@@ -1,0 +1,49 @@
+# Rust build artifacts
+/target
+**/target/
+**/*.rs.bk
+*.pdb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+*.key
+*.pem
+*.p12
+
+# Logs
+*.log
+
+# Temporary files (project convention: hyphen-prefixed)
+-*
+*~
+
+# Transient runtime state (never commit)
+.transient/
+
+# Test artifacts
+test_outputs/
+temp_*
+tmp_*
+*.pending-snap
+
+# Coverage
+tarpaulin-report.*
+lcov.info
+coverage/
+
+# Benchmark outputs
+benchmarks/
+criterion/
+
+# Lock files
+Cargo.lock

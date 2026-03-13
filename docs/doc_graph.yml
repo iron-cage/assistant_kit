@@ -1,0 +1,115 @@
+meta:
+  description: Cross-reference graph for all doc instances in the agent_kit workspace
+  node_count: 7
+  edge_count: 14
+  component_count: 1
+  generated: 2026-04-07
+
+nodes:
+  - id: feature/001
+    file: feature/001_workspace_design.md
+    label: Workspace Design
+    entity: feature
+
+  - id: invariant/001
+    file: invariant/001_privacy_invariant.md
+    label: Privacy Invariant
+    entity: invariant
+
+  - id: invariant/002
+    file: invariant/002_versioning_strategy.md
+    label: Versioning Strategy
+    entity: invariant
+
+  - id: invariant/003
+    file: invariant/003_testing_strategy.md
+    label: Testing Strategy
+    entity: invariant
+
+  - id: invariant/004
+    file: invariant/004_performance.md
+    label: Performance
+    entity: invariant
+
+  - id: pattern/001
+    file: pattern/001_crate_layering.md
+    label: Crate Layering
+    entity: pattern
+
+  - id: integration/001
+    file: integration/001_willbe_integration.md
+    label: Willbe Integration
+    entity: integration
+
+edges:
+  - from: feature/001
+    to: pattern/001
+    via: cross_references
+
+  - from: feature/001
+    to: invariant/001
+    via: cross_references
+
+  - from: feature/001
+    to: invariant/004
+    via: cross_references
+
+  - from: feature/001
+    to: integration/001
+    via: cross_references
+
+  - from: invariant/001
+    to: feature/001
+    via: cross_references
+
+  - from: invariant/001
+    to: integration/001
+    via: cross_references
+
+  - from: invariant/002
+    to: feature/001
+    via: cross_references
+
+  - from: invariant/003
+    to: feature/001
+    via: cross_references
+
+  - from: invariant/004
+    to: feature/001
+    via: cross_references
+
+  - from: pattern/001
+    to: feature/001
+    via: cross_references
+
+  - from: pattern/001
+    to: invariant/001
+    via: cross_references
+
+  - from: integration/001
+    to: invariant/001
+    via: cross_references
+
+  - from: integration/001
+    to: pattern/001
+    via: cross_references
+
+  - from: feature/001
+    to: invariant/003
+    via: cross_references
+
+components:
+  - id: 1
+    label: Main corpus
+    size: 7
+    isolated: false
+    nodes:
+      - feature/001
+      - invariant/001
+      - invariant/002
+      - invariant/003
+      - invariant/004
+      - pattern/001
+      - integration/001
+
+dangling_refs: []

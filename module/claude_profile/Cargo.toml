@@ -1,0 +1,46 @@
+[package]
+name = "claude_profile"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Claude Code account credential management and token status"
+keywords = [ "claude", "ai", "automation", "profile", "account" ]
+categories = [ "authentication", "development-tools" ]
+
+[lints]
+workspace = true
+
+[lib]
+name = "claude_profile"
+path = "src/lib.rs"
+
+[[bin]]
+name = "clp"
+path = "src/main.rs"
+required-features = [ "enabled" ]
+
+[dependencies]
+# Zero third-party (crates.io) dependencies for core library functionality.
+# Internal workspace crates (claude_common, claude_profile_core) are allowed.
+# CLI binary deps are feature-gated behind "enabled".
+claude_common        = { workspace = true }
+claude_profile_core  = { workspace = true }
+error_tools          = { workspace = true, optional = true }
+serde_json           = { workspace = true, optional = true }
+unilang              = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile.workspace = true
+
+[features]
+default = [ "enabled" ]
+enabled = [
+  "dep:error_tools",
+  "error_tools/enabled",
+  "error_tools/error_untyped",
+  "dep:serde_json",
+  "dep:unilang",
+]
+full = [ "enabled" ]

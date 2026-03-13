@@ -1,0 +1,66 @@
+# Parameter Groups
+
+| Group | Parameters | Used By |
+|-------|------------|---------|
+| [Output Control](#group--1-output-control) | `verbosity::`, `format::` | `.account.list`, `.account.status`, `.token.status`, `.paths` |
+
+**Total:** 1 group
+
+---
+
+### Group :: 1. Output Control
+
+**Parameters:** `verbosity::`, `format::`
+**Pattern:** Read-only output formatting
+**Purpose:** Controls presentation layer for commands that display information without modifying state.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| [`verbosity::`](params.md#parameter--2-verbosity--v) | [`VerbosityLevel`](types.md#type--2-verbositylevel) | Output detail: 0=quiet, 1=normal, 2=verbose |
+| [`format::`](params.md#parameter--3-format) | [`OutputFormat`](types.md#type--3-outputformat) | Output format: `text` or `json` |
+
+**Used By (4 commands):** [`.account.list`](commands.md#command--3-accountlist), [`.account.status`](commands.md#command--4-accountstatus), [`.token.status`](commands.md#command--8-tokenstatus), [`.paths`](commands.md#command--9-paths)
+
+**Typical Patterns:**
+
+```bash
+# Scripting: bare JSON for pipeline consumption
+clp .account.list format::json v::0
+
+# Interactive: default labels for human reading
+clp .token.status
+
+# Debugging: full metadata for diagnostics
+clp .paths v::2
+```
+
+#### Semantic Coherence Test
+
+> "Does parameter X control **output presentation**?"
+
+| Parameter | Controls output presentation? | In group? |
+|-----------|-------------------------------|-----------|
+| `verbosity::` | Yes — controls label density and metadata detail | Yes |
+| `format::` | Yes — controls text vs JSON serialization | Yes |
+| `name::` | No — identifies target account, not presentation | No |
+| `threshold::` | No — controls classification boundary, not presentation | No |
+| `dry::` | No — controls execution mode, not presentation | No |
+
+All members pass. No false inclusions.
+
+#### Why NOT These Parameters
+
+- **`name::`** — Identifies a target entity, not output style. Mutation commands (save, switch, delete) don't produce formatted output in the Output Control sense.
+- **`threshold::`** — Modifies classification logic (when to report ExpiringSoon), not how results are displayed. A classification parameter, not a presentation parameter.
+- **`dry::`** — Controls whether mutation happens, not how output is formatted. Orthogonal concern (execution control vs output control).
+
+#### Cross-References
+
+- [params.md](params.md) — individual parameter specifications
+- [types.md](types.md) — `VerbosityLevel`, `OutputFormat` type definitions
+- [commands.md](commands.md) — command specifications using this group
+
+#### Notes
+
+- `format::json` overrides `verbosity::` — JSON output always includes all fields regardless of verbosity level.
+- Commands not in this group (`.account.save`, `.account.switch`, `.account.delete`) produce fixed single-line confirmation messages not affected by formatting parameters.

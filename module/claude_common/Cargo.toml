@@ -1,0 +1,21 @@
+[package]
+name = "claude_common"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "readme.md"
+description = "Shared Claude Code primitives: path topology and process utilities"
+
+[lints]
+workspace = true
+
+[features]
+default = [ "enabled" ]
+full = [ "enabled" ]
+enabled = []
+
+[dependencies]
+
+[dev-dependencies]
+test_tools = { workspace = true, features = [ "full" ] }

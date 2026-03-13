@@ -1,0 +1,153 @@
+meta:
+  description: Cross-reference graph for all doc instances in claude_runner_core
+  node_count: 8
+  edge_count: 22
+  component_count: 1
+  generated: 2026-04-07
+
+nodes:
+  - id: pattern/001
+    file: pattern/001_command_builder.md
+    label: Command Builder
+    entity: pattern
+
+  - id: api/001
+    file: api/001_execution_api.md
+    label: Execution API
+    entity: api
+
+  - id: data_structure/001
+    file: data_structure/001_command_types.md
+    label: Command Types
+    entity: data_structure
+
+  - id: feature/001
+    file: feature/001_execution_control.md
+    label: Execution Control
+    entity: feature
+
+  - id: feature/002
+    file: feature/002_dry_run.md
+    label: Dry Run
+    entity: feature
+
+  - id: feature/003
+    file: feature/003_describe.md
+    label: Describe
+    entity: feature
+
+  - id: invariant/001
+    file: invariant/001_single_execution_point.md
+    label: Single Execution Point
+    entity: invariant
+
+  - id: invariant/002
+    file: invariant/002_nfr_conformance.md
+    label: NFR Conformance
+    entity: invariant
+
+edges:
+  - from: pattern/001
+    to: api/001
+    via: cross_references
+
+  - from: pattern/001
+    to: data_structure/001
+    via: cross_references
+
+  - from: pattern/001
+    to: feature/001
+    via: cross_references
+
+  - from: api/001
+    to: pattern/001
+    via: cross_references
+
+  - from: api/001
+    to: feature/001
+    via: cross_references
+
+  - from: api/001
+    to: feature/002
+    via: cross_references
+
+  - from: api/001
+    to: invariant/001
+    via: cross_references
+
+  - from: data_structure/001
+    to: api/001
+    via: cross_references
+
+  - from: data_structure/001
+    to: pattern/001
+    via: cross_references
+
+  - from: feature/001
+    to: pattern/001
+    via: cross_references
+
+  - from: feature/001
+    to: api/001
+    via: cross_references
+
+  - from: feature/001
+    to: invariant/001
+    via: cross_references
+
+  - from: feature/001
+    to: feature/002
+    via: cross_references
+
+  - from: feature/002
+    to: api/001
+    via: cross_references
+
+  - from: feature/002
+    to: feature/001
+    via: cross_references
+
+  - from: feature/002
+    to: feature/003
+    via: cross_references
+
+  - from: feature/003
+    to: feature/002
+    via: cross_references
+
+  - from: feature/003
+    to: api/001
+    via: cross_references
+
+  - from: invariant/001
+    to: feature/001
+    via: cross_references
+
+  - from: invariant/001
+    to: api/001
+    via: cross_references
+
+  - from: invariant/002
+    to: invariant/001
+    via: cross_references
+
+  - from: invariant/002
+    to: data_structure/001
+    via: cross_references
+
+components:
+  - id: 1
+    label: Main corpus
+    size: 8
+    isolated: false
+    nodes:
+      - pattern/001
+      - api/001
+      - data_structure/001
+      - feature/001
+      - feature/002
+      - feature/003
+      - invariant/001
+      - invariant/002
+
+dangling_refs: []

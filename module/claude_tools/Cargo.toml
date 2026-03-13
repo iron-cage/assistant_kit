@@ -1,0 +1,57 @@
+[package]
+name         = "claude_tools"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme       = "readme.md"
+description  = "Layer 3 super-app aggregating all claude_* CLI commands."
+
+[lints]
+workspace = true
+
+[lib]
+name = "claude_tools"
+path = "src/lib.rs"
+
+[[bin]]
+name = "clt"
+path = "src/main.rs"
+required-features = [ "enabled" ]
+
+[features]
+default = [ "enabled" ]
+full    = [ "enabled" ]
+enabled = [
+  "dep:claude_manager",
+  "claude_manager/enabled",
+  "dep:claude_profile",
+  "claude_profile/enabled",
+  "dep:claude_runner",
+  "claude_runner/enabled",
+  "dep:claude_storage",
+  "claude_storage/cli",
+  "dep:unilang",
+  "unilang/enabled",
+  "dep:error_tools",
+  "error_tools/enabled",
+]
+
+[dependencies]
+claude_manager = { workspace = true, optional = true }
+claude_profile = { workspace = true, optional = true }
+claude_runner  = { workspace = true, optional = true }
+claude_storage = { workspace = true, optional = true }
+unilang        = { workspace = true, optional = true }
+error_tools    = { workspace = true, optional = true }
+
+[build-dependencies]
+claude_runner  = { workspace = true }
+claude_storage = { workspace = true, features = [ "cli" ] }
+unilang        = { workspace = true }
+serde_yaml     = { workspace = true }
+
+[dev-dependencies]
+tempfile   = { workspace = true }
+assert_cmd = { workspace = true }

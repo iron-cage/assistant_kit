@@ -1,0 +1,518 @@
+# Claude Code Manager CLI Commands
+# Following unilang v0.35+ schema
+# Metadata-only export — not aggregated by build.rs; manager uses programmatic registration
+
+- name: ".status"
+  namespace: ""
+  description: "Show installation state, process count, and active account"
+  hint: "Show installation status"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "info"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level (0=minimal, 1=labeled)"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".status"
+    - ".status format::json"
+  auto_help_enabled: true
+
+- name: ".version.show"
+  namespace: ""
+  description: "Print the currently installed Claude Code version"
+  hint: "Show installed version"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "version"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".version.show"
+    - ".version.show format::json"
+  auto_help_enabled: true
+
+- name: ".version.install"
+  namespace: ""
+  description: "Download and install a Claude Code version via installer"
+  hint: "Install a specific version"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "version", "mutation"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "POST"
+
+  arguments:
+    - name: "version"
+      kind: "String"
+      description: "Version to install (semver or alias)"
+      hint: "Target version"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview without executing (1=dry-run)"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "force"
+      kind: "Boolean"
+      description: "Force install even if version matches (1=force)"
+      hint: "Force install"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".version.install version::2.1.0"
+    - ".version.install version::latest dry::1"
+  auto_help_enabled: true
+
+- name: ".version.guard"
+  namespace: ""
+  description: "Check for version drift and restore preferred version"
+  hint: "Guard preferred version"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "version", "mutation"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "POST"
+
+  arguments:
+    - name: "version"
+      kind: "String"
+      description: "Preferred version spec to guard"
+      hint: "Version spec"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview without executing (1=dry-run)"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "force"
+      kind: "Boolean"
+      description: "Force reinstall even if version matches (1=force)"
+      hint: "Force reinstall"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "interval"
+      kind: "Integer"
+      description: "Check interval in seconds (0=one-shot)"
+      hint: "Check interval"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+  examples:
+    - ".version.guard version::stable"
+    - ".version.guard version::2.1.0 interval::300"
+  auto_help_enabled: true
+
+- name: ".version.list"
+  namespace: ""
+  description: "List all named version aliases"
+  hint: "List version aliases"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "version"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".version.list"
+    - ".version.list format::json"
+  auto_help_enabled: true
+
+- name: ".version.history"
+  namespace: ""
+  description: "Show release history with changelogs from GitHub"
+  hint: "Show release history"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "version"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "count"
+      kind: "Integer"
+      description: "Number of releases to show"
+      hint: "Release count"
+      optional: true
+      default: "5"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".version.history"
+    - ".version.history count::10 format::json"
+  auto_help_enabled: true
+
+- name: ".processes"
+  namespace: ""
+  description: "List all running Claude Code processes"
+  hint: "List Claude processes"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "processes"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level (0=pid+cwd, 1=labeled)"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".processes"
+    - ".processes format::json"
+  auto_help_enabled: true
+
+- name: ".processes.kill"
+  namespace: ""
+  description: "Terminate all Claude Code processes"
+  hint: "Kill Claude processes"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "processes", "mutation"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "DELETE"
+
+  arguments:
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview without executing (1=dry-run)"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "force"
+      kind: "Boolean"
+      description: "Use SIGKILL instead of SIGTERM (1=force)"
+      hint: "Force kill"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".processes.kill"
+    - ".processes.kill dry::1"
+    - ".processes.kill force::1"
+  auto_help_enabled: true
+
+- name: ".settings.show"
+  namespace: ""
+  description: "Print all settings from ~/.claude/settings.json"
+  hint: "Show all settings"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "settings"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".settings.show"
+    - ".settings.show format::json"
+  auto_help_enabled: true
+
+- name: ".settings.get"
+  namespace: ""
+  description: "Read a single setting by key"
+  hint: "Get a setting value"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "settings"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "key"
+      kind: "String"
+      description: "Setting key to read"
+      hint: "Setting key"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".settings.get key::theme"
+    - ".settings.get key::autoUpdaterStatus format::json"
+  auto_help_enabled: true
+
+- name: ".settings.set"
+  namespace: ""
+  description: "Write a single setting atomically"
+  hint: "Set a setting value"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["manager", "settings", "mutation"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "PUT"
+
+  arguments:
+    - name: "key"
+      kind: "String"
+      description: "Setting key to write"
+      hint: "Setting key"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "value"
+      kind: "String"
+      description: "Value to set"
+      hint: "Setting value"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview without writing (1=dry-run)"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".settings.set key::theme value::dark"
+    - ".settings.set key::autoUpdaterStatus value::disabled dry::1"
+  auto_help_enabled: true

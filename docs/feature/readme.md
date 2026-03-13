@@ -1,0 +1,14 @@
+# Feature Doc Entity
+
+### Scope
+
+- **Purpose**: Document user-facing capabilities of the agent_kit workspace.
+- **Responsibility**: Index of feature doc instances covering workspace design and crate inventory.
+- **In Scope**: Workspace purpose, crate roles, scope boundaries, performance characteristics.
+- **Out of Scope**: Structural invariants (→ `invariant/`), layering pattern (→ `pattern/`), willbe integration (→ `integration/`).
+
+### Overview Table
+
+| ID | Name | Purpose | Status |
+|----|------|---------|--------|
+| 001 | [Workspace Design](001_workspace_design.md) | Workspace purpose, crate inventory, and scope boundaries | ✅ |

@@ -1,0 +1,147 @@
+# Agent Kit Workspace
+#
+# Standalone workspace for AI agent tooling: credentials, sessions, and process execution.
+# Privacy invariant: this workspace has ZERO knowledge of willbe.
+# Can use published wtools crates (error_tools, unilang, etc.).
+#
+# Dependency flow (one-directional):
+#   wtools (published) ← agent_kit ← willbe (private)
+
+[workspace]
+resolver = "2"
+members = [
+  "module/claude_common",
+  "module/claude_profile_core",
+  "module/claude_manager_core",
+  "module/claude_storage_core",
+  "module/claude_storage",
+  "module/claude_profile",
+  "module/claude_runner_core",
+  "module/claude_runner",
+  "module/claude_manager",
+  "module/claude_tools",
+]
+exclude = [ "-*" ]
+
+[workspace.package]
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.70"
+authors = [ "Kostiantyn Mysnyk <wandalen@obox.systems>" ]
+license = "MIT"
+
+[workspace.lints.rust]
+# Denies non-idiomatic code for Rust 2018 edition.
+rust_2018_idioms = { level = "warn", priority = -1 }
+# Denies using features that may break in future Rust versions.
+future_incompatible = { level = "warn", priority = -1 }
+# Warns if public items lack documentation.
+missing_docs = "warn"
+# Warns for public types not implementing Debug.
+missing_debug_implementations = "warn"
+# Denies all unsafe code usage.
+unsafe-code = "deny"
+
+[workspace.lints.clippy]
+# Denies pedantic lints, enforcing strict coding styles and conventions.
+pedantic = { level = "warn", priority = -1 }
+# Denies undocumented unsafe blocks.
+undocumented_unsafe_blocks = "deny"
+# Denies to prefer `core` over `std` when available, for `no_std` compatibility.
+std_instead_of_core = "warn"
+# Denies including files in documentation unconditionally.
+doc_include_without_cfg = "warn"
+# Denies missing inline in public items.
+missing_inline_in_public_items = "warn"
+
+# exceptions
+single_call_fn = "allow"
+inline_always = "allow"
+module_name_repetitions = "allow"
+absolute_paths = "allow"
+wildcard_imports = "allow"
+std_instead_of_alloc = "allow"
+items_after_statements = "allow"
+cast_precision_loss = "allow"
+pub_use = "allow"
+question_mark_used = "allow"
+implicit_return = "allow"
+arbitrary_source_item_ordering = "allow"
+mod_module_files = "allow"
+missing_docs_in_private_items = "allow"
+
+## Internal workspace dependencies
+
+[workspace.dependencies.claude_common]
+path = "module/claude_common"
+version = "~1.0.0"
+default-features = false
+
+[workspace.dependencies.claude_profile_core]
+path = "module/claude_profile_core"
+version = "~1.0.0"
+default-features = false
+
+[workspace.dependencies.claude_manager_core]
+path = "module/claude_manager_core"
+version = "~1.0.0"
+default-features = false
+
+[workspace.dependencies.claude_storage_core]
+path = "module/claude_storage_core"
+version = "~1.0.0"
+default-features = false
+
+[workspace.dependencies.claude_profile]
+path = "module/claude_profile"
+version = "~1.0.0"
+default-features = false
+
+[workspace.dependencies.claude_runner_core]
+path = "module/claude_runner_core"
+version = "~1.0.0"
+default-features = false
+
+[workspace.dependencies.claude_runner]
+path = "module/claude_runner"
+version = "~1.0.0"
+default-features = false
+
+[workspace.dependencies.claude_manager]
+path = "module/claude_manager"
+version = "~1.0.0"
+default-features = false
+
+[workspace.dependencies.claude_storage]
+path = "module/claude_storage"
+version = "~1.0.0"
+default-features = false
+
+## External — published wtools crates
+
+[workspace.dependencies.error_tools]
+version = "~0.37"
+default-features = false
+
+[workspace.dependencies.unilang]
+version = "~0.48"
+features = [ "enabled", "approach_yaml_multi_build" ]
+default-features = false
+
+## Dev dependencies
+
+[workspace.dependencies.tempfile]
+version = "~3"
+
+[workspace.dependencies.test_tools]
+version = "~0.16"
+default-features = false
+
+[workspace.dependencies.assert_cmd]
+version = "~2.0"
+
+[workspace.dependencies.serde_json]
+version = "~1.0"
+
+[workspace.dependencies.serde_yaml]
+version = "~0.9"

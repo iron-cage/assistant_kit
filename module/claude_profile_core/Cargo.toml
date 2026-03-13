@@ -1,0 +1,23 @@
+[package]
+name = "claude_profile_core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "readme.md"
+description = "Layer 1 domain logic: token status and account management for Claude Code"
+
+[lints]
+workspace = true
+
+[features]
+default = [ "enabled" ]
+full = [ "enabled" ]
+enabled = []
+
+[dependencies]
+claude_common = { workspace = true }
+
+[dev-dependencies]
+test_tools = { workspace = true, features = [ "full" ] }
+tempfile   = { workspace = true }

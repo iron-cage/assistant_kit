@@ -1,0 +1,423 @@
+# Claude Code Profile CLI Commands
+# Following unilang v0.35+ schema
+# Metadata-only export — not aggregated by build.rs; profile uses programmatic registration
+
+- name: ".account.list"
+  namespace: ""
+  description: "List all saved accounts with subscription type and token state"
+  hint: "List all accounts"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "account"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level (0=minimal, 1=labeled, 2=verbose)"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".account.list"
+    - ".account.list format::json"
+  auto_help_enabled: true
+
+- name: ".account.status"
+  namespace: ""
+  description: "Show active account name and token state; optionally query a named account"
+  hint: "Show account status"
+  version: "1.1.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "account"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "name"
+      kind: "String"
+      description: "Query a specific account by name instead of the active account"
+      hint: "Account name"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".account.status"
+    - ".account.status name::work"
+    - ".account.status name::personal v::2"
+    - ".account.status format::json"
+  auto_help_enabled: true
+
+- name: ".account.save"
+  namespace: ""
+  description: "Save current credentials as a named account profile"
+  hint: "Save account"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "account", "mutation"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "POST"
+
+  arguments:
+    - name: "name"
+      kind: "String"
+      description: "Account name to save as"
+      hint: "Account name"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview without executing (1=dry-run)"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".account.save name::work"
+    - ".account.save name::personal dry::1"
+  auto_help_enabled: true
+
+- name: ".account.switch"
+  namespace: ""
+  description: "Switch active account by name with atomic credential rotation"
+  hint: "Switch account"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "account", "mutation"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "PUT"
+
+  arguments:
+    - name: "name"
+      kind: "String"
+      description: "Account name to switch to"
+      hint: "Account name"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview without executing (1=dry-run)"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".account.switch name::work"
+    - ".account.switch name::personal dry::1"
+  auto_help_enabled: true
+
+- name: ".account.delete"
+  namespace: ""
+  description: "Delete a saved account from the account store"
+  hint: "Delete account"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "account", "mutation"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "DELETE"
+
+  arguments:
+    - name: "name"
+      kind: "String"
+      description: "Account name to delete"
+      hint: "Account name"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview without executing (1=dry-run)"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".account.delete name::old"
+    - ".account.delete name::stale dry::1"
+  auto_help_enabled: true
+
+- name: ".token.status"
+  namespace: ""
+  description: "Show active OAuth token expiry classification"
+  hint: "Show token status"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "token"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+    - name: "threshold"
+      kind: "Integer"
+      description: "Minutes threshold for expiry warning classification"
+      hint: "Expiry threshold"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".token.status"
+    - ".token.status format::json"
+  auto_help_enabled: true
+
+- name: ".paths"
+  namespace: ""
+  description: "Show all resolved ~/.claude/ canonical file paths"
+  hint: "Show Claude paths"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "paths"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".paths"
+    - ".paths format::json"
+  auto_help_enabled: true
+
+- name: ".usage"
+  namespace: ""
+  description: "Show 7-day token usage from stats-cache.json"
+  hint: "Show token usage"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "usage"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".usage"
+    - ".usage format::json"
+  auto_help_enabled: true
+
+- name: ".credentials.status"
+  namespace: ""
+  description: "Show live credential metadata without account store dependency"
+  hint: "Show credentials status"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "credentials"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level (0=sub+token, 1=adds tier/email/org, 2=adds expiry)"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".credentials.status"
+    - ".credentials.status v::2"
+    - ".credentials.status format::json"
+  auto_help_enabled: true
+
+- name: ".account.limits"
+  namespace: ""
+  description: "Show rate-limit utilization for the active or named account"
+  hint: "Show account rate limits"
+  version: "0.1.0"
+  status: "planned"
+  aliases: []
+  tags: ["profile", "account", "limits"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "name"
+      kind: "String"
+      description: "Query a specific account by name instead of the active account"
+      hint: "Account name"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level (0=compact, 1=labeled, 2=verbose)"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
+  examples:
+    - ".account.limits"
+    - ".account.limits name::work"
+    - ".account.limits format::json"
+  auto_help_enabled: true

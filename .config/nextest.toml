@@ -1,0 +1,8 @@
+# Nextest configuration for agent_kit workspace
+#
+# dry_run_test invokes the real `claude` binary which takes 60-120s under load.
+# Without this override, nextest treats the test as hung and cancels it.
+
+[[profile.default.overrides]]
+filter = "binary(dry_run_test)"
+slow-timeout = { period = "120s", terminate-after = 10 }

@@ -1,0 +1,24 @@
+[package]
+name = "claude_storage_core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Core library for Claude Code filesystem storage access (zero dependencies)"
+readme = "readme.md"
+keywords = [ "claude", "storage", "jsonl", "conversation", "parser" ]
+categories = [ "development-tools", "filesystem", "parsing" ]
+
+[lints]
+workspace = true
+
+[dependencies]
+# ZERO runtime dependencies - this is a core guarantee
+
+[features]
+default = [ "enabled" ]
+enabled = []
+full = [ "enabled" ]
+
+[dev-dependencies]
+tempfile = { workspace = true }

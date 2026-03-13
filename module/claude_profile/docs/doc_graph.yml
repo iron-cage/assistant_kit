@@ -1,0 +1,151 @@
+meta:
+  description: Cross-reference graph for all doc instances in claude_profile
+  node_count: 18
+  edge_count: 11
+  component_count: 4
+  generated: 2026-04-07
+
+nodes:
+  - id: feature/001
+    file: feature/001_account_store_init.md
+    label: Account Store Initialization
+    entity: feature
+
+  - id: feature/002
+    file: feature/002_account_save.md
+    label: Save Account
+    entity: feature
+
+  - id: feature/003
+    file: feature/003_account_list.md
+    label: List Accounts
+    entity: feature
+
+  - id: feature/004
+    file: feature/004_account_switch.md
+    label: Switch Account
+    entity: feature
+
+  - id: feature/005
+    file: feature/005_account_delete.md
+    label: Delete Account
+    entity: feature
+
+  - id: feature/006
+    file: feature/006_token_status.md
+    label: Token Status
+    entity: feature
+
+  - id: feature/007
+    file: feature/007_file_topology.md
+    label: File Topology
+    entity: feature
+
+  - id: feature/008
+    file: feature/008_auto_rotate.md
+    label: Auto Rotate
+    entity: feature
+
+  - id: feature/009
+    file: feature/009_token_usage.md
+    label: Token Usage Reporting
+    entity: feature
+
+  - id: feature/010
+    file: feature/010_persistent_storage.md
+    label: Persistent Storage Path
+    entity: feature
+
+  - id: feature/011
+    file: feature/011_account_status_by_name.md
+    label: Account Status by Name
+    entity: feature
+
+  - id: feature/012
+    file: feature/012_live_credentials_status.md
+    label: Live Credentials Status
+    entity: feature
+
+  - id: feature/013
+    file: feature/013_account_limits.md
+    label: Account Rate-Limit Utilization
+    entity: feature
+
+  - id: invariant/001
+    file: invariant/001_zero_third_party_deps.md
+    label: Zero Third-Party Dependencies
+    entity: invariant
+
+  - id: invariant/002
+    file: invariant/002_cross_platform.md
+    label: Cross-Platform Compatibility
+    entity: invariant
+
+  - id: invariant/003
+    file: invariant/003_clear_errors.md
+    label: Clear Error Messages
+    entity: invariant
+
+  - id: invariant/004
+    file: invariant/004_no_process_execution.md
+    label: No Process Execution
+    entity: invariant
+
+  - id: invariant/005
+    file: invariant/005_atomic_switching.md
+    label: Atomic Account Switching
+    entity: invariant
+
+edges:
+  # feature/002 → feature/001: save triggers store initialization
+  - {from: feature/002, to: feature/001, label: "save triggers store init"}
+
+  # feature/004 ↔ invariant/005: switch feature is governed by atomicity invariant
+  - {from: feature/004, to: invariant/005, label: "governed by atomicity invariant"}
+  - {from: invariant/005, to: feature/004, label: "enforces atomicity on switch"}
+
+  # feature/008 → feature/004: auto_rotate uses switch_account primitive
+  - {from: feature/008, to: feature/004, label: "delegates to switch_account"}
+
+  # feature/008 → feature/006: auto_rotate triggered by token expiry detection
+  - {from: feature/008, to: feature/006, label: "triggered after token expiry check"}
+
+  # feature/009 → feature/013: usage reports historical tokens; limits reports live utilization
+  - {from: feature/009, to: feature/013, label: "distinct from live rate-limit data"}
+  - {from: feature/013, to: feature/009, label: "historical token context"}
+
+  # feature/011 ↔ feature/012: two complementary status commands
+  - {from: feature/011, to: feature/012, label: "related: account-store-free alternative"}
+  - {from: feature/012, to: feature/011, label: "related: account-store-aware sibling"}
+
+  # feature/013 → feature/011: .account.limits uses same name:: account selection pattern
+  - {from: feature/013, to: feature/011, label: "shares name:: account selection pattern"}
+
+  # invariant/004 → invariant/001: both enforce boundary constraints on the library
+  - {from: invariant/004, to: invariant/001, label: "related boundary constraint"}
+
+components:
+  - id: 1
+    size: 6
+    isolated: false
+    nodes: [feature/002, feature/001, feature/004, invariant/005, feature/008, feature/006]
+
+  - id: 2
+    size: 4
+    isolated: false
+    nodes: [feature/009, feature/013, feature/011, feature/012]
+
+  - id: 3
+    size: 6
+    isolated: true
+    nodes: [feature/003, feature/005, feature/007, feature/010, invariant/002, invariant/003]
+    gap: >
+      These nodes have no intra-doc cross-references. They are orthogonal capabilities
+      with no natural dependency direction. Isolation is expected here.
+
+  - id: 4
+    size: 2
+    isolated: false
+    nodes: [invariant/001, invariant/004]
+
+dangling_refs: []

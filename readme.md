@@ -1,0 +1,59 @@
+# agent_kit
+
+Rust workspace for programmatic Claude Code integration: credential management, session storage, and process execution.
+
+## Quick Start
+
+```bash
+cargo build --release
+clt .help          # list all commands
+clp .account.list  # list saved accounts
+clr "write a test" # run Claude Code
+```
+
+## Structure
+
+| Path | Responsibility |
+|------|----------------|
+| `module/` | Ten workspace crates (see Crates below) |
+| `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
+| `task/` | Task tracking: active, completed, backlog |
+| `vision.md` | Project vision, design rationale, and open problems |
+| `locales.md` | Locale and internationalisation notes |
+| `Cargo.toml` | Workspace manifest: members, lints, shared dependencies |
+
+## Crates
+
+| Crate | Cmd | Layer | Responsibility |
+|---|---|---|---|
+| `claude_common` | — | 0 | Shared primitives: `ClaudePaths`, process utilities |
+| `claude_storage_core` | — | * | Zero-dep JSONL parser for `~/.claude/`; path encoding |
+| `claude_profile_core` | — | 1 | Token status + account domain logic |
+| `claude_manager_core` | — | 1 | Version detection, install, settings domain helpers |
+| `claude_runner_core` | — | 1 | `ClaudeCommand` builder + single process execution point |
+| `claude_profile` | `clp` | 2 | Account management, token status, `~/.claude/` paths |
+| `claude_storage` | `clg` | 2 | CLI for exploring Claude Code filesystem storage |
+| `claude_runner` | `clr` | 2 | Claude Code execution with session continuity |
+| `claude_manager` | `clman` | 2 | Install, version, session, and settings management |
+| `claude_tools` | `clt` | 3 | Super-app aggregating all Layer 2 CLIs |
+
+`*` `claude_storage_core` is a zero-dep parsing primitive sitting outside the layer hierarchy — no dependency on `claude_common`.
+
+## Architecture
+
+```
+Layer 0: claude_common            (shared primitives — zero workspace deps)
+             ↓
+Layer 1: claude_profile_core      (token status, account domain logic)
+         claude_manager_core      (version, settings domain helpers)
+         claude_runner_core       (ClaudeCommand builder + execute())
+             ↓
+Layer 2: claude_profile  (clp)    (account management, token status)
+         claude_storage  (clg)    (storage exploration)
+         claude_runner   (clr)    (Claude Code execution)
+         claude_manager  (clman)  (install, version, session management)
+             ↓
+Layer 3: claude_tools    (clt)    (super-app: all Layer 2 commands)
+
+claude_storage_core — zero-dep JSONL parser, used by claude_storage and independently
+```

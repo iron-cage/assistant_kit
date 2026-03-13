@@ -1,0 +1,41 @@
+[package]
+name = "claude_runner"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+readme = "readme.md"
+description = "CLI for executing Claude Code via builder pattern; YAML schema constants for command registration"
+
+[lints]
+workspace = true
+
+[lib]
+name = "claude_runner"
+path = "src/lib.rs"
+
+[[bin]]
+name = "clr"
+path = "src/main.rs"
+required-features = [ "enabled" ]
+
+[features]
+default = [ "enabled" ]
+full = [ "enabled" ]
+enabled = [
+  "dep:claude_runner_core",
+  "claude_runner_core/enabled",
+  "dep:error_tools",
+  "error_tools/enabled",
+  "error_tools/error_untyped",
+  "dep:unilang",
+  "unilang/enabled",
+]
+
+[dependencies]
+claude_runner_core = { workspace = true, optional = true }
+error_tools        = { workspace = true, optional = true }
+unilang            = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

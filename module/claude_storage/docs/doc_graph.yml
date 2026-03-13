@@ -1,0 +1,43 @@
+meta:
+  description: Cross-reference graph for all NNN-identified doc instances in claude_storage
+  node_count: 2
+  edge_count: 0
+  component_count: 2
+  generated: 2026-04-07
+
+nodes:
+  - id: feature/001
+    file: feature/001_cli_tool.md
+    label: CLI Tool
+    entity: feature
+  - id: operation/001
+    file: operation/001_migration_guide.md
+    label: Migration Guide
+    entity: operation
+
+edges: []
+
+components:
+  - id: 1
+    label: CLI Tool
+    size: 1
+    isolated: true
+    nodes:
+      - feature/001
+    gap: >
+      L2 stub — external cross-references (to claude_storage_core/docs/) use relative
+      paths outside this module's doc graph scope; a bridge within this module would be
+      operation/001 (migration guide), but that node is in a separate component pending
+      a cross-reference addition in feature/001.
+  - id: 2
+    label: Migration Guide
+    size: 1
+    isolated: true
+    nodes:
+      - operation/001
+    gap: >
+      L2 stub — operation/001 cross-references only external docs (claude_storage_core).
+      Adding a cross-reference from feature/001 to operation/001 would merge these
+      components.
+
+dangling_refs: []
