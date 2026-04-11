@@ -4,8 +4,8 @@
 
 | Order | ID | Advisability | Value | Easiness | Safety | Priority | Status | Executor | Task | Purpose |
 |-------|----|-------------|-------|----------|--------|----------|--------|----------|------|---------|
-| 1 | 010 | 1134 | 7 | 9 | 9 | 2 | 🎯 (Available) | any | [Fix docs/ consistency](010_docs_consistency.md) | Fix stale counts, isolated graph components, readme accuracy |
-| 2 | 011 | 756 | 7 | 6 | 9 | 2 | 🎯 (Available) | any | [Create docs/cli/format/ catalog](011_cli_format_catalog.md) | CLI Output Format Doc Entity for export rendering modes |
+| 1 | 010 | 0 | 7 | 9 | 9 | 0 | ✅ (Completed) | any | [Fix docs/ consistency](completed/010_docs_consistency.md) | Fix stale counts, isolated graph components, readme accuracy |
+| 2 | 011 | 0 | 7 | 6 | 9 | 0 | ✅ (Completed) | any | [Create docs/cli/format/ catalog](completed/011_cli_format_catalog.md) | CLI Output Format Doc Entity for export rendering modes |
 | 3 | 007 | 0 | 8 | 5 | 8 | 0 | ✅ (Completed) | any | [Active session summary as default output](completed/007_sessions_active_summary_default.md) | Show most-recent session details instead of session list on bare invocation |
 | 4 | 002 | 0 | 8 | 4 | 7 | 0 | ✅ (Completed) | any | [Session family tree detection](completed/002_session_families.md) | Implement hierarchical display grouping agent sessions under their parent |
 | 5 | 008 | 0 | 7 | 8 | 9 | 0 | ✅ (Completed) | any | [Update CLI test docs — .sessions summary mode](completed/008_cli_test_docs_sessions_summary.md) | Rewrite IT-1 and add IT-30..IT-35 for summary behavior; update EC-7 |

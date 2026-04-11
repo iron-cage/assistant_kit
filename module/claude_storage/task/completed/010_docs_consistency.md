@@ -5,7 +5,7 @@
 - **Executor Type:** any
 - **Actor:** null
 - **Claimed At:** null
-- **Status:** 🎯 (Available)
+- **Status:** ✅ (Completed)
 
 ## Goal
 
@@ -107,3 +107,20 @@ Expected: ≥1. Why: ensures the doc_graph edge is backed by an actual cross-ref
 **AF2 — No "9 commands" remnant**
 Check: `grep -c "9 commands" /home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_storage/docs/readme.md`
 Expected: 0. Why: catches partial fix where count was added but old count not removed.
+
+## Outcomes
+
+All measurements and anti-faking checks passed:
+
+- **M1**: `grep -c "All 13 commands"` → 1 (was 0)
+- **M2**: `component_count: 1` (was 2)
+- **M3**: `edge_count: 1` (was 0)
+- **M4**: Testing file counts match entities.md (13 commands, 20 params, 5 param_groups)
+- **AF1**: `grep -c "operation/001" feature/001_cli_tool.md` → 1
+- **AF2**: `grep -c "9 commands" readme.md` → 0
+
+Files modified:
+- `docs/readme.md` — "All 9 commands" → "All 13 commands"
+- `docs/doc_graph.yml` — merged 2 isolated components into 1 connected component with 1 edge
+- `docs/feature/001_cli_tool.md` — added `### See Also` cross-reference to operation/001
+- `docs/entities.md` — verified counts accurate, added `cli/format/` row

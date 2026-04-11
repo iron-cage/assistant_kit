@@ -10,6 +10,8 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
+| 088 | 🎯 Available | Create `claude_kit` library super-crate — aggregate all non-CLI crates (depends: TSK-087) | architecture | 2026-04-11 | [088](088_claude_kit_library_aggregation.md) |
+| 087 | 🎯 Available | Create `claude_assets` crate pair — multi-artifact installer CLI (`cla`) | feature | 2026-04-11 | [087](087_claude_assets_installer.md) |
 | 086 | ⏳ In Progress | Implement `.account.limits` command (FR-18) | feature | 2026-04-07 | [086](086_implement_account_limits.md) |
 | 085 | ✅ Complete | Update claude_runner `docs/cli/` — `--system-prompt` and `--append-system-prompt` | documentation | 2026-04-06 | [085](completed/085_runner_cli_docs_system_prompt.md) |
 | 084 | ✅ Complete | Update claude_runner `spec.md` — `--system-prompt` and `--append-system-prompt` | documentation | 2026-04-06 | [084](completed/084_runner_spec_system_prompt.md) |
@@ -105,7 +107,7 @@
 
 **Status Distribution:**
 - ⏳ In Progress: 1
-- 🔄 Planned: 0
+- 🎯 Available: 2
 - ✅ Complete: 80
 - 📥 Backlog: 0
 
@@ -117,4 +119,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-04-07 (spec.md migrated to docs/feature/ + docs/invariant/; TSK-086 in progress: error paths done, blocked on HTTP client for happy path)
+**Last Updated:** 2026-04-11 (TSK-087: `claude_assets` crate pair, binary `cla`, multi-artifact installer; TSK-088: `claude_kit` library aggregator, depends on TSK-087 for `claude_assets_core`)
