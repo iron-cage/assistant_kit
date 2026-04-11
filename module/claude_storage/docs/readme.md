@@ -36,7 +36,7 @@ Key files there: `storage_organization.md`, `file_formats.md`, `jsonl_format.md`
 **Complete CLI reference** for all claude_storage commands, parameters, and types.
 
 **Contents**:
-- [commands.md](cli/commands.md) — All 9 commands with syntax, parameters, examples
+- [commands.md](cli/commands.md) — All 13 commands with syntax, parameters, examples
 - [params.md](cli/params.md) — All parameters with types, validation, bidirectional cross-refs
 - [types.md](cli/types.md) — Semantic type system with validation rules
 - [dictionary.md](cli/dictionary.md) — Domain vocabulary (project, session, entry, scope, etc.)

@@ -6,6 +6,7 @@
 |------|---------|-------------|----------:|
 | `feature/` | CLI tool functional design and scope | [feature/readme.md](feature/readme.md) | 1 |
 | `operation/` | Operational procedures for users and maintainers | [operation/readme.md](operation/readme.md) | 1 |
+| `cli/format/` | Export output format rendering specifications (semantic naming) | [cli/format/readme.md](cli/format/readme.md) | 3 |
 | `testing/command/` | Per-command test coverage and cases | [cli/testing/command/readme.md](cli/testing/command/readme.md) | 13 |
 | `testing/param/` | Per-parameter test coverage and cases | [cli/testing/param/readme.md](cli/testing/param/readme.md) | 20 |
 | `testing/param_group/` | Per-parameter-group test coverage and cases | [cli/testing/param_group/readme.md](cli/testing/param_group/readme.md) | 5 |

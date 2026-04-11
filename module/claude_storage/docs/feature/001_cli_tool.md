@@ -25,6 +25,10 @@
 | doc | `../cli/commands.md` | All CLI commands with syntax and examples |
 | doc | `../advanced_topics.md` | Agent sessions and advanced storage topics |
 
+### See Also
+
+- [Operation: Migration Guide](../operation/001_migration_guide.md) — operational procedure for migrating between storage layouts
+
 ### Sources
 
 | File | Notes |

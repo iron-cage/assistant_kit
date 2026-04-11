@@ -12,6 +12,7 @@ Reference documentation for the `claude_storage` CLI binary — a read-only tool
 | `dictionary.md` | Domain vocabulary and term definitions |
 | `parameter_groups.md` | Shared parameter groups with coherence tests |
 | `workflows.md` | Usage scenarios, best practices, complexity matrix |
+| `format/` | Output format catalog for export rendering modes |
 | `testing/` | Test case indexes for all commands, params, and groups |
 
 ## Completion Matrix
@@ -25,6 +26,8 @@ Reference documentation for the `claude_storage` CLI binary — a read-only tool
 | `types.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 | `parameter_groups.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 | `workflows.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
+| `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
+| `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 | `testing/readme.md` | ➖ | ➖ | ➖ | ✅ | ✅ | Index only |
 | `testing/command/*.md` (13 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | `testing/param/*.md` (20 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
@@ -42,6 +45,7 @@ Reference documentation for the `claude_storage` CLI binary — a read-only tool
 - [Dictionary](dictionary.md) — Domain vocabulary
 - [Parameter Groups](parameter_groups.md) — Related parameter sets and their coherence
 - [Workflows](workflows.md) — Common usage patterns and best practices
+- [Formats](format/readme.md) — Export output format rendering specifications
 - [Testing](testing/readme.md) — Test case indexes for all commands, params, and groups
 
 ## Related Documentation
