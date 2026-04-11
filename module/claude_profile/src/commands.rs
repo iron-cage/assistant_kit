@@ -606,7 +606,7 @@ fn parse_rate_limit_headers( resp : &ureq::Response ) -> Result< RateLimitData, 
   } )
 }
 
-/// Format rate-limit data as compact text (v::0): bare percentages, no labels or reset times.
+/// Format rate-limit data as compact text (`v::0`): bare percentages, no labels or reset times.
 fn format_rate_limits_compact( data : &RateLimitData ) -> String
 {
   let pct_session = format!( "{:.0}", data.utilization_5h * 100.0 );
@@ -615,7 +615,7 @@ fn format_rate_limits_compact( data : &RateLimitData ) -> String
   format!( "{pct_session}%\n{pct_weekly}%\n{status}\n" )
 }
 
-/// Format rate-limit data as human-readable text (v::1 default): labelled with reset durations.
+/// Format rate-limit data as human-readable text (`v::1` default): labelled with reset durations.
 fn format_rate_limits_text( data : &RateLimitData ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -631,7 +631,7 @@ fn format_rate_limits_text( data : &RateLimitData ) -> String
   format!( "Session (5h):  {pct_session}% consumed, resets in {reset_session_str}\nWeekly (7d):   {pct_weekly}% consumed, resets in {reset_weekly_str}\nStatus:        {status}\n" )
 }
 
-/// Format rate-limit data as verbose text (v::2): all fields including raw floats and timestamps.
+/// Format rate-limit data as verbose text (`v::2`): all fields including raw floats and timestamps.
 fn format_rate_limits_verbose( data : &RateLimitData ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -706,6 +706,16 @@ fn fetch_rate_limits( creds_path : &std::path::Path ) -> Result< RateLimitData, 
 ///
 /// Makes a lightweight `POST /v1/messages` to fetch `anthropic-ratelimit-unified-*`
 /// response headers; outputs session (5h) and weekly (7d) utilization percentages.
+///
+/// Output format uses a two-level dispatch: outer on `opts.format` (`json` vs `text`),
+/// inner on `opts.verbosity` (only within `text`): `0`=compact, `2`=verbose, `_`=default.
+///
+/// # Pitfall
+///
+/// The inner verbosity match (`0`/`2`/`_`) is SEPARATE from the outer format match.
+/// If only the outer match exists, all text verbosity levels silently fall back to `v::1`
+/// output. Both dispatches are required; `v::0` and `v::2` have automated live tests
+/// (`lim_it2`, `lim_it5`) to catch regressions.
 ///
 /// # Errors
 ///

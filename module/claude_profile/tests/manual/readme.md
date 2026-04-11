@@ -69,48 +69,23 @@ step. No partial writes or missing files.
 
 ---
 
-## Manual Testing Plan — `.account.limits` Happy Path (IT-1–IT-5)
+## Manual Testing Plan — `.account.limits` Happy Path
 
-**Trigger:** When HTTP client infrastructure is added to support `fetch_rate_limits()`.
-Until then, these tests cannot be automated (no local cache exists for rate-limit headers).
+**Trigger:** After any change to `fetch_rate_limits()`, `account_limits_routine()`,
+or the format helpers in `src/commands.rs`.
 
-**Blocker:** Requires a live `POST /v1/messages` call. See TSK-086 for the data source
-investigation and HTTP blocker details.
+**Automated tests (do not re-run manually):** IT-1, IT-2, IT-3, IT-5 are automated
+live tests in `tests/integration/account_limits_test.rs` (lim_it1, lim_it2, lim_it3,
+lim_it5). They require real credentials and will fail without `claude auth login`.
+
+**Manual-only tests (require additional setup):**
 
 ### Prerequisites
 
 - Valid `~/.claude/.credentials.json` with an active Claude Max session
 - `clp` binary compiled with `--features enabled`
 - Network access to `api.anthropic.com`
-
-### IT-1: Default output shows utilization lines
-
-```
-clp .account.limits
-```
-
-Expected exit: 0
-Expected stdout contains:
-- `5h` or `session` utilization line with a percentage (e.g., `Session (5h): 12%`)
-- `7d` or `weekly` utilization line with a percentage
-- Reset time in a human-readable format
-
-### IT-2: Verbose flag shows full header values
-
-```
-clp .account.limits v::2
-```
-
-Expected: all available header fields displayed (status, reset timestamps, utilization decimals).
-
-### IT-3: JSON format returns valid object
-
-```
-clp .account.limits format::json | jq .
-```
-
-Expected exit: 0
-Expected: valid JSON object with numeric utilization fields.
+- A saved named account `work` (run `clp .account.save name::work` first)
 
 ### IT-4: Named account resolves credentials
 
@@ -120,12 +95,4 @@ clp .account.limits name::work
 ```
 
 Expected exit: 0 — uses `work.credentials.json` (not active `.credentials.json`).
-
-### IT-5: `allowed_warning` status shows advisory
-
-Make enough API calls to trigger a warning utilization level, then:
-```
-clp .account.limits
-```
-
-Expected: output mentions the warning status or elevated utilization.
+Expected: same utilization output as default (uses the named account's API key).

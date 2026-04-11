@@ -9,14 +9,16 @@
 
 ## Outcomes
 
-**Completed 2026-04-11.** All 9 IT cases passing (lim01–lim05 error paths + IT-1/IT-3 live automated tests).
+**Completed 2026-04-11.** 9 automated tests passing (lim01–lim05 error paths + lim_it1/lim_it2/lim_it3/lim_it5 live happy-path tests).
 
 - `ureq` v2 added to workspace and `claude_profile` under `enabled` feature (zero deps in library path)
 - `RateLimitData` struct defined in `src/commands.rs` (5h + 7d utilization/reset fields + status string)
 - `fetch_rate_limits()` makes real `POST /v1/messages` (max_tokens: 1) and extracts `anthropic-ratelimit-unified-*` headers via ureq error destructuring (never `.status()` — responsibility test constraint)
-- `account_limits_routine()` output formatting complete: `v::0` (compact), `v::1` (default), `v::2` (verbose), `format::json`
+- `account_limits_routine()` output formatting complete with full verbosity dispatch: `v::0` (compact — bare percentages), `v::1` (default — labelled + reset durations), `v::2` (verbose — raw floats + Unix timestamps), `format::json`
+- `format_rate_limits_compact`, `format_rate_limits_text`, `format_rate_limits_verbose` functions added
 - `unilang.commands.yaml` status updated `"planned"` → `"stable"`
 - `013_account_limits.md` updated to reflect implemented state with ureq note
+- IT-4 (named account `name::work`) remains in manual test plan (`tests/manual/readme.md`)
 
 ## Goal
 

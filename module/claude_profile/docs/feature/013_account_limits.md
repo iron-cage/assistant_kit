@@ -32,7 +32,9 @@
 
 These headers are never cached locally — no local file contains them. `stats-cache.json` has raw token counts only.
 
-**Current implementation state:** Error paths (lim01–lim05) and happy path (AC-01 through AC-03) are implemented. `ureq` v2 HTTP client is gated under the `enabled` feature. The command makes a lightweight `POST /v1/messages` (`max_tokens: 1`, `content: "quota"`) and reads `anthropic-ratelimit-unified-*` response headers. IT-1 through IT-5 require a live API call and are tracked in `tests/manual/readme.md`.
+**Current implementation state:** Error paths (lim01–lim05) and happy path (AC-01 through AC-03) fully implemented. `ureq` v2 HTTP client is gated under the `enabled` feature. The command makes a lightweight `POST /v1/messages` (`max_tokens: 1`, `content: "quota"`) and reads `anthropic-ratelimit-unified-*` response headers. IT-1 (`v::1` default), IT-2 (`v::0` compact), IT-3 (`format::json`), and IT-5 (`v::2` verbose) are automated live API tests in `tests/integration/account_limits_test.rs`. IT-4 (named account `name::work`) is manual-only — requires a saved account and is tracked in `tests/manual/readme.md`.
+
+**Verbosity dispatch:** Output format dispatches on both `opts.format` (outer: `json` vs `text`) and `opts.verbosity` (inner, only when `text`): `0` → compact (bare percentages + status, no labels or reset times), `1` (default) → labelled with reset durations, `2` → verbose with raw floats and Unix timestamps. The inner verbosity match is SEPARATE from the outer format match — omitting the inner match is a silent bug where all verbosity levels produce identical `v::1` output.
 
 **Exit codes:**
 - 0: success
@@ -54,5 +56,6 @@ These headers are never cached locally — no local file contains them. `stats-c
 | doc | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account selection pattern via `name::` |
 | doc | [cli/commands.md](../cli/commands.md) | CLI commands table (row 12) and command detail section |
 | source | `src/commands.rs` | `account_limits_routine()` — fully implemented via `ureq` HTTP client (feature-gated) |
-| test | `tests/` — `lim01–lim04` | Error-path coverage: not-found, no credentials, data unavailable, invalid chars |
+| test | `tests/` — `lim01–lim05` | Error-path coverage: not-found, no credentials, data unavailable, invalid chars, existing-account data-unavailable |
+| test | `tests/integration/account_limits_test.rs` — `lim_it1`, `lim_it2`, `lim_it3`, `lim_it5` | Automated live API tests: default, compact, JSON, verbose verbosity levels |
 | doc | [cli/testing/command/account_limits.md](../cli/testing/command/account_limits.md) | Manual integration test specification |

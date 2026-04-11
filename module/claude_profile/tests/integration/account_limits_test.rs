@@ -13,13 +13,13 @@
 //!
 //! ## Happy Path Status (IT-1 through IT-5)
 //!
-//! IT-1 and IT-3 are automated live tests — they use real credentials from
-//! `~/.claude/.credentials.json` and make a live POST /v1/messages API call.
-//! They will fail if credentials are absent or expired; run `claude auth login` first.
+//! IT-1, IT-2 (`v::0`), IT-3 (`format::json`), and IT-5 (`v::2`) are automated live
+//! tests — they use real credentials from `~/.claude/.credentials.json` and make a
+//! live `POST /v1/messages` API call. They will fail if credentials are absent or
+//! expired; run `claude auth login` first.
 //!
-//! IT-2 (named account), IT-4 (`v::0`), and IT-5 (`v::2`) require additional
-//! setup (a saved named account, verbosity validation) and are tracked in
-//! `tests/manual/readme.md`.
+//! IT-4 (named account `name::work`) requires a saved named account and is tracked
+//! in `tests/manual/readme.md`.
 //!
 //! ## Root Cause Context
 //!
@@ -247,6 +247,33 @@ fn lim_it1_active_account_exits_0_with_utilization_text()
   );
 }
 
+// ── IT-2 ─────────────────────────────────────────────────────────────────────
+
+/// IT-2 (live): Active account, `v::0` compact — exits 0, bare percentages only.
+///
+/// Root Cause: `v::0` verbosity was not dispatched; `account_limits_routine` ignored
+///   `opts.verbosity` and always used the labelled `v::1` format.
+/// Why Not Caught: No automated test existed for compact output.
+/// Fix Applied: Added `format_rate_limits_compact` and verbosity dispatch in routine.
+/// Prevention: Each verbosity level must have its own automated live test.
+/// Pitfall: Requires live credentials — same constraint as IT-1.
+#[ test ]
+fn lim_it2_compact_verbosity_exits_0_with_bare_percentages()
+{
+  let out = run_cs( &[ ".account.limits", "v::0" ] );
+  assert_exit( &out, 0 );
+  let output = stdout( &out );
+  assert!(
+    output.contains( '%' ),
+    "compact output must contain a percentage, got:\n{output}",
+  );
+  // v::0 must NOT contain the labelled headers that appear in v::1
+  assert!(
+    !output.to_lowercase().contains( "session" ) && !output.to_lowercase().contains( "weekly" ),
+    "compact output must not contain 'session' or 'weekly' labels, got:\n{output}",
+  );
+}
+
 // ── IT-3 ─────────────────────────────────────────────────────────────────────
 
 /// IT-3 (live): Active account, `format::json` — exits 0, returns structured JSON.
@@ -273,5 +300,36 @@ fn lim_it3_json_format_exits_0_with_valid_json()
   assert!(
     output.contains( "status" ),
     "json output must contain 'status', got:\n{output}",
+  );
+}
+
+// ── IT-5 ─────────────────────────────────────────────────────────────────────
+
+/// IT-5 (live): Active account, `v::2` verbose — exits 0, shows raw values and timestamps.
+///
+/// Root Cause: `v::2` verbosity was not dispatched; `account_limits_routine` ignored
+///   `opts.verbosity` and always used the labelled `v::1` format.
+/// Why Not Caught: No automated test existed for verbose output.
+/// Fix Applied: Added `format_rate_limits_verbose` and verbosity dispatch in routine.
+/// Prevention: Each verbosity level must have its own automated live test.
+/// Pitfall: Requires live credentials — same constraint as IT-1.
+#[ test ]
+fn lim_it5_verbose_verbosity_exits_0_with_raw_values()
+{
+  let out = run_cs( &[ ".account.limits", "v::2" ] );
+  assert_exit( &out, 0 );
+  let output = stdout( &out );
+  assert!(
+    output.contains( '%' ),
+    "verbose output must contain a percentage, got:\n{output}",
+  );
+  // v::2 must show raw float values and Unix timestamps
+  assert!(
+    output.contains( "raw:" ),
+    "verbose output must contain 'raw:' field, got:\n{output}",
+  );
+  assert!(
+    output.contains( "reset_ts:" ),
+    "verbose output must contain 'reset_ts:' field, got:\n{output}",
   );
 }
