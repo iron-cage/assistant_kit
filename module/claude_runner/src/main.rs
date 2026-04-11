@@ -27,6 +27,8 @@
 //! - **Print** (default when message given): `clr "Fix bug"` or `clr -p "Fix bug"`
 //!   Non-interactive, adds `--print` automatically when a message is provided.
 //!   Captures stdout via `execute()`. Continues previous session.
+//!   Message is automatically prefixed with `"ultrathink "` (extended thinking mode).
+//!   Use `--no-ultrathink` to send the message verbatim.
 //! - **Explicit interactive with message**: `clr --interactive "Fix bug"`
 //!   Suppresses the auto-`--print` default; runs TTY passthrough with a prompt.
 //! - **Dry run** (`--dry-run`): shows the command without executing (includes `-c`).
@@ -45,6 +47,7 @@
 //! clr --new-session "Start fresh analysis"   # new session
 //! clr --system-prompt "You are a Rust expert" "Explain lifetimes"   # override system prompt
 //! clr --append-system-prompt "Be concise." "Fix the bug"            # extend system prompt
+//! clr --no-ultrathink "Send this verbatim"                          # skip ultrathink prefix
 //! clr --help
 //! ```
 
@@ -74,6 +77,7 @@ struct CliArgs
   help : bool,
   system_prompt : Option< String >,
   append_system_prompt : Option< String >,
+  no_ultrathink : bool,
 }
 
 fn print_help()
@@ -100,6 +104,7 @@ fn print_help()
   println!( "  --trace                            Print command to stderr then execute (like set -x)" );
   println!( "  --system-prompt <TEXT>             Set system prompt (replaces the default)" );
   println!( "  --append-system-prompt <TEXT>      Append text to the default system prompt" );
+  println!( "  --no-ultrathink                    Disable automatic \"ultrathink \" message prefix" );
   println!( "  --verbosity <0-5>                  Runner output verbosity level (default: 3)" );
   println!( "  -h, --help                         Show this help" );
 }
@@ -131,8 +136,24 @@ fn parse_token_limit( raw : &str ) -> Result< u32 >
 ///
 /// Mirrors Claude Code's native `--flag value` syntax.
 /// Positional (non-flag) arguments are joined with space to form the message.
+///
+/// `--help`/`-h` wins regardless of other flags or unknown tokens: if either appears
+/// anywhere in `tokens`, parsing short-circuits and returns `CliArgs { help: true, .. }`.
+#[allow( clippy::too_many_lines )]
 fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
 {
+  // --help/-h always wins — return early before any other token is parsed.
+  // This ensures help is shown even when unknown flags or other errors are present.
+  // Fix(issue-help-loses-to-unknown): parse_args returned Err on the first unknown flag,
+  // so main() never reached the cli.help check even when --help was present in argv.
+  // Root cause: early Err return on unknown flags prevented the help check from firing.
+  // Pitfall: checking cli.help after parse_args completes is insufficient — the Err path
+  // in main() exits before any field of CliArgs is consulted.
+  if tokens.iter().any( | t | t == "--help" || t == "-h" )
+  {
+    return Ok( CliArgs { help : true, ..CliArgs::default() } );
+  }
+
   let mut parsed = CliArgs::default();
   let mut positional : Vec< String > = Vec::new();
   let mut i = 0;
@@ -174,6 +195,10 @@ fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       {
         parsed.trace = true;
       }
+      "--no-ultrathink" =>
+      {
+        parsed.no_ultrathink = true;
+      }
       "--system-prompt" =>
       {
         i += 1;
@@ -213,7 +238,13 @@ fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       "--" =>
       {
         // Everything after `--` is positional.
-        positional.extend( tokens[ i + 1 .. ].iter().cloned() );
+        // Fix(issue-empty-msg-double-dash): filter empty tokens here too — `clr -- ""`
+        // must behave like bare `clr`, not forward a degenerate "ultrathink " message.
+        // Root cause: positional.extend() copies all tokens verbatim; the empty-token
+        // guard in the `_` arm does not apply to the `--` code path.
+        // Pitfall: filter at the individual-token level (not the joined string) so that
+        // whitespace-only strings like " " are still valid messages and pass through.
+        positional.extend( tokens[ i + 1 .. ].iter().filter( | t | !t.is_empty() ).cloned() );
         break;
       }
       s if s.starts_with( '-' ) =>
@@ -222,7 +253,16 @@ fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       }
       _ =>
       {
-        positional.push( tokens[ i ].clone() );
+        // Fix(issue-empty-msg-ultrathink): skip empty tokens so `clr ""` behaves like
+        // bare `clr` (no message, no --print, no degenerate "ultrathink " forwarded to claude).
+        // Root cause: empty string was pushed to positional, joined to message=Some(""),
+        // then the ultrathink prefix produced "ultrathink " (trailing space).
+        // Pitfall: filter individual empty tokens, not the joined string — whitespace-only
+        // strings like " " are valid non-empty messages and must not be filtered out.
+        if !tokens[ i ].is_empty()
+        {
+          positional.push( tokens[ i ].clone() );
+        }
       }
     }
     i += 1;
@@ -291,7 +331,18 @@ fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
   }
   if let Some( ref msg ) = cli.message
   {
-    builder = builder.with_message( msg.clone() );
+    // Prepend "ultrathink " to activate extended thinking mode by default.
+    // Idempotent guard (starts_with — no trailing space) prevents double-prefix when
+    // the caller already includes it. --no-ultrathink opts out of the injection entirely.
+    let effective_msg = if cli.no_ultrathink || msg.starts_with( "ultrathink" )
+    {
+      msg.clone()
+    }
+    else
+    {
+      format!( "ultrathink {msg}" )
+    };
+    builder = builder.with_message( effective_msg );
   }
 
   builder

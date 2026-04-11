@@ -15,6 +15,7 @@ use std::{ collections::HashMap, env, path::PathBuf };
 fn main()
 {
   println!( "cargo:rerun-if-changed=build.rs" );
+  println!( "cargo:rerun-if-changed={}", claude_assets::COMMANDS_YAML );
   println!( "cargo:rerun-if-changed={}", claude_runner::COMMANDS_YAML );
   println!( "cargo:rerun-if-changed={}", claude_storage::COMMANDS_YAML );
 

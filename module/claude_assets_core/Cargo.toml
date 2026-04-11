@@ -1,0 +1,23 @@
+[package]
+name         = "claude_assets_core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+readme       = "readme.md"
+description  = "Layer 1 domain logic: symlink-based Claude Code artifact installer"
+
+[lints]
+workspace = true
+
+[lib]
+name = "claude_assets_core"
+path = "src/lib.rs"
+
+[features]
+default = [ "enabled" ]
+full    = [ "enabled" ]
+enabled = []
+
+[dev-dependencies]
+tempfile = { workspace = true }

@@ -10,6 +10,8 @@
 [workspace]
 resolver = "2"
 members = [
+  "module/claude_assets_core",
+  "module/claude_assets",
   "module/claude_common",
   "module/claude_profile_core",
   "module/claude_manager_core",
@@ -73,6 +75,16 @@ missing_docs_in_private_items = "allow"
 
 ## Internal workspace dependencies
 
+[workspace.dependencies.claude_assets_core]
+path = "module/claude_assets_core"
+version = "~1.0.0"
+default-features = false
+
+[workspace.dependencies.claude_assets]
+path = "module/claude_assets"
+version = "~1.0.0"
+default-features = false
+
 [workspace.dependencies.claude_common]
 path = "module/claude_common"
 version = "~1.0.0"
@@ -133,6 +145,9 @@ default-features = false
 version = "~0.48"
 features = [ "enabled", "approach_yaml_multi_build" ]
 default-features = false
+
+[workspace.dependencies.ureq]
+version = "~2"
 
 ## Dev dependencies
 

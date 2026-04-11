@@ -65,4 +65,4 @@ Interaction test planning for the System Prompt parameter group. See [parameter_
 **Expected Output:** Does NOT contain `--system-prompt` or `--append-system-prompt`.
 **Verification:** `!output.contains("--system-prompt")`.
 **Pass Criteria:** Exit 0; no system-prompt flags injected by default.
-**Source:** [params.md — --system-prompt default: absent](../../params.md#parameter--14---system-prompt)
+**Source:** [params.md — --system-prompt default: absent](../../params.md#parameter--15---system-prompt)

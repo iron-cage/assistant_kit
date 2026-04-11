@@ -1,6 +1,6 @@
 # Parameters
 
-### All Parameters (15 total)
+### All Parameters (16 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -17,10 +17,11 @@
 | 11 | `--dry-run` | bool | false | present/absent | Print command without executing | 1 cmd |
 | 12 | `--verbosity` | [`VerbosityLevel`](types.md#type--5-verbositylevel) | 3 | 0 to 5 | Runner output gate level | 1 cmd |
 | 13 | `--trace` | bool | false | present/absent | Print env+command to stderr then execute | 1 cmd |
-| 14 | `--system-prompt` | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Any text | Set system prompt (replaces the default) | 1 cmd |
-| 15 | `--append-system-prompt` | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Any text | Append text to the default system prompt | 1 cmd |
+| 14 | `--no-ultrathink` | bool | false | present/absent | Disable default ultrathink message prefix | 1 cmd |
+| 15 | `--system-prompt` | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Any text | Set system prompt (replaces the default) | 1 cmd |
+| 16 | `--append-system-prompt` | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Any text | Append text to the default system prompt | 1 cmd |
 
-**Groups:** Parameters 2–4 form [Claude-Native Flags](parameter_groups.md#group--1-claude-native-flags). Parameters 5–13 form [Runner Control](parameter_groups.md#group--2-runner-control). Parameters 14–15 form [System Prompt](parameter_groups.md#group--3-system-prompt).
+**Groups:** Parameters 2–4 form [Claude-Native Flags](parameter_groups.md#group--1-claude-native-flags). Parameters 5–14 form [Runner Control](parameter_groups.md#group--2-runner-control). Parameters 15–16 form [System Prompt](parameter_groups.md#group--3-system-prompt).
 
 ---
 
@@ -228,7 +229,7 @@ combinations.
 
 ```sh
 clr --dry-run "test" --model sonnet --max-tokens 50000
-# Output includes: claude --dangerously-skip-permissions --chrome -c --print --model sonnet "test"
+# Output includes: claude --dangerously-skip-permissions --chrome -c --print --model sonnet "ultrathink test"
 ```
 
 ---
@@ -264,7 +265,7 @@ semantics.
 ```sh
 clr --trace "Fix bug"
 # Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
-# Stderr: claude --dangerously-skip-permissions --chrome -c --print "Fix bug"
+# Stderr: claude --dangerously-skip-permissions --chrome -c --print "ultrathink Fix bug"
 # Then: subprocess executes normally
 ```
 
@@ -273,7 +274,33 @@ Combine with `--dry-run` if you want to preview without executing.
 
 ---
 
-### Parameter :: 14. `--system-prompt`
+### Parameter :: 14. `--no-ultrathink`
+
+Disable the default ultrathink message prefix. Normally `clr` prepends
+`"ultrathink "` to every message before sending it to the `claude` subprocess,
+which triggers Claude's extended thinking mode. `--no-ultrathink` suppresses
+this transformation so the message is sent verbatim.
+
+- **Type:** bool (standalone flag)
+- **Default:** false (ultrathink prefix is **ON** by default; this flag turns it **OFF**)
+- **Command:** [`run`](commands.md#command--1-run)
+- **Group:** [Runner Control](parameter_groups.md#group--2-runner-control)
+
+```sh
+clr "Fix the auth bug"                # sends: "ultrathink Fix the auth bug"
+clr --no-ultrathink "Fix the auth bug" # sends: "Fix the auth bug" (verbatim)
+```
+
+**Note:** The ultrathink prefix is not added when the message already starts
+with `"ultrathink"` (idempotent guard — prevents double prepend when the user
+explicitly writes `"ultrathink ..."` themselves).
+
+**Note:** Applies only to message-bearing invocations. Bare `clr` (no message,
+interactive REPL) is not affected.
+
+---
+
+### Parameter :: 15. `--system-prompt`
 
 Replace the default system prompt sent to the `claude` subprocess with a
 custom text. When omitted, Claude's built-in system prompt remains in effect.
@@ -305,7 +332,7 @@ For most use cases, `--append-system-prompt` is the correct choice.
 
 ---
 
-### Parameter :: 15. `--append-system-prompt`
+### Parameter :: 16. `--append-system-prompt`
 
 Append text to the default system prompt. Additive — does not replace the
 built-in system prompt. When omitted, nothing is appended.
@@ -340,4 +367,4 @@ given in the same invocation. Both are forwarded to claude in parse order.
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt).
 
-**Commands by parameter count:** `run` = 15 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 16 parameters, `help` = 0 parameters.

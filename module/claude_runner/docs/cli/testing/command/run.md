@@ -14,6 +14,10 @@ Integration test planning for the `run` command. See [commands.md](../../command
 | TC-06 | `--system-prompt "text"` → flag forwarded to claude | System Prompt |
 | TC-07 | `--append-system-prompt "text"` → flag forwarded to claude | System Prompt |
 | TC-08 | Unknown flag → exit 1, error message | Error Handling |
+| TC-09 | Message → prefixed with `"ultrathink "` by default | Ultrathink Default |
+| TC-10 | `--no-ultrathink "msg"` → message sent verbatim | Ultrathink Opt-Out |
+| TC-11 | Empty string positional `""` → no message (treated as bare `clr`) | Edge Case |
+| TC-12 | Empty string after `--` separator `-- ""` → no message (treated as bare `clr`) | Edge Case |
 
 ## Test Coverage Summary
 
@@ -24,8 +28,11 @@ Integration test planning for the `run` command. See [commands.md](../../command
 - Trace Mode: 1 test
 - System Prompt: 2 tests
 - Error Handling: 1 test
+- Ultrathink Default: 1 test
+- Ultrathink Opt-Out: 1 test
+- Edge Case: 2 tests
 
-**Total:** 8 tests
+**Total:** 12 tests
 
 ---
 
@@ -97,7 +104,7 @@ Integration test planning for the `run` command. See [commands.md](../../command
 **Expected Output:** Command line contains `--system-prompt` and `Be concise.`.
 **Verification:** `output.contains("--system-prompt")` and `output.contains("Be concise.")`.
 **Pass Criteria:** Exit 0; flag and value in assembled command.
-**Source:** [params.md — --system-prompt](../../params.md#parameter--14---system-prompt)
+**Source:** [params.md — --system-prompt](../../params.md#parameter--15---system-prompt)
 
 ---
 
@@ -109,7 +116,7 @@ Integration test planning for the `run` command. See [commands.md](../../command
 **Expected Output:** Command line contains `--append-system-prompt` and `Always JSON.`.
 **Verification:** `output.contains("--append-system-prompt")` and `output.contains("Always JSON.")`.
 **Pass Criteria:** Exit 0; flag and value in assembled command.
-**Source:** [params.md — --append-system-prompt](../../params.md#parameter--15---append-system-prompt)
+**Source:** [params.md — --append-system-prompt](../../params.md#parameter--16---append-system-prompt)
 
 ---
 
@@ -122,3 +129,51 @@ Integration test planning for the `run` command. See [commands.md](../../command
 **Verification:** Exit code 1; stderr contains "unknown option".
 **Pass Criteria:** Exit 1; error message shown.
 **Source:** [feature/001_runner_tool.md](../../../feature/001_runner_tool.md)
+
+---
+
+### TC-09: Message → prefixed with `"ultrathink "` by default
+
+**Goal:** `clr` prepends `"ultrathink "` to every message by default, activating Claude's extended thinking mode.
+**Setup:** None.
+**Command:** `clr --dry-run "Fix the auth bug"`
+**Expected Output:** Command line contains `"ultrathink Fix the auth bug"` (not bare `"Fix the auth bug"`).
+**Verification:** `output.contains("\"ultrathink Fix the auth bug\"")`.
+**Pass Criteria:** Exit 0; message appears with ultrathink prefix in assembled command.
+**Source:** [params.md — --no-ultrathink](../../params.md#parameter--14---no-ultrathink), [invariant/001_default_flags.md](../../../invariant/001_default_flags.md)
+
+---
+
+### TC-10: `--no-ultrathink` → message sent verbatim
+
+**Goal:** `--no-ultrathink` suppresses the ultrathink prefix so the message is forwarded exactly as typed.
+**Setup:** None.
+**Command:** `clr --dry-run --no-ultrathink "Fix the auth bug"`
+**Expected Output:** Command line contains `"Fix the auth bug"` (not `"ultrathink Fix the auth bug"`).
+**Verification:** `output.contains("\"Fix the auth bug\"")` and `!output.contains("\"ultrathink Fix")`.
+**Pass Criteria:** Exit 0; message verbatim, no ultrathink prefix.
+**Source:** [params.md — --no-ultrathink](../../params.md#parameter--14---no-ultrathink)
+
+---
+
+### TC-12: Empty string after `--` separator → no message
+
+**Goal:** `clr -- ""` (empty string after `--` separator) is ignored — behaves identically to bare `clr -- ` (interactive REPL, no `--print`, no message forwarded to claude).
+**Setup:** None.
+**Command:** `clr --dry-run -- ""`
+**Expected Output:** Last line is `claude --dangerously-skip-permissions --chrome -c` (no `--print`, no message arg).
+**Verification:** Exit 0; last line equals bare command; output does NOT contain `"ultrathink "` (with trailing space).
+**Pass Criteria:** Exit 0; empty arg after `--` silently ignored; no degenerate prompt forwarded to claude.
+**Source:** fix issue-empty-msg-double-dash
+
+---
+
+### TC-11: Empty string positional `""` → no message
+
+**Goal:** An empty string positional arg is ignored — `clr ""` behaves identically to bare `clr` (interactive REPL, no `--print`, no message forwarded to claude).
+**Setup:** None.
+**Command:** `clr --dry-run ""`
+**Expected Output:** Last line is `claude --dangerously-skip-permissions --chrome -c` (no `--print`, no message arg).
+**Verification:** Exit 0; last line equals bare command; output does NOT contain `"ultrathink "` (with trailing space).
+**Pass Criteria:** Exit 0; empty arg silently ignored; no degenerate prompt forwarded to claude.
+**Source:** fix issue-empty-msg-ultrathink

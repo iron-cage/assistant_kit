@@ -519,42 +519,162 @@ fn require_active_credentials( paths : &crate::ClaudePaths ) -> Result< std::pat
   Ok( creds )
 }
 
-/// Attempt to fetch rate-limit utilization data from the Anthropic API.
-///
-/// **Not yet implemented**: Rate-limit data (`anthropic-ratelimit-unified-*` headers)
-/// is server-side only and requires a live POST `/v1/messages` API call.
-/// This crate is architecturally prohibited from spawning processes or making
-/// network calls (enforced by `responsibility_no_process_execution_test.rs`).
-///
-/// # Investigation findings (2026-04-07)
-///
-/// - Headers confirmed from Claude Code binary analysis:
-///   `anthropic-ratelimit-unified-5h-utilization`, `5h-reset`,
-///   `anthropic-ratelimit-unified-7d-utilization`, `7d-reset`,
-///   `anthropic-ratelimit-unified-status` (`allowed`/`allowed_warning`/`rejected`).
-/// - Utilization values are decimals (0.0–1.0); reset times are Unix timestamps.
-/// - Claude Code makes a lightweight POST with `max_tokens: 1` to fetch these headers.
-/// - No local cache; headers are response-only.
-///
-/// # Blocked by
-///
-/// HTTP client infrastructure (e.g., `ureq`) is not available in this crate.
-/// Add HTTP dependency and implement `fetch_rate_limits` to unblock IT-1 through IT-5.
-fn fetch_rate_limits( _creds_path : &std::path::Path ) -> Result< (), ErrorData >
+/// Rate-limit utilization data from the Anthropic API response headers.
+#[ derive( Debug ) ]
+struct RateLimitData
 {
-  Err( ErrorData::new(
-    ErrorCode::InternalError,
-    "rate limit data unavailable: requires a live API call \u{2014} \
-     run `claude /usage` to view current limits".to_string(),
-  ) )
+  /// 5-hour session window utilization (0.0–1.0).
+  utilization_5h : f64,
+  /// 5-hour session window reset time (Unix timestamp, seconds).
+  reset_5h       : u64,
+  /// 7-day all-model utilization (0.0–1.0).
+  utilization_7d : f64,
+  /// 7-day all-model reset time (Unix timestamp, seconds).
+  reset_7d       : u64,
+  /// Rate-limit status: `allowed`, `allowed_warning`, or `rejected`.
+  status         : String,
+}
+
+/// Read the OAuth access token from a credentials file.
+///
+/// Searches for `accessToken` in the credential JSON using `parse_string_field`.
+/// Works for both the active credentials file and saved named account files
+/// because the field search is position-independent.
+fn read_auth_token( creds_path : &std::path::Path ) -> Result< String, ErrorData >
+{
+  let content = std::fs::read_to_string( creds_path )
+    .map_err( |e| ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "cannot read credentials: {e}" ),
+    ) )?;
+  crate::account::parse_string_field( &content, "accessToken" )
+    .ok_or_else( || ErrorData::new(
+      ErrorCode::InternalError,
+      "credentials missing 'accessToken' \u{2014} re-authenticate with `claude auth login`".to_string(),
+    ) )
+}
+
+/// Format seconds as a human-readable duration (`1d 2h 30m`, `5h 15m`, `0m`).
+fn format_duration_secs( secs : u64 ) -> String
+{
+  if secs == 0 { return "0m".to_string(); }
+  let days  = secs / 86400;
+  let hours = ( secs % 86400 ) / 3600;
+  let mins  = ( secs % 3600 ) / 60;
+  let mut parts = Vec::new();
+  if days  > 0 { parts.push( format!( "{days}d" ) ); }
+  if hours > 0 { parts.push( format!( "{hours}h" ) ); }
+  if mins  > 0 || parts.is_empty() { parts.push( format!( "{mins}m" ) ); }
+  parts.join( " " )
+}
+
+/// Parse rate-limit utilization headers from the API response.
+fn parse_rate_limit_headers( resp : &ureq::Response ) -> Result< RateLimitData, ErrorData >
+{
+  let h = | name : &str | -> Result< String, ErrorData >
+  {
+    resp.header( name )
+      .map( ToString::to_string )
+      .ok_or_else( || ErrorData::new(
+        ErrorCode::InternalError,
+        format!( "rate limit header '{name}' missing \u{2014} run `claude /usage` to view limits" ),
+      ) )
+  };
+
+  let s_session_util  = h( "anthropic-ratelimit-unified-5h-utilization" )?;
+  let s_session_reset = h( "anthropic-ratelimit-unified-5h-reset" )?;
+  let s_weekly_util   = h( "anthropic-ratelimit-unified-7d-utilization" )?;
+  let s_weekly_reset  = h( "anthropic-ratelimit-unified-7d-reset" )?;
+  let status          = h( "anthropic-ratelimit-unified-status" )?;
+
+  let utilization_session = s_session_util.parse::< f64 >()
+    .map_err( |e| ErrorData::new( ErrorCode::InternalError, format!( "malformed 5h-utilization header: {e}" ) ) )?;
+  let reset_session_ts = s_session_reset.parse::< u64 >()
+    .map_err( |e| ErrorData::new( ErrorCode::InternalError, format!( "malformed 5h-reset header: {e}" ) ) )?;
+  let utilization_weekly = s_weekly_util.parse::< f64 >()
+    .map_err( |e| ErrorData::new( ErrorCode::InternalError, format!( "malformed 7d-utilization header: {e}" ) ) )?;
+  let reset_weekly_ts = s_weekly_reset.parse::< u64 >()
+    .map_err( |e| ErrorData::new( ErrorCode::InternalError, format!( "malformed 7d-reset header: {e}" ) ) )?;
+
+  Ok( RateLimitData
+  {
+    utilization_5h : utilization_session,
+    reset_5h       : reset_session_ts,
+    utilization_7d : utilization_weekly,
+    reset_7d       : reset_weekly_ts,
+    status,
+  } )
+}
+
+/// Format rate-limit data as human-readable text.
+fn format_rate_limits_text( data : &RateLimitData ) -> String
+{
+  use std::time::{ SystemTime, UNIX_EPOCH };
+  let now_secs = SystemTime::now()
+    .duration_since( UNIX_EPOCH )
+    .unwrap_or_default()
+    .as_secs();
+  let pct_session       = format!( "{:.0}", data.utilization_5h * 100.0 );
+  let pct_weekly        = format!( "{:.0}", data.utilization_7d * 100.0 );
+  let reset_session_str = format_duration_secs( data.reset_5h.saturating_sub( now_secs ) );
+  let reset_weekly_str  = format_duration_secs( data.reset_7d.saturating_sub( now_secs ) );
+  let status            = &data.status;
+  format!( "Session (5h):  {pct_session}% consumed, resets in {reset_session_str}\nWeekly (7d):   {pct_weekly}% consumed, resets in {reset_weekly_str}\nStatus:        {status}\n" )
+}
+
+/// Format rate-limit data as a JSON object.
+fn format_rate_limits_json( data : &RateLimitData ) -> String
+{
+  let pct_session  = format!( "{:.0}", data.utilization_5h * 100.0 );
+  let pct_weekly   = format!( "{:.0}", data.utilization_7d * 100.0 );
+  let ts_session   = data.reset_5h;
+  let ts_weekly    = data.reset_7d;
+  let status_esc   = json_escape( &data.status );
+  format!( "{{\n  \"session_5h_pct\": {pct_session},\n  \"session_5h_reset_ts\": {ts_session},\n  \"weekly_7d_pct\": {pct_weekly},\n  \"weekly_7d_reset_ts\": {ts_weekly},\n  \"status\": \"{status_esc}\"\n}}\n" )
+}
+
+/// Fetch rate-limit utilization from the Anthropic API.
+///
+/// Makes a lightweight `POST /v1/messages` (`max_tokens: 1`, content `"quota"`)
+/// and reads `anthropic-ratelimit-unified-*` response headers present on both
+/// 2xx and non-2xx responses.
+///
+/// # Errors
+///
+/// Returns `ErrorData` (exit 2) if credentials are missing or malformed,
+/// the HTTP transport fails, or required rate-limit headers are absent.
+fn fetch_rate_limits( creds_path : &std::path::Path ) -> Result< RateLimitData, ErrorData >
+{
+  let token = read_auth_token( creds_path )?;
+  let body  = r#"{"model":"claude-haiku-4-5-20251001","max_tokens":1,"messages":[{"role":"user","content":"quota"}]}"#;
+
+  // Fix(issue-oauth-beta-stale): anthropic-beta version must match what the Claude binary uses.
+  // Root cause: "oauth-2023-09-22" was the initial value; the API silently rejected it with 401
+  // ("OAuth authentication is currently not supported") — no rate-limit headers were returned.
+  // Pitfall: the beta string is not in any public Anthropic API doc; confirm against `strings $(which claude)`.
+  let req_result = ureq::post( "https://api.anthropic.com/v1/messages" )
+    .set( "Authorization", &format!( "Bearer {token}" ) )
+    .set( "anthropic-beta", "oauth-2025-04-20" )
+    .set( "anthropic-version", "2023-06-01" )
+    .set( "Content-Type", "application/json" )
+    .send_string( body );
+
+  let resp = match req_result
+  {
+    Ok( r ) | Err( ureq::Error::Status( _, r ) ) => r,
+    Err( e )                                      => return Err( ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "HTTP request failed: {e} \u{2014} check network connection" ),
+    ) ),
+  };
+
+  parse_rate_limit_headers( &resp )
 }
 
 /// `.account.limits` — show rate-limit utilization for the selected account (FR-18).
 ///
-/// **Status**: Parameter validation and error paths are implemented.
-/// Happy-path data display (IT-1 through IT-5) is pending HTTP client
-/// infrastructure: rate-limit data requires a live POST `/v1/messages` call
-/// which is architecturally out of scope for `claude_profile/src/`.
+/// Makes a lightweight `POST /v1/messages` to fetch `anthropic-ratelimit-unified-*`
+/// response headers; outputs session (5h) and weekly (7d) utilization percentages.
 ///
 /// # Errors
 ///
@@ -563,11 +683,12 @@ fn fetch_rate_limits( _creds_path : &std::path::Path ) -> Result< (), ErrorData 
 /// - `name::` contains invalid characters (exit 1)
 /// - Named account does not exist (exit 2)
 /// - No active credentials are configured (exit 2)
-/// - Rate-limit data cannot be retrieved (exit 2 — always until HTTP is added)
+/// - Credentials missing `accessToken` (exit 2)
+/// - HTTP transport fails or rate-limit headers absent (exit 2)
 #[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
 pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let _opts = OutputOptions::from_cmd( &cmd )?;
+  let opts = OutputOptions::from_cmd( &cmd )?;
   let paths = require_claude_paths()?;
 
   let name_arg = match cmd.arguments.get( "name" )
@@ -595,8 +716,13 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
     path
   };
 
-  fetch_rate_limits( &creds_path )
-    .map( |()| OutputData::new( String::new(), "text" ) )
+  let data = fetch_rate_limits( &creds_path )?;
+  let text = match opts.format
+  {
+    OutputFormat::Json  => format_rate_limits_json( &data ),
+    OutputFormat::Text  => format_rate_limits_text( &data ),
+  };
+  Ok( OutputData::new( text, "text" ) )
 }
 
 /// `.` handler — dead code (adapter routes `.` → `.help`).

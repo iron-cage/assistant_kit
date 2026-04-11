@@ -29,6 +29,7 @@ claude_profile_core  = { workspace = true }
 error_tools          = { workspace = true, optional = true }
 serde_json           = { workspace = true, optional = true }
 unilang              = { workspace = true, optional = true }
+ureq                 = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json.workspace = true
@@ -42,5 +43,6 @@ enabled = [
   "error_tools/error_untyped",
   "dep:serde_json",
   "dep:unilang",
+  "dep:ureq",
 ]
 full = [ "enabled" ]

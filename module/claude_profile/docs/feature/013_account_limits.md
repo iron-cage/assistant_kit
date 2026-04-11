@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Show plan and rate-limit utilization for a selected account so the user can see how much of their allocation remains before hitting limits.
-- **Responsibility**: Documents the `.account.limits` command requirements (FR-18). L2 for happy-path (HTTP client not yet in workspace); L3 for error-path behaviour (implemented).
+- **Responsibility**: Documents the `.account.limits` command requirements (FR-18). L3 implemented: happy-path (ureq HTTP client, `anthropic-ratelimit-unified-*` headers) and error-path (lim01–lim05) both passing.
 - **In Scope**: Command output structure, verbosity levels, account selection, confirmed data source (HTTP response headers).
 - **Out of Scope**: Implementation details (→ implementation task), historical token counts (→ 009_token_usage.md).
 
@@ -32,7 +32,7 @@
 
 These headers are never cached locally — no local file contains them. `stats-cache.json` has raw token counts only.
 
-**Current implementation state:** Error paths are implemented and tested (`lim01–lim04`). Happy path (AC-01 through AC-03) is blocked on adding an HTTP client (`ureq` recommended — no async, minimal deps) to the workspace. Until unblocked, the command exits 2 with: `"rate limit data unavailable — run 'claude /usage' to view current limits"`.
+**Current implementation state:** Error paths (lim01–lim05) and happy path (AC-01 through AC-03) are implemented. `ureq` v2 HTTP client is gated under the `enabled` feature. The command makes a lightweight `POST /v1/messages` (`max_tokens: 1`, `content: "quota"`) and reads `anthropic-ratelimit-unified-*` response headers. IT-1 through IT-5 require a live API call and are tracked in `tests/manual/readme.md`.
 
 **Exit codes:**
 - 0: success
@@ -53,6 +53,6 @@ These headers are never cached locally — no local file contains them. `stats-c
 | doc | [009_token_usage.md](009_token_usage.md) | Related: historical token counts from stats-cache.json (distinct data) |
 | doc | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account selection pattern via `name::` |
 | doc | [cli/commands.md](../cli/commands.md) | CLI commands table (row 12) and command detail section |
-| source | `src/commands.rs` | `account_limits_routine()` — error paths implemented; happy path blocked on HTTP client |
+| source | `src/commands.rs` | `account_limits_routine()` — fully implemented via `ureq` HTTP client (feature-gated) |
 | test | `tests/` — `lim01–lim04` | Error-path coverage: not-found, no credentials, data unavailable, invalid chars |
 | doc | [cli/testing/command/account_limits.md](../cli/testing/command/account_limits.md) | Manual integration test specification |

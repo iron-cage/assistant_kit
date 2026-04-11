@@ -1,6 +1,6 @@
 # Test: `--append-system-prompt`
 
-Edge case coverage for the `--append-system-prompt` parameter. See [params.md](../../params.md#parameter--15---append-system-prompt) for specification.
+Edge case coverage for the `--append-system-prompt` parameter. See [params.md](../../params.md#parameter--16---append-system-prompt) for specification.
 
 ## Test Case Index
 
@@ -32,7 +32,7 @@ Edge case coverage for the `--append-system-prompt` parameter. See [params.md](.
 **Expected Output:** Command line contains `--append-system-prompt` and `Always JSON.`.
 **Verification:** `output.contains("--append-system-prompt")` and `output.contains("Always JSON.")`.
 **Pass Criteria:** Exit 0; flag and value both present.
-**Source:** [params.md — --append-system-prompt](../../params.md#parameter--15---append-system-prompt)
+**Source:** [params.md — --append-system-prompt](../../params.md#parameter--16---append-system-prompt)
 
 ---
 
@@ -44,7 +44,7 @@ Edge case coverage for the `--append-system-prompt` parameter. See [params.md](.
 **Expected Output:** Exit code 1; stderr contains "--append-system-prompt requires a value".
 **Verification:** Exit code 1.
 **Pass Criteria:** Exit 1; error message shown.
-**Source:** [params.md — --append-system-prompt validation](../../params.md#parameter--15---append-system-prompt)
+**Source:** [params.md — --append-system-prompt validation](../../params.md#parameter--16---append-system-prompt)
 
 ---
 
@@ -56,7 +56,7 @@ Edge case coverage for the `--append-system-prompt` parameter. See [params.md](.
 **Expected Output:** Exit 0; command assembled (empty append forwarded).
 **Verification:** Exit 0.
 **Pass Criteria:** Exit 0; no rejection of empty string.
-**Source:** [params.md — --append-system-prompt](../../params.md#parameter--15---append-system-prompt)
+**Source:** [params.md — --append-system-prompt](../../params.md#parameter--16---append-system-prompt)
 
 ---
 

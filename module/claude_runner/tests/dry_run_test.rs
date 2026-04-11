@@ -28,10 +28,15 @@
 //! - All 5 Tier-1 default env vars appear in output (not just max-tokens)
 //! - No message provided: `--dry-run` outputs bare `claude --dangerously-skip-permissions --chrome -c` command with no message arg
 //! - `--dry-run --verbosity 0` still shows output (verbosity does not gate dry-run; bug reproducer)
-//! - `--system-prompt TEXT` appears in command args (param 14 round-trip)
-//! - `--append-system-prompt TEXT` appears in command args (param 15 round-trip)
+//! - `--system-prompt TEXT` appears in command args (param 15 round-trip)
+//! - `--append-system-prompt TEXT` appears in command args (param 16 round-trip)
 //! - Both system-prompt flags can appear together in a single invocation
 //! - `--help` output lists both `--system-prompt` and `--append-system-prompt`
+//! - `"ultrathink "` prefix applied to message by default
+//! - `--no-ultrathink` suppresses `"ultrathink "` prefix in dry-run output
+//! - Idempotent guard: message starting with `"ultrathink"` is not double-prefixed
+//! - `--trace --dry-run` emits nothing to stderr (dry-run returns before trace fires)
+//! - `""` empty positional arg ignored — bare command, no message, no degenerate ultrathink prefix
 
 use std::process::Command;
 
@@ -49,6 +54,17 @@ fn run_dry( args : &[ &str ] ) -> String
     String::from_utf8_lossy( &out.stderr )
   );
   String::from_utf8_lossy( &out.stdout ).into_owned()
+}
+
+/// Raw binary invocation — returns `Output` without asserting success.
+/// Used for tests where a non-zero exit is the expected failure signal (e.g. unknown flags).
+fn run_cli( args : &[ &str ] ) -> std::process::Output
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  Command::new( bin )
+    .args( args )
+    .output()
+    .expect( "Failed to invoke clr binary" )
 }
 
 #[ test ]
@@ -110,8 +126,8 @@ fn message_appears_in_command_quoted()
 {
   let output = run_dry( &[ "--dry-run", "hello world" ] );
   assert!(
-    output.contains( "\"hello world\"" ),
-    "Message must appear quoted in command. Got:\n{output}"
+    output.contains( "\"ultrathink hello world\"" ),
+    "Message must appear with ultrathink prefix and quoted. Got:\n{output}"
   );
 }
 
@@ -126,7 +142,7 @@ fn combined_flags_all_appear()
   assert!( output.contains( "cd /tmp" ), "Must have cd line" );
   assert!( output.contains( "--dangerously-skip-permissions" ), "Must have skip-permissions (default)" );
   assert!( output.contains( " -c" ), "Must have -c (automatic)" );
-  assert!( output.contains( "\"fix it\"" ), "Must have quoted message" );
+  assert!( output.contains( "\"ultrathink fix it\"" ), "Must have ultrathink-prefixed quoted message" );
 }
 
 #[ test ]
@@ -148,8 +164,8 @@ fn message_param_appears_in_command()
 {
   let output = run_dry( &[ "--dry-run", "Hello there" ] );
   assert!(
-    output.contains( "\"Hello there\"" ),
-    "message must appear quoted in command. Got:\n{output}"
+    output.contains( "\"ultrathink Hello there\"" ),
+    "message must appear with ultrathink prefix and quoted. Got:\n{output}"
   );
 }
 
@@ -402,5 +418,109 @@ fn help_shows_system_prompt_flags()
   assert!(
     output.contains( "--append-system-prompt" ),
     "--help must mention --append-system-prompt. Got:\n{output}"
+  );
+}
+
+// Default "ultrathink " prefix is applied to every message in dry-run output.
+#[ test ]
+fn ultrathink_prefix_default_on()
+{
+  let output = run_dry( &[ "--dry-run", "fix the bug" ] );
+  assert!(
+    output.contains( "\"ultrathink fix the bug\"" ),
+    "message must be prefixed with \"ultrathink \" by default. Got:\n{output}"
+  );
+}
+
+// --no-ultrathink flag suppresses the default "ultrathink " prefix.
+//
+// Uses run_cli (not run_dry) because --no-ultrathink is unknown before Phase 3
+// implementation; run_dry panics on non-zero exit — run_cli lets the test fail cleanly.
+#[ test ]
+fn no_ultrathink_flag_suppresses_prefix()
+{
+  let out = run_cli( &[ "--dry-run", "--no-ultrathink", "fix the bug" ] );
+  assert!(
+    out.status.success(),
+    "--no-ultrathink must be accepted (exit 0). stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "\"fix the bug\"" ),
+    "message must appear verbatim when --no-ultrathink given. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "\"ultrathink fix the bug\"" ),
+    "ultrathink prefix must be suppressed. Got:\n{stdout}"
+  );
+}
+
+// Idempotent guard: message starting with "ultrathink" is not double-prefixed.
+#[ test ]
+fn ultrathink_idempotent_guard()
+{
+  let output = run_dry( &[ "--dry-run", "ultrathink fix it" ] );
+  assert!(
+    output.contains( "\"ultrathink fix it\"" ),
+    "message must appear verbatim when already ultrathink-prefixed. Got:\n{output}"
+  );
+  assert!(
+    !output.contains( "\"ultrathink ultrathink" ),
+    "double ultrathink prefix must not appear. Got:\n{output}"
+  );
+}
+
+// --trace combined with --dry-run: dry-run wins; nothing appears on stderr.
+//
+// `handle_dry_run` returns before the trace output block fires, so stderr must be empty.
+// Regression guard: if the control flow order is changed (trace moved before dry-run check),
+// this catches the breakage.
+#[ test ]
+fn trace_with_dry_run_emits_no_stderr()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "--trace", "--dry-run", "test" ] )
+    .output()
+    .expect( "Failed to invoke clr binary" );
+  assert!( out.status.success(), "--trace --dry-run must exit 0" );
+  assert!(
+    out.stderr.is_empty(),
+    "--trace must not emit to stderr when --dry-run wins. Got:\n{}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "claude " ),
+    "--dry-run stdout output must still appear. Got:\n{stdout}"
+  );
+}
+
+// Empty positional arg `""` is ignored — bare command, no message, no degenerate ultrathink.
+//
+// Bug reproducer: before the fix, `clr ""` produced `"ultrathink "` (trailing space)
+// as the message because the empty token was pushed to positional, joined to Some(""),
+// and the ultrathink prefix fired unconditionally. See cli_args_test.rs T54 for the
+// canonical reproducer with 5-section documentation.
+// test_kind: bug_reproducer(issue-empty-msg-ultrathink)
+#[ test ]
+fn empty_positional_arg_produces_bare_command()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "--dry-run", "" ] )
+    .output()
+    .expect( "Failed to invoke clr binary" );
+  assert!( out.status.success(), "empty positional arg must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  let last_line = stdout.trim_end().lines().last().unwrap_or_default();
+  assert_eq!(
+    last_line, "claude --dangerously-skip-permissions --chrome -c",
+    "empty positional arg must produce bare command (no message). Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "\"ultrathink \"" ),
+    "empty positional must NOT produce 'ultrathink ' degenerate message. Got:\n{stdout}"
   );
 }

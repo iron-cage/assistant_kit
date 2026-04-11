@@ -5,7 +5,7 @@
 | # | Group | Parameters | Purpose |
 |---|-------|------------|---------|
 | 1 | Claude-Native Flags | 3 | Flags passed through to the claude subprocess |
-| 2 | Runner Control | 9 | Flags consumed by the runner itself |
+| 2 | Runner Control | 10 | Flags consumed by the runner itself |
 | 3 | System Prompt | 2 | Flags that inject or extend the system prompt sent to claude |
 
 ---
@@ -54,7 +54,7 @@ Flags consumed by the runner itself before or instead of invoking the
 claude subprocess. These control execution behavior, not Claude Code
 behavior.
 
-**Coherence test:** "Is this flag consumed by the runner, not Claude?" — YES for all 9.
+**Coherence test:** "Is this flag consumed by the runner, not Claude?" — YES for all 10.
 
 **Parameters:**
 
@@ -69,6 +69,7 @@ behavior.
 | [`--dry-run`](params.md#parameter--11---dry-run) | bool | Preview without executing |
 | [`--verbosity`](params.md#parameter--12---verbosity) | [`VerbosityLevel`](types.md#type--5-verbositylevel) | Runner output level |
 | [`--trace`](params.md#parameter--13---trace) | bool | Print env+command to stderr then execute |
+| [`--no-ultrathink`](params.md#parameter--14---no-ultrathink) | bool | Disable default ultrathink message prefix |
 
 **Used by:** [`run`](commands.md#command--1-run)
 
@@ -107,8 +108,8 @@ sent to claude?" — YES for both.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| [`--system-prompt`](params.md#parameter--14---system-prompt) | [`SystemPromptText`](types.md#type--6-systemprompttext) | Set system prompt (replaces the default) |
-| [`--append-system-prompt`](params.md#parameter--15---append-system-prompt) | [`SystemPromptText`](types.md#type--6-systemprompttext) | Append text to the default system prompt |
+| [`--system-prompt`](params.md#parameter--15---system-prompt) | [`SystemPromptText`](types.md#type--6-systemprompttext) | Set system prompt (replaces the default) |
+| [`--append-system-prompt`](params.md#parameter--16---append-system-prompt) | [`SystemPromptText`](types.md#type--6-systemprompttext) | Append text to the default system prompt |
 
 **Used by:** [`run`](commands.md#command--1-run)
 

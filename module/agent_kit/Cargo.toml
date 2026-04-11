@@ -17,7 +17,8 @@ storage = [ "dep:claude_storage_core" ]
 profile = [ "dep:claude_profile_core" ]
 runner  = [ "dep:claude_runner_core" ]
 manager = [ "dep:claude_manager_core" ]
-full    = [ "common", "storage", "profile", "runner", "manager" ]
+assets  = [ "dep:claude_assets_core" ]
+full    = [ "common", "storage", "profile", "runner", "manager", "assets" ]
 enabled = [ "full" ]
 
 [dependencies]
@@ -26,6 +27,7 @@ claude_storage_core = { workspace = true, optional = true }
 claude_profile_core = { workspace = true, optional = true }
 claude_runner_core  = { workspace = true, optional = true, features = [ "enabled" ] }
 claude_manager_core = { workspace = true, optional = true }
+claude_assets_core  = { workspace = true, optional = true }
 
 [[test]]
 name = "integration"

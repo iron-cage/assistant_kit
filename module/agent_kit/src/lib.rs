@@ -11,7 +11,8 @@
 //! | `profile` | [`profile`] | `claude_profile_core` — token status, account management |
 //! | `runner` | [`runner`] | `claude_runner_core` — `ClaudeCommand` builder + `execute()` |
 //! | `manager` | [`manager`] | `claude_manager_core` — version, settings I/O helpers |
-//! | `full` | all | All five domain modules |
+//! | `assets` | [`assets`] | `claude_assets_core` — symlink-based artifact installer |
+//! | `full` | all | All six domain modules |
 //! | `enabled` | all | Alias for `full` |
 //!
 //! # Usage
@@ -61,4 +62,11 @@ pub mod manager
 {
   //! Re-exports from [`claude_manager_core`]: version detection, settings I/O.
   pub use claude_manager_core::*;
+}
+
+#[ cfg( feature = "assets" ) ]
+pub mod assets
+{
+  //! Re-exports from [`claude_assets_core`]: symlink-based artifact installer.
+  pub use claude_assets_core::*;
 }

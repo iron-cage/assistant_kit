@@ -1,0 +1,46 @@
+[package]
+name         = "claude_assets"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+readme       = "readme.md"
+description  = "CLI for installing Claude Code artifacts (rules, skills, commands) via symlinks"
+
+[lints]
+workspace = true
+
+[lib]
+name = "claude_assets"
+path = "src/lib.rs"
+
+[[bin]]
+name = "claude_assets"
+path = "src/main.rs"
+required-features = [ "enabled" ]
+
+[[bin]]
+name = "cla"
+path = "src/bin/cla.rs"
+required-features = [ "enabled" ]
+
+[features]
+default = [ "enabled" ]
+full    = [ "enabled" ]
+enabled = [
+  "dep:claude_assets_core",
+  "dep:unilang",
+  "unilang/enabled",
+  "dep:error_tools",
+  "error_tools/enabled",
+  "error_tools/error_untyped",
+]
+
+[dependencies]
+claude_assets_core = { workspace = true, optional = true }
+unilang            = { workspace = true, optional = true }
+error_tools        = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile   = { workspace = true }
+assert_cmd = { workspace = true }

@@ -1,6 +1,6 @@
 # Test: `--system-prompt`
 
-Edge case coverage for the `--system-prompt` parameter. See [params.md](../../params.md#parameter--14---system-prompt) for specification.
+Edge case coverage for the `--system-prompt` parameter. See [params.md](../../params.md#parameter--15---system-prompt) for specification.
 
 ## Test Case Index
 
@@ -32,7 +32,7 @@ Edge case coverage for the `--system-prompt` parameter. See [params.md](../../pa
 **Expected Output:** Command line contains `--system-prompt` and `Be concise.`.
 **Verification:** `output.contains("--system-prompt")` and `output.contains("Be concise.")`.
 **Pass Criteria:** Exit 0; flag and value both present.
-**Source:** [params.md — --system-prompt](../../params.md#parameter--14---system-prompt)
+**Source:** [params.md — --system-prompt](../../params.md#parameter--15---system-prompt)
 
 ---
 
@@ -44,7 +44,7 @@ Edge case coverage for the `--system-prompt` parameter. See [params.md](../../pa
 **Expected Output:** Exit code 1; stderr contains "--system-prompt requires a value".
 **Verification:** Exit code 1.
 **Pass Criteria:** Exit 1; error message shown.
-**Source:** [params.md — --system-prompt validation](../../params.md#parameter--14---system-prompt)
+**Source:** [params.md — --system-prompt validation](../../params.md#parameter--15---system-prompt)
 
 ---
 
@@ -56,7 +56,7 @@ Edge case coverage for the `--system-prompt` parameter. See [params.md](../../pa
 **Expected Output:** Exit 0; command assembled (empty prompt forwarded).
 **Verification:** Exit 0.
 **Pass Criteria:** Exit 0; no rejection of empty string.
-**Source:** [params.md — --system-prompt](../../params.md#parameter--14---system-prompt)
+**Source:** [params.md — --system-prompt](../../params.md#parameter--15---system-prompt)
 
 ---
 

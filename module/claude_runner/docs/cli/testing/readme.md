@@ -15,7 +15,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
 | Commands | 2 | ≥4 TC each |
-| Parameters | 2 | ≥4 TC each |
+| Parameters | 3 | ≥4 TC each |
 | Parameter groups | 1 | ≥4 TC each |
 
 ## Navigation
@@ -25,6 +25,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`help`](command/help.md)
 
 ### Parameters
+- [`--no-ultrathink`](param/no_ultrathink.md)
 - [`--system-prompt`](param/system_prompt.md)
 - [`--append-system-prompt`](param/append_system_prompt.md)
 

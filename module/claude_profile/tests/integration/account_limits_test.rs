@@ -13,11 +13,13 @@
 //!
 //! ## Happy Path Status (IT-1 through IT-5)
 //!
-//! IT-1 through IT-5 require a live POST /v1/messages API call to retrieve
-//! `anthropic-ratelimit-unified-*` response headers. This crate is architecturally
-//! prohibited from making network calls (see `responsibility_no_process_execution_test.rs`).
-//! HTTP client infrastructure must be added before these tests can be written.
-//! Until then, they are tracked in the manual test plan at `tests/manual/readme.md`.
+//! IT-1 and IT-3 are automated live tests — they use real credentials from
+//! `~/.claude/.credentials.json` and make a live POST /v1/messages API call.
+//! They will fail if credentials are absent or expired; run `claude auth login` first.
+//!
+//! IT-2 (named account), IT-4 (`v::0`), and IT-5 (`v::2`) require additional
+//! setup (a saved named account, verbosity validation) and are tracked in
+//! `tests/manual/readme.md`.
 //!
 //! ## Root Cause Context
 //!
@@ -34,8 +36,8 @@
 //! feature and MUST NOT use [`std::process::Command`] (banned by the responsibility test).
 
 use crate::helpers::{
-  run_cs_with_env,
-  stderr, assert_exit,
+  run_cs, run_cs_with_env,
+  stdout, stderr, assert_exit,
   write_credentials, write_account,
   FAR_FUTURE_MS,
 };
@@ -206,5 +208,70 @@ fn lim05_existing_named_account_exits_2_with_data_unavailable()
   assert!(
     !err.is_empty(),
     "must emit an actionable data-unavailable error, got empty stderr",
+  );
+}
+
+// ── IT-1 ─────────────────────────────────────────────────────────────────────
+
+/// IT-1 (live): Active account, default text format — exits 0, shows utilization.
+///
+/// Root Cause (original): `fetch_rate_limits` was a no-op stub until `ureq` HTTP client was added.
+/// Root Cause (regression — issue-oauth-beta-stale): `anthropic-beta: oauth-2023-09-22` was stale;
+///   the Anthropic API rejected it with 401 ("OAuth authentication is currently not supported"),
+///   so rate-limit headers were never returned. Fix: update to `oauth-2025-04-20` (confirmed via
+///   `strings $(which claude)`). The beta string tracks the Claude binary release — recheck
+///   whenever Claude Code updates its OAuth implementation.
+/// Why Not Caught: No automated test was possible without HTTP infrastructure.
+/// Fix Applied: `ureq` feature-gated under `enabled`; real `fetch_rate_limits` makes
+///   a lightweight `POST /v1/messages` (`max_tokens: 1`) and reads rate-limit headers.
+/// Prevention: Keep as a smoke test that catches regressions in the HTTP path.
+/// Pitfall: Requires valid credentials in `~/.claude/.credentials.json` — runs
+///   against the real Anthropic API. Fails if credentials absent or expired.
+#[ test ]
+fn lim_it1_active_account_exits_0_with_utilization_text()
+{
+  let out = run_cs( &[ ".account.limits" ] );
+  assert_exit( &out, 0 );
+  let output = stdout( &out );
+  assert!(
+    output.contains( '%' ),
+    "output must contain a utilization percentage, got:\n{output}",
+  );
+  assert!(
+    output.to_lowercase().contains( "session" ) || output.contains( "5h" ),
+    "output must mention session or 5h window, got:\n{output}",
+  );
+  assert!(
+    output.to_lowercase().contains( "weekly" ) || output.contains( "7d" ),
+    "output must mention weekly or 7d window, got:\n{output}",
+  );
+}
+
+// ── IT-3 ─────────────────────────────────────────────────────────────────────
+
+/// IT-3 (live): Active account, `format::json` — exits 0, returns structured JSON.
+///
+/// Root Cause: AC-03 requires `format::json` to return JSON with utilization fields.
+/// Why Not Caught: No automated test was possible without HTTP infrastructure.
+/// Fix Applied: `format_rate_limits_json` formats the API response as a JSON object.
+/// Prevention: Verify JSON structure remains valid after any format function changes.
+/// Pitfall: Same as IT-1 — requires live credentials.
+#[ test ]
+fn lim_it3_json_format_exits_0_with_valid_json()
+{
+  let out = run_cs( &[ ".account.limits", "format::json" ] );
+  assert_exit( &out, 0 );
+  let output = stdout( &out );
+  assert!(
+    output.trim_start().starts_with( '{' ),
+    "json output must start with '{{', got:\n{output}",
+  );
+  assert!(
+    output.contains( "session_5h_pct" ),
+    "json output must contain 'session_5h_pct', got:\n{output}",
+  );
+  assert!(
+    output.contains( "status" ),
+    "json output must contain 'status', got:\n{output}",
   );
 }

@@ -96,6 +96,7 @@ fn build_registry() -> CommandRegistry
   let mut registry = CommandRegistry::new();
   // Registration order determines first-wins precedence for overlapping command names.
   // After plan-005: account commands live exclusively in claude_profile; no overlap with claude_manager.
+  claude_assets::register_commands( &mut registry );
   claude_manager::register_commands( &mut registry );
   claude_profile::register_commands( &mut registry );
   claude_runner::register_commands( &mut registry );

@@ -13,13 +13,11 @@ Export formats are mutually exclusive (one per invocation) and produce structura
 
 ### Catalog
 
-| Format | Extension | Content Type | Includes Thinking | Includes Tool Use | Machine-Parseable |
-|--------|-----------|-------------|-------------------|-------------------|-------------------|
-| [markdown](markdown.md) | `.md` | Human-readable conversation with metadata | Yes (collapsible) | Yes (code blocks) | No |
-| [json](json.md) | `.json` | Pretty-printed raw JSONL entries in wrapper object | Yes (raw field) | Yes (raw field) | Yes |
-| [text](text.md) | `.txt` | Plain transcript, text content only | No | No | No |
-
-**Default:** `markdown` when `format::` is omitted.
+| # | Format | Category | Trigger | File | Extension | Machine-Parseable |
+|---|--------|----------|---------|------|-----------|-------------------|
+| 1 | markdown | Export | `format::markdown` (default when omitted) | [markdown.md](markdown.md) | `.md` | No |
+| 2 | json | Export | `format::json` | [json.md](json.md) | `.json` | Yes |
+| 3 | text | Export | `format::text` | [text.md](text.md) | `.txt` | No |
 
 **Parameter:** [`format::` in params.md](../params.md#parameter--5-format) | **Type:** [`ExportFormat` in types.md](../types.md#exportformat)
 

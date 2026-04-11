@@ -1,0 +1,150 @@
+# Claude Assets CLI Commands
+# Following unilang v0.35+ schema
+# Metadata-only export — programmatic registration via register_commands()
+
+- name: ".list"
+  namespace: ""
+  description: "List available and installed Claude Code artifacts"
+  hint: "List artifacts"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["assets", "list"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments:
+    - name: "kind"
+      kind: "String"
+      description: "Filter to a specific artifact kind (rule, command, agent, skill, plugin, hook)"
+      hint: "Artifact kind"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "installed"
+      kind: "Boolean"
+      description: "Show only installed artifacts (1=installed only)"
+      hint: "Installed filter"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level (0=minimal, 1=normal, 2=verbose)"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+  examples:
+    - ".list"
+    - ".list kind::rule"
+    - ".list kind::rule installed::1"
+  auto_help_enabled: true
+
+- name: ".install"
+  namespace: ""
+  description: "Install a named artifact via symlink into .claude/<kind>/"
+  hint: "Install artifact"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["assets", "install", "mutation"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "PUT"
+
+  arguments:
+    - name: "kind"
+      kind: "String"
+      description: "Artifact kind (rule, command, agent, skill, plugin, hook)"
+      hint: "Artifact kind"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "name"
+      kind: "String"
+      description: "Artifact name to install"
+      hint: "Artifact name"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".install kind::rule name::rust"
+    - ".install kind::skill name::tsk"
+  auto_help_enabled: true
+
+- name: ".uninstall"
+  namespace: ""
+  description: "Remove an installed artifact symlink from .claude/<kind>/"
+  hint: "Uninstall artifact"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["assets", "uninstall", "mutation"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "DELETE"
+
+  arguments:
+    - name: "kind"
+      kind: "String"
+      description: "Artifact kind (rule, command, agent, skill, plugin, hook)"
+      hint: "Artifact kind"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "name"
+      kind: "String"
+      description: "Artifact name to uninstall"
+      hint: "Artifact name"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".uninstall kind::rule name::rust"
+    - ".uninstall kind::skill name::tsk"
+  auto_help_enabled: true
+
+- name: ".kinds"
+  namespace: ""
+  description: "Show all supported artifact kinds with source and target path mappings"
+  hint: "Show artifact kinds"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["assets"]
+  permissions: []
+  idempotent: true
+  deprecation_message: ""
+  http_method_hint: "GET"
+
+  arguments: []
+
+  examples:
+    - ".kinds"
+  auto_help_enabled: true

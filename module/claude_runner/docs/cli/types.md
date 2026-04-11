@@ -9,7 +9,7 @@
 | 3 | `TokenLimit` | u32 | [`--max-tokens`](params.md#parameter--9---max-tokens) | Maximum output token count |
 | 4 | `ModelName` | String | [`--model`](params.md#parameter--3---model) | Claude model identifier |
 | 5 | `VerbosityLevel` | u8 | [`--verbosity`](params.md#parameter--12---verbosity) | Runner output gate (0–5) |
-| 6 | `SystemPromptText` | String | [`--system-prompt`](params.md#parameter--14---system-prompt), [`--append-system-prompt`](params.md#parameter--15---append-system-prompt) | Free-form system prompt text |
+| 6 | `SystemPromptText` | String | [`--system-prompt`](params.md#parameter--15---system-prompt), [`--append-system-prompt`](params.md#parameter--16---append-system-prompt) | Free-form system prompt text |
 
 ---
 
@@ -150,7 +150,7 @@ model's behavioral context (system turn), not the user's conversational input
 - **Base type:** String
 - **Constraints:** any UTF-8 text; no length limit
 - **Parsing:** consumed as the next token after `--system-prompt` or `--append-system-prompt`
-- **Used by:** [`--system-prompt`](params.md#parameter--14---system-prompt), [`--append-system-prompt`](params.md#parameter--15---append-system-prompt)
+- **Used by:** [`--system-prompt`](params.md#parameter--15---system-prompt), [`--append-system-prompt`](params.md#parameter--16---append-system-prompt)
 
 ```sh
 clr --system-prompt "You are a Rust expert. Be concise." "Review PR"

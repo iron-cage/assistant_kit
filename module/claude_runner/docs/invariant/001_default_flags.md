@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the automatic flag injection behavior that must be maintained across all clr invocations.
 - **Responsibility**: State which flags are injected by default, their opt-out mechanism, and why the defaults exist.
-- **In Scope**: Automatic `-c` injection, `--dangerously-skip-permissions` default-on, `--chrome` builder default, `--new-session` override, `--no-skip-permissions` opt-out.
+- **In Scope**: Automatic `-c` injection, `--dangerously-skip-permissions` default-on, `--chrome` builder default, `"ultrathink "` message prefix default-on, `--new-session` override, `--no-skip-permissions` opt-out, `--no-ultrathink` opt-out.
 - **Out of Scope**: Dependency constraints (→ `invariant/002_dep_constraints.md`), execution mode behavior (→ `feature/001_runner_tool.md`).
 
 ### Invariant Statement
@@ -16,14 +16,16 @@
 | `-c` (continue conversation) | ON | `--new-session` | Automation expects session continuity by default |
 | `--dangerously-skip-permissions` | ON | `--no-skip-permissions` | Automation pipelines must not stall on permission prompts |
 | `--chrome` | ON | none at clr level | Browser context is essential for web-aware automation |
+| `"ultrathink "` message prefix | ON | `--no-ultrathink` | Extended thinking mode should be the automation default |
 
 These defaults are intentional and must not be removed without explicit design decision. They represent the automation-optimized defaults for the `clr` runner.
 
 ### Enforcement Mechanism
 
-The flag injection is implemented at two layers:
+The flag injection is implemented at three layers:
 - `-c` and `--dangerously-skip-permissions`: injected explicitly by `build_claude_command()` (the function that translates `CliArgs` to a `ClaudeCommand` builder). Added unconditionally unless the corresponding opt-out flag is present in `CliArgs`.
 - `--chrome`: injected via `ClaudeCommand::new()` builder default (`chrome: Some(true)`). No clr-level opt-out exists — callers using the Rust API can override with `with_chrome(None)` or `with_chrome(Some(false))`.
+- `"ultrathink "` message prefix: prepended to the message string inside `build_claude_command()` before `builder.with_message()` is called. Skipped when `cli.no_ultrathink` is set or the message already starts with `"ultrathink"` (idempotent guard).
 
 `--dangerously-skip-permissions` is no longer user-facing as a positive flag. Users disable it via `--no-skip-permissions`. This prevents confusion between "skip permissions" as an intentional choice vs. the default behavior.
 
@@ -31,9 +33,10 @@ Dry-run mode (`--dry-run`) shows the injected flags in its output — the previe
 
 ### Violation Consequences
 
-If either default injection is removed:
+If any default injection is removed:
 - Interactive automation scripts stall waiting for permission prompts (skip-permissions removed)
 - Each invocation starts a new session, losing conversation context (continuation removed)
+- Claude performs fast (non-extended) thinking on every automation request (ultrathink prefix removed)
 - Automation pipelines that depend on these defaults will behave differently without a version change
 
 ### Cross-References

@@ -1,10 +1,14 @@
 # Format: JSON
 
-### Purpose
+## Description
 
-Machine-readable export preserving the complete raw JSONL entry structure. Wraps all session entries in a JSON object with session metadata. Suitable for programmatic analysis, import into other tools, or archival.
+Machine-readable export preserving the complete raw JSONL entry structure. Wraps all session entries in a JSON object with session metadata. Suitable for programmatic analysis, import into other tools, or archival. Renderer: `write_json_value()` in `claude_storage_core/src/export.rs`.
 
-### Structure
+## Trigger
+
+Activated by `format::json` on `.export`.
+
+## Structure
 
 ```json
 {
@@ -50,7 +54,11 @@ Machine-readable export preserving the complete raw JSONL entry structure. Wraps
 - **Streaming:** reads raw JSONL lines via `BufReader`, parses each with the internal JSON parser, then pretty-prints. Memory holds one entry at a time.
 - **Validation:** parseable with `jq .` or any JSON parser
 
-### Related
+## Source
+
+`claude_storage_core/src/export.rs` — `write_json_value()`, `export_session()`
+
+### Cross-References
 
 - [params.md § format::](../params.md#parameter--5-format) — parameter definition and validation
 - [types.md § ExportFormat](../types.md#exportformat) — type constants and parsing

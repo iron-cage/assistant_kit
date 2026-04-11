@@ -3,9 +3,9 @@
 ## Execution State
 
 - **Executor Type:** any
-- **Actor:** null
-- **Claimed At:** null
-- **Status:** 🎯 (Available)
+- **Actor:** Claude
+- **Claimed At:** 2026-04-11
+- **Status:** ✅ (Complete)
 
 ## Goal
 
@@ -283,4 +283,11 @@ Expected: 0. Why: it's possible to add the feature flag in Cargo.toml without ad
 
 ## Outcomes
 
-[Empty — populated upon task completion]
+**Completed 2026-04-11.** Both crates fully implemented and integrated; 1589/1591 tests pass workspace-wide (2 pre-existing live API failures unrelated to this task).
+
+- `module/claude_assets_core/` — Layer 1 lib with zero CLI deps: `artifact.rs` (6-variant `ArtifactKind`, `ArtifactLayout`), `paths.rs` (`AssetPaths` reads `$PRO_CLAUDE`/`$PRO` env vars), `error.rs` (`AssetError` domain enum), `install.rs` (symlink-only install/uninstall with `NotASymlink` guard), `registry.rs` (`list_all` via `BTreeSet` merge). 13 real-fs tests via `tempfile::TempDir`.
+- `module/claude_assets/` — Layer 2 binary crate: `cla` + `claude_assets` dual binaries, `unilang.commands.yaml` (`.list`/`.install`/`.uninstall`/`.kinds`), `adapter.rs`, `commands.rs` (4 routines), `lib.rs` (`COMMANDS_YAML` + `register_commands()` + `run_cli()`). 11 CLI integration tests via `assert_cmd`.
+- Workspace `Cargo.toml` — both crates added to `workspace.members` and `[workspace.dependencies]`.
+- `module/agent_kit` — `assets` feature added; `agent_kit::assets::ArtifactKind` resolves with `--features assets`.
+- `module/claude_tools` — `claude_assets::register_commands(&mut registry)` wired in `build_registry()`; `rerun-if-changed` added to `build.rs`.
+- Key fixes applied: `from_str` renamed to `from_name` (avoids `should_implement_trait` lint), `#[must_use]` on all pure methods, `writeln!` replacing `write!(...\n)`, error mappers take `&E` not owned, `#[allow(clippy::doc_markdown)]` in test files.

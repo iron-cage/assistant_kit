@@ -377,7 +377,7 @@
   description: "Show rate-limit utilization for the active or named account"
   hint: "Show account rate limits"
   version: "0.1.0"
-  status: "planned"
+  status: "stable"
   aliases: []
   tags: ["profile", "account", "limits"]
   permissions: []

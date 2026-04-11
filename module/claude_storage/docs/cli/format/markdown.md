@@ -1,10 +1,14 @@
 # Format: Markdown
 
-### Purpose
+## Description
 
-Human-readable conversation export with full metadata, thinking blocks, and tool use. Designed for reading in any markdown renderer (GitHub, VS Code, Obsidian) or plain text.
+Human-readable conversation export with full metadata, thinking blocks, and tool use. Designed for reading in any markdown renderer (GitHub, VS Code, Obsidian) or plain text. Default format when `format::` is omitted. Renderer: `write_markdown_entry()` in `claude_storage_core/src/export.rs`.
 
-### Structure
+## Trigger
+
+Activated by `format::markdown` on `.export`, or by omitting `format::` entirely (this is the default format).
+
+## Structure
 
 ```
 # Session: {session_id}
@@ -65,7 +69,11 @@ Human-readable conversation export with full metadata, thinking blocks, and tool
 - **Metadata fields:** bold label with value (`**Path**: ...`)
 - **Default format** when `format::` is omitted
 
-### Related
+## Source
+
+`claude_storage_core/src/export.rs` — `write_markdown_entry()`, `export_session()`
+
+### Cross-References
 
 - [params.md § format::](../params.md#parameter--5-format) — parameter definition and validation
 - [types.md § ExportFormat](../types.md#exportformat) — type constants and parsing

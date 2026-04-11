@@ -10,9 +10,10 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
-| 089 | 🎯 Available | Create `claude_assets` crate pair — multi-artifact installer CLI (`cla`) | feature | 2026-04-11 | [089](089_claude_assets_installer.md) |
+| 090 | ✅ Complete | Implement ultrathink default message prefix in `clr` binary | feature | 2026-04-11 | [090](completed/090_ultrathink_default_prefix_impl.md) |
+| 089 | ✅ Complete | Create `claude_assets` crate pair — multi-artifact installer CLI (`cla`) | feature | 2026-04-11 | [089](completed/089_claude_assets_installer.md) |
 | 087 | ✅ Complete | Introduce `agent_kit` aggregation crate (Layer 2 facade) | architecture | 2026-04-11 | [087](completed/087_introduce_agent_kit_crate.md) |
-| 086 | ⏳ In Progress | Implement `.account.limits` command (FR-18) | feature | 2026-04-07 | [086](086_implement_account_limits.md) |
+| 086 | ✅ Complete | Implement `.account.limits` command (FR-18) | feature | 2026-04-07 | [086](completed/086_implement_account_limits.md) |
 | 085 | ✅ Complete | Update claude_runner `docs/cli/` — `--system-prompt` and `--append-system-prompt` | documentation | 2026-04-06 | [085](completed/085_runner_cli_docs_system_prompt.md) |
 | 084 | ✅ Complete | Update claude_runner `spec.md` — `--system-prompt` and `--append-system-prompt` | documentation | 2026-04-06 | [084](completed/084_runner_spec_system_prompt.md) |
 | 083 | ✅ Complete | Update claude_runner docs/cli/ — `--trace` flag + stale content fixes | documentation | 2026-04-04 | [083](completed/083_runner_cli_docs_trace_flag.md) |
@@ -106,9 +107,7 @@
 ## Metadata
 
 **Status Distribution:**
-- ⏳ In Progress: 1
-- 🎯 Available: 1
-- ✅ Complete: 81
+- ✅ Complete: 84
 - 📥 Backlog: 0
 
 **Status Legend:**
@@ -119,4 +118,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-04-11 (TSK-087 complete: agent_kit aggregation crate implemented and verified; TSK-089 added: claude_assets crate pair, binary `cla`, multi-artifact installer including agent_kit extension; TSK-086 in progress: blocked on HTTP client for happy path)
+**Last Updated:** 2026-04-11 (TSK-086 complete: `.account.limits` happy path with ureq, real HTTP headers, text/json output; TSK-089 complete: claude_assets_core + claude_assets crate pair, `cla` binary, symlink installer, agent_kit assets feature, claude_tools integration — 1589/1591 tests pass)
