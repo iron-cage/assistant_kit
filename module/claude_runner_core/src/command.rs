@@ -51,6 +51,9 @@ pub struct ClaudeCommand {
   // Safety override
   skip_permissions: bool,
 
+  // Terminal & IDE flags with non-standard builder defaults
+  chrome: Option<bool>,
+
   // Tier 3: Optional parameters with standard defaults
   sandbox_mode: Option<bool>,
   session_dir: Option<PathBuf>,
@@ -90,6 +93,11 @@ impl ClaudeCommand {
     // Root cause: Automation contexts shouldnt send usage data without explicit consent
     // Pitfall: Respect user privacy in programmatic execution
 
+    // Fix(issue-chrome-default): Chrome enabled by default (Some(true) vs None/omit)
+    // Root cause: Browser context is essential for web-aware automation; omitting --chrome
+    //             relies on the user's global claude config being set to on, which is not guaranteed
+    // Pitfall: Store as field, not push to args in new() — must remain overridable by with_chrome()
+
     Self {
       working_directory: None,
       max_output_tokens: Some( 200_000 ),
@@ -104,6 +112,7 @@ impl ClaudeCommand {
       telemetry: Some( false ),                    // Disable telemetry (vs true standard)
 
       skip_permissions: false,
+      chrome: Some( true ),  // Enable browser context by default (vs off in raw claude binary)
 
       // Tier 2 & 3: Standard defaults (security-sensitive, opt-in only)
       auto_approve_tools: None,  // Inherits standard: false
@@ -1288,15 +1297,22 @@ impl ClaudeCommand {
   ///
   /// - `Some(true)` → `--chrome`
   /// - `Some(false)` → `--no-chrome`
-  /// - `None` → omit (no flag)
+  /// - `None` → omit flag entirely (overrides `Some(true)` builder default; defers to Claude's own config)
+  ///
+  /// Builder default is `Some(true)` — `--chrome` is emitted unless explicitly overridden.
   ///
   /// # Example
   ///
   /// ```
   /// use claude_runner_core::ClaudeCommand;
   ///
-  /// let cmd = ClaudeCommand::new().with_chrome( Some( true ) );   // --chrome
+  /// // Default: chrome already on — no call needed
+  /// let cmd = ClaudeCommand::new();
+  ///
+  /// // Explicitly disable chrome for this invocation
   /// let cmd = ClaudeCommand::new().with_chrome( Some( false ) );  // --no-chrome
+  ///
+  /// // Defer to Claude's own config (omit flag entirely, overrides default)
   /// let cmd = ClaudeCommand::new().with_chrome( None );           // omit
   /// ```
   #[inline]
@@ -1305,11 +1321,7 @@ impl ClaudeCommand {
     // Fix(issue-chrome-tristate): tri-state — Some(true)=--chrome, Some(false)=--no-chrome, None=omit
     // Root cause: chrome has both positive and negative flags; None must produce no output at all
     // Pitfall: Never collapse Some(false) to None — the negative flag IS meaningful to the CLI
-    match enabled {
-      Some( true ) => self.args.push( "--chrome".to_string() ),
-      Some( false ) => self.args.push( "--no-chrome".to_string() ),
-      None => {}
-    }
+    self.chrome = enabled;
     self
   }
 
@@ -1412,12 +1424,25 @@ impl ClaudeCommand {
   /// **not** by the order in which `with_*` builder methods are called. The order is:
   ///
   /// 1. `--dangerously-skip-permissions` (if `skip_permissions` is true)
-  /// 2. custom args (in insertion order via `with_arg`)
-  /// 3. `-c` (if `continue_conversation` is true)
-  /// 4. `"<message>"` (if message is set)
+  /// 2. `--chrome` or `--no-chrome` (from `chrome` field; default `Some(true)` = `--chrome`)
+  /// 3. custom args (in insertion order via `with_arg`)
+  /// 4. `-c` (if `continue_conversation` is true)
+  /// 5. `"<message>"` (if message is set)
   ///
   /// This matters when writing tests that assert the exact output string (e.g. `assert_eq!`).
   /// Use `contains` assertions for individual flags when order is not the subject of the test.
+  ///
+  /// # Critical: Must Mirror `build_command()`
+  ///
+  /// `describe()` reconstructs the command string independently of `build_command()`. Every CLI
+  /// flag that `build_command()` emits from a **typed field** (not from `self.args`) MUST also
+  /// appear in `describe()` at the corresponding position.
+  ///
+  /// Typed-field flags (currently `skip_permissions`, `chrome`, `continue_conversation`) are
+  /// emitted directly in `build_command()` — NOT via `self.args`. Updating `build_command()`
+  /// without updating `describe()` causes dry-run output to diverge from the actual command.
+  ///
+  /// Pitfall: always update both methods when adding a new typed-field CLI parameter.
   ///
   /// # Example
   ///
@@ -1446,6 +1471,13 @@ impl ClaudeCommand {
 
     if self.skip_permissions {
       parts.push( "--dangerously-skip-permissions".to_string() );
+    }
+
+    // Emit chrome flag from typed field (default: Some(true) → --chrome)
+    match self.chrome {
+      Some( true )  => parts.push( "--chrome".to_string() ),
+      Some( false ) => parts.push( "--no-chrome".to_string() ),
+      None          => {}
     }
 
     for arg in &self.args {
@@ -1627,6 +1659,11 @@ impl ClaudeCommand {
   /// Build the Command instance with all configured parameters
   ///
   /// SINGLE EXECUTION POINT: This is the ONLY location where `Command::new("claude")` appears
+  ///
+  /// Pitfall: any typed-field CLI flag added here MUST also be added to `describe()` at the
+  /// same relative position — otherwise dry-run output diverges from actual execution.
+  /// Typed-field flags: `skip_permissions`, `chrome`, `continue_conversation` (see `describe()`).
+  /// Flags pushed via `self.args` are automatically mirrored; only typed fields need manual sync.
   #[inline]
   fn build_command( &self ) -> std::process::Command {
     use std::process::Command;
@@ -1698,6 +1735,13 @@ impl ClaudeCommand {
     // Add skip-permissions flag before custom args
     if self.skip_permissions {
       cmd.arg( "--dangerously-skip-permissions" );
+    }
+
+    // Emit chrome flag from typed field (default: Some(true) → --chrome)
+    match self.chrome {
+      Some( true )  => { cmd.arg( "--chrome" ); }
+      Some( false ) => { cmd.arg( "--no-chrome" ); }
+      None          => {}
     }
 
     // Add custom arguments

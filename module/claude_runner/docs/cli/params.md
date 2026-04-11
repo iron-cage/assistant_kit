@@ -228,7 +228,7 @@ combinations.
 
 ```sh
 clr --dry-run "test" --model sonnet --max-tokens 50000
-# Output includes: claude --dangerously-skip-permissions -c --print --model sonnet "test"
+# Output includes: claude --dangerously-skip-permissions --chrome -c --print --model sonnet "test"
 ```
 
 ---
@@ -264,7 +264,7 @@ semantics.
 ```sh
 clr --trace "Fix bug"
 # Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
-# Stderr: claude --dangerously-skip-permissions -c --print "Fix bug"
+# Stderr: claude --dangerously-skip-permissions --chrome -c --print "Fix bug"
 # Then: subprocess executes normally
 ```
 

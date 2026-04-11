@@ -26,7 +26,7 @@
 //! - Message with embedded double quotes is properly escaped
 //! - `--dir` with spaces: `cd` output is unquoted (human-readable per FR-21, not shell-safe)
 //! - All 5 Tier-1 default env vars appear in output (not just max-tokens)
-//! - No message provided: `--dry-run` outputs bare `claude --dangerously-skip-permissions -c` command with no message arg
+//! - No message provided: `--dry-run` outputs bare `claude --dangerously-skip-permissions --chrome -c` command with no message arg
 //! - `--dry-run --verbosity 0` still shows output (verbosity does not gate dry-run; bug reproducer)
 //! - `--system-prompt TEXT` appears in command args (param 14 round-trip)
 //! - `--append-system-prompt TEXT` appears in command args (param 15 round-trip)
@@ -185,14 +185,14 @@ fn dir_with_spaces_produces_unquoted_cd_line()
   );
 }
 
-// No-message case: --dry-run with no message produces `claude --dangerously-skip-permissions -c` command.
+// No-message case: --dry-run with no message produces `claude --dangerously-skip-permissions --chrome -c` command.
 #[ test ]
 fn dry_run_without_message_shows_bare_command()
 {
   let output = run_dry( &[ "--dry-run" ] );
   let last_line = output.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
-    last_line, "claude --dangerously-skip-permissions -c",
+    last_line, "claude --dangerously-skip-permissions --chrome -c",
     "Bare --dry-run must end with default bypass and continuation (no message arg). Got:\n{output}"
   );
 }

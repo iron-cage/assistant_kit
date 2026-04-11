@@ -4,7 +4,7 @@
 
 - **Purpose**: Document non-functional constraints that claude_runner must always satisfy.
 - **Responsibility**: Index of invariant doc instances covering default flag injection and dependency constraints.
-- **In Scope**: Default-on flags (`--dangerously-skip-permissions`, `-c`), zero willbe dependency rule, binary dependency gating.
+- **In Scope**: Default-on flags (`--dangerously-skip-permissions`, `-c`, `--chrome`), zero willbe dependency rule, binary dependency gating.
 - **Out of Scope**: Feature behavior (→ `feature/`), API contracts (→ `api/`).
 
 ### Overview Table

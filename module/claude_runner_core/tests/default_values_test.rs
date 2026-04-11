@@ -78,6 +78,18 @@ fn default_telemetry_is_false() {
 }
 
 #[test]
+fn default_chrome_is_on() {
+  // Fix(issue-chrome-default): chrome defaults to Some(true) — builder always emits --chrome
+  // Rationale: browser context is essential for automation; off-by-default relies on user config
+  let cmd_builder = ClaudeCommand::new();
+  let cmd = cmd_builder.build_command_for_test();
+
+  let debug = format!( "{cmd:?}" );
+  assert!( debug.contains( "--chrome" ), "chrome must be on by default: {debug:?}" );
+  assert!( !debug.contains( "--no-chrome" ), "must not emit --no-chrome by default: {debug:?}" );
+}
+
+#[test]
 fn tier2_tier3_defaults_are_none() {
   // Tier 2 & 3 should be None (inherit standard defaults)
   let cmd_builder = ClaudeCommand::new();
@@ -98,7 +110,7 @@ fn tier2_tier3_defaults_are_none() {
 
 #[test]
 fn all_tier1_defaults_set_together() {
-  // Verify all 4 Tier 1 defaults are set simultaneously
+  // Verify all Tier 1 defaults are set simultaneously (env vars + chrome CLI flag)
   let cmd_builder = ClaudeCommand::new();
   let cmd = cmd_builder.build_command_for_test();
 
@@ -108,8 +120,10 @@ fn all_tier1_defaults_set_together() {
   let has_bash_max_timeout = debug.contains( "CLAUDE_CODE_BASH_MAX_TIMEOUT" );
   let has_auto_continue = debug.contains( "CLAUDE_CODE_AUTO_CONTINUE" );
   let has_telemetry = debug.contains( "CLAUDE_CODE_TELEMETRY" );
+  let has_chrome = debug.contains( "--chrome" );
 
-  assert!( has_bash_timeout && has_bash_max_timeout && has_auto_continue && has_telemetry,
-    "All Tier 1 defaults must be set: bash_timeout={has_bash_timeout}, bash_max_timeout={has_bash_max_timeout}, auto_continue={has_auto_continue}, telemetry={has_telemetry}"
+  assert!(
+    has_bash_timeout && has_bash_max_timeout && has_auto_continue && has_telemetry && has_chrome,
+    "All Tier 1 defaults must be set: bash_timeout={has_bash_timeout}, bash_max_timeout={has_bash_max_timeout}, auto_continue={has_auto_continue}, telemetry={has_telemetry}, chrome={has_chrome}"
   );
 }

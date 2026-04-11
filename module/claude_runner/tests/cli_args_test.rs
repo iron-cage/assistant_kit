@@ -524,7 +524,7 @@ fn t38_double_dash_only_no_message()
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
     last_line,
-    "claude --dangerously-skip-permissions -c",
+    "claude --dangerously-skip-permissions --chrome -c",
     "-- with nothing after must produce command with default bypass and continuation. Got:\n{stdout}"
   );
 }
