@@ -1,0 +1,32 @@
+[package]
+name        = "agent_kit"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+readme      = "readme.md"
+description = "Library facade re-exporting all Layer 0–1 core crates under feature-gated modules"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+common  = [ "dep:claude_common" ]
+storage = [ "dep:claude_storage_core" ]
+profile = [ "dep:claude_profile_core" ]
+runner  = [ "dep:claude_runner_core" ]
+manager = [ "dep:claude_manager_core" ]
+full    = [ "common", "storage", "profile", "runner", "manager" ]
+enabled = [ "full" ]
+
+[dependencies]
+claude_common       = { workspace = true, optional = true }
+claude_storage_core = { workspace = true, optional = true }
+claude_profile_core = { workspace = true, optional = true }
+claude_runner_core  = { workspace = true, optional = true, features = [ "enabled" ] }
+claude_manager_core = { workspace = true, optional = true }
+
+[[test]]
+name = "integration"
+path = "tests/integration/facade_test.rs"

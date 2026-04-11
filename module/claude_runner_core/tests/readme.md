@@ -50,7 +50,7 @@ This test suite covers the claude_runner_core crate's builder pattern API for Cl
 - Builder pattern API (4 test files):
   - Edge cases: token limits (0, 1, 200K, u32::MAX), method overrides (last wins), argument accumulation
   - Methods: 61+ with_*() methods, chainability, order independence
-  - Defaults: tier 1 (bash_timeout=3.6M, auto_continue=true, telemetry=false, max_output_tokens=200K), tier 2/3 (None)
+  - Defaults: tier 1 (bash_timeout=3.6M, auto_continue=true, telemetry=false, max_output_tokens=200K, chrome=--chrome), tier 2/3 (None)
   - Environment variables: each parameter sets correct env var, tier 1 defaults set vars
 - Type definitions (1 test file):
   - ActionMode enum (Ask/Allow/Deny) with string conversions

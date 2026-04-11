@@ -19,6 +19,7 @@ members = [
   "module/claude_runner_core",
   "module/claude_runner",
   "module/claude_manager",
+  "module/agent_kit",
   "module/claude_tools",
 ]
 exclude = [ "-*" ]
@@ -114,6 +115,11 @@ default-features = false
 
 [workspace.dependencies.claude_storage]
 path = "module/claude_storage"
+version = "~1.0.0"
+default-features = false
+
+[workspace.dependencies.agent_kit]
+path = "module/agent_kit"
 version = "~1.0.0"
 default-features = false
 

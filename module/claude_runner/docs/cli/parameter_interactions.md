@@ -104,9 +104,10 @@ clr --dry-run --new-session "test"   -- shows command without -c; does not execu
 clr --dry-run --trace "test"         -- dry-run wins over trace; no execution
 ```
 
-Default injection rules (both are default-on unless suppressed):
+Default injection rules (all are default-on):
 - `-c` is injected unless `--new-session` is given
 - `--dangerously-skip-permissions` is injected unless `--no-skip-permissions` is given
+- `--chrome` is injected via builder default (`ClaudeCommand::new()`); no clr-level suppression flag exists
 
 ## Independent Parameters
 

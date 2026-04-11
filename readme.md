@@ -15,7 +15,7 @@ clr "write a test" # run Claude Code
 
 | Path | Responsibility |
 |------|----------------|
-| `module/` | Ten workspace crates (see Crates below) |
+| `module/` | Eleven workspace crates (see Crates below) |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
 | `task/` | Task tracking: active, completed, backlog |
 | `vision.md` | Project vision, design rationale, and open problems |
@@ -35,6 +35,7 @@ clr "write a test" # run Claude Code
 | `claude_storage` | `clg` | 2 | CLI for exploring Claude Code filesystem storage |
 | `claude_runner` | `clr` | 2 | Claude Code execution with session continuity |
 | `claude_manager` | `clman` | 2 | Install, version, session, and settings management |
+| `agent_kit` | — | 2 | Library facade re-exporting all Layer 0–1 core crates |
 | `claude_tools` | `clt` | 3 | Super-app aggregating all Layer 2 CLIs |
 
 `*` `claude_storage_core` is a zero-dep parsing primitive sitting outside the layer hierarchy — no dependency on `claude_common`.
@@ -48,7 +49,8 @@ Layer 1: claude_profile_core      (token status, account domain logic)
          claude_manager_core      (version, settings domain helpers)
          claude_runner_core       (ClaudeCommand builder + execute())
              ↓
-Layer 2: claude_profile  (clp)    (account management, token status)
+Layer 2: agent_kit       (lib)    (library facade — re-exports all Layer 0–1 core crates)
+         claude_profile  (clp)    (account management, token status)
          claude_storage  (clg)    (storage exploration)
          claude_runner   (clr)    (Claude Code execution)
          claude_manager  (clman)  (install, version, session management)

@@ -78,7 +78,7 @@ fn b13_subagent_dir_contains_agent_jsonl()
   }
 }
 
-/// B13c: agent IDs include both short hex and typed-prefix formats.
+/// B13c: agent IDs follow hex or typed-prefix pattern (length varies by Claude Code version).
 ///
 /// Root cause: documentation described agent IDs as "8-character hex" but real
 /// storage contains IDs as short as 7 hex chars and IDs with typed prefixes
@@ -87,6 +87,12 @@ fn b13_subagent_dir_contains_agent_jsonl()
 /// Fix(A1): corrected agent ID format from "8-char hex" to dual-pattern description.
 /// Pitfall: assuming a fixed-width hex format will reject valid agent filenames
 /// that use the typed-prefix convention.
+///
+/// Fix(issue-b13-id-length): removed stale min_len ≤ 8 assertion.
+/// Root cause: Claude Code changed agent ID format from short (7-8 char) hex to
+///             17-char hex (e.g., `a662c27bae2e4fece`). The ≤8 constraint was
+///             machine-observed data from the old format, not a stable invariant.
+/// Pitfall: agent ID length is not a stable invariant — assert pattern, not length.
 #[ test ]
 fn b13_agent_id_format_variations()
 {
@@ -120,14 +126,8 @@ fn b13_agent_id_format_variations()
     "B13 violated: found agent file with empty ID"
   );
 
-  // verify minimum length — real storage has 7-char IDs, not 8
+  // log observed format stats (not an assertion — length varies by Claude Code version)
   let min_len = all_ids.iter().map( String::len ).min().unwrap();
-  assert!(
-    min_len <= 8,
-    "B13 info: shortest agent ID is {min_len} chars (expected ≤8 per observed data)"
-  );
-
-  // check for non-hex-only IDs (typed prefix pattern: contains `-` or non-hex chars)
   let pure_hex = all_ids.iter()
     .filter( | id | id.chars().all( | c | c.is_ascii_hexdigit() ) )
     .count();
@@ -140,8 +140,8 @@ fn b13_agent_id_format_variations()
     typed_prefix
   );
 
-  // at least one ID should exist (already checked above)
-  // if typed prefix IDs exist, verify they follow the `type-hex` pattern
+  // verify pattern: each ID is either pure hex or a typed-prefix (contains `-`)
+  // Fix(issue-b13-id-length): length constraint removed — assert pattern, not length
   for id in &all_ids
   {
     let is_pure_hex = id.chars().all( | c | c.is_ascii_hexdigit() );

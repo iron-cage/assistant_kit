@@ -10,9 +10,10 @@
 //! - `with_worktree(Some("feature"))` adds `-w feature`
 //! - `with_tmux(true)` adds `--tmux`; `with_tmux(false)` adds nothing
 //! - `with_ide(true)` adds `--ide`; `with_ide(false)` adds nothing
+//! - `ClaudeCommand::new()` emits `--chrome` by default (builder default: `Some(true)`)
 //! - `with_chrome(Some(true))` adds `--chrome` (Pattern G tri-state)
 //! - `with_chrome(Some(false))` adds `--no-chrome` (Pattern G tri-state)
-//! - `with_chrome(None)` adds nothing (Pattern G tri-state)
+//! - `with_chrome(None)` adds nothing — explicitly overrides the `Some(true)` default
 //!
 //! ## Test Coverage Matrix
 //!
@@ -22,7 +23,8 @@
 //! | with_worktree(Some) | ✅ | — | — | ✅ |
 //! | with_tmux | ✅ | ✅ | — | — |
 //! | with_ide | ✅ | ✅ | — | — |
-//! | with_chrome | ✅ | ✅ | ✅ | — |
+//! | with_chrome | ✅ | ✅ | ✅ (overrides default) | — |
+//! | new() chrome default | — | — | — (emits --chrome) | — |
 
 use claude_runner_core::ClaudeCommand;
 
@@ -94,6 +96,16 @@ fn with_ide_false_adds_nothing() {
 // with_chrome (Pattern G: tri-state)
 
 #[test]
+fn new_emits_chrome_by_default() {
+  // Fix(issue-chrome-default): ClaudeCommand::new() defaults chrome to Some(true) → --chrome
+  // Builder always emits --chrome unless explicitly overridden with with_chrome()
+  let cmd = ClaudeCommand::new();
+  let args = args_of( &cmd );
+  assert!( args.contains( &"--chrome".to_string() ), "new() must emit --chrome by default: {args:?}" );
+  assert!( !args.contains( &"--no-chrome".to_string() ) );
+}
+
+#[test]
 fn with_chrome_some_true_adds_chrome_flag() {
   // Fix(issue-chrome-tristate): Some(true) → --chrome, Some(false) → --no-chrome, None → omit
   let cmd = ClaudeCommand::new().with_chrome( Some( true ) );
@@ -113,6 +125,8 @@ fn with_chrome_some_false_adds_no_chrome_flag() {
 
 #[test]
 fn with_chrome_none_adds_nothing() {
+  // with_chrome(None) explicitly overrides the Some(true) builder default to None
+  // → no flag emitted; defers entirely to Claude's own config (which defaults to off)
   let cmd = ClaudeCommand::new().with_chrome( None );
   let args = args_of( &cmd );
   assert!( !args.contains( &"--chrome".to_string() ) );

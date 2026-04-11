@@ -94,7 +94,7 @@ Quick-reference for all 59 parameters (+1 builder-only). Type: **CLI** = flag on
 | [worktree](worktree.md) | CLI | `-w` / `--worktree [name]` | — | — | `with_worktree()` | Create git worktree for session |
 | [tmux](tmux.md) | CLI | `--tmux` | — | off | `with_tmux()` | Create tmux session for worktree |
 | [ide](ide.md) | CLI | `--ide` | — | off | `with_ide()` | Auto-connect to IDE on startup |
-| [chrome](chrome.md) | CLI | `--chrome` / `--no-chrome` | — | off | `with_chrome()` | Toggle Claude-in-Chrome integration |
+| [chrome](chrome.md) | CLI | `--chrome` / `--no-chrome` | — | **on** | `with_chrome()` | Toggle Claude-in-Chrome integration |
 
 ### Debug
 
@@ -135,7 +135,7 @@ These parameters are only settable via environment variables. All have dedicated
 
 ## Notes
 
-- **Builder defaults vs claude defaults**: `max_output_tokens`, `bash_timeout`, `bash_max_timeout`, `auto_continue`, and `telemetry` have **different** defaults in `claude_runner_core` than in the `claude` binary. The builder values are tuned for programmatic/automation use.
+- **Builder defaults vs claude defaults**: `max_output_tokens`, `bash_timeout`, `bash_max_timeout`, `auto_continue`, `telemetry`, and `chrome` have **different** defaults in `claude_runner_core` than in the `claude` binary. The builder values are tuned for programmatic/automation use. Notably, `chrome` defaults to **on** in the builder (vs off in the raw `claude` binary) so browser context is available by default in automation.
 - **Combined parameters**: [`api_key`](api_key.md) documents both `--api-key` CLI flag and `ANTHROPIC_API_KEY` env var in one place since they configure the same thing.
 - **Deprecated**: [`mcp_debug`](mcp_debug.md) documents `--mcp-debug` which is deprecated in favor of `--debug`.
 - **Builder-only**: `dry_run` is not a `claude` binary parameter — it controls whether `ClaudeCommand` spawns a process or returns `describe_compact()` as stdout.

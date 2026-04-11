@@ -41,7 +41,7 @@
 //! - ✅ `system_prompt`: appears as raw CLI args (no quoting)
 //! - ✅ `api_key`: appears in plaintext (no masking)
 //! - ✅ Flag output order is fixed by `describe()` implementation, NOT by `with_*` call order:
-//!   `--dangerously-skip-permissions` → custom args → `-c` → `"<message>"`.
+//!   `--dangerously-skip-permissions` → `--chrome`/`--no-chrome` → custom args → `-c` → `"<message>"`.
 //!   Tests using `assert_eq!` on the full output string must match this exact order.
 //!   Use `contains` for individual flag checks when order is not the assertion subject.
 //!
@@ -52,6 +52,15 @@
 //!   the double-quoted string early, producing wrong argument splitting.
 //!   Root cause: `msg.replace('"', "\\\"")` applied without first escaping backslashes.
 //!   Prevention: Always escape `\` before `"` when building double-quoted shell strings.
+//!
+//! - **2026-04-11 (issue-chrome-default):** Adding a new typed-field CLI default (`chrome`)
+//!   broke two `assert_eq!` tests in `claude_runner` that asserted exact command strings.
+//!   Root cause: Tests used `assert_eq!(last_line, "claude --dangerously-skip-permissions -c")`
+//!   without accounting for new default flags. `describe()` output changed when `chrome: Some(true)`
+//!   was added as a default, inserting `--chrome` between skip-permissions and `-c`.
+//!   Prevention: Use `contains`/`starts_with`/`ends_with` instead of `assert_eq!` on full command
+//!   strings, unless the test specifically validates the complete flag order. When adding new
+//!   builder defaults, grep all test files for exact command string assertions.
 
 use claude_runner_core::{ ClaudeCommand, ActionMode, LogLevel };
 
