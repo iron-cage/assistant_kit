@@ -606,7 +606,16 @@ fn parse_rate_limit_headers( resp : &ureq::Response ) -> Result< RateLimitData, 
   } )
 }
 
-/// Format rate-limit data as human-readable text.
+/// Format rate-limit data as compact text (v::0): bare percentages, no labels or reset times.
+fn format_rate_limits_compact( data : &RateLimitData ) -> String
+{
+  let pct_session = format!( "{:.0}", data.utilization_5h * 100.0 );
+  let pct_weekly  = format!( "{:.0}", data.utilization_7d * 100.0 );
+  let status      = &data.status;
+  format!( "{pct_session}%\n{pct_weekly}%\n{status}\n" )
+}
+
+/// Format rate-limit data as human-readable text (v::1 default): labelled with reset durations.
 fn format_rate_limits_text( data : &RateLimitData ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -620,6 +629,28 @@ fn format_rate_limits_text( data : &RateLimitData ) -> String
   let reset_weekly_str  = format_duration_secs( data.reset_7d.saturating_sub( now_secs ) );
   let status            = &data.status;
   format!( "Session (5h):  {pct_session}% consumed, resets in {reset_session_str}\nWeekly (7d):   {pct_weekly}% consumed, resets in {reset_weekly_str}\nStatus:        {status}\n" )
+}
+
+/// Format rate-limit data as verbose text (v::2): all fields including raw floats and timestamps.
+fn format_rate_limits_verbose( data : &RateLimitData ) -> String
+{
+  use std::time::{ SystemTime, UNIX_EPOCH };
+  let now_secs = SystemTime::now()
+    .duration_since( UNIX_EPOCH )
+    .unwrap_or_default()
+    .as_secs();
+  let reset_session_str = format_duration_secs( data.reset_5h.saturating_sub( now_secs ) );
+  let reset_weekly_str  = format_duration_secs( data.reset_7d.saturating_sub( now_secs ) );
+  let pct_session       = format!( "{:.0}", data.utilization_5h * 100.0 );
+  let pct_weekly        = format!( "{:.0}", data.utilization_7d * 100.0 );
+  let raw_session       = data.utilization_5h;
+  let raw_weekly        = data.utilization_7d;
+  let ts_session        = data.reset_5h;
+  let ts_weekly         = data.reset_7d;
+  let status            = &data.status;
+  format!(
+    "Session (5h):  {pct_session}% consumed, resets in {reset_session_str}\n  raw: {raw_session:.6}, reset_ts: {ts_session}\nWeekly (7d):   {pct_weekly}% consumed, resets in {reset_weekly_str}\n  raw: {raw_weekly:.6}, reset_ts: {ts_weekly}\nStatus:        {status}\n"
+  )
 }
 
 /// Format rate-limit data as a JSON object.
@@ -719,8 +750,13 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   let data = fetch_rate_limits( &creds_path )?;
   let text = match opts.format
   {
-    OutputFormat::Json  => format_rate_limits_json( &data ),
-    OutputFormat::Text  => format_rate_limits_text( &data ),
+    OutputFormat::Json => format_rate_limits_json( &data ),
+    OutputFormat::Text => match opts.verbosity
+    {
+      0 => format_rate_limits_compact( &data ),
+      2 => format_rate_limits_verbose( &data ),
+      _ => format_rate_limits_text( &data ),
+    },
   };
   Ok( OutputData::new( text, "text" ) )
 }
