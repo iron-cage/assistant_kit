@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the clr CLI tool design including execution modes, default flag injection, and the YAML library surface.
 - **Responsibility**: Describe the two roles of claude_runner (CLI binary and YAML library), invocation modes, and flag behavior.
-- **In Scope**: clr execution modes, automatic `-c`, `--dangerously-skip-permissions`, `--chrome` injection, `"ultrathink "` message prefix default, YAML library role, mode selection logic.
+- **In Scope**: clr execution modes, automatic `-c`, `--dangerously-skip-permissions`, `--chrome` injection, `"\n\nultrathink"` message suffix default, YAML library role, mode selection logic.
 - **Out of Scope**: Dependency constraints (→ `invariant/002_dep_constraints.md`), public API contracts (→ `api/001_public_api.md`).
 
 ### Design
@@ -27,7 +27,7 @@ claude_runner serves two distinct consumers from one crate:
 | `clr --trace "Fix bug"` | Trace | `describe_env()` + `describe()` to stderr, then `execute()` |
 | `clr --new-session "Fix bug"` | Fresh session, print | `execute()` + `--print` (no `-c`) |
 
-**Default flag injection:** `-c` (continue conversation) is applied automatically to every invocation. Use `--new-session` to start a fresh session instead. `--dangerously-skip-permissions` is injected by default to prevent automation stalling on permission prompts. Use `--no-skip-permissions` to disable this per invocation. `--chrome` is injected via the builder default (`ClaudeCommand::new()`) to provide browser context for web-aware automation; no clr-level opt-out exists. `"ultrathink "` is prepended to every message by default to activate Claude's extended thinking mode; use `--no-ultrathink` to send the message verbatim. The prefix is not added when the message already starts with `"ultrathink"` (idempotent guard).
+**Default flag injection:** `-c` (continue conversation) is applied automatically to every invocation. Use `--new-session` to start a fresh session instead. `--dangerously-skip-permissions` is injected by default to prevent automation stalling on permission prompts. Use `--no-skip-permissions` to disable this per invocation. `--chrome` is injected via the builder default (`ClaudeCommand::new()`) to provide browser context for web-aware automation; no clr-level opt-out exists. `"\n\nultrathink"` is appended to every message by default to activate Claude's extended thinking mode; use `--no-ultrathink` to send the message verbatim. The suffix is not added when the message already ends with `"ultrathink"` (idempotent guard).
 
 **Verbosity gate:** The `--verbosity <0-5>` flag (default 3) controls how much runner diagnostic output is emitted. At level 0 all diagnostic output is suppressed. At level 4 a command preview is printed to stderr before execution. `--dry-run` output is always shown regardless of verbosity level.
 

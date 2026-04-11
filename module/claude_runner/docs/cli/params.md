@@ -17,7 +17,7 @@
 | 11 | `--dry-run` | bool | false | present/absent | Print command without executing | 1 cmd |
 | 12 | `--verbosity` | [`VerbosityLevel`](types.md#type--5-verbositylevel) | 3 | 0 to 5 | Runner output gate level | 1 cmd |
 | 13 | `--trace` | bool | false | present/absent | Print env+command to stderr then execute | 1 cmd |
-| 14 | `--no-ultrathink` | bool | false | present/absent | Disable default ultrathink message prefix | 1 cmd |
+| 14 | `--no-ultrathink` | bool | false | present/absent | Disable default ultrathink message suffix | 1 cmd |
 | 15 | `--system-prompt` | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Any text | Set system prompt (replaces the default) | 1 cmd |
 | 16 | `--append-system-prompt` | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Any text | Append text to the default system prompt | 1 cmd |
 
@@ -229,7 +229,7 @@ combinations.
 
 ```sh
 clr --dry-run "test" --model sonnet --max-tokens 50000
-# Output includes: claude --dangerously-skip-permissions --chrome -c --print --model sonnet "ultrathink test"
+# Output includes: claude --dangerously-skip-permissions --chrome -c --print --model sonnet "test\n\nultrathink"
 ```
 
 ---
@@ -265,7 +265,7 @@ semantics.
 ```sh
 clr --trace "Fix bug"
 # Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
-# Stderr: claude --dangerously-skip-permissions --chrome -c --print "ultrathink Fix bug"
+# Stderr: claude --dangerously-skip-permissions --chrome -c --print "Fix bug\n\nultrathink"
 # Then: subprocess executes normally
 ```
 
@@ -276,24 +276,25 @@ Combine with `--dry-run` if you want to preview without executing.
 
 ### Parameter :: 14. `--no-ultrathink`
 
-Disable the default ultrathink message prefix. Normally `clr` prepends
-`"ultrathink "` to every message before sending it to the `claude` subprocess,
-which triggers Claude's extended thinking mode. `--no-ultrathink` suppresses
-this transformation so the message is sent verbatim.
+Disable the default ultrathink message suffix. Normally `clr` appends
+`"\n\nultrathink"` after every message before sending it to the `claude`
+subprocess, which triggers Claude's extended thinking mode. `--no-ultrathink`
+suppresses this transformation so the message is sent verbatim.
 
 - **Type:** bool (standalone flag)
-- **Default:** false (ultrathink prefix is **ON** by default; this flag turns it **OFF**)
+- **Default:** false (ultrathink suffix is **ON** by default; this flag turns it **OFF**)
 - **Command:** [`run`](commands.md#command--1-run)
 - **Group:** [Runner Control](parameter_groups.md#group--2-runner-control)
 
 ```sh
-clr "Fix the auth bug"                # sends: "ultrathink Fix the auth bug"
+clr "Fix the auth bug"                # sends: "Fix the auth bug\n\nultrathink"
 clr --no-ultrathink "Fix the auth bug" # sends: "Fix the auth bug" (verbatim)
 ```
 
-**Note:** The ultrathink prefix is not added when the message already starts
-with `"ultrathink"` (idempotent guard — prevents double prepend when the user
-explicitly writes `"ultrathink ..."` themselves).
+**Note:** The ultrathink suffix is not added when the message already ends
+with `"ultrathink"` (idempotent guard — prevents double append when the message
+already carries `"\n\nultrathink"` from a prior injection or the user
+explicitly writes it themselves).
 
 **Note:** Applies only to message-bearing invocations. Bare `clr` (no message,
 interactive REPL) is not affected.

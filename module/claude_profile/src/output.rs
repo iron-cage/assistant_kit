@@ -1,4 +1,4 @@
-//! Output formatting: text/json selection and JSON string escaping.
+//! Output formatting: text/json selection, JSON string escaping, duration display.
 //!
 //! Provides the `OutputOptions` struct used by command handlers to determine
 //! output format and verbosity. All format decisions are centralised here
@@ -69,6 +69,31 @@ impl OutputOptions
 
     Ok( OutputOptions { verbosity, format } )
   }
+}
+
+/// Format a duration in seconds as a compact human-readable string.
+///
+/// Output form: `Nd Nh Nm` — only non-zero components are shown, with minutes
+/// always present as the most-granular unit (sub-minute precision is dropped).
+///
+/// - `0` → `"0m"` (special case: the only time minutes appear as zero)
+/// - `60` → `"1m"`, `3600` → `"1h"`, `86400` → `"1d"`
+/// - `3660` → `"1h 1m"`, `86460` → `"1d 1m"`, `90000` → `"1d 1h"`
+///
+/// Used to display rate-limit reset times (`resets in …`).
+#[ inline ]
+#[ must_use ]
+pub fn format_duration_secs( secs : u64 ) -> String
+{
+  if secs == 0 { return "0m".to_string(); }
+  let days  = secs / 86400;
+  let hours = ( secs % 86400 ) / 3600;
+  let mins  = ( secs % 3600 ) / 60;
+  let mut parts = Vec::new();
+  if days  > 0 { parts.push( format!( "{days}d" ) ); }
+  if hours > 0 { parts.push( format!( "{hours}h" ) ); }
+  if mins  > 0 || parts.is_empty() { parts.push( format!( "{mins}m" ) ); }
+  parts.join( " " )
 }
 
 /// Escape a string for safe embedding inside a JSON string value.

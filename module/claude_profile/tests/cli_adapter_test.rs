@@ -1,6 +1,6 @@
 //! Unit tests for the adapter and output modules.
 //!
-//! Covers matrix IDs A-01..A-33 (adapter) and O-01..O-19 (output).
+//! Covers matrix IDs A-01..A-33 (adapter), O-01..O-19 (output), D-01..D-12 (`format_duration`).
 //! All tests call library functions directly — no binary invocation.
 
 // ── Adapter tests ─────────────────────────────────────────────────────────────
@@ -514,5 +514,107 @@ mod output
   fn json_escape_unicode()
   {
     assert_eq!( json_escape( "cafe\u{0301}" ), "cafe\u{0301}" );
+  }
+}
+
+// ── format_duration_secs tests ────────────────────────────────────────────────
+
+/// Unit tests for `format_duration_secs`: human-readable duration from seconds.
+///
+/// Corner cases covered:
+/// - Zero and sub-minute values (no days/hours/mins components)
+/// - Boundary at exactly 60s (first minute shows)
+/// - Boundary at exactly 3600s (first hour, no minutes shown)
+/// - Mixed components: hours+minutes, days+hours, days+minutes
+/// - `u64::MAX` does not panic (overflow safety)
+#[ cfg( feature = "enabled" ) ]
+mod format_duration
+{
+  use claude_profile::output::format_duration_secs;
+
+  // D-01: 0 seconds → "0m"
+  #[ test ]
+  fn dur_zero_seconds_shows_0m()
+  {
+    assert_eq!( format_duration_secs( 0 ), "0m" );
+  }
+
+  // D-02: 1 second (sub-minute) → "0m"
+  #[ test ]
+  fn dur_sub_minute_rounds_to_0m()
+  {
+    assert_eq!( format_duration_secs( 1 ), "0m" );
+  }
+
+  // D-03: 59 seconds → "0m"
+  #[ test ]
+  fn dur_59s_rounds_to_0m()
+  {
+    assert_eq!( format_duration_secs( 59 ), "0m" );
+  }
+
+  // D-04: exactly 60 seconds → "1m"
+  #[ test ]
+  fn dur_60s_shows_1m()
+  {
+    assert_eq!( format_duration_secs( 60 ), "1m" );
+  }
+
+  // D-05: 3599 seconds → "59m"
+  #[ test ]
+  fn dur_3599s_shows_59m()
+  {
+    assert_eq!( format_duration_secs( 3599 ), "59m" );
+  }
+
+  // D-06: exactly 3600 seconds (1 hour, 0 minutes) → "1h"
+  // Pitfall: the condition `mins > 0 || parts.is_empty()` means minutes are
+  // suppressed when hours or days already appear AND mins == 0.
+  #[ test ]
+  fn dur_3600s_shows_1h_no_minutes()
+  {
+    assert_eq!( format_duration_secs( 3600 ), "1h" );
+  }
+
+  // D-07: 3660 seconds (1h 1m) → "1h 1m"
+  #[ test ]
+  fn dur_3660s_shows_1h_1m()
+  {
+    assert_eq!( format_duration_secs( 3660 ), "1h 1m" );
+  }
+
+  // D-08: exactly 86400 seconds (1 day, 0 hours, 0 mins) → "1d"
+  #[ test ]
+  fn dur_86400s_shows_1d_no_hours()
+  {
+    assert_eq!( format_duration_secs( 86400 ), "1d" );
+  }
+
+  // D-09: 86460 seconds (1d 1m, no hours) → "1d 1m"
+  #[ test ]
+  fn dur_86460s_shows_1d_1m()
+  {
+    assert_eq!( format_duration_secs( 86460 ), "1d 1m" );
+  }
+
+  // D-10: 90000 seconds (1d 1h, 0 mins) → "1d 1h"
+  #[ test ]
+  fn dur_90000s_shows_1d_1h_no_minutes()
+  {
+    assert_eq!( format_duration_secs( 90000 ), "1d 1h" );
+  }
+
+  // D-11: 90060 seconds (1d 1h 1m) → "1d 1h 1m"
+  #[ test ]
+  fn dur_90060s_shows_1d_1h_1m()
+  {
+    assert_eq!( format_duration_secs( 90060 ), "1d 1h 1m" );
+  }
+
+  // D-12: u64::MAX — must not panic (overflow safety)
+  #[ test ]
+  fn dur_max_u64_does_not_panic()
+  {
+    let _ = format_duration_secs( u64::MAX );
   }
 }

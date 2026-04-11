@@ -20,6 +20,7 @@
 //! | astname12 | name:: = non-active, v::1 | Shows named account's own Sub/Tier, not active account's |
 //! | astname13 | name:: = non-active, subscriptionType absent in file | Sub: N/A (not blank) |
 //! | astname14 | name:: = non-active, rateLimitTier absent in file | Tier: N/A (not blank) |
+//! | astname15 | name:: = active, .claude.json has empty email/org | Email: N/A, Org: N/A (not blank) |
 
 use crate::helpers::{
   run_cs_with_env,
@@ -346,5 +347,77 @@ fn astname14_missing_tier_in_file_shows_n_a()
   assert!(
     text.contains( "Tier:    N/A" ),
     "missing rateLimitTier must show 'Tier:    N/A', got:\n{text}",
+  );
+}
+
+// ── astname15: active account + empty-string email/org → N/A (not blank) ─────
+
+/// astname15: `name::` = active account, `.claude.json` has `emailAddress: ""` and
+/// `organizationName: ""` — both must display as `N/A`, not as a blank line.
+///
+/// # Root Cause
+///
+/// `parse_string_field` returns `Some("")` for empty-string JSON fields.
+/// `unwrap_or_else(|| "N/A".to_string())` fires only on `None`, not `Some("")`,
+/// so an empty field bypasses the fallback and produces a blank output line.
+///
+/// # Why Not Caught
+///
+/// `astname06` tests the happy path (non-empty email/org). No test exercised the
+/// case where `.claude.json` has fields present but set to empty strings — an
+/// unusual but valid credential state the API can produce.
+///
+/// # Fix Applied
+///
+/// Added `.filter(|s| !s.is_empty())` before `.unwrap_or_else()` in
+/// `status_named` (matching the pattern already applied in `read_live_cred_meta`
+/// for the `issue-empty-field-blank` fix). Empty string is now treated the same
+/// as absent, producing `"N/A"` in both cases.
+///
+/// # Prevention
+///
+/// Every `parse_string_field(...).unwrap_or_else(|| "N/A".to_string())` chain
+/// MUST include `.filter(|s| !s.is_empty())`. The source pitfall comment in
+/// `read_live_cred_meta` documents this rule — apply it everywhere, not just
+/// where the original bug was fixed.
+///
+/// # Pitfall
+///
+/// The `status_named` function reads email/org from `.claude.json` for the
+/// ACTIVE account only. The fix must be applied to that branch — not to the
+/// non-active branch (which hard-codes "N/A" and is unaffected).
+
+// test_kind: bug_reproducer(issue-empty-field-blank-status-named)
+#[ test ]
+fn astname15_active_empty_email_org_in_claude_json_shows_na()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  // .claude.json with EMPTY email and org strings — not absent, but `""`
+  write_claude_json( dir.path(), "", "" );
+
+  let out = run_cs_with_env( &[ ".account.status", "name::work", "v::1" ], &[ ( "HOME", home ) ] );
+
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // Both must display "N/A" — not blank lines
+  assert!(
+    text.contains( "Email:   N/A" ),
+    "empty emailAddress must show 'Email:   N/A', got:\n{text}",
+  );
+  assert!(
+    text.contains( "Org:     N/A" ),
+    "empty organizationName must show 'Org:     N/A', got:\n{text}",
+  );
+  // Confirm neither is blank (i.e., "Email:   \n" must not appear)
+  assert!(
+    !text.contains( "Email:   \n" ),
+    "email line must not be blank, got:\n{text}",
+  );
+  assert!(
+    !text.contains( "Org:     \n" ),
+    "org line must not be blank, got:\n{text}",
   );
 }

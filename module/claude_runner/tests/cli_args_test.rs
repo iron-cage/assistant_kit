@@ -70,17 +70,15 @@
 //! - T47: `--dangerously-skip-permissions` explicit → rejected as "unknown option" (now hidden/default-on)
 //! - T48: `--no-skip-permissions --new-session` combo → no `-c`, no `--dangerously-skip-permissions`
 //! - T49: all `--help` option lines have descriptions at the same column (alignment regression guard)
-//! - T50: message is prefixed with `"ultrathink "` by default in dry-run output
-//! - T51: `--no-ultrathink` suppresses the default `"ultrathink "` prefix
-//! - T52: idempotent guard — message already starting with `"ultrathink"` not double-prefixed
+//! - T50: message is suffixed with `"\n\nultrathink"` by default in dry-run output
+//! - T51: `--no-ultrathink` suppresses the default `"\n\nultrathink"` suffix
+//! - T52: idempotent guard — message already ending with `"ultrathink"` not double-suffixed
 //! - T53: `--no-ultrathink` listed in `--help` output
-//! - T54: empty string positional arg `""` is silently skipped (no message, no degenerate prefix)
+//! - T54: empty string positional arg `""` is silently skipped (no message, no degenerate suffix)
 //! - T55: `--help` wins over subsequent unknown flags in argv (pre-scan)
 //! - T56: `--help` wins over preceding unknown flags in argv (pre-scan)
 //! - T57: empty string positional arg after `--` separator is silently skipped
-//! - T54: empty positional arg `""` → ignored, no message (no `--print`, no `"ultrathink "`)
-//! - T55: `--help` wins over subsequent unknown flag (help regardless of parse errors)
-//! - T56: `--help` wins over preceding unknown flag (unknown flag before `--help` shows help)
+//! - T58: message is suffixed (not prefixed) with `"\n\nultrathink"` — suffix position guard
 
 use std::process::Command;
 
@@ -100,7 +98,7 @@ fn t01_message_accepted()
   let out = run_cli( &[ "--dry-run", "hello" ] );
   assert!( out.status.success(), "positional message must be accepted" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!( stdout.contains( "\"ultrathink hello\"" ), "message must be prefixed with \"ultrathink \" and appear quoted. Got:\n{stdout}" );
+  assert!( stdout.contains( "\"hello\n\nultrathink\"" ), "message must be suffixed with \"\\n\\nultrathink\" and appear quoted. Got:\n{stdout}" );
 }
 
 // T02: --model accepted, value appears in command
@@ -209,7 +207,7 @@ fn t10_multiple_flags_combined()
   assert!( stdout.contains( "--dangerously-skip-permissions" ), "Must have skip-permissions (default-on)" );
   assert!( stdout.contains( " -c" ), "Must have -c (automatic)" );
   assert!( stdout.contains( "claude-sonnet-4-6" ), "Must have model" );
-  assert!( stdout.contains( "\"ultrathink fix it\"" ), "Must have ultrathink-prefixed quoted message" );
+  assert!( stdout.contains( "\"fix it\n\nultrathink\"" ), "Must have ultrathink-suffixed quoted message" );
 }
 
 // T11: unknown flag rejected
@@ -402,8 +400,8 @@ fn t27_double_dash_separator()
   assert!( out.status.success(), "-- separator must allow --not-a-flag as message" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "\"ultrathink --not-a-flag\"" ),
-    "Text after -- must become message with ultrathink prefix. Got:\n{stdout}"
+    stdout.contains( "\"--not-a-flag\n\nultrathink\"" ),
+    "Text after -- must become message with ultrathink suffix. Got:\n{stdout}"
   );
 }
 
@@ -473,8 +471,8 @@ fn t33_interleaved_positional_and_flags()
   assert!( out.status.success(), "interleaved positional must be accepted" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "\"ultrathink hello world\"" ),
-    "positional args must join as ultrathink-prefixed message. Got:\n{stdout}"
+    stdout.contains( "\"hello world\n\nultrathink\"" ),
+    "positional args must join as ultrathink-suffixed message. Got:\n{stdout}"
   );
   assert!( stdout.contains( "cd /tmp" ), "dir flag must still work. Got:\n{stdout}" );
 }
@@ -520,8 +518,8 @@ fn t37_multiple_positional_words_joined()
   assert!( out.status.success(), "multiple positional words must be accepted" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "\"ultrathink Fix the bug now\"" ),
-    "all positional words must join with space and be ultrathink-prefixed. Got:\n{stdout}"
+    stdout.contains( "\"Fix the bug now\n\nultrathink\"" ),
+    "all positional words must join with space and be ultrathink-suffixed. Got:\n{stdout}"
   );
 }
 
@@ -750,13 +748,13 @@ fn t48_no_skip_permissions_new_session_combination()
   );
 }
 
-// T50: message is prefixed with "ultrathink " by default
+// T50: message is suffixed with "\n\nultrathink" by default
 //
-// Default-on behavior: every message passed to clr is prepended with "ultrathink "
+// Default-on behavior: every message passed to clr is appended with "\n\nultrathink"
 // before being forwarded to claude. This activates extended thinking mode for all
 // automation without requiring the user to write "ultrathink" in every prompt.
 #[ test ]
-fn t50_default_message_gets_ultrathink_prefix()
+fn t50_default_message_gets_ultrathink_suffix()
 {
   let out = run_cli( &[ "--dry-run", "hello" ] );
   assert!(
@@ -766,17 +764,17 @@ fn t50_default_message_gets_ultrathink_prefix()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "\"ultrathink hello\"" ),
-    "message must be prefixed with \"ultrathink \". Got:\n{stdout}"
+    stdout.contains( "\"hello\n\nultrathink\"" ),
+    "message must be suffixed with \"\\n\\nultrathink\". Got:\n{stdout}"
   );
 }
 
-// T51: --no-ultrathink suppresses the default "ultrathink " prefix
+// T51: --no-ultrathink suppresses the default "\n\nultrathink" suffix
 //
 // Opt-out: when --no-ultrathink is given, the message is forwarded verbatim
-// without prepending "ultrathink ". Allows callers to manage their own prompts.
+// without appending "\n\nultrathink". Allows callers to manage their own prompts.
 #[ test ]
-fn t51_no_ultrathink_suppresses_prefix()
+fn t51_no_ultrathink_suppresses_suffix()
 {
   let out = run_cli( &[ "--dry-run", "--no-ultrathink", "hello" ] );
   assert!(
@@ -790,34 +788,33 @@ fn t51_no_ultrathink_suppresses_prefix()
     "message must appear verbatim with --no-ultrathink. Got:\n{stdout}"
   );
   assert!(
-    !stdout.contains( "\"ultrathink hello\"" ),
-    "prefix must be suppressed with --no-ultrathink. Got:\n{stdout}"
+    !stdout.contains( "ultrathink" ),
+    "suffix must be suppressed with --no-ultrathink. Got:\n{stdout}"
   );
 }
 
-// T52: idempotent guard — message already starting with "ultrathink" is not double-prefixed
+// T52: idempotent guard — message already ending with "ultrathink" is not double-suffixed
 //
-// If the user's message already begins with "ultrathink", the prefix injection is skipped.
-// Guard uses starts_with("ultrathink") — no trailing space — to also catch "ultrathink\n"
-// and "ultrathinkfoo" variants. This prevents accumulation in scripts that call clr
-// with pre-prefixed prompts.
+// If the user's message already ends with "ultrathink", the suffix injection is skipped.
+// Guard uses trim_end().ends_with("ultrathink") to also catch trailing-whitespace variants.
+// This prevents accumulation in scripts that call clr with pre-suffixed prompts.
 #[ test ]
-fn t52_idempotent_guard_no_double_prefix()
+fn t52_idempotent_guard_no_double_suffix()
 {
-  let out = run_cli( &[ "--dry-run", "ultrathink fix the bug" ] );
+  let out = run_cli( &[ "--dry-run", "fix the bug ultrathink" ] );
   assert!(
     out.status.success(),
-    "ultrathink-prefixed message must be accepted. stderr: {}",
+    "ultrathink-suffixed message must be accepted. stderr: {}",
     String::from_utf8_lossy( &out.stderr )
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    stdout.contains( "\"ultrathink fix the bug\"" ),
-    "message must appear verbatim (guard fires, no re-prefix). Got:\n{stdout}"
+    stdout.contains( "\"fix the bug ultrathink\"" ),
+    "message must appear verbatim (guard fires, no re-suffix). Got:\n{stdout}"
   );
   assert!(
-    !stdout.contains( "\"ultrathink ultrathink" ),
-    "double-prefix must not appear. Got:\n{stdout}"
+    !stdout.contains( "ultrathink\n\nultrathink" ),
+    "double-suffix must not appear. Got:\n{stdout}"
   );
 }
 
@@ -1004,5 +1001,55 @@ fn t57_empty_positional_after_double_dash_ignored()
   assert!(
     !stdout.contains( "\"ultrathink \"" ),
     "empty arg after -- must NOT produce degenerate 'ultrathink ' message. Got:\n{stdout}"
+  );
+}
+
+// T58: ultrathink is appended as suffix ("\n\nultrathink") not prepended as prefix
+//
+// ## Root Cause (bug_reproducer(issue-ultrathink-suffix))
+//
+// TSK-090 implemented ultrathink injection as `format!("ultrathink {msg}")` (prefix),
+// but the correct behavior is `format!("{msg}\n\nultrathink")` (suffix after two
+// newlines). Live feedback (`-feedback.md`) showed `"ultrathink hi"` when `"hi\n\nultrathink"`
+// was expected.
+//
+// ## Why Not Caught
+//
+// Existing tests only asserted that "ultrathink" was present (containment check),
+// never that it was at the END of the message. `String::contains("ultrathink")` is
+// position-blind — it returns true for both prefix and suffix forms.
+//
+// ## Fix Applied
+//
+// Changed `format!("ultrathink {msg}")` → `format!("{msg}\n\nultrathink")` and
+// the idempotent guard from `msg.starts_with("ultrathink")` → `msg.trim_end().ends_with("ultrathink")`.
+//
+// ## Prevention
+//
+// Assert the EXACT expected string including position (`contains("\"hello\n\nultrathink\"")`),
+// not just containment (`contains("ultrathink")`). Injection-position bugs are invisible
+// to containment-only assertions.
+//
+// ## Pitfall
+//
+// `String::contains("ultrathink")` passes for both `"ultrathink hello"` (prefix) and
+// `"hello\n\nultrathink"` (suffix). Always test the exact injection form.
+#[ test ]
+fn t58_default_message_gets_ultrathink_suffix()
+{
+  let out = run_cli( &[ "--dry-run", "hello" ] );
+  assert!(
+    out.status.success(),
+    "dry-run with message must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "\"hello\n\nultrathink\"" ),
+    "message must be suffixed with \"\\n\\nultrathink\". Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "\"ultrathink hello\"" ),
+    "prefix form must be absent after fix. Got:\n{stdout}"
   );
 }

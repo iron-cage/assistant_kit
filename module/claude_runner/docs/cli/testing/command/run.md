@@ -14,7 +14,7 @@ Integration test planning for the `run` command. See [commands.md](../../command
 | TC-06 | `--system-prompt "text"` → flag forwarded to claude | System Prompt |
 | TC-07 | `--append-system-prompt "text"` → flag forwarded to claude | System Prompt |
 | TC-08 | Unknown flag → exit 1, error message | Error Handling |
-| TC-09 | Message → prefixed with `"ultrathink "` by default | Ultrathink Default |
+| TC-09 | Message → suffixed with `"\n\nultrathink"` by default | Ultrathink Default |
 | TC-10 | `--no-ultrathink "msg"` → message sent verbatim | Ultrathink Opt-Out |
 | TC-11 | Empty string positional `""` → no message (treated as bare `clr`) | Edge Case |
 | TC-12 | Empty string after `--` separator `-- ""` → no message (treated as bare `clr`) | Edge Case |
@@ -132,26 +132,26 @@ Integration test planning for the `run` command. See [commands.md](../../command
 
 ---
 
-### TC-09: Message → prefixed with `"ultrathink "` by default
+### TC-09: Message → suffixed with `"\n\nultrathink"` by default
 
-**Goal:** `clr` prepends `"ultrathink "` to every message by default, activating Claude's extended thinking mode.
+**Goal:** `clr` appends `"\n\nultrathink"` to every message by default, activating Claude's extended thinking mode.
 **Setup:** None.
 **Command:** `clr --dry-run "Fix the auth bug"`
-**Expected Output:** Command line contains `"ultrathink Fix the auth bug"` (not bare `"Fix the auth bug"`).
-**Verification:** `output.contains("\"ultrathink Fix the auth bug\"")`.
-**Pass Criteria:** Exit 0; message appears with ultrathink prefix in assembled command.
+**Expected Output:** Command line contains `"Fix the auth bug"` followed by `ultrathink` as suffix (not `"ultrathink Fix the auth bug"`).
+**Verification:** `output.contains("Fix the auth bug")` and `output.contains("ultrathink")` as suffix; `!output.contains("\"ultrathink Fix the auth bug\"")`.
+**Pass Criteria:** Exit 0; message appears with ultrathink suffix in assembled command.
 **Source:** [params.md — --no-ultrathink](../../params.md#parameter--14---no-ultrathink), [invariant/001_default_flags.md](../../../invariant/001_default_flags.md)
 
 ---
 
 ### TC-10: `--no-ultrathink` → message sent verbatim
 
-**Goal:** `--no-ultrathink` suppresses the ultrathink prefix so the message is forwarded exactly as typed.
+**Goal:** `--no-ultrathink` suppresses the ultrathink suffix so the message is forwarded exactly as typed.
 **Setup:** None.
 **Command:** `clr --dry-run --no-ultrathink "Fix the auth bug"`
-**Expected Output:** Command line contains `"Fix the auth bug"` (not `"ultrathink Fix the auth bug"`).
-**Verification:** `output.contains("\"Fix the auth bug\"")` and `!output.contains("\"ultrathink Fix")`.
-**Pass Criteria:** Exit 0; message verbatim, no ultrathink prefix.
+**Expected Output:** Command line contains `"Fix the auth bug"` (not followed by `ultrathink`).
+**Verification:** `output.contains("\"Fix the auth bug\"")` and `!output.contains("ultrathink")`.
+**Pass Criteria:** Exit 0; message verbatim, no ultrathink suffix.
 **Source:** [params.md — --no-ultrathink](../../params.md#parameter--14---no-ultrathink)
 
 ---

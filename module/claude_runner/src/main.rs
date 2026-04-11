@@ -27,7 +27,7 @@
 //! - **Print** (default when message given): `clr "Fix bug"` or `clr -p "Fix bug"`
 //!   Non-interactive, adds `--print` automatically when a message is provided.
 //!   Captures stdout via `execute()`. Continues previous session.
-//!   Message is automatically prefixed with `"ultrathink "` (extended thinking mode).
+//!   Message is automatically suffixed with `"\n\nultrathink"` (extended thinking mode).
 //!   Use `--no-ultrathink` to send the message verbatim.
 //! - **Explicit interactive with message**: `clr --interactive "Fix bug"`
 //!   Suppresses the auto-`--print` default; runs TTY passthrough with a prompt.
@@ -47,7 +47,7 @@
 //! clr --new-session "Start fresh analysis"   # new session
 //! clr --system-prompt "You are a Rust expert" "Explain lifetimes"   # override system prompt
 //! clr --append-system-prompt "Be concise." "Fix the bug"            # extend system prompt
-//! clr --no-ultrathink "Send this verbatim"                          # skip ultrathink prefix
+//! clr --no-ultrathink "Send this verbatim"                          # skip ultrathink suffix
 //! clr --help
 //! ```
 
@@ -104,7 +104,7 @@ fn print_help()
   println!( "  --trace                            Print command to stderr then execute (like set -x)" );
   println!( "  --system-prompt <TEXT>             Set system prompt (replaces the default)" );
   println!( "  --append-system-prompt <TEXT>      Append text to the default system prompt" );
-  println!( "  --no-ultrathink                    Disable automatic \"ultrathink \" message prefix" );
+  println!( "  --no-ultrathink                    Disable automatic \"\\n\\nultrathink\" message suffix" );
   println!( "  --verbosity <0-5>                  Runner output verbosity level (default: 3)" );
   println!( "  -h, --help                         Show this help" );
 }
@@ -239,7 +239,7 @@ fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       {
         // Everything after `--` is positional.
         // Fix(issue-empty-msg-double-dash): filter empty tokens here too — `clr -- ""`
-        // must behave like bare `clr`, not forward a degenerate "ultrathink " message.
+        // must behave like bare `clr`, not forward a degenerate "\n\nultrathink" message.
         // Root cause: positional.extend() copies all tokens verbatim; the empty-token
         // guard in the `_` arm does not apply to the `--` code path.
         // Pitfall: filter at the individual-token level (not the joined string) so that
@@ -254,9 +254,9 @@ fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       _ =>
       {
         // Fix(issue-empty-msg-ultrathink): skip empty tokens so `clr ""` behaves like
-        // bare `clr` (no message, no --print, no degenerate "ultrathink " forwarded to claude).
+        // bare `clr` (no message, no --print, no degenerate "\n\nultrathink" forwarded).
         // Root cause: empty string was pushed to positional, joined to message=Some(""),
-        // then the ultrathink prefix produced "ultrathink " (trailing space).
+        // then the ultrathink suffix produced "\n\nultrathink" for an empty payload.
         // Pitfall: filter individual empty tokens, not the joined string — whitespace-only
         // strings like " " are valid non-empty messages and must not be filtered out.
         if !tokens[ i ].is_empty()
@@ -331,16 +331,16 @@ fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
   }
   if let Some( ref msg ) = cli.message
   {
-    // Prepend "ultrathink " to activate extended thinking mode by default.
-    // Idempotent guard (starts_with — no trailing space) prevents double-prefix when
-    // the caller already includes it. --no-ultrathink opts out of the injection entirely.
-    let effective_msg = if cli.no_ultrathink || msg.starts_with( "ultrathink" )
+    // Append "\n\nultrathink" to activate extended thinking mode by default.
+    // Idempotent guard (trim_end().ends_with) prevents double-suffix when the message
+    // already ends with "ultrathink". --no-ultrathink opts out of the injection entirely.
+    let effective_msg = if cli.no_ultrathink || msg.trim_end().ends_with( "ultrathink" )
     {
       msg.clone()
     }
     else
     {
-      format!( "ultrathink {msg}" )
+      format!( "{msg}\n\nultrathink" )
     };
     builder = builder.with_message( effective_msg );
   }

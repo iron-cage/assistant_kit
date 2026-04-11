@@ -16,7 +16,7 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 
-use crate::output::{ OutputFormat, OutputOptions, json_escape };
+use crate::output::{ OutputFormat, OutputOptions, json_escape, format_duration_secs };
 
 // ── Private helpers ───────────────────────────────────────────────────────────
 
@@ -411,13 +411,19 @@ fn status_named(
              else { account.rate_limit_tier.clone()   };
 
   // P3: email/org live in .claude.json (active session) — N/A for non-active accounts.
+  // Fix(issue-empty-field-blank-status-named)
+  // Root cause: parse_string_field returns Some("") for empty-string JSON fields;
+  //   unwrap_or_else fires only on None, so Some("") bypassed the "N/A" fallback.
+  // Pitfall: always pair .filter(|s| !s.is_empty()) before .unwrap_or_else for display.
   let ( email, org ) = if account.is_active
   {
     let content = std::fs::read_to_string( paths.base().join( ".claude.json" ) )
       .unwrap_or_default();
     let email = crate::account::parse_string_field( &content, "emailAddress" )
+      .filter( | s | !s.is_empty() )
       .unwrap_or_else( || "N/A".to_string() );
     let org = crate::account::parse_string_field( &content, "organizationName" )
+      .filter( | s | !s.is_empty() )
       .unwrap_or_else( || "N/A".to_string() );
     ( email, org )
   }
@@ -552,20 +558,6 @@ fn read_auth_token( creds_path : &std::path::Path ) -> Result< String, ErrorData
       ErrorCode::InternalError,
       "credentials missing 'accessToken' \u{2014} re-authenticate with `claude auth login`".to_string(),
     ) )
-}
-
-/// Format seconds as a human-readable duration (`1d 2h 30m`, `5h 15m`, `0m`).
-fn format_duration_secs( secs : u64 ) -> String
-{
-  if secs == 0 { return "0m".to_string(); }
-  let days  = secs / 86400;
-  let hours = ( secs % 86400 ) / 3600;
-  let mins  = ( secs % 3600 ) / 60;
-  let mut parts = Vec::new();
-  if days  > 0 { parts.push( format!( "{days}d" ) ); }
-  if hours > 0 { parts.push( format!( "{hours}h" ) ); }
-  if mins  > 0 || parts.is_empty() { parts.push( format!( "{mins}m" ) ); }
-  parts.join( " " )
 }
 
 /// Parse rate-limit utilization headers from the API response.

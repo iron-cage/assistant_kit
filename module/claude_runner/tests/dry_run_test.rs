@@ -32,11 +32,11 @@
 //! - `--append-system-prompt TEXT` appears in command args (param 16 round-trip)
 //! - Both system-prompt flags can appear together in a single invocation
 //! - `--help` output lists both `--system-prompt` and `--append-system-prompt`
-//! - `"ultrathink "` prefix applied to message by default
-//! - `--no-ultrathink` suppresses `"ultrathink "` prefix in dry-run output
-//! - Idempotent guard: message starting with `"ultrathink"` is not double-prefixed
+//! - `"\n\nultrathink"` suffix applied to message by default
+//! - `--no-ultrathink` suppresses `"\n\nultrathink"` suffix in dry-run output
+//! - Idempotent guard: message ending with `"ultrathink"` is not double-suffixed
 //! - `--trace --dry-run` emits nothing to stderr (dry-run returns before trace fires)
-//! - `""` empty positional arg ignored — bare command, no message, no degenerate ultrathink prefix
+//! - `""` empty positional arg ignored — bare command, no message, no degenerate ultrathink suffix
 
 use std::process::Command;
 
@@ -126,8 +126,8 @@ fn message_appears_in_command_quoted()
 {
   let output = run_dry( &[ "--dry-run", "hello world" ] );
   assert!(
-    output.contains( "\"ultrathink hello world\"" ),
-    "Message must appear with ultrathink prefix and quoted. Got:\n{output}"
+    output.contains( "\"hello world\n\nultrathink\"" ),
+    "Message must appear with ultrathink suffix and quoted. Got:\n{output}"
   );
 }
 
@@ -142,7 +142,7 @@ fn combined_flags_all_appear()
   assert!( output.contains( "cd /tmp" ), "Must have cd line" );
   assert!( output.contains( "--dangerously-skip-permissions" ), "Must have skip-permissions (default)" );
   assert!( output.contains( " -c" ), "Must have -c (automatic)" );
-  assert!( output.contains( "\"ultrathink fix it\"" ), "Must have ultrathink-prefixed quoted message" );
+  assert!( output.contains( "\"fix it\n\nultrathink\"" ), "Must have ultrathink-suffixed quoted message" );
 }
 
 #[ test ]
@@ -164,8 +164,8 @@ fn message_param_appears_in_command()
 {
   let output = run_dry( &[ "--dry-run", "Hello there" ] );
   assert!(
-    output.contains( "\"ultrathink Hello there\"" ),
-    "message must appear with ultrathink prefix and quoted. Got:\n{output}"
+    output.contains( "\"Hello there\n\nultrathink\"" ),
+    "message must appear with ultrathink suffix and quoted. Got:\n{output}"
   );
 }
 
@@ -421,23 +421,20 @@ fn help_shows_system_prompt_flags()
   );
 }
 
-// Default "ultrathink " prefix is applied to every message in dry-run output.
+// Default "\n\nultrathink" suffix is applied to every message in dry-run output.
 #[ test ]
-fn ultrathink_prefix_default_on()
+fn ultrathink_suffix_default_on()
 {
   let output = run_dry( &[ "--dry-run", "fix the bug" ] );
   assert!(
-    output.contains( "\"ultrathink fix the bug\"" ),
-    "message must be prefixed with \"ultrathink \" by default. Got:\n{output}"
+    output.contains( "\"fix the bug\n\nultrathink\"" ),
+    "message must be suffixed with \"\\n\\nultrathink\" by default. Got:\n{output}"
   );
 }
 
-// --no-ultrathink flag suppresses the default "ultrathink " prefix.
-//
-// Uses run_cli (not run_dry) because --no-ultrathink is unknown before Phase 3
-// implementation; run_dry panics on non-zero exit — run_cli lets the test fail cleanly.
+// --no-ultrathink flag suppresses the default "\n\nultrathink" suffix.
 #[ test ]
-fn no_ultrathink_flag_suppresses_prefix()
+fn no_ultrathink_flag_suppresses_suffix()
 {
   let out = run_cli( &[ "--dry-run", "--no-ultrathink", "fix the bug" ] );
   assert!(
@@ -451,23 +448,23 @@ fn no_ultrathink_flag_suppresses_prefix()
     "message must appear verbatim when --no-ultrathink given. Got:\n{stdout}"
   );
   assert!(
-    !stdout.contains( "\"ultrathink fix the bug\"" ),
-    "ultrathink prefix must be suppressed. Got:\n{stdout}"
+    !stdout.contains( "ultrathink" ),
+    "ultrathink suffix must be suppressed. Got:\n{stdout}"
   );
 }
 
-// Idempotent guard: message starting with "ultrathink" is not double-prefixed.
+// Idempotent guard: message already ending with "ultrathink" is not double-suffixed.
 #[ test ]
 fn ultrathink_idempotent_guard()
 {
-  let output = run_dry( &[ "--dry-run", "ultrathink fix it" ] );
+  let output = run_dry( &[ "--dry-run", "fix it ultrathink" ] );
   assert!(
-    output.contains( "\"ultrathink fix it\"" ),
-    "message must appear verbatim when already ultrathink-prefixed. Got:\n{output}"
+    output.contains( "\"fix it ultrathink\"" ),
+    "message must appear verbatim when already ending with ultrathink. Got:\n{output}"
   );
   assert!(
-    !output.contains( "\"ultrathink ultrathink" ),
-    "double ultrathink prefix must not appear. Got:\n{output}"
+    !output.contains( "ultrathink\n\nultrathink" ),
+    "double ultrathink suffix must not appear. Got:\n{output}"
   );
 }
 

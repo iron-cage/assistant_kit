@@ -15,8 +15,8 @@ How `clr` parameters interact when combined. See [params.md](params.md) and [par
 | `--new-session` (absent) | Default | `-c` injected automatically; previous session continued |
 | `--no-skip-permissions` (present) | Suppression | `--dangerously-skip-permissions` not injected into claude invocation |
 | `--no-skip-permissions` (absent) | Default | `--dangerously-skip-permissions` injected automatically |
-| `--no-ultrathink` (present) | Suppression | `"ultrathink "` prefix not prepended to message |
-| `--no-ultrathink` (absent) | Default | `"ultrathink "` prepended to message (unless it already starts with `"ultrathink"`) |
+| `--no-ultrathink` (present) | Suppression | `"\n\nultrathink"` suffix not appended to message |
+| `--no-ultrathink` (absent) | Default | `"\n\nultrathink"` appended to message (unless it already ends with `"ultrathink"`) |
 | `--system-prompt` + `--append-system-prompt` | Additive | Both forwarded to claude in parse order; system-prompt replaces, then append adds |
 | `--system-prompt` + `[MESSAGE]` | Independent | System prompt sets behavioral context; message sets user turn |
 | `--dir` + `--session-dir` | Independent | `--dir` changes working directory; `--session-dir` changes session storage location |
@@ -110,7 +110,7 @@ Default injection rules (all are default-on):
 - `-c` is injected unless `--new-session` is given
 - `--dangerously-skip-permissions` is injected unless `--no-skip-permissions` is given
 - `--chrome` is injected via builder default (`ClaudeCommand::new()`); no clr-level suppression flag exists
-- `"ultrathink "` is prepended to the message unless `--no-ultrathink` is given or the message already starts with `"ultrathink"`
+- `"\n\nultrathink"` is appended to the message unless `--no-ultrathink` is given or the message already ends with `"ultrathink"`
 
 ## Independent Parameters
 
@@ -129,7 +129,7 @@ These parameters operate on orthogonal dimensions and do not interact:
 - `--new-session` (controls automatic `-c` injection)
 
 **Applies to message-bearing invocations (with default-on behavior):**
-- `--no-ultrathink` (controls automatic `"ultrathink "` prefix on message)
+- `--no-ultrathink` (controls automatic `"\n\nultrathink"` suffix on message)
 
 **Applies to message-bearing invocations only:**
 - `-p`/`--print`, `--interactive`: print vs. TTY passthrough selection

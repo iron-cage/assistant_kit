@@ -15,7 +15,7 @@
 | print mode | Non-interactive capture mode (`-p`/`--print`); stdout collected and printed for programmatic use; continues previous session automatically |
 | dry-run | Preview mode (`--dry-run`); prints the assembled command without executing it; output always shows `-c` (automatic continuation) |
 | new session | Invocation with `--new-session`; starts a fresh Claude conversation with no prior context (omits the default `-c`) |
-| ultrathink prefix | Text `"ultrathink "` prepended to every message before it is sent to the claude subprocess; activates Claude's extended thinking mode; default-on, suppressed with `--no-ultrathink` |
+| ultrathink suffix | Text `"\n\nultrathink"` appended after every message before it is sent to the claude subprocess; activates Claude's extended thinking mode; default-on, suppressed with `--no-ultrathink` |
 
 ### Types
 

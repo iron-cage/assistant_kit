@@ -69,7 +69,7 @@ behavior.
 | [`--dry-run`](params.md#parameter--11---dry-run) | bool | Preview without executing |
 | [`--verbosity`](params.md#parameter--12---verbosity) | [`VerbosityLevel`](types.md#type--5-verbositylevel) | Runner output level |
 | [`--trace`](params.md#parameter--13---trace) | bool | Print env+command to stderr then execute |
-| [`--no-ultrathink`](params.md#parameter--14---no-ultrathink) | bool | Disable default ultrathink message prefix |
+| [`--no-ultrathink`](params.md#parameter--14---no-ultrathink) | bool | Disable default ultrathink message suffix |
 
 **Used by:** [`run`](commands.md#command--1-run)
 

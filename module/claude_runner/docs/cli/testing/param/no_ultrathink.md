@@ -6,9 +6,9 @@ Edge case coverage for the `--no-ultrathink` parameter. See [params.md](../../pa
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| TC-01 | Message → `"ultrathink "` prefix present by default (default-on) | Default Behavior |
-| TC-02 | `--no-ultrathink "msg"` → message sent verbatim (no prefix) | Opt-Out |
-| TC-03 | Message already starting with `"ultrathink"` → not double-prefixed (idempotent guard) | Idempotent Guard |
+| TC-01 | Message → `"\n\nultrathink"` suffix present by default (default-on) | Default Behavior |
+| TC-02 | `--no-ultrathink "msg"` → message sent verbatim (no suffix) | Opt-Out |
+| TC-03 | Message already ending with `"ultrathink"` → not double-suffixed (idempotent guard) | Idempotent Guard |
 | TC-04 | `--no-ultrathink` without message → accepted, no error | Edge Case |
 | TC-05 | `--help` output contains `--no-ultrathink` | Documentation |
 
@@ -24,38 +24,38 @@ Edge case coverage for the `--no-ultrathink` parameter. See [params.md](../../pa
 
 ---
 
-### TC-01: Message → `"ultrathink "` prefix present by default
+### TC-01: Message → `"\n\nultrathink"` suffix present by default
 
-**Goal:** Without `--no-ultrathink`, `clr` prepends `"ultrathink "` to the message before forwarding to claude. This is the default-on behavior.
+**Goal:** Without `--no-ultrathink`, `clr` appends `"\n\nultrathink"` to the message before forwarding to claude. This is the default-on behavior.
 **Setup:** None.
 **Command:** `clr --dry-run "Fix the auth bug"`
-**Expected Output:** Command line contains `"ultrathink Fix the auth bug"` — not bare `"Fix the auth bug"`.
-**Verification:** `output.contains("\"ultrathink Fix the auth bug\"")`.
-**Pass Criteria:** Exit 0; ultrathink prefix present in assembled command.
+**Expected Output:** Command line contains the message followed by `\n\nultrathink` — not bare `"Fix the auth bug"`.
+**Verification:** `output.contains("Fix the auth bug")` and `output.contains("ultrathink")` as suffix; `!output.contains("\"ultrathink Fix the auth bug\"")`.
+**Pass Criteria:** Exit 0; ultrathink suffix present in assembled command.
 **Source:** [params.md — --no-ultrathink](../../params.md#parameter--14---no-ultrathink), [invariant/001_default_flags.md](../../../invariant/001_default_flags.md)
 
 ---
 
 ### TC-02: `--no-ultrathink "msg"` → message sent verbatim
 
-**Goal:** `--no-ultrathink` suppresses the ultrathink prefix; the message is forwarded exactly as provided.
+**Goal:** `--no-ultrathink` suppresses the ultrathink suffix; the message is forwarded exactly as provided.
 **Setup:** None.
 **Command:** `clr --dry-run --no-ultrathink "Fix the auth bug"`
-**Expected Output:** Command line contains `"Fix the auth bug"` — not `"ultrathink Fix the auth bug"`.
-**Verification:** `output.contains("\"Fix the auth bug\"")` and `!output.contains("\"ultrathink Fix")`.
-**Pass Criteria:** Exit 0; message verbatim; ultrathink prefix absent.
+**Expected Output:** Command line contains `"Fix the auth bug"` — not followed by `\n\nultrathink`.
+**Verification:** `output.contains("\"Fix the auth bug\"")` and `!output.contains("ultrathink")` (no suffix present).
+**Pass Criteria:** Exit 0; message verbatim; ultrathink suffix absent.
 **Source:** [params.md — --no-ultrathink](../../params.md#parameter--14---no-ultrathink)
 
 ---
 
-### TC-03: Message already starting with `"ultrathink"` → not double-prefixed
+### TC-03: Message already ending with `"ultrathink"` → not double-suffixed
 
-**Goal:** When the message already starts with `"ultrathink"`, the runner's idempotent guard prevents a second prefix from being added.
+**Goal:** When the message already ends with `"ultrathink"`, the runner's idempotent guard prevents a second suffix from being added.
 **Setup:** None.
-**Command:** `clr --dry-run "ultrathink fix the bug"`
-**Expected Output:** Command line contains `"ultrathink fix the bug"` — NOT `"ultrathink ultrathink fix the bug"`.
-**Verification:** `output.contains("\"ultrathink fix the bug\"")` and `!output.contains("ultrathink ultrathink")`.
-**Pass Criteria:** Exit 0; message unchanged (single prefix, no double-prepend).
+**Command:** `clr --dry-run` with a message that ends with `"ultrathink"` (e.g., `"fix the bug\n\nultrathink"` in Rust string literal form)
+**Expected Output:** Assembled command contains the message unchanged — NOT with an extra `\n\nultrathink` appended.
+**Verification:** Output contains exactly one occurrence of `"ultrathink"` at end; does NOT contain `"ultrathink\n\nultrathink"` or `"ultrathinkulthrathink"`.
+**Pass Criteria:** Exit 0; message unchanged (single suffix, no double-append).
 **Source:** [params.md — --no-ultrathink (idempotent guard)](../../params.md#parameter--14---no-ultrathink)
 
 ---
@@ -74,7 +74,7 @@ Edge case coverage for the `--no-ultrathink` parameter. See [params.md](../../pa
 
 ### TC-05: `--help` lists `--no-ultrathink`
 
-**Goal:** `--no-ultrathink` is documented in help output so users can discover how to disable the default prefix.
+**Goal:** `--no-ultrathink` is documented in help output so users can discover how to disable the default suffix.
 **Setup:** None.
 **Command:** `clr --help`
 **Expected Output:** Stdout contains `--no-ultrathink`.

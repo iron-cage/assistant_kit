@@ -37,7 +37,7 @@ clr [OPTIONS] [MESSAGE]
 | [`--dry-run`](params.md#parameter--11---dry-run) | bool | false | Print command without executing |
 | [`--verbosity`](params.md#parameter--12---verbosity) | [`VerbosityLevel`](types.md#type--5-verbositylevel) | 3 | Runner output gate level |
 | [`--trace`](params.md#parameter--13---trace) | bool | false | Print env+command to stderr then execute (like `set -x`) |
-| [`--no-ultrathink`](params.md#parameter--14---no-ultrathink) | bool | false | Disable default ultrathink message prefix |
+| [`--no-ultrathink`](params.md#parameter--14---no-ultrathink) | bool | false | Disable default ultrathink message suffix |
 | [`--system-prompt`](params.md#parameter--15---system-prompt) | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Set system prompt (replaces the default) |
 | [`--append-system-prompt`](params.md#parameter--16---append-system-prompt) | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Append text to the default system prompt |
 
