@@ -15,7 +15,7 @@ claude --no-chrome
 
 ## Default
 
-off (as configured in settings)
+on — `--chrome` is always emitted by the builder. Pass `Some(false)` to suppress, `None` to defer to Claude's own config.
 
 ## Description
 
@@ -28,20 +28,19 @@ The Chrome integration allows Claude Code to read browser context, interact with
 
 ## Builder API
 
-Use `with_chrome()` — Tri-state `Option<bool>`: `Some(true)` = `--chrome`, `Some(false)` = `--no-chrome`, `None` = omit flag.
+Use `with_chrome()` — Tri-state `Option<bool>`: `Some(true)` = `--chrome`, `Some(false)` = `--no-chrome`, `None` = omit flag entirely (defer to Claude's config). The builder default is `Some(true)` — chrome is on unless explicitly overridden.
 
 ```rust
 use claude_runner_core::ClaudeCommand;
 
-// Enable chrome integration
-let cmd = ClaudeCommand::new()
-  .with_chrome( Some( true ) );
+// Default: chrome already on — no call needed
+let cmd = ClaudeCommand::new();
 
-// Explicitly disable
+// Explicitly disable chrome for this invocation
 let cmd = ClaudeCommand::new()
   .with_chrome( Some( false ) );
 
-// Use config default (no flag emitted)
+// Defer to Claude's own config (omit flag entirely)
 let cmd = ClaudeCommand::new()
   .with_chrome( None );
 ```
@@ -49,11 +48,14 @@ let cmd = ClaudeCommand::new()
 ## Examples
 
 ```bash
-# Enable Chrome integration for web debugging session
-claude --chrome "Debug this JavaScript issue"
+# Default builder invocation — chrome is on automatically
+# (no explicit --chrome needed when using ClaudeCommand::new())
 
-# Disable Chrome even if globally configured on
+# Disable Chrome for a headless/no-browser invocation
 claude --no-chrome --print "Process this without browser access"
+
+# Explicitly enable (equivalent to builder default; useful in raw CLI)
+claude --chrome "Debug this JavaScript issue"
 ```
 
 ## Notes

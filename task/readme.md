@@ -10,6 +10,7 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
+| 087 | ✅ Complete | Introduce `agent_kit` aggregation crate (Layer 2 facade) | architecture | 2026-04-11 | [087](completed/087_introduce_agent_kit_crate.md) |
 | 086 | ⏳ In Progress | Implement `.account.limits` command (FR-18) | feature | 2026-04-07 | [086](086_implement_account_limits.md) |
 | 085 | ✅ Complete | Update claude_runner `docs/cli/` — `--system-prompt` and `--append-system-prompt` | documentation | 2026-04-06 | [085](completed/085_runner_cli_docs_system_prompt.md) |
 | 084 | ✅ Complete | Update claude_runner `spec.md` — `--system-prompt` and `--append-system-prompt` | documentation | 2026-04-06 | [084](completed/084_runner_spec_system_prompt.md) |
@@ -106,7 +107,7 @@
 **Status Distribution:**
 - ⏳ In Progress: 1
 - 🔄 Planned: 0
-- ✅ Complete: 80
+- ✅ Complete: 81
 - 📥 Backlog: 0
 
 **Status Legend:**
@@ -117,4 +118,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-04-07 (spec.md migrated to docs/feature/ + docs/invariant/; TSK-086 in progress: error paths done, blocked on HTTP client for happy path)
+**Last Updated:** 2026-04-11 (TSK-087 complete: agent_kit aggregation crate implemented and verified; TSK-086 in progress: error paths done, blocked on HTTP client for happy path)
