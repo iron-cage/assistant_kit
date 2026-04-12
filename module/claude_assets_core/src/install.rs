@@ -77,7 +77,7 @@ pub fn install( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Resul
   std::fs::create_dir_all( &tgt_dir ).map_err( AssetError::Io )?;
 
   // Determine action — re-link or fresh link.
-  let action = if tgt_path.exists() || std::fs::symlink_metadata( &tgt_path ).is_ok()
+  let action = if std::fs::symlink_metadata( &tgt_path ).is_ok()
   {
     let meta = std::fs::symlink_metadata( &tgt_path ).map_err( AssetError::Io )?;
     if !meta.file_type().is_symlink()
@@ -146,30 +146,25 @@ pub fn uninstall( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Res
 
 // ── Private helpers ───────────────────────────────────────────────────────────
 
-fn source_path( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> PathBuf
+fn artifact_path( base_dir : &std::path::Path, kind : ArtifactKind, name : &str ) -> PathBuf
 {
-  let dir = paths.source_dir( kind );
   match kind.layout()
   {
     ArtifactLayout::File =>
     {
       let ext = kind.file_extension().unwrap_or( "" );
-      dir.join( format!( "{name}.{ext}" ) )
+      base_dir.join( format!( "{name}.{ext}" ) )
     }
-    ArtifactLayout::Directory => dir.join( name ),
+    ArtifactLayout::Directory => base_dir.join( name ),
   }
+}
+
+fn source_path( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> PathBuf
+{
+  artifact_path( &paths.source_dir( kind ), kind, name )
 }
 
 fn target_path( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> PathBuf
 {
-  let dir = paths.target_dir( kind );
-  match kind.layout()
-  {
-    ArtifactLayout::File =>
-    {
-      let ext = kind.file_extension().unwrap_or( "" );
-      dir.join( format!( "{name}.{ext}" ) )
-    }
-    ArtifactLayout::Directory => dir.join( name ),
-  }
+  artifact_path( &paths.target_dir( kind ), kind, name )
 }

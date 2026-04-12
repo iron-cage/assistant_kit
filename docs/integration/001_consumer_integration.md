@@ -30,6 +30,8 @@ If either workspace is relocated, the path deps in the consumer workspace's `Car
 
 **Exposed crates:** Layer 1 core crates (`claude_profile_core`, `claude_runner_core`, `claude_manager_core`, `claude_assets_core`) and Layer 2 library facade (`agent_kit`) are the natural consumer entry points. The Layer 2 CLI crates (`claude_manager`, `claude_storage`, `claude_tools`, etc.) are standalone CLI tools not intended for library consumers.
 
+**Phase migration (kbase consumer):** kbase (in willbe/kbase3 workspace) consumes `claude_assets_core` directly for asset discovery (Phase 1). When `agent_inventory` is implemented (Phase 2), kbase migrates from `claude_assets_core` to `agent_inventory` for multi-agent support — with zero CLI API changes. See [feature/002_agent_inventory.md](../feature/002_agent_inventory.md) § Consumer integration.
+
 ### Error Handling
 
 If the co-location requirement is not met, `cargo build` in the consumer workspace fails with "no such file or directory" on the path dep. Fix: ensure both repos are siblings under the same parent, or update the path in the consumer workspace's `Cargo.toml`.

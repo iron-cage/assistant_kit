@@ -10,6 +10,7 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
+| 106 | 🎯 Available | Create agent_inventory crate — agent-agnostic asset discovery with Claude Code adapter | feature | 2026-04-12 | [106](106_create_agent_inventory_crate.md) |
 | 100 | 🎯 Available | Fix settings_get_routine JSON output losing type information | bug | 2026-04-12 | [100](100_fix_settings_get_json_type_loss.md) |
 | 101 | 🎯 Available | Fix processes_kill_routine swallowing signal errors and never producing exit 2 | bug | 2026-04-12 | [101](101_fix_processes_kill_silent_signal_errors.md) |
 | 095 | 🎯 Available | Fix require_claude_paths producing identical errors for distinct failure conditions | bug | 2026-04-12 | [095](095_fix_require_claude_paths_error_messages.md) |
@@ -120,7 +121,7 @@
 
 **Status Distribution:**
 - ✅ Complete: 92
-- 🎯 Available: 7
+- 🎯 Available: 8
 - 📥 Backlog: 3
 
 **Status Legend:**
@@ -131,4 +132,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-04-12 (TSK-092–098 created: claude_manager comprehensive audit — 7 bug/quality tasks available)
+**Last Updated:** 2026-04-12 (TSK-106 created: agent_inventory crate — agent-agnostic asset discovery)

@@ -22,6 +22,7 @@ pub const COMMANDS_YAML : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/unilan
 mod adapter;
 
 #[ cfg( feature = "enabled" ) ]
+/// Command handler routines for each CLI subcommand.
 pub mod commands;
 
 #[ cfg( feature = "enabled" ) ]

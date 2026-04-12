@@ -4,7 +4,7 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `feature/` | Workspace design and crate inventory | [feature/readme.md](feature/readme.md) | 1 |
+| `feature/` | Workspace design and crate inventory | [feature/readme.md](feature/readme.md) | 2 |
 | `invariant/` | Privacy, versioning, testing, and performance constraints | [invariant/readme.md](invariant/readme.md) | 4 |
 | `pattern/` | Four-layer crate dependency architecture | [pattern/readme.md](pattern/readme.md) | 1 |
 | `integration/` | Cross-workspace integration protocol | [integration/readme.md](integration/readme.md) | 1 |
@@ -16,6 +16,7 @@
 | Entity | ID | Name | File |
 |--------|----|------|------|
 | feature | 001 | Workspace Design | [feature/001_workspace_design.md](feature/001_workspace_design.md) |
+| feature | 002 | Agent Inventory | [feature/002_agent_inventory.md](feature/002_agent_inventory.md) |
 | invariant | 001 | Privacy Invariant | [invariant/001_privacy_invariant.md](invariant/001_privacy_invariant.md) |
 | invariant | 002 | Versioning Strategy | [invariant/002_versioning_strategy.md](invariant/002_versioning_strategy.md) |
 | invariant | 003 | Testing Strategy | [invariant/003_testing_strategy.md](invariant/003_testing_strategy.md) |
