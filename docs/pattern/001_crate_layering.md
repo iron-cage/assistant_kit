@@ -9,7 +9,7 @@
 
 ### Problem
 
-A workspace with 11 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
+A workspace with 13 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
 
 ### Solution
 
@@ -18,9 +18,9 @@ Strict four-layer hierarchy with one rule: **dependencies flow downward only**. 
 ```
 Layer 3: claude_tools           (super-app aggregator — clt binary)
              ↓
-Layer 2: agent_kit · claude_manager · claude_runner · claude_profile · claude_storage
+Layer 2: agent_kit · claude_assets · claude_manager · claude_runner · claude_profile · claude_storage
              ↓
-Layer 1: claude_profile_core · claude_manager_core · claude_runner_core
+Layer 1: claude_assets_core · claude_profile_core · claude_manager_core · claude_runner_core
              ↓
 Layer 0: claude_common          (zero workspace deps — ClaudePaths + process utilities)
 ```
@@ -30,10 +30,12 @@ Layer 0: claude_common          (zero workspace deps — ClaudePaths + process u
 | Layer | Crate | Permitted workspace deps |
 |-------|-------|--------------------------|
 | 0 | `claude_common` | stdlib only (zero workspace deps) |
+| 1 | `claude_assets_core` | none (stdlib only; zero workspace deps) |
 | 1 | `claude_profile_core` | `claude_common` + `error_tools` |
 | 1 | `claude_manager_core` | `claude_common` + `error_tools` |
 | 1 | `claude_runner_core` | `claude_common` + `error_tools` |
 | 2 | `agent_kit` | Layer 0, 1, `claude_storage_core` — all optional via feature gates |
+| 2 | `claude_assets` | `claude_assets_core` + `unilang` + `error_tools` — all optional via feature gates |
 | 2 | `claude_profile` | Layer 0 + Layer 1 + `unilang` |
 | 2 | `claude_manager` | Layer 0 + Layer 1 + `unilang` |
 | 2 | `claude_runner` | Layer 0 + Layer 1 + `unilang` |

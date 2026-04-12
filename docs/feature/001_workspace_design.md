@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the purpose, crate inventory, and scope of the agent_kit workspace.
 - **Responsibility**: Describe what the workspace provides, what it excludes, and how the crates relate.
-- **In Scope**: Workspace purpose, crate inventory (11 members), in-scope capabilities, out-of-scope boundaries, performance characteristics.
+- **In Scope**: Workspace purpose, crate inventory (13 members), in-scope capabilities, out-of-scope boundaries, performance characteristics.
 - **Out of Scope**: Crate layering pattern (→ `pattern/001_crate_layering.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`), cross-workspace integration (→ `integration/001_willbe_integration.md`).
 
 ### Design
@@ -22,11 +22,13 @@ This workspace is a clean extraction from wtools. It has no knowledge of willbe'
 | claude_profile_core | — | 1 | Token status + account domain logic (no CLI deps) |
 | claude_manager_core | — | 1 | Version / settings_io / status domain helpers (no CLI deps) |
 | claude_runner_core | — | 1 | Builder pattern for constructing and executing claude commands |
+| claude_assets_core | — | 1 | Symlink-based artifact installer domain logic (no CLI deps) |
 | claude_profile | clp | 2 | Manage Claude Code accounts, token status, and ~/.claude/ paths |
 | claude_storage | cls | 2 | CLI for exploring Claude Code filesystem storage |
 | claude_runner | clr | 2 | CLI for executing Claude Code with configurable parameters |
 | agent_kit | — | 2 | Library facade re-exporting all Layer 0–1 core crates under feature-gated modules |
 | claude_manager | clman | 2 | CLI for managing Claude Code installation, versions, and processes |
+| claude_assets | cla | 2 | CLI for installing Claude Code artifacts (rules, skills, commands) via symlinks |
 | claude_tools | clt | 3 | Super-app aggregator: all four Layer 2 crate commands in one binary |
 
 **In scope:** Reading and parsing Claude Code's filesystem storage (`~/.claude/`); detecting sessions and continuation state; spawning `claude` with controlled parameters; managing Claude Code installation; managing accounts and active sessions; reading and writing Claude Code settings.

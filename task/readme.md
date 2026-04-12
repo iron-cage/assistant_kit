@@ -10,6 +10,17 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
+| 100 | 🎯 Available | Fix settings_get_routine JSON output losing type information | bug | 2026-04-12 | [100](100_fix_settings_get_json_type_loss.md) |
+| 101 | 🎯 Available | Fix processes_kill_routine swallowing signal errors and never producing exit 2 | bug | 2026-04-12 | [101](101_fix_processes_kill_silent_signal_errors.md) |
+| 095 | 🎯 Available | Fix require_claude_paths producing identical errors for distinct failure conditions | bug | 2026-04-12 | [095](095_fix_require_claude_paths_error_messages.md) |
+| 099 | 🎯 Available | Fix dead output-control params in version_install, version_guard, and processes_kill | bug | 2026-04-12 | [099](099_fix_dead_output_control_params.md) |
+| 096 | 🎯 Available | Handle UTF-16 surrogate pairs in parse_json_string_value | bug | 2026-04-12 | [096](096_fix_surrogate_pairs_in_json_string_parser.md) |
+| 097 | 🎯 Available | Fix extract_releases fragile literal-split tag parsing | quality | 2026-04-12 | [097](097_fix_extract_releases_fragile_tag_parsing.md) |
+| 098 | 🎯 Available | Minor code quality fixes: rename chrono_timestamp and fix status alignment | quality | 2026-04-12 | [098](098_minor_code_quality_fixes.md) |
+| 102 | 📥 Backlog | Split `claude_storage/src/cli/mod.rs` into per-command modules | refactoring | 2026-04-12 | [102](backlog/102_split_claude_storage_cli_mod.md) |
+| 103 | 📥 Backlog | Split `sessions_command_test.rs` into focused test files | quality | 2026-04-12 | [103](backlog/103_split_sessions_command_test.md) |
+| 104 | 📥 Backlog | Split `claude_runner_core/src/command.rs` into parameter-group modules | refactoring | 2026-04-12 | [104](backlog/104_split_claude_runner_core_command.md) |
+| 105 | ✅ Complete | Create `docs/` structure for claude_assets, claude_assets_core, claude_tools | documentation | 2026-04-12 | [105](completed/105_create_docs_for_new_crates.md) |
 | 091 | ✅ Complete | Change ultrathink injection from prefix to suffix (`\n\nultrathink`) | bug | 2026-04-11 | [091](completed/091_ultrathink_suffix_injection.md) |
 | 090 | ✅ Complete | Implement ultrathink default message prefix in `clr` binary | feature | 2026-04-11 | [090](completed/090_ultrathink_default_prefix_impl.md) |
 | 089 | ✅ Complete | Create `claude_assets` crate pair — multi-artifact installer CLI (`cla`) | feature | 2026-04-11 | [089](completed/089_claude_assets_installer.md) |
@@ -108,9 +119,9 @@
 ## Metadata
 
 **Status Distribution:**
-- ✅ Complete: 91
-- 🎯 Available: 0
-- 📥 Backlog: 0
+- ✅ Complete: 92
+- 🎯 Available: 7
+- 📥 Backlog: 3
 
 **Status Legend:**
 - 📥 Backlog — not yet planned
@@ -120,4 +131,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-04-11 (TSK-091 closed: ultrathink suffix injection complete — fix comment added, 126/126 tests pass)
+**Last Updated:** 2026-04-12 (TSK-092–098 created: claude_manager comprehensive audit — 7 bug/quality tasks available)

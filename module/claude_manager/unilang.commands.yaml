@@ -274,7 +274,7 @@
       description: "Number of releases to show"
       hint: "Release count"
       optional: true
-      default: "5"
+      default: "10"
       validation_rules: []
       aliases: []
       tags: []
@@ -377,10 +377,31 @@
       aliases: []
       tags: []
 
+    - name: "verbosity"
+      kind: "Integer"
+      description: "Output detail level"
+      hint: "Output verbosity level"
+      optional: true
+      default: "1"
+      validation_rules: []
+      aliases: ["v"]
+      tags: []
+
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
   examples:
     - ".processes.kill"
     - ".processes.kill dry::1"
     - ".processes.kill force::1"
+    - ".processes.kill format::json"
   auto_help_enabled: true
 
 - name: ".settings.show"

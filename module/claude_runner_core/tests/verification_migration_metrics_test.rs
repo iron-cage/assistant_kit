@@ -73,29 +73,62 @@
 use std::fs;
 use std::path::Path;
 
-/// Helper function to count pattern occurrences in file using grep-like logic
-fn count_pattern_in_file( file_path : &str, pattern : &str ) -> usize
+/// Read all source content for the command module.
+///
+/// Returns concatenated content of all `.rs` files in `src/command/` when the
+/// module has been split into a directory, or the content of `src/command.rs`
+/// when it still exists as a single file.
+fn read_command_src() -> String
 {
-  let path = Path::new( file_path );
-  if !path.exists()
-  {
-    return 0;
-  }
+  let dir_path = Path::new( "src/command" );
+  let file_path = Path::new( "src/command.rs" );
 
-  let content = fs::read_to_string( path ).unwrap_or_default();
+  if dir_path.is_dir()
+  {
+    let mut content = String::new();
+    let mut entries : Vec<_> = fs::read_dir( dir_path )
+      .expect( "Failed to read src/command/ directory" )
+      .filter_map( | e | e.ok() )
+      .filter( | e |
+      {
+        e.path().extension().map_or( false, | ext | ext == "rs" )
+      })
+      .collect();
+    entries.sort_by_key( | e | e.path() );
+    for entry in entries
+    {
+      let file_content = fs::read_to_string( entry.path() )
+        .unwrap_or_default();
+      content.push_str( &file_content );
+      content.push( '\n' );
+    }
+    content
+  }
+  else if file_path.exists()
+  {
+    fs::read_to_string( file_path ).unwrap_or_default()
+  }
+  else
+  {
+    String::new()
+  }
+}
+
+/// Helper function to count pattern occurrences in the command module source
+fn count_pattern_in_file( _file_path : &str, pattern : &str ) -> usize
+{
+  let content = read_command_src();
   content.lines().filter( | line | line.contains( pattern ) ).count()
 }
 
 /// Helper function to count lines matching a pattern within a struct definition
-fn count_fields_in_struct( file_path : &str, struct_name : &str, field_pattern : &str ) -> usize
+fn count_fields_in_struct( _file_path : &str, struct_name : &str, field_pattern : &str ) -> usize
 {
-  let path = Path::new( file_path );
-  if !path.exists()
+  let content = read_command_src();
+  if content.is_empty()
   {
     return 0;
   }
-
-  let content = fs::read_to_string( path ).unwrap_or_default();
   let lines : Vec< &str > = content.lines().collect();
 
   let mut in_struct = false;
@@ -150,7 +183,7 @@ fn test_factory_methods_reduced()
   assert!( count > 0, "with_message() should exist as builder method" );
 
   // Verify it takes self (builder pattern)
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
   let with_message_line = content.lines()
     .find( | line | line.contains( "pub fn with_message" ) )
     .expect( "with_message method should exist" );
@@ -186,7 +219,7 @@ fn test_public_fields_eliminated()
 {
   // Count public fields in ClaudeCommand struct
   // Allow pub(crate) for internal use, but no fully public fields
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
   let lines : Vec< &str > = content.lines().collect();
 
   let mut in_struct = false;
@@ -238,7 +271,7 @@ fn test_public_fields_eliminated()
 #[test]
 fn test_string_literals_replaced_with_enums()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Ignore lines with CLAUDE_CODE_ env vars, test markers, or doc comments
   let relevant_lines : Vec< &str > = content.lines()
@@ -287,7 +320,7 @@ fn test_string_literals_replaced_with_enums()
 #[test]
 fn test_wrong_defaults_corrected()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Ignore lines with correct values, test code, or fix documentation
   let relevant_lines : Vec< &str > = content.lines()
@@ -436,7 +469,7 @@ fn test_builder_methods_added()
     "Should have >= 61 builder methods, found {count}" );
 
   // Verify builder pattern signature (takes mut self, returns Self)
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
   let with_methods : Vec< &str > = content.lines()
     .filter( | line | line.contains( "pub fn with_" ) )
     .collect();

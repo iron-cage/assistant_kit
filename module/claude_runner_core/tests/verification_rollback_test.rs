@@ -163,35 +163,64 @@
 use std::fs;
 use std::path::Path;
 
-/// Helper to verify pattern doesn't exist in file
-fn assert_pattern_not_exists( file_path : &str, pattern : &str, description : &str )
+/// Read all source content for the command module.
+///
+/// Returns concatenated content of all `.rs` files in `src/command/` when the
+/// module has been split into a directory, or the content of `src/command.rs`
+/// when it still exists as a single file.
+fn read_command_src() -> String
 {
-  let path = Path::new( file_path );
-  if !path.exists()
+  let dir_path = Path::new( "src/command" );
+  let file_path = Path::new( "src/command.rs" );
+
+  if dir_path.is_dir()
   {
-    return; // File doesn't exist, pattern can't exist
+    let mut content = String::new();
+    let mut entries : Vec<_> = fs::read_dir( dir_path )
+      .expect( "Failed to read src/command/ directory" )
+      .filter_map( | e | e.ok() )
+      .filter( | e |
+      {
+        e.path().extension().map_or( false, | ext | ext == "rs" )
+      })
+      .collect();
+    entries.sort_by_key( | e | e.path() );
+    for entry in entries
+    {
+      let file_content = fs::read_to_string( entry.path() )
+        .unwrap_or_default();
+      content.push_str( &file_content );
+      content.push( '\n' );
+    }
+    content
   }
+  else if file_path.exists()
+  {
+    fs::read_to_string( file_path ).unwrap_or_default()
+  }
+  else
+  {
+    String::new()
+  }
+}
 
-  let content = fs::read_to_string( path )
-    .unwrap_or_default();
-
+/// Helper to verify pattern doesn't exist in the command module source
+fn assert_pattern_not_exists( _file_path : &str, pattern : &str, description : &str )
+{
+  let content = read_command_src();
   let count = content.matches( pattern ).count();
 
   assert_eq!( count, 0,
-    "{description} should not exist in {file_path}, found {count} occurrences");
+    "{description} should not exist in command module, found {count} occurrences");
 }
 
-/// Helper to verify pattern DOES exist (required for new API)
-fn assert_pattern_exists( file_path : &str, pattern : &str, description : &str )
+/// Helper to verify pattern DOES exist in the command module source (required for new API)
+fn assert_pattern_exists( _file_path : &str, pattern : &str, description : &str )
 {
-  let path = Path::new( file_path );
-  assert!( path.exists(), "File {file_path} should exist" );
-
-  let content = fs::read_to_string( path )
-    .expect( "Should read {file_path}" );
+  let content = read_command_src();
 
   assert!( content.contains( pattern ),
-    "{description} should exist in {file_path}" );
+    "{description} should exist in command module" );
 }
 
 // =====================================================================
@@ -304,7 +333,7 @@ fn test_execution_method_signature_changed()
 #[test]
 fn test_default_delegates_to_new_if_exists()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // If Default implementation exists, it should delegate to new()
   if content.contains( "impl Default for ClaudeCommand" )
@@ -331,7 +360,7 @@ fn test_default_delegates_to_new_if_exists()
 #[test]
 fn test_struct_initialization_requires_builder()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Verify struct has private fields (public construction blocked)
   let struct_section = content
@@ -375,7 +404,7 @@ fn test_action_mode_enum_required()
     "ActionMode enum must exist (type system dependency)" );
 
   // Verify command.rs references ActionMode (proves it's used)
-  let command_content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let command_content = read_command_src();
 
   assert!( command_content.contains( "ActionMode" ),
     "command.rs should reference ActionMode (proves enum in use)" );
@@ -396,7 +425,7 @@ fn test_log_level_enum_required()
   assert!( types_content.contains( "pub enum LogLevel" ),
     "LogLevel enum must exist (type system dependency)" );
 
-  let command_content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let command_content = read_command_src();
 
   assert!( command_content.contains( "LogLevel" ),
     "command.rs should reference LogLevel (proves enum in use)" );
@@ -437,7 +466,7 @@ fn test_enum_conversions_one_way_only()
 #[test]
 fn test_no_type_aliases_hiding_migration()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Check for suspicious type aliases
   let has_old_alias = content.contains( "type Old" ) ||
@@ -460,7 +489,7 @@ fn test_no_type_aliases_hiding_migration()
 #[test]
 fn test_no_feature_flags_for_old_api()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   assert!( !content.contains( r#"feature = "old"#),
     "No feature flags for old API (prevents conditional rollback)" );
@@ -485,7 +514,7 @@ fn test_no_feature_flags_for_old_api()
 #[test]
 fn test_builder_pattern_hardcoded()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Verify only new() exists (no alternative constructors)
   let constructor_count = content.matches( "pub fn new(" ).count();
@@ -509,7 +538,7 @@ fn test_builder_pattern_hardcoded()
 #[test]
 fn test_private_fields_enforce_builder()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   let struct_section = content
     .split( "pub struct ClaudeCommand" )
@@ -546,7 +575,7 @@ fn test_no_struct_update_syntax_support()
   // If fields are private, struct update syntax won't compile
   // We verify fields are private
 
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   let struct_section = content
     .split( "pub struct ClaudeCommand" )
@@ -580,7 +609,7 @@ fn test_no_struct_update_syntax_support()
 #[test]
 fn test_single_execution_api()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Count execution methods (should be exactly 2: execute and execute_interactive)
   let execute_count = content.matches( "pub fn execute(" ).count();
@@ -606,7 +635,7 @@ fn test_single_execution_api()
 #[test]
 fn test_no_partial_construction_helpers()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   assert!( !content.contains( "pub fn partial(" ), "No partial() constructor" );
   assert!( !content.contains( "pub fn incomplete(" ), "No incomplete() constructor" );
@@ -624,7 +653,7 @@ fn test_no_partial_construction_helpers()
 #[test]
 fn test_builder_methods_return_self()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Find with_* method signatures
   let with_methods : Vec< &str > = content
@@ -653,7 +682,7 @@ fn test_builder_methods_return_self()
 #[test]
 fn test_no_mutable_getters()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Check for *_mut() methods
   let has_mut_getters = content.contains( "_mut(" );
@@ -671,7 +700,7 @@ fn test_no_mutable_getters()
 #[test]
 fn test_no_setter_methods()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Check for set_* methods
   let has_setters = content.contains( "pub fn set_" );
@@ -689,7 +718,7 @@ fn test_no_setter_methods()
 #[test]
 fn test_env_var_automation_baked_in()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Verify env var setting exists (CLAUDE_CODE_*)
   let claude_env_count = content.matches( "CLAUDE_CODE_" ).count();
@@ -728,7 +757,7 @@ fn test_rollback_would_fail()
   assert!( types_content.contains( "pub enum LogLevel" ), "LogLevel enum required" );
 
   // Verify architecture changes
-  let command_content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let command_content = read_command_src();
   let with_count = command_content.matches( "pub fn with_" ).count();
   assert!( with_count > 10, "Builder pattern required (many with_* methods)" );
 

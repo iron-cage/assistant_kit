@@ -1306,51 +1306,6 @@ fn format_project_output(
   Ok( OutputData::new( output, "text" ) )
 }
 
-/// Show project details and all sessions (DEPRECATED: use .show instead)
-///
-/// Displays comprehensive information about a project including all sessions,
-/// statistics, and metadata. This command is deprecated in favor of `.show`.
-///
-/// # Errors
-///
-/// Returns error if storage creation fails, project loading fails,
-/// or session statistics retrieval fails.
-#[allow(clippy::needless_pass_by_value)]
-#[inline]
-pub fn show_project_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
-  -> core::result::Result< OutputData, ErrorData >
-{
-  let project_param = cmd.get_string( "project" );
-  let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
-
-  // Fix(issue-016): Validate verbosity range (0-5)
-  //
-  // Root cause: show_project_routine passed unvalidated verbosity to impl functions.
-  // Values like -1 or 10 were silently accepted and forwarded to display logic,
-  // inconsistent with status_routine and show_routine which validate at routine entry.
-  //
-  // Pitfall: Validation must happen at the routine boundary, not inside impl functions.
-  // Passing invalid values into impl functions propagates the error deeper and makes
-  // it harder to produce a clear user-facing error message.
-  if !( 0..=5 ).contains( &verbosity )
-  {
-    return Err
-    (
-      ErrorData::new
-      (
-        ErrorCode::InternalError,
-        format!( "Invalid verbosity: {verbosity}. Valid range: 0-5" )
-      )
-    );
-  }
-
-  // Handle optional project parameter (backward compatibility)
-  match project_param
-  {
-    Some( proj ) => show_project_impl( proj, verbosity ),
-    None => show_project_for_cwd_impl( verbosity ),
-  }
-}
 
 /// Count entries, sessions, or projects
 ///
@@ -1826,46 +1781,6 @@ pub fn export_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   Ok( OutputData::new( output, "text" ) )
 }
 
-/// Check if a directory has Claude Code conversation history
-///
-/// Delegates to `claude_storage_core::continuation::check_continuation()`.
-/// Default: current working directory. Override with `path::` parameter.
-///
-/// # Errors
-///
-/// Returns error if path resolution or current directory detection fails.
-#[allow(clippy::needless_pass_by_value)]
-#[inline]
-pub fn session_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
-  -> core::result::Result< OutputData, ErrorData >
-{
-  let path_param = cmd.get_string( "path" );
-
-  let resolved = path_param
-    .map( | p | resolve_path_parameter( p )
-      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to resolve path: {e}" ) ) )
-    )
-    .transpose()?;
-
-  let session_dir = if let Some( path ) = resolved
-  {
-    std::path::PathBuf::from( path )
-  }
-  else
-  {
-    std::env::current_dir()
-      .map_err( | e | ErrorData::new(
-        ErrorCode::InternalError,
-        format!( "Failed to get current directory: {e}" ),
-      ) )?
-  };
-
-  let has_history = claude_storage_core::continuation::check_continuation( &session_dir );
-
-  let message = if has_history { "has history" } else { "no history" };
-  Ok( OutputData::new( message.to_string(), "text" ) )
-}
-
 /// Check whether `encoded_base` (cwd or `path::` arg, encoded) is covered by
 /// the project identified by `dir_name` (raw storage directory name).
 ///
@@ -2180,6 +2095,16 @@ struct SessionFamily
   agents : Vec< AgentInfo >,
 }
 
+struct ProjectSummary
+{
+  display_path         : String,
+  session_count        : usize,
+  last_mtime           : std::time::SystemTime,
+  last_session_id      : String,
+  last_session_entries : usize,
+  last_message         : Option< String >,
+}
+
 /// Read `meta.json` sidecar for an agent session.
 ///
 /// Derives the meta path by replacing the `.jsonl` extension with `.meta.json`.
@@ -2365,54 +2290,87 @@ fn format_type_breakdown( agents : &[ AgentInfo ] ) -> String
     .join( ", " )
 }
 
-/// Render the active-session summary block.
+/// Aggregate sessions by project, returning projects sorted by last mtime descending.
 ///
-/// Finds the most-recently-modified session across all collected groups, reads
-/// its last text entry, applies truncation, and formats the compact summary.
-/// Returns `None` when no sessions are present in any group.
-fn render_active_summary(
+/// For each project in `groups`, finds the most-recently-modified session, computes
+/// the session count, and reads the last text entry of the most recent session.
+/// Projects where no session has a readable mtime are excluded.
+///
+/// # Pitfalls
+///
+/// - (P4) Finds the most-active PROJECT by max(mtime) per project — not the
+///   globally most-active session. A project with 3 old sessions and 1 new
+///   session has `last_mtime` = that new session's mtime.
+/// - (P5) Returns a Vec sorted by mtime descending; never iterate `groups`
+///   directly for time-sorted output — `BTreeMap` order is alphabetical.
+fn aggregate_projects(
+  groups : &mut std::collections::BTreeMap< String, Vec< claude_storage_core::Session > >,
+) -> Vec< ProjectSummary >
+{
+  let mut summaries : Vec< ProjectSummary > = Vec::new();
+
+  for ( display_path, sessions ) in groups.iter_mut()
+  {
+    // Find the session with the maximum mtime in this project.
+    let best = sessions
+      .iter()
+      .enumerate()
+      .filter_map( | ( i, s ) | session_mtime( s ).map( | t | ( i, t ) ) )
+      .max_by_key( | &( _, t ) | t );
+
+    let Some( ( best_idx, best_time ) ) = best else { continue };
+
+    let session_count        = sessions.len();
+    let last_session_id      = short_id( sessions[ best_idx ].id() ).to_string();
+    let last_session_entries = sessions[ best_idx ].count_entries().unwrap_or( 0 );
+    let last_message         = last_text_entry( &mut sessions[ best_idx ] );
+
+    summaries.push( ProjectSummary
+    {
+      display_path         : display_path.clone(),
+      session_count,
+      last_mtime           : best_time,
+      last_session_id,
+      last_session_entries,
+      last_message,
+    } );
+  }
+
+  // Most recently active project first.
+  summaries.sort_by( | a, b | b.last_mtime.cmp( &a.last_mtime ) );
+  summaries
+}
+
+/// Render the active-project summary block (bare `clg .projects` invocation).
+///
+/// Finds the most-recently-active project across all collected groups and
+/// formats a project-centric summary. Returns `None` when no sessions are present.
+fn render_active_project_summary(
   groups : &mut std::collections::BTreeMap< String, Vec< claude_storage_core::Session > >,
 ) -> Option< String >
 {
-  // Phase 1 — find the (key, index) of the session with the highest mtime.
-  // Immutable borrows are all released when this block ends.
-  let mut best_key  : Option< String >      = None;
-  let mut best_idx  : usize                 = 0;
-  let mut best_time : std::time::SystemTime = std::time::UNIX_EPOCH;
+  let summaries = aggregate_projects( groups );
+  let summary   = summaries.into_iter().next()?;
 
-  for ( key, sessions ) in groups.iter()
-  {
-    for ( idx, session ) in sessions.iter().enumerate()
-    {
-      if let Some( t ) = session_mtime( session )
-      {
-        if t > best_time
-        {
-          best_time = t;
-          best_key  = Some( key.clone() );
-          best_idx  = idx;
-        }
-      }
-    }
-  }
-
-  // Phase 2 — get mutable access to the winning session to load its entries.
-  let key      = best_key?;
-  let sessions = groups.get_mut( &key )?;
-  let session  = &mut sessions[ best_idx ];
-
-  let id_str   = short_id( session.id() ).to_string();
-  let age      = format_relative_time( best_time );
-  let last_raw = last_text_entry( session );
-  let count    = session.count_entries().unwrap_or( 0 );
-  let noun     = if count == 1 { "entry" } else { "entries" };
-  let last_txt = last_raw
+  let age      = format_relative_time( summary.last_mtime );
+  let s_noun   = if summary.session_count == 1 { "session" } else { "sessions" };
+  let e_count  = summary.last_session_entries;
+  let e_noun   = if e_count == 1 { "entry" } else { "entries" };
+  let last_txt = summary.last_message
     .as_deref()
     .map_or_else( || "(no text content)".to_string(), truncate_message );
 
   let mut out = String::new();
-  writeln!( out, "Active session  {id_str}  {age}  {count} {noun}" ).unwrap();
-  writeln!( out, "Project  {key}" ).unwrap();
+  writeln!(
+    out,
+    "Active project  {}  ({} {}, last active {})",
+    summary.display_path, summary.session_count, s_noun, age
+  ).unwrap();
+  writeln!(
+    out,
+    "Last session:  {}  {}  ({} {})",
+    summary.last_session_id, age, e_count, e_noun
+  ).unwrap();
   writeln!( out ).unwrap();
   writeln!( out, "Last message:" ).unwrap();
   writeln!( out, "  {last_txt}" ).unwrap();
@@ -2436,7 +2394,7 @@ fn render_active_summary(
 #[allow(clippy::needless_pass_by_value)]
 #[allow(clippy::too_many_lines)]
 #[inline]
-pub fn sessions_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
+pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
   use std::collections::BTreeMap;
@@ -2445,14 +2403,19 @@ pub fn sessions_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   // --- default invocation detection ---
   // Must be checked BEFORE any unwrap_or() calls — those erase the None signal.
-  // Summary mode activates only when every parameter is absent.
+  // Summary mode activates only when every scope/filter parameter is absent.
+  // Fix(issue-is-default-verbosity)
+  // Root cause: verbosity was included in the all-None gate; Some(1) from an
+  //   explicit `verbosity::1` set is_default=false and routed to list mode even
+  //   though verbosity::1 is semantically identical to the default.
+  // Pitfall: display modifiers (verbosity, format) must never appear in a
+  //   mode-selection gate — only scope/filter parameters belong there.
   let is_default = cmd.get_string( "scope" ).is_none()
     && cmd.get_string( "path" ).is_none()
     && cmd.get_string( "session" ).is_none()
     && cmd.get_boolean( "agent" ).is_none()
     && cmd.get_integer( "min_entries" ).is_none()
-    && cmd.get_integer( "limit" ).is_none()
-    && cmd.get_integer( "verbosity" ).is_none();
+    && cmd.get_integer( "limit" ).is_none();
 
   // --- parameters ---
 
@@ -2661,36 +2624,44 @@ pub fn sessions_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // to list mode (Algorithm C) below.
   if is_default
   {
-    let summary = render_active_summary( &mut groups )
-      .unwrap_or_else( || "No active session found.\n".to_string() );
+    let summary = render_active_project_summary( &mut groups )
+      .unwrap_or_else( || "No active project found.\n".to_string() );
     return Ok( OutputData::new( summary, "text" ) );
   }
 
   // --- format output (Algorithm C) ---
 
-  let total_sessions : usize = groups.values().map( Vec::len ).sum();
+  // Aggregate into time-sorted project summaries (P5: never iterate groups directly).
+  // aggregate_projects borrows groups mutably then releases; groups used below for
+  // session lookup by display_path key.
+  let summaries = aggregate_projects( &mut groups );
+
+  // v0: one project path per line (machine-readable, no session IDs).
+  if verbosity == 0
+  {
+    let mut output = String::new();
+    for summary in &summaries
+    {
+      writeln!( output, "{}", summary.display_path ).unwrap();
+    }
+    return Ok( OutputData::new( output, "text" ) );
+  }
+
+  let total_projects = summaries.len();
   let mut output = String::new();
 
   // Family grouping: at v1 with no explicit agent:: filter, agents are grouped
-  // into families under their root sessions instead of shown flat.
-  let use_families = verbosity >= 1 && agent_filter.is_none();
+  // into families under their root sessions instead of shown flat (P6: preserved).
+  let use_families = agent_filter.is_none();
 
-  if verbosity >= 1
-  {
-    let noun = if total_sessions == 1 { "session" } else { "sessions" };
-    writeln!( output, "Found {total_sessions} {noun}:\n" ).unwrap();
-  }
+  let p_noun = if total_projects == 1 { "project" } else { "projects" };
+  writeln!( output, "Found {total_projects} {p_noun}:\n" ).unwrap();
 
-  for ( display_path, sessions ) in groups
+  for summary in summaries
   {
-    if verbosity == 0
-    {
-      for session in &sessions
-      {
-        writeln!( output, "{}", session.id() ).unwrap();
-      }
-      continue;
-    }
+    // Retrieve (and remove) sessions for this project from groups.
+    let sessions = groups.remove( &summary.display_path ).unwrap_or_default();
+    let display_path = &summary.display_path;
 
     if use_families
     {
@@ -2757,7 +2728,7 @@ pub fn sessions_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         let hidden_noun = if hidden == 1 { "session" } else { "sessions" };
         writeln!(
           output,
-          "  ... and {hidden} more {hidden_noun}  (use verbosity::0 to list all)"
+          "  ... and {hidden} more {hidden_noun}  (use limit::0 to list all)"
         ).unwrap();
       }
     }
@@ -2833,7 +2804,7 @@ fn render_families_v1(
   {
     let hidden = displayable.len() - limit_cap;
     let noun = if hidden == 1 { "session" } else { "sessions" };
-    writeln!( output, "  ... and {hidden} more {noun}  (use verbosity::0 to list all)" ).unwrap();
+    writeln!( output, "  ... and {hidden} more {noun}  (use limit::0 to list all)" ).unwrap();
   }
 }
 

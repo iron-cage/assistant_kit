@@ -27,4 +27,5 @@ clt .version.install          # install/update claude
 |------|----------------|
 | `src/` | `clt` binary entry and feature-gated Layer 2 registry aggregation |
 | `build.rs` | YAML aggregation for `claude_runner` and `claude_storage` commands |
+| `docs/` | Behavioral requirements: feature and invariant doc instances |
 | `tests/` | Compile and link sanity checks for the `clt` binary |

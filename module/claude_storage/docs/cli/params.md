@@ -49,7 +49,7 @@ Session type filter for listing operations.
 
 **Default:** unset (all session types shown)
 
-**Commands:** `.list`, `.sessions`
+**Commands:** `.list`, `.projects`
 (See [commands.md#command--2-list](commands.md#command--2-list) and [commands.md#command--8-sessions](commands.md#command--8-sessions))
 
 **Purpose:** Distinguishes between main conversation sessions and agent sub-sessions spawned by tool calls. Agent sessions are stored as `agent-*.jsonl` files and have `isSidechain: true`. Use `agent::1` to inspect sub-agent behavior, `agent::0` to see only top-level conversations.
@@ -243,7 +243,7 @@ Filter sessions by minimum entry count threshold.
 
 **Default:** unset (no minimum)
 
-**Commands:** `.list`, `.sessions`
+**Commands:** `.list`, `.projects`
 (See [commands.md#command--2-list](commands.md#command--2-list) and [commands.md#command--8-sessions](commands.md#command--8-sessions))
 
 **Purpose:** Excludes sessions with fewer entries than the threshold. Useful for finding substantive conversations (skip one-message sessions) or for performance (only load sessions known to have content).
@@ -312,7 +312,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 
 **Default:** Command-dependent
 
-**Commands:** `.status`, `.list`, `.session`, `.sessions`, `.count`, `.search`, `.show`, `.export`, `.path`, `.exists`, `.session.dir`, `.session.ensure`
+**Commands:** `.status`, `.list`, `.session`, `.projects`, `.count`, `.search`, `.show`, `.export`, `.path`, `.exists`, `.session.dir`, `.session.ensure`
 (See individual command sections in [commands.md](commands.md))
 
 **Per-command semantics:**
@@ -322,7 +322,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 | `.status` | StoragePath | `~/.claude/` | Storage root override |
 | `.list` | PathSubstring | — | Filter projects by path substring (case-insensitive) |
 | `.session` | StoragePath | cwd | Directory to check for history |
-| `.sessions` | StoragePath | cwd | Scope anchor path |
+| `.projects` | StoragePath | cwd | Scope anchor path |
 | `.count` | StoragePath | cwd | Scope anchor path |
 | `.search` | StoragePath | cwd | Scope anchor path |
 | `.show` | StoragePath | cwd | Scope anchor path |
@@ -332,7 +332,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 | `.session.dir` | StoragePath | — | Base directory (required) |
 | `.session.ensure` | StoragePath | — | Base directory (required) |
 
-**Purpose:** Provides a path context appropriate to each command. In `.status`, `.session`, `.exists`, `.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list`, it is a substring filter on project paths. In `.sessions`, `.count`, `.search`, `.show`, and `.export`, it anchors the scope discovery when paired with `scope::`.
+**Purpose:** Provides a path context appropriate to each command. In `.status`, `.session`, `.exists`, `.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list`, it is a substring filter on project paths. In `.projects`, `.count`, `.search`, `.show`, and `.export`, it anchors the scope discovery when paired with `scope::`.
 
 **Examples:**
 ```bash
@@ -353,13 +353,13 @@ Path argument. Semantics differ by command — see command sections for exact be
 .session.dir path::/home/user/project
 .session.ensure path::/home/user/project
 
-# .sessions / .count / .search / .show / .export: scope anchor
-.sessions scope::under path::/home/user1/pro
+# .projects / .count / .search / .show / .export: scope anchor
+.projects scope::under path::/home/user1/pro
 .count scope::under path::/home/user1/pro
 .search query::error scope::under path::/home/user1/pro
 ```
 
-**Group (scope anchor context):** [Scope Configuration](parameter_groups.md#scope-configuration) — `path::` acts as the scope anchor paired with `scope::` in `.sessions`, `.count`, `.search`, `.show`, and `.export`; its role in `.status`, `.list`, `.session`, `.exists`, `.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
+**Group (scope anchor context):** [Scope Configuration](parameter_groups.md#scope-configuration) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.count`, `.search`, `.show`, and `.export`; its role in `.status`, `.list`, `.session`, `.exists`, `.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
 
 ---
 
@@ -453,7 +453,7 @@ Discovery scope for session and project operations.
 
 **Default:** varies by command (see table below)
 
-**Commands:** `.list`, `.count`, `.search`, `.show`, `.export`, `.sessions`
+**Commands:** `.list`, `.count`, `.search`, `.show`, `.export`, `.projects`
 (See individual command sections in [commands.md](commands.md))
 
 **Purpose:** Controls which projects are searched or counted. `local` is the narrowest (current project only); `global` is the broadest (all projects). `relevant` walks the ancestor chain from cwd upward to `/`, collecting projects at each level — modeling the "what matters for this project" concept.
@@ -467,7 +467,7 @@ Discovery scope for session and project operations.
 | `.search` | `global` | Boundary for what gets searched |
 | `.show` | `local` | Project search boundary when no `project::` given |
 | `.export` | `local` | Project search boundary for source session lookup |
-| `.sessions` | `local` | Session discovery scope |
+| `.projects` | `local` | Session discovery scope |
 
 **Examples:**
 ```bash
@@ -489,18 +489,18 @@ scope::all        # "scope must be relevant|local|under|global, got all"
 
 Session identifier parameter — acts as substring filter in listing commands, as exact identifier in counting/search commands.
 
-**Type:** [`SessionFilter`](types.md#sessionfilter) (in `.list`, `.sessions`) / [`SessionId`](types.md#sessionid) (in `.count`, `.search`)
+**Type:** [`SessionFilter`](types.md#sessionfilter) (in `.list`, `.projects`) / [`SessionId`](types.md#sessionid) (in `.count`, `.search`)
 
 **Fundamental Type:** String
 
 **Constraints:**
 - Non-empty string expected
-- In `.list` and `.sessions`: case-insensitive substring match against session filename stem
+- In `.list` and `.projects`: case-insensitive substring match against session filename stem
 - In `.count` and `.search`: exact match (used to scope to a specific session)
 
 **Default:** unset (no filter / no scope restriction)
 
-**Commands:** `.list`, `.count`, `.search`, `.sessions`
+**Commands:** `.list`, `.count`, `.search`, `.projects`
 (See individual command sections in [commands.md](commands.md))
 
 **Per-command semantics:**
@@ -508,11 +508,11 @@ Session identifier parameter — acts as substring filter in listing commands, a
 | Command | Type | Semantics |
 |---------|------|-----------|
 | `.list` | SessionFilter | Substring filter — shows sessions whose ID contains this string |
-| `.sessions` | SessionFilter | Substring filter — shows sessions whose ID contains this string |
+| `.projects` | SessionFilter | Substring filter — shows sessions whose ID contains this string |
 | `.count` | SessionId | Exact scope — counts entries within this specific session |
 | `.search` | SessionId | Exact scope — restricts search to this specific session |
 
-**Purpose:** Narrows results by session identity. In listing contexts (`.list`, `.sessions`), acts as a substring filter for discovery. In counting/search contexts (`.count`, `.search`), acts as an exact scope pin to a specific session.
+**Purpose:** Narrows results by session identity. In listing contexts (`.list`, `.projects`), acts as a substring filter for discovery. In counting/search contexts (`.count`, `.search`), acts as an exact scope pin to a specific session.
 
 **Side effect:** Auto-enables `sessions::1` in `.list`.
 
@@ -527,7 +527,7 @@ session::default      # Matches -default_topic.jsonl
 .search query::error session::-default_topic
 ```
 
-**Group (listing context):** [Session Filter](parameter_groups.md#session-filter) — applies to `.list` and `.sessions` only where `session::` acts as a substring filter alongside `agent::` and `min_entries::`.
+**Group (listing context):** [Session Filter](parameter_groups.md#session-filter) — applies to `.list` and `.projects` only where `session::` acts as a substring filter alongside `agent::` and `min_entries::`.
 
 ---
 
@@ -677,7 +677,7 @@ Output detail level controlling information density.
 
 **Alias:** `v`
 
-**Commands:** `.status`, `.list`, `.show`, `.show.project`, `.search`, `.sessions`
+**Commands:** `.status`, `.list`, `.show`, `.show.project`, `.search`, `.projects`
 (See individual command sections in [commands.md](commands.md))
 
 **Purpose:** Controls how much information each command outputs. Level `0` is minimal/machine-readable; level `1` is the standard summary; level `2` adds details; level `3` shows all fields; levels `4-5` are reserved.

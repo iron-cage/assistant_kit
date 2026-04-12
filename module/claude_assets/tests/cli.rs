@@ -17,6 +17,10 @@
 //! | cli09 | `cla .list kind::rule` with 2 source, 1 installed | Exit 0; ● and ○ markers |
 //! | cli10 | `cla .install` without kind:: | Exit 1; error mentions kind:: |
 //! | cli11 | `cla .install kind::invalid name::x` | Exit 1; "unknown kind" error |
+//! | cli12 | `cla .list installed::true` | Exit 1; error says expected 0 or 1 |
+//! | cli13 | `cla .list v::0` | Exit 0; verbosity alias accepted |
+//! | cli14 | `cla list` (no dot) | Exit 1; error says must start with '.' |
+//! | cli15 | `cla .list verbosity::5` | Exit 1; error says out of range |
 
 use assert_cmd::Command;
 use std::fs;

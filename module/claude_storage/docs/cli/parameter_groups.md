@@ -24,7 +24,7 @@ See [params.md](params.md) for individual parameter specs and [commands.md](comm
 
 **Purpose:** Controls how much information each read command outputs, from machine-readable minimal to full-field verbose.
 
-**Used By:** `.status`, `.list`, `.show`, `.show.project`, `.search`, `.sessions` (6 commands total)
+**Used By:** `.status`, `.list`, `.show`, `.show.project`, `.search`, `.projects` (6 commands total)
 
 **Semantic Coherence Test:**
 - "Does `verbosity::` control output detail level?" → YES
@@ -130,16 +130,16 @@ project::Path("/home/user1/pro/lib/willbe") # Path(...) from .list output
 
 **Purpose:** Together these three parameters filter which sessions appear in a listing — by ID pattern, by session type, and by minimum size.
 
-**Used By (full implementors):** `.list`, `.sessions` (2 commands total)
+**Used By (full implementors):** `.list`, `.projects` (2 commands total)
 
 **Partial implementors:**
 - `.count` (`session::` only — as exact `SessionId`, not substring filter): scopes entry counting to a session
 - `.search` (`session::` only — as exact `SessionId`, not substring filter): restricts search to a session
 
-Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact match), not as a `SessionFilter` (substring). The group semantics (substring filtering of session listings) apply only to `.list` and `.sessions`.
+Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact match), not as a `SessionFilter` (substring). The group semantics (substring filtering of session listings) apply only to `.list` and `.projects`.
 
 **Semantic Coherence Test:**
-- "Does `session::` control which sessions appear in listing?" → YES (by ID substring) — in `.list` and `.sessions`
+- "Does `session::` control which sessions appear in listing?" → YES (by ID substring) — in `.list` and `.projects`
 - "Does `agent::` control which sessions appear in listing?" → YES (by session type)
 - "Does `min_entries::` control which sessions appear in listing?" → YES (by size threshold)
 
@@ -180,7 +180,7 @@ Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact mat
 
 **Purpose:** Together these control the session discovery strategy: `scope::` selects the discovery algorithm and `path::` provides the filesystem anchor for scope resolution.
 
-**Used By:** `.list` (scope:: only — path:: is PathSubstring in this command), `.count`, `.search`, `.show`, `.export`, `.sessions` (6 commands total)
+**Used By:** `.list` (scope:: only — path:: is PathSubstring in this command), `.count`, `.search`, `.show`, `.export`, `.projects` (6 commands total)
 
 **Note on `.list` membership:** `.list` is a partial member — it accepts `scope::` for discovery boundary control, but its `path::` parameter remains a PathSubstring filter (not a StoragePath anchor); cwd is used as the implicit scope anchor in `.list`.
 
@@ -217,8 +217,8 @@ Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact mat
 
 **Examples:**
 ```bash
-.sessions scope::local
-.sessions scope::relevant
-.sessions scope::under path::/home/user1/pro
-.sessions scope::global
+.projects scope::local
+.projects scope::relevant
+.projects scope::under path::/home/user1/pro
+.projects scope::global
 ```

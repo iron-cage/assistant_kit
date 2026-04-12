@@ -5,7 +5,7 @@
 - **Executor Type:** any
 - **Actor:** null
 - **Claimed At:** null
-- **Status:** 🎯 (Available)
+- **Status:** ✅ (Completed)
 
 ## Goal
 
@@ -126,4 +126,7 @@ Expected: `2` (the `let is_default =` assignment and the `if is_default` dispatc
 
 ## Outcomes
 
-<!-- Populated upon task completion -->
+- Removed `&& cmd.get_integer("verbosity").is_none()` from `is_default` in `sessions_routine` (`src/cli/mod.rs`)
+- Added 3-field fix comment at the change site
+- Added `it47_verbosity_1_alone_stays_in_summary_mode` bug reproducer to `tests/sessions_command_test.rs` with full 5-section doc comment
+- 292/292 tests pass; clippy and doc tests clean

@@ -116,14 +116,51 @@
 use std::fs;
 use std::path::Path;
 
-/// Helper to verify method doesn't exist in file
-fn assert_method_not_exists( file_path : &str, method_pattern : &str, method_name : &str )
+/// Read all source content for the command module.
+///
+/// Returns concatenated content of all `.rs` files in `src/command/` when the
+/// module has been split into a directory, or the content of `src/command.rs`
+/// when it still exists as a single file.
+fn read_command_src() -> String
 {
-  let path = Path::new( file_path );
-  assert!( path.exists(), "File {file_path} should exist" );
+  let dir_path = Path::new( "src/command" );
+  let file_path = Path::new( "src/command.rs" );
 
-  let content = fs::read_to_string( path )
-    .unwrap_or_else(|_| panic!("Should read {file_path}"));
+  if dir_path.is_dir()
+  {
+    let mut content = String::new();
+    let mut entries : Vec<_> = fs::read_dir( dir_path )
+      .expect( "Failed to read src/command/ directory" )
+      .filter_map( | e | e.ok() )
+      .filter( | e |
+      {
+        e.path().extension().map_or( false, | ext | ext == "rs" )
+      })
+      .collect();
+    entries.sort_by_key( | e | e.path() );
+    for entry in entries
+    {
+      let file_content = fs::read_to_string( entry.path() )
+        .unwrap_or_default();
+      content.push_str( &file_content );
+      content.push( '\n' );
+    }
+    content
+  }
+  else if file_path.exists()
+  {
+    fs::read_to_string( file_path ).unwrap_or_default()
+  }
+  else
+  {
+    String::new()
+  }
+}
+
+/// Helper to verify method doesn't exist in the command module source
+fn assert_method_not_exists( _file_path : &str, method_pattern : &str, method_name : &str )
+{
+  let content = read_command_src();
 
   // Filter out comments and test code
   let relevant_lines : Vec< &str > = content.lines()
@@ -140,19 +177,18 @@ fn assert_method_not_exists( file_path : &str, method_pattern : &str, method_nam
   let count = relevant_content.matches( method_pattern ).count();
 
   assert_eq!( count, 0,
-    "Method {method_name} should not exist in {file_path}, found {count} occurrences" );
+    "Method {method_name} should not exist in command module, found {count} occurrences" );
 }
 
 /// Helper to count public fields in struct
-fn count_public_fields_in_struct( file_path : &str, struct_name : &str ) -> usize
+fn count_public_fields_in_struct( _file_path : &str, struct_name : &str ) -> usize
 {
-  let path = Path::new( file_path );
-  if !path.exists()
+  let content = read_command_src();
+  if content.is_empty()
   {
     return 0;
   }
 
-  let content = fs::read_to_string( path ).unwrap();
   let lines : Vec< &str > = content.lines().collect();
 
   let mut in_struct = false;
@@ -264,8 +300,7 @@ fn test_no_other_factory_methods()
 #[test]
 fn test_only_new_constructor_exists()
 {
-  let content = fs::read_to_string( "src/command.rs" )
-    .expect( "Should read src/command.rs" );
+  let content = read_command_src();
 
   let count = content.matches( "pub fn new(" ).count();
 
@@ -280,8 +315,7 @@ fn test_only_new_constructor_exists()
 #[test]
 fn test_with_message_is_builder_not_factory()
 {
-  let content = fs::read_to_string( "src/command.rs" )
-    .expect( "Should read src/command.rs" );
+  let content = read_command_src();
 
   // Find with_message definition
   let with_message_line = content.lines()
@@ -321,7 +355,7 @@ fn test_no_public_fields_in_command_struct()
 #[test]
 fn test_message_field_is_private()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Look for "pub message:" in ClaudeCommand struct
   let struct_section = content
@@ -340,7 +374,7 @@ fn test_message_field_is_private()
 #[test]
 fn test_working_directory_field_is_private()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   let struct_section = content
     .split( "pub struct ClaudeCommand" )
@@ -358,7 +392,7 @@ fn test_working_directory_field_is_private()
 #[test]
 fn test_max_output_tokens_field_is_private()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   let struct_section = content
     .split( "pub struct ClaudeCommand" )
@@ -382,7 +416,7 @@ fn test_max_output_tokens_field_is_private()
 #[test]
 fn test_all_config_fields_private()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   let struct_section = content
     .split( "pub struct ClaudeCommand" )
@@ -449,7 +483,7 @@ fn test_run_method_removed()
 #[test]
 fn test_no_public_spawn_method()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Check for pub fn spawn (not private fn spawn)
   let pub_spawn_count = content.matches( "pub fn spawn(" ).count();
@@ -531,7 +565,7 @@ fn test_log_level_enum_exists()
 #[test]
 fn test_enums_used_not_strings()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Check that ActionMode and LogLevel are referenced
   // (usage indicates enums are being used, not strings)
@@ -588,7 +622,7 @@ fn test_old_api_usage_impossible()
 #[test]
 fn test_grep_patterns_accurate()
 {
-  let content = fs::read_to_string( "src/command.rs" ).unwrap();
+  let content = read_command_src();
 
   // Verify we CAN find new() (proves grep works)
   assert!( content.contains( "pub fn new(" ),

@@ -310,17 +310,45 @@ fn builder_methods_comprehensive_coverage() {
     return;
   }
 
-  let output = Command::new("grep")
-    .args([
-      "-c",
-      "pub fn with_",
-      src_dir.join("command.rs").to_str().unwrap(),
-    ])
-    .output()
-    .expect("Failed to run grep");
+  // Support both single-file and split-directory layouts.
+  // After TSK-104 split, command.rs was replaced by command/ directory.
+  let command_file = src_dir.join("command.rs");
+  let command_dir = src_dir.join("command");
 
-  let count_str = String::from_utf8_lossy(&output.stdout);
-  let count: usize = count_str.trim().parse().unwrap_or(0);
+  let count = if command_dir.is_dir() {
+    // Count across all .rs files in the directory
+    let output = Command::new("grep")
+      .args([
+        "-r",
+        "-c",
+        "--include=*.rs",
+        "pub fn with_",
+        command_dir.to_str().unwrap(),
+      ])
+      .output()
+      .expect("Failed to run grep");
+    // grep -r -c returns per-file counts; sum them
+    String::from_utf8_lossy(&output.stdout)
+      .lines()
+      .filter_map( | line |
+      {
+        // Each line is "path:count"; extract the count part
+        line.rsplit(':').next().and_then( | n | n.trim().parse::<usize>().ok() )
+      })
+      .sum()
+  } else if command_file.exists() {
+    let output = Command::new("grep")
+      .args([
+        "-c",
+        "pub fn with_",
+        command_file.to_str().unwrap(),
+      ])
+      .output()
+      .expect("Failed to run grep");
+    String::from_utf8_lossy(&output.stdout).trim().parse().unwrap_or(0)
+  } else {
+    0
+  };
 
   assert!(
     count >= 10,

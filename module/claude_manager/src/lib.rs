@@ -1,6 +1,6 @@
 //! `claude_manager` — manage Claude Code installation, versions, and process lifecycle.
 //!
-//! See [`spec.md`](../spec.md) for complete requirements and architecture.
+//! See `docs/feature/`, `docs/pattern/`, and `docs/algorithm/` for requirements and architecture.
 //!
 //! # Feature Gate
 //!
@@ -54,7 +54,6 @@ fn reg_cmd(
   .expect( "internal error: failed to register command" );
 }
 
-#[ cfg( feature = "enabled" ) ]
 /// Register all `claude_manager` commands into an existing registry.
 ///
 /// Used by both the standalone binary (`run_cli`) and by `claude_tools` (Layer 3)
@@ -64,6 +63,7 @@ fn reg_cmd(
 ///
 /// Panics if a command fails to register (would indicate a duplicate name,
 /// which is a programming error).
+#[ cfg( feature = "enabled" ) ]
 #[ inline ]
 pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
 {
@@ -92,13 +92,12 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".version.list",    "List all named version aliases",                             vec![ v(), fmt() ],                      Box::new( version_list_routine    ) );
   reg_cmd( registry, ".version.history", "Show release history with changelogs from GitHub",           vec![ cnt(), v(), fmt() ],               Box::new( version_history_routine ) );
   reg_cmd( registry, ".processes",       "List all running Claude Code processes",                     vec![ v(), fmt() ],                      Box::new( processes_routine       ) );
-  reg_cmd( registry, ".processes.kill",  "Terminate all Claude Code processes",                        vec![ dry(), frc() ],                    Box::new( processes_kill_routine  ) );
+  reg_cmd( registry, ".processes.kill",  "Terminate all Claude Code processes",                        vec![ dry(), frc(), v(), fmt() ],        Box::new( processes_kill_routine  ) );
   reg_cmd( registry, ".settings.show",   "Print all settings from ~/.claude/settings.json",            vec![ v(), fmt() ],                      Box::new( settings_show_routine   ) );
   reg_cmd( registry, ".settings.get",    "Read a single setting by key",                               vec![ key(), v(), fmt() ],               Box::new( settings_get_routine    ) );
   reg_cmd( registry, ".settings.set",    "Write a single setting atomically",                          vec![ key(), val(), dry() ],             Box::new( settings_set_routine    ) );
 }
 
-#[ cfg( feature = "enabled" ) ]
 /// Run the `claude_manager` CLI — 5-phase unilang pipeline.
 ///
 /// Entry point shared by both the `claude_manager` and `clman` binaries so
@@ -112,6 +111,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
 /// | 0    | Success |
 /// | 1    | Usage / input error |
 /// | 2    | Runtime error (`InternalError`, `CommandNotImplemented`) |
+#[ cfg( feature = "enabled" ) ]
 #[ inline ]
 pub fn run_cli()
 {

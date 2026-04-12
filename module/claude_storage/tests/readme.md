@@ -44,11 +44,9 @@ tests/
 ├── search_command_test.rs                 # .search parameter validation tests (Phase 1B)
 ├── search_session_partial_uuid_bug.rs     # .search session partial UUID fix (issue-020)
 ├── search_special_characters_bug.rs       # Special character handling (Bug #006, #007)
-├── show_project_command.rs                # .show.project command tests
-├── session_command_test.rs                # .session conversation history check tests
 ├── session_path_command_test.rs           # .path/.exists/.session.dir/.session.ensure lifecycle commands
-├── sessions_command_test.rs               # .sessions scope-aware listing and parameter validation (issue-024/029/031/032 regression)
-├── sessions_output_format_test.rs         # .sessions output format redesign (plan-004): IT-17 through IT-22
+├── projects_command_test.rs               # .projects scope-aware listing and parameter validation (issue-024/029/031/032 regression)
+├── projects_output_format_test.rs         # .projects output format redesign (plan-004): IT-17 through IT-22
 ├── smart_show_command.rs                  # .show smart parameter detection tests
 ├── status_path_test.rs                    # .status path parameter tests (Phase 1D)
 └── truncate_utf8_bug.rs                   # Truncation safety on multibyte UTF-8 (issue-018)
@@ -89,11 +87,9 @@ tests/
 | `search_command_test.rs` | Validate .search command parameters |
 | `search_session_partial_uuid_bug.rs` | Test partial UUID matching in .search session filter |
 | `search_special_characters_bug.rs` | Test special character handling in queries |
-| `session_command_test.rs` | Test .session conversation history detection |
 | `session_path_command_test.rs` | Test .path/.exists/.session.dir/.session.ensure lifecycle commands |
-| `sessions_command_test.rs` | Test .sessions scope-aware session listing and parameter validation |
-| `sessions_output_format_test.rs` | Test .sessions output format redesign (plan-004): path headers, agent collapse, entry counts |
-| `show_project_command.rs` | Test .show.project command functionality |
+| `projects_command_test.rs` | Test .projects scope-aware session listing and parameter validation |
+| `projects_output_format_test.rs` | Test .projects output format redesign (plan-004): path headers, agent collapse, entry counts |
 | `smart_show_command.rs` | Test location-aware .show command |
 | `status_path_test.rs` | Test path parameter in .status command |
 | `truncate_utf8_bug.rs` | Test truncation safety on multibyte UTF-8 (issue-018) |
@@ -334,12 +330,12 @@ cargo nextest run --all-features -- --include-ignored
 - **Root Cause**: Verbosity extracted without bounds check, unlike `status_routine` and `search_routine`
 - **Documentation**: Fix(issue-015) comment in `src/cli/mod.rs` + 5-section test documentation
 
-### Finding #016: show_project_routine missing verbosity range validation ✅ Fixed
+### Finding #016: show_project_routine missing verbosity range validation ✅ Fixed (command removed in task-013)
 - **Issue**: `show_project_routine` did not validate verbosity 0-5 range; same gap as Finding #015
-- **Tests**: 4 verbosity tests in `show_project_command.rs` (N: -1, 6; P: 0, 5)
+- **Tests**: 4 verbosity tests existed — test file deleted with command removal (task-013)
 - **Fix**: Added `if !(0..=5).contains(&verbosity)` check in `show_project_routine` after get_integer call
 - **Root Cause**: Verbosity passed unvalidated to impl functions; invalid values produced garbled output
-- **Documentation**: Fix(issue-016) comment in `src/cli/mod.rs` + 5-section test documentation
+- **Note**: `.show.project` command removed in task-013; pattern applies to any routine that accepts verbosity
 
 ### issue-015: .status performance — global_stats() O(total JSONL bytes)
 - **Issue**: `.status` took >2 minutes with 1903 projects / 7 GB JSONL
@@ -371,8 +367,8 @@ cargo nextest run --all-features -- --include-ignored
 - **Documentation**: Fix(issue-018) in `cli/mod.rs` + 5-section test doc in `truncate_utf8_bug.rs`
 
 ### issue-025: Singular/plural mismatch in "Found N X:" output headers
-- **Issue**: `.list`, `.search`, and `.sessions` all output "Found 1 projects:", "Found 1 matches:", "Found 1 sessions:" — incorrect plural when count == 1
-- **Tests**: 7 tests across 3 files (IT-14..IT-16 in `sessions_command_test.rs`; 2 in `list_command_test.rs`; 2 in `search_command_test.rs`)
+- **Issue**: `.list`, `.search`, and `.projects` all output "Found 1 projects:", "Found 1 matches:", "Found 1 sessions:" — incorrect plural when count == 1
+- **Tests**: 7 tests across 3 files (IT-14..IT-16 in `projects_command_test.rs`; 2 in `list_command_test.rs`; 2 in `search_command_test.rs`)
 - **Fix**: Derive noun ("project"/"projects", "match"/"matches", "session"/"sessions") from count before formatting header; zero uses plural
 - **Root Cause**: `writeln!(output, "Found {} noun:\n", count)` used a hardcoded plural noun string regardless of count
 - **Documentation**: 5-section doc block at issue-025 comment in each test file; source changes are minimal inline fixes
@@ -391,11 +387,11 @@ cargo nextest run --all-features -- --include-ignored
 - **Root Cause**: Blanket `From<io::Error> for Error` always sets context to "unknown operation". Any `?` on an IO operation silently loses path/operation context.
 - **Documentation**: Fix(issue-026) in `export.rs` + 5-section test doc in `export_command_test.rs`
 
-### plan-004: sessions_routine output format redesign
+### plan-004: projects_routine output format redesign
 
-- **Issue**: `.sessions` output was a flat list of session IDs with opaque encoded project labels (e.g. `"-home-user1-pro"`); no project grouping, no readable paths, no agent collapse at scale
-- **Tests**: 6 tests IT-17..IT-22 in `sessions_output_format_test.rs` (IT-23 covers display fix issue-029)
-- **Fix**: Redesigned `sessions_routine` to group sessions by `BTreeMap<String, Vec<Session>>` keyed by decoded project path; added `decode_project_display()` helper; agent sessions collapsed at v1 with no `agent::` filter; entry counts shown per session at v2+; blank line between project groups
+- **Issue**: `.projects` output was a flat list of session IDs with opaque encoded project labels (e.g. `"-home-user1-pro"`); no project grouping, no readable paths, no agent collapse at scale
+- **Tests**: 6 tests IT-17..IT-22 in `projects_output_format_test.rs` (IT-23 covers display fix issue-029)
+- **Fix**: Redesigned `projects_routine` to group sessions by `BTreeMap<String, Vec<Session>>` keyed by decoded project path; added `decode_project_display()` helper; agent sessions collapsed at v1 with no `agent::` filter; entry counts shown per session at v2+; blank line between project groups
 - **Root Cause**: Original design used flat `Vec<(label, id)>` with labels from `format!("{:?}", project.id())` — debug-format encoded strings, not human-readable paths
 - **Pitfalls**:
   1. `decode_path()` requires input starting with `-`; UUID project dirs don't → must guard with `starts_with('-')` before calling decode
@@ -406,26 +402,26 @@ cargo nextest run --all-features -- --include-ignored
 ### issue-029: decode_project_display splits underscore dirs as path separators
 
 - **Issue**: `.sessions scope::under` (and all verbosity ≥ 1 scopes) displayed project path headers with underscore-named directories split on `/` — e.g., `~/wip_core/myproject:` shown as `~/wip/core/myproject:`
-- **Test**: `IT-23` (`test_sessions_under_display_preserves_underscores`) in `sessions_command_test.rs`; marked `bug_reproducer(issue-029)`
+- **Test**: `IT-23` (`test_sessions_under_display_preserves_underscores`) in `projects_command_test.rs`; marked `bug_reproducer(issue-029)`
 - **Fix**: Added `decode_path_via_fs()` + `walk_fs()` in `cli/mod.rs`; `decode_project_display` now tries the heuristic result first — if it doesn't exist on disk, falls back to FS-guided DFS that chooses `/` vs `_` at each boundary by calling `is_dir()` on candidate prefixes; final fallback is the heuristic result (handles deleted/remote projects)
 - **Root Cause**: `encode_path` maps both `_` (underscore) and `/` (path separator) to `-`; `decode_component` heuristic defaulted to `/` for all unrecognized `-` boundaries, so `wip-core` always decoded to `wip/core` regardless of whether a real `wip_core` directory exists
-- **Documentation**: Fix(issue-029) + 3-field source comment in `cli/mod.rs`; 5-section test doc block in `sessions_command_test.rs`
+- **Documentation**: Fix(issue-029) + 3-field source comment in `cli/mod.rs`; 5-section test doc block in `projects_command_test.rs`
 
 ### issue-031: scope::under includes sibling modules with underscore-suffix names
 
 - **Issue**: `scope::under path::claude_storage` incorrectly included sessions from `claude_storage_core` — a sibling module at the same directory level
-- **Test**: `IT-25` (`it_25_scope_under_excludes_underscore_named_sibling`) in `sessions_command_test.rs`; marked `bug_reproducer(issue-031)`
-- **Fix**: Two-stage predicate in the `"under"` arm of `project_matches` in `sessions_routine`. String prefix is fast-reject only; `decode_path_via_fs` + `Path::starts_with` (component-wise) verifies ambiguous candidates. `--topic` suffix stripped before filesystem walk.
+- **Test**: `IT-25` (`it_25_scope_under_excludes_underscore_named_sibling`) in `projects_command_test.rs`; marked `bug_reproducer(issue-031)`
+- **Fix**: Two-stage predicate in the `"under"` arm of `project_matches` in `projects_routine`. String prefix is fast-reject only; `decode_path_via_fs` + `Path::starts_with` (component-wise) verifies ambiguous candidates. `--topic` suffix stripped before filesystem walk.
 - **Root Cause**: `encode_path` maps both `_` and `/` to `-`; string `starts_with` on encoded forms cannot distinguish `base/sub` (encoded `base-sub`) from `base_extra` (encoded `base-extra`) — both share the `base-` prefix
-- **Documentation**: Fix(issue-031) + 3-field source comment in `cli/mod.rs`; 5-section test doc block in `sessions_command_test.rs`
+- **Documentation**: Fix(issue-031) + 3-field source comment in `cli/mod.rs`; 5-section test doc block in `projects_command_test.rs`
 
 ### issue-032: scope::relevant includes sibling projects with underscore-suffix names
 
 - **Issue**: `scope::relevant path::base_extra` incorrectly included sessions from the sibling project `base` — not an ancestor of `base_extra` despite passing the string prefix check
-- **Test**: `IT-26` (`it_26_scope_relevant_excludes_underscore_named_sibling`) in `sessions_command_test.rs`; marked `bug_reproducer(issue-032)`
+- **Test**: `IT-26` (`it_26_scope_relevant_excludes_underscore_named_sibling`) in `projects_command_test.rs`; marked `bug_reproducer(issue-032)`
 - **Fix**: Two-stage predicate in the `"relevant"` arm of `project_matches`. `is_relevant_encoded` is fast-reject only; `decode_path_via_fs` + `base_path.starts_with(decoded_path)` (component-wise) verifies prefix-match candidates.
 - **Root Cause**: `is_relevant_encoded` used `encoded_base.starts_with(dir_name + "-")` which cannot distinguish ancestor `base` (child path `base/sub` → `base-sub`) from sibling `base` (when base_path is `base_extra` → `base-extra`) — same underscore/slash encoding ambiguity as issue-031
-- **Documentation**: Fix(issue-032) + 3-field source comment in `cli/mod.rs`; 5-section test doc block in `sessions_command_test.rs`
+- **Documentation**: Fix(issue-032) + 3-field source comment in `cli/mod.rs`; 5-section test doc block in `projects_command_test.rs`
 
 ### issue-033: `.exists` stderr output violated spec ("no sessions" vs multi-level wrapped error)
 
@@ -437,8 +433,8 @@ cargo nextest run --all-features -- --include-ignored
 
 ### issue-028: "1 entries" — hardcoded plural "entries" in session header and project session list
 - **Issue**: (a) `.show session_id::abc` produced "Session: abc (1 entries)" — wrong plural in header; (b) `.show.project verbosity::1` with 1-entry session showed "(1 entries, last: ...)" — same root cause
-- **Tests**: `test_show_session_single_entry_header_says_entry_not_entries`, `test_show_session_multi_entry_header_still_says_entries` in `smart_show_command.rs`; `test_show_project_single_entry_session_says_entry_not_entries`, `test_show_project_multi_entry_session_still_says_entries` in `show_project_command.rs`
-- **Fix**: Added `entry_noun`/`e_noun` variables derived from count (1 → "entry", else "entries") in `show_session_routine` and `show_project_routine` in `cli/mod.rs`
+- **Tests**: `test_show_session_single_entry_header_says_entry_not_entries`, `test_show_session_multi_entry_header_still_says_entries` in `smart_show_command.rs`; `.show.project` tests deleted with command removal (task-013)
+- **Fix**: Added `entry_noun`/`e_noun` variables derived from count (1 → "entry", else "entries") in `show_session_routine` in `cli/mod.rs`; same fix was in `show_project_routine` (now removed)
 - **Root Cause**: Format strings hardcoded "entries" regardless of count — same pattern as issue-025/027 but for the irregular noun "entry"/"entries"
 - **Documentation**: Fix(issue-028) in `cli/mod.rs` (two locations) + 5-section test doc in both test files
 

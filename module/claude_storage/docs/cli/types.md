@@ -61,7 +61,7 @@ Pseudocode:
 - `is_zero() -> boolean` — True when count is 0 (no minimum)
 - `exceeds(actual: integer) -> boolean` — True when actual count is below threshold
 
-**Commands:** `.list`, `.sessions`
+**Commands:** `.list`, `.projects`
 
 ---
 
@@ -255,7 +255,7 @@ Parse string to enum variant (case-insensitive):
 
 ### Type :: 7. `ScopeValue`
 
-**Purpose:** Controls the discovery boundary for session listing in `.sessions`. Mirrors `kbase` scope semantics for consistent cross-tool mental model.
+**Purpose:** Controls the discovery boundary for session listing in `.projects`. Mirrors `kbase` scope semantics for consistent cross-tool mental model.
 
 **Fundamental Type:** Wrapper around string enum
 
@@ -296,7 +296,7 @@ Parse string to enum variant (case-insensitive):
 | `under` | Down (descendants) | N projects |
 | `global` | — | All projects |
 
-**Commands:** `.sessions`
+**Commands:** `.projects`
 
 ---
 
@@ -324,7 +324,7 @@ Validate non-empty string:
 - `get() -> string` — Raw substring value
 - `matches(session_id: string) -> boolean` — True if session ID contains substring (case-insensitive)
 
-**Commands:** `.list`, `.count`, `.search`, `.sessions`
+**Commands:** `.list`, `.count`, `.search`, `.projects`
 
 **Usage:**
 ```
@@ -375,7 +375,7 @@ Validate non-empty string, then resolve:
 
 **Constants:**
 - DEFAULT_ROOT = `~/.claude/` (for `.status`)
-- DEFAULT_CWD = current working directory (for `.session`, `.sessions`)
+- DEFAULT_CWD = current working directory (for `.session`, `.projects`)
 
 **Constraints:**
 - Non-empty string
@@ -397,7 +397,7 @@ Validate and normalize path:
 - `expanded() -> string` — Returns path with `~` expanded
 - `exists() -> boolean` — True when path exists on filesystem
 
-**Commands:** `.status`, `.session`, `.sessions`, `.export` (via `output::`); `.show.project` (via `project::`)
+**Commands:** `.status`, `.session`, `.projects`, `.export` (via `output::`); `.show.project` (via `project::`)
 
 ---
 
@@ -482,7 +482,7 @@ Pseudocode:
 - `is_verbose() -> boolean` — True when level ≥ 3
 - `default() -> VerbosityLevel` — Returns VerbosityLevel(1)
 
-**Commands:** `.status`, `.list`, `.show`, `.show.project`, `.search`, `.sessions`
+**Commands:** `.status`, `.list`, `.show`, `.show.project`, `.search`, `.projects`
 
 **Usage:**
 ```

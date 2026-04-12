@@ -80,6 +80,9 @@
 //! | TC-238 | `.settings.set` without `key::` → error mentions `key::` | N | 1 |
 //! | TC-239 | `.settings.set key::foo` without `value::` → error mentions `value::` | N | 1 |
 //! | TC-241 | `.settings.show format::json` preserves bool/number types | P | 0 |
+//! | TC-490 | `.settings.get key::boolKey format::json` bool → `"value":true` (unquoted) | P | 0 |
+//! | TC-491 | `.settings.get key::numKey format::json` number → `"value":42` (unquoted) | P | 0 |
+//! | TC-492 | `.settings.get key::strKey format::json` string → `"value":"hello"` (quoted) | P | 0 |
 //! | TC-242 | `format::xml` → exit 1 (unknown format) | N | 1 |
 //! | TC-243 | `format::JSON` (uppercase) → exit 1 | N | 1 |
 //! | TC-244 | `format::` (empty) → exit 1 | N | 1 |
@@ -698,6 +701,79 @@ fn tc241_settings_show_json_preserves_types()
   assert!( text.contains( ":true" ), "bool must be unquoted in JSON: {text}" );
   assert!( text.contains( ":42" ), "number must be unquoted in JSON: {text}" );
   assert!( text.contains( ":\"hello\"" ), "string must be quoted in JSON: {text}" );
+}
+
+// ── settings_get JSON type preservation ─────────────────────────────────────
+//
+// Root Cause: settings_get_routine always emitted value as a quoted JSON string
+//   regardless of its actual type — {"key":"autoUpdates","value":"true"} instead
+//   of {"key":"autoUpdates","value":true}.
+// Why Not Caught: TC-182 only checked for presence of "key"/"value" fields, not
+//   that the value type matched the stored type.
+// Fix Applied: JSON branch now calls infer_type(v) and branches on StoredAs to
+//   emit bare Bool/Number/Raw or quoted Str, matching settings_show_routine.
+// Prevention: TC-490–492 assert the specific JSON value representations.
+// Pitfall: write_settings helper quotes all values as strings; use direct JSON
+//   writes with raw booleans/numbers to test real Claude settings behaviour.
+
+// TC-490: settings_get bool value → JSON output has unquoted true
+#[ test ]
+fn tc490_settings_get_json_bool_unquoted()
+{
+  let dir = tempfile::TempDir::new().unwrap();
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( "settings.json" ), "{\"autoUpdates\":true}" ).unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.get", "key::autoUpdates", "format::json" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "\"value\":true" ),
+    "bool value must be unquoted in JSON (was: value:\"true\"): {text}",
+  );
+}
+
+// TC-491: settings_get number value → JSON output has unquoted number
+#[ test ]
+fn tc491_settings_get_json_number_unquoted()
+{
+  let dir = tempfile::TempDir::new().unwrap();
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( "settings.json" ), "{\"maxRetries\":42}" ).unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.get", "key::maxRetries", "format::json" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "\"value\":42" ),
+    "number value must be unquoted in JSON (was: value:\"42\"): {text}",
+  );
+}
+
+// TC-492: settings_get string value → JSON output has quoted string
+#[ test ]
+fn tc492_settings_get_json_string_quoted()
+{
+  let dir = tempfile::TempDir::new().unwrap();
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( "settings.json" ), "{\"name\":\"hello\"}" ).unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.get", "key::name", "format::json" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "\"value\":\"hello\"" ),
+    "string value must be quoted in JSON: {text}",
+  );
 }
 
 // ── Edge cases: empty/special values ────────────────────────────────────────

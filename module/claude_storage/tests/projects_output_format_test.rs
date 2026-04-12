@@ -1,10 +1,13 @@
-//! Tests for `.sessions` command — output format.
+//! Tests for `.projects` command — output format.
 //!
 //! ## Coverage
 //!
 //! IT-17 through IT-29: output format behaviour — `verbosity::1` grouping,
 //! agent session collapse, entry counts, filter interaction with collapse,
 //! v1 entry count, limit truncation, and zero-byte session exclusion.
+//!
+//! IT-50 through IT-53: project-centric redesign (task 016) — "Active project"
+//! summary header, session count aggregate, recency-sorted list, and v0 paths.
 //!
 //! ## Test Case Index
 //!
@@ -19,6 +22,10 @@
 //! | IT-27 | entry count shown per session at v1 | Output Format |
 //! | IT-28 | limit::N truncates main sessions shown at v1 | Output Format |
 //! | IT-29 | zero-byte sessions excluded from v1 display | Output Format |
+//! | IT-50 | summary mode shows "Active project" not "Active session" | Project-Centric |
+//! | IT-51 | summary mode shows session count aggregate "(N sessions," | Project-Centric |
+//! | IT-52 | list mode shows projects sorted by recency (most recently active first) | Project-Centric |
+//! | IT-53 | verbosity::0 shows project paths only — no session IDs | Project-Centric |
 
 mod common;
 
@@ -48,7 +55,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 // ─────────────────────────────────────────────────────────────────────────────
 // Output Format Redesign (plan-004)
 //
-// Root Cause: sessions_routine collected sessions into a flat Vec<(label, id)>
+// Root Cause: projects_routine collected sessions into a flat Vec<(label, id)>
 // and formatted project labels as format!("{:?}", project.id()) — opaque encoded
 // strings. At scope::global with 60+ sessions there was no grouping, no readable
 // paths, and no way to tell which sessions belonged to which project.
@@ -56,7 +63,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 // Why Not Caught: All existing format tests only checked for presence of session
 // IDs or "Found N" header. No test asserted path-group headers or agent collapse.
 //
-// Fix Applied: sessions_routine redesigned to collect into BTreeMap<String,
+// Fix Applied: projects_routine redesigned to collect into BTreeMap<String,
 // Vec<Session>> keyed by decoded project path. Output loop emits path headers at
 // v1+, collapses agent sessions at v1 when no agent:: filter, shows entry counts
 // at v2+.
@@ -83,7 +90,7 @@ fn it_17_v1_groups_sessions_by_project_path()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::1" )
     .output()
@@ -113,7 +120,7 @@ fn it_18_path_header_present_at_v1_single_project()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .arg( "verbosity::1" )
@@ -151,7 +158,7 @@ fn it_19_agent_sessions_collapsed_at_v1_no_filter()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::1" )
     .output()
@@ -194,7 +201,7 @@ fn it_20_agent_sessions_shown_individually_at_v2()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::2" )
     .output()
@@ -232,7 +239,7 @@ fn it_21_entry_count_shown_at_v2()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::2" )
     .output()
@@ -262,7 +269,7 @@ fn it_22_agent_filter_disables_collapse_at_v1()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::1" )
     .arg( "agent::1" )
@@ -314,7 +321,7 @@ fn it_27_entry_count_shown_at_v1()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::1" )
     .output()
@@ -360,7 +367,7 @@ fn it_28_limit_truncates_display()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::1" )
     .arg( "limit::2" )
@@ -414,7 +421,7 @@ fn it_29_zero_byte_sessions_excluded_at_v1()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::1" )
     .output()
@@ -431,5 +438,224 @@ fn it_29_zero_byte_sessions_excluded_at_v1()
   assert!(
     s.contains( "session-real" ),
     "real session must still appear when zero-byte is excluded; got:\n{s}"
+  );
+}
+
+// ── IT-50..IT-53: Project-centric redesign (Task 016) ────────────────────────
+
+// IT-50: summary mode shows "Active project" not "Active session"
+//
+// Root Cause: render_active_summary labelled the output "Active session" — a
+// session-level view. The redesigned render_active_project_summary must say
+// "Active project" to reflect the project-centric mental model.
+//
+// Why Not Caught: No test asserted on "Active project" vs "Active session"
+// before task 016.
+//
+// Fix Applied: render_active_summary replaced by render_active_project_summary
+// which aggregates sessions per project and labels the output "Active project".
+//
+// Prevention: Assert the exact prefix of the summary header whenever replacing
+// a summary output function.
+//
+// Pitfall: The summary aggregates across ALL sessions in a project to find
+// last_mtime. A project with 3 old sessions and 1 new session has
+// last_mtime = max(all session mtimes).
+#[test]
+fn it_summary_mode_shows_active_project_header()
+{
+  let root = TempDir::new().unwrap();
+  let project_path = root.path().join( "summary_proj" );
+  std::fs::create_dir_all( &project_path ).unwrap();
+
+  common::write_path_project_session( root.path(), &project_path, "session-sp-001", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
+    .current_dir( &project_path )
+    .arg( ".projects" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "Active project" ),
+    "summary must say 'Active project'; got:\n{s}"
+  );
+  assert!(
+    !s.contains( "Active session" ),
+    "summary must NOT say 'Active session'; got:\n{s}"
+  );
+}
+
+// IT-51: summary mode shows session count aggregate "(N sessions,"
+//
+// Root Cause: render_active_summary showed entry count ("N entries") not
+// session count ("N sessions"). Project-centric summary must aggregate
+// session count across all sessions in the project.
+//
+// Why Not Caught: No test checked for "sessions," in summary output.
+//
+// Fix Applied: render_active_project_summary outputs
+// "(N sessions, last active Xago)" where N is the session count.
+//
+// Prevention: Assert for "sessions," (with comma) in summary output to verify
+// the project-level session count appears in the expected format.
+//
+// Pitfall: 1 session renders "1 session," (singular, no 's'). Use 3+ sessions
+// to test the "sessions," plural form.
+#[test]
+fn it_summary_mode_shows_session_count()
+{
+  let root = TempDir::new().unwrap();
+  let project_path = root.path().join( "session_count_proj" );
+  std::fs::create_dir_all( &project_path ).unwrap();
+
+  // 3 sessions in the same project → plural "sessions"
+  common::write_path_project_session( root.path(), &project_path, "session-sc-001", 2 );
+  common::write_path_project_session( root.path(), &project_path, "session-sc-002", 2 );
+  common::write_path_project_session( root.path(), &project_path, "session-sc-003", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
+    .current_dir( &project_path )
+    .arg( ".projects" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  // Summary must show "(3 sessions, last active ...)" — "sessions," is the key marker
+  assert!(
+    s.contains( "sessions," ),
+    "summary must contain 'sessions,' aggregate count; got:\n{s}"
+  );
+}
+
+// IT-52: list mode shows projects sorted by recency (most recently active first)
+//
+// Root Cause: projects_routine iterated groups: BTreeMap<String, Vec<Session>>
+// directly, yielding keys in alphabetical order. "proj_beta" always appeared
+// after "proj_alpha" regardless of which was more recently active.
+//
+// Why Not Caught: No test created projects where alphabetical order differs from
+// recency order to expose the sort mismatch.
+//
+// Fix Applied: list mode now calls aggregate_projects() which returns
+// Vec<ProjectSummary> sorted by last_mtime descending (most recently active first).
+//
+// Prevention: Multi-project list tests must assert ORDER (find positions), not
+// just presence — contains() is insufficient for verifying sort order.
+//
+// Pitfall: FileTimes must be set AFTER writing the file. File::create() and
+// write() set mtime to "now"; explicit set_times() must be the last step.
+#[test]
+fn it_list_mode_shows_projects_sorted_by_recency()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // proj_alpha: alphabetically FIRST but OLDER → must appear second in time-sorted output
+  let project_alpha = root.path().join( "proj_alpha" );
+  // proj_beta: alphabetically SECOND but NEWER → must appear first in time-sorted output
+  let project_beta = root.path().join( "proj_beta" );
+  // Create directories so decode_project_display filesystem walk succeeds for
+  // paths containing underscores (e.g. proj_alpha, proj_beta).
+  std::fs::create_dir_all( &project_alpha ).unwrap();
+  std::fs::create_dir_all( &project_beta ).unwrap();
+
+  let enc_alpha = common::write_path_project_session(
+    &storage_root, &project_alpha, "session-alpha", 2
+  );
+  let enc_beta  = common::write_path_project_session(
+    &storage_root, &project_beta, "session-beta", 2
+  );
+
+  // Explicitly set mtimes for deterministic ordering
+  let old_t = std::time::SystemTime::UNIX_EPOCH + core::time::Duration::from_secs( 1_000 );
+  let new_t = std::time::SystemTime::UNIX_EPOCH + core::time::Duration::from_secs( 2_000 );
+
+  {
+    let p = storage_root.join( "projects" ).join( &enc_alpha ).join( "session-alpha.jsonl" );
+    let f = std::fs::OpenOptions::new().write( true ).open( &p ).unwrap();
+    f.set_times( std::fs::FileTimes::new().set_modified( old_t ) ).unwrap();
+  }
+  {
+    let p = storage_root.join( "projects" ).join( &enc_beta ).join( "session-beta.jsonl" );
+    let f = std::fs::OpenOptions::new().write( true ).open( &p ).unwrap();
+    f.set_times( std::fs::FileTimes::new().set_modified( new_t ) ).unwrap();
+  }
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+
+  let pos_beta  = s.find( "proj_beta" ).expect( "proj_beta must appear in output" );
+  let pos_alpha = s.find( "proj_alpha" ).expect( "proj_alpha must appear in output" );
+  assert!(
+    pos_beta < pos_alpha,
+    "proj_beta (newer, t=2000) must appear before proj_alpha (older, t=1000); got:\n{s}"
+  );
+}
+
+// IT-53: verbosity::0 shows project paths only — no session IDs
+//
+// Root Cause: At v0, projects_routine emitted one SESSION ID per line.
+// Project-centric output at v0 must emit one PROJECT PATH per line for
+// machine-readable scripting (e.g. iterating distinct working directories).
+//
+// Why Not Caught: No test checked v0 output for project-path format.
+//
+// Fix Applied: v0 list mode now outputs one decoded project path per line
+// from aggregate_projects(), replacing the per-session ID enumeration.
+//
+// Prevention: Any v0 output change needs a test asserting the exact per-line
+// format (project path present, session IDs absent).
+//
+// Pitfall: The output contains DECODED paths (e.g. /tmp/.../proj_v0), not
+// encoded storage dir names. Assert for the directory name component, not the
+// full encoded form.
+#[test]
+fn it_verbosity_0_shows_paths_only()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let project_path = root.path().join( "proj_v0" );
+  // Create directory so decode_project_display filesystem walk succeeds.
+  std::fs::create_dir_all( &project_path ).unwrap();
+  common::write_path_project_session( &storage_root, &project_path, "session-v0-001", 2 );
+  common::write_path_project_session( &storage_root, &project_path, "session-v0-002", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "verbosity::0" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  // Must contain the project directory name (decoded path)
+  assert!(
+    s.contains( "proj_v0" ),
+    "v0 must output project path containing 'proj_v0'; got:\n{s}"
+  );
+  // Must NOT contain session IDs
+  assert!(
+    !s.contains( "session-v0" ),
+    "v0 must NOT output session IDs; got:\n{s}"
   );
 }

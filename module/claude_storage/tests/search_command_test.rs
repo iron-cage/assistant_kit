@@ -18,7 +18,7 @@
 //! ## Testing Strategy
 //!
 //! - Parameter validation tests: Run immediately (command will fail, we check error messages)
-//! - Integration tests: Marked #[ignore] until `search_routine` implemented
+//! - Integration tests: Run against the `search_routine` implementation in `src/cli/mod.rs`
 //! - Uses same pattern as `parameter_validation_test.rs` for consistency
 //!
 //! ## Related Requirements

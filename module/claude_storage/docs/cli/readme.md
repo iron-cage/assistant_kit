@@ -1,6 +1,6 @@
 # `claude_storage` CLI Documentation
 
-Reference documentation for the `claude_storage` CLI binary — a read-only tool for exploring Claude Code conversation storage.
+Reference documentation for the `claude_storage` CLI binary — a tool for exploring Claude Code conversation storage. All commands are read-only except `.session.ensure`, which creates the session working directory on disk.
 
 ## Responsibility Table
 
@@ -29,13 +29,13 @@ Reference documentation for the `claude_storage` CLI binary — a read-only tool
 | `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 | `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 | `testing/readme.md` | ➖ | ➖ | ➖ | ✅ | ✅ | Index only |
-| `testing/command/*.md` (13 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| `testing/command/*.md` (11 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | `testing/param/*.md` (20 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | `testing/param_group/*.md` (5 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 
 **Current Level:** L5 (Tests Complete for existing commands)
 **Design Completeness:** 100% (5/5 levels passed)
-**Implementation Status:** 100% (13/13 commands implemented; 1 deprecated)
+**Implementation Status:** 100% (11/11 commands implemented; 0 deprecated)
 
 ## Navigation
 

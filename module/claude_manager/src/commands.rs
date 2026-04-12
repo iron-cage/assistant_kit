@@ -1,8 +1,8 @@
 //! Command handlers: one function per `claude_manager` subcommand.
 //!
 //! Each handler receives a `VerifiedCommand` and `ExecutionContext` and returns
-//! `Result<OutputData, ErrorData>`. Handlers are registered in `build_registry()`
-//! in `main.rs`.
+//! `Result<OutputData, ErrorData>`. Handlers are registered via `register_commands()`
+//! in `lib.rs`.
 //!
 //! # Architectural Boundary
 //!
@@ -75,7 +75,7 @@ fn require_claude_paths() -> Result< claude_common::ClaudePaths, ErrorData >
     {
       claude_common::ClaudePaths::new().ok_or_else( || ErrorData::new(
         ErrorCode::InternalError,
-        "HOME environment variable not set".to_string(),
+        "could not resolve Claude configuration paths (HOME is set but path resolution failed)".to_string(),
       ) )
     }
     _ => Err( ErrorData::new( ErrorCode::InternalError, "HOME environment variable not set".to_string() ) ),
@@ -146,7 +146,7 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
     }
     ( OutputFormat::Text, v ) =>
     {
-      let base = format!( "Version:  {version}\nProcesses: {processes}\nAccount:  {account}" );
+      let base = format!( "Version:  {version}\nProcesses:  {processes}\nAccount:  {account}" );
       match &pref
       {
         Some( ( spec, resolved ) ) =>
@@ -225,11 +225,12 @@ pub fn version_show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 ///
 /// # Errors
 ///
-/// Returns `Err(ArgumentTypeMismatch)` when the version spec is invalid.
+/// Returns `Err(ArgumentTypeMismatch)` when the version spec or format is invalid.
 /// Returns `Err(InternalError)` when `curl` is not found or the install fails.
 #[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
 pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
+  let opts = OutputOptions::from_cmd( &cmd )?;
   let version_spec = match cmd.arguments.get( "version" )
   {
     Some( Value::String( s ) ) => s.clone(),
@@ -246,31 +247,10 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
                    else { format!( "v{resolved}" ) };
   let auto_label = if is_latest { "true" } else { "false" };
 
-  // Dry-run: preview what would happen, no side effects.
   if is_dry( &cmd )
   {
-    let out = if is_latest
-    {
-      format!(
-        "[dry-run] would install {label}\n\
-         [dry-run] would set autoUpdates = {auto_label}\n\
-         [dry-run] would remove env.DISABLE_AUTOUPDATER\n\
-         [dry-run] would leave versions dir unlocked\n\
-         [dry-run] would store preferred version = {version_spec}\n"
-      )
-    }
-    else
-    {
-      format!(
-        "[dry-run] would install {label}\n\
-         [dry-run] would set autoUpdates = {auto_label}\n\
-         [dry-run] would set env.DISABLE_AUTOUPDATER = 1\n\
-         [dry-run] would chmod 555 versions dir (hard lock)\n\
-         [dry-run] would purge stale cached binaries (keep v{resolved})\n\
-         [dry-run] would store preferred version = {version_spec} (v{resolved})\n"
-      )
-    };
-    return Ok( OutputData::new( out, "text" ) );
+    let content = install_dry_content( &opts, &label, auto_label, is_latest, &version_spec, resolved );
+    return Ok( OutputData::new( content, "text" ) );
   }
 
   // Idempotency guard: skip install if already at target version.
@@ -284,7 +264,16 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       if current == resolved
       {
         let _ = store_preferred_version( &version_spec, resolved, is_latest );
-        return Ok( OutputData::new( format!( "already at {label}\n" ), "text" ) );
+        let content = match opts.format
+        {
+          OutputFormat::Json =>
+          {
+            let l = json_escape( &label );
+            format!( "{{\"installed\":false,\"label\":\"{l}\"}}\n" )
+          }
+          OutputFormat::Text => format!( "already at {label}\n" ),
+        };
+        return Ok( OutputData::new( content, "text" ) );
       }
     }
   }
@@ -295,10 +284,61 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
 
   let pref_label = if is_latest { version_spec.clone() } else { format!( "{version_spec} (v{resolved})" ) };
-  Ok( OutputData::new(
-    format!( "installed {label}\nautoUpdates = {auto_label}\npreferred = {pref_label}\n" ),
-    "text",
-  ) )
+  let content = match opts.format
+  {
+    OutputFormat::Json =>
+    {
+      let l = json_escape( &label );
+      let p = json_escape( &pref_label );
+      format!( "{{\"installed\":true,\"label\":\"{l}\",\"auto_updates\":{auto_label},\"preferred\":\"{p}\"}}\n" )
+    }
+    OutputFormat::Text => format!( "installed {label}\nautoUpdates = {auto_label}\npreferred = {pref_label}\n" ),
+  };
+  Ok( OutputData::new( content, "text" ) )
+}
+
+/// Build dry-run output for `version_install_routine`.
+fn install_dry_content(
+  opts         : &OutputOptions,
+  label        : &str,
+  auto_label   : &str,
+  is_latest    : bool,
+  version_spec : &str,
+  resolved     : &str,
+) -> String
+{
+  match opts.format
+  {
+    OutputFormat::Json =>
+    {
+      let l = json_escape( label );
+      format!( "{{\"dry_run\":true,\"version\":\"{l}\",\"auto_updates\":{auto_label}}}\n" )
+    }
+    OutputFormat::Text =>
+    {
+      if is_latest
+      {
+        format!(
+          "[dry-run] would install {label}\n\
+           [dry-run] would set autoUpdates = {auto_label}\n\
+           [dry-run] would remove env.DISABLE_AUTOUPDATER\n\
+           [dry-run] would leave versions dir unlocked\n\
+           [dry-run] would store preferred version = {version_spec}\n"
+        )
+      }
+      else
+      {
+        format!(
+          "[dry-run] would install {label}\n\
+           [dry-run] would set autoUpdates = {auto_label}\n\
+           [dry-run] would set env.DISABLE_AUTOUPDATER = 1\n\
+           [dry-run] would chmod 555 versions dir (hard lock)\n\
+           [dry-run] would purge stale cached binaries (keep v{resolved})\n\
+           [dry-run] would store preferred version = {version_spec} (v{resolved})\n"
+        )
+      }
+    }
+  }
 }
 
 /// `.version.guard` — check for version drift and restore preferred version.
@@ -314,6 +354,7 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 #[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
 pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
+  let opts  = OutputOptions::from_cmd( &cmd )?;
   let dry   = is_dry( &cmd );
   let force = is_force( &cmd );
   let version_override = match cmd.arguments.get( "version" )
@@ -336,7 +377,7 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
 
   if interval_secs == 0
   {
-    return guard_once( dry, force, version_override.as_deref() );
+    return guard_once( dry, force, version_override.as_deref(), opts.verbosity );
   }
 
   // Watch mode: loop until interrupted (Ctrl+C).
@@ -344,8 +385,8 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
   loop
   {
     iterations += 1;
-    let now    = chrono_timestamp();
-    let result = guard_once( dry, force, version_override.as_deref() );
+    let now    = current_timestamp();
+    let result = guard_once( dry, force, version_override.as_deref(), opts.verbosity );
 
     match &result
     {
@@ -373,17 +414,22 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
 /// Defaults to `stable` when no preference is stored.
 /// When `version_override` is `Some`, it replaces the stored preference for this invocation
 /// without writing to `settings.json`.
-fn guard_once( dry : bool, force : bool, version_override : Option< &str > ) -> Result< OutputData, ErrorData >
+fn guard_once( dry : bool, force : bool, version_override : Option< &str >, verbosity : u8 ) -> Result< OutputData, ErrorData >
 {
   // If HOME is unset or empty, installation would target "/.claude" (root)
   // which requires root permission.  Degrade gracefully rather than crashing.
   let home_valid = std::env::var( "HOME" ).map( | h | !h.is_empty() ).unwrap_or( false );
   if !home_valid
   {
-    return Ok( OutputData::new(
-      "no HOME directory; defaulting to stable (nothing to guard)\n".to_string(),
-      "text",
-    ) );
+    let msg = if verbosity == 0
+    {
+      "no-home\n"
+    }
+    else
+    {
+      "no HOME directory; defaulting to stable (nothing to guard)\n"
+    };
+    return Ok( OutputData::new( msg.to_string(), "text" ) );
   }
 
   let ( spec, resolved ) = if let Some( ver ) = version_override
@@ -401,9 +447,9 @@ fn guard_once( dry : bool, force : bool, version_override : Option< &str > ) -> 
 
   if spec == "latest" || resolved.is_none()
   {
-    return Ok( guard_once_latest( dry ) );
+    return Ok( guard_once_latest( dry, verbosity ) );
   }
-  guard_once_pinned( dry, force, &spec, resolved.as_deref().unwrap_or( &spec ) )
+  guard_once_pinned( dry, force, &spec, resolved.as_deref().unwrap_or( &spec ), verbosity )
 }
 
 /// Guard path for `latest` preference: verify auto-update config, fix if wrong.
@@ -411,11 +457,12 @@ fn guard_once( dry : bool, force : bool, version_override : Option< &str > ) -> 
 /// Returns `OutputData` (not `Result`) because every code path succeeds: settings
 /// read and write errors are silently tolerated so the guard degrades gracefully
 /// rather than failing when HOME exists but settings are unreadable.
-fn guard_once_latest( dry : bool ) -> OutputData
+fn guard_once_latest( dry : bool, verbosity : u8 ) -> OutputData
 {
   if dry
   {
-    return OutputData::new( "preferred = latest (no version pin to guard)\n".to_string(), "text" );
+    let msg = if verbosity == 0 { "latest\n" } else { "preferred = latest (no version pin to guard)\n" };
+    return OutputData::new( msg.to_string(), "text" );
   }
   if let Some( paths ) = claude_common::ClaudePaths::new()
   {
@@ -427,14 +474,16 @@ fn guard_once_latest( dry : bool ) -> OutputData
     if auto_val != "true"
     {
       let _ = set_setting( &settings_file, "autoUpdates", "true" );
-      return OutputData::new( "fixed autoUpdates = true for latest preference\n".to_string(), "text" );
+      let msg = if verbosity == 0 { "fixed\n" } else { "fixed autoUpdates = true for latest preference\n" };
+      return OutputData::new( msg.to_string(), "text" );
     }
   }
-  OutputData::new( "preferred = latest (auto-update enabled)\n".to_string(), "text" )
+  let msg = if verbosity == 0 { "latest\n" } else { "preferred = latest (auto-update enabled)\n" };
+  OutputData::new( msg.to_string(), "text" )
 }
 
 /// Guard path for pinned versions: compare installed vs preferred and restore on drift.
-fn guard_once_pinned( dry : bool, force : bool, spec : &str, resolved : &str ) -> Result< OutputData, ErrorData >
+fn guard_once_pinned( dry : bool, force : bool, spec : &str, resolved : &str, verbosity : u8 ) -> Result< OutputData, ErrorData >
 {
   // Re-resolve alias through current table so stale settings don't trigger false drift.
   let resolved_now = resolve_version_spec( spec );
@@ -447,39 +496,70 @@ fn guard_once_pinned( dry : bool, force : bool, spec : &str, resolved : &str ) -
     {
       if current == target
       {
-        return Ok( OutputData::new(
-          format!( "version {current} matches preferred {pref_label}\n" ),
-          "text",
-        ) );
+        let msg = if verbosity == 0
+        {
+          "ok\n".to_string()
+        }
+        else
+        {
+          format!( "version {current} matches preferred {pref_label}\n" )
+        };
+        return Ok( OutputData::new( msg, "text" ) );
       }
       if dry
       {
-        return Ok( OutputData::new(
+        let msg = if verbosity == 0
+        {
+          format!( "[dry-run] {current}\u{2192}{target}\n" )
+        }
+        else
+        {
           format!( "[dry-run] drift detected: installed {current}, preferred {pref_label}\n\
-                    [dry-run] would reinstall {pref_label}\n" ),
-          "text",
-        ) );
+                    [dry-run] would reinstall {pref_label}\n" )
+        };
+        return Ok( OutputData::new( msg, "text" ) );
       }
       eprintln!( "drift detected: installed {current}, preferred {pref_label} \u{2014} restoring" );
       perform_install( target, false )
         .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
-      return Ok( OutputData::new( format!( "restored {pref_label}\n" ), "text" ) );
+      let msg = if verbosity == 0
+      {
+        format!( "restored {target}\n" )
+      }
+      else
+      {
+        format!( "restored {pref_label}\n" )
+      };
+      return Ok( OutputData::new( msg, "text" ) );
     }
   }
   if dry
   {
-    return Ok( OutputData::new(
-      format!( "[dry-run] would install preferred {pref_label}\n" ),
-      "text",
-    ) );
+    let msg = if verbosity == 0
+    {
+      format!( "[dry-run] {target}\n" )
+    }
+    else
+    {
+      format!( "[dry-run] would install preferred {pref_label}\n" )
+    };
+    return Ok( OutputData::new( msg, "text" ) );
   }
   perform_install( target, false )
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
-  Ok( OutputData::new( format!( "installed preferred {pref_label}\n" ), "text" ) )
+  let msg = if verbosity == 0
+  {
+    format!( "installed {target}\n" )
+  }
+  else
+  {
+    format!( "installed preferred {pref_label}\n" )
+  };
+  Ok( OutputData::new( msg, "text" ) )
 }
 
 /// Simple UTC timestamp string (no chrono crate — uses system time).
-fn chrono_timestamp() -> String
+fn current_timestamp() -> String
 {
   let dur = std::time::SystemTime::now()
     .duration_since( std::time::UNIX_EPOCH )
@@ -601,46 +681,87 @@ pub fn processes_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Re
 ///
 /// # Errors
 ///
-/// Returns `Err(InternalError)` if signal delivery fails for all processes.
+/// Returns `Err(InternalError)` if signal delivery fails or processes survive.
+///
+/// Fix(issue-kill-silent): `let _ = send_sigterm/sigkill` silently discarded
+///   signal delivery errors — EPERM failures on surviving processes produced
+///   exit 0 until the trailing `remaining > 0` check caught them, but errors
+///   that caused the process list to be stale were invisible.
+/// Root cause: `let _` pattern swallows `Err` from signal functions entirely.
+/// Pitfall: ESRCH ("no such process") is a benign race — the process already
+///   exited — so collect all signal errors but filter ESRCH from final report.
 #[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
 pub fn processes_kill_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
+  let opts  = OutputOptions::from_cmd( &cmd )?;
   let procs = find_claude_processes();
 
   if procs.is_empty()
   {
-    return Ok( OutputData::new( "no active processes\n".to_string(), "text" ) );
+    let content = match opts.format
+    {
+      OutputFormat::Json => "{\"killed\":0}\n".to_string(),
+      OutputFormat::Text => "no active processes\n".to_string(),
+    };
+    return Ok( OutputData::new( content, "text" ) );
   }
 
   if is_dry( &cmd )
   {
     let signal = if is_force( &cmd ) { "SIGKILL" } else { "SIGTERM" };
-    let lines : Vec< String > = procs.iter()
-    .map( | p | format!( "[dry-run] would send {signal} to PID {}", p.pid ) )
-    .collect();
-    return Ok( OutputData::new( format!( "{}\n", lines.join( "\n" ) ), "text" ) );
+    let pids : Vec< String > = procs.iter().map( | p | p.pid.to_string() ).collect();
+    let content = match opts.format
+    {
+      OutputFormat::Json =>
+      {
+        format!( "{{\"dry_run\":true,\"signal\":\"{signal}\",\"pids\":[{}]}}\n", pids.join( "," ) )
+      }
+      OutputFormat::Text =>
+      {
+        let lines : Vec< String > = procs.iter()
+        .map( | p | format!( "[dry-run] would send {signal} to PID {}", p.pid ) )
+        .collect();
+        format!( "{}\n", lines.join( "\n" ) )
+      }
+    };
+    return Ok( OutputData::new( content, "text" ) );
   }
 
   let count = procs.len();
 
   if is_force( &cmd )
   {
+    let mut failures = Vec::new();
     for p in &procs
     {
-      let _ = send_sigkill( p.pid );
+      if let Err( e ) = send_sigkill( p.pid ) { failures.push( format!( "PID {}: {e}", p.pid ) ); }
+    }
+    if !failures.is_empty()
+    {
+      return Err( ErrorData::new( ErrorCode::InternalError, format!( "SIGKILL failed: {}", failures.join( ", " ) ) ) );
     }
   }
   else
   {
+    let mut failures = Vec::new();
     for p in &procs
     {
-      let _ = send_sigterm( p.pid );
+      if let Err( e ) = send_sigterm( p.pid ) { failures.push( format!( "PID {}: {e}", p.pid ) ); }
+    }
+    if !failures.is_empty()
+    {
+      return Err( ErrorData::new( ErrorCode::InternalError, format!( "SIGTERM failed: {}", failures.join( ", " ) ) ) );
     }
     std::thread::sleep( core::time::Duration::from_secs( 2 ) );
     let survivors = find_claude_processes();
+    let mut kfailures = Vec::new();
     for p in &survivors
     {
-      let _ = send_sigkill( p.pid );
+      if let Err( e ) = send_sigkill( p.pid ) { kfailures.push( format!( "PID {}: {e}", p.pid ) ); }
+    }
+    if !kfailures.is_empty()
+    {
+      return Err( ErrorData::new( ErrorCode::InternalError, format!( "SIGKILL failed: {}", kfailures.join( ", " ) ) ) );
     }
   }
 
@@ -654,7 +775,12 @@ pub fn processes_kill_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
     ) );
   }
 
-  Ok( OutputData::new( format!( "killed {count} process(es)\n" ), "text" ) )
+  let content = match opts.format
+  {
+    OutputFormat::Json => format!( "{{\"killed\":{count}}}\n" ),
+    OutputFormat::Text => format!( "killed {count} process(es)\n" ),
+  };
+  Ok( OutputData::new( content, "text" ) )
 }
 
 /// `.settings.show` — print all entries from `~/.claude/settings.json`.
@@ -739,8 +865,12 @@ pub fn settings_get_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     ( OutputFormat::Json, _ ) =>
     {
       let k = json_escape( &key );
-      let v = json_escape( &value );
-      format!( "{{\"key\":\"{k}\",\"value\":\"{v}\"}}\n" )
+      let json_val = match infer_type( &value )
+      {
+        StoredAs::Bool | StoredAs::Number | StoredAs::Raw => value.clone(),
+        StoredAs::Str => format!( "\"{}\"", json_escape( &value ) ),
+      };
+      format!( "{{\"key\":\"{k}\",\"value\":{json_val}}}\n" )
     }
     ( OutputFormat::Text, 0 ) => format!( "{value}\n" ),
     ( OutputFormat::Text, _ ) => format!( "{key}: {value}\n" ),
@@ -1062,5 +1192,3 @@ pub fn version_history_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   Ok( OutputData::new( content, "text" ) )
 }
-
-

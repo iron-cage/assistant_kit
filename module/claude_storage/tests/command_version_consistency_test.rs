@@ -178,23 +178,6 @@ fn test_command_version_consistency()
     );
   }
 
-  // Validate: Related commands should have synchronized versions
-  // .show and .show.project are functionally related (deprecated pair)
-  let show_version = commands.iter()
-    .find( |( n, _ )| n == ".show" )
-    .map( |( _, v )| v )
-    .expect( ".show command must exist" );
-
-  let show_project_version = commands.iter()
-    .find( |( n, _ )| n == ".show.project" )
-    .map( |( _, v )| v )
-    .expect( ".show.project command must exist" );
-
-  assert_eq!(
-    show_version, show_project_version,
-    ".show and .show.project must have synchronized versions (related deprecated pair)"
-  );
-
   // Validate: All versions are valid semantic versions (basic check)
   for ( name, version ) in &commands
   {
@@ -232,20 +215,14 @@ fn test_v1_3_0_release_versions()
     // REQ-011 Content-First Display affected these commands:
     let show_cmd = commands.iter().find( |( n, _ )| n == ".show" )
       .expect( ".show command exists" );
-    let show_project_cmd = commands.iter().find( |( n, _ )| n == ".show.project" )
-      .expect( ".show.project command exists" );
 
     assert_eq!(
       show_cmd.1, "1.3.0",
       ".show command must be v1.3.0 (breaking change in REQ-011)"
     );
 
-    assert_eq!(
-      show_project_cmd.1, "1.3.0",
-      ".show.project command must be v1.3.0 (synchronized with .show)"
-    );
-
-    println!( "\n✅ v1.3.0 release: .show and .show.project correctly versioned" );
+    // Note: .show.project was removed in task-013 — no longer validated here
+    println!( "\n✅ v1.3.0 release: .show correctly versioned" );
   }
   else
   {

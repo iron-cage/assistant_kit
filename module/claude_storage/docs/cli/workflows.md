@@ -165,12 +165,12 @@ claude_storage .session path::/home/user1/pro
 claude_storage .list sessions::1 path::current_dir_name
 # Output: sessions for matching projects
 
-# Planned (when .sessions is implemented):
-# claude_storage .sessions scope::relevant
+# Available via .projects:
+# claude_storage .projects scope::relevant
 # Output: sessions from all ancestor projects in one listing
 ```
 
-**Notes:** When `.sessions` with `scope::relevant` is implemented, this workflow will be replaced by a single command.
+**Notes:** When `.projects` with `scope::relevant` is implemented, this workflow will be replaced by a single command.
 
 ---
 

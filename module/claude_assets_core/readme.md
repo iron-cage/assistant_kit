@@ -7,4 +7,6 @@
 | src/paths.rs | AssetPaths: resolves source root from $PRO_CLAUDE env var |
 | src/registry.rs | InstallStatus; list_available, list_installed, list_all |
 | src/install.rs | install() and uninstall() with symlink-only semantics |
+| `docs/` | Behavioral requirements: feature and invariant doc instances |
+| `tests/` | Integration test suite directory |
 | tests/install.rs | Real-fs integration tests via tempfile |

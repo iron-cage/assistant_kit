@@ -1,6 +1,6 @@
 # Commands Reference
 
-All commands for the `claude_storage` CLI. Parameters use `param::value` syntax. All commands are read-only (no writes to Claude Code storage).
+All commands for the `claude_storage` CLI. Parameters use `param::value` syntax. All commands are read-only except `.session.ensure`, which creates the session working directory on disk.
 
 See [params.md](params.md) for full parameter specs and [types.md](types.md) for type definitions.
 
@@ -14,15 +14,13 @@ See [params.md](params.md) for full parameter specs and [types.md](types.md) for
 | 4 | `.count` | stable | Fast counting of items | 5 |
 | 5 | `.search` | stable | Search session content by query | 8 |
 | 6 | `.export` | stable | Export session to file | 6 |
-| 7 | `.session` | stable | Check directory for conversation history | 2 |
-| 8 | `.sessions` | stable | Active-session summary (default) or scoped session list | 6 |
-| 9 | `.show.project` | deprecated | Show project details (use `.show`) | 2 |
-| 10 | `.path` | stable | Compute Claude storage path for a directory | 2 |
-| 11 | `.exists` | stable | Check conversation history exists (exits 1 when absent) | 2 |
-| 12 | `.session.dir` | stable | Compute session working directory path | 2 |
-| 13 | `.session.ensure` | stable | Ensure session directory exists, report resume strategy | 3 |
+| 7 | `.projects` | stable | Active-session summary (default) or scoped session list | 6 |
+| 8 | `.path` | stable | Compute Claude storage path for a directory | 2 |
+| 9 | `.exists` | stable | Check conversation history exists (exits 1 when absent) | 2 |
+| 10 | `.session.dir` | stable | Compute session working directory path | 2 |
+| 11 | `.session.ensure` | stable | Ensure session directory exists, report resume strategy | 3 |
 
-**Total:** 13 commands (12 stable ✅, 1 deprecated)
+**Total:** 11 commands (11 stable ✅, 0 deprecated)
 
 ---
 
@@ -334,50 +332,9 @@ claude_storage .export session_id::ID output::PATH scope::global
 
 ---
 
-### Command :: 7. `.session`
+### Command :: 7. `.projects`
 
-Check whether a directory has Claude Code conversation history. Use this for scripts that need to detect if a path was used as a Claude Code working directory.
-
-**Parameters:** `path::`, `topic::`
-
-**Exit:** `0` history found | `1` no history found | `2` storage read error
-
-**Syntax:**
-```bash
-claude_storage .session
-claude_storage .session path::PATH
-claude_storage .session topic::TOPIC
-```
-
-**Parameters:**
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `path::` | [`StoragePath`](types.md#storagepath) | optional | current dir | Directory to check |
-| `topic::` | [`TopicName`](types.md#topicname) | optional | — | Session topic suffix (without leading `-`) |
-
-**Examples:**
-```bash
-# Check current directory
-claude_storage .session
-
-# Check a specific directory
-claude_storage .session path::/home/user/project
-
-# Check with topic suffix
-claude_storage .session path::/home/user/project topic::default_topic
-```
-
-**Notes:**
-- Exit code `0` means history exists (path-encoded project found in `~/.claude/projects/`)
-- Exit code `1` means no history (not an error, just not found)
-- This command does NOT list sessions; use `.list` or `.sessions` for that
-
----
-
-### Command :: 8. `.sessions`
-
-Active-session summary by default; session-first scoped list when any explicit parameter is given. Where `.list` is project-first, `.sessions` is session-first: returns all sessions matching the scope without requiring project context first.
+Active-session summary by default; session-first scoped list when any explicit parameter is given. Where `.list` is project-first, `.projects` is session-first: returns all sessions matching the scope without requiring project context first.
 
 **Parameters:** `scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`, `verbosity::`
 
@@ -385,11 +342,11 @@ Active-session summary by default; session-first scoped list when any explicit p
 
 **Syntax:**
 ```bash
-claude_storage .sessions
-claude_storage .sessions scope::relevant
-claude_storage .sessions scope::under path::PATH
-claude_storage .sessions scope::global [agent::1] [min_entries::N]
-claude_storage .sessions limit::5
+claude_storage .projects
+claude_storage .projects scope::relevant
+claude_storage .projects scope::under path::PATH
+claude_storage .projects scope::global [agent::1] [min_entries::N]
+claude_storage .projects limit::5
 ```
 
 **Parameters:**
@@ -408,7 +365,7 @@ claude_storage .sessions limit::5
 
 **Default invocation (summary mode):**
 
-When `.sessions` is called with no arguments, it outputs a single-session summary for the most-recent session in scope — not a list. Any explicit scope or filter parameter (`scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`) activates list mode instead. `verbosity::` is a display modifier and never affects mode selection — `verbosity::1` stays in summary mode.
+When `.projects` is called with no arguments, it outputs a single-session summary for the most-recent session in scope — not a list. Any explicit scope or filter parameter (`scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`) activates list mode instead. `verbosity::` is a display modifier and never affects mode selection — `verbosity::1` stays in summary mode.
 
 ```
 Active session  {8-char-id}  {age}  {count} entries
@@ -424,24 +381,24 @@ No sessions in scope → `No active session found.`
 **Examples:**
 ```bash
 # Active-session summary (default — no args)
-claude_storage .sessions
+claude_storage .projects
 
 # All sessions related to current work (ancestor chain)
-claude_storage .sessions scope::relevant
+claude_storage .projects scope::relevant
 
 # All sessions under a subtree
-claude_storage .sessions scope::under path::/home/user1/pro
+claude_storage .projects scope::under path::/home/user1/pro
 
 # All sessions, agent only, with entries
-claude_storage .sessions scope::global agent::1 min_entries::50
+claude_storage .projects scope::global agent::1 min_entries::50
 
 # Show at most 5 sessions per project
-claude_storage .sessions scope::global limit::5
+claude_storage .projects scope::global limit::5
 ```
 
 **Notes:**
 - `scope::relevant` walks UP from cwd to `/`, collecting sessions from every project at each ancestor level
-- Distinct from `.session` (singular): that checks existence; this lists sessions
+- Distinct from `.exists`: that checks existence (exit 0/1); this lists sessions
 - **Fixed (issue-024)**: `scope::local/relevant/under` previously returned 0 results when the base path contained underscores (e.g., `wip_core`). Root cause: lossy encoding mapped `_` and `/` identically; decoded paths diverged from real paths. Fixed by comparing encoded paths directly against raw storage directory names.
 - **Fixed (issue-029)**: `scope::under` (and all scopes at verbosity ≥ 1) previously displayed project path headers with underscore-named directories split as path separators (e.g., `wip_core` → `wip/core`). Root cause: `decode_project_display` heuristic defaulted to `/` for every `-` boundary; underscore-named dirs were indistinguishable from path separators in the encoded form. Fixed by adding a filesystem-guided fallback that walks the real directory tree to resolve ambiguous boundaries.
 - **Fixed (issue-030)**: Session path headers previously showed only the base directory, truncating hyphen-prefixed topic components even when they represent real directories (e.g., `src/-default_topic` was shown as `src`). Root cause: `decode_project_display` stripped all `--topic` suffixes before decoding. Fixed by extending the decoded base with each topic component as a real filesystem directory; the longest existing path is used as the header.
@@ -503,36 +460,7 @@ At `verbosity::2+`, agents are tree-indented under their parent:
 
 ---
 
-### Command :: 9. `.show.project` (deprecated)
-
-> **Deprecated** — Use `.show` or `.show project::PATH` instead.
-
-Display project details and session list. Replaced by `.show` which handles both session and project display through parameter dispatch.
-
-**Parameters:** `project::`, `verbosity::`
-
-**Exit:** `0` success | `1` argument error | `2` project not found
-
-**Migration:**
-
-| Old command | New command |
-|-------------|-------------|
-| `.show.project` | `.show` |
-| `.show.project project::PATH` | `.show project::PATH` |
-| `.show.project -home-user1-pro` | `.show project::-home-user1-pro` |
-
-**Parameters:**
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `project::` | [`ProjectId`](types.md#projectid) | optional | current dir | Project identifier |
-| `verbosity::` | [`VerbosityLevel`](types.md#verbositylevel) | optional | `1` | Output detail level |
-
-`project::` belongs to [Project Scope](parameter_groups.md#project-scope). See [Output Control group](parameter_groups.md#output-control) for `verbosity` semantics.
-
----
-
-### Command :: 10. `.path`
+### Command :: 8. `.path`
 
 Compute the Claude Code storage path for a directory without requiring it to exist. Use this to inspect what storage path would be used for a given working directory.
 
@@ -578,9 +506,9 @@ claude_storage .path path::~/pro/lib/myapp topic::work
 
 ---
 
-### Command :: 11. `.exists`
+### Command :: 9. `.exists`
 
-Check whether a directory has Claude Code conversation history. Unlike `.session`, this command explicitly exits with code `1` when no history is found, making it ideal for shell conditional logic.
+Check whether a directory has Claude Code conversation history. Exits with code `1` when no history is found, making it ideal for shell conditional logic.
 
 **Parameters:** `path::`, `topic::`
 
@@ -618,11 +546,11 @@ if clg .exists; then echo "Has history"; else echo "Fresh start"; fi
 
 **Notes:**
 - Exit code `1` is an informational result (no history found), not a command error
-- Compare with `.session`: semantically identical but `.exists` has explicit exit-1 documentation making it clearer for scripting
+- This is the sole history-check command; `.session` was removed as a duplicate (task-014)
 
 ---
 
-### Command :: 12. `.session.dir`
+### Command :: 10. `.session.dir`
 
 Compute the session working directory path (`{base}/-{topic}`) without creating it. Use this to determine the correct session directory before deciding whether to start or resume.
 
@@ -664,7 +592,7 @@ claude_storage .session.dir path::/home/user/project topic::work
 
 ---
 
-### Command :: 13. `.session.ensure`
+### Command :: 11. `.session.ensure`
 
 Ensure a session working directory exists, creating it if necessary. Reports whether the session has existing conversation history (`resume`) or is starting fresh (`fresh`). Outputs two lines: the absolute session directory path and the strategy.
 

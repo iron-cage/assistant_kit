@@ -24,6 +24,8 @@
 //! | 258 | `format::json` produces valid JSON for `.status` | P | 0 |
 //! | 259 | `format::json v::0` still produces complete JSON for `.status` | P | 0 |
 //! | 260 | `format::JSON` rejected on `.version.list` | N | 1 |
+//! | 261 | `format::json dry::1` on `.version.install` → accepted, JSON output | P | 0 |
+//! | 262 | `v::0` on `.version.guard` → accepted, exit 0 | P | 0 |
 
 use crate::helpers::{ assert_exit, run_clm, stdout };
 
@@ -130,4 +132,29 @@ fn tc260_format_uppercase_rejected()
 {
   let out = run_clm( &[ ".version.list", "format::JSON" ] );
   assert_exit( &out, 1 );
+}
+
+// TC-261: format::json dry::1 on .version.install → accepted, JSON output
+#[ test ]
+fn tc261_version_install_format_json_accepted()
+{
+  let out = run_clm( &[ ".version.install", "format::json", "dry::1" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.trim_start().starts_with( '{' ),
+    "format::json must produce JSON object on install dry-run: {text}"
+  );
+}
+
+// TC-262: v::0 on .version.guard → accepted, exit 0
+#[ test ]
+fn tc262_version_guard_v0_accepted()
+{
+  let dir  = tempfile::TempDir::new().unwrap();
+  let out = crate::helpers::run_clm_with_env(
+    &[ ".version.guard", "dry::1", "v::0" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
 }

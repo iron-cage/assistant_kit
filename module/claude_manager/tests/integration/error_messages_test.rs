@@ -12,6 +12,7 @@
 //! | 317 | `.settings.get` missing `key::` → stderr contains "key" | N | 1 |
 //! | 318 | `.settings.set` missing `value::` → stderr contains "value" | N | 1 |
 //! | 320a | `.settings.show` empty HOME → stderr mentions "HOME" | N | 2 |
+//! | 320b | `.settings.show` unset HOME → stderr mentions "HOME" | N | 2 |
 //! | 322 | `.version.show` no claude → stderr mentions "PATH" | N | 2 |
 //! | 323 | `.version.install version::STABLE` → stderr mentions case | N | 1 |
 //! | 324 | `.settings.get key::absent` → stderr mentions key name | N | 2 |
@@ -107,6 +108,35 @@ fn tc320a_settings_show_no_home_error_mentions_home()
   assert_exit( &out, 2 );
   let err = stderr( &out );
   assert!( err.contains( "HOME" ), "error must mention HOME: {err}" );
+}
+
+// TC-320b: .settings.show with HOME completely unset → stderr mentions HOME
+//
+// Root Cause: require_claude_paths() had two distinct failure conditions that both
+//   emitted "HOME environment variable not set". The HOME-unset branch still emits
+//   that message; the inner ClaudePaths::new() failure now emits a distinct message.
+// Why Not Caught: TC-320a only tested HOME=""; this tests HOME entirely absent.
+// Fix Applied: the outer `_` branch (HOME unset/empty) keeps the HOME message.
+// Prevention: TC-320b ensures HOME-unset path still surfaces HOME in the error.
+// Pitfall: env::remove_var is unsafe in multi-threaded tests (other tests may run
+//   concurrently with HOME set); use run_clm_with_env with an explicit empty value
+//   rather than removing the var, since the OS treats a missing HOME and an empty
+//   HOME the same way for the outer guard branch.
+#[ test ]
+fn tc320b_settings_show_home_unset_error_mentions_home()
+{
+  // Use an empty HOME rather than unsetting it to stay thread-safe.
+  // The outer guard branch fires for both missing and empty HOME.
+  let out = run_clm_with_env( &[ ".settings.show" ], &[ ( "HOME", "" ) ] );
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!( err.contains( "HOME" ), "HOME-absent error must mention HOME: {err}" );
+  // The HOME-absent error message must NOT mention "path resolution failed" —
+  // that message belongs to the inner branch (HOME set but ClaudePaths fails).
+  assert!(
+    !err.contains( "path resolution failed" ),
+    "HOME-absent error must not mention path resolution: {err}",
+  );
 }
 
 // TC-322: .version.show no claude binary → mentions "not found"

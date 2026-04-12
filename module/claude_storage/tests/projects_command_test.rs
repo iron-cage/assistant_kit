@@ -1,4 +1,4 @@
-//! Tests for `.sessions` command — scope-aware session listing.
+//! Tests for `.projects` command — scope-aware session listing.
 //!
 //! ## Coverage
 //!
@@ -70,7 +70,7 @@ fn ec1_scope_local_accepted()
   let root = TempDir::new().unwrap();
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .output()
     .unwrap();
@@ -86,7 +86,7 @@ fn ec2_scope_relevant_accepted()
   let root = TempDir::new().unwrap();
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::relevant" )
     .output()
     .unwrap();
@@ -102,7 +102,7 @@ fn ec3_scope_under_accepted()
   let root = TempDir::new().unwrap();
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", root.path().display() ) )
     .output()
@@ -119,7 +119,7 @@ fn ec4_scope_global_accepted()
   let root = TempDir::new().unwrap();
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .output()
     .unwrap();
@@ -137,12 +137,12 @@ fn ec5_scope_case_insensitive()
 
   let lower = common::clg_cmd()
     .env( "HOME", home )
-    .arg( ".sessions" ).arg( "scope::relevant" )
+    .arg( ".projects" ).arg( "scope::relevant" )
     .output().unwrap();
 
   let upper = common::clg_cmd()
     .env( "HOME", home )
-    .arg( ".sessions" ).arg( "scope::RELEVANT" )
+    .arg( ".projects" ).arg( "scope::RELEVANT" )
     .output().unwrap();
 
   assert_exit( &lower, 0 );
@@ -162,7 +162,7 @@ fn ec6_invalid_scope_rejected()
   let root = TempDir::new().unwrap();
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::all" )
     .output()
     .unwrap();
@@ -195,14 +195,14 @@ fn ec7_omitted_scope_defaults_to_under()
   let implicit = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( format!( "path::{}", parent.display() ) )
     .output().unwrap();
 
   let explicit = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", parent.display() ) )
     .output().unwrap();
@@ -231,12 +231,12 @@ fn ec8_global_ignores_path()
 
   let without_path = common::clg_cmd()
     .env( "HOME", home )
-    .arg( ".sessions" ).arg( "scope::global" )
+    .arg( ".projects" ).arg( "scope::global" )
     .output().unwrap();
 
   let with_path = common::clg_cmd()
     .env( "HOME", home )
-    .arg( ".sessions" ).arg( "scope::global" ).arg( "path::/nonexistent-subpath" )
+    .arg( ".projects" ).arg( "scope::global" ).arg( "path::/nonexistent-subpath" )
     .output().unwrap();
 
   assert_exit( &without_path, 0 );
@@ -264,7 +264,7 @@ fn local_scope_returns_only_matching_project_sessions()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project_a.display() ) )
     .output()
@@ -297,7 +297,7 @@ fn under_scope_returns_all_projects_in_subtree()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", workspace.display() ) )
     .output()
@@ -332,7 +332,7 @@ fn relevant_scope_includes_ancestor_projects()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::relevant" )
     .arg( format!( "path::{}", cwd.display() ) )
     .output()
@@ -364,7 +364,7 @@ fn global_scope_returns_all_sessions()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .output()
     .unwrap();
@@ -376,7 +376,7 @@ fn global_scope_returns_all_sessions()
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Behavioural: verbosity::0 → no header, just session IDs
+// Behavioural: verbosity::0 → no header, just project paths
 // ────────────────────────────────────────────────────────────────────────────
 #[test]
 fn verbosity_zero_no_header()
@@ -389,7 +389,7 @@ fn verbosity_zero_no_header()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::0" )
     .output()
@@ -397,8 +397,8 @@ fn verbosity_zero_no_header()
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  assert!( !s.contains( "Found" ),      "verbosity::0 must not emit 'Found N sessions' header; got:\n{s}" );
-  assert!( s.contains( "session-v0-test" ), "must still list session ID; got:\n{s}" );
+  assert!( !s.contains( "Found" ),  "verbosity::0 must not emit 'Found N projects' header; got:\n{s}" );
+  assert!( s.contains( "proj" ),    "verbosity::0 must output project path; got:\n{s}" );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -418,7 +418,7 @@ fn session_filter_narrows_results()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "session::keep" )
     .output()
@@ -439,7 +439,7 @@ fn invalid_verbosity_rejected()
   let root = TempDir::new().unwrap();
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".sessions" ).arg( "verbosity::99" )
+    .arg( ".projects" ).arg( "verbosity::99" )
     .output().unwrap();
   assert_exit( &out, 1 );
   assert!(
@@ -458,7 +458,7 @@ fn invalid_min_entries_rejected()
   let root = TempDir::new().unwrap();
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".sessions" ).arg( "min_entries::-1" )
+    .arg( ".projects" ).arg( "min_entries::-1" )
     .output().unwrap();
   assert_exit( &out, 1 );
   assert!(
@@ -485,10 +485,10 @@ fn agent_filter_includes_only_agent_sessions()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "agent::1" )
-    .arg( "verbosity::0" )
+    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -512,10 +512,10 @@ fn agent_filter_excludes_agent_sessions()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "agent::0" )
-    .arg( "verbosity::0" )
+    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -542,10 +542,10 @@ fn min_entries_filters_by_entry_count()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "min_entries::3" )
-    .arg( "verbosity::0" )
+    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -569,7 +569,7 @@ fn verbosity_two_includes_project_label()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::2" )
     .output()
@@ -629,7 +629,7 @@ fn scope_local_finds_project_with_underscore_path()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project_path.display() ) )
     .output()
@@ -666,7 +666,7 @@ fn scope_under_finds_project_with_underscore_path()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", base.display() ) )
     .output()
@@ -707,7 +707,7 @@ fn scope_relevant_finds_ancestor_with_underscore_path()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::relevant" )
     .arg( format!( "path::{}", cwd.display() ) )
     .output()
@@ -757,7 +757,7 @@ fn scope_relevant_finds_topic_scoped_ancestor()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::relevant" )
     .arg( format!( "path::{}", cwd.display() ) )
     .output()
@@ -799,7 +799,7 @@ fn scope_under_finds_deeply_nested_with_multiple_underscore_components()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", base.display() ) )
     .output()
@@ -848,31 +848,33 @@ fn uuid_project_only_matches_global_scope()
   let out_global = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" ).arg( "scope::global" ).arg( "verbosity::0" )
+    .arg( ".projects" ).arg( "scope::global" ).arg( "verbosity::0" )
     .output().unwrap();
   assert_exit( &out_global, 0 );
   let s_global = stdout( &out_global );
-  assert!( s_global.contains( "session-uuid-test" ), "global must include UUID session; got:\n{s_global}" );
+  // v0 outputs project paths: UUID project decoded as the UUID string itself
+  assert!( s_global.contains( "deadbeef-1234-5678" ), "global must include UUID project path; got:\n{s_global}" );
+  assert!( s_global.contains( "proj" ), "global must include path project; got:\n{s_global}" );
 
-  // scope::local → excludes UUID session
+  // scope::local → excludes UUID session (only path project visible)
   let out_local = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" ).arg( "scope::local" )
+    .arg( ".projects" ).arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .arg( "verbosity::0" )
     .output().unwrap();
   assert_exit( &out_local, 0 );
   let s_local = stdout( &out_local );
-  assert!( !s_local.contains( "session-uuid-test" ), "local must exclude UUID session; got:\n{s_local}" );
-  assert!( s_local.contains( "session-path" ), "local must include path session; got:\n{s_local}" );
+  assert!( !s_local.contains( "deadbeef" ), "local must exclude UUID project; got:\n{s_local}" );
+  assert!( s_local.contains( "proj" ), "local must include path project; got:\n{s_local}" );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // issue-025 regression: "Found 1 sessions:" uses wrong plural — must be
 // "Found 1 session:" (singular).
 //
-// Root Cause: sessions_routine always formats the count noun as "sessions"
+// Root Cause: projects_routine always formats the count noun as "sessions"
 // regardless of count. English grammar requires singular ("session") when
 // count == 1.
 //
@@ -905,7 +907,7 @@ fn output_uses_singular_noun_when_exactly_one_session_found()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::1" )
     .output()
@@ -914,12 +916,12 @@ fn output_uses_singular_noun_when_exactly_one_session_found()
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!(
-    s.contains( "Found 1 session:" ),
-    "with 1 result, header must use singular 'session' (not 'sessions'); got:\n{s}"
+    s.contains( "Found 1 project:" ),
+    "with 1 result, header must use singular 'project' (not 'projects'); got:\n{s}"
   );
   assert!(
-    !s.contains( "Found 1 sessions:" ),
-    "with 1 result, header must NOT use plural 'sessions'; got:\n{s}"
+    !s.contains( "Found 1 projects:" ),
+    "with 1 result, header must NOT use plural 'projects'; got:\n{s}"
   );
   assert!( s.contains( "session-singular-test" ), "must list the session ID; got:\n{s}" );
 }
@@ -932,16 +934,17 @@ fn output_uses_plural_noun_when_multiple_sessions_found()
 {
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
-  let project = root.path().join( "proj" );
+  let project_a = root.path().join( "proj-a" );
+  let project_b = root.path().join( "proj-b" );
 
-  // Two sessions
-  common::write_path_project_session( &storage_root, &project, "session-plural-a", 2 );
-  common::write_path_project_session( &storage_root, &project, "session-plural-b", 2 );
+  // Two sessions in two distinct project directories = two projects
+  common::write_path_project_session( &storage_root, &project_a, "session-plural-a", 2 );
+  common::write_path_project_session( &storage_root, &project_b, "session-plural-b", 2 );
 
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::1" )
     .output()
@@ -950,8 +953,8 @@ fn output_uses_plural_noun_when_multiple_sessions_found()
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!(
-    s.contains( "Found 2 sessions:" ),
-    "with 2 results, header must use plural 'sessions'; got:\n{s}"
+    s.contains( "Found 2 projects:" ),
+    "with 2 distinct projects, header must use plural 'projects'; got:\n{s}"
   );
 }
 
@@ -968,7 +971,7 @@ fn output_uses_plural_noun_when_zero_sessions_found()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::1" )
     .output()
@@ -977,8 +980,8 @@ fn output_uses_plural_noun_when_zero_sessions_found()
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!(
-    s.contains( "Found 0 sessions:" ),
-    "with 0 results, header must use plural 'sessions' (zero takes plural in English); got:\n{s}"
+    s.contains( "Found 0 projects:" ),
+    "with 0 results, header must use plural 'projects' (zero takes plural in English); got:\n{s}"
   );
 }
 
@@ -1006,7 +1009,7 @@ fn verbosity_negative_one_rejected()
   let root = TempDir::new().unwrap();
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".sessions" ).arg( "verbosity::-1" )
+    .arg( ".projects" ).arg( "verbosity::-1" )
     .output().unwrap();
   assert_exit( &out, 1 );
   assert!(
@@ -1029,7 +1032,7 @@ fn verbosity_negative_one_rejected()
 //
 // ## Validation Strategy
 // Assert exit code 1. The error is produced by the unilang boolean parser
-// before sessions_routine is entered.
+// before projects_routine is entered.
 //
 // ## Related Requirements
 // `agent::` is documented as accepting 0 or 1 only.
@@ -1040,7 +1043,7 @@ fn agent_value_out_of_range_rejected()
   let root = TempDir::new().unwrap();
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".sessions" ).arg( "agent::2" )
+    .arg( ".projects" ).arg( "agent::2" )
     .output().unwrap();
   assert_exit( &out, 1 );
 }
@@ -1077,10 +1080,10 @@ fn min_entries_zero_includes_all_sessions()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "min_entries::0" )
-    .arg( "verbosity::0" )
+    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -1137,10 +1140,10 @@ fn scope_local_matches_topic_scoped_directory()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
-    .arg( "verbosity::0" )
+    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -1180,7 +1183,7 @@ fn root_path_rejected_for_non_global_scope()
   // scope::under with path::/ must fail (unencodable base path)
   let out_under = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::under" )
     .arg( "path::/" )
     .output()
@@ -1200,7 +1203,7 @@ fn root_path_rejected_for_non_global_scope()
   // scope::global with path::/ must still succeed (global ignores path)
   let out_global = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "path::/" )
     .output()
@@ -1247,7 +1250,7 @@ fn it_24_decode_display_includes_hyphen_prefixed_topic_dir()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::1" )
     .output()
@@ -1305,7 +1308,7 @@ fn it_23_decode_display_preserves_underscore_named_dirs()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::global" )
     .arg( "verbosity::1" )
     .output()
@@ -1377,7 +1380,7 @@ fn it_25_scope_under_excludes_underscore_named_sibling()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", base.display() ) )
     .output()
@@ -1448,7 +1451,7 @@ fn it_26_scope_relevant_excludes_underscore_named_sibling()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::relevant" )
     .arg( format!( "path::{}", target.display() ) )
     .output()
@@ -1467,23 +1470,23 @@ fn it_26_scope_relevant_excludes_underscore_named_sibling()
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// IT-1 / T01: Default (no args) shows active-session summary, not a list
+// IT-1 / T01: Default (no args) shows active-project summary, not a list
 // ────────────────────────────────────────────────────────────────────────────
 
-/// IT-1: Default (no args) shows active-session summary
+/// IT-1: Default (no args) shows active-project summary
 ///
 /// ## Root Cause (tested behaviour)
-/// When `clg .sessions` is invoked with no arguments, it activates summary mode:
-/// prints a single-session block for the most-recent session instead of the
-/// full project-grouped session list.
+/// When `clg .projects` is invoked with no arguments, it activates summary mode:
+/// prints a project-centric summary block for the most recently active project
+/// instead of the full project-grouped session list.
 ///
 /// ## Verification
-/// - stdout contains "Active session" header line
-/// - stdout contains "Project" line
+/// - stdout contains "Active project" header line (not "Active session")
+/// - stdout contains "Last session:" line
 /// - stdout contains "Last message:" section
 /// - stdout does NOT contain "Found" (list-mode header)
 #[test]
-fn it1_default_shows_active_session_summary()
+fn it1_default_shows_active_project_summary()
 {
   let root = tempfile::TempDir::new().unwrap();
   let project_path = root.path().join( "myproject" );
@@ -1497,33 +1500,96 @@ fn it1_default_shows_active_session_summary()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
     .current_dir( &project_path )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  assert!( s.contains( "Active session" ), "expected summary header; got:\n{s}" );
-  assert!( s.contains( "Project" ), "expected Project line; got:\n{s}" );
+  assert!( s.contains( "Active project" ), "expected 'Active project' summary header; got:\n{s}" );
+  assert!( !s.contains( "Active session" ), "must NOT say 'Active session'; got:\n{s}" );
+  assert!( s.contains( "Last session:" ), "expected 'Last session:' line; got:\n{s}" );
   assert!( s.contains( "Last message:" ), "expected Last message section; got:\n{s}" );
   assert!( !s.contains( "Found" ), "expected no list header; got:\n{s}" );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// IT-47: verbosity::1 alone stays in summary mode (bug-is-default-verbosity)
+// ────────────────────────────────────────────────────────────────────────────
+
+/// IT-47: `verbosity::1` alone must not activate list mode.
+///
+/// ## Root Cause
+/// `projects_routine` computes `is_default` by requiring every parameter to
+/// be `None`, including `cmd.get_integer("verbosity").is_none()` (cli/mod.rs).
+/// Passing `verbosity::1` returns `Some(1)` instead of `None`, setting
+/// `is_default = false` and routing to list mode (Algorithm C) even though
+/// `verbosity::1` is semantically the default — a display modifier with no
+/// bearing on mode selection.
+///
+/// ## Why Not Caught Initially
+/// All existing summary-mode tests invoke bare `.projects` with no arguments.
+/// None tested the invariant: passing a parameter at its default value must
+/// produce identical output to omitting it entirely.
+///
+/// ## Fix Applied
+/// Removed `&& cmd.get_integer("verbosity").is_none()` from the `is_default`
+/// predicate. Verbosity controls how much to display within a mode, not which
+/// mode to enter; it must not appear in the mode-selection gate.
+///
+/// ## Prevention
+/// `is_default` must only include parameters that change *what* is shown
+/// (scope, filter, session ID). Display modifiers (verbosity, format) must
+/// never appear in the mode-selection gate.
+///
+/// ## Pitfall to Avoid
+/// "Parameter is absent" and "parameter is at its default value" are
+/// semantically different — treat them as equivalent for display modifiers.
+// test_kind: bug_reproducer(issue-is-default-verbosity)
+#[test]
+fn it47_verbosity_1_alone_stays_in_summary_mode()
+{
+  let root = tempfile::TempDir::new().unwrap();
+  let project_path = root.path().join( "myproject" );
+  std::fs::create_dir_all( &project_path ).unwrap();
+
+  common::write_path_project_session_with_last_message(
+    root.path(), &project_path, "session-it47", 2, "Hello from it47"
+  );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
+    .current_dir( &project_path )
+    .arg( ".projects" )
+    .arg( "verbosity::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!( s.contains( "Active project" ), "verbosity::1 must stay in summary mode; got:\n{s}" );
+  assert!( !s.contains( "Active session" ), "must NOT say 'Active session'; got:\n{s}" );
+  assert!( s.contains( "Last message:" ), "expected Last message section; got:\n{s}" );
+  assert!( !s.contains( "Found" ), "verbosity::1 must not trigger list mode header; got:\n{s}" );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
 // IT-30 / T01: Summary header format (id, age, count, project path)
 // ────────────────────────────────────────────────────────────────────────────
 
-/// IT-30: Summary header format — id, age, count, path
+/// IT-30: Summary header format — project path, session count, last session id
 ///
 /// ## Root Cause (tested behaviour)
-/// The first line must be `Active session  {8-char-id}  {age}  {N} entries`.
-/// The second line must be `Project  {path}`.
+/// The first line must be `Active project  {path}  (N session(s), last active Xago)`.
+/// The second line must be `Last session:  {8-char-id}  {age}  (N entries)`.
 ///
 /// ## Verification
-/// - First line starts with "Active session"
-/// - First line contains the session ID (or its first 8 chars)
-/// - First line contains the entry count and "entries"
-/// - Second line starts with "Project"
+/// - First line starts with "Active project"
+/// - First line contains the project path (project dir name)
+/// - First line contains "session" (session count)
+/// - Second line starts with "Last session:"
+/// - Second line contains "entries" (entry count)
 #[test]
 fn it30_summary_header_format()
 {
@@ -1531,7 +1597,7 @@ fn it30_summary_header_format()
   let project_path = root.path().join( "proj30" );
   std::fs::create_dir_all( &project_path ).unwrap();
 
-  // Write 2 standard + 1 last-message entry → total 3 entries
+  // Write 2 standard + 1 last-message entry → total 3 entries, 1 session
   common::write_path_project_session_with_last_message(
     root.path(), &project_path, "session-it30", 2, "Last msg for it30"
   );
@@ -1540,7 +1606,7 @@ fn it30_summary_header_format()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
     .current_dir( &project_path )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .output()
     .unwrap();
 
@@ -1550,16 +1616,24 @@ fn it30_summary_header_format()
 
   assert!( !lines.is_empty(), "output should not be empty" );
   assert!(
-    lines[ 0 ].starts_with( "Active session" ),
-    "first line must start with 'Active session'; got: {:?}", lines[ 0 ]
+    lines[ 0 ].starts_with( "Active project" ),
+    "first line must start with 'Active project'; got: {:?}", lines[ 0 ]
   );
   assert!(
-    lines[ 0 ].contains( "entries" ),
-    "first line must contain entry count; got: {:?}", lines[ 0 ]
+    lines[ 0 ].contains( "proj30" ),
+    "first line must contain project dir name; got: {:?}", lines[ 0 ]
   );
   assert!(
-    lines.len() >= 2 && lines[ 1 ].starts_with( "Project" ),
-    "second line must start with 'Project'; got: {:?}", lines.get( 1 )
+    lines[ 0 ].contains( "session" ),
+    "first line must contain session count; got: {:?}", lines[ 0 ]
+  );
+  assert!(
+    lines.len() >= 2 && lines[ 1 ].starts_with( "Last session:" ),
+    "second line must start with 'Last session:'; got: {:?}", lines.get( 1 )
+  );
+  assert!(
+    lines.len() >= 2 && lines[ 1 ].contains( "entries" ),
+    "second line must contain entry count; got: {:?}", lines.get( 1 )
   );
 }
 
@@ -1597,7 +1671,7 @@ fn it31_truncation_gate_short_message()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
     .current_dir( &project_path )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .output()
     .unwrap();
 
@@ -1643,7 +1717,7 @@ fn it32_truncation_formula_long_message()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
     .current_dir( &project_path )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .output()
     .unwrap();
 
@@ -1681,14 +1755,14 @@ fn it33_no_sessions_shows_not_found()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
     .current_dir( &project_path )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!(
-    s.contains( "No active session found." ),
+    s.contains( "No active project found." ),
     "expected sentinel message; got:\n{s}"
   );
   assert!( stderr( &out ).is_empty(), "stderr must be empty; got: {}", stderr( &out ) );
@@ -1722,7 +1796,7 @@ fn it34_explicit_scope_keeps_list_mode()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
     .current_dir( &project_path )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .output()
     .unwrap();
@@ -1761,7 +1835,7 @@ fn it35_explicit_limit_keeps_list_mode()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
     .current_dir( &project_path )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "limit::5" )
     .output()
     .unwrap();
@@ -1805,7 +1879,7 @@ fn it36_family_header_format()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -1855,7 +1929,7 @@ fn it37_per_root_agent_breakdown()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -1910,7 +1984,7 @@ fn it38_hierarchical_format_detection()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -1963,7 +2037,7 @@ fn it39_flat_format_detection()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -2021,7 +2095,7 @@ fn it40_orphan_family_display()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -2057,7 +2131,7 @@ fn it41_childless_root_no_bracket()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -2102,7 +2176,7 @@ fn it42_meta_json_agent_type()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -2163,7 +2237,7 @@ fn it43_empty_meta_json_fallback()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -2218,7 +2292,7 @@ fn it44_v1_orphan_shows_orphan_label()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -2262,7 +2336,7 @@ fn it45_v2_root_entry_count_singular()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .arg( "verbosity::2" )
@@ -2320,7 +2394,7 @@ fn it46_v2_agent_entry_count_singular()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .arg( "verbosity::2" )
@@ -2395,7 +2469,7 @@ fn it47_empty_string_agent_type_falls_back_to_unknown()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()
@@ -2465,7 +2539,7 @@ fn it48_whitespace_agent_type_falls_back_to_unknown()
   let out = common::clg_cmd()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
-    .arg( ".sessions" )
+    .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
     .output()

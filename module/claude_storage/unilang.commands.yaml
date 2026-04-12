@@ -201,46 +201,6 @@
     - ".show session_id::abc123 entries::1"
   auto_help_enabled: true
 
-- name: ".show.project"
-  namespace: ""
-  description: "Display project details and all sessions (DEPRECATED: use .show instead)"
-  hint: "Show project (deprecated)"
-  version: "1.3.0"
-  status: "deprecated"
-  aliases: []
-  tags: ["storage", "info", "project"]
-  permissions: []
-  idempotent: true
-  deprecation_message: "This command is deprecated. Use '.show' or '.show project::{path}' instead."
-  http_method_hint: "GET"
-
-  arguments:
-    - name: "project"
-      kind: "String"
-      description: "Project path, path-encoded, UUID, or Path(...) from .list output (default: current directory)"
-      hint: "Project identifier"
-      optional: true
-      validation_rules: []
-      aliases: []
-      tags: []
-
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level (0-5, default: 1)"
-      hint: "Output verbosity"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
-  examples:
-    - ".show.project"
-    - ".show.project /home/user1/pro/lib/willbe/module/willbe3/-commit"
-    - ".show.project Path(\"/home/user1/pro/lib/willbe/module/willbe3/-commit\")"
-    - ".show.project abc-123-def-456"
-    - ".show.project -home-user1-pro"
-  auto_help_enabled: true
 
 - name: ".count"
   namespace: ""
@@ -423,42 +383,14 @@
     - ".export session_id::-default_topic format::text output::transcript.txt"
   auto_help_enabled: true
 
-- name: ".session"
+- name: ".projects"
   namespace: ""
-  description: "Check if directory has Claude Code conversation history"
-  hint: "Check for conversation history"
+  description: "Show active-project summary (default) or family-grouped session list with scope control"
+  hint: "Active project summary or family-grouped list"
   version: "1.0.0"
   status: "stable"
   aliases: []
-  tags: ["storage", "session", "check"]
-  permissions: []
-  idempotent: true
-  deprecation_message: ""
-  http_method_hint: "GET"
-
-  arguments:
-    - name: "path"
-      kind: "String"
-      description: "Directory to check (default: current directory)"
-      hint: "Directory path"
-      optional: true
-      validation_rules: []
-      aliases: []
-      tags: []
-
-  examples:
-    - ".session"
-    - ".session path::/home/user/project"
-  auto_help_enabled: true
-
-- name: ".sessions"
-  namespace: ""
-  description: "Show active-session summary (default) or family-grouped session list with scope control"
-  hint: "Active session summary or family-grouped list"
-  version: "1.0.0"
-  status: "stable"
-  aliases: []
-  tags: ["storage", "session", "list"]
+  tags: ["storage", "project", "list"]
   permissions: []
   idempotent: true
   deprecation_message: ""
@@ -529,12 +461,12 @@
       tags: []
 
   examples:
-    - ".sessions"
-    - ".sessions scope::relevant"
-    - ".sessions scope::under path::/home/user1/pro"
-    - ".sessions scope::global agent::1 min_entries::50"
-    - ".sessions scope::local session::abc123"
-    - ".sessions limit::5"
+    - ".projects"
+    - ".projects scope::relevant"
+    - ".projects scope::under path::/home/user1/pro"
+    - ".projects scope::global agent::1 min_entries::50"
+    - ".projects scope::local session::abc123"
+    - ".projects limit::5"
   auto_help_enabled: true
 
 - name: ".path"

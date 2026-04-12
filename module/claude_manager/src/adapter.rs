@@ -1,13 +1,14 @@
 //! Adapter layer: convert raw `argv` tokens to unilang token strings.
 //!
 //! Implements the first phase of the unilang pipeline for `claude_manager`.
-//! Handles alias expansion (`v::` → `verbosity::`), bool normalisation
-//! (`dry::true` → `dry::1`), integer range validation (`v::3` → error),
+//! Handles alias expansion (`v::` → `verbosity::`), bool enforcement
+//! (only `0`/`1` accepted; `dry::true` is rejected with an error),
+//! integer range validation (`v::3` → error),
 //! and dot-prefix enforcement before handing off to `unilang::Parser`.
 
 use error_tools::{ Error, Result };
 
-/// Bool params that accept only `0`/`1`/`true`/`false`.
+/// Bool params that accept only `0` (false) or `1` (true); all other values are rejected.
 const BOOL_PARAMS : &[ &str ] = &[ "dry", "force" ];
 
 /// Integer params that must be non-negative.

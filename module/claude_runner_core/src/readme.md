@@ -7,12 +7,12 @@ This directory contains the core implementation of the `claude_runner_core` crat
 | File | Responsibility |
 |------|----------------|
 | `lib.rs` | Crate entry point and public API surface |
-| `command.rs` | ClaudeCommand builder implementation |
+| `command/` | ClaudeCommand builder split into per-tier parameter modules |
 | `types.rs` | Enum type definitions and conversions |
 | `process.rs` | Scan `/proc` for Claude processes; send SIGTERM/SIGKILL |
 | `session_dir.rs` | Directory-based session isolation for invocations |
 
-## Organization (5 files)
+## Organization (5 entries)
 
 Files organized by responsibility following Rust module conventions.
 
@@ -20,11 +20,15 @@ Files organized by responsibility following Rust module conventions.
 
 ```
 src/
-├── lib.rs          # Crate root, public API
-├── command.rs      # ClaudeCommand builder
-├── types.rs        # ActionMode, LogLevel enums
-├── process.rs      # /proc scanner, signal sending
-└── session_dir.rs  # Session directory isolation
+├── lib.rs              # Crate root, public API
+├── command/            # ClaudeCommand builder (split into 4 files)
+│   ├── mod.rs          # Struct def, execution methods, describe helpers
+│   ├── params_core.rs  # Tier 1 critical parameters
+│   ├── params_security.rs  # Tier 2 security-sensitive parameters
+│   └── params_extended.rs  # Tier 3+ optional parameters
+├── types.rs            # ActionMode, LogLevel enums
+├── process.rs          # /proc scanner, signal sending
+└── session_dir.rs      # Session directory isolation
 ```
 
 ### Scope
