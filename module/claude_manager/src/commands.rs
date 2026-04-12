@@ -683,11 +683,12 @@ pub fn processes_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Re
 ///
 /// Returns `Err(InternalError)` if signal delivery fails or processes survive.
 ///
-/// Fix(issue-kill-silent): `let _ = send_sigterm/sigkill` silently discarded
-///   signal delivery errors — EPERM failures on surviving processes produced
-///   exit 0 until the trailing `remaining > 0` check caught them, but errors
-///   that caused the process list to be stale were invisible.
-/// Root cause: `let _` pattern swallows `Err` from signal functions entirely.
+/// Fix(issue-kill-silent): signal delivery results were discarded via the
+///   `let _ = …` pattern on `send_sigterm`/`send_sigkill`, so EPERM and other
+///   errors were silently swallowed — surviving processes only surfaced via the
+///   trailing `remaining > 0` check; stale-list errors were completely invisible.
+/// Root cause: discarding the `Result` from signal functions hides every error
+///   that does not manifest as a surviving process in the follow-up scan.
 /// Pitfall: ESRCH ("no such process") is a benign race — the process already
 ///   exited — so collect all signal errors but filter ESRCH from final report.
 #[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
