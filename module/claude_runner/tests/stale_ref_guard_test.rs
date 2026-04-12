@@ -4,7 +4,7 @@
 //!
 //! Two sets of stale references are guarded:
 //!
-//! **1. `claude_runner_plugin`** — removed from willbe/dev workspace on 2026-03-09.
+//! **1. `claude_runner_plugin`** — removed from the consumer workspace on 2026-03-09.
 //! YAML consumers now aggregate `claude.commands.yaml` directly via `build.rs`.
 //!
 //! **2. `dream_agent`** — removed as a coupling concern on 2026-03-26.
@@ -37,11 +37,11 @@
 //! the decoupling happened — mentioning `dream_agent` there is intentional historical context,
 //! not a stale coupling. Exempt pattern: skip files named `design_decisions.md`.
 //!
-//! **Proset ≠ deleted.** `claude_runner_plugin` still exists at `willbe/proset/module/`
-//! as a reference implementation. It was only *removed from willbe/dev workspace*. Guard
+//! **Proset ≠ deleted.** `claude_runner_plugin` still exists at `consumer/proset/module/`
+//! as a reference implementation. It was only *removed from the consumer workspace*. Guard
 //! tests that check for the plugin name must exempt deliberate Note lines documenting this
 //! preservation — those are accurate history, not stale refs. Exempt pattern:
-//! `!line.contains("removed from willbe/dev workspace")`.
+//! `!line.contains("removed from the consumer workspace")`.
 //!
 //! **MSRV is 1.70.** `.is_some_and()` is available and preferred over
 //! `.map_or( false, |x| ... )`. Use `is_some_and` in this crate.
@@ -101,7 +101,7 @@ fn md_files_in_dir( dir : &Path, skip_names : &[ &str ] ) -> Vec< PathBuf >
 fn no_plugin_ref_in_docs()
 {
   // Note lines about proset preservation are exempt: they document historical removal, not stale refs.
-  // Exempt pattern: lines containing "removed from willbe/dev workspace"
+  // Exempt pattern: lines containing "removed from the consumer workspace"
   // spec.md was migrated to docs/ — scan all .md files under docs/ instead.
   let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
   let docs_dir = manifest.join( "docs" );
@@ -109,7 +109,7 @@ fn no_plugin_ref_in_docs()
   let violations : Vec< String > = files
     .iter()
     .flat_map( |f| collect_violations( f, "claude_runner_plugin" ) )
-    .filter( |line| !line.contains( "removed from willbe/dev workspace" ) )
+    .filter( |line| !line.contains( "removed from the consumer workspace" ) )
     .collect();
   assert!(
     violations.is_empty(),

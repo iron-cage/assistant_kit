@@ -15,8 +15,13 @@ name = "claude_runner"
 path = "src/lib.rs"
 
 [[bin]]
-name = "clr"
+name = "claude_runner"
 path = "src/main.rs"
+required-features = [ "enabled" ]
+
+[[bin]]
+name = "clr"
+path = "src/bin/clr.rs"
 required-features = [ "enabled" ]
 
 [features]

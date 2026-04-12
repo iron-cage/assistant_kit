@@ -222,7 +222,7 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// resolve_path_parameter(".") → "/home/user/project"
 /// resolve_path_parameter("..") → "/home/user"
 /// resolve_path_parameter("~") → "/home/user"
-/// resolve_path_parameter("willbe") → "willbe" (unchanged)
+/// resolve_path_parameter("myproject") → "myproject" (unchanged)
 /// ```
 fn resolve_path_parameter( param : &str ) -> core::result::Result< String, String >
 {

@@ -28,7 +28,7 @@
 //!
 //! Real-world Claude Code usage creates directories like:
 //! - `~/.claude/projects/-home-user-pro-genai-claude-commands--default-topic/`
-//! - `~/.claude/projects/-home-user-pro-lib-willbe--commit/`
+//! - `~/.claude/projects/-home-user-pro-lib-consumer--commit/`
 //!
 //! These patterns were not tested because:
 //! 1. Tests focused on "happy path" normal directory names
@@ -135,7 +135,7 @@ use std::path::{ Path, PathBuf };
 ///
 /// Real-world failure case discovered when running `claude_storage .list`:
 /// ```text
-/// Path("/home/user1/pro/lib/willbe/module/wplan/agent//default/topic")
+/// Path("/home/user1/pro/lib/consumer/module/wplan/agent//default/topic")
 /// ```
 ///
 /// The double slash (`//default`) should be `/-default_topic` (hyphen-prefixed directory).
@@ -162,11 +162,11 @@ fn bug_reproducer_wplan_agent_path()
   // Another real-world case
   // Note: Due to lossy encoding, decoder uses heuristics and prefers underscore after "module/"
   // matching actual filesystem structure (wplan_agent is a module directory)
-  let encoded = "-home-user1-pro-lib-willbe-module-wplan-agent--default-topic";
+  let encoded = "-home-user1-pro-lib-consumer-module-wplan-agent--default-topic";
   let decoded = decode_path( encoded ).expect( "Failed to decode" );
 
   assert!( !decoded.to_str().unwrap().contains( "//" ) );
-  assert_eq!( decoded, PathBuf::from( "/home/user1/pro/lib/willbe/module/wplan_agent/-default_topic" ) );
+  assert_eq!( decoded, PathBuf::from( "/home/user1/pro/lib/consumer/module/wplan_agent/-default_topic" ) );
 }
 
 #[test]

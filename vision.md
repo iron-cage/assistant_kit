@@ -78,7 +78,7 @@ Layer 1 — Storage & Detection (zero process execution)
 
 Layer 2 — Execution (owns Command::new("claude"))
   claude_runner_core    ClaudeCommand builder, single execution point
-  claude_runner         CLI adapter with YAML schema for willbe integration
+  claude_runner         CLI adapter with YAML schema for consumer workspace integration
 ```
 
 The hard boundary between layers is enforced by a static analysis test: if `std::process::Command`

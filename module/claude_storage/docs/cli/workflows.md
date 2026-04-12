@@ -46,15 +46,15 @@ claude_storage .status verbosity::2
 
 ```bash
 # Step 1: List projects matching path keyword
-claude_storage .list path::willbe
-# Output: projects whose paths contain "willbe"
+claude_storage .list path::claude_tools
+# Output: projects whose paths contain "claude_tools"
 
 # Step 2: List sessions for a matching project
-claude_storage .list path::willbe sessions::1
+claude_storage .list path::claude_tools sessions::1
 # Output: same projects, now with their sessions listed
 
 # Step 3: Show the session content
-claude_storage .show project::/home/user1/pro/lib/willbe session_id::-default_topic
+claude_storage .show project::/home/user1/pro/lib/consumer session_id::-default_topic
 # Output: conversation content
 ```
 
@@ -114,11 +114,11 @@ claude_storage .count
 # Output: projects: N
 
 # Count sessions in a project
-claude_storage .count target::sessions project::-home-user1-pro-lib-willbe
+claude_storage .count target::sessions project::-home-user1-pro-lib-consumer
 # Output: sessions: N
 
 # Count entries in a session
-claude_storage .count target::entries project::-home-user1-pro-lib-willbe session::-default_topic
+claude_storage .count target::entries project::-home-user1-pro-lib-consumer session::-default_topic
 # Output: entries: N
 ```
 
@@ -188,8 +188,8 @@ claude_storage .list agent::1 min_entries::10
 # Output: agent sessions with 10+ entries
 
 # Find substantial sessions in a specific project by path
-claude_storage .list path::willbe min_entries::50
-# Output: willbe projects with sessions having 50+ entries
+claude_storage .list path::claude_tools min_entries::50
+# Output: claude_tools projects with sessions having 50+ entries
 ```
 
 **Notes:** `min_entries::` counts all entries including both user and assistant turns, so a 10-entry session has roughly 5 user-assistant exchange pairs.

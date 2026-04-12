@@ -42,7 +42,7 @@ This task is the prerequisite for removing the `claude_session` standalone stub 
 
 ## Out of Scope
 
-- Removing `claude_session` crate (separate task — requires checking external callers in willbe and other repos, and migrating `SessionManager`/`Strategy` to `claude_runner_core`)
+- Removing `claude_session` crate (separate task — requires checking external callers in consumer workspace and other repos, and migrating `SessionManager`/`Strategy` to `claude_runner_core`)
 - Changes to `claude_runner_core` or `claude_session`
 - Changing the path-encoding algorithm
 

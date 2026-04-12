@@ -108,7 +108,7 @@ Session filter parameters belong to the [Session Filter group](parameter_groups.
 claude_storage .list
 
 # List all sessions for projects matching path
-claude_storage .list path::willbe sessions::1
+claude_storage .list path::claude_tools sessions::1
 
 # Find sessions matching a topic filter
 claude_storage .list session::commit
@@ -334,7 +334,7 @@ claude_storage .export session_id::ID output::PATH scope::global
 
 ### Command :: 7. `.projects`
 
-Active-session summary by default; session-first scoped list when any explicit parameter is given. Where `.list` is project-first, `.projects` is session-first: returns all sessions matching the scope without requiring project context first.
+Active-project summary by default; project-first scoped list when any explicit parameter is given. Sessions are aggregated by project directory — bare invocation shows the most-recently-modified project as a single summary block; list mode shows one entry per project (not per session file).
 
 **Parameters:** `scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`, `verbosity::`
 
@@ -365,18 +365,18 @@ claude_storage .projects limit::5
 
 **Default invocation (summary mode):**
 
-When `.projects` is called with no arguments, it outputs a single-session summary for the most-recent session in scope — not a list. Any explicit scope or filter parameter (`scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`) activates list mode instead. `verbosity::` is a display modifier and never affects mode selection — `verbosity::1` stays in summary mode.
+When `.projects` is called with no arguments, it outputs a single-project summary for the most-recently-modified project in scope — not a list. Any explicit scope or filter parameter (`scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`) activates list mode instead. `verbosity::` is a display modifier and never affects mode selection — `verbosity::1` stays in summary mode.
 
 ```
-Active session  {8-char-id}  {age}  {count} entries
-Project  {path-relative-to-cwd}
+Active project  {path}  ({N} sessions, last active {age})
+Last session:  {8-char-id}  {age}  ({count} entries)
 
 Last message:
   {text}
 ```
 
 Truncation rule: message text longer than 50 chars → `{first30}...{last30}`; 50 chars or fewer shown in full.
-No sessions in scope → `No active session found.`
+No sessions in scope → `No active project found.`
 
 **Examples:**
 ```bash
@@ -412,7 +412,7 @@ Verbosity levels apply to **list mode** (activated when any explicit parameter i
 Output is grouped by project at verbosity ≥ 1. Path header is always shown (never suppressed):
 
 ```
-Found N sessions:
+Found N projects:
 
 ~/path/to/project-a: (2 conversations, 12 agents)
   * a1b2c3d4  2h ago  (347 entries)  [8 agents: 5×Explore, 2×general-purpose, 1×Plan]
@@ -440,9 +440,9 @@ At `verbosity::2+`, agents are tree-indented under their parent:
 
 **Verbosity matrix:**
 
-| Verbosity | Path header | Session lines | Agent sessions | Mtime | Entry count | Sort |
-|-----------|-------------|---------------|----------------|-------|-------------|------|
-| 0 | None (flat) | `{full-id}` | shown | — | — | filesystem |
+| Verbosity | Project output | Session lines | Agent sessions | Mtime | Entry count | Sort |
+|-----------|----------------|---------------|----------------|-------|-------------|------|
+| 0 | Project paths only (one per line, machine-readable) | — | — | — | — | mtime desc |
 | 1 (default) | `~/path: (N conversations, M agents)` | `  * {short-id}  {mtime}  ({n} entries)  [N agents: breakdown]` | family-grouped per parent | ✓ | ✓ | mtime desc |
 | 2+ | `~/path: (N conversations, M agents)` | `  - {full-id}  ({n} entries)` | tree-indented under parent (`├─`/`└─`) | — | ✓ | mtime desc |
 
@@ -454,8 +454,8 @@ At `verbosity::2+`, agents are tree-indented under their parent:
 - Orphan families (no root): `  ? (orphan)  [N agents: breakdown]`
 - `limit::N` caps families per project; truncated projects show `... and N more sessions` hint
 
-- `verbosity::0` — bare session IDs only, one per line; suitable for piping
-- `verbosity::1` — grouped per project with family display; header shows `(N conversations, M agents)` when agents present, otherwise `(N sessions)`
+- `verbosity::0` — project paths only (one per line, machine-readable); suitable for piping
+- `verbosity::1` — `Found N projects:` header; grouped per project with family display; project header shows `(N conversations, M agents)` when agents present, otherwise `(N sessions)`
 - `verbosity::2+` — same grouping; agents tree-indented under parent; full IDs; entry count per session
 
 ---

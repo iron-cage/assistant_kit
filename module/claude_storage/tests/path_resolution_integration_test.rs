@@ -104,7 +104,7 @@ fn test_list_path_tilde_integration()
   );
 }
 
-/// Test: .list `path::willbe` still works (backward compatibility)
+/// Test: .list `path::claude_tools` still works (backward compatibility)
 #[test]
 fn test_list_path_pattern_backward_compat()
 {
@@ -112,7 +112,7 @@ fn test_list_path_pattern_backward_compat()
 
   // Verify backward compatibility: pattern matching still works
   let output = common::clg_cmd()
-    .args( [ ".list", "path::willbe" ] )
+    .args( [ ".list", "path::claude_tools" ] )
     .current_dir( &test_dir )
     .output()
     .expect( "Failed to execute claude_storage" );

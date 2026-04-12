@@ -436,10 +436,10 @@ impl Storage
   ///
   /// let storage = Storage::new().unwrap();
   ///
-  /// // Filter for projects with "willbe" in path and 5+ sessions
+  /// // Filter for projects with "myproject" in path and 5+ sessions
   /// let filter = ProjectFilter
   /// {
-  ///   path_substring : Some( "willbe".to_string() ),
+  ///   path_substring : Some( "myproject".to_string() ),
   ///   min_entries : None,
   ///   min_sessions : Some( 5 ),
   /// };

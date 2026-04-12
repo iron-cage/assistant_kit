@@ -172,28 +172,28 @@ fn session_filter_and_composition()
   }
 }
 
-/// Test `ProjectFilter` with `path_substring`
+/// Test `ProjectFilter` with `path_substring` (real-filesystem filter on known path component)
 #[test]
 fn project_filter_path_substring()
 {
   let storage = Storage::new().expect( "Failed to create storage" );
 
-  // Filter for projects with "willbe" in path
+  // Filter for projects with "claude_tools" in path
   let filter = ProjectFilter
   {
-    path_substring : Some( "willbe".to_string() ),
+    path_substring : Some( "claude_tools".to_string() ),
     min_entries : None,
     min_sessions : None,
   };
 
   let filtered = storage.list_projects_filtered( &filter ).expect( "Failed to filter projects" );
 
-  // All results should contain "willbe" in path (case-insensitive)
-  let matcher = StringMatcher::new( "willbe" );
+  // All results should contain "claude_tools" in path (case-insensitive)
+  let matcher = StringMatcher::new( "claude_tools" );
   for project in &filtered
   {
     let path_str = format!( "{:?}", project.id() );
-    assert!( matcher.matches( &path_str ), "Project path {path_str} should contain 'willbe'" );
+    assert!( matcher.matches( &path_str ), "Project path {path_str} should contain 'claude_tools'" );
   }
 }
 

@@ -156,7 +156,7 @@ fn test_relative_path_resolution()
 #[test]
 fn test_pattern_detection()
 {
-  let pattern = "willbe";
+  let pattern = "claude_tools";
 
   assert!
   (

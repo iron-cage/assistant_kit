@@ -11,12 +11,12 @@
 //! This caused paths with underscores to fail when loading from real Claude Code storage:
 //!
 //! ```text
-//! $ claude_storage .show.project /home/user1/pro/lib/willbe/module/claude_storage/-default_topic
-//! Error: Project not found: /home/user1/.claude/projects/-home-user1-pro-lib-willbe-module-claude_storage--default_topic
+//! $ claude_storage .show.project /home/user1/pro/lib/consumer/module/claude_storage/-default_topic
+//! Error: Project not found: /home/user1/.claude/projects/-home-user1-pro-lib-consumer-module-claude_storage--default_topic
 //! ```
 //!
 //! The storage directory actually exists with hyphens:
-//! `/home/user1/.claude/projects/-home-user1-pro-lib-willbe-module-claude-storage--default-topic`
+//! `/home/user1/.claude/projects/-home-user1-pro-lib-consumer-module-claude-storage--default-topic`
 //!
 //! Our encoder looked for: `claude_storage` (with underscore)
 //! Claude Code created: `claude-storage` (with hyphen)
@@ -105,14 +105,14 @@ fn test_underscore_in_hyphen_prefixed_component()
 fn test_real_claude_storage_path()
 {
   // Real path from manual testing
-  let path = Path::new( "/home/user1/pro/lib/willbe/module/claude_storage/-default_topic" );
+  let path = Path::new( "/home/user1/pro/lib/consumer/module/claude_storage/-default_topic" );
   let encoded = encode_path( path ).unwrap();
 
   // Should match actual Claude Code storage directory name
   assert_eq!
   (
     encoded,
-    "-home-user1-pro-lib-willbe-module-claude-storage--default-topic"
+    "-home-user1-pro-lib-consumer-module-claude-storage--default-topic"
   );
 
   // Verify this matches the directory that actually exists in ~/.claude/projects/
@@ -176,13 +176,13 @@ fn test_compatibility_with_existing_tests()
 fn test_underscore_in_deeply_nested_path()
 {
   // Real-world complex path
-  let path = Path::new( "/home/user1/pro/lib/willbe/module/wplan_agent/tests/test_file.rs" );
+  let path = Path::new( "/home/user1/pro/lib/consumer/module/wplan_agent/tests/test_file.rs" );
   let encoded = encode_path( path ).unwrap();
 
   // All underscores replaced
   assert_eq!
   (
     encoded,
-    "-home-user1-pro-lib-willbe-module-wplan-agent-tests-test-file.rs"
+    "-home-user1-pro-lib-consumer-module-wplan-agent-tests-test-file.rs"
   );
 }

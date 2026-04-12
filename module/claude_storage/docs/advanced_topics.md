@@ -23,7 +23,7 @@ session in `.sessions` output), see [commands.md § .sessions](cli/commands.md#c
 
 **Flat format (older projects, B7):**
 ```
-projects/-home-user1-pro-lib-willbe-module--default-topic/
+projects/-home-user1-pro-lib-consumer-module--default-topic/
 ├── 9425242b-1185-4788-993e-09852db0516d.jsonl    # Main session
 ├── agent-64bdad98.jsonl                           # Agent session 1
 ├── agent-e360ed21.jsonl                           # Agent session 2
@@ -57,7 +57,7 @@ Both formats form a **Session Family** — a root session and all its agents. Se
   "parentUuid": null,
   "isSidechain": true,
   "userType": "external",
-  "cwd": "/home/user1/pro/lib/willbe/module/wplan_agent/-default_topic",
+  "cwd": "/home/user1/pro/lib/consumer/module/wplan_agent/-default_topic",
   "sessionId": "9425242b-1185-4788-993e-09852db0516d",
   "version": "2.0.31",
   "gitBranch": "master",
@@ -462,7 +462,7 @@ You will be provided with the following real-time repository information to info
 
 **Shell commands** (from CLI):
 ```json
-"display": "└ ~/pro/lib/willbe/module/reasoner ─> cargo run --"
+"display": "└ ~/pro/lib/consumer/module/reasoner ─> cargo run --"
 "display": " curl -X GET \"https://www.youtube.com/watch?v=dQw4"
 ```
 
@@ -505,15 +505,15 @@ let millis = now.duration_since(UNIX_EPOCH)?.as_millis() as u64;
 
 **Always absolute paths**:
 ```
-/home/user1/pro/lib/willbe/module/reasoner
+/home/user1/pro/lib/consumer/module/reasoner
 /home/user1/pro/lib/knowledge-hr
 /home/user1/pro/lib/knowledge-trial-tasks
 ```
 
 **Mapping to storage**:
-- Path: `/home/user1/pro/lib/willbe/module/reasoner`
-- Encoded: `-home-user1-pro-lib-willbe-module-reasoner`
-- Storage: `~/.claude/projects/-home-user1-pro-lib-willbe-module-reasoner/`
+- Path: `/home/user1/pro/lib/consumer/module/reasoner`
+- Encoded: `-home-user1-pro-lib-consumer-module-reasoner`
+- Storage: `~/.claude/projects/-home-user1-pro-lib-consumer-module-reasoner/`
 
 ### history usage patterns
 

@@ -8,7 +8,7 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | Default (no args) shows active-session summary | Summary Mode (default) |
+| IT-1 | Default (no args) shows active-project summary | Summary Mode (default) |
 | IT-2 | scope::relevant includes ancestor project sessions | Scope Behavior |
 | IT-3 | scope::under includes descendant project sessions | Scope Behavior |
 | IT-4 | scope::global returns all sessions regardless of path | Scope Behavior |
@@ -37,7 +37,7 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | IT-30 | Summary header format (id, age, count, path) | Summary Mode |
 | IT-31 | Truncation gate — message ≤ 50 chars shown in full | Summary Mode |
 | IT-32 | Truncation formula — message > 50 chars as first30...last30 | Summary Mode |
-| IT-33 | No sessions in scope shows "No active session found." | Summary Mode |
+| IT-33 | No sessions in scope shows "No active project found." | Summary Mode |
 | IT-34 | Explicit scope::local keeps list mode | Filter Passthrough |
 | IT-35 | Explicit limit::N keeps list mode | Filter Passthrough |
 | IT-36 | Family header format (conversations + agents) | Family Display |
@@ -52,6 +52,10 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | IT-45 | v2 root entry count singular `(1 entry)` | Family Display |
 | IT-46 | v2 agent entry count singular `1 entry` | Family Display |
 | IT-47 | verbosity::1 alone stays in summary mode (bug-is-default-verbosity) | Summary Mode |
+| IT-50 | Summary mode shows "Active project" header (task-016) | Project-Centric Output |
+| IT-51 | Summary mode shows session count aggregate (task-016) | Project-Centric Output |
+| IT-52 | List mode shows projects sorted by recency (task-016) | Project-Centric Output |
+| IT-53 | verbosity::0 outputs project paths only (task-016) | Project-Centric Output |
 
 ## Test Coverage Summary
 
@@ -70,30 +74,31 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 - Sibling Exclusion (issue-032): 1 test (IT-26)
 - Output Format (v1 enhancement): 3 tests (IT-27, IT-28, IT-29)
 - Family Display: 11 tests (IT-36 through IT-43, IT-44 through IT-46)
+- Project-Centric Output (task-016): 4 tests (IT-50 through IT-53)
 
 ## Test Cases
 
-### IT-1: Default (no args) shows active-session summary
+### IT-1: Default (no args) shows active-project summary
 
-**Goal:** Verify that bare `.projects` with no arguments outputs a single-session summary block — not a session list. The summary shows the most-recent session's ID (first 8 chars), age, entry count, project path relative to cwd, and last message text.
+**Goal:** Verify that bare `.projects` with no arguments outputs a single-project summary block — not a project list. The summary shows the aggregated session count, last-active age, most-recent session short ID, and last message text.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at `/home/user1/pro/alpha` containing at least one session with entries. Run from `/home/user1/pro/alpha`.
 **Command:** `clg .projects`
 **Expected Output:**
 ```
-Active session  {8-char-id}  Xd ago  N entries
-Project  ~/pro/alpha
+Active project  ~/pro/alpha  (N sessions, last active Xd ago)
+Last session:  {8-char-id}  Xd ago  (N entries)
 
 Last message:
   {message text or truncated form}
 ```
-stdout does NOT contain `Found N sessions:` (list-mode header absent).
+stdout does NOT contain `Found N projects:` (list-mode header absent).
 **Verification:**
 - Exit code is 0
-- stdout first line contains `Active session`
-- stdout contains a `Project` line with the project path
+- stdout first line contains `Active project`
+- stdout contains `Last session:` line
 - stdout contains `Last message:` header
-- stdout does NOT contain `Found N sessions:`
-**Pass Criteria:** exit 0 + summary header present + `Found N sessions:` absent
+- stdout does NOT contain `Found N projects:`
+**Pass Criteria:** exit 0 + summary header present + `Found N projects:` absent
 
 **Source:** [commands.md](../../commands.md)
 
@@ -541,23 +546,24 @@ Found 1 session:
 
 ---
 
-### IT-30: Summary header format (id, age, count, path)
+### IT-30: Summary header format (path, count, age, last-session)
 
-**Goal:** Verify that the summary header line contains the session UUID truncated to 8 chars, a human-readable age string, the entry count, and the project path relative to cwd on the following line.
+**Goal:** Verify that the summary header line contains the project path, aggregated session count, last-active age, and a `Last session:` line with short session ID and entry count.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at cwd containing one session with a known UUID and a known number of entries. Run from the project directory.
 **Command:** `clg .projects`
 **Expected Output:**
 ```
-Active session  {first-8-chars-of-uuid}  Xd ago  N entries
-Project  {rel-path-from-cwd}
+Active project  {path}  (N sessions, last active Xd ago)
+Last session:  {8-char-id}  Xd ago  (N entries)
 ```
 **Verification:**
 - Exit code is 0
-- stdout first line starts with `Active session`
-- First line contains the first 8 chars of the session UUID
-- First line contains the entry count followed by `entries`
-- Second line starts with `Project` and contains the project path
-**Pass Criteria:** exit 0 + header fields present: 8-char UUID, age, entry count, project path
+- stdout first line starts with `Active project`
+- First line contains the project path
+- First line contains `sessions,`
+- Second line starts with `Last session:`
+- Second line contains `entries`
+**Pass Criteria:** exit 0 + header fields present: project path, session count, `Last session:` line with entry count
 
 **Source:** [commands.md](../../commands.md)
 
@@ -596,18 +602,18 @@ Project  {rel-path-from-cwd}
 
 ---
 
-### IT-33: No sessions in scope shows "No active session found."
+### IT-33: No sessions in scope shows "No active project found."
 
-**Goal:** Verify that when no sessions exist in scope, stdout contains `No active session found.` rather than an error or empty output.
+**Goal:** Verify that when no sessions exist in scope, stdout contains `No active project found.` rather than an error or empty output.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (empty storage — no session files). Run from any directory.
 **Command:** `clg .projects`
-**Expected Output:** `No active session found.`
+**Expected Output:** `No active project found.`
 **Verification:**
 - Exit code is 0
-- stdout contains `No active session found.`
+- stdout contains `No active project found.`
 - stderr is empty
-- stdout does NOT contain `Active session`
-**Pass Criteria:** exit 0 + `No active session found.` in stdout
+- stdout does NOT contain `Active project  ` (project summary line must be absent)
+**Pass Criteria:** exit 0 + `No active project found.` in stdout
 
 **Source:** [commands.md](../../commands.md)
 
@@ -618,12 +624,12 @@ Project  {rel-path-from-cwd}
 **Goal:** Verify that providing any explicit parameter (`scope::local` here) bypasses summary mode and activates the normal session list.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at cwd containing at least one session. Run from that project.
 **Command:** `clg .projects scope::local`
-**Expected Output:** stdout contains `Found N session` (list-mode header); no `Active session` line.
+**Expected Output:** stdout contains `Found N project` (list-mode header); no `Active project` line.
 **Verification:**
 - Exit code is 0
-- stdout contains `Found` followed by a session count (list-mode header)
-- stdout does NOT contain `Active session` (summary mode not triggered)
-**Pass Criteria:** exit 0 + `Found N session` header present + `Active session` absent
+- stdout contains `Found` followed by a project count (list-mode header)
+- stdout does NOT contain `Active project` (summary mode not triggered)
+**Pass Criteria:** exit 0 + `Found N project` header present + `Active project` absent
 
 **Source:** [commands.md](../../commands.md)
 
@@ -634,12 +640,12 @@ Project  {rel-path-from-cwd}
 **Goal:** Verify that providing `limit::N` (an explicit parameter) bypasses summary mode and activates the normal session list.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at cwd containing at least one session. Run from that project.
 **Command:** `clg .projects limit::5`
-**Expected Output:** stdout contains `Found N session` (list-mode header); no `Active session` line.
+**Expected Output:** stdout contains `Found N project` (list-mode header); no `Active project` line.
 **Verification:**
 - Exit code is 0
-- stdout contains `Found` followed by a session count (list-mode header)
-- stdout does NOT contain `Active session` (summary mode not triggered)
-**Pass Criteria:** exit 0 + `Found N session` header present + `Active session` absent
+- stdout contains `Found` followed by a project count (list-mode header)
+- stdout does NOT contain `Active project` (summary mode not triggered)
+**Pass Criteria:** exit 0 + `Found N project` header present + `Active project` absent
 
 **Source:** [commands.md](../../commands.md)
 
@@ -815,23 +821,86 @@ Project  {rel-path-from-cwd}
 **Goal:** Verify that passing `verbosity::1` (the default verbosity value) without any other parameter does NOT activate list mode — the output must be identical to bare `.projects`.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at cwd containing at least one session with entries. Run from that project.
 **Command:** `clg .projects verbosity::1`
-**Expected Output:** Same summary block as bare `clg .projects` — NOT a session list.
+**Expected Output:** Same summary block as bare `clg .projects` — NOT a project list.
 ```
-Active session  {8-char-id}  Xd ago  N entries
-Project  ~/path/to/project
+Active project  ~/path/to/project  (N sessions, last active Xd ago)
+Last session:  {8-char-id}  Xd ago  (N entries)
 
 Last message:
   {message text}
 ```
-stdout does NOT contain `Found N sessions:` (list-mode header must be absent).
+stdout does NOT contain `Found N projects:` (list-mode header must be absent).
 **Verification:**
 - Exit code is 0
-- stdout first line contains `Active session`
-- stdout contains `Project` line
+- stdout first line contains `Active project`
+- stdout contains `Last session:` line
 - stdout contains `Last message:` header
-- stdout does NOT contain `Found N sessions:` (list mode must not activate)
-**Pass Criteria:** exit 0 + summary header present + `Found N sessions:` absent
+- stdout does NOT contain `Found N projects:` (list mode must not activate)
+**Pass Criteria:** exit 0 + summary header present + `Found N projects:` absent
 
 **Root Cause (bug-is-default-verbosity):** `is_default` gate in `projects_routine` included `verbosity` in its all-None check (`cmd.get_integer("verbosity").is_none()`). Passing `verbosity::1` returned `Some(1)` instead of `None`, setting `is_default=false` and routing to list mode even though `verbosity::1` is semantically equivalent to the default.
 
 **Source:** [commands.md](../../commands.md)
+
+---
+
+### IT-50: Summary mode shows "Active project" header (task-016)
+
+**Goal:** Verify that bare `.projects` outputs `Active project` as the summary header — not `Active session`. Introduced by task-016 redesign.
+**Setup:** One project at cwd with ≥1 session.
+**Command:** `clg .projects`
+**Expected Output:** stdout first line starts with `Active project`.
+**Verification:**
+- Exit code is 0
+- stdout contains `Active project`
+- stdout does NOT contain `Active session`
+**Pass Criteria:** exit 0 + `Active project` present + `Active session` absent
+
+**Source:** `tests/projects_output_format_test.rs::it_summary_mode_shows_active_project_header`
+
+---
+
+### IT-51: Summary mode shows session count aggregate (task-016)
+
+**Goal:** Verify that the summary block aggregates all sessions in the project and shows a count with `sessions,` (plural) rather than individual session IDs.
+**Setup:** One project at cwd with 3 sessions.
+**Command:** `clg .projects`
+**Expected Output:** stdout contains `sessions,`.
+**Verification:**
+- Exit code is 0
+- stdout contains `sessions,`
+**Pass Criteria:** exit 0 + session count aggregate present
+
+**Source:** `tests/projects_output_format_test.rs::it_summary_mode_shows_session_count`
+
+---
+
+### IT-52: List mode shows projects sorted by recency (task-016)
+
+**Goal:** Verify that list mode orders projects by most-recently-modified first, not alphabetically. Two projects with distinct mtimes: the newer project must appear before the older one.
+**Setup:** Two projects (`proj_alpha` and `proj_beta`) with different file mtimes. `proj_beta` has a newer mtime.
+**Command:** `clg .projects scope::global`
+**Expected Output:** `proj_beta` appears before `proj_alpha` in stdout.
+**Verification:**
+- Exit code is 0
+- `proj_beta` appears earlier in output than `proj_alpha`
+**Pass Criteria:** exit 0 + recency-first ordering confirmed
+
+**Source:** `tests/projects_output_format_test.rs::it_list_mode_shows_projects_sorted_by_recency`
+
+---
+
+### IT-53: verbosity::0 outputs project paths only (task-016)
+
+**Goal:** Verify that `verbosity::0` in list mode outputs one project path per line with no session IDs, no `Found N projects:` header, and no `sessions,` text.
+**Setup:** One project with ≥1 session.
+**Command:** `clg .projects scope::global verbosity::0`
+**Expected Output:** One line containing the project path; no other output.
+**Verification:**
+- Exit code is 0
+- stdout contains the project path
+- stdout does NOT contain `sessions,`
+- stdout does NOT contain `Found`
+**Pass Criteria:** exit 0 + project path present + no `sessions,` or `Found` text
+
+**Source:** `tests/projects_output_format_test.rs::it_verbosity_0_shows_paths_only`

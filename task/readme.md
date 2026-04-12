@@ -94,19 +94,19 @@
 | 003 | ✅ Complete | Migrate claude_profile from wtools to claude_tools | infrastructure | 2026-03-13 |
 | 004 | ✅ Complete | Migrate claude_runner_core from wtools to claude_tools | infrastructure | 2026-03-13 |
 | 005 | ✅ Complete | Migrate claude_runner (was claude_runner_cli) from wtools to claude_tools | infrastructure | 2026-03-13 |
-| 006 | ✅ Complete | Move claude_runner from wtools to willbe (path deps → workspace deps) | infrastructure | 2026-03-13 |
+| 006 | ✅ Complete | Move claude_runner from wtools to consumer workspace (path deps → workspace deps) | infrastructure | 2026-03-13 |
 | 007 | ✅ Complete | Unify all crate versions to 1.0.0 via workspace.package.version | infrastructure | 2026-03-13 |
 | 008 | ✅ Complete | Remove 6 crate directories from wtools | cleanup | 2026-03-13 |
 | 009 | ✅ Complete | Verify 542/542 tests pass in claude_tools | validation | 2026-03-13 |
 | 010 | ✅ Complete | Create workspace-level spec.md | specification | 2026-03-13 |
 | 011 | ✅ Complete | Fix stale workspace references in 3 docs | documentation | 2026-03-13 |
-| 012 | ✅ Complete | Complete claude_runner/spec.md in willbe (89 → 303 lines) | specification | 2026-03-13 |
+| 012 | ✅ Complete | Complete claude_runner/spec.md in consumer workspace (89 → 303 lines) | specification | 2026-03-13 |
 | 013 | ✅ Complete | Add .gitignore (with Cargo.lock policy for binary crates) | infrastructure | 2026-03-13 |
 | 014 | ✅ Complete | Add cfg_attr doc inclusion to 4 library crates | documentation | 2026-03-13 |
 | 015 | ✅ Complete | Run full L3 verification (nextest + doc test + clippy) | validation | 2026-03-13 |
 | 016 | ✅ Complete | Fix 3 organizational violations (missing module/readme.md and docs/ readme.md) | documentation | 2026-03-13 |
 | 017 | ✅ Complete | Create docs/cli.md user-facing CLI reference for .claude commands | documentation | 2026-03-13 |
-| 018 | ✅ Complete | Add claude_runner to willbe crates.md (alphabetical) | documentation | 2026-03-13 |
+| 018 | ✅ Complete | Add claude_runner to consumer workspace crates.md (alphabetical) | documentation | 2026-03-13 |
 | 019 | ✅ Complete | Fix clippy missing_inline_in_public_items across claude_storage_core and claude_storage | quality | 2026-03-13 |
 | 020 | ✅ Complete | Fix org violations: add readme.md to testing/param/ (9 files) and testing/param_group/ (4 files) | documentation | 2026-03-13 |
 | 021 | ✅ Complete | Bug fix issue-015: .status performance — add global_stats_fast() O(P+S) fast path | bug | 2026-03-13 |

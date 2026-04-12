@@ -605,7 +605,7 @@ mod tests
   {
     // Real path from user's storage
     // Encoding is lossy for ALL components (both `/` and `_` → `-`)
-    let path = Path::new( "/home/user1/pro/lib/willbe/module/wplan_agent/-default_topic" );
+    let path = Path::new( "/home/user1/pro/lib/consumer/module/wplan_agent/-default_topic" );
     let encoded = encode_path( path ).unwrap();
 
     // wplan_agent → wplan-agent (underscore replaced)
@@ -613,7 +613,7 @@ mod tests
     assert_eq!
     (
       encoded,
-      "-home-user1-pro-lib-willbe-module-wplan-agent--default-topic"
+      "-home-user1-pro-lib-consumer-module-wplan-agent--default-topic"
     );
 
     let decoded = decode_path( &encoded ).unwrap();
@@ -623,7 +623,7 @@ mod tests
     assert_eq!
     (
       decoded,
-      PathBuf::from( "/home/user1/pro/lib/willbe/module/wplan_agent/-default_topic" )
+      PathBuf::from( "/home/user1/pro/lib/consumer/module/wplan_agent/-default_topic" )
     );
   }
 

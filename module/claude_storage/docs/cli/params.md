@@ -340,7 +340,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 .status path::~/.claude/
 
 # .list: path substring filter
-.list path::willbe          # Matches all projects with "willbe" in path
+.list path::claude_tools          # Matches all projects with "claude_tools" in path
 
 # .session / .exists: directory check
 .session path::/home/user/project
@@ -383,16 +383,16 @@ Project identifier for scoping operations to a specific project.
 **Purpose:** Restricts an operation to a specific project. Without `project::`, most commands default to the current directory's project. Use `project::` when working with a project other than the current directory.
 
 **Accepted formats:**
-- Absolute path: `project::/home/user1/pro/lib/willbe`
-- Path-encoded ID: `project::-home-user1-pro-lib-willbe`
+- Absolute path: `project::/home/user1/pro/lib/consumer`
+- Path-encoded ID: `project::-home-user1-pro-lib-consumer`
 - UUID: `project::8d795a1c-c81d-4010-8d29-b4e678272419`
-- `Path(...)` form from `.list`: `project::Path("/home/user1/pro/lib/willbe")`
+- `Path(...)` form from `.list`: `project::Path("/home/user1/pro/lib/consumer")`
 
 **Examples:**
 ```bash
 # All equivalent — identify the same project
-project::/home/user1/pro/lib/willbe
-project::-home-user1-pro-lib-willbe
+project::/home/user1/pro/lib/consumer
+project::-home-user1-pro-lib-consumer
 project::8d795a1c-c81d-4010-8d29-b4e678272419
 
 # Invalid

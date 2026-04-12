@@ -47,12 +47,12 @@ use claude_storage_core::decode_path;
 fn bug_reproducer_hyphen_prefixed_with_internal_hyphens()
 {
   // Real encoded name from Claude Code storage
-  let encoded = "-home-user1-pro-lib-willbe-module-claude-storage--default-topic";
+  let encoded = "-home-user1-pro-lib-consumer-module-claude-storage--default-topic";
 
   let decoded = decode_path( encoded ).unwrap();
 
   // Should decode to actual filesystem path with underscores
-  let expected = "/home/user1/pro/lib/willbe/module/claude_storage/-default_topic";
+  let expected = "/home/user1/pro/lib/consumer/module/claude_storage/-default_topic";
 
   assert_eq!( decoded.to_string_lossy(), expected,
     "Hyphens in encoded form should decode to underscores (Claude Code's lossy encoding)"

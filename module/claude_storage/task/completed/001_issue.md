@@ -6,9 +6,9 @@ Properties don't work.
 
 ```
 ┌────────────────── user1@workstation-2025-07-19-13-39 (master) ──────────────────
-└ ~/pro/lib/willbe/module/claude_storage ─> claude_storage .show
-Project: Path("/home/user1/pro/lib/willbe/module/claude_storage/-default_topic")
-Storage: "/home/user1/.claude/projects/-home-user1-pro-lib-willbe-module-claude-storage--default-topic"
+└ ~/pro/lib/consumer/module/claude_storage ─> claude_storage .show
+Project: Path("/home/user1/pro/lib/consumer/module/claude_storage/-default_topic")
+Storage: "/home/user1/.claude/projects/-home-user1-pro-lib-consumer-module-claude-storage--default-topic"
 
 Sessions: 12 (Main: 2, Agent: 10)
 Total Entries: 357
@@ -18,7 +18,7 @@ Sessions:
   - 38809aee-8384-413c-9e41-813cef040eb7 (0 entries, last: unknown)
 
 ┌────────────────── user1@workstation-2025-07-19-13-39 (master) ──────────────────
-└ ~/pro/lib/willbe/module/claude_storage ─> claude_storage .show.help
+└ ~/pro/lib/consumer/module/claude_storage ─> claude_storage .show.help
 Command: .show
 Description: Display session or project details (location-aware, adapts to parameters)
 Hint: Show session or project
@@ -48,9 +48,9 @@ Usage:
   .show ??  # Alternative help access
 
 ┌────────────────── user1@workstation-2025-07-19-13-39 (master) ──────────────────
-└ ~/pro/lib/willbe/module/claude_storage ─> claude_storage .show entries::1
-Project: Path("/home/user1/pro/lib/willbe/module/claude_storage/-default_topic")
-Storage: "/home/user1/.claude/projects/-home-user1-pro-lib-willbe-module-claude-storage--default-topic"
+└ ~/pro/lib/consumer/module/claude_storage ─> claude_storage .show entries::1
+Project: Path("/home/user1/pro/lib/consumer/module/claude_storage/-default_topic")
+Storage: "/home/user1/.claude/projects/-home-user1-pro-lib-consumer-module-claude-storage--default-topic"
 
 Sessions: 12 (Main: 2, Agent: 10)
 Total Entries: 357
@@ -60,7 +60,7 @@ Sessions:
   - 38809aee-8384-413c-9e41-813cef040eb7 (0 entries, last: unknown)
 
 ┌────────────────── user1@workstation-2025-07-19-13-39 (master) ──────────────────
-└ ~/pro/lib/willbe/module/claude_storage ─>
+└ ~/pro/lib/consumer/module/claude_storage ─>
 ```
 
 ---
@@ -86,7 +86,7 @@ Integration/unit tests focused on the "happy path" where `entries` is used corre
 
 ### Fix Applied
 
-**File:** `/home/user1/pro/lib/willbe/module/claude_storage/src/cli/mod.rs`
+**File:** `/home/user1/pro/lib/consumer/module/claude_storage/src/cli/mod.rs`
 **Location:** Lines 336-357
 **Approach:** Parameter validation
 

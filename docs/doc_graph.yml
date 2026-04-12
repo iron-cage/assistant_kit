@@ -37,8 +37,8 @@ nodes:
     entity: pattern
 
   - id: integration/001
-    file: integration/001_willbe_integration.md
-    label: Willbe Integration
+    file: integration/001_consumer_integration.md
+    label: Consumer Workspace Integration
     entity: integration
 
   - id: error/001

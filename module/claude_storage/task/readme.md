@@ -19,4 +19,4 @@
 | 13 | 013 | 810 | 5 | 9 | 9 | 2 | ✅ (Completed) | any | [Remove deprecated .show.project command](completed/013_remove_show_project_command.md) | Delete dead deprecated stub and its test infrastructure |
 | 14 | 014 | 896 | 7 | 8 | 8 | 2 | ✅ (Completed) | any | [Remove duplicate .session command](completed/014_remove_session_command.md) | Deduplicate with .exists; eliminate tab-completion hazard |
 | 15 | 015 | 576 | 8 | 6 | 6 | 2 | ✅ (Completed) | any | [Rename .sessions → .projects](completed/015_rename_sessions_to_projects.md) | Align command name with user-facing concept (projects, not sessions) |
-| 16 | 016 | 270 | 9 | 3 | 5 | 2 | 🎯 (Available) | any | [Redesign .projects output as project-centric](016_redesign_projects_output.md) | Show project summaries (aggregated) instead of session UUID lists |
+| 16 | 016 | 270 | 9 | 3 | 5 | 2 | ✅ (Completed) | any | [Redesign .projects output as project-centric](completed/016_redesign_projects_output.md) | Show project summaries (aggregated) instead of session UUID lists |

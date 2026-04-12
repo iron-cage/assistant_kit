@@ -5,7 +5,7 @@
 - **Executor Type:** any
 - **Actor:** null
 - **Claimed At:** null
-- **Status:** 🔄 (In Progress)
+- **Status:** ✅ (Completed)
 
 ## Goal
 
@@ -203,4 +203,11 @@ Check: `grep -c "one_line_per_project\|project_dir\|distinct_project" tests/proj
 Expected: ≥ 1. Why: ensures the list mode test explicitly validates project-level aggregation.
 
 ## Outcomes
+
+- `ProjectSummary` struct and `aggregate_projects` function added to `src/cli/mod.rs`
+- Summary mode replaced `render_active_summary` with `render_active_project_summary` — outputs `Active project  {path}  ({N} sessions, last active {age})`
+- List mode redesigned: v0 → project paths only; v1+ → `aggregate_projects` result iterated (time-sorted), family grouping preserved (P6)
+- 4 new TDD tests added (IT-50..IT-53) in `tests/projects_output_format_test.rs`
+- `tests/projects_command_test.rs` updated: IT-1, IT-30, IT-47 assertions aligned to new format; 11 tests updated for project-centric output and new header noun ("Found N projects:")
+- Level 3 validation: 281 tests, 3 doctests, clippy 0 errors — all pass
 

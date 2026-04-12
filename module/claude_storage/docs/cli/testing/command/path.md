@@ -33,9 +33,9 @@ Integration tests for the `.path` command. Tests verify storage path computation
 ### IT-1: Default (cwd) computes correct storage path
 
 **Goal:** Verify `.path` with no arguments returns the storage path for the current working directory.
-**Setup:** Run from `/home/user1/pro/lib/willbe`; `CLAUDE_STORAGE_ROOT` is not relevant (`.path` computes the path, not the root).
+**Setup:** Run from `/home/user1/pro/lib/consumer`; `CLAUDE_STORAGE_ROOT` is not relevant (`.path` computes the path, not the root).
 **Command:** `clg .path`
-**Expected Output:** Single line: `~/.claude/projects/-home-user1-pro-lib-willbe/` (or the absolute equivalent).
+**Expected Output:** Single line: `~/.claude/projects/-home-user1-pro-lib-consumer/` (or the absolute equivalent).
 **Verification:**
 - Exit code is `0`
 - stdout contains the path-encoded project directory for cwd
@@ -51,8 +51,8 @@ Integration tests for the `.path` command. Tests verify storage path computation
 
 **Goal:** Verify `.path path::PATH` returns the storage path for the given directory.
 **Setup:** None specific.
-**Command:** `clg .path path::/home/user1/pro/lib/willbe`
-**Expected Output:** Single line containing `/.claude/projects/-home-user1-pro-lib-willbe/`.
+**Command:** `clg .path path::/home/user1/pro/lib/consumer`
+**Expected Output:** Single line containing `/.claude/projects/-home-user1-pro-lib-consumer/`.
 **Verification:**
 - Exit code is `0`
 - Output contains the correct path-encoded directory
@@ -67,8 +67,8 @@ Integration tests for the `.path` command. Tests verify storage path computation
 
 **Goal:** Verify `topic::` appends `--{topic}` to the encoded path directory.
 **Setup:** None specific.
-**Command:** `clg .path path::/home/user1/pro/lib/willbe topic::default_topic`
-**Expected Output:** Single line containing `/-home-user1-pro-lib-willbe--default-topic/`.
+**Command:** `clg .path path::/home/user1/pro/lib/consumer topic::default_topic`
+**Expected Output:** Single line containing `/-home-user1-pro-lib-consumer--default-topic/`.
 **Verification:**
 - Exit code is `0`
 - Output ends with `--default-topic/` (topic encoded with double hyphen separator)
@@ -131,7 +131,7 @@ Integration tests for the `.path` command. Tests verify storage path computation
 
 **Goal:** Verify `~`-prefixed paths are expanded correctly.
 **Setup:** None specific.
-**Command:** `clg .path path::~/pro/lib/willbe`
+**Command:** `clg .path path::~/pro/lib/consumer`
 **Expected Output:** Storage path containing the expanded home directory (not literal `~`).
 **Verification:**
 - Exit code is `0`

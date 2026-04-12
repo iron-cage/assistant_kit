@@ -1,11 +1,11 @@
 # Agent Kit Workspace
 #
 # Standalone workspace for AI agent tooling: credentials, sessions, and process execution.
-# Privacy invariant: this workspace has ZERO knowledge of willbe.
+# Privacy invariant: this workspace has ZERO knowledge of any private consumer workspace.
 # Can use published wtools crates (error_tools, unilang, etc.).
 #
 # Dependency flow (one-directional):
-#   wtools (published) ← agent_kit ← willbe (private)
+#   wtools (published) ← agent_kit ← consumer workspace (private)
 
 [workspace]
 resolver = "2"

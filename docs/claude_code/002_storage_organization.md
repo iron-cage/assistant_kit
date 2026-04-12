@@ -114,7 +114,7 @@ projects/26dd749d-5b4b-bfee-f4f3-9e03803b8cad/
 
 **Path projects** (CLI sessions):
 ```
-projects/-home-user1-pro-lib-willbe-module-wplan_agent/
+projects/-home-user1-pro-lib-consumer-module-wplan_agent/
 ├── 3a4b5c6d-e7f8-9012-3456-789abcdef012.jsonl    # Session 1
 └── 7e8f9a0b-c1d2-3456-7890-abcdef123456.jsonl    # Session 2
 ```
@@ -181,7 +181,7 @@ projects/-home-user1-pro-lib-willbe-module-wplan_agent/
   "display": "https://www.youtube-transcript.io/api\nread page...",
   "pastedContents": {},
   "timestamp": 1758992388766,
-  "project": "/home/user1/pro/lib/willbe/module/reasoner"
+  "project": "/home/user1/pro/lib/consumer/module/reasoner"
 }
 ```
 

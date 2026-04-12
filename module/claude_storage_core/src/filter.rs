@@ -14,9 +14,9 @@
 /// ```rust
 /// use claude_storage_core::StringMatcher;
 ///
-/// let matcher = StringMatcher::new( "WillBe" );
-/// assert!( matcher.matches( "claude_storage/willbe/src" ) );
-/// assert!( matcher.matches( "CLAUDE_STORAGE/WILLBE/SRC" ) );
+/// let matcher = StringMatcher::new( "MyProject" );
+/// assert!( matcher.matches( "claude_storage/myproject/src" ) );
+/// assert!( matcher.matches( "CLAUDE_STORAGE/MYPROJECT/SRC" ) );
 /// assert!( !matcher.matches( "claude_storage/wplan/src" ) );
 /// ```
 ///
@@ -48,8 +48,8 @@ impl StringMatcher
   /// ```rust
   /// use claude_storage_core::StringMatcher;
   ///
-  /// let matcher = StringMatcher::new( "WillBe" );
-  /// assert!( matcher.matches( "willbe" ) );
+  /// let matcher = StringMatcher::new( "MyProject" );
+  /// assert!( matcher.matches( "myproject" ) );
   /// ```
   #[inline]
   pub fn new( pattern : impl Into< String > ) -> Self
@@ -148,10 +148,10 @@ impl SessionFilter
 /// ```rust
 /// use claude_storage_core::ProjectFilter;
 ///
-/// // Filter for projects with "willbe" in path and 5+ sessions
+/// // Filter for projects with "myproject" in path and 5+ sessions
 /// let filter = ProjectFilter
 /// {
-///   path_substring : Some( "willbe".to_string() ),
+///   path_substring : Some( "myproject".to_string() ),
 ///   min_entries : None,
 ///   min_sessions : Some( 5 ),
 /// };

@@ -11,7 +11,7 @@
 
 claude_runner serves two distinct consumers from one crate:
 
-**YAML library consumer:** The library surface exposes `COMMANDS_YAML` — an absolute path (computed at compile time via `env!("CARGO_MANIFEST_DIR")`) to `claude.commands.yaml`. Consumers such as `dream` aggregate this YAML at compile time via `build.rs` to build a PHF static command registry for `.claude` and `.claude.help` commands. The library has zero willbe dependencies.
+**YAML library consumer:** The library surface exposes `COMMANDS_YAML` — an absolute path (computed at compile time via `env!("CARGO_MANIFEST_DIR")`) to `claude.commands.yaml`. Consumers such as `dream` aggregate this YAML at compile time via `build.rs` to build a PHF static command registry for `.claude` and `.claude.help` commands. The library has zero consumer workspace dependencies.
 
 **CLI binary (`clr`):** The `clr` binary translates `--flag value` syntax to `ClaudeCommand` builder calls and executes Claude Code via `claude_runner_core`. It acts as the user-facing runner for both interactive and non-interactive use.
 
@@ -41,7 +41,7 @@ claude_runner serves two distinct consumers from one crate:
 |------|------|----------------|
 | api | [api/001_public_api.md](../api/001_public_api.md) | COMMANDS_YAML and VerbosityLevel public API |
 | invariant | [invariant/001_default_flags.md](../invariant/001_default_flags.md) | Default flag injection rules and opt-out mechanism |
-| invariant | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero willbe deps, binary deps gated by enabled |
+| invariant | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace deps, binary deps gated by enabled |
 | source | `../../src/main.rs` | clr binary entry point and mode dispatch |
 
 ### Sources

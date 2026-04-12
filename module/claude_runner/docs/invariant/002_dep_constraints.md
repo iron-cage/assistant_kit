@@ -3,19 +3,19 @@
 ### Scope
 
 - **Purpose**: Document the structural constraints on claude_runner's dependencies and module organization.
-- **Responsibility**: State the zero willbe dependency rule, binary dependency gating requirement, and prohibited file structure patterns.
-- **In Scope**: Zero willbe dep rule, `enabled` feature gating for binary deps, no routines.rs, no build.rs.
+- **Responsibility**: State the zero consumer workspace dependency rule, binary dependency gating requirement, and prohibited file structure patterns.
+- **In Scope**: Zero consumer workspace dep rule, `enabled` feature gating for binary deps, no routines.rs, no build.rs.
 - **Out of Scope**: Default flag behavior (→ `invariant/001_default_flags.md`), API contracts (→ `api/001_public_api.md`).
 
 ### Invariant Statement
 
 claude_runner must satisfy all of the following structural constraints simultaneously:
 
-#### Zero Willbe Dependencies
+#### Zero Consumer Workspace Dependencies
 
-The library surface of `claude_runner` must not depend on any willbe crate — this includes `wplan`, `wplan_core`, and any `dream` variant. This constraint applies to the library target (`src/lib.rs`), not just `Cargo.toml` dependencies.
+The library surface of `claude_runner` must not depend on any consumer workspace crate — this includes `wplan`, `wplan_core`, and any `dream` variant. This constraint applies to the library target (`src/lib.rs`), not just `Cargo.toml` dependencies.
 
-**Rationale:** YAML consumers (e.g. `dream`'s `build.rs`) aggregate `COMMANDS_YAML` at compile time. If the library itself depended on willbe crates, aggregating consumers would pull in the entire willbe dependency tree.
+**Rationale:** YAML consumers (e.g. `dream`'s `build.rs`) aggregate `COMMANDS_YAML` at compile time. If the library itself depended on consumer workspace crates, aggregating consumers would pull in the entire consumer workspace dependency tree.
 
 #### Binary Deps Gated by `enabled`
 
@@ -38,12 +38,12 @@ enabled = ["dep:claude_runner_core", "dep:error_tools", ..., "dep:unilang", ...]
 ### Enforcement Mechanism
 
 - `Cargo.toml` structure enforces feature gating at compile time
-- Absence of willbe deps is verifiable by inspecting `Cargo.toml` and confirmed by `cargo +nightly udeps`
+- Absence of consumer workspace deps is verifiable by inspecting `Cargo.toml` and confirmed by `cargo +nightly udeps`
 - Absence of `routines.rs` and `build.rs` is verifiable by directory inspection
 
 ### Violation Consequences
 
-- **Willbe dep added:** Library consumers acquire willbe transitive deps, bloating compile times for pure YAML aggregation use cases
+- **Consumer workspace dep added:** Library consumers acquire consumer workspace transitive deps, bloating compile times for pure YAML aggregation use cases
 - **Binary deps ungated:** Library consumers that default-feature-enable get unnecessary runtime dependencies
 - **routines.rs added:** Introduces an aggregation pattern inconsistent with this crate's design role
 - **build.rs added:** Duplicates registration work that belongs to consumers; creates a conflicting code-gen step
@@ -60,4 +60,4 @@ enabled = ["dep:claude_runner_core", "dep:error_tools", ..., "dep:unilang", ...]
 
 | File | Notes |
 |------|-------|
-| `spec.md` (deleted — migrated here) | Constraints section (zero willbe deps, binary deps gating, no routines.rs, no build.rs) |
+| `spec.md` (deleted — migrated here) | Constraints section (zero consumer workspace deps, binary deps gating, no routines.rs, no build.rs) |

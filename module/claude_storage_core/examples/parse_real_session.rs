@@ -6,7 +6,7 @@ use claude_storage_core::Session;
 fn main() -> Result< (), Box< dyn core::error::Error > >
 {
   // Direct session file path
-  let session_path = PathBuf::from( "/home/user1/.claude/projects/-home-user1-pro-lib-willbe-module-claude-storage--default-topic/bc14c4bf-eb06-406f-82ed-4349dd1f93a3.jsonl" );
+  let session_path = PathBuf::from( "/home/user1/.claude/projects/-home-user1-pro-lib-consumer-module-claude-storage--default-topic/bc14c4bf-eb06-406f-82ed-4349dd1f93a3.jsonl" );
 
   println!( "=== Real Session Parse Test ===" );
   println!( "Session file: {}", session_path.display() );

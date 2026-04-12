@@ -16,8 +16,13 @@ name = "claude_profile"
 path = "src/lib.rs"
 
 [[bin]]
-name = "clp"
+name = "claude_profile"
 path = "src/main.rs"
+required-features = [ "enabled" ]
+
+[[bin]]
+name = "clp"
+path = "src/bin/clp.rs"
 required-features = [ "enabled" ]
 
 [dependencies]

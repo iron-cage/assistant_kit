@@ -9,7 +9,7 @@
 
 ### Abstract
 
-The `claude_runner` library exposes three items: a compile-time path constant, a verbosity newtype, and an API-consistency no-op function. All three are designed for consumers that need to integrate Claude command definitions without depending on willbe crates.
+The `claude_runner` library exposes three items: a compile-time path constant, a verbosity newtype, and an API-consistency no-op function. All three are designed for consumers that need to integrate Claude command definitions without depending on consumer workspace crates.
 
 ### Operations
 
@@ -62,7 +62,7 @@ The library surface has no fallible operations. `COMMANDS_YAML` is a `&'static s
 | Type | File | Responsibility |
 |------|------|----------------|
 | feature | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | CLI binary design that uses VerbosityLevel |
-| invariant | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero willbe dep rule that shapes this minimal library surface |
+| invariant | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace dep rule that shapes this minimal library surface |
 | source | `../../src/lib.rs` | COMMANDS_YAML and register_commands definitions |
 
 ### Sources

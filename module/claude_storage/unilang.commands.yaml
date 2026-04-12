@@ -123,7 +123,7 @@
     - ".list"
     - ".list type::uuid"
     - ".list sessions::1"
-    - ".list path::willbe"
+    - ".list path::claude_tools"
     - ".list session::commit"
     - ".list agent::1 min_entries::10"
     - ".list path::claude_storage session::default"

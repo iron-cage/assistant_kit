@@ -5,13 +5,13 @@
 - **Purpose**: Document the purpose, crate inventory, and scope of the agent_kit workspace.
 - **Responsibility**: Describe what the workspace provides, what it excludes, and how the crates relate.
 - **In Scope**: Workspace purpose, crate inventory (13 members), in-scope capabilities, out-of-scope boundaries, performance characteristics.
-- **Out of Scope**: Crate layering pattern (→ `pattern/001_crate_layering.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`), cross-workspace integration (→ `integration/001_willbe_integration.md`).
+- **Out of Scope**: Crate layering pattern (→ `pattern/001_crate_layering.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`), cross-workspace integration (→ `integration/001_consumer_integration.md`).
 
 ### Design
 
 **Purpose:** agent_kit is a standalone Rust workspace for AI agent tooling: credential management, session storage, and process execution. The current implementation covers Claude Code in depth; the layered architecture is designed to expand to additional agents following the same crate pattern.
 
-This workspace is a clean extraction from wtools. It has no knowledge of willbe's architecture, job queues, AI orchestration, or any private workspace concerns. It depends only on published wtools crates (error_tools, unilang, former) and the Rust standard library.
+This workspace is a clean extraction from wtools. It has no knowledge of consumer workspace's architecture, job queues, AI orchestration, or any private workspace concerns. It depends only on published wtools crates (error_tools, unilang, former) and the Rust standard library.
 
 **Crate inventory:**
 
@@ -23,17 +23,34 @@ This workspace is a clean extraction from wtools. It has no knowledge of willbe'
 | claude_manager_core | — | 1 | Version / settings_io / status domain helpers (no CLI deps) |
 | claude_runner_core | — | 1 | Builder pattern for constructing and executing claude commands |
 | claude_assets_core | — | 1 | Symlink-based artifact installer domain logic (no CLI deps) |
-| claude_profile | clp | 2 | Manage Claude Code accounts, token status, and ~/.claude/ paths |
-| claude_storage | cls | 2 | CLI for exploring Claude Code filesystem storage |
-| claude_runner | clr | 2 | CLI for executing Claude Code with configurable parameters |
+| claude_profile | clp / claude_profile | 2 | Manage Claude Code accounts, token status, and ~/.claude/ paths |
+| claude_storage | clg / claude_storage | 2 | CLI for exploring Claude Code filesystem storage |
+| claude_runner | clr / claude_runner | 2 | CLI for executing Claude Code with configurable parameters |
 | agent_kit | — | 2 | Library facade re-exporting all Layer 0–1 core crates under feature-gated modules |
-| claude_manager | clman | 2 | CLI for managing Claude Code installation, versions, and processes |
-| claude_assets | cla | 2 | CLI for installing Claude Code artifacts (rules, skills, commands) via symlinks |
-| claude_tools | clt | 3 | Super-app aggregator: all four Layer 2 crate commands in one binary |
+| claude_manager | clman / claude_manager | 2 | CLI for managing Claude Code installation, versions, and processes |
+| claude_assets | cla / claude_assets | 2 | CLI for installing Claude Code artifacts (rules, skills, commands) via symlinks |
+| claude_tools | clt / claude_tools | 3 | Super-app aggregator: all four Layer 2 crate commands in one binary |
+
+**Binaries** (12 targets — 6 crates expose both canonical name and short alias):
+
+| Binary | Crate | Kind | Entry point |
+|--------|-------|------|-------------|
+| `cla` | `claude_assets` | alias | `src/bin/cla.rs` |
+| `claude_assets` | `claude_assets` | canonical | `src/main.rs` |
+| `clg` | `claude_storage` | alias | `src/bin/clg.rs` |
+| `claude_storage` | `claude_storage` | canonical | `src/main.rs` |
+| `clman` | `claude_manager` | alias | `src/bin/clman.rs` |
+| `claude_manager` | `claude_manager` | canonical | `src/main.rs` |
+| `clp` | `claude_profile` | alias | `src/bin/clp.rs` |
+| `claude_profile` | `claude_profile` | canonical | `src/main.rs` |
+| `clr` | `claude_runner` | alias | `src/bin/clr.rs` |
+| `claude_runner` | `claude_runner` | canonical | `src/main.rs` |
+| `clt` | `claude_tools` | alias | `src/bin/clt.rs` |
+| `claude_tools` | `claude_tools` | canonical | `src/main.rs` |
 
 **In scope:** Reading and parsing Claude Code's filesystem storage (`~/.claude/`); detecting sessions and continuation state; spawning `claude` with controlled parameters; managing Claude Code installation; managing accounts and active sessions; reading and writing Claude Code settings.
 
-**Out of scope:** Job queue management, AI orchestration, wplan daemon integration, and any willbe-specific types (WorkDir, TopicName, JobId). If a feature requires knowing about queues, topics, or jobs, it does not belong here.
+**Out of scope:** Job queue management, AI orchestration, wplan daemon integration, and any consumer-workspace-specific types (WorkDir, TopicName, JobId). If a feature requires knowing about queues, topics, or jobs, it does not belong here.
 
 **Performance characteristics:**
 
@@ -54,9 +71,9 @@ This workspace is a clean extraction from wtools. It has no knowledge of willbe'
 | Type | File | Responsibility |
 |------|------|----------------|
 | pattern | [pattern/001_crate_layering.md](../pattern/001_crate_layering.md) | Four-layer dependency hierarchy between these crates |
-| invariant | [invariant/001_privacy_invariant.md](../invariant/001_privacy_invariant.md) | Zero willbe dependency rule |
+| invariant | [invariant/001_privacy_invariant.md](../invariant/001_privacy_invariant.md) | Zero consumer workspace dependency rule |
 | invariant | [invariant/004_performance.md](../invariant/004_performance.md) | Performance constraints for storage operations |
-| integration | [integration/001_willbe_integration.md](../integration/001_willbe_integration.md) | How willbe consumes agent_kit crates |
+| integration | [integration/001_consumer_integration.md](../integration/001_consumer_integration.md) | How consumer workspaces consume agent_kit crates |
 | source | `../../Cargo.toml` | Workspace manifest and member declarations |
 
 ### Sources

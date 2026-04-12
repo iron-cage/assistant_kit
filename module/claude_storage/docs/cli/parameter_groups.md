@@ -82,10 +82,10 @@ See [params.md](params.md) for individual parameter specs and [commands.md](comm
 
 **Accepted formats:**
 ```bash
-project::/home/user1/pro/lib/willbe         # Absolute path
-project::-home-user1-pro-lib-willbe         # Path-encoded ID
+project::/home/user1/pro/lib/consumer         # Absolute path
+project::-home-user1-pro-lib-consumer         # Path-encoded ID
 project::8d795a1c-c81d-4010-8d29-b4e678272419  # UUID
-project::Path("/home/user1/pro/lib/willbe") # Path(...) from .list output
+project::Path("/home/user1/pro/lib/consumer") # Path(...) from .list output
 ```
 
 ---

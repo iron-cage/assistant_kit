@@ -7,7 +7,7 @@
 //!
 //! ## Key Features
 //!
-//! - **Case-insensitive**: "`WillBe`" matches "willbe", "WILLBE", "`WiLlBe`"
+//! - **Case-insensitive**: "`MyProject`" matches "myproject", "MYPROJECT", "`MyPrOjEcT`"
 //! - **Empty pattern matches all**: Empty string matches any text
 //! - **Unicode-aware**: Uses `to_lowercase()` for proper Unicode handling
 //! - **Zero dependencies**: No regex crate, stdlib only
@@ -26,17 +26,17 @@ use claude_storage_core::StringMatcher;
 #[test]
 fn exact_match_same_case()
 {
-  let matcher = StringMatcher::new( "willbe" );
-  assert!( matcher.matches( "willbe" ) );
+  let matcher = StringMatcher::new( "myproject" );
+  assert!( matcher.matches( "myproject" ) );
 }
 
 #[test]
 fn exact_match_different_case()
 {
-  let matcher = StringMatcher::new( "WillBe" );
-  assert!( matcher.matches( "willbe" ) );
-  assert!( matcher.matches( "WILLBE" ) );
-  assert!( matcher.matches( "WiLlBe" ) );
+  let matcher = StringMatcher::new( "MyProject" );
+  assert!( matcher.matches( "myproject" ) );
+  assert!( matcher.matches( "MYPROJECT" ) );
+  assert!( matcher.matches( "MyPrOjEcT" ) );
 }
 
 #[test]
@@ -76,7 +76,7 @@ fn empty_pattern_matches_all()
 #[test]
 fn empty_text_matches_only_empty_pattern()
 {
-  let matcher = StringMatcher::new( "willbe" );
+  let matcher = StringMatcher::new( "myproject" );
   assert!( !matcher.matches( "" ) );
 
   let empty_matcher = StringMatcher::new( "" );
@@ -93,7 +93,7 @@ fn pattern_longer_than_text()
 #[test]
 fn no_match()
 {
-  let matcher = StringMatcher::new( "willbe" );
+  let matcher = StringMatcher::new( "myproject" );
   assert!( !matcher.matches( "claude" ) );
   assert!( !matcher.matches( "storage" ) );
   assert!( !matcher.matches( "wplan" ) );
@@ -111,9 +111,9 @@ fn unicode_matching()
 #[test]
 fn real_world_path_matching()
 {
-  let matcher = StringMatcher::new( "willbe" );
-  assert!( matcher.matches( "/home/user1/pro/lib/willbe/module/claude_storage" ) );
-  assert!( matcher.matches( "/HOME/USER1/PRO/LIB/WILLBE/MODULE/CLAUDE_STORAGE" ) );
+  let matcher = StringMatcher::new( "myproject" );
+  assert!( matcher.matches( "/home/user1/pro/lib/myproject/module/claude_storage" ) );
+  assert!( matcher.matches( "/HOME/USER1/PRO/LIB/MYPROJECT/MODULE/CLAUDE_STORAGE" ) );
   assert!( !matcher.matches( "/home/user1/pro/lib/wplan/src" ) );
 }
 

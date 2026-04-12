@@ -3,7 +3,7 @@
 
 # Locales — agent_kit
 
-A **locale** is a named, bounded directory representing a self-contained unit of development work. See [`willbe/locate/module/locate/docs/locale.md`](../../willbe/locate/module/locate/docs/locale.md) for the full specification.
+A **locale** is a named, bounded directory representing a self-contained unit of development work. See [`consumer/locate/module/locate/docs/locale.md`](../../consumer/locate/module/locate/docs/locale.md) for the full specification.
 
 All paths are relative to `~/pro/lib/wip_core/claude_tools/dev`. `task` — Y = `task/` directory initialized.
 

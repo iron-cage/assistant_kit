@@ -8,13 +8,13 @@ For conceptual hierarchy diagrams (containment, threading, agent session layout)
 
 ### Active Project
 
-The project directory most recently modified within the current scope. Will be displayed by bare `clg .projects` (no arguments, after Task 016 output redesign) as a single summary block showing aggregated session count and last message — not a list. Computed by grouping sessions by project path, sorting projects by last-session write time, and returning the latest. Distinct from Active Session: Active Project aggregates all sessions in one directory; Active Session is one JSONL file within that directory.
+The project directory most recently modified within the current scope. Displayed by bare `clg .projects` (no arguments) as a single summary block showing aggregated session count and last message — not a list. Computed by grouping sessions by project path, sorting projects by last-session write time, and returning the latest. Distinct from Active Session: Active Project aggregates all sessions in one directory; Active Session is one JSONL file within that directory.
 
 ---
 
 ### Active Session
 
-The most-recently modified session within the current scope. Currently displayed by bare `clg .projects` (no arguments) as a single summary block — not a list. Computed by sorting all sessions in scope by last-write time and taking the latest. After Task 016, the bare-invocation summary will show Active Project instead.
+The most-recently modified session within the current scope. Computed by sorting all sessions in scope by last-write time and taking the latest. After Task 016, bare `clg .projects` shows Active Project instead of Active Session.
 
 ---
 

@@ -11,7 +11,7 @@
 
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
-| 001 | [Privacy Invariant](001_privacy_invariant.md) | Zero willbe knowledge rule and dependency flow | ✅ |
+| 001 | [Privacy Invariant](001_privacy_invariant.md) | Privacy constraint: no private consumer workspace deps | ✅ |
 | 002 | [Versioning Strategy](002_versioning_strategy.md) | Shared workspace version and divergence policy | ✅ |
 | 003 | [Testing Strategy](003_testing_strategy.md) | TDD baseline rule, test categories, baseline enforcement | ✅ |
 | 004 | [Performance](004_performance.md) | Status verbosity modes, min_entries cost, count_entries cost model | ✅ |

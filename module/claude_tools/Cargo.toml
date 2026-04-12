@@ -16,8 +16,13 @@ name = "claude_tools"
 path = "src/lib.rs"
 
 [[bin]]
-name = "clt"
+name = "claude_tools"
 path = "src/main.rs"
+required-features = [ "enabled" ]
+
+[[bin]]
+name = "clt"
+path = "src/bin/clt.rs"
 required-features = [ "enabled" ]
 
 [features]

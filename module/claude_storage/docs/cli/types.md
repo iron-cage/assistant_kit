@@ -159,8 +159,8 @@ Parse string to enum variant (case-insensitive):
 **Parsing:**
 ```
 Validate non-empty string:
-  Input: "willbe" → PathSubstring("willbe")
-  Input: ""       → Error("path filter must be non-empty")
+  Input: "myproject" → PathSubstring("myproject")
+  Input: ""          → Error("path filter must be non-empty")
 ```
 
 **Methods:**
@@ -171,10 +171,10 @@ Validate non-empty string:
 
 **Usage:**
 ```
-.list path::willbe
-# Matches: /home/user1/pro/lib/wip_core/willbe/module/core
-# Matches: /home/user1/pro/lib/willbe
-# Does not match: /home/user1/pro/lib/widgetbe
+.list path::claude_tools
+# Matches: /home/user1/pro/lib/wip_core/claude_tools/module/core
+# Matches: /home/user1/pro/lib/claude_tools
+# Does not match: /home/user1/pro/lib/claude_storage
 ```
 
 ---
@@ -189,10 +189,10 @@ Validate non-empty string:
 - DEFAULT = current working directory (resolved at runtime)
 
 **Accepted Formats:**
-- Absolute path: `/home/user1/pro/lib/willbe`
-- Path-encoded ID: `-home-user1-pro-lib-willbe`
+- Absolute path: `/home/user1/pro/lib/consumer`
+- Path-encoded ID: `-home-user1-pro-lib-consumer`
 - UUID: `8d795a1c-c81d-4010-8d29-b4e678272419`
-- `Path(...)` form from `.list`: `Path("/home/user1/pro/lib/willbe")`
+- `Path(...)` form from `.list`: `Path("/home/user1/pro/lib/consumer")`
 
 **Constraints:**
 - Non-empty string
