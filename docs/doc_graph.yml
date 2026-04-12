@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in the agent_kit workspace
-  node_count: 12
-  edge_count: 21
-  component_count: 2
-  generated: 2026-04-11
+  node_count: 18
+  edge_count: 29
+  component_count: 3
+  generated: 2026-04-12
 
 nodes:
   - id: feature/001
@@ -65,6 +65,36 @@ nodes:
     file: error/005_api_overloaded.md
     label: API Overloaded
     entity: error
+
+  - id: claude_code/001
+    file: claude_code/001_session_behaviors.md
+    label: Session Behaviors
+    entity: claude_code
+
+  - id: claude_code/002
+    file: claude_code/002_storage_organization.md
+    label: Storage Organization
+    entity: claude_code
+
+  - id: claude_code/003
+    file: claude_code/003_filesystem_layout.md
+    label: Filesystem Layout
+    entity: claude_code
+
+  - id: claude_code/004
+    file: claude_code/004_jsonl_format.md
+    label: JSONL Format
+    entity: claude_code
+
+  - id: claude_code/005
+    file: claude_code/005_settings_format.md
+    label: Settings Format
+    entity: claude_code
+
+  - id: claude_code/006
+    file: claude_code/006_ancillary_formats.md
+    label: Ancillary Formats
+    entity: claude_code
 
 edges:
   - from: feature/001
@@ -151,6 +181,38 @@ edges:
     to: error/004
     via: cross_references
 
+  - from: claude_code/001
+    to: claude_code/002
+    via: cross_references
+
+  - from: claude_code/001
+    to: claude_code/004
+    via: cross_references
+
+  - from: claude_code/002
+    to: claude_code/001
+    via: cross_references
+
+  - from: claude_code/002
+    to: claude_code/004
+    via: cross_references
+
+  - from: claude_code/002
+    to: claude_code/005
+    via: cross_references
+
+  - from: claude_code/003
+    to: claude_code/005
+    via: cross_references
+
+  - from: claude_code/004
+    to: claude_code/001
+    via: cross_references
+
+  - from: claude_code/006
+    to: claude_code/004
+    via: cross_references
+
 components:
   - id: 1
     label: Main corpus
@@ -175,5 +237,17 @@ components:
       - error/003
       - error/004
       - error/005
+
+  - id: 3
+    label: Claude Code knowledge
+    size: 6
+    isolated: true
+    nodes:
+      - claude_code/001
+      - claude_code/002
+      - claude_code/003
+      - claude_code/004
+      - claude_code/005
+      - claude_code/006
 
 dangling_refs: []

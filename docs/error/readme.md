@@ -5,7 +5,7 @@
 - **Purpose**: Catalog error messages returned by the Claude Code binary during operation.
 - **Responsibility**: Document each error's trigger conditions, plain-language meaning, and recovery steps.
 - **In Scope**: Terminal error messages emitted by the `claude` binary; API, network, and authentication failures.
-- **Out of Scope**: Session behaviors (→ `claude_code/behavior.md`); internal Rust crate error types (→ source `src/`).
+- **Out of Scope**: Session behaviors (→ `claude_code/001_session_behaviors.md`); internal Rust crate error types (→ source `src/`).
 - **Type-Specific Sections**: Each doc instance MUST include, in addition to Common Doc Instance Requirements: Abstract (H3), Trigger Conditions (H3), Recovery (H3).
 
 ### Overview Table

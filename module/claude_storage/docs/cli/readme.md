@@ -52,5 +52,5 @@ Reference documentation for the `claude_storage` CLI binary — a read-only tool
 
 - [`../feature/001_cli_tool.md`](../feature/001_cli_tool.md) — Crate architecture and overall design
 - `../readme.md` — User-facing crate overview
-- [`docs/claude_code/storage_organization.md`](../../../../docs/claude_code/storage_organization.md) — Storage layout (`~/.claude/projects/`)
+- [`docs/claude_code/002_storage_organization.md`](../../../../docs/claude_code/002_storage_organization.md) — Storage layout (`~/.claude/projects/`)
 - `../../unilang.commands.yaml` — Machine-readable command definitions

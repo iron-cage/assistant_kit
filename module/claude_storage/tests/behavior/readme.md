@@ -1,7 +1,7 @@
 # behavior
 
 Invalidation tests for Claude Code session behaviors. Each file covers exactly one behavior
-from `docs/claude_code/behavior.md`. Tests inspect real `~/.claude/` storage to verify Claude
+from `docs/claude_code/001_session_behaviors.md`. Tests inspect real `~/.claude/` storage to verify Claude
 Code's actual output — if Claude Code changes behavior, the tests go RED.
 
 ## Responsibility Table

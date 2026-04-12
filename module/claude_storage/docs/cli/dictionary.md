@@ -2,13 +2,13 @@
 
 Definitions for terms used in `claude_storage` CLI documentation.
 
-For conceptual hierarchy diagrams (containment, threading, agent session layout) see [storage_organization.md](../../../../docs/claude_code/storage_organization.md#conceptual-model).
+For conceptual hierarchy diagrams (containment, threading, agent session layout) see [002_storage_organization.md](../../../../docs/claude_code/002_storage_organization.md#conceptual-model).
 
 ## Core Terms
 
 ### Agent Session
 
-A sub-agent conversation spawned during a main session. Two storage layouts coexist (per-project, neither deprecated): **flat** (older projects) where `agent-*.jsonl` files are siblings of the main session at project root, and **hierarchical** (newer projects) where agents live in `{session-uuid}/subagents/agent-{agentId}.jsonl` with optional `.meta.json` sidecars. Agents have `isSidechain: true` in their entries. The `sessionId` field in agent entries references the parent session UUID. Use `agent::1` in `.list` or `.sessions` to filter to agent sessions only. See [storage_organization.md](../../../../docs/claude_code/storage_organization.md#conceptual-model) for layout diagrams.
+A sub-agent conversation spawned during a main session. Two storage layouts coexist (per-project, neither deprecated): **flat** (older projects) where `agent-*.jsonl` files are siblings of the main session at project root, and **hierarchical** (newer projects) where agents live in `{session-uuid}/subagents/agent-{agentId}.jsonl` with optional `.meta.json` sidecars. Agents have `isSidechain: true` in their entries. The `sessionId` field in agent entries references the parent session UUID. Use `agent::1` in `.list` or `.sessions` to filter to agent sessions only. See [002_storage_organization.md](../../../../docs/claude_code/002_storage_organization.md#conceptual-model) for layout diagrams.
 
 ---
 
@@ -26,7 +26,7 @@ A single line in a JSONL session file representing one conversation turn. Each E
 
 Entries are append-only: once written to a `.jsonl` file they are never modified.
 
-See [jsonl_format.md](../../../../docs/claude_code/jsonl_format.md) for the full field schema and content block types.
+See [004_jsonl_format.md](../../../../docs/claude_code/004_jsonl_format.md) for the full field schema and content block types.
 
 ---
 
@@ -40,7 +40,7 @@ A top-level Claude Code conversation, as opposed to an agent session. Stored as 
 
 The algorithm Claude Code uses to convert a filesystem path into a safe directory name for `~/.claude/projects/`. Slashes (`/`) become hyphens (`-`); no other transformation is applied. Example: `/home/user1/pro` → `-home-user1-pro`. Path-encoded IDs are accepted by the `project::` parameter.
 
-See [storage_organization.md](../../../../docs/claude_code/storage_organization.md) for the encoding specification.
+See [002_storage_organization.md](../../../../docs/claude_code/002_storage_organization.md) for the encoding specification.
 
 ---
 
@@ -78,7 +78,7 @@ The resume/fresh decision for `.session.ensure`. `resume` means an existing conv
 
 A single Claude Code conversation for a project, stored as one `.jsonl` file. Session IDs are either UUID v4 strings (e.g., `8d795a1c-c81d-4010-8d29-b4e678272419`) or human-readable topic names (e.g., `-default_topic`, `-commit`). The session ID is the filename stem without the `.jsonl` extension.
 
-A session is a container of Entries. Entries are appended as the conversation progresses and are never modified. Entries within a session are linked by `parentUuid` into a thread (see [storage_organization.md](../../../../docs/claude_code/storage_organization.md#conceptual-model)).
+A session is a container of Entries. Entries are appended as the conversation progresses and are never modified. Entries within a session are linked by `parentUuid` into a thread (see [002_storage_organization.md](../../../../docs/claude_code/002_storage_organization.md#conceptual-model)).
 
 ---
 

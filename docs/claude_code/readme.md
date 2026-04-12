@@ -1,20 +1,40 @@
-# Claude Code Knowledge Base
+# Claude Code Doc Entity
 
-Shared knowledge about the external Claude Code binary — its storage layout, file formats,
-runtime behavior, and filesystem conventions. This knowledge is consumed by multiple crates
-in the workspace (`claude_storage`, `claude_manager`, `claude_runner`, `claude_profile`).
+### Scope
 
-## Responsibility Table
+- **Purpose**: Document the external behavior, storage format, and runtime filesystem conventions of the Claude Code binary for all workspace crates that interact with it.
+- **Responsibility**: Master file for the `claude_code/` doc entity — lists all instances, defines type-specific requirements, and declares scope boundaries.
+- **In Scope**: Session behavior catalog, storage organization, filesystem layout, JSONL entry format, settings format, and ancillary file formats.
+- **Out of Scope**: Internal implementation details of workspace crates (→ respective crate `docs/`); Claude API protocol (→ Anthropic documentation); claude_params reference (→ `module/claude_runner_core/docs/claude_params/`).
 
-| File | Responsibility |
-|------|----------------|
-| `behavior.md` | Observed Claude Code session behaviors and invalidation tests (B1-B15) |
-| `storage_organization.md` | Storage directory architecture under `~/.claude/` |
-| `jsonl_format.md` | JSONL conversation entry format specification |
-| `file_formats.md` | All Claude Code file format specifications |
-| `filesystem.md` | Runtime filesystem paths and directory layout |
-| `settings_format.md` | Settings file structure and atomic write protocols |
+### Overview Table
 
-## Related (in-crate)
+| ID | Name | Purpose | Status |
+|----|------|---------|--------|
+| 001 | [Session Behaviors](001_session_behaviors.md) | Observed external behaviors (B1–B16h) with evidence and invalidation tests | ✅ |
+| 002 | [Storage Organization](002_storage_organization.md) | `~/.claude/` directory architecture, containment hierarchy, access patterns | ✅ |
+| 003 | [Filesystem Layout](003_filesystem_layout.md) | Runtime paths accessed by claude_manager; directory tree and path resolution | ✅ |
+| 004 | [JSONL Format](004_jsonl_format.md) | Session entry schema: fields, content blocks, usage, threading model | ✅ |
+| 005 | [Settings Format](005_settings_format.md) | settings.json structure, atomic write protocol, version lock, type inference | ✅ |
+| 006 | [Ancillary Formats](006_ancillary_formats.md) | history.jsonl, credentials, debug logs, shell snapshots, todos, commands | ✅ |
 
-- **CLI parameters** — `module/claude_runner_core/docs/claude_params/` (59 parameter docs; dual-purpose with builder API mapping)
+### Type-Specific Requirements
+
+All `claude_code/` doc instances must include:
+
+1. **Title**: `# Claude Code: {Name}` — using `Claude Code` as the type prefix
+2. **Scope** (H3): 4 required bullets — Purpose, Responsibility, In Scope, Out of Scope
+3. **Content sections** (H3/H4 only): At least one section documenting the specific facet
+4. **Cross-References** (H3): Flat table with `Type | File | Responsibility` columns
+
+Each doc instance covers exactly one facet of the external Claude Code binary's behavior or storage contract.
+
+### Cross-Doc Entity Dependencies
+
+**This entity depends on**:
+- `error/` — Claude Code API error catalog (error/001–005)
+
+**This entity consumed by**:
+- `module/claude_storage/docs/` — storage implementation docs reference this entity extensively
+- `module/claude_manager/docs/` — manager docs reference filesystem and settings format
+- `module/claude_runner_core/docs/` — runner core docs reference behavior and params

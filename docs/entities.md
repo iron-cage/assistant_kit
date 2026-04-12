@@ -9,6 +9,7 @@
 | `pattern/` | Four-layer crate dependency architecture | [pattern/readme.md](pattern/readme.md) | 1 |
 | `integration/` | Cross-workspace integration protocol | [integration/readme.md](integration/readme.md) | 1 |
 | `error/` | Claude Code error message catalog | [error/readme.md](error/readme.md) | 5 |
+| `claude_code/` | External Claude Code binary behavior, storage formats, filesystem conventions | [claude_code/readme.md](claude_code/readme.md) | 6 |
 
 ## Master Doc Instances Table
 
@@ -26,3 +27,9 @@
 | error | 003 | Context Limit Reached | [error/003_context_limit_reached.md](error/003_context_limit_reached.md) |
 | error | 004 | Request Timed Out | [error/004_request_timed_out.md](error/004_request_timed_out.md) |
 | error | 005 | API Overloaded | [error/005_api_overloaded.md](error/005_api_overloaded.md) |
+| claude_code | 001 | Session Behaviors | [claude_code/001_session_behaviors.md](claude_code/001_session_behaviors.md) |
+| claude_code | 002 | Storage Organization | [claude_code/002_storage_organization.md](claude_code/002_storage_organization.md) |
+| claude_code | 003 | Filesystem Layout | [claude_code/003_filesystem_layout.md](claude_code/003_filesystem_layout.md) |
+| claude_code | 004 | JSONL Format | [claude_code/004_jsonl_format.md](claude_code/004_jsonl_format.md) |
+| claude_code | 005 | Settings Format | [claude_code/005_settings_format.md](claude_code/005_settings_format.md) |
+| claude_code | 006 | Ancillary Formats | [claude_code/006_ancillary_formats.md](claude_code/006_ancillary_formats.md) |

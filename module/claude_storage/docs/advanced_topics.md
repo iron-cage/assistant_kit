@@ -784,9 +784,9 @@ For hierarchical format discovery, see [detecting agent sessions (hierarchical f
 
 ## related documentation
 
-- [`docs/claude_code/storage_organization.md`](../../docs/claude_code/storage_organization.md) - Directory structure and storage model
-- [`docs/claude_code/file_formats.md`](../../docs/claude_code/file_formats.md) - Complete file format specifications
-- [`docs/claude_code/jsonl_format.md`](../../docs/claude_code/jsonl_format.md) - Conversation entry format details
+- [`docs/claude_code/002_storage_organization.md`](../../docs/claude_code/002_storage_organization.md) - Directory structure and storage model
+- [`docs/claude_code/006_ancillary_formats.md`](../../docs/claude_code/006_ancillary_formats.md) - Ancillary file format specifications
+- [`docs/claude_code/004_jsonl_format.md`](../../docs/claude_code/004_jsonl_format.md) - Conversation entry format details
 - `development_plan.md` - Implementation roadmap
 - `cli_design.md` - CLI command specifications
 - [`feature/001_cli_tool.md`](feature/001_cli_tool.md) - Overall crate scope and design
