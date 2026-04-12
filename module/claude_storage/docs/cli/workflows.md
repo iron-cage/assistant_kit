@@ -14,7 +14,7 @@ See [commands.md](commands.md) for command reference and [params.md](params.md) 
 | [Search for a topic](#4-search-for-a-topic) | `.search`, `.show` | low |
 | [Count storage by scope](#5-count-storage-by-scope) | `.count` | low |
 | [Inspect agent sessions](#6-inspect-agent-sessions) | `.list`, `.show` | medium |
-| [Navigate project hierarchy](#7-navigate-project-hierarchy) | `.session`, `.list`, `.show` | medium |
+| [Navigate project hierarchy](#7-navigate-project-hierarchy) | `.projects`, `.exists` | medium |
 | [Find substantial sessions](#8-find-substantial-sessions) | `.list` | medium |
 | [Session lifecycle management](#9-session-lifecycle-management) | `.path`, `.exists`, `.session.dir`, `.session.ensure` | medium |
 
@@ -153,24 +153,20 @@ claude_storage .show session_id::agent-abc123 metadata::1
 **Scenario:** You're in a subdirectory and want to find all sessions in ancestor projects.
 
 ```bash
-# Step 1: Check if current directory has history
-claude_storage .session
+# Find all ancestor project summaries from cwd up to filesystem root
+clg .projects scope::relevant
+# Output: project summary for cwd + every ancestor that has sessions
+
+# Narrow to a specific starting path
+clg .projects scope::relevant path::/home/user1/pro/lib/my_crate
+# Output: project summaries for my_crate and all its ancestor projects
+
+# Check if a specific directory has any recorded history (scripting)
+clg .exists path::/home/user1/pro
 # Exit 0: has history; Exit 1: no history
-
-# Step 2: Check a parent directory
-claude_storage .session path::/home/user1/pro
-# Exit 0: parent has history too
-
-# Step 3: List all sessions for current project
-claude_storage .list sessions::1 path::current_dir_name
-# Output: sessions for matching projects
-
-# Available via .projects:
-# claude_storage .projects scope::relevant
-# Output: sessions from all ancestor projects in one listing
 ```
 
-**Notes:** When `.projects` with `scope::relevant` is implemented, this workflow will be replaced by a single command.
+**Notes:** `scope::relevant` walks from `path::` (or cwd if omitted) up to the filesystem root, returning a summary line for each ancestor project that has at least one session. Use `.exists` when you only need a boolean check without loading the full listing.
 
 ---
 
@@ -232,7 +228,7 @@ result=$(clg .session.ensure path::/home/user/project topic::work strategy::fres
 
 **Notes:**
 - `.path` and `.session.dir` never modify the filesystem; they only compute paths
-- `.exists` is equivalent to `.session` for detection but is documented to exit 1 intentionally for scripting
+- `.exists` exits 1 intentionally for scripting — non-zero exit signals "no history" to the calling shell
 - `.session.ensure` is the only command that creates directories; it is idempotent (safe to call repeatedly)
 - All four commands accept `.`, `..`, `~`, and `~/path` in `path::`
 

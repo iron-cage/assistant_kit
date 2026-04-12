@@ -7,7 +7,7 @@ This document covers advanced storage features discovered through deep analysis:
 ## agent sessions (sub-agents)
 
 For CLI display of session families (how agents are grouped under their parent root
-session in `.sessions` output), see [commands.md § .sessions](cli/commands.md#command--8-sessions).
+session in `.projects` output), see [commands.md § .projects](cli/commands.md#command--7-projects).
 
 ### what are agent sessions
 

@@ -29,9 +29,9 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 | `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 | `testing/readme.md` | ➖ | ➖ | ➖ | ✅ | ✅ | Index only |
-| `testing/command/*.md` (11 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| `testing/param/*.md` (20 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| `testing/param_group/*.md` (5 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| `testing/command/*.md` (12 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| `testing/param/*.md` (21 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| `testing/param_group/*.md` (6 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 
 **Current Level:** L5 (Tests Complete for existing commands)
 **Design Completeness:** 100% (5/5 levels passed)

@@ -30,7 +30,7 @@ Edge case tests for the `min_entries::` parameter. Tests validate non-negative i
 
 **Goal:** Verify that `min_entries::0` is accepted and imposes no threshold (all sessions included).
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions min_entries::0`
+**Command:** `clg .list min_entries::0`
 **Expected Output:** All sessions listed regardless of entry count, including sessions with very few entries.
 **Verification:**
 - Command exits with code 0
@@ -45,7 +45,7 @@ Edge case tests for the `min_entries::` parameter. Tests validate non-negative i
 
 **Goal:** Verify that `min_entries::1` is accepted and filters out sessions with zero entries.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions min_entries::1`
+**Command:** `clg .list min_entries::1`
 **Expected Output:** Sessions with at least 1 entry listed; empty sessions excluded.
 **Verification:**
 - Command exits with code 0
@@ -60,7 +60,7 @@ Edge case tests for the `min_entries::` parameter. Tests validate non-negative i
 
 **Goal:** Verify that a large threshold value like `10000` is accepted without error (even if it matches no sessions).
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions min_entries::10000`
+**Command:** `clg .list min_entries::10000`
 **Expected Output:** Empty session list (no sessions in the fixture have 10000+ entries).
 **Verification:**
 - Command exits with code 0
@@ -75,7 +75,7 @@ Edge case tests for the `min_entries::` parameter. Tests validate non-negative i
 
 **Goal:** Verify that a negative value for `min_entries::` is rejected with the exact error message.
 **Setup:** None
-**Command:** `clg .sessions min_entries::-1`
+**Command:** `clg .list min_entries::-1`
 **Expected Output:** `min_entries must be ≥ 0, got -1`
 **Verification:**
 - Command exits with code 1
@@ -89,7 +89,7 @@ Edge case tests for the `min_entries::` parameter. Tests validate non-negative i
 
 **Goal:** Verify that a float value is rejected as a non-integer for `min_entries::`.
 **Setup:** None
-**Command:** `clg .sessions min_entries::2.5`
+**Command:** `clg .list min_entries::2.5`
 **Expected Output:** `min_entries must be a non-negative integer, got 2.5`
 **Verification:**
 - Command exits with code 1
@@ -103,7 +103,7 @@ Edge case tests for the `min_entries::` parameter. Tests validate non-negative i
 
 **Goal:** Verify that a non-numeric string is rejected as a non-integer for `min_entries::`.
 **Setup:** None
-**Command:** `clg .sessions min_entries::ten`
+**Command:** `clg .list min_entries::ten`
 **Expected Output:** `min_entries must be a non-negative integer, got ten`
 **Verification:**
 - Command exits with code 1
@@ -132,7 +132,7 @@ Edge case tests for the `min_entries::` parameter. Tests validate non-negative i
 
 **Goal:** Verify that omitting `min_entries::` returns all sessions regardless of entry count.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions`
+**Command:** `clg .list`
 **Expected Output:** All sessions listed without any entry-count filter applied.
 **Verification:**
 - Command exits with code 0

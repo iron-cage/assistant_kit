@@ -14,8 +14,8 @@ Edge case tests for the `path::` parameter. Tests validate semantics per-command
 | EC-4 | Empty value rejected | Boundary Values |
 | EC-5 | Substring filter in .list matches case-insensitively | Semantics (.list) |
 | EC-6 | Substring filter in .list with no match returns empty list | Semantics (.list) |
-| EC-7 | Default in .session resolves to cwd | Default |
-| EC-8 | Nonexistent path in .session exits with code 1 (not error) | Semantics (.session) |
+| EC-7 | Default in .exists resolves to cwd | Default |
+| EC-8 | Nonexistent path in .exists exits with code 1 (not error) | Semantics (.exists) |
 
 ## Test Coverage Summary
 
@@ -24,7 +24,7 @@ Edge case tests for the `path::` parameter. Tests validate semantics per-command
 - Boundary Values: 1 test (EC-4)
 - Semantics (.list): 2 tests (EC-5, EC-6)
 - Default: 1 test (EC-7)
-- Semantics (.session): 1 test (EC-8)
+- Semantics (.exists): 1 test (EC-8)
 
 ## Test Cases
 
@@ -62,12 +62,12 @@ Edge case tests for the `path::` parameter. Tests validate semantics per-command
 
 **Goal:** Verify that a relative path is accepted (relative to cwd at invocation time).
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .session path::subdir/project`
-**Expected Output:** Session history for the relative path resolved from cwd, or "no history" if not found.
+**Command:** `clg .exists path::subdir/project`
+**Expected Output:** Exit 0 if the resolved path has history, exit 1 if not — either way no format error.
 **Verification:**
-- Command exits with code 0 (path accepted syntactically; content may be empty)
+- Command exits with code 0 or 1 (path accepted syntactically; exit reflects presence/absence)
 - No error about path format rejection appears on stderr
-**Pass Criteria:** exit 0 + relative path accepted without format error
+**Pass Criteria:** exit 0 or 1 + relative path accepted without format error
 **Source:** [params.md](../../params.md)
 
 ---
@@ -116,26 +116,26 @@ Edge case tests for the `path::` parameter. Tests validate semantics per-command
 
 ---
 
-### EC-7: Default in .session resolves to cwd
+### EC-7: Default in .exists resolves to cwd
 
-**Goal:** Verify that omitting `path::` in `.session` uses the current working directory as the project path.
+**Goal:** Verify that omitting `path::` in `.exists` uses the current working directory as the project path.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .session` (run from a directory that has a known project in the fixture)
-**Expected Output:** Session history for the current working directory's project.
+**Command:** `clg .exists` (run from a directory that has a known project in the fixture)
+**Expected Output:** Exit 0 indicating the cwd project has history.
 **Verification:**
 - Command exits with code 0
-- Output reflects sessions associated with the cwd project
 - No `path::` argument was needed to identify the project
-**Pass Criteria:** exit 0 + sessions for cwd project displayed without explicit `path::` argument
+- No error about missing path appears on stderr
+**Pass Criteria:** exit 0 + cwd project recognized as having history without explicit `path::` argument
 **Source:** [params.md](../../params.md)
 
 ---
 
-### EC-8: Nonexistent path in .session exits with code 1 (not error)
+### EC-8: Nonexistent path in .exists exits with code 1 (not error)
 
-**Goal:** Verify that a nonexistent directory path in `.session` exits with code 1 indicating no history (not a hard error).
+**Goal:** Verify that a nonexistent directory path in `.exists` exits with code 1 indicating no history (not a hard error).
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .session path::/tmp/nonexistent-dir-xyzabc`
+**Command:** `clg .exists path::/tmp/nonexistent-dir-xyzabc`
 **Expected Output:** "No session history found" or similar not-found message; no stack trace or exception output.
 **Verification:**
 - Command exits with code 1

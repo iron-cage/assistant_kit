@@ -29,7 +29,7 @@ Edge case tests for the `agent::` parameter. Tests validate boolean enforcement,
 
 **Goal:** Verify that `agent::0` is accepted and filters to main sessions only (excludes agent/sidechain sessions).
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions agent::0`
+**Command:** `clg .list agent::0`
 **Expected Output:** List of sessions where none are agent sessions (`agent-*.jsonl` files excluded).
 **Verification:**
 - Command exits with code 0
@@ -44,7 +44,7 @@ Edge case tests for the `agent::` parameter. Tests validate boolean enforcement,
 
 **Goal:** Verify that `agent::1` is accepted and filters to agent sessions only.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions agent::1`
+**Command:** `clg .list agent::1`
 **Expected Output:** List of only agent sessions (`agent-*.jsonl` files) if any exist; empty list otherwise.
 **Verification:**
 - Command exits with code 0
@@ -59,7 +59,7 @@ Edge case tests for the `agent::` parameter. Tests validate boolean enforcement,
 
 **Goal:** Verify that `agent::2` is rejected with the boolean constraint error message.
 **Setup:** None
-**Command:** `clg .sessions agent::2`
+**Command:** `clg .list agent::2`
 **Expected Output:** `agent must be 0 or 1`
 **Verification:**
 - Command exits with code 1
@@ -73,7 +73,7 @@ Edge case tests for the `agent::` parameter. Tests validate boolean enforcement,
 
 **Goal:** Verify that the string `yes` is rejected as a non-boolean value for `agent::`.
 **Setup:** None
-**Command:** `clg .sessions agent::yes`
+**Command:** `clg .list agent::yes`
 **Expected Output:** `agent must be 0 or 1`
 **Verification:**
 - Command exits with code 1
@@ -87,7 +87,7 @@ Edge case tests for the `agent::` parameter. Tests validate boolean enforcement,
 
 **Goal:** Verify that omitting `agent::` returns both main and agent sessions with no filtering.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions`
+**Command:** `clg .list`
 **Expected Output:** All sessions regardless of type — both main sessions and agent sessions appear.
 **Verification:**
 - Command exits with code 0

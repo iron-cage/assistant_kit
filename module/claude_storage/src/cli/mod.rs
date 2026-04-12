@@ -456,7 +456,8 @@ pub fn truncate_if_needed( text : &str, max_length : Option< usize > ) -> String
 ///
 /// Smart session display:
 /// - Providing session filters (`session::`, `agent::`, `min_entries::`) auto-enables session display
-/// - Explicit `sessions::0` or `sessions::1` overrides auto-detection
+/// - `sessions::1` always enables session display
+/// - `sessions::0` has no effect when session filters are also active — filters win
 /// - No filters → Projects only (default behavior)
 ///
 /// Examples:
@@ -467,7 +468,7 @@ pub fn truncate_if_needed( text : &str, max_length : Option< usize > ) -> String
 /// # Auto-enable sessions (filter provided)
 /// .list session::commit
 ///
-/// # Explicit disable (overrides auto-enable)
+/// # sessions::0 ignored when filters active — sessions still shown
 /// .list sessions::0 session::commit
 /// ```
 ///
@@ -2311,16 +2312,29 @@ fn aggregate_projects(
 
   for ( display_path, sessions ) in groups.iter_mut()
   {
-    // Find the session with the maximum mtime in this project.
+    // Fix(issue-034): Exclude zero-byte placeholder sessions from best-session
+    // selection and session_count in aggregate_projects.
+    //
+    // Root cause: `best` selection iterated all sessions including zero-byte
+    // placeholders. When a zero-byte file had a more recent mtime than any real
+    // session, it became the "best" session and displayed "(no text content)"
+    // even when real sessions with content existed. Similarly, `session_count`
+    // used sessions.len() which included zero-byte files, inflating the
+    // "N sessions" count in summary mode.
+    //
+    // Pitfall: `is_zero_byte_session()` must be applied at every aggregation
+    // site — not only in the render layer. Filtering only for display while
+    // counting all sessions produces a "X sessions / 0 lines shown" mismatch.
     let best = sessions
       .iter()
       .enumerate()
+      .filter( | ( _, s ) | !is_zero_byte_session( s ) )
       .filter_map( | ( i, s ) | session_mtime( s ).map( | t | ( i, t ) ) )
       .max_by_key( | &( _, t ) | t );
 
     let Some( ( best_idx, best_time ) ) = best else { continue };
 
-    let session_count        = sessions.len();
+    let session_count = sessions.iter().filter( | s | !is_zero_byte_session( s ) ).count();
     let last_session_id      = short_id( sessions[ best_idx ].id() ).to_string();
     let last_session_entries = sessions[ best_idx ].count_entries().unwrap_or( 0 );
     let last_message         = last_text_entry( &mut sessions[ best_idx ] );
@@ -2668,8 +2682,19 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       // Build families from sessions
       let families = build_families( sessions );
 
-      // Count roots and agents for header
-      let root_count = families.iter().filter( | f | f.root.is_some() ).count();
+      // Fix(issue-034): Count only displayable (non-zero-byte) root sessions in header.
+      //
+      // Root cause: families.iter().filter(|f| f.root.is_some()).count() counted ALL
+      // root families including those whose root is a zero-byte placeholder. render_families_v1
+      // excludes zero-byte roots from display, so the header showed "(2 sessions)" while
+      // zero lines were rendered below it.
+      //
+      // Pitfall: The render layer and the count must apply identical zero-byte filters.
+      // If render changes to show/hide zero-byte sessions, update this count expression too.
+      let root_count = families
+        .iter()
+        .filter( | f | f.root.as_ref().is_some_and( | s | !is_zero_byte_session( s ) ) )
+        .count();
       let agent_count : usize = families.iter().map( | f | f.agents.len() ).sum();
 
       if agent_count > 0
@@ -2695,15 +2720,23 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     }
     else
     {
-      // agent:: filter active: flat display (no family grouping)
-      let group_count = sessions.len();
-      let group_noun = if group_count == 1 { "session" } else { "sessions" };
-      writeln!( output, "{display_path}: ({group_count} {group_noun})" ).unwrap();
-
+      // Fix(issue-034): Flat branch — compute displayable before group_count so
+      // the header count matches what is actually rendered.
+      //
+      // Root cause: `group_count = sessions.len()` was computed before the
+      // `displayable` filter that excludes zero-byte non-agent sessions.
+      // The header showed "(2 sessions)" when `displayable` produced 0 lines.
+      //
+      // Pitfall: Never count from the unfiltered source after a render filter
+      // has been defined. Move the filter computation above the count so both
+      // the header and the render loop use the same source of truth.
       let displayable : Vec< &Session > = sessions
         .iter()
         .filter( | &s | s.is_agent_session() || !is_zero_byte_session( s ) )
         .collect();
+      let group_count = displayable.len();
+      let group_noun = if group_count == 1 { "session" } else { "sessions" };
+      writeln!( output, "{display_path}: ({group_count} {group_noun})" ).unwrap();
       let show_count = displayable.len().min( limit_cap );
       for ( i, &session ) in displayable[ ..show_count ].iter().enumerate()
       {

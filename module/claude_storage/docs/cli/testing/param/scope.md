@@ -29,9 +29,9 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 
 ### EC-1: Value "local" accepted
 
-**Goal:** Verify that `scope::local` is accepted and `.sessions` returns only sessions for the current project.
+**Goal:** Verify that `scope::local` is accepted and `.list` returns only sessions for the current project.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions scope::local`
+**Command:** `clg .list scope::local`
 **Expected Output:** stdout lists sessions belonging to the current directory project only; sessions from parent or sibling projects are absent.
 **Verification:**
 - Exit code is 0
@@ -42,9 +42,9 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 
 ### EC-2: Value "relevant" accepted
 
-**Goal:** Verify that `scope::relevant` is accepted and `.sessions` walks the ancestor chain, returning sessions from the current project and all parent projects up to `/`.
+**Goal:** Verify that `scope::relevant` is accepted and `.list` walks the ancestor chain, returning sessions from the current project and all parent projects up to `/`.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions scope::relevant`
+**Command:** `clg .list scope::relevant`
 **Expected Output:** stdout lists sessions from the current project and sessions from projects at ancestor path levels.
 **Verification:**
 - Exit code is 0
@@ -55,9 +55,9 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 
 ### EC-3: Value "under" accepted
 
-**Goal:** Verify that `scope::under` is accepted and `.sessions` returns sessions from all projects under the specified path.
+**Goal:** Verify that `scope::under` is accepted and `.list` returns sessions from all projects under the specified path.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions scope::under path::/tmp/test-fixture`
+**Command:** `clg .list scope::under path::/tmp/test-fixture`
 **Expected Output:** stdout lists sessions from all projects whose path is under the given base path.
 **Verification:**
 - Exit code is 0
@@ -67,9 +67,9 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 
 ### EC-4: Value "global" accepted
 
-**Goal:** Verify that `scope::global` is accepted and `.sessions` returns sessions from all projects in storage.
+**Goal:** Verify that `scope::global` is accepted and `.list` returns sessions from all projects in storage.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions scope::global`
+**Command:** `clg .list scope::global`
 **Expected Output:** stdout lists sessions from all projects in storage, regardless of path hierarchy.
 **Verification:**
 - Exit code is 0
@@ -82,11 +82,11 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 
 **Goal:** Verify that enum parsing is case-insensitive and `scope::RELEVANT` is treated identically to `scope::relevant`.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions scope::RELEVANT`
+**Command:** `clg .list scope::RELEVANT`
 **Expected Output:** No error; output is identical to using lowercase `scope::relevant`.
 **Verification:**
 - Exit code is 0
-- Output matches the result of `clg .sessions scope::relevant`
+- Output matches the result of `clg .list scope::relevant`
 **Pass Criteria:** exit 0 + output identical to lowercase variant (case normalization applied)
 **Source:** [params.md](../../params.md)
 
@@ -94,7 +94,7 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 
 **Goal:** Verify that `scope::all` is rejected with the exact error message `"scope must be relevant|local|under|global, got all"`.
 **Setup:** None
-**Command:** `clg .sessions scope::all`
+**Command:** `clg .list scope::all`
 **Expected Output:** stderr contains `scope must be relevant|local|under|global, got all`
 **Verification:**
 - Exit code is 1
@@ -104,35 +104,35 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 
 ### EC-7: Omitted defaults to "under" scope (summary mode output)
 
-**Goal:** Verify that omitting `scope::` defaults the session discovery scope to `under` — sessions from the entire subtree are candidates — while the output is **summary mode** (not a session list). The scope filter behaviour is `under`; the output format is distinct from `clg .sessions scope::under`, which uses an explicit parameter and always activates list mode.
+**Goal:** Verify that omitting `scope::` defaults the session discovery scope to `under` — projects from the entire subtree are candidates — while the output is **summary mode** (not a project list). The scope filter behaviour is `under`; the output format is distinct from `clg .projects scope::under`, which uses an explicit parameter and always activates list mode.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a parent project at `/tmp/test-fixture/parent` and a child project at `/tmp/test-fixture/parent/child`. The most-recent session is in the child project. Run from `/tmp/test-fixture/parent`.
-**Command:** `clg .sessions` (run from `/tmp/test-fixture/parent`)
+**Command:** `clg .projects` (run from `/tmp/test-fixture/parent`)
 **Expected Output:**
 ```
-Active session  {8-char-id}  Xs ago  N entries
-Project  ~/test-fixture/parent/child
+Active project  ~/test-fixture/parent/child  (N sessions, last active Xs ago)
+Last session:  {8-char-id}  Xs ago  (N entries)
 
 Last message:
   {last message text}
 ```
-The project path in the summary belongs to the child project, confirming that `scope::under` is active (sub-project sessions are in scope). stdout does NOT contain `Found N sessions:`.
+The project path in the summary header belongs to the child project, confirming that `scope::under` is active (sub-project sessions are in scope). stdout does NOT contain `Found N projects:`.
 **Verification:**
 - Exit code is 0
-- stdout contains `Active session` (summary mode active)
-- stdout does NOT contain `Found N sessions:` (list mode not triggered)
-- The `Project` line path belongs to the sub-project (confirming under-scope, not just local)
-**Pass Criteria:** exit 0 + summary header present + `Found N sessions:` absent + child project path visible
+- stdout contains `Active project` (summary mode active)
+- stdout does NOT contain `Found N projects:` (list mode not triggered)
+- The `Active project` header path belongs to the sub-project (confirming under-scope, not just local)
+**Pass Criteria:** exit 0 + `Active project` header present + `Found N projects:` absent + child project path in header
 **Source:** [params.md](../../params.md)
 
 ### EC-8: scope::global ignores path::
 
 **Goal:** Verify that `scope::global` includes all projects in storage even when `path::` is specified — the path is ignored for global scope.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions scope::global path::/tmp/nonexistent-subpath`
+**Command:** `clg .list scope::global path::/tmp/nonexistent-subpath`
 **Expected Output:** stdout lists sessions from all projects in storage; the `path::` value has no filtering effect with `scope::global`.
 **Verification:**
 - Exit code is 0
-- Output is identical to `clg .sessions scope::global` without `path::`
-- Output is broader than `clg .sessions scope::under path::/tmp/nonexistent-subpath` would be
+- Output is identical to `clg .list scope::global` without `path::`
+- Output is broader than `clg .list scope::under path::/tmp/nonexistent-subpath` would be
 **Pass Criteria:** exit 0 + output unaffected by path parameter when scope is global
 **Source:** [params.md](../../params.md)

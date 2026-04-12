@@ -24,7 +24,7 @@ See [params.md](params.md) for individual parameter specs and [commands.md](comm
 
 **Purpose:** Controls how much information each read command outputs, from machine-readable minimal to full-field verbose.
 
-**Used By:** `.status`, `.list`, `.show`, `.show.project`, `.search`, `.projects` (6 commands total)
+**Used By:** `.status`, `.list`, `.show`, `.search`, `.projects` (5 commands total)
 
 **Semantic Coherence Test:**
 - "Does `verbosity::` control output detail level?" → YES
@@ -61,7 +61,7 @@ See [params.md](params.md) for individual parameter specs and [commands.md](comm
 
 **Purpose:** Restricts an operation to a specific project, identified by multiple accepted formats.
 
-**Used By:** `.show`, `.show.project`, `.count`, `.search`, `.export` (5 commands total)
+**Used By:** `.show`, `.count`, `.search`, `.export` (4 commands total)
 
 **Semantic Coherence Test:**
 - "Does `project::` control which project is operated on?" → YES

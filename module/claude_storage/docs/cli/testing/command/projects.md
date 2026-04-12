@@ -2,7 +2,7 @@
 
 Integration tests for the `.projects` command. Tests verify summary mode output (default), scope semantics, path anchoring, filter behavior, and exit code contracts.
 
-**Source:** [commands.md#command--8-sessions](../../commands.md#command--8-sessions)
+**Source:** [commands.md#command--7-projects](../../commands.md#command--7-projects)
 
 ## Test Case Index
 
@@ -630,6 +630,7 @@ Last session:  {8-char-id}  Xd ago  (N entries)
 - stdout contains `Found` followed by a project count (list-mode header)
 - stdout does NOT contain `Active project` (summary mode not triggered)
 **Pass Criteria:** exit 0 + `Found N project` header present + `Active project` absent
+**⚠️ Maintenance:** The negative check string (`Active project`) must match the current summary-mode header. If the header is renamed, update this test assertion. History: `Active session` (task-007) → `Active project` (task-016).
 
 **Source:** [commands.md](../../commands.md)
 
@@ -646,6 +647,7 @@ Last session:  {8-char-id}  Xd ago  (N entries)
 - stdout contains `Found` followed by a project count (list-mode header)
 - stdout does NOT contain `Active project` (summary mode not triggered)
 **Pass Criteria:** exit 0 + `Found N project` header present + `Active project` absent
+**⚠️ Maintenance:** The negative check string (`Active project`) must match the current summary-mode header. If the header is renamed, update this test assertion. History: `Active session` (task-007) → `Active project` (task-016).
 
 **Source:** [commands.md](../../commands.md)
 

@@ -45,8 +45,9 @@ tests/
 ├── search_session_partial_uuid_bug.rs     # .search session partial UUID fix (issue-020)
 ├── search_special_characters_bug.rs       # Special character handling (Bug #006, #007)
 ├── session_path_command_test.rs           # .path/.exists/.session.dir/.session.ensure lifecycle commands
-├── projects_command_test.rs               # .projects scope-aware listing and parameter validation (issue-024/029/031/032 regression)
-├── projects_output_format_test.rs         # .projects output format redesign (plan-004): IT-17 through IT-22
+├── projects_command_test.rs               # .projects scope-aware listing, family tree display, mode boundaries, parameter validation (issues 024/029/031/032, IT-47)
+├── projects_output_format_test.rs         # .projects output format: path headers, agent collapse (IT-17..IT-22); project-centric redesign (IT-50..IT-53)
+├── projects_zero_byte_count_bug.rs        # .projects zero-byte session exclusion from header count (issue-034, IT-54..IT-56)
 ├── smart_show_command.rs                  # .show smart parameter detection tests
 ├── status_path_test.rs                    # .status path parameter tests (Phase 1D)
 └── truncate_utf8_bug.rs                   # Truncation safety on multibyte UTF-8 (issue-018)
@@ -88,8 +89,9 @@ tests/
 | `search_session_partial_uuid_bug.rs` | Test partial UUID matching in .search session filter |
 | `search_special_characters_bug.rs` | Test special character handling in queries |
 | `session_path_command_test.rs` | Test .path/.exists/.session.dir/.session.ensure lifecycle commands |
-| `projects_command_test.rs` | Test .projects scope-aware session listing and parameter validation |
-| `projects_output_format_test.rs` | Test .projects output format redesign (plan-004): path headers, agent collapse, entry counts |
+| `projects_command_test.rs` | Test .projects scope filtering, family tree, mode boundaries, parameter validation |
+| `projects_output_format_test.rs` | Test .projects output format: path headers, agent collapse (IT-17..22); project-centric redesign (IT-50..53) |
+| `projects_zero_byte_count_bug.rs` | Test zero-byte session exclusion from .projects list-mode header count (issue-034) |
 | `smart_show_command.rs` | Test location-aware .show command |
 | `status_path_test.rs` | Test path parameter in .status command |
 | `truncate_utf8_bug.rs` | Test truncation safety on multibyte UTF-8 (issue-018) |
@@ -290,8 +292,8 @@ cargo nextest run --all-features -- --include-ignored
 
 ## Test Count Tracking
 
-**Current Status**: 242 tests, 0 ignored
-- Effective tests: 242 (all tests run fully)
+**Current Status**: 284 tests, 0 ignored
+- Effective tests: 284 (all tests run fully)
 - Ignored tests: 0 (target met — all tests use `CLAUDE_STORAGE_ROOT` + `TempDir` isolation)
 
 ## Known Findings
@@ -430,6 +432,14 @@ cargo nextest run --all-features -- --include-ignored
 - **Fix**: Added `extract_user_message()` in `cli_main.rs` that strips `"Execution error: Execution Error: "` prefix before printing in one-shot mode
 - **Root Cause**: `execute_oneshot` used `eprintln!("Error: {error}")` where the unilang pipeline had already double-wrapped the message. `ErrorData::Display` uses `writeln!` (adds `\n`) → `Error::Execution` adds `"Execution Error: "` → pipeline adds `"Execution error: "` → `execute_oneshot` adds `"Error: "` = four layers
 - **Documentation**: Fix(issue-033) comment in `cli/mod.rs` exists_routine + 5-section test doc in `session_path_command_test.rs`
+
+### issue-034: .projects list mode header count includes zero-byte placeholder sessions
+
+- **Issue**: `clg .projects scope::local` showed `"(2 sessions)"` in the header but rendered 0 session lines when a project had 2 zero-byte placeholder sessions. Same bug in flat display branch (agent:: filter active) and in summary mode (zero-byte file could become the "best session" showing "(no text content)").
+- **Tests**: 3 tests IT-54..IT-56 in `projects_zero_byte_count_bug.rs` (use_families branch, flat branch, zero-byte-only project)
+- **Fix**: 3-site fix in `src/cli/mod.rs`: (1) `aggregate_projects` skips zero-byte in best-selection and uses `!is_zero_byte_session` in session_count; (2) `root_count` in use_families branch filters to non-zero-byte roots; (3) flat branch computes `displayable` before `group_count`
+- **Root Cause**: Count expressions used unfiltered `sessions.len()` / `families.len()` while the render layer had separate `is_zero_byte_session` filtering. Count and render were not derived from the same source
+- **Documentation**: Fix(issue-034) 3-field comment at all three source sites + 5-section test docs in `projects_zero_byte_count_bug.rs`
 
 ### issue-028: "1 entries" — hardcoded plural "entries" in session header and project session list
 - **Issue**: (a) `.show session_id::abc` produced "Session: abc (1 entries)" — wrong plural in header; (b) `.show.project verbosity::1` with 1-entry session showed "(1 entries, last: ...)" — same root cause

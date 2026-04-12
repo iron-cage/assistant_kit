@@ -15,8 +15,9 @@
 | 9 | 005 | 0 | 6 | 9 | 9 | 0 | ✅ (Completed) | any | [Update CLI test docs — .sessions scope default](completed/005_sessions_default_scope_cli_docs.md) | CLI test docs IT-1 and CD-2 updated for under default |
 | 10 | 010 | 0 | 7 | 9 | 9 | 0 | ✅ (Completed) | any | [Fix docs/ consistency](completed/010_docs_consistency.md) | Fix stale counts, isolated graph components, readme accuracy |
 | 11 | 011 | 0 | 7 | 6 | 9 | 0 | ✅ (Completed) | any | [Create docs/cli/format/ catalog](completed/011_cli_format_catalog.md) | CLI Output Format Doc Entity for export rendering modes |
-| 12 | 012 | 0 | 8 | 9 | 9 | 0 | ✅ (Completed) | any | [Fix .sessions is_default verbosity guard](012_fix_is_default_verbosity_sessions.md) | Remove verbosity from is_default so verbosity::1 stays in summary mode |
-| 13 | 013 | 810 | 5 | 9 | 9 | 2 | ✅ (Completed) | any | [Remove deprecated .show.project command](completed/013_remove_show_project_command.md) | Delete dead deprecated stub and its test infrastructure |
-| 14 | 014 | 896 | 7 | 8 | 8 | 2 | ✅ (Completed) | any | [Remove duplicate .session command](completed/014_remove_session_command.md) | Deduplicate with .exists; eliminate tab-completion hazard |
-| 15 | 015 | 576 | 8 | 6 | 6 | 2 | ✅ (Completed) | any | [Rename .sessions → .projects](completed/015_rename_sessions_to_projects.md) | Align command name with user-facing concept (projects, not sessions) |
-| 16 | 016 | 270 | 9 | 3 | 5 | 2 | ✅ (Completed) | any | [Redesign .projects output as project-centric](completed/016_redesign_projects_output.md) | Show project summaries (aggregated) instead of session UUID lists |
+| 12 | 012 | 0 | 8 | 9 | 9 | 0 | ✅ (Completed) | any | [Fix .sessions is_default verbosity guard](completed/012_fix_is_default_verbosity_sessions.md) | Remove verbosity from is_default so verbosity::1 stays in summary mode |
+| 13 | 013 | 0 | 5 | 9 | 9 | 0 | ✅ (Completed) | any | [Remove deprecated .show.project command](completed/013_remove_show_project_command.md) | Delete dead deprecated stub and its test infrastructure |
+| 14 | 014 | 0 | 7 | 8 | 8 | 0 | ✅ (Completed) | any | [Remove duplicate .session command](completed/014_remove_session_command.md) | Deduplicate with .exists; eliminate tab-completion hazard |
+| 15 | 015 | 0 | 8 | 6 | 6 | 0 | ✅ (Completed) | any | [Rename .sessions → .projects](completed/015_rename_sessions_to_projects.md) | Align command name with user-facing concept (projects, not sessions) |
+| 16 | 016 | 0 | 9 | 3 | 5 | 0 | ✅ (Completed) | any | [Redesign .projects output as project-centric](completed/016_redesign_projects_output.md) | Show project summaries (aggregated) instead of session UUID lists |
+| 17 | 017 | 0 | 7 | 9 | 5 | 0 | ✅ (Completed) | any | [Fix stale "Active session" mode-boundary assertions](completed/017_fix_stale_active_session_assertions.md) | Replace obsolete pre-016 marker in IT-34/IT-35; remove redundant checks from IT-1/IT-47 |

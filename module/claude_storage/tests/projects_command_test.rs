@@ -1481,7 +1481,7 @@ fn it_26_scope_relevant_excludes_underscore_named_sibling()
 /// instead of the full project-grouped session list.
 ///
 /// ## Verification
-/// - stdout contains "Active project" header line (not "Active session")
+/// - stdout contains "Active project" header line
 /// - stdout contains "Last session:" line
 /// - stdout contains "Last message:" section
 /// - stdout does NOT contain "Found" (list-mode header)
@@ -1507,7 +1507,6 @@ fn it1_default_shows_active_project_summary()
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!( s.contains( "Active project" ), "expected 'Active project' summary header; got:\n{s}" );
-  assert!( !s.contains( "Active session" ), "must NOT say 'Active session'; got:\n{s}" );
   assert!( s.contains( "Last session:" ), "expected 'Last session:' line; got:\n{s}" );
   assert!( s.contains( "Last message:" ), "expected Last message section; got:\n{s}" );
   assert!( !s.contains( "Found" ), "expected no list header; got:\n{s}" );
@@ -1569,7 +1568,6 @@ fn it47_verbosity_1_alone_stays_in_summary_mode()
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!( s.contains( "Active project" ), "verbosity::1 must stay in summary mode; got:\n{s}" );
-  assert!( !s.contains( "Active session" ), "must NOT say 'Active session'; got:\n{s}" );
   assert!( s.contains( "Last message:" ), "expected Last message section; got:\n{s}" );
   assert!( !s.contains( "Found" ), "verbosity::1 must not trigger list mode header; got:\n{s}" );
 }
@@ -1780,7 +1778,13 @@ fn it33_no_sessions_shows_not_found()
 ///
 /// ## Verification
 /// - stdout contains "Found" (list-mode header)
-/// - stdout does NOT contain "Active session"
+/// - stdout does NOT contain "Active project"
+///
+/// ## Maintenance Note
+/// The negative check `!s.contains("Active project")` must track the current
+/// summary-mode header string. If that header is renamed, update this assertion.
+/// History: "Active session" (task-007) → "Active project" (task-016); stale
+/// assertion discovered and fixed by task-017.
 #[test]
 fn it34_explicit_scope_keeps_list_mode()
 {
@@ -1804,7 +1808,7 @@ fn it34_explicit_scope_keeps_list_mode()
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!( s.contains( "Found" ), "explicit scope:: must activate list mode; got:\n{s}" );
-  assert!( !s.contains( "Active session" ), "must NOT show summary with explicit scope::; got:\n{s}" );
+  assert!( !s.contains( "Active project" ), "explicit scope:: must not show summary; got:\n{s}" );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -1819,7 +1823,13 @@ fn it34_explicit_scope_keeps_list_mode()
 ///
 /// ## Verification
 /// - stdout contains "Found" (list-mode header)
-/// - stdout does NOT contain "Active session"
+/// - stdout does NOT contain "Active project"
+///
+/// ## Maintenance Note
+/// The negative check `!s.contains("Active project")` must track the current
+/// summary-mode header string. If that header is renamed, update this assertion.
+/// History: "Active session" (task-007) → "Active project" (task-016); stale
+/// assertion discovered and fixed by task-017.
 #[test]
 fn it35_explicit_limit_keeps_list_mode()
 {
@@ -1843,7 +1853,7 @@ fn it35_explicit_limit_keeps_list_mode()
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!( s.contains( "Found" ), "explicit limit:: must activate list mode; got:\n{s}" );
-  assert!( !s.contains( "Active session" ), "must NOT show summary with explicit limit::; got:\n{s}" );
+  assert!( !s.contains( "Active project" ), "explicit limit:: must not show summary; got:\n{s}" );
 }
 
 // ────────────────────────────────────────────────────────────────────────────

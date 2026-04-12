@@ -20,10 +20,10 @@
 
 | Tier | Files | Tests |
 |------|-------|-------|
-| Commands | 13 files | 120+ tests (9 complete + 4 new) |
-| Parameters | 20 files | 148+ tests (18 complete + 2 new) |
-| Parameter Groups | 5 files | 31 tests (~6 per group) |
-| **Total** | **38 files** | **299+ tests** |
+| Commands | 12 files | 149 tests |
+| Parameters | 21 files | 148 tests |
+| Parameter Groups | 6 files | 31 tests |
+| **Total** | **39 files** | **328 tests** |
 
 ## Test ID Conventions
 

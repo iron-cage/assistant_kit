@@ -214,7 +214,7 @@ Detect format and resolve to internal key:
 - `path_encoded() -> string` — Resolved path-encoded form
 - `is_uuid() -> boolean` — True when project uses UUID naming
 
-**Commands:** `.show`, `.show.project`, `.count`, `.search`, `.export`
+**Commands:** `.show`, `.count`, `.search`, `.export`
 
 ---
 
@@ -375,7 +375,7 @@ Validate non-empty string, then resolve:
 
 **Constants:**
 - DEFAULT_ROOT = `~/.claude/` (for `.status`)
-- DEFAULT_CWD = current working directory (for `.session`, `.projects`)
+- DEFAULT_CWD = current working directory (for `.exists`, `.projects`)
 
 **Constraints:**
 - Non-empty string
@@ -397,7 +397,7 @@ Validate and normalize path:
 - `expanded() -> string` — Returns path with `~` expanded
 - `exists() -> boolean` — True when path exists on filesystem
 
-**Commands:** `.status`, `.session`, `.projects`, `.export` (via `output::`); `.show.project` (via `project::`)
+**Commands:** `.status`, `.exists`, `.projects`, `.export` (via `output::`)
 
 ---
 
@@ -482,7 +482,7 @@ Pseudocode:
 - `is_verbose() -> boolean` — True when level ≥ 3
 - `default() -> VerbosityLevel` — Returns VerbosityLevel(1)
 
-**Commands:** `.status`, `.list`, `.show`, `.show.project`, `.search`, `.projects`
+**Commands:** `.status`, `.list`, `.show`, `.search`, `.projects`
 
 **Usage:**
 ```
@@ -525,7 +525,7 @@ Validate non-empty, no slashes:
 - `get() -> string` — Raw topic name (without leading `-`)
 - `as_dir_suffix() -> string` — Returns `-{name}` for appending to base path
 
-**Commands:** `.session`, `.path`, `.exists`, `.session.dir`, `.session.ensure`
+**Commands:** `.path`, `.exists`, `.session.dir`, `.session.ensure`
 
 ---
 

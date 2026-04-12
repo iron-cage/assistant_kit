@@ -29,7 +29,7 @@ Edge case tests for the `session::` parameter (filter, not `session_id::`). Test
 
 **Goal:** Verify that a substring matching the beginning of a session filename stem returns that session.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions session::default`
+**Command:** `clg .list session::default`
 **Expected Output:** Sessions whose ID starts with `default` (e.g., `-default_topic`) appear in results.
 **Verification:**
 - Command exits with code 0
@@ -44,7 +44,7 @@ Edge case tests for the `session::` parameter (filter, not `session_id::`). Test
 
 **Goal:** Verify that a substring matching the middle of a session filename stem returns that session.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions session::topic`
+**Command:** `clg .list session::topic`
 **Expected Output:** Sessions containing `topic` anywhere in their ID (e.g., `-default_topic`) appear in results.
 **Verification:**
 - Command exits with code 0
@@ -59,7 +59,7 @@ Edge case tests for the `session::` parameter (filter, not `session_id::`). Test
 
 **Goal:** Verify that `session::` matching is case-insensitive (uppercase filter matches lowercase session ID).
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions session::DEFAULT`
+**Command:** `clg .list session::DEFAULT`
 **Expected Output:** Same sessions returned as `session::default` — case difference is ignored.
 **Verification:**
 - Command exits with code 0
@@ -74,7 +74,7 @@ Edge case tests for the `session::` parameter (filter, not `session_id::`). Test
 
 **Goal:** Verify that a non-matching filter returns an empty list without an error.
 **Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-**Command:** `clg .sessions session::zzznomatch999`
+**Command:** `clg .list session::zzznomatch999`
 **Expected Output:** Empty session list or "no sessions found" message; no error exit code.
 **Verification:**
 - Command exits with code 0
@@ -89,7 +89,7 @@ Edge case tests for the `session::` parameter (filter, not `session_id::`). Test
 
 **Goal:** Verify that an empty `session::` value is rejected with an error.
 **Setup:** None
-**Command:** `clg .sessions session::`
+**Command:** `clg .list session::`
 **Expected Output:** Error about empty session filter value (e.g., `session filter must be non-empty`).
 **Verification:**
 - Command exits with code 1

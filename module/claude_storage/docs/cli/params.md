@@ -50,7 +50,7 @@ Session type filter for listing operations.
 **Default:** unset (all session types shown)
 
 **Commands:** `.list`, `.projects`
-(See [commands.md#command--2-list](commands.md#command--2-list) and [commands.md#command--8-sessions](commands.md#command--8-sessions))
+(See [commands.md#command--2-list](commands.md#command--2-list) and [commands.md#command--7-projects](commands.md#command--7-projects))
 
 **Purpose:** Distinguishes between main conversation sessions and agent sub-sessions spawned by tool calls. Agent sessions are stored as `agent-*.jsonl` files and have `isSidechain: true`. Use `agent::1` to inspect sub-agent behavior, `agent::0` to see only top-level conversations.
 
@@ -244,7 +244,7 @@ Filter sessions by minimum entry count threshold.
 **Default:** unset (no minimum)
 
 **Commands:** `.list`, `.projects`
-(See [commands.md#command--2-list](commands.md#command--2-list) and [commands.md#command--8-sessions](commands.md#command--8-sessions))
+(See [commands.md#command--2-list](commands.md#command--2-list) and [commands.md#command--7-projects](commands.md#command--7-projects))
 
 **Purpose:** Excludes sessions with fewer entries than the threshold. Useful for finding substantive conversations (skip one-message sessions) or for performance (only load sessions known to have content).
 
@@ -312,7 +312,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 
 **Default:** Command-dependent
 
-**Commands:** `.status`, `.list`, `.session`, `.projects`, `.count`, `.search`, `.show`, `.export`, `.path`, `.exists`, `.session.dir`, `.session.ensure`
+**Commands:** `.status`, `.list`, `.projects`, `.count`, `.search`, `.show`, `.export`, `.path`, `.exists`, `.session.dir`, `.session.ensure`
 (See individual command sections in [commands.md](commands.md))
 
 **Per-command semantics:**
@@ -321,7 +321,6 @@ Path argument. Semantics differ by command — see command sections for exact be
 |---------|------|---------|-----------|
 | `.status` | StoragePath | `~/.claude/` | Storage root override |
 | `.list` | PathSubstring | — | Filter projects by path substring (case-insensitive) |
-| `.session` | StoragePath | cwd | Directory to check for history |
 | `.projects` | StoragePath | cwd | Scope anchor path |
 | `.count` | StoragePath | cwd | Scope anchor path |
 | `.search` | StoragePath | cwd | Scope anchor path |
@@ -332,7 +331,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 | `.session.dir` | StoragePath | — | Base directory (required) |
 | `.session.ensure` | StoragePath | — | Base directory (required) |
 
-**Purpose:** Provides a path context appropriate to each command. In `.status`, `.session`, `.exists`, `.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list`, it is a substring filter on project paths. In `.projects`, `.count`, `.search`, `.show`, and `.export`, it anchors the scope discovery when paired with `scope::`.
+**Purpose:** Provides a path context appropriate to each command. In `.exists`, `.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list`, it is a substring filter on project paths. In `.projects`, `.count`, `.search`, `.show`, and `.export`, it anchors the scope discovery when paired with `scope::`.
 
 **Examples:**
 ```bash
@@ -342,8 +341,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 # .list: path substring filter
 .list path::claude_tools          # Matches all projects with "claude_tools" in path
 
-# .session / .exists: directory check
-.session path::/home/user/project
+# .exists: directory check
 .exists path::/home/user/project
 
 # .path: storage path computation
@@ -359,7 +357,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 .search query::error scope::under path::/home/user1/pro
 ```
 
-**Group (scope anchor context):** [Scope Configuration](parameter_groups.md#scope-configuration) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.count`, `.search`, `.show`, and `.export`; its role in `.status`, `.list`, `.session`, `.exists`, `.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
+**Group (scope anchor context):** [Scope Configuration](parameter_groups.md#scope-configuration) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.count`, `.search`, `.show`, and `.export`; its role in `.status`, `.list`, `.exists`, `.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
 
 ---
 
@@ -377,7 +375,7 @@ Project identifier for scoping operations to a specific project.
 
 **Default:** resolves to the project for the current working directory
 
-**Commands:** `.show`, `.show.project`, `.count`, `.search`, `.export`
+**Commands:** `.show`, `.count`, `.search`, `.export`
 (See individual command sections in [commands.md](commands.md))
 
 **Purpose:** Restricts an operation to a specific project. Without `project::`, most commands default to the current directory's project. Use `project::` when working with a project other than the current directory.
@@ -677,7 +675,7 @@ Output detail level controlling information density.
 
 **Alias:** `v`
 
-**Commands:** `.status`, `.list`, `.show`, `.show.project`, `.search`, `.projects`
+**Commands:** `.status`, `.list`, `.show`, `.search`, `.projects`
 (See individual command sections in [commands.md](commands.md))
 
 **Purpose:** Controls how much information each command outputs. Level `0` is minimal/machine-readable; level `1` is the standard summary; level `2` adds details; level `3` shows all fields; levels `4-5` are reserved.
@@ -716,7 +714,7 @@ Session topic name appended as a `-{name}` suffix to the base directory path.
 
 **Default:** unset (no suffix applied) for `.path`, `.exists`; `default_topic` for `.session.dir`, `.session.ensure`
 
-**Commands:** `.session`, `.path`, `.exists`, `.session.dir`, `.session.ensure`
+**Commands:** `.path`, `.exists`, `.session.dir`, `.session.ensure`
 (See individual command sections in [commands.md](commands.md))
 
 **Purpose:** Identifies a named session topic within a base directory. Claude Code uses hyphen-prefixed directories (`-default_topic`, `-work`, `-commit`) as session working directories. `topic::` takes the name without the leading hyphen and appends it as `{base}/-{topic}`.
