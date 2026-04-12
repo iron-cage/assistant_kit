@@ -247,6 +247,7 @@ cargo nextest run --test behavior
 |------|------|----------------|
 | doc | [`002_storage_organization.md`](002_storage_organization.md) | Storage directory layout and containment hierarchy |
 | doc | [`004_jsonl_format.md`](004_jsonl_format.md) | Entry-level JSONL field schema and content block types |
+| doc | [`params/readme.md`](params/readme.md) | Canonical definitions for flags referenced in this table (--print, --continue, --new-session, CLAUDE_CODE_AUTO_CONTINUE) |
 | test | [`../../module/claude_storage/tests/behavior/`](../../module/claude_storage/tests/behavior/) | Invalidation test suite — one file per behavior (B1–B16) |
 | source | [`../../module/claude_runner/src/main.rs`](../../module/claude_runner/src/main.rs) | Evidence E1–E3: flag definitions (new-session, print, continue) |
 | source | [`../../module/claude_runner_core/src/command.rs`](../../module/claude_runner_core/src/command.rs) | Evidence E2, E10: continuation flag builder and auto-continue env var |

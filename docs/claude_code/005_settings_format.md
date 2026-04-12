@@ -61,6 +61,21 @@ Two keys written by `.version.install` on every successful exit (including idemp
 | `preferredVersionSpec` | string | `"stable"`, `"2.1.78"` | User's original request (alias or semver) |
 | `preferredVersionResolved` | string or null | `"2.1.78"`, `null` | Concrete semver at install time; `null` for `latest` |
 
+### Settings Config Parameter Table
+
+The six keys read by `claude` at startup from `~/.claude/settings.json`. No CLI flag or env var form — config-only.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `theme` | string | `"dark"` | UI color theme |
+| `autoUpdates` | bool | `true` | Auto-update binary on startup |
+| `preferredVersionSpec` | string/null | `null` | Preferred version alias or semver (e.g. `"stable"`, `"2.1.78"`) |
+| `preferredVersionResolved` | string/null | `null` | Concrete semver resolved at last install; `null` for `latest` |
+| `env` | object | `{}` | Persistent env var overrides injected at startup |
+| `enabledPlugins` | object | `{}` | Active plugin registry |
+
+See [`params/readme.md`](params/readme.md) for the complete parameter table including CLI flags and env vars. Precedence: CLI arg > env var > settings config.
+
 ### Account Active Marker
 
 `~/.claude/accounts/_active` is a single-line plain text file containing the active account name. Written by `.account.switch`, read by `.account.status` and `.status`.
@@ -70,6 +85,7 @@ Two keys written by `.version.install` on every successful exit (including idemp
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [`003_filesystem_layout.md`](003_filesystem_layout.md) | Path locations and directory tree |
+| doc | [`params/readme.md`](params/readme.md) | Full parameter table including config keys, CLI flags, and env vars |
 | doc | [`../../module/claude_manager/docs/feature/003_settings_management.md`](../../module/claude_manager/docs/feature/003_settings_management.md) | Settings JSON, nested preservation feature doc |
 | doc | [`../../module/claude_manager/docs/pattern/001_version_lock.md`](../../module/claude_manager/docs/pattern/001_version_lock.md) | Version lock pattern |
 | doc | [`../../module/claude_manager/docs/feature/001_version_management.md`](../../module/claude_manager/docs/feature/001_version_management.md) | Preference persistence feature doc |

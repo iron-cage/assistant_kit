@@ -1,7 +1,7 @@
 meta:
   description: Cross-reference graph for all doc instances in the agent_kit workspace
-  node_count: 18
-  edge_count: 29
+  node_count: 19
+  edge_count: 33
   component_count: 3
   generated: 2026-04-12
 
@@ -94,6 +94,11 @@ nodes:
   - id: claude_code/006
     file: claude_code/006_ancillary_formats.md
     label: Ancillary Formats
+    entity: claude_code
+
+  - id: claude_code/params
+    file: claude_code/params/readme.md
+    label: Parameters
     entity: claude_code
 
 edges:
@@ -213,6 +218,22 @@ edges:
     to: claude_code/004
     via: cross_references
 
+  - from: claude_code/params
+    to: claude_code/001
+    via: cross_references
+
+  - from: claude_code/params
+    to: claude_code/005
+    via: cross_references
+
+  - from: claude_code/001
+    to: claude_code/params
+    via: cross_references
+
+  - from: claude_code/005
+    to: claude_code/params
+    via: cross_references
+
 components:
   - id: 1
     label: Main corpus
@@ -240,7 +261,7 @@ components:
 
   - id: 3
     label: Claude Code knowledge
-    size: 6
+    size: 7
     isolated: true
     nodes:
       - claude_code/001
@@ -249,5 +270,6 @@ components:
       - claude_code/004
       - claude_code/005
       - claude_code/006
+      - claude_code/params
 
 dangling_refs: []

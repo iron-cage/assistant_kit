@@ -9,7 +9,7 @@
 | `pattern/` | Four-layer crate dependency architecture | [pattern/readme.md](pattern/readme.md) | 1 |
 | `integration/` | Cross-workspace integration protocol | [integration/readme.md](integration/readme.md) | 1 |
 | `error/` | Claude Code error message catalog | [error/readme.md](error/readme.md) | 5 |
-| `claude_code/` | External Claude Code binary behavior, storage formats, filesystem conventions | [claude_code/readme.md](claude_code/readme.md) | 6 |
+| `claude_code/` | External Claude Code binary behavior, storage formats, filesystem conventions | [claude_code/readme.md](claude_code/readme.md) | 7 |
 
 ## Master Doc Instances Table
 
@@ -33,3 +33,4 @@
 | claude_code | 004 | JSONL Format | [claude_code/004_jsonl_format.md](claude_code/004_jsonl_format.md) |
 | claude_code | 005 | Settings Format | [claude_code/005_settings_format.md](claude_code/005_settings_format.md) |
 | claude_code | 006 | Ancillary Formats | [claude_code/006_ancillary_formats.md](claude_code/006_ancillary_formats.md) |
+| claude_code | params | Parameters | [claude_code/params/readme.md](claude_code/params/readme.md) |

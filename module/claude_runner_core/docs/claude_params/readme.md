@@ -1,6 +1,12 @@
 # claude_params/
 
-Comprehensive reference for every parameter the `claude` binary accepts — CLI flags, environment variables, settings config keys, and combined options.
+Builder-API reference for `ClaudeCommand` — documents Rust `with_*()` methods,
+builder-specific defaults, and the underlying `claude` binary parameters they wrap.
+
+> **Binary-perspective reference** (actual `claude` flags, env vars, config keys with
+> binary defaults): [`docs/claude_code/params/readme.md`](../../../docs/claude_code/params/readme.md).
+> This file is the **builder-API perspective** — defaults here are intentionally tuned
+> for automation and may differ from the binary defaults shown there.
 
 ## Parameter Summary Table
 
@@ -149,7 +155,7 @@ These parameters are read from the settings file on startup. No builder method �
 ## Notes
 
 - **Builder defaults vs claude defaults**: `max_output_tokens` (#48), `bash_timeout` (#49), `bash_max_timeout` (#50), `auto_continue` (#51), `telemetry` (#52), and `chrome` (#40) have **different** defaults in `claude_runner_core` than in the `claude` binary. The builder values are tuned for programmatic/automation use. Notably, `chrome` defaults to **on** in the builder (vs off in the raw `claude` binary) so browser context is available by default in automation.
-- **Combined parameters**: `api_key` (#7) documents both `--api-key` CLI flag and `ANTHROPIC_API_KEY` env var in one place since they configure the same thing.
+- **`--api-key` removed from CLI**: `api_key` (#7) is listed as `Both` (CLI + env) in this doc, but `--api-key` is no longer present in `claude --help` as of current builds — env var `ANTHROPIC_API_KEY` is the only runtime form. The binary-perspective reference in `docs/claude_code/params/api_key.md` reflects this correctly; this doc retains the builder method which still passes the value via env var internally.
 - **Deprecated**: `mcp_debug` (#47) documents `--mcp-debug` which is deprecated in favor of `--debug` (#41).
 - **Builder-only**: `dry_run` (#3) is not a `claude` binary parameter — it controls whether `ClaudeCommand` spawns a process or returns `describe_compact()` as stdout.
 - **Config vs runtime**: Settings config parameters (#61–#66) are loaded once at startup from `~/.claude/settings.json`; runtime parameters (#1–#60) are passed per-invocation via CLI flags or env vars.
