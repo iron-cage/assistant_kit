@@ -7,22 +7,12 @@
 #[ derive( Debug ) ]
 pub enum AssetError
 {
-  /// Neither `$PRO_CLAUDE` nor `$PRO` is set.
-  EnvVarNotSet,
   /// The named artifact was not found in the source directory.
   SourceNotFound
   {
     /// Artifact kind label (e.g., `"rule"`).
     kind : String,
     /// Artifact name (e.g., `"rust"`).
-    name : String,
-  },
-  /// The artifact is not currently installed (for uninstall).
-  NotInstalled
-  {
-    /// Artifact kind label.
-    kind : String,
-    /// Artifact name.
     name : String,
   },
   /// The target path exists but is not a symlink — uninstall refused.
@@ -44,12 +34,8 @@ impl core::fmt::Display for AssetError
   {
     match self
     {
-      Self::EnvVarNotSet =>
-        write!( f, "$PRO_CLAUDE is not set — export PRO_CLAUDE=/path/to/your/claude-assets" ),
       Self::SourceNotFound { kind, name } =>
         write!( f, "{kind} '{name}' not found in $PRO_CLAUDE/{kind}s/" ),
-      Self::NotInstalled { kind, name } =>
-        write!( f, "{kind} '{name}' is not installed" ),
       Self::NotASymlink { kind, name } =>
         write!( f, "{kind} '{name}' target is not a symlink — refusing to remove (data-loss guard)" ),
       Self::Io( e ) =>

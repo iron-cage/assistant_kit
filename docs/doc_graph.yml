@@ -11,6 +11,11 @@ nodes:
     label: Workspace Design
     entity: feature
 
+  - id: feature/002
+    file: feature/002_agent_inventory.md
+    label: Agent Inventory
+    entity: feature
+
   - id: invariant/001
     file: invariant/001_privacy_invariant.md
     label: Privacy Invariant
@@ -115,6 +120,22 @@ edges:
     via: cross_references
 
   - from: feature/001
+    to: integration/001
+    via: cross_references
+
+  - from: feature/002
+    to: feature/001
+    via: cross_references
+
+  - from: feature/002
+    to: pattern/001
+    via: cross_references
+
+  - from: feature/002
+    to: invariant/001
+    via: cross_references
+
+  - from: feature/002
     to: integration/001
     via: cross_references
 
@@ -237,10 +258,11 @@ edges:
 components:
   - id: 1
     label: Main corpus
-    size: 7
+    size: 8
     isolated: false
     nodes:
       - feature/001
+      - feature/002
       - invariant/001
       - invariant/002
       - invariant/003

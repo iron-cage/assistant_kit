@@ -46,10 +46,14 @@ fn opt_str( cmd : &VerifiedCommand, name : &str ) -> String
 /// Parse `kind::` to `ArtifactKind`; returns `ArgumentTypeMismatch` for unknown strings.
 fn parse_kind( raw : &str ) -> Result< ArtifactKind, ErrorData >
 {
-  ArtifactKind::from_name( raw ).ok_or_else( || ErrorData::new(
-    ErrorCode::ArgumentTypeMismatch,
-    format!( "unknown kind '{raw}': valid kinds are rule, command, agent, skill, plugin, hook" ),
-  ) )
+  ArtifactKind::from_name( raw ).ok_or_else( ||
+  {
+    let valid : Vec< &str > = ArtifactKind::all().iter().map( |k| k.as_str() ).collect();
+    ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "unknown kind '{raw}': valid kinds are {}", valid.join( ", " ) ),
+    )
+  } )
 }
 
 /// Extract a required (non-empty) string argument.
@@ -181,7 +185,8 @@ pub fn uninstall_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Re
   {
     InstallAction::Uninstalled  => format!( "Uninstalled {kind_str}/{name}\n" ),
     InstallAction::NotInstalled => format!( "Not installed: {kind_str}/{name}\n" ),
-    _                           => format!( "Done: {kind_str}/{name}\n" ),
+    InstallAction::Installed    => format!( "Installed {kind_str}/{name}\n" ),
+    InstallAction::Reinstalled  => format!( "Reinstalled {kind_str}/{name}\n" ),
   };
 
   Ok( OutputData::new( msg, "text" ) )

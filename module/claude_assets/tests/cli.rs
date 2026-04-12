@@ -389,3 +389,118 @@ fn cli11_install_invalid_kind_exits_1()
     "must mention unknown kind, got: {stderr}",
   );
 }
+
+// ── cli12 ─────────────────────────────────────────────────────────────────────
+
+/// cli12: `.list installed::true` exits 1 — boolean expects `0` or `1`, not `"true"`.
+///
+/// Root Cause: unilang bool params accept only 0/1 integer tokens, not string "true"/"false".
+/// Why Not Caught: no test for boolean argument validation existed.
+/// Fix Applied: adapter normalise_bool_value() rejects any value other than "0" or "1".
+/// Prevention: test every boolean param with a plausible-but-wrong string value.
+/// Pitfall: users familiar with other CLIs expect "true" to work — error must be clear.
+#[ test ]
+fn cli12_installed_true_string_exits_1()
+{
+  let src = TempDir::new().unwrap();
+  let tgt = TempDir::new().unwrap();
+
+  let out = cla()
+    .args( [ ".list", "installed::true" ] )
+    .env( "PRO_CLAUDE", src.path() )
+    .current_dir( tgt.path() )
+    .output()
+    .unwrap();
+
+  assert_eq!( out.status.code(), Some( 1 ), "exit must be 1, got: {:?}", out.status );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "expected 0 or 1" ),
+    "error must say 'expected 0 or 1', got: {stderr}",
+  );
+}
+
+// ── cli13 ─────────────────────────────────────────────────────────────────────
+
+/// cli13: `.list v::0` exits 0 — `v::` is a valid alias for `verbosity::`.
+///
+/// Root Cause: adapter must expand `v::` to `verbosity::` before unilang parsing.
+/// Why Not Caught: no test for alias expansion existed.
+/// Fix Applied: argv_to_unilang_tokens() rewrites `v::` prefix to `verbosity::`.
+/// Prevention: test every registered alias with a valid value.
+/// Pitfall: if adapter doesnt run, `v::` becomes an unknown argument and exit 1.
+#[ test ]
+fn cli13_verbosity_alias_exits_0()
+{
+  let src = TempDir::new().unwrap();
+  let tgt = TempDir::new().unwrap();
+
+  let out = cla()
+    .args( [ ".list", "v::0" ] )
+    .env( "PRO_CLAUDE", src.path() )
+    .current_dir( tgt.path() )
+    .output()
+    .unwrap();
+
+  assert!( out.status.success(), "exit must be 0, got: {:?}", out.status );
+}
+
+// ── cli14 ─────────────────────────────────────────────────────────────────────
+
+/// cli14: `list` (no dot prefix) exits 1 — commands must start with `.`.
+///
+/// Root Cause: adapter enforces dot-prefix as a namespace invariant for commands.
+/// Why Not Caught: no test for bare (undotted) command names existed.
+/// Fix Applied: argv_to_unilang_tokens() rejects first arg without `.` prefix.
+/// Prevention: test the bare name of every registered command.
+/// Pitfall: error should hint at the correct form (`.list`) for discoverability.
+#[ test ]
+fn cli14_bare_command_without_dot_exits_1()
+{
+  let src = TempDir::new().unwrap();
+  let tgt = TempDir::new().unwrap();
+
+  let out = cla()
+    .args( [ "list" ] )
+    .env( "PRO_CLAUDE", src.path() )
+    .current_dir( tgt.path() )
+    .output()
+    .unwrap();
+
+  assert_eq!( out.status.code(), Some( 1 ), "exit must be 1, got: {:?}", out.status );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "start with '.'" ) || stderr.contains( "list" ),
+    "error must mention dot prefix, got: {stderr}",
+  );
+}
+
+// ── cli15 ─────────────────────────────────────────────────────────────────────
+
+/// cli15: `.list verbosity::5` exits 1 — verbosity range is 0..=2.
+///
+/// Root Cause: adapter enforces MAX_VERBOSITY = 2; values above are rejected.
+/// Why Not Caught: no test for out-of-range verbosity existed.
+/// Fix Applied: normalise_verbosity() returns error for values > MAX_VERBOSITY.
+/// Prevention: test boundary values (MAX+1) for all bounded params.
+/// Pitfall: if verbosity silently clamps instead of erroring, users get no feedback.
+#[ test ]
+fn cli15_verbosity_out_of_range_exits_1()
+{
+  let src = TempDir::new().unwrap();
+  let tgt = TempDir::new().unwrap();
+
+  let out = cla()
+    .args( [ ".list", "verbosity::5" ] )
+    .env( "PRO_CLAUDE", src.path() )
+    .current_dir( tgt.path() )
+    .output()
+    .unwrap();
+
+  assert_eq!( out.status.code(), Some( 1 ), "exit must be 1, got: {:?}", out.status );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "out of range" ) || stderr.contains( "max" ),
+    "error must mention range, got: {stderr}",
+  );
+}

@@ -106,7 +106,7 @@ impl AssetPaths
     self.target_root.join( ".claude" ).join( kind.target_subdir() )
   }
 
-  /// The source root path.
+  /// Absolute path to `$PRO_CLAUDE` (or `$PRO/genai/claude/`) used as source root.
   #[ must_use ]
   #[ inline ]
   pub fn source_root( &self ) -> &Path

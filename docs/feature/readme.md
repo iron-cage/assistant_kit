@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Workspace Design](001_workspace_design.md) | Workspace purpose, crate inventory, and scope boundaries | ✅ |
+| 002 | [Agent Inventory](002_agent_inventory.md) | Agent-agnostic adapter layer for cross-agent asset discovery | 🔄 |
