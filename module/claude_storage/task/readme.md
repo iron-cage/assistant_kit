@@ -15,3 +15,4 @@
 | 9 | 005 | 0 | 6 | 9 | 9 | 0 | ✅ (Completed) | any | [Update CLI test docs — .sessions scope default](completed/005_sessions_default_scope_cli_docs.md) | CLI test docs IT-1 and CD-2 updated for under default |
 | 10 | 010 | 0 | 7 | 9 | 9 | 0 | ✅ (Completed) | any | [Fix docs/ consistency](completed/010_docs_consistency.md) | Fix stale counts, isolated graph components, readme accuracy |
 | 11 | 011 | 0 | 7 | 6 | 9 | 0 | ✅ (Completed) | any | [Create docs/cli/format/ catalog](completed/011_cli_format_catalog.md) | CLI Output Format Doc Entity for export rendering modes |
+| 12 | 012 | 1296 | 8 | 9 | 9 | 2 | 🎯 (Available) | any | [Fix .sessions is_default verbosity guard](012_fix_is_default_verbosity_sessions.md) | Remove verbosity from is_default so verbosity::1 stays in summary mode |

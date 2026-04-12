@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in the agent_kit workspace
-  node_count: 7
-  edge_count: 14
-  component_count: 1
-  generated: 2026-04-07
+  node_count: 12
+  edge_count: 21
+  component_count: 2
+  generated: 2026-04-11
 
 nodes:
   - id: feature/001
@@ -40,6 +40,31 @@ nodes:
     file: integration/001_willbe_integration.md
     label: Willbe Integration
     entity: integration
+
+  - id: error/001
+    file: error/001_rate_limit_reached.md
+    label: Rate Limit Reached
+    entity: error
+
+  - id: error/002
+    file: error/002_authentication_failed.md
+    label: Authentication Failed
+    entity: error
+
+  - id: error/003
+    file: error/003_context_limit_reached.md
+    label: Context Limit Reached
+    entity: error
+
+  - id: error/004
+    file: error/004_request_timed_out.md
+    label: Request Timed Out
+    entity: error
+
+  - id: error/005
+    file: error/005_api_overloaded.md
+    label: API Overloaded
+    entity: error
 
 edges:
   - from: feature/001
@@ -98,6 +123,34 @@ edges:
     to: invariant/003
     via: cross_references
 
+  - from: error/002
+    to: error/001
+    via: cross_references
+
+  - from: error/003
+    to: error/001
+    via: cross_references
+
+  - from: error/003
+    to: error/004
+    via: cross_references
+
+  - from: error/004
+    to: error/003
+    via: cross_references
+
+  - from: error/004
+    to: error/005
+    via: cross_references
+
+  - from: error/005
+    to: error/001
+    via: cross_references
+
+  - from: error/005
+    to: error/004
+    via: cross_references
+
 components:
   - id: 1
     label: Main corpus
@@ -111,5 +164,16 @@ components:
       - invariant/004
       - pattern/001
       - integration/001
+
+  - id: 2
+    label: Error catalog
+    size: 5
+    isolated: true
+    nodes:
+      - error/001
+      - error/002
+      - error/003
+      - error/004
+      - error/005
 
 dangling_refs: []

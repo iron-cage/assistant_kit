@@ -11,5 +11,6 @@ Documentation for the `agent_kit` workspace covering behavioral requirements, st
 | `invariant/` | Privacy, versioning, testing, and performance constraints |
 | `pattern/` | Four-layer crate dependency architecture pattern |
 | `integration/` | Cross-workspace integration protocol |
+| `error/` | Claude Code error message catalog |
 | `entities.md` | Master index of all doc entities and instances |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

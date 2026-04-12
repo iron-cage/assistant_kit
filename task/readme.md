@@ -10,7 +10,7 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
-| 091 | 🎯 Available | Change ultrathink injection from prefix to suffix (`\n\nultrathink`) | bug | 2026-04-11 | [091](091_ultrathink_suffix_injection.md) |
+| 091 | ✅ Complete | Change ultrathink injection from prefix to suffix (`\n\nultrathink`) | bug | 2026-04-11 | [091](completed/091_ultrathink_suffix_injection.md) |
 | 090 | ✅ Complete | Implement ultrathink default message prefix in `clr` binary | feature | 2026-04-11 | [090](completed/090_ultrathink_default_prefix_impl.md) |
 | 089 | ✅ Complete | Create `claude_assets` crate pair — multi-artifact installer CLI (`cla`) | feature | 2026-04-11 | [089](completed/089_claude_assets_installer.md) |
 | 087 | ✅ Complete | Introduce `agent_kit` aggregation crate (Layer 2 facade) | architecture | 2026-04-11 | [087](completed/087_introduce_agent_kit_crate.md) |
@@ -108,8 +108,8 @@
 ## Metadata
 
 **Status Distribution:**
-- ✅ Complete: 90
-- 🎯 Available: 1
+- ✅ Complete: 91
+- 🎯 Available: 0
 - 📥 Backlog: 0
 
 **Status Legend:**
@@ -120,4 +120,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-04-11 (TSK-091 created: ultrathink suffix fix — change `"ultrathink {msg}"` prefix to `"{msg}\n\nultrathink"` suffix in build_claude_command())
+**Last Updated:** 2026-04-11 (TSK-091 closed: ultrathink suffix injection complete — fix comment added, 126/126 tests pass)

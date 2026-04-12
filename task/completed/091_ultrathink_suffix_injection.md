@@ -180,4 +180,10 @@ Expected: `0`. Why: confirms the old format string was replaced, not just commen
 
 ## Outcomes
 
-[Added upon task completion.]
+- `build_claude_command()` now produces `"{msg}\n\nultrathink"` (suffix) instead of `"ultrathink {msg}"` (prefix).
+- Idempotent guard changed from `starts_with("ultrathink")` to `trim_end().ends_with("ultrathink")`.
+- Module doc comment (line ~30) updated: "prefixed" → "suffixed after `\"\n\n\""`.
+- T58 (`t58_default_message_gets_ultrathink_suffix`) added as TDD-first failing test before the fix.
+- Seven existing tests (t10, t27, t33, t37, t50, t51, t52) updated to suffix-form assertions.
+- Fix comment (`Fix(issue-ultrathink-suffix)`) added at injection site with Root cause and Pitfall.
+- `w3 .test level::3`: 126/126 passed, 0 doc tests, 0 clippy warnings.

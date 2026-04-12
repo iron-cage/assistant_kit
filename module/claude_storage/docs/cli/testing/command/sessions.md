@@ -51,11 +51,12 @@ Integration tests for the `.sessions` command. Tests verify summary mode output 
 | IT-44 | v1 orphan shows `? (orphan)` label (bug-cc-c1) | Family Display |
 | IT-45 | v2 root entry count singular `(1 entry)` | Family Display |
 | IT-46 | v2 agent entry count singular `1 entry` | Family Display |
+| IT-47 | verbosity::1 alone stays in summary mode (bug-is-default-verbosity) | Summary Mode |
 
 ## Test Coverage Summary
 
 - Summary Mode (default): 1 test (IT-1)
-- Summary Mode: 4 tests (IT-30–IT-33)
+- Summary Mode: 5 tests (IT-30–IT-33, IT-47)
 - Filter Passthrough: 2 tests (IT-34–IT-35)
 - Scope Behavior: 3 tests (IT-2, IT-3, IT-4)
 - Path Anchoring: 1 test (IT-5)
@@ -804,5 +805,33 @@ Project  {rel-path-from-cwd}
 - stdout contains `1 entry`
 - stdout does NOT contain `1 entries`
 **Pass Criteria:** exit 0 + correct singular noun for agent entry count
+
+**Source:** [commands.md](../../commands.md)
+
+---
+
+### IT-47: verbosity::1 alone stays in summary mode (bug-is-default-verbosity)
+
+**Goal:** Verify that passing `verbosity::1` (the default verbosity value) without any other parameter does NOT activate list mode — the output must be identical to bare `.sessions`.
+**Setup:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at cwd containing at least one session with entries. Run from that project.
+**Command:** `clg .sessions verbosity::1`
+**Expected Output:** Same summary block as bare `clg .sessions` — NOT a session list.
+```
+Active session  {8-char-id}  Xd ago  N entries
+Project  ~/path/to/project
+
+Last message:
+  {message text}
+```
+stdout does NOT contain `Found N sessions:` (list-mode header must be absent).
+**Verification:**
+- Exit code is 0
+- stdout first line contains `Active session`
+- stdout contains `Project` line
+- stdout contains `Last message:` header
+- stdout does NOT contain `Found N sessions:` (list mode must not activate)
+**Pass Criteria:** exit 0 + summary header present + `Found N sessions:` absent
+
+**Root Cause (bug-is-default-verbosity):** `is_default` gate in `sessions_routine` included `verbosity` in its all-None check (`cmd.get_integer("verbosity").is_none()`). Passing `verbosity::1` returned `Some(1)` instead of `None`, setting `is_default=false` and routing to list mode even though `verbosity::1` is semantically equivalent to the default.
 
 **Source:** [commands.md](../../commands.md)

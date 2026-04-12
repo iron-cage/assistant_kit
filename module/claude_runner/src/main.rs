@@ -331,9 +331,13 @@ fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
   }
   if let Some( ref msg ) = cli.message
   {
-    // Append "\n\nultrathink" to activate extended thinking mode by default.
-    // Idempotent guard (trim_end().ends_with) prevents double-suffix when the message
-    // already ends with "ultrathink". --no-ultrathink opts out of the injection entirely.
+    // Fix(issue-ultrathink-suffix): inject as suffix not prefix so the user task
+    //   comes first in Claude's context window — earlier tokens carry more weight.
+    // Root cause: original format!("ultrathink {msg}") buried the task description
+    //   under the directive; suffix form preserves natural "state task, then direct thinking"
+    //   order that matches Claude's conversational expectations.
+    // Pitfall: idempotent guard must use trim_end().ends_with not starts_with —
+    //   suffix anchors at the end; starts_with would miss re-injection on existing suffixes.
     let effective_msg = if cli.no_ultrathink || msg.trim_end().ends_with( "ultrathink" )
     {
       msg.clone()

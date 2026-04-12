@@ -408,7 +408,7 @@ claude_storage .sessions limit::5
 
 **Default invocation (summary mode):**
 
-When `.sessions` is called with no arguments, it outputs a single-session summary for the most-recent session in scope — not a list. Any explicit parameter (`scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`, `verbosity::`) activates list mode instead.
+When `.sessions` is called with no arguments, it outputs a single-session summary for the most-recent session in scope — not a list. Any explicit scope or filter parameter (`scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`) activates list mode instead. `verbosity::` is a display modifier and never affects mode selection — `verbosity::1` stays in summary mode.
 
 ```
 Active session  {8-char-id}  {age}  {count} entries
