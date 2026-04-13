@@ -39,6 +39,7 @@ or direct inference. All behaviors describe the external `claude` binary.
 | B15 | Agent entries carry a `slug` field (human-readable label shared by all agents of one parent); root session entries typically lack `slug` | Families | 🎯 | 85% | E25, E29 |
 | B16 | `--tools ""` disables all tool invocation; `--tools "default"` restores all tools; both values accepted at CLI parse time | Flags | ✅ | 90% | E30, E31 |
 | B16h | Tool *definitions* (~12k tokens) remain in the assembled system prompt even when `--tools ""` is given — invocation is blocked but the token cost is unchanged | Flags | ❓ | 60% | E32 |
+| B17 | Claude code usage statistic can be obtained by POST request to url https://api.anthropic.com/v1/messages | Observation | 🎯 | 90% | E33 |
 
 ---
 
@@ -78,6 +79,7 @@ or direct inference. All behaviors describe the external `claude` binary.
 | E30 | B16      | Observation | `claude --help` live output | `--tools` flag entry | Help text: "Specify the list of available tools from the built-in set. Use `""` to disable all tools, `"default"` to use all tools, or specify tool names (e.g. `"Bash,Edit,Read"`)" |
 | E31 | B16      | Test        | `../../module/claude_storage/tests/behavior/b16_tools_disable.rs` | `b16a_tools_flag_documented_in_help`, `b16b_tools_empty_string_accepted`, `b16c_tools_default_value_accepted` | Flag documented in help and accepted at CLI parse time without parse error |
 | E32 | B16h     | Inference   | Research: Piebald-AI/claude-code-system-prompts; ClaudeLog (2026-04) | Tool assembly layer analysis | Tool definitions injected into assembled system prompt before behavioral flags are applied (confirmed for `--system-prompt` replacement). `--tools` likely operates at invocation-policy layer, not definition-assembly layer — same architectural split as `--system-prompt`. Unconfirmed: requires live token-count comparison. |
+| E33 | B17 | Observation | `../../module/claude_profile/src/commands.rs` | line 669 - 695 | Fetches usage statistics. Unconfirmed: requires deep testing. |
 
 ---
 
@@ -195,19 +197,51 @@ Root session entries typically lack the `slug` field; their first entry is usual
 
 The slug serves as a human-friendly family identifier that could be displayed instead of UUIDs.
 
+### B16 - TODO Add details
+
+### B16h - TODO Add details
+
+### B17 — Usage statistics
+
+Command  `claude /usage` allows get current usage statistics like current session, current week (all models), and extra usage (if enabled).
+Alternative way to get usage statistic is by sending http request to https://api.anthropic.com/v1/messages with the next structure:
+
+```
+POST /v1/messages HTTP/1.1
+Host: api.anthropic.com
+Authorization: Bearer <VALUE_FROM_read_auth_token>
+anthropic-beta: oauth-2025-04-20
+anthropic-version: 2023-06-01
+Content-Type: application/json
+Content-Length: 109
+
+{"model":"claude-haiku-4-5-20251001","max_tokens":1,"messages":[{"role":"user","content":"quota"}]}
+```
+
+The response should contain next headers:
+
+| Header name  | Value | Description |
+|-----|----------|-------------|
+| `anthropic-ratelimit-unified-5h-utilization`  | 0.0 - 1.0   | 5-hour session window utilization | 
+| `anthropic-ratelimit-unified-5h-reset` | Unix timestamp, seconds | 5-hour session window reset time | 
+| `anthropic-ratelimit-unified-7d-utilization` | 0.0 - 1.0 | 7-day all-model utilization | 
+| `anthropic-ratelimit-unified-7d-reset` | Unix timestamp, seconds | 7-day all-model reset time | 
+| `anthropic-ratelimit-unified-status` | String: `allowed`, `allowed_warning`, or `rejected` | Rate-limit status |
+
 ---
 
 ### Statistical Summary
 
 | Status | Count | IDs |
 |--------|-------|-----|
-| ✅ Confirmed | 11 | B1, B2, B3, B6, B7, B8, B9, B10, B12, B13, B14 |
-| 🎯 Observed | 4 | B4, B5, B11, B15 |
-| ❓ Uncertain | 0 | — |
+| ✅ Confirmed | 11 | B1, B2, B3, B6, B7, B8, B9, B10, B12, B13, B14, B16 |
+| 🎯 Observed | 5 | B4, B5, B11, B15, B17 |
+| ❓ Uncertain | 1 | B16h |
 
-**Total behaviors:** 15
-**Confirmed (≥90% certainty):** 11
+**Total behaviors:** 17
+**Confirmed (≥90% certainty):** 12
 **Lowest certainty:** B5 (60% — current session selection mechanism)
+B16h (60% - tools behavior)
 **Investigation priority:** B5 — can be confirmed by reading Claude Code changelog or source
 
 ---
