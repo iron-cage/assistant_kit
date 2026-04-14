@@ -108,6 +108,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     token_status_routine,
     paths_routine,
     usage_routine,
+    credentials_enable_auto_rotation_routine,
+    credentials_enable_auto_rotation_routine_bg,
   };
 
   let v   = || reg_arg_opt( "verbosity", Kind::Integer );
@@ -117,6 +119,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let thr = || reg_arg_opt( "threshold", Kind::Integer );
 
   reg_cmd( registry, ".credentials.status", "Show live credential metadata without account store dependency", vec![ v(), fmt() ],   Box::new( credentials_status_routine ) );
+  reg_cmd( registry, ".credentials.rotation", "Show live credential metadata without account store dependency", vec![],   Box::new( credentials_enable_auto_rotation_routine ) );
+  reg_cmd( registry, ".credentials.rotation.bg", "Show live credential metadata without account store dependency", vec![],   Box::new( credentials_enable_auto_rotation_routine_bg ) );
   reg_cmd( registry, ".account.list",   "List all saved accounts with subscription type and token state", vec![ v(), fmt() ],        Box::new( account_list_routine   ) );
   reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), v(), fmt() ],   Box::new( account_limits_routine ) );
   reg_cmd( registry, ".account.status", "Show active account name and token state; optionally query a named account", vec![ nam(), v(), fmt() ], Box::new( account_status_routine ) );

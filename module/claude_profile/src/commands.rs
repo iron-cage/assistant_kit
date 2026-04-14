@@ -11,10 +11,25 @@
 //! type alias requires ownership.
 
 use core::fmt::Write as _;
-use unilang::data::{ ErrorCode, ErrorData, OutputData };
+use std::collections::HashMap;
+use std::process::Stdio;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use claude_profile_core::account::auto_rotate;
+use unilang::data::{ErrorCode, ErrorData, OutputData};
 use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
+use std::fs::OpenOptions;
+use std::io::{BufWriter, Write};
+use error_tools::Context;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::convert::Infallible;
+use std::thread;
+use std::time::Duration;
+
+const PID_FILE: &str = ".rotation.pid";
 
 use crate::output::{ OutputFormat, OutputOptions, json_escape, format_duration_secs };
 
@@ -967,4 +982,180 @@ pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   };
 
   Ok( OutputData::new( content, "text" ) )
+}
+
+struct PidGuard;
+
+impl Drop for PidGuard {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(PID_FILE);
+    }
+}
+
+fn create_pid_file() -> Result<(), ErrorData> {
+    if Path::new(PID_FILE).exists() {
+        return Err(ErrorData::new(
+            ErrorCode::InternalError,
+            format!(
+                "PID file '{}' already exists. Is the auto-rotation routine already running?",
+                PID_FILE
+            ),
+        ));
+    }
+
+    fs::write(PID_FILE, std::process::id().to_string())
+        .context(format!("failed to write PID file at {}", PID_FILE))
+        .map_err(|e| {
+            ErrorData::new(
+                ErrorCode::InternalError,
+                format!("failed to write PID file at '{}': {e}", PID_FILE),
+            )
+        })?;
+
+    Ok(())
+}
+
+fn run_rotation() -> Result<Infallible, ErrorData> {
+    create_pid_file()?;
+
+    let _guard = PidGuard;
+
+    // Open file in append mode (create if not exists)
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("rotation.log")
+        .map_err(|e| {
+            ErrorData::new(
+                ErrorCode::InternalError,
+                format!("failed to open log file: {}", e),
+            )
+        })?;
+
+    let mut writer = BufWriter::new(file);
+    writeln!(
+        writer,
+        "Running credential auto-rotation routine..."
+    )
+    .ok();
+    writer.flush().ok();
+
+    loop {
+
+      // we need to get creds for active account -> therefore empty name should be passed
+      let creds_path = get_creds_path(&HashMap::new())?;
+      let limits = fetch_rate_limits(&creds_path);
+
+      match limits {
+        Ok(limits) => {
+          if limits.utilization_5h >= 0.9 {
+            match auto_rotate() {
+              Ok(_) => writeln!(writer, "Auto-rotation triggered due to high utilization: {limits:?}").ok(),
+              Err(_) => writeln!(writer, "High utilization detected but auto-rotation conditions not met: {limits:?}").ok(),
+            };
+          }
+        },
+        Err(e) => {
+          writeln!(writer, "Error fetching rate limits: {e}").ok();
+          writer.flush().ok();
+        }
+      }
+
+      thread::sleep(Duration::from_mins(5));
+    }
+}
+
+fn spawn_background_rotation() -> Result<(), ErrorData> {
+    if Path::new(PID_FILE).exists() {
+        return Err(ErrorData::new(
+            ErrorCode::InternalError,
+            format!(
+                "PID file '{}' already exists. Is the auto-rotation routine already running?",
+                PID_FILE
+            ),
+        ));
+    }
+
+    std::process::Command::new(std::env::current_exe().map_err(|e| {
+      ErrorData::new(
+            ErrorCode::InternalError,
+            format!(
+                "Failed to get current executable path: {e}"
+            ))
+    })?) 
+        .arg(".credentials.rotation.bg")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .context("Failed to spawn background process").map_err(|e| {
+            ErrorData::new(
+                ErrorCode::InternalError,
+                format!("Failed to spawn background process: {e}")
+            )
+        })?;
+
+    println!("Started in background");
+    Ok(())
+}
+
+/// `.credentials.auto-rotation` — enables credentials auto-rotation feature
+///
+/// # Errors
+///
+/// Returns `ErrorData` if HOME is unset or empty.
+#[allow(clippy::needless_pass_by_value, clippy::missing_inline_in_public_items)]
+pub fn credentials_enable_auto_rotation_routine(
+    cmd: VerifiedCommand,
+    _ctx: ExecutionContext,
+) -> Result<OutputData, ErrorData> {
+
+  spawn_background_rotation()?;
+
+    Ok(OutputData::new(
+        "Credentials auto-rotation enabled.\n",
+        "text",
+    ))
+}
+
+#[allow(clippy::needless_pass_by_value, clippy::missing_inline_in_public_items)]
+pub fn credentials_enable_auto_rotation_routine_bg(
+    _cmd: VerifiedCommand,
+    _ctx: ExecutionContext,
+) -> Result<OutputData, ErrorData> {
+
+    run_rotation()?;
+
+    Ok(OutputData::new(
+        "BG Credentials auto-rotation enabled.\n",
+        "text",
+    ))
+}
+
+fn get_creds_path(arguments: &HashMap< String, Value >) -> Result<PathBuf, ErrorData> {
+    let paths = require_claude_paths()?;
+
+    let name_arg = match arguments.get("name") {
+        Some(Value::String(s)) => s.clone(),
+        _ => String::new(),
+    };
+
+    let creds_path = if name_arg.is_empty() {
+        require_active_credentials(&paths)?
+    } else {
+        crate::account::validate_name(&name_arg)
+            .map_err(|e| io_err_to_error_data(&e, "account limits"))?;
+        let path = paths
+            .accounts_dir()
+            .join(format!("{name_arg}.credentials.json"));
+        if !path.exists() {
+            return Err(ErrorData::new(
+                ErrorCode::InternalError,
+                format!("account '{name_arg}' not found"),
+            ));
+        }
+        path
+    };
+
+    Ok(creds_path)
 }
