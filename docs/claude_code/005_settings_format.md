@@ -30,13 +30,25 @@ All commands that modify settings (`.settings.set`, `.version.install`, `.versio
   "env": {
     "DISABLE_AUTOUPDATER": "1"
   },
-  "enabledPlugins": {}
+  "enabledPlugins": {},
+  "model": "sonnet",
+  "effortLevel": "high",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "/path/to/hook.sh" }]
+      }
+    ]
+  },
+  "skipDangerousModePermissionPrompt": false,
+  "voiceEnabled": false
 }
 ```
 
 **Key rules:**
 - Top-level values: strings, numbers, booleans, null (hand-rolled parser, no serde)
-- Nested objects (`env`, `enabledPlugins`): captured as raw JSON strings, output verbatim
+- Nested objects (`env`, `enabledPlugins`, `hooks`, `mcpServers`): captured as raw JSON strings, output verbatim
 - Only `env` sub-object is actively manipulated (set/remove individual env vars)
 - Type inference on write: exact `"true"`/`"false"` → bool; `"null"` → raw null; values starting with `{`/`[` (after left-trim) → raw JSON; `i64`/`f64`-parseable → number; all others → string
 
@@ -63,7 +75,7 @@ Two keys written by `.version.install` on every successful exit (including idemp
 
 ### Settings Config Parameter Table
 
-The six keys read by `claude` at startup from `~/.claude/settings.json`. No CLI flag or env var form — config-only.
+The eleven global keys read by `claude` at startup from `~/.claude/settings.json`. No CLI flag or env var form except where noted (config key overrides are lower precedence than CLI flags).
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
@@ -73,6 +85,11 @@ The six keys read by `claude` at startup from `~/.claude/settings.json`. No CLI 
 | `preferredVersionResolved` | string/null | `null` | Concrete semver resolved at last install; `null` for `latest` |
 | `env` | object | `{}` | Persistent env var overrides injected at startup |
 | `enabledPlugins` | object | `{}` | Active plugin registry |
+| `model` | string | binary default | Persistent model preference; overridden by `--model` CLI flag |
+| `effortLevel` | enum | `"medium"` | Persistent effort level (`low`/`medium`/`high`/`max`); overridden by `--effort` |
+| `hooks` | object | `{}` | Hooks for `PreToolUse` / `PostToolUse` / `UserPromptSubmit` events |
+| `skipDangerousModePermissionPrompt` | bool | `false` | Suppress interactive confirmation when dangerous mode is active |
+| `voiceEnabled` | bool | `false` | Enable voice input and audio output |
 
 See [`params/readme.md`](params/readme.md) for the complete parameter table including CLI flags and env vars. Precedence: CLI arg > env var > settings config.
 

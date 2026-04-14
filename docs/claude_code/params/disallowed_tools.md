@@ -8,7 +8,7 @@ Blocks specific tools from being available for the session.
 |-|-------|
 | CLI Flag | `--disallowed-tools <tools...>` |
 | Env Var | — |
-| Config Key | — |
+| Config Key | `disallowedTools` |
 
 ### Type
 

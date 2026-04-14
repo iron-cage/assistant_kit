@@ -8,7 +8,7 @@ Specifies the Claude model to use for the session.
 |-|-------|
 | CLI Flag | `--model <model>` |
 | Env Var | — |
-| Config Key | — |
+| Config Key | `model` |
 
 ### Type
 
@@ -20,7 +20,7 @@ string
 
 ### Description
 
-Specifies the model to use for this session. Accepts short aliases (`sonnet`, `opus`, `haiku`) or full model IDs (e.g. `claude-sonnet-4-6`). The default resolves to the latest Sonnet model. Overrides any model setting in config files for the duration of the session.
+Specifies the model to use for this session. Accepts short aliases (`sonnet`, `opus`, `haiku`) or full model IDs (e.g. `claude-sonnet-4-6`). The default resolves to the latest Sonnet model. When set as `model` in `~/.claude/settings.json`, persists the model preference across all sessions. CLI flag overrides the config key for the current session.
 
 ### Cross-References
 

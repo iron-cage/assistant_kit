@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in the agent_kit workspace
-  node_count: 19
-  edge_count: 33
+  node_count: 20
+  edge_count: 37
   component_count: 3
-  generated: 2026-04-12
+  generated: 2026-04-13
 
 nodes:
   - id: feature/001

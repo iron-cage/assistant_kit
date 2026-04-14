@@ -8,7 +8,7 @@ Sets fine-grained permission behaviour for tool invocations during the session.
 |-|-------|
 | CLI Flag | `--permission-mode <mode>` |
 | Env Var | — |
-| Config Key | — |
+| Config Key | `permissionMode` |
 
 ### Type
 

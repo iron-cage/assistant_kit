@@ -8,7 +8,7 @@ Restricts available tools to an explicit allowlist for the session.
 |-|-------|
 | CLI Flag | `--allowed-tools <tools...>` |
 | Env Var | — |
-| Config Key | — |
+| Config Key | `allowedTools` |
 
 ### Type
 

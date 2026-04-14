@@ -1,4 +1,4 @@
-# manual testing plan - claude_storage v1.3.0
+# manual testing plan - claude_storage v1.4.0
 
 ## responsibility
 
@@ -8,13 +8,23 @@ Comprehensive manual testing coverage for all CLI commands, parameter combinatio
 
 ### commands to test
 
+Current command set (11 commands as of v1.4.0):
+
 1. `.status` - Storage statistics (path parameter tested in Phase 1D)
 2. `.list` - Project/session listing with filtering
 3. `.show` - Session/project display (location-aware)
-4. `.show.project` - Project display (deprecated)
-5. `.count` - Fast counting operations (target parameter tested in Phase 1A)
-6. `.search` - Full-text search (parameter validation tested in Phase 1B)
-7. `.export` - Export sessions to file (parameter validation tested in Phase 1C)
+4. `.count` - Fast counting operations (target parameter tested in Phase 1A)
+5. `.search` - Full-text search (parameter validation tested in Phase 1B)
+6. `.export` - Export sessions to file (parameter validation tested in Phase 1C)
+7. `.projects` - Project-centric listing with scope filtering (renamed from `.sessions` in task-015; redesigned in task-016)
+8. `.path` - Print canonical storage path for a topic
+9. `.exists` - Exit-code check whether a topic has session history
+10. `.session.dir` - Print or create session directory for a topic
+11. `.session.ensure` - Ensure session directory exists for a topic
+
+**Removed commands (do not test):**
+- `.show.project` — removed in task-013 (deprecated stub)
+- `.session` — removed in task-014 (duplicate of `.exists`)
 
 ### parameter validation
 
@@ -160,18 +170,43 @@ Each command must be tested with:
 | Large session (1000+ entries) | `session_id::{large} project::/path` | Performance + truncation | Medium |
 | UTF-8 in content | `session_id::{utf8} project::/path` | Display correctly | High |
 
-### `.show.project` command (deprecated)
+### `.projects` command
 
 | Test Case | Parameters | Expected Behavior | Priority |
 |-----------|------------|-------------------|----------|
-| No params (in project) | (none) | Show current project | High |
-| No params (not in project) | (none) | Error | High |
-| Absolute path | `project::/home/user/pro` | Show project | High |
-| Path-encoded | `project::-home-user-pro` | Show project | High |
-| UUID | `project::abc-123-def` | Show project | High |
-| Path format | `project::Path("/home/user/pro")` | Show project | High |
-| Nonexistent project | `project::/nonexistent` | Error message | High |
-| Verbosity levels | `verbosity::0..5` | Different detail levels | Medium |
+| Default (summary mode) | (none) | Show active project summary | High |
+| Scope local | `scope::local` | List only current project | High |
+| Scope under | `scope::under` | List projects under CWD | High |
+| Scope relevant | `scope::relevant` | List ancestor projects | High |
+| Scope global | `scope::global` | List all projects | High |
+| With path filter | `path::/home/user/pro` | Scoped to path | High |
+| With session filter | `session::commit` | Filter by session ID | High |
+| With agent filter | `agent::1` | Agent sessions only | High |
+| Agent filter off | `agent::0` | Non-agent sessions only | High |
+| Min entries filter | `min_entries::5` | Sessions with ≥5 entries | High |
+| Limit default | `scope::global` | Capped at default limit | High |
+| Limit explicit | `scope::global limit::5` | Max 5 sessions per project | High |
+| Limit zero (unlimited) | `scope::global limit::0` | All sessions listed | High |
+| Verbosity 0 | `scope::global verbosity::0` | Paths only, no session IDs | High |
+| Verbosity 1 | `scope::global verbosity::1` | Default family tree view | High |
+| Verbosity 2 | `scope::global verbosity::2` | Detailed with entry counts | High |
+| Zero-byte sessions | project with only placeholders | Project excluded from list | High |
+| Zero-byte mixed | project with real + placeholder | Count excludes zero-byte | High |
+| Invalid scope | `scope::invalid` | Error message | Medium |
+| Invalid verbosity | `verbosity::10` | Error message | Medium |
+| Negative min_entries | `min_entries::-1` | Error message | Medium |
+
+### `.path` / `.exists` / `.session.dir` / `.session.ensure` commands
+
+| Test Case | Parameters | Expected Behavior | Priority |
+|-----------|------------|-------------------|----------|
+| `.path` default topic | (none) | Print default topic path | High |
+| `.path` custom topic | `topic::mytopic` | Print topic path | High |
+| `.path` invalid topic (with /) | `topic::a/b` | Error message | High |
+| `.exists` present | `topic::` with history | Exit 0 | High |
+| `.exists` absent | `topic::` no history | Exit 1 + "no sessions" | High |
+| `.session.dir` create | `topic::new` | Create + print dir | High |
+| `.session.ensure` idempotent | existing topic | Exit 0, no duplicate | High |
 
 ### `.count` command
 
@@ -335,9 +370,9 @@ For each test executed:
 
 ## test status
 
-**Status**: IN PROGRESS — phase 1-6 comprehensive manual testing completed 2026-03-13; issue-025, issue-026, issue-027, issue-028 found and fixed 2026-03-29
+**Status**: IN PROGRESS — phase 1-6 comprehensive manual testing completed 2026-03-13; issue-025..028 found and fixed 2026-03-29; issue-034 found and fixed 2026-04-12 (zero-byte session count mismatch in `.projects`)
 
-**Last Updated**: 2026-03-13
+**Last Updated**: 2026-04-12
 
 **Test Run Log**: See `-test_results.md` (created during execution)
 
@@ -356,6 +391,7 @@ All bugs found during `/test_manual` execution. Each has a bug reproducer test.
 | #026 | `.export` to nonexistent directory: "I/O error during unknown operation" — missing output path context | `claude_storage_core/src/export.rs::export_session_to_file()` | `export_command_test.rs::test_export_output_path_in_error_message` |
 | #027 | `.list sessions::1` shows `(1 sessions)` — wrong plural in per-project session count label | `cli/mod.rs::list_routine()` verbosity 1 branch | `list_command_test.rs::test_list_session_count_singular_when_one_session` |
 | #028 | `.show` session header shows `(1 entries)` and `.show.project` shows `(1 entries, last:)` — wrong plural for irregular noun "entry" | `cli/mod.rs::show_session_routine()` + `show_project_routine()` | `smart_show_command.rs::test_show_session_single_entry_header_says_entry_not_entries`, `show_project_command.rs::test_show_project_single_entry_session_says_entry_not_entries` |
+| #034 | `.projects` list mode: header showed `(2 sessions)` but rendered 0 lines when project had only zero-byte placeholder sessions. Same root cause in flat branch and summary mode. | `cli/mod.rs` 3 sites: `aggregate_projects`, use_families `root_count`, flat `group_count` | `projects_zero_byte_count_bug.rs` IT-54..IT-56 |
 
 ## verbosity behavior reference
 
