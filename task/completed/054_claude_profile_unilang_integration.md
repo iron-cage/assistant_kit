@@ -41,7 +41,7 @@ work identically before and after migration.
 
 ## Description
 
-The agent_kit workspace follows a pattern where Layer 2 CLI crates expose their commands
+The dream workspace follows a pattern where Layer 2 CLI crates expose their commands
 for aggregation by `claude_tools` (Layer 3).  Both `claude_runner` and `claude_storage`
 follow this pattern with `COMMANDS_YAML` constants and (for storage) a `register_commands()`
 function.  `claude_manager` is being migrated in task 053.

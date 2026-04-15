@@ -1,4 +1,4 @@
-# Task Registry — agent_kit
+# Task Registry — dream
 
 | Dir | Responsibility |
 |-----|----------------|
@@ -21,7 +21,7 @@
 | 102 | 📥 Backlog | Split `claude_storage/src/cli/mod.rs` into per-command modules | refactoring | 2026-04-12 | [102](backlog/102_split_claude_storage_cli_mod.md) |
 | 103 | 📥 Backlog | Split `sessions_command_test.rs` into focused test files | quality | 2026-04-12 | [103](backlog/103_split_sessions_command_test.md) |
 | 104 | 📥 Backlog | Split `claude_runner_core/src/command.rs` into parameter-group modules | refactoring | 2026-04-12 | [104](backlog/104_split_claude_runner_core_command.md) |
-| 105 | ✅ Complete | Create `docs/` structure for claude_assets, claude_assets_core, claude_tools | documentation | 2026-04-12 | [105](completed/105_create_docs_for_new_crates.md) |
+| 105 | ✅ Complete | Create `docs/` structure for claude_assets, claude_assets_core, assistant | documentation | 2026-04-12 | [105](completed/105_create_docs_for_new_crates.md) |
 | 091 | ✅ Complete | Change ultrathink injection from prefix to suffix (`\n\nultrathink`) | bug | 2026-04-11 | [091](completed/091_ultrathink_suffix_injection.md) |
 | 090 | ✅ Complete | Implement ultrathink default message prefix in `clr` binary | feature | 2026-04-11 | [090](completed/090_ultrathink_default_prefix_impl.md) |
 | 089 | ✅ Complete | Create `claude_assets` crate pair — multi-artifact installer CLI (`cla`) | feature | 2026-04-11 | [089](completed/089_claude_assets_installer.md) |
@@ -56,9 +56,9 @@
 | 058 | ✅ Complete | Implement default-on skip-permissions in clr binary | feature | 2026-03-31 | [058](completed/058_clr_default_skip_permissions_impl.md) |
 | 057 | ✅ Complete | Update claude_runner CLI docs for default-on skip-permissions | documentation | 2026-03-31 | [057](completed/057_runner_cli_docs_default_flags.md) |
 | 056 | ✅ Complete | Add Default Flags Principle to claude_runner spec.md | documentation | 2026-03-31 | [056](completed/056_runner_spec_default_flags.md) |
-| 055 | ✅ Complete | Aggregate claude_profile into claude_tools super-app | architecture | 2026-03-29 | [055](completed/055_claude_tools_full_aggregation.md) |
+| 055 | ✅ Complete | Aggregate claude_profile into assistant super-app | architecture | 2026-03-29 | [055](completed/055_assistant_full_aggregation.md) |
 | 054 | ✅ Complete | Migrate claude_profile to reusable unilang integration | refactoring | 2026-03-29 | [054](completed/054_claude_profile_unilang_integration.md) |
-| 053 | ✅ Complete | Migrate claude_manager to unilang YAML command definitions | refactoring | 2026-03-29 | [053](completed/053_claude_manager_unilang_yaml_migration.md) |
+| 053 | ✅ Complete | Migrate claude_version to unilang YAML command definitions | refactoring | 2026-03-29 | [053](completed/053_claude_version_unilang_yaml_migration.md) |
 | 052 | ✅ Complete | Bug fix issue-028: `.show` header and `.show.project` list show "(1 entries)" — wrong plural for irregular noun | bug | 2026-03-29 | — |
 | 051 | ✅ Complete | Bug fix issue-027: `.list sessions::1` shows "(1 sessions)" — wrong plural in per-project label | bug | 2026-03-29 | — |
 | 050 | ✅ Complete | Bug fix issue-026: `.export` IO error loses output path context ("unknown operation") | bug | 2026-03-29 | — |
@@ -75,7 +75,7 @@
 | 040 | ✅ Complete | Sync docs with unilang 5-phase pipeline migration (7 files updated) | documentation | 2026-03-24 | — |
 | 041 | ✅ Complete | Rename crate claude_session → claude_profile (79 files updated) | refactoring | 2026-03-28 | — |
 | 042 | ✅ Complete | Implement FR-13 auto_rotate() — one-call best-account rotation | feature | 2026-03-28 | — |
-| 043 | ✅ Complete | Rename workspace identity claude_tools → agent_kit (12 files, ~23 occurrences) | refactoring | 2026-03-28 | — |
+| 043 | ✅ Complete | Rename workspace identity assistant → agent_kit (12 files, ~23 occurrences) | refactoring | 2026-03-28 | — |
 
 ## Completed Tasks (Legacy Index)
 
@@ -90,15 +90,15 @@
 | 033 | ✅ Complete | Move continuation detection from claude_profile to claude_storage_core | refactoring | 2026-03-21 |
 | 034 | ✅ Complete | Move SessionManager from claude_profile to claude_runner_core | refactoring | 2026-03-21 |
 | 035 | ✅ Complete | Add .session command to claude_storage CLI (check_continuation API surface) | feature | 2026-03-21 |
-| 001 | ✅ Complete | Migrate claude_storage_core from wtools to claude_tools | infrastructure | 2026-03-13 |
-| 002 | ✅ Complete | Migrate claude_storage from wtools to claude_tools | infrastructure | 2026-03-13 |
-| 003 | ✅ Complete | Migrate claude_profile from wtools to claude_tools | infrastructure | 2026-03-13 |
-| 004 | ✅ Complete | Migrate claude_runner_core from wtools to claude_tools | infrastructure | 2026-03-13 |
-| 005 | ✅ Complete | Migrate claude_runner (was claude_runner_cli) from wtools to claude_tools | infrastructure | 2026-03-13 |
+| 001 | ✅ Complete | Migrate claude_storage_core from wtools to assistant | infrastructure | 2026-03-13 |
+| 002 | ✅ Complete | Migrate claude_storage from wtools to assistant | infrastructure | 2026-03-13 |
+| 003 | ✅ Complete | Migrate claude_profile from wtools to assistant | infrastructure | 2026-03-13 |
+| 004 | ✅ Complete | Migrate claude_runner_core from wtools to assistant | infrastructure | 2026-03-13 |
+| 005 | ✅ Complete | Migrate claude_runner (was claude_runner_cli) from wtools to assistant | infrastructure | 2026-03-13 |
 | 006 | ✅ Complete | Move claude_runner from wtools to consumer workspace (path deps → workspace deps) | infrastructure | 2026-03-13 |
 | 007 | ✅ Complete | Unify all crate versions to 1.0.0 via workspace.package.version | infrastructure | 2026-03-13 |
 | 008 | ✅ Complete | Remove 6 crate directories from wtools | cleanup | 2026-03-13 |
-| 009 | ✅ Complete | Verify 542/542 tests pass in claude_tools | validation | 2026-03-13 |
+| 009 | ✅ Complete | Verify 542/542 tests pass in assistant | validation | 2026-03-13 |
 | 010 | ✅ Complete | Create workspace-level spec.md | specification | 2026-03-13 |
 | 011 | ✅ Complete | Fix stale workspace references in 3 docs | documentation | 2026-03-13 |
 | 012 | ✅ Complete | Complete claude_runner/spec.md in consumer workspace (89 → 303 lines) | specification | 2026-03-13 |

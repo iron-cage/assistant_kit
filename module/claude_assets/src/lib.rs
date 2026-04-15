@@ -14,7 +14,7 @@
 
 /// Path to the YAML command definitions for this crate.
 ///
-/// Used by `claude_tools/build.rs` for `rerun-if-changed` watching.
+/// Used by `assistant/build.rs` for `rerun-if-changed` watching.
 /// Commands are registered programmatically via [`register_commands()`].
 pub const COMMANDS_YAML : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/unilang.commands.yaml" );
 
@@ -53,7 +53,7 @@ fn reg_cmd(
 #[ cfg( feature = "enabled" ) ]
 /// Register all `claude_assets` commands into an existing registry.
 ///
-/// Used by both the standalone binary (`run_cli`) and by `claude_tools`
+/// Used by both the standalone binary (`run_cli`) and by `assistant`
 /// to aggregate commands from multiple crates into one shared registry.
 ///
 /// # Panics

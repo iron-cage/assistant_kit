@@ -1,6 +1,6 @@
 # claude_runner_core
 
-> **Workspace:** agent_kit — `claude_runner_core`
+> **Workspace:** dream — `claude_runner_core`
 
 Claude Code process execution with builder pattern and single execution point.
 

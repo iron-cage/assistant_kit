@@ -1,0 +1,66 @@
+[package]
+name         = "assistant"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme       = "readme.md"
+description  = "Layer 3 super-app aggregating all claude_* CLI commands."
+
+[lints]
+workspace = true
+
+[lib]
+name = "assistant"
+path = "src/lib.rs"
+
+[[bin]]
+name = "assistant"
+path = "src/main.rs"
+required-features = [ "enabled" ]
+
+[[bin]]
+name = "clt"
+path = "src/bin/clt.rs"
+required-features = [ "enabled" ]
+
+[features]
+default = [ "enabled" ]
+full    = [ "enabled" ]
+enabled = [
+  "dep:claude_assets",
+  "claude_assets/enabled",
+  "dep:claude_version",
+  "claude_version/enabled",
+  "dep:claude_profile",
+  "claude_profile/enabled",
+  "dep:claude_runner",
+  "claude_runner/enabled",
+  "dep:claude_storage",
+  "claude_storage/cli",
+  "dep:unilang",
+  "unilang/enabled",
+  "dep:error_tools",
+  "error_tools/enabled",
+]
+
+[dependencies]
+claude_assets  = { workspace = true, optional = true }
+claude_version = { workspace = true, optional = true }
+claude_profile = { workspace = true, optional = true }
+claude_runner  = { workspace = true, optional = true }
+claude_storage = { workspace = true, optional = true }
+unilang        = { workspace = true, optional = true }
+error_tools    = { workspace = true, optional = true }
+
+[build-dependencies]
+claude_assets  = { workspace = true }
+claude_runner  = { workspace = true }
+claude_storage = { workspace = true, features = [ "cli" ] }
+unilang        = { workspace = true }
+serde_yaml     = { workspace = true }
+
+[dev-dependencies]
+tempfile   = { workspace = true }
+assert_cmd = { workspace = true }

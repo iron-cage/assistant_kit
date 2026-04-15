@@ -61,7 +61,7 @@
 
 /// Path to the YAML command definitions for this crate.
 ///
-/// Used by `claude_tools/build.rs` for metadata-only export. Profile commands
+/// Used by `assistant/build.rs` for metadata-only export. Profile commands
 /// are registered programmatically via [`register_commands()`], not via YAML aggregation.
 pub const COMMANDS_YAML : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/unilang.commands.yaml" );
 

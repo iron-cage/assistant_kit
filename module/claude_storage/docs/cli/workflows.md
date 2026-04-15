@@ -46,11 +46,11 @@ claude_storage .status verbosity::2
 
 ```bash
 # Step 1: List projects matching path keyword
-claude_storage .list path::claude_tools
-# Output: projects whose paths contain "claude_tools"
+claude_storage .list path::assistant
+# Output: projects whose paths contain "assistant"
 
 # Step 2: List sessions for a matching project
-claude_storage .list path::claude_tools sessions::1
+claude_storage .list path::assistant sessions::1
 # Output: same projects, now with their sessions listed
 
 # Step 3: Show the session content
@@ -184,8 +184,8 @@ claude_storage .list agent::1 min_entries::10
 # Output: agent sessions with 10+ entries
 
 # Find substantial sessions in a specific project by path
-claude_storage .list path::claude_tools min_entries::50
-# Output: claude_tools projects with sessions having 50+ entries
+claude_storage .list path::assistant min_entries::50
+# Output: assistant projects with sessions having 50+ entries
 ```
 
 **Notes:** `min_entries::` counts all entries including both user and assistant turns, so a 10-entry session has roughly 5 user-assistant exchange pairs.

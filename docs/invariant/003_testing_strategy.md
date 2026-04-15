@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Document the testing constraints and TDD baseline rule for the agent_kit workspace.
+- **Purpose**: Document the testing constraints and TDD baseline rule for the dream workspace.
 - **Responsibility**: State the test directory placement rule, TDD baseline enforcement, test categories, and what constitutes a regression.
 - **In Scope**: tests/ placement rule, TDD baseline, test categories, skip count as regression proxy.
 - **Out of Scope**: Performance constraints (→ `invariant/004_performance.md`), versioning (→ `invariant/002_versioning_strategy.md`).

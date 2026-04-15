@@ -13,8 +13,8 @@ Fix `processes_kill_routine` so that individual signal-delivery failures are pro
 
 ## In Scope
 
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/src/commands.rs` — `processes_kill_routine`: replace `let _ = send_sigterm(p.pid)` and `let _ = send_sigkill(p.pid)` with proper error collection; accumulate failures; return `Err` if any signal failed
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/tests/integration/mutation_commands_test.rs` — add TC-315: when SIGTERM delivery fails (kill a PID that does not exist), exit 2 is produced (or verify that signal errors are no longer silently swallowed)
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/src/commands.rs` — `processes_kill_routine`: replace `let _ = send_sigterm(p.pid)` and `let _ = send_sigkill(p.pid)` with proper error collection; accumulate failures; return `Err` if any signal failed
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/tests/integration/mutation_commands_test.rs` — add TC-315: when SIGTERM delivery fails (kill a PID that does not exist), exit 2 is produced (or verify that signal errors are no longer silently swallowed)
 
 ## Out of Scope
 

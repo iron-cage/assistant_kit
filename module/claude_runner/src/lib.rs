@@ -42,9 +42,9 @@ pub const COMMANDS_YAML : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/claude
 /// Register `claude_runner` commands into an existing registry.
 ///
 /// `claude_runner` commands are defined in [`COMMANDS_YAML`] for compile-time aggregation
-/// (used by `claude_tools/build.rs`). This function is provided for API consistency with
+/// (used by `assistant/build.rs`). This function is provided for API consistency with
 /// other Layer 2 crates; the body is intentionally empty because runtime registration of
-/// `.claude` commands is handled by the build-time YAML aggregation path in `claude_tools`.
+/// `.claude` commands is handled by the build-time YAML aggregation path in `assistant`.
 #[ inline ]
 pub fn register_commands( _registry : &mut unilang::registry::CommandRegistry ) {}
 

@@ -1,6 +1,6 @@
 # claude_common
 
-Layer 0 shared primitives for the agent_kit workspace. Zero workspace dependencies.
+Layer 0 shared primitives for the dream workspace. Zero workspace dependencies.
 
 ## Responsibility Table
 

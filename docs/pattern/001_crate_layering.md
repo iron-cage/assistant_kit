@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Document the four-layer crate dependency hierarchy governing the agent_kit workspace.
+- **Purpose**: Document the four-layer crate dependency hierarchy governing the dream workspace.
 - **Responsibility**: Describe the layer definitions, Layer Invariant, permitted dep directions, and crate-to-layer assignments.
 - **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, claude_storage_core position outside hierarchy.
 - **Out of Scope**: Cross-workspace integration (→ `integration/001_consumer_integration.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`).
@@ -16,14 +16,15 @@ A workspace with 13 crates that have varying responsibilities risks uncontrolled
 Strict four-layer hierarchy with one rule: **dependencies flow downward only**. No Layer N crate may depend on another Layer N crate.
 
 ```
-Layer 3: claude_tools                                                   (cli — clt, super-app aggregator)
+Layer 3: assistant                                                   (cli — clt, super-app aggregator)
              ↓
-Layer 2: agent_kit                                                      (lib — re-export facade, no own logic)
-         claude_assets · claude_manager · claude_runner · claude_profile · claude_storage  (cli)
+Layer 2: dream                                                      (lib — re-export facade, no own logic)
+         claude_assets · claude_version · claude_runner · claude_profile · claude_storage  (cli)
              ↓
-Layer 1: claude_assets_core · claude_profile_core · claude_manager_core · claude_runner_core
+Layer 1: claude_assets_core · claude_profile_core · claude_version_core · claude_runner_core
              ↓
 Layer 0: claude_common                                                  (zero workspace deps — ClaudePaths + process utilities)
+*        claude_storage_core                                            (zero-dep JSONL parser — no claude_common dep)
 ```
 
 **Dependencies per crate:**
@@ -34,15 +35,15 @@ Layer 0: claude_common                                                  (zero wo
 | * | `claude_storage_core` | lib | — |
 | 1 | `claude_assets_core` | lib | — |
 | 1 | `claude_profile_core` | lib | — |
-| 1 | `claude_manager_core` | lib | — |
+| 1 | `claude_version_core` | lib | — |
 | 1 | `claude_runner_core` | lib | — |
-| 2 | `agent_kit` | lib | — |
+| 2 | `dream` | lib | — |
 | 2 | `claude_assets` | cli | `claude_assets`, `cla` |
 | 2 | `claude_profile` | cli | `clp`, `claude_profile` |
 | 2 | `claude_storage` | cli | `clg`, `claude_storage` |
 | 2 | `claude_runner` | cli | `clr`, `claude_runner` |
-| 2 | `claude_manager` | cli | `clman`, `claude_manager` |
-| 3 | `claude_tools` | cli | `clt`, `claude_tools` |
+| 2 | `claude_version` | cli | `clv`, `claude_version` |
+| 3 | `assistant` | cli | `clt`, `assistant` |
 
 `*` = outside layer hierarchy.
 

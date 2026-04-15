@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Document the internal structure and write semantics for settings and credential files managed by claude_manager.
+- **Purpose**: Document the internal structure and write semantics for settings and credential files managed by claude_version.
 - **Responsibility**: Authoritative reference for settings.json structure, atomic write protocol, version lock operations, and account active marker.
 - **In Scope**: JSON structure, write protocols, lock operations, type inference rules, preferred version storage.
 - **Out of Scope**: Filesystem paths and directory layout (→ [003_filesystem_layout.md](003_filesystem_layout.md)).
@@ -103,7 +103,7 @@ See [`params/readme.md`](params/readme.md) for the complete parameter table incl
 |------|------|----------------|
 | doc | [`003_filesystem_layout.md`](003_filesystem_layout.md) | Path locations and directory tree |
 | doc | [`params/readme.md`](params/readme.md) | Full parameter table including config keys, CLI flags, and env vars |
-| doc | [`../../module/claude_manager/docs/feature/003_settings_management.md`](../../module/claude_manager/docs/feature/003_settings_management.md) | Settings JSON, nested preservation feature doc |
-| doc | [`../../module/claude_manager/docs/pattern/001_version_lock.md`](../../module/claude_manager/docs/pattern/001_version_lock.md) | Version lock pattern |
-| doc | [`../../module/claude_manager/docs/feature/001_version_management.md`](../../module/claude_manager/docs/feature/001_version_management.md) | Preference persistence feature doc |
-| source | [`../../module/claude_manager/src/settings_io.rs`](../../module/claude_manager/src/settings_io.rs) | `set_setting()`, `get_setting()`, `read_all_settings()`, `infer_type()` |
+| doc | [`../../module/claude_version/docs/feature/003_settings_management.md`](../../module/claude_version/docs/feature/003_settings_management.md) | Settings JSON, nested preservation feature doc |
+| doc | [`../../module/claude_version/docs/pattern/001_version_lock.md`](../../module/claude_version/docs/pattern/001_version_lock.md) | Version lock pattern |
+| doc | [`../../module/claude_version/docs/feature/001_version_management.md`](../../module/claude_version/docs/feature/001_version_management.md) | Preference persistence feature doc |
+| source | [`../../module/claude_version/src/settings_io.rs`](../../module/claude_version/src/settings_io.rs) | `set_setting()`, `get_setting()`, `read_all_settings()`, `infer_type()` |

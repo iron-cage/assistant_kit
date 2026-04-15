@@ -13,7 +13,7 @@ Fix two minor code quality issues in `commands.rs` — rename `chrono_timestamp`
 
 ## In Scope
 
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/src/commands.rs` — rename `chrono_timestamp` → `current_timestamp` (or `unix_timestamp_string`) at definition and all call sites; fix `"Processes: "` label to use consistent trailing padding matching `"Version:  "` and `"Account:  "`
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/src/commands.rs` — rename `chrono_timestamp` → `current_timestamp` (or `unix_timestamp_string`) at definition and all call sites; fix `"Processes: "` label to use consistent trailing padding matching `"Version:  "` and `"Account:  "`
 
 ## Out of Scope
 

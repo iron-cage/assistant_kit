@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Document non-functional constraints that the agent_kit workspace must always satisfy.
+- **Purpose**: Document non-functional constraints that the dream workspace must always satisfy.
 - **Responsibility**: Index of invariant doc instances covering privacy, versioning, testing, and performance constraints.
 - **In Scope**: Privacy invariant, shared versioning strategy, TDD baseline rule, performance expectations.
 - **Out of Scope**: Feature behavior (→ `feature/`), crate layering pattern (→ `pattern/`).

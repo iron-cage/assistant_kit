@@ -22,7 +22,7 @@ This directory contains comprehensive documentation for the `claude_storage` cra
 
 Core specifications for Claude Code's storage layout, file formats, and JSONL schema have moved
 to the workspace-level [`docs/claude_code/`](../../docs/claude_code/) directory, since they are
-consumed by multiple crates (`claude_storage`, `claude_manager`, `claude_runner`, `claude_profile`).
+consumed by multiple crates (`claude_storage`, `claude_version`, `claude_runner`, `claude_profile`).
 
 Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.md`, `003_filesystem_layout.md`,
 `004_jsonl_format.md`, `005_settings_format.md`, `006_ancillary_formats.md`.

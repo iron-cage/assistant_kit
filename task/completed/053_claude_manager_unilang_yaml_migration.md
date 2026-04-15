@@ -47,7 +47,7 @@ routes to the storage variant (scope-based session listing).
 
 ## Description
 
-The agent_kit workspace has a design inconsistency: `claude_runner` and `claude_storage`
+The dream workspace has a design inconsistency: `claude_runner` and `claude_storage`
 define their commands in `unilang.commands.yaml` files and export `COMMANDS_YAML` constants,
 enabling `claude_tools/build.rs` to aggregate them at compile time into a PHF static
 registry.  But `claude_manager` uses inline programmatic registration via `reg_cmd()` calls

@@ -171,9 +171,9 @@ Validate non-empty string:
 
 **Usage:**
 ```
-.list path::claude_tools
-# Matches: /home/user1/pro/lib/wip_core/claude_tools/module/core
-# Matches: /home/user1/pro/lib/claude_tools
+.list path::assistant
+# Matches: /home/user1/pro/lib/wip_core/assistant/module/core
+# Matches: /home/user1/pro/lib/assistant
 # Does not match: /home/user1/pro/lib/claude_storage
 ```
 

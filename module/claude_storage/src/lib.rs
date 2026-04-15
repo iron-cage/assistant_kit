@@ -101,8 +101,8 @@ pub use cli::parse_project_parameter;
 /// Register `claude_storage` commands into an existing registry.
 ///
 /// Commands are defined in [`COMMANDS_YAML`] for compile-time aggregation
-/// (used by `claude_tools/build.rs`). This function is provided for API consistency with
+/// (used by `assistant/build.rs`). This function is provided for API consistency with
 /// other Layer 2 crates; the body is intentionally empty because runtime registration of
-/// `claude_storage` commands is handled by the build-time YAML aggregation path in `claude_tools`.
+/// `claude_storage` commands is handled by the build-time YAML aggregation path in `assistant`.
 #[ inline ]
 pub fn register_commands( _registry : &mut unilang::registry::CommandRegistry ) {}

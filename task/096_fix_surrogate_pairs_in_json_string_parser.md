@@ -13,8 +13,8 @@ Fix `parse_json_string_value` in `commands.rs` to correctly decode UTF-16 surrog
 
 ## In Scope
 
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/src/commands.rs` — `parse_json_string_value`: detect lead surrogate (`\uD800`–`\uDBFF`), consume trailing surrogate (`\uDC00`–`\uDFFF`), compute the supplementary code point `0x10000 + (lead - 0xD800) * 0x400 + (trail - 0xDC00)`, encode as UTF-8; return error for lone surrogates
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/tests/integration/read_commands_test.rs` — add TC-460: `parse_json_string_value` with `\uD83D\uDE80` decodes to `🚀`; TC-461: lone lead surrogate returns error; TC-462: lone trail surrogate returns error
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/src/commands.rs` — `parse_json_string_value`: detect lead surrogate (`\uD800`–`\uDBFF`), consume trailing surrogate (`\uDC00`–`\uDFFF`), compute the supplementary code point `0x10000 + (lead - 0xD800) * 0x400 + (trail - 0xDC00)`, encode as UTF-8; return error for lone surrogates
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/tests/integration/read_commands_test.rs` — add TC-460: `parse_json_string_value` with `\uD83D\uDE80` decodes to `🚀`; TC-461: lone lead surrogate returns error; TC-462: lone trail surrogate returns error
 
 ## Out of Scope
 

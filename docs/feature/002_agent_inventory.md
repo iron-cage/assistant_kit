@@ -124,6 +124,6 @@ Implementation order: `.skills` first (primary use case), then remaining kinds a
 | feature | [feature/001_workspace_design.md](001_workspace_design.md) | Workspace crate inventory (will include agent_inventory) |
 | pattern | [pattern/001_crate_layering.md](../pattern/001_crate_layering.md) | Four-layer dependency hierarchy |
 | invariant | [invariant/001_privacy_invariant.md](../invariant/001_privacy_invariant.md) | Zero consumer workspace dependency rule |
-| integration | [integration/001_consumer_integration.md](../integration/001_consumer_integration.md) | How kbase consumes agent_kit crates |
+| integration | [integration/001_consumer_integration.md](../integration/001_consumer_integration.md) | How kbase consumes dream crates |
 | source | `../../module/claude_assets_core/src/registry.rs` | Claude Code adapter wraps this registry |
 | source | `../../module/claude_assets_core/src/artifact.rs` | ArtifactKind → AssetKind mapping source |

@@ -13,12 +13,12 @@ Fix `require_claude_paths()` in `commands.rs` so it emits distinct, actionable e
 
 ## In Scope
 
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/src/commands.rs` — `require_claude_paths()`: distinguish the two conditions and return distinct error messages
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/tests/integration/error_messages_test.rs` — add TC-320b: `HOME=""` path → error mentions "HOME"; add TC-320c: if HOME is set but ClaudePaths::new() returns None for another reason → error does NOT say "HOME environment variable not set"
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/src/commands.rs` — `require_claude_paths()`: distinguish the two conditions and return distinct error messages
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/tests/integration/error_messages_test.rs` — add TC-320b: `HOME=""` path → error mentions "HOME"; add TC-320c: if HOME is set but ClaudePaths::new() returns None for another reason → error does NOT say "HOME environment variable not set"
 
 ## Out of Scope
 
-- Changing `ClaudePaths::new()` itself or its logic in `claude_manager_core`
+- Changing `ClaudePaths::new()` itself or its logic in `claude_version_core`
 - Changing callers of `require_claude_paths()` other than fixing the error text
 - Changing any other error messages in `commands.rs`
 
@@ -79,7 +79,7 @@ Desired answer for every question is YES.
 - [ ] C4 — Does TC-320b pass (HOME="" → error mentions "HOME")?
 
 **Out of Scope confirmation**
-- [ ] C5 — Is `ClaudePaths::new()` in `claude_manager_core` unchanged?
+- [ ] C5 — Is `ClaudePaths::new()` in `claude_version_core` unchanged?
 - [ ] C6 — Are callers of `require_claude_paths()` other than the function body itself unchanged?
 
 ### Measurements

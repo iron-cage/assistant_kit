@@ -13,7 +13,7 @@
 |----|------|---------|--------|
 | 001 | [Session Behaviors](001_session_behaviors.md) | Observed external behaviors (B1–B16h) with evidence and invalidation tests | ✅ |
 | 002 | [Storage Organization](002_storage_organization.md) | `~/.claude/` directory architecture, containment hierarchy, access patterns | ✅ |
-| 003 | [Filesystem Layout](003_filesystem_layout.md) | Runtime paths accessed by claude_manager; directory tree and path resolution | ✅ |
+| 003 | [Filesystem Layout](003_filesystem_layout.md) | Runtime paths accessed by claude_version; directory tree and path resolution | ✅ |
 | 004 | [JSONL Format](004_jsonl_format.md) | Session entry schema: fields, content blocks, usage, threading model | ✅ |
 | 005 | [Settings Format](005_settings_format.md) | settings.json structure, atomic write protocol, version lock, type inference | ✅ |
 | 006 | [Ancillary Formats](006_ancillary_formats.md) | history.jsonl, credentials, debug logs, shell snapshots, todos, commands | ✅ |
@@ -37,5 +37,5 @@ Each doc instance covers exactly one facet of the external Claude Code binary's 
 
 **This entity consumed by**:
 - `module/claude_storage/docs/` — storage implementation docs reference this entity extensively
-- `module/claude_manager/docs/` — manager docs reference filesystem and settings format
+- `module/claude_version/docs/` — manager docs reference filesystem and settings format
 - `module/claude_runner_core/docs/` — runner core docs reference behavior and params

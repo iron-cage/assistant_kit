@@ -37,9 +37,9 @@ Create two new dedicated crates — `claude_assets_core` (Layer 1 domain logic) 
 - `/home/user1/pro/lib/wip_core/claude_tools/dev/Cargo.toml` — add `"module/claude_assets_core"` and `"module/claude_assets"` to `workspace.members`; add `[workspace.dependencies.claude_assets_core]` and `[workspace.dependencies.claude_assets]` path-dep blocks
 - `module/readme.md` — add 2 rows for new crates in responsibility table
 
-**`agent_kit` extension (2 files):**
-- `module/agent_kit/Cargo.toml` — add `assets = [ "dep:claude_assets_core" ]` to `[features]`; update `full` and `enabled` to include `"assets"`; add `claude_assets_core` as `optional = true` dep; add `[workspace.dependencies.claude_assets_core]` reference
-- `module/agent_kit/src/lib.rs` — add `#[cfg(feature = "assets")] pub mod assets { pub use claude_assets_core::*; }` block; update crate-level doc feature table to include the `assets` row
+**`dream` extension (2 files):**
+- `module/dream/Cargo.toml` — add `assets = [ "dep:claude_assets_core" ]` to `[features]`; update `full` and `enabled` to include `"assets"`; add `claude_assets_core` as `optional = true` dep; add `[workspace.dependencies.claude_assets_core]` reference
+- `module/dream/src/lib.rs` — add `#[cfg(feature = "assets")] pub mod assets { pub use claude_assets_core::*; }` block; update crate-level doc feature table to include the `assets` row
 
 **`claude_tools` integration (3 files):**
 - `module/claude_tools/Cargo.toml` — add `claude_assets` to `[features] enabled`, `[dependencies]` (optional), and `[build-dependencies]` (non-optional for COMMANDS_YAML watch)
@@ -126,9 +126,9 @@ Execute in order. Do not skip or reorder steps.
 12. **Create `readme.md` for each new crate** — single-sentence responsibility in responsibility table format.
 13. **Register in workspace** — add both new crates to root `Cargo.toml` `workspace.members` (alphabetical) and add `[workspace.dependencies.*]` blocks.
 14. **Update `module/readme.md`** — add 2 rows for new crates.
-15. **Extend `agent_kit`** — Read `module/agent_kit/Cargo.toml` and `module/agent_kit/src/lib.rs` to understand the existing feature-gated pattern; add `assets` feature following the same structure; verify `--no-default-features` still compiles and `--features assets` exposes `agent_kit::assets::ArtifactKind`.
+15. **Extend `dream`** — Read `module/dream/Cargo.toml` and `module/dream/src/lib.rs` to understand the existing feature-gated pattern; add `assets` feature following the same structure; verify `--no-default-features` still compiles and `--features assets` exposes `dream::assets::ArtifactKind`.
 16. **Integrate with `claude_tools`** — (a) add `claude_assets` to `Cargo.toml` features, deps, build-deps; (b) add `rerun-if-changed` line to `build.rs`; (c) add `claude_assets::register_commands(&mut registry);` to `build_registry()` in `main.rs`.
-17. **Verify tests pass** — run core unit tests first: `cargo nextest run -p claude_assets_core`; then CLI integration: `cargo nextest run -p claude_assets`; then `cargo check -p agent_kit --features assets`; then full workspace: `w3 .test level::3`.
+17. **Verify tests pass** — run core unit tests first: `cargo nextest run -p claude_assets_core`; then CLI integration: `cargo nextest run -p claude_assets`; then `cargo check -p dream --features assets`; then full workspace: `w3 .test level::3`.
 18. **Walk Validation Checklist** — every item must answer YES.
 19. **Update task status** — mark complete in `task/readme.md`.
 
@@ -149,8 +149,8 @@ Execute in order. Do not skip or reorder steps.
 | `cla .uninstall kind::rule name::rust` | Not installed | Reports "not installed"; exit 0 (not error) |
 | `cla .uninstall kind::rule name::rust` | Target is a regular file (not symlink) | Err: refuses to remove non-symlink |
 | `clt .list kind::rule` | claude_tools built with claude_assets integration | Delegates correctly, identical output to `cla .list kind::rule` |
-| `cargo check -p agent_kit --features assets` | agent_kit extended with assets feature | Compiles; `agent_kit::assets::ArtifactKind` resolves |
-| `cargo check -p agent_kit --no-default-features` | agent_kit no-default-features still clean | Compiles without pulling in claude_assets_core |
+| `cargo check -p dream --features assets` | dream extended with assets feature | Compiles; `dream::assets::ArtifactKind` resolves |
+| `cargo check -p dream --no-default-features` | dream no-default-features still clean | Compiles without pulling in claude_assets_core |
 | `cargo check -p claude_assets_core` | No CLI deps in Cargo.toml | Compiles with zero warnings; no unilang symbols |
 | `w3 .test level::3` | Full workspace | All pass; zero regressions in previously-passing crates |
 
@@ -204,14 +204,14 @@ Desired answer for every question is YES.
 - [ ] Do both `[workspace.dependencies.*]` blocks exist with correct path and `default-features = false`?
 - [ ] Does `module/readme.md` have rows for both new crates?
 
-**agent_kit extension**
-- [ ] Does `module/agent_kit/Cargo.toml` have `assets = [ "dep:claude_assets_core" ]` in `[features]`?
-- [ ] Is `claude_assets_core` listed as `optional = true` in `module/agent_kit/[dependencies]`?
-- [ ] Do `full` and `enabled` features in `agent_kit` now include `"assets"`?
-- [ ] Does `module/agent_kit/src/lib.rs` have the `#[cfg(feature = "assets")] pub mod assets` block?
-- [ ] Does `cargo check -p agent_kit --features assets` pass?
-- [ ] Does `cargo check -p agent_kit --no-default-features` still pass (feature isolation preserved)?
-- [ ] Does the `agent_kit` crate-level doc feature table include the `assets` row?
+**dream extension**
+- [ ] Does `module/dream/Cargo.toml` have `assets = [ "dep:claude_assets_core" ]` in `[features]`?
+- [ ] Is `claude_assets_core` listed as `optional = true` in `module/dream/[dependencies]`?
+- [ ] Do `full` and `enabled` features in `dream` now include `"assets"`?
+- [ ] Does `module/dream/src/lib.rs` have the `#[cfg(feature = "assets")] pub mod assets` block?
+- [ ] Does `cargo check -p dream --features assets` pass?
+- [ ] Does `cargo check -p dream --no-default-features` still pass (feature isolation preserved)?
+- [ ] Does the `dream` crate-level doc feature table include the `assets` row?
 
 **claude_tools integration**
 - [ ] Is `claude_assets` in the `enabled` feature list of `claude_tools/Cargo.toml`?
@@ -277,9 +277,9 @@ Expected: 0. Why: mocked FS tests can pass while real FS behavior is broken (per
 Check: In `tests/install.rs` create a regular file at the target path, call `uninstall()`, assert `Err` variant and file still present.
 Expected: error returned, file unchanged. Why: silent deletion of regular files would be data-loss; this guard is load-bearing for safe operation in shared environments.
 
-**AF7 — agent_kit extension is real, not cosmetic**
-Check: `cargo check -p agent_kit --features assets 2>&1 | grep -c 'error'`
-Expected: 0. Why: it's possible to add the feature flag in Cargo.toml without adding the `pub mod assets` block in `src/lib.rs` — the feature compiles but `agent_kit::assets::ArtifactKind` silently doesn't exist; this check confirms the re-export is actually wired.
+**AF7 — dream extension is real, not cosmetic**
+Check: `cargo check -p dream --features assets 2>&1 | grep -c 'error'`
+Expected: 0. Why: it's possible to add the feature flag in Cargo.toml without adding the `pub mod assets` block in `src/lib.rs` — the feature compiles but `dream::assets::ArtifactKind` silently doesn't exist; this check confirms the re-export is actually wired.
 
 ## Outcomes
 
@@ -288,6 +288,6 @@ Expected: 0. Why: it's possible to add the feature flag in Cargo.toml without ad
 - `module/claude_assets_core/` — Layer 1 lib with zero CLI deps: `artifact.rs` (6-variant `ArtifactKind`, `ArtifactLayout`), `paths.rs` (`AssetPaths` reads `$PRO_CLAUDE`/`$PRO` env vars), `error.rs` (`AssetError` domain enum), `install.rs` (symlink-only install/uninstall with `NotASymlink` guard), `registry.rs` (`list_all` via `BTreeSet` merge). 13 real-fs tests via `tempfile::TempDir`.
 - `module/claude_assets/` — Layer 2 binary crate: `cla` + `claude_assets` dual binaries, `unilang.commands.yaml` (`.list`/`.install`/`.uninstall`/`.kinds`), `adapter.rs`, `commands.rs` (4 routines), `lib.rs` (`COMMANDS_YAML` + `register_commands()` + `run_cli()`). 11 CLI integration tests via `assert_cmd`.
 - Workspace `Cargo.toml` — both crates added to `workspace.members` and `[workspace.dependencies]`.
-- `module/agent_kit` — `assets` feature added; `agent_kit::assets::ArtifactKind` resolves with `--features assets`.
+- `module/dream` — `assets` feature added; `dream::assets::ArtifactKind` resolves with `--features assets`.
 - `module/claude_tools` — `claude_assets::register_commands(&mut registry)` wired in `build_registry()`; `rerun-if-changed` added to `build.rs`.
 - Key fixes applied: `from_str` renamed to `from_name` (avoids `should_implement_trait` lint), `#[must_use]` on all pure methods, `writeln!` replacing `write!(...\n)`, error mappers take `&E` not owned, `#[allow(clippy::doc_markdown)]` in test files.

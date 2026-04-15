@@ -339,7 +339,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 .status path::~/.claude/
 
 # .list: path substring filter
-.list path::claude_tools          # Matches all projects with "claude_tools" in path
+.list path::assistant          # Matches all projects with "assistant" in path
 
 # .exists: directory check
 .exists path::/home/user/project

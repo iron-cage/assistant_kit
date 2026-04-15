@@ -5,7 +5,7 @@
 - **Purpose**: Describe how Claude Code organizes conversation data, settings, and metadata on disk.
 - **Responsibility**: Authoritative reference for the `~/.claude/` storage architecture, directory purposes, containment hierarchy, and access/growth patterns.
 - **In Scope**: Storage root layout, project/session/entry hierarchy, agent storage layouts (flat and hierarchical), directory purposes, path encoding, access patterns, security considerations, design principles.
-- **Out of Scope**: Entry-level JSONL field schema (→ [004_jsonl_format.md](004_jsonl_format.md)); file format internals for settings/credentials (→ [005_settings_format.md](005_settings_format.md)); runtime filesystem paths managed by claude_manager (→ [003_filesystem_layout.md](003_filesystem_layout.md)).
+- **Out of Scope**: Entry-level JSONL field schema (→ [004_jsonl_format.md](004_jsonl_format.md)); file format internals for settings/credentials (→ [005_settings_format.md](005_settings_format.md)); runtime filesystem paths managed by claude_version (→ [003_filesystem_layout.md](003_filesystem_layout.md)).
 
 ---
 
@@ -274,6 +274,6 @@ chmod 644 ~/.claude/settings.json
 | doc | [`001_session_behaviors.md`](001_session_behaviors.md) | Session behavior evidence (B1–B16h) including agent layouts |
 | doc | [`004_jsonl_format.md`](004_jsonl_format.md) | Entry-level JSONL field schema and content blocks |
 | doc | [`005_settings_format.md`](005_settings_format.md) | Settings.json structure and atomic write protocol |
-| doc | [`003_filesystem_layout.md`](003_filesystem_layout.md) | claude_manager runtime path reference table |
+| doc | [`003_filesystem_layout.md`](003_filesystem_layout.md) | claude_version runtime path reference table |
 | doc | [`../../module/claude_storage_core/docs/data_structure/001_storage_hierarchy.md`](../../module/claude_storage_core/docs/data_structure/001_storage_hierarchy.md) | Session Family data structure |
 | source | [`../../module/claude_storage/src/`](../../module/claude_storage/src/) | Storage layer implementation |

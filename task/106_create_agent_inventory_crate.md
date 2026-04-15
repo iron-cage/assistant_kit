@@ -9,7 +9,7 @@
 
 ## Goal
 
-Create a Layer 1 `agent_inventory` crate providing an `AgentAdapter` trait and Claude Code adapter so that consumer workspaces can discover assets across multiple AI coding agents in a unified flat table (Motivated: kbase needs cross-agent asset listing; Observable: new crate compiles, adapter returns correct entries, tests pass; Scoped: crate creation + workspace integration + agent_kit re-export only; Testable: `cargo nextest run -p agent_inventory --all-features`).
+Create a Layer 1 `agent_inventory` crate providing an `AgentAdapter` trait and Claude Code adapter so that consumer workspaces can discover assets across multiple AI coding agents in a unified flat table (Motivated: kbase needs cross-agent asset listing; Observable: new crate compiles, adapter returns correct entries, tests pass; Scoped: crate creation + workspace integration + dream re-export only; Testable: `cargo nextest run -p agent_inventory --all-features`).
 
 ## In Scope
 
@@ -24,8 +24,8 @@ Create a Layer 1 `agent_inventory` crate providing an `AgentAdapter` trait and C
 - `/home/user1/pro/lib/wip_core/claude_tools/dev/module/agent_inventory/readme.md` — crate readme
 - `/home/user1/pro/lib/wip_core/claude_tools/dev/module/agent_inventory/tests/` — integration tests
 - `/home/user1/pro/lib/wip_core/claude_tools/dev/Cargo.toml` — add workspace member + dependency entry
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/agent_kit/Cargo.toml` — add `inventory` feature
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/agent_kit/src/lib.rs` — add `inventory` re-export module
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/dream/Cargo.toml` — add `inventory` feature
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/dream/src/lib.rs` — add `inventory` re-export module
 - `/home/user1/pro/lib/wip_core/claude_tools/dev/module/readme.md` — add agent_inventory row
 - `/home/user1/pro/lib/wip_core/claude_tools/dev/readme.md` — update Crates table + Architecture diagram
 
@@ -42,7 +42,7 @@ The workspace currently has 6 Layer 1 domain crates, all focused on Claude Code.
 
 The first (and currently only) adapter wraps `claude_assets_core::registry` behind a `claude_code` feature gate. It converts `ArtifactKind` → `AssetKind` and computes `SyncStatus` from the combination of `InstallStatus` and source existence: `Synced` (symlink + source), `NotInstalled` (source only), `Orphaned` (symlink but source deleted). The `Inventory` struct collects adapters and merges their results into a single `Vec<AssetEntry>`, enabling flat-table output across all registered agents.
 
-The crate follows the established workspace pattern: Layer 1 (zero CLI framework deps), workspace lints inherited, `#[inline]` on public items, `missing_docs` warning. It gets re-exported via `agent_kit` under an `inventory` feature flag.
+The crate follows the established workspace pattern: Layer 1 (zero CLI framework deps), workspace lints inherited, `#[inline]` on public items, `missing_docs` warning. It gets re-exported via `dream` under an `inventory` feature flag.
 
 ## Requirements
 
@@ -59,7 +59,7 @@ Execute in order. Do not skip or reorder steps.
 
 1. **Read rulebooks** — `kbase .rulebooks`; note code_design.rulebook.md constraints on trait design and error handling.
 2. **Read documentation** — Read `docs/feature/002_agent_inventory.md` as source of truth for expected types and adapter trait.
-3. **Read existing patterns** — Read `module/claude_assets_core/src/registry.rs` (list_all API), `module/claude_assets_core/src/artifact.rs` (ArtifactKind enum), `module/claude_assets_core/src/paths.rs` (AssetPaths::from_env), `module/claude_assets_core/src/error.rs` (AssetError). Read `module/agent_kit/src/lib.rs` and `module/agent_kit/Cargo.toml` for re-export pattern.
+3. **Read existing patterns** — Read `module/claude_assets_core/src/registry.rs` (list_all API), `module/claude_assets_core/src/artifact.rs` (ArtifactKind enum), `module/claude_assets_core/src/paths.rs` (AssetPaths::from_env), `module/claude_assets_core/src/error.rs` (AssetError). Read `module/dream/src/lib.rs` and `module/dream/Cargo.toml` for re-export pattern.
 4. **Create crate scaffold** — Create `module/agent_inventory/Cargo.toml` with workspace version/edition/lints, `claude_code` optional feature gating `claude_assets_core` dependency. Create `module/agent_inventory/readme.md`.
 5. **Write failing tests** — Create `module/agent_inventory/tests/` with tests covering: `AssetKind` variants, `AssetEntry` construction, `Inventory::new()` returns empty, Claude Code adapter returns entries when `$PRO_CLAUDE` is set (use tempdir), adapter name is `"claude_code"`.
 6. **Implement core types** — Create `src/entry.rs` (`AssetEntry` with agent/kind/name/status fields, `AssetKind` enum, `SyncStatus` enum with `Synced`/`NotInstalled`/`Orphaned` variants and emoji `Display` impl: ✅/⬇️/⚠️), `src/error.rs` (`InventoryError`), `src/adapter.rs` (`AgentAdapter` trait).
@@ -67,8 +67,8 @@ Execute in order. Do not skip or reorder steps.
 8. **Implement Claude Code adapter** — Create `src/claude_code.rs` gated under `#[cfg(feature = "claude_code")]`. Wrap `claude_assets_core::registry::list_all()` and compute `SyncStatus`: `Installed` + source exists → `Synced`; `Available` → `NotInstalled`; `Installed` + source missing → `Orphaned`.
 9. **Create lib.rs** — Public module declarations, re-exports, doc inclusion from readme.md.
 10. **Integrate into workspace** — Add `module/agent_inventory` to workspace `Cargo.toml` members + dependency table. Add row to `module/readme.md`. Update workspace `readme.md` Crates table and Architecture diagram (add agent_inventory at Layer 1).
-11. **Integrate into agent_kit** — Add `inventory` feature to `module/agent_kit/Cargo.toml` gating `agent_inventory` dependency. Add `#[cfg(feature = "inventory")] pub mod inventory` to `module/agent_kit/src/lib.rs`.
-12. **Validate** — Run `cargo nextest run -p agent_inventory --all-features` and `cargo clippy -p agent_inventory --all-features -- -D warnings`. Then run `cargo nextest run -p agent_kit --all-features` to verify re-export compiles.
+11. **Integrate into dream** — Add `inventory` feature to `module/dream/Cargo.toml` gating `agent_inventory` dependency. Add `#[cfg(feature = "inventory")] pub mod inventory` to `module/dream/src/lib.rs`.
+12. **Validate** — Run `cargo nextest run -p agent_inventory --all-features` and `cargo clippy -p agent_inventory --all-features -- -D warnings`. Then run `cargo nextest run -p dream --all-features` to verify re-export compiles.
 13. **Walk Validation Checklist** — check every item. Every answer must be YES.
 
 ## Test Matrix
@@ -93,7 +93,7 @@ Execute in order. Do not skip or reorder steps.
 - Claude Code adapter correctly maps all 6 `ArtifactKind` variants to `AssetKind`
 - Claude Code adapter computes `SyncStatus` correctly (Synced/NotInstalled/Orphaned)
 - `Inventory::list_all()` returns entries from all registered adapters
-- `agent_kit` re-exports `agent_inventory` under `inventory` feature flag
+- `dream` re-exports `agent_inventory` under `inventory` feature flag
 - All tests in `tests/` pass with `cargo nextest run -p agent_inventory --all-features`
 - `cargo clippy -p agent_inventory --all-features -- -D warnings` clean
 
@@ -120,7 +120,7 @@ Desired answer for every question is YES.
 **Integration**
 - [ ] Is `agent_inventory` listed in workspace `Cargo.toml` members?
 - [ ] Is `agent_inventory` in workspace dependency table?
-- [ ] Does `agent_kit` have `inventory` feature?
+- [ ] Does `dream` have `inventory` feature?
 - [ ] Does `module/readme.md` include agent_inventory row?
 - [ ] Does workspace `readme.md` include agent_inventory in Crates table and Architecture diagram?
 
@@ -158,9 +158,9 @@ Expected: 1. Why: confirms trait definition exists, not just re-exports.
 Check: `grep -c 'cfg.*feature.*claude_code' module/agent_inventory/src/claude_code.rs`
 Expected: ≥1. Why: confirms adapter is feature-gated, not unconditionally compiled.
 
-**AF3 — agent_kit re-export**
-Check: `grep -c 'agent_inventory' module/agent_kit/src/lib.rs`
-Expected: ≥1. Why: confirms agent_kit actually re-exports the new crate.
+**AF3 — dream re-export**
+Check: `grep -c 'agent_inventory' module/dream/src/lib.rs`
+Expected: ≥1. Why: confirms dream actually re-exports the new crate.
 
 **AF4 — Workspace member registered**
 Check: `grep -c 'agent_inventory' Cargo.toml`

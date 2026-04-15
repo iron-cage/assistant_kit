@@ -108,7 +108,7 @@ Session filter parameters belong to the [Session Filter group](parameter_groups.
 claude_storage .list
 
 # List all sessions for projects matching path
-claude_storage .list path::claude_tools sessions::1
+claude_storage .list path::assistant sessions::1
 
 # Find sessions matching a topic filter
 claude_storage .list session::commit

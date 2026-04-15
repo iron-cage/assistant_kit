@@ -13,8 +13,8 @@ Replace the fragile `split("\"tag_name\": \"v")` approach in `extract_releases` 
 
 ## In Scope
 
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/src/commands.rs` — `extract_releases`: replace the `split("\"tag_name\": \"v")` approach with explicit field extraction by scanning for the `"tag_name"` key, then extracting the value regardless of whether it starts with `v`; strip a leading `v` if present
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/tests/integration/read_commands_test.rs` — add TC-470: `extract_releases` with a tag without `v` prefix parses correctly; TC-471: `extract_releases` where release body contains `"tag_name": "v` does not corrupt adjacent version fields
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/src/commands.rs` — `extract_releases`: replace the `split("\"tag_name\": \"v")` approach with explicit field extraction by scanning for the `"tag_name"` key, then extracting the value regardless of whether it starts with `v`; strip a leading `v` if present
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/tests/integration/read_commands_test.rs` — add TC-470: `extract_releases` with a tag without `v` prefix parses correctly; TC-471: `extract_releases` where release body contains `"tag_name": "v` does not corrupt adjacent version fields
 
 ## Out of Scope
 

@@ -125,7 +125,7 @@ Each command must be tested with:
 | Path home + subdir | `path::~/pro` | Match home subdir | High |
 | Path absolute | `path::/home/user/pro` | Match absolute | High |
 | Path relative | `path::../lib` | Resolve + match | High |
-| Path pattern | `path::claude_tools` | Substring match | High |
+| Path pattern | `path::assistant` | Substring match | High |
 | Path nonexistent | `path::/nonexistent` | No matches | Medium |
 | Agent main only | `agent::0` | Filter main sessions | Medium |
 | Agent sub only | `agent::1` | Filter agent sessions | Medium |
@@ -135,7 +135,7 @@ Each command must be tested with:
 | Session substring | `session::commit` | Match session IDs | High |
 | Session empty | `session::` | All or error | Low |
 | Session nonexistent | `session::xyz999` | No matches | Medium |
-| Combined filters | `path::claude_tools session::default agent::0 min_entries::5` | All filters apply | High |
+| Combined filters | `path::assistant session::default agent::0 min_entries::5` | All filters apply | High |
 | Empty storage | (none) | No projects | High |
 
 ### `.show` command

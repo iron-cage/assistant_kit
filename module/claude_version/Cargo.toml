@@ -1,0 +1,51 @@
+[package]
+name         = "claude_version"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme       = "readme.md"
+description  = "Manage Claude Code installation, versions, and session lifecycle."
+
+[lints]
+workspace = true
+
+[lib]
+name = "claude_version"
+path = "src/lib.rs"
+
+[[bin]]
+name = "claude_version"
+path = "src/main.rs"
+required-features = [ "enabled" ]
+
+[[bin]]
+name = "clv"
+path = "src/bin/clv.rs"
+required-features = [ "enabled" ]
+
+[features]
+default = [ "enabled" ]
+full    = [ "enabled" ]
+enabled = [
+  "dep:claude_runner_core",
+  "claude_runner_core/enabled",
+  "dep:claude_common",
+  "claude_common/enabled",
+  "dep:claude_version_core",
+  "dep:unilang",
+  "unilang/enabled",
+  "dep:error_tools",
+  "error_tools/enabled",
+]
+
+[dependencies]
+claude_runner_core  = { workspace = true, optional = true }
+claude_common       = { workspace = true, optional = true }
+claude_version_core = { workspace = true, optional = true }
+unilang             = { workspace = true, optional = true }
+error_tools         = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

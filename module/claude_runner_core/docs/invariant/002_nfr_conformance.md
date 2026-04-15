@@ -62,7 +62,7 @@ full    = ["enabled"]
 enabled = ["dep:error_tools", "error_tools/enabled", "error_tools/error_untyped"]
 ```
 
-This structure follows the agent_kit workspace standard and ensures correct error type availability.
+This structure follows the dream workspace standard and ensures correct error type availability.
 
 ### Violation Consequences
 

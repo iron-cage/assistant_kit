@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Account management consolidated here** (task 038)
   - `claude_profile` is now the single owner of all account CRUD logic
-  - `claude_manager` account commands delegate to this library
+  - `claude_version` account commands delegate to this library
   - Eliminates duplicate account handling that previously existed in both crates
 
 ### Added

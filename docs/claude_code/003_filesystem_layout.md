@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Centralized reference for all filesystem paths that claude_manager reads, writes, or inspects at runtime.
+- **Purpose**: Centralized reference for all filesystem paths that claude_version reads, writes, or inspects at runtime.
 - **Responsibility**: Authoritative directory tree and path reference table for all `~/.claude/` and `~/.local/` locations.
-- **In Scope**: Every filesystem path accessed by claude_manager commands and the `/proc/` scanner.
+- **In Scope**: Every filesystem path accessed by claude_version commands and the `/proc/` scanner.
 - **Out of Scope**: File format internals and write protocols (→ [005_settings_format.md](005_settings_format.md)); paths internal to the Claude Code binary (npm cache, node internals).
 
 ### Directory Tree
@@ -67,8 +67,8 @@ $HOME/
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [`005_settings_format.md`](005_settings_format.md) | Atomic write protocol, version lock operations, settings JSON structure |
-| doc | [`../../module/claude_manager/docs/feature/003_settings_management.md`](../../module/claude_manager/docs/feature/003_settings_management.md) | Settings JSON structure feature doc |
-| doc | [`../../module/claude_manager/docs/feature/001_version_management.md`](../../module/claude_manager/docs/feature/001_version_management.md) | Hot-swap and version lock feature doc |
-| source | [`../../module/claude_manager/src/commands.rs`](../../module/claude_manager/src/commands.rs) | `require_claude_paths()`, `hot_swap_binary()`, `versions_dir_path()` |
+| doc | [`../../module/claude_version/docs/feature/003_settings_management.md`](../../module/claude_version/docs/feature/003_settings_management.md) | Settings JSON structure feature doc |
+| doc | [`../../module/claude_version/docs/feature/001_version_management.md`](../../module/claude_version/docs/feature/001_version_management.md) | Hot-swap and version lock feature doc |
+| source | [`../../module/claude_version/src/commands.rs`](../../module/claude_version/src/commands.rs) | `require_claude_paths()`, `hot_swap_binary()`, `versions_dir_path()` |
 | source | [`../../module/claude_profile/src/paths.rs`](../../module/claude_profile/src/paths.rs) | `ClaudePaths` struct — authoritative path source |
 | source | [`../../module/claude_runner_core/src/process.rs`](../../module/claude_runner_core/src/process.rs) | `/proc` scanner |

@@ -114,7 +114,7 @@ The `path::` parameter supports both shell-style path resolution and pattern mat
   - `path::~/subdir` → Home directory + relative path
 
 - **Patterns** (substring matching):
-  - `path::claude_tools` → Match any path containing "claude_tools"
+  - `path::assistant` → Match any path containing "assistant"
   - `path::storage` → Match any path containing "storage"
 
 **Examples**:
@@ -136,7 +136,7 @@ cd /home/user/project
 .list path::~
 
 # Pattern matching (backward compatible)
-.list path::claude_tools
+.list path::assistant
 
 # Filter sessions with auto-enable
 .list session::commit          # Auto-enables session display

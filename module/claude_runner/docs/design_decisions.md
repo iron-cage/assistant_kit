@@ -40,9 +40,9 @@ Enables wrapper scripts to override defaults.
 
 ## D7 — Hand-rolled parser over clap/unilang
 
-354 LOC hand-rolled parser. Zero external dependencies for CLI parsing. Exact control over
-error messages and behavior. The flag surface (11 flags) is small enough that a framework
-adds complexity without benefit.
+Hand-rolled parser. Zero external dependencies for CLI parsing. Exact control over
+error messages and behavior. The flag surface (15 flags + 1 positional) is small enough
+that a framework adds complexity without benefit.
 
 ## D9 — Session continuation by default
 
@@ -63,8 +63,8 @@ This also decouples `clr` from external session orchestration (formerly
 
 The previous `docs/cli/` contained 42 files documenting `param::value` syntax. Restored as
 a proper three-layer reference (commands.md, params.md, types.md) with parameter groups,
-dictionary, and workflows — adapted to the new `--flag value` syntax. The old design/
-and testing/ subdirectories are not restored (L3 target, flat structure).
+dictionary, and workflows — adapted to the new `--flag value` syntax. Extended to L5 in a
+subsequent pass: testing/ added with per-command and per-param test case coverage.
 
 ## D11 — Print by default when message given; `--interactive` to opt into TTY
 
@@ -113,7 +113,7 @@ preserves tool definitions regardless of replacement.
 The installed binary is `clr`; the Rust crate/lib remains `claude_runner`.
 
 **Rationale:** `clr` is short and fast to type — the tool is used interactively
-many times per session (mirrors the `cm` convention of `claude_manager`). The crate
+many times per session (mirrors the `cm` convention of `claude_version`). The crate
 name stays `claude_runner` so existing `use claude_runner::COMMANDS_YAML` consumers
 are unaffected; only the `[[bin]] name` in `Cargo.toml` changes.
 

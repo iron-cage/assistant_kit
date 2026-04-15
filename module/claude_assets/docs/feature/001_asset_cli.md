@@ -38,7 +38,7 @@
 
 **Dual binary:** Both `claude_assets` and the `cla` alias binary call `run_cli()` from `lib.rs` — the pipeline is compiled once, not twice.
 
-**Registry aggregation:** `register_commands()` is exported from `lib.rs` and called by `claude_tools::build_registry()` to include all four commands in the `clt` super-app without running a separate process.
+**Registry aggregation:** `register_commands()` is exported from `lib.rs` and called by `assistant::build_registry()` to include all four commands in the `clt` super-app without running a separate process.
 
 ### Cross-References
 
@@ -50,4 +50,4 @@
 | source | `unilang.commands.yaml` | CLI command metadata (names, arguments, examples) |
 | invariant | [invariant/001_source_root_resolution.md](../invariant/001_source_root_resolution.md) | Rule: $PRO_CLAUDE must resolve before any install/list |
 | feature | [claude_assets_core/docs/feature/001_artifact_installer.md](../../claude_assets_core/docs/feature/001_artifact_installer.md) | Domain install/uninstall semantics called by the routines |
-| feature | [claude_tools/docs/feature/001_super_app_aggregation.md](../../claude_tools/docs/feature/001_super_app_aggregation.md) | How register_commands() is consumed by clt |
+| feature | [assistant/docs/feature/001_super_app_aggregation.md](../../assistant/docs/feature/001_super_app_aggregation.md) | How register_commands() is consumed by clt |

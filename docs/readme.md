@@ -1,6 +1,6 @@
 # docs/
 
-Documentation for the `agent_kit` workspace covering behavioral requirements, structural patterns, integration contracts, and invariants.
+Documentation for the `dream` workspace covering behavioral requirements, structural patterns, integration contracts, and invariants.
 
 ## Responsibility Table
 

@@ -1,4 +1,4 @@
-# agent_kit — Vision
+# dream — Vision
 
 Claude Code is the most capable AI coding assistant available. It also has no public API,
 no programmatic interface, and no way to integrate it into automated workflows without
@@ -6,7 +6,7 @@ hand-rolling file parsing and shell invocations from scratch. Every team that us
 heavily ends up writing the same glue code — or worse, not writing it and just clicking
 through a terminal manually.
 
-`agent_kit` changes that.
+`dream` changes that.
 
 ## The Problem Space
 
@@ -34,7 +34,7 @@ documented calling convention beyond reading the binary's help text.
 
 ## What We Built
 
-`agent_kit` is a layered Rust workspace that solves each of these:
+`dream` is a layered Rust workspace that solves each of these:
 
 ```
 claude_profile      Account lifecycle management + full ~/.claude/ topology

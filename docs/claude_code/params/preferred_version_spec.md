@@ -20,7 +20,7 @@ string/null
 
 ### Description
 
-The user's preferred version alias or semver constraint written by `cm .version.install`. Examples: `"stable"`, `"latest"`, `"2.1.78"`. `null` means no preference is pinned. Used by `cm .version.guard` to detect and restore version drift. Not read by the `claude` binary itself at runtime — it is metadata for `claude_manager`'s version management commands.
+The user's preferred version alias or semver constraint written by `cm .version.install`. Examples: `"stable"`, `"latest"`, `"2.1.78"`. `null` means no preference is pinned. Used by `cm .version.guard` to detect and restore version drift. Not read by the `claude` binary itself at runtime — it is metadata for `claude_version`'s version management commands.
 
 ### Cross-References
 

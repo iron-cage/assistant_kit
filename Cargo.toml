@@ -5,7 +5,7 @@
 # Can use published wtools crates (error_tools, unilang, etc.).
 #
 # Dependency flow (one-directional):
-#   wtools (published) ← agent_kit ← consumer workspace (private)
+#   wtools (published) ← dream ← consumer workspace (private)
 
 [workspace]
 resolver = "2"
@@ -14,15 +14,15 @@ members = [
   "module/claude_assets",
   "module/claude_common",
   "module/claude_profile_core",
-  "module/claude_manager_core",
+  "module/claude_version_core",
   "module/claude_storage_core",
   "module/claude_storage",
   "module/claude_profile",
   "module/claude_runner_core",
   "module/claude_runner",
-  "module/claude_manager",
-  "module/agent_kit",
-  "module/claude_tools",
+  "module/claude_version",
+  "module/dream",
+  "module/assistant",
 ]
 exclude = [ "-*" ]
 
@@ -95,8 +95,8 @@ path = "module/claude_profile_core"
 version = "~1.0.0"
 default-features = false
 
-[workspace.dependencies.claude_manager_core]
-path = "module/claude_manager_core"
+[workspace.dependencies.claude_version_core]
+path = "module/claude_version_core"
 version = "~1.0.0"
 default-features = false
 
@@ -120,8 +120,8 @@ path = "module/claude_runner"
 version = "~1.0.0"
 default-features = false
 
-[workspace.dependencies.claude_manager]
-path = "module/claude_manager"
+[workspace.dependencies.claude_version]
+path = "module/claude_version"
 version = "~1.0.0"
 default-features = false
 
@@ -130,8 +130,8 @@ path = "module/claude_storage"
 version = "~1.0.0"
 default-features = false
 
-[workspace.dependencies.agent_kit]
-path = "module/agent_kit"
+[workspace.dependencies.dream]
+path = "module/dream"
 version = "~1.0.0"
 default-features = false
 

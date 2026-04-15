@@ -13,20 +13,20 @@ Fix `settings_get_routine` so its `format::json` output emits the correct JSON t
 
 ## In Scope
 
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/src/commands.rs` — `settings_get_routine`: call `infer_type(v)` (from `claude_manager_core::settings_io`) and emit the raw value for `Bool`/`Number`/`Raw`, or `json_escape(v)` wrapped in quotes for `Str`
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/tests/integration/read_commands_test.rs` — new TCs covering `format::json` type preservation for bool, number, string, and null values in `settings_get`
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/src/commands.rs` — `settings_get_routine`: call `infer_type(v)` (from `claude_version_core::settings_io`) and emit the raw value for `Bool`/`Number`/`Raw`, or `json_escape(v)` wrapped in quotes for `Str`
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/tests/integration/read_commands_test.rs` — new TCs covering `format::json` type preservation for bool, number, string, and null values in `settings_get`
 
 ## Out of Scope
 
 - `settings_show_routine` (already correct)
 - `settings_set_routine` or any other command
-- Changes to `infer_type` or `StoredAs` logic in `claude_manager_core`
+- Changes to `infer_type` or `StoredAs` logic in `claude_version_core`
 
 ## Description
 
 `settings_get_routine` always quotes its JSON output value as a string — `{"key":"autoUpdates","value":"false"}` instead of `{"key":"autoUpdates","value":false}`. This breaks JSON consumers that rely on type information to distinguish booleans and numbers from strings. The `settings_show_routine` already handles this correctly: it calls `infer_type(v)` and branches on the `StoredAs` enum to emit bare `true`/`false`, bare integers, or quoted strings as appropriate.
 
-The `infer_type` function and `StoredAs` enum are already defined in `claude_manager_core::settings_io` and imported into `commands.rs`. There is no new infrastructure to build — the fix is a targeted change to the JSON branch of `settings_get_routine` to match the existing pattern in `settings_show_routine`.
+The `infer_type` function and `StoredAs` enum are already defined in `claude_version_core::settings_io` and imported into `commands.rs`. There is no new infrastructure to build — the fix is a targeted change to the JSON branch of `settings_get_routine` to match the existing pattern in `settings_show_routine`.
 
 The change has no effect on text-format output (only the JSON branch changes) and no effect on any other command.
 
@@ -84,7 +84,7 @@ Desired answer for every question is YES.
 
 **Out of Scope confirmation**
 - [ ] C5 — Is `settings_show_routine` unchanged (no modifications)?
-- [ ] C6 — Is `infer_type` in `claude_manager_core` unchanged?
+- [ ] C6 — Is `infer_type` in `claude_version_core` unchanged?
 
 ### Measurements
 

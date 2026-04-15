@@ -141,7 +141,7 @@ These parameters are only settable via environment variables. All have dedicated
 
 ### Settings Config (`~/.claude/settings.json`)
 
-These parameters are read from the settings file on startup. No builder method — managed by `claude_manager`. Full write semantics in [005_settings_format.md](../../../docs/claude_code/005_settings_format.md).
+These parameters are read from the settings file on startup. No builder method — managed by `claude_version`. Full write semantics in [005_settings_format.md](../../../docs/claude_code/005_settings_format.md).
 
 | # | Key | Type | Values | Default | Description |
 |---|-----|------|--------|---------|-------------|

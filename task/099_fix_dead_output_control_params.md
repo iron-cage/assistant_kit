@@ -13,11 +13,11 @@ Fix three mutation commands that register output-control parameters but never ap
 
 ## In Scope
 
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/src/commands.rs` — `version_install_routine`: call `OutputOptions::from_cmd()` and apply `opts.format` / `opts.verbosity` to output; `version_guard_routine`: apply `opts.verbosity` from `v()` param; `processes_kill_routine`: extract and apply `verbosity` and `format` params
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/src/lib.rs` — `register_commands()`: add `v()` and `fmt()` to `.processes.kill` registration
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/unilang.commands.yaml` — `.processes.kill`: add `verbosity` and `format` argument entries
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/tests/integration/mutation_commands_test.rs` — add TC-360x: `format::json` on `.version.install dry::1` produces valid JSON; add TC-401x: `v::0` on `.version.guard dry::1` produces shorter output; add TC-310x: `format::json` on `.processes.kill dry::1` produces JSON array
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_manager/tests/integration/cross_cutting_test.rs` — add TC-261: `format::json` on `.version.install` at adapter level accepted; TC-262: `v::0` on `.version.guard` accepted
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/src/commands.rs` — `version_install_routine`: call `OutputOptions::from_cmd()` and apply `opts.format` / `opts.verbosity` to output; `version_guard_routine`: apply `opts.verbosity` from `v()` param; `processes_kill_routine`: extract and apply `verbosity` and `format` params
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/src/lib.rs` — `register_commands()`: add `v()` and `fmt()` to `.processes.kill` registration
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/unilang.commands.yaml` — `.processes.kill`: add `verbosity` and `format` argument entries
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/tests/integration/mutation_commands_test.rs` — add TC-360x: `format::json` on `.version.install dry::1` produces valid JSON; add TC-401x: `v::0` on `.version.guard dry::1` produces shorter output; add TC-310x: `format::json` on `.processes.kill dry::1` produces JSON array
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_version/tests/integration/cross_cutting_test.rs` — add TC-261: `format::json` on `.version.install` at adapter level accepted; TC-262: `v::0` on `.version.guard` accepted
 
 ## Out of Scope
 

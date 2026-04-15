@@ -287,7 +287,7 @@ mod adapter
   //
   // ## Why Not Caught
   //
-  // `claude_manager`'s adapter gained a `.help`-anywhere scan (Step 1b) for a
+  // `claude_version`'s adapter gained a `.help`-anywhere scan (Step 1b) for a
   // prior bug fix but that fix was never propagated to `claude_profile`.  No
   // test exercised `.help` in a non-first position against `clp`.
   //
