@@ -39,7 +39,7 @@ or direct inference. All behaviors describe the external `claude` binary.
 | B15 | Agent entries carry a `slug` field (human-readable label shared by all agents of one parent); root session entries typically lack `slug` | Families | 🎯 | 85% | E25, E29 |
 | B16 | `--tools ""` disables all tool invocation; `--tools "default"` restores all tools; both values accepted at CLI parse time | Flags | ✅ | 90% | E30, E31 |
 | B16h | Tool *definitions* (~12k tokens) remain in the assembled system prompt even when `--tools ""` is given — invocation is blocked but the token cost is unchanged | Flags | ❓ | 60% | E32 |
-| B17 | Claude code usage statistic can be obtained by POST request to url https://api.anthropic.com/v1/messages | Observation | 🎯 | 90% | E33 |
+| B17 | Rate-limit utilization (5-hour and 7-day windows) can be read from response headers of POST /v1/messages | Observation | ❓ | 70% | E33 |
 
 ---
 
@@ -213,7 +213,6 @@ Authorization: Bearer <VALUE_FROM_read_auth_token>
 anthropic-beta: oauth-2025-04-20
 anthropic-version: 2023-06-01
 Content-Type: application/json
-Content-Length: 109
 
 {"model":"claude-haiku-4-5-20251001","max_tokens":1,"messages":[{"role":"user","content":"quota"}]}
 ```
@@ -234,9 +233,9 @@ The response should contain next headers:
 
 | Status | Count | IDs |
 |--------|-------|-----|
-| ✅ Confirmed | 11 | B1, B2, B3, B6, B7, B8, B9, B10, B12, B13, B14, B16 |
-| 🎯 Observed | 5 | B4, B5, B11, B15, B17 |
-| ❓ Uncertain | 1 | B16h |
+| ✅ Confirmed | 12 | B1, B2, B3, B6, B7, B8, B9, B10, B12, B13, B14, B16 |
+| 🎯 Observed | 4 | B4, B5, B11, B15 |
+| ❓ Uncertain | 2 | B16h, B17 |
 
 **Total behaviors:** 17
 **Confirmed (≥90% certainty):** 12

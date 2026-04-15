@@ -128,4 +128,20 @@ impl ClaudePaths
   {
     self.base.join( "sessions" )
   }
+
+  /// Path to `~/.claude/.rotation.pid` — PID file for the auto-rotation daemon.
+  #[ inline ]
+  #[ must_use ]
+  pub fn rotation_pid_file( &self ) -> PathBuf
+  {
+    self.base.join( ".rotation.pid" )
+  }
+
+  /// Path to `~/.claude/rotation.log` — append-only log for the auto-rotation daemon.
+  #[ inline ]
+  #[ must_use ]
+  pub fn rotation_log_file( &self ) -> PathBuf
+  {
+    self.base.join( "rotation.log" )
+  }
 }

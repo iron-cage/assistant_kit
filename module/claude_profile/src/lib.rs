@@ -77,6 +77,8 @@ pub mod output;
 #[ cfg( feature = "enabled" ) ]
 pub mod commands;
 #[ cfg( feature = "enabled" ) ]
+pub mod rotation;
+#[ cfg( feature = "enabled" ) ]
 pub mod usage;
 
 pub use paths::ClaudePaths;
@@ -108,8 +110,12 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     token_status_routine,
     paths_routine,
     usage_routine,
+  };
+  use rotation::
+  {
     credentials_enable_auto_rotation_routine,
-    credentials_enable_auto_rotation_routine_bg,
+    credentials_disable_auto_rotation_routine,
+    credentials_rotation_status_routine,
   };
 
   let v   = || reg_arg_opt( "verbosity", Kind::Integer );
@@ -119,8 +125,9 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let thr = || reg_arg_opt( "threshold", Kind::Integer );
 
   reg_cmd( registry, ".credentials.status", "Show live credential metadata without account store dependency", vec![ v(), fmt() ],   Box::new( credentials_status_routine ) );
-  reg_cmd( registry, ".credentials.rotation", "Show live credential metadata without account store dependency", vec![],   Box::new( credentials_enable_auto_rotation_routine ) );
-  reg_cmd( registry, ".credentials.rotation.bg", "Show live credential metadata without account store dependency", vec![],   Box::new( credentials_enable_auto_rotation_routine_bg ) );
+  reg_cmd( registry, ".credentials.rotation.start", "Start background auto-rotation daemon; rotates when 5-hour utilization ≥ 90%", vec![],   Box::new( credentials_enable_auto_rotation_routine ) );
+  reg_cmd( registry, ".credentials.rotation.stop",   "Stop the background auto-rotation daemon by sending SIGTERM to its PID",        vec![],   Box::new( credentials_disable_auto_rotation_routine  ) );
+  reg_cmd( registry, ".credentials.rotation.status", "Show whether the rotation daemon is running and when it last rotated",          vec![],   Box::new( credentials_rotation_status_routine        ) );
   reg_cmd( registry, ".account.list",   "List all saved accounts with subscription type and token state", vec![ v(), fmt() ],        Box::new( account_list_routine   ) );
   reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), v(), fmt() ],   Box::new( account_limits_routine ) );
   reg_cmd( registry, ".account.status", "Show active account name and token state; optionally query a named account", vec![ nam(), v(), fmt() ], Box::new( account_status_routine ) );
@@ -354,6 +361,15 @@ pub fn run_cli()
   .to_owned();
 
   let argv : Vec< String > = std::env::args().skip( 1 ).collect();
+
+  // Internal flag: re-invoked as a background daemon by `.credentials.rotation.start`.
+  // Not exposed in the public command registry; handled here before unilang dispatch.
+  if argv.first().map( |s| s.as_str() ) == Some( "--bg-rotation-daemon" )
+  {
+    let Err( e ) = rotation::rotation_run();
+    eprintln!( "rotation daemon error: {e}" );
+    std::process::exit( 2 );
+  }
 
   cli::run( &binary, &argv );
 }
