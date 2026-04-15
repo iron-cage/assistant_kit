@@ -79,7 +79,7 @@ or direct inference. All behaviors describe the external `claude` binary.
 | E30 | B16      | Observation | `claude --help` live output | `--tools` flag entry | Help text: "Specify the list of available tools from the built-in set. Use `""` to disable all tools, `"default"` to use all tools, or specify tool names (e.g. `"Bash,Edit,Read"`)" |
 | E31 | B16      | Test        | `../../module/claude_storage/tests/behavior/b16_tools_disable.rs` | `b16a_tools_flag_documented_in_help`, `b16b_tools_empty_string_accepted`, `b16c_tools_default_value_accepted` | Flag documented in help and accepted at CLI parse time without parse error |
 | E32 | B16h     | Inference   | Research: Piebald-AI/claude-code-system-prompts; ClaudeLog (2026-04) | Tool assembly layer analysis | Tool definitions injected into assembled system prompt before behavioral flags are applied (confirmed for `--system-prompt` replacement). `--tools` likely operates at invocation-policy layer, not definition-assembly layer — same architectural split as `--system-prompt`. Unconfirmed: requires live token-count comparison. |
-| E33 | B17 | Observation | `../../module/claude_profile/src/commands.rs` | line 669 - 695 | Fetches usage statistics. Unconfirmed: requires deep testing. |
+| E33 | B17 | Observation | `../../module/claude_profile/src/commands.rs` | line 974 - 1031 | Reads rate-limit utilization headers (anthropic-ratelimit-unified-5h-utilization, etc.) from POST /v1/messages response. Unconfirmed: requires deep testing with a real token. |
 
 ---
 
@@ -196,10 +196,6 @@ Root session entries typically lack the `slug` field; their first entry is usual
 `queue-operation` (metadata, not conversation content).
 
 The slug serves as a human-friendly family identifier that could be displayed instead of UUIDs.
-
-### B16 - TODO Add details
-
-### B16h - TODO Add details
 
 ### B17 — Usage statistics
 

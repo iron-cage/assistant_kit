@@ -87,7 +87,16 @@ pub use persist::PersistPaths;
 #[ cfg( feature = "enabled" ) ]
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 10 commands (credentials status, account management including limits, token status, paths, usage).
+/// Registers 13 commands:
+/// - `.credentials.status` — live credential metadata
+/// - `.credentials.rotation.start` — spawn background auto-rotation daemon
+/// - `.credentials.rotation.stop` — stop the daemon via SIGTERM
+/// - `.credentials.rotation.status` — show daemon liveness and last rotation time
+/// - `.account.list` / `.account.status` / `.account.save` / `.account.switch` / `.account.delete` / `.account.limits` — account management
+/// - `.token.status` — OAuth token expiry classification
+/// - `.paths` — resolved `~/.claude/` canonical paths
+/// - `.usage` — 7-day token usage report
+///
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -101,6 +110,9 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   use commands::
   {
     credentials_status_routine,
+    credentials_enable_auto_rotation_routine,
+    credentials_disable_auto_rotation_routine,
+    credentials_rotation_status_routine,
     account_list_routine,
     account_limits_routine,
     account_status_routine,
@@ -110,12 +122,6 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     token_status_routine,
     paths_routine,
     usage_routine,
-  };
-  use rotation::
-  {
-    credentials_enable_auto_rotation_routine,
-    credentials_disable_auto_rotation_routine,
-    credentials_rotation_status_routine,
   };
 
   let v   = || reg_arg_opt( "verbosity", Kind::Integer );
@@ -253,6 +259,9 @@ mod cli
     println!( "  .paths               [v::0-2] [format::text|json]   Show all ~/.claude/ canonical paths" );
     println!( "  .usage               [v::0-2] [format::text|json]   Show 7-day token usage summary" );
     println!( "  .credentials.status  [v::0-2] [format::text|json]   Show live credentials (no account store needed)" );
+    println!( "  .credentials.rotation.start                         Spawn background auto-rotation daemon" );
+    println!( "  .credentials.rotation.stop                          Stop the auto-rotation daemon (SIGTERM)" );
+    println!( "  .credentials.rotation.status                        Show daemon liveness and last rotation time" );
     println!();
     println!( "Options:" );
     println!( "  v::0-2              Verbosity level (default: 1)" );

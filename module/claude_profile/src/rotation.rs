@@ -8,29 +8,25 @@
 //!
 //! | Path | Purpose |
 //! |------|---------|
-//! | `~/.claude/.rotation.pid` | PID of the running daemon; removed on clean exit |
-//! | `~/.claude/rotation.log`  | Append-only daemon log with `[unix_ts]`-prefixed rotation events |
+//! | `~/.claude/.transient/.rotation.pid` | PID of the running daemon; removed on clean exit |
+//! | `~/.claude/.transient/rotation.log`  | Append-only daemon log with `[unix_ts]`-prefixed rotation events |
 //!
 //! # Public surface
 //!
 //! - [`rotation_run`] — called by `lib.rs` when the binary is re-invoked with
 //!   `--bg-rotation-daemon`; runs the daemon loop and never returns normally
-//! - [`credentials_enable_auto_rotation_routine`] — `.credentials.rotation.start` handler
-//! - [`credentials_disable_auto_rotation_routine`] — `.credentials.rotation.stop` handler
-//! - [`credentials_rotation_status_routine`] — `.credentials.rotation.status` handler
+//! - [`rotation_background_spawn`] / [`rotation_stop`] / [`rotation_status`] — called by
+//!   the command handlers in `commands.rs`
 
 use std::convert::Infallible;
 use std::fs::{ self, OpenOptions };
 use std::io::{ BufWriter, Write };
 use std::path::{ Path, PathBuf };
-use std::process::Stdio;
 use std::thread;
 use std::time::Duration;
 use claude_profile_core::account::auto_rotate;
-use error_tools::Context;
-use unilang::data::{ ErrorCode, ErrorData, OutputData };
-use unilang::interpreter::ExecutionContext;
-use unilang::semantic::VerifiedCommand;
+use claude_runner_core::process;
+use unilang::data::{ ErrorCode, ErrorData };
 
 use crate::ClaudePaths;
 use crate::commands::{ fetch_rate_limits, require_active_credentials, require_claude_paths };
@@ -51,33 +47,35 @@ impl Drop for PidGuard
 
 fn pid_file_create( pid_path : &Path ) -> Result< (), ErrorData >
 {
-  if pid_path.exists()
-  {
-    return Err( ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "PID file '{}' already exists. Is the auto-rotation routine already running?", pid_path.display() ),
-    ) );
-  }
+  use std::io::Write as _;
 
-  fs::write( pid_path, std::process::id().to_string() )
-    .context( format!( "failed to write PID file at {}", pid_path.display() ) )
+  let mut file = OpenOptions::new()
+    .write( true )
+    .create_new( true )
+    .open( pid_path )
+    .map_err( |e|
+    {
+      if e.kind() == std::io::ErrorKind::AlreadyExists
+      {
+        ErrorData::new(
+          ErrorCode::InternalError,
+          format!( "PID file '{}' already exists. Is the auto-rotation routine already running?", pid_path.display() ),
+        )
+      }
+      else
+      {
+        ErrorData::new(
+          ErrorCode::InternalError,
+          format!( "failed to create PID file '{}': {e}", pid_path.display() ),
+        )
+      }
+    } )?;
+
+  write!( file, "{}", process::current_pid() )
     .map_err( |e| ErrorData::new(
       ErrorCode::InternalError,
-      format!( "failed to write PID file at '{}': {e}", pid_path.display() ),
+      format!( "failed to write PID file '{}': {e}", pid_path.display() ),
     ) )
-}
-
-/// Returns `true` if `kill -0 <pid>` succeeds — process exists and is signal-able.
-fn pid_is_alive( pid : u32 ) -> bool
-{
-  std::process::Command::new( "kill" )
-    .args( [ "-0", &pid.to_string() ] )
-    .stdin( Stdio::null() )
-    .stdout( Stdio::null() )
-    .stderr( Stdio::null() )
-    .status()
-    .map( | s | s.success() )
-    .unwrap_or( false )
 }
 
 // ── Timestamp helper ──────────────────────────────────────────────────────────
@@ -99,10 +97,17 @@ fn unix_secs() -> u64
 /// or cannot resolve active credentials). Never returns `Ok` — the loop is infinite.
 pub(crate) fn rotation_run() -> Result< Infallible, ErrorData >
 {
-  let paths      = require_claude_paths()?;
-  let pid_path   = paths.rotation_pid_file();
-  let log_path   = paths.rotation_log_file();
+  let paths        = require_claude_paths()?;
+  let transient    = paths.base().join( ".transient" );
+  let pid_path     = transient.join( ".rotation.pid" );
+  let log_path     = transient.join( "rotation.log" );
   let creds_path = require_active_credentials( &paths )?;
+
+  fs::create_dir_all( &transient )
+    .map_err( |e| ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "failed to create transient directory '{}': {e}", transient.display() ),
+    ) )?;
 
   let file = OpenOptions::new()
     .create( true )
@@ -151,10 +156,10 @@ pub(crate) fn rotation_run() -> Result< Infallible, ErrorData >
   }
 }
 
-fn rotation_background_spawn() -> Result< (), ErrorData >
+pub(crate) fn rotation_background_spawn() -> Result< (), ErrorData >
 {
   let paths    = require_claude_paths()?;
-  let pid_path = paths.rotation_pid_file();
+  let pid_path = paths.base().join( ".transient" ).join( ".rotation.pid" );
 
   if pid_path.exists()
   {
@@ -169,7 +174,7 @@ fn rotation_background_spawn() -> Result< (), ErrorData >
       )
     )?;
 
-    if pid_is_alive( pid )
+    if process::process_is_alive( pid )
     {
       return Err( ErrorData::new(
         ErrorCode::InternalError,
@@ -184,30 +189,18 @@ fn rotation_background_spawn() -> Result< (), ErrorData >
     eprintln!( "warning: removed stale PID file (pid {pid} is no longer running)" );
   }
 
-  std::process::Command::new(
-    std::env::current_exe().map_err( |e| ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "Failed to get current executable path: {e}" ),
-    ) )?
-  )
-    .arg( "--bg-rotation-daemon" )
-    .stdin( Stdio::null() )
-    .stdout( Stdio::null() )
-    .stderr( Stdio::null() )
-    .spawn()
-    .context( "Failed to spawn background process" )
-    .map_err( |e| ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "Failed to spawn background process: {e}" ),
-    ) )?;
+  process::spawn_background_self( "--bg-rotation-daemon" ).map_err( |e| ErrorData::new(
+    ErrorCode::InternalError,
+    format!( "failed to spawn background daemon: {e}" ),
+  ) )?;
 
   println!( "Started in background" );
   Ok( () )
 }
 
-fn rotation_stop( paths : &ClaudePaths ) -> Result< String, ErrorData >
+pub(crate) fn rotation_stop( paths : &ClaudePaths ) -> Result< String, ErrorData >
 {
-  let pid_path = paths.rotation_pid_file();
+  let pid_path = paths.base().join( ".transient" ).join( ".rotation.pid" );
 
   if !pid_path.exists()
   {
@@ -228,8 +221,7 @@ fn rotation_stop( paths : &ClaudePaths ) -> Result< String, ErrorData >
     )
   )?;
 
-  // Verify the process is alive via /proc/{pid} before signalling.
-  if !Path::new( &format!( "/proc/{pid}" ) ).exists()
+  if !process::process_is_alive( pid )
   {
     let _ = fs::remove_file( &pid_path );
     return Err( ErrorData::new(
@@ -240,41 +232,48 @@ fn rotation_stop( paths : &ClaudePaths ) -> Result< String, ErrorData >
 
   println!( "Stopping rotation daemon (pid {pid})..." );
 
-  let status = std::process::Command::new( "kill" )
-    .args( [ "-TERM", &pid.to_string() ] )
-    .status()
-    .map_err( |e| ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "failed to invoke kill(1): {e}" ),
-    ) )?;
+  process::send_sigterm( pid ).map_err( |e| ErrorData::new(
+    ErrorCode::InternalError,
+    format!( "failed to send SIGTERM to pid {pid}: {e}" ),
+  ) )?;
 
-  if !status.success()
+  const POLL_ATTEMPTS : u32 = 10;
+  const POLL_INTERVAL : Duration = Duration::from_millis( 200 );
+
+  let terminated = ( 0..POLL_ATTEMPTS ).any( |_|
+  {
+    thread::sleep( POLL_INTERVAL );
+    !process::process_is_alive( pid )
+  } );
+
+  if !terminated
   {
     return Err( ErrorData::new(
       ErrorCode::InternalError,
-      format!( "kill -TERM {pid} exited with status {status}" ),
+      format!( "process {pid} did not terminate within {}ms after SIGTERM; PID file left in place", POLL_ATTEMPTS * POLL_INTERVAL.as_millis() as u32 ),
     ) );
   }
 
   fs::remove_file( &pid_path ).map_err( |e| ErrorData::new(
     ErrorCode::InternalError,
-    format!( "SIGTERM sent but failed to remove PID file '{}': {e}", pid_path.display() ),
+    format!( "failed to remove PID file '{}': {e}", pid_path.display() ),
   ) )?;
 
   Ok( format!( "Sent SIGTERM to rotation daemon (pid {pid}); PID file removed.\n" ) )
 }
 
-fn rotation_status( paths : &ClaudePaths ) -> Result< String, ErrorData >
+pub(crate) fn rotation_status( paths : &ClaudePaths ) -> Result< String, ErrorData >
 {
-  let pid_path = paths.rotation_pid_file();
-  let log_path = paths.rotation_log_file();
+  let transient = paths.base().join( ".transient" );
+  let pid_path  = transient.join( ".rotation.pid" );
+  let log_path  = transient.join( "rotation.log" );
 
   // ── Daemon liveness ───────────────────────────────────────────────────────
   let ( running, pid_display ) = if pid_path.exists()
   {
     let raw = fs::read_to_string( &pid_path ).unwrap_or_default();
     let pid : u32 = raw.trim().parse().unwrap_or( 0 );
-    let alive = pid > 0 && Path::new( &format!( "/proc/{pid}" ) ).exists();
+    let alive = pid > 0 && process::process_is_alive( pid );
     ( alive, if pid > 0 { format!( " (pid {pid})" ) } else { String::new() } )
   }
   else
@@ -322,63 +321,3 @@ fn rotation_status( paths : &ClaudePaths ) -> Result< String, ErrorData >
   Ok( format!( "Daemon:       {status}\nLast rotated: {last_rotated_str}\n" ) )
 }
 
-// ── Command handlers ──────────────────────────────────────────────────────────
-
-/// `.credentials.rotation.start` — spawn the background auto-rotation daemon.
-///
-/// Refuses if a live daemon is already running. Removes a stale PID file and
-/// re-spawns if the recorded process is no longer alive.
-///
-/// # Errors
-///
-/// Returns `ErrorData` if the daemon is already running or if spawning fails.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
-pub fn credentials_enable_auto_rotation_routine(
-  _cmd : VerifiedCommand,
-  _ctx : ExecutionContext,
-) -> Result< OutputData, ErrorData >
-{
-  rotation_background_spawn()?;
-  Ok( OutputData::new( "Credentials auto-rotation enabled.\n", "text" ) )
-}
-
-/// `.credentials.rotation.stop` — send SIGTERM to the daemon identified by the PID file.
-///
-/// Verifies the process is alive before signalling. Removes a stale PID file and
-/// returns an error if the recorded process no longer exists.
-///
-/// # Errors
-///
-/// Returns `ErrorData` if the PID file is missing, unreadable, contains an invalid
-/// value, the process is not alive, or `kill(2)` fails.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
-pub fn credentials_disable_auto_rotation_routine(
-  _cmd : VerifiedCommand,
-  _ctx : ExecutionContext,
-) -> Result< OutputData, ErrorData >
-{
-  let paths = require_claude_paths()?;
-  let msg   = rotation_stop( &paths )?;
-  Ok( OutputData::new( msg, "text" ) )
-}
-
-/// `.credentials.rotation.status` — show whether the daemon is running and when it last rotated.
-///
-/// Liveness is determined by checking `/proc/{pid}` against the PID in
-/// `~/.claude/.rotation.pid`. Last-rotation time is parsed from the most recent
-/// `[unix_secs] Auto-rotation triggered` line in `~/.claude/rotation.log`.
-///
-/// # Errors
-///
-/// Only returns `ErrorData` on internal I/O failures; a stopped daemon or a missing log
-/// are reported as human-readable text, not errors.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
-pub fn credentials_rotation_status_routine(
-  _cmd : VerifiedCommand,
-  _ctx : ExecutionContext,
-) -> Result< OutputData, ErrorData >
-{
-  let paths = require_claude_paths()?;
-  let msg   = rotation_status( &paths )?;
-  Ok( OutputData::new( msg, "text" ) )
-}

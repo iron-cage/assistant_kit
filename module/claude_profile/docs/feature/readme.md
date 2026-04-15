@@ -24,3 +24,4 @@
 | 011 | [Account Status by Name](011_account_status_by_name.md) | FR-16 | ✅ |
 | 012 | [Live Credentials Status](012_live_credentials_status.md) | FR-17 | ✅ |
 | 013 | [Account Rate-Limit Utilization](013_account_limits.md) | FR-18 | 🔄 |
+| 014 | [Account Rotation Daemon](014_rotation_daemon.md) | FR-19 | 🔄 |

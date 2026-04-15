@@ -968,3 +968,64 @@ pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
   Ok( OutputData::new( content, "text" ) )
 }
+
+// ── Rotation command handlers ─────────────────────────────────────────────────
+
+/// `.credentials.rotation.start` — spawn the background auto-rotation daemon.
+///
+/// Refuses if a live daemon is already running. Removes a stale PID file and
+/// re-spawns if the recorded process is no longer alive.
+///
+/// # Errors
+///
+/// Returns `ErrorData` if the daemon is already running or if spawning fails.
+#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+pub fn credentials_enable_auto_rotation_routine(
+  _cmd : VerifiedCommand,
+  _ctx : ExecutionContext,
+) -> Result< OutputData, ErrorData >
+{
+  crate::rotation::rotation_background_spawn()?;
+  Ok( OutputData::new( "Credentials auto-rotation enabled.\n", "text" ) )
+}
+
+/// `.credentials.rotation.stop` — send SIGTERM to the daemon identified by the PID file.
+///
+/// Verifies the process is alive before signalling. Polls for termination and
+/// returns an error if the process does not exit within the timeout.
+///
+/// # Errors
+///
+/// Returns `ErrorData` if the PID file is missing, unreadable, contains an invalid
+/// value, the process is not alive, or `kill(2)` fails.
+#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+pub fn credentials_disable_auto_rotation_routine(
+  _cmd : VerifiedCommand,
+  _ctx : ExecutionContext,
+) -> Result< OutputData, ErrorData >
+{
+  let paths = require_claude_paths()?;
+  let msg   = crate::rotation::rotation_stop( &paths )?;
+  Ok( OutputData::new( msg, "text" ) )
+}
+
+/// `.credentials.rotation.status` — show whether the daemon is running and when it last rotated.
+///
+/// Liveness is determined by checking the PID in `~/.claude/.transient/.rotation.pid`.
+/// Last-rotation time is parsed from the most recent `[unix_secs] Auto-rotation triggered`
+/// line in `~/.claude/.transient/rotation.log`.
+///
+/// # Errors
+///
+/// Only returns `ErrorData` on internal I/O failures; a stopped daemon or a missing log
+/// are reported as human-readable text, not errors.
+#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+pub fn credentials_rotation_status_routine(
+  _cmd : VerifiedCommand,
+  _ctx : ExecutionContext,
+) -> Result< OutputData, ErrorData >
+{
+  let paths = require_claude_paths()?;
+  let msg   = crate::rotation::rotation_status( &paths )?;
+  Ok( OutputData::new( msg, "text" ) )
+}

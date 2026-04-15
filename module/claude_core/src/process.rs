@@ -7,6 +7,7 @@
 
 use std::io;
 use std::path::PathBuf;
+use std::process::Stdio;
 
 /// Information about a running Claude Code process.
 #[ derive( Debug ) ]
@@ -101,6 +102,50 @@ pub fn send_sigterm( pid : u32 ) -> Result< (), io::Error >
 pub fn send_sigkill( pid : u32 ) -> Result< (), io::Error >
 {
   run_kill( &[ "-KILL", &pid.to_string() ] )
+}
+
+/// Returns the PID of the current process.
+#[ inline ]
+#[ must_use ]
+pub fn current_pid() -> u32
+{
+  std::process::id()
+}
+
+/// Returns `true` if the process with the given PID exists and is signal-able
+/// (equivalent to `kill -0 <pid>`).
+///
+/// Uses `kill -0` as a subprocess. Returns `false` on any error, including
+/// permission errors and process-not-found.
+#[ inline ]
+#[ must_use ]
+pub fn process_is_alive( pid : u32 ) -> bool
+{
+  run_kill( &[ "-0", &pid.to_string() ] ).is_ok()
+}
+
+/// Spawns the current executable as a detached background process with one argument.
+///
+/// All stdio streams are redirected to null so the child is fully detached.
+/// Returns immediately after the OS accepts the spawn; does not wait for exit.
+///
+/// # Errors
+///
+/// Returns `Err` if [`std::env::current_exe`] fails or if spawning fails.
+#[ inline ]
+pub fn spawn_background_self( arg : &str ) -> Result< (), io::Error >
+{
+  let exe = std::env::current_exe()
+    .map_err( | e | io::Error::other( e.to_string() ) )?;
+
+  std::process::Command::new( exe )
+    .arg( arg )
+    .stdin( Stdio::null() )
+    .stdout( Stdio::null() )
+    .stderr( Stdio::null() )
+    .spawn()?;
+
+  Ok( () )
 }
 
 // `io::Error::other()` is required here; `io::Error::new(ErrorKind::Other, …)` is

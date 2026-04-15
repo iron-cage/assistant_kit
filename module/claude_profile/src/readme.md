@@ -12,3 +12,4 @@
 | `commands.rs` | CLI command handler functions for 9 named commands and the dot fallback. |
 | `usage.rs` | `.usage` command — parse stats-cache.json, format 7-day token report. |
 | `persist.rs` | PersistPaths — persistent user storage path from $PRO/$HOME. |
+| `rotation.rs` | Background credential auto-rotation daemon: start/stop/status handlers and daemon loop. |

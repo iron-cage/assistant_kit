@@ -36,6 +36,7 @@ required-features = [ "enabled" ]
 # CLI binary deps are feature-gated behind "enabled".
 claude_core        = { workspace = true }
 claude_profile_core  = { workspace = true }
+claude_runner_core   = { workspace = true, optional = true, features = [ "enabled" ] }
 error_tools          = { workspace = true, optional = true }
 serde_json           = { workspace = true, optional = true }
 unilang              = { workspace = true, optional = true }
@@ -48,6 +49,7 @@ tempfile.workspace = true
 [features]
 default = [ "enabled" ]
 enabled = [
+  "dep:claude_runner_core",
   "dep:error_tools",
   "error_tools/enabled",
   "error_tools/error_untyped",
