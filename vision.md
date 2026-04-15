@@ -1,154 +1,91 @@
-# dream — Vision
+# assistant — Vision
 
-Claude Code is the most capable AI coding assistant available. It also has no public API,
-no programmatic interface, and no way to integrate it into automated workflows without
-hand-rolling file parsing and shell invocations from scratch. Every team that uses it
-heavily ends up writing the same glue code — or worse, not writing it and just clicking
-through a terminal manually.
+Claude Code has no public API, no programmatic interface, and no way to integrate it into
+automated workflows without hand-rolling file parsing and shell invocations from scratch.
+Every team that uses it heavily ends up writing the same glue code.
 
-`dream` changes that.
+`assistant` changes that.
 
 ## The Problem Space
 
-When you work with Claude Code seriously, you run into three distinct friction points:
+Three friction points emerge when using Claude Code seriously:
 
-**1. Account rotation is manual and fragile.**
-Each Claude subscription has a 5-hour active-use window. If you run multiple subscriptions
-(work, personal, team) to maintain uninterrupted availability, switching between them today
-means manually editing `~/.claude/.credentials.json` — the kind of operation that, if done
-wrong, logs you out entirely. One transient write failure and your session is gone. There
-has to be a better way.
+**Account rotation is manual and fragile.** Each subscription has a 5-hour active-use window.
+Switching between multiple subscriptions means manually editing `~/.claude/.credentials.json`
+— one transient write failure and the session is gone.
 
-**2. Session lifecycle is opaque.**
-Claude Code stores all conversation history in `~/.claude/projects/`, keyed by a
-non-obvious escaped path. Should a new run resume an existing conversation or start fresh?
-Where exactly does the history for `/home/user/project` live? Right now answering these
-questions requires digging through undocumented directory structures. Programmatic code
-that needs to decide "continue or restart?" has nothing to call.
+**Session lifecycle is opaque.** Conversation history lives in `~/.claude/projects/` keyed by
+a non-obvious escaped path. Answering "should this run continue or start fresh?" requires
+digging through undocumented directory structures.
 
-**3. Automation requires hand-rolled glue.**
-Any tool that wants to invoke Claude Code — a CI hook, a code review bot, a scheduled
-analysis job — needs to know which flags to pass, how to set the right environment, how to
-handle interactive vs non-interactive modes, how to wire stderr vs stdout. There is no
-documented calling convention beyond reading the binary's help text.
+**Automation requires hand-rolled glue.** Any tool invoking Claude Code — a CI hook, a code
+review bot, a scheduled job — needs to know which flags to pass, how to handle interactive
+vs non-interactive modes, how to wire stderr vs stdout. There is no documented calling
+convention.
 
 ## What We Built
 
-`dream` is a layered Rust workspace that solves each of these:
+A 13-crate layered Rust workspace:
 
 ```
-claude_profile      Account lifecycle management + full ~/.claude/ topology
-claude_runner_core  Type-safe builder pattern for Claude Code invocations
-claude_runner       CLI adapter — human interface over the builder
-claude_storage_core Zero-dep JSONL parser for conversation history
-claude_storage      CLI for exploring and analysing Claude's session storage
+Layer 3: assistant              Super-app aggregating all CLI tools (clt)
+             ↓
+Layer 2: claude_profile  (clp)  Account management, token status, ~/.claude/ paths
+         claude_storage  (clg)  CLI for exploring Claude Code session storage
+         claude_runner   (clr)  Claude Code execution with session continuity
+         claude_version  (clv)  Install, version, session, and settings management
+         claude_assets   (cla)  Install artifacts (rules, skills, commands) via symlinks
+         dream                  Library facade re-exporting all core crates
+             ↓
+Layer 1: claude_profile_core    Token status + account domain logic
+         claude_version_core    Version detection, settings domain helpers
+         claude_runner_core     ClaudeCommand builder + single process execution point
+         claude_assets_core     Symlink-based artifact installer domain logic
+             ↓
+Layer 0: claude_common          Shared primitives: ClaudePaths, process utilities
+*        claude_storage_core    Zero-dep JSONL parser for ~/.claude/
 ```
 
-**Account rotation is now two lines:**
-```rust
-claude_profile::account::switch_account("work")?;
-// ~/.credentials.json atomically replaced, _active marker updated
-```
+## Design Principles
 
-**Continuation detection is a function call:**
-```rust
-if claude_profile::check_session_exists(&working_dir) {
-    // resume, not fresh
-}
-```
-
-**Executing Claude Code is a builder:**
-```rust
-ClaudeCommand::new()
-    .message("review this PR for security issues")
-    .working_dir(&repo_path)
-    .verbose(true)
-    .execute()?;
-```
-
-## Architecture
-
-The crates form two clean layers:
-
-```
-Layer 1 — Storage & Detection (zero process execution)
-  claude_storage_core   ~/.claude/ JSONL parsing, token stats
-  claude_profile        Account CRUD, token status, session paths
-  claude_storage        CLI over storage_core
-
-Layer 2 — Execution (owns Command::new("claude"))
-  claude_runner_core    ClaudeCommand builder, single execution point
-  claude_runner         CLI adapter with YAML schema for consumer workspace integration
-```
-
-The hard boundary between layers is enforced by a static analysis test: if `std::process::Command`
-ever appears in `claude_profile`, the test suite fails immediately. The responsibility split is
-not just a convention — it is a compiler-checked invariant.
-
-## Design Philosophy
-
-**Atomic operations by default.**
-Account switching uses write-then-rename, not overwrite-in-place. Both files are in the
-same `~/.claude/` directory, guaranteeing the same filesystem and therefore atomic rename.
+**Atomic operations.** Account switching uses write-then-rename, not overwrite-in-place.
 A crash mid-switch leaves either the old credentials or the new ones — never a half-written
 file.
 
-**One place for every decision.**
-`ClaudePaths` is the single authoritative source for all `~/.claude/` paths in the entire
-workspace. `ClaudeCommand::execute()` is the single execution point for process spawning.
-Neither convention is informal — both are enforced by tests that will tell you exactly
-which file violated the rule if you drift.
+**One place for every decision.** `ClaudePaths` is the single authoritative source for all
+`~/.claude/` paths. `ClaudeCommand::execute()` is the single process execution point. Both
+are enforced by tests that name exactly which file violated the rule.
 
-**The docs are the source of truth.**
-Each crate ships a `docs/` directory with feature, invariant, api, pattern, and data_structure
-doc entity instances covering functional and non-functional requirements, vocabulary, and
-architecture. Conformance checklists in doc instances are not aspirational —
-every item has a named test that must pass for the checkmark to stay.
+**Docs are the source of truth.** Each crate ships a `docs/` directory with feature,
+invariant, and pattern doc instances. Every conformance checklist item has a named test that
+must pass for the checkmark to stay.
 
 ## Current State
 
-The workspace is production-ready at L3 (nextest + doc tests + clippy, zero warnings).
-All five crates pass. The account management layer (`claude_profile` 0.2) landed recently
-and has full test coverage across all functional requirements.
+13 crates. All pass L3 (nextest + doc tests + clippy, zero warnings).
 
-What has been validated in production:
+Validated in production:
 - `claude_storage` parsing ~1,900 projects and 2,400 sessions (~7 GB of JSONL) in under
   30 seconds from warm cache
-- Session continuation detection running correctly inside live tooling
-- The `claude_runner` builder being used to automate multi-step review workflows
+- Session continuation detection running inside live tooling
+- `claude_runner` automating multi-step review workflows
 
-What has been specified but not yet battle-tested:
-- Account rotation across live subscriptions (the implementation is complete; the real-world
-  rotation loop needs field time)
-- Token expiry monitoring as an automation trigger
+## Open Problems
 
-## Open Problems Worth Solving
-
-The foundation is solid. The interesting work is ahead:
-
-- **Rotation automation**: A daemon or hook that watches `TokenStatus` and rotates accounts
+- **Rotation automation:** A daemon watching `TokenStatus` and rotating accounts
   automatically when `ExpiringSoon` fires — the piece that makes multi-subscription setups
   truly seamless.
+- **Usage analytics:** Token spend by project, day, and conversation type built on the
+  existing `claude_storage_core` statistics.
+- **Conversation replay:** The JSONL format is fully parsed — extraction, summarisation,
+  and cross-session comparison are straightforward to build.
+- **CI integration:** `claude_runner` on pull requests as a structured code review step
+  with output parseable enough to post as a comment.
+- **crates.io publishing:** The privacy invariant is already enforced. Publishing Layer 0
+  and Layer 1 crates is a straightforward next step once interfaces stabilise.
 
-- **Usage analytics**: `claude_storage_core` already parses token statistics per session.
-  A tool that shows token spend by project, by day, by conversation type would make
-  subscription management much more intelligent.
-
-- **Conversation replay**: The JSONL format is fully parsed. A tool that extracts, summarises,
-  or compares conversations across sessions would unlock entirely new workflows.
-
-- **CI integration**: `claude_runner` running on pull requests as a structured code review
-  step — with output parseable enough to post as a comment.
-
-- **crates.io publishing**: The workspace was designed for this from day one. The privacy
-  invariant is already enforced. Publishing `claude_profile` and `claude_runner_core` as
-  public crates is a straightforward next step once the interfaces stabilize.
-
-## The Stack
+## Stack
 
 Rust 2021, pedantic clippy with `missing_inline_in_public_items` and `std_instead_of_core`
 as hard errors. Every public item documented. Every functional requirement traced to a named
 test.
-
-The codebase is the kind you can read cold and understand — because the constraints that
-make it hard to write are the same constraints that make it easy to maintain.

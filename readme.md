@@ -1,4 +1,4 @@
-# dream
+# assistant
 
 Rust workspace for programmatic Claude Code integration: credential management, session storage, and process execution.
 

@@ -10,6 +10,8 @@ repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/assistant"
 description  = "Layer 3 super-app aggregating all claude_* CLI commands."
+keywords     = [ "claude", "ai", "cli", "automation", "assistant" ]
+categories   = [ "development-tools", "command-line-utilities" ]
 
 [lints]
 workspace = true

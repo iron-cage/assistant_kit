@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Document the four-layer crate dependency hierarchy governing the dream workspace.
+- **Purpose**: Document the four-layer crate dependency hierarchy governing the assistant workspace.
 - **Responsibility**: Describe the layer definitions, Layer Invariant, permitted dep directions, and crate-to-layer assignments.
 - **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, claude_storage_core position outside hierarchy.
 - **Out of Scope**: Cross-workspace integration (→ `integration/001_consumer_integration.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`).

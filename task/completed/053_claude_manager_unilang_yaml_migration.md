@@ -47,9 +47,9 @@ routes to the storage variant (scope-based session listing).
 
 ## Description
 
-The dream workspace has a design inconsistency: `claude_runner` and `claude_storage`
+The assistant workspace has a design inconsistency: `claude_runner` and `claude_storage`
 define their commands in `unilang.commands.yaml` files and export `COMMANDS_YAML` constants,
-enabling `claude_tools/build.rs` to aggregate them at compile time into a PHF static
+enabling `assistant/build.rs` to aggregate them at compile time into a PHF static
 registry.  But `claude_manager` uses inline programmatic registration via `reg_cmd()` calls
 in `lib.rs:86-99`, bypassing the YAML pipeline entirely.
 

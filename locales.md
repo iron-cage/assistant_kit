@@ -1,7 +1,7 @@
 > **Generated.** Do not edit manually. Maintained by `.locale.doc.generate`.
 > Source of truth: `locales.config.yml` + `.persistent/locale.toml`.
 
-# Locales — dream
+# Locales — assistant
 
 A **locale** is a named, bounded directory representing a self-contained unit of development work. See [`consumer/locate/module/locate/docs/locale.md`](../../consumer/locate/module/locate/docs/locale.md) for the full specification.
 
@@ -27,7 +27,7 @@ All paths are relative to `~/pro/lib/wip_core/claude_tools/dev`. `task` — Y = 
 
 ## Profile
 
-### workspace :: dream
+### workspace :: assistant
 
 | field | value |
 |-------|-------|

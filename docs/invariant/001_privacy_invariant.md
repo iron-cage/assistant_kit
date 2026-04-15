@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Document the zero-upstream-private-workspace-knowledge constraint that the dream workspace must always maintain.
+- **Purpose**: Document the zero-upstream-private-workspace-knowledge constraint that the assistant workspace must always maintain.
 - **Responsibility**: State the invariant, enumerate permitted and forbidden dependency types, and explain the rationale.
 - **In Scope**: Permitted upstream deps (published wtools, stdlib), forbidden dep types (private workspace path deps), dependency flow direction.
 - **Out of Scope**: Versioning strategy (→ `invariant/002_versioning_strategy.md`), cross-workspace protocol (→ `integration/001_consumer_integration.md`).
@@ -27,11 +27,11 @@ The workspace `Cargo.toml` lists no path deps to any private workspace. Each cra
 Dependency flow is strictly one-way:
 ```
 wtools (published crates)
-  └─ dream (this workspace)
-       └─ consumer workspace (private — depends on dream via path deps)
+  └─ assistant (this workspace)
+       └─ consumer workspace (private — depends on assistant via path deps)
 ```
 
-The consumer workspace depends on dream; dream does not depend on the consumer workspace. Allowing the reverse direction would create a circular dependency.
+The consumer workspace depends on assistant; assistant does not depend on the consumer workspace. Allowing the reverse direction would create a circular dependency.
 
 **`missing_inline_in_public_items` boundary:** The workspace lint `missing_inline_in_public_items = "warn"` with `-D warnings` makes missing `#[inline]` a hard error. All public items — including trait impl methods (`fmt`, `source`, `from`, `default`) — require `#[inline]`.
 

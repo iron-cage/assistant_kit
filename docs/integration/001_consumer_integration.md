@@ -2,14 +2,14 @@
 
 ### Scope
 
-- **Purpose**: Document the cross-workspace integration protocol between dream and a consumer workspace.
+- **Purpose**: Document the cross-workspace integration protocol between assistant and a consumer workspace.
 - **Responsibility**: Specify the path dependency setup, co-location requirement, and publishing migration path.
 - **In Scope**: Path dep declarations in the consumer workspace's Cargo.toml, required directory co-location, crates exposed to consumers, production publishing path.
 - **Out of Scope**: Privacy invariant (→ `invariant/001_privacy_invariant.md`), crate layering (→ `pattern/001_crate_layering.md`).
 
 ### System Description
 
-A consumer workspace is a private workspace that depends on one or more dream crates for Claude Code integration. Typical entry points are `claude_profile` (account management and storage paths) and `claude_runner_core` (process execution builder).
+A consumer workspace is a private workspace that depends on one or more assistant crates for Claude Code integration. Typical entry points are `claude_profile` (account management and storage paths) and `claude_runner_core` (process execution builder).
 
 ### Integration Points
 
@@ -22,7 +22,7 @@ claude_runner_core = { path = "../../claude_tools/dev/module/claude_runner_core"
 **Required co-location:** Both workspaces must be siblings under the same parent directory for these relative paths to resolve:
 ```
 ~/pro/lib/wip_core/
-  claude_tools/dev/   ← dream workspace
+  claude_tools/dev/   ← assistant workspace
   consumer/dev/       ← consumer workspace
 ```
 
@@ -44,7 +44,7 @@ claude_profile     = { version = "1.0.0" }
 claude_runner_core = { version = "1.0.0" }
 ```
 
-The path dep is a development convenience. Publishing dream crates to crates.io removes the co-location requirement for production users.
+The path dep is a development convenience. Publishing assistant crates to crates.io removes the co-location requirement for production users.
 
 **Version constraint:** Use `~1.0.0` (patch-level flexibility). Patch updates to dream crates should not require the consumer workspace's Cargo.toml to be updated. Minor and major version bumps require coordination.
 

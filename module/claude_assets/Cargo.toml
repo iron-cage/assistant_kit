@@ -2,6 +2,7 @@
 name         = "claude_assets"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 readme       = "readme.md"
@@ -9,6 +10,8 @@ repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/claude_assets"
 description  = "CLI for installing Claude Code artifacts (rules, skills, commands) via symlinks"
+keywords     = [ "claude", "ai", "assets", "symlink", "cli" ]
+categories   = [ "development-tools", "command-line-utilities" ]
 
 [lints]
 workspace = true

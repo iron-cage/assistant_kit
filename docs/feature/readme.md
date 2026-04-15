@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Document user-facing capabilities of the dream workspace.
+- **Purpose**: Document user-facing capabilities of the assistant workspace.
 - **Responsibility**: Index of feature doc instances covering workspace design and crate inventory.
 - **In Scope**: Workspace purpose, crate roles, scope boundaries, performance characteristics.
 - **Out of Scope**: Structural invariants (→ `invariant/`), layering pattern (→ `pattern/`), consumer workspace integration (→ `integration/`).

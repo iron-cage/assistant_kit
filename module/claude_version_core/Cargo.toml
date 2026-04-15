@@ -2,6 +2,7 @@
 name = "claude_version_core"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 readme = "readme.md"
@@ -9,6 +10,8 @@ repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/claude_version_core"
 description = "Layer 1 domain helpers: version management, settings I/O, and install utilities"
+keywords = [ "claude", "ai", "version", "install", "settings" ]
+categories = [ "development-tools" ]
 
 [lints]
 workspace = true

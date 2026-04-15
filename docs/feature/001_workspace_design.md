@@ -2,14 +2,14 @@
 
 ### Scope
 
-- **Purpose**: Document the purpose, crate inventory, and scope of the dream workspace.
+- **Purpose**: Document the purpose, crate inventory, and scope of the assistant workspace.
 - **Responsibility**: Describe what the workspace provides, what it excludes, and how the crates relate.
 - **In Scope**: Workspace purpose, crate inventory (13 members), in-scope capabilities, out-of-scope boundaries, performance characteristics.
 - **Out of Scope**: Crate layering pattern (→ `pattern/001_crate_layering.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`), cross-workspace integration (→ `integration/001_consumer_integration.md`).
 
 ### Design
 
-**Purpose:** dream is a standalone Rust workspace for AI agent tooling: credential management, session storage, and process execution. The current implementation covers Claude Code in depth; the layered architecture is designed to expand to additional agents following the same crate pattern.
+**Purpose:** assistant is a standalone Rust workspace for AI agent tooling: credential management, session storage, and process execution. The current implementation covers Claude Code in depth; the layered architecture is designed to expand to additional agents following the same crate pattern.
 
 This workspace is a clean extraction from wtools. It has no knowledge of consumer workspace's architecture, job queues, AI orchestration, or any private workspace concerns. It depends only on published wtools crates (error_tools, unilang, former) and the Rust standard library.
 
@@ -73,7 +73,7 @@ This workspace is a clean extraction from wtools. It has no knowledge of consume
 | pattern | [pattern/001_crate_layering.md](../pattern/001_crate_layering.md) | Four-layer dependency hierarchy between these crates |
 | invariant | [invariant/001_privacy_invariant.md](../invariant/001_privacy_invariant.md) | Zero consumer workspace dependency rule |
 | invariant | [invariant/004_performance.md](../invariant/004_performance.md) | Performance constraints for storage operations |
-| integration | [integration/001_consumer_integration.md](../integration/001_consumer_integration.md) | How consumer workspaces consume dream crates |
+| integration | [integration/001_consumer_integration.md](../integration/001_consumer_integration.md) | How consumer workspaces consume assistant crates |
 | source | `../../Cargo.toml` | Workspace manifest and member declarations |
 
 ### Sources

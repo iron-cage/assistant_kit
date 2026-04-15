@@ -1,5 +1,5 @@
 meta:
-  description: Cross-reference graph for all doc instances in the dream workspace
+  description: Cross-reference graph for all doc instances in the assistant workspace
   node_count: 20
   edge_count: 37
   component_count: 3

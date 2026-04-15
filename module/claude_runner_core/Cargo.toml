@@ -2,6 +2,7 @@
 name = "claude_runner_core"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 readme = "readme.md"
@@ -9,6 +10,8 @@ repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/claude_runner_core"
 description = "Claude Code process execution with builder pattern"
+keywords = [ "claude", "ai", "runner", "process", "execution" ]
+categories = [ "development-tools" ]
 
 [lints]
 workspace = true
