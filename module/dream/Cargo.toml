@@ -28,12 +28,12 @@ full    = [ "common", "storage", "profile", "runner", "version", "assets" ]
 enabled = [ "full" ]
 
 [dependencies]
-claude_common       = { workspace = true, optional = true }
-claude_storage_core = { workspace = true, optional = true }
-claude_profile_core = { workspace = true, optional = true }
-claude_runner_core  = { workspace = true, optional = true, features = [ "enabled" ] }
-claude_version_core = { workspace = true, optional = true }
-claude_assets_core  = { workspace = true, optional = true }
+# claude_common       = { workspace = true, optional = true }
+# claude_storage_core = { workspace = true, optional = true }
+# claude_profile_core = { workspace = true, optional = true }
+# claude_runner_core  = { workspace = true, optional = true, features = [ "enabled" ] }
+# claude_version_core = { workspace = true, optional = true }
+# claude_assets_core  = { workspace = true, optional = true }
 
 [[test]]
 name = "integration"

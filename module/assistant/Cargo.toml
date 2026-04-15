@@ -51,21 +51,21 @@ enabled = [
 ]
 
 [dependencies]
-claude_assets  = { workspace = true, optional = true }
-claude_version = { workspace = true, optional = true }
-claude_profile = { workspace = true, optional = true }
-claude_runner  = { workspace = true, optional = true }
-claude_storage = { workspace = true, optional = true }
-unilang        = { workspace = true, optional = true }
-error_tools    = { workspace = true, optional = true }
+# claude_assets  = { workspace = true, optional = true }
+# claude_version = { workspace = true, optional = true }
+# claude_profile = { workspace = true, optional = true }
+# claude_runner  = { workspace = true, optional = true }
+# claude_storage = { workspace = true, optional = true }
+# unilang        = { workspace = true, optional = true }
+# error_tools    = { workspace = true, optional = true }
 
 [build-dependencies]
-claude_assets  = { workspace = true }
-claude_runner  = { workspace = true }
-claude_storage = { workspace = true, features = [ "cli" ] }
-unilang        = { workspace = true }
-serde_yaml     = { workspace = true }
+# claude_assets  = { workspace = true }
+# claude_runner  = { workspace = true }
+# claude_storage = { workspace = true, features = [ "cli" ] }
+# unilang        = { workspace = true }
+# serde_yaml     = { workspace = true }
 
 [dev-dependencies]
-tempfile   = { workspace = true }
-assert_cmd = { workspace = true }
+# tempfile   = { workspace = true }
+# assert_cmd = { workspace = true }
