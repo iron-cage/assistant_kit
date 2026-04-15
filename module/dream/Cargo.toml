@@ -1,6 +1,6 @@
 [package]
 name        = "dream"
-version.workspace = true
+version     = "1.1.0"
 edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
@@ -18,22 +18,22 @@ workspace = true
 
 [features]
 default = []
-# common  = [ "dep:claude_common" ]
-# storage = [ "dep:claude_storage_core" ]
-# profile = [ "dep:claude_profile_core" ]
-# runner  = [ "dep:claude_runner_core" ]
-# version = [ "dep:claude_version_core" ]
-# assets  = [ "dep:claude_assets_core" ]
-# full    = [ "common", "storage", "profile", "runner", "version", "assets" ]
-# enabled = [ "full" ]
+common  = [ "dep:claude_common" ]
+storage = [ "dep:claude_storage_core" ]
+profile = [ "dep:claude_profile_core" ]
+runner  = [ "dep:claude_runner_core" ]
+version = [ "dep:claude_version_core" ]
+assets  = [ "dep:claude_assets_core" ]
+full    = [ "common", "storage", "profile", "runner", "version", "assets" ]
+enabled = [ "full" ]
 
 [dependencies]
-# claude_common       = { workspace = true, optional = true }
-# claude_storage_core = { workspace = true, optional = true }
-# claude_profile_core = { workspace = true, optional = true }
-# claude_runner_core  = { workspace = true, optional = true, features = [ "enabled" ] }
-# claude_version_core = { workspace = true, optional = true }
-# claude_assets_core  = { workspace = true, optional = true }
+claude_common       = { workspace = true, optional = true }
+claude_storage_core = { workspace = true, optional = true }
+claude_profile_core = { workspace = true, optional = true }
+claude_runner_core  = { workspace = true, optional = true, features = [ "enabled" ] }
+claude_version_core = { workspace = true, optional = true }
+claude_assets_core  = { workspace = true, optional = true }
 
 [[test]]
 name = "integration"
