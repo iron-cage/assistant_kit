@@ -382,6 +382,8 @@ fn tc049_atomic_write_leaves_no_tmp_file()
 }
 
 // TC-050: write to read-only directory → error
+// Fix(issue-108): set_mode(0o555) via PermissionsExt is Unix-only.
+#[ cfg( unix ) ]
 #[ test ]
 fn tc050_write_to_read_only_dir_returns_error()
 {

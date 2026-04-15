@@ -2,9 +2,11 @@
 //!
 //! ## Invariant
 //!
-//! All install operations use [`std::os::unix::fs::symlink`] — never
-//! [`std::fs::copy`]. Symlinks preserve the single source of truth in
-//! `$PRO_CLAUDE`; edits there propagate to every project instantly.
+//! All install operations create a filesystem symlink — never [`std::fs::copy`].
+//! Symlinks preserve the single source of truth in `$PRO_CLAUDE`; edits there
+//! propagate to every project instantly. On Unix one call covers both files and
+//! directories; on Windows `symlink_file` / `symlink_dir` are dispatched on
+//! [`ArtifactLayout`] because Windows requires different APIs per target type.
 //!
 //! ## Uninstall guard
 //!
@@ -58,8 +60,6 @@ pub enum InstallAction
 #[ inline ]
 pub fn install( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Result< InstallReport, AssetError >
 {
-  use std::os::unix::fs::symlink;
-
   let src_path = source_path( paths, kind, name );
   if !src_path.exists()
   {
@@ -96,7 +96,7 @@ pub fn install( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Resul
     InstallAction::Installed
   };
 
-  symlink( &src_path, &tgt_path ).map_err( AssetError::Io )?;
+  create_symlink( &src_path, &tgt_path, kind.layout() ).map_err( AssetError::Io )?;
   Ok( InstallReport { kind, name : name.to_string(), action } )
 }
 
@@ -145,6 +145,30 @@ pub fn uninstall( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Res
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
+
+// Fix(issue-108): cross-platform symlink dispatch.
+// Root cause: std::os::unix::fs::symlink is cfg(unix)-gated and absent on Windows;
+//   Windows needs symlink_file vs symlink_dir based on whether the target is a
+//   file or a directory — a distinction Unix's single symlink() doesn't require.
+// Pitfall: on Windows, calling symlink_file on a directory path (or vice versa)
+//   produces a broken symlink without returning an error.
+#[ cfg( unix ) ]
+#[ inline ]
+fn create_symlink( src : &std::path::Path, dst : &std::path::Path, _layout : ArtifactLayout ) -> std::io::Result<()>
+{
+  std::os::unix::fs::symlink( src, dst )
+}
+
+#[ cfg( windows ) ]
+#[ inline ]
+fn create_symlink( src : &std::path::Path, dst : &std::path::Path, layout : ArtifactLayout ) -> std::io::Result<()>
+{
+  match layout
+  {
+    ArtifactLayout::File      => std::os::windows::fs::symlink_file( src, dst ),
+    ArtifactLayout::Directory => std::os::windows::fs::symlink_dir( src, dst ),
+  }
+}
 
 fn artifact_path( base_dir : &std::path::Path, kind : ArtifactKind, name : &str ) -> PathBuf
 {

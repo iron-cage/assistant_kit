@@ -128,7 +128,7 @@ fn cli03_list_empty_source_exits_0()
 ///
 /// Root Cause: install must use symlink(), not copy().
 /// Why Not Caught: no test existed.
-/// Fix Applied: install() calls std::os::unix::fs::symlink().
+/// Fix Applied: install() calls create_symlink() — dispatches to the correct platform API.
 /// Prevention: verify symlink with read_link() after install.
 /// Pitfall: stat shows same content for copy and symlink; read_link() distinguishes.
 #[ test ]

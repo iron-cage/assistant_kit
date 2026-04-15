@@ -118,6 +118,8 @@ fn t06_verbosity_one_shows_dry_run_output()
 
 // T07: --verbosity 0 with -p (print mode) — runner output suppressed;
 // Claude subprocess still executes. Uses a fake claude binary.
+// Fix(issue-108): chmod via PermissionsExt is Unix-only.
+#[ cfg( unix ) ]
 #[ test ]
 fn t07_verbosity_zero_suppresses_print_output()
 {

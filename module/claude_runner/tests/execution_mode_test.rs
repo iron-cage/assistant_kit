@@ -1,4 +1,8 @@
-//! Execution Mode Tests — interactive and print paths
+//! Execution Mode Tests — interactive and print paths (Unix-only: uses shell scripts and chmod)
+// Fix(issue-108): all tests in this file depend on Unix shell scripts and PermissionsExt.
+// Root cause: PATH-injection strategy uses chmod(0o755) and sh scripts — unavailable on Windows.
+// Pitfall: compiling this file on Windows fails silently — gate the whole file, not individual tests.
+#![ cfg( unix ) ]
 //!
 //! ## Purpose
 //!

@@ -61,7 +61,7 @@ fn write_source( paths : &AssetPaths, kind : ArtifactKind, name : &str )
 
 /// inst01: install() creates a symlink confirmed by read_link().
 ///
-/// Root Cause: install() must use std::os::unix::fs::symlink, never copy().
+/// Root Cause: install() must create a symlink (via create_symlink helper), never copy().
 /// Why Not Caught: no test existed.
 /// Fix Applied: install() calls symlink() and the test verifies with read_link().
 /// Prevention: always verify symlink with read_link() in install tests.
@@ -378,7 +378,7 @@ fn inst12_from_env_errors_when_vars_unset()
 ///
 /// Root Cause: skills are directory trees; symlink must point to dir, not copy it.
 /// Why Not Caught: no test existed.
-/// Fix Applied: install() uses std::os::unix::fs::symlink for both File and Directory.
+/// Fix Applied: install() uses create_symlink() — dispatches to the correct platform API.
 /// Prevention: confirm with read_link() that the target is a symlink to a dir.
 /// Pitfall: fs::copy() silently copies file trees; read_link() fails on copies.
 #[ test ]
