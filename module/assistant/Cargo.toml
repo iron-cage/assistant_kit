@@ -6,6 +6,9 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 readme       = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/assistant"
 description  = "Layer 3 super-app aggregating all claude_* CLI commands."
 
 [lints]

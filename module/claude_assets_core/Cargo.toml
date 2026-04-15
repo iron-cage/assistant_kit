@@ -5,6 +5,9 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 readme       = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/claude_assets_core"
 description  = "Layer 1 domain logic: symlink-based Claude Code artifact installer"
 
 [lints]

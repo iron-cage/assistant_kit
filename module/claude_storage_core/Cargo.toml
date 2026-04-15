@@ -4,8 +4,11 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Core library for Claude Code filesystem storage access (zero dependencies)"
 readme = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/claude_storage_core"
+description = "Core library for Claude Code filesystem storage access (zero dependencies)"
 keywords = [ "claude", "storage", "jsonl", "conversation", "parser" ]
 categories = [ "development-tools", "filesystem", "parsing" ]
 

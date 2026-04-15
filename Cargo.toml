@@ -4,8 +4,6 @@
 # Privacy invariant: this workspace has ZERO knowledge of any private consumer workspace.
 # Can use published wtools crates (error_tools, unilang, etc.).
 #
-# Dependency flow (one-directional):
-#   wtools (published) ← dream ← consumer workspace (private)
 
 [workspace]
 resolver = "2"
@@ -30,8 +28,10 @@ exclude = [ "-*" ]
 version = "1.0.0"
 edition = "2021"
 rust-version = "1.70"
-authors = [ "Kostiantyn Mysnyk <wandalen@obox.systems>" ]
-license = "MIT"
+authors    = [ "Kostiantyn Mysnyk <wandalen@obox.systems>" ]
+license    = "MIT"
+repository = "https://github.com/iron-cage/claude_tools"
+homepage   = "https://github.com/iron-cage/claude_tools"
 
 [workspace.lints.rust]
 # Denies non-idiomatic code for Rust 2018 edition.

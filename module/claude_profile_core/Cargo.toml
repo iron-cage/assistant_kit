@@ -5,6 +5,9 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 readme = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/claude_profile_core"
 description = "Layer 1 domain logic: token status and account management for Claude Code"
 
 [lints]

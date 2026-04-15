@@ -4,8 +4,11 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "CLI tool for exploring Claude Code filesystem storage"
 readme = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/claude_storage"
+description = "CLI tool for exploring Claude Code filesystem storage"
 keywords = [ "claude", "storage", "cli", "conversation", "tool" ]
 categories = [ "development-tools", "command-line-utilities" ]
 

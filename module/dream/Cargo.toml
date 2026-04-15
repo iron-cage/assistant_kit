@@ -5,6 +5,9 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 readme      = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/dream"
 description = "Library facade re-exporting all core crates under feature-gated modules"
 
 [lints]

@@ -6,6 +6,9 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 readme       = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/claude_version"
 description  = "Manage Claude Code installation, versions, and session lifecycle."
 
 [lints]
