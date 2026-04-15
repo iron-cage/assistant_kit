@@ -1,6 +1,6 @@
 # assistant
 
-Layer 3 super-app aggregating all `claude_*` CLI commands into a single `clt` binary.
+Agent-agnostic Layer 3 super-app aggregating all AI agent CLI tools into a single `clt` binary.
 
 ## Architecture
 

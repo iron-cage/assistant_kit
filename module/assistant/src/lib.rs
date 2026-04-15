@@ -1,4 +1,4 @@
-//! `assistant` — Layer 3 super-app aggregating all `claude_*` CLI commands.
+//! `assistant` — agent-agnostic super-app aggregating all AI agent CLI tools.
 //!
 //! Aggregates commands from all Layer 2 crates:
 //! - [`claude_version`]: version management, settings, session, account commands

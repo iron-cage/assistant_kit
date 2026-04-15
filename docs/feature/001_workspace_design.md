@@ -26,10 +26,10 @@ This workspace is a clean extraction from wtools. It has no knowledge of consume
 | claude_profile | clp / claude_profile | 2 | Manage Claude Code accounts, token status, and ~/.claude/ paths |
 | claude_storage | clg / claude_storage | 2 | CLI for exploring Claude Code filesystem storage |
 | claude_runner | clr / claude_runner | 2 | CLI for executing Claude Code with configurable parameters |
-| dream | — | 2 | Library facade re-exporting all core crates (Layer 0, *, 1) under feature-gated modules |
+| dream | — | 2 | Agent-agnostic library facade re-exporting all core crates (Layer 0, *, 1) under feature-gated modules |
 | claude_version | clv / claude_version | 2 | CLI for managing Claude Code installation, versions, and processes |
 | claude_assets | cla / claude_assets | 2 | CLI for installing Claude Code artifacts (rules, skills, commands) via symlinks |
-| assistant | clt / assistant | 3 | Super-app aggregator: all five Layer 2 CLI crates in one binary |
+| assistant | clt / assistant | 3 | Agent-agnostic super-app aggregator: all five Layer 2 CLI crates in one binary |
 
 **Binaries** (12 targets — 6 crates expose both canonical name and short alias):
 
@@ -47,6 +47,8 @@ This workspace is a clean extraction from wtools. It has no knowledge of consume
 | `claude_runner` | `claude_runner` | canonical | `src/main.rs` |
 | `clt` | `assistant` | alias | `src/bin/clt.rs` |
 | `assistant` | `assistant` | canonical | `src/main.rs` |
+
+**Naming convention:** Crates prefixed `claude_*` are Claude Code-specific. `dream` and `assistant` are intentionally unprefixed — their scope extends beyond Claude Code to any AI agent. They form the agent-agnostic integration layer: `dream` as the library facade, `assistant` as the CLI super-app.
 
 **In scope:** Reading and parsing Claude Code's filesystem storage (`~/.claude/`); detecting sessions and continuation state; spawning `claude` with controlled parameters; managing Claude Code installation; managing accounts and active sessions; reading and writing Claude Code settings.
 

@@ -29,7 +29,7 @@ inside `#[cfg(feature)]`-gated `pub mod` blocks. No item can be exported without
 from a dep crate.
 
 **INV-3** is enforced by the `Cargo.toml` `[dependencies]` section: only Layer 0
-(`claude_core`), Layer 1 (`claude_profile_core`, `claude_runner_core`, `claude_version_core`),
+(`claude_core`), Layer 1 (`claude_profile_core`, `claude_runner_core`, `claude_version_core`, `claude_assets_core`),
 and the out-of-hierarchy primitive (`claude_storage_core`) are listed. No Layer 2 CLI crate
 (`claude_profile`, `claude_runner`, `claude_version`, `claude_storage`) or Layer 3
 (`assistant`) may appear.

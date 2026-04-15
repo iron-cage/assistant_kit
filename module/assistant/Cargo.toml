@@ -9,8 +9,8 @@ readme       = "readme.md"
 repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/assistant"
-description  = "Layer 3 super-app aggregating all claude_* CLI commands."
-keywords     = [ "claude", "ai", "cli", "automation", "assistant" ]
+description  = "Agent-agnostic CLI super-app; aggregates all AI agent CLI tools into a single binary"
+keywords     = [ "ai", "agent", "cli", "automation", "assistant" ]
 categories   = [ "development-tools", "command-line-utilities" ]
 
 [lints]

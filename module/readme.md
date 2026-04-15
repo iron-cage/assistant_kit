@@ -13,5 +13,5 @@
 | claude_storage_core | Zero-dep core library for Claude storage access |
 | claude_version | CLI for managing Claude Code installation and lifecycle |
 | claude_version_core | Layer 1 domain logic: version, session, settings, account |
-| dream | Layer 2 library facade re-exporting all core crates (Layer 0, *, 1) |
-| assistant | Layer 3 super-app aggregating all claude_* CLI commands into clt |
+| dream | Agent-agnostic Layer 2 library facade re-exporting all core crates (Layer 0, *, 1) |
+| assistant | Agent-agnostic Layer 3 super-app aggregating all AI agent CLI tools into clt |

@@ -1,6 +1,6 @@
 #![ cfg_attr( doc, doc = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/", "readme.md" ) ) ) ]
 
-//! `dream` — feature-gated facade re-exporting all `claude_*` core crates.
+//! `dream` — agent-agnostic, feature-gated facade re-exporting AI agent core crates.
 //!
 //! Enable individual domain modules via Cargo features:
 //!
@@ -10,7 +10,7 @@
 //! | `storage` | [`storage`] | `claude_storage_core` — JSONL parser, session types |
 //! | `profile` | [`profile`] | `claude_profile_core` — token status, account management |
 //! | `runner` | [`runner`] | `claude_runner_core` — `ClaudeCommand` builder + `execute()` |
-//! | `version` | [`version`] | `claude_version_core` — version, settings I/O helpers |
+//! | `version` | [`version`] | `claude_version_core` — version detection, settings I/O helpers |
 //! | `assets` | [`assets`] | `claude_assets_core` — symlink-based artifact installer |
 //! | `full` | all | All six domain modules |
 //! | `enabled` | all | Alias for `full` |

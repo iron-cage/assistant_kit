@@ -37,8 +37,8 @@ clr "write a test" # run Claude Code
 | `claude_runner` | `clr` | 2 | Claude Code execution with session continuity |
 | `claude_version` | `clv` | 2 | Install, version, session, and settings management |
 | `claude_assets` | `cla` | 2 | Install Claude Code artifacts (rules, skills, commands) via symlinks |
-| `dream` | — | 2 | Library facade re-exporting all core crates (Layer 0, *, 1) |
-| `assistant` | `clt` | 3 | Super-app aggregating all Layer 2 CLIs |
+| `dream` | — | 2 | Agent-agnostic library facade re-exporting all core crates (Layer 0, *, 1) |
+| `assistant` | `clt` | 3 | Agent-agnostic super-app aggregating all Layer 2 CLIs |
 
 `*` `claude_storage_core` is a zero-dep parsing primitive sitting outside the layer hierarchy — no dependency on `claude_core`.
 
@@ -53,12 +53,12 @@ Layer 1: claude_profile_core      (token status, account domain logic)
          claude_runner_core       (ClaudeCommand builder + execute())
          claude_assets_core       (symlink artifact installer domain logic)
              ↓
-Layer 2: dream       (lib)    (library facade — re-exports all core crates: Layer 0, *, 1)
+Layer 2: dream       (lib)    (agent-agnostic facade — re-exports all core crates: Layer 0, *, 1)
          claude_profile  (clp)    (account management, token status)
          claude_storage  (clg)    (storage exploration)
          claude_runner   (clr)    (Claude Code execution)
          claude_version  (clv)  (install, version, session management)
          claude_assets   (cla)    (artifact installer: rules, skills, commands)
              ↓
-Layer 3: assistant    (clt)    (super-app: all five Layer 2 CLIs)
+Layer 3: assistant    (clt)    (agent-agnostic super-app: all five Layer 2 CLIs)
 ```

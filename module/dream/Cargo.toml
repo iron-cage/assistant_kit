@@ -9,8 +9,8 @@ readme      = "readme.md"
 repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/dream"
-description = "Library facade re-exporting all core crates under feature-gated modules"
-keywords = [ "claude", "ai", "facade", "toolkit", "library" ]
+description = "Agent-agnostic library facade; re-exports AI agent core crates under feature-gated modules"
+keywords = [ "ai", "agent", "facade", "toolkit", "library" ]
 categories = [ "development-tools" ]
 
 [lints]
