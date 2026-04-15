@@ -6,7 +6,7 @@
 //!
 //! | Feature | Module | Activates |
 //! |---------|--------|-----------|
-//! | `common` | [`common`] | `claude_common` — `ClaudePaths`, process utilities |
+//! | `common` | [`common`] | `claude_core` — `ClaudePaths`, process utilities |
 //! | `storage` | [`storage`] | `claude_storage_core` — JSONL parser, session types |
 //! | `profile` | [`profile`] | `claude_profile_core` — token status, account management |
 //! | `runner` | [`runner`] | `claude_runner_core` — `ClaudeCommand` builder + `execute()` |
@@ -32,8 +32,8 @@
 #[ cfg( feature = "common" ) ]
 pub mod common
 {
-  //! Re-exports from [`claude_common`]: `ClaudePaths`, process utilities.
-  pub use claude_common::*;
+  //! Re-exports from [`claude_core`]: `ClaudePaths`, process utilities.
+  pub use claude_core::*;
 }
 
 #[ cfg( feature = "storage" ) ]

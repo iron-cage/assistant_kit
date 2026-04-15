@@ -18,7 +18,7 @@ This workspace is a clean extraction from wtools. It has no knowledge of consume
 | Crate | Binary | Layer | Responsibility |
 |-------|--------|-------|----------------|
 | claude_storage_core | — | primitives | Parse Claude JSONL files: sessions, token statistics |
-| claude_common | — | 0 | Shared domain primitives: ClaudePaths, process utilities |
+| claude_core | — | 0 | Shared domain primitives: ClaudePaths, process utilities |
 | claude_profile_core | — | 1 | Token status + account domain logic (no CLI deps) |
 | claude_version_core | — | 1 | Version / settings_io / status domain helpers (no CLI deps) |
 | claude_runner_core | — | 1 | Builder pattern for constructing and executing claude commands |

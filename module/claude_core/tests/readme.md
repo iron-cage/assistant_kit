@@ -1,6 +1,6 @@
 # tests/
 
-Unit tests for the `claude_common` crate.
+Unit tests for the `claude_core` crate.
 
 ## Responsibility Table
 

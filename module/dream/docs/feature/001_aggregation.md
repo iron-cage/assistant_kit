@@ -13,7 +13,7 @@
 
 | ID | Requirement |
 |----|-------------|
-| FR-1 | When feature `common` is enabled, `dream::common` re-exports all public items from `claude_common` |
+| FR-1 | When feature `common` is enabled, `dream::common` re-exports all public items from `claude_core` |
 | FR-2 | When feature `storage` is enabled, `dream::storage` re-exports all public items from `claude_storage_core` |
 | FR-3 | When feature `profile` is enabled, `dream::profile` re-exports all public items from `claude_profile_core` |
 | FR-4 | When feature `runner` is enabled, `dream::runner` re-exports all public items from `claude_runner_core` |
@@ -25,7 +25,7 @@
 |----|-------------|
 | FR-6 | With no features enabled, the crate compiles with zero runtime dependencies |
 | FR-7 | Feature `full` enables all five domain modules simultaneously |
-| FR-8 | Enabling `storage` does NOT activate `claude_common` as a runtime dependency |
+| FR-8 | Enabling `storage` does NOT activate `claude_core` as a runtime dependency |
 | FR-9 | Each feature is independently activatable without enabling unrelated features |
 
 **Feature graph (authoritative):**
@@ -33,7 +33,7 @@
 ```toml
 [features]
 default = []
-common  = [ "dep:claude_common" ]
+common  = [ "dep:claude_core" ]
 storage = [ "dep:claude_storage_core" ]
 profile = [ "dep:claude_profile_core" ]
 runner  = [ "dep:claude_runner_core" ]
@@ -50,8 +50,8 @@ Each domain module uses `#[cfg(feature = "X")]` gating on the `pub mod` declarat
 ```rust
 #[cfg(feature = "common")]
 pub mod common {
-  //! Re-exports from [`claude_common`].
-  pub use claude_common::*;
+  //! Re-exports from [`claude_core`].
+  pub use claude_core::*;
 }
 ```
 

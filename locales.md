@@ -11,7 +11,7 @@ All paths are relative to `~/pro/lib/wip_core/claude_tools/dev`. `task` — Y = 
 
 | # | rel-path | name | type | lang | purpose | task | last_active |
 |---|----------|------|------|------|---------|------|-------------|
-| 1 | `module/claude_common` | claude_common | rust_crate | rs | Shared primitives: ClaudePaths, process utilities | N | 2026-03-28 |
+| 1 | `module/claude_core` | claude_core | rust_crate | rs | Shared primitives: ClaudePaths, process utilities | N | 2026-03-28 |
 | 2 | `module/claude_storage_core` | claude_storage_core | rust_crate | rs | Zero-dep JSONL parser for ~/.claude/; path encoding | N | 2026-03-14 |
 | 3 | `module/claude_profile_core` | claude_profile_core | rust_crate | rs | Token status and account domain logic | N | 2026-03-28 |
 | 4 | `module/claude_version_core` | claude_version_core | rust_crate | rs | Version detection, install, settings domain helpers | N | 2026-03-29 |

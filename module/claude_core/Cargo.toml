@@ -1,5 +1,5 @@
 [package]
-name = "claude_common"
+name = "claude_core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,7 +8,7 @@ license.workspace = true
 readme = "readme.md"
 repository.workspace = true
 homepage.workspace = true
-documentation = "https://docs.rs/claude_common"
+documentation = "https://docs.rs/claude_core"
 description = "Shared Claude Code primitives: path topology and process utilities"
 keywords = [ "claude", "ai", "utilities", "paths", "process" ]
 categories = [ "development-tools" ]

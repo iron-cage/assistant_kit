@@ -2,7 +2,7 @@
 
 //! Layer 1 domain helpers for Claude Code version management and settings.
 //!
-//! Depends only on [`claude_common`] — no CLI framework dependencies.
+//! Depends only on [`claude_core`] — no CLI framework dependencies.
 //!
 //! # Modules
 //!

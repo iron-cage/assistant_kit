@@ -28,7 +28,7 @@
 
 use core::time::Duration;
 use std::time::{ SystemTime, UNIX_EPOCH };
-use claude_common::ClaudePaths;
+use claude_core::ClaudePaths;
 
 /// Default warning threshold in seconds before expiry to report
 /// [`TokenStatus::ExpiringSoon`] instead of [`TokenStatus::Valid`].

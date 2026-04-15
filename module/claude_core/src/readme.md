@@ -1,6 +1,6 @@
 # src/
 
-Source code for the `claude_common` crate.
+Source code for the `claude_core` crate.
 
 ## Responsibility Table
 

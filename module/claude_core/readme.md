@@ -1,4 +1,4 @@
-# claude_common
+# claude_core
 
 Layer 0 shared primitives for the assistant workspace. Zero workspace dependencies.
 

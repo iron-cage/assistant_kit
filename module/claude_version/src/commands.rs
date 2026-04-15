@@ -67,13 +67,13 @@ fn is_force( cmd : &VerifiedCommand ) -> bool
 }
 
 /// Validate HOME is non-empty and return a `ClaudePaths`.
-fn require_claude_paths() -> Result< claude_common::ClaudePaths, ErrorData >
+fn require_claude_paths() -> Result< claude_core::ClaudePaths, ErrorData >
 {
   match std::env::var( "HOME" )
   {
     Ok( home ) if !home.is_empty() =>
     {
-      claude_common::ClaudePaths::new().ok_or_else( || ErrorData::new(
+      claude_core::ClaudePaths::new().ok_or_else( || ErrorData::new(
         ErrorCode::InternalError,
         "could not resolve Claude configuration paths (HOME is set but path resolution failed)".to_string(),
       ) )
@@ -88,7 +88,7 @@ fn require_claude_paths() -> Result< claude_common::ClaudePaths, ErrorData >
 /// Still needed by `status_routine`; not removed with the account routines in Task 038.
 fn get_active_account() -> Option< String >
 {
-  let paths = claude_common::ClaudePaths::new()?;
+  let paths = claude_core::ClaudePaths::new()?;
   let marker = paths.accounts_dir().join( "_active" );
   std::fs::read_to_string( marker )
   .ok()
@@ -464,7 +464,7 @@ fn guard_once_latest( dry : bool, verbosity : u8 ) -> OutputData
     let msg = if verbosity == 0 { "latest\n" } else { "preferred = latest (no version pin to guard)\n" };
     return OutputData::new( msg.to_string(), "text" );
   }
-  if let Some( paths ) = claude_common::ClaudePaths::new()
+  if let Some( paths ) = claude_core::ClaudePaths::new()
   {
     let settings_file = paths.settings_file();
     let auto_val = get_setting( &settings_file, "autoUpdates" )

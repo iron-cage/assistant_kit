@@ -32,7 +32,7 @@
 //! ```
 
 use std::path::Path;
-use claude_common::ClaudePaths;
+use claude_core::ClaudePaths;
 
 /// Metadata for a saved Claude Code account credential snapshot.
 #[ derive( Debug, Clone ) ]

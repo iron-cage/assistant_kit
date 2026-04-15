@@ -12,7 +12,7 @@
 The `claude_profile` **library path** must have zero third-party (crates.io) dependencies.
 
 **Permitted:**
-- Internal workspace crates: `claude_common`, `claude_profile_core`
+- Internal workspace crates: `claude_core`, `claude_profile_core`
 - Under the `enabled` feature (CLI binary only): `unilang`, `error_tools`, `serde_json`, `ureq`
   - `serde_json` is gated behind `dep:serde_json` in the `enabled` feature and used exclusively by the `.usage` command for parsing `stats-cache.json`
   - `ureq` is gated behind `dep:ureq` in the `enabled` feature and used exclusively by `.account.limits` for fetching rate-limit headers via `POST /v1/messages`

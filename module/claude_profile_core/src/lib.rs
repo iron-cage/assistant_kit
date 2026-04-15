@@ -2,7 +2,7 @@
 
 //! Layer 1 domain logic for Claude Code account and token management.
 //!
-//! Depends only on [`claude_common`] — zero CLI framework dependencies.
+//! Depends only on [`claude_core`] — zero CLI framework dependencies.
 //!
 //! # Modules
 //!

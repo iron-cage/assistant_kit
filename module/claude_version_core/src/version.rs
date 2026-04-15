@@ -3,8 +3,8 @@
 //! Provides version detection, alias resolution, installation, and preference persistence.
 //! These are pure domain operations with no CLI framework dependencies.
 
-use claude_common::ClaudePaths;
-use claude_common::process::find_claude_processes;
+use claude_core::ClaudePaths;
+use claude_core::process::find_claude_processes;
 use crate::settings_io::{ get_setting, set_setting, set_env_var, remove_env_var };
 use crate::CoreError;
 

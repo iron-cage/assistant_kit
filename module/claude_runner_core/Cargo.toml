@@ -22,7 +22,7 @@ full = [ "enabled" ]
 enabled = [ "dep:error_tools", "error_tools/enabled", "error_tools/error_untyped" ]
 
 [dependencies]
-claude_common = { workspace = true }
+claude_core = { workspace = true }
 error_tools   = { workspace = true, optional = true }
 
 [dev-dependencies]

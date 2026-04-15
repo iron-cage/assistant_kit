@@ -36,8 +36,8 @@ full    = [ "enabled" ]
 enabled = [
   "dep:claude_runner_core",
   "claude_runner_core/enabled",
-  "dep:claude_common",
-  "claude_common/enabled",
+  "dep:claude_core",
+  "claude_core/enabled",
   "dep:claude_version_core",
   "dep:unilang",
   "unilang/enabled",
@@ -47,7 +47,7 @@ enabled = [
 
 [dependencies]
 claude_runner_core  = { workspace = true, optional = true }
-claude_common       = { workspace = true, optional = true }
+claude_core       = { workspace = true, optional = true }
 claude_version_core = { workspace = true, optional = true }
 unilang             = { workspace = true, optional = true }
 error_tools         = { workspace = true, optional = true }

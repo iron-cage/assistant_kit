@@ -4,7 +4,7 @@
 |-------|---------------|
 | claude_assets_core | Layer 1 domain logic: symlink-based Claude Code artifact installer |
 | claude_assets | CLI for installing Claude Code artifacts via symlinks (cla binary) |
-| claude_common | Layer 0 shared primitives: ClaudePaths and process utilities |
+| claude_core | Layer 0 shared primitives: ClaudePaths and process utilities |
 | claude_profile_core | Layer 1 domain logic: token status and account management |
 | claude_runner | CLI binary for executing Claude Code |
 | claude_runner_core | Core library for spawning Claude Code process |

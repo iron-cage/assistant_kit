@@ -23,15 +23,15 @@ Layer 2: dream                                                      (lib — re-
              ↓
 Layer 1: claude_assets_core · claude_profile_core · claude_version_core · claude_runner_core
              ↓
-Layer 0: claude_common                                                  (zero workspace deps — ClaudePaths + process utilities)
-*        claude_storage_core                                            (zero-dep JSONL parser — no claude_common dep)
+Layer 0: claude_core                                                  (zero workspace deps — ClaudePaths + process utilities)
+*        claude_storage_core                                            (zero-dep JSONL parser — no claude_core dep)
 ```
 
 **Dependencies per crate:**
 
 | Layer | Crate | Kind | Binaries |
 |-------|-------|------|----------|
-| 0 | `claude_common` | lib | — |
+| 0 | `claude_core` | lib | — |
 | * | `claude_storage_core` | lib | — |
 | 1 | `claude_assets_core` | lib | — |
 | 1 | `claude_profile_core` | lib | — |
@@ -47,7 +47,7 @@ Layer 0: claude_common                                                  (zero wo
 
 `*` = outside layer hierarchy.
 
-**`claude_storage_core` position:** Sits outside the layer hierarchy. It has no `claude_common` dependency (uses env-var paths, not `ClaudePaths`) and is a zero-dep JSONL parsing primitive. Layer 2's `claude_storage` wraps it.
+**`claude_storage_core` position:** Sits outside the layer hierarchy. It has no `claude_core` dependency (uses env-var paths, not `ClaudePaths`) and is a zero-dep JSONL parsing primitive. Layer 2's `claude_storage` wraps it.
 
 ### Applicability
 

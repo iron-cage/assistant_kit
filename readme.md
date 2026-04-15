@@ -26,7 +26,7 @@ clr "write a test" # run Claude Code
 
 | Crate | Cmd | Layer | Responsibility |
 |---|---|---|---|
-| `claude_common` | — | 0 | Shared primitives: `ClaudePaths`, process utilities |
+| `claude_core` | — | 0 | Shared primitives: `ClaudePaths`, process utilities |
 | `claude_storage_core` | — | * | Zero-dep JSONL parser for `~/.claude/`; path encoding |
 | `claude_profile_core` | — | 1 | Token status + account domain logic |
 | `claude_version_core` | — | 1 | Version detection, install, settings domain helpers |
@@ -40,13 +40,13 @@ clr "write a test" # run Claude Code
 | `dream` | — | 2 | Library facade re-exporting all core crates (Layer 0, *, 1) |
 | `assistant` | `clt` | 3 | Super-app aggregating all Layer 2 CLIs |
 
-`*` `claude_storage_core` is a zero-dep parsing primitive sitting outside the layer hierarchy — no dependency on `claude_common`.
+`*` `claude_storage_core` is a zero-dep parsing primitive sitting outside the layer hierarchy — no dependency on `claude_core`.
 
 ## Architecture
 
 ```
-*        claude_storage_core      (zero-dep JSONL parser — no claude_common dep)
-Layer 0: claude_common            (shared primitives — zero workspace deps)
+*        claude_storage_core      (zero-dep JSONL parser — no claude_core dep)
+Layer 0: claude_core            (shared primitives — zero workspace deps)
              ↓
 Layer 1: claude_profile_core      (token status, account domain logic)
          claude_version_core      (version, settings domain helpers)

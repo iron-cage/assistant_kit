@@ -32,9 +32,9 @@ required-features = [ "enabled" ]
 
 [dependencies]
 # Zero third-party (crates.io) dependencies for core library functionality.
-# Internal workspace crates (claude_common, claude_profile_core) are allowed.
+# Internal workspace crates (claude_core, claude_profile_core) are allowed.
 # CLI binary deps are feature-gated behind "enabled".
-claude_common        = { workspace = true }
+claude_core        = { workspace = true }
 claude_profile_core  = { workspace = true }
 error_tools          = { workspace = true, optional = true }
 serde_json           = { workspace = true, optional = true }

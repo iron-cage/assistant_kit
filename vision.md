@@ -42,7 +42,7 @@ Layer 1: claude_profile_core    Token status + account domain logic
          claude_runner_core     ClaudeCommand builder + single process execution point
          claude_assets_core     Symlink-based artifact installer domain logic
              ↓
-Layer 0: claude_common          Shared primitives: ClaudePaths, process utilities
+Layer 0: claude_core          Shared primitives: ClaudePaths, process utilities
 *        claude_storage_core    Zero-dep JSONL parser for ~/.claude/
 ```
 

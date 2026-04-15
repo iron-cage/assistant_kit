@@ -34,7 +34,7 @@
 //! cannot be tested here because `std::env::remove_var` requires `unsafe`
 //! which is denied workspace-wide. The None path is covered by code review.
 
-use claude_common::ClaudePaths;
+use claude_core::ClaudePaths;
 
 #[test]
 fn paths_new_returns_some_with_home()

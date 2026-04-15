@@ -16,7 +16,7 @@ Zero own logic — every public item originates from a core crate.
 
 | Feature | Activates | Description |
 |---------|-----------|-------------|
-| `common` | `claude_common` | Path topology (`ClaudePaths`) and process utilities |
+| `common` | `claude_core` | Path topology (`ClaudePaths`) and process utilities |
 | `storage` | `claude_storage_core` | Zero-dep JSONL parser for `~/.claude/` storage |
 | `profile` | `claude_profile_core` | Token status detection and account credential management |
 | `runner` | `claude_runner_core` | `ClaudeCommand` builder for programmatic Claude Code execution |
@@ -39,7 +39,7 @@ use dream::runner::ClaudeCommand;
 
 ## Architecture
 
-Layer 2 facade — depends on Layer 0 (`claude_common`) and Layer 1
+Layer 2 facade — depends on Layer 0 (`claude_core`) and Layer 1
 (`claude_profile_core`, `claude_runner_core`, `claude_version_core`) plus the
 out-of-hierarchy `claude_storage_core`. No dependency on any Layer 2 CLI crate or
 Layer 3 super-app. No own types, traits, functions, or error definitions.

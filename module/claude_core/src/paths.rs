@@ -13,7 +13,7 @@
 //! # Examples
 //!
 //! ```no_run
-//! use claude_common::ClaudePaths;
+//! use claude_core::ClaudePaths;
 //!
 //! let p = ClaudePaths::new().expect( "HOME must be set" );
 //! println!( "credentials: {}", p.credentials_file().display() );
@@ -31,7 +31,7 @@ use std::path::{ Path, PathBuf };
 /// # Examples
 ///
 /// ```no_run
-/// use claude_common::ClaudePaths;
+/// use claude_core::ClaudePaths;
 ///
 /// if let Some( p ) = ClaudePaths::new()
 /// {
@@ -53,7 +53,7 @@ impl ClaudePaths
   /// # Examples
   ///
   /// ```no_run
-  /// use claude_common::ClaudePaths;
+  /// use claude_core::ClaudePaths;
   ///
   /// let p = ClaudePaths::new().expect( "HOME must be set" );
   /// ```

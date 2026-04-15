@@ -22,7 +22,7 @@ full = [ "enabled" ]
 enabled = []
 
 [dependencies]
-claude_common = { workspace = true }
+claude_core = { workspace = true }
 
 [dev-dependencies]
 test_tools = { workspace = true, features = [ "full" ] }
