@@ -18,14 +18,14 @@ workspace = true
 
 [features]
 default = []
-common  = [ "dep:claude_common" ]
-storage = [ "dep:claude_storage_core" ]
-profile = [ "dep:claude_profile_core" ]
-runner  = [ "dep:claude_runner_core" ]
-version = [ "dep:claude_version_core" ]
-assets  = [ "dep:claude_assets_core" ]
-full    = [ "common", "storage", "profile", "runner", "version", "assets" ]
-enabled = [ "full" ]
+# common  = [ "dep:claude_common" ]
+# storage = [ "dep:claude_storage_core" ]
+# profile = [ "dep:claude_profile_core" ]
+# runner  = [ "dep:claude_runner_core" ]
+# version = [ "dep:claude_version_core" ]
+# assets  = [ "dep:claude_assets_core" ]
+# full    = [ "common", "storage", "profile", "runner", "version", "assets" ]
+# enabled = [ "full" ]
 
 [dependencies]
 # claude_common       = { workspace = true, optional = true }

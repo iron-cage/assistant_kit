@@ -23,32 +23,32 @@ path = "src/lib.rs"
 [[bin]]
 name = "assistant"
 path = "src/main.rs"
-required-features = [ "enabled" ]
+# required-features = [ "enabled" ]
 
 [[bin]]
 name = "clt"
 path = "src/bin/clt.rs"
-required-features = [ "enabled" ]
+# required-features = [ "enabled" ]
 
 [features]
-default = [ "enabled" ]
-full    = [ "enabled" ]
-enabled = [
-  "dep:claude_assets",
-  "claude_assets/enabled",
-  "dep:claude_version",
-  "claude_version/enabled",
-  "dep:claude_profile",
-  "claude_profile/enabled",
-  "dep:claude_runner",
-  "claude_runner/enabled",
-  "dep:claude_storage",
-  "claude_storage/cli",
-  "dep:unilang",
-  "unilang/enabled",
-  "dep:error_tools",
-  "error_tools/enabled",
-]
+default = []
+# full    = [ "enabled" ]
+# enabled = [
+#   "dep:claude_assets",
+#   "claude_assets/enabled",
+#   "dep:claude_version",
+#   "claude_version/enabled",
+#   "dep:claude_profile",
+#   "claude_profile/enabled",
+#   "dep:claude_runner",
+#   "claude_runner/enabled",
+#   "dep:claude_storage",
+#   "claude_storage/cli",
+#   "dep:unilang",
+#   "unilang/enabled",
+#   "dep:error_tools",
+#   "error_tools/enabled",
+# ]
 
 [dependencies]
 # claude_assets  = { workspace = true, optional = true }
