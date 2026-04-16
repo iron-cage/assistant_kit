@@ -1,6 +1,6 @@
 # claude_version
 
-Manage Claude Code installation, versions, and session lifecycle.
+Claude Code version manager: install, upgrade, and session lifecycle.
 
 ## Responsibility Table
 

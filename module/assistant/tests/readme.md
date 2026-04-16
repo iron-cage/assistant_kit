@@ -6,4 +6,4 @@ Integration tests for the `assistant` crate.
 
 | File | Responsibility |
 |------|----------------|
-| `cli_sanity.rs` | Compile and link sanity check for the `clt` binary against all Layer 2 crates |
+| `cli_sanity.rs` | Compile and link sanity check for the `ast` binary against all Layer 2 crates |

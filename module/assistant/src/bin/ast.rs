@@ -1,4 +1,4 @@
-//! `clt` binary entry point.
+//! `ast` binary entry point.
 //!
 //! Short alias — identical to the `assistant` binary.
 //! This separate file gives Cargo a unique compilation unit per `[[bin]]`

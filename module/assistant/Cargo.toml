@@ -26,8 +26,8 @@ path = "src/main.rs"
 required-features = [ "enabled" ]
 
 [[bin]]
-name = "clt"
-path = "src/bin/clt.rs"
+name = "ast"
+path = "src/bin/ast.rs"
 required-features = [ "enabled" ]
 
 [features]

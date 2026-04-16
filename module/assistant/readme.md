@@ -1,11 +1,11 @@
 # assistant
 
-Layer 3 super-app aggregating all Layer 2 CLI tools into a single `clt` binary.
+Layer 3 super-app aggregating all Layer 2 CLI tools into a single `ast` binary.
 
 ## Architecture
 
 ```
-clt (Layer 3)
+ast (Layer 3)
   ├── claude_version (Layer 2) — 14 commands: .status, .version.*, .processes.*, .settings.*, .account.*
   ├── claude_profile (Layer 2) — 8 commands:  .account.*, .token.status, .paths, .usage
   ├── claude_runner  (Layer 2) — 2 commands:  .claude, .claude.help
@@ -15,17 +15,17 @@ clt (Layer 3)
 ## Usage
 
 ```bash
-clt .help                     # list all commands
-clt .status                   # claude installation status
-clt .version.show             # current claude version
-clt .version.install          # install/update claude
+ast .help                     # list all commands
+ast .status                   # claude installation status
+ast .version.show             # current claude version
+ast .version.install          # install/update claude
 ```
 
 ## Responsibility Table
 
 | File | Responsibility |
 |------|----------------|
-| `src/` | `clt` binary entry and feature-gated Layer 2 registry aggregation |
+| `src/` | `ast` binary entry and feature-gated Layer 2 registry aggregation |
 | `build.rs` | YAML aggregation for `claude_runner` and `claude_storage` commands |
 | `docs/` | Behavioral requirements: feature and invariant doc instances |
-| `tests/` | Compile and link sanity checks for the `clt` binary |
+| `tests/` | Compile and link sanity checks for the `ast` binary |

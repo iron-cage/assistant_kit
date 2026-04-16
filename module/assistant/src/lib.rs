@@ -53,7 +53,7 @@ mod cli
     }
   }
 
-  /// Stub for `.claude` and `.claude.help` — subprocess routing is out of scope for `clt`.
+  /// Stub for `.claude` and `.claude.help` — subprocess routing is out of scope for `ast`.
   #[ allow( clippy::unnecessary_wraps ) ]
   fn claude_stub_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
   {

@@ -5,10 +5,19 @@ Rust workspace for AI agent integration infrastructure. Currently targets Claude
 ## Quick Start
 
 ```bash
-cargo build --release
-clt .help          # list all commands
-clp .account.list  # list saved accounts
-clr "write a test" # run Claude Code
+cargo install --path module/assistant
+
+clv .status                  # version, token health, active processes
+clv .version.install         # install or upgrade Claude Code
+
+clp .account.list            # saved accounts (credential rotation)
+clp .token.status            # active token — expiry and health
+
+clr "review this file"       # run Claude Code with session continuity
+
+clg .search "auth"           # search across session history
+
+ast .help                    # all ~40 commands in one place
 ```
 
 ## Structure
@@ -35,10 +44,10 @@ clr "write a test" # run Claude Code
 | `claude_profile` | `clp` | 2 | Account management, token status, `~/.claude/` paths |
 | `claude_storage` | `clg` | 2 | CLI for exploring Claude Code filesystem storage |
 | `claude_runner` | `clr` | 2 | Claude Code execution with session continuity |
-| `claude_version` | `clv` | 2 | Install, version, session, and settings management |
+| `claude_version` | `clv` | 2 | Claude Code version manager |
 | `claude_assets` | `cla` | 2 | Install Claude Code artifacts (rules, skills, commands) via symlinks |
 | `dream` | — | 2 | Library facade re-exporting all core crates (Layer 0, *, 1) |
-| `assistant` | `clt` | 3 | Super-app aggregating all Layer 2 CLIs |
+| `assistant` | `ast` | 3 | Super-app aggregating all Layer 2 CLIs |
 
 `*` `claude_storage_core` is a zero-dep parsing primitive sitting outside the layer hierarchy — no dependency on `claude_core`.
 
@@ -57,8 +66,8 @@ Layer 2: dream           (lib)    (library facade — re-exports all core crates
          claude_profile  (clp)    (account management, token status)
          claude_storage  (clg)    (storage exploration)
          claude_runner   (clr)    (Claude Code execution)
-         claude_version  (clv)    (install, version, session management)
+         claude_version  (clv)    (Claude Code version manager)
          claude_assets   (cla)    (artifact installer: rules, skills, commands)
              ↓
-Layer 3: assistant       (clt)    (super-app — all Layer 2 CLIs)
+Layer 3: assistant       (ast)    (super-app — all Layer 2 CLIs)
 ```

@@ -7,4 +7,4 @@ Source code for the `assistant` crate.
 | File | Responsibility |
 |------|----------------|
 | `lib.rs` | Crate root; feature-gate declarations and Layer 2 registry aggregation |
-| `main.rs` | `clt` binary entry point; delegates to aggregated command registries |
+| `main.rs` | `ast` binary entry point; delegates to aggregated command registries |

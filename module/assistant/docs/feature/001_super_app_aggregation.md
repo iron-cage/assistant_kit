@@ -2,7 +2,7 @@
 
 ### Scope
 
-- **Purpose**: Document how assistant aggregates all Layer 2 Claude CLI crates into a single `clt` binary via programmatic command registration.
+- **Purpose**: Document how assistant aggregates all Layer 2 Claude CLI crates into a single `ast` binary via programmatic command registration.
 - **Responsibility**: Describe the `build_registry()` assembly sequence, static YAML aggregation via `build.rs`, feature-gated compilation, and the adapter reuse contract.
 - **In Scope**: `build_registry()` registration order and precedence, `register_commands()` pattern across Layer 2 crates, static YAML inclusion for YAML-backed commands, `claude_stub_routine`, exit codes, feature gate.
 - **Out of Scope**: Individual command behavior in each Layer 2 crate, unilang 5-phase pipeline internals, `cla` standalone binary behavior.
@@ -17,7 +17,7 @@
 claude_assets::register_commands(&mut registry)    // .list, .install, .uninstall, .kinds
 claude_version::register_commands(&mut registry)   // .status, .version.*, .processes.*, .settings.*
 claude_profile::register_commands(&mut registry)   // .account.*, .token.status, .paths, .usage
-claude_runner::register_commands(&mut registry)    // .claude, .claude.help (stub in clt context)
+claude_runner::register_commands(&mut registry)    // .claude, .claude.help (stub in ast context)
 claude_storage::register_commands(&mut registry)   // .status (skipped — already registered by manager)
 register_static_commands(&mut registry)            // YAML-backed runner + storage commands
 ```
@@ -28,9 +28,9 @@ Duplicate registrations via `command_add_runtime` are silently skipped — the f
 
 **Adapter reuse:** `src/main.rs` calls `claude_version::adapter::argv_to_unilang_tokens()` for argv preprocessing. assistant does not implement its own adapter — it delegates to the manager's adapter, which covers all commands in the registry.
 
-**`.claude` stub:** In standalone `clr` context, `.claude` routes to Claude Code execution. In `clt` context, `.claude` and `.claude.help` route to `claude_stub_routine`, which prints a message directing the user to `clr`. This prevents `clt` from competing with `clr` as the execution entry point.
+**`.claude` stub:** In standalone `clr` context, `.claude` routes to Claude Code execution. In `ast` context, `.claude` and `.claude.help` route to `claude_stub_routine`, which prints a message directing the user to `clr`. This prevents `ast` from competing with `clr` as the execution entry point.
 
-**Feature gate:** All Layer 2 dependencies are behind the `enabled` feature. Building without `--features enabled` produces an empty library shell — the intended behavior for library crates in this workspace. The `clt` binary target requires `enabled` via `required-features`.
+**Feature gate:** All Layer 2 dependencies are behind the `enabled` feature. Building without `--features enabled` produces an empty library shell — the intended behavior for library crates in this workspace. The `ast` binary target requires `enabled` via `required-features`.
 
 ### Cross-References
 

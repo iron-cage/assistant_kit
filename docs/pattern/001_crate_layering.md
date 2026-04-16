@@ -43,7 +43,7 @@ Layer 0: claude_core                                                  (zero work
 | 2 | `claude_storage` | cli | `clg`, `claude_storage` |
 | 2 | `claude_runner` | cli | `clr`, `claude_runner` |
 | 2 | `claude_version` | cli | `clv`, `claude_version` |
-| 3 | `assistant` | cli | `clt`, `assistant` |
+| 3 | `assistant` | cli | `ast`, `assistant` |
 
 `*` = outside layer hierarchy.
 

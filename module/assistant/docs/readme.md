@@ -1,6 +1,6 @@
 # docs/
 
-Documentation for the `assistant` crate covering behavioral requirements, aggregation design, and non-functional constraints for the `clt` super-app binary.
+Documentation for the `assistant` crate covering behavioral requirements, aggregation design, and non-functional constraints for the `ast` super-app binary.
 
 ## Responsibility Table
 

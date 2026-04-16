@@ -9,7 +9,7 @@ readme       = "readme.md"
 repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/claude_version"
-description  = "Manage Claude Code installation, versions, and session lifecycle."
+description  = "Claude Code version manager: install, upgrade, and session lifecycle"
 keywords     = [ "claude", "ai", "version", "installer", "cli" ]
 categories   = [ "development-tools", "command-line-utilities" ]
 

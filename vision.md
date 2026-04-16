@@ -29,12 +29,12 @@ convention.
 A 13-crate layered Rust workspace:
 
 ```
-Layer 3: assistant              Agent-agnostic super-app aggregating all CLI tools (clt)
+Layer 3: assistant              Agent-agnostic super-app aggregating all CLI tools (ast)
              ↓
 Layer 2: claude_profile  (clp)  Account management, token status, ~/.claude/ paths
          claude_storage  (clg)  CLI for exploring Claude Code session storage
          claude_runner   (clr)  Claude Code execution with session continuity
-         claude_version  (clv)  Install, version, session, and settings management
+         claude_version  (clv)  Claude Code version manager
          claude_assets   (cla)  Install artifacts (rules, skills, commands) via symlinks
          dream                  Agent-agnostic library facade re-exporting all core crates
              ↓

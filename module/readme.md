@@ -11,7 +11,7 @@
 | claude_profile | Account credential management, token status, path topology |
 | claude_storage | CLI tool for Claude Code storage exploration |
 | claude_storage_core | Zero-dep core library for Claude storage access |
-| claude_version | CLI for managing Claude Code installation and lifecycle |
+| claude_version | Claude Code version manager CLI |
 | claude_version_core | Layer 1 domain logic: version, session, settings, account |
 | dream | Layer 2 library facade re-exporting all core crates (Layer 0, *, 1) |
 | assistant | Layer 3 super-app aggregating all Layer 2 CLI tools into clt |

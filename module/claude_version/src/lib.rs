@@ -1,4 +1,4 @@
-//! `claude_version` — manage Claude Code installation, versions, and process lifecycle.
+//! `claude_version` — Claude Code version manager: install, upgrade, and session lifecycle.
 //!
 //! See `docs/feature/`, `docs/pattern/`, and `docs/algorithm/` for requirements and architecture.
 //!
