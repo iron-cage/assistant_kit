@@ -9,7 +9,7 @@ readme       = "readme.md"
 repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/assistant"
-description  = "Agent-agnostic CLI super-app; aggregates all AI agent CLI tools into a single binary"
+description  = "Agent-agnostic CLI super-app; aggregates all coding agent CLI tools into a single binary"
 keywords     = [ "ai", "agent", "cli", "automation", "assistant" ]
 categories   = [ "development-tools", "command-line-utilities" ]
 

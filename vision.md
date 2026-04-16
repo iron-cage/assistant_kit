@@ -1,11 +1,11 @@
 # assistant — Vision
 
-AI agents have no standard programmatic interface — no public API, no documented calling
+Coding agents have no standard programmatic interface — no public API, no documented calling
 convention, no built-in way to integrate into automated workflows. Every team that uses them
 seriously ends up writing the same glue code from scratch.
 
 `assistant` changes that. The architecture is agent-agnostic — `dream` and `assistant` carry
-no `claude_` prefix by design, ready to grow beyond Claude Code as new agents emerge.
+no `claude_` prefix by design, ready to grow beyond Claude Code as new coding agents emerge.
 
 ## The Problem Space
 

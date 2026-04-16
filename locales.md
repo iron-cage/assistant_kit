@@ -39,4 +39,4 @@ All paths are relative to `~/pro/lib/wip_core/claude_tools/dev`. `task` — Y = 
 | task | Y |
 | last_active | 2026-04-11 |
 
-**Purpose.** AI agent tooling infrastructure. Provides credential management, session state persistence (`claude_profile`, `claude_storage`, `claude_storage_core`) and execution management (`claude_runner_core`, `claude_runner`) for autonomous multi-turn workflows — currently focused on Claude Code, designed to expand to other agents.
+**Purpose.** Coding agent tooling infrastructure. Provides credential management, session state persistence (`claude_profile`, `claude_storage`, `claude_storage_core`) and execution management (`claude_runner_core`, `claude_runner`) for autonomous multi-turn workflows — currently focused on Claude Code, designed to expand to other coding agents.

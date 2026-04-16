@@ -9,7 +9,7 @@
 
 ### Design
 
-**Purpose:** assistant is a standalone Rust workspace for AI agent tooling: credential management, session storage, and process execution. The current implementation covers Claude Code in depth; the layered architecture is designed to expand to additional agents following the same crate pattern.
+**Purpose:** assistant is a standalone Rust workspace for coding agent tooling: credential management, session storage, and process execution. The current implementation covers Claude Code in depth; the layered architecture is designed to expand to additional coding agents following the same crate pattern.
 
 This workspace is a clean extraction from wtools. It has no knowledge of consumer workspace's architecture, job queues, AI orchestration, or any private workspace concerns. It depends only on published wtools crates (error_tools, unilang, former) and the Rust standard library.
 
@@ -48,7 +48,7 @@ This workspace is a clean extraction from wtools. It has no knowledge of consume
 | `ast` | `assistant` | alias | `src/bin/ast.rs` |
 | `assistant` | `assistant` | canonical | `src/main.rs` |
 
-**Naming convention:** Crates prefixed `claude_*` are Claude Code-specific. `dream` and `assistant` are intentionally unprefixed — their scope extends beyond Claude Code to any AI agent. They form the agent-agnostic integration layer: `dream` as the library facade, `assistant` as the CLI super-app.
+**Naming convention:** Crates prefixed `claude_*` are Claude Code-specific. `dream` and `assistant` are intentionally unprefixed — their scope extends beyond Claude Code to any coding agent. They form the agent-agnostic integration layer: `dream` as the library facade, `assistant` as the CLI super-app.
 
 **In scope:** Reading and parsing Claude Code's filesystem storage (`~/.claude/`); detecting sessions and continuation state; spawning `claude` with controlled parameters; managing Claude Code installation; managing accounts and active sessions; reading and writing Claude Code settings.
 

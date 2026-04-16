@@ -1,6 +1,6 @@
 # assistant
 
-Rust workspace for AI agent integration infrastructure. Currently targets Claude Code; architecture designed to extend to any agent.
+Rust workspace for coding agent integration infrastructure. Currently targets Claude Code; architecture designed to extend to any coding agent.
 
 ## Quick Start
 

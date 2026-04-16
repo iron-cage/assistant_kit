@@ -1,6 +1,6 @@
 #![ cfg_attr( doc, doc = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/", "readme.md" ) ) ) ]
 
-//! `dream` — agent-agnostic, feature-gated facade re-exporting AI agent core crates.
+//! `dream` — agent-agnostic, feature-gated facade re-exporting coding agent core crates.
 //!
 //! Enable individual domain modules via Cargo features:
 //!

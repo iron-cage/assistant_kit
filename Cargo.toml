@@ -1,6 +1,6 @@
 # assistant Workspace
 #
-# Standalone workspace for AI agent tooling: credentials, sessions, and process execution.
+# Standalone workspace for coding agent tooling: credentials, sessions, and process execution.
 # Privacy invariant: this workspace has ZERO knowledge of any private consumer workspace.
 # Can use published wtools crates (error_tools, unilang, etc.).
 #
