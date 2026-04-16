@@ -46,7 +46,7 @@ clr binary (standalone CLI, mirrors claude's --flag syntax)
     └─ parse_args() → build_claude_command() → execute_interactive() / execute()
     └─ -c applied by default; --new-session to start fresh
 
-YAML consumers (e.g. clt aggregator, build.rs)
+YAML consumers (e.g. ast aggregator, build.rs)
     └─ aggregate claude.commands.yaml → PHF map (.claude, .claude.help)
 ```
 

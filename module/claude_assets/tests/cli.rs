@@ -161,7 +161,7 @@ fn cli04_install_creates_symlink()
 /// Why Not Caught: no test existed.
 /// Fix Applied: install() returns AssetError::SourceNotFound for absent source.
 /// Prevention: always test with a name that doesn't exist in the source.
-/// Pitfall: if exit code is 1 (not 2), clt scripts may misinterpret as usage error.
+/// Pitfall: if exit code is 1 (not 2), ast scripts may misinterpret as usage error.
 #[ test ]
 fn cli05_install_nonexistent_exits_2()
 {

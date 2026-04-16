@@ -170,9 +170,9 @@ mod cli
 }
 
 #[ cfg( feature = "enabled" ) ]
-/// Run the `clt`/`assistant` CLI.
+/// Run the `ast`/`assistant` CLI.
 ///
-/// Entry point shared by the `clt` and `assistant` binary targets.
+/// Entry point shared by the `ast` and `assistant` binary targets.
 #[ inline ]
 pub fn run_cli()
 {

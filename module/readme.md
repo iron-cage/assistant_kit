@@ -14,4 +14,4 @@
 | claude_version | Claude Code version manager CLI |
 | claude_version_core | Layer 1 domain logic: version, session, settings, account |
 | dream | Layer 2 library facade re-exporting all core crates (Layer 0, *, 1) |
-| assistant | Layer 3 super-app aggregating all Layer 2 CLI tools into clt |
+| assistant | Layer 3 super-app aggregating all Layer 2 CLI tools into ast |
