@@ -16,9 +16,9 @@ A workspace with 13 crates that have varying responsibilities risks uncontrolled
 Strict four-layer hierarchy with one rule: **dependencies flow downward only**. No Layer N crate may depend on another Layer N crate.
 
 ```
-Layer 3: assistant                                                   (cli — agent-agnostic super-app; not claude_-prefixed by design)
+Layer 3: assistant                                                   (cli — not claude_-prefixed by design)
              ↓
-Layer 2: dream                                                      (lib — agent-agnostic facade; not claude_-prefixed by design)
+Layer 2: dream                                                      (lib — not claude_-prefixed by design)
          claude_assets · claude_version · claude_runner · claude_profile · claude_storage  (cli)
              ↓
 Layer 1: claude_assets_core · claude_profile_core · claude_version_core · claude_runner_core

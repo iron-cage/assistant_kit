@@ -1,6 +1,6 @@
 # dream
 
-Agent-agnostic Layer 2 library facade that re-exports all Layer 0–1 core crates under feature-gated modules.
+Layer 2 library facade re-exporting all Layer 0–1 core crates under feature-gated modules.
 Zero own logic — every public item originates from a core crate.
 
 ## Responsibility Table

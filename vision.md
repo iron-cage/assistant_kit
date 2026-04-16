@@ -1,14 +1,15 @@
 # assistant — Vision
 
-Claude Code has no public API, no programmatic interface, and no way to integrate it into
-automated workflows without hand-rolling file parsing and shell invocations from scratch.
-Every team that uses it heavily ends up writing the same glue code.
+AI agents have no standard programmatic interface — no public API, no documented calling
+convention, no built-in way to integrate into automated workflows. Every team that uses them
+seriously ends up writing the same glue code from scratch.
 
-`assistant` changes that.
+`assistant` changes that. The architecture is agent-agnostic — `dream` and `assistant` carry
+no `claude_` prefix by design, ready to grow beyond Claude Code as new agents emerge.
 
 ## The Problem Space
 
-Three friction points emerge when using Claude Code seriously:
+The first target is Claude Code. Three friction points emerge when using it seriously:
 
 **Account rotation is manual and fragile.** Each subscription has a 5-hour active-use window.
 Switching between multiple subscriptions means manually editing `~/.claude/.credentials.json`

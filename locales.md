@@ -20,8 +20,8 @@ All paths are relative to `~/pro/lib/wip_core/claude_tools/dev`. `task` — Y = 
 | 7 | `module/claude_storage` | claude_storage | rust_crate | rs | CLI for exploring Claude Code filesystem storage | Y | 2026-04-11 |
 | 8 | `module/claude_runner` | claude_runner | rust_crate | rs | Claude Code execution with session continuity | N | 2026-04-06 |
 | 9 | `module/claude_version` | claude_version | rust_crate | rs | Install, version, session, and settings management | N | 2026-03-29 |
-| 10 | `module/assistant` | assistant | rust_crate | rs | Agent-agnostic super-app aggregating all Layer 2 CLIs | N | 2026-03-29 |
-| 11 | `module/dream` | dream | rust_crate | rs | Agent-agnostic library facade re-exporting all core crates (Layer 0, *, 1) | N | 2026-04-11 |
+| 10 | `module/assistant` | assistant | rust_crate | rs | Super-app aggregating all Layer 2 CLIs | N | 2026-03-29 |
+| 11 | `module/dream` | dream | rust_crate | rs | Library facade re-exporting all core crates (Layer 0, *, 1) | N | 2026-04-11 |
 
 ---
 

@@ -1,6 +1,6 @@
 # assistant
 
-Agent-agnostic Layer 3 super-app aggregating all AI agent CLI tools into a single `clt` binary.
+Layer 3 super-app aggregating all Layer 2 CLI tools into a single `clt` binary.
 
 ## Architecture
 
