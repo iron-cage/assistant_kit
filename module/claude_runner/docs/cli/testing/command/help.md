@@ -47,15 +47,15 @@ Integration test planning for help output. See [commands.md](../../commands.md#c
 
 ---
 
-### TC-03: Help lists `--system-prompt`, `--append-system-prompt`, and `--no-ultrathink`
+### TC-03: Help lists `--system-prompt`, `--append-system-prompt`, `--no-ultrathink`, `--effort`, and `--no-effort-max`
 
-**Goal:** All system-prompt and ultrathink control flags are documented in help output so users can discover them.
+**Goal:** All system-prompt, ultrathink control, and effort control flags are documented in help output so users can discover them.
 **Setup:** None.
 **Command:** `clr --help`
-**Expected Output:** Contains `--system-prompt`, `--append-system-prompt`, and `--no-ultrathink`.
-**Verification:** `output.contains("--system-prompt")` and `output.contains("--append-system-prompt")` and `output.contains("--no-ultrathink")`.
-**Pass Criteria:** Exit 0; all three flags present in help.
-**Source:** [params.md — --system-prompt](../../params.md#parameter--15---system-prompt), [params.md — --append-system-prompt](../../params.md#parameter--16---append-system-prompt), [params.md — --no-ultrathink](../../params.md#parameter--14---no-ultrathink)
+**Expected Output:** Contains `--system-prompt`, `--append-system-prompt`, `--no-ultrathink`, `--effort`, and `--no-effort-max`.
+**Verification:** `output.contains("--system-prompt")` and `output.contains("--append-system-prompt")` and `output.contains("--no-ultrathink")` and `output.contains("--effort")` and `output.contains("--no-effort-max")`.
+**Pass Criteria:** Exit 0; all five flags present in help.
+**Source:** [params.md — --system-prompt](../../params.md#parameter--15---system-prompt), [params.md — --append-system-prompt](../../params.md#parameter--16---append-system-prompt), [params.md — --no-ultrathink](../../params.md#parameter--14---no-ultrathink), [params.md — --effort](../../params.md#parameter--17---effort), [params.md — --no-effort-max](../../params.md#parameter--18---no-effort-max)
 
 ---
 

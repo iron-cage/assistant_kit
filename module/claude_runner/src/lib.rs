@@ -52,7 +52,7 @@ pub fn register_commands( _registry : &mut unilang::registry::CommandRegistry ) 
 mod cli
 {
   use super::VerbosityLevel;
-  use claude_runner_core::ClaudeCommand;
+  use claude_runner_core::{ ClaudeCommand, EffortLevel };
   use error_tools::{ Error, Result };
 
   /// Parsed CLI arguments.
@@ -77,6 +77,8 @@ mod cli
     pub( super ) system_prompt        : Option< String >,
     pub( super ) append_system_prompt : Option< String >,
     pub( super ) no_ultrathink        : bool,
+    pub( super ) effort               : Option< EffortLevel >,
+    pub( super ) no_effort_max        : bool,
   }
 
   pub( super ) fn print_help()
@@ -104,6 +106,8 @@ mod cli
     println!( "  --system-prompt <TEXT>             Set system prompt (replaces the default)" );
     println!( "  --append-system-prompt <TEXT>      Append text to the default system prompt" );
     println!( "  --no-ultrathink                    Disable automatic \"\\n\\nultrathink\" message suffix" );
+    println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max)" );
+    println!( "  --no-effort-max                    Suppress default --effort max injection" );
     println!( "  --verbosity <0-5>                  Runner output verbosity level (default: 3)" );
     println!( "  -h, --help                         Show this help" );
   }
@@ -129,6 +133,15 @@ mod cli
          Expected unsigned integer 0–4294967295"
       ) )
     )
+  }
+
+  /// Parse a raw string as an `EffortLevel` with a clear error message.
+  ///
+  /// Extracted from `parse_args()` to keep that function under clippy's
+  /// `too_many_lines` limit. Delegates to `EffortLevel::from_str`.
+  fn parse_effort_level( raw : &str ) -> Result< EffortLevel >
+  {
+    raw.parse::< EffortLevel >().map_err( Error::msg )
   }
 
   /// Parse argv into structured CLI arguments.
@@ -197,6 +210,17 @@ mod cli
         "--no-ultrathink" =>
         {
           parsed.no_ultrathink = true;
+        }
+        "--effort" =>
+        {
+          i += 1;
+          parsed.effort = Some(
+            parse_effort_level( next_value( tokens, i, "--effort" )? )?
+          );
+        }
+        "--no-effort-max" =>
+        {
+          parsed.no_effort_max = true;
         }
         "--system-prompt" =>
         {
@@ -297,6 +321,12 @@ mod cli
     if !cli.no_skip_permissions
     {
       builder = builder.with_skip_permissions( true );
+    }
+    if !cli.no_effort_max
+    {
+      builder = builder.with_effort(
+        cli.effort.unwrap_or( EffortLevel::Max )
+      );
     }
     if cli.verbose
     {

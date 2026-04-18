@@ -9,6 +9,8 @@ Per-parameter edge case indices for `clr`. See [params.md](../../params.md) for 
 | no_ultrathink.md | Edge cases for `--no-ultrathink` flag |
 | system_prompt.md | Edge cases for `--system-prompt` flag |
 | append_system_prompt.md | Edge cases for `--append-system-prompt` flag |
+| effort.md | Edge cases for `--effort` flag |
+| no_effort_max.md | Edge cases for `--no-effort-max` flag |
 
 ## Index
 
@@ -17,3 +19,5 @@ Per-parameter edge case indices for `clr`. See [params.md](../../params.md) for 
 | `--no-ultrathink` | [no_ultrathink.md](no_ultrathink.md) | 5 TC |
 | `--system-prompt` | [system_prompt.md](system_prompt.md) | 5 TC |
 | `--append-system-prompt` | [append_system_prompt.md](append_system_prompt.md) | 5 TC |
+| `--effort` | [effort.md](effort.md) | 8 TC |
+| `--no-effort-max` | [no_effort_max.md](no_effort_max.md) | 5 TC |

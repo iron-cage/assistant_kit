@@ -18,6 +18,8 @@ Integration test planning for the `run` command. See [commands.md](../../command
 | TC-10 | `--no-ultrathink "msg"` → message sent verbatim | Ultrathink Opt-Out |
 | TC-11 | Empty string positional `""` → no message (treated as bare `clr`) | Edge Case |
 | TC-12 | Empty string after `--` separator `-- ""` → no message (treated as bare `clr`) | Edge Case |
+| TC-13 | Default → `--effort max` in assembled command | Effort Default |
+| TC-14 | `--no-effort-max` → no `--effort` in assembled command | Effort Opt-Out |
 
 ## Test Coverage Summary
 
@@ -31,8 +33,10 @@ Integration test planning for the `run` command. See [commands.md](../../command
 - Ultrathink Default: 1 test
 - Ultrathink Opt-Out: 1 test
 - Edge Case: 2 tests
+- Effort Default: 1 test
+- Effort Opt-Out: 1 test
 
-**Total:** 12 tests
+**Total:** 14 tests
 
 ---
 
@@ -177,3 +181,27 @@ Integration test planning for the `run` command. See [commands.md](../../command
 **Verification:** Exit 0; last line equals bare command; output does NOT contain `"ultrathink "` (with trailing space).
 **Pass Criteria:** Exit 0; empty arg silently ignored; no degenerate prompt forwarded to claude.
 **Source:** fix issue-empty-msg-ultrathink
+
+---
+
+### TC-13: Default → `--effort max` in assembled command
+
+**Goal:** Without any effort flags, `clr` injects `--effort max` into the assembled command automatically.
+**Setup:** None.
+**Command:** `clr --dry-run "Fix bug"`
+**Expected Output:** Command line contains `--effort max`.
+**Verification:** `output.contains("--effort max")`.
+**Pass Criteria:** Exit 0; `--effort max` present in assembled command.
+**Source:** [invariant/001_default_flags.md](../../../invariant/001_default_flags.md), [params.md — --effort](../../params.md#parameter--17---effort)
+
+---
+
+### TC-14: `--no-effort-max` → no `--effort` in assembled command
+
+**Goal:** `--no-effort-max` suppresses the default `--effort max` injection; no `--effort` token appears.
+**Setup:** None.
+**Command:** `clr --dry-run --no-effort-max "Fix bug"`
+**Expected Output:** Command line does NOT contain `--effort`.
+**Verification:** `!output.contains("--effort")`.
+**Pass Criteria:** Exit 0; suppression applied; no effort flag forwarded.
+**Source:** [params.md — --no-effort-max](../../params.md#parameter--18---no-effort-max)

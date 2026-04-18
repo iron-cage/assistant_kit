@@ -88,13 +88,13 @@ fn read_command_src() -> String
     let mut content = String::new();
     let mut entries : Vec<_> = fs::read_dir( dir_path )
       .expect( "Failed to read src/command/ directory" )
-      .filter_map( | e | e.ok() )
+      .filter_map( Result::ok )
       .filter( | e |
       {
-        e.path().extension().map_or( false, | ext | ext == "rs" )
+        e.path().extension().is_some_and( | ext | ext == "rs" )
       })
       .collect();
-    entries.sort_by_key( | e | e.path() );
+    entries.sort_by_key( std::fs::DirEntry::path );
     for entry in entries
     {
       let file_content = fs::read_to_string( entry.path() )

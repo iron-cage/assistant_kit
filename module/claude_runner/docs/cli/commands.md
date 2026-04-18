@@ -4,7 +4,7 @@
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
-| 1 | `run` (default) | Execute Claude Code with given parameters | 16 | `clr "Fix bug" --model sonnet` |
+| 1 | `run` (default) | Execute Claude Code with given parameters | 18 | `clr "Fix bug" --model sonnet` |
 | 2 | `help` | Print usage information and exit | 0 | `clr --help` |
 
 ---
@@ -40,6 +40,8 @@ clr [OPTIONS] [MESSAGE]
 | [`--no-ultrathink`](params.md#parameter--14---no-ultrathink) | bool | false | Disable default ultrathink message suffix |
 | [`--system-prompt`](params.md#parameter--15---system-prompt) | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Set system prompt (replaces the default) |
 | [`--append-system-prompt`](params.md#parameter--16---append-system-prompt) | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Append text to the default system prompt |
+| [`--effort`](params.md#parameter--17---effort) | [`EffortLevel`](types.md#type--7-effortlevel) | max | Override reasoning effort level (default: max) |
+| [`--no-effort-max`](params.md#parameter--18---no-effort-max) | bool | false | Suppress default `--effort max` injection |
 
 **Parameter Groups:** [Claude-Native Flags](parameter_groups.md#group--1-claude-native-flags), [Runner Control](parameter_groups.md#group--2-runner-control), [System Prompt](parameter_groups.md#group--3-system-prompt)
 

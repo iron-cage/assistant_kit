@@ -4,8 +4,8 @@
 
 | # | Group | Parameters | Purpose |
 |---|-------|------------|---------|
-| 1 | Claude-Native Flags | 3 | Flags passed through to the claude subprocess |
-| 2 | Runner Control | 10 | Flags consumed by the runner itself |
+| 1 | Claude-Native Flags | 4 | Flags passed through to the claude subprocess |
+| 2 | Runner Control | 11 | Flags consumed by the runner itself |
 | 3 | System Prompt | 2 | Flags that inject or extend the system prompt sent to claude |
 
 ---
@@ -21,7 +21,10 @@ exposed as a user flag. Use `--new-session` (Runner Control) to disable it.
 **Note:** `--dangerously-skip-permissions` is injected automatically by `clr` (default-on).
 Use `--no-skip-permissions` (Runner Control) to disable the automatic bypass.
 
-**Coherence test:** "Is this flag consumed by the claude subprocess?" — YES for all 3.
+**Note:** `--effort max` is injected automatically by `clr` (default-on).
+Use `--effort <level>` to override or `--no-effort-max` (Runner Control) to suppress entirely.
+
+**Coherence test:** "Is this flag consumed by the claude subprocess?" — YES for all 4.
 
 **Parameters:**
 
@@ -30,6 +33,7 @@ Use `--no-skip-permissions` (Runner Control) to disable the automatic bypass.
 | [`-p`/`--print`](params.md#parameter--2---print) | bool | Print mode (default when message given) |
 | [`--model`](params.md#parameter--3---model) | [`ModelName`](types.md#type--4-modelname) | Model selection |
 | [`--verbose`](params.md#parameter--4---verbose) | bool | Claude verbose output |
+| [`--effort`](params.md#parameter--17---effort) | [`EffortLevel`](types.md#type--7-effortlevel) | Reasoning effort level (default: max) |
 
 **Used by:** [`run`](commands.md#command--1-run)
 
@@ -39,6 +43,7 @@ Use `--no-skip-permissions` (Runner Control) to disable the automatic bypass.
 - `--dry-run`: prevents execution entirely, runner-only concern
 - `--new-session`: controls runner session behavior, not forwarded to claude
 - `--no-skip-permissions`: controls whether runner injects `--dangerously-skip-permissions`; consumed by runner, not forwarded to claude
+- `--no-effort-max`: controls whether runner injects `--effort max`; consumed by runner, not forwarded to claude
 
 **Typical usage:**
 
@@ -54,7 +59,7 @@ Flags consumed by the runner itself before or instead of invoking the
 claude subprocess. These control execution behavior, not Claude Code
 behavior.
 
-**Coherence test:** "Is this flag consumed by the runner, not Claude?" — YES for all 10.
+**Coherence test:** "Is this flag consumed by the runner, not Claude?" — YES for all 11.
 
 **Parameters:**
 
@@ -70,6 +75,7 @@ behavior.
 | [`--verbosity`](params.md#parameter--12---verbosity) | [`VerbosityLevel`](types.md#type--5-verbositylevel) | Runner output level |
 | [`--trace`](params.md#parameter--13---trace) | bool | Print env+command to stderr then execute |
 | [`--no-ultrathink`](params.md#parameter--14---no-ultrathink) | bool | Disable default ultrathink message suffix |
+| [`--no-effort-max`](params.md#parameter--18---no-effort-max) | bool | Suppress default `--effort max` injection |
 
 **Used by:** [`run`](commands.md#command--1-run)
 
@@ -77,6 +83,7 @@ behavior.
 - `--print`: forwarded to claude subprocess as `--print`
 - `--model`: forwarded to claude subprocess as `--model`
 - `--verbose`: forwarded to claude subprocess as `--verbose`
+- `--effort`: forwarded to claude subprocess as `--effort <level>`
 - `--dangerously-skip-permissions`: not a user flag — injected automatically by the runner (default-on)
 
 **Typical usage:**

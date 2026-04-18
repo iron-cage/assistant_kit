@@ -1,6 +1,6 @@
 # Parameters
 
-### All Parameters (16 total)
+### All Parameters (18 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -20,8 +20,10 @@
 | 14 | `--no-ultrathink` | bool | false | present/absent | Disable default ultrathink message suffix | 1 cmd |
 | 15 | `--system-prompt` | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Any text | Set system prompt (replaces the default) | 1 cmd |
 | 16 | `--append-system-prompt` | [`SystemPromptText`](types.md#type--6-systemprompttext) | — | Any text | Append text to the default system prompt | 1 cmd |
+| 17 | `--effort` | [`EffortLevel`](types.md#type--7-effortlevel) | max | low/medium/high/max | Reasoning effort level forwarded to claude | 1 cmd |
+| 18 | `--no-effort-max` | bool | false | present/absent | Suppress default `--effort max` injection | 1 cmd |
 
-**Groups:** Parameters 2–4 form [Claude-Native Flags](parameter_groups.md#group--1-claude-native-flags). Parameters 5–14 form [Runner Control](parameter_groups.md#group--2-runner-control). Parameters 15–16 form [System Prompt](parameter_groups.md#group--3-system-prompt).
+**Groups:** Parameters 2–4 and 17 form [Claude-Native Flags](parameter_groups.md#group--1-claude-native-flags). Parameters 5–14 and 18 form [Runner Control](parameter_groups.md#group--2-runner-control). Parameters 15–16 form [System Prompt](parameter_groups.md#group--3-system-prompt).
 
 ---
 
@@ -362,10 +364,61 @@ given in the same invocation. Both are forwarded to claude in parse order.
 
 ---
 
+### Parameter :: 17. `--effort`
+
+Override the reasoning effort level passed to the `claude` subprocess. `clr`
+injects `--effort max` automatically on every invocation; this flag overrides
+that default to any supported level.
+
+- **Type:** [`EffortLevel`](types.md#type--7-effortlevel)
+- **Default:** max (injected automatically; override with this flag or suppress entirely with `--no-effort-max`)
+- **Command:** [`run`](commands.md#command--1-run)
+- **Group:** [Claude-Native Flags](parameter_groups.md#group--1-claude-native-flags)
+- **Validation:** requires a value; unknown level → error listing valid values (`low`, `medium`, `high`, `max`)
+
+```sh
+clr "Fix the bug"                  # sends: --effort max (default)
+clr --effort medium "Fix the bug"  # sends: --effort medium
+clr --effort high "Fix the bug"    # sends: --effort high
+```
+
+**Note:** `max` is the default because `clr` is designed for agentic automation
+tasks where full reasoning capacity is the correct default. The claude binary's
+own default (`medium`) is intentionally overridden here.
+
+**Note:** To suppress the `--effort` flag entirely (pass no effort flag to claude),
+use `--no-effort-max`.
+
+---
+
+### Parameter :: 18. `--no-effort-max`
+
+Suppress the automatic `--effort max` injection. When set, no `--effort` flag
+is forwarded to the `claude` subprocess at all.
+
+- **Type:** bool (standalone flag)
+- **Default:** false (effort max injection is **ON** by default; this flag turns it **OFF**)
+- **Command:** [`run`](commands.md#command--1-run)
+- **Group:** [Runner Control](parameter_groups.md#group--2-runner-control)
+
+```sh
+clr "Fix bug"                      # sends: --effort max (default)
+clr --no-effort-max "Fix bug"      # sends: no --effort flag at all
+```
+
+**Note:** Use `--no-effort-max` when targeting models or configurations that
+do not support the `--effort` flag, or when you need claude's native default
+effort level without any override.
+
+**Note:** `--effort <level>` and `--no-effort-max` are mutually exclusive.
+If `--no-effort-max` is set, any `--effort` value is ignored.
+
+---
+
 ### Quick Reference
 
 **Required parameters:** `[MESSAGE]` is required for print mode (which is the default when a message is given).
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt).
 
-**Commands by parameter count:** `run` = 16 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 18 parameters, `help` = 0 parameters.

@@ -10,6 +10,7 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
+| 107 | ✅ Complete | Add `--effort max` as default effort level in `clr` binary | feature | 2026-04-18 | [107](completed/107_clr_default_effort_max.md) |
 | 106 | 🎯 Available | Create agent_inventory crate — agent-agnostic asset discovery with Claude Code adapter | feature | 2026-04-12 | [106](106_create_agent_inventory_crate.md) |
 | 100 | 🎯 Available | Fix settings_get_routine JSON output losing type information | bug | 2026-04-12 | [100](100_fix_settings_get_json_type_loss.md) |
 | 101 | 🎯 Available | Fix processes_kill_routine swallowing signal errors and never producing exit 2 | bug | 2026-04-12 | [101](101_fix_processes_kill_silent_signal_errors.md) |
@@ -20,7 +21,7 @@
 | 098 | 🎯 Available | Minor code quality fixes: rename chrono_timestamp and fix status alignment | quality | 2026-04-12 | [098](098_minor_code_quality_fixes.md) |
 | 102 | 📥 Backlog | Split `claude_storage/src/cli/mod.rs` into per-command modules | refactoring | 2026-04-12 | [102](backlog/102_split_claude_storage_cli_mod.md) |
 | 103 | 📥 Backlog | Split `sessions_command_test.rs` into focused test files | quality | 2026-04-12 | [103](backlog/103_split_sessions_command_test.md) |
-| 104 | 📥 Backlog | Split `claude_runner_core/src/command.rs` into parameter-group modules | refactoring | 2026-04-12 | [104](backlog/104_split_claude_runner_core_command.md) |
+| 104 | ✅ Complete | Split `claude_runner_core/src/command.rs` into parameter-group modules | refactoring | 2026-04-12 | [104](completed/104_split_claude_runner_core_command.md) |
 | 105 | ✅ Complete | Create `docs/` structure for claude_assets, claude_assets_core, assistant | documentation | 2026-04-12 | [105](completed/105_create_docs_for_new_crates.md) |
 | 091 | ✅ Complete | Change ultrathink injection from prefix to suffix (`\n\nultrathink`) | bug | 2026-04-11 | [091](completed/091_ultrathink_suffix_injection.md) |
 | 090 | ✅ Complete | Implement ultrathink default message prefix in `clr` binary | feature | 2026-04-11 | [090](completed/090_ultrathink_default_prefix_impl.md) |
@@ -120,9 +121,9 @@
 ## Metadata
 
 **Status Distribution:**
-- ✅ Complete: 92
-- 🎯 Available: 8
-- 📥 Backlog: 3
+- ✅ Complete: 93
+- 🎯 Available: 9
+- 📥 Backlog: 2
 
 **Status Legend:**
 - 📥 Backlog — not yet planned
@@ -132,4 +133,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-04-12 (TSK-106 created: agent_inventory crate — agent-agnostic asset discovery)
+**Last Updated:** 2026-04-18 (TSK-107 created: --effort max default in clr binary)

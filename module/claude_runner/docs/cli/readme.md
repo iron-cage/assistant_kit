@@ -27,8 +27,8 @@ clr [OPTIONS] [MESSAGE]
 ## Navigation
 
 - [Commands](commands.md) — command reference (2 commands)
-- [Parameters](params.md) — flag and argument reference (16 parameters)
-- [Types](types.md) — semantic type definitions (6 types)
+- [Parameters](params.md) — flag and argument reference (18 parameters)
+- [Types](types.md) — semantic type definitions (7 types)
 - [Parameter Groups](parameter_groups.md) — logical parameter groupings (3 groups)
 - [Dictionary](dictionary.md) — domain vocabulary
 - [Workflows](workflows.md) — common usage patterns (9 workflows)

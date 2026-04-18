@@ -5,7 +5,7 @@
 - **Executor Type:** any
 - **Actor:** null
 - **Claimed At:** null
-- **Status:** 📥 (Backlog)
+- **Status:** ✅ (Complete)
 
 ## Goal
 
@@ -118,4 +118,7 @@ Desired answer for every question is YES.
 
 ## Outcomes
 
-[Added upon task completion.]
+Split completed. `src/command.rs` (1828 lines) replaced by `src/command/` directory with 4 files:
+`mod.rs` (586 lines), `params_core.rs` (193 lines), `params_security.rs` (188 lines),
+`params_extended.rs` (894 lines). All files under 900 lines. Monolith absent. `w3 .test level::3`
+passes with zero regressions. `src/command/readme.md` and `src/readme.md` updated.

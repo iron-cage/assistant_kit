@@ -1,6 +1,6 @@
 # Types
 
-### All Types (6 total)
+### All Types (7 total)
 
 | # | Type | Base | Used By | Purpose |
 |---|------|------|---------|---------|
@@ -10,6 +10,7 @@
 | 4 | `ModelName` | String | [`--model`](params.md#parameter--3---model) | Claude model identifier |
 | 5 | `VerbosityLevel` | u8 | [`--verbosity`](params.md#parameter--12---verbosity) | Runner output gate (0–5) |
 | 6 | `SystemPromptText` | String | [`--system-prompt`](params.md#parameter--15---system-prompt), [`--append-system-prompt`](params.md#parameter--16---append-system-prompt) | Free-form system prompt text |
+| 7 | `EffortLevel` | enum | [`--effort`](params.md#parameter--17---effort) | Reasoning effort level (low/medium/high/max) |
 
 ---
 
@@ -155,4 +156,38 @@ model's behavioral context (system turn), not the user's conversational input
 ```sh
 clr --system-prompt "You are a Rust expert. Be concise." "Review PR"
 clr --append-system-prompt "Always respond in JSON." "List failing tests"
+```
+
+---
+
+### Type :: 7. `EffortLevel`
+
+Reasoning effort level passed to the `claude` subprocess via `--effort`.
+Controls how much computation Claude allocates to reasoning before responding.
+`clr` defaults to `max` — the claude binary's own default is `medium`.
+
+- **Base type:** enum (4 variants)
+- **Rust type:** `claude_runner_core::EffortLevel` (public enum in `claude_runner_core/src/types.rs`)
+- **Parsing:** `EffortLevel::from_str()`; rejects unknown strings
+- **Default (clr):** `max` (injected automatically; see `--effort`)
+- **Default (claude binary):** `medium`
+- **Validation errors:**
+  - Unknown level: `"unknown effort level: '{s}' — valid values: low, medium, high, max"`
+- **Used by:** [`--effort`](params.md#parameter--17---effort)
+
+**Level Semantics:**
+
+| Level | Rust Variant | CLI String | Reasoning Budget |
+|-------|-------------|------------|------------------|
+| `low` | `EffortLevel::Low` | `low` | Minimal — fast, lowest token cost |
+| `medium` | `EffortLevel::Medium` | `medium` | Standard — claude binary default |
+| `high` | `EffortLevel::High` | `high` | Extended — more deliberate reasoning |
+| `max` | `EffortLevel::Max` | `max` | Maximum — `clr` default for automation |
+
+```sh
+clr --effort max "Fix bug"     # explicitly maximum (same as default)
+clr --effort high "Fix bug"    # extended reasoning
+clr --effort medium "Fix bug"  # claude binary's default
+clr --effort low "Fix bug"     # fast, minimal reasoning
+clr --effort bad "Fix bug"     # error: unknown effort level
 ```

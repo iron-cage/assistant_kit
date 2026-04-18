@@ -367,6 +367,42 @@ impl Default for EffortLevel
   fn default() -> Self { Self::Medium }
 }
 
+impl core::str::FromStr for EffortLevel
+{
+  type Err = String;
+
+  /// Parse a CLI string into an `EffortLevel`.
+  ///
+  /// Accepts exactly the strings returned by `as_str()`:
+  /// `"low"`, `"medium"`, `"high"`, `"max"`.
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use claude_runner_core::EffortLevel;
+  ///
+  /// assert_eq!( "max".parse::< EffortLevel >().unwrap(), EffortLevel::Max );
+  /// assert_eq!( "low".parse::< EffortLevel >().unwrap(), EffortLevel::Low );
+  /// assert!( "invalid".parse::< EffortLevel >().is_err() );
+  /// let err = "bad".parse::< EffortLevel >().unwrap_err();
+  /// assert!( err.contains( "valid values" ), "error must list valid values: {err}" );
+  /// ```
+  #[inline]
+  fn from_str( s : &str ) -> Result< Self, Self::Err >
+  {
+    match s
+    {
+      "low"    => Ok( Self::Low ),
+      "medium" => Ok( Self::Medium ),
+      "high"   => Ok( Self::High ),
+      "max"    => Ok( Self::Max ),
+      _ => Err( format!(
+        "unknown effort level: '{s}' — valid values: low, medium, high, max"
+      ) ),
+    }
+  }
+}
+
 /// Output from a non-interactive Claude Code execution
 ///
 /// Contains captured stdout, stderr, and exit code from the process.
