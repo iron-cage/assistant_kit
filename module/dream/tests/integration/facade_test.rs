@@ -11,6 +11,7 @@
 //! cargo test -p dream --no-default-features --features profile  --test integration
 //! cargo test -p dream --no-default-features --features runner   --test integration
 //! cargo test -p dream --no-default-features --features version  --test integration
+//! cargo test -p dream --no-default-features --features assets   --test integration
 //! cargo test -p dream --no-default-features --features full     --test integration
 //! ```
 
@@ -64,4 +65,14 @@ fn version_re_exports_accessible()
 {
   use dream::version::CoreError;
   let _ = core::any::TypeId::of::< CoreError >();
+}
+
+// ─── feature: assets ────────────────────────────────────────────────────────
+
+#[ cfg( feature = "assets" ) ]
+#[ test ]
+fn assets_re_exports_accessible()
+{
+  use dream::assets::artifact::ArtifactKind;
+  let _ = core::any::TypeId::of::< ArtifactKind >();
 }

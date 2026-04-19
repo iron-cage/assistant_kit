@@ -77,4 +77,4 @@ Activated by `format::markdown` on `.export`, or by omitting `format::` entirely
 
 - [params.md § format::](../params.md#parameter--5-format) — parameter definition and validation
 - [types.md § ExportFormat](../types.md#exportformat) — type constants and parsing
-- [testing/param/format.md](../testing/param/format.md) — test cases EC-1, EC-4, EC-7
+- [05_format.md](../../../tests/doc/cli/testing/param/05_format.md) — test cases EC-1, EC-4, EC-7

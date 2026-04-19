@@ -3,6 +3,23 @@
 //! Each test writes a credential file to a temp HOME directory and
 //! verifies the `TokenStatus` variant returned.
 //! Safe because nextest runs every test in its own process.
+//!
+//! ## Test Matrix
+//!
+//! | ID   | Test Function | Condition | P/N |
+//! |------|---------------|-----------|-----|
+//! | T-01 | `status_returns_expired_when_expires_at_in_past` | `expiresAt` in the past → `Expired` | P |
+//! | T-02 | `status_returns_valid_when_far_future` | `expiresAt` = `u64::MAX` → `Valid` | P |
+//! | T-03 | `status_returns_expiring_soon_within_default_threshold` | within default warning window → `ExpiringSoon` | P |
+//! | T-04 | `status_with_threshold_zero_classifies_non_expired_as_expiring_soon` | threshold=0 → non-expired is `ExpiringSoon` | P |
+//! | T-05 | `status_returns_error_when_credentials_file_missing` | no credentials file → `Err` | N |
+//! | T-06 | `status_returns_error_when_expires_at_missing_from_credentials` | `expiresAt` field absent → `Err` | N |
+//! | T-07 | `status_with_custom_threshold_classifies_correctly` | custom threshold boundary → correct variant | P |
+//! | T-08 | `parse_expires_at_standard_format` | standard ms value → `Some` | P |
+//! | T-09 | `parse_expires_at_with_whitespace` | leading/trailing whitespace → `Some` | P |
+//! | T-10 | `parse_expires_at_missing_returns_none` | field absent → `None` | N |
+//! | T-11 | `parse_expires_at_empty_value_returns_none` | field present, value empty → `None` | N |
+//! | T-12 | `parse_expires_at_epoch_plus_one_is_some` | value `"1"` → `Some(1)` | P |
 
 use claude_profile::token::{ self, TokenStatus };
 use tempfile::TempDir;

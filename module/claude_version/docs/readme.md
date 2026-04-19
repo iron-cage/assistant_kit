@@ -2,7 +2,7 @@
 
 Documentation for the `claude_version` crate covering behavioral requirements, design patterns, and algorithms.
 
-## Responsibility Table
+### Responsibility Table
 
 | File/Directory | Responsibility |
 |----------------|----------------|
@@ -11,5 +11,4 @@ Documentation for the `claude_version` crate covering behavioral requirements, d
 | `feature/` | Version management, process lifecycle, settings, dry-run, CLI design |
 | `pattern/` | 5-layer version lock design pattern |
 | `algorithm/` | Settings type inference algorithm |
-| `entities.md` | Master index of all doc entities and instances |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

@@ -26,7 +26,7 @@
 //! let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
 //!
 //! // Always validate range, even with defaults
-//! if !( 0..=5 ).contains( &verbosity )
+//! if !( 0..=VERBOSITY_MAX ).contains( &verbosity )
 //! {
 //!   return Err( ErrorData::new(
 //!     ErrorCode::InternalError,
@@ -46,6 +46,35 @@
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use claude_storage_core::Storage;
+
+// ─── constants ─────────────────────────────────────────────────────────────
+
+/// Maximum accepted verbosity level (inclusive).
+const VERBOSITY_MAX : i64 = 5;
+
+/// UUID string length (8-4-4-4-12 = 36 chars).
+const UUID_LEN : usize = 36;
+
+/// Characters to display from each end when short-displaying a UUID.
+const UUID_SHORT_LEN : usize = 8;
+
+/// Entry count above which `truncate_message` abbreviates.
+const TRUNCATE_THRESHOLD : usize = 50;
+
+/// Characters kept from each end when truncating a message.
+const TRUNCATE_PREVIEW : usize = 30;
+
+/// Fallback agent type when `meta.json` is absent or missing `agentType`.
+const AGENT_TYPE_UNKNOWN : &str = "unknown";
+
+/// Default session topic when no `topic::` param is supplied.
+const DEFAULT_TOPIC : &str = "default_topic";
+
+// Seconds-per-unit thresholds for relative time formatting.
+const SECS_PER_MIN   : u64 = 60;
+const SECS_PER_HOUR  : u64 = 3_600;
+const SECS_PER_DAY   : u64 = 86_400;
+const SECS_PER_MONTH : u64 = 2_592_000;
 
 /// Create a `Storage` instance, respecting `CLAUDE_STORAGE_ROOT` env var.
 ///
@@ -69,6 +98,26 @@ fn create_storage() -> core::result::Result< Storage, ErrorData >
   }
 }
 
+/// Validate that `verbosity` is within `0..=VERBOSITY_MAX`.
+///
+/// # Errors
+///
+/// Returns `ErrorData` when `verbosity` is outside the valid range.
+fn validate_verbosity( verbosity : i64 ) -> core::result::Result< (), ErrorData >
+{
+  if ( 0..=VERBOSITY_MAX ).contains( &verbosity )
+  {
+    Ok( () )
+  }
+  else
+  {
+    Err( ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "Invalid verbosity: {verbosity}. Valid range: 0-{VERBOSITY_MAX}" ),
+    ) )
+  }
+}
+
 /// Show storage status and statistics
 ///
 /// Displays comprehensive information about Claude Code storage including
@@ -84,19 +133,7 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
   let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
-
-  // Validate verbosity range (0-5)
-  if !( 0..=5 ).contains( &verbosity )
-  {
-    return Err
-    (
-      ErrorData::new
-      (
-        ErrorCode::InternalError,
-        format!( "Invalid verbosity: {verbosity}. Valid range: 0-5" )
-      )
-    );
-  }
+  validate_verbosity( verbosity )?;
 
   let custom_path = cmd.get_string( "path" );
 
@@ -487,7 +524,7 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let project_type = cmd.get_string( "type" ).unwrap_or( "all" );
   let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
 
-  // Fix(issue-015): Validate verbosity range (0-5)
+  // Fix(issue-015): Validate verbosity range
   //
   // Root cause: list_routine retrieved verbosity without range validation, unlike
   // status_routine and show_routine which include explicit 0-5 checks. Values like
@@ -496,17 +533,7 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // Pitfall: get_integer().unwrap_or(default) only substitutes the default when the
   // parameter is absent. An explicit out-of-range value is returned as-is. Range
   // validation is always the caller's responsibility, even when a default is set.
-  if !( 0..=5 ).contains( &verbosity )
-  {
-    return Err
-    (
-      ErrorData::new
-      (
-        ErrorCode::InternalError,
-        format!( "Invalid verbosity: {verbosity}. Valid range: 0-5" )
-      )
-    );
-  }
+  validate_verbosity( verbosity )?;
 
   // Parse filter parameters
   let path_filter = cmd.get_string( "path" );
@@ -860,6 +887,44 @@ pub fn parse_project_parameter( input : &str )
   Ok( ProjectId::uuid( input ) )
 }
 
+/// Parse a raw project ID string and load the corresponding project.
+///
+/// Combines `parse_project_parameter` + `storage.load_project` into a single
+/// call, eliminating the repeated two-step pattern at every command site that
+/// accepts a `project::` parameter.
+///
+/// # Errors
+///
+/// Returns `ErrorData` when parsing fails or the project cannot be loaded.
+fn load_project_for_param(
+  storage  : &Storage,
+  proj_id  : &str,
+) -> core::result::Result< claude_storage_core::Project, ErrorData >
+{
+  let id = parse_project_parameter( proj_id )
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, e ) )?;
+  storage.load_project( &id )
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load project: {e}" ) ) )
+}
+
+/// Find a mutable session reference by exact ID or UUID prefix.
+///
+/// Checks `s.id() == session_id || s.id().starts_with(session_id)` so both
+/// full UUIDs and 8-character prefixes resolve correctly.
+///
+/// # Errors
+///
+/// Returns `ErrorData` when no session matches.
+fn find_session_mut<'a>(
+  sessions   : &'a mut [ claude_storage_core::Session ],
+  session_id : &str,
+) -> core::result::Result< &'a mut claude_storage_core::Session, ErrorData >
+{
+  sessions.iter_mut()
+    .find( | s | s.id() == session_id || s.id().starts_with( session_id ) )
+    .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {session_id}" ) ) )
+}
+
 /// Show session or project details (location-aware)
 ///
 /// Smart behavior based on parameters:
@@ -883,18 +948,7 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let show_entries = cmd.get_boolean( "entries" ).unwrap_or( false );
   let metadata_only = cmd.get_boolean( "metadata" ).unwrap_or( false );
 
-  // Validate verbosity range (0-5)
-  if !( 0..=5 ).contains( &verbosity )
-  {
-    return Err
-    (
-      ErrorData::new
-      (
-        ErrorCode::InternalError,
-        format!( "Invalid verbosity: {verbosity}. Valid range: 0-5" )
-      )
-    );
-  }
+  validate_verbosity( verbosity )?;
 
   // Fix(issue-001): Validate entries parameter requires session_id
   //
@@ -1078,9 +1132,7 @@ fn format_session_output(
   // Pitfall: ID lookups should always support prefix matching for UUIDs. Test with
   // both exact and partial IDs to ensure both work. Use production-format test data
   // (actual UUIDs) not test-friendly strings like "test-session-123".
-  let session = sessions.iter_mut()
-    .find( | s | s.id() == session_id || s.id().starts_with( session_id ) )
-    .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {session_id}" ) ) )?;
+  let session = find_session_mut( &mut sessions, session_id )?;
 
   // Get session stats
   let stats = session.stats()
@@ -1401,11 +1453,7 @@ pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       //
       // Pitfall: When fixing a bug in one command, grep for identical patterns in other commands.
       // Bugs often exist in multiple locations sharing the same flawed assumption.
-      let project_id_parsed = parse_project_parameter( proj_id )
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, e ) )?;
-
-      let project = storage.load_project( &project_id_parsed )
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load project: {e}" ) ) )?;
+      let project = load_project_for_param( &storage, proj_id )?;
 
       project.count_sessions()
         .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to count sessions: {e}" ) ) )?
@@ -1427,11 +1475,7 @@ pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       //
       // Pitfall: When fixing a bug in one command, grep for identical patterns in other commands.
       // Bugs often exist in multiple locations sharing the same flawed assumption.
-      let project_id_parsed = parse_project_parameter( proj_id )
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, e ) )?;
-
-      let project = storage.load_project( &project_id_parsed )
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load project: {e}" ) ) )?;
+      let project = load_project_for_param( &storage, proj_id )?;
 
       let sessions = project.all_sessions()
         .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
@@ -1493,24 +1537,14 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let entry_type = cmd.get_string( "entry_type" );
   let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
 
-  // Fix(issue-010): Validate verbosity range (0-5)
+  // Fix(issue-010): Validate verbosity range
   //
   // Root cause: search_routine accepted any verbosity value without validation,
   // inconsistent with status_routine and show_routine which validate 0-5 range.
   //
   // Pitfall: Don't assume default values prevent invalid input. Parameters with
   // defaults still need validation since users can override with invalid values.
-  if !( 0..=5 ).contains( &verbosity )
-  {
-    return Err
-    (
-      ErrorData::new
-      (
-        ErrorCode::InternalError,
-        format!( "Invalid verbosity: {verbosity}. Valid range: 0-5" )
-      )
-    );
-  }
+  validate_verbosity( verbosity )?;
 
   // Create storage instance
   let storage = create_storage()?;
@@ -1557,16 +1591,13 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       //
       // Pitfall: When fixing a bug in one command, grep for identical patterns in other commands.
       // Bugs often exist in multiple locations sharing the same flawed assumption.
-      let project_id_parsed = parse_project_parameter( proj_id )
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, e ) )?;
-
-      storage.load_project( &project_id_parsed )
+      load_project_for_param( &storage, proj_id )
     }
     else
     {
       storage.load_project_for_cwd()
-    }
-    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load project: {e}" ) ) )?;
+        .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load project: {e}" ) ) )
+    }?;
 
     let mut sessions = project.all_sessions()
       .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
@@ -1579,9 +1610,7 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     //
     // Pitfall: Partial-UUID support must be applied uniformly. Any session find()
     // predicate that uses only == will silently reject valid prefix IDs.
-    let session = sessions.iter_mut()
-      .find( | s | s.id() == sess_id || s.id().starts_with( sess_id ) )
-      .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {sess_id}" ) ) )?;
+    let session = find_session_mut( &mut sessions, sess_id )?;
 
     let matches = session.search( &filter )
       .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Search failed: {e}" ) ) )?;
@@ -1602,19 +1631,18 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     //
     // Pitfall: When fixing a bug in one command, grep for identical patterns in other commands.
     // Bugs often exist in multiple locations sharing the same flawed assumption.
-    let project_id_parsed = parse_project_parameter( proj_id )
-      .map_err( | e | ErrorData::new( ErrorCode::InternalError, e ) )?;
-
-    let project = storage.load_project( &project_id_parsed )
-      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load project: {e}" ) ) )?;
+    let project = load_project_for_param( &storage, proj_id )?;
 
     let mut sessions = project.sessions()
       .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
 
     for session in &mut sessions
     {
-      let matches = session.search( &filter )
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Search failed in session {}: {}", session.id(), e ) ) )?;
+      let matches = match session.search( &filter )
+      {
+        Ok( m )  => m,
+        Err( e ) => { eprintln!( "warning: search skipped session {}: {e}", session.id() ); continue; }
+      };
 
       for m in matches
       {
@@ -1633,8 +1661,11 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
     for session in &mut sessions
     {
-      let matches = session.search( &filter )
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Search failed in session {}: {}", session.id(), e ) ) )?;
+      let matches = match session.search( &filter )
+      {
+        Ok( m )  => m,
+        Err( e ) => { eprintln!( "warning: search skipped session {}: {e}", session.id() ); continue; }
+      };
 
       for m in matches
       {
@@ -1744,16 +1775,13 @@ pub fn export_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     //
     // Pitfall: When fixing a bug in one command, grep for identical patterns in other commands.
     // Bugs often exist in multiple locations sharing the same flawed assumption.
-    let project_id_parsed = parse_project_parameter( proj_id )
-      .map_err( | e | ErrorData::new( ErrorCode::InternalError, e ) )?;
-
-    storage.load_project( &project_id_parsed )
+    load_project_for_param( &storage, proj_id )
   }
   else
   {
     storage.load_project_for_cwd()
-  }
-  .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load project: {e}" ) ) )?;
+      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load project: {e}" ) ) )
+  }?;
 
   // Find session
   let mut sessions = project.all_sessions()
@@ -1768,9 +1796,7 @@ pub fn export_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // Pitfall: ID lookups should always support prefix matching for UUIDs. Test with
   // both exact and partial IDs to ensure both work. Use production-format test data
   // (actual UUIDs) not test-friendly strings like "test-session-123".
-  let session = sessions.iter_mut()
-    .find( | s | s.id() == session_id || s.id().starts_with( session_id ) )
-    .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {session_id}" ) ) )?;
+  let session = find_session_mut( &mut sessions, session_id )?;
 
   // Export to file
   let output_path = std::path::Path::new( output_path_str );
@@ -2003,11 +2029,11 @@ fn is_zero_byte_session( session : &claude_storage_core::Session ) -> bool
     .unwrap_or( false )
 }
 
-// Shorten real UUID-format IDs (36 chars, dash at position 8) to first 8 chars.
+// Shorten real UUID-format IDs to first `UUID_SHORT_LEN` chars.
 // Non-UUID IDs (e.g. synthetic test IDs) are returned intact.
 fn short_id( id : &str ) -> &str
 {
-  if id.len() == 36 && id.as_bytes().get( 8 ) == Some( &b'-' ) { &id[ ..8 ] }
+  if id.len() == UUID_LEN && id.as_bytes().get( UUID_SHORT_LEN ) == Some( &b'-' ) { &id[ ..UUID_SHORT_LEN ] }
   else { id }
 }
 
@@ -2017,11 +2043,11 @@ fn format_relative_time( mtime : std::time::SystemTime ) -> String
     .duration_since( mtime )
     .unwrap_or_default();
   let secs = elapsed.as_secs();
-  if secs < 60             { format!( "{secs}s ago" ) }
-  else if secs < 3_600     { format!( "{}m ago", secs / 60 ) }
-  else if secs < 86_400    { format!( "{}h ago", secs / 3_600 ) }
-  else if secs < 2_592_000 { format!( "{}d ago", secs / 86_400 ) }
-  else                     { format!( "{}mo ago", secs / 2_592_000 ) }
+  if secs < SECS_PER_MIN        { format!( "{secs}s ago" ) }
+  else if secs < SECS_PER_HOUR  { format!( "{}m ago", secs / SECS_PER_MIN ) }
+  else if secs < SECS_PER_DAY   { format!( "{}h ago", secs / SECS_PER_HOUR ) }
+  else if secs < SECS_PER_MONTH { format!( "{}d ago", secs / SECS_PER_DAY ) }
+  else                          { format!( "{}mo ago", secs / SECS_PER_MONTH ) }
 }
 
 /// Find the last entry in a session that contains visible text content.
@@ -2068,10 +2094,10 @@ fn last_text_entry( session : &mut claude_storage_core::Session ) -> Option< Str
 fn truncate_message( text : &str ) -> String
 {
   let chars : Vec< char > = text.chars().collect();
-  if chars.len() > 50
+  if chars.len() > TRUNCATE_THRESHOLD
   {
-    let first : String = chars[ ..30 ].iter().collect();
-    let last  : String = chars[ chars.len() - 30.. ].iter().collect();
+    let first : String = chars[ ..TRUNCATE_PREVIEW ].iter().collect();
+    let last  : String = chars[ chars.len() - TRUNCATE_PREVIEW.. ].iter().collect();
     format!( "{first}...{last}" )
   }
   else
@@ -2125,17 +2151,17 @@ fn parse_agent_meta( agent_path : &std::path::Path ) -> AgentMeta
   let content = match std::fs::read_to_string( &meta_path )
   {
     Ok( c ) if !c.is_empty() => c,
-    _ => return AgentMeta { agent_type : "unknown".into() },
+    _ => return AgentMeta { agent_type : AGENT_TYPE_UNKNOWN.into() },
   };
   let Ok( val ) = claude_storage_core::parse_json( &content ) else
   {
-    return AgentMeta { agent_type : "unknown".into() };
+    return AgentMeta { agent_type : AGENT_TYPE_UNKNOWN.into() };
   };
   let agent_type = val.as_object()
     .and_then( | obj | obj.get( "agentType" ) )
     .and_then( claude_storage_core::JsonValue::as_str )
     .filter( | s | !s.trim().is_empty() )
-    .unwrap_or( "unknown" )
+    .unwrap_or( AGENT_TYPE_UNKNOWN )
     .to_string();
   AgentMeta { agent_type }
 }
@@ -2444,13 +2470,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
 
   let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
-  if !( 0..=5 ).contains( &verbosity )
-  {
-    return Err( ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "Invalid verbosity: {verbosity}. Valid range: 0-5" ),
-    ) );
-  }
+  validate_verbosity( verbosity )?;
 
   let min_entries_filter = if let Some( n ) = cmd.get_integer( "min_entries" )
   {
@@ -2563,7 +2583,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         if dir_name == eb { return true; }
         let candidate_base = dir_name.find( "--" ).map_or( dir_name, | i | &dir_name[ ..i ] );
         decode_path_via_fs( candidate_base )
-          .is_none_or( | p | p.starts_with( &base_path ) )
+          .map_or( true, | p | p.starts_with( &base_path ) )
       },
       // Fix(issue-032)
       // Root cause: is_relevant_encoded uses string starts_with to check if
@@ -2580,7 +2600,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         let candidate_base = dir_name.find( "--" ).map_or( dir_name, | i | &dir_name[ ..i ] );
         if candidate_base == eb { return true; }
         decode_path_via_fs( candidate_base )
-          .is_none_or( | p | base_path.starts_with( &p ) )
+          .map_or( true, | p | base_path.starts_with( &p ) )
       },
       _          => false,
     }
@@ -3012,6 +3032,38 @@ pub fn exists_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
 }
 
+// ─── .session.dir / .session.ensure shared helper ────────────────────────────
+
+/// Resolve `path::` + `topic::` parameters into a session working directory.
+///
+/// Requires `path::` (errors with `command_name` in the message when absent).
+/// `topic::` defaults to `DEFAULT_TOPIC`. The returned path is `{base}/-{topic}`.
+///
+/// # Errors
+///
+/// Returns `ErrorData` when `path::` is absent, path resolution fails, or topic
+/// is invalid.
+fn resolve_required_session_dir(
+  cmd          : &VerifiedCommand,
+  command_name : &str,
+) -> core::result::Result< std::path::PathBuf, ErrorData >
+{
+  let path_str = cmd.get_string( "path" )
+    .ok_or_else( || ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "path parameter is required for {command_name}" ),
+    ) )?;
+
+  let resolved = resolve_path_parameter( path_str )
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, e ) )?;
+  let base = std::path::PathBuf::from( resolved );
+
+  let topic = cmd.get_string( "topic" ).unwrap_or( DEFAULT_TOPIC );
+  validate_topic( topic )?;
+
+  Ok( base.join( format!( "-{topic}" ) ) )
+}
+
 // ─── .session.dir routine ─────────────────────────────────────────────────────
 
 /// Compute the session working directory path without creating it.
@@ -3026,21 +3078,7 @@ pub fn exists_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 pub fn session_dir_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
-  let path_str = cmd.get_string( "path" )
-    .ok_or_else( || ErrorData::new(
-      ErrorCode::InternalError,
-      "path parameter is required for .session.dir".to_string(),
-    ) )?;
-
-  let resolved = resolve_path_parameter( path_str )
-    .map_err( | e | ErrorData::new( ErrorCode::InternalError, e ) )?;
-  let base = std::path::PathBuf::from( resolved );
-
-  let topic = cmd.get_string( "topic" ).unwrap_or( "default_topic" );
-  validate_topic( topic )?;
-
-  let session_dir = base.join( format!( "-{topic}" ) );
-
+  let session_dir = resolve_required_session_dir( &cmd, ".session.dir" )?;
   Ok( OutputData::new( format!( "{}", session_dir.display() ), "text" ) )
 }
 
@@ -3066,18 +3104,7 @@ pub fn session_dir_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 pub fn session_ensure_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
-  let path_str = cmd.get_string( "path" )
-    .ok_or_else( || ErrorData::new(
-      ErrorCode::InternalError,
-      "path parameter is required for .session.ensure".to_string(),
-    ) )?;
-
-  let resolved = resolve_path_parameter( path_str )
-    .map_err( | e | ErrorData::new( ErrorCode::InternalError, e ) )?;
-  let base = std::path::PathBuf::from( resolved );
-
-  let topic = cmd.get_string( "topic" ).unwrap_or( "default_topic" );
-  validate_topic( topic )?;
+  let session_dir = resolve_required_session_dir( &cmd, ".session.ensure" )?;
 
   let forced_strategy = if let Some( s ) = cmd.get_string( "strategy" )
   {
@@ -3095,8 +3122,6 @@ pub fn session_ensure_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   {
     None
   };
-
-  let session_dir = base.join( format!( "-{topic}" ) );
 
   std::fs::create_dir_all( &session_dir ).map_err( | e | ErrorData::new(
     ErrorCode::InternalError,

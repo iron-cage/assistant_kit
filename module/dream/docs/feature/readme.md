@@ -11,4 +11,4 @@
 
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
-| 001 | [Facade Aggregation](001_aggregation.md) | Feature-gate re-export requirements FR-1 through FR-9 | ✅ |
+| 001 | [Facade Aggregation](001_aggregation.md) | Feature-gate re-export requirements FR-1 through FR-10 | ✅ |

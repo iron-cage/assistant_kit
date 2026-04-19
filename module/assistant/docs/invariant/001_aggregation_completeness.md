@@ -36,4 +36,4 @@ Every Layer 2 crate that exposes CLI commands MUST satisfy both of the following
 | source | `src/main.rs` | build_registry() — the authoritative registration call site |
 | source | `build.rs` | COMMANDS_YAML consumption for rerun-if-changed tracking |
 | source | `Cargo.toml` | Layer 2 optional dependency declarations |
-| feature | [feature/001_super_app_aggregation.md](../feature/001_super_app_aggregation.md) | Registration sequence and precedence design |
+| doc | [feature/001_super_app_aggregation.md](../feature/001_super_app_aggregation.md) | Registration sequence and precedence design |

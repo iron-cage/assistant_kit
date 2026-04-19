@@ -12,13 +12,13 @@
 |---|---|---|---|---|---|
 | 107 | ✅ Complete | Add `--effort max` as default effort level in `clr` binary | feature | 2026-04-18 | [107](completed/107_clr_default_effort_max.md) |
 | 106 | 🎯 Available | Create agent_inventory crate — agent-agnostic asset discovery with Claude Code adapter | feature | 2026-04-12 | [106](106_create_agent_inventory_crate.md) |
-| 100 | 🎯 Available | Fix settings_get_routine JSON output losing type information | bug | 2026-04-12 | [100](100_fix_settings_get_json_type_loss.md) |
-| 101 | 🎯 Available | Fix processes_kill_routine swallowing signal errors and never producing exit 2 | bug | 2026-04-12 | [101](101_fix_processes_kill_silent_signal_errors.md) |
-| 095 | 🎯 Available | Fix require_claude_paths producing identical errors for distinct failure conditions | bug | 2026-04-12 | [095](095_fix_require_claude_paths_error_messages.md) |
-| 099 | 🎯 Available | Fix dead output-control params in version_install, version_guard, and processes_kill | bug | 2026-04-12 | [099](099_fix_dead_output_control_params.md) |
-| 096 | 🎯 Available | Handle UTF-16 surrogate pairs in parse_json_string_value | bug | 2026-04-12 | [096](096_fix_surrogate_pairs_in_json_string_parser.md) |
-| 097 | 🎯 Available | Fix extract_releases fragile literal-split tag parsing | quality | 2026-04-12 | [097](097_fix_extract_releases_fragile_tag_parsing.md) |
-| 098 | 🎯 Available | Minor code quality fixes: rename chrono_timestamp and fix status alignment | quality | 2026-04-12 | [098](098_minor_code_quality_fixes.md) |
+| 100 | ✅ Complete | Fix settings_get_routine JSON output losing type information | bug | 2026-04-12 | [100](completed/100_fix_settings_get_json_type_loss.md) |
+| 101 | ✅ Complete | Fix processes_kill_routine swallowing signal errors and never producing exit 2 | bug | 2026-04-12 | [101](completed/101_fix_processes_kill_silent_signal_errors.md) |
+| 095 | ✅ Complete | Fix require_claude_paths producing identical errors for distinct failure conditions | bug | 2026-04-12 | [095](completed/095_fix_require_claude_paths_error_messages.md) |
+| 099 | ✅ Complete | Fix dead output-control params in version_install, version_guard, and processes_kill | bug | 2026-04-12 | [099](completed/099_fix_dead_output_control_params.md) |
+| 096 | ✅ Complete | Handle UTF-16 surrogate pairs in parse_json_string_value | bug | 2026-04-12 | [096](completed/096_fix_surrogate_pairs_in_json_string_parser.md) |
+| 097 | ✅ Complete | Fix extract_releases fragile literal-split tag parsing | quality | 2026-04-12 | [097](completed/097_fix_extract_releases_fragile_tag_parsing.md) |
+| 098 | ✅ Complete | Minor code quality fixes: rename chrono_timestamp and fix status alignment | quality | 2026-04-12 | [098](completed/098_minor_code_quality_fixes.md) |
 | 102 | 📥 Backlog | Split `claude_storage/src/cli/mod.rs` into per-command modules | refactoring | 2026-04-12 | [102](backlog/102_split_claude_storage_cli_mod.md) |
 | 103 | 📥 Backlog | Split `sessions_command_test.rs` into focused test files | quality | 2026-04-12 | [103](backlog/103_split_sessions_command_test.md) |
 | 104 | ✅ Complete | Split `claude_runner_core/src/command.rs` into parameter-group modules | refactoring | 2026-04-12 | [104](completed/104_split_claude_runner_core_command.md) |
@@ -121,8 +121,8 @@
 ## Metadata
 
 **Status Distribution:**
-- ✅ Complete: 93
-- 🎯 Available: 9
+- ✅ Complete: 103
+- 🎯 Available: 1
 - 📥 Backlog: 2
 
 **Status Legend:**
@@ -133,4 +133,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-04-18 (TSK-107 created: --effort max default in clr binary)
+**Last Updated:** 2026-04-19 (TSK-096, TSK-097, TSK-098, TSK-099 marked complete; documentation consistency pass)

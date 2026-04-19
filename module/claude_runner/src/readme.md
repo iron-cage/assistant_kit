@@ -2,6 +2,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `lib.rs` | Public API: `COMMANDS_YAML` constant + `VerbosityLevel` re-export. |
-| `main.rs` | CLI binary: arg parsing, `ClaudeCommand` builder, execute. |
+| `lib.rs` | CLI parsing pipeline, execution routing, and library API constants. |
+| `main.rs` | `claude_runner` binary entry point; delegates to `run_cli()`. |
 | `verbosity.rs` | `VerbosityLevel` newtype: output gating with semantic level methods. |
+| `bin/` | `clr` binary alias entry point (thin wrapper). |

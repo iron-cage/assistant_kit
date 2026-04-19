@@ -5,10 +5,10 @@ Zero own logic — every public item originates from a core crate.
 
 ## Responsibility Table
 
-| File/Dir | Responsibility |
-|----------|---------------|
-| `Cargo.toml` | Crate manifest: seven feature-gated optional workspace deps |
-| `src/lib.rs` | Feature-gated `pub mod` re-exports + crate-level Feature Flags table |
+| File | Responsibility |
+|------|----------------|
+| `Cargo.toml` | Crate manifest: six feature-gated optional workspace deps |
+| `src/` | Define feature-gated `pub mod` re-export modules for all six domains |
 | `docs/` | Crate doc entities: aggregation feature spec and zero-own-logic invariant |
 | `tests/` | Integration smoke tests verifying re-export paths per feature |
 
@@ -30,7 +30,7 @@ Zero own logic — every public item originates from a core crate.
 ```toml
 # Cargo.toml
 [dependencies]
-dream = { version = "~1.0", features = ["profile", "runner"] }
+dream = { version = "~1.1", features = ["profile", "runner"] }
 ```
 
 ```rust,no_run

@@ -402,3 +402,48 @@ fn test_count_entries_partial_uuid_match()
     "Expected 3 entries via partial UUID match. stdout: {stdout}"
   );
 }
+
+/// Test `.count target::invalid` exits 1 (argument error)
+///
+/// ## Purpose
+///
+/// Verifies that `.count` rejects an unrecognised `target::` value with exit
+/// code 1 and an error message, per the Exit Code table in commands.md
+/// (`1` = argument error).
+///
+/// ## Why Not Caught
+///
+/// All existing count tests used only valid target values (`projects`,
+/// `sessions`, `entries`). No test covered the invalid-value path.
+///
+/// ## Prevention
+///
+/// Enumerated parameters must always have at least one test for an invalid
+/// value to confirm the error path is exercised.
+#[ test ]
+fn test_count_invalid_target_exits_1()
+{
+  let storage = TempDir::new().unwrap();
+
+  let output = common::clg_cmd()
+    .args( [ ".count", "target::invalid" ] )
+    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
+    .output()
+    .expect( "failed to execute .count" );
+
+  let stderr = String::from_utf8_lossy( &output.stderr );
+  let stdout = String::from_utf8_lossy( &output.stdout );
+  let combined = format!( "{stderr}{stdout}" );
+
+  assert!(
+    !output.status.success(),
+    ".count with invalid target must fail. Got: {combined}"
+  );
+
+  assert_eq!(
+    output.status.code(),
+    Some( 1 ),
+    ".count with invalid target must exit 1. Code: {:?}, output: {combined}",
+    output.status.code()
+  );
+}

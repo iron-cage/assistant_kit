@@ -55,7 +55,7 @@ The inference is applied in strict priority order. The first matching rule wins:
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| feature | [feature/003_settings_management.md](../feature/003_settings_management.md) | .settings.set that applies this inference |
+| doc | [feature/003_settings_management.md](../feature/003_settings_management.md) | .settings.set that applies this inference |
 | source | `../../src/settings_io.rs` | Type inference implementation |
 
 ### Sources

@@ -211,9 +211,20 @@
       aliases: ["v"]
       tags: []
 
+    - name: "format"
+      kind: "String"
+      description: "Output format (text or json)"
+      hint: "Output format"
+      optional: true
+      default: "text"
+      validation_rules: []
+      aliases: ["fmt"]
+      tags: []
+
   examples:
     - ".version.guard version::stable"
     - ".version.guard version::2.1.0 interval::300"
+    - ".version.guard format::json"
   auto_help_enabled: true
 
 - name: ".version.list"

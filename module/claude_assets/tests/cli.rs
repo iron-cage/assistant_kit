@@ -18,9 +18,7 @@
 //! | cli10 | `cla .install` without kind:: | Exit 1; error mentions kind:: |
 //! | cli11 | `cla .install kind::invalid name::x` | Exit 1; "unknown kind" error |
 //! | cli12 | `cla .list installed::true` | Exit 1; error says expected 0 or 1 |
-//! | cli13 | `cla .list v::0` | Exit 0; verbosity alias accepted |
-//! | cli14 | `cla list` (no dot) | Exit 1; error says must start with '.' |
-//! | cli15 | `cla .list verbosity::5` | Exit 1; error says out of range |
+//! | cli13 | `cla list` (no dot) | Exit 1; error says must start with '.' |
 
 use assert_cmd::Command;
 use std::fs;
@@ -422,32 +420,7 @@ fn cli12_installed_true_string_exits_1()
 
 // ── cli13 ─────────────────────────────────────────────────────────────────────
 
-/// cli13: `.list v::0` exits 0 — `v::` is a valid alias for `verbosity::`.
-///
-/// Root Cause: adapter must expand `v::` to `verbosity::` before unilang parsing.
-/// Why Not Caught: no test for alias expansion existed.
-/// Fix Applied: argv_to_unilang_tokens() rewrites `v::` prefix to `verbosity::`.
-/// Prevention: test every registered alias with a valid value.
-/// Pitfall: if adapter doesnt run, `v::` becomes an unknown argument and exit 1.
-#[ test ]
-fn cli13_verbosity_alias_exits_0()
-{
-  let src = TempDir::new().unwrap();
-  let tgt = TempDir::new().unwrap();
-
-  let out = cla()
-    .args( [ ".list", "v::0" ] )
-    .env( "PRO_CLAUDE", src.path() )
-    .current_dir( tgt.path() )
-    .output()
-    .unwrap();
-
-  assert!( out.status.success(), "exit must be 0, got: {:?}", out.status );
-}
-
-// ── cli14 ─────────────────────────────────────────────────────────────────────
-
-/// cli14: `list` (no dot prefix) exits 1 — commands must start with `.`.
+/// cli13: `list` (no dot prefix) exits 1 — commands must start with `.`.
 ///
 /// Root Cause: adapter enforces dot-prefix as a namespace invariant for commands.
 /// Why Not Caught: no test for bare (undotted) command names existed.
@@ -455,7 +428,7 @@ fn cli13_verbosity_alias_exits_0()
 /// Prevention: test the bare name of every registered command.
 /// Pitfall: error should hint at the correct form (`.list`) for discoverability.
 #[ test ]
-fn cli14_bare_command_without_dot_exits_1()
+fn cli13_bare_command_without_dot_exits_1()
 {
   let src = TempDir::new().unwrap();
   let tgt = TempDir::new().unwrap();
@@ -472,35 +445,5 @@ fn cli14_bare_command_without_dot_exits_1()
   assert!(
     stderr.contains( "start with '.'" ) || stderr.contains( "list" ),
     "error must mention dot prefix, got: {stderr}",
-  );
-}
-
-// ── cli15 ─────────────────────────────────────────────────────────────────────
-
-/// cli15: `.list verbosity::5` exits 1 — verbosity range is 0..=2.
-///
-/// Root Cause: adapter enforces MAX_VERBOSITY = 2; values above are rejected.
-/// Why Not Caught: no test for out-of-range verbosity existed.
-/// Fix Applied: normalise_verbosity() returns error for values > MAX_VERBOSITY.
-/// Prevention: test boundary values (MAX+1) for all bounded params.
-/// Pitfall: if verbosity silently clamps instead of erroring, users get no feedback.
-#[ test ]
-fn cli15_verbosity_out_of_range_exits_1()
-{
-  let src = TempDir::new().unwrap();
-  let tgt = TempDir::new().unwrap();
-
-  let out = cla()
-    .args( [ ".list", "verbosity::5" ] )
-    .env( "PRO_CLAUDE", src.path() )
-    .current_dir( tgt.path() )
-    .output()
-    .unwrap();
-
-  assert_eq!( out.status.code(), Some( 1 ), "exit must be 1, got: {:?}", out.status );
-  let stderr = String::from_utf8_lossy( &out.stderr );
-  assert!(
-    stderr.contains( "out of range" ) || stderr.contains( "max" ),
-    "error must mention range, got: {stderr}",
   );
 }

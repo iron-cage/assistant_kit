@@ -9,13 +9,12 @@
 
 ## Goal
 
-Fix three documentation consistency gaps in `claude_storage/docs/` so that entities.md instance counts, doc_graph.yml component structure, and readme.md command counts all match the actual state of the CLI and documentation, verified by grep-based measurements showing zero stale values (Motivated: downstream tooling and human readers rely on accurate counts; Observable: entities.md, doc_graph.yml, readme.md all updated; Scoped: only `docs/` root-level files; Testable: all measurements in Validation Procedure pass).
+Fix two documentation consistency gaps in `claude_storage/docs/` so that doc_graph.yml component structure and readme.md command counts match the actual state of the CLI and documentation, verified by grep-based measurements showing zero stale values (Motivated: downstream tooling and human readers rely on accurate counts; Observable: doc_graph.yml, readme.md updated; Scoped: only `docs/` root-level files; Testable: all measurements in Validation Procedure pass).
 
 ## In Scope
 
 - `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_storage/docs/readme.md` — fix stale "9 commands" reference (actual: 13 commands, 12 stable + 1 deprecated)
 - `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_storage/docs/doc_graph.yml` — connect isolated components (feature/001 ↔ operation/001) by adding a cross-reference edge, update meta counts
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_storage/docs/entities.md` — verify instance counts match actual file counts on disk
 
 ## Out of Scope
 
@@ -32,8 +31,6 @@ Post-migration consistency audit revealed three documentation drift issues in th
 
 2. **doc_graph.yml**: Contains 2 fully isolated components (feature/001 and operation/001), each with `isolated: true`. The gap notes in the YAML itself describe how to merge them: add a cross-reference from feature/001 to operation/001. This requires also adding a `### Related` or `### See Also` link in `docs/feature/001_cli_tool.md` pointing to operation/001.
 
-3. **entities.md**: Instance counts (1 feature, 1 operation, 13 commands, 20 params, 5 param_groups) should be verified against actual file counts on disk.
-
 ## Requirements
 
 - All work must strictly adhere to all applicable rulebooks
@@ -43,18 +40,16 @@ Post-migration consistency audit revealed three documentation drift issues in th
 
 Execute in order. Do not skip or reorder steps.
 
-1. **Read rulebooks** — `kbase .rulebooks`; note doc.rulebook.md constraints on doc_graph.yml structure and entities.md format.
+1. **Read rulebooks** — `kbase .rulebooks`; note doc.rulebook.md constraints on doc_graph.yml structure.
 2. **Fix readme.md** — `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_storage/docs/readme.md` line 39: change "All 9 commands" to "All 13 commands" (or whatever the accurate count is per `docs/cli/commands.md`).
 3. **Connect doc_graph.yml components** — Add an edge `feature/001 → operation/001` (or vice versa) and update meta: `edge_count: 0 → 1`, `component_count: 2 → 1`. Remove `isolated: true` from both components and merge into one component.
 4. **Add cross-reference in feature/001** — Add a `### See Also` or `### Related` section in `docs/feature/001_cli_tool.md` linking to `operation/001_migration_guide.md` to justify the doc_graph edge.
-5. **Verify entities.md counts** — Run `ls docs/cli/testing/command/*.md | grep -v readme | wc -l` (expected: 13), same for `param/` (expected: 20) and `param_group/` (expected: 5). Update entities.md if counts differ.
-6. **Walk Validation Checklist** — check every item. Every answer must be YES.
+5. **Walk Validation Checklist** — check every item. Every answer must be YES.
 
 ## Acceptance Criteria
 
 - readme.md command count matches `docs/cli/commands.md` Commands Table row count
 - doc_graph.yml has zero isolated components (all nodes in one connected component)
-- entities.md instance counts match actual file counts on disk
 - All cross-references resolve to existing files
 
 ## Validation Checklist
@@ -69,11 +64,6 @@ Desired answer for every question is YES.
 - [ ] Does doc_graph.yml have `component_count: 1`?
 - [ ] Does doc_graph.yml have `edge_count: ≥ 1`?
 - [ ] Are all components `isolated: false`?
-
-**entities.md counts**
-- [ ] Does testing/command/ instance count match `ls docs/cli/testing/command/*.md | grep -v readme | wc -l`?
-- [ ] Does testing/param/ instance count match `ls docs/cli/testing/param/*.md | grep -v readme | wc -l`?
-- [ ] Does testing/param_group/ instance count match `ls docs/cli/testing/param_group/*.md | grep -v readme | wc -l`?
 
 **Out of Scope confirmation**
 - [ ] Are docs/cli/ files unchanged by this task?
@@ -94,10 +84,6 @@ Before: `component_count: 2`. Expected: `component_count: 1`. Deviation: isolate
 Command: `grep "edge_count:" /home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_storage/docs/doc_graph.yml`
 Before: `edge_count: 0`. Expected: `edge_count: 1` (or more). Deviation: no connectivity.
 
-**M4 — Testing file counts match entities.md**
-Command: `ls /home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_storage/docs/cli/testing/command/*.md | grep -v readme | wc -l`
-Expected: matches value in entities.md testing/command/ Instances column. Deviation: count mismatch.
-
 ### Anti-faking checks
 
 **AF1 — Cross-reference actually exists in feature/001**
@@ -115,7 +101,6 @@ All measurements and anti-faking checks passed:
 - **M1**: `grep -c "All 13 commands"` → 1 (was 0)
 - **M2**: `component_count: 1` (was 2)
 - **M3**: `edge_count: 1` (was 0)
-- **M4**: Testing file counts match entities.md (13 commands, 20 params, 5 param_groups)
 - **AF1**: `grep -c "operation/001" feature/001_cli_tool.md` → 1
 - **AF2**: `grep -c "9 commands" readme.md` → 0
 
@@ -123,4 +108,3 @@ Files modified:
 - `docs/readme.md` — "All 9 commands" → "All 13 commands"
 - `docs/doc_graph.yml` — merged 2 isolated components into 1 connected component with 1 edge
 - `docs/feature/001_cli_tool.md` — added `### See Also` cross-reference to operation/001
-- `docs/entities.md` — verified counts accurate, added `cli/format/` row

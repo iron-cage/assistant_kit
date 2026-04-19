@@ -2,7 +2,7 @@
 
 Documentation for the `claude_runner` crate covering behavioral requirements, API contracts, and structural constraints.
 
-## Responsibility Table
+### Responsibility Table
 
 | File/Directory | Responsibility |
 |----------------|----------------|
@@ -11,5 +11,4 @@ Documentation for the `claude_runner` crate covering behavioral requirements, AP
 | `feature/` | Runner tool design: execution modes, defaults, YAML library |
 | `invariant/` | Default flag injection and dependency constraint rules |
 | `api/` | Public library API contracts (COMMANDS_YAML, VerbosityLevel) |
-| `entities.md` | Master index of all doc entities and instances |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

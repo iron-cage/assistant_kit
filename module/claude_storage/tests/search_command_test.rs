@@ -566,3 +566,70 @@ fn test_search_plural_noun_multiple_matches()
     );
   }
 }
+
+/// Test `.search q::TEXT` alias produces same result as `query::TEXT` (EC-5)
+///
+/// ## Purpose
+///
+/// Verifies that the short alias `q::` is accepted by `.search` and produces
+/// identical output to the canonical `query::` form.
+///
+/// ## Coverage
+///
+/// Tests the alias defined in the YAML spec: `q` is an alias for `query`.
+/// Without this test, a silent regression in the YAML alias declaration would
+/// go undetected — both forms would appear to "work" (framework would either
+/// accept or reject silently) with no test pinning the expectation.
+///
+/// ## Prevention
+///
+/// Every documented parameter alias must have an explicit test that executes
+/// both the canonical and alias forms and asserts they produce the same output.
+///
+/// ## Pitfall
+///
+/// YAML alias declarations in unilang (`alias: q`) are separate from the
+/// parameter name. If the alias key is removed or misspelled in the YAML,
+/// `q::` silently becomes an unknown parameter and is ignored or rejected
+/// without breaking any test that only uses the canonical `query::`.
+#[ test ]
+fn test_search_q_alias_same_as_query()
+{
+  use tempfile::TempDir;
+  let storage = TempDir::new().unwrap();
+
+  // Write a session with known content so both searches return results
+  common::write_test_session( storage.path(), "search-proj-alias", "sess-alias-001", 4 );
+
+  let out_query = common::clg_cmd()
+    .args( [ ".search", "query::entry", "project::search-proj-alias" ] )
+    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
+    .output()
+    .expect( "Failed to execute .search with query::" );
+
+  let out_q = common::clg_cmd()
+    .args( [ ".search", "q::entry", "project::search-proj-alias" ] )
+    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
+    .output()
+    .expect( "Failed to execute .search with q::" );
+
+  let stdout_query = String::from_utf8_lossy( &out_query.stdout );
+  let stdout_q     = String::from_utf8_lossy( &out_q.stdout );
+  let stderr_q     = String::from_utf8_lossy( &out_q.stderr );
+
+  assert!(
+    out_query.status.success(),
+    ".search query:: must succeed. stderr: {}",
+    String::from_utf8_lossy( &out_query.stderr )
+  );
+  assert!(
+    out_q.status.success(),
+    ".search q:: (alias) must succeed. stderr: {stderr_q}"
+  );
+
+  assert_eq!(
+    stdout_q.as_ref(),
+    stdout_query.as_ref(),
+    "q:: alias must produce identical output to query::"
+  );
+}

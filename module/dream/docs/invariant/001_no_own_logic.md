@@ -48,7 +48,7 @@ and the out-of-hierarchy primitive (`claude_storage_core`) are listed. No Layer 
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| feature | [feature/001_aggregation.md](../feature/001_aggregation.md) | Feature spec that this invariant constrains |
-| pattern | workspace `docs/pattern/001_crate_layering.md` | Layer definitions governing INV-3 |
+| doc | [feature/001_aggregation.md](../feature/001_aggregation.md) | Feature spec that this invariant constrains |
+| doc | workspace `docs/pattern/001_crate_layering.md` | Layer definitions governing INV-3 |
 | source | `../../src/lib.rs` | Implementation that must satisfy INV-1 and INV-2 |
 | source | `../../Cargo.toml` | Dep declarations that must satisfy INV-3 |

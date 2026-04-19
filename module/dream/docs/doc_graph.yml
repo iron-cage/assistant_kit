@@ -1,0 +1,35 @@
+meta:
+  description: Cross-reference graph for all NNN-identified doc instances in dream
+  node_count: 2
+  edge_count: 2
+  component_count: 1
+  generated: 2026-04-19
+
+nodes:
+  - id: feature/001
+    file: feature/001_aggregation.md
+    label: Facade Aggregation
+    entity: feature
+  - id: invariant/001
+    file: invariant/001_no_own_logic.md
+    label: Zero Own Logic
+    entity: invariant
+
+edges:
+  - from: feature/001
+    to: invariant/001
+    via: cross_references
+  - from: invariant/001
+    to: feature/001
+    via: cross_references
+
+components:
+  - id: 1
+    label: Facade Aggregation + Zero Own Logic
+    size: 2
+    isolated: false
+    nodes:
+      - feature/001
+      - invariant/001
+
+dangling_refs: []

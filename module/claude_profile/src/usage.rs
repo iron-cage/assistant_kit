@@ -34,7 +34,17 @@ fn days_in_month( year : u32, month : u32 ) -> u32
 {
   match month
   {
-    2 => if year.is_multiple_of( 4 ) && ( !year.is_multiple_of( 100 ) || year.is_multiple_of( 400 ) ) { 29 } else { 28 },
+    2 =>
+    {
+      if year % 4 == 0 && ( year % 100 != 0 || year % 400 == 0 )
+      {
+        29
+      }
+      else
+      {
+        28
+      }
+    }
     4 | 6 | 9 | 11 => 30,
     _ => 31,
   }
@@ -54,7 +64,15 @@ fn subtract_days( date : &str, n : u32 ) -> Option< String >
 
   while day <= 0
   {
-    if month == 1 { month = 12; year -= 1; } else { month -= 1; }
+    if month == 1
+    {
+      month = 12;
+      year -= 1;
+    }
+    else
+    {
+      month -= 1;
+    }
     day += i64::from( days_in_month( year, month ) );
   }
 
@@ -95,9 +113,18 @@ fn fmt_tokens_compact( n : u64 ) -> String
 {
   // Boundaries account for {:.1} rounding: 999_950 / 1000 = 999.95 → "1000.0K"
   // so we promote to M at 999_950 instead of 1_000_000.
-  if n < 1_000         { format!( "{n}" ) }
-  else if n < 999_950  { format!( "{:.1}K", n as f64 / 1_000.0 ) }
-  else                 { format!( "{:.1}M", n as f64 / 1_000_000.0 ) }
+  if n < 1_000
+  {
+    format!( "{n}" )
+  }
+  else if n < 999_950
+  {
+    format!( "{:.1}K", n as f64 / 1_000.0 )
+  }
+  else
+  {
+    format!( "{:.1}M", n as f64 / 1_000_000.0 )
+  }
 }
 
 /// Format tokens as a comma-separated integer: `17,282,815`.
@@ -107,7 +134,7 @@ fn fmt_tokens_full( n : u64 ) -> String
   let mut out = String::with_capacity( s.len() + s.len() / 3 );
   for ( i, c ) in s.chars().enumerate()
   {
-    if i > 0 && ( s.len() - i ).is_multiple_of( 3 ) { out.push( ',' ); }
+    if i > 0 && ( s.len() - i ) % 3 == 0 { out.push( ',' ); }
     out.push( c );
   }
   out
@@ -314,7 +341,7 @@ fn text_json( data : &UsageData ) -> String
 ///
 /// Returns `ErrorData` if HOME is unset, `stats-cache.json` is missing
 /// or malformed.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ inline ]
 pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts  = OutputOptions::from_cmd( &cmd )?;

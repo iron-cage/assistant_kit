@@ -8,10 +8,10 @@
 | 2 | `.status` | Show installation state, session count, and preferred version | 2 | `cm .status format::json` |
 | 3 | `.version.show` | Print installed Claude Code version | 2 | `cm .version.show` |
 | 4 | `.version.install` | Install a Claude Code version via official installer | 5 | `cm .version.install version::stable` |
-| 5 | `.version.guard` | Check for version drift and restore preferred version | 5 | `cm .version.guard` |
+| 5 | `.version.guard` | Check for version drift and restore preferred version | 6 | `cm .version.guard` |
 | 6 | `.version.list` | List named version aliases with pinned values | 2 | `cm .version.list` |
 | 7 | `.processes` | List running Claude Code processes | 2 | `cm .processes` |
-| 8 | `.processes.kill` | Terminate all Claude Code processes | 2 | `cm .processes.kill dry::1` |
+| 8 | `.processes.kill` | Terminate all Claude Code processes | 4 | `cm .processes.kill dry::1` |
 | 9 | `.settings.show` | Print all settings | 2 | `cm .settings.show format::json` |
 | 10 | `.settings.get` | Read a single setting by key | 3 | `cm .settings.get key::theme` |
 | 11 | `.settings.set` | Write a single setting atomically | 3 | `cm .settings.set key::theme value::dark` |
@@ -155,7 +155,7 @@ the loop; one-shot mode still propagates errors normally.
 **Syntax:**
 
 ```sh
-cm .version.guard [version::SPEC] [dry::1] [force::1] [interval::N] [v::N]
+cm .version.guard [version::SPEC] [dry::1] [force::1] [interval::N] [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -167,6 +167,9 @@ cm .version.guard [version::SPEC] [dry::1] [force::1] [interval::N] [v::N]
 | [`force::`](params.md#parameter--3-force) | bool | false | Reinstall even if version matches |
 | [`interval::`](params.md#parameter--9-interval) | u64 | 0 | Seconds between checks; 0 = one-shot |
 | [`v::`](params.md#parameter--4-v) | [`VerbosityLevel`](types.md#type--1-verbositylevel) | 1 | Output detail |
+| [`format::`](params.md#parameter--5-format) | [`OutputFormat`](types.md#type--2-outputformat) | text | Output format |
+
+**Groups:** [Execution Control](parameter_groups.md#group--2-execution-control), [Output Control](parameter_groups.md#group--1-output-control)
 
 **Exit Codes:** 0 (success/restored), 2 (runtime error -- install failed or HOME unset)
 
@@ -249,7 +252,7 @@ Terminate all running Claude Code processes. Normal mode: SIGTERM, wait
 **Syntax:**
 
 ```sh
-cm .processes.kill [dry::1] [force::1]
+cm .processes.kill [dry::1] [force::1] [v::N] [format::FMT]
 ```
 
 **Parameters:**
@@ -258,8 +261,10 @@ cm .processes.kill [dry::1] [force::1]
 |-----------|------|---------|-------------|
 | [`dry::`](params.md#parameter--2-dry) | bool | false | Preview which processes would be killed |
 | [`force::`](params.md#parameter--3-force) | bool | false | SIGKILL directly (skip SIGTERM) |
+| [`v::`](params.md#parameter--4-v) | [`VerbosityLevel`](types.md#type--1-verbositylevel) | 1 | Output detail |
+| [`format::`](params.md#parameter--5-format) | [`OutputFormat`](types.md#type--2-outputformat) | text | Output format |
 
-**Group:** [Execution Control](parameter_groups.md#group--2-execution-control)
+**Groups:** [Execution Control](parameter_groups.md#group--2-execution-control), [Output Control](parameter_groups.md#group--1-output-control)
 
 **Exit Codes:** 0 (success), 2 (signal delivery failed)
 

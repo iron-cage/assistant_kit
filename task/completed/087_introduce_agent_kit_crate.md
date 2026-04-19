@@ -68,7 +68,6 @@ Zero own logic. No structs, traits, functions, enums, or type aliases defined in
 | `module/agent_kit/Cargo.toml` | Crate manifest with feature-gated optional deps |
 | `module/agent_kit/src/lib.rs` | Feature-gated `pub mod` re-exports + full crate doc |
 | `module/agent_kit/readme.md` | User-facing docs: Responsibility Table, features, usage |
-| `module/agent_kit/docs/entities.md` | Master doc entity index |
 | `module/agent_kit/docs/feature/001_aggregation.md` | FR spec: facade behavior |
 | `module/agent_kit/docs/invariant/001_no_own_logic.md` | Invariant: zero own types/fns |
 | `module/agent_kit/tests/integration/facade_test.rs` | Compilation smoke tests per feature |
@@ -136,9 +135,7 @@ Execute in order. Do not skip or reorder steps.
 6. **Write `readme.md`** — Responsibility Table (files/dirs), feature table with
    cargo snippet, usage example, architecture note (layer, zero-own-logic).
 
-7. **Create `docs/` structure** — Three files:
-   - `docs/entities.md` — Master Doc Entities Table: `feature/` (1 instance),
-     `invariant/` (1 instance)
+7. **Create `docs/` structure** — Two files:
    - `docs/feature/001_aggregation.md` — FR-1 through FR-5 (see Requirements below)
    - `docs/invariant/001_no_own_logic.md` — INV-1 through INV-3 (see below)
 
@@ -220,7 +217,6 @@ Execute in order. Do not skip or reorder steps.
 - [ ] `module/agent_kit/readme.md` has Feature Flags table with cargo snippet
 - [ ] `docs/feature/001_aggregation.md` has FR-1 through FR-9
 - [ ] `docs/invariant/001_no_own_logic.md` has INV-1 through INV-3
-- [ ] `docs/entities.md` registers `feature/` and `invariant/` instances
 - [ ] Workspace `readme.md` Crates table row exists for `agent_kit`
 - [ ] `locales.md` row exists for `agent_kit`
 - [ ] `module/readme.md` row exists for `agent_kit`

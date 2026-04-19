@@ -31,25 +31,26 @@ The target root is always the current working directory. `AssetPaths::new(source
 
 **Install semantics:** `install(paths, kind, name)` creates a symlink from `$PRO_CLAUDE/<kind>/<name>[.ext]` to `.claude/<kind>/<name>[.ext]`. Behavior:
 - Creates the `.claude/<kind>/` target subdirectory if absent (`create_dir_all`).
-- If a symlink already exists at the target path, removes it and re-links — idempotent update, reports `InstallAction::Reinstalled`.
-- If no symlink exists, creates a fresh link and reports `InstallAction::Installed`.
+- If a symlink already exists at the target path, removes it and re-links — idempotent update, reports `InstallOutcome::Reinstalled`.
+- If no symlink exists, creates a fresh link and reports `InstallOutcome::Installed`.
 - Refuses to overwrite a regular file: returns `AssetError::NotASymlink` (data-loss guard).
 - Returns `AssetError::SourceNotFound` if the source artifact does not exist.
 
 **Uninstall semantics:** `uninstall(paths, kind, name)` removes the symlink at `.claude/<kind>/<name>[.ext]`. Behavior:
 - Uses `symlink_metadata()` (not `metadata()`) to detect dangling symlinks correctly.
-- Returns `InstallAction::NotInstalled` (not an error) when no entry exists at the target path.
+- Returns `UninstallOutcome::NotInstalled` (not an error) when no entry exists at the target path.
 - Refuses to remove a regular file: returns `AssetError::NotASymlink` (data-loss guard).
 
-**InstallReport:** Both functions return `InstallReport { kind, name, action }` where `action` is one of `Installed`, `Reinstalled`, `Uninstalled`, or `NotInstalled`.
+**InstallReport:** Both functions return `InstallReport<A> { kind, name, action }`. `install()` returns `InstallReport<InstallOutcome>` where `action` is `Installed` or `Reinstalled`. `uninstall()` returns `InstallReport<UninstallOutcome>` where `action` is `Uninstalled` or `NotInstalled`.
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/artifact.rs` | ArtifactKind and ArtifactLayout enums with subdirectory mappings |
+| source | `src/error.rs` | AssetError and AssetPathsError domain error types |
 | source | `src/paths.rs` | AssetPaths env var resolution and directory computation |
 | source | `src/install.rs` | install() and uninstall() implementation |
 | source | `src/registry.rs` | list_available, list_installed, list_all for survey queries |
-| invariant | [invariant/001_symlink_only.md](../invariant/001_symlink_only.md) | Rule: install() must use symlink only, never copy |
-| feature | [claude_assets/docs/feature/001_asset_cli.md](../../claude_assets/docs/feature/001_asset_cli.md) | CLI layer that calls install/uninstall |
+| doc | [invariant/001_symlink_only.md](../invariant/001_symlink_only.md) | Rule: install() must use symlink only, never copy |
+| doc | [claude_assets/docs/feature/001_asset_cli.md](../../claude_assets/docs/feature/001_asset_cli.md) | CLI layer that calls install/uninstall |

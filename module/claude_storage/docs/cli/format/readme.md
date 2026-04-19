@@ -1,6 +1,19 @@
-# CLI Output Formats
+# Output Formats
 
-Output format catalog for `claude_storage` CLI. Documents each named rendering mode produced by the `format::` parameter on `.export`.
+### Scope
+
+- **Purpose**: Document the three named export rendering modes for the `.export` command.
+- **Responsibility**: Index of format doc instances covering all export rendering modes.
+- **In Scope**: Three named export formats (markdown, json, text) produced by `.export`.
+- **Out of Scope**: Verbosity-driven output (→ `commands.md` per-command), parameter specs (→ `params.md`).
+
+### Responsibility Table
+
+| File | Responsibility |
+|------|----------------|
+| `markdown.md` | Markdown export format rendering spec |
+| `json.md` | JSON export format rendering spec |
+| `text.md` | Plain text export format rendering spec |
 
 ### Taxonomy
 

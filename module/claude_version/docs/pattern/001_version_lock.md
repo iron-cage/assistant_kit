@@ -56,7 +56,7 @@ This pattern does not apply when tracking `latest` is desired — for `latest`, 
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| feature | [feature/001_version_management.md](../feature/001_version_management.md) | .version.install and .version.guard that apply/read the lock |
+| doc | [feature/001_version_management.md](../feature/001_version_management.md) | .version.install and .version.guard that apply/read the lock |
 | source | `../../src/commands.rs` | Lock application in perform_install() |
 | source | `../../src/settings_io.rs` | settings.json write for layers 1, 2, 5 |
 

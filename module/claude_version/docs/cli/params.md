@@ -7,8 +7,8 @@
 | 1 | `version::` | [`VersionSpec`](types.md#type--3-versionspec) | stable | stable, latest, month, semver | Version to install or guard | 2 cmds |
 | 2 | `dry::` | bool | false | 0, 1 | Preview without executing | 4 cmds |
 | 3 | `force::` | bool | false | 0, 1 | Bypass guards | 3 cmds |
-| 4 | `v::` | [`VerbosityLevel`](types.md#type--1-verbositylevel) | 1 | 0 to 2 | Output detail level | 9 cmds |
-| 5 | `format::` | [`OutputFormat`](types.md#type--2-outputformat) | text | text, json | Output format | 8 cmds |
+| 4 | `v::` | [`VerbosityLevel`](types.md#type--1-verbositylevel) | 1 | 0 to 2 | Output detail level | 10 cmds |
+| 5 | `format::` | [`OutputFormat`](types.md#type--2-outputformat) | text | text, json | Output format | 10 cmds |
 | 6 | `key::` | [`SettingsKey`](types.md#type--4-settingskey) | **(required)** | Any text | Settings key | 2 cmds |
 | 7 | `value::` | [`SettingsValue`](types.md#type--5-settingsvalue) | **(required)** | Any text | Settings value (type-inferred) | 1 cmd |
 | 8 | `interval::` | u64 | 0 | Non-negative integer | Guard check interval (seconds) | 1 cmd |
@@ -85,7 +85,7 @@ Control output detail level.
 
 - **Type:** [`VerbosityLevel`](types.md#type--1-verbositylevel)
 - **Default:** 1 (normal)
-- **Commands:** [`.status`](commands.md#command--2-status), [`.version.show`](commands.md#command--3-version-show), [`.version.install`](commands.md#command--4-version-install), [`.version.list`](commands.md#command--6-version-list), [`.version.guard`](commands.md#command--5-version-guard), [`.version.history`](commands.md#command--12-version-history), [`.processes`](commands.md#command--7-processes), [`.settings.show`](commands.md#command--9-settings-show), [`.settings.get`](commands.md#command--10-settings-get)
+- **Commands:** [`.status`](commands.md#command--2-status), [`.version.show`](commands.md#command--3-version-show), [`.version.install`](commands.md#command--4-version-install), [`.version.list`](commands.md#command--6-version-list), [`.version.guard`](commands.md#command--5-version-guard), [`.version.history`](commands.md#command--12-version-history), [`.processes`](commands.md#command--7-processes), [`.processes.kill`](commands.md#command--8-processes-kill), [`.settings.show`](commands.md#command--9-settings-show), [`.settings.get`](commands.md#command--10-settings-get)
 - **Group:** [Output Control](parameter_groups.md#group--1-output-control)
 - **Validation:** must be 0, 1, or 2; out of range -> exit 1
 - **Last-wins:** when repeated, the last value takes effect
@@ -103,7 +103,7 @@ Select output format. Case-sensitive: `text` and `json` only.
 
 - **Type:** [`OutputFormat`](types.md#type--2-outputformat)
 - **Default:** text
-- **Commands:** [`.status`](commands.md#command--2-status), [`.version.show`](commands.md#command--3-version-show), [`.version.install`](commands.md#command--4-version-install), [`.version.list`](commands.md#command--6-version-list), [`.version.history`](commands.md#command--12-version-history), [`.processes`](commands.md#command--7-processes), [`.settings.show`](commands.md#command--9-settings-show), [`.settings.get`](commands.md#command--10-settings-get)
+- **Commands:** [`.status`](commands.md#command--2-status), [`.version.show`](commands.md#command--3-version-show), [`.version.install`](commands.md#command--4-version-install), [`.version.list`](commands.md#command--6-version-list), [`.version.guard`](commands.md#command--5-version-guard), [`.version.history`](commands.md#command--12-version-history), [`.processes`](commands.md#command--7-processes), [`.processes.kill`](commands.md#command--8-processes-kill), [`.settings.show`](commands.md#command--9-settings-show), [`.settings.get`](commands.md#command--10-settings-get)
 - **Group:** [Output Control](parameter_groups.md#group--1-output-control)
 - **Validation:** `text` or `json` only; `TEXT`, `Json` etc. -> exit 1
 
@@ -208,6 +208,6 @@ cm .version.install .help    # still shows help, ignores install
 
 **Required parameters:** `key::` (`.settings.get`/`.settings.set`), `value::` (`.settings.set`).
 
-**Most used parameters:** `v::` (9 commands), `format::` (8 commands), `dry::` (4 commands), `force::` (3 commands), `key::` (2 commands).
+**Most used parameters:** `v::` (10 commands), `format::` (10 commands), `dry::` (4 commands), `force::` (3 commands), `key::` (2 commands).
 
-**Commands by parameter count:** 0 params = 1 command (`.help`), 2 params = 9 commands, 3 params = 3 commands, 5 params = 2 commands (`.version.guard`, `.version.install`).
+**Commands by parameter count:** 0 params = 1 command (`.help`), 2 params = 5 commands, 3 params = 3 commands, 4 params = 1 command (`.processes.kill`), 5 params = 1 command (`.version.install`), 6 params = 1 command (`.version.guard`).

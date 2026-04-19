@@ -25,7 +25,7 @@ changing behavior.
 | [`format::`](params.md#parameter--5-format) | [`OutputFormat`](types.md#type--2-outputformat) | Display encoding (text or json) |
 | [`count::`](params.md#parameter--10-count) | u64 | Entry limit (`.version.history` only; default 10) |
 
-**Used by:** [`.status`](commands.md#command--2-status), [`.version.show`](commands.md#command--3-version-show), [`.version.install`](commands.md#command--4-version-install), [`.version.list`](commands.md#command--6-version-list), [`.version.guard`](commands.md#command--5-version-guard), [`.version.history`](commands.md#command--12-version-history), [`.processes`](commands.md#command--7-processes), [`.settings.show`](commands.md#command--9-settings-show), [`.settings.get`](commands.md#command--10-settings-get)
+**Used by:** [`.status`](commands.md#command--2-status), [`.version.show`](commands.md#command--3-version-show), [`.version.install`](commands.md#command--4-version-install), [`.version.list`](commands.md#command--6-version-list), [`.version.guard`](commands.md#command--5-version-guard), [`.version.history`](commands.md#command--12-version-history), [`.processes`](commands.md#command--7-processes), [`.processes.kill`](commands.md#command--8-processes-kill), [`.settings.show`](commands.md#command--9-settings-show), [`.settings.get`](commands.md#command--10-settings-get)
 
 **Why NOT in this group:**
 - `dry::`: controls execution, not display

@@ -8,6 +8,107 @@
 | `responsibility_no_process_execution_test.rs` | Guard: no std::process import anywhere in crate source. |
 | `lib_test.rs` | Library exports: COMMANDS_YAML, register_commands(), command presence. |
 | `cli_adapter_test.rs` | Adapter and output module: argv conversion, aliases, bool normalization, validation, json_escape, format_duration_secs. |
-| `cli_integration_test.rs` | CLI binary integration: entry point for integration/ modules. |
-| `integration/` | Split integration test modules (help, accounts, token, paths, env, persist). |
+| `cli_integration_test.rs` | CLI binary integration: entry point for cli/ modules. |
+| `cli/` | Split integration test modules (help, accounts, token, paths, env, persist). |
 | `manual/` | Manual testing plan: live Claude Code account switching. |
+| `doc/` | Test-lens documentation: per-command, per-parameter, and per-group test case indices. |
+
+## Scope
+
+### Responsibilities
+
+These tests cover the `claude_profile` crate: account credential management,
+token status classification, canonical path resolution, and the `clp` CLI binary.
+
+### In Scope
+
+- Library unit tests (account, token, paths): real tmpdir HOME, no subprocess
+- CLI integration tests (`cli/`): subprocess invocation of compiled `clp` binary
+- Library-level export verification (`lib_test.rs`)
+- Adapter and output module logic (`cli_adapter_test.rs`)
+- Responsibility boundary guards (no `std::process::Command` in crate source)
+
+### Out of Scope
+
+- Tests for `claude_profile_core` — those belong in `claude_profile_core/tests/`
+- Tests for other crates (`claude_runner`, `claude_storage`, etc.)
+- Performance benchmarks — belong in `benches/`
+
+## Organization Principles
+
+Tests are organized by functional domain (what is tested), not methodology.
+Top-level test files cover discrete library domains (account, token, paths).
+CLI end-to-end tests are split into focused domain files under `cli/`
+and loaded through the `cli_integration_test.rs` entry point.
+
+## Directory Structure
+
+```text
+tests/
+├── readme.md                             # this file
+├── account_tests.rs                      # account CRUD library tests
+├── token_tests.rs                        # token classification library tests
+├── paths_tests.rs                        # ClaudePaths library tests
+├── lib_test.rs                           # library export smoke tests
+├── cli_adapter_test.rs                   # adapter + output unit tests
+├── cli_integration_test.rs               # integration test entry point
+├── responsibility_no_process_execution_test.rs  # arch boundary guard
+├── cli/
+│   ├── readme.md                         # integration submodule index
+│   ├── helpers.rs                        # shared binary runner + fixtures
+│   ├── account_list_status_test.rs       # help, account list, account status
+│   ├── account_mutations_test.rs         # account save, switch, delete
+│   ├── account_status_name_test.rs       # account status with name:: param
+│   ├── token_paths_test.rs               # token status + paths commands
+│   ├── cross_cutting_test.rs             # idempotency, param order, exit codes
+│   ├── usage_test.rs                     # .usage command tests
+│   ├── persist_test.rs                   # PersistPaths resolution tests
+│   ├── credentials_test.rs               # .credentials.status command tests
+│   └── account_limits_test.rs            # .account.limits error paths
+├── manual/
+│   └── readme.md                         # manual testing plan
+└── doc/
+    ├── readme.md                         # test-lens doc index
+    └── cli/
+        ├── readme.md                     # CLI test-lens index
+        └── testing/                      # per-command, per-param, per-group test case files
+```
+
+## Domain Map
+
+| Domain | Test Location | What It Tests |
+|--------|---------------|---------------|
+| Account CRUD (library) | `account_tests.rs` | save, list, switch, delete, auto_rotate, helpers |
+| Token classification (library) | `token_tests.rs` | status, status_with_threshold, parse_expires_at |
+| Path resolution (library) | `paths_tests.rs` | ClaudePaths construction and all path methods |
+| Library exports | `lib_test.rs` | COMMANDS_YAML, register_commands, command presence |
+| Adapter + output | `cli_adapter_test.rs` | argv_to_unilang_tokens, OutputOptions, json_escape, format_duration_secs |
+| Help CLI | `cli/account_list_status_test.rs` (H series) | --help, .help, no-args, unknown command |
+| Account list CLI | `cli/account_list_status_test.rs` (AL series) | list text/json, empty dir, sorted, format errors |
+| Account status CLI | `cli/account_list_status_test.rs` (ASTAT series) | status valid/expired/expiring, v0/v1/v2, json |
+| Account save/switch/delete CLI | `cli/account_mutations_test.rs` | save, switch, delete with all edge cases |
+| Account status by name CLI | `cli/account_status_name_test.rs` | name:: param on .account.status |
+| Token status + paths CLI | `cli/token_paths_test.rs` | .token.status and .paths all verbosity/format |
+| Cross-cutting CLI | `cli/cross_cutting_test.rs` | idempotency, param order, exit code contracts, env |
+| Usage CLI | `cli/usage_test.rs` | .usage stats-cache parsing, formats, boundaries |
+| Persist paths | `cli/persist_test.rs` | PersistPaths PRO/HOME resolution, ensure_exists |
+| Credentials status CLI | `cli/credentials_test.rs` | .credentials.status without account store |
+| Account limits CLI | `cli/account_limits_test.rs` | .account.limits error paths |
+| Arch boundary | `responsibility_no_process_execution_test.rs` | no std::process in crate source |
+
+## Adding New Tests
+
+**Q: Testing a new library function in `src/account.rs`?**
+→ Add to `account_tests.rs` (account domain). Update test matrix in that file.
+
+**Q: Testing a new CLI command end-to-end?**
+→ Create or extend a file in `cli/` matching the command's domain.
+→ Wire it into `cli_integration_test.rs` with a new `mod` block.
+→ Update `cli/readme.md`.
+
+**Q: Testing a new library module (e.g., `src/foo.rs`)?**
+→ Create `tests/foo_tests.rs`. Add a row to this readme's Responsibility Table and Domain Map.
+
+**Q: Testing an invariant across the whole crate?**
+→ Add to `responsibility_no_process_execution_test.rs` if it is an arch boundary guard,
+or create a dedicated `tests/<invariant>_test.rs` file.

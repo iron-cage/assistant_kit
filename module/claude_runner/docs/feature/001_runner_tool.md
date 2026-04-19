@@ -15,19 +15,9 @@ claude_runner serves two distinct consumers from one crate:
 
 **CLI binary (`clr`):** The `clr` binary translates `--flag value` syntax to `ClaudeCommand` builder calls and executes Claude Code via `claude_runner_core`. It acts as the user-facing runner for both interactive and non-interactive use.
 
-**Execution modes:**
+**Execution modes:** See [commands.md](../cli/commands.md) for the full invocation mode table.
 
-| Invocation | Mode | Execution Path |
-|------------|------|----------------|
-| `clr` | Interactive REPL | `execute_interactive()` + `-c` |
-| `clr "Fix bug"` | Print (default) | `execute()` + `--print` + `-c` |
-| `clr -p "Fix bug"` | Print (explicit) | `execute()` + `--print` + `-c` |
-| `clr --interactive "Fix bug"` | Interactive | `execute_interactive()` + `-c` |
-| `clr --dry-run "Fix bug"` | Preview only | `describe()` / `describe_env()` output |
-| `clr --trace "Fix bug"` | Trace | `describe_env()` + `describe()` to stderr, then `execute()` |
-| `clr --new-session "Fix bug"` | Fresh session, print | `execute()` + `--print` (no `-c`) |
-
-**Default flag injection:** `-c` (continue conversation) is applied automatically to every invocation. Use `--new-session` to start a fresh session instead. `--dangerously-skip-permissions` is injected by default to prevent automation stalling on permission prompts. Use `--no-skip-permissions` to disable this per invocation. `--chrome` is injected via the builder default (`ClaudeCommand::new()`) to provide browser context for web-aware automation; no clr-level opt-out exists. `"\n\nultrathink"` is appended to every message by default to activate Claude's extended thinking mode; use `--no-ultrathink` to send the message verbatim. The suffix is not added when the message already ends with `"ultrathink"` (idempotent guard).
+**Default flag injection:** See [invariant/001_default_flags.md](../invariant/001_default_flags.md) for the complete default injection rules and opt-out mechanisms.
 
 **Verbosity gate:** The `--verbosity <0-5>` flag (default 3) controls how much runner diagnostic output is emitted. At level 0 all diagnostic output is suppressed. At level 4 a command preview is printed to stderr before execution. `--dry-run` output is always shown regardless of verbosity level.
 
@@ -39,10 +29,10 @@ claude_runner serves two distinct consumers from one crate:
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| api | [api/001_public_api.md](../api/001_public_api.md) | COMMANDS_YAML and VerbosityLevel public API |
-| invariant | [invariant/001_default_flags.md](../invariant/001_default_flags.md) | Default flag injection rules and opt-out mechanism |
-| invariant | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace deps, binary deps gated by enabled |
-| source | `../../src/main.rs` | clr binary entry point and mode dispatch |
+| doc | [api/001_public_api.md](../api/001_public_api.md) | COMMANDS_YAML and VerbosityLevel public API |
+| doc | [invariant/001_default_flags.md](../invariant/001_default_flags.md) | Default flag injection rules and opt-out mechanism |
+| doc | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace deps, binary deps gated by enabled |
+| source | `../../src/lib.rs` | run_cli() entry point; mode dispatch (run_print_mode, run_interactive) |
 
 ### Sources
 

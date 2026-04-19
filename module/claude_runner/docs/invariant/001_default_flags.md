@@ -46,8 +46,8 @@ If any default injection is removed:
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| feature | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Execution modes that consume these injected defaults |
-| source | `../../src/main.rs` | build_claude_command() flag injection implementation |
+| doc | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Execution modes that consume these injected defaults |
+| source | `../../src/lib.rs` | build_claude_command() flag injection implementation |
 
 ### Sources
 

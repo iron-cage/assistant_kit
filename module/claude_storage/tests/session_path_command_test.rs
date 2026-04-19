@@ -900,6 +900,185 @@ fn it_session_ensure_empty_topic_rejected()
   );
 }
 
+// ─── .path additional coverage ───────────────────────────────────────────────
+
+/// `.path` output is a single line ending with `/` (IT-5)
+#[ test ]
+fn it_path_output_single_line_ending_slash()
+{
+  let home = tempfile::TempDir::new().unwrap();
+
+  let output = common::clg_cmd()
+    .args( [ ".path", "path::/tmp/test-dir-path-format-check" ] )
+    .env( "HOME", home.path() )
+    .output()
+    .expect( "Failed to execute" );
+
+  let stdout = String::from_utf8_lossy( &output.stdout );
+  let stderr = String::from_utf8_lossy( &output.stderr );
+
+  assert!(
+    output.status.success(),
+    "Should exit 0. stderr: {stderr}"
+  );
+
+  let content = stdout.trim_end_matches( '\n' );
+  let lines : Vec< &str > = content.split( '\n' ).filter( | l | !l.is_empty() ).collect();
+  assert_eq!(
+    lines.len(), 1,
+    "Output must be exactly one non-empty line. Got: {stdout}"
+  );
+  assert!(
+    content.ends_with( '/' ),
+    "Output must end with '/'. Got: {stdout}"
+  );
+}
+
+/// `.path path::~` expands tilde to home directory (IT-7)
+#[ test ]
+fn it_path_tilde_expansion()
+{
+  let home = tempfile::TempDir::new().unwrap();
+  let home_str = home.path().to_str().unwrap();
+
+  let output = common::clg_cmd()
+    .args( [ ".path", "path::~/myproject" ] )
+    .env( "HOME", home.path() )
+    .output()
+    .expect( "Failed to execute" );
+
+  let stdout = String::from_utf8_lossy( &output.stdout );
+  let stderr = String::from_utf8_lossy( &output.stderr );
+
+  assert!(
+    output.status.success(),
+    "Should exit 0 after tilde expansion. stderr: {stderr}"
+  );
+  assert!(
+    !stdout.contains( '~' ),
+    "Output must not contain literal '~' — tilde must be expanded. Got: {stdout}"
+  );
+  assert!(
+    stdout.contains( home_str ),
+    "Output must contain expanded home directory. Got: {stdout}"
+  );
+}
+
+/// `.path path::.` resolves to cwd (IT-8)
+#[ test ]
+fn it_path_dot_resolves_to_cwd()
+{
+  let home = tempfile::TempDir::new().unwrap();
+  let project = tempfile::TempDir::new().unwrap();
+
+  let out_no_args = common::clg_cmd()
+    .args( [ ".path" ] )
+    .current_dir( project.path() )
+    .env( "HOME", home.path() )
+    .output()
+    .expect( "Failed to execute (no args)" );
+
+  let out_dot = common::clg_cmd()
+    .args( [ ".path", "path::." ] )
+    .current_dir( project.path() )
+    .env( "HOME", home.path() )
+    .output()
+    .expect( "Failed to execute (path::.)" );
+
+  assert!( out_no_args.status.success(), "no-args form should succeed" );
+  assert!( out_dot.status.success(), "path::. form should succeed" );
+
+  assert_eq!(
+    String::from_utf8_lossy( &out_dot.stdout ),
+    String::from_utf8_lossy( &out_no_args.stdout ),
+    "path::. must produce same output as bare .path from same cwd"
+  );
+}
+
+// ─── .session.dir additional coverage ────────────────────────────────────────
+
+/// `.session.dir path::~` expands tilde in path:: (IT-5)
+#[ test ]
+fn it_session_dir_tilde_expansion()
+{
+  let home = tempfile::TempDir::new().unwrap();
+  let home_str = home.path().to_str().unwrap();
+
+  let output = common::clg_cmd()
+    .args( [ ".session.dir", "path::~/myproject" ] )
+    .env( "HOME", home.path() )
+    .output()
+    .expect( "Failed to execute" );
+
+  let stdout = String::from_utf8_lossy( &output.stdout );
+  let stderr = String::from_utf8_lossy( &output.stderr );
+
+  assert!(
+    output.status.success(),
+    "Should exit 0 after tilde expansion. stderr: {stderr}"
+  );
+  assert!(
+    !stdout.contains( '~' ),
+    "Output must not contain literal '~' — tilde must be expanded. Got: {stdout}"
+  );
+  assert!(
+    stdout.contains( home_str ),
+    "Output must contain expanded home path. Got: {stdout}"
+  );
+}
+
+/// `.session.dir path::.` resolves to cwd (IT-6)
+#[ test ]
+fn it_session_dir_dot_resolves_to_cwd()
+{
+  let home = tempfile::TempDir::new().unwrap();
+  let project = tempfile::TempDir::new().unwrap();
+  let base = project.path().to_str().unwrap();
+
+  let out_dot = common::clg_cmd()
+    .args( [ ".session.dir", "path::." ] )
+    .current_dir( project.path() )
+    .env( "HOME", home.path() )
+    .output()
+    .expect( "Failed to execute (path::.)" );
+
+  let out_explicit = common::clg_cmd()
+    .args( [ ".session.dir", &format!( "path::{base}" ) ] )
+    .env( "HOME", home.path() )
+    .output()
+    .expect( "Failed to execute (explicit path)" );
+
+  assert!( out_dot.status.success(), "path::. form should succeed" );
+  assert!( out_explicit.status.success(), "explicit path form should succeed" );
+
+  assert_eq!(
+    String::from_utf8_lossy( &out_dot.stdout ),
+    String::from_utf8_lossy( &out_explicit.stdout ),
+    "path::. must produce same output as explicit cwd path"
+  );
+}
+
+/// `.session.dir` exits 0 even when given path does not exist on disk (IT-10)
+#[ test ]
+fn it_session_dir_exits_0_nonexistent_path()
+{
+  let home = tempfile::TempDir::new().unwrap();
+
+  let output = common::clg_cmd()
+    .args( [ ".session.dir", "path::/tmp/nonexistent-project-session-dir-xyz-abc" ] )
+    .env( "HOME", home.path() )
+    .output()
+    .expect( "Failed to execute" );
+
+  let stderr = String::from_utf8_lossy( &output.stderr );
+  let stdout = String::from_utf8_lossy( &output.stdout );
+
+  assert!(
+    output.status.success(),
+    ".session.dir must exit 0 even for nonexistent path (path is computed, not accessed). stderr: {stderr}, stdout: {stdout}"
+  );
+}
+
 /// `.session.ensure` custom topic used in output path
 #[ test ]
 fn it_session_ensure_custom_topic_in_output()

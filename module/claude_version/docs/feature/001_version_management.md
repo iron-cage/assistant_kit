@@ -51,9 +51,9 @@ Optional `version::SPEC` overrides the stored preference for a single invocation
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| pattern | [pattern/001_version_lock.md](../pattern/001_version_lock.md) | 5-layer lock applied after successful install |
-| feature | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .version.install and .version.guard |
-| feature | [feature/005_cli_design.md](005_cli_design.md) | CLI routing, parameter parsing, exit codes |
+| doc | [pattern/001_version_lock.md](../pattern/001_version_lock.md) | 5-layer lock applied after successful install |
+| doc | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .version.install and .version.guard |
+| doc | [feature/005_cli_design.md](005_cli_design.md) | CLI routing, parameter parsing, exit codes |
 | source | `../../src/commands.rs` | Version command routines |
 
 ### Sources

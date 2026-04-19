@@ -46,9 +46,9 @@
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| feature | [feature/001_version_management.md](001_version_management.md) | Version commands handled by this pipeline |
-| feature | [feature/002_process_lifecycle.md](002_process_lifecycle.md) | Process commands handled by this pipeline |
-| feature | [feature/003_settings_management.md](003_settings_management.md) | Settings commands handled by this pipeline |
+| doc | [feature/001_version_management.md](001_version_management.md) | Version commands handled by this pipeline |
+| doc | [feature/002_process_lifecycle.md](002_process_lifecycle.md) | Process commands handled by this pipeline |
+| doc | [feature/003_settings_management.md](003_settings_management.md) | Settings commands handled by this pipeline |
 | source | `../../src/lib.rs` | run_cli() 5-phase pipeline |
 | source | `../../src/adapter.rs` | Argv → unilang token adapter |
 

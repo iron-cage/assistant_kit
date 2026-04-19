@@ -42,7 +42,7 @@ Newtype wrapper over `u8` (valid range 0–5, default 3). Controls how much diag
 
 `--dry-run` output is always shown regardless of `VerbosityLevel`. `--trace` mode prints env+command to stderr and then executes, independent of verbosity level.
 
-#### `register_commands(registry: &mut unilang::registry::CommandRegistry)`
+#### `register_commands`
 
 Gated behind the `enabled` feature. Empty-body function provided for API consistency with other Layer 2 crates that do runtime registration. Calling this function has no effect — actual registration of `.claude` and `.claude.help` commands is handled by build-time YAML aggregation via `COMMANDS_YAML`.
 
@@ -61,8 +61,8 @@ The library surface has no fallible operations. `COMMANDS_YAML` is a `&'static s
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| feature | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | CLI binary design that uses VerbosityLevel |
-| invariant | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace dep rule that shapes this minimal library surface |
+| doc | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | CLI binary design that uses VerbosityLevel |
+| doc | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace dep rule that shapes this minimal library surface |
 | source | `../../src/lib.rs` | COMMANDS_YAML and register_commands definitions |
 
 ### Sources

@@ -38,8 +38,8 @@
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/commands.rs` | `account_status_routine()` — named-account branch |
-| test | `tests/account_status_name_test.rs::astname01–14` | Full named-account path coverage |
-| test | `tests/account_list_status_test.rs::astat11–12` | N/A normalization in list context |
+| test | `tests/cli/account_status_name_test.rs::astname01–14` | Full named-account path coverage |
+| test | `tests/cli/account_list_status_test.rs::astat11–12` | N/A normalization in list context |
 | doc | [012_live_credentials_status.md](012_live_credentials_status.md) | Related command — live credentials without account store |
 | doc | [cli/commands.md](../cli/commands.md#command--4-accountstatus) | CLI command specification |
-| doc | [cli/testing/command/account_status.md](../cli/testing/command/account_status.md) | Manual integration tests IT-24, IT-25, IT-26 |
+| doc | [cli/testing/command/04_account_status.md](../cli/testing/command/04_account_status.md) | Manual integration tests IT-24, IT-25, IT-26 |

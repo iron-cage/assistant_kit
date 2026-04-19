@@ -29,13 +29,6 @@ impl VerbosityLevel
   #[ inline ]
   pub fn get( self ) -> u8 { self.0 }
 
-  /// Clamp `n` to 0–5 and return a `VerbosityLevel`.
-  ///
-  /// Used when reading an already-validated integer from CLI parsing.
-  #[ must_use ]
-  #[ inline ]
-  pub fn from_u8_clamped( n : u8 ) -> Self { VerbosityLevel( n.min( 5 ) ) }
-
   /// Level ≥ 1: error messages are shown.
   #[ must_use ]
   #[ inline ]

@@ -1,18 +1,20 @@
 # Doc Entities
 
+### Scope
+
+- **Purpose**: Index of doc entity directories for `claude_profile`.
+- **Responsibility**: Master entity registry for all behavioral requirement doc entities under `docs/`.
+- **In Scope**: Behavioral entities (`feature/`, `invariant/`).
+- **Out of Scope**: Test doc entities (→ `tests/doc/entities.md`).
+
 ## Master Doc Entities Table
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
-| `feature/` | Account credential management and CLI capabilities | [feature/readme.md](feature/readme.md) | 13 |
-| `invariant/` | Non-functional constraints the crate must maintain | [invariant/readme.md](invariant/readme.md) | 5 |
-| `cli/testing/command/` | Per-command integration test case indices | [cli/testing/command/readme.md](cli/testing/command/readme.md) | 12 |
-| `cli/testing/param/` | Per-parameter edge case indices | [cli/testing/param/readme.md](cli/testing/param/readme.md) | 5 |
-| `cli/testing/param_group/` | Per-parameter-group integration test indices | [cli/testing/param_group/readme.md](cli/testing/param_group/readme.md) | 1 |
+| `feature/` | Documents all functional requirements with their design, acceptance criteria, and test references. | [feature/readme.md](feature/readme.md) | 13 |
+| `invariant/` | Documents all quality invariants with their statements, enforcement mechanisms, and violation consequences. | [invariant/readme.md](invariant/readme.md) | 5 |
 
 ## Master Doc Instances Table
-
-*CLI testing entities (`cli/testing/command/`, `cli/testing/param/`) use semantic file names and are excluded from this table per the semantic naming exception. They appear in the Master Doc Entities Table above.*
 
 | Entity | ID | Name | File |
 |--------|----|------|------|

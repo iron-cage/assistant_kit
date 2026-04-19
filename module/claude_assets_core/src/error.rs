@@ -1,6 +1,8 @@
-//! Domain-level error type for asset operations.
+//! Domain-level error types for asset operations.
 //!
-//! Layer 2 (`claude_assets`) adapts `AssetError` to unilang's `ErrorData`
+//! `AssetError` covers filesystem and domain errors from install/uninstall/list.
+//! `AssetPathsError` covers environment resolution failures from `AssetPaths::from_env()`.
+//! Layer 2 (`claude_assets`) adapts both to unilang's `ErrorData`
 //! at call sites via `.map_err(|e| ErrorData::new(code, e.to_string()))`.
 
 /// Error type for all `claude_assets_core` operations.
@@ -65,3 +67,30 @@ impl From< std::io::Error > for AssetError
     Self::Io( e )
   }
 }
+
+/// Typed error returned when `$PRO_CLAUDE` cannot be resolved.
+#[ derive( Debug ) ]
+pub enum AssetPathsError
+{
+  /// Neither `$PRO_CLAUDE` nor `$PRO` is set in the environment.
+  EnvVarNotSet,
+}
+
+impl core::fmt::Display for AssetPathsError
+{
+  #[ inline ]
+  fn fmt( &self, f : &mut core::fmt::Formatter< '_ > ) -> core::fmt::Result
+  {
+    match self
+    {
+      Self::EnvVarNotSet => write!(
+        f,
+        "environment variable $PRO_CLAUDE is not set \
+         (fallback: set $PRO and ensure $PRO/genai/claude/ exists) \
+         — run: export PRO_CLAUDE=/path/to/your/claude-assets"
+      ),
+    }
+  }
+}
+
+impl core::error::Error for AssetPathsError {}

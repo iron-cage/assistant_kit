@@ -14,9 +14,9 @@ use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 
 use claude_assets_core::artifact::ArtifactKind;
-use claude_assets_core::error::AssetError;
-use claude_assets_core::install::{ InstallAction, install, uninstall };
-use claude_assets_core::paths::{ AssetPaths, AssetPathsError };
+use claude_assets_core::error::{ AssetError, AssetPathsError };
+use claude_assets_core::install::{ InstallOutcome, UninstallOutcome, install, uninstall };
+use claude_assets_core::paths::AssetPaths;
 use claude_assets_core::registry::{ InstallStatus, list_all };
 
 // ── Error mapping ─────────────────────────────────────────────────────────────
@@ -33,13 +33,13 @@ fn paths_err_to_error_data( e : &AssetPathsError ) -> ErrorData
 
 // ── Argument helpers ──────────────────────────────────────────────────────────
 
-/// Extract an optional string argument; returns `""` if missing/unset.
-fn opt_str( cmd : &VerifiedCommand, name : &str ) -> String
+/// Extract an optional string argument; returns `None` if missing/unset.
+fn opt_str( cmd : &VerifiedCommand, name : &str ) -> Option< String >
 {
   match cmd.arguments.get( name )
   {
-    Some( Value::String( s ) ) => s.clone(),
-    _                          => String::new(),
+    Some( Value::String( s ) ) => Some( s.clone() ),
+    _                          => None,
   }
 }
 
@@ -59,14 +59,17 @@ fn parse_kind( raw : &str ) -> Result< ArtifactKind, ErrorData >
 /// Extract a required (non-empty) string argument.
 fn require_str( cmd : &VerifiedCommand, name : &str ) -> Result< String, ErrorData >
 {
-  let val = opt_str( cmd, name );
-  if val.is_empty()
+  match opt_str( cmd, name )
   {
-    Err( ErrorData::new( ErrorCode::ArgumentMissing, format!( "{name}:: is required" ) ) )
-  }
-  else
-  {
-    Ok( val )
+    Some( s ) if !s.is_empty() => Ok( s ),
+    Some( _ ) => Err( ErrorData::new(
+      ErrorCode::ArgumentMissing,
+      format!( "{name}:: must not be empty" ),
+    ) ),
+    None => Err( ErrorData::new(
+      ErrorCode::ArgumentMissing,
+      format!( "{name}:: is required" ),
+    ) ),
   }
 }
 
@@ -87,7 +90,7 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result<
 {
   let paths = AssetPaths::from_env().map_err( |e| paths_err_to_error_data( &e ) )?;
 
-  let raw_kind       = opt_str( &cmd, "kind" );
+  let raw_kind       = opt_str( &cmd, "kind" ).unwrap_or_default();
   let installed_only = matches!( cmd.arguments.get( "installed" ), Some( Value::Boolean( true ) ) );
 
   let kinds : Vec< ArtifactKind > = if raw_kind.is_empty()
@@ -151,10 +154,8 @@ pub fn install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resu
 
   let msg = match report.action
   {
-    InstallAction::Installed    => format!( "Installed {kind_str}/{name}\n" ),
-    InstallAction::Reinstalled  => format!( "Reinstalled {kind_str}/{name}\n" ),
-    InstallAction::Uninstalled  => format!( "Uninstalled {kind_str}/{name}\n" ),
-    InstallAction::NotInstalled => format!( "Not installed: {kind_str}/{name}\n" ),
+    InstallOutcome::Installed   => format!( "Installed {kind_str}/{name}\n" ),
+    InstallOutcome::Reinstalled => format!( "Reinstalled {kind_str}/{name}\n" ),
   };
 
   Ok( OutputData::new( msg, "text" ) )
@@ -183,10 +184,8 @@ pub fn uninstall_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Re
 
   let msg = match report.action
   {
-    InstallAction::Uninstalled  => format!( "Uninstalled {kind_str}/{name}\n" ),
-    InstallAction::NotInstalled => format!( "Not installed: {kind_str}/{name}\n" ),
-    InstallAction::Installed    => format!( "Installed {kind_str}/{name}\n" ),
-    InstallAction::Reinstalled  => format!( "Reinstalled {kind_str}/{name}\n" ),
+    UninstallOutcome::Uninstalled  => format!( "Uninstalled {kind_str}/{name}\n" ),
+    UninstallOutcome::NotInstalled => format!( "Not installed: {kind_str}/{name}\n" ),
   };
 
   Ok( OutputData::new( msg, "text" ) )

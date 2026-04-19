@@ -1,8 +1,15 @@
 # `claude_storage` CLI Documentation
 
+### Scope
+
+- **Purpose**: Document the clg command-line interface for Claude Code conversation storage exploration.
+- **Responsibility**: Reference documentation for commands, parameters, types, workflows, and test planning.
+- **In Scope**: commands, params, types, parameter groups, dictionary, workflows, format/.
+- **Out of Scope**: CLI tool design (→ `feature/001_cli_tool.md`), quality constraints (→ `invariant/`).
+
 Reference documentation for the `claude_storage` CLI binary — a tool for exploring Claude Code conversation storage. All commands are read-only except `.session.ensure`, which creates the session working directory on disk.
 
-## Responsibility Table
+### Responsibility Table
 
 | File | Responsibility |
 |------|----------------|
@@ -13,9 +20,8 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `parameter_groups.md` | Shared parameter groups with coherence tests |
 | `workflows.md` | Usage scenarios, best practices, complexity matrix |
 | `format/` | Output format catalog for export rendering modes |
-| `testing/` | Test case indexes for all commands, params, and groups |
 
-## Completion Matrix
+### Completion Matrix
 
 | File | L1 | L2 | L3 | L4 | L5 | Status |
 |------|----|----|----|----|----|----|
@@ -28,16 +34,11 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `workflows.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 | `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 | `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
-| `testing/readme.md` | ➖ | ➖ | ➖ | ✅ | ✅ | Index only |
-| `testing/command/*.md` (12 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| `testing/param/*.md` (21 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| `testing/param_group/*.md` (6 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-
-**Current Level:** L5 (Tests Complete for existing commands)
-**Design Completeness:** 100% (5/5 levels passed)
+**Current Level:** L4 (Specification Complete)
+**Design Completeness:** 100% (4/4 levels passed)
 **Implementation Status:** 100% (11/11 commands implemented; 0 deprecated)
 
-## Navigation
+### Navigation
 
 - [Commands](commands.md) — What operations exist and how to invoke them
 - [Parameters](params.md) — What inputs control each command
@@ -46,11 +47,10 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 - [Parameter Groups](parameter_groups.md) — Related parameter sets and their coherence
 - [Workflows](workflows.md) — Common usage patterns and best practices
 - [Formats](format/readme.md) — Export output format rendering specifications
-- [Testing](testing/readme.md) — Test case indexes for all commands, params, and groups
-
-## Related Documentation
+### Related Documentation
 
 - [`../feature/001_cli_tool.md`](../feature/001_cli_tool.md) — Crate architecture and overall design
 - `../readme.md` — User-facing crate overview
 - [`docs/claude_code/002_storage_organization.md`](../../../../docs/claude_code/002_storage_organization.md) — Storage layout (`~/.claude/projects/`)
 - `../../unilang.commands.yaml` — Machine-readable command definitions
+- [tests/doc/cli/](../../tests/doc/cli/readme.md) — test case planning (commands, params, groups)

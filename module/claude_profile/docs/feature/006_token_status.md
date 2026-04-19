@@ -13,9 +13,9 @@
 
 | Status | Condition |
 |--------|-----------|
-| `TokenStatus::Valid { expires_in }` | `expiresAt` is in the future and more than `threshold` seconds away |
-| `TokenStatus::ExpiringSoon { expires_in }` | `expiresAt` is in the future but within `threshold` seconds |
-| `TokenStatus::Expired` | `expiresAt` is in the past (now ≥ expiresAt) |
+| `Valid` | `expiresAt` is in the future and more than `threshold` seconds away |
+| `ExpiringSoon` | `expiresAt` is in the future but within `threshold` seconds |
+| `Expired` | `expiresAt` is in the past (now ≥ expiresAt) |
 
 **Default threshold:** 3600 seconds (60 minutes), matching `token::WARNING_THRESHOLD_SECS`.
 

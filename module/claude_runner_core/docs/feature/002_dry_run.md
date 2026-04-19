@@ -40,9 +40,9 @@ The label width is exactly 4 characters (`dir:`, `cmd:`), colon-terminated with 
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| api | [api/001_execution_api.md](../api/001_execution_api.md) | execute() contract including dry-run return value |
-| feature | [feature/001_execution_control.md](001_execution_control.md) | Normal execution modes that dry-run overrides |
-| feature | [feature/003_describe.md](003_describe.md) | describe() and describe_compact() inspection output |
+| doc | [api/001_execution_api.md](../api/001_execution_api.md) | execute() contract including dry-run return value |
+| doc | [feature/001_execution_control.md](001_execution_control.md) | Normal execution modes that dry-run overrides |
+| doc | [feature/003_describe.md](003_describe.md) | describe() and describe_compact() inspection output |
 | source | `../../src/command.rs` | dry_run field, execute() dry-run branch, describe_compact() |
 
 ### Sources

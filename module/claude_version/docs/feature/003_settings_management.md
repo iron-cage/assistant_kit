@@ -30,9 +30,9 @@
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| algorithm | [algorithm/001_settings_type_inference.md](../algorithm/001_settings_type_inference.md) | Type inference rules for value:: |
-| feature | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .settings.set |
-| feature | [feature/005_cli_design.md](005_cli_design.md) | CLI routing and required parameter validation |
+| doc | [algorithm/001_settings_type_inference.md](../algorithm/001_settings_type_inference.md) | Type inference rules for value:: |
+| doc | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .settings.set |
+| doc | [feature/005_cli_design.md](005_cli_design.md) | CLI routing and required parameter validation |
 | source | `../../src/settings_io.rs` | Settings JSON read/write implementation |
 
 ### Sources

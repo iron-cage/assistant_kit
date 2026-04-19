@@ -2,21 +2,21 @@
 
 ### Responsibility Table
 
-| Path | Responsibility |
+| File | Responsibility |
 |------|----------------|
 | `cli/` | CLI command, parameter, and type specifications |
 | `feature/` | CLI tool functional design and scope |
 | `operation/` | Operational procedures for users and maintainers |
 | `advanced_topics.md` | Agent sessions, command system, advanced search |
-| `cli_design.md` | CLI design decisions and rationale |
-| `entities.md` | Cross-entity index of all doc instances |
+| `cli_design.md` | CLI design decisions (superseded by `cli/`) |
 | `doc_graph.yml` | Cross-reference graph for navigability analysis |
+| `entities.md` | Entity tree and cross-entity index of all doc instances |
 
-## Overview
+### Overview
 
 This directory contains comprehensive documentation for the `claude_storage` crate.
 
-## Documents
+### Documents
 
 ### Claude Code Knowledge (shared)
 
@@ -84,7 +84,7 @@ Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.m
 
 ---
 
-## Quick Reference
+### Quick Reference
 
 ### Key Files to Read First
 
@@ -109,7 +109,7 @@ Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.m
 
 ---
 
-## Current Status
+### Current Status
 
 **Phase 1: Foundation** ✅ Complete
 - Core types implemented
@@ -130,7 +130,7 @@ Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.m
 
 ---
 
-## Testing Data
+### Testing Data
 
 ### Real Storage Location
 
@@ -165,7 +165,7 @@ head -2 FILE.jsonl | tail -1 | jq '.message.content[]'
 
 ---
 
-## Format Examples
+### Format Examples
 
 ### Minimal User Message
 
@@ -234,7 +234,7 @@ head -2 FILE.jsonl | tail -1 | jq '.message.content[]'
 
 ---
 
-## Implementation Notes
+### Implementation Notes
 
 ### Zero Dependencies Strategy
 
@@ -275,7 +275,7 @@ head -2 FILE.jsonl | tail -1 | jq '.message.content[]'
 
 ---
 
-## API Examples
+### API Examples
 
 ### List Projects
 
@@ -320,7 +320,7 @@ for result in results {
 
 ---
 
-## Contributing
+### Contributing
 
 ### Before Starting Implementation
 
@@ -348,7 +348,7 @@ for result in results {
 
 ---
 
-## Resources
+### Resources
 
 - **JSONL Spec**: https://jsonlines.org/
 - **Claude API**: https://docs.anthropic.com/en/api/
@@ -357,6 +357,6 @@ for result in results {
 
 ---
 
-## Questions?
+### Questions?
 
 See the main [readme.md](../readme.md) for more information.

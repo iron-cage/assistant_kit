@@ -75,7 +75,7 @@ step. No partial writes or missing files.
 or the format helpers in `src/commands.rs`.
 
 **Automated tests (do not re-run manually):** IT-1, IT-2, IT-3, IT-5 are automated
-live tests in `tests/integration/account_limits_test.rs` (lim_it1, lim_it2, lim_it3,
+live tests in `tests/cli/account_limits_test.rs` (lim_it1, lim_it2, lim_it3,
 lim_it5). They require real credentials and will fail without `claude auth login`.
 
 **Manual-only tests (require additional setup):**

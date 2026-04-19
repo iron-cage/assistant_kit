@@ -11,4 +11,5 @@
 | `verbosity_test.rs` | Verbosity flag: output gating levels 0–5, default behavior. |
 | `lib_test.rs` | Library API: `register_commands()` callable. |
 | `stale_ref_guard_test.rs` | Guard against stale `claude_runner_plugin` and `dream_agent` references. |
-| `manual/readme.md` | Manual testing plan: live Claude Code invocation. |
+| `doc/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups |
+| `manual/` | Manual testing plan for live Claude Code invocation. |

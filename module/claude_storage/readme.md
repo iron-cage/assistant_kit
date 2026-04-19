@@ -400,7 +400,7 @@ fn main() -> claude_storage_core::Result< () >
 
 ## documentation
 
-- **Documentation**: `docs/` - Behavioral requirements, CLI reference, feature docs (see `docs/entities.md` for index)
+- **Documentation**: `docs/` - Behavioral requirements, CLI reference, feature docs
 - **Migration guide**: `docs/MIGRATION.md` - Migration from monolithic crate
 - **Format docs**: `docs/` - Storage organization, file formats, advanced topics
 - **Integration guide**: `docs/integration_guide.md` - Library integration examples

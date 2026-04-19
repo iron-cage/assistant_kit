@@ -110,7 +110,7 @@
       kind: "String"
       description: "Account name to save as"
       hint: "Account name"
-      optional: true
+      optional: false
       validation_rules: []
       aliases: []
       tags: []
@@ -148,7 +148,7 @@
       kind: "String"
       description: "Account name to switch to"
       hint: "Account name"
-      optional: true
+      optional: false
       validation_rules: []
       aliases: []
       tags: []
@@ -186,7 +186,7 @@
       kind: "String"
       description: "Account name to delete"
       hint: "Account name"
-      optional: true
+      optional: false
       validation_rules: []
       aliases: []
       tags: []
@@ -242,9 +242,10 @@
 
     - name: "threshold"
       kind: "Integer"
-      description: "Minutes threshold for expiry warning classification"
-      hint: "Expiry threshold"
+      description: "Seconds before token expiry to classify as ExpiringSoon (default: 3600)"
+      hint: "Expiry threshold (seconds)"
       optional: true
+      default: "3600"
       validation_rules: []
       aliases: []
       tags: []

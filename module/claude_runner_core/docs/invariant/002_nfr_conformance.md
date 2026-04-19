@@ -76,8 +76,8 @@ This structure follows the assistant workspace standard and ensures correct erro
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| invariant | [invariant/001_single_execution_point.md](001_single_execution_point.md) | Complementary structural invariant |
-| data_structure | [data_structure/001_command_types.md](../data_structure/001_command_types.md) | Type-safe enums that satisfy NFR-3 |
+| doc | [invariant/001_single_execution_point.md](001_single_execution_point.md) | Complementary structural invariant |
+| doc | [data_structure/001_command_types.md](../data_structure/001_command_types.md) | Type-safe enums that satisfy NFR-3 |
 | source | `../../Cargo.toml` | Dependency and feature flag definitions |
 | source | `../../src/types.rs` | Enum type definitions |
 | test | `../../tests/verification_negative_criteria_test.rs` | NFR-5 enforcement |

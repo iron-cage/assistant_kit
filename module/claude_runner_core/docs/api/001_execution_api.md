@@ -70,10 +70,10 @@ Non-zero exit codes are not converted to errors — callers receive `ExecutionOu
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| pattern | [pattern/001_command_builder.md](../pattern/001_command_builder.md) | Fluent builder pattern for constructing the command |
-| feature | [feature/001_execution_control.md](../feature/001_execution_control.md) | Interactive vs non-interactive execution mode design |
-| feature | [feature/002_dry_run.md](../feature/002_dry_run.md) | Dry-run mode semantics and describe_compact() output |
-| invariant | [invariant/001_single_execution_point.md](../invariant/001_single_execution_point.md) | All Command::new("claude") calls centralized here |
+| doc | [pattern/001_command_builder.md](../pattern/001_command_builder.md) | Fluent builder pattern for constructing the command |
+| doc | [feature/001_execution_control.md](../feature/001_execution_control.md) | Interactive vs non-interactive execution mode design |
+| doc | [feature/002_dry_run.md](../feature/002_dry_run.md) | Dry-run mode semantics and describe_compact() output |
+| doc | [invariant/001_single_execution_point.md](../invariant/001_single_execution_point.md) | All Command::new("claude") calls centralized here |
 | source | `../../src/command.rs` | execute(), execute_interactive(), build_command() implementation |
 | source | `../../src/types.rs` | ExecutionOutput struct definition |
 

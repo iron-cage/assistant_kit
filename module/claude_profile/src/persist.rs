@@ -56,8 +56,8 @@ impl PersistPaths
   #[ inline ]
   pub fn new() -> Result< Self, std::io::Error >
   {
-  let root = Self ::resolve_root()?;
-  Ok( Self { base : root.join( "persistent" ).join( "claude_profile" ) } )
+    let root = Self::resolve_root()?;
+    Ok( Self { base : root.join( "persistent" ).join( "claude_profile" ) } )
   }
 
   /// The resolved base directory: `{root}/persistent/claude_profile/`.
@@ -65,7 +65,7 @@ impl PersistPaths
   #[ inline ]
   pub fn base( &self ) -> &Path
   {
-  &self.base
+    &self.base
   }
 
   /// Create the base directory if it does not exist.
@@ -76,28 +76,28 @@ impl PersistPaths
   #[ inline ]
   pub fn ensure_exists( &self ) -> Result< (), std::io::Error >
   {
-  std::fs ::create_dir_all( &self.base )
+    std::fs::create_dir_all( &self.base )
   }
 
   fn resolve_root() -> Result< PathBuf, std::io::Error >
   {
-  // prefer $PRO if it is set and an *existing directory* — a file path would
-  // produce a nonsensical base like `<file>/persistent/claude_profile` and make
-  // ensure_exists() fail with ENOTDIR; fall through instead (Fix: issue-001)
-  // Root cause: path.exists() returns true for files — is_dir() is the correct guard
-  // Pitfall: do not replace is_dir() with exists() — files silently break ensure_exists()
-  if let Some( pro ) = std::env ::var_os( "PRO" )
-  {
-   let path = PathBuf ::from( pro );
-   if path.is_dir()
-   {
-    return Ok( path );
-   }
-  }
-  // fall back to $HOME (Unix) or $USERPROFILE (Windows)
-  std::env ::var_os( "HOME" )
-  .or_else( || std::env ::var_os( "USERPROFILE" ) )
-  .map( PathBuf ::from )
-  .ok_or_else( || std::io::Error::new( std::io::ErrorKind::NotFound, "neither $PRO nor $HOME is set" ) )
+    // Fix(issue-001):
+    // Root cause: path.exists() returns true for files — is_dir() is the correct guard;
+    //   a file path produces a nonsensical base like `<file>/persistent/claude_profile`
+    //   and makes ensure_exists() fail with ENOTDIR at call time, not at validation.
+    // Pitfall: do not replace is_dir() with exists() — files silently break ensure_exists()
+    if let Some( pro ) = std::env::var_os( "PRO" )
+    {
+      let path = PathBuf::from( pro );
+      if path.is_dir()
+      {
+        return Ok( path );
+      }
+    }
+    // fall back to $HOME (Unix) or $USERPROFILE (Windows)
+    std::env::var_os( "HOME" )
+    .or_else( || std::env::var_os( "USERPROFILE" ) )
+    .map( PathBuf::from )
+    .ok_or_else( || std::io::Error::new( std::io::ErrorKind::NotFound, "neither $PRO nor $HOME is set" ) )
   }
 }

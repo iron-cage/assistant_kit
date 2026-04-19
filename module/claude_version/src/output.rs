@@ -73,7 +73,8 @@ impl OutputOptions
 
 /// Escape a string for safe embedding inside a JSON string value.
 ///
-/// Handles: `"`, `\`, newline, carriage return, tab.
+/// Handles: `"`, `\`, newline, carriage return, tab, and all C0 control
+/// characters (U+0000–U+001F) per RFC 8259 § 7.
 #[ inline ]
 #[ must_use ]
 pub fn json_escape( s : &str ) -> String
@@ -88,6 +89,8 @@ pub fn json_escape( s : &str ) -> String
       '\n' => out.push_str( "\\n"  ),
       '\r' => out.push_str( "\\r"  ),
       '\t' => out.push_str( "\\t"  ),
+      // RFC 8259 requires all other C0 control chars to be escaped as \uXXXX.
+      c if ( c as u32 ) < 0x20 => out.push_str( &format!( "\\u{:04x}", c as u32 ) ),
       c    => out.push( c ),
     }
   }

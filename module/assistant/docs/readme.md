@@ -2,9 +2,10 @@
 
 Documentation for the `assistant` crate covering behavioral requirements, aggregation design, and non-functional constraints for the `ast` super-app binary.
 
-## Responsibility Table
+### Responsibility Table
 
 | File/Directory | Responsibility |
 |----------------|----------------|
 | `feature/` | Super-app aggregation design and Layer 2 command registration |
 | `invariant/` | Aggregation completeness constraint for Layer 2 crates |
+| `doc_graph.yml` | Cross-reference graph for all doc instances |

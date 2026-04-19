@@ -24,5 +24,5 @@
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/install.rs` | install() and uninstall() — the only permitted install paths |
-| feature | [feature/001_artifact_installer.md](../feature/001_artifact_installer.md) | Full installer design including idempotency semantics |
+| doc | [feature/001_artifact_installer.md](../feature/001_artifact_installer.md) | Full installer design including idempotency semantics |
 | test | `tests/install.rs` | Real-fs integration tests verifying symlink creation |

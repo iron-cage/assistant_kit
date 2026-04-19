@@ -32,6 +32,15 @@
 //! # Related Tests
 //!
 //! - `claude_runner_core/tests/responsibility_single_execution_point_test.rs`: Verifies ONLY `claude_runner` executes
+//!
+//! # Test Matrix
+//!
+//! | Test Function | What It Checks | P/N |
+//! |---------------|----------------|-----|
+//! | `no_std_process_command_import` | `use std::process::Command` absent in src/ | P |
+//! | `no_command_new_calls` | `Command::new` absent in src/ | P |
+//! | `no_process_spawning_logic` | spawn/output/status/.wait/ExitStatus absent in non-comment src/ | P |
+//! | `responsibility_documented_in_readme` | readme.md references claude_runner + has Out of Scope section | P |
 
 use std::path::Path;
 use std::process::Command;
@@ -44,7 +53,7 @@ fn no_std_process_command_import()
 
   let src_dir = Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src" );
 
-  let output = Command::new( "grep" )
+  let output = Command::new( "/usr/bin/grep" )
     .args( [
       "-r",
       "use std::process::Command",
@@ -77,7 +86,7 @@ fn no_command_new_calls()
 
   let src_dir = Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src" );
 
-  let output = Command::new( "grep" )
+  let output = Command::new( "/usr/bin/grep" )
     .args( [
       "-r",
       "Command::new",
@@ -121,7 +130,7 @@ fn no_process_spawning_logic()
 
   for pattern in patterns
   {
-    let output = Command::new( "grep" )
+    let output = Command::new( "/usr/bin/grep" )
       .args( [
         "-r",
         pattern,

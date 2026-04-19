@@ -2,10 +2,10 @@
 
 Crate-level documentation for `dream`: behavioral requirements and structural invariants.
 
-## Responsibility Table
+### Responsibility Table
 
-| File/Directory | Responsibility |
-|----------------|----------------|
-| `entities.md` | Master index of all crate doc entities and instance counts |
-| `feature/` | Feature specifications: facade aggregation requirements (FR-1–FR-9) |
+| File | Responsibility |
+|------|----------------|
+| `doc_graph.yml` | Cross-reference graph for all doc instances |
+| `feature/` | Feature specifications: facade aggregation requirements (FR-1–FR-10) |
 | `invariant/` | Invariant specifications: zero-own-logic structural constraint |

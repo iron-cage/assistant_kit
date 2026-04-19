@@ -78,7 +78,8 @@ fn require_claude_paths() -> Result< claude_core::ClaudePaths, ErrorData >
         "could not resolve Claude configuration paths (HOME is set but path resolution failed)".to_string(),
       ) )
     }
-    _ => Err( ErrorData::new( ErrorCode::InternalError, "HOME environment variable not set".to_string() ) ),
+    Ok( _ ) => Err( ErrorData::new( ErrorCode::InternalError, "HOME environment variable is empty".to_string() ) ),
+    Err( _ ) => Err( ErrorData::new( ErrorCode::InternalError, "HOME environment variable not set".to_string() ) ),
   }
 }
 
@@ -146,7 +147,8 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Resul
     }
     ( OutputFormat::Text, v ) =>
     {
-      let base = format!( "Version:  {version}\nProcesses:  {processes}\nAccount:  {account}" );
+      // "Processes:" is 10 chars; pad shorter labels to align values at column 12.
+      let base = format!( "Version:   {version}\nProcesses: {processes}\nAccount:   {account}" );
       match &pref
       {
         Some( ( spec, resolved ) ) =>
@@ -271,7 +273,18 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
             let l = json_escape( &label );
             format!( "{{\"installed\":false,\"label\":\"{l}\"}}\n" )
           }
-          OutputFormat::Text => format!( "already at {label}\n" ),
+          OutputFormat::Text =>
+          {
+            // v::0 = bare label only; v::1+ = labeled confirmation.
+            if opts.verbosity == 0
+            {
+              format!( "{label}\n" )
+            }
+            else
+            {
+              format!( "already at {label}\n" )
+            }
+          }
         };
         return Ok( OutputData::new( content, "text" ) );
       }
@@ -292,7 +305,18 @@ pub fn version_install_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       let p = json_escape( &pref_label );
       format!( "{{\"installed\":true,\"label\":\"{l}\",\"auto_updates\":{auto_label},\"preferred\":\"{p}\"}}\n" )
     }
-    OutputFormat::Text => format!( "installed {label}\nautoUpdates = {auto_label}\npreferred = {pref_label}\n" ),
+    OutputFormat::Text =>
+    {
+      // v::0 = bare label only; v::1+ = full labeled output.
+      if opts.verbosity == 0
+      {
+        format!( "{label}\n" )
+      }
+      else
+      {
+        format!( "installed {label}\nautoUpdates = {auto_label}\npreferred = {pref_label}\n" )
+      }
+    }
   };
   Ok( OutputData::new( content, "text" ) )
 }
@@ -377,7 +401,7 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
 
   if interval_secs == 0
   {
-    return guard_once( dry, force, version_override.as_deref(), opts.verbosity );
+    return guard_once( dry, force, version_override.as_deref(), opts.verbosity, opts.format );
   }
 
   // Watch mode: loop until interrupted (Ctrl+C).
@@ -386,7 +410,7 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
   {
     iterations += 1;
     let now    = current_timestamp();
-    let result = guard_once( dry, force, version_override.as_deref(), opts.verbosity );
+    let result = guard_once( dry, force, version_override.as_deref(), opts.verbosity, opts.format );
 
     match &result
     {
@@ -414,22 +438,29 @@ pub fn version_guard_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -
 /// Defaults to `stable` when no preference is stored.
 /// When `version_override` is `Some`, it replaces the stored preference for this invocation
 /// without writing to `settings.json`.
-fn guard_once( dry : bool, force : bool, version_override : Option< &str >, verbosity : u8 ) -> Result< OutputData, ErrorData >
+fn guard_once( dry : bool, force : bool, version_override : Option< &str >, verbosity : u8, format : OutputFormat ) -> Result< OutputData, ErrorData >
 {
   // If HOME is unset or empty, installation would target "/.claude" (root)
   // which requires root permission.  Degrade gracefully rather than crashing.
   let home_valid = std::env::var( "HOME" ).map( | h | !h.is_empty() ).unwrap_or( false );
   if !home_valid
   {
-    let msg = if verbosity == 0
+    let msg = match format
     {
-      "no-home\n"
-    }
-    else
-    {
-      "no HOME directory; defaulting to stable (nothing to guard)\n"
+      OutputFormat::Json => "{\"status\":\"no-home\"}\n".to_string(),
+      OutputFormat::Text =>
+      {
+        if verbosity == 0
+        {
+          "no-home\n".to_string()
+        }
+        else
+        {
+          "no HOME directory; defaulting to stable (nothing to guard)\n".to_string()
+        }
+      }
     };
-    return Ok( OutputData::new( msg.to_string(), "text" ) );
+    return Ok( OutputData::new( msg, "text" ) );
   }
 
   let ( spec, resolved ) = if let Some( ver ) = version_override
@@ -447,22 +478,30 @@ fn guard_once( dry : bool, force : bool, version_override : Option< &str >, verb
 
   if spec == "latest" || resolved.is_none()
   {
-    return Ok( guard_once_latest( dry, verbosity ) );
+    return guard_once_latest( dry, verbosity, format );
   }
-  guard_once_pinned( dry, force, &spec, resolved.as_deref().unwrap_or( &spec ), verbosity )
+  guard_once_pinned( dry, force, &spec, resolved.as_deref().unwrap_or( &spec ), verbosity, format )
 }
 
 /// Guard path for `latest` preference: verify auto-update config, fix if wrong.
 ///
-/// Returns `OutputData` (not `Result`) because every code path succeeds: settings
-/// read and write errors are silently tolerated so the guard degrades gracefully
-/// rather than failing when HOME exists but settings are unreadable.
-fn guard_once_latest( dry : bool, verbosity : u8 ) -> OutputData
+/// # Errors
+///
+/// Returns `Err(InternalError)` when the `autoUpdates` setting must be written
+/// but the write fails (e.g. read-only filesystem, permissions error).
+fn guard_once_latest( dry : bool, verbosity : u8, format : OutputFormat ) -> Result< OutputData, ErrorData >
 {
   if dry
   {
-    let msg = if verbosity == 0 { "latest\n" } else { "preferred = latest (no version pin to guard)\n" };
-    return OutputData::new( msg.to_string(), "text" );
+    let msg = match format
+    {
+      OutputFormat::Json => "{\"status\":\"dry\",\"spec\":\"latest\"}\n".to_string(),
+      OutputFormat::Text =>
+      {
+        if verbosity == 0 { "latest\n" } else { "preferred = latest (no version pin to guard)\n" }.to_string()
+      }
+    };
+    return Ok( OutputData::new( msg, "text" ) );
   }
   if let Some( paths ) = claude_core::ClaudePaths::new()
   {
@@ -473,17 +512,35 @@ fn guard_once_latest( dry : bool, verbosity : u8 ) -> OutputData
       .unwrap_or_default();
     if auto_val != "true"
     {
-      let _ = set_setting( &settings_file, "autoUpdates", "true" );
-      let msg = if verbosity == 0 { "fixed\n" } else { "fixed autoUpdates = true for latest preference\n" };
-      return OutputData::new( msg.to_string(), "text" );
+      set_setting( &settings_file, "autoUpdates", "true" )
+        .map_err( | e | ErrorData::new(
+          ErrorCode::InternalError,
+          format!( "failed to set autoUpdates: {e}" ),
+        ) )?;
+      let msg = match format
+      {
+        OutputFormat::Json => "{\"status\":\"fixed\",\"action\":\"autoUpdates_enabled\"}\n".to_string(),
+        OutputFormat::Text =>
+        {
+          if verbosity == 0 { "fixed\n" } else { "fixed autoUpdates = true for latest preference\n" }.to_string()
+        }
+      };
+      return Ok( OutputData::new( msg, "text" ) );
     }
   }
-  let msg = if verbosity == 0 { "latest\n" } else { "preferred = latest (auto-update enabled)\n" };
-  OutputData::new( msg.to_string(), "text" )
+  let msg = match format
+  {
+    OutputFormat::Json => "{\"status\":\"ok\",\"spec\":\"latest\"}\n".to_string(),
+    OutputFormat::Text =>
+    {
+      if verbosity == 0 { "latest\n" } else { "preferred = latest (auto-update enabled)\n" }.to_string()
+    }
+  };
+  Ok( OutputData::new( msg, "text" ) )
 }
 
 /// Guard path for pinned versions: compare installed vs preferred and restore on drift.
-fn guard_once_pinned( dry : bool, force : bool, spec : &str, resolved : &str, verbosity : u8 ) -> Result< OutputData, ErrorData >
+fn guard_once_pinned( dry : bool, force : bool, spec : &str, resolved : &str, verbosity : u8, format : OutputFormat ) -> Result< OutputData, ErrorData >
 {
   // Re-resolve alias through current table so stale settings don't trigger false drift.
   let resolved_now = resolve_version_spec( spec );
@@ -496,79 +553,151 @@ fn guard_once_pinned( dry : bool, force : bool, spec : &str, resolved : &str, ve
     {
       if current == target
       {
-        let msg = if verbosity == 0
+        let pl = json_escape( &pref_label );
+        let msg = match format
         {
-          "ok\n".to_string()
-        }
-        else
-        {
-          format!( "version {current} matches preferred {pref_label}\n" )
+          OutputFormat::Json =>
+          {
+            format!( "{{\"status\":\"ok\",\"installed\":\"{current}\",\"preferred\":\"{pl}\"}}\n" )
+          }
+          OutputFormat::Text =>
+          {
+            if verbosity == 0
+            {
+              "ok\n".to_string()
+            }
+            else
+            {
+              format!( "version {current} matches preferred {pref_label}\n" )
+            }
+          }
         };
         return Ok( OutputData::new( msg, "text" ) );
       }
       if dry
       {
-        let msg = if verbosity == 0
+        let pl = json_escape( &pref_label );
+        let msg = match format
         {
-          format!( "[dry-run] {current}\u{2192}{target}\n" )
-        }
-        else
-        {
-          format!( "[dry-run] drift detected: installed {current}, preferred {pref_label}\n\
-                    [dry-run] would reinstall {pref_label}\n" )
+          OutputFormat::Json =>
+          {
+            format!( "{{\"status\":\"dry\",\"drift\":true,\"installed\":\"{current}\",\"preferred\":\"{pl}\"}}\n" )
+          }
+          OutputFormat::Text =>
+          {
+            if verbosity == 0
+            {
+              format!( "[dry-run] {current}\u{2192}{target}\n" )
+            }
+            else
+            {
+              format!( "[dry-run] drift detected: installed {current}, preferred {pref_label}\n\
+                        [dry-run] would reinstall {pref_label}\n" )
+            }
+          }
         };
         return Ok( OutputData::new( msg, "text" ) );
       }
       eprintln!( "drift detected: installed {current}, preferred {pref_label} \u{2014} restoring" );
       perform_install( target, false )
         .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
-      let msg = if verbosity == 0
+      let pl = json_escape( &pref_label );
+      let msg = match format
       {
-        format!( "restored {target}\n" )
-      }
-      else
-      {
-        format!( "restored {pref_label}\n" )
+        OutputFormat::Json =>
+        {
+          format!( "{{\"status\":\"restored\",\"preferred\":\"{pl}\"}}\n" )
+        }
+        OutputFormat::Text =>
+        {
+          if verbosity == 0 { format!( "restored {target}\n" ) } else { format!( "restored {pref_label}\n" ) }
+        }
       };
       return Ok( OutputData::new( msg, "text" ) );
     }
   }
   if dry
   {
-    let msg = if verbosity == 0
+    let pl = json_escape( &pref_label );
+    let msg = match format
     {
-      format!( "[dry-run] {target}\n" )
-    }
-    else
-    {
-      format!( "[dry-run] would install preferred {pref_label}\n" )
+      OutputFormat::Json =>
+      {
+        format!( "{{\"status\":\"dry\",\"drift\":false,\"preferred\":\"{pl}\"}}\n" )
+      }
+      OutputFormat::Text =>
+      {
+        if verbosity == 0
+        {
+          format!( "[dry-run] {target}\n" )
+        }
+        else
+        {
+          format!( "[dry-run] would install preferred {pref_label}\n" )
+        }
+      }
     };
     return Ok( OutputData::new( msg, "text" ) );
   }
   perform_install( target, false )
     .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
-  let msg = if verbosity == 0
+  let pl = json_escape( &pref_label );
+  let msg = match format
   {
-    format!( "installed {target}\n" )
-  }
-  else
-  {
-    format!( "installed preferred {pref_label}\n" )
+    OutputFormat::Json =>
+    {
+      format!( "{{\"status\":\"installed\",\"preferred\":\"{pl}\"}}\n" )
+    }
+    OutputFormat::Text =>
+    {
+      if verbosity == 0 { format!( "installed {target}\n" ) } else { format!( "installed preferred {pref_label}\n" ) }
+    }
   };
   Ok( OutputData::new( msg, "text" ) )
 }
 
-/// Simple UTC timestamp string (no chrono crate — uses system time).
+/// Convert a count of days since the Unix epoch into a (year, month, day) tuple (UTC).
+///
+/// Uses Gregorian calendar arithmetic with 400-year cycle constants.
+/// No leap-second adjustment: this is for human-readable log timestamps only.
+fn days_to_ymd( mut days : u64 ) -> ( u64, u8, u8 )
+{
+  let y400 = days / 146_097;    days %= 146_097;
+  let y100 = ( days / 36_524 ).min( 3 );  days -= y100 * 36_524;
+  let y4   = days / 1_461;                days %= 1_461;
+  let y1   = ( days / 365 ).min( 3 );     days -= y1 * 365;
+  let year = 1970 + y400 * 400 + y100 * 100 + y4 * 4 + y1;
+  let leap  = ( year % 4 == 0 && year % 100 != 0 ) || year % 400 == 0;
+  let mdays : &[ u64 ] = if leap
+  {
+    &[ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ]
+  }
+  else
+  {
+    &[ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ]
+  };
+  let mut month = 1u8;
+  for &md in mdays
+  {
+    if days < md { break; }
+    days  -= md;
+    month += 1;
+  }
+  ( year, month, days as u8 + 1 )
+}
+
+/// UTC timestamp in ISO 8601 format: `YYYY-MM-DDTHH:MM:SSZ` (no chrono crate).
 fn current_timestamp() -> String
 {
-  let dur = std::time::SystemTime::now()
+  let secs = std::time::SystemTime::now()
     .duration_since( std::time::UNIX_EPOCH )
-    .unwrap_or_default();
-  let secs = dur.as_secs();
-  let h = ( secs / 3600 ) % 24;
-  let m = ( secs / 60 ) % 60;
+    .unwrap_or_default()
+    .as_secs();
   let s = secs % 60;
-  format!( "{h:02}:{m:02}:{s:02}" )
+  let m = ( secs / 60 ) % 60;
+  let h = ( secs / 3600 ) % 24;
+  let ( year, month, day ) = days_to_ymd( secs / 86_400 );
+  format!( "{year:04}-{month:02}-{day:02}T{h:02}:{m:02}:{s:02}Z" )
 }
 
 /// `.version.list` — list all named version aliases.
@@ -702,7 +831,11 @@ pub fn processes_kill_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
     let content = match opts.format
     {
       OutputFormat::Json => "{\"killed\":0}\n".to_string(),
-      OutputFormat::Text => "no active processes\n".to_string(),
+      // v::0 = bare count; v::1+ = labeled message.
+      OutputFormat::Text =>
+      {
+        if opts.verbosity == 0 { "0\n".to_string() } else { "no active processes\n".to_string() }
+      }
     };
     return Ok( OutputData::new( content, "text" ) );
   }
@@ -719,10 +852,18 @@ pub fn processes_kill_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
       }
       OutputFormat::Text =>
       {
-        let lines : Vec< String > = procs.iter()
-        .map( | p | format!( "[dry-run] would send {signal} to PID {}", p.pid ) )
-        .collect();
-        format!( "{}\n", lines.join( "\n" ) )
+        if opts.verbosity == 0
+        {
+          // v::0: bare PID list only.
+          format!( "{}\n", pids.join( "\n" ) )
+        }
+        else
+        {
+          let lines : Vec< String > = procs.iter()
+          .map( | p | format!( "[dry-run] would send {signal} to PID {}", p.pid ) )
+          .collect();
+          format!( "{}\n", lines.join( "\n" ) )
+        }
       }
     };
     return Ok( OutputData::new( content, "text" ) );
@@ -779,7 +920,18 @@ pub fn processes_kill_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   let content = match opts.format
   {
     OutputFormat::Json => format!( "{{\"killed\":{count}}}\n" ),
-    OutputFormat::Text => format!( "killed {count} process(es)\n" ),
+    // v::0 = bare count; v::1+ = labeled message.
+    OutputFormat::Text =>
+    {
+      if opts.verbosity == 0
+      {
+        format!( "{count}\n" )
+      }
+      else
+      {
+        format!( "killed {count} process(es)\n" )
+      }
+    }
   };
   Ok( OutputData::new( content, "text" ) )
 }
@@ -975,6 +1127,8 @@ fn parse_json_string_value( json : &str, key : &str ) -> Option< String >
         'n'  => out.push( '\n' ),
         'r'  => out.push( '\r' ),
         't'  => out.push( '\t' ),
+        'b'  => out.push( '\x08' ),  // backspace (JSON \b)
+        'f'  => out.push( '\x0C' ),  // form feed  (JSON \f)
         '"'  => out.push( '"'  ),
         '\\' => out.push( '\\' ),
         'u'  =>
@@ -985,7 +1139,30 @@ fn parse_json_string_value( json : &str, key : &str ) -> Option< String >
           {
             if let Ok( cp ) = u32::from_str_radix( &hex, 16 )
             {
-              if let Some( c ) = char::from_u32( cp )
+              // UTF-16 surrogate pair: high surrogate must be followed by \uLLLL.
+              if ( 0xD800..=0xDBFF ).contains( &cp )
+              {
+                let mut low_hex = String::new();
+                if chars.next() == Some( '\\' ) && chars.next() == Some( 'u' )
+                {
+                  low_hex = chars.by_ref().take( 4 ).collect();
+                }
+                if low_hex.len() == 4
+                {
+                  if let Ok( lo ) = u32::from_str_radix( &low_hex, 16 )
+                  {
+                    if ( 0xDC00..=0xDFFF ).contains( &lo )
+                    {
+                      let scalar = 0x1_0000 + ( ( cp - 0xD800 ) << 10 ) + ( lo - 0xDC00 );
+                      if let Some( c ) = char::from_u32( scalar )
+                      {
+                        out.push( c );
+                      }
+                    }
+                  }
+                }
+              }
+              else if let Some( c ) = char::from_u32( cp )
               {
                 out.push( c );
               }
@@ -1016,8 +1193,18 @@ fn parse_json_string_value( json : &str, key : &str ) -> Option< String >
 /// Parse the full GitHub Releases API JSON response into a `Vec<ReleaseInfo>`.
 fn extract_releases( json : &str ) -> Vec< ReleaseInfo >
 {
-  let marker = "\"tag_name\": \"v";
-  let chunks : Vec< &str > = json.split( marker ).collect();
+  // Support both spaced ("tag_name": "v) and compact ("tag_name":"v) GitHub API formats.
+  let marker_spaced  = "\"tag_name\": \"v";
+  let marker_compact = "\"tag_name\":\"v";
+  let ( marker, chunks ) : ( &str, Vec< &str > ) = if json.contains( marker_spaced )
+  {
+    ( marker_spaced,  json.split( marker_spaced  ).collect() )
+  }
+  else
+  {
+    ( marker_compact, json.split( marker_compact ).collect() )
+  };
+
   let mut releases = Vec::new();
 
   for chunk in chunks.iter().skip( 1 )
@@ -1073,10 +1260,10 @@ fn fetch_releases_json( base : &std::path::Path ) -> Result< String, ErrorData >
     }
   }
 
-  let output = std::process::Command::new( "bash" )
-  .args( [ "-c", &format!( "curl -fsSL '{RELEASES_API_URL}'" ) ] )
+  let output = std::process::Command::new( "curl" )
+  .args( [ "-fsSL", RELEASES_API_URL ] )
   .output()
-  .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "failed to fetch release history: {e}" ) ) )?;
+  .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "curl not found or fetch failed: {e}" ) ) )?;
 
   if !output.status.success()
   {

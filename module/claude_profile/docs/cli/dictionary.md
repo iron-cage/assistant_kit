@@ -1,6 +1,6 @@
 # Dictionary
 
-## Core Terms
+### Core Terms
 
 **Account** — Named credential set stored as `~/.claude/accounts/{name}.credentials.json`. Each account is a snapshot of Claude OAuth credentials that can be restored by switching.
 
@@ -14,7 +14,7 @@
 
 **Token Status** — Classification of the active OAuth access token: `Valid` (more than threshold remaining), `ExpiringSoon` (within warning threshold), or `Expired` (past `expiresAt`).
 
-## Technical Terms
+### Technical Terms
 
 **Atomic Switch** — Write-then-rename pattern used during account switching. Credentials are written to a `.json.tmp` file adjacent to the target, then renamed into place, ensuring the credential file is never partially written.
 

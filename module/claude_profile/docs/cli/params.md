@@ -1,12 +1,14 @@
 # Parameters
 
-| # | Parameter | Type | Default | Commands | Purpose | Status |
-|---|-----------|------|---------|----------|---------|--------|
-| 1 | `name::` | `AccountName` | required / optional | 5 | Account name for save, switch, delete (required); or status/limits query (optional) | 🕐 |
-| 2 | `verbosity::` / `v::` | `VerbosityLevel` | `1` | 7 | Output detail: 0=quiet, 1=normal, 2=verbose | 🕐 |
-| 3 | `format::` | `OutputFormat` | `text` | 7 | Output format: `text` or `json` | 🕐 |
-| 4 | `threshold::` | `WarningThreshold` | `3600` | 1 | Seconds before token expiry to classify as ExpiringSoon | 🕐 |
-| 5 | `dry::` | `bool` | `0` | 3 | Print intended action without executing | 🕐 |
+### All Parameters (5 total)
+
+| # | Parameter | Type | Default | Valid Values | Purpose | Used In |
+|---|-----------|------|---------|--------------|---------|---------|
+| 1 | `name::` | `AccountName` | Varies | Any filesystem-safe string | Account name for save/switch/delete (required); or status/limits query (optional) | 5 cmds |
+| 2 | `verbosity::` / `v::` | `VerbosityLevel` | `1` | `0`, `1`, `2` | Output detail: 0=quiet, 1=normal, 2=verbose | 7 cmds |
+| 3 | `format::` | `OutputFormat` | `text` | `text`, `json` | Output format: `text` or `json` | 7 cmds |
+| 4 | `threshold::` | `WarningThreshold` | `3600` | Non-negative integer (seconds) | Seconds before token expiry to classify as ExpiringSoon | 1 cmd |
+| 5 | `dry::` | `bool` | `0` | `0`, `1`, `false`, `true` | Print intended action without executing | 3 cmds |
 
 **Total:** 5 parameters
 
@@ -61,7 +63,7 @@ Selects between human-readable text output and machine-parseable JSON. Text is t
 
 - **Type:** `OutputFormat`
 - **Default:** `text`
-- **Constraints:** One of `text`, `json`
+- **Constraints:** One of `text`, `json` (case-insensitive)
 - **Commands:** [`.account.list`](commands.md#command--3-accountlist), [`.account.status`](commands.md#command--4-accountstatus), [`.token.status`](commands.md#command--8-tokenstatus), [`.paths`](commands.md#command--9-paths), [`.usage`](commands.md#command--10-usage), [`.credentials.status`](commands.md#command--11-credentialsstatus), [`.account.limits`](commands.md#command--12-accountlimits)
 - **Purpose:** Enables CLI composability — `format::json` output can be piped to `jq` for structured extraction without parsing fragile text layouts.
 - **Group:** Output Control

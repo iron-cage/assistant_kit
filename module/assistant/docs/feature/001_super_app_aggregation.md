@@ -40,5 +40,5 @@ Duplicate registrations via `command_add_runtime` are silently skipped — the f
 | source | `src/lib.rs` | Feature gate and crate-level doc comment |
 | source | `build.rs` | YAML aggregation that generates static_commands.rs |
 | source | `Cargo.toml` | Layer 2 dependency declarations with feature gating |
-| invariant | [invariant/001_aggregation_completeness.md](../invariant/001_aggregation_completeness.md) | Rule: every Layer 2 crate must expose register_commands() |
-| feature | [claude_assets/docs/feature/001_asset_cli.md](../../claude_assets/docs/feature/001_asset_cli.md) | register_commands() contract for claude_assets |
+| doc | [invariant/001_aggregation_completeness.md](../invariant/001_aggregation_completeness.md) | Rule: every Layer 2 crate must expose register_commands() |
+| doc | [claude_assets/docs/feature/001_asset_cli.md](../../claude_assets/docs/feature/001_asset_cli.md) | register_commands() contract for claude_assets |

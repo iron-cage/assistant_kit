@@ -42,7 +42,7 @@ This command succeeds on a fresh Claude Code installation where only `~/.claude/
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/commands.rs` | `credentials_routine()` — reads credentials directly, no account store calls |
-| test | `tests/credentials_test.rs::cred01–cred05` | No-account-store, all verbosity levels, JSON, N/A cases |
+| test | `tests/cli/credentials_test.rs::cred01–cred05` | No-account-store, all verbosity levels, JSON, N/A cases |
 | doc | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account-store-aware status command |
 | doc | [cli/commands.md](../cli/commands.md#command--11-credentialsstatus) | CLI command specification |
-| doc | [cli/testing/command/credentials_status.md](../cli/testing/command/credentials_status.md) | Manual integration tests |
+| doc | [cli/testing/command/11_credentials_status.md](../cli/testing/command/11_credentials_status.md) | Manual integration tests |

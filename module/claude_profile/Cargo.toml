@@ -21,13 +21,13 @@ name = "claude_profile"
 path = "src/lib.rs"
 
 [[bin]]
-name = "claude_profile"
-path = "src/main.rs"
+name = "clp"
+path = "src/bin/clp.rs"
 required-features = [ "enabled" ]
 
 [[bin]]
-name = "clp"
-path = "src/bin/clp.rs"
+name = "claude_profile"
+path = "src/main.rs"
 required-features = [ "enabled" ]
 
 [dependencies]
@@ -46,7 +46,9 @@ serde_json.workspace = true
 tempfile.workspace = true
 
 [features]
-default = [ "enabled" ]
+# Default: library-only build with zero dependencies (no CLI binary).
+default = []
+# Master switch: activates CLI binary dependencies (error_tools, serde_json, unilang, ureq).
 enabled = [
   "dep:error_tools",
   "error_tools/enabled",
@@ -55,4 +57,5 @@ enabled = [
   "dep:unilang",
   "dep:ureq",
 ]
+# Convenience: enables all functionality (currently equivalent to enabled).
 full = [ "enabled" ]

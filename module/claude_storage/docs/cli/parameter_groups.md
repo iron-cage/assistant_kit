@@ -8,7 +8,7 @@ See [params.md](params.md) for individual parameter specs and [commands.md](comm
 
 | # | Group | Parameters | Used By |
 |---|-------|-----------|---------|
-| 1 | [Output Control](#output-control) | `verbosity::` | 6 commands |
+| 1 | [Output Control](#output-control) | `verbosity::` | 5 commands |
 | 2 | [Project Scope](#project-scope) | `project::` | 5 commands |
 | 3 | [Session Identification](#session-identification) | `session_id::` | 2 commands |
 | 4 | [Session Filter](#session-filter) | `session::`, `agent::`, `min_entries::` | 2 commands |

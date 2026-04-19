@@ -41,7 +41,7 @@ Enables wrapper scripts to override defaults.
 ## D7 — Hand-rolled parser over clap/unilang
 
 Hand-rolled parser. Zero external dependencies for CLI parsing. Exact control over
-error messages and behavior. The flag surface (15 flags + 1 positional) is small enough
+error messages and behavior. The flag surface (18 flags + 1 positional) is small enough
 that a framework adds complexity without benefit.
 
 ## D9 — Session continuation by default

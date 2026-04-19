@@ -13,6 +13,7 @@ Unit and integration tests for `claude_version`.
 | `integration/` | Module files for integration tests (included by `integration.rs`) |
 | `lib_test.rs` | Library API: `register_commands()` callable and registers all commands |
 | `manual/` | Manual testing plan for scenarios requiring human verification |
+| `doc/` | Test planning documentation mirroring `docs/` structure |
 
 ## Integration Test Modules
 

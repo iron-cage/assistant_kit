@@ -1,4 +1,5 @@
 #![ cfg_attr( doc, doc = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/", "readme.md" ) ) ) ]
+#![ doc( html_root_url = "https://docs.rs/claude_profile" ) ]
 
 //! Claude Code account credential management.
 //!
@@ -55,9 +56,6 @@
 //! // Switch to a specific account
 //! account::switch_account( "personal" ).expect( "switch failed" );
 //! ```
-
-#![ cfg_attr( not( feature = "enabled" ), allow( unused ) ) ]
-#![ warn( missing_docs ) ]
 
 /// Path to the YAML command definitions for this crate.
 ///
@@ -186,7 +184,7 @@ mod cli
 
   /// Register all `claude_profile` commands with their argument definitions and routines.
   ///
-  /// Delegates 9 shared commands to `claude_profile::register_commands()` and
+  /// Delegates 10 shared commands to `claude_profile::register_commands()` and
   /// adds the `.` (dot) hidden command inline (binary-specific).
   pub( super ) fn build_registry() -> CommandRegistry
   {
@@ -207,7 +205,7 @@ mod cli
 
     // `.help` is pre-registered by CommandRegistry::new() — do not register again.
 
-    // Register 9 shared commands (credentials, account, token, paths, usage).
+    // Register 10 shared commands (credentials, account, token, paths, usage).
     crate::register_commands( &mut registry );
 
     registry
@@ -244,6 +242,8 @@ mod cli
     println!( "  .credentials.status  [v::0-2] [format::text|json]   Show live credentials (no account store needed)" );
     println!();
     println!( "Options:" );
+    println!( "  --version, -V       Show version and exit" );
+    println!( "  --help, -h          Show this help and exit" );
     println!( "  v::0-2              Verbosity level (default: 1)" );
     println!( "  format::text|json   Output format (default: text)" );
     println!( "  dry::bool           Preview without applying" );
@@ -264,6 +264,13 @@ mod cli
   /// Run the full unilang pipeline for the given argv.
   pub( super ) fn run( binary : &str, argv : &[ String ] )
   {
+    // Phase 0: --version / -V
+    if argv.first().map_or( false, |a| a == "--version" || a == "-V" )
+    {
+      println!( "{} {}", binary, env!( "CARGO_PKG_VERSION" ) );
+      return;
+    }
+
     // Phase 1: adapter — convert argv to unilang tokens.
     let ( tokens, needs_help ) = match argv_to_unilang_tokens( argv )
     {

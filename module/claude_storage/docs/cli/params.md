@@ -26,7 +26,7 @@ See [types.md](types.md) for type definitions and [parameter_groups.md](paramete
 | 16 | `target::` | [`TargetType`](types.md#targettype) | `projects` | 1 | Count operation target |
 | 17 | `topic::` | [`TopicName`](types.md#topicname) | — | 5 | Session topic suffix (without leading `-`) |
 | 18 | `type::` | [`ProjectType`](types.md#projecttype) | `all` | 1 | Project naming scheme filter |
-| 19 | `verbosity::` | [`VerbosityLevel`](types.md#verbositylevel) | `1` | 6 | Output detail level |
+| 19 | `verbosity::` | [`VerbosityLevel`](types.md#verbositylevel) | `1` | 5 | Output detail level |
 | 20 | `strategy::` | [`StrategyType`](types.md#strategytype) | auto-detect | 1 | Resume strategy override for `.session.ensure` |
 
 **Total:** 20 parameters

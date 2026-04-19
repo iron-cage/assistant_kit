@@ -11,6 +11,8 @@ tests/
 ├── readme.md                              # This file - test suite organization
 ├── common/                                 # Shared test utilities
 │   └── mod.rs                             # Pre-compiled binary helper (cargo_bin!)
+├── doc/                                    # Test documentation mirroring docs/ hierarchy
+│   └── cli/testing/                       # CLI test case indexes (command, param, param_group)
 ├── behavior/                               # Behavior hypothesis invalidation tests (B1..B11)
 │   ├── mod.rs                             # Test binary root; shared helpers for real ~/.claude/ inspection
 │   ├── b01_default_continues.rs           # B1 — default invocation continues most recent session
@@ -57,6 +59,7 @@ tests/
 
 | File | Responsibility |
 |------|----------------|
+| `doc/` | Test documentation parallel to `docs/` (test case indexes, test plans) |
 | `lib_test.rs` | Library API: `COMMANDS_YAML` exists, `register_commands()` callable |
 | `common/mod.rs` | Pre-compiled binary helper for integration tests |
 | `behavior/mod.rs` | Behavior test binary root; shared helpers for real `~/.claude/` inspection |
@@ -454,7 +457,6 @@ See `tests/manual/readme.md` for manual testing plan and procedures.
 
 ## Related Documentation
 
-- **Documentation**: `docs/entities.md` - Command specifications and behavioral requirements index
 - **Code Design**: See applicable rulebooks via `clm .rulebooks.list`
 - **Test Organization**: `test_organization.rulebook.md` - Test documentation format standards
 - **Codebase Hygiene**: `codebase_hygiene.rulebook.md` - Quality standards for documentation

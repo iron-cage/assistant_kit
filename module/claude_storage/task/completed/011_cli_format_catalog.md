@@ -19,7 +19,6 @@ Create the `docs/cli/format/` CLI Output Format Doc Entity for claude_storage, d
 - [NEW FILE] `docs/cli/format/json.md` — JSON export format specification
 - [NEW FILE] `docs/cli/format/text.md` — plain text export format specification
 - `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_storage/docs/cli/readme.md` — add `format/` row to Responsibility Table
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_storage/docs/entities.md` — add `cli/format/` to Master Doc Entities Table (semantic naming)
 
 ## Out of Scope
 
@@ -60,8 +59,7 @@ Execute in order. Do not skip or reorder steps.
    - Sections: Purpose, Structure, Example Output, Related (cross-ref to params.md, types.md)
    - Semantic filename: `markdown.md`, `json.md`, `text.md`
 6. **Update cli/readme.md** — Add `format/` row to Responsibility Table.
-7. **Update entities.md** — Add `cli/format/` to Master Doc Entities Table with semantic naming note.
-8. **Walk Validation Checklist** — check every item. Every answer must be YES.
+7. **Walk Validation Checklist** — check every item. Every answer must be YES.
 
 ## Acceptance Criteria
 
@@ -69,7 +67,6 @@ Execute in order. Do not skip or reorder steps.
 - readme.md master file has Taxonomy, Catalog, and Rendering Convention sections
 - Each format file documents the rendering specification for one ExportFormat value
 - `docs/cli/readme.md` Responsibility Table includes `format/` row
-- `docs/entities.md` Master Doc Entities Table includes `cli/format/` row
 
 ## Validation Checklist
 
@@ -92,11 +89,9 @@ Desired answer for every question is YES.
 
 **Integration**
 - [ ] Does `docs/cli/readme.md` Responsibility Table include `format/` row?
-- [ ] Does `docs/entities.md` include `cli/format/` in Master Doc Entities Table?
-
 **Out of Scope confirmation**
 - [ ] Are `docs/cli/commands.md`, `params.md`, `types.md` unchanged?
-- [ ] Are `docs/` root files (other than entities.md) unchanged?
+- [ ] Are `docs/` root files unchanged?
 
 ## Validation Procedure
 
@@ -113,10 +108,6 @@ Before: N/A. Expected: 3. Deviation: missing required sections.
 **M3 — cli/readme.md registration**
 Command: `grep -c "format/" /home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_storage/docs/cli/readme.md`
 Before: 0. Expected: ≥1. Deviation: format/ not registered.
-
-**M4 — entities.md registration**
-Command: `grep -c "cli/format/" /home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_storage/docs/entities.md`
-Before: 0. Expected: ≥1. Deviation: format/ entity not registered.
 
 ### Anti-faking checks
 
@@ -139,7 +130,6 @@ All measurements and anti-faking checks passed:
 - **M1**: `ls docs/cli/format/*.md | wc -l` → 4 (readme.md + 3 format files)
 - **M2**: `grep -c "### Taxonomy\|### Catalog\|### Rendering Convention"` → 3
 - **M3**: `grep -c "format/" docs/cli/readme.md` → ≥1 (4 matches across Responsibility Table, Completion Matrix, Navigation)
-- **M4**: `grep -c "cli/format/" docs/entities.md` → 1
 - **AF1**: `wc -l markdown.md` → 72 lines (≥20)
 - **AF2**: H2 matches in code blocks only (fenced example output, not actual document headings) — compliant
 - **AF3**: `grep -rc "params.md" docs/cli/format/` → ≥3
@@ -152,4 +142,3 @@ Files created:
 
 Files modified:
 - `docs/cli/readme.md` — added format/ to Responsibility Table, Completion Matrix, Navigation
-- `docs/entities.md` — added cli/format/ row to Master Doc Entities Table

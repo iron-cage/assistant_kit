@@ -185,5 +185,4 @@ Check network connectivity and Claude API status. Set timeout in test if needed.
 ## Contact
 
 For questions about manual testing:
-- See specification: `../../docs/entities.md`
 - See main readme: `../../readme.md`

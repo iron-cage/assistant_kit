@@ -21,24 +21,30 @@ use crate::paths::AssetPaths;
 
 /// Outcome of a successful install or uninstall operation.
 #[ derive( Debug ) ]
-pub struct InstallReport
+pub struct InstallReport< A >
 {
   /// Artifact kind (e.g., `ArtifactKind::Rule`).
   pub kind   : ArtifactKind,
   /// Artifact name (e.g., `"rust"`).
   pub name   : String,
   /// Which action was taken.
-  pub action : InstallAction,
+  pub action : A,
 }
 
-/// The specific action recorded in an [`InstallReport`].
+/// Outcome of a successful [`install`] call.
 #[ derive( Debug, Clone, Copy, PartialEq, Eq ) ]
-pub enum InstallAction
+pub enum InstallOutcome
 {
   /// A new symlink was created.
   Installed,
   /// A symlink was already present and re-linked (idempotent update).
   Reinstalled,
+}
+
+/// Outcome of a successful [`uninstall`] call.
+#[ derive( Debug, Clone, Copy, PartialEq, Eq ) ]
+pub enum UninstallOutcome
+{
   /// The symlink was removed.
   Uninstalled,
   /// No installed symlink was found; nothing was changed.
@@ -58,7 +64,7 @@ pub enum InstallAction
 /// - `AssetError::NotASymlink` — target path exists as a regular file
 /// - `AssetError::Io` — filesystem error
 #[ inline ]
-pub fn install( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Result< InstallReport, AssetError >
+pub fn install( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Result< InstallReport< InstallOutcome >, AssetError >
 {
   let src_path = source_path( paths, kind, name );
   if !src_path.exists()
@@ -89,11 +95,11 @@ pub fn install( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Resul
       } );
     }
     std::fs::remove_file( &tgt_path ).map_err( AssetError::Io )?;
-    InstallAction::Reinstalled
+    InstallOutcome::Reinstalled
   }
   else
   {
-    InstallAction::Installed
+    InstallOutcome::Installed
   };
 
   create_symlink( &src_path, &tgt_path, kind.layout() ).map_err( AssetError::Io )?;
@@ -111,7 +117,7 @@ pub fn install( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Resul
 /// - `AssetError::NotASymlink` — target path is a regular file (data-loss guard)
 /// - `AssetError::Io` — filesystem error during metadata read or removal
 #[ inline ]
-pub fn uninstall( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Result< InstallReport, AssetError >
+pub fn uninstall( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Result< InstallReport< UninstallOutcome >, AssetError >
 {
   let tgt_path = target_path( paths, kind, name );
 
@@ -125,7 +131,7 @@ pub fn uninstall( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Res
       {
         kind,
         name   : name.to_string(),
-        action : InstallAction::NotInstalled,
+        action : UninstallOutcome::NotInstalled,
       } );
     }
     Err( e ) => return Err( AssetError::Io( e ) ),
@@ -141,7 +147,7 @@ pub fn uninstall( paths : &AssetPaths, kind : ArtifactKind, name : &str ) -> Res
   }
 
   std::fs::remove_file( &tgt_path ).map_err( AssetError::Io )?;
-  Ok( InstallReport { kind, name : name.to_string(), action : InstallAction::Uninstalled } )
+  Ok( InstallReport { kind, name : name.to_string(), action : UninstallOutcome::Uninstalled } )
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────

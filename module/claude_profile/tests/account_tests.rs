@@ -3,6 +3,44 @@
 //! Each test creates a fully isolated temp HOME directory so tests never
 //! touch the real `~/.claude/` installation.
 //! Safe because nextest runs every test in its own process.
+//!
+//! ## Test Matrix
+//!
+//! | ID   | Test Function | Condition | P/N |
+//! |------|---------------|-----------|-----|
+//! | A-01 | `save_creates_accounts_dir_when_missing` | first save creates `accounts/` | P |
+//! | A-02 | `save_copies_credentials_to_named_file` | save produces named file with same content | P |
+//! | A-03 | `save_overwrites_existing_entry` | second save overwrites first | P |
+//! | A-04 | `save_rejects_empty_name` | empty name → `Err` | N |
+//! | A-05 | `save_rejects_name_with_slash` | name contains `/` → `Err` | N |
+//! | A-06 | `list_returns_empty_when_accounts_dir_missing` | no `accounts/` dir → empty vec | P |
+//! | A-07 | `list_returns_saved_accounts_with_metadata` | accounts dir has files → vec with metadata | P |
+//! | A-08 | `list_marks_active_account_via_active_marker` | `_active` marker file → `is_active = true` | P |
+//! | A-09 | `list_returns_accounts_sorted_by_name` | multiple accounts → sorted ascending | P |
+//! | A-10 | `switch_account_overwrites_credentials_file` | switch copies named account to `.credentials.json` | P |
+//! | A-11 | `switch_account_updates_active_marker` | switch writes `_active` marker | P |
+//! | A-12 | `switch_account_returns_not_found_for_missing_account` | name not in `accounts/` → `Err` NotFound | N |
+//! | A-13 | `delete_removes_credential_file` | delete removes named file | P |
+//! | A-14 | `delete_returns_error_if_account_is_active` | active account → `PermissionDenied` | N |
+//! | A-15 | `delete_returns_not_found_for_missing_account` | non-existent name → `Err` NotFound | N |
+//! | A-16 | `auto_rotate_switches_to_inactive_account` | inactive account present → switches | P |
+//! | A-17 | `auto_rotate_returns_switched_account_name` | → returns name string | P |
+//! | A-18 | `auto_rotate_picks_account_with_highest_expires_at` | multiple inactive → picks latest expiry | P |
+//! | A-19 | `auto_rotate_fails_when_no_inactive_accounts` | all active → `Err` | N |
+//! | A-20 | `auto_rotate_fails_when_account_store_empty` | no accounts → `Err` | N |
+//! | A-21 | `auto_rotate_with_no_active_marker_picks_highest_expires_at` | no `_active` file → picks latest | P |
+//! | A-22 | `credential_stem_valid` | `.credentials.json` file → `Some(stem)` | P |
+//! | A-23 | `credential_stem_filters_active_marker` | `_active` file → `None` | P |
+//! | A-24 | `credential_stem_filters_plain_json` | non-credentials `.json` → `None` | P |
+//! | A-25 | `parse_string_field_standard` | standard JSON field → `Some(value)` | P |
+//! | A-26 | `parse_string_field_with_space` | field with spaces → `Some(value)` | P |
+//! | A-27 | `parse_string_field_missing` | field absent → `None` | N |
+//! | A-28 | `parse_u64_field_standard` | numeric JSON field → `Some(u64)` | P |
+//! | A-29 | `parse_u64_field_with_space` | numeric field with spaces → `Some(u64)` | P |
+//! | A-30 | `validate_name_empty_is_error` | empty string → `Err` | N |
+//! | A-31 | `validate_name_slash_is_error` | name with `/` → `Err` | N |
+//! | A-32 | `validate_name_null_byte_is_error` | name with NUL byte → `Err` | N |
+//! | A-33 | `validate_name_valid` | clean alphanumeric name → `Ok` | P |
 
 use claude_profile::account;
 use tempfile::TempDir;

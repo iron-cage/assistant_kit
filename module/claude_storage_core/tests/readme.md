@@ -279,7 +279,6 @@ cargo nextest run --all-features -- --include-ignored
 
 ## Related Documentation
 
-- **Documentation**: `../docs/entities.md` — index of all behavioral requirements and API contracts
 - **Test Organization**: `test_organization.rulebook.md` — test documentation format standards
 - **Codebase Hygiene**: `codebase_hygiene.rulebook.md` — quality standards for documentation
 - **Invariants**: `../docs/invariant/` — known pitfalls and workspace-level constraints

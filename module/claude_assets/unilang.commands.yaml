@@ -36,16 +36,6 @@
       aliases: []
       tags: []
 
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level (0=minimal, 1=normal, 2=verbose)"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
   examples:
     - ".list"
     - ".list kind::rule"

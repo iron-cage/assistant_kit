@@ -42,8 +42,8 @@ If a crate outside claude_runner_core spawns `claude` directly:
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| feature | [feature/001_execution_control.md](../feature/001_execution_control.md) | Execution mode design that centralizes spawning here |
-| api | [api/001_execution_api.md](../api/001_execution_api.md) | execute() and execute_interactive() as the only permitted callers |
+| doc | [feature/001_execution_control.md](../feature/001_execution_control.md) | Execution mode design that centralizes spawning here |
+| doc | [api/001_execution_api.md](../api/001_execution_api.md) | execute() and execute_interactive() as the only permitted callers |
 | source | `../../src/command.rs` | The single permitted location for Command::new("claude") |
 | test | `../../tests/responsibility_single_execution_point_test.rs` | Automated enforcement test |
 

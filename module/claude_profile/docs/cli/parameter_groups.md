@@ -2,7 +2,7 @@
 
 | Group | Parameters | Used By |
 |-------|------------|---------|
-| [Output Control](#group--1-output-control) | `verbosity::`, `format::` | `.account.list`, `.account.status`, `.token.status`, `.paths` |
+| [Output Control](#group--1-output-control) | `verbosity::`, `format::` | `.account.list`, `.account.status`, `.token.status`, `.paths`, `.usage`, `.credentials.status`, `.account.limits` |
 
 **Total:** 1 group
 
@@ -19,7 +19,7 @@
 | [`verbosity::`](params.md#parameter--2-verbosity--v) | [`VerbosityLevel`](types.md#type--2-verbositylevel) | Output detail: 0=quiet, 1=normal, 2=verbose |
 | [`format::`](params.md#parameter--3-format) | [`OutputFormat`](types.md#type--3-outputformat) | Output format: `text` or `json` |
 
-**Used By (4 commands):** [`.account.list`](commands.md#command--3-accountlist), [`.account.status`](commands.md#command--4-accountstatus), [`.token.status`](commands.md#command--8-tokenstatus), [`.paths`](commands.md#command--9-paths)
+**Used By (7 commands):** [`.account.list`](commands.md#command--3-accountlist), [`.account.status`](commands.md#command--4-accountstatus), [`.token.status`](commands.md#command--8-tokenstatus), [`.paths`](commands.md#command--9-paths), [`.usage`](commands.md#command--10-usage), [`.credentials.status`](commands.md#command--11-credentialsstatus), [`.account.limits`](commands.md#command--12-accountlimits)
 
 **Typical Patterns:**
 
@@ -34,7 +34,7 @@ clp .token.status
 clp .paths v::2
 ```
 
-#### Semantic Coherence Test
+**Semantic Coherence Test**
 
 > "Does parameter X control **output presentation**?"
 
@@ -48,19 +48,20 @@ clp .paths v::2
 
 All members pass. No false inclusions.
 
-#### Why NOT These Parameters
+**Why NOT These Parameters**
 
 - **`name::`** — Identifies a target entity, not output style. Mutation commands (save, switch, delete) don't produce formatted output in the Output Control sense.
 - **`threshold::`** — Modifies classification logic (when to report ExpiringSoon), not how results are displayed. A classification parameter, not a presentation parameter.
 - **`dry::`** — Controls whether mutation happens, not how output is formatted. Orthogonal concern (execution control vs output control).
 
-#### Cross-References
+**Cross-References**
 
 - [params.md](params.md) — individual parameter specifications
 - [types.md](types.md) — `VerbosityLevel`, `OutputFormat` type definitions
 - [commands.md](commands.md) — command specifications using this group
+- [parameter_interactions.md](parameter_interactions.md) — `format::json` / `verbosity::` interaction rule
 
-#### Notes
+**Notes**
 
-- `format::json` overrides `verbosity::` — JSON output always includes all fields regardless of verbosity level.
+- `format::json` overrides `verbosity::` — see [parameter_interactions.md](parameter_interactions.md#interaction--1-formatjson-overrides-verbosity) for the authoritative rule.
 - Commands not in this group (`.account.save`, `.account.switch`, `.account.delete`) produce fixed single-line confirmation messages not affected by formatting parameters.

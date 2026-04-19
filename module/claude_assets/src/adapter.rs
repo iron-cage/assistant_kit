@@ -1,20 +1,12 @@
 //! Adapter layer: convert raw argv tokens to unilang token strings.
 //!
-//! Handles alias expansion (`v::` → `verbosity::`), bool normalisation
-//! (`installed::true` → error; only `0`/`1` accepted), and dot-prefix
-//! enforcement before handing off to `unilang::Parser`.
+//! Handles bool normalisation (`installed::true` → error; only `0`/`1` accepted)
+//! and dot-prefix enforcement before handing off to `unilang::Parser`.
 
 use error_tools::{ Error, Result };
 
 /// Bool params that accept only `0`/`1`.
 const BOOL_PARAMS : &[ &str ] = &[ "installed" ];
-
-/// Short alias for verbosity param.
-const VERBOSITY_ALIAS : &str = "v";
-/// Canonical verbosity key forwarded to unilang.
-const VERBOSITY_KEY   : &str = "verbosity";
-/// Maximum accepted verbosity value.
-const MAX_VERBOSITY   : u8   = 2;
 
 fn split_first_colons( s : &str ) -> Option< ( &str, &str ) >
 {
@@ -33,20 +25,6 @@ fn normalise_bool_value( key : &str, raw_val : &str ) -> Result< String >
   }
 }
 
-fn normalise_verbosity( key : &str, raw_val : &str ) -> Result< String >
-{
-  let n : u8 = raw_val.parse().map_err( |_| Error::msg( format!(
-    "{key}:: must be 0, 1, or 2, got: '{raw_val}'"
-  ) ) )?;
-  if n > MAX_VERBOSITY
-  {
-    return Err( Error::msg( format!(
-      "{key}:: out of range: {n} (max {MAX_VERBOSITY})"
-    ) ) );
-  }
-  Ok( VERBOSITY_KEY.to_string() )
-}
-
 /// Convert raw argv into unilang token strings.
 ///
 /// Returns `(tokens, needs_help)`.
@@ -55,7 +33,6 @@ fn normalise_verbosity( key : &str, raw_val : &str ) -> Result< String >
 ///
 /// - First arg does not start with `.`
 /// - Any subsequent arg missing `::` separator
-/// - `v::` / `verbosity::` value not in `[0, 2]`
 /// - Bool param value other than `0` or `1`
 #[ inline ]
 pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, bool ) >
@@ -120,14 +97,7 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
       "expected param::value syntax, got: '{arg}'"
     ) ) )?;
 
-    let key : String = if raw_key == VERBOSITY_ALIAS || raw_key == VERBOSITY_KEY
-    {
-      normalise_verbosity( raw_key, raw_val )?
-    }
-    else
-    {
-      raw_key.to_string()
-    };
+    let key = raw_key.to_string();
 
     let val : String = if BOOL_PARAMS.contains( &key.as_str() )
     {
@@ -138,6 +108,9 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
       raw_val.to_string()
     };
 
+    // Duplicate keys: last value wins (overwrite-in-place).
+    // Supplying the same key twice on the CLI is an input error in practice,
+    // but silently preferring the last value matches typical shell override semantics.
     if let Some( entry ) = pairs.iter_mut().find( |( k, _ )| k == &key )
     {
       entry.1 = val;

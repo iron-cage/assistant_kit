@@ -21,7 +21,7 @@ name = "claude_assets_core"
 path = "src/lib.rs"
 
 [features]
-default = [ "enabled" ]
+default = []
 full    = [ "enabled" ]
 enabled = []
 

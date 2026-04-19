@@ -27,9 +27,9 @@
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| feature | [feature/001_version_management.md](001_version_management.md) | Version mutation commands supporting dry::1 |
-| feature | [feature/002_process_lifecycle.md](002_process_lifecycle.md) | Kill command supporting dry::1 |
-| feature | [feature/003_settings_management.md](003_settings_management.md) | Settings set command supporting dry::1 |
+| doc | [feature/001_version_management.md](001_version_management.md) | Version mutation commands supporting dry::1 |
+| doc | [feature/002_process_lifecycle.md](002_process_lifecycle.md) | Kill command supporting dry::1 |
+| doc | [feature/003_settings_management.md](003_settings_management.md) | Settings set command supporting dry::1 |
 | source | `../../src/commands.rs` | dry-run branches in mutation routines |
 
 ### Sources

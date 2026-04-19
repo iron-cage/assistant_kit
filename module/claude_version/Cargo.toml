@@ -31,6 +31,9 @@ path = "src/bin/clv.rs"
 required-features = [ "enabled" ]
 
 [features]
+# Binary crate exception: `default = ["enabled"]` activates the CLI binaries.
+# Library consumers must opt in via `features = ["enabled"]`; the default
+# does not impose transitive dependencies on library-only users.
 default = [ "enabled" ]
 full    = [ "enabled" ]
 enabled = [

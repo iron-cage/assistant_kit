@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the four CLI commands of the `cla`/`claude_assets` binary that manage Claude Code artifact installations via symlink.
 - **Responsibility**: Describe command signatures, argument semantics, adapter preprocessing, and the 5-phase unilang pipeline that connects argv to domain logic.
-- **In Scope**: `.list`, `.install`, `.uninstall`, `.kinds` commands; `kind::` and `name::` arguments; `v::` alias; `installed::` bool normalisation; adapter dot-prefix enforcement; unilang pipeline; exit codes.
+- **In Scope**: `.list`, `.install`, `.uninstall`, `.kinds` commands; `kind::` and `name::` arguments; `installed::` bool normalisation; adapter dot-prefix enforcement; unilang pipeline; exit codes.
 - **Out of Scope**: Domain install/uninstall semantics (→ `claude_assets_core/docs/feature/001_artifact_installer.md`), source root resolution constraint (→ `invariant/001_source_root_resolution.md`).
 
 ### Design
@@ -13,7 +13,7 @@
 
 | Command | Purpose | Required args | Optional args |
 |---------|---------|---------------|---------------|
-| `.list` | Survey available and installed artifacts | — | `kind::`, `installed::`, `verbosity::` |
+| `.list` | Survey available and installed artifacts | — | `kind::`, `installed::` |
 | `.install` | Create symlink from `$PRO_CLAUDE/<kind>/<name>` into `.claude/<kind>/` | `kind::`, `name::` | — |
 | `.uninstall` | Remove installed symlink from `.claude/<kind>/` | `kind::`, `name::` | — |
 | `.kinds` | Print all artifact kinds with their source and target path mappings | — | — |
@@ -29,7 +29,6 @@
 **Adapter preprocessing:** `argv_to_unilang_tokens()` in `src/adapter.rs` transforms raw argv into unilang token strings before the parser runs:
 - Empty argv → `.help` (shows usage)
 - First arg not starting with `.` → error (commands must start with dot)
-- `v::N` → `verbosity::N` (alias expansion); values outside `[0, 2]` → error
 - `installed::` values other than `0` or `1` → error (bool normalisation)
 - Args missing `::` separator → error
 - `-` prefixed flags → error (use `param::value` syntax instead)
@@ -48,6 +47,6 @@
 | source | `src/commands.rs` | list_routine, install_routine, uninstall_routine, kinds_routine |
 | source | `src/adapter.rs` | argv_to_unilang_tokens(): alias expansion and validation |
 | source | `unilang.commands.yaml` | CLI command metadata (names, arguments, examples) |
-| invariant | [invariant/001_source_root_resolution.md](../invariant/001_source_root_resolution.md) | Rule: $PRO_CLAUDE must resolve before any install/list |
-| feature | [claude_assets_core/docs/feature/001_artifact_installer.md](../../claude_assets_core/docs/feature/001_artifact_installer.md) | Domain install/uninstall semantics called by the routines |
-| feature | [assistant/docs/feature/001_super_app_aggregation.md](../../assistant/docs/feature/001_super_app_aggregation.md) | How register_commands() is consumed by ast |
+| doc | [invariant/001_source_root_resolution.md](../invariant/001_source_root_resolution.md) | Rule: $PRO_CLAUDE must resolve before any install/list |
+| doc | [claude_assets_core/docs/feature/001_artifact_installer.md](../../claude_assets_core/docs/feature/001_artifact_installer.md) | Domain install/uninstall semantics called by the routines |
+| doc | [assistant/docs/feature/001_super_app_aggregation.md](../../assistant/docs/feature/001_super_app_aggregation.md) | How register_commands() is consumed by ast |

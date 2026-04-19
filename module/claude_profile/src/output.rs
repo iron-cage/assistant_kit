@@ -85,14 +85,26 @@ impl OutputOptions
 #[ must_use ]
 pub fn format_duration_secs( secs : u64 ) -> String
 {
-  if secs == 0 { return "0m".to_string(); }
+  if secs == 0
+  {
+    return "0m".to_string();
+  }
   let days  = secs / 86400;
   let hours = ( secs % 86400 ) / 3600;
   let mins  = ( secs % 3600 ) / 60;
   let mut parts = Vec::new();
-  if days  > 0 { parts.push( format!( "{days}d" ) ); }
-  if hours > 0 { parts.push( format!( "{hours}h" ) ); }
-  if mins  > 0 || parts.is_empty() { parts.push( format!( "{mins}m" ) ); }
+  if days > 0
+  {
+    parts.push( format!( "{days}d" ) );
+  }
+  if hours > 0
+  {
+    parts.push( format!( "{hours}h" ) );
+  }
+  if mins > 0 || parts.is_empty()
+  {
+    parts.push( format!( "{mins}m" ) );
+  }
   parts.join( " " )
 }
 

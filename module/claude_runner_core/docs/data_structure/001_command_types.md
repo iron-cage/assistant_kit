@@ -95,8 +95,8 @@ All enums implement `Display` (or equivalent) to produce their CLI string values
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| api | [api/001_execution_api.md](../api/001_execution_api.md) | ExecutionOutput usage in execute() contract |
-| pattern | [pattern/001_command_builder.md](../pattern/001_command_builder.md) | Builder methods that accept these enum types |
+| doc | [api/001_execution_api.md](../api/001_execution_api.md) | ExecutionOutput usage in execute() contract |
+| doc | [pattern/001_command_builder.md](../pattern/001_command_builder.md) | Builder methods that accept these enum types |
 | source | `../../src/types.rs` | Enum and struct definitions |
 
 ### Sources

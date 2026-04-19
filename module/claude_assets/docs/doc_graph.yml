@@ -1,0 +1,32 @@
+meta:
+  description: Cross-reference graph for all doc instances in claude_assets
+  node_count: 2
+  edge_count: 2
+  component_count: 1
+  generated: 2026-04-19
+
+nodes:
+  - id: feature/001
+    file: feature/001_asset_cli.md
+    label: Asset CLI
+    entity: feature
+
+  - id: invariant/001
+    file: invariant/001_source_root_resolution.md
+    label: Source Root Resolution
+    entity: invariant
+
+edges:
+  # feature/001 → invariant/001: CLI commands governed by source root resolution constraint
+  - {from: feature/001, to: invariant/001, label: "governed by source root resolution constraint"}
+
+  # invariant/001 → feature/001: constraint specifies .kinds graceful degradation exception
+  - {from: invariant/001, to: feature/001, label: "specifies .kinds graceful degradation exception"}
+
+components:
+  - id: 1
+    size: 2
+    isolated: false
+    nodes: [feature/001, invariant/001]
+
+dangling_refs: []

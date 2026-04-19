@@ -3,7 +3,7 @@
 //! Each handler receives a `VerifiedCommand` and `ExecutionContext` and returns
 //! `Result<OutputData, ErrorData>`. Handlers are registered via
 //! [`register_commands()`](crate::register_commands) in `lib.rs`;
-//! the binary-specific `.` handler is registered inline in `build_registry()` in `main.rs`.
+//! the binary-specific `.` handler is registered inline in `build_registry()` in `lib.rs`.
 //!
 //! # Note on `needless_pass_by_value`
 //!
@@ -44,12 +44,12 @@ fn is_dry( cmd : &VerifiedCommand ) -> bool
 /// Used for non-active named accounts where reading the live credentials file
 /// would return the active account's token state, not the queried account's.
 ///
-/// Fix(issue-p2-named-account-token)
-/// Root cause: `status_with_threshold()` reads `~/.claude/.credentials.json`
-///   which belongs to the ACTIVE account. For non-active named accounts, that
-///   returns the active account's token — not the queried one's.
-/// Pitfall: Never call `status_with_threshold()` for non-active named accounts.
-///   Always compute `TokenStatus` from the account's own stored `expiresAt`.
+// Fix(issue-p2-named-account-token):
+// Root cause: `status_with_threshold()` reads `~/.claude/.credentials.json`
+//   which belongs to the ACTIVE account. For non-active named accounts, that
+//   returns the active account's token — not the queried one's.
+// Pitfall: Never call `status_with_threshold()` for non-active named accounts.
+//   Always compute `TokenStatus` from the account's own stored `expiresAt`.
 fn token_status_from_ms( expires_at_ms : u64 ) -> crate::token::TokenStatus
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -114,14 +114,11 @@ fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> ErrorData
 ///
 /// Called by both `status_active()` (at `v::1`+) and `credentials_status_routine()` (always).
 /// Gracefully returns `"N/A"` for any absent or empty field.
-///
-/// Fix(issue-empty-field-blank): `parse_string_field` returns `Some("")` for empty-string
-///   JSON fields, bypassing `unwrap_or_else`. Added `.filter(|s| !s.is_empty())` to treat
-///   empty the same as absent, producing `"N/A"` instead of a blank output line.
-/// Root cause: `Option::unwrap_or_else` only fires on `None`, not `Some("")`. Empty strings
-///   in credential JSON (unusual but possible) produced blank output lines instead of "N/A".
-/// Pitfall: When adding new `parse_string_field` chains, always pair `.filter(|s| !s.is_empty())`
-///   with `.unwrap_or_else(|| "N/A".to_string())` — never rely on `unwrap_or_else` alone.
+// Fix(issue-empty-field-blank):
+// Root cause: `Option::unwrap_or_else` only fires on `None`, not `Some("")`. Empty strings
+//   in credential JSON (unusual but possible) produced blank output lines instead of "N/A".
+// Pitfall: When adding new `parse_string_field` chains, always pair `.filter(|s| !s.is_empty())`
+//   with `.unwrap_or_else(|| "N/A".to_string())` — never rely on `unwrap_or_else` alone.
 fn read_live_cred_meta( paths : &crate::ClaudePaths ) -> ( String, String, String, String )
 {
   let creds = std::fs::read_to_string( paths.credentials_file() ).unwrap_or_default();
@@ -152,7 +149,7 @@ fn read_live_cred_meta( paths : &crate::ClaudePaths ) -> ( String, String, Strin
 /// # Errors
 ///
 /// Returns `ErrorData` if HOME is unset or `.credentials.json` is missing.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ inline ]
 pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts  = OutputOptions::from_cmd( &cmd )?;
@@ -223,11 +220,11 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
 /// # Errors
 ///
 /// Returns `ErrorData` if HOME is unset or the account store is unreadable.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ inline ]
 pub fn account_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts = OutputOptions::from_cmd( &cmd )?;
-  let _paths = require_claude_paths()?;
+  require_claude_paths()?;
   let accounts = crate::account::list()
     .map_err( |e| io_err_to_error_data( &e, "account list" ) )?;
 
@@ -302,7 +299,6 @@ pub fn account_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 // ── .account.status helpers ──────────────────────────────────────────────────
 
 /// Active-account path for `.account.status` (backward-compat, no `name::` given).
-#[ allow( clippy::needless_pass_by_value ) ]
 fn status_active( opts : OutputOptions, paths : crate::ClaudePaths ) -> Result< OutputData, ErrorData >
 {
   let active_marker = paths.accounts_dir().join( "_active" );
@@ -362,7 +358,6 @@ fn status_active( opts : OutputOptions, paths : crate::ClaudePaths ) -> Result< 
 }
 
 /// Named-account path for `.account.status` (FR-16).
-#[ allow( clippy::needless_pass_by_value ) ]
 fn status_named(
   opts     : OutputOptions,
   paths    : crate::ClaudePaths,
@@ -411,7 +406,7 @@ fn status_named(
              else { account.rate_limit_tier.clone()   };
 
   // P3: email/org live in .claude.json (active session) — N/A for non-active accounts.
-  // Fix(issue-empty-field-blank-status-named)
+  // Fix(issue-empty-field-blank-status-named):
   // Root cause: parse_string_field returns Some("") for empty-string JSON fields;
   //   unwrap_or_else fires only on None, so Some("") bypassed the "N/A" fallback.
   // Pitfall: always pair .filter(|s| !s.is_empty()) before .unwrap_or_else for display.
@@ -459,7 +454,7 @@ fn status_named(
 ///
 /// Returns `ErrorData` if HOME is unset, `name::` is invalid (exit 1),
 /// the named account is not found (exit 2), or no active account is set.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ inline ]
 pub fn account_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts  = OutputOptions::from_cmd( &cmd )?;
@@ -482,16 +477,16 @@ pub fn account_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
 ///
 /// Returns `ErrorData` if name is missing/empty, HOME is unset,
 /// or the target account does not exist.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ inline ]
 pub fn account_switch_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  // Fix(issue-switch-dry-validation)
+  // Fix(issue-switch-dry-validation):
   // Root cause: is_dry() was checked before existence validation, so dry-run silently
   //   succeeded for non-existent accounts instead of reporting NotFound (exit 2).
   // Pitfall: Always run input validation + precondition checks before the dry-run guard;
   //   only the mutating operation (file copy + marker write) is skipped in dry-run.
   let name = require_nonempty_string_arg( &cmd, "name" )?;
-  let _paths = require_claude_paths()?;
+  require_claude_paths()?;
   crate::account::check_switch_preconditions( &name )
     .map_err( |e| io_err_to_error_data( &e, "account switch" ) )?;
 
@@ -718,7 +713,7 @@ fn fetch_rate_limits( creds_path : &std::path::Path ) -> Result< RateLimitData, 
 /// - No active credentials are configured (exit 2)
 /// - Credentials missing `accessToken` (exit 2)
 /// - HTTP transport fails or rate-limit headers absent (exit 2)
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ inline ]
 pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts = OutputOptions::from_cmd( &cmd )?;
@@ -763,12 +758,17 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   Ok( OutputData::new( text, "text" ) )
 }
 
-/// `.` handler — dead code (adapter routes `.` → `.help`).
+/// `.` handler — registered in the command registry as a hidden fallback.
+///
+/// The adapter intercepts `.` before it reaches the registry and redirects it
+/// to `.help`, so this routine is never invoked in normal operation. It is kept
+/// registered to satisfy the `hidden_from_list` registry entry and to prevent
+/// "unknown command" errors if the adapter path is ever bypassed.
 ///
 /// # Errors
 ///
 /// Never returns an error — always succeeds with empty output.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ inline ]
 pub fn dot_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   Ok( OutputData::new( String::new(), "text" ) )
@@ -780,11 +780,11 @@ pub fn dot_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result<
 ///
 /// Returns `ErrorData` if name is missing/empty, HOME is unset,
 /// or the credential copy fails.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ inline ]
 pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let name = require_nonempty_string_arg( &cmd, "name" )?;
-  let _paths = require_claude_paths()?;
+  require_claude_paths()?;
 
   if is_dry( &cmd )
   {
@@ -801,16 +801,16 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 ///
 /// Returns `ErrorData` if name is missing/empty, HOME is unset,
 /// the account is active, or the account does not exist.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ inline ]
 pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  // Fix(issue-delete-dry-validation)
+  // Fix(issue-delete-dry-validation):
   // Root cause: is_dry() was checked before active-account guard and existence check,
   //   so dry-run bypassed PermissionDenied (active account) and NotFound (missing account).
   // Pitfall: The active-account safety invariant must hold even in dry-run — reporting
   //   "would delete active account" without error is a misleading no-op.
   let name = require_nonempty_string_arg( &cmd, "name" )?;
-  let _paths = require_claude_paths()?;
+  require_claude_paths()?;
   crate::account::check_delete_preconditions( &name )
     .map_err( |e| io_err_to_error_data( &e, "account delete" ) )?;
 
@@ -832,11 +832,11 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
 ///
 /// Returns `ErrorData` if HOME is unset, credentials are missing,
 /// or the `expiresAt` field is unparseable.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ inline ]
 pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts = OutputOptions::from_cmd( &cmd )?;
-  let _paths = require_claude_paths()?;
+  require_claude_paths()?;
 
   let threshold_secs = match cmd.arguments.get( "threshold" )
   {
@@ -891,7 +891,7 @@ pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 /// # Errors
 ///
 /// Returns `ErrorData` if HOME is unset or empty.
-#[ allow( clippy::needless_pass_by_value, clippy::missing_inline_in_public_items ) ]
+#[ inline ]
 pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts = OutputOptions::from_cmd( &cmd )?;

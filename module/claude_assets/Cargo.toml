@@ -31,7 +31,7 @@ path = "src/bin/cla.rs"
 required-features = [ "enabled" ]
 
 [features]
-default = [ "enabled" ]
+default = []
 full    = [ "enabled" ]
 enabled = [
   "dep:claude_assets_core",

@@ -5,33 +5,7 @@
 
 use std::path::{ Path, PathBuf };
 use crate::artifact::ArtifactKind;
-
-/// Typed error returned when `$PRO_CLAUDE` cannot be resolved.
-#[ derive( Debug ) ]
-pub enum AssetPathsError
-{
-  /// Neither `$PRO_CLAUDE` nor `$PRO` is set in the environment.
-  EnvVarNotSet,
-}
-
-impl core::fmt::Display for AssetPathsError
-{
-  #[ inline ]
-  fn fmt( &self, f : &mut core::fmt::Formatter< '_ > ) -> core::fmt::Result
-  {
-    match self
-    {
-      Self::EnvVarNotSet => write!(
-        f,
-        "environment variable $PRO_CLAUDE is not set \
-         (fallback: set $PRO and ensure $PRO/genai/claude/ exists) \
-         — run: export PRO_CLAUDE=/path/to/your/claude-assets"
-      ),
-    }
-  }
-}
-
-impl core::error::Error for AssetPathsError {}
+pub use crate::error::AssetPathsError;
 
 /// Resolved source and target roots for asset installation.
 ///

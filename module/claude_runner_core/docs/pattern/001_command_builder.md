@@ -65,9 +65,9 @@ This pattern does not apply when the command is simple (1–2 parameters) or whe
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| api | [api/001_execution_api.md](../api/001_execution_api.md) | execute() and execute_interactive() contracts |
-| data_structure | [data_structure/001_command_types.md](../data_structure/001_command_types.md) | Type-safe enum parameters accepted by with_*() methods |
-| feature | [feature/001_execution_control.md](../feature/001_execution_control.md) | Interactive vs non-interactive execution modes |
+| doc | [api/001_execution_api.md](../api/001_execution_api.md) | execute() and execute_interactive() contracts |
+| doc | [data_structure/001_command_types.md](../data_structure/001_command_types.md) | Type-safe enum parameters accepted by with_*() methods |
+| doc | [feature/001_execution_control.md](../feature/001_execution_control.md) | Interactive vs non-interactive execution modes |
 | source | `../../src/command.rs` | ClaudeCommand builder implementation |
 
 ### Sources

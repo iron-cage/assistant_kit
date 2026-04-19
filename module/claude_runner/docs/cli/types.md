@@ -126,7 +126,6 @@ Verbosity gates runner diagnostics only; `--dry-run` is core feature output.
 | Method | Returns true when |
 |--------|-------------------|
 | `get()` | — (returns inner u8) |
-| `from_u8_clamped(n)` | — (clamps to 0–5) |
 | `shows_errors()` | level >= 1 |
 | `shows_warnings()` | level >= 2 |
 | `shows_progress()` | level >= 3 |

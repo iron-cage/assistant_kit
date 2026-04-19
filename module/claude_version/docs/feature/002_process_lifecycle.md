@@ -33,8 +33,8 @@ Signal delivery uses `Command::new("kill")` (no `libc`, enforced by `unsafe-code
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| feature | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .processes.kill |
-| feature | [feature/005_cli_design.md](005_cli_design.md) | CLI routing and exit code mapping |
+| doc | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .processes.kill |
+| doc | [feature/005_cli_design.md](005_cli_design.md) | CLI routing and exit code mapping |
 | source | `../../src/commands.rs` | Process command routines |
 
 ### Sources

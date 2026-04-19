@@ -113,7 +113,7 @@ See `../claude_storage/docs/MIGRATION.md` for complete migration guide.
 
 ## documentation
 
-- **Documentation**: `docs/` - Behavioral requirements, API contracts, algorithms, invariants (see `docs/entities.md` for index)
+- **Documentation**: `docs/` - Behavioral requirements, API contracts, algorithms, invariants
 - **Format docs**: `../claude_storage/docs/` - JSONL format, storage organization, advanced features
 - **Examples**: `examples/` - Usage examples and integration patterns
 

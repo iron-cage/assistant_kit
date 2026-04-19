@@ -38,4 +38,4 @@
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/persist.rs` | `PersistPaths` struct, resolution chain, `base()`, `ensure_exists()` |
-| test | `tests/persist_test.rs::p01–p15` | Full resolution chain, idempotency, error cases |
+| test | `tests/cli/persist_test.rs::p01–p15` | Full resolution chain, idempotency, error cases |

@@ -42,6 +42,14 @@ version = [ "dep:claude_version_core" ]
 assets  = [ "dep:claude_assets_core" ]
 full    = [ "common", "storage", "profile", "runner", "version", "assets" ]
 enabled = [ "full" ]
+
+[dependencies]
+claude_core         = { workspace = true, optional = true }
+claude_storage_core = { workspace = true, optional = true }
+claude_profile_core = { workspace = true, optional = true }
+claude_runner_core  = { workspace = true, optional = true, features = [ "enabled" ] }
+claude_version_core = { workspace = true, optional = true }
+claude_assets_core  = { workspace = true, optional = true }
 ```
 
 **Re-export module pattern:**
@@ -50,8 +58,9 @@ Each domain module uses `#[cfg(feature = "X")]` gating on the `pub mod` declarat
 `pub use`) so that the module path does not exist unless the feature is active:
 
 ```rust
-#[cfg(feature = "common")]
-pub mod common {
+#[ cfg( feature = "common" ) ]
+pub mod common
+{
   //! Re-exports from [`claude_core`].
   pub use claude_core::*;
 }
@@ -61,6 +70,6 @@ pub mod common {
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| invariant | [invariant/001_no_own_logic.md](../invariant/001_no_own_logic.md) | Zero-own-logic constraint complementing these feature specs |
-| pattern | workspace `docs/pattern/001_crate_layering.md` | Layer 2 dep rules governing `dream`'s dependency set |
+| doc | [invariant/001_no_own_logic.md](../invariant/001_no_own_logic.md) | Zero-own-logic constraint complementing these feature specs |
+| doc | workspace `docs/pattern/001_crate_layering.md` | Layer 2 dep rules governing `dream`'s dependency set |
 | source | `../../Cargo.toml` | Authoritative feature graph declaration |

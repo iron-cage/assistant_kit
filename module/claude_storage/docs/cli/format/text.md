@@ -56,4 +56,4 @@ Only `ContentBlock::Text` variants are rendered for assistant entries. All other
 
 - [params.md § format::](../params.md#parameter--5-format) — parameter definition and validation
 - [types.md § ExportFormat](../types.md#exportformat) — type constants and parsing
-- [testing/param/format.md](../testing/param/format.md) — test case EC-3
+- [05_format.md](../../../tests/doc/cli/testing/param/05_format.md) — test case EC-3

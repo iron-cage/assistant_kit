@@ -68,9 +68,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let kind      = || reg_arg_opt( "kind",      Kind::String  );
   let name      = || reg_arg_opt( "name",      Kind::String  );
   let installed = || reg_arg_opt( "installed", Kind::Boolean );
-  let v         = || reg_arg_opt( "verbosity", Kind::Integer );
 
-  reg_cmd( registry, ".list",      "List available and installed Claude Code artifacts",         vec![ kind(), installed(), v() ],  Box::new( list_routine      ) );
+  reg_cmd( registry, ".list",      "List available and installed Claude Code artifacts",         vec![ kind(), installed() ],       Box::new( list_routine      ) );
   reg_cmd( registry, ".install",   "Install a named artifact via symlink into .claude/<kind>/",  vec![ kind(), name() ],            Box::new( install_routine   ) );
   reg_cmd( registry, ".uninstall", "Remove an installed artifact symlink from .claude/<kind>/",  vec![ kind(), name() ],            Box::new( uninstall_routine ) );
   reg_cmd( registry, ".kinds",     "Show all supported artifact kinds with source and target path mappings",       vec![],                            Box::new( kinds_routine     ) );

@@ -52,8 +52,8 @@ enabled = ["dep:claude_runner_core", "dep:error_tools", ..., "dep:unilang", ...]
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| feature | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Separation of concerns (library vs binary) |
-| api | [api/001_public_api.md](../api/001_public_api.md) | COMMANDS_YAML constant that is the library's sole purpose |
+| doc | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Separation of concerns (library vs binary) |
+| doc | [api/001_public_api.md](../api/001_public_api.md) | COMMANDS_YAML constant that is the library's sole purpose |
 | source | `../../Cargo.toml` | Dependency and feature flag definitions |
 
 ### Sources

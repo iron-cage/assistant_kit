@@ -1,74 +1,42 @@
 # Commands
 
-| # | Command | Purpose | Params | Status |
-|---|---------|---------|--------|--------|
-| 1 | `.` | Show help information (hidden dot-shorthand) | 0 | 🕐 |
-| 2 | `.help` | Display command reference and usage examples | 0 | 🕐 |
-| 3 | `.account.list` | List all saved accounts with subscription type and token state | 2 | 🕐 |
-| 4 | `.account.status` | Show account name and token state; optionally query a named account | 3 | 🕐 |
-| 5 | `.account.save` | Save current credentials as a named account profile | 2 | 🕐 |
-| 6 | `.account.switch` | Switch active account by name with atomic credential rotation | 2 | 🕐 |
-| 7 | `.account.delete` | Delete a saved account from the account store | 2 | 🕐 |
-| 8 | `.token.status` | Show active OAuth token expiry classification | 3 | 🕐 |
-| 9 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 2 | 🕐 |
-| 10 | `.usage` | Show token usage statistics from stats-cache.json | 2 | 🕐 |
-| 11 | `.credentials.status` | Show live credential metadata without account store dependency | 2 | 🕐 |
-| 12 | `.account.limits` | Show rate-limit utilization for the active or named account | 3 | 🔄 |
+### All Commands (12 total)
+
+| # | Command | Purpose | Params | Example |
+|---|---------|---------|--------|---------|
+| 1 | `.` | Show help information (hidden dot-shorthand) | 0 | `clp .` |
+| 2 | `.help` | Display command reference and usage examples | 0 | `clp .help` |
+| 3 | `.account.list` | List all saved accounts with subscription type and token state | 2 | `clp .account.list` |
+| 4 | `.account.status` | Show account name and token state; optionally query a named account | 3 | `clp .account.status name::work` |
+| 5 | `.account.save` | Save current credentials as a named account profile | 2 | `clp .account.save name::work` |
+| 6 | `.account.switch` | Switch active account by name with atomic credential rotation | 2 | `clp .account.switch name::personal` |
+| 7 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::old` |
+| 8 | `.token.status` | Show active OAuth token expiry classification | 3 | `clp .token.status` |
+| 9 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 2 | `clp .paths` |
+| 10 | `.usage` | Show token usage statistics from stats-cache.json | 2 | `clp .usage v::0` |
+| 11 | `.credentials.status` | Show live credential metadata without account store dependency | 2 | `clp .credentials.status` |
+| 12 | `.account.limits` | Show rate-limit utilization for the active or named account | 3 | `clp .account.limits name::work` |
 
 **Total:** 12 commands (10 visible + 2 hidden)
 
 ---
 
-### Command :: 1. `.`
+### Quick Reference
 
-Hidden dot-shorthand that delegates immediately to `.help`. Triggers when the user types only a dot with no subcommand.
+**Required Parameters:**
+- `name::` — required on `.account.save`, `.account.switch`, `.account.delete`
 
--- **Parameters:** (none)
--- **Exit:** 0 (success)
+**Most-Used Parameters:**
+- `verbosity::` / `v::` — 7 commands
+- `format::` — 7 commands
 
-**Syntax:**
+**Commands by Parameter Count:**
 
-```bash
-clp .
-```
-
-**Notes:**
-- Hidden: does not appear in the help command listing.
-- Identical output to `.help`.
-
----
-
-### Command :: 2. `.help`
-
-Prints a formatted reference of all available commands with their parameters and a usage line. Use this to discover commands or share a quick reference.
-
--- **Parameters:** (none)
--- **Exit:** 0 (success)
-
-**Syntax:**
-
-```bash
-clp .help
-```
-
-**Examples:**
-
-```bash
-clp .help
-# Usage: clp <command> [params]
-#
-# Commands:
-#   .account.list      List all saved accounts with subscription type and token state
-#   .account.status    Show active account name and token state
-#   .account.save      Save current credentials as a named account profile
-#   .account.switch    Switch active account by name with atomic credential rotation
-#   .account.delete    Delete a saved account from the account store
-#   .token.status      Show active OAuth token expiry classification
-#   .paths             Show all resolved ~/.claude/ canonical file paths
-```
-
-**Notes:**
-- Hidden commands (`.` and `.help` itself) are excluded from the output listing.
+| Count | Commands |
+|-------|----------|
+| 0 | `.`, `.help` |
+| 2 | `.account.list`, `.account.save`, `.account.switch`, `.account.delete`, `.paths`, `.usage`, `.credentials.status` |
+| 3 | `.account.status`, `.token.status`, `.account.limits` |
 
 ---
 
@@ -87,10 +55,10 @@ clp .account.list v::0
 clp .account.list format::json
 ```
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `v::` | [`VerbosityLevel`] | Output detail level | `1` |
-| `format::` | [`OutputFormat`] | Output format | `text` |
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `v::` | [`VerbosityLevel`] | `1` | Output detail level |
+| `format::` | [`OutputFormat`] | `text` | Output format |
 
 **Examples:**
 
@@ -111,12 +79,7 @@ clp .account.list format::json
 
 ### Command :: 4. `.account.status`
 
-Reads the `_active` marker and the active OAuth token to report the current account name,
-token state, subscription type, tier, email, and org in one call (at default `v::1`).
-With the optional `name::` parameter (FR-16), queries any named account's own stored
-token state regardless of which account is active.
-Use this to quickly verify which account is live and whether its token is still valid
-before starting a workflow, or to inspect any account by name.
+Reads the `_active` marker and the active OAuth token to report account name, token state, subscription, tier, email, and org in one call. With the optional `name::` parameter, queries any named account's stored token state regardless of which account is active.
 
 -- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found, no active account set, HOME unset)
@@ -130,11 +93,11 @@ clp .account.status name::personal v::2
 clp .account.status format::json
 ```
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `name::` | [`AccountName`] | Query a named account instead of the active account | *(omit for active)* |
-| `v::` | [`VerbosityLevel`] | Output detail level | `1` |
-| `format::` | [`OutputFormat`] | Output format | `text` |
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `name::` | [`AccountName`] | *(omit for active)* | Query a named account instead of the active account |
+| `v::` | [`VerbosityLevel`] | `1` | Output detail level |
+| `format::` | [`OutputFormat`] | `text` | Output format |
 
 **Examples:**
 
@@ -202,10 +165,10 @@ clp .account.save name::work
 clp .account.save name::work dry::1
 ```
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `name::` | [`AccountName`] | Account name to save as | **(required)** |
-| `dry::` | `bool` | Preview action without executing | `0` |
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `name::` | [`AccountName`] | **(required)** | Account name to save as |
+| `dry::` | `bool` | `0` | Preview action without executing |
 
 **Examples:**
 
@@ -233,10 +196,10 @@ clp .account.switch name::personal
 clp .account.switch name::personal dry::1
 ```
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `name::` | [`AccountName`] | Account name to switch to | **(required)** |
-| `dry::` | `bool` | Preview action without executing | `0` |
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `name::` | [`AccountName`] | **(required)** | Account name to switch to |
+| `dry::` | `bool` | `0` | Preview action without executing |
 
 **Examples:**
 
@@ -264,10 +227,10 @@ clp .account.delete name::old
 clp .account.delete name::old dry::1
 ```
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `name::` | [`AccountName`] | Account name to delete | **(required)** |
-| `dry::` | `bool` | Preview action without executing | `0` |
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `name::` | [`AccountName`] | **(required)** | Account name to delete |
+| `dry::` | `bool` | `0` | Preview action without executing |
 
 **Examples:**
 
@@ -299,11 +262,11 @@ clp .token.status threshold::1800
 clp .token.status format::json
 ```
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `v::` | [`VerbosityLevel`] | Output detail level | `1` |
-| `format::` | [`OutputFormat`] | Output format | `text` |
-| `threshold::` | [`WarningThreshold`] | ExpiringSoon threshold in seconds | `3600` |
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `v::` | [`VerbosityLevel`] | `1` | Output detail level |
+| `format::` | [`OutputFormat`] | `text` | Output format |
+| `threshold::` | [`WarningThreshold`] | `3600` | ExpiringSoon threshold in seconds |
 
 **Examples:**
 
@@ -337,10 +300,10 @@ clp .paths
 clp .paths format::json
 ```
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `v::` | [`VerbosityLevel`] | Output detail level | `1` |
-| `format::` | [`OutputFormat`] | Output format | `text` |
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `v::` | [`VerbosityLevel`] | `1` | Output detail level |
+| `format::` | [`OutputFormat`] | `text` | Output format |
 
 **Examples:**
 
@@ -378,10 +341,10 @@ clp .usage v::0
 clp .usage format::json
 ```
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `v::` | [`VerbosityLevel`] | Output detail level | `1` |
-| `format::` | [`OutputFormat`] | Output format | `text` |
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `v::` | [`VerbosityLevel`] | `1` | Output detail level |
+| `format::` | [`OutputFormat`] | `text` | Output format |
 
 **Examples:**
 
@@ -411,13 +374,10 @@ clp .usage format::json
 
 ### Command :: 11. `.credentials.status`
 
-Show live credential metadata by reading `~/.claude/.credentials.json` directly.
-No account store dependency — succeeds on any authenticated machine regardless of
-whether `accounts/` directory or `_active` marker exist. Use this command on fresh
-Claude Code installations where `.account.status` fails with "no active account linked".
+Show live credential metadata by reading `~/.claude/.credentials.json` directly. Succeeds on any authenticated machine regardless of whether account store setup exists.
 
--- **Parameters:** 2 (`v::`, `format::`)
--- **Exit:** 0 (success), 2 (credential file absent or HOME unset)
+-- **Parameters:** [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
+-- **Exit:** 0 (success) | 2 (credential file absent or HOME unset)
 
 **Syntax:**
 
@@ -427,10 +387,10 @@ clp .credentials.status v::2
 clp .credentials.status format::json
 ```
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `v::` | [`VerbosityLevel`] | Output detail level (0=sub+token, 1=+tier/email/org, 2=+expiry) | `1` |
-| `format::` | [`OutputFormat`] | Output format | `text` |
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `v::` | [`VerbosityLevel`] | `1` | Output detail level (0=sub+token, 1=+tier/email/org, 2=+expiry) |
+| `format::` | [`OutputFormat`] | `text` | Output format |
 
 **Examples:**
 
@@ -462,10 +422,7 @@ clp .credentials.status format::json
 
 ### Command :: 12. `.account.limits`
 
-Show plan and rate-limit utilization for the active account or any named account.
-Displays session usage (5-hour window), weekly all-model usage, and weekly Sonnet usage
-with percentage consumed and reset times — mirroring the information shown in the
-Claude Code settings panel.
+Show plan and rate-limit utilization for the active or named account. Displays session usage, weekly all-model usage, and weekly Sonnet usage with percentage consumed and reset times.
 
 -- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found, data unavailable, HOME unset)
@@ -478,11 +435,11 @@ clp .account.limits name::work
 clp .account.limits format::json
 ```
 
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `name::` | [`AccountName`] | Query a named account instead of the active account | *(omit for active)* |
-| `v::` | [`VerbosityLevel`] | Output detail level | `1` |
-| `format::` | [`OutputFormat`] | Output format | `text` |
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `name::` | [`AccountName`] | *(omit for active)* | Query a named account instead of the active account |
+| `v::` | [`VerbosityLevel`] | `1` | Output detail level |
+| `format::` | [`OutputFormat`] | `text` | Output format |
 
 **Examples:**
 

@@ -9,18 +9,18 @@
 
 ### Overview Table
 
-| ID | Name | FR | Status |
-|----|------|----|--------|
-| 001 | [Account Store Initialization](001_account_store_init.md) | FR-6 | ✅ |
-| 002 | [Save Account](002_account_save.md) | FR-7 | ✅ |
-| 003 | [List Accounts](003_account_list.md) | FR-8 | ✅ |
-| 004 | [Switch Account](004_account_switch.md) | FR-9 | ✅ |
-| 005 | [Delete Account](005_account_delete.md) | FR-10 | ✅ |
-| 006 | [Token Status](006_token_status.md) | FR-11 | ✅ |
-| 007 | [File Topology](007_file_topology.md) | FR-12 | ✅ |
-| 008 | [Auto Rotate](008_auto_rotate.md) | FR-13 | ✅ |
-| 009 | [Token Usage Reporting](009_token_usage.md) | FR-14 | ✅ |
-| 010 | [Persistent Storage Path](010_persistent_storage.md) | FR-15 | ✅ |
-| 011 | [Account Status by Name](011_account_status_by_name.md) | FR-16 | ✅ |
-| 012 | [Live Credentials Status](012_live_credentials_status.md) | FR-17 | ✅ |
-| 013 | [Account Rate-Limit Utilization](013_account_limits.md) | FR-18 | 🔄 |
+| ID | Name | Purpose | Status |
+|----|------|---------|--------|
+| 001 | [Account Store Initialization](001_account_store_init.md) | Create `~/.claude/accounts/` on first use | ✅ |
+| 002 | [Save Account](002_account_save.md) | Save current credentials as a named account profile | ✅ |
+| 003 | [List Accounts](003_account_list.md) | List all stored accounts with token state and metadata | ✅ |
+| 004 | [Switch Account](004_account_switch.md) | Atomically switch the active credential set to a named account | ✅ |
+| 005 | [Delete Account](005_account_delete.md) | Remove a named account with an active-account safety guard | ✅ |
+| 006 | [Token Status](006_token_status.md) | Classify the active OAuth token as Valid, ExpiringSoon, or Expired | ✅ |
+| 007 | [File Topology](007_file_topology.md) | Expose all `~/.claude/` canonical paths via a typed API | ✅ |
+| 008 | [Auto Rotate](008_auto_rotate.md) | Rotate to the inactive account with the highest token expiry | ✅ |
+| 009 | [Token Usage Reporting](009_token_usage.md) | Report per-model token counts from the 7-day stats-cache window | ✅ |
+| 010 | [Persistent Storage Path](010_persistent_storage.md) | Resolve persistent storage root from `$PRO` / `$HOME` environment variables | ✅ |
+| 011 | [Account Status by Name](011_account_status_by_name.md) | Inspect any stored account's token state without switching | ✅ |
+| 012 | [Live Credentials Status](012_live_credentials_status.md) | Show credential metadata with no account store dependency | ✅ |
+| 013 | [Account Rate-Limit Utilization](013_account_limits.md) | Show rate-limit utilization via live HTTP response headers | ✅ |

@@ -19,16 +19,20 @@
 //! | inst11 | list_all() merges available and installed | correct InstallStatus per name |
 //! | inst12 | AssetPaths::from_env() errors when both vars unset | AssetPathsError::EnvVarNotSet |
 //! | inst13 | Directory-layout install creates dir symlink | Skill symlink → source dir |
+//! | inst14 | Directory-layout install creates dir symlink (Plugin) | Plugin symlink → source dir |
 
 use claude_assets_core::{
   artifact::ArtifactKind,
-  error::AssetError,
-  install::{ InstallAction, install, uninstall },
-  paths::{ AssetPaths, AssetPathsError },
+  error::{ AssetError, AssetPathsError },
+  install::{ InstallOutcome, UninstallOutcome, install, uninstall },
+  paths::AssetPaths,
   registry::{ InstallStatus, list_all, list_available, list_installed },
 };
 use std::fs;
 use tempfile::TempDir;
+
+/// Guards process-global env var mutations in inst12 against parallel test threads.
+static ENV_LOCK : std::sync::Mutex< () > = std::sync::Mutex::new( () );
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -75,7 +79,7 @@ fn inst01_install_creates_symlink()
   write_source( &paths, ArtifactKind::Rule, "rust" );
 
   let report = install( &paths, ArtifactKind::Rule, "rust" ).unwrap();
-  assert_eq!( report.action, InstallAction::Installed );
+  assert_eq!( report.action, InstallOutcome::Installed );
 
   let tgt_path = paths.target_dir( ArtifactKind::Rule ).join( "rust.md" );
   assert!( fs::read_link( &tgt_path ).is_ok(), "target must be a symlink" );
@@ -124,7 +128,7 @@ fn inst03_install_is_idempotent()
 
   install( &paths, ArtifactKind::Command, "commit" ).unwrap();
   let r2 = install( &paths, ArtifactKind::Command, "commit" ).unwrap();
-  assert_eq!( r2.action, InstallAction::Reinstalled );
+  assert_eq!( r2.action, InstallOutcome::Reinstalled );
 
   // Symlink still valid after re-link.
   let tgt_path = paths.target_dir( ArtifactKind::Command ).join( "commit.md" );
@@ -185,7 +189,7 @@ fn inst05_uninstall_removes_symlink()
   assert!( fs::symlink_metadata( &tgt_path ).is_ok() );
 
   let report = uninstall( &paths, ArtifactKind::Agent, "planner" ).unwrap();
-  assert_eq!( report.action, InstallAction::Uninstalled );
+  assert_eq!( report.action, UninstallOutcome::Uninstalled );
   assert!( !tgt_path.exists() );
 }
 
@@ -206,7 +210,7 @@ fn inst06_uninstall_absent_returns_not_installed()
   let paths = make_paths( src.path(), tgt.path() );
 
   let report = uninstall( &paths, ArtifactKind::Rule, "nonexistent" ).unwrap();
-  assert_eq!( report.action, InstallAction::NotInstalled );
+  assert_eq!( report.action, UninstallOutcome::NotInstalled );
 }
 
 // ── inst07 ────────────────────────────────────────────────────────────────────
@@ -354,11 +358,12 @@ fn inst11_list_all_merges_with_correct_status()
 /// Root Cause: clear actionable error required when env is not configured.
 /// Why Not Caught: no test existed.
 /// Fix Applied: from_env() checks PRO_CLAUDE then PRO; if neither set, returns error.
-/// Prevention: run in a controlled env that clears both vars.
+/// Prevention: hold ENV_LOCK before mutating; clear both vars while locked.
 /// Pitfall: CI machines may have PRO set from a prior test; always clear both.
 #[ test ]
 fn inst12_from_env_errors_when_vars_unset()
 {
+  let _guard = ENV_LOCK.lock().unwrap_or_else( std::sync::PoisonError::into_inner );
   // Remove both vars for this test.
   std::env::remove_var( "PRO_CLAUDE" );
   std::env::remove_var( "PRO" );
@@ -390,9 +395,39 @@ fn inst13_install_directory_layout_creates_dir_symlink()
   write_source( &paths, ArtifactKind::Skill, "tsk" );
 
   let report = install( &paths, ArtifactKind::Skill, "tsk" ).unwrap();
-  assert_eq!( report.action, InstallAction::Installed );
+  assert_eq!( report.action, InstallOutcome::Installed );
 
   let tgt_path = paths.target_dir( ArtifactKind::Skill ).join( "tsk" );
   let link_target = fs::read_link( &tgt_path ).expect( "target must be a symlink" );
   assert!( link_target.ends_with( "skills/tsk" ), "symlink must point to source dir, got: {link_target:?}" );
+}
+
+// ── inst14 ────────────────────────────────────────────────────────────────────
+
+/// inst14: install() creates a directory symlink for Plugin (Directory layout).
+///
+/// Root Cause: plugins are directory trees, same layout as skills; both require
+///   symlink_dir on Windows and unix::symlink on Unix — same dispatch path.
+/// Why Not Caught: inst13 covered Skill but Plugin is a separate Directory-layout
+///   variant that must be exercised independently.
+/// Fix Applied: test confirms install() + read_link() work for ArtifactKind::Plugin.
+/// Prevention: every Directory-layout kind must have a dedicated install test.
+/// Pitfall: Plugin source subdir is "plugins/" — distinct from "skills/".
+#[ test ]
+fn inst14_install_plugin_directory_layout_creates_dir_symlink()
+{
+  let src = TempDir::new().unwrap();
+  let tgt = TempDir::new().unwrap();
+  let paths = make_paths( src.path(), tgt.path() );
+  write_source( &paths, ArtifactKind::Plugin, "mcp_server" );
+
+  let report = install( &paths, ArtifactKind::Plugin, "mcp_server" ).unwrap();
+  assert_eq!( report.action, InstallOutcome::Installed );
+
+  let tgt_path = paths.target_dir( ArtifactKind::Plugin ).join( "mcp_server" );
+  let link_target = fs::read_link( &tgt_path ).expect( "target must be a symlink" );
+  assert!(
+    link_target.ends_with( "plugins/mcp_server" ),
+    "symlink must point to source dir, got: {link_target:?}",
+  );
 }

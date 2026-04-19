@@ -122,9 +122,8 @@ mod cli
 
   /// Parse a raw string as a u32 token limit with a clear error message.
   ///
-  /// Extracted from `parse_args()` to keep that function under clippy's
-  /// `too_many_lines` limit (100). Each new value-flag match arm costs ~5 lines;
-  /// pull additional multi-line logic here rather than into `parse_args` directly.
+  /// Called from `parse_value_flag()`. Isolates multi-line parse logic so each
+  /// value-consuming arm in `parse_value_flag` stays single-expression.
   fn parse_token_limit( raw : &str ) -> Result< u32 >
   {
     raw.parse::< u32 >().map_err( | _ |
@@ -137,11 +136,65 @@ mod cli
 
   /// Parse a raw string as an `EffortLevel` with a clear error message.
   ///
-  /// Extracted from `parse_args()` to keep that function under clippy's
-  /// `too_many_lines` limit. Delegates to `EffortLevel::from_str`.
+  /// Called from `parse_value_flag()`. Delegates to `EffortLevel::from_str`.
   fn parse_effort_level( raw : &str ) -> Result< EffortLevel >
   {
     raw.parse::< EffortLevel >().map_err( Error::msg )
+  }
+
+  /// Parse a value-consuming flag (`--flag value` pair) into `parsed`.
+  ///
+  /// Returns `true` when `token` is a recognised value-consuming flag and its
+  /// following value was consumed into `parsed`. Returns `false` when `token`
+  /// is not a known value-consuming flag (caller decides whether to treat it
+  /// as unknown). `next` is the index of the token immediately after `token`.
+  fn parse_value_flag(
+    token  : &str,
+    tokens : &[ String ],
+    next   : usize,
+    parsed : &mut CliArgs,
+  ) -> Result< bool >
+  {
+    match token
+    {
+      "--effort" =>
+      {
+        parsed.effort = Some(
+          parse_effort_level( next_value( tokens, next, "--effort" )? )?
+        );
+      }
+      "--system-prompt" =>
+      {
+        parsed.system_prompt = Some( next_value( tokens, next, "--system-prompt" )?.to_string() );
+      }
+      "--append-system-prompt" =>
+      {
+        parsed.append_system_prompt = Some( next_value( tokens, next, "--append-system-prompt" )?.to_string() );
+      }
+      "--model" =>
+      {
+        parsed.model = Some( next_value( tokens, next, "--model" )?.to_string() );
+      }
+      "--max-tokens" =>
+      {
+        parsed.max_tokens = Some( parse_token_limit( next_value( tokens, next, "--max-tokens" )? )? );
+      }
+      "--session-dir" =>
+      {
+        parsed.session_dir = Some( next_value( tokens, next, "--session-dir" )?.to_string() );
+      }
+      "--dir" =>
+      {
+        parsed.dir = Some( next_value( tokens, next, "--dir" )?.to_string() );
+      }
+      "--verbosity" =>
+      {
+        let raw = next_value( tokens, next, "--verbosity" )?;
+        parsed.verbosity = raw.parse::< VerbosityLevel >().map_err( Error::msg )?;
+      }
+      _ => return Ok( false ),
+    }
+    Ok( true )
   }
 
   /// Parse argv into structured CLI arguments.
@@ -151,7 +204,6 @@ mod cli
   ///
   /// `--help`/`-h` wins regardless of other flags or unknown tokens: if either appears
   /// anywhere in `tokens`, parsing short-circuits and returns `CliArgs { help: true, .. }`.
-  #[ allow( clippy::too_many_lines ) ]
   pub( super ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
   {
     // --help/-h always wins — return early before any other token is parsed.
@@ -211,52 +263,9 @@ mod cli
         {
           parsed.no_ultrathink = true;
         }
-        "--effort" =>
-        {
-          i += 1;
-          parsed.effort = Some(
-            parse_effort_level( next_value( tokens, i, "--effort" )? )?
-          );
-        }
         "--no-effort-max" =>
         {
           parsed.no_effort_max = true;
-        }
-        "--system-prompt" =>
-        {
-          i += 1;
-          parsed.system_prompt = Some( next_value( tokens, i, "--system-prompt" )?.to_string() );
-        }
-        "--append-system-prompt" =>
-        {
-          i += 1;
-          parsed.append_system_prompt = Some( next_value( tokens, i, "--append-system-prompt" )?.to_string() );
-        }
-        "--model" =>
-        {
-          i += 1;
-          parsed.model = Some( next_value( tokens, i, "--model" )?.to_string() );
-        }
-        "--max-tokens" =>
-        {
-          i += 1;
-          parsed.max_tokens = Some( parse_token_limit( next_value( tokens, i, "--max-tokens" )? )? );
-        }
-        "--session-dir" =>
-        {
-          i += 1;
-          parsed.session_dir = Some( next_value( tokens, i, "--session-dir" )?.to_string() );
-        }
-        "--dir" =>
-        {
-          i += 1;
-          parsed.dir = Some( next_value( tokens, i, "--dir" )?.to_string() );
-        }
-        "--verbosity" =>
-        {
-          i += 1;
-          let raw = next_value( tokens, i, "--verbosity" )?;
-          parsed.verbosity = raw.parse::< VerbosityLevel >().map_err( Error::msg )?;
         }
         "--" =>
         {
@@ -272,7 +281,14 @@ mod cli
         }
         s if s.starts_with( '-' ) =>
         {
-          return Err( Error::msg( format!( "unknown option: {s}\nRun with --help for usage." ) ) );
+          if parse_value_flag( s, tokens, i + 1, &mut parsed )?
+          {
+            i += 1; // advance past the consumed value token
+          }
+          else
+          {
+            return Err( Error::msg( format!( "unknown option: {s}\nRun with --help for usage." ) ) );
+          }
         }
         _ =>
         {

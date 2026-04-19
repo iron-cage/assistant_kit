@@ -2,6 +2,87 @@
 //!
 //! Covers matrix IDs A-01..A-33 (adapter), O-01..O-19 (output), D-01..D-12 (`format_duration`).
 //! All tests call library functions directly — no binary invocation.
+//!
+//! ## Test Matrix
+//!
+//! ### A — Adapter (`argv_to_unilang_tokens`)
+//!
+//! | ID   | Test Function | Condition | P/N |
+//! |------|---------------|-----------|-----|
+//! | A-01 | `adapter_empty_argv_returns_help` | empty argv → help | P |
+//! | A-02 | `adapter_single_command` | single command word → command token | P |
+//! | A-03 | `adapter_dot_returns_help` | `.` → help | P |
+//! | A-04 | `adapter_double_dash_help` | `--help` → help | P |
+//! | A-05 | `adapter_dash_h_help` | `-h` → help | P |
+//! | A-06 | `adapter_rejects_unknown_flag` | `-verbose` (unknown flag) → error | N |
+//! | A-07 | `adapter_rejects_param_as_command` | `key::value` as first arg → error | N |
+//! | A-08 | `adapter_verbosity_alias_0` | `v::0` → verbosity 0 | P |
+//! | A-09 | `adapter_verbosity_alias_1` | `v::1` → verbosity 1 | P |
+//! | A-10 | `adapter_verbosity_alias_2` | `v::2` → verbosity 2 | P |
+//! | A-11 | `adapter_verbosity_out_of_range` | `v::3` → error | N |
+//! | A-12 | `adapter_verbosity_non_numeric` | `v::abc` → error | N |
+//! | A-13 | `adapter_verbosity_canonical_key` | `verbosity::1` (canonical) → passes | P |
+//! | A-14 | `adapter_dry_true_normalizes` | `dry::true` → `dry::1` | P |
+//! | A-15 | `adapter_dry_false_normalizes` | `dry::false` → `dry::0` | P |
+//! | A-16 | `adapter_dry_1_passthrough` | `dry::1` → unchanged | P |
+//! | A-17 | `adapter_dry_0_passthrough` | `dry::0` → unchanged | P |
+//! | A-18 | `adapter_dry_invalid_value` | `dry::maybe` → error | N |
+//! | A-19 | `adapter_missing_separator` | bareword without `::` → error | N |
+//! | A-20 | `adapter_rejects_flag_in_params` | `--verbose` after command → error | N |
+//! | A-21 | `adapter_duplicate_last_wins` | duplicate key → last value wins | P |
+//! | A-22 | `adapter_alias_then_canonical_dedup` | alias then canonical → deduped | P |
+//! | A-23 | `adapter_multi_separator_split` | `key::val::extra` → split at first `::` | P |
+//! | A-24 | `adapter_empty_value_allowed` | `key::` → empty value allowed | P |
+//! | A-25 | `adapter_verbosity_negative` | `v::-1` → error (u8 parse) | N |
+//! | A-26 | `adapter_verbosity_decimal` | `v::2.5` → error | N |
+//! | A-27 | `adapter_verbosity_empty` | `v::` → error (empty) | N |
+//! | A-28 | `adapter_multiple_params` | multiple `k::v` pairs → all assembled | P |
+//! | A-29 | `adapter_help_as_command` | `.help` as sole arg → help | P |
+//! | A-30 | `adapter_verbosity_overflow` | `v::256` → error (u8 overflow) | N |
+//! | A-31 | `adapter_dot_help_in_second_position` | `.help` in second position → routes to help | P |
+//! | A-32 | `adapter_bare_help_in_second_position` | `help` in second position → routes to help | P |
+//! | A-33 | `adapter_bare_help_as_sole_arg` | bare `help` as sole argv → routes to help | P |
+//!
+//! ### O — Output format / verbosity / `json_escape`
+//!
+//! | ID   | Test Function | Condition | P/N |
+//! |------|---------------|-----------|-----|
+//! | O-01 | `output_format_text` | `fmt::text` → `OutputFormat::Text` | P |
+//! | O-02 | `output_format_json` | `fmt::json` → `OutputFormat::Json` | P |
+//! | O-03 | `output_format_xml_rejected` | `fmt::xml` → error | N |
+//! | O-04 | `output_format_default` | no `fmt::` → default `Text` | P |
+//! | O-05 | `output_format_case_json_rejected` | `fmt::JSON` (uppercase) → error | N |
+//! | O-06 | `output_format_case_text_rejected` | `fmt::Text` (capitalized) → error | N |
+//! | O-07 | `output_verbosity_0` | `v::0` → verbosity 0 | P |
+//! | O-08 | `output_verbosity_1` | `v::1` → verbosity 1 | P |
+//! | O-09 | `output_verbosity_2` | `v::2` → verbosity 2 | P |
+//! | O-10 | `output_verbosity_default` | no `v::` → default verbosity 1 | P |
+//! | O-11 | `json_escape_plain` | plain string unchanged | P |
+//! | O-12 | `json_escape_quote` | `"` → `\"` | P |
+//! | O-13 | `json_escape_backslash` | `\` → `\\` | P |
+//! | O-14 | `json_escape_newline` | `\n` → `\n` (escaped) | P |
+//! | O-15 | `json_escape_tab` | `\t` → `\t` (escaped) | P |
+//! | O-16 | `json_escape_cr` | `\r` → `\r` (escaped) | P |
+//! | O-17 | `json_escape_empty` | empty string → empty string | P |
+//! | O-18 | `json_escape_mixed` | string with multiple special chars → all escaped | P |
+//! | O-19 | `json_escape_unicode` | non-ASCII unicode passthrough unchanged | P |
+//!
+//! ### D — `format_duration_secs`
+//!
+//! | ID   | Test Function | Condition | P/N |
+//! |------|---------------|-----------|-----|
+//! | D-01 | `dur_zero_seconds_shows_0m` | 0s → `"0m"` | P |
+//! | D-02 | `dur_sub_minute_rounds_to_0m` | 1s → `"0m"` | P |
+//! | D-03 | `dur_59s_rounds_to_0m` | 59s → `"0m"` | P |
+//! | D-04 | `dur_60s_shows_1m` | 60s → `"1m"` | P |
+//! | D-05 | `dur_3599s_shows_59m` | 3599s → `"59m"` | P |
+//! | D-06 | `dur_3600s_shows_1h_no_minutes` | 3600s → `"1h"` | P |
+//! | D-07 | `dur_3660s_shows_1h_1m` | 3660s → `"1h 1m"` | P |
+//! | D-08 | `dur_86400s_shows_1d_no_hours` | 86400s → `"1d"` | P |
+//! | D-09 | `dur_86460s_shows_1d_1m` | 86460s → `"1d 1m"` | P |
+//! | D-10 | `dur_90000s_shows_1d_1h_no_minutes` | 90000s → `"1d 1h"` | P |
+//! | D-11 | `dur_90060s_shows_1d_1h_1m` | 90060s → `"1d 1h 1m"` | P |
+//! | D-12 | `dur_max_u64_does_not_panic` | `u64::MAX` → does not panic | P |
 
 // ── Adapter tests ─────────────────────────────────────────────────────────────
 
@@ -307,6 +388,7 @@ mod adapter
   // Adding `--help`/`-h` handling does NOT substitute for the pre-scan.
   // `argv[0]` checks are too narrow: users type `clp .account.list .help` or
   // `clp .account.list help` — the help token is not in position 0.
+  // test_kind: bug_reproducer(issue-help-prescan)
   #[ test ]
   fn adapter_dot_help_in_second_position()
   {

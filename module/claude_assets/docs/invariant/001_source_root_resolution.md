@@ -25,5 +25,6 @@ Every command that reads from or installs into `$PRO_CLAUDE` MUST call `AssetPat
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/commands.rs` | list_routine, install_routine, uninstall_routine — all call from_env() |
-| source | `claude_assets_core/src/paths.rs` | AssetPaths::from_env() resolution logic and error type |
-| feature | [feature/001_asset_cli.md](../feature/001_asset_cli.md) | CLI command design including .kinds graceful degradation |
+| source | `claude_assets_core/src/paths.rs` | AssetPaths::from_env() resolution logic and directory computation |
+| source | `claude_assets_core/src/error.rs` | AssetPathsError::EnvVarNotSet returned on resolution failure |
+| doc | [feature/001_asset_cli.md](../feature/001_asset_cli.md) | CLI command design including .kinds graceful degradation |

@@ -88,7 +88,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".status",          "Show installation state, process count, and active account", vec![ v(), fmt() ],                      Box::new( status_routine          ) );
   reg_cmd( registry, ".version.show",    "Print the currently installed Claude Code version",          vec![ v(), fmt() ],                      Box::new( version_show_routine    ) );
   reg_cmd( registry, ".version.install", "Download and install a Claude Code version via installer",   vec![ ver(), dry(), frc(), v(), fmt() ], Box::new( version_install_routine ) );
-  reg_cmd( registry, ".version.guard",   "Check for version drift and restore preferred version",      vec![ ver(), dry(), frc(), itv(), v() ], Box::new( version_guard_routine   ) );
+  reg_cmd( registry, ".version.guard",   "Check for version drift and restore preferred version",      vec![ ver(), dry(), frc(), itv(), v(), fmt() ], Box::new( version_guard_routine   ) );
   reg_cmd( registry, ".version.list",    "List all named version aliases",                             vec![ v(), fmt() ],                      Box::new( version_list_routine    ) );
   reg_cmd( registry, ".version.history", "Show release history with changelogs from GitHub",           vec![ cnt(), v(), fmt() ],               Box::new( version_history_routine ) );
   reg_cmd( registry, ".processes",       "List all running Claude Code processes",                     vec![ v(), fmt() ],                      Box::new( processes_routine       ) );

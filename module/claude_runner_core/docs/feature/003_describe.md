@@ -53,8 +53,8 @@ Label width is 4 characters (`dir:`, `cmd:`), colon-terminated with a trailing s
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| feature | [feature/002_dry_run.md](002_dry_run.md) | Dry-run mode that uses describe_compact() as execute() output |
-| api | [api/001_execution_api.md](../api/001_execution_api.md) | execute() contract that returns describe_compact() in dry-run |
+| doc | [feature/002_dry_run.md](002_dry_run.md) | Dry-run mode that uses describe_compact() as execute() output |
+| doc | [api/001_execution_api.md](../api/001_execution_api.md) | execute() contract that returns describe_compact() in dry-run |
 | source | `../../src/command.rs` | describe(), describe_env(), describe_compact() implementation |
 
 ### Sources

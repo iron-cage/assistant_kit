@@ -34,10 +34,10 @@ claude_runner_core never calls into claude_profile. It receives resolved paths a
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| pattern | [pattern/001_command_builder.md](../pattern/001_command_builder.md) | Fluent builder pattern used to configure execution |
-| api | [api/001_execution_api.md](../api/001_execution_api.md) | execute() and execute_interactive() method contracts |
-| invariant | [invariant/001_single_execution_point.md](../invariant/001_single_execution_point.md) | Rule: all Command::new("claude") in one place |
-| feature | [feature/002_dry_run.md](002_dry_run.md) | Dry-run mode that intercepts execute() |
+| doc | [pattern/001_command_builder.md](../pattern/001_command_builder.md) | Fluent builder pattern used to configure execution |
+| doc | [api/001_execution_api.md](../api/001_execution_api.md) | execute() and execute_interactive() method contracts |
+| doc | [invariant/001_single_execution_point.md](../invariant/001_single_execution_point.md) | Rule: all Command::new("claude") in one place |
+| doc | [feature/002_dry_run.md](002_dry_run.md) | Dry-run mode that intercepts execute() |
 | source | `../../src/command.rs` | execute() and execute_interactive() implementation |
 
 ### Sources

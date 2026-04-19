@@ -2,7 +2,7 @@
 
 Common usage patterns showing how `clp` CLI commands compose for real operational tasks.
 
-## 1. Account Rotation on Token Expiry
+### 1. Account Rotation on Token Expiry
 
 The primary use case: detect an expired or expiring token and switch to a fresh account.
 
@@ -27,7 +27,7 @@ clp .token.status
 
 **When to use:** Token is `Expired` or `ExpiringSoon` and automation or manual work must continue.
 
-## 2. Onboarding a New Account
+### 2. Onboarding a New Account
 
 Save the current session's credentials before they're lost, then verify the account store.
 
@@ -51,7 +51,7 @@ clp .account.list
 
 **When to use:** First time setting up multi-account rotation on a machine.
 
-## 3. Scripted Health Check
+### 3. Scripted Health Check
 
 Use JSON output for pipeline integration in monitoring scripts.
 
@@ -80,7 +80,7 @@ esac
 
 **When to use:** CI/CD pipelines, cron monitoring, pre-flight checks before batch operations.
 
-## 4. Account Cleanup
+### 4. Account Cleanup
 
 Remove stale accounts that are no longer needed.
 
@@ -106,7 +106,7 @@ clp .account.delete name::work
 
 **When to use:** Periodic maintenance to remove expired or unused accounts.
 
-## 5. Diagnostics and Support
+### 5. Diagnostics and Support
 
 Collect environment information for troubleshooting.
 
@@ -138,7 +138,7 @@ clp .token.status format::json > /tmp/diag-token.json
 
 **When to use:** Filing support tickets, debugging environment issues, verifying correct `~/.claude/` layout.
 
-## 6. Dry-Run Preview Before Destructive Operations
+### 6. Dry-Run Preview Before Destructive Operations
 
 Preview all mutation operations before executing in unfamiliar or production environments.
 
@@ -163,7 +163,7 @@ clp .account.delete name::old
 
 **When to use:** Shared machines, production environments, or any context where credential file changes must be verified before execution.
 
-## 7. Fresh Installation Credential Check
+### 7. Fresh Installation Credential Check
 
 Inspect live credentials on a machine where account management has not been initialized — `.account.status` would fail with "no active account linked".
 

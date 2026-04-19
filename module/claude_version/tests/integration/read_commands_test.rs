@@ -11,7 +11,7 @@
 //! ## E2 — `.status`
 //! | TC | Description | P/N | Exit |
 //! |----|-------------|-----|------|
-//! | TC-095 | `.status` exits 0 always | P | 0 |
+//! | TC-099 | `.status` exits 0 always | P | 0 |
 //! | TC-096 | `.status` with empty PATH → version "not found", still exits 0 | P | 0 |
 //! | TC-097 | `.status v::0` → 3 bare lines | P | 0 |
 //! | TC-098 | `.status v::1` → labeled Version/Processes/Account lines | P | 0 |
@@ -146,9 +146,9 @@ fn tc02_empty_argv_shows_help()
 
 // ─── E2: status ──────────────────────────────────────────────────────────────
 
-// TC-095
+// TC-099
 #[ test ]
-fn tc095_status_exits_0()
+fn tc099_status_exits_0()
 {
   let out = run_clm( &[ ".status" ] );
   assert_exit( &out, 0 );

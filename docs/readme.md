@@ -12,5 +12,4 @@ Documentation for the `assistant` workspace covering behavioral requirements, st
 | `pattern/` | Four-layer crate dependency architecture pattern |
 | `integration/` | Cross-workspace integration protocol |
 | `error/` | Claude Code error message catalog |
-| `entities.md` | Master index of all doc entities and instances |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

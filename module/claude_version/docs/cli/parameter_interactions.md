@@ -51,6 +51,6 @@ When `dry::1` and `force::1` are both present, `dry::` takes precedence:
 
 `force::` applies to mutation commands with safety guards: `.version.install`, `.version.guard`, `.processes.kill`.
 
-`v::` applies to output-capable commands: `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.settings.show`, `.settings.get`.
+`v::` applies to output-capable commands: `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`.
 
-`format::` applies to output-capable commands: `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.history`, `.processes`, `.settings.show`, `.settings.get`.
+`format::` applies to output-capable commands: `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`.

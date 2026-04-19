@@ -48,6 +48,6 @@
 |------|------|----------------|
 | source | `src/usage.rs` | Token usage parsing, aggregation, and formatting |
 | source | `src/commands.rs` | `usage_routine()` — CLI handler |
-| test | `tests/usage_test.rs` | 7-day window, model sort, JSON output tests |
+| test | `tests/cli/usage_test.rs` | 7-day window, model sort, JSON output tests |
 | doc | [013_account_limits.md](013_account_limits.md) | FR-18 future command for live rate-limit data |
 | doc | [cli/commands.md](../cli/commands.md#command--10-usage) | CLI command specification |
