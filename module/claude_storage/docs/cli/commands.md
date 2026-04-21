@@ -14,7 +14,7 @@ See [params.md](params.md) for full parameter specs and [types.md](types.md) for
 | 4 | `.count` | stable | Fast counting of items | 5 |
 | 5 | `.search` | stable | Search session content by query | 8 |
 | 6 | `.export` | stable | Export session to file | 6 |
-| 7 | `.projects` | stable | Active-session summary (default) or scoped session list | 6 |
+| 7 | `.projects` | stable | Scoped project list with per-project session aggregation | 6 |
 | 8 | `.path` | stable | Compute Claude storage path for a directory | 2 |
 | 9 | `.exists` | stable | Check conversation history exists (exits 1 when absent) | 2 |
 | 10 | `.session.dir` | stable | Compute session working directory path | 2 |
@@ -334,7 +334,7 @@ claude_storage .export session_id::ID output::PATH scope::global
 
 ### Command :: 7. `.projects`
 
-Active-project summary by default; project-first scoped list when any explicit parameter is given. Sessions are aggregated by project directory — bare invocation shows the most-recently-modified project as a single summary block; list mode shows one entry per project (not per session file).
+Project list with scope control; sessions are aggregated by project directory and one entry is shown per project (not per session file). Bare invocation shows all projects in the bidirectional neighborhood (ancestors + current + descendants via `scope::around`).
 
 **Parameters:** `scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`, `verbosity::`
 
@@ -343,6 +343,7 @@ Active-project summary by default; project-first scoped list when any explicit p
 **Syntax:**
 ```bash
 claude_storage .projects
+claude_storage .projects scope::around
 claude_storage .projects scope::relevant
 claude_storage .projects scope::under path::PATH
 claude_storage .projects scope::global [agent::1] [min_entries::N]
@@ -353,7 +354,7 @@ claude_storage .projects limit::5
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `scope::` | [`ScopeValue`](types.md#scopevalue) | optional | `under` | Session discovery scope |
+| `scope::` | [`ScopeValue`](types.md#scopevalue) | optional | `around` | Session discovery scope |
 | `path::` | [`StoragePath`](types.md#storagepath) | optional | cwd | Base path for scope resolution |
 | `session::` | [`SessionFilter`](types.md#sessionfilter) | optional | — | Filter sessions by ID substring |
 | `agent::` | Boolean | optional | — | Session type filter (`0`=main, `1`=agent) |
@@ -363,25 +364,17 @@ claude_storage .projects limit::5
 
 `scope::` and `path::` belong to the [Scope Configuration group](parameter_groups.md#scope-configuration). Session filters belong to [Session Filter](parameter_groups.md#session-filter).
 
-**Default invocation (summary mode):**
+**Default invocation:**
 
-When `.projects` is called with no arguments, it outputs a single-project summary for the most-recently-modified project in scope — not a list. Any explicit scope or filter parameter (`scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`) activates list mode instead. `verbosity::` is a display modifier and never affects mode selection — `verbosity::1` stays in summary mode.
-
-```
-Active project  {path}  ({N} sessions, last active {age})
-Last session:  {8-char-id}  {age}  ({count} entries)
-
-Last message:
-  {text}
-```
-
-Truncation rule: message text longer than 50 chars → `{first30}...{last30}`; 50 chars or fewer shown in full.
-No sessions in scope → `No active project found.`
+Bare `clg .projects` uses `scope::around` — showing all projects in the bidirectional neighborhood of cwd (ancestors upward to `/` plus all descendants). Output format is the same as any explicit invocation (see Verbosity output format below). No sessions in scope → `No active project found.`
 
 **Examples:**
 ```bash
-# Active-session summary (default — no args)
+# Neighborhood view — ancestors + current + descendants (default)
 claude_storage .projects
+
+# Explicit bidirectional neighborhood
+claude_storage .projects scope::around
 
 # All sessions related to current work (ancestor chain)
 claude_storage .projects scope::relevant
@@ -407,9 +400,7 @@ claude_storage .projects scope::global limit::5
 
 **Verbosity output format:**
 
-Verbosity levels apply to **list mode** (activated when any explicit parameter is given). Default bare invocation uses summary mode (see Default invocation above), independent of verbosity.
-
-Output is grouped by project at verbosity ≥ 1. Path header is always shown (never suppressed):
+All invocations (including bare) use the same list output format. Output is grouped by project at verbosity ≥ 1. Path header is always shown (never suppressed):
 
 ```
 Found N projects:

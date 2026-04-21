@@ -385,8 +385,8 @@
 
 - name: ".projects"
   namespace: ""
-  description: "Show active-project summary (default) or family-grouped session list with scope control"
-  hint: "Active project summary or family-grouped list"
+  description: "Scoped project list with per-project session aggregation (default: scope::around)"
+  hint: "Scoped project list"
   version: "1.0.0"
   status: "stable"
   aliases: []
@@ -399,7 +399,7 @@
   arguments:
     - name: "scope"
       kind: "String"
-      description: "Session discovery scope (local, relevant, under, global; default: under)"
+      description: "Session discovery scope (local, relevant, under, global, around; default: around)"
       hint: "Discovery scope"
       optional: true
       validation_rules: []
@@ -462,6 +462,7 @@
 
   examples:
     - ".projects"
+    - ".projects scope::around"
     - ".projects scope::relevant"
     - ".projects scope::under path::/home/user1/pro"
     - ".projects scope::global agent::1 min_entries::50"

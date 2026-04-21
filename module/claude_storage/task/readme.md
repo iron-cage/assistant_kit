@@ -21,3 +21,5 @@
 | 15 | 015 | 0 | 8 | 6 | 6 | 0 | ✅ (Completed) | any | [Rename .sessions → .projects](completed/015_rename_sessions_to_projects.md) | Align command name with user-facing concept (projects, not sessions) |
 | 16 | 016 | 0 | 9 | 3 | 5 | 0 | ✅ (Completed) | any | [Redesign .projects output as project-centric](completed/016_redesign_projects_output.md) | Show project summaries (aggregated) instead of session UUID lists |
 | 17 | 017 | 0 | 7 | 9 | 5 | 0 | ✅ (Completed) | any | [Fix stale "Active session" mode-boundary assertions](completed/017_fix_stale_active_session_assertions.md) | Replace obsolete pre-016 marker in IT-34/IT-35; remove redundant checks from IT-1/IT-47 |
+| 18 | 018 | 1008 | 8 | 7 | 9 | 2 | 🎯 (Available) | any | [Implement `scope::around` for `.projects`](018_implement_scope_around.md) | Add bidirectional neighborhood scope and make it the default for `.projects` |
+| 19 | 019 | 1512 | 9 | 7 | 8 | 3 | 🎯 (Available) | any | [Remove `.projects` summary mode](019_remove_summary_mode.md) | Delete `is_default` gate + `render_active_project_summary`; bare invocation becomes list mode |

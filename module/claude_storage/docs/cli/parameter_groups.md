@@ -199,12 +199,13 @@ Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact mat
 
 **Scope × Path interaction:**
 
-| Scope | Path semantics |
-|-------|----------------|
-| `local` | Starting directory to look up (default: cwd) |
-| `relevant` | Starting point for ancestor walk (default: cwd) |
-| `under` | Root of subtree to descend (required when non-cwd) |
-| `global` | Ignored (all projects regardless of path) |
+| Scope | Path semantics | Direction |
+|-------|----------------|-----------|
+| `local` | Starting directory to look up (default: cwd) | ↑ |
+| `relevant` | Starting point for ancestor walk (default: cwd) | ↑ |
+| `under` | Root of subtree to descend (required when non-cwd) | ↓ |
+| `global` | Ignored (all projects regardless of path) | all |
+| `around` | Bidirectional anchor: ancestor walk + subtree (default: cwd) | ↑↓ |
 
 **Mirrors kbase `DiscoveryConfig`:** The `scope` + `path` pair directly mirrors kbase's `DiscoveryConfig` group (scope, path, depth, role). This intentional alignment creates a consistent mental model across tools.
 
@@ -212,11 +213,12 @@ Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact mat
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
-| `scope::` | [`ScopeValue`](types.md#scopevalue) | Discovery strategy: `local`\|`relevant`\|`under`\|`global` | `under` |
+| `scope::` | [`ScopeValue`](types.md#scopevalue) | Discovery strategy: `local`\|`relevant`\|`under`\|`global`\|`around` | `around` |
 | `path::` | [`StoragePath`](types.md#storagepath) | Filesystem anchor for scope resolution | cwd |
 
 **Examples:**
 ```bash
+.projects scope::around
 .projects scope::local
 .projects scope::relevant
 .projects scope::under path::/home/user1/pro

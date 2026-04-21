@@ -445,16 +445,16 @@ Discovery scope for session and project operations.
 **Fundamental Type:** String enum wrapper
 
 **Constraints:**
-- Valid values: `relevant`, `local`, `under`, `global`
+- Valid values: `relevant`, `local`, `under`, `global`, `around`
 - Case-insensitive on input
-- Error on invalid: `"scope must be relevant|local|under|global, got {value}"`
+- Error on invalid: `"scope must be relevant|local|under|global|around, got {value}"`
 
 **Default:** varies by command (see table below)
 
 **Commands:** `.list`, `.count`, `.search`, `.show`, `.export`, `.projects`
 (See individual command sections in [commands.md](commands.md))
 
-**Purpose:** Controls which projects are searched or counted. `local` is the narrowest (current project only); `global` is the broadest (all projects). `relevant` walks the ancestor chain from cwd upward to `/`, collecting projects at each level — modeling the "what matters for this project" concept.
+**Purpose:** Controls which projects are searched or counted. `local` is the narrowest (current project only); `global` is the broadest (all projects). `relevant` walks the ancestor chain from cwd upward to `/`; `under` descends into the subtree; `around` combines both for a full neighborhood view — models "what governs this work and what lives under it."
 
 **Per-command semantics:**
 
@@ -465,7 +465,7 @@ Discovery scope for session and project operations.
 | `.search` | `global` | Boundary for what gets searched |
 | `.show` | `local` | Project search boundary when no `project::` given |
 | `.export` | `local` | Project search boundary for source session lookup |
-| `.projects` | `local` | Session discovery scope |
+| `.projects` | `around` | Session discovery scope (ancestors + current + descendants) |
 
 **Examples:**
 ```bash
@@ -474,9 +474,10 @@ scope::local      # Current project only
 scope::relevant   # All ancestor projects up to /
 scope::under      # All projects under path
 scope::global     # All projects in storage
+scope::around     # Ancestors + current + descendants (default for .projects)
 
 # Invalid values
-scope::all        # "scope must be relevant|local|under|global, got all"
+scope::all        # "scope must be relevant|local|under|global|around, got all"
 ```
 
 **Group:** [Scope Configuration](parameter_groups.md#scope-configuration)
