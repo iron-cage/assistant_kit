@@ -22,34 +22,86 @@
 
 ---
 
-### Containment Diagram
+### Architecture Diagram
+
+Two-layer architecture with all six pairwise cardinalities:
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│  Storage Root  (~/.claude/projects/)                                │
-│                                                                     │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  Project  (-home-user1-pro/)                                 │  │
-│  │                                                              │  │
-│  │  ┌──────────────────────────┐  ┌──────────────────────────┐ │  │
-│  │  │  Conversation 1          │  │  Conversation 2          │ │  │
-│  │  │  ┌──────────────────┐    │  │  ┌────────┐  ┌────────┐  │ │  │
-│  │  │  │  Session A       │    │  │  │Session │  │Session │  │ │  │
-│  │  │  │  (root .jsonl)   │    │  │  │   B    │  │   C    │  │ │  │
-│  │  │  │  Entry 1         │    │  │  │        │  │        │  │ │  │
-│  │  │  │  Entry 2  ...    │    │  │  │ (chain │  │ of B)  │  │ │  │
-│  │  │  └──────────────────┘    │  │  └────────┘  └────────┘  │ │  │
-│  │  │  ┌──────────────────┐    │  │                           │ │  │
-│  │  │  │  Agent Session   │    │  └──────────────────────────┘ │  │
-│  │  │  │  (agent-*.jsonl) │    │                               │  │
-│  │  │  │  Entry 1 ...     │    │                               │  │
-│  │  │  └──────────────────┘    │                               │  │
-│  │  └──────────────────────────┘                               │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
+╔═══════════════════════════════════════════════════════════════════════╗
+║                      USER-FACING LAYER                                ║
+║                                                                       ║
+║   ┌─────────────────────────────────────────────────────────────┐    ║
+║   │                        PROJECT                              │    ║
+║   │   filesystem directory opened in Claude Code                │    ║
+║   │   ~/.claude/projects/{path-encoded}/                        │    ║
+║   └───────────────────────────┬─────────────────────────────────┘    ║
+║                               │ 1                                     ║
+║                               │  contains                             ║
+║                               │ N                                     ║
+║   ┌───────────────────────────▼─────────────────────────────────┐    ║
+║   │                      CONVERSATION                           │    ║
+║   │   logical interaction unit — "one chat" from user's view    │    ║
+║   │   currently: 1 Session Family per Conversation              │    ║
+║   │   future:    N sessions chained per Conversation (task 021) │    ║
+║   └─────────────────────────────────────────────────────────────┘    ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║   boundary: users see conversations — sessions are hidden below       ║
+╠═══════════════════════════════════════════════════════════════════════╣
+║                       STORAGE LAYER                                   ║
+║                                                                       ║
+║   ┌─────────────────────────────────────────────────────────────┐    ║
+║   │                        SESSION                              │    ║
+║   │   one .jsonl file on disk — physical container              │    ║
+║   │   B17: parentUuid chain is closed within this file          │    ║
+║   │   B18: no link to prior session (chains must be inferred)   │    ║
+║   └───────────────────────────┬─────────────────────────────────┘    ║
+║                               │ 1                                     ║
+║                               │  contains                             ║
+║                               │ 0..N                                  ║
+║   ┌───────────────────────────▼─────────────────────────────────┐    ║
+║   │                         ENTRY                               │    ║
+║   │   one line in .jsonl — one turn (user or assistant message) │    ║
+║   │   fields: uuid, parentUuid, timestamp, sessionId, message   │    ║
+║   └─────────────────────────────────────────────────────────────┘    ║
+╚═══════════════════════════════════════════════════════════════════════╝
 ```
 
-**Note on Conversation 2 (Sessions B + C)**: A conversation spanning multiple session files requires the Conversation Chain detection algorithm (task 021). In the current implementation, each session = one conversation (Sessions B and C are two separate conversations until the algorithm is deployed).
+**All six pairwise cardinalities:**
+
+```
+  Project      ──1:N──▶  Conversation   one workspace, many chats
+  Project      ──1:N──▶  Session        transitive via Conversation
+  Project      ──1:M──▶  Entry          transitive via Session
+
+  Conversation ──1:1──▶  Session        now   — one .jsonl = one chat
+  Conversation ──1:N──▶  Session        future — chain of .jsonl files (task 021)
+  Conversation ──1:M──▶  Entry          transitive via Session
+
+  Session      ──1:N──▶  Entry          one file, many turns
+```
+
+**Containment (with agent sessions and conversation chains):**
+
+```
+~/.claude/projects/
+└── -home-user1-pro/                    ← Project
+    │
+    ├── [Conversation 1]  ─────────────── user-facing grouping
+    │   ├── a1b2c3d4.jsonl              ← Session A (root)
+    │   │   ├── Entry (user)
+    │   │   ├── Entry (assistant)
+    │   │   └── ...
+    │   └── agent-e5f6.jsonl            ← Agent Session (part of Conv 1)
+    │       └── ...
+    │
+    └── [Conversation 2]  ─────────────── future: chain of 2 sessions
+        ├── 7e8f9a0b.jsonl              ← Session B  ─┐ chained by
+        │   └── ...                                    │ temporal proximity
+        └── c1d2e3f4.jsonl              ← Session C  ─┘ (task 021)
+            └── ...
+```
+
+**Note (current implementation)**: Conversation 2 (Sessions B + C chained) requires the Conversation Chain detection algorithm from task 021. Until then, Sessions B and C are each their own separate Conversation (1:1 mapping).
 
 ---
 
