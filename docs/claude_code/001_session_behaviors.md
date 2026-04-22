@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Catalog observed and confirmed external behaviors of the `claude` binary relevant to session lifecycle and storage.
-- **Responsibility**: Authoritative source of behavior hypotheses (B1–B16h) with evidence and invalidation tests.
-- **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding.
+- **Responsibility**: Authoritative source of behavior hypotheses (B1–B18) with evidence and invalidation tests.
+- **In Scope**: Session continuation, flag semantics, agent layouts, entry threading, storage path encoding, cross-session relationship absence (conversation chain foundations).
 - **Out of Scope**: Entry-level JSONL schema (→ [004_jsonl_format.md](004_jsonl_format.md)); storage directory structure (→ [002_storage_organization.md](002_storage_organization.md)).
 
 ---
@@ -39,6 +39,8 @@ or direct inference. All behaviors describe the external `claude` binary.
 | B15 | Agent entries carry a `slug` field (human-readable label shared by all agents of one parent); root session entries typically lack `slug` | Families | 🎯 | 85% | E25, E29 |
 | B16 | `--tools ""` disables all tool invocation; `--tools "default"` restores all tools; both values accepted at CLI parse time | Flags | ✅ | 90% | E30, E31 |
 | B16h | Tool *definitions* (~12k tokens) remain in the assembled system prompt even when `--tools ""` is given — invocation is blocked but the token cost is unchanged | Flags | ❓ | 60% | E32 |
+| B17 | The `parentUuid` chain within one session file is self-contained: every UUID referenced by a `parentUuid` field exists as a `uuid` field within the same `.jsonl` file; no `parentUuid` points across session files | Entries | 🎯 | 85% | E33 |
+| B18 | Claude Code writes no cross-session continuation metadata: a new session's first entry has `parentUuid: null` with no field referencing the prior session; logical conversation chains must be inferred externally (e.g., from mtime ordering or content) | Continuation | 🎯 | 80% | E34 |
 
 ---
 
@@ -78,6 +80,8 @@ or direct inference. All behaviors describe the external `claude` binary.
 | E30 | B16      | Observation | `claude --help` live output | `--tools` flag entry | Help text: "Specify the list of available tools from the built-in set. Use `""` to disable all tools, `"default"` to use all tools, or specify tool names (e.g. `"Bash,Edit,Read"`)" |
 | E31 | B16      | Test        | `../../module/claude_storage/tests/behavior/b16_tools_disable.rs` | `b16a_tools_flag_documented_in_help`, `b16b_tools_empty_string_accepted`, `b16c_tools_default_value_accepted` | Flag documented in help and accepted at CLI parse time without parse error |
 | E32 | B16h     | Inference   | Research: Piebald-AI/claude-code-system-prompts; ClaudeLog (2026-04) | Tool assembly layer analysis | Tool definitions injected into assembled system prompt before behavioral flags are applied (confirmed for `--system-prompt` replacement). `--tools` likely operates at invocation-policy layer, not definition-assembly layer — same architectural split as `--system-prompt`. Unconfirmed: requires live token-count comparison. |
+| E33 | B17      | Test        | `../../module/claude_storage/tests/behavior/b17_parentuuid_self_contained.rs` | `b17_parentuuid_refs_stay_within_session` | For a real multi-entry session file, every non-null `parentUuid` value appears as a `uuid` in the same file; no UUID from another session file is referenced |
+| E34 | B18      | Test        | `../../module/claude_storage/tests/behavior/b18_no_cross_session_links.rs` | `b18_first_entry_of_new_session_has_null_parent` | In a project with 2+ non-agent session files, the first entry of each non-oldest session has `parentUuid: null` — confirming no cross-session continuation pointer is written |
 
 ---
 
@@ -195,18 +199,41 @@ Root session entries typically lack the `slug` field; their first entry is usual
 
 The slug serves as a human-friendly family identifier that could be displayed instead of UUIDs.
 
+### B17 — `parentUuid` chain is self-contained per session file
+
+Within one `.jsonl` session file, the `parentUuid` threading is closed — no entry references
+a UUID that lives in a different file. This means the full conversation thread for a session
+can be reconstructed by reading only that one file.
+
+This is the key reason why cross-session conversation chains must be inferred rather than
+followed: there is no pointer to jump to. The boundary between two sessions (even if they
+represent logically connected work) is a hard storage boundary with no link crossing it.
+
+### B18 — No cross-session continuation metadata
+
+When Claude Code starts a new session in a project that already has sessions (whether via
+`--new-session` or a fresh start), the first entry of the new session has `parentUuid: null`.
+No field in the new session's entries references the prior session's UUID or last entry UUID.
+
+This means:
+- Two consecutive sessions in the same project directory look identical from a storage perspective whether they are logically connected or not
+- Grouping sessions into Conversations (Conversation Chains) requires heuristic inference — temporal proximity, content context, or external markers
+- Claude Code itself has no "resume from prior conversation" semantic in storage; it only "continue current session" (append to the same file) or "start new" (create a new file)
+
+See [007_concept_taxonomy.md](007_concept_taxonomy.md) for how Conversation Chains are defined relative to this storage reality.
+
 ---
 
 ### Statistical Summary
 
 | Status | Count | IDs |
 |--------|-------|-----|
-| ✅ Confirmed | 11 | B1, B2, B3, B6, B7, B8, B9, B10, B12, B13, B14 |
-| 🎯 Observed | 4 | B4, B5, B11, B15 |
-| ❓ Uncertain | 0 | — |
+| ✅ Confirmed | 12 | B1, B2, B3, B6, B7, B8, B9, B10, B12, B13, B14, B16 |
+| 🎯 Observed | 6 | B4, B5, B11, B15, B17, B18 |
+| ❓ Uncertain | 1 | B16h |
 
-**Total behaviors:** 15
-**Confirmed (≥90% certainty):** 11
+**Total behaviors:** 18 (B1–B18; B16h is a sub-hypothesis within B16)
+**Confirmed (≥90% certainty):** 12
 **Lowest certainty:** B5 (60% — current session selection mechanism)
 **Investigation priority:** B5 — can be confirmed by reading Claude Code changelog or source
 

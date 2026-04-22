@@ -1,297 +1,259 @@
 meta:
   description: Cross-reference graph for all doc instances in the assistant workspace
-  node_count: 20
-  edge_count: 37
+  node_count: 21
+  edge_count: 43
   component_count: 3
-  generated: 2026-04-13
-
+  generated: '2026-04-22'
 nodes:
-  - id: feature/001
-    file: feature/001_workspace_design.md
-    label: Workspace Design
-    entity: feature
-
-  - id: feature/002
-    file: feature/002_agent_inventory.md
-    label: Agent Inventory
-    entity: feature
-
-  - id: invariant/001
-    file: invariant/001_privacy_invariant.md
-    label: Privacy Invariant
-    entity: invariant
-
-  - id: invariant/002
-    file: invariant/002_versioning_strategy.md
-    label: Versioning Strategy
-    entity: invariant
-
-  - id: invariant/003
-    file: invariant/003_testing_strategy.md
-    label: Testing Strategy
-    entity: invariant
-
-  - id: invariant/004
-    file: invariant/004_performance.md
-    label: Performance
-    entity: invariant
-
-  - id: pattern/001
-    file: pattern/001_crate_layering.md
-    label: Crate Layering
-    entity: pattern
-
-  - id: integration/001
-    file: integration/001_consumer_integration.md
-    label: Consumer Workspace Integration
-    entity: integration
-
-  - id: error/001
-    file: error/001_rate_limit_reached.md
-    label: Rate Limit Reached
-    entity: error
-
-  - id: error/002
-    file: error/002_authentication_failed.md
-    label: Authentication Failed
-    entity: error
-
-  - id: error/003
-    file: error/003_context_limit_reached.md
-    label: Context Limit Reached
-    entity: error
-
-  - id: error/004
-    file: error/004_request_timed_out.md
-    label: Request Timed Out
-    entity: error
-
-  - id: error/005
-    file: error/005_api_overloaded.md
-    label: API Overloaded
-    entity: error
-
-  - id: claude_code/001
-    file: claude_code/001_session_behaviors.md
-    label: Session Behaviors
-    entity: claude_code
-
-  - id: claude_code/002
-    file: claude_code/002_storage_organization.md
-    label: Storage Organization
-    entity: claude_code
-
-  - id: claude_code/003
-    file: claude_code/003_filesystem_layout.md
-    label: Filesystem Layout
-    entity: claude_code
-
-  - id: claude_code/004
-    file: claude_code/004_jsonl_format.md
-    label: JSONL Format
-    entity: claude_code
-
-  - id: claude_code/005
-    file: claude_code/005_settings_format.md
-    label: Settings Format
-    entity: claude_code
-
-  - id: claude_code/006
-    file: claude_code/006_ancillary_formats.md
-    label: Ancillary Formats
-    entity: claude_code
-
-  - id: claude_code/params
-    file: claude_code/params/readme.md
-    label: Parameters
-    entity: claude_code
-
+- id: feature/001
+  file: feature/001_workspace_design.md
+  label: Workspace Design
+  entity: feature
+- id: feature/002
+  file: feature/002_agent_inventory.md
+  label: Agent Inventory
+  entity: feature
+- id: invariant/001
+  file: invariant/001_privacy_invariant.md
+  label: Privacy Invariant
+  entity: invariant
+- id: invariant/002
+  file: invariant/002_versioning_strategy.md
+  label: Versioning Strategy
+  entity: invariant
+- id: invariant/003
+  file: invariant/003_testing_strategy.md
+  label: Testing Strategy
+  entity: invariant
+- id: invariant/004
+  file: invariant/004_performance.md
+  label: Performance
+  entity: invariant
+- id: pattern/001
+  file: pattern/001_crate_layering.md
+  label: Crate Layering
+  entity: pattern
+- id: integration/001
+  file: integration/001_consumer_integration.md
+  label: Consumer Workspace Integration
+  entity: integration
+- id: error/001
+  file: error/001_rate_limit_reached.md
+  label: Rate Limit Reached
+  entity: error
+- id: error/002
+  file: error/002_authentication_failed.md
+  label: Authentication Failed
+  entity: error
+- id: error/003
+  file: error/003_context_limit_reached.md
+  label: Context Limit Reached
+  entity: error
+- id: error/004
+  file: error/004_request_timed_out.md
+  label: Request Timed Out
+  entity: error
+- id: error/005
+  file: error/005_api_overloaded.md
+  label: API Overloaded
+  entity: error
+- id: claude_code/001
+  file: claude_code/001_session_behaviors.md
+  label: Session Behaviors
+  entity: claude_code
+- id: claude_code/002
+  file: claude_code/002_storage_organization.md
+  label: Storage Organization
+  entity: claude_code
+- id: claude_code/003
+  file: claude_code/003_filesystem_layout.md
+  label: Filesystem Layout
+  entity: claude_code
+- id: claude_code/004
+  file: claude_code/004_jsonl_format.md
+  label: JSONL Format
+  entity: claude_code
+- id: claude_code/005
+  file: claude_code/005_settings_format.md
+  label: Settings Format
+  entity: claude_code
+- id: claude_code/006
+  file: claude_code/006_ancillary_formats.md
+  label: Ancillary Formats
+  entity: claude_code
+- id: claude_code/params
+  file: claude_code/params/readme.md
+  label: Parameters
+  entity: claude_code
+- id: claude_code/007
+  file: claude_code/007_concept_taxonomy.md
+  label: Concept Taxonomy
+  entity: claude_code
 edges:
-  - from: feature/001
-    to: pattern/001
-    via: cross_references
-
-  - from: feature/001
-    to: invariant/001
-    via: cross_references
-
-  - from: feature/001
-    to: invariant/004
-    via: cross_references
-
-  - from: feature/001
-    to: integration/001
-    via: cross_references
-
-  - from: feature/002
-    to: feature/001
-    via: cross_references
-
-  - from: feature/002
-    to: pattern/001
-    via: cross_references
-
-  - from: feature/002
-    to: invariant/001
-    via: cross_references
-
-  - from: feature/002
-    to: integration/001
-    via: cross_references
-
-  - from: invariant/001
-    to: feature/001
-    via: cross_references
-
-  - from: invariant/001
-    to: integration/001
-    via: cross_references
-
-  - from: invariant/002
-    to: feature/001
-    via: cross_references
-
-  - from: invariant/003
-    to: feature/001
-    via: cross_references
-
-  - from: invariant/004
-    to: feature/001
-    via: cross_references
-
-  - from: pattern/001
-    to: feature/001
-    via: cross_references
-
-  - from: pattern/001
-    to: invariant/001
-    via: cross_references
-
-  - from: integration/001
-    to: invariant/001
-    via: cross_references
-
-  - from: integration/001
-    to: pattern/001
-    via: cross_references
-
-  - from: feature/001
-    to: invariant/003
-    via: cross_references
-
-  - from: error/002
-    to: error/001
-    via: cross_references
-
-  - from: error/003
-    to: error/001
-    via: cross_references
-
-  - from: error/003
-    to: error/004
-    via: cross_references
-
-  - from: error/004
-    to: error/003
-    via: cross_references
-
-  - from: error/004
-    to: error/005
-    via: cross_references
-
-  - from: error/005
-    to: error/001
-    via: cross_references
-
-  - from: error/005
-    to: error/004
-    via: cross_references
-
-  - from: claude_code/001
-    to: claude_code/002
-    via: cross_references
-
-  - from: claude_code/001
-    to: claude_code/004
-    via: cross_references
-
-  - from: claude_code/002
-    to: claude_code/001
-    via: cross_references
-
-  - from: claude_code/002
-    to: claude_code/004
-    via: cross_references
-
-  - from: claude_code/002
-    to: claude_code/005
-    via: cross_references
-
-  - from: claude_code/003
-    to: claude_code/005
-    via: cross_references
-
-  - from: claude_code/004
-    to: claude_code/001
-    via: cross_references
-
-  - from: claude_code/006
-    to: claude_code/004
-    via: cross_references
-
-  - from: claude_code/params
-    to: claude_code/001
-    via: cross_references
-
-  - from: claude_code/params
-    to: claude_code/005
-    via: cross_references
-
-  - from: claude_code/001
-    to: claude_code/params
-    via: cross_references
-
-  - from: claude_code/005
-    to: claude_code/params
-    via: cross_references
-
+- from: feature/001
+  to: pattern/001
+  via: cross_references
+- from: feature/001
+  to: invariant/001
+  via: cross_references
+- from: feature/001
+  to: invariant/004
+  via: cross_references
+- from: feature/001
+  to: integration/001
+  via: cross_references
+- from: feature/002
+  to: feature/001
+  via: cross_references
+- from: feature/002
+  to: pattern/001
+  via: cross_references
+- from: feature/002
+  to: invariant/001
+  via: cross_references
+- from: feature/002
+  to: integration/001
+  via: cross_references
+- from: invariant/001
+  to: feature/001
+  via: cross_references
+- from: invariant/001
+  to: integration/001
+  via: cross_references
+- from: invariant/002
+  to: feature/001
+  via: cross_references
+- from: invariant/003
+  to: feature/001
+  via: cross_references
+- from: invariant/004
+  to: feature/001
+  via: cross_references
+- from: pattern/001
+  to: feature/001
+  via: cross_references
+- from: pattern/001
+  to: invariant/001
+  via: cross_references
+- from: integration/001
+  to: invariant/001
+  via: cross_references
+- from: integration/001
+  to: pattern/001
+  via: cross_references
+- from: feature/001
+  to: invariant/003
+  via: cross_references
+- from: error/002
+  to: error/001
+  via: cross_references
+- from: error/003
+  to: error/001
+  via: cross_references
+- from: error/003
+  to: error/004
+  via: cross_references
+- from: error/004
+  to: error/003
+  via: cross_references
+- from: error/004
+  to: error/005
+  via: cross_references
+- from: error/005
+  to: error/001
+  via: cross_references
+- from: error/005
+  to: error/004
+  via: cross_references
+- from: claude_code/001
+  to: claude_code/002
+  via: cross_references
+- from: claude_code/001
+  to: claude_code/004
+  via: cross_references
+- from: claude_code/002
+  to: claude_code/001
+  via: cross_references
+- from: claude_code/002
+  to: claude_code/004
+  via: cross_references
+- from: claude_code/002
+  to: claude_code/005
+  via: cross_references
+- from: claude_code/003
+  to: claude_code/005
+  via: cross_references
+- from: claude_code/004
+  to: claude_code/001
+  via: cross_references
+- from: claude_code/006
+  to: claude_code/004
+  via: cross_references
+- from: claude_code/params
+  to: claude_code/001
+  via: cross_references
+- from: claude_code/params
+  to: claude_code/005
+  via: cross_references
+- from: claude_code/001
+  to: claude_code/params
+  via: cross_references
+- from: claude_code/005
+  to: claude_code/params
+  via: cross_references
+- from: claude_code/007
+  to: claude_code/001
+  via: cross_references
+- from: claude_code/007
+  to: claude_code/002
+  via: cross_references
+- from: claude_code/007
+  to: claude_code/004
+  via: cross_references
+- from: claude_code/001
+  to: claude_code/007
+  via: cross_references
+- from: claude_code/002
+  to: claude_code/007
+  via: cross_references
+- from: claude_code/004
+  to: claude_code/007
+  via: cross_references
 components:
-  - id: 1
-    label: Main corpus
-    size: 8
-    isolated: false
-    nodes:
-      - feature/001
-      - feature/002
-      - invariant/001
-      - invariant/002
-      - invariant/003
-      - invariant/004
-      - pattern/001
-      - integration/001
-
-  - id: 2
-    label: Error catalog
-    size: 5
-    isolated: true
-    nodes:
-      - error/001
-      - error/002
-      - error/003
-      - error/004
-      - error/005
-
-  - id: 3
-    label: Claude Code knowledge
-    size: 7
-    isolated: true
-    nodes:
-      - claude_code/001
-      - claude_code/002
-      - claude_code/003
-      - claude_code/004
-      - claude_code/005
-      - claude_code/006
-      - claude_code/params
-
+- id: 1
+  label: Main corpus
+  size: 8
+  isolated: false
+  nodes:
+  - feature/001
+  - feature/002
+  - invariant/001
+  - invariant/002
+  - invariant/003
+  - invariant/004
+  - pattern/001
+  - integration/001
+- id: 2
+  label: Error catalog
+  size: 5
+  isolated: true
+  nodes:
+  - error/001
+  - error/002
+  - error/003
+  - error/004
+  - error/005
+- id: 3
+  label: Claude Code knowledge
+  size: 8
+  isolated: true
+  nodes:
+  - claude_code/001
+  - claude_code/002
+  - claude_code/003
+  - claude_code/004
+  - claude_code/005
+  - claude_code/006
+  - claude_code/params
+  - claude_code/007
 dangling_refs: []

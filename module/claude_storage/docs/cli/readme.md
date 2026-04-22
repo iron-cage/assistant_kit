@@ -51,6 +51,7 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 
 - [`../feature/001_cli_tool.md`](../feature/001_cli_tool.md) — Crate architecture and overall design
 - `../readme.md` — User-facing crate overview
+- [`docs/claude_code/007_concept_taxonomy.md`](../../../../docs/claude_code/007_concept_taxonomy.md) — Four-level taxonomy (Project / Conversation / Session / Entry) — authoritative terminology reference
 - [`docs/claude_code/002_storage_organization.md`](../../../../docs/claude_code/002_storage_organization.md) — Storage layout (`~/.claude/projects/`)
 - `../../unilang.commands.yaml` — Machine-readable command definitions
 - [tests/doc/cli/](../../tests/doc/cli/readme.md) — test case planning (commands, params, groups)

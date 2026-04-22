@@ -59,6 +59,7 @@ The hierarchy mirrors the `~/.claude/` directory layout exactly. Each level is a
 | source | `../../src/stats.rs` | SessionStats, ProjectStats, GlobalStats |
 | doc | `../algorithm/001_path_encoding.md` | Path encoding for path-based project names |
 | doc | `../invariant/001_safety_guarantees.md` | Append-only and atomic write invariants |
+| doc | `../../../../docs/claude_code/007_concept_taxonomy.md` | User-facing four-level taxonomy (Project/Conversation/Session/Entry) that maps onto this storage model |
 
 ### Sources
 

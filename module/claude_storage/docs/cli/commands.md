@@ -14,7 +14,7 @@ See [params.md](params.md) for full parameter specs and [types.md](types.md) for
 | 4 | `.count` | stable | Fast counting of items | 5 |
 | 5 | `.search` | stable | Search session content by query | 8 |
 | 6 | `.export` | stable | Export session to file | 6 |
-| 7 | `.projects` | stable | Scoped project list with per-project session aggregation | 6 |
+| 7 | `.projects` | stable | Scoped project list with per-project conversation listing | 6 |
 | 8 | `.path` | stable | Compute Claude storage path for a directory | 2 |
 | 9 | `.exists` | stable | Check conversation history exists (exits 1 when absent) | 2 |
 | 10 | `.session.dir` | stable | Compute session working directory path | 2 |
@@ -72,7 +72,7 @@ claude_storage .status verbosity::2
 
 ### Command :: 2. `.list`
 
-List projects or sessions in Claude Code storage. Project-first view: all projects are listed, with sessions optionally shown per project. Use this when navigating projects or filtering by project path.
+List projects or conversations in Claude Code storage. Project-first view: all projects are listed, with conversations optionally shown per project. Use this when navigating projects or filtering by project path.
 
 **Parameters:** `type::`, `path::`, `sessions::`, `session::`, `agent::`, `min_entries::`, `verbosity::`, `scope::`
 
@@ -334,7 +334,7 @@ claude_storage .export session_id::ID output::PATH scope::global
 
 ### Command :: 7. `.projects`
 
-Project list with scope control; sessions are aggregated by project directory and one entry is shown per project (not per session file). Bare invocation shows all projects in the bidirectional neighborhood (ancestors + current + descendants via `scope::around`).
+Project list with scope control; conversations are grouped by project directory and one entry is shown per project (not per session file). Bare invocation shows all projects in the bidirectional neighborhood (ancestors + current + descendants via `scope::around`).
 
 **Parameters:** `scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`, `verbosity::`
 
@@ -391,7 +391,7 @@ claude_storage .projects scope::global limit::5
 
 **Notes:**
 - `scope::relevant` walks UP from cwd to `/`, collecting sessions from every project at each ancestor level
-- Distinct from `.exists`: that checks existence (exit 0/1); this lists sessions
+- Distinct from `.exists`: that checks existence (exit 0/1); this lists conversations
 - **Fixed (issue-024)**: `scope::local/relevant/under` previously returned 0 results when the base path contained underscores (e.g., `wip_core`). Root cause: lossy encoding mapped `_` and `/` identically; decoded paths diverged from real paths. Fixed by comparing encoded paths directly against raw storage directory names.
 - **Fixed (issue-029)**: `scope::under` (and all scopes at verbosity ≥ 1) previously displayed project path headers with underscore-named directories split as path separators (e.g., `wip_core` → `wip/core`). Root cause: `decode_project_display` heuristic defaulted to `/` for every `-` boundary; underscore-named dirs were indistinguishable from path separators in the encoded form. Fixed by adding a filesystem-guided fallback that walks the real directory tree to resolve ambiguous boundaries.
 - **Fixed (issue-030)**: Session path headers previously showed only the base directory, truncating hyphen-prefixed topic components even when they represent real directories (e.g., `src/-default_topic` was shown as `src`). Root cause: `decode_project_display` stripped all `--topic` suffixes before decoding. Fixed by extending the decoded base with each topic component as a real filesystem directory; the longest existing path is used as the header.

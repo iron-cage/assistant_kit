@@ -25,7 +25,7 @@ to the workspace-level [`docs/claude_code/`](../../docs/claude_code/) directory,
 consumed by multiple crates (`claude_storage`, `claude_version`, `claude_runner`, `claude_profile`).
 
 Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.md`, `003_filesystem_layout.md`,
-`004_jsonl_format.md`, `005_settings_format.md`, `006_ancillary_formats.md`.
+`004_jsonl_format.md`, `005_settings_format.md`, `006_ancillary_formats.md`, `007_concept_taxonomy.md`.
 
 ---
 
@@ -36,10 +36,10 @@ Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.m
 **Complete CLI reference** for all claude_storage commands, parameters, and types.
 
 **Contents**:
-- [commands.md](cli/commands.md) — All 13 commands with syntax, parameters, examples
+- [commands.md](cli/commands.md) — All 11 commands with syntax, parameters, examples
 - [params.md](cli/params.md) — All parameters with types, validation, bidirectional cross-refs
 - [types.md](cli/types.md) — Semantic type system with validation rules
-- [dictionary.md](cli/dictionary.md) — Domain vocabulary (project, session, entry, scope, etc.)
+- [dictionary.md](cli/dictionary.md) — Domain vocabulary (project, conversation, session, entry, scope, etc.)
 - [parameter_groups.md](cli/parameter_groups.md) — Shared parameter groups (Output Control, Project Scope, Session Filter, etc.)
 
 **Use this when**:

@@ -26,8 +26,8 @@ Four-level containment hierarchy from storage root to individual message payload
 
 ```
 Storage Root  (~/.claude/)
-└── Project   (one directory per filesystem path or UUID)
-    └── Session  (one .jsonl file per conversation, append-only)
+└── Project      (one directory per filesystem path or UUID)
+    └── Session  (one .jsonl file — the physical storage unit)
         └── Entry  (one line per turn)
             ├── [envelope]  uuid, parentUuid, timestamp,
             │               sessionId, isSidechain, cwd, gitBranch
@@ -37,6 +37,8 @@ Storage Root  (~/.claude/)
                 ├── model    (assistant only)
                 └── usage    (assistant only)
 ```
+
+**User-facing layer**: The `claude_storage` tool introduces **Conversation** as the user-facing concept sitting between Project and Session. One Conversation corresponds to one Session (root file) in the current implementation; in future it may span a chain of sessions. See [007_concept_taxonomy.md](007_concept_taxonomy.md) for the full four-level user/storage taxonomy.
 
 Two agent storage layouts coexist (format is per-project, neither is deprecated).
 

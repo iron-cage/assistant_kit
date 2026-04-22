@@ -4,19 +4,20 @@
 
 - **Purpose**: Document the external behavior, storage format, and runtime filesystem conventions of the Claude Code binary for all workspace crates that interact with it.
 - **Responsibility**: Master file for the `claude_code/` doc entity — lists all instances, defines type-specific requirements, and declares scope boundaries.
-- **In Scope**: Session behavior catalog, storage organization, filesystem layout, JSONL entry format, settings format, ancillary file formats, and complete runtime parameter reference (CLI flags, env vars, config keys).
+- **In Scope**: Concept taxonomy (Project/Conversation/Session/Entry hierarchy), session behavior catalog, storage organization, filesystem layout, JSONL entry format, settings format, ancillary file formats, and complete runtime parameter reference (CLI flags, env vars, config keys).
 - **Out of Scope**: Internal implementation details of workspace crates (→ respective crate `docs/`); Claude API protocol (→ Anthropic documentation); builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_params/`).
 
 ### Overview Table
 
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
-| 001 | [Session Behaviors](001_session_behaviors.md) | Observed external behaviors (B1–B16h) with evidence and invalidation tests | ✅ |
+| 001 | [Session Behaviors](001_session_behaviors.md) | Observed external behaviors (B1–B18) with evidence and invalidation tests | ✅ |
 | 002 | [Storage Organization](002_storage_organization.md) | `~/.claude/` directory architecture, containment hierarchy, access patterns | ✅ |
 | 003 | [Filesystem Layout](003_filesystem_layout.md) | Runtime paths accessed by claude_version; directory tree and path resolution | ✅ |
 | 004 | [JSONL Format](004_jsonl_format.md) | Session entry schema: fields, content blocks, usage, threading model | ✅ |
 | 005 | [Settings Format](005_settings_format.md) | settings.json structure, atomic write protocol, version lock, type inference | ✅ |
 | 006 | [Ancillary Formats](006_ancillary_formats.md) | history.jsonl, credentials, debug logs, shell snapshots, todos, commands | ✅ |
+| 007 | [Concept Taxonomy](007_concept_taxonomy.md) | Four-level hierarchy (Project / Conversation / Session / Entry), pairwise relationships, containment diagram | ✅ |
 | params/ | [Parameters](params/readme.md) | All 69 runtime parameters — CLI flags, env vars, config keys; one file per parameter | ✅ |
 
 ### Type-Specific Requirements

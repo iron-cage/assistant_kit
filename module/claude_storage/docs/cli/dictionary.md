@@ -4,23 +4,49 @@ Definitions for terms used in `claude_storage` CLI documentation.
 
 For conceptual hierarchy diagrams (containment, threading, agent session layout) see [002_storage_organization.md](../../../../docs/claude_code/002_storage_organization.md#conceptual-model).
 
+For the complete four-level taxonomy (Project / Conversation / Session / Entry) with pairwise relationship descriptions and ASCII containment diagram, see [007_concept_taxonomy.md](../../../../docs/claude_code/007_concept_taxonomy.md).
+
 ## Core Terms
 
 ### Active Project
 
-The project directory most recently modified within the current scope. Displayed by bare `clg .projects` (no arguments) as a single summary block showing aggregated session count and last message — not a list. Computed by grouping sessions by project path, sorting projects by last-session write time, and returning the latest. Distinct from Active Session: Active Project aggregates all sessions in one directory; Active Session is one JSONL file within that directory.
+The project directory most recently modified within the current scope. Bare `clg .projects` shows all projects in the bidirectional neighborhood (scope::around), listed by recency. Computed by grouping sessions by project path and sorting projects by last-session write time. Distinct from Active Session: Active Project aggregates all conversations in one directory; Active Session is one JSONL file (one session) within that directory.
 
 ---
 
 ### Active Session
 
-The most-recently modified session within the current scope. Computed by sorting all sessions in scope by last-write time and taking the latest. After Task 016, bare `clg .projects` shows Active Project instead of Active Session.
+The most-recently modified session (JSONL file) within the current scope. Computed by sorting all sessions in scope by last-write time and taking the latest. The session belongs to the Active Project. `clg .projects` operates at the project level (not session level); use `.show` with a specific session ID to inspect the active session directly.
 
 ---
 
 ### Agent Session
 
 A sub-agent conversation spawned during a main session. Two storage layouts coexist (per-project, neither deprecated): **flat** (older projects) where `agent-*.jsonl` files are siblings of the main session at project root, and **hierarchical** (newer projects) where agents live in `{session-uuid}/subagents/agent-{agentId}.jsonl` with optional `.meta.json` sidecars. Agents have `isSidechain: true` in their entries. The `sessionId` field in agent entries references the parent session UUID. Use `agent::1` in `.list` or `.projects` to filter to agent sessions only. See [002_storage_organization.md](../../../../docs/claude_code/002_storage_organization.md#conceptual-model) for layout diagrams.
+
+---
+
+### Conversation
+
+The user-facing logical interaction unit within a project. Each conversation represents one complete thread of interaction between the user and Claude Code.
+
+**Storage correspondence**: A conversation maps to one main session (root JSONL file) together with all agent sessions it spawned. In the current implementation this is a 1:1 mapping with Session Family — one root `.jsonl` file = one conversation. When the conversation chain detection algorithm is implemented (task 021), a conversation will be able to span multiple sequential session files that represent logically connected work.
+
+**Conversation vs Session**: Session is the storage-layer artifact (one JSONL file); Conversation is the user-facing concept. Users see conversations; sessions are an implementation detail. Commands show conversation counts in output headers; session UUIDs are secondary display information.
+
+**Agent sessions**: Each conversation owns zero or more agent sessions. Agents are sub-sessions spawned during the conversation; they are part of the conversation but not themselves conversations.
+
+See also: [Session](#session), [Session Family](#session-family), [Entry](#entry), [007_concept_taxonomy.md](../../../../docs/claude_code/007_concept_taxonomy.md).
+
+---
+
+### Conversation Chain
+
+A sequence of two or more sessions within a project that represent logically connected work — where the user continued the same line of thinking across multiple `--new-session` invocations. No explicit storage link exists between sessions in a chain; the relationship must be inferred from temporal proximity, content context, or other heuristics.
+
+Chain detection is the algorithm that groups sessions into conversations when more than one session file represents a single logical interaction. Until task 021 is implemented, each session (Session Family) is treated as its own conversation.
+
+See also: [Conversation](#conversation), [Session](#session), [007_concept_taxonomy.md](../../../../docs/claude_code/007_concept_taxonomy.md).
 
 ---
 
@@ -64,7 +90,7 @@ A directory on the filesystem that has been opened in Claude Code. Each project 
 
 ### Scope
 
-The discovery boundary for project and session listing. Controls which projects are searched: `local` (current project only), `relevant` (all ancestor projects up to `/`), `under` (all descendant projects), or `global` (all projects in storage). Applies to `.projects` (scope default: `under`), `.list` (scope default: `global`), `.search`, and `.count`. Mirrors the `scope` concept in `kbase` for consistent mental model across tools.
+The discovery boundary for project and conversation listing. Controls which projects are searched: `local` (current project only), `relevant` (all ancestor projects up to `/`), `under` (all descendant projects), `around` (bidirectional: ancestors + current + descendants), or `global` (all projects in storage). Applies to `.projects` (scope default: `around`), `.list` (scope default: `global`), `.search`, and `.count`. Mirrors the `scope` concept in `kbase` for consistent mental model across tools.
 
 ---
 
@@ -88,15 +114,19 @@ The resume/fresh decision for `.session.ensure`. `resume` means an existing conv
 
 ### Session
 
-A single Claude Code conversation for a project, stored as one `.jsonl` file. Session IDs are either UUID v4 strings (e.g., `8d795a1c-c81d-4010-8d29-b4e678272419`) or human-readable topic names (e.g., `-default_topic`, `-commit`). The session ID is the filename stem without the `.jsonl` extension.
+The storage-layer artifact for one Claude Code interaction: a single `.jsonl` file containing all entries for that interaction. Session IDs are either UUID v4 strings (e.g., `8d795a1c-c81d-4010-8d29-b4e678272419`) or human-readable topic names (e.g., `-default_topic`, `-commit`). The session ID is the filename stem without the `.jsonl` extension.
+
+**Session vs Conversation**: Session is the implementation detail (JSONL file on disk); Conversation is the user-facing concept. In the current implementation one session = one conversation, but the conversation chain detection algorithm (task 021) will allow one conversation to span multiple sessions.
 
 A session is a container of Entries. Entries are appended as the conversation progresses and are never modified. Entries within a session are linked by `parentUuid` into a thread (see [002_storage_organization.md](../../../../docs/claude_code/002_storage_organization.md#conceptual-model)).
+
+Session files have no explicit cross-file links — no `parentUuid` or `continuedFrom` field points from one session to another. Any cross-session relationships (Conversation Chains) must be inferred externally.
 
 ---
 
 ### Session Family
 
-A root (main) session together with all agent sessions it spawned, treated as a single display unit. At `verbosity::1`, `.projects` shows one family per root: the root line carries an inline `[N agents: type breakdown]` suffix and the agents are collapsed. At `verbosity::2+` agents are tree-indented under their root. An orphan family is one whose root session file has been deleted; it is shown with a `?` marker. A childless root (no agents) shows no bracket suffix.
+A root (main) session together with all agent sessions it spawned, treated as a single display unit. In the current implementation, one Session Family corresponds to one Conversation — each root `.jsonl` file is one conversation, and its agent sessions are part of that conversation. At `verbosity::1`, `.projects` shows one family per root: the root line carries an inline `[N agents: type breakdown]` suffix and the agents are collapsed. At `verbosity::2+` agents are tree-indented under their root. An orphan family is one whose root session file has been deleted; it is shown with a `?` marker. A childless root (no agents) shows no bracket suffix.
 
 ---
 

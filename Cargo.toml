@@ -25,7 +25,7 @@ members = [
 exclude = [ "-*" ]
 
 [workspace.package]
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 rust-version = "1.74"
 authors    = [ "Kostiantyn Mysnyk <wandalen@obox.systems>" ]
@@ -80,62 +80,62 @@ missing_docs_in_private_items = "allow"
 
 [workspace.dependencies.claude_assets_core]
 path = "module/claude_assets_core"
-version = "~1.0.0"
+version = "~1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_assets]
 path = "module/claude_assets"
-version = "~1.0.0"
+version = "~1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_core]
 path = "module/claude_core"
-version = "~1.0.0"
+version = "~1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_profile_core]
 path = "module/claude_profile_core"
-version = "~1.0.0"
+version = "~1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_version_core]
 path = "module/claude_version_core"
-version = "~1.0.0"
+version = "~1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_storage_core]
 path = "module/claude_storage_core"
-version = "~1.0.0"
+version = "~1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_profile]
 path = "module/claude_profile"
-version = "~1.0.0"
+version = "~1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_runner_core]
 path = "module/claude_runner_core"
-version = "~1.0.0"
+version = "~1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_runner]
 path = "module/claude_runner"
-version = "~1.0.0"
+version = "~1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_version]
 path = "module/claude_version"
-version = "~1.0.0"
+version = "~1.1.0"
 default-features = false
 
 [workspace.dependencies.claude_storage]
 path = "module/claude_storage"
-version = "~1.0.0"
+version = "~1.1.0"
 default-features = false
 
 [workspace.dependencies.dream]
 path = "module/dream"
-version = "~1.1.0"
+version = "~1.2.0"
 default-features = false
 
 ## External — published wtools crates
