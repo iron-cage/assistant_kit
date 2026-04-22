@@ -28,8 +28,9 @@ See [types.md](types.md) for type definitions and [parameter_groups.md](paramete
 | 18 | `type::` | [`ProjectType`](types.md#projecttype) | `all` | 1 | Project naming scheme filter |
 | 19 | `verbosity::` | [`VerbosityLevel`](types.md#verbositylevel) | `1` | 5 | Output detail level |
 | 20 | `strategy::` | [`StrategyType`](types.md#strategytype) | auto-detect | 1 | Resume strategy override for `.session.ensure` |
+| 21 | `count::` | Boolean | `0` | 1 | Output count only instead of full list (`.list type::conversation`) |
 
-**Total:** 20 parameters
+**Total:** 21 parameters
 
 ---
 
@@ -602,26 +603,27 @@ Specifies what `.count` should count.
 **Fundamental Type:** String enum wrapper
 
 **Constraints:**
-- Valid values: `projects`, `sessions`, `entries`
+- Valid values: `projects`, `sessions`, `entries`, `conversations`
 - Case-insensitive on input
-- Error on invalid: `"target must be projects|sessions|entries, got {value}"`
+- Error on invalid: `"target must be projects|sessions|entries|conversations, got {value}"`
 
 **Default:** `projects`
 
 **Commands:** `.count`
 (See [commands.md#command--4-count](commands.md#command--4-count))
 
-**Purpose:** Selects the granularity of counting. `projects` counts all projects in storage. `sessions` counts sessions within a project. `entries` counts individual conversation entries.
+**Purpose:** Selects the granularity of counting. `projects` counts all projects in storage. `sessions` counts sessions within a project. `entries` counts individual conversation entries. `conversations` counts conversations within a project (requires `project::`; currently 1:1 with sessions).
 
 **Examples:**
 ```bash
 # Valid values
-target::projects   # Count all projects (default)
-target::sessions   # Count sessions in a project
-target::entries    # Count entries in a session
+target::projects       # Count all projects (default)
+target::sessions       # Count sessions in a project
+target::entries        # Count entries in a session
+target::conversations  # Count conversations in a project
 
 # Invalid values
-target::files      # "target must be projects|sessions|entries, got files"
+target::files      # "Invalid target: files"
 ```
 
 ---
@@ -635,26 +637,28 @@ Project naming scheme filter for `.list`.
 **Fundamental Type:** String enum wrapper
 
 **Constraints:**
-- Valid values: `uuid`, `path`, `all`
+- Valid values: `uuid`, `path`, `all`, `conversation`
 - Case-insensitive on input
-- Error on invalid: `"type must be uuid|path|all, got {value}"`
+- Error on invalid: `"Invalid type: {value}. Valid values: uuid, path, all"`
+- `conversation` requires `project::` parameter
 
 **Default:** `all`
 
 **Commands:** `.list`
 (See [commands.md#command--2-list](commands.md#command--2-list))
 
-**Purpose:** Filters projects by how their directory is named in `~/.claude/projects/`. Path-encoded projects (`-home-user1-pro`) are opened by filesystem path. UUID projects (`8d795a1c-...`) are created by other means. Most users only need `type::path`.
+**Purpose:** Filters projects by how their directory is named in `~/.claude/projects/`. Path-encoded projects (`-home-user1-pro`) are opened by filesystem path. UUID projects (`8d795a1c-...`) are created by other means. `conversation` lists conversation IDs within a specific project (one per line).
 
 **Examples:**
 ```bash
 # Valid values
-type::all    # No filter (default)
-type::path   # Path-encoded projects only (e.g., -home-user1-pro)
-type::uuid   # UUID-named projects only (e.g., 8d795a1c-...)
+type::all           # No filter (default)
+type::path          # Path-encoded projects only (e.g., -home-user1-pro)
+type::uuid          # UUID-named projects only (e.g., 8d795a1c-...)
+type::conversation  # List conversation IDs for a project (requires project::)
 
 # Invalid values
-type::both   # "type must be uuid|path|all, got both"
+type::both   # "Invalid type: both. Valid values: uuid, path, all"
 ```
 
 ---
@@ -764,5 +768,39 @@ strategy::fresh     # Force fresh strategy
 # Invalid values
 strategy::auto      # "strategy must be resume|fresh, got auto"
 strategy::restart   # "strategy must be resume|fresh, got restart"
+```
+
+---
+
+### Parameter :: 21. `count::`
+
+Boolean mode flag for `.list` that suppresses the full listing and outputs only the count as a bare integer.
+
+**Type:** Boolean
+
+**Fundamental Type:** Boolean (`0`/`1`, `true`/`false`)
+
+**Constraints:**
+- Only meaningful with `type::conversation`
+- When `1`: outputs bare integer count + newline, no other output
+- When `0` (default): outputs full listing
+
+**Default:** `0` (full listing)
+
+**Commands:** `.list`
+(See [commands.md#command--2-list](commands.md#command--2-list))
+
+**Purpose:** Enables scripting use cases where only the count is needed. For example, `clg .list type::conversation count::1 project::abc123` outputs `3` and nothing else.
+
+**Examples:**
+```bash
+# Count mode on
+count::1    # Output bare integer only
+
+# Count mode off (default)
+count::0    # Output full listing
+
+# Combined with conversation type
+.list type::conversation count::1 project::abc123   # e.g., outputs "3"
 ```
 

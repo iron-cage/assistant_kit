@@ -118,14 +118,14 @@ fn it54_use_families_zero_byte_excluded_from_header_count()
   assert_exit( &out, 0 );
   let s = stdout( &out );
 
-  // Header must reflect only the 1 displayable (non-zero-byte) session.
+  // Header must reflect only the 1 displayable (non-zero-byte) conversation.
   assert!(
-    s.contains( "(1 session)" ),
-    "header must say '(1 session)' — zero-byte must not be counted; got:\n{s}"
+    s.contains( "(1 conversation)" ),
+    "header must say '(1 conversation)' — zero-byte must not be counted; got:\n{s}"
   );
   assert!(
-    !s.contains( "(2 session" ),
-    "header must NOT say '(2 session...)' — that would include zero-byte; got:\n{s}"
+    !s.contains( "(2 conversation" ),
+    "header must NOT say '(2 conversation...)' — that would include zero-byte; got:\n{s}"
   );
 
   // The real session must appear in the listing.
@@ -185,14 +185,14 @@ fn it55_flat_branch_zero_byte_excluded_from_header_count()
   assert_exit( &out, 0 );
   let s = stdout( &out );
 
-  // Header must reflect only the 1 non-agent, non-zero-byte session.
+  // Header must reflect only the 1 non-agent, non-zero-byte conversation.
   assert!(
-    s.contains( "(1 session)" ),
-    "flat-branch header must say '(1 session)' — zero-byte must not be counted; got:\n{s}"
+    s.contains( "(1 conversation)" ),
+    "flat-branch header must say '(1 conversation)' — zero-byte must not be counted; got:\n{s}"
   );
   assert!(
-    !s.contains( "(2 session" ),
-    "flat-branch header must NOT say '(2 session...)'; got:\n{s}"
+    !s.contains( "(2 conversation" ),
+    "flat-branch header must NOT say '(2 conversation...)'; got:\n{s}"
   );
 
   // The real session must appear.

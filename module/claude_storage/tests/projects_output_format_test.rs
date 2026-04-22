@@ -26,6 +26,8 @@
 //! | IT-51 | summary mode shows session count aggregate "(N sessions," | Project-Centric |
 //! | IT-52 | list mode shows projects sorted by recency (most recently active first) | Project-Centric |
 //! | IT-53 | verbosity::0 shows project paths only — no session IDs | Project-Centric |
+//! | CC-P03 | limit::1 with 2 sessions uses singular "conversation" in truncation | Truncation Noun |
+//! | CC-P04 | limit::1 with 3 sessions uses plural "conversations" in truncation | Truncation Noun |
 
 mod common;
 
@@ -565,5 +567,87 @@ fn it_verbosity_0_shows_paths_only()
   assert!(
     !s.contains( "session-v0" ),
     "v0 must NOT output session IDs; got:\n{s}"
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CC-P03 / CC-P04: truncation noun — "conversation" vs "conversations"
+//
+// Root Cause: The truncation message used "sessions" (internal storage term)
+// instead of "conversations" (user-facing taxonomy noun). This was fixed in
+// both render_families_v1 and the flat-branch truncation path.
+//
+// Why Not Caught: IT-28 asserts only `s.contains("and 3 more")` — it does not
+// assert the noun that follows, so the wrong noun went undetected.
+//
+// Fix Applied: Derive noun from hidden count: singular "conversation" when
+// hidden == 1, plural "conversations" when hidden > 1.
+//
+// Prevention: Truncation tests must assert both the count AND the noun.
+//
+// Pitfall: "and 3 more" passes even if the noun is wrong. Always assert the
+// full phrase "N more conversation(s)" to guard the noun independently.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// CC-P03: limit::1 with 2 sessions → singular "1 more conversation"
+#[test]
+fn it_truncation_noun_singular_one_hidden()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let project = root.path().join( "trunc_noun_singular" );
+  common::write_path_project_session( &storage_root, &project, "session-tn-a", 2 );
+  common::write_path_project_session( &storage_root, &project, "session-tn-b", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "verbosity::1" )
+    .arg( "limit::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "1 more conversation" ),
+    "limit::1 with 2 sessions must show '1 more conversation' (singular); got:\n{s}"
+  );
+  assert!(
+    !s.contains( "1 more conversations" ),
+    "truncation must NOT use plural '1 more conversations'; got:\n{s}"
+  );
+}
+
+// CC-P04: limit::1 with 3 sessions → plural "2 more conversations"
+#[test]
+fn it_truncation_noun_plural_two_hidden()
+{
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  let project = root.path().join( "trunc_noun_plural" );
+  common::write_path_project_session( &storage_root, &project, "session-tp-a", 2 );
+  common::write_path_project_session( &storage_root, &project, "session-tp-b", 2 );
+  common::write_path_project_session( &storage_root, &project, "session-tp-c", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".projects" )
+    .arg( "scope::global" )
+    .arg( "verbosity::1" )
+    .arg( "limit::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &out, 0 );
+  let s = stdout( &out );
+  assert!(
+    s.contains( "2 more conversations" ),
+    "limit::1 with 3 sessions must show '2 more conversations' (plural); got:\n{s}"
   );
 }

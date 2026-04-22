@@ -119,6 +119,25 @@
       aliases: []
       tags: ["filter"]
 
+    - name: "project"
+      kind: "String"
+      description: "Project ID (required for type::conversation)"
+      hint: "Project ID"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "count"
+      kind: "Boolean"
+      description: "Output only the count as a bare integer instead of the full list"
+      hint: "Count-only mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
   examples:
     - ".list"
     - ".list type::uuid"
@@ -128,6 +147,8 @@
     - ".list agent::1 min_entries::10"
     - ".list path::claude_storage session::default"
     - ".list sessions::0 session::commit"
+    - ".list type::conversation project::abc123"
+    - ".list type::conversation count::1 project::abc123"
   auto_help_enabled: true
 
 - name: ".show"
@@ -247,6 +268,7 @@
     - ".count"
     - ".count target::sessions project::abc123"
     - ".count target::entries project::abc123 session::xyz789"
+    - ".count target::conversations project::abc123"
   auto_help_enabled: true
 
 - name: ".search"

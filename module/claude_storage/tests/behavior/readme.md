@@ -25,8 +25,8 @@ Code's actual output — if Claude Code changes behavior, the tests go RED.
 | `b14_agent_meta_json.rs` | B14 — `.meta.json` sidecars with `agentType` |
 | `b15_agent_slug_field.rs` | B15 — agents carry shared `slug` field |
 | `b16_tools_disable.rs` | B16 — `--tools ""` disables tool invocation (H1 vs H2 ❓ unresolved) |
-| `b17_parentuuid_self_contained.rs` | B17 — `parentUuid` chain is self-contained per session file (🎯 planned — task 024) |
-| `b18_no_cross_session_links.rs` | B18 — new session's first entry has `parentUuid: null` (🎯 planned — task 024) |
+| `b17_parentuuid_self_contained.rs` | B17 — `parentUuid` chain is self-contained per session file |
+| `b18_no_cross_session_links.rs` | B18 — new session's first entry has `parentUuid: null` |
 
 ## Running
 

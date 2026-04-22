@@ -718,7 +718,7 @@ fn test_list_plural_noun_multiple_projects()
 // A targeted fix for one occurrence may miss siblings with identical patterns.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Test `.list sessions::1` shows "(1 session)" (singular) when project has 1 session.
+/// Test `.list sessions::1` shows "(1 conversation)" (singular) when project has 1 conversation.
 ///
 /// bug_reproducer(issue-027)
 // test_kind: bug_reproducer(issue-027)
@@ -742,16 +742,16 @@ fn test_list_session_count_singular_when_one_session()
     String::from_utf8_lossy( &output.stderr )
   );
   assert!(
-    stdout.contains( "(1 session)" ),
-    "with 1 session, project label must use singular '(1 session)'; got:\n{stdout}"
+    stdout.contains( "(1 conversation)" ),
+    "with 1 conversation, project label must use singular '(1 conversation)'; got:\n{stdout}"
   );
   assert!(
-    !stdout.contains( "(1 sessions)" ),
-    "with 1 session, project label must NOT use plural '(1 sessions)'; got:\n{stdout}"
+    !stdout.contains( "(1 conversations)" ),
+    "with 1 conversation, project label must NOT use plural '(1 conversations)'; got:\n{stdout}"
   );
 }
 
-/// Test `.list sessions::1` shows "(2 sessions)" (plural) when project has 2 sessions.
+/// Test `.list sessions::1` shows "(2 conversations)" (plural) when project has 2 conversations.
 ///
 /// Regression guard for issue-027: plural form must remain correct for counts > 1.
 // test_kind: regression_guard(issue-027)
@@ -777,7 +777,345 @@ fn test_list_session_count_plural_when_multiple_sessions()
     String::from_utf8_lossy( &output.stderr )
   );
   assert!(
-    stdout.contains( "(2 sessions)" ),
-    "with 2 sessions, project label must use plural '(2 sessions)'; got:\n{stdout}"
+    stdout.contains( "(2 conversations)" ),
+    "with 2 conversations, project label must use plural '(2 conversations)'; got:\n{stdout}"
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// IT-T01: `.list type::conversation project::<id>` outputs conversation IDs
+// ────────────────────────────────────────────────────────────────────────────
+/// IT-T01: `.list type::conversation` outputs one conversation ID per line when `project::` is given.
+///
+/// Verifies the conversation type filter lists IDs and exits 0.
+#[ test ]
+fn it_list_type_conversation_outputs_ids()
+{
+  use tempfile::TempDir;
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj-conv" );
+  let encoded = common::write_path_project_session( &storage_root, &project, "sess-conv-001", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".list" )
+    .arg( "type::conversation" )
+    .arg( format!( "project::{encoded}" ) )
+    .output()
+    .unwrap();
+
+  assert!(
+    out.status.success(),
+    ".list type::conversation must exit 0; stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+  let s = String::from_utf8_lossy( &out.stdout );
+  assert!( !s.is_empty(), "output must be non-empty when project has sessions; got:\n{s}" );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// IT-T02: `.list type::conversation` without `project::` returns error
+// ────────────────────────────────────────────────────────────────────────────
+/// IT-T02: `.list type::conversation` without `project::` must return a clear error.
+///
+/// Conversations require a project scope; without it the command must fail.
+#[ test ]
+fn it_list_type_conversation_requires_project()
+{
+  use tempfile::TempDir;
+  let root = TempDir::new().unwrap();
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .arg( ".list" )
+    .arg( "type::conversation" )
+    .output()
+    .unwrap();
+
+  assert!(
+    !out.status.success(),
+    ".list type::conversation without project:: must exit non-0; got: {:?}",
+    out.status.code(),
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// IT-T03: `.list type::conversation count::1 project::<id>` outputs bare integer
+// ────────────────────────────────────────────────────────────────────────────
+/// IT-T03: `count::1` mode outputs only the count as a bare integer.
+///
+/// Useful for scripting: `clg .list type::conversation count::1 project::abc123` → `2`
+#[ test ]
+fn it_list_count_mode_outputs_integer()
+{
+  use tempfile::TempDir;
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj-count" );
+  let encoded = common::write_path_project_session( &storage_root, &project, "sess-count-001", 2 );
+  common::write_path_project_session( &storage_root, &project, "sess-count-002", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".list" )
+    .arg( "type::conversation" )
+    .arg( "count::1" )
+    .arg( format!( "project::{encoded}" ) )
+    .output()
+    .unwrap();
+
+  assert!(
+    out.status.success(),
+    ".list count::1 must exit 0; stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+  let s = String::from_utf8_lossy( &out.stdout ).trim().to_string();
+  assert!(
+    s.parse::< usize >().is_ok(),
+    "count mode must output a bare integer; got: '{s}'",
+  );
+  assert_eq!( s, "2", "expected 2 conversations for 2 sessions; got: '{s}'" );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// IT-T09 (CC-L01): `.list type::conversation project::<id>` line count = N sessions
+// ────────────────────────────────────────────────────────────────────────────
+/// IT-T09: `.list type::conversation` outputs exactly N lines for N conversations.
+///
+/// IT-T01 only checks non-empty. This test verifies the line count precisely
+/// matches the session count (1:1 identity mapping — no duplicates, no missing).
+#[ test ]
+fn it_list_type_conversation_exact_line_count()
+{
+  use tempfile::TempDir;
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj-cc-l01" );
+  let encoded = common::write_path_project_session( &storage_root, &project, "sess-l01-a", 2 );
+  common::write_path_project_session( &storage_root, &project, "sess-l01-b", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".list" )
+    .arg( "type::conversation" )
+    .arg( format!( "project::{encoded}" ) )
+    .output()
+    .unwrap();
+
+  assert!(
+    out.status.success(),
+    ".list type::conversation must exit 0; stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+  let s = String::from_utf8_lossy( &out.stdout );
+  let lines : Vec< &str > = s.lines().filter( | l | !l.is_empty() ).collect();
+  assert_eq!(
+    lines.len(),
+    2,
+    "2 sessions → 2 conversation ID lines; got {} line(s):\n{s}",
+    lines.len(),
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// IT-T10 (CC-L02): `.list type::conversation project::<id>` with 0 sessions → empty
+// ────────────────────────────────────────────────────────────────────────────
+/// IT-T10: `.list type::conversation` on an empty project outputs nothing.
+///
+/// Project dir exists in storage but has no JSONL files.
+/// Must exit 0 and produce empty output — not an error.
+#[ test ]
+fn it_list_type_conversation_empty_project()
+{
+  use tempfile::TempDir;
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj-cc-l02-empty" );
+
+  // Create project directory without any session files
+  let encoded = claude_storage_core::encode_path( &project )
+    .expect( "encode project path" );
+  let dir = storage_root.join( "projects" ).join( &encoded );
+  std::fs::create_dir_all( &dir ).unwrap();
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".list" )
+    .arg( "type::conversation" )
+    .arg( format!( "project::{encoded}" ) )
+    .output()
+    .unwrap();
+
+  assert!(
+    out.status.success(),
+    ".list type::conversation on empty project must exit 0; stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+  let s = String::from_utf8_lossy( &out.stdout ).trim().to_string();
+  assert!(
+    s.is_empty(),
+    "empty project must produce empty output; got: '{s}'"
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// IT-T11 (CC-L03): `.list type::conversation count::0 project::<id>` → full list
+// ────────────────────────────────────────────────────────────────────────────
+/// IT-T11: `count::0` means "not count mode" — outputs full list, not bare integer.
+///
+/// `count::0` (Boolean false) must behave identically to omitting `count::`.
+/// The output must be a multi-line list of conversation IDs, not a bare integer.
+#[ test ]
+fn it_list_count_zero_means_full_list()
+{
+  use tempfile::TempDir;
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj-cc-l03" );
+  let encoded = common::write_path_project_session( &storage_root, &project, "sess-l03-a", 2 );
+  common::write_path_project_session( &storage_root, &project, "sess-l03-b", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".list" )
+    .arg( "type::conversation" )
+    .arg( "count::0" )
+    .arg( format!( "project::{encoded}" ) )
+    .output()
+    .unwrap();
+
+  assert!(
+    out.status.success(),
+    ".list type::conversation count::0 must exit 0; stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+  let s = String::from_utf8_lossy( &out.stdout ).trim().to_string();
+  // Output must NOT be a bare integer
+  assert!(
+    s.parse::< usize >().is_err(),
+    "count::0 must produce list output (not bare integer); got: '{s}'"
+  );
+  // Must have 2 lines — one per conversation
+  let lines : Vec< &str > = s.lines().filter( | l | !l.is_empty() ).collect();
+  assert_eq!(
+    lines.len(),
+    2,
+    "count::0 full list must have 2 lines for 2 sessions; got {} line(s):\n{s}",
+    lines.len(),
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// IT-T12 (CC-L04): `.list type::conversation count::1` with 0 sessions → "0"
+// ────────────────────────────────────────────────────────────────────────────
+/// IT-T12: `count::1` on an empty project outputs "0".
+///
+/// Count mode on a project with zero conversations must output "0" (not crash).
+#[ test ]
+fn it_list_count_mode_zero_sessions()
+{
+  use tempfile::TempDir;
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj-cc-l04-empty" );
+
+  // Create project directory without any session files
+  let encoded = claude_storage_core::encode_path( &project )
+    .expect( "encode project path" );
+  let dir = storage_root.join( "projects" ).join( &encoded );
+  std::fs::create_dir_all( &dir ).unwrap();
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".list" )
+    .arg( "type::conversation" )
+    .arg( "count::1" )
+    .arg( format!( "project::{encoded}" ) )
+    .output()
+    .unwrap();
+
+  assert!(
+    out.status.success(),
+    ".list type::conversation count::1 on empty project must exit 0; stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+  let s = String::from_utf8_lossy( &out.stdout ).trim().to_string();
+  assert_eq!( s, "0", "count::1 on empty project must output '0'; got: '{s}'" );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// IT-T13 (CC-L05): `.list type::conversation count::1` with 1 session → "1"
+// ────────────────────────────────────────────────────────────────────────────
+/// IT-T13: `count::1` with exactly 1 conversation outputs "1".
+///
+/// Singular count edge case — complementary to IT-T03 which uses 2 sessions.
+#[ test ]
+fn it_list_count_mode_one_session()
+{
+  use tempfile::TempDir;
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+  let project = root.path().join( "proj-cc-l05" );
+  let encoded = common::write_path_project_session( &storage_root, &project, "sess-l05-only", 2 );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".list" )
+    .arg( "type::conversation" )
+    .arg( "count::1" )
+    .arg( format!( "project::{encoded}" ) )
+    .output()
+    .unwrap();
+
+  assert!(
+    out.status.success(),
+    ".list type::conversation count::1 must exit 0; stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+  let s = String::from_utf8_lossy( &out.stdout ).trim().to_string();
+  assert_eq!( s, "1", "1 session → 1 conversation in count mode; got: '{s}'" );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// IT-T14 (CC-L06): `.list type::conversation project::<nonexistent>` → error
+// ────────────────────────────────────────────────────────────────────────────
+/// IT-T14: `.list type::conversation` with a nonexistent project must fail.
+///
+/// A valid encoded project ID whose storage directory does not exist is an error.
+/// Must exit non-0 — silently returning empty output would hide a user mistake.
+#[ test ]
+fn it_list_type_conversation_nonexistent_project_fails()
+{
+  use tempfile::TempDir;
+  let root = TempDir::new().unwrap();
+  let storage_root = root.path().join( ".claude" );
+
+  // Encode a path but intentionally do NOT create the project dir in storage
+  let fake_project = root.path().join( "nonexistent-proj-l06" );
+  let encoded = claude_storage_core::encode_path( &fake_project )
+    .expect( "encode project path" );
+
+  let out = common::clg_cmd()
+    .env( "HOME", root.path().to_str().unwrap() )
+    .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
+    .arg( ".list" )
+    .arg( "type::conversation" )
+    .arg( format!( "project::{encoded}" ) )
+    .output()
+    .unwrap();
+
+  assert!(
+    !out.status.success(),
+    ".list type::conversation with nonexistent project must exit non-0; stdout: {}; stderr: {}",
+    String::from_utf8_lossy( &out.stdout ),
+    String::from_utf8_lossy( &out.stderr ),
   );
 }

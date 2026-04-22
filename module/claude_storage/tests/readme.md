@@ -13,19 +13,26 @@ tests/
 │   └── mod.rs                             # Pre-compiled binary helper (cargo_bin!)
 ├── doc/                                    # Test documentation mirroring docs/ hierarchy
 │   └── cli/testing/                       # CLI test case indexes (command, param, param_group)
-├── behavior/                               # Behavior hypothesis invalidation tests (B1..B11)
+├── behavior/                               # Behavior hypothesis invalidation tests (B1..B18)
 │   ├── mod.rs                             # Test binary root; shared helpers for real ~/.claude/ inspection
 │   ├── b01_default_continues.rs           # B1 — default invocation continues most recent session
 │   ├── b02_new_session.rs                 # B2 — --new-session creates separate .jsonl
 │   ├── b03_print_flag.rs                  # B3 — -p is output mode, not session flag
-│   ├── b04_continue_flag.rs              # B4 — -c aliases default continuation
+│   ├── b04_continue_flag.rs               # B4 — -c aliases default continuation
 │   ├── b05_mtime_selection.rs             # B5 — current session selected by mtime
 │   ├── b06_session_accumulation.rs        # B6 — sessions accumulate as separate files
 │   ├── b07_agent_sessions.rs              # B7 — agent sessions are agent-*.jsonl siblings
 │   ├── b08_zero_byte_init.rs              # B8 — 0-byte .jsonl created as placeholder on startup
 │   ├── b09_storage_path.rs                # B9 — project path uses /→- encoding
 │   ├── b10_entry_threading.rs             # B10 — entries linked via parentUuid
-│   └── b11_auto_continue.rs              # B11 — CLAUDE_CODE_AUTO_CONTINUE env var
+│   ├── b11_auto_continue.rs               # B11 — CLAUDE_CODE_AUTO_CONTINUE env var
+│   ├── b12_agent_session_id_is_parent.rs  # B12 — agent sessionId matches parent root session
+│   ├── b13_subagent_directory_structure.rs # B13 — subagents live in {root}/{session}/subagents/
+│   ├── b14_agent_meta_json.rs             # B14 — agent-*.meta.json holds agentType
+│   ├── b15_agent_slug_field.rs            # B15 — agent files have slug field in entries
+│   ├── b16_tools_disable.rs               # B16 — tools_disable field present in agent entries
+│   ├── b17_parentuuid_self_contained.rs   # B17 — parentUuid chains never cross session boundary
+│   └── b18_no_cross_session_links.rs      # B18 — no entry references uuid from different session
 ├── manual/                                 # Manual testing plans and results
 │   └── readme.md                          # Manual testing plan for this crate
 ├── cli_commands.rs                        # CLI command storage operations
@@ -33,6 +40,7 @@ tests/
 ├── command_version_consistency_test.rs    # Command version consistency tests
 ├── content_display_integration_test.rs    # Content display behavior tests
 ├── count_command_bug_fix.rs               # .count context-awareness bug fix (Bug #003)
+├── count_command_test.rs                  # .count target::conversations tests (IT-T04..IT-T05)
 ├── export_command_test.rs                 # .export parameter validation tests (Phase 1C)
 ├── lib_test.rs                            # Library API smoke tests
 ├── list_command_test.rs                   # .list parameter bounds and combinations
@@ -47,7 +55,9 @@ tests/
 ├── search_session_partial_uuid_bug.rs     # .search session partial UUID fix (issue-020)
 ├── search_special_characters_bug.rs       # Special character handling (Bug #006, #007)
 ├── session_path_command_test.rs           # .path/.exists/.session.dir/.session.ensure lifecycle commands
-├── projects_command_test.rs               # .projects scope-aware listing, family tree display, parameter validation (issues 024/029/031/032)
+├── projects_command_test.rs               # .projects scope filtering and parameter validation (EC-1..EC-8, IT-50)
+├── projects_family_display_test.rs        # .projects family/agent session display (IT-1, IT-33, IT-36..IT-48)
+├── projects_path_encoding_test.rs         # .projects path decode/display bug reproducers (IT-23..IT-26)
 ├── projects_output_format_test.rs         # .projects output format: path headers, agent collapse (IT-17..IT-22); list-mode redesign (IT-52..IT-53)
 ├── projects_scope_around_test.rs          # .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59)
 ├── projects_zero_byte_count_bug.rs        # .projects zero-byte session exclusion from header count (issue-034, IT-54..IT-56)
@@ -75,11 +85,19 @@ tests/
 | `behavior/b09_storage_path.rs` | B9: project dir names follow `/`→`-` encoding convention |
 | `behavior/b10_entry_threading.rs` | B10: conversation entries linked via `parentUuid` (null root, non-null chain) |
 | `behavior/b11_auto_continue.rs` | B11: `CLAUDE_CODE_AUTO_CONTINUE` env var recognized by `claude` |
+| `behavior/b12_agent_session_id_is_parent.rs` | B12: agent `sessionId` matches parent root session UUID |
+| `behavior/b13_subagent_directory_structure.rs` | B13: subagents stored in `{root}/{session}/subagents/` |
+| `behavior/b14_agent_meta_json.rs` | B14: `agent-*.meta.json` sidecar holds `agentType` field |
+| `behavior/b15_agent_slug_field.rs` | B15: agent JSONL entries contain `slug` field |
+| `behavior/b16_tools_disable.rs` | B16: agent entries contain `tools_disable` field |
+| `behavior/b17_parentuuid_self_contained.rs` | B17: `parentUuid` chains never reference entries outside their session |
+| `behavior/b18_no_cross_session_links.rs` | B18: no entry `uuid` is referenced as `parentUuid` in a different session |
 | `cli_commands.rs` | Test CLI command storage operations |
 | `cli_sanity.rs` | Verify CLI binary builds and runs |
 | `command_version_consistency_test.rs` | Validate version annotation consistency |
 | `content_display_integration_test.rs` | Test content-first display (REQ-011) |
 | `count_command_bug_fix.rs` | Test .count context-awareness and path projects |
+| `count_command_test.rs` | Test .count target::conversations (IT-T04..IT-T05) |
 | `export_command_test.rs` | Validate .export command parameters |
 | `list_command_test.rs` | Validate .list command parameter bounds and combinations |
 | `list_smart_session_display.rs` | Test smart session display in .list |
@@ -93,7 +111,9 @@ tests/
 | `search_session_partial_uuid_bug.rs` | Test partial UUID matching in .search session filter |
 | `search_special_characters_bug.rs` | Test special character handling in queries |
 | `session_path_command_test.rs` | Test .path/.exists/.session.dir/.session.ensure lifecycle commands |
-| `projects_command_test.rs` | Test .projects scope filtering, family tree, and parameter validation |
+| `projects_command_test.rs` | Test .projects scope filtering and parameter validation (EC-1..EC-8, IT-50) |
+| `projects_family_display_test.rs` | Test .projects family and agent session display (IT-1, IT-33, IT-36..IT-48) |
+| `projects_path_encoding_test.rs` | Test .projects path decode/display bug reproducers (IT-23..IT-26) |
 | `projects_output_format_test.rs` | Test .projects output format: path headers, agent collapse (IT-17..22); list-mode redesign (IT-52..53) |
 | `projects_scope_around_test.rs` | Test .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59) |
 | `projects_zero_byte_count_bug.rs` | Test zero-byte session exclusion from .projects list-mode header count (issue-034) |
@@ -297,8 +317,8 @@ cargo nextest run --all-features -- --include-ignored
 
 ## Test Count Tracking
 
-**Current Status**: 289 tests, 0 ignored
-- Effective tests: 289 (all tests run fully)
+**Current Status**: 309 tests, 0 ignored
+- Effective tests: 309 (all tests run fully)
 - Ignored tests: 0 (target met — all tests use `CLAUDE_STORAGE_ROOT` + `TempDir` isolation)
 
 ## Known Findings

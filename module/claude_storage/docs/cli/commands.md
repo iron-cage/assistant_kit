@@ -74,7 +74,7 @@ claude_storage .status verbosity::2
 
 List projects or conversations in Claude Code storage. Project-first view: all projects are listed, with conversations optionally shown per project. Use this when navigating projects or filtering by project path.
 
-**Parameters:** `type::`, `path::`, `sessions::`, `session::`, `agent::`, `min_entries::`, `verbosity::`, `scope::`
+**Parameters:** `type::`, `path::`, `sessions::`, `session::`, `agent::`, `min_entries::`, `verbosity::`, `scope::`, `project::`, `count::`
 
 **Exit:** `0` success | `1` argument error | `2` storage read error
 
@@ -85,13 +85,15 @@ claude_storage .list type::uuid
 claude_storage .list path::SUBSTR [sessions::1]
 claude_storage .list session::FILTER [agent::0|1] [min_entries::N]
 claude_storage .list scope::relevant
+claude_storage .list type::conversation project::PROJECT
+claude_storage .list type::conversation count::1 project::PROJECT
 ```
 
 **Parameters:**
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `type::` | [`ProjectType`](types.md#projecttype) | optional | `all` | Project naming filter |
+| `type::` | [`ProjectType`](types.md#projecttype) | optional | `all` | Project naming filter (`uuid`, `path`, `all`, `conversation`) |
 | `path::` | [`PathSubstring`](types.md#pathsubstring) | optional | — | Filter projects by path substring |
 | `sessions::` | Boolean | optional | `0` | Show sessions per project |
 | `session::` | [`SessionFilter`](types.md#sessionfilter) | optional | — | Filter sessions by ID substring |
@@ -99,6 +101,8 @@ claude_storage .list scope::relevant
 | `min_entries::` | [`EntryCount`](types.md#entrycount) | optional | — | Minimum entry count threshold |
 | `verbosity::` | [`VerbosityLevel`](types.md#verbositylevel) | optional | `1` | Output detail level |
 | `scope::` | [`ScopeValue`](types.md#scopevalue) | optional | `global` | Project discovery boundary |
+| `project::` | String | required for `type::conversation` | — | Project ID; scopes conversation listing |
+| `count::` | Boolean | optional | `0` | Output only the count as a bare integer |
 
 Session filter parameters belong to the [Session Filter group](parameter_groups.md#session-filter). See [Output Control group](parameter_groups.md#output-control) for `verbosity` semantics. See [Scope Configuration group](parameter_groups.md#scope-configuration) for `scope::` semantics.
 
@@ -118,11 +122,19 @@ claude_storage .list agent::1 min_entries::10
 
 # List only projects in the ancestor chain of cwd
 claude_storage .list scope::relevant
+
+# List conversation IDs for a specific project
+claude_storage .list type::conversation project::abc123
+
+# Count conversations in a project (bare integer output)
+claude_storage .list type::conversation count::1 project::abc123
 ```
 
 **Notes:**
 - `session::`, `agent::`, or `min_entries::` auto-enables `sessions::1`; use `sessions::0` to suppress
 - `type::uuid` shows projects identified by UUID rather than path encoding
+- `type::conversation` requires `project::` and lists one conversation ID per line
+- `count::1` with `type::conversation` outputs only the count as a bare integer (useful for scripting)
 - `scope::global` is the default — lists all projects regardless of cwd; `scope::relevant` lists only projects in the ancestor chain of cwd
 
 ---
@@ -193,6 +205,7 @@ Fast counting of projects, sessions, or entries without loading full content. Op
 claude_storage .count
 claude_storage .count target::sessions project::PROJECT
 claude_storage .count target::entries project::PROJECT session::SESSION
+claude_storage .count target::conversations project::PROJECT
 claude_storage .count scope::relevant
 ```
 
@@ -200,7 +213,7 @@ claude_storage .count scope::relevant
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `target::` | [`TargetType`](types.md#targettype) | optional | `projects` | What to count |
+| `target::` | [`TargetType`](types.md#targettype) | optional | `projects` | What to count (`projects`, `sessions`, `entries`, `conversations`) |
 | `project::` | [`ProjectId`](types.md#projectid) | optional | — | Scope to this project |
 | `session::` | [`SessionId`](types.md#sessionid) | optional | — | Scope to this session |
 | `scope::` | [`ScopeValue`](types.md#scopevalue) | optional | `global` | Count boundary |
@@ -219,6 +232,9 @@ claude_storage .count target::sessions project::abc123
 # Count entries in a specific session
 claude_storage .count target::entries project::abc123 session::xyz789
 
+# Count conversations in a specific project
+claude_storage .count target::conversations project::abc123
+
 # Count sessions in the relevant scope (ancestor chain of cwd)
 claude_storage .count target::sessions scope::relevant
 ```
@@ -226,6 +242,7 @@ claude_storage .count target::sessions scope::relevant
 **Notes:**
 - `target::sessions` requires `project::` to avoid counting all sessions in all projects
 - `target::entries` requires both `project::` and `session::`
+- `target::conversations` requires `project::` (currently 1:1 with sessions; will differ once chain detection is implemented)
 
 ---
 
@@ -446,7 +463,7 @@ At `verbosity::2+`, agents are tree-indented under their parent:
 - `limit::N` caps families per project; truncated projects show `... and N more sessions` hint
 
 - `verbosity::0` — project paths only (one per line, machine-readable); suitable for piping
-- `verbosity::1` — `Found N projects:` header; grouped per project with family display; project header shows `(N conversations, M agents)` when agents present, otherwise `(N sessions)`
+- `verbosity::1` — `Found N projects:` header; grouped per project with family display; project header always shows `(N conversations)` or `(N conversations, M agents)` when agents present
 - `verbosity::2+` — same grouping; agents tree-indented under parent; full IDs; entry count per session
 
 ---

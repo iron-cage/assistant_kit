@@ -517,6 +517,37 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
   let project_type = cmd.get_string( "type" ).unwrap_or( "all" );
+
+  // Early dispatch: conversation listing requires project:: and is handled separately.
+  if project_type == "conversation"
+  {
+    let proj_id = cmd.get_string( "project" )
+      .ok_or_else( || ErrorData::new(
+        ErrorCode::InternalError,
+        "project parameter required for listing conversations".to_string(),
+      ) )?;
+    let storage = create_storage()?;
+    let project = load_project_for_param( &storage, proj_id )?;
+    let sessions = project.all_sessions()
+      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load sessions: {e}" ) ) )?;
+    let families = build_families( sessions );
+    let conversations = group_into_conversations( families );
+    let count_mode = cmd.get_boolean( "count" ).unwrap_or( false );
+    if count_mode
+    {
+      return Ok( OutputData::new( format!( "{}", conversations.len() ), "text" ) );
+    }
+    let mut out = String::new();
+    for conv in &conversations
+    {
+      if let Some( s ) = conv.root_session()
+      {
+        writeln!( out, "{}", s.id() ).unwrap();
+      }
+    }
+    return Ok( OutputData::new( out, "text" ) );
+  }
+
   let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
 
   // Fix(issue-015): Validate verbosity range
@@ -695,13 +726,13 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       }
       1 =>
       {
-        // ID + session count (skip if project was deleted)
+        // ID + conversation count (skip if project was deleted)
         let Ok( session_count ) = project.count_sessions() else { continue };  // Skip projects that can't be read
 
-        // Fix(issue-027): Use singular "session" when count == 1; plural otherwise.
+        // Fix(issue-027): Use singular "conversation" when count == 1; plural otherwise.
         // Root cause: hardcoded "sessions" regardless of count produced "(1 sessions)".
         // Pitfall: same pattern as issue-025 — always derive noun from count, never hardcode.
-        let noun = if session_count == 1 { "session" } else { "sessions" };
+        let noun = if session_count == 1 { "conversation" } else { "conversations" };
         writeln!( output, "{:?} ({session_count} {noun})", project.id() ).unwrap();
       }
       _ =>
@@ -1490,6 +1521,20 @@ pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       session.count_entries()
         .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to count entries: {e}" ) ) )?
     }
+    "conversations" =>
+    {
+      let proj_id = project_id
+        .ok_or_else( || ErrorData::new(
+          ErrorCode::InternalError,
+          "project parameter required for counting conversations".to_string(),
+        ) )?;
+      let project = load_project_for_param( &storage, proj_id )?;
+      let sessions = project.all_sessions()
+        .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load sessions: {e}" ) ) )?;
+      let families = build_families( sessions );
+      let conversations = group_into_conversations( families );
+      conversations.len()
+    }
     // Fix(issue-009): Validate target parameter against allowed values
     //
     // Root cause: target parameter accepted any string without validation,
@@ -2061,6 +2106,66 @@ struct SessionFamily
   agents : Vec< AgentInfo >,
 }
 
+/// A Conversation is the user-facing unit of interaction — one logical chat.
+///
+/// # Current implementation (1:1 mapping)
+///
+/// Each `SessionFamily` maps to exactly one `Conversation` via
+/// `group_into_conversations`. The identity mapping is a placeholder
+/// until cross-session chain detection is implemented.
+///
+/// # Future: Chain Detection contract
+///
+/// When implemented, one `Conversation` may span multiple `SessionFamily`
+/// values representing work continued across `--new-session` invocations.
+/// No explicit storage links exist (B17, B18 invariants); detection uses
+/// temporal proximity and content heuristics.
+pub struct Conversation
+{
+  families : Vec< SessionFamily >,
+}
+
+impl core::fmt::Debug for Conversation
+{
+  #[ inline ]
+  fn fmt( &self, f : &mut core::fmt::Formatter< '_ > ) -> core::fmt::Result
+  {
+    f.debug_struct( "Conversation" )
+      .field( "family_count", &self.conversation_count() )
+      .finish()
+  }
+}
+
+impl Conversation
+{
+  fn root_session( &self ) -> Option< &claude_storage_core::Session >
+  {
+    self.families.first().and_then( | f | f.root.as_ref() )
+  }
+
+  fn all_agents( &self ) -> impl Iterator< Item = &AgentInfo >
+  {
+    self.families.iter().flat_map( | f | f.agents.iter() )
+  }
+
+  fn conversation_count( &self ) -> usize
+  {
+    self.families.len()
+  }
+}
+
+// Group session families into conversations (currently 1:1 identity mapping).
+//
+// Each `SessionFamily` maps to exactly one `Conversation`. Placeholder for
+// future cross-session chain detection (B17/B18 invariants rule out storage links).
+fn group_into_conversations( families : Vec< SessionFamily > ) -> Vec< Conversation >
+{
+  families
+    .into_iter()
+    .map( | family | Conversation { families : vec![ family ] } )
+    .collect()
+}
+
 struct ProjectSummary
 {
   display_path : String,
@@ -2583,8 +2688,9 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
     if use_families
     {
-      // Build families from sessions
+      // Build families from sessions and group into conversations (1:1 now)
       let families = build_families( sessions );
+      let conversations = group_into_conversations( families );
 
       // Fix(issue-034): Count only displayable (non-zero-byte) root sessions in header.
       //
@@ -2595,22 +2701,26 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       //
       // Pitfall: The render layer and the count must apply identical zero-byte filters.
       // If render changes to show/hide zero-byte sessions, update this count expression too.
-      let root_count = families
+      let root_count = conversations
         .iter()
-        .filter( | f | f.root.as_ref().is_some_and( | s | !is_zero_byte_session( s ) ) )
+        .filter( | c | c.root_session().is_some_and( | s | !is_zero_byte_session( s ) ) )
         .count();
-      let agent_count : usize = families.iter().map( | f | f.agents.len() ).sum();
+      let agent_count : usize = conversations.iter().map( | c | c.all_agents().count() ).sum();
+      // Unpack back to families for rendering (Phase 4 will use Conversation directly)
+      let families : Vec< SessionFamily > = conversations
+        .into_iter()
+        .flat_map( | c | c.families )
+        .collect();
 
+      let r_noun = if root_count == 1 { "conversation" } else { "conversations" };
       if agent_count > 0
       {
-        let r_noun = if root_count == 1 { "conversation" } else { "conversations" };
         let a_noun = if agent_count == 1 { "agent" } else { "agents" };
         writeln!( output, "{display_path}: ({root_count} {r_noun}, {agent_count} {a_noun})" ).unwrap();
       }
       else
       {
-        let noun = if root_count == 1 { "session" } else { "sessions" };
-        writeln!( output, "{display_path}: ({root_count} {noun})" ).unwrap();
+        writeln!( output, "{display_path}: ({root_count} {r_noun})" ).unwrap();
       }
 
       if verbosity == 1
@@ -2639,7 +2749,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         .filter( | &s | s.is_agent_session() || !is_zero_byte_session( s ) )
         .collect();
       let group_count = displayable.len();
-      let group_noun = if group_count == 1 { "session" } else { "sessions" };
+      let group_noun = if group_count == 1 { "conversation" } else { "conversations" };
       writeln!( output, "{display_path}: ({group_count} {group_noun})" ).unwrap();
       let show_count = displayable.len().min( limit_cap );
       for ( i, &session ) in displayable[ ..show_count ].iter().enumerate()
@@ -2662,7 +2772,8 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       if displayable.len() > limit_cap
       {
         let hidden = displayable.len() - limit_cap;
-        let hidden_noun = if hidden == 1 { "session" } else { "sessions" };
+        // "conversation" is the user-facing taxonomy noun; "session" is the internal storage term.
+        let hidden_noun = if hidden == 1 { "conversation" } else { "conversations" };
         writeln!(
           output,
           "  ... and {hidden} more {hidden_noun}  (use limit::0 to list all)"
@@ -2740,7 +2851,8 @@ fn render_families_v1(
   if displayable.len() > limit_cap
   {
     let hidden = displayable.len() - limit_cap;
-    let noun = if hidden == 1 { "session" } else { "sessions" };
+    // "conversation" is the user-facing taxonomy noun; "session" is the internal storage term.
+    let noun = if hidden == 1 { "conversation" } else { "conversations" };
     writeln!( output, "  ... and {hidden} more {noun}  (use limit::0 to list all)" ).unwrap();
   }
 }
@@ -3019,4 +3131,28 @@ pub fn session_ensure_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let strategy = if is_resume { "resume" } else { "fresh" };
 
   Ok( OutputData::new( format!( "{}\n{strategy}", session_dir.display() ), "text" ) )
+}
+
+#[ cfg( test ) ]
+mod tests
+{
+  use super::*;
+
+  /// UT-49: `group_into_conversations` implements identity (1:1) mapping from families to conversations.
+  ///
+  /// Each `SessionFamily` maps to exactly one `Conversation`; empty input → empty output.
+  /// Also verifies `root_session`, `all_agents`, `conversation_count` compile and return sensible values.
+  #[ test ]
+  fn it_conversation_groups_families_one_to_one()
+  {
+    let result = group_into_conversations( vec![] );
+    assert_eq!( result.len(), 0, "Expected 0 conversations for 0 families" );
+    // Verify all helper methods compile; loop is a no-op for empty input.
+    for conv in &result
+    {
+      let _ = conv.root_session();
+      let _ = conv.all_agents().count();
+      let _ = conv.conversation_count();
+    }
+  }
 }

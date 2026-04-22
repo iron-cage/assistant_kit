@@ -47,7 +47,7 @@ name = "behavior"
 path = "tests/behavior/mod.rs"
 
 [features]
-default = []
+default = [ "cli" ]
 enabled = [ "dep:unilang" ]
 full = [ "enabled", "cli" ]
 cli = [ "dep:unilang" ]
