@@ -21,6 +21,7 @@
 //!
 //! ```rust,no_run
 //! # use unilang::{ VerifiedCommand, ErrorData, ErrorCode };
+//! # const VERBOSITY_MAX : i64 = 5;
 //! # fn example( cmd : VerifiedCommand ) -> Result< (), ErrorData >
 //! # {
 //! let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
@@ -57,12 +58,6 @@ const UUID_LEN : usize = 36;
 
 /// Characters to display from each end when short-displaying a UUID.
 const UUID_SHORT_LEN : usize = 8;
-
-/// Entry count above which `truncate_message` abbreviates.
-const TRUNCATE_THRESHOLD : usize = 50;
-
-/// Characters kept from each end when truncating a message.
-const TRUNCATE_PREVIEW : usize = 30;
 
 /// Fallback agent type when `meta.json` is absent or missing `agentType`.
 const AGENT_TYPE_UNKNOWN : &str = "unknown";
@@ -2050,62 +2045,6 @@ fn format_relative_time( mtime : std::time::SystemTime ) -> String
   else                          { format!( "{}mo ago", secs / SECS_PER_MONTH ) }
 }
 
-/// Find the last entry in a session that contains visible text content.
-///
-/// Scans entries in reverse order. Returns the text of the first entry found:
-/// - User entries: returns `message.content` (always a plain string).
-/// - Assistant entries: returns text from the first `ContentBlock::Text` block,
-///   skipping `Thinking`, `ToolUse`, and `ToolResult` blocks.
-///
-/// Returns `None` when no text entry exists or when loading fails.
-fn last_text_entry( session : &mut claude_storage_core::Session ) -> Option< String >
-{
-  use claude_storage_core::{ MessageContent, ContentBlock };
-
-  let entries = session.entries().ok()?;
-  for entry in entries.iter().rev()
-  {
-    match &entry.message
-    {
-      MessageContent::User( msg ) =>
-      {
-        if !msg.content.is_empty() { return Some( msg.content.clone() ); }
-      },
-      MessageContent::Assistant( msg ) =>
-      {
-        for block in &msg.content
-        {
-          if let ContentBlock::Text { text } = block
-          {
-            if !text.is_empty() { return Some( text.clone() ); }
-          }
-        }
-      },
-    }
-  }
-  None
-}
-
-/// Truncate a message string for summary display.
-///
-/// Returns `{first30}...{last30}` when `text` has more than 50 Unicode scalar
-/// values. Returns the full text otherwise. Uses `chars()` for correct Unicode
-/// handling — not byte length.
-fn truncate_message( text : &str ) -> String
-{
-  let chars : Vec< char > = text.chars().collect();
-  if chars.len() > TRUNCATE_THRESHOLD
-  {
-    let first : String = chars[ ..TRUNCATE_PREVIEW ].iter().collect();
-    let last  : String = chars[ chars.len() - TRUNCATE_PREVIEW.. ].iter().collect();
-    format!( "{first}...{last}" )
-  }
-  else
-  {
-    text.to_string()
-  }
-}
-
 // ─── family detection ──────────────────────────────────────────────────────
 
 struct AgentMeta { agent_type : String }
@@ -2124,12 +2063,8 @@ struct SessionFamily
 
 struct ProjectSummary
 {
-  display_path         : String,
-  session_count        : usize,
-  last_mtime           : std::time::SystemTime,
-  last_session_id      : String,
-  last_session_entries : usize,
-  last_message         : Option< String >,
+  display_path : String,
+  last_mtime   : std::time::SystemTime,
 }
 
 /// Read `meta.json` sidecar for an agent session.
@@ -2319,8 +2254,7 @@ fn format_type_breakdown( agents : &[ AgentInfo ] ) -> String
 
 /// Aggregate sessions by project, returning projects sorted by last mtime descending.
 ///
-/// For each project in `groups`, finds the most-recently-modified session, computes
-/// the session count, and reads the last text entry of the most recent session.
+/// For each project in `groups`, finds the most-recently-modified non-zero-byte session.
 /// Projects where no session has a readable mtime are excluded.
 ///
 /// # Pitfalls
@@ -2339,18 +2273,14 @@ fn aggregate_projects(
   for ( display_path, sessions ) in groups.iter_mut()
   {
     // Fix(issue-034): Exclude zero-byte placeholder sessions from best-session
-    // selection and session_count in aggregate_projects.
+    // selection in aggregate_projects.
     //
     // Root cause: `best` selection iterated all sessions including zero-byte
     // placeholders. When a zero-byte file had a more recent mtime than any real
-    // session, it became the "best" session and displayed "(no text content)"
-    // even when real sessions with content existed. Similarly, `session_count`
-    // used sessions.len() which included zero-byte files, inflating the
-    // "N sessions" count in summary mode.
+    // session, it became the "best" session with a stale timestamp.
     //
     // Pitfall: `is_zero_byte_session()` must be applied at every aggregation
-    // site — not only in the render layer. Filtering only for display while
-    // counting all sessions produces a "X sessions / 0 lines shown" mismatch.
+    // site — not only in the render layer.
     let best = sessions
       .iter()
       .enumerate()
@@ -2358,64 +2288,18 @@ fn aggregate_projects(
       .filter_map( | ( i, s ) | session_mtime( s ).map( | t | ( i, t ) ) )
       .max_by_key( | &( _, t ) | t );
 
-    let Some( ( best_idx, best_time ) ) = best else { continue };
-
-    let session_count = sessions.iter().filter( | s | !is_zero_byte_session( s ) ).count();
-    let last_session_id      = short_id( sessions[ best_idx ].id() ).to_string();
-    let last_session_entries = sessions[ best_idx ].count_entries().unwrap_or( 0 );
-    let last_message         = last_text_entry( &mut sessions[ best_idx ] );
+    let Some( ( _, best_time ) ) = best else { continue };
 
     summaries.push( ProjectSummary
     {
-      display_path         : display_path.clone(),
-      session_count,
-      last_mtime           : best_time,
-      last_session_id,
-      last_session_entries,
-      last_message,
+      display_path : display_path.clone(),
+      last_mtime   : best_time,
     } );
   }
 
   // Most recently active project first.
   summaries.sort_by( | a, b | b.last_mtime.cmp( &a.last_mtime ) );
   summaries
-}
-
-/// Render the active-project summary block (bare `clg .projects` invocation).
-///
-/// Finds the most-recently-active project across all collected groups and
-/// formats a project-centric summary. Returns `None` when no sessions are present.
-fn render_active_project_summary(
-  groups : &mut std::collections::BTreeMap< String, Vec< claude_storage_core::Session > >,
-) -> Option< String >
-{
-  let summaries = aggregate_projects( groups );
-  let summary   = summaries.into_iter().next()?;
-
-  let age      = format_relative_time( summary.last_mtime );
-  let s_noun   = if summary.session_count == 1 { "session" } else { "sessions" };
-  let e_count  = summary.last_session_entries;
-  let e_noun   = if e_count == 1 { "entry" } else { "entries" };
-  let last_txt = summary.last_message
-    .as_deref()
-    .map_or_else( || "(no text content)".to_string(), truncate_message );
-
-  let mut out = String::new();
-  writeln!(
-    out,
-    "Active project  {}  ({} {}, last active {})",
-    summary.display_path, summary.session_count, s_noun, age
-  ).unwrap();
-  writeln!(
-    out,
-    "Last session:  {}  {}  ({} {})",
-    summary.last_session_id, age, e_count, e_noun
-  ).unwrap();
-  writeln!( out ).unwrap();
-  writeln!( out, "Last message:" ).unwrap();
-  writeln!( out, "  {last_txt}" ).unwrap();
-
-  Some( out )
 }
 
 /// List sessions with scope control (session-first view).
@@ -2441,31 +2325,15 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   use std::path::PathBuf;
   use claude_storage_core::{ Session, SessionFilter, encode_path };
 
-  // --- default invocation detection ---
-  // Must be checked BEFORE any unwrap_or() calls — those erase the None signal.
-  // Summary mode activates only when every scope/filter parameter is absent.
-  // Fix(issue-is-default-verbosity)
-  // Root cause: verbosity was included in the all-None gate; Some(1) from an
-  //   explicit `verbosity::1` set is_default=false and routed to list mode even
-  //   though verbosity::1 is semantically identical to the default.
-  // Pitfall: display modifiers (verbosity, format) must never appear in a
-  //   mode-selection gate — only scope/filter parameters belong there.
-  let is_default = cmd.get_string( "scope" ).is_none()
-    && cmd.get_string( "path" ).is_none()
-    && cmd.get_string( "session" ).is_none()
-    && cmd.get_boolean( "agent" ).is_none()
-    && cmd.get_integer( "min_entries" ).is_none()
-    && cmd.get_integer( "limit" ).is_none();
-
   // --- parameters ---
 
-  let scope_raw = cmd.get_string( "scope" ).unwrap_or( "under" );
+  let scope_raw = cmd.get_string( "scope" ).unwrap_or( "around" );
   let scope = scope_raw.to_lowercase();
-  if !matches!( scope.as_str(), "local" | "relevant" | "under" | "global" )
+  if !matches!( scope.as_str(), "local" | "relevant" | "under" | "around" | "global" )
   {
     return Err( ErrorData::new(
       ErrorCode::InternalError,
-      format!( "scope must be relevant|local|under|global, got {scope_raw}" ),
+      format!( "scope must be relevant|local|under|around|global, got {scope_raw}" ),
     ) );
   }
 
@@ -2602,6 +2470,32 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         decode_path_via_fs( candidate_base )
           .map_or( true, | p | base_path.starts_with( &p ) )
       },
+      // Union of under + relevant — bidirectional neighborhood.
+      // BTreeMap key on decoded path deduplicates projects matched by both arms.
+      "around" =>
+      {
+        let is_under = {
+          if dir_name != eb && !dir_name.starts_with( &format!( "{eb}-" ) ) { false }
+          else if dir_name == eb { true }
+          else {
+            let candidate_base = dir_name.find( "--" ).map_or( dir_name, | i | &dir_name[ ..i ] );
+            decode_path_via_fs( candidate_base )
+              .map_or( true, | p | p.starts_with( &base_path ) )
+          }
+        };
+        let is_relevant = {
+          if is_relevant_encoded( dir_name, eb ) {
+            let candidate_base = dir_name.find( "--" ).map_or( dir_name, | i | &dir_name[ ..i ] );
+            if candidate_base == eb { true }
+            else {
+              decode_path_via_fs( candidate_base )
+                .map_or( true, | p | base_path.starts_with( &p ) )
+            }
+          }
+          else { false }
+        };
+        is_under || is_relevant
+      },
       _          => false,
     }
   };
@@ -2651,16 +2545,6 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       let tb = session_mtime( b ).unwrap_or( std::time::UNIX_EPOCH );
       tb.cmp( &ta )
     } );
-  }
-
-  // --- summary mode (default invocation) ---
-  // Active when all parameters are absent. Any explicit parameter falls through
-  // to list mode (Algorithm C) below.
-  if is_default
-  {
-    let summary = render_active_project_summary( &mut groups )
-      .unwrap_or_else( || "No active project found.\n".to_string() );
-    return Ok( OutputData::new( summary, "text" ) );
   }
 
   // --- format output (Algorithm C) ---

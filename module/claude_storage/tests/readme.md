@@ -47,8 +47,9 @@ tests/
 ├── search_session_partial_uuid_bug.rs     # .search session partial UUID fix (issue-020)
 ├── search_special_characters_bug.rs       # Special character handling (Bug #006, #007)
 ├── session_path_command_test.rs           # .path/.exists/.session.dir/.session.ensure lifecycle commands
-├── projects_command_test.rs               # .projects scope-aware listing, family tree display, mode boundaries, parameter validation (issues 024/029/031/032, IT-47)
-├── projects_output_format_test.rs         # .projects output format: path headers, agent collapse (IT-17..IT-22); project-centric redesign (IT-50..IT-53)
+├── projects_command_test.rs               # .projects scope-aware listing, family tree display, parameter validation (issues 024/029/031/032)
+├── projects_output_format_test.rs         # .projects output format: path headers, agent collapse (IT-17..IT-22); list-mode redesign (IT-52..IT-53)
+├── projects_scope_around_test.rs          # .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59)
 ├── projects_zero_byte_count_bug.rs        # .projects zero-byte session exclusion from header count (issue-034, IT-54..IT-56)
 ├── smart_show_command.rs                  # .show smart parameter detection tests
 ├── status_path_test.rs                    # .status path parameter tests (Phase 1D)
@@ -92,8 +93,9 @@ tests/
 | `search_session_partial_uuid_bug.rs` | Test partial UUID matching in .search session filter |
 | `search_special_characters_bug.rs` | Test special character handling in queries |
 | `session_path_command_test.rs` | Test .path/.exists/.session.dir/.session.ensure lifecycle commands |
-| `projects_command_test.rs` | Test .projects scope filtering, family tree, mode boundaries, parameter validation |
-| `projects_output_format_test.rs` | Test .projects output format: path headers, agent collapse (IT-17..22); project-centric redesign (IT-50..53) |
+| `projects_command_test.rs` | Test .projects scope filtering, family tree, and parameter validation |
+| `projects_output_format_test.rs` | Test .projects output format: path headers, agent collapse (IT-17..22); list-mode redesign (IT-52..53) |
+| `projects_scope_around_test.rs` | Test .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59) |
 | `projects_zero_byte_count_bug.rs` | Test zero-byte session exclusion from .projects list-mode header count (issue-034) |
 | `smart_show_command.rs` | Test location-aware .show command |
 | `status_path_test.rs` | Test path parameter in .status command |
@@ -295,8 +297,8 @@ cargo nextest run --all-features -- --include-ignored
 
 ## Test Count Tracking
 
-**Current Status**: 284 tests, 0 ignored
-- Effective tests: 284 (all tests run fully)
+**Current Status**: 289 tests, 0 ignored
+- Effective tests: 289 (all tests run fully)
 - Ignored tests: 0 (target met — all tests use `CLAUDE_STORAGE_ROOT` + `TempDir` isolation)
 
 ## Known Findings

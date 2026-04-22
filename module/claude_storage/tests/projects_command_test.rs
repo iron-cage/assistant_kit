@@ -170,19 +170,20 @@ fn ec6_invalid_scope_rejected()
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "scope must be relevant|local|under|global, got all" ),
+    err.contains( "scope must be relevant|local|under|around|global, got all" ),
     "error must contain exact message; got: {err}"
   );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// EC-7: scope:: omitted → defaults to under (same output as explicit scope::under)
+// EC-7: scope:: omitted → defaults to around (same output as explicit scope::around)
 //
-// Fixture: parent project + child project (under parent path) so that scope::local
-// and scope::under produce different results. Under includes the child; local doesn't.
+// Fixture: parent project + child project so that scope::local and scope::around
+// produce different results. Around includes the child; local doesn't.
+// (No ancestor projects in storage → around output equals under output here.)
 // ────────────────────────────────────────────────────────────────────────────
 #[test]
-fn ec7_omitted_scope_defaults_to_under()
+fn ec7_omitted_scope_defaults_to_around()
 {
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
@@ -203,20 +204,20 @@ fn ec7_omitted_scope_defaults_to_under()
     .env( "HOME", root.path().to_str().unwrap() )
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
-    .arg( "scope::under" )
+    .arg( "scope::around" )
     .arg( format!( "path::{}", parent.display() ) )
     .output().unwrap();
 
   assert_exit( &implicit, 0 );
   let s = core::str::from_utf8( &implicit.stdout ).unwrap();
-  // default scope must include sub-project sessions (under behavior)
+  // default scope must include descendant sessions (around includes under direction)
   assert!(
     s.contains( "session-child" ),
-    "default scope must include sub-project sessions (under behavior); got:\n{s}"
+    "default scope must include descendant sessions (around behavior); got:\n{s}"
   );
   assert_eq!(
     implicit.stdout, explicit.stdout,
-    "omitting scope:: must produce same output as scope::under"
+    "omitting scope:: must produce same output as scope::around"
   );
 }
 
@@ -1470,23 +1471,20 @@ fn it_26_scope_relevant_excludes_underscore_named_sibling()
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// IT-1 / T01: Default (no args) shows active-project summary, not a list
+// IT-1 / T01: Default (no args) shows list output, not a single-project summary
 // ────────────────────────────────────────────────────────────────────────────
 
-/// IT-1: Default (no args) shows active-project summary
+/// IT-1: Default (no args) outputs list-mode `Found N project(s):` format.
 ///
 /// ## Root Cause (tested behaviour)
-/// When `clg .projects` is invoked with no arguments, it activates summary mode:
-/// prints a project-centric summary block for the most recently active project
-/// instead of the full project-grouped session list.
+/// After summary-mode removal (task-019), bare `clg .projects` uses the default
+/// `scope::around` in list mode. There is no longer a single-project summary path.
 ///
 /// ## Verification
-/// - stdout contains "Active project" header line
-/// - stdout contains "Last session:" line
-/// - stdout contains "Last message:" section
-/// - stdout does NOT contain "Found" (list-mode header)
+/// - stdout contains `Found` (list-mode header)
+/// - stdout does NOT contain `Active project` (summary block absent)
 #[test]
-fn it1_default_shows_active_project_summary()
+fn it1_default_shows_list_output()
 {
   let root = tempfile::TempDir::new().unwrap();
   let project_path = root.path().join( "myproject" );
@@ -1506,243 +1504,28 @@ fn it1_default_shows_active_project_summary()
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  assert!( s.contains( "Active project" ), "expected 'Active project' summary header; got:\n{s}" );
-  assert!( s.contains( "Last session:" ), "expected 'Last session:' line; got:\n{s}" );
-  assert!( s.contains( "Last message:" ), "expected Last message section; got:\n{s}" );
-  assert!( !s.contains( "Found" ), "expected no list header; got:\n{s}" );
+  assert!( s.contains( "Found" ),          "bare .projects must output 'Found N project(s):' format; got:\n{s}" );
+  assert!( !s.contains( "Active project" ), "bare .projects must not output summary block; got:\n{s}" );
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// IT-47: verbosity::1 alone stays in summary mode (bug-is-default-verbosity)
-// ────────────────────────────────────────────────────────────────────────────
-
-/// IT-47: `verbosity::1` alone must not activate list mode.
-///
-/// ## Root Cause
-/// `projects_routine` computes `is_default` by requiring every parameter to
-/// be `None`, including `cmd.get_integer("verbosity").is_none()` (cli/mod.rs).
-/// Passing `verbosity::1` returns `Some(1)` instead of `None`, setting
-/// `is_default = false` and routing to list mode (Algorithm C) even though
-/// `verbosity::1` is semantically the default — a display modifier with no
-/// bearing on mode selection.
-///
-/// ## Why Not Caught Initially
-/// All existing summary-mode tests invoke bare `.projects` with no arguments.
-/// None tested the invariant: passing a parameter at its default value must
-/// produce identical output to omitting it entirely.
-///
-/// ## Fix Applied
-/// Removed `&& cmd.get_integer("verbosity").is_none()` from the `is_default`
-/// predicate. Verbosity controls how much to display within a mode, not which
-/// mode to enter; it must not appear in the mode-selection gate.
-///
-/// ## Prevention
-/// `is_default` must only include parameters that change *what* is shown
-/// (scope, filter, session ID). Display modifiers (verbosity, format) must
-/// never appear in the mode-selection gate.
-///
-/// ## Pitfall to Avoid
-/// "Parameter is absent" and "parameter is at its default value" are
-/// semantically different — treat them as equivalent for display modifiers.
-// test_kind: bug_reproducer(issue-is-default-verbosity)
-#[test]
-fn it47_verbosity_1_alone_stays_in_summary_mode()
-{
-  let root = tempfile::TempDir::new().unwrap();
-  let project_path = root.path().join( "myproject" );
-  std::fs::create_dir_all( &project_path ).unwrap();
-
-  common::write_path_project_session_with_last_message(
-    root.path(), &project_path, "session-it47", 2, "Hello from it47"
-  );
-
-  let out = common::clg_cmd()
-    .env( "HOME", root.path().to_str().unwrap() )
-    .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
-    .current_dir( &project_path )
-    .arg( ".projects" )
-    .arg( "verbosity::1" )
-    .output()
-    .unwrap();
-
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  assert!( s.contains( "Active project" ), "verbosity::1 must stay in summary mode; got:\n{s}" );
-  assert!( s.contains( "Last message:" ), "expected Last message section; got:\n{s}" );
-  assert!( !s.contains( "Found" ), "verbosity::1 must not trigger list mode header; got:\n{s}" );
-}
 
 // ────────────────────────────────────────────────────────────────────────────
-// IT-30 / T01: Summary header format (id, age, count, project path)
+// IT-33: Empty scope → "Found 0 projects:"
 // ────────────────────────────────────────────────────────────────────────────
 
-/// IT-30: Summary header format — project path, session count, last session id
+/// IT-33: Empty storage → list-mode zero-result header.
 ///
 /// ## Root Cause (tested behaviour)
-/// The first line must be `Active project  {path}  (N session(s), last active Xago)`.
-/// The second line must be `Last session:  {8-char-id}  {age}  (N entries)`.
-///
-/// ## Verification
-/// - First line starts with "Active project"
-/// - First line contains the project path (project dir name)
-/// - First line contains "session" (session count)
-/// - Second line starts with "Last session:"
-/// - Second line contains "entries" (entry count)
-#[test]
-fn it30_summary_header_format()
-{
-  let root = tempfile::TempDir::new().unwrap();
-  let project_path = root.path().join( "proj30" );
-  std::fs::create_dir_all( &project_path ).unwrap();
-
-  // Write 2 standard + 1 last-message entry → total 3 entries, 1 session
-  common::write_path_project_session_with_last_message(
-    root.path(), &project_path, "session-it30", 2, "Last msg for it30"
-  );
-
-  let out = common::clg_cmd()
-    .env( "HOME", root.path().to_str().unwrap() )
-    .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
-    .current_dir( &project_path )
-    .arg( ".projects" )
-    .output()
-    .unwrap();
-
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  let lines : Vec< &str > = s.lines().collect();
-
-  assert!( !lines.is_empty(), "output should not be empty" );
-  assert!(
-    lines[ 0 ].starts_with( "Active project" ),
-    "first line must start with 'Active project'; got: {:?}", lines[ 0 ]
-  );
-  assert!(
-    lines[ 0 ].contains( "proj30" ),
-    "first line must contain project dir name; got: {:?}", lines[ 0 ]
-  );
-  assert!(
-    lines[ 0 ].contains( "session" ),
-    "first line must contain session count; got: {:?}", lines[ 0 ]
-  );
-  assert!(
-    lines.len() >= 2 && lines[ 1 ].starts_with( "Last session:" ),
-    "second line must start with 'Last session:'; got: {:?}", lines.get( 1 )
-  );
-  assert!(
-    lines.len() >= 2 && lines[ 1 ].contains( "entries" ),
-    "second line must contain entry count; got: {:?}", lines.get( 1 )
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// IT-31 / T02: Truncation gate — message ≤ 50 chars shown in full
-// ────────────────────────────────────────────────────────────────────────────
-
-/// IT-31: Truncation gate — 40-char message shown in full, no ellipsis
-///
-/// ## Root Cause (tested behaviour)
-/// Messages of 50 characters or fewer must NOT be truncated.
-/// The full text must appear verbatim in the Last message section.
-///
-/// ## Verification
-/// - stdout contains the full 40-char string
-/// - stdout does NOT contain "..."
-#[test]
-fn it31_truncation_gate_short_message()
-{
-  // Exactly 40 characters (verified by counting):
-  // "Fix typo in the readme file near line 10"
-  //  3 + 1 + 4 + 1 + 2 + 1 + 3 + 1 + 6 + 1 + 4 + 1 + 4 + 1 + 4 + 1 + 2 = 40
-  let msg_40 = "Fix typo in the readme file near line 10";
-  assert_eq!( msg_40.chars().count(), 40, "fixture must be exactly 40 chars" );
-
-  let root = tempfile::TempDir::new().unwrap();
-  let project_path = root.path().join( "proj31" );
-  std::fs::create_dir_all( &project_path ).unwrap();
-
-  common::write_path_project_session_with_last_message(
-    root.path(), &project_path, "session-it31", 2, msg_40
-  );
-
-  let out = common::clg_cmd()
-    .env( "HOME", root.path().to_str().unwrap() )
-    .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
-    .current_dir( &project_path )
-    .arg( ".projects" )
-    .output()
-    .unwrap();
-
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  assert!( s.contains( msg_40 ), "full 40-char message must appear verbatim; got:\n{s}" );
-  assert!( !s.contains( "..." ), "must NOT truncate a 40-char message; got:\n{s}" );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// IT-32 / T04: Truncation formula — message > 50 chars as first30...last30
-// ────────────────────────────────────────────────────────────────────────────
-
-/// IT-32: Truncation formula — 60-char message as {first30}...{last30}
-///
-/// ## Root Cause (tested behaviour)
-/// Messages longer than 50 Unicode scalar values must be truncated to
-/// `{first30}...{last30}` (exactly 63 output characters for a 60-char input).
-///
-/// ## Verification
-/// - stdout contains "..."
-/// - The first 30 chars of the source message appear before "..."
-/// - The last 30 chars of the source message appear after "..."
-/// - The full 60-char message does NOT appear verbatim
-#[test]
-fn it32_truncation_formula_long_message()
-{
-  // 60 chars total: 30 A's + 30 B's — distinct halves for easy verification.
-  let first30  = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-  let last30   = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
-  let msg_60   = format!( "{first30}{last30}" );
-  assert_eq!( msg_60.chars().count(), 60, "fixture must be exactly 60 chars" );
-
-  let root = tempfile::TempDir::new().unwrap();
-  let project_path = root.path().join( "proj32" );
-  std::fs::create_dir_all( &project_path ).unwrap();
-
-  common::write_path_project_session_with_last_message(
-    root.path(), &project_path, "session-it32", 2, &msg_60
-  );
-
-  let out = common::clg_cmd()
-    .env( "HOME", root.path().to_str().unwrap() )
-    .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
-    .current_dir( &project_path )
-    .arg( ".projects" )
-    .output()
-    .unwrap();
-
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  assert!( s.contains( "..." ), "must use ... for 60-char message; got:\n{s}" );
-  assert!( s.contains( first30 ), "must contain first 30 chars before ...; got:\n{s}" );
-  assert!( s.contains( last30 ), "must contain last 30 chars after ...; got:\n{s}" );
-  assert!( !s.contains( &msg_60 ), "must NOT show full 60-char message verbatim; got:\n{s}" );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// IT-33 / T05: No sessions in scope → "No active session found."
-// ────────────────────────────────────────────────────────────────────────────
-
-/// IT-33: Empty scope → "No active session found."
-///
-/// ## Root Cause (tested behaviour)
-/// When no sessions exist under the cwd, summary mode must emit the sentinel
-/// message `No active session found.` rather than empty output or an error.
+/// When no sessions exist under the cwd, list mode must emit `Found 0 projects:`
+/// rather than empty output or an error. Summary mode was removed in task-019;
+/// the zero-result path now always uses the list-mode header.
 ///
 /// ## Verification
 /// - exit code is 0
-/// - stdout contains "No active session found."
+/// - stdout contains "Found 0 projects:"
 /// - stderr is empty
 #[test]
-fn it33_no_sessions_shows_not_found()
+fn it33_no_sessions_shows_zero_result_header()
 {
   let root = tempfile::TempDir::new().unwrap();
   let project_path = root.path().join( "empty_proj" );
@@ -1760,101 +1543,12 @@ fn it33_no_sessions_shows_not_found()
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!(
-    s.contains( "No active project found." ),
-    "expected sentinel message; got:\n{s}"
+    s.contains( "Found 0 projects:" ),
+    "empty storage must produce list-mode zero-result header; got:\n{s}"
   );
   assert!( stderr( &out ).is_empty(), "stderr must be empty; got: {}", stderr( &out ) );
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// IT-34 / T06: Explicit scope::local keeps list mode
-// ────────────────────────────────────────────────────────────────────────────
-
-/// IT-34: Explicit `scope::` parameter activates list mode
-///
-/// ## Root Cause (tested behaviour)
-/// Summary mode is only active when ALL parameters are absent.
-/// An explicit `scope::local` must activate list mode regardless.
-///
-/// ## Verification
-/// - stdout contains "Found" (list-mode header)
-/// - stdout does NOT contain "Active project"
-///
-/// ## Maintenance Note
-/// The negative check `!s.contains("Active project")` must track the current
-/// summary-mode header string. If that header is renamed, update this assertion.
-/// History: "Active session" (task-007) → "Active project" (task-016); stale
-/// assertion discovered and fixed by task-017.
-#[test]
-fn it34_explicit_scope_keeps_list_mode()
-{
-  let root = tempfile::TempDir::new().unwrap();
-  let project_path = root.path().join( "proj34" );
-  std::fs::create_dir_all( &project_path ).unwrap();
-
-  common::write_path_project_session_with_last_message(
-    root.path(), &project_path, "session-it34", 2, "Some message"
-  );
-
-  let out = common::clg_cmd()
-    .env( "HOME", root.path().to_str().unwrap() )
-    .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
-    .current_dir( &project_path )
-    .arg( ".projects" )
-    .arg( "scope::local" )
-    .output()
-    .unwrap();
-
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  assert!( s.contains( "Found" ), "explicit scope:: must activate list mode; got:\n{s}" );
-  assert!( !s.contains( "Active project" ), "explicit scope:: must not show summary; got:\n{s}" );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// IT-35 / T07: Explicit limit::N keeps list mode
-// ────────────────────────────────────────────────────────────────────────────
-
-/// IT-35: Explicit `limit::` parameter activates list mode
-///
-/// ## Root Cause (tested behaviour)
-/// Summary mode is only active when ALL parameters are absent.
-/// An explicit `limit::5` must activate list mode regardless.
-///
-/// ## Verification
-/// - stdout contains "Found" (list-mode header)
-/// - stdout does NOT contain "Active project"
-///
-/// ## Maintenance Note
-/// The negative check `!s.contains("Active project")` must track the current
-/// summary-mode header string. If that header is renamed, update this assertion.
-/// History: "Active session" (task-007) → "Active project" (task-016); stale
-/// assertion discovered and fixed by task-017.
-#[test]
-fn it35_explicit_limit_keeps_list_mode()
-{
-  let root = tempfile::TempDir::new().unwrap();
-  let project_path = root.path().join( "proj35" );
-  std::fs::create_dir_all( &project_path ).unwrap();
-
-  common::write_path_project_session_with_last_message(
-    root.path(), &project_path, "session-it35", 2, "Some message"
-  );
-
-  let out = common::clg_cmd()
-    .env( "HOME", root.path().to_str().unwrap() )
-    .env( "CLAUDE_STORAGE_ROOT", root.path().to_str().unwrap() )
-    .current_dir( &project_path )
-    .arg( ".projects" )
-    .arg( "limit::5" )
-    .output()
-    .unwrap();
-
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  assert!( s.contains( "Found" ), "explicit limit:: must activate list mode; got:\n{s}" );
-  assert!( !s.contains( "Active project" ), "explicit limit:: must not show summary; got:\n{s}" );
-}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Family Display Tests (IT-36 through IT-43)

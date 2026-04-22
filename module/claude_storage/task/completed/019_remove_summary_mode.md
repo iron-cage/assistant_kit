@@ -5,9 +5,9 @@
 - **Executor Type:** any
 - **Actor:** null
 - **Claimed At:** null
-- **Status:** 🎯 (Available)
-- **Validated By:** null
-- **Validation Date:** null
+- **Status:** ✅ (Completed)
+- **Validated By:** claude-sonnet-4-6
+- **Validation Date:** 2026-04-22
 
 ## Goal
 
@@ -132,4 +132,13 @@ Desired answer for every question is YES.
 
 ## Outcomes
 
-[Empty — populated upon task completion]
+- Deleted `render_active_project_summary` function (~36 lines) from `src/cli/mod.rs`
+- Deleted `is_default` variable block and the `if is_default { return ... }` branch from `projects_routine`
+- Deleted `TRUNCATE_THRESHOLD`, `TRUNCATE_PREVIEW` constants and `last_text_entry`, `truncate_message` helper functions (all now dead without summary mode)
+- Pruned `ProjectSummary` struct to `{ display_path, last_mtime }` — removed `session_count`, `last_session_id`, `last_session_entries`, `last_message` fields and their computation in `aggregate_projects`
+- Updated `aggregate_projects` doc comment to remove stale references to session count and last-text-entry aggregation
+- Rewrote IT-1 (`it1_default_shows_list_output`): asserts `Found` present, `Active project` absent for bare invocation
+- Removed summary-mode tests: IT-30, IT-31, IT-32, IT-34, IT-35, IT-47-summary (verbosity gate), IT-50, IT-51
+- Rewrote IT-33 to assert `Found 0 projects:` (list-mode zero-result header replaces summary sentinel)
+- Updated `tests/readme.md`: count 287 → 289, removed "mode boundaries" description from `projects_command_test.rs` row, updated `projects_output_format_test.rs` row to reference IT-52..53
+- Full Level 3 suite: 289 tests, exit 0, clippy clean

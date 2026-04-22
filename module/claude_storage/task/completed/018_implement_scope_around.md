@@ -5,9 +5,9 @@
 - **Executor Type:** any
 - **Actor:** null
 - **Claimed At:** null
-- **Status:** 🎯 (Available)
-- **Validated By:** null
-- **Validation Date:** null
+- **Status:** ✅ (Completed)
+- **Validated By:** claude-sonnet-4-6
+- **Validation Date:** 2026-04-22
 
 ## Goal
 
@@ -178,4 +178,10 @@ Expected: assertion `!s.contains("sibling_project_name")` present in the test.
 
 ## Outcomes
 
-[Empty — populated upon task completion]
+- Added `"around"` arm to `project_matches` closure in `projects_routine` — union of `relevant ∪ under`, deduped by BTreeMap key
+- Changed `unwrap_or("under")` to `unwrap_or("around")` — `scope::around` is now the default for `.projects`
+- Updated valid-values match guard and error message string to include `"around"`
+- Created `tests/projects_scope_around_test.rs` with IT-57, IT-58, IT-59 covering: ancestor+self+descendant visible/sibling excluded; default scope = around; degenerate single-project case
+- Updated EC-6 error-message assertion and renamed EC-7 to compare against `scope::around`
+- Registered `projects_scope_around_test.rs` in `tests/readme.md`; test count 284 → 287
+- All 3 new tests pass; full Level 3 suite clean (289 tests, exit 0)

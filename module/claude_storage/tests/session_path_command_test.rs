@@ -997,7 +997,7 @@ fn it_path_dot_resolves_to_cwd()
 
 // ─── .session.dir additional coverage ────────────────────────────────────────
 
-/// `.session.dir path::~` expands tilde in path:: (IT-5)
+/// `.session.dir path::~` expands tilde in `path::` (IT-5)
 #[ test ]
 fn it_session_dir_tilde_expansion()
 {

@@ -61,22 +61,22 @@ fn ast_processes_command_accepted()
   );
 }
 
-/// After `.sessions` → `.processes` rename in manager, storage's `.sessions`
-/// (scope-based session listing) is now the winner in `ast`.  It accepts `scope::`.
+/// After storage renamed `.sessions` → `.projects` (task-015), `.projects`
+/// is the scope-based session listing command in `ast`.  It accepts `scope::`.
 #[test]
-fn ast_sessions_accepts_scope_param()
+fn ast_projects_accepts_scope_param()
 {
   let home = tempfile::TempDir::new().unwrap();
   let out = std::process::Command::new(
     assert_cmd::cargo::cargo_bin!( "ast" )
   )
     .env( "HOME", home.path() )
-    .args( [ ".sessions", "scope::local" ] )
+    .args( [ ".projects", "scope::local" ] )
     .output()
     .unwrap();
   assert_eq!(
     out.status.code().unwrap_or( -1 ), 0,
-    "ast.sessions scope::local must succeed (storage variant accepts scope); stderr: {}",
+    "ast.projects scope::local must succeed (storage variant accepts scope); stderr: {}",
     String::from_utf8_lossy( &out.stderr ),
   );
 }
