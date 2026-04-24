@@ -56,6 +56,11 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | IT-51 | Summary mode shows session count aggregate (task-016) | Project-Centric Output |
 | IT-52 | List mode shows projects sorted by recency (task-016) | Project-Centric Output |
 | IT-53 | verbosity::0 outputs project paths only (task-016) | Project-Centric Output |
+| IT-60 | Topic path shown even when topic dir absent from disk | Topic Existence Guard (issue-035) |
+| IT-61 | Topic path shown when topic dir present on disk | Topic Existence Guard (issue-035) |
+| IT-62 | Default-topic path shown when topic dir absent from disk | Topic Existence Guard (issue-035) |
+| IT-63 | Base path shown correctly with no topic suffix | Topic Existence Guard (issue-035) |
+| IT-64 | Double-topic key shows both topic components unconditionally | Topic Existence Guard (issue-035) |
 
 ## Test Coverage Summary
 
@@ -75,6 +80,7 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 - Output Format (v1 enhancement): 3 tests (IT-27, IT-28, IT-29)
 - Family Display: 11 tests (IT-36 through IT-43, IT-44 through IT-46)
 - Project-Centric Output (task-016): 4 tests (IT-50 through IT-53)
+- Topic Existence Guard (issue-035): 5 tests (IT-60 through IT-64)
 
 ## Test Cases
 
@@ -906,3 +912,81 @@ stdout does NOT contain `Found N projects:` (list-mode header must be absent).
 **Pass Criteria:** exit 0 + project path present + no `sessions,` or `Found` text
 
 **Source:** `tests/projects_output_format_test.rs::it_verbosity_0_shows_paths_only`
+
+---
+
+### IT-60: Topic path shown even when topic dir absent from disk
+
+**Goal:** Verify that `decode_project_display` extends the decoded path with the topic component unconditionally, even when the topic directory does not exist on disk. Reproduces issue-035.
+**Setup:** Storage root with one project dir `{encoded}--commit` containing one session. The `-commit` filesystem directory does NOT exist under the project path.
+**Command:** `clg .projects scope::local`
+**Expected Output:** Path header contains `/-commit` (topic component appended regardless of disk state).
+**Verification:**
+- Exit code is 0
+- stdout path header contains `/-commit`
+**Pass Criteria:** exit 0 + `/-commit` present in path header
+
+**Source:** `tests/projects_path_encoding_test.rs::projects_shows_topic_path_when_topic_dir_absent`
+
+---
+
+### IT-61: Topic path shown when topic dir present on disk
+
+**Goal:** Verify that when the `-commit` topic directory DOES exist on disk, `decode_project_display` still correctly extends the path (non-regression for the exists case after issue-035 fix).
+**Setup:** Storage root with one project dir `{encoded}--commit` containing one session. The `-commit` filesystem directory DOES exist.
+**Command:** `clg .projects scope::local`
+**Expected Output:** Path header contains `/-commit`.
+**Verification:**
+- Exit code is 0
+- stdout path header contains `/-commit`
+**Pass Criteria:** exit 0 + `/-commit` present in path header
+
+**Source:** `tests/projects_path_encoding_test.rs::projects_shows_topic_path_when_topic_dir_present`
+
+---
+
+### IT-62: Default-topic path shown when topic dir absent from disk
+
+**Goal:** Verify that the `--default-topic` suffix is also decoded correctly when the `-default_topic` directory is absent — same root cause as IT-60 but for the default-topic variant.
+**Setup:** Storage root with one project dir `{encoded}--default-topic` containing one session. The `-default_topic` filesystem directory does NOT exist.
+**Command:** `clg .projects scope::local`
+**Expected Output:** Path header contains `/-default_topic`.
+**Verification:**
+- Exit code is 0
+- stdout path header contains `/-default_topic`
+**Pass Criteria:** exit 0 + `/-default_topic` present in path header
+
+**Source:** `tests/projects_path_encoding_test.rs::projects_shows_default_topic_path_when_topic_dir_absent`
+
+---
+
+### IT-63: Base path shown correctly with no topic suffix
+
+**Goal:** Verify that a project dir without `--` suffix still decodes to the correct base path (no-regression for the common non-topic case).
+**Setup:** Storage root with one plain project dir `{encoded}` (no `--` suffix) containing one session.
+**Command:** `clg .projects scope::local`
+**Expected Output:** Path header shows the decoded base path without any `/-topic` suffix.
+**Verification:**
+- Exit code is 0
+- stdout path header contains the project base path
+- stdout does NOT contain `/-commit` or `/-default_topic`
+**Pass Criteria:** exit 0 + base path present + no spurious topic suffix
+
+**Source:** `tests/projects_path_encoding_test.rs::projects_shows_base_path_with_no_topic`
+
+---
+
+### IT-64: Double-topic key shows both topic components unconditionally
+
+**Goal:** Verify that a storage key with two `--` separators (`{base}--default-topic--commit`) displays both topic components in the path (`base/-default_topic/-commit`), even when neither topic directory exists on disk. Validates that `split_storage_key` and the unconditional-join loop work correctly for multi-topic keys.
+**Setup:** Storage root with one project dir `{encoded_base}--default-topic--commit`. Topic dirs (`-default_topic`, `-commit`) are NOT created on disk.
+**Command:** `clg .projects scope::global verbosity::1`
+**Expected Output:** Path header contains `/-default_topic` AND `/-commit`.
+**Verification:**
+- Exit code is 0
+- stdout contains `/-default_topic`
+- stdout contains `/-commit`
+- stdout contains the session ID
+**Pass Criteria:** exit 0 + both topic components present in path
+
+**Source:** `tests/projects_path_encoding_test.rs::projects_shows_both_topic_components_for_double_topic_key`

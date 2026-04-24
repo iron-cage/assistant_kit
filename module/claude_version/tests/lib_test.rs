@@ -98,7 +98,7 @@ mod enabled
       .filter_map( | line |
       {
         let t = line.trim();
-        t.strip_prefix( "- name: \"" )?.strip_suffix( '"' ).map( | n | n.to_string() )
+        t.strip_prefix( "- name: \"" )?.strip_suffix( '"' ).map( String::from )
       } )
       .collect();
 

@@ -24,7 +24,7 @@ use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 
 use crate::output::{ OutputFormat, OutputOptions, json_escape };
-use claude_runner_core::process::{ find_claude_processes, send_sigkill, send_sigterm };
+use claude_runner_core::process::{ ProcessInfo, find_claude_processes, send_sigkill, send_sigterm };
 use claude_version_core::settings_io::{ StoredAs, get_setting, infer_type, read_all_settings, set_setting };
 use claude_version_core::version::{
   VERSION_ALIASES,
@@ -539,6 +539,85 @@ fn guard_once_latest( dry : bool, verbosity : u8, format : OutputFormat ) -> Res
   Ok( OutputData::new( msg, "text" ) )
 }
 
+/// Check installed version and handle drift for the guard command.
+///
+/// Returns `Ok(Some(output))` when the installed version yields an early response,
+/// `Ok(None)` if no version is installed (caller proceeds to fresh install),
+/// or `Err` if a reinstall was attempted and failed.
+fn check_installed_guard(
+  target     : &str,
+  pref_label : &str,
+  dry        : bool,
+  verbosity  : u8,
+  format     : OutputFormat,
+) -> Result< Option< OutputData >, ErrorData >
+{
+  let Some( current ) = get_installed_version() else { return Ok( None ); };
+  if current == target
+  {
+    let pl  = json_escape( pref_label );
+    let msg = match format
+    {
+      OutputFormat::Json =>
+      {
+        format!( "{{\"status\":\"ok\",\"installed\":\"{current}\",\"preferred\":\"{pl}\"}}\n" )
+      }
+      OutputFormat::Text =>
+      {
+        if verbosity == 0
+        {
+          "ok\n".to_string()
+        }
+        else
+        {
+          format!( "version {current} matches preferred {pref_label}\n" )
+        }
+      }
+    };
+    return Ok( Some( OutputData::new( msg, "text" ) ) );
+  }
+  if dry
+  {
+    let pl  = json_escape( pref_label );
+    let msg = match format
+    {
+      OutputFormat::Json =>
+      {
+        format!( "{{\"status\":\"dry\",\"drift\":true,\"installed\":\"{current}\",\"preferred\":\"{pl}\"}}\n" )
+      }
+      OutputFormat::Text =>
+      {
+        if verbosity == 0
+        {
+          format!( "[dry-run] {current}\u{2192}{target}\n" )
+        }
+        else
+        {
+          format!( "[dry-run] drift detected: installed {current}, preferred {pref_label}\n\
+                    [dry-run] would reinstall {pref_label}\n" )
+        }
+      }
+    };
+    return Ok( Some( OutputData::new( msg, "text" ) ) );
+  }
+  eprintln!( "drift detected: installed {current}, preferred {pref_label} \u{2014} restoring" );
+  perform_install( target, false )
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
+  let pl  = json_escape( pref_label );
+  let msg = match format
+  {
+    OutputFormat::Json =>
+    {
+      format!( "{{\"status\":\"restored\",\"preferred\":\"{pl}\"}}\n" )
+    }
+    OutputFormat::Text =>
+    {
+      if verbosity == 0 { format!( "restored {target}\n" ) } else { format!( "restored {pref_label}\n" ) }
+    }
+  };
+  Ok( Some( OutputData::new( msg, "text" ) ) )
+}
+
 /// Guard path for pinned versions: compare installed vs preferred and restore on drift.
 fn guard_once_pinned( dry : bool, force : bool, spec : &str, resolved : &str, verbosity : u8, format : OutputFormat ) -> Result< OutputData, ErrorData >
 {
@@ -549,71 +628,9 @@ fn guard_once_pinned( dry : bool, force : bool, spec : &str, resolved : &str, ve
 
   if !force
   {
-    if let Some( current ) = get_installed_version()
+    if let Some( output ) = check_installed_guard( target, &pref_label, dry, verbosity, format )?
     {
-      if current == target
-      {
-        let pl = json_escape( &pref_label );
-        let msg = match format
-        {
-          OutputFormat::Json =>
-          {
-            format!( "{{\"status\":\"ok\",\"installed\":\"{current}\",\"preferred\":\"{pl}\"}}\n" )
-          }
-          OutputFormat::Text =>
-          {
-            if verbosity == 0
-            {
-              "ok\n".to_string()
-            }
-            else
-            {
-              format!( "version {current} matches preferred {pref_label}\n" )
-            }
-          }
-        };
-        return Ok( OutputData::new( msg, "text" ) );
-      }
-      if dry
-      {
-        let pl = json_escape( &pref_label );
-        let msg = match format
-        {
-          OutputFormat::Json =>
-          {
-            format!( "{{\"status\":\"dry\",\"drift\":true,\"installed\":\"{current}\",\"preferred\":\"{pl}\"}}\n" )
-          }
-          OutputFormat::Text =>
-          {
-            if verbosity == 0
-            {
-              format!( "[dry-run] {current}\u{2192}{target}\n" )
-            }
-            else
-            {
-              format!( "[dry-run] drift detected: installed {current}, preferred {pref_label}\n\
-                        [dry-run] would reinstall {pref_label}\n" )
-            }
-          }
-        };
-        return Ok( OutputData::new( msg, "text" ) );
-      }
-      eprintln!( "drift detected: installed {current}, preferred {pref_label} \u{2014} restoring" );
-      perform_install( target, false )
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
-      let pl = json_escape( &pref_label );
-      let msg = match format
-      {
-        OutputFormat::Json =>
-        {
-          format!( "{{\"status\":\"restored\",\"preferred\":\"{pl}\"}}\n" )
-        }
-        OutputFormat::Text =>
-        {
-          if verbosity == 0 { format!( "restored {target}\n" ) } else { format!( "restored {pref_label}\n" ) }
-        }
-      };
-      return Ok( OutputData::new( msg, "text" ) );
+      return Ok( output );
     }
   }
   if dry
@@ -683,7 +700,7 @@ fn days_to_ymd( mut days : u64 ) -> ( u64, u8, u8 )
     days  -= md;
     month += 1;
   }
-  ( year, month, days as u8 + 1 )
+  ( year, month, u8::try_from( days ).expect( "day of month always 0-30" ) + 1 )
 }
 
 /// UTC timestamp in ISO 8601 format: `YYYY-MM-DDTHH:MM:SSZ` (no chrono crate).
@@ -806,6 +823,50 @@ pub fn processes_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Re
   Ok( OutputData::new( content, "text" ) )
 }
 
+/// Deliver SIGTERM+SIGKILL (with 2 s wait) or bare SIGKILL to a process list.
+///
+/// `force == true` → immediate SIGKILL; `force == false` → SIGTERM first, then
+/// SIGKILL any survivors after a 2-second grace period.
+fn send_kill_signals( procs : &[ ProcessInfo ], force : bool ) -> Result< (), ErrorData >
+{
+  if force
+  {
+    let mut failures = Vec::new();
+    for p in procs
+    {
+      if let Err( e ) = send_sigkill( p.pid ) { failures.push( format!( "PID {}: {e}", p.pid ) ); }
+    }
+    if !failures.is_empty()
+    {
+      return Err( ErrorData::new( ErrorCode::InternalError, format!( "SIGKILL failed: {}", failures.join( ", " ) ) ) );
+    }
+  }
+  else
+  {
+    let mut failures = Vec::new();
+    for p in procs
+    {
+      if let Err( e ) = send_sigterm( p.pid ) { failures.push( format!( "PID {}: {e}", p.pid ) ); }
+    }
+    if !failures.is_empty()
+    {
+      return Err( ErrorData::new( ErrorCode::InternalError, format!( "SIGTERM failed: {}", failures.join( ", " ) ) ) );
+    }
+    std::thread::sleep( core::time::Duration::from_secs( 2 ) );
+    let survivors = find_claude_processes();
+    let mut kfailures = Vec::new();
+    for p in &survivors
+    {
+      if let Err( e ) = send_sigkill( p.pid ) { kfailures.push( format!( "PID {}: {e}", p.pid ) ); }
+    }
+    if !kfailures.is_empty()
+    {
+      return Err( ErrorData::new( ErrorCode::InternalError, format!( "SIGKILL failed: {}", kfailures.join( ", " ) ) ) );
+    }
+  }
+  Ok( () )
+}
+
 /// `.processes.kill` — terminate all Claude Code processes.
 ///
 /// # Errors
@@ -871,41 +932,7 @@ pub fn processes_kill_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
 
   let count = procs.len();
 
-  if is_force( &cmd )
-  {
-    let mut failures = Vec::new();
-    for p in &procs
-    {
-      if let Err( e ) = send_sigkill( p.pid ) { failures.push( format!( "PID {}: {e}", p.pid ) ); }
-    }
-    if !failures.is_empty()
-    {
-      return Err( ErrorData::new( ErrorCode::InternalError, format!( "SIGKILL failed: {}", failures.join( ", " ) ) ) );
-    }
-  }
-  else
-  {
-    let mut failures = Vec::new();
-    for p in &procs
-    {
-      if let Err( e ) = send_sigterm( p.pid ) { failures.push( format!( "PID {}: {e}", p.pid ) ); }
-    }
-    if !failures.is_empty()
-    {
-      return Err( ErrorData::new( ErrorCode::InternalError, format!( "SIGTERM failed: {}", failures.join( ", " ) ) ) );
-    }
-    std::thread::sleep( core::time::Duration::from_secs( 2 ) );
-    let survivors = find_claude_processes();
-    let mut kfailures = Vec::new();
-    for p in &survivors
-    {
-      if let Err( e ) = send_sigkill( p.pid ) { kfailures.push( format!( "PID {}: {e}", p.pid ) ); }
-    }
-    if !kfailures.is_empty()
-    {
-      return Err( ErrorData::new( ErrorCode::InternalError, format!( "SIGKILL failed: {}", kfailures.join( ", " ) ) ) );
-    }
-  }
+  send_kill_signals( &procs, is_force( &cmd ) )?;
 
   std::thread::sleep( core::time::Duration::from_millis( 500 ) );
   let remaining = find_claude_processes().len();

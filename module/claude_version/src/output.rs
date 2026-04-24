@@ -7,6 +7,7 @@
 use unilang::data::{ ErrorCode, ErrorData };
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
+use core::fmt::Write as _;
 
 /// Available output formats for command results.
 #[ derive( Debug, Clone, Copy, PartialEq ) ]
@@ -90,7 +91,7 @@ pub fn json_escape( s : &str ) -> String
       '\r' => out.push_str( "\\r"  ),
       '\t' => out.push_str( "\\t"  ),
       // RFC 8259 requires all other C0 control chars to be escaped as \uXXXX.
-      c if ( c as u32 ) < 0x20 => out.push_str( &format!( "\\u{:04x}", c as u32 ) ),
+      c if ( c as u32 ) < 0x20 => write!( out, "\\u{:04x}", c as u32 ).unwrap(),
       c    => out.push( c ),
     }
   }

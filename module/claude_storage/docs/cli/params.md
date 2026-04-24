@@ -464,7 +464,7 @@ Discovery scope for session and project operations.
 | `.list` | `global` | Discovery boundary for project listing |
 | `.count` | `global` | Boundary for what gets counted |
 | `.search` | `global` | Boundary for what gets searched |
-| `.show` | `local` | Project search boundary when no `project::` given |
+| `.show` | `local` | Session search scope when `session_id::` given (current project + topic variants); no scope used when `session_id::` absent |
 | `.export` | `local` | Project search boundary for source session lookup |
 | `.projects` | `around` | Session discovery scope (ancestors + current + descendants) |
 

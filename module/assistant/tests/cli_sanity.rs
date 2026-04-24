@@ -20,7 +20,7 @@
 //! | `ast_package_name_is_assistant` | build metadata sanity |
 //! | `ast_binary_is_present` | binary builds and runs |
 //! | `ast_processes_command_accepted` | `.processes` routed via manager programmatic registration |
-//! | `ast_sessions_accepts_scope_param` | storage `.sessions` accepts `scope::` (manager collision gone) |
+//! | `ast_projects_accepts_scope_param` | storage `.projects` accepts `scope::` (manager collision gone) |
 //! | `ast_usage_command_accepted` | `.usage` routed via profile programmatic registration |
 //! | `ast_paths_command_accepted` | `.paths` routed via profile programmatic registration |
 //! | `ast_account_list_command_accepted` | `.account.list` routed via manager (first-wins) |

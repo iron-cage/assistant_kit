@@ -57,7 +57,7 @@ tests/
 ├── session_path_command_test.rs           # .path/.exists/.session.dir/.session.ensure lifecycle commands
 ├── projects_command_test.rs               # .projects scope filtering and parameter validation (EC-1..EC-8, IT-50)
 ├── projects_family_display_test.rs        # .projects family/agent session display (IT-1, IT-33, IT-36..IT-48)
-├── projects_path_encoding_test.rs         # .projects path decode/display bug reproducers (IT-23..IT-26)
+├── projects_path_encoding_test.rs         # .projects path decode/display bug reproducers (IT-23..IT-26, IT-60..IT-63)
 ├── projects_output_format_test.rs         # .projects output format: path headers, agent collapse (IT-17..IT-22); list-mode redesign (IT-52..IT-53)
 ├── projects_scope_around_test.rs          # .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59)
 ├── projects_zero_byte_count_bug.rs        # .projects zero-byte session exclusion from header count (issue-034, IT-54..IT-56)
@@ -113,7 +113,7 @@ tests/
 | `session_path_command_test.rs` | Test .path/.exists/.session.dir/.session.ensure lifecycle commands |
 | `projects_command_test.rs` | Test .projects scope filtering and parameter validation (EC-1..EC-8, IT-50) |
 | `projects_family_display_test.rs` | Test .projects family and agent session display (IT-1, IT-33, IT-36..IT-48) |
-| `projects_path_encoding_test.rs` | Test .projects path decode/display bug reproducers (IT-23..IT-26) |
+| `projects_path_encoding_test.rs` | Test .projects path decode/display bug reproducers (IT-23..IT-26, IT-60..IT-64) |
 | `projects_output_format_test.rs` | Test .projects output format: path headers, agent collapse (IT-17..22); list-mode redesign (IT-52..53) |
 | `projects_scope_around_test.rs` | Test .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59) |
 | `projects_zero_byte_count_bug.rs` | Test zero-byte session exclusion from .projects list-mode header count (issue-034) |
@@ -317,8 +317,8 @@ cargo nextest run --all-features -- --include-ignored
 
 ## Test Count Tracking
 
-**Current Status**: 309 tests, 0 ignored
-- Effective tests: 309 (all tests run fully)
+**Current Status**: 319 tests, 0 ignored
+- Effective tests: 319 (all tests run fully)
 - Ignored tests: 0 (target met — all tests use `CLAUDE_STORAGE_ROOT` + `TempDir` isolation)
 
 ## Known Findings

@@ -141,7 +141,7 @@ claude_storage .list type::conversation count::1 project::abc123
 
 ### Command :: 3. `.show`
 
-Display session or project details. Scope-aware: when `session_id::` is given without `project::`, all projects are searched globally for the session. Without `session_id::`, resolves to the current project (scope defaults to `local`). Use this when you need the content of a conversation or a project's session list.
+Display session or project details. Scope-aware: when `session_id::` is given without `project::`, the current project and all its topic variants (`--commit`, `--default-topic`, etc.) are searched (scope::local). Without `session_id::`, resolves to the current project. Use this when you need the content of a conversation or a project's session list.
 
 **Parameters:** `session_id::`, `project::`, `verbosity::`, `entries::`, `metadata::`, `scope::`, `path::`
 
@@ -160,12 +160,12 @@ claude_storage .show session_id::ID project::PROJECT
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `session_id::` | [`SessionId`](types.md#sessionid) | optional | — | Session to display; when given without `project::`, all projects are searched globally |
+| `session_id::` | [`SessionId`](types.md#sessionid) | optional | — | Session to display; when given without `project::`, the current project and all its topic variants are searched (scope::local) |
 | `project::` | [`ProjectId`](types.md#projectid) | optional | current dir | Project identifier; when given with `session_id::`, restricts search to this project only |
 | `entries::` | Boolean | optional | `0` | Show all entries in session |
 | `metadata::` | Boolean | optional | `0` | Show metadata only (suppresses content) |
 | `verbosity::` | [`VerbosityLevel`](types.md#verbositylevel) | optional | `1` | Output detail level |
-| `scope::` | [`ScopeValue`](types.md#scopevalue) | optional | `global` when `session_id::` given alone, `local` otherwise | Project search boundary |
+| `scope::` | [`ScopeValue`](types.md#scopevalue) | optional | `local` | Project search boundary (Case 2 only: session_id without project::) |
 | `path::` | [`StoragePath`](types.md#storagepath) | optional | cwd | Scope anchor path |
 
 `session_id::` and `project::` belong to [Session Identification](parameter_groups.md#session-identification) and [Project Scope](parameter_groups.md#project-scope) groups. `scope::` and `path::` belong to the [Scope Configuration group](parameter_groups.md#scope-configuration).
@@ -186,8 +186,8 @@ claude_storage .show session_id::ID project::/path/to/project
 ```
 
 **Notes:**
-- When `session_id::` is given without `project::`, all projects are searched globally; supply `project::` to restrict lookup to one project
-- Without `session_id::`, resolves to current directory project (`scope::local` default); exits with `2` if cwd has no project in storage
+- When `session_id::` is given without `project::`, the current project and all its topic variants (scope::local) are searched; supply `project::` to restrict lookup to one specific project
+- Without `session_id::`, resolves to current directory project; exits with `2` if cwd has no project in storage
 - `entries::1` and `metadata::1` are mutually exclusive; `entries::1` takes precedence
 
 ---
@@ -411,7 +411,8 @@ claude_storage .projects scope::global limit::5
 - Distinct from `.exists`: that checks existence (exit 0/1); this lists conversations
 - **Fixed (issue-024)**: `scope::local/relevant/under` previously returned 0 results when the base path contained underscores (e.g., `wip_core`). Root cause: lossy encoding mapped `_` and `/` identically; decoded paths diverged from real paths. Fixed by comparing encoded paths directly against raw storage directory names.
 - **Fixed (issue-029)**: `scope::under` (and all scopes at verbosity ≥ 1) previously displayed project path headers with underscore-named directories split as path separators (e.g., `wip_core` → `wip/core`). Root cause: `decode_project_display` heuristic defaulted to `/` for every `-` boundary; underscore-named dirs were indistinguishable from path separators in the encoded form. Fixed by adding a filesystem-guided fallback that walks the real directory tree to resolve ambiguous boundaries.
-- **Fixed (issue-030)**: Session path headers previously showed only the base directory, truncating hyphen-prefixed topic components even when they represent real directories (e.g., `src/-default_topic` was shown as `src`). Root cause: `decode_project_display` stripped all `--topic` suffixes before decoding. Fixed by extending the decoded base with each topic component as a real filesystem directory; the longest existing path is used as the header.
+- **Fixed (issue-030)**: Session path headers previously showed only the base directory, truncating hyphen-prefixed topic components (e.g., `src/-default_topic` was shown as `src`). Root cause: `decode_project_display` stripped all `--topic` suffixes before decoding. Fixed by decoding the base path with filesystem guidance (resolves `_` vs `/` ambiguity per issue-029), then appending topic components as hyphen-prefixed directory names. **Display-path invariant**: topic components must always be appended regardless of whether the directory currently exists on disk — the storage key encodes the actual CWD at session time and must be decoded as-is.
+- **Fixed (issue-035)**: The issue-030 fix introduced an incorrect filesystem existence check — topic components were only appended when `candidate.exists()` was true. Sessions recorded in `dir/-commit` displayed as `dir` after the `-commit` directory was deleted, obscuring which working directory the session used. Root cause: `decode_project_display` called `candidate.exists()` and broke at the first missing topic dir. Fixed by removing the existence guard from the topic-extension loop; all topic components are always appended unconditionally — filesystem state at query time must not affect which CWD a session is attributed to. (Task 025.)
 - **Fixed (issue-031)**: `scope::under` previously included sessions from sibling modules whose names start with the base name followed by `_` (e.g., `claude_storage_core` matched when base was `claude_storage`). Root cause: `encode_path` maps both `_` and `/` to `-`, so string `starts_with` cannot distinguish a child path from an underscore-suffixed sibling — both produce the same encoded prefix. Fixed by a two-stage predicate: string prefix is fast-reject only; `decode_path_via_fs` + `Path::starts_with` (component-wise) provides correct disambiguation.
 - **Fixed (issue-032)**: `scope::relevant` previously included sessions from sibling projects whose encoded name is a string prefix of the current path's encoded form (e.g., `/base` matched when current path was `/base_extra`). Root cause: `is_relevant_encoded` used `encoded_base.starts_with(dir_name + "-")` which cannot distinguish a true ancestor (`base/sub`) from a same-level sibling with an underscore suffix (`base_extra`). Fixed by the same two-stage predicate as issue-031: `decode_path_via_fs` + `base_path.starts_with(decoded_path)` (component-wise) for disambiguation.
 
