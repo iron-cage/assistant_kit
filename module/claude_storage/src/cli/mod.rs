@@ -2998,7 +2998,7 @@ fn validate_topic( topic : &str ) -> core::result::Result< (), ErrorData >
   Ok( () )
 }
 
-// ─── .path routine ────────────────────────────────────────────────────────────
+// ─── .project.path routine ────────────────────────────────────────────────────
 
 /// Compute the Claude storage path for a directory.
 ///
@@ -3010,7 +3010,7 @@ fn validate_topic( topic : &str ) -> core::result::Result< (), ErrorData >
 /// Returns error if path resolution fails or HOME is not set.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
-pub fn path_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
+pub fn project_path_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
   let base = resolve_cmd_path( &cmd )?;
@@ -3034,7 +3034,7 @@ pub fn path_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   Ok( OutputData::new( format!( "{}/", storage_path.display() ), "text" ) )
 }
 
-// ─── .exists routine ──────────────────────────────────────────────────────────
+// ─── .project.exists routine ──────────────────────────────────────────────────
 
 /// Check whether conversation history exists for a directory.
 ///
@@ -3046,7 +3046,7 @@ pub fn path_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// Returns error if path resolution fails, topic is invalid, or no history exists.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
-pub fn exists_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
+pub fn project_exists_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
   let base = resolve_cmd_path( &cmd )?;
@@ -3083,27 +3083,21 @@ pub fn exists_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
 /// Resolve `path::` + `topic::` parameters into a session working directory.
 ///
-/// Requires `path::` (errors with `command_name` in the message when absent).
-/// `topic::` defaults to `DEFAULT_TOPIC`. The returned path is `{base}/-{topic}`.
+/// Defaults to cwd when `path::` is absent. `topic::` defaults to `DEFAULT_TOPIC`.
+/// The returned path is `{base}/-{topic}`.
 ///
 /// # Errors
 ///
-/// Returns `ErrorData` when `path::` is absent, path resolution fails, or topic
-/// is invalid.
-fn resolve_required_session_dir(
-  cmd          : &VerifiedCommand,
-  command_name : &str,
+/// Returns `ErrorData` when path resolution fails (including cwd failure) or
+/// topic is invalid.
+fn resolve_session_dir(
+  cmd : &VerifiedCommand,
 ) -> core::result::Result< std::path::PathBuf, ErrorData >
 {
-  let path_str = cmd.get_string( "path" )
-    .ok_or_else( || ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "path parameter is required for {command_name}" ),
-    ) )?;
-
-  let resolved = resolve_path_parameter( path_str )
-    .map_err( | e | ErrorData::new( ErrorCode::InternalError, e ) )?;
-  let base = std::path::PathBuf::from( resolved );
+  // Fix(issue-037): resolve_session_dir defaults to cwd when path:: is absent.
+  // Root cause: prior ok_or_else guard rejected absent path:: though YAML declared it optional.
+  // Pitfall: resolve_cmd_path returns cwd — tests must set .current_dir() explicitly.
+  let base = resolve_cmd_path( cmd )?;
 
   let topic = cmd.get_string( "topic" ).unwrap_or( DEFAULT_TOPIC );
   validate_topic( topic )?;
@@ -3115,17 +3109,18 @@ fn resolve_required_session_dir(
 
 /// Compute the session working directory path without creating it.
 ///
-/// Returns `{base}/-{topic}`. `path::` is required; `topic::` defaults to `default_topic`.
+/// Returns `{base}/-{topic}`. `path::` defaults to cwd when absent;
+/// `topic::` defaults to `default_topic`.
 ///
 /// # Errors
 ///
-/// Returns error if `path::` is absent, path resolution fails, or topic is invalid.
+/// Returns error if path resolution fails or topic is invalid.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn session_dir_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
-  let session_dir = resolve_required_session_dir( &cmd, ".session.dir" )?;
+  let session_dir = resolve_session_dir( &cmd )?;
   Ok( OutputData::new( format!( "{}", session_dir.display() ), "text" ) )
 }
 
@@ -3138,20 +3133,20 @@ pub fn session_dir_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 ///   Line 1: absolute path to session directory
 ///   Line 2: `resume` or `fresh`
 ///
-/// `path::` is required; `topic::` defaults to `default_topic`.
+/// `path::` defaults to cwd when absent; `topic::` defaults to `default_topic`.
 /// `strategy::` overrides the auto-detected label (`fresh`/`resume`) — it is a
 /// **label override only** and does NOT modify the filesystem (no wipe/recreate).
 ///
 /// # Errors
 ///
-/// Returns error if `path::` absent, path resolution fails, topic invalid, strategy invalid,
+/// Returns error if path resolution fails, topic invalid, strategy invalid,
 /// or directory creation fails.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn session_ensure_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
-  let session_dir = resolve_required_session_dir( &cmd, ".session.ensure" )?;
+  let session_dir = resolve_session_dir( &cmd )?;
 
   let forced_strategy = if let Some( s ) = cmd.get_string( "strategy" )
   {

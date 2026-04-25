@@ -14,9 +14,9 @@ See [commands.md](commands.md) for command reference and [params.md](params.md) 
 | [Search for a topic](#4-search-for-a-topic) | `.search`, `.show` | low |
 | [Count storage by scope](#5-count-storage-by-scope) | `.count` | low |
 | [Inspect agent sessions](#6-inspect-agent-sessions) | `.list`, `.show` | medium |
-| [Navigate project hierarchy](#7-navigate-project-hierarchy) | `.projects`, `.exists` | medium |
+| [Navigate project hierarchy](#7-navigate-project-hierarchy) | `.projects`, `.project.exists` | medium |
 | [Find substantial sessions](#8-find-substantial-sessions) | `.list` | medium |
-| [Session lifecycle management](#9-session-lifecycle-management) | `.path`, `.exists`, `.session.dir`, `.session.ensure` | medium |
+| [Session lifecycle management](#9-session-lifecycle-management) | `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure` | medium |
 
 ---
 
@@ -162,11 +162,11 @@ clg .projects scope::relevant path::/home/user1/pro/lib/my_crate
 # Output: project summaries for my_crate and all its ancestor projects
 
 # Check if a specific directory has any recorded history (scripting)
-clg .exists path::/home/user1/pro
+clg .project.exists path::/home/user1/pro
 # Exit 0: has history; Exit 1: no history
 ```
 
-**Notes:** `scope::relevant` walks from `path::` (or cwd if omitted) up to the filesystem root, returning a summary line for each ancestor project that has at least one session. Use `.exists` when you only need a boolean check without loading the full listing.
+**Notes:** `scope::relevant` walks from `path::` (or cwd if omitted) up to the filesystem root, returning a summary line for each ancestor project that has at least one session. Use `.project.exists` when you only need a boolean check without loading the full listing.
 
 ---
 
@@ -198,11 +198,11 @@ claude_storage .list path::assistant min_entries::50
 
 ```bash
 # Step 1: Inspect the storage path for the project
-claude_storage .path path::/home/user/project topic::work
+claude_storage .project.path path::/home/user/project topic::work
 # Output: /home/user/.claude/projects/-home-user-project--work/
 
 # Step 2: Check if history exists before doing anything
-if clg .exists path::/home/user/project topic::work; then
+if clg .project.exists path::/home/user/project topic::work; then
   echo "Will resume existing conversation"
 else
   echo "Will start fresh"
@@ -227,8 +227,8 @@ result=$(clg .session.ensure path::/home/user/project topic::work strategy::fres
 ```
 
 **Notes:**
-- `.path` and `.session.dir` never modify the filesystem; they only compute paths
-- `.exists` exits 1 intentionally for scripting — non-zero exit signals "no history" to the calling shell
+- `.project.path` and `.session.dir` never modify the filesystem; they only compute paths
+- `.project.exists` exits 1 intentionally for scripting — non-zero exit signals "no history" to the calling shell
 - `.session.ensure` is the only command that creates directories; it is idempotent (safe to call repeatedly)
 - All four commands accept `.`, `..`, `~`, and `~/path` in `path::`
 

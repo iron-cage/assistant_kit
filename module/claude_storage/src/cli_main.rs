@@ -30,8 +30,8 @@ fn build_command_registry() -> CommandRegistry
     ".search"         => cli::search_routine,
     ".export"         => cli::export_routine,
     ".projects"       => cli::projects_routine,
-    ".path"           => cli::path_routine,
-    ".exists"         => cli::exists_routine,
+    ".project.path"   => cli::project_path_routine,
+    ".project.exists" => cli::project_exists_routine,
     ".session.dir"    => cli::session_dir_routine,
     ".session.ensure" => cli::session_ensure_routine,
   };
@@ -110,7 +110,7 @@ fn run_repl( registry : CommandRegistry )
 ///
 /// In one-shot scripting mode callers should see only `{message}` — the text
 /// the handler authored — without framework noise. Spec-defined commands like
-/// `.exists` rely on exact stderr content (e.g. `"no sessions"`) for shell
+/// `.project.exists` rely on exact stderr content (e.g. `"no sessions"`) for shell
 /// conditional use; the wrapping would break `stderr == "no sessions"` checks.
 ///
 /// Parse errors are NOT stripped because the context they carry (`"Parse error:

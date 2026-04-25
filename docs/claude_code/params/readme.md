@@ -8,7 +8,7 @@ parameter in this directory.
 
 - **Purpose**: Authoritative flat reference for every parameter the `claude` binary accepts at runtime.
 - **Responsibility**: Master table and per-parameter detail files for CLI flags, env vars, and settings config keys.
-- **In Scope**: All 71 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
+- **In Scope**: All 73 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
 - **Out of Scope**: Builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_params/`); Claude API protocol (→ Anthropic docs).
 
 ### Responsibility Table
@@ -87,6 +87,8 @@ parameter in this directory.
 | worktree.md | `-w` / `--worktree` — create git worktree for session |
 | permissions.md | `permissions` config key — per-project tool allow/deny/ask rules |
 | output_style.md | `outputStyle` config key — terminal output visual style |
+| file_checkpointing_enabled.md | `fileCheckpointingEnabled` config key — file checkpointing before edits |
+| remote_control_at_startup.md | `remoteControlAtStartup` config key — remote-control channel on startup |
 
 ### Parameter Table
 
@@ -166,6 +168,8 @@ Precedence: CLI arg > env var > settings config.
 | 69 | [voice_enabled](voice_enabled.md) | — | — | `voiceEnabled` | bool | `false` | Enable voice input and audio output features |
 | 70 | [permissions](permissions.md) | — | — | `permissions` | object | `{}` | Per-project tool allow/deny/ask rules; auto-managed by Claude Code |
 | 71 | [output_style](output_style.md) | — | — | `outputStyle` | string | `"default"` | Terminal output visual rendering style |
+| 72 | [file_checkpointing_enabled](file_checkpointing_enabled.md) | — | — | `fileCheckpointingEnabled` | bool | `false` | Save file checkpoint before each edit |
+| 73 | [remote_control_at_startup](remote_control_at_startup.md) | — | — | `remoteControlAtStartup` | bool | `false` | Open remote-control channel on startup |
 
 ### Cross-References
 

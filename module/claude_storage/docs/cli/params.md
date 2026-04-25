@@ -24,13 +24,14 @@ See [types.md](types.md) for type definitions and [parameter_groups.md](paramete
 | 14 | `session_id::` | [`SessionId`](types.md#sessionid) | — | 2 | Direct session identifier |
 | 15 | `sessions::` | Boolean | `0` | 1 | Explicit session display toggle |
 | 16 | `target::` | [`TargetType`](types.md#targettype) | `projects` | 1 | Count operation target |
-| 17 | `topic::` | [`TopicName`](types.md#topicname) | — | 5 | Session topic suffix (without leading `-`) |
+| 17 | `topic::` | [`TopicName`](types.md#topicname) | — | 4 | Session topic suffix (without leading `-`) |
 | 18 | `type::` | [`ProjectType`](types.md#projecttype) | `all` | 1 | Project naming scheme filter |
 | 19 | `verbosity::` | [`VerbosityLevel`](types.md#verbositylevel) | `1` | 5 | Output detail level |
 | 20 | `strategy::` | [`StrategyType`](types.md#strategytype) | auto-detect | 1 | Resume strategy override for `.session.ensure` |
 | 21 | `count::` | Boolean | `0` | 1 | Output count only instead of full list (`.list type::conversation`) |
+| 22 | `limit::` | Integer | `0` | 1 | Per-project session display cap for `.projects` at verbosity 1 |
 
-**Total:** 21 parameters
+**Total:** 22 parameters
 
 ---
 
@@ -313,7 +314,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 
 **Default:** Command-dependent
 
-**Commands:** `.status`, `.list`, `.projects`, `.count`, `.search`, `.show`, `.export`, `.path`, `.exists`, `.session.dir`, `.session.ensure`
+**Commands:** `.status`, `.list`, `.projects`, `.count`, `.search`, `.show`, `.export`, `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`
 (See individual command sections in [commands.md](commands.md))
 
 **Per-command semantics:**
@@ -327,12 +328,12 @@ Path argument. Semantics differ by command — see command sections for exact be
 | `.search` | StoragePath | cwd | Scope anchor path |
 | `.show` | StoragePath | cwd | Scope anchor path |
 | `.export` | StoragePath | cwd | Scope anchor path |
-| `.path` | StoragePath | cwd | Directory to compute storage path for |
-| `.exists` | StoragePath | cwd | Directory to check for history |
-| `.session.dir` | StoragePath | — | Base directory (required) |
-| `.session.ensure` | StoragePath | — | Base directory (required) |
+| `.project.path` | StoragePath | cwd | Directory to compute storage path for |
+| `.project.exists` | StoragePath | cwd | Directory to check for history |
+| `.session.dir` | StoragePath | cwd | Base directory |
+| `.session.ensure` | StoragePath | cwd | Base directory |
 
-**Purpose:** Provides a path context appropriate to each command. In `.exists`, `.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list`, it is a substring filter on project paths. In `.projects`, `.count`, `.search`, `.show`, and `.export`, it anchors the scope discovery when paired with `scope::`.
+**Purpose:** Provides a path context appropriate to each command. In `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure`, it is a filesystem path to process. In `.list`, it is a substring filter on project paths. In `.projects`, `.count`, `.search`, `.show`, and `.export`, it anchors the scope discovery when paired with `scope::`.
 
 **Examples:**
 ```bash
@@ -342,13 +343,13 @@ Path argument. Semantics differ by command — see command sections for exact be
 # .list: path substring filter
 .list path::assistant          # Matches all projects with "assistant" in path
 
-# .exists: directory check
-.exists path::/home/user/project
+# .project.exists: directory check
+.project.exists path::/home/user/project
 
-# .path: storage path computation
-.path path::/home/user/project
+# .project.path: storage path computation
+.project.path path::/home/user/project
 
-# .session.dir / .session.ensure: base directory (required)
+# .session.dir / .session.ensure: base directory (cwd when omitted)
 .session.dir path::/home/user/project
 .session.ensure path::/home/user/project
 
@@ -358,7 +359,7 @@ Path argument. Semantics differ by command — see command sections for exact be
 .search query::error scope::under path::/home/user1/pro
 ```
 
-**Group (scope anchor context):** [Scope Configuration](parameter_groups.md#scope-configuration) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.count`, `.search`, `.show`, and `.export`; its role in `.status`, `.list`, `.exists`, `.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
+**Group (scope anchor context):** [Scope Configuration](parameter_groups.md#scope-configuration) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.count`, `.search`, `.show`, and `.export`; its role in `.status`, `.list`, `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
 
 ---
 
@@ -628,7 +629,7 @@ target::files      # "Invalid target: files"
 
 ---
 
-### Parameter :: 17. `type::`
+### Parameter :: 18. `type::`
 
 Project naming scheme filter for `.list`.
 
@@ -663,7 +664,7 @@ type::both   # "Invalid type: both. Valid values: uuid, path, all"
 
 ---
 
-### Parameter :: 18. `verbosity::`
+### Parameter :: 19. `verbosity::`
 
 Output detail level controlling information density.
 
@@ -717,9 +718,9 @@ Session topic name appended as a `-{name}` suffix to the base directory path.
 - Error on empty: `"topic must be non-empty"`
 - Error on slash: `"topic must not contain path separators"`
 
-**Default:** unset (no suffix applied) for `.path`, `.exists`; `default_topic` for `.session.dir`, `.session.ensure`
+**Default:** unset (no suffix applied) for `.project.path`, `.project.exists`; `default_topic` for `.session.dir`, `.session.ensure`
 
-**Commands:** `.path`, `.exists`, `.session.dir`, `.session.ensure`
+**Commands:** `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`
 (See individual command sections in [commands.md](commands.md))
 
 **Purpose:** Identifies a named session topic within a base directory. Claude Code uses hyphen-prefixed directories (`-default_topic`, `-work`, `-commit`) as session working directories. `topic::` takes the name without the leading hyphen and appends it as `{base}/-{topic}`.
@@ -755,7 +756,7 @@ Resume strategy override for `.session.ensure`.
 **Default:** auto-detect (from conversation history presence)
 
 **Commands:** `.session.ensure`
-(See [commands.md#command--13-sessionensure](commands.md#command--13-sessionensure))
+(See [commands.md#command--11-sessionensure](commands.md#command--11-sessionensure))
 
 **Purpose:** Forces the reported resume strategy instead of auto-detecting it from storage history. When `strategy::resume` is forced and no history exists, the command still reports `resume` (the caller's intent is respected). When `strategy::fresh` is forced and history exists, `fresh` is reported regardless.
 
@@ -802,5 +803,39 @@ count::0    # Output full listing
 
 # Combined with conversation type
 .list type::conversation count::1 project::abc123   # e.g., outputs "3"
+```
+
+---
+
+### Parameter :: 22. `limit::`
+
+Maximum number of main sessions to display per project at verbosity 1. Zero means unlimited.
+
+**Type:** Integer
+
+**Fundamental Type:** Integer
+
+**Constraints:**
+- Must be a non-negative integer
+- `0` means no cap (all sessions shown)
+- Error on negative: `"limit must be non-negative"`
+
+**Default:** `0` (unlimited)
+
+**Commands:** `.projects`
+(See [commands.md#command--7-projects](commands.md#command--7-projects))
+
+**Purpose:** Caps how many sessions are shown per project in the default verbosity-1 view of `.projects`. Useful when a project has many sessions and you only want a preview. At verbosity 2+ the cap is not applied.
+
+**Examples:**
+```bash
+# Show at most 5 sessions per project
+.projects limit::5
+
+# No cap (default)
+.projects limit::0
+
+# Combined with scope
+.projects scope::global limit::3
 ```
 

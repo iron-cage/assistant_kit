@@ -380,7 +380,7 @@ Validate non-empty string, then resolve:
 
 **Constants:**
 - DEFAULT_ROOT = `~/.claude/` (for `.status`)
-- DEFAULT_CWD = current working directory (for `.exists`, `.projects`)
+- DEFAULT_CWD = current working directory (for `.project.exists`, `.projects`)
 
 **Constraints:**
 - Non-empty string
@@ -402,7 +402,7 @@ Validate and normalize path:
 - `expanded() -> string` — Returns path with `~` expanded
 - `exists() -> boolean` — True when path exists on filesystem
 
-**Commands:** `.status`, `.exists`, `.projects`, `.export` (via `output::`)
+**Commands:** `.status`, `.project.exists`, `.projects`, `.export` (via `output::`)
 
 ---
 
@@ -530,7 +530,7 @@ Validate non-empty, no slashes:
 - `get() -> string` — Raw topic name (without leading `-`)
 - `as_dir_suffix() -> string` — Returns `-{name}` for appending to base path
 
-**Commands:** `.path`, `.exists`, `.session.dir`, `.session.ensure`
+**Commands:** `.project.path`, `.project.exists`, `.session.dir`, `.session.ensure`
 
 ---
 

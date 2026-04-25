@@ -44,7 +44,9 @@ User-global `~/.claude/settings.json`:
     ]
   },
   "skipDangerousModePermissionPrompt": false,
-  "voiceEnabled": false
+  "voiceEnabled": false,
+  "fileCheckpointingEnabled": false,
+  "remoteControlAtStartup": false
 }
 ```
 
@@ -110,6 +112,8 @@ Config keys read by `claude` at startup from `settings.json`. No CLI flag or env
 | `voiceEnabled` | G | bool | `false` | Enable voice input and audio output |
 | `permissions` | P | object | `{}` | Per-project tool allow/deny/ask rules; auto-managed by Claude Code during sessions |
 | `outputStyle` | G+P | string | `"default"` | Terminal output visual rendering style |
+| `fileCheckpointingEnabled` | G | bool | `false` | Save a checkpoint copy of each file before editing |
+| `remoteControlAtStartup` | G | bool | `false` | Open remote-control channel on startup for IDE/orchestrator connections |
 
 See [`params/readme.md`](params/readme.md) for the complete parameter table including CLI flags and env vars. Precedence: CLI arg > env var > settings config.
 

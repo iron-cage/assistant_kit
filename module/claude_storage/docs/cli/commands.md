@@ -15,8 +15,8 @@ See [params.md](params.md) for full parameter specs and [types.md](types.md) for
 | 5 | `.search` | stable | Search session content by query | 8 |
 | 6 | `.export` | stable | Export session to file | 6 |
 | 7 | `.projects` | stable | Scoped project list with per-project conversation listing | 6 |
-| 8 | `.path` | stable | Compute Claude storage path for a directory | 2 |
-| 9 | `.exists` | stable | Check conversation history exists (exits 1 when absent) | 2 |
+| 8 | `.project.path` | stable | Compute Claude storage path for a directory | 2 |
+| 9 | `.project.exists` | stable | Check conversation history exists (exits 1 when absent) | 2 |
 | 10 | `.session.dir` | stable | Compute session working directory path | 2 |
 | 11 | `.session.ensure` | stable | Ensure session directory exists, report resume strategy | 3 |
 
@@ -408,7 +408,7 @@ claude_storage .projects scope::global limit::5
 
 **Notes:**
 - `scope::relevant` walks UP from cwd to `/`, collecting sessions from every project at each ancestor level
-- Distinct from `.exists`: that checks existence (exit 0/1); this lists conversations
+- Distinct from `.project.exists`: that checks existence (exit 0/1); this lists conversations
 - **Fixed (issue-024)**: `scope::local/relevant/under` previously returned 0 results when the base path contained underscores (e.g., `wip_core`). Root cause: lossy encoding mapped `_` and `/` identically; decoded paths diverged from real paths. Fixed by comparing encoded paths directly against raw storage directory names.
 - **Fixed (issue-029)**: `scope::under` (and all scopes at verbosity ≥ 1) previously displayed project path headers with underscore-named directories split as path separators (e.g., `wip_core` → `wip/core`). Root cause: `decode_project_display` heuristic defaulted to `/` for every `-` boundary; underscore-named dirs were indistinguishable from path separators in the encoded form. Fixed by adding a filesystem-guided fallback that walks the real directory tree to resolve ambiguous boundaries.
 - **Fixed (issue-030)**: Session path headers previously showed only the base directory, truncating hyphen-prefixed topic components (e.g., `src/-default_topic` was shown as `src`). Root cause: `decode_project_display` stripped all `--topic` suffixes before decoding. Fixed by decoding the base path with filesystem guidance (resolves `_` vs `/` ambiguity per issue-029), then appending topic components as hyphen-prefixed directory names. **Display-path invariant**: topic components must always be appended regardless of whether the directory currently exists on disk — the storage key encodes the actual CWD at session time and must be decoded as-is.
@@ -469,7 +469,7 @@ At `verbosity::2+`, agents are tree-indented under their parent:
 
 ---
 
-### Command :: 8. `.path`
+### Command :: 8. `.project.path`
 
 Compute the Claude Code storage path for a directory without requiring it to exist. Use this to inspect what storage path would be used for a given working directory.
 
@@ -479,10 +479,10 @@ Compute the Claude Code storage path for a directory without requiring it to exi
 
 **Syntax:**
 ```bash
-claude_storage .path
-claude_storage .path path::PATH
-claude_storage .path topic::TOPIC
-claude_storage .path path::PATH topic::TOPIC
+claude_storage .project.path
+claude_storage .project.path path::PATH
+claude_storage .project.path topic::TOPIC
+claude_storage .project.path path::PATH topic::TOPIC
 ```
 
 **Parameters:**
@@ -497,25 +497,25 @@ claude_storage .path path::PATH topic::TOPIC
 **Examples:**
 ```bash
 # Storage path for current directory
-claude_storage .path
+claude_storage .project.path
 
 # Storage path for a specific directory
-claude_storage .path path::/home/user/project
+claude_storage .project.path path::/home/user/project
 
 # Storage path with topic suffix
-claude_storage .path topic::default_topic
+claude_storage .project.path topic::default_topic
 
 # Storage path with directory and topic
-claude_storage .path path::~/pro/lib/myapp topic::work
+claude_storage .project.path path::~/pro/lib/myapp topic::work
 ```
 
 **Notes:**
 - The returned path does not need to exist on disk
-- Use `.exists` to test whether the path has conversation history
+- Use `.project.exists` to test whether the path has conversation history
 
 ---
 
-### Command :: 9. `.exists`
+### Command :: 9. `.project.exists`
 
 Check whether a directory has Claude Code conversation history. Exits with code `1` when no history is found, making it ideal for shell conditional logic.
 
@@ -525,9 +525,9 @@ Check whether a directory has Claude Code conversation history. Exits with code 
 
 **Syntax:**
 ```bash
-claude_storage .exists
-claude_storage .exists path::PATH
-claude_storage .exists topic::TOPIC
+claude_storage .project.exists
+claude_storage .project.exists path::PATH
+claude_storage .project.exists topic::TOPIC
 ```
 
 **Parameters:**
@@ -544,13 +544,13 @@ claude_storage .exists topic::TOPIC
 **Examples:**
 ```bash
 # Check current directory
-claude_storage .exists
+claude_storage .project.exists
 
 # Check specific directory
-claude_storage .exists path::/home/user/project
+claude_storage .project.exists path::/home/user/project
 
 # Shell conditional
-if clg .exists; then echo "Has history"; else echo "Fresh start"; fi
+if clg .project.exists; then echo "Has history"; else echo "Fresh start"; fi
 ```
 
 **Notes:**
@@ -565,10 +565,11 @@ Compute the session working directory path (`{base}/-{topic}`) without creating 
 
 **Parameters:** `path::`, `topic::`
 
-**Exit:** `0` success | `1` argument error (missing required `path::`, invalid topic)
+**Exit:** `0` success | `1` argument error (invalid path or topic)
 
 **Syntax:**
 ```bash
+claude_storage .session.dir
 claude_storage .session.dir path::PATH
 claude_storage .session.dir path::PATH topic::TOPIC
 ```
@@ -577,7 +578,7 @@ claude_storage .session.dir path::PATH topic::TOPIC
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `path::` | [`StoragePath`](types.md#storagepath) | **required** | — | Base directory |
+| `path::` | [`StoragePath`](types.md#storagepath) | optional | cwd | Base directory |
 | `topic::` | [`TopicName`](types.md#topicname) | optional | `default_topic` | Session topic (without leading `-`) |
 
 **Output:** Single line — the absolute path to `{base}/-{topic}`.
@@ -585,7 +586,7 @@ claude_storage .session.dir path::PATH topic::TOPIC
 **Examples:**
 ```bash
 # Session dir for current directory with default topic
-claude_storage .session.dir path::.
+claude_storage .session.dir
 
 # Session dir for specific project
 claude_storage .session.dir path::/home/user/project
@@ -595,7 +596,7 @@ claude_storage .session.dir path::/home/user/project topic::work
 ```
 
 **Notes:**
-- `path::` is required; omitting it returns exit 1
+- `path::` defaults to cwd when omitted
 - The returned directory path does not need to exist on disk
 - Use `.session.ensure` to create the directory and detect resume strategy
 
@@ -607,10 +608,11 @@ Ensure a session working directory exists, creating it if necessary. Reports whe
 
 **Parameters:** `path::`, `topic::`, `strategy::`
 
-**Exit:** `0` success | `1` argument error (missing required `path::`, invalid params)
+**Exit:** `0` success | `1` argument error (invalid path or params)
 
 **Syntax:**
 ```bash
+claude_storage .session.ensure
 claude_storage .session.ensure path::PATH
 claude_storage .session.ensure path::PATH topic::TOPIC
 claude_storage .session.ensure path::PATH strategy::resume|fresh
@@ -620,7 +622,7 @@ claude_storage .session.ensure path::PATH strategy::resume|fresh
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `path::` | [`StoragePath`](types.md#storagepath) | **required** | — | Base directory |
+| `path::` | [`StoragePath`](types.md#storagepath) | optional | cwd | Base directory |
 | `topic::` | [`TopicName`](types.md#topicname) | optional | `default_topic` | Session topic (without leading `-`) |
 | `strategy::` | [`StrategyType`](types.md#strategytype) | optional | auto-detect | Override resume strategy |
 
@@ -648,6 +650,6 @@ claude_storage .session.ensure path::/home/user/project strategy::resume
 
 **Notes:**
 - Creates `{base}/-{topic}` directory if it does not exist
-- `path::` is required; omitting it returns exit 1
+- `path::` defaults to cwd when omitted
 - When `strategy::resume` is forced but no history exists, the output still reports `resume` (caller's intent is respected)
 

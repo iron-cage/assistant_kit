@@ -1,6 +1,6 @@
 //! Session path lifecycle command tests
 //!
-//! Integration tests for `.path`, `.exists`, `.session.dir`, and `.session.ensure`.
+//! Integration tests for `.project.path`, `.project.exists`, `.session.dir`, and `.session.ensure`.
 //!
 //! ## Design Notes
 //!
@@ -17,7 +17,7 @@
 //!
 //! ## Coverage
 //!
-//! ### `.path`
+//! ### `.project.path`
 //! - Default (cwd) computes correct storage path
 //! - `path::` override computes path for given directory
 //! - `topic::` appends encoded suffix
@@ -25,7 +25,7 @@
 //! - Empty topic rejected
 //! - Slash in topic rejected
 //!
-//! ### `.exists`
+//! ### `.project.exists`
 //! - With history: exits 0, stdout `"sessions exist\n"` (exact)
 //! - Without history: exits 1, stderr `"no sessions\n"` (exact, issue-033)
 //! - `path::` override with history
@@ -35,7 +35,7 @@
 //! ### `.session.dir`
 //! - Default topic produces `{base}/-default_topic`
 //! - Custom topic produces `{base}/-{topic}`
-//! - Missing `path::` rejected
+//! - Missing `path::` defaults to cwd (issue-037)
 //! - Does not create directory
 //! - Empty topic rejected
 //! - Slash in topic rejected
@@ -47,7 +47,7 @@
 //! - `strategy::resume` forces resume
 //! - `strategy::fresh` forces fresh
 //! - Custom topic respected
-//! - Missing `path::` rejected
+//! - Missing `path::` defaults to cwd (issue-037)
 //! - Invalid strategy rejected
 //! - Empty topic rejected
 
@@ -71,9 +71,9 @@ fn setup_history( home : &std::path::Path, project_path : &std::path::Path )
   fs::write( storage_dir.join( "session.jsonl" ), b"fake content\n" ).unwrap();
 }
 
-// ─── .path tests ─────────────────────────────────────────────────────────────
+// ─── .project.path tests ──────────────────────────────────────────────────────
 
-/// `.path` with no arguments returns storage path for cwd
+/// `.project.path` with no arguments returns storage path for cwd
 #[ test ]
 fn it_path_default_cwd()
 {
@@ -81,7 +81,7 @@ fn it_path_default_cwd()
   let project = tempfile::TempDir::new().unwrap();
 
   let output = common::clg_cmd()
-    .args( [ ".path" ] )
+    .args( [ ".project.path" ] )
     .current_dir( project.path() )
     .env( "HOME", home.path() )
     .output()
@@ -104,7 +104,7 @@ fn it_path_default_cwd()
   );
 }
 
-/// `.path path::PATH` returns storage path for given directory
+/// `.project.path path::PATH` returns storage path for given directory
 #[ test ]
 fn it_path_explicit_path()
 {
@@ -113,7 +113,7 @@ fn it_path_explicit_path()
   let project_path = project.path().to_str().unwrap().to_string();
 
   let output = common::clg_cmd()
-    .args( [ ".path", &format!( "path::{project_path}" ) ] )
+    .args( [ ".project.path", &format!( "path::{project_path}" ) ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -131,7 +131,7 @@ fn it_path_explicit_path()
   );
 }
 
-/// `.path topic::NAME` appends topic suffix to storage path
+/// `.project.path topic::NAME` appends topic suffix to storage path
 #[ test ]
 fn it_path_with_topic()
 {
@@ -140,7 +140,7 @@ fn it_path_with_topic()
   let project_path = project.path().to_str().unwrap().to_string();
 
   let output = common::clg_cmd()
-    .args( [ ".path", &format!( "path::{project_path}" ), "topic::work" ] )
+    .args( [ ".project.path", &format!( "path::{project_path}" ), "topic::work" ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -158,14 +158,14 @@ fn it_path_with_topic()
   );
 }
 
-/// `.path` exits 0 for nonexistent path
+/// `.project.path` exits 0 for nonexistent path
 #[ test ]
 fn it_path_nonexistent_exits_0()
 {
   let home = tempfile::TempDir::new().unwrap();
 
   let output = common::clg_cmd()
-    .args( [ ".path", "path::/tmp/nonexistent-path-for-test-xyz-abc" ] )
+    .args( [ ".project.path", "path::/tmp/nonexistent-path-for-test-xyz-abc" ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -179,14 +179,14 @@ fn it_path_nonexistent_exits_0()
   );
 }
 
-/// `.path topic::` (empty) rejected
+/// `.project.path topic::` (empty) rejected
 #[ test ]
 fn it_path_empty_topic_rejected()
 {
   let home = tempfile::TempDir::new().unwrap();
 
   let output = common::clg_cmd()
-    .args( [ ".path", "topic::" ] )
+    .args( [ ".project.path", "topic::" ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -201,14 +201,14 @@ fn it_path_empty_topic_rejected()
   );
 }
 
-/// `.path topic::sub/dir` (slash in topic) rejected
+/// `.project.path topic::sub/dir` (slash in topic) rejected
 #[ test ]
 fn it_path_slash_in_topic_rejected()
 {
   let home = tempfile::TempDir::new().unwrap();
 
   let output = common::clg_cmd()
-    .args( [ ".path", "topic::sub/dir" ] )
+    .args( [ ".project.path", "topic::sub/dir" ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -223,9 +223,9 @@ fn it_path_slash_in_topic_rejected()
   );
 }
 
-// ─── .exists tests ────────────────────────────────────────────────────────────
+// ─── .project.exists tests ────────────────────────────────────────────────────
 
-/// `.exists` with history exits 0 and prints "sessions exist"
+/// `.project.exists` with history exits 0 and prints "sessions exist"
 #[ test ]
 fn it_exists_with_history_exits_0()
 {
@@ -235,7 +235,7 @@ fn it_exists_with_history_exits_0()
   setup_history( home.path(), project.path() );
 
   let output = common::clg_cmd()
-    .args( [ ".exists", &format!( "path::{}", project.path().display() ) ] )
+    .args( [ ".project.exists", &format!( "path::{}", project.path().display() ) ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -257,7 +257,7 @@ fn it_exists_with_history_exits_0()
   );
 }
 
-/// `.exists` without history exits 1 and prints "no sessions" on stderr
+/// `.project.exists` without history exits 1 and prints "no sessions" on stderr
 #[ test ]
 fn it_exists_without_history_exits_1()
 {
@@ -265,7 +265,7 @@ fn it_exists_without_history_exits_1()
   let project = tempfile::TempDir::new().unwrap();
 
   let output = common::clg_cmd()
-    .args( [ ".exists", &format!( "path::{}", project.path().display() ) ] )
+    .args( [ ".project.exists", &format!( "path::{}", project.path().display() ) ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -287,7 +287,7 @@ fn it_exists_without_history_exits_1()
   );
 }
 
-/// `.exists` stderr is exactly "no sessions\n" when not found
+/// `.project.exists` stderr is exactly "no sessions\n" when not found
 ///
 /// ## Root Cause
 ///
@@ -329,7 +329,7 @@ fn it_exists_stderr_exact_when_no_history()
   let project = tempfile::TempDir::new().unwrap();
 
   let output = common::clg_cmd()
-    .args( [ ".exists", &format!( "path::{}", project.path().display() ) ] )
+    .args( [ ".project.exists", &format!( "path::{}", project.path().display() ) ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -348,7 +348,7 @@ fn it_exists_stderr_exact_when_no_history()
   );
 }
 
-/// `.exists` stdout is exactly "sessions exist\n" when found
+/// `.project.exists` stdout is exactly "sessions exist\n" when found
 #[ test ]
 fn it_exists_stdout_exact_when_found()
 {
@@ -358,7 +358,7 @@ fn it_exists_stdout_exact_when_found()
   setup_history( home.path(), project.path() );
 
   let output = common::clg_cmd()
-    .args( [ ".exists", &format!( "path::{}", project.path().display() ) ] )
+    .args( [ ".project.exists", &format!( "path::{}", project.path().display() ) ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -376,7 +376,7 @@ fn it_exists_stdout_exact_when_found()
   );
 }
 
-/// `.exists` with `topic::` checks topic-specific storage
+/// `.project.exists` with `topic::` checks topic-specific storage
 #[ test ]
 fn it_exists_topic_checks_topic_storage()
 {
@@ -391,7 +391,7 @@ fn it_exists_topic_checks_topic_storage()
   setup_history( home.path(), &session_dir );
 
   let output = common::clg_cmd()
-    .args( [ ".exists", &format!( "path::{}", project.path().display() ), "topic::work" ] )
+    .args( [ ".project.exists", &format!( "path::{}", project.path().display() ), "topic::work" ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -409,14 +409,14 @@ fn it_exists_topic_checks_topic_storage()
   );
 }
 
-/// `.exists` empty topic rejected
+/// `.project.exists` empty topic rejected
 #[ test ]
 fn it_exists_empty_topic_rejected()
 {
   let home = tempfile::TempDir::new().unwrap();
 
   let output = common::clg_cmd()
-    .args( [ ".exists", "topic::" ] )
+    .args( [ ".project.exists", "topic::" ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -493,25 +493,50 @@ fn it_session_dir_custom_topic()
   );
 }
 
-/// `.session.dir` without `path::` is rejected
+// .session.dir without path:: defaults to cwd
+//
+// Root Cause: resolve_required_session_dir called ok_or_else to reject absent path::,
+// but the YAML spec declares path:: optional with "default: current directory".
+//
+// Why Not Caught: The prior test asserted exit 1, matching the broken implementation;
+// the correct cwd-default behavior was never tested.
+//
+// Fix Applied: Replaced ok_or_else guard + resolve_path_parameter with
+// resolve_cmd_path(cmd)?, which falls back to current_dir() when path:: is absent.
+//
+// Prevention: YAML optional-param semantics must be reflected in the implementation;
+// add a cwd-default test for every optional path:: parameter.
+//
+// Pitfall: The test must set .current_dir(project.path()) explicitly — process cwd
+// is undefined in test harnesses; never assume it matches a tempdir.
 #[ test ]
-fn it_session_dir_missing_path_rejected()
+// test_kind: bug_reproducer(issue-037)
+fn it_session_dir_cwd_default()
 {
   let home = tempfile::TempDir::new().unwrap();
+  let project = tempfile::TempDir::new().unwrap();
+  let base = project.path().to_str().unwrap();
 
   let output = common::clg_cmd()
     .args( [ ".session.dir" ] )
+    .current_dir( project.path() )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
 
-  let stderr = String::from_utf8_lossy( &output.stderr );
   let stdout = String::from_utf8_lossy( &output.stdout );
-  let combined = format!( "{stderr}{stdout}" );
+  let stderr = String::from_utf8_lossy( &output.stderr );
 
   assert!(
-    !output.status.success(),
-    "Should fail without path. Got: {combined}"
+    output.status.success(),
+    "Should exit 0 when path:: is absent (cwd default). stderr: {stderr}, stdout: {stdout}"
+  );
+
+  let expected = format!( "{base}/-default_topic\n" );
+  assert_eq!(
+    stdout.as_ref(),
+    expected,
+    "Output should be {{cwd}}/-default_topic"
   );
 }
 
@@ -822,27 +847,64 @@ fn it_session_ensure_idempotent()
   );
 }
 
-/// `.session.ensure` without `path::` rejected
+// .session.ensure without path:: defaults to cwd
+//
+// Root Cause: Same as issue-037 for .session.dir: ok_or_else guard rejected absent
+// path:: even though YAML spec declares it optional with cwd default.
+//
+// Why Not Caught: it_session_ensure_missing_path_rejected asserted exit 1, matching
+// the broken implementation; the cwd-default behavior was never tested.
+//
+// Fix Applied: Both .session.dir and .session.ensure share resolve_session_dir,
+// which now calls resolve_cmd_path(cmd)? — a single fix covers both commands.
+//
+// Prevention: Test all optional path:: parameters with bare invocation + explicit
+// .current_dir() to cover the cwd-default path.
+//
+// Pitfall: .current_dir(project.path()) is required; without it the process cwd is
+// the test harness working directory, not the project tempdir.
 #[ test ]
-fn it_session_ensure_missing_path_rejected()
+// test_kind: bug_reproducer(issue-037)
+fn it_session_ensure_cwd_default()
 {
   let home = tempfile::TempDir::new().unwrap();
+  let project = tempfile::TempDir::new().unwrap();
+  let base = project.path().to_str().unwrap();
 
   let output = common::clg_cmd()
     .args( [ ".session.ensure" ] )
+    .current_dir( project.path() )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
 
-  let combined = format!(
-    "{}{}",
-    String::from_utf8_lossy( &output.stderr ),
-    String::from_utf8_lossy( &output.stdout )
-  );
+  let stdout = String::from_utf8_lossy( &output.stdout );
+  let stderr = String::from_utf8_lossy( &output.stderr );
 
   assert!(
-    !output.status.success(),
-    "Should fail without path. Got: {combined}"
+    output.status.success(),
+    "Should exit 0 when path:: is absent (cwd default). stderr: {stderr}, stdout: {stdout}"
+  );
+
+  let lines : Vec< &str > = stdout.lines().collect();
+  assert_eq!( lines.len(), 2, "Should output exactly 2 lines. Got: {stdout}" );
+
+  let expected_dir = format!( "{base}/-default_topic" );
+  assert_eq!(
+    lines[ 0 ],
+    expected_dir,
+    "Line 1 should be {{cwd}}/-default_topic. Got: {stdout}"
+  );
+  assert!(
+    lines[ 1 ] == "fresh" || lines[ 1 ] == "resume",
+    "Line 2 should be 'fresh' or 'resume'. Got: {stdout}"
+  );
+
+  // Directory must have been created
+  let session_dir = project.path().join( "-default_topic" );
+  assert!(
+    session_dir.exists(),
+    ".session.ensure must create {{cwd}}/-default_topic. Path: {session_dir:?}"
   );
 }
 
@@ -900,16 +962,16 @@ fn it_session_ensure_empty_topic_rejected()
   );
 }
 
-// ─── .path additional coverage ───────────────────────────────────────────────
+// ─── .project.path additional coverage ───────────────────────────────────────
 
-/// `.path` output is a single line ending with `/` (IT-5)
+/// `.project.path` output is a single line ending with `/` (IT-5)
 #[ test ]
 fn it_path_output_single_line_ending_slash()
 {
   let home = tempfile::TempDir::new().unwrap();
 
   let output = common::clg_cmd()
-    .args( [ ".path", "path::/tmp/test-dir-path-format-check" ] )
+    .args( [ ".project.path", "path::/tmp/test-dir-path-format-check" ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -942,7 +1004,7 @@ fn it_path_tilde_expansion()
   let home_str = home.path().to_str().unwrap();
 
   let output = common::clg_cmd()
-    .args( [ ".path", "path::~/myproject" ] )
+    .args( [ ".project.path", "path::~/myproject" ] )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute" );
@@ -972,14 +1034,14 @@ fn it_path_dot_resolves_to_cwd()
   let project = tempfile::TempDir::new().unwrap();
 
   let out_no_args = common::clg_cmd()
-    .args( [ ".path" ] )
+    .args( [ ".project.path" ] )
     .current_dir( project.path() )
     .env( "HOME", home.path() )
     .output()
     .expect( "Failed to execute (no args)" );
 
   let out_dot = common::clg_cmd()
-    .args( [ ".path", "path::." ] )
+    .args( [ ".project.path", "path::." ] )
     .current_dir( project.path() )
     .env( "HOME", home.path() )
     .output()

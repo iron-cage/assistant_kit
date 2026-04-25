@@ -502,10 +502,10 @@
     - ".projects limit::5"
   auto_help_enabled: true
 
-- name: ".path"
+- name: ".project.path"
   namespace: ""
-  description: "Compute Claude storage path for a directory"
-  hint: "Compute storage path"
+  description: "Compute Claude storage path for a project directory"
+  hint: "Compute project storage path"
   version: "1.0.0"
   status: "stable"
   aliases: []
@@ -535,15 +535,15 @@
       tags: []
 
   examples:
-    - ".path"
-    - ".path path::/home/user/project"
-    - ".path path::/home/user/project topic::work"
+    - ".project.path"
+    - ".project.path path::/home/user/project"
+    - ".project.path path::/home/user/project topic::work"
   auto_help_enabled: true
 
-- name: ".exists"
+- name: ".project.exists"
   namespace: ""
-  description: "Check if a session has existing conversation history (exit 0 = yes, exit 1 = no)"
-  hint: "Check for session history"
+  description: "Check if a project directory has existing conversation history (exit 0 = yes, exit 1 = no)"
+  hint: "Check for project history"
   version: "1.0.0"
   status: "stable"
   aliases: []
@@ -573,9 +573,9 @@
       tags: []
 
   examples:
-    - ".exists"
-    - ".exists path::/home/user/project"
-    - ".exists path::/home/user/project topic::work"
+    - ".project.exists"
+    - ".project.exists path::/home/user/project"
+    - ".project.exists path::/home/user/project topic::work"
   auto_help_enabled: true
 
 - name: ".session.dir"

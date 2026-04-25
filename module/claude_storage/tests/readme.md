@@ -54,10 +54,10 @@ tests/
 ├── search_command_test.rs                 # .search parameter validation tests (Phase 1B)
 ├── search_session_partial_uuid_bug.rs     # .search session partial UUID fix (issue-020)
 ├── search_special_characters_bug.rs       # Special character handling (Bug #006, #007)
-├── session_path_command_test.rs           # .path/.exists/.session.dir/.session.ensure lifecycle commands
+├── session_path_command_test.rs           # .project.path/.project.exists/.session.dir/.session.ensure lifecycle commands
 ├── projects_command_test.rs               # .projects scope filtering and parameter validation (EC-1..EC-8, IT-50)
 ├── projects_family_display_test.rs        # .projects family/agent session display (IT-1, IT-33, IT-36..IT-48)
-├── projects_path_encoding_test.rs         # .projects path decode/display bug reproducers (IT-23..IT-26, IT-60..IT-63)
+├── projects_path_encoding_test.rs         # .projects path decode/display bug reproducers (IT-23..IT-26, IT-60..IT-64)
 ├── projects_output_format_test.rs         # .projects output format: path headers, agent collapse (IT-17..IT-22); list-mode redesign (IT-52..IT-53)
 ├── projects_scope_around_test.rs          # .projects scope::around bidirectional neighborhood semantics (IT-57..IT-59)
 ├── projects_zero_byte_count_bug.rs        # .projects zero-byte session exclusion from header count (issue-034, IT-54..IT-56)
@@ -110,7 +110,7 @@ tests/
 | `search_command_test.rs` | Validate .search command parameters |
 | `search_session_partial_uuid_bug.rs` | Test partial UUID matching in .search session filter |
 | `search_special_characters_bug.rs` | Test special character handling in queries |
-| `session_path_command_test.rs` | Test .path/.exists/.session.dir/.session.ensure lifecycle commands |
+| `session_path_command_test.rs` | Test .project.path/.project.exists/.session.dir/.session.ensure lifecycle commands |
 | `projects_command_test.rs` | Test .projects scope filtering and parameter validation (EC-1..EC-8, IT-50) |
 | `projects_family_display_test.rs` | Test .projects family and agent session display (IT-1, IT-33, IT-36..IT-48) |
 | `projects_path_encoding_test.rs` | Test .projects path decode/display bug reproducers (IT-23..IT-26, IT-60..IT-64) |

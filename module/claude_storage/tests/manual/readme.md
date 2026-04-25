@@ -17,14 +17,14 @@ Current command set (11 commands as of v1.4.0):
 5. `.search` - Full-text search (parameter validation tested in Phase 1B)
 6. `.export` - Export sessions to file (parameter validation tested in Phase 1C)
 7. `.projects` - Project-centric listing with scope filtering (renamed from `.sessions` in task-015; redesigned in task-016)
-8. `.path` - Print canonical storage path for a topic
-9. `.exists` - Exit-code check whether a topic has session history
+8. `.project.path` - Print canonical storage path for a topic
+9. `.project.exists` - Exit-code check whether a topic has session history
 10. `.session.dir` - Print or create session directory for a topic
 11. `.session.ensure` - Ensure session directory exists for a topic
 
 **Removed commands (do not test):**
 - `.show.project` — removed in task-013 (deprecated stub)
-- `.session` — removed in task-014 (duplicate of `.exists`)
+- `.session` — removed in task-014 (duplicate of `.project.exists`)
 
 ### parameter validation
 
@@ -196,15 +196,15 @@ Each command must be tested with:
 | Invalid verbosity | `verbosity::10` | Error message | Medium |
 | Negative min_entries | `min_entries::-1` | Error message | Medium |
 
-### `.path` / `.exists` / `.session.dir` / `.session.ensure` commands
+### `.project.path` / `.project.exists` / `.session.dir` / `.session.ensure` commands
 
 | Test Case | Parameters | Expected Behavior | Priority |
 |-----------|------------|-------------------|----------|
-| `.path` default topic | (none) | Print default topic path | High |
-| `.path` custom topic | `topic::mytopic` | Print topic path | High |
-| `.path` invalid topic (with /) | `topic::a/b` | Error message | High |
-| `.exists` present | `topic::` with history | Exit 0 | High |
-| `.exists` absent | `topic::` no history | Exit 1 + "no sessions" | High |
+| `.project.path` default topic | (none) | Print default topic path | High |
+| `.project.path` custom topic | `topic::mytopic` | Print topic path | High |
+| `.project.path` invalid topic (with /) | `topic::a/b` | Error message | High |
+| `.project.exists` present | `topic::` with history | Exit 0 | High |
+| `.project.exists` absent | `topic::` no history | Exit 1 + "no sessions" | High |
 | `.session.dir` create | `topic::new` | Create + print dir | High |
 | `.session.ensure` idempotent | existing topic | Exit 0, no duplicate | High |
 

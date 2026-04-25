@@ -1,0 +1,10 @@
+# Compiled artifacts — excluded to keep build context small.
+# Docker will use target/ from the cook stage, not the host.
+target/
+
+# Hyphen-prefixed directories are temporary scratch space (investigations,
+# experiments, notes). Never relevant to a container build.
+-*/
+
+# Git history is not needed inside the image.
+.git/

@@ -46,8 +46,8 @@ serde_json.workspace = true
 tempfile.workspace = true
 
 [features]
-# Default: library-only build with zero dependencies (no CLI binary).
-default = []
+# Default: full CLI build (binary + all deps). Use --no-default-features for library-only.
+default = [ "enabled" ]
 # Master switch: activates CLI binary dependencies (error_tools, serde_json, unilang, ureq).
 enabled = [
   "dep:error_tools",
