@@ -24,7 +24,7 @@
 //! | `b14_agent_meta_json.rs` | B14 — `.meta.json` sidecars with `agentType` | Families |
 //! | `b15_agent_slug_field.rs` | B15 — agents carry shared `slug` field | Families |
 //! | `b16_tools_disable.rs` | B16 — `--tools ""` disables tool invocation; definitions may or may not be stripped (H1 vs H2 ❓) | Flags |
-//! | `b17_parentuuid_self_contained.rs` | B17 — `parentUuid` chains are self-contained per session file | Entries |
+//! | `b17_parentuuid_self_contained.rs` | B17 — `parentUuid` orphaned-link rate < 1%; compaction-boundary exception documented | Entries |
 //! | `b18_no_cross_session_links.rs` | B18 — first conversation entry of every session has `parentUuid: null` | Entries |
 
 #[ allow( dead_code ) ]

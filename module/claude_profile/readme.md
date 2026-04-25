@@ -11,6 +11,8 @@ Claude Code account credential management.
 | `tests/` | Test suite for credential management |
 | `docs/` | Behavioral requirements: features (FR-6–FR-18), invariants, CLI reference |
 | `unilang.commands.yaml` | YAML command metadata for 10 profile commands |
+| `Dockerfile` | Container image definition for isolated test runs. |
+| `scripts/` | Container CLI for building and running tests in isolation. |
 | `vision.md` | Crate vision, design decisions, and open problems |
 | `vision_ua.md` | Crate vision in Ukrainian |
 | `changelog.md` | Notable changes by version |
@@ -107,6 +109,17 @@ clp .paths                 # show ~/.claude/ canonical paths
 
 ## Testing
 
+**Local:**
 ```bash
 cargo nextest run -p claude_profile
+```
+
+**Container (offline — no credentials needed):**
+```bash
+./scripts/docker .test
+```
+
+**Container (all tests — credentials required):**
+```bash
+./scripts/docker .test.live
 ```

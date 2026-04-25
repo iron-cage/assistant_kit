@@ -31,7 +31,7 @@ tests/
 │   ├── b14_agent_meta_json.rs             # B14 — agent-*.meta.json holds agentType
 │   ├── b15_agent_slug_field.rs            # B15 — agent files have slug field in entries
 │   ├── b16_tools_disable.rs               # B16 — tools_disable field present in agent entries
-│   ├── b17_parentuuid_self_contained.rs   # B17 — parentUuid chains never cross session boundary
+│   ├── b17_parentuuid_self_contained.rs   # B17 — parentUuid orphaned-link rate < 1% (compaction-boundary exception)
 │   └── b18_no_cross_session_links.rs      # B18 — no entry references uuid from different session
 ├── manual/                                 # Manual testing plans and results
 │   └── readme.md                          # Manual testing plan for this crate
@@ -90,7 +90,7 @@ tests/
 | `behavior/b14_agent_meta_json.rs` | B14: `agent-*.meta.json` sidecar holds `agentType` field |
 | `behavior/b15_agent_slug_field.rs` | B15: agent JSONL entries contain `slug` field |
 | `behavior/b16_tools_disable.rs` | B16: agent entries contain `tools_disable` field |
-| `behavior/b17_parentuuid_self_contained.rs` | B17: `parentUuid` chains never reference entries outside their session |
+| `behavior/b17_parentuuid_self_contained.rs` | B17: `parentUuid` orphaned-link rate < 1% (context-compaction boundary exception documented) |
 | `behavior/b18_no_cross_session_links.rs` | B18: no entry `uuid` is referenced as `parentUuid` in a different session |
 | `cli_commands.rs` | Test CLI command storage operations |
 | `cli_sanity.rs` | Verify CLI binary builds and runs |
@@ -465,6 +465,30 @@ cargo nextest run --all-features -- --include-ignored
 - **Fix**: 3-site fix in `src/cli/mod.rs`: (1) `aggregate_projects` skips zero-byte in best-selection and uses `!is_zero_byte_session` in session_count; (2) `root_count` in use_families branch filters to non-zero-byte roots; (3) flat branch computes `displayable` before `group_count`
 - **Root Cause**: Count expressions used unfiltered `sessions.len()` / `families.len()` while the render layer had separate `is_zero_byte_session` filtering. Count and render were not derived from the same source
 - **Documentation**: Fix(issue-034) 3-field comment at all three source sites + 5-section test docs in `projects_zero_byte_count_bug.rs`
+
+### issue-037: `.session.dir` and `.session.ensure` rejected absent `path::` despite YAML spec declaring it optional
+
+- **Issue**: `clg .session.dir` without `path::` exited 1 with an error even though the YAML spec marks `path::` as `optional: true` with "default: current directory"
+- **Tests**: `it_session_dir_cwd_default`, `it_session_ensure_cwd_default` in `session_path_command_test.rs`; both marked `bug_reproducer(issue-037)`
+- **Fix**: Replaced `ok_or_else` + `resolve_path_parameter` call chain in `resolve_session_dir` with a single call to `resolve_cmd_path(cmd)?`, which returns `cwd` when `path::` is absent
+- **Root Cause**: `resolve_required_session_dir` (old name) used `cmd.get_string("path").ok_or_else(|| error)?` which unconditionally rejected absent `path::` before any cwd fallback could occur. The sibling helper `resolve_cmd_path` already implemented the correct pattern
+- **Documentation**: Fix(issue-037) in `cli/mod.rs` `resolve_session_dir`; 5-section test doc in `session_path_command_test.rs`
+
+### issue-036: `.show session_id::` fails for sessions in topic project directories
+
+- **Issue**: `clg .show session_id::UUID` returned "Session not found" for sessions recorded in topic dirs (e.g., `-commit`, `-default_topic`) even though `.projects` showed the session under the current project
+- **Tests**: `show_finds_session_in_topic_dir`, `show_rejects_sibling_single_hyphen_dir` and others in `content_display_integration_test.rs`; marked `bug_reproducer(issue-036)`
+- **Fix**: Replaced `storage.load_project_for_cwd()` in `show_session_in_cwd_impl` with a `list_projects()` scan filtered by `dir_name == eb || dir_name.starts_with(&format!("{eb}--"))` (double-hyphen prevents sibling matches)
+- **Root Cause**: `load_project_for_cwd()` matched only the exact encoded base path; topic dirs use `{base}--{topic}` suffixes, which exact-match never returned
+- **Documentation**: Fix(issue-036) in `cli/mod.rs` `show_session_in_cwd_impl`; 5-section test doc in `content_display_integration_test.rs`
+
+### issue-035: `.projects` shows base path instead of topic path when topic directory is absent from disk
+
+- **Issue**: `clg .projects` displayed `project/base` instead of `project/base/-commit` for sessions recorded under a topic dir that no longer existed on disk
+- **Tests**: `projects_shows_topic_path_when_topic_dir_absent`, `projects_shows_topic_path_when_topic_dir_exists` and others in `projects_path_encoding_test.rs`; marked `bug_reproducer(issue-035)`
+- **Fix**: Removed the `if candidate.exists()` guard inside the topic-extension loop in `decode_project_display` — always join the topic component unconditionally
+- **Root Cause**: The existence check treated disk state as authoritative for display; but the storage key records the CWD at session start, and that attribution must not change based on current filesystem state
+- **Documentation**: Fix(issue-035) in `cli/mod.rs` `decode_project_display`; 5-section test doc in `projects_path_encoding_test.rs`
 
 ### issue-028: "1 entries" — hardcoded plural "entries" in session header and project session list
 - **Issue**: (a) `.show session_id::abc` produced "Session: abc (1 entries)" — wrong plural in header; (b) `.show.project verbosity::1` with 1-entry session showed "(1 entries, last: ...)" — same root cause

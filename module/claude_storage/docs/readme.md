@@ -10,7 +10,6 @@
 | `advanced_topics.md` | Agent sessions, command system, advanced search |
 | `cli_design.md` | CLI design decisions (superseded by `cli/`) |
 | `doc_graph.yml` | Cross-reference graph for navigability analysis |
-| `entities.md` | Entity tree and cross-entity index of all doc instances |
 
 ### Overview
 

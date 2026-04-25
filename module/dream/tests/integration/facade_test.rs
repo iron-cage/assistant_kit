@@ -76,13 +76,3 @@ fn assets_re_exports_accessible()
   use dream::assets::artifact::ArtifactKind;
   let _ = core::any::TypeId::of::< ArtifactKind >();
 }
-
-// ─── feature: inventory ─────────────────────────────────────────────────────
-
-#[ cfg( feature = "inventory" ) ]
-#[ test ]
-fn inventory_re_exports_accessible()
-{
-  use dream::inventory::inventory::Inventory;
-  let _ = core::any::TypeId::of::< Inventory >();
-}

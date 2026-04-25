@@ -12,4 +12,3 @@
 | File | Responsibility |
 |------|----------------|
 | `cli/` | CLI testing documentation mirroring `docs/cli/` |
-| `entities.md` | Entity tree and master entity registry for test doc entities |

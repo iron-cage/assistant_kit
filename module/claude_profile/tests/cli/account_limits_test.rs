@@ -120,8 +120,9 @@ fn lim02_no_active_credentials_exits_2()
 ///   be obtained. AC-04 from `feature/013_account_limits.md` requires exit 2
 ///   with an actionable message.
 /// Why Not Caught: No test existed before lim03.
-/// Fix Applied: `fetch_rate_limits()` always returns Err until HTTP is added;
-///   the command exits 2 with an actionable message pointing to `claude /usage`.
+/// Fix Applied: `fetch_rate_limits()` calls the real `ureq` HTTP client, but
+///   `write_credentials()` produces JSON without `accessToken`, so
+///   `read_auth_token()` fails before any HTTP call — command exits 2.
 /// Prevention: Add AC-04-style "must not be silent" assertions to any command
 ///   that has an optional-data data source.
 /// Pitfall: An empty stdout with exit 0 is a silent success — always assert
