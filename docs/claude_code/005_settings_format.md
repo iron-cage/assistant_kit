@@ -21,6 +21,8 @@ All commands that modify settings (`.settings.set`, `.version.install`, `.versio
 
 `~/.claude/settings.json` is a flat `{ "k1": v1, ... }` object with nested object preservation:
 
+User-global `~/.claude/settings.json`:
+
 ```json
 {
   "theme": "dark",
@@ -46,9 +48,25 @@ All commands that modify settings (`.settings.set`, `.version.install`, `.versio
 }
 ```
 
+Project-level `.claude/settings.local.json` (auto-managed by Claude Code):
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run test:*)",
+      "Bash(npx eslint:*)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "outputStyle": "default"
+}
+```
+
 **Key rules:**
 - Top-level values: strings, numbers, booleans, null (hand-rolled parser, no serde)
-- Nested objects (`env`, `enabledPlugins`, `hooks`, `mcpServers`): captured as raw JSON strings, output verbatim
+- Nested objects (`env`, `enabledPlugins`, `hooks`, `mcpServers`, `permissions`): captured as raw JSON strings, output verbatim
 - Only `env` sub-object is actively manipulated (set/remove individual env vars)
 - Type inference on write: exact `"true"`/`"false"` → bool; `"null"` → raw null; values starting with `{`/`[` (after left-trim) → raw JSON; `i64`/`f64`-parseable → number; all others → string
 
@@ -75,21 +93,23 @@ Two keys written by `.version.install` on every successful exit (including idemp
 
 ### Settings Config Parameter Table
 
-The eleven global keys read by `claude` at startup from `~/.claude/settings.json`. No CLI flag or env var form except where noted (config key overrides are lower precedence than CLI flags).
+Config keys read by `claude` at startup from `settings.json`. No CLI flag or env var form except where noted (config key overrides are lower precedence than CLI flags). User-global keys (`~/.claude/settings.json`) marked **G**; project-level keys (`.claude/settings.json` / `.claude/settings.local.json`) marked **P**; keys valid at both levels marked **G+P**.
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `theme` | string | `"dark"` | UI color theme |
-| `autoUpdates` | bool | `true` | Auto-update binary on startup |
-| `preferredVersionSpec` | string/null | `null` | Preferred version alias or semver (e.g. `"stable"`, `"2.1.78"`) |
-| `preferredVersionResolved` | string/null | `null` | Concrete semver resolved at last install; `null` for `latest` |
-| `env` | object | `{}` | Persistent env var overrides injected at startup |
-| `enabledPlugins` | object | `{}` | Active plugin registry |
-| `model` | string | binary default | Persistent model preference; overridden by `--model` CLI flag |
-| `effortLevel` | enum | `"medium"` | Persistent effort level (`low`/`medium`/`high`/`max`); overridden by `--effort` |
-| `hooks` | object | `{}` | Hooks for `PreToolUse` / `PostToolUse` / `UserPromptSubmit` events |
-| `skipDangerousModePermissionPrompt` | bool | `false` | Suppress interactive confirmation when dangerous mode is active |
-| `voiceEnabled` | bool | `false` | Enable voice input and audio output |
+| Key | Scope | Type | Default | Description |
+|-----|-------|------|---------|-------------|
+| `theme` | G | string | `"dark"` | UI color theme |
+| `autoUpdates` | G | bool | `true` | Auto-update binary on startup |
+| `preferredVersionSpec` | G | string/null | `null` | Preferred version alias or semver (e.g. `"stable"`, `"2.1.78"`) |
+| `preferredVersionResolved` | G | string/null | `null` | Concrete semver resolved at last install; `null` for `latest` |
+| `env` | G | object | `{}` | Persistent env var overrides injected at startup |
+| `enabledPlugins` | G | object | `{}` | Active plugin registry |
+| `model` | G+P | string | binary default | Persistent model preference; overridden by `--model` CLI flag |
+| `effortLevel` | G+P | enum | `"medium"` | Persistent effort level (`low`/`medium`/`high`/`max`); overridden by `--effort` |
+| `hooks` | G+P | object | `{}` | Hooks for `PreToolUse` / `PostToolUse` / `UserPromptSubmit` events |
+| `skipDangerousModePermissionPrompt` | G | bool | `false` | Suppress interactive confirmation when dangerous mode is active |
+| `voiceEnabled` | G | bool | `false` | Enable voice input and audio output |
+| `permissions` | P | object | `{}` | Per-project tool allow/deny/ask rules; auto-managed by Claude Code during sessions |
+| `outputStyle` | G+P | string | `"default"` | Terminal output visual rendering style |
 
 See [`params/readme.md`](params/readme.md) for the complete parameter table including CLI flags and env vars. Precedence: CLI arg > env var > settings config.
 

@@ -274,3 +274,195 @@ fn show_verbosity_zero_is_metadata_only()
     "verbosity::0 should NOT show chat-log format. stdout: {show_output}"
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// show session_id:: — Topic Project Directory Search (issue-036)
+//
+// Root Cause: show_session_in_cwd_impl calls storage.load_project_for_cwd(),
+// which does an exact match on the base encoded path. Sessions recorded in
+// topic dirs (e.g. -commit, -default_topic) live under storage dirs with
+// --commit / --default-topic suffixes; load_project_for_cwd() never returns
+// these, so .show session_id:: fails with "Session not found" even when
+// .projects shows the session under the current project.
+//
+// Why Not Caught: No test exercised .show session_id:: with a session in a
+// topic project dir. All existing tests supply project:: (Case 4), bypassing
+// show_session_in_cwd_impl (Case 2) entirely.
+//
+// Fix Applied: Replace load_project_for_cwd() with a list_projects() scan
+// filtered by the scope::local predicate:
+//   dir_name == eb || dir_name.starts_with(&format!("{eb}--"))
+// The double-hyphen prevents matching sibling directories.
+//
+// Prevention: Every test of .show session_id:: (Case 2, no project parameter)
+// must cover both the base-dir and topic-dir cases.
+//
+// Pitfall: Use double-hyphen ({eb}--) for the topic predicate, not
+// single-hyphen ({eb}-). Single-hyphen matches sibling directories whose
+// encoded name shares the base prefix (e.g. myproject-extra matches myproject).
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+// bug_reproducer(issue-036)
+fn show_finds_session_in_topic_dir()
+{
+  use claude_storage_core::encode_path;
+
+  let storage     = TempDir::new().unwrap();
+  let project_dir = TempDir::new().unwrap();  // simulated CWD
+  let eb          = encode_path( project_dir.path() ).unwrap();
+  let topic_id    = format!( "{eb}--commit" );
+
+  // Write session into the topic project dir. Base dir {eb} is absent.
+  common::write_test_session( storage.path(), &topic_id, "session-t05-topic-show", 4 );
+
+  let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
+    .current_dir( project_dir.path() )  // CWD is the project path
+    .args( [ ".show", "session_id::session-t05-topic-show" ] )
+    .output()
+    .unwrap();
+
+  let s    = String::from_utf8_lossy( &output.stdout );
+  let serr = String::from_utf8_lossy( &output.stderr );
+  assert!(
+    output.status.success(),
+    ".show must find session in topic project dir; stderr: {serr}\nstdout: {s}"
+  );
+  assert!( s.contains( "Session:" ), "output must have Session header; got:\n{s}" );
+}
+
+#[test]
+fn show_finds_session_in_base_dir()
+{
+  use claude_storage_core::encode_path;
+
+  let storage     = TempDir::new().unwrap();
+  let project_dir = TempDir::new().unwrap();
+  let eb          = encode_path( project_dir.path() ).unwrap();
+
+  // Write session into the base project dir (non-regression).
+  common::write_test_session( storage.path(), &eb, "session-t06-base-show", 4 );
+
+  let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
+    .current_dir( project_dir.path() )
+    .args( [ ".show", "session_id::session-t06-base-show" ] )
+    .output()
+    .unwrap();
+
+  let s    = String::from_utf8_lossy( &output.stdout );
+  let serr = String::from_utf8_lossy( &output.stderr );
+  assert!(
+    output.status.success(),
+    ".show must find session in base project dir; stderr: {serr}\nstdout: {s}"
+  );
+  assert!( s.contains( "Session:" ), "output must have Session header; got:\n{s}" );
+}
+
+#[test]
+fn show_session_not_found_in_unrelated_dir()
+{
+  use claude_storage_core::encode_path;
+
+  let storage     = TempDir::new().unwrap();
+  let project_dir = TempDir::new().unwrap();  // CWD — no sessions here
+  let unrelated   = TempDir::new().unwrap();
+  let unrelated_id = encode_path( unrelated.path() ).unwrap();
+
+  // Write session into unrelated project (completely different path).
+  common::write_test_session( storage.path(), &unrelated_id, "session-t07-unrelated", 2 );
+
+  let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
+    .current_dir( project_dir.path() )  // CWD has no sessions
+    .args( [ ".show", "session_id::session-t07-unrelated" ] )
+    .output()
+    .unwrap();
+
+  assert!(
+    !output.status.success(),
+    ".show must fail when session is in an unrelated project dir"
+  );
+}
+
+#[test]
+// bug_reproducer(issue-036)
+fn show_finds_session_in_default_topic_dir()
+{
+  use claude_storage_core::encode_path;
+
+  let storage     = TempDir::new().unwrap();
+  let project_dir = TempDir::new().unwrap();
+  let eb          = encode_path( project_dir.path() ).unwrap();
+  // "--default-topic" is the storage suffix for the -default_topic working dir.
+  let topic_id    = format!( "{eb}--default-topic" );
+
+  common::write_test_session( storage.path(), &topic_id, "session-t08-default-topic-show", 4 );
+
+  let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
+    .current_dir( project_dir.path() )
+    .args( [ ".show", "session_id::session-t08-default-topic-show" ] )
+    .output()
+    .unwrap();
+
+  let s    = String::from_utf8_lossy( &output.stdout );
+  let serr = String::from_utf8_lossy( &output.stderr );
+  assert!(
+    output.status.success(),
+    ".show must find session in --default-topic dir; stderr: {serr}\nstdout: {s}"
+  );
+  assert!( s.contains( "Session:" ), "output must have Session header; got:\n{s}" );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// show session_id:: — Single-Hyphen Sibling Not Matched (issue-036, T09)
+//
+// Root Cause: show_session_in_cwd_impl uses `dir_name.starts_with(&format!("{eb}--"))`
+// (double-hyphen) as the topic predicate. A storage dir named `{eb}-extra`
+// (single hyphen) must NOT be matched — that encodes a completely different
+// path (e.g., `base_extra`), not a topic subdirectory of `base`.
+//
+// Why Not Caught: T07 only tested a completely unrelated path (independent
+// TempDir with no prefix overlap). The single-vs-double-hyphen distinction
+// was never explicitly validated.
+//
+// Fix Applied: The double-hyphen predicate is already correct. This test
+// guards against regression where the predicate might be weakened to
+// single-hyphen.
+//
+// Prevention: Any change to the topic-prefix predicate in show_session_in_cwd_impl
+// must keep T09 passing.
+//
+// Pitfall: Using single-hyphen `{eb}-` would allow sibling paths like
+// `base_extra` to match — the double-hyphen `{eb}--` is critical to
+// limiting the scan to genuine topic subdirectories of the current project.
+// ─────────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn show_session_not_found_in_single_hyphen_sibling_dir()
+{
+  use claude_storage_core::encode_path;
+
+  let storage     = TempDir::new().unwrap();
+  let project_dir = TempDir::new().unwrap();  // CWD
+  let eb          = encode_path( project_dir.path() ).unwrap();
+
+  // Craft a storage dir named "{eb}-extra" — single hyphen, NOT double.
+  // This simulates a sibling path whose encoded form shares the base prefix.
+  let sibling_id  = format!( "{eb}-extra" );
+  common::write_test_session( storage.path(), &sibling_id, "session-t09-single-hyphen-sibling", 2 );
+
+  let output = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", storage.path() )
+    .current_dir( project_dir.path() )
+    .args( [ ".show", "session_id::session-t09-single-hyphen-sibling" ] )
+    .output()
+    .unwrap();
+
+  assert!(
+    !output.status.success(),
+    ".show must NOT find session in single-hyphen sibling dir (double-hyphen predicate required)"
+  );
+}

@@ -213,6 +213,16 @@
       aliases: []
       tags: []
 
+    - name: "scope"
+      kind: "String"
+      description: "Project search boundary when session_id is given without project:: (default: local)"
+      hint: "Project search scope"
+      optional: true
+      default: "local"
+      validation_rules: []
+      aliases: []
+      tags: ["scope"]
+
   examples:
     - ".show"
     - ".show session_id::abc123"

@@ -8,7 +8,7 @@ parameter in this directory.
 
 - **Purpose**: Authoritative flat reference for every parameter the `claude` binary accepts at runtime.
 - **Responsibility**: Master table and per-parameter detail files for CLI flags, env vars, and settings config keys.
-- **In Scope**: All 69 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
+- **In Scope**: All 71 parameters — positional args, long/short flags, `CLAUDE_CODE_*` env vars, `ANTHROPIC_*` env vars, `~/.claude/settings.json` config keys, project-level `.claude/settings.json` config keys.
 - **Out of Scope**: Builder-API defaults and Rust `with_*()` methods (→ `module/claude_runner_core/docs/claude_params/`); Claude API protocol (→ Anthropic docs).
 
 ### Responsibility Table
@@ -85,6 +85,8 @@ parameter in this directory.
 | verbose.md | `--verbose` — override verbose mode from config |
 | voice_enabled.md | `voiceEnabled` config key — voice input/output features |
 | worktree.md | `-w` / `--worktree` — create git worktree for session |
+| permissions.md | `permissions` config key — per-project tool allow/deny/ask rules |
+| output_style.md | `outputStyle` config key — terminal output visual style |
 
 ### Parameter Table
 
@@ -162,6 +164,8 @@ Precedence: CLI arg > env var > settings config.
 | 67 | [mcp_servers](mcp_servers.md) | — | — | `mcpServers` | object | `{}` | Inline MCP server definitions (alternative to `--mcp-config`) |
 | 68 | [skip_dangerous_mode_permission_prompt](skip_dangerous_mode_permission_prompt.md) | — | — | `skipDangerousModePermissionPrompt` | bool | `false` | Suppress interactive confirmation for dangerous mode |
 | 69 | [voice_enabled](voice_enabled.md) | — | — | `voiceEnabled` | bool | `false` | Enable voice input and audio output features |
+| 70 | [permissions](permissions.md) | — | — | `permissions` | object | `{}` | Per-project tool allow/deny/ask rules; auto-managed by Claude Code |
+| 71 | [output_style](output_style.md) | — | — | `outputStyle` | string | `"default"` | Terminal output visual rendering style |
 
 ### Cross-References
 

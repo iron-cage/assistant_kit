@@ -1050,16 +1050,41 @@ fn show_session_in_cwd_impl(
   metadata_only : bool
 ) -> core::result::Result< OutputData, ErrorData >
 {
+  // Fix(issue-036)
+  // Root cause: load_project_for_cwd() only matches the exact encoded base path, so sessions
+  //   stored under topic project dirs ({base}--commit, {base}--default-topic) were invisible
+  //   when running .show from the corresponding working directory.
+  // Pitfall: Use double-hyphen ({eb}--) not single ({eb}-) for the topic prefix predicate;
+  //   single-hyphen would falsely match sibling directories sharing a common prefix.
   let storage = create_storage()?;
 
-  let project = storage.load_project_for_cwd()
-    .map_err( | e | ErrorData::new
-    (
-      ErrorCode::InternalError,
-      format!( "Failed to load project from current directory: {e}" )
-    ))?;
+  let cwd = std::env::current_dir()
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to get current directory: {e}" ) ) )?;
 
-  format_session_output( &project, session_id, verbosity, show_entries, metadata_only )
+  let eb = claude_storage_core::encode_path( &cwd )
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to encode current directory: {e}" ) ) )?;
+
+  let topic_prefix = format!( "{eb}--" );
+
+  let all_projects = storage.list_projects()
+    .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list projects: {e}" ) ) )?;
+
+  for project in &all_projects
+  {
+    let dir_name = project.storage_dir()
+      .file_name()
+      .and_then( | n | n.to_str() )
+      .unwrap_or( "" );
+
+    if dir_name != eb && !dir_name.starts_with( &topic_prefix ) { continue; }
+
+    if let Ok( output ) = format_session_output( project, session_id, verbosity, show_entries, metadata_only )
+    {
+      return Ok( output );
+    }
+  }
+
+  Err( ErrorData::new( ErrorCode::InternalError, format!( "Session '{session_id}' not found in current directory projects" ) ) )
 }
 
 /// Helper: Show session in specific project
@@ -1914,6 +1939,98 @@ fn decode_path_via_fs( encoded : &str ) -> Option< std::path::PathBuf >
   walk_fs( std::path::Path::new( "/" ), &pieces, 0, "" )
 }
 
+/// Decode the base-encoded component of a storage dir name to a real filesystem path.
+///
+/// Returns `None` if the encoded string is malformed (non-path-encoded keys such as UUIDs).
+/// When `decode_path` succeeds but the result does not exist on disk, falls back to the
+/// filesystem-guided walk to resolve `_` vs `/` ambiguity (Fix(issue-029)).
+fn decode_storage_base( base_encoded : &str ) -> Option< std::path::PathBuf >
+{
+  use claude_storage_core::decode_path;
+  let h = decode_path( base_encoded ).ok()?;
+  if h.exists()
+  {
+    Some( h )
+  }
+  else
+  {
+    // Fix(issue-029): heuristic maps '_' to '/', try filesystem-guided decode.
+    Some( decode_path_via_fs( base_encoded ).unwrap_or( h ) )
+  }
+}
+
+/// Convert a topic component from a storage key to the corresponding filesystem directory name.
+///
+/// Topic components in storage keys use hyphens (`default-topic`); the filesystem directory
+/// uses underscores (`-default_topic`). The leading `-` marks it as a git-ignored directory.
+///
+/// Examples: `"default-topic"` → `"-default_topic"`,  `"commit"` → `"-commit"`
+fn topic_to_dir( topic : &str ) -> String
+{
+  format!( "-{}", topic.replace( '-', "_" ) )
+}
+
+/// Return true if `dir_name` encodes a project path that is `base_path` itself or is nested
+/// under `base_path` (`scope::under` predicate).
+///
+/// The single-hyphen fast-reject `starts_with("{eb}-")` weeds out projects with completely
+/// different paths before the more expensive filesystem decode.
+fn matches_under( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
+{
+  if dir_name != eb && !dir_name.starts_with( &format!( "{eb}-" ) ) { return false; }
+  if dir_name == eb { return true; }
+  let candidate_base = strip_topic_suffix( dir_name );
+  decode_path_via_fs( candidate_base )
+    .map_or( true, | p | p.starts_with( base_path ) )
+}
+
+/// Return true if `dir_name` encodes a project path that is an ancestor of `base_path`
+/// (`scope::relevant` predicate).
+fn matches_relevant( dir_name : &str, eb : &str, base_path : &std::path::Path ) -> bool
+{
+  if !is_relevant_encoded( dir_name, eb ) { return false; }
+  let candidate_base = strip_topic_suffix( dir_name );
+  if candidate_base == eb { return true; }
+  decode_path_via_fs( candidate_base )
+    .map_or( true, | p | base_path.starts_with( &p ) )
+}
+
+/// Strip the `--topic` suffix from a storage dir name, returning the base encoded component.
+///
+/// Examples:
+/// - `"-home-src--default-topic"` → `"-home-src"`
+/// - `"-home-src"` → `"-home-src"` (unchanged)
+fn strip_topic_suffix( dir_name : &str ) -> &str
+{
+  dir_name.find( "--" ).map_or( dir_name, | i | &dir_name[ ..i ] )
+}
+
+/// Split a storage dir name at each `--` boundary into a base encoded component
+/// and zero or more topic components.
+///
+/// Example: `"-home-src--default-topic--commit"` → `("-home-src", ["default-topic", "commit"])`
+fn split_storage_key< 'a >( dir_name : &'a str ) -> ( &'a str, Vec< &'a str > )
+{
+  let mut parts : Vec< &'a str > = Vec::new();
+  let mut rest = dir_name;
+  loop
+  {
+    if let Some( idx ) = rest.find( "--" )
+    {
+      parts.push( &rest[ ..idx ] );
+      rest = &rest[ idx + 2.. ];
+    }
+    else
+    {
+      parts.push( rest );
+      break;
+    }
+  }
+  let base   = parts[ 0 ];
+  let topics = parts[ 1.. ].to_vec();
+  ( base, topics )
+}
+
 /// Recursive DFS helper for `decode_path_via_fs`.
 ///
 /// `segment` accumulates the current unresolved path component. At each step, option A
@@ -1972,13 +2089,14 @@ fn walk_fs(
 /// Topics are often pure metadata tags (e.g. `--commit`), but they can also be real
 /// hyphen-prefixed directories (e.g. `--default-topic` → `-default_topic/`).
 ///
-/// Algorithm: decode the base path, then try to extend it by each `--topic` component
-/// as a real filesystem directory. Use the longest existing prefix.
+/// Algorithm: decode the base path, then unconditionally extend it by each `--topic`
+/// component. The storage key is authoritative: disk state at query time does not
+/// affect session attribution. (Fix issue-035 removed the existence check.)
 ///
 /// Examples:
-/// - `-...-src--default-topic`         → `src/-default_topic`  (topic IS a real dir)
-/// - `-...-src--default-topic--commit` → `src/-default_topic`  (`-commit` is not a dir)
-/// - `-...-src--commit`                → `src`                  (`-commit` is not a dir)
+/// - `-...-src--default-topic`         → `src/-default_topic`
+/// - `-...-src--default-topic--commit` → `src/-default_topic/-commit`
+/// - `-...-src--commit`                → `src/-commit`
 ///
 /// # Why the filesystem fallback for the base
 ///
@@ -1991,63 +2109,31 @@ fn walk_fs(
 /// back to the raw encoded storage dir name.
 fn decode_project_display( dir_name : &str ) -> String
 {
-  use claude_storage_core::decode_path;
   if !dir_name.starts_with( '-' ) { return dir_name.to_string(); }
-
-  // Split into base + zero or more topic components at each "--" boundary.
-  // E.g. "-home-src--default-topic--commit" → ["-home-src", "default-topic", "commit"]
-  let mut parts = Vec::new();
-  let mut rest = dir_name;
-  loop
-  {
-    if let Some( idx ) = rest.find( "--" )
-    {
-      parts.push( &rest[ ..idx ] );
-      rest = &rest[ idx + 2.. ];
-    }
-    else
-    {
-      parts.push( rest );
-      break;
-    }
-  }
 
   // Fix(issue-030)
   // Root cause: decode_project_display stripped `--topic` before decoding, so
   // `-...-src--default-topic` displayed as `src` even when `-default_topic` is a
   // real directory (the actual CWD). Topic suffixes that are real hyphen-prefixed
   // dirs were invisible in the session header.
-  // Pitfall: The existence check requires the directory to be on disk; deleted
-  // projects fall back to the base path, which is acceptable.
 
   // Decode the base path (handles underscore vs slash ambiguity via filesystem walk).
-  let base_encoded = parts[ 0 ];
-  let base_path = if let Ok( h ) = decode_path( base_encoded )
-  {
-    if h.exists()
-    {
-      h
-    }
-    else
-    {
-      // Fix(issue-029): heuristic maps '_' to '/', try filesystem-guided decode.
-      decode_path_via_fs( base_encoded ).unwrap_or( h )
-    }
-  }
-  else
-  {
-    return dir_name.to_string();
-  };
+  let ( base_encoded, topics ) = split_storage_key( dir_name );
+  let Some( base_path ) = decode_storage_base( base_encoded ) else { return dir_name.to_string() };
 
-  // Try to extend by each topic component as a real hyphen-prefixed directory.
+  // Extend by each topic component as a hyphen-prefixed directory path segment.
   // "default-topic" → "-default_topic",  "commit" → "-commit".
-  // Stop at the first topic that doesn't exist on disk.
+  // Fix(issue-035)
+  // Root cause: candidate.exists() dropped topic components when the topic
+  //   directory is absent from disk. The storage key records the CWD at session
+  //   start; disk state at query time must not affect session attribution.
+  // Pitfall: Do NOT remove the h.exists() guard on the base path decode above —
+  //   that check enables the filesystem-guided fallback for _/slash ambiguity.
+  //   Only this topic-loop guard was incorrect.
   let mut current = base_path;
-  for &topic in &parts[ 1.. ]
+  for &topic in &topics
   {
-    let topic_dir = format!( "-{}", topic.replace( '-', "_" ) );
-    let candidate = current.join( &topic_dir );
-    if candidate.exists() { current = candidate; } else { break; }
+    current = current.join( topic_to_dir( topic ) );
   }
 
   tilde_compress( &current )
@@ -2550,14 +2636,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       //   like `-default_topic`; left in place, the walker searches for a dir named
       //   `topic` under the project root, returns None, and the fallback silently
       //   includes everything — the sibling exclusion is bypassed.
-      "under" =>
-      {
-        if dir_name != eb && !dir_name.starts_with( &format!( "{eb}-" ) ) { return false; }
-        if dir_name == eb { return true; }
-        let candidate_base = dir_name.find( "--" ).map_or( dir_name, | i | &dir_name[ ..i ] );
-        decode_path_via_fs( candidate_base )
-          .map_or( true, | p | p.starts_with( &base_path ) )
-      },
+      "under" => matches_under( dir_name, eb, &base_path ),
       // Fix(issue-032)
       // Root cause: is_relevant_encoded uses string starts_with to check if
       //   dir_name's encoded path is a prefix of encoded_base, so a sibling
@@ -2567,40 +2646,12 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       //   base_path.starts_with(decoded_path) is component-wise and rejects siblings.
       // Pitfall: strip the `--topic` suffix before calling decode_path_via_fs —
       //   same requirement as the issue-031 fix for scope::under.
-      "relevant" =>
-      {
-        if !is_relevant_encoded( dir_name, eb ) { return false; }
-        let candidate_base = dir_name.find( "--" ).map_or( dir_name, | i | &dir_name[ ..i ] );
-        if candidate_base == eb { return true; }
-        decode_path_via_fs( candidate_base )
-          .map_or( true, | p | base_path.starts_with( &p ) )
-      },
+      "relevant" => matches_relevant( dir_name, eb, &base_path ),
       // Union of under + relevant — bidirectional neighborhood.
       // BTreeMap key on decoded path deduplicates projects matched by both arms.
       "around" =>
-      {
-        let is_under = {
-          if dir_name != eb && !dir_name.starts_with( &format!( "{eb}-" ) ) { false }
-          else if dir_name == eb { true }
-          else {
-            let candidate_base = dir_name.find( "--" ).map_or( dir_name, | i | &dir_name[ ..i ] );
-            decode_path_via_fs( candidate_base )
-              .map_or( true, | p | p.starts_with( &base_path ) )
-          }
-        };
-        let is_relevant = {
-          if is_relevant_encoded( dir_name, eb ) {
-            let candidate_base = dir_name.find( "--" ).map_or( dir_name, | i | &dir_name[ ..i ] );
-            if candidate_base == eb { true }
-            else {
-              decode_path_via_fs( candidate_base )
-                .map_or( true, | p | base_path.starts_with( &p ) )
-            }
-          }
-          else { false }
-        };
-        is_under || is_relevant
-      },
+        matches_under( dir_name, eb, &base_path )
+          || matches_relevant( dir_name, eb, &base_path ),
       _          => false,
     }
   };
