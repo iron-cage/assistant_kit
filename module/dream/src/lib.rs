@@ -43,3 +43,10 @@ pub mod assets
   //! Re-exports from [`claude_assets_core`]: symlink-based artifact installer.
   pub use claude_assets_core::*;
 }
+
+#[ cfg( feature = "inventory" ) ]
+pub mod inventory
+{
+  //! Re-exports from [`agent_inventory`]: `Inventory`, `AgentAdapter` trait, asset types.
+  pub use agent_inventory::*;
+}
