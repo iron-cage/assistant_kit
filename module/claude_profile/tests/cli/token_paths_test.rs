@@ -8,20 +8,20 @@
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | ts01 | `ts01_token_valid_text_v1` | valid token, v::1 → "Valid" labeled output | P |
-//! | ts02 | `ts02_token_expiring_soon_text_v1` | near-expiry token, v::1 → "Expiring Soon" | P |
-//! | ts03 | `ts03_token_expired_text_v1` | expired token, v::1 → "Expired" | P |
-//! | ts04 | `ts04_token_valid_text_v0` | valid token, v::0 → compact output | P |
-//! | ts05 | `ts05_token_valid_text_v2` | valid token, v::2 → verbose output | P |
-//! | ts06 | `ts06_token_valid_json` | valid token, format::json → JSON object | P |
-//! | ts07 | `ts07_token_expired_json` | expired token, format::json → JSON with status | P |
+//! | ts01 | `ts01_token_valid_text_v1` | valid token, `v::1` → "Valid" labeled output | P |
+//! | ts02 | `ts02_token_expiring_soon_text_v1` | near-expiry token, `v::1` → "Expiring Soon" | P |
+//! | ts03 | `ts03_token_expired_text_v1` | expired token, `v::1` → "Expired" | P |
+//! | ts04 | `ts04_token_valid_text_v0` | valid token, `v::0` → compact output | P |
+//! | ts05 | `ts05_token_valid_text_v2` | valid token, `v::2` → verbose output | P |
+//! | ts06 | `ts06_token_valid_json` | valid token, `format::json` → JSON object | P |
+//! | ts07 | `ts07_token_expired_json` | expired token, `format::json` → JSON with status | P |
 //! | ts08 | `ts08_token_missing_creds_exits_2` | no credentials file → exit 2 | N |
 //! | ts09 | `ts09_token_malformed_creds_exits_2` | malformed JSON → exit 2 | N |
-//! | ts10 | `ts10_token_threshold_0_always_valid` | threshold::0 + far-future → Valid | P |
-//! | ts11 | `ts11_token_threshold_86400_expiring_soon` | threshold::86400 + 1h expiry → ExpiringSoon | P |
+//! | ts10 | `ts10_token_threshold_0_always_valid` | `threshold::0` + far-future → Valid | P |
+//! | ts11 | `ts11_token_threshold_86400_expiring_soon` | `threshold::86400` + 1h expiry → `ExpiringSoon` | P |
 //! | ts12 | `ts12_token_home_unset_exits_2` | HOME unset → exit 2 | N |
 //! | ts13 | `ts13_token_empty_creds_exits_2` | empty credentials file → exit 2 | N |
-//! | ts14 | `ts14_token_expiring_soon_json` | near-expiry token, format::json → JSON with status | P |
+//! | ts14 | `ts14_token_expiring_soon_json` | near-expiry token, `format::json` → JSON with status | P |
 //!
 //! ### P — Paths
 //!

@@ -10,6 +10,7 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
+| 108 | ✅ Complete | Extract `claude_quota` crate — Anthropic API rate-limit transport | refactoring | 2026-04-25 | [108](108_extract_claude_quota_crate.md) |
 | 107 | ✅ Complete | Add `--effort max` as default effort level in `clr` binary | feature | 2026-04-18 | [107](completed/107_clr_default_effort_max.md) |
 | 100 | ✅ Complete | Fix settings_get_routine JSON output losing type information | bug | 2026-04-12 | [100](completed/100_fix_settings_get_json_type_loss.md) |
 | 101 | ✅ Complete | Fix processes_kill_routine swallowing signal errors and never producing exit 2 | bug | 2026-04-12 | [101](completed/101_fix_processes_kill_silent_signal_errors.md) |
@@ -120,8 +121,7 @@
 ## Metadata
 
 **Status Distribution:**
-- ✅ Complete: 103
-- 🎯 Available: 0
+- ✅ Complete: 104
 - 📥 Backlog: 2
 
 **Status Legend:**
@@ -132,4 +132,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-04-19 (TSK-096, TSK-097, TSK-098, TSK-099 marked complete; documentation consistency pass)
+**Last Updated:** 2026-04-25 (TSK-108 completed: claude_quota crate extracted; 322/322 tests pass; live API tests lim_it1–lim_it5 pass)

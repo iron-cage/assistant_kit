@@ -9,7 +9,7 @@
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
 //! | as01 | `as01_save_creates_file` | save creates .credentials.json | P |
-//! | as02 | `as02_save_dry_run` | dry::1 → no file created | P |
+//! | as02 | `as02_save_dry_run` | `dry::1` → no file created | P |
 //! | as03 | `as03_save_overwrite` | second save overwrites first | P |
 //! | as04 | `as04_save_hyphened_name` | hyphenated name accepted | P |
 //! | as05 | `as05_save_underscored_name` | underscored name accepted | P |
@@ -17,7 +17,7 @@
 //! | as07 | `as07_save_slash_name_exits_1` | name with `/` → exit 1 | N |
 //! | as08 | `as08_save_backslash_name_exits_1` | name with `\` → exit 1 | N |
 //! | as09 | `as09_save_star_name_exits_1` | name with `*` → exit 1 | N |
-//! | as10 | `as10_save_missing_name_param_exits_1` | no name:: param → exit 1 | N |
+//! | as10 | `as10_save_missing_name_param_exits_1` | no `name::` param → exit 1 | N |
 //! | as11 | `as11_save_missing_credentials_exits_2` | no credentials file → exit 2 | N |
 //! | as12 | `as12_save_auto_creates_accounts_dir` | accounts/ auto-created | P |
 //! | as13 | `as13_save_dry_then_exec_match` | dry then exec → same output | P |
@@ -28,11 +28,11 @@
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
 //! | aw01 | `aw01_switch_swaps_credentials` | switch replaces .credentials.json | P |
-//! | aw02 | `aw02_switch_dry_run` | dry::1 → no file changed | P |
+//! | aw02 | `aw02_switch_dry_run` | `dry::1` → no file changed | P |
 //! | aw03 | `aw03_switch_nonexistent_exits_2` | unknown account → exit 2 | N |
 //! | aw04 | `aw04_switch_empty_name_exits_1` | empty name → exit 1 | N |
 //! | aw05 | `aw05_switch_slash_name_exits_1` | name with `/` → exit 1 | N |
-//! | aw06 | `aw06_switch_missing_name_param_exits_1` | no name:: param → exit 1 | N |
+//! | aw06 | `aw06_switch_missing_name_param_exits_1` | no `name::` param → exit 1 | N |
 //! | aw07 | `aw07_switch_updates_active_marker` | switch writes _active marker | P |
 //! | aw08 | `aw08_switch_same_account_idempotent` | switch to same account succeeds | P |
 //! | aw09 | `aw09_switch_copies_credentials` | switch copies correct cred content | P |

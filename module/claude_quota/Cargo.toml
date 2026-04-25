@@ -1,0 +1,13 @@
+[package]
+name        = "claude_quota"
+version     = "0.1.0"
+edition     = "2021"
+description = "Anthropic API rate-limit HTTP transport — Layer * standalone primitive."
+
+[features]
+enabled = [ "dep:ureq" ]
+
+[dependencies]
+ureq = { workspace = true, optional = true }
+
+[dev-dependencies]

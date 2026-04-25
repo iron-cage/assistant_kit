@@ -76,3 +76,13 @@ fn assets_re_exports_accessible()
   use dream::assets::artifact::ArtifactKind;
   let _ = core::any::TypeId::of::< ArtifactKind >();
 }
+
+// ─── feature: quota ─────────────────────────────────────────────────────────
+
+#[ cfg( feature = "quota" ) ]
+#[ test ]
+fn quota_re_exports_accessible()
+{
+  use dream::quota::RateLimitData;
+  let _ = core::any::TypeId::of::< RateLimitData >();
+}

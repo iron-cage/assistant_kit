@@ -422,7 +422,7 @@ clp .credentials.status format::json
 
 ### Command :: 12. `.account.limits`
 
-Show plan and rate-limit utilization for the active or named account. Displays session usage, weekly all-model usage, and weekly Sonnet usage with percentage consumed and reset times.
+Show rate-limit utilization for the active or named account. Displays session (5h) usage, weekly all-model (7d) usage, and rate-limit status with percentage consumed and reset times.
 
 -- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found, data unavailable, HOME unset)

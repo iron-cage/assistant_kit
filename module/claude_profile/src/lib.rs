@@ -265,7 +265,7 @@ mod cli
   pub( super ) fn run( binary : &str, argv : &[ String ] )
   {
     // Phase 0: --version / -V
-    if argv.first().map_or( false, |a| a == "--version" || a == "-V" )
+    if argv.first().is_some_and( |a| a == "--version" || a == "-V" )
     {
       println!( "{} {}", binary, env!( "CARGO_PKG_VERSION" ) );
       return;

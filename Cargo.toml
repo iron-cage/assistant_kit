@@ -19,6 +19,7 @@ members = [
   "module/claude_runner_core",
   "module/claude_runner",
   "module/claude_version",
+  "module/claude_quota",
   "module/dream",
   "module/assistant",
 ]
@@ -136,6 +137,11 @@ default-features = false
 [workspace.dependencies.dream]
 path = "module/dream"
 version = "~1.2.0"
+default-features = false
+
+[workspace.dependencies.claude_quota]
+path = "module/claude_quota"
+version = "~0.1.0"
 default-features = false
 
 ## External — published wtools crates

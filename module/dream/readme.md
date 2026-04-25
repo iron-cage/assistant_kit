@@ -7,8 +7,8 @@ Zero own logic — every public item originates from a core crate.
 
 | File | Responsibility |
 |------|----------------|
-| `Cargo.toml` | Crate manifest: six feature-gated optional workspace deps |
-| `src/` | Define feature-gated `pub mod` re-export modules for all six domains |
+| `Cargo.toml` | Crate manifest: seven feature-gated optional workspace deps |
+| `src/` | Define feature-gated `pub mod` re-export modules for all seven domains |
 | `docs/` | Crate doc entities: aggregation feature spec and zero-own-logic invariant |
 | `tests/` | Integration smoke tests verifying re-export paths per feature |
 
@@ -22,7 +22,8 @@ Zero own logic — every public item originates from a core crate.
 | `runner` | `claude_runner_core` | `ClaudeCommand` builder for programmatic Claude Code execution |
 | `version` | `claude_version_core` | Version detection, settings I/O, and install helpers |
 | `assets` | `claude_assets_core` | Symlink-based artifact installer |
-| `full` | all six above | All domain modules in a single dependency |
+| `quota` | `claude_quota` | Rate-limit utilization data and HTTP transport |
+| `full` | all seven above | All domain modules in a single dependency |
 | `enabled` | `full` | Alias for `full`; conventional workspace activation name |
 
 ## Usage

@@ -24,7 +24,7 @@ ast .help                    # all ~40 commands in one place
 
 | Path | Responsibility |
 |------|----------------|
-| `module/` | Thirteen workspace crates (see Crates below) |
+| `module/` | Fourteen workspace crates (see Crates below) |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
 | `task/` | Task tracking: active, completed, backlog |
 | `vision.md` | Project vision, design rationale, and open problems |
@@ -37,6 +37,7 @@ ast .help                    # all ~40 commands in one place
 |---|---|---|---|
 | `claude_core` | — | 0 | Shared primitives: `ClaudePaths`, process utilities |
 | `claude_storage_core` | — | * | Zero-dep JSONL parser for `~/.claude/`; path encoding |
+| `claude_quota` | — | * | Anthropic API rate-limit HTTP transport; `RateLimitData`, `QuotaError` |
 | `claude_profile_core` | — | 1 | Token status + account domain logic |
 | `claude_version_core` | — | 1 | Version detection, install, settings domain helpers |
 | `claude_runner_core` | — | 1 | `ClaudeCommand` builder + single process execution point |
@@ -55,6 +56,7 @@ ast .help                    # all ~40 commands in one place
 
 ```
 *        claude_storage_core      (zero-dep JSONL parser — no claude_core dep)
+*        claude_quota             (Anthropic API rate-limit HTTP transport — standalone primitive)
 Layer 0: claude_core              (shared primitives — zero workspace deps)
              ↓
 Layer 1: claude_profile_core      (token status, account domain logic)

@@ -14,8 +14,8 @@
 //! | x04 | `x04_token_status_idempotent` | token.status called twice → identical output | P |
 //! | x05 | `x05_param_order_independence_list` | params reordered → same output | P |
 //! | x06 | `x06_param_order_independence_token` | params reordered → same output | P |
-//! | x07 | `x07_read_commands_accept_v_and_format` | read commands accept v:: and format:: | P |
-//! | x08 | `x08_mutation_commands_accept_name_and_dry` | mutation commands accept name:: and dry:: | P |
+//! | x07 | `x07_read_commands_accept_v_and_format` | read commands accept `v::` and `format::` | P |
+//! | x08 | `x08_mutation_commands_accept_name_and_dry` | mutation commands accept `name::` and `dry::` | P |
 //! | x09 | `x09_every_command_has_exit_0_path` | every command has at least one success path | P |
 //! | x10 | `x10_usage_error_exits_1_stderr_nonempty` | usage error → exit 1 + stderr | N |
 //! | x11 | `x11_runtime_error_exits_2_stderr_nonempty` | runtime error → exit 2 + stderr | N |

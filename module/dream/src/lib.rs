@@ -43,3 +43,10 @@ pub mod assets
   //! Re-exports from [`claude_assets_core`]: symlink-based artifact installer.
   pub use claude_assets_core::*;
 }
+
+#[ cfg( feature = "quota" ) ]
+pub mod quota
+{
+  //! Re-exports from [`claude_quota`]: rate-limit utilization data and HTTP transport.
+  pub use claude_quota::*;
+}

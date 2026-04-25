@@ -16,7 +16,7 @@
 //! | `token_paths_test` | token status, paths | TS, P |
 //! | `cross_cutting_test` | idempotency, param order, exit codes, env | X, E |
 //! | `usage_test` | .usage command | U |
-//! | `persist_test` | PersistPaths resolution | P |
+//! | `persist_test` | `PersistPaths` resolution | P |
 //! | `credentials_test` | .credentials.status | cred |
 //! | `account_limits_test` | .account.limits error paths | lim |
 //!

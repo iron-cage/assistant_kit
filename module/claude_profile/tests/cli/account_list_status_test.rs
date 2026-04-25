@@ -20,10 +20,10 @@
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | al01 | `al01_list_text_v0_bare_names` | v::0 → bare names only | P |
-//! | al02 | `al02_list_text_v1_active_marker` | v::1 → active account marked | P |
-//! | al03 | `al03_list_text_v2_metadata` | v::2 → metadata shown | P |
-//! | al04 | `al04_list_json` | format::json → valid JSON array | P |
+//! | al01 | `al01_list_text_v0_bare_names` | `v::0` → bare names only | P |
+//! | al02 | `al02_list_text_v1_active_marker` | `v::1` → active account marked | P |
+//! | al03 | `al03_list_text_v2_metadata` | `v::2` → metadata shown | P |
+//! | al04 | `al04_list_json` | `format::json` → valid JSON array | P |
 //! | al05 | `al05_list_absent_dir_text` | no accounts dir → empty output | P |
 //! | al06 | `al06_list_empty_dir_text` | empty accounts dir → empty output | P |
 //! | al07 | `al07_list_absent_dir_json` | no accounts dir + json → empty array | P |
@@ -33,7 +33,7 @@
 //! | al11 | `al11_list_home_unset_exits_2` | HOME unset → exit 2 | N |
 //! | al12 | `al12_list_home_empty_exits_2` | HOME="" → exit 2 | N |
 //! | al13 | `al13_list_sorted_alphabetically` | multiple accounts → sorted by name | P |
-//! | al14 | `al14_list_format_xml_exits_1` | format::xml → exit 1 | N |
+//! | al14 | `al14_list_format_xml_exits_1` | `format::xml` → exit 1 | N |
 //!
 //! ### ASTAT — Account Status
 //!

@@ -16,6 +16,7 @@ use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 
+use claude_quota::RateLimitData;
 use crate::output::{ OutputFormat, OutputOptions, json_escape, format_duration_secs };
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -520,22 +521,6 @@ fn require_active_credentials( paths : &crate::ClaudePaths ) -> Result< std::pat
   Ok( creds )
 }
 
-/// Rate-limit utilization data from the Anthropic API response headers.
-#[ derive( Debug ) ]
-struct RateLimitData
-{
-  /// 5-hour session window utilization (0.0–1.0).
-  utilization_5h : f64,
-  /// 5-hour session window reset time (Unix timestamp, seconds).
-  reset_5h       : u64,
-  /// 7-day all-model utilization (0.0–1.0).
-  utilization_7d : f64,
-  /// 7-day all-model reset time (Unix timestamp, seconds).
-  reset_7d       : u64,
-  /// Rate-limit status: `allowed`, `allowed_warning`, or `rejected`.
-  status         : String,
-}
-
 /// Read the OAuth access token from a credentials file.
 ///
 /// Searches for `accessToken` in the credential JSON using `parse_string_field`.
@@ -553,44 +538,6 @@ fn read_auth_token( creds_path : &std::path::Path ) -> Result< String, ErrorData
       ErrorCode::InternalError,
       "credentials missing 'accessToken' \u{2014} re-authenticate with `claude auth login`".to_string(),
     ) )
-}
-
-/// Parse rate-limit utilization headers from the API response.
-fn parse_rate_limit_headers( resp : &ureq::Response ) -> Result< RateLimitData, ErrorData >
-{
-  let h = | name : &str | -> Result< String, ErrorData >
-  {
-    resp.header( name )
-      .map( ToString::to_string )
-      .ok_or_else( || ErrorData::new(
-        ErrorCode::InternalError,
-        format!( "rate limit header '{name}' missing \u{2014} run `claude /usage` to view limits" ),
-      ) )
-  };
-
-  let s_session_util  = h( "anthropic-ratelimit-unified-5h-utilization" )?;
-  let s_session_reset = h( "anthropic-ratelimit-unified-5h-reset" )?;
-  let s_weekly_util   = h( "anthropic-ratelimit-unified-7d-utilization" )?;
-  let s_weekly_reset  = h( "anthropic-ratelimit-unified-7d-reset" )?;
-  let status          = h( "anthropic-ratelimit-unified-status" )?;
-
-  let utilization_session = s_session_util.parse::< f64 >()
-    .map_err( |e| ErrorData::new( ErrorCode::InternalError, format!( "malformed 5h-utilization header: {e}" ) ) )?;
-  let reset_session_ts = s_session_reset.parse::< u64 >()
-    .map_err( |e| ErrorData::new( ErrorCode::InternalError, format!( "malformed 5h-reset header: {e}" ) ) )?;
-  let utilization_weekly = s_weekly_util.parse::< f64 >()
-    .map_err( |e| ErrorData::new( ErrorCode::InternalError, format!( "malformed 7d-utilization header: {e}" ) ) )?;
-  let reset_weekly_ts = s_weekly_reset.parse::< u64 >()
-    .map_err( |e| ErrorData::new( ErrorCode::InternalError, format!( "malformed 7d-reset header: {e}" ) ) )?;
-
-  Ok( RateLimitData
-  {
-    utilization_5h : utilization_session,
-    reset_5h       : reset_session_ts,
-    utilization_7d : utilization_weekly,
-    reset_7d       : reset_weekly_ts,
-    status,
-  } )
 }
 
 /// Format rate-limit data as compact text (`v::0`): bare percentages, no labels or reset times.
@@ -651,44 +598,6 @@ fn format_rate_limits_json( data : &RateLimitData ) -> String
   format!( "{{\n  \"session_5h_pct\": {pct_session},\n  \"session_5h_reset_ts\": {ts_session},\n  \"weekly_7d_pct\": {pct_weekly},\n  \"weekly_7d_reset_ts\": {ts_weekly},\n  \"status\": \"{status_esc}\"\n}}\n" )
 }
 
-/// Fetch rate-limit utilization from the Anthropic API.
-///
-/// Makes a lightweight `POST /v1/messages` (`max_tokens: 1`, content `"quota"`)
-/// and reads `anthropic-ratelimit-unified-*` response headers present on both
-/// 2xx and non-2xx responses.
-///
-/// # Errors
-///
-/// Returns `ErrorData` (exit 2) if credentials are missing or malformed,
-/// the HTTP transport fails, or required rate-limit headers are absent.
-fn fetch_rate_limits( creds_path : &std::path::Path ) -> Result< RateLimitData, ErrorData >
-{
-  let token = read_auth_token( creds_path )?;
-  let body  = r#"{"model":"claude-haiku-4-5-20251001","max_tokens":1,"messages":[{"role":"user","content":"quota"}]}"#;
-
-  // Fix(issue-oauth-beta-stale): anthropic-beta version must match what the Claude binary uses.
-  // Root cause: "oauth-2023-09-22" was the initial value; the API silently rejected it with 401
-  // ("OAuth authentication is currently not supported") — no rate-limit headers were returned.
-  // Pitfall: the beta string is not in any public Anthropic API doc; confirm against `strings $(which claude)`.
-  let req_result = ureq::post( "https://api.anthropic.com/v1/messages" )
-    .set( "Authorization", &format!( "Bearer {token}" ) )
-    .set( "anthropic-beta", "oauth-2025-04-20" )
-    .set( "anthropic-version", "2023-06-01" )
-    .set( "Content-Type", "application/json" )
-    .send_string( body );
-
-  let resp = match req_result
-  {
-    Ok( r ) | Err( ureq::Error::Status( _, r ) ) => r,
-    Err( e )                                      => return Err( ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "HTTP request failed: {e} \u{2014} check network connection" ),
-    ) ),
-  };
-
-  parse_rate_limit_headers( &resp )
-}
-
 /// `.account.limits` — show rate-limit utilization for the selected account (FR-18).
 ///
 /// Makes a lightweight `POST /v1/messages` to fetch `anthropic-ratelimit-unified-*`
@@ -744,7 +653,9 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
     path
   };
 
-  let data = fetch_rate_limits( &creds_path )?;
+  let token = read_auth_token( &creds_path )?;
+  let data  = claude_quota::fetch_rate_limits( &token )
+    .map_err( |e| ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
   let text = match opts.format
   {
     OutputFormat::Json => format_rate_limits_json( &data ),
