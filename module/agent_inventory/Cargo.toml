@@ -1,0 +1,33 @@
+[package]
+name         = "agent_inventory"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+readme       = "readme.md"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/agent_inventory"
+description  = "Layer 1 agent-agnostic asset discovery with Claude Code adapter"
+keywords     = [ "claude", "ai", "agent", "inventory", "assets" ]
+categories   = [ "development-tools" ]
+
+[lints]
+workspace = true
+
+[lib]
+name = "agent_inventory"
+path = "src/lib.rs"
+
+[features]
+default     = []
+claude_code = [ "dep:claude_assets_core" ]
+full        = [ "enabled" ]
+enabled     = [ "claude_code" ]
+
+[dependencies]
+claude_assets_core = { workspace = true, optional = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

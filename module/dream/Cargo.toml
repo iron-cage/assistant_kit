@@ -23,11 +23,13 @@ storage = [ "dep:claude_storage_core" ]
 profile = [ "dep:claude_profile_core" ]
 runner  = [ "dep:claude_runner_core" ]
 version = [ "dep:claude_version_core" ]
-assets  = [ "dep:claude_assets_core" ]
-full    = [ "common", "storage", "profile", "runner", "version", "assets" ]
-enabled = [ "full" ]
+assets    = [ "dep:claude_assets_core" ]
+inventory = [ "dep:agent_inventory" ]
+full      = [ "common", "storage", "profile", "runner", "version", "assets", "inventory" ]
+enabled   = [ "full" ]
 
 [dependencies]
+agent_inventory   = { workspace = true, optional = true, features = [ "enabled" ] }
 claude_core       = { workspace = true, optional = true }
 claude_storage_core = { workspace = true, optional = true }
 claude_profile_core = { workspace = true, optional = true }

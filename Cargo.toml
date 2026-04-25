@@ -8,6 +8,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "module/agent_inventory",
   "module/claude_assets_core",
   "module/claude_assets",
   "module/claude_core",
@@ -77,6 +78,11 @@ mod_module_files = "allow"
 missing_docs_in_private_items = "allow"
 
 ## Internal workspace dependencies
+
+[workspace.dependencies.agent_inventory]
+path = "module/agent_inventory"
+version = "~1.1.0"
+default-features = false
 
 [workspace.dependencies.claude_assets_core]
 path = "module/claude_assets_core"

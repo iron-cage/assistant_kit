@@ -24,7 +24,7 @@ ast .help                    # all ~40 commands in one place
 
 | Path | Responsibility |
 |------|----------------|
-| `module/` | Thirteen workspace crates (see Crates below) |
+| `module/` | Fourteen workspace crates (see Crates below) |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
 | `task/` | Task tracking: active, completed, backlog |
 | `vision.md` | Project vision, design rationale, and open problems |
@@ -41,6 +41,7 @@ ast .help                    # all ~40 commands in one place
 | `claude_version_core` | — | 1 | Version detection, install, settings domain helpers |
 | `claude_runner_core` | — | 1 | `ClaudeCommand` builder + single process execution point |
 | `claude_assets_core` | — | 1 | Symlink-based artifact installer domain logic |
+| `agent_inventory` | — | 1 | Agent-agnostic asset discovery with Claude Code adapter |
 | `claude_profile` | `clp` | 2 | Account management, token status, `~/.claude/` paths |
 | `claude_storage` | `clg` | 2 | CLI for exploring Claude Code filesystem storage |
 | `claude_runner` | `clr` | 2 | Claude Code execution with session continuity |
@@ -61,6 +62,7 @@ Layer 1: claude_profile_core      (token status, account domain logic)
          claude_version_core      (version, settings domain helpers)
          claude_runner_core       (ClaudeCommand builder + execute())
          claude_assets_core       (symlink artifact installer domain logic)
+         agent_inventory          (agent-agnostic asset discovery)
              ↓
 Layer 2: dream           (lib)    (library facade — re-exports all core crates: Layer 0, *, 1)
          claude_profile  (clp)    (account management, token status)
