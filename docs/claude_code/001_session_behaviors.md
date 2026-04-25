@@ -199,15 +199,22 @@ Root session entries typically lack the `slug` field; their first entry is usual
 
 The slug serves as a human-friendly family identifier that could be displayed instead of UUIDs.
 
-### B17 — `parentUuid` chain is self-contained per session file
+### B17 — `parentUuid` chain is self-contained per session file (with known exception)
 
-Within one `.jsonl` session file, the `parentUuid` threading is closed — no entry references
-a UUID that lives in a different file. This means the full conversation thread for a session
-can be reconstructed by reading only that one file.
+Within one `.jsonl` session file, the `parentUuid` threading is closed for the vast majority
+of entries — no entry references a UUID that lives in a different file.
+
+**Known exception — context-compaction boundaries:** When Claude Code's context window is
+exhausted and the conversation is resumed, the continuation user message is appended to the
+existing `.jsonl` with a `parentUuid` that references the last UUID from the pre-compaction
+context. That UUID may have existed only in the previous context window and was never written
+into the file as a top-level `uuid` entry; the orphaned reference is expected and unavoidable.
+Empirically, these violations are rare (< 0.2% of entries with a non-null `parentUuid`).
 
 This is the key reason why cross-session conversation chains must be inferred rather than
-followed: there is no pointer to jump to. The boundary between two sessions (even if they
-represent logically connected work) is a hard storage boundary with no link crossing it.
+followed: for B17-conforming entries there is no pointer to jump to, and for the small number
+of compaction-boundary exceptions the pointer is dangling. The boundary between two sessions
+(even if they represent logically connected work) is a hard storage boundary.
 
 ### B18 — No cross-session continuation metadata
 
@@ -229,7 +236,8 @@ See [007_concept_taxonomy.md](007_concept_taxonomy.md) for how Conversation Chai
 | Status | Count | IDs |
 |--------|-------|-----|
 | ✅ Confirmed | 12 | B1, B2, B3, B6, B7, B8, B9, B10, B12, B13, B14, B16 |
-| 🎯 Observed | 6 | B4, B5, B11, B15, B17, B18 |
+| 🎯 Observed | 5 | B4, B5, B11, B15, B18 |
+| ⚠️ Exception noted | 1 | B17 (self-contained except at context-compaction boundaries; < 0.2% violation rate) |
 | ❓ Uncertain | 1 | B16h |
 
 **Total behaviors:** 18 (B1–B18; B16h is a sub-hypothesis within B16)

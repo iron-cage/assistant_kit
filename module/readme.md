@@ -2,7 +2,6 @@
 
 | Crate | Responsibility |
 |-------|---------------|
-| agent_inventory | Layer 1 domain logic: agent-agnostic asset discovery |
 | claude_assets_core | Layer 1 domain logic: symlink-based Claude Code artifact installer |
 | claude_assets | CLI for installing Claude Code artifacts via symlinks (cla binary) |
 | claude_core | Layer 0 shared primitives: ClaudePaths and process utilities |

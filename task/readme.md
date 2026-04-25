@@ -11,7 +11,6 @@
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
 | 107 | ✅ Complete | Add `--effort max` as default effort level in `clr` binary | feature | 2026-04-18 | [107](completed/107_clr_default_effort_max.md) |
-| 106 | 🎯 Available | Create agent_inventory crate — agent-agnostic asset discovery with Claude Code adapter | feature | 2026-04-12 | [106](106_create_agent_inventory_crate.md) |
 | 100 | ✅ Complete | Fix settings_get_routine JSON output losing type information | bug | 2026-04-12 | [100](completed/100_fix_settings_get_json_type_loss.md) |
 | 101 | ✅ Complete | Fix processes_kill_routine swallowing signal errors and never producing exit 2 | bug | 2026-04-12 | [101](completed/101_fix_processes_kill_silent_signal_errors.md) |
 | 095 | ✅ Complete | Fix require_claude_paths producing identical errors for distinct failure conditions | bug | 2026-04-12 | [095](completed/095_fix_require_claude_paths_error_messages.md) |
@@ -122,7 +121,7 @@
 
 **Status Distribution:**
 - ✅ Complete: 103
-- 🎯 Available: 1
+- 🎯 Available: 0
 - 📥 Backlog: 2
 
 **Status Legend:**

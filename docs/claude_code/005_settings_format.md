@@ -108,6 +108,10 @@ Config keys read by `claude` at startup from `settings.json`. No CLI flag or env
 | `model` | G+P | string | binary default | Persistent model preference; overridden by `--model` CLI flag |
 | `effortLevel` | G+P | enum | `"medium"` | Persistent effort level (`low`/`medium`/`high`/`max`); overridden by `--effort` |
 | `hooks` | G+P | object | `{}` | Hooks for `PreToolUse` / `PostToolUse` / `UserPromptSubmit` events |
+| `mcpServers` | G+P | object | `{}` | Inline MCP server definitions (alternative to `--mcp-config` flag) |
+| `permissionMode` | G+P | enum | `"default"` | Permission mode: `default` `acceptEdits` `bypassPermissions` `dontAsk` `plan` `auto` |
+| `allowedTools` | G+P | string[] | all | Persistent allowlist of permitted tools (overrides default; also set by `--allowed-tools`) |
+| `disallowedTools` | G+P | string[] | none | Persistent denylist of forbidden tools (also set by `--disallowed-tools`) |
 | `skipDangerousModePermissionPrompt` | G | bool | `false` | Suppress interactive confirmation when dangerous mode is active |
 | `voiceEnabled` | G | bool | `false` | Enable voice input and audio output |
 | `permissions` | P | object | `{}` | Per-project tool allow/deny/ask rules; auto-managed by Claude Code during sessions |
