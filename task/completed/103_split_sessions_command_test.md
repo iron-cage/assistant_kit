@@ -5,7 +5,7 @@
 - **Executor Type:** any
 - **Actor:** null
 - **Claimed At:** null
-- **Status:** 📥 (Backlog)
+- **Status:** ✅ (Completed)
 
 ## Goal
 
@@ -108,4 +108,18 @@ Desired answer for every question is YES.
 
 ## Outcomes
 
-[Added upon task completion.]
+**Completed.** Target file had been renamed from `sessions_command_test.rs` → `projects_command_test.rs` in the `62a01f0` auto-commit (sessions→projects rename). `projects_command_test.rs` (1,241 lines) split into 3 focused files:
+
+| File | Lines | Tests | Content |
+|------|-------|-------|---------|
+| `projects_command_test.rs` | 519 | 15 | Filters, validation, output formatting, IT-14..IT-16, IT-50 |
+| `projects_edge_case_test.rs` | 271 | 9 | EC-1..EC-8 + EC-9 (root path rejection) |
+| `projects_scope_test.rs` | 529 | 11 | Scope behavioral semantics, IT-9..IT-13 underscore, UUID, topic-dir |
+
+**Deviation:** The planned target files used `sessions_` prefix (e.g. `sessions_scope_test.rs`) but since the source file was renamed to `projects_*`, the new files correctly use `projects_*` naming for consistency.
+
+**Validation results:**
+- 319/319 tests pass (same count as before split)
+- `cargo clippy` → 0 warnings
+- All files ≤ 1,000 lines ✓
+- `tests/readme.md` updated (tree + responsibility table)

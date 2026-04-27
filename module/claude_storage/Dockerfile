@@ -1,4 +1,4 @@
-# claude_profile — test runner
+# claude_storage — test runner
 #
 # Three-stage build using cargo-chef for dependency caching.
 # Rebuilt layers:
@@ -7,16 +7,16 @@
 #
 # Usage:
 #   # Build
-#   docker build -f module/claude_profile/Dockerfile -t claude_profile_test .
+#   docker build -f module/claude_storage/Dockerfile -t claude_storage_test .
 #
-#   # Offline tests (default — no credentials needed)
-#   docker run --rm claude_profile_test
+#   # Offline tests (default — no ~/.claude/ storage needed)
+#   docker run --rm claude_storage_test
 #
-#   # Live tests (require real ~/.claude/.credentials.json)
+#   # Live tests (require real ~/.claude/ storage on host)
 #   docker run --rm \
-#     -v ~/.claude/.credentials.json:/root/.claude/.credentials.json:ro \
-#     claude_profile_test \
-#     cargo nextest run -p claude_profile --filter-expr 'test(lim_it)'
+#     -v ~/.claude:/root/.claude:ro \
+#     claude_storage_test \
+#     cargo nextest run -p claude_storage
 
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
 
@@ -44,18 +44,27 @@ WORKDIR /workspace
 COPY --from=planner /workspace/recipe.json recipe.json
 RUN cargo chef cook \
       --recipe-path recipe.json \
-      -p claude_profile \
+      -p claude_storage \
       --tests
 
-# ── Stage 3: test — compiles claude_profile itself and runs tests ─────────────
+# ── Stage 3: test — compiles claude_storage itself and runs tests ──────────────
 #
 # Gets precompiled dep artifacts from cook (avoids recompiling external crates).
-# Only claude_profile and its local workspace deps are recompiled here.
+# Only claude_storage and its local workspace deps are recompiled here.
 
 FROM rust:slim AS test
 
 # nextest: compile from source for architecture portability (layer is cached).
 RUN cargo install cargo-nextest --locked
+
+# Non-root user: permission-based tests (chmod 000) require non-root execution.
+# Root bypasses file permission checks, causing those tests to silently pass the
+# wrong code path (no warning emitted for "unreadable" sessions).
+RUN useradd -m -s /bin/bash testuser
+
+# Path resolution tests assert cwd starts with $HOME (mirrors dev-machine layout).
+# Set HOME to workspace root so /workspace/... satisfies that precondition.
+ENV HOME=/workspace
 
 WORKDIR /workspace
 
@@ -65,16 +74,21 @@ WORKDIR /workspace
 COPY --from=cook /usr/local/cargo/registry /usr/local/cargo/registry
 COPY --from=cook /workspace/target         /workspace/target
 
-# Full workspace source. Only claude_profile and its local workspace deps rebuild.
+# Full workspace source. Only claude_storage and its local workspace deps rebuild.
 COPY . .
 
-# Offline tests by default — no credentials or outbound network required.
-# The four lim_it* tests (live API calls) are excluded.
+# Transfer workspace and cargo home ownership so testuser can compile and run tests.
+RUN chown -R testuser:testuser /workspace /usr/local/cargo
+
+USER testuser
+
+# Offline tests by default — no ~/.claude/ storage required.
+# The behavior/* tests (B1..B18) inspect real ~/.claude/ and are excluded.
 #
-# To run live tests, mount credentials and override the filter:
-#   docker run -v ~/.claude/.credentials.json:/root/.claude/.credentials.json:ro \
-#              claude_profile_test \
-#              cargo nextest run -p claude_profile --filter-expr 'test(lim_it)'
+# To run behavior tests, mount ~/.claude/ and override the filter:
+#   docker run -v ~/.claude:/root/.claude:ro \
+#              claude_storage_test \
+#              cargo nextest run -p claude_storage
 CMD [ "cargo", "nextest", "run", \
-      "-p", "claude_profile", \
-      "--filter-expr", "!test(lim_it)" ]
+      "-p", "claude_storage", \
+      "--filter-expr", "!binary(behavior)" ]

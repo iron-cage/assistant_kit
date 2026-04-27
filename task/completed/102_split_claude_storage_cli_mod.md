@@ -5,7 +5,7 @@
 - **Executor Type:** any
 - **Actor:** null
 - **Claimed At:** null
-- **Status:** 📥 (Backlog)
+- **Status:** ✅ (Completed)
 
 ## Goal
 
@@ -119,4 +119,29 @@ Desired answer for every question is YES.
 
 ## Outcomes
 
-[Added upon task completion.]
+**Completed.** `src/cli/mod.rs` (3,204 lines) split into 10 focused files:
+
+| File | Lines |
+|------|-------|
+| `mod.rs` | 67 (doc comment + 15 code lines) |
+| `storage.rs` | 324 |
+| `format.rs` | 153 |
+| `status.rs` | 127 |
+| `list.rs` | 309 |
+| `show.rs` | 465 |
+| `count.rs` | 171 |
+| `search.rs` | 228 |
+| `export.rs` | 77 |
+| `session.rs` | 236 |
+| `projects.rs` | 1,134 |
+
+**Deviation:** `projects.rs` exceeds the 500-line target at 1,134 lines. Root cause: the task spec was written when the section was ~670 lines; subsequent bug fixes (issues 011–021+) expanded it significantly. The file is a single coherent domain (path-decode helpers, family detection, render helpers, projects_routine) and cannot be trivially split without circular-import risk. Recommend follow-up task to extract path-decode helpers into a `path_decode.rs` file.
+
+**Validation results:**
+- 319/319 tests pass (`cargo nextest run -p claude_storage --all-features`)
+- 3/3 doc tests pass
+- `cargo clippy` → 0 warnings
+- `cargo check --all-features` → 0 errors
+- `src/cli/readme.md` created
+- `src/readme.md` updated
+- `SessionFamily` made `pub(super)` to allow cross-module use (only fix required beyond verbatim code move)

@@ -10,7 +10,7 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
-| 108 | ✅ Complete | Extract `claude_quota` crate — Anthropic API rate-limit transport | refactoring | 2026-04-25 | [108](108_extract_claude_quota_crate.md) |
+| 108 | ✅ Complete | Extract `claude_quota` crate — Anthropic API rate-limit transport | refactoring | 2026-04-25 | [108](completed/108_extract_claude_quota_crate.md) |
 | 107 | ✅ Complete | Add `--effort max` as default effort level in `clr` binary | feature | 2026-04-18 | [107](completed/107_clr_default_effort_max.md) |
 | 100 | ✅ Complete | Fix settings_get_routine JSON output losing type information | bug | 2026-04-12 | [100](completed/100_fix_settings_get_json_type_loss.md) |
 | 101 | ✅ Complete | Fix processes_kill_routine swallowing signal errors and never producing exit 2 | bug | 2026-04-12 | [101](completed/101_fix_processes_kill_silent_signal_errors.md) |
@@ -19,8 +19,8 @@
 | 096 | ✅ Complete | Handle UTF-16 surrogate pairs in parse_json_string_value | bug | 2026-04-12 | [096](completed/096_fix_surrogate_pairs_in_json_string_parser.md) |
 | 097 | ✅ Complete | Fix extract_releases fragile literal-split tag parsing | quality | 2026-04-12 | [097](completed/097_fix_extract_releases_fragile_tag_parsing.md) |
 | 098 | ✅ Complete | Minor code quality fixes: rename chrono_timestamp and fix status alignment | quality | 2026-04-12 | [098](completed/098_minor_code_quality_fixes.md) |
-| 102 | 📥 Backlog | Split `claude_storage/src/cli/mod.rs` into per-command modules | refactoring | 2026-04-12 | [102](backlog/102_split_claude_storage_cli_mod.md) |
-| 103 | 📥 Backlog | Split `sessions_command_test.rs` into focused test files | quality | 2026-04-12 | [103](backlog/103_split_sessions_command_test.md) |
+| 102 | ✅ Complete | Split `claude_storage/src/cli/mod.rs` into per-command modules | refactoring | 2026-04-12 | [102](completed/102_split_claude_storage_cli_mod.md) |
+| 103 | ✅ Complete | Split `sessions_command_test.rs` into focused test files | quality | 2026-04-12 | [103](completed/103_split_sessions_command_test.md) |
 | 104 | ✅ Complete | Split `claude_runner_core/src/command.rs` into parameter-group modules | refactoring | 2026-04-12 | [104](completed/104_split_claude_runner_core_command.md) |
 | 105 | ✅ Complete | Create `docs/` structure for claude_assets, claude_assets_core, assistant | documentation | 2026-04-12 | [105](completed/105_create_docs_for_new_crates.md) |
 | 091 | ✅ Complete | Change ultrathink injection from prefix to suffix (`\n\nultrathink`) | bug | 2026-04-11 | [091](completed/091_ultrathink_suffix_injection.md) |
@@ -121,8 +121,8 @@
 ## Metadata
 
 **Status Distribution:**
-- ✅ Complete: 104
-- 📥 Backlog: 2
+- ✅ Complete: 106
+- 📥 Backlog: 0
 
 **Status Legend:**
 - 📥 Backlog — not yet planned
@@ -132,4 +132,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-04-25 (TSK-108 completed: claude_quota crate extracted; 322/322 tests pass; live API tests lim_it1–lim_it5 pass)
+**Last Updated:** 2026-04-26 (TSK-103 completed: projects_command_test.rs split into 3 focused files; 319/319 tests pass; backlog cleared)

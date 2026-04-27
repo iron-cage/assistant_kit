@@ -7,11 +7,13 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | File / Directory | Responsibility |
 |------------------|----------------|
 | `Cargo.toml` | Crate manifest: deps, features, build script |
+| `Dockerfile` | Three-stage cargo-chef test image for containerized test runs |
 | `build.rs` | Transforms YAML command definitions to static PHF registry |
 | `unilang.commands.yaml` | Command definitions (9 commands) |
 | `src/` | CLI pipeline, command routines, binary entry points |
 | `tests/` | Integration and parameter validation tests (242 tests) |
 | `docs/` | Behavioral requirements: features, CLI reference, operation docs |
+| `scripts/` | Shell scripts for container image build and test execution |
 | `task/` | Crate-level task tracking |
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |

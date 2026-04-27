@@ -9,5 +9,5 @@ Source code for the `claude_storage` crate.
 | `lib.rs` | Crate root; re-exports from core; exposes `cli` and `cli_main` modules |
 | `main.rs` | `claude_storage` binary entry; thin wrapper calling `cli_main::run()` |
 | `cli_main.rs` | Shared CLI pipeline (REPL + one-shot); `pub fn run()` |
-| `cli/` | Command routines: status, list, show, count, search, export, path, projects (monolithic `mod.rs`; split planned in Task 017) |
+| `cli/` | Per-command CLI routines: one file per command, shared utilities in `storage.rs` and `format.rs` |
 | `bin/` | Alias binary entry points (`clg`) |

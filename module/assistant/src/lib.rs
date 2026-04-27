@@ -80,8 +80,8 @@ mod cli
       ".count"           => claude_storage::cli::count_routine,
       ".search"          => claude_storage::cli::search_routine,
       ".export"          => claude_storage::cli::export_routine,
-      ".path"            => claude_storage::cli::path_routine,
-      ".exists"          => claude_storage::cli::exists_routine,
+      ".path"            => claude_storage::cli::project_path_routine,
+      ".exists"          => claude_storage::cli::project_exists_routine,
       ".session.dir"     => claude_storage::cli::session_dir_routine,
       ".session.ensure"  => claude_storage::cli::session_ensure_routine,
     };
