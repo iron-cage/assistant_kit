@@ -35,17 +35,41 @@ _ensure_image()
   fi
 }
 
+_ensure_build_cache()
+{
+  local volume="${IMAGE}_target"
+  if ! "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null; then
+    echo "Seeding build cache from image (first run only)..."
+    # Copy pre-compiled dep artifacts from image into the named volume.
+    # The image target/ has deps from the cook stage; without seeding the volume
+    # would start empty and force a full recompile from scratch on first use.
+    "$CONTAINER_CMD" run --rm \
+      -v "${volume}:/workspace/target_seed" \
+      "$IMAGE" \
+      bash -c "cp -a /workspace/target/. /workspace/target_seed/"
+  fi
+}
+
 # ── Commands ──────────────────────────────────────────────────────────────────
 
 cmd_build()
 {
   _build
+  # Drop stale build cache so next .test re-seeds from the new image.
+  local volume="${IMAGE}_target"
+  if "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null; then
+    echo "Removing stale build cache volume..."
+    "$CONTAINER_CMD" volume rm "$volume"
+  fi
 }
 
 cmd_test()
 {
   _ensure_image
-  "$CONTAINER_CMD" run --rm "$IMAGE"
+  _ensure_build_cache
+  "$CONTAINER_CMD" run --rm \
+    -v "${IMAGE}_target:/workspace/target" \
+    "$IMAGE"
 }
 
 cmd_test_live()
