@@ -60,11 +60,8 @@ unilang        = { workspace = true, optional = true }
 error_tools    = { workspace = true, optional = true }
 
 [build-dependencies]
-claude_assets  = { workspace = true }
-claude_runner  = { workspace = true }
-claude_storage = { workspace = true, features = [ "cli" ] }
-unilang        = { workspace = true }
-serde_yaml     = { workspace = true }
+unilang    = { workspace = true }
+serde_yaml = { workspace = true }
 
 [dev-dependencies]
 tempfile   = { workspace = true }

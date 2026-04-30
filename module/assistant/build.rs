@@ -1,8 +1,8 @@
 //! Build script for `assistant`.
 //!
 //! Aggregates command YAML from Layer 2 crates that expose static YAML definitions:
-//!   - `claude_runner`  — `claude_runner::COMMANDS_YAML`  (`.claude`, `.claude.help`)
-//!   - `claude_storage` — `claude_storage::COMMANDS_YAML`  (9 storage commands)
+//!   - `claude_runner`  — `module/claude_runner/claude.commands.yaml`  (`.claude`, `.claude.help`)
+//!   - `claude_storage` — `module/claude_storage/unilang.commands.yaml`  (9 storage commands)
 //!
 //! Manager and profile use programmatic registration via `register_commands()`
 //! (hybrid approach — their YAML is metadata-only, not aggregated here).
@@ -12,12 +12,23 @@
 
 use std::{ collections::HashMap, env, path::PathBuf };
 
+// Fix(issue-build-dep-host-target-conflict): Use inline paths instead of crate constants.
+// Root cause: importing claude_storage/claude_runner/claude_assets as build-deps forced Cargo
+// to create a separate HOST-triple compilation unit for those crates. When Job 1 ran nextest
+// from the package dir, the TARGET-triple fingerprint dirs were not yet created, causing
+// "No such file or directory" on fresh target dirs.
+// Pitfall: each crate uses a different YAML filename — claude_runner uses claude.commands.yaml
+// (not unilang.commands.yaml), while claude_assets and claude_storage use unilang.commands.yaml.
+const ASSETS_YAML  : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/../claude_assets/unilang.commands.yaml" );
+const RUNNER_YAML  : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/../claude_runner/claude.commands.yaml" );
+const STORAGE_YAML : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/../claude_storage/unilang.commands.yaml" );
+
 fn main()
 {
   println!( "cargo:rerun-if-changed=build.rs" );
-  println!( "cargo:rerun-if-changed={}", claude_assets::COMMANDS_YAML );
-  println!( "cargo:rerun-if-changed={}", claude_runner::COMMANDS_YAML );
-  println!( "cargo:rerun-if-changed={}", claude_storage::COMMANDS_YAML );
+  println!( "cargo:rerun-if-changed={ASSETS_YAML}" );
+  println!( "cargo:rerun-if-changed={RUNNER_YAML}" );
+  println!( "cargo:rerun-if-changed={STORAGE_YAML}" );
 
   if env::var( "CARGO_FEATURE_ENABLED" ).is_ok()
   {
@@ -105,8 +116,8 @@ fn generate_static_commands()
 
   // Transform YAML from Layer 2 YAML-based crates.
   // claude_version uses programmatic registration (no YAML file).
-  let runner_yaml  = transform_yaml( claude_runner::COMMANDS_YAML,  "claude_runner.yaml",  &out_dir );
-  let storage_yaml = transform_yaml( claude_storage::COMMANDS_YAML, "claude_storage.yaml", &out_dir );
+  let runner_yaml  = transform_yaml( RUNNER_YAML,  "claude_runner.yaml",  &out_dir );
+  let storage_yaml = transform_yaml( STORAGE_YAML, "claude_storage.yaml", &out_dir );
 
   let config = unilang::multi_yaml::AggregationConfig
   {

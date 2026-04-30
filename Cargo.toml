@@ -77,6 +77,18 @@ arbitrary_source_item_ordering = "allow"
 mod_module_files = "allow"
 missing_docs_in_private_items = "allow"
 
+## Profiles
+
+[profile.dev]
+# Fix(issue-incremental-cgu-race): Disable incremental compilation to prevent
+# rustc CGU object file copy failures in shared CARGO_TARGET_DIR.
+# Root cause: shared target dir between local and workspace nextest jobs causes
+# rustc to attempt writing CGU objects to s-HASH-working/ dirs that don't exist,
+# failing with "No such file or directory" and then "linking with cc failed".
+# Pitfall: incremental=true in a multi-job shared target dir causes non-deterministic
+# failures depending on which job pre-creates the working directories first.
+incremental = false
+
 ## Internal workspace dependencies
 
 [workspace.dependencies.claude_assets_core]

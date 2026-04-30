@@ -71,7 +71,7 @@ cmd_help()
   echo "  .build       Build the $IMAGE container image"
   echo ""
   echo "Testing:"
-  echo "  .test        Run offline tests in container (no ~/.claude/ needed)"
+  echo "  . / .test    Run offline tests in container (no ~/.claude/ needed)"
   echo "  .test.live   Run all tests including behavior tests (real ~/.claude/ required)"
   echo ""
   echo "Help:"
@@ -84,7 +84,7 @@ COMMAND="${1:-.help}"
 
 case "$COMMAND" in
   .build)     cmd_build ;;
-  .test)      cmd_test ;;
+  .|.test)    cmd_test ;;
   .test.live) cmd_test_live ;;
   .help)      cmd_help ;;
   *)
