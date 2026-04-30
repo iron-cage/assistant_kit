@@ -3,9 +3,9 @@
 //! ## Coverage
 //!
 //! Parameter validation, filter behavior, and output formatting:
-//! - Verbosity level output (v::0 no header, v::2 project path header)
-//! - Session, agent, and min_entries filters
-//! - Invalid parameter rejection (verbosity, min_entries, agent out of range)
+//! - Verbosity level output (`v::0` no header, `v::2` project path header)
+//! - Session, agent, and `min_entries` filters
+//! - Invalid parameter rejection (verbosity, `min_entries`, agent out of range)
 //! - Singular/plural noun formatting in "Found N projects:" header (IT-14..IT-16)
 //! - Header uses "conversations" not "sessions" (IT-50)
 //!
