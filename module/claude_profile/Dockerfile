@@ -6,17 +6,18 @@
 #   test               — on every source change (fast: deps already compiled)
 #
 # Usage (via script — recommended):
-#   module/claude_profile/scripts/docker .build          # build image
-#   module/claude_profile/scripts/docker .test           # all tests (credentials required)
-#   module/claude_profile/scripts/docker .test.offline   # offline tests only
+#   module/claude_profile/run/docker .build          # build image
+#   module/claude_profile/run/docker .test           # all tests (credentials required)
+#   module/claude_profile/run/docker .test.offline   # offline tests only
 #
 # Usage (direct docker):
 #   docker build -f module/claude_profile/Dockerfile -t claude_profile_test .
 #   docker run --rm claude_profile_test                  # offline tests (default CMD)
 #   docker run --rm \
 #     -v ~/.claude/.credentials.json:/root/.claude/.credentials.json:ro \
+#     -v $(which w3):/usr/local/bin/w3:ro \
 #     claude_profile_test \
-#     cargo nextest run -p claude_profile                # all tests
+#     bash -c "cd /workspace/module/claude_profile && w3 .test level::3"  # all tests
 
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
 
@@ -71,10 +72,11 @@ COPY . .
 # Offline tests by default — no credentials or outbound network required.
 # The four lim_it* tests (live API calls) are excluded.
 #
-# To run all tests (including live), mount credentials and drop the filter:
+# To run all tests (including live), mount credentials and w3, then use w3 .test:
 #   docker run -v ~/.claude/.credentials.json:/root/.claude/.credentials.json:ro \
+#              -v $(which w3):/usr/local/bin/w3:ro \
 #              claude_profile_test \
-#              cargo nextest run -p claude_profile
+#              bash -c "cd /workspace/module/claude_profile && w3 .test level::3"
 CMD [ "cargo", "nextest", "run", \
       "-p", "claude_profile", \
       "--filter-expr", "!test(lim_it)" ]

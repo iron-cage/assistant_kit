@@ -27,6 +27,8 @@ ast .help                    # all ~40 commands in one place
 | `module/` | Fourteen workspace crates (see Crates below) |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
 | `task/` | Task tracking: active, completed, backlog |
+| `run/` | Container CLI: build image and run tests. |
+| `Dockerfile` | Three-stage cargo-chef test image for all workspace crates. |
 | `vision.md` | Project vision, design rationale, and open problems |
 | `../locales.md` | Locale and internationalisation notes |
 | `Cargo.toml` | Workspace manifest: members, lints, shared dependencies |
@@ -72,4 +74,16 @@ Layer 2: dream           (lib)    (library facade — re-exports all core crates
          claude_assets   (cla)    (artifact installer: rules, skills, commands)
              ↓
 Layer 3: assistant       (ast)    (super-app — all Layer 2 CLIs)
+```
+
+## Testing
+
+**Container (all tests — real ~/.claude/ required):**
+```bash
+./run/docker .test
+```
+
+**Container (offline — no ~/.claude/ needed):**
+```bash
+./run/docker .test.offline
 ```

@@ -1,6 +1,6 @@
-# scripts
+# run
 
-Shell scripts for `claude_storage` container operations.
+Shell scripts for workspace container operations.
 
 | File | Responsibility |
 |------|----------------|

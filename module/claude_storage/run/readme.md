@@ -1,6 +1,6 @@
-# scripts
+# run
 
-Shell scripts for `claude_profile` container operations.
+Shell scripts for `claude_storage` container operations.
 
 | File | Responsibility |
 |------|----------------|

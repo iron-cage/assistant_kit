@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# claude_storage container test runner
-# Usage: ./scripts/docker <command>
+# claude_profile container test runner
+# Usage: ./run/docker <command>
 set -euo pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/../../.." && pwd )"
 DOCKERFILE="$( cd "$SCRIPT_DIR/.." && pwd )/Dockerfile"
-IMAGE=claude_storage_test
+IMAGE=claude_profile_test
 
 # ── Container runtime ─────────────────────────────────────────────────────────
 
@@ -65,19 +65,23 @@ cmd_build()
 
 cmd_test()
 {
-  local claude_dir="$HOME/.claude"
-  if [[ ! -d "$claude_dir" ]]; then
-    echo "error: ~/.claude/ not found at $claude_dir" >&2
-    echo "behavior tests require real Claude Code storage" >&2
+  local creds="$HOME/.claude/.credentials.json"
+  if [[ ! -f "$creds" ]]; then
+    echo "error: credentials not found at $creds" >&2
+    echo "run 'claude auth login' to authenticate first" >&2
     exit 1
   fi
+  local w3_bin
+  w3_bin="$(which w3 2>/dev/null)" \
+    || { echo "error: w3 (willbe3) not found on PATH — install it on the host first" >&2; exit 1; }
   _ensure_image
   _ensure_build_cache
   "$CONTAINER_CMD" run --rm \
     -v "${IMAGE}_target:/workspace/target" \
-    -v "$claude_dir":/workspace/.claude:ro \
+    -v "$w3_bin":/usr/local/bin/w3:ro \
+    -v "$creds":/root/.claude/.credentials.json:ro \
     "$IMAGE" \
-    cargo nextest run -p claude_storage
+    bash -c "cd /workspace/module/claude_profile && w3 .test level::3"
 }
 
 cmd_test_offline()
@@ -87,19 +91,19 @@ cmd_test_offline()
   "$CONTAINER_CMD" run --rm \
     -v "${IMAGE}_target:/workspace/target" \
     "$IMAGE" \
-    cargo nextest run -p claude_storage --filter-expr '!binary(behavior)'
+    cargo nextest run -p claude_profile --filter-expr '!test(lim_it)'
 }
 
 cmd_help()
 {
-  echo "Usage: ./scripts/docker <command>"
+  echo "Usage: ./run/docker <command>"
   echo ""
   echo "Image Management:"
   echo "  .build          Build the $IMAGE container image"
   echo ""
   echo "Testing:"
-  echo "  . / .test       Run all tests (real ~/.claude/ required)"
-  echo "  .test.offline   Run offline tests only (no ~/.claude/ needed)"
+  echo "  . / .test       Run all tests (credentials required)"
+  echo "  .test.offline   Run offline tests only (no credentials needed)"
   echo ""
   echo "Help:"
   echo "  .help           Show this help"
@@ -116,7 +120,7 @@ case "$COMMAND" in
   .help)         cmd_help ;;
   *)
     echo "error: unknown command '$COMMAND'" >&2
-    echo "run './scripts/docker .help' for available commands" >&2
+    echo "run './run/docker .help' for available commands" >&2
     exit 1
     ;;
 esac

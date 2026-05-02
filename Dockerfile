@@ -1,4 +1,4 @@
-# claude_storage — test runner
+# workspace — full test runner
 #
 # Three-stage build using cargo-chef for dependency caching.
 # Rebuilt layers:
@@ -6,18 +6,18 @@
 #   test               — on every source change (fast: deps already compiled)
 #
 # Usage (via script — recommended):
-#   module/claude_storage/run/docker .build          # build image
-#   module/claude_storage/run/docker .test           # all tests (real ~/.claude/ required)
-#   module/claude_storage/run/docker .test.offline   # offline tests only
+#   run/docker .build          # build image
+#   run/docker .test           # all tests (real ~/.claude/ required)
+#   run/docker .test.offline   # offline tests only
 #
 # Usage (direct docker):
-#   docker build -f module/claude_storage/Dockerfile -t claude_storage_test .
-#   docker run --rm claude_storage_test                  # offline tests (default CMD)
+#   docker build -f Dockerfile -t workspace_test .
+#   docker run --rm workspace_test                          # offline tests (default CMD)
 #   docker run --rm \
 #     -v ~/.claude:/workspace/.claude:ro \
 #     -v $(which w3):/usr/local/bin/w3:ro \
-#     claude_storage_test \
-#     bash -c "cd /workspace/module/claude_storage && w3 .test level::3"  # all tests
+#     workspace_test \
+#     w3 .test level::3                                     # all tests
 
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
 
@@ -45,26 +45,27 @@ WORKDIR /workspace
 COPY --from=planner /workspace/recipe.json recipe.json
 RUN cargo chef cook \
       --recipe-path recipe.json \
-      -p claude_storage \
+      --workspace \
       --tests
 
-# ── Stage 3: test — compiles claude_storage itself and runs tests ──────────────
+# ── Stage 3: test — compiles all workspace crates and runs tests ───────────────
 #
 # Gets precompiled dep artifacts from cook (avoids recompiling external crates).
-# Only claude_storage and its local workspace deps are recompiled here.
+# Only workspace crates themselves are recompiled here.
 
 FROM rust:slim AS test
 
 # nextest: compile from source for architecture portability (layer is cached).
 RUN cargo install cargo-nextest --locked
 
-# Non-root user: permission-based tests (chmod 000) require non-root execution.
-# Root bypasses file permission checks, causing those tests to silently pass the
-# wrong code path (no warning emitted for "unreadable" sessions).
+# Non-root user: claude_storage tests use chmod 000 — root bypasses permission checks,
+# causing those tests to silently pass the wrong code path.
 RUN useradd -m -s /bin/bash testuser
 
-# Path resolution tests assert cwd starts with $HOME (mirrors dev-machine layout).
-# Set HOME to workspace root so /workspace/... satisfies that precondition.
+# Path resolution tests in claude_storage assert cwd starts with $HOME.
+# HOME=/workspace satisfies this for all /workspace/... paths.
+# This also causes ClaudePaths to resolve credentials and storage under /workspace/.claude,
+# so a single -v ~/.claude:/workspace/.claude:ro mount covers all crates.
 ENV HOME=/workspace
 
 WORKDIR /workspace
@@ -75,7 +76,7 @@ WORKDIR /workspace
 COPY --from=cook /usr/local/cargo/registry /usr/local/cargo/registry
 COPY --from=cook /workspace/target         /workspace/target
 
-# Full workspace source. Only claude_storage and its local workspace deps rebuild.
+# Full workspace source.
 COPY . .
 
 # Transfer workspace and cargo home ownership so testuser can compile and run tests.
@@ -83,14 +84,14 @@ RUN chown -R testuser:testuser /workspace /usr/local/cargo
 
 USER testuser
 
-# Offline tests by default — no ~/.claude/ storage required.
-# The behavior/* tests (B1..B18) inspect real ~/.claude/ and are excluded.
+# Offline tests by default — no ~/.claude/ storage or credentials required.
+# Excludes lim_it* (claude_profile live API calls) and behavior binary (claude_storage real-storage tests).
 #
-# To run all tests (including behavior), mount ~/.claude/ and w3, then use w3 .test:
+# To run all tests, mount ~/.claude/ and w3, then use w3 .test:
 #   docker run -v ~/.claude:/workspace/.claude:ro \
 #              -v $(which w3):/usr/local/bin/w3:ro \
-#              claude_storage_test \
-#              bash -c "cd /workspace/module/claude_storage && w3 .test level::3"
+#              workspace_test \
+#              w3 .test level::3
 CMD [ "cargo", "nextest", "run", \
-      "-p", "claude_storage", \
-      "--filter-expr", "!binary(behavior)" ]
+      "--workspace", \
+      "--filter-expr", "!test(lim_it) & !binary(behavior)" ]
