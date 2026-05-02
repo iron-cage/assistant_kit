@@ -1,0 +1,14 @@
+image: claude_profile_test
+dockerfile: Dockerfile
+
+cook_flags: -p claude_profile
+test_user: testuser
+home_dir: /workspace
+cmd_scope: -p claude_profile
+cmd_filter: "!test(lim_it)"
+
+test_script: module/claude_profile/run/test
+
+mount_test:  ~/.claude:/workspace/.claude:directory:true
+mount_shell: ~/.claude:/workspace/.claude:directory:false
+mount_test_label: "real ~/.claude/ (credentials)"

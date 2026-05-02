@@ -7,13 +7,12 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | File / Directory | Responsibility |
 |------------------|----------------|
 | `Cargo.toml` | Crate manifest: deps, features, build script |
-| `Dockerfile` | Three-stage cargo-chef test image for containerized test runs. |
 | `build.rs` | Transforms YAML command definitions to static PHF registry |
 | `unilang.commands.yaml` | Command definitions (9 commands) |
 | `src/` | CLI pipeline, command routines, binary entry points |
 | `tests/` | Integration and parameter validation tests (242 tests) |
 | `docs/` | Behavioral requirements: features, CLI reference, operation docs |
-| `run/` | Container CLI: build image and run tests. |
+| `run/` | Container runner: thin wrapper, config manifest, and test script. |
 | `task/` | Crate-level task tracking |
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
@@ -439,6 +438,11 @@ fn main() -> claude_storage_core::Result< () >
 **Container (interactive shell):**
 ```bash
 ./run/docker .shell
+```
+
+**Local (w3 required):**
+```bash
+./run/test
 ```
 
 ## license

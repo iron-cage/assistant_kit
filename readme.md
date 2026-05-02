@@ -27,8 +27,8 @@ ast .help                    # all ~40 commands in one place
 | `module/` | Fourteen workspace crates (see Crates below) |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
 | `task/` | Task tracking: active, completed, backlog |
-| `run/` | Container CLI: build image and run tests. |
-| `Dockerfile` | Three-stage cargo-chef test image for all workspace crates. |
+| `run/` | Container runner: universal docker-run, config manifest, and test script. |
+| `Dockerfile` | Parameterised test image for all modules; built via run/docker-run. |
 | `vision.md` | Project vision, design rationale, and open problems |
 | `../locales.md` | Locale and internationalisation notes |
 | `Cargo.toml` | Workspace manifest: members, lints, shared dependencies |
@@ -91,4 +91,9 @@ Layer 3: assistant       (ast)    (super-app — all Layer 2 CLIs)
 **Container (interactive shell):**
 ```bash
 ./run/docker .shell
+```
+
+**Local (w3 required):**
+```bash
+./run/test
 ```

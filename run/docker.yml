@@ -1,0 +1,14 @@
+image: workspace_test
+dockerfile: Dockerfile
+
+cook_flags: --workspace
+test_user: testuser
+home_dir: /workspace
+cmd_scope: --workspace
+cmd_filter: "!test(lim_it) & !binary(behavior)"
+
+test_script: run/test
+
+mount_test:  ~/.claude:/workspace/.claude:directory:true
+mount_shell: ~/.claude:/workspace/.claude:directory:false
+mount_test_label: "real ~/.claude/ (storage + credentials)"

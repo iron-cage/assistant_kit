@@ -1,24 +1,37 @@
-# workspace — full test runner
+# workspace / module test runner  (parameterised via build args)
 #
 # Three-stage build using cargo-chef for dependency caching.
 # Rebuilt layers:
 #   chef/planner/cook  — only when Cargo.toml or Cargo.lock change
 #   test               — on every source change (fast: deps already compiled)
 #
-# Usage (via script — recommended):
-#   run/docker .build          # build image
-#   run/docker .test           # all tests (real ~/.claude/ required)
-#   run/docker .test.offline   # offline tests only
-#   run/docker .shell          # interactive bash shell
+# Build args (values come from run/docker.yml, passed by run/docker-run):
+#   COOK_FLAGS  — --workspace | -p claude_profile | -p claude_storage
+#   TEST_USER   — testuser (chmod-000 + path-resolution tests) | root
+#   HOME_DIR    — /workspace (ClaudePaths + path tests) | /root
+#   CMD_SCOPE   — --workspace | -p claude_profile | -p claude_storage
+#   CMD_FILTER  — nextest filter expression for offline default CMD
 #
-# Usage (direct docker):
+# Usage (via script — recommended):
+#   run/docker .build                        # workspace image
+#   module/claude_profile/run/docker .build  # profile image
+#   module/claude_storage/run/docker .build  # storage image
+#   run/docker .test                         # full test run
+#   run/docker .shell                        # interactive shell
+#
+# Usage (direct docker — workspace):
 #   docker build -f Dockerfile -t workspace_test .
+#   docker build -f Dockerfile \
+#     --build-arg COOK_FLAGS="-p claude_profile" \
+#     --build-arg CMD_SCOPE="-p claude_profile" \
+#     --build-arg CMD_FILTER='!test(lim_it)' \
+#     -t claude_profile_test .
 #   docker run --rm workspace_test                          # offline tests (default CMD)
 #   docker run --rm \
 #     -v ~/.claude:/workspace/.claude:ro \
 #     -v $(which w3):/usr/local/bin/w3:ro \
 #     workspace_test \
-#     w3 .test level::3                                     # all tests
+#     /workspace/run/test                                   # all tests
 #   docker run --rm -it workspace_test bash                 # interactive shell
 
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
@@ -36,39 +49,51 @@ WORKDIR /workspace
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
-# ── Stage 2: cook — compiles all dependencies ─────────────────────────────────
+# ── Stage 2: cook — compiles dependencies ─────────────────────────────────────
 #
 # Receives only recipe.json (not source files).
 # This layer is cache-stable: rebuilds only when Cargo.toml or Cargo.lock change,
 # not when .rs files change.
+# COOK_FLAGS selects which crate(s) to compile deps for.
 
 FROM chef AS cook
+ARG COOK_FLAGS=--workspace
 WORKDIR /workspace
 COPY --from=planner /workspace/recipe.json recipe.json
 RUN cargo chef cook \
       --recipe-path recipe.json \
-      --workspace \
+      $COOK_FLAGS \
       --tests
 
-# ── Stage 3: test — compiles all workspace crates and runs tests ───────────────
+# ── Stage 3: test — compiles crate(s) and runs tests ─────────────────────────
 #
 # Gets precompiled dep artifacts from cook (avoids recompiling external crates).
-# Only workspace crates themselves are recompiled here.
+# Only workspace/module crates themselves are recompiled here.
 
 FROM rust:slim AS test
 
 # nextest: compile from source for architecture portability (layer is cached).
 RUN cargo install cargo-nextest --locked
 
-# Non-root user: claude_storage tests use chmod 000 — root bypasses permission checks,
-# causing those tests to silently pass the wrong code path.
-RUN useradd -m -s /bin/bash testuser
+# System utilities required by tests:
+#   procps — provides /bin/kill used by send_sigterm / send_sigkill in claude_core::process
+#   curl   — used by claude_version history commands to fetch release data
+# rust:slim is intentionally minimal and omits both; tests fail with ENOENT without them.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl procps \
+ && rm -rf /var/lib/apt/lists/*
 
-# Path resolution tests in claude_storage assert cwd starts with $HOME.
-# HOME=/workspace satisfies this for all /workspace/... paths.
-# This also causes ClaudePaths to resolve credentials and storage under /workspace/.claude,
-# so a single -v ~/.claude:/workspace/.claude:ro mount covers all crates.
-ENV HOME=/workspace
+# TEST_USER: testuser when tests require:
+#   - chmod 000 file checks (root bypasses permission → silent wrong-path failures)
+#   - path-resolution assertions expecting cwd starts with $HOME
+ARG TEST_USER=testuser
+RUN [ "$TEST_USER" = "root" ] || useradd -m -s /bin/bash "$TEST_USER"
+
+# HOME_DIR: /workspace so ClaudePaths resolves credentials and session storage
+# under /workspace/.claude — a single -v ~/.claude:/workspace/.claude:ro mount
+# covers both credentials and session storage for all crates.
+ARG HOME_DIR=/workspace
+ENV HOME=$HOME_DIR
 
 WORKDIR /workspace
 
@@ -78,22 +103,22 @@ WORKDIR /workspace
 COPY --from=cook /usr/local/cargo/registry /usr/local/cargo/registry
 COPY --from=cook /workspace/target         /workspace/target
 
-# Full workspace source.
+# Full workspace source (includes run/test scripts invoked by cmd_test).
 COPY . .
 
-# Transfer workspace and cargo home ownership so testuser can compile and run tests.
-RUN chown -R testuser:testuser /workspace /usr/local/cargo
+# Create the seed mount point so Docker initialises the named volume with TEST_USER
+# ownership when _ensure_build_cache first mounts it.  Without this mkdir, Docker
+# creates /workspace/target_seed as root at container start (path absent from image),
+# and testuser cannot write into it — causing the seeding cp -a to fail.
+RUN mkdir /workspace/target_seed
 
-USER testuser
+# Transfer workspace and cargo home ownership so TEST_USER can compile and run tests.
+RUN [ "$TEST_USER" = "root" ] || \
+      chown -R "$TEST_USER":"$TEST_USER" /workspace /usr/local/cargo
+USER $TEST_USER
 
-# Offline tests by default — no ~/.claude/ storage or credentials required.
-# Excludes lim_it* (claude_profile live API calls) and behavior binary (claude_storage real-storage tests).
-#
-# To run all tests, mount ~/.claude/ and w3, then use w3 .test:
-#   docker run -v ~/.claude:/workspace/.claude:ro \
-#              -v $(which w3):/usr/local/bin/w3:ro \
-#              workspace_test \
-#              w3 .test level::3
-CMD [ "cargo", "nextest", "run", \
-      "--workspace", \
-      "--filter-expr", "!test(lim_it) & !binary(behavior)" ]
+# Offline tests by default — no ~/.claude/ storage or w3 required.
+# CMD_SCOPE and CMD_FILTER are baked in at build time from docker.yml values.
+ARG CMD_SCOPE=--workspace
+ARG CMD_FILTER=!test(lim_it) & !binary(behavior)
+CMD cargo nextest run $CMD_SCOPE --filter-expr "$CMD_FILTER"

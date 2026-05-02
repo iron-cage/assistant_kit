@@ -1,0 +1,210 @@
+#!/usr/bin/env bash
+# Universal Docker test runner.
+# Usage: docker-run <config.yml> [command]
+#   command: .build | . | .test | .test.offline | .shell | .help  (default: .test)
+set -euo pipefail
+
+CONFIG="$1"
+COMMAND="${2:-.test}"
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+
+# ── Config reader (flat YAML — no external parser required) ───────────────────
+# Strips "key: " prefix and surrounding double-quotes from value.
+
+cfg() { grep -m1 "^$1:" "$CONFIG" | sed 's/^[^:]*:[[:space:]]*//' | tr -d '"'; }
+
+IMAGE="$(cfg image)"
+DOCKERFILE="$WORKSPACE_ROOT/$(cfg dockerfile)"
+COOK_FLAGS="$(cfg cook_flags)"
+TEST_USER="$(cfg test_user)"
+HOME_DIR="$(cfg home_dir)"
+CMD_SCOPE="$(cfg cmd_scope)"
+CMD_FILTER="$(cfg cmd_filter)"
+TEST_SCRIPT="$(cfg test_script)"
+MOUNT_TEST="$(cfg mount_test)"
+MOUNT_SHELL="$(cfg mount_shell)"
+MOUNT_TEST_LABEL="$(cfg mount_test_label)"
+
+# ── Mount resolver ────────────────────────────────────────────────────────────
+# Spec format: "~/path:container_path:check_type:required"
+#   check_type: file | directory
+#   required:   true | false
+# On success: prints "host:container:ro" ready for -v flag.
+# On required+missing: prints error and exits.
+# On optional+missing: prints nothing (caller checks with -n).
+
+_resolve_mount()
+{
+  local spec="$1" label="$2"
+  local host container check required rest
+  host="${spec%%:*}";      rest="${spec#*:}"
+  container="${rest%%:*}"; rest="${rest#*:}"
+  check="${rest%%:*}"
+  required="${rest#*:}"
+  host="${host/#\~/$HOME}"
+
+  local present=false
+  [[ "$check" == "file"      ]] && [[ -f "$host" ]] && present=true
+  [[ "$check" == "directory" ]] && [[ -d "$host" ]] && present=true
+
+  if ! $present
+  then
+    if [[ "$required" == "true" ]]
+    then
+      echo "error: required mount ($label) not found at $host" >&2
+      exit 1
+    fi
+    return 0
+  fi
+
+  echo "$host:$container:ro"
+}
+
+# ── Container runtime ─────────────────────────────────────────────────────────
+
+if command -v podman &>/dev/null
+then
+  CONTAINER_CMD=podman
+elif command -v docker &>/dev/null
+then
+  CONTAINER_CMD=docker
+else
+  echo "error: neither podman nor docker found" >&2
+  exit 1
+fi
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+_build()
+{
+  echo "Building $IMAGE using $CONTAINER_CMD..."
+  # shellcheck disable=SC2086
+  "$CONTAINER_CMD" build \
+    -f "$DOCKERFILE" \
+    --build-arg "COOK_FLAGS=$COOK_FLAGS" \
+    --build-arg "TEST_USER=$TEST_USER" \
+    --build-arg "HOME_DIR=$HOME_DIR" \
+    --build-arg "CMD_SCOPE=$CMD_SCOPE" \
+    --build-arg "CMD_FILTER=$CMD_FILTER" \
+    -t "$IMAGE" \
+    "$WORKSPACE_ROOT"
+}
+
+_ensure_image()
+{
+  if ! "$CONTAINER_CMD" image inspect "$IMAGE" &>/dev/null
+  then
+    echo "Image $IMAGE not found — building first..."
+    _build
+  fi
+}
+
+_ensure_build_cache()
+{
+  local volume="${IMAGE}_target"
+  if ! "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
+  then
+    echo "Seeding build cache from image (first run only)..."
+    # Copy pre-compiled dep artifacts from image into the named volume.
+    # The image target/ has deps from the cook stage; without seeding the volume
+    # would start empty and force a full recompile from scratch on first use.
+    "$CONTAINER_CMD" run --rm \
+      -v "${volume}:/workspace/target_seed" \
+      "$IMAGE" \
+      bash -c "cp -a /workspace/target/. /workspace/target_seed/"
+  fi
+}
+
+# ── Commands ──────────────────────────────────────────────────────────────────
+
+cmd_build()
+{
+  _build
+  # Drop stale build cache so next .test re-seeds from the new image.
+  local volume="${IMAGE}_target"
+  if "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
+  then
+    echo "Removing stale build cache volume..."
+    "$CONTAINER_CMD" volume rm "$volume"
+  fi
+}
+
+cmd_test()
+{
+  local w3_bin
+  w3_bin="$(which w3 2>/dev/null)" \
+    || { echo "error: w3 (willbe3) not found on PATH — install it on the host first" >&2; exit 1; }
+  local test_mount
+  test_mount="$(_resolve_mount "$MOUNT_TEST" "$MOUNT_TEST_LABEL")"
+  _ensure_image
+  _ensure_build_cache
+  "$CONTAINER_CMD" run --rm \
+    -v "${IMAGE}_target:/workspace/target" \
+    -v "$w3_bin":/usr/local/bin/w3:ro \
+    -v "$test_mount" \
+    "$IMAGE" \
+    "/workspace/$TEST_SCRIPT"
+}
+
+cmd_test_offline()
+{
+  _ensure_image
+  _ensure_build_cache
+  # shellcheck disable=SC2086
+  "$CONTAINER_CMD" run --rm \
+    -v "${IMAGE}_target:/workspace/target" \
+    "$IMAGE" \
+    cargo nextest run $CMD_SCOPE --filter-expr "$CMD_FILTER"
+}
+
+cmd_shell()
+{
+  _ensure_image
+  _ensure_build_cache
+  local args=( --rm -it -v "${IMAGE}_target:/workspace/target" )
+  local w3_bin
+  if w3_bin="$(which w3 2>/dev/null)"
+  then
+    args+=( -v "$w3_bin":/usr/local/bin/w3:ro )
+  fi
+  local shell_mount
+  shell_mount="$(_resolve_mount "$MOUNT_SHELL" "$MOUNT_TEST_LABEL")"
+  if [[ -n "$shell_mount" ]]
+  then
+    args+=( -v "$shell_mount" )
+  fi
+  "$CONTAINER_CMD" run "${args[@]}" "$IMAGE" bash
+}
+
+cmd_help()
+{
+  echo "Usage: ./run/docker <command>"
+  echo ""
+  echo "Image Management:"
+  echo "  .build          Build the $IMAGE container image"
+  echo ""
+  echo "Testing:"
+  echo "  . / .test       Run all tests ($MOUNT_TEST_LABEL required)"
+  echo "  .test.offline   Run offline tests only (no external data needed)"
+  echo "  .shell          Interactive bash shell (mounts available)"
+  echo ""
+  echo "Help:"
+  echo "  .help           Show this help"
+}
+
+# ── Dispatch ──────────────────────────────────────────────────────────────────
+
+case "$COMMAND" in
+  .build)        cmd_build ;;
+  .|.test)       cmd_test ;;
+  .test.offline) cmd_test_offline ;;
+  .shell)        cmd_shell ;;
+  .help)         cmd_help ;;
+  *)
+    echo "error: unknown command '$COMMAND'" >&2
+    echo "run './run/docker .help' for available commands" >&2
+    exit 1
+    ;;
+esac
