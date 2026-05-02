@@ -304,8 +304,7 @@ fn session_mtime( session : &claude_storage_core::Session ) -> Option< std::time
 fn is_zero_byte_session( session : &claude_storage_core::Session ) -> bool
 {
   std::fs::metadata( session.storage_path() )
-    .map( | m | m.len() == 0 )
-    .unwrap_or( false )
+    .is_ok_and( | m | m.len() == 0 )
 }
 
 // Shorten real UUID-format IDs to first `UUID_SHORT_LEN` chars.
@@ -642,7 +641,7 @@ fn aggregate_projects(
   }
 
   // Most recently active project first.
-  summaries.sort_by( | a, b | b.last_mtime.cmp( &a.last_mtime ) );
+  summaries.sort_by_key( | b | core::cmp::Reverse( b.last_mtime ) );
   summaries
 }
 

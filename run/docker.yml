@@ -9,6 +9,6 @@ cmd_filter: "!test(lim_it) & !binary(behavior)"
 
 test_script: run/test
 
-mount_test:  ~/.claude:/workspace/.claude:directory:true
+mount_test:  ~/.claude:/workspace/.claude:directory:true:rw
 mount_shell: ~/.claude:/workspace/.claude:directory:false
 mount_test_label: "real ~/.claude/ (storage + credentials)"

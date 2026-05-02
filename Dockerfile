@@ -75,6 +75,9 @@ FROM rust:slim AS test
 # nextest: compile from source for architecture portability (layer is cached).
 RUN cargo install cargo-nextest --locked
 
+# clippy: rust:slim ships without it; w3 .test level::3 runs clippy -D warnings.
+RUN rustup component add clippy
+
 # System utilities required by tests:
 #   procps — provides /bin/kill used by send_sigterm / send_sigkill in claude_core::process
 #   curl   — used by claude_version history commands to fetch release data
@@ -113,8 +116,12 @@ COPY . .
 RUN mkdir /workspace/target_seed
 
 # Transfer workspace and cargo home ownership so TEST_USER can compile and run tests.
-RUN [ "$TEST_USER" = "root" ] || \
-      chown -R "$TEST_USER":"$TEST_USER" /workspace /usr/local/cargo
+# chmod a+rwX makes files writable by any uid so cmd_test can run as the host UID
+# (--user $(id -u):$(id -g)) to access host-owned ~/.claude credentials, while also
+# being able to write build artifacts and cargo lock files as that uid.
+RUN [ "$TEST_USER" = "root" ] || ( \
+      chown -R "$TEST_USER":"$TEST_USER" /workspace /usr/local/cargo && \
+      chmod -R a+rwX /workspace /usr/local/cargo )
 USER $TEST_USER
 
 # Offline tests by default — no ~/.claude/ storage or w3 required.

@@ -39,7 +39,7 @@ fn b7_real_agent_session_has_issidechain_true()
   let projects = super::find_projects();
   let agent_file = projects.iter()
     .flat_map( | p | super::find_agent_sessions( p ) )
-    .find( | f | std::fs::metadata( f ).map( | m | m.len() > 0 ).unwrap_or( false ) );
+    .find( | f | std::fs::metadata( f ).is_ok_and( | m | m.len() > 0 ) );
 
   let Some( path ) = agent_file else
   {

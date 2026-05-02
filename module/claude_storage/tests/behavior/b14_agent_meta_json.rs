@@ -48,7 +48,7 @@ fn b14_meta_json_contains_agent_type()
   let meta_file = projects.iter()
     .flat_map( | p | super::find_subagent_dirs( p ) )
     .flat_map( | ( _, dir ) | super::find_meta_json_files( &dir ) )
-    .find( | f | std::fs::metadata( f ).map( | m | m.len() > 0 ).unwrap_or( false ) );
+    .find( | f | std::fs::metadata( f ).is_ok_and( | m | m.len() > 0 ) );
 
   let Some( path ) = meta_file else
   {
@@ -104,8 +104,7 @@ fn b14_all_meta_json_have_known_agent_type()
       for meta_path in super::find_meta_json_files( &dir )
       {
         let len = std::fs::metadata( &meta_path )
-          .map( | m | m.len() )
-          .unwrap_or( 0 );
+          .map_or( 0, | m | m.len() );
         if len == 0 { continue; }
 
         let Ok( content ) = std::fs::read_to_string( &meta_path ) else { continue };

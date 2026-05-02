@@ -22,7 +22,7 @@ fn b8_zero_byte_jsonl_exists_in_real_storage()
   let has_zero_byte = projects.iter().any( | p |
   {
     super::find_all_jsonl( p ).iter().any( | f |
-      std::fs::metadata( f ).map( | m | m.len() == 0 ).unwrap_or( false )
+      std::fs::metadata( f ).is_ok_and( | m | m.len() == 0 )
     )
   });
 

@@ -213,7 +213,7 @@ fn load_usage( paths : &crate::ClaudePaths ) -> Result< UsageData, ErrorData >
       .iter()
       .map( |( model, val ) | ( model_short( model ), val.as_u64().unwrap_or( 0 ) ) )
       .collect();
-    day_models.sort_by( |a, b| b.1.cmp( &a.1 ) );
+    day_models.sort_by_key( | b | core::cmp::Reverse( b.1 ) );
 
     for ( short, tokens ) in &day_models
     {
@@ -227,7 +227,7 @@ fn load_usage( paths : &crate::ClaudePaths ) -> Result< UsageData, ErrorData >
   daily.sort_by( |a, b| b.0.cmp( &a.0 ) );
 
   let mut by_model : Vec< ( String, u64 ) > = totals.into_iter().collect();
-  by_model.sort_by( |a, b| b.1.cmp( &a.1 ) );
+  by_model.sort_by_key( | b | core::cmp::Reverse( b.1 ) );
 
   let total : u64 = by_model.iter().map( |( _, t ) | t ).sum();
 

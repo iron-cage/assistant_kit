@@ -155,7 +155,7 @@ fn artifact_name( path : &std::path::Path, kind : ArtifactKind ) -> Option< Stri
       //   collect_names()         (source dir) — entries are real dirs; is_dir() covers them.
       //   collect_symlink_names() (target dir) — entries are confirmed symlinks; the
       //     symlink_metadata() branch covers dangling symlinks whose is_dir() returns false.
-      if path.is_dir() || std::fs::symlink_metadata( path ).map( | m | m.file_type().is_symlink() ).unwrap_or( false )
+      if path.is_dir() || std::fs::symlink_metadata( path ).is_ok_and( | m | m.file_type().is_symlink() )
       {
         path.file_name()?.to_str().map( str::to_string )
       }

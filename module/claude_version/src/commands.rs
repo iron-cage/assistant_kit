@@ -442,7 +442,7 @@ fn guard_once( dry : bool, force : bool, version_override : Option< &str >, verb
 {
   // If HOME is unset or empty, installation would target "/.claude" (root)
   // which requires root permission.  Degrade gracefully rather than crashing.
-  let home_valid = std::env::var( "HOME" ).map( | h | !h.is_empty() ).unwrap_or( false );
+  let home_valid = std::env::var( "HOME" ).is_ok_and( | h | !h.is_empty() );
   if !home_valid
   {
     let msg = match format

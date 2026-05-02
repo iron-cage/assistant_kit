@@ -84,7 +84,7 @@ pub fn find_projects() -> Vec< std::path::PathBuf >
     .into_iter()
     .flatten()
     .filter_map( Result::ok )
-    .filter( | e | e.file_type().map( | t | t.is_dir() ).unwrap_or( false ) )
+    .filter( | e | e.file_type().is_ok_and( | t | t.is_dir() ) )
     .map( | e | e.path() )
     .collect()
 }
@@ -105,7 +105,7 @@ pub fn find_sessions( project : &std::path::Path ) -> Vec< std::path::PathBuf >
       let name = name.to_string_lossy();
       name.ends_with( ".jsonl" )
         && !name.starts_with( "agent-" )
-        && e.metadata().map( | m | m.len() > 0 ).unwrap_or( false )
+        && e.metadata().is_ok_and( | m | m.len() > 0 )
     })
     .map( | e | e.path() )
     .collect()
@@ -189,7 +189,7 @@ pub fn find_subagent_dirs( project : &std::path::Path ) -> Vec< ( String, std::p
     .into_iter()
     .flatten()
     .filter_map( Result::ok )
-    .filter( | e | e.file_type().map( | t | t.is_dir() ).unwrap_or( false ) )
+    .filter( | e | e.file_type().is_ok_and( | t | t.is_dir() ) )
     .filter_map( | e |
     {
       let name = e.file_name().to_string_lossy().into_owned();
@@ -230,7 +230,7 @@ pub fn find_subagent_sessions( subagents_dir : &std::path::Path ) -> Vec< std::p
       let name = name.to_string_lossy();
       name.starts_with( "agent-" )
         && name.ends_with( ".jsonl" )
-        && e.metadata().map( | m | m.len() > 0 ).unwrap_or( false )
+        && e.metadata().is_ok_and( | m | m.len() > 0 )
     })
     .map( | e | e.path() )
     .collect()

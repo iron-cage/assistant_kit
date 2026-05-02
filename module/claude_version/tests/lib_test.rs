@@ -92,13 +92,16 @@ mod enabled
     let content = std::fs::read_to_string( claude_version::COMMANDS_YAML )
       .expect( "failed to read unilang.commands.yaml" );
 
-    // Extract all `- name: "..."` entries from the YAML.
+    // Extract command `- name: "..."` entries from the YAML (names starting with `.`).
+    // Parameter entries like `- name: "verbosity"` share the same YAML syntax but
+    // are not commands — filtering by dot prefix distinguishes them correctly.
     let yaml_names : Vec< String > = content
       .lines()
       .filter_map( | line |
       {
         let t = line.trim();
-        t.strip_prefix( "- name: \"" )?.strip_suffix( '"' ).map( String::from )
+        let name = t.strip_prefix( "- name: \"" )?.strip_suffix( '"' )?;
+        name.starts_with( '.' ).then( || name.to_string() )
       } )
       .collect();
 

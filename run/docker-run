@@ -28,21 +28,24 @@ MOUNT_SHELL="$(cfg mount_shell)"
 MOUNT_TEST_LABEL="$(cfg mount_test_label)"
 
 # ── Mount resolver ────────────────────────────────────────────────────────────
-# Spec format: "~/path:container_path:check_type:required"
+# Spec format: "~/path:container_path:check_type:required[:mode]"
 #   check_type: file | directory
 #   required:   true | false
-# On success: prints "host:container:ro" ready for -v flag.
+#   mode:       ro | rw  (optional, defaults to ro)
+# On success: prints "host:container:mode" ready for -v flag.
 # On required+missing: prints error and exits.
 # On optional+missing: prints nothing (caller checks with -n).
 
 _resolve_mount()
 {
   local spec="$1" label="$2"
-  local host container check required rest
+  local host container check required mode rest
   host="${spec%%:*}";      rest="${spec#*:}"
   container="${rest%%:*}"; rest="${rest#*:}"
-  check="${rest%%:*}"
-  required="${rest#*:}"
+  check="${rest%%:*}";     rest="${rest#*:}"
+  required="${rest%%:*}";  mode="${rest#*:}"
+  # If there is no 5th field, ${rest#*:} == rest (no colon to consume) == required.
+  [[ "$mode" == "$required" ]] && mode="ro"
   host="${host/#\~/$HOME}"
 
   local present=false
@@ -59,7 +62,7 @@ _resolve_mount()
     return 0
   fi
 
-  echo "$host:$container:ro"
+  echo "$host:$container:$mode"
 }
 
 # ── Container runtime ─────────────────────────────────────────────────────────
@@ -110,10 +113,11 @@ _ensure_build_cache()
     # Copy pre-compiled dep artifacts from image into the named volume.
     # The image target/ has deps from the cook stage; without seeding the volume
     # would start empty and force a full recompile from scratch on first use.
+    # World-writable so the host uid (used by cmd_test via --user) can write build artifacts.
     "$CONTAINER_CMD" run --rm \
       -v "${volume}:/workspace/target_seed" \
       "$IMAGE" \
-      bash -c "cp -a /workspace/target/. /workspace/target_seed/"
+      bash -c "cp -a /workspace/target/. /workspace/target_seed/ && chmod -R a+rwX /workspace/target_seed/"
   fi
 }
 
@@ -140,7 +144,18 @@ cmd_test()
   test_mount="$(_resolve_mount "$MOUNT_TEST" "$MOUNT_TEST_LABEL")"
   _ensure_image
   _ensure_build_cache
+  # Run as the host user so mounted credential files (owned by host uid) are readable.
+  # Rootless Podman remaps container uid 0 → host uid, so without --userns=keep-id
+  # files owned by the host user appear as root inside the container and are unreadable
+  # by a non-root container process.  keep-id preserves the host UID mapping so the
+  # running uid matches the owner uid of the mounted credential files.
+  # workspace and cargo dirs are world-writable (a+rwX in Dockerfile) so the host
+  # uid can write cargo lock files and build artifacts without owning those files.
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
   "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
     -v "${IMAGE}_target:/workspace/target" \
     -v "$w3_bin":/usr/local/bin/w3:ro \
     -v "$test_mount" \
