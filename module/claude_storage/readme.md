@@ -426,6 +426,16 @@ fn main() -> claude_storage_core::Result< () >
 - Full workflow integration test
 - CLI sanity tests (build, features)
 
+**Container (all tests — real ~/.claude/ required):**
+```bash
+./scripts/docker .test
+```
+
+**Container (offline — no ~/.claude/ needed):**
+```bash
+./scripts/docker .test.offline
+```
+
 ## license
 
 MIT

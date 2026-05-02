@@ -109,17 +109,12 @@ clp .paths                 # show ~/.claude/ canonical paths
 
 ## Testing
 
-**Local:**
-```bash
-cargo nextest run -p claude_profile
-```
-
-**Container (offline — no credentials needed):**
+**Container (all tests — credentials required):**
 ```bash
 ./scripts/docker .test
 ```
 
-**Container (all tests — credentials required):**
+**Container (offline — no credentials needed):**
 ```bash
-./scripts/docker .test.live
+./scripts/docker .test.offline
 ```

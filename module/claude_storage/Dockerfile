@@ -5,18 +5,18 @@
 #   chef/planner/cook  — only when Cargo.toml or Cargo.lock change
 #   test               — on every source change (fast: deps already compiled)
 #
-# Usage:
-#   # Build
+# Usage (via script — recommended):
+#   module/claude_storage/scripts/docker .build          # build image
+#   module/claude_storage/scripts/docker .test           # all tests (real ~/.claude/ required)
+#   module/claude_storage/scripts/docker .test.offline   # offline tests only
+#
+# Usage (direct docker):
 #   docker build -f module/claude_storage/Dockerfile -t claude_storage_test .
-#
-#   # Offline tests (default — no ~/.claude/ storage needed)
-#   docker run --rm claude_storage_test
-#
-#   # Live tests (require real ~/.claude/ storage on host)
+#   docker run --rm claude_storage_test                  # offline tests (default CMD)
 #   docker run --rm \
-#     -v ~/.claude:/root/.claude:ro \
+#     -v ~/.claude:/workspace/.claude:ro \
 #     claude_storage_test \
-#     cargo nextest run -p claude_storage
+#     cargo nextest run -p claude_storage                # all tests
 
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
 
@@ -85,8 +85,8 @@ USER testuser
 # Offline tests by default — no ~/.claude/ storage required.
 # The behavior/* tests (B1..B18) inspect real ~/.claude/ and are excluded.
 #
-# To run behavior tests, mount ~/.claude/ and override the filter:
-#   docker run -v ~/.claude:/root/.claude:ro \
+# To run all tests (including behavior), mount ~/.claude/ and drop the filter:
+#   docker run -v ~/.claude:/workspace/.claude:ro \
 #              claude_storage_test \
 #              cargo nextest run -p claude_storage
 CMD [ "cargo", "nextest", "run", \

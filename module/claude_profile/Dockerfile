@@ -5,18 +5,18 @@
 #   chef/planner/cook  — only when Cargo.toml or Cargo.lock change
 #   test               — on every source change (fast: deps already compiled)
 #
-# Usage:
-#   # Build
+# Usage (via script — recommended):
+#   module/claude_profile/scripts/docker .build          # build image
+#   module/claude_profile/scripts/docker .test           # all tests (credentials required)
+#   module/claude_profile/scripts/docker .test.offline   # offline tests only
+#
+# Usage (direct docker):
 #   docker build -f module/claude_profile/Dockerfile -t claude_profile_test .
-#
-#   # Offline tests (default — no credentials needed)
-#   docker run --rm claude_profile_test
-#
-#   # Live tests (require real ~/.claude/.credentials.json)
+#   docker run --rm claude_profile_test                  # offline tests (default CMD)
 #   docker run --rm \
 #     -v ~/.claude/.credentials.json:/root/.claude/.credentials.json:ro \
 #     claude_profile_test \
-#     cargo nextest run -p claude_profile --filter-expr 'test(lim_it)'
+#     cargo nextest run -p claude_profile                # all tests
 
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
 
@@ -71,10 +71,10 @@ COPY . .
 # Offline tests by default — no credentials or outbound network required.
 # The four lim_it* tests (live API calls) are excluded.
 #
-# To run live tests, mount credentials and override the filter:
+# To run all tests (including live), mount credentials and drop the filter:
 #   docker run -v ~/.claude/.credentials.json:/root/.claude/.credentials.json:ro \
 #              claude_profile_test \
-#              cargo nextest run -p claude_profile --filter-expr 'test(lim_it)'
+#              cargo nextest run -p claude_profile
 CMD [ "cargo", "nextest", "run", \
       "-p", "claude_profile", \
       "--filter-expr", "!test(lim_it)" ]
