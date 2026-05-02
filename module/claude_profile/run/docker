@@ -10,9 +10,11 @@ IMAGE=claude_profile_test
 
 # ── Container runtime ─────────────────────────────────────────────────────────
 
-if command -v podman &>/dev/null; then
+if command -v podman &>/dev/null
+then
   CONTAINER_CMD=podman
-elif command -v docker &>/dev/null; then
+elif command -v docker &>/dev/null
+then
   CONTAINER_CMD=docker
 else
   echo "error: neither podman nor docker found" >&2
@@ -29,7 +31,8 @@ _build()
 
 _ensure_image()
 {
-  if ! "$CONTAINER_CMD" image inspect "$IMAGE" &>/dev/null; then
+  if ! "$CONTAINER_CMD" image inspect "$IMAGE" &>/dev/null
+  then
     echo "Image $IMAGE not found — building first..."
     _build
   fi
@@ -38,7 +41,8 @@ _ensure_image()
 _ensure_build_cache()
 {
   local volume="${IMAGE}_target"
-  if ! "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null; then
+  if ! "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
+  then
     echo "Seeding build cache from image (first run only)..."
     # Copy pre-compiled dep artifacts from image into the named volume.
     # The image target/ has deps from the cook stage; without seeding the volume
@@ -57,7 +61,8 @@ cmd_build()
   _build
   # Drop stale build cache so next .test re-seeds from the new image.
   local volume="${IMAGE}_target"
-  if "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null; then
+  if "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
+  then
     echo "Removing stale build cache volume..."
     "$CONTAINER_CMD" volume rm "$volume"
   fi
@@ -66,7 +71,8 @@ cmd_build()
 cmd_test()
 {
   local creds="$HOME/.claude/.credentials.json"
-  if [[ ! -f "$creds" ]]; then
+  if [[ ! -f "$creds" ]]
+  then
     echo "error: credentials not found at $creds" >&2
     echo "run 'claude auth login' to authenticate first" >&2
     exit 1
@@ -94,6 +100,24 @@ cmd_test_offline()
     cargo nextest run -p claude_profile --filter-expr '!test(lim_it)'
 }
 
+cmd_shell()
+{
+  _ensure_image
+  _ensure_build_cache
+  local args=( --rm -it -v "${IMAGE}_target:/workspace/target" )
+  local w3_bin
+  if w3_bin="$(which w3 2>/dev/null)"
+  then
+    args+=( -v "$w3_bin":/usr/local/bin/w3:ro )
+  fi
+  local creds="$HOME/.claude/.credentials.json"
+  if [[ -f "$creds" ]]
+  then
+    args+=( -v "$creds":/root/.claude/.credentials.json:ro )
+  fi
+  "$CONTAINER_CMD" run "${args[@]}" "$IMAGE" bash
+}
+
 cmd_help()
 {
   echo "Usage: ./run/docker <command>"
@@ -104,6 +128,7 @@ cmd_help()
   echo "Testing:"
   echo "  . / .test       Run all tests (credentials required)"
   echo "  .test.offline   Run offline tests only (no credentials needed)"
+  echo "  .shell          Interactive bash shell (mounts available)"
   echo ""
   echo "Help:"
   echo "  .help           Show this help"
@@ -117,6 +142,7 @@ case "$COMMAND" in
   .build)        cmd_build ;;
   .|.test)       cmd_test ;;
   .test.offline) cmd_test_offline ;;
+  .shell)        cmd_shell ;;
   .help)         cmd_help ;;
   *)
     echo "error: unknown command '$COMMAND'" >&2

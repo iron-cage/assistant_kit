@@ -9,6 +9,7 @@
 #   module/claude_profile/run/docker .build          # build image
 #   module/claude_profile/run/docker .test           # all tests (credentials required)
 #   module/claude_profile/run/docker .test.offline   # offline tests only
+#   module/claude_profile/run/docker .shell          # interactive bash shell
 #
 # Usage (direct docker):
 #   docker build -f module/claude_profile/Dockerfile -t claude_profile_test .
@@ -18,6 +19,7 @@
 #     -v $(which w3):/usr/local/bin/w3:ro \
 #     claude_profile_test \
 #     bash -c "cd /workspace/module/claude_profile && w3 .test level::3"  # all tests
+#   docker run --rm -it claude_profile_test bash            # interactive shell
 
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
 

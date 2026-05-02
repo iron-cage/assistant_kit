@@ -87,3 +87,8 @@ Layer 3: assistant       (ast)    (super-app — all Layer 2 CLIs)
 ```bash
 ./run/docker .test.offline
 ```
+
+**Container (interactive shell):**
+```bash
+./run/docker .shell
+```

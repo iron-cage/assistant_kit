@@ -436,6 +436,11 @@ fn main() -> claude_storage_core::Result< () >
 ./run/docker .test.offline
 ```
 
+**Container (interactive shell):**
+```bash
+./run/docker .shell
+```
+
 ## license
 
 MIT

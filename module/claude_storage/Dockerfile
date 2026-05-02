@@ -9,6 +9,7 @@
 #   module/claude_storage/run/docker .build          # build image
 #   module/claude_storage/run/docker .test           # all tests (real ~/.claude/ required)
 #   module/claude_storage/run/docker .test.offline   # offline tests only
+#   module/claude_storage/run/docker .shell          # interactive bash shell
 #
 # Usage (direct docker):
 #   docker build -f module/claude_storage/Dockerfile -t claude_storage_test .
@@ -18,6 +19,7 @@
 #     -v $(which w3):/usr/local/bin/w3:ro \
 #     claude_storage_test \
 #     bash -c "cd /workspace/module/claude_storage && w3 .test level::3"  # all tests
+#   docker run --rm -it claude_storage_test bash            # interactive shell
 
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
 

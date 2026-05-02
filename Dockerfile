@@ -9,6 +9,7 @@
 #   run/docker .build          # build image
 #   run/docker .test           # all tests (real ~/.claude/ required)
 #   run/docker .test.offline   # offline tests only
+#   run/docker .shell          # interactive bash shell
 #
 # Usage (direct docker):
 #   docker build -f Dockerfile -t workspace_test .
@@ -18,6 +19,7 @@
 #     -v $(which w3):/usr/local/bin/w3:ro \
 #     workspace_test \
 #     w3 .test level::3                                     # all tests
+#   docker run --rm -it workspace_test bash                 # interactive shell
 
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
 

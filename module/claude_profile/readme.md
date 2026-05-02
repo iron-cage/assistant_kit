@@ -118,3 +118,8 @@ clp .paths                 # show ~/.claude/ canonical paths
 ```bash
 ./run/docker .test.offline
 ```
+
+**Container (interactive shell):**
+```bash
+./run/docker .shell
+```
