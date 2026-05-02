@@ -28,10 +28,10 @@
 #     -t claude_profile_test .
 #   docker run --rm workspace_test                          # offline tests (default CMD)
 #   docker run --rm \
-#     -v ~/.claude:/workspace/.claude:ro \
+#     -v ~/.claude:/workspace/.claude:rw \
 #     -v $(which w3):/usr/local/bin/w3:ro \
 #     workspace_test \
-#     /workspace/run/test                                   # all tests
+#     /workspace/run/test                                   # all tests (continuation tests need rw)
 #   docker run --rm -it workspace_test bash                 # interactive shell
 
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
@@ -93,8 +93,8 @@ ARG TEST_USER=testuser
 RUN [ "$TEST_USER" = "root" ] || useradd -m -s /bin/bash "$TEST_USER"
 
 # HOME_DIR: /workspace so ClaudePaths resolves credentials and session storage
-# under /workspace/.claude — a single -v ~/.claude:/workspace/.claude:ro mount
-# covers both credentials and session storage for all crates.
+# under /workspace/.claude — a single -v ~/.claude:/workspace/.claude:rw mount
+# covers both credentials and session storage for all crates (rw needed for continuation tests).
 ARG HOME_DIR=/workspace
 ENV HOME=$HOME_DIR
 
