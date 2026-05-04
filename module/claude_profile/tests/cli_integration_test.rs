@@ -18,6 +18,7 @@
 //! | `usage_test` | .usage command | U |
 //! | `persist_test` | `PersistPaths` resolution | P |
 //! | `credentials_test` | .credentials.status | cred |
+//! | `credentials_status_help_test` | .credentials.status.help descriptions | csh |
 //! | `account_limits_test` | .account.limits error paths | lim |
 //!
 //! ## Parallel Execution Note
@@ -55,6 +56,9 @@ mod account_status_name_test;
 
 #[ path = "cli/credentials_test.rs" ]
 mod credentials_test;
+
+#[ path = "cli/credentials_status_help_test.rs" ]
+mod credentials_status_help_test;
 
 #[ path = "cli/account_limits_test.rs" ]
 mod account_limits_test;

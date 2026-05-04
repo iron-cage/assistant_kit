@@ -10,11 +10,11 @@ Integration test specifications for the `.account.limits` command. See [commands
 | IT-2 | Active account — `v::0` compact output (bare percentages) | Verbosity |
 | IT-3 | Active account — `v::2` verbose output (all fields + raw values) | Verbosity |
 | IT-4 | Active account — `format::json` returns parseable JSON | Format |
-| IT-5 | Named account — `name::work` shows limits for that account | Named Account |
-| IT-6 | Named account — `name::ghost` unknown account exits 2 | Not Found |
+| IT-5 | Named account — `name::work@acme.com` shows limits for that account | Named Account |
+| IT-6 | Named account — `name::ghost@example.com` unknown account exits 2 | Not Found |
 | IT-7 | No active account set — exits 2 with actionable error | Error Handling |
 | IT-8 | Data unavailable — exits 2 with actionable error (not silent 0) | Error Handling |
-| IT-9 | `name::` with invalid chars — exits 1 (usage error, not 2) | Parameter Validation |
+| IT-9 | `name::` with non-email value — exits 1 (usage error, not 2) | Parameter Validation |
 
 ### Test Coverage Summary
 
@@ -93,11 +93,11 @@ Integration test specifications for the `.account.limits` command. See [commands
 
 ---
 
-### IT-5: Named Account — `name::work`
+### IT-5: Named Account — `name::work@acme.com`
 
-**Goal:** Confirm `.account.limits name::work` shows limits for the named account, not the active account.
-**Setup:** Two accounts configured: active is `personal`, named `work` exists.
-**Command:** `clp .account.limits name::work`
+**Goal:** Confirm `.account.limits name::work@acme.com` shows limits for the named account, not the active account.
+**Setup:** Two accounts configured: active is `personal@home.com`, named `work@acme.com` exists.
+**Command:** `clp .account.limits name::work@acme.com`
 **Expected Output:** Exit 0; output reflects `work` account limits.
 **Verification:**
 - Exit code is 0
@@ -110,12 +110,12 @@ Integration test specifications for the `.account.limits` command. See [commands
 ### IT-6: Not Found — Unknown Named Account
 
 **Goal:** Confirm that a syntactically valid but non-existent account name exits 2.
-**Setup:** `ghost` account does not exist in `~/.persistent/claude/credential/`.
-**Command:** `clp .account.limits name::ghost`
-**Expected Output:** Exit 2; stderr contains `not found` or `ghost`.
+**Setup:** `ghost@example.com` account does not exist in `~/.persistent/claude/credential/`.
+**Command:** `clp .account.limits name::ghost@example.com`
+**Expected Output:** Exit 2; stderr contains `not found` or `ghost@example.com`.
 **Verification:**
 - Exit code is 2
-- Stderr contains `not found` or `ghost`
+- Stderr contains `not found` or `ghost@example.com`
 **Pass Criteria:** Exit 2; not-found is a runtime error (2), not a usage error (1).
 **Source:** [commands.md — .account.limits](../../../../../docs/cli/commands.md#command--12-accountlimits)
 
@@ -150,14 +150,14 @@ Integration test specifications for the `.account.limits` command. See [commands
 
 ---
 
-### IT-9: Parameter Validation — Invalid `name::` Characters
+### IT-9: Parameter Validation — Non-email `name::` Value
 
-**Goal:** Confirm that `name::` with forbidden characters exits 1 (usage error), not 2 (runtime error).
+**Goal:** Confirm that `name::` with a non-email value exits 1 (usage error), not 2 (runtime error).
 **Setup:** Any environment.
-**Command:** `clp .account.limits name::foo/bar`
-**Expected Output:** Exit 1; stderr contains `invalid characters`.
+**Command:** `clp .account.limits name::notanemail`
+**Expected Output:** Exit 1; stderr contains `email address`.
 **Verification:**
 - Exit code is 1 (not 2)
-- Stderr contains `invalid characters` or similar
-**Pass Criteria:** Exit 1; character validation is a usage error.
+- Stderr contains `email address` or similar
+**Pass Criteria:** Exit 1; email validation is a usage error.
 **Source:** [params.md — name::](../../../../../docs/cli/params.md#parameter--1-name)

@@ -10,6 +10,7 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
+| 113 | 🎯 Available | Add parameter descriptions to `.credentials.status` help output | feature | 2026-05-04 | [113](113_credentials_status_help_descriptions.md) |
 | 112 | ✅ Complete | Implement field-presence params for `.credentials.status` | feature | 2026-05-04 | [112](completed/112_credentials_status_field_presence_params.md) |
 | 111 | ✅ Complete | Relocate credential store to `$PRO/.persistent/claude/credential/` | refactoring | 2026-05-04 | [111](completed/111_credential_store_relocation.md) |
 | 110 | ✅ Complete | Change account names to email-based identifiers in clp CLI | feature | 2026-05-03 | [110](completed/110_email_based_account_names.md) |
@@ -125,6 +126,7 @@
 ## Metadata
 
 **Status Distribution:**
+- 🎯 Available: 1
 - ✅ Complete: 110
 
 **Status Legend:**
@@ -135,4 +137,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-05-04 (TSK-109/110/111/112 closed: POSIX flags removed, email account names, credential store relocated, field-presence params)
+**Last Updated:** 2026-05-04 (TSK-113 opened: credentials.status help descriptions)

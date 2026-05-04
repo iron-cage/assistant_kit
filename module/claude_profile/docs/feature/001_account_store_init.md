@@ -39,5 +39,12 @@ The caller does not need to know whether the store was newly created or pre-exis
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/account.rs` | Account CRUD operations including credential store path resolution and directory initialization |
-| test | `tests/account_tests.rs::save_creates_credential_store_when_missing` | Verifies credential store created on first save |
+| source | `src/persist.rs` | `PersistPaths` type — resolves credential store path via `$PRO`/`$HOME` chain (consumed by account operations) |
+| test | `tests/account_tests.rs::save_creates_credential_store_when_missing` | Verifies credential store created on first save (AC-01) |
+| test | `tests/account_tests.rs::save_copies_credentials_to_named_file` | Verifies idempotency — second save into existing store succeeds (AC-02) |
+| test | `tests/cli/persist_test.rs::p01` | `$PRO` set → credential store resolves under `$PRO` (AC-03) |
+| test | `tests/cli/persist_test.rs::p02` | `$PRO` unset, `$HOME` set → credential store resolves under `$HOME` (AC-04) |
+| test | `tests/cli/persist_test.rs::p16` | `credential_store()` under `$PRO` path starts with `$PRO` (AC-03) |
+| test | `tests/cli/persist_test.rs::p17` | `credential_store()` path ends with `.persistent/claude/credential` (AC-03) |
+| test | `tests/cli/persist_test.rs::p18` | `credential_store()` path ends with `.persistent/claude/credential` under `$HOME` (AC-04) |
 | doc | [010_persistent_storage.md](010_persistent_storage.md) | General persistent storage path (`PersistPaths`); same `$PRO`/`$HOME` resolution chain |

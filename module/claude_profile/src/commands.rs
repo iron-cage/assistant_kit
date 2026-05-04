@@ -227,10 +227,9 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
 
   // Saved: count *.credentials.json files; 0 when credential_store absent.
   let saved = std::fs::read_dir( &credential_store )
-    .map( | rd | rd.filter_map( Result::ok )
+    .map_or( 0, | rd | rd.filter_map( Result::ok )
       .filter( | e | e.file_name().to_string_lossy().ends_with( ".credentials.json" ) )
-      .count() )
-    .unwrap_or( 0 );
+      .count() );
 
   let file_path = paths.credentials_file().display().to_string();
 
@@ -257,31 +256,32 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
     OutputFormat::Text =>
     {
       let mut out = String::new();
-      if show_account { out.push_str( &format!( "Account: {account}\n" ) ); }
-      if show_sub     { out.push_str( &format!( "Sub:     {sub}\n"     ) ); }
-      if show_tier    { out.push_str( &format!( "Tier:    {tier}\n"    ) ); }
-      if show_token   { out.push_str( &format!( "Token:   {tok}\n"     ) ); }
-      if show_expires { out.push_str( &format!( "Expires: {exp}\n"     ) ); }
-      if show_email   { out.push_str( &format!( "Email:   {email}\n"   ) ); }
-      if show_org     { out.push_str( &format!( "Org:     {org}\n"     ) ); }
-      if show_file    { out.push_str( &format!( "File:    {file_path}\n" ) ); }
-      if show_saved   { out.push_str( &format!( "Saved:   {saved} account(s)\n" ) ); }
+      if show_account { let _ = write!( out, "Account: {account}\n" ); }
+      if show_sub     { let _ = write!( out, "Sub:     {sub}\n"     ); }
+      if show_tier    { let _ = write!( out, "Tier:    {tier}\n"    ); }
+      if show_token   { let _ = write!( out, "Token:   {tok}\n"     ); }
+      if show_expires { let _ = write!( out, "Expires: {exp}\n"     ); }
+      if show_email   { let _ = write!( out, "Email:   {email}\n"   ); }
+      if show_org     { let _ = write!( out, "Org:     {org}\n"     ); }
+      if show_file    { let _ = write!( out, "File:    {file_path}\n" ); }
+      if show_saved   { let _ = write!( out, "Saved:   {saved} account(s)\n" ); }
       out
     }
   };
   Ok( OutputData::new( content, "text" ) )
 }
 
-/// `.account.list` — list all saved accounts with metadata.
+/// Default behavior for `account_view_routine` when no `name::` is given.
+enum DefaultSelection { ListAll, StatusActive }
+
+/// Enumerate all accounts; the list-all path for `.account.list`.
 ///
-/// # Errors
-///
-/// Returns `ErrorData` if HOME is unset or the account store is unreadable.
-#[ inline ]
-pub fn account_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+/// - `v::0` — bare name per line.
+/// - `v::1` (default) — `name{ *} (sub, expiry)` per line.
+/// - `v::2` — `name{ <- active} (sub, tier, expiry)` per line.
+/// - Empty store → advisory message, exit 0.
+fn list_all( opts : OutputOptions, credential_store : std::path::PathBuf ) -> Result< OutputData, ErrorData >
 {
-  let opts = OutputOptions::from_cmd( &cmd )?;
-  let credential_store = require_credential_store()?;
   let accounts = crate::account::list( &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account list" ) )?;
 
@@ -295,7 +295,7 @@ pub fn account_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
       }
       else
       {
-        let entries : Vec< String > = accounts.iter().map( |a|
+        let entries : Vec< String > = accounts.iter().map( | a |
         {
           format!(
             r#"{{"name":"{}","subscription_type":"{}","rate_limit_tier":"{}","expires_at_ms":{},"is_active":{}}}"#,
@@ -327,21 +327,32 @@ pub fn account_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
               out.push_str( &a.name );
               out.push( '\n' );
             }
-            1 =>
+            v =>
             {
-              out.push_str( &a.name );
-              if a.is_active { out.push_str( " *" ); }
-              out.push( '\n' );
-            }
-            _ =>
-            {
-              out.push_str( &a.name );
-              if a.is_active { out.push_str( " <- active" ); }
-              let _ = write!(
-                out, " ({}, {}, expires_at_ms={})",
-                a.subscription_type, a.rate_limit_tier, a.expires_at_ms,
-              );
-              out.push( '\n' );
+              let ts     = token_status_from_ms( a.expires_at_ms );
+              let expiry = match &ts
+              {
+                crate::token::TokenStatus::Valid { expires_in }
+                | crate::token::TokenStatus::ExpiringSoon { expires_in } =>
+                {
+                  let h = expires_in.as_secs() / 3600;
+                  let m = ( expires_in.as_secs() % 3600 ) / 60;
+                  format!( "in {h}h {m}m" )
+                }
+                crate::token::TokenStatus::Expired => "expired".to_string(),
+              };
+              let sub = if a.subscription_type.is_empty() { "N/A" } else { &a.subscription_type };
+              if v >= 2
+              {
+                let active = if a.is_active { " <- active" } else { "" };
+                let tier   = if a.rate_limit_tier.is_empty() { "N/A" } else { &a.rate_limit_tier };
+                let _ = writeln!( out, "{}{} ({}, {}, {})", a.name, active, sub, tier, expiry );
+              }
+              else
+              {
+                let active = if a.is_active { " *" } else { "" };
+                let _ = writeln!( out, "{}{} ({}, {})", a.name, active, sub, expiry );
+              }
             }
           }
         }
@@ -353,7 +364,54 @@ pub fn account_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   Ok( OutputData::new( content, "text" ) )
 }
 
-// ── .account.status helpers ──────────────────────────────────────────────────
+/// Shared routing for `.account.list` and `.account.status`.
+///
+/// When `name::` is given: both commands delegate to `status_named` — output is identical.
+/// When omitted: `default` selects `ListAll` or `StatusActive`.
+fn account_view_routine(
+  cmd     : VerifiedCommand,
+  default : DefaultSelection,
+) -> Result< OutputData, ErrorData >
+{
+  let opts             = OutputOptions::from_cmd( &cmd )?;
+  let paths            = require_claude_paths()?;
+  let credential_store = require_credential_store()?;
+
+  let name_arg = match cmd.arguments.get( "name" )
+  {
+    Some( Value::String( s ) ) => s.clone(),
+    _                          => String::new(),
+  };
+  if !name_arg.is_empty()
+  {
+    return status_named( opts, paths, &name_arg, credential_store );
+  }
+
+  match default
+  {
+    DefaultSelection::ListAll      => list_all( opts, credential_store ),
+    DefaultSelection::StatusActive => status_active( opts, paths, credential_store ),
+  }
+}
+
+/// `.account.list` — list all saved accounts, or show a single named account.
+///
+/// Without `name::`: enumerates all credential files. At `v::0`: bare names.
+/// At `v::1` (default): name, active marker (`*`), subscription type, expiry.
+/// At `v::2`: all fields including rate-limit tier. Empty store → advisory message, exit 0.
+/// With `name::EMAIL`: delegates to `status_named` — identical to `.account.status name::EMAIL`.
+///
+/// # Errors
+///
+/// Returns `ErrorData` if HOME is unset, `name::` is invalid (exit 1),
+/// the named account is not found (exit 2), or the account store is unreadable.
+#[ inline ]
+pub fn account_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  account_view_routine( cmd, DefaultSelection::ListAll )
+}
+
+// ── .account.list / .account.status shared helpers ───────────────────────────
 
 /// Active-account path for `.account.status` (backward-compat, no `name::` given).
 fn status_active( opts : OutputOptions, paths : crate::ClaudePaths, credential_store : std::path::PathBuf ) -> Result< OutputData, ErrorData >
@@ -502,11 +560,10 @@ fn status_named(
   Ok( OutputData::new( content, "text" ) )
 }
 
-/// `.account.status` — show the active account name and token state.
+/// `.account.status` — show the active account status, or a named account.
 ///
-/// With `name::` (FR-16): query any named account regardless of active status;
-/// sub/tier shown at `v::1` for all accounts; email/org shown at `v::1` for
-/// the active account only (N/A for non-active).
+/// Without `name::`: reads `_active` marker and shows token state for the active account.
+/// With `name::` (FR-16): delegates to `status_named` — identical to `.account.list name::EMAIL`.
 ///
 /// # Errors
 ///
@@ -515,19 +572,7 @@ fn status_named(
 #[ inline ]
 pub fn account_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let opts             = OutputOptions::from_cmd( &cmd )?;
-  let paths            = require_claude_paths()?;
-  let credential_store = require_credential_store()?;
-
-  // FR-16: optional name:: parameter; empty string means "use active account".
-  let name_arg = match cmd.arguments.get( "name" )
-  {
-    Some( Value::String( s ) ) => s.clone(),
-    _                          => String::new(),
-  };
-
-  if name_arg.is_empty() { return status_active( opts, paths, credential_store ); }
-  status_named( opts, paths, &name_arg, credential_store )
+  account_view_routine( cmd, DefaultSelection::StatusActive )
 }
 
 /// `.account.switch` — atomic credential rotation by name.

@@ -56,7 +56,9 @@ atomic. A crash at any point leaves either the old credentials or the new ones, 
 half-written file. This turns a dangerous manual operation into a safe, one-call API:
 
 ```rust
-claude_profile::account::switch_account( "personal" )?;
+let credential_store = claude_profile::PersistPaths::new()?.credential_store();
+let paths            = claude_profile::ClaudePaths::new().expect( "HOME must be set" );
+claude_profile::account::switch_account( "personal@home.com", &credential_store, &paths )?;
 ```
 
 Account save, list, and delete complete the lifecycle. Save is a copy. Delete is a remove
@@ -107,7 +109,7 @@ about credentials. The credential crate knows nothing about execution.
 ## Where the Crate Stands
 
 All four library modules — `account`, `token`, `paths`, `persist` — are implemented and
-fully tested. The CLI binary layer adds `adapter`, `output`, and `commands` (9 commands
+fully tested. The CLI binary layer adds `adapter`, `output`, and `commands` (10 commands
 behind the `enabled` feature). Functional requirements live in [`docs/feature/`](docs/feature/) (FR-6 through FR-18);
 each doc instance maps to named tests via Cross-References sections. All tests pass. No clippy warnings.
 
@@ -121,15 +123,15 @@ That decision logic now lives in the library, not in every caller:
 
 ```rust
 // Before (repeated in every caller):
-let candidate = account::list()?
+let candidate = account::list( &credential_store )?
     .into_iter()
     .filter( | a | !a.is_active )
     .max_by_key( | a | a.expires_at_ms )
     .ok_or_else( || /* no accounts available */ )?;
-account::switch_account( &candidate.name )?;
+account::switch_account( &candidate.name, &credential_store, &paths )?;
 
 // After (FR-13):
-account::auto_rotate()?;  // returns the name of the account switched to
+account::auto_rotate( &credential_store, &paths )?;  // returns the name switched to
 ```
 
 `auto_rotate()` is FR-13, implemented in `account.rs`. It completes the

@@ -6,8 +6,8 @@
 |---|---------|---------|--------|---------|
 | 1 | `.` | Show help information (hidden dot-shorthand) | 0 | `clp .` |
 | 2 | `.help` | Display command reference and usage examples | 0 | `clp .help` |
-| 3 | `.account.list` | List all saved accounts with subscription type and token state | 2 | `clp .account.list` |
-| 4 | `.account.status` | Show account name and token state; optionally query a named account | 3 | `clp .account.status name::alice@acme.com` |
+| 3 | `.account.list` | List all accounts; or show a single named account (same as `.account.status name::`) | 3 | `clp .account.list` |
+| 4 | `.account.status` | Show active account status; optionally query a named account | 3 | `clp .account.status name::alice@acme.com` |
 | 5 | `.account.save` | Save current credentials as a named account profile | 2 | `clp .account.save name::alice@acme.com` |
 | 6 | `.account.switch` | Switch active account by name with atomic credential rotation | 2 | `clp .account.switch name::alice@home.com` |
 | 7 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::alice@oldco.com` |
@@ -35,18 +35,18 @@
 | Count | Commands |
 |-------|----------|
 | 0 | `.`, `.help` |
-| 2 | `.account.list`, `.account.save`, `.account.switch`, `.account.delete`, `.paths`, `.usage` |
-| 3 | `.account.status`, `.token.status`, `.account.limits` |
+| 2 | `.account.save`, `.account.switch`, `.account.delete`, `.paths`, `.usage` |
+| 3 | `.account.list`, `.account.status`, `.token.status`, `.account.limits` |
 | 10 | `.credentials.status` |
 
 ---
 
 ### Command :: 3. `.account.list`
 
-Enumerates all credential snapshots in the credential store and displays name, subscription type, rate-limit tier, token expiry, and active marker. Use this to see which accounts are available before switching.
+Without `name::`: enumerates all credential snapshots in the credential store and displays name, subscription type, rate-limit tier, token expiry, and active marker. With `name::EMAIL`: shows a single named account's status — identical output to `.account.status name::EMAIL`. Both commands share the same single-account display path.
 
--- **Parameters:** [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
--- **Exit:** 0 (success) | 2 (runtime: accounts dir unreadable)
+-- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
+-- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
 
@@ -54,10 +54,13 @@ Enumerates all credential snapshots in the credential store and displays name, s
 clp .account.list
 clp .account.list v::0
 clp .account.list format::json
+clp .account.list name::alice@acme.com
+clp .account.list name::alice@home.com v::2
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
+| `name::` | [`AccountName`] | *(omit to list all)* | Show a single named account instead of listing all |
 | `v::` | [`VerbosityLevel`] | `1` | Output detail level |
 | `format::` | [`OutputFormat`] | `text` | Output format |
 
@@ -74,7 +77,20 @@ clp .account.list v::0
 
 clp .account.list format::json
 # [{"name":"alice@acme.com","subscription_type":"max","rate_limit_tier":"standard","expires_at_ms":1711234567000,"is_active":true},...]
+
+clp .account.list name::alice@home.com
+# Account: alice@home.com
+# Token:   expired
+# Sub:     pro
+# Tier:    standard
+# Email:   N/A
+# Org:     N/A
 ```
+
+**Notes:**
+- Without `name::`: shows all accounts; `v::0` → bare names, `v::1` → name + active marker, `v::2` → full metadata.
+- With `name::`: single-account view; output is identical to `.account.status name::EMAIL` at the same verbosity.
+- Reports exit 1 for invalid `name::` value; exit 2 if the named account is not found.
 
 ---
 
@@ -439,7 +455,7 @@ clp .credentials.status format::json
 **Notes:**
 - Field-presence params only affect text output. `format::json` always includes all fields regardless of `sub::`, `tier::`, etc.
 - `account::` reads the `_active` marker; shows `N/A` on fresh installs without an account store.
-- `saved::` counts `*.credentials.json` files in the accounts directory; shows `0` when the directory is absent.
+- `saved::` counts `*.credentials.json` files in the credential store; shows `0` when the credential store is absent.
 
 ---
 

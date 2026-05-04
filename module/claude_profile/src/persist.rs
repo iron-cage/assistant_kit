@@ -72,6 +72,11 @@ impl PersistPaths
   ///
   /// This is the canonical location for saved account credential files.
   /// Computed independently from `base()` so the two paths can evolve separately.
+  ///
+  /// # Panics
+  ///
+  /// Panics if `base` has fewer than two parent components (should never happen
+  /// for valid `PersistPaths` constructed via [`PersistPaths::new`]).
   #[ must_use ]
   #[ inline ]
   pub fn credential_store( &self ) -> PathBuf

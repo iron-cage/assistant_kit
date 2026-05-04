@@ -43,5 +43,8 @@
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/persist.rs` | `PersistPaths` struct, resolution chain, `base()`, `ensure_exists()` |
-| test | `tests/cli/persist_test.rs::p01–p15` | Full resolution chain, idempotency, error cases |
+| source | `src/persist.rs` | `PersistPaths` struct, resolution chain, `base()`, `credential_store()`, `ensure_exists()` |
+| test | `tests/cli/persist_test.rs::p01–p15` | Resolution chain (base()), idempotency, error cases (AC-01 through AC-05) |
+| test | `tests/cli/persist_test.rs::p16` | `credential_store()` under `$PRO` — path starts with `$PRO` (AC-06) |
+| test | `tests/cli/persist_test.rs::p17` | `credential_store()` path ends with `.persistent/claude/credential` under `$PRO` (AC-06) |
+| test | `tests/cli/persist_test.rs::p18` | `credential_store()` path ends with `.persistent/claude/credential` under `$HOME` (AC-07) |

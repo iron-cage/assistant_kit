@@ -122,12 +122,24 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let nam = || reg_arg_opt( "name",      Kind::String  );
   let thr = || reg_arg_opt( "threshold", Kind::Integer );
   let bf  = | nm : &'static str | reg_arg_opt( nm, Kind::Boolean );
+  let bfd = | nm : &'static str, desc : &'static str |
+    reg_arg_opt( nm, Kind::Boolean ).with_description( desc );
 
   reg_cmd( registry, ".credentials.status", "Show live credential metadata without account store dependency",
-    vec![ fmt(), bf( "account" ), bf( "sub" ), bf( "tier" ), bf( "token" ),
-          bf( "expires" ), bf( "email" ), bf( "org" ), bf( "file" ), bf( "saved" ) ],
+    vec![
+      reg_arg_opt( "format", Kind::String ).with_description( "Output format: `text` (default) or `json`" ),
+      bfd( "account", "Show account name from `_active` marker (default on)"   ),
+      bfd( "sub",     "Show subscription type from credentials (default on)"    ),
+      bfd( "tier",    "Show rate-limit tier from credentials (default on)"      ),
+      bfd( "token",   "Show OAuth token validity state (default on)"            ),
+      bfd( "expires", "Show token expiry time (default on)"                     ),
+      bfd( "email",   "Show email address from `.claude.json` (default on)"     ),
+      bfd( "org",     "Show organisation name from `.claude.json` (default on)" ),
+      bfd( "file",    "Show path to `.credentials.json` file (opt-in)"          ),
+      bfd( "saved",   "Show count of saved accounts in credential store (opt-in)" ),
+    ],
     Box::new( credentials_status_routine ) );
-  reg_cmd( registry, ".account.list",   "List all saved accounts with subscription type and token state", vec![ v(), fmt() ],        Box::new( account_list_routine   ) );
+  reg_cmd( registry, ".account.list",   "List all saved accounts; or show a single named account", vec![ nam(), v(), fmt() ], Box::new( account_list_routine   ) );
   reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), v(), fmt() ],   Box::new( account_limits_routine ) );
   reg_cmd( registry, ".account.status", "Show active account name and token state; optionally query a named account", vec![ nam(), v(), fmt() ], Box::new( account_status_routine ) );
   reg_cmd( registry, ".account.save",   "Save current credentials as a named account profile",            vec![ nam(), dry() ],      Box::new( account_save_routine   ) );
@@ -243,8 +255,8 @@ mod cli
     println!( "Manage Claude Code account credentials and token state." );
     println!();
     println!( "Commands:" );
-    println!( "  .account.list        [v::0-2] [format::text|json]   List all saved accounts" );
-    println!( "  .account.status      [v::0-2] [format::text|json]   Show active account and token state" );
+    println!( "  .account.list        [name::EMAIL] [v::0-2] [format::text|json]   List all accounts; single with name::" );
+    println!( "  .account.status      [name::EMAIL] [v::0-2] [format::text|json]   Show active or named account status" );
     println!( "  .account.save        name::EMAIL [dry::bool]       Save current credentials as named account" );
     println!( "  .account.switch      name::EMAIL [dry::bool]       Switch active account" );
     println!( "  .account.delete      name::EMAIL [dry::bool]       Delete a saved account" );

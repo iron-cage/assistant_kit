@@ -34,6 +34,10 @@
 //! | al12 | `al12_list_home_empty_exits_2` | HOME="" → exit 2 | N |
 //! | al13 | `al13_list_sorted_alphabetically` | multiple accounts → sorted by name | P |
 //! | al14 | `al14_list_format_xml_exits_1` | `format::xml` → exit 1 | N |
+//! | al15 | `al15_list_name_single_account_status_view` | `name::EMAIL` → single-account status output | P |
+//! | al16 | `al16_list_name_not_found_exits_2` | `name::` not in store → exit 2 | N |
+//! | al17 | `al17_list_name_invalid_exits_1` | `name::notanemail` → exit 1 | N |
+//! | al18 | `al18_list_name_matches_account_status` | `list name::X` output == `status name::X` output | P |
 //!
 //! ### ASTAT — Account Status
 //!
@@ -332,6 +336,73 @@ fn al14_list_format_xml_exits_1()
 
   let out = run_cs_with_env( &[ ".account.list", "format::xml" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
+}
+
+#[ test ]
+fn al15_list_name_single_account_status_view()
+{
+  // al15: .account.list name::X → single-account status view (Account:/Token: labels).
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".account.list", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "alice@acme.com" ), "must show account name, got:\n{text}" );
+  assert!( text.contains( "Account:" ), "must show Account: label, got:\n{text}" );
+  assert!( text.contains( "Token:" ), "must show Token: label, got:\n{text}" );
+  assert!( text.contains( "valid" ), "must show valid token state, got:\n{text}" );
+}
+
+#[ test ]
+fn al16_list_name_not_found_exits_2()
+{
+  // al16: .account.list name::ghost@example.com when that account doesn't exist → exit 2.
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env( &[ ".account.list", "name::ghost@example.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!( err.contains( "not found" ) || err.contains( "ghost@example.com" ),
+    "must report account not found, got:\n{err}" );
+}
+
+#[ test ]
+fn al17_list_name_invalid_exits_1()
+{
+  // al17: .account.list name::notanemail (not an email address) → exit 1.
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  std::fs::create_dir_all( dir.path().join( ".claude" ) ).unwrap();
+
+  let out = run_cs_with_env( &[ ".account.list", "name::notanemail" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+#[ test ]
+fn al18_list_name_matches_account_status()
+{
+  // al18: .account.list name::X and .account.status name::X produce identical output.
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  let env = &[ ( "HOME", home ) ];
+  let list_out   = run_cs_with_env( &[ ".account.list",   "name::alice@home.com" ], env );
+  let status_out = run_cs_with_env( &[ ".account.status", "name::alice@home.com" ], env );
+  assert_exit( &list_out,   0 );
+  assert_exit( &status_out, 0 );
+  assert_eq!(
+    stdout( &list_out ),
+    stdout( &status_out ),
+    ".account.list name:: and .account.status name:: must produce identical output",
+  );
 }
 
 // ── ASTAT: Account Status ─────────────────────────────────────────────────────

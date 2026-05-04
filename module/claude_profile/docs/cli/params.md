@@ -293,13 +293,13 @@ file::1   → File:    /home/user/.claude/.credentials.json
 
 ### Parameter :: 14. `saved::`
 
-Controls whether the saved account count line appears in `.credentials.status` output. Opt-in (default `0`). Counts `*.credentials.json` files in the accounts directory.
+Controls whether the saved account count line appears in `.credentials.status` output. Opt-in (default `0`). Counts `*.credentials.json` files in the credential store.
 
 - **Type:** `bool`
 - **Default:** `0` (hidden)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
 - **Commands:** [`.credentials.status`](commands.md#command--11-credentialsstatus)
-- **Purpose:** Shows how many credential profiles are saved in the account store; shows `0` when the accounts directory is absent.
+- **Purpose:** Shows how many credential profiles are saved in the credential store; shows `0` when the credential store is absent.
 - **Group:** Field Presence
 
 **Examples:**

@@ -20,9 +20,9 @@ Claude Code має внутрішню файлову систему, яку ні
   settings.json
 
 $PRO/.persistent/claude/credential/   ← або $HOME/.persistent/claude/credential/
-  work.credentials.json           ← іменований знімок облікових даних
-  personal.credentials.json
-  _active                         ← «work» ← один текстовий файл, одна відповідальність
+  work@acme.com.credentials.json  ← іменований знімок облікових даних
+  personal@home.com.credentials.json
+  _active                         ← «work@acme.com» ← один текстовий файл, одна відповідальність
 ```
 
 Кожен шлях у цьому дереві, що має значення для інструментів, обчислюється через
@@ -53,7 +53,9 @@ std::fs::write( &marker, name )?;       // оновлення _active
 однорядковий виклик:
 
 ```rust
-claude_profile::account::switch_account( "personal" )?;
+let credential_store = claude_profile::PersistPaths::new()?.credential_store();
+let paths            = claude_profile::ClaudePaths::new().expect( "HOME must be set" );
+claude_profile::account::switch_account( "personal@home.com", &credential_store, &paths )?;
 ```
 
 Збереження, перелік та видалення облікових записів завершують життєвий цикл. Збереження — це
@@ -105,7 +107,7 @@ RESPONSIBILITY VIOLATION: claude_profile MUST NOT import std::process::Command
 ## Поточний стан
 
 Усі чотири бібліотечні модулі — `account`, `token`, `paths`, `persist` — реалізовані та повністю
-протестовані. Бінарний шар CLI додає `adapter`, `output` і `commands` (9 команд за
+протестовані. Бінарний шар CLI додає `adapter`, `output` і `commands` (10 команд за
 фічею `enabled`). Функціональні вимоги знаходяться в [`docs/feature/`](docs/feature/) (FR-6 до FR-18);
 кожен екземпляр документа пов'язаний з тестами через секції Cross-References. Усі тести проходять. Нуль попереджень clippy.
 
@@ -119,15 +121,15 @@ RESPONSIBILITY VIOLATION: claude_profile MUST NOT import std::process::Command
 
 ```rust
 // До (повторюється у кожного клієнта):
-let candidate = account::list()?
+let candidate = account::list( &credential_store )?
     .into_iter()
     .filter( | a | !a.is_active )
     .max_by_key( | a | a.expires_at_ms )
     .ok_or_else( || /* немає доступних облікових записів */ )?;
-account::switch_account( &candidate.name )?;
+account::switch_account( &candidate.name, &credential_store, &paths )?;
 
 // Після (FR-13):
-account::auto_rotate()?;  // повертає ім'я облікового запису, на який переключились
+account::auto_rotate( &credential_store, &paths )?;  // повертає ім'я облікового запису, на який переключились
 ```
 
 `auto_rotate()` — це FR-13, реалізована в `account.rs`. Вона завершує обіцянку
