@@ -12,9 +12,20 @@ clp .token.status
 # expiring soon — 12m remaining
 
 # See what's available
-clp .account.list
-# alice@acme.com <- active (max, standard, expires in 12m)
-# alice@home.com (pro, standard, expires in 4h2m)
+clp .accounts
+# alice@acme.com
+#   Active:  yes
+#   Sub:     max
+#   Tier:    default_claude_max_20x
+#   Expires: in 12m
+#   Org:     N/A
+#
+# alice@home.com
+#   Active:  no
+#   Sub:     pro
+#   Tier:    default_claude_pro
+#   Expires: in 4h 2m
+#   Org:     N/A
 
 # Switch to the account with more time
 clp .account.switch name::alice@home.com
@@ -44,9 +55,20 @@ clp .account.save name::alice@home.com
 # saved current credentials as 'alice@home.com'
 
 # Verify both are stored
-clp .account.list
-# alice@home.com <- active (pro, standard, expires in 5h59m)
-# alice@acme.com (max, standard, expires in 3h41m)
+clp .accounts
+# alice@home.com
+#   Active:  yes
+#   Sub:     pro
+#   Tier:    default_claude_pro
+#   Expires: in 5h 59m
+#   Org:     N/A
+#
+# alice@acme.com
+#   Active:  no
+#   Sub:     max
+#   Tier:    default_claude_max_20x
+#   Expires: in 3h 41m
+#   Org:     N/A
 ```
 
 **When to use:** First time setting up multi-account rotation on a machine.
@@ -85,11 +107,28 @@ esac
 Remove stale accounts that are no longer needed.
 
 ```bash
-# List all accounts
-clp .account.list v::2
-# alice@acme.com <- active (max, standard, expires in 2h10m)
-# alice@home.com (pro, standard, expired)
-# alice@oldco.com (free, standard, expired)
+# List all accounts with full metadata
+clp .accounts
+# alice@acme.com
+#   Active:  yes
+#   Sub:     max
+#   Tier:    default_claude_max_20x
+#   Expires: in 2h 10m
+#   Org:     N/A
+#
+# alice@home.com
+#   Active:  no
+#   Sub:     pro
+#   Tier:    default_claude_pro
+#   Expires: expired
+#   Org:     N/A
+#
+# alice@oldco.com
+#   Active:  no
+#   Sub:     free
+#   Tier:    default_claude_free
+#   Expires: expired
+#   Org:     N/A
 
 # Preview what delete would do
 clp .account.delete name::alice@oldco.com dry::1
@@ -126,13 +165,24 @@ clp .token.status v::2
 # valid — 2h47m remaining (expiresAt: 1711234567000, threshold: 3600s)
 
 # List all accounts with full metadata
-clp .account.list v::2
-# alice@acme.com <- active (max, standard, expires in 2h47m)
-# alice@home.com (pro, standard, expires in 1h3m)
+clp .accounts
+# alice@acme.com
+#   Active:  yes
+#   Sub:     max
+#   Tier:    default_claude_max_20x
+#   Expires: in 2h 47m
+#   Org:     N/A
+#
+# alice@home.com
+#   Active:  no
+#   Sub:     pro
+#   Tier:    default_claude_pro
+#   Expires: in 1h 3m
+#   Org:     N/A
 
 # Machine-readable snapshot for support tickets
 clp .paths format::json > /tmp/diag-paths.json
-clp .account.list format::json > /tmp/diag-accounts.json
+clp .accounts format::json > /tmp/diag-accounts.json
 clp .token.status format::json > /tmp/diag-token.json
 ```
 
@@ -165,12 +215,12 @@ clp .account.delete name::alice@oldco.com
 
 ### 7. Fresh Installation Credential Check
 
-Inspect live credentials on a machine where account management has not been initialized — `.account.status` would fail with "no active account linked".
+Inspect live credentials on a machine where account management has not been initialized — `.accounts` shows `(no accounts configured)` without error.
 
 ```bash
-# .account.status fails on machines with no account management set up
-clp .account.status
-# error: no active account linked — see `.credentials.status` for live credentials
+# .accounts shows empty store gracefully
+clp .accounts
+# (no accounts configured)
 
 # .credentials.status works without a credential store — shows 7 default-on fields
 clp .credentials.status
@@ -196,10 +246,14 @@ clp .account.save name::alice@example.com
 clp .account.switch name::alice@example.com
 # switched to 'alice@example.com'
 
-# Now .account.status also works
-clp .account.status
-# Account: alice@example.com
-# Token:   valid
+# Now .accounts shows the new account
+clp .accounts
+# alice@example.com
+#   Active:  yes
+#   Sub:     pro
+#   Tier:    standard
+#   Expires: in 3h 42m
+#   Org:     Acme Corp
 ```
 
 **When to use:** Fresh Claude Code installations, CI/CD machines, or any environment where the credential store has never been initialized.

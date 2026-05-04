@@ -10,9 +10,8 @@
 //!
 //! | Module | Domain | Test Series |
 //! |--------|--------|-------------|
-//! | `account_list_status_test` | help, account list, account status | H, AL, ASTAT |
+//! | `accounts_test` | help, `.accounts` command | H, ACC |
 //! | `account_mutations_test` | account save, switch, delete | AS, AW, AD |
-//! | `account_status_name_test` | account status by name | ASTNAME |
 //! | `token_paths_test` | token status, paths | TS, P |
 //! | `cross_cutting_test` | idempotency, param order, exit codes, env | X, E |
 //! | `usage_test` | .usage command | U |
@@ -33,8 +32,8 @@
 #[ path = "cli/helpers.rs" ]
 pub mod helpers;
 
-#[ path = "cli/account_list_status_test.rs" ]
-mod account_list_status_test;
+#[ path = "cli/accounts_test.rs" ]
+mod accounts_test;
 
 #[ path = "cli/account_mutations_test.rs" ]
 mod account_mutations_test;
@@ -50,9 +49,6 @@ mod usage_test;
 
 #[ path = "cli/persist_test.rs" ]
 mod persist_test;
-
-#[ path = "cli/account_status_name_test.rs" ]
-mod account_status_name_test;
 
 #[ path = "cli/credentials_test.rs" ]
 mod credentials_test;

@@ -466,7 +466,7 @@ fn ad08_delete_then_list_absent()
 
   let _ = run_cs_with_env( &[ ".account.delete", "name::alice@oldco.com" ], &[ ( "HOME", home ) ] );
 
-  let out = run_cs_with_env( &[ ".account.list", "v::0" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".accounts", "active::0", "sub::0", "tier::0", "expires::0", "org::0" ], &[ ( "HOME", home ) ] );
   let text = stdout( &out );
   assert!( !text.contains( "alice@oldco.com" ), "deleted account must not appear in list, got:\n{text}" );
   assert!( text.contains( "keep@example.com" ), "kept account must still appear, got:\n{text}" );

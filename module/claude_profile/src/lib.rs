@@ -91,7 +91,7 @@ pub use persist::PersistPaths;
 #[ cfg( feature = "enabled" ) ]
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 10 commands (credentials status, account management including limits, token status, paths, usage).
+/// Registers 9 commands (credentials status, account management including limits, token status, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -105,9 +105,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   use commands::
   {
     credentials_status_routine,
-    account_list_routine,
+    accounts_routine,
     account_limits_routine,
-    account_status_routine,
     account_save_routine,
     account_switch_routine,
     account_delete_routine,
@@ -121,7 +120,6 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let dry = || reg_arg_opt( "dry",       Kind::Boolean );
   let nam = || reg_arg_opt( "name",      Kind::String  );
   let thr = || reg_arg_opt( "threshold", Kind::Integer );
-  let bf  = | nm : &'static str | reg_arg_opt( nm, Kind::Boolean );
   let bfd = | nm : &'static str, desc : &'static str |
     reg_arg_opt( nm, Kind::Boolean ).with_description( desc );
 
@@ -139,9 +137,18 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfd( "saved",   "Show count of saved accounts in credential store (opt-in)" ),
     ],
     Box::new( credentials_status_routine ) );
-  reg_cmd( registry, ".account.list",   "List all saved accounts; or show a single named account", vec![ nam(), v(), fmt() ], Box::new( account_list_routine   ) );
-  reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), v(), fmt() ],   Box::new( account_limits_routine ) );
-  reg_cmd( registry, ".account.status", "Show active account name and token state; optionally query a named account", vec![ nam(), v(), fmt() ], Box::new( account_status_routine ) );
+  reg_cmd( registry, ".accounts",       "List all saved accounts with field-presence control",
+    vec![
+      nam(),
+      bfd( "active",  "Show active/inactive status per account (default on)"  ),
+      bfd( "sub",     "Show subscription type per account (default on)"        ),
+      bfd( "tier",    "Show rate-limit tier per account (default on)"          ),
+      bfd( "expires", "Show token expiry duration per account (default on)"    ),
+      bfd( "org",     "Show organisation name per account (default on)"        ),
+      fmt(),
+    ],
+    Box::new( accounts_routine ) );
+  reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), v(), fmt() ], Box::new( account_limits_routine ) );
   reg_cmd( registry, ".account.save",   "Save current credentials as a named account profile",            vec![ nam(), dry() ],      Box::new( account_save_routine   ) );
   reg_cmd( registry, ".account.switch", "Switch active account by name with atomic credential rotation",  vec![ nam(), dry() ],      Box::new( account_switch_routine ) );
   reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                  vec![ nam(), dry() ],      Box::new( account_delete_routine ) );
@@ -208,7 +215,7 @@ mod cli
 
   /// Register all `claude_profile` commands with their argument definitions and routines.
   ///
-  /// Delegates 10 shared commands to `claude_profile::register_commands()` and
+  /// Delegates 9 shared commands to `claude_profile::register_commands()` and
   /// adds the `.` (dot) hidden command inline (binary-specific).
   pub( super ) fn build_registry() -> CommandRegistry
   {
@@ -229,7 +236,7 @@ mod cli
 
     // `.help` is pre-registered by CommandRegistry::new() — do not register again.
 
-    // Register 10 shared commands (credentials, account, token, paths, usage).
+    // Register 9 shared commands (credentials, account, token, paths, usage).
     crate::register_commands( &mut registry );
 
     registry
@@ -255,31 +262,31 @@ mod cli
     println!( "Manage Claude Code account credentials and token state." );
     println!();
     println!( "Commands:" );
-    println!( "  .account.list        [name::EMAIL] [v::0-2] [format::text|json]   List all accounts; single with name::" );
-    println!( "  .account.status      [name::EMAIL] [v::0-2] [format::text|json]   Show active or named account status" );
-    println!( "  .account.save        name::EMAIL [dry::bool]       Save current credentials as named account" );
-    println!( "  .account.switch      name::EMAIL [dry::bool]       Switch active account" );
-    println!( "  .account.delete      name::EMAIL [dry::bool]       Delete a saved account" );
-    println!( "  .token.status        [v::0-2] [format::text|json]   Show OAuth token expiry status" );
-    println!( "  .paths               [v::0-2] [format::text|json]   Show all ~/.claude/ canonical paths" );
-    println!( "  .usage               [v::0-2] [format::text|json]   Show 7-day token usage summary" );
-    println!( "  .credentials.status  [format::text|json] [field::0|1] ...  Show live credentials (no account store needed)" );
+    println!( "  .accounts            [name::EMAIL] [active::0|1] [sub::0|1] [tier::0|1] [expires::0|1] [org::0|1] [format::text|json]   List accounts with field-presence control" );
+    println!( "  .account.save        name::EMAIL [dry::bool]                          Save current credentials as named account" );
+    println!( "  .account.switch      name::EMAIL [dry::bool]                          Switch active account" );
+    println!( "  .account.delete      name::EMAIL [dry::bool]                          Delete a saved account" );
+    println!( "  .token.status        [v::0-2] [format::text|json]                     Show OAuth token expiry status" );
+    println!( "  .paths               [v::0-2] [format::text|json]                     Show all ~/.claude/ canonical paths" );
+    println!( "  .usage               [v::0-2] [format::text|json]                     Show 7-day token usage summary" );
+    println!( "  .credentials.status  [format::text|json] [field::0|1] ...             Show live credentials (no account store needed)" );
+    println!( "  .account.limits      [name::EMAIL] [v::0-2] [format::text|json]       Show rate-limit utilization" );
     println!();
     println!( "Options:" );
-    println!( "  v::0-2              Verbosity level (default: 1)" );
     println!( "  format::text|json   Output format (default: text)" );
+    println!( "  v::0-2              Verbosity level (default: 1)" );
     println!( "  dry::bool           Preview without applying" );
-    println!( "  name::EMAIL        Account name" );
+    println!( "  name::EMAIL         Account name" );
     println!();
     println!( "Examples:" );
-    println!( "  {binary} .account.list" );
-    println!( "  {binary} .account.list v::2" );
+    println!( "  {binary} .accounts" );
+    println!( "  {binary} .accounts active::0 sub::0" );
+    println!( "  {binary} .accounts name::alice@acme.com" );
     println!( "  {binary} .account.switch name::alice@acme.com" );
     println!( "  {binary} .account.switch name::alice@acme.com dry::true" );
     println!( "  {binary} .token.status format::json" );
     println!( "  {binary} .paths v::2" );
     println!( "  {binary} .usage" );
-    println!( "  {binary} .usage v::2" );
     println!( "  {binary} .credentials.status" );
   }
 

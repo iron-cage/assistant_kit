@@ -11,7 +11,7 @@
 | `cli_integration_test.rs` | CLI binary integration: entry point for cli/ modules. |
 | `cli/` | Split integration test modules (help, accounts, token, paths, env, persist). |
 | `manual/` | Manual testing plan: live Claude Code account switching. |
-| `doc/` | Test-lens documentation: per-command, per-parameter, and per-group test case indices. |
+| `docs/` | Test-lens documentation: per-command, per-parameter, and per-group test case indices. |
 
 ## Scope
 
@@ -56,9 +56,8 @@ tests/
 ├── cli/
 │   ├── readme.md                         # integration submodule index
 │   ├── helpers.rs                        # shared binary runner + fixtures
-│   ├── account_list_status_test.rs       # help, account list, account status
+│   ├── accounts_test.rs                  # help output and .accounts command
 │   ├── account_mutations_test.rs         # account save, switch, delete
-│   ├── account_status_name_test.rs       # account status with name:: param
 │   ├── token_paths_test.rs               # token status + paths commands
 │   ├── cross_cutting_test.rs             # idempotency, param order, exit codes
 │   ├── usage_test.rs                     # .usage command tests
@@ -67,11 +66,12 @@ tests/
 │   └── account_limits_test.rs            # .account.limits error paths
 ├── manual/
 │   └── readme.md                         # manual testing plan
-└── doc/
-    ├── readme.md                         # test-lens doc index
+└── docs/
     └── cli/
         ├── readme.md                     # CLI test-lens index
-        └── testing/                      # per-command, per-param, per-group test case files
+        ├── command/                      # per-command test case files (00–11)
+        ├── param/                        # per-parameter test case files (01–05)
+        └── param_group/                  # per-group test case files (01–02)
 ```
 
 ## Domain Map
@@ -83,11 +83,9 @@ tests/
 | Path resolution (library) | `paths_tests.rs` | ClaudePaths construction and all path methods |
 | Library exports | `lib_test.rs` | COMMANDS_YAML, register_commands, command presence |
 | Adapter + output | `cli_adapter_test.rs` | argv_to_unilang_tokens, OutputOptions, json_escape, format_duration_secs |
-| Help CLI | `cli/account_list_status_test.rs` (H series) | --help, .help, no-args, unknown command |
-| Account list CLI | `cli/account_list_status_test.rs` (AL series) | list text/json, empty dir, sorted, format errors |
-| Account status CLI | `cli/account_list_status_test.rs` (ASTAT series) | status valid/expired/expiring, v0/v1/v2, json |
+| Help CLI | `cli/accounts_test.rs` (H series) | --help, .help, no-args, unknown command |
+| Accounts CLI | `cli/accounts_test.rs` (acc series) | list text/json, empty dir, sorted, field-presence, named-account |
 | Account save/switch/delete CLI | `cli/account_mutations_test.rs` | save, switch, delete with all edge cases |
-| Account status by name CLI | `cli/account_status_name_test.rs` | name:: param on .account.status |
 | Token status + paths CLI | `cli/token_paths_test.rs` | .token.status and .paths all verbosity/format |
 | Cross-cutting CLI | `cli/cross_cutting_test.rs` | idempotency, param order, exit code contracts, env |
 | Usage CLI | `cli/usage_test.rs` | .usage stats-cache parsing, formats, boundaries |

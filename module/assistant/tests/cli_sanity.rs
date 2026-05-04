@@ -124,9 +124,9 @@ fn ast_paths_command_accepted()
   );
 }
 
-/// Verify `.account.list` is routed through `ast`.
+/// Verify `.accounts` is routed through `ast`.
 ///
-/// `.account.list` belongs exclusively to `claude_profile` — `claude_version`
+/// `.accounts` belongs exclusively to `claude_profile` — `claude_version`
 /// does NOT register any `.account.*` commands. Profile owns all five account
 /// commands; manager owns version, processes, and settings only.
 #[test]
@@ -137,12 +137,12 @@ fn ast_account_list_command_accepted()
     assert_cmd::cargo::cargo_bin!( "ast" )
   )
     .env( "HOME", home.path() )
-    .args( [ ".account.list" ] )
+    .args( [ ".accounts" ] )
     .output()
     .unwrap();
   assert_eq!(
     out.status.code().unwrap_or( -1 ), 0,
-    "ast.account.list should exit 0; stderr: {}",
+    "ast .accounts should exit 0; stderr: {}",
     String::from_utf8_lossy( &out.stderr ),
   );
 }

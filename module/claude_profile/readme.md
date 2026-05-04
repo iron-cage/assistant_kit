@@ -104,7 +104,7 @@ println!( "sessions:         {}", p.sessions_dir().display() );
 Two names, same binary — both `claude_profile` and `clp` are installed:
 
 ```bash
-clp .account.list          # list saved accounts
+clp .accounts              # list saved accounts
 clp .usage                 # token usage statistics
 clp .paths                 # show ~/.claude/ canonical paths
 ```

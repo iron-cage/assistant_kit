@@ -32,7 +32,7 @@ mod enabled
   {
     let mut registry = CommandRegistry::new();
     claude_profile::register_commands( &mut registry );
-    assert!( registry.command( ".account.list" ).is_some(), ".account.list must be registered" );
+    assert!( registry.command( ".accounts" ).is_some(), ".accounts must be registered" );
     assert!( registry.command( ".usage" ).is_some(), ".usage must be registered" );
     assert!( registry.command( ".paths" ).is_some(), ".paths must be registered" );
   }
@@ -43,12 +43,12 @@ mod enabled
     let mut registry = CommandRegistry::new();
     claude_profile::register_commands( &mut registry );
     let expected = [
-      ".account.list",
+      ".accounts",
       ".account.limits",
-      ".account.status",
       ".account.save",
       ".account.switch",
       ".account.delete",
+      ".credentials.status",
       ".token.status",
       ".paths",
       ".usage",

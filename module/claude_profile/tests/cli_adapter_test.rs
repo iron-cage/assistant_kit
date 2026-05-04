@@ -113,8 +113,8 @@ mod adapter
   #[ test ]
   fn adapter_single_command()
   {
-    let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ ".account.list" ] ) ).unwrap();
-    assert_eq!( tokens, vec![ ".account.list" ] );
+    let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ ".accounts" ] ) ).unwrap();
+    assert_eq!( tokens, vec![ ".accounts" ] );
     assert!( !needs_help );
   }
 
@@ -366,7 +366,7 @@ mod adapter
   // ## Root Cause
   //
   // `claude_profile`'s adapter only checked `--help`/`-h` as argv[0].  It had
-  // no pre-scan for `.help` anywhere in argv, so `clp .account.list .help`
+  // no pre-scan for `.help` anywhere in argv, so `clp .accounts .help`
   // was parsed as a bare token after the command name and rejected with
   // "expected param::value syntax, got: '.help'" instead of showing help.
   //
@@ -390,14 +390,14 @@ mod adapter
   // ## Pitfall
   //
   // Adding `--help`/`-h` handling does NOT substitute for the pre-scan.
-  // `argv[0]` checks are too narrow: users type `clp .account.list .help` or
-  // `clp .account.list help` — the help token is not in position 0.
+  // `argv[0]` checks are too narrow: users type `clp .accounts .help` or
+  // `clp .accounts help` — the help token is not in position 0.
   // test_kind: bug_reproducer(issue-help-prescan)
   #[ test ]
   fn adapter_dot_help_in_second_position()
   {
     // A-31: `.help` after command name must route to `.help`, not error.
-    let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ ".account.list", ".help" ] ) ).unwrap();
+    let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ ".accounts", ".help" ] ) ).unwrap();
     assert_eq!( tokens, vec![ ".help" ] );
     assert!( needs_help );
   }
@@ -409,7 +409,7 @@ mod adapter
   #[ test ]
   fn adapter_bare_help_in_second_position()
   {
-    let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ ".account.list", "help" ] ) ).unwrap();
+    let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ ".accounts", "help" ] ) ).unwrap();
     assert_eq!( tokens, vec![ ".help" ] );
     assert!( needs_help );
   }

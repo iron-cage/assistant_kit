@@ -8,7 +8,7 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 |---|-------------|------------|--------|
 | 1 | `format::json` overrides `verbosity::` | `format::`, `verbosity::` | JSON output includes all fields regardless of verbosity level |
 | 2 | `dry::` is orthogonal to output control | `dry::`, `verbosity::`, `format::` | Dry-run mode applies to mutation; does not affect output formatting |
-| 3 | `format::json` overrides field-presence params | `format::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `org::`, `file::`, `saved::` | JSON output includes all fields regardless of field-presence param values |
+| 3 | `format::json` overrides field-presence params | `format::`, `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `org::`, `file::`, `saved::` | JSON output includes all fields regardless of field-presence param values |
 
 ---
 
@@ -20,7 +20,7 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 
 **Rationale:** JSON consumers rely on stable schemas; omitting fields based on verbosity would break pipeline consumers that expect consistent structure.
 
-**Commands affected:** All 6 Output Control commands — [`.account.list`](commands.md#command--3-accountlist), [`.account.status`](commands.md#command--4-accountstatus), [`.token.status`](commands.md#command--8-tokenstatus), [`.paths`](commands.md#command--9-paths), [`.usage`](commands.md#command--10-usage), [`.account.limits`](commands.md#command--12-accountlimits)
+**Commands affected:** [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.account.limits`](commands.md#command--11-accountlimits)
 
 **Examples:**
 
@@ -44,26 +44,30 @@ clp .token.status v::0
 
 **Rationale:** Mutation commands produce single fixed-line confirmation messages, not parameterized output; the Output Control parameters have no effect on them. The two concerns — execution mode and output formatting — are fully independent.
 
-**Commands affected:** [`.account.save`](commands.md#command--5-accountsave), [`.account.switch`](commands.md#command--6-accountswitch), [`.account.delete`](commands.md#command--7-accountdelete)
+**Commands affected:** [`.account.save`](commands.md#command--4-accountsave), [`.account.switch`](commands.md#command--5-accountswitch), [`.account.delete`](commands.md#command--6-accountdelete)
 
 ---
 
 ### Interaction :: 3. `format::json` overrides field-presence params
 
-**Parameters:** [`format::`](params.md#parameter--3-format), [`account::`](params.md#parameter--6-account), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`token::`](params.md#parameter--9-token), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`org::`](params.md#parameter--12-org), [`file::`](params.md#parameter--13-file), [`saved::`](params.md#parameter--14-saved)
+**Parameters:** [`format::`](params.md#parameter--3-format), [`active::`](params.md#parameter--15-active), [`account::`](params.md#parameter--6-account), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`token::`](params.md#parameter--9-token), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`org::`](params.md#parameter--12-org), [`file::`](params.md#parameter--13-file), [`saved::`](params.md#parameter--14-saved)
 
-**Effect:** When `format::json` is specified on `.credentials.status`, the JSON output always includes all fields (subscription, tier, token, expires_in_secs, email, org, account, file, saved) regardless of the field-presence param values. Setting `sub::0` or `file::0` only suppresses those fields in text output, not in JSON.
+**Effect:** When `format::json` is specified on `.accounts` or `.credentials.status`, the JSON output always includes all fields regardless of field-presence param values. Setting `sub::0` or `active::0` only suppresses those fields in text output, not in JSON.
 
 **Rationale:** JSON consumers rely on stable schemas; selectively omitting fields based on presence params would break pipeline consumers that expect consistent structure. The field-presence params are a text-output formatting concern, not a data-selection concern.
 
-**Commands affected:** [`.credentials.status`](commands.md#command--11-credentialsstatus)
+**Commands affected:** [`.accounts`](commands.md#command--3-accounts), [`.credentials.status`](commands.md#command--10-credentialsstatus)
 
 **Examples:**
 
 ```bash
-# sub::0 suppresses Sub: in text, but JSON still has "subscription"
-clp .credentials.status sub::0 format::json
-# {"subscription":"max","tier":"...","token":"valid",...}  ← subscription still present
+# sub::0 suppresses Sub: in text, but JSON still has "subscription_type"
+clp .accounts sub::0 format::json
+# [{"name":"alice@acme.com","is_active":true,"subscription_type":"max",...}]  ← subscription_type still present
+
+# active::0 suppresses Active: in text, but JSON still has "is_active"
+clp .accounts active::0 format::json
+# [{"name":"alice@acme.com","is_active":true,...}]  ← is_active still present
 
 # file::0 (default) suppresses File: in text, but JSON always includes "file"
 clp .credentials.status format::json

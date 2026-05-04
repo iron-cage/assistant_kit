@@ -124,7 +124,7 @@ fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> ErrorData
 
 /// Read subscription type, rate limit tier, email, and org from live credential files.
 ///
-/// Called by both `status_active()` (at `v::1`+) and `credentials_status_routine()` (always).
+/// Called by `credentials_status_routine()` to read subscription, tier, email, and org.
 /// Gracefully returns `"N/A"` for any absent or empty field.
 // Fix(issue-empty-field-blank):
 // Root cause: `Option::unwrap_or_else` only fires on `None`, not `Some("")`. Empty strings
@@ -256,35 +256,140 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
     OutputFormat::Text =>
     {
       let mut out = String::new();
-      if show_account { let _ = write!( out, "Account: {account}\n" ); }
-      if show_sub     { let _ = write!( out, "Sub:     {sub}\n"     ); }
-      if show_tier    { let _ = write!( out, "Tier:    {tier}\n"    ); }
-      if show_token   { let _ = write!( out, "Token:   {tok}\n"     ); }
-      if show_expires { let _ = write!( out, "Expires: {exp}\n"     ); }
-      if show_email   { let _ = write!( out, "Email:   {email}\n"   ); }
-      if show_org     { let _ = write!( out, "Org:     {org}\n"     ); }
-      if show_file    { let _ = write!( out, "File:    {file_path}\n" ); }
-      if show_saved   { let _ = write!( out, "Saved:   {saved} account(s)\n" ); }
+      if show_account { let _ = writeln!( out, "Account: {account}" ); }
+      if show_sub     { let _ = writeln!( out, "Sub:     {sub}"     ); }
+      if show_tier    { let _ = writeln!( out, "Tier:    {tier}"    ); }
+      if show_token   { let _ = writeln!( out, "Token:   {tok}"     ); }
+      if show_expires { let _ = writeln!( out, "Expires: {exp}"     ); }
+      if show_email   { let _ = writeln!( out, "Email:   {email}"   ); }
+      if show_org     { let _ = writeln!( out, "Org:     {org}"     ); }
+      if show_file    { let _ = writeln!( out, "File:    {file_path}" ); }
+      if show_saved   { let _ = writeln!( out, "Saved:   {saved} account(s)" ); }
       out
     }
   };
   Ok( OutputData::new( content, "text" ) )
 }
 
-/// Default behavior for `account_view_routine` when no `name::` is given.
-enum DefaultSelection { ListAll, StatusActive }
-
-/// Enumerate all accounts; the list-all path for `.account.list`.
+/// Render an account list in text format with field-presence control.
 ///
-/// - `v::0` — bare name per line.
-/// - `v::1` (default) — `name{ *} (sub, expiry)` per line.
-/// - `v::2` — `name{ <- active} (sub, tier, expiry)` per line.
-/// - Empty store → advisory message, exit 0.
-fn list_all( opts : OutputOptions, credential_store : std::path::PathBuf ) -> Result< OutputData, ErrorData >
+/// Returns `"(no accounts configured)\n"` when `accounts` is empty.
+/// When any field flag is `true`, each account block is followed by its fields
+/// and separated from the next account by a blank line.
+#[ allow( clippy::fn_params_excessive_bools ) ]
+#[ inline ]
+fn render_accounts_text(
+  accounts     : &[ &crate::account::Account ],
+  show_active  : bool,
+  show_sub     : bool,
+  show_tier    : bool,
+  show_expires : bool,
+  show_org     : bool,
+) -> String
 {
-  let accounts = crate::account::list( &credential_store )
-    .map_err( |e| io_err_to_error_data( &e, "account list" ) )?;
+  if accounts.is_empty() { return "(no accounts configured)\n".to_string(); }
+  let any_field = show_active || show_sub || show_tier || show_expires || show_org;
+  let mut out   = String::new();
+  let last_idx  = accounts.len() - 1;
+  for ( idx, a ) in accounts.iter().enumerate()
+  {
+    out.push_str( &a.name );
+    out.push( '\n' );
+    if any_field
+    {
+      if show_active
+      {
+        let active_str = if a.is_active { "yes" } else { "no" };
+        let _ = writeln!( out, "  Active:  {active_str}" );
+      }
+      if show_sub
+      {
+        let sub = if a.subscription_type.is_empty() { "N/A" } else { &a.subscription_type };
+        let _ = writeln!( out, "  Sub:     {sub}" );
+      }
+      if show_tier
+      {
+        let tier = if a.rate_limit_tier.is_empty() { "N/A" } else { &a.rate_limit_tier };
+        let _ = writeln!( out, "  Tier:    {tier}" );
+      }
+      if show_expires
+      {
+        let ts  = token_status_from_ms( a.expires_at_ms );
+        let exp = match &ts
+        {
+          crate::token::TokenStatus::Valid { expires_in }
+          | crate::token::TokenStatus::ExpiringSoon { expires_in } =>
+          {
+            let h = expires_in.as_secs() / 3600;
+            let m = ( expires_in.as_secs() % 3600 ) / 60;
+            format!( "in {h}h {m}m" )
+          }
+          crate::token::TokenStatus::Expired => "expired".to_string(),
+        };
+        let _ = writeln!( out, "  Expires: {exp}" );
+      }
+      if show_org { let _ = writeln!( out, "  Org:     N/A" ); }
+      if idx < last_idx { out.push( '\n' ); }
+    }
+  }
+  out
+}
 
+/// `.accounts` — list all saved accounts with field-presence control.
+///
+/// Without `name::`: lists every account in the credential store as an indented
+/// key-value block, with a blank line between accounts when any field is shown.
+/// With `name::EMAIL`: shows that single account's block only.
+/// Field-presence params (`active`, `sub`, `tier`, `expires`, `org`) are all default-on.
+/// `format::json` always includes all fields regardless of presence params.
+///
+/// # Errors
+///
+/// Returns `ErrorData` if `name::` is invalid (exit 1),
+/// the named account is not found (exit 2), or the credential store is unreadable.
+#[ inline ]
+pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  let opts             = OutputOptions::from_cmd( &cmd )?;
+  let credential_store = require_credential_store()?;
+
+  let name_arg = match cmd.arguments.get( "name" )
+  {
+    Some( Value::String( s ) ) => s.clone(),
+    _                          => String::new(),
+  };
+
+  if !name_arg.is_empty()
+  {
+    crate::account::validate_name( &name_arg )
+      .map_err( |e| io_err_to_error_data( &e, "accounts" ) )?;
+  }
+
+  let all_accounts = crate::account::list( &credential_store )
+    .map_err( |e| io_err_to_error_data( &e, "accounts" ) )?;
+
+  let accounts : Vec< _ > = if name_arg.is_empty()
+  {
+    all_accounts.iter().collect()
+  }
+  else
+  {
+    let found : Vec< _ > = all_accounts.iter().filter( |a| a.name == name_arg ).collect();
+    if found.is_empty()
+    {
+      return Err( ErrorData::new(
+        ErrorCode::InternalError,
+        format!( "account '{name_arg}' not found" ),
+      ) );
+    }
+    found
+  };
+
+  let show_active  = matches!( cmd.arguments.get( "active"  ), Some( Value::Boolean( true ) ) | None );
+  let show_sub     = matches!( cmd.arguments.get( "sub"     ), Some( Value::Boolean( true ) ) | None );
+  let show_tier    = matches!( cmd.arguments.get( "tier"    ), Some( Value::Boolean( true ) ) | None );
+  let show_expires = matches!( cmd.arguments.get( "expires" ), Some( Value::Boolean( true ) ) | None );
+  let show_org     = matches!( cmd.arguments.get( "org"     ), Some( Value::Boolean( true ) ) | None );
   let content = match opts.format
   {
     OutputFormat::Json =>
@@ -295,15 +400,15 @@ fn list_all( opts : OutputOptions, credential_store : std::path::PathBuf ) -> Re
       }
       else
       {
-        let entries : Vec< String > = accounts.iter().map( | a |
+        let entries : Vec< String > = accounts.iter().map( |a|
         {
           format!(
-            r#"{{"name":"{}","subscription_type":"{}","rate_limit_tier":"{}","expires_at_ms":{},"is_active":{}}}"#,
+            "{{\"name\":\"{}\",\"is_active\":{},\"subscription_type\":\"{}\",\"rate_limit_tier\":\"{}\",\"expires_at_ms\":{},\"org\":\"N/A\"}}",
             json_escape( &a.name ),
+            a.is_active,
             json_escape( &a.subscription_type ),
             json_escape( &a.rate_limit_tier ),
             a.expires_at_ms,
-            a.is_active,
           )
         } ).collect();
         format!( "[{}]\n", entries.join( "," ) )
@@ -311,268 +416,10 @@ fn list_all( opts : OutputOptions, credential_store : std::path::PathBuf ) -> Re
     }
     OutputFormat::Text =>
     {
-      if accounts.is_empty()
-      {
-        "(no accounts configured)\n".to_string()
-      }
-      else
-      {
-        let mut out = String::new();
-        for a in &accounts
-        {
-          match opts.verbosity
-          {
-            0 =>
-            {
-              out.push_str( &a.name );
-              out.push( '\n' );
-            }
-            v =>
-            {
-              let ts     = token_status_from_ms( a.expires_at_ms );
-              let expiry = match &ts
-              {
-                crate::token::TokenStatus::Valid { expires_in }
-                | crate::token::TokenStatus::ExpiringSoon { expires_in } =>
-                {
-                  let h = expires_in.as_secs() / 3600;
-                  let m = ( expires_in.as_secs() % 3600 ) / 60;
-                  format!( "in {h}h {m}m" )
-                }
-                crate::token::TokenStatus::Expired => "expired".to_string(),
-              };
-              let sub = if a.subscription_type.is_empty() { "N/A" } else { &a.subscription_type };
-              if v >= 2
-              {
-                let active = if a.is_active { " <- active" } else { "" };
-                let tier   = if a.rate_limit_tier.is_empty() { "N/A" } else { &a.rate_limit_tier };
-                let _ = writeln!( out, "{}{} ({}, {}, {})", a.name, active, sub, tier, expiry );
-              }
-              else
-              {
-                let active = if a.is_active { " *" } else { "" };
-                let _ = writeln!( out, "{}{} ({}, {})", a.name, active, sub, expiry );
-              }
-            }
-          }
-        }
-        out
-      }
+      render_accounts_text( &accounts, show_active, show_sub, show_tier, show_expires, show_org )
     }
-  };
-
-  Ok( OutputData::new( content, "text" ) )
-}
-
-/// Shared routing for `.account.list` and `.account.status`.
-///
-/// When `name::` is given: both commands delegate to `status_named` — output is identical.
-/// When omitted: `default` selects `ListAll` or `StatusActive`.
-fn account_view_routine(
-  cmd     : VerifiedCommand,
-  default : DefaultSelection,
-) -> Result< OutputData, ErrorData >
-{
-  let opts             = OutputOptions::from_cmd( &cmd )?;
-  let paths            = require_claude_paths()?;
-  let credential_store = require_credential_store()?;
-
-  let name_arg = match cmd.arguments.get( "name" )
-  {
-    Some( Value::String( s ) ) => s.clone(),
-    _                          => String::new(),
-  };
-  if !name_arg.is_empty()
-  {
-    return status_named( opts, paths, &name_arg, credential_store );
-  }
-
-  match default
-  {
-    DefaultSelection::ListAll      => list_all( opts, credential_store ),
-    DefaultSelection::StatusActive => status_active( opts, paths, credential_store ),
-  }
-}
-
-/// `.account.list` — list all saved accounts, or show a single named account.
-///
-/// Without `name::`: enumerates all credential files. At `v::0`: bare names.
-/// At `v::1` (default): name, active marker (`*`), subscription type, expiry.
-/// At `v::2`: all fields including rate-limit tier. Empty store → advisory message, exit 0.
-/// With `name::EMAIL`: delegates to `status_named` — identical to `.account.status name::EMAIL`.
-///
-/// # Errors
-///
-/// Returns `ErrorData` if HOME is unset, `name::` is invalid (exit 1),
-/// the named account is not found (exit 2), or the account store is unreadable.
-#[ inline ]
-pub fn account_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
-{
-  account_view_routine( cmd, DefaultSelection::ListAll )
-}
-
-// ── .account.list / .account.status shared helpers ───────────────────────────
-
-/// Active-account path for `.account.status` (backward-compat, no `name::` given).
-fn status_active( opts : OutputOptions, paths : crate::ClaudePaths, credential_store : std::path::PathBuf ) -> Result< OutputData, ErrorData >
-{
-  let active_marker = credential_store.join( "_active" );
-  let account_name  = std::fs::read_to_string( &active_marker )
-  .ok()
-  .map( | s | s.trim().to_string() )
-  .filter( | s | !s.is_empty() )
-  .ok_or_else( || ErrorData::new(
-    ErrorCode::InternalError,
-    "no active account linked \u{2014} see `.credentials.status` for live credentials, or initialize with `.account.save name::X` + `.account.switch name::X`".to_string(),
-  ) )?;
-
-  let ts  = crate::token::status_with_threshold( crate::token::WARNING_THRESHOLD_SECS );
-  let tok = match &ts
-  {
-    Ok( crate::token::TokenStatus::Valid { .. } )                => "valid".to_string(),
-    Ok( crate::token::TokenStatus::ExpiringSoon { expires_in } ) =>
-      format!( "expiring in {}m", expires_in.as_secs() / 60 ),
-    Ok( crate::token::TokenStatus::Expired )                     => "expired".to_string(),
-    Err( _ )                                                     => "unknown".to_string(),
-  };
-  let exp = match &ts
-  {
-    Ok( crate::token::TokenStatus::Valid { expires_in }
-      | crate::token::TokenStatus::ExpiringSoon { expires_in } ) =>
-    {
-      let h = expires_in.as_secs() / 3600;
-      let m = ( expires_in.as_secs() % 3600 ) / 60;
-      format!( "in {h}h {m}m" )
-    }
-    Ok( crate::token::TokenStatus::Expired ) => "expired".to_string(),
-    Err( _ )                                 => "(unavailable)".to_string(),
-  };
-
-  // Delegate credential-reading to shared helper; see read_live_cred_meta for fix notes.
-  let ( sub, tier, email, org ) = if opts.verbosity >= 1
-  {
-    read_live_cred_meta( &paths )
-  }
-  else { ( String::new(), String::new(), String::new(), String::new() ) };
-
-  let content = match ( opts.format, opts.verbosity )
-  {
-    ( OutputFormat::Json, _ ) =>
-    {
-      let a = json_escape( &account_name );
-      let t = json_escape( &tok );
-      format!( "{{\"account\":\"{a}\",\"token\":\"{t}\"}}\n" )
-    }
-    ( OutputFormat::Text, 0 ) => format!( "{account_name}\n{tok}\n" ),
-    ( OutputFormat::Text, 1 ) =>
-      format!( "Account: {account_name}\nToken:   {tok}\nSub:     {sub}\nTier:    {tier}\nEmail:   {email}\nOrg:     {org}\n" ),
-    ( OutputFormat::Text, _ ) =>
-      format!( "Account: {account_name}\nToken:   {tok}\nSub:     {sub}\nTier:    {tier}\nExpires: {exp}\nEmail:   {email}\nOrg:     {org}\n" ),
   };
   Ok( OutputData::new( content, "text" ) )
-}
-
-/// Named-account path for `.account.status` (FR-16).
-fn status_named(
-  opts             : OutputOptions,
-  paths            : crate::ClaudePaths,
-  name_arg         : &str,
-  credential_store : std::path::PathBuf,
-) -> Result< OutputData, ErrorData >
-{
-  crate::account::validate_name( name_arg )
-    .map_err( |e| io_err_to_error_data( &e, "account status" ) )?;
-
-  let accounts = crate::account::list( &credential_store )
-    .map_err( |e| io_err_to_error_data( &e, "account status" ) )?;
-
-  let account = accounts.iter().find( | a | a.name == name_arg )
-    .ok_or_else( || ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "account '{name_arg}' not found" ),
-    ) )?;
-
-  // P2: use the named account's OWN expiresAt — never the live credentials file.
-  let ts  = token_status_from_ms( account.expires_at_ms );
-  let tok = match &ts
-  {
-    crate::token::TokenStatus::Valid { .. }                => "valid".to_string(),
-    crate::token::TokenStatus::ExpiringSoon { expires_in } =>
-      format!( "expiring in {}m", expires_in.as_secs() / 60 ),
-    crate::token::TokenStatus::Expired                     => "expired".to_string(),
-  };
-  let exp = match &ts
-  {
-    crate::token::TokenStatus::Valid { expires_in }
-    | crate::token::TokenStatus::ExpiringSoon { expires_in } =>
-    {
-      let h = expires_in.as_secs() / 3600;
-      let m = ( expires_in.as_secs() % 3600 ) / 60;
-      format!( "in {h}h {m}m" )
-    }
-    crate::token::TokenStatus::Expired => "expired".to_string(),
-  };
-
-  // P2: sub/tier come from the named account's own struct — no extra I/O needed.
-  // Normalize empty strings to "N/A": account::list() uses unwrap_or_default() which
-  // yields "" for missing fields, so empty and absent are indistinguishable here.
-  let sub  = if account.subscription_type.is_empty() { "N/A".to_string() }
-             else { account.subscription_type.clone() };
-  let tier = if account.rate_limit_tier.is_empty()   { "N/A".to_string() }
-             else { account.rate_limit_tier.clone()   };
-
-  // P3: email/org live in .claude.json (active session) — N/A for non-active accounts.
-  // Fix(issue-empty-field-blank-status-named):
-  // Root cause: parse_string_field returns Some("") for empty-string JSON fields;
-  //   unwrap_or_else fires only on None, so Some("") bypassed the "N/A" fallback.
-  // Pitfall: always pair .filter(|s| !s.is_empty()) before .unwrap_or_else for display.
-  let ( email, org ) = if account.is_active
-  {
-    let content = std::fs::read_to_string( paths.base().join( ".claude.json" ) )
-      .unwrap_or_default();
-    let email = crate::account::parse_string_field( &content, "emailAddress" )
-      .filter( | s | !s.is_empty() )
-      .unwrap_or_else( || "N/A".to_string() );
-    let org = crate::account::parse_string_field( &content, "organizationName" )
-      .filter( | s | !s.is_empty() )
-      .unwrap_or_else( || "N/A".to_string() );
-    ( email, org )
-  }
-  else
-  {
-    ( "N/A".to_string(), "N/A".to_string() )
-  };
-
-  let content = match ( opts.format, opts.verbosity )
-  {
-    ( OutputFormat::Json, _ ) =>
-    {
-      let a = json_escape( name_arg );
-      let t = json_escape( &tok );
-      format!( "{{\"account\":\"{a}\",\"token\":\"{t}\"}}\n" )
-    }
-    ( OutputFormat::Text, 0 ) => format!( "{name_arg}\n{tok}\n" ),
-    ( OutputFormat::Text, 1 ) =>
-      format!( "Account: {name_arg}\nToken:   {tok}\nSub:     {sub}\nTier:    {tier}\nEmail:   {email}\nOrg:     {org}\n" ),
-    ( OutputFormat::Text, _ ) =>
-      format!( "Account: {name_arg}\nToken:   {tok}\nSub:     {sub}\nTier:    {tier}\nExpires: {exp}\nEmail:   {email}\nOrg:     {org}\n" ),
-  };
-  Ok( OutputData::new( content, "text" ) )
-}
-
-/// `.account.status` — show the active account status, or a named account.
-///
-/// Without `name::`: reads `_active` marker and shows token state for the active account.
-/// With `name::` (FR-16): delegates to `status_named` — identical to `.account.list name::EMAIL`.
-///
-/// # Errors
-///
-/// Returns `ErrorData` if HOME is unset, `name::` is invalid (exit 1),
-/// the named account is not found (exit 2), or no active account is set.
-#[ inline ]
-pub fn account_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
-{
-  account_view_routine( cmd, DefaultSelection::StatusActive )
 }
 
 /// `.account.switch` — atomic credential rotation by name.

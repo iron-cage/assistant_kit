@@ -5,8 +5,8 @@
 | # | Type | Fundamental | Parameters | Commands |
 |---|------|-------------|------------|----------|
 | 1 | `AccountName` | `String` (newtype) | [`name::`](params.md#parameter--1-name) | 5 cmds |
-| 2 | `VerbosityLevel` | `u8` (newtype) | [`verbosity::`](params.md#parameter--2-verbosity--v) | 6 cmds |
-| 3 | `OutputFormat` | `enum` | [`format::`](params.md#parameter--3-format) | 7 cmds |
+| 2 | `VerbosityLevel` | `u8` (newtype) | [`verbosity::`](params.md#parameter--2-verbosity--v) | 4 cmds |
+| 3 | `OutputFormat` | `enum` | [`format::`](params.md#parameter--3-format) | 6 cmds |
 | 4 | `WarningThreshold` | `u64` (newtype) | [`threshold::`](params.md#parameter--4-threshold) | 1 cmd |
 
 **Total:** 4 types
@@ -53,7 +53,7 @@ impl AccountName
 - `get() -> &str` — raw string accessor
 - `to_credential_path( credential_store : &Path ) -> PathBuf` — resolves `{credential_store}/{name}.credentials.json`
 
-**Commands:** [`.account.status`](commands.md#command--4-accountstatus) *(optional)*, [`.account.save`](commands.md#command--5-accountsave), [`.account.switch`](commands.md#command--6-accountswitch), [`.account.delete`](commands.md#command--7-accountdelete), [`.account.limits`](commands.md#command--12-accountlimits) *(optional)*
+**Commands:** [`.accounts`](commands.md#command--3-accounts) *(optional)*, [`.account.save`](commands.md#command--4-accountsave), [`.account.switch`](commands.md#command--5-accountswitch), [`.account.delete`](commands.md#command--6-accountdelete), [`.account.limits`](commands.md#command--11-accountlimits) *(optional)*
 
 ---
 
@@ -98,7 +98,7 @@ impl VerbosityLevel
 - `is_verbose() -> bool` — true when level is 2
 - `includes_labels() -> bool` — true when level >= 1
 
-**Commands:** [`.account.list`](commands.md#command--3-accountlist), [`.account.status`](commands.md#command--4-accountstatus), [`.token.status`](commands.md#command--8-tokenstatus), [`.paths`](commands.md#command--9-paths), [`.usage`](commands.md#command--10-usage), [`.account.limits`](commands.md#command--12-accountlimits)
+**Commands:** [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.account.limits`](commands.md#command--11-accountlimits)
 
 ---
 
@@ -147,7 +147,7 @@ impl OutputFormat
 - `is_json() -> bool` — true for JSON format
 - `is_text() -> bool` — true for text format
 
-**Commands:** [`.account.list`](commands.md#command--3-accountlist), [`.account.status`](commands.md#command--4-accountstatus), [`.token.status`](commands.md#command--8-tokenstatus), [`.paths`](commands.md#command--9-paths), [`.usage`](commands.md#command--10-usage), [`.credentials.status`](commands.md#command--11-credentialsstatus), [`.account.limits`](commands.md#command--12-accountlimits)
+**Commands:** [`.accounts`](commands.md#command--3-accounts), [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.credentials.status`](commands.md#command--10-credentialsstatus), [`.account.limits`](commands.md#command--11-accountlimits)
 
 ---
 
@@ -188,4 +188,4 @@ impl WarningThreshold
 - `as_duration() -> Duration` — converts to `std::time::Duration`
 - `is_disabled() -> bool` — true when threshold is 0
 
-**Commands:** [`.token.status`](commands.md#command--8-tokenstatus)
+**Commands:** [`.token.status`](commands.md#command--7-tokenstatus)

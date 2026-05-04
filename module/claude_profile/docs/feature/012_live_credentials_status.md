@@ -60,4 +60,4 @@ Each output line is independently controlled by a boolean param. All default to 
 | test | `tests/cli/credentials_test.rs::cred01–cred07` | Account-store independence, field presence, JSON, N/A cases |
 | doc | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account-store-aware status command |
 | doc | [cli/commands.md](../cli/commands.md#command--11-credentialsstatus) | CLI command specification |
-| doc | [tests/doc/cli/testing/command/11_credentials_status.md](../../tests/doc/cli/testing/command/11_credentials_status.md) | Test case planning |
+| doc | [tests/docs/cli/command/10_credentials_status.md](../../tests/docs/cli/command/10_credentials_status.md) | Test case planning |

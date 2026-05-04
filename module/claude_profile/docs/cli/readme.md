@@ -5,7 +5,7 @@
 - **Purpose**: Document the clp command-line interface for Claude Code account management.
 - **Responsibility**: Reference documentation for commands, parameters, types, and workflows.
 - **In Scope**: commands, params, types, parameter groups, dictionary, workflows.
-- **Out of Scope**: Implementation design (→ `feature/`), quality constraints (→ `invariant/`), test planning (→ `tests/doc/cli/`).
+- **Out of Scope**: Implementation design (→ `feature/`), quality constraints (→ `invariant/`), test planning (→ `tests/docs/cli/`).
 
 Manage Claude Code account credentials: save, list, switch, and delete named profiles; check token status; discover ~/.claude/ file paths.
 
@@ -24,7 +24,7 @@ Manage Claude Code account credentials: save, list, switch, and delete named pro
 
 **Current Level:** L4 (Workflow Complete)
 **Design Completeness:** 100%
-**Implementation Status:** 100% (12/12 commands implemented)
+**Implementation Status:** 100% (11/11 commands implemented)
 
 ### Navigation
 
@@ -38,4 +38,4 @@ Manage Claude Code account credentials: save, list, switch, and delete named pro
 
 ### See Also
 
-- [tests/doc/cli/](../../tests/doc/cli/readme.md) — test case planning (commands, params, groups)
+- [tests/docs/cli/](../../tests/docs/cli/readme.md) — test case planning (commands, params, groups)

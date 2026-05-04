@@ -9,6 +9,7 @@ use error_tools::{ Error, Result };
 /// Param names that only accept boolean values (true/false/1/0).
 const BOOL_PARAMS : &[ &str ] = &[
   "dry",
+  "active",
   "account", "sub", "tier", "token", "expires", "email", "org", "file", "saved",
 ];
 
@@ -87,7 +88,7 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
   }
 
   // Step 1b: `.help` or bare `help` anywhere in argv → show help (FR-02).
-  // Must precede all other checks so `.account.list .help` shows help rather than
+  // Must precede all other checks so `.accounts .help` shows help rather than
   // erroring on the missing `::` separator.
   // Bare `help` (without the dot) is treated as a synonym so users following the
   // help footer's "Use '<command> help'" instruction get the expected output

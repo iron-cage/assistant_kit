@@ -45,26 +45,26 @@ use tempfile::TempDir;
 
 // ── lim01 ─────────────────────────────────────────────────────────────────────
 
-/// lim01 (IT-6): `name::ghost` — syntactically valid but non-existent account.
+/// lim01 (IT-6): `name::ghost@example.com` — syntactically valid but non-existent account.
 ///
 /// Root Cause: `account.limits` must distinguish "not found" (exit 2) from
-///   "invalid name chars" (exit 1); both use the `name::` parameter.
+///   "invalid name" (exit 1); both use the `name::` parameter.
 /// Why Not Caught: No test existed before lim01.
 /// Fix Applied: Existence check on `{name}.credentials.json` before data fetch.
 /// Prevention: Always add not-found tests for all `name::` parameters.
 /// Pitfall: Do not return exit 1 for "not found" — that code is reserved for
-///   usage errors (invalid characters), not runtime "record not found" errors.
+///   usage errors (invalid format), not runtime "record not found" errors.
 #[ test ]
 fn lim01_unknown_named_account_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  // Active credentials exist; `ghost` account does NOT.
+  // Active credentials exist; `ghost@example.com` account does NOT.
   write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
   std::fs::create_dir_all( dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ) ).unwrap();
 
   let out = run_cs_with_env(
-    &[ ".account.limits", "name::ghost" ],
+    &[ ".account.limits", "name::ghost@example.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 2 );
@@ -148,13 +148,13 @@ fn lim03_data_unavailable_exits_2_not_silent()
 
 // ── lim04 ─────────────────────────────────────────────────────────────────────
 
-/// lim04 (IT-9): `name::` with path-separator characters exits 1 (usage error).
+/// lim04 (IT-9): `name::` with non-email value exits 1 (usage error).
 ///
-/// Root Cause: Path-separator characters in account names would allow directory
-///   traversal; they must be caught at the parameter layer with exit 1, not
-///   treated as a "not found" runtime error (exit 2).
+/// Root Cause: Non-email account names are invalid at the parameter layer;
+///   they must be caught with exit 1, not treated as a "not found" runtime
+///   error (exit 2). Account names must be email addresses (local@domain).
 /// Why Not Caught: No test existed before lim04.
-/// Fix Applied: `account::validate_name()` rejects forbidden chars; mapped to
+/// Fix Applied: `account::validate_name()` rejects non-email names; mapped to
 ///   `ArgumentTypeMismatch` error code (exit 1) via `io_err_to_error_data`.
 /// Prevention: Any `name::` parameter must call `validate_name()` before any
 ///   filesystem operation, and the resulting error must map to exit 1.
@@ -174,14 +174,14 @@ fn lim04_invalid_name_chars_exits_1()
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.to_lowercase().contains( "invalid" ) || err.to_lowercase().contains( "character" ),
-    "exit 1 error must mention invalid/character, got:\n{err}",
+    err.to_lowercase().contains( "email" ) || err.to_lowercase().contains( "valid" ),
+    "exit 1 error must mention email/valid, got:\n{err}",
   );
 }
 
 // ── lim05 ─────────────────────────────────────────────────────────────────────
 
-/// lim05 (IT-6 variant): `name::work` when named account exists exits 2 with
+/// lim05 (IT-6 variant): `name::work@example.com` when named account exists exits 2 with
 /// data-unavailable (not not-found).
 ///
 /// Verifies that the not-found path and the data-unavailable path produce
@@ -191,12 +191,12 @@ fn lim05_existing_named_account_exits_2_with_data_unavailable()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  // Write a named account "work" (not active) and active credentials
+  // Write a named account "work@example.com" (not active) and active credentials
   write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
-  write_account( dir.path(), "work", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "work@example.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env(
-    &[ ".account.limits", "name::work" ],
+    &[ ".account.limits", "name::work@example.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 2 );

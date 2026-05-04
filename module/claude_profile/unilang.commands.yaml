@@ -2,50 +2,11 @@
 # Following unilang v0.35+ schema
 # Metadata-only export — not aggregated by build.rs; profile uses programmatic registration
 
-- name: ".account.list"
+- name: ".accounts"
   namespace: ""
-  description: "List all saved accounts with subscription type and token state"
-  hint: "List all accounts"
-  version: "1.0.0"
-  status: "stable"
-  aliases: []
-  tags: ["profile", "account"]
-  permissions: []
-  idempotent: true
-  deprecation_message: ""
-  http_method_hint: "GET"
-
-  arguments:
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level (0=minimal, 1=labeled, 2=verbose)"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
-    - name: "format"
-      kind: "String"
-      description: "Output format (text or json)"
-      hint: "Output format"
-      optional: true
-      default: "text"
-      validation_rules: []
-      aliases: ["fmt"]
-      tags: []
-
-  examples:
-    - ".account.list"
-    - ".account.list format::json"
-  auto_help_enabled: true
-
-- name: ".account.status"
-  namespace: ""
-  description: "Show active account name and token state; optionally query a named account"
-  hint: "Show account status"
-  version: "1.1.0"
+  description: "List all saved accounts with field-presence control"
+  hint: "List accounts"
+  version: "2.0.0"
   status: "stable"
   aliases: []
   tags: ["profile", "account"]
@@ -57,7 +18,7 @@
   arguments:
     - name: "name"
       kind: "String"
-      description: "Query a specific account by name instead of the active account"
+      description: "Scope output to a single named account"
       hint: "Account name"
       optional: true
       default: ""
@@ -65,14 +26,54 @@
       aliases: []
       tags: []
 
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level"
-      hint: "Output verbosity level"
+    - name: "active"
+      kind: "Boolean"
+      description: "Show active/inactive status per account (default on)"
+      hint: "Show Active: line"
       optional: true
-      default: "1"
+      default: "true"
       validation_rules: []
-      aliases: ["v"]
+      aliases: []
+      tags: []
+
+    - name: "sub"
+      kind: "Boolean"
+      description: "Show subscription type per account (default on)"
+      hint: "Show Sub: line"
+      optional: true
+      default: "true"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "tier"
+      kind: "Boolean"
+      description: "Show rate-limit tier per account (default on)"
+      hint: "Show Tier: line"
+      optional: true
+      default: "true"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "expires"
+      kind: "Boolean"
+      description: "Show token expiry duration per account (default on)"
+      hint: "Show Expires: line"
+      optional: true
+      default: "true"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "org"
+      kind: "Boolean"
+      description: "Show organisation name per account (default on)"
+      hint: "Show Org: line"
+      optional: true
+      default: "true"
+      validation_rules: []
+      aliases: []
       tags: []
 
     - name: "format"
@@ -86,10 +87,10 @@
       tags: []
 
   examples:
-    - ".account.status"
-    - ".account.status name::work"
-    - ".account.status name::personal v::2"
-    - ".account.status format::json"
+    - ".accounts"
+    - ".accounts name::alice@acme.com"
+    - ".accounts active::0 sub::0"
+    - ".accounts format::json"
   auto_help_enabled: true
 
 - name: ".account.save"

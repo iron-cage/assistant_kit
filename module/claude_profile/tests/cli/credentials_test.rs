@@ -5,7 +5,7 @@
 //!
 //! ## Root Cause Context
 //!
-//! `.account.status` errors when `_active` is absent — even on machines with valid
+//! Account-inspection commands require an `_active` marker — even on machines with valid
 //! credentials but no account management initialized. These tests confirm that
 //! `.credentials.status` has no such dependency.
 //!

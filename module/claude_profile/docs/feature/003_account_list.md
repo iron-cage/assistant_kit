@@ -1,10 +1,10 @@
-# Feature: List Accounts
+# Feature: Accounts
 
 ### Scope
 
-- **Purpose**: Give users a snapshot of all stored accounts and their metadata in one call.
-- **Responsibility**: Documents the `account::list()` API and the `.account.list` CLI command (FR-8).
-- **In Scope**: Account enumeration, metadata per entry, active-account marking, empty-store handling.
+- **Purpose**: Give users a snapshot of all stored accounts and their metadata in one call, with optional scoping to a single named account.
+- **Responsibility**: Documents the `account::list()` API and the `.accounts` CLI command (FR-8).
+- **In Scope**: Account enumeration, metadata per entry, active-account marking, empty-store handling, named-account scoping, field-presence toggles, JSON output.
 - **Out of Scope**: Switching accounts (→ 004_account_switch.md), token classification logic (→ 006_token_status.md).
 
 ### Design
@@ -14,31 +14,45 @@
 | Field | Source | Notes |
 |-------|--------|-------|
 | `name` | Filename stem | e.g. `alice@acme.com` from `alice@acme.com.credentials.json` |
+| `is_active` | Name matches `_active` marker content | `true` if name == contents of `{credential_store}/_active` |
 | `subscriptionType` | Credential file JSON field | Empty or absent → shown as `N/A` |
 | `rateLimitTier` | Credential file JSON field | Empty or absent → shown as `N/A` |
 | `expiresAt` | Credential file `expiresAt` field | Unix epoch milliseconds |
-| `is_active` | Name matches `_active` marker content | `true` if name == contents of `{credential_store}/_active` |
+| `org` | Credential file `org` field | Empty or absent → shown as `N/A` |
 
-**Empty account store:** Returns an empty `Vec`, not an error. Exit 0.
+**Without `name::`:** Lists all accounts as indented key-val blocks, sorted alphabetically. Each block is a header line (email) followed by indented `Key:  value` lines. A blank line separates consecutive blocks.
 
-**CLI output verbosity:**
-- `v::0`: account names only (one per line), active account marked with `<-` suffix
-- `v::1` (default): name + sub + tier + expiry + active marker
-- `v::2`: same as v::1 (no additional fields at this level)
-- `format::json`: JSON array with all fields
+**With `name::EMAIL`:** Shows only the block for the named account. Exits 2 if the account is not found. Exits 1 if the name fails email validation.
+
+**Empty account store:** Prints `(no accounts configured)` and exits 0.
+
+**Field-presence toggles (all on by default):**
+- `active::0` — suppress the `Active:` line
+- `sub::0` — suppress the `Sub:` line
+- `tier::0` — suppress the `Tier:` line
+- `expires::0` — suppress the `Expires:` line
+- `org::0` — suppress the `Org:` line
+
+When all field toggles are disabled, only bare account name lines are printed (no indentation, no blank-line separators).
+
+**`format::json`:** Returns a JSON array with all fields regardless of field-presence toggle values. Each object contains `name`, `is_active`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `org`.
 
 ### Acceptance Criteria
 
-- **AC-01**: Empty credential store returns empty list, exit 0.
-- **AC-02**: Each entry reports name, subscriptionType, rateLimitTier, expiresAt, is_active.
+- **AC-01**: Empty credential store returns `(no accounts configured)`, exit 0.
+- **AC-02**: Each entry reports name, is_active, subscriptionType, rateLimitTier, expiresAt, org.
 - **AC-03**: The account matching `_active` marker has `is_active: true`; all others `false`.
 - **AC-04**: `format::json` output is a valid JSON array.
+- **AC-05**: `name::EMAIL` scopes to single account; exit 2 if not found; exit 1 if invalid format.
+- **AC-06**: Field-presence toggles suppress individual lines from text output only.
+- **AC-07**: All fields disabled → bare name lines only; no blank-line separators.
+- **AC-08**: Accounts listed alphabetically by name.
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/account.rs` | `list()` — enumerates credential store, reads _active marker |
-| source | `src/commands.rs` | `account_list_routine()` — CLI handler |
-| test | `tests/account_tests.rs::list_marks_active_account_via_active_marker` | Verifies is_active field |
-| doc | [cli/commands.md](../cli/commands.md#command--3-accountlist) | CLI command specification |
+| source | `src/commands.rs` | `accounts_routine()` — CLI handler |
+| doc | [cli/commands.md](../cli/commands.md#command--3-accounts) | CLI command specification |
+| doc | [cli/testing/command/03_accounts.md](../cli/testing/command/03_accounts.md) | Integration test plan |
