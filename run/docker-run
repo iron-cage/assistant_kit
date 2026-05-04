@@ -126,13 +126,15 @@ _ensure_build_cache()
 cmd_build()
 {
   _build
-  # Drop stale build cache so next .test re-seeds from the new image.
-  local volume="${IMAGE}_target"
-  if "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
-  then
-    echo "Removing stale build cache volume..."
-    "$CONTAINER_CMD" volume rm "$volume"
-  fi
+  # Drop stale build caches so next use re-seeds from the new image.
+  for volume in "${IMAGE}_target" "${IMAGE}_w3_targets"
+  do
+    if "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
+    then
+      echo "Removing stale build cache volume: $volume..."
+      "$CONTAINER_CMD" volume rm "$volume"
+    fi
+  done
 }
 
 cmd_test()
@@ -143,7 +145,6 @@ cmd_test()
   local test_mount
   test_mount="$(_resolve_mount "$MOUNT_TEST" "$MOUNT_TEST_LABEL")"
   _ensure_image
-  _ensure_build_cache
   # Run as the host user so mounted credential files (owned by host uid) are readable.
   # Rootless Podman remaps container uid 0 → host uid, so without --userns=keep-id
   # files owned by the host user appear as root inside the container and are unreadable
@@ -151,12 +152,14 @@ cmd_test()
   # running uid matches the owner uid of the mounted credential files.
   # workspace and cargo dirs are world-writable (a+rwX in Dockerfile) so the host
   # uid can write cargo lock files and build artifacts without owning those files.
+  # Mount the w3 targets volume at w3's hardcoded CARGO_TARGET_DIR base so per-crate
+  # compilation artifacts survive between container runs (incremental compilation).
   local userns_arg=()
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
   "$CONTAINER_CMD" run --rm \
     "${userns_arg[@]}" \
     --user "$(id -u):$(id -g)" \
-    -v "${IMAGE}_target:/workspace/target" \
+    -v "${IMAGE}_w3_targets:/tmp/will_test_targets" \
     -v "$w3_bin":/usr/local/bin/w3:ro \
     -v "$test_mount" \
     "$IMAGE" \
@@ -172,6 +175,21 @@ cmd_test_offline()
     -v "${IMAGE}_target:/workspace/target" \
     "$IMAGE" \
     cargo nextest run $CMD_SCOPE --filter-expr "$CMD_FILTER"
+}
+
+cmd_list()
+{
+  _ensure_image
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  # Same volume as cmd_test so .list artifacts persist between repeated .list calls.
+  # shellcheck disable=SC2086
+  "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
+    -v "${IMAGE}_w3_targets:/tmp/will_test_targets" \
+    "$IMAGE" \
+    bash -c "CARGO_TARGET_DIR=/tmp/will_test_targets cargo nextest list $CMD_SCOPE --all-features"
 }
 
 cmd_shell()
@@ -201,8 +219,9 @@ cmd_help()
   echo "  .build          Build the $IMAGE container image"
   echo ""
   echo "Testing:"
-  echo "  . / .test       Run all tests ($MOUNT_TEST_LABEL required)"
+  echo "  . / .test       Run all tests via w3 level::3 ($MOUNT_TEST_LABEL required)"
   echo "  .test.offline   Run offline tests only (no external data needed)"
+  echo "  .list           List all test names without running"
   echo "  .shell          Interactive bash shell (mounts available)"
   echo ""
   echo "Help:"
@@ -215,6 +234,7 @@ case "$COMMAND" in
   .build)        cmd_build ;;
   .|.test)       cmd_test ;;
   .test.offline) cmd_test_offline ;;
+  .list)         cmd_list ;;
   .shell)        cmd_shell ;;
   .help)         cmd_help ;;
   *)
