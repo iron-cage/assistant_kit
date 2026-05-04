@@ -347,16 +347,6 @@
   http_method_hint: "GET"
 
   arguments:
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level (0=sub+token, 1=adds tier/email/org, 2=adds expiry)"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
     - name: "format"
       kind: "String"
       description: "Output format (text or json)"
@@ -367,9 +357,100 @@
       aliases: ["fmt"]
       tags: []
 
+    - name: "account"
+      kind: "Boolean"
+      description: "Show active account name line (from _active marker; N/A when absent)"
+      hint: "Show Account: line"
+      optional: true
+      default: "true"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "sub"
+      kind: "Boolean"
+      description: "Show subscription type line"
+      hint: "Show Sub: line"
+      optional: true
+      default: "true"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "tier"
+      kind: "Boolean"
+      description: "Show rate-limit tier line"
+      hint: "Show Tier: line"
+      optional: true
+      default: "true"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "token"
+      kind: "Boolean"
+      description: "Show token status line"
+      hint: "Show Token: line"
+      optional: true
+      default: "true"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "expires"
+      kind: "Boolean"
+      description: "Show token expiry duration line"
+      hint: "Show Expires: line"
+      optional: true
+      default: "true"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "email"
+      kind: "Boolean"
+      description: "Show email address line (N/A when absent)"
+      hint: "Show Email: line"
+      optional: true
+      default: "true"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "org"
+      kind: "Boolean"
+      description: "Show organization name line (N/A when absent)"
+      hint: "Show Org: line"
+      optional: true
+      default: "true"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "file"
+      kind: "Boolean"
+      description: "Show credentials file path (opt-in, default off)"
+      hint: "Show File: line"
+      optional: true
+      default: "false"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "saved"
+      kind: "Boolean"
+      description: "Show saved account count (opt-in, default off)"
+      hint: "Show Saved: line"
+      optional: true
+      default: "false"
+      validation_rules: []
+      aliases: []
+      tags: []
+
   examples:
     - ".credentials.status"
-    - ".credentials.status v::2"
+    - ".credentials.status email::0 org::0"
+    - ".credentials.status file::1 saved::1"
     - ".credentials.status format::json"
   auto_help_enabled: true
 

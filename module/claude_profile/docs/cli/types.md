@@ -5,7 +5,7 @@
 | # | Type | Fundamental | Parameters | Commands |
 |---|------|-------------|------------|----------|
 | 1 | `AccountName` | `String` (newtype) | [`name::`](params.md#parameter--1-name) | 5 cmds |
-| 2 | `VerbosityLevel` | `u8` (newtype) | [`verbosity::`](params.md#parameter--2-verbosity--v) | 7 cmds |
+| 2 | `VerbosityLevel` | `u8` (newtype) | [`verbosity::`](params.md#parameter--2-verbosity--v) | 6 cmds |
 | 3 | `OutputFormat` | `enum` | [`format::`](params.md#parameter--3-format) | 7 cmds |
 | 4 | `WarningThreshold` | `u64` (newtype) | [`threshold::`](params.md#parameter--4-threshold) | 1 cmd |
 
@@ -15,7 +15,7 @@
 
 ### Type :: 1. `AccountName`
 
-**Purpose:** Identifies a named credential profile in the account store. Enforces filesystem-safe naming to guarantee safe file creation under `~/.claude/accounts/`.
+**Purpose:** Identifies a credential profile in the account store using the account's email address as the unique key. Enforces email format to guarantee correct identification and safe file creation under the credential store.
 
 **Fundamental Type:** Newtype wrapping `String`
 
@@ -28,8 +28,8 @@ pub struct AccountName( String );
 
 **Constraints:**
 - Non-empty (reject `""`)
-- No filesystem-forbidden characters: `/`, `\`, `:`, `*`, `?`, `"`, `<`, `>`, `|`, null byte
-- Maps to file `~/.claude/accounts/{name}.credentials.json`
+- Must contain `@` with non-empty local part and domain (valid email format)
+- Maps to file `{credential_store}/{email}.credentials.json`
 
 **Parsing:**
 
@@ -39,9 +39,10 @@ impl AccountName
   pub fn new( s : &str ) -> Result< Self, String >
   {
     if s.is_empty() { return Err( "account name must not be empty".into() ); }
-    if s.chars().any( | c | matches!( c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '\0' ) )
+    let at = s.find( '@' ).ok_or_else( || format!( "account name '{}' must be an email address", s ) )?;
+    if at == 0 || at == s.len() - 1
     {
-      return Err( format!( "account name '{}' contains invalid characters", s ) );
+      return Err( format!( "account name '{}' must be an email address", s ) );
     }
     Ok( Self( s.to_string() ) )
   }
@@ -50,7 +51,7 @@ impl AccountName
 
 **Methods:**
 - `get() -> &str` — raw string accessor
-- `to_credential_path( accounts_dir : &Path ) -> PathBuf` — resolves `{accounts_dir}/{name}.credentials.json`
+- `to_credential_path( credential_store : &Path ) -> PathBuf` — resolves `{credential_store}/{name}.credentials.json`
 
 **Commands:** [`.account.status`](commands.md#command--4-accountstatus) *(optional)*, [`.account.save`](commands.md#command--5-accountsave), [`.account.switch`](commands.md#command--6-accountswitch), [`.account.delete`](commands.md#command--7-accountdelete), [`.account.limits`](commands.md#command--12-accountlimits) *(optional)*
 
@@ -97,7 +98,7 @@ impl VerbosityLevel
 - `is_verbose() -> bool` — true when level is 2
 - `includes_labels() -> bool` — true when level >= 1
 
-**Commands:** [`.account.list`](commands.md#command--3-accountlist), [`.account.status`](commands.md#command--4-accountstatus), [`.token.status`](commands.md#command--8-tokenstatus), [`.paths`](commands.md#command--9-paths), [`.usage`](commands.md#command--10-usage), [`.credentials.status`](commands.md#command--11-credentialsstatus), [`.account.limits`](commands.md#command--12-accountlimits)
+**Commands:** [`.account.list`](commands.md#command--3-accountlist), [`.account.status`](commands.md#command--4-accountstatus), [`.token.status`](commands.md#command--8-tokenstatus), [`.paths`](commands.md#command--9-paths), [`.usage`](commands.md#command--10-usage), [`.account.limits`](commands.md#command--12-accountlimits)
 
 ---
 

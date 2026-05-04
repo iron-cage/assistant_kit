@@ -79,12 +79,12 @@ fn x03_save_twice_same_result()
 
   let _ = run_cs_with_env( &[ ".account.save", "name::x" ], &[ ( "HOME", home ) ] );
   let content1 = std::fs::read_to_string(
-    dir.path().join( ".claude" ).join( "accounts" ).join( "x.credentials.json" )
+    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( "x.credentials.json" )
   ).unwrap();
 
   let _ = run_cs_with_env( &[ ".account.save", "name::x" ], &[ ( "HOME", home ) ] );
   let content2 = std::fs::read_to_string(
-    dir.path().join( ".claude" ).join( "accounts" ).join( "x.credentials.json" )
+    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( "x.credentials.json" )
   ).unwrap();
 
   assert_eq!( content1, content2, "saving twice must produce same file" );
@@ -133,9 +133,9 @@ fn x07_read_commands_accept_v_and_format()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
   // .account.status needs an _active marker to exit 0
-  let accounts = dir.path().join( ".claude" ).join( "accounts" );
-  std::fs::create_dir_all( &accounts ).unwrap();
-  std::fs::write( accounts.join( "_active" ), "solo" ).unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  std::fs::write( credential_store.join( "_active" ), "solo" ).unwrap();
 
   for cmd in &[ ".account.list", ".account.status", ".token.status", ".paths", ".credentials.status" ]
   {

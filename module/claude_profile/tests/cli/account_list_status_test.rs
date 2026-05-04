@@ -13,7 +13,7 @@
 //! | h03 | `h03_help_hides_dot` | `.help` → bare `.` not listed | P |
 //! | h04 | `h04_help_exits_0` | `.help` → exit 0 | P |
 //! | h05 | `h05_no_args_shows_help` | no args → help | P |
-//! | h06 | `h06_double_dash_help` | `--help` → help | P |
+//! | h06 | `h06_double_dash_help` | `--help` → exit 1 (POSIX flags not supported) | N |
 //! | h07 | `h07_unknown_command_exits_1` | `.nonexistent` → exit 1 + stderr | N |
 //!
 //! ### AL — Account List
@@ -129,10 +129,11 @@ fn h05_no_args_shows_help()
 #[ test ]
 fn h06_double_dash_help()
 {
+  // POSIX flags (--help, -h) are not supported — use `.help` command instead.
   let out = run_cs( &[ "--help" ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!( text.contains( ".account.list" ), "--help must show commands, got:\n{text}" );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!( err.contains( "unexpected flag" ), "--help must produce unexpected flag error, got:\n{err}" );
 }
 
 #[ test ]
@@ -151,16 +152,16 @@ fn al01_list_text_v0_bare_names()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "personal", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account( dir.path(), "work", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@home.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.list", "v::0" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let lines : Vec< &str > = text.lines().collect();
   assert_eq!( lines.len(), 2, "v::0 must produce 2 lines, got:\n{text}" );
-  assert_eq!( lines[ 0 ], "personal" );
-  assert_eq!( lines[ 1 ], "work" );
+  assert_eq!( lines[ 0 ], "alice@acme.com" );
+  assert_eq!( lines[ 1 ], "alice@home.com" );
 }
 
 #[ test ]
@@ -168,16 +169,16 @@ fn al02_list_text_v1_active_marker()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "personal", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account( dir.path(), "work", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@home.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.list" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "work *" ) || text.contains( "work *" ), "active must have marker, got:\n{text}" );
-  // personal should NOT have marker
-  let personal_line = text.lines().find( | l | l.starts_with( "personal" ) ).unwrap();
-  assert!( !personal_line.contains( '*' ), "inactive must not have marker, got: {personal_line}" );
+  assert!( text.contains( "alice@acme.com *" ), "active must have marker, got:\n{text}" );
+  // alice@home.com should NOT have marker
+  let inactive_line = text.lines().find( | l | l.starts_with( "alice@home.com" ) ).unwrap();
+  assert!( !inactive_line.contains( '*' ), "inactive must not have marker, got: {inactive_line}" );
 }
 
 #[ test ]
@@ -185,7 +186,7 @@ fn al03_list_text_v2_metadata()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.list", "v::2" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -200,13 +201,13 @@ fn al04_list_json()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.list", "format::json" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.starts_with( '[' ), "JSON must start with '[', got:\n{text}" );
-  assert!( text.contains( "\"name\":\"work\"" ), "JSON must contain name, got:\n{text}" );
+  assert!( text.contains( "\"name\":\"alice@acme.com\"" ), "JSON must contain name, got:\n{text}" );
   assert!( text.contains( "\"is_active\":true" ), "JSON must contain is_active, got:\n{text}" );
 }
 
@@ -229,7 +230,7 @@ fn al06_list_empty_dir_text()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  std::fs::create_dir_all( dir.path().join( ".claude" ).join( "accounts" ) ).unwrap();
+  std::fs::create_dir_all( dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ) ).unwrap();
 
   let out = run_cs_with_env( &[ ".account.list" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -255,12 +256,12 @@ fn al08_list_single_active()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "solo", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "solo@example.com", "pro", "standard", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.list" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "solo" ), "must list the account, got:\n{text}" );
+  assert!( text.contains( "solo@example.com" ), "must list the account, got:\n{text}" );
   assert!( text.contains( '*' ), "active must have marker, got:\n{text}" );
 }
 
@@ -269,12 +270,12 @@ fn al09_list_single_not_active()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "solo", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "solo@example.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env( &[ ".account.list" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "solo" ), "must list the account, got:\n{text}" );
+  assert!( text.contains( "solo@example.com" ), "must list the account, got:\n{text}" );
   assert!( !text.contains( '*' ), "inactive must not have marker, got:\n{text}" );
 }
 
@@ -283,8 +284,8 @@ fn al10_list_multi_none_active()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "a", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account( dir.path(), "b", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "a@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "b@acme.com", "max", "tier4", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env( &[ ".account.list" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -311,15 +312,15 @@ fn al13_list_sorted_alphabetically()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "zebra", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account( dir.path(), "alpha", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account( dir.path(), "mid", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "zebra@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alpha@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "mid@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env( &[ ".account.list", "v::0" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let lines : Vec< &str > = text.lines().map( str::trim ).collect();
-  assert_eq!( lines, vec![ "alpha", "mid", "zebra" ] );
+  assert_eq!( lines, vec![ "alpha@acme.com", "mid@acme.com", "zebra@acme.com" ] );
 }
 
 #[ test ]
@@ -355,9 +356,9 @@ fn astat02_empty_active_file_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  let accounts = dir.path().join( ".claude" ).join( "accounts" );
-  std::fs::create_dir_all( &accounts ).unwrap();
-  std::fs::write( accounts.join( "_active" ), "" ).unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  std::fs::write( credential_store.join( "_active" ), "" ).unwrap();
 
   let out = run_cs_with_env( &[ ".account.status" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 2 );
@@ -370,13 +371,13 @@ fn astat03_valid_token_shows_valid()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   let out = run_cs_with_env( &[ ".account.status" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "work" ), "must show account name, got:\n{text}" );
+  assert!( text.contains( "alice@acme.com" ), "must show account name, got:\n{text}" );
   assert!( text.contains( "valid" ), "must show valid token state, got:\n{text}" );
 }
 
@@ -385,13 +386,13 @@ fn astat04_expired_token_shows_expired()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", PAST_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", PAST_MS, true );
   write_credentials( dir.path(), "pro", "standard", PAST_MS );
 
   let out = run_cs_with_env( &[ ".account.status" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "work" ), "must show account name, got:\n{text}" );
+  assert!( text.contains( "alice@acme.com" ), "must show account name, got:\n{text}" );
   assert!( text.contains( "expired" ), "must show expired token state, got:\n{text}" );
 }
 
@@ -401,13 +402,13 @@ fn astat05_near_expiry_token_shows_expiring_in()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   let near = near_future_ms();
-  write_account( dir.path(), "work", "pro", "standard", near, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", near, true );
   write_credentials( dir.path(), "pro", "standard", near );
 
   let out = run_cs_with_env( &[ ".account.status" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "work" ), "must show account name, got:\n{text}" );
+  assert!( text.contains( "alice@acme.com" ), "must show account name, got:\n{text}" );
   assert!( text.contains( "expiring in" ), "must show expiring-in state, got:\n{text}" );
 }
 
@@ -417,14 +418,14 @@ fn astat06_missing_credentials_shows_unknown()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   // write _active but NO .credentials.json
-  let accounts = dir.path().join( ".claude" ).join( "accounts" );
-  std::fs::create_dir_all( &accounts ).unwrap();
-  std::fs::write( accounts.join( "_active" ), "work" ).unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  std::fs::write( credential_store.join( "_active" ), "alice@acme.com" ).unwrap();
 
   let out = run_cs_with_env( &[ ".account.status" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "work" ), "must show account name, got:\n{text}" );
+  assert!( text.contains( "alice@acme.com" ), "must show account name, got:\n{text}" );
   assert!( text.contains( "unknown" ), "missing credentials must show unknown token, got:\n{text}" );
 }
 
@@ -433,14 +434,14 @@ fn astat07_v0_bare_name_and_status()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   let out = run_cs_with_env( &[ ".account.status", "v::0" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let lines : Vec< &str > = text.lines().collect();
-  assert_eq!( lines[ 0 ], "work", "v::0 line 0 must be bare name, got:\n{text}" );
+  assert_eq!( lines[ 0 ], "alice@acme.com", "v::0 line 0 must be bare name, got:\n{text}" );
   assert_eq!( lines[ 1 ], "valid", "v::0 line 1 must be bare token state, got:\n{text}" );
   assert!( !text.contains( "Account:" ), "v::0 must not have labels, got:\n{text}" );
   assert!( !text.contains( "Token:" ), "v::0 must not have labels, got:\n{text}" );
@@ -451,13 +452,13 @@ fn astat08_v1_default_shows_labels()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   let out = run_cs_with_env( &[ ".account.status" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "Account: work" ), "v::1 must show Account: label, got:\n{text}" );
+  assert!( text.contains( "Account: alice@acme.com" ), "v::1 must show Account: label, got:\n{text}" );
   assert!( text.contains( "Token:" ), "v::1 must show Token: label, got:\n{text}" );
   assert!( !text.contains( "Expires:" ), "v::1 must not show Expires: line, got:\n{text}" );
 }
@@ -467,13 +468,13 @@ fn astat09_v2_shows_expires_line()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   let out = run_cs_with_env( &[ ".account.status", "v::2" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "Account: work" ), "v::2 must show Account: label, got:\n{text}" );
+  assert!( text.contains( "Account: alice@acme.com" ), "v::2 must show Account: label, got:\n{text}" );
   assert!( text.contains( "Token:" ), "v::2 must show Token: label, got:\n{text}" );
   assert!( text.contains( "Expires:" ), "v::2 must show Expires: line, got:\n{text}" );
 }
@@ -483,14 +484,14 @@ fn astat10_json_format_returns_object()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   let out = run_cs_with_env( &[ ".account.status", "format::json" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim().starts_with( '{' ), "JSON must start with '{{', got:\n{text}" );
-  assert!( text.contains( "\"account\":\"work\"" ), "JSON must contain account field, got:\n{text}" );
+  assert!( text.contains( "\"account\":\"alice@acme.com\"" ), "JSON must contain account field, got:\n{text}" );
   assert!( text.contains( "\"token\":\"valid\"" ), "JSON must contain token field, got:\n{text}" );
 }
 
@@ -501,7 +502,7 @@ fn astat11_v1_shows_sub_tier_email_org()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
   write_claude_json( dir.path(), "alice@example.com", "Acme Corp" );
 
@@ -539,7 +540,7 @@ fn astat12_v1_empty_sub_in_creds_shows_n_a()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   // Write credentials with subscriptionType = "" (empty string)
   std::fs::create_dir_all( dir.path().join( ".claude" ) ).unwrap();
   std::fs::write(

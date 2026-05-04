@@ -1,18 +1,27 @@
 # Parameters
 
-### All Parameters (5 total)
+### All Parameters (14 total)
 
 | # | Parameter | Type | Default | Valid Values | Purpose | Used In |
 |---|-----------|------|---------|--------------|---------|---------|
-| 1 | `name::` | `AccountName` | Varies | Any filesystem-safe string | Account name for save/switch/delete (required); or status/limits query (optional) | 5 cmds |
-| 2 | `verbosity::` / `v::` | `VerbosityLevel` | `1` | `0`, `1`, `2` | Output detail: 0=quiet, 1=normal, 2=verbose | 7 cmds |
+| 1 | `name::` | `AccountName` | Varies | Email address | Account email for save/switch/delete (required); or status/limits query (optional) | 5 cmds |
+| 2 | `verbosity::` / `v::` | `VerbosityLevel` | `1` | `0`, `1`, `2` | Output detail: 0=quiet, 1=normal, 2=verbose | 6 cmds |
 | 3 | `format::` | `OutputFormat` | `text` | `text`, `json` | Output format: `text` or `json` | 7 cmds |
 | 4 | `threshold::` | `WarningThreshold` | `3600` | Non-negative integer (seconds) | Seconds before token expiry to classify as ExpiringSoon | 1 cmd |
 | 5 | `dry::` | `bool` | `0` | `0`, `1`, `false`, `true` | Print intended action without executing | 3 cmds |
+| 6 | `account::` | `bool` | `1` | `0`, `1` | Show active account name line (`.credentials.status`) | 1 cmd |
+| 7 | `sub::` | `bool` | `1` | `0`, `1` | Show subscription type line (`.credentials.status`) | 1 cmd |
+| 8 | `tier::` | `bool` | `1` | `0`, `1` | Show rate-limit tier line (`.credentials.status`) | 1 cmd |
+| 9 | `token::` | `bool` | `1` | `0`, `1` | Show token status line (`.credentials.status`) | 1 cmd |
+| 10 | `expires::` | `bool` | `1` | `0`, `1` | Show token expiry duration line (`.credentials.status`) | 1 cmd |
+| 11 | `email::` | `bool` | `1` | `0`, `1` | Show email address line (`.credentials.status`) | 1 cmd |
+| 12 | `org::` | `bool` | `1` | `0`, `1` | Show organization name line (`.credentials.status`) | 1 cmd |
+| 13 | `file::` | `bool` | `0` | `0`, `1` | Show credentials file path, opt-in (`.credentials.status`) | 1 cmd |
+| 14 | `saved::` | `bool` | `0` | `0`, `1` | Show saved account count, opt-in (`.credentials.status`) | 1 cmd |
 
-**Total:** 5 parameters
+**Total:** 14 parameters
 
-*Parameters 2-3 form the Output Control group*
+*Parameters 2-3 form the Output Control group; parameters 6-14 form the Field Presence group*
 
 ---
 
@@ -22,16 +31,15 @@ Identifies which named account to operate on. Required for mutation commands; op
 
 - **Type:** `AccountName`
 - **Default:** **(required)** on `.account.save`, `.account.switch`, `.account.delete`; **optional** on `.account.status` (omit to query the active account)
-- **Constraints:** Non-empty, no filesystem-forbidden characters (`/\:*?"<>|` or null bytes)
+- **Constraints:** Valid email address (non-empty, must contain `@`, non-empty local part and domain)
 - **Commands:** [`.account.status`](commands.md#command--4-accountstatus) *(optional)*, [`.account.save`](commands.md#command--5-accountsave), [`.account.switch`](commands.md#command--6-accountswitch), [`.account.delete`](commands.md#command--7-accountdelete), [`.account.limits`](commands.md#command--12-accountlimits) *(optional)*
-- **Purpose:** Selects the target credential file at `~/.claude/accounts/{name}.credentials.json`. Name validation matches the library's `account::validate_name()` rules. On `.account.status`, an invalid name exits 1; a valid but unknown name exits 2.
+- **Purpose:** Selects the target credential file at `{credential_store}/{email}.credentials.json`. Name validation matches the library's `account::validate_name()` rules. On `.account.status`, an invalid name exits 1; a valid but unknown name exits 2.
 
 **Examples:**
 
 ```text
-name::work        → ~/.claude/accounts/work.credentials.json
-name::personal    → ~/.claude/accounts/personal.credentials.json
-name::client-a    → ~/.claude/accounts/client-a.credentials.json
+name::alice@acme.com   → {credential_store}/alice@acme.com.credentials.json
+name::alice@home.com   → {credential_store}/alice@home.com.credentials.json
 ```
 
 ---
@@ -43,7 +51,7 @@ Controls the amount of detail in text output. Higher levels add labels, metadata
 - **Type:** `VerbosityLevel`
 - **Default:** `1` (normal output with labels)
 - **Constraints:** Integer 0-2
-- **Commands:** [`.account.list`](commands.md#command--3-accountlist), [`.account.status`](commands.md#command--4-accountstatus), [`.token.status`](commands.md#command--8-tokenstatus), [`.paths`](commands.md#command--9-paths), [`.usage`](commands.md#command--10-usage), [`.credentials.status`](commands.md#command--11-credentialsstatus), [`.account.limits`](commands.md#command--12-accountlimits)
+- **Commands:** [`.account.list`](commands.md#command--3-accountlist), [`.account.status`](commands.md#command--4-accountstatus), [`.token.status`](commands.md#command--8-tokenstatus), [`.paths`](commands.md#command--9-paths), [`.usage`](commands.md#command--10-usage), [`.account.limits`](commands.md#command--12-accountlimits)
 - **Purpose:** Adapts output density to context: `0` for scripting (bare values), `1` for interactive use (labeled), `2` for debugging (full metadata).
 - **Group:** Output Control
 
@@ -120,3 +128,183 @@ dry::false → same as dry::0
 **Notes:**
 - Dry-run output uses `[dry-run]` prefix for clear visual distinction.
 - Dry and execute modes share identical validation logic — if `dry::1` succeeds, `dry::0` will perform exactly those actions.
+
+---
+
+### Parameter :: 6. `account::`
+
+Controls whether the active account name line appears in `.credentials.status` output. Reads the `_active` marker file; shows `N/A` when no account store has been initialised.
+
+- **Type:** `bool`
+- **Default:** `1` (shown)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--11-credentialsstatus)
+- **Purpose:** Lets callers suppress the account name line when it is irrelevant (e.g., scripting that only needs the token state).
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+account::1   → Account: alice@acme.com  (default)
+account::0   → line omitted
+```
+
+---
+
+### Parameter :: 7. `sub::`
+
+Controls whether the subscription type line appears in `.credentials.status` output.
+
+- **Type:** `bool`
+- **Default:** `1` (shown)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--11-credentialsstatus)
+- **Purpose:** Allows suppression of the subscription type when only token validity matters.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+sub::1   → Sub:     max  (default)
+sub::0   → line omitted
+```
+
+---
+
+### Parameter :: 8. `tier::`
+
+Controls whether the rate-limit tier line appears in `.credentials.status` output.
+
+- **Type:** `bool`
+- **Default:** `1` (shown)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--11-credentialsstatus)
+- **Purpose:** Allows suppression of the tier when only core token state is needed.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+tier::1   → Tier:    default_claude_max_20x  (default)
+tier::0   → line omitted
+```
+
+---
+
+### Parameter :: 9. `token::`
+
+Controls whether the token validity status line appears in `.credentials.status` output.
+
+- **Type:** `bool`
+- **Default:** `1` (shown)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--11-credentialsstatus)
+- **Purpose:** Allows suppression of the token status line (rare; usually the most important field).
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+token::1   → Token:   valid  (default)
+token::0   → line omitted
+```
+
+---
+
+### Parameter :: 10. `expires::`
+
+Controls whether the token expiry duration line appears in `.credentials.status` output.
+
+- **Type:** `bool`
+- **Default:** `1` (shown)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--11-credentialsstatus)
+- **Purpose:** Allows suppression of the expiry countdown when exact timing is not needed.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+expires::1   → Expires: in 7h 24m  (default)
+expires::0   → line omitted
+```
+
+---
+
+### Parameter :: 11. `email::`
+
+Controls whether the email address line appears in `.credentials.status` output. Source: `emailAddress` field in `~/.claude/.claude.json`.
+
+- **Type:** `bool`
+- **Default:** `1` (shown)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--11-credentialsstatus)
+- **Purpose:** Allows suppression of the email line; especially useful when the field is consistently `N/A`.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+email::1   → Email:   alice@acme.com  (default; N/A when absent)
+email::0   → line omitted
+```
+
+---
+
+### Parameter :: 12. `org::`
+
+Controls whether the organization name line appears in `.credentials.status` output. Source: `organizationName` field in `~/.claude/.claude.json`.
+
+- **Type:** `bool`
+- **Default:** `1` (shown)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--11-credentialsstatus)
+- **Purpose:** Allows suppression of the org line; often `N/A` for individual accounts.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+org::1   → Org:     Acme Corp  (default; N/A when absent)
+org::0   → line omitted
+```
+
+---
+
+### Parameter :: 13. `file::`
+
+Controls whether the credentials file path line appears in `.credentials.status` output. Opt-in (default `0`).
+
+- **Type:** `bool`
+- **Default:** `0` (hidden)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--11-credentialsstatus)
+- **Purpose:** Exposes the resolved path to `~/.claude/.credentials.json` for diagnostics and tooling integration.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+file::0   → line omitted  (default)
+file::1   → File:    /home/user/.claude/.credentials.json
+```
+
+---
+
+### Parameter :: 14. `saved::`
+
+Controls whether the saved account count line appears in `.credentials.status` output. Opt-in (default `0`). Counts `*.credentials.json` files in the accounts directory.
+
+- **Type:** `bool`
+- **Default:** `0` (hidden)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--11-credentialsstatus)
+- **Purpose:** Shows how many credential profiles are saved in the account store; shows `0` when the accounts directory is absent.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+saved::0   → line omitted  (default)
+saved::1   → Saved:   3 account(s)
+```

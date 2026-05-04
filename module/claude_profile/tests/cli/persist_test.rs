@@ -19,11 +19,11 @@
 //! | p01 | `$PRO` set (real dir), `$HOME` also set       | `base()` under `$PRO`                           |
 //! | p02 | `$PRO` unset, `$HOME` set                     | `base()` under `$HOME`                          |
 //! | p03 | `$PRO`, `$HOME`, `$USERPROFILE` all unset     | `Err` (`NotFound` kind)                         |
-//! | p04 | `$PRO` set                                    | path ends with `persistent/claude_profile`      |
+//! | p04 | `$PRO` set                                    | path ends with `.persistent/claude_profile`     |
 //! | p06 | `$PRO` set to non-existent path               | falls back to `$HOME`                           |
 //! | p07 | `$USERPROFILE` set, `$PRO`+`$HOME` unset      | `base()` under `$USERPROFILE`                   |
 //! | p08 | `$HOME` and `$USERPROFILE` both set, no `$PRO`| `$HOME` takes priority over `$USERPROFILE`      |
-//! | p09 | `$PRO` unset, `$HOME` set                     | path ends with `persistent/claude_profile`      |
+//! | p09 | `$PRO` unset, `$HOME` set                     | path ends with `.persistent/claude_profile`     |
 //! | p13 | `$PRO` set to `""` (empty string)             | falls back to `$HOME` (empty path is not a dir) |
 //! | p14 | `$PRO` set to existing FILE (not directory)   | falls back to `$HOME` (file is not a directory) |
 //!
@@ -41,6 +41,14 @@
 //! |-----|-----------------------------------------------|-------------------------------------------------|
 //! | p12 | both `$PRO` and `$HOME` unset → error message | message text is actionable (mentions `$HOME`)   |
 //! | p15 | `Debug` formatting                            | `{:?}` produces non-empty output                |
+//!
+//! ### Category D — `credential_store()` path
+//!
+//! | id  | condition                                     | expected                                        |
+//! |-----|-----------------------------------------------|-------------------------------------------------|
+//! | p16 | `$PRO` set → `credential_store()` under `$PRO` | path starts with `$PRO`                        |
+//! | p17 | `$PRO` set → path shape                       | ends with `.persistent/claude/credential`       |
+//! | p18 | `$PRO` unset, `$HOME` set → path shape        | ends with `.persistent/claude/credential`       |
 
 use claude_profile::PersistPaths;
 use std::env;
@@ -162,8 +170,8 @@ fn p04_base_path_shape_ends_with_persistent_claude_profile()
 
   let paths = result.expect( "p04: PersistPaths::new() must succeed" );
   assert!(
-  paths.base().ends_with( "persistent/claude_profile" ),
-  "p04: base() must end with persistent/claude_profile; got: {}",
+  paths.base().ends_with( ".persistent/claude_profile" ),
+  "p04: base() must end with .persistent/claude_profile; got: {}",
   paths.base().display()
   );
 }
@@ -309,8 +317,8 @@ fn p09_path_shape_ends_with_persistent_claude_profile_under_home()
 
   let paths = result.expect( "p09: PersistPaths::new() must succeed when $HOME is set" );
   assert!(
-  paths.base().ends_with( "persistent/claude_profile" ),
-  "p09: base() must end with persistent/claude_profile when $HOME is root; got: {}",
+  paths.base().ends_with( ".persistent/claude_profile" ),
+  "p09: base() must end with .persistent/claude_profile when $HOME is root; got: {}",
   paths.base().display()
   );
 }
@@ -509,5 +517,80 @@ fn p15_debug_formatting_is_non_empty()
   assert!(
   debug_str.contains( "persistent" ),
   "p15: Debug output must include the base path; got: {debug_str:?}"
+  );
+}
+
+/// p16 — `credential_store()` resolves under `$PRO` when `$PRO` is set
+#[ test ]
+fn p16_credential_store_under_pro()
+{
+  let _lock   = lock();
+  let pro_dir = TempDir::new().unwrap();
+  let home_dir = TempDir::new().unwrap();
+  let orig_pro  = env::var( "PRO"  ).ok();
+  let orig_home = env::var( "HOME" ).ok();
+
+  env::set_var( "PRO",  pro_dir.path() );
+  env::set_var( "HOME", home_dir.path() );
+
+  let result = PersistPaths::new();
+
+  restore( "PRO",  orig_pro  );
+  restore( "HOME", orig_home );
+
+  let paths = result.expect( "p16: PersistPaths::new() must succeed" );
+  assert!(
+  paths.credential_store().starts_with( pro_dir.path() ),
+  "p16: credential_store() must start with $PRO; got: {}",
+  paths.credential_store().display()
+  );
+}
+
+/// p17 — `credential_store()` path shape ends with `.persistent/claude/credential`
+#[ test ]
+fn p17_credential_store_path_shape_under_pro()
+{
+  let _lock   = lock();
+  let pro_dir = TempDir::new().unwrap();
+  let orig_pro  = env::var( "PRO"  ).ok();
+  let orig_home = env::var( "HOME" ).ok();
+
+  env::set_var( "PRO", pro_dir.path() );
+
+  let result = PersistPaths::new();
+
+  restore( "PRO",  orig_pro  );
+  restore( "HOME", orig_home );
+
+  let paths = result.expect( "p17: PersistPaths::new() must succeed" );
+  assert!(
+  paths.credential_store().ends_with( ".persistent/claude/credential" ),
+  "p17: credential_store() must end with .persistent/claude/credential; got: {}",
+  paths.credential_store().display()
+  );
+}
+
+/// p18 — `credential_store()` path shape ends with `.persistent/claude/credential` under `$HOME`
+#[ test ]
+fn p18_credential_store_path_shape_under_home()
+{
+  let _lock    = lock();
+  let home_dir = TempDir::new().unwrap();
+  let orig_pro  = env::var( "PRO"  ).ok();
+  let orig_home = env::var( "HOME" ).ok();
+
+  env::remove_var( "PRO" );
+  env::set_var( "HOME", home_dir.path() );
+
+  let result = PersistPaths::new();
+
+  restore( "PRO",  orig_pro  );
+  restore( "HOME", orig_home );
+
+  let paths = result.expect( "p18: PersistPaths::new() must succeed" );
+  assert!(
+  paths.credential_store().ends_with( ".persistent/claude/credential" ),
+  "p18: credential_store() must end with .persistent/claude/credential under $HOME; got: {}",
+  paths.credential_store().display()
   );
 }

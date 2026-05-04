@@ -34,7 +34,7 @@ Integration test planning for the `.account.list` command. See [commands.md](../
 ### IT-1: Lists all accounts when multiple exist
 
 **Goal:** Confirm all saved accounts appear in the listing when multiple credential files exist.
-**Setup:** Create `~/.claude/accounts/` with two credential files: `work.credentials.json` and `personal.credentials.json`. Set `work` as the active account via the `_active` marker.
+**Setup:** Create `~/.persistent/claude/credential/` with two credential files: `work.credentials.json` and `personal.credentials.json`. Set `work` as the active account via the `_active` marker.
 **Command:** `clp .account.list`
 **Expected Output:** Output contains both `work` and `personal` account entries.
 **Verification:**
@@ -50,7 +50,7 @@ Integration test planning for the `.account.list` command. See [commands.md](../
 ### IT-2: Active account marked with `<- active` indicator
 
 **Goal:** Confirm the currently active account is visually distinguished with the `<- active` marker.
-**Setup:** Create `~/.claude/accounts/` with `work.credentials.json` and `personal.credentials.json`. Set `work` as active via the `_active` marker.
+**Setup:** Create `~/.persistent/claude/credential/` with `work.credentials.json` and `personal.credentials.json`. Set `work` as active via the `_active` marker.
 **Command:** `clp .account.list`
 **Expected Output:** The `work` line includes `<- active`; the `personal` line does not.
 **Verification:**
@@ -65,7 +65,7 @@ Integration test planning for the `.account.list` command. See [commands.md](../
 ### IT-3: Empty account store returns empty output, exit 0
 
 **Goal:** Confirm that an empty account store produces no output lines and exits successfully.
-**Setup:** Create `~/.claude/accounts/` as an empty directory. No credential files present.
+**Setup:** Create `~/.persistent/claude/credential/` as an empty directory. No credential files present.
 **Command:** `clp .account.list`
 **Expected Output:** Empty stdout (no lines).
 **Verification:**
@@ -80,7 +80,7 @@ Integration test planning for the `.account.list` command. See [commands.md](../
 ### IT-4: `v::0` shows bare account names only
 
 **Goal:** Confirm verbosity level 0 strips all metadata and shows only account names, one per line.
-**Setup:** Create `~/.claude/accounts/` with `work.credentials.json` and `personal.credentials.json`. Set `work` as active.
+**Setup:** Create `~/.persistent/claude/credential/` with `work.credentials.json` and `personal.credentials.json`. Set `work` as active.
 **Command:** `clp .account.list v::0`
 **Expected Output:** Two lines, each containing only a bare account name (no `<- active`, no subscription type, no tier, no expiry).
 **Verification:**
@@ -97,7 +97,7 @@ Integration test planning for the `.account.list` command. See [commands.md](../
 ### IT-5: `v::1` shows names with active indicator and subscription type
 
 **Goal:** Confirm verbosity level 1 (default) includes account name, active marker, and subscription type.
-**Setup:** Create `~/.claude/accounts/` with `work.credentials.json` (subscription type `max`) and `personal.credentials.json` (subscription type `pro`). Set `work` as active.
+**Setup:** Create `~/.persistent/claude/credential/` with `work.credentials.json` (subscription type `max`) and `personal.credentials.json` (subscription type `pro`). Set `work` as active.
 **Command:** `clp .account.list v::1`
 **Expected Output:** Lines like `work <- active (max, standard, expires in 47m)` and `personal (pro, standard, expires in 3h12m)`.
 **Verification:**
@@ -114,7 +114,7 @@ Integration test planning for the `.account.list` command. See [commands.md](../
 ### IT-6: `v::2` shows full metadata including tier and expiry
 
 **Goal:** Confirm verbosity level 2 displays all available metadata: name, active marker, subscription type, rate-limit tier, and token expiry time.
-**Setup:** Create `~/.claude/accounts/` with `work.credentials.json` containing full metadata (subscription type `max`, rate-limit tier `standard`, valid expiry timestamp). Set `work` as active.
+**Setup:** Create `~/.persistent/claude/credential/` with `work.credentials.json` containing full metadata (subscription type `max`, rate-limit tier `standard`, valid expiry timestamp). Set `work` as active.
 **Command:** `clp .account.list v::2`
 **Expected Output:** Expanded output with all metadata fields visible, including tier and expiry details beyond what `v::1` shows.
 **Verification:**
@@ -131,7 +131,7 @@ Integration test planning for the `.account.list` command. See [commands.md](../
 ### IT-7: `format::json` returns valid JSON array
 
 **Goal:** Confirm JSON format output is a valid JSON array of account objects with expected fields.
-**Setup:** Create `~/.claude/accounts/` with `work.credentials.json` and `personal.credentials.json`. Set `work` as active.
+**Setup:** Create `~/.persistent/claude/credential/` with `work.credentials.json` and `personal.credentials.json`. Set `work` as active.
 **Command:** `clp .account.list format::json`
 **Expected Output:** A valid JSON array containing objects with at least: `name`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `is_active`.
 **Verification:**
@@ -164,8 +164,8 @@ Integration test planning for the `.account.list` command. See [commands.md](../
 
 ### IT-9: Accounts dir missing returns empty, not error
 
-**Goal:** Confirm that a missing `~/.claude/accounts/` directory is treated as empty, not as an error.
-**Setup:** Ensure `~/.claude/accounts/` does not exist (delete if present). Ensure `~/.claude/` itself exists.
+**Goal:** Confirm that a missing `~/.persistent/claude/credential/` directory is treated as empty, not as an error.
+**Setup:** Ensure `~/.persistent/claude/credential/` does not exist (delete if present). Ensure `~/.claude/` itself exists.
 **Command:** `clp .account.list`
 **Expected Output:** Empty stdout; no error message on stderr.
 **Verification:**
@@ -181,7 +181,7 @@ Integration test planning for the `.account.list` command. See [commands.md](../
 ### IT-10: `format::json` with `v::0` returns full JSON
 
 **Goal:** Confirm that `format::json` overrides verbosity, returning complete JSON regardless of `v::0`.
-**Setup:** Create `~/.claude/accounts/` with `work.credentials.json`. Set `work` as active.
+**Setup:** Create `~/.persistent/claude/credential/` with `work.credentials.json`. Set `work` as active.
 **Command:** `clp .account.list format::json v::0`
 **Expected Output:** Full JSON array identical to `format::json` without `v::0` -- format takes precedence over verbosity.
 **Verification:**

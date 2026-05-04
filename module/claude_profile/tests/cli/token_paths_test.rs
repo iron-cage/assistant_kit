@@ -257,7 +257,7 @@ fn p02_paths_text_v1_labeled()
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "credentials:" ), "v::1 must have credentials label, got:\n{text}" );
-  assert!( text.contains( "accounts:" ), "v::1 must have accounts label, got:\n{text}" );
+  assert!( text.contains( "credential_store:" ), "v::1 must have credential_store label, got:\n{text}" );
   assert!( text.contains( "sessions:" ), "v::1 must have sessions label, got:\n{text}" );
   let lines : Vec< &str > = text.lines().collect();
   assert_eq!( lines.len(), 7, "v::1 must have 7 labeled lines, got {}", lines.len() );
@@ -269,7 +269,7 @@ fn p03_paths_text_v2_existence_markers()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   // Create some paths to have mixed exists/absent
-  std::fs::create_dir_all( dir.path().join( ".claude" ).join( "accounts" ) ).unwrap();
+  std::fs::create_dir_all( dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ) ).unwrap();
 
   let out = run_cs_with_env( &[ ".paths", "v::2" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );

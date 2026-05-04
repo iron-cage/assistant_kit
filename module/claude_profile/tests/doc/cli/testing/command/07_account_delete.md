@@ -36,11 +36,11 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 ### IT-1: Delete removes credential file from account store
 
 **Goal:** Verify that deleting a non-active account removes its `.credentials.json` file from the account store.
-**Setup:** Two accounts saved: `work` (active) and `old`. Both have `.credentials.json` files in `~/.claude/accounts/`. `_active` marker reads `work`.
+**Setup:** Two accounts saved: `work` (active) and `old`. Both have `.credentials.json` files in `~/.persistent/claude/credential/`. `_active` marker reads `work`.
 **Command:** `clp .account.delete name::old`
 **Expected Output:** `deleted account 'old'` on stdout, exit 0.
 **Verification:**
-- `~/.claude/accounts/old.credentials.json` no longer exists on disk
+- `~/.persistent/claude/credential/old.credentials.json` no longer exists on disk
 - Exit code is 0
 **Pass Criteria:** Exit 0; account file removed from store.
 **Source:** [commands.md — .account.delete](../../../../../docs/cli/commands.md#command--6-accountdelete)
@@ -56,7 +56,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 **Verification:**
 - Exit code is 2
 - Stderr contains the substring "cannot delete active"
-- `~/.claude/accounts/work.credentials.json` still exists on disk
+- `~/.persistent/claude/credential/work.credentials.json` still exists on disk
 - `_active` marker is unchanged
 **Pass Criteria:** Exit 2; stderr contains "cannot delete active"; no state mutation.
 **Source:** [commands.md — .account.delete](../../../../../docs/cli/commands.md#command--6-accountdelete)
@@ -101,7 +101,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 **Expected Output:** `[dry-run] would delete account 'old'` on stdout, exit 0.
 **Verification:**
 - Stdout contains `[dry-run]` and `old`
-- `~/.claude/accounts/old.credentials.json` still exists on disk
+- `~/.persistent/claude/credential/old.credentials.json` still exists on disk
 - SHA-256 of `old.credentials.json` is identical before and after
 - Exit code is 0
 **Pass Criteria:** Exit 0; stdout contains dry-run message; account file not removed.
@@ -116,7 +116,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 **Command:** `clp .account.delete name::old`
 **Expected Output:** `deleted account 'old'`, exit 0.
 **Verification:**
-- SHA-256 of `~/.claude/accounts/_active` is identical before and after
+- SHA-256 of `~/.persistent/claude/credential/_active` is identical before and after
 - `_active` file content still reads `work`
 **Pass Criteria:** Exit 0; `_active` marker unchanged.
 **Source:** [commands.md — .account.delete](../../../../../docs/cli/commands.md#command--6-accountdelete)

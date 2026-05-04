@@ -39,7 +39,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../../doc
 - Exit code is 0
 - Output starts with `[dry-run]`
 - Output contains `would save current credentials as 'preview'`
-- File `~/.claude/accounts/preview.credentials.json` does not exist after execution
+- File `~/.persistent/claude/credential/preview.credentials.json` does not exist after execution
 **Pass Criteria:** Exit 0; output has `[dry-run]` prefix and no file is created.
 **Source:** [params.md -- dry::](../../../../../docs/cli/params.md#parameter--5-dry)
 
@@ -55,7 +55,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../../doc
 - Exit code is 0
 - Output contains `saved current credentials as 'real'`
 - Output does not contain `[dry-run]`
-- File `~/.claude/accounts/real.credentials.json` exists after execution
+- File `~/.persistent/claude/credential/real.credentials.json` exists after execution
 **Pass Criteria:** Exit 0; command executes normally with file created.
 **Source:** [params.md -- dry::](../../../../../docs/cli/params.md#parameter--5-dry)
 
@@ -71,7 +71,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../../doc
 - Exit code is 0
 - Output starts with `[dry-run]`
 - Output matches the output of `clp .account.save name::alias_test dry::1`
-- File `~/.claude/accounts/alias_test.credentials.json` does not exist after execution
+- File `~/.persistent/claude/credential/alias_test.credentials.json` does not exist after execution
 **Pass Criteria:** Exit 0; `dry::true` behaves identically to `dry::1`.
 **Source:** [params.md -- dry::](../../../../../docs/cli/params.md#parameter--5-dry)
 
@@ -87,7 +87,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../../doc
 - Exit code is 0
 - Output contains `saved current credentials as 'alias_test2'`
 - Output does not contain `[dry-run]`
-- File `~/.claude/accounts/alias_test2.credentials.json` exists after execution
+- File `~/.persistent/claude/credential/alias_test2.credentials.json` exists after execution
 **Pass Criteria:** Exit 0; `dry::false` behaves identically to `dry::0`.
 **Source:** [params.md -- dry::](../../../../../docs/cli/params.md#parameter--5-dry)
 
@@ -102,7 +102,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../../doc
 **Verification:**
 - Exit code is 1
 - Stderr indicates the value is not a valid boolean
-- No file created under `~/.claude/accounts/`
+- No file created under `~/.persistent/claude/credential/`
 **Pass Criteria:** Exit 1; non-boolean `dry::` value rejected with descriptive error.
 **Source:** [params.md -- dry::](../../../../../docs/cli/params.md#parameter--5-dry)
 
@@ -111,14 +111,14 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../../doc
 ### EC-6: No Side Effects
 
 **Goal:** Confirm that `dry::1` does not create, modify, or delete any files on disk.
-**Setup:** Active credentials exist at `~/.claude/.credentials.json`. Record file listing and checksums of `~/.claude/` and `~/.claude/accounts/` before execution.
+**Setup:** Active credentials exist at `~/.claude/.credentials.json`. Record file listing and checksums of `~/.claude/` and `~/.persistent/claude/credential/` before execution.
 **Command:** `clp .account.save name::sideeffect dry::1`
 **Expected Output:** `[dry-run] would save current credentials as 'sideeffect'` with exit 0.
 **Verification:**
 - Exit code is 0
-- File `~/.claude/accounts/sideeffect.credentials.json` does not exist
+- File `~/.persistent/claude/credential/sideeffect.credentials.json` does not exist
 - File listing of `~/.claude/` is identical before and after execution
-- File listing of `~/.claude/accounts/` is identical before and after execution
+- File listing of `~/.persistent/claude/credential/` is identical before and after execution
 - No new files, no modified timestamps, no deleted files
 **Pass Criteria:** Exit 0; filesystem state unchanged after dry-run execution.
 **Source:** [params.md -- dry::](../../../../../docs/cli/params.md#parameter--5-dry)
@@ -138,8 +138,8 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../../doc
 **Verification:**
 - Both commands exit 0
 - Dry-run output describes the same action that execute performs
-- File `~/.claude/accounts/fidelity.credentials.json` does not exist after step 1
-- File `~/.claude/accounts/fidelity.credentials.json` exists after step 2
+- File `~/.persistent/claude/credential/fidelity.credentials.json` does not exist after step 1
+- File `~/.persistent/claude/credential/fidelity.credentials.json` exists after step 2
 **Pass Criteria:** Exit 0 for both; dry-run success implies execute success with identical semantics.
 **Source:** [params.md -- dry::](../../../../../docs/cli/params.md#parameter--5-dry)
 
@@ -155,6 +155,6 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../../doc
 - Exit code is 0
 - Output contains `saved current credentials as 'default_test'`
 - Output does not contain `[dry-run]`
-- File `~/.claude/accounts/default_test.credentials.json` exists after execution
+- File `~/.persistent/claude/credential/default_test.credentials.json` exists after execution
 **Pass Criteria:** Exit 0; default behavior is normal execution without dry-run prefix.
 **Source:** [params.md -- dry::](../../../../../docs/cli/params.md#parameter--5-dry)

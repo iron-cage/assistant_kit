@@ -3,32 +3,37 @@
 //! # Account Store Layout
 //!
 //! ```text
-//! ~/.claude/accounts/
-//!   work.credentials.json       ← saved credential snapshot
-//!   personal.credentials.json
-//!   _active                     ← text: name of active account
+//! $PRO/.persistent/claude/credential/
+//!   alice@acme.com.credentials.json   ← saved credential snapshot
+//!   alice@home.com.credentials.json
+//!   _active                           ← text: name of active account
 //! ```
 //!
 //! # Examples
 //!
 //! ```no_run
 //! use claude_profile_core::account;
+//! use claude_core::ClaudePaths;
+//! use std::path::Path;
+//!
+//! let paths = ClaudePaths::new().expect( "HOME must be set" );
+//! let credential_store = Path::new( "/pro/.persistent/claude/credential" );
 //!
 //! // List stored accounts
-//! for acct in account::list().expect( "failed to list accounts" )
+//! for acct in account::list( credential_store ).expect( "failed to list accounts" )
 //! {
 //!   let active = if acct.is_active { " ← active" } else { "" };
 //!   println!( "{}{} ({})", acct.name, active, acct.subscription_type );
 //! }
 //!
-//! // Save current credentials as "work"
-//! account::save( "work" ).expect( "failed to save" );
+//! // Save current credentials as "alice@acme.com"
+//! account::save( "alice@acme.com", credential_store, &paths ).expect( "failed to save" );
 //!
-//! // Switch to "personal"
-//! account::switch_account( "personal" ).expect( "failed to switch" );
+//! // Switch to "alice@home.com"
+//! account::switch_account( "alice@home.com", credential_store, &paths ).expect( "failed to switch" );
 //!
 //! // Delete an old entry
-//! account::delete( "old" ).expect( "failed to delete" );
+//! account::delete( "alice@oldco.com", credential_store ).expect( "failed to delete" );
 //! ```
 
 use std::path::Path;
@@ -38,7 +43,7 @@ use claude_core::ClaudePaths;
 #[ derive( Debug, Clone ) ]
 pub struct Account
 {
-  /// Account name — the filename stem in `~/.claude/accounts/`.
+  /// Account name — the email address used as the credential filename stem.
   pub name : String,
   /// Claude subscription type (e.g., `"max"`, `"pro"`).
   pub subscription_type : String,
@@ -50,25 +55,23 @@ pub struct Account
   pub is_active : bool,
 }
 
-/// List all accounts in `~/.claude/accounts/`.
+/// List all accounts in `credential_store`.
 ///
-/// Returns an empty `Vec` if the account store does not exist yet — not an error.
+/// Returns an empty `Vec` if the credential store does not exist yet — not an error.
 ///
 /// # Errors
 ///
-/// Returns an error if the accounts directory exists but cannot be read.
+/// Returns an error if the credential store exists but cannot be read.
 #[ inline ]
 #[ must_use = "check the returned accounts list" ]
-pub fn list() -> Result< Vec< Account >, std::io::Error >
+pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Error >
 {
-  let paths = require_paths()?;
-  let accounts_dir = paths.accounts_dir();
-  if !accounts_dir.exists() { return Ok( Vec::new() ); }
+  if !credential_store.exists() { return Ok( Vec::new() ); }
 
-  let active = read_active_marker( &accounts_dir );
+  let active = read_active_marker( credential_store );
   let mut accounts = Vec::new();
 
-  for entry in std::fs::read_dir( &accounts_dir )?.flatten()
+  for entry in std::fs::read_dir( credential_store )?.flatten()
   {
     let path = entry.path();
     let Some( name ) = credential_stem( &path ) else { continue };
@@ -88,22 +91,20 @@ pub fn list() -> Result< Vec< Account >, std::io::Error >
   Ok( accounts )
 }
 
-/// Save the current `~/.claude/.credentials.json` as a named account.
+/// Save the current credentials as a named account in `credential_store`.
 ///
-/// Creates `~/.claude/accounts/{name}.credentials.json`. Overwrites if exists.
+/// Creates `{credential_store}/{name}.credentials.json`. Overwrites if exists.
 ///
 /// # Errors
 ///
 /// Returns an error if the name is invalid, the credentials file cannot be
-/// read, or the account store cannot be written.
+/// read, or the credential store cannot be written.
 #[ inline ]
-pub fn save( name : &str ) -> Result< (), std::io::Error >
+pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths ) -> Result< (), std::io::Error >
 {
   validate_name( name )?;
-  let paths = require_paths()?;
-  let accounts_dir = paths.accounts_dir();
-  std::fs::create_dir_all( &accounts_dir )?;
-  let dest = accounts_dir.join( format!( "{name}.credentials.json" ) );
+  std::fs::create_dir_all( credential_store )?;
+  let dest = credential_store.join( format!( "{name}.credentials.json" ) );
   std::fs::copy( paths.credentials_file(), dest )?;
   Ok( () )
 }
@@ -116,18 +117,16 @@ pub fn save( name : &str ) -> Result< (), std::io::Error >
 /// # Errors
 ///
 /// Returns `NotFound` if the account does not exist.
-/// Returns an I/O error if HOME is not set.
 #[ inline ]
-pub fn check_switch_preconditions( name : &str ) -> Result< (), std::io::Error >
+pub fn check_switch_preconditions( name : &str, credential_store : &Path ) -> Result< (), std::io::Error >
 {
   validate_name( name )?;
-  let paths = require_paths()?;
-  let src = paths.accounts_dir().join( format!( "{name}.credentials.json" ) );
+  let src = credential_store.join( format!( "{name}.credentials.json" ) );
   if !src.exists()
   {
     return Err( std::io::Error::new(
       std::io::ErrorKind::NotFound,
-      format!( "account '{name}' not found in {}", paths.accounts_dir().display() ),
+      format!( "account '{name}' not found in {}", credential_store.display() ),
     ) );
   }
   Ok( () )
@@ -135,31 +134,27 @@ pub fn check_switch_preconditions( name : &str ) -> Result< (), std::io::Error >
 
 /// Switch the active account by name.
 ///
-/// Atomically overwrites `~/.claude/.credentials.json` with the named
-/// account's credentials using write-then-rename, then updates
-/// `~/.claude/accounts/_active`.
+/// Atomically overwrites the credentials file with the named account's
+/// credentials using write-then-rename, then updates `{credential_store}/_active`.
 ///
 /// # Errors
 ///
 /// Returns `NotFound` if the account does not exist, or an I/O error if
 /// the switch cannot be completed.
 #[ inline ]
-pub fn switch_account( name : &str ) -> Result< (), std::io::Error >
+pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePaths ) -> Result< (), std::io::Error >
 {
-  check_switch_preconditions( name )?;
-  let paths = require_paths()?;
-  let accounts_dir = paths.accounts_dir();
-  let src = accounts_dir.join( format!( "{name}.credentials.json" ) );
+  check_switch_preconditions( name, credential_store )?;
+  let src = credential_store.join( format!( "{name}.credentials.json" ) );
 
   // Atomic write: copy to adjacent temp file, then rename into place.
-  // Both files share the same ~/.claude/ directory, guaranteeing same filesystem.
   let creds = paths.credentials_file();
   let tmp = creds.with_extension( "json.tmp" );
   std::fs::copy( &src, &tmp )?;
   std::fs::rename( &tmp, &creds )?;
 
   // Update active marker after credentials are safely in place.
-  let marker = accounts_dir.join( "_active" );
+  let marker = credential_store.join( "_active" );
   std::fs::write( marker, name )?;
 
   Ok( () )
@@ -182,14 +177,18 @@ pub fn switch_account( name : &str ) -> Result< (), std::io::Error >
 ///
 /// ```no_run
 /// use claude_profile_core::account;
+/// use claude_core::ClaudePaths;
+/// use std::path::Path;
 ///
-/// let switched_to = account::auto_rotate().expect( "rotation failed" );
+/// let credential_store = Path::new( "/pro/.persistent/claude/credential" );
+/// let paths = ClaudePaths::new().expect( "HOME must be set" );
+/// let switched_to = account::auto_rotate( credential_store, &paths ).expect( "rotation failed" );
 /// println!( "rotated to: {switched_to}" );
 /// ```
 #[ inline ]
-pub fn auto_rotate() -> Result< String, std::io::Error >
+pub fn auto_rotate( credential_store : &Path, paths : &ClaudePaths ) -> Result< String, std::io::Error >
 {
-  let candidate = list()?
+  let candidate = list( credential_store )?
     .into_iter()
     .filter( | a | !a.is_active )
     .max_by_key( | a | a.expires_at_ms )
@@ -199,7 +198,7 @@ pub fn auto_rotate() -> Result< String, std::io::Error >
     ) )?;
 
   let name = candidate.name;
-  switch_account( &name )?;
+  switch_account( &name, credential_store, paths )?;
   Ok( name )
 }
 
@@ -212,14 +211,11 @@ pub fn auto_rotate() -> Result< String, std::io::Error >
 ///
 /// Returns `PermissionDenied` if the account is currently active.
 /// Returns `NotFound` if the account does not exist.
-/// Returns an I/O error if HOME is not set.
 #[ inline ]
-pub fn check_delete_preconditions( name : &str ) -> Result< (), std::io::Error >
+pub fn check_delete_preconditions( name : &str, credential_store : &Path ) -> Result< (), std::io::Error >
 {
   validate_name( name )?;
-  let paths = require_paths()?;
-  let accounts_dir = paths.accounts_dir();
-  let active = read_active_marker( &accounts_dir );
+  let active = read_active_marker( credential_store );
 
   if active.as_deref() == Some( name )
   {
@@ -229,48 +225,38 @@ pub fn check_delete_preconditions( name : &str ) -> Result< (), std::io::Error >
     ) );
   }
 
-  let target = accounts_dir.join( format!( "{name}.credentials.json" ) );
+  let target = credential_store.join( format!( "{name}.credentials.json" ) );
   if !target.exists()
   {
     return Err( std::io::Error::new(
       std::io::ErrorKind::NotFound,
-      format!( "account '{name}' not found in {}", accounts_dir.display() ),
+      format!( "account '{name}' not found in {}", credential_store.display() ),
     ) );
   }
 
   Ok( () )
 }
 
-/// Delete a named account from `~/.claude/accounts/`.
+/// Delete a named account from `credential_store`.
 ///
 /// # Errors
 ///
 /// Returns `PermissionDenied` if the named account is currently active.
 /// Returns `NotFound` if the account does not exist.
 #[ inline ]
-pub fn delete( name : &str ) -> Result< (), std::io::Error >
+pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::Error >
 {
-  check_delete_preconditions( name )?;
-  let paths = require_paths()?;
-  let accounts_dir = paths.accounts_dir();
-  let target = accounts_dir.join( format!( "{name}.credentials.json" ) );
+  check_delete_preconditions( name, credential_store )?;
+  let target = credential_store.join( format!( "{name}.credentials.json" ) );
   std::fs::remove_file( target )?;
   Ok( () )
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
 
-fn require_paths() -> Result< ClaudePaths, std::io::Error >
+fn read_active_marker( credential_store : &Path ) -> Option< String >
 {
-  ClaudePaths::new().ok_or_else( || std::io::Error::new(
-    std::io::ErrorKind::NotFound,
-    "HOME environment variable not set",
-  ) )
-}
-
-fn read_active_marker( accounts_dir : &Path ) -> Option< String >
-{
-  let marker = accounts_dir.join( "_active" );
+  let marker = credential_store.join( "_active" );
   std::fs::read_to_string( marker )
     .ok()
     .map( | s | s.trim().to_string() )
@@ -295,18 +281,24 @@ pub fn credential_stem( path : &Path ) -> Option< String >
 #[ inline ]
 pub fn validate_name( name : &str ) -> Result< (), std::io::Error >
 {
-  if name.is_empty()
+  // Account names must be valid email addresses (local@domain) so they can be
+  // used as filenames and unambiguously identify the Claude account owner.
+  let at = name.find( '@' ).ok_or_else( || std::io::Error::new(
+    std::io::ErrorKind::InvalidInput,
+    format!( "account name '{name}' is not a valid email address: must contain '@'" ),
+  ) )?;
+  if at == 0
   {
     return Err( std::io::Error::new(
       std::io::ErrorKind::InvalidInput,
-      "account name must not be empty",
+      format!( "account name '{name}' is not a valid email address: local part must not be empty" ),
     ) );
   }
-  if name.chars().any( | c | matches!( c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '\0' ) )
+  if name[ at + 1.. ].is_empty()
   {
     return Err( std::io::Error::new(
       std::io::ErrorKind::InvalidInput,
-      format!( "account name '{name}' contains invalid characters" ),
+      format!( "account name '{name}' is not a valid email address: domain must not be empty" ),
     ) );
   }
   Ok( () )

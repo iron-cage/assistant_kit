@@ -9,26 +9,26 @@
 
 ### Design
 
-`claude_profile` must copy `~/.claude/.credentials.json` to `~/.claude/accounts/{name}.credentials.json`, creating or overwriting the named entry.
+`claude_profile` must copy `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json`, creating or overwriting the named entry. The credential store path is resolved per FR-6 (see `001_account_store_init.md`).
 
-**Name validation** — account names must be:
+**Name validation** — account names must be valid email addresses:
 - Non-empty
-- Free of filesystem-forbidden characters: `/\:*?"<>|` and null bytes
+- Must contain `@` with non-empty local part and domain
 
 **Operation steps:**
 1. Validate `name` against the rules above (exit 1 on violation).
-2. Ensure `~/.claude/accounts/` exists (`create_dir_all` — see FR-6).
+2. Resolve credential store directory and ensure it exists (`create_dir_all` — see FR-6).
 3. Read `~/.claude/.credentials.json`.
-4. Write contents to `~/.claude/accounts/{name}.credentials.json` (creates or overwrites).
+4. Write contents to `{credential_store}/{name}.credentials.json` (creates or overwrites).
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would save current credentials as '{name}'` without modifying any files.
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .account.save name::work` exits 0 and creates `~/.claude/accounts/work.credentials.json`.
+- **AC-01**: `clp .account.save name::alice@acme.com` exits 0 and creates `{credential_store}/alice@acme.com.credentials.json`.
 - **AC-02**: `clp .account.save name::` (empty) exits 1 with `account name must not be empty`.
-- **AC-03**: `clp .account.save name::foo/bar` exits 1 with `contains invalid characters`.
-- **AC-04**: `clp .account.save name::work dry::1` prints `[dry-run] would save current credentials as 'work'` and creates no files.
+- **AC-03**: `clp .account.save name::notanemail` exits 1 with `must be an email address`.
+- **AC-04**: `clp .account.save name::alice@acme.com dry::1` prints `[dry-run] would save current credentials as 'alice@acme.com'` and creates no files.
 
 ### Cross-References
 

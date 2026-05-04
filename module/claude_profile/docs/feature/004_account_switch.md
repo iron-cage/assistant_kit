@@ -11,10 +11,10 @@
 
 `claude_profile` must switch the active account by:
 
-1. Read `~/.claude/accounts/{name}.credentials.json` → fail with `NotFound` if absent.
+1. Read `{credential_store}/{name}.credentials.json` → fail with `NotFound` if absent.
 2. Write contents to a temp file adjacent to `~/.claude/.credentials.json`.
 3. Rename temp file to `~/.claude/.credentials.json` — atomic on same filesystem (POSIX rename semantics).
-4. Write account name to `~/.claude/accounts/_active`.
+4. Write account name to `{credential_store}/_active`.
 
 **Atomicity guarantee:** The rename in step 3 ensures that a crash between steps 2 and 4 leaves either the old credentials or the new ones in place — never a partially-written file. Step 4 (_active marker) is a best-effort metadata update; a crash after step 3 leaves the credentials correct but the marker stale.
 
@@ -27,10 +27,10 @@
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .account.switch name::personal` exits 0, `~/.claude/.credentials.json` contains personal's credentials, `_active` contains `personal`.
-- **AC-02**: `clp .account.switch name::ghost` (no such account) exits 2 with actionable error.
+- **AC-01**: `clp .account.switch name::alice@home.com` exits 0, `~/.claude/.credentials.json` contains alice@home.com's credentials, `_active` contains `alice@home.com`.
+- **AC-02**: `clp .account.switch name::ghost@example.com` (no such account) exits 2 with actionable error.
 - **AC-03**: Concurrent crash during rename leaves credentials in valid state (never partial write).
-- **AC-04**: `clp .account.switch name::personal dry::1` exits 0 with `[dry-run]` prefix; no files changed.
+- **AC-04**: `clp .account.switch name::alice@home.com dry::1` exits 0 with `[dry-run]` prefix; no files changed.
 
 ### Cross-References
 

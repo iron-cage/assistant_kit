@@ -38,7 +38,7 @@
 | type inference | Settings value auto-typing via `infer_type()`: bool -> number -> string cascade |
 | atomic write | Settings written via temp-file rename (`settings.json.tmp` -> `settings.json`) to prevent corruption |
 | version alias | Named reference (`stable`, `month`, `latest`) resolving to a specific version string |
-| active account | Current account marker stored in `~/.claude/accounts/_active` |
+| active account | Current account marker stored in `$PRO/.persistent/claude/credential/_active` (or `$HOME/.persistent/...`) |
 | `/proc` scanning | Process detection via reading `/proc/{pid}/cmdline` for `basename == "claude"` |
 | signal sequence | Normal kill: SIGTERM -> 2 second wait -> SIGKILL survivors |
 | last-wins | When a parameter appears multiple times, the last occurrence takes effect |

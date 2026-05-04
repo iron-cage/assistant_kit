@@ -20,7 +20,6 @@
 //! | `paths_new_returns_some_with_home` | HOME set → Some |
 //! | `paths_base_ends_with_dot_claude` | base path suffix |
 //! | `paths_credentials_file_correct` | .credentials.json path |
-//! | `paths_accounts_dir_correct` | accounts/ path |
 //! | `paths_projects_dir_correct` | projects/ path |
 //! | `paths_stats_file_correct` | stats-cache.json path |
 //! | `paths_settings_file_correct` | settings.json path |
@@ -65,19 +64,6 @@ fn paths_credentials_file_correct()
     f.ends_with( ".claude/.credentials.json" ),
     "expected .claude/.credentials.json, got: {}",
     f.display()
-  );
-}
-
-#[test]
-fn paths_accounts_dir_correct()
-{
-  std::env::set_var( "HOME", "/tmp/test_home" );
-  let p = ClaudePaths::new().expect( "HOME is set" );
-  let d = p.accounts_dir();
-  assert!(
-    d.ends_with( ".claude/accounts" ),
-    "expected .claude/accounts, got: {}",
-    d.display()
   );
 }
 

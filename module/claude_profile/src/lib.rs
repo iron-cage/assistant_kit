@@ -3,7 +3,7 @@
 
 //! Claude Code account credential management.
 //!
-//! Manages multiple Claude Code credential sets stored under `~/.claude/accounts/`
+//! Manages multiple Claude Code credential sets stored under `.persistent/claude/credential/`
 //! for account rotation when usage limits are reached.
 //!
 //! # Modules
@@ -34,27 +34,35 @@
 //! ## Rotate Account
 //!
 //! ```no_run
-//! use claude_profile::account;
+//! use std::path::Path;
+//! use claude_profile::{ account, ClaudePaths, PersistPaths };
 //!
+//! let persist = PersistPaths::new().expect( "PRO or HOME must be set" );
+//! let credential_store = persist.credential_store();
+//! let paths = ClaudePaths::new().expect( "HOME must be set" );
 //! // One-liner: pick the inactive account with the highest expiry and switch
-//! let switched_to = account::auto_rotate().expect( "no inactive account available" );
+//! let switched_to = account::auto_rotate( &credential_store, &paths ).expect( "no inactive account available" );
 //! println!( "switched to {switched_to}" );
 //! ```
 //!
 //! ## Inspect and Switch Manually
 //!
 //! ```no_run
-//! use claude_profile::account;
+//! use claude_profile::{ account, ClaudePaths, PersistPaths };
+//!
+//! let persist = PersistPaths::new().expect( "PRO or HOME must be set" );
+//! let credential_store = persist.credential_store();
+//! let paths = ClaudePaths::new().expect( "HOME must be set" );
 //!
 //! // See what's available
-//! for acct in account::list().expect( "list failed" )
+//! for acct in account::list( &credential_store ).expect( "list failed" )
 //! {
 //!   let active = if acct.is_active { " ← active" } else { "" };
 //!   println!( "{}{} ({})", acct.name, active, acct.subscription_type );
 //! }
 //!
 //! // Switch to a specific account
-//! account::switch_account( "personal" ).expect( "switch failed" );
+//! account::switch_account( "alice@home.com", &credential_store, &paths ).expect( "switch failed" );
 //! ```
 
 /// Path to the YAML command definitions for this crate.
@@ -113,8 +121,12 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let dry = || reg_arg_opt( "dry",       Kind::Boolean );
   let nam = || reg_arg_opt( "name",      Kind::String  );
   let thr = || reg_arg_opt( "threshold", Kind::Integer );
+  let bf  = | nm : &'static str | reg_arg_opt( nm, Kind::Boolean );
 
-  reg_cmd( registry, ".credentials.status", "Show live credential metadata without account store dependency", vec![ v(), fmt() ],   Box::new( credentials_status_routine ) );
+  reg_cmd( registry, ".credentials.status", "Show live credential metadata without account store dependency",
+    vec![ fmt(), bf( "account" ), bf( "sub" ), bf( "tier" ), bf( "token" ),
+          bf( "expires" ), bf( "email" ), bf( "org" ), bf( "file" ), bf( "saved" ) ],
+    Box::new( credentials_status_routine ) );
   reg_cmd( registry, ".account.list",   "List all saved accounts with subscription type and token state", vec![ v(), fmt() ],        Box::new( account_list_routine   ) );
   reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), v(), fmt() ],   Box::new( account_limits_routine ) );
   reg_cmd( registry, ".account.status", "Show active account name and token state; optionally query a named account", vec![ nam(), v(), fmt() ], Box::new( account_status_routine ) );
@@ -233,27 +245,25 @@ mod cli
     println!( "Commands:" );
     println!( "  .account.list        [v::0-2] [format::text|json]   List all saved accounts" );
     println!( "  .account.status      [v::0-2] [format::text|json]   Show active account and token state" );
-    println!( "  .account.save        name::STRING [dry::bool]       Save current credentials as named account" );
-    println!( "  .account.switch      name::STRING [dry::bool]       Switch active account" );
-    println!( "  .account.delete      name::STRING [dry::bool]       Delete a saved account" );
+    println!( "  .account.save        name::EMAIL [dry::bool]       Save current credentials as named account" );
+    println!( "  .account.switch      name::EMAIL [dry::bool]       Switch active account" );
+    println!( "  .account.delete      name::EMAIL [dry::bool]       Delete a saved account" );
     println!( "  .token.status        [v::0-2] [format::text|json]   Show OAuth token expiry status" );
     println!( "  .paths               [v::0-2] [format::text|json]   Show all ~/.claude/ canonical paths" );
     println!( "  .usage               [v::0-2] [format::text|json]   Show 7-day token usage summary" );
-    println!( "  .credentials.status  [v::0-2] [format::text|json]   Show live credentials (no account store needed)" );
+    println!( "  .credentials.status  [format::text|json] [field::0|1] ...  Show live credentials (no account store needed)" );
     println!();
     println!( "Options:" );
-    println!( "  --version, -V       Show version and exit" );
-    println!( "  --help, -h          Show this help and exit" );
     println!( "  v::0-2              Verbosity level (default: 1)" );
     println!( "  format::text|json   Output format (default: text)" );
     println!( "  dry::bool           Preview without applying" );
-    println!( "  name::STRING        Account name" );
+    println!( "  name::EMAIL        Account name" );
     println!();
     println!( "Examples:" );
     println!( "  {binary} .account.list" );
     println!( "  {binary} .account.list v::2" );
-    println!( "  {binary} .account.switch name::work" );
-    println!( "  {binary} .account.switch name::work dry::true" );
+    println!( "  {binary} .account.switch name::alice@acme.com" );
+    println!( "  {binary} .account.switch name::alice@acme.com dry::true" );
     println!( "  {binary} .token.status format::json" );
     println!( "  {binary} .paths v::2" );
     println!( "  {binary} .usage" );
@@ -264,13 +274,6 @@ mod cli
   /// Run the full unilang pipeline for the given argv.
   pub( super ) fn run( binary : &str, argv : &[ String ] )
   {
-    // Phase 0: --version / -V
-    if argv.first().is_some_and( |a| a == "--version" || a == "-V" )
-    {
-      println!( "{} {}", binary, env!( "CARGO_PKG_VERSION" ) );
-      return;
-    }
-
     // Phase 1: adapter — convert argv to unilang tokens.
     let ( tokens, needs_help ) = match argv_to_unilang_tokens( argv )
     {
@@ -278,13 +281,13 @@ mod cli
       Err( e ) =>
       {
         eprintln!( "Error: {e}" );
-        eprintln!( "Run '{binary} --help' for usage." );
+        eprintln!( "Run '{binary} .help' for usage." );
         std::process::exit( 1 );
       }
     };
 
     // Intercept help requests before entering the unilang pipeline.
-    // Triggered by: no args, `.`, `--help`, `-h`.
+    // Triggered by: no args, `.`.
     // Explicit `.help` does NOT set needs_help, so it still goes through unilang.
     if needs_help
     {

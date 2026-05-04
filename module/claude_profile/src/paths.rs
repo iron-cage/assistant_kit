@@ -8,7 +8,7 @@
 //! use claude_profile::ClaudePaths;
 //!
 //! let p = ClaudePaths::new().expect( "HOME must be set" );
-//! println!( "accounts: {}", p.accounts_dir().display() );
+//! println!( "credentials: {}", p.credentials_file().display() );
 //! ```
 
 pub use claude_core::ClaudePaths;

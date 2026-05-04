@@ -28,7 +28,7 @@ Claude Code account credential management.
 ### Scope
 
 **In Scope:**
-- Account credential snapshots in `~/.claude/accounts/`
+- Account credential snapshots in `$PRO/.persistent/claude/credential/` (or `$HOME/.persistent/...`)
 - Token expiry detection from `~/.claude/.credentials.json`
 - All canonical `~/.claude/` paths via `ClaudePaths`
 - Persistent user storage path resolution via `PersistPaths` (`$PRO`/`$HOME`)
@@ -45,13 +45,15 @@ Claude Code account credential management.
 ## Account Management
 
 ```rust,no_run
-use claude_profile::{ account, token, ClaudePaths };
+use claude_profile::{ account, token, ClaudePaths, PersistPaths };
 
 // Where are the files?
-let p = ClaudePaths::new().expect( "HOME must be set" );
-println!( "credentials: {}", p.credentials_file().display() );
-println!( "accounts:    {}", p.accounts_dir().display() );
-println!( "projects:    {}", p.projects_dir().display() );
+let claude = ClaudePaths::new().expect( "HOME must be set" );
+let persist = PersistPaths::new().expect( "HOME must be set" );
+let credential_store = persist.credential_store();
+println!( "credentials:      {}", claude.credentials_file().display() );
+println!( "credential_store: {}", credential_store.display() );
+println!( "projects:         {}", claude.projects_dir().display() );
 
 // Check active token status
 match token::status().expect( "failed to read credentials" )
@@ -65,35 +67,36 @@ match token::status().expect( "failed to read credentials" )
 }
 
 // List all stored accounts
-for acct in account::list().expect( "failed to list accounts" )
+for acct in account::list( &credential_store ).expect( "failed to list accounts" )
 {
   let active = if acct.is_active { " ← active" } else { "" };
   println!( "{}{} ({})", acct.name, active, acct.subscription_type );
 }
 
-// Save current credentials as "work"
-account::save( "work" ).expect( "failed to save account" );
+// Save current credentials as "work@acme.com"
+account::save( "work@acme.com", &credential_store, &claude ).expect( "failed to save account" );
 
-// Switch to "personal"
-account::switch_account( "personal" ).expect( "failed to switch" );
+// Switch to "personal@home.com"
+account::switch_account( "personal@home.com", &credential_store, &claude ).expect( "failed to switch" );
 
 // Delete an old account
-account::delete( "old-account" ).expect( "failed to delete" );
+account::delete( "old@acme.com", &credential_store ).expect( "failed to delete" );
 ```
 
 ## File Paths
 
 ```rust,no_run
-use claude_profile::ClaudePaths;
+use claude_profile::{ ClaudePaths, PersistPaths };
 
 let p = ClaudePaths::new().expect( "HOME must be set" );
-println!( "credentials: {}", p.credentials_file().display() );
-println!( "accounts:    {}", p.accounts_dir().display() );
-println!( "projects:    {}", p.projects_dir().display() );
-println!( "stats:       {}", p.stats_file().display() );
-println!( "settings:    {}", p.settings_file().display() );
-println!( "session-env: {}", p.session_env_dir().display() );
-println!( "sessions:    {}", p.sessions_dir().display() );
+let persist = PersistPaths::new().expect( "HOME must be set" );
+println!( "credentials:      {}", p.credentials_file().display() );
+println!( "credential_store: {}", persist.credential_store().display() );
+println!( "projects:         {}", p.projects_dir().display() );
+println!( "stats:            {}", p.stats_file().display() );
+println!( "settings:         {}", p.settings_file().display() );
+println!( "session-env:      {}", p.session_env_dir().display() );
+println!( "sessions:         {}", p.sessions_dir().display() );
 ```
 
 ## Binary

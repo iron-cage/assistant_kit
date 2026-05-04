@@ -42,7 +42,7 @@ $HOME/
 | `~/.claude/` | dir | R | all commands | Configuration root; base for all `ClaudePaths` methods |
 | `~/.claude/settings.json` | file | R/W | `.settings.*`, `.version.install`, `.version.guard`, `.status` | User settings; flat JSON with nested object preservation |
 | `~/.claude/settings.json.tmp` | file | W | `.settings.set`, `.version.install`, `.version.guard` | Atomic write staging; renamed to `settings.json` on success |
-| `~/.claude/accounts/_active` | file | R | `.status` | Active account name (single line, plain text) |
+| `{credential_store}/_active` | file | R/W | `.account.switch`, `.account.status`, `.status` | Active account name (single line, plain text); `{credential_store}` = `$PRO/.persistent/claude/credential/` or `$HOME/.persistent/claude/credential/` |
 | `~/.claude/projects/` | dir | R | (reserved) | Conversation history root |
 | `~/.claude/sessions/` | dir | R | (reserved) | Session records |
 | `~/.claude/session-env/` | dir | R | (reserved) | Per-session environment records |

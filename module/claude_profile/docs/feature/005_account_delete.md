@@ -9,14 +9,14 @@
 
 ### Design
 
-`claude_profile` must remove `~/.claude/accounts/{name}.credentials.json` from the account store.
+`claude_profile` must remove `{credential_store}/{name}.credentials.json` from the account store.
 
 **Active-account guard:** Before deletion, check if `name` matches the `_active` marker. If so, return `PermissionDenied` with an actionable message instructing the user to switch accounts first.
 
 **Operation steps:**
 1. Validate `name`.
-2. Read `_active` marker; if `name` matches → error: cannot delete active account.
-3. Remove `~/.claude/accounts/{name}.credentials.json` → `NotFound` if absent.
+2. Read `_active` marker from `{credential_store}/_active`; if `name` matches → error: cannot delete active account.
+3. Remove `{credential_store}/{name}.credentials.json` → `NotFound` if absent.
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would delete account '{name}'` without removing any files.
 
@@ -27,10 +27,10 @@
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .account.delete name::old` exits 0 and removes `~/.claude/accounts/old.credentials.json`.
-- **AC-02**: `clp .account.delete name::work` (active account) exits 2 with message directing user to switch first.
-- **AC-03**: `clp .account.delete name::ghost` (non-existent) exits 2 with not-found error.
-- **AC-04**: `clp .account.delete name::old dry::1` exits 0 with `[dry-run]` prefix; no files removed.
+- **AC-01**: `clp .account.delete name::alice@oldco.com` exits 0 and removes `{credential_store}/alice@oldco.com.credentials.json`.
+- **AC-02**: `clp .account.delete name::alice@acme.com` (active account) exits 2 with message directing user to switch first.
+- **AC-03**: `clp .account.delete name::ghost@example.com` (non-existent) exits 2 with not-found error.
+- **AC-04**: `clp .account.delete name::alice@oldco.com dry::1` exits 0 with `[dry-run]` prefix; no files removed.
 
 ### Cross-References
 

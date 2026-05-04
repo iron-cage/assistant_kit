@@ -61,7 +61,7 @@ fn lim01_unknown_named_account_exits_2()
   let home = dir.path().to_str().unwrap();
   // Active credentials exist; `ghost` account does NOT.
   write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
-  std::fs::create_dir_all( dir.path().join( ".claude" ).join( "accounts" ) ).unwrap();
+  std::fs::create_dir_all( dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ) ).unwrap();
 
   let out = run_cs_with_env(
     &[ ".account.limits", "name::ghost" ],

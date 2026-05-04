@@ -1,6 +1,6 @@
 //! Unit tests for the adapter and output modules.
 //!
-//! Covers matrix IDs A-01..A-33 (adapter), O-01..O-19 (output), D-01..D-12 (`format_duration`).
+//! Covers matrix IDs A-01..A-37 (adapter), O-01..O-19 (output), D-01..D-12 (`format_duration`).
 //! All tests call library functions directly — no binary invocation.
 //!
 //! ## Test Matrix
@@ -12,8 +12,8 @@
 //! | A-01 | `adapter_empty_argv_returns_help` | empty argv → help | P |
 //! | A-02 | `adapter_single_command` | single command word → command token | P |
 //! | A-03 | `adapter_dot_returns_help` | `.` → help | P |
-//! | A-04 | `adapter_double_dash_help` | `--help` → help | P |
-//! | A-05 | `adapter_dash_h_help` | `-h` → help | P |
+//! | A-04 | `adapter_rejects_double_dash_help` | `--help` → unexpected flag error | N |
+//! | A-05 | `adapter_rejects_dash_h` | `-h` → unexpected flag error | N |
 //! | A-06 | `adapter_rejects_unknown_flag` | `-verbose` (unknown flag) → error | N |
 //! | A-07 | `adapter_rejects_param_as_command` | `key::value` as first arg → error | N |
 //! | A-08 | `adapter_verbosity_alias_0` | `v::0` → verbosity 0 | P |
@@ -42,6 +42,10 @@
 //! | A-31 | `adapter_dot_help_in_second_position` | `.help` in second position → routes to help | P |
 //! | A-32 | `adapter_bare_help_in_second_position` | `help` in second position → routes to help | P |
 //! | A-33 | `adapter_bare_help_as_sole_arg` | bare `help` as sole argv → routes to help | P |
+//! | A-34 | `adapter_rejects_double_dash_version` | `--version` → unexpected flag error | N |
+//! | A-35 | `adapter_rejects_dash_v_version` | `-V` → unexpected flag error | N |
+//! | A-36 | `adapter_field_presence_bool_true_normalises` | `account::true` → `account::1` | P |
+//! | A-37 | `adapter_field_presence_bool_false_normalises` | `account::false` → `account::0` | P |
 //!
 //! ### O — Output format / verbosity / `json_escape`
 //!
@@ -123,22 +127,22 @@ mod adapter
     assert!( needs_help );
   }
 
-  // A-04: --help → help
+  // A-04: --help → unexpected flag error (POSIX flags not supported)
   #[ test ]
-  fn adapter_double_dash_help()
+  fn adapter_rejects_double_dash_help()
   {
-    let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ "--help" ] ) ).unwrap();
-    assert_eq!( tokens, vec![ ".help" ] );
-    assert!( needs_help );
+    let err = argv_to_unilang_tokens( &s( &[ "--help" ] ) ).unwrap_err();
+    let msg = format!( "{err}" );
+    assert!( msg.contains( "unexpected flag" ), "got: {msg}" );
   }
 
-  // A-05: -h → help
+  // A-05: -h → unexpected flag error (POSIX flags not supported)
   #[ test ]
-  fn adapter_dash_h_help()
+  fn adapter_rejects_dash_h()
   {
-    let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ "-h" ] ) ).unwrap();
-    assert_eq!( tokens, vec![ ".help" ] );
-    assert!( needs_help );
+    let err = argv_to_unilang_tokens( &s( &[ "-h" ] ) ).unwrap_err();
+    let msg = format!( "{err}" );
+    assert!( msg.contains( "unexpected flag" ), "got: {msg}" );
   }
 
   // A-06: -verbose → error
@@ -417,6 +421,46 @@ mod adapter
     let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ "help" ] ) ).unwrap();
     assert_eq!( tokens, vec![ ".help" ] );
     assert!( needs_help );
+  }
+
+  // A-34: --version → unexpected flag error (POSIX flags not supported)
+  #[ test ]
+  fn adapter_rejects_double_dash_version()
+  {
+    let err = argv_to_unilang_tokens( &s( &[ "--version" ] ) ).unwrap_err();
+    let msg = format!( "{err}" );
+    assert!( msg.contains( "unexpected flag" ), "got: {msg}" );
+  }
+
+  // A-35: -V → unexpected flag error (POSIX flags not supported)
+  #[ test ]
+  fn adapter_rejects_dash_v_version()
+  {
+    let err = argv_to_unilang_tokens( &s( &[ "-V" ] ) ).unwrap_err();
+    let msg = format!( "{err}" );
+    assert!( msg.contains( "unexpected flag" ), "got: {msg}" );
+  }
+
+  // A-36: account::true → account::1 (field-presence bool normalisation)
+  #[ test ]
+  fn adapter_field_presence_bool_true_normalises()
+  {
+    let ( tokens, _ ) = argv_to_unilang_tokens( &s( &[ ".credentials.status", "account::true" ] ) ).unwrap();
+    assert!(
+      tokens.contains( &"account::1".to_string() ),
+      "account::true must normalise to account::1, got: {tokens:?}",
+    );
+  }
+
+  // A-37: account::false → account::0 (field-presence bool normalisation)
+  #[ test ]
+  fn adapter_field_presence_bool_false_normalises()
+  {
+    let ( tokens, _ ) = argv_to_unilang_tokens( &s( &[ ".credentials.status", "account::false" ] ) ).unwrap();
+    assert!(
+      tokens.contains( &"account::0".to_string() ),
+      "account::false must normalise to account::0, got: {tokens:?}",
+    );
   }
 }
 

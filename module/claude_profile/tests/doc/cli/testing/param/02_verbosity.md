@@ -31,7 +31,7 @@ Edge case coverage for the `verbosity::` parameter. See [params.md](../../../../
 ### EC-1: Valid Level — Quiet
 
 **Goal:** Confirm that `v::0` suppresses labels and produces bare values only.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list v::0`
 **Expected Output:** Bare account names only, one per line, no labels, no active indicator, no subscription metadata. Exit 0.
 **Verification:**
@@ -46,7 +46,7 @@ Edge case coverage for the `verbosity::` parameter. See [params.md](../../../../
 ### EC-2: Valid Level — Normal
 
 **Goal:** Confirm that `v::1` produces labeled output with human context.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`, with one marked active.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`, with one marked active.
 **Command:** `clp .account.list v::1`
 **Expected Output:** Account names with `<- active` marker on the active account and subscription type. Exit 0.
 **Verification:**
@@ -62,7 +62,7 @@ Edge case coverage for the `verbosity::` parameter. See [params.md](../../../../
 ### EC-3: Valid Level — Verbose
 
 **Goal:** Confirm that `v::2` includes full metadata including tier and expiry details.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list v::2`
 **Expected Output:** Account names with subscription type, rate-limit tier, and full expiry timestamp. Exit 0.
 **Verification:**
@@ -78,7 +78,7 @@ Edge case coverage for the `verbosity::` parameter. See [params.md](../../../../
 ### EC-4: Out of Range
 
 **Goal:** Confirm that `v::3` is rejected as outside the valid 0-2 range.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list v::3`
 **Expected Output:** Error message containing `verbosity must be 0-2` with exit 1.
 **Verification:**
@@ -93,7 +93,7 @@ Edge case coverage for the `verbosity::` parameter. See [params.md](../../../../
 ### EC-5: Invalid Type
 
 **Goal:** Confirm that a non-integer verbosity value is rejected.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list v::abc`
 **Expected Output:** Error message indicating non-integer value with exit 1.
 **Verification:**
@@ -108,7 +108,7 @@ Edge case coverage for the `verbosity::` parameter. See [params.md](../../../../
 ### EC-6: Alias
 
 **Goal:** Confirm that the long-form `verbosity::` alias produces identical output to the short-form `v::`.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list verbosity::1`
 **Expected Output:** Same labeled output as `clp .account.list v::1`. Exit 0.
 **Verification:**
@@ -123,7 +123,7 @@ Edge case coverage for the `verbosity::` parameter. See [params.md](../../../../
 ### EC-7: Last Wins
 
 **Goal:** Confirm that when `v::` is specified multiple times, the last occurrence takes precedence.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list v::0 v::2`
 **Expected Output:** Verbose output (matching `v::2` behavior), not quiet output. Exit 0.
 **Verification:**
@@ -138,7 +138,7 @@ Edge case coverage for the `verbosity::` parameter. See [params.md](../../../../
 ### EC-8: Default
 
 **Goal:** Confirm that omitting `v::` defaults to `v::1` (normal labeled output).
-**Setup:** At least one saved account exists under `~/.claude/accounts/`, with one marked active.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`, with one marked active.
 **Command:** `clp .account.list`
 **Expected Output:** Same labeled output as `clp .account.list v::1`. Exit 0.
 **Verification:**

@@ -14,10 +14,6 @@ That is its founding purpose, and everything else follows from it.
 ```
 ~/.claude/
   .credentials.json             ← active OAuth token; shape is the API contract
-  accounts/
-    work.credentials.json       ← named credential snapshot
-    personal.credentials.json
-    _active                     ← "work"  ← single text file, single responsibility
   projects/
     -home-user-project-/        ← path-escaped working dir
       abc123.jsonl              ← conversation history
@@ -26,12 +22,17 @@ That is its founding purpose, and everything else follows from it.
   sessions/{id}.json            ← session records
   stats-cache.json
   settings.json
+
+$PRO/.persistent/claude/credential/   ← or $HOME/.persistent/claude/credential/
+  work@acme.com.credentials.json  ← named credential snapshot
+  personal@home.com.credentials.json
+  _active                         ← "work@acme.com"  ← single text file, single responsibility
 ```
 
 Every path in that tree that matters to tooling is computed through
-[`ClaudePaths`](src/paths.rs). Nothing in this codebase hardcodes `~/.claude/` as a
-string literal — not once. `ClaudePaths` is the single authoritative source and every
-other module that needs a path calls it.
+[`ClaudePaths`](src/paths.rs) or [`PersistPaths`](src/persist.rs). Nothing in this codebase hardcodes
+`~/.claude/` or credential store paths as string literals. `ClaudePaths` and `PersistPaths`
+are the single authoritative sources and every other module that needs a path calls them.
 
 ## The Primary Problem: Account Rotation
 

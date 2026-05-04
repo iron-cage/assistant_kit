@@ -8,18 +8,18 @@
 //!
 //! | ID   | Test Function | Condition | P/N |
 //! |------|---------------|-----------|-----|
-//! | A-01 | `save_creates_accounts_dir_when_missing` | first save creates `accounts/` | P |
+//! | A-01 | `save_creates_credential_store_when_missing` | first save creates credential store | P |
 //! | A-02 | `save_copies_credentials_to_named_file` | save produces named file with same content | P |
 //! | A-03 | `save_overwrites_existing_entry` | second save overwrites first | P |
 //! | A-04 | `save_rejects_empty_name` | empty name → `Err` | N |
 //! | A-05 | `save_rejects_name_with_slash` | name contains `/` → `Err` | N |
-//! | A-06 | `list_returns_empty_when_accounts_dir_missing` | no `accounts/` dir → empty vec | P |
-//! | A-07 | `list_returns_saved_accounts_with_metadata` | accounts dir has files → vec with metadata | P |
+//! | A-06 | `list_returns_empty_when_credential_store_missing` | no credential store → empty vec | P |
+//! | A-07 | `list_returns_saved_accounts_with_metadata` | credential store has files → vec with metadata | P |
 //! | A-08 | `list_marks_active_account_via_active_marker` | `_active` marker file → `is_active = true` | P |
 //! | A-09 | `list_returns_accounts_sorted_by_name` | multiple accounts → sorted ascending | P |
 //! | A-10 | `switch_account_overwrites_credentials_file` | switch copies named account to `.credentials.json` | P |
 //! | A-11 | `switch_account_updates_active_marker` | switch writes `_active` marker | P |
-//! | A-12 | `switch_account_returns_not_found_for_missing_account` | name not in `accounts/` → `Err` NotFound | N |
+//! | A-12 | `switch_account_returns_not_found_for_missing_account` | name not in credential store → `Err` NotFound | N |
 //! | A-13 | `delete_removes_credential_file` | delete removes named file | P |
 //! | A-14 | `delete_returns_error_if_account_is_active` | active account → `PermissionDenied` | N |
 //! | A-15 | `delete_returns_not_found_for_missing_account` | non-existent name → `Err` NotFound | N |
@@ -40,9 +40,11 @@
 //! | A-30 | `validate_name_empty_is_error` | empty string → `Err` | N |
 //! | A-31 | `validate_name_slash_is_error` | name with `/` → `Err` | N |
 //! | A-32 | `validate_name_null_byte_is_error` | name with NUL byte → `Err` | N |
-//! | A-33 | `validate_name_valid` | clean alphanumeric name → `Ok` | P |
+//! | A-33 | `validate_name_valid` | valid email address → `Ok` | P |
+//! | A-34 | `validate_name_must_be_email` | non-email name → `Err` with email message | N |
 
 use claude_profile::account;
+use claude_profile::ClaudePaths;
 use tempfile::TempDir;
 
 // Minimal credentials JSON that satisfies the account module's parser.
@@ -52,35 +54,35 @@ const CREDENTIALS_B : &str = r#"{"claudeAiOauth":{"accessToken":"token-def","ref
 
 /// Create a temp HOME with `.claude/.credentials.json` pre-populated.
 ///
-/// Returns the `TempDir` handle — drop it to clean up.
-fn setup_home( credentials : &str ) -> TempDir
+/// Returns `(TempDir, credential_store_path)`. Drop `TempDir` to clean up.
+/// The credential store is at `{home}/.persistent/claude/credential/`.
+fn setup_home( credentials : &str ) -> ( TempDir, std::path::PathBuf )
 {
   let dir = TempDir::new().expect( "temp dir" );
   let claude = dir.path().join( ".claude" );
   std::fs::create_dir_all( &claude ).expect( "create .claude dir" );
   std::fs::write( claude.join( ".credentials.json" ), credentials ).expect( "write credentials" );
   std::env::set_var( "HOME", dir.path() );
-  dir
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  ( dir, credential_store )
 }
 
 // ── FR-6: Account Store Initialization ───────────────────────────────────────
 
 #[ test ]
-fn save_creates_accounts_dir_when_missing()
+fn save_creates_credential_store_when_missing()
 {
-  //! FR-6: `~/.claude/accounts/` is created on first `save()` call.
+  //! FR-6: `{home}/.persistent/claude/credential/` is created on first `save()` call.
   //!
-  //! Why: callers must not have to pre-create the accounts directory; the
-  //! function itself is responsible for initializing the account store.
-  let _dir = setup_home( CREDENTIALS );
-  let accounts_dir = std::path::PathBuf::from( std::env::var( "HOME" ).unwrap() )
-    .join( ".claude" )
-    .join( "accounts" );
-  assert!( !accounts_dir.exists(), "accounts/ must not exist before first save" );
+  //! Why: callers must not have to pre-create the credential store; the
+  //! function itself is responsible for initializing it.
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  assert!( !credential_store.exists(), "credential_store must not exist before first save" );
 
-  account::save( "work" ).expect( "save" );
+  account::save( "alice@acme.com", &credential_store, &paths ).expect( "save" );
 
-  assert!( accounts_dir.exists(), "accounts/ must be created by save()" );
+  assert!( credential_store.exists(), "credential_store must be created by save()" );
 }
 
 // ── FR-7: Save Account ────────────────────────────────────────────────────────
@@ -88,14 +90,14 @@ fn save_creates_accounts_dir_when_missing()
 #[ test ]
 fn save_copies_credentials_to_named_file()
 {
-  //! FR-7: `save("work")` creates `accounts/work.credentials.json`
-  //! with the same content as `.credentials.json`.
-  let dir = setup_home( CREDENTIALS );
-  account::save( "work" ).expect( "save" );
+  //! FR-7: `save("alice@acme.com")` creates `alice@acme.com.credentials.json`
+  //! in the credential store with the same content as `.credentials.json`.
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  account::save( "alice@acme.com", &credential_store, &paths ).expect( "save" );
 
-  let saved = dir.path()
-    .join( ".claude/accounts/work.credentials.json" );
-  assert!( saved.exists(), "work.credentials.json must exist after save" );
+  let saved = credential_store.join( "alice@acme.com.credentials.json" );
+  assert!( saved.exists(), "alice@acme.com.credentials.json must exist after save" );
   assert_eq!(
     std::fs::read_to_string( saved ).unwrap(),
     CREDENTIALS,
@@ -107,15 +109,16 @@ fn save_copies_credentials_to_named_file()
 fn save_overwrites_existing_entry()
 {
   //! FR-7 overwrite: saving the same name twice uses the latest credentials.
-  let dir = setup_home( CREDENTIALS );
-  account::save( "work" ).expect( "first save" );
+  let ( dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  account::save( "alice@acme.com", &credential_store, &paths ).expect( "first save" );
 
   // Overwrite active credentials with different content.
   let claude = dir.path().join( ".claude" );
   std::fs::write( claude.join( ".credentials.json" ), CREDENTIALS_B ).expect( "overwrite" );
-  account::save( "work" ).expect( "second save" );
+  account::save( "alice@acme.com", &credential_store, &paths ).expect( "second save" );
 
-  let saved = dir.path().join( ".claude/accounts/work.credentials.json" );
+  let saved = credential_store.join( "alice@acme.com.credentials.json" );
   assert_eq!(
     std::fs::read_to_string( saved ).unwrap(),
     CREDENTIALS_B,
@@ -126,42 +129,45 @@ fn save_overwrites_existing_entry()
 #[ test ]
 fn save_rejects_empty_name()
 {
-  let _dir = setup_home( CREDENTIALS );
-  let err = account::save( "" ).expect_err( "empty name must fail" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  let err = account::save( "", &credential_store, &paths ).expect_err( "empty name must fail" );
   assert_eq!( err.kind(), std::io::ErrorKind::InvalidInput );
 }
 
 #[ test ]
 fn save_rejects_name_with_slash()
 {
-  let _dir = setup_home( CREDENTIALS );
-  let err = account::save( "work/home" ).expect_err( "slash must fail" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  let err = account::save( "work/home", &credential_store, &paths ).expect_err( "slash must fail" );
   assert_eq!( err.kind(), std::io::ErrorKind::InvalidInput );
 }
 
 // ── FR-8: List Accounts ───────────────────────────────────────────────────────
 
 #[ test ]
-fn list_returns_empty_when_accounts_dir_missing()
+fn list_returns_empty_when_credential_store_missing()
 {
   //! FR-8: empty account store is not an error — returns empty Vec.
   //!
   //! Why: callers should not need to guard against a first-time install.
-  let _dir = setup_home( CREDENTIALS );
-  let accounts = account::list().expect( "list" );
-  assert!( accounts.is_empty(), "list must return empty vec when accounts/ absent" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let accounts = account::list( &credential_store ).expect( "list" );
+  assert!( accounts.is_empty(), "list must return empty vec when credential_store absent" );
 }
 
 #[ test ]
 fn list_returns_saved_accounts_with_metadata()
 {
   //! FR-8: `list()` returns correct metadata from credential files.
-  let _dir = setup_home( CREDENTIALS );
-  account::save( "work" ).expect( "save" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  account::save( "alice@acme.com", &credential_store, &paths ).expect( "save" );
 
-  let accounts = account::list().expect( "list" );
+  let accounts = account::list( &credential_store ).expect( "list" );
   assert_eq!( accounts.len(), 1 );
-  assert_eq!( accounts[ 0 ].name, "work" );
+  assert_eq!( accounts[ 0 ].name, "alice@acme.com" );
   assert_eq!( accounts[ 0 ].subscription_type, "max" );
   assert_eq!( accounts[ 0 ].rate_limit_tier, "standard" );
   assert_eq!( accounts[ 0 ].expires_at_ms, 9_999_999_999_999_u64 );
@@ -174,33 +180,35 @@ fn list_marks_active_account_via_active_marker()
   //!
   //! Why: callers use `is_active` to avoid redundant switches and to display
   //! which account is currently in use.
-  let dir = setup_home( CREDENTIALS );
-  account::save( "work" ).expect( "save work" );
-  account::save( "personal" ).expect( "save personal" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  account::save( "alice@acme.com", &credential_store, &paths ).expect( "save alice@acme.com" );
+  account::save( "alice@home.com", &credential_store, &paths ).expect( "save alice@home.com" );
 
-  // Write _active marker manually to "work".
-  let marker = dir.path().join( ".claude/accounts/_active" );
-  std::fs::write( &marker, "work" ).expect( "write _active" );
+  // Write _active marker manually to "alice@acme.com".
+  let marker = credential_store.join( "_active" );
+  std::fs::write( &marker, "alice@acme.com" ).expect( "write _active" );
 
-  let accounts = account::list().expect( "list" );
-  let work = accounts.iter().find( | a | a.name == "work" ).expect( "work" );
-  let personal = accounts.iter().find( | a | a.name == "personal" ).expect( "personal" );
-  assert!( work.is_active, "work must be active" );
-  assert!( !personal.is_active, "personal must not be active" );
+  let accounts = account::list( &credential_store ).expect( "list" );
+  let work = accounts.iter().find( | a | a.name == "alice@acme.com" ).expect( "alice@acme.com" );
+  let personal = accounts.iter().find( | a | a.name == "alice@home.com" ).expect( "alice@home.com" );
+  assert!( work.is_active, "alice@acme.com must be active" );
+  assert!( !personal.is_active, "alice@home.com must not be active" );
 }
 
 #[ test ]
 fn list_returns_accounts_sorted_by_name()
 {
   //! FR-8: list is deterministic — sorted alphabetically by name.
-  let _dir = setup_home( CREDENTIALS );
-  account::save( "zebra" ).expect( "save zebra" );
-  account::save( "alpha" ).expect( "save alpha" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  account::save( "zebra@acme.com", &credential_store, &paths ).expect( "save zebra" );
+  account::save( "alpha@acme.com", &credential_store, &paths ).expect( "save alpha" );
 
-  let accounts = account::list().expect( "list" );
+  let accounts = account::list( &credential_store ).expect( "list" );
   assert_eq!( accounts.len(), 2 );
-  assert_eq!( accounts[ 0 ].name, "alpha" );
-  assert_eq!( accounts[ 1 ].name, "zebra" );
+  assert_eq!( accounts[ 0 ].name, "alpha@acme.com" );
+  assert_eq!( accounts[ 1 ].name, "zebra@acme.com" );
 }
 
 // ── FR-9: Switch Account ──────────────────────────────────────────────────────
@@ -209,19 +217,19 @@ fn list_returns_accounts_sorted_by_name()
 fn switch_account_overwrites_credentials_file()
 {
   //! FR-9 + NFR-6: atomic write-then-rename puts named credentials in place.
-  let dir = setup_home( CREDENTIALS );
-  // Save a second credential set as "personal".
-  let claude = dir.path().join( ".claude" );
-  std::fs::create_dir_all( claude.join( "accounts" ) ).expect( "accounts dir" );
+  let ( dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  // Save a second credential set as "alice@home.com".
+  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
   std::fs::write(
-    claude.join( "accounts/personal.credentials.json" ),
+    credential_store.join( "alice@home.com.credentials.json" ),
     CREDENTIALS_B,
   )
-  .expect( "write personal" );
+  .expect( "write alice@home.com" );
 
-  account::switch_account( "personal" ).expect( "switch" );
+  account::switch_account( "alice@home.com", &credential_store, &paths ).expect( "switch" );
 
-  let active_content = std::fs::read_to_string( claude.join( ".credentials.json" ) )
+  let active_content = std::fs::read_to_string( dir.path().join( ".claude/.credentials.json" ) )
     .expect( "read credentials" );
   assert_eq!( active_content, CREDENTIALS_B, "credentials must be replaced by switch" );
 }
@@ -230,28 +238,30 @@ fn switch_account_overwrites_credentials_file()
 fn switch_account_updates_active_marker()
 {
   //! FR-9: `_active` marker file is written with the new account name after switch.
-  let dir = setup_home( CREDENTIALS );
-  let claude = dir.path().join( ".claude" );
-  std::fs::create_dir_all( claude.join( "accounts" ) ).expect( "accounts dir" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
   std::fs::write(
-    claude.join( "accounts/personal.credentials.json" ),
+    credential_store.join( "alice@home.com.credentials.json" ),
     CREDENTIALS_B,
   )
-  .expect( "write personal" );
+  .expect( "write alice@home.com" );
 
-  account::switch_account( "personal" ).expect( "switch" );
+  account::switch_account( "alice@home.com", &credential_store, &paths ).expect( "switch" );
 
-  let marker = std::fs::read_to_string( claude.join( "accounts/_active" ) )
+  let marker = std::fs::read_to_string( credential_store.join( "_active" ) )
     .expect( "read _active" );
-  assert_eq!( marker.trim(), "personal" );
+  assert_eq!( marker.trim(), "alice@home.com" );
 }
 
 #[ test ]
 fn switch_account_returns_not_found_for_missing_account()
 {
   //! FR-9: switching to an account that doesn't exist must fail with `NotFound`.
-  let _dir = setup_home( CREDENTIALS );
-  let err = account::switch_account( "ghost" ).expect_err( "must fail" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  let err = account::switch_account( "ghost@example.com", &credential_store, &paths )
+    .expect_err( "must fail" );
   assert_eq!( err.kind(), std::io::ErrorKind::NotFound );
 }
 
@@ -261,12 +271,13 @@ fn switch_account_returns_not_found_for_missing_account()
 fn delete_removes_credential_file()
 {
   //! FR-10: `delete()` removes the named account file from the store.
-  let dir = setup_home( CREDENTIALS );
-  account::save( "old" ).expect( "save" );
-  let file = dir.path().join( ".claude/accounts/old.credentials.json" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  account::save( "alice@oldco.com", &credential_store, &paths ).expect( "save" );
+  let file = credential_store.join( "alice@oldco.com.credentials.json" );
   assert!( file.exists() );
 
-  account::delete( "old" ).expect( "delete" );
+  account::delete( "alice@oldco.com", &credential_store ).expect( "delete" );
 
   assert!( !file.exists(), "credential file must be gone after delete" );
 }
@@ -278,12 +289,14 @@ fn delete_returns_error_if_account_is_active()
   //!
   //! Why: deleting the active account would leave the credentials pointer
   //! dangling — the next switch would succeed but point to nothing.
-  let dir = setup_home( CREDENTIALS );
-  account::save( "work" ).expect( "save" );
-  let marker = dir.path().join( ".claude/accounts/_active" );
-  std::fs::write( &marker, "work" ).expect( "write _active" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  account::save( "alice@acme.com", &credential_store, &paths ).expect( "save" );
+  let marker = credential_store.join( "_active" );
+  std::fs::write( &marker, "alice@acme.com" ).expect( "write _active" );
 
-  let err = account::delete( "work" ).expect_err( "must fail for active account" );
+  let err = account::delete( "alice@acme.com", &credential_store )
+    .expect_err( "must fail for active account" );
   assert_eq!( err.kind(), std::io::ErrorKind::PermissionDenied );
 }
 
@@ -291,13 +304,11 @@ fn delete_returns_error_if_account_is_active()
 fn delete_returns_not_found_for_missing_account()
 {
   //! FR-10: deleting an account that was never saved fails with `NotFound`.
-  let _dir = setup_home( CREDENTIALS );
-  // Create accounts dir so the not-found path is exercised.
-  let accounts = std::path::PathBuf::from( std::env::var( "HOME" ).unwrap() )
-    .join( ".claude/accounts" );
-  std::fs::create_dir_all( &accounts ).expect( "accounts dir" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  // Create credential_store so the not-found path is exercised.
+  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
 
-  let err = account::delete( "ghost" ).expect_err( "must fail" );
+  let err = account::delete( "ghost@example.com", &credential_store ).expect_err( "must fail" );
   assert_eq!( err.kind(), std::io::ErrorKind::NotFound );
 }
 
@@ -313,32 +324,32 @@ const CREDENTIALS_EXPIRE_LOW : &str = r#"{"claudeAiOauth":{"accessToken":"token-
 fn auto_rotate_switches_to_inactive_account()
 {
   //! FR-13: `auto_rotate()` switches to the only inactive account.
-  let dir = setup_home( CREDENTIALS );
-  let accounts = dir.path().join( ".claude/accounts" );
-  std::fs::create_dir_all( &accounts ).expect( "accounts dir" );
-  std::fs::write( accounts.join( "work.credentials.json" ), CREDENTIALS ).expect( "save work" );
-  std::fs::write( accounts.join( "personal.credentials.json" ), CREDENTIALS_B ).expect( "save personal" );
-  std::fs::write( accounts.join( "_active" ), "work" ).expect( "_active" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
+  std::fs::write( credential_store.join( "alice@acme.com.credentials.json" ), CREDENTIALS ).expect( "save alice@acme.com" );
+  std::fs::write( credential_store.join( "alice@home.com.credentials.json" ), CREDENTIALS_B ).expect( "save alice@home.com" );
+  std::fs::write( credential_store.join( "_active" ), "alice@acme.com" ).expect( "_active" );
 
-  account::auto_rotate().expect( "auto_rotate" );
+  account::auto_rotate( &credential_store, &paths ).expect( "auto_rotate" );
 
-  let marker = std::fs::read_to_string( accounts.join( "_active" ) ).expect( "read _active" );
-  assert_eq!( marker.trim(), "personal" );
+  let marker = std::fs::read_to_string( credential_store.join( "_active" ) ).expect( "read _active" );
+  assert_eq!( marker.trim(), "alice@home.com" );
 }
 
 #[ test ]
 fn auto_rotate_returns_switched_account_name()
 {
   //! FR-13: return value is the name of the account switched to.
-  let dir = setup_home( CREDENTIALS_B );
-  let accounts = dir.path().join( ".claude/accounts" );
-  std::fs::create_dir_all( &accounts ).expect( "accounts dir" );
-  std::fs::write( accounts.join( "work.credentials.json" ), CREDENTIALS ).expect( "save work" );
-  std::fs::write( accounts.join( "personal.credentials.json" ), CREDENTIALS_B ).expect( "save personal" );
-  std::fs::write( accounts.join( "_active" ), "personal" ).expect( "_active" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS_B );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
+  std::fs::write( credential_store.join( "alice@acme.com.credentials.json" ), CREDENTIALS ).expect( "save alice@acme.com" );
+  std::fs::write( credential_store.join( "alice@home.com.credentials.json" ), CREDENTIALS_B ).expect( "save alice@home.com" );
+  std::fs::write( credential_store.join( "_active" ), "alice@home.com" ).expect( "_active" );
 
-  let switched_to = account::auto_rotate().expect( "auto_rotate" );
-  assert_eq!( switched_to, "work" );
+  let switched_to = account::auto_rotate( &credential_store, &paths ).expect( "auto_rotate" );
+  assert_eq!( switched_to, "alice@acme.com" );
 }
 
 #[ test ]
@@ -349,17 +360,17 @@ fn auto_rotate_picks_account_with_highest_expires_at()
   //!
   //! Why: callers use `auto_rotate` to get the best remaining account, not an
   //! arbitrary one. The selection must be deterministic and optimal.
-  let dir = setup_home( CREDENTIALS );
-  let accounts = dir.path().join( ".claude/accounts" );
-  std::fs::create_dir_all( &accounts ).expect( "accounts dir" );
-  std::fs::write( accounts.join( "alpha.credentials.json" ), CREDENTIALS_EXPIRE_LOW ).expect( "save alpha" );
-  std::fs::write( accounts.join( "beta.credentials.json" ), CREDENTIALS_EXPIRE_HIGH ).expect( "save beta" );
-  std::fs::write( accounts.join( "current.credentials.json" ), CREDENTIALS ).expect( "save current" );
-  std::fs::write( accounts.join( "_active" ), "current" ).expect( "_active" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
+  std::fs::write( credential_store.join( "alpha@acme.com.credentials.json" ), CREDENTIALS_EXPIRE_LOW ).expect( "save alpha" );
+  std::fs::write( credential_store.join( "beta@acme.com.credentials.json" ), CREDENTIALS_EXPIRE_HIGH ).expect( "save beta" );
+  std::fs::write( credential_store.join( "current@acme.com.credentials.json" ), CREDENTIALS ).expect( "save current" );
+  std::fs::write( credential_store.join( "_active" ), "current@acme.com" ).expect( "_active" );
 
-  // beta has expiresAt=9000000000000 > alpha's 2000000000000.
-  let switched_to = account::auto_rotate().expect( "auto_rotate" );
-  assert_eq!( switched_to, "beta" );
+  // beta@acme.com has expiresAt=9000000000000 > alpha@acme.com's 2000000000000.
+  let switched_to = account::auto_rotate( &credential_store, &paths ).expect( "auto_rotate" );
+  assert_eq!( switched_to, "beta@acme.com" );
 }
 
 #[ test ]
@@ -369,13 +380,14 @@ fn auto_rotate_fails_when_no_inactive_accounts()
   //!
   //! Why: there is no candidate to rotate to — the error surfaces this
   //! rather than silently succeeding by switching to the same account.
-  let dir = setup_home( CREDENTIALS );
-  let accounts = dir.path().join( ".claude/accounts" );
-  std::fs::create_dir_all( &accounts ).expect( "accounts dir" );
-  std::fs::write( accounts.join( "solo.credentials.json" ), CREDENTIALS ).expect( "save solo" );
-  std::fs::write( accounts.join( "_active" ), "solo" ).expect( "_active" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
+  std::fs::write( credential_store.join( "solo@example.com.credentials.json" ), CREDENTIALS ).expect( "save solo" );
+  std::fs::write( credential_store.join( "_active" ), "solo@example.com" ).expect( "_active" );
 
-  let err = account::auto_rotate().expect_err( "must fail with no inactive accounts" );
+  let err = account::auto_rotate( &credential_store, &paths )
+    .expect_err( "must fail with no inactive accounts" );
   assert_eq!( err.kind(), std::io::ErrorKind::NotFound );
 }
 
@@ -383,10 +395,12 @@ fn auto_rotate_fails_when_no_inactive_accounts()
 fn auto_rotate_fails_when_account_store_empty()
 {
   //! FR-13: when no accounts are configured, `auto_rotate` fails with `NotFound`.
-  let _dir = setup_home( CREDENTIALS );
-  // No accounts/ directory — list() returns empty vec.
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  // No credential_store directory — list() returns empty vec.
 
-  let err = account::auto_rotate().expect_err( "must fail with empty account store" );
+  let err = account::auto_rotate( &credential_store, &paths )
+    .expect_err( "must fail with empty account store" );
   assert_eq!( err.kind(), std::io::ErrorKind::NotFound );
 }
 
@@ -395,15 +409,15 @@ fn auto_rotate_with_no_active_marker_picks_highest_expires_at()
 {
   //! FR-13: when no _active marker exists all accounts are inactive;
   //! `auto_rotate` picks the one with the highest `expires_at_ms`.
-  let dir = setup_home( CREDENTIALS );
-  let accounts = dir.path().join( ".claude/accounts" );
-  std::fs::create_dir_all( &accounts ).expect( "accounts dir" );
-  std::fs::write( accounts.join( "alpha.credentials.json" ), CREDENTIALS_EXPIRE_LOW ).expect( "save alpha" );
-  std::fs::write( accounts.join( "beta.credentials.json" ), CREDENTIALS_EXPIRE_HIGH ).expect( "save beta" );
+  let ( _dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+  std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
+  std::fs::write( credential_store.join( "alpha@acme.com.credentials.json" ), CREDENTIALS_EXPIRE_LOW ).expect( "save alpha" );
+  std::fs::write( credential_store.join( "beta@acme.com.credentials.json" ), CREDENTIALS_EXPIRE_HIGH ).expect( "save beta" );
   // No _active marker — both accounts appear inactive.
 
-  let switched_to = account::auto_rotate().expect( "auto_rotate" );
-  assert_eq!( switched_to, "beta" );
+  let switched_to = account::auto_rotate( &credential_store, &paths ).expect( "auto_rotate" );
+  assert_eq!( switched_to, "beta@acme.com" );
 }
 
 // ── Private helper unit tests (moved from src/account.rs) ────────────────────
@@ -414,21 +428,21 @@ use std::path::PathBuf;
 #[ test ]
 fn credential_stem_valid()
 {
-  let path = PathBuf::from( "/home/user/.claude/accounts/work.credentials.json" );
-  assert_eq!( credential_stem( &path ), Some( "work".to_string() ) );
+  let path = PathBuf::from( "/home/user/.persistent/claude/credential/alice@acme.com.credentials.json" );
+  assert_eq!( credential_stem( &path ), Some( "alice@acme.com".to_string() ) );
 }
 
 #[ test ]
 fn credential_stem_filters_active_marker()
 {
-  let path = PathBuf::from( "/home/user/.claude/accounts/_active" );
+  let path = PathBuf::from( "/home/user/.persistent/claude/credential/_active" );
   assert_eq!( credential_stem( &path ), None );
 }
 
 #[ test ]
 fn credential_stem_filters_plain_json()
 {
-  let path = PathBuf::from( "/home/user/.claude/accounts/something.json" );
+  let path = PathBuf::from( "/home/user/.persistent/claude/credential/something.json" );
   assert_eq!( credential_stem( &path ), None );
 }
 
@@ -488,7 +502,16 @@ fn validate_name_null_byte_is_error()
 #[ test ]
 fn validate_name_valid()
 {
-  assert!( validate_name( "work" ).is_ok() );
-  assert!( validate_name( "my-account-2" ).is_ok() );
-  assert!( validate_name( "user.name" ).is_ok() );
+  assert!( validate_name( "alice@acme.com" ).is_ok() );
+  assert!( validate_name( "alice-work@acme.com" ).is_ok() );
+  assert!( validate_name( "alice.name@acme.com" ).is_ok() );
+}
+
+#[ test ]
+fn validate_name_must_be_email()
+{
+  let err = validate_name( "notanemail" ).expect_err( "non-email name must fail" );
+  assert_eq!( err.kind(), std::io::ErrorKind::InvalidInput );
+  let msg = format!( "{err}" );
+  assert!( msg.contains( "email address" ), "error must mention email address, got: {msg}" );
 }

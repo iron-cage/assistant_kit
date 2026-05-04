@@ -106,7 +106,7 @@ pub fn write_credentials( home : &std::path::Path, sub_type : &str, tier : &str,
   std::fs::write( creds, credential_json( sub_type, tier, expires_at_ms ) ).unwrap();
 }
 
-/// Write a saved account credential file into `~/.claude/accounts/{name}.credentials.json`
+/// Write a saved account credential file into `{home}/.persistent/claude/credential/{name}.credentials.json`
 /// and optionally mark it active.
 ///
 /// # Panics
@@ -115,13 +115,13 @@ pub fn write_credentials( home : &std::path::Path, sub_type : &str, tier : &str,
 #[ inline ]
 pub fn write_account( home : &std::path::Path, name : &str, sub_type : &str, tier : &str, expires_at_ms : u64, make_active : bool )
 {
-  let accounts_dir = home.join( ".claude" ).join( "accounts" );
-  std::fs::create_dir_all( &accounts_dir ).unwrap();
-  let dest = accounts_dir.join( format!( "{name}.credentials.json" ) );
+  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  let dest = credential_store.join( format!( "{name}.credentials.json" ) );
   std::fs::write( dest, credential_json( sub_type, tier, expires_at_ms ) ).unwrap();
   if make_active
   {
-    std::fs::write( accounts_dir.join( "_active" ), name ).unwrap();
+    std::fs::write( credential_store.join( "_active" ), name ).unwrap();
   }
 }
 
@@ -148,7 +148,8 @@ pub fn write_claude_json( home : &std::path::Path, email : &str, org : &str )
 #[ must_use ]
 pub fn account_exists( home : &std::path::Path, name : &str ) -> bool
 {
-  home.join( ".claude" ).join( "accounts" ).join( format!( "{name}.credentials.json" ) ).exists()
+  home.join( ".persistent" ).join( "claude" ).join( "credential" )
+    .join( format!( "{name}.credentials.json" ) ).exists()
 }
 
 /// Far-future timestamp (year ~2286) for "valid" tokens.

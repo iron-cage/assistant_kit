@@ -123,7 +123,7 @@ See [`params/readme.md`](params/readme.md) for the complete parameter table incl
 
 ### Account Active Marker
 
-`~/.claude/accounts/_active` is a single-line plain text file containing the active account name. Written by `.account.switch`, read by `.account.status` and `.status`.
+`{credential_store}/_active` is a single-line plain text file containing the active account name, where `{credential_store}` resolves to `$PRO/.persistent/claude/credential/` when `$PRO` is a directory, or `$HOME/.persistent/claude/credential/` otherwise. Written by `.account.switch`, read by `.account.status` and `.status`.
 
 ### Cross-References
 

@@ -81,8 +81,8 @@ pub fn write_settings(
   std::fs::write( &path, json ).unwrap();
 }
 
-/// Create `~/.claude/accounts/_active` with the given account name and a
-/// minimal credential file for that account inside `home_dir`.
+/// Write a credential file into `{home_dir}/.persistent/claude/credential/{name}.credentials.json`
+/// and optionally write `_active` to mark it as active.
 ///
 /// # Panics
 ///
@@ -94,19 +94,19 @@ pub fn write_account(
   make_active : bool,
 )
 {
-  let accounts_dir = home_dir.join( ".claude" ).join( "accounts" );
-  std::fs::create_dir_all( &accounts_dir ).unwrap();
+  let credential_store = home_dir.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
 
   // Minimal credential JSON (expires far in the future)
   let expires_ms = 9_999_999_999_000_u64; // year ~2286
   let cred_json = format!(
     r#"{{"oauthAccount":{{"subscriptionType":"pro","rateLimitTier":"standard"}},"expiresAt":{expires_ms}}}"#
   );
-  std::fs::write( accounts_dir.join( format!( "{name}.credentials.json" ) ), &cred_json ).unwrap();
+  std::fs::write( credential_store.join( format!( "{name}.credentials.json" ) ), &cred_json ).unwrap();
 
   if make_active
   {
-    std::fs::write( accounts_dir.join( "_active" ), name ).unwrap();
+    std::fs::write( credential_store.join( "_active" ), name ).unwrap();
   }
 }
 

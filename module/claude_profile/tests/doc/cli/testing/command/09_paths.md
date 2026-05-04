@@ -33,11 +33,11 @@ Integration test planning for the `.paths` command. See [commands.md](../../../.
 **Goal:** Verify that the default invocation lists all 7 canonical paths, each with its label.
 **Setup:** `HOME` is set to a valid directory (e.g., `/home/testuser`). No special account or credential state required.
 **Command:** `clp .paths`
-**Expected Output:** Seven labeled lines on stdout covering: `credentials`, `accounts`, `projects`, `stats`, `settings`, `session-env`, `sessions`. Exit 0.
+**Expected Output:** Seven labeled lines on stdout covering: `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session-env`, `sessions`. Exit 0.
 **Verification:**
 - Stdout contains exactly 7 non-empty lines (one per canonical path)
 - Each line contains a label followed by a colon and a path
-- Labels present: `credentials`, `accounts`, `projects`, `stats`, `settings`, `session-env`, `sessions`
+- Labels present: `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session-env`, `sessions`
 - Exit code is 0
 **Pass Criteria:** Exit 0; all 7 labeled paths present in output.
 **Source:** [commands.md — .paths](../../../../../docs/cli/commands.md#command--8-paths)
@@ -54,7 +54,7 @@ Integration test planning for the `.paths` command. See [commands.md](../../../.
 - Stdout is valid JSON (parseable without error)
 - Parsed JSON is an object (not an array)
 - JSON contains key `base` with value ending in `/.claude`
-- JSON contains keys: `credentials`, `accounts`, `projects`, `stats`, `settings`, `session_env` (or `session-env`), `sessions`
+- JSON contains keys: `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env` (or `session-env`), `sessions`
 - All values are non-empty strings
 - Exit code is 0
 **Pass Criteria:** Exit 0; valid JSON object with all expected path keys.
@@ -81,7 +81,7 @@ Integration test planning for the `.paths` command. See [commands.md](../../../.
 ### IT-4: Verbose output shows paths with existence markers
 
 **Goal:** Verify that `v::2` includes all paths with labels and an existence indicator for each path (e.g., whether the file/directory exists on disk).
-**Setup:** `HOME` set to `/home/testuser`. Create `~/.claude/.credentials.json` and `~/.claude/accounts/` so some paths exist and some do not.
+**Setup:** `HOME` set to `/home/testuser`. Create `~/.claude/.credentials.json` and `~/.persistent/claude/credential/` so some paths exist and some do not.
 **Command:** `clp .paths v::2`
 **Expected Output:** Seven or more labeled lines on stdout, each with a path and an existence marker, exit 0.
 **Verification:**

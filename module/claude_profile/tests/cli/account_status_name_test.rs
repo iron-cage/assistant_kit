@@ -37,17 +37,17 @@ fn astname01_name_equals_active_same_as_no_name()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   let out_no_name  = run_cs_with_env( &[ ".account.status" ],            &[ ( "HOME", home ) ] );
-  let out_with_name = run_cs_with_env( &[ ".account.status", "name::work" ], &[ ( "HOME", home ) ] );
+  let out_with_name = run_cs_with_env( &[ ".account.status", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out_no_name,   0 );
   assert_exit( &out_with_name, 0 );
   // Both paths should show the same account name and token state at default verbosity
   assert!(
-    stdout( &out_with_name ).contains( "work" ),
+    stdout( &out_with_name ).contains( "alice@acme.com" ),
     "must show account name, got:\n{}", stdout( &out_with_name ),
   );
   assert!(
@@ -64,16 +64,16 @@ fn astname02_nonactive_account_shows_own_expiry()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   // work is active with a valid far-future token
-  write_account( dir.path(), "work", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
   // personal is NOT active and has an already-expired token
-  write_account( dir.path(), "personal", "pro", "standard", PAST_MS, false );
+  write_account( dir.path(), "alice@home.com", "pro", "standard", PAST_MS, false );
 
-  let out = run_cs_with_env( &[ ".account.status", "name::personal" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "personal" ), "must show queried account name, got:\n{text}" );
+  assert!( text.contains( "alice@home.com" ), "must show queried account name, got:\n{text}" );
   assert!(
     text.contains( "expired" ),
     "non-active account must show its OWN expired token, not the active account's valid token, got:\n{text}",
@@ -91,15 +91,15 @@ fn astname03_nonexistent_name_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.status", "name::ghost" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::ghost@example.com" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 2 );
   let err = stderr( &out );
   assert!(
-    err.to_lowercase().contains( "not found" ) || err.to_lowercase().contains( "ghost" ),
+    err.to_lowercase().contains( "not found" ) || err.contains( "ghost@example.com" ),
     "stderr must mention not found or account name, got:\n{err}",
   );
   assert!( stdout( &out ).is_empty(), "stdout must be empty on error, got:\n{}", stdout( &out ) );
@@ -112,7 +112,7 @@ fn astname04_invalid_chars_in_name_exits_1()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   // "/" is an invalid character per validate_name
@@ -128,16 +128,16 @@ fn astname05_name_v0_bare_output()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.status", "name::work", "v::0" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@acme.com", "v::0" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let lines : Vec< &str > = text.lines().collect();
   assert_eq!( lines.len(), 2, "v::0 must produce exactly 2 lines, got:\n{text}" );
-  assert_eq!( lines[ 0 ], "work",  "v::0 line 0 must be bare account name, got:\n{text}" );
+  assert_eq!( lines[ 0 ], "alice@acme.com", "v::0 line 0 must be bare account name, got:\n{text}" );
   assert_eq!( lines[ 1 ], "valid", "v::0 line 1 must be bare token state, got:\n{text}" );
   assert!( !text.contains( "Account:" ), "v::0 must not have labels, got:\n{text}" );
 }
@@ -149,11 +149,11 @@ fn astname06_active_v1_shows_email_org()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
   write_claude_json( dir.path(), "alice@example.com", "Acme Corp" );
 
-  let out = run_cs_with_env( &[ ".account.status", "name::work", "v::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@acme.com", "v::1" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -168,16 +168,16 @@ fn astname07_nonactive_v1_na_email_org()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work",     "max", "tier4",    FAR_FUTURE_MS, true  );
-  write_account( dir.path(), "personal", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "alice@home.com", "pro", "standard", FAR_FUTURE_MS, false );
   write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
   write_claude_json( dir.path(), "alice@example.com", "Acme Corp" );
 
-  let out = run_cs_with_env( &[ ".account.status", "name::personal", "v::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@home.com", "v::1" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "personal" ), "must show queried account name, got:\n{text}" );
+  assert!( text.contains( "alice@home.com" ), "must show queried account name, got:\n{text}" );
   assert!(
     text.contains( "N/A" ),
     "non-active account email/org must show N/A, got:\n{text}",
@@ -195,15 +195,15 @@ fn astname08_nonactive_v2_shows_expires()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work",     "max", "tier4",    FAR_FUTURE_MS, true  );
-  write_account( dir.path(), "personal", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "alice@home.com", "pro", "standard", FAR_FUTURE_MS, false );
   write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.status", "name::personal", "v::2" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@home.com", "v::2" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "personal" ), "must show queried account name, got:\n{text}" );
+  assert!( text.contains( "alice@home.com" ), "must show queried account name, got:\n{text}" );
   assert!( text.contains( "Expires:" ), "v::2 must show Expires: line, got:\n{text}" );
 }
 
@@ -214,15 +214,15 @@ fn astname09_name_format_json()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.status", "name::work", "format::json" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@acme.com", "format::json" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.trim().starts_with( '{' ), "JSON must start with '{{', got:\n{text}" );
-  assert!( text.contains( "\"account\":\"work\"" ), "JSON must contain account field, got:\n{text}" );
+  assert!( text.contains( "\"account\":\"alice@acme.com\"" ), "JSON must contain account field, got:\n{text}" );
   assert!( text.contains( "\"token\":\"valid\"" ),  "JSON must contain token field, got:\n{text}" );
 }
 
@@ -233,17 +233,17 @@ fn astname10_nonactive_v0_shows_own_state()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work",     "max", "tier4",    FAR_FUTURE_MS, true  );
-  write_account( dir.path(), "personal", "pro", "standard", PAST_MS,       false );
+  write_account( dir.path(), "alice@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "alice@home.com", "pro", "standard", PAST_MS,       false );
   write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.status", "name::personal", "v::0" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@home.com", "v::0" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let lines : Vec< &str > = text.lines().collect();
   assert_eq!( lines.len(), 2, "v::0 must produce 2 lines, got:\n{text}" );
-  assert_eq!( lines[ 0 ], "personal", "line 0 must be the queried account name, got:\n{text}" );
+  assert_eq!( lines[ 0 ], "alice@home.com", "line 0 must be the queried account name, got:\n{text}" );
   assert_eq!( lines[ 1 ], "expired",  "line 1 must reflect personal's own expired state, got:\n{text}" );
 }
 
@@ -254,11 +254,11 @@ fn astname11_active_named_v1_shows_sub_tier()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
   write_claude_json( dir.path(), "alice@example.com", "Acme Corp" );
 
-  let out = run_cs_with_env( &[ ".account.status", "name::work", "v::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@acme.com", "v::1" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -275,11 +275,11 @@ fn astname12_nonactive_named_v1_shows_own_sub_tier()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work",     "max",   "tier4",    FAR_FUTURE_MS, true  );
-  write_account( dir.path(), "personal", "pro",   "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@acme.com",     "max",   "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "alice@home.com", "pro",   "standard", FAR_FUTURE_MS, false );
   write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.status", "name::personal", "v::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@home.com", "v::1" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -316,16 +316,16 @@ fn astname13_missing_sub_in_file_shows_n_a()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work",     "max", "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "alice@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
   write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
   // personal has no subscriptionType field — should show N/A, not blank
-  let accounts_dir = dir.path().join( ".claude" ).join( "accounts" );
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::write(
-    accounts_dir.join( "personal.credentials.json" ),
+    credential_store.join( "alice@home.com.credentials.json" ),
     r#"{"oauthAccount":{"rateLimitTier":"standard"},"expiresAt":9999999999000}"#,
   ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.status", "name::personal" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -342,16 +342,16 @@ fn astname14_missing_tier_in_file_shows_n_a()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work",     "max", "tier4",    FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "alice@acme.com",     "max", "tier4",    FAR_FUTURE_MS, true  );
   write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
   // personal has no rateLimitTier field — should show N/A, not blank
-  let accounts_dir = dir.path().join( ".claude" ).join( "accounts" );
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::write(
-    accounts_dir.join( "personal.credentials.json" ),
+    credential_store.join( "alice@home.com.credentials.json" ),
     r#"{"oauthAccount":{"subscriptionType":"pro"},"expiresAt":9999999999000}"#,
   ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.status", "name::personal" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -404,12 +404,12 @@ fn astname15_active_empty_email_org_in_claude_json_shows_na()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
   // .claude.json with EMPTY email and org strings — not absent, but `""`
   write_claude_json( dir.path(), "", "" );
 
-  let out = run_cs_with_env( &[ ".account.status", "name::work", "v::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.status", "name::alice@acme.com", "v::1" ], &[ ( "HOME", home ) ] );
 
   assert_exit( &out, 0 );
   let text = stdout( &out );

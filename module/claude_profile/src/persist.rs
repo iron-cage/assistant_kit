@@ -1,7 +1,7 @@
 //! Persistent user storage paths for `claude_profile`.
 //!
-//! Resolves `$PRO/persistent/claude_profile/` from environment variables,
-//! falling back to `$HOME/persistent/claude_profile/` when `$PRO` is unset,
+//! Resolves `$PRO/.persistent/claude_profile/` from environment variables,
+//! falling back to `$HOME/.persistent/claude_profile/` when `$PRO` is unset,
 //! non-existent, or points to a file rather than a directory. See `docs/feature/010_persistent_storage.md` (FR-15).
 //!
 //! # Known Pitfalls
@@ -26,7 +26,7 @@ use std::path::{ Path, PathBuf };
 ///
 /// Resolves the storage root from environment variables: `$PRO` (if set and
 /// is an existing directory) → `$HOME` / `$USERPROFILE`. The resolved base is
-/// `{root}/persistent/claude_profile/`.
+/// `{root}/.persistent/claude_profile/`.
 ///
 /// # Examples
 ///
@@ -57,15 +57,33 @@ impl PersistPaths
   pub fn new() -> Result< Self, std::io::Error >
   {
     let root = Self::resolve_root()?;
-    Ok( Self { base : root.join( "persistent" ).join( "claude_profile" ) } )
+    Ok( Self { base : root.join( ".persistent" ).join( "claude_profile" ) } )
   }
 
-  /// The resolved base directory: `{root}/persistent/claude_profile/`.
+  /// The resolved base directory: `{root}/.persistent/claude_profile/`.
   #[ must_use ]
   #[ inline ]
   pub fn base( &self ) -> &Path
   {
     &self.base
+  }
+
+  /// The credential store directory: `{root}/.persistent/claude/credential/`.
+  ///
+  /// This is the canonical location for saved account credential files.
+  /// Computed independently from `base()` so the two paths can evolve separately.
+  #[ must_use ]
+  #[ inline ]
+  pub fn credential_store( &self ) -> PathBuf
+  {
+    // Reconstruct root from base: base = root/.persistent/claude_profile/
+    // so root = base.parent().parent()
+    let root = self.base
+      .parent()
+      .expect( "base must have a .persistent parent" )
+      .parent()
+      .expect( ".persistent must have a root parent" );
+    root.join( ".persistent" ).join( "claude" ).join( "credential" )
   }
 
   /// Create the base directory if it does not exist.

@@ -5,7 +5,7 @@
 - **Purpose**: Provide a typed API for all `~/.claude/` canonical paths so tooling doesn't hard-code path strings.
 - **Responsibility**: Documents the `ClaudePaths` type and `.paths` CLI command (FR-12).
 - **In Scope**: All `~/.claude/` paths exposed via `ClaudePaths`, HOME-unset handling, CLI output.
-- **Out of Scope**: Writing to these paths (owned by their respective modules), `$PRO`-based persistent storage (→ 010_persistent_storage.md).
+- **Out of Scope**: Writing to these paths (owned by their respective modules), credential store path (→ 001_account_store_init.md), `$PRO`-based persistent storage (→ 010_persistent_storage.md).
 
 ### Design
 
@@ -18,7 +18,6 @@
 | Method | Resolves to |
 |--------|-------------|
 | `credentials_file()` | `~/.claude/.credentials.json` |
-| `accounts_dir()` | `~/.claude/accounts/` |
 | `projects_dir()` | `~/.claude/projects/` |
 | `stats_file()` | `~/.claude/stats-cache.json` |
 | `settings_file()` | `~/.claude/settings.json` |

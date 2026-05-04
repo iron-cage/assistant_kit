@@ -13,12 +13,12 @@ clp .token.status
 
 # See what's available
 clp .account.list
-# work <- active (max, standard, expires in 12m)
-# personal (pro, standard, expires in 4h2m)
+# alice@acme.com <- active (max, standard, expires in 12m)
+# alice@home.com (pro, standard, expires in 4h2m)
 
 # Switch to the account with more time
-clp .account.switch name::personal
-# switched to 'personal'
+clp .account.switch name::alice@home.com
+# switched to 'alice@home.com'
 
 # Verify
 clp .token.status
@@ -33,20 +33,20 @@ Save the current session's credentials before they're lost, then verify the acco
 
 ```bash
 # Save current credentials as a named profile
-clp .account.save name::work
-# saved current credentials as 'work'
+clp .account.save name::alice@acme.com
+# saved current credentials as 'alice@acme.com'
 
 # Log into a different Claude account (external step)
 # claude auth login  ← done outside clp
 
 # Save the new credentials too
-clp .account.save name::personal
-# saved current credentials as 'personal'
+clp .account.save name::alice@home.com
+# saved current credentials as 'alice@home.com'
 
 # Verify both are stored
 clp .account.list
-# personal <- active (pro, standard, expires in 5h59m)
-# work (max, standard, expires in 3h41m)
+# alice@home.com <- active (pro, standard, expires in 5h59m)
+# alice@acme.com (max, standard, expires in 3h41m)
 ```
 
 **When to use:** First time setting up multi-account rotation on a machine.
@@ -87,21 +87,21 @@ Remove stale accounts that are no longer needed.
 ```bash
 # List all accounts
 clp .account.list v::2
-# work <- active (max, standard, expires in 2h10m, saved: 2026-03-15)
-# personal (pro, standard, expired)
-# old-trial (free, standard, expired)
+# alice@acme.com <- active (max, standard, expires in 2h10m)
+# alice@home.com (pro, standard, expired)
+# alice@oldco.com (free, standard, expired)
 
 # Preview what delete would do
-clp .account.delete name::old-trial dry::1
-# [dry-run] would delete account 'old-trial'
+clp .account.delete name::alice@oldco.com dry::1
+# [dry-run] would delete account 'alice@oldco.com'
 
 # Execute deletion
-clp .account.delete name::old-trial
-# deleted account 'old-trial'
+clp .account.delete name::alice@oldco.com
+# deleted account 'alice@oldco.com'
 
 # Cannot delete active account
-clp .account.delete name::work
-# error: cannot delete active account 'work' — switch to another account first
+clp .account.delete name::alice@acme.com
+# error: cannot delete active account 'alice@acme.com' — switch to another account first
 ```
 
 **When to use:** Periodic maintenance to remove expired or unused accounts.
@@ -113,13 +113,13 @@ Collect environment information for troubleshooting.
 ```bash
 # Show all file paths
 clp .paths
-# credentials: /home/user/.claude/.credentials.json
-# accounts:    /home/user/.claude/accounts/
-# projects:    /home/user/.claude/projects/
-# stats:       /home/user/.claude/stats-cache.json
-# settings:    /home/user/.claude/settings.json
-# session-env: /home/user/.claude/session-env/
-# sessions:    /home/user/.claude/sessions/
+# credentials:      /home/user/.claude/.credentials.json
+# credential_store: /home/user/.persistent/claude/credential/
+# projects:         /home/user/.claude/projects/
+# stats:            /home/user/.claude/stats-cache.json
+# settings:         /home/user/.claude/settings.json
+# session-env:      /home/user/.claude/session-env/
+# sessions:         /home/user/.claude/sessions/
 
 # Check token state
 clp .token.status v::2
@@ -127,8 +127,8 @@ clp .token.status v::2
 
 # List all accounts with full metadata
 clp .account.list v::2
-# work <- active (max, standard, expires in 2h47m)
-# personal (pro, standard, expires in 1h3m)
+# alice@acme.com <- active (max, standard, expires in 2h47m)
+# alice@home.com (pro, standard, expires in 1h3m)
 
 # Machine-readable snapshot for support tickets
 clp .paths format::json > /tmp/diag-paths.json
@@ -144,21 +144,21 @@ Preview all mutation operations before executing in unfamiliar or production env
 
 ```bash
 # Preview save
-clp .account.save name::backup dry::1
-# [dry-run] would save current credentials as 'backup'
+clp .account.save name::alice@acme.com dry::1
+# [dry-run] would save current credentials as 'alice@acme.com'
 
 # Preview switch
-clp .account.switch name::personal dry::1
-# [dry-run] would switch to 'personal'
+clp .account.switch name::alice@home.com dry::1
+# [dry-run] would switch to 'alice@home.com'
 
 # Preview delete
-clp .account.delete name::old dry::1
-# [dry-run] would delete account 'old'
+clp .account.delete name::alice@oldco.com dry::1
+# [dry-run] would delete account 'alice@oldco.com'
 
 # All look correct — execute for real
-clp .account.save name::backup
-clp .account.switch name::personal
-clp .account.delete name::old
+clp .account.save name::alice@acme.com
+clp .account.switch name::alice@home.com
+clp .account.delete name::alice@oldco.com
 ```
 
 **When to use:** Shared machines, production environments, or any context where credential file changes must be verified before execution.
@@ -172,16 +172,9 @@ Inspect live credentials on a machine where account management has not been init
 clp .account.status
 # error: no active account linked — see `.credentials.status` for live credentials
 
-# .credentials.status works without any accounts/ setup
+# .credentials.status works without a credential store — shows 7 default-on fields
 clp .credentials.status
-# Sub:     pro
-# Tier:    standard
-# Token:   valid
-# Email:   user@example.com
-# Org:     Acme Corp
-
-# Check in detail
-clp .credentials.status v::2
+# Account: N/A
 # Sub:     pro
 # Tier:    standard
 # Token:   valid
@@ -189,16 +182,24 @@ clp .credentials.status v::2
 # Email:   user@example.com
 # Org:     Acme Corp
 
+# Compact view — suppress fields that are often N/A on individual accounts
+clp .credentials.status email::0 org::0
+# Account: N/A
+# Sub:     pro
+# Tier:    standard
+# Token:   valid
+# Expires: in 3h 42m
+
 # Initialize account management from live credentials
-clp .account.save name::main
-# saved current credentials as 'main'
-clp .account.switch name::main
-# switched to 'main'
+clp .account.save name::alice@example.com
+# saved current credentials as 'alice@example.com'
+clp .account.switch name::alice@example.com
+# switched to 'alice@example.com'
 
 # Now .account.status also works
 clp .account.status
-# Account: main
+# Account: alice@example.com
 # Token:   valid
 ```
 
-**When to use:** Fresh Claude Code installations, CI/CD machines, or any environment where `~/.claude/accounts/` was never created.
+**When to use:** Fresh Claude Code installations, CI/CD machines, or any environment where the credential store has never been initialized.

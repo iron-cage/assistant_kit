@@ -7,7 +7,10 @@
 use error_tools::{ Error, Result };
 
 /// Param names that only accept boolean values (true/false/1/0).
-const BOOL_PARAMS : &[ &str ] = &[ "dry" ];
+const BOOL_PARAMS : &[ &str ] = &[
+  "dry",
+  "account", "sub", "tier", "token", "expires", "email", "org", "file", "saved",
+];
 
 /// Short alias for verbosity param.
 const VERBOSITY_ALIAS : &str = "v";
@@ -64,14 +67,14 @@ fn parse_verbosity( raw_val : &str ) -> Result< u8 >
 /// Convert raw argv (process args, NOT including argv\[0\]) into unilang token strings.
 ///
 /// Returns `(tokens, needs_help)` where `needs_help=true` signals that help text should
-/// be displayed (empty input or `--help`/`-h`).
+/// be displayed (empty input, `.`, `.help`, or bare `help`).
 ///
 /// # Errors
 ///
 /// Returns an error for:
 /// - First arg contains `::` (a param was given instead of a command name)
 /// - Param without `::` (not a valid `key::value` token)
-/// - Arg starting with `-` that is not `--help` or `-h` (flag syntax rejected)
+/// - Arg starting with `-` (flag syntax rejected — use `.help` instead of `--help`)
 /// - `verbosity::` / `v::` value that is not an integer in `[0, 2]`
 /// - Bool param (`dry::`) value other than `true`, `false`, `1`, `0`
 #[ inline ]
@@ -90,12 +93,6 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
   // help footer's "Use '<command> help'" instruction get the expected output
   // rather than a confusing "expected param::value syntax" error.
   if argv.iter().any( |a| a == ".help" || a == "help" )
-  {
-    return Ok( ( vec![ ".help".to_string() ], true ) );
-  }
-
-  // Step 2: --help / -h as first arg → show help
-  if argv[ 0 ] == "--help" || argv[ 0 ] == "-h"
   {
     return Ok( ( vec![ ".help".to_string() ], true ) );
   }

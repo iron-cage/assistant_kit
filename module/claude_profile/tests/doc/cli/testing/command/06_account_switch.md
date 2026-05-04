@@ -37,11 +37,11 @@ Integration test planning for the `.account.switch` command. See [commands.md](.
 ### IT-1: Switch overwrites credentials with named account
 
 **Goal:** Verify that switching to a saved account replaces `~/.claude/.credentials.json` with that account's stored credentials.
-**Setup:** Two accounts saved in `~/.claude/accounts/`: `work.credentials.json` and `personal.credentials.json`. `_active` marker set to `work`. `~/.claude/.credentials.json` contains `work` credentials.
+**Setup:** Two accounts saved in `~/.persistent/claude/credential/`: `work.credentials.json` and `personal.credentials.json`. `_active` marker set to `work`. `~/.claude/.credentials.json` contains `work` credentials.
 **Command:** `clp .account.switch name::personal`
 **Expected Output:** `switched to 'personal'` on stdout, exit 0.
 **Verification:**
-- `~/.claude/.credentials.json` now contains the exact content of `~/.claude/accounts/personal.credentials.json`
+- `~/.claude/.credentials.json` now contains the exact content of `~/.persistent/claude/credential/personal.credentials.json`
 - Exit code is 0
 **Pass Criteria:** Exit 0; credentials file replaced with `personal` account content.
 **Source:** [commands.md — .account.switch](../../../../../docs/cli/commands.md#command--5-accountswitch)
@@ -55,7 +55,7 @@ Integration test planning for the `.account.switch` command. See [commands.md](.
 **Command:** `clp .account.switch name::personal`
 **Expected Output:** `switched to 'personal'` on stdout, exit 0.
 **Verification:**
-- `~/.claude/accounts/_active` file content is exactly `personal` (no trailing newline or whitespace beyond what the implementation writes)
+- `~/.persistent/claude/credential/_active` file content is exactly `personal` (no trailing newline or whitespace beyond what the implementation writes)
 - Previous marker value `work` is no longer present
 **Pass Criteria:** Exit 0; `_active` marker reads `personal`.
 **Source:** [commands.md — .account.switch](../../../../../docs/cli/commands.md#command--5-accountswitch)
@@ -102,7 +102,7 @@ Integration test planning for the `.account.switch` command. See [commands.md](.
 **Verification:**
 - Stdout contains `[dry-run]` and `personal`
 - SHA-256 of `~/.claude/.credentials.json` is identical before and after
-- SHA-256 of `~/.claude/accounts/_active` is identical before and after
+- SHA-256 of `~/.persistent/claude/credential/_active` is identical before and after
 - Exit code is 0
 **Pass Criteria:** Exit 0; stdout contains dry-run message; no files modified.
 **Source:** [commands.md — .account.switch](../../../../../docs/cli/commands.md#command--5-accountswitch)
@@ -116,7 +116,7 @@ Integration test planning for the `.account.switch` command. See [commands.md](.
 **Command:** `clp .account.switch name::personal`
 **Expected Output:** `switched to 'personal'`, exit 0.
 **Verification:**
-- Byte-for-byte comparison: `diff ~/.claude/.credentials.json ~/.claude/accounts/personal.credentials.json` produces no output
+- Byte-for-byte comparison: `diff ~/.claude/.credentials.json ~/.persistent/claude/credential/personal.credentials.json` produces no output
 - JSON parse of both files yields identical key-value pairs
 **Pass Criteria:** Exit 0; credentials file is byte-identical to source account file.
 **Source:** [commands.md — .account.switch](../../../../../docs/cli/commands.md#command--5-accountswitch)
@@ -126,7 +126,7 @@ Integration test planning for the `.account.switch` command. See [commands.md](.
 ### IT-7: Other accounts in store not modified by switch
 
 **Goal:** Verify that switching to one account does not alter any other account files in the store.
-**Setup:** Three accounts saved: `work`, `personal`, `backup`. Record SHA-256 of all three `.credentials.json` files in `~/.claude/accounts/`.
+**Setup:** Three accounts saved: `work`, `personal`, `backup`. Record SHA-256 of all three `.credentials.json` files in `~/.persistent/claude/credential/`.
 **Command:** `clp .account.switch name::personal`
 **Expected Output:** `switched to 'personal'`, exit 0.
 **Verification:**

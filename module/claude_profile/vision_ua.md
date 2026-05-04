@@ -10,10 +10,6 @@ Claude Code має внутрішню файлову систему, яку ні
 ```
 ~/.claude/
   .credentials.json             ← активний OAuth-токен; форма — це API-контракт
-  accounts/
-    work.credentials.json       ← іменований знімок облікових даних
-    personal.credentials.json
-    _active                     ← «work»  ← один текстовий файл, одна відповідальність
   projects/
     -home-user-project-/        ← екранований шлях робочої директорії
       abc123.jsonl              ← історія розмов
@@ -22,10 +18,15 @@ Claude Code має внутрішню файлову систему, яку ні
   sessions/{id}.json            ← записи сесій
   stats-cache.json
   settings.json
+
+$PRO/.persistent/claude/credential/   ← або $HOME/.persistent/claude/credential/
+  work.credentials.json           ← іменований знімок облікових даних
+  personal.credentials.json
+  _active                         ← «work» ← один текстовий файл, одна відповідальність
 ```
 
 Кожен шлях у цьому дереві, що має значення для інструментів, обчислюється через
-[`ClaudePaths`](src/paths.rs). Ніде в цьому коді немає рядкового літерала `~/.claude/` —
+[`ClaudePaths`](src/paths.rs) або [`PersistPaths`](src/persist.rs). Ніде в цьому коді немає рядкового літерала `~/.claude/` —
 жодного разу. `ClaudePaths` — єдине авторитетне джерело, і кожен інший модуль,
 якому потрібен шлях, звертається до нього.
 

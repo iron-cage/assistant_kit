@@ -31,7 +31,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../../
 ### EC-1: Valid Format — Text
 
 **Goal:** Confirm that `format::text` produces human-readable labeled output.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list format::text`
 **Expected Output:** Human-readable text with labels, active indicator, and subscription type. Exit 0.
 **Verification:**
@@ -46,7 +46,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../../
 ### EC-2: Valid Format — JSON
 
 **Goal:** Confirm that `format::json` produces valid parseable JSON output.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list format::json`
 **Expected Output:** A JSON array of account objects. Exit 0.
 **Verification:**
@@ -61,7 +61,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../../
 ### EC-3: Invalid Format
 
 **Goal:** Confirm that an unsupported format value is rejected.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list format::xml`
 **Expected Output:** Error message containing `invalid format 'xml'` with exit 1.
 **Verification:**
@@ -77,7 +77,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../../
 ### EC-4: Case Handling — Uppercase TEXT
 
 **Goal:** Confirm that format matching is case-insensitive and accepts `TEXT`.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list format::TEXT`
 **Expected Output:** Same human-readable labeled output as `format::text`. Exit 0.
 **Verification:**
@@ -92,7 +92,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../../
 ### EC-5: Case Handling — Uppercase JSON
 
 **Goal:** Confirm that format matching is case-insensitive and accepts `JSON`.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list format::JSON`
 **Expected Output:** Same JSON output as `format::json`. Exit 0.
 **Verification:**
@@ -107,7 +107,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../../
 ### EC-6: Last Wins
 
 **Goal:** Confirm that when `format::` is specified multiple times, the last occurrence takes precedence.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list format::text format::json`
 **Expected Output:** JSON output (matching `format::json` behavior), not text output. Exit 0.
 **Verification:**
@@ -122,7 +122,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../../
 ### EC-7: Default
 
 **Goal:** Confirm that omitting `format::` defaults to `format::text`.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list`
 **Expected Output:** Human-readable labeled text output, same as `format::text`. Exit 0.
 **Verification:**
@@ -138,7 +138,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../../
 ### EC-8: JSON Validity
 
 **Goal:** Confirm that `format::json` output is fully parseable by `jq` without errors.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`. `jq` is available on PATH.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`. `jq` is available on PATH.
 **Command:** `clp .account.list format::json | jq .`
 **Expected Output:** Pretty-printed JSON from `jq` with exit 0 from both the pipeline stages.
 **Verification:**

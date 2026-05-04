@@ -19,7 +19,7 @@
 //! | as09 | `as09_save_star_name_exits_1` | name with `*` → exit 1 | N |
 //! | as10 | `as10_save_missing_name_param_exits_1` | no `name::` param → exit 1 | N |
 //! | as11 | `as11_save_missing_credentials_exits_2` | no credentials file → exit 2 | N |
-//! | as12 | `as12_save_auto_creates_accounts_dir` | accounts/ auto-created | P |
+//! | as12 | `as12_save_auto_creates_credential_store` | credential store auto-created | P |
 //! | as13 | `as13_save_dry_then_exec_match` | dry then exec → same output | P |
 //! | as14 | `as14_save_file_matches_source` | saved content matches source | P |
 //!
@@ -70,11 +70,11 @@ fn as01_save_creates_file()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.save", "name::work" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "saved" ), "must confirm save, got:\n{text}" );
-  assert!( account_exists( dir.path(), "work" ), "account file must exist" );
+  assert!( account_exists( dir.path(), "alice@acme.com" ), "account file must exist" );
 }
 
 #[ test ]
@@ -84,11 +84,11 @@ fn as02_save_dry_run()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.save", "name::work", "dry::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.save", "name::alice@acme.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "dry-run" ), "must say dry-run, got:\n{text}" );
-  assert!( !account_exists( dir.path(), "work" ), "dry-run must not create file" );
+  assert!( !account_exists( dir.path(), "alice@acme.com" ), "dry-run must not create file" );
 }
 
 #[ test ]
@@ -99,15 +99,15 @@ fn as03_save_overwrite()
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   // First save
-  let _ = run_cs_with_env( &[ ".account.save", "name::work" ], &[ ( "HOME", home ) ] );
+  let _ = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   // Update credentials and save again
   write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
-  let out = run_cs_with_env( &[ ".account.save", "name::work" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
 
   // Verify new content
   let saved = std::fs::read_to_string(
-    dir.path().join( ".claude" ).join( "accounts" ).join( "work.credentials.json" )
+    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( "alice@acme.com.credentials.json" )
   ).unwrap();
   assert!( saved.contains( "max" ), "overwrite must use new credentials, got: {saved}" );
 }
@@ -119,9 +119,9 @@ fn as04_save_hyphened_name()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.save", "name::a-b" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.save", "name::alice-work@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
-  assert!( account_exists( dir.path(), "a-b" ) );
+  assert!( account_exists( dir.path(), "alice-work@acme.com" ) );
 }
 
 #[ test ]
@@ -131,9 +131,9 @@ fn as05_save_underscored_name()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.save", "name::a_b" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.save", "name::alice_work@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
-  assert!( account_exists( dir.path(), "a_b" ) );
+  assert!( account_exists( dir.path(), "alice_work@acme.com" ) );
 }
 
 #[ test ]
@@ -199,21 +199,21 @@ fn as11_save_missing_credentials_exits_2()
   // No credentials file — only create .claude dir
   std::fs::create_dir_all( dir.path().join( ".claude" ) ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.save", "name::work" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 2 );
 }
 
 #[ test ]
-fn as12_save_auto_creates_accounts_dir()
+fn as12_save_auto_creates_credential_store()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  // accounts dir does NOT exist
+  // credential store does NOT exist
 
-  let out = run_cs_with_env( &[ ".account.save", "name::work" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
-  assert!( account_exists( dir.path(), "work" ), "account file must be auto-created" );
+  assert!( account_exists( dir.path(), "alice@acme.com" ), "account file must be auto-created" );
 }
 
 #[ test ]
@@ -223,13 +223,13 @@ fn as13_save_dry_then_exec_match()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let dry = run_cs_with_env( &[ ".account.save", "name::work", "dry::1" ], &[ ( "HOME", home ) ] );
+  let dry = run_cs_with_env( &[ ".account.save", "name::alice@acme.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &dry, 0 );
-  assert!( !account_exists( dir.path(), "work" ), "dry-run must not create file" );
+  assert!( !account_exists( dir.path(), "alice@acme.com" ), "dry-run must not create file" );
 
-  let exec = run_cs_with_env( &[ ".account.save", "name::work" ], &[ ( "HOME", home ) ] );
+  let exec = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &exec, 0 );
-  assert!( account_exists( dir.path(), "work" ), "exec must create file" );
+  assert!( account_exists( dir.path(), "alice@acme.com" ), "exec must create file" );
 }
 
 #[ test ]
@@ -239,10 +239,12 @@ fn as14_save_file_matches_source()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let _ = run_cs_with_env( &[ ".account.save", "name::work" ], &[ ( "HOME", home ) ] );
+  let _ = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
 
   let source = std::fs::read_to_string( dir.path().join( ".claude" ).join( ".credentials.json" ) ).unwrap();
-  let saved = std::fs::read_to_string( dir.path().join( ".claude" ).join( "accounts" ).join( "work.credentials.json" ) ).unwrap();
+  let saved = std::fs::read_to_string(
+    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( "alice@acme.com.credentials.json" )
+  ).unwrap();
   assert_eq!( source, saved, "saved file must be byte-identical to source" );
 }
 
@@ -254,9 +256,9 @@ fn aw01_switch_swaps_credentials()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_account( dir.path(), "personal", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
 
-  let out = run_cs_with_env( &[ ".account.switch", "name::personal" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.switch", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "switched" ), "must confirm switch, got:\n{text}" );
@@ -268,10 +270,10 @@ fn aw02_switch_dry_run()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_account( dir.path(), "personal", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
 
   let before = std::fs::read_to_string( dir.path().join( ".claude" ).join( ".credentials.json" ) ).unwrap();
-  let out = run_cs_with_env( &[ ".account.switch", "name::personal", "dry::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.switch", "name::alice@home.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "dry-run" ), "must say dry-run, got:\n{text}" );
@@ -285,9 +287,9 @@ fn aw03_switch_nonexistent_exits_2()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  std::fs::create_dir_all( dir.path().join( ".claude" ).join( "accounts" ) ).unwrap();
+  std::fs::create_dir_all( dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ) ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.switch", "name::missing" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.switch", "name::missing@example.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 2 );
 }
 
@@ -330,14 +332,14 @@ fn aw07_switch_updates_active_marker()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_account( dir.path(), "personal", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
 
-  let _ = run_cs_with_env( &[ ".account.switch", "name::personal" ], &[ ( "HOME", home ) ] );
+  let _ = run_cs_with_env( &[ ".account.switch", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
 
   let marker = std::fs::read_to_string(
-    dir.path().join( ".claude" ).join( "accounts" ).join( "_active" )
+    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( "_active" )
   ).unwrap();
-  assert_eq!( marker.trim(), "personal" );
+  assert_eq!( marker.trim(), "alice@home.com" );
 }
 
 #[ test ]
@@ -346,9 +348,9 @@ fn aw08_switch_same_account_idempotent()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
 
-  let out = run_cs_with_env( &[ ".account.switch", "name::work" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.switch", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
 }
 
@@ -358,13 +360,13 @@ fn aw09_switch_copies_credentials()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_account( dir.path(), "personal", "max", "tier4", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
 
-  let _ = run_cs_with_env( &[ ".account.switch", "name::personal" ], &[ ( "HOME", home ) ] );
+  let _ = run_cs_with_env( &[ ".account.switch", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
 
   let creds = std::fs::read_to_string( dir.path().join( ".claude" ).join( ".credentials.json" ) ).unwrap();
   let account_file = std::fs::read_to_string(
-    dir.path().join( ".claude" ).join( "accounts" ).join( "personal.credentials.json" )
+    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( "alice@home.com.credentials.json" )
   ).unwrap();
   assert_eq!( creds, account_file, "credentials must match account file after switch" );
 }
@@ -376,12 +378,12 @@ fn ad01_delete_inactive_removes_file()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
-  write_account( dir.path(), "old", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@oldco.com", "pro", "standard", FAR_FUTURE_MS, false );
 
-  let out = run_cs_with_env( &[ ".account.delete", "name::old" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.delete", "name::alice@oldco.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
-  assert!( !account_exists( dir.path(), "old" ), "account file must be removed" );
+  assert!( !account_exists( dir.path(), "alice@oldco.com" ), "account file must be removed" );
 }
 
 #[ test ]
@@ -389,13 +391,13 @@ fn ad02_delete_dry_run_keeps_file()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "old", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@oldco.com", "pro", "standard", FAR_FUTURE_MS, false );
 
-  let out = run_cs_with_env( &[ ".account.delete", "name::old", "dry::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.delete", "name::alice@oldco.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "dry-run" ), "must say dry-run, got:\n{text}" );
-  assert!( account_exists( dir.path(), "old" ), "dry-run must not delete file" );
+  assert!( account_exists( dir.path(), "alice@oldco.com" ), "dry-run must not delete file" );
 }
 
 #[ test ]
@@ -403,11 +405,11 @@ fn ad03_delete_active_exits_1()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
 
-  let out = run_cs_with_env( &[ ".account.delete", "name::work" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.delete", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
-  assert!( account_exists( dir.path(), "work" ), "active account must not be deleted" );
+  assert!( account_exists( dir.path(), "alice@acme.com" ), "active account must not be deleted" );
 }
 
 #[ test ]
@@ -415,9 +417,9 @@ fn ad04_delete_nonexistent_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  std::fs::create_dir_all( dir.path().join( ".claude" ).join( "accounts" ) ).unwrap();
+  std::fs::create_dir_all( dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ) ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.delete", "name::ghost" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.delete", "name::ghost@example.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 2 );
 }
 
@@ -459,15 +461,15 @@ fn ad08_delete_then_list_absent()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "keep", "pro", "standard", FAR_FUTURE_MS, true );
-  write_account( dir.path(), "old", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "keep@example.com", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@oldco.com", "pro", "standard", FAR_FUTURE_MS, false );
 
-  let _ = run_cs_with_env( &[ ".account.delete", "name::old" ], &[ ( "HOME", home ) ] );
+  let _ = run_cs_with_env( &[ ".account.delete", "name::alice@oldco.com" ], &[ ( "HOME", home ) ] );
 
   let out = run_cs_with_env( &[ ".account.list", "v::0" ], &[ ( "HOME", home ) ] );
   let text = stdout( &out );
-  assert!( !text.contains( "old" ), "deleted account must not appear in list, got:\n{text}" );
-  assert!( text.contains( "keep" ), "kept account must still appear, got:\n{text}" );
+  assert!( !text.contains( "alice@oldco.com" ), "deleted account must not appear in list, got:\n{text}" );
+  assert!( text.contains( "keep@example.com" ), "kept account must still appear, got:\n{text}" );
 }
 
 #[ test ]
@@ -475,12 +477,12 @@ fn ad09_double_delete_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "old", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@oldco.com", "pro", "standard", FAR_FUTURE_MS, false );
 
-  let first = run_cs_with_env( &[ ".account.delete", "name::old" ], &[ ( "HOME", home ) ] );
+  let first = run_cs_with_env( &[ ".account.delete", "name::alice@oldco.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &first, 0 );
 
-  let second = run_cs_with_env( &[ ".account.delete", "name::old" ], &[ ( "HOME", home ) ] );
+  let second = run_cs_with_env( &[ ".account.delete", "name::alice@oldco.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &second, 2 );
 }
 
@@ -502,9 +504,9 @@ fn aw10_switch_dry_run_nonexistent_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  std::fs::create_dir_all( dir.path().join( ".claude" ).join( "accounts" ) ).unwrap();
+  std::fs::create_dir_all( dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ) ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.switch", "name::missing", "dry::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.switch", "name::missing@example.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 2 );
 }
 
@@ -525,11 +527,11 @@ fn ad10_delete_dry_run_active_exits_1()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  write_account( dir.path(), "work", "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
 
-  let out = run_cs_with_env( &[ ".account.delete", "name::work", "dry::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.delete", "name::alice@acme.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
-  assert!( account_exists( dir.path(), "work" ), "dry-run must not delete active account" );
+  assert!( account_exists( dir.path(), "alice@acme.com" ), "dry-run must not delete active account" );
 }
 
 // test_kind: bug_reproducer(issue-delete-dry-validation)
@@ -548,9 +550,9 @@ fn ad11_delete_dry_run_nonexistent_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
-  std::fs::create_dir_all( dir.path().join( ".claude" ).join( "accounts" ) ).unwrap();
+  std::fs::create_dir_all( dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ) ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.delete", "name::ghost", "dry::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.delete", "name::ghost@example.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 2 );
 }
 

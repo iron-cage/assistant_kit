@@ -12,7 +12,7 @@
 `.account.status` must accept an optional `name::` parameter:
 
 **With `name::`:**
-- Read the named account's own credential snapshot at `~/.claude/accounts/{name}.credentials.json`.
+- Read the named account's own credential snapshot at `{credential_store}/{name}.credentials.json`.
 - Compute token state from that snapshot's own `expiresAt` (never `unknown` — the file either exists or doesn't).
 - Show `Email: N/A` and `Org: N/A` because `~/.claude/.claude.json` OAuth profile is only valid for the currently active session, not for stored snapshots.
 - Return `NotFound` error (exit 2) if the named account does not exist in the store.
@@ -27,8 +27,8 @@
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .account.status name::work` exits 0 and shows token state from `work.credentials.json`.
-- **AC-02**: `clp .account.status name::ghost` exits 2 with a not-found error.
+- **AC-01**: `clp .account.status name::alice@acme.com` exits 0 and shows token state from `alice@acme.com.credentials.json`.
+- **AC-02**: `clp .account.status name::ghost@example.com` exits 2 with a not-found error.
 - **AC-03**: Named non-active account shows `Email: N/A` and `Org: N/A`.
 - **AC-04**: `clp .account.status` without `name::` continues to show active account (backward compatible).
 - **AC-05**: Empty or absent `subscriptionType`/`rateLimitTier` → shown as `N/A`, never blank.

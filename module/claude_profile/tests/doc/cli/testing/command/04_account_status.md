@@ -52,7 +52,7 @@ Integration test planning for the `.account.status` command. See [commands.md](.
 ### IT-1: No `_active` file → exit 2, stderr reports no active account
 
 **Goal:** Confirm that a missing `_active` marker produces a clear error and non-zero exit.
-**Setup:** Create `~/.claude/.credentials.json` (valid token). Do NOT create `~/.claude/accounts/_active`.
+**Setup:** Create `~/.claude/.credentials.json` (valid token). Do NOT create `~/.persistent/claude/credential/_active`.
 **Command:** `clp .account.status`
 **Expected Output:** Empty stdout; stderr contains "no active account set".
 **Verification:**
@@ -68,7 +68,7 @@ Integration test planning for the `.account.status` command. See [commands.md](.
 ### IT-2: Empty `_active` file → exit 2, stderr reports no active account
 
 **Goal:** Confirm that an existing but empty `_active` marker is treated the same as absent.
-**Setup:** Create `~/.claude/accounts/_active` with empty contents (zero bytes or whitespace only).
+**Setup:** Create `~/.persistent/claude/credential/_active` with empty contents (zero bytes or whitespace only).
 **Command:** `clp .account.status`
 **Expected Output:** Empty stdout; stderr contains "no active account set".
 **Verification:**
@@ -83,7 +83,7 @@ Integration test planning for the `.account.status` command. See [commands.md](.
 ### IT-3: Active account with valid token → name and "valid" in output
 
 **Goal:** Confirm the happy-path output shows the account name and "valid" token state.
-**Setup:** Write `~/.claude/accounts/_active` = `"work"`. Write `~/.claude/.credentials.json` with `expiresAt` far in the future (year ~2286).
+**Setup:** Write `~/.persistent/claude/credential/_active` = `"work"`. Write `~/.claude/.credentials.json` with `expiresAt` far in the future (year ~2286).
 **Command:** `clp .account.status`
 **Expected Output:** Output contains `work` and `valid`.
 **Verification:**
@@ -99,7 +99,7 @@ Integration test planning for the `.account.status` command. See [commands.md](.
 ### IT-4: Active account with expired token → name and "expired" in output
 
 **Goal:** Confirm that an expired token is reported as "expired" in the output.
-**Setup:** Write `~/.claude/accounts/_active` = `"work"`. Write `~/.claude/.credentials.json` with `expiresAt` in the past (Unix ms 1_000_000_000).
+**Setup:** Write `~/.persistent/claude/credential/_active` = `"work"`. Write `~/.claude/.credentials.json` with `expiresAt` in the past (Unix ms 1_000_000_000).
 **Command:** `clp .account.status`
 **Expected Output:** Output contains `work` and `expired`.
 **Verification:**
@@ -115,7 +115,7 @@ Integration test planning for the `.account.status` command. See [commands.md](.
 ### IT-5: Active account with near-expiry token → "expiring in Xm" in output
 
 **Goal:** Confirm that a token within the warning threshold is reported as expiring.
-**Setup:** Write `~/.claude/accounts/_active` = `"work"`. Write `~/.claude/.credentials.json` with `expiresAt` 30 minutes from now (within 3600s default threshold).
+**Setup:** Write `~/.persistent/claude/credential/_active` = `"work"`. Write `~/.claude/.credentials.json` with `expiresAt` 30 minutes from now (within 3600s default threshold).
 **Command:** `clp .account.status`
 **Expected Output:** Output contains `work` and `expiring in`.
 **Verification:**
@@ -131,7 +131,7 @@ Integration test planning for the `.account.status` command. See [commands.md](.
 ### IT-6: Missing credentials file → token shows "unknown", exit 0
 
 **Goal:** Confirm that a missing credentials file does not crash the command — account name is still shown with token state "unknown".
-**Setup:** Write `~/.claude/accounts/_active` = `"work"`. Do NOT create `~/.claude/.credentials.json`.
+**Setup:** Write `~/.persistent/claude/credential/_active` = `"work"`. Do NOT create `~/.claude/.credentials.json`.
 **Command:** `clp .account.status`
 **Expected Output:** Output contains `work` and `unknown`. Exit 0.
 **Verification:**
@@ -147,7 +147,7 @@ Integration test planning for the `.account.status` command. See [commands.md](.
 ### IT-7: `v::0` shows bare name then token state (no labels)
 
 **Goal:** Confirm verbosity 0 produces exactly two lines: account name then token state, no "Account:" or "Token:" labels.
-**Setup:** Write `~/.claude/accounts/_active` = `"work"`. Write valid credentials.
+**Setup:** Write `~/.persistent/claude/credential/_active` = `"work"`. Write valid credentials.
 **Command:** `clp .account.status v::0`
 **Expected Output:** Two lines: line 1 = `work`, line 2 = `valid`. No label prefixes.
 **Verification:**
@@ -166,7 +166,7 @@ Integration test planning for the `.account.status` command. See [commands.md](.
 ### IT-8: `v::1` (default) shows "Account:" and "Token:" labels
 
 **Goal:** Confirm the default verbosity level 1 shows labelled output with "Account:" and "Token:" prefixes.
-**Setup:** Write `~/.claude/accounts/_active` = `"work"`. Write valid credentials.
+**Setup:** Write `~/.persistent/claude/credential/_active` = `"work"`. Write valid credentials.
 **Command:** `clp .account.status` (implicit v::1)
 **Expected Output:** Lines like `Account: work` and `Token:   valid`.
 **Verification:**
@@ -183,7 +183,7 @@ Integration test planning for the `.account.status` command. See [commands.md](.
 ### IT-9: `v::2` shows additional "Expires:" line
 
 **Goal:** Confirm verbosity level 2 adds the "Expires:" line beyond what v::1 shows.
-**Setup:** Write `~/.claude/accounts/_active` = `"work"`. Write valid credentials with far-future expiry.
+**Setup:** Write `~/.persistent/claude/credential/_active` = `"work"`. Write valid credentials with far-future expiry.
 **Command:** `clp .account.status v::2`
 **Expected Output:** Seven lines: `Account: work`, `Token:   valid`, `Sub:     pro`, `Tier:    standard`, `Expires: in Xh Ym`, `Email:   N/A`, `Org:     N/A` (no `.claude.json` in setup, so email/org fall back to N/A).
 **Verification:**
@@ -200,7 +200,7 @@ Integration test planning for the `.account.status` command. See [commands.md](.
 ### IT-10: `format::json` returns `{"account":"...","token":"..."}`
 
 **Goal:** Confirm JSON format output is a valid JSON object with `account` and `token` fields.
-**Setup:** Write `~/.claude/accounts/_active` = `"work"`. Write valid credentials.
+**Setup:** Write `~/.persistent/claude/credential/_active` = `"work"`. Write valid credentials.
 **Command:** `clp .account.status format::json`
 **Expected Output:** A single JSON object `{"account":"work","token":"valid"}`.
 **Verification:**

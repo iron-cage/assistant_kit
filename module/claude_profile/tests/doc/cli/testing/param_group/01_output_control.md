@@ -32,7 +32,7 @@ Integration and edge case coverage for the Output Control parameter group (`v::`
 ### IT-1: Quiet Mode
 
 **Goal:** Confirm that `v::0` suppresses labels and produces bare values across all 3 commands that accept Output Control.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`. Active credentials exist at `~/.claude/.credentials.json`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`. Active credentials exist at `~/.claude/.credentials.json`.
 **Command:**
 1. `clp .account.list v::0`
 2. `clp .token.status v::0`
@@ -55,7 +55,7 @@ All exit 0.
 ### IT-2: Standard Mode
 
 **Goal:** Confirm that `v::1` produces labeled output with human context across all 3 commands.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`, with one marked active. Active credentials exist at `~/.claude/.credentials.json`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`, with one marked active. Active credentials exist at `~/.claude/.credentials.json`.
 **Command:**
 1. `clp .account.list v::1`
 2. `clp .token.status v::1`
@@ -78,7 +78,7 @@ All exit 0.
 ### IT-3: Verbose Mode
 
 **Goal:** Confirm that `v::2` includes full metadata across all 3 commands.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`. Active credentials exist at `~/.claude/.credentials.json`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`. Active credentials exist at `~/.claude/.credentials.json`.
 **Command:**
 1. `clp .account.list v::2`
 2. `clp .token.status v::2`
@@ -101,7 +101,7 @@ All exit 0.
 ### IT-4: Alias Consistency
 
 **Goal:** Confirm that the long-form `verbosity::` alias produces identical output to `v::` across all 3 commands.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`. Active credentials exist at `~/.claude/.credentials.json`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`. Active credentials exist at `~/.claude/.credentials.json`.
 **Command:**
 1. `clp .account.list verbosity::0` vs `clp .account.list v::0`
 2. `clp .token.status verbosity::1` vs `clp .token.status v::1`
@@ -120,7 +120,7 @@ All exit 0.
 ### EC-1: Interaction — Quiet with JSON
 
 **Goal:** Confirm that `v::0` with `format::json` still produces complete JSON with all keys (format overrides verbosity for JSON).
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list v::0 format::json`
 **Expected Output:** Valid JSON array with all fields (`name`, `is_active`, `subscription_type`, etc.) present in each object. Exit 0.
 **Verification:**
@@ -136,7 +136,7 @@ All exit 0.
 ### EC-2: Interaction — Verbose with JSON
 
 **Goal:** Confirm that `v::2` with `format::json` does not inject extra keys or diagnostic metadata into the JSON structure.
-**Setup:** At least one saved account exists under `~/.claude/accounts/`.
+**Setup:** At least one saved account exists under `~/.persistent/claude/credential/`.
 **Command:** `clp .account.list v::2 format::json`
 **Expected Output:** Valid JSON array with the same keys as `format::json` alone. Exit 0.
 **Verification:**

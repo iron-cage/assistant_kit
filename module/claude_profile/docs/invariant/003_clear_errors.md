@@ -21,8 +21,8 @@ All errors produced by `claude_profile` must provide actionable messages — mes
 **Examples:**
 
 ```
-✅ Good: "account 'work' not found in ~/.claude/accounts/"
-✅ Good: "cannot delete active account 'work' — switch to another account first"
+✅ Good: "account 'alice@acme.com' not found in {credential_store}"
+✅ Good: "cannot delete active account 'alice@acme.com' — switch to another account first"
 ✅ Good: "~/.claude/.credentials.json not found — run 'claude' to authenticate first"
 
 ❌ Bad: "not found"

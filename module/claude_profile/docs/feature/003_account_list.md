@@ -9,15 +9,15 @@
 
 ### Design
 
-`claude_profile` must enumerate all `*.credentials.json` files in `~/.claude/accounts/` and return for each:
+`claude_profile` must enumerate all `*.credentials.json` files in `{credential_store}` and return for each:
 
 | Field | Source | Notes |
 |-------|--------|-------|
-| `name` | Filename stem | e.g. `work` from `work.credentials.json` |
+| `name` | Filename stem | e.g. `alice@acme.com` from `alice@acme.com.credentials.json` |
 | `subscriptionType` | Credential file JSON field | Empty or absent → shown as `N/A` |
 | `rateLimitTier` | Credential file JSON field | Empty or absent → shown as `N/A` |
 | `expiresAt` | Credential file `expiresAt` field | Unix epoch milliseconds |
-| `is_active` | Name matches `_active` marker content | `true` if name == contents of `~/.claude/accounts/_active` |
+| `is_active` | Name matches `_active` marker content | `true` if name == contents of `{credential_store}/_active` |
 
 **Empty account store:** Returns an empty `Vec`, not an error. Exit 0.
 
@@ -29,7 +29,7 @@
 
 ### Acceptance Criteria
 
-- **AC-01**: Empty `~/.claude/accounts/` returns empty list, exit 0.
+- **AC-01**: Empty credential store returns empty list, exit 0.
 - **AC-02**: Each entry reports name, subscriptionType, rateLimitTier, expiresAt, is_active.
 - **AC-03**: The account matching `_active` marker has `is_active: true`; all others `false`.
 - **AC-04**: `format::json` output is a valid JSON array.
@@ -38,7 +38,7 @@
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/account.rs` | `list()` — enumerates accounts/, reads _active marker |
+| source | `src/account.rs` | `list()` — enumerates credential store, reads _active marker |
 | source | `src/commands.rs` | `account_list_routine()` — CLI handler |
 | test | `tests/account_tests.rs::list_marks_active_account_via_active_marker` | Verifies is_active field |
 | doc | [cli/commands.md](../cli/commands.md#command--3-accountlist) | CLI command specification |

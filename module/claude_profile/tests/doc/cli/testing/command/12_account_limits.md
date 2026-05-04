@@ -110,7 +110,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 ### IT-6: Not Found — Unknown Named Account
 
 **Goal:** Confirm that a syntactically valid but non-existent account name exits 2.
-**Setup:** `ghost` account does not exist in `~/.claude/accounts/`.
+**Setup:** `ghost` account does not exist in `~/.persistent/claude/credential/`.
 **Command:** `clp .account.limits name::ghost`
 **Expected Output:** Exit 2; stderr contains `not found` or `ghost`.
 **Verification:**

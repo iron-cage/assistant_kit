@@ -6,8 +6,8 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | Save creates credential file in `~/.claude/accounts/` | Basic Invocation |
-| IT-2 | Save creates `accounts/` directory if missing | Directory Init |
+| IT-1 | Save creates credential file in `~/.persistent/claude/credential/` | Basic Invocation |
+| IT-2 | Save creates credential store if missing | Directory Init |
 | IT-3 | Save with existing name overwrites silently | Overwrite |
 | IT-4 | Save with invalid name (contains `/`) exits 1 | Validation |
 | IT-5 | Save with empty `name::` exits 1 | Validation |
@@ -32,31 +32,31 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 
 ---
 
-### IT-1: Save creates credential file in `~/.claude/accounts/`
+### IT-1: Save creates credential file in `~/.persistent/claude/credential/`
 
 **Goal:** Confirm that saving an account creates the named credential file in the accounts directory.
-**Setup:** Create `~/.claude/.credentials.json` with valid credential content. Create `~/.claude/accounts/` directory (empty).
+**Setup:** Create `~/.claude/.credentials.json` with valid credential content. Create `~/.persistent/claude/credential/` directory (empty).
 **Command:** `clp .account.save name::work`
-**Expected Output:** stdout: `saved current credentials as 'work'`. File `~/.claude/accounts/work.credentials.json` now exists.
+**Expected Output:** stdout: `saved current credentials as 'work'`. File `~/.persistent/claude/credential/work.credentials.json` now exists.
 **Verification:**
 - Assert exit code is 0
-- Assert `~/.claude/accounts/work.credentials.json` exists on disk
+- Assert `~/.persistent/claude/credential/work.credentials.json` exists on disk
 - Assert stdout contains `saved current credentials as 'work'`
 **Pass Criteria:** Exit 0; credential file created at expected path.
 **Source:** [commands.md — .account.save](../../../../../docs/cli/commands.md#command--4-accountsave)
 
 ---
 
-### IT-2: Save creates `accounts/` directory if missing
+### IT-2: Save creates credential store if missing
 
-**Goal:** Confirm the command auto-creates the `~/.claude/accounts/` directory when it does not exist.
-**Setup:** Create `~/.claude/.credentials.json` with valid credential content. Ensure `~/.claude/accounts/` does not exist.
+**Goal:** Confirm the command auto-creates the `~/.persistent/claude/credential/` directory when it does not exist.
+**Setup:** Create `~/.claude/.credentials.json` with valid credential content. Ensure `~/.persistent/claude/credential/` does not exist.
 **Command:** `clp .account.save name::work`
-**Expected Output:** stdout: `saved current credentials as 'work'`. Both `~/.claude/accounts/` directory and `~/.claude/accounts/work.credentials.json` file now exist.
+**Expected Output:** stdout: `saved current credentials as 'work'`. Both `~/.persistent/claude/credential/` directory and `~/.persistent/claude/credential/work.credentials.json` file now exist.
 **Verification:**
 - Assert exit code is 0
-- Assert `~/.claude/accounts/` directory exists
-- Assert `~/.claude/accounts/work.credentials.json` file exists
+- Assert `~/.persistent/claude/credential/` directory exists
+- Assert `~/.persistent/claude/credential/work.credentials.json` file exists
 **Pass Criteria:** Exit 0; directory auto-created; credential file created.
 **Source:** [commands.md — .account.save](../../../../../docs/cli/commands.md#command--4-accountsave)
 
@@ -65,12 +65,12 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 ### IT-3: Save with existing name overwrites silently
 
 **Goal:** Confirm that saving to an already-existing account name overwrites the file without error or confirmation prompt.
-**Setup:** Create `~/.claude/.credentials.json` with credential content V2. Create `~/.claude/accounts/work.credentials.json` with older credential content V1.
+**Setup:** Create `~/.claude/.credentials.json` with credential content V2. Create `~/.persistent/claude/credential/work.credentials.json` with older credential content V1.
 **Command:** `clp .account.save name::work`
-**Expected Output:** stdout: `saved current credentials as 'work'`. File `~/.claude/accounts/work.credentials.json` now contains V2 content.
+**Expected Output:** stdout: `saved current credentials as 'work'`. File `~/.persistent/claude/credential/work.credentials.json` now contains V2 content.
 **Verification:**
 - Assert exit code is 0
-- Read `~/.claude/accounts/work.credentials.json`
+- Read `~/.persistent/claude/credential/work.credentials.json`
 - Assert file content matches V2 (current `.credentials.json`), not V1 (previous)
 - Assert no error or warning on stderr
 **Pass Criteria:** Exit 0; file overwritten with current credentials; no error output.
@@ -87,7 +87,7 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 **Verification:**
 - Assert exit code is 1
 - Assert stderr contains an error message referencing invalid characters
-- Assert no file matching `bad` or `name` exists under `~/.claude/accounts/`
+- Assert no file matching `bad` or `name` exists under `~/.persistent/claude/credential/`
 **Pass Criteria:** Exit 1; no file created; error message on stderr.
 **Source:** [commands.md — .account.save](../../../../../docs/cli/commands.md#command--4-accountsave)
 
@@ -102,7 +102,7 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 **Verification:**
 - Assert exit code is 1
 - Assert stderr contains an error message about empty name
-- Assert no new files created in `~/.claude/accounts/`
+- Assert no new files created in `~/.persistent/claude/credential/`
 **Pass Criteria:** Exit 1; no file created; error message about empty name.
 **Source:** [commands.md — .account.save](../../../../../docs/cli/commands.md#command--4-accountsave)
 
@@ -111,13 +111,13 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 ### IT-6: Save when `~/.claude/.credentials.json` missing exits 2
 
 **Goal:** Confirm that a missing source credential file causes a runtime error exit 2.
-**Setup:** Ensure `~/.claude/.credentials.json` does not exist. Create `~/.claude/accounts/` directory.
+**Setup:** Ensure `~/.claude/.credentials.json` does not exist. Create `~/.persistent/claude/credential/` directory.
 **Command:** `clp .account.save name::work`
 **Expected Output:** Error message indicating credentials file is unreadable or missing. No account file created.
 **Verification:**
 - Assert exit code is 2
 - Assert stderr contains an error message about credentials
-- Assert `~/.claude/accounts/work.credentials.json` does not exist
+- Assert `~/.persistent/claude/credential/work.credentials.json` does not exist
 **Pass Criteria:** Exit 2; no file created; error message about missing credentials.
 **Source:** [commands.md — .account.save](../../../../../docs/cli/commands.md#command--4-accountsave)
 
@@ -126,14 +126,14 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 ### IT-7: `dry::1` prints action without creating file
 
 **Goal:** Confirm that dry-run mode previews the save action without writing any file to disk.
-**Setup:** Create `~/.claude/.credentials.json` with valid credential content. Create `~/.claude/accounts/` directory (empty).
+**Setup:** Create `~/.claude/.credentials.json` with valid credential content. Create `~/.persistent/claude/credential/` directory (empty).
 **Command:** `clp .account.save name::work dry::1`
 **Expected Output:** stdout: `[dry-run] would save current credentials as 'work'`. No file created.
 **Verification:**
 - Assert exit code is 0
 - Assert stdout contains `[dry-run]`
 - Assert stdout contains `would save current credentials as 'work'`
-- Assert `~/.claude/accounts/work.credentials.json` does not exist
+- Assert `~/.persistent/claude/credential/work.credentials.json` does not exist
 **Pass Criteria:** Exit 0; dry-run message printed; no file created on disk.
 **Source:** [commands.md — .account.save](../../../../../docs/cli/commands.md#command--4-accountsave)
 
@@ -142,13 +142,13 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 ### IT-8: `dry::1` then `dry::0` creates file as previewed
 
 **Goal:** Confirm that executing after a dry run produces the exact action that was previewed.
-**Setup:** Create `~/.claude/.credentials.json` with valid credential content. Create `~/.claude/accounts/` directory (empty).
+**Setup:** Create `~/.claude/.credentials.json` with valid credential content. Create `~/.persistent/claude/credential/` directory (empty).
 **Command:** `clp .account.save name::work dry::1` followed by `clp .account.save name::work`
 **Expected Output:** First command: `[dry-run] would save current credentials as 'work'` (no file). Second command: `saved current credentials as 'work'` (file created).
 **Verification:**
 - Run dry-run command; assert exit 0 and no file created
 - Run real command; assert exit 0
-- Assert `~/.claude/accounts/work.credentials.json` now exists
+- Assert `~/.persistent/claude/credential/work.credentials.json` now exists
 - Assert file content matches `~/.claude/.credentials.json`
 **Pass Criteria:** Exit 0 on both; dry run creates nothing; real run creates exactly the previewed file.
 **Source:** [commands.md — .account.save](../../../../../docs/cli/commands.md#command--4-accountsave)
@@ -160,11 +160,11 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 **Goal:** Confirm the saved credential file is a byte-exact copy of the source `.credentials.json`.
 **Setup:** Create `~/.claude/.credentials.json` with known credential content (e.g., specific JSON with `accessToken`, `refreshToken`, `expiresAt` fields).
 **Command:** `clp .account.save name::work`
-**Expected Output:** `~/.claude/accounts/work.credentials.json` is a byte-identical copy of `~/.claude/.credentials.json`.
+**Expected Output:** `~/.persistent/claude/credential/work.credentials.json` is a byte-identical copy of `~/.claude/.credentials.json`.
 **Verification:**
 - Assert exit code is 0
 - Read `~/.claude/.credentials.json` into variable SOURCE
-- Read `~/.claude/accounts/work.credentials.json` into variable SAVED
+- Read `~/.persistent/claude/credential/work.credentials.json` into variable SAVED
 - Assert SOURCE == SAVED (byte-equal comparison)
 **Pass Criteria:** Exit 0; saved file is byte-identical to source credentials.
 **Source:** [commands.md — .account.save](../../../../../docs/cli/commands.md#command--4-accountsave)
@@ -180,6 +180,6 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 **Verification:**
 - Assert exit code is 1
 - Assert stderr contains an error message about missing or required `name` parameter
-- Assert no new files created in `~/.claude/accounts/`
+- Assert no new files created in `~/.persistent/claude/credential/`
 **Pass Criteria:** Exit 1; no file created; error message about required parameter.
 **Source:** [commands.md — .account.save](../../../../../docs/cli/commands.md#command--4-accountsave)

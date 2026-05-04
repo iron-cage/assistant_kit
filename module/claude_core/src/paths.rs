@@ -17,7 +17,6 @@
 //!
 //! let p = ClaudePaths::new().expect( "HOME must be set" );
 //! println!( "credentials: {}", p.credentials_file().display() );
-//! println!( "accounts:    {}", p.accounts_dir().display() );
 //! println!( "projects:    {}", p.projects_dir().display() );
 //! ```
 
@@ -79,14 +78,6 @@ impl ClaudePaths
   pub fn credentials_file( &self ) -> PathBuf
   {
     self.base.join( ".credentials.json" )
-  }
-
-  /// Path to `~/.claude/accounts/` — named credential snapshots.
-  #[ inline ]
-  #[ must_use ]
-  pub fn accounts_dir( &self ) -> PathBuf
-  {
-    self.base.join( "accounts" )
   }
 
   /// Path to `~/.claude/projects/` — conversation history root.

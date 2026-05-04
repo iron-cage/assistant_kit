@@ -84,13 +84,17 @@ fn require_claude_paths() -> Result< claude_core::ClaudePaths, ErrorData >
 }
 
 
-/// Read the active account name from `~/.claude/accounts/_active`.
+/// Read the active account name from the credential store `_active` marker.
 ///
-/// Still needed by `status_routine`; not removed with the account routines in Task 038.
+/// Checks `$PRO/.persistent/claude/credential/_active` first, falling back to
+/// `$HOME/.persistent/claude/credential/_active`.
 fn get_active_account() -> Option< String >
 {
-  let paths = claude_core::ClaudePaths::new()?;
-  let marker = paths.accounts_dir().join( "_active" );
+  let root = std::env::var_os( "PRO" )
+    .filter( | v | !v.is_empty() )
+    .or_else( || std::env::var_os( "HOME" ).filter( | v | !v.is_empty() ) )?;
+  let marker = std::path::Path::new( &root )
+    .join( ".persistent" ).join( "claude" ).join( "credential" ).join( "_active" );
   std::fs::read_to_string( marker )
   .ok()
   .map( | s | s.trim().to_string() )

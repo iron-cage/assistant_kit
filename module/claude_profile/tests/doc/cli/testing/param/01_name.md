@@ -47,7 +47,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../../do
 **Verification:**
 - Exit code is 0
 - Output contains `saved current credentials as 'work'`
-- File `~/.claude/accounts/work.credentials.json` exists after execution
+- File `~/.persistent/claude/credential/work.credentials.json` exists after execution
 **Pass Criteria:** Exit 0; credential file created with correct name.
 **Source:** [params.md -- name::](../../../../../docs/cli/params.md#parameter--1-name)
 
@@ -62,7 +62,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../../do
 **Verification:**
 - Exit code is 1
 - Stderr contains `account name must not be empty`
-- No file created under `~/.claude/accounts/`
+- No file created under `~/.persistent/claude/credential/`
 **Pass Criteria:** Exit 1; empty name rejected with descriptive error.
 **Source:** [types.md -- AccountName](../../../../../docs/cli/types.md#type--1-accountname)
 
@@ -77,7 +77,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../../do
 **Verification:**
 - Exit code is 1
 - Stderr references the missing `name::` parameter
-- No file created under `~/.claude/accounts/`
+- No file created under `~/.persistent/claude/credential/`
 **Pass Criteria:** Exit 1; missing required parameter clearly reported.
 **Source:** [params.md -- name::](../../../../../docs/cli/params.md#parameter--1-name)
 
@@ -92,7 +92,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../../do
 **Verification:**
 - Exit code is 1
 - Stderr contains `contains invalid characters`
-- No file created under `~/.claude/accounts/`
+- No file created under `~/.persistent/claude/credential/`
 **Pass Criteria:** Exit 1; forward slash in name rejected.
 **Source:** [types.md -- AccountName](../../../../../docs/cli/types.md#type--1-accountname)
 
@@ -107,7 +107,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../../do
 **Verification:**
 - Exit code is 1
 - Stderr contains `contains invalid characters`
-- No file created under `~/.claude/accounts/`
+- No file created under `~/.persistent/claude/credential/`
 **Pass Criteria:** Exit 1; backslash in name rejected.
 **Source:** [types.md -- AccountName](../../../../../docs/cli/types.md#type--1-accountname)
 
@@ -122,7 +122,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../../do
 **Verification:**
 - Exit code is 1
 - Stderr contains `contains invalid characters`
-- No file created under `~/.claude/accounts/`
+- No file created under `~/.persistent/claude/credential/`
 - Repeat conceptually for each forbidden character: `?`, `"`, `<`, `>`, `|`
 **Pass Criteria:** Exit 1; each forbidden special character in name rejected.
 **Source:** [types.md -- AccountName](../../../../../docs/cli/types.md#type--1-accountname)
@@ -138,7 +138,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../../do
 **Verification:**
 - Exit code is 1
 - Stderr contains `contains invalid characters`
-- No file created under `~/.claude/accounts/`
+- No file created under `~/.persistent/claude/credential/`
 **Pass Criteria:** Exit 1; null byte in name rejected.
 **Source:** [types.md -- AccountName](../../../../../docs/cli/types.md#type--1-accountname)
 
@@ -153,7 +153,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../../do
 **Verification:**
 - Exit code is 0
 - Output contains `saved current credentials as 'client-a'`
-- File `~/.claude/accounts/client-a.credentials.json` exists after execution
+- File `~/.persistent/claude/credential/client-a.credentials.json` exists after execution
 **Pass Criteria:** Exit 0; hyphenated name accepted and credential file created.
 **Source:** [params.md -- name::](../../../../../docs/cli/params.md#parameter--1-name)
 
@@ -168,7 +168,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../../do
 **Verification:**
 - Exit code is 0
 - Output contains `saved current credentials as 'my_account'`
-- File `~/.claude/accounts/my_account.credentials.json` exists after execution
+- File `~/.persistent/claude/credential/my_account.credentials.json` exists after execution
 **Pass Criteria:** Exit 0; underscored name accepted and credential file created.
 **Source:** [params.md -- name::](../../../../../docs/cli/params.md#parameter--1-name)
 
@@ -237,7 +237,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../../do
 ### EC-14: Optional on `.account.limits` — queries named account (FR-18)
 
 **Goal:** Confirm that `name::work` on `.account.limits` succeeds and shows that account's limits.
-**Setup:** `work` account exists in `~/.claude/accounts/`; rate-limit data available.
+**Setup:** `work` account exists in `~/.persistent/claude/credential/`; rate-limit data available.
 **Command:** `clp .account.limits name::work`
 **Expected Output:** Exit 0; output contains utilization data for `work`.
 **Verification:**

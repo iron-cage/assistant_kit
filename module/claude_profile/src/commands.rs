@@ -95,6 +95,17 @@ fn require_claude_paths() -> Result< crate::ClaudePaths, ErrorData >
   }
 }
 
+/// Resolve the credential store path via `PersistPaths`.
+fn require_credential_store() -> Result< std::path::PathBuf, ErrorData >
+{
+  crate::PersistPaths::new()
+    .map( | p | p.credential_store() )
+    .map_err( |e| ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "persistent storage unavailable: {e}" ),
+    ) )
+}
+
 /// Map `std::io::Error` to `ErrorData` with appropriate exit code.
 ///
 /// - `InvalidInput` / `PermissionDenied` → `ArgumentTypeMismatch` (exit 1)
@@ -143,9 +154,11 @@ fn read_live_cred_meta( paths : &crate::ClaudePaths ) -> ( String, String, Strin
 
 /// `.credentials.status` — show live credential metadata without account store dependency.
 ///
-/// Reads `~/.claude/.credentials.json` directly; does not require `_active` marker or
-/// any `accounts/` directory. Useful on fresh Claude Code installations where account
-/// management has not been initialized.
+/// Reads `~/.claude/.credentials.json` directly. Does not require account store setup.
+/// Each output line is independently controlled by a boolean field-presence param.
+/// Default-on: `account`, `sub`, `tier`, `token`, `expires`, `email`, `org`.
+/// Opt-in (default off): `file`, `saved`.
+/// `format::json` always emits all 9 fields regardless of field-presence params.
 ///
 /// # Errors
 ///
@@ -153,8 +166,9 @@ fn read_live_cred_meta( paths : &crate::ClaudePaths ) -> ( String, String, Strin
 #[ inline ]
 pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let opts  = OutputOptions::from_cmd( &cmd )?;
-  let paths = require_claude_paths()?;
+  let opts             = OutputOptions::from_cmd( &cmd )?;
+  let paths            = require_claude_paths()?;
+  let credential_store = require_credential_store()?;
 
   if !paths.credentials_file().exists()
   {
@@ -166,6 +180,19 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
       ),
     ) );
   }
+
+  // Per-field presence flags; None (absent param) = use default.
+  // Default-on: account, sub, tier, token, expires, email, org.
+  // Opt-in (default off): file, saved — require explicit Some(Boolean(true)).
+  let show_account = matches!( cmd.arguments.get( "account" ), Some( Value::Boolean( true ) ) | None );
+  let show_sub     = matches!( cmd.arguments.get( "sub"     ), Some( Value::Boolean( true ) ) | None );
+  let show_tier    = matches!( cmd.arguments.get( "tier"    ), Some( Value::Boolean( true ) ) | None );
+  let show_token   = matches!( cmd.arguments.get( "token"   ), Some( Value::Boolean( true ) ) | None );
+  let show_expires = matches!( cmd.arguments.get( "expires" ), Some( Value::Boolean( true ) ) | None );
+  let show_email   = matches!( cmd.arguments.get( "email"   ), Some( Value::Boolean( true ) ) | None );
+  let show_org     = matches!( cmd.arguments.get( "org"     ), Some( Value::Boolean( true ) ) | None );
+  let show_file    = matches!( cmd.arguments.get( "file"    ), Some( Value::Boolean( true ) ) );
+  let show_saved   = matches!( cmd.arguments.get( "saved"   ), Some( Value::Boolean( true ) ) );
 
   let ts  = crate::token::status_with_threshold( crate::token::WARNING_THRESHOLD_SECS );
   let tok = match &ts
@@ -191,13 +218,33 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
 
   let ( sub, tier, email, org ) = read_live_cred_meta( &paths );
 
-  let content = match ( opts.format, opts.verbosity )
+  // Account: reads _active opportunistically — N/A when absent (no hard dependency).
+  let account = std::fs::read_to_string( credential_store.join( "_active" ) )
+    .ok()
+    .map( | s | s.trim().to_string() )
+    .filter( | s | !s.is_empty() )
+    .unwrap_or_else( || "N/A".to_string() );
+
+  // Saved: count *.credentials.json files; 0 when credential_store absent.
+  let saved = std::fs::read_dir( &credential_store )
+    .map( | rd | rd.filter_map( Result::ok )
+      .filter( | e | e.file_name().to_string_lossy().ends_with( ".credentials.json" ) )
+      .count() )
+    .unwrap_or( 0 );
+
+  let file_path = paths.credentials_file().display().to_string();
+
+  let content = match opts.format
   {
-    ( OutputFormat::Json, _ ) =>
+    OutputFormat::Json =>
     {
       let s  = json_escape( &sub );
       let t  = json_escape( &tier );
       let tk = json_escape( &tok );
+      let em = json_escape( &email );
+      let or = json_escape( &org );
+      let ac = json_escape( &account );
+      let fp = json_escape( &file_path );
       let exp_secs = match &ts
       {
         Ok( crate::token::TokenStatus::Valid { expires_in }
@@ -205,13 +252,22 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
           expires_in.as_secs().to_string(),
         _ => "0".to_string(),
       };
-      format!( "{{\"subscription\":\"{s}\",\"tier\":\"{t}\",\"token\":\"{tk}\",\"expires_in_secs\":{exp_secs}}}\n" )
+      format!( "{{\"subscription\":\"{s}\",\"tier\":\"{t}\",\"token\":\"{tk}\",\"expires_in_secs\":{exp_secs},\"email\":\"{em}\",\"org\":\"{or}\",\"account\":\"{ac}\",\"file\":\"{fp}\",\"saved\":{saved}}}\n" )
     }
-    ( OutputFormat::Text, 0 ) => format!( "Sub:     {sub}\nToken:   {tok}\n" ),
-    ( OutputFormat::Text, 1 ) =>
-      format!( "Sub:     {sub}\nTier:    {tier}\nToken:   {tok}\nEmail:   {email}\nOrg:     {org}\n" ),
-    ( OutputFormat::Text, _ ) =>
-      format!( "Sub:     {sub}\nTier:    {tier}\nToken:   {tok}\nExpires: {exp}\nEmail:   {email}\nOrg:     {org}\n" ),
+    OutputFormat::Text =>
+    {
+      let mut out = String::new();
+      if show_account { out.push_str( &format!( "Account: {account}\n" ) ); }
+      if show_sub     { out.push_str( &format!( "Sub:     {sub}\n"     ) ); }
+      if show_tier    { out.push_str( &format!( "Tier:    {tier}\n"    ) ); }
+      if show_token   { out.push_str( &format!( "Token:   {tok}\n"     ) ); }
+      if show_expires { out.push_str( &format!( "Expires: {exp}\n"     ) ); }
+      if show_email   { out.push_str( &format!( "Email:   {email}\n"   ) ); }
+      if show_org     { out.push_str( &format!( "Org:     {org}\n"     ) ); }
+      if show_file    { out.push_str( &format!( "File:    {file_path}\n" ) ); }
+      if show_saved   { out.push_str( &format!( "Saved:   {saved} account(s)\n" ) ); }
+      out
+    }
   };
   Ok( OutputData::new( content, "text" ) )
 }
@@ -225,8 +281,8 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
 pub fn account_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts = OutputOptions::from_cmd( &cmd )?;
-  require_claude_paths()?;
-  let accounts = crate::account::list()
+  let credential_store = require_credential_store()?;
+  let accounts = crate::account::list( &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account list" ) )?;
 
   let content = match opts.format
@@ -300,9 +356,9 @@ pub fn account_list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 // ── .account.status helpers ──────────────────────────────────────────────────
 
 /// Active-account path for `.account.status` (backward-compat, no `name::` given).
-fn status_active( opts : OutputOptions, paths : crate::ClaudePaths ) -> Result< OutputData, ErrorData >
+fn status_active( opts : OutputOptions, paths : crate::ClaudePaths, credential_store : std::path::PathBuf ) -> Result< OutputData, ErrorData >
 {
-  let active_marker = paths.accounts_dir().join( "_active" );
+  let active_marker = credential_store.join( "_active" );
   let account_name  = std::fs::read_to_string( &active_marker )
   .ok()
   .map( | s | s.trim().to_string() )
@@ -360,15 +416,16 @@ fn status_active( opts : OutputOptions, paths : crate::ClaudePaths ) -> Result< 
 
 /// Named-account path for `.account.status` (FR-16).
 fn status_named(
-  opts     : OutputOptions,
-  paths    : crate::ClaudePaths,
-  name_arg : &str,
+  opts             : OutputOptions,
+  paths            : crate::ClaudePaths,
+  name_arg         : &str,
+  credential_store : std::path::PathBuf,
 ) -> Result< OutputData, ErrorData >
 {
   crate::account::validate_name( name_arg )
     .map_err( |e| io_err_to_error_data( &e, "account status" ) )?;
 
-  let accounts = crate::account::list()
+  let accounts = crate::account::list( &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account status" ) )?;
 
   let account = accounts.iter().find( | a | a.name == name_arg )
@@ -458,8 +515,9 @@ fn status_named(
 #[ inline ]
 pub fn account_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let opts  = OutputOptions::from_cmd( &cmd )?;
-  let paths = require_claude_paths()?;
+  let opts             = OutputOptions::from_cmd( &cmd )?;
+  let paths            = require_claude_paths()?;
+  let credential_store = require_credential_store()?;
 
   // FR-16: optional name:: parameter; empty string means "use active account".
   let name_arg = match cmd.arguments.get( "name" )
@@ -468,8 +526,8 @@ pub fn account_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
     _                          => String::new(),
   };
 
-  if name_arg.is_empty() { return status_active( opts, paths ); }
-  status_named( opts, paths, &name_arg )
+  if name_arg.is_empty() { return status_active( opts, paths, credential_store ); }
+  status_named( opts, paths, &name_arg, credential_store )
 }
 
 /// `.account.switch` — atomic credential rotation by name.
@@ -486,9 +544,10 @@ pub fn account_switch_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   //   succeeded for non-existent accounts instead of reporting NotFound (exit 2).
   // Pitfall: Always run input validation + precondition checks before the dry-run guard;
   //   only the mutating operation (file copy + marker write) is skipped in dry-run.
-  let name = require_nonempty_string_arg( &cmd, "name" )?;
-  require_claude_paths()?;
-  crate::account::check_switch_preconditions( &name )
+  let name             = require_nonempty_string_arg( &cmd, "name" )?;
+  let paths            = require_claude_paths()?;
+  let credential_store = require_credential_store()?;
+  crate::account::check_switch_preconditions( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account switch" ) )?;
 
   if is_dry( &cmd )
@@ -496,7 +555,7 @@ pub fn account_switch_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
     return Ok( OutputData::new( format!( "[dry-run] would switch to '{name}'\n" ), "text" ) );
   }
 
-  crate::account::switch_account( &name )
+  crate::account::switch_account( &name, &credential_store, &paths )
     .map_err( |e| io_err_to_error_data( &e, "account switch" ) )?;
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )
 }
@@ -625,8 +684,9 @@ fn format_rate_limits_json( data : &RateLimitData ) -> String
 #[ inline ]
 pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let opts = OutputOptions::from_cmd( &cmd )?;
-  let paths = require_claude_paths()?;
+  let opts             = OutputOptions::from_cmd( &cmd )?;
+  let paths            = require_claude_paths()?;
+  let credential_store = require_credential_store()?;
 
   let name_arg = match cmd.arguments.get( "name" )
   {
@@ -642,7 +702,7 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   {
     crate::account::validate_name( &name_arg )
       .map_err( | e | io_err_to_error_data( &e, "account limits" ) )?;
-    let path = paths.accounts_dir().join( format!( "{name_arg}.credentials.json" ) );
+    let path = credential_store.join( format!( "{name_arg}.credentials.json" ) );
     if !path.exists()
     {
       return Err( ErrorData::new(
@@ -694,15 +754,17 @@ pub fn dot_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result<
 #[ inline ]
 pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let name = require_nonempty_string_arg( &cmd, "name" )?;
-  require_claude_paths()?;
+  let name             = require_nonempty_string_arg( &cmd, "name" )?;
+  let paths            = require_claude_paths()?;
+  let credential_store = require_credential_store()?;
 
   if is_dry( &cmd )
   {
     return Ok( OutputData::new( format!( "[dry-run] would save current credentials as '{name}'\n" ), "text" ) );
   }
 
-  crate::account::save( &name ).map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
+  crate::account::save( &name, &credential_store, &paths )
+    .map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
   Ok( OutputData::new( format!( "saved current credentials as '{name}'\n" ), "text" ) )
 }
 
@@ -720,9 +782,9 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   //   so dry-run bypassed PermissionDenied (active account) and NotFound (missing account).
   // Pitfall: The active-account safety invariant must hold even in dry-run — reporting
   //   "would delete active account" without error is a misleading no-op.
-  let name = require_nonempty_string_arg( &cmd, "name" )?;
-  require_claude_paths()?;
-  crate::account::check_delete_preconditions( &name )
+  let name             = require_nonempty_string_arg( &cmd, "name" )?;
+  let credential_store = require_credential_store()?;
+  crate::account::check_delete_preconditions( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account delete" ) )?;
 
   if is_dry( &cmd )
@@ -730,7 +792,8 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
     return Ok( OutputData::new( format!( "[dry-run] would delete account '{name}'\n" ), "text" ) );
   }
 
-  crate::account::delete( &name ).map_err( |e| io_err_to_error_data( &e, "account delete" ) )?;
+  crate::account::delete( &name, &credential_store )
+    .map_err( |e| io_err_to_error_data( &e, "account delete" ) )?;
   Ok( OutputData::new( format!( "deleted account '{name}'\n" ), "text" ) )
 }
 
@@ -805,8 +868,9 @@ pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 #[ inline ]
 pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let opts = OutputOptions::from_cmd( &cmd )?;
-  let paths = require_claude_paths()?;
+  let opts             = OutputOptions::from_cmd( &cmd )?;
+  let paths            = require_claude_paths()?;
+  let credential_store = require_credential_store()?;
 
   let content = match opts.format
   {
@@ -816,7 +880,7 @@ pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
         concat!(
           "{{\"base\":\"{}\",",
           "\"credentials\":\"{}\",",
-          "\"accounts\":\"{}\",",
+          "\"credential_store\":\"{}\",",
           "\"projects\":\"{}\",",
           "\"stats\":\"{}\",",
           "\"settings\":\"{}\",",
@@ -825,7 +889,7 @@ pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
         ),
         json_escape( &paths.base().display().to_string() ),
         json_escape( &paths.credentials_file().display().to_string() ),
-        json_escape( &paths.accounts_dir().display().to_string() ),
+        json_escape( &credential_store.display().to_string() ),
         json_escape( &paths.projects_dir().display().to_string() ),
         json_escape( &paths.stats_file().display().to_string() ),
         json_escape( &paths.settings_file().display().to_string() ),
@@ -844,9 +908,9 @@ pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
         1 =>
         {
           format!(
-            "credentials: {}\naccounts:    {}\nprojects:    {}\nstats:       {}\nsettings:    {}\nsession-env: {}\nsessions:    {}\n",
+            "credentials:      {}\ncredential_store: {}\nprojects:         {}\nstats:            {}\nsettings:         {}\nsession-env:      {}\nsessions:         {}\n",
             paths.credentials_file().display(),
-            paths.accounts_dir().display(),
+            credential_store.display(),
             paths.projects_dir().display(),
             paths.stats_file().display(),
             paths.settings_file().display(),
@@ -857,13 +921,13 @@ pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
         _ =>
         {
           let entries : Vec< ( &str, std::path::PathBuf ) > = vec![
-            ( "credentials", paths.credentials_file() ),
-            ( "accounts",    paths.accounts_dir() ),
-            ( "projects",    paths.projects_dir() ),
-            ( "stats",       paths.stats_file() ),
-            ( "settings",    paths.settings_file() ),
-            ( "session-env", paths.session_env_dir() ),
-            ( "sessions",    paths.sessions_dir() ),
+            ( "credentials",      paths.credentials_file() ),
+            ( "credential_store", credential_store ),
+            ( "projects",         paths.projects_dir() ),
+            ( "stats",            paths.stats_file() ),
+            ( "settings",         paths.settings_file() ),
+            ( "session-env",      paths.session_env_dir() ),
+            ( "sessions",         paths.sessions_dir() ),
           ];
           let mut out = String::new();
           for ( label, path ) in entries

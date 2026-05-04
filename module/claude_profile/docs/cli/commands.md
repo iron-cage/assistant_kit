@@ -7,15 +7,15 @@
 | 1 | `.` | Show help information (hidden dot-shorthand) | 0 | `clp .` |
 | 2 | `.help` | Display command reference and usage examples | 0 | `clp .help` |
 | 3 | `.account.list` | List all saved accounts with subscription type and token state | 2 | `clp .account.list` |
-| 4 | `.account.status` | Show account name and token state; optionally query a named account | 3 | `clp .account.status name::work` |
-| 5 | `.account.save` | Save current credentials as a named account profile | 2 | `clp .account.save name::work` |
-| 6 | `.account.switch` | Switch active account by name with atomic credential rotation | 2 | `clp .account.switch name::personal` |
-| 7 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::old` |
+| 4 | `.account.status` | Show account name and token state; optionally query a named account | 3 | `clp .account.status name::alice@acme.com` |
+| 5 | `.account.save` | Save current credentials as a named account profile | 2 | `clp .account.save name::alice@acme.com` |
+| 6 | `.account.switch` | Switch active account by name with atomic credential rotation | 2 | `clp .account.switch name::alice@home.com` |
+| 7 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::alice@oldco.com` |
 | 8 | `.token.status` | Show active OAuth token expiry classification | 3 | `clp .token.status` |
 | 9 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 2 | `clp .paths` |
 | 10 | `.usage` | Show token usage statistics from stats-cache.json | 2 | `clp .usage v::0` |
-| 11 | `.credentials.status` | Show live credential metadata without account store dependency | 2 | `clp .credentials.status` |
-| 12 | `.account.limits` | Show rate-limit utilization for the active or named account | 3 | `clp .account.limits name::work` |
+| 11 | `.credentials.status` | Show live credential metadata without account store dependency | 10 | `clp .credentials.status` |
+| 12 | `.account.limits` | Show rate-limit utilization for the active or named account | 3 | `clp .account.limits name::alice@acme.com` |
 
 **Total:** 12 commands (10 visible + 2 hidden)
 
@@ -24,10 +24,10 @@
 ### Quick Reference
 
 **Required Parameters:**
-- `name::` — required on `.account.save`, `.account.switch`, `.account.delete`
+- `name::` — required on `.account.save`, `.account.switch`, `.account.delete` (must be an email address)
 
 **Most-Used Parameters:**
-- `verbosity::` / `v::` — 7 commands
+- `verbosity::` / `v::` — 6 commands
 - `format::` — 7 commands
 
 **Commands by Parameter Count:**
@@ -35,14 +35,15 @@
 | Count | Commands |
 |-------|----------|
 | 0 | `.`, `.help` |
-| 2 | `.account.list`, `.account.save`, `.account.switch`, `.account.delete`, `.paths`, `.usage`, `.credentials.status` |
+| 2 | `.account.list`, `.account.save`, `.account.switch`, `.account.delete`, `.paths`, `.usage` |
 | 3 | `.account.status`, `.token.status`, `.account.limits` |
+| 10 | `.credentials.status` |
 
 ---
 
 ### Command :: 3. `.account.list`
 
-Enumerates all credential snapshots in `~/.claude/accounts/` and displays name, subscription type, rate-limit tier, token expiry, and active marker. Use this to see which accounts are available before switching.
+Enumerates all credential snapshots in the credential store and displays name, subscription type, rate-limit tier, token expiry, and active marker. Use this to see which accounts are available before switching.
 
 -- **Parameters:** [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
 -- **Exit:** 0 (success) | 2 (runtime: accounts dir unreadable)
@@ -64,15 +65,15 @@ clp .account.list format::json
 
 ```bash
 clp .account.list
-# work <- active (max, standard, expires in 47m)
-# personal (pro, standard, expires in 3h12m)
+# alice@acme.com <- active (max, standard, expires in 47m)
+# alice@home.com (pro, standard, expires in 3h12m)
 
 clp .account.list v::0
-# work
-# personal
+# alice@acme.com
+# alice@home.com
 
 clp .account.list format::json
-# [{"name":"work","subscription_type":"max","rate_limit_tier":"standard","expires_at_ms":1711234567000,"is_active":true},...]
+# [{"name":"alice@acme.com","subscription_type":"max","rate_limit_tier":"standard","expires_at_ms":1711234567000,"is_active":true},...]
 ```
 
 ---
@@ -88,8 +89,8 @@ Reads the `_active` marker and the active OAuth token to report account name, to
 
 ```bash
 clp .account.status
-clp .account.status name::work
-clp .account.status name::personal v::2
+clp .account.status name::alice@acme.com
+clp .account.status name::alice@home.com v::2
 clp .account.status format::json
 ```
 
@@ -103,57 +104,57 @@ clp .account.status format::json
 
 ```bash
 clp .account.status
-# Account: work
+# Account: alice@acme.com
 # Token:   valid
 # Sub:     pro
 # Tier:    standard
-# Email:   alice@example.com
+# Email:   alice@acme.com
 # Org:     Acme Corp
 
-clp .account.status name::personal
-# Account: personal
+clp .account.status name::alice@home.com
+# Account: alice@home.com
 # Token:   expired
 # Sub:     pro
 # Tier:    standard
 # Email:   N/A
 # Org:     N/A
 
-clp .account.status name::work v::1
-# Account: work
+clp .account.status name::alice@acme.com v::1
+# Account: alice@acme.com
 # Token:   valid
 # Sub:     pro
 # Tier:    standard
-# Email:   alice@example.com
+# Email:   alice@acme.com
 # Org:     Acme Corp
 
 clp .account.status v::0
-# work
+# alice@acme.com
 # valid
 
 clp .account.status v::2
-# Account: work
+# Account: alice@acme.com
 # Token:   valid
 # Sub:     pro
 # Tier:    standard
 # Expires: in 47h 12m
-# Email:   alice@example.com
+# Email:   alice@acme.com
 # Org:     Acme Corp
 
 clp .account.status format::json
-# {"account":"work","token":"valid"}
+# {"account":"alice@acme.com","token":"valid"}
 ```
 
 **Notes:**
 - Without `name::`: reads the active account from `_active` and the live credentials file. Token state can be `unknown` if the credentials file is unreadable.
 - With `name::`: reads the named account's own `expiresAt` from its stored credential file. Token state is always `valid`, `expiring in Xm`, or `expired` (never `unknown`).
 - At `v::1`: shows `Sub:` (subscriptionType) and `Tier:` (rateLimitTier) for all accounts; shows `Email:` and `Org:` from `~/.claude/.claude.json` for the active account only — `N/A` for non-active accounts.
-- Reports exit 1 for invalid `name::` characters; exit 2 if no `_active` marker is set or the named account is not found.
+- Reports exit 1 for invalid `name::` value; exit 2 if no `_active` marker is set or the named account is not found.
 
 ---
 
 ### Command :: 5. `.account.save`
 
-Copies `~/.claude/.credentials.json` to `~/.claude/accounts/{name}.credentials.json`, creating the account store directory if needed. Use this to snapshot the current credentials before switching accounts.
+Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json`, creating the credential store directory if needed. Use this to snapshot the current credentials before switching accounts.
 
 -- **Parameters:** [`name::`](params.md#parameter--1-name) **(required)**, [`dry::`](params.md#parameter--5-dry)
 -- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: credentials unreadable)
@@ -161,23 +162,23 @@ Copies `~/.claude/.credentials.json` to `~/.claude/accounts/{name}.credentials.j
 **Syntax:**
 
 ```bash
-clp .account.save name::work
-clp .account.save name::work dry::1
+clp .account.save name::alice@acme.com
+clp .account.save name::alice@acme.com dry::1
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `name::` | [`AccountName`] | **(required)** | Account name to save as |
+| `name::` | [`AccountName`] | **(required)** | Account email to save as |
 | `dry::` | `bool` | `0` | Preview action without executing |
 
 **Examples:**
 
 ```bash
-clp .account.save name::work
-# saved current credentials as 'work'
+clp .account.save name::alice@acme.com
+# saved current credentials as 'alice@acme.com'
 
-clp .account.save name::work dry::1
-# [dry-run] would save current credentials as 'work'
+clp .account.save name::alice@acme.com dry::1
+# [dry-run] would save current credentials as 'alice@acme.com'
 ```
 
 ---
@@ -192,30 +193,30 @@ Atomically overwrites `~/.claude/.credentials.json` with the named account's cre
 **Syntax:**
 
 ```bash
-clp .account.switch name::personal
-clp .account.switch name::personal dry::1
+clp .account.switch name::alice@home.com
+clp .account.switch name::alice@home.com dry::1
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `name::` | [`AccountName`] | **(required)** | Account name to switch to |
+| `name::` | [`AccountName`] | **(required)** | Account email to switch to |
 | `dry::` | `bool` | `0` | Preview action without executing |
 
 **Examples:**
 
 ```bash
-clp .account.switch name::personal
-# switched to 'personal'
+clp .account.switch name::alice@home.com
+# switched to 'alice@home.com'
 
-clp .account.switch name::personal dry::1
-# [dry-run] would switch to 'personal'
+clp .account.switch name::alice@home.com dry::1
+# [dry-run] would switch to 'alice@home.com'
 ```
 
 ---
 
 ### Command :: 7. `.account.delete`
 
-Removes `~/.claude/accounts/{name}.credentials.json` from the account store. Refuses to delete the currently active account — switch to another account first.
+Removes `{credential_store}/{name}.credentials.json` from the credential store. Refuses to delete the currently active account — switch to another account first.
 
 -- **Parameters:** [`name::`](params.md#parameter--1-name) **(required)**, [`dry::`](params.md#parameter--5-dry)
 -- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found, account is active)
@@ -223,26 +224,26 @@ Removes `~/.claude/accounts/{name}.credentials.json` from the account store. Ref
 **Syntax:**
 
 ```bash
-clp .account.delete name::old
-clp .account.delete name::old dry::1
+clp .account.delete name::alice@oldco.com
+clp .account.delete name::alice@oldco.com dry::1
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `name::` | [`AccountName`] | **(required)** | Account name to delete |
+| `name::` | [`AccountName`] | **(required)** | Account email to delete |
 | `dry::` | `bool` | `0` | Preview action without executing |
 
 **Examples:**
 
 ```bash
-clp .account.delete name::old
-# deleted account 'old'
+clp .account.delete name::alice@oldco.com
+# deleted account 'alice@oldco.com'
 
-clp .account.delete name::old dry::1
-# [dry-run] would delete account 'old'
+clp .account.delete name::alice@oldco.com dry::1
+# [dry-run] would delete account 'alice@oldco.com'
 
-clp .account.delete name::work
-# error: cannot delete active account 'work' — switch to another account first
+clp .account.delete name::alice@acme.com
+# error: cannot delete active account 'alice@acme.com' — switch to another account first
 ```
 
 ---
@@ -309,9 +310,9 @@ clp .paths format::json
 
 ```bash
 clp .paths
-# credentials: /home/user/.claude/.credentials.json
-# accounts:    /home/user/.claude/accounts/
-# projects:    /home/user/.claude/projects/
+# credentials:      /home/user/.claude/.credentials.json
+# credential_store: /home/user/.persistent/claude/credential/
+# projects:         /home/user/.claude/projects/
 # stats:       /home/user/.claude/stats-cache.json
 # settings:    /home/user/.claude/settings.json
 # session-env: /home/user/.claude/session-env/
@@ -376,47 +377,69 @@ clp .usage format::json
 
 Show live credential metadata by reading `~/.claude/.credentials.json` directly. Succeeds on any authenticated machine regardless of whether account store setup exists.
 
--- **Parameters:** [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
+-- **Parameters:** [`format::`](params.md#parameter--3-format), [`account::`](params.md#parameter--6-account), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`token::`](params.md#parameter--9-token), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`org::`](params.md#parameter--12-org), [`file::`](params.md#parameter--13-file), [`saved::`](params.md#parameter--14-saved)
 -- **Exit:** 0 (success) | 2 (credential file absent or HOME unset)
 
 **Syntax:**
 
 ```bash
 clp .credentials.status
-clp .credentials.status v::2
+clp .credentials.status email::0 org::0
+clp .credentials.status file::1 saved::1
 clp .credentials.status format::json
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `v::` | [`VerbosityLevel`] | `1` | Output detail level (0=sub+token, 1=+tier/email/org, 2=+expiry) |
-| `format::` | [`OutputFormat`] | `text` | Output format |
+| `format::` | [`OutputFormat`](types.md#type--3-outputformat) | `text` | Output format |
+| `account::` | `bool` | `1` | Show active account name line |
+| `sub::` | `bool` | `1` | Show subscription type line |
+| `tier::` | `bool` | `1` | Show rate-limit tier line |
+| `token::` | `bool` | `1` | Show token status line |
+| `expires::` | `bool` | `1` | Show token expiry duration line |
+| `email::` | `bool` | `1` | Show email address line |
+| `org::` | `bool` | `1` | Show organization name line |
+| `file::` | `bool` | `0` | Show credentials file path (opt-in) |
+| `saved::` | `bool` | `0` | Show saved account count (opt-in) |
 
 **Examples:**
 
 ```bash
 clp .credentials.status
-# Sub:     pro
-# Tier:    standard
+# Account: alice@acme.com
+# Sub:     max
+# Tier:    default_claude_max_20x
 # Token:   valid
-# Email:   user@example.com
-# Org:     Acme Corp
+# Expires: in 7h 24m
+# Email:   N/A
+# Org:     N/A
 
-clp .credentials.status v::0
-# Sub:     pro
+clp .credentials.status email::0 org::0
+# Account: alice@acme.com
+# Sub:     max
+# Tier:    default_claude_max_20x
 # Token:   valid
+# Expires: in 7h 24m
 
-clp .credentials.status v::2
-# Sub:     pro
-# Tier:    standard
+clp .credentials.status file::1 saved::1
+# Account: alice@acme.com
+# Sub:     max
+# Tier:    default_claude_max_20x
 # Token:   valid
-# Expires: in 3h 42m
-# Email:   user@example.com
-# Org:     Acme Corp
+# Expires: in 7h 24m
+# Email:   N/A
+# Org:     N/A
+# File:    /home/user/.claude/.credentials.json
+# Saved:   2 account(s)
 
 clp .credentials.status format::json
-# {"subscription":"pro","tier":"standard","token":"valid","expires_in_secs":13320}
+# {"subscription":"max","tier":"default_claude_max_20x","token":"valid","expires_in_secs":26640,"email":"N/A","org":"N/A","account":"alice@acme.com","file":"/home/user/.claude/.credentials.json","saved":2}
 ```
+
+**Notes:**
+- Field-presence params only affect text output. `format::json` always includes all fields regardless of `sub::`, `tier::`, etc.
+- `account::` reads the `_active` marker; shows `N/A` on fresh installs without an account store.
+- `saved::` counts `*.credentials.json` files in the accounts directory; shows `0` when the directory is absent.
 
 ---
 
@@ -431,7 +454,7 @@ Show rate-limit utilization for the active or named account. Displays session (5
 
 ```bash
 clp .account.limits
-clp .account.limits name::work
+clp .account.limits name::alice@acme.com
 clp .account.limits format::json
 ```
 

@@ -10,6 +10,10 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
+| 112 | ✅ Complete | Implement field-presence params for `.credentials.status` | feature | 2026-05-04 | [112](completed/112_credentials_status_field_presence_params.md) |
+| 111 | ✅ Complete | Relocate credential store to `$PRO/.persistent/claude/credential/` | refactoring | 2026-05-04 | [111](completed/111_credential_store_relocation.md) |
+| 110 | ✅ Complete | Change account names to email-based identifiers in clp CLI | feature | 2026-05-03 | [110](completed/110_email_based_account_names.md) |
+| 109 | ✅ Complete | Remove POSIX-like flags (--version/-V, --help/-h) from clp CLI | cleanup | 2026-05-03 | [109](completed/109_remove_posix_flags_from_clp.md) |
 | 108 | ✅ Complete | Extract `claude_quota` crate — Anthropic API rate-limit transport | refactoring | 2026-04-25 | [108](completed/108_extract_claude_quota_crate.md) |
 | 107 | ✅ Complete | Add `--effort max` as default effort level in `clr` binary | feature | 2026-04-18 | [107](completed/107_clr_default_effort_max.md) |
 | 100 | ✅ Complete | Fix settings_get_routine JSON output losing type information | bug | 2026-04-12 | [100](completed/100_fix_settings_get_json_type_loss.md) |
@@ -121,8 +125,7 @@
 ## Metadata
 
 **Status Distribution:**
-- ✅ Complete: 106
-- 📥 Backlog: 0
+- ✅ Complete: 110
 
 **Status Legend:**
 - 📥 Backlog — not yet planned
@@ -132,4 +135,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-04-26 (TSK-103 completed: projects_command_test.rs split into 3 focused files; 319/319 tests pass; backlog cleared)
+**Last Updated:** 2026-05-04 (TSK-109/110/111/112 closed: POSIX flags removed, email account names, credential store relocated, field-presence params)
