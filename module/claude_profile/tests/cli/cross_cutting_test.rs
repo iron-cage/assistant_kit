@@ -37,6 +37,9 @@
 //! | e07 | `e07_format_yaml_exits_1` | format::yaml → exit 1 | N |
 //! | e08 | `e08_format_csv_exits_1` | format::csv → exit 1 | N |
 //! | e09 | `e09_empty_name_value_exits_1` | name:: with empty value → exit 1 | N |
+//! | e10 | `e10_accounts_home_unset_exits_0` | HOME unset + .accounts → exit 0 advisory | P |
+//! | e11 | `e11_fmt_alias_accounts_json` | fmt::json → .accounts outputs JSON array | P |
+//! | e12 | `e12_fmt_alias_token_status_json` | fmt::json → .token.status outputs JSON object | P |
 
 use crate::helpers::{
   run_cs, run_cs_with_env, run_cs_without_home,
@@ -347,4 +350,84 @@ fn e09_empty_name_value_exits_1()
 
   let out = run_cs_with_env( &[ ".account.save", "name::" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
+}
+
+#[ test ]
+// Fix(issue-accounts-home-unset):
+// Root cause: require_credential_store() → PersistPaths::new() fails when HOME is completely
+//   unset, because it requires $PRO or $HOME to be set. This propagates as exit 2, but
+//   .accounts is a graceful-read command — must return advisory "(no accounts configured)"
+//   with exit 0 when storage is unavailable, consistent with HOME="" behavior (e03b).
+// Why Not Caught: e03b uses HOME="" which, in test environments with $PRO set, resolves
+//   storage successfully via $PRO. HOME fully absent (env_remove) also misses this when $PRO
+//   is available. The bug only triggers when BOTH $HOME and $PRO are unset (e.g. env -i).
+// Fix Applied: accounts_routine wraps require_credential_store() in match and returns
+//   advisory text on Err instead of propagating with ?.
+// Prevention: For any graceful-read command, catch storage-unavailable errors at the
+//   routine level — never let them exit 2 when an empty-result advisory is correct.
+// Pitfall: e05 (absent store, valid HOME) does NOT catch this — store absence is handled
+//   by crate::account::list() returning Ok([]); this bug is in require_credential_store().
+fn e10_accounts_home_unset_exits_0()
+{
+  // run_cs_without_home removes HOME; if $PRO is also absent in the container this
+  // triggers the PersistPaths::new() failure path that was previously exit 2.
+  let out = run_cs_without_home( &[ ".accounts" ] );
+  assert_exit( &out, 0 );
+  // Must show advisory, not error text
+  assert!(
+    stdout( &out ).contains( "(no accounts configured)" ),
+    "HOME unset must show advisory, got stdout: {:?}, stderr: {:?}",
+    stdout( &out ),
+    crate::helpers::stderr( &out ),
+  );
+}
+
+#[ test ]
+// Fix(issue-fmt-alias):
+// Root cause: adapter.rs only expands v:: → verbosity:: but does not expand fmt:: → format::.
+//   The unilang.commands.yaml declares fmt as an alias for format, but programmatic
+//   registration in adapter.rs has no corresponding expansion — leaving fmt:: as an
+//   unknown parameter, which causes exit 1 "Unknown parameter 'fmt'".
+// Why Not Caught: x07 tests v:: and format:: directly; no test covered the fmt:: alias.
+// Fix Applied: Added FORMAT_ALIAS/FORMAT_KEY constants and an expansion branch in
+//   argv_to_unilang_tokens() parallel to the existing VERBOSITY_ALIAS branch.
+// Prevention: When the YAML aliases list is updated, verify each alias has a matching
+//   expansion branch in adapter.rs argv_to_unilang_tokens().
+// Pitfall: The YAML file is metadata-only — changes there do NOT affect runtime behavior.
+//   All alias expansion must be implemented in adapter.rs.
+fn e11_fmt_alias_accounts_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // No accounts set up — must return empty JSON array, not "Unknown parameter 'fmt'"
+  let out = run_cs_with_env( &[ ".accounts", "fmt::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.trim_start().starts_with( '[' ),
+    "fmt::json must produce JSON array, got stdout: {:?}, stderr: {:?}",
+    text,
+    crate::helpers::stderr( &out ),
+  );
+}
+
+#[ test ]
+// test_kind: bug_reproducer(issue-fmt-alias)
+fn e12_fmt_alias_token_status_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  // Must output JSON object, not "Unknown parameter 'fmt'"
+  let out = run_cs_with_env( &[ ".token.status", "fmt::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.trim_start().starts_with( '{' ),
+    "fmt::json must produce JSON object, got stdout: {:?}, stderr: {:?}",
+    text,
+    crate::helpers::stderr( &out ),
+  );
 }

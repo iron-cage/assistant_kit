@@ -19,6 +19,16 @@ const VERBOSITY_ALIAS : &str = "v";
 const VERBOSITY_KEY   : &str = "verbosity";
 /// Maximum accepted verbosity value.
 const MAX_VERBOSITY   : u8   = 2;
+/// Short alias for format param.
+// Fix(issue-fmt-alias):
+// Root cause: adapter.rs expanded v:: → verbosity:: but had no corresponding expansion
+//   for fmt:: → format::, despite the YAML aliases list declaring it. Because the YAML
+//   file is metadata-only (not read at runtime), all alias expansion must be coded here.
+// Pitfall: Never rely on unilang.commands.yaml aliases for runtime behavior — they are
+//   for documentation/export only. Expand every alias explicitly in argv_to_unilang_tokens.
+const FORMAT_ALIAS : &str = "fmt";
+/// Canonical format key.
+const FORMAT_KEY   : &str = "format";
 
 /// Split `"key::value"` at the first `::`, returning `(key, value)`.
 ///
@@ -141,10 +151,14 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
       "expected param::value syntax, got: '{arg}'"
     ) ) )?;
 
-    // Expand verbosity alias
+    // Expand aliases
     let key : String = if raw_key == VERBOSITY_ALIAS
     {
       VERBOSITY_KEY.to_string()
+    }
+    else if raw_key == FORMAT_ALIAS
+    {
+      FORMAT_KEY.to_string()
     }
     else
     {

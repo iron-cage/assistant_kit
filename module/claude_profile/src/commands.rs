@@ -347,11 +347,33 @@ fn render_accounts_text(
 ///
 /// Returns `ErrorData` if `name::` is invalid (exit 1),
 /// the named account is not found (exit 2), or the credential store is unreadable.
+///
+/// Storage unavailable (HOME/PRO unset) returns advisory "(no accounts configured)"
+/// with exit 0 — same graceful behavior as an empty credential store.
+// Fix(issue-accounts-home-unset):
+// Root cause: require_credential_store()?; propagated Err (exit 2) when HOME and PRO are
+//   both unset. .accounts is a graceful-read command; storage unavailability means the same
+//   thing as an empty store — show advisory, not an error.
+// Pitfall: require_credential_store() failing is NOT the same as list() returning [] —
+//   they are different code paths. The graceful fallback must be at require_credential_store()
+//   level, not at list() level.
 #[ inline ]
 pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts             = OutputOptions::from_cmd( &cmd )?;
-  let credential_store = require_credential_store()?;
+  let credential_store = match require_credential_store()
+  {
+    Ok( path ) => path,
+    Err( _ )   =>
+    {
+      let content = match opts.format
+      {
+        OutputFormat::Json => "[]\n".to_string(),
+        OutputFormat::Text => "(no accounts configured)\n".to_string(),
+      };
+      return Ok( OutputData::new( content, "text" ) );
+    }
+  };
 
   let name_arg = match cmd.arguments.get( "name" )
   {

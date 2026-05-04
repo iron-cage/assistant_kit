@@ -36,6 +36,9 @@
 //! | acc14 | `acc14_nonactive_shows_own_stored_expires` | non-active uses own stored expires, not active's | P |
 //! | acc15 | `acc15_missing_sub_field_shows_na` | missing subscriptionType in file → Sub: N/A | P |
 //! | acc16 | `acc16_missing_tier_field_shows_na` | missing rateLimitTier in file → Tier: N/A | P |
+//! | acc17 | `acc17_json_format_empty_store` | `format::json` + absent store → `[]` | P |
+//! | acc18 | `acc18_single_account_no_trailing_blank` | single account text → no trailing blank line | P |
+//! | acc19 | `acc19_missing_expires_at_shows_expired` | missing expiresAt in file → Expires: expired | P |
 
 use crate::helpers::{
   run_cs, run_cs_with_env,
@@ -475,5 +478,120 @@ fn acc16_missing_tier_field_shows_na()
   assert!(
     text.contains( "Tier:    N/A" ),
     "missing rateLimitTier must display 'Tier:    N/A', got:\n{text}",
+  );
+}
+
+// ── acc17: format::json + absent store → [] ───────────────────────────────────
+
+/// acc17: `format::json` with no credential store directory → returns `[]`.
+///
+/// Root Cause: The `Json` branch has an explicit `if accounts.is_empty()` guard
+///   that returns `"[]\n"` — this code path was not directly tested.
+/// Why Not Caught: acc09 (json format) requires accounts to be present; acc11
+///   (absent store) uses text format only. The intersection was untested.
+/// Fix Applied: No fix needed — the guard was already correct. Test confirms it.
+/// Prevention: For every format × store-state combination (json+empty, text+empty)
+///   add an explicit test — do not assume format handling is symmetric.
+/// Pitfall: An empty JSON array `[]` and the text advisory `(no accounts configured)`
+///   are NOT interchangeable — callers of `format::json` must parse `[]`, not text.
+#[ test ]
+fn acc17_json_format_empty_store()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Deliberately do NOT create .persistent/claude/credential/ — account::list returns []
+  std::fs::create_dir_all( dir.path().join( ".claude" ) ).unwrap();
+
+  let out  = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.trim_start().starts_with( '[' ),
+    "json format must start with '[', got:\n{text}",
+  );
+  assert!(
+    text.contains( "[]" ),
+    "json format with absent store must return empty array '[]', got:\n{text}",
+  );
+  assert!(
+    !text.contains( "no accounts" ),
+    "json format must not return text advisory, got:\n{text}",
+  );
+}
+
+// ── acc18: single account text → no trailing blank line ───────────────────────
+
+/// acc18: A single account in text mode produces no trailing blank line.
+///
+/// Root Cause: `render_accounts_text` adds a blank separator only between blocks
+///   (`if idx < last_idx`). For a single account (idx=0, last_idx=0) the condition
+///   is false — no blank line is appended after the final block.
+/// Why Not Caught: acc13 confirms a blank line EXISTS between two accounts, but
+///   never asserts the last block has no trailing blank. acc04 confirms single-block
+///   content but does not check for absence of trailing blank.
+/// Fix Applied: No fix needed — the guard was already correct. Test confirms it.
+/// Prevention: When testing separator logic, test both the presence case (multiple
+///   blocks) and the absence case (single block) explicitly.
+/// Pitfall: A trailing blank line in text output breaks scripts that read the last
+///   line of output — always verify last-block is not followed by a blank.
+#[ test ]
+fn acc18_single_account_no_trailing_blank()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "solo@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "solo@example.com" ),
+    "must list the sole account, got:\n{text}",
+  );
+  assert!(
+    !text.ends_with( "\n\n" ),
+    "single account must not have a trailing blank line, got:\n{text:?}",
+  );
+}
+
+// ── acc19: missing expiresAt → Expires: expired ───────────────────────────────
+
+/// acc19: A credential file missing `expiresAt` is displayed as expired.
+///
+/// Root Cause: `account::list()` calls `parse_u64_field(&content, "expiresAt")`
+///   which returns `None` for a missing field, then `unwrap_or(0)` yields 0 ms
+///   (Unix epoch). Any current time is >> 0 ms → `token_status_from_ms(0)` →
+///   `TokenStatus::Expired` → `Expires: expired`.
+/// Why Not Caught: All prior tests use `write_account()` which always writes a
+///   non-zero `expiresAt`. No test used a raw credential file with the field absent.
+/// Fix Applied: No fix needed — `unwrap_or(0)` correctly maps missing → expired.
+///   Test documents the contract and prevents future regressions.
+/// Prevention: When adding or changing `parse_u64_field` call sites, verify
+///   the fallback for a missing field produces the expected sentinel behaviour.
+/// Pitfall: A missing `expiresAt` silently renders as expired — do not mistake
+///   this for a credential-read error; the account IS listed, just marked expired.
+#[ test ]
+fn acc19_missing_expires_at_shows_expired()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let credential_store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  // No `expiresAt` field → parse_u64_field returns None → unwrap_or(0) → epoch → expired
+  std::fs::write(
+    credential_store.join( "ghost@example.com.credentials.json" ),
+    r#"{"oauthAccount":{"subscriptionType":"pro","rateLimitTier":"standard"}}"#,
+  ).unwrap();
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "ghost@example.com" ),
+    "must list the account, got:\n{text}",
+  );
+  assert!(
+    text.contains( "Expires: expired" ),
+    "missing expiresAt must display 'Expires: expired', got:\n{text}",
   );
 }
