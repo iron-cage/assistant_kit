@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: FR-6 through FR-18; CLI commands and library API surface.
+- **In Scope**: FR-6 through FR-20; CLI commands and library API surface.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -24,3 +24,4 @@
 | 011 | [Account Status by Name](011_account_status_by_name.md) | Inspect any stored account's token state without switching | ✅ |
 | 012 | [Live Credentials Status](012_live_credentials_status.md) | Show credential metadata with no account store dependency | ✅ |
 | 013 | [Account Rate-Limit Utilization](013_account_limits.md) | Show rate-limit utilization via live HTTP response headers | ✅ |
+| 014 | [Rich Account Metadata](014_rich_account_metadata.md) | Expose `oauthAccount` and model fields from `~/.claude.json` in `.credentials.status` | ✅ |

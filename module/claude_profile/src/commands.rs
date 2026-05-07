@@ -124,30 +124,93 @@ fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> ErrorData
 
 /// Read subscription type, rate limit tier, email, and org from live credential files.
 ///
-/// Called by `credentials_status_routine()` to read subscription, tier, email, and org.
+/// Called by `credentials_status_routine()` to read subscription, tier, email, org, display, role, and billing.
 /// Gracefully returns `"N/A"` for any absent or empty field.
 // Fix(issue-empty-field-blank):
 // Root cause: `Option::unwrap_or_else` only fires on `None`, not `Some("")`. Empty strings
 //   in credential JSON (unusual but possible) produced blank output lines instead of "N/A".
 // Pitfall: When adding new `parse_string_field` chains, always pair `.filter(|s| !s.is_empty())`
 //   with `.unwrap_or_else(|| "N/A".to_string())` — never rely on `unwrap_or_else` alone.
-fn read_live_cred_meta( paths : &crate::ClaudePaths ) -> ( String, String, String, String )
+fn read_live_cred_meta( paths : &crate::ClaudePaths )
+  -> ( String, String, String, String, String, String, String )
 {
-  let creds = std::fs::read_to_string( paths.credentials_file() ).unwrap_or_default();
-  let sub   = crate::account::parse_string_field( &creds, "subscriptionType" )
+  let creds   = std::fs::read_to_string( paths.credentials_file() ).unwrap_or_default();
+  let sub     = crate::account::parse_string_field( &creds, "subscriptionType" )
     .filter( | s | !s.is_empty() )
     .unwrap_or_else( || "N/A".to_string() );
-  let tier  = crate::account::parse_string_field( &creds, "rateLimitTier" )
+  let tier    = crate::account::parse_string_field( &creds, "rateLimitTier" )
     .filter( | s | !s.is_empty() )
     .unwrap_or_else( || "N/A".to_string() );
-  let cj    = std::fs::read_to_string( paths.base().join( ".claude.json" ) ).unwrap_or_default();
-  let email = crate::account::parse_string_field( &cj, "emailAddress" )
+  // Fix(FR-19): use claude_json_file() — ~/.claude.json lives at $HOME level, not inside ~/.claude/
+  // Root cause: base().join(".claude.json") produced ~/.claude/.claude.json (one dir too deep).
+  // Pitfall: ClaudePaths::base() is $HOME/.claude/, so joining there lands inside the .claude dir.
+  let cj      = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
+  let email   = crate::account::parse_string_field( &cj, "emailAddress" )
     .filter( | s | !s.is_empty() )
     .unwrap_or_else( || "N/A".to_string() );
-  let org   = crate::account::parse_string_field( &cj, "organizationName" )
+  let org     = crate::account::parse_string_field( &cj, "organizationName" )
     .filter( | s | !s.is_empty() )
     .unwrap_or_else( || "N/A".to_string() );
-  ( sub, tier, email, org )
+  let display = crate::account::parse_string_field( &cj, "displayName" )
+    .filter( | s | !s.is_empty() )
+    .unwrap_or_else( || "N/A".to_string() );
+  let role    = crate::account::parse_string_field( &cj, "organizationRole" )
+    .filter( | s | !s.is_empty() )
+    .unwrap_or_else( || "N/A".to_string() );
+  let billing = crate::account::parse_string_field( &cj, "billingType" )
+    .filter( | s | !s.is_empty() )
+    .unwrap_or_else( || "N/A".to_string() );
+  ( sub, tier, email, org, display, role, billing )
+}
+
+/// Read the `model` field from `~/.claude/settings.json`.
+///
+/// Returns `"N/A"` when the file is absent or the field is missing.
+fn read_settings_model( paths : &crate::ClaudePaths ) -> String
+{
+  let settings = std::fs::read_to_string( paths.settings_file() ).unwrap_or_default();
+  crate::account::parse_string_field( &settings, "model" )
+    .filter( | s | !s.is_empty() )
+    .unwrap_or_else( || "N/A".to_string() )
+}
+
+/// Derive the token state display strings from a raw `TokenStatus` result.
+///
+/// Returns `( tok_label, exp_label, exp_secs )`:
+/// - `tok_label` — "valid", "expiring in Nm", "expired", or "unknown"
+/// - `exp_label` — "in Xh Ym", "expired", or "(unavailable)"
+/// - `exp_secs`  — seconds until expiry; `0` when expired or unavailable
+fn derive_token_state(
+  ts : &Result< crate::token::TokenStatus, std::io::Error >,
+) -> ( String, String, u64 )
+{
+  let tok = match ts
+  {
+    Ok( crate::token::TokenStatus::Valid { .. } )                => "valid".to_string(),
+    Ok( crate::token::TokenStatus::ExpiringSoon { expires_in } ) =>
+      format!( "expiring in {}m", expires_in.as_secs() / 60 ),
+    Ok( crate::token::TokenStatus::Expired )                     => "expired".to_string(),
+    Err( _ )                                                     => "unknown".to_string(),
+  };
+  let exp = match ts
+  {
+    Ok( crate::token::TokenStatus::Valid { expires_in }
+      | crate::token::TokenStatus::ExpiringSoon { expires_in } ) =>
+    {
+      let h = expires_in.as_secs() / 3600;
+      let m = ( expires_in.as_secs() % 3600 ) / 60;
+      format!( "in {h}h {m}m" )
+    }
+    Ok( crate::token::TokenStatus::Expired ) => "expired".to_string(),
+    Err( _ )                                 => "(unavailable)".to_string(),
+  };
+  let exp_secs = match ts
+  {
+    Ok( crate::token::TokenStatus::Valid { expires_in }
+      | crate::token::TokenStatus::ExpiringSoon { expires_in } ) => expires_in.as_secs(),
+    _ => 0,
+  };
+  ( tok, exp, exp_secs )
 }
 
 // ── Command handlers ──────────────────────────────────────────────────────────
@@ -157,8 +220,8 @@ fn read_live_cred_meta( paths : &crate::ClaudePaths ) -> ( String, String, Strin
 /// Reads `~/.claude/.credentials.json` directly. Does not require account store setup.
 /// Each output line is independently controlled by a boolean field-presence param.
 /// Default-on: `account`, `sub`, `tier`, `token`, `expires`, `email`, `org`.
-/// Opt-in (default off): `file`, `saved`.
-/// `format::json` always emits all 9 fields regardless of field-presence params.
+/// Opt-in (default off): `file`, `saved`, `display_name`, `role`, `billing`, `model`.
+/// `format::json` always emits all 13 fields regardless of field-presence params.
 ///
 /// # Errors
 ///
@@ -191,32 +254,19 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
   let show_expires = matches!( cmd.arguments.get( "expires" ), Some( Value::Boolean( true ) ) | None );
   let show_email   = matches!( cmd.arguments.get( "email"   ), Some( Value::Boolean( true ) ) | None );
   let show_org     = matches!( cmd.arguments.get( "org"     ), Some( Value::Boolean( true ) ) | None );
-  let show_file    = matches!( cmd.arguments.get( "file"    ), Some( Value::Boolean( true ) ) );
-  let show_saved   = matches!( cmd.arguments.get( "saved"   ), Some( Value::Boolean( true ) ) );
+  let show_file         = matches!( cmd.arguments.get( "file"         ), Some( Value::Boolean( true ) ) );
+  let show_saved        = matches!( cmd.arguments.get( "saved"        ), Some( Value::Boolean( true ) ) );
+  let show_display_name = matches!( cmd.arguments.get( "display_name" ), Some( Value::Boolean( true ) ) );
+  let show_role         = matches!( cmd.arguments.get( "role"         ), Some( Value::Boolean( true ) ) );
+  let show_billing      = matches!( cmd.arguments.get( "billing"      ), Some( Value::Boolean( true ) ) );
+  let show_model        = matches!( cmd.arguments.get( "model"        ), Some( Value::Boolean( true ) ) );
 
-  let ts  = crate::token::status_with_threshold( crate::token::WARNING_THRESHOLD_SECS );
-  let tok = match &ts
-  {
-    Ok( crate::token::TokenStatus::Valid { .. } )                => "valid".to_string(),
-    Ok( crate::token::TokenStatus::ExpiringSoon { expires_in } ) =>
-      format!( "expiring in {}m", expires_in.as_secs() / 60 ),
-    Ok( crate::token::TokenStatus::Expired )                     => "expired".to_string(),
-    Err( _ )                                                     => "unknown".to_string(),
-  };
-  let exp = match &ts
-  {
-    Ok( crate::token::TokenStatus::Valid { expires_in }
-      | crate::token::TokenStatus::ExpiringSoon { expires_in } ) =>
-    {
-      let h = expires_in.as_secs() / 3600;
-      let m = ( expires_in.as_secs() % 3600 ) / 60;
-      format!( "in {h}h {m}m" )
-    }
-    Ok( crate::token::TokenStatus::Expired ) => "expired".to_string(),
-    Err( _ )                                 => "(unavailable)".to_string(),
-  };
+  let ( tok, exp, exp_secs ) = derive_token_state(
+    &crate::token::status_with_threshold( crate::token::WARNING_THRESHOLD_SECS ),
+  );
 
-  let ( sub, tier, email, org ) = read_live_cred_meta( &paths );
+  let ( sub, tier, email, org, display, role, billing ) = read_live_cred_meta( &paths );
+  let model = read_settings_model( &paths );
 
   // Account: reads _active opportunistically — N/A when absent (no hard dependency).
   let account = std::fs::read_to_string( credential_store.join( "_active" ) )
@@ -237,34 +287,40 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
   {
     OutputFormat::Json =>
     {
-      let s  = json_escape( &sub );
-      let t  = json_escape( &tier );
-      let tk = json_escape( &tok );
-      let em = json_escape( &email );
-      let or = json_escape( &org );
-      let ac = json_escape( &account );
-      let fp = json_escape( &file_path );
-      let exp_secs = match &ts
-      {
-        Ok( crate::token::TokenStatus::Valid { expires_in }
-          | crate::token::TokenStatus::ExpiringSoon { expires_in } ) =>
-          expires_in.as_secs().to_string(),
-        _ => "0".to_string(),
-      };
-      format!( "{{\"subscription\":\"{s}\",\"tier\":\"{t}\",\"token\":\"{tk}\",\"expires_in_secs\":{exp_secs},\"email\":\"{em}\",\"org\":\"{or}\",\"account\":\"{ac}\",\"file\":\"{fp}\",\"saved\":{saved}}}\n" )
+      let s   = json_escape( &sub );
+      let t   = json_escape( &tier );
+      let tk  = json_escape( &tok );
+      let em  = json_escape( &email );
+      let or  = json_escape( &org );
+      let ac  = json_escape( &account );
+      let fp  = json_escape( &file_path );
+      let dn  = json_escape( &display );
+      let rl  = json_escape( &role );
+      let bl  = json_escape( &billing );
+      let md  = json_escape( &model );
+      format!(
+        "{{\"subscription\":\"{s}\",\"tier\":\"{t}\",\"token\":\"{tk}\",\
+         \"expires_in_secs\":{exp_secs},\"email\":\"{em}\",\"org\":\"{or}\",\
+         \"account\":\"{ac}\",\"file\":\"{fp}\",\"saved\":{saved},\
+         \"display_name\":\"{dn}\",\"role\":\"{rl}\",\"billing\":\"{bl}\",\"model\":\"{md}\"}}\n"
+      )
     }
     OutputFormat::Text =>
     {
       let mut out = String::new();
-      if show_account { let _ = writeln!( out, "Account: {account}" ); }
-      if show_sub     { let _ = writeln!( out, "Sub:     {sub}"     ); }
-      if show_tier    { let _ = writeln!( out, "Tier:    {tier}"    ); }
-      if show_token   { let _ = writeln!( out, "Token:   {tok}"     ); }
-      if show_expires { let _ = writeln!( out, "Expires: {exp}"     ); }
-      if show_email   { let _ = writeln!( out, "Email:   {email}"   ); }
-      if show_org     { let _ = writeln!( out, "Org:     {org}"     ); }
-      if show_file    { let _ = writeln!( out, "File:    {file_path}" ); }
-      if show_saved   { let _ = writeln!( out, "Saved:   {saved} account(s)" ); }
+      if show_account      { let _ = writeln!( out, "Account: {account}" ); }
+      if show_sub          { let _ = writeln!( out, "Sub:     {sub}"     ); }
+      if show_tier         { let _ = writeln!( out, "Tier:    {tier}"    ); }
+      if show_token        { let _ = writeln!( out, "Token:   {tok}"     ); }
+      if show_expires      { let _ = writeln!( out, "Expires: {exp}"     ); }
+      if show_email        { let _ = writeln!( out, "Email:   {email}"   ); }
+      if show_org          { let _ = writeln!( out, "Org:     {org}"     ); }
+      if show_file         { let _ = writeln!( out, "File:    {file_path}" ); }
+      if show_saved        { let _ = writeln!( out, "Saved:   {saved} account(s)" ); }
+      if show_display_name { let _ = writeln!( out, "Display: {display}" ); }
+      if show_role         { let _ = writeln!( out, "Role:    {role}"    ); }
+      if show_billing      { let _ = writeln!( out, "Billing: {billing}" ); }
+      if show_model        { let _ = writeln!( out, "Model:   {model}"   ); }
       out
     }
   };
@@ -361,18 +417,14 @@ fn render_accounts_text(
 pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts             = OutputOptions::from_cmd( &cmd )?;
-  let credential_store = match require_credential_store()
+  let Ok( credential_store ) = require_credential_store() else
   {
-    Ok( path ) => path,
-    Err( _ )   =>
+    let content = match opts.format
     {
-      let content = match opts.format
-      {
-        OutputFormat::Json => "[]\n".to_string(),
-        OutputFormat::Text => "(no accounts configured)\n".to_string(),
-      };
-      return Ok( OutputData::new( content, "text" ) );
-    }
+      OutputFormat::Json => "[]\n".to_string(),
+      OutputFormat::Text => "(no accounts configured)\n".to_string(),
+    };
+    return Ok( OutputData::new( content, "text" ) );
   };
 
   let name_arg = match cmd.arguments.get( "name" )

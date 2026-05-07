@@ -1,12 +1,12 @@
 # Parameters
 
-### All Parameters (15 total)
+### All Parameters (19 total)
 
 | # | Parameter | Type | Default | Valid Values | Purpose | Used In |
 |---|-----------|------|---------|--------------|---------|---------|
 | 1 | `name::` | `AccountName` | Varies | Email address | Account email for save/switch/delete (required); or accounts/limits query (optional) | 5 cmds |
 | 2 | `verbosity::` / `v::` | `VerbosityLevel` | `1` | `0`, `1`, `2` | Output detail: 0=quiet, 1=normal, 2=verbose | 4 cmds |
-| 3 | `format::` | `OutputFormat` | `text` | `text`, `json` | Output format: `text` or `json` | 6 cmds |
+| 3 | `format::` / `fmt::` | `OutputFormat` | `text` | `text`, `json` | Output format: `text` or `json` | 6 cmds |
 | 4 | `threshold::` | `WarningThreshold` | `3600` | Non-negative integer (seconds) | Seconds before token expiry to classify as ExpiringSoon | 1 cmd |
 | 5 | `dry::` | `bool` | `0` | `0`, `1`, `false`, `true` | Print intended action without executing | 3 cmds |
 | 6 | `account::` | `bool` | `1` | `0`, `1` | Show active account name line (`.credentials.status`) | 1 cmd |
@@ -19,10 +19,14 @@
 | 13 | `file::` | `bool` | `0` | `0`, `1` | Show credentials file path, opt-in (`.credentials.status`) | 1 cmd |
 | 14 | `saved::` | `bool` | `0` | `0`, `1` | Show saved account count, opt-in (`.credentials.status`) | 1 cmd |
 | 15 | `active::` | `bool` | `1` | `0`, `1` | Show active/inactive status line (`.accounts`) | 1 cmd |
+| 16 | `display_name::` | `bool` | `0` | `0`, `1` | Show display name from `~/.claude.json` oauthAccount, opt-in (`.credentials.status`) | 1 cmd |
+| 17 | `role::` | `bool` | `0` | `0`, `1` | Show organisation role from `~/.claude.json` oauthAccount, opt-in (`.credentials.status`) | 1 cmd |
+| 18 | `billing::` | `bool` | `0` | `0`, `1` | Show billing type from `~/.claude.json` oauthAccount, opt-in (`.credentials.status`) | 1 cmd |
+| 19 | `model::` | `bool` | `0` | `0`, `1` | Show active model from `~/.claude/settings.json`, opt-in (`.credentials.status`) | 1 cmd |
 
-**Total:** 15 parameters
+**Total:** 19 parameters
 
-*Parameters 2-3 form the Output Control group; parameters 6-15 form the Field Presence group*
+*Parameters 2-3 form the Output Control group; parameters 6-19 form the Field Presence group*
 
 ---
 
@@ -66,12 +70,13 @@ v::2   → extended metadata including expiry times
 
 ---
 
-### Parameter :: 3. `format::`
+### Parameter :: 3. `format::` / `fmt::`
 
 Selects between human-readable text output and machine-parseable JSON. Text is the default for interactive use; JSON enables pipeline integration.
 
 - **Type:** `OutputFormat`
 - **Default:** `text`
+- **Alias:** `fmt::` (short form; both accepted at runtime)
 - **Constraints:** One of `text`, `json` (case-insensitive)
 - **Commands:** [`.accounts`](commands.md#command--3-accounts), [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.credentials.status`](commands.md#command--10-credentialsstatus), [`.account.limits`](commands.md#command--11-accountlimits)
 - **Purpose:** Enables CLI composability — `format::json` output can be piped to `jq` for structured extraction without parsing fragile text layouts.
@@ -82,6 +87,7 @@ Selects between human-readable text output and machine-parseable JSON. Text is t
 ```text
 format::text   → human-readable labeled output (default)
 format::json   → JSON object or array
+fmt::json      → same as format::json (short alias)
 ```
 
 ---
@@ -234,7 +240,7 @@ expires::0   → line omitted
 
 ### Parameter :: 11. `email::`
 
-Controls whether the email address line appears in `.credentials.status` output. Source: `emailAddress` field in `~/.claude/.claude.json`.
+Controls whether the email address line appears in `.credentials.status` output. Source: `emailAddress` field in `~/.claude.json`.
 
 - **Type:** `bool`
 - **Default:** `1` (shown)
@@ -254,7 +260,7 @@ email::0   → line omitted
 
 ### Parameter :: 12. `org::`
 
-Controls whether the organisation name line appears in output. Used by both `.accounts` (per stored credential) and `.credentials.status` (from `~/.claude/.claude.json`).
+Controls whether the organisation name line appears in output. Used by both `.accounts` (per stored credential) and `.credentials.status` (from `~/.claude.json`).
 
 - **Type:** `bool`
 - **Default:** `1` (shown)
@@ -328,4 +334,84 @@ Controls whether the active/inactive status line appears in `.accounts` output f
 ```text
 active::1   → Active:  yes  (default; or "no" for non-active accounts)
 active::0   → line omitted
+```
+
+---
+
+### Parameter :: 16. `display_name::`
+
+Controls whether the display name line appears in `.credentials.status` output. Opt-in (default `0`). Source: `displayName` field in `~/.claude.json` `oauthAccount`.
+
+- **Type:** `bool`
+- **Default:** `0` (hidden)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--10-credentialsstatus)
+- **Purpose:** Exposes the human-readable display name set by the OAuth account. Shows `N/A` when `~/.claude.json` is absent or the field is missing.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+display_name::0   → line omitted  (default)
+display_name::1   → Display: alice
+```
+
+---
+
+### Parameter :: 17. `role::`
+
+Controls whether the organisation role line appears in `.credentials.status` output. Opt-in (default `0`). Source: `organizationRole` field in `~/.claude.json` `oauthAccount`.
+
+- **Type:** `bool`
+- **Default:** `0` (hidden)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--10-credentialsstatus)
+- **Purpose:** Shows the OAuth account's role within its organisation (e.g., `admin`, `member`). Shows `N/A` when `~/.claude.json` is absent or the field is missing.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+role::0   → line omitted  (default)
+role::1   → Role:    admin
+```
+
+---
+
+### Parameter :: 18. `billing::`
+
+Controls whether the billing type line appears in `.credentials.status` output. Opt-in (default `0`). Source: `billingType` field in `~/.claude.json` `oauthAccount`.
+
+- **Type:** `bool`
+- **Default:** `0` (hidden)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--10-credentialsstatus)
+- **Purpose:** Shows the raw billing type string (e.g., `stripe_subscription`). Shows `N/A` when `~/.claude.json` is absent or the field is missing.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+billing::0   → line omitted  (default)
+billing::1   → Billing: stripe_subscription
+```
+
+---
+
+### Parameter :: 19. `model::`
+
+Controls whether the active model line appears in `.credentials.status` output. Opt-in (default `0`). Source: `model` field in `~/.claude/settings.json`.
+
+- **Type:** `bool`
+- **Default:** `0` (hidden)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.credentials.status`](commands.md#command--10-credentialsstatus)
+- **Purpose:** Shows the model currently selected in Claude Code settings. Shows `N/A` when `~/.claude/settings.json` is absent or the `model` field is missing.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+model::0   → line omitted  (default)
+model::1   → Model:   sonnet
 ```

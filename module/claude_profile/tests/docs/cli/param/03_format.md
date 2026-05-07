@@ -14,6 +14,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 | EC-6 | Duplicate `format::text format::json` — last wins | Last Wins |
 | EC-7 | Omitted `format::` defaults to `format::text` | Default |
 | EC-8 | `format::json` output parseable by `jq` | JSON Validity |
+| EC-9 | `fmt::json` alias produces JSON output (same as `format::json`) | Alias |
 
 ### Test Coverage Summary
 
@@ -23,8 +24,9 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - Last Wins: 1 test
 - Default: 1 test
 - JSON Validity: 1 test
+- Alias: 1 test
 
-**Total:** 8 edge cases
+**Total:** 9 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
 
@@ -107,3 +109,13 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **Then:** Pretty-printed JSON from `jq` with exit 0 from both pipeline stages.; `jq` successfully parses the JSON output without errors
 - **Exit:** 0
 - **Source:** [params.md -- format::](../../../../docs/cli/params.md#parameter--3-format)
+
+---
+
+### EC-9: Alias — `fmt::` accepted as `format::`
+
+- **Given:** Empty credential store (no accounts required).
+- **When:** `clp .accounts fmt::json` and `clp .token.status fmt::json` (with a valid credentials file for the latter)
+- **Then:** `.accounts` returns a JSON array starting with `[`; `.token.status` returns a JSON object starting with `{`. Exit 0 for both.; `fmt::` alias is expanded to `format::` at runtime — not rejected as an unknown parameter
+- **Exit:** 0
+- **Source:** `tests/cli/cross_cutting_test.rs (e11, e12)`

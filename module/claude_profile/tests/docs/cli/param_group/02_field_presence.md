@@ -12,7 +12,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 | EC-2 | Default: all on-by-default fields appear in `.credentials.status` output | Default On |
 | EC-3 | Single field disabled — only that line suppressed | Single Suppression |
 | EC-4 | All on-by-default fields disabled — only opt-in fields absent | Full Suppression |
-| EC-5 | `file::1` and `saved::1` (opt-in) appear when enabled | Opt-In Fields |
+| EC-5 | All 6 opt-in fields (`file`, `saved`, `display_name`, `role`, `billing`, `model`) appear when enabled | Opt-In Fields |
 | EC-6 | Shared params (`sub::`, `tier::`, `expires::`, `org::`) behave identically on both commands | Cross-Command Consistency |
 | EC-1 | `format::json` overrides field-presence params — all keys in JSON | Interaction |
 | EC-2 | `active::0` suppresses `Active:` in `.accounts` but has no effect on `.credentials.status` | Command Specificity |
@@ -78,9 +78,9 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 
 ### EC-5: Opt-in fields appear when enabled
 
-- **Given:** Active credentials exist. At least one account saved in credential store.
-- **When:** `clp .credentials.status file::1 saved::1`
-- **Then:** All seven default-on fields plus `File:` and `Saved:` lines.; opt-in fields appear when explicitly enabled
+- **Given:** Active credentials exist with `~/.claude.json` containing `displayName`, `organizationRole`, `billingType` and `~/.claude/settings.json` containing `model`. At least one account saved in credential store.
+- **When:** `clp .credentials.status file::1 saved::1 display_name::1 role::1 billing::1 model::1`
+- **Then:** All seven default-on fields plus `File:`, `Saved:`, `Display:`, `Role:`, `Billing:`, and `Model:` lines.; all 6 opt-in fields appear when explicitly enabled
 - **Exit:** 0
 - **Source:** [parameter_groups.md — Field Presence](../../../../docs/cli/parameter_groups.md#group--2-field-presence)
 

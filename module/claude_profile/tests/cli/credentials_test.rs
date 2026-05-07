@@ -42,11 +42,17 @@
 //! | cred05 | `cred05_no_claude_json_shows_na` | no .claude.json → N/A for email/org/account | P |
 //! | cred06 | `cred06_suppress_all_default_on` | all default-on suppressed → Token line only | P |
 //! | cred07 | `cred07_opt_in_file_and_saved` | file::1 saved::1 → File and Saved lines | P |
+//! | cred08 | `cred08_display_name_opt_in` | display_name::1 → Display: {name} shown | P |
+//! | cred09 | `cred09_role_opt_in` | role::1 → Role: {role} shown | P |
+//! | cred10 | `cred10_billing_opt_in` | billing::1 → Billing: {type} shown | P |
+//! | cred11 | `cred11_model_opt_in` | model::1 → Model: {model} shown | P |
+//! | cred12 | `cred12_json_extended_shape` | format::json → includes display_name, role, billing, model keys | P |
+//! | cred13 | `cred13_new_params_absent_by_default` | all 4 new opt-in params absent in single default invocation | P |
 
 use crate::helpers::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
-  write_credentials, write_claude_json,
+  write_credentials, write_claude_json, write_claude_json_full, write_settings_json,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -231,4 +237,165 @@ fn cred07_opt_in_file_and_saved()
     text.contains( ".credentials.json" ),
     "File: line must contain credentials path, got:\n{text}",
   );
+}
+
+// ── cred08 ────────────────────────────────────────────────────────────────────
+
+/// cred08: `display_name::1` — Display: line shows displayName from `~/.claude.json`.
+///
+/// Confirms opt-in field is absent by default and shown when explicitly requested.
+#[ test ]
+fn cred08_display_name_opt_in()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_claude_json_full( dir.path(), "user@example.com", "Acme Corp", "alice", "admin", "stripe_subscription" );
+
+  // Default output must NOT contain Display: line
+  let out_default = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_default, 0 );
+  let text_default = stdout( &out_default );
+  assert!( !text_default.contains( "Display:" ), "Display: must be absent by default, got:\n{text_default}" );
+
+  // With display_name::1 it must appear
+  let out = run_cs_with_env( &[ ".credentials.status", "display_name::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Display:" ), "Display: line must appear with display_name::1, got:\n{text}" );
+  assert!( text.contains( "alice" ),    "Display: must contain displayName value, got:\n{text}" );
+}
+
+// ── cred09 ────────────────────────────────────────────────────────────────────
+
+/// cred09: `role::1` — Role: line shows organizationRole from `~/.claude.json`.
+///
+/// Confirms opt-in field is absent by default and shown when explicitly requested.
+#[ test ]
+fn cred09_role_opt_in()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_claude_json_full( dir.path(), "user@example.com", "Acme Corp", "alice", "admin", "stripe_subscription" );
+
+  // Default output must NOT contain Role: line
+  let out_default = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_default, 0 );
+  let text_default = stdout( &out_default );
+  assert!( !text_default.contains( "Role:" ), "Role: must be absent by default, got:\n{text_default}" );
+
+  // With role::1 it must appear
+  let out = run_cs_with_env( &[ ".credentials.status", "role::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Role:" ),  "Role: line must appear with role::1, got:\n{text}" );
+  assert!( text.contains( "admin" ), "Role: must contain organizationRole value, got:\n{text}" );
+}
+
+// ── cred10 ────────────────────────────────────────────────────────────────────
+
+/// cred10: `billing::1` — Billing: line shows billingType from `~/.claude.json`.
+///
+/// Confirms opt-in field is absent by default and shown when explicitly requested.
+#[ test ]
+fn cred10_billing_opt_in()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_claude_json_full( dir.path(), "user@example.com", "Acme Corp", "alice", "admin", "stripe_subscription" );
+
+  // Default output must NOT contain Billing: line
+  let out_default = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_default, 0 );
+  let text_default = stdout( &out_default );
+  assert!( !text_default.contains( "Billing:" ), "Billing: must be absent by default, got:\n{text_default}" );
+
+  // With billing::1 it must appear
+  let out = run_cs_with_env( &[ ".credentials.status", "billing::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Billing:" ),              "Billing: line must appear with billing::1, got:\n{text}" );
+  assert!( text.contains( "stripe_subscription" ),   "Billing: must contain billingType value, got:\n{text}" );
+}
+
+// ── cred11 ────────────────────────────────────────────────────────────────────
+
+/// cred11: `model::1` — Model: line shows model from `~/.claude/settings.json`.
+///
+/// Confirms opt-in field is absent by default and shown when explicitly requested.
+#[ test ]
+fn cred11_model_opt_in()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_settings_json( dir.path(), "sonnet" );
+
+  // Default output must NOT contain Model: line
+  let out_default = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_default, 0 );
+  let text_default = stdout( &out_default );
+  assert!( !text_default.contains( "Model:" ), "Model: must be absent by default, got:\n{text_default}" );
+
+  // With model::1 it must appear
+  let out = run_cs_with_env( &[ ".credentials.status", "model::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Model:" ),  "Model: line must appear with model::1, got:\n{text}" );
+  assert!( text.contains( "sonnet" ), "Model: must contain model value from settings.json, got:\n{text}" );
+}
+
+// ── cred12 ────────────────────────────────────────────────────────────────────
+
+/// cred12: `format::json` — JSON output includes `display_name`, `role`, `billing`, `model` keys.
+///
+/// Confirms JSON shape is extended with all 4 new fields regardless of field-presence params.
+#[ test ]
+fn cred12_json_extended_shape()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_claude_json_full( dir.path(), "user@example.com", "Acme Corp", "alice", "admin", "stripe_subscription" );
+  write_settings_json( dir.path(), "sonnet" );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out ).trim().to_string();
+  assert!( text.starts_with( '{' ) && text.ends_with( '}' ), "output must be JSON object, got:\n{text}" );
+  assert!( text.contains( "\"display_name\"" ), "JSON must have display_name key, got:\n{text}" );
+  assert!( text.contains( "\"role\"" ),         "JSON must have role key, got:\n{text}" );
+  assert!( text.contains( "\"billing\"" ),      "JSON must have billing key, got:\n{text}" );
+  assert!( text.contains( "\"model\"" ),        "JSON must have model key, got:\n{text}" );
+  assert!( text.contains( "alice" ),            "display_name value must be present, got:\n{text}" );
+  assert!( text.contains( "admin" ),            "role value must be present, got:\n{text}" );
+  assert!( text.contains( "stripe_subscription" ), "billing value must be present, got:\n{text}" );
+  assert!( text.contains( "sonnet" ),           "model value must be present, got:\n{text}" );
+}
+
+// ── cred13 ────────────────────────────────────────────────────────────────────
+
+/// cred13: consolidated default-off check — all 4 new opt-in params absent in a single invocation.
+///
+/// Verifies that `display_name`, `role`, `billing`, and `model` are ALL absent from the
+/// default output when all relevant fixture data is present. A single invocation covers
+/// all four so the default-off guarantee is tested as a group, not split across tests.
+#[ test ]
+fn cred13_new_params_absent_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_claude_json_full( dir.path(), "user@example.com", "Acme Corp", "alice", "admin", "stripe_subscription" );
+  write_settings_json( dir.path(), "sonnet" );
+
+  let out  = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Display:" ), "Display: must be absent by default, got:\n{text}" );
+  assert!( !text.contains( "Role:" ),    "Role: must be absent by default, got:\n{text}" );
+  assert!( !text.contains( "Billing:" ), "Billing: must be absent by default, got:\n{text}" );
+  assert!( !text.contains( "Model:" ),   "Model: must be absent by default, got:\n{text}" );
 }

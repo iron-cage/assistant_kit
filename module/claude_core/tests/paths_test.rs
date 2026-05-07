@@ -26,6 +26,8 @@
 //! | `paths_session_env_dir_correct` | session-env/ path |
 //! | `paths_sessions_dir_correct` | sessions/ path |
 //! | `paths_rooted_at_provided_home` | custom HOME → rooted there |
+//! | `paths_claude_json_file_correct` | .claude.json is at $HOME level |
+//! | `paths_claude_json_file_not_inside_claude_dir` | .claude.json not inside .claude/ |
 //!
 //! ## Note on None path
 //!
@@ -141,5 +143,33 @@ fn paths_rooted_at_provided_home()
   assert!(
     base.starts_with( "/custom/home" ),
     "paths must be rooted at the provided HOME, got: {base}"
+  );
+}
+
+#[test]
+fn paths_claude_json_file_correct()
+{
+  std::env::set_var( "HOME", "/tmp/test_home" );
+  let p = ClaudePaths::new().expect( "HOME is set" );
+  let f = p.claude_json_file();
+  assert_eq!(
+    f.to_str().expect( "valid UTF-8 path" ),
+    "/tmp/test_home/.claude.json",
+    "claude_json_file must be $HOME/.claude.json, got: {}",
+    f.display()
+  );
+}
+
+#[test]
+fn paths_claude_json_file_not_inside_claude_dir()
+{
+  std::env::set_var( "HOME", "/tmp/test_home" );
+  let p = ClaudePaths::new().expect( "HOME is set" );
+  let f = p.claude_json_file();
+  let base = p.base();
+  assert!(
+    !f.starts_with( base ),
+    "claude_json_file must NOT be inside $HOME/.claude/, got: {}",
+    f.display()
   );
 }

@@ -135,12 +135,52 @@ pub fn write_account( home : &std::path::Path, name : &str, sub_type : &str, tie
 #[ inline ]
 pub fn write_claude_json( home : &std::path::Path, email : &str, org : &str )
 {
-  let claude_dir = home.join( ".claude" );
-  std::fs::create_dir_all( &claude_dir ).unwrap();
+  // Fix(FR-19): write to $HOME/.claude.json — production code reads from claude_json_file()
+  // Root cause: was writing to $HOME/.claude/.claude.json (one dir too deep), matching old bug.
+  // Pitfall: fixture write path must equal production read path (Fixture–Production Path Alignment).
   let content = format!(
     r#"{{"oauthAccount":{{"emailAddress":"{email}","organizationName":"{org}"}}}}"#,
   );
-  std::fs::write( claude_dir.join( ".claude.json" ), content ).unwrap();
+  std::fs::write( home.join( ".claude.json" ), content ).unwrap();
+}
+
+/// Write `~/.claude.json` with a full `oauthAccount` profile (email, org, displayName, role, billing).
+///
+/// Used to test all five oauthAccount fields in `.credentials.status`.
+///
+/// # Panics
+///
+/// Panics if the file cannot be written.
+#[ inline ]
+pub fn write_claude_json_full(
+  home    : &std::path::Path,
+  email   : &str,
+  org     : &str,
+  display : &str,
+  role    : &str,
+  billing : &str,
+)
+{
+  let content = format!(
+    r#"{{"oauthAccount":{{"emailAddress":"{email}","organizationName":"{org}","displayName":"{display}","organizationRole":"{role}","billingType":"{billing}"}}}}"#,
+  );
+  std::fs::write( home.join( ".claude.json" ), content ).unwrap();
+}
+
+/// Write `~/.claude/settings.json` with the given model value.
+///
+/// Used to test `model::1` field in `.credentials.status`.
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_settings_json( home : &std::path::Path, model : &str )
+{
+  let claude_dir = home.join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  let content = format!( r#"{{"model":"{model}"}}"# );
+  std::fs::write( claude_dir.join( "settings.json" ), content ).unwrap();
 }
 
 /// Check whether an account credential file exists.

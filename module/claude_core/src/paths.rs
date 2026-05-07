@@ -104,6 +104,24 @@ impl ClaudePaths
     self.base.join( "settings.json" )
   }
 
+  /// Path to `~/.claude.json` — OAuth account metadata (one level above `~/.claude/`).
+  ///
+  /// This file lives at `$HOME/.claude.json`, NOT inside `$HOME/.claude/`.
+  ///
+  /// # Panics
+  ///
+  /// Panics if `base` has no parent directory. In practice this cannot happen because
+  /// `base` is always `$HOME/.claude`, which always has `$HOME` as a parent.
+  #[ inline ]
+  #[ must_use ]
+  pub fn claude_json_file( &self ) -> PathBuf
+  {
+    self.base
+      .parent()
+      .expect( "ClaudePaths base ($HOME/.claude) always has a HOME parent" )
+      .join( ".claude.json" )
+  }
+
   /// Path to `~/.claude/session-env/` — per-session environment records.
   #[ inline ]
   #[ must_use ]

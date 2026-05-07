@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Provide a typed API for all `~/.claude/` canonical paths so tooling doesn't hard-code path strings.
-- **Responsibility**: Documents the `ClaudePaths` type and `.paths` CLI command (FR-12).
-- **In Scope**: All `~/.claude/` paths exposed via `ClaudePaths`, HOME-unset handling, CLI output.
+- **Purpose**: Provide a typed API for all `~/.claude/` canonical paths and `~/.claude.json` so tooling doesn't hard-code path strings.
+- **Responsibility**: Documents the `ClaudePaths` type and `.paths` CLI command (FR-12, FR-19).
+- **In Scope**: All `~/.claude/` paths and `~/.claude.json` exposed via `ClaudePaths`, HOME-unset handling, CLI output.
 - **Out of Scope**: Writing to these paths (owned by their respective modules), credential store path (→ 001_account_store_init.md), `$PRO`-based persistent storage (→ 010_persistent_storage.md).
 
 ### Design
@@ -18,6 +18,7 @@
 | Method | Resolves to |
 |--------|-------------|
 | `credentials_file()` | `~/.claude/.credentials.json` |
+| `claude_json_file()` | `~/.claude.json` (Claude Code state: `oauthAccount`, model preference) |
 | `projects_dir()` | `~/.claude/projects/` |
 | `stats_file()` | `~/.claude/stats-cache.json` |
 | `settings_file()` | `~/.claude/settings.json` |
@@ -38,6 +39,8 @@ All methods return `PathBuf` computed from `HOME`. No filesystem access is perfo
 - **AC-01**: `ClaudePaths::new()` returns `None` when `HOME` is unset.
 - **AC-02**: Each path method returns the correct path relative to `HOME`.
 - **AC-03**: `clp .paths` exits 2 when `HOME` is unset with actionable error.
+- **AC-04**: `claude_json_file()` returns `$HOME/.claude.json` (one level above `base()`).
+- **AC-05**: `claude_json_file()` is NOT inside the `.claude/` directory — it is a sibling to it at `$HOME`.
 
 ### Cross-References
 

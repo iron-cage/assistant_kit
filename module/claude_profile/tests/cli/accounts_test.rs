@@ -524,7 +524,7 @@ fn acc17_json_format_empty_store()
 /// acc18: A single account in text mode produces no trailing blank line.
 ///
 /// Root Cause: `render_accounts_text` adds a blank separator only between blocks
-///   (`if idx < last_idx`). For a single account (idx=0, last_idx=0) the condition
+///   (`if idx < last_idx`). For a single account (`idx=0, last_idx=0`) the condition
 ///   is false — no blank line is appended after the final block.
 /// Why Not Caught: acc13 confirms a blank line EXISTS between two accounts, but
 ///   never asserts the last block has no trailing blank. acc04 confirms single-block

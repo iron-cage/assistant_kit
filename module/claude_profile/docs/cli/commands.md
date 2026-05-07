@@ -13,7 +13,7 @@
 | 7 | `.token.status` | Show active OAuth token expiry classification | 3 | `clp .token.status` |
 | 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 2 | `clp .paths` |
 | 9 | `.usage` | Show token usage statistics from stats-cache.json | 2 | `clp .usage v::0` |
-| 10 | `.credentials.status` | Show live credential metadata without account store dependency | 10 | `clp .credentials.status` |
+| 10 | `.credentials.status` | Show live credential metadata without account store dependency | 14 | `clp .credentials.status` |
 | 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 3 | `clp .account.limits name::alice@acme.com` |
 
 **Total:** 11 commands (9 visible + 2 hidden)
@@ -37,7 +37,7 @@
 | 2 | `.account.save`, `.account.switch`, `.account.delete`, `.paths`, `.usage` |
 | 3 | `.token.status`, `.account.limits` |
 | 7 | `.accounts` |
-| 10 | `.credentials.status` |
+| 14 | `.credentials.status` |
 
 ---
 
@@ -361,7 +361,7 @@ clp .usage format::json
 
 Show live credential metadata by reading `~/.claude/.credentials.json` directly. Succeeds on any authenticated machine regardless of whether account store setup exists.
 
--- **Parameters:** [`format::`](params.md#parameter--3-format), [`account::`](params.md#parameter--6-account), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`token::`](params.md#parameter--9-token), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`org::`](params.md#parameter--12-org), [`file::`](params.md#parameter--13-file), [`saved::`](params.md#parameter--14-saved)
+-- **Parameters:** [`format::`](params.md#parameter--3-format), [`account::`](params.md#parameter--6-account), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`token::`](params.md#parameter--9-token), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`org::`](params.md#parameter--12-org), [`file::`](params.md#parameter--13-file), [`saved::`](params.md#parameter--14-saved), [`display_name::`](params.md#parameter--16-display_name), [`role::`](params.md#parameter--17-role), [`billing::`](params.md#parameter--18-billing), [`model::`](params.md#parameter--19-model)
 -- **Exit:** 0 (success) | 2 (credential file absent or HOME unset)
 
 **Syntax:**
@@ -370,6 +370,7 @@ Show live credential metadata by reading `~/.claude/.credentials.json` directly.
 clp .credentials.status
 clp .credentials.status email::0 org::0
 clp .credentials.status file::1 saved::1
+clp .credentials.status display_name::1 role::1 billing::1 model::1
 clp .credentials.status format::json
 ```
 
@@ -385,6 +386,10 @@ clp .credentials.status format::json
 | `org::` | `bool` | `1` | Show organisation name line |
 | `file::` | `bool` | `0` | Show credentials file path (opt-in) |
 | `saved::` | `bool` | `0` | Show saved account count (opt-in) |
+| `display_name::` | `bool` | `0` | Show display name from `~/.claude.json` (opt-in) |
+| `role::` | `bool` | `0` | Show organisation role from `~/.claude.json` (opt-in) |
+| `billing::` | `bool` | `0` | Show billing type from `~/.claude.json` (opt-in) |
+| `model::` | `bool` | `0` | Show active model from `~/.claude/settings.json` (opt-in) |
 
 **Examples:**
 
@@ -416,14 +421,29 @@ clp .credentials.status file::1 saved::1
 # File:    /home/user/.claude/.credentials.json
 # Saved:   2 account(s)
 
+clp .credentials.status display_name::1 role::1 billing::1 model::1
+# Account: alice@acme.com
+# Sub:     max
+# Tier:    default_claude_max_20x
+# Token:   valid
+# Expires: in 7h 24m
+# Email:   alice@acme.com
+# Org:     Acme Corp
+# Display: alice
+# Role:    admin
+# Billing: stripe_subscription
+# Model:   sonnet
+
 clp .credentials.status format::json
-# {"subscription":"max","tier":"default_claude_max_20x","token":"valid","expires_in_secs":26640,"email":"N/A","org":"N/A","account":"alice@acme.com","file":"/home/user/.claude/.credentials.json","saved":2}
+# {"subscription":"max","tier":"default_claude_max_20x","token":"valid","expires_in_secs":26640,"email":"alice@acme.com","org":"Acme Corp","account":"alice@acme.com","file":"/home/user/.claude/.credentials.json","saved":2,"display_name":"alice","role":"admin","billing":"stripe_subscription","model":"sonnet"}
 ```
 
 **Notes:**
-- Field-presence params only affect text output. `format::json` always includes all fields regardless of `sub::`, `tier::`, etc.
+- Field-presence params only affect text output. `format::json` always includes all fields (including `display_name`, `role`, `billing`, `model`) regardless of field-presence params.
 - `account::` reads the `_active` marker; shows `N/A` on fresh installs without an account store.
 - `saved::` counts `*.credentials.json` files in the credential store; shows `0` when the credential store is absent.
+- `display_name::`, `role::`, `billing::` read from `~/.claude.json` `oauthAccount`; all show `N/A` when the file is absent.
+- `model::` reads from `~/.claude/settings.json`; shows `N/A` when the file is absent or the `model` field is missing.
 
 ---
 
