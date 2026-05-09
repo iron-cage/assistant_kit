@@ -89,7 +89,7 @@
 #                                        ┌─ test ───────────────────────────┐
 #                                        │  FROM rust:slim                  │
 #                                        │  + nextest, clippy, curl, procps │
-#                                        │  + cook artifacts (lines 153–154)│
+#                                        │  + cook artifacts (COPY --from=cook)│
 #                                        │  + COPY . .  (full source)       │
 #                                        │  ── final runnable image ─────── │
 #                                        └──────────────────────────────────┘
@@ -99,9 +99,7 @@
 #   test               — on every source change (fast: deps already compiled)
 #
 # Build args (values come from run/runbox.yml, passed by run/docker-run):
-#   COOK_FLAGS  — derived from CMD_SCOPE by docker-run; not a user-facing config value
 #   TEST_USER   — testuser (chmod-000 + path-resolution tests) | root
-#   HOME_DIR    — /workspace (ClaudePaths + path tests) | /root
 #   CMD_SCOPE   — --workspace | -p claude_profile | -p claude_storage
 #   CMD_FILTER  — nextest filter expression for offline default CMD
 #
@@ -113,9 +111,8 @@
 #   run/docker .shell                        # interactive shell
 #
 # Usage (direct docker — workspace):
-#   docker build -f Dockerfile -t workspace_test .
-#   docker build -f Dockerfile \
-#     --build-arg COOK_FLAGS="-p claude_profile" \
+#   docker build -f runbox.dockerfile -t workspace_test .
+#   docker build -f runbox.dockerfile \
 #     --build-arg CMD_SCOPE="-p claude_profile" \
 #     --build-arg CMD_FILTER='!test(lim_it)' \
 #     -t claude_profile_test .
@@ -124,7 +121,7 @@
 #     -v ~/.claude:/workspace/.claude:rw \
 #     -v $(which w3):/usr/local/bin/w3:ro \
 #     workspace_test \
-#     /workspace/run/test                                   # all tests (continuation tests need rw)
+#     /workspace/run/test                                   # all tests (plugin mounts required)
 #   docker run --rm -it workspace_test bash                 # interactive shell
 
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
@@ -147,15 +144,15 @@ RUN cargo chef prepare --recipe-path recipe.json
 # Receives only recipe.json (not source files).
 # This layer is cache-stable: rebuilds only when Cargo.toml or Cargo.lock change,
 # not when .rs files change.
-# COOK_FLAGS mirrors CMD_SCOPE (derived by docker-run, not user-configured directly).
+# CMD_SCOPE scopes which crates' deps to precompile — the same value drives nextest run.
 
 FROM chef AS cook
-ARG COOK_FLAGS=--workspace
+ARG CMD_SCOPE=--workspace
 WORKDIR /workspace
 COPY --from=planner /workspace/recipe.json recipe.json
 RUN cargo chef cook \
       --recipe-path recipe.json \
-      $COOK_FLAGS \
+      $CMD_SCOPE \
       --tests
 
 # ── Stage 3: test — compiles crate(s) and runs tests ─────────────────────────
@@ -185,11 +182,8 @@ RUN apt-get update \
 ARG TEST_USER=testuser
 RUN [ "$TEST_USER" = "root" ] || useradd -m -s /bin/bash "$TEST_USER"
 
-# HOME_DIR: /workspace so ClaudePaths resolves credentials and session storage
-# under /workspace/.claude — a single -v ~/.claude:/workspace/.claude:rw mount
-# covers both credentials and session storage for all crates (rw needed for continuation tests).
-ARG HOME_DIR=/workspace
-ENV HOME=$HOME_DIR
+# HOME=/workspace so ClaudePaths resolves .claude/ under /workspace — plugin mounts land there.
+ENV HOME=/workspace
 
 WORKDIR /workspace
 

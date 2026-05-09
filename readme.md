@@ -28,7 +28,7 @@ ast .help                    # all ~40 commands in one place
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
 | `task/` | Task tracking: active, completed, backlog |
 | `run/` | Container runner: universal docker-run, config manifest, and test script. |
-| `Dockerfile` | Parameterised test image for all modules; built via run/docker-run. |
+| `runbox.dockerfile` | Parameterised test image for all modules; built via run/docker-run. |
 | `vision.md` | Project vision, design rationale, and open problems |
 | `../locales.md` | Locale and internationalisation notes |
 | `Cargo.toml` | Workspace manifest: members, lints, shared dependencies |
