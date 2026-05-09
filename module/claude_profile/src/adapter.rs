@@ -17,8 +17,6 @@ const BOOL_PARAMS : &[ &str ] = &[
 const VERBOSITY_ALIAS : &str = "v";
 /// Canonical verbosity key.
 const VERBOSITY_KEY   : &str = "verbosity";
-/// Maximum accepted verbosity value.
-const MAX_VERBOSITY   : u8   = 2;
 /// Short alias for format param.
 // Fix(issue-fmt-alias):
 // Root cause: adapter.rs expanded v:: → verbosity:: but had no corresponding expansion
@@ -59,22 +57,6 @@ fn normalise_bool_value( key : &str, raw_val : &str ) -> Result< String >
   }
 }
 
-/// Validate and return a verbosity integer value (must be 0–2).
-#[ inline ]
-fn parse_verbosity( raw_val : &str ) -> Result< u8 >
-{
-  let n = raw_val.parse::< u8 >().map_err( |_| Error::msg( format!(
-    "verbosity must be 0, 1, or 2, got: '{raw_val}'"
-  ) ) )?;
-  if n > MAX_VERBOSITY
-  {
-    return Err( Error::msg( format!(
-      "verbosity out of range: {n} (max {MAX_VERBOSITY})"
-    ) ) );
-  }
-  Ok( n )
-}
-
 /// Convert raw argv (process args, NOT including argv\[0\]) into unilang token strings.
 ///
 /// Returns `(tokens, needs_help)` where `needs_help=true` signals that help text should
@@ -86,7 +68,6 @@ fn parse_verbosity( raw_val : &str ) -> Result< u8 >
 /// - First arg contains `::` (a param was given instead of a command name)
 /// - Param without `::` (not a valid `key::value` token)
 /// - Arg starting with `-` (flag syntax rejected — use `.help` instead of `--help`)
-/// - `verbosity::` / `v::` value that is not an integer in `[0, 2]`
 /// - Bool param (`dry::`) value other than `true`, `false`, `1`, `0`
 #[ inline ]
 pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, bool ) >
@@ -164,12 +145,6 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
     {
       raw_key.to_string()
     };
-
-    // Validate verbosity
-    if key == VERBOSITY_KEY
-    {
-      parse_verbosity( raw_val )?;
-    }
 
     // Normalise bool params
     let val : String = if BOOL_PARAMS.contains( &key.as_str() )

@@ -40,6 +40,7 @@
 //! | e10 | `e10_accounts_home_unset_exits_0` | HOME unset + .accounts → exit 0 advisory | P |
 //! | e11 | `e11_fmt_alias_accounts_json` | fmt::json → .accounts outputs JSON array | P |
 //! | e12 | `e12_fmt_alias_token_status_json` | fmt::json → .token.status outputs JSON object | P |
+//! | e13 | `e13_verbosity_out_of_range_on_non_verbosity_cmd` | verbosity::3 on .credentials.status → "Unknown parameter" not "out of range" | N |
 
 use crate::helpers::{
   run_cs, run_cs_with_env, run_cs_without_home,
@@ -429,5 +430,40 @@ fn e12_fmt_alias_token_status_json()
     "fmt::json must produce JSON object, got stdout: {:?}, stderr: {:?}",
     text,
     crate::helpers::stderr( &out ),
+  );
+}
+
+#[ test ]
+// test_kind: bug_reproducer(issue-verbosity-precheck)
+// Root cause: adapter.rs pre-validated verbosity:: range (lines 168-172) for ALL commands
+//   before command dispatch. Commands that don't accept verbosity (e.g. .credentials.status)
+//   received "verbosity out of range: 3 (max 2)" instead of "Unknown parameter 'verbosity'",
+//   implying the parameter was accepted but the value was wrong — a false error contract.
+// Why Not Caught: No test checked the error message for verbosity::3 on a command that does
+//   not register verbosity::; cross-cutting verbosity tests only targeted accepting commands.
+// Fix Applied: Removed parse_verbosity() pre-check from adapter.rs; moved range validation
+//   into output.rs::from_cmd() where it fires only after command dispatch confirms acceptance.
+// Prevention: For each parameter with adapter-level pre-validation, add a cross-cutting test
+//   asserting that out-of-range values on non-accepting commands report "Unknown parameter".
+// Pitfall: Adapter-layer validation is command-agnostic — never validate parameter semantics
+//   (range, enum membership) in the adapter; only validate syntax (parsability, key::value form).
+fn e13_verbosity_out_of_range_on_non_verbosity_cmd()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // .credentials.status does not register verbosity::; verbosity::3 must report
+  // "Unknown parameter 'verbosity'" (command-level rejection), not "out of range"
+  // (adapter-level pre-validation that fires before the command registry is consulted).
+  let out = run_cs_with_env( &[ ".credentials.status", "verbosity::3" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "Unknown parameter" ) || err.contains( "unknown parameter" ),
+    "verbosity::3 on non-verbosity command must report 'Unknown parameter', got stderr: {err:?}",
+  );
+  assert!(
+    !err.contains( "out of range" ),
+    "must not report 'out of range' for a parameter this command doesn't accept, got stderr: {err:?}",
   );
 }

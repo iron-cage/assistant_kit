@@ -19,8 +19,8 @@
 //! | A-08 | `adapter_verbosity_alias_0` | `v::0` → verbosity 0 | P |
 //! | A-09 | `adapter_verbosity_alias_1` | `v::1` → verbosity 1 | P |
 //! | A-10 | `adapter_verbosity_alias_2` | `v::2` → verbosity 2 | P |
-//! | A-11 | `adapter_verbosity_out_of_range` | `v::3` → error | N |
-//! | A-12 | `adapter_verbosity_non_numeric` | `v::abc` → error | N |
+//! | A-11 | `adapter_verbosity_out_of_range` | `v::3` → passes through as `verbosity::3` | P |
+//! | A-12 | `adapter_verbosity_non_numeric` | `v::abc` → passes through as `verbosity::abc` | P |
 //! | A-13 | `adapter_verbosity_canonical_key` | `verbosity::1` (canonical) → passes | P |
 //! | A-14 | `adapter_dry_true_normalizes` | `dry::true` → `dry::1` | P |
 //! | A-15 | `adapter_dry_false_normalizes` | `dry::false` → `dry::0` | P |
@@ -33,12 +33,12 @@
 //! | A-22 | `adapter_alias_then_canonical_dedup` | alias then canonical → deduped | P |
 //! | A-23 | `adapter_multi_separator_split` | `key::val::extra` → split at first `::` | P |
 //! | A-24 | `adapter_empty_value_allowed` | `key::` → empty value allowed | P |
-//! | A-25 | `adapter_verbosity_negative` | `v::-1` → error (u8 parse) | N |
-//! | A-26 | `adapter_verbosity_decimal` | `v::2.5` → error | N |
-//! | A-27 | `adapter_verbosity_empty` | `v::` → error (empty) | N |
+//! | A-25 | `adapter_verbosity_negative` | `v::-1` → passes through as `verbosity::-1` | P |
+//! | A-26 | `adapter_verbosity_decimal` | `v::2.5` → passes through as `verbosity::2.5` | P |
+//! | A-27 | `adapter_verbosity_empty` | `v::` → passes through as `verbosity::` | P |
 //! | A-28 | `adapter_multiple_params` | multiple `k::v` pairs → all assembled | P |
 //! | A-29 | `adapter_help_as_command` | `.help` as sole arg → help | P |
-//! | A-30 | `adapter_verbosity_overflow` | `v::256` → error (u8 overflow) | N |
+//! | A-30 | `adapter_verbosity_overflow` | `v::256` → passes through as `verbosity::256` | P |
 //! | A-31 | `adapter_dot_help_in_second_position` | `.help` in second position → routes to help | P |
 //! | A-32 | `adapter_bare_help_in_second_position` | `help` in second position → routes to help | P |
 //! | A-33 | `adapter_bare_help_as_sole_arg` | bare `help` as sole argv → routes to help | P |
@@ -61,6 +61,7 @@
 //! | O-08 | `output_verbosity_1` | `v::1` → verbosity 1 | P |
 //! | O-09 | `output_verbosity_2` | `v::2` → verbosity 2 | P |
 //! | O-10 | `output_verbosity_default` | no `v::` → default verbosity 1 | P |
+//! | O-20 | `output_verbosity_out_of_range` | `verbosity::3` → error "out of range" | N |
 //! | O-11 | `json_escape_plain` | plain string unchanged | P |
 //! | O-12 | `json_escape_quote` | `"` → `\"` | P |
 //! | O-13 | `json_escape_backslash` | `\` → `\\` | P |
@@ -187,22 +188,20 @@ mod adapter
     assert_eq!( tokens, vec![ ".cmd", "verbosity::2" ] );
   }
 
-  // A-11: v::3 → error (out of range)
+  // A-11: v::3 → passes through as verbosity::3 (range validation deferred to output layer)
   #[ test ]
   fn adapter_verbosity_out_of_range()
   {
-    let err = argv_to_unilang_tokens( &s( &[ ".cmd", "v::3" ] ) ).unwrap_err();
-    let msg = format!( "{err}" );
-    assert!( msg.contains( "out of range" ), "got: {msg}" );
+    let ( tokens, _ ) = argv_to_unilang_tokens( &s( &[ ".cmd", "v::3" ] ) ).unwrap();
+    assert_eq!( tokens, vec![ ".cmd", "verbosity::3" ] );
   }
 
-  // A-12: v::abc → error (not numeric)
+  // A-12: v::abc → passes through as verbosity::abc (type validation deferred to unilang)
   #[ test ]
   fn adapter_verbosity_non_numeric()
   {
-    let err = argv_to_unilang_tokens( &s( &[ ".cmd", "v::abc" ] ) ).unwrap_err();
-    let msg = format!( "{err}" );
-    assert!( msg.contains( "verbosity" ), "got: {msg}" );
+    let ( tokens, _ ) = argv_to_unilang_tokens( &s( &[ ".cmd", "v::abc" ] ) ).unwrap();
+    assert_eq!( tokens, vec![ ".cmd", "verbosity::abc" ] );
   }
 
   // A-13: verbosity::1 (canonical key)
@@ -304,31 +303,28 @@ mod adapter
     assert_eq!( tokens, vec![ ".cmd", "key::" ] );
   }
 
-  // A-25: v::-1 → error (u8 parse)
+  // A-25: v::-1 → passes through as verbosity::-1 (validation deferred to unilang)
   #[ test ]
   fn adapter_verbosity_negative()
   {
-    let err = argv_to_unilang_tokens( &s( &[ ".cmd", "v::-1" ] ) ).unwrap_err();
-    let msg = format!( "{err}" );
-    assert!( msg.contains( "verbosity" ), "got: {msg}" );
+    let ( tokens, _ ) = argv_to_unilang_tokens( &s( &[ ".cmd", "v::-1" ] ) ).unwrap();
+    assert_eq!( tokens, vec![ ".cmd", "verbosity::-1" ] );
   }
 
-  // A-26: v::2.5 → error
+  // A-26: v::2.5 → passes through as verbosity::2.5 (validation deferred to unilang)
   #[ test ]
   fn adapter_verbosity_decimal()
   {
-    let err = argv_to_unilang_tokens( &s( &[ ".cmd", "v::2.5" ] ) ).unwrap_err();
-    let msg = format!( "{err}" );
-    assert!( msg.contains( "verbosity" ), "got: {msg}" );
+    let ( tokens, _ ) = argv_to_unilang_tokens( &s( &[ ".cmd", "v::2.5" ] ) ).unwrap();
+    assert_eq!( tokens, vec![ ".cmd", "verbosity::2.5" ] );
   }
 
-  // A-27: v:: → error (empty)
+  // A-27: v:: → passes through as verbosity:: (empty value; same as A-24 for any key)
   #[ test ]
   fn adapter_verbosity_empty()
   {
-    let err = argv_to_unilang_tokens( &s( &[ ".cmd", "v::" ] ) ).unwrap_err();
-    let msg = format!( "{err}" );
-    assert!( msg.contains( "verbosity" ), "got: {msg}" );
+    let ( tokens, _ ) = argv_to_unilang_tokens( &s( &[ ".cmd", "v::" ] ) ).unwrap();
+    assert_eq!( tokens, vec![ ".cmd", "verbosity::" ] );
   }
 
   // A-28: multiple params assembled
@@ -352,13 +348,12 @@ mod adapter
     assert!( needs_help );
   }
 
-  // A-30: v::256 → error (u8 overflow)
+  // A-30: v::256 → passes through as verbosity::256 (validation deferred to unilang)
   #[ test ]
   fn adapter_verbosity_overflow()
   {
-    let err = argv_to_unilang_tokens( &s( &[ ".cmd", "v::256" ] ) ).unwrap_err();
-    let msg = format!( "{err}" );
-    assert!( msg.contains( "verbosity" ), "got: {msg}" );
+    let ( tokens, _ ) = argv_to_unilang_tokens( &s( &[ ".cmd", "v::256" ] ) ).unwrap();
+    assert_eq!( tokens, vec![ ".cmd", "verbosity::256" ] );
   }
 
   // A-31: `.help` in second position → routes to `.help` (N→P)
@@ -577,6 +572,15 @@ mod output
     let cmd = make_cmd( vec![] );
     let opts = OutputOptions::from_cmd( &cmd ).unwrap();
     assert_eq!( opts.verbosity, 1 );
+  }
+
+  // O-20: verbosity=3 → error "out of range" (range validation lives at output layer, not adapter)
+  #[ test ]
+  fn output_verbosity_out_of_range()
+  {
+    let cmd = make_cmd( vec![ ( "verbosity", Value::Integer( 3 ) ) ] );
+    let err = OutputOptions::from_cmd( &cmd ).unwrap_err();
+    assert!( err.message.contains( "out of range" ), "got: {}", err.message );
   }
 
   // O-11: json_escape plain
