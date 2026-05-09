@@ -3,7 +3,7 @@
 | Group | Parameters | Used By |
 |-------|------------|---------|
 | [Output Control](#group--1-output-control) | `verbosity::`, `format::` | `.accounts` (format only), `.token.status`, `.paths`, `.usage`, `.account.limits` |
-| [Field Presence](#group--2-field-presence) | `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `org::`, `file::`, `saved::` | `.accounts`, `.credentials.status` |
+| [Field Presence](#group--2-field-presence) | `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `org::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | `.accounts`, `.credentials.status` |
 
 **Total:** 2 groups
 
@@ -78,9 +78,9 @@ All members pass. No false inclusions.
 
 ### Group :: 2. Field Presence
 
-**Parameters:** `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `org::`, `file::`, `saved::`
+**Parameters:** `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `org::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::`
 **Pattern:** Per-field boolean presence control
-**Purpose:** Each param independently controls whether one output line appears in text output. Shared params (`sub::`, `tier::`, `expires::`, `org::`) work identically across both commands.
+**Purpose:** Each param independently controls whether one output line appears in text output. Shared params (`sub::`, `tier::`, `expires::`, `org::`, `display_name::`, `role::`, `billing::`, `model::`) work identically across both commands.
 
 | Parameter | Type | Default | Commands | Controls |
 |-----------|------|---------|----------|----------|
@@ -94,6 +94,10 @@ All members pass. No false inclusions.
 | [`org::`](params.md#parameter--12-org) | `bool` | `1` | Both | Organisation name line |
 | [`file::`](params.md#parameter--13-file) | `bool` | `0` | `.credentials.status` only | Credentials file path line (opt-in) |
 | [`saved::`](params.md#parameter--14-saved) | `bool` | `0` | `.credentials.status` only | Saved account count line (opt-in) |
+| [`display_name::`](params.md#parameter--16-display_name) | `bool` | `0` | Both | Display name line (opt-in) |
+| [`role::`](params.md#parameter--17-role) | `bool` | `0` | Both | Organisation role line (opt-in) |
+| [`billing::`](params.md#parameter--18-billing) | `bool` | `0` | Both | Billing type line (opt-in) |
+| [`model::`](params.md#parameter--19-model) | `bool` | `0` | Both | Active model line (opt-in) |
 
 **Used By (2 commands):** [`.accounts`](commands.md#command--3-accounts), [`.credentials.status`](commands.md#command--10-credentialsstatus)
 
@@ -134,6 +138,10 @@ clp .credentials.status account::0 sub::0 tier::0 expires::0 email::0 org::0
 | `org::` | Yes — Org: line | Yes |
 | `file::` | Yes — File: line (`.credentials.status`) | Yes |
 | `saved::` | Yes — Saved: line (`.credentials.status`) | Yes |
+| `display_name::` | Yes — Display: line | Yes |
+| `role::` | Yes — Role: line | Yes |
+| `billing::` | Yes — Billing: line | Yes |
+| `model::` | Yes — Model: line | Yes |
 | `format::` | No — controls serialisation format, not field selection | No (Output Control) |
 | `verbosity::` | No — controls detail density across all fields | No (Output Control) |
 

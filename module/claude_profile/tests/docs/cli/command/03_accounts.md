@@ -22,6 +22,12 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 | IT-14 | Non-active account shows its own stored expiry, not active's | Bug Reproducer |
 | IT-15 | Missing `subscriptionType` in credential file → `Sub:     N/A` | Edge Case |
 | IT-16 | Missing `rateLimitTier` in credential file → `Tier:    N/A` | Edge Case |
+| IT-17 | `display_name::1` shows `Display:` line from saved `.claude.json` snapshot | Rich Metadata |
+| IT-18 | `role::1 billing::1 model::1` shows corresponding lines from saved snapshots | Rich Metadata |
+| IT-19 | Account without saved metadata snapshots → `N/A` for all 4 new fields | Rich Metadata / Edge Case |
+| IT-20 | `format::json` includes `display_name`, `role`, `billing`, `model` keys | Rich Metadata / JSON |
+| IT-21 | New metadata fields absent by default (opt-in) | Rich Metadata / Default |
+| IT-22 | `org::` reads real value from saved `.claude.json` snapshot (no longer hardcoded `N/A`) | Rich Metadata / Fix |
 
 ### Test Coverage Summary
 
@@ -31,12 +37,13 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 - Named Account: 3 tests (IT-4, IT-5, IT-6)
 - Field Presence: 2 tests (IT-7, IT-8)
 - Interaction: 1 test (IT-10)
-- Edge Case: 3 tests (IT-11, IT-15, IT-16)
+- Edge Case: 4 tests (IT-11, IT-15, IT-16, IT-19)
 - Output Order: 1 test (IT-12)
 - Bug Reproducer: 1 test (IT-14)
-- Output Order: 1 test
+- Rich Metadata: 4 tests (IT-17, IT-18, IT-20, IT-21)
+- Rich Metadata / Fix: 1 test (IT-22)
 
-**Total:** 12 integration tests
+**Total:** 22 integration tests
 
 ---
 
@@ -195,5 +202,65 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 - **Given:** Credential file contains `{"oauthAccount":{"subscriptionType":"pro"},"expiresAt":9999999999000}` (no `rateLimitTier`).
 - **When:** `clp .accounts`
 - **Then:** Stdout contains `Tier:    N/A`.; missing field shows `N/A` not blank
+- **Exit:** 0
+- **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
+
+---
+
+### IT-17: `display_name::1` shows Display line from saved snapshot
+
+- **Given:** `work@acme.com` with saved `.claude.json` containing `{"oauthAccount":{"displayName":"alice"}}`. Active account.
+- **When:** `clp .accounts display_name::1`
+- **Then:** Stdout contains `Display: alice`.; display name rendered from saved snapshot
+- **Exit:** 0
+- **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
+
+---
+
+### IT-18: `role::1 billing::1 model::1` shows corresponding lines
+
+- **Given:** `work@acme.com` with saved `.claude.json` containing `{"oauthAccount":{"organizationRole":"admin","billingType":"stripe_subscription"}}` and saved `.settings.json` containing `{"model":"sonnet"}`.
+- **When:** `clp .accounts role::1 billing::1 model::1`
+- **Then:** Stdout contains `Role:    admin`, `Billing: stripe_subscription`, `Model:   sonnet`.; all 3 metadata fields rendered
+- **Exit:** 0
+- **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
+
+---
+
+### IT-19: Account without saved metadata → N/A for new fields
+
+- **Given:** `work@acme.com` with credential file only (no `.claude.json` or `.settings.json` snapshots).
+- **When:** `clp .accounts display_name::1 role::1 billing::1 model::1`
+- **Then:** Stdout contains `Display: N/A`, `Role:    N/A`, `Billing: N/A`, `Model:   N/A`.; absent snapshots degrade gracefully
+- **Exit:** 0
+- **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
+
+---
+
+### IT-20: JSON includes new metadata keys
+
+- **Given:** `work@acme.com` with saved `.claude.json` snapshot containing display name and role.
+- **When:** `clp .accounts format::json`
+- **Then:** Valid JSON array where each object contains `display_name`, `role`, `billing`, `model` keys.; JSON shape includes all metadata regardless of snapshot presence
+- **Exit:** 0
+- **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
+
+---
+
+### IT-21: New metadata fields absent by default
+
+- **Given:** `work@acme.com` with saved `.claude.json` and `.settings.json` snapshots containing rich metadata.
+- **When:** `clp .accounts`
+- **Then:** Stdout does NOT contain `Display:`, `Role:`, `Billing:`, `Model:` lines.; opt-in fields absent by default
+- **Exit:** 0
+- **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
+
+---
+
+### IT-22: `org::` reads real value from saved snapshot
+
+- **Given:** `work@acme.com` with saved `.claude.json` containing `{"oauthAccount":{"organizationName":"Acme Corp"}}`.
+- **When:** `clp .accounts`
+- **Then:** Stdout contains `Org:     Acme Corp` (not `N/A`).; org populated from snapshot instead of hardcoded N/A
 - **Exit:** 0
 - **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)

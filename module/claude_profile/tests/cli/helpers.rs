@@ -183,6 +183,49 @@ pub fn write_settings_json( home : &std::path::Path, model : &str )
   std::fs::write( claude_dir.join( "settings.json" ), content ).unwrap();
 }
 
+/// Write `{credential_store}/{name}.claude.json` with an `oauthAccount` snapshot.
+///
+/// Used to pre-populate `.accounts` snapshot data for `org`, `display_name`,
+/// `role`, and `billing` field tests. Mirrors what `account::save()` produces.
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_account_claude_json(
+  home    : &std::path::Path,
+  name    : &str,
+  org     : &str,
+  display : &str,
+  role    : &str,
+  billing : &str,
+)
+{
+  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  let content = format!(
+    r#"{{"oauthAccount":{{"organizationName":"{org}","displayName":"{display}","organizationRole":"{role}","billingType":"{billing}"}}}}"#,
+  );
+  std::fs::write( credential_store.join( format!( "{name}.claude.json" ) ), content ).unwrap();
+}
+
+/// Write `{credential_store}/{name}.settings.json` with a `model` field.
+///
+/// Used to pre-populate `.accounts` snapshot data for `model` field tests.
+/// Mirrors what `account::save()` produces.
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_account_settings_json( home : &std::path::Path, name : &str, model : &str )
+{
+  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  let content = format!( r#"{{"model":"{model}"}}"# );
+  std::fs::write( credential_store.join( format!( "{name}.settings.json" ) ), content ).unwrap();
+}
+
 /// Check whether an account credential file exists.
 #[ inline ]
 #[ must_use ]

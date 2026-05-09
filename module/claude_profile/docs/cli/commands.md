@@ -6,7 +6,7 @@
 |---|---------|---------|--------|---------|
 | 1 | `.` | Show help information (hidden dot-shorthand) | 0 | `clp .` |
 | 2 | `.help` | Display command reference and usage examples | 0 | `clp .help` |
-| 3 | `.accounts` | List all saved accounts or show a single named account | 7 | `clp .accounts` |
+| 3 | `.accounts` | List all saved accounts or show a single named account | 11 | `clp .accounts` |
 | 4 | `.account.save` | Save current credentials as a named account profile | 2 | `clp .account.save name::alice@acme.com` |
 | 5 | `.account.switch` | Switch active account by name with atomic credential rotation | 2 | `clp .account.switch name::alice@home.com` |
 | 6 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::alice@oldco.com` |
@@ -36,7 +36,7 @@
 | 0 | `.`, `.help` |
 | 2 | `.account.save`, `.account.switch`, `.account.delete`, `.paths`, `.usage` |
 | 3 | `.token.status`, `.account.limits` |
-| 7 | `.accounts` |
+| 11 | `.accounts` |
 | 14 | `.credentials.status` |
 
 ---
@@ -63,7 +63,7 @@ clp -V          # → identical output
 
 List all saved accounts or show a single named account with per-field presence control. Without `name::`: shows every account in the credential store as an indented key-val block; with `name::EMAIL`: shows that account's block only.
 
--- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`active::`](params.md#parameter--15-active), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`expires::`](params.md#parameter--10-expires), [`org::`](params.md#parameter--12-org), [`format::`](params.md#parameter--3-format)
+-- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`active::`](params.md#parameter--15-active), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`expires::`](params.md#parameter--10-expires), [`org::`](params.md#parameter--12-org), [`display_name::`](params.md#parameter--16-display_name), [`role::`](params.md#parameter--17-role), [`billing::`](params.md#parameter--18-billing), [`model::`](params.md#parameter--19-model), [`format::`](params.md#parameter--3-format)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
@@ -72,6 +72,7 @@ List all saved accounts or show a single named account with per-field presence c
 clp .accounts
 clp .accounts name::alice@acme.com
 clp .accounts sub::0 tier::0
+clp .accounts display_name::1 role::1 billing::1 model::1
 clp .accounts format::json
 ```
 
@@ -83,6 +84,10 @@ clp .accounts format::json
 | `tier::` | `bool` | `1` | Show rate-limit tier line |
 | `expires::` | `bool` | `1` | Show token expiry duration line |
 | `org::` | `bool` | `1` | Show organisation name line |
+| `display_name::` | `bool` | `0` | Show display name from saved `~/.claude.json` snapshot (opt-in) |
+| `role::` | `bool` | `0` | Show organisation role from saved `~/.claude.json` snapshot (opt-in) |
+| `billing::` | `bool` | `0` | Show billing type from saved `~/.claude.json` snapshot (opt-in) |
+| `model::` | `bool` | `0` | Show active model from saved `settings.json` snapshot (opt-in) |
 | `format::` | [`OutputFormat`](types.md#type--3-outputformat) | `text` | Output format |
 
 **Examples:**
@@ -124,8 +129,31 @@ clp .accounts active::0 sub::0 tier::0 expires::0 org::0
 # alice@acme.com
 # alice@home.com
 
+clp .accounts display_name::1 role::1 billing::1 model::1
+# alice@acme.com
+#   Active:  yes
+#   Sub:     max
+#   Tier:    default_claude_max_20x
+#   Expires: in 2h 11m
+#   Org:     Acme Corp
+#   Display: alice
+#   Role:    admin
+#   Billing: stripe_subscription
+#   Model:   sonnet
+#
+# alice@home.com
+#   Active:  no
+#   Sub:     pro
+#   Tier:    default_claude_pro
+#   Expires: in 5h 30m
+#   Org:     N/A
+#   Display: N/A
+#   Role:    N/A
+#   Billing: N/A
+#   Model:   N/A
+
 clp .accounts format::json
-# [{"name":"alice@acme.com","is_active":true,"subscription_type":"max","rate_limit_tier":"default_claude_max_20x","expires_at_ms":1711234567000,"org":"N/A"},{"name":"alice@home.com","is_active":false,"subscription_type":"pro","rate_limit_tier":"default_claude_pro","expires_at_ms":1711243567000,"org":"N/A"}]
+# [{"name":"alice@acme.com","is_active":true,"subscription_type":"max","rate_limit_tier":"default_claude_max_20x","expires_at_ms":1711234567000,"org":"Acme Corp","display_name":"alice","role":"admin","billing":"stripe_subscription","model":"sonnet"},{"name":"alice@home.com","is_active":false,"subscription_type":"pro","rate_limit_tier":"default_claude_pro","expires_at_ms":1711243567000,"org":"N/A","display_name":"N/A","role":"N/A","billing":"N/A","model":"N/A"}]
 ```
 
 **Notes:**
@@ -133,12 +161,14 @@ clp .accounts format::json
 - With `name::EMAIL`: shows exactly one account's block — same format as listing.
 - Field params affect text output only; `format::json` always includes all fields regardless of presence params.
 - Reports exit 1 for invalid `name::` value; exit 2 if the named account is not found.
+- `display_name::`, `role::`, `billing::` read from per-account saved `{name}.claude.json` snapshot; `model::` reads from `{name}.settings.json`. All show `N/A` when the snapshot file is absent (backward compatible with accounts saved before this feature).
+- `org::` also reads from `{name}.claude.json` (`organizationName`), replacing the previously hardcoded `N/A`.
 
 ---
 
 ### Command :: 4. `.account.save`
 
-Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json`, creating the credential store directory if needed. Use this to snapshot the current credentials before switching accounts.
+Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and snapshots `~/.claude.json` and `~/.claude/settings.json` as named per-account files, creating the credential store directory if needed. Use this to preserve the full current account state before switching.
 
 -- **Parameters:** [`name::`](params.md#parameter--1-name) **(required)**, [`dry::`](params.md#parameter--5-dry)
 -- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: credentials unreadable)

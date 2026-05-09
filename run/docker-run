@@ -15,17 +15,17 @@ WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 
 cfg() { grep -m1 "^$1:" "$CONFIG" | sed 's/^[^:]*:[[:space:]]*//' | tr -d '"'; }
 
-IMAGE="$(cfg image)"
-DOCKERFILE="$WORKSPACE_ROOT/$(cfg dockerfile)"
-COOK_FLAGS="$(cfg cook_flags)"
-TEST_USER="$(cfg test_user)"
-HOME_DIR="$(cfg home_dir)"
-CMD_SCOPE="$(cfg cmd_scope)"
-CMD_FILTER="$(cfg cmd_filter)"
-TEST_SCRIPT="$(cfg test_script)"
-MOUNT_TEST="$(cfg mount_test)"
-MOUNT_SHELL="$(cfg mount_shell)"
-MOUNT_TEST_LABEL="$(cfg mount_test_label)"
+IMAGE="$(cfg image)"                              # image tag for -t at build and image lookup at run
+DOCKERFILE="$WORKSPACE_ROOT/$(cfg dockerfile)"    # absolute Dockerfile path (cfg gives workspace-relative)
+COOK_FLAGS="$(cfg cook_flags)"                    # forwarded as --build-arg to cargo chef cook
+TEST_USER="$(cfg test_user)"                      # forwarded as --build-arg; non-root for chmod-000 tests
+HOME_DIR="$(cfg home_dir)"                        # forwarded as --build-arg; sets $HOME so ClaudePaths finds .claude/
+CMD_SCOPE="$(cfg cmd_scope)"                      # forwarded as --build-arg; crate filter baked into offline CMD
+CMD_FILTER="$(cfg cmd_filter)"                    # forwarded as --build-arg; nextest filter baked into offline CMD
+TEST_SCRIPT="$(cfg test_script)"                  # path (relative to /workspace) exec'd by cmd_test
+MOUNT_TEST="$(cfg mount_test)"                    # spec passed to _resolve_mount for .test (required=true)
+MOUNT_SHELL="$(cfg mount_shell)"                  # spec passed to _resolve_mount for .shell (required=false)
+MOUNT_TEST_LABEL="$(cfg mount_test_label)"        # label used in cmd_help output and mount-missing errors
 
 # ── Mount resolver ────────────────────────────────────────────────────────────
 # Spec format: "~/path:container_path:check_type:required[:mode]"

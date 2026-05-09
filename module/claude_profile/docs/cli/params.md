@@ -19,10 +19,10 @@
 | 13 | `file::` | `bool` | `0` | `0`, `1` | Show credentials file path, opt-in (`.credentials.status`) | 1 cmd |
 | 14 | `saved::` | `bool` | `0` | `0`, `1` | Show saved account count, opt-in (`.credentials.status`) | 1 cmd |
 | 15 | `active::` | `bool` | `1` | `0`, `1` | Show active/inactive status line (`.accounts`) | 1 cmd |
-| 16 | `display_name::` | `bool` | `0` | `0`, `1` | Show display name from `~/.claude.json` oauthAccount, opt-in (`.credentials.status`) | 1 cmd |
-| 17 | `role::` | `bool` | `0` | `0`, `1` | Show organisation role from `~/.claude.json` oauthAccount, opt-in (`.credentials.status`) | 1 cmd |
-| 18 | `billing::` | `bool` | `0` | `0`, `1` | Show billing type from `~/.claude.json` oauthAccount, opt-in (`.credentials.status`) | 1 cmd |
-| 19 | `model::` | `bool` | `0` | `0`, `1` | Show active model from `~/.claude/settings.json`, opt-in (`.credentials.status`) | 1 cmd |
+| 16 | `display_name::` | `bool` | `0` | `0`, `1` | Show display name from `oauthAccount`, opt-in | 2 cmds |
+| 17 | `role::` | `bool` | `0` | `0`, `1` | Show organisation role from `oauthAccount`, opt-in | 2 cmds |
+| 18 | `billing::` | `bool` | `0` | `0`, `1` | Show billing type from `oauthAccount`, opt-in | 2 cmds |
+| 19 | `model::` | `bool` | `0` | `0`, `1` | Show active model from settings, opt-in | 2 cmds |
 
 **Total:** 19 parameters
 
@@ -340,13 +340,13 @@ active::0   → line omitted
 
 ### Parameter :: 16. `display_name::`
 
-Controls whether the display name line appears in `.credentials.status` output. Opt-in (default `0`). Source: `displayName` field in `~/.claude.json` `oauthAccount`.
+Controls whether the display name line appears in output. Opt-in (default `0`). Source: `displayName` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`) or from the saved `{name}.claude.json` snapshot (`.accounts`).
 
 - **Type:** `bool`
 - **Default:** `0` (hidden)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
-- **Commands:** [`.credentials.status`](commands.md#command--10-credentialsstatus)
-- **Purpose:** Exposes the human-readable display name set by the OAuth account. Shows `N/A` when `~/.claude.json` is absent or the field is missing.
+- **Commands:** [`.accounts`](commands.md#command--3-accounts), [`.credentials.status`](commands.md#command--10-credentialsstatus)
+- **Purpose:** Exposes the human-readable display name set by the OAuth account. Shows `N/A` when the source file is absent or the field is missing.
 - **Group:** Field Presence
 
 **Examples:**
@@ -360,13 +360,13 @@ display_name::1   → Display: alice
 
 ### Parameter :: 17. `role::`
 
-Controls whether the organisation role line appears in `.credentials.status` output. Opt-in (default `0`). Source: `organizationRole` field in `~/.claude.json` `oauthAccount`.
+Controls whether the organisation role line appears in output. Opt-in (default `0`). Source: `organizationRole` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`) or from the saved `{name}.claude.json` snapshot (`.accounts`).
 
 - **Type:** `bool`
 - **Default:** `0` (hidden)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
-- **Commands:** [`.credentials.status`](commands.md#command--10-credentialsstatus)
-- **Purpose:** Shows the OAuth account's role within its organisation (e.g., `admin`, `member`). Shows `N/A` when `~/.claude.json` is absent or the field is missing.
+- **Commands:** [`.accounts`](commands.md#command--3-accounts), [`.credentials.status`](commands.md#command--10-credentialsstatus)
+- **Purpose:** Shows the OAuth account's role within its organisation (e.g., `admin`, `member`). Shows `N/A` when the source file is absent or the field is missing.
 - **Group:** Field Presence
 
 **Examples:**
@@ -380,13 +380,13 @@ role::1   → Role:    admin
 
 ### Parameter :: 18. `billing::`
 
-Controls whether the billing type line appears in `.credentials.status` output. Opt-in (default `0`). Source: `billingType` field in `~/.claude.json` `oauthAccount`.
+Controls whether the billing type line appears in output. Opt-in (default `0`). Source: `billingType` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`) or from the saved `{name}.claude.json` snapshot (`.accounts`).
 
 - **Type:** `bool`
 - **Default:** `0` (hidden)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
-- **Commands:** [`.credentials.status`](commands.md#command--10-credentialsstatus)
-- **Purpose:** Shows the raw billing type string (e.g., `stripe_subscription`). Shows `N/A` when `~/.claude.json` is absent or the field is missing.
+- **Commands:** [`.accounts`](commands.md#command--3-accounts), [`.credentials.status`](commands.md#command--10-credentialsstatus)
+- **Purpose:** Shows the raw billing type string (e.g., `stripe_subscription`). Shows `N/A` when the source file is absent or the field is missing.
 - **Group:** Field Presence
 
 **Examples:**
@@ -400,13 +400,13 @@ billing::1   → Billing: stripe_subscription
 
 ### Parameter :: 19. `model::`
 
-Controls whether the active model line appears in `.credentials.status` output. Opt-in (default `0`). Source: `model` field in `~/.claude/settings.json`.
+Controls whether the active model line appears in output. Opt-in (default `0`). Source: `model` field in `settings.json` — read from live `~/.claude/settings.json` (`.credentials.status`) or from the saved `{name}.settings.json` snapshot (`.accounts`).
 
 - **Type:** `bool`
 - **Default:** `0` (hidden)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
-- **Commands:** [`.credentials.status`](commands.md#command--10-credentialsstatus)
-- **Purpose:** Shows the model currently selected in Claude Code settings. Shows `N/A` when `~/.claude/settings.json` is absent or the `model` field is missing.
+- **Commands:** [`.accounts`](commands.md#command--3-accounts), [`.credentials.status`](commands.md#command--10-credentialsstatus)
+- **Purpose:** Shows the model currently selected in Claude Code settings. Shows `N/A` when the source file is absent or the `model` field is missing.
 - **Group:** Field Presence
 
 **Examples:**

@@ -6,7 +6,7 @@ Master index of all documentation entities and their instances for `claude_profi
 
 | Entity | Directory | Count | Responsibility |
 |--------|-----------|-------|----------------|
-| Feature | [feature/](feature/readme.md) | 13 | Functional requirements (FR-6 – FR-18) |
+| Feature | [feature/](feature/readme.md) | 14 | Functional requirements (FR-6 – FR-20) |
 | Invariant | [invariant/](invariant/readme.md) | 5 | Non-functional constraints (NFR-1, NFR-3 – NFR-6) |
 | CLI Design | [cli/](cli/readme.md) | 7 | Command, parameter, and workflow reference |
 
@@ -29,6 +29,7 @@ Master index of all documentation entities and their instances for `claude_profi
 | 011 | [feature/011_account_status_by_name.md](feature/011_account_status_by_name.md) | FR-16 | Named account scoping for `.accounts name::` |
 | 012 | [feature/012_live_credentials_status.md](feature/012_live_credentials_status.md) | FR-17 | Live credentials status without account store dependency |
 | 013 | [feature/013_account_limits.md](feature/013_account_limits.md) | FR-18 | Rate-limit utilization via live HTTP response headers |
+| 014 | [feature/014_rich_account_metadata.md](feature/014_rich_account_metadata.md) | FR-20 | Rich OAuth metadata fields on `.credentials.status` and `.accounts` |
 
 ---
 

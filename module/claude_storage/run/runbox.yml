@@ -1,0 +1,25 @@
+# docker image tag — used for -t at build and image lookup at run; unique per module
+image: claude_storage_test
+# path to Dockerfile relative to workspace root (shared across all modules)
+dockerfile: Dockerfile
+
+# passed to `cargo chef cook`; scopes dep precompilation — must mirror cmd_scope
+cook_flags: -p claude_storage
+# non-root so chmod-000 file-permission tests fail correctly (root bypasses checks)
+test_user: testuser
+# $HOME inside container; ClaudePaths resolves .claude/ here → one mount covers credentials + storage
+home_dir: /workspace
+# crate scope for `nextest run`; must match cook_flags so compiled deps align with tested crates
+cmd_scope: -p claude_storage
+# baked into the image default CMD; excludes live behavior tests needing external I/O (offline-safe default)
+cmd_filter: "!binary(behavior)"
+
+# script invoked by `.test` inside the container (path relative to /workspace)
+test_script: module/claude_storage/run/test
+
+# host:container:check_type:required:mode — format parsed by _resolve_mount in docker-run
+mount_test:  ~/.claude:/workspace/.claude:directory:true:rw
+# same path as mount_test but required=false — .shell works without credentials
+mount_shell: ~/.claude:/workspace/.claude:directory:false
+# label shown in .help output and mount-missing error messages
+mount_test_label: "real ~/.claude/ (storage)"

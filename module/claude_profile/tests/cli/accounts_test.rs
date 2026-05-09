@@ -39,11 +39,21 @@
 //! | acc17 | `acc17_json_format_empty_store` | `format::json` + absent store → `[]` | P |
 //! | acc18 | `acc18_single_account_no_trailing_blank` | single account text → no trailing blank line | P |
 //! | acc19 | `acc19_missing_expires_at_shows_expired` | missing expiresAt in file → Expires: expired | P |
+//! | acc20 | `acc20_display_name_shows_from_snapshot` | `display_name::1` → Display: from saved snapshot | P |
+//! | acc21 | `acc21_role_billing_model_from_snapshots` | `role::1 billing::1 model::1` → 3 lines from snapshots | P |
+//! | acc22 | `acc22_no_snapshot_shows_na_for_new_fields` | no snapshot → N/A for new fields when enabled | P |
+//! | acc23 | `acc23_json_includes_new_fields` | `format::json` → includes display_name, role, billing, model | P |
+//! | acc24 | `acc24_new_fields_absent_by_default` | no opt-in → Display/Role/Billing/Model absent | P |
+//! | acc25 | `acc25_org_reads_from_snapshot` | `org::1` → real org from snapshot, not hardcoded N/A | P |
+//! | acc26 | `acc26_save_creates_snapshot_files` | `save` creates `{name}.claude.json` and `.settings.json` | P |
+//! | acc27 | `acc27_save_succeeds_without_claude_json` | save OK when `~/.claude.json` absent (best-effort) | P |
+//! | acc28 | `acc28_save_succeeds_without_settings_json` | save OK when `settings.json` absent but `.claude.json` present | P |
 
 use crate::helpers::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
-  write_account,
+  write_account, write_credentials, write_claude_json_full, write_settings_json,
+  write_account_claude_json, write_account_settings_json,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
@@ -593,5 +603,304 @@ fn acc19_missing_expires_at_shows_expired()
   assert!(
     text.contains( "Expires: expired" ),
     "missing expiresAt must display 'Expires: expired', got:\n{text}",
+  );
+}
+
+// ── acc20–acc28: Rich account metadata (FR-20, feature/014) ──────────────────
+
+/// acc20 (T01): `display_name::1` renders `Display:` line from saved snapshot.
+///
+/// Root Cause (before fix): `Account` struct lacked `display_name` field; `list()` never
+///   read snapshot files; `render_accounts_text()` did not accept `show_display_name` param.
+/// Why Not Caught: All prior tests used only the 5 original Account fields.
+/// Fix Applied: `Account` gains `display_name`; `list()` reads `{name}.claude.json`;
+///   `render_accounts_text()` renders `Display:` when `show_display_name` is true.
+/// Prevention: Whenever adding opt-in fields, write a snapshot-present test (acc20)
+///   and a snapshot-absent test (acc22) to cover both code paths.
+/// Pitfall: `parse_string_field()` searches the flat string — it finds nested keys like
+///   `"displayName"` regardless of JSON depth. Do NOT add custom JSON parsing.
+#[ test ]
+fn acc20_display_name_shows_from_snapshot()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe" );
+
+  let out  = run_cs_with_env( &[ ".accounts", "display_name::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Display: Alice K" ),
+    "display_name::1 must render Display: line from snapshot, got:\n{text}",
+  );
+}
+
+/// acc21 (T02+T03+T04): `role::1 billing::1 model::1` renders three snapshot lines.
+///
+/// Root Cause (before fix): `Account` struct lacked `role`, `billing`, `model` fields;
+///   `list()` did not read snapshot files; rendering did not handle these params.
+/// Why Not Caught: Only original 5 fields were tested.
+/// Fix Applied: `Account` gains `role`, `billing`, `model`; `list()` reads both snapshot
+///   files; `render_accounts_text()` renders the three new lines when enabled.
+/// Prevention: Test all three in one function to catch the common mistake of reading
+///   one snapshot file but forgetting the other.
+/// Pitfall: `model` comes from `{name}.settings.json`, not `{name}.claude.json`. A single
+///   snapshot read call is insufficient — both files must be read independently.
+#[ test ]
+fn acc21_role_billing_model_from_snapshots()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe_sub" );
+  write_account_settings_json( dir.path(), "alice@acme.com", "claude-sonnet" );
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "role::1", "billing::1", "model::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Role:    admin"         ), "role::1 must render Role: from snapshot, got:\n{text}"    );
+  assert!( text.contains( "Billing: stripe_sub"    ), "billing::1 must render Billing: from snapshot, got:\n{text}" );
+  assert!( text.contains( "Model:   claude-sonnet" ), "model::1 must render Model: from snapshot, got:\n{text}"  );
+}
+
+/// acc22 (T05): when no snapshot files exist, opt-in fields show `N/A`.
+///
+/// Root Cause (before fix): Without snapshot files, `list()` would yield empty strings
+///   for all new fields, but `render_accounts_text()` lacked the empty-string → N/A guard.
+/// Why Not Caught: Implementation gap: snapshot reading not yet coded.
+/// Fix Applied: `list()` uses `unwrap_or_default()` → empty string; `render_accounts_text()`
+///   guards each new field with `if field.is_empty() { "N/A" }`.
+/// Prevention: Always pair a snapshot-absent test with each snapshot-present test so both
+///   the reading path and the fallback path are verified.
+/// Pitfall: `unwrap_or_default()` on a missing file yields `""` — callers must guard
+///   against empty string, not `None`. Pattern: `if s.is_empty() { "N/A" } else { s }`.
+#[ test ]
+fn acc22_no_snapshot_shows_na_for_new_fields()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  // No snapshot files written — all new fields must fall back to N/A.
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "display_name::1", "role::1", "billing::1", "model::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Display: N/A" ), "absent snapshot must show Display: N/A, got:\n{text}" );
+  assert!( text.contains( "Role:    N/A" ), "absent snapshot must show Role:    N/A, got:\n{text}" );
+  assert!( text.contains( "Billing: N/A" ), "absent snapshot must show Billing: N/A, got:\n{text}" );
+  assert!( text.contains( "Model:   N/A" ), "absent snapshot must show Model:   N/A, got:\n{text}" );
+}
+
+/// acc23 (T06): `format::json` always includes the four new field keys.
+///
+/// Root Cause (before fix): JSON format string in `accounts_routine()` hardcoded only
+///   legacy fields; no `display_name`, `role`, `billing`, `model` keys were emitted.
+/// Why Not Caught: acc10 (`json_ignores_field_presence`) only checked original fields.
+/// Fix Applied: Extend the JSON format string with all four new fields using
+///   `json_escape(&a.display_name)` etc. — matches the `.credentials.status` JSON pattern.
+/// Prevention: When adding struct fields, always extend BOTH text rendering AND JSON output
+///   in the same phase to avoid silent key omissions.
+/// Pitfall: `format::json` emits all fields unconditionally — do NOT gate new JSON keys
+///   on the field-presence booleans (`show_display_name` etc.); those control text only.
+#[ test ]
+fn acc23_json_includes_new_fields()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe_sub" );
+  write_account_settings_json( dir.path(), "alice@acme.com", "claude-sonnet" );
+
+  let out  = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"display_name\"" ), "JSON must include display_name key, got:\n{text}" );
+  assert!( text.contains( "\"role\""         ), "JSON must include role key, got:\n{text}"         );
+  assert!( text.contains( "\"billing\""      ), "JSON must include billing key, got:\n{text}"      );
+  assert!( text.contains( "\"model\""        ), "JSON must include model key, got:\n{text}"        );
+  assert!( text.contains( "Alice K"          ), "JSON display_name must contain actual value, got:\n{text}" );
+  assert!( text.contains( "claude-sonnet"    ), "JSON model must contain actual value, got:\n{text}"        );
+}
+
+/// acc24 (T07): new opt-in fields absent from output by default.
+///
+/// Root Cause (invariant guard): Opt-in fields use `Some(Value::Boolean(true))` without
+///   `| None` fallback, so absence of the param = field hidden. No `None` in the match
+///   is the ONLY difference from default-on params.
+/// Why Not Caught: No test verified that the new params are truly off by default.
+/// Fix Applied: Invariant confirmed by test; `accounts_routine()` reads each new param
+///   with `matches!(..., Some(Value::Boolean(true)))` (no `None`).
+/// Prevention: For every opt-in param, pair an opt-in-enabled test (acc20) with an
+///   opt-in-absent test (acc24) so regressions to default-on are caught immediately.
+/// Pitfall: Adding `| None` to an opt-in param silently makes it default-on — a
+///   runtime-invisible change that only a test like this one catches.
+#[ test ]
+fn acc24_new_fields_absent_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe" );
+  write_account_settings_json( dir.path(), "alice@acme.com", "claude-sonnet" );
+
+  // Default .accounts call — no opt-in params.
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Display:" ), "Display: must be absent by default, got:\n{text}" );
+  assert!( !text.contains( "Role:"    ), "Role: must be absent by default, got:\n{text}"    );
+  assert!( !text.contains( "Billing:" ), "Billing: must be absent by default, got:\n{text}" );
+  assert!( !text.contains( "Model:"   ), "Model: must be absent by default, got:\n{text}"   );
+}
+
+/// acc25 (T08): `org::1` renders real org name from saved snapshot, not hardcoded `N/A`.
+///
+/// Root Cause (bug fix): `render_accounts_text()` hardcoded `"  Org:     N/A\n"` — the
+///   `organizationName` stored in the per-account snapshot was never read or rendered.
+/// Why Not Caught: acc07 only verified `Org:` was present; no test checked the VALUE.
+/// Fix Applied: `list()` reads `{name}.claude.json` and populates `Account.org`;
+///   `render_accounts_text()` uses `a.org` with empty-string → N/A guard.
+/// Prevention: Whenever a display value is derived from a data source, write a test that
+///   verifies the ACTUAL VALUE appears — not just the label line.
+/// Pitfall: The old hardcoded `"N/A"` was silently wrong — always correct since nothing
+///   could trigger it. A test that only checks `Org:` presence would miss the hardcoding.
+#[ test ]
+fn acc25_org_reads_from_snapshot()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe" );
+
+  let out  = run_cs_with_env( &[ ".accounts", "org::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Org:     Acme Corp" ),
+    "org::1 must show real org from snapshot, got:\n{text}",
+  );
+  assert!(
+    !text.contains( "Org:     N/A" ),
+    "org must not be hardcoded N/A when snapshot has org, got:\n{text}",
+  );
+}
+
+/// acc26 (T09 — save with both snapshot sources): `account::save` writes both snapshot files.
+///
+/// Root Cause (before fix): `save()` only called `std::fs::copy(paths.credentials_file(), dest)`.
+///   The `.claude.json` and `settings.json` sources were never copied to the store.
+/// Why Not Caught: No save test verified the presence of snapshot files after save.
+/// Fix Applied: `save()` calls `let _ = std::fs::copy(paths.claude_json_file(), ...)` and
+///   `let _ = std::fs::copy(paths.settings_file(), ...)` after the credential copy.
+/// Prevention: After any `save()` implementation change, verify ALL expected output files
+///   exist — not just the primary credential file.
+/// Pitfall: `let _ = std::fs::copy(...)` silently discards errors — this is intentional
+///   (best-effort), but means a wrong SOURCE path would pass the `save()` return value.
+///   This test catches that by asserting the destination files EXIST.
+#[ test ]
+fn acc26_save_creates_snapshot_files()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Source files that save() will copy.
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json_full( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe" );
+  write_settings_json( dir.path(), "claude-sonnet" );
+
+  let out  = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  assert!(
+    store.join( "alice@acme.com.credentials.json" ).exists(),
+    "save must create credentials snapshot, store: {}", store.display(),
+  );
+  assert!(
+    store.join( "alice@acme.com.claude.json" ).exists(),
+    "save must create .claude.json snapshot, store: {}", store.display(),
+  );
+  assert!(
+    store.join( "alice@acme.com.settings.json" ).exists(),
+    "save must create settings.json snapshot, store: {}", store.display(),
+  );
+}
+
+/// acc27 (T09 — save without `~/.claude.json`): save succeeds even when source is absent.
+///
+/// Root Cause (before fix): If `let _ = std::fs::copy(paths.claude_json_file(), ...)` were
+///   written as a hard `?` copy, a missing `~/.claude.json` would fail the entire save.
+/// Why Not Caught: All prior save tests relied on a credentials file being present;
+///   no test verified the best-effort behaviour for the new optional sources.
+/// Fix Applied: Use `let _ = std::fs::copy(...)` (discard result) for both snapshot copies —
+///   missing source silently skips; credential copy still uses `?` (required).
+/// Prevention: For every best-effort file operation, add a test where the source is absent
+///   to confirm the operation succeeds and downstream callers are not affected.
+/// Pitfall: `let _ = expr` discards the `Result` ENTIRELY — compilation will not warn
+///   about missing files. Always add a best-effort-absent test like this one.
+#[ test ]
+fn acc27_save_succeeds_without_claude_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Only credentials file — no ~/.claude.json, no settings.json.
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+
+  let out  = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  assert!(
+    store.join( "alice@acme.com.credentials.json" ).exists(),
+    "save must still create credential file when snapshots absent",
+  );
+  // Snapshot files must be absent (not created from non-existent sources).
+  assert!(
+    !store.join( "alice@acme.com.claude.json" ).exists(),
+    "no .claude.json source → no .claude.json snapshot must be created",
+  );
+}
+
+/// acc28 (T09 — save with claude.json but without settings.json): partial snapshot scenario.
+///
+/// Root Cause (before fix): Same as acc27 — the settings.json copy used a hard `?`, so a
+///   missing `settings.json` would abort save even when `~/.claude.json` was present.
+/// Why Not Caught: No test exercised the partial-source scenario.
+/// Fix Applied: Both snapshot copies use `let _ = std::fs::copy(...)` independently so
+///   one absent source does not block the other copy.
+/// Prevention: Test each source file independently — one present, one absent — to confirm
+///   the two best-effort copies are truly independent and not short-circuit-evaluated.
+/// Pitfall: If `save()` used a single compound expression for both copies, one absent
+///   source would prevent the other snapshot from being created. Independence is required.
+#[ test ]
+fn acc28_save_succeeds_without_settings_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Credentials + .claude.json present; settings.json absent.
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json_full( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe" );
+
+  let out  = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  assert!(
+    store.join( "alice@acme.com.credentials.json" ).exists(),
+    "save must create credential snapshot",
+  );
+  assert!(
+    store.join( "alice@acme.com.claude.json" ).exists(),
+    "save must create .claude.json snapshot when source present",
+  );
+  assert!(
+    !store.join( "alice@acme.com.settings.json" ).exists(),
+    "no settings.json source → no settings.json snapshot must be created",
   );
 }

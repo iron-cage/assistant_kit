@@ -332,19 +332,24 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
 /// Returns `"(no accounts configured)\n"` when `accounts` is empty.
 /// When any field flag is `true`, each account block is followed by its fields
 /// and separated from the next account by a blank line.
-#[ allow( clippy::fn_params_excessive_bools ) ]
+#[ allow( clippy::fn_params_excessive_bools, clippy::too_many_arguments ) ]
 #[ inline ]
 fn render_accounts_text(
-  accounts     : &[ &crate::account::Account ],
-  show_active  : bool,
-  show_sub     : bool,
-  show_tier    : bool,
-  show_expires : bool,
-  show_org     : bool,
+  accounts          : &[ &crate::account::Account ],
+  show_active       : bool,
+  show_sub          : bool,
+  show_tier         : bool,
+  show_expires      : bool,
+  show_org          : bool,
+  show_display_name : bool,
+  show_role         : bool,
+  show_billing      : bool,
+  show_model        : bool,
 ) -> String
 {
   if accounts.is_empty() { return "(no accounts configured)\n".to_string(); }
-  let any_field = show_active || show_sub || show_tier || show_expires || show_org;
+  let any_field = show_active || show_sub || show_tier || show_expires || show_org
+    || show_display_name || show_role || show_billing || show_model;
   let mut out   = String::new();
   let last_idx  = accounts.len() - 1;
   for ( idx, a ) in accounts.iter().enumerate()
@@ -384,7 +389,31 @@ fn render_accounts_text(
         };
         let _ = writeln!( out, "  Expires: {exp}" );
       }
-      if show_org { let _ = writeln!( out, "  Org:     N/A" ); }
+      if show_org
+      {
+        let org = if a.org.is_empty() { "N/A" } else { &a.org };
+        let _ = writeln!( out, "  Org:     {org}" );
+      }
+      if show_display_name
+      {
+        let dn = if a.display_name.is_empty() { "N/A" } else { &a.display_name };
+        let _ = writeln!( out, "  Display: {dn}" );
+      }
+      if show_role
+      {
+        let role = if a.role.is_empty() { "N/A" } else { &a.role };
+        let _ = writeln!( out, "  Role:    {role}" );
+      }
+      if show_billing
+      {
+        let billing = if a.billing.is_empty() { "N/A" } else { &a.billing };
+        let _ = writeln!( out, "  Billing: {billing}" );
+      }
+      if show_model
+      {
+        let model = if a.model.is_empty() { "N/A" } else { &a.model };
+        let _ = writeln!( out, "  Model:   {model}" );
+      }
       if idx < last_idx { out.push( '\n' ); }
     }
   }
@@ -459,11 +488,15 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     found
   };
 
-  let show_active  = matches!( cmd.arguments.get( "active"  ), Some( Value::Boolean( true ) ) | None );
-  let show_sub     = matches!( cmd.arguments.get( "sub"     ), Some( Value::Boolean( true ) ) | None );
-  let show_tier    = matches!( cmd.arguments.get( "tier"    ), Some( Value::Boolean( true ) ) | None );
-  let show_expires = matches!( cmd.arguments.get( "expires" ), Some( Value::Boolean( true ) ) | None );
-  let show_org     = matches!( cmd.arguments.get( "org"     ), Some( Value::Boolean( true ) ) | None );
+  let show_active       = matches!( cmd.arguments.get( "active"       ), Some( Value::Boolean( true ) ) | None );
+  let show_sub          = matches!( cmd.arguments.get( "sub"          ), Some( Value::Boolean( true ) ) | None );
+  let show_tier         = matches!( cmd.arguments.get( "tier"         ), Some( Value::Boolean( true ) ) | None );
+  let show_expires      = matches!( cmd.arguments.get( "expires"      ), Some( Value::Boolean( true ) ) | None );
+  let show_org          = matches!( cmd.arguments.get( "org"          ), Some( Value::Boolean( true ) ) | None );
+  let show_display_name = matches!( cmd.arguments.get( "display_name" ), Some( Value::Boolean( true ) ) );
+  let show_role         = matches!( cmd.arguments.get( "role"         ), Some( Value::Boolean( true ) ) );
+  let show_billing      = matches!( cmd.arguments.get( "billing"      ), Some( Value::Boolean( true ) ) );
+  let show_model        = matches!( cmd.arguments.get( "model"        ), Some( Value::Boolean( true ) ) );
   let content = match opts.format
   {
     OutputFormat::Json =>
@@ -477,12 +510,19 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
         let entries : Vec< String > = accounts.iter().map( |a|
         {
           format!(
-            "{{\"name\":\"{}\",\"is_active\":{},\"subscription_type\":\"{}\",\"rate_limit_tier\":\"{}\",\"expires_at_ms\":{},\"org\":\"N/A\"}}",
+            "{{\"name\":\"{}\",\"is_active\":{},\"subscription_type\":\"{}\",\
+             \"rate_limit_tier\":\"{}\",\"expires_at_ms\":{},\"org\":\"{}\",\
+             \"display_name\":\"{}\",\"role\":\"{}\",\"billing\":\"{}\",\"model\":\"{}\"}}",
             json_escape( &a.name ),
             a.is_active,
             json_escape( &a.subscription_type ),
             json_escape( &a.rate_limit_tier ),
             a.expires_at_ms,
+            json_escape( &a.org ),
+            json_escape( &a.display_name ),
+            json_escape( &a.role ),
+            json_escape( &a.billing ),
+            json_escape( &a.model ),
           )
         } ).collect();
         format!( "[{}]\n", entries.join( "," ) )
@@ -490,7 +530,11 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     }
     OutputFormat::Text =>
     {
-      render_accounts_text( &accounts, show_active, show_sub, show_tier, show_expires, show_org )
+      render_accounts_text(
+        &accounts,
+        show_active, show_sub, show_tier, show_expires, show_org,
+        show_display_name, show_role, show_billing, show_model,
+      )
     }
   };
   Ok( OutputData::new( content, "text" ) )

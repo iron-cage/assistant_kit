@@ -23,7 +23,7 @@
 //! for acct in account::list( credential_store ).expect( "failed to list accounts" )
 //! {
 //!   let active = if acct.is_active { " ← active" } else { "" };
-//!   println!( "{}{} ({})", acct.name, active, acct.subscription_type );
+//!   println!( "{}{} ({}) org={}", acct.name, active, acct.subscription_type, acct.org );
 //! }
 //!
 //! // Save current credentials as "alice@acme.com"
@@ -53,6 +53,21 @@ pub struct Account
   pub expires_at_ms : u64,
   /// Whether this account's credentials are currently active.
   pub is_active : bool,
+  /// Organisation name from saved `{name}.claude.json` `oauthAccount.organizationName`.
+  /// Empty string when snapshot absent or field missing.
+  pub org : String,
+  /// Display name from saved `{name}.claude.json` `oauthAccount.displayName`.
+  /// Empty string when snapshot absent or field missing.
+  pub display_name : String,
+  /// Organisation role from saved `{name}.claude.json` `oauthAccount.organizationRole`.
+  /// Empty string when snapshot absent or field missing.
+  pub role : String,
+  /// Billing type from saved `{name}.claude.json` `oauthAccount.billingType`.
+  /// Empty string when snapshot absent or field missing.
+  pub billing : String,
+  /// Active model from saved `{name}.settings.json` `model` field.
+  /// Empty string when snapshot absent or field missing.
+  pub model : String,
 }
 
 /// List all accounts in `credential_store`.
@@ -84,7 +99,32 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
       .unwrap_or( 0 );
     let is_active = active.as_deref() == Some( name.as_str() );
 
-    accounts.push( Account { name, subscription_type, rate_limit_tier, expires_at_ms, is_active } );
+    // Read per-account snapshot files written by save() — best-effort, empty when absent.
+    let claude_json = std::fs::read_to_string(
+      credential_store.join( format!( "{name}.claude.json" ) )
+    ).unwrap_or_default();
+    let settings_json = std::fs::read_to_string(
+      credential_store.join( format!( "{name}.settings.json" ) )
+    ).unwrap_or_default();
+    let org          = parse_string_field( &claude_json, "organizationName" ).unwrap_or_default();
+    let display_name = parse_string_field( &claude_json, "displayName"      ).unwrap_or_default();
+    let role         = parse_string_field( &claude_json, "organizationRole" ).unwrap_or_default();
+    let billing      = parse_string_field( &claude_json, "billingType"      ).unwrap_or_default();
+    let model        = parse_string_field( &settings_json, "model"          ).unwrap_or_default();
+
+    accounts.push( Account
+    {
+      name,
+      subscription_type,
+      rate_limit_tier,
+      expires_at_ms,
+      is_active,
+      org,
+      display_name,
+      role,
+      billing,
+      model,
+    } );
   }
 
   accounts.sort_by( | a, b | a.name.cmp( &b.name ) );
@@ -106,6 +146,16 @@ pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths ) -> Re
   std::fs::create_dir_all( credential_store )?;
   let dest = credential_store.join( format!( "{name}.credentials.json" ) );
   std::fs::copy( paths.credentials_file(), dest )?;
+  // Best-effort: snapshot ~/.claude.json and settings.json alongside credentials.
+  // Missing source files are silently skipped — save() must not fail for absent optionals.
+  let _ = std::fs::copy(
+    paths.claude_json_file(),
+    credential_store.join( format!( "{name}.claude.json" ) ),
+  );
+  let _ = std::fs::copy(
+    paths.settings_file(),
+    credential_store.join( format!( "{name}.settings.json" ) ),
+  );
   Ok( () )
 }
 

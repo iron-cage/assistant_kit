@@ -76,6 +76,46 @@
       aliases: []
       tags: []
 
+    - name: "display_name"
+      kind: "Boolean"
+      description: "Show display name from saved ~/.claude.json snapshot (opt-in)"
+      hint: "Show Display: line"
+      optional: true
+      default: "false"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "role"
+      kind: "Boolean"
+      description: "Show organisation role from saved ~/.claude.json snapshot (opt-in)"
+      hint: "Show Role: line"
+      optional: true
+      default: "false"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "billing"
+      kind: "Boolean"
+      description: "Show billing type from saved ~/.claude.json snapshot (opt-in)"
+      hint: "Show Billing: line"
+      optional: true
+      default: "false"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "model"
+      kind: "Boolean"
+      description: "Show active model from saved settings.json snapshot (opt-in)"
+      hint: "Show Model: line"
+      optional: true
+      default: "false"
+      validation_rules: []
+      aliases: []
+      tags: []
+
     - name: "format"
       kind: "String"
       description: "Output format (text or json)"
@@ -90,6 +130,7 @@
     - ".accounts"
     - ".accounts name::alice@acme.com"
     - ".accounts active::0 sub::0"
+    - ".accounts display_name::1 role::1 billing::1 model::1"
     - ".accounts format::json"
   auto_help_enabled: true
 

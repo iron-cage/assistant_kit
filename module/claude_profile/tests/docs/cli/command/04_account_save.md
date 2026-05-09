@@ -16,6 +16,9 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 | IT-8 | `dry::1` then `dry::0` creates file as previewed | Dry Run Fidelity |
 | IT-9 | Saved file content matches active credentials exactly | Data Integrity |
 | IT-10 | Missing `name::` parameter exits 1 | Required Param |
+| IT-11 | Save creates `{name}.claude.json` and `{name}.settings.json` snapshots when both sources exist | Metadata Snapshot |
+| IT-12 | Save succeeds when `~/.claude.json` absent — only credential file created | Metadata Snapshot / Best-Effort |
+| IT-13 | Save succeeds when `settings.json` absent — credential + `.claude.json` created, no `.settings.json` | Metadata Snapshot / Best-Effort |
 
 ### Test Coverage Summary
 
@@ -27,8 +30,10 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 - Dry Run: 2 tests
 - Data Integrity: 1 test
 - Required Param: 1 test
+- Metadata Snapshot: 1 test
+- Metadata Snapshot / Best-Effort: 2 tests
 
-**Total:** 10 integration tests
+**Total:** 13 integration tests
 
 ---
 
@@ -128,4 +133,34 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 - **When:** `clp .account.save`
 - **Then:** Error message indicating the `name::` parameter is required. No file created.; no file created; error message about required parameter
 - **Exit:** 1
+- **Source:** [commands.md — .account.save](../../../../docs/cli/commands.md#command--4-accountsave)
+
+---
+
+### IT-11: Save creates metadata snapshots when both source files exist
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists with `oauthAccount.displayName = "alice"`. `~/.claude/settings.json` exists with `model = "sonnet"`.
+- **When:** `clp .account.save name::work@acme.com`
+- **Then:** `{credential_store}/work@acme.com.claude.json` created (copy of `~/.claude.json`); `{credential_store}/work@acme.com.settings.json` created (copy of `settings.json`); both files contain correct content.; metadata snapshot files created alongside credential file
+- **Exit:** 0
+- **Source:** [commands.md — .account.save](../../../../docs/cli/commands.md#command--4-accountsave)
+
+---
+
+### IT-12: Save succeeds when `~/.claude.json` absent — best-effort snapshot
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` does NOT exist.
+- **When:** `clp .account.save name::work@acme.com`
+- **Then:** Credential file created. No `.claude.json` snapshot created. No error emitted; save succeeds silently despite missing source.; save completes successfully; no error for absent optional source
+- **Exit:** 0
+- **Source:** [commands.md — .account.save](../../../../docs/cli/commands.md#command--4-accountsave)
+
+---
+
+### IT-13: Save succeeds when `settings.json` absent — best-effort snapshot
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists. `~/.claude/settings.json` does NOT exist.
+- **When:** `clp .account.save name::work@acme.com`
+- **Then:** Credential file created. `{credential_store}/work@acme.com.claude.json` created. No `.settings.json` snapshot created. No error emitted.; both present files snapshotted; absent source silently skipped
+- **Exit:** 0
 - **Source:** [commands.md — .account.save](../../../../docs/cli/commands.md#command--4-accountsave)

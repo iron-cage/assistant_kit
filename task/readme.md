@@ -10,6 +10,7 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
+| 115 | ✅ Complete | Extend `.accounts` with rich OAuth metadata fields | feature | 2026-05-07 | [115](completed/115_accounts_rich_metadata.md) |
 | 114 | ✅ Complete | Fix `accounts_routine` HOME validation and verify full test suite | verification | 2026-05-04 | [114](completed/114_fix_accounts_routine_and_run_tests.md) |
 | 113 | ✅ Complete | Add parameter descriptions to `.credentials.status` help output | feature | 2026-05-04 | [113](completed/113_credentials_status_help_descriptions.md) |
 | 112 | ✅ Complete | Implement field-presence params for `.credentials.status` | feature | 2026-05-04 | [112](completed/112_credentials_status_field_presence_params.md) |
@@ -128,7 +129,7 @@
 
 **Status Distribution:**
 - 🎯 Available: 0
-- ✅ Complete: 114
+- ✅ Complete: 115
 
 **Status Legend:**
 - 📥 Backlog — not yet planned
@@ -138,4 +139,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-05-04 (TSK-114 created: fix accounts_routine HOME validation + full test run)
+**Last Updated:** 2026-05-07 (TSK-115 complete: extend `.accounts` with rich OAuth metadata fields)

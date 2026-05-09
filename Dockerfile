@@ -1,11 +1,104 @@
 # workspace / module test runner  (parameterised via build args)
 #
-# Three-stage build using cargo-chef for dependency caching.
+# Why cargo-chef:
+#   On a local machine, cargo keeps a persistent target/ directory.  Changing a .rs
+#   file only recompiles the affected crate and its dependents — external crates are
+#   untouched.  Docker breaks this: there is no persistent target/ between builds.
+#   Any .rs change invalidates the COPY . . layer, so the following cargo command
+#   starts from an empty target/ and recompiles every external dependency from
+#   scratch — even for a one-line change in your own code.
+#
+#   cargo-chef restores the local-dev behaviour inside Docker by splitting
+#   compilation into two separate layers:
+#     1. cook  — compiles all external deps from recipe.json (derived from
+#                Cargo.toml/Cargo.lock only, so .rs changes never touch it)
+#     2. test  — compiles only workspace crates (deps already done in cook)
+#   Docker caches the cook layer indefinitely; only the test layer reruns on
+#   source changes.  Net effect: same incremental speed as a local cargo build.
+#
+#   What crosses stage boundaries:
+#
+#     planner ──► recipe.json
+#                   dep manifest derived purely from Cargo.toml + Cargo.lock;
+#                   contains no .rs content, so it never changes on source edits
+#
+#     cook    ──► /workspace/target/debug/deps/*.rlib
+#                   compiled external crate artifacts (serde, tokio, anyhow, …)
+#                 /usr/local/cargo/registry/
+#                   downloaded crate source archives (cargo re-validates these
+#                   during the final link step; omitting them causes link errors)
+#
+#     test    ──► receives both cook outputs, then:
+#                 COPY . . adds the full workspace source on top
+#
+#   Filesystem when cargo runs in the test stage:
+#
+#     /workspace/
+#     ├── Cargo.toml, Cargo.lock     ← COPY . .
+#     ├── src/ module/ …             ← COPY . .  (workspace source)
+#     └── target/debug/deps/         ← from cook  (external deps pre-built)
+#             ├── libserde-*.rlib         ✓ already compiled — skipped
+#             ├── libtokio-*.rlib         ✓ already compiled — skipped
+#             └── …                       ✓ all external crates — skipped
+#
+#     /usr/local/cargo/registry/     ← from cook  (source archives for linking)
+#
+#   cargo sees a populated target/debug/deps/ and skips every external crate.
+#   It compiles only the workspace crates (absent from deps/), then links.
+#   This is identical to what cargo does on a local machine after the first build.
+#
+# Stages:
+#   A Docker stage is one isolated build environment started by a FROM instruction.
+#   Each stage gets its own filesystem; the only way to move data between stages is
+#   an explicit COPY --from=<stage>.  The final image contains only the last stage —
+#   all intermediate stages are discarded (they exist only to produce artifacts for
+#   downstream stages to cherry-pick).
+#
+#   Stage    Base        cargo-chef    Purpose
+#   ──────── ─────────── ────────────  ────────────────────────────────────────────
+#   chef     rust:slim   installs it   shared base — compiled once, inherited below
+#   planner  chef        inherited     scans workspace manifests → emits recipe.json
+#   cook     chef        inherited     compiles all external dep .rlib from recipe.json
+#   test     rust:slim   absent        final image — receives cook artifacts + source
+#
+#   Stage    Receives                         Produces                       In image?
+#   ──────── ───────────────────────────────  ─────────────────────────────  ─────────
+#   chef     rust:slim                        rust:slim + cargo-chef binary  no
+#   planner  chef + COPY . . (full source)    recipe.json                    no
+#   cook     chef + recipe.json               target/debug/deps/ + registry  no
+#   test     rust:slim + cook dirs + source   the runnable image             YES
+#
+#   Data flow:
+#
+#     rust:slim
+#         │
+#         ▼
+#     ┌─ chef ──────────────────────────────────────┐
+#     │  RUN cargo install cargo-chef               │
+#     └──────────┬──────────────────────┬───────────┘
+#                │                      │
+#                ▼                      ▼
+#     ┌─ planner ────────┐    ┌─ cook ───────────────────────────┐
+#     │  COPY . .        │    │  COPY --from=planner recipe.json │
+#     │  chef prepare    │    │  chef cook --tests               │
+#     └────────┬─────────┘    └──────────────────┬───────────────┘
+#              │ recipe.json                      │ target/debug/deps/*.rlib
+#              └──────────────────────────────────┘ /usr/local/cargo/registry/
+#                                                  │
+#                                                  ▼  COPY --from=cook
+#                                        ┌─ test ───────────────────────────┐
+#                                        │  FROM rust:slim                  │
+#                                        │  + nextest, clippy, curl, procps │
+#                                        │  + cook artifacts (lines 153–154)│
+#                                        │  + COPY . .  (full source)       │
+#                                        │  ── final runnable image ─────── │
+#                                        └──────────────────────────────────┘
+#
 # Rebuilt layers:
 #   chef/planner/cook  — only when Cargo.toml or Cargo.lock change
 #   test               — on every source change (fast: deps already compiled)
 #
-# Build args (values come from run/docker.yml, passed by run/docker-run):
+# Build args (values come from run/runbox.yml, passed by run/docker-run):
 #   COOK_FLAGS  — --workspace | -p claude_profile | -p claude_storage
 #   TEST_USER   — testuser (chmod-000 + path-resolution tests) | root
 #   HOME_DIR    — /workspace (ClaudePaths + path tests) | /root
@@ -125,7 +218,7 @@ RUN [ "$TEST_USER" = "root" ] || ( \
 USER $TEST_USER
 
 # Offline tests by default — no ~/.claude/ storage or w3 required.
-# CMD_SCOPE and CMD_FILTER are baked in at build time from docker.yml values.
+# CMD_SCOPE and CMD_FILTER are baked in at build time from runbox.yml values.
 ARG CMD_SCOPE=--workspace
 ARG CMD_FILTER=!test(lim_it) & !binary(behavior)
 CMD cargo nextest run $CMD_SCOPE --filter-expr "$CMD_FILTER"

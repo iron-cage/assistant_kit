@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_profile
-  node_count: 18
-  edge_count: 11
-  component_count: 10
-  generated: 2026-04-19
+  node_count: 19
+  edge_count: 14
+  component_count: 8
+  generated: 2026-05-07
 
 nodes:
   - id: feature/001
@@ -71,6 +71,11 @@ nodes:
     label: Account Rate-Limit Utilization
     entity: feature
 
+  - id: feature/014
+    file: feature/014_rich_account_metadata.md
+    label: Rich Account Metadata
+    entity: feature
+
   - id: invariant/001
     file: invariant/001_zero_third_party_deps.md
     label: Zero Third-Party Dependencies
@@ -121,14 +126,23 @@ edges:
   # feature/013 → feature/011: .account.limits uses same name:: account selection pattern
   - {from: feature/013, to: feature/011, label: "shares name:: account selection pattern"}
 
+  # feature/014 → feature/002: rich metadata extends save() to snapshot metadata files
+  - {from: feature/014, to: feature/002, label: "extends save() with metadata snapshots"}
+
+  # feature/014 → feature/003: rich metadata extends list() to read snapshot fields
+  - {from: feature/014, to: feature/003, label: "extends list() with snapshot field reading"}
+
+  # feature/014 → feature/012: rich metadata extends credentials.status with new opt-in fields
+  - {from: feature/014, to: feature/012, label: "adds opt-in fields to credentials.status"}
+
   # invariant/004 → invariant/001: both enforce boundary constraints on the library
   - {from: invariant/004, to: invariant/001, label: "related boundary constraint"}
 
 components:
   - id: 1
-    size: 2
+    size: 8
     isolated: false
-    nodes: [feature/001, feature/002]
+    nodes: [feature/001, feature/002, feature/003, feature/009, feature/011, feature/012, feature/013, feature/014]
 
   - id: 2
     size: 4
@@ -136,11 +150,6 @@ components:
     nodes: [feature/004, feature/006, feature/008, invariant/005]
 
   - id: 3
-    size: 4
-    isolated: false
-    nodes: [feature/009, feature/011, feature/012, feature/013]
-
-  - id: 4
     size: 2
     isolated: true
     nodes: [invariant/001, invariant/004]
@@ -149,15 +158,7 @@ components:
       cross-references to the feature or feature-linked invariant components. Isolation is
       expected: they govern library-level constraints rather than any specific feature flow.
 
-  - id: 5
-    size: 1
-    isolated: true
-    nodes: [feature/003]
-    gap: >
-      List Accounts is an orthogonal read-only capability with no dependency edges to other
-      features. Isolation is expected.
-
-  - id: 6
+  - id: 4
     size: 1
     isolated: true
     nodes: [feature/005]
@@ -166,7 +167,7 @@ components:
       features in the doc graph (the active-account guard is a runtime check, not a
       cross-referenced design dependency). Isolation is expected.
 
-  - id: 7
+  - id: 5
     size: 1
     isolated: true
     nodes: [feature/007]
@@ -174,7 +175,7 @@ components:
       File Topology is a foundational path-registry capability consumed by all other features
       but not cross-referenced back to them in the doc instances. Isolation is expected.
 
-  - id: 8
+  - id: 6
     size: 1
     isolated: true
     nodes: [feature/010]
@@ -182,7 +183,7 @@ components:
       Persistent Storage Path is an orthogonal path-resolution capability with no
       cross-references to other doc instances. Isolation is expected.
 
-  - id: 9
+  - id: 7
     size: 1
     isolated: true
     nodes: [invariant/002]
@@ -190,7 +191,7 @@ components:
       Cross-Platform Compatibility is a broad constraint that applies across all features
       but is not cross-referenced from individual feature doc instances. Isolation is expected.
 
-  - id: 10
+  - id: 8
     size: 1
     isolated: true
     nodes: [invariant/003]
