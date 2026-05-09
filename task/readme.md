@@ -1,10 +1,11 @@
 # Task Registry — dream
 
-| Dir | Responsibility |
-|-----|----------------|
-| completed/ | Completed tasks archived after closure |
-| backlog/ | Backlog tasks deferred for future planning |
-| cancelled/ | Cancelled tasks archived after cancellation |
+| Name | Responsibility |
+|------|----------------|
+| `procedure.md` | Add, complete, backlog, and cancel task procedures |
+| `completed/` | Completed tasks archived after closure |
+| `backlog/` | Backlog tasks deferred for future planning |
+| `cancelled/` | Cancelled tasks archived after cancellation |
 
 ## Active Tasks
 

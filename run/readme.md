@@ -8,4 +8,3 @@ Shell scripts for workspace container operations.
 | `docker-run` | Universal Docker runner: reads runbox.yml, builds and runs containers. |
 | `runbox.yml` | Workspace Docker config: image, build args, plugins, test script path. |
 | `test` | Run workspace tests locally; also called by docker-run inside container. |
-| `docs/` | Design documents: runbox variability analysis. |

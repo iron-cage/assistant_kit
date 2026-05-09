@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Universal Docker test runner.
 # Usage: docker-run <config.yml> [command]
-#   command: .build | . | .test | .test.offline | .shell | .help  (default: .test)
+#   command: .build | .test | .test.offline | .shell | .help  (default: help)
 set -euo pipefail
 
 CONFIG="$1"
-COMMAND="${2:-.test}"
+COMMAND="${2:-.}"
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
@@ -241,7 +241,7 @@ cmd_help()
   echo "  .build          Build the $IMAGE container image"
   echo ""
   echo "Testing:"
-  echo "  . / .test       Run all tests${plugin_hint}"
+  echo "  .test           Run all tests${plugin_hint}"
   echo "  .test.offline   Run offline tests only (no external data needed)"
   echo "  .list           List all test names without running"
   echo "  .shell          Interactive bash shell (mounts available)"
@@ -254,11 +254,11 @@ cmd_help()
 
 case "$COMMAND" in
   .build)        cmd_build ;;
-  .|.test)       cmd_test ;;
+  .test)         cmd_test ;;
   .test.offline) cmd_test_offline ;;
   .list)         cmd_list ;;
   .shell)        cmd_shell ;;
-  .help)         cmd_help ;;
+  .|.help)       cmd_help ;;
   *)
     echo "error: unknown command '$COMMAND'" >&2
     echo "run './run/docker .help' for available commands" >&2

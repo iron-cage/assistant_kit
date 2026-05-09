@@ -2,9 +2,10 @@
 
 | Dir/File | Responsibility |
 |----------|----------------|
-| completed/ | Completed tasks archived after closure |
-| backlog/ | Backlog tasks deferred for future planning |
-| cancelled/ | Cancelled tasks archived after cancellation |
+| `procedure.md` | Add, complete, and backlog task procedures |
+| `completed/` | Completed tasks archived after closure |
+| `backlog/` | Backlog tasks deferred for future planning |
+| `cancelled/` | Cancelled tasks archived after cancellation |
 
 ## Active Tasks
 

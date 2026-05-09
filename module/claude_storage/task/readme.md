@@ -1,5 +1,10 @@
 # task
 
+| Dir/File | Responsibility |
+|----------|----------------|
+| `procedure.md` | Add, complete, and backlog task procedures |
+| `completed/` | Completed tasks archived after closure |
+
 ## Tasks Index
 
 | Order | ID | Advisability | Value | Easiness | Safety | Priority | Status | Executor | Task | Purpose |
