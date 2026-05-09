@@ -99,7 +99,7 @@
 #   test               — on every source change (fast: deps already compiled)
 #
 # Build args (values come from run/runbox.yml, passed by run/docker-run):
-#   COOK_FLAGS  — --workspace | -p claude_profile | -p claude_storage
+#   COOK_FLAGS  — derived from CMD_SCOPE by docker-run; not a user-facing config value
 #   TEST_USER   — testuser (chmod-000 + path-resolution tests) | root
 #   HOME_DIR    — /workspace (ClaudePaths + path tests) | /root
 #   CMD_SCOPE   — --workspace | -p claude_profile | -p claude_storage
@@ -147,7 +147,7 @@ RUN cargo chef prepare --recipe-path recipe.json
 # Receives only recipe.json (not source files).
 # This layer is cache-stable: rebuilds only when Cargo.toml or Cargo.lock change,
 # not when .rs files change.
-# COOK_FLAGS selects which crate(s) to compile deps for.
+# COOK_FLAGS mirrors CMD_SCOPE (derived by docker-run, not user-configured directly).
 
 FROM chef AS cook
 ARG COOK_FLAGS=--workspace

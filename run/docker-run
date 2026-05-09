@@ -17,10 +17,10 @@ cfg() { grep -m1 "^$1:" "$CONFIG" | sed 's/^[^:]*:[[:space:]]*//' | tr -d '"'; }
 
 IMAGE="$(cfg image)"                              # image tag for -t at build and image lookup at run
 DOCKERFILE="$WORKSPACE_ROOT/$(cfg dockerfile)"    # absolute Dockerfile path (cfg gives workspace-relative)
-COOK_FLAGS="$(cfg cook_flags)"                    # forwarded as --build-arg to cargo chef cook
 TEST_USER="$(cfg test_user)"                      # forwarded as --build-arg; non-root for chmod-000 tests
 HOME_DIR="$(cfg home_dir)"                        # forwarded as --build-arg; sets $HOME so ClaudePaths finds .claude/
-CMD_SCOPE="$(cfg cmd_scope)"                      # forwarded as --build-arg; crate filter baked into offline CMD
+CMD_SCOPE="$(cfg cmd_scope)"                      # crate filter for nextest run and cargo chef cook
+COOK_FLAGS="$CMD_SCOPE"                           # always equal to cmd_scope — cargo-chef is an impl detail
 CMD_FILTER="$(cfg cmd_filter)"                    # forwarded as --build-arg; nextest filter baked into offline CMD
 TEST_SCRIPT="$(cfg test_script)"                  # path (relative to /workspace) exec'd by cmd_test
 MOUNT_TEST="$(cfg mount_test)"                    # spec passed to _resolve_mount for .test (required=true)

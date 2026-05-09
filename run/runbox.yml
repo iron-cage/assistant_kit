@@ -3,13 +3,11 @@ image: workspace_test
 # path to Dockerfile relative to workspace root (shared across all modules)
 dockerfile: Dockerfile
 
-# passed to `cargo chef cook`; scopes dep precompilation — must mirror cmd_scope
-cook_flags: --workspace
 # non-root so chmod-000 file-permission tests fail correctly (root bypasses checks)
 test_user: testuser
 # $HOME inside container; ClaudePaths resolves .claude/ here → one mount covers credentials + storage
 home_dir: /workspace
-# crate scope for `nextest run`; must match cook_flags so compiled deps align with tested crates
+# crate scope for nextest run and cargo chef cook — single source of truth for both
 cmd_scope: --workspace
 # baked into the image default CMD; excludes tests needing external I/O (offline-safe default)
 cmd_filter: "!test(lim_it) & !binary(behavior)"
