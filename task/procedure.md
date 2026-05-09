@@ -24,3 +24,11 @@
 
 1. Move task file from `task/` to `task/completed/` (or delete if not worth archiving)
 2. Update `readme.md` Active Tasks table: set Status to cancelled, update File link accordingly
+
+## Example
+
+Creating task `003_storage_refactor.md`:
+
+1. Check `readme.md` Active Tasks — current highest ID is `002`
+2. Create `003_storage_refactor.md` in `task/` with title, goal, and steps
+3. Add row: `| 003 | 📥 | Storage Refactor | Architecture | 2026-05-10 | [003_storage_refactor.md](003_storage_refactor.md) |`

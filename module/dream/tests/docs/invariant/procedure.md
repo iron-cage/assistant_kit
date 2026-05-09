@@ -14,3 +14,12 @@
 
 1. Edit the target `NNN_*.md` file
 2. If name or purpose changed: update `readme.md` Overview Table row
+
+## Example
+
+Adding test spec for invariant `003_token_limit_always_positive`:
+
+1. Check highest prefix in `tests/docs/invariant/` — current highest is `002`
+2. Create `003_token_limit_always_positive.md` with Edge Case Index, Coverage Summary, and IN- test cases (GWT format)
+3. Add row to `readme.md`: `| 003_token_limit_always_positive.md | IN specs for token limit positive invariant | ✅ |`
+4. Add entry to `tests/docs/inventory.md`

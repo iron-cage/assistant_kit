@@ -4,7 +4,7 @@
 
 | # | Parameter | Type | Default | Valid Values | Purpose | Used In |
 |---|-----------|------|---------|--------------|---------|---------|
-| 1 | `name::` | `AccountName` | Varies | Email address | Account email for save/switch/delete (required); or accounts/limits query (optional) | 5 cmds |
+| 1 | `name::` | `AccountName` | Varies | Email address | Account email for switch/delete (required); save (optional, inferred from `~/.claude.json`); accounts/limits query (optional) | 5 cmds |
 | 2 | `verbosity::` / `v::` | `VerbosityLevel` | `1` | `0`, `1`, `2` | Output detail: 0=quiet, 1=normal, 2=verbose | 4 cmds |
 | 3 | `format::` / `fmt::` | `OutputFormat` | `text` | `text`, `json` | Output format: `text` or `json` | 6 cmds |
 | 4 | `threshold::` | `WarningThreshold` | `3600` | Non-negative integer (seconds) | Seconds before token expiry to classify as ExpiringSoon | 1 cmd |
@@ -32,12 +32,12 @@
 
 ### Parameter :: 1. `name::`
 
-Identifies which named account to operate on. Required for mutation commands; optional on `.accounts` and `.account.limits` to query a specific account's details without switching to it.
+Identifies which named account to operate on. Required for destructive commands; optional with inference on `.account.save`; optional for query on `.accounts` and `.account.limits`.
 
 - **Type:** `AccountName`
-- **Default:** **(required)** on `.account.save`, `.account.switch`, `.account.delete`; **optional** on `.accounts` (omit to list all) and `.account.limits` (omit for active account)
+- **Default:** **(required)** on `.account.switch`, `.account.delete`; **inferred** on `.account.save` (reads `emailAddress` from `~/.claude.json`; exits 1 if absent); **optional** on `.accounts` (omit to list all) and `.account.limits` (omit for active account)
 - **Constraints:** Valid email address (non-empty, must contain `@`, non-empty local part and domain)
-- **Commands:** [`.accounts`](commands.md#command--3-accounts) *(optional)*, [`.account.save`](commands.md#command--4-accountsave), [`.account.switch`](commands.md#command--5-accountswitch), [`.account.delete`](commands.md#command--6-accountdelete), [`.account.limits`](commands.md#command--11-accountlimits) *(optional)*
+- **Commands:** [`.accounts`](commands.md#command--3-accounts) *(optional)*, [`.account.save`](commands.md#command--4-accountsave) *(optional/inferred)*, [`.account.switch`](commands.md#command--5-accountswitch), [`.account.delete`](commands.md#command--6-accountdelete), [`.account.limits`](commands.md#command--11-accountlimits) *(optional)*
 - **Purpose:** Selects the target credential file at `{credential_store}/{email}.credentials.json`. Name validation matches the library's `account::validate_name()` rules. An invalid name exits 1; a valid but unknown name exits 2.
 
 **Examples:**

@@ -11,6 +11,7 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
+| 116 | 🎯 Available | Make `name::` optional on `.account.save` — infer from `emailAddress` | feature | 2026-05-10 | [116](116_account_save_infer_name_from_email.md) |
 | 115 | ✅ Complete | Extend `.accounts` with rich OAuth metadata fields | feature | 2026-05-07 | [115](completed/115_accounts_rich_metadata.md) |
 | 114 | ✅ Complete | Fix `accounts_routine` HOME validation and verify full test suite | verification | 2026-05-04 | [114](completed/114_fix_accounts_routine_and_run_tests.md) |
 | 113 | ✅ Complete | Add parameter descriptions to `.credentials.status` help output | feature | 2026-05-04 | [113](completed/113_credentials_status_help_descriptions.md) |

@@ -8,7 +8,8 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 |----|-----------|----------|
 | EC-1 | `name::work` — valid name accepted | Valid Name |
 | EC-2 | `name::` (empty value) rejected with exit 1 | Empty Value |
-| EC-3 | Omitted `name::` on required command exits 1 | Required Parameter |
+| EC-3 | Omitted `name::` on `.account.switch` exits 1 | Required Parameter |
+| EC-17 | Omitted `name::` on `.account.save` with `emailAddress` in `~/.claude.json` — infers name | Name Inference |
 | EC-4 | `name::` with `/` rejected with exit 1 | Forbidden Characters |
 | EC-5 | `name::` with `\` rejected with exit 1 | Forbidden Characters |
 | EC-6 | `name::` with `*?"<>\|` rejected with exit 1 | Forbidden Characters |
@@ -28,13 +29,14 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - Valid Name: 1 test
 - Empty Value: 1 test
 - Required Parameter: 1 test
+- Name Inference: 1 test
 - Forbidden Characters: 4 tests
 - Valid Characters: 2 tests
 - Boundary Value: 1 test
 - Optional on Accounts: 3 tests
 - Optional on Limits (FR-18): 3 tests
 
-**Total:** 16 edge cases
+**Total:** 17 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
 
@@ -60,11 +62,11 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 
 ---
 
-### EC-3: Required Parameter
+### EC-3: Required Parameter on `.account.switch`
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`.
-- **When:** `clp .account.save`
-- **Then:** Error message indicating `name::` is required with exit 1.; missing required parameter clearly reported
+- **When:** `clp .account.switch`
+- **Then:** Error message indicating `name::` is required with exit 1.; missing required parameter clearly reported; `.account.switch` has no inference fallback
 - **Exit:** 1
 - **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
 
@@ -197,3 +199,13 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **Then:** Exit 2; stderr contains `not found` or `ghost`.; not-found is a runtime error (2), not a usage error (1)
 - **Exit:** 2
 - **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name) (FR-18)
+
+---
+
+### EC-17: Name Inference on `.account.save` — `emailAddress` from `~/.claude.json`
+
+- **Given:** Active credentials exist at `~/.claude/.credentials.json`. `~/.claude.json` exists and contains `"emailAddress": "alice@acme.com"`.
+- **When:** `clp .account.save` (no `name::` argument)
+- **Then:** Exit 0; stdout: `saved current credentials as 'alice@acme.com'`; credential file created using the inferred email as the account name.; `name::` behaves as optional on `.account.save` when `emailAddress` is readable
+- **Exit:** 0
+- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)

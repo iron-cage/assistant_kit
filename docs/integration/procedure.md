@@ -14,3 +14,11 @@
 
 1. Edit the target `NNN_*.md` file
 2. If name or purpose changed: update `readme.md` Overview Table row
+
+## Example
+
+Adding integration document `004_claude_api`:
+
+1. Check `readme.md` Overview Table — current highest ID is `003`
+2. Create `004_claude_api.md` in this directory
+3. Add row: `| 004 | Integration Name | [004_claude_api.md](004_claude_api.md) | Active |`

@@ -12,6 +12,7 @@ Claude Code account credential management.
 | `docs/` | Behavioral requirements: features (FR-6–FR-18), invariants, CLI reference |
 | `unilang.commands.yaml` | YAML command metadata for 10 profile commands |
 | `run/` | Container runner: thin wrapper, config manifest, and test script. |
+| `verb/` | Shell scripts for each `do` protocol verb (build, test, clean, run, lint). |
 | `vision.md` | Crate vision, design decisions, and open problems |
 | `vision_ua.md` | Crate vision in Ukrainian |
 | `changelog.md` | Notable changes by version |

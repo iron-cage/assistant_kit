@@ -12,3 +12,12 @@
 4. Register in `docs/runbox/readme.md` Responsibility Table: add row for the new directory
 
 **Note:** To add or update an individual parameter, use `parameter/procedure.md`. To add or update an individual plugin, use `plugin/procedure.md`.
+
+## Example
+
+Adding a `secret/` analysis dimension for secret injection slots:
+
+1. Create `docs/runbox/secret/` directory
+2. Create `secret/readme.md` with Scope and Overview Table (follow `parameter/readme.md` pattern)
+3. Create `secret/procedure.md` with Add and Update procedures for secret instances
+4. Add row to `docs/runbox/readme.md`: `| \`secret/\` | Per-secret reference for all secret injection slots |`

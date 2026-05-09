@@ -14,3 +14,11 @@
 
 1. Edit the target `NNN_*.md` file
 2. If name or purpose changed: update `readme.md` Overview Table row
+
+## Example
+
+Adding pattern document `003_builder`:
+
+1. Check `readme.md` Overview Table — current highest ID is `002`
+2. Create `003_builder.md` in this directory
+3. Add row: `| 003 | Pattern Name | [003_builder.md](003_builder.md) | Active |`

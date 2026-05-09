@@ -7,3 +7,17 @@
 ### Notes
 
 Always volume+seed strategy. Strategy is split across dockerfile (seed) and docker-run (volume management); both must change together.
+
+### Example
+
+First `./run/docker .test.offline` invocation:
+1. `_ensure_build_cache`: `docker volume inspect workspace_test_target` → not found
+2. Creates volume; seeds it: `docker run -v workspace_test_target:/workspace/target_seed workspace_test bash -c "cp -a /workspace/target/. /workspace/target_seed/ && chmod -R a+rwX /workspace/target_seed/"`
+3. `cmd_test_offline` runs: `docker run -v workspace_test_target:/workspace/target workspace_test cargo nextest run --workspace --filter-expr "..."`
+4. Cargo finds a pre-populated `target/` — only changed workspace crates recompile; unchanged artifacts from the cook stage are reused immediately
+
+After `./run/docker .build` (image rebuild):
+- `cmd_build()` deletes `workspace_test_target` and `workspace_test_plugin_targets` volumes
+- Next `_ensure_build_cache` re-seeds from the new image's freshly-cooked `target/`
+
+The seed lives at `/workspace/target` in the image (deposited by the cook stage). `/workspace/target_seed` is a temporary mount point used only during seeding — absent from normal test runs.

@@ -23,7 +23,7 @@
 ### Quick Reference
 
 **Required Parameters:**
-- `name::` — required on `.account.save`, `.account.switch`, `.account.delete` (must be an email address)
+- `name::` — required on `.account.switch`, `.account.delete` (must be an email address); optional on `.account.save` (inferred from `~/.claude.json` `emailAddress` when omitted)
 
 **Most-Used Parameters:**
 - `format::` — 6 commands
@@ -170,24 +170,28 @@ clp .accounts format::json
 
 Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and snapshots `~/.claude.json` and `~/.claude/settings.json` as named per-account files, creating the credential store directory if needed. Use this to preserve the full current account state before switching.
 
--- **Parameters:** [`name::`](params.md#parameter--1-name) **(required)**, [`dry::`](params.md#parameter--5-dry)
--- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: credentials unreadable)
+-- **Parameters:** [`name::`](params.md#parameter--1-name), [`dry::`](params.md#parameter--5-dry)
+-- **Exit:** 0 (success) | 1 (usage: invalid name or cannot infer email) | 2 (runtime: credentials unreadable)
 
 **Syntax:**
 
 ```bash
-clp .account.save name::alice@acme.com
+clp .account.save                          # infer name from ~/.claude.json emailAddress
+clp .account.save name::alice@acme.com    # explicit name
 clp .account.save name::alice@acme.com dry::1
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `name::` | [`AccountName`] | **(required)** | Account email to save as |
+| `name::` | [`AccountName`] | `auto` (inferred from `~/.claude.json` `emailAddress`) | Account email to save as |
 | `dry::` | `bool` | `0` | Preview action without executing |
 
 **Examples:**
 
 ```bash
+clp .account.save
+# saved current credentials as 'alice@acme.com'   (inferred from ~/.claude.json)
+
 clp .account.save name::alice@acme.com
 # saved current credentials as 'alice@acme.com'
 

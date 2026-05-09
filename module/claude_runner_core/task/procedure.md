@@ -19,3 +19,11 @@
 
 1. Move task file from `task/` to `task/backlog/`
 2. Update `readme.md` Active Tasks table: set Status to backlogged, update File link to `backlog/NNN_*.md`
+
+## Example
+
+Creating task `008_add_retry_logic.md` for this crate:
+
+1. Coordinate with workspace root `task/readme.md` — obtain next global ID (e.g., `008`)
+2. Create `008_add_retry_logic.md` in `task/` with title, goal, and implementation steps
+3. Add row to `readme.md`: `| 008 | 📥 | Add Retry Logic | Feature | 2026-05-10 | [008_add_retry_logic.md](008_add_retry_logic.md) |`

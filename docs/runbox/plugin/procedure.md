@@ -14,3 +14,11 @@
 
 1. Edit the target `NNN_*.md` file
 2. If Status changed: update `readme.md` Overview Table Status column
+
+## Example
+
+Adding plugin `007_git_plugin`:
+
+1. Check `readme.md` Overview Table — current highest ID is `006`
+2. Create `007_git_plugin.md` with Status, Controls, Mechanism, and Notes sections
+3. Add row: `| [007](007_git_plugin.md) | \`git_plugin\` | ⚠️ | VCS Integration |`

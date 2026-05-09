@@ -14,3 +14,12 @@
 
 1. Edit the target `NNN_*.md` file
 2. If name or purpose changed: update `readme.md` Overview Table row
+
+## Example
+
+Adding test spec for feature `005_quota_enforcement`:
+
+1. Check highest prefix in `tests/docs/feature/` — current highest is `004`
+2. Create `005_quota_enforcement.md` with Edge Case Index, Coverage Summary, and FT- test cases (GWT format)
+3. Add row to `readme.md`: `| 005_quota_enforcement.md | FT specs for quota enforcement feature | ✅ |`
+4. Add entry to `tests/docs/inventory.md`
