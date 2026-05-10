@@ -18,7 +18,7 @@
 | `subscriptionType` | Credential file JSON field | Empty or absent → shown as `N/A` |
 | `rateLimitTier` | Credential file JSON field | Empty or absent → shown as `N/A` |
 | `expiresAt` | Credential file `expiresAt` field | Unix epoch milliseconds |
-| `org` | Saved `{name}.claude.json` → `oauthAccount.organizationName` | Empty or absent → shown as `N/A` |
+| `email` | Saved `{name}.claude.json` → `emailAddress` | Empty or absent → shown as `N/A` |
 | `display_name` | Saved `{name}.claude.json` → `oauthAccount.displayName` | Empty or absent → shown as `N/A` |
 | `role` | Saved `{name}.claude.json` → `oauthAccount.organizationRole` | Empty or absent → shown as `N/A` |
 | `billing` | Saved `{name}.claude.json` → `oauthAccount.billingType` | Empty or absent → shown as `N/A` |
@@ -35,7 +35,7 @@
 - `sub::0` — suppress the `Sub:` line
 - `tier::0` — suppress the `Tier:` line
 - `expires::0` — suppress the `Expires:` line
-- `org::0` — suppress the `Org:` line
+- `email::0` — suppress the `Email:` line
 
 **Field-presence toggles (opt-in, default off):**
 - `display_name::1` — show the `Display:` line

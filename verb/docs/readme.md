@@ -20,7 +20,7 @@ Per-verb reference for the `do` Universal Action Protocol.
 | `004_run.md` | `run` verb: execute the project entry point |
 | `005_lint.md` | `lint` verb: static analysis and style checking |
 | `006_verbs.md` | `verbs` meta-verb: list available verbs |
-| `007_detect.md` | `detect` meta-verb: identify the project ecosystem |
+| `007_package_info.md` | `package_info` meta-verb: report deterministic package metadata as JSON |
 | `008_verify.md` | `verify` verb: full checks including dependency analysis and audit |
 
 ### Overview Table
@@ -36,6 +36,6 @@ Canonical verbs implement project actions. Meta verbs implement protocol introsp
 | [005](005_lint.md) | `lint` | canonical | universal | yes | Static analysis, warnings as errors |
 | [008](008_verify.md) | `verify` | canonical | universal | yes | Full checks: tests, deps, audit |
 | [006](006_verbs.md) | `verbs` | meta | universal | — | List all verbs with status |
-| [007](007_detect.md) | `detect` | meta | universal | — | Report project ecosystem and confidence |
+| [007](007_package_info.md) | `package_info` | meta | universal | — | Deterministic flat JSON: name, version, edition, ecosystem |
 
 **Availability:** `universal` = present and functional in all modules; `binary-only` = functional only in modules with a binary entry point; library modules exit 3 (unavailable).

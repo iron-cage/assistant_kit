@@ -1,12 +1,12 @@
 # Plugin: Test lister
 
-- **Status:** 🔒 Hardcoded — in `runbox-run`
+- **Status:** ✅ Configurable — `_plugin_list_cmd()` hook in `run/plugins.sh`
 - **Controls:** What command enumerates available tests for the `.list` sub-command
-- **Mechanism:** `cargo nextest list $CMD_SCOPE $CARGO_FEATURES` in `cmd_list` function; feature flags are configurable via `cargo_features` parameter
+- **Mechanism:** `_plugin_list_cmd()` stub in `runbox-run` sets `$list_cmd`; called after `_plugin_list_args()` so `$cargo_env` reflects active plugin state; `cmd_list()` executes `bash -c "$list_cmd"` inside the container
 
 ### Notes
 
-Tied to nextest. The command structure (`cargo nextest list`) is hardcoded; the feature flags it uses follow the `cargo_features` parameter. Changing the test runner would require updating `cmd_list` in `runbox-run`.
+Default stub: `list_cmd="${cargo_env}cargo nextest list $CMD_SCOPE $CARGO_FEATURES"`. Override `_plugin_list_cmd()` in `run/plugins.sh` to swap the list command for a different test runner (e.g., `list_cmd="jest --listTests"` for Node). The hook receives `$cargo_env` from `_plugin_list_args()` via bash dynamic scope — the default stub incorporates any env prefix set by the active bin-plugin.
 
 ### Example
 

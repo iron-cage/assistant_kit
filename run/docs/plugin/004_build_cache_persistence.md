@@ -1,19 +1,19 @@
 # Plugin: Build cache persistence
 
-- **Status:** 🔒 Hardcoded — mechanism split across `run/runbox.dockerfile` and `runbox-run`
+- **Status:** 🔧 Configurable — `cache_dir` param in `runbox.yml`; default: `target`
 - **Controls:** How compiled artifacts survive between `docker run` invocations
-- **Mechanism:** Named Docker volume seeded from image via `cp -a` in `_ensure_build_cache`; `target_seed/` directory baked into dockerfile at cook stage
+- **Mechanism:** Named Docker volume `${IMAGE}_$CACHE_DIR` seeded from image via `cp -a` in `_ensure_build_cache`; `${CACHE_DIR}_seed/` directory baked into dockerfile as seeding mount point
 
 ### Notes
 
-Always volume+seed strategy. Strategy is split across dockerfile (seed) and runbox-run (volume management); both must change together.
+Always volume+seed strategy. The `cache_dir` param sets the artifact dir name used for the volume, mount path, and seed dir — swap it to match the ecosystem's output dir (e.g., `node_modules` for Node). A compatible dockerfile must bake the matching `${CACHE_DIR}_seed/` directory. The volume name (`${IMAGE}_$CACHE_DIR`) and mount path (`$WORKSPACE_DIR/$CACHE_DIR`) derive from the param automatically.
 
 ### Example
 
-First `./run/runbox .test.offline` invocation:
+First `./run/runbox .test.offline` invocation (default `cache_dir: target`):
 1. `_ensure_build_cache`: `docker volume inspect workspace_test_target` → not found
 2. Creates volume; seeds it: `docker run -v workspace_test_target:/workspace/target_seed workspace_test bash -c "cp -a /workspace/target/. /workspace/target_seed/ && chmod -R a+rwX /workspace/target_seed/"`
-3. `cmd_test_offline` runs: `docker run -v workspace_test_target:/workspace/target workspace_test cargo nextest run --workspace --filter-expr "..."`
+3. `cmd_test_offline` runs: `docker run --rm -v workspace_test_target:/workspace/target workspace_test` — Docker uses the baked `CMD`
 4. Cargo finds a pre-populated `target/` — only changed workspace crates recompile; unchanged artifacts from the cook stage are reused immediately
 
 After `./run/runbox .build` (image rebuild):

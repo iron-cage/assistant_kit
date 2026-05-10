@@ -9,7 +9,7 @@
 
 ### Design
 
-`.credentials.status` reads `emailAddress` and `organizationName` from `~/.claude.json` via `read_live_cred_meta()`. This feature extends that read to expose additional `oauthAccount` fields and the active model setting — both on `.credentials.status` (live data) and `.accounts` (per-account snapshots).
+`.credentials.status` reads `emailAddress` from `~/.claude.json` via `read_live_cred_meta()`. This feature extends that read to expose additional `oauthAccount` fields and the active model setting — both on `.credentials.status` (live data) and `.accounts` (per-account snapshots).
 
 **`.accounts` integration:** `account::save()` snapshots `~/.claude.json` and `~/.claude/settings.json` alongside the credential file. `account::list()` reads these saved snapshots to populate the new fields per account. This makes rich metadata available for all saved accounts, not just the currently active session.
 

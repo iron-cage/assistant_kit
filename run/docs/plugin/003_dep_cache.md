@@ -1,12 +1,12 @@
 # Plugin: Dep cache
 
-- **Status:** 🔒 Hardcoded — mechanism embedded in `run/runbox.dockerfile`
+- **Status:** 🔧 Configurable — `dockerfile` param in `runbox.yml`; default: `run/runbox.dockerfile`
 - **Controls:** How external dependencies are pre-compiled before the test stage
-- **Mechanism:** cargo-chef 4-stage build hardcoded in dockerfile (chef → planner → cook → test)
+- **Mechanism:** Dockerfile selected via `dockerfile` param; default implements cargo-chef 4-stage (chef → planner → cook → test); swap the dockerfile to use a different strategy or no pre-compilation
 
 ### Notes
 
-Always cargo-chef. No way to switch to sccache or a simpler single-stage build without rewriting the dockerfile.
+The default dockerfile uses cargo-chef: `planner` derives a dep manifest from Cargo.toml/Cargo.lock only; `cook` pre-compiles all external crates into `target/debug/deps/`; `test` inherits those artifacts so only workspace crates recompile on source changes. A simpler single-stage dockerfile skips pre-compilation entirely — slower first `.test.offline` but no multi-stage complexity. Swapping also replaces plugin 006 (offline runner) since the new dockerfile defines its own `CMD`.
 
 ### Example
 

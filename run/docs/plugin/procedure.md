@@ -4,12 +4,23 @@
 - **Trigger:** A runbox plugin slot is added, removed, or its status, mechanism, or behavior changes.
 - **Emits:** —
 
-## Add Plugin
+## Add Plugin (✅ hook-based)
 
 1. Assign the next available ID (check `readme.md` Overview Table for current highest ID, increment by 1)
-2. Create `NNN_{snake_case_name}.md` with Status `✅`, Controls, Mechanism, and Notes
-3. Add hook override to `run/plugins.sh` — read config via inherited `cfg`, override the relevant `_plugin_*` stub
-4. Register in `readme.md` Overview Table: add row with ID, Plugin, Status (`✅`), Category
+2. Add `_plugin_<name>()` stub (no-op) to the hook stubs block in `runbox-run`
+3. Create `NNN_{snake_case_name}.md` with Status `✅`, Controls, Mechanism, and Notes
+4. Add hook override to `run/plugins.sh` — read config via inherited `cfg`, override the stub
+5. Register in `readme.md` Overview Table: add row with ID, Plugin, Status (`✅`), Category, Controls, Parameterizable, Affects
+
+## Add Plugin (🔧 param-based)
+
+Param-based plugins are configured via `runbox.yml` and `cfg_or` in `runbox-run`. Use this path when the behavioral slot is controlled by selecting an external resource (e.g., a different dockerfile) rather than injecting logic at runtime.
+
+1. Add `cfg_or` read in `runbox-run` config block (e.g., `DOCKERFILE="$(cfg_or dockerfile ...)"`)
+2. Use the new variable in the relevant `runbox-run` function(s)
+3. Create `NNN_{snake_case_name}.md` with Status `🔧`, Controls, Mechanism, and Notes
+4. Create `run/docs/parameter/NNN_{param_name}.md` documenting the new `runbox.yml` key
+5. Register in both `plugin/readme.md` and `parameter/readme.md` Overview Tables
 
 ## Update Plugin
 

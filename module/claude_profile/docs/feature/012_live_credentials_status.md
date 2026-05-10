@@ -27,12 +27,11 @@ Each output line is independently controlled by a boolean param. All default to 
 | `token::` | `1` | `Token:   valid / expiring in Xm / expired` |
 | `expires::` | `1` | `Expires: in Xh Ym` |
 | `email::` | `1` | `Email:   {emailAddress_or_N/A}` |
-| `org::` | `1` | `Org:     {organizationName_or_N/A}` |
 | `file::` | `0` | `File:    {credentials_file_path}` (opt-in) |
 | `saved::` | `0` | `Saved:   N account(s)` (opt-in, counts `*.credentials.json`) |
 
 **`format::json`:** Returns all fields regardless of field-presence params:
-`{"subscription":"…","tier":"…","token":"…","expires_in_secs":N,"email":"…","org":"…","account":"…","file":"…","saved":N}`.
+`{"subscription":"…","tier":"…","token":"…","expires_in_secs":N,"email":"…","account":"…","file":"…","saved":N}`.
 
 **`Account:` line:** Reads `_active` marker if it exists. Shows `N/A` when no `_active` marker is present (fresh install or uninitialised account store). Because `.account.save` writes `_active` on every successful save, the account name is always present after any save operation.
 
@@ -45,11 +44,11 @@ Each output line is independently controlled by a boolean param. All default to 
 ### Acceptance Criteria
 
 - **AC-01**: `.credentials.status` exits 0 on a machine with only `~/.claude/.credentials.json` (no credential store).
-- **AC-02**: Default output (no params) shows all 7 default-on fields: account, sub, tier, token, expires, email, org.
-- **AC-03**: `format::json` returns valid JSON with subscription, tier, token, expires_in_secs, email, org, account, file, saved.
+- **AC-02**: Default output (no params) shows all 6 default-on fields: account, sub, tier, token, expires, email.
+- **AC-03**: `format::json` returns valid JSON with subscription, tier, token, expires_in_secs, email, account, file, saved.
 - **AC-04**: Absent `~/.claude/.credentials.json` exits 2 with error naming the file path.
-- **AC-05**: Missing or empty email/org and absent `_active` marker → shown as `N/A`.
-- **AC-06**: `sub::0 tier::0 expires::0 email::0 org::0 account::0` → only Token line shown.
+- **AC-05**: Missing or empty email and absent `_active` marker → shown as `N/A`.
+- **AC-06**: `sub::0 tier::0 expires::0 email::0 account::0` → only Token line shown.
 - **AC-07**: `file::1 saved::1` → File and Saved lines appended after default-on fields.
 
 ### Cross-References

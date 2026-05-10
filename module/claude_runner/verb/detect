@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# do detect — identify the project ecosystem (protocol meta-verb)
-set -euo pipefail
-printf 'ecosystem:  cargo\n'
-printf 'signal:     Cargo.toml\n'
-printf 'confidence: inferred\n'

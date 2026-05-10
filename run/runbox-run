@@ -17,7 +17,7 @@ cfg()     { grep -m1 "^$1:" "$CONFIG" | sed 's/^[^:]*:[[:space:]]*//' | tr -d '"
 cfg_or()  { local v; v="$(cfg "$1")"; echo "${v:-$2}"; }
 
 IMAGE="$(cfg image)"                              # image tag for -t at build and image lookup at run
-DOCKERFILE="$SCRIPT_DIR/runbox.dockerfile"         # runbox system build file
+DOCKERFILE="$(cfg_or dockerfile "$SCRIPT_DIR/runbox.dockerfile")"  # runbox system build file
 TEST_USER="$(cfg test_user)"                      # forwarded as --build-arg; non-root for chmod-000 tests
 CMD_SCOPE="$(cfg cmd_scope)"                      # crate filter for nextest run and cargo chef cook
 CMD_FILTER="$(cfg cmd_filter)"                    # forwarded as --build-arg; nextest filter baked into offline CMD
@@ -27,11 +27,13 @@ RUSTUP_COMPONENTS="$(cfg_or rustup_components clippy)"  # space-separated rustup
 SYSTEM_PACKAGES="$(cfg_or system_packages '')"          # space-separated apt packages; empty = skip install
 CARGO_FEATURES="$(cfg_or cargo_features --all-features)" # feature flags for nextest list and offline run
 WORKSPACE_DIR="$(cfg_or workspace_dir /workspace)"      # container working directory
+CACHE_DIR="$(cfg_or cache_dir target)"                  # build artifact dir; seeded volume + container mount
 
 # ── Plugin hooks (no-ops; overridden by run/plugins.sh if present) ───────────
 _plugin_build_volumes()    { extra_volumes=();                  }
 _plugin_test_args()        { bin_args=();    mount_args=();     }
 _plugin_list_args()        { vol_args=();    cargo_env="";      }
+_plugin_list_cmd()         { list_cmd="${cargo_env}cargo nextest list $CMD_SCOPE $CARGO_FEATURES"; }
 _plugin_shell_extra_args() { plugin_extra_args=();              }
 _plugin_help_hint()        { plugin_hint="";                    }
 
@@ -90,7 +92,7 @@ _ensure_image()
 
 _ensure_build_cache()
 {
-  local volume="${IMAGE}_target"
+  local volume="${IMAGE}_$CACHE_DIR"
   if ! "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
   then
     echo "Seeding build cache from image (first run only)..."
@@ -99,9 +101,9 @@ _ensure_build_cache()
     # would start empty and force a full recompile from scratch on first use.
     # World-writable so the host uid (used by cmd_test via --user) can write build artifacts.
     "$CONTAINER_CMD" run --rm \
-      -v "${volume}:$WORKSPACE_DIR/target_seed" \
+      -v "${volume}:$WORKSPACE_DIR/${CACHE_DIR}_seed" \
       "$IMAGE" \
-      bash -c "cp -a $WORKSPACE_DIR/target/. $WORKSPACE_DIR/target_seed/ && chmod -R a+rwX $WORKSPACE_DIR/target_seed/"
+      bash -c "cp -a $WORKSPACE_DIR/$CACHE_DIR/. $WORKSPACE_DIR/${CACHE_DIR}_seed/ && chmod -R a+rwX $WORKSPACE_DIR/${CACHE_DIR}_seed/"
   fi
 }
 
@@ -113,7 +115,7 @@ cmd_build()
   # Drop stale build caches so next use re-seeds from the new image.
   local extra_volumes=()
   _plugin_build_volumes
-  for volume in "${IMAGE}_target" "${extra_volumes[@]}"
+  for volume in "${IMAGE}_$CACHE_DIR" "${extra_volumes[@]}"
   do
     if "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
     then
@@ -159,34 +161,32 @@ cmd_test_offline()
 {
   _ensure_image
   _ensure_build_cache
-  # shellcheck disable=SC2086
   "$CONTAINER_CMD" run --rm \
-    -v "${IMAGE}_target:$WORKSPACE_DIR/target" \
-    "$IMAGE" \
-    cargo nextest run $CMD_SCOPE $CARGO_FEATURES --filter-expr "$CMD_FILTER"
+    -v "${IMAGE}_$CACHE_DIR:$WORKSPACE_DIR/$CACHE_DIR" \
+    "$IMAGE"
 }
 
 cmd_list()
 {
   _ensure_image
-  local userns_arg=() vol_args=() cargo_env=""
+  local userns_arg=() vol_args=() cargo_env="" list_cmd=""
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
   # Same volume as cmd_test so .list artifacts persist between repeated .list calls.
   _plugin_list_args
-  # shellcheck disable=SC2086
+  _plugin_list_cmd
   "$CONTAINER_CMD" run --rm \
     "${userns_arg[@]}" \
     --user "$(id -u):$(id -g)" \
     "${vol_args[@]}" \
     "$IMAGE" \
-    bash -c "${cargo_env}cargo nextest list $CMD_SCOPE $CARGO_FEATURES"
+    bash -c "$list_cmd"
 }
 
 cmd_shell()
 {
   _ensure_image
   _ensure_build_cache
-  local args=( --rm -it -v "${IMAGE}_target:$WORKSPACE_DIR/target" )
+  local args=( --rm -it -v "${IMAGE}_$CACHE_DIR:$WORKSPACE_DIR/$CACHE_DIR" )
   local plugin_extra_args=()
   _plugin_shell_extra_args
   args+=( "${plugin_extra_args[@]}" )

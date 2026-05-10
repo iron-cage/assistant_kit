@@ -9,7 +9,8 @@ Shell scripts implementing the `do` protocol verbs for `claude_assets` (cargo ec
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `run` | Execute the `cla` binary entry point via `cargo run`. |
 | `lint` | Run static analysis and style checks via `cargo clippy`. |
+| `verify` | Run full pre-push gate: tests, deps analysis, audit. |
 | `verbs` | List all available verbs and their availability (meta). |
-| `detect` | Report the detected ecosystem and signal confidence (meta). |
+| `package_info` | Report deterministic package metadata as JSON (meta). |
 
-All action scripts support `--dry-run`: prints the delegated command without executing it.
+Canonical verbs support `--dry-run`: prints the delegated command without executing it. Meta verbs (`verbs`, `package_info`) do not.
