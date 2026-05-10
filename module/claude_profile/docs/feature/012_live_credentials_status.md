@@ -13,7 +13,7 @@
 - The credential store directory
 - Any account store setup
 
-The `_active` marker is read opportunistically for the `Account:` line if it exists; the command still succeeds and shows `N/A` when it is absent.
+The `_active` marker is read opportunistically for the `Account:` line if it exists; the command still succeeds and shows `N/A` when it is absent (e.g. a machine where no account has ever been saved).
 
 **Field Presence Parameters:**
 
@@ -34,7 +34,7 @@ Each output line is independently controlled by a boolean param. All default to 
 **`format::json`:** Returns all fields regardless of field-presence params:
 `{"subscription":"…","tier":"…","token":"…","expires_in_secs":N,"email":"…","org":"…","account":"…","file":"…","saved":N}`.
 
-**`Account:` line:** Reads `_active` marker if it exists. Shows `N/A` when no `_active` marker is present (fresh install or uninitialised account store).
+**`Account:` line:** Reads `_active` marker if it exists. Shows `N/A` when no `_active` marker is present (fresh install or uninitialised account store). Because `.account.save` writes `_active` on every successful save, the account name is always present after any save operation.
 
 **Missing fields:** Email and org show `N/A` when `~/.claude.json` is absent or the fields are empty.
 

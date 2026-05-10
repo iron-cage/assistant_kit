@@ -478,7 +478,7 @@ clp .credentials.status format::json
 
 **Notes:**
 - Field-presence params only affect text output. `format::json` always includes all fields (including `display_name`, `role`, `billing`, `model`) regardless of field-presence params.
-- `account::` reads the `_active` marker; shows `N/A` on fresh installs without an account store.
+- `account::` reads the `_active` marker; shows `N/A` on machines where no account has ever been saved.
 - `saved::` counts `*.credentials.json` files in the credential store; shows `0` when the credential store is absent.
 - `display_name::`, `role::`, `billing::` read from `~/.claude.json` `oauthAccount`; all show `N/A` when the file is absent.
 - `model::` reads from `~/.claude/settings.json`; shows `N/A` when the file is absent or the `model` field is missing.

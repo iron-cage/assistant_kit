@@ -25,6 +25,7 @@
 5. Write contents to `{credential_store}/{name}.credentials.json` (creates or overwrites).
 6. Copy `~/.claude.json` → `{credential_store}/{name}.claude.json` (best-effort: skip silently if source absent).
 7. Copy `~/.claude/settings.json` → `{credential_store}/{name}.settings.json` (best-effort: skip silently if source absent).
+8. Write `{credential_store}/_active` = `{name}` — mark the saved account as the current active account.
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would save current credentials as '{name}'` without modifying any files.
 
@@ -39,6 +40,7 @@
 - **AC-07**: When `~/.claude.json` is absent, no `.claude.json` snapshot is created — save still succeeds.
 - **AC-08**: `clp .account.save` (no `name::`) with `emailAddress` present in `~/.claude.json` infers the account name from that field and saves normally; output reads `saved current credentials as '{email}'`.
 - **AC-09**: `clp .account.save` (no `name::`) when `~/.claude.json` has no `emailAddress` exits 1 with `cannot infer account name: emailAddress absent from ~/.claude.json — pass name:: explicitly`.
+- **AC-10**: After a successful `clp .account.save`, `{credential_store}/_active` contains the saved account name; `clp .credentials.status` shows `Account: {name}` immediately.
 
 ### Cross-References
 

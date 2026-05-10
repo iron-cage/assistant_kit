@@ -27,8 +27,9 @@ ast .help                    # all ~40 commands in one place
 | `module/` | Fourteen workspace crates (see Crates below) |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
 | `task/` | Task tracking: active, completed, backlog |
-| `run/` | Container runner: universal docker-run, config manifest, and test script. |
-| `runbox.dockerfile` | Parameterised test image for all modules; built via run/docker-run. |
+| `run/` | Container runner: scripts, config, and variability analysis docs. |
+| `verb/` | Universal Action Protocol: per-verb reference docs for all 7 `do` protocol verbs. |
+| `runbox.dockerfile` | Parameterised test image for all modules; built via run/runbox-run. |
 | `vision.md` | Project vision, design rationale, and open problems |
 | `../locales.md` | Locale and internationalisation notes |
 | `Cargo.toml` | Workspace manifest: members, lints, shared dependencies |
@@ -80,17 +81,17 @@ Layer 3: assistant       (ast)    (super-app — all Layer 2 CLIs)
 
 **Container (all tests — real ~/.claude/ required):**
 ```bash
-./run/docker .test
+./run/runbox .test
 ```
 
 **Container (offline — no ~/.claude/ needed):**
 ```bash
-./run/docker .test.offline
+./run/runbox .test.offline
 ```
 
 **Container (interactive shell):**
 ```bash
-./run/docker .shell
+./run/runbox .shell
 ```
 
 **Local (w3 required):**

@@ -12,7 +12,6 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | `src/` | CLI pipeline, command routines, binary entry points |
 | `tests/` | Integration and parameter validation tests (242 tests) |
 | `docs/` | Behavioral requirements: features, CLI reference, operation docs |
-| `run/` | Container runner: thin wrapper, config manifest, and test script. |
 | `task/` | Crate-level task tracking |
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
@@ -409,6 +408,8 @@ fn main() -> claude_storage_core::Result< () >
 
 ## testing
 
+**Container tests**: Run via workspace runbox (`./run/docker .test` from workspace root, using `--workspace` scope).
+
 **Core library tests**: 105 tests in `claude_storage_core` crate
 - Entry parsing and validation
 - Path encoding/decoding
@@ -425,21 +426,6 @@ fn main() -> claude_storage_core::Result< () >
 - Counting operations tests (projects, sessions, entries)
 - Full workflow integration test
 - CLI sanity tests (build, features)
-
-**Container (all tests — real ~/.claude/ required):**
-```bash
-./run/docker .test
-```
-
-**Container (offline — no ~/.claude/ needed):**
-```bash
-./run/docker .test.offline
-```
-
-**Container (interactive shell):**
-```bash
-./run/docker .shell
-```
 
 **Local (w3 required):**
 ```bash

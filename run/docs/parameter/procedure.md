@@ -21,4 +21,4 @@ Adding parameter `011_verbosity`:
 
 1. Check `readme.md` Overview Table — current highest ID is `010`
 2. Create `011_verbosity.md` with Status, Current State, Where It Flows, and Notes sections
-3. Add row: `| [011](011_verbosity.md) | \`verbosity\` | ⚠️ | Test Execution |`
+3. Add row: `| [011](011_verbosity.md) | \`verbosity\` | ✅ | Test Execution |`

@@ -7,7 +7,7 @@ Per-verb reference for the `do` Universal Action Protocol.
 - **Purpose:** Document every verb in the `do` protocol implemented across workspace modules.
 - **Responsibility:** Per-instance reference covering kind, availability, `--dry-run` contract, command, and notes.
 - **In Scope:** All 7 protocol verbs (5 canonical + 2 meta); their contracts and module-level variation.
-- **Out of Scope:** Verb script implementation (→ `module/*/verb/`); runbox integration (→ `docs/runbox/`).
+- **Out of Scope:** Verb script implementation (→ `module/*/verb/`); runbox integration (→ `run/docs/`).
 
 ### Responsibility Table
 

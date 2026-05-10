@@ -10,12 +10,17 @@ Plugins have lifecycle management — their absence changes the execution shape,
 - **In Scope:** Configurable plugin slots and hardcoded-but-swappable infrastructure components.
 - **Out of Scope:** Scalar parameters (→ `parameter/`); plugin configuration values.
 
+### Status Legend
+
+✅ = fully extracted to `run/plugins.sh`; configured via `runbox.yml`; remove `plugins.sh` to disable
+🔒 = hardcoded in `docker-run` or `runbox.dockerfile`; requires code changes to swap
+
 ### Overview Table
 
 | ID | Plugin | Status | Category |
 |----|--------|--------|----------|
-| [001](001_bin_plugin.md) | `bin_plugin` | ⚠️ | Binary Injection |
-| [002](002_plugin_mount.md) | `plugin_mount` | ⚠️ | Data Mount |
+| [001](001_bin_plugin.md) | `bin_plugin` | ✅ | Binary Injection |
+| [002](002_plugin_mount.md) | `plugin_mount` | ✅ | Data Mount |
 | [003](003_dep_cache.md) | Dep cache | 🔒 | Build Infrastructure |
 | [004](004_build_cache_persistence.md) | Build cache persistence | 🔒 | Build Infrastructure |
 | [005](005_test_lister.md) | Test lister | 🔒 | Test Runner |

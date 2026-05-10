@@ -18,7 +18,7 @@
 8. Create `verb/verbs`: `printf` table with verb/status/command for all 7 verbs; library modules show `unavailable` for `run`.
 9. Create `verb/detect`: fixed output — `ecosystem: cargo`, `signal: Cargo.toml`, `confidence: inferred` (universal — identical across all cargo modules).
 10. Set executable bit on all 7 scripts: `chmod +x module/<name>/verb/*`.
-11. If the module has runbox infrastructure: set `test_script: module/<name>/verb/test` in `module/<name>/run/runbox.yml` (see `docs/runbox/parameter/005_test_script.md`).
+11. If the module has runbox infrastructure: set `test_script: module/<name>/verb/test` in `module/<name>/run/runbox.yml` (see `run/docs/parameter/005_test_script.md`).
 12. Add `| \`verb/\` | Shell scripts for each \`do\` protocol verb. |` row to `module/<name>/readme.md` Responsibility Table.
 
 ## Update a Verb Command

@@ -16,7 +16,7 @@ Workspace `runbox.yml`:
 ```yaml
 test_script: run/test
 ```
-Module `runbox.yml` (`claude_profile`, `claude_storage`):
+Module `runbox.yml` (`claude_profile`):
 ```yaml
 test_script: module/claude_profile/verb/test
 ```

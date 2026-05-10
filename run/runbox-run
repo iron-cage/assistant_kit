@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Universal Docker test runner.
-# Usage: docker-run <config.yml> [command]
+# Universal runbox test runner.
+# Usage: runbox-run <config.yml> [command]
 #   command: .build | .test | .test.offline | .shell | .help  (default: help)
 set -euo pipefail
 
@@ -22,49 +22,22 @@ TEST_USER="$(cfg test_user)"                      # forwarded as --build-arg; no
 CMD_SCOPE="$(cfg cmd_scope)"                      # crate filter for nextest run and cargo chef cook
 CMD_FILTER="$(cfg cmd_filter)"                    # forwarded as --build-arg; nextest filter baked into offline CMD
 TEST_SCRIPT="$(cfg test_script)"                  # path (relative to /workspace) exec'd by cmd_test
-BIN_PLUGIN="$(cfg bin_plugin)"                    # optional binary plugin: name:container_path
-BIN_PLUGIN_VOLUME="$(cfg bin_plugin_volume)"      # container mount point for bin_plugin working volume
-PLUGIN_MOUNT="$(cfg plugin_mount)"                # data dir plugin: host_path:container_path:check_type
 BASE_IMAGE="$(cfg_or base_image rust:slim)"             # FROM image for chef and test stages
 RUSTUP_COMPONENTS="$(cfg_or rustup_components clippy)"  # space-separated rustup components
 SYSTEM_PACKAGES="$(cfg_or system_packages '')"          # space-separated apt packages; empty = skip install
 CARGO_FEATURES="$(cfg_or cargo_features --all-features)" # feature flags for nextest list and offline run
 WORKSPACE_DIR="$(cfg_or workspace_dir /workspace)"      # container working directory
 
-# ── Mount resolver ────────────────────────────────────────────────────────────
-# Spec format: "host_path:container_path:check_type"  (3 fields from runbox.yml)
-#   check_type: file | directory
-# Caller passes required (true|false) and mode (ro|rw) as positional args.
-# On success: prints "host:container:mode" ready for -v flag.
-# On required+missing: prints error and exits.
-# On optional+missing: prints nothing (caller checks with -n).
+# ── Plugin hooks (no-ops; overridden by run/plugins.sh if present) ───────────
+_plugin_build_volumes()    { extra_volumes=();                  }
+_plugin_test_args()        { bin_args=();    mount_args=();     }
+_plugin_list_args()        { vol_args=();    cargo_env="";      }
+_plugin_shell_extra_args() { plugin_extra_args=();              }
+_plugin_help_hint()        { plugin_hint="";                    }
 
-_resolve_mount()
-{
-  # spec format: "host_path:container_path:check_type"
-  # Caller provides required (true|false) and mode (ro|rw).
-  local spec="$1" required="$2" mode="${3:-ro}"
-  local host container check rest
-  host="${spec%%:*}";      rest="${spec#*:}"
-  container="${rest%%:*}"; check="${rest#*:}"
-  host="${host/#\~/$HOME}"
-
-  local present=false
-  [[ "$check" == "file"      ]] && [[ -f "$host" ]] && present=true
-  [[ "$check" == "directory" ]] && [[ -d "$host" ]] && present=true
-
-  if ! $present
-  then
-    if [[ "$required" == "true" ]]
-    then
-      echo "error: required mount not found at $host" >&2
-      exit 1
-    fi
-    return 0
-  fi
-
-  echo "$host:$container:$mode"
-}
+# SCRIPT_DIR is always run/ — plugins.sh is the single canonical location.
+PLUGINS_FILE="${SCRIPT_DIR}/plugins.sh"
+[[ -f "$PLUGINS_FILE" ]] && source "$PLUGINS_FILE"
 
 # ── Container runtime ─────────────────────────────────────────────────────────
 
@@ -138,7 +111,9 @@ cmd_build()
 {
   _build
   # Drop stale build caches so next use re-seeds from the new image.
-  for volume in "${IMAGE}_target" "${IMAGE}_plugin_targets"
+  local extra_volumes=()
+  _plugin_build_volumes
+  for volume in "${IMAGE}_target" "${extra_volumes[@]}"
   do
     if "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
     then
@@ -159,23 +134,8 @@ cmd_test()
     echo "Check test_script path in $(basename "$CONFIG")" >&2
     exit 1
   fi
-  local bin_args=()
-  if [[ -n "$BIN_PLUGIN" ]]
-  then
-    local bin_name bin_container bin_host
-    bin_name="${BIN_PLUGIN%%:*}"
-    bin_container="${BIN_PLUGIN#*:}"
-    bin_host="$(which "$bin_name" 2>/dev/null)" \
-      || { echo "error: binary plugin '$bin_name' not found on PATH" >&2; exit 1; }
-    bin_args=( -v "${IMAGE}_plugin_targets:$BIN_PLUGIN_VOLUME" -v "$bin_host:$bin_container:ro" )
-  fi
-  local mount_args=()
-  if [[ -n "$PLUGIN_MOUNT" ]]
-  then
-    local plugin_mount
-    plugin_mount="$(_resolve_mount "$PLUGIN_MOUNT" true rw)"
-    mount_args=( -v "$plugin_mount" )
-  fi
+  local bin_args=() mount_args=()
+  _plugin_test_args
   _ensure_image
   # Run as the host user so mounted credential files (owned by host uid) are readable.
   # Rootless Podman remaps container uid 0 → host uid, so without --userns=keep-id
@@ -212,11 +172,7 @@ cmd_list()
   local userns_arg=() vol_args=() cargo_env=""
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
   # Same volume as cmd_test so .list artifacts persist between repeated .list calls.
-  if [[ -n "$BIN_PLUGIN_VOLUME" ]]
-  then
-    vol_args=( -v "${IMAGE}_plugin_targets:$BIN_PLUGIN_VOLUME" )
-    cargo_env="CARGO_TARGET_DIR=$BIN_PLUGIN_VOLUME "
-  fi
+  _plugin_list_args
   # shellcheck disable=SC2086
   "$CONTAINER_CMD" run --rm \
     "${userns_arg[@]}" \
@@ -231,38 +187,17 @@ cmd_shell()
   _ensure_image
   _ensure_build_cache
   local args=( --rm -it -v "${IMAGE}_target:$WORKSPACE_DIR/target" )
-  if [[ -n "$BIN_PLUGIN" ]]
-  then
-    local bin_name bin_container bin_host
-    bin_name="${BIN_PLUGIN%%:*}"
-    bin_container="${BIN_PLUGIN#*:}"
-    if bin_host="$(which "$bin_name" 2>/dev/null)"
-    then
-      args+=( -v "$bin_host:$bin_container:ro" )
-    fi
-  fi
-  if [[ -n "$PLUGIN_MOUNT" ]]
-  then
-    local shell_mount
-    shell_mount="$(_resolve_mount "$PLUGIN_MOUNT" false ro)"
-    if [[ -n "$shell_mount" ]]
-    then
-      args+=( -v "$shell_mount" )
-    fi
-  fi
+  local plugin_extra_args=()
+  _plugin_shell_extra_args
+  args+=( "${plugin_extra_args[@]}" )
   "$CONTAINER_CMD" run "${args[@]}" "$IMAGE" bash
 }
 
 cmd_help()
 {
   local plugin_hint=""
-  if [[ -n "$PLUGIN_MOUNT" ]]
-  then
-    local plugin_host
-    plugin_host="${PLUGIN_MOUNT%%:*}"
-    plugin_hint=" ($plugin_host required)"
-  fi
-  echo "Usage: ./run/docker <command>"
+  _plugin_help_hint
+  echo "Usage: ./run/runbox <command>"
   echo ""
   echo "Image Management:"
   echo "  .build          Build the $IMAGE container image"
@@ -288,7 +223,7 @@ case "$COMMAND" in
   .|.help)       cmd_help ;;
   *)
     echo "error: unknown command '$COMMAND'" >&2
-    echo "run './run/docker .help' for available commands" >&2
+    echo "run './run/runbox .help' for available commands" >&2
     exit 1
     ;;
 esac

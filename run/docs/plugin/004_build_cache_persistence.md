@@ -17,7 +17,7 @@ First `./run/docker .test.offline` invocation:
 4. Cargo finds a pre-populated `target/` — only changed workspace crates recompile; unchanged artifacts from the cook stage are reused immediately
 
 After `./run/docker .build` (image rebuild):
-- `cmd_build()` deletes `workspace_test_target` and `workspace_test_plugin_targets` volumes
+- `cmd_build()` deletes `workspace_test_target` and any plugin-provided volumes (`workspace_test_plugin_targets` when `run/plugins.sh` is active, via `_plugin_build_volumes`)
 - Next `_ensure_build_cache` re-seeds from the new image's freshly-cooked `target/`
 
 The seed lives at `/workspace/target` in the image (deposited by the cook stage). `/workspace/target_seed` is a temporary mount point used only during seeding — absent from normal test runs.

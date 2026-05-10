@@ -12,6 +12,4 @@ Documentation for the `assistant` workspace covering behavioral requirements, st
 | `pattern/` | Four-layer crate dependency architecture pattern |
 | `integration/` | Cross-workspace integration protocol |
 | `error/` | Claude Code error message catalog |
-| `runbox/` | Variability analysis: runbox infrastructure parameters and plugins |
-| `verb/` | Per-verb reference for the `do` Universal Action Protocol |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

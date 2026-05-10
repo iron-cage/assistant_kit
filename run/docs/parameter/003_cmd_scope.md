@@ -14,9 +14,9 @@ Workspace runner:
 ```yaml
 cmd_scope: --workspace
 ```
-Module runner (`claude_storage`):
+Module runner (`claude_profile`):
 ```yaml
-cmd_scope: -p claude_storage
+cmd_scope: -p claude_profile
 ```
 Both propagate as `--build-arg CMD_SCOPE=...` to `_build()`. In the dockerfile, the same `$CMD_SCOPE` arg drives two stages:
 ```dockerfile
@@ -27,4 +27,4 @@ RUN cargo chef cook --recipe-path recipe.json $CMD_SCOPE --tests
 ARG CMD_SCOPE=--workspace
 CMD cargo nextest run $CMD_SCOPE --filter-expr "$CMD_FILTER"
 ```
-Changing `cmd_scope: -p claude_storage` → `cmd_scope: --workspace` widens both the dep pre-compilation and the test execution scope atomically with a single `runbox.yml` edit followed by `.build`.
+Changing `cmd_scope: -p claude_profile` → `cmd_scope: --workspace` widens both the dep pre-compilation and the test execution scope atomically with a single `runbox.yml` edit followed by `.build`.

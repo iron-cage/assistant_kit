@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# claude_storage Docker test runner — delegates to universal run/docker-run.
+# claude_profile runbox test runner — delegates to universal run/runbox-run.
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-RUNNER="$( cd "$SCRIPT_DIR/../../../run" && pwd )/docker-run"
+RUNNER="$( cd "$SCRIPT_DIR/../../../run" && pwd )/runbox-run"
 exec "$RUNNER" "$SCRIPT_DIR/runbox.yml" "$@"
