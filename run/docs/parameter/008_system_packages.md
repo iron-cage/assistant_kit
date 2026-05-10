@@ -14,4 +14,4 @@ Adding `git` for a crate that shells out to git:
 ```yaml
 system_packages: curl procps git
 ```
-`docker-run` passes `--build-arg SYSTEM_PACKAGES=curl procps git` → dockerfile runs `apt-get install -y --no-install-recommends curl procps git`. To use no system packages at all, set the key to an empty string or remove it — the install block is skipped when `$SYSTEM_PACKAGES` is empty.
+`runbox-run` passes `--build-arg SYSTEM_PACKAGES=curl procps git` → dockerfile runs `apt-get install -y --no-install-recommends curl procps git`. To use no system packages at all, set the key to an empty string or remove it — the install block is skipped when `$SYSTEM_PACKAGES` is empty.

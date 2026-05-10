@@ -6,7 +6,7 @@
 
 ### Notes
 
-Configured via `runbox.yml` key `plugin_mount: host_path:container_path:type`. Current use: `~/.claude:/workspace/.claude:directory`. Plugin logic lives entirely in `run/plugins.sh` — core `docker-run` has no plugin knowledge. A second mount slot requires additions to `plugins.sh` only; `docker-run` is unchanged.
+Configured via `runbox.yml` key `plugin_mount: host_path:container_path:type`. Current use: `~/.claude:/workspace/.claude:directory`. Plugin logic lives entirely in `run/plugins.sh` — core `runbox-run` has no plugin knowledge. A second mount slot requires additions to `plugins.sh` only; `runbox-run` is unchanged.
 
 ### Example
 

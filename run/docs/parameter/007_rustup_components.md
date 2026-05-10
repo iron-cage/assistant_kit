@@ -14,4 +14,4 @@ Adding `rustfmt` for format-check tests alongside the required `clippy`:
 ```yaml
 rustup_components: clippy rustfmt
 ```
-`docker-run` passes `--build-arg RUSTUP_COMPONENTS=clippy rustfmt` → dockerfile runs `rustup component add clippy rustfmt` in a single invocation. Both components are available in the test stage after rebuild.
+`runbox-run` passes `--build-arg RUSTUP_COMPONENTS=clippy rustfmt` → dockerfile runs `rustup component add clippy rustfmt` in a single invocation. Both components are available in the test stage after rebuild.

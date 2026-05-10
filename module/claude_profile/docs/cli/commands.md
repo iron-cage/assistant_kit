@@ -199,6 +199,10 @@ clp .account.save name::alice@acme.com dry::1
 # [dry-run] would save current credentials as 'alice@acme.com'
 ```
 
+**Notes:**
+
+- Also writes `{credential_store}/_active` = `{name}` on every successful save; `.credentials.status` shows `Account: {name}` immediately after save without requiring a separate `.account.switch` call.
+
 ---
 
 ### Command :: 5. `.account.switch`

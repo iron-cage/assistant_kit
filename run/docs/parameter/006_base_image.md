@@ -2,7 +2,7 @@
 
 - **Status:** ✅ Configured — via `runbox.yml`; default: `rust:slim`
 - **Current State:** `rust:slim`
-- **Where It Flows:** `runbox.yml base_image:` → `--build-arg BASE_IMAGE` → `FROM $BASE_IMAGE AS chef` and `FROM $BASE_IMAGE AS test` in `runbox.dockerfile`
+- **Where It Flows:** `runbox.yml base_image:` → `--build-arg BASE_IMAGE` → `FROM $BASE_IMAGE AS chef` and `FROM $BASE_IMAGE AS test` in `run/runbox.dockerfile`
 
 ### Notes
 
@@ -14,4 +14,4 @@ Pinning to a specific Rust release:
 ```yaml
 base_image: rust:1.78-slim
 ```
-`docker-run` passes `--build-arg BASE_IMAGE=rust:1.78-slim` → dockerfile bakes `FROM rust:1.78-slim AS chef` and `FROM rust:1.78-slim AS test`. To revert to floating latest, remove the key or leave it commented out — `docker-run` defaults to `rust:slim`.
+`runbox-run` passes `--build-arg BASE_IMAGE=rust:1.78-slim` → dockerfile bakes `FROM rust:1.78-slim AS chef` and `FROM rust:1.78-slim AS test`. To revert to floating latest, remove the key or leave it commented out — `runbox-run` defaults to `rust:slim`.

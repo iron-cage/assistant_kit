@@ -1,16 +1,16 @@
 # Plugin: Test lister
 
-- **Status:** 🔒 Hardcoded — in `docker-run`
+- **Status:** 🔒 Hardcoded — in `runbox-run`
 - **Controls:** What command enumerates available tests for the `.list` sub-command
 - **Mechanism:** `cargo nextest list $CMD_SCOPE $CARGO_FEATURES` in `cmd_list` function; feature flags are configurable via `cargo_features` parameter
 
 ### Notes
 
-Tied to nextest. The command structure (`cargo nextest list`) is hardcoded; the feature flags it uses follow the `cargo_features` parameter. Changing the test runner would require updating `cmd_list` in `docker-run`.
+Tied to nextest. The command structure (`cargo nextest list`) is hardcoded; the feature flags it uses follow the `cargo_features` parameter. Changing the test runner would require updating `cmd_list` in `runbox-run`.
 
 ### Example
 
-`./run/docker .list` triggers `cmd_list()`. With `run/plugins.sh` active and `bin_plugin_volume: /tmp/will_test_targets`, `_plugin_list_args` injects `CARGO_TARGET_DIR` and a volume flag:
+`./run/runbox .list` triggers `cmd_list()`. With `run/plugins.sh` active and `bin_plugin_volume: /tmp/will_test_targets`, `_plugin_list_args` injects `CARGO_TARGET_DIR` and a volume flag:
 ```bash
 CARGO_TARGET_DIR=/tmp/will_test_targets \
   cargo nextest list --workspace --all-features

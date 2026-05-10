@@ -1,12 +1,12 @@
 # Plugin: Offline runner
 
-- **Status:** 🔒 Hardcoded — baked into image `CMD` via `runbox.dockerfile` `ARG`
+- **Status:** 🔒 Hardcoded — baked into image `CMD` via `run/runbox.dockerfile` `ARG`
 - **Controls:** What command the image's default `CMD` executes when run without `test_script`
 - **Mechanism:** `cargo nextest run $CMD_SCOPE $CARGO_FEATURES --filter-expr $CMD_FILTER` baked at image build time; scope, features, and filter are all configurable via their respective parameters
 
 ### Notes
 
-Always nextest. The command structure is hardcoded; `CMD_SCOPE`, `CARGO_FEATURES`, and `CMD_FILTER` are all baked in at build time from `runbox.yml` values. Changing the offline runner to a different test tool requires editing the `CMD` line in `runbox.dockerfile` and rebuilding.
+Always nextest. The command structure is hardcoded; `CMD_SCOPE`, `CARGO_FEATURES`, and `CMD_FILTER` are all baked in at build time from `runbox.yml` values. Changing the offline runner to a different test tool requires editing the `CMD` line in `run/runbox.dockerfile` and rebuilding.
 
 ### Example
 

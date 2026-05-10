@@ -28,4 +28,4 @@
 3. Edit the script: update the `exec` line and the matching `--dry-run` echo to stay in sync.
 4. If the verb is `test`: also verify `runbox.yml` `test_script` still points to `verb/test` (it should — path does not change when command changes).
 5. If the verb is `run` or `build`: update `verb/verbs` to reflect the new command string in the table.
-6. Run `verb/test` (or `./run/docker .test`) to verify the module still passes.
+6. Run `verb/test` (or `./run/runbox .test`) to verify the module still passes.

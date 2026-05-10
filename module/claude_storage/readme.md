@@ -408,7 +408,7 @@ fn main() -> claude_storage_core::Result< () >
 
 ## testing
 
-**Container tests**: Run via workspace runbox (`./run/docker .test` from workspace root, using `--workspace` scope).
+**Container tests**: Run via workspace runbox (`./run/runbox .test` from workspace root, using `--workspace` scope).
 
 **Core library tests**: 105 tests in `claude_storage_core` crate
 - Entry parsing and validation

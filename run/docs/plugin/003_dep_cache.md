@@ -1,6 +1,6 @@
 # Plugin: Dep cache
 
-- **Status:** 🔒 Hardcoded — mechanism embedded in `runbox.dockerfile`
+- **Status:** 🔒 Hardcoded — mechanism embedded in `run/runbox.dockerfile`
 - **Controls:** How external dependencies are pre-compiled before the test stage
 - **Mechanism:** cargo-chef 4-stage build hardcoded in dockerfile (chef → planner → cook → test)
 

@@ -98,7 +98,7 @@
 #   chef/planner/cook  — only when Cargo.toml or Cargo.lock change
 #   test               — on every source change (fast: deps already compiled)
 #
-# Build args (values come from run/runbox.yml, passed by run/docker-run):
+# Build args (values come from run/runbox.yml, passed by run/runbox-run):
 #   BASE_IMAGE         — FROM image for chef and test stages (default: rust:slim)
 #   TEST_USER          — non-root user for chmod-000 / path-resolution tests (default: testuser)
 #   CMD_SCOPE          — --workspace | -p claude_profile | -p claude_storage
@@ -106,17 +106,16 @@
 #   RUSTUP_COMPONENTS  — space-separated rustup components to add (default: clippy)
 #   SYSTEM_PACKAGES    — space-separated apt packages; empty string skips install (default: '')
 #   CARGO_FEATURES     — feature flags passed to nextest (default: --all-features)
-#   WORKSPACE_DIR      — container WORKDIR; must match in docker-run (default: /workspace)
+#   WORKSPACE_DIR      — container WORKDIR; must match in runbox-run (default: /workspace)
 #
 # Usage (via script — recommended):
-#   run/docker .build                        # workspace image
-#   module/claude_profile/run/docker .build  # profile image
-#   module/claude_storage/run/docker .build  # storage image
-#   run/docker .test                         # full test run
-#   run/docker .shell                        # interactive shell
+#   run/runbox .build                        # workspace image
+#   module/claude_profile/run/runbox .build  # profile image
+#   run/runbox .test                         # full test run
+#   run/runbox .shell                        # interactive shell
 #
 # Usage (direct docker — workspace):
-#   docker build -f runbox.dockerfile -t workspace_test .
+#   docker build -f run/runbox.dockerfile -t workspace_test .
 #   docker run --rm workspace_test                          # offline tests (default CMD)
 #   docker run --rm \
 #     -v ~/.claude:/workspace/.claude:rw \

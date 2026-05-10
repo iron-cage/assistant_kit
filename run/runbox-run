@@ -17,7 +17,7 @@ cfg()     { grep -m1 "^$1:" "$CONFIG" | sed 's/^[^:]*:[[:space:]]*//' | tr -d '"
 cfg_or()  { local v; v="$(cfg "$1")"; echo "${v:-$2}"; }
 
 IMAGE="$(cfg image)"                              # image tag for -t at build and image lookup at run
-DOCKERFILE="$WORKSPACE_ROOT/runbox.dockerfile"    # runbox system build file (always at workspace root)
+DOCKERFILE="$SCRIPT_DIR/runbox.dockerfile"         # runbox system build file
 TEST_USER="$(cfg test_user)"                      # forwarded as --build-arg; non-root for chmod-000 tests
 CMD_SCOPE="$(cfg cmd_scope)"                      # crate filter for nextest run and cargo chef cook
 CMD_FILTER="$(cfg cmd_filter)"                    # forwarded as --build-arg; nextest filter baked into offline CMD
@@ -142,7 +142,7 @@ cmd_test()
   # files owned by the host user appear as root inside the container and are unreadable
   # by a non-root container process.  keep-id preserves the host UID mapping so the
   # running uid matches the owner uid of the mounted credential files.
-  # workspace and cargo dirs are world-writable (a+rwX in runbox.dockerfile) so the host
+  # workspace and cargo dirs are world-writable (a+rwX in run/runbox.dockerfile) so the host
   # uid can write cargo lock files and build artifacts without owning those files.
   local userns_arg=()
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )

@@ -13,7 +13,7 @@ Plugins have lifecycle management — their absence changes the execution shape,
 ### Status Legend
 
 ✅ = fully extracted to `run/plugins.sh`; configured via `runbox.yml`; remove `plugins.sh` to disable
-🔒 = hardcoded in `docker-run` or `runbox.dockerfile`; requires code changes to swap
+🔒 = hardcoded in `runbox-run` or `run/runbox.dockerfile`; requires code changes to swap
 
 ### Overview Table
 

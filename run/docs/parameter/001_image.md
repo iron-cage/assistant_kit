@@ -18,4 +18,4 @@ Module `runbox.yml` (`claude_profile`):
 ```yaml
 image: claude_profile_test
 ```
-`_build()` invokes `docker build -f runbox.dockerfile -t workspace_test .`. `cmd_test()` runs `docker run ... workspace_test /workspace/run/test`. Build-cache volumes are also derived from the tag: `workspace_test_target`, `workspace_test_plugin_targets` — so both images coexist on the same host with fully isolated caches.
+`_build()` invokes `docker build -f run/runbox.dockerfile -t workspace_test .`. `cmd_test()` runs `docker run ... workspace_test /workspace/run/test`. Build-cache volumes are also derived from the tag: `workspace_test_target`, `workspace_test_plugin_targets` — so both images coexist on the same host with fully isolated caches.

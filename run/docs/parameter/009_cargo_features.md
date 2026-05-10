@@ -2,7 +2,7 @@
 
 - **Status:** ✅ Configured — via `runbox.yml`; default: `--all-features`
 - **Current State:** `--all-features`
-- **Where It Flows:** `runbox.yml cargo_features:` → `--build-arg CARGO_FEATURES` → baked into image `CMD`; also used at runtime by `cmd_test_offline` and `cmd_list` in `docker-run`
+- **Where It Flows:** `runbox.yml cargo_features:` → `--build-arg CARGO_FEATURES` → baked into image `CMD`; also used at runtime by `cmd_test_offline` and `cmd_list` in `runbox-run`
 
 ### Notes
 
@@ -14,4 +14,4 @@ Switching to a specific feature set to avoid conflicting features:
 ```yaml
 cargo_features: --no-default-features -F storage_json
 ```
-`docker-run` passes `--build-arg CARGO_FEATURES=...` and uses `$CARGO_FEATURES` at runtime. Result: `cargo nextest run $CMD_SCOPE --no-default-features -F storage_json --filter-expr "..."` in offline runs, and `cargo nextest list $CMD_SCOPE --no-default-features -F storage_json` for `.list`. The offline `CMD` gets the same flags baked in after `.build`.
+`runbox-run` passes `--build-arg CARGO_FEATURES=...` and uses `$CARGO_FEATURES` at runtime. Result: `cargo nextest run $CMD_SCOPE --no-default-features -F storage_json --filter-expr "..."` in offline runs, and `cargo nextest list $CMD_SCOPE --no-default-features -F storage_json` for `.list`. The offline `CMD` gets the same flags baked in after `.build`.

@@ -24,4 +24,4 @@ plugin_mount: ~/.claude:/workspace/.claude:directory
 # rustup_components: clippy      # space-separated; e.g. "clippy rustfmt"
 system_packages: curl procps
 # cargo_features: --all-features # passed to nextest list and offline run CMD
-# workspace_dir: /workspace      # container WORKDIR; must match in runbox.dockerfile and docker-run
+# workspace_dir: /workspace      # container WORKDIR; must match in run/runbox.dockerfile and runbox-run

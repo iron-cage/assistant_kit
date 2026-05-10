@@ -114,17 +114,17 @@ clp .paths                 # show ~/.claude/ canonical paths
 
 **Container (all tests — credentials required):**
 ```bash
-./run/docker .test
+./run/runbox .test
 ```
 
 **Container (offline — no credentials needed):**
 ```bash
-./run/docker .test.offline
+./run/runbox .test.offline
 ```
 
 **Container (interactive shell):**
 ```bash
-./run/docker .shell
+./run/runbox .shell
 ```
 
 **Local (w3 required):**

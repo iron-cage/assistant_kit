@@ -2,7 +2,7 @@
 
 - **Status:** ✅ Configured — present in `runbox.yml`
 - **Current State:** `testuser`
-- **Where It Flows:** `ARG TEST_USER` in `runbox.dockerfile` → `useradd` + `chown` at build time
+- **Where It Flows:** `ARG TEST_USER` in `run/runbox.dockerfile` → `useradd` + `chown` at build time
 
 ### Notes
 

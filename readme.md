@@ -27,9 +27,8 @@ ast .help                    # all ~40 commands in one place
 | `module/` | Fourteen workspace crates (see Crates below) |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
 | `task/` | Task tracking: active, completed, backlog |
-| `run/` | Container runner: scripts, config, and variability analysis docs. |
+| `run/` | Container runner: scripts, Dockerfile, config, and variability analysis docs. |
 | `verb/` | Universal Action Protocol: per-verb reference docs for all 7 `do` protocol verbs. |
-| `runbox.dockerfile` | Parameterised test image for all modules; built via run/runbox-run. |
 | `vision.md` | Project vision, design rationale, and open problems |
 | `../locales.md` | Locale and internationalisation notes |
 | `Cargo.toml` | Workspace manifest: members, lints, shared dependencies |
