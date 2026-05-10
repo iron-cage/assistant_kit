@@ -18,14 +18,14 @@ clp .accounts
 #   Sub:     max
 #   Tier:    default_claude_max_20x
 #   Expires: in 12m
-#   Org:     N/A
+#   Email:   N/A
 #
 # alice@home.com
 #   Active:  no
 #   Sub:     pro
 #   Tier:    default_claude_pro
 #   Expires: in 4h 2m
-#   Org:     N/A
+#   Email:   N/A
 
 # Switch to the account with more time
 clp .account.switch name::alice@home.com
@@ -61,14 +61,14 @@ clp .accounts
 #   Sub:     pro
 #   Tier:    default_claude_pro
 #   Expires: in 5h 59m
-#   Org:     N/A
+#   Email:   N/A
 #
 # alice@acme.com
 #   Active:  no
 #   Sub:     max
 #   Tier:    default_claude_max_20x
 #   Expires: in 3h 41m
-#   Org:     N/A
+#   Email:   N/A
 ```
 
 **When to use:** First time setting up multi-account rotation on a machine.
@@ -114,21 +114,21 @@ clp .accounts
 #   Sub:     max
 #   Tier:    default_claude_max_20x
 #   Expires: in 2h 10m
-#   Org:     N/A
+#   Email:   N/A
 #
 # alice@home.com
 #   Active:  no
 #   Sub:     pro
 #   Tier:    default_claude_pro
 #   Expires: expired
-#   Org:     N/A
+#   Email:   N/A
 #
 # alice@oldco.com
 #   Active:  no
 #   Sub:     free
 #   Tier:    default_claude_free
 #   Expires: expired
-#   Org:     N/A
+#   Email:   N/A
 
 # Preview what delete would do
 clp .account.delete name::alice@oldco.com dry::1
@@ -171,14 +171,14 @@ clp .accounts
 #   Sub:     max
 #   Tier:    default_claude_max_20x
 #   Expires: in 2h 47m
-#   Org:     N/A
+#   Email:   N/A
 #
 # alice@home.com
 #   Active:  no
 #   Sub:     pro
 #   Tier:    default_claude_pro
 #   Expires: in 1h 3m
-#   Org:     N/A
+#   Email:   N/A
 
 # Machine-readable snapshot for support tickets
 clp .paths format::json > /tmp/diag-paths.json
@@ -222,7 +222,7 @@ Inspect live credentials on a machine where account management has not been init
 clp .accounts
 # (no accounts configured)
 
-# .credentials.status works without a credential store — shows 7 default-on fields
+# .credentials.status works without a credential store — shows 6 default-on fields
 clp .credentials.status
 # Account: N/A
 # Sub:     pro
@@ -230,10 +230,9 @@ clp .credentials.status
 # Token:   valid
 # Expires: in 3h 42m
 # Email:   user@example.com
-# Org:     Acme Corp
 
-# Compact view — suppress fields that are often N/A on individual accounts
-clp .credentials.status email::0 org::0
+# Compact view — suppress the email line
+clp .credentials.status email::0
 # Account: N/A
 # Sub:     pro
 # Tier:    standard
@@ -253,7 +252,7 @@ clp .accounts
 #   Sub:     pro
 #   Tier:    standard
 #   Expires: in 3h 42m
-#   Org:     Acme Corp
+#   Email:   alice@example.com
 ```
 
 **When to use:** Fresh Claude Code installations, CI/CD machines, or any environment where the credential store has never been initialized.

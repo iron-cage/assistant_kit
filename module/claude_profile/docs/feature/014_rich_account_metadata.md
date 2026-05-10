@@ -31,7 +31,6 @@
 {
   "oauthAccount": {
     "displayName": "alice",
-    "organizationName": "Acme Corp",
     "organizationRole": "admin",
     "billingType": "stripe_subscription"
   }
@@ -44,8 +43,6 @@
 ```
 
 **Missing or empty fields:** All new fields show `N/A` when the source file is absent or the field is missing/empty. Never error on absent metadata — `.credentials.status` is a graceful read command.
-
-**`org::` data source fix:** The existing `org` field (`Org:` line in `.accounts`) previously rendered as hardcoded `N/A`. With this feature, `account::save()` also captures `organizationName` from `~/.claude.json`, and `account::list()` reads it from the saved `{name}.claude.json` snapshot. This makes `Org:` display real organization data when available, falling back to `N/A` only when absent from the snapshot.
 
 **Login method label:** `subscriptionType` values map to human-readable labels matching Claude Code's `/status` display:
 

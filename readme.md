@@ -26,8 +26,9 @@ ast .help                    # all ~40 commands in one place
 |------|----------------|
 | `module/` | Fourteen workspace crates (see Crates below) |
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
-| `task/` | Task tracking: active, completed, backlog |
+| `../task/workspace/` | Workspace task registry — External Layout (see `../task/`) |
 | `run/` | Container runner: scripts, Dockerfile, config, and variability analysis docs. |
+| `example/` | Non-Rust project examples demonstrating universal runbox usage. |
 | `verb/` | Universal Action Protocol: per-verb reference docs for all 7 `do` protocol verbs. |
 | `vision.md` | Project vision, design rationale, and open problems |
 | `../locales.md` | Locale and internationalisation notes |

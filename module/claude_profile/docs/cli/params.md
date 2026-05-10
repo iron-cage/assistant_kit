@@ -1,6 +1,6 @@
 # Parameters
 
-### All Parameters (19 total)
+### All Parameters (18 total)
 
 | # | Parameter | Type | Default | Valid Values | Purpose | Used In |
 |---|-----------|------|---------|--------------|---------|---------|
@@ -14,19 +14,18 @@
 | 8 | `tier::` | `bool` | `1` | `0`, `1` | Show rate-limit tier line | 2 cmds |
 | 9 | `token::` | `bool` | `1` | `0`, `1` | Show token status line (`.credentials.status`) | 1 cmd |
 | 10 | `expires::` | `bool` | `1` | `0`, `1` | Show token expiry duration line | 2 cmds |
-| 11 | `email::` | `bool` | `1` | `0`, `1` | Show email address line (`.credentials.status`) | 1 cmd |
-| 12 | `org::` | `bool` | `1` | `0`, `1` | Show organisation name line | 2 cmds |
-| 13 | `file::` | `bool` | `0` | `0`, `1` | Show credentials file path, opt-in (`.credentials.status`) | 1 cmd |
-| 14 | `saved::` | `bool` | `0` | `0`, `1` | Show saved account count, opt-in (`.credentials.status`) | 1 cmd |
-| 15 | `active::` | `bool` | `1` | `0`, `1` | Show active/inactive status line (`.accounts`) | 1 cmd |
-| 16 | `display_name::` | `bool` | `0` | `0`, `1` | Show display name from `oauthAccount`, opt-in | 2 cmds |
-| 17 | `role::` | `bool` | `0` | `0`, `1` | Show organisation role from `oauthAccount`, opt-in | 2 cmds |
-| 18 | `billing::` | `bool` | `0` | `0`, `1` | Show billing type from `oauthAccount`, opt-in | 2 cmds |
-| 19 | `model::` | `bool` | `0` | `0`, `1` | Show active model from settings, opt-in | 2 cmds |
+| 11 | `email::` | `bool` | `1` | `0`, `1` | Show email address line | 2 cmds |
+| 12 | `file::` | `bool` | `0` | `0`, `1` | Show credentials file path, opt-in (`.credentials.status`) | 1 cmd |
+| 13 | `saved::` | `bool` | `0` | `0`, `1` | Show saved account count, opt-in (`.credentials.status`) | 1 cmd |
+| 14 | `active::` | `bool` | `1` | `0`, `1` | Show active/inactive status line (`.accounts`) | 1 cmd |
+| 15 | `display_name::` | `bool` | `0` | `0`, `1` | Show display name from `oauthAccount`, opt-in | 2 cmds |
+| 16 | `role::` | `bool` | `0` | `0`, `1` | Show organisation role from `oauthAccount`, opt-in | 2 cmds |
+| 17 | `billing::` | `bool` | `0` | `0`, `1` | Show billing type from `oauthAccount`, opt-in | 2 cmds |
+| 18 | `model::` | `bool` | `0` | `0`, `1` | Show active model from settings, opt-in | 2 cmds |
 
-**Total:** 19 parameters
+**Total:** 18 parameters
 
-*Parameters 2-3 form the Output Control group; parameters 6-19 form the Field Presence group*
+*Parameters 2-3 form the Output Control group; parameters 6-18 form the Field Presence group*
 
 ---
 
@@ -240,13 +239,13 @@ expires::0   → line omitted
 
 ### Parameter :: 11. `email::`
 
-Controls whether the email address line appears in `.credentials.status` output. Source: `emailAddress` field in `~/.claude.json`.
+Controls whether the email address line appears in output. Source for `.credentials.status`: `emailAddress` field in live `~/.claude.json`. Source for `.accounts`: `emailAddress` field in saved `{name}.claude.json` snapshot.
 
 - **Type:** `bool`
 - **Default:** `1` (shown)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
-- **Commands:** [`.credentials.status`](commands.md#command--10-credentialsstatus)
-- **Purpose:** Allows suppression of the email line; especially useful when the field is consistently `N/A`.
+- **Commands:** [`.accounts`](commands.md#command--3-accounts), [`.credentials.status`](commands.md#command--10-credentialsstatus)
+- **Purpose:** Allows suppression of the email line; shows `N/A` when the source file is absent or `emailAddress` is empty.
 - **Group:** Field Presence
 
 **Examples:**
@@ -258,27 +257,7 @@ email::0   → line omitted
 
 ---
 
-### Parameter :: 12. `org::`
-
-Controls whether the organisation name line appears in output. Used by both `.accounts` (per stored credential) and `.credentials.status` (from `~/.claude.json`).
-
-- **Type:** `bool`
-- **Default:** `1` (shown)
-- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
-- **Commands:** [`.accounts`](commands.md#command--3-accounts), [`.credentials.status`](commands.md#command--10-credentialsstatus)
-- **Purpose:** Allows suppression of the org line; often `N/A` for individual accounts.
-- **Group:** Field Presence
-
-**Examples:**
-
-```text
-org::1   → Org:     Acme Corp  (default; N/A when absent)
-org::0   → line omitted
-```
-
----
-
-### Parameter :: 13. `file::`
+### Parameter :: 12. `file::`
 
 Controls whether the credentials file path line appears in `.credentials.status` output. Opt-in (default `0`).
 
@@ -298,7 +277,7 @@ file::1   → File:    /home/user/.claude/.credentials.json
 
 ---
 
-### Parameter :: 14. `saved::`
+### Parameter :: 13. `saved::`
 
 Controls whether the saved account count line appears in `.credentials.status` output. Opt-in (default `0`). Counts `*.credentials.json` files in the credential store.
 
@@ -318,7 +297,7 @@ saved::1   → Saved:   3 account(s)
 
 ---
 
-### Parameter :: 15. `active::`
+### Parameter :: 14. `active::`
 
 Controls whether the active/inactive status line appears in `.accounts` output for each account entry.
 
@@ -338,7 +317,7 @@ active::0   → line omitted
 
 ---
 
-### Parameter :: 16. `display_name::`
+### Parameter :: 15. `display_name::`
 
 Controls whether the display name line appears in output. Opt-in (default `0`). Source: `displayName` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`) or from the saved `{name}.claude.json` snapshot (`.accounts`).
 
@@ -358,7 +337,7 @@ display_name::1   → Display: alice
 
 ---
 
-### Parameter :: 17. `role::`
+### Parameter :: 16. `role::`
 
 Controls whether the organisation role line appears in output. Opt-in (default `0`). Source: `organizationRole` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`) or from the saved `{name}.claude.json` snapshot (`.accounts`).
 
@@ -378,7 +357,7 @@ role::1   → Role:    admin
 
 ---
 
-### Parameter :: 18. `billing::`
+### Parameter :: 17. `billing::`
 
 Controls whether the billing type line appears in output. Opt-in (default `0`). Source: `billingType` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`) or from the saved `{name}.claude.json` snapshot (`.accounts`).
 
@@ -398,7 +377,7 @@ billing::1   → Billing: stripe_subscription
 
 ---
 
-### Parameter :: 19. `model::`
+### Parameter :: 18. `model::`
 
 Controls whether the active model line appears in output. Opt-in (default `0`). Source: `model` field in `settings.json` — read from live `~/.claude/settings.json` (`.credentials.status`) or from the saved `{name}.settings.json` snapshot (`.accounts`).
 

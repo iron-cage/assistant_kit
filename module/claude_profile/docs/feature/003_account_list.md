@@ -45,12 +45,12 @@
 
 When all field toggles are disabled, only bare account name lines are printed (no indentation, no blank-line separators).
 
-**`format::json`:** Returns a JSON array with all fields regardless of field-presence toggle values. Each object contains `name`, `is_active`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `org`, `display_name`, `role`, `billing`, `model`.
+**`format::json`:** Returns a JSON array with all fields regardless of field-presence toggle values. Each object contains `name`, `is_active`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `email`, `display_name`, `role`, `billing`, `model`.
 
 ### Acceptance Criteria
 
 - **AC-01**: Empty credential store returns `(no accounts configured)`, exit 0.
-- **AC-02**: Each entry reports `name`, `is_active`, `subscriptionType`, `rateLimitTier`, `expiresAt`, `org`; opt-in fields `display_name`, `role`, `billing`, `model` are available when enabled.
+- **AC-02**: Each entry reports `name`, `is_active`, `subscriptionType`, `rateLimitTier`, `expiresAt`, `email`; opt-in fields `display_name`, `role`, `billing`, `model` are available when enabled.
 - **AC-03**: The account matching `_active` marker has `is_active: true`; all others `false`.
 - **AC-04**: `format::json` output is a valid JSON array.
 - **AC-05**: `name::EMAIL` scopes to single account; exit 2 if not found; exit 1 if invalid format.
@@ -59,8 +59,8 @@ When all field toggles are disabled, only bare account name lines are printed (n
 - **AC-08**: Accounts listed alphabetically by name.
 - **AC-09**: `display_name::1` shows `Display:` line per account from saved `{name}.claude.json`.
 - **AC-10**: `role::1`, `billing::1`, `model::1` show corresponding lines per account from saved snapshots.
-- **AC-11**: Accounts without saved metadata files show `N/A` for `display_name`, `role`, `billing`, `model`.
-- **AC-12**: `format::json` includes `display_name`, `role`, `billing`, `model` keys per account object.
+- **AC-11**: Accounts without saved metadata files show `N/A` for `email`, `display_name`, `role`, `billing`, `model`.
+- **AC-12**: `format::json` includes `email`, `display_name`, `role`, `billing`, `model` keys per account object.
 
 ### Cross-References
 

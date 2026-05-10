@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+exec /workspace/.venv/bin/pytest /workspace/tests/ -v

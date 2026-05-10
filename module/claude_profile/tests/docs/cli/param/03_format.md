@@ -36,7 +36,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 
 - **Given:** At least one saved account exists under `~/.persistent/claude/credential/`.
 - **When:** `clp .accounts format::text`
-- **Then:** Indented key-val blocks with `Active:`, `Sub:`, `Tier:`, `Expires:`, `Org:` lines per account. Exit 0.; output is human-readable labeled text, not JSON
+- **Then:** Indented key-val blocks with `Active:`, `Sub:`, `Tier:`, `Expires:`, `Email:` lines per account. Exit 0.; output is human-readable labeled text, not JSON
 - **Exit:** 0
 - **Source:** [params.md -- format::](../../../../docs/cli/params.md#parameter--3-format)
 

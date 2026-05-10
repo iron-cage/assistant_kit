@@ -28,3 +28,4 @@ Parameters have fixed presence — they always exist; only their value changes.
 | [010](010_workspace_dir.md) | `workspace_dir` | ✅ | Infrastructure |
 | [011](011_dockerfile.md) | `dockerfile` | ✅ | Infrastructure |
 | [012](012_cache_dir.md) | `cache_dir` | ✅ | Infrastructure |
+| [013](013_workspace_root.md) | `workspace_root` | ✅ | Infrastructure |

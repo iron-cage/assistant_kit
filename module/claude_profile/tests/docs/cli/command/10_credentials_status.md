@@ -7,10 +7,10 @@ Integration test planning for the `.credentials.status` command. See [commands.m
 | ID | Test Name | Category |
 |----|-----------|----------|
 | IT-1 | No clp credential store — exits 0, default output | Account-Store Independence |
-| IT-2 | Default output with `.claude.json` — all 7 default-on fields shown | Field Presence (default) |
-| IT-3 | `format::json` — returns parseable JSON with all 9 fields | Output Format |
+| IT-2 | Default output with `.claude.json` — all 6 default-on fields shown | Field Presence (default) |
+| IT-3 | `format::json` — returns parseable JSON with all 8 fields | Output Format |
 | IT-4 | Missing `.credentials.json` — exits non-zero with actionable error | Error Handling |
-| IT-5 | Default output without `.claude.json` — email, org, account show N/A | Missing Optional File |
+| IT-5 | Default output without `.claude.json` — email and account show N/A | Missing Optional File |
 | IT-6 | All default-on fields suppressed — only token line shown | Field Presence (suppress) |
 | IT-7 | `file::1 saved::1` — File and Saved lines appended | Field Presence (opt-in) |
 | IT-8 | Output is stable across repeated invocations | Stability |
@@ -39,21 +39,21 @@ Integration test planning for the `.credentials.status` command. See [commands.m
 
 ---
 
-### IT-2: Default output with `.claude.json` — all 7 default-on fields shown
+### IT-2: Default output with `.claude.json` — all 6 default-on fields shown
 
-- **Given:** Claude Code's `~/.claude/.credentials.json` present (subscriptionType="pro", rateLimitTier="standard", expiresAt=far future). Claude Code's `~/.claude/.claude.json` present (emailAddress="user@example.com", organizationName="Acme Corp"). No `clp` credential store.
+- **Given:** Claude Code's `~/.claude/.credentials.json` present (subscriptionType="pro", rateLimitTier="standard", expiresAt=far future). Claude Code's `~/.claude/.claude.json` present (emailAddress="user@example.com"). No `clp` credential store.
 - **When:** `clp .credentials.status`
-- **Then:** Stdout contains all 7 default-on fields, exit 0.; all 7 default-on fields present in output
+- **Then:** Stdout contains all 6 default-on fields (Account, Sub, Tier, Token, Expires, Email), exit 0.; all 6 default-on fields present in output
 - **Exit:** 0
 - **Source:** [FR-17](../../../../docs/feature/012_live_credentials_status.md)
 
 ---
 
-### IT-3: `format::json` — returns parseable JSON with all 9 fields
+### IT-3: `format::json` — returns parseable JSON with all 8 fields
 
-- **Given:** Claude Code's `~/.claude/.credentials.json` present (subscriptionType="pro", rateLimitTier="standard", expiresAt=far future). Claude Code's `~/.claude/.claude.json` present (emailAddress="user@example.com", organizationName="Acme Corp").
+- **Given:** Claude Code's `~/.claude/.credentials.json` present (subscriptionType="pro", rateLimitTier="standard", expiresAt=far future). Claude Code's `~/.claude/.claude.json` present (emailAddress="user@example.com").
 - **When:** `clp .credentials.status format::json`
-- **Then:** Valid JSON object on stdout containing all 9 keys, exit 0.; output is valid JSON with all 9 required fields (including opt-in `file` and `saved`)
+- **Then:** Valid JSON object on stdout containing all 8 keys, exit 0.; output is valid JSON with all 8 required fields (including opt-in `file` and `saved`)
 - **Exit:** 0
 - **Source:** [FR-17](../../../../docs/feature/012_live_credentials_status.md)
 
@@ -69,11 +69,11 @@ Integration test planning for the `.credentials.status` command. See [commands.m
 
 ---
 
-### IT-5: Default output without `.claude.json` — email, org, account show N/A
+### IT-5: Default output without `.claude.json` — email and account show N/A
 
 - **Given:** Claude Code's `~/.claude/.credentials.json` present (subscriptionType="pro"). No `~/.claude/.claude.json`. No `clp` credential store (no `_active` marker).
 - **When:** `clp .credentials.status`
-- **Then:** Stdout shows "N/A" for email, org, and account fields, exit 0.; N/A displayed for missing email, org, and account
+- **Then:** Stdout shows "N/A" for email and account fields, exit 0.; N/A displayed for missing email and account
 - **Exit:** 0
 - **Source:** [FR-17](../../../../docs/feature/012_live_credentials_status.md)
 
@@ -82,7 +82,7 @@ Integration test planning for the `.credentials.status` command. See [commands.m
 ### IT-6: All default-on fields suppressed — only token line shown
 
 - **Given:** Claude Code's `~/.claude/.credentials.json` present (subscriptionType="pro", rateLimitTier="standard", expiresAt=far future).
-- **When:** `clp .credentials.status account::0 sub::0 tier::0 expires::0 email::0 org::0`
+- **When:** `clp .credentials.status account::0 sub::0 tier::0 expires::0 email::0`
 - **Then:** Stdout contains only the Token line, exit 0.; only Token: line in output, all other default-on lines suppressed
 - **Exit:** 0
 - **Source:** [FR-17](../../../../docs/feature/012_live_credentials_status.md)

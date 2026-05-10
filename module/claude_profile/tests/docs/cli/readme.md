@@ -6,7 +6,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 
 - **Purpose**: Document integration and edge case test plans for all clp commands and parameters.
 - **Responsibility**: Index of per-command, per-parameter, and per-group test case planning files.
-- **In Scope**: All 11 clp commands plus binary meta-flags (`--version`/`-V`), all 19 parameters, and all 2 parameter groups.
+- **In Scope**: All 11 clp commands plus binary meta-flags (`--version`/`-V`), all 18 parameters, and all 2 parameter groups.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 ### Responsibility Table
@@ -22,7 +22,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
 | Commands + meta-flags | 12 | >=8 IT each |
-| Parameters | 19 | >=6 EC each |
+| Parameters | 18 | >=6 EC each |
 | Parameter groups | 2 | >=4 IT each |
 
 ### Navigation
@@ -53,14 +53,13 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`token::`](param/09_token.md)
 - [`expires::`](param/10_expires.md)
 - [`email::`](param/11_email.md)
-- [`org::`](param/12_org.md)
-- [`file::`](param/13_file.md)
-- [`saved::`](param/14_saved.md)
-- [`active::`](param/15_active.md)
-- [`display_name::`](param/16_display_name.md)
-- [`role::`](param/17_role.md)
-- [`billing::`](param/18_billing.md)
-- [`model::`](param/19_model.md)
+- [`file::`](param/12_file.md)
+- [`saved::`](param/13_saved.md)
+- [`active::`](param/14_active.md)
+- [`display_name::`](param/15_display_name.md)
+- [`role::`](param/16_role.md)
+- [`billing::`](param/17_billing.md)
+- [`model::`](param/18_model.md)
 
 **Parameter Groups:**
 - [Output Control](param_group/01_output_control.md)

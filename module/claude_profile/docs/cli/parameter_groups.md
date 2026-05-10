@@ -3,7 +3,7 @@
 | Group | Parameters | Used By |
 |-------|------------|---------|
 | [Output Control](#group--1-output-control) | `verbosity::`, `format::` | `.accounts` (format only), `.token.status`, `.paths`, `.usage`, `.account.limits` |
-| [Field Presence](#group--2-field-presence) | `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `org::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | `.accounts`, `.credentials.status` |
+| [Field Presence](#group--2-field-presence) | `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | `.accounts`, `.credentials.status` |
 
 **Total:** 2 groups
 
@@ -78,26 +78,25 @@ All members pass. No false inclusions.
 
 ### Group :: 2. Field Presence
 
-**Parameters:** `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `org::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::`
+**Parameters:** `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::`
 **Pattern:** Per-field boolean presence control
-**Purpose:** Each param independently controls whether one output line appears in text output. Shared params (`sub::`, `tier::`, `expires::`, `org::`, `display_name::`, `role::`, `billing::`, `model::`) work identically across both commands.
+**Purpose:** Each param independently controls whether one output line appears in text output. Shared params (`sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `role::`, `billing::`, `model::`) work identically across both commands.
 
 | Parameter | Type | Default | Commands | Controls |
 |-----------|------|---------|----------|----------|
-| [`active::`](params.md#parameter--15-active) | `bool` | `1` | `.accounts` only | Active/inactive status line |
+| [`active::`](params.md#parameter--14-active) | `bool` | `1` | `.accounts` only | Active/inactive status line |
 | [`account::`](params.md#parameter--6-account) | `bool` | `1` | `.credentials.status` only | Active account name line |
 | [`sub::`](params.md#parameter--7-sub) | `bool` | `1` | Both | Subscription type line |
 | [`tier::`](params.md#parameter--8-tier) | `bool` | `1` | Both | Rate-limit tier line |
 | [`token::`](params.md#parameter--9-token) | `bool` | `1` | `.credentials.status` only | Token status line |
 | [`expires::`](params.md#parameter--10-expires) | `bool` | `1` | Both | Token expiry duration line |
-| [`email::`](params.md#parameter--11-email) | `bool` | `1` | `.credentials.status` only | Email address line |
-| [`org::`](params.md#parameter--12-org) | `bool` | `1` | Both | Organisation name line |
-| [`file::`](params.md#parameter--13-file) | `bool` | `0` | `.credentials.status` only | Credentials file path line (opt-in) |
-| [`saved::`](params.md#parameter--14-saved) | `bool` | `0` | `.credentials.status` only | Saved account count line (opt-in) |
-| [`display_name::`](params.md#parameter--16-display_name) | `bool` | `0` | Both | Display name line (opt-in) |
-| [`role::`](params.md#parameter--17-role) | `bool` | `0` | Both | Organisation role line (opt-in) |
-| [`billing::`](params.md#parameter--18-billing) | `bool` | `0` | Both | Billing type line (opt-in) |
-| [`model::`](params.md#parameter--19-model) | `bool` | `0` | Both | Active model line (opt-in) |
+| [`email::`](params.md#parameter--11-email) | `bool` | `1` | Both | Email address line |
+| [`file::`](params.md#parameter--12-file) | `bool` | `0` | `.credentials.status` only | Credentials file path line (opt-in) |
+| [`saved::`](params.md#parameter--13-saved) | `bool` | `0` | `.credentials.status` only | Saved account count line (opt-in) |
+| [`display_name::`](params.md#parameter--15-display_name) | `bool` | `0` | Both | Display name line (opt-in) |
+| [`role::`](params.md#parameter--16-role) | `bool` | `0` | Both | Organisation role line (opt-in) |
+| [`billing::`](params.md#parameter--17-billing) | `bool` | `0` | Both | Billing type line (opt-in) |
+| [`model::`](params.md#parameter--18-model) | `bool` | `0` | Both | Active model line (opt-in) |
 
 **Used By (2 commands):** [`.accounts`](commands.md#command--3-accounts), [`.credentials.status`](commands.md#command--10-credentialsstatus)
 
@@ -109,17 +108,17 @@ clp .accounts
 clp .credentials.status
 
 # Compact: suppress less-essential fields
-clp .accounts sub::0 tier::0 org::0
-clp .credentials.status email::0 org::0
+clp .accounts sub::0 tier::0 email::0
+clp .credentials.status email::0
 
 # Debug .credentials.status: add file path and account count
 clp .credentials.status file::1 saved::1
 
 # Bare names only (.accounts)
-clp .accounts active::0 sub::0 tier::0 expires::0 org::0
+clp .accounts active::0 sub::0 tier::0 expires::0 email::0
 
 # Token-only (.credentials.status)
-clp .credentials.status account::0 sub::0 tier::0 expires::0 email::0 org::0
+clp .credentials.status account::0 sub::0 tier::0 expires::0 email::0
 ```
 
 **Semantic Coherence Test**
@@ -134,8 +133,7 @@ clp .credentials.status account::0 sub::0 tier::0 expires::0 email::0 org::0
 | `tier::` | Yes — Tier: line | Yes |
 | `token::` | Yes — Token: line (`.credentials.status`) | Yes |
 | `expires::` | Yes — Expires: line | Yes |
-| `email::` | Yes — Email: line (`.credentials.status`) | Yes |
-| `org::` | Yes — Org: line | Yes |
+| `email::` | Yes — Email: line (both commands) | Yes |
 | `file::` | Yes — File: line (`.credentials.status`) | Yes |
 | `saved::` | Yes — Saved: line (`.credentials.status`) | Yes |
 | `display_name::` | Yes — Display: line | Yes |

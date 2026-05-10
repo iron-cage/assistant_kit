@@ -63,7 +63,7 @@ clp -V          # → identical output
 
 List all saved accounts or show a single named account with per-field presence control. Without `name::`: shows every account in the credential store as an indented key-val block; with `name::EMAIL`: shows that account's block only.
 
--- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`active::`](params.md#parameter--15-active), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`expires::`](params.md#parameter--10-expires), [`org::`](params.md#parameter--12-org), [`display_name::`](params.md#parameter--16-display_name), [`role::`](params.md#parameter--17-role), [`billing::`](params.md#parameter--18-billing), [`model::`](params.md#parameter--19-model), [`format::`](params.md#parameter--3-format)
+-- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`active::`](params.md#parameter--14-active), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`display_name::`](params.md#parameter--15-display_name), [`role::`](params.md#parameter--16-role), [`billing::`](params.md#parameter--17-billing), [`model::`](params.md#parameter--18-model), [`format::`](params.md#parameter--3-format)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
@@ -83,7 +83,7 @@ clp .accounts format::json
 | `sub::` | `bool` | `1` | Show subscription type line |
 | `tier::` | `bool` | `1` | Show rate-limit tier line |
 | `expires::` | `bool` | `1` | Show token expiry duration line |
-| `org::` | `bool` | `1` | Show organisation name line |
+| `email::` | `bool` | `1` | Show email address from saved `{name}.claude.json` snapshot |
 | `display_name::` | `bool` | `0` | Show display name from saved `~/.claude.json` snapshot (opt-in) |
 | `role::` | `bool` | `0` | Show organisation role from saved `~/.claude.json` snapshot (opt-in) |
 | `billing::` | `bool` | `0` | Show billing type from saved `~/.claude.json` snapshot (opt-in) |
@@ -99,14 +99,14 @@ clp .accounts
 #   Sub:     max
 #   Tier:    default_claude_max_20x
 #   Expires: in 2h 11m
-#   Org:     N/A
+#   Email:   alice@acme.com
 #
 # alice@home.com
 #   Active:  no
 #   Sub:     pro
 #   Tier:    default_claude_pro
 #   Expires: in 5h 30m
-#   Org:     N/A
+#   Email:   N/A
 
 clp .accounts name::alice@acme.com
 # alice@acme.com
@@ -114,9 +114,9 @@ clp .accounts name::alice@acme.com
 #   Sub:     max
 #   Tier:    default_claude_max_20x
 #   Expires: in 2h 11m
-#   Org:     N/A
+#   Email:   alice@acme.com
 
-clp .accounts sub::0 tier::0 org::0
+clp .accounts sub::0 tier::0 email::0
 # alice@acme.com
 #   Active:  yes
 #   Expires: in 2h 11m
@@ -125,7 +125,7 @@ clp .accounts sub::0 tier::0 org::0
 #   Active:  no
 #   Expires: in 5h 30m
 
-clp .accounts active::0 sub::0 tier::0 expires::0 org::0
+clp .accounts active::0 sub::0 tier::0 expires::0 email::0
 # alice@acme.com
 # alice@home.com
 
@@ -135,7 +135,7 @@ clp .accounts display_name::1 role::1 billing::1 model::1
 #   Sub:     max
 #   Tier:    default_claude_max_20x
 #   Expires: in 2h 11m
-#   Org:     Acme Corp
+#   Email:   alice@acme.com
 #   Display: alice
 #   Role:    admin
 #   Billing: stripe_subscription
@@ -146,14 +146,14 @@ clp .accounts display_name::1 role::1 billing::1 model::1
 #   Sub:     pro
 #   Tier:    default_claude_pro
 #   Expires: in 5h 30m
-#   Org:     N/A
+#   Email:   N/A
 #   Display: N/A
 #   Role:    N/A
 #   Billing: N/A
 #   Model:   N/A
 
 clp .accounts format::json
-# [{"name":"alice@acme.com","is_active":true,"subscription_type":"max","rate_limit_tier":"default_claude_max_20x","expires_at_ms":1711234567000,"org":"Acme Corp","display_name":"alice","role":"admin","billing":"stripe_subscription","model":"sonnet"},{"name":"alice@home.com","is_active":false,"subscription_type":"pro","rate_limit_tier":"default_claude_pro","expires_at_ms":1711243567000,"org":"N/A","display_name":"N/A","role":"N/A","billing":"N/A","model":"N/A"}]
+# [{"name":"alice@acme.com","is_active":true,"subscription_type":"max","rate_limit_tier":"default_claude_max_20x","expires_at_ms":1711234567000,"email":"alice@acme.com","display_name":"alice","role":"admin","billing":"stripe_subscription","model":"sonnet"},{"name":"alice@home.com","is_active":false,"subscription_type":"pro","rate_limit_tier":"default_claude_pro","expires_at_ms":1711243567000,"email":"N/A","display_name":"N/A","role":"N/A","billing":"N/A","model":"N/A"}]
 ```
 
 **Notes:**
@@ -161,8 +161,7 @@ clp .accounts format::json
 - With `name::EMAIL`: shows exactly one account's block — same format as listing.
 - Field params affect text output only; `format::json` always includes all fields regardless of presence params.
 - Reports exit 1 for invalid `name::` value; exit 2 if the named account is not found.
-- `display_name::`, `role::`, `billing::` read from per-account saved `{name}.claude.json` snapshot; `model::` reads from `{name}.settings.json`. All show `N/A` when the snapshot file is absent (backward compatible with accounts saved before this feature).
-- `org::` also reads from `{name}.claude.json` (`organizationName`), replacing the previously hardcoded `N/A`.
+- `email::`, `display_name::`, `role::`, `billing::` read from per-account saved `{name}.claude.json` snapshot; `model::` reads from `{name}.settings.json`. All show `N/A` when the snapshot file is absent (backward compatible with accounts saved before this feature).
 
 ---
 
@@ -403,14 +402,14 @@ clp .usage format::json
 
 Show live credential metadata by reading `~/.claude/.credentials.json` directly. Succeeds on any authenticated machine regardless of whether account store setup exists.
 
--- **Parameters:** [`format::`](params.md#parameter--3-format), [`account::`](params.md#parameter--6-account), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`token::`](params.md#parameter--9-token), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`org::`](params.md#parameter--12-org), [`file::`](params.md#parameter--13-file), [`saved::`](params.md#parameter--14-saved), [`display_name::`](params.md#parameter--16-display_name), [`role::`](params.md#parameter--17-role), [`billing::`](params.md#parameter--18-billing), [`model::`](params.md#parameter--19-model)
+-- **Parameters:** [`format::`](params.md#parameter--3-format), [`account::`](params.md#parameter--6-account), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`token::`](params.md#parameter--9-token), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`file::`](params.md#parameter--12-file), [`saved::`](params.md#parameter--13-saved), [`display_name::`](params.md#parameter--15-display_name), [`role::`](params.md#parameter--16-role), [`billing::`](params.md#parameter--17-billing), [`model::`](params.md#parameter--18-model)
 -- **Exit:** 0 (success) | 2 (credential file absent or HOME unset)
 
 **Syntax:**
 
 ```bash
 clp .credentials.status
-clp .credentials.status email::0 org::0
+clp .credentials.status email::0
 clp .credentials.status file::1 saved::1
 clp .credentials.status display_name::1 role::1 billing::1 model::1
 clp .credentials.status format::json
@@ -425,7 +424,6 @@ clp .credentials.status format::json
 | `token::` | `bool` | `1` | Show token status line |
 | `expires::` | `bool` | `1` | Show token expiry duration line |
 | `email::` | `bool` | `1` | Show email address line |
-| `org::` | `bool` | `1` | Show organisation name line |
 | `file::` | `bool` | `0` | Show credentials file path (opt-in) |
 | `saved::` | `bool` | `0` | Show saved account count (opt-in) |
 | `display_name::` | `bool` | `0` | Show display name from `~/.claude.json` (opt-in) |
@@ -443,9 +441,8 @@ clp .credentials.status
 # Token:   valid
 # Expires: in 7h 24m
 # Email:   N/A
-# Org:     N/A
 
-clp .credentials.status email::0 org::0
+clp .credentials.status email::0
 # Account: alice@acme.com
 # Sub:     max
 # Tier:    default_claude_max_20x
@@ -459,7 +456,6 @@ clp .credentials.status file::1 saved::1
 # Token:   valid
 # Expires: in 7h 24m
 # Email:   N/A
-# Org:     N/A
 # File:    /home/user/.claude/.credentials.json
 # Saved:   2 account(s)
 
@@ -470,14 +466,13 @@ clp .credentials.status display_name::1 role::1 billing::1 model::1
 # Token:   valid
 # Expires: in 7h 24m
 # Email:   alice@acme.com
-# Org:     Acme Corp
 # Display: alice
 # Role:    admin
 # Billing: stripe_subscription
 # Model:   sonnet
 
 clp .credentials.status format::json
-# {"subscription":"max","tier":"default_claude_max_20x","token":"valid","expires_in_secs":26640,"email":"alice@acme.com","org":"Acme Corp","account":"alice@acme.com","file":"/home/user/.claude/.credentials.json","saved":2,"display_name":"alice","role":"admin","billing":"stripe_subscription","model":"sonnet"}
+# {"subscription":"max","tier":"default_claude_max_20x","token":"valid","expires_in_secs":26640,"email":"alice@acme.com","account":"alice@acme.com","file":"/home/user/.claude/.credentials.json","saved":2,"display_name":"alice","role":"admin","billing":"stripe_subscription","model":"sonnet"}
 ```
 
 **Notes:**

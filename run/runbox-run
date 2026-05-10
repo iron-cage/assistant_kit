@@ -8,16 +8,23 @@ CONFIG="$1"
 COMMAND="${2:-.}"
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+CONFIG_DIR="$( cd "$( dirname "$CONFIG" )" && pwd )"
 
 # ── Config reader (flat YAML — no external parser required) ───────────────────
 # Strips "key: " prefix and surrounding double-quotes from value.
 
-cfg()     { grep -m1 "^$1:" "$CONFIG" | sed 's/^[^:]*:[[:space:]]*//' | tr -d '"'; }
+cfg()     { grep -m1 "^$1:" "$CONFIG" | sed 's/^[^:]*:[[:space:]]*//' | tr -d '"' || :; }
 cfg_or()  { local v; v="$(cfg "$1")"; echo "${v:-$2}"; }
 
 IMAGE="$(cfg image)"                              # image tag for -t at build and image lookup at run
-DOCKERFILE="$(cfg_or dockerfile "$SCRIPT_DIR/runbox.dockerfile")"  # runbox system build file
+_dockerfile_raw="$(cfg_or dockerfile "")"         # resolved relative to CONFIG_DIR
+if [[ -z "$_dockerfile_raw" ]]; then
+  DOCKERFILE="$SCRIPT_DIR/runbox.dockerfile"
+elif [[ "$_dockerfile_raw" = /* ]]; then
+  DOCKERFILE="$_dockerfile_raw"
+else
+  DOCKERFILE="$CONFIG_DIR/$_dockerfile_raw"
+fi
 TEST_USER="$(cfg test_user)"                      # forwarded as --build-arg; non-root for chmod-000 tests
 CMD_SCOPE="$(cfg cmd_scope)"                      # crate filter for nextest run and cargo chef cook
 CMD_FILTER="$(cfg cmd_filter)"                    # forwarded as --build-arg; nextest filter baked into offline CMD
@@ -28,6 +35,12 @@ SYSTEM_PACKAGES="$(cfg_or system_packages '')"          # space-separated apt pa
 CARGO_FEATURES="$(cfg_or cargo_features --all-features)" # feature flags for nextest list and offline run
 WORKSPACE_DIR="$(cfg_or workspace_dir /workspace)"      # container working directory
 CACHE_DIR="$(cfg_or cache_dir target)"                  # build artifact dir; seeded volume + container mount
+_workspace_root_raw="$(cfg_or workspace_root "")"       # project root; resolved relative to CONFIG_DIR
+if [[ -z "$_workspace_root_raw" ]]; then
+  WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+else
+  WORKSPACE_ROOT="$( cd "$CONFIG_DIR/$_workspace_root_raw" && pwd )"
+fi
 
 # ── Plugin hooks (no-ops; overridden by run/plugins.sh if present) ───────────
 _plugin_build_volumes()    { extra_volumes=();                  }
@@ -37,9 +50,13 @@ _plugin_list_cmd()         { list_cmd="${cargo_env}cargo nextest list $CMD_SCOPE
 _plugin_shell_extra_args() { plugin_extra_args=();              }
 _plugin_help_hint()        { plugin_hint="";                    }
 
-# SCRIPT_DIR is always run/ — plugins.sh is the single canonical location.
+# Source core plugins first (SCRIPT_DIR/plugins.sh), then project-local overrides (CONFIG_DIR/plugins.sh).
 PLUGINS_FILE="${SCRIPT_DIR}/plugins.sh"
 [[ -f "$PLUGINS_FILE" ]] && source "$PLUGINS_FILE"
+if [[ "$CONFIG_DIR" != "$SCRIPT_DIR" ]]; then
+  CONFIG_PLUGINS_FILE="${CONFIG_DIR}/plugins.sh"
+  [[ -f "$CONFIG_PLUGINS_FILE" ]] && source "$CONFIG_PLUGINS_FILE"
+fi
 
 # ── Container runtime ─────────────────────────────────────────────────────────
 

@@ -8,7 +8,7 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 |---|-------------|------------|--------|
 | 1 | `format::json` overrides `verbosity::` | `format::`, `verbosity::` | JSON output includes all fields regardless of verbosity level |
 | 2 | `dry::` is orthogonal to output control | `dry::`, `verbosity::`, `format::` | Dry-run mode applies to mutation; does not affect output formatting |
-| 3 | `format::json` overrides field-presence params | `format::`, `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `org::`, `file::`, `saved::` | JSON output includes all fields regardless of field-presence param values |
+| 3 | `format::json` overrides field-presence params | `format::`, `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::` | JSON output includes all fields regardless of field-presence param values |
 
 ---
 
@@ -50,7 +50,7 @@ clp .token.status v::0
 
 ### Interaction :: 3. `format::json` overrides field-presence params
 
-**Parameters:** [`format::`](params.md#parameter--3-format), [`active::`](params.md#parameter--15-active), [`account::`](params.md#parameter--6-account), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`token::`](params.md#parameter--9-token), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`org::`](params.md#parameter--12-org), [`file::`](params.md#parameter--13-file), [`saved::`](params.md#parameter--14-saved)
+**Parameters:** [`format::`](params.md#parameter--3-format), [`active::`](params.md#parameter--14-active), [`account::`](params.md#parameter--6-account), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`token::`](params.md#parameter--9-token), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`file::`](params.md#parameter--12-file), [`saved::`](params.md#parameter--13-saved)
 
 **Effect:** When `format::json` is specified on `.accounts` or `.credentials.status`, the JSON output always includes all fields regardless of field-presence param values. Setting `sub::0` or `active::0` only suppresses those fields in text output, not in JSON.
 

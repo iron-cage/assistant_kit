@@ -27,7 +27,7 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 | IT-19 | Account without saved metadata snapshots → `N/A` for all 4 new fields | Rich Metadata / Edge Case |
 | IT-20 | `format::json` includes `display_name`, `role`, `billing`, `model` keys | Rich Metadata / JSON |
 | IT-21 | New metadata fields absent by default (opt-in) | Rich Metadata / Default |
-| IT-22 | `org::` reads real value from saved `.claude.json` snapshot (no longer hardcoded `N/A`) | Rich Metadata / Fix |
+| IT-22 | `email::` shows value from saved `.claude.json` snapshot (default-on) | Rich Metadata / Email |
 
 ### Test Coverage Summary
 
@@ -41,7 +41,7 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 - Output Order: 1 test (IT-12)
 - Bug Reproducer: 1 test (IT-14)
 - Rich Metadata: 4 tests (IT-17, IT-18, IT-20, IT-21)
-- Rich Metadata / Fix: 1 test (IT-22)
+- Rich Metadata / Email: 1 test (IT-22)
 
 **Total:** 22 integration tests
 
@@ -51,7 +51,7 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 
 - **Given:** Create `~/.persistent/claude/credential/` with two credential files: `work@acme.com.credentials.json` and `personal@home.com.credentials.json`. Set `work@acme.com` as the active account via the `_active` marker.
 - **When:** `clp .accounts`
-- **Then:** Output contains two indented blocks, one starting with `work@acme.com` and one with `personal@home.com`. Each block has `Active:`, `Sub:`, `Tier:`, `Expires:`, `Org:` lines.; both accounts listed as indented key-val blocks
+- **Then:** Output contains two indented blocks, one starting with `work@acme.com` and one with `personal@home.com`. Each block has `Active:`, `Sub:`, `Tier:`, `Expires:`, `Email:` lines.; both accounts listed as indented key-val blocks
 - **Exit:** 0
 - **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
 
@@ -111,7 +111,7 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 
 - **Given:** `work@acme.com` is the active account.
 - **When:** `clp .accounts sub::0 tier::0`
-- **Then:** Blocks contain `Active:`, `Expires:`, `Org:` lines but NOT `Sub:` or `Tier:` lines.; suppressed field lines are absent; non-suppressed lines remain
+- **Then:** Blocks contain `Active:`, `Expires:`, `Email:` lines but NOT `Sub:` or `Tier:` lines.; suppressed field lines are absent; non-suppressed lines remain
 - **Exit:** 0
 - **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts), [parameter_groups.md — Field Presence](../../../../docs/cli/parameter_groups.md#group--2-field-presence)
 
@@ -120,7 +120,7 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 ### IT-8: All field params off — bare name list
 
 - **Given:** Two accounts exist: `work@acme.com` (active) and `personal@home.com`.
-- **When:** `clp .accounts active::0 sub::0 tier::0 expires::0 org::0`
+- **When:** `clp .accounts active::0 sub::0 tier::0 expires::0 email::0`
 - **Then:** Two bare name lines, no indented fields, no blank-line separators between them.; bare name list when all fields off
 - **Exit:** 0
 - **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
@@ -131,7 +131,7 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 
 - **Given:** `work@acme.com` (active) and `personal@home.com` exist.
 - **When:** `clp .accounts format::json`
-- **Then:** Valid JSON array `[{...},{...}]` with each object containing `name`, `is_active`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `org`.; valid JSON array with correct structure and active status
+- **Then:** Valid JSON array `[{...},{...}]` with each object containing `name`, `is_active`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `email`.; valid JSON array with correct structure and active status
 - **Exit:** 0
 - **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
 
@@ -160,7 +160,7 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 ### IT-12: Alphabetical ordering
 
 - **Given:** Create accounts: `zed@acme.com`, `alice@acme.com`, `mike@acme.com` in non-alphabetical creation order.
-- **When:** `clp .accounts active::0 sub::0 tier::0 expires::0 org::0`
+- **When:** `clp .accounts active::0 sub::0 tier::0 expires::0 email::0`
 - **Then:** Three bare names in alphabetical order: `alice@acme.com`, `mike@acme.com`, `zed@acme.com`.; accounts sorted alphabetically regardless of creation order
 - **Exit:** 0
 - **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
@@ -257,10 +257,10 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 
 ---
 
-### IT-22: `org::` reads real value from saved snapshot
+### IT-22: `email::` shows value from saved snapshot
 
-- **Given:** `work@acme.com` with saved `.claude.json` containing `{"oauthAccount":{"organizationName":"Acme Corp"}}`.
+- **Given:** `work@acme.com` with saved `.claude.json` containing `{"emailAddress":"work@acme.com"}`.
 - **When:** `clp .accounts`
-- **Then:** Stdout contains `Org:     Acme Corp` (not `N/A`).; org populated from snapshot instead of hardcoded N/A
+- **Then:** Stdout contains `Email:   work@acme.com`.; email address populated from saved snapshot (default-on)
 - **Exit:** 0
 - **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)

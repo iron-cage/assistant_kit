@@ -35,7 +35,7 @@ Each output line is independently controlled by a boolean param. All default to 
 
 **`Account:` line:** Reads `_active` marker if it exists. Shows `N/A` when no `_active` marker is present (fresh install or uninitialised account store). Because `.account.save` writes `_active` on every successful save, the account name is always present after any save operation.
 
-**Missing fields:** Email and org show `N/A` when `~/.claude.json` is absent or the fields are empty.
+**Missing fields:** Email shows `N/A` when `~/.claude.json` is absent or the field is empty.
 
 **Absent credentials file:** Exit non-zero (exit 2) with an actionable error naming the full path to `~/.claude/.credentials.json`.
 

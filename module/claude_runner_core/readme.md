@@ -12,7 +12,7 @@ Claude Code process execution with builder pattern and single execution point.
 | `src/` | Builder pattern implementation: `ClaudeCommand`, types, process scanner |
 | `tests/` | Builder API, migration validation, verification framework (31 test files) |
 | `docs/` | Behavioral requirements: features, invariants, parameter reference |
-| `task/` | Crate-level task tracking |
+| `../../../task/claude_runner_core/` | Crate task registry — External Layout (see `claude_tools/task/`) |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 
 ### Responsibility Table
@@ -143,7 +143,7 @@ let result = ClaudeCommand::new()
 - **Parameter Reference**: `docs/claude_params/` — all 59 `claude` binary parameters (CLI flags + env vars), with builder API mapping and default comparisons
 - **Builder API**: `src/command.rs` doc comments — authoritative builder method documentation
 - **Tests**: `tests/readme.md` — full test suite coverage map
-- **Tasks**: `task/` — crate-level task tracking
+- **Tasks**: `../../../task/claude_runner_core/` — crate task registry (External Layout)
 
 ## Dependencies
 

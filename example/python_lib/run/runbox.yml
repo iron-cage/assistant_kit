@@ -1,0 +1,6 @@
+image: python_lib_test
+dockerfile: runbox.dockerfile
+test_user: root
+workspace_root: ..
+cache_dir: .venv
+test_script: run/test

@@ -171,6 +171,7 @@ ARG WORKSPACE_DIR=/workspace
 ARG RUSTUP_COMPONENTS=clippy
 ARG SYSTEM_PACKAGES=curl procps
 ARG CARGO_FEATURES=--all-features
+ENV CARGO_FEATURES=$CARGO_FEATURES
 
 # nextest: compile from source for architecture portability (layer is cached).
 RUN cargo install cargo-nextest --locked
@@ -224,6 +225,9 @@ USER $TEST_USER
 
 # Offline tests by default — no ~/.claude/ storage or w3 required.
 # CMD_SCOPE and CMD_FILTER are baked in at build time from runbox.yml values.
+# ENV promotes each ARG so the value persists to container runtime (ARGs alone expire after build).
 ARG CMD_SCOPE=--workspace
+ENV CMD_SCOPE=$CMD_SCOPE
 ARG CMD_FILTER=!test(lim_it) & !binary(behavior)
+ENV CMD_FILTER=$CMD_FILTER
 CMD cargo nextest run $CMD_SCOPE $CARGO_FEATURES --filter-expr "$CMD_FILTER"
