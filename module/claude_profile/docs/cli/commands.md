@@ -234,7 +234,7 @@ clp .account.switch name::alice@home.com dry::1
 
 ### Command :: 6. `.account.delete`
 
-Removes `{credential_store}/{name}.credentials.json` from the credential store. Refuses to delete the currently active account — switch to another account first.
+Removes `{credential_store}/{name}.credentials.json` from the credential store and best-effort removes the accompanying `{name}.claude.json` and `{name}.settings.json` snapshot files. Refuses to delete the currently active account — switch to another account first.
 
 -- **Parameters:** [`name::`](params.md#parameter--1-name) **(required)**, [`dry::`](params.md#parameter--5-dry)
 -- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found, account is active)
@@ -263,6 +263,10 @@ clp .account.delete name::alice@oldco.com dry::1
 clp .account.delete name::alice@acme.com
 # error: cannot delete active account 'alice@acme.com' — switch to another account first
 ```
+
+**Notes:**
+- Snapshot files (`{name}.claude.json`, `{name}.settings.json`) are removed best-effort: missing snapshots are silently skipped — the operation still succeeds.
+- Attempting to delete the active account exits 2 regardless of `dry::1`.
 
 ---
 

@@ -108,16 +108,17 @@ fn require_credential_store() -> Result< std::path::PathBuf, ErrorData >
 
 /// Map `std::io::Error` to `ErrorData` with appropriate exit code.
 ///
-/// - `InvalidInput` / `PermissionDenied` → `ArgumentTypeMismatch` (exit 1)
-/// - Everything else → `InternalError` (exit 2)
+/// - `InvalidInput` → `ArgumentTypeMismatch` (exit 1)
+/// - `PermissionDenied` and everything else → `InternalError` (exit 2)
+///
+/// `PermissionDenied` covers the active-account guard in `check_delete_preconditions()` —
+/// a runtime state violation, not an argument format error, so it maps to exit 2.
 fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> ErrorData
 {
   let code = match e.kind()
   {
-    std::io::ErrorKind::InvalidInput | std::io::ErrorKind::PermissionDenied =>
-      ErrorCode::ArgumentTypeMismatch,
-    _ =>
-      ErrorCode::InternalError,
+    std::io::ErrorKind::InvalidInput => ErrorCode::ArgumentTypeMismatch,
+    _                                => ErrorCode::InternalError,
   };
   ErrorData::new( code, format!( "{context}: {e}" ) )
 }

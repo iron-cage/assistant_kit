@@ -44,20 +44,22 @@
 //! |----|---------------|-----------|-----|
 //! | ad01 | `ad01_delete_inactive_removes_file` | delete inactive removes file | P |
 //! | ad02 | `ad02_delete_dry_run_keeps_file` | dry::1 → file kept | P |
-//! | ad03 | `ad03_delete_active_exits_1` | delete active account → exit 1 | N |
+//! | ad03 | `ad03_delete_active_exits_2` | delete active account → exit 2 | N |
 //! | ad04 | `ad04_delete_nonexistent_exits_2` | unknown account → exit 2 | N |
 //! | ad05 | `ad05_delete_empty_name_exits_1` | empty name → exit 1 | N |
 //! | ad06 | `ad06_delete_slash_name_exits_1` | name with `/` → exit 1 | N |
 //! | ad07 | `ad07_delete_missing_name_param_exits_1` | no name:: param → exit 1 | N |
 //! | ad08 | `ad08_delete_then_list_absent` | delete then list → account gone | P |
 //! | ad09 | `ad09_double_delete_exits_2` | delete twice → second exit 2 | N |
-//! | ad10 | `ad10_delete_dry_run_active_exits_1` | dry delete active → exit 1 | N |
+//! | ad10 | `ad10_delete_dry_run_active_exits_2` | dry delete active → exit 2 | N |
 //! | ad11 | `ad11_delete_dry_run_nonexistent_exits_2` | dry delete nonexistent → exit 2 | N |
+//! | ad12 | `ad12_delete_removes_snapshot_files` | delete removes .claude.json + .settings.json snapshots | P |
 
 use crate::helpers::{
   run_cs_with_env,
   stdout, assert_exit,
   write_credentials, write_account, write_claude_json, account_exists,
+  write_account_claude_json, write_account_settings_json,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -419,14 +421,14 @@ fn ad02_delete_dry_run_keeps_file()
 }
 
 #[ test ]
-fn ad03_delete_active_exits_1()
+fn ad03_delete_active_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.delete", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 1 );
+  assert_exit( &out, 2 );
   assert!( account_exists( dir.path(), "alice@acme.com" ), "active account must not be deleted" );
 }
 
@@ -541,14 +543,14 @@ fn aw10_switch_dry_run_nonexistent_exits_2()
 // Pitfall: The active-account guard is a safety invariant that must hold even in dry-run;
 //   reporting "would delete active account" without error is a misleading no-op.
 #[ test ]
-fn ad10_delete_dry_run_active_exits_1()
+fn ad10_delete_dry_run_active_exits_2()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.delete", "name::alice@acme.com", "dry::1" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 1 );
+  assert_exit( &out, 2 );
   assert!( account_exists( dir.path(), "alice@acme.com" ), "dry-run must not delete active account" );
 }
 
@@ -574,3 +576,22 @@ fn ad11_delete_dry_run_nonexistent_exits_2()
   assert_exit( &out, 2 );
 }
 
+#[ test ]
+fn ad12_delete_removes_snapshot_files()
+{
+  // IT-11: delete removes all 3 files — credentials, .claude.json, and .settings.json snapshots.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",  "pro", "standard", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "old@archive.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_claude_json(   dir.path(), "old@archive.com", "", "", "", "" );
+  write_account_settings_json( dir.path(), "old@archive.com", "sonnet" );
+
+  let out = run_cs_with_env( &[ ".account.delete", "name::old@archive.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  assert!( !store.join( "old@archive.com.credentials.json" ).exists(), "credentials must be removed after delete" );
+  assert!( !store.join( "old@archive.com.claude.json" ).exists(),      "claude.json snapshot must be removed after delete" );
+  assert!( !store.join( "old@archive.com.settings.json" ).exists(),    "settings.json snapshot must be removed after delete" );
+}
