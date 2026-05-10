@@ -35,6 +35,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 | `tests/` | CLI flag parsing, dry-run, verbosity, execution mode tests |
 | `docs/` | CLI reference and design documentation |
 | `changelog.md` | Notable changes by version |
+| `verb/` | Shell scripts for each `do` protocol verb. |
 
 ### Architecture
 

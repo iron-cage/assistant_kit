@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# do verbs — list available verbs for this project (protocol meta-verb)
+set -euo pipefail
+printf '%-8s %-11s %s\n' build   available   "cargo build -p claude_quota"
+printf '%-8s %-11s %s\n' test    available   "w3 .test level::3"
+printf '%-8s %-11s %s\n' clean   available   "cargo clean -p claude_quota"
+printf '%-8s %-11s %s\n' run     unavailable "-"
+printf '%-8s %-11s %s\n' lint    available   "cargo clippy -p claude_quota --all-features -- -D warnings"
+printf '%-8s %-11s %s\n' verbs   built-in    "-"
+printf '%-8s %-11s %s\n' detect  built-in    "-"

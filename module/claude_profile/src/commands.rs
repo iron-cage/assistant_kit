@@ -759,13 +759,29 @@ pub fn dot_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result<
 ///
 /// # Errors
 ///
-/// Returns `ErrorData` if name is missing/empty, HOME is unset,
+/// Returns `ErrorData` if the name cannot be resolved (explicit empty value or
+/// `emailAddress` absent from `~/.claude.json`), HOME is unset,
 /// or the credential copy fails.
 #[ inline ]
 pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let name             = require_nonempty_string_arg( &cmd, "name" )?;
   let paths            = require_claude_paths()?;
+  let name             = match cmd.arguments.get( "name" )
+  {
+    Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
+    Some( Value::String( _ ) ) =>
+      return Err( ErrorData::new( ErrorCode::ArgumentMissing, "name:: value cannot be empty".to_string() ) ),
+    _ =>
+    {
+      let cj = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
+      crate::account::parse_string_field( &cj, "emailAddress" )
+        .filter( | s | !s.is_empty() )
+        .ok_or_else( || ErrorData::new(
+          ErrorCode::ArgumentMissing,
+          "cannot infer account name: emailAddress absent from ~/.claude.json — pass name:: explicitly".to_string(),
+        ) )?
+    }
+  };
   let credential_store = require_credential_store()?;
 
   if is_dry( &cmd )

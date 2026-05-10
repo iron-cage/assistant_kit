@@ -56,7 +56,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`.
 - **When:** `clp .account.save name::`
-- **Then:** Error message containing `account name must not be empty` with exit 1.; empty name rejected with descriptive error
+- **Then:** Error message containing `name:: value cannot be empty` with exit 1.; empty name rejected with descriptive error
 - **Exit:** 1
 - **Source:** [types.md -- AccountName](../../../../docs/cli/types.md#type--1-accountname)
 

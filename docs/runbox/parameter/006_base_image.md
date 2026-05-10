@@ -1,19 +1,17 @@
 # Parameter: `base_image`
 
-- **Status:** 🔒 Hardcoded — in `runbox.dockerfile`
+- **Status:** ✅ Configured — via `runbox.yml`; default: `rust:slim`
 - **Current State:** `rust:slim`
-- **Where It Flows:** `FROM rust:slim` in all four build stages (chef, planner, cook, test)
+- **Where It Flows:** `runbox.yml base_image:` → `--build-arg BASE_IMAGE` → `FROM $BASE_IMAGE AS chef` and `FROM $BASE_IMAGE AS test` in `runbox.dockerfile`
 
 ### Notes
 
-Version-unpinned. Identical string baked into both the chef and test stages; any change must be applied consistently to all four `FROM` lines.
+`planner` and `cook` inherit from `chef` so they need no separate `FROM` — changing the chef base propagates to them automatically. Only the two explicit `FROM` lines (chef and test) must match; keeping them on the same value avoids ABI mismatches between the stages.
 
 ### Example
 
-```dockerfile
-FROM rust:slim AS chef      # installs cargo-chef; inherited by planner and cook
-FROM chef AS planner        # inherits rust:slim via chef — no separate FROM needed
-FROM chef AS cook           # inherits rust:slim via chef
-FROM rust:slim AS test      # final image; fresh rust:slim, receives cook artifacts
+Pinning to a specific Rust release:
+```yaml
+base_image: rust:1.78-slim
 ```
-To pin to a specific version, change `rust:slim` → `rust:1.78-slim` in the `chef` and `test` FROM lines. Planner and cook inherit from `chef`, so they update automatically. A mismatch (chef on 1.77, test on 1.78) risks ABI-incompatible artifacts if the rust ABI changes between patch versions — keep both FROM lines on the same value.
+`docker-run` passes `--build-arg BASE_IMAGE=rust:1.78-slim` → dockerfile bakes `FROM rust:1.78-slim AS chef` and `FROM rust:1.78-slim AS test`. To revert to floating latest, remove the key or leave it commented out — `docker-run` defaults to `rust:slim`.

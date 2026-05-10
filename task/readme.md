@@ -11,7 +11,8 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
-| 116 | 🎯 Available | Make `name::` optional on `.account.save` — infer from `emailAddress` | feature | 2026-05-10 | [116](116_account_save_infer_name_from_email.md) |
+| 117 | ✅ Complete | Fix `account::delete()` — remove snapshot files alongside credentials | bug | 2026-05-10 | [117](completed/117_account_delete_snapshot_cleanup.md) |
+| 116 | ✅ Complete | Make `name::` optional on `.account.save` — infer from `emailAddress` | feature | 2026-05-10 | [116](completed/116_account_save_infer_name_from_email.md) |
 | 115 | ✅ Complete | Extend `.accounts` with rich OAuth metadata fields | feature | 2026-05-07 | [115](completed/115_accounts_rich_metadata.md) |
 | 114 | ✅ Complete | Fix `accounts_routine` HOME validation and verify full test suite | verification | 2026-05-04 | [114](completed/114_fix_accounts_routine_and_run_tests.md) |
 | 113 | ✅ Complete | Add parameter descriptions to `.credentials.status` help output | feature | 2026-05-04 | [113](completed/113_credentials_status_help_descriptions.md) |
@@ -131,7 +132,7 @@
 
 **Status Distribution:**
 - 🎯 Available: 0
-- ✅ Complete: 115
+- ✅ Complete: 117
 
 **Status Legend:**
 - 📥 Backlog — not yet planned
@@ -141,4 +142,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-05-07 (TSK-115 complete: extend `.accounts` with rich OAuth metadata fields)
+**Last Updated:** 2026-05-10 (TSK-116+117 complete: name inference on `.account.save` + snapshot cleanup on `.account.delete`)

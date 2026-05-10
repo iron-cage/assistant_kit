@@ -1,28 +1,17 @@
 # Parameter: `workspace_dir`
 
-- **Status:** 🔒 Hardcoded — in both `runbox.dockerfile` and `docker-run`
+- **Status:** ✅ Configured — via `runbox.yml`; default: `/workspace`
 - **Current State:** `/workspace`
-- **Where It Flows:** `WORKDIR /workspace`, all volume mount paths, `ENV HOME /workspace`, `docker run -w /workspace`
+- **Where It Flows:** `runbox.yml workspace_dir:` → `--build-arg WORKSPACE_DIR` → `WORKDIR`, `ENV HOME`, `COPY`, and `RUN` paths in planner/cook/test stages; `$WORKSPACE_DIR` in all `docker-run` volume mounts and the test entrypoint path
 
 ### Notes
 
-Split across both dockerfile and `docker-run` — both must change together. Baking it into one place is blocked by the need for it at both build time and run time.
+Propagates through both files at build time (4 dockerfile stages) and runtime (6 docker-run call sites). Dockerfile paths are baked into the image on `.build`; docker-run picks up the runtime paths immediately from `runbox.yml`. The `run/test` scripts inside the container are not auto-updated — they still contain hard-coded paths and must be updated manually if `workspace_dir` changes.
 
 ### Example
 
-`/workspace` is hardcoded in both files:
-
-`runbox.dockerfile`:
-```dockerfile
-WORKDIR /workspace
-ENV HOME=/workspace
-COPY --from=cook /workspace/target /workspace/target
-RUN mkdir /workspace/target_seed
+Moving the container workspace to `/app`:
+```yaml
+workspace_dir: /app
 ```
-`docker-run`:
-```bash
--v "${volume}:/workspace/target"       # build cache mount
--v "${volume}:/workspace/target_seed"  # seeding mount
-"/workspace/$TEST_SCRIPT"             # test entrypoint
-```
-Changing to `/app` requires a coordinated search-and-replace across both files. A partial change (dockerfile says `/workspace`, docker-run mounts at `/app/target`) causes the build-cache volume to miss: cargo sees an empty `target/` and recompiles all workspace crates from scratch on every run.
+`docker-run` passes `--build-arg WORKSPACE_DIR=/app` → dockerfile bakes `WORKDIR /app`, `ENV HOME=/app`, `COPY --from=cook /app/target /app/target`, `RUN mkdir /app/target_seed`, and `chown`/`chmod` on `/app`. Docker-run uses `/app` in all `-v` mounts (`${IMAGE}_target:/app/target`) and the test entrypoint (`/app/$TEST_SCRIPT`). Requires `.build` before the next `.test`; also requires updating `run/test` and any other scripts that reference `/workspace` directly.

@@ -3,9 +3,11 @@
 ## Execution State
 
 - **Executor Type:** any
-- **Actor:** null
-- **Claimed At:** null
-- **Status:** 🎯 (Available)
+- **Actor:** claude-sonnet-4-6
+- **Claimed At:** 2026-05-10
+- **Status:** ✅ (Complete)
+- **Validated By:** claude-sonnet-4-6
+- **Validation Date:** 2026-05-10
 
 ## Goal
 
@@ -17,8 +19,8 @@ The counterexample already exists: `read_live_cred_meta()` at `commands.rs:148` 
 
 ## In Scope
 
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_profile/src/commands.rs` § `account_save_routine()` — replace `require_nonempty_string_arg(&cmd, "name")?` with a two-branch pattern: use explicit `name::` if present and non-empty, else read `emailAddress` from `paths.claude_json_file()` via `parse_string_field`
-- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_profile/tests/cli/accounts_test.rs` — update test for IT-10 (now tests absent-emailAddress path) and add test for IT-14 (infer success)
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_profile/src/commands.rs` § `account_save_routine()` — replace `require_nonempty_string_arg(&cmd, "name")?` and the following `require_claude_paths()` call with a three-branch match: non-empty explicit name (use it), empty explicit name (error immediately), absent (read `emailAddress` from `paths.claude_json_file()` via `parse_string_field`)
+- `/home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_profile/tests/cli/account_mutations_test.rs` — rename `as10_save_missing_name_param_exits_1` to `as10_save_infer_absent_email_exits_1` (update comment to reflect new semantics), add `as15_save_infers_email_from_claude_json` (IT-14 success path)
 
 ## Out of Scope
 
@@ -44,22 +46,28 @@ Execute in order. Do not skip or reorder steps.
 3. **Read source counterexample** — Read `src/commands.rs` lines 134-163 (`read_live_cred_meta()`) to confirm `parse_string_field(&cj, "emailAddress")` pattern and `paths.claude_json_file()` usage.
 4. **Read current routine** — Read `src/commands.rs` lines 765-810 (`account_save_routine()`) to understand full flow before changing.
 5. **Write failing tests** — In `tests/cli/accounts_test.rs`, update the IT-10 test (absent-email path exits 1 with correct message) and add IT-14 test (emailAddress present → saves with inferred name). Confirm RED.
-6. **Implement inference** — In `account_save_routine()`, replace `let name = require_nonempty_string_arg(&cmd, "name")?;` with:
+6. **Implement inference** — In `account_save_routine()`, replace the opening three `let` bindings with:
    ```rust
-   let name = match get_string_arg(&cmd, "name").filter(|s| !s.is_empty()) {
-     Some(n) => n,
-     None => {
-       let paths = require_claude_paths()?;
-       let cj    = std::fs::read_to_string(paths.claude_json_file()).unwrap_or_default();
-       crate::account::parse_string_field(&cj, "emailAddress")
-         .filter(|s| !s.is_empty())
-         .ok_or_else(|| make_error(
-           "cannot infer account name: emailAddress absent from ~/.claude.json — pass name:: explicitly"
-         ))?
+   let paths            = require_claude_paths()?;
+   let name             = match cmd.arguments.get( "name" )
+   {
+     Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
+     Some( Value::String( _ ) ) =>
+       return Err( ErrorData::new( ErrorCode::ArgumentMissing, "name:: value cannot be empty" ) ),
+     _ =>
+     {
+       let cj = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
+       crate::account::parse_string_field( &cj, "emailAddress" )
+         .filter( | s | !s.is_empty() )
+         .ok_or_else( || ErrorData::new(
+           ErrorCode::ArgumentMissing,
+           "cannot infer account name: emailAddress absent from ~/.claude.json — pass name:: explicitly",
+         ) )?
      }
    };
+   let credential_store = require_credential_store()?;
    ```
-   Ensure `paths` from the inference branch is reused for the rest of the routine (do not call `require_claude_paths()` again below).
+   `paths` is now resolved before the name match so it is available both in the inference branch and for the `account::save(&name, &credential_store, &paths)` call below. Three distinct cases: non-empty explicit name (use it), empty explicit name (error immediately), absent (inference path).
 7. **Validate** — Run `w3 .test level::3` inside Docker. All tests must pass.
 8. **Walk Validation Checklist** — check every item. Every answer must be YES.
 
@@ -90,20 +98,20 @@ Execute in order. Do not skip or reorder steps.
 Desired answer for every question is YES.
 
 **Name Inference**
-- [ ] Does `clp .account.save` (no args) with `emailAddress` in `~/.claude.json` exit 0 and create the credential file?
-- [ ] Does the stdout read `saved current credentials as 'EMAIL'` where EMAIL is the inferred address?
-- [ ] Does `clp .account.save` (no args) when `emailAddress` is absent exit 1?
-- [ ] Is the error message exactly `cannot infer account name: emailAddress absent from ~/.claude.json — pass name:: explicitly`?
+- [x] Does `clp .account.save` (no args) with `emailAddress` in `~/.claude.json` exit 0 and create the credential file?
+- [x] Does the stdout read `saved current credentials as 'EMAIL'` where EMAIL is the inferred address?
+- [x] Does `clp .account.save` (no args) when `emailAddress` is absent exit 1?
+- [x] Is the error message exactly `cannot infer account name: emailAddress absent from ~/.claude.json — pass name:: explicitly`?
 
 **Regression Guard**
-- [ ] Does `clp .account.save name::alice@acme.com` (explicit) still work with exit 0?
-- [ ] Does `clp .account.save name::notanemail` still exit 1 with email-format error?
-- [ ] Does `clp .account.save name::` still exit 1 with empty-name error?
-- [ ] Are `.account.switch` and `.account.delete` without `name::` still exit 1?
+- [x] Does `clp .account.save name::alice@acme.com` (explicit) still work with exit 0?
+- [x] Does `clp .account.save name::notanemail` still exit 1 with email-format error?
+- [x] Does `clp .account.save name::` still exit 1 with empty-name error?
+- [x] Are `.account.switch` and `.account.delete` without `name::` still exit 1?
 
 **Out of Scope confirmation**
-- [ ] Is `account.rs` unchanged?
-- [ ] Is `unilang.commands.yaml` unchanged?
+- [x] Is `account.rs` unchanged?
+- [x] Is `unilang.commands.yaml` unchanged?
 
 ### Measurements
 
@@ -117,7 +125,7 @@ Before: generic `name:: is required`. Expected: `cannot infer account name: emai
 
 ### Invariants
 
-- [ ] I1 — full test suite: `w3 .test level::3` → 0 failures, 0 clippy warnings
+- [x] I1 — full test suite: `w3 .test level::3` → 0 failures, 0 clippy warnings
 
 ### Anti-faking checks
 
@@ -126,8 +134,12 @@ Check: `grep -c "emailAddress" /home/user1/pro/lib/wip_core/claude_tools/dev/mod
 Expected: ≥2 (one existing in `read_live_cred_meta`, one new in `account_save_routine`). Why: confirms inference code was added, not just tests.
 
 **AF2 — IT-14 test exists**
-Check: `grep -c "IT-14\|infer\|emailAddress" /home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_profile/tests/cli/accounts_test.rs`
+Check: `grep -c "as15\|infer\|emailAddress" /home/user1/pro/lib/wip_core/claude_tools/dev/module/claude_profile/tests/cli/account_mutations_test.rs`
 Expected: ≥2. Why: confirms test was written, not just documented.
 
 ## Outcomes
 
+- Implemented three-branch match in `account_save_routine()` (`commands.rs`): non-empty explicit name → use as-is; empty explicit name → `ArgumentMissing` error immediately; absent → read `emailAddress` from `~/.claude.json` via `parse_string_field`, exit 1 with diagnostic if absent.
+- Renamed `as10_save_missing_name_param_exits_1` → `as10_save_infer_absent_email_exits_1` with updated semantics: no `~/.claude.json` present → inference fails → exit 1 with correct message.
+- Added `as15_save_infers_email_from_claude_json` (IT-14): sets up `~/.claude.json` with `emailAddress: alice@acme.com`, runs `.account.save` with no `name::` arg, asserts exit 0 and credential file created under inferred name.
+- Full test suite: 14/14 crates GREEN, 0 clippy warnings — `w3 .test level::3` inside Docker.

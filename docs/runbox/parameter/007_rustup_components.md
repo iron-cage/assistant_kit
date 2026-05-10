@@ -1,16 +1,17 @@
 # Parameter: `rustup_components`
 
-- **Status:** 🔒 Hardcoded — in `runbox.dockerfile`
+- **Status:** ✅ Configured — via `runbox.yml`; default: `clippy`
 - **Current State:** `clippy`
-- **Where It Flows:** `rustup component add clippy` in test stage
+- **Where It Flows:** `runbox.yml rustup_components:` → `--build-arg RUSTUP_COMPONENTS` → `RUN rustup component add $RUSTUP_COMPONENTS` in test stage
 
 ### Notes
 
-Single component hardcoded. Projects needing `rustfmt` or `llvm-tools-preview` must add them manually or make this parameter configurable.
+Space-separated — `rustup component add` accepts multiple components in one invocation. `clippy` is required by `w3 .test level::3` (`cargo clippy -D warnings`). Adding `rustfmt` or `llvm-tools-preview` requires only a `runbox.yml` edit and `.build`.
 
 ### Example
 
-```dockerfile
-RUN rustup component add clippy
+Adding `rustfmt` for format-check tests alongside the required `clippy`:
+```yaml
+rustup_components: clippy rustfmt
 ```
-`w3 .test level::3` runs `cargo clippy --all-targets --all-features -- -D warnings` inside the container. Without `clippy` in the test stage, this fails with `error: unknown component: clippy`. To add `rustfmt` for format-check tests, append `RUN rustup component add rustfmt` to the test stage — there is no `runbox.yml` key; it is a direct dockerfile edit.
+`docker-run` passes `--build-arg RUSTUP_COMPONENTS=clippy rustfmt` → dockerfile runs `rustup component add clippy rustfmt` in a single invocation. Both components are available in the test stage after rebuild.

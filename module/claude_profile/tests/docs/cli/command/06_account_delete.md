@@ -16,6 +16,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 | IT-8 | Delete with empty `name::` exits 1 | Validation |
 | IT-9 | After delete, `.accounts` no longer shows deleted account | Post-Condition |
 | IT-10 | Missing `name::` parameter exits 1 (required) | Required Param |
+| IT-11 | Delete also removes `{name}.claude.json` and `{name}.settings.json` snapshots | Snapshot Cleanup |
 
 ### Test Coverage Summary
 
@@ -28,8 +29,9 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - Isolation: 1 test
 - Post-Condition: 1 test
 - Required Param: 1 test
+- Snapshot Cleanup: 1 test
 
-**Total:** 10 integration tests
+**Total:** 11 integration tests
 
 ---
 
@@ -129,4 +131,14 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete`
 - **Then:** Error message on stderr indicating missing required parameter `name::`, exit 1.; no state mutation; error message references missing parameter
 - **Exit:** 1
+- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+
+---
+
+### IT-11: Delete removes snapshot files alongside credential file
+
+- **Given:** Account `old@archive.com` saved (non-active). Store contains `old@archive.com.credentials.json`, `old@archive.com.claude.json`, and `old@archive.com.settings.json`. Active account is `work@acme.com`.
+- **When:** `clp .account.delete name::old@archive.com`
+- **Then:** `deleted account 'old@archive.com'`, exit 0. All three files — `.credentials.json`, `.claude.json`, `.settings.json` — are absent from the store. No error even if either snapshot file was missing.; credential and both snapshot files removed; no error for absent snapshots
+- **Exit:** 0
 - **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)

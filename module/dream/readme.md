@@ -11,6 +11,7 @@ Zero own logic — every public item originates from a core crate.
 | `src/` | Define feature-gated `pub mod` re-export modules for all seven domains |
 | `docs/` | Crate doc entities: aggregation feature spec and zero-own-logic invariant |
 | `tests/` | Integration smoke tests verifying re-export paths per feature |
+| `verb/` | Shell scripts for each `do` protocol verb. |
 
 ## Feature Flags
 

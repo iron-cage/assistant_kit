@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# Run tests for this scope (workspace or module).
-# Works locally (w3 must be on PATH) and inside the Docker test container.
-set -euo pipefail
-cd "$( dirname "${BASH_SOURCE[0]}" )/.."
-exec w3 .test level::3

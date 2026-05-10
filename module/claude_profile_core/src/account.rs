@@ -289,6 +289,11 @@ pub fn check_delete_preconditions( name : &str, credential_store : &Path ) -> Re
 
 /// Delete a named account from `credential_store`.
 ///
+/// Removes the credentials snapshot and, best-effort, the accompanying
+/// `.claude.json` and `.settings.json` snapshots created by `save()`.
+/// Snapshot removal is best-effort — accounts saved before snapshot support
+/// was introduced have no snapshot files, and missing files are silently skipped.
+///
 /// # Errors
 ///
 /// Returns `PermissionDenied` if the named account is currently active.
@@ -296,9 +301,16 @@ pub fn check_delete_preconditions( name : &str, credential_store : &Path ) -> Re
 #[ inline ]
 pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::Error >
 {
+  // Fix(issue-snapshot-orphan):
+  // Root cause: save() creates 3 files but delete() only removed .credentials.json,
+  //   leaving .claude.json and .settings.json as orphans after every delete.
+  // Pitfall: snapshot removal must be best-effort (let _ = ...) — pre-snapshot accounts
+  //   have no snapshot files; a strict remove_file() would fail them.
   check_delete_preconditions( name, credential_store )?;
   let target = credential_store.join( format!( "{name}.credentials.json" ) );
   std::fs::remove_file( target )?;
+  let _ = std::fs::remove_file( credential_store.join( format!( "{name}.claude.json" ) ) );
+  let _ = std::fs::remove_file( credential_store.join( format!( "{name}.settings.json" ) ) );
   Ok( () )
 }
 

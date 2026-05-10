@@ -7,3 +7,4 @@
 | `src/` | Library and binary source code |
 | `docs/` | Behavioral requirements: feature and invariant doc instances |
 | `tests/` | Integration test suite |
+| `verb/` | Shell scripts for each `do` protocol verb. |

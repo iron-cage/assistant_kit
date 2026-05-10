@@ -1,18 +1,17 @@
 # Parameter: `system_packages`
 
-- **Status:** 🔒 Hardcoded — in `runbox.dockerfile`
+- **Status:** ✅ Configured — present in `runbox.yml`
 - **Current State:** `curl procps`
-- **Where It Flows:** `apt-get install -y curl procps` in test stage
+- **Where It Flows:** `runbox.yml system_packages:` → `--build-arg SYSTEM_PACKAGES` → `apt-get install -y --no-install-recommends $SYSTEM_PACKAGES` in test stage; empty value skips the install block entirely
 
 ### Notes
 
-Project-specific: `curl` for version history fetching; `procps` for `kill`-based process management tests. Other workspaces differ (e.g., `willbe` also needs `git`).
+Workspace-specific: `curl` for version history fetching; `procps` for `/bin/kill`-based process management tests. `willbe` also needs `git`. Empty string (or absent key) disables the apt-get block entirely — safe for workspaces with no system dependencies.
 
 ### Example
 
-```dockerfile
-RUN apt-get update \
- && apt-get install -y --no-install-recommends curl procps \
- && rm -rf /var/lib/apt/lists/*
+Adding `git` for a crate that shells out to git:
+```yaml
+system_packages: curl procps git
 ```
-`procps` provides `/bin/kill` used by `send_sigterm`/`send_sigkill` in `claude_core::process` — tests fail with `ENOENT` without it. `curl` is used by version history commands to fetch GitHub release data. Other workspaces differ: `willbe` also installs `git` for repository operations. Adding a package requires editing this line directly; there is no `runbox.yml` key.
+`docker-run` passes `--build-arg SYSTEM_PACKAGES=curl procps git` → dockerfile runs `apt-get install -y --no-install-recommends curl procps git`. To use no system packages at all, set the key to an empty string or remove it — the install block is skipped when `$SYSTEM_PACKAGES` is empty.

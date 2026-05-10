@@ -11,6 +11,7 @@ Pure library for Claude Code's filesystem-based storage access (zero dependencie
 | `tests/` | Test suite for storage access logic |
 | `docs/` | Behavioral requirements: features, invariants, API, algorithms, data structures |
 | `examples/` | Usage examples for the storage API |
+| `verb/` | Shell scripts for each `do` protocol verb. |
 
 ## overview
 

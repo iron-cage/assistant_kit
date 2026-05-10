@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# do lint — static analysis and style checking (cargo ecosystem)
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/.."
+if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clippy -p claude_quota --all-features -- -D warnings"; exit 0; fi
+exec cargo clippy -p claude_quota --all-features -- -D warnings

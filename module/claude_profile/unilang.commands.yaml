@@ -168,6 +168,7 @@
       tags: []
 
   examples:
+    - ".account.save"
     - ".account.save name::work"
     - ".account.save name::personal dry::1"
   auto_help_enabled: true

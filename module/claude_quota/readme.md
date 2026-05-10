@@ -37,3 +37,4 @@ pub fn fetch_rate_limits(token: &str) -> Result<RateLimitData, QuotaError>
 | src/lib.rs | Types, error, constants, parse_headers, fetch_rate_limits |
 | tests/readme.md | Test directory organization guide |
 | tests/rate_limit_test.rs | Unit tests T01–T16 (offline, closure-based) |
+| `verb/` | Shell scripts for each `do` protocol verb. |

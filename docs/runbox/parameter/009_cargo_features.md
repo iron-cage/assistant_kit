@@ -1,17 +1,17 @@
 # Parameter: `cargo_features`
 
-- **Status:** 🔒 Hardcoded — in `docker-run`
+- **Status:** ✅ Configured — via `runbox.yml`; default: `--all-features`
 - **Current State:** `--all-features`
-- **Where It Flows:** `cargo nextest list $CMD_SCOPE --all-features` in `cmd_list` function
+- **Where It Flows:** `runbox.yml cargo_features:` → `--build-arg CARGO_FEATURES` → baked into image `CMD`; also used at runtime by `cmd_test_offline` and `cmd_list` in `docker-run`
 
 ### Notes
 
-Hardcoded in `docker-run`. Projects with conflicting feature combinations need `--no-default-features -F specific_feature` instead.
+Applied consistently across all three call sites: the baked offline `CMD`, `cmd_test_offline`, and `cmd_list`. A workspace with mutually exclusive features can set `--no-default-features -F specific_feature` to avoid compilation conflicts at all three sites simultaneously. Rebuild required for the `CMD` change to take effect; `cmd_test_offline` and `cmd_list` pick up the new value immediately from `runbox.yml`.
 
 ### Example
 
-`./run/docker .list` triggers `cmd_list()`:
-```bash
-CARGO_TARGET_DIR=/tmp/will_test_targets cargo nextest list --workspace --all-features
+Switching to a specific feature set to avoid conflicting features:
+```yaml
+cargo_features: --no-default-features -F storage_json
 ```
-(`CARGO_TARGET_DIR` is set because `bin_plugin_volume` is configured — redirects build artifacts into the persistent plugin-targets volume so repeated `.list` calls reuse prior compilation.) `--all-features` is a literal in `docker-run`; it is not in `runbox.yml`. A workspace with mutually exclusive features that conflict under `--all-features` requires patching `cmd_list` in `docker-run` to use `--no-default-features -F specific_feature`.
+`docker-run` passes `--build-arg CARGO_FEATURES=...` and uses `$CARGO_FEATURES` at runtime. Result: `cargo nextest run $CMD_SCOPE --no-default-features -F storage_json --filter-expr "..."` in offline runs, and `cargo nextest list $CMD_SCOPE --no-default-features -F storage_json` for `.list`. The offline `CMD` gets the same flags baked in after `.build`.

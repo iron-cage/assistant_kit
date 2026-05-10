@@ -13,6 +13,7 @@ Claude Code process execution with builder pattern and single execution point.
 | `tests/` | Builder API, migration validation, verification framework (31 test files) |
 | `docs/` | Behavioral requirements: features, invariants, parameter reference |
 | `task/` | Crate-level task tracking |
+| `verb/` | Shell scripts for each `do` protocol verb. |
 
 ### Responsibility Table
 

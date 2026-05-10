@@ -17,7 +17,8 @@
 //! | as07 | `as07_save_slash_name_exits_1` | name with `/` → exit 1 | N |
 //! | as08 | `as08_save_backslash_name_exits_1` | name with `\` → exit 1 | N |
 //! | as09 | `as09_save_star_name_exits_1` | name with `*` → exit 1 | N |
-//! | as10 | `as10_save_missing_name_param_exits_1` | no `name::` param → exit 1 | N |
+//! | as10 | `as10_save_infer_absent_email_exits_1` | no `name::`, no emailAddress → exit 1 | N |
+//! | as15 | `as15_save_infers_email_from_claude_json` | no `name::`, emailAddress present → exit 0 | P |
 //! | as11 | `as11_save_missing_credentials_exits_2` | no credentials file → exit 2 | N |
 //! | as12 | `as12_save_auto_creates_credential_store` | credential store auto-created | P |
 //! | as13 | `as13_save_dry_then_exec_match` | dry then exec → same output | P |
@@ -56,7 +57,7 @@
 use crate::helpers::{
   run_cs_with_env,
   stdout, assert_exit,
-  write_credentials, write_account, account_exists,
+  write_credentials, write_account, write_claude_json, account_exists,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -181,14 +182,31 @@ fn as09_save_star_name_exits_1()
 }
 
 #[ test ]
-fn as10_save_missing_name_param_exits_1()
+fn as10_save_infer_absent_email_exits_1()
 {
+  // IT-10: no ~/.claude.json → emailAddress absent → inference fails → exit 1.
+  // write_credentials writes only ~/.claude/.credentials.json, not ~/.claude.json,
+  // so the inference branch finds no emailAddress and must exit 1.
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   let out = run_cs_with_env( &[ ".account.save" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
+}
+
+#[ test ]
+fn as15_save_infers_email_from_claude_json()
+{
+  // IT-14: ~/.claude.json present with emailAddress → inference succeeds → exit 0.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "alice@acme.com", "" );
+
+  let out = run_cs_with_env( &[ ".account.save" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  assert!( account_exists( dir.path(), "alice@acme.com" ), "credential file must be created under inferred name" );
 }
 
 #[ test ]

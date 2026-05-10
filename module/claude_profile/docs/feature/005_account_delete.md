@@ -4,7 +4,7 @@
 
 - **Purpose**: Remove a named account from the store with a safety guard that prevents deleting the currently active account.
 - **Responsibility**: Documents the `account::delete()` API and `.account.delete` CLI command (FR-10).
-- **In Scope**: Credential file removal, active-account guard, dry-run mode.
+- **In Scope**: Credential file removal, snapshot cleanup (`.claude.json`, `.settings.json`), active-account guard, dry-run mode.
 - **Out of Scope**: Switching accounts before deletion (caller responsibility).
 
 ### Design
@@ -17,6 +17,8 @@
 1. Validate `name`.
 2. Read `_active` marker from `{credential_store}/_active`; if `name` matches → error: cannot delete active account.
 3. Remove `{credential_store}/{name}.credentials.json` → `NotFound` if absent.
+4. Best-effort: remove `{credential_store}/{name}.claude.json` if present (silently skip if absent).
+5. Best-effort: remove `{credential_store}/{name}.settings.json` if present (silently skip if absent).
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would delete account '{name}'` without removing any files.
 
@@ -31,6 +33,7 @@
 - **AC-02**: `clp .account.delete name::alice@acme.com` (active account) exits 2 with message directing user to switch first.
 - **AC-03**: `clp .account.delete name::ghost@example.com` (non-existent) exits 2 with not-found error.
 - **AC-04**: `clp .account.delete name::alice@oldco.com dry::1` exits 0 with `[dry-run]` prefix; no files removed.
+- **AC-05**: After a successful delete, `{credential_store}/{name}.claude.json` and `{credential_store}/{name}.settings.json` are also removed if they existed; absent snapshot files cause no error.
 
 ### Cross-References
 

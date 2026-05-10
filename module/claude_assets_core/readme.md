@@ -11,3 +11,4 @@
 | `docs/` | Behavioral requirements: feature and invariant doc instances |
 | `tests/` | Integration test suite directory |
 | tests/install.rs | Real-fs integration tests via tempfile |
+| `verb/` | Shell scripts for each `do` protocol verb. |

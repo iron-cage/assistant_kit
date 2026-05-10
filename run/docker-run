@@ -13,7 +13,8 @@ WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 # ── Config reader (flat YAML — no external parser required) ───────────────────
 # Strips "key: " prefix and surrounding double-quotes from value.
 
-cfg() { grep -m1 "^$1:" "$CONFIG" | sed 's/^[^:]*:[[:space:]]*//' | tr -d '"'; }
+cfg()     { grep -m1 "^$1:" "$CONFIG" | sed 's/^[^:]*:[[:space:]]*//' | tr -d '"'; }
+cfg_or()  { local v; v="$(cfg "$1")"; echo "${v:-$2}"; }
 
 IMAGE="$(cfg image)"                              # image tag for -t at build and image lookup at run
 DOCKERFILE="$WORKSPACE_ROOT/runbox.dockerfile"    # runbox system build file (always at workspace root)
@@ -24,6 +25,11 @@ TEST_SCRIPT="$(cfg test_script)"                  # path (relative to /workspace
 BIN_PLUGIN="$(cfg bin_plugin)"                    # optional binary plugin: name:container_path
 BIN_PLUGIN_VOLUME="$(cfg bin_plugin_volume)"      # container mount point for bin_plugin working volume
 PLUGIN_MOUNT="$(cfg plugin_mount)"                # data dir plugin: host_path:container_path:check_type
+BASE_IMAGE="$(cfg_or base_image rust:slim)"             # FROM image for chef and test stages
+RUSTUP_COMPONENTS="$(cfg_or rustup_components clippy)"  # space-separated rustup components
+SYSTEM_PACKAGES="$(cfg_or system_packages '')"          # space-separated apt packages; empty = skip install
+CARGO_FEATURES="$(cfg_or cargo_features --all-features)" # feature flags for nextest list and offline run
+WORKSPACE_DIR="$(cfg_or workspace_dir /workspace)"      # container working directory
 
 # ── Mount resolver ────────────────────────────────────────────────────────────
 # Spec format: "host_path:container_path:check_type"  (3 fields from runbox.yml)
@@ -81,9 +87,14 @@ _build()
   # shellcheck disable=SC2086
   "$CONTAINER_CMD" build \
     -f "$DOCKERFILE" \
+    --build-arg "BASE_IMAGE=$BASE_IMAGE" \
     --build-arg "TEST_USER=$TEST_USER" \
     --build-arg "CMD_SCOPE=$CMD_SCOPE" \
     --build-arg "CMD_FILTER=$CMD_FILTER" \
+    --build-arg "RUSTUP_COMPONENTS=$RUSTUP_COMPONENTS" \
+    --build-arg "SYSTEM_PACKAGES=$SYSTEM_PACKAGES" \
+    --build-arg "CARGO_FEATURES=$CARGO_FEATURES" \
+    --build-arg "WORKSPACE_DIR=$WORKSPACE_DIR" \
     -t "$IMAGE" \
     "$WORKSPACE_ROOT"
 }
@@ -93,6 +104,13 @@ _ensure_image()
   if ! "$CONTAINER_CMD" image inspect "$IMAGE" &>/dev/null
   then
     echo "Image $IMAGE not found — building first..."
+    _build
+  elif [[ -n "$TEST_SCRIPT" ]] \
+    && ! "$CONTAINER_CMD" run --rm "$IMAGE" test -f "$WORKSPACE_DIR/$TEST_SCRIPT" 2>/dev/null
+  then
+    # test_script exists on host but is absent from the image — image is stale.
+    # Rebuild automatically rather than emitting a cryptic OCI "not found" error.
+    echo "Image $IMAGE is stale (test_script not found inside image) — rebuilding..."
     _build
   fi
 }
@@ -108,9 +126,9 @@ _ensure_build_cache()
     # would start empty and force a full recompile from scratch on first use.
     # World-writable so the host uid (used by cmd_test via --user) can write build artifacts.
     "$CONTAINER_CMD" run --rm \
-      -v "${volume}:/workspace/target_seed" \
+      -v "${volume}:$WORKSPACE_DIR/target_seed" \
       "$IMAGE" \
-      bash -c "cp -a /workspace/target/. /workspace/target_seed/ && chmod -R a+rwX /workspace/target_seed/"
+      bash -c "cp -a $WORKSPACE_DIR/target/. $WORKSPACE_DIR/target_seed/ && chmod -R a+rwX $WORKSPACE_DIR/target_seed/"
   fi
 }
 
@@ -132,6 +150,15 @@ cmd_build()
 
 cmd_test()
 {
+  # Pre-flight: verify test_script exists on host; a missing file here means a wrong
+  # path in runbox.yml — a rebuild won't help and _ensure_image's probe would rebuild
+  # endlessly without this guard.
+  if [[ -n "$TEST_SCRIPT" ]] && [[ ! -f "$WORKSPACE_ROOT/$TEST_SCRIPT" ]]
+  then
+    echo "error: test_script '$TEST_SCRIPT' not found at $WORKSPACE_ROOT/$TEST_SCRIPT" >&2
+    echo "Check test_script path in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
   local bin_args=()
   if [[ -n "$BIN_PLUGIN" ]]
   then
@@ -165,7 +192,7 @@ cmd_test()
     "${bin_args[@]}" \
     "${mount_args[@]}" \
     "$IMAGE" \
-    "/workspace/$TEST_SCRIPT"
+    "$WORKSPACE_DIR/$TEST_SCRIPT"
 }
 
 cmd_test_offline()
@@ -174,9 +201,9 @@ cmd_test_offline()
   _ensure_build_cache
   # shellcheck disable=SC2086
   "$CONTAINER_CMD" run --rm \
-    -v "${IMAGE}_target:/workspace/target" \
+    -v "${IMAGE}_target:$WORKSPACE_DIR/target" \
     "$IMAGE" \
-    cargo nextest run $CMD_SCOPE --filter-expr "$CMD_FILTER"
+    cargo nextest run $CMD_SCOPE $CARGO_FEATURES --filter-expr "$CMD_FILTER"
 }
 
 cmd_list()
@@ -196,14 +223,14 @@ cmd_list()
     --user "$(id -u):$(id -g)" \
     "${vol_args[@]}" \
     "$IMAGE" \
-    bash -c "${cargo_env}cargo nextest list $CMD_SCOPE --all-features"
+    bash -c "${cargo_env}cargo nextest list $CMD_SCOPE $CARGO_FEATURES"
 }
 
 cmd_shell()
 {
   _ensure_image
   _ensure_build_cache
-  local args=( --rm -it -v "${IMAGE}_target:/workspace/target" )
+  local args=( --rm -it -v "${IMAGE}_target:$WORKSPACE_DIR/target" )
   if [[ -n "$BIN_PLUGIN" ]]
   then
     local bin_name bin_container bin_host

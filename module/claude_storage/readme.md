@@ -16,6 +16,7 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | `task/` | Crate-level task tracking |
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
+| `verb/` | Shell scripts for each `do` protocol verb. |
 
 ## overview
 
