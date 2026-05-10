@@ -1,8 +1,9 @@
-//! Account deletion unit tests.
+//! Account unit tests: save and delete operations.
 //!
 //! ## Purpose
 //!
-//! Verify `account::delete()` removes all three files created by `save()`:
+//! Verify `account::save()` writes `_active` = `name` on every successful save,
+//! and that `account::delete()` removes all three files created by `save()`:
 //! `{name}.credentials.json`, `{name}.claude.json`, and `{name}.settings.json`.
 //!
 //! ## Fix Documentation — issue-snapshot-orphan
@@ -21,11 +22,13 @@
 //!
 //! | Test | Scenario |
 //! |------|----------|
+//! | `as_save_writes_active_marker` | save() → `_active` contains the saved name |
 //! | `ad_delete_also_removes_snapshots` | All 3 files exist → all 3 absent after delete |
 //! | `ad_delete_succeeds_when_snapshots_absent` | Only credentials → delete succeeds, no error |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
+use claude_core::ClaudePaths;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -93,5 +96,39 @@ fn ad_delete_succeeds_when_snapshots_absent()
   assert!(
     !store.join( "old@archive.com.credentials.json" ).exists(),
     "credentials file must be absent after delete",
+  );
+}
+
+// ── AS: Account Save ──────────────────────────────────────────────────────────
+
+#[ test ]
+fn as_save_writes_active_marker()
+{
+  // Confirm that save() writes _active = name so credentials_status can
+  // display the account without a separate switch call.
+  //
+  // Fix(issue-active-marker): Root cause was save() never writing _active.
+  // Prevention: this test will catch any regression that drops the write.
+  // Pitfall: use ClaudePaths::with_home() — not set_var("HOME") — to avoid
+  // mutating the process environment across parallel nextest processes.
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  // credentials_file must exist for the copy inside save() to succeed.
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+
+  account::save( "alice@acme.com", &store, &paths ).unwrap();
+
+  let active = std::fs::read_to_string( store.join( "_active" ) )
+    .expect( "_active must exist after save()" );
+  assert_eq!(
+    active.trim(),
+    "alice@acme.com",
+    "_active must contain the saved account name",
   );
 }

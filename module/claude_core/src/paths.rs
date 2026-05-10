@@ -64,6 +64,26 @@ impl ClaudePaths
     Some( Self { base : PathBuf::from( home ).join( ".claude" ) } )
   }
 
+  /// Create a `ClaudePaths` from an explicit home directory path.
+  ///
+  /// Used in tests to avoid `HOME` env-var mutation across parallel processes.
+  ///
+  /// # Examples
+  ///
+  /// ```
+  /// use claude_core::ClaudePaths;
+  ///
+  /// let tmp = std::path::PathBuf::from( "/tmp/test-home" );
+  /// let p   = ClaudePaths::with_home( &tmp );
+  /// assert!( p.credentials_file().starts_with( "/tmp/test-home/.claude" ) );
+  /// ```
+  #[ inline ]
+  #[ must_use ]
+  pub fn with_home( home : &Path ) -> Self
+  {
+    Self { base : home.join( ".claude" ) }
+  }
+
   /// Base `~/.claude/` directory.
   #[ inline ]
   #[ must_use ]

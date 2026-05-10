@@ -11,7 +11,7 @@
 
 | ID | Status | Title | Category | Created | File |
 |---|---|---|---|---|---|
-| 118 | 🎯 Available | Make `.account.save` write the `_active` marker | feature | 2026-05-10 | [118](118_account_save_writes_active_marker.md) |
+| 118 | ✅ Complete | Make `.account.save` write the `_active` marker | feature | 2026-05-10 | [118](completed/118_account_save_writes_active_marker.md) |
 | 117 | ✅ Complete | Fix `account::delete()` — remove snapshot files alongside credentials | bug | 2026-05-10 | [117](completed/117_account_delete_snapshot_cleanup.md) |
 | 116 | ✅ Complete | Make `name::` optional on `.account.save` — infer from `emailAddress` | feature | 2026-05-10 | [116](completed/116_account_save_infer_name_from_email.md) |
 | 115 | ✅ Complete | Extend `.accounts` with rich OAuth metadata fields | feature | 2026-05-07 | [115](completed/115_accounts_rich_metadata.md) |
@@ -132,8 +132,8 @@
 ## Metadata
 
 **Status Distribution:**
-- 🎯 Available: 1
-- ✅ Complete: 117
+- 🎯 Available: 0
+- ✅ Complete: 118
 
 **Status Legend:**
 - 📥 Backlog — not yet planned
@@ -143,4 +143,4 @@
 - ⚠️ Superseded — replaced by another task
 - ❌ Rejected — won't do
 
-**Last Updated:** 2026-05-10 (TSK-118 created: make `.account.save` write `_active` marker)
+**Last Updated:** 2026-05-10 (TSK-118 complete: make `.account.save` write `_active` marker)

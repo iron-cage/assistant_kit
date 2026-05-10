@@ -11,7 +11,7 @@
 
 `claude_profile` must expose all `~/.claude/` canonical paths via `ClaudePaths::new()`.
 
-**Construction:** `ClaudePaths::new()` returns `None` if `HOME` environment variable is not set.
+**Construction:** `ClaudePaths::new()` returns `None` if `HOME` environment variable is not set. `ClaudePaths::with_home(home: &Path)` constructs from an explicit path — used in unit tests to avoid mutating the `HOME` env var in parallel test processes.
 
 **Path methods:**
 
@@ -41,6 +41,7 @@ All methods return `PathBuf` computed from `HOME`. No filesystem access is perfo
 - **AC-03**: `clp .paths` exits 2 when `HOME` is unset with actionable error.
 - **AC-04**: `claude_json_file()` returns `$HOME/.claude.json` (one level above `base()`).
 - **AC-05**: `claude_json_file()` is NOT inside the `.claude/` directory — it is a sibling to it at `$HOME`.
+- **AC-06**: `ClaudePaths::with_home(home)` returns a `ClaudePaths` whose `credentials_file()` resolves to `{home}/.claude/.credentials.json`.
 
 ### Cross-References
 

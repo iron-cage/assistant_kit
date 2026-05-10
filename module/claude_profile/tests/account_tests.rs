@@ -276,6 +276,9 @@ fn delete_removes_credential_file()
   account::save( "alice@oldco.com", &credential_store, &paths ).expect( "save" );
   let file = credential_store.join( "alice@oldco.com.credentials.json" );
   assert!( file.exists() );
+  // save() now writes _active = "alice@oldco.com"; switch to a different account
+  // so alice@oldco.com is inactive and deletion is permitted.
+  std::fs::write( credential_store.join( "_active" ), "work@acme.com" ).expect( "overwrite _active" );
 
   account::delete( "alice@oldco.com", &credential_store ).expect( "delete" );
 

@@ -15,11 +15,12 @@
    - **Binary module:** `cargo run -p <name> --bin <binary> -- "$@"` with `--dry-run` printing the command.
    - **Library module:** `echo "verb 'run' is not available for this project" >&2; exit 3` (no `--dry-run`).
 7. Create `verb/lint`: `cargo clippy -p <name> --all-features -- -D warnings` (universal).
-8. Create `verb/verbs`: `printf` table with verb/status/command for all 7 verbs; library modules show `unavailable` for `run`.
-9. Create `verb/detect`: fixed output — `ecosystem: cargo`, `signal: Cargo.toml`, `confidence: inferred` (universal — identical across all cargo modules).
-10. Set executable bit on all 7 scripts: `chmod +x module/<name>/verb/*`.
-11. If the module has runbox infrastructure: set `test_script: module/<name>/verb/test` in `module/<name>/run/runbox.yml` (see `run/docs/parameter/005_test_script.md`).
-12. Add `| \`verb/\` | Shell scripts for each \`do\` protocol verb. |` row to `module/<name>/readme.md` Responsibility Table.
+8. Create `verb/verify`: `exec w3 .test level::4` (universal — identical across all modules); add `--dry-run` echo printing `w3 .test level::4`.
+9. Create `verb/verbs`: `printf` table with verb/status/command for all 8 verbs; library modules show `unavailable` for `run`.
+10. Create `verb/detect`: fixed output — `ecosystem: cargo`, `signal: Cargo.toml`, `confidence: inferred` (universal — identical across all cargo modules).
+11. Set executable bit on all 8 scripts: `chmod +x module/<name>/verb/*`.
+12. If the module has runbox infrastructure: set `test_script: module/<name>/verb/test` in `module/<name>/run/runbox.yml` (see `run/docs/parameter/005_test_script.md`).
+13. Add `| \`verb/\` | Shell scripts for each \`do\` protocol verb. |` row to `module/<name>/readme.md` Responsibility Table.
 
 ## Update a Verb Command
 

@@ -48,6 +48,7 @@
 //! | cred11 | `cred11_model_opt_in` | model::1 → Model: {model} shown | P |
 //! | cred12 | `cred12_json_extended_shape` | format::json → includes display_name, role, billing, model keys | P |
 //! | cred13 | `cred13_new_params_absent_by_default` | all 4 new opt-in params absent in single default invocation | P |
+//! | cred14 | `cred14_save_writes_active_shown_in_credentials_status` | after .account.save → Account: {name} in .credentials.status | P |
 
 use crate::helpers::{
   run_cs_with_env,
@@ -398,4 +399,45 @@ fn cred13_new_params_absent_by_default()
   assert!( !text.contains( "Role:" ),    "Role: must be absent by default, got:\n{text}" );
   assert!( !text.contains( "Billing:" ), "Billing: must be absent by default, got:\n{text}" );
   assert!( !text.contains( "Model:" ),   "Model: must be absent by default, got:\n{text}" );
+}
+
+// ── cred14 ────────────────────────────────────────────────────────────────────
+
+/// cred14: after `.account.save`, `.credentials.status` shows `Account: {name}`.
+///
+/// Regression guard for the bug where `save()` did not write `_active`,
+/// leaving `.credentials.status Account:` as `N/A` after every save.
+///
+/// ## Fix Documentation — issue-active-marker
+///
+/// - **Root Cause:** `save()` never wrote `_active`; only `switch_account()` did.
+/// - **Why Not Caught:** No cross-command test verified `Account:` output immediately after `.account.save`.
+/// - **Fix Applied:** Added `std::fs::write(credential_store.join("_active"), name)?;` to `save()`.
+/// - **Prevention:** This test will catch any regression that drops the write.
+/// - **Pitfall:** `_active` write must be non-best-effort (`?`) — a silent drop leaves `.credentials.status` showing `Account: N/A`.
+#[ test ]
+fn cred14_save_writes_active_shown_in_credentials_status()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
+
+  // Save current credentials as test@example.com — must write _active.
+  let save_out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &save_out, 0 );
+
+  // .credentials.status must immediately show Account: test@example.com.
+  let status_out = run_cs_with_env(
+    &[ ".credentials.status" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &status_out, 0 );
+  let text = stdout( &status_out );
+  assert!(
+    text.contains( "Account: test@example.com" ),
+    "Account: must show saved name after .account.save, got:\n{text}",
+  );
 }

@@ -134,6 +134,8 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
 /// Save the current credentials as a named account in `credential_store`.
 ///
 /// Creates `{credential_store}/{name}.credentials.json`. Overwrites if exists.
+/// Also writes `{credential_store}/_active` = `name` so that the saved account
+/// is immediately visible as the active account without a separate switch call.
 ///
 /// # Errors
 ///
@@ -156,6 +158,13 @@ pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths ) -> Re
     paths.settings_file(),
     credential_store.join( format!( "{name}.settings.json" ) ),
   );
+  // Mark this account as the current active account.
+  // Fix(issue-active-marker): save() never wrote _active; only switch_account() did,
+  // so .credentials.status showed Account: N/A immediately after every .account.save.
+  // Root cause: _active write was omitted when save() was first implemented.
+  // Pitfall: must be non-best-effort (?): a save that silently drops _active leaves
+  // .credentials.status inconsistent with the just-saved account.
+  std::fs::write( credential_store.join( "_active" ), name )?;
   Ok( () )
 }
 

@@ -23,6 +23,7 @@
 //! | as12 | `as12_save_auto_creates_credential_store` | credential store auto-created | P |
 //! | as13 | `as13_save_dry_then_exec_match` | dry then exec → same output | P |
 //! | as14 | `as14_save_file_matches_source` | saved content matches source | P |
+//! | as16 | `as16_save_writes_active_marker` | save writes `_active` = name | P |
 //!
 //! ### AW — Account Switch
 //!
@@ -594,4 +595,42 @@ fn ad12_delete_removes_snapshot_files()
   assert!( !store.join( "old@archive.com.credentials.json" ).exists(), "credentials must be removed after delete" );
   assert!( !store.join( "old@archive.com.claude.json" ).exists(),      "claude.json snapshot must be removed after delete" );
   assert!( !store.join( "old@archive.com.settings.json" ).exists(),    "settings.json snapshot must be removed after delete" );
+}
+
+// ── as16 ──────────────────────────────────────────────────────────────────────
+
+/// as16: `.account.save name::work@acme.com` writes `{store}/_active` = `"work@acme.com"`.
+///
+/// CLI-level symmetry test with aw07: reads `_active` directly (not via
+/// `.credentials.status`) to confirm the write happened at the filesystem level.
+///
+/// ## Fix Documentation — issue-active-marker
+///
+/// - **Root Cause:** `save()` never wrote `_active`; only `switch_account()` did.
+/// - **Why Not Caught:** No AS test verified the `_active` file after `.account.save`.
+/// - **Fix Applied:** Added `std::fs::write(credential_store.join("_active"), name)?;` to `save()`.
+/// - **Prevention:** This test guards `_active` at the filesystem level, independently of `.credentials.status`.
+/// - **Pitfall:** Must assert the raw file content — not just exit code — to catch a write that produces wrong content.
+#[ test ]
+fn as16_save_writes_active_marker()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::work@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let store  = dir.path()
+    .join( ".persistent" ).join( "claude" ).join( "credential" );
+  let active = std::fs::read_to_string( store.join( "_active" ) )
+    .expect( "_active must exist after .account.save" );
+  assert_eq!(
+    active.trim(),
+    "work@acme.com",
+    "_active must equal the saved account name",
+  );
 }

@@ -31,6 +31,7 @@ test     available   w3 .test level::3
 clean    available   cargo clean -p claude_profile
 run      available   cargo run -p claude_profile --bin clp
 lint     available   cargo clippy -p claude_profile --all-features -- -D warnings
+verify   available   w3 .test level::4
 verbs    built-in    -
 detect   built-in    -
 ```
@@ -42,6 +43,7 @@ test     available    w3 .test level::3
 clean    available    cargo clean -p claude_storage_core
 run      unavailable  -
 lint     available    cargo clippy -p claude_storage_core --all-features -- -D warnings
+verify   available    w3 .test level::4
 verbs    built-in     -
 detect   built-in     -
 ```
@@ -56,6 +58,7 @@ printf '%-8s %-10s %s\n' test    available "w3 .test level::3"
 printf '%-8s %-10s %s\n' clean   available "cargo clean -p claude_profile"
 printf '%-8s %-10s %s\n' run     available "cargo run -p claude_profile --bin clp"
 printf '%-8s %-10s %s\n' lint    available "cargo clippy -p claude_profile --all-features -- -D warnings"
+printf '%-8s %-10s %s\n' verify  available "w3 .test level::4"
 printf '%-8s %-10s %s\n' verbs   built-in  "-"
 printf '%-8s %-10s %s\n' detect  built-in  "-"
 ```
