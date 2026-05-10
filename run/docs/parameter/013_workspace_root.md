@@ -8,12 +8,12 @@
 
 Required only for standalone projects where the runbox config lives outside the default workspace root. When unset, `WORKSPACE_ROOT` defaults to the parent of the `runbox-run` script — correct for the Rust workspace where `run/runbox-run` sits one level inside the project root (`dev/run/` → `dev/`).
 
-Standalone projects (e.g. `example/python_lib/`) set `workspace_root: ..` so `WORKSPACE_ROOT` resolves to the project root regardless of where the universal `runbox-run` binary lives. The path is always resolved relative to `CONFIG_DIR` (the directory containing the config file) — not relative to `SCRIPT_DIR` — making it portable.
+Standalone projects (e.g. `experiment/python_lib/`) set `workspace_root: ..` so `WORKSPACE_ROOT` resolves to the project root regardless of where the universal `runbox-run` binary lives. The path is always resolved relative to `CONFIG_DIR` (the directory containing the config file) — not relative to `SCRIPT_DIR` — making it portable.
 
 ### Example
 
-Python standalone project with config at `example/python_lib/run/runbox.yml`:
+Python standalone project with config at `experiment/python_lib/run/runbox.yml`:
 ```yaml
 workspace_root: ..
 ```
-`runbox-run` resolves this to `$CONFIG_DIR/..` = `example/python_lib/`. Docker build context becomes the project root, so `COPY . .` in the dockerfile copies the full Python project into the container.
+`runbox-run` resolves this to `$CONFIG_DIR/..` = `experiment/python_lib/`. Docker build context becomes the project root, so `COPY . .` in the dockerfile copies the full Python project into the container.

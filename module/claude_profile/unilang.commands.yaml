@@ -66,10 +66,10 @@
       aliases: []
       tags: []
 
-    - name: "org"
+    - name: "email"
       kind: "Boolean"
-      description: "Show organisation name per account (default on)"
-      hint: "Show Org: line"
+      description: "Show email address per account (default on)"
+      hint: "Show Email: line"
       optional: true
       default: "true"
       validation_rules: []
@@ -460,16 +460,6 @@
       aliases: []
       tags: []
 
-    - name: "org"
-      kind: "Boolean"
-      description: "Show organization name line (N/A when absent)"
-      hint: "Show Org: line"
-      optional: true
-      default: "true"
-      validation_rules: []
-      aliases: []
-      tags: []
-
     - name: "file"
       kind: "Boolean"
       description: "Show credentials file path (opt-in, default off)"
@@ -492,7 +482,7 @@
 
   examples:
     - ".credentials.status"
-    - ".credentials.status email::0 org::0"
+    - ".credentials.status email::0"
     - ".credentials.status file::1 saved::1"
     - ".credentials.status format::json"
   auto_help_enabled: true

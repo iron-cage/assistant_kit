@@ -90,14 +90,14 @@ fn cred01_no_credential_store_succeeds()
 
 /// cred02: default output with both `.credentials.json` and `.claude.json`.
 ///
-/// Confirms all 7 default-on fields shown: account, sub, tier, token, expires, email, org.
+/// Confirms all 6 default-on fields shown: account, sub, tier, token, expires, email.
 #[ test ]
 fn cred02_default_with_claude_json()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_claude_json( dir.path(), "user@example.com", "Acme Corp" );
+  write_claude_json( dir.path(), "user@example.com" );
 
   let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -106,7 +106,6 @@ fn cred02_default_with_claude_json()
   assert!( text.contains( "pro" ),              "sub must appear, got:\n{text}" );
   assert!( text.contains( "standard" ),         "tier must appear, got:\n{text}" );
   assert!( text.contains( "user@example.com" ), "email must appear, got:\n{text}" );
-  assert!( text.contains( "Acme Corp" ),        "org must appear, got:\n{text}" );
   assert!(
     text.contains( "Expires" ) || text.contains( "expires" ),
     "Expires: line must appear in default output, got:\n{text}",
@@ -115,14 +114,14 @@ fn cred02_default_with_claude_json()
 
 // ── cred03 ────────────────────────────────────────────────────────────────────
 
-/// cred03: `format::json` — output must be parseable JSON with all 9 required fields.
+/// cred03: `format::json` — output must be parseable JSON with all 8 required fields.
 #[ test ]
 fn cred03_format_json()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_claude_json( dir.path(), "user@example.com", "Acme Corp" );
+  write_claude_json( dir.path(), "user@example.com" );
 
   let out = run_cs_with_env( &[ ".credentials.status", "format::json" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -133,7 +132,6 @@ fn cred03_format_json()
   assert!( text.contains( "\"token\"" ),         "JSON must have token field, got:\n{text}" );
   assert!( text.contains( "\"expires_in_secs\"" ), "JSON must have expires_in_secs field, got:\n{text}" );
   assert!( text.contains( "\"email\"" ),         "JSON must have email field, got:\n{text}" );
-  assert!( text.contains( "\"org\"" ),           "JSON must have org field, got:\n{text}" );
   assert!( text.contains( "\"account\"" ),       "JSON must have account field, got:\n{text}" );
   assert!( text.contains( "\"file\"" ),          "JSON must have file field, got:\n{text}" );
   assert!( text.contains( "\"saved\"" ),         "JSON must have saved field, got:\n{text}" );
@@ -162,7 +160,7 @@ fn cred04_missing_credentials_file_exits_nonzero()
 
 // ── cred05 ────────────────────────────────────────────────────────────────────
 
-/// cred05: default output with no `.claude.json` and no `_active` — email, org, account show N/A.
+/// cred05: default output with no `.claude.json` and no `_active` — email, account show N/A.
 #[ test ]
 fn cred05_no_claude_json_shows_na()
 {
@@ -174,11 +172,11 @@ fn cred05_no_claude_json_shows_na()
   let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // N/A must appear at least 3 times: Account:, Email:, Org:
+  // N/A must appear at least 2 times: Account:, Email:
   let na_count = text.matches( "N/A" ).count();
   assert!(
-    na_count >= 3,
-    "default output without .claude.json and no _active must show N/A for account, email, org \
+    na_count >= 2,
+    "default output without .claude.json and no _active must show N/A for account, email \
      (found {na_count} N/A), got:\n{text}",
   );
 }
@@ -187,7 +185,7 @@ fn cred05_no_claude_json_shows_na()
 
 /// cred06: suppress all default-on fields except token — only Token: line in output.
 ///
-/// Confirms per-field boolean control: setting account/sub/tier/expires/email/org to 0
+/// Confirms per-field boolean control: setting account/sub/tier/expires/email to 0
 /// leaves only the Token: line in stdout.
 #[ test ]
 fn cred06_suppress_all_default_on()
@@ -197,7 +195,7 @@ fn cred06_suppress_all_default_on()
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
   let out = run_cs_with_env(
-    &[ ".credentials.status", "account::0", "sub::0", "tier::0", "expires::0", "email::0", "org::0" ],
+    &[ ".credentials.status", "account::0", "sub::0", "tier::0", "expires::0", "email::0" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -210,7 +208,6 @@ fn cred06_suppress_all_default_on()
   assert!( !text.contains( "Tier:" ),    "Tier: must be suppressed, got:\n{text}" );
   assert!( !text.contains( "Expires:" ), "Expires: must be suppressed, got:\n{text}" );
   assert!( !text.contains( "Email:" ),   "Email: must be suppressed, got:\n{text}" );
-  assert!( !text.contains( "Org:" ),     "Org: must be suppressed, got:\n{text}" );
   assert!( !text.contains( "Account:" ), "Account: must be suppressed, got:\n{text}" );
 }
 
@@ -251,7 +248,7 @@ fn cred08_display_name_opt_in()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_claude_json_full( dir.path(), "user@example.com", "Acme Corp", "alice", "admin", "stripe_subscription" );
+  write_claude_json_full( dir.path(), "user@example.com", "alice", "admin", "stripe_subscription" );
 
   // Default output must NOT contain Display: line
   let out_default = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
@@ -278,7 +275,7 @@ fn cred09_role_opt_in()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_claude_json_full( dir.path(), "user@example.com", "Acme Corp", "alice", "admin", "stripe_subscription" );
+  write_claude_json_full( dir.path(), "user@example.com", "alice", "admin", "stripe_subscription" );
 
   // Default output must NOT contain Role: line
   let out_default = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
@@ -305,7 +302,7 @@ fn cred10_billing_opt_in()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_claude_json_full( dir.path(), "user@example.com", "Acme Corp", "alice", "admin", "stripe_subscription" );
+  write_claude_json_full( dir.path(), "user@example.com", "alice", "admin", "stripe_subscription" );
 
   // Default output must NOT contain Billing: line
   let out_default = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
@@ -359,7 +356,7 @@ fn cred12_json_extended_shape()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_claude_json_full( dir.path(), "user@example.com", "Acme Corp", "alice", "admin", "stripe_subscription" );
+  write_claude_json_full( dir.path(), "user@example.com", "alice", "admin", "stripe_subscription" );
   write_settings_json( dir.path(), "sonnet" );
 
   let out = run_cs_with_env( &[ ".credentials.status", "format::json" ], &[ ( "HOME", home ) ] );
@@ -389,7 +386,7 @@ fn cred13_new_params_absent_by_default()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_claude_json_full( dir.path(), "user@example.com", "Acme Corp", "alice", "admin", "stripe_subscription" );
+  write_claude_json_full( dir.path(), "user@example.com", "alice", "admin", "stripe_subscription" );
   write_settings_json( dir.path(), "sonnet" );
 
   let out  = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
@@ -439,5 +436,41 @@ fn cred14_save_writes_active_shown_in_credentials_status()
   assert!(
     text.contains( "Account: test@example.com" ),
     "Account: must show saved name after .account.save, got:\n{text}",
+  );
+}
+
+// ── cred15 ────────────────────────────────────────────────────────────────────
+
+/// cred15: `.account.save` with no `name::` infers email from `~/.claude.json → emailAddress`.
+///
+/// Confirms the full inferred-name path: `save()` reads emailAddress, writes `_active`,
+/// and `.credentials.status` shows that email as `Account:`.
+///
+/// ## Fix Documentation — issue-inferred-name-save
+///
+/// - **Root Cause:** No test covered the save-without-name path end-to-end.
+/// - **Why Not Caught:** cred14 only tested the explicit-name save path.
+/// - **Fix Applied:** Added cred15 to guard the inferred-name → _active → Account: path.
+/// - **Prevention:** This test will fail if emailAddress inference or _active write breaks.
+/// - **Pitfall:** `write_claude_json` must be written before `save` so emailAddress is readable.
+#[ test ]
+fn cred15_save_infers_name_from_email()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "inferred@example.com" );
+
+  // Save with no name:: — should infer email from ~/.claude.json.
+  let save_out = run_cs_with_env( &[ ".account.save" ], &[ ( "HOME", home ) ] );
+  assert_exit( &save_out, 0 );
+
+  // .credentials.status must show Account: inferred@example.com.
+  let status_out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &status_out, 0 );
+  let text = stdout( &status_out );
+  assert!(
+    text.contains( "Account: inferred@example.com" ),
+    "Account: must show inferred email after nameless .account.save, got:\n{text}",
   );
 }

@@ -43,3 +43,11 @@ cd "$SCRIPT_DIR/.."
 if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clippy -p claude_profile --all-features -- -D warnings"; exit 0; fi
 exec cargo clippy -p claude_profile --all-features -- -D warnings
 ```
+
+### Runbox Ecosystem
+
+Standalone projects (Python, Node.js, Rust examples) implement `lint` via a `run/lint` shell script executed inside the container by `runbox-run .lint`. The `verb/lint` script invokes `./run/runbox .lint` rather than calling the linter directly.
+
+`runbox.yml` must declare `lint_script: run/lint` — see `run/docs/parameter/014_lint_script.md`.
+
+The linter is ecosystem-specific: ruff for Python, eslint for Node.js, cargo clippy for Rust. All are invoked with absolute container paths (`/workspace/...`). `verb/lint` is `available` for all project types — linting is universal.

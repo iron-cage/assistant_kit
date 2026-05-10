@@ -48,7 +48,7 @@ _resolve_mount()
 
 _plugin_build_volumes()
 {
-  [[ -n "$BIN_PLUGIN_VOLUME" ]] && extra_volumes=( "${IMAGE}_plugin_targets" )
+  if [[ -n "$BIN_PLUGIN_VOLUME" ]]; then extra_volumes=( "${IMAGE}_plugin_targets" ); fi
 }
 
 _plugin_test_args()
@@ -101,5 +101,5 @@ _plugin_shell_extra_args()
 
 _plugin_help_hint()
 {
-  [[ -n "$PLUGIN_MOUNT" ]] && plugin_hint=" (${PLUGIN_MOUNT%%:*} required)"
+  if [[ -n "$PLUGIN_MOUNT" ]]; then plugin_hint=" (${PLUGIN_MOUNT%%:*} required)"; fi
 }

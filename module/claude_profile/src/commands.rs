@@ -123,9 +123,9 @@ fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> ErrorData
   ErrorData::new( code, format!( "{context}: {e}" ) )
 }
 
-/// Read subscription type, rate limit tier, email, and org from live credential files.
+/// Read subscription type, rate limit tier, email, display, role, and billing from live credential files.
 ///
-/// Called by `credentials_status_routine()` to read subscription, tier, email, org, display, role, and billing.
+/// Called by `credentials_status_routine()` to read subscription, tier, email, display, role, and billing.
 /// Gracefully returns `"N/A"` for any absent or empty field.
 // Fix(issue-empty-field-blank):
 // Root cause: `Option::unwrap_or_else` only fires on `None`, not `Some("")`. Empty strings
@@ -133,7 +133,7 @@ fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> ErrorData
 // Pitfall: When adding new `parse_string_field` chains, always pair `.filter(|s| !s.is_empty())`
 //   with `.unwrap_or_else(|| "N/A".to_string())` — never rely on `unwrap_or_else` alone.
 fn read_live_cred_meta( paths : &crate::ClaudePaths )
-  -> ( String, String, String, String, String, String, String )
+  -> ( String, String, String, String, String, String )
 {
   let creds   = std::fs::read_to_string( paths.credentials_file() ).unwrap_or_default();
   let sub     = crate::account::parse_string_field( &creds, "subscriptionType" )
@@ -149,9 +149,6 @@ fn read_live_cred_meta( paths : &crate::ClaudePaths )
   let email   = crate::account::parse_string_field( &cj, "emailAddress" )
     .filter( | s | !s.is_empty() )
     .unwrap_or_else( || "N/A".to_string() );
-  let org     = crate::account::parse_string_field( &cj, "organizationName" )
-    .filter( | s | !s.is_empty() )
-    .unwrap_or_else( || "N/A".to_string() );
   let display = crate::account::parse_string_field( &cj, "displayName" )
     .filter( | s | !s.is_empty() )
     .unwrap_or_else( || "N/A".to_string() );
@@ -161,7 +158,7 @@ fn read_live_cred_meta( paths : &crate::ClaudePaths )
   let billing = crate::account::parse_string_field( &cj, "billingType" )
     .filter( | s | !s.is_empty() )
     .unwrap_or_else( || "N/A".to_string() );
-  ( sub, tier, email, org, display, role, billing )
+  ( sub, tier, email, display, role, billing )
 }
 
 /// Read the `model` field from `~/.claude/settings.json`.
@@ -220,9 +217,9 @@ fn derive_token_state(
 ///
 /// Reads `~/.claude/.credentials.json` directly. Does not require account store setup.
 /// Each output line is independently controlled by a boolean field-presence param.
-/// Default-on: `account`, `sub`, `tier`, `token`, `expires`, `email`, `org`.
+/// Default-on: `account`, `sub`, `tier`, `token`, `expires`, `email`.
 /// Opt-in (default off): `file`, `saved`, `display_name`, `role`, `billing`, `model`.
-/// `format::json` always emits all 13 fields regardless of field-presence params.
+/// `format::json` always emits all 12 fields regardless of field-presence params.
 ///
 /// # Errors
 ///
@@ -246,7 +243,7 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
   }
 
   // Per-field presence flags; None (absent param) = use default.
-  // Default-on: account, sub, tier, token, expires, email, org.
+  // Default-on: account, sub, tier, token, expires, email.
   // Opt-in (default off): file, saved — require explicit Some(Boolean(true)).
   let show_account = matches!( cmd.arguments.get( "account" ), Some( Value::Boolean( true ) ) | None );
   let show_sub     = matches!( cmd.arguments.get( "sub"     ), Some( Value::Boolean( true ) ) | None );
@@ -254,7 +251,6 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
   let show_token   = matches!( cmd.arguments.get( "token"   ), Some( Value::Boolean( true ) ) | None );
   let show_expires = matches!( cmd.arguments.get( "expires" ), Some( Value::Boolean( true ) ) | None );
   let show_email   = matches!( cmd.arguments.get( "email"   ), Some( Value::Boolean( true ) ) | None );
-  let show_org     = matches!( cmd.arguments.get( "org"     ), Some( Value::Boolean( true ) ) | None );
   let show_file         = matches!( cmd.arguments.get( "file"         ), Some( Value::Boolean( true ) ) );
   let show_saved        = matches!( cmd.arguments.get( "saved"        ), Some( Value::Boolean( true ) ) );
   let show_display_name = matches!( cmd.arguments.get( "display_name" ), Some( Value::Boolean( true ) ) );
@@ -266,7 +262,7 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
     &crate::token::status_with_threshold( crate::token::WARNING_THRESHOLD_SECS ),
   );
 
-  let ( sub, tier, email, org, display, role, billing ) = read_live_cred_meta( &paths );
+  let ( sub, tier, email, display, role, billing ) = read_live_cred_meta( &paths );
   let model = read_settings_model( &paths );
 
   // Account: reads _active opportunistically — N/A when absent (no hard dependency).
@@ -292,7 +288,6 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
       let t   = json_escape( &tier );
       let tk  = json_escape( &tok );
       let em  = json_escape( &email );
-      let or  = json_escape( &org );
       let ac  = json_escape( &account );
       let fp  = json_escape( &file_path );
       let dn  = json_escape( &display );
@@ -301,7 +296,7 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
       let md  = json_escape( &model );
       format!(
         "{{\"subscription\":\"{s}\",\"tier\":\"{t}\",\"token\":\"{tk}\",\
-         \"expires_in_secs\":{exp_secs},\"email\":\"{em}\",\"org\":\"{or}\",\
+         \"expires_in_secs\":{exp_secs},\"email\":\"{em}\",\
          \"account\":\"{ac}\",\"file\":\"{fp}\",\"saved\":{saved},\
          \"display_name\":\"{dn}\",\"role\":\"{rl}\",\"billing\":\"{bl}\",\"model\":\"{md}\"}}\n"
       )
@@ -315,7 +310,6 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
       if show_token        { let _ = writeln!( out, "Token:   {tok}"     ); }
       if show_expires      { let _ = writeln!( out, "Expires: {exp}"     ); }
       if show_email        { let _ = writeln!( out, "Email:   {email}"   ); }
-      if show_org          { let _ = writeln!( out, "Org:     {org}"     ); }
       if show_file         { let _ = writeln!( out, "File:    {file_path}" ); }
       if show_saved        { let _ = writeln!( out, "Saved:   {saved} account(s)" ); }
       if show_display_name { let _ = writeln!( out, "Display: {display}" ); }
@@ -341,7 +335,7 @@ fn render_accounts_text(
   show_sub          : bool,
   show_tier         : bool,
   show_expires      : bool,
-  show_org          : bool,
+  show_email        : bool,
   show_display_name : bool,
   show_role         : bool,
   show_billing      : bool,
@@ -349,7 +343,7 @@ fn render_accounts_text(
 ) -> String
 {
   if accounts.is_empty() { return "(no accounts configured)\n".to_string(); }
-  let any_field = show_active || show_sub || show_tier || show_expires || show_org
+  let any_field = show_active || show_sub || show_tier || show_expires || show_email
     || show_display_name || show_role || show_billing || show_model;
   let mut out   = String::new();
   let last_idx  = accounts.len() - 1;
@@ -390,10 +384,10 @@ fn render_accounts_text(
         };
         let _ = writeln!( out, "  Expires: {exp}" );
       }
-      if show_org
+      if show_email
       {
-        let org = if a.org.is_empty() { "N/A" } else { &a.org };
-        let _ = writeln!( out, "  Org:     {org}" );
+        let email = if a.email.is_empty() { "N/A" } else { &a.email };
+        let _ = writeln!( out, "  Email:   {email}" );
       }
       if show_display_name
       {
@@ -426,7 +420,7 @@ fn render_accounts_text(
 /// Without `name::`: lists every account in the credential store as an indented
 /// key-value block, with a blank line between accounts when any field is shown.
 /// With `name::EMAIL`: shows that single account's block only.
-/// Field-presence params (`active`, `sub`, `tier`, `expires`, `org`) are all default-on.
+/// Field-presence params (`active`, `sub`, `tier`, `expires`, `email`) are all default-on.
 /// `format::json` always includes all fields regardless of presence params.
 ///
 /// # Errors
@@ -493,7 +487,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
   let show_sub          = matches!( cmd.arguments.get( "sub"          ), Some( Value::Boolean( true ) ) | None );
   let show_tier         = matches!( cmd.arguments.get( "tier"         ), Some( Value::Boolean( true ) ) | None );
   let show_expires      = matches!( cmd.arguments.get( "expires"      ), Some( Value::Boolean( true ) ) | None );
-  let show_org          = matches!( cmd.arguments.get( "org"          ), Some( Value::Boolean( true ) ) | None );
+  let show_email        = matches!( cmd.arguments.get( "email"        ), Some( Value::Boolean( true ) ) | None );
   let show_display_name = matches!( cmd.arguments.get( "display_name" ), Some( Value::Boolean( true ) ) );
   let show_role         = matches!( cmd.arguments.get( "role"         ), Some( Value::Boolean( true ) ) );
   let show_billing      = matches!( cmd.arguments.get( "billing"      ), Some( Value::Boolean( true ) ) );
@@ -512,14 +506,14 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
         {
           format!(
             "{{\"name\":\"{}\",\"is_active\":{},\"subscription_type\":\"{}\",\
-             \"rate_limit_tier\":\"{}\",\"expires_at_ms\":{},\"org\":\"{}\",\
+             \"rate_limit_tier\":\"{}\",\"expires_at_ms\":{},\"email\":\"{}\",\
              \"display_name\":\"{}\",\"role\":\"{}\",\"billing\":\"{}\",\"model\":\"{}\"}}",
             json_escape( &a.name ),
             a.is_active,
             json_escape( &a.subscription_type ),
             json_escape( &a.rate_limit_tier ),
             a.expires_at_ms,
-            json_escape( &a.org ),
+            json_escape( &a.email ),
             json_escape( &a.display_name ),
             json_escape( &a.role ),
             json_escape( &a.billing ),
@@ -533,7 +527,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     {
       render_accounts_text(
         &accounts,
-        show_active, show_sub, show_tier, show_expires, show_org,
+        show_active, show_sub, show_tier, show_expires, show_email,
         show_display_name, show_role, show_billing, show_model,
       )
     }

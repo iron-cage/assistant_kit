@@ -22,6 +22,24 @@
 12. If the module has runbox infrastructure: set `test_script: module/<name>/verb/test` in `module/<name>/run/runbox.yml` (see `run/docs/parameter/005_test_script.md`).
 13. Add `| \`verb/\` | Shell scripts for each \`do\` protocol verb. |` row to `module/<name>/readme.md` Responsibility Table.
 
+## Add verb/ Directory to a Standalone Runbox Project
+
+For non-Rust standalone projects (Python, Node.js, etc.) the `verb/` scripts delegate to the container runner instead of calling cargo.
+
+1. Determine project type: **binary** (has entry point) or **library** (no runnable entry point).
+2. Create `verb/build`: `exec ./run/runbox .build` (universal).
+3. Create `verb/test`: `exec ./run/runbox .test` (universal).
+4. Create `verb/clean`: remove build artifacts specific to the ecosystem (`.venv/`, `node_modules/`, `target/`).
+5. Create `verb/run`:
+   - **Binary project:** `exec ./run/runbox .run`; ensure `run_script: run/run` is in `runbox.yml`.
+   - **Library project:** `echo "verb 'run' is not available for this project" >&2; exit 3`.
+6. Create `verb/lint`: `exec ./run/runbox .lint`; ensure `lint_script: run/lint` is in `runbox.yml`.
+7. Create `verb/verify`: `exec ./run/runbox .test` (same as test — no level::4 concept outside Rust).
+8. Create `verb/verbs`: same `printf` table format as Rust; ecosystem-specific commands in the table.
+9. Create `verb/package_info`: reads the ecosystem manifest (`pyproject.toml`, `package.json`, `Cargo.toml`) and emits flat JSON. Match the field set used by Rust projects.
+10. Set executable bit on all 8 scripts: `chmod +x verb/*`.
+11. Add `| \`verb/\` | Shell scripts for each \`do\` protocol verb. |` row to project `readme.md`.
+
 ## Update a Verb Command
 
 1. Identify the module and verb to change (e.g., `claude_profile/verb/build`).

@@ -24,3 +24,31 @@ claude_storage::tests::session_path_unique_per_id
 …
 ```
 With `cargo_features: --no-default-features -F storage_json` in `runbox.yml`, the list command becomes `cargo nextest list --workspace --no-default-features -F storage_json` — listing only tests compilable under that feature set.
+
+### Multi-Ecosystem Examples
+
+Override `_plugin_list_cmd()` in the project's `run/plugins.sh` for non-Rust ecosystems:
+
+**Python (pytest):**
+```bash
+_plugin_list_cmd() {
+  list_cmd="/workspace/.venv/bin/pytest --collect-only -q /workspace/tests/"
+}
+```
+Output: one test node ID per line (`tests/test_example.py::test_add`).
+
+**Node.js (node --test):**
+```bash
+_plugin_list_cmd() {
+  list_cmd="node --test --reporter=spec /workspace/tests/"
+}
+```
+Output: spec-format test names from the Node.js built-in test runner.
+
+**Rust (cargo test -- --list, without nextest):**
+```bash
+_plugin_list_cmd() {
+  list_cmd="cargo test --manifest-path /workspace/Cargo.toml -- --list"
+}
+```
+Use when the image does not include cargo-nextest. Output: `test_name: test` per line.

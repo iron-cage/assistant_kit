@@ -1,6 +1,6 @@
 # Runbox Onboarding
 
-How to integrate runbox test isolation into a new project. One `run/` directory, five files, any ecosystem.
+How to integrate runbox test isolation into a new project. One `run/` directory, a handful of scripts, any ecosystem.
 
 ### Prerequisites
 
@@ -54,6 +54,12 @@ workspace_root: ..
 
 # Script path (relative to /workspace) executed by .test for online tests.
 test_script: run/test
+
+# Optional: script path executed by .lint.
+lint_script: run/lint
+
+# Optional: script path executed by .run.
+run_script: run/run
 ```
 
 → Full parameter reference: `run/docs/parameter/`
@@ -64,7 +70,7 @@ test_script: run/test
 
 The dockerfile must:
 - Install dependencies into `cache_dir` so the volume seed has them.
-- Create `{cache_dir}_seed/` as an empty directory (Docker initialises the volume from it).
+- Create `{cache_dir}_seed/` as an empty directory (used as mount point for seeding).
 - Set `CMD` to run offline tests without arguments.
 
 Python example:
@@ -80,8 +86,8 @@ COPY . .
 # Install into .venv so the cache_dir volume contains pre-installed packages.
 RUN python -m venv .venv && .venv/bin/pip install --no-cache-dir .[dev]
 
-# Seed mount point for build cache persistence plugin.
-RUN mkdir .venv_seed
+# Seed mount point for build cache persistence.
+RUN mkdir .venv_seed && chmod -R a+rwX .venv .venv_seed
 
 CMD [".venv/bin/pytest", "tests/", "-v"]
 ```
@@ -90,14 +96,14 @@ CMD [".venv/bin/pytest", "tests/", "-v"]
 
 ### Step 4 — `run/plugins.sh` (test lister override)
 
-Override `_plugin_list_cmd` to use your ecosystem's test discovery command.
+Override `_plugin_list_cmd` to use your ecosystem's test discovery command. Always use absolute paths (`/workspace/...`) inside the container.
 
 ```bash
 #!/usr/bin/env bash
 # Sourced by runbox-run after the core plugins — overrides only what differs.
 
 _plugin_list_cmd() {
-  list_cmd=".venv/bin/pytest --collect-only -q tests/"
+  list_cmd="/workspace/.venv/bin/pytest --collect-only -q /workspace/tests/"
 }
 ```
 
@@ -118,18 +124,36 @@ Not needed for `.test.offline` — that command uses the baked image `CMD` direc
 
 ---
 
+### Step 6 — `run/lint` and `run/run` (optional)
+
+Add these when you want `.lint` and `.run` commands. Use absolute paths.
+
+```bash
+# run/lint
+#!/usr/bin/env bash
+exec /workspace/.venv/bin/ruff check /workspace/src/ /workspace/tests/
+
+# run/run
+#!/usr/bin/env bash
+exec /workspace/.venv/bin/python -m my_package
+```
+
+---
+
 ### Finalize
 
 ```bash
-chmod +x run/runbox run/test run/plugins.sh
+chmod +x run/runbox run/test run/lint run/run
 ```
 
 ### Usage
 
 ```bash
 ./run/runbox .build          # build the container image
+./run/runbox .run            # run the entry point (requires run_script)
 ./run/runbox .test           # online tests (requires mounted credentials if configured)
-./run/runbox .test.offline   # offline tests using seeded .venv volume
+./run/runbox .test.offline   # offline tests using seeded cache volume
+./run/runbox .lint           # run linter (requires lint_script)
 ./run/runbox .list           # list tests via plugins.sh _plugin_list_cmd
 ./run/runbox .shell          # interactive shell with cache volume mounted
 ```

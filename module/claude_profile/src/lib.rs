@@ -132,7 +132,6 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfd( "token",   "Show OAuth token validity state (default on)"            ),
       bfd( "expires", "Show token expiry time (default on)"                     ),
       bfd( "email",   "Show email address from `.claude.json` (default on)"     ),
-      bfd( "org",     "Show organisation name from `.claude.json` (default on)" ),
       bfd( "file",         "Show path to `.credentials.json` file (opt-in)"                         ),
       bfd( "saved",        "Show count of saved accounts in credential store (opt-in)"               ),
       bfd( "display_name", "Show display name from `~/.claude.json` oauthAccount (opt-in)"           ),
@@ -148,7 +147,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfd( "sub",          "Show subscription type per account (default on)"                           ),
       bfd( "tier",         "Show rate-limit tier per account (default on)"                             ),
       bfd( "expires",      "Show token expiry duration per account (default on)"                       ),
-      bfd( "org",          "Show organisation name per account (default on)"                           ),
+      bfd( "email",        "Show email address per account (default on)"                               ),
       bfd( "display_name", "Show display name from saved `{name}.claude.json` snapshot (opt-in)"       ),
       bfd( "role",         "Show organisation role from saved `{name}.claude.json` snapshot (opt-in)"  ),
       bfd( "billing",      "Show billing type from saved `{name}.claude.json` snapshot (opt-in)"       ),
@@ -270,7 +269,7 @@ mod cli
     println!( "Manage Claude Code account credentials and token state." );
     println!();
     println!( "Commands:" );
-    println!( "  .accounts            [name::EMAIL] [active::0|1] [sub::0|1] [tier::0|1] [expires::0|1] [org::0|1] [display_name::0|1] [role::0|1] [billing::0|1] [model::0|1] [format::text|json]   List accounts with field-presence control" );
+    println!( "  .accounts            [name::EMAIL] [active::0|1] [sub::0|1] [tier::0|1] [expires::0|1] [email::0|1] [display_name::0|1] [role::0|1] [billing::0|1] [model::0|1] [format::text|json]   List accounts with field-presence control" );
     println!( "  .account.save        name::EMAIL [dry::bool]                          Save current credentials as named account" );
     println!( "  .account.switch      name::EMAIL [dry::bool]                          Switch active account" );
     println!( "  .account.delete      name::EMAIL [dry::bool]                          Delete a saved account" );

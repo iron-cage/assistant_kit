@@ -23,7 +23,7 @@
 //! for acct in account::list( credential_store ).expect( "failed to list accounts" )
 //! {
 //!   let active = if acct.is_active { " ← active" } else { "" };
-//!   println!( "{}{} ({}) org={}", acct.name, active, acct.subscription_type, acct.org );
+//!   println!( "{}{} ({}) email={}", acct.name, active, acct.subscription_type, acct.email );
 //! }
 //!
 //! // Save current credentials as "alice@acme.com"
@@ -53,9 +53,9 @@ pub struct Account
   pub expires_at_ms : u64,
   /// Whether this account's credentials are currently active.
   pub is_active : bool,
-  /// Organisation name from saved `{name}.claude.json` `oauthAccount.organizationName`.
+  /// Email address from saved `{name}.claude.json` `emailAddress`.
   /// Empty string when snapshot absent or field missing.
-  pub org : String,
+  pub email : String,
   /// Display name from saved `{name}.claude.json` `oauthAccount.displayName`.
   /// Empty string when snapshot absent or field missing.
   pub display_name : String,
@@ -106,7 +106,7 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
     let settings_json = std::fs::read_to_string(
       credential_store.join( format!( "{name}.settings.json" ) )
     ).unwrap_or_default();
-    let org          = parse_string_field( &claude_json, "organizationName" ).unwrap_or_default();
+    let email        = parse_string_field( &claude_json, "emailAddress"      ).unwrap_or_default();
     let display_name = parse_string_field( &claude_json, "displayName"      ).unwrap_or_default();
     let role         = parse_string_field( &claude_json, "organizationRole" ).unwrap_or_default();
     let billing      = parse_string_field( &claude_json, "billingType"      ).unwrap_or_default();
@@ -119,7 +119,7 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
       rate_limit_tier,
       expires_at_ms,
       is_active,
-      org,
+      email,
       display_name,
       role,
       billing,

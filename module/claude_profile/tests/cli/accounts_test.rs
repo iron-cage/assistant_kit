@@ -44,7 +44,7 @@
 //! | acc22 | `acc22_no_snapshot_shows_na_for_new_fields` | no snapshot → N/A for new fields when enabled | P |
 //! | acc23 | `acc23_json_includes_new_fields` | `format::json` → includes display_name, role, billing, model | P |
 //! | acc24 | `acc24_new_fields_absent_by_default` | no opt-in → Display/Role/Billing/Model absent | P |
-//! | acc25 | `acc25_org_reads_from_snapshot` | `org::1` → real org from snapshot, not hardcoded N/A | P |
+//! | acc25 | `acc25_email_reads_from_snapshot` | Email: default-on → real email from snapshot | P |
 //! | acc26 | `acc26_save_creates_snapshot_files` | `save` creates `{name}.claude.json` and `.settings.json` | P |
 //! | acc27 | `acc27_save_succeeds_without_claude_json` | save OK when `~/.claude.json` absent (best-effort) | P |
 //! | acc28 | `acc28_save_succeeds_without_settings_json` | save OK when `settings.json` absent but `.claude.json` present | P |
@@ -252,7 +252,7 @@ fn acc06_name_invalid_exits_1()
 #[ test ]
 fn acc07_field_presence_suppresses_lines()
 {
-  // IT-7: sub::0 tier::0 → Sub/Tier absent; Active/Expires/Org remain.
+  // IT-7: sub::0 tier::0 → Sub/Tier absent; Active/Expires/Email remain.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "work@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
@@ -262,6 +262,7 @@ fn acc07_field_presence_suppresses_lines()
   let text = stdout( &out );
   assert!(  text.contains( "Active:" ),  "Active: must remain when sub::0 tier::0, got:\n{text}" );
   assert!(  text.contains( "Expires:" ), "Expires: must remain when sub::0 tier::0, got:\n{text}" );
+  assert!(  text.contains( "Email:" ),   "Email: must remain when sub::0 tier::0, got:\n{text}"  );
   assert!( !text.contains( "Sub:" ),     "Sub: must be suppressed, got:\n{text}" );
   assert!( !text.contains( "Tier:" ),    "Tier: must be suppressed, got:\n{text}" );
 }
@@ -276,7 +277,7 @@ fn acc08_all_fields_off_bare_names()
   write_account( dir.path(), "personal@home.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out  = run_cs_with_env(
-    &[ ".accounts", "active::0", "sub::0", "tier::0", "expires::0", "org::0" ],
+    &[ ".accounts", "active::0", "sub::0", "tier::0", "expires::0", "email::0" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -287,7 +288,7 @@ fn acc08_all_fields_off_bare_names()
   assert!( !text.contains( "Sub:" ),     "Sub: must be absent, got:\n{text}" );
   assert!( !text.contains( "Tier:" ),    "Tier: must be absent, got:\n{text}" );
   assert!( !text.contains( "Expires:" ), "Expires: must be absent, got:\n{text}" );
-  assert!( !text.contains( "Org:" ),     "Org: must be absent, got:\n{text}" );
+  assert!( !text.contains( "Email:" ),   "Email: must be absent, got:\n{text}" );
 }
 
 #[ test ]
@@ -356,7 +357,7 @@ fn acc12_sorted_alphabetically()
   write_account( dir.path(), "mike@acme.com",  "pro", "standard", FAR_FUTURE_MS, false );
 
   let out  = run_cs_with_env(
-    &[ ".accounts", "active::0", "sub::0", "tier::0", "expires::0", "org::0" ],
+    &[ ".accounts", "active::0", "sub::0", "tier::0", "expires::0", "email::0" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
@@ -625,7 +626,7 @@ fn acc20_display_name_shows_from_snapshot()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
-  write_account_claude_json( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe" );
+  write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe" );
 
   let out  = run_cs_with_env( &[ ".accounts", "display_name::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -653,7 +654,7 @@ fn acc21_role_billing_model_from_snapshots()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
-  write_account_claude_json( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe_sub" );
+  write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe_sub" );
   write_account_settings_json( dir.path(), "alice@acme.com", "claude-sonnet" );
 
   let out  = run_cs_with_env(
@@ -715,16 +716,18 @@ fn acc23_json_includes_new_fields()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
-  write_account_claude_json( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe_sub" );
+  write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe_sub" );
   write_account_settings_json( dir.path(), "alice@acme.com", "claude-sonnet" );
 
   let out  = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
+  assert!( text.contains( "\"email\""         ), "JSON must include email key, got:\n{text}"        );
   assert!( text.contains( "\"display_name\"" ), "JSON must include display_name key, got:\n{text}" );
   assert!( text.contains( "\"role\""         ), "JSON must include role key, got:\n{text}"         );
   assert!( text.contains( "\"billing\""      ), "JSON must include billing key, got:\n{text}"      );
   assert!( text.contains( "\"model\""        ), "JSON must include model key, got:\n{text}"        );
+  assert!( text.contains( "alice@acme.com"   ), "JSON email must contain actual value, got:\n{text}"        );
   assert!( text.contains( "Alice K"          ), "JSON display_name must contain actual value, got:\n{text}" );
   assert!( text.contains( "claude-sonnet"    ), "JSON model must contain actual value, got:\n{text}"        );
 }
@@ -747,7 +750,7 @@ fn acc24_new_fields_absent_by_default()
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
-  write_account_claude_json( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe" );
+  write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe" );
   write_account_settings_json( dir.path(), "alice@acme.com", "claude-sonnet" );
 
   // Default .accounts call — no opt-in params.
@@ -760,35 +763,36 @@ fn acc24_new_fields_absent_by_default()
   assert!( !text.contains( "Model:"   ), "Model: must be absent by default, got:\n{text}"   );
 }
 
-/// acc25 (T08): `org::1` renders real org name from saved snapshot, not hardcoded `N/A`.
+/// acc25 (T08): `Email:` default-on renders real email from saved snapshot.
 ///
-/// Root Cause (bug fix): `render_accounts_text()` hardcoded `"  Org:     N/A\n"` — the
-///   `organizationName` stored in the per-account snapshot was never read or rendered.
-/// Why Not Caught: acc07 only verified `Org:` was present; no test checked the VALUE.
-/// Fix Applied: `list()` reads `{name}.claude.json` and populates `Account.org`;
-///   `render_accounts_text()` uses `a.org` with empty-string → N/A guard.
-/// Prevention: Whenever a display value is derived from a data source, write a test that
+/// Root Cause (before fix): `list()` read `organizationName` for `Account.org`; the
+///   `emailAddress` field was never read from the per-account snapshot file.
+/// Why Not Caught: No test verified that Email: shows the actual stored emailAddress value.
+/// Fix Applied: `list()` reads `{name}.claude.json` → `emailAddress` and populates
+///   `Account.email`; `render_accounts_text()` uses `a.email` with empty-string → N/A guard.
+/// Prevention: When a display value is derived from a data source, write a test that
 ///   verifies the ACTUAL VALUE appears — not just the label line.
-/// Pitfall: The old hardcoded `"N/A"` was silently wrong — always correct since nothing
-///   could trigger it. A test that only checks `Org:` presence would miss the hardcoding.
+/// Pitfall: An empty-string fallback silently shows "N/A" — always add a snapshot-present
+///   test like this one so the read path is exercised, not just the fallback.
 #[ test ]
-fn acc25_org_reads_from_snapshot()
+fn acc25_email_reads_from_snapshot()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
-  write_account_claude_json( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe" );
+  write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe" );
 
-  let out  = run_cs_with_env( &[ ".accounts", "org::1" ], &[ ( "HOME", home ) ] );
+  // Email is default-on — no toggle needed.
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
-    text.contains( "Org:     Acme Corp" ),
-    "org::1 must show real org from snapshot, got:\n{text}",
+    text.contains( "Email:   alice@acme.com" ),
+    "Email: must show real email from snapshot, got:\n{text}",
   );
   assert!(
-    !text.contains( "Org:     N/A" ),
-    "org must not be hardcoded N/A when snapshot has org, got:\n{text}",
+    !text.contains( "Email:   N/A" ),
+    "Email: must not show N/A when snapshot has emailAddress, got:\n{text}",
   );
 }
 
@@ -811,7 +815,7 @@ fn acc26_save_creates_snapshot_files()
   let home = dir.path().to_str().unwrap();
   // Source files that save() will copy.
   write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
-  write_claude_json_full( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe" );
+  write_claude_json_full( dir.path(), "alice@acme.com", "Alice K", "admin", "stripe" );
   write_settings_json( dir.path(), "claude-sonnet" );
 
   let out  = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
@@ -885,7 +889,7 @@ fn acc28_save_succeeds_without_settings_json()
   let home = dir.path().to_str().unwrap();
   // Credentials + .claude.json present; settings.json absent.
   write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
-  write_claude_json_full( dir.path(), "alice@acme.com", "Acme Corp", "Alice K", "admin", "stripe" );
+  write_claude_json_full( dir.path(), "alice@acme.com", "Alice K", "admin", "stripe" );
 
   let out  = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );

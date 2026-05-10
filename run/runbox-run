@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Universal runbox test runner.
 # Usage: runbox-run <config.yml> [command]
-#   command: .build | .test | .test.offline | .shell | .help  (default: help)
+#   command: .build | .run | .test | .test.offline | .lint | .list | .shell | .help  (default: help)
 set -euo pipefail
 
 CONFIG="$1"
@@ -29,6 +29,8 @@ TEST_USER="$(cfg test_user)"                      # forwarded as --build-arg; no
 CMD_SCOPE="$(cfg cmd_scope)"                      # crate filter for nextest run and cargo chef cook
 CMD_FILTER="$(cfg cmd_filter)"                    # forwarded as --build-arg; nextest filter baked into offline CMD
 TEST_SCRIPT="$(cfg test_script)"                  # path (relative to /workspace) exec'd by cmd_test
+LINT_SCRIPT="$(cfg lint_script)"                  # path (relative to /workspace) exec'd by cmd_lint
+RUN_SCRIPT="$(cfg run_script)"                    # path (relative to /workspace) exec'd by cmd_run
 BASE_IMAGE="$(cfg_or base_image rust:slim)"             # FROM image for chef and test stages
 RUSTUP_COMPONENTS="$(cfg_or rustup_components clippy)"  # space-separated rustup components
 SYSTEM_PACKAGES="$(cfg_or system_packages '')"          # space-separated apt packages; empty = skip install
@@ -97,13 +99,24 @@ _ensure_image()
   then
     echo "Image $IMAGE not found — building first..."
     _build
-  elif [[ -n "$TEST_SCRIPT" ]] \
-    && ! "$CONTAINER_CMD" run --rm "$IMAGE" test -f "$WORKSPACE_DIR/$TEST_SCRIPT" 2>/dev/null
+    return
+  fi
+  # Build a single probe that tests all configured scripts in one container run.
+  # Any missing file means the image predates a script addition — rebuild automatically
+  # rather than emitting a cryptic "not found" error.
+  local probe_parts=()
+  [[ -n "$TEST_SCRIPT" ]] && probe_parts+=( "test -f $WORKSPACE_DIR/$TEST_SCRIPT" )
+  [[ -n "$LINT_SCRIPT" ]] && probe_parts+=( "test -f $WORKSPACE_DIR/$LINT_SCRIPT" )
+  [[ -n "$RUN_SCRIPT"  ]] && probe_parts+=( "test -f $WORKSPACE_DIR/$RUN_SCRIPT" )
+  if [[ ${#probe_parts[@]} -gt 0 ]]
   then
-    # test_script exists on host but is absent from the image — image is stale.
-    # Rebuild automatically rather than emitting a cryptic OCI "not found" error.
-    echo "Image $IMAGE is stale (test_script not found inside image) — rebuilding..."
-    _build
+    local probe_cmd="${probe_parts[0]}"
+    for part in "${probe_parts[@]:1}"; do probe_cmd+=" && $part"; done
+    if ! "$CONTAINER_CMD" run --rm "$IMAGE" bash -c "$probe_cmd" 2>/dev/null
+    then
+      echo "Image $IMAGE is stale (one or more configured scripts missing) — rebuilding..."
+      _build
+    fi
   fi
 }
 
@@ -183,6 +196,48 @@ cmd_test_offline()
     "$IMAGE"
 }
 
+cmd_lint()
+{
+  if [[ -z "$LINT_SCRIPT" ]]; then
+    echo "error: lint_script not configured in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  if [[ ! -f "$WORKSPACE_ROOT/$LINT_SCRIPT" ]]; then
+    echo "error: lint_script '$LINT_SCRIPT' not found at $WORKSPACE_ROOT/$LINT_SCRIPT" >&2
+    echo "Check lint_script path in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  _ensure_image
+  "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
+    "$IMAGE" \
+    "$WORKSPACE_DIR/$LINT_SCRIPT"
+}
+
+cmd_run()
+{
+  if [[ -z "$RUN_SCRIPT" ]]; then
+    echo "error: run_script not configured in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  if [[ ! -f "$WORKSPACE_ROOT/$RUN_SCRIPT" ]]; then
+    echo "error: run_script '$RUN_SCRIPT' not found at $WORKSPACE_ROOT/$RUN_SCRIPT" >&2
+    echo "Check run_script path in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  _ensure_image
+  "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
+    "$IMAGE" \
+    "$WORKSPACE_DIR/$RUN_SCRIPT"
+}
+
 cmd_list()
 {
   _ensure_image
@@ -219,9 +274,13 @@ cmd_help()
   echo "Image Management:"
   echo "  .build          Build the $IMAGE container image"
   echo ""
+  echo "Running:"
+  echo "  .run            Run the entry point (requires run_script in runbox.yml)"
+  echo ""
   echo "Testing:"
   echo "  .test           Run all tests${plugin_hint}"
   echo "  .test.offline   Run offline tests only (no external data needed)"
+  echo "  .lint           Run linter (requires lint_script in runbox.yml)"
   echo "  .list           List all test names without running"
   echo "  .shell          Interactive bash shell (mounts available)"
   echo ""
@@ -233,8 +292,10 @@ cmd_help()
 
 case "$COMMAND" in
   .build)        cmd_build ;;
+  .run)          cmd_run ;;
   .test)         cmd_test ;;
   .test.offline) cmd_test_offline ;;
+  .lint)         cmd_lint ;;
   .list)         cmd_list ;;
   .shell)        cmd_shell ;;
   .|.help)       cmd_help ;;

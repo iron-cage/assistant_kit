@@ -10,7 +10,7 @@ use error_tools::{ Error, Result };
 const BOOL_PARAMS : &[ &str ] = &[
   "dry",
   "active",
-  "account", "sub", "tier", "token", "expires", "email", "org", "file", "saved",
+  "account", "sub", "tier", "token", "expires", "email", "file", "saved",
 ];
 
 /// Short alias for verbosity param.

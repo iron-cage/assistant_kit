@@ -127,26 +127,26 @@ pub fn write_account( home : &std::path::Path, name : &str, sub_type : &str, tie
 
 /// Write `~/.claude/.claude.json` with an `OAuthAccount` profile entry.
 ///
-/// Used to test email/org retrieval at `v::1` and above for the active account.
+/// Used to test email retrieval at `v::1` and above for the active account.
 ///
 /// # Panics
 ///
 /// Panics if the directory or file cannot be created.
 #[ inline ]
-pub fn write_claude_json( home : &std::path::Path, email : &str, org : &str )
+pub fn write_claude_json( home : &std::path::Path, email : &str )
 {
   // Fix(FR-19): write to $HOME/.claude.json — production code reads from claude_json_file()
   // Root cause: was writing to $HOME/.claude/.claude.json (one dir too deep), matching old bug.
   // Pitfall: fixture write path must equal production read path (Fixture–Production Path Alignment).
   let content = format!(
-    r#"{{"oauthAccount":{{"emailAddress":"{email}","organizationName":"{org}"}}}}"#,
+    r#"{{"oauthAccount":{{"emailAddress":"{email}"}}}}"#,
   );
   std::fs::write( home.join( ".claude.json" ), content ).unwrap();
 }
 
-/// Write `~/.claude.json` with a full `oauthAccount` profile (email, org, displayName, role, billing).
+/// Write `~/.claude.json` with a full `oauthAccount` profile (email, displayName, role, billing).
 ///
-/// Used to test all five oauthAccount fields in `.credentials.status`.
+/// Used to test all four oauthAccount fields in `.credentials.status`.
 ///
 /// # Panics
 ///
@@ -155,14 +155,13 @@ pub fn write_claude_json( home : &std::path::Path, email : &str, org : &str )
 pub fn write_claude_json_full(
   home    : &std::path::Path,
   email   : &str,
-  org     : &str,
   display : &str,
   role    : &str,
   billing : &str,
 )
 {
   let content = format!(
-    r#"{{"oauthAccount":{{"emailAddress":"{email}","organizationName":"{org}","displayName":"{display}","organizationRole":"{role}","billingType":"{billing}"}}}}"#,
+    r#"{{"oauthAccount":{{"emailAddress":"{email}","displayName":"{display}","organizationRole":"{role}","billingType":"{billing}"}}}}"#,
   );
   std::fs::write( home.join( ".claude.json" ), content ).unwrap();
 }
@@ -185,7 +184,7 @@ pub fn write_settings_json( home : &std::path::Path, model : &str )
 
 /// Write `{credential_store}/{name}.claude.json` with an `oauthAccount` snapshot.
 ///
-/// Used to pre-populate `.accounts` snapshot data for `org`, `display_name`,
+/// Used to pre-populate `.accounts` snapshot data for `email`, `display_name`,
 /// `role`, and `billing` field tests. Mirrors what `account::save()` produces.
 ///
 /// # Panics
@@ -195,7 +194,7 @@ pub fn write_settings_json( home : &std::path::Path, model : &str )
 pub fn write_account_claude_json(
   home    : &std::path::Path,
   name    : &str,
-  org     : &str,
+  email   : &str,
   display : &str,
   role    : &str,
   billing : &str,
@@ -204,7 +203,7 @@ pub fn write_account_claude_json(
   let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &credential_store ).unwrap();
   let content = format!(
-    r#"{{"oauthAccount":{{"organizationName":"{org}","displayName":"{display}","organizationRole":"{role}","billingType":"{billing}"}}}}"#,
+    r#"{{"oauthAccount":{{"emailAddress":"{email}","displayName":"{display}","organizationRole":"{role}","billingType":"{billing}"}}}}"#,
   );
   std::fs::write( credential_store.join( format!( "{name}.claude.json" ) ), content ).unwrap();
 }
