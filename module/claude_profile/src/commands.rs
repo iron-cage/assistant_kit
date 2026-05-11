@@ -535,14 +535,14 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
   Ok( OutputData::new( content, "text" ) )
 }
 
-/// `.account.switch` — atomic credential rotation by name.
+/// `.account.use` — atomic credential rotation by name.
 ///
 /// # Errors
 ///
 /// Returns `ErrorData` if name is missing/empty, HOME is unset,
 /// or the target account does not exist.
 #[ inline ]
-pub fn account_switch_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   // Fix(issue-switch-dry-validation):
   // Root cause: is_dry() was checked before existence validation, so dry-run silently
@@ -553,7 +553,7 @@ pub fn account_switch_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
   crate::account::check_switch_preconditions( &name, &credential_store )
-    .map_err( |e| io_err_to_error_data( &e, "account switch" ) )?;
+    .map_err( |e| io_err_to_error_data( &e, "account use" ) )?;
 
   if is_dry( &cmd )
   {
@@ -561,7 +561,7 @@ pub fn account_switch_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   }
 
   crate::account::switch_account( &name, &credential_store, &paths )
-    .map_err( |e| io_err_to_error_data( &e, "account switch" ) )?;
+    .map_err( |e| io_err_to_error_data( &e, "account use" ) )?;
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )
 }
 pub use crate::usage::usage_routine;
@@ -604,16 +604,7 @@ fn read_auth_token( creds_path : &std::path::Path ) -> Result< String, ErrorData
     ) )
 }
 
-/// Format rate-limit data as compact text (`v::0`): bare percentages, no labels or reset times.
-fn format_rate_limits_compact( data : &RateLimitData ) -> String
-{
-  let pct_session = format!( "{:.0}", data.utilization_5h * 100.0 );
-  let pct_weekly  = format!( "{:.0}", data.utilization_7d * 100.0 );
-  let status      = &data.status;
-  format!( "{pct_session}%\n{pct_weekly}%\n{status}\n" )
-}
-
-/// Format rate-limit data as human-readable text (`v::1` default): labelled with reset durations.
+/// Format rate-limit data as human-readable text: labelled with reset durations.
 fn format_rate_limits_text( data : &RateLimitData ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -627,28 +618,6 @@ fn format_rate_limits_text( data : &RateLimitData ) -> String
   let reset_weekly_str  = format_duration_secs( data.reset_7d.saturating_sub( now_secs ) );
   let status            = &data.status;
   format!( "Session (5h):  {pct_session}% consumed, resets in {reset_session_str}\nWeekly (7d):   {pct_weekly}% consumed, resets in {reset_weekly_str}\nStatus:        {status}\n" )
-}
-
-/// Format rate-limit data as verbose text (`v::2`): all fields including raw floats and timestamps.
-fn format_rate_limits_verbose( data : &RateLimitData ) -> String
-{
-  use std::time::{ SystemTime, UNIX_EPOCH };
-  let now_secs = SystemTime::now()
-    .duration_since( UNIX_EPOCH )
-    .unwrap_or_default()
-    .as_secs();
-  let reset_session_str = format_duration_secs( data.reset_5h.saturating_sub( now_secs ) );
-  let reset_weekly_str  = format_duration_secs( data.reset_7d.saturating_sub( now_secs ) );
-  let pct_session       = format!( "{:.0}", data.utilization_5h * 100.0 );
-  let pct_weekly        = format!( "{:.0}", data.utilization_7d * 100.0 );
-  let raw_session       = data.utilization_5h;
-  let raw_weekly        = data.utilization_7d;
-  let ts_session        = data.reset_5h;
-  let ts_weekly         = data.reset_7d;
-  let status            = &data.status;
-  format!(
-    "Session (5h):  {pct_session}% consumed, resets in {reset_session_str}\n  raw: {raw_session:.6}, reset_ts: {ts_session}\nWeekly (7d):   {pct_weekly}% consumed, resets in {reset_weekly_str}\n  raw: {raw_weekly:.6}, reset_ts: {ts_weekly}\nStatus:        {status}\n"
-  )
 }
 
 /// Format rate-limit data as a JSON object.
@@ -666,16 +635,6 @@ fn format_rate_limits_json( data : &RateLimitData ) -> String
 ///
 /// Makes a lightweight `POST /v1/messages` to fetch `anthropic-ratelimit-unified-*`
 /// response headers; outputs session (5h) and weekly (7d) utilization percentages.
-///
-/// Output format uses a two-level dispatch: outer on `opts.format` (`json` vs `text`),
-/// inner on `opts.verbosity` (only within `text`): `0`=compact, `2`=verbose, `_`=default.
-///
-/// # Pitfall
-///
-/// The inner verbosity match (`0`/`2`/`_`) is SEPARATE from the outer format match.
-/// If only the outer match exists, all text verbosity levels silently fall back to `v::1`
-/// output. Both dispatches are required; `v::0` and `v::2` have automated live tests
-/// (`lim_it2`, `lim_it5`) to catch regressions.
 ///
 /// # Errors
 ///
@@ -724,12 +683,7 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   let text = match opts.format
   {
     OutputFormat::Json => format_rate_limits_json( &data ),
-    OutputFormat::Text => match opts.verbosity
-    {
-      0 => format_rate_limits_compact( &data ),
-      2 => format_rate_limits_verbose( &data ),
-      _ => format_rate_limits_text( &data ),
-    },
+    OutputFormat::Text => format_rate_limits_text( &data ),
   };
   Ok( OutputData::new( text, "text" ) )
 }
@@ -858,21 +812,13 @@ pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     }
     OutputFormat::Text =>
     {
-      match ( &token_result, opts.verbosity )
+      match &token_result
       {
-        ( crate::token::TokenStatus::Valid { .. }, 0 ) =>
-          "valid\n".to_string(),
-        ( crate::token::TokenStatus::Valid { expires_in }, 1 ) =>
+        crate::token::TokenStatus::Valid { expires_in } =>
           format!( "valid — {}m remaining\n", expires_in.as_secs() / 60 ),
-        ( crate::token::TokenStatus::Valid { expires_in }, _ ) =>
-          format!( "valid — {}s remaining (threshold={}s)\n", expires_in.as_secs(), threshold_secs ),
-        ( crate::token::TokenStatus::ExpiringSoon { .. }, 0 ) =>
-          "expiring soon\n".to_string(),
-        ( crate::token::TokenStatus::ExpiringSoon { expires_in }, 1 ) =>
+        crate::token::TokenStatus::ExpiringSoon { expires_in } =>
           format!( "expiring soon — {}m remaining\n", expires_in.as_secs() / 60 ),
-        ( crate::token::TokenStatus::ExpiringSoon { expires_in }, _ ) =>
-          format!( "expiring soon — {}s remaining (threshold={}s)\n", expires_in.as_secs(), threshold_secs ),
-        ( crate::token::TokenStatus::Expired, _ ) =>
+        crate::token::TokenStatus::Expired =>
           "expired\n".to_string(),
       }
     }
@@ -920,45 +866,16 @@ pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     }
     OutputFormat::Text =>
     {
-      match opts.verbosity
-      {
-        0 =>
-        {
-          format!( "{}\n", paths.base().display() )
-        }
-        1 =>
-        {
-          format!(
-            "credentials:      {}\ncredential_store: {}\nprojects:         {}\nstats:            {}\nsettings:         {}\nsession-env:      {}\nsessions:         {}\n",
-            paths.credentials_file().display(),
-            credential_store.display(),
-            paths.projects_dir().display(),
-            paths.stats_file().display(),
-            paths.settings_file().display(),
-            paths.session_env_dir().display(),
-            paths.sessions_dir().display(),
-          )
-        }
-        _ =>
-        {
-          let entries : Vec< ( &str, std::path::PathBuf ) > = vec![
-            ( "credentials",      paths.credentials_file() ),
-            ( "credential_store", credential_store ),
-            ( "projects",         paths.projects_dir() ),
-            ( "stats",            paths.stats_file() ),
-            ( "settings",         paths.settings_file() ),
-            ( "session-env",      paths.session_env_dir() ),
-            ( "sessions",         paths.sessions_dir() ),
-          ];
-          let mut out = String::new();
-          for ( label, path ) in entries
-          {
-            let exists = if path.exists() { "exists" } else { "absent" };
-            let _ = writeln!( out, "{label}: {} [{exists}]", path.display() );
-          }
-          out
-        }
-      }
+      format!(
+        "credentials:      {}\ncredential_store: {}\nprojects:         {}\nstats:            {}\nsettings:         {}\nsession-env:      {}\nsessions:         {}\n",
+        paths.credentials_file().display(),
+        credential_store.display(),
+        paths.projects_dir().display(),
+        paths.stats_file().display(),
+        paths.settings_file().display(),
+        paths.session_env_dir().display(),
+        paths.sessions_dir().display(),
+      )
     }
   };
 

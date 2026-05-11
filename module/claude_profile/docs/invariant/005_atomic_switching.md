@@ -40,4 +40,4 @@ Account switching (FR-9) must use write-then-rename to prevent credential corrup
 |------|------|----------------|
 | source | `src/account.rs` | `switch_account()` — write-then-rename implementation |
 | test | `tests/account_tests.rs::switch_account_overwrites_credentials_file` | Verifies atomic overwrite semantics |
-| doc | [004_account_switch.md](../feature/004_account_switch.md) | Feature design for account switching |
+| doc | [004_account_use.md](../feature/004_account_use.md) | Feature design for account switching |

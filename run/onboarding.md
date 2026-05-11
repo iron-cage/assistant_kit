@@ -113,11 +113,14 @@ _plugin_list_cmd() {
 
 ### Step 5 — `run/test` (online test script)
 
-Executed inside the container by `.test`. Use absolute paths (`/workspace/...`).
+Executed inside the container by `.test`. Use `$SCRIPT_DIR`-relative paths — inside the
+container `SCRIPT_DIR` resolves to `/workspace/run`, so `$SCRIPT_DIR/..` is `/workspace`.
+This also allows calling the script directly on the host when local dev tools are available.
 
 ```bash
 #!/usr/bin/env bash
-exec /workspace/.venv/bin/pytest /workspace/tests/ -v
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec "$SCRIPT_DIR/../.venv/bin/pytest" "$SCRIPT_DIR/../tests/" -v
 ```
 
 Not needed for `.test.offline` — that command uses the baked image `CMD` directly.
@@ -126,16 +129,18 @@ Not needed for `.test.offline` — that command uses the baked image `CMD` direc
 
 ### Step 6 — `run/lint` and `run/run` (optional)
 
-Add these when you want `.lint` and `.run` commands. Use absolute paths.
+Add these when you want `.lint` and `.run` commands. Use `$SCRIPT_DIR`-relative paths.
 
 ```bash
 # run/lint
 #!/usr/bin/env bash
-exec /workspace/.venv/bin/ruff check /workspace/src/ /workspace/tests/
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec "$SCRIPT_DIR/../.venv/bin/ruff" check --no-cache "$SCRIPT_DIR/../src/" "$SCRIPT_DIR/../tests/"
 
 # run/run
 #!/usr/bin/env bash
-exec /workspace/.venv/bin/python -m my_package
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec "$SCRIPT_DIR/../.venv/bin/python" -m my_package
 ```
 
 ---

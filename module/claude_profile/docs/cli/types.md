@@ -1,15 +1,14 @@
 # Types
 
-### All Types (4 total)
+### All Types (3 total)
 
 | # | Type | Fundamental | Parameters | Commands |
 |---|------|-------------|------------|----------|
 | 1 | `AccountName` | `String` (newtype) | [`name::`](params.md#parameter--1-name) | 5 cmds |
-| 2 | `VerbosityLevel` | `u8` (newtype) | [`verbosity::`](params.md#parameter--2-verbosity--v) | 4 cmds |
-| 3 | `OutputFormat` | `enum` | [`format::`](params.md#parameter--3-format) | 6 cmds |
-| 4 | `WarningThreshold` | `u64` (newtype) | [`threshold::`](params.md#parameter--4-threshold) | 1 cmd |
+| 2 | `OutputFormat` | `enum` | [`format::`](params.md#parameter--2-format) | 6 cmds |
+| 3 | `WarningThreshold` | `u64` (newtype) | [`threshold::`](params.md#parameter--3-threshold) | 1 cmd |
 
-**Total:** 4 types
+**Total:** 3 types
 
 ---
 
@@ -29,6 +28,7 @@ pub struct AccountName( String );
 **Constraints:**
 - Non-empty (reject `""`)
 - Must contain `@` with non-empty local part and domain (valid email format)
+- Local part (before `@`) must not contain `/`, `\`, or `*` (path-unsafe chars rejected before any filesystem operation)
 - Maps to file `{credential_store}/{email}.credentials.json`
 
 **Parsing:**
@@ -53,56 +53,11 @@ impl AccountName
 - `get() -> &str` — raw string accessor
 - `to_credential_path( credential_store : &Path ) -> PathBuf` — resolves `{credential_store}/{name}.credentials.json`
 
-**Commands:** [`.accounts`](commands.md#command--3-accounts) *(optional)*, [`.account.save`](commands.md#command--4-accountsave), [`.account.switch`](commands.md#command--5-accountswitch), [`.account.delete`](commands.md#command--6-accountdelete), [`.account.limits`](commands.md#command--11-accountlimits) *(optional)*
+**Commands:** [`.accounts`](commands.md#command--3-accounts) *(optional)*, [`.account.save`](commands.md#command--4-accountsave), [`.account.use`](commands.md#command--5-accountuse), [`.account.delete`](commands.md#command--6-accountdelete), [`.account.limits`](commands.md#command--11-accountlimits) *(optional)*
 
 ---
 
-### Type :: 2. `VerbosityLevel`
-
-**Purpose:** Controls output detail density. Enables scripts to suppress labels (`v::0`) and debuggers to surface full metadata (`v::2`).
-
-**Fundamental Type:** Newtype wrapping `u8`
-
-```rust
-pub struct VerbosityLevel( u8 );
-```
-
-**Constants:**
-- `QUIET = 0` — bare values only (machine-friendly)
-- `NORMAL = 1` — labeled output with human context (default)
-- `VERBOSE = 2` — full metadata including subscription type, tier, raw timestamps
-- `DEFAULT = 1`
-- `MIN = 0`
-- `MAX = 2`
-
-**Constraints:**
-- Range: 0-2 inclusive
-- Values outside range rejected with exit 1
-
-**Parsing:**
-
-```rust
-impl VerbosityLevel
-{
-  pub fn new( n : u8 ) -> Result< Self, String >
-  {
-    if n > 2 { return Err( format!( "verbosity must be 0-2, got {}", n ) ); }
-    Ok( Self( n ) )
-  }
-}
-```
-
-**Methods:**
-- `get() -> u8` — raw numeric value
-- `is_quiet() -> bool` — true when level is 0
-- `is_verbose() -> bool` — true when level is 2
-- `includes_labels() -> bool` — true when level >= 1
-
-**Commands:** [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.account.limits`](commands.md#command--11-accountlimits)
-
----
-
-### Type :: 3. `OutputFormat`
+### Type :: 2. `OutputFormat`
 
 **Purpose:** Selects between human-readable text and machine-parseable JSON output. Enables pipeline composition via `format::json | jq`.
 
@@ -151,7 +106,7 @@ impl OutputFormat
 
 ---
 
-### Type :: 4. `WarningThreshold`
+### Type :: 3. `WarningThreshold`
 
 **Purpose:** Configures the boundary between `Valid` and `ExpiringSoon` token classification. Allows callers to tune early-warning sensitivity for automation or interactive use.
 

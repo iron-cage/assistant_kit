@@ -5,7 +5,7 @@
 - **Purpose**: Give users a snapshot of all stored accounts and their metadata in one call, with optional scoping to a single named account.
 - **Responsibility**: Documents the `account::list()` API and the `.accounts` CLI command (FR-8).
 - **In Scope**: Account enumeration, metadata per entry, active-account marking, empty-store handling, named-account scoping, field-presence toggles, JSON output.
-- **Out of Scope**: Switching accounts (→ 004_account_switch.md), token classification logic (→ 006_token_status.md).
+- **Out of Scope**: Switching accounts (→ 004_account_use.md), token classification logic (→ 006_token_status.md).
 
 ### Design
 

@@ -216,6 +216,23 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
   let marker = credential_store.join( "_active" );
   std::fs::write( marker, name )?;
 
+  // Fix(issue-122): switch_account() restored only .credentials.json; ~/.claude.json
+  //   was never updated, so credentials_status_routine() showed the previous account's
+  //   email after every switch.
+  // Root cause: save() added ~/.claude.json snapshotting (best-effort) but switch_account()
+  //   was not updated to mirror the restore, leaving an asymmetric save/restore pair.
+  // Pitfall: any future extension to save() that captures additional companion files must
+  //   add a corresponding best-effort restore in switch_account() — the two functions
+  //   must stay symmetric.
+  let _ = std::fs::copy(
+    credential_store.join( format!( "{name}.claude.json" ) ),
+    paths.claude_json_file(),
+  );
+  let _ = std::fs::copy(
+    credential_store.join( format!( "{name}.settings.json" ) ),
+    paths.settings_file(),
+  );
+
   Ok( () )
 }
 
@@ -370,6 +387,22 @@ pub fn validate_name( name : &str ) -> Result< (), std::io::Error >
     return Err( std::io::Error::new(
       std::io::ErrorKind::InvalidInput,
       format!( "account name '{name}' is not a valid email address: domain must not be empty" ),
+    ) );
+  }
+  // Fix(issue-123): validate_name() passed names like `a/b@c.com` because it only checked
+  //   @-presence and non-empty local/domain parts; the local part was never inspected for
+  //   path-unsafe chars, so save()/switch_account() hit filesystem errors (exit 2) instead
+  //   of returning InvalidInput (exit 1).
+  // Root cause: local-part safety check was absent; chars `/`, `\`, `*` create path
+  //   traversal when used as a filename prefix (e.g. `{store}/a/b@c.com.credentials.json`).
+  // Pitfall: only the local part (before `@`) needs this check; the domain part appears
+  //   after `@` in the filename and cannot create sub-directory traversal in practice.
+  let local = &name[ ..at ];
+  if local.contains( '/' ) || local.contains( '\\' ) || local.contains( '*' )
+  {
+    return Err( std::io::Error::new(
+      std::io::ErrorKind::InvalidInput,
+      format!( "account name '{name}' contains path-unsafe characters in the local part" ),
     ) );
   }
   Ok( () )

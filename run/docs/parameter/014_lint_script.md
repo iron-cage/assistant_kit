@@ -18,26 +18,29 @@ Python standalone project:
 ```yaml
 lint_script: run/lint
 ```
-`run/lint` inside the container:
+`run/lint` (works inside the container and natively on the host):
 ```bash
 #!/usr/bin/env bash
-exec /workspace/.venv/bin/ruff check /workspace/src/ /workspace/tests/
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec "$SCRIPT_DIR/../.venv/bin/ruff" check --no-cache "$SCRIPT_DIR/../src/" "$SCRIPT_DIR/../tests/"
 ```
 Node.js standalone project:
 ```yaml
 lint_script: run/lint
 ```
-`run/lint` inside the container:
+`run/lint` (works inside the container and natively on the host):
 ```bash
 #!/usr/bin/env bash
-exec /workspace/node_modules/.bin/eslint /workspace/src/ /workspace/tests/
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec "$SCRIPT_DIR/../node_modules/.bin/eslint" "$SCRIPT_DIR/../src/" "$SCRIPT_DIR/../tests/"
 ```
 Rust standalone project:
 ```yaml
 lint_script: run/lint
 ```
-`run/lint` inside the container:
+`run/lint` (works inside the container and natively on the host):
 ```bash
 #!/usr/bin/env bash
-exec cargo clippy --manifest-path /workspace/Cargo.toml --all-targets -- -D warnings
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec cargo clippy --manifest-path "$SCRIPT_DIR/../Cargo.toml" --all-targets -- -D warnings
 ```

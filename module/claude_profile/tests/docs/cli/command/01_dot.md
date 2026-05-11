@@ -62,7 +62,7 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .`
-- **Then:** stdout contains all 9 visible command names (`.accounts`, `.account.save`, `.account.switch`, `.account.delete`, `.token.status`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`); does NOT contain `.account.list` or `.account.status`
+- **Then:** stdout contains all 9 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.token.status`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`); does NOT contain `.account.list` or `.account.status`
 - **Exit:** 0
 - **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
 

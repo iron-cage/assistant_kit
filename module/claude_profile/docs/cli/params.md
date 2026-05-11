@@ -1,31 +1,30 @@
 # Parameters
 
-### All Parameters (18 total)
+### All Parameters (17 total)
 
 | # | Parameter | Type | Default | Valid Values | Purpose | Used In |
 |---|-----------|------|---------|--------------|---------|---------|
 | 1 | `name::` | `AccountName` | Varies | Email address | Account email for switch/delete (required); save (optional, inferred from `~/.claude.json`); accounts/limits query (optional) | 5 cmds |
-| 2 | `verbosity::` / `v::` | `VerbosityLevel` | `1` | `0`, `1`, `2` | Output detail: 0=quiet, 1=normal, 2=verbose | 4 cmds |
-| 3 | `format::` / `fmt::` | `OutputFormat` | `text` | `text`, `json` | Output format: `text` or `json` | 6 cmds |
-| 4 | `threshold::` | `WarningThreshold` | `3600` | Non-negative integer (seconds) | Seconds before token expiry to classify as ExpiringSoon | 1 cmd |
-| 5 | `dry::` | `bool` | `0` | `0`, `1`, `false`, `true` | Print intended action without executing | 3 cmds |
-| 6 | `account::` | `bool` | `1` | `0`, `1` | Show active account name line (`.credentials.status`) | 1 cmd |
-| 7 | `sub::` | `bool` | `1` | `0`, `1` | Show subscription type line | 2 cmds |
-| 8 | `tier::` | `bool` | `1` | `0`, `1` | Show rate-limit tier line | 2 cmds |
-| 9 | `token::` | `bool` | `1` | `0`, `1` | Show token status line (`.credentials.status`) | 1 cmd |
-| 10 | `expires::` | `bool` | `1` | `0`, `1` | Show token expiry duration line | 2 cmds |
-| 11 | `email::` | `bool` | `1` | `0`, `1` | Show email address line | 2 cmds |
-| 12 | `file::` | `bool` | `0` | `0`, `1` | Show credentials file path, opt-in (`.credentials.status`) | 1 cmd |
-| 13 | `saved::` | `bool` | `0` | `0`, `1` | Show saved account count, opt-in (`.credentials.status`) | 1 cmd |
-| 14 | `active::` | `bool` | `1` | `0`, `1` | Show active/inactive status line (`.accounts`) | 1 cmd |
-| 15 | `display_name::` | `bool` | `0` | `0`, `1` | Show display name from `oauthAccount`, opt-in | 2 cmds |
-| 16 | `role::` | `bool` | `0` | `0`, `1` | Show organisation role from `oauthAccount`, opt-in | 2 cmds |
-| 17 | `billing::` | `bool` | `0` | `0`, `1` | Show billing type from `oauthAccount`, opt-in | 2 cmds |
-| 18 | `model::` | `bool` | `0` | `0`, `1` | Show active model from settings, opt-in | 2 cmds |
+| 2 | `format::` / `fmt::` | `OutputFormat` | `text` | `text`, `json` | Output format: `text` or `json` | 6 cmds |
+| 3 | `threshold::` | `WarningThreshold` | `3600` | Non-negative integer (seconds) | Seconds before token expiry to classify as ExpiringSoon | 1 cmd |
+| 4 | `dry::` | `bool` | `0` | `0`, `1`, `false`, `true` | Print intended action without executing | 3 cmds |
+| 5 | `account::` | `bool` | `1` | `0`, `1` | Show active account name line (`.credentials.status`) | 1 cmd |
+| 6 | `sub::` | `bool` | `1` | `0`, `1` | Show subscription type line | 2 cmds |
+| 7 | `tier::` | `bool` | `1` | `0`, `1` | Show rate-limit tier line | 2 cmds |
+| 8 | `token::` | `bool` | `1` | `0`, `1` | Show token status line (`.credentials.status`) | 1 cmd |
+| 9 | `expires::` | `bool` | `1` | `0`, `1` | Show token expiry duration line | 2 cmds |
+| 10 | `email::` | `bool` | `1` | `0`, `1` | Show email address line | 2 cmds |
+| 11 | `file::` | `bool` | `0` | `0`, `1` | Show credentials file path, opt-in (`.credentials.status`) | 1 cmd |
+| 12 | `saved::` | `bool` | `0` | `0`, `1` | Show saved account count, opt-in (`.credentials.status`) | 1 cmd |
+| 13 | `active::` | `bool` | `1` | `0`, `1` | Show active/inactive status line (`.accounts`) | 1 cmd |
+| 14 | `display_name::` | `bool` | `0` | `0`, `1` | Show display name from `oauthAccount`, opt-in | 2 cmds |
+| 15 | `role::` | `bool` | `0` | `0`, `1` | Show organisation role from `oauthAccount`, opt-in | 2 cmds |
+| 16 | `billing::` | `bool` | `0` | `0`, `1` | Show billing type from `oauthAccount`, opt-in | 2 cmds |
+| 17 | `model::` | `bool` | `0` | `0`, `1` | Show active model from settings, opt-in | 2 cmds |
 
-**Total:** 18 parameters
+**Total:** 17 parameters
 
-*Parameters 2-3 form the Output Control group; parameters 6-18 form the Field Presence group*
+*Parameter 2 forms the Output Control group; parameters 5-17 form the Field Presence group*
 
 ---
 
@@ -34,9 +33,9 @@
 Identifies which named account to operate on. Required for destructive commands; optional with inference on `.account.save`; optional for query on `.accounts` and `.account.limits`.
 
 - **Type:** `AccountName`
-- **Default:** **(required)** on `.account.switch`, `.account.delete`; **inferred** on `.account.save` (reads `emailAddress` from `~/.claude.json`; exits 1 if absent); **optional** on `.accounts` (omit to list all) and `.account.limits` (omit for active account)
-- **Constraints:** Valid email address (non-empty, must contain `@`, non-empty local part and domain)
-- **Commands:** [`.accounts`](commands.md#command--3-accounts) *(optional)*, [`.account.save`](commands.md#command--4-accountsave) *(optional/inferred)*, [`.account.switch`](commands.md#command--5-accountswitch), [`.account.delete`](commands.md#command--6-accountdelete), [`.account.limits`](commands.md#command--11-accountlimits) *(optional)*
+- **Default:** **(required)** on `.account.use`, `.account.delete`; **inferred** on `.account.save` (reads `emailAddress` from `~/.claude.json`; exits 1 if absent); **optional** on `.accounts` (omit to list all) and `.account.limits` (omit for active account)
+- **Constraints:** Valid email address (non-empty, must contain `@`, non-empty local part and domain); local part must not contain `/`, `\`, or `*` (path-unsafe characters rejected before any filesystem operation)
+- **Commands:** [`.accounts`](commands.md#command--3-accounts) *(optional)*, [`.account.save`](commands.md#command--4-accountsave) *(optional/inferred)*, [`.account.use`](commands.md#command--5-accountuse), [`.account.delete`](commands.md#command--6-accountdelete), [`.account.limits`](commands.md#command--11-accountlimits) *(optional)*
 - **Purpose:** Selects the target credential file at `{credential_store}/{email}.credentials.json`. Name validation matches the library's `account::validate_name()` rules. An invalid name exits 1; a valid but unknown name exits 2.
 
 **Examples:**
@@ -48,28 +47,7 @@ name::alice@home.com   → {credential_store}/alice@home.com.credentials.json
 
 ---
 
-### Parameter :: 2. `verbosity::` / `v::`
-
-Controls the amount of detail in text output. Higher levels add labels, metadata, and diagnostic context. Does not affect computation or exit codes.
-
-- **Type:** `VerbosityLevel`
-- **Default:** `1` (normal output with labels)
-- **Constraints:** Integer 0-2
-- **Commands:** [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.account.limits`](commands.md#command--11-accountlimits)
-- **Purpose:** Adapts output density to context: `0` for scripting (bare values), `1` for interactive use (labeled), `2` for debugging (full metadata).
-- **Group:** Output Control
-
-**Examples:**
-
-```text
-v::0   → bare values only (names, paths, status word)
-v::1   → labeled output with human context (default)
-v::2   → extended metadata including expiry times
-```
-
----
-
-### Parameter :: 3. `format::` / `fmt::`
+### Parameter :: 2. `format::` / `fmt::`
 
 Selects between human-readable text output and machine-parseable JSON. Text is the default for interactive use; JSON enables pipeline integration.
 
@@ -81,6 +59,7 @@ Selects between human-readable text output and machine-parseable JSON. Text is t
 - **Purpose:** Enables CLI composability — `format::json` output can be piped to `jq` for structured extraction without parsing fragile text layouts.
 - **Group:** Output Control
 
+
 **Examples:**
 
 ```text
@@ -91,7 +70,7 @@ fmt::json      → same as format::json (short alias)
 
 ---
 
-### Parameter :: 4. `threshold::`
+### Parameter :: 3. `threshold::`
 
 Overrides the default 60-minute warning window for token expiry classification. Tokens expiring within `threshold::` seconds are classified as `ExpiringSoon` instead of `Valid`.
 
@@ -112,14 +91,14 @@ threshold::0      → never classify as ExpiringSoon (only Valid or Expired)
 
 ---
 
-### Parameter :: 5. `dry::`
+### Parameter :: 4. `dry::`
 
 Activates simulation mode for mutation commands. When `dry::1`, the command prints what it *would* do without modifying any files. Part of the standard CLI dry-run pattern.
 
 - **Type:** `bool` (`0` / `1` or `false` / `true`)
 - **Default:** `0` (execute normally)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`
-- **Commands:** [`.account.save`](commands.md#command--4-accountsave), [`.account.switch`](commands.md#command--5-accountswitch), [`.account.delete`](commands.md#command--6-accountdelete)
+- **Commands:** [`.account.save`](commands.md#command--4-accountsave), [`.account.use`](commands.md#command--5-accountuse), [`.account.delete`](commands.md#command--6-accountdelete)
 - **Purpose:** Lets users preview credential file changes before committing. Critical for account management where an accidental switch or delete could disrupt active sessions.
 
 **Examples:**
@@ -137,7 +116,7 @@ dry::false → same as dry::0
 
 ---
 
-### Parameter :: 6. `account::`
+### Parameter :: 5. `account::`
 
 Controls whether the active account name line appears in `.credentials.status` output. Reads the `_active` marker file; shows `N/A` when no account store has been initialised.
 
@@ -157,7 +136,7 @@ account::0   → line omitted
 
 ---
 
-### Parameter :: 7. `sub::`
+### Parameter :: 6. `sub::`
 
 Controls whether the subscription type line appears in output. Used by both `.accounts` (per stored credential) and `.credentials.status` (from live credentials).
 
@@ -177,7 +156,7 @@ sub::0   → line omitted
 
 ---
 
-### Parameter :: 8. `tier::`
+### Parameter :: 7. `tier::`
 
 Controls whether the rate-limit tier line appears in output. Used by both `.accounts` (per stored credential) and `.credentials.status` (from live credentials).
 
@@ -197,7 +176,7 @@ tier::0   → line omitted
 
 ---
 
-### Parameter :: 9. `token::`
+### Parameter :: 8. `token::`
 
 Controls whether the token validity status line appears in `.credentials.status` output.
 
@@ -217,7 +196,7 @@ token::0   → line omitted
 
 ---
 
-### Parameter :: 10. `expires::`
+### Parameter :: 9. `expires::`
 
 Controls whether the token expiry duration line appears in output. Used by both `.accounts` (per stored credential) and `.credentials.status` (from live credentials).
 
@@ -237,7 +216,7 @@ expires::0   → line omitted
 
 ---
 
-### Parameter :: 11. `email::`
+### Parameter :: 10. `email::`
 
 Controls whether the email address line appears in output. Source for `.credentials.status`: `emailAddress` field in live `~/.claude.json`. Source for `.accounts`: `emailAddress` field in saved `{name}.claude.json` snapshot.
 
@@ -257,7 +236,7 @@ email::0   → line omitted
 
 ---
 
-### Parameter :: 12. `file::`
+### Parameter :: 11. `file::`
 
 Controls whether the credentials file path line appears in `.credentials.status` output. Opt-in (default `0`).
 
@@ -277,7 +256,7 @@ file::1   → File:    /home/user/.claude/.credentials.json
 
 ---
 
-### Parameter :: 13. `saved::`
+### Parameter :: 12. `saved::`
 
 Controls whether the saved account count line appears in `.credentials.status` output. Opt-in (default `0`). Counts `*.credentials.json` files in the credential store.
 
@@ -297,7 +276,7 @@ saved::1   → Saved:   3 account(s)
 
 ---
 
-### Parameter :: 14. `active::`
+### Parameter :: 13. `active::`
 
 Controls whether the active/inactive status line appears in `.accounts` output for each account entry.
 
@@ -317,7 +296,7 @@ active::0   → line omitted
 
 ---
 
-### Parameter :: 15. `display_name::`
+### Parameter :: 14. `display_name::`
 
 Controls whether the display name line appears in output. Opt-in (default `0`). Source: `displayName` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`) or from the saved `{name}.claude.json` snapshot (`.accounts`).
 
@@ -337,7 +316,7 @@ display_name::1   → Display: alice
 
 ---
 
-### Parameter :: 16. `role::`
+### Parameter :: 15. `role::`
 
 Controls whether the organisation role line appears in output. Opt-in (default `0`). Source: `organizationRole` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`) or from the saved `{name}.claude.json` snapshot (`.accounts`).
 
@@ -357,7 +336,7 @@ role::1   → Role:    admin
 
 ---
 
-### Parameter :: 17. `billing::`
+### Parameter :: 16. `billing::`
 
 Controls whether the billing type line appears in output. Opt-in (default `0`). Source: `billingType` field in `oauthAccount` — read from live `~/.claude.json` (`.credentials.status`) or from the saved `{name}.claude.json` snapshot (`.accounts`).
 
@@ -377,7 +356,7 @@ billing::1   → Billing: stripe_subscription
 
 ---
 
-### Parameter :: 18. `model::`
+### Parameter :: 17. `model::`
 
 Controls whether the active model line appears in output. Opt-in (default `0`). Source: `model` field in `settings.json` — read from live `~/.claude/settings.json` (`.credentials.status`) or from the saved `{name}.settings.json` snapshot (`.accounts`).
 

@@ -22,7 +22,7 @@ nodes:
     entity: feature
 
   - id: feature/004
-    file: feature/004_account_switch.md
+    file: feature/004_account_use.md
     label: Switch Account
     entity: feature
 

@@ -78,7 +78,7 @@ fn h02_help_lists_all_registered_commands()
   for cmd in &[
     ".accounts",
     ".account.save",
-    ".account.switch",
+    ".account.use",
     ".account.delete",
     ".token.status",
     ".paths",

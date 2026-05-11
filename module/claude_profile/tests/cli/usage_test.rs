@@ -18,21 +18,23 @@
 //! | u07 | `u07_usage_single_model_single_day` | one model, one day → correct output | P |
 //! | u08 | `u08_usage_multiple_models_sorted_desc` | multiple models → sorted descending | P |
 //! | u09 | `u09_usage_model_name_shortening` | long model names → shortened display | P |
-//! | u10 | `u10_usage_v0_compact_single_line` | v::0 → compact single-line output | P |
-//! | u11 | `u11_usage_v1_default_table` | v::1 → default table format | P |
-//! | u12 | `u12_usage_v2_daily_breakdown` | v::2 → daily breakdown shown | P |
+//! | u10 | *(reserved — not assigned)* | — | — |
+//! | u11 | `u11_usage_v1_default_table` | default → table format | P |
+//! | u12 | *(reserved — not assigned)* | — | — |
 //! | u13 | `u13_usage_json_valid` | format::json → valid JSON output | P |
 //! | u14 | `u14_usage_filters_outside_7day_window` | entries outside 7-day window filtered | P |
 //! | u15 | `u15_usage_month_boundary` | entries spanning month boundary | P |
 //! | u16 | `u16_usage_year_boundary` | entries spanning year boundary | P |
 //! | u17 | `u17_usage_leap_year_boundary` | entries spanning leap-year Feb boundary | P |
-//! | u18 | `u18_usage_token_format_boundaries` | boundary token counts (0, max) | P |
+//! | u18 | *(reserved — not assigned)* | — | — |
 //! | u19 | `u19_usage_multi_day_aggregation` | multi-day entries aggregated correctly | P |
 //! | u20 | `u20_usage_malformed_entries_skipped` | malformed entries skipped gracefully | P |
 //! | u21 | `u21_usage_json_empty_by_model` | no models in window → empty JSON | P |
 //! | u22 | `u22_usage_single_model_100_percent` | single model → 100% share | P |
 //! | u23 | `u23_usage_v1_comma_formatted_tokens` | large token counts → comma-formatted | P |
-//! | u24 | `u24_usage_v1_shows_period` | v::1 → period label shown | P |
+//! | u24 | `u24_usage_v1_shows_period` | default → period label shown | P |
+//! | u25 | `u25_usage_stale_data_shows_warning` | lastComputedDate 30 days old → warning present | P |
+//! | u26 | `u26_usage_fresh_data_no_warning` | lastComputedDate 5 days old → no warning | P |
 
 use crate::helpers::{
   run_cs_with_env, run_cs_without_home,
@@ -145,10 +147,12 @@ fn u06_usage_empty_daily_array_shows_zero()
   let home = dir.path().to_str().unwrap();
   write_stats_cache( dir.path(), Some( "2026-03-07" ), &[] );
 
-  let out = run_cs_with_env( &[ ".usage", "v::0" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "0 total" ), "empty array must show 0 total, got:\n{text}" );
+  assert!( text.contains( "Total" ), "empty array must show Total row, got:\n{text}" );
+  assert!( text.contains( "0\n" ) || text.ends_with( "0\n" ) || text.contains( "  0\n" ),
+    "empty array total must be 0, got:\n{text}" );
 }
 
 // ── Happy path: single model, single day ────────────────────────────────────
@@ -162,10 +166,10 @@ fn u07_usage_single_model_single_day()
     DayEntry { date: "2026-03-07", models: vec![ ( "claude-sonnet-4-6", 5000 ) ] },
   ] );
 
-  let out = run_cs_with_env( &[ ".usage", "v::0" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "5.0K total" ), "must show 5.0K total, got:\n{text}" );
+  assert!( text.contains( "5,000" ), "must show 5,000 tokens, got:\n{text}" );
   assert!( text.contains( "sonnet-4-6" ), "must show shortened model name, got:\n{text}" );
 }
 
@@ -213,7 +217,7 @@ fn u09_usage_model_name_shortening()
     ] },
   ] );
 
-  let out = run_cs_with_env( &[ ".usage", "v::0" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   // haiku-4-5 (date stripped), not haiku-4-5-20251001
@@ -223,24 +227,7 @@ fn u09_usage_model_name_shortening()
   assert!( text.contains( "glm-4.5-air" ), "non-claude model must be unchanged, got:\n{text}" );
 }
 
-// ── Verbosity levels ────────────────────────────────────────────────────────
-
-#[ test ]
-fn u10_usage_v0_compact_single_line()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_stats_cache( dir.path(), Some( "2026-03-07" ), &[
-    DayEntry { date: "2026-03-07", models: vec![ ( "claude-sonnet-4-6", 2_000_000 ) ] },
-  ] );
-
-  let out = run_cs_with_env( &[ ".usage", "v::0" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  let lines : Vec< &str > = text.trim().lines().collect();
-  assert_eq!( lines.len(), 1, "v::0 must be a single line, got:\n{text}" );
-  assert!( text.contains( "total" ), "v::0 must contain 'total', got:\n{text}" );
-}
+// ── Output format ────────────────────────────────────────────────────────────
 
 #[ test ]
 fn u11_usage_v1_default_table()
@@ -254,34 +241,11 @@ fn u11_usage_v1_default_table()
   let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "Usage" ), "v::1 must have header, got:\n{text}" );
-  assert!( text.contains( "Total" ), "v::1 must have Total row, got:\n{text}" );
-  assert!( text.contains( '%' ), "v::1 must have percentage, got:\n{text}" );
-  // Must NOT have Daily section (that's v::2).
-  assert!( !text.contains( "Daily" ), "v::1 must not have Daily section, got:\n{text}" );
-}
-
-#[ test ]
-fn u12_usage_v2_daily_breakdown()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_stats_cache( dir.path(), Some( "2026-03-07" ), &[
-    DayEntry { date: "2026-03-06", models: vec![ ( "claude-sonnet-4-6", 1_000_000 ) ] },
-    DayEntry { date: "2026-03-07", models: vec![ ( "claude-sonnet-4-6", 2_000_000 ) ] },
-  ] );
-
-  let out = run_cs_with_env( &[ ".usage", "v::2" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!( text.contains( "Daily" ), "v::2 must have Daily section, got:\n{text}" );
-  assert!( text.contains( "2026-03-07" ), "v::2 must show individual dates, got:\n{text}" );
-  assert!( text.contains( "2026-03-06" ), "v::2 must show both dates, got:\n{text}" );
-
-  // Newest first: 03-07 before 03-06.
-  let pos_07 = text.find( "2026-03-07" ).unwrap();
-  let pos_06 = text.find( "2026-03-06" ).unwrap();
-  assert!( pos_07 < pos_06, "daily must be newest first, got:\n{text}" );
+  assert!( text.contains( "Usage" ), "default output must have header, got:\n{text}" );
+  assert!( text.contains( "Total" ), "default output must have Total row, got:\n{text}" );
+  assert!( text.contains( '%' ), "default output must have percentage, got:\n{text}" );
+  // Must NOT have Daily section.
+  assert!( !text.contains( "Daily" ), "default output must not have Daily section, got:\n{text}" );
 }
 
 // ── JSON output ─────────────────────────────────────────────────────────────
@@ -408,81 +372,6 @@ fn u17_usage_leap_year_boundary()
   assert_eq!( parsed[ "total_tokens" ], 300 );
 }
 
-// ── Token formatting boundaries ─────────────────────────────────────────────
-
-/// Verify compact token formatting at tier boundaries.
-///
-/// # Root Cause
-///
-/// `fmt_tokens_compact` used `n < 1_000_000` as the `K→M` boundary, but
-/// `{:.1}` rounding caused `999_999` to display as "1000.0K".
-///
-/// # Why Not Caught
-///
-/// No test exercised values near the K→M rounding boundary.
-///
-/// # Fix Applied
-///
-/// Changed boundary from `n < 1_000_000` to `n < 999_950` to account for
-/// `{:.1}` rounding (`999_950` / 1000 = 999.95 → rounds to "1000.0").
-///
-/// # Prevention
-///
-/// This test checks all tier boundaries including rounding edge cases.
-///
-/// # Pitfall
-///
-/// Floating-point display with fixed precision can round values across
-/// intended tier boundaries — test at the rounding threshold, not just
-/// at the logical boundary.
-#[ test ]
-fn u18_usage_token_format_boundaries()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-
-  // Test 999 tokens → "999" (below K threshold).
-  write_stats_cache( dir.path(), Some( "2026-03-07" ), &[
-    DayEntry { date: "2026-03-07", models: vec![ ( "claude-sonnet-4-6", 999 ) ] },
-  ] );
-  let out = run_cs_with_env( &[ ".usage", "v::0" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!( text.contains( "999 total" ), "999 must display as '999', got:\n{text}" );
-
-  // Test 1000 → "1.0K".
-  write_stats_cache( dir.path(), Some( "2026-03-07" ), &[
-    DayEntry { date: "2026-03-07", models: vec![ ( "claude-sonnet-4-6", 1000 ) ] },
-  ] );
-  let out = run_cs_with_env( &[ ".usage", "v::0" ], &[ ( "HOME", home ) ] );
-  let text = stdout( &out );
-  assert!( text.contains( "1.0K total" ), "1000 must display as '1.0K', got:\n{text}" );
-
-  // Test 999_949 → "999.9K" (just below rounding threshold).
-  write_stats_cache( dir.path(), Some( "2026-03-07" ), &[
-    DayEntry { date: "2026-03-07", models: vec![ ( "claude-sonnet-4-6", 999_949 ) ] },
-  ] );
-  let out = run_cs_with_env( &[ ".usage", "v::0" ], &[ ( "HOME", home ) ] );
-  let text = stdout( &out );
-  assert!( text.contains( "999.9K total" ), "999_949 must display as '999.9K', got:\n{text}" );
-
-  // Test 999_950 → "1.0M" (at rounding boundary, promoted to M).
-  write_stats_cache( dir.path(), Some( "2026-03-07" ), &[
-    DayEntry { date: "2026-03-07", models: vec![ ( "claude-sonnet-4-6", 999_950 ) ] },
-  ] );
-  let out = run_cs_with_env( &[ ".usage", "v::0" ], &[ ( "HOME", home ) ] );
-  let text = stdout( &out );
-  assert!( text.contains( "1.0M total" ), "999_950 must display as '1.0M' (not '1000.0K'), got:\n{text}" );
-
-  // Test 1_000_000 → "1.0M".
-  write_stats_cache( dir.path(), Some( "2026-03-07" ), &[
-    DayEntry { date: "2026-03-07", models: vec![ ( "claude-sonnet-4-6", 1_000_000 ) ] },
-  ] );
-  let out = run_cs_with_env( &[ ".usage", "v::0" ], &[ ( "HOME", home ) ] );
-  let text = stdout( &out );
-  assert!( text.contains( "1.0M total" ), "1_000_000 must display as '1.0M', got:\n{text}" );
-}
-
 // ── Multi-day aggregation ───────────────────────────────────────────────────
 
 /// Same model across multiple days must aggregate correctly.
@@ -569,7 +458,7 @@ fn u22_usage_single_model_100_percent()
 
 // ── Full-format token display ───────────────────────────────────────────────
 
-/// `v::1` must show comma-separated token counts.
+/// Default text output must show comma-separated token counts.
 #[ test ]
 fn u23_usage_v1_comma_formatted_tokens()
 {
@@ -582,12 +471,12 @@ fn u23_usage_v1_comma_formatted_tokens()
   let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "1,234,567" ), "v::1 must show comma-formatted tokens, got:\n{text}" );
+  assert!( text.contains( "1,234,567" ), "default output must show comma-formatted tokens, got:\n{text}" );
 }
 
 // ── Period display ──────────────────────────────────────────────────────────
 
-/// `v::1` header must show the date range.
+/// Default text output header must show the date range.
 #[ test ]
 fn u24_usage_v1_shows_period()
 {
@@ -602,4 +491,83 @@ fn u24_usage_v1_shows_period()
   let text = stdout( &out );
   assert!( text.contains( "2026-03-01" ), "must show period start, got:\n{text}" );
   assert!( text.contains( "2026-03-07" ), "must show period end, got:\n{text}" );
+}
+
+// ── Staleness warning ────────────────────────────────────────────────────────
+
+/// Compute the ISO date string for `n` days before today (UTC day boundary).
+///
+/// Uses Julian Day Number arithmetic for correct Gregorian calendar rollover —
+/// mirrors the `days_since()` implementation so both sides of the check are
+/// consistent with the same day-counting method.
+fn date_n_days_ago( days : u32 ) -> String
+{
+  use std::time::{ SystemTime, UNIX_EPOCH };
+  let now_secs    = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap().as_secs();
+  let today_days  = now_secs / 86400;
+  let target_days = today_days - u64::from( days );
+
+  // Days-since-epoch → Julian Day Number → Gregorian calendar.
+  // Reverse algorithm from Richards (2013) / Meeus "Astronomical Algorithms".
+  let jdn = i64::try_from( target_days ).expect( "epoch days fit in i64" ) + 2_440_588_i64;
+  let a   = jdn + 32044;
+  let b   = ( 4 * a + 3 ) / 146_097;
+  let c   = a - ( 146_097 * b ) / 4;
+  let dv  = ( 4 * c + 3 ) / 1461;
+  let e   = c - ( 1461 * dv ) / 4;
+  let mv  = ( 5 * e + 2 ) / 153;
+  let day   = e - ( 153 * mv + 2 ) / 5 + 1;
+  let month = mv + 3 - 12 * ( mv / 10 );
+  let year  = 100 * b + dv - 4800 + mv / 10;
+  format!( "{year:04}-{month:02}-{day:02}" )
+}
+
+/// u25: `lastComputedDate` is 30 days before today → warning line present in stdout.
+///
+/// The interim `.usage` implementation uses `lastComputedDate` verbatim as the
+/// window endpoint. Without a staleness guard a user running `clp .usage` months
+/// after the cache was last written sees stale token data with no indication.
+#[ test ]
+fn u25_usage_stale_data_shows_warning()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let date = date_n_days_ago( 30 );
+  // Build raw JSON so the dynamic date string can be injected (DayEntry uses &'static str).
+  let json = format!(
+    r#"{{"lastComputedDate":"{date}","dailyModelTokens":[{{"date":"{date}","tokensByModel":{{"claude-sonnet-4-6":1000}}}}]}}"#
+  );
+  write_stats_cache_raw( dir.path(), &json );
+
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "⚠ Data last updated" ),
+    "30-day-old cache must show staleness warning, got:\n{text}",
+  );
+  // Token data must still appear after the warning.
+  assert!( text.contains( "Total" ), "warning must not replace token data, got:\n{text}" );
+}
+
+/// u26: `lastComputedDate` is 5 days before today → no warning line in stdout.
+#[ test ]
+fn u26_usage_fresh_data_no_warning()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let date = date_n_days_ago( 5 );
+  let json = format!(
+    r#"{{"lastComputedDate":"{date}","dailyModelTokens":[{{"date":"{date}","tokensByModel":{{"claude-sonnet-4-6":1000}}}}]}}"#
+  );
+  write_stats_cache_raw( dir.path(), &json );
+
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "⚠" ),
+    "5-day-old cache must not show staleness warning, got:\n{text}",
+  );
+  assert!( text.contains( "Total" ), "must show token data, got:\n{text}" );
 }

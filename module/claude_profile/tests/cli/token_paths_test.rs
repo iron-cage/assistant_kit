@@ -8,11 +8,9 @@
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | ts01 | `ts01_token_valid_text_v1` | valid token, `v::1` → "Valid" labeled output | P |
-//! | ts02 | `ts02_token_expiring_soon_text_v1` | near-expiry token, `v::1` → "Expiring Soon" | P |
-//! | ts03 | `ts03_token_expired_text_v1` | expired token, `v::1` → "Expired" | P |
-//! | ts04 | `ts04_token_valid_text_v0` | valid token, `v::0` → compact output | P |
-//! | ts05 | `ts05_token_valid_text_v2` | valid token, `v::2` → verbose output | P |
+//! | ts01 | `ts01_token_valid_text_v1` | valid token → "valid — Nm remaining" output | P |
+//! | ts02 | `ts02_token_expiring_soon_text_v1` | near-expiry token → "expiring soon — Nm remaining" | P |
+//! | ts03 | `ts03_token_expired_text_v1` | expired token → "expired" | P |
 //! | ts06 | `ts06_token_valid_json` | valid token, `format::json` → JSON object | P |
 //! | ts07 | `ts07_token_expired_json` | expired token, `format::json` → JSON with status | P |
 //! | ts08 | `ts08_token_missing_creds_exits_2` | no credentials file → exit 2 | N |
@@ -27,9 +25,7 @@
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
-//! | p01 | `p01_paths_text_v0_base_only` | v::0 → base path only | P |
-//! | p02 | `p02_paths_text_v1_labeled` | v::1 → labeled paths | P |
-//! | p03 | `p03_paths_text_v2_existence_markers` | v::2 → existence markers shown | P |
+//! | p02 | `p02_paths_text_v1_labeled` | default → 7 labeled paths | P |
 //! | p04 | `p04_paths_json` | format::json → JSON object | P |
 //! | p05 | `p05_paths_home_unset_exits_2` | HOME unset → exit 2 | N |
 //! | p06 | `p06_paths_contain_home_value` | HOME set → output contains HOME value | P |
@@ -84,32 +80,6 @@ fn ts03_token_expired_text_v1()
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.starts_with( "expired" ), "past token must be expired, got:\n{text}" );
-}
-
-#[ test ]
-fn ts04_token_valid_text_v0()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-
-  let out = run_cs_with_env( &[ ".token.status", "v::0" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert_eq!( text.trim(), "valid", "v::0 must be bare 'valid', got:\n{text}" );
-}
-
-#[ test ]
-fn ts05_token_valid_text_v2()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-
-  let out = run_cs_with_env( &[ ".token.status", "v::2" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!( text.contains( "threshold" ), "v::2 must show threshold, got:\n{text}" );
 }
 
 #[ test ]
@@ -235,19 +205,6 @@ fn ts14_token_expiring_soon_json()
 // ── P: Paths ──────────────────────────────────────────────────────────────────
 
 #[ test ]
-fn p01_paths_text_v0_base_only()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-
-  let out = run_cs_with_env( &[ ".paths", "v::0" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  let expected = format!( "{home}/.claude" );
-  assert_eq!( text.trim(), expected, "v::0 must show base path only" );
-}
-
-#[ test ]
 fn p02_paths_text_v1_labeled()
 {
   let dir = TempDir::new().unwrap();
@@ -261,20 +218,6 @@ fn p02_paths_text_v1_labeled()
   assert!( text.contains( "sessions:" ), "v::1 must have sessions label, got:\n{text}" );
   let lines : Vec< &str > = text.lines().collect();
   assert_eq!( lines.len(), 7, "v::1 must have 7 labeled lines, got {}", lines.len() );
-}
-
-#[ test ]
-fn p03_paths_text_v2_existence_markers()
-{
-  let dir = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
-  // Create some paths to have mixed exists/absent
-  std::fs::create_dir_all( dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ) ).unwrap();
-
-  let out = run_cs_with_env( &[ ".paths", "v::2" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!( text.contains( "[exists]" ) || text.contains( "[absent]" ), "v::2 must show existence markers, got:\n{text}" );
 }
 
 #[ test ]
@@ -322,7 +265,7 @@ fn p07_paths_home_with_spaces()
   std::fs::create_dir_all( &space_path ).unwrap();
   let home = space_path.to_str().unwrap();
 
-  let out = run_cs_with_env( &[ ".paths", "v::0" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".paths" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "path with spaces" ), "must handle spaces in path, got:\n{text}" );

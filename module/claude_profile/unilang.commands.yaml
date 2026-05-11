@@ -150,9 +150,10 @@
   arguments:
     - name: "name"
       kind: "String"
-      description: "Account name to save as"
+      description: "Account name to save as; inferred from emailAddress in ~/.claude.json when absent"
       hint: "Account name"
-      optional: false
+      optional: true
+      default: ""
       validation_rules: []
       aliases: []
       tags: []
@@ -173,7 +174,7 @@
     - ".account.save name::personal dry::1"
   auto_help_enabled: true
 
-- name: ".account.switch"
+- name: ".account.use"
   namespace: ""
   description: "Switch active account by name with atomic credential rotation"
   hint: "Switch account"
@@ -207,8 +208,8 @@
       tags: []
 
   examples:
-    - ".account.switch name::work"
-    - ".account.switch name::personal dry::1"
+    - ".account.use name::work"
+    - ".account.use name::personal dry::1"
   auto_help_enabled: true
 
 - name: ".account.delete"
@@ -263,16 +264,6 @@
   http_method_hint: "GET"
 
   arguments:
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
     - name: "format"
       kind: "String"
       description: "Output format (text or json)"
@@ -312,16 +303,6 @@
   http_method_hint: "GET"
 
   arguments:
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
     - name: "format"
       kind: "String"
       description: "Output format (text or json)"
@@ -351,16 +332,6 @@
   http_method_hint: "GET"
 
   arguments:
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
     - name: "format"
       kind: "String"
       description: "Output format (text or json)"
@@ -480,10 +451,51 @@
       aliases: []
       tags: []
 
+    - name: "display_name"
+      kind: "Boolean"
+      description: "Show display name from ~/.claude.json oauthAccount (opt-in, default off)"
+      hint: "Show Display: line"
+      optional: true
+      default: "false"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "role"
+      kind: "Boolean"
+      description: "Show organisation role from ~/.claude.json oauthAccount (opt-in, default off)"
+      hint: "Show Role: line"
+      optional: true
+      default: "false"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "billing"
+      kind: "Boolean"
+      description: "Show billing type from ~/.claude.json oauthAccount (opt-in, default off)"
+      hint: "Show Billing: line"
+      optional: true
+      default: "false"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "model"
+      kind: "Boolean"
+      description: "Show active model from ~/.claude/settings.json (opt-in, default off)"
+      hint: "Show Model: line"
+      optional: true
+      default: "false"
+      validation_rules: []
+      aliases: []
+      tags: []
+
   examples:
     - ".credentials.status"
     - ".credentials.status email::0"
     - ".credentials.status file::1 saved::1"
+    - ".credentials.status display_name::1 role::1 billing::1 model::1"
     - ".credentials.status format::json"
   auto_help_enabled: true
 
@@ -509,16 +521,6 @@
       default: ""
       validation_rules: []
       aliases: []
-      tags: []
-
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level (0=compact, 1=labeled, 2=verbose)"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
       tags: []
 
     - name: "format"

@@ -108,14 +108,13 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     accounts_routine,
     account_limits_routine,
     account_save_routine,
-    account_switch_routine,
+    account_use_routine,
     account_delete_routine,
     token_status_routine,
     paths_routine,
     usage_routine,
   };
 
-  let v   = || reg_arg_opt( "verbosity", Kind::Integer );
   let fmt = || reg_arg_opt( "format",    Kind::String  );
   let dry = || reg_arg_opt( "dry",       Kind::Boolean );
   let nam = || reg_arg_opt( "name",      Kind::String  );
@@ -155,13 +154,13 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( accounts_routine ) );
-  reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), v(), fmt() ], Box::new( account_limits_routine ) );
+  reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), fmt() ],      Box::new( account_limits_routine ) );
   reg_cmd( registry, ".account.save",   "Save current credentials as a named account profile",            vec![ nam(), dry() ],      Box::new( account_save_routine   ) );
-  reg_cmd( registry, ".account.switch", "Switch active account by name with atomic credential rotation",  vec![ nam(), dry() ],      Box::new( account_switch_routine ) );
+  reg_cmd( registry, ".account.use",    "Switch active account by name with atomic credential rotation",  vec![ nam(), dry() ],      Box::new( account_use_routine    ) );
   reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                  vec![ nam(), dry() ],      Box::new( account_delete_routine ) );
-  reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ v(), fmt(), thr() ], Box::new( token_status_routine   ) );
-  reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",              vec![ v(), fmt() ],        Box::new( paths_routine          ) );
-  reg_cmd( registry, ".usage",          "Show 7-day token usage from stats-cache.json",                   vec![ v(), fmt() ],        Box::new( usage_routine          ) );
+  reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr() ],      Box::new( token_status_routine   ) );
+  reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",              vec![ fmt() ],             Box::new( paths_routine          ) );
+  reg_cmd( registry, ".usage",          "Show 7-day token usage from stats-cache.json",                    vec![ fmt() ],             Box::new( usage_routine          ) );
 }
 
 #[ cfg( feature = "enabled" ) ]
@@ -270,18 +269,17 @@ mod cli
     println!();
     println!( "Commands:" );
     println!( "  .accounts            [name::EMAIL] [active::0|1] [sub::0|1] [tier::0|1] [expires::0|1] [email::0|1] [display_name::0|1] [role::0|1] [billing::0|1] [model::0|1] [format::text|json]   List accounts with field-presence control" );
-    println!( "  .account.save        name::EMAIL [dry::bool]                          Save current credentials as named account" );
-    println!( "  .account.switch      name::EMAIL [dry::bool]                          Switch active account" );
+    println!( "  .account.save        [name::EMAIL] [dry::bool]                        Save current credentials as named account (name inferred from emailAddress when absent)" );
+    println!( "  .account.use         name::EMAIL [dry::bool]                          Switch active account" );
     println!( "  .account.delete      name::EMAIL [dry::bool]                          Delete a saved account" );
-    println!( "  .token.status        [v::0-2] [format::text|json]                     Show OAuth token expiry status" );
-    println!( "  .paths               [v::0-2] [format::text|json]                     Show all ~/.claude/ canonical paths" );
-    println!( "  .usage               [v::0-2] [format::text|json]                     Show 7-day token usage summary" );
+    println!( "  .token.status        [format::text|json] [threshold::SECS]              Show OAuth token expiry status" );
+    println!( "  .paths               [format::text|json]                               Show all ~/.claude/ canonical paths" );
+    println!( "  .usage               [format::text|json]                               Show quota utilization for all accounts" );
     println!( "  .credentials.status  [format::text|json] [field::0|1] ...             Show live credentials (no account store needed)" );
-    println!( "  .account.limits      [name::EMAIL] [v::0-2] [format::text|json]       Show rate-limit utilization" );
+    println!( "  .account.limits      [name::EMAIL] [format::text|json]                Show rate-limit utilization" );
     println!();
     println!( "Options:" );
     println!( "  format::text|json   Output format (default: text)" );
-    println!( "  v::0-2              Verbosity level (default: 1)" );
     println!( "  dry::bool           Preview without applying" );
     println!( "  name::EMAIL         Account name" );
     println!();
@@ -289,10 +287,10 @@ mod cli
     println!( "  {binary} .accounts" );
     println!( "  {binary} .accounts active::0 sub::0" );
     println!( "  {binary} .accounts name::alice@acme.com" );
-    println!( "  {binary} .account.switch name::alice@acme.com" );
-    println!( "  {binary} .account.switch name::alice@acme.com dry::true" );
+    println!( "  {binary} .account.use name::alice@acme.com" );
+    println!( "  {binary} .account.use name::alice@acme.com dry::true" );
     println!( "  {binary} .token.status format::json" );
-    println!( "  {binary} .paths v::2" );
+    println!( "  {binary} .paths" );
     println!( "  {binary} .usage" );
     println!( "  {binary} .credentials.status" );
   }

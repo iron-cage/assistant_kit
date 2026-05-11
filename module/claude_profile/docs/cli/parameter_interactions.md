@@ -2,55 +2,30 @@
 
 Formal specification of co-dependencies, mutual exclusions, and cascading effects between clp parameters.
 
-### All Interactions (3 total)
+### All Interactions (2 total)
 
 | # | Interaction | Parameters | Effect |
 |---|-------------|------------|--------|
-| 1 | `format::json` overrides `verbosity::` | `format::`, `verbosity::` | JSON output includes all fields regardless of verbosity level |
-| 2 | `dry::` is orthogonal to output control | `dry::`, `verbosity::`, `format::` | Dry-run mode applies to mutation; does not affect output formatting |
-| 3 | `format::json` overrides field-presence params | `format::`, `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::` | JSON output includes all fields regardless of field-presence param values |
+| 1 | `dry::` is orthogonal to output control | `dry::`, `format::` | Dry-run mode applies to mutation; does not affect output formatting |
+| 2 | `format::json` overrides field-presence params | `format::`, `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | JSON output includes all fields regardless of field-presence param values |
 
 ---
 
-### Interaction :: 1. `format::json` overrides `verbosity::`
+### Interaction :: 1. `dry::` is orthogonal to output control
 
-**Parameters:** [`format::`](params.md#parameter--3-format), [`verbosity::`](params.md#parameter--2-verbosity--v)
+**Parameters:** [`dry::`](params.md#parameter--4-dry), [`format::`](params.md#parameter--2-format)
 
-**Effect:** When `format::json` is specified, the output always includes all available fields regardless of the `v::` level. The verbosity setting is ignored for JSON output — JSON serialization always produces a complete object.
+**Effect:** `dry::` controls whether the mutation executes; it does not affect output formatting. The `[dry-run]` prefix is always added to the confirmation message regardless of `format::`. The `dry::` parameter is only available on mutation commands (`.account.save`, `.account.use`, `.account.delete`), which do not belong to the Output Control group.
 
-**Rationale:** JSON consumers rely on stable schemas; omitting fields based on verbosity would break pipeline consumers that expect consistent structure.
+**Rationale:** Mutation commands produce single fixed-line confirmation messages, not parameterized output; the Output Control parameter has no effect on them. The two concerns — execution mode and output formatting — are fully independent.
 
-**Commands affected:** [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.account.limits`](commands.md#command--11-accountlimits)
-
-**Examples:**
-
-```bash
-# v::0 normally suppresses labels, but format::json always returns full object
-clp .token.status v::0 format::json
-# {"status":"valid","expires_in_secs":2820}  ← all fields present
-
-# v::0 without json gives bare value only
-clp .token.status v::0
-# valid
-```
+**Commands affected:** [`.account.save`](commands.md#command--4-accountsave), [`.account.use`](commands.md#command--5-accountuse), [`.account.delete`](commands.md#command--6-accountdelete)
 
 ---
 
-### Interaction :: 2. `dry::` is orthogonal to output control
+### Interaction :: 2. `format::json` overrides field-presence params
 
-**Parameters:** [`dry::`](params.md#parameter--5-dry), [`verbosity::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
-
-**Effect:** `dry::` controls whether the mutation executes; it does not affect output formatting. The `[dry-run]` prefix is always added to the confirmation message regardless of `v::` or `format::`. The `dry::` parameter is only available on mutation commands (`.account.save`, `.account.switch`, `.account.delete`), which do not belong to the Output Control group.
-
-**Rationale:** Mutation commands produce single fixed-line confirmation messages, not parameterized output; the Output Control parameters have no effect on them. The two concerns — execution mode and output formatting — are fully independent.
-
-**Commands affected:** [`.account.save`](commands.md#command--4-accountsave), [`.account.switch`](commands.md#command--5-accountswitch), [`.account.delete`](commands.md#command--6-accountdelete)
-
----
-
-### Interaction :: 3. `format::json` overrides field-presence params
-
-**Parameters:** [`format::`](params.md#parameter--3-format), [`active::`](params.md#parameter--14-active), [`account::`](params.md#parameter--6-account), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`token::`](params.md#parameter--9-token), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`file::`](params.md#parameter--12-file), [`saved::`](params.md#parameter--13-saved)
+**Parameters:** [`format::`](params.md#parameter--2-format), [`active::`](params.md#parameter--13-active), [`account::`](params.md#parameter--5-account), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`token::`](params.md#parameter--8-token), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`file::`](params.md#parameter--11-file), [`saved::`](params.md#parameter--12-saved), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model)
 
 **Effect:** When `format::json` is specified on `.accounts` or `.credentials.status`, the JSON output always includes all fields regardless of field-presence param values. Setting `sub::0` or `active::0` only suppresses those fields in text output, not in JSON.
 

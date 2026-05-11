@@ -2,7 +2,7 @@
 
 | Group | Parameters | Used By |
 |-------|------------|---------|
-| [Output Control](#group--1-output-control) | `verbosity::`, `format::` | `.accounts` (format only), `.token.status`, `.paths`, `.usage`, `.account.limits` |
+| [Output Control](#group--1-output-control) | `format::` | `.accounts` (format only), `.token.status`, `.paths`, `.usage`, `.account.limits` |
 | [Field Presence](#group--2-field-presence) | `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | `.accounts`, `.credentials.status` |
 
 **Total:** 2 groups
@@ -11,37 +11,34 @@
 
 ### Group :: 1. Output Control
 
-**Parameters:** `verbosity::`, `format::`
+**Parameters:** `format::`
 **Pattern:** Read-only output formatting
 **Purpose:** Controls presentation layer for commands that display information without modifying state.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| [`verbosity::`](params.md#parameter--2-verbosity--v) | [`VerbosityLevel`](types.md#type--2-verbositylevel) | Output detail: 0=quiet, 1=normal, 2=verbose |
-| [`format::`](params.md#parameter--3-format) | [`OutputFormat`](types.md#type--3-outputformat) | Output format: `text` or `json` |
+| [`format::`](params.md#parameter--2-format) | [`OutputFormat`](types.md#type--2-outputformat) | Output format: `text` or `json` |
 
-**Used By:** [`.accounts`](commands.md#command--3-accounts) *(format only)*, [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.account.limits`](commands.md#command--11-accountlimits) — 5 commands total (4 full, 1 partial)
+**Used By:** [`.accounts`](commands.md#command--3-accounts), [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.credentials.status`](commands.md#command--10-credentialsstatus), [`.account.limits`](commands.md#command--11-accountlimits) — 6 commands
 
 **Typical Patterns:**
 
 ```bash
-# Scripting: bare JSON for pipeline consumption
+# Scripting: structured JSON for pipeline consumption
 clp .accounts format::json
+clp .usage format::json
 
-# Interactive: default labels for human reading
+# Interactive: default text for human reading
 clp .token.status
-
-# Debugging: full metadata for diagnostics
-clp .paths v::2
+clp .usage
 ```
 
 **Semantic Coherence Test**
 
-> "Does parameter X control **output presentation**?"
+> "Does parameter X control **output serialization format**?"
 
-| Parameter | Controls output presentation? | In group? |
-|-----------|-------------------------------|-----------|
-| `verbosity::` | Yes — controls label density and metadata detail | Yes |
+| Parameter | Controls output format? | In group? |
+|-----------|-------------------------|-----------|
 | `format::` | Yes — controls text vs JSON serialization | Yes |
 | `name::` | No — identifies target account, not presentation | No |
 | `threshold::` | No — controls classification boundary, not presentation | No |
@@ -55,24 +52,19 @@ All members pass. No false inclusions.
 - **`name::`** — Identifies a target entity, not output style. Mutation commands (save, switch, delete) don't produce formatted output in the Output Control sense.
 - **`threshold::`** — Modifies classification logic (when to report ExpiringSoon), not how results are displayed. A classification parameter, not a presentation parameter.
 - **`dry::`** — Controls whether mutation happens, not how output is formatted. Orthogonal concern (execution control vs output control).
-- **Field Presence params** — Control which individual output lines appear (field selection), not how the output is serialized or how dense it is.
-
-**Partial Implementors**
-
-- **`.accounts`** — Full implementor of `format::` only. Does not support `verbosity::` — uses individual Field Presence params instead of density levels.
-- **`.credentials.status`** — Full implementor of `format::` only. Does not support `verbosity::` — same Field Presence pattern.
+- **Field Presence params** — Control which individual output lines appear (field selection), not how the output is serialized.
 
 **Cross-References**
 
 - [params.md](params.md) — individual parameter specifications
-- [types.md](types.md) — `VerbosityLevel`, `OutputFormat` type definitions
+- [types.md](types.md) — `OutputFormat` type definition
 - [commands.md](commands.md) — command specifications using this group
-- [parameter_interactions.md](parameter_interactions.md) — `format::json` / `verbosity::` interaction rule
+- [parameter_interactions.md](parameter_interactions.md) — `format::json` override rules
 
 **Notes**
 
-- `format::json` overrides `verbosity::` — see [parameter_interactions.md](parameter_interactions.md#interaction--1-formatjson-overrides-verbosity) for the authoritative rule.
-- Commands not in this group (`.account.save`, `.account.switch`, `.account.delete`) produce fixed single-line confirmation messages not affected by formatting parameters.
+- `format::json` overrides field-presence params — see [parameter_interactions.md](parameter_interactions.md#interaction--1-formatjson-overrides-field-presence-params) for the authoritative rule.
+- Commands not in this group (`.account.save`, `.account.use`, `.account.delete`) produce fixed single-line confirmation messages not affected by formatting parameters.
 
 ---
 
@@ -84,19 +76,19 @@ All members pass. No false inclusions.
 
 | Parameter | Type | Default | Commands | Controls |
 |-----------|------|---------|----------|----------|
-| [`active::`](params.md#parameter--14-active) | `bool` | `1` | `.accounts` only | Active/inactive status line |
-| [`account::`](params.md#parameter--6-account) | `bool` | `1` | `.credentials.status` only | Active account name line |
-| [`sub::`](params.md#parameter--7-sub) | `bool` | `1` | Both | Subscription type line |
-| [`tier::`](params.md#parameter--8-tier) | `bool` | `1` | Both | Rate-limit tier line |
-| [`token::`](params.md#parameter--9-token) | `bool` | `1` | `.credentials.status` only | Token status line |
-| [`expires::`](params.md#parameter--10-expires) | `bool` | `1` | Both | Token expiry duration line |
-| [`email::`](params.md#parameter--11-email) | `bool` | `1` | Both | Email address line |
-| [`file::`](params.md#parameter--12-file) | `bool` | `0` | `.credentials.status` only | Credentials file path line (opt-in) |
-| [`saved::`](params.md#parameter--13-saved) | `bool` | `0` | `.credentials.status` only | Saved account count line (opt-in) |
-| [`display_name::`](params.md#parameter--15-display_name) | `bool` | `0` | Both | Display name line (opt-in) |
-| [`role::`](params.md#parameter--16-role) | `bool` | `0` | Both | Organisation role line (opt-in) |
-| [`billing::`](params.md#parameter--17-billing) | `bool` | `0` | Both | Billing type line (opt-in) |
-| [`model::`](params.md#parameter--18-model) | `bool` | `0` | Both | Active model line (opt-in) |
+| [`active::`](params.md#parameter--13-active) | `bool` | `1` | `.accounts` only | Active/inactive status line |
+| [`account::`](params.md#parameter--5-account) | `bool` | `1` | `.credentials.status` only | Active account name line |
+| [`sub::`](params.md#parameter--6-sub) | `bool` | `1` | Both | Subscription type line |
+| [`tier::`](params.md#parameter--7-tier) | `bool` | `1` | Both | Rate-limit tier line |
+| [`token::`](params.md#parameter--8-token) | `bool` | `1` | `.credentials.status` only | Token status line |
+| [`expires::`](params.md#parameter--9-expires) | `bool` | `1` | Both | Token expiry duration line |
+| [`email::`](params.md#parameter--10-email) | `bool` | `1` | Both | Email address line |
+| [`file::`](params.md#parameter--11-file) | `bool` | `0` | `.credentials.status` only | Credentials file path line (opt-in) |
+| [`saved::`](params.md#parameter--12-saved) | `bool` | `0` | `.credentials.status` only | Saved account count line (opt-in) |
+| [`display_name::`](params.md#parameter--14-display_name) | `bool` | `0` | Both | Display name line (opt-in) |
+| [`role::`](params.md#parameter--15-role) | `bool` | `0` | Both | Organisation role line (opt-in) |
+| [`billing::`](params.md#parameter--16-billing) | `bool` | `0` | Both | Billing type line (opt-in) |
+| [`model::`](params.md#parameter--17-model) | `bool` | `0` | Both | Active model line (opt-in) |
 
 **Used By (2 commands):** [`.accounts`](commands.md#command--3-accounts), [`.credentials.status`](commands.md#command--10-credentialsstatus)
 
@@ -141,14 +133,12 @@ clp .credentials.status account::0 sub::0 tier::0 expires::0 email::0
 | `billing::` | Yes — Billing: line | Yes |
 | `model::` | Yes — Model: line | Yes |
 | `format::` | No — controls serialisation format, not field selection | No (Output Control) |
-| `verbosity::` | No — controls detail density across all fields | No (Output Control) |
 
 All members pass. No false inclusions.
 
-**Why NOT `format::` and `verbosity::`**
+**Why NOT `format::`**
 
 - **`format::`** — selects serialisation (text vs JSON), not field inclusion. `format::json` always serialises all fields regardless of field-presence params — the two axes are independent.
-- **`verbosity::`** — controls per-field detail density (labels, extra context). Neither `.accounts` nor `.credentials.status` uses `verbosity::` — each field either appears or not.
 
 **Cross-References**
 

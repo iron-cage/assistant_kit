@@ -47,7 +47,7 @@
 //! | A-36 | `adapter_field_presence_bool_true_normalises` | `account::true` → `account::1` | P |
 //! | A-37 | `adapter_field_presence_bool_false_normalises` | `account::false` → `account::0` | P |
 //!
-//! ### O — Output format / verbosity / `json_escape`
+//! ### O — Output format / `json_escape`
 //!
 //! | ID   | Test Function | Condition | P/N |
 //! |------|---------------|-----------|-----|
@@ -57,11 +57,6 @@
 //! | O-04 | `output_format_default` | no `fmt::` → default `Text` | P |
 //! | O-05 | `output_format_case_json_rejected` | `fmt::JSON` (uppercase) → error | N |
 //! | O-06 | `output_format_case_text_rejected` | `fmt::Text` (capitalized) → error | N |
-//! | O-07 | `output_verbosity_0` | `v::0` → verbosity 0 | P |
-//! | O-08 | `output_verbosity_1` | `v::1` → verbosity 1 | P |
-//! | O-09 | `output_verbosity_2` | `v::2` → verbosity 2 | P |
-//! | O-10 | `output_verbosity_default` | no `v::` → default verbosity 1 | P |
-//! | O-20 | `output_verbosity_out_of_range` | `verbosity::3` → error "out of range" | N |
 //! | O-11 | `json_escape_plain` | plain string unchanged | P |
 //! | O-12 | `json_escape_quote` | `"` → `\"` | P |
 //! | O-13 | `json_escape_backslash` | `\` → `\\` | P |
@@ -536,51 +531,6 @@ mod output
     let cmd = make_cmd( vec![ ( "format", Value::String( "Text".to_string() ) ) ] );
     let err = OutputOptions::from_cmd( &cmd ).unwrap_err();
     assert!( err.message.contains( "unknown format" ), "got: {}", err.message );
-  }
-
-  // O-07: verbosity=0
-  #[ test ]
-  fn output_verbosity_0()
-  {
-    let cmd = make_cmd( vec![ ( "verbosity", Value::Integer( 0 ) ) ] );
-    let opts = OutputOptions::from_cmd( &cmd ).unwrap();
-    assert_eq!( opts.verbosity, 0 );
-  }
-
-  // O-08: verbosity=1
-  #[ test ]
-  fn output_verbosity_1()
-  {
-    let cmd = make_cmd( vec![ ( "verbosity", Value::Integer( 1 ) ) ] );
-    let opts = OutputOptions::from_cmd( &cmd ).unwrap();
-    assert_eq!( opts.verbosity, 1 );
-  }
-
-  // O-09: verbosity=2
-  #[ test ]
-  fn output_verbosity_2()
-  {
-    let cmd = make_cmd( vec![ ( "verbosity", Value::Integer( 2 ) ) ] );
-    let opts = OutputOptions::from_cmd( &cmd ).unwrap();
-    assert_eq!( opts.verbosity, 2 );
-  }
-
-  // O-10: no verbosity → default 1
-  #[ test ]
-  fn output_verbosity_default()
-  {
-    let cmd = make_cmd( vec![] );
-    let opts = OutputOptions::from_cmd( &cmd ).unwrap();
-    assert_eq!( opts.verbosity, 1 );
-  }
-
-  // O-20: verbosity=3 → error "out of range" (range validation lives at output layer, not adapter)
-  #[ test ]
-  fn output_verbosity_out_of_range()
-  {
-    let cmd = make_cmd( vec![ ( "verbosity", Value::Integer( 3 ) ) ] );
-    let err = OutputOptions::from_cmd( &cmd ).unwrap_err();
-    assert!( err.message.contains( "out of range" ), "got: {}", err.message );
   }
 
   // O-11: json_escape plain

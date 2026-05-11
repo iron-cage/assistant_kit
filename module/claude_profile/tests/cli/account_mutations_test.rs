@@ -1,4 +1,4 @@
-//! Integration tests: AS (Account Save), AW (Account Switch), AD (Account Delete).
+//! Integration tests: AS (Account Save), AW (Account Use), AD (Account Delete).
 //!
 //! Tests invoke the compiled `clp` binary as a subprocess via `CARGO_BIN_EXE_clp`.
 //!
@@ -18,14 +18,16 @@
 //! | as08 | `as08_save_backslash_name_exits_1` | name with `\` → exit 1 | N |
 //! | as09 | `as09_save_star_name_exits_1` | name with `*` → exit 1 | N |
 //! | as10 | `as10_save_infer_absent_email_exits_1` | no `name::`, no emailAddress → exit 1 | N |
-//! | as15 | `as15_save_infers_email_from_claude_json` | no `name::`, emailAddress present → exit 0 | P |
 //! | as11 | `as11_save_missing_credentials_exits_2` | no credentials file → exit 2 | N |
 //! | as12 | `as12_save_auto_creates_credential_store` | credential store auto-created | P |
 //! | as13 | `as13_save_dry_then_exec_match` | dry then exec → same output | P |
 //! | as14 | `as14_save_file_matches_source` | saved content matches source | P |
+//! | as15 | `as15_save_infers_email_from_claude_json` | no `name::`, emailAddress present → exit 0 | P |
 //! | as16 | `as16_save_writes_active_marker` | save writes `_active` = name | P |
+//! | as17 | `as17_save_slash_in_email_local_part_exits_1` | `/` in email local part → exit 1 | N |
+//! | as18 | `as18_save_backslash_in_email_local_part_exits_1` | `\` in email local part → exit 1 | N |
 //!
-//! ### AW — Account Switch
+//! ### AW — Account Use
 //!
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
@@ -38,6 +40,9 @@
 //! | aw07 | `aw07_switch_updates_active_marker` | switch writes _active marker | P |
 //! | aw08 | `aw08_switch_same_account_idempotent` | switch to same account succeeds | P |
 //! | aw09 | `aw09_switch_copies_credentials` | switch copies correct cred content | P |
+//! | aw10 | `aw10_switch_dry_run_nonexistent_exits_2` | dry-run nonexistent → exit 2 | N |
+//! | aw11 | `aw11_switch_slash_in_email_local_part_exits_1` | `/` in email local part → exit 1 | N |
+//! | — | `switch_restores_claude_json` | `~/.claude.json` restored after switch (issue-122) | P |
 //!
 //! ### AD — Account Delete
 //!
@@ -269,7 +274,7 @@ fn as14_save_file_matches_source()
   assert_eq!( source, saved, "saved file must be byte-identical to source" );
 }
 
-// ── AW: Account Switch ────────────────────────────────────────────────────────
+// ── AW: Account Use ───────────────────────────────────────────────────────────
 
 #[ test ]
 fn aw01_switch_swaps_credentials()
@@ -279,7 +284,7 @@ fn aw01_switch_swaps_credentials()
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
 
-  let out = run_cs_with_env( &[ ".account.switch", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.use", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "switched" ), "must confirm switch, got:\n{text}" );
@@ -294,7 +299,7 @@ fn aw02_switch_dry_run()
   write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
 
   let before = std::fs::read_to_string( dir.path().join( ".claude" ).join( ".credentials.json" ) ).unwrap();
-  let out = run_cs_with_env( &[ ".account.switch", "name::alice@home.com", "dry::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.use", "name::alice@home.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!( text.contains( "dry-run" ), "must say dry-run, got:\n{text}" );
@@ -310,7 +315,7 @@ fn aw03_switch_nonexistent_exits_2()
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
   std::fs::create_dir_all( dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ) ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.switch", "name::missing@example.com" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.use", "name::missing@example.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 2 );
 }
 
@@ -321,7 +326,7 @@ fn aw04_switch_empty_name_exits_1()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.switch", "name::" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.use", "name::" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
 }
 
@@ -332,7 +337,7 @@ fn aw05_switch_slash_name_exits_1()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.switch", "name::a/b" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.use", "name::a/b" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
 }
 
@@ -343,7 +348,7 @@ fn aw06_switch_missing_name_param_exits_1()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out = run_cs_with_env( &[ ".account.switch" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.use" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
 }
 
@@ -355,7 +360,7 @@ fn aw07_switch_updates_active_marker()
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
 
-  let _ = run_cs_with_env( &[ ".account.switch", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
+  let _ = run_cs_with_env( &[ ".account.use", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
 
   let marker = std::fs::read_to_string(
     dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( "_active" )
@@ -371,7 +376,7 @@ fn aw08_switch_same_account_idempotent()
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
 
-  let out = run_cs_with_env( &[ ".account.switch", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.use", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
 }
 
@@ -383,7 +388,7 @@ fn aw09_switch_copies_credentials()
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
   write_account( dir.path(), "alice@home.com", "max", "tier4", FAR_FUTURE_MS, false );
 
-  let _ = run_cs_with_env( &[ ".account.switch", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
+  let _ = run_cs_with_env( &[ ".account.use", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
 
   let creds = std::fs::read_to_string( dir.path().join( ".claude" ).join( ".credentials.json" ) ).unwrap();
   let account_file = std::fs::read_to_string(
@@ -509,8 +514,8 @@ fn ad09_double_delete_exits_2()
 
 // test_kind: bug_reproducer(issue-switch-dry-validation)
 //
-// Root Cause: `account_switch_routine` checked `is_dry()` before validating account
-//   existence, so `.account.switch dry::1 name::missing` returned exit 0 ("would switch
+// Root Cause: `account_use_routine` checked `is_dry()` before validating account
+//   existence, so `.account.use dry::1 name::missing` returned exit 0 ("would switch
 //   to 'missing'") even when the named account does not exist.
 // Why Not Caught: `aw02_switch_dry_run` only exercises the happy-path dry-run (valid
 //   account). No test covered the dry-run-with-nonexistent-account case.
@@ -527,7 +532,7 @@ fn aw10_switch_dry_run_nonexistent_exits_2()
   let home = dir.path().to_str().unwrap();
   std::fs::create_dir_all( dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ) ).unwrap();
 
-  let out = run_cs_with_env( &[ ".account.switch", "name::missing@example.com", "dry::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".account.use", "name::missing@example.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 2 );
 }
 
@@ -633,4 +638,129 @@ fn as16_save_writes_active_marker()
     "work@acme.com",
     "_active must equal the saved account name",
   );
+}
+
+// ── switch_restores_claude_json ────────────────────────────────────────────────
+
+/// bug_reproducer(issue-122): `.account.use` does not restore `~/.claude.json`,
+/// so `.credentials.status` shows the previous account's email after a switch.
+///
+/// ## Fix Documentation — issue-122
+///
+/// - **Root Cause:** `switch_account()` restored only `.credentials.json`; the
+///   companion `~/.claude.json` restore (from `{name}.claude.json` snapshot) was
+///   never added, leaving the active JSON pointing at the previous account's data.
+/// - **Why Not Caught:** Prior tests never called `.credentials.status` after
+///   `.account.use` in a two-account setup, so the email mismatch was invisible.
+/// - **Fix Applied:** Added two best-effort `let _ = std::fs::copy(...)` calls in
+///   `switch_account()` after the `_active` marker write — mirroring the two
+///   companion writes already present in `save()`.
+/// - **Prevention:** This test encodes the full save-A / save-B / switch-to-A /
+///   check-email flow, preventing any future regression where the restore pair
+///   becomes asymmetric again.
+/// - **Pitfall:** The `let _ = ...` idiom silences copy errors intentionally —
+///   `~/.claude.json` may legitimately not exist. The test must explicitly write
+///   `~/.claude.json` for both accounts before saving so the snapshots exist.
+#[ test ]
+fn switch_restores_claude_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Save account A: work@acme.com
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "work@acme.com" );
+  let save_a = run_cs_with_env( &[ ".account.save", "name::work@acme.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &save_a, 0 );
+
+  // Save account B: personal@home.com (overwrites active credentials + claude.json)
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "personal@home.com" );
+  let save_b = run_cs_with_env( &[ ".account.save", "name::personal@home.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &save_b, 0 );
+
+  // Switch back to A — must restore work@acme.com's ~/.claude.json
+  let switch_out = run_cs_with_env(
+    &[ ".account.use", "name::work@acme.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &switch_out, 0 );
+
+  // .credentials.status must show work@acme.com — not personal@home.com
+  let status_out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &status_out, 0 );
+  let text = stdout( &status_out );
+  assert!(
+    text.contains( "work@acme.com" ),
+    "Email: must reflect switched-to account, got:\n{text}",
+  );
+}
+
+// ── as17 ──────────────────────────────────────────────────────────────────────
+
+/// bug_reproducer(issue-123): `.account.save name::a/b@c.com` exits 2 instead
+/// of 1 because `validate_name()` passes `a/b@c.com` (local part non-empty,
+/// domain non-empty), then `save()` hits a filesystem error when creating
+/// `a/b@c.com.credentials.json`.
+///
+/// ## Fix Documentation — issue-123
+///
+/// - **Root Cause:** `validate_name()` only checked `@` presence and non-empty
+///   local/domain parts; it did not reject path-unsafe chars (`/`, `\`, `*`)
+///   inside the local part, so names like `a/b@c.com` bypassed validation and
+///   reached filesystem operations that exit 2.
+/// - **Why Not Caught:** Existing as07/as08/as09 only cover names WITHOUT `@`
+///   (caught by the "must contain @" guard); no test covered the combined case
+///   where the local part carries an unsafe char but `@` is present.
+/// - **Fix Applied:** Added a local-part path-safety check in `validate_name()`
+///   after the `@` position is found: if the local part contains `/`, `\`, or
+///   `*`, return `InvalidInput` (exit 1) before any filesystem operation runs.
+/// - **Prevention:** This test (as17) and as18/aw11 encode the three unsafe-char
+///   variants so any regression in the local-part check is caught immediately.
+/// - **Pitfall:** Only the local part (before `@`) needs the check; domain chars
+///   cannot create path traversal in practice because the `@` separates them.
+#[ test ]
+fn as17_save_slash_in_email_local_part_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".account.save", "name::a/b@c.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+// ── as18 ──────────────────────────────────────────────────────────────────────
+
+/// bug_reproducer(issue-123): same root cause as as17 but for `\` in the local
+/// part of the email address.
+///
+/// See as17 for full fix documentation.
+#[ test ]
+fn as18_save_backslash_in_email_local_part_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".account.save", "name::a\\b@c.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+// ── aw11 ──────────────────────────────────────────────────────────────────────
+
+/// bug_reproducer(issue-123): `.account.use name::a/b@c.com` exits 2 instead
+/// of 1 for the same reason as as17 — `validate_name()` passes the name, then
+/// `switch_account()` fails with a filesystem error.
+///
+/// See as17 for full fix documentation.
+#[ test ]
+fn aw11_switch_slash_in_email_local_part_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".account.use", "name::a/b@c.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
 }

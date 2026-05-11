@@ -2,6 +2,13 @@
 #
 # dry_run_test invokes the real `claude` binary which takes 60-120s under load.
 # Without this override, nextest treats the test as hung and cancels it.
+#
+# lim_it tests require valid live Anthropic API credentials; they are excluded
+# from default runs.  Run with -E 'all()' to include them when credentials are
+# fresh.
+
+[profile.default]
+default-filter = "!test(lim_it)"
 
 [[profile.default.overrides]]
 filter = "binary(dry_run_test)"

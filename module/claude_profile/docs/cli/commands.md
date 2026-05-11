@@ -8,13 +8,13 @@
 | 2 | `.help` | Display command reference and usage examples | 0 | `clp .help` |
 | 3 | `.accounts` | List all saved accounts or show a single named account | 11 | `clp .accounts` |
 | 4 | `.account.save` | Save current credentials as a named account profile | 2 | `clp .account.save name::alice@acme.com` |
-| 5 | `.account.switch` | Switch active account by name with atomic credential rotation | 2 | `clp .account.switch name::alice@home.com` |
+| 5 | `.account.use` | Switch active account by name with atomic credential rotation | 2 | `clp .account.use name::alice@home.com` |
 | 6 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::alice@oldco.com` |
-| 7 | `.token.status` | Show active OAuth token expiry classification | 3 | `clp .token.status` |
-| 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 2 | `clp .paths` |
-| 9 | `.usage` | Show token usage statistics from stats-cache.json | 2 | `clp .usage v::0` |
-| 10 | `.credentials.status` | Show live credential metadata without account store dependency | 14 | `clp .credentials.status` |
-| 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 3 | `clp .account.limits name::alice@acme.com` |
+| 7 | `.token.status` | Show active OAuth token expiry classification | 2 | `clp .token.status` |
+| 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 1 | `clp .paths` |
+| 9 | `.usage` | Show 7-day token usage from stats-cache.json (interim) | 1 | `clp .usage` |
+| 10 | `.credentials.status` | Show live credential metadata without account store dependency | 13 | `clp .credentials.status` |
+| 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 2 | `clp .account.limits name::alice@acme.com` |
 
 **Total:** 11 commands (9 visible + 2 hidden)
 
@@ -23,21 +23,20 @@
 ### Quick Reference
 
 **Required Parameters:**
-- `name::` — required on `.account.switch`, `.account.delete` (must be an email address); optional on `.account.save` (inferred from `~/.claude.json` `emailAddress` when omitted)
+- `name::` — required on `.account.use`, `.account.delete` (must be an email address); optional on `.account.save` (inferred from `~/.claude.json` `emailAddress` when omitted)
 
 **Most-Used Parameters:**
 - `format::` — 6 commands
-- `verbosity::` / `v::` — 4 commands
 
 **Commands by Parameter Count:**
 
 | Count | Commands |
 |-------|----------|
 | 0 | `.`, `.help` |
-| 2 | `.account.save`, `.account.switch`, `.account.delete`, `.paths`, `.usage` |
-| 3 | `.token.status`, `.account.limits` |
+| 1 | `.paths`, `.usage` |
+| 2 | `.account.save`, `.account.use`, `.account.delete`, `.token.status`, `.account.limits` |
 | 11 | `.accounts` |
-| 14 | `.credentials.status` |
+| 13 | `.credentials.status` |
 
 ---
 
@@ -63,7 +62,7 @@ clp -V          # → identical output
 
 List all saved accounts or show a single named account with per-field presence control. Without `name::`: shows every account in the credential store as an indented key-val block; with `name::EMAIL`: shows that account's block only.
 
--- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`active::`](params.md#parameter--14-active), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`display_name::`](params.md#parameter--15-display_name), [`role::`](params.md#parameter--16-role), [`billing::`](params.md#parameter--17-billing), [`model::`](params.md#parameter--18-model), [`format::`](params.md#parameter--3-format)
+-- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`active::`](params.md#parameter--13-active), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model), [`format::`](params.md#parameter--2-format)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
@@ -169,7 +168,7 @@ clp .accounts format::json
 
 Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and snapshots `~/.claude.json` and `~/.claude/settings.json` as named per-account files, creating the credential store directory if needed. Use this to preserve the full current account state before switching.
 
--- **Parameters:** [`name::`](params.md#parameter--1-name), [`dry::`](params.md#parameter--5-dry)
+-- **Parameters:** [`name::`](params.md#parameter--1-name), [`dry::`](params.md#parameter--4-dry)
 -- **Exit:** 0 (success) | 1 (usage: invalid name or cannot infer email) | 2 (runtime: credentials unreadable)
 
 **Syntax:**
@@ -200,22 +199,22 @@ clp .account.save name::alice@acme.com dry::1
 
 **Notes:**
 
-- Also writes `{credential_store}/_active` = `{name}` on every successful save; `.credentials.status` shows `Account: {name}` immediately after save without requiring a separate `.account.switch` call.
+- Also writes `{credential_store}/_active` = `{name}` on every successful save; `.credentials.status` shows `Account: {name}` immediately after save without requiring a separate `.account.use` call.
 
 ---
 
-### Command :: 5. `.account.switch`
+### Command :: 5. `.account.use`
 
-Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), then updates the `_active` marker. Use this to rotate to a different account when the current token expires.
+Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the `_active` marker, and best-effort restores the account's `~/.claude.json` and `~/.claude/settings.json` snapshots. Use this to rotate to a different account when the current token expires.
 
--- **Parameters:** [`name::`](params.md#parameter--1-name) **(required)**, [`dry::`](params.md#parameter--5-dry)
+-- **Parameters:** [`name::`](params.md#parameter--1-name) **(required)**, [`dry::`](params.md#parameter--4-dry)
 -- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found)
 
 **Syntax:**
 
 ```bash
-clp .account.switch name::alice@home.com
-clp .account.switch name::alice@home.com dry::1
+clp .account.use name::alice@home.com
+clp .account.use name::alice@home.com dry::1
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -226,10 +225,10 @@ clp .account.switch name::alice@home.com dry::1
 **Examples:**
 
 ```bash
-clp .account.switch name::alice@home.com
+clp .account.use name::alice@home.com
 # switched to 'alice@home.com'
 
-clp .account.switch name::alice@home.com dry::1
+clp .account.use name::alice@home.com dry::1
 # [dry-run] would switch to 'alice@home.com'
 ```
 
@@ -239,7 +238,7 @@ clp .account.switch name::alice@home.com dry::1
 
 Removes `{credential_store}/{name}.credentials.json` from the credential store and best-effort removes the accompanying `{name}.claude.json` and `{name}.settings.json` snapshot files. Refuses to delete the currently active account — switch to another account first.
 
--- **Parameters:** [`name::`](params.md#parameter--1-name) **(required)**, [`dry::`](params.md#parameter--5-dry)
+-- **Parameters:** [`name::`](params.md#parameter--1-name) **(required)**, [`dry::`](params.md#parameter--4-dry)
 -- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found, account is active)
 
 **Syntax:**
@@ -277,7 +276,7 @@ clp .account.delete name::alice@acme.com
 
 Reads `expiresAt` from `~/.claude/.credentials.json` and classifies the active OAuth token as Valid, ExpiringSoon, or Expired. Use this to detect when account rotation is needed.
 
--- **Parameters:** [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format), [`threshold::`](params.md#parameter--4-threshold)
+-- **Parameters:** [`format::`](params.md#parameter--2-format), [`threshold::`](params.md#parameter--3-threshold)
 -- **Exit:** 0 (success) | 2 (runtime: credentials unreadable, expiresAt unparseable)
 
 **Syntax:**
@@ -290,7 +289,6 @@ clp .token.status format::json
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `v::` | [`VerbosityLevel`] | `1` | Output detail level |
 | `format::` | [`OutputFormat`] | `text` | Output format |
 | `threshold::` | [`WarningThreshold`] | `3600` | ExpiringSoon threshold in seconds |
 
@@ -299,9 +297,6 @@ clp .token.status format::json
 ```bash
 clp .token.status
 # valid — 47m remaining
-
-clp .token.status v::0
-# valid
 
 clp .token.status threshold::1800
 # expiring soon — 25m remaining
@@ -316,7 +311,7 @@ clp .token.status format::json
 
 Displays all canonical `~/.claude/` file and directory paths resolved from `HOME`. Use this for diagnostics and tooling integration.
 
--- **Parameters:** [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
+-- **Parameters:** [`format::`](params.md#parameter--2-format)
 -- **Exit:** 0 (success) | 2 (runtime: HOME not set)
 
 **Syntax:**
@@ -328,7 +323,6 @@ clp .paths format::json
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `v::` | [`VerbosityLevel`] | `1` | Output detail level |
 | `format::` | [`OutputFormat`] | `text` | Output format |
 
 **Examples:**
@@ -343,9 +337,6 @@ clp .paths
 # session-env: /home/user/.claude/session-env/
 # sessions:    /home/user/.claude/sessions/
 
-clp .paths v::0
-# /home/user/.claude
-
 clp .paths format::json
 # {"base":"/home/user/.claude","credentials":"/home/user/.claude/.credentials.json",...}
 ```
@@ -354,47 +345,46 @@ clp .paths format::json
 
 ### Command :: 9. `.usage`
 
-Reads `~/.claude/stats-cache.json` and displays token usage statistics for the last 7 days. Shows per-model token counts with compact formatting and daily breakdowns at higher verbosity levels.
+Shows 7-day token usage by reading `~/.claude/stats-cache.json` (written by Claude Code during local sessions). Reports per-model token totals for the window ending at `lastComputedDate`.
 
--- **Parameters:** [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
--- **Exit:** 0 (success) | 2 (runtime: stats file missing or HOME not set)
+> **Interim implementation**: Current output is based on `stats-cache.json` historical data. See [feature/009_token_usage.md](../feature/009_token_usage.md) for the target design (live per-account quota fetch via `anthropic-ratelimit-unified-*` headers, blocked on `data_fmt` workspace dependency).
+
+-- **Parameters:** [`format::`](params.md#parameter--2-format)
+-- **Exit:** 0 (success) | 2 (runtime: `stats-cache.json` missing or malformed, HOME unset)
 
 **Syntax:**
 
 ```bash
 clp .usage
-clp .usage v::0
 clp .usage format::json
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `v::` | [`VerbosityLevel`] | `1` | Output detail level |
-| `format::` | [`OutputFormat`] | `text` | Output format |
+| `format::` | [`OutputFormat`](types.md#type--3-outputformat) | `text` | Output format |
 
 **Examples:**
 
 ```bash
 clp .usage
-# Token Usage (Mar 22 – Mar 29)
-# sonnet-4-20250514  142.3K  87%
-# haiku-3.5          21.0K   13%
-# Total: 163.3K tokens
-
-clp .usage v::0
-# 163.3K
-
-clp .usage v::2
-# Token Usage (Mar 22 – Mar 29)
-# ...per-model summary...
-# Daily:
-#   Mar 29: sonnet-4 42.1K, haiku-3.5 3.2K
-#   Mar 28: sonnet-4 38.7K, haiku-3.5 5.1K
-#   ...
+# Usage — last 7 days (2026-05-05 → 2026-05-12)
+#
+#   Total            1,234,567
+#   sonnet-4-6       1,100,000   89.2%
+#   opus-4-6           134,567   10.8%
 
 clp .usage format::json
-# {"period_days":7,"period_start":"2026-03-22","period_end":"2026-03-29","total_tokens":163300,"by_model":[...]}
+# {"period_days":7,"period_start":"2026-05-05","period_end":"2026-05-12","total_tokens":1234567,"by_model":[
+#   {"model":"sonnet-4-6","tokens":1100000,"pct":89.2},
+#   {"model":"opus-4-6","tokens":134567,"pct":10.8}
+# ]}
 ```
+
+**Notes:**
+- Data source: `~/.claude/stats-cache.json` — written by Claude Code when it processes local sessions.
+- `lastComputedDate` is used as the window endpoint; data may be stale if Claude Code hasn't run recently.
+- Model names are shortened: `claude-` prefix stripped, 8-digit date suffixes removed (e.g. `claude-haiku-4-5-20251001` → `haiku-4-5`).
+- **Target design** (when `data_fmt` is added to the workspace): live per-account quota table showing session (5h) and weekly (7d) utilization. See [feature/009_token_usage.md](../feature/009_token_usage.md).
 
 ---
 
@@ -402,7 +392,7 @@ clp .usage format::json
 
 Show live credential metadata by reading `~/.claude/.credentials.json` directly. Succeeds on any authenticated machine regardless of whether account store setup exists.
 
--- **Parameters:** [`format::`](params.md#parameter--3-format), [`account::`](params.md#parameter--6-account), [`sub::`](params.md#parameter--7-sub), [`tier::`](params.md#parameter--8-tier), [`token::`](params.md#parameter--9-token), [`expires::`](params.md#parameter--10-expires), [`email::`](params.md#parameter--11-email), [`file::`](params.md#parameter--12-file), [`saved::`](params.md#parameter--13-saved), [`display_name::`](params.md#parameter--15-display_name), [`role::`](params.md#parameter--16-role), [`billing::`](params.md#parameter--17-billing), [`model::`](params.md#parameter--18-model)
+-- **Parameters:** [`format::`](params.md#parameter--2-format), [`account::`](params.md#parameter--5-account), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`token::`](params.md#parameter--8-token), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`file::`](params.md#parameter--11-file), [`saved::`](params.md#parameter--12-saved), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model)
 -- **Exit:** 0 (success) | 2 (credential file absent or HOME unset)
 
 **Syntax:**
@@ -488,7 +478,7 @@ clp .credentials.status format::json
 
 Show rate-limit utilization for the active or named account. Displays session (5h) usage, weekly all-model (7d) usage, and rate-limit status with percentage consumed and reset times.
 
--- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`v::`](params.md#parameter--2-verbosity--v), [`format::`](params.md#parameter--3-format)
+-- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`format::`](params.md#parameter--2-format)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found, data unavailable, HOME unset)
 
 **Syntax:**
@@ -502,7 +492,6 @@ clp .account.limits format::json
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`] | *(omit for active)* | Query a named account instead of the active account |
-| `v::` | [`VerbosityLevel`] | `1` | Output detail level |
 | `format::` | [`OutputFormat`] | `text` | Output format |
 
 **Examples:**
@@ -518,6 +507,6 @@ clp .account.limits format::json
 ```
 
 **Notes:**
-- Data source: `anthropic-ratelimit-unified-*` response headers from a lightweight API call; see [feature/013_account_limits.md](../feature/013_account_limits.md). Happy path blocked until HTTP client added to workspace.
+- Data source: `anthropic-ratelimit-unified-*` response headers from a lightweight API call; see [feature/013_account_limits.md](../feature/013_account_limits.md). Transport: `claude_quota::fetch_rate_limits()`.
 - With `name::`: shows limits for the named account (requires account store entry).
 - Without `name::`: shows limits for the active account.

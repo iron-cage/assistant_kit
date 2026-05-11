@@ -14,7 +14,7 @@
 //! | x04 | `x04_token_status_idempotent` | token.status called twice → identical output | P |
 //! | x05 | `x05_param_order_independence_list` | params reordered → same output | P |
 //! | x06 | `x06_param_order_independence_token` | params reordered → same output | P |
-//! | x07 | `x07_read_commands_accept_v_and_format` | commands accepting `v::` and `format::` | P |
+//! | x07 | `x07_read_commands_accept_format` | commands accepting `format::` | P |
 //! | x08 | `x08_mutation_commands_accept_name_and_dry` | mutation commands accept `name::` and `dry::` | P |
 //! | x09 | `x09_every_command_has_exit_0_path` | every command has at least one success path | P |
 //! | x10 | `x10_usage_error_exits_1_stderr_nonempty` | usage error → exit 1 + stderr | N |
@@ -59,7 +59,7 @@ fn x01_accounts_idempotent()
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "work@example.com", "pro", "standard", FAR_FUTURE_MS, true );
 
-  let args = &[ ".accounts", "active::0", "sub::0", "tier::0", "expires::0", "org::0" ];
+  let args = &[ ".accounts", "active::0", "sub::0", "tier::0", "expires::0", "email::0" ];
   let out1 = run_cs_with_env( args, &[ ( "HOME", home ) ] );
   let out2 = run_cs_with_env( args, &[ ( "HOME", home ) ] );
   assert_eq!( stdout( &out1 ), stdout( &out2 ), ".accounts must be idempotent" );
@@ -71,8 +71,8 @@ fn x02_paths_idempotent()
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
 
-  let out1 = run_cs_with_env( &[ ".paths", "v::0" ], &[ ( "HOME", home ) ] );
-  let out2 = run_cs_with_env( &[ ".paths", "v::0" ], &[ ( "HOME", home ) ] );
+  let out1 = run_cs_with_env( &[ ".paths" ], &[ ( "HOME", home ) ] );
+  let out2 = run_cs_with_env( &[ ".paths" ], &[ ( "HOME", home ) ] );
   assert_eq!( stdout( &out1 ), stdout( &out2 ), "paths must be idempotent" );
 }
 
@@ -103,8 +103,8 @@ fn x04_token_status_idempotent()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let out1 = run_cs_with_env( &[ ".token.status", "v::0" ], &[ ( "HOME", home ) ] );
-  let out2 = run_cs_with_env( &[ ".token.status", "v::0" ], &[ ( "HOME", home ) ] );
+  let out1 = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
+  let out2 = run_cs_with_env( &[ ".token.status" ], &[ ( "HOME", home ) ] );
   assert_eq!( stdout( &out1 ), stdout( &out2 ), "token status must be idempotent" );
 }
 
@@ -127,24 +127,25 @@ fn x06_param_order_independence_token()
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  let a = run_cs_with_env( &[ ".token.status", "threshold::1800", "v::2" ], &[ ( "HOME", home ) ] );
-  let b = run_cs_with_env( &[ ".token.status", "v::2", "threshold::1800" ], &[ ( "HOME", home ) ] );
+  let a = run_cs_with_env( &[ ".token.status", "threshold::1800", "format::text" ], &[ ( "HOME", home ) ] );
+  let b = run_cs_with_env( &[ ".token.status", "format::text", "threshold::1800" ], &[ ( "HOME", home ) ] );
   assert_eq!( stdout( &a ), stdout( &b ), "param order must not matter" );
 }
 
 #[ test ]
-fn x07_read_commands_accept_v_and_format()
+fn x07_read_commands_accept_format()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
 
-  // NOTE: `.accounts` uses field-presence booleans (no `v::`); `.credentials.status` also uses
-  //   field-presence booleans — both are excluded here; their happy paths are covered by
-  //   `x09_every_command_has_exit_0_path`.
+  // NOTE: `.accounts` and `.credentials.status` use field-presence booleans — both are
+  //   excluded here; their happy paths are covered by `x09_every_command_has_exit_0_path`.
+  //   `.usage` excluded — requires stats-cache.json fixture (covered by usage_test.rs).
+  //   `.account.limits` excluded — requires live HTTP call (covered by lim_it tests).
   for cmd in &[ ".token.status", ".paths" ]
   {
-    let out = run_cs_with_env( &[ cmd, "v::0", "format::text" ], &[ ( "HOME", home ) ] );
+    let out = run_cs_with_env( &[ cmd, "format::text" ], &[ ( "HOME", home ) ] );
     assert_exit( &out, 0 );
   }
 }
@@ -157,7 +158,7 @@ fn x08_mutation_commands_accept_name_and_dry()
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
   write_account( dir.path(), "target@example.com", "pro", "standard", FAR_FUTURE_MS, false );
 
-  for cmd in &[ ".account.save", ".account.switch", ".account.delete" ]
+  for cmd in &[ ".account.save", ".account.use", ".account.delete" ]
   {
     let out = run_cs_with_env( &[ cmd, "name::target@example.com", "dry::1" ], &[ ( "HOME", home ) ] );
     assert_exit( &out, 0 );
@@ -173,11 +174,16 @@ fn x09_every_command_has_exit_0_path()
   // "target@example.com" is inactive — delete/switch/save dry-run must use a non-active account
   write_account( dir.path(), "target@example.com", "pro", "standard", FAR_FUTURE_MS, false );
 
+  // NOTE: `.usage` excluded — requires a stats-cache.json fixture; its exit-0 path is
+  //   covered by usage_test.rs (u06, u07, u11, etc.).
+  //   `.account.limits` excluded — requires a live HTTP call to the Anthropic API;
+  //   its exit-0 path is covered by account_limits_test.rs (lim_it1, lim_it3, filtered
+  //   from the default nextest run via `default-filter` in .config/nextest.toml).
   let commands = vec![
     vec![ ".help" ],
     vec![ ".accounts" ],
     vec![ ".account.save",   "name::target@example.com", "dry::1" ],
-    vec![ ".account.switch", "name::target@example.com", "dry::1" ],
+    vec![ ".account.use", "name::target@example.com", "dry::1" ],
     vec![ ".account.delete", "name::target@example.com", "dry::1" ],
     vec![ ".token.status" ],
     vec![ ".paths" ],

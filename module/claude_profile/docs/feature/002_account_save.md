@@ -5,7 +5,7 @@
 - **Purpose**: Snapshot the current active credentials as a named account profile for later restoration.
 - **Responsibility**: Documents the `account::save()` API and the `.account.save` CLI command (FR-7).
 - **In Scope**: Credential copy, metadata snapshot (`~/.claude.json`, `settings.json`), name validation, directory init, CLI dry-run behaviour.
-- **Out of Scope**: Account switching (→ 004_account_switch.md), store initialization (→ 001_account_store_init.md).
+- **Out of Scope**: Account switching (→ 004_account_use.md), store initialization (→ 001_account_store_init.md).
 
 ### Design
 
@@ -41,6 +41,7 @@
 - **AC-08**: `clp .account.save` (no `name::`) with `emailAddress` present in `~/.claude.json` infers the account name from that field and saves normally; output reads `saved current credentials as '{email}'`.
 - **AC-09**: `clp .account.save` (no `name::`) when `~/.claude.json` has no `emailAddress` exits 1 with `cannot infer account name: emailAddress absent from ~/.claude.json — pass name:: explicitly`.
 - **AC-10**: After a successful `clp .account.save`, `{credential_store}/_active` contains the saved account name; `clp .credentials.status` shows `Account: {name}` immediately.
+- **AC-11**: `clp .account.save name::a/b@c.com` exits 1 — path-unsafe characters (`/`, `\`, `*`) in the email local part are rejected by `validate_name()` before any filesystem operation.
 
 ### Cross-References
 
@@ -51,7 +52,7 @@
 | test | `tests/cli/accounts_test.rs` | Verifies credential file and metadata snapshots created with correct content |
 | test | `claude_profile_core/tests/account_test.rs` | `as_save_writes_active_marker` — unit test: `_active` written after `save()` |
 | test | `tests/cli/credentials_test.rs` | `cred14` — CLI: `.credentials.status` shows `Account: {name}` after `.account.save` |
-| test | `tests/cli/account_mutations_test.rs` | `as16` — CLI: `_active` file contains saved name after `.account.save` |
+| test | `tests/cli/account_mutations_test.rs` | `as16` — CLI: `_active` file contains saved name after `.account.save`; `as17`/`as18` — path-unsafe chars in local part exit 1 |
 | doc | [001_account_store_init.md](001_account_store_init.md) | Directory initialization triggered by save |
 | doc | [cli/commands.md](../cli/commands.md#command--4-accountsave) | CLI command specification |
 | doc | [014_rich_account_metadata.md](014_rich_account_metadata.md) | Metadata fields snapshotted by `save()` |

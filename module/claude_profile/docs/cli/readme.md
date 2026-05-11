@@ -24,7 +24,7 @@ Manage Claude Code account credentials: save, list, switch, and delete named pro
 
 **Current Level:** L4 (Workflow Complete)
 **Design Completeness:** 100%
-**Implementation Status:** 100% (11/11 commands implemented, 18/18 params implemented)
+**Implementation Status:** 100% (11/11 commands implemented, 17/17 params implemented)
 
 ### Navigation
 

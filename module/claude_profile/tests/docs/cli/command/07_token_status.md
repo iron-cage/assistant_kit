@@ -12,10 +12,8 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 | IT-4 | Custom `threshold::1800` changes classification boundary | Threshold Override |
 | IT-5 | `threshold::0` never classifies as ExpiringSoon | Threshold Edge |
 | IT-6 | `format::json` returns JSON object with status and expires_in_secs | Output Format |
-| IT-7 | `v::0` shows bare status word only | Verbosity |
 | IT-8 | Missing credentials file exits 2 | Error Handling |
 | IT-9 | Credentials file with unparseable `expiresAt` exits 2 | Error Handling |
-| IT-10 | `v::2` shows raw expiresAt timestamp and threshold value | Verbosity |
 
 ### Test Coverage Summary
 
@@ -24,10 +22,9 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 - Threshold Override: 1 test
 - Threshold Edge: 1 test
 - Output Format: 1 test
-- Verbosity: 2 tests
 - Error Handling: 2 tests
 
-**Total:** 10 integration tests
+**Total:** 8 integration tests
 
 ---
 
@@ -91,16 +88,6 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 
 ---
 
-### IT-7: Quiet verbosity shows bare status word only
-
-- **Given:** `~/.claude/.credentials.json` contains an `expiresAt` timestamp set to current time + 7200 seconds.
-- **When:** `clp .token.status v::0`
-- **Then:** `valid` on stdout (bare word, no dash, no remaining time), exit 0.; output is bare status word with no additional text
-- **Exit:** 0
-- **Source:** [commands.md — .token.status](../../../../docs/cli/commands.md#command--7-tokenstatus)
-
----
-
 ### IT-8: Missing credentials file exits 2
 
 - **Given:** Ensure `~/.claude/.credentials.json` does not exist (rename or remove it). Account store state is irrelevant.
@@ -119,12 +106,3 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 - **Exit:** 2
 - **Source:** [commands.md — .token.status](../../../../docs/cli/commands.md#command--7-tokenstatus)
 
----
-
-### IT-10: Verbose output shows raw timestamp and threshold
-
-- **Given:** `~/.claude/.credentials.json` contains an `expiresAt` timestamp (e.g., `"expiresAt": "2026-03-22T14:00:00Z"` or a millisecond epoch value).
-- **When:** `clp .token.status v::2`
-- **Then:** Output on stdout containing the status classification, remaining time, raw `expiresAt` value, and the threshold value (default `3600`), exit 0.; output includes raw timestamp, threshold value, and status
-- **Exit:** 0
-- **Source:** [commands.md — .token.status](../../../../docs/cli/commands.md#command--7-tokenstatus)

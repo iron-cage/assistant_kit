@@ -49,6 +49,7 @@
 //! | cred12 | `cred12_json_extended_shape` | format::json → includes display_name, role, billing, model keys | P |
 //! | cred13 | `cred13_new_params_absent_by_default` | all 4 new opt-in params absent in single default invocation | P |
 //! | cred14 | `cred14_save_writes_active_shown_in_credentials_status` | after .account.save → Account: {name} in .credentials.status | P |
+//! | cred15 | `cred15_save_infers_name_from_email` | save (no name::) → infers email → _active → Account: shows inferred name | P |
 
 use crate::helpers::{
   run_cs_with_env,

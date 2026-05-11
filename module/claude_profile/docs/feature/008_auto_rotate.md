@@ -43,5 +43,5 @@
 |------|------|----------------|
 | source | `src/account.rs` | `auto_rotate()` implementation |
 | test | `tests/account_tests.rs::auto_rotate_*` | Rotation selection and switch tests |
-| doc | [004_account_switch.md](004_account_switch.md) | Switch primitive used by auto_rotate |
+| doc | [004_account_use.md](004_account_use.md) | Switch primitive used by auto_rotate |
 | doc | [006_token_status.md](006_token_status.md) | Token detection to trigger rotation |

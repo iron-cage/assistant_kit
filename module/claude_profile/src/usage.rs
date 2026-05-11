@@ -1,21 +1,20 @@
-//! `.usage` command — 7-day token usage history from `stats-cache.json`.
+//! `.usage` command — interim implementation reading `stats-cache.json`.
+//!
+//! # Current implementation (interim)
 //!
 //! Reads `~/.claude/stats-cache.json` (written by Claude Code) and reports
 //! per-model token totals for the 7-day window ending at `lastComputedDate`.
+//! This is an interim approach: see `docs/feature/009_token_usage.md` for the
+//! target design (live quota via `claude_quota::fetch_rate_limits()` + `data_fmt`
+//! table rendering). The live path is blocked on `data_fmt` being added to the
+//! workspace; `claude_quota` is already available in `Cargo.toml`.
 //!
-//! # Data source
+//! # Data source (interim)
 //!
 //! `stats-cache.json` → `dailyModelTokens[].tokensByModel`.
 //! Tokens per entry are the sum of input + output + cache tokens for that day
 //! and model. The `lastComputedDate` field tells us when Claude Code last
 //! recomputed the cache; data may be stale if Claude Code hasn't run recently.
-//!
-//! # What this command CANNOT show
-//!
-//! The live 5-hour and 7-day utilization percentages are server-side only —
-//! Claude Code receives them via `anthropic-ratelimit-unified-*` response
-//! headers at runtime but never persists them to disk. A future `.quota`
-//! command would make a minimal API call to retrieve that data.
 
 use core::fmt::Write as FmtWrite;
 use std::collections::HashMap;
@@ -79,6 +78,45 @@ fn subtract_days( date : &str, n : u32 ) -> Option< String >
   Some( format!( "{year:04}-{month:02}-{day:02}" ) )
 }
 
+/// Whole days elapsed since the given `YYYY-MM-DD` date, measured against
+/// `SystemTime::now()`.
+///
+/// Returns `None` when the date string is malformed or refers to a future date.
+/// Uses Julian Day Numbers for correct Gregorian calendar arithmetic; no
+/// external crate dependency.
+fn days_since( date : &str ) -> Option< u64 >
+{
+  use std::time::{ SystemTime, UNIX_EPOCH };
+
+  let parts : Vec< &str > = date.splitn( 3, '-' ).collect();
+  if parts.len() < 3 { return None; }
+  let y : i64 = parts[ 0 ].parse().ok()?;
+  let m : i64 = parts[ 1 ].parse().ok()?;
+  let d : i64 = parts[ 2 ].parse().ok()?;
+
+  // Gregorian calendar → Julian Day Number.
+  // Algorithm: Richards (2013), via Meeus "Astronomical Algorithms".
+  let a  = ( 14 - m ) / 12;
+  let yy = y + 4800 - a;
+  let mm = m + 12 * a - 3;
+  let jdn : i64 = d
+    + ( 153 * mm + 2 ) / 5
+    + 365 * yy
+    + yy / 4
+    - yy / 100
+    + yy / 400
+    - 32045;
+
+  // Unix epoch (1970-01-01) is JDN 2440588.
+  let date_days = jdn - 2_440_588;
+  let now_secs  = SystemTime::now().duration_since( UNIX_EPOCH ).ok()?.as_secs();
+  let now_days  = i64::try_from( now_secs / 86400 ).ok()?;
+  let elapsed   = now_days - date_days;
+
+  // Future dates are treated as "not stale" — return None so callers skip the warning.
+  if elapsed < 0 { None } else { u64::try_from( elapsed ).ok() }
+}
+
 // ── Model name helpers ────────────────────────────────────────────────────────
 
 /// Shorten a full API model name to a compact display form.
@@ -103,29 +141,6 @@ fn model_short( model : &str ) -> String
 }
 
 // ── Token formatting ──────────────────────────────────────────────────────────
-
-/// Format tokens as a human-readable compact string.
-///
-/// - < 1 000          → `"999"`
-/// - < 1 000 000      → `"42.3K"`
-/// - ≥ 1 000 000      → `"17.3M"`
-fn fmt_tokens_compact( n : u64 ) -> String
-{
-  // Boundaries account for {:.1} rounding: 999_950 / 1000 = 999.95 → "1000.0K"
-  // so we promote to M at 999_950 instead of 1_000_000.
-  if n < 1_000
-  {
-    format!( "{n}" )
-  }
-  else if n < 999_950
-  {
-    format!( "{:.1}K", n as f64 / 1_000.0 )
-  }
-  else
-  {
-    format!( "{:.1}M", n as f64 / 1_000_000.0 )
-  }
-}
 
 /// Format tokens as a comma-separated integer: `17,282,815`.
 fn fmt_tokens_full( n : u64 ) -> String
@@ -152,8 +167,8 @@ struct UsageData
   total         : u64,
   /// Per-model totals, sorted descending by token count.
   by_model      : Vec< ( String, u64 ) >,
-  /// Daily entries (newest first), each with per-model breakdown.
-  daily         : Vec< ( String, Vec< ( String, u64 ) > ) >,
+  /// Days elapsed since `period_end`; `None` when the date is malformed or in the future.
+  stale_days    : Option< u64 >,
 }
 
 /// Load and compute `UsageData` from `stats-cache.json`.
@@ -184,13 +199,15 @@ fn load_usage( paths : &crate::ClaudePaths ) -> Result< UsageData, ErrorData >
   let period_start = subtract_days( &period_end, 6 )
     .unwrap_or_else( || period_end.clone() );
 
+  // Compare lastComputedDate against today to detect stale caches.
+  let stale_days = days_since( &period_end );
+
   let dmt = json[ "dailyModelTokens" ].as_array().ok_or_else( || ErrorData::new(
     ErrorCode::InternalError,
     "stats-cache.json: dailyModelTokens missing or not an array".to_string(),
   ) )?;
 
   let mut totals : HashMap< String, u64 > = HashMap::new();
-  let mut daily  : Vec< ( String, Vec< ( String, u64 ) > ) > = Vec::new();
 
   for entry in dmt
   {
@@ -220,41 +237,45 @@ fn load_usage( paths : &crate::ClaudePaths ) -> Result< UsageData, ErrorData >
       *totals.entry( short.clone() ).or_insert( 0 ) += tokens;
     }
 
-    daily.push( ( date, day_models ) );
   }
-
-  // Newest first.
-  daily.sort_by( |a, b| b.0.cmp( &a.0 ) );
 
   let mut by_model : Vec< ( String, u64 ) > = totals.into_iter().collect();
   by_model.sort_by_key( | b | core::cmp::Reverse( b.1 ) );
 
   let total : u64 = by_model.iter().map( |( _, t ) | t ).sum();
 
-  Ok( UsageData { period_end, period_start, total, by_model, daily } )
+  Ok( UsageData { period_end, period_start, total, by_model, stale_days } )
 }
 
 // ── Output formatters ─────────────────────────────────────────────────────────
 
-/// `v::0` — single compact summary line.
-fn text_v0( data : &UsageData ) -> String
-{
-  let mut parts = vec![ format!( "{} total", fmt_tokens_compact( data.total ) ) ];
-  for ( model, tokens ) in &data.by_model
-  {
-    parts.push( format!( "{model}: {}", fmt_tokens_compact( *tokens ) ) );
-  }
-  format!( "{}\n", parts.join( " · " ) )
-}
-
-/// `v::1` — labelled summary table (default).
+/// Labelled summary table (default).
 fn text_v1( data : &UsageData ) -> String
 {
+  let mut out = String::new();
+
+  // Warn the user when the cache is stale — silent display of months-old data
+  // is misleading, since it looks identical to fresh data.
+  if let Some( days ) = data.stale_days
+  {
+    if days > 14
+    {
+      let _ = writeln!(
+        out,
+        "⚠ Data last updated {} ({} days ago) — run Claude Code to refresh",
+        data.period_end, days
+      );
+      out.push( '\n' );
+    }
+  }
+
   // Column widths: model name padded to 12, token count right-aligned to 14.
-  let mut out = format!(
-    "Usage — last 7 days ({} → {})\n\n",
+  let _ = writeln!(
+    out,
+    "Usage — last 7 days ({} → {})",
     data.period_start, data.period_end
   );
+  out.push( '\n' );
 
   let total_str = fmt_tokens_full( data.total );
   let _ = writeln!( out, "  {:<12}  {:>14}", "Total", total_str );
@@ -269,35 +290,6 @@ fn text_v1( data : &UsageData ) -> String
       fmt_tokens_full( *tokens ),
       pct
     );
-  }
-
-  out
-}
-
-/// `v::2` — summary + daily breakdown (newest first).
-fn text_v2( data : &UsageData ) -> String
-{
-  let mut out = text_v1( data );
-
-  if data.daily.is_empty() { return out; }
-
-  out.push( '\n' );
-  out.push_str( "  Daily:\n" );
-
-  for ( date, models ) in &data.daily
-  {
-    let day_total : u64 = models.iter().map( |( _, t ) | t ).sum();
-    let mut line = format!( "  {}  {:>12}", date, fmt_tokens_full( day_total ) );
-
-    // Show each model contribution on the same line.
-    for ( model, tokens ) in models
-    {
-      // Use first segment of model name (e.g. "sonnet" from "sonnet-4-6").
-      let family = model.split( '-' ).next().unwrap_or( model );
-      let _ = write!( line, "   {family}: {:>10}", fmt_tokens_full( *tokens ) );
-    }
-    out.push_str( &line );
-    out.push( '\n' );
   }
 
   out
@@ -355,12 +347,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   let content = match opts.format
   {
     OutputFormat::Json => text_json( &data ),
-    OutputFormat::Text => match opts.verbosity
-    {
-      0 => text_v0( &data ),
-      1 => text_v1( &data ),
-      _ => text_v2( &data ),
-    },
+    OutputFormat::Text => text_v1( &data ),
   };
 
   Ok( OutputData::new( content, "text" ) )

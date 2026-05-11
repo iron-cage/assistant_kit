@@ -8,12 +8,13 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 |----|-----------|----------|
 | EC-1 | `name::work` — valid name accepted | Valid Name |
 | EC-2 | `name::` (empty value) rejected with exit 1 | Empty Value |
-| EC-3 | Omitted `name::` on `.account.switch` exits 1 | Required Parameter |
+| EC-3 | Omitted `name::` on `.account.use` exits 1 | Required Parameter |
 | EC-17 | Omitted `name::` on `.account.save` with `emailAddress` in `~/.claude.json` — infers name | Name Inference |
-| EC-4 | `name::` with `/` rejected with exit 1 | Forbidden Characters |
-| EC-5 | `name::` with `\` rejected with exit 1 | Forbidden Characters |
-| EC-6 | `name::` with `*?"<>\|` rejected with exit 1 | Forbidden Characters |
+| EC-4 | `name::` with `/` (no `@`) rejected with exit 1 | Forbidden Characters |
+| EC-5 | `name::` with `\` (no `@`) rejected with exit 1 | Forbidden Characters |
+| EC-6 | `name::` with `*` (no `@`) rejected with exit 1 | Forbidden Characters |
 | EC-7 | `name::` with null byte rejected with exit 1 | Forbidden Characters |
+| EC-18 | `name::` with `/` in email local part (`a/b@c.com`) rejected with exit 1 | Forbidden Characters (email) |
 | EC-8 | `name::client-a` — hyphens accepted | Valid Characters |
 | EC-9 | `name::my_account` — underscores accepted | Valid Characters |
 | EC-10 | Very long name (>255 chars) handled without crash | Boundary Value |
@@ -30,13 +31,13 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - Empty Value: 1 test
 - Required Parameter: 1 test
 - Name Inference: 1 test
-- Forbidden Characters: 4 tests
+- Forbidden Characters: 5 tests
 - Valid Characters: 2 tests
 - Boundary Value: 1 test
 - Optional on Accounts: 3 tests
 - Optional on Limits (FR-18): 3 tests
 
-**Total:** 17 edge cases
+**Total:** 18 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
 
@@ -45,8 +46,8 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 ### EC-1: Valid Name
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`.
-- **When:** `clp .account.save name::work`
-- **Then:** `saved current credentials as 'work'` with exit 0.; credential file created with correct name
+- **When:** `clp .account.save name::work@acme.com`
+- **Then:** `saved current credentials as 'work@acme.com'` with exit 0.; credential file created with correct name
 - **Exit:** 0
 - **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
 
@@ -62,41 +63,41 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 
 ---
 
-### EC-3: Required Parameter on `.account.switch`
+### EC-3: Required Parameter on `.account.use`
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`.
-- **When:** `clp .account.switch`
-- **Then:** Error message indicating `name::` is required with exit 1.; missing required parameter clearly reported; `.account.switch` has no inference fallback
+- **When:** `clp .account.use`
+- **Then:** Error message indicating `name::` is required with exit 1.; missing required parameter clearly reported; `.account.use` has no inference fallback
 - **Exit:** 1
 - **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
 
 ---
 
-### EC-4: Forbidden Characters — Forward Slash
+### EC-4: Forbidden Characters — Forward Slash (no `@`)
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`.
 - **When:** `clp .account.save name::foo/bar`
-- **Then:** Error message containing `contains invalid characters` with exit 1.; forward slash in name rejected
+- **Then:** Error message containing `must contain '@'` with exit 1. (No `@` present — `@`-absence check fires before path-safety check.); name without `@` rejected as non-email
 - **Exit:** 1
 - **Source:** [types.md -- AccountName](../../../../docs/cli/types.md#type--1-accountname)
 
 ---
 
-### EC-5: Forbidden Characters — Backslash
+### EC-5: Forbidden Characters — Backslash (no `@`)
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`.
 - **When:** `clp .account.save 'name::foo\bar'`
-- **Then:** Error message containing `contains invalid characters` with exit 1.; backslash in name rejected
+- **Then:** Error message containing `must contain '@'` with exit 1. (No `@` present — `@`-absence check fires before path-safety check.); name without `@` rejected as non-email
 - **Exit:** 1
 - **Source:** [types.md -- AccountName](../../../../docs/cli/types.md#type--1-accountname)
 
 ---
 
-### EC-6: Forbidden Characters — Special Characters
+### EC-6: Forbidden Characters — Star (no `@`)
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`.
 - **When:** `clp .account.save 'name::test*file'`
-- **Then:** Error message containing `contains invalid characters` with exit 1.; each forbidden special character in name rejected
+- **Then:** Error message containing `must contain '@'` with exit 1. (No `@` present — `@`-absence check fires before path-safety check.); name without `@` rejected as non-email
 - **Exit:** 1
 - **Source:** [types.md -- AccountName](../../../../docs/cli/types.md#type--1-accountname)
 
@@ -115,8 +116,8 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 ### EC-8: Valid Characters — Hyphens
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`.
-- **When:** `clp .account.save name::client-a`
-- **Then:** `saved current credentials as 'client-a'` with exit 0.; hyphenated name accepted and credential file created
+- **When:** `clp .account.save name::client-a@acme.com`
+- **Then:** `saved current credentials as 'client-a@acme.com'` with exit 0.; hyphenated local part in email accepted and credential file created
 - **Exit:** 0
 - **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
 
@@ -125,8 +126,8 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 ### EC-9: Valid Characters — Underscores
 
 - **Given:** Active credentials exist at `~/.claude/.credentials.json`.
-- **When:** `clp .account.save name::my_account`
-- **Then:** `saved current credentials as 'my_account'` with exit 0.; underscored name accepted and credential file created
+- **When:** `clp .account.save name::my_account@acme.com`
+- **Then:** `saved current credentials as 'my_account@acme.com'` with exit 0.; underscored local part in email accepted and credential file created
 - **Exit:** 0
 - **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
 
@@ -209,3 +210,13 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **Then:** Exit 0; stdout: `saved current credentials as 'alice@acme.com'`; credential file created using the inferred email as the account name.; `name::` behaves as optional on `.account.save` when `emailAddress` is readable
 - **Exit:** 0
 - **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
+
+---
+
+### EC-18: Forbidden Characters — Forward Slash in Email Local Part
+
+- **Given:** Active credentials exist at `~/.claude/.credentials.json`.
+- **When:** `clp .account.save name::a/b@c.com`
+- **Then:** Error message containing `path-unsafe characters` with exit 1. (`@` is present — `@`-check passes; path-safety check fires next and rejects `/` in local part `a/b`.); path-unsafe char in email local part rejected before any filesystem operation
+- **Exit:** 1
+- **Source:** [types.md -- AccountName](../../../../docs/cli/types.md#type--1-accountname), [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)

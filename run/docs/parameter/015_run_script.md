@@ -18,26 +18,29 @@ Python standalone project:
 ```yaml
 run_script: run/run
 ```
-`run/run` inside the container:
+`run/run` (works inside the container and natively on the host):
 ```bash
 #!/usr/bin/env bash
-exec /workspace/.venv/bin/python -m example_lib
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec "$SCRIPT_DIR/../.venv/bin/python" -m example_lib
 ```
 Node.js standalone project:
 ```yaml
 run_script: run/run
 ```
-`run/run` inside the container:
+`run/run` (works inside the container and natively on the host):
 ```bash
 #!/usr/bin/env bash
-exec node /workspace/src/main.js
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec node "$SCRIPT_DIR/../src/main.js"
 ```
 Rust standalone project (pre-built binary in image):
 ```yaml
 run_script: run/run
 ```
-`run/run` inside the container:
+`run/run` (works inside the container and natively on the host):
 ```bash
 #!/usr/bin/env bash
-exec /workspace/target/debug/rust_example
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec "$SCRIPT_DIR/../target/debug/rust_example"
 ```

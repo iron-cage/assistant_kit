@@ -28,7 +28,7 @@ clp .accounts
 #   Email:   N/A
 
 # Switch to the account with more time
-clp .account.switch name::alice@home.com
+clp .account.use name::alice@home.com
 # switched to 'alice@home.com'
 
 # Verify
@@ -81,7 +81,7 @@ Use JSON output for pipeline integration in monitoring scripts.
 #!/bin/bash
 # health_check.sh — exit non-zero if token is not valid
 
-status=$( clp .token.status format::json v::0 )
+status=$( clp .token.status format::json )
 state=$( echo "$status" | jq -r '.status' )
 
 case "$state" in
@@ -161,8 +161,8 @@ clp .paths
 # sessions:         /home/user/.claude/sessions/
 
 # Check token state
-clp .token.status v::2
-# valid — 2h47m remaining (expiresAt: 1711234567000, threshold: 3600s)
+clp .token.status
+# valid — 2h47m remaining
 
 # List all accounts with full metadata
 clp .accounts
@@ -198,7 +198,7 @@ clp .account.save name::alice@acme.com dry::1
 # [dry-run] would save current credentials as 'alice@acme.com'
 
 # Preview switch
-clp .account.switch name::alice@home.com dry::1
+clp .account.use name::alice@home.com dry::1
 # [dry-run] would switch to 'alice@home.com'
 
 # Preview delete
@@ -207,7 +207,7 @@ clp .account.delete name::alice@oldco.com dry::1
 
 # All look correct — execute for real
 clp .account.save name::alice@acme.com
-clp .account.switch name::alice@home.com
+clp .account.use name::alice@home.com
 clp .account.delete name::alice@oldco.com
 ```
 
@@ -242,7 +242,7 @@ clp .credentials.status email::0
 # Initialize account management from live credentials
 clp .account.save name::alice@example.com
 # saved current credentials as 'alice@example.com'
-clp .account.switch name::alice@example.com
+clp .account.use name::alice@example.com
 # switched to 'alice@example.com'
 
 # Now .accounts shows the new account

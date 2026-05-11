@@ -1,21 +1,12 @@
 //! Output formatting: text/json selection, JSON string escaping, duration display.
 //!
 //! Provides the `OutputOptions` struct used by command handlers to determine
-//! output format and verbosity. All format decisions are centralised here
-//! rather than scattered across command modules.
+//! output format. All format decisions are centralised here rather than
+//! scattered across command modules.
 
 use unilang::data::{ ErrorCode, ErrorData };
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
-
-/// Maximum accepted verbosity level (0–2). Validated at consumption in `from_cmd()`.
-///
-/// Fix(issue-verbosity-precheck):
-/// Root cause: verbosity range was checked in adapter.rs globally before command dispatch,
-///   causing misleading "out of range" errors for commands that don't accept verbosity.
-/// Pitfall: Range validation for command-specific parameters belongs at the consumption
-///   layer (here), never in the adapter which lacks command-registry context.
-const MAX_VERBOSITY : u8 = 2;
 
 /// Available output formats for command results.
 #[ derive( Debug, Clone, Copy, PartialEq ) ]
@@ -31,10 +22,8 @@ pub enum OutputFormat
 #[ derive( Debug ) ]
 pub struct OutputOptions
 {
-  /// Verbosity level: 0 = minimal, 1 = normal (default), 2 = verbose.
-  pub verbosity : u8,
   /// Output format.
-  pub format    : OutputFormat,
+  pub format : OutputFormat,
 }
 
 impl OutputOptions
@@ -44,28 +33,10 @@ impl OutputOptions
   /// # Errors
   ///
   /// Returns `Err(ErrorData)` with `ErrorCode::ArgumentTypeMismatch` if
-  /// `format::` has an unrecognised value or `verbosity::` is out of range (> 2).
+  /// `format::` has an unrecognised value.
   #[ inline ]
   pub fn from_cmd( cmd : &VerifiedCommand ) -> Result< Self, ErrorData >
   {
-    // Parse verbosity: Integer argument, default 1. Range check: 0–MAX_VERBOSITY.
-    let verbosity = match cmd.arguments.get( "verbosity" )
-    {
-      Some( Value::Integer( n ) ) =>
-      {
-        let v = u8::try_from( *n ).unwrap_or( u8::MAX );
-        if v > MAX_VERBOSITY
-        {
-          return Err( ErrorData::new(
-            ErrorCode::ArgumentTypeMismatch,
-            format!( "verbosity out of range: {n} (max {MAX_VERBOSITY})" ),
-          ) );
-        }
-        v
-      }
-      _ => 1,
-    };
-
     // Parse format: String argument, default "text".
     let format = match cmd.arguments.get( "format" )
     {
@@ -87,7 +58,7 @@ impl OutputOptions
       _ => OutputFormat::Text,
     };
 
-    Ok( OutputOptions { verbosity, format } )
+    Ok( OutputOptions { format } )
   }
 }
 

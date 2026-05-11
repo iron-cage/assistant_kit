@@ -21,13 +21,14 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 | IT-12 | Save succeeds when `~/.claude.json` absent — only credential file created | Metadata Snapshot / Best-Effort |
 | IT-13 | Save succeeds when `settings.json` absent — credential + `.claude.json` created, no `.settings.json` | Metadata Snapshot / Best-Effort |
 | IT-15 | Save writes `_active` marker — `.credentials.status` shows `Account: {name}` immediately after save | Active Marker |
+| IT-16 | Save with path-unsafe chars in email local part (`/`, `\`) exits 1 | Validation |
 
 ### Test Coverage Summary
 
 - Basic Invocation: 1 test
 - Directory Init: 1 test
 - Overwrite: 1 test
-- Validation: 2 tests
+- Validation: 3 tests
 - Error Handling: 1 test
 - Dry Run: 2 tests
 - Data Integrity: 1 test
@@ -37,7 +38,7 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 - Metadata Snapshot / Best-Effort: 2 tests
 - Active Marker: 1 test
 
-**Total:** 15 integration tests
+**Total:** 16 integration tests
 
 ---
 
@@ -188,3 +189,13 @@ Integration test planning for the `.account.save` command. See [commands.md](../
 - **Then:** `{credential_store}/_active` contains the text `work@acme.com`. Subsequent `clp .credentials.status` shows `Account: work@acme.com` (not `N/A`).
 - **Exit:** 0
 - **Source:** [commands.md — .account.save](../../../../docs/cli/commands.md#command--4-accountsave)
+
+---
+
+### IT-16: Save with path-unsafe chars in email local part exits 1
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials.
+- **When:** `clp .account.save name::a/b@c.com`
+- **Then:** Error message on stderr indicating path-unsafe characters in account name, exit 1. No credential file created in the store.
+- **Exit:** 1
+- **Source:** [commands.md — .account.save](../../../../docs/cli/commands.md#command--4-accountsave), [002_account_save.md AC-11](../../../../docs/feature/002_account_save.md), [as17/as18 in account_mutations_test.rs]

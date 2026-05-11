@@ -46,7 +46,7 @@ mod enabled
       ".accounts",
       ".account.limits",
       ".account.save",
-      ".account.switch",
+      ".account.use",
       ".account.delete",
       ".credentials.status",
       ".token.status",

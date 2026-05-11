@@ -40,7 +40,7 @@ Output: one test node ID per line (`tests/test_example.py::test_add`).
 **Node.js (node --test):**
 ```bash
 _plugin_list_cmd() {
-  list_cmd="node --test --reporter=spec /workspace/tests/"
+  list_cmd="node --test --test-reporter=spec /workspace/tests/"
 }
 ```
 Output: spec-format test names from the Node.js built-in test runner.
