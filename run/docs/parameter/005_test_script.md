@@ -12,6 +12,14 @@ Use `$SCRIPT_DIR`-relative paths in the script body — inside the container `SC
 
 Module-level runboxes point at `verb/test` (the canonical `do`-protocol test verb) rather than a bespoke `run/test` script. This makes `verb/test` the single source of truth for what "run tests" means for a module.
 
+### Directory Form
+
+When `test_script` points to a directory (a multi-layer verb), `runbox-run` resolves the in-container invocation to `$test_script/l1` and passes `VERB_LAYER=l1` to the container run. This makes the same verb path behave differently at the host layer (`verb/X/default` → `l2` → runbox) and the container layer (`verb/X/l1` → direct execution).
+
+The path in `runbox.yml` is unchanged — whether `verb/test` is a file or a directory, `test_script: module/foo/verb/test` works for both. `runbox-run` detects the form at runtime.
+
+See `onboarding.md § Multi-Layer Verbs` for the complete protocol, layer naming, dispatch rules, and `VERB_LAYER` convention.
+
 ### Example
 
 Workspace `runbox.yml`:

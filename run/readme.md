@@ -6,6 +6,7 @@ Shell scripts for workspace container operations.
 |------|----------------|
 | `runbox` | Canonical project wrapper: auto-discovers runbox-run; copy verbatim for new projects. |
 | `runbox-run` | Universal Docker runner: reads runbox.yml, builds and runs containers. |
+| `verb-run` | Universal verb dispatcher: resolves flat-file or directory-form verbs by VERB_LAYER. |
 | `plugins.sh` | Workspace plugin definitions: sourced by runbox-run; remove for plugin-free operation. |
 | `runbox.yml` | Workspace Docker config: image, build args, plugins, test script path. |
 | `test` | Run workspace tests locally; also called by runbox-run inside container. |

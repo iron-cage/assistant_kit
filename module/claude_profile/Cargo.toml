@@ -40,6 +40,7 @@ error_tools          = { workspace = true, optional = true }
 serde_json           = { workspace = true, optional = true }
 unilang              = { workspace = true, optional = true }
 claude_quota         = { workspace = true, optional = true, features = [ "enabled" ] }
+data_fmt             = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json.workspace = true
@@ -56,6 +57,7 @@ enabled = [
   "dep:serde_json",
   "dep:unilang",
   "dep:claude_quota",
+  "dep:data_fmt",
 ]
 # Convenience: enables all functionality (currently equivalent to enabled).
 full = [ "enabled" ]

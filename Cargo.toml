@@ -167,6 +167,11 @@ version = "~0.48"
 features = [ "enabled", "approach_yaml_multi_build" ]
 default-features = false
 
+[workspace.dependencies.data_fmt]
+version = "~0.2"
+default-features = false
+features = [ "enabled" ]
+
 [workspace.dependencies.ureq]
 version = "~2"
 

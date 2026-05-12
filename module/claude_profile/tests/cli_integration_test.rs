@@ -14,7 +14,7 @@
 //! | `account_mutations_test` | account save, switch, delete | AS, AW, AD |
 //! | `token_paths_test` | token status, paths | TS, P |
 //! | `cross_cutting_test` | idempotency, param order, exit codes, env | X, E |
-//! | `usage_test` | .usage command | U |
+//! | `usage_test` | .usage live quota (all accounts) | IT |
 //! | `persist_test` | `PersistPaths` resolution | P |
 //! | `credentials_test` | .credentials.status | cred |
 //! | `credentials_status_help_test` | .credentials.status.help descriptions | csh |

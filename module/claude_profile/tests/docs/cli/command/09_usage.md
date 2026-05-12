@@ -2,7 +2,7 @@
 
 Integration test planning for the `.usage` command. See [commands.md](../../../../docs/cli/commands.md#command--9-usage) for specification.
 
-> **Implementation state:** IT-1 through IT-9 below describe the target test coverage for the live-API implementation (per `docs/feature/009_token_usage.md`). The current interim implementation reads `stats-cache.json` and its tests are in `tests/cli/usage_test.rs` (u01–u24). IT-1..IT-9 will be implemented when `data_fmt` is added to the workspace.
+> **Implementation state:** IT-1 through IT-9 below describe the target test coverage for the live-API implementation (per `docs/feature/009_token_usage.md`). The current interim implementation reads `stats-cache.json` and its tests are in `tests/cli/usage_test.rs` (u01–u26, including u25/u26 for staleness warning). IT-1..IT-9 will be implemented when `data_fmt` is added to the workspace.
 
 ### Test Case Index
 

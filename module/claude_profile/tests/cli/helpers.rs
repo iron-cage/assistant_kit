@@ -323,3 +323,60 @@ pub fn write_stats_cache_raw( home : &std::path::Path, content : &str )
   std::fs::create_dir_all( &claude_dir ).unwrap();
   std::fs::write( claude_dir.join( "stats-cache.json" ), content ).unwrap();
 }
+
+// ── Live-quota helpers ────────────────────────────────────────────────────────
+
+/// Credential JSON including an `accessToken` field.
+///
+/// Used by `write_account_with_token()` to create credential files that pass
+/// through `read_token()` successfully, enabling `fetch_rate_limits()` to be called.
+#[ inline ]
+#[ must_use ]
+pub fn credential_json_with_token( token : &str ) -> String
+{
+  format!(
+    r#"{{"oauthAccount":{{"subscriptionType":"max","rateLimitTier":"default_claude_max_20x"}},"expiresAt":{FAR_FUTURE_MS},"accessToken":"{token}"}}"#,
+  )
+}
+
+/// Write a saved account credential file WITH an `accessToken` field.
+///
+/// Unlike `write_account()`, the resulting file contains `accessToken` so
+/// `read_token()` will succeed and `fetch_rate_limits()` can be called.
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_account_with_token(
+  home        : &std::path::Path,
+  name        : &str,
+  token       : &str,
+  make_active : bool,
+)
+{
+  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  let dest = credential_store.join( format!( "{name}.credentials.json" ) );
+  std::fs::write( dest, credential_json_with_token( token ) ).unwrap();
+  if make_active
+  {
+    std::fs::write( credential_store.join( "_active" ), name ).unwrap();
+  }
+}
+
+/// Read the active OAuth access token from the real HOME credentials file.
+///
+/// Returns `None` if HOME is unset, the credentials file is absent, or
+/// `accessToken` is not present. Used exclusively in `lim_it` tests that
+/// require a real Anthropic API token.
+#[ inline ]
+#[ must_use ]
+pub fn live_active_token() -> Option< String >
+{
+  let home    = std::env::var( "HOME" ).ok()?;
+  let content = std::fs::read_to_string(
+    std::path::Path::new( &home ).join( ".claude" ).join( ".credentials.json" ),
+  ).ok()?;
+  claude_profile::account::parse_string_field( &content, "accessToken" )
+}
