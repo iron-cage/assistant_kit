@@ -13,9 +13,9 @@ The `claude_profile` **library path** must have zero third-party (crates.io) dep
 
 **Permitted:**
 - Internal workspace crates: `claude_core`, `claude_profile_core`
-- Under the `enabled` feature (CLI binary only): `unilang`, `error_tools`, `serde_json`, `claude_quota`
-  - `serde_json` is gated behind `dep:serde_json` in the `enabled` feature and used exclusively by the `.usage` command for parsing `stats-cache.json`
+- Under the `enabled` feature (CLI binary only): `unilang`, `error_tools`, `claude_quota`, `data_fmt`
   - `claude_quota` is gated behind `dep:claude_quota` in the `enabled` feature; it is an internal workspace crate that encapsulates the HTTP transport and exposes `fetch_rate_limits(token: &str)`
+  - `data_fmt` is gated behind `dep:data_fmt` in the `enabled` feature; it is used for all table rendering in the CLI binary
 
 **Forbidden:**
 - Any crates.io dependency in the library path (non-feature-gated)

@@ -7,7 +7,7 @@
 - **In Scope**: commands, params, types, parameter groups, dictionary, workflows.
 - **Out of Scope**: Implementation design (→ `feature/`), quality constraints (→ `invariant/`), test planning (→ `tests/docs/cli/`).
 
-Manage Claude Code account credentials: save, list, switch, and delete named profiles; check token status; discover ~/.claude/ file paths.
+Manage Claude Code account credentials: save, list, use, and delete named profiles; check token status; discover ~/.claude/ file paths.
 
 ### Completion Matrix
 

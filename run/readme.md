@@ -9,7 +9,7 @@ Shell scripts for workspace container operations.
 | `verb-run` | Universal verb dispatcher: resolves flat-file or directory-form verbs by VERB_LAYER. |
 | `plugins.sh` | Workspace plugin definitions: sourced by runbox-run; remove for plugin-free operation. |
 | `runbox.yml` | Workspace Docker config: image, build args, plugins, test script path. |
-| `test` | Run workspace tests locally; also called by runbox-run inside container. |
+| `verb-run` | Universal verb dispatcher: resolves flat-file or directory-form verbs by VERB_LAYER. |
 | `runbox.dockerfile` | Parameterised multi-stage Docker image; built by runbox-run. |
 | `onboarding.md` | New project integration guide: how to add runbox to any ecosystem. |
 | `docs/` | Variability analysis: runbox infrastructure parameters and plugins. |

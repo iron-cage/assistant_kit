@@ -107,8 +107,8 @@ RESPONSIBILITY VIOLATION: claude_profile MUST NOT import std::process::Command
 ## Поточний стан
 
 Усі чотири бібліотечні модулі — `account`, `token`, `paths`, `persist` — реалізовані та повністю
-протестовані. Бінарний шар CLI додає `adapter`, `output` і `commands` (10 команд за
-фічею `enabled`). Функціональні вимоги знаходяться в [`docs/feature/`](docs/feature/) (FR-6 до FR-18);
+протестовані. Бінарний шар CLI додає `adapter`, `output` і `commands` (11 команд за
+фічею `enabled`). Функціональні вимоги знаходяться в [`docs/feature/`](docs/feature/) (FR-6 до FR-20);
 кожен екземпляр документа пов'язаний з тестами через секції Cross-References. Усі тести проходять. Нуль попереджень clippy.
 
 Крейт використовується в продакшні для визначення шляхів та ротації облікових записів.

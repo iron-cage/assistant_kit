@@ -11,7 +11,7 @@
 //! | Module | Domain | Test Series |
 //! |--------|--------|-------------|
 //! | `accounts_test` | help, `.accounts` command | H, ACC |
-//! | `account_mutations_test` | account save, switch, delete | AS, AW, AD |
+//! | `account_mutations_test` | account save, use, delete | AS, AW, AD |
 //! | `token_paths_test` | token status, paths | TS, P |
 //! | `cross_cutting_test` | idempotency, param order, exit codes, env | X, E |
 //! | `usage_test` | .usage live quota (all accounts) | IT |
@@ -19,6 +19,7 @@
 //! | `credentials_test` | .credentials.status | cred |
 //! | `credentials_status_help_test` | .credentials.status.help descriptions | csh |
 //! | `account_limits_test` | .account.limits error paths | lim |
+//! | `dot_test` | `.` / `.help` help output | dot |
 //!
 //! ## Parallel Execution Note
 //!
@@ -58,3 +59,6 @@ mod credentials_status_help_test;
 
 #[ path = "cli/account_limits_test.rs" ]
 mod account_limits_test;
+
+#[ path = "cli/dot_test.rs" ]
+mod dot_test;

@@ -9,8 +9,8 @@ Claude Code account credential management.
 | `Cargo.toml` | Crate manifest: dependencies, features, metadata |
 | `src/` | Library modules and CLI binary (account, token, paths, adapter, commands) |
 | `tests/` | Test suite for credential management |
-| `docs/` | Behavioral requirements: features (FR-6–FR-18), invariants, CLI reference |
-| `unilang.commands.yaml` | YAML command metadata for 10 profile commands |
+| `docs/` | Behavioral requirements: features (FR-6–FR-20), invariants, CLI reference |
+| `unilang.commands.yaml` | YAML command metadata for 9 profile commands |
 | `run/` | Container runner: thin wrapper, config manifest, and test script. |
 | `verb/` | Shell scripts for each `do` protocol verb (build, test, clean, run, lint). |
 | `vision.md` | Crate vision, design decisions, and open problems |
@@ -106,7 +106,7 @@ Two names, same binary — both `claude_profile` and `clp` are installed:
 
 ```bash
 clp .accounts              # list saved accounts
-clp .usage                 # token usage statistics
+clp .usage                 # live rate-limit quota for all saved accounts
 clp .paths                 # show ~/.claude/ canonical paths
 ```
 
@@ -127,7 +127,7 @@ clp .paths                 # show ~/.claude/ canonical paths
 ./run/runbox .shell
 ```
 
-**Local (w3 required):**
+**Local (Docker-orchestrated):**
 ```bash
-./run/test
+./run/verb-run test
 ```

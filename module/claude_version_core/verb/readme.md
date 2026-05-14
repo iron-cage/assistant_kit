@@ -5,7 +5,7 @@ Shell scripts implementing the `do` protocol verbs for `claude_version_core` (ca
 | File | Responsibility |
 |------|---------------|
 | `build` | Compile project artifacts via `cargo build`. |
-| `test` | Run full test suite via `w3 .test level::3`. |
+| `test/` | Run full test suite; directory form (`default` → `l1` → `w3 .test level::3`). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `run` | Execute entry point binary — unavailable for this library crate. |
 | `lint` | Run static analysis and style checks via `cargo clippy`. |

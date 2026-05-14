@@ -49,7 +49,7 @@ Master index of all documentation entities and their instances for `claude_profi
 
 | File | Responsibility |
 |------|----------------|
-| [cli/commands.md](cli/commands.md) | Per-command specification for all 9 visible commands |
+| [cli/commands.md](cli/commands.md) | Per-command specification for all 11 commands (9 visible + 2 hidden) |
 | [cli/params.md](cli/params.md) | Per-parameter specification (name, format, dry, field-presence) |
 | [cli/parameter_groups.md](cli/parameter_groups.md) | Parameter grouping, shared behavior, and output-control groups |
 | [cli/parameter_interactions.md](cli/parameter_interactions.md) | Cross-parameter interaction rules |

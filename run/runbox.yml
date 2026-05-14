@@ -9,7 +9,7 @@ cmd_scope: --workspace
 cmd_filter: "!test(lim_it) & !binary(behavior)"
 
 # script invoked by `.test` inside the container (path relative to /workspace)
-test_script: run/test
+test_script: verb/test
 
 # optional binary plugin: name:container_path (binary found via 'which name' on host)
 bin_plugin: w3:/usr/local/bin/w3

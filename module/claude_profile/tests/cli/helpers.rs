@@ -27,6 +27,9 @@ pub fn run_cs( args : &[ &str ] ) -> Output
 
 /// Run the binary with explicit environment overrides (added to inherited env).
 ///
+/// `PRO` is always removed so the binary falls back to `HOME` for credential
+/// store resolution — prevents the host `$PRO` from overriding the test HOME.
+///
 /// # Panics
 ///
 /// Panics if the binary cannot be executed.
@@ -34,13 +37,22 @@ pub fn run_cs( args : &[ &str ] ) -> Output
 #[ must_use ]
 pub fn run_cs_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> Output
 {
+  // Fix(issue-pro-isolation): env_remove("PRO") prevents host $PRO from overriding the test HOME.
+  // Root cause: PersistPaths::resolve_root() prefers $PRO over $HOME when $PRO is an existing dir;
+  //   tests that only set HOME inherited $PRO from the runner, causing the binary to operate on
+  //   the real production credential store instead of the test-supplied temp dir.
+  // Pitfall: cmd.env("HOME", ...) alone is not enough for isolation — $PRO must also be removed.
   let mut cmd = Command::new( BIN );
   cmd.args( args );
+  cmd.env_remove( "PRO" );
   for ( k, v ) in env { cmd.env( k, v ); }
   cmd.output().expect( "failed to execute claude_profile binary" )
 }
 
-/// Run the binary with HOME removed entirely from the environment.
+/// Run the binary with HOME and PRO removed from the environment.
+///
+/// Removes both `HOME` and `PRO` so the binary cannot locate any credential
+/// store — tests the "no home directory configured" error path.
 ///
 /// # Panics
 ///
@@ -49,9 +61,14 @@ pub fn run_cs_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> Output
 #[ must_use ]
 pub fn run_cs_without_home( args : &[ &str ] ) -> Output
 {
+  // Fix(issue-pro-isolation): env_remove("PRO") prevents host $PRO from substituting for HOME.
+  // Root cause: removing $HOME but not $PRO left a silent fallback; the binary resolved the
+  //   credential store via $PRO and succeeded instead of failing as the test expected.
+  // Pitfall: Removing only $HOME is insufficient — $PRO takes priority and must also be removed.
   Command::new( BIN )
   .args( args )
   .env_remove( "HOME" )
+  .env_remove( "PRO" )
   .output()
   .expect( "failed to execute claude_profile binary" )
 }

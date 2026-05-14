@@ -17,7 +17,7 @@ The `_active` marker is read opportunistically for the `Account:` line if it exi
 
 **Field Presence Parameters:**
 
-Each output line is independently controlled by a boolean param. All default to `1` (shown) except `file::` and `saved::` which are opt-in (`0` by default).
+Each output line is independently controlled by a boolean param. All default to `1` (shown) except `file::`, `saved::`, `display_name::`, `role::`, `billing::`, and `model::` which are opt-in (`0` by default).
 
 | Param | Default | Output Line |
 |-------|---------|-------------|
@@ -29,9 +29,13 @@ Each output line is independently controlled by a boolean param. All default to 
 | `email::` | `1` | `Email:   {emailAddress_or_N/A}` |
 | `file::` | `0` | `File:    {credentials_file_path}` (opt-in) |
 | `saved::` | `0` | `Saved:   N account(s)` (opt-in, counts `*.credentials.json`) |
+| `display_name::` | `0` | `Display: {displayName_or_N/A}` (opt-in, from `~/.claude.json` oauthAccount) |
+| `role::` | `0` | `Role:    {organizationRole_or_N/A}` (opt-in, from `~/.claude.json` oauthAccount) |
+| `billing::` | `0` | `Billing: {billingType_or_N/A}` (opt-in, from `~/.claude.json` oauthAccount) |
+| `model::` | `0` | `Model:   {model_or_N/A}` (opt-in, from `~/.claude/settings.json`) |
 
-**`format::json`:** Returns all fields regardless of field-presence params:
-`{"subscription":"…","tier":"…","token":"…","expires_in_secs":N,"email":"…","account":"…","file":"…","saved":N}`.
+**`format::json`:** Returns all 12 fields regardless of field-presence params:
+`{"subscription":"…","tier":"…","token":"…","expires_in_secs":N,"email":"…","account":"…","file":"…","saved":N,"display_name":"…","role":"…","billing":"…","model":"…"}`.
 
 **`Account:` line:** Reads `_active` marker if it exists. Shows `N/A` when no `_active` marker is present (fresh install or uninitialised account store). Because `.account.save` writes `_active` on every successful save, the account name is always present after any save operation.
 
@@ -45,7 +49,7 @@ Each output line is independently controlled by a boolean param. All default to 
 
 - **AC-01**: `.credentials.status` exits 0 on a machine with only `~/.claude/.credentials.json` (no credential store).
 - **AC-02**: Default output (no params) shows all 6 default-on fields: account, sub, tier, token, expires, email.
-- **AC-03**: `format::json` returns valid JSON with subscription, tier, token, expires_in_secs, email, account, file, saved.
+- **AC-03**: `format::json` returns valid JSON with all 12 fields: subscription, tier, token, expires_in_secs, email, account, file, saved, display_name, role, billing, model.
 - **AC-04**: Absent `~/.claude/.credentials.json` exits 2 with error naming the file path.
 - **AC-05**: Missing or empty email and absent `_active` marker → shown as `N/A`.
 - **AC-06**: `sub::0 tier::0 expires::0 email::0 account::0` → only Token line shown.
@@ -58,5 +62,5 @@ Each output line is independently controlled by a boolean param. All default to 
 | source | `src/commands.rs` | `credentials_status_routine()` — reads credentials directly, no account store calls |
 | test | `tests/cli/credentials_test.rs::cred01–cred07` | Account-store independence, field presence, JSON, N/A cases |
 | doc | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account-store-aware status command |
-| doc | [cli/commands.md](../cli/commands.md#command--11-credentialsstatus) | CLI command specification |
+| doc | [cli/commands.md](../cli/commands.md#command--10-credentialsstatus) | CLI command specification |
 | doc | [tests/docs/cli/command/10_credentials_status.md](../../tests/docs/cli/command/10_credentials_status.md) | Test case planning |

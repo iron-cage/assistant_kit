@@ -7,21 +7,21 @@ Integration test specifications for the `.account.limits` command. See [commands
 | ID | Test Name | Category |
 |----|-----------|----------|
 | IT-1 | Active account — default output shows session, weekly-all, weekly-sonnet | Happy Path |
-| IT-4 | Active account — `format::json` returns parseable JSON | Format |
-| IT-5 | Named account — `name::work@acme.com` shows limits for that account | Named Account |
-| IT-6 | Named account — `name::ghost@example.com` unknown account exits 2 | Not Found |
-| IT-7 | No active account set — exits 2 with actionable error | Error Handling |
-| IT-8 | Data unavailable — exits 2 with actionable error (not silent 0) | Error Handling |
-| IT-9 | `name::` with non-email value — exits 1 (usage error, not 2) | Parameter Validation |
+| IT-3 | Active account — `format::json` returns parseable JSON | Format |
+| IT-4 | Named account — `name::work@acme.com` shows limits for that account | Named Account |
+| IT-5 | Named account — `name::ghost@example.com` unknown account exits 2 | Not Found |
+| IT-6 | No active account set — exits 2 with actionable error | Error Handling |
+| IT-7 | Data unavailable — exits 2 with actionable error (not silent 0) | Error Handling |
+| IT-8 | `name::` with non-email value — exits 1 (usage error, not 2) | Parameter Validation |
 
 ### Test Coverage Summary
 
 - Happy Path: 1 test (IT-1)
-- Format: 1 test (IT-4)
-- Named Account: 1 test (IT-5)
-- Not Found: 1 test (IT-6)
-- Error Handling: 2 tests (IT-7, IT-8)
-- Parameter Validation: 1 test (IT-9)
+- Format: 1 test (IT-3)
+- Named Account: 1 test (IT-4)
+- Not Found: 1 test (IT-5)
+- Error Handling: 2 tests (IT-6, IT-7)
+- Parameter Validation: 1 test (IT-8)
 
 **Total:** 7 integration tests
 
@@ -39,7 +39,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 
 ---
 
-### IT-4: Format — `format::json`
+### IT-3: Format — `format::json`
 
 - **Given:** Active account configured; rate-limit data available.
 - **When:** `clp .account.limits format::json`
@@ -49,7 +49,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 
 ---
 
-### IT-5: Named Account — `name::work@acme.com`
+### IT-4: Named Account — `name::work@acme.com`
 
 - **Given:** Two accounts configured: active is `personal@home.com`, named `work@acme.com` exists.
 - **When:** `clp .account.limits name::work@acme.com`
@@ -59,7 +59,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 
 ---
 
-### IT-6: Not Found — Unknown Named Account
+### IT-5: Not Found — Unknown Named Account
 
 - **Given:** `ghost@example.com` account does not exist in `~/.persistent/claude/credential/`.
 - **When:** `clp .account.limits name::ghost@example.com`
@@ -69,7 +69,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 
 ---
 
-### IT-7: Error Handling — No Active Account
+### IT-6: Error Handling — No Active Account
 
 - **Given:** No `_active` marker set, no active credentials.
 - **When:** `clp .account.limits`
@@ -79,7 +79,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 
 ---
 
-### IT-8: Error Handling — Data Unavailable
+### IT-7: Error Handling — Data Unavailable
 
 - **Given:** Active account configured but rate-limit data source unavailable.
 - **When:** `clp .account.limits`
@@ -89,7 +89,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 
 ---
 
-### IT-9: Parameter Validation — Non-email `name::` Value
+### IT-8: Parameter Validation — Non-email `name::` Value
 
 - **Given:** Any environment.
 - **When:** `clp .account.limits name::notanemail`

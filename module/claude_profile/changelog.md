@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`.usage` redesigned — live quota from Anthropic API** (FR-14, task 127)
+  - Replaced `stats-cache.json` file reading with live `claude_quota::fetch_rate_limits()` calls
+  - 8-column table: flag (`✓`/`→`/ ), Account, Expires, 5h Left, 5h Reset, 7d Left, 7d Reset, Status
+  - Active account marked `✓`; recommended next account (highest remaining 5h session quota) marked `→`
+  - Footer line: `Valid: X / Y   →  Next: name  (N% session left, token expires in Xh Ym)` when ≥2 valid
+  - `format::json` uses `session_5h_left_pct` / `weekly_7d_left_pct` naming (remaining, not consumed)
+  - `serde_json` dep removed; `claude_quota` and `data_fmt` added under `enabled` feature
+
+- **`.credentials.status` — live credential metadata** (FR-17)
+  - New command; reads `~/.claude/.credentials.json` without requiring account store setup
+  - Default-on fields: `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`
+  - Opt-in fields: `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::`
+  - `format::json` always includes all fields regardless of field-presence params
+  - Exit 2 when credential file absent or HOME unset
+
+- **`.account.limits` — single-account rate-limit utilization** (FR-18)
+  - New command; fetches live quota for the active or named account via `claude_quota`
+  - Shows session (5h) and weekly (7d) usage with consumed percentage and reset times
+  - Optional `name::` to query a non-active account by email; exit 2 for credential/network errors
+
+- **Rich OAuth metadata fields on `.credentials.status` and `.accounts`** (FR-20)
+  - `display_name::`, `role::`, `billing::` read from `~/.claude.json` `oauthAccount`
+  - `model::` reads from `~/.claude/settings.json`
+  - All four opt-in (default off); show `N/A` when source file absent or field missing
+
+### Changed
+
+- **`.account.switch` renamed to `.account.use`**
+  - Aligns with the ubiquitous-language term "use" (the account you switch *to* is the one in use)
+  - CLI alias `.account.switch` removed; callers must use `.account.use`
+
+### Added
+
 - **`PersistPaths` — persistent user storage path resolution** (FR-15)
   - New `persist.rs` module exposing `PersistPaths` struct (zero new dependencies)
   - Resolves `$PRO/persistent/claude_profile/` from env vars (stdlib only),

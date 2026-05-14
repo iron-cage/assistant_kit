@@ -12,7 +12,7 @@
 | 6 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::alice@oldco.com` |
 | 7 | `.token.status` | Show active OAuth token expiry classification | 2 | `clp .token.status` |
 | 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 1 | `clp .paths` |
-| 9 | `.usage` | Show 7-day token usage from stats-cache.json (interim) | 1 | `clp .usage` |
+| 9 | `.usage` | Show live rate-limit quota for all saved accounts | 1 | `clp .usage` |
 | 10 | `.credentials.status` | Show live credential metadata without account store dependency | 13 | `clp .credentials.status` |
 | 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 2 | `clp .account.limits name::alice@acme.com` |
 
@@ -55,6 +55,84 @@ Print the binary name and version string, then exit. This flag takes priority ov
 clp --version   # → "clp 0.12.3"
 clp -V          # → identical output
 ```
+
+---
+
+### Command :: 1. `.`
+
+Hidden alias that triggers `print_usage()` at the adapter layer — identical to typing `.help`.
+The `.` command is registered in the registry with `hidden_from_list(true)` so it never
+appears in its own output; its registered handler (`dot_routine`) is never invoked because
+the adapter intercepts `.` before the unilang pipeline.
+
+-- **Parameters:** none accepted (trailing `key::value` tokens are silently ignored)
+-- **Exit:** 0 (always)
+
+**Syntax:**
+
+```bash
+clp .
+```
+
+**Output (non-TTY, ANSI stripped):**
+
+```
+Usage: clp <command> [key::value ...]
+
+Manage Claude Code account credentials and token state.
+
+Commands:
+
+  Account management
+    .accounts             List all saved accounts
+    .account.save         Save current credentials as a named profile
+    .account.use          Switch the active account
+    .account.delete       Delete a saved account
+    .account.limits       Show rate-limit utilization (one account)
+
+  Status & info
+    .credentials.status   Show live credential metadata
+    .token.status         Show OAuth token expiry classification
+    .paths                Show all resolved ~/.claude/ paths
+    .usage                Show live quota for all saved accounts
+
+Options:
+  format::text|json     Output format (default: text)
+  dry::bool             Dry-run preview (no changes)
+  name::EMAIL           Account name
+
+Examples:
+  clp .accounts
+  clp .account.use name::alice@acme.com
+  clp .usage
+  clp .credentials.status
+```
+
+**Notes:**
+- On a TTY, group headers and command names are rendered in ANSI colour (yellow/bold-cyan); piped output strips ANSI codes automatically (`std::io::IsTerminal`).
+- Commands are grouped into "Account management" and "Status & info"; no per-command parameter listings are shown at this level of abstraction.
+- Per-command parameter details are available via `clp <command>.help` (e.g., `clp .accounts.help`).
+- Implemented in `src/lib.rs::cli::print_usage()`.
+
+---
+
+### Command :: 2. `.help`
+
+Pre-registered by the unilang `CommandRegistry`. At the adapter layer, `.help` (and bare `help`) set `needs_help=true` which intercepts execution before the unilang pipeline, causing `print_usage()` to run — producing output byte-identical to `clp .`.
+
+-- **Parameters:** none accepted (trailing `key::value` tokens are silently ignored)
+-- **Exit:** 0 (always)
+
+**Syntax:**
+
+```bash
+clp .help
+clp help
+```
+
+**Notes:**
+- Output is identical to `clp .` (both call `print_usage()`).
+- `clp .help` is the canonical help invocation; `clp .` is a convenience alias.
 
 ---
 
@@ -345,12 +423,10 @@ clp .paths format::json
 
 ### Command :: 9. `.usage`
 
-Shows 7-day token usage by reading `~/.claude/stats-cache.json` (written by Claude Code during local sessions). Reports per-model token totals for the window ending at `lastComputedDate`.
-
-> **Interim implementation**: Current output is based on `stats-cache.json` historical data. See [feature/009_token_usage.md](../feature/009_token_usage.md) for the target design (live per-account quota fetch via `anthropic-ratelimit-unified-*` headers, blocked on `data_fmt` workspace dependency).
+Fetches live rate-limit utilization for every saved account by reading `anthropic-ratelimit-unified-*` response headers via `claude_quota::fetch_rate_limits()`. Renders results as a `data_fmt` table with per-account Expires, 5h Left, 5h Reset, 7d Left, 7d Reset, and Status columns, plus a footer recommendation line.
 
 -- **Parameters:** [`format::`](params.md#parameter--2-format)
--- **Exit:** 0 (success) | 2 (runtime: `stats-cache.json` missing or malformed, HOME unset)
+-- **Exit:** 0 (success) | 2 (runtime: credential store unreadable, HOME unset)
 
 **Syntax:**
 
@@ -367,24 +443,32 @@ clp .usage format::json
 
 ```bash
 clp .usage
-# Usage — last 7 days (2026-05-05 → 2026-05-12)
+# Quota
 #
-#   Total            1,234,567
-#   sonnet-4-6       1,100,000   89.2%
-#   opus-4-6           134,567   10.8%
+#   Account          Expires     5h Left  5h Reset    7d Left  7d Reset     Status
+# ✓ i12@wbox.pro    in 7h 24m  86%      in 3h 19m  65%      in 4d 23h   allowed
+# → i6@wbox.pro     in 5h 02m  100%     in 4h 58m  88%      in 6d 14h   allowed
+#   i7@wbox.pro     EXPIRED    —        —           —        —            (missing accessToken)
+#
+# Valid: 2 / 3   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 02m)
 
 clp .usage format::json
-# {"period_days":7,"period_start":"2026-05-05","period_end":"2026-05-12","total_tokens":1234567,"by_model":[
-#   {"model":"sonnet-4-6","tokens":1100000,"pct":89.2},
-#   {"model":"opus-4-6","tokens":134567,"pct":10.8}
-# ]}
+# [
+#   {"account":"i12@wbox.pro","active":true,"expires_in_secs":26640,"session_5h_left_pct":86,"session_5h_resets_in_secs":11940,"weekly_7d_left_pct":65,"weekly_7d_resets_in_secs":432540,"status":"allowed"},
+#   {"account":"i6@wbox.pro","active":false,"expires_in_secs":18120,"session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_resets_in_secs":500040,"status":"allowed"},
+#   {"account":"i7@wbox.pro","active":false,"expires_in_secs":0,"error":"missing accessToken"}
+# ]
 ```
 
 **Notes:**
-- Data source: `~/.claude/stats-cache.json` — written by Claude Code when it processes local sessions.
-- `lastComputedDate` is used as the window endpoint; data may be stale if Claude Code hasn't run recently.
-- Model names are shortened: `claude-` prefix stripped, 8-digit date suffixes removed (e.g. `claude-haiku-4-5-20251001` → `haiku-4-5`).
-- **Target design** (when `data_fmt` is added to the workspace): live per-account quota table showing session (5h) and weekly (7d) utilization. See [feature/009_token_usage.md](../feature/009_token_usage.md).
+- Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
+- Flag column: `✓` for the active account, `→` for the recommended next account (highest remaining session quota among non-active accounts with valid quota data and a non-expired token), blank otherwise.
+- `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails. Shows "in Xh Ym" or "EXPIRED".
+- `5h Left` / `7d Left` show remaining quota percentage (100 − consumed). `5h Reset` / `7d Reset` are independent countdown columns.
+- Accounts with expired or missing `accessToken` show `—` for quota columns and a shortened error reason in Status; other accounts continue processing (per-account errors are non-fatal).
+- Footer "Valid: X / Y   →  Next: ..." appears when ≥2 accounts have valid quota data; omitted when 0 or 1.
+- Empty credential store exits 0 with `(no accounts configured)`.
+- See [feature/009_token_usage.md](../feature/009_token_usage.md) for full algorithm and AC criteria.
 
 ---
 

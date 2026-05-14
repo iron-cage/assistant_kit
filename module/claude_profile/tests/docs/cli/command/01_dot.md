@@ -11,20 +11,26 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 | IT-3 | `.` is hidden from help listing | Visibility |
 | IT-4 | `.` output lists all 9 visible commands; removed commands absent | Content |
 | IT-5 | `.` output excludes bare `.` from listing | Content |
-| IT-6 | `.` output includes usage line | Content |
+| IT-6 | `.` output includes usage line with `<command>` syntax | Content |
 | IT-7 | `.` with trailing unknown param still shows help | Robustness |
 | IT-8 | `.` output is stable across repeated invocations | Stability |
+| IT-9 | `.` output shows grouped section headers, not a flat list | Format |
+| IT-10 | `.` output contains no per-command parameter listings | Format |
+| IT-11 | `.` output includes Options section with format/dry/name hints | Content |
+| IT-12 | Piped `.` output contains no ANSI escape sequences | Output |
 
 ### Test Coverage Summary
 
 - Delegation: 1 test
 - Exit Code: 1 test
 - Visibility: 1 test
-- Content: 3 tests
+- Content: 4 tests
 - Robustness: 1 test
 - Stability: 1 test
+- Format: 2 tests
+- Output: 1 test
 
-**Total:** 8 integration tests
+**Total:** 12 integration tests
 
 ---
 
@@ -78,11 +84,11 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 
 ---
 
-### IT-6: `.` output includes usage line
+### IT-6: `.` output includes usage line with `<command>` syntax
 
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .`
-- **Then:** stdout contains `Usage: clp`
+- **Then:** stdout contains `Usage: clp <command>`
 - **Exit:** 0
 - **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
 
@@ -103,5 +109,45 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .` (run 3 times)
 - **Then:** all 3 stdout captures are byte-identical
+- **Exit:** 0
+- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+
+---
+
+### IT-9: `.` output shows grouped section headers, not a flat list
+
+- **Given:** clean environment, `clp` on PATH
+- **When:** `clp .`
+- **Then:** stdout contains both "Account management" and "Status & info" as group headers; commands appear indented under each group
+- **Exit:** 0
+- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+
+---
+
+### IT-10: `.` output contains no per-command parameter listings
+
+- **Given:** clean environment, `clp` on PATH
+- **When:** `clp .`
+- **Then:** stdout does NOT contain `[name::EMAIL]`, does NOT contain `format::text|json` within a command line (Options section mentions it, but command rows do not)
+- **Exit:** 0
+- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+
+---
+
+### IT-11: `.` output includes Options section with cross-command hints
+
+- **Given:** clean environment, `clp` on PATH
+- **When:** `clp .`
+- **Then:** stdout contains "Options:" followed by "format::text|json", "dry::bool", and "name::EMAIL" on separate lines
+- **Exit:** 0
+- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+
+---
+
+### IT-12: Piped `.` output contains no ANSI escape sequences
+
+- **Given:** clean environment, `clp` piped to a command (non-TTY stdout)
+- **When:** `clp .` (stdout captured as bytes, not a terminal)
+- **Then:** stdout contains no ESC (`\x1b`) characters; all text is plain ASCII
 - **Exit:** 0
 - **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)

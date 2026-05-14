@@ -37,7 +37,6 @@ required-features = [ "enabled" ]
 claude_core        = { workspace = true }
 claude_profile_core  = { workspace = true }
 error_tools          = { workspace = true, optional = true }
-serde_json           = { workspace = true, optional = true }
 unilang              = { workspace = true, optional = true }
 claude_quota         = { workspace = true, optional = true, features = [ "enabled" ] }
 data_fmt             = { workspace = true, optional = true }
@@ -49,12 +48,11 @@ tempfile.workspace = true
 [features]
 # Default: full CLI build (binary + all deps). Use --no-default-features for library-only.
 default = [ "enabled" ]
-# Master switch: activates CLI binary dependencies (error_tools, serde_json, unilang, claude_quota).
+# Master switch: activates CLI binary dependencies (error_tools, unilang, claude_quota, data_fmt).
 enabled = [
   "dep:error_tools",
   "error_tools/enabled",
   "error_tools/error_untyped",
-  "dep:serde_json",
   "dep:unilang",
   "dep:claude_quota",
   "dep:data_fmt",

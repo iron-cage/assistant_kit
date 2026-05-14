@@ -6,20 +6,21 @@ Integration test planning for the `.help` command. See [commands.md](../../../..
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | `.help` lists all registered visible commands | Content |
-| IT-2 | `.help` excludes hidden commands (only bare `.`) | Visibility |
-| IT-3 | `.help` shows usage line with binary name | Content |
+| IT-1 | `.help` lists all 9 registered visible commands; removed commands absent | Content |
+| IT-2 | `.help` excludes hidden commands (bare `.` and `.help` itself absent from listing) | Visibility |
+| IT-3 | `.help` shows usage line with `<command>` syntax | Content |
 | IT-4 | `.help` exits 0 | Exit Code |
-| IT-5 | `.help` output includes command purposes | Content |
-| IT-6 | `.help` output includes parameter hints per command | Content |
-| IT-7 | `.help` does not appear in its own listing | Visibility |
+| IT-5 | `.help` output shows grouped section headers, not a flat list | Format |
+| IT-6 | `.help` output contains no per-command parameter listings | Format |
+| IT-7 | `.help` output includes Options section with format/dry/name hints | Content |
 | IT-8 | `.help` output is stable across repeated invocations | Stability |
 
 ### Test Coverage Summary
 
-- Content: 4 tests
-- Visibility: 2 tests
+- Content: 3 tests
+- Visibility: 1 test
 - Exit Code: 1 test
+- Format: 2 tests
 - Stability: 1 test
 
 **Total:** 8 integration tests
@@ -28,9 +29,9 @@ Integration test planning for the `.help` command. See [commands.md](../../../..
 
 ### IT-1: `.help` lists all registered visible commands
 
-- **Given:** clean environment
+- **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help`
-- **Then:** Output contains all 9 registered command names.; all 9 registered command names present; removed commands absent
+- **Then:** stdout contains all 9 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.credentials.status`, `.token.status`, `.paths`, `.usage`); does NOT contain `.account.list` or `.account.status`
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/commands.md#command--2-help)
 
@@ -38,19 +39,19 @@ Integration test planning for the `.help` command. See [commands.md](../../../..
 
 ### IT-2: `.help` excludes hidden commands
 
-- **Given:** clean environment
+- **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help`
-- **Then:** The "Commands:" section lists exactly 9 entries; bare `.` and `.help` are both absent.; bare `.` absent; `.help` absent; exactly 9 command entries
+- **Then:** bare `.` is absent from the Commands section; `.help` itself does not appear as a listed command; exactly 9 entries present
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/commands.md#command--2-help)
 
 ---
 
-### IT-3: `.help` shows usage line with binary name
+### IT-3: `.help` shows usage line with `<command>` syntax
 
-- **Given:** clean environment
+- **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help`
-- **Then:** Output contains a line matching `Usage: clp <command> [params]`.; usage line with `clp` binary name is present
+- **Then:** stdout contains `Usage: clp <command>`
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/commands.md#command--2-help)
 
@@ -58,39 +59,39 @@ Integration test planning for the `.help` command. See [commands.md](../../../..
 
 ### IT-4: `.help` exits 0
 
-- **Given:** clean environment
+- **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help`
-- **Then:** Help text printed to stdout; exit code 0.
+- **Then:** process exits with code 0; stdout is non-empty; stderr is empty
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/commands.md#command--2-help)
 
 ---
 
-### IT-5: `.help` output includes command purposes
+### IT-5: `.help` output shows grouped section headers, not a flat list
 
-- **Given:** clean environment
+- **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help`
-- **Then:** Each command entry in the listing is followed by its purpose text as defined in the spec.; all 9 command purpose descriptions present in output
+- **Then:** stdout contains both "Account management" and "Status & info" as group headers; commands appear indented under each group
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/commands.md#command--2-help)
 
 ---
 
-### IT-6: `.help` output includes parameter hints per command
+### IT-6: `.help` output contains no per-command parameter listings
 
-- **Given:** clean environment
+- **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help`
-- **Then:** Commands that accept parameters show parameter names or placeholders (e.g., `name::`, `v::`, `format::`, `dry::`, `threshold::`).; parameter hints visible for commands that accept parameters
+- **Then:** stdout does NOT contain `[name::EMAIL]`, does NOT contain `[format::text|json]`, does NOT contain bracket-enclosed parameter syntax in command rows; the Commands section shows names and one-line descriptions only
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/commands.md#command--2-help)
 
 ---
 
-### IT-7: `.help` does not appear in its own listing
+### IT-7: `.help` output includes Options section with cross-command hints
 
-- **Given:** clean environment
+- **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help`
-- **Then:** Exactly 9 command entries in the "Commands:" section; `.help` is absent.; `.help` does not appear as a listed command; exactly 9 entries
+- **Then:** stdout contains "Options:" followed by "format::text|json", "dry::bool", and "name::EMAIL" on separate lines
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/commands.md#command--2-help)
 
@@ -98,8 +99,8 @@ Integration test planning for the `.help` command. See [commands.md](../../../..
 
 ### IT-8: `.help` output is stable across repeated invocations
 
-- **Given:** clean environment
+- **Given:** clean environment, `clp` on PATH
 - **When:** `clp .help` (run 3 times)
-- **Then:** All 3 invocations produce identical stdout.; on all runs; all 3 outputs are byte-identical
+- **Then:** all 3 stdout captures are byte-identical
 - **Exit:** 0
 - **Source:** [commands.md — .help](../../../../docs/cli/commands.md#command--2-help)

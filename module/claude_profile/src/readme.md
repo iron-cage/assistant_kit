@@ -9,8 +9,8 @@
 | `main.rs` | CLI binary entry point, 5-phase unilang pipeline. |
 | `adapter.rs` | Argv-to-unilang token conversion, alias expansion, validation. |
 | `output.rs` | Output format extraction, JSON string escaping, and duration display. |
-| `commands.rs` | CLI command handler functions for 12 named commands and the dot fallback. |
-| `usage.rs` | `.usage` command — parse stats-cache.json, format 7-day token report. |
+| `commands.rs` | CLI command handler routines for 11 commands (10 named + dot fallback). |
+| `usage.rs` | `.usage` command — fetch live rate-limit quota for all saved accounts. |
 | `persist.rs` | PersistPaths — persistent user storage path from $PRO/$HOME. |
 | `bin/` | Separate Cargo compilation units for each binary target. |
 | `bin/clp.rs` | `clp` short-alias binary entry point; delegates to `run_cli()`. |

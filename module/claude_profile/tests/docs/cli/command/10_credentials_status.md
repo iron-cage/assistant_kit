@@ -1,6 +1,6 @@
 # Test: `.credentials.status`
 
-Integration test planning for the `.credentials.status` command. See [commands.md](../../../../docs/cli/commands.md#command--11-credentialsstatus) for specification.
+Integration test planning for the `.credentials.status` command. See [commands.md](../../../../docs/cli/commands.md#command--10-credentialsstatus) for specification.
 
 ### Test Case Index
 
@@ -8,7 +8,7 @@ Integration test planning for the `.credentials.status` command. See [commands.m
 |----|-----------|----------|
 | IT-1 | No clp credential store — exits 0, default output | Account-Store Independence |
 | IT-2 | Default output with `.claude.json` — all 6 default-on fields shown | Field Presence (default) |
-| IT-3 | `format::json` — returns parseable JSON with all 8 fields | Output Format |
+| IT-3 | `format::json` — returns parseable JSON with all 12 fields | Output Format |
 | IT-4 | Missing `.credentials.json` — exits non-zero with actionable error | Error Handling |
 | IT-5 | Default output without `.claude.json` — email and account show N/A | Missing Optional File |
 | IT-6 | All default-on fields suppressed — only token line shown | Field Presence (suppress) |
@@ -24,6 +24,7 @@ Integration test planning for the `.credentials.status` command. See [commands.m
 - Missing Optional File: 1 test
 - Field Presence (suppress): 1 test
 - Field Presence (opt-in): 1 test
+- Stability: 1 test
 
 **Total:** 8 integration tests
 
@@ -49,11 +50,11 @@ Integration test planning for the `.credentials.status` command. See [commands.m
 
 ---
 
-### IT-3: `format::json` — returns parseable JSON with all 8 fields
+### IT-3: `format::json` — returns parseable JSON with all 12 fields
 
 - **Given:** Claude Code's `~/.claude/.credentials.json` present (subscriptionType="pro", rateLimitTier="standard", expiresAt=far future). Claude Code's `~/.claude/.claude.json` present (emailAddress="user@example.com").
 - **When:** `clp .credentials.status format::json`
-- **Then:** Valid JSON object on stdout containing all 8 keys, exit 0.; output is valid JSON with all 8 required fields (including opt-in `file` and `saved`)
+- **Then:** Valid JSON object on stdout containing all 12 keys: subscription, tier, token, expires_in_secs, email, account, file, saved, display_name, role, billing, model; exit 0.
 - **Exit:** 0
 - **Source:** [FR-17](../../../../docs/feature/012_live_credentials_status.md)
 
@@ -64,7 +65,7 @@ Integration test planning for the `.credentials.status` command. See [commands.m
 - **Given:** Claude Code's `~/.claude/` directory exists but `.credentials.json` is not present.
 - **When:** `clp .credentials.status`
 - **Then:** Error message on stderr referencing "credential", exit non-zero.; Exit non-zero; stderr references the missing credential file
-- **Exit:** 0
+- **Exit:** 2
 - **Source:** [FR-17](../../../../docs/feature/012_live_credentials_status.md)
 
 ---

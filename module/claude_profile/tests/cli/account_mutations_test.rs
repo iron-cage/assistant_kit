@@ -400,6 +400,20 @@ fn aw09_switch_copies_credentials()
 // ── AD: Account Delete ────────────────────────────────────────────────────────
 
 #[ test ]
+// Fix(issue-pro-isolation):
+// Root cause: run_cs_with_env() set HOME to a temp dir but inherited $PRO from the test runner;
+//   PersistPaths::resolve_root() prefers $PRO over $HOME when $PRO is an existing directory, so
+//   the binary operated on the real credential store ($PRO/.persistent/claude/credential) while
+//   the test wrote fixtures to and checked $HOME/.persistent/claude/credential — the two paths
+//   never overlapped.
+// Why Not Caught: tests were developed in a Docker container where $PRO is not set; the
+//   isolation failure is invisible there and only manifests in the host environment.
+// Fix Applied: added cmd.env_remove("PRO") to run_cs_with_env() in helpers.rs so that $PRO
+//   cannot leak into subprocesses when tests supply a custom HOME.
+// Prevention: any subprocess helper that isolates HOME must explicitly remove $PRO (and
+//   $USERPROFILE); document this as an invariant in helpers.rs.
+// Pitfall: cmd.env("HOME", ...) does not clear inherited vars — $PRO still takes priority until
+//   explicitly removed with env_remove().
 fn ad01_delete_inactive_removes_file()
 {
   let dir = TempDir::new().unwrap();

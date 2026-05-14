@@ -4,7 +4,7 @@
 
 | # | Parameter | Type | Default | Valid Values | Purpose | Used In |
 |---|-----------|------|---------|--------------|---------|---------|
-| 1 | `name::` | `AccountName` | Varies | Email address | Account email for switch/delete (required); save (optional, inferred from `~/.claude.json`); accounts/limits query (optional) | 5 cmds |
+| 1 | `name::` | `AccountName` | Varies | Email address | Account email for use/delete (required); save (optional, inferred from `~/.claude.json`); accounts/limits query (optional) | 5 cmds |
 | 2 | `format::` / `fmt::` | `OutputFormat` | `text` | `text`, `json` | Output format: `text` or `json` | 6 cmds |
 | 3 | `threshold::` | `WarningThreshold` | `3600` | Non-negative integer (seconds) | Seconds before token expiry to classify as ExpiringSoon | 1 cmd |
 | 4 | `dry::` | `bool` | `0` | `0`, `1`, `false`, `true` | Print intended action without executing | 3 cmds |

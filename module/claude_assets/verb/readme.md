@@ -5,7 +5,7 @@ Shell scripts implementing the `do` protocol verbs for `claude_assets` (cargo ec
 | File | Responsibility |
 |------|---------------|
 | `build` | Compile project artifacts via `cargo build`. |
-| `test` | Run full test suite via `w3 .test level::3`. |
+| `test/` | Run full test suite; directory form (`default` → `l1` → `w3 .test level::3`). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `run` | Execute the `cla` binary entry point via `cargo run`. |
 | `lint` | Run static analysis and style checks via `cargo clippy`. |

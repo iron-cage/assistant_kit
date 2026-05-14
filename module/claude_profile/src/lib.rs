@@ -160,7 +160,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                  vec![ nam(), dry() ],      Box::new( account_delete_routine ) );
   reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr() ],      Box::new( token_status_routine   ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",              vec![ fmt() ],             Box::new( paths_routine          ) );
-  reg_cmd( registry, ".usage",          "Show 7-day token usage from stats-cache.json",                    vec![ fmt() ],             Box::new( usage_routine          ) );
+  reg_cmd( registry, ".usage",          "Show live rate-limit quota for all saved accounts",               vec![ fmt() ],             Box::new( usage_routine          ) );
 }
 
 #[ cfg( feature = "enabled" ) ]
@@ -248,51 +248,62 @@ mod cli
     registry
   }
 
-  /// Print Claude Code-style structured usage to stdout.
+  /// Print structured usage to stdout with ANSI colours on TTYs.
   ///
-  /// Mirrors the format Claude Code itself uses: header, description, Commands
-  /// table, Options table, and Examples block — binary name is detected at
-  /// runtime so both `claude_profile` and `clp` show the correct invocation.
+  /// Layout:
+  ///   header  — bold usage line
+  ///   Commands — two groups, each with name (bold cyan, 20-wide) + description
+  ///   Options  — 3 cross-command `key::value` hints
+  ///   Examples — canonical invocations
+  ///
+  /// Colour is suppressed when stdout is not a terminal (e.g. pipes, scripts).
   pub( super ) fn print_usage( binary : &str )
   {
-    // Column layout (measured from line start, 0-based):
-    //   col  0-1  : 2-space indent
-    //   col  2-18 : command name, padded to 17 chars
-    //   col 19-46 : parameters  (28 chars for read cmds, 24 for write cmds)
-    //   col 47-49 : gap (3+ spaces, making descriptions land on col 50)
-    //   col 50+   : description
-    //
-    // Options column: names padded to 17 chars → descriptions at col 20.
-    println!( "Usage: {binary} [command] [key::value ...]" );
+    use std::io::IsTerminal;
+    let tty = std::io::stdout().is_terminal();
+    let bold = if tty { "\x1b[1m"    } else { "" };
+    let cyan = if tty { "\x1b[1;36m" } else { "" };
+    let yell = if tty { "\x1b[33m"   } else { "" };
+    let dim  = if tty { "\x1b[2m"    } else { "" };
+    let rst  = if tty { "\x1b[0m"    } else { "" };
+
+    // Command row: 4-space indent, name left-padded to 20, then description.
+    // `.credentials.status` = 19 chars — longest name; +1 pad → 1-space gap.
+    let cmd = | name : &str, desc : &str |
+      println!( "    {cyan}{name:<20}{rst}  {desc}" );
+    let grp = | title : &str |
+      println!( "\n  {yell}{bold}{title}{rst}" );
+
+    println!( "{bold}Usage:{rst} {binary} <command> [key::value ...]" );
     println!();
     println!( "Manage Claude Code account credentials and token state." );
     println!();
-    println!( "Commands:" );
-    println!( "  .accounts            [name::EMAIL] [active::0|1] [sub::0|1] [tier::0|1] [expires::0|1] [email::0|1] [display_name::0|1] [role::0|1] [billing::0|1] [model::0|1] [format::text|json]   List accounts with field-presence control" );
-    println!( "  .account.save        [name::EMAIL] [dry::bool]                        Save current credentials as named account (name inferred from emailAddress when absent)" );
-    println!( "  .account.use         name::EMAIL [dry::bool]                          Switch active account" );
-    println!( "  .account.delete      name::EMAIL [dry::bool]                          Delete a saved account" );
-    println!( "  .token.status        [format::text|json] [threshold::SECS]              Show OAuth token expiry status" );
-    println!( "  .paths               [format::text|json]                               Show all ~/.claude/ canonical paths" );
-    println!( "  .usage               [format::text|json]                               Show quota utilization for all accounts" );
-    println!( "  .credentials.status  [format::text|json] [field::0|1] ...             Show live credentials (no account store needed)" );
-    println!( "  .account.limits      [name::EMAIL] [format::text|json]                Show rate-limit utilization" );
+    println!( "{bold}Commands:{rst}" );
+
+    grp( "Account management" );
+    cmd( ".accounts",           "List all saved accounts"                      );
+    cmd( ".account.save",       "Save current credentials as a named profile"  );
+    cmd( ".account.use",        "Switch the active account"                    );
+    cmd( ".account.delete",     "Delete a saved account"                       );
+    cmd( ".account.limits",     "Show rate-limit utilization (one account)"    );
+
+    grp( "Status & info" );
+    cmd( ".credentials.status", "Show live credential metadata"                );
+    cmd( ".token.status",       "Show OAuth token expiry classification"        );
+    cmd( ".paths",              "Show all resolved ~/.claude/ paths"            );
+    cmd( ".usage",              "Show live quota for all saved accounts"        );
+
     println!();
-    println!( "Options:" );
-    println!( "  format::text|json   Output format (default: text)" );
-    println!( "  dry::bool           Preview without applying" );
-    println!( "  name::EMAIL         Account name" );
+    println!( "{bold}Options:{rst}" );
+    println!( "  {cyan}{:<18}{rst}  Output format (default: text)", "format::text|json" );
+    println!( "  {cyan}{:<18}{rst}  Dry-run preview (no changes)",  "dry::bool"         );
+    println!( "  {cyan}{:<18}{rst}  Account name",                   "name::EMAIL"       );
     println!();
-    println!( "Examples:" );
-    println!( "  {binary} .accounts" );
-    println!( "  {binary} .accounts active::0 sub::0" );
-    println!( "  {binary} .accounts name::alice@acme.com" );
-    println!( "  {binary} .account.use name::alice@acme.com" );
-    println!( "  {binary} .account.use name::alice@acme.com dry::true" );
-    println!( "  {binary} .token.status format::json" );
-    println!( "  {binary} .paths" );
-    println!( "  {binary} .usage" );
-    println!( "  {binary} .credentials.status" );
+    println!( "{bold}Examples:{rst}" );
+    println!( "  {dim}{binary} .accounts{rst}" );
+    println!( "  {dim}{binary} .account.use name::alice@acme.com{rst}" );
+    println!( "  {dim}{binary} .usage{rst}" );
+    println!( "  {dim}{binary} .credentials.status{rst}" );
   }
 
   /// Run the full unilang pipeline for the given argv.

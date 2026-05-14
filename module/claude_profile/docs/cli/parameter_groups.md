@@ -49,7 +49,7 @@ All members pass. No false inclusions.
 
 **Why NOT These Parameters**
 
-- **`name::`** — Identifies a target entity, not output style. Mutation commands (save, switch, delete) don't produce formatted output in the Output Control sense.
+- **`name::`** — Identifies a target entity, not output style. Mutation commands (save, use, delete) don't produce formatted output in the Output Control sense.
 - **`threshold::`** — Modifies classification logic (when to report ExpiringSoon), not how results are displayed. A classification parameter, not a presentation parameter.
 - **`dry::`** — Controls whether mutation happens, not how output is formatted. Orthogonal concern (execution control vs output control).
 - **Field Presence params** — Control which individual output lines appear (field selection), not how the output is serialized.

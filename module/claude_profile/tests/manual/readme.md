@@ -37,7 +37,7 @@
    let accounts = claude_profile::account::list(&credential_store).expect("list");
    for a in &accounts { println!("{} active={}", a.name, a.is_active); }
    ```
-   Verify: `work@acme.com` appears with `is_active = false` (no `_active` marker written yet).
+   Verify: `work@acme.com` appears with `is_active = true` (`save()` writes the `_active` marker).
 
 4. **Switch to saved account**
    ```rust
@@ -77,9 +77,9 @@ step. No partial writes or missing files.
 **Trigger:** After any change to `fetch_rate_limits()`, `account_limits_routine()`,
 or the format helpers in `src/commands.rs`.
 
-**Automated tests (do not re-run manually):** IT-1, IT-2, IT-3, IT-5 are automated
-live tests in `tests/cli/account_limits_test.rs` (lim_it1, lim_it2, lim_it3,
-lim_it5). They require real credentials and will fail without `claude auth login`.
+**Automated tests (do not re-run manually):** IT-1 (default text) and IT-3 (`format::json`)
+are automated live tests in `tests/cli/account_limits_test.rs` (lim_it1, lim_it3).
+They require real credentials and will fail without `claude auth login`.
 
 **Manual-only tests (require additional setup):**
 

@@ -320,8 +320,8 @@
 
 - name: ".usage"
   namespace: ""
-  description: "Show 7-day token usage from stats-cache.json"
-  hint: "Show token usage"
+  description: "Show live rate-limit quota for all saved accounts"
+  hint: "Show live quota"
   version: "1.0.0"
   status: "stable"
   aliases: []

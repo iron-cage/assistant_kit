@@ -50,4 +50,4 @@ All methods return `PathBuf` computed from `HOME`. No filesystem access is perfo
 | source | `src/paths.rs` | `ClaudePaths` struct and all path methods |
 | source | `src/commands.rs` | `paths_routine()` — CLI handler |
 | test | `tests/paths_tests.rs` | All path methods return correct values |
-| doc | [cli/commands.md](../cli/commands.md#command--9-paths) | CLI command specification |
+| doc | [cli/commands.md](../cli/commands.md#command--8-paths) | CLI command specification |
