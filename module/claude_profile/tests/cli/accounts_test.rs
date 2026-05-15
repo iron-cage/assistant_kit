@@ -25,7 +25,7 @@
 //! | acc03 | `acc03_empty_store_shows_advisory` | empty store → advisory message, exit 0 | P |
 //! | acc04 | `acc04_name_scopes_to_single_block` | `name::EMAIL` → only that account's block | P |
 //! | acc05 | `acc05_name_not_found_exits_2` | valid but unknown name → exit 2 | N |
-//! | acc06 | `acc06_name_invalid_exits_1` | `name::notanemail` → exit 1 | N |
+//! | acc06 | `acc06_name_invalid_exits_1` | `name::a/b` (path-unsafe prefix) → exit 1 | N |
 //! | acc07 | `acc07_field_presence_suppresses_lines` | `sub::0 tier::0` → Sub/Tier absent | P |
 //! | acc08 | `acc08_all_fields_off_bare_names` | all fields off → bare name list | P |
 //! | acc09 | `acc09_json_format_array` | `format::json` → valid JSON array | P |
@@ -50,12 +50,16 @@
 //! | acc28 | `acc28_save_succeeds_without_settings_json` | save OK when `settings.json` absent but `.claude.json` present | P |
 //! | acc29 | `acc29_accounts_positional_bare_arg` | positional email → shows single account block | P |
 //! | acc30 | `acc30_accounts_prefix_resolves` | prefix `alice` resolves to `alice@acme.com` | P |
+//! | acc31 | `acc31_accounts_shows_current_yes_no` | live creds match work@acme.com → `Current: yes` on work, `Current: no` on alice | P |
+//! | acc32 | `acc32_accounts_suppresses_current_when_creds_absent` | no live creds → no `Current:` line | P |
+//! | acc33 | `acc33_accounts_current_param_and_json` | `current::0` → no `Current:`; `format::json` → `is_current` field | P |
+//! | acc34 | `acc34_accounts_table_format` | `format::table` → exit 0, output contains column headers | P |
 
 use crate::helpers::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
-  write_account, write_credentials, write_claude_json_full, write_settings_json,
-  write_account_claude_json, write_account_settings_json,
+  write_account, write_account_with_token, write_credentials, write_claude_json_full, write_settings_json,
+  write_account_claude_json, write_account_settings_json, write_live_credentials_with_token,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
@@ -242,12 +246,14 @@ fn acc05_name_not_found_exits_2()
 #[ test ]
 fn acc06_name_invalid_exits_1()
 {
-  // IT-6: invalid email format → exit 1.
+  // IT-6: path-unsafe prefix chars → ArgumentTypeMismatch (exit 1).
+  // With resolve_account_name(): bare names (no @) are prefix queries, not email validations.
+  // Path-unsafe chars (/, \, *) are still rejected with exit 1 before prefix matching runs.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   std::fs::create_dir_all( dir.path().join( ".claude" ) ).unwrap();
 
-  let out = run_cs_with_env( &[ ".accounts", "name::notanemail" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".accounts", "name::a/b" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
 }
 
@@ -946,4 +952,150 @@ fn acc30_accounts_prefix_resolves()
   let text = stdout( &out );
   assert!( text.contains( "alice@acme.com" ), "prefix alice must resolve to alice@acme.com, got:\n{text}" );
   assert!( !text.contains( "work@acme.com" ), "must not show work@acme.com, got:\n{text}" );
+}
+
+// ── acc31 ─────────────────────────────────────────────────────────────────────
+
+/// acc31 (IT-26): live creds `accessToken` matches `work@acme.com` → `Current: yes` on that
+/// account and `Current: no` on `alice@acme.com`.
+///
+/// Both saved accounts have `accessToken` fields (via `write_account_with_token`) so
+/// `detect_current_account()` can compare them against the live creds.
+#[ test ]
+fn acc31_accounts_shows_current_yes_no()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "work@acme.com",  "tok-work",  false );
+  write_account_with_token( dir.path(), "alice@acme.com", "tok-alice", false );
+  write_live_credentials_with_token( dir.path(), "tok-work" );
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  // Each account block: find work@ and alice@ sections and verify Current: line.
+  let lines : Vec< &str > = text.lines().collect();
+  let work_idx  = lines.iter().position( |l| l.contains( "work@acme.com"  ) );
+  let alice_idx = lines.iter().position( |l| l.contains( "alice@acme.com" ) );
+
+  let work_idx  = work_idx.expect( "work@acme.com not found in output" );
+  let alice_idx = alice_idx.expect( "alice@acme.com not found in output" );
+
+  // Find Current: line near each account header (within the next 10 lines).
+  let work_block  = &lines[ work_idx  ..( work_idx  + 10 ).min( lines.len() ) ];
+  let alice_block = &lines[ alice_idx ..( alice_idx + 10 ).min( lines.len() ) ];
+
+  assert!(
+    work_block.iter().any( |l| l.contains( "Current:" ) && l.contains( "yes" ) ),
+    "work@acme.com block must have 'Current: yes', got block:\n{}", work_block.join( "\n" ),
+  );
+  assert!(
+    alice_block.iter().any( |l| l.contains( "Current:" ) && l.contains( "no" ) ),
+    "alice@acme.com block must have 'Current: no', got block:\n{}", alice_block.join( "\n" ),
+  );
+}
+
+// ── acc32 ─────────────────────────────────────────────────────────────────────
+
+/// acc32 (IT-27): no live credentials file → `Current:` line is suppressed entirely.
+///
+/// When `~/.claude/.credentials.json` is absent, the detection algorithm cannot match
+/// any account and the `Current:` line must not appear at all (not even `Current: no`).
+#[ test ]
+fn acc32_accounts_suppresses_current_when_creds_absent()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",  "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@acme.com", "max", "tier4",    FAR_FUTURE_MS, false );
+  // Deliberately do NOT write live credentials file.
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "Current:" ),
+    "Current: line must be absent when creds file is missing, got:\n{text}",
+  );
+}
+
+// ── acc33 ─────────────────────────────────────────────────────────────────────
+
+/// acc33 (IT-28): two sub-tests for the `current::` parameter and JSON `is_current` field.
+///
+/// (a) `current::0` suppresses the `Current:` line even when live creds are present.
+/// (b) `format::json` output includes an `is_current` boolean field per account object.
+#[ test ]
+fn acc33_accounts_current_param_and_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "alice@acme.com", "tok-alice", false );
+  write_live_credentials_with_token( dir.path(), "tok-alice" );
+
+  // (a) current::0 must suppress the Current: line.
+  let out_off = run_cs_with_env( &[ ".accounts", "current::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_off, 0 );
+  let text_off = stdout( &out_off );
+  assert!(
+    !text_off.contains( "Current:" ),
+    "current::0 must suppress Current: line, got:\n{text_off}",
+  );
+
+  // (b) format::json must include is_current boolean field.
+  let out_json = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_json, 0 );
+  let json = stdout( &out_json );
+  assert!(
+    json.contains( "\"is_current\"" ),
+    "JSON output must include is_current field, got:\n{json}",
+  );
+}
+
+// ── acc34 ─────────────────────────────────────────────────────────────────────
+
+/// acc34 (IT-34): `format::table` renders a `data_fmt` ASCII table with column headers.
+///
+/// # Root Cause
+/// Task 131 adds `OutputFormat::Table` to `.accounts`. Before implementation this
+/// exits 1 with `"unknown format 'table'"`.
+///
+/// # Why Not Caught
+/// New feature; no prior test existed.
+///
+/// # Fix Applied
+/// Added `OutputFormat::Table` variant to `output.rs`, `"table"` parse arm in
+/// `from_cmd()`, and `render_accounts_table()` in `commands.rs`.
+///
+/// # Prevention
+/// Covered by this test: two accounts saved; `format::table` asserted to exit 0
+/// and contain `Account` header (column header from `data_fmt` table).
+///
+/// # Pitfall
+/// `format::table` for non-`.accounts` commands must exit 1. Only `.accounts`
+/// accepts this format; all other routines reject with `ArgumentTypeMismatch`.
+#[ test ]
+fn acc34_accounts_table_format()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "work@acme.com",  "max", "default", FAR_FUTURE_MS, true );
+
+  let out  = run_cs_with_env( &[ ".accounts", "format::table" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Account" ),
+    "format::table must include 'Account' column header, got:\n{text}",
+  );
+  assert!(
+    text.contains( "alice@acme.com" ),
+    "format::table must include alice@acme.com in output, got:\n{text}",
+  );
+  assert!(
+    text.contains( "work@acme.com" ),
+    "format::table must include work@acme.com in output, got:\n{text}",
+  );
 }

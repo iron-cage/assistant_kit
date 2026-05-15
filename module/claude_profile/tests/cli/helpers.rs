@@ -382,6 +382,26 @@ pub fn write_account_with_token(
   }
 }
 
+/// Write `~/.claude/.credentials.json` with an `accessToken` field.
+///
+/// Used to simulate a live authenticated session for `detect_current_account()` tests.
+/// The credential JSON includes `accessToken` so the detection algorithm can match it
+/// against saved account credential files.
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_live_credentials_with_token( home : &std::path::Path, token : &str )
+{
+  let claude_dir = home.join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  let content = format!(
+    r#"{{"accessToken":"{token}","oauthAccount":{{"subscriptionType":"max","rateLimitTier":"default"}},"expiresAt":{FAR_FUTURE_MS}}}"#,
+  );
+  std::fs::write( claude_dir.join( ".credentials.json" ), content ).unwrap();
+}
+
 /// Read the active OAuth access token from the real HOME credentials file.
 ///
 /// Returns `None` if HOME is unset, the credentials file is absent, or

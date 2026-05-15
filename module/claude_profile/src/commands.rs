@@ -17,6 +17,7 @@ use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 
 use claude_quota::RateLimitData;
+use data_fmt::{ RowBuilder, TableFormatter, Format };
 use crate::output::{ OutputFormat, OutputOptions, json_escape, format_duration_secs };
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -166,6 +167,35 @@ fn resolve_account_name( raw : &str, store : &std::path::Path ) -> Result< Strin
   }
 }
 
+/// Detect which saved account matches the live session token.
+///
+/// Reads `accessToken` from `live_creds_path` (graceful degradation: returns `None`
+/// on any I/O or parse error). Compares by string equality against each saved account's
+/// stored `accessToken` in `credential_store`; returns `Some(name)` on the first match,
+/// `None` if no match.
+fn detect_current_account(
+  accounts         : &[ crate::account::Account ],
+  live_creds_path  : &std::path::Path,
+  credential_store : &std::path::Path,
+) -> Option< String >
+{
+  let content    = std::fs::read_to_string( live_creds_path ).ok()?;
+  let live_token = crate::account::parse_string_field( &content, "accessToken" )?;
+  for acct in accounts
+  {
+    let path    = credential_store.join( format!( "{}.credentials.json", acct.name ) );
+    let Ok( s ) = std::fs::read_to_string( &path ) else { continue };
+    if let Some( token ) = crate::account::parse_string_field( &s, "accessToken" )
+    {
+      if token == live_token
+      {
+        return Some( acct.name.clone() );
+      }
+    }
+  }
+  None
+}
+
 /// Read subscription type, rate limit tier, email, display, role, and billing from live credential files.
 ///
 /// Called by `credentials_status_routine()` to read subscription, tier, email, display, role, and billing.
@@ -271,6 +301,13 @@ fn derive_token_state(
 pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts             = OutputOptions::from_cmd( &cmd )?;
+  if opts.is_table()
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "format::table is only supported by .accounts".to_string(),
+    ) );
+  }
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
 
@@ -361,6 +398,8 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
       if show_model        { let _ = writeln!( out, "Model:   {model}"   ); }
       out
     }
+    // Table rejected above via is_table() guard; unreachable.
+    OutputFormat::Table => String::new(),
   };
   Ok( OutputData::new( content, "text" ) )
 }
@@ -375,6 +414,8 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
 fn render_accounts_text(
   accounts          : &[ &crate::account::Account ],
   show_active       : bool,
+  show_current      : bool,
+  current_name      : Option< &str >,
   show_sub          : bool,
   show_tier         : bool,
   show_expires      : bool,
@@ -386,7 +427,9 @@ fn render_accounts_text(
 ) -> String
 {
   if accounts.is_empty() { return "(no accounts configured)\n".to_string(); }
-  let any_field = show_active || show_sub || show_tier || show_expires || show_email
+  // show_current is false when current::0 or when creds file is unreadable (current_name=None).
+  let emit_current = show_current && current_name.is_some();
+  let any_field = show_active || emit_current || show_sub || show_tier || show_expires || show_email
     || show_display_name || show_role || show_billing || show_model;
   let mut out   = String::new();
   let last_idx  = accounts.len() - 1;
@@ -400,6 +443,11 @@ fn render_accounts_text(
       {
         let active_str = if a.is_active { "yes" } else { "no" };
         let _ = writeln!( out, "  Active:  {active_str}" );
+      }
+      if emit_current
+      {
+        let current_str = if current_name == Some( a.name.as_str() ) { "yes" } else { "no" };
+        let _ = writeln!( out, "  Current: {current_str}" );
       }
       if show_sub
       {
@@ -458,6 +506,93 @@ fn render_accounts_text(
   out
 }
 
+/// Render a slice of accounts as a `data_fmt` ASCII table.
+///
+/// Columns: flag (active/current marker), Account, Active, Sub, Tier, Expires.
+/// `current_name` is matched against account names to populate the flag column;
+/// `✓` = current, `*` = active-but-not-current, blank otherwise.
+/// Render a slice of accounts as a JSON array string.
+fn render_accounts_json( accounts : &[ &crate::account::Account ], current_name : Option< &str > ) -> String
+{
+  if accounts.is_empty() { return "[]\n".to_string(); }
+  let entries : Vec< String > = accounts.iter().map( |a|
+  {
+    let is_current = current_name == Some( a.name.as_str() );
+    format!(
+      "{{\"name\":\"{}\",\"is_active\":{},\"is_current\":{},\"subscription_type\":\"{}\",\
+       \"rate_limit_tier\":\"{}\",\"expires_at_ms\":{},\"email\":\"{}\",\
+       \"display_name\":\"{}\",\"role\":\"{}\",\"billing\":\"{}\",\"model\":\"{}\"}}",
+      json_escape( &a.name ),
+      a.is_active,
+      is_current,
+      json_escape( &a.subscription_type ),
+      json_escape( &a.rate_limit_tier ),
+      a.expires_at_ms,
+      json_escape( &a.email ),
+      json_escape( &a.display_name ),
+      json_escape( &a.role ),
+      json_escape( &a.billing ),
+      json_escape( &a.model ),
+    )
+  } ).collect();
+  format!( "[{}]\n", entries.join( "," ) )
+}
+
+fn render_accounts_table(
+  accounts     : &[ &crate::account::Account ],
+  current_name : Option< &str >,
+) -> String
+{
+  use std::time::{ SystemTime, UNIX_EPOCH };
+
+  if accounts.is_empty() { return "(no accounts configured)\n".to_string(); }
+
+  let now_secs = SystemTime::now()
+    .duration_since( UNIX_EPOCH )
+    .unwrap_or_default()
+    .as_secs();
+
+  let headers = vec![
+    String::new(),
+    "Account".to_string(),
+    "Active".to_string(),
+    "Sub".to_string(),
+    "Tier".to_string(),
+    "Expires".to_string(),
+  ];
+
+  let mut builder = RowBuilder::new( headers );
+  for acct in accounts
+  {
+    let is_current = current_name == Some( acct.name.as_str() );
+    let flag_cell  = if is_current { "✓".to_string() }
+      else if acct.is_active { "*".to_string() }
+      else { String::new() };
+
+    let remaining    = ( acct.expires_at_ms / 1000 ).saturating_sub( now_secs );
+    let expires_cell = if remaining == 0
+    {
+      "EXPIRED".to_string()
+    }
+    else
+    {
+      format!( "in {}", format_duration_secs( remaining ) )
+    };
+
+    builder = builder.add_row( vec![
+      flag_cell.into(),
+      acct.name.clone().into(),
+      if acct.is_active { "yes" } else { "no" }.into(),
+      acct.subscription_type.clone().into(),
+      acct.rate_limit_tier.clone().into(),
+      expires_cell.into(),
+    ] );
+  }
+
+  let view  = builder.build_view();
+  Format::format( &TableFormatter::new(), &view ).unwrap_or_default()
+}
+
 /// `.accounts` — list all saved accounts with field-presence control.
 ///
 /// Without `name::`: lists every account in the credential store as an indented
@@ -488,8 +623,9 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
   {
     let content = match opts.format
     {
-      OutputFormat::Json => "[]\n".to_string(),
-      OutputFormat::Text => "(no accounts configured)\n".to_string(),
+      OutputFormat::Json  => "[]\n".to_string(),
+      OutputFormat::Text
+      | OutputFormat::Table => "(no accounts configured)\n".to_string(),
     };
     return Ok( OutputData::new( content, "text" ) );
   };
@@ -529,6 +665,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
   };
 
   let show_active       = matches!( cmd.arguments.get( "active"       ), Some( Value::Boolean( true ) ) | None );
+  let show_current      = matches!( cmd.arguments.get( "current"      ), Some( Value::Boolean( true ) ) | None );
   let show_sub          = matches!( cmd.arguments.get( "sub"          ), Some( Value::Boolean( true ) ) | None );
   let show_tier         = matches!( cmd.arguments.get( "tier"         ), Some( Value::Boolean( true ) ) | None );
   let show_expires      = matches!( cmd.arguments.get( "expires"      ), Some( Value::Boolean( true ) ) | None );
@@ -537,44 +674,27 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
   let show_role         = matches!( cmd.arguments.get( "role"         ), Some( Value::Boolean( true ) ) );
   let show_billing      = matches!( cmd.arguments.get( "billing"      ), Some( Value::Boolean( true ) ) );
   let show_model        = matches!( cmd.arguments.get( "model"        ), Some( Value::Boolean( true ) ) );
+
+  // Detect which account matches the live session token (graceful: None when creds absent).
+  let live_creds = crate::ClaudePaths::new()
+    .map_or_else( || std::path::PathBuf::from( "/dev/null" ), |p| p.credentials_file() );
+  let current_name = detect_current_account( &all_accounts, &live_creds, &credential_store );
+
   let content = match opts.format
   {
-    OutputFormat::Json =>
-    {
-      if accounts.is_empty()
-      {
-        "[]\n".to_string()
-      }
-      else
-      {
-        let entries : Vec< String > = accounts.iter().map( |a|
-        {
-          format!(
-            "{{\"name\":\"{}\",\"is_active\":{},\"subscription_type\":\"{}\",\
-             \"rate_limit_tier\":\"{}\",\"expires_at_ms\":{},\"email\":\"{}\",\
-             \"display_name\":\"{}\",\"role\":\"{}\",\"billing\":\"{}\",\"model\":\"{}\"}}",
-            json_escape( &a.name ),
-            a.is_active,
-            json_escape( &a.subscription_type ),
-            json_escape( &a.rate_limit_tier ),
-            a.expires_at_ms,
-            json_escape( &a.email ),
-            json_escape( &a.display_name ),
-            json_escape( &a.role ),
-            json_escape( &a.billing ),
-            json_escape( &a.model ),
-          )
-        } ).collect();
-        format!( "[{}]\n", entries.join( "," ) )
-      }
-    }
+    OutputFormat::Json => render_accounts_json( &accounts, current_name.as_deref() ),
     OutputFormat::Text =>
     {
       render_accounts_text(
         &accounts,
-        show_active, show_sub, show_tier, show_expires, show_email,
+        show_active, show_current, current_name.as_deref(),
+        show_sub, show_tier, show_expires, show_email,
         show_display_name, show_role, show_billing, show_model,
       )
+    }
+    OutputFormat::Table =>
+    {
+      render_accounts_table( &accounts, current_name.as_deref() )
     }
   };
   Ok( OutputData::new( content, "text" ) )
@@ -695,6 +815,13 @@ fn format_rate_limits_json( data : &RateLimitData ) -> String
 pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts             = OutputOptions::from_cmd( &cmd )?;
+  if opts.is_table()
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "format::table is only supported by .accounts".to_string(),
+    ) );
+  }
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
 
@@ -729,8 +856,10 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
     .map_err( |e| ErrorData::new( ErrorCode::InternalError, e.to_string() ) )?;
   let text = match opts.format
   {
-    OutputFormat::Json => format_rate_limits_json( &data ),
-    OutputFormat::Text => format_rate_limits_text( &data ),
+    OutputFormat::Json  => format_rate_limits_json( &data ),
+    OutputFormat::Text  => format_rate_limits_text( &data ),
+    // Table rejected above via is_table() guard; unreachable.
+    OutputFormat::Table => String::new(),
   };
   Ok( OutputData::new( text, "text" ) )
 }
@@ -832,6 +961,13 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
 pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts = OutputOptions::from_cmd( &cmd )?;
+  if opts.is_table()
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "format::table is only supported by .accounts".to_string(),
+    ) );
+  }
   require_claude_paths()?;
 
   let threshold_secs = match cmd.arguments.get( "threshold" )
@@ -869,6 +1005,8 @@ pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
           "expired\n".to_string(),
       }
     }
+    // Table rejected above via is_table() guard; unreachable.
+    OutputFormat::Table => String::new(),
   };
 
   Ok( OutputData::new( content, "text" ) )
@@ -883,6 +1021,13 @@ pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts             = OutputOptions::from_cmd( &cmd )?;
+  if opts.is_table()
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "format::table is only supported by .accounts".to_string(),
+    ) );
+  }
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
 
@@ -924,6 +1069,8 @@ pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
         paths.sessions_dir().display(),
       )
     }
+    // Table rejected above via is_table() guard; unreachable.
+    OutputFormat::Table => String::new(),
   };
 
   Ok( OutputData::new( content, "text" ) )

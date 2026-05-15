@@ -3,6 +3,14 @@
 //! Fetches live rate-limit utilization for every saved account via
 //! `claude_quota::fetch_rate_limits()` and renders results as a `data_fmt` table.
 //! Accounts are enumerated from the credential store in alphabetical order.
+//!
+//! ## Synthetic Row (AC-09)
+//!
+//! When `~/.claude/.credentials.json` contains a token that does not match any
+//! saved account's stored token (e.g. a fresh login not yet saved), `fetch_all_quota()`
+//! prepends a synthetic entry with `is_current: true` and name derived from
+//! `~/.claude.json` `emailAddress` (falling back to `"(current session)"`).
+//! This row is excluded from `find_recommendation()` — it IS the current session.
 
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
@@ -17,7 +25,10 @@ use crate::output::{ OutputFormat, OutputOptions, format_duration_secs, json_esc
 struct AccountQuota
 {
   name          : String,
-  active        : bool,
+  /// Live-token match: `accessToken` in `~/.claude/.credentials.json` equals this account's stored token.
+  is_current    : bool,
+  /// Active-marker match: `_active` file in the credential store names this account.
+  is_active     : bool,
   expires_at_ms : u64,
   /// `Ok` = live headers fetched; `Err` = reason string (expired, network, etc.).
   result        : Result< RateLimitData, String >,
@@ -43,7 +54,17 @@ fn read_token( credential_store : &std::path::Path, name : &str ) -> Result< Str
 /// Accounts are listed in alphabetical order (delegated to `account::list()`).
 /// Per-account failures are stored inline in `AccountQuota::result`; only
 /// fatal errors (credential store unreadable) propagate as `ErrorData`.
-fn fetch_all_quota( credential_store : &std::path::Path ) -> Result< Vec< AccountQuota >, ErrorData >
+///
+/// `live_creds_file` is read once to extract the live `accessToken`; any failure
+/// (absent file, parse error) silently sets `is_current = false` for all accounts.
+///
+/// If no saved account's token matches the live token, a synthetic entry is prepended
+/// (AC-09): `is_current: true`, name from `~/.claude.json` email or `(current session)`.
+/// Pitfall: this case is easy to miss when only testing the normal single-account path.
+fn fetch_all_quota(
+  credential_store : &std::path::Path,
+  live_creds_file  : &std::path::Path,
+) -> Result< Vec< AccountQuota >, ErrorData >
 {
   let accounts = crate::account::list( credential_store )
     .map_err( |e| ErrorData::new(
@@ -51,9 +72,20 @@ fn fetch_all_quota( credential_store : &std::path::Path ) -> Result< Vec< Accoun
       format!( "cannot read credential store: {e}" ),
     ) )?;
 
+  // Read the live session token once (graceful degradation on any error).
+  let live_token : Option< String > = std::fs::read_to_string( live_creds_file )
+    .ok()
+    .and_then( |s| crate::account::parse_string_field( &s, "accessToken" ) );
+
   let mut results = Vec::with_capacity( accounts.len() );
   for acct in &accounts
   {
+    // Determine whether this account's stored token matches the live session.
+    let is_current = live_token.as_ref().is_some_and( |live|
+    {
+      read_token( credential_store, &acct.name )
+        .is_ok_and( |stored| stored == *live )
+    } );
     let result = match read_token( credential_store, &acct.name )
     {
       Ok( token ) => claude_quota::fetch_rate_limits( &token ).map_err( |e| e.to_string() ),
@@ -62,16 +94,59 @@ fn fetch_all_quota( credential_store : &std::path::Path ) -> Result< Vec< Accoun
     results.push( AccountQuota
     {
       name          : acct.name.clone(),
-      active        : acct.is_active,
+      is_current,
+      is_active     : acct.is_active,
       expires_at_ms : acct.expires_at_ms,
       result,
     } );
+  }
+
+  // Synthetic row: when live creds exist but no saved account matches the live
+  // token, prepend a row so the current session is still visible in the table.
+  let any_current = results.iter().any( |r| r.is_current );
+  if !any_current
+  {
+    if let Some( ref token ) = live_token
+    {
+      let synthetic_name = live_creds_file.parent()
+        .and_then( |p| p.parent() )
+        .map( |home| home.join( ".claude.json" ) )
+        .and_then( |p| std::fs::read_to_string( p ).ok() )
+        .and_then( |s| crate::account::parse_string_field( &s, "emailAddress" ) )
+        .filter( |e| !e.is_empty() )
+        .unwrap_or_else( || "(current session)".to_string() );
+      let expires_at_ms = parse_u64_field( live_creds_file, "expiresAt" ).unwrap_or( 0 );
+      let result        = claude_quota::fetch_rate_limits( token ).map_err( |e| e.to_string() );
+      results.insert( 0, AccountQuota
+      {
+        name : synthetic_name,
+        is_current    : true,
+        is_active     : false,
+        expires_at_ms,
+        result,
+      } );
+    }
   }
 
   Ok( results )
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+
+/// Parse a raw numeric JSON field from a file without an external JSON parser.
+///
+/// Reads the file at `path`, finds `"key":` by string scan, and parses the
+/// immediately following run of ASCII digits as `u64`. Returns `None` on any
+/// I/O error, missing key, or non-numeric value.
+fn parse_u64_field( path : &std::path::Path, key : &str ) -> Option< u64 >
+{
+  let s      = std::fs::read_to_string( path ).ok()?;
+  let needle = format!( "\"{key}\":" );
+  let start  = s.find( &needle )? + needle.len();
+  let rest   = s[ start.. ].trim_start();
+  let end    = rest.find( |c : char| !c.is_ascii_digit() ).unwrap_or( rest.len() );
+  rest[ ..end ].parse().ok()
+}
 
 /// Compute the `Expires` cell value for a given token expiry and current time.
 ///
@@ -109,11 +184,14 @@ fn shorten_error( reason : &str ) -> &str
 
 /// Find the index of the recommended next account in an already-sorted slice.
 ///
-/// Selects the non-active account with the highest `5h Left` among those with
-/// valid quota data and a non-expired token (`expires_in_secs > 0`). Ties are
+/// Selects the non-active, non-current account with the highest `5h Left` among those
+/// with valid quota data and a non-expired token (`expires_in_secs > 0`). Ties are
 /// broken alphabetically — the first (alphabetically) account with equal `5h Left`
 /// wins because the input is already alpha-sorted and strict-greater comparison
 /// is used.
+///
+/// Skips `is_current` accounts (including the synthetic row) because the user is
+/// already on that session — recommending it would be a no-op.
 fn find_recommendation( accounts : &[ AccountQuota ], now_secs : u64 ) -> Option< usize >
 {
   let mut best_idx    : Option< usize > = None;
@@ -121,7 +199,7 @@ fn find_recommendation( accounts : &[ AccountQuota ], now_secs : u64 ) -> Option
 
   for ( idx, aq ) in accounts.iter().enumerate()
   {
-    if aq.active { continue; }
+    if aq.is_active || aq.is_current { continue; }
     let expires_in_secs = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
     if expires_in_secs == 0 { continue; }
     if let Ok( data ) = &aq.result
@@ -175,9 +253,14 @@ fn render_text( accounts : &[ AccountQuota ] ) -> String
   let mut builder = RowBuilder::new( headers );
   for ( idx, aq ) in accounts.iter().enumerate()
   {
-    let flag_cell = if aq.active
+    // Four-level priority: ✓ (is_current) > * (is_active, not current) > → (recommendation) > blank.
+    let flag_cell = if aq.is_current
     {
       "✓".to_string()
+    }
+    else if aq.is_active
+    {
+      "*".to_string()
     }
     else if best_idx == Some( idx )
     {
@@ -275,15 +358,17 @@ fn render_json( accounts : &[ AccountQuota ] ) -> String
   let mut parts = Vec::with_capacity( accounts.len() );
   for aq in accounts
   {
-    let name_esc        = json_escape( &aq.name );
-    let active_str      = if aq.active { "true" } else { "false" };
-    let expires_in_secs = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
+    let name_esc         = json_escape( &aq.name );
+    let is_current_str   = if aq.is_current { "true" } else { "false" };
+    let is_active_str    = if aq.is_active  { "true" } else { "false" };
+    let expires_in_secs  = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
     let entry = match &aq.result
     {
       Ok( data ) =>
       {
         format!(
-          "{{\"account\":\"{name_esc}\",\"active\":{active_str},\"expires_in_secs\":{expires_in_secs},\
+          "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
+\"expires_in_secs\":{expires_in_secs},\
 \"session_5h_left_pct\":{:.0},\"session_5h_resets_in_secs\":{},\
 \"weekly_7d_left_pct\":{:.0},\"weekly_7d_resets_in_secs\":{},\"status\":\"{}\"}}",
           ( 1.0 - data.utilization_5h ) * 100.0,
@@ -296,7 +381,8 @@ fn render_json( accounts : &[ AccountQuota ] ) -> String
       Err( reason ) =>
       {
         format!(
-          "{{\"account\":\"{name_esc}\",\"active\":{active_str},\"expires_in_secs\":{expires_in_secs},\"error\":\"{}\"}}",
+          "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
+\"expires_in_secs\":{expires_in_secs},\"error\":\"{}\"}}",
           json_escape( reason ),
         )
       }
@@ -323,18 +409,28 @@ fn render_json( accounts : &[ AccountQuota ] ) -> String
 pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts             = OutputOptions::from_cmd( &cmd )?;
-  let credential_store = crate::PersistPaths::new()
-    .map( | p | p.credential_store() )
+  if opts.is_table()
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "format::table is only supported by .accounts".to_string(),
+    ) );
+  }
+  let persist_paths    = crate::PersistPaths::new()
     .map_err( |e| ErrorData::new(
       ErrorCode::InternalError,
       format!( "cannot resolve storage root: {e}" ),
     ) )?;
+  let credential_store = persist_paths.credential_store();
+  let live_creds_file  = crate::ClaudePaths::new()
+    .map_or_else( || std::path::PathBuf::from( "/dev/null" ), |p| p.credentials_file() );
 
-  let accounts = fetch_all_quota( &credential_store )?;
+  let accounts = fetch_all_quota( &credential_store, &live_creds_file )?;
   let content  = match opts.format
   {
-    OutputFormat::Json => render_json( &accounts ),
-    OutputFormat::Text => render_text( &accounts ),
+    OutputFormat::Json  => render_json( &accounts ),
+    OutputFormat::Text
+    | OutputFormat::Table => render_text( &accounts ),
   };
 
   Ok( OutputData::new( content, "text" ) )

@@ -133,7 +133,7 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
       && !argv[ 1 ].starts_with( '-' )
     {
       Some(
-        std::iter::once( format!( "name::{}", argv[ 1 ] ) )
+        core::iter::once( format!( "name::{}", argv[ 1 ] ) )
           .chain( argv[ 2.. ].iter().cloned() )
           .collect()
       )

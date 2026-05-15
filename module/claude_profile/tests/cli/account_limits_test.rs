@@ -286,7 +286,7 @@ fn lim_it3_json_format_exits_0_with_valid_json()
 /// the account file (not-found path is bypassed), then fails at data fetch →
 /// exit 2 (data unavailable), not exit 1 (adapter/validation error).
 /// This distinguishes: adapter accepted the positional form (not rejected as
-/// "expected param::value") AND the account was found (not rejected as "not found").
+/// `"expected param::value"`) AND the account was found (not rejected as "not found").
 #[ test ]
 fn lim09_limits_positional_bare_arg()
 {

@@ -16,6 +16,8 @@ pub enum OutputFormat
   Text,
   /// Machine-readable JSON object or array.
   Json,
+  /// ASCII table via `data_fmt` (`.accounts` only).
+  Table,
 }
 
 /// Parsed output options extracted from a `VerifiedCommand`.
@@ -44,13 +46,14 @@ impl OutputOptions
       {
         match s.as_str()
         {
-          "text" => OutputFormat::Text,
-          "json" => OutputFormat::Json,
-          other  =>
+          "text"  => OutputFormat::Text,
+          "json"  => OutputFormat::Json,
+          "table" => OutputFormat::Table,
+          other   =>
           {
             return Err( ErrorData::new(
               ErrorCode::ArgumentTypeMismatch,
-              format!( "unknown format '{other}': expected text or json" ),
+              format!( "unknown format '{other}': expected text, json, or table" ),
             ) );
           }
         }
@@ -60,6 +63,11 @@ impl OutputOptions
 
     Ok( OutputOptions { format } )
   }
+
+  /// Return `true` when the selected format is `Table`.
+  #[ inline ]
+  #[ must_use ]
+  pub fn is_table( &self ) -> bool { matches!( self.format, OutputFormat::Table ) }
 }
 
 /// Format a duration in seconds as a compact human-readable string.

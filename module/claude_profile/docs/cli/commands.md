@@ -451,7 +451,7 @@ clp .paths format::json
 
 ### Command :: 9. `.usage`
 
-Fetches live rate-limit utilization for every saved account by reading `anthropic-ratelimit-unified-*` response headers via `claude_quota::fetch_rate_limits()`. Renders results as a `data_fmt` table with per-account Expires, 5h Left, 5h Reset, 7d Left, 7d Reset, and Status columns, plus a footer recommendation line.
+Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`). Renders results as a `data_fmt` table with per-account Expires, 5h Left, 5h Reset, 7d Left, 7d(Son), and 7d Reset columns, plus a footer recommendation line.
 
 -- **Parameters:** [`format::`](params.md#parameter--2-format)
 -- **Exit:** 0 (success) | 2 (runtime: credential store unreadable, HOME unset)
@@ -473,17 +473,17 @@ clp .usage format::json
 clp .usage
 # Quota
 #
-#   Account          Expires     5h Left  5h Reset    7d Left  7d Reset     Status
-# ✓ i12@wbox.pro    in 7h 24m  86%      in 3h 19m  65%      in 4d 23h   allowed
-# → i6@wbox.pro     in 5h 02m  100%     in 4h 58m  88%      in 6d 14h   allowed
-#   i7@wbox.pro     EXPIRED    —        —           —        —            (missing accessToken)
+#   Account          Expires     5h Left  5h Reset    7d Left  7d(Son)  7d Reset
+# ✓ i12@wbox.pro    in 7h 24m  86%      in 3h 19m  65%      35%      in 4d 23h
+# → i6@wbox.pro     in 5h 02m  100%     in 4h 58m  88%      28%      in 6d 14h
+#   i7@wbox.pro     EXPIRED    —        —           —        —        (missing accessToken)
 #
 # Valid: 2 / 3   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 02m)
 
 clp .usage format::json
 # [
-#   {"account":"i12@wbox.pro","is_current":true,"is_active":false,"expires_in_secs":26640,"session_5h_left_pct":86,"session_5h_resets_in_secs":11940,"weekly_7d_left_pct":65,"weekly_7d_resets_in_secs":432540,"status":"allowed"},
-#   {"account":"i6@wbox.pro","is_current":false,"is_active":true,"expires_in_secs":18120,"session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_resets_in_secs":500040,"status":"allowed"},
+#   {"account":"i12@wbox.pro","is_current":true,"is_active":false,"expires_in_secs":26640,"session_5h_left_pct":86,"session_5h_resets_in_secs":11940,"weekly_7d_left_pct":65,"weekly_7d_sonnet_left_pct":35,"weekly_7d_resets_in_secs":432540},
+#   {"account":"i6@wbox.pro","is_current":false,"is_active":true,"expires_in_secs":18120,"session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_sonnet_left_pct":28,"weekly_7d_resets_in_secs":500040},
 #   {"account":"i7@wbox.pro","is_current":false,"is_active":false,"expires_in_secs":0,"error":"missing accessToken"}
 # ]
 ```
@@ -492,8 +492,8 @@ clp .usage format::json
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
 - Flag column priority: `✓` = current account (live `accessToken` match), `*` = `_active`-but-not-current (divergence indicator), `→` = recommended next account (highest remaining session quota among non-current accounts with valid quota data and a non-expired token), ` ` = none. When current = active, only `✓` appears; `*` is suppressed. See [feature/016_current_account_awareness.md](../feature/016_current_account_awareness.md).
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails. Shows "in Xh Ym" or "EXPIRED".
-- `5h Left` / `7d Left` show remaining quota percentage (100 − consumed). `5h Reset` / `7d Reset` are independent countdown columns.
-- Accounts with expired or missing `accessToken` show `—` for quota columns and a shortened error reason in Status; other accounts continue processing (per-account errors are non-fatal).
+- `5h Left` / `7d Left` show remaining quota percentage (100 − consumed); `7d(Son)` shows remaining Sonnet-only weekly quota or `—` when unavailable. `5h Reset` / `7d Reset` are independent countdown columns. All quota data sourced from `claude_quota::fetch_oauth_usage()` → `/api/oauth/usage`.
+- Accounts with expired or missing `accessToken` show `—` for quota columns and a shortened error reason in the last column; other accounts continue processing (per-account errors are non-fatal).
 - Footer "Valid: X / Y   →  Next: ..." appears when ≥2 accounts have valid quota data; omitted when 0 or 1.
 - Empty credential store exits 0 with `(no accounts configured)`.
 - See [feature/009_token_usage.md](../feature/009_token_usage.md) for full algorithm and AC criteria.

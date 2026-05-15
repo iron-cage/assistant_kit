@@ -143,6 +143,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     vec![
       nam(),
       bfd( "active",       "Show active/inactive status per account (default on)"                      ),
+      bfd( "current",      "Show current (live) session match per account (default on)"                ),
       bfd( "sub",          "Show subscription type per account (default on)"                           ),
       bfd( "tier",         "Show rate-limit tier per account (default on)"                             ),
       bfd( "expires",      "Show token expiry duration per account (default on)"                       ),

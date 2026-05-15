@@ -26,11 +26,17 @@
 //! | it10 | `it10_expired_token_shows_expired_in_expires_col` | account with PAST_MS → "EXPIRED" in Expires column           | P   | no    |
 //! | it11 | `it11_lim_it_recommendation_marker_shown`       | 2 accounts with real tokens → `→` on non-active account       | P   | yes   |
 //! | it12 | `it12_lim_it_footer_shows_valid_count`          | 2 accounts with real tokens → footer "Valid: 2" + "Next:"     | P   | yes   |
+//! | it13 | `it13_active_divergence_shows_star`             | live creds=work, _active=alice → `✓` on work, `*` on alice    | P   | no    |
+//! | it14 | `it14_creds_unreadable_no_checkmark_star_shown` | no live creds, _active=alice → no `✓`, `*` on alice           | P   | no    |
+//! | it15 | `it15_current_equals_active_no_star`            | live creds=alice, _active=alice → `✓` on alice, no `*`        | P   | no    |
+//! | it16 | `it16_json_is_current_is_active`                | JSON has `is_current` + `is_active`, no `active` key          | P   | no    |
+//! | it17 | `it17_format_table_rejected`                    | `format::table` → exit 1 (not supported by .usage)           | N   | no    |
+//! | it18 | `it18_synthetic_row_when_no_saved_match`         | live token unmatched → synthetic (current session) row with ✓ | P   | no    |
 
 use crate::helpers::{
   run_cs_with_env, run_cs_without_home,
   stdout, stderr, assert_exit,
-  write_account, write_account_with_token, live_active_token,
+  write_account, write_account_with_token, live_active_token, write_live_credentials_with_token,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
@@ -407,4 +413,164 @@ fn it12_lim_it_footer_shows_valid_count()
     text.contains( "Next:" ),
     "footer must contain 'Next:', got:\n{text}",
   );
+}
+
+// ── Offline: current-vs-active divergence ─────────────────────────────────────
+
+/// it13 (IT-13): live creds match `work@acme.com`; `_active` = `alice@acme.com`.
+///
+/// Flag column: `work@acme.com` gets `✓` (`is_current`), `alice@acme.com` gets `*`
+/// (`is_active` but not `is_current`). This demonstrates divergence: the active marker
+/// and the live session point at different accounts.
+#[ test ]
+fn it13_active_divergence_shows_star()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // alice is _active, work matches live creds → divergence
+  write_account_with_token( dir.path(), "alice@acme.com", "tok-alice", true  );
+  write_account_with_token( dir.path(), "work@acme.com",  "tok-work",  false );
+  write_live_credentials_with_token( dir.path(), "tok-work" );
+
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  let work_current = text.lines().any( |l| l.contains( '\u{2713}' ) && l.contains( "work@acme.com" ) );
+  assert!( work_current, "work@acme.com must have ✓ (is_current), got:\n{text}" );
+
+  let alice_active = text.lines().any( |l| l.contains( '*' ) && l.contains( "alice@acme.com" ) );
+  assert!( alice_active, "alice@acme.com must have * (is_active, not current), got:\n{text}" );
+}
+
+/// it14 (IT-14): no live credentials file; `_active` = `alice@acme.com`.
+///
+/// With no live creds, `is_current` is false for all — no `✓` shown.
+/// `alice@acme.com` is still `is_active` so `*` is still shown.
+#[ test ]
+fn it14_creds_unreadable_no_checkmark_star_shown()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "alice@acme.com", "tok-alice", true  );
+  write_account_with_token( dir.path(), "work@acme.com",  "tok-work",  false );
+  // Deliberately no live credentials file.
+
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  let has_checkmark = text.lines().any( |l| l.contains( '\u{2713}' ) );
+  assert!( !has_checkmark, "no ✓ when creds file absent, got:\n{text}" );
+
+  let alice_star = text.lines().any( |l| l.contains( '*' ) && l.contains( "alice@acme.com" ) );
+  assert!( alice_star, "alice@acme.com must still have * (is_active), got:\n{text}" );
+}
+
+/// it15 (IT-15): live creds match `alice@acme.com`; `_active` = `alice@acme.com`.
+///
+/// When `is_current` and `is_active` point at the same account, `✓` wins (priority)
+/// and `*` does NOT appear on any line (no divergence).
+#[ test ]
+fn it15_current_equals_active_no_star()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "alice@acme.com", "tok-alice", true );
+  write_live_credentials_with_token( dir.path(), "tok-alice" );
+
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  let alice_current = text.lines().any( |l| l.contains( '\u{2713}' ) && l.contains( "alice@acme.com" ) );
+  assert!( alice_current, "alice@acme.com must have ✓ when both current and active, got:\n{text}" );
+
+  let has_star = text.lines().any( |l| l.contains( '*' ) );
+  assert!( !has_star, "no * when current == active (no divergence), got:\n{text}" );
+}
+
+/// it16 (IT-16): `format::json` uses `is_current` + `is_active` field names, not `active`.
+///
+/// Two accounts; live creds match `work@acme.com`; `_active` = `alice@acme.com`.
+/// JSON output must have `"is_current":true` on work and `"is_active":true` on alice.
+/// The old `"active"` key must not appear.
+#[ test ]
+fn it16_json_is_current_is_active()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "alice@acme.com", "tok-alice", true  );
+  write_account_with_token( dir.path(), "work@acme.com",  "tok-work",  false );
+  write_live_credentials_with_token( dir.path(), "tok-work" );
+
+  let out  = run_cs_with_env( &[ ".usage", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let json = stdout( &out );
+
+  assert!( json.contains( "\"is_current\"" ), "JSON must have is_current field, got:\n{json}" );
+  assert!( json.contains( "\"is_active\""  ), "JSON must have is_active field, got:\n{json}" );
+  assert!( !json.contains( "\"active\""    ), "JSON must not have old 'active' field, got:\n{json}" );
+
+  // work@acme.com: is_current=true, is_active=false
+  let work_current = json.contains( "\"work@acme.com\"" ) && json.contains( "\"is_current\":true" );
+  assert!( work_current, "work@acme.com must have is_current:true, got:\n{json}" );
+
+  // alice@acme.com: is_active=true
+  let alice_active = json.contains( "\"alice@acme.com\"" ) && json.contains( "\"is_active\":true" );
+  assert!( alice_active, "alice@acme.com must have is_active:true, got:\n{json}" );
+}
+
+// ── it18 ──────────────────────────────────────────────────────────────────────
+
+/// it18 (IT-18): live token does not match any saved account → synthetic row.
+///
+/// `alice@acme.com` is saved with `tok-alice`; live creds use `tok-unsaved`.
+/// No saved account matches the live token → `fetch_all_quota()` prepends a
+/// synthetic `(current session)` row with `✓` in the flag column.
+///
+/// Pitfall (AC-09): this branch is easy to miss when only testing the happy path
+/// where the saved account's token equals the live token. The plan explicitly
+/// flagged it, and it was still omitted until a systematic AC-by-AC cross-check
+/// caught the gap. Always add an explicit unmatched-token test alongside the
+/// matched-token test.
+#[ test ]
+fn it18_synthetic_row_when_no_saved_match()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "alice@acme.com", "tok-alice", false );
+  write_live_credentials_with_token( dir.path(), "tok-unsaved" );
+
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  assert!(
+    text.contains( "(current session)" ),
+    "must show synthetic (current session) row, got:\n{text}",
+  );
+  let synthetic_current = text.lines().any( |l|
+    l.contains( '\u{2713}' ) && l.contains( "(current session)" )
+  );
+  assert!( synthetic_current, "synthetic row must have ✓ flag, got:\n{text}" );
+
+  let alice_current = text.lines().any( |l|
+    l.contains( '\u{2713}' ) && l.contains( "alice@acme.com" )
+  );
+  assert!( !alice_current, "alice must NOT have ✓ when unsaved session is live, got:\n{text}" );
+}
+
+// ── it17 ──────────────────────────────────────────────────────────────────────
+
+/// it17 (IT-17): `.usage format::table` exits 1 with `ArgumentTypeMismatch`.
+///
+/// `format::table` is only valid for `.accounts`; all other commands must reject it.
+#[ test ]
+fn it17_format_table_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let out  = run_cs_with_env( &[ ".usage", "format::table" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
 }
