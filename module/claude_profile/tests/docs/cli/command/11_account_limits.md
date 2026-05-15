@@ -13,6 +13,8 @@ Integration test specifications for the `.account.limits` command. See [commands
 | IT-6 | No active account set — exits 2 with actionable error | Error Handling |
 | IT-7 | Data unavailable — exits 2 with actionable error (not silent 0) | Error Handling |
 | IT-8 | `name::` with non-email value — exits 1 (usage error, not 2) | Parameter Validation |
+| IT-9 | Positional bare arg `alice@acme.com` (no `name::`) shows limits | Positional Syntax |
+| IT-10 | Prefix `alice` resolves to `alice@acme.com` limits | Prefix Resolution |
 
 ### Test Coverage Summary
 
@@ -22,8 +24,10 @@ Integration test specifications for the `.account.limits` command. See [commands
 - Not Found: 1 test (IT-5)
 - Error Handling: 2 tests (IT-6, IT-7)
 - Parameter Validation: 1 test (IT-8)
+- Positional Syntax: 1 test (IT-9)
+- Prefix Resolution: 1 test (IT-10)
 
-**Total:** 7 integration tests
+**Total:** 9 integration tests
 
 **Requirement:** FR-18 (feature/013_account_limits.md)
 
@@ -96,3 +100,23 @@ Integration test specifications for the `.account.limits` command. See [commands
 - **Then:** Exit 1; stderr contains `email address`.; email validation is a usage error
 - **Exit:** 1
 - **Source:** [params.md — name::](../../../../docs/cli/params.md#parameter--1-name)
+
+---
+
+### IT-9: Positional Bare Arg Shows Named Account Limits
+
+- **Given:** Two accounts exist: `work@acme.com` (active) and `alice@acme.com`. Rate-limit data available for `alice@acme.com`.
+- **When:** `clp .account.limits alice@acme.com` (no `name::` prefix)
+- **Then:** Exits 0; output reflects `alice@acme.com` limits; identical to `clp .account.limits name::alice@acme.com`.
+- **Exit:** 0
+- **Source:** [015_name_shortcut_syntax.md AC-04](../../../../docs/feature/015_name_shortcut_syntax.md)
+
+---
+
+### IT-10: Prefix Resolves to Named Account Limits
+
+- **Given:** Two accounts saved: `alice@acme.com` and `work@acme.com` (active). Rate-limit data available for `alice@acme.com`.
+- **When:** `clp .account.limits alice` (prefix form, no `@`)
+- **Then:** Exits 0; output reflects `alice@acme.com` limits.
+- **Exit:** 0
+- **Source:** [015_name_shortcut_syntax.md AC-05](../../../../docs/feature/015_name_shortcut_syntax.md)

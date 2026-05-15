@@ -7,7 +7,7 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 | ID | Test Name | Category |
 |----|-----------|----------|
 | IT-1 | Default invocation shows quota table with new column headers | Basic Invocation |
-| IT-2 | Active account has `✓` in flag column; inactive accounts do not | Active Marker |
+| IT-2 | Current account (live-token match) has `✓` in flag column; others do not | Current Marker |
 | IT-3 | Account with missing accessToken shows `—` columns and error reason | Error Inline |
 | IT-4 | `format::json` produces valid JSON array with `expires_in_secs` and `_left_pct` fields | Output Format |
 | IT-5 | Empty credential store exits 0 with `(no accounts configured)` | Edge Case |
@@ -16,23 +16,29 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 | IT-8 | Multiple accounts displayed in alphabetical order | Ordering |
 | IT-9 | Account with missing token file shows `—` with error reason | Error Inline |
 | IT-10 | Account with expired token shows `EXPIRED` in Expires column | Expires Column |
-| IT-11 | Best non-active account is marked with `→` in flag column | Recommendation |
+| IT-11 | Best non-current account is marked with `→` in flag column | Recommendation |
 | IT-12 | Footer line shows valid count and recommended next account | Footer |
+| IT-13 | `*` marks `_active` account when it differs from the current account | Active Divergence |
+| IT-14 | When credentials file unreadable: no `✓`; `*` still marks `_active` account | Active Divergence |
+| IT-15 | When current = active, only `✓` appears; no `*` on any row | Active Divergence |
+| IT-16 | JSON output uses `is_current` (not `active`) and includes `is_active` per object | JSON Schema |
 
 ### Test Coverage Summary
 
-- Basic Invocation: 1 test
-- Active Marker: 1 test
-- Error Inline: 2 tests
-- Output Format: 1 test
-- Edge Case: 1 test
-- Error Handling: 2 tests
-- Ordering: 1 test
-- Expires Column: 1 test
-- Recommendation: 1 test
-- Footer: 1 test
+- Basic Invocation: 1 test (IT-1)
+- Current Marker: 1 test (IT-2)
+- Error Inline: 2 tests (IT-3, IT-9)
+- Output Format: 1 test (IT-4)
+- Edge Case: 1 test (IT-5)
+- Error Handling: 2 tests (IT-6, IT-7)
+- Ordering: 1 test (IT-8)
+- Expires Column: 1 test (IT-10)
+- Recommendation: 1 test (IT-11)
+- Footer: 1 test (IT-12)
+- Active Divergence: 3 tests (IT-13, IT-14, IT-15)
+- JSON Schema: 1 test (IT-16)
 
-**Total:** 12 integration tests
+**Total:** 16 integration tests
 
 ---
 
@@ -46,13 +52,13 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 
 ---
 
-### IT-2: Active account has `✓` in flag column; inactive accounts do not
+### IT-2: Current account (live-token match) has `✓` in flag column
 
-- **Given:** At least two saved accounts, one marked active via `_active`.
+- **Given:** Two saved accounts; live `~/.claude/.credentials.json` has an `accessToken` matching `work@acme.com`'s stored token. `_active` also points to `work@acme.com` (current = active, normal case).
 - **When:** `clp .usage`
-- **Then:** A line in stdout contains both `✓` and the active account name; no line contains both `✓` and any inactive account name. Exit 0.
+- **Then:** A line in stdout contains both `✓` and `work@acme.com`; no line contains `✓` and any other account name; no `*` appears (current = active). Exit 0.
 - **Exit:** 0
-- **Source:** [commands.md — .usage](../../../../docs/cli/commands.md#command--9-usage)
+- **Source:** [016_current_account_awareness.md AC-05](../../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -66,13 +72,13 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 
 ---
 
-### IT-4: `format::json` produces valid JSON array with `expires_in_secs` and `_left_pct` fields
+### IT-4: `format::json` produces valid JSON array with `expires_in_secs`, `is_current`, `is_active`
 
 - **Given:** At least one saved account with a valid token.
 - **When:** `clp .usage format::json`
-- **Then:** Valid JSON array on stdout. Each element has `account` (string), `active` (boolean), and `expires_in_secs` (number). Successful elements have `session_5h_left_pct` and `weekly_7d_left_pct` (not `session_5h_pct` or `weekly_7d_pct`). Exit 0.
+- **Then:** Valid JSON array on stdout. Each element has `account` (string), `is_current` (boolean), `is_active` (boolean), and `expires_in_secs` (number). Successful elements have `session_5h_left_pct` and `weekly_7d_left_pct` (not `session_5h_pct` or `weekly_7d_pct`). No element has a top-level `active` key. Exit 0.
 - **Exit:** 0
-- **Source:** [commands.md — .usage](../../../../docs/cli/commands.md#command--9-usage)
+- **Source:** [016_current_account_awareness.md AC-08](../../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -136,7 +142,7 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 
 ---
 
-### IT-11: Best non-active account is marked with `→` in flag column
+### IT-11: Best non-current account is marked with `→` in flag column
 
 - **Given:** Two accounts — one active with quota data, one non-active with valid token and quota data showing lower session usage than the active account.
 - **When:** `clp .usage`
@@ -155,3 +161,43 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota headers)
 - **Source:** [commands.md — .usage](../../../../docs/cli/commands.md#command--9-usage)
+
+---
+
+### IT-13: `*` marks `_active` account when it differs from current
+
+- **Given:** Two saved accounts: `alice@acme.com` (stored as `_active`) and `work@acme.com`. Live `~/.claude/.credentials.json` `accessToken` matches `work@acme.com`'s stored token (not `alice`'s).
+- **When:** `clp .usage`
+- **Then:** A line contains `✓` and `work@acme.com`; a different line contains `*` and `alice@acme.com`. No line contains both `✓` and `alice`, or both `*` and `work`.
+- **Exit:** 0
+- **Source:** [016_current_account_awareness.md AC-06](../../../../docs/feature/016_current_account_awareness.md)
+
+---
+
+### IT-14: Credentials file unreadable — no `✓`; `*` still marks `_active`
+
+- **Given:** Two saved accounts: `alice@acme.com` (stored as `_active`) and `work@acme.com`. `~/.claude/.credentials.json` is absent or unreadable.
+- **When:** `clp .usage`
+- **Then:** No line contains `✓`; a line contains `*` and `alice@acme.com`. All saved accounts are still shown. Exit 0.
+- **Exit:** 0
+- **Source:** [016_current_account_awareness.md AC-07](../../../../docs/feature/016_current_account_awareness.md)
+
+---
+
+### IT-15: When current = active, only `✓` appears; no `*` on any row
+
+- **Given:** Two saved accounts: `alice@acme.com` (stored as `_active`) and `work@acme.com`. Live `~/.claude/.credentials.json` `accessToken` matches `alice@acme.com`'s stored token (current = active).
+- **When:** `clp .usage`
+- **Then:** A line contains `✓` and `alice@acme.com`; no line contains `*`.
+- **Exit:** 0
+- **Source:** [016_current_account_awareness.md AC-06](../../../../docs/feature/016_current_account_awareness.md)
+
+---
+
+### IT-16: JSON output uses `is_current` and `is_active`; no `active` key
+
+- **Given:** Two saved accounts; live credentials match one of them; `_active` points to the other (divergence case).
+- **When:** `clp .usage format::json`
+- **Then:** Valid JSON array; the current account object has `"is_current":true` and `"is_active":false`; the `_active` account object has `"is_current":false` and `"is_active":true`; no object has a top-level `"active"` key.
+- **Exit:** 0
+- **Source:** [016_current_account_awareness.md AC-08](../../../../docs/feature/016_current_account_awareness.md)

@@ -1,30 +1,30 @@
 # Parameter: `test_script`
 
 - **Status:** ✅ Configured — present in `runbox.yml`
-- **Current State:** module-relative path (e.g., `run/test` for workspace; `module/claude_profile/verb/test` for modules)
+- **Current State:** `verb/test` for standalone projects; module-relative path (e.g., `module/claude_profile/verb/test`) for workspace modules
 - **Where It Flows:** `docker run /workspace/$TEST_SCRIPT` — executed after plugin mounts are wired
 
 ### Notes
 
 Full-test entrypoint. May invoke bin plugins (e.g., `w3`) and assumes plugin mounts are present. Used by `runbox-run`'s `.test` command path. `_ensure_image()` probes for `test_script`, `lint_script`, and `run_script` in a single container run before executing any command; any missing file triggers an automatic rebuild rather than emitting a cryptic OCI "not found" error.
 
-Use `$SCRIPT_DIR`-relative paths in the script body — inside the container `SCRIPT_DIR` resolves to `$WORKSPACE_DIR/run`, so `$SCRIPT_DIR/..` is `$WORKSPACE_DIR`. This also allows calling the script natively on the host when local dev tools are present.
+Use `$SCRIPT_DIR`-relative paths in the layer script body — inside the container `SCRIPT_DIR` resolves to `$WORKSPACE_DIR/verb/test.d`, so `$SCRIPT_DIR/../..` is `$WORKSPACE_DIR`. The dispatcher (`verb/test`) itself does not use SCRIPT_DIR for execution paths.
 
 Module-level runboxes point at `verb/test` (the canonical `do`-protocol test verb) rather than a bespoke `run/test` script. This makes `verb/test` the single source of truth for what "run tests" means for a module.
 
-### Directory Form
+### Multi-Layer Verbs
 
-When `test_script` points to a directory (a multi-layer verb), `runbox-run` resolves the in-container invocation to `$test_script/l1` and passes `VERB_LAYER=l1` to the container run. This makes the same verb path behave differently at the host layer (`verb/X/default` → `l2` → runbox) and the container layer (`verb/X/l1` → direct execution).
+`test_script` may point to a verb dispatcher — a plain executable file that reads `VERB_LAYER` and self-dispatches to `test.d/l1` (container invocation, `VERB_LAYER=l1` set by `runbox-run`) or to `test.d/l2` by default (host invocation). `verb/test` is always a file; no directory detection is needed in `runbox-run`.
 
-The path in `runbox.yml` is unchanged — whether `verb/test` is a file or a directory, `test_script: module/foo/verb/test` works for both. `runbox-run` detects the form at runtime.
+`runbox-run` passes `-e VERB_LAYER=l1` to the container run. The dispatcher inside `verb/test` routes to `test.d/l1` for direct execution.
 
 See `onboarding.md § Multi-Layer Verbs` for the complete protocol, layer naming, dispatch rules, and `VERB_LAYER` convention.
 
 ### Example
 
-Workspace `runbox.yml`:
+Standalone project `runbox.yml`:
 ```yaml
-test_script: run/test
+test_script: verb/test
 ```
 Module `runbox.yml` (`claude_profile`):
 ```yaml

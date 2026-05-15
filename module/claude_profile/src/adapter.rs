@@ -17,6 +17,11 @@ const BOOL_PARAMS : &[ &str ] = &[
 const VERBOSITY_ALIAS : &str = "v";
 /// Canonical verbosity key.
 const VERBOSITY_KEY   : &str = "verbosity";
+/// Commands that accept a bare positional first argument as a shortcut for `name::{value}`.
+const POSITIONAL_NAME_COMMANDS : &[ &str ] = &[
+  ".accounts", ".account.use", ".account.delete", ".account.limits",
+];
+
 /// Short alias for format param.
 // Fix(issue-fmt-alias):
 // Root cause: adapter.rs expanded v:: → verbosity:: but had no corresponding expansion
@@ -115,9 +120,29 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
   let command_name = argv[ 0 ].clone();
 
   // Step 5-6: process remaining args as key::value pairs
+  // Positional rewrite (A1): bare first arg → name::{value} for name-taking commands.
+  // Fix(issue-name-shortcut):
+  // Root cause: name-taking commands required `name::email` syntax; bare first args were
+  //   rejected as "expected param::value syntax", preventing shortcut forms like `clp .account.use alice`.
+  // Pitfall: Only rewrite when the arg has no `::` and does not start with `-`; never
+  //   rewrite explicit `name::` params or flag-style args.
+  let rewritten_args : Option< Vec< String > > =
+    if POSITIONAL_NAME_COMMANDS.contains( &command_name.as_str() )
+      && argv.len() > 1
+      && !argv[ 1 ].contains( "::" )
+      && !argv[ 1 ].starts_with( '-' )
+    {
+      Some(
+        std::iter::once( format!( "name::{}", argv[ 1 ] ) )
+          .chain( argv[ 2.. ].iter().cloned() )
+          .collect()
+      )
+    }
+    else { None };
+  let rest : &[ String ] = rewritten_args.as_deref().unwrap_or( &argv[ 1.. ] );
   let mut pairs : Vec< ( String, String ) > = vec![];
 
-  for arg in &argv[ 1.. ]
+  for arg in rest
   {
     // Reject --flag / -flag style
     if arg.starts_with( '-' )

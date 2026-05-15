@@ -38,13 +38,24 @@ docker run --rm \
   /workspace/module/claude_profile/verb/test
 ```
 
-Script body:
+`verb/test` dispatcher (universal — identical across all cargo modules):
 ```bash
 #!/usr/bin/env bash
-# do test — run the project test suite (cargo ecosystem)
+# test — run full test suite; dispatches by VERB_LAYER to test.d/ layer.
+set -euo pipefail
+DIR="$(dirname "${BASH_SOURCE[0]}")/test.d"
+LAYER="${VERB_LAYER:-}"
+[[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
+exec "$DIR/l1" "$@"
+```
+
+`verb/test.d/l1` (universal — identical across all cargo modules):
+```bash
+#!/usr/bin/env bash
+# l1 — bare test execution (VERB_LAYER=l1); runs w3 directly.
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR/.."
+cd "$SCRIPT_DIR/../.."
 if [[ "${1:-}" == "--dry-run" ]]; then echo "w3 .test level::3"; exit 0; fi
 exec w3 .test level::3
 ```

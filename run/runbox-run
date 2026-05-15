@@ -160,15 +160,11 @@ cmd_test()
   # Pre-flight: verify test_script exists on host; a missing file here means a wrong
   # path in runbox.yml — a rebuild won't help and _ensure_image's probe would rebuild
   # endlessly without this guard.
-  if [[ -n "$TEST_SCRIPT" ]] && [[ ! -e "$WORKSPACE_ROOT/$TEST_SCRIPT" ]]
+  if [[ -n "$TEST_SCRIPT" ]] && [[ ! -f "$WORKSPACE_ROOT/$TEST_SCRIPT" ]]
   then
     echo "error: test_script '$TEST_SCRIPT' not found at $WORKSPACE_ROOT/$TEST_SCRIPT" >&2
     echo "Check test_script path in $(basename "$CONFIG")" >&2
     exit 1
-  fi
-  RESOLVED_TEST_SCRIPT="$TEST_SCRIPT"
-  if [[ -d "$WORKSPACE_ROOT/$TEST_SCRIPT" ]]; then
-    RESOLVED_TEST_SCRIPT="$TEST_SCRIPT/l1"
   fi
   local bin_args=() mount_args=()
   _plugin_test_args
@@ -189,7 +185,7 @@ cmd_test()
     "${bin_args[@]}" \
     "${mount_args[@]}" \
     "$IMAGE" \
-    "$WORKSPACE_DIR/$RESOLVED_TEST_SCRIPT"
+    "$WORKSPACE_DIR/$TEST_SCRIPT"
 }
 
 cmd_test_offline()
@@ -207,14 +203,10 @@ cmd_lint()
     echo "error: lint_script not configured in $(basename "$CONFIG")" >&2
     exit 1
   fi
-  if [[ ! -e "$WORKSPACE_ROOT/$LINT_SCRIPT" ]]; then
+  if [[ ! -f "$WORKSPACE_ROOT/$LINT_SCRIPT" ]]; then
     echo "error: lint_script '$LINT_SCRIPT' not found at $WORKSPACE_ROOT/$LINT_SCRIPT" >&2
     echo "Check lint_script path in $(basename "$CONFIG")" >&2
     exit 1
-  fi
-  RESOLVED_LINT_SCRIPT="$LINT_SCRIPT"
-  if [[ -d "$WORKSPACE_ROOT/$LINT_SCRIPT" ]]; then
-    RESOLVED_LINT_SCRIPT="$LINT_SCRIPT/l1"
   fi
   local userns_arg=()
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
@@ -224,7 +216,7 @@ cmd_lint()
     --user "$(id -u):$(id -g)" \
     -e VERB_LAYER=l1 \
     "$IMAGE" \
-    "$WORKSPACE_DIR/$RESOLVED_LINT_SCRIPT"
+    "$WORKSPACE_DIR/$LINT_SCRIPT"
 }
 
 cmd_run()
@@ -233,14 +225,10 @@ cmd_run()
     echo "error: run_script not configured in $(basename "$CONFIG")" >&2
     exit 1
   fi
-  if [[ ! -e "$WORKSPACE_ROOT/$RUN_SCRIPT" ]]; then
+  if [[ ! -f "$WORKSPACE_ROOT/$RUN_SCRIPT" ]]; then
     echo "error: run_script '$RUN_SCRIPT' not found at $WORKSPACE_ROOT/$RUN_SCRIPT" >&2
     echo "Check run_script path in $(basename "$CONFIG")" >&2
     exit 1
-  fi
-  RESOLVED_RUN_SCRIPT="$RUN_SCRIPT"
-  if [[ -d "$WORKSPACE_ROOT/$RUN_SCRIPT" ]]; then
-    RESOLVED_RUN_SCRIPT="$RUN_SCRIPT/l1"
   fi
   local userns_arg=()
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
@@ -250,7 +238,7 @@ cmd_run()
     --user "$(id -u):$(id -g)" \
     -e VERB_LAYER=l1 \
     "$IMAGE" \
-    "$WORKSPACE_DIR/$RESOLVED_RUN_SCRIPT"
+    "$WORKSPACE_DIR/$RUN_SCRIPT"
 }
 
 cmd_list()

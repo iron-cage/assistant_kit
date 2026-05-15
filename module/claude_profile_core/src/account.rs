@@ -278,28 +278,18 @@ pub fn auto_rotate( credential_store : &Path, paths : &ClaudePaths ) -> Result< 
   Ok( name )
 }
 
-/// Validate that a named account can be deleted (name valid + not active + file exists).
+/// Validate that a named account can be deleted (name valid + file exists).
 ///
 /// Called by both `delete` and the CLI dry-run path so that dry-run
 /// reports the same errors as a live delete.
 ///
 /// # Errors
 ///
-/// Returns `PermissionDenied` if the account is currently active.
 /// Returns `NotFound` if the account does not exist.
 #[ inline ]
 pub fn check_delete_preconditions( name : &str, credential_store : &Path ) -> Result< (), std::io::Error >
 {
   validate_name( name )?;
-  let active = read_active_marker( credential_store );
-
-  if active.as_deref() == Some( name )
-  {
-    return Err( std::io::Error::new(
-      std::io::ErrorKind::PermissionDenied,
-      format!( "cannot delete active account '{name}' — switch to another account first" ),
-    ) );
-  }
 
   let target = credential_store.join( format!( "{name}.credentials.json" ) );
   if !target.exists()
@@ -316,13 +306,13 @@ pub fn check_delete_preconditions( name : &str, credential_store : &Path ) -> Re
 /// Delete a named account from `credential_store`.
 ///
 /// Removes the credentials snapshot and, best-effort, the accompanying
-/// `.claude.json` and `.settings.json` snapshots created by `save()`.
-/// Snapshot removal is best-effort — accounts saved before snapshot support
-/// was introduced have no snapshot files, and missing files are silently skipped.
+/// `.claude.json` and `.settings.json` snapshots created by `save()`, and
+/// the `_active` marker if it currently points at the deleted account.
+/// All best-effort removals use `let _ = ...` — accounts saved before snapshot
+/// support was introduced have no snapshot files, and missing files are silently skipped.
 ///
 /// # Errors
 ///
-/// Returns `PermissionDenied` if the named account is currently active.
 /// Returns `NotFound` if the account does not exist.
 #[ inline ]
 pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::Error >
@@ -337,6 +327,15 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
   std::fs::remove_file( target )?;
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.claude.json" ) ) );
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.settings.json" ) ) );
+  // Fix(issue-delete-active):
+  // Root cause: `PermissionDenied` guard blocked deleting the active account; `delete()`
+  //   never cleaned up `_active`, leaving a stale marker after any deletion.
+  // Pitfall: Never block on `_active` marker state — the live credential file is already
+  //   deployed; clean up the stale marker after deletion rather than refusing the operation.
+  if read_active_marker( credential_store ).as_deref() == Some( name )
+  {
+    let _ = std::fs::remove_file( credential_store.join( "_active" ) );
+  }
   Ok( () )
 }
 

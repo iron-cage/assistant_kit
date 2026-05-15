@@ -2,12 +2,13 @@
 
 Formal specification of co-dependencies, mutual exclusions, and cascading effects between clp parameters.
 
-### All Interactions (2 total)
+### All Interactions (3 total)
 
 | # | Interaction | Parameters | Effect |
 |---|-------------|------------|--------|
 | 1 | `dry::` is orthogonal to output control | `dry::`, `format::` | Dry-run mode applies to mutation; does not affect output formatting |
 | 2 | `format::json` overrides field-presence params | `format::`, `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | JSON output includes all fields regardless of field-presence param values |
+| 3 | `format::table` ignores field-presence params | `format::`, `active::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `role::`, `billing::`, `model::` | Table output uses fixed columns regardless of field-presence param values |
 
 ---
 
@@ -47,4 +48,26 @@ clp .accounts active::0 format::json
 # file::0 (default) suppresses File: in text, but JSON always includes "file"
 clp .credentials.status format::json
 # {"subscription":"max",...,"file":"/home/user/.claude/.credentials.json","saved":2}
+```
+
+---
+
+### Interaction :: 3. `format::table` ignores field-presence params
+
+**Parameters:** [`format::`](params.md#parameter--2-format), [`active::`](params.md#parameter--13-active), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model)
+
+**Effect:** When `format::table` is specified on `.accounts`, the table always uses a fixed column set (flag, Account, Sub, Tier, Expires, Email) regardless of field-presence param values. Passing `sub::0` or `tier::0` alongside `format::table` has no effect on table columns.
+
+**Rationale:** Table layout requires fixed column widths computed across all rows; selectively omitting columns based on field-presence params would break alignment and produce inconsistent table structures. Field-presence params are a text-output concern; table is a distinct, fixed-schema rendering mode.
+
+**Commands affected:** [`.accounts`](commands.md#command--3-accounts)
+
+**Examples:**
+
+```bash
+# sub::0 has no effect in table mode — Sub column still appears
+clp .accounts sub::0 format::table
+
+# All field-presence params ignored in table mode
+clp .accounts active::0 sub::0 tier::0 format::table
 ```

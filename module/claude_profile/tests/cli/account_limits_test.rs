@@ -10,6 +10,8 @@
 //! | lim02 | IT-7 | No active credentials exits 2 with actionable error | N |
 //! | lim03 | IT-8 | Active credentials present but data unavailable exits 2 | N |
 //! | lim04 | IT-9 | `name::` with invalid chars exits 1 (usage error) | N |
+//! | lim09 | IT-9  | Positional bare arg routes to named account (data unavailable → exit 2) | N |
+//! | lim10 | IT-10 | Prefix resolves to named account (data unavailable → exit 2) | N |
 //!
 //! ## Happy Path Status (IT-1 through IT-5)
 //!
@@ -273,6 +275,69 @@ fn lim_it3_json_format_exits_0_with_valid_json()
   assert!(
     output.contains( "status" ),
     "json output must contain 'status', got:\n{output}",
+  );
+}
+
+// ── lim09 ────────────────────────────────────────────────────────────────────
+
+/// lim09 (IT-9): positional bare arg `alice@acme.com` routes to named account.
+///
+/// After positional rewrite, the command receives `name::alice@acme.com`, finds
+/// the account file (not-found path is bypassed), then fails at data fetch →
+/// exit 2 (data unavailable), not exit 1 (adapter/validation error).
+/// This distinguishes: adapter accepted the positional form (not rejected as
+/// "expected param::value") AND the account was found (not rejected as "not found").
+#[ test ]
+fn lim09_limits_positional_bare_arg()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
+  write_account( dir.path(), "alice@acme.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".account.limits", "alice@acme.com" ], &[ ( "HOME", home ) ] );
+  // Positional rewrite worked → account found → data fetch fails → exit 2.
+  // Before fix: adapter would reject bare arg → exit 1 with "expected param::value".
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "param::value" ),
+    "must not be a positional-rewrite failure, got:\n{err}",
+  );
+  assert!(
+    !err.to_lowercase().contains( "not found" ),
+    "account must be found (not a routing failure), got:\n{err}",
+  );
+}
+
+// ── lim10 ────────────────────────────────────────────────────────────────────
+
+/// lim10 (IT-10): prefix `alice` resolves to `alice@acme.com` limits.
+///
+/// After prefix resolution, the command has `name = alice@acme.com`, finds the
+/// account file, then fails at data fetch → exit 2 (data unavailable), not
+/// exit 1 (validation error: `alice` is not an email address).
+/// This distinguishes: resolver accepted the prefix form AND the account was found.
+#[ test ]
+fn lim10_limits_prefix_resolves()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
+  write_account( dir.path(), "alice@acme.com", "max", "default_claude_max_20x", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".account.limits", "alice" ], &[ ( "HOME", home ) ] );
+  // Prefix resolved → account found → data fetch fails → exit 2.
+  // Before fix: validate_name("alice") would reject non-email → exit 1 with "email address".
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    !err.to_lowercase().contains( "email address" ),
+    "must not be a validation failure, got:\n{err}",
+  );
+  assert!(
+    !err.to_lowercase().contains( "not found" ),
+    "account must be found (not a routing failure), got:\n{err}",
   );
 }
 

@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # verb-run — universal verb dispatcher.
-# Resolves flat-file or directory-form verbs and selects the right implementation.
+# Resolves the verb file and execs it; VERB_LAYER is passed via environment
+# so the verb self-dispatches to the appropriate test.d/ layer.
 #
 # Usage: verb-run <verb-name> [args...]
 #
 # Resolution:
-#   if verb/X is a file       → exec it directly (VERB_LAYER ignored)
-#   if verb/X/ is a directory → exec verb/X/$VERB_LAYER  (if set and the file exists)
-#                             → else exec verb/X/default
-#   if neither                → exit 1 with a clear error
+#   if verb/X is a file → exec it directly (it reads VERB_LAYER internally)
+#   if neither          → exit 1 with a clear error
 set -euo pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -24,19 +23,7 @@ shift
 VERB_PATH="$SCRIPT_DIR/../verb/$VERB_NAME"
 
 if [[ -f "$VERB_PATH" ]]; then
-  # Flat form — exec directly; VERB_LAYER is irrelevant.
   exec "$VERB_PATH" "$@"
-elif [[ -d "$VERB_PATH" ]]; then
-  # Directory form — dispatch to $VERB_LAYER or fall back to default.
-  LAYER="${VERB_LAYER:-}"
-  if [[ -n "$LAYER" ]] && [[ -f "$VERB_PATH/$LAYER" ]]; then
-    exec "$VERB_PATH/$LAYER" "$@"
-  elif [[ -f "$VERB_PATH/default" ]]; then
-    exec "$VERB_PATH/default" "$@"
-  else
-    echo "error: directory verb '$VERB_NAME' has no 'default' file (VERB_LAYER='${VERB_LAYER:-unset}')" >&2
-    exit 1
-  fi
 else
   echo "error: verb '$VERB_NAME' not found at $VERB_PATH" >&2
   exit 1

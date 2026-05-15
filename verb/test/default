@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-# default — developer entry point; delegates to l2 (Docker-orchestrated, reproducible).
-set -euo pipefail
-exec "$(dirname "${BASH_SOURCE[0]}")/l2" "$@"

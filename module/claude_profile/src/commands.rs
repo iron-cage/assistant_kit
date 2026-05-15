@@ -109,10 +109,7 @@ fn require_credential_store() -> Result< std::path::PathBuf, ErrorData >
 /// Map `std::io::Error` to `ErrorData` with appropriate exit code.
 ///
 /// - `InvalidInput` → `ArgumentTypeMismatch` (exit 1)
-/// - `PermissionDenied` and everything else → `InternalError` (exit 2)
-///
-/// `PermissionDenied` covers the active-account guard in `check_delete_preconditions()` —
-/// a runtime state violation, not an argument format error, so it maps to exit 2.
+/// - everything else → `InternalError` (exit 2)
 fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> ErrorData
 {
   let code = match e.kind()
@@ -121,6 +118,52 @@ fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> ErrorData
     _                                => ErrorCode::InternalError,
   };
   ErrorData::new( code, format!( "{context}: {e}" ) )
+}
+
+/// Resolve a raw account name: full email passes through; bare prefix is resolved via saved accounts.
+///
+/// - Contains `@` → returned as-is (treated as full email; downstream `validate_name` catches format errors).
+/// - No `@` with path-unsafe chars (`/`, `\`, `*`) → `ArgumentTypeMismatch` (exit 1).
+/// - No `@` (prefix) → prefix-match all saved account names:
+///   - Exactly 1 match → return that name.
+///   - 0 matches → `InternalError` (exit 2): not found.
+///   - 2+ matches → `ArgumentTypeMismatch` (exit 1): ambiguous prefix.
+// Fix(issue-name-shortcut):
+// Root cause: bare prefix args like `alice` were passed to `validate_name()` which rejected them
+//   with exit 1 ("not an email address"), masking the correct "not found" (exit 2) outcome.
+// Pitfall: Prefix resolution must occur BEFORE validate_name(); calling validate_name() on a
+//   bare prefix always returns exit 1, preventing the resolver from running at all.
+fn resolve_account_name( raw : &str, store : &std::path::Path ) -> Result< String, ErrorData >
+{
+  if raw.contains( '@' )
+  {
+    return Ok( raw.to_string() );
+  }
+  if raw.contains( '/' ) || raw.contains( '\\' ) || raw.contains( '*' )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "account name prefix '{raw}' contains invalid characters" ),
+    ) );
+  }
+  let accounts = crate::account::list( store )
+    .map_err( |e| ErrorData::new( ErrorCode::InternalError, format!( "cannot list accounts: {e}" ) ) )?;
+  let matches : Vec< &str > = accounts.iter()
+    .filter( |a| a.name.starts_with( raw ) )
+    .map( |a| a.name.as_str() )
+    .collect();
+  match matches.len()
+  {
+    1 => Ok( matches[ 0 ].to_string() ),
+    0 => Err( ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "account '{raw}' not found" ),
+    ) ),
+    _ => Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "ambiguous prefix '{raw}': matches {}", matches.join( ", " ) ),
+    ) ),
+  }
 }
 
 /// Read subscription type, rate limit tier, email, display, role, and billing from live credential files.
@@ -451,17 +494,19 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     return Ok( OutputData::new( content, "text" ) );
   };
 
-  let name_arg = match cmd.arguments.get( "name" )
+  let raw_name = match cmd.arguments.get( "name" )
   {
     Some( Value::String( s ) ) => s.clone(),
     _                          => String::new(),
   };
-
-  if !name_arg.is_empty()
+  let name_arg = if raw_name.is_empty()
   {
-    crate::account::validate_name( &name_arg )
-      .map_err( |e| io_err_to_error_data( &e, "accounts" ) )?;
+    raw_name
   }
+  else
+  {
+    resolve_account_name( &raw_name, &credential_store )?
+  };
 
   let all_accounts = crate::account::list( &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "accounts" ) )?;
@@ -549,9 +594,10 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   //   succeeded for non-existent accounts instead of reporting NotFound (exit 2).
   // Pitfall: Always run input validation + precondition checks before the dry-run guard;
   //   only the mutating operation (file copy + marker write) is skipped in dry-run.
-  let name             = require_nonempty_string_arg( &cmd, "name" )?;
+  let raw_name         = require_nonempty_string_arg( &cmd, "name" )?;
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
+  let name             = resolve_account_name( &raw_name, &credential_store )?;
   crate::account::check_switch_preconditions( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account use" ) )?;
 
@@ -652,18 +698,19 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
 
-  let name_arg = match cmd.arguments.get( "name" )
+  let raw_name = match cmd.arguments.get( "name" )
   {
     Some( Value::String( s ) ) => s.clone(),
     _                          => String::new(),
   };
 
-  let creds_path = if name_arg.is_empty()
+  let creds_path = if raw_name.is_empty()
   {
     require_active_credentials( &paths )?
   }
   else
   {
+    let name_arg = resolve_account_name( &raw_name, &credential_store )?;
     crate::account::validate_name( &name_arg )
       .map_err( | e | io_err_to_error_data( &e, "account limits" ) )?;
     let path = credential_store.join( format!( "{name_arg}.credentials.json" ) );
@@ -748,17 +795,17 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 /// # Errors
 ///
 /// Returns `ErrorData` if name is missing/empty, HOME is unset,
-/// the account is active, or the account does not exist.
+/// or the account does not exist.
 #[ inline ]
 pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   // Fix(issue-delete-dry-validation):
-  // Root cause: is_dry() was checked before active-account guard and existence check,
-  //   so dry-run bypassed PermissionDenied (active account) and NotFound (missing account).
-  // Pitfall: The active-account safety invariant must hold even in dry-run — reporting
-  //   "would delete active account" without error is a misleading no-op.
-  let name             = require_nonempty_string_arg( &cmd, "name" )?;
+  // Root cause: is_dry() was checked before existence check,
+  //   so dry-run bypassed NotFound (missing account).
+  // Pitfall: precondition checks must run before the dry-run shortcut.
+  let raw_name         = require_nonempty_string_arg( &cmd, "name" )?;
   let credential_store = require_credential_store()?;
+  let name             = resolve_account_name( &raw_name, &credential_store )?;
   crate::account::check_delete_preconditions( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account delete" ) )?;
 

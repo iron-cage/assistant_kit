@@ -59,7 +59,7 @@ impl AccountName
 
 ### Type :: 2. `OutputFormat`
 
-**Purpose:** Selects between human-readable text and machine-parseable JSON output. Enables pipeline composition via `format::json | jq`.
+**Purpose:** Selects between human-readable text, compact table, and machine-parseable JSON output. Enables pipeline composition via `format::json | jq`; enables at-a-glance multi-account comparison via `format::table`.
 
 **Fundamental Type:** Enum
 
@@ -68,16 +68,19 @@ pub enum OutputFormat
 {
   Text,
   Json,
+  Table,
 }
 ```
 
 **Constants:**
 - `TEXT` — human-readable labeled output (default)
 - `JSON` — structured JSON output
+- `TABLE` — compact aligned table (`.accounts` only)
 - `DEFAULT = Text`
 
 **Constraints:**
-- Exactly one of: `text`, `json` (case-insensitive)
+- One of: `text`, `json`, `table` (case-insensitive)
+- `table` is accepted only by `.accounts`; other commands reject it with exit 1
 - Unknown values rejected with exit 1
 
 **Parsing:**
@@ -89,18 +92,20 @@ impl OutputFormat
   {
     match s.to_lowercase().as_str()
     {
-      "text" => Ok( Self::Text ),
-      "json" => Ok( Self::Json ),
-      other => Err( format!( "invalid format '{}' — expected 'text' or 'json'", other ) ),
+      "text"  => Ok( Self::Text ),
+      "json"  => Ok( Self::Json ),
+      "table" => Ok( Self::Table ),
+      other   => Err( format!( "unknown format '{}': expected text, json, or table", other ) ),
     }
   }
 }
 ```
 
 **Methods:**
-- `get() -> &str` — string representation (`"text"` or `"json"`)
+- `get() -> &str` — string representation (`"text"`, `"json"`, or `"table"`)
 - `is_json() -> bool` — true for JSON format
 - `is_text() -> bool` — true for text format
+- `is_table() -> bool` — true for table format
 
 **Commands:** [`.accounts`](commands.md#command--3-accounts), [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.credentials.status`](commands.md#command--10-credentialsstatus), [`.account.limits`](commands.md#command--11-accountlimits)
 

@@ -4,7 +4,7 @@
 
 - **Purpose**: Give users a snapshot of all stored accounts and their metadata in one call, with optional scoping to a single named account.
 - **Responsibility**: Documents the `account::list()` API and the `.accounts` CLI command (FR-8).
-- **In Scope**: Account enumeration, metadata per entry, active-account marking, empty-store handling, named-account scoping, field-presence toggles, JSON output.
+- **In Scope**: Account enumeration, metadata per entry, active-account marking, current-account detection, empty-store handling, named-account scoping, field-presence toggles, JSON output.
 - **Out of Scope**: Switching accounts (→ 004_account_use.md), token classification logic (→ 006_token_status.md).
 
 ### Design
@@ -15,6 +15,7 @@
 |-------|--------|-------|
 | `name` | Filename stem | e.g. `alice@acme.com` from `alice@acme.com.credentials.json` |
 | `is_active` | Name matches `_active` marker content | `true` if name == contents of `{credential_store}/_active` |
+| `is_current` | `accessToken` matches `~/.claude/.credentials.json` | `true` for at most one account; `false` for all when credentials file unreadable |
 | `subscriptionType` | Credential file JSON field | Empty or absent → shown as `N/A` |
 | `rateLimitTier` | Credential file JSON field | Empty or absent → shown as `N/A` |
 | `expiresAt` | Credential file `expiresAt` field | Unix epoch milliseconds |
@@ -32,6 +33,7 @@
 
 **Field-presence toggles (default-on):**
 - `active::0` — suppress the `Active:` line
+- `current::0` — suppress the `Current:` line (live credential match; see [016_current_account_awareness.md](016_current_account_awareness.md))
 - `sub::0` — suppress the `Sub:` line
 - `tier::0` — suppress the `Tier:` line
 - `expires::0` — suppress the `Expires:` line
@@ -45,7 +47,7 @@
 
 When all field toggles are disabled, only bare account name lines are printed (no indentation, no blank-line separators).
 
-**`format::json`:** Returns a JSON array with all fields regardless of field-presence toggle values. Each object contains `name`, `is_active`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `email`, `display_name`, `role`, `billing`, `model`.
+**`format::json`:** Returns a JSON array with all fields regardless of field-presence toggle values. Each object contains `name`, `is_active`, `is_current`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `email`, `display_name`, `role`, `billing`, `model`.
 
 ### Acceptance Criteria
 
@@ -61,6 +63,9 @@ When all field toggles are disabled, only bare account name lines are printed (n
 - **AC-10**: `role::1`, `billing::1`, `model::1` show corresponding lines per account from saved snapshots.
 - **AC-11**: Accounts without saved metadata files show `N/A` for `email`, `display_name`, `role`, `billing`, `model`.
 - **AC-12**: `format::json` includes `email`, `display_name`, `role`, `billing`, `model` keys per account object.
+- **AC-13**: `Current:  yes` is shown for the account whose `accessToken` matches `~/.claude/.credentials.json`; `Current:  no` for all others. See [016_current_account_awareness.md](016_current_account_awareness.md).
+- **AC-14**: `current::0` suppresses the `Current:` line; the line is also suppressed when `~/.claude/.credentials.json` is unreadable.
+- **AC-15**: `format::json` includes `is_current` boolean field per account object.
 
 ### Cross-References
 

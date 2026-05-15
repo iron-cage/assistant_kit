@@ -21,7 +21,7 @@
 //! | A-11 | `switch_account_updates_active_marker` | switch writes `_active` marker | P |
 //! | A-12 | `switch_account_returns_not_found_for_missing_account` | name not in credential store → `Err` NotFound | N |
 //! | A-13 | `delete_removes_credential_file` | delete removes named file | P |
-//! | A-14 | `delete_returns_error_if_account_is_active` | active account → `PermissionDenied` | N |
+//! | A-14 | `delete_active_account_succeeds` | active account → succeeds, `_active` cleaned up | P |
 //! | A-15 | `delete_returns_not_found_for_missing_account` | non-existent name → `Err` NotFound | N |
 //! | A-16 | `auto_rotate_switches_to_inactive_account` | inactive account present → switches | P |
 //! | A-17 | `auto_rotate_returns_switched_account_name` | → returns name string | P |
@@ -285,22 +285,38 @@ fn delete_removes_credential_file()
   assert!( !file.exists(), "credential file must be gone after delete" );
 }
 
+// test_kind: bug_reproducer(issue-delete-active)
+//
+// Root Cause: `check_delete_preconditions()` returned `PermissionDenied` when the account
+//   matched the `_active` marker; `delete()` never cleaned up `_active` on any deletion.
+// Why Not Caught: A-14 asserted `PermissionDenied` as correct behavior; no test covered
+//   the stale-marker scenario (no other account to switch to before deleting).
+// Fix Applied: Removed the `PermissionDenied` guard from `check_delete_preconditions()`;
+//   added best-effort `_active` cleanup in `delete()` after credential file removal.
+// Prevention: Active-marker state must not block file operations — clean up stale markers
+//   after deletion rather than refusing the operation.
+// Pitfall: Checking `_active` in preconditions creates a deadlock when no other accounts
+//   exist (must switch before delete, but can't switch with no other accounts).
 #[ test ]
-fn delete_returns_error_if_account_is_active()
+fn delete_active_account_succeeds()
 {
-  //! FR-10 active-guard: cannot delete the currently active account.
+  //! FR-10: deleting the active account succeeds; `_active` marker is cleaned up.
   //!
-  //! Why: deleting the active account would leave the credentials pointer
-  //! dangling — the next switch would succeed but point to nothing.
+  //! Why: external credential changes may leave `_active` pointing at an account
+  //! the user needs to delete; blocking on `_active` adds no safety since
+  //! `~/.claude/.credentials.json` is already live regardless of the marker.
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
   account::save( "alice@acme.com", &credential_store, &paths ).expect( "save" );
   let marker = credential_store.join( "_active" );
   std::fs::write( &marker, "alice@acme.com" ).expect( "write _active" );
 
-  let err = account::delete( "alice@acme.com", &credential_store )
-    .expect_err( "must fail for active account" );
-  assert_eq!( err.kind(), std::io::ErrorKind::PermissionDenied );
+  account::delete( "alice@acme.com", &credential_store )
+    .expect( "delete must succeed even when account is active" );
+
+  let file = credential_store.join( "alice@acme.com.credentials.json" );
+  assert!( !file.exists(), "credential file must be removed after delete" );
+  assert!( !marker.exists(), "_active marker must be cleaned up after deleting active account" );
 }
 
 #[ test ]

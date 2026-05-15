@@ -6,7 +6,7 @@
 |---|---------|---------|--------|---------|
 | 1 | `.` | Show help information (hidden dot-shorthand) | 0 | `clp .` |
 | 2 | `.help` | Display command reference and usage examples | 0 | `clp .help` |
-| 3 | `.accounts` | List all saved accounts or show a single named account | 11 | `clp .accounts` |
+| 3 | `.accounts` | List all saved accounts or show a single named account | 12 | `clp .accounts` |
 | 4 | `.account.save` | Save current credentials as a named account profile | 2 | `clp .account.save name::alice@acme.com` |
 | 5 | `.account.use` | Switch active account by name with atomic credential rotation | 2 | `clp .account.use name::alice@home.com` |
 | 6 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::alice@oldco.com` |
@@ -23,7 +23,7 @@
 ### Quick Reference
 
 **Required Parameters:**
-- `name::` — required on `.account.use`, `.account.delete` (must be an email address); optional on `.account.save` (inferred from `~/.claude.json` `emailAddress` when omitted)
+- `name::` — required on `.account.use`, `.account.delete` (must be an email address); optional on `.account.save` (inferred from `~/.claude.json` `emailAddress` when omitted). Also accepted as a bare positional argument (`clp .account.use alice@home.com`) or a prefix shortcut (`clp .account.use i3` resolves to the first saved account starting with `i3`).
 
 **Most-Used Parameters:**
 - `format::` — 6 commands
@@ -35,7 +35,7 @@
 | 0 | `.`, `.help` |
 | 1 | `.paths`, `.usage` |
 | 2 | `.account.save`, `.account.use`, `.account.delete`, `.token.status`, `.account.limits` |
-| 11 | `.accounts` |
+| 12 | `.accounts` |
 | 13 | `.credentials.status` |
 
 ---
@@ -103,7 +103,7 @@ Options:
 
 Examples:
   clp .accounts
-  clp .account.use name::alice@acme.com
+  clp .account.use alice@acme.com
   clp .usage
   clp .credentials.status
 ```
@@ -140,7 +140,7 @@ clp help
 
 List all saved accounts or show a single named account with per-field presence control. Without `name::`: shows every account in the credential store as an indented key-val block; with `name::EMAIL`: shows that account's block only.
 
--- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`active::`](params.md#parameter--13-active), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model), [`format::`](params.md#parameter--2-format)
+-- **Parameters:** [`name::`](params.md#parameter--1-name) *(optional)*, [`active::`](params.md#parameter--13-active), [`current::`](params.md#parameter--18-current), [`sub::`](params.md#parameter--6-sub), [`tier::`](params.md#parameter--7-tier), [`expires::`](params.md#parameter--9-expires), [`email::`](params.md#parameter--10-email), [`display_name::`](params.md#parameter--14-display_name), [`role::`](params.md#parameter--15-role), [`billing::`](params.md#parameter--16-billing), [`model::`](params.md#parameter--17-model), [`format::`](params.md#parameter--2-format)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
@@ -148,15 +148,19 @@ List all saved accounts or show a single named account with per-field presence c
 ```bash
 clp .accounts
 clp .accounts name::alice@acme.com
+clp .accounts alice@acme.com         # positional: same as name::alice@acme.com
+clp .accounts i3                     # prefix: first saved account starting with "i3"
 clp .accounts sub::0 tier::0
 clp .accounts display_name::1 role::1 billing::1 model::1
 clp .accounts format::json
+clp .accounts format::table
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](types.md#type--1-accountname) | *(omit to list all)* | Show a single named account instead of listing all |
 | `active::` | `bool` | `1` | Show active/inactive status line |
+| `current::` | `bool` | `1` | Show current (live) account line; suppressed when `~/.claude/.credentials.json` is unreadable |
 | `sub::` | `bool` | `1` | Show subscription type line |
 | `tier::` | `bool` | `1` | Show rate-limit tier line |
 | `expires::` | `bool` | `1` | Show token expiry duration line |
@@ -173,6 +177,7 @@ clp .accounts format::json
 clp .accounts
 # alice@acme.com
 #   Active:  yes
+#   Current: no
 #   Sub:     max
 #   Tier:    default_claude_max_20x
 #   Expires: in 2h 11m
@@ -180,6 +185,7 @@ clp .accounts
 #
 # alice@home.com
 #   Active:  no
+#   Current: yes
 #   Sub:     pro
 #   Tier:    default_claude_pro
 #   Expires: in 5h 30m
@@ -188,6 +194,7 @@ clp .accounts
 clp .accounts name::alice@acme.com
 # alice@acme.com
 #   Active:  yes
+#   Current: no
 #   Sub:     max
 #   Tier:    default_claude_max_20x
 #   Expires: in 2h 11m
@@ -196,19 +203,22 @@ clp .accounts name::alice@acme.com
 clp .accounts sub::0 tier::0 email::0
 # alice@acme.com
 #   Active:  yes
+#   Current: no
 #   Expires: in 2h 11m
 #
 # alice@home.com
 #   Active:  no
+#   Current: yes
 #   Expires: in 5h 30m
 
-clp .accounts active::0 sub::0 tier::0 expires::0 email::0
+clp .accounts active::0 current::0 sub::0 tier::0 expires::0 email::0
 # alice@acme.com
 # alice@home.com
 
 clp .accounts display_name::1 role::1 billing::1 model::1
 # alice@acme.com
 #   Active:  yes
+#   Current: no
 #   Sub:     max
 #   Tier:    default_claude_max_20x
 #   Expires: in 2h 11m
@@ -220,6 +230,7 @@ clp .accounts display_name::1 role::1 billing::1 model::1
 #
 # alice@home.com
 #   Active:  no
+#   Current: yes
 #   Sub:     pro
 #   Tier:    default_claude_pro
 #   Expires: in 5h 30m
@@ -230,15 +241,26 @@ clp .accounts display_name::1 role::1 billing::1 model::1
 #   Model:   N/A
 
 clp .accounts format::json
-# [{"name":"alice@acme.com","is_active":true,"subscription_type":"max","rate_limit_tier":"default_claude_max_20x","expires_at_ms":1711234567000,"email":"alice@acme.com","display_name":"alice","role":"admin","billing":"stripe_subscription","model":"sonnet"},{"name":"alice@home.com","is_active":false,"subscription_type":"pro","rate_limit_tier":"default_claude_pro","expires_at_ms":1711243567000,"email":"N/A","display_name":"N/A","role":"N/A","billing":"N/A","model":"N/A"}]
+# [{"name":"alice@acme.com","is_active":true,"is_current":false,"subscription_type":"max","rate_limit_tier":"default_claude_max_20x","expires_at_ms":1711234567000,"email":"alice@acme.com","display_name":"alice","role":"admin","billing":"stripe_subscription","model":"sonnet"},{"name":"alice@home.com","is_active":false,"is_current":true,"subscription_type":"pro","rate_limit_tier":"default_claude_pro","expires_at_ms":1711243567000,"email":"N/A","display_name":"N/A","role":"N/A","billing":"N/A","model":"N/A"}]
+
+clp .accounts format::table
+# Accounts
+#
+#    Account         Sub   Tier                     Expires     Email
+# -  --------------  ----  -----------------------  ----------  ----------------
+# ✓  alice@acme.com  max   default_claude_max_20x   in 2h 11m   alice@acme.com
+#    alice@home.com  pro   default_claude_pro        in 5h 30m   N/A
 ```
 
 **Notes:**
 - Without `name::`: all accounts listed as indented blocks, separated by blank lines. Empty store → `(no accounts configured)`.
 - With `name::EMAIL`: shows exactly one account's block — same format as listing.
 - Field params affect text output only; `format::json` always includes all fields regardless of presence params.
+- `format::table` renders a compact one-row-per-account table with fixed columns (flag, Account, Sub, Tier, Expires, Email) — field-presence params are ignored in table mode.
 - Reports exit 1 for invalid `name::` value; exit 2 if the named account is not found.
 - `email::`, `display_name::`, `role::`, `billing::` read from per-account saved `{name}.claude.json` snapshot; `model::` reads from `{name}.settings.json`. All show `N/A` when the snapshot file is absent (backward compatible with accounts saved before this feature).
+- `current::` (default on): shows `Current:  yes` for the account whose `accessToken` matches `~/.claude/.credentials.json`; `Current:  no` for others. The line is suppressed entirely (regardless of the `current::` toggle) when `~/.claude/.credentials.json` is unreadable. See [feature/016_current_account_awareness.md](../feature/016_current_account_awareness.md).
+- `format::json` includes `is_current` boolean per account object.
 
 ---
 
@@ -292,7 +314,10 @@ Atomically overwrites `~/.claude/.credentials.json` with the named account's cre
 
 ```bash
 clp .account.use name::alice@home.com
+clp .account.use alice@home.com          # positional: same as name::alice@home.com
+clp .account.use i3                      # prefix: first saved account starting with "i3"
 clp .account.use name::alice@home.com dry::1
+clp .account.use alice@home.com dry::1
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -314,16 +339,19 @@ clp .account.use name::alice@home.com dry::1
 
 ### Command :: 6. `.account.delete`
 
-Removes `{credential_store}/{name}.credentials.json` from the credential store and best-effort removes the accompanying `{name}.claude.json` and `{name}.settings.json` snapshot files. Refuses to delete the currently active account — switch to another account first.
+Removes `{credential_store}/{name}.credentials.json` from the credential store and best-effort removes the accompanying `{name}.claude.json` and `{name}.settings.json` snapshot files. When the deleted account is active, the `_active` marker is also removed.
 
 -- **Parameters:** [`name::`](params.md#parameter--1-name) **(required)**, [`dry::`](params.md#parameter--4-dry)
--- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found, account is active)
+-- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found)
 
 **Syntax:**
 
 ```bash
 clp .account.delete name::alice@oldco.com
+clp .account.delete alice@oldco.com         # positional: same as name::alice@oldco.com
+clp .account.delete i3                      # prefix: first saved account starting with "i3"
 clp .account.delete name::alice@oldco.com dry::1
+clp .account.delete alice@oldco.com dry::1
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -341,12 +369,12 @@ clp .account.delete name::alice@oldco.com dry::1
 # [dry-run] would delete account 'alice@oldco.com'
 
 clp .account.delete name::alice@acme.com
-# error: cannot delete active account 'alice@acme.com' — switch to another account first
+# deleted account 'alice@acme.com'
 ```
 
 **Notes:**
 - Snapshot files (`{name}.claude.json`, `{name}.settings.json`) are removed best-effort: missing snapshots are silently skipped — the operation still succeeds.
-- Attempting to delete the active account exits 2 regardless of `dry::1`.
+- Deleting the active account also removes the `_active` marker, leaving no active account. Use `.account.use` or `.account.save` to restore an active account.
 
 ---
 
@@ -454,15 +482,15 @@ clp .usage
 
 clp .usage format::json
 # [
-#   {"account":"i12@wbox.pro","active":true,"expires_in_secs":26640,"session_5h_left_pct":86,"session_5h_resets_in_secs":11940,"weekly_7d_left_pct":65,"weekly_7d_resets_in_secs":432540,"status":"allowed"},
-#   {"account":"i6@wbox.pro","active":false,"expires_in_secs":18120,"session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_resets_in_secs":500040,"status":"allowed"},
-#   {"account":"i7@wbox.pro","active":false,"expires_in_secs":0,"error":"missing accessToken"}
+#   {"account":"i12@wbox.pro","is_current":true,"is_active":false,"expires_in_secs":26640,"session_5h_left_pct":86,"session_5h_resets_in_secs":11940,"weekly_7d_left_pct":65,"weekly_7d_resets_in_secs":432540,"status":"allowed"},
+#   {"account":"i6@wbox.pro","is_current":false,"is_active":true,"expires_in_secs":18120,"session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_resets_in_secs":500040,"status":"allowed"},
+#   {"account":"i7@wbox.pro","is_current":false,"is_active":false,"expires_in_secs":0,"error":"missing accessToken"}
 # ]
 ```
 
 **Notes:**
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
-- Flag column: `✓` for the active account, `→` for the recommended next account (highest remaining session quota among non-active accounts with valid quota data and a non-expired token), blank otherwise.
+- Flag column priority: `✓` = current account (live `accessToken` match), `*` = `_active`-but-not-current (divergence indicator), `→` = recommended next account (highest remaining session quota among non-current accounts with valid quota data and a non-expired token), ` ` = none. When current = active, only `✓` appears; `*` is suppressed. See [feature/016_current_account_awareness.md](../feature/016_current_account_awareness.md).
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails. Shows "in Xh Ym" or "EXPIRED".
 - `5h Left` / `7d Left` show remaining quota percentage (100 − consumed). `5h Reset` / `7d Reset` are independent countdown columns.
 - Accounts with expired or missing `accessToken` show `—` for quota columns and a shortened error reason in Status; other accounts continue processing (per-account errors are non-fatal).
@@ -570,6 +598,8 @@ Show rate-limit utilization for the active or named account. Displays session (5
 ```bash
 clp .account.limits
 clp .account.limits name::alice@acme.com
+clp .account.limits alice@acme.com       # positional: same as name::alice@acme.com
+clp .account.limits i3                   # prefix: first saved account starting with "i3"
 clp .account.limits format::json
 ```
 

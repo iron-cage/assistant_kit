@@ -33,21 +33,32 @@ Runs clippy on the target module with all features enabled and warnings promoted
 ./verb/lint              # runs: cargo clippy -p claude_runner_core --all-features -- -D warnings
 ```
 
-Script body:
+`verb/lint` dispatcher (universal — identical for all cargo modules):
 ```bash
 #!/usr/bin/env bash
-# do lint — static analysis and style checking (cargo ecosystem)
+# lint — run linter; dispatches by VERB_LAYER to lint.d/ layer.
+set -euo pipefail
+DIR="$(dirname "${BASH_SOURCE[0]}")/lint.d"
+LAYER="${VERB_LAYER:-}"
+[[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
+exec "$DIR/l1" "$@"
+```
+
+`verb/lint.d/l1` (module-specific, example: `claude_profile`):
+```bash
+#!/usr/bin/env bash
+# l1 — run cargo clippy directly (cargo ecosystem).
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR/.."
+cd "$SCRIPT_DIR/../.."
 if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clippy -p claude_profile --all-features -- -D warnings"; exit 0; fi
 exec cargo clippy -p claude_profile --all-features -- -D warnings
 ```
 
 ### Runbox Ecosystem
 
-Standalone projects (Python, Node.js, Rust examples) implement `lint` via a `run/lint` shell script executed inside the container by `runbox-run .lint`. The `verb/lint` script invokes `./run/runbox .lint` rather than calling the linter directly.
+Standalone projects (Python, Node.js, Rust examples) implement `lint` via a `verb/lint.d/l1` layer script executed directly inside the container. `verb/lint` is a dispatcher: when `VERB_LAYER=l1` (set by `runbox-run`), it routes to `verb/lint.d/l1`; on the host it falls through to `verb/lint.d/l2` which delegates to `./run/runbox .lint`.
 
-`runbox.yml` must declare `lint_script: run/lint` — see `run/docs/parameter/014_lint_script.md`.
+`runbox.yml` must declare `lint_script: verb/lint` — see `run/docs/parameter/014_lint_script.md`.
 
 The linter is ecosystem-specific: ruff for Python, eslint for Node.js, cargo clippy for Rust. All are invoked with absolute container paths (`/workspace/...`). `verb/lint` is `available` for all project types — linting is universal.

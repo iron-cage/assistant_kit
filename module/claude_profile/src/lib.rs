@@ -301,7 +301,7 @@ mod cli
     println!();
     println!( "{bold}Examples:{rst}" );
     println!( "  {dim}{binary} .accounts{rst}" );
-    println!( "  {dim}{binary} .account.use name::alice@acme.com{rst}" );
+    println!( "  {dim}{binary} .account.use alice@acme.com{rst}" );
     println!( "  {dim}{binary} .usage{rst}" );
     println!( "  {dim}{binary} .credentials.status{rst}" );
   }

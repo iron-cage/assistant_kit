@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-# default — developer entry point; delegates to l1 (no separate Docker layer for this module).
-set -euo pipefail
-exec "$(dirname "${BASH_SOURCE[0]}")/l1" "$@"

@@ -15,18 +15,21 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 | EC-7 | Omitted `format::` defaults to `format::text` | Default |
 | EC-8 | `format::json` output parseable by `jq` | JSON Validity |
 | EC-9 | `fmt::json` alias produces JSON output (same as `format::json`) | Alias |
+| EC-10 | `format::table` on `.accounts` renders aligned one-row-per-account table | Valid Format / Table |
+| EC-11 | `format::table` on `.token.status` exits 1 (table not supported) | Format Restriction |
 
 ### Test Coverage Summary
 
-- Valid Format: 2 tests
-- Invalid Format: 1 test
-- Case Handling: 2 tests
-- Last Wins: 1 test
-- Default: 1 test
-- JSON Validity: 1 test
-- Alias: 1 test
+- Valid Format: 3 tests (EC-1, EC-2, EC-10)
+- Invalid Format: 1 test (EC-3)
+- Case Handling: 2 tests (EC-4, EC-5)
+- Last Wins: 1 test (EC-6)
+- Default: 1 test (EC-7)
+- JSON Validity: 1 test (EC-8)
+- Alias: 1 test (EC-9)
+- Format Restriction: 1 test (EC-11)
 
-**Total:** 9 edge cases
+**Total:** 11 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
 
@@ -119,3 +122,23 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **Then:** `.accounts` returns a JSON array starting with `[`; `.token.status` returns a JSON object starting with `{`. Exit 0 for both.; `fmt::` alias is expanded to `format::` at runtime — not rejected as an unknown parameter
 - **Exit:** 0
 - **Source:** `tests/cli/cross_cutting_test.rs (e11, e12)`
+
+---
+
+### EC-10: Valid Format — Table (`.accounts` only)
+
+- **Given:** At least two saved accounts exist under `~/.persistent/claude/credential/`. One is active.
+- **When:** `clp .accounts format::table`
+- **Then:** Stdout contains `Accounts` title, a dash-separated header row with `Account`, `Sub`, `Tier`, `Expires`, `Email` columns, and one data row per account; the active account row has `✓` in the flag column; non-active rows have a blank flag. Exit 0.; table output with fixed columns and aligned rows
+- **Exit:** 0
+- **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
+
+---
+
+### EC-11: Table Format Rejected on Non-`.accounts` Commands
+
+- **Given:** Valid credentials file present.
+- **When:** `clp .token.status format::table`
+- **Then:** Exit 1; stderr contains an error message indicating `table` is not supported (or is an unknown format); no output on stdout.; `table` is rejected by commands that only accept `text` or `json`
+- **Exit:** 1
+- **Source:** [types.md -- OutputFormat](../../../../docs/cli/types.md#type--3-outputformat)

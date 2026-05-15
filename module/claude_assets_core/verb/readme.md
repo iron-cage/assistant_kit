@@ -5,10 +5,12 @@ Shell scripts implementing the `do` protocol verbs for `claude_assets_core` (car
 | File | Responsibility |
 |------|---------------|
 | `build` | Compile project artifacts via `cargo build`. |
-| `test/` | Run full test suite; directory form (`default` → `l1` → `w3 .test level::3`). |
+| `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
+| `test.d/` | Layer directory: `l1` (w3 .test level::3). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `run` | Execute entry point binary — unavailable for this library crate. |
-| `lint` | Run static analysis and style checks via `cargo clippy`. |
+| `lint` | Dispatcher: run linter; delegates to `lint.d/` layer by `VERB_LAYER`. |
+| `lint.d/` | Layer directory: `l1` (cargo clippy). |
 | `verify` | Run full pre-push gate: tests, deps analysis, audit. |
 | `verbs` | List all available verbs and their availability (meta). |
 | `package_info` | Report deterministic package metadata as JSON (meta). |

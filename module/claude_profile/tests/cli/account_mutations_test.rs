@@ -43,6 +43,9 @@
 //! | aw10 | `aw10_switch_dry_run_nonexistent_exits_2` | dry-run nonexistent → exit 2 | N |
 //! | aw11 | `aw11_switch_slash_in_email_local_part_exits_1` | `/` in email local part → exit 1 | N |
 //! | — | `switch_restores_claude_json` | `~/.claude.json` restored after switch (issue-122) | P |
+//! | aw13 | `aw13_use_positional_bare_arg` | positional email `personal@home.com` → switches | P |
+//! | aw14 | `aw14_use_prefix_resolves` | prefix `i3` resolves to `i3@wbox.pro`, switches | P |
+//! | aw15 | `aw15_use_prefix_ambiguous_exits_1` | ambiguous prefix `i` → exit 1 with "ambiguous" | N |
 //!
 //! ### AD — Account Delete
 //!
@@ -50,20 +53,22 @@
 //! |----|---------------|-----------|-----|
 //! | ad01 | `ad01_delete_inactive_removes_file` | delete inactive removes file | P |
 //! | ad02 | `ad02_delete_dry_run_keeps_file` | dry::1 → file kept | P |
-//! | ad03 | `ad03_delete_active_exits_2` | delete active account → exit 2 | N |
+//! | ad03 | `ad03_delete_active_exits_0` | delete active account → exit 0, `_active` cleaned up | P |
 //! | ad04 | `ad04_delete_nonexistent_exits_2` | unknown account → exit 2 | N |
 //! | ad05 | `ad05_delete_empty_name_exits_1` | empty name → exit 1 | N |
 //! | ad06 | `ad06_delete_slash_name_exits_1` | name with `/` → exit 1 | N |
 //! | ad07 | `ad07_delete_missing_name_param_exits_1` | no name:: param → exit 1 | N |
 //! | ad08 | `ad08_delete_then_list_absent` | delete then list → account gone | P |
 //! | ad09 | `ad09_double_delete_exits_2` | delete twice → second exit 2 | N |
-//! | ad10 | `ad10_delete_dry_run_active_exits_2` | dry delete active → exit 2 | N |
+//! | ad10 | `ad10_delete_dry_run_active_exits_0` | dry delete active → exit 0, file kept | P |
 //! | ad11 | `ad11_delete_dry_run_nonexistent_exits_2` | dry delete nonexistent → exit 2 | N |
 //! | ad12 | `ad12_delete_removes_snapshot_files` | delete removes .claude.json + .settings.json snapshots | P |
+//! | ad13 | `ad13_delete_positional_bare_arg` | positional email `old@archive.com` → deletes account | P |
+//! | ad14 | `ad14_delete_prefix_resolves` | prefix `old` resolves to `old@archive.com`, deletes | P |
 
 use crate::helpers::{
   run_cs_with_env,
-  stdout, assert_exit,
+  stdout, stderr, assert_exit,
   write_credentials, write_account, write_claude_json, account_exists,
   write_account_claude_json, write_account_settings_json,
   FAR_FUTURE_MS,
@@ -441,15 +446,17 @@ fn ad02_delete_dry_run_keeps_file()
 }
 
 #[ test ]
-fn ad03_delete_active_exits_2()
+fn ad03_delete_active_exits_0()
 {
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.delete", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 2 );
-  assert!( account_exists( dir.path(), "alice@acme.com" ), "active account must not be deleted" );
+  assert_exit( &out, 0 );
+  assert!( !account_exists( dir.path(), "alice@acme.com" ), "active account must be deleted" );
+  let active_marker = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( "_active" );
+  assert!( !active_marker.exists(), "_active marker must be cleaned up after deleting active account" );
 }
 
 #[ test ]
@@ -550,27 +557,17 @@ fn aw10_switch_dry_run_nonexistent_exits_2()
   assert_exit( &out, 2 );
 }
 
-// test_kind: bug_reproducer(issue-delete-dry-validation)
-//
-// Root Cause: `account_delete_routine` checked `is_dry()` before running the active-account
-//   guard, so `.account.delete dry::1 name::work` (where `work` is active) returned exit 0
-//   ("would delete account 'work'") bypassing `PermissionDenied`.
-// Why Not Caught: `ad02_delete_dry_run_keeps_file` uses an inactive account — it never
-//   exercised dry-run against the currently active account.
-// Fix Applied: `check_delete_preconditions()` extracted from `delete()` and called in
-//   the command routine before the dry-run guard.
-// Prevention: Same as aw10: validate preconditions before the dry-run shortcut.
-// Pitfall: The active-account guard is a safety invariant that must hold even in dry-run;
-//   reporting "would delete active account" without error is a misleading no-op.
 #[ test ]
-fn ad10_delete_dry_run_active_exits_2()
+fn ad10_delete_dry_run_active_exits_0()
 {
+  // Dry-run on the active account exits 0 now that the active-account guard is removed.
+  // The account file must not be deleted (dry-run protection is unrelated to active status).
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
 
   let out = run_cs_with_env( &[ ".account.delete", "name::alice@acme.com", "dry::1" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 2 );
+  assert_exit( &out, 0 );
   assert!( account_exists( dir.path(), "alice@acme.com" ), "dry-run must not delete active account" );
 }
 
@@ -777,4 +774,99 @@ fn aw11_switch_slash_in_email_local_part_exits_1()
 
   let out = run_cs_with_env( &[ ".account.use", "name::a/b@c.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
+}
+
+// ── aw13 ──────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn aw13_use_positional_bare_arg()
+{
+  // AC-01: positional form `clp .account.use personal@home.com` is equivalent to
+  // `clp .account.use name::personal@home.com`.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "work@acme.com",     "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "personal@home.com", "max", "tier4",    FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".account.use", "personal@home.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "switched" ), "must confirm switch, got:\n{text}" );
+  let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let active = std::fs::read_to_string( store.join( "_active" ) ).expect( "_active must exist" );
+  assert_eq!( active.trim(), "personal@home.com", "_active must point at switched-to account" );
+}
+
+// ── aw14 ──────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn aw14_use_prefix_resolves()
+{
+  // AC-05: prefix `i3` resolves uniquely to `i3@wbox.pro` and switches.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "i3@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "i5@wbox.pro", "pro", "standard", FAR_FUTURE_MS, true  );
+
+  let out = run_cs_with_env( &[ ".account.use", "i3" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let active = std::fs::read_to_string( store.join( "_active" ) ).expect( "_active must exist" );
+  assert_eq!( active.trim(), "i3@wbox.pro", "prefix i3 must resolve to i3@wbox.pro" );
+}
+
+// ── aw15 ──────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn aw15_use_prefix_ambiguous_exits_1()
+{
+  // AC-06: ambiguous prefix `i` matches both `i3@wbox.pro` and `i5@wbox.pro` → exit 1.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "i3@wbox.pro", "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "i5@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".account.use", "i" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.to_lowercase().contains( "ambiguous" ),
+    "error must say 'ambiguous', got:\n{err}",
+  );
+}
+
+// ── ad13 ──────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn ad13_delete_positional_bare_arg()
+{
+  // AC-02 (delete): positional form `clp .account.delete old@archive.com` is
+  // equivalent to `clp .account.delete name::old@archive.com`.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",    "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "old@archive.com",  "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".account.delete", "old@archive.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  assert!( !account_exists( dir.path(), "old@archive.com" ), "account must be deleted" );
+}
+
+// ── ad14 ──────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn ad14_delete_prefix_resolves()
+{
+  // AC-05 (delete): prefix `old` resolves uniquely to `old@archive.com` and deletes it.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",    "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "old@archive.com",  "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".account.delete", "old" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  assert!( !account_exists( dir.path(), "old@archive.com" ), "prefix old must resolve to old@archive.com and delete it" );
 }

@@ -18,6 +18,9 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 | IT-10 | Missing `name::` parameter exits 1 (required) | Required Param |
 | IT-11 | `.credentials.status` shows new account email after use | Email Consistency |
 | IT-12 | Use with path-unsafe chars in email local part exits 1 | Validation |
+| IT-13 | Positional bare arg `alice@home.com` (no `name::`) switches account | Positional Syntax |
+| IT-14 | Prefix `i3` resolves to `i3@wbox.pro` and switches account | Prefix Resolution |
+| IT-15 | Ambiguous prefix matches two accounts → exit 1 | Prefix Resolution / Error |
 
 ### Test Coverage Summary
 
@@ -32,8 +35,10 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - Atomicity: 1 test
 - Required Param: 1 test
 - Email Consistency: 1 test
+- Positional Syntax: 1 test
+- Prefix Resolution: 2 tests
 
-**Total:** 12 integration tests
+**Total:** 15 integration tests
 
 ---
 
@@ -154,3 +159,33 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **Then:** Error message on stderr indicating the name contains path-unsafe characters, exit 1. No filesystem modification.
 - **Exit:** 1
 - **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse), [004_account_use.md AC-06](../../../../docs/feature/004_account_use.md), [aw11 in account_mutations_test.rs]
+
+---
+
+### IT-13: Positional bare arg switches account
+
+- **Given:** Two accounts saved: `work@acme.com` (active) and `personal@home.com`.
+- **When:** `clp .account.use personal@home.com` (no `name::` prefix)
+- **Then:** Exits 0; `switched to 'personal@home.com'` on stdout; outcome identical to `clp .account.use name::personal@home.com`.
+- **Exit:** 0
+- **Source:** [015_name_shortcut_syntax.md AC-01](../../../../docs/feature/015_name_shortcut_syntax.md)
+
+---
+
+### IT-14: Prefix resolves to single account
+
+- **Given:** Two accounts saved: `i3@wbox.pro` and `i5@wbox.pro`. `_active` = `i5@wbox.pro`.
+- **When:** `clp .account.use i3` (prefix form, no `@`)
+- **Then:** Exits 0; `switched to 'i3@wbox.pro'` on stdout; credentials overwritten with `i3@wbox.pro` content.
+- **Exit:** 0
+- **Source:** [015_name_shortcut_syntax.md AC-05](../../../../docs/feature/015_name_shortcut_syntax.md)
+
+---
+
+### IT-15: Ambiguous prefix exits 1
+
+- **Given:** Two accounts saved: `i3@wbox.pro` and `i5@wbox.pro`.
+- **When:** `clp .account.use i` (prefix matches both accounts)
+- **Then:** Exits 1; stderr contains "ambiguous" and lists both matching account names.
+- **Exit:** 1
+- **Source:** [015_name_shortcut_syntax.md AC-06](../../../../docs/feature/015_name_shortcut_syntax.md)

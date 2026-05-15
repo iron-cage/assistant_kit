@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# test — run full test suite; dispatches by VERB_LAYER to test.d/ layer.
+set -euo pipefail
+DIR="$(dirname "${BASH_SOURCE[0]}")/test.d"
+LAYER="${VERB_LAYER:-}"
+[[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
+exec "$DIR/l1" "$@"

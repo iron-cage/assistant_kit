@@ -11,6 +11,7 @@ Integration and edge case coverage for the Output Control parameter group (`form
 | EC-3 | `format::json` overrides field-presence params on `.accounts` | Interaction |
 | EC-4 | `format::json` overrides field-presence params on `.credentials.status` | Interaction |
 | EC-5 | `format::` param ignored by mutation commands (save, use, delete) | Non-Applicability |
+| EC-6 | `format::table` on `.accounts` renders table; rejected on other commands | Table Mode |
 
 ### Test Coverage Summary
 
@@ -18,8 +19,9 @@ Integration and edge case coverage for the Output Control parameter group (`form
 - Text Mode: 1 test
 - Interaction: 2 tests
 - Non-Applicability: 1 test
+- Table Mode: 1 test
 
-**Total:** 5 tests
+**Total:** 6 tests
 
 ---
 
@@ -80,3 +82,15 @@ Integration and edge case coverage for the Output Control parameter group (`form
 - **Then:** Each mutation command either ignores `format::json` (producing its standard single-line confirmation) or rejects it with an error. The param does not alter mutation output format.
 - **Exit:** 0
 - **Source:** [parameter_groups.md — Output Control](../../../../docs/cli/parameter_groups.md#group--1-output-control)
+
+---
+
+### EC-6: Table Mode
+
+- **Given:** At least one saved account exists. Active credentials present.
+- **When:**
+  1. `clp .accounts format::table`
+  2. `clp .token.status format::table`
+- **Then:** `.accounts format::table` exits 0 and produces a titled, aligned table with columns Account, Sub, Tier, Expires, Email (with flag column). `.token.status format::table` exits 1 with an error indicating table is not supported.
+- **Exit:** 0 (`.accounts`), 1 (`.token.status`)
+- **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts), [parameter_interactions.md — Interaction 3](../../../../docs/cli/parameter_interactions.md#interaction--3-formattable-ignores-field-presence-params)

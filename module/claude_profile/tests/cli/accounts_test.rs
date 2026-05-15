@@ -48,6 +48,8 @@
 //! | acc26 | `acc26_save_creates_snapshot_files` | `save` creates `{name}.claude.json` and `.settings.json` | P |
 //! | acc27 | `acc27_save_succeeds_without_claude_json` | save OK when `~/.claude.json` absent (best-effort) | P |
 //! | acc28 | `acc28_save_succeeds_without_settings_json` | save OK when `settings.json` absent but `.claude.json` present | P |
+//! | acc29 | `acc29_accounts_positional_bare_arg` | positional email → shows single account block | P |
+//! | acc30 | `acc30_accounts_prefix_resolves` | prefix `alice` resolves to `alice@acme.com` | P |
 
 use crate::helpers::{
   run_cs, run_cs_with_env,
@@ -907,4 +909,41 @@ fn acc28_save_succeeds_without_settings_json()
     !store.join( "alice@acme.com.settings.json" ).exists(),
     "no settings.json source → no settings.json snapshot must be created",
   );
+}
+
+// ── acc29 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn acc29_accounts_positional_bare_arg()
+{
+  // AC-03: positional form `clp .accounts alice@acme.com` is equivalent to
+  // `clp .accounts name::alice@acme.com` — shows only that account block.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",  "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "alice@acme.com", "max", "tier4",    FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".accounts", "alice@acme.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "alice@acme.com" ), "must show alice@acme.com, got:\n{text}" );
+  assert!( !text.contains( "work@acme.com" ), "must not show work@acme.com, got:\n{text}" );
+}
+
+// ── acc30 ─────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn acc30_accounts_prefix_resolves()
+{
+  // AC-05 (accounts): prefix `alice` resolves to `alice@acme.com` — shows only that block.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4",    FAR_FUTURE_MS, false );
+  write_account( dir.path(), "work@acme.com",  "pro", "standard", FAR_FUTURE_MS, true  );
+
+  let out = run_cs_with_env( &[ ".accounts", "alice" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "alice@acme.com" ), "prefix alice must resolve to alice@acme.com, got:\n{text}" );
+  assert!( !text.contains( "work@acme.com" ), "must not show work@acme.com, got:\n{text}" );
 }

@@ -10,37 +10,54 @@ Optional script path (relative to `/workspace`) executed by `.run`. When absent,
 
 `_ensure_image()` probes for the script inside the image (alongside `test_script` and `lint_script`) in a single container run. If any configured script is absent from the image, the image is automatically rebuilt rather than emitting a cryptic "not found" error.
 
-Library-only projects typically omit `run_script` entirely. Binary projects (Python modules, Node.js services, Rust binaries) set this to `run/run` — a thin shell script that invokes the compiled or interpreted entry point at an absolute container path.
+Library-only projects typically omit `run_script` entirely. Binary projects (Python modules, Node.js services, Rust binaries) set this to `verb/run` — a self-dispatching dispatcher that routes to `verb/run.d/l1` inside the container (via `VERB_LAYER=l1`) or delegates to runbox via `verb/run.d/l2` when invoked on the host.
 
 ### Example
 
-Python standalone project:
+`verb/run` dispatcher (identical for all ecosystems):
 ```yaml
-run_script: run/run
+run_script: verb/run
 ```
-`run/run` (works inside the container and natively on the host):
 ```bash
 #!/usr/bin/env bash
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-exec "$SCRIPT_DIR/../.venv/bin/python" -m example_lib
+# run — execute entry point; dispatches by VERB_LAYER to run.d/ layer.
+set -euo pipefail
+DIR="$(dirname "${BASH_SOURCE[0]}")/run.d"
+LAYER="${VERB_LAYER:-}"
+[[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
+exec "$DIR/l2" "$@"
 ```
-Node.js standalone project:
-```yaml
-run_script: run/run
-```
-`run/run` (works inside the container and natively on the host):
+
+`verb/run.d/l1` — container execution layer (ecosystem-specific):
+
+Python:
 ```bash
 #!/usr/bin/env bash
+set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-exec node "$SCRIPT_DIR/../src/main.js"
+exec "$SCRIPT_DIR/../../.venv/bin/python" -m example_lib
 ```
-Rust standalone project (pre-built binary in image):
-```yaml
-run_script: run/run
-```
-`run/run` (works inside the container and natively on the host):
+Node.js:
 ```bash
 #!/usr/bin/env bash
+set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-exec "$SCRIPT_DIR/../target/debug/rust_example"
+exec node "$SCRIPT_DIR/../../src/main.js"
+```
+Rust (pre-built binary in image):
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec "$SCRIPT_DIR/../../target/debug/rust_example"
+```
+
+`verb/run.d/l2` — host orchestration layer (identical for all ecosystems):
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+if [[ "${1:-}" == "--dry-run" ]]; then echo "./run/runbox .run"; exit 0; fi
+exec ./run/runbox .run
 ```

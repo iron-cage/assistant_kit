@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# l1 — run cargo clippy directly (cargo ecosystem).
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clippy -p claude_runner_core --all-features -- -D warnings"; exit 0; fi
+exec cargo clippy -p claude_runner_core --all-features -- -D warnings

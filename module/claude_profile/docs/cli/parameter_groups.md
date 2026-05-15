@@ -17,7 +17,7 @@
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| [`format::`](params.md#parameter--2-format) | [`OutputFormat`](types.md#type--2-outputformat) | Output format: `text` or `json` |
+| [`format::`](params.md#parameter--2-format) | [`OutputFormat`](types.md#type--2-outputformat) | Output format: `text`, `json`, or `table` (`.accounts` only) |
 
 **Used By:** [`.accounts`](commands.md#command--3-accounts), [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.credentials.status`](commands.md#command--10-credentialsstatus), [`.account.limits`](commands.md#command--11-accountlimits) — 6 commands
 
@@ -39,7 +39,7 @@ clp .usage
 
 | Parameter | Controls output format? | In group? |
 |-----------|-------------------------|-----------|
-| `format::` | Yes — controls text vs JSON serialization | Yes |
+| `format::` | Yes — controls text vs JSON vs table serialization | Yes |
 | `name::` | No — identifies target account, not presentation | No |
 | `threshold::` | No — controls classification boundary, not presentation | No |
 | `dry::` | No — controls execution mode, not presentation | No |
@@ -63,7 +63,8 @@ All members pass. No false inclusions.
 
 **Notes**
 
-- `format::json` overrides field-presence params — see [parameter_interactions.md](parameter_interactions.md#interaction--1-formatjson-overrides-field-presence-params) for the authoritative rule.
+- `format::json` overrides field-presence params — see [parameter_interactions.md](parameter_interactions.md#interaction--2-formatjson-overrides-field-presence-params) for the authoritative rule.
+- `format::table` ignores field-presence params and uses fixed columns — see [parameter_interactions.md](parameter_interactions.md#interaction--3-formattable-ignores-field-presence-params). Only accepted by `.accounts`.
 - Commands not in this group (`.account.save`, `.account.use`, `.account.delete`) produce fixed single-line confirmation messages not affected by formatting parameters.
 
 ---
@@ -138,7 +139,7 @@ All members pass. No false inclusions.
 
 **Why NOT `format::`**
 
-- **`format::`** — selects serialisation (text vs JSON), not field inclusion. `format::json` always serialises all fields regardless of field-presence params — the two axes are independent.
+- **`format::`** — selects serialisation (text, JSON, or table), not field inclusion. `format::json` and `format::table` both render all fields regardless of field-presence params — the two axes are independent.
 
 **Cross-References**
 

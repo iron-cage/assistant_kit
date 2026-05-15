@@ -28,6 +28,12 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 | IT-20 | `format::json` includes `display_name`, `role`, `billing`, `model` keys | Rich Metadata / JSON |
 | IT-21 | New metadata fields absent by default (opt-in) | Rich Metadata / Default |
 | IT-22 | `email::` shows value from saved `.claude.json` snapshot (default-on) | Rich Metadata / Email |
+| IT-23 | `format::table` renders one-row-per-account table with flag, Account, Sub, Tier, Expires, Email columns | Table Format |
+| IT-24 | Positional bare arg `alice@acme.com` (no `name::`) shows single account | Positional Syntax |
+| IT-25 | Prefix `alice` resolves to `alice@acme.com` and shows that account | Prefix Resolution |
+| IT-26 | Account matching live `accessToken` shows `Current:  yes`; others show `Current:  no` | Current Account |
+| IT-27 | `Current:` line suppressed when `~/.claude/.credentials.json` is unreadable | Current Account |
+| IT-28 | `current::0` suppresses `Current:` line; `format::json` includes `is_current` field | Current Account |
 
 ### Test Coverage Summary
 
@@ -42,8 +48,12 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 - Bug Reproducer: 1 test (IT-14)
 - Rich Metadata: 4 tests (IT-17, IT-18, IT-20, IT-21)
 - Rich Metadata / Email: 1 test (IT-22)
+- Table Format: 1 test (IT-23)
+- Positional Syntax: 1 test (IT-24)
+- Prefix Resolution: 1 test (IT-25)
+- Current Account: 3 tests (IT-26, IT-27, IT-28)
 
-**Total:** 22 integration tests
+**Total:** 28 integration tests
 
 ---
 
@@ -264,3 +274,63 @@ Integration test planning for the `.accounts` command. See [commands.md](../../.
 - **Then:** Stdout contains `Email:   work@acme.com`.; email address populated from saved snapshot (default-on)
 - **Exit:** 0
 - **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
+
+---
+
+### IT-23: `format::table` renders one-row-per-account table
+
+- **Given:** `work@acme.com` (active, `subscriptionType=max`, `rateLimitTier=default_claude_max_20x`, expires far future) and `personal@home.com` (non-active, `subscriptionType=pro`, `rateLimitTier=default_claude_pro`, expires in ~5h) both exist.
+- **When:** `clp .accounts format::table`
+- **Then:** Stdout contains title `Accounts`, a blank line, then a header row with columns `Account`, `Sub`, `Tier`, `Expires`, `Email` (with an unlabelled flag column); `work@acme.com` row has `✓` in the flag column; `personal@home.com` row has a blank flag; both rows appear with aligned columns; field-presence params are irrelevant (table has fixed columns).
+- **Exit:** 0
+- **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
+
+---
+
+### IT-24: Positional bare arg shows single account
+
+- **Given:** Two accounts saved: `work@acme.com` (active) and `alice@acme.com`.
+- **When:** `clp .accounts alice@acme.com` (no `name::` prefix)
+- **Then:** Exits 0; output identical to `clp .accounts name::alice@acme.com`; shows only the `alice@acme.com` indented block.
+- **Exit:** 0
+- **Source:** [015_name_shortcut_syntax.md AC-03](../../../../docs/feature/015_name_shortcut_syntax.md)
+
+---
+
+### IT-25: Prefix resolves to single account
+
+- **Given:** Two accounts saved: `alice@acme.com` and `work@acme.com` (active).
+- **When:** `clp .accounts alice` (prefix form, no `@`)
+- **Then:** Exits 0; output identical to `clp .accounts name::alice@acme.com`; shows only the `alice@acme.com` indented block.
+- **Exit:** 0
+- **Source:** [015_name_shortcut_syntax.md AC-05](../../../../docs/feature/015_name_shortcut_syntax.md)
+
+---
+
+### IT-26: Current account shows `Current:  yes`; others show `Current:  no`
+
+- **Given:** Two accounts: `alice@acme.com` (active) and `work@acme.com`. The live `~/.claude/.credentials.json` has an `accessToken` matching `work@acme.com`'s stored token.
+- **When:** `clp .accounts`
+- **Then:** `work@acme.com` block contains `Current: yes`; `alice@acme.com` block contains `Current: no`. Both blocks also show `Active:  no` / `Active:  yes` respectively.
+- **Exit:** 0
+- **Source:** [016_current_account_awareness.md AC-01](../../../../docs/feature/016_current_account_awareness.md)
+
+---
+
+### IT-27: `Current:` line suppressed when credentials file unreadable
+
+- **Given:** Two accounts saved. `~/.claude/.credentials.json` is absent (or has no read permission).
+- **When:** `clp .accounts`
+- **Then:** Output contains `Active:`, `Sub:`, `Tier:`, `Expires:`, `Email:` lines for each account but does NOT contain any `Current:` line.
+- **Exit:** 0
+- **Source:** [016_current_account_awareness.md AC-02](../../../../docs/feature/016_current_account_awareness.md)
+
+---
+
+### IT-28: `current::0` suppresses line; JSON includes `is_current`
+
+- **Given:** Two accounts saved. Live `~/.claude/.credentials.json` matches one of them.
+- **When (a):** `clp .accounts current::0` → stdout must NOT contain `Current:` line.
+- **When (b):** `clp .accounts format::json` → valid JSON array; each object contains `is_current` boolean field.
+- **Exit:** 0
+- **Source:** [016_current_account_awareness.md AC-03, AC-04](../../../../docs/feature/016_current_account_awareness.md)

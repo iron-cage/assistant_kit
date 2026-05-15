@@ -1,10 +1,10 @@
 # Parameters
 
-### All Parameters (17 total)
+### All Parameters (18 total)
 
 | # | Parameter | Type | Default | Valid Values | Purpose | Used In |
 |---|-----------|------|---------|--------------|---------|---------|
-| 1 | `name::` | `AccountName` | Varies | Email address | Account email for use/delete (required); save (optional, inferred from `~/.claude.json`); accounts/limits query (optional) | 5 cmds |
+| 1 | `name::` | `AccountName` | Varies | Email or prefix | Account email or prefix shortcut for use/delete (required); save (optional, inferred from `~/.claude.json`); accounts/limits query (optional); bare positional arg accepted after command name | 5 cmds |
 | 2 | `format::` / `fmt::` | `OutputFormat` | `text` | `text`, `json` | Output format: `text` or `json` | 6 cmds |
 | 3 | `threshold::` | `WarningThreshold` | `3600` | Non-negative integer (seconds) | Seconds before token expiry to classify as ExpiringSoon | 1 cmd |
 | 4 | `dry::` | `bool` | `0` | `0`, `1`, `false`, `true` | Print intended action without executing | 3 cmds |
@@ -21,28 +21,33 @@
 | 15 | `role::` | `bool` | `0` | `0`, `1` | Show organisation role from `oauthAccount`, opt-in | 2 cmds |
 | 16 | `billing::` | `bool` | `0` | `0`, `1` | Show billing type from `oauthAccount`, opt-in | 2 cmds |
 | 17 | `model::` | `bool` | `0` | `0`, `1` | Show active model from settings, opt-in | 2 cmds |
+| 18 | `current::` | `bool` | `1` | `0`, `1` | Show current (live) account line in `.accounts`; suppressed when `~/.claude/.credentials.json` is unreadable | 1 cmd |
 
-**Total:** 17 parameters
+**Total:** 18 parameters
 
-*Parameter 2 forms the Output Control group; parameters 5-17 form the Field Presence group*
+*Parameter 2 forms the Output Control group; parameters 5-18 form the Field Presence group*
 
 ---
 
 ### Parameter :: 1. `name::`
 
-Identifies which named account to operate on. Required for destructive commands; optional with inference on `.account.save`; optional for query on `.accounts` and `.account.limits`.
+Identifies the target account. Accepted as an explicit `name::EMAIL` pair, as a bare positional argument after the command name (no `name::` prefix required), or as a prefix shortcut (no `@`) that resolves to the first saved account whose name starts with that value.
 
 - **Type:** `AccountName`
 - **Default:** **(required)** on `.account.use`, `.account.delete`; **inferred** on `.account.save` (reads `emailAddress` from `~/.claude.json`; exits 1 if absent); **optional** on `.accounts` (omit to list all) and `.account.limits` (omit for active account)
-- **Constraints:** Valid email address (non-empty, must contain `@`, non-empty local part and domain); local part must not contain `/`, `\`, or `*` (path-unsafe characters rejected before any filesystem operation)
+- **Constraints:** Resolved value must be a valid email address (non-empty, must contain `@`, non-empty local part and domain); local part must not contain `/`, `\`, or `*` (path-unsafe characters rejected before any filesystem operation). Prefix input (no `@`) must be unambiguous — exits 1 when multiple saved accounts share the prefix.
+- **Positional syntax:** On `.accounts`, `.account.use`, `.account.delete`, and `.account.limits` a bare argument after the command name is treated as the `name::` value. `clp .account.use alice@home.com` is equivalent to `clp .account.use name::alice@home.com`.
+- **Prefix resolution:** When the supplied value contains no `@`, it is matched as a prefix against saved account names. The first alphabetically sorted match is used. If zero or multiple accounts match, the command exits 1 with a disambiguation error.
 - **Commands:** [`.accounts`](commands.md#command--3-accounts) *(optional)*, [`.account.save`](commands.md#command--4-accountsave) *(optional/inferred)*, [`.account.use`](commands.md#command--5-accountuse), [`.account.delete`](commands.md#command--6-accountdelete), [`.account.limits`](commands.md#command--11-accountlimits) *(optional)*
 - **Purpose:** Selects the target credential file at `{credential_store}/{email}.credentials.json`. Name validation matches the library's `account::validate_name()` rules. An invalid name exits 1; a valid but unknown name exits 2.
 
 **Examples:**
 
 ```text
-name::alice@acme.com   → {credential_store}/alice@acme.com.credentials.json
-name::alice@home.com   → {credential_store}/alice@home.com.credentials.json
+name::alice@acme.com   → explicit form → {credential_store}/alice@acme.com.credentials.json
+alice@acme.com         → positional form (bare arg after command) → same as above
+alice                  → prefix form → resolves to first saved account starting with "alice"
+i3                     → prefix form → resolves to e.g. i3@wbox.pro
 ```
 
 ---
@@ -54,7 +59,7 @@ Selects between human-readable text output and machine-parseable JSON. Text is t
 - **Type:** `OutputFormat`
 - **Default:** `text`
 - **Alias:** `fmt::` (short form; both accepted at runtime)
-- **Constraints:** One of `text`, `json` (case-insensitive)
+- **Constraints:** One of `text`, `json`, `table` (case-insensitive); `table` accepted only on `.accounts`
 - **Commands:** [`.accounts`](commands.md#command--3-accounts), [`.token.status`](commands.md#command--7-tokenstatus), [`.paths`](commands.md#command--8-paths), [`.usage`](commands.md#command--9-usage), [`.credentials.status`](commands.md#command--10-credentialsstatus), [`.account.limits`](commands.md#command--11-accountlimits)
 - **Purpose:** Enables CLI composability — `format::json` output can be piped to `jq` for structured extraction without parsing fragile text layouts.
 - **Group:** Output Control
@@ -66,6 +71,7 @@ Selects between human-readable text output and machine-parseable JSON. Text is t
 format::text   → human-readable labeled output (default)
 format::json   → JSON object or array
 fmt::json      → same as format::json (short alias)
+format::table  → compact one-row-per-account table (.accounts only)
 ```
 
 ---
@@ -373,3 +379,27 @@ Controls whether the active model line appears in output. Opt-in (default `0`). 
 model::0   → line omitted  (default)
 model::1   → Model:   sonnet
 ```
+
+---
+
+### Parameter :: 18. `current::`
+
+Controls whether the current (live) account line appears in `.accounts` output for each account entry. The current account is the saved account whose `accessToken` matches the live `~/.claude/.credentials.json` file — distinct from the active account (`_active` marker). See [feature/016_current_account_awareness.md](../feature/016_current_account_awareness.md).
+
+- **Type:** `bool`
+- **Default:** `1` (shown)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`; the line is always suppressed when `~/.claude/.credentials.json` is absent or unreadable regardless of the toggle value
+- **Commands:** [`.accounts`](commands.md#command--3-accounts)
+- **Purpose:** Indicates which saved account corresponds to the credentials currently loaded by Claude Code. When current ≠ active (divergence), both `Active:  yes` and `Current: no` appear on the `_active` account row, and `Active:  no` / `Current: yes` appear on the current account row.
+- **Group:** Field Presence
+
+**Examples:**
+
+```text
+current::1   → Current: yes  (default; or "no" for accounts not matching live token)
+current::0   → line omitted
+```
+
+**Notes:**
+- When `~/.claude/.credentials.json` is unreadable, the `Current:` line is suppressed for all accounts (equivalent to `current::0`). This prevents misleading `Current: no` output when the live token cannot be determined.
+- `format::json` always includes `is_current` per account object regardless of this toggle.
