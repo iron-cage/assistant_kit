@@ -34,8 +34,9 @@ required-features = [ "enabled" ]
 # Zero third-party (crates.io) dependencies for core library functionality.
 # Internal workspace crates (claude_core, claude_profile_core) are allowed.
 # CLI binary deps are feature-gated behind "enabled".
-claude_core        = { workspace = true }
+claude_core          = { workspace = true }
 claude_profile_core  = { workspace = true }
+cli_fmt              = { workspace = true, optional = true }
 error_tools          = { workspace = true, optional = true }
 unilang              = { workspace = true, optional = true }
 claude_quota         = { workspace = true, optional = true, features = [ "enabled" ] }
@@ -51,6 +52,7 @@ tempfile.workspace = true
 default = [ "enabled" ]
 # Master switch: activates CLI binary dependencies (error_tools, unilang, claude_quota, data_fmt).
 enabled = [
+  "dep:cli_fmt",
   "dep:error_tools",
   "error_tools/enabled",
   "error_tools/error_untyped",

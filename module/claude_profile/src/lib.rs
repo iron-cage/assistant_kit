@@ -259,60 +259,57 @@ mod cli
 
   /// Print structured usage to stdout with ANSI colours on TTYs.
   ///
-  /// Layout:
-  ///   header  — bold usage line
-  ///   Commands — two groups, each with name (bold cyan, 20-wide) + description
-  ///   Options  — 3 cross-command `key::value` hints
-  ///   Examples — canonical invocations
-  ///
-  /// Colour is suppressed when stdout is not a terminal (e.g. pipes, scripts).
+  /// Renders help via `cli_fmt::CliHelpTemplate` with two command groups,
+  /// three options, and four examples. Colour is suppressed when stdout is
+  /// not a terminal (TTY detection delegated to `CliHelpStyle::default()`).
   pub( super ) fn print_usage( binary : &str )
   {
-    use std::io::IsTerminal;
-    let tty = std::io::stdout().is_terminal();
-    let bold = if tty { "\x1b[1m"    } else { "" };
-    let cyan = if tty { "\x1b[1;36m" } else { "" };
-    let yell = if tty { "\x1b[33m"   } else { "" };
-    let dim  = if tty { "\x1b[2m"    } else { "" };
-    let rst  = if tty { "\x1b[0m"    } else { "" };
-
-    // Command row: 4-space indent, name left-padded to 20, then description.
-    // `.credentials.status` = 19 chars — longest name; +1 pad → 1-space gap.
-    let cmd = | name : &str, desc : &str |
-      println!( "    {cyan}{name:<20}{rst}  {desc}" );
-    let grp = | title : &str |
-      println!( "\n  {yell}{bold}{title}{rst}" );
-
-    println!( "{bold}Usage:{rst} {binary} <command> [key::value ...]" );
-    println!();
-    println!( "Manage Claude Code account credentials and token state." );
-    println!();
-    println!( "{bold}Commands:{rst}" );
-
-    grp( "Account management" );
-    cmd( ".accounts",           "List all saved accounts"                      );
-    cmd( ".account.save",       "Save current credentials as a named profile"  );
-    cmd( ".account.use",        "Switch the active account"                    );
-    cmd( ".account.delete",     "Delete a saved account"                       );
-    cmd( ".account.limits",     "Show rate-limit utilization (one account)"    );
-
-    grp( "Status & info" );
-    cmd( ".credentials.status", "Show live credential metadata"                );
-    cmd( ".token.status",       "Show OAuth token expiry classification"        );
-    cmd( ".paths",              "Show all resolved ~/.claude/ paths"            );
-    cmd( ".usage",              "Show live quota for all saved accounts"        );
-
-    println!();
-    println!( "{bold}Options:{rst}" );
-    println!( "  {cyan}{:<18}{rst}  Output format (default: text)", "format::text|json" );
-    println!( "  {cyan}{:<18}{rst}  Dry-run preview (no changes)",  "dry::bool"         );
-    println!( "  {cyan}{:<18}{rst}  Account name",                   "name::EMAIL"       );
-    println!();
-    println!( "{bold}Examples:{rst}" );
-    println!( "  {dim}{binary} .accounts{rst}" );
-    println!( "  {dim}{binary} .account.use alice@acme.com{rst}" );
-    println!( "  {dim}{binary} .usage{rst}" );
-    println!( "  {dim}{binary} .credentials.status{rst}" );
+    use cli_fmt::help::*;
+    let data = CliHelpData
+    {
+      binary  : binary.to_string(),
+      tagline : "Manage Claude Code account credentials and token state.".to_string(),
+      groups  : vec!
+      [
+        CommandGroup
+        {
+          name    : "Account management".to_string(),
+          entries : vec!
+          [
+            CommandEntry { name : ".accounts".to_string(),       desc : "List all saved accounts".to_string()                    },
+            CommandEntry { name : ".account.save".to_string(),   desc : "Save current credentials as a named profile".to_string() },
+            CommandEntry { name : ".account.use".to_string(),    desc : "Switch the active account".to_string()                  },
+            CommandEntry { name : ".account.delete".to_string(), desc : "Delete a saved account".to_string()                    },
+            CommandEntry { name : ".account.limits".to_string(), desc : "Show rate-limit utilization (one account)".to_string()  },
+          ],
+        },
+        CommandGroup
+        {
+          name    : "Status & info".to_string(),
+          entries : vec!
+          [
+            CommandEntry { name : ".credentials.status".to_string(), desc : "Show live credential metadata".to_string()          },
+            CommandEntry { name : ".token.status".to_string(),       desc : "Show OAuth token expiry classification".to_string() },
+            CommandEntry { name : ".paths".to_string(),              desc : "Show all resolved ~/.claude/ paths".to_string()     },
+            CommandEntry { name : ".usage".to_string(),              desc : "Show live quota for all saved accounts".to_string() },
+          ],
+        },
+      ],
+      options  : vec!
+      [
+        OptionEntry { name : "format::text|json".to_string(), desc : "Output format (default: text)".to_string() },
+        OptionEntry { name : "dry::bool".to_string(),         desc : "Dry-run preview (no changes)".to_string()  },
+        OptionEntry { name : "name::EMAIL".to_string(),       desc : "Account name".to_string()                  },
+      ],
+      examples : vec!
+      [
+        ExampleEntry { invocation : format!( "{binary} .accounts" ),                   desc : None },
+        ExampleEntry { invocation : format!( "{binary} .account.use alice@acme.com" ), desc : None },
+        ExampleEntry { invocation : format!( "{binary} .usage" ),                      desc : None },
+        ExampleEntry { invocation : format!( "{binary} .credentials.status" ),         desc : None },
+      ],
+    };
+    print!( "{}", CliHelpTemplate::new( CliHelpStyle::default(), data ).render() );
   }
 
   /// Run the full unilang pipeline for the given argv.

@@ -3,8 +3,10 @@ image: claude_profile_test
 
 # non-root so chmod-000 file-permission tests fail correctly (root bypasses checks)
 test_user: testuser
-# crate scope for nextest run and cargo chef cook — single source of truth for both
-cmd_scope: -p claude_profile
+# crate scope for cargo chef cook — workspace-wide ensures all transitive dev-deps are
+# pre-cooked (nextest workspace metadata resolves assert_cmd → anstyle regardless of scope).
+# Test execution is controlled by test_script (l1), not this field.
+cmd_scope: --workspace
 # baked into the image default CMD; excludes rate-limit tests needing external I/O (offline-safe default)
 cmd_filter: "!test(lim_it)"
 

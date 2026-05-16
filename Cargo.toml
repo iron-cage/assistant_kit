@@ -23,6 +23,7 @@ members = [
   "module/claude_quota",
   "module/dream",
   "module/assistant",
+  "module/cli_fmt",
 ]
 exclude = [ "-*" ]
 
@@ -172,6 +173,11 @@ default-features = false
 version = "~0.48"
 features = [ "enabled", "approach_yaml_multi_build" ]
 default-features = false
+
+[workspace.dependencies.cli_fmt]
+path = "module/cli_fmt"
+default-features = false
+features = [ "cli_help_template" ]
 
 [workspace.dependencies.data_fmt]
 version = "~0.2"

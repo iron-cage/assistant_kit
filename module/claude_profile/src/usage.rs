@@ -659,29 +659,37 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
   let mut accounts = fetch_all_quota( &credential_store, &live_creds_file, false )?;
 
-  // Retry-once on 401/403: if refresh::1 and any account returned an HTTP auth error,
-  // attempt to refresh the live token via an isolated subprocess, then re-fetch once.
+  // Retry-once per account on 401/403/429: if refresh::1 and any account returned an
+  // HTTP auth error, refresh that account's stored token via an isolated subprocess,
+  // then re-fetch only that account's quota (not all accounts).
   if refresh == 1
   {
-    let has_auth_error = accounts.iter().any( |aq|
-      matches!( aq.result, Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) )
-    );
-    if has_auth_error
+    for aq in &mut accounts
     {
-      if let Ok( creds_json ) = std::fs::read_to_string( &live_creds_file )
+      let should_retry = matches!(
+        aq.result,
+        Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) || e.contains( "429" )
+      );
+      if !should_retry { continue; }
+
+      // Read this account's credential file — not the shared live session file.
+      let creds_path = credential_store.join( format!( "{}.credentials.json", aq.name ) );
+      let Ok( creds_json ) = std::fs::read_to_string( &creds_path )
+      else { continue; };
+
+      // Attempt to refresh the token via an isolated subprocess.
+      let Ok( isolated ) = claude_runner_core::run_isolated( &creds_json, vec![], 30 )
+      else { continue; };
+
+      // Write the refreshed credentials back to the same per-account file.
+      let Some( new_creds ) = isolated.credentials else { continue; };
+      if std::fs::write( &creds_path, &new_creds ).is_err() { continue; }
+
+      // Re-read the refreshed token and retry only this account's quota.
+      let Ok( token ) = read_token( &credential_store, &aq.name ) else { continue; };
+      if let Ok( retried ) = claude_quota::fetch_oauth_usage( &token )
       {
-        if let Ok( isolated ) = claude_runner_core::run_isolated( &creds_json, vec![], 30 )
-        {
-          // Only write back and retry if the subprocess actually refreshed credentials.
-          if let Some( new_creds ) = isolated.credentials
-          {
-            let _ = std::fs::write( &live_creds_file, &new_creds );
-            if let Ok( retried ) = fetch_all_quota( &credential_store, &live_creds_file, false )
-            {
-              accounts = retried;
-            }
-          }
-        }
+        aq.result = Ok( retried );
       }
     }
   }

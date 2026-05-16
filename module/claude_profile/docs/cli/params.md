@@ -429,10 +429,9 @@ refresh::1   → on 401/403, attempt token refresh via isolated subprocess, then
 ```
 
 **Notes:**
-- Only HTTP 4xx auth errors trigger a refresh attempt; network timeouts and non-auth HTTP errors are not retried.
+- Only HTTP 401/403 responses trigger a refresh attempt. HTTP 429 responses are NOT matched by the current guard (`e.contains("401") || e.contains("403")`), so rate-limit responses pass through as error rows with `refresh::1` having no effect. Network timeouts and non-4xx errors are also not retried. See [feature/017_token_refresh.md](../feature/017_token_refresh.md) § Scope Limitation 2 for the root cause.
 - Exactly one retry per account per invocation. If the retried fetch also fails, the final error is shown in the account's row.
-- When a refresh succeeds, the updated credential JSON is written back to `{credential_store}/{name}.credentials.json` before the retry.
-- See [feature/017_token_refresh.md](../feature/017_token_refresh.md) for the full algorithm.
+- When a refresh succeeds, the updated credential JSON is written back to the live session credentials file (`~/.claude/.credentials.json`) before retrying all accounts. Stored credential files for non-active accounts are not updated — `refresh::1` can only recover the currently active session's token, not tokens for other saved accounts. See [feature/017_token_refresh.md](../feature/017_token_refresh.md) § Scope Limitation 1 for the root cause. Both limitations are fixed by task 142.
 
 ---
 

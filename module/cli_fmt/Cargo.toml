@@ -1,0 +1,23 @@
+[package]
+name = "cli_fmt"
+version = "0.4.0"
+edition = "2021"
+rust-version = "1.74"
+authors = [ "wTools Contributors" ]
+license = "MIT"
+description = "CLI output formatting utilities for command-line applications"
+# Local copy of the wtools cli_fmt crate, vendored here so the Docker build
+# context (claude_tools/dev/) can resolve the dependency without access to the
+# wtools workspace.  Replace with the published crates.io version once
+# cli_fmt >= 0.4.0 (with cli_help_template feature) is released.
+
+[lints]
+workspace = true
+
+[dependencies]
+# No external dependencies — only std is required for the help module.
+
+[features]
+# Only the subset needed by claude_tools is enabled here.
+default = [ "cli_help_template" ]
+cli_help_template = []

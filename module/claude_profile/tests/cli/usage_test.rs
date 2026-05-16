@@ -45,6 +45,7 @@
 //! | it29 | `it29_live_default_interval_accepted`           | `live::1` alone → default interval=30, no guard error (exit 2 from store) | P | no |
 //! | it30 | `it30_live_sigint_exits_0`                      | `live::1`; after 3s send SIGINT → exit 0, stdout has "Monitor stopped."  | P | no |
 //! | it31 | `it31_usage_help_shows_live_params`             | `.usage.help` → exit 0, stdout contains `live`, `interval`, `jitter`     | P | no |
+//! | it32 | `it32_lim_it_refresh_per_account`               | real token + `refresh::1` → exit 0, account name visible (AC-19)         | P | yes |
 
 use crate::helpers::{
   BIN,
@@ -996,5 +997,40 @@ fn it31_usage_help_shows_live_params()
       ".usage.help must list param `{param}` (AC-32), got:\n{text}",
     );
   }
+}
+
+// ── it32 ──────────────────────────────────────────────────────────────────────
+
+/// it32 (`lim_it`): `refresh::1` with a real saved account — exercises the
+/// per-account refresh loop (AC-19) and verifies no panic + exit 0.
+///
+/// The per-account loop reads `{credential_store}/{name}.credentials.json`
+/// (not the live session file). When the account's quota fetch succeeds on the
+/// first pass, `should_retry` is false and the loop is a no-op — the test
+/// proves no regression in the happy path. When credentials are stale/expired,
+/// the loop runs `run_isolated` and updates `aq.result`.
+///
+/// Requires one saved account with a live token reachable via `live_active_token()`.
+#[ test ]
+fn it32_lim_it_refresh_per_account()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it32: no live token — skipping" );
+    return;
+  };
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "test-acct", &token, true );
+  write_live_credentials_with_token( dir.path(), &token );
+
+  let out = run_cs_with_env( &[ ".usage", "refresh::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "test-acct" ),
+    "account must appear in output with refresh::1 (AC-19), got:\n{text}",
+  );
 }
 
