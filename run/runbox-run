@@ -84,6 +84,29 @@ fi
 _build()
 {
   echo "Building $IMAGE using $CONTAINER_CMD..."
+
+  # Fix(issue-runbox-build-safety): Serialize concurrent _build() calls via atomic mkdir lock.
+  # Root cause: Multiple simultaneous `runbox .build` / `_ensure_image` invocations (7 observed
+  #   in production) each spawn an independent `podman build` process with no coordination,
+  #   causing disk oscillation (9.9 G–54 G), storage corruption, and graphroot migration mid-build.
+  # Pitfall: mkdir is atomic on POSIX — use it (not lockfile) for reliable mutual exclusion in bash.
+  local _build_lockdir="/tmp/runbox_build_${IMAGE//[^a-zA-Z0-9_-]/_}.lock"
+  local _build_deadline
+  _build_deadline=$(( $(date +%s) + 300 ))
+  while ! mkdir "$_build_lockdir" 2>/dev/null
+  do
+    if (( $(date +%s) >= _build_deadline ))
+    then
+      echo "error: build lock timeout for '$IMAGE' after 5 min — another build may be stuck." >&2
+      echo "       Remove $_build_lockdir manually if the other process is gone." >&2
+      exit 1
+    fi
+    echo "Waiting for a concurrent build of '$IMAGE' to finish..."
+    sleep 2
+  done
+  # shellcheck disable=SC2064
+  trap "rm -rf '$_build_lockdir'" EXIT
+
   # --rm=false: skip intermediate-container cleanup after build.
   # Rootless Podman + fuse-overlayfs can lose overlay mounts during multi-stage
   # cleanup; when cleanup fails, Podman removes the committed image as a rollback.
@@ -104,6 +127,23 @@ _build()
     --build-arg "WORKSPACE_DIR=$WORKSPACE_DIR" \
     -t "$IMAGE" \
     "$WORKSPACE_ROOT"
+
+  # Fix(issue-runbox-build-safety): Verify image is accessible immediately after build.
+  # Root cause: `podman build` exits 0 when the image tag is written to storage, but if the
+  #   storage.conf graphroot was migrated mid-build (triggered by concurrent builds corrupting
+  #   storage), the image is orphaned in the old graphroot. Subsequent `image inspect` fails
+  #   with "image not known" despite BUILD COMPLETE appearing in the output.
+  # Pitfall: Build exit code 0 ≠ image accessible; always verify with image inspect before returning.
+  if ! "$CONTAINER_CMD" image inspect "$IMAGE" &>/dev/null
+  then
+    echo "error: Build completed (exit 0) but '$IMAGE' is not accessible via image inspect." >&2
+    echo "       The storage.conf graphroot may have been migrated mid-build." >&2
+    echo "       Try: $CONTAINER_CMD system migrate  (Podman only)" >&2
+    rm -rf "$_build_lockdir"
+    exit 1
+  fi
+
+  rm -rf "$_build_lockdir"
 }
 
 _ensure_image()

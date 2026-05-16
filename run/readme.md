@@ -12,3 +12,4 @@ Shell scripts for workspace container operations.
 | `runbox.dockerfile` | Parameterised multi-stage Docker image; built by runbox-run. |
 | `onboarding.md` | New project integration guide: how to add runbox to any ecosystem. |
 | `docs/` | Variability analysis: runbox infrastructure parameters and plugins. |
+| `tests/` | Regression tests for the runbox shell script infrastructure. |
