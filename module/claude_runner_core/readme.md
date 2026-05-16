@@ -120,7 +120,7 @@ ClaudeCommand::new()
   .execute()
 
 // Single execution point (1x)
-Command::new("claude")  // ONLY in claude_runner_core::execute()
+Command::new("claude")  // ONLY in claude_runner_core::build_command()
 ```
 
 ## Token Limit Bug Fix
@@ -161,7 +161,7 @@ cargo nextest run
 ## Critical Execution Rule
 
 **Command::new("claude") MUST appear exactly once:**
-- ✅ Single occurrence in claude_runner_core::execute()
+- ✅ Single occurrence in claude_runner_core::build_command()
 - ❌ Zero occurrences in dream_agent
 - ❌ Zero occurrences in claude_profile
 

@@ -44,10 +44,11 @@
 //! | it28 | `it28_interval_jitter_ignored_when_not_live`    | `interval::5 jitter::70` without `live::1` → exit 0, guards never fire | P | no |
 //! | it29 | `it29_live_default_interval_accepted`           | `live::1` alone → default interval=30, no guard error (exit 2 from store) | P | no |
 //! | it30 | `it30_live_sigint_exits_0`                      | `live::1`; after 3s send SIGINT → exit 0, stdout has "Monitor stopped."  | P | no |
+//! | it31 | `it31_usage_help_shows_live_params`             | `.usage.help` → exit 0, stdout contains `live`, `interval`, `jitter`     | P | no |
 
 use crate::helpers::{
   BIN,
-  run_cs_with_env, run_cs_without_home, run_cs_bytes_for_secs,
+  run_cs, run_cs_with_env, run_cs_without_home, run_cs_bytes_for_secs,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token, write_claude_json, live_active_token,
   write_live_credentials_with_token,
@@ -904,8 +905,8 @@ fn it30_live_sigint_exits_0()
   // No accessToken → read_token() fails instantly (no HTTP call); render error row; countdown starts.
   write_account( dir.path(), "myaccount", "max", "default", FAR_FUTURE_MS, true );
 
-  let mut child = std::process::Command::new( BIN )
-    .args( &[ ".usage", "live::1", "interval::30", "jitter::0" ] )
+  let child = std::process::Command::new( BIN )
+    .args( [ ".usage", "live::1", "interval::30", "jitter::0" ] )
     .env( "HOME", home )
     .env_remove( "PRO" )
     .stdout( Stdio::piped() )
@@ -914,11 +915,11 @@ fn it30_live_sigint_exits_0()
     .expect( "failed to spawn clp binary" );
 
   // Wait for the cycle to complete: stagger (200–1500 ms) + instant fail + render + countdown start.
-  std::thread::sleep( std::time::Duration::from_secs( 3 ) );
+  std::thread::sleep( core::time::Duration::from_secs( 3 ) );
 
   // Send SIGINT via the system `kill` utility — no libc dep needed.
   let _ = std::process::Command::new( "kill" )
-    .args( &[ "-INT", &child.id().to_string() ] )
+    .args( [ "-INT", &child.id().to_string() ] )
     .status();
 
   let out = child.wait_with_output().expect( "failed to wait on clp binary" );
@@ -971,5 +972,29 @@ fn it29_live_default_interval_accepted()
     !err.contains( "interval" ),
     "default interval (30) must not trigger the interval guard, stderr:\n{err}",
   );
+}
+
+// ── it31 ──────────────────────────────────────────────────────────────────────
+
+/// it31: `.usage.help` lists `live`, `interval`, and `jitter` params.
+///
+/// Verifies AC-32: all three live-monitor params must appear in the per-command
+/// help output so users can discover them without reading source code.
+/// The params are registered via `register_commands()` in `src/lib.rs`; this
+/// test confirms the registration produces visible output in `.usage.help`.
+#[ test ]
+fn it31_usage_help_shows_live_params()
+{
+  let out = run_cs( &[ ".usage.help" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  for param in &[ "live", "interval", "jitter" ]
+  {
+    assert!(
+      text.contains( param ),
+      ".usage.help must list param `{param}` (AC-32), got:\n{text}",
+    );
+  }
 }
 

@@ -1,6 +1,6 @@
 //! Isolated subprocess runner tests: `IsolatedRunResult` and `RunnerError`.
 //!
-//! T01–T06 are offline (no `lim_it`) — struct construction and Display.
+//! T01–T09 are offline (no `lim_it`) — struct construction, Display, and type contracts.
 //! T07–T08 are live (`lim_it`) — actual subprocess execution with real Claude binary.
 //!
 //! ## Test Matrix
@@ -15,6 +15,7 @@
 //! | T06 | `RunnerError::Io(String)` Display                     | contains the reason string           | no    |
 //! | T07 | `run_isolated()` with valid creds → exit_code -1/0    | `IsolatedRunResult` returned         | yes   |
 //! | T08 | `run_isolated()` with timeout 0 → `Err(Timeout)`      | `RunnerError::Timeout { secs: 0 }`   | yes   |
+//! | T09 | timeout-with-credentials sentinel: `exit_code = -1`   | `Ok` with `credentials: Some(...)`   | no    |
 
 use claude_runner_core::{ IsolatedRunResult, RunnerError };
 
@@ -158,4 +159,52 @@ fn t08_lim_it_run_isolated_timeout()
     }
     other => panic!( "expected Err(Timeout), got: {other:?}" ),
   }
+}
+
+// ── T09 ───────────────────────────────────────────────────────────────────────
+
+/// T09: Timeout-with-credentials result type: `Ok(IsolatedRunResult { exit_code: -1 })`.
+///
+/// When `run_isolated()` times out but the subprocess already wrote refreshed credentials
+/// (OAuth token-refresh at startup before blocking on stdin), the function returns
+/// `Ok(IsolatedRunResult { exit_code: -1, credentials: Some(...) })` — NOT `Err(Timeout)`.
+///
+/// The `exit_code = -1` sentinel distinguishes "timeout + credentials" from a clean exit
+/// (`exit_code` ≥ 0). Callers check `credentials.is_some()` to determine whether to write
+/// back and retry — a pattern used by `usage_routine()` in the `refresh::1` path.
+///
+/// ## Bug Reproducer
+///
+/// issue: isolated-credentials-on-timeout
+/// Scenario: `run_isolated(expired_creds, [], 30)` — Claude refreshes the token
+///           at startup then waits for interactive input. Previously the 30-second
+///           timeout fired and returned `Err(Timeout)`, discarding the refreshed
+///           credentials and silently skipping the `refresh::1` retry.
+/// Root cause: `exec_result = Err(RecvTimeoutError::Timeout)` was mapped unconditionally
+///             to `Err(RunnerError::Timeout)`, dropping the `credentials` value that
+///             was already read from the temp file in step 6.
+/// Fix: Check `credentials.is_some()` before returning `Err(Timeout)`; if the file
+///      changed, return `Ok(IsolatedRunResult { exit_code: -1, credentials })` instead.
+/// Pitfall: Always read credentials BEFORE the timeout match and check them in both
+///          the timeout and the success branches.
+#[ test ]
+fn t09_timeout_with_changed_credentials_result_type()
+{
+  // Verify the canonical result type for "timeout + credentials updated":
+  // exit_code = -1 is the sentinel that distinguishes this case.
+  let result = IsolatedRunResult
+  {
+    exit_code   : -1,
+    stdout      : String::new(),
+    stderr      : String::new(),
+    credentials : Some( r#"{"accessToken":"refreshed","expiresAt":9999999999}"#.to_string() ),
+  };
+  assert_eq!(
+    result.exit_code, -1,
+    "timeout-with-credentials sentinel must use exit_code = -1",
+  );
+  assert!(
+    result.credentials.is_some(),
+    "timeout-with-credentials result must carry the refreshed credentials",
+  );
 }

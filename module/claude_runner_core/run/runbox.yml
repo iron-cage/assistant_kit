@@ -4,8 +4,8 @@ image: workspace_test
 
 # non-root so chmod-000 file-permission tests fail correctly (root bypasses checks)
 test_user: testuser
-# workspace scope — simple modules share the workspace image; no per-module build
-cmd_scope: --workspace
+# per-crate scope to avoid OOM when committing large workspace target directory as image layer
+cmd_scope: --package claude_runner_core
 # baked into the image default CMD; excludes tests needing external I/O (offline-safe default)
 cmd_filter: "!test(lim_it) & !binary(behavior)"
 

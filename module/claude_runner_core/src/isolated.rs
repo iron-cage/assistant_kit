@@ -141,9 +141,35 @@ pub fn run_isolated
   let _ = std::fs::remove_dir_all( &temp_dir );
 
   // Step 8: Translate execution result into IsolatedRunResult or RunnerError
+  //
+  // Fix(issue-isolated-credentials-on-timeout): When the subprocess times out but
+  // already refreshed credentials (e.g. OAuth token refresh at startup before
+  // waiting for interactive input), return Ok so callers can access the new creds.
+  // Root cause: Claude refreshes the OAuth token at startup then waits for input;
+  //             previously the timeout fired and discarded the refreshed credentials,
+  //             breaking the refresh::1 retry path in usage_routine().
+  // Pitfall: Check credentials BEFORE deciding to return Err(Timeout) — the token
+  //          may have been written before the subprocess started blocking.
   match exec_result
   {
-    Err( _ ) => Err( RunnerError::Timeout { secs : timeout_secs } ),
+    Err( _ ) =>
+    {
+      // If credentials were updated during the timeout window, preserve them.
+      if credentials.is_some()
+      {
+        Ok( IsolatedRunResult
+        {
+          exit_code   : -1,
+          stdout      : String::new(),
+          stderr      : String::new(),
+          credentials,
+        } )
+      }
+      else
+      {
+        Err( RunnerError::Timeout { secs : timeout_secs } )
+      }
+    }
 
     Ok( Err( e ) ) =>
     {

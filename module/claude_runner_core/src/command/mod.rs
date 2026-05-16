@@ -550,11 +550,18 @@ impl ClaudeCommand {
 #[ must_use ]
 pub fn claude_version() -> Option< String >
 {
-  let output = std::process::Command::new( "claude" )
-    .arg( "--version" )
-    .output()
+  // Route through ClaudeCommand::execute() → build_command() to preserve the
+  // single-execution-point invariant (Command::new("claude") must appear exactly once).
+  // Fix(issue-claude-version-chrome): with_chrome(None) omits the --chrome flag;
+  // Root cause: ClaudeCommand::new() defaults chrome=Some(true) for automation use,
+  //             but version queries must not pass browser-context flags.
+  // Pitfall: Always override automation defaults for system-query functions.
+  let output = ClaudeCommand::new()
+    .with_chrome( None )
+    .with_args( [ "--version" ] )
+    .execute()
     .ok()?;
-  let s = String::from_utf8_lossy( &output.stdout ).trim().to_string();
+  let s = output.stdout.trim().to_string();
   if s.is_empty() { None } else { Some( s ) }
 }
 

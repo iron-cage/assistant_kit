@@ -54,28 +54,28 @@
 #   all intermediate stages are discarded (they exist only to produce artifacts for
 #   downstream stages to cherry-pick).
 #
-#   Stage    Base        cargo-chef    Purpose
-#   ──────── ─────────── ────────────  ────────────────────────────────────────────
-#   chef     rust:slim   installs it   shared base — compiled once, inherited below
-#   planner  chef        inherited     scans workspace manifests → emits recipe.json
-#   cook     chef        inherited     compiles all external dep .rlib from recipe.json
-#   test     rust:slim   absent        final image — receives cook artifacts + source
+#   Stage    Base                  cargo-chef    Purpose
+#   ──────── ───────────────────── ────────────  ────────────────────────────────────────────
+#   chef     cargo-chef:rust-slim  pre-built     shared base — inherited by planner and cook
+#   planner  chef                  inherited     scans workspace manifests → emits recipe.json
+#   cook     chef                  inherited     compiles all external dep .rlib from recipe.json
+#   test     rust:slim             absent        final image — receives cook artifacts + source
 #
-#   Stage    Receives                         Produces                       In image?
-#   ──────── ───────────────────────────────  ─────────────────────────────  ─────────
-#   chef     rust:slim                        rust:slim + cargo-chef binary  no
-#   planner  chef + COPY . . (full source)    recipe.json                    no
-#   cook     chef + recipe.json               target/debug/deps/ + registry  no
-#   test     rust:slim + cook dirs + source   the runnable image             YES
+#   Stage    Receives                              Produces                       In image?
+#   ──────── ────────────────────────────────────  ─────────────────────────────  ─────────
+#   chef     CHEF_IMAGE (pre-built, multi-arch)    cargo-chef binary              no
+#   planner  chef + COPY . . (full source)         recipe.json                    no
+#   cook     chef + recipe.json                    target/debug/deps/ + registry  no
+#   test     rust:slim + cook dirs + source        the runnable image             YES
 #
 #   Data flow:
 #
-#     rust:slim
+#     lukemathwalker/cargo-chef:latest-rust-slim  (CHEF_IMAGE — pre-built, multi-arch)
 #         │
 #         ▼
-#     ┌─ chef ──────────────────────────────────────┐
-#     │  RUN cargo install cargo-chef               │
-#     └──────────┬──────────────────────┬───────────┘
+#     ┌─ chef ───────────────────────────────────────┐
+#     │  (cargo-chef already present — no RUN step)  │
+#     └──────────┬───────────────────────┬───────────┘
 #                │                      │
 #                ▼                      ▼
 #     ┌─ planner ────────┐    ┌─ cook ───────────────────────────┐
@@ -99,7 +99,8 @@
 #   test               — on every source change (fast: deps already compiled)
 #
 # Build args (values come from run/runbox.yml, passed by run/runbox-run):
-#   BASE_IMAGE         — FROM image for chef and test stages (default: rust:slim)
+#   BASE_IMAGE         — FROM image for the test stage (default: rust:slim)
+#   CHEF_IMAGE         — pre-built cargo-chef image for chef/planner/cook (default: lukemathwalker/cargo-chef:latest-rust-slim)
 #   TEST_USER          — non-root user for chmod-000 / path-resolution tests (default: testuser)
 #   CMD_SCOPE          — --workspace | -p claude_profile | -p claude_storage
 #   CMD_FILTER         — nextest filter expression for offline default CMD
@@ -128,9 +129,10 @@
 # Pre-FROM ARG: available in all FROM instructions in this file.
 
 ARG BASE_IMAGE=rust:slim
+ARG CHEF_IMAGE=lukemathwalker/cargo-chef:latest-rust-slim
 
-FROM $BASE_IMAGE AS chef
-RUN cargo install cargo-chef --locked
+FROM $CHEF_IMAGE AS chef
+# cargo-chef binary pre-installed — no compilation step.
 
 # ── Stage 1: planner — generates recipe.json from the workspace manifests ─────
 #
@@ -155,7 +157,7 @@ ARG WORKSPACE_DIR=/workspace
 ARG CMD_SCOPE=--workspace
 WORKDIR $WORKSPACE_DIR
 COPY --from=planner $WORKSPACE_DIR/recipe.json recipe.json
-RUN cargo chef cook \
+RUN CARGO_BUILD_JOBS=1 cargo chef cook \
       --recipe-path recipe.json \
       $CMD_SCOPE \
       --tests
@@ -173,20 +175,34 @@ ARG SYSTEM_PACKAGES=curl procps
 ARG CARGO_FEATURES=--all-features
 ENV CARGO_FEATURES=$CARGO_FEATURES
 
-# nextest: compile from source for architecture portability (layer is cached).
-RUN cargo install cargo-nextest --locked
-
-# clippy: rust:slim ships without it; w3 .test level::3 runs clippy -D warnings.
-RUN rustup component add $RUSTUP_COMPONENTS
-
-# System utilities required by tests:
+# System utilities required by tests (must precede nextest download — curl is used below):
+#   curl   — used by the nextest download step and by claude_version history commands
 #   procps — provides /bin/kill used by send_sigterm / send_sigkill in claude_core::process
-#   curl   — used by claude_version history commands to fetch release data
 # rust:slim is intentionally minimal and omits both; tests fail with ENOENT without them.
 RUN [ -z "$SYSTEM_PACKAGES" ] || ( \
       apt-get update \
       && apt-get install -y --no-install-recommends $SYSTEM_PACKAGES \
       && rm -rf /var/lib/apt/lists/* )
+
+# nextest: pre-built binary — avoids compiling ~200 crates (saves memory and time).
+# Architecture-aware: CDN (get.nexte.st) serves x86_64 only; aarch64 downloads from GitHub.
+# Version is discovered via a HEAD request to releases/latest (Location header) so both
+# paths always install the same version.
+# Requires curl; SYSTEM_PACKAGES (above) must include it.
+RUN set -e && \
+    ARCH=$(uname -m) && \
+    case "$ARCH" in \
+      x86_64)  curl -LsSf "https://get.nexte.st/latest/linux" \
+               | tar zxf - -C /usr/local/cargo/bin ;; \
+      aarch64) VER=$(curl -sSI "https://github.com/nextest-rs/nextest/releases/latest" \
+                    | grep -i '^location:' | tr -d '\r' | sed 's|.*/cargo-nextest-||') && \
+               curl -LsSf "https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-${VER}/cargo-nextest-${VER}-${ARCH}-unknown-linux-musl.tar.gz" \
+               | tar zxf - -C /usr/local/cargo/bin ;; \
+      *)       CARGO_BUILD_JOBS=1 cargo install cargo-nextest --locked ;; \
+    esac
+
+# clippy: rust:slim ships without it; w3 .test level::3 runs clippy -D warnings.
+RUN rustup component add $RUSTUP_COMPONENTS
 
 # TEST_USER: testuser when tests require:
 #   - chmod 000 file checks (root bypasses permission → silent wrong-path failures)

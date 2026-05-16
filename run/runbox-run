@@ -61,16 +61,22 @@ if [[ "$CONFIG_DIR" != "$SCRIPT_DIR" ]]; then
 fi
 
 # ── Container runtime ─────────────────────────────────────────────────────────
+# CONTAINER_CMD env override: export CONTAINER_CMD=docker before calling this
+# script to bypass auto-detection.  Useful when both runtimes are installed but
+# one has storage issues (e.g. Podman fuse-overlayfs instability on aarch64).
 
-if command -v podman &>/dev/null
+if [[ -z "${CONTAINER_CMD:-}" ]]
 then
-  CONTAINER_CMD=podman
-elif command -v docker &>/dev/null
-then
-  CONTAINER_CMD=docker
-else
-  echo "error: neither podman nor docker found" >&2
-  exit 1
+  if command -v podman &>/dev/null
+  then
+    CONTAINER_CMD=podman
+  elif command -v docker &>/dev/null
+  then
+    CONTAINER_CMD=docker
+  else
+    echo "error: neither podman nor docker found" >&2
+    exit 1
+  fi
 fi
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -78,8 +84,15 @@ fi
 _build()
 {
   echo "Building $IMAGE using $CONTAINER_CMD..."
+  # --rm=false: skip intermediate-container cleanup after build.
+  # Rootless Podman + fuse-overlayfs can lose overlay mounts during multi-stage
+  # cleanup; when cleanup fails, Podman removes the committed image as a rollback.
+  # Skipping cleanup avoids this and lets the final tagged image survive.
+  # Accumulated intermediate containers are pruned here before each build.
+  "$CONTAINER_CMD" container prune -f &>/dev/null || true
   # shellcheck disable=SC2086
   "$CONTAINER_CMD" build \
+    --rm=false \
     -f "$DOCKERFILE" \
     --build-arg "BASE_IMAGE=$BASE_IMAGE" \
     --build-arg "TEST_USER=$TEST_USER" \
@@ -137,6 +150,27 @@ _ensure_build_cache()
   fi
 }
 
+_ensure_plugin_targets()
+{
+  if [[ -z "$BIN_PLUGIN_VOLUME" ]]; then return; fi
+  local volume="${IMAGE}_plugin_targets"
+  if ! "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
+  then
+    echo "Initializing plugin targets volume (first run only)..."
+    # Docker creates new named volumes with root ownership (mode 755).  When cmd_test
+    # runs as the host uid (--user flag), cargo cannot write build artifacts into the
+    # freshly-created volume and fails with EPERM.  Running chmod a+rwX here seeds the
+    # volume with world-writable permissions before the first test invocation.
+    # Must run as root (--user 0) because the image default user (testuser) cannot
+    # chmod a root-owned directory.
+    "$CONTAINER_CMD" run --rm \
+      --user 0 \
+      -v "${volume}:$BIN_PLUGIN_VOLUME" \
+      "$IMAGE" \
+      bash -c "chmod a+rwX $BIN_PLUGIN_VOLUME"
+  fi
+}
+
 # ── Commands ──────────────────────────────────────────────────────────────────
 
 cmd_build()
@@ -169,6 +203,7 @@ cmd_test()
   local bin_args=() mount_args=()
   _plugin_test_args
   _ensure_image
+  _ensure_plugin_targets
   # Run as the host user so mounted credential files (owned by host uid) are readable.
   # Rootless Podman remaps container uid 0 → host uid, so without --userns=keep-id
   # files owned by the host user appear as root inside the container and are unreadable
@@ -244,6 +279,7 @@ cmd_run()
 cmd_list()
 {
   _ensure_image
+  _ensure_plugin_targets
   local userns_arg=() vol_args=() cargo_env="" list_cmd=""
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
   # Same volume as cmd_test so .list artifacts persist between repeated .list calls.

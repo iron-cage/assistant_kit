@@ -29,6 +29,7 @@
 //! | `describe_env_shows_set_tier3` | tier-3 set | sandbox, session, `top_p`, `top_k` | Env vars present | ✅ |
 //! | `describe_env_overridden_tier1` | tier-1 overridden | custom token/timeout | Overridden values | ✅ |
 //! | `describe_env_lines_are_newline_separated` | format | `ClaudeCommand::new()` | Each line has `=` | ✅ |
+//! | `describe_claude_version_chain_omits_chrome` | `claude_version()` builder | `.with_chrome(None).with_args(["--version"])` | No `--chrome`, no `--no-chrome`, has `--version` | ✅ |
 //!
 //! ## Corner Cases Covered
 //!
@@ -61,6 +62,14 @@
 //!   Prevention: Use `contains`/`starts_with`/`ends_with` instead of `assert_eq!` on full command
 //!   strings, unless the test specifically validates the complete flag order. When adding new
 //!   builder defaults, grep all test files for exact command string assertions.
+//!
+//! - **2026-05-16 (issue-claude-version-chrome):** `claude_version()` used
+//!   `ClaudeCommand::new().with_args(["--version"]).execute()` which emits
+//!   `claude --chrome --version` because `new()` defaults `chrome = Some(true)`.
+//!   Root cause: System-query functions must override automation defaults; `.with_chrome(None)`
+//!   omits the flag entirely. Test: `describe_claude_version_chain_omits_chrome`.
+//!   Prevention: Always call `.with_chrome(None)` (or override other automation defaults)
+//!   in system-query builder chains that must not inherit session-oriented flags.
 
 use claude_runner_core::{ ClaudeCommand, ActionMode, LogLevel };
 
@@ -400,4 +409,47 @@ fn describe_env_lines_are_newline_separated()
   for line in &lines {
     assert!( line.contains( '=' ), "Each line should be NAME=VALUE, got: {line}" );
   }
+}
+
+// ── claude_version() builder chain ───────────────────────────────────────────
+
+/// `claude_version()` builder chain omits `--chrome` and `--no-chrome`.
+///
+/// Mirrors the builder chain used by `claude_version()` in `command/mod.rs` and
+/// verifies that `describe_compact()` produces `claude --version` without any
+/// browser-context flags.
+///
+/// ## Bug Reproducer (issue-claude-version-chrome)
+///
+/// `ClaudeCommand::new()` defaults `chrome = Some(true)` for automation contexts.
+/// Without `.with_chrome(None)`, the builder emits `claude --chrome --version`,
+/// passing an unexpected browser-context flag to a system-query call.
+///
+/// Root cause: Automation defaults (chrome, `max_output_tokens`, bash timeouts) are
+///             appropriate for interactive/automation use but must be overridden for
+///             lightweight system-query functions.
+/// Fix: Call `.with_chrome(None)` in the `claude_version()` builder chain to omit
+///      the chrome flag entirely (not `--chrome`, not `--no-chrome`).
+/// Pitfall: Never use `ClaudeCommand::new()` bare for system queries — always
+///          override automation-specific defaults that could change behavior.
+#[ test ]
+fn describe_claude_version_chain_omits_chrome()
+{
+  // Mirror the exact builder chain in claude_version() (command/mod.rs).
+  let cmd  = ClaudeCommand::new()
+    .with_chrome( None )
+    .with_args( [ "--version" ] );
+  let desc = cmd.describe_compact();
+  assert!(
+    !desc.contains( "--chrome" ),
+    "`claude_version()` builder must not include --chrome, got: {desc}",
+  );
+  assert!(
+    !desc.contains( "--no-chrome" ),
+    "`claude_version()` builder must not include --no-chrome, got: {desc}",
+  );
+  assert!(
+    desc.contains( "--version" ),
+    "`claude_version()` builder must include --version, got: {desc}",
+  );
 }

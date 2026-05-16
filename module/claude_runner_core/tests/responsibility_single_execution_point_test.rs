@@ -14,7 +14,7 @@
 //! # Verification Method
 //!
 //! 1. Grep entire module/ directory for `Command::new\s*\(\s*"claude"\s*\)` (extended regex)
-//! 2. Count occurrences (must equal 2: `build_command` + `claude_version`)
+//! 2. Count occurrences (must equal 1: `build_command` only)
 //! 3. Verify all occurrences are in `claude_runner_core/src/`
 //!
 //! **Pattern Specificity**: Uses `\s*\(\s*"claude"\s*\)` to match exactly `Command::new("claude")`
@@ -30,13 +30,13 @@
 //!
 //! Test FAILS if:
 //! - `Command::new("claude")` appears 0 times (missing implementation)
-//! - `Command::new("claude")` count != 2 (unexpected addition or removal)
+//! - `Command::new("claude")` count != 1 (unexpected addition or removal)
 //! - `Command::new("claude")` appears outside `claude_runner_core` (boundary violation)
 //!
 //! # Bug Prevention
 //!
 //! Prevents:
-//! - Duplicate execution points (measured baseline: 2x → target: 1x)
+//! - Duplicate execution points (achieved: 1x — target met)
 //! - Scattered execution logic
 //! - Difficulty updating execution behavior
 //!
@@ -50,8 +50,9 @@ use std::process::Command;
 
 #[test]
 fn single_execution_point_in_workspace() {
-  // Verify: Command::new("claude") appears exactly TWICE in claude_runner_core
-  // Rationale: Centralized execution point — build_command() + claude_version()
+  // Verify: Command::new("claude") appears exactly ONCE in claude_runner_core
+  // Rationale: Single execution point — build_command() only; claude_version() routes
+  // through ClaudeCommand::execute() which calls build_command() internally.
 
   let module_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
     .parent()
@@ -79,21 +80,23 @@ fn single_execution_point_in_workspace() {
   let match_count = match_lines.len();
 
   assert_eq!(
-    match_count, 2,
+    match_count, 1,
     "CENTRALIZED EXECUTION POINT VIOLATION\n\
      \n\
-     Expected: 2 occurrences of Command::new(\"claude\") in claude_runner_core\n\
+     Expected: 1 occurrence of Command::new(\"claude\") in claude_runner_core\n\
      Found: {match_count} occurrence(s)\n\
      \n\
      Matches:\n{}\n\
      \n\
-     Known occurrences (both in claude_runner_core):\n\
-     - build_command(): builder execution path\n\
-     - claude_version(): version query (FR-20b)\n\
+     Known occurrence (claude_runner_core only):\n\
+     - build_command(): the single canonical execution point\n\
+     \n\
+     Note: claude_version() routes through ClaudeCommand::execute() → build_command()\n\
+     to preserve the single-execution-point invariant.\n\
      \n\
      Fix:\n\
      - If 0 occurrences: Implement execute() method in claude_runner_core\n\
-     - If != 2: Ensure all Command::new(\"claude\") calls are in claude_runner_core only",
+     - If != 1: Ensure Command::new(\"claude\") only appears in build_command()",
     match_lines.join("\n")
   );
 }

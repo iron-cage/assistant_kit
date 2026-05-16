@@ -67,7 +67,7 @@ cargo run -p claude_runner -- --dry-run --dir /tmp "test"
 **Expected:**
 - Prints env var lines (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`, etc.)
 - Prints: `cd /tmp`
-- Prints: `claude --dangerously-skip-permissions -c "test"` (note: bypass and `-c` appear automatically)
+- Prints: `claude --dangerously-skip-permissions --chrome --effort max --print -c "test\n\nultrathink"` (bypass, chrome, effort max, print, and `-c` appear automatically; ultrathink suffix added)
 - Does NOT invoke Claude binary
 - Exit code 0
 
@@ -118,7 +118,7 @@ cargo run -p claude_runner -- --dry-run --session-dir /tmp/sessions "test"
 cargo run -p claude_runner -- --dry-run
 ```
 
-**Expected:** Dry-run output ends with `claude --dangerously-skip-permissions -c` (default bypass + automatic continuation, no message arg). Exit code 0.
+**Expected:** Dry-run output ends with `claude --dangerously-skip-permissions --chrome --effort max -c` (default bypass, chrome, effort max, automatic continuation; no `--print` since no message). Exit code 0.
 
 ### TC-15: Duplicate Dir Flag (Last Wins)
 ```sh
@@ -216,19 +216,21 @@ cargo run -p claude_runner -- -h
 
 **Expected:** Identical output to `--help`. Exit code 0.
 
-### TC-28: Trace Flag — Preview on Stderr
+### TC-28: Trace + Dry-Run — Dry-Run Wins; Stderr Empty
 ```sh
-cargo run -p claude_runner -- --dry-run --trace "test" 2>/tmp/trace_err.txt; cat /tmp/trace_err.txt
+cargo run -p claude_runner -- --dry-run --trace "test" 2>/tmp/trace_err.txt; echo "stderr:"; cat /tmp/trace_err.txt
 ```
 
-**Expected:** Trace preview (command preview lines) written to stderr, not stdout. Dry-run output still appears on stdout. Exit code 0.
+**Expected:** Dry-run output on stdout (env vars + command). Stderr is **empty** — `--dry-run` short-circuits before the `--trace` block fires, so no trace preview is emitted. Exit code 0.
 
-### TC-29: Trace + Dry-Run — Both Active
+(Note: `--trace` without `--dry-run` echoes the assembled command to stderr before invoking Claude. With `--dry-run` active, the early return means trace never runs.)
+
+### TC-29: Trace Without Dry-Run — Preview on Stderr
 ```sh
-cargo run -p claude_runner -- --trace --dry-run "test"
+cargo run -p claude_runner -- --trace "test" 2>/tmp/trace29_err.txt; echo "exit:$?"; echo "stderr:"; cat /tmp/trace29_err.txt
 ```
 
-**Expected:** Dry-run output on stdout (not suppressed by `--trace`). Trace preview also visible on stderr. Exit code 0.
+**Expected:** Command preview (env vars + command) written to stderr. Invocation attempt made (may fail if Claude binary absent). Exit code 0 on success, non-zero if Claude not found.
 
 ### TC-30: No-Skip-Permissions in Dry-Run
 ```sh

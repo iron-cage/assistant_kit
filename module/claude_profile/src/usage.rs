@@ -485,18 +485,37 @@ fn execute_live_mode(
   jitter_secs      : u64,
 ) -> Result< OutputData, ErrorData >
 {
-  use std::os::raw::c_int;
+  use std::os::raw::{ c_int, c_void };
   use core::sync::atomic::Ordering;
   use std::time::{ SystemTime, UNIX_EPOCH };
   use std::io::Write;
 
   type SignalFn = extern "C" fn( c_int );
-  extern "C" { fn signal( signum : c_int, handler : SignalFn ) -> usize; }
+  extern "C"
+  {
+    fn signal     ( signum : c_int, handler : SignalFn ) -> usize;
+    fn sigprocmask( how : c_int, set : *const c_void, oldset : *mut c_void ) -> c_int;
+    fn sigemptyset( set : *mut c_void ) -> c_int;
+    fn sigaddset  ( set : *mut c_void, signum : c_int ) -> c_int;
+  }
 
   // Reset STOP_FLAG before registering the handler (safe across sequential test runs).
   STOP_FLAG.store( false, Ordering::Relaxed );
+  // Unblock SIGINT: test runners (nextest) block SIGINT in their own mask; child processes
+  // inherit this blocked mask.  A blocked signal is never delivered even with a registered
+  // handler, so the STOP_FLAG is never set and the monitor loops forever.
+  // Fix: explicitly unblock SIGINT before registering the handler.
+  // sigset_t on Linux = 128 bytes, represented as [u64; 16].
   // SAFETY: `on_sigint` is a valid C-compatible function pointer.
-  unsafe { signal( 2, on_sigint ); } // 2 = SIGINT
+  //         `sigset` is zero-initialised and large enough for sigset_t on Linux.
+  let mut sigset = [ 0u64; 16 ];
+  unsafe
+  {
+    sigemptyset( sigset.as_mut_ptr().cast::< c_void >() );
+    sigaddset  ( sigset.as_mut_ptr().cast::< c_void >(), 2 );  // 2 = SIGINT
+    sigprocmask( 1, sigset.as_ptr().cast::< c_void >(), core::ptr::null_mut() ); // 1 = SIG_UNBLOCK
+    signal( 2, on_sigint );
+  }
 
   loop
   {

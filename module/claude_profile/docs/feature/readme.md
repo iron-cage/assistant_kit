@@ -25,8 +25,8 @@
 | 012 | [Live Credentials Status](012_live_credentials_status.md) | Show credential metadata with no account store dependency | ✅ |
 | 013 | [Account Rate-Limit Utilization](013_account_limits.md) | Show rate-limit utilization via live HTTP response headers | ✅ |
 | 014 | [Rich Account Metadata](014_rich_account_metadata.md) | Expose `oauthAccount` and model fields in `.credentials.status` and `.accounts` | ✅ |
-| 015 | [Account Name Shortcut Syntax](015_name_shortcut_syntax.md) | Positional bare arg and prefix resolution for `name::` on four account commands | 🚧 |
-| 016 | [Current Account Awareness](016_current_account_awareness.md) | Current account detection via token match; divergence display in `.accounts` and `.usage` | 🚧 |
+| 015 | [Account Name Shortcut Syntax](015_name_shortcut_syntax.md) | Positional bare arg and prefix resolution for `name::` on four account commands | ✅ |
+| 016 | [Current Account Awareness](016_current_account_awareness.md) | Current account detection via token match; divergence display in `.accounts` and `.usage` | ✅ |
 | 017 | [Expired Token Refresh via Isolated Subprocess](017_token_refresh.md) | `refresh::` parameter; retry-on-auth-error via `run_isolated()`; credential write-back | ✅ |
-| 018 | [Live Quota Monitor Mode](018_live_monitor.md) | `live::`, `interval::`, `jitter::` parameters; continuous refresh with staggered fetches and countdown footer | 🎯 |
+| 018 | [Live Quota Monitor Mode](018_live_monitor.md) | `live::`, `interval::`, `jitter::` parameters; continuous refresh with staggered fetches and countdown footer | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |
