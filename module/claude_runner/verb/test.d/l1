@@ -7,4 +7,14 @@ if [[ "${1:-}" == "--dry-run" ]]; then echo "w3 .test level::3"; exit 0; fi
 # Prevent cargo from trying to update the registry index inside the container.
 # All deps are pre-cooked via cargo-chef during image build; registry is read-only.
 export CARGO_NET_OFFLINE=1
+# Fix(issue-nextest-pty-output): Disable nextest's interactive PTY progress bar.
+# Root cause: wrun_core spawns subprocesses via PTY, causing nextest to detect isatty()=true
+# and activate indicatif's cursor-movement progress display. wrun_core's ANSI normalization
+# (consolidate_carriage_returns + extract_ansi_erase_codes) then discards this output,
+# making all test results invisible (exit 0, zero per-test lines visible).
+# With NO_COLOR=1, indicatif returns hidden()=true regardless of isatty(), and nextest
+# falls back to plain \n-terminated output that survives wrun_core's normalization intact.
+# Pitfall: Even with the fix in will_test source (local_nextest.rs, workspace_nextest.rs),
+# environment inheritance ensures this works with any w3 binary version.
+export NO_COLOR=1
 exec w3 .test level::3

@@ -506,9 +506,9 @@ fn execute_live_mode(
   // handler, so the STOP_FLAG is never set and the monitor loops forever.
   // Fix: explicitly unblock SIGINT before registering the handler.
   // sigset_t on Linux = 128 bytes, represented as [u64; 16].
+  let mut sigset = [ 0u64; 16 ];
   // SAFETY: `on_sigint` is a valid C-compatible function pointer.
   //         `sigset` is zero-initialised and large enough for sigset_t on Linux.
-  let mut sigset = [ 0u64; 16 ];
   unsafe
   {
     sigemptyset( sigset.as_mut_ptr().cast::< c_void >() );
