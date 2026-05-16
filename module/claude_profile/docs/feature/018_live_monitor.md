@@ -104,6 +104,7 @@ In live mode, `format::json` is rejected before the first fetch (see Validation)
 | source | `src/usage.rs` | `live::` loop; stagger delay; countdown footer; SIGINT handler; param validation |
 | source | `src/lib.rs` | `live::`, `interval::`, `jitter::` parameter registration via `register_commands()` |
 | dep | `libc` | `signal()` for SIGINT handler (transitive dep, no new crate) |
+| test | `tests/cli/usage_test.rs` | it21 (live loop), it22–it24 (guards), it25–it29 (boundary/edge), it30 (SIGINT clean-exit) |
 | task | `task/claude_profile/138_usage_live_monitor.md` | Implementation task for this feature |
 | doc | [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm and table format that this extends |
 | doc | [017_token_refresh.md](017_token_refresh.md) | `refresh::` parameter — composable with live mode |

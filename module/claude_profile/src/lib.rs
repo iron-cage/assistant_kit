@@ -161,7 +161,15 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                  vec![ nam(), dry() ],      Box::new( account_delete_routine ) );
   reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr() ],      Box::new( token_status_routine   ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",              vec![ fmt() ],             Box::new( paths_routine          ) );
-  reg_cmd( registry, ".usage",          "Show live rate-limit quota for all saved accounts",               vec![ fmt() ],             Box::new( usage_routine          ) );
+  reg_cmd( registry, ".usage",          "Show live rate-limit quota for all saved accounts",
+    vec![
+      fmt(),
+      reg_arg_opt( "refresh",   Kind::Integer ).with_description( "Retry once on 401 by refreshing OAuth token (0 = disabled; 1 = enabled)" ),
+      reg_arg_opt( "live",      Kind::Integer ).with_description( "Continuous monitor mode (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "interval",  Kind::Integer ).with_description( "Seconds between refreshes (minimum 30, default 30)" ),
+      reg_arg_opt( "jitter",    Kind::Integer ).with_description( "Max random seconds added to interval (0 = none, default)" ),
+    ],
+    Box::new( usage_routine          ) );
 }
 
 #[ cfg( feature = "enabled" ) ]

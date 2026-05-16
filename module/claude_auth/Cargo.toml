@@ -1,0 +1,13 @@
+[package]
+name        = "claude_auth"
+version     = "0.1.0"
+edition.workspace = true
+description = "Anthropic OAuth token refresh transport — Layer * standalone primitive."
+
+[features]
+enabled = [ "dep:ureq" ]
+
+[dependencies]
+ureq = { workspace = true, optional = true }
+
+[dev-dependencies]

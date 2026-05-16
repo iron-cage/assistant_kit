@@ -72,10 +72,15 @@
 //! See [spec.md](../spec.md) for complete documentation.
 
 mod command;
+mod isolated;
 mod types;
 pub mod process;
 pub mod session_dir;
 
 pub use crate::command::{ ClaudeCommand, claude_version };
+pub use crate::isolated::{ IsolatedRunResult, RunnerError };
 pub use crate::types::{ ActionMode, EffortLevel, ExecutionOutput, InputFormat, LogLevel, OutputFormat, PermissionMode };
 pub use crate::session_dir::{ SessionManager, Strategy };
+
+#[ cfg( feature = "enabled" ) ]
+pub use crate::isolated::run_isolated;

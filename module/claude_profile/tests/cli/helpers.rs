@@ -417,3 +417,55 @@ pub fn live_active_token() -> Option< String >
   ).ok()?;
   claude_profile::account::parse_string_field( &content, "accessToken" )
 }
+
+/// Spawn the binary, wait `secs` seconds, kill it, and return all bytes written to stdout.
+///
+/// Reads from the piped stdout using a background thread so bytes accumulate even
+/// while the main thread sleeps. After killing the child process the write-end of the
+/// pipe is closed, causing `read_to_end` to return immediately with all buffered bytes.
+///
+/// Used by `lim_it` tests that need to observe live-monitor output before the process exits.
+///
+/// # Panics
+///
+/// Panics if the binary cannot be spawned.
+#[ must_use ]
+#[ inline ]
+pub fn run_cs_bytes_for_secs( args : &[ &str ], env : &[ ( &str, &str ) ], secs : u64 ) -> Vec< u8 >
+{
+  use std::process::Stdio;
+  use std::io::Read;
+  use std::sync::{ Arc, Mutex };
+
+  let mut cmd = std::process::Command::new( BIN );
+  cmd.args( args ).env_remove( "PRO" );
+  for ( k, v ) in env { cmd.env( k, v ); }
+  cmd.stdout( Stdio::piped() );
+
+  let mut child  = cmd.spawn().expect( "failed to spawn binary" );
+  let mut stdout = child.stdout.take().unwrap();
+
+  // Reader thread accumulates bytes so the pipe buffer does not fill and block the child.
+  let collected : Arc< Mutex< Vec< u8 > > > = Arc::new( Mutex::new( Vec::new() ) );
+  let collected2 = collected.clone();
+  let reader = std::thread::spawn( move ||
+  {
+    let mut buf = [ 0u8; 4096 ];
+    loop
+    {
+      match stdout.read( &mut buf )
+      {
+        Ok( 0 ) | Err( _ ) => break,
+        Ok( n ) => collected2.lock().unwrap().extend_from_slice( &buf[ ..n ] ),
+      }
+    }
+  } );
+
+  std::thread::sleep( core::time::Duration::from_secs( secs ) );
+  let _ = child.kill();
+  let _ = reader.join();
+  let _ = child.wait();
+
+  let guard = collected.lock().unwrap();
+  guard.clone()
+}

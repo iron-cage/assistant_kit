@@ -39,6 +39,7 @@ claude_profile_core  = { workspace = true }
 error_tools          = { workspace = true, optional = true }
 unilang              = { workspace = true, optional = true }
 claude_quota         = { workspace = true, optional = true, features = [ "enabled" ] }
+claude_runner_core   = { workspace = true, optional = true, features = [ "enabled" ] }
 data_fmt             = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -55,6 +56,7 @@ enabled = [
   "error_tools/error_untyped",
   "dep:unilang",
   "dep:claude_quota",
+  "dep:claude_runner_core",
   "dep:data_fmt",
 ]
 # Convenience: enables all functionality (currently equivalent to enabled).

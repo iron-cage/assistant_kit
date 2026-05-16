@@ -37,14 +37,15 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `debug_advanced_params_test.rs` | Test debug and advanced parameter builder methods (TSK-078) |
 | `terminal_ide_params_test.rs` | Test terminal and IDE parameter builder methods (TSK-079) |
 | `pattern_e_empty_and_edge_cases_test.rs` | Test Pattern E empty-iterator bug fix and float edge cases |
+| `isolated_test.rs` | Test IsolatedRunResult fields and RunnerError Display (T01–T08) |
 
-## Organization (31 test files)
+## Organization (32 test files)
 
 Tests organized by functional domain and architectural principles (see Responsibility Table above).
 
 ### Scope
 
-This test suite covers the claude_runner_core crate's builder pattern API for Claude Code command construction and comprehensive verification framework (31 test files):
+This test suite covers the claude_runner_core crate's builder pattern API for Claude Code command construction and comprehensive verification framework (32 test files):
 
 **In Scope:**
 - Builder pattern API (4 test files):

@@ -92,6 +92,27 @@ impl ClaudeCommand {
     self
   }
 
+  /// Override the `HOME` environment variable for process isolation
+  ///
+  /// Sets `HOME=<path>` on the spawned process, directing it to use a different
+  /// home directory. Used by `run_isolated()` to prevent credential contamination.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// use claude_runner_core::ClaudeCommand;
+  ///
+  /// let cmd = ClaudeCommand::new()
+  ///   .with_home( std::path::Path::new( "/tmp/isolated_home" ) );
+  /// ```
+  #[ inline ]
+  #[ must_use ]
+  pub fn with_home( mut self, path : &std::path::Path ) -> Self
+  {
+    self.home_override = Some( path.to_owned() );
+    self
+  }
+
   /// Add multiple arguments to the command
   ///
   /// # Example

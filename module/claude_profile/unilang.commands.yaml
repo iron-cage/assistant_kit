@@ -353,9 +353,52 @@
       aliases: ["fmt"]
       tags: []
 
+    - name: "refresh"
+      kind: "Integer"
+      description: "Retry once on 401 by refreshing OAuth token (0 = disabled; 1 = enabled)"
+      hint: "Retry on 401"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "live"
+      kind: "Integer"
+      description: "Continuous monitor mode (0 = off, default; 1 = on)"
+      hint: "Live monitor"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "interval"
+      kind: "Integer"
+      description: "Seconds between refreshes (minimum 30, default 30)"
+      hint: "Refresh interval"
+      optional: true
+      default: "30"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "jitter"
+      kind: "Integer"
+      description: "Max random seconds added to interval (0 = none, default)"
+      hint: "Interval jitter"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
   examples:
     - ".usage"
     - ".usage format::json"
+    - ".usage refresh::1"
+    - ".usage live::1"
+    - ".usage live::1 interval::60 jitter::10"
   auto_help_enabled: true
 
 - name: ".credentials.status"

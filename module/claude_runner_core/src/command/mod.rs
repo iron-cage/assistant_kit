@@ -66,6 +66,9 @@ pub struct ClaudeCommand {
 
   // Execution control
   pub(super) dry_run: bool,
+
+  // Isolation
+  pub(super) home_override: Option< PathBuf >,
 }
 
 impl ClaudeCommand {
@@ -129,6 +132,8 @@ impl ClaudeCommand {
       top_k: None,               // Inherits standard: None
 
       dry_run: false,
+
+      home_override: None,
     }
   }
 
@@ -319,6 +324,9 @@ impl ClaudeCommand {
     if let Some( top_k ) = self.top_k {
       lines.push( format!( "CLAUDE_CODE_TOP_K={top_k}" ) );
     }
+    if let Some( ref home ) = self.home_override {
+      lines.push( format!( "HOME={}", home.display() ) );
+    }
 
     lines.join( "\n" )
   }
@@ -488,6 +496,10 @@ impl ClaudeCommand {
 
     if let Some( top_k ) = self.top_k {
       cmd.env( "CLAUDE_CODE_TOP_K", top_k.to_string() );
+    }
+
+    if let Some( ref home ) = self.home_override {
+      cmd.env( "HOME", home );
     }
 
     // Add skip-permissions flag before custom args

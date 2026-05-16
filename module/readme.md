@@ -13,6 +13,7 @@
 | claude_storage_core | Zero-dep core library for Claude storage access |
 | claude_version | Claude Code version manager CLI |
 | claude_version_core | Layer 1 domain logic: version, session, settings, account |
+| claude_auth | Layer * standalone primitive: Anthropic OAuth token refresh transport |
 | claude_quota | Layer * standalone primitive: Anthropic API rate-limit HTTP transport |
 | dream | Layer 2 library facade re-exporting all core crates (Layer 0, *, 1) |
 | assistant | Layer 3 super-app aggregating all Layer 2 CLI tools into ast |

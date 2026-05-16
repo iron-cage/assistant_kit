@@ -2,14 +2,14 @@
 
 ### Scope
 
-- **Purpose**: Surface live rate-limit utilization for all saved accounts and the currently live session from Anthropic API response headers.
+- **Purpose**: Surface live quota utilization for all saved accounts and the currently live session via `GET /api/oauth/usage`, showing 5h, 7d, and Sonnet-specific weekly quota remaining.
 - **Responsibility**: Documents the `usage` module and `.usage` CLI command.
-- **In Scope**: Per-account quota fetch via `anthropic-ratelimit-unified-*` headers, token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for `_active`-but-not-current accounts), synthetic `(current session)` row when live credentials are unsaved, table output using `data_fmt`, graceful handling of expired/missing tokens, recommendation marker for best next account, footer summary line, `format::json` output.
+- **In Scope**: Per-account quota fetch via `claude_quota::fetch_oauth_usage()` calling `GET /api/oauth/usage`, `OauthUsageData` parsing with `five_hour`/`seven_day`/`seven_day_sonnet` fields, token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for `_active`-but-not-current accounts), synthetic `(current session)` row when live credentials are unsaved, table output using `data_fmt`, graceful handling of expired/missing tokens, recommendation marker for best next account, footer summary line, `format::json` output.
 - **Out of Scope**: Historical token counts from stats-cache.json (replaced by live API data); verbosity levels (single fixed output level per command design); relying on `_active` marker for `✓` determination (live credential matching via `accessToken` comparison determines `✓`; `_active` determines `*` only).
 
 ### Design
 
-`claude_profile` CLI provides a `.usage` command that fetches live quota utilization for every saved account by making a minimal API call per account and reading rate-limit headers from the response. Results are displayed as a table.
+`claude_profile` CLI provides a `.usage` command that fetches live quota utilization for every saved account by calling `claude_quota::fetch_oauth_usage(&token)` which issues `GET /api/oauth/usage` to `api.anthropic.com`. Results are displayed as a table.
 
 **Live account detection:** The `_active` marker is NOT used to determine which account is currently in use. Instead, the command reads the `accessToken` from `~/.claude/.credentials.json` (the live credentials file used by Claude Code) and compares it against each saved account's stored token. This is correct even when an external actor (Claude Code, `claude auth login`, another process) has changed the credentials without going through `clp`.
 

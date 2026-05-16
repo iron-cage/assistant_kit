@@ -8,6 +8,7 @@
 [workspace]
 resolver = "2"
 members = [
+  "module/claude_auth",
   "module/claude_assets_core",
   "module/claude_assets",
   "module/claude_core",
@@ -90,6 +91,11 @@ missing_docs_in_private_items = "allow"
 incremental = false
 
 ## Internal workspace dependencies
+
+[workspace.dependencies.claude_auth]
+path = "module/claude_auth"
+version = "~0.1.0"
+default-features = false
 
 [workspace.dependencies.claude_assets_core]
 path = "module/claude_assets_core"
@@ -192,3 +198,6 @@ version = "~1.0"
 
 [workspace.dependencies.serde_yaml]
 version = "~0.9"
+
+[workspace.dependencies.libc]
+version = "~0.2"
