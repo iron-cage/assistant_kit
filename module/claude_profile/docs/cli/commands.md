@@ -12,7 +12,7 @@
 | 6 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::alice@oldco.com` |
 | 7 | `.token.status` | Show active OAuth token expiry classification | 2 | `clp .token.status` |
 | 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 1 | `clp .paths` |
-| 9 | `.usage` | Show live rate-limit quota for all saved accounts | 1 | `clp .usage` |
+| 9 | `.usage` | Show live rate-limit quota for all saved accounts | 5 | `clp .usage` |
 | 10 | `.credentials.status` | Show live credential metadata without account store dependency | 13 | `clp .credentials.status` |
 | 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 2 | `clp .account.limits name::alice@acme.com` |
 
@@ -33,8 +33,9 @@
 | Count | Commands |
 |-------|----------|
 | 0 | `.`, `.help` |
-| 1 | `.paths`, `.usage` |
+| 1 | `.paths` |
 | 2 | `.account.save`, `.account.use`, `.account.delete`, `.token.status`, `.account.limits` |
+| 5 | `.usage` |
 | 12 | `.accounts` |
 | 13 | `.credentials.status` |
 
@@ -451,21 +452,29 @@ clp .paths format::json
 
 ### Command :: 9. `.usage`
 
-Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`). Renders results as a `data_fmt` table with per-account Expires, 5h Left, 5h Reset, 7d Left, 7d(Son), and 7d Reset columns, plus a footer recommendation line.
+Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`). Renders results as a `data_fmt` table with per-account Expires, 5h Left, 5h Reset, 7d Left, 7d(Son), and 7d Reset columns, plus a footer recommendation line. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
--- **Parameters:** [`format::`](params.md#parameter--2-format)
--- **Exit:** 0 (success) | 2 (runtime: credential store unreadable, HOME unset)
+-- **Parameters:** [`format::`](params.md#parameter--2-format), [`refresh::`](params.md#parameter--19-refresh), [`live::`](params.md#parameter--20-live), [`interval::`](params.md#parameter--21-interval), [`jitter::`](params.md#parameter--22-jitter)
+-- **Exit:** 0 (success) | 1 (usage: invalid param combination) | 2 (runtime: credential store unreadable, HOME unset)
 
 **Syntax:**
 
 ```bash
 clp .usage
 clp .usage format::json
+clp .usage refresh::1
+clp .usage live::1
+clp .usage live::1 interval::60 jitter::10
+clp .usage live::1 refresh::1 interval::60
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `format::` | [`OutputFormat`](types.md#type--3-outputformat) | `text` | Output format |
+| `format::` | [`OutputFormat`](types.md#type--3-outputformat) | `text` | Output format (`text` or `json`; `json` incompatible with `live::1`) |
+| `refresh::` | `bool` | `0` | On 401/403 auth error, refresh token via isolated subprocess and retry |
+| `live::` | `bool` | `0` | Enable continuous refresh loop (Ctrl-C to exit) |
+| `interval::` | `u64` | `30` | Seconds between refresh cycles (≥ 30; only validated when `live::1`) |
+| `jitter::` | `u64` | `0` | Max random seconds added to each cycle delay (≤ interval; only validated when `live::1`) |
 
 **Examples:**
 
@@ -486,6 +495,16 @@ clp .usage format::json
 #   {"account":"i6@wbox.pro","is_current":false,"is_active":true,"expires_in_secs":18120,"session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_sonnet_left_pct":28,"weekly_7d_resets_in_secs":500040},
 #   {"account":"i7@wbox.pro","is_current":false,"is_active":false,"expires_in_secs":0,"error":"missing accessToken"}
 # ]
+
+clp .usage refresh::1
+# (same table as above; expired tokens silently refreshed before fetch, invisible to user)
+
+clp .usage live::1 interval::60 jitter::10
+# Quota
+# ...table...
+#
+#   Next update in 0:59 (at 14:32:07 UTC)  [Ctrl-C to exit]
+# (refreshes every 60–70 seconds; Ctrl-C exits cleanly)
 ```
 
 **Notes:**
@@ -494,9 +513,12 @@ clp .usage format::json
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails. Shows "in Xh Ym" or "EXPIRED".
 - `5h Left` / `7d Left` show remaining quota percentage (100 − consumed); `7d(Son)` shows remaining Sonnet-only weekly quota or `—` when unavailable. `5h Reset` / `7d Reset` are independent countdown columns. All quota data sourced from `claude_quota::fetch_oauth_usage()` → `/api/oauth/usage`.
 - Accounts with expired or missing `accessToken` show `—` for quota columns and a shortened error reason in the last column; other accounts continue processing (per-account errors are non-fatal).
-- Footer "Valid: X / Y   →  Next: ..." appears when ≥2 accounts have valid quota data; omitted when 0 or 1.
+- Footer "Valid: X / Y   →  Next: ..." appears when ≥2 accounts have valid quota data; omitted when 0 or 1. In live mode this footer is followed by the countdown line.
 - Empty credential store exits 0 with `(no accounts configured)`.
-- See [feature/009_token_usage.md](../feature/009_token_usage.md) for full algorithm and AC criteria.
+- `refresh::1` triggers at most one retry per account per cycle; only HTTP 401/403 errors trigger the subprocess. See [feature/017_token_refresh.md](../feature/017_token_refresh.md).
+- `live::1 format::json` exits 1 before any fetch. `interval::` and `jitter::` are validated only when `live::1`. See [feature/018_live_monitor.md](../feature/018_live_monitor.md).
+- `refresh::` and `live::1` are composable — token refresh runs on every cycle in live mode.
+- See [feature/009_token_usage.md](../feature/009_token_usage.md) for the baseline algorithm and AC criteria.
 
 ---
 

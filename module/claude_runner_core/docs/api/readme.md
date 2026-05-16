@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Execution API](001_execution_api.md) | execute() and execute_interactive() contracts | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating API doc instances | ✅ |

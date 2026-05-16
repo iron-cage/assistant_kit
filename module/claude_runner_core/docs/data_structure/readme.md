@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Command Types](001_command_types.md) | Configuration enums: ActionMode, LogLevel, OutputFormat, etc. | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating data structure doc instances | ✅ |

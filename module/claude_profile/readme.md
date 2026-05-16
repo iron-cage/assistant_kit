@@ -4,8 +4,8 @@ Claude Code account credential management.
 
 ## Files
 
-| File / Directory | Responsibility |
-|------------------|----------------|
+| File | Responsibility |
+|------|----------------|
 | `Cargo.toml` | Crate manifest: dependencies, features, metadata |
 | `src/` | Library modules and CLI binary (account, token, paths, adapter, commands) |
 | `tests/` | Test suite for credential management |

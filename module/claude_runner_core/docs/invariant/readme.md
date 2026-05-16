@@ -13,3 +13,4 @@
 |----|------|---------|--------|
 | 001 | [Single Execution Point](001_single_execution_point.md) | All claude spawning goes through one location | ✅ |
 | 002 | [NFR Conformance](002_nfr_conformance.md) | Dependency count, performance, and type-safety constraints | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating invariant doc instances | ✅ |

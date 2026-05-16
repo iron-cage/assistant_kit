@@ -73,16 +73,8 @@
 //!
 //! See `ultrathink_args_test.rs` (T50–T58) and `effort_args_test.rs` (T59–T70).
 
-use std::process::Command;
-
-fn run_cli( args : &[ &str ] ) -> std::process::Output
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  Command::new( bin )
-    .args( args )
-    .output()
-    .expect( "Failed to invoke clr binary" )
-}
+mod common;
+use common::run_cli;
 
 // T01: positional message accepted with --dry-run
 #[ test ]

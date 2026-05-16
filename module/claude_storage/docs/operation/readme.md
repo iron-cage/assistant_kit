@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Migration Guide](001_migration_guide.md) | Upgrading from `claude_storage` library to `claude_storage_core` | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating operation doc instances | ✅ |

@@ -1,5 +1,11 @@
 # claude_storage Documentation
 
+### Scope
+
+**Responsibilities:** Documentation for the `claude_storage` CLI crate covering behavioral requirements, CLI reference, and operational procedures.
+**In Scope:** CLI command and parameter reference (`cli/`), feature requirements (`feature/`), operational procedures (`operation/`), advanced topics, and doc cross-reference graph.
+**Out of Scope:** Source code (→ `src/`), automated tests (→ `tests/`), build scripts (→ `verb/`).
+
 ### Responsibility Table
 
 | File | Responsibility |

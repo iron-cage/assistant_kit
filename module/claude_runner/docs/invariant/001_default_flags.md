@@ -42,14 +42,27 @@ If any default injection is removed:
 - Claude uses medium-effort reasoning instead of maximum for every automation request (effort max removed)
 - Automation pipelines that depend on these defaults will behave differently without a version change
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Execution modes that consume these injected defaults |
-| source | `../../src/lib.rs` | build_claude_command() flag injection implementation |
+| File | Relationship |
+|------|--------------|
+| [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Execution modes that consume these injected defaults |
 
 ### Sources
+
+| File | Relationship |
+|------|--------------|
+| `../../src/lib.rs` | build_claude_command() flag injection implementation |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `../../tests/cli_args_test.rs` | T01–T49 flag parsing; --new-session, --no-skip-permissions, --no-ultrathink, --no-effort-max |
+| `../../tests/ultrathink_args_test.rs` | T50–T58 ultrathink suffix injection, idempotent guard, and --no-ultrathink opt-out |
+| `../../tests/effort_args_test.rs` | T59–T70 --effort max default injection and override behavior |
+
+### Provenance
 
 | File | Notes |
 |------|-------|

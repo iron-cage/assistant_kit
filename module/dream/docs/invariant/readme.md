@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Zero Own Logic](001_no_own_logic.md) | No own types, functions, or traits defined in `src/` | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating invariant doc instances | ✅ |

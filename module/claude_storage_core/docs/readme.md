@@ -1,8 +1,14 @@
 # docs/
 
+### Scope
+
+**Responsibilities:** Documentation for the `claude_storage_core` library covering behavioral requirements, data models, algorithms, and API contracts.
+**In Scope:** Feature requirements (`feature/`), in-memory data structures (`data_structure/`), computational algorithms (`algorithm/`), non-functional constraints (`invariant/`), public API contracts (`api/`), and doc cross-reference graph.
+**Out of Scope:** Source code (→ `src/`), automated tests (→ `tests/`), build scripts (→ `verb/`).
+
 ### Responsibility Table
 
-| Path | Responsibility |
+| File | Responsibility |
 |------|----------------|
 | `feature/` | User-facing capabilities and functional design |
 | `data_structure/` | In-memory data models and their relationships |

@@ -48,15 +48,31 @@ enabled = ["dep:claude_runner_core", "dep:error_tools", ..., "dep:unilang", ...]
 - **routines.rs added:** Introduces an aggregation pattern inconsistent with this crate's design role
 - **build.rs added:** Duplicates registration work that belongs to consumers; creates a conflicting code-gen step
 
-### Cross-References
+### APIs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Separation of concerns (library vs binary) |
-| doc | [api/001_public_api.md](../api/001_public_api.md) | COMMANDS_YAML constant that is the library's sole purpose |
-| source | `../../Cargo.toml` | Dependency and feature flag definitions |
+| File | Relationship |
+|------|--------------|
+| [api/001_public_api.md](../api/001_public_api.md) | COMMANDS_YAML constant that is the library's sole purpose |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [feature/001_runner_tool.md](../feature/001_runner_tool.md) | Separation of concerns (library vs binary) |
 
 ### Sources
+
+| File | Relationship |
+|------|--------------|
+| `../../Cargo.toml` | Dependency and feature flag definitions |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `../../tests/stale_ref_guard_test.rs` | Guards against stale consumer workspace references in source and docs |
+
+### Provenance
 
 | File | Notes |
 |------|-------|

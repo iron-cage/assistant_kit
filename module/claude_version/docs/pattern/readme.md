@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Version Lock](001_version_lock.md) | 5-layer protection for pinned Claude Code versions | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating pattern doc instances | ✅ |

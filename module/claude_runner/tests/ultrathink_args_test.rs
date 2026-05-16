@@ -24,16 +24,8 @@
 //! - T57: empty string positional arg after `--` separator is silently skipped
 //! - T58: message is suffixed (not prefixed) with `"\n\nultrathink"` — suffix position guard
 
-use std::process::Command;
-
-fn run_cli( args : &[ &str ] ) -> std::process::Output
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  Command::new( bin )
-    .args( args )
-    .output()
-    .expect( "Failed to invoke clr binary" )
-}
+mod common;
+use common::run_cli;
 
 // T50: message is suffixed with "\n\nultrathink" by default
 //

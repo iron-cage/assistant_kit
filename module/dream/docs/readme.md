@@ -1,6 +1,10 @@
 # docs/
 
-Crate-level documentation for `dream`: behavioral requirements and structural invariants.
+### Scope
+
+**Responsibilities:** Crate-level documentation for `dream`: behavioral requirements and structural invariants.
+**In Scope:** Feature specifications (`feature/`), structural invariant constraints (`invariant/`), and doc cross-reference graph.
+**Out of Scope:** Source code (→ `src/`), automated tests (→ `tests/`), build scripts (→ `verb/`).
 
 ### Responsibility Table
 

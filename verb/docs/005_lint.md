@@ -33,7 +33,7 @@ Runs clippy on the target module with all features enabled and warnings promoted
 ./verb/lint              # runs: cargo clippy -p claude_runner_core --all-features -- -D warnings
 ```
 
-`verb/lint` dispatcher (universal — identical for all cargo modules):
+`verb/lint` dispatcher (universal — identical across all cargo modules):
 ```bash
 #!/usr/bin/env bash
 # lint — run linter; dispatches by VERB_LAYER to lint.d/ layer.
@@ -41,10 +41,10 @@ set -euo pipefail
 DIR="$(dirname "${BASH_SOURCE[0]}")/lint.d"
 LAYER="${VERB_LAYER:-}"
 [[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-exec "$DIR/l1" "$@"
+exec "$DIR/l2" "$@"
 ```
 
-`verb/lint.d/l1` (module-specific, example: `claude_profile`):
+`verb/lint.d/l1` (module-specific, entered via `VERB_LAYER=l1`; example: `claude_profile`):
 ```bash
 #!/usr/bin/env bash
 # l1 — run cargo clippy directly (cargo ecosystem).
@@ -55,10 +55,15 @@ if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clippy -p claude_profile --al
 exec cargo clippy -p claude_profile --all-features -- -D warnings
 ```
 
-### Runbox Ecosystem
+`verb/lint.d/l2` (universal — identical across all cargo modules; default host-side invocation):
+```bash
+#!/usr/bin/env bash
+# l2 — host orchestration; delegates to runbox (Docker-orchestrated execution).
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+if [[ "${1:-}" == "--dry-run" ]]; then echo "./run/runbox .lint"; exit 0; fi
+exec ./run/runbox .lint
+```
 
-Standalone projects (Python, Node.js, Rust examples) implement `lint` via a `verb/lint.d/l1` layer script executed directly inside the container. `verb/lint` is a dispatcher: when `VERB_LAYER=l1` (set by `runbox-run`), it routes to `verb/lint.d/l1`; on the host it falls through to `verb/lint.d/l2` which delegates to `./run/runbox .lint`.
-
-`runbox.yml` must declare `lint_script: verb/lint` — see `run/docs/parameter/014_lint_script.md`.
-
-The linter is ecosystem-specific: ruff for Python, eslint for Node.js, cargo clippy for Rust. All are invoked with absolute container paths (`/workspace/...`). `verb/lint` is `available` for all project types — linting is universal.
+Each module's `run/runbox.yml` must declare `lint_script: module/<name>/verb/lint.d/l1` — the container entry point is the l1 layer directly. See `run/docs/parameter/014_lint_script.md`. The linter is ecosystem-specific: ruff for Python, eslint for Node.js, cargo clippy for Rust. `verb/lint` is `available` for all project types — linting is universal.

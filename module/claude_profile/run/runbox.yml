@@ -9,7 +9,13 @@ cmd_scope: -p claude_profile
 cmd_filter: "!test(lim_it)"
 
 # script invoked by `.test` inside the container (path relative to /workspace)
-test_script: module/claude_profile/verb/test
+test_script: module/claude_profile/verb/test.d/l1
+
+# script invoked by `.lint` inside the container (path relative to /workspace)
+lint_script: module/claude_profile/verb/lint.d/l1
+
+# script invoked by `.run` inside the container (path relative to /workspace)
+run_script: module/claude_profile/verb/run.d/l1
 
 # optional binary plugin: name:container_path (binary found via 'which name' on host)
 bin_plugin: w3:/usr/local/bin/w3

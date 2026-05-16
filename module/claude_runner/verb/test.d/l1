@@ -4,4 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
 if [[ "${1:-}" == "--dry-run" ]]; then echo "w3 .test level::3"; exit 0; fi
+# Prevent cargo from trying to update the registry index inside the container.
+# All deps are pre-cooked via cargo-chef during image build; registry is read-only.
+export CARGO_NET_OFFLINE=1
 exec w3 .test level::3

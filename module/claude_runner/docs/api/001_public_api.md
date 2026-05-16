@@ -57,15 +57,34 @@ The library surface has no fallible operations. `COMMANDS_YAML` is a `&'static s
 - `register_commands` will remain a no-op — its signature is stable but its empty body is by design.
 - The `enabled` feature gate for `register_commands` is stable.
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [feature/001_runner_tool.md](../feature/001_runner_tool.md) | CLI binary design that uses VerbosityLevel |
-| doc | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace dep rule that shapes this minimal library surface |
-| source | `../../src/lib.rs` | COMMANDS_YAML and register_commands definitions |
+| File | Relationship |
+|------|--------------|
+| [feature/001_runner_tool.md](../feature/001_runner_tool.md) | CLI binary design that uses VerbosityLevel |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace dep rule that shapes this minimal library surface |
 
 ### Sources
+
+| File | Relationship |
+|------|--------------|
+| `../../src/lib.rs` | COMMANDS_YAML and register_commands definitions |
+| `../../src/verbosity.rs` | VerbosityLevel newtype implementation |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `../../tests/cli_args_test.rs` | T01–T49 flag parsing; covers --verbosity flag and VerbosityLevel parsing |
+| `../../tests/commands_yaml_test.rs` | Validates COMMANDS_YAML path resolves to a readable, well-formed YAML file |
+| `../../tests/verbosity_test.rs` | Full VerbosityLevel range, boundary, default, and method predicate coverage |
+
+### Provenance
 
 | File | Notes |
 |------|-------|

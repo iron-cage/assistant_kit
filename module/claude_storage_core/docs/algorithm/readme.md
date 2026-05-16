@@ -13,3 +13,4 @@
 |----|------|---------|--------|
 | 001 | [Path Encoding](001_path_encoding.md) | v1/v2 filesystem path encoding/decoding scheme | ✅ |
 | 002 | [JSON Parser](002_json_parser.md) | Hand-written zero-dependency recursive descent parser | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating algorithm doc instances | ✅ |

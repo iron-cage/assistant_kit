@@ -2,13 +2,14 @@
 
 Formal specification of co-dependencies, mutual exclusions, and cascading effects between clp parameters.
 
-### All Interactions (3 total)
+### All Interactions (4 total)
 
 | # | Interaction | Parameters | Effect |
 |---|-------------|------------|--------|
 | 1 | `dry::` is orthogonal to output control | `dry::`, `format::` | Dry-run mode applies to mutation; does not affect output formatting |
 | 2 | `format::json` overrides field-presence params | `format::`, `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | JSON output includes all fields regardless of field-presence param values |
 | 3 | `format::table` ignores field-presence params | `format::`, `active::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `role::`, `billing::`, `model::` | Table output uses fixed columns regardless of field-presence param values |
+| 4 | `live::1` is incompatible with `format::json` | `live::`, `format::` | Exits 1 before any fetch with `"live monitor mode is incompatible with format::json"` |
 
 ---
 
@@ -70,4 +71,32 @@ clp .accounts sub::0 format::table
 
 # All field-presence params ignored in table mode
 clp .accounts active::0 sub::0 tier::0 format::table
+```
+
+---
+
+### Interaction :: 4. `live::1` is incompatible with `format::json`
+
+**Parameters:** [`live::`](params.md#parameter--20-live), [`format::`](params.md#parameter--2-format)
+
+**Effect:** When both `live::1` and `format::json` are specified on `.usage`, the command exits 1 before any fetch with `"live monitor mode is incompatible with format::json"`.
+
+**Rationale:** Live monitor mode requires interactive terminal control — ANSI screen clear (`\x1B[2J\x1B[H`) and a countdown footer line rewritten in-place via carriage return (`\r`). JSON output is a machine-readable, one-shot, newline-terminated format for pipeline consumption. Mixing the two rendering modes would corrupt JSON parsers with control codes and produce an unstable stream that no pipeline consumer could reliably parse. The guard runs once at startup before any network call.
+
+**Commands affected:** [`.usage`](commands.md#command--9-usage)
+
+**Examples:**
+
+```bash
+# Rejected before any fetch — exits 1
+clp .usage live::1 format::json
+# error: live monitor mode is incompatible with format::json
+
+# Valid: live mode with default text format
+clp .usage live::1 interval::60
+# ...continuous monitor loop...
+
+# Valid: single-shot JSON fetch without live mode
+clp .usage format::json
+# [...JSON array...]
 ```

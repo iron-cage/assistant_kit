@@ -16,7 +16,7 @@ Delegates to `w3`, the workspace-level test runner. Level 3 runs: nextest (all f
 
 The `test` verb is **identical across all modules** — the command does not vary by module name because `w3 .test level::3` already scopes itself to the current workspace context. This makes `verb/test` the single source of truth for what "run tests" means for any module.
 
-`verb/test` doubles as the runbox `test_script`: `cmd_test()` in `runbox-run` mounts and executes `/workspace/module/<name>/verb/test` inside the container. The `_ensure_image()` probe checks for this file inside the image before running; a stale image (missing the script) triggers an automatic rebuild. See `run/docs/parameter/005_test_script.md`.
+`verb/test.d/l1` serves as the runbox `test_script`: `cmd_test()` in `runbox-run` mounts and executes `/workspace/module/<name>/verb/test.d/l1` directly inside the container — bypassing the dispatcher entirely. The `_ensure_image()` probe checks for this file inside the image before running; a stale image (missing the script) triggers an automatic rebuild. See `run/docs/parameter/005_test_script.md`.
 
 `--dry-run` prints `w3 .test level::3` and exits 0 — no tests run.
 
@@ -35,7 +35,7 @@ docker run --rm \
   -v /usr/local/bin/w3:/usr/local/bin/w3:ro \
   -v /home/user/.claude:/workspace/.claude:rw \
   claude_profile_test \
-  /workspace/module/claude_profile/verb/test
+  /workspace/module/claude_profile/verb/test.d/l1
 ```
 
 `verb/test` dispatcher (universal — identical across all cargo modules):
@@ -46,10 +46,10 @@ set -euo pipefail
 DIR="$(dirname "${BASH_SOURCE[0]}")/test.d"
 LAYER="${VERB_LAYER:-}"
 [[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-exec "$DIR/l1" "$@"
+exec "$DIR/l2" "$@"
 ```
 
-`verb/test.d/l1` (universal — identical across all cargo modules):
+`verb/test.d/l1` (universal — identical across all cargo modules; entered via `VERB_LAYER=l1`):
 ```bash
 #!/usr/bin/env bash
 # l1 — bare test execution (VERB_LAYER=l1); runs w3 directly.
@@ -59,3 +59,16 @@ cd "$SCRIPT_DIR/../.."
 if [[ "${1:-}" == "--dry-run" ]]; then echo "w3 .test level::3"; exit 0; fi
 exec w3 .test level::3
 ```
+
+`verb/test.d/l2` (universal — identical across all cargo modules; default host-side invocation):
+```bash
+#!/usr/bin/env bash
+# l2 — host orchestration; delegates to runbox (Docker-orchestrated execution).
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+if [[ "${1:-}" == "--dry-run" ]]; then echo "./run/runbox .test"; exit 0; fi
+exec ./run/runbox .test
+```
+
+Each module's `run/runbox.yml` sets `test_script: module/<name>/verb/test.d/l1` — the container entry point is the l1 layer directly, with no dispatcher involved. `runbox-run` still injects `VERB_LAYER=l1` as a safety guard, but the script path makes container execution robust without relying on it.

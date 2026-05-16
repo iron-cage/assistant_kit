@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Asset CLI](001_asset_cli.md) | Four CLI commands for listing, installing, and uninstalling artifacts | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

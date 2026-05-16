@@ -3,7 +3,7 @@ meta:
   node_count: 4
   edge_count: 8
   component_count: 1
-  generated: 2026-04-07
+  generated: 2026-05-16
 
 nodes:
   - id: feature/001
@@ -29,35 +29,35 @@ nodes:
 edges:
   - from: feature/001
     to: api/001
-    via: cross_references
+    via: apis
 
   - from: feature/001
     to: invariant/001
-    via: cross_references
+    via: invariants
 
   - from: feature/001
     to: invariant/002
-    via: cross_references
+    via: invariants
 
   - from: invariant/001
     to: feature/001
-    via: cross_references
+    via: features
 
   - from: invariant/002
     to: feature/001
-    via: cross_references
+    via: features
 
   - from: invariant/002
     to: api/001
-    via: cross_references
+    via: apis
 
   - from: api/001
     to: feature/001
-    via: cross_references
+    via: features
 
   - from: api/001
     to: invariant/002
-    via: cross_references
+    via: invariants
 
 components:
   - id: 1

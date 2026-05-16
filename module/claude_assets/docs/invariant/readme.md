@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Source Root Resolution](001_source_root_resolution.md) | $PRO_CLAUDE must resolve before any install or list operation | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating invariant doc instances | ✅ |

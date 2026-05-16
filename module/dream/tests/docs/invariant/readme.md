@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Zero Own Logic](001_no_own_logic.md) | Verification approach for INV-1, INV-2, INV-3 | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating invariant doc instances | ✅ |

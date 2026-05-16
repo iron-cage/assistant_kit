@@ -10,3 +10,4 @@ Layer 1 domain logic for Claude Code account and token management. Depends only 
 | `src/` | Token status detection and account CRUD domain logic |
 | `tests/` | Unit tests for token classification and account lifecycle |
 | `verb/` | Shell scripts for each `do` protocol verb. |
+| `run/` | Shell scripts for container-orchestrated operations. |

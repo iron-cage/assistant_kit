@@ -13,3 +13,4 @@
 |----|------|---------|--------|
 | 001 | [Storage Hierarchy](001_storage_hierarchy.md) | Storage → Project → Session → Entry model | ✅ |
 | 002 | [Filter Types](002_filter_types.md) | SessionFilter, ProjectFilter, StringMatcher composition | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating data structure doc instances | ✅ |

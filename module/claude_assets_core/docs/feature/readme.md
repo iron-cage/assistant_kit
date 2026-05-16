@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Artifact Installer](001_artifact_installer.md) | Symlink-based install/uninstall of Claude Code artifacts | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

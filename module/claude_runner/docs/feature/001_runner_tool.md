@@ -15,7 +15,7 @@ claude_runner serves two distinct consumers from one crate:
 
 **CLI binary (`clr`):** The `clr` binary translates `--flag value` syntax to `ClaudeCommand` builder calls and executes Claude Code via `claude_runner_core`. It acts as the user-facing runner for both interactive and non-interactive use.
 
-**Execution modes:** See [commands.md](../cli/commands.md) for the full invocation mode table.
+**Execution modes:** See [command.md](../cli/command.md) for the full invocation mode table.
 
 **Default flag injection:** See [invariant/001_default_flags.md](../invariant/001_default_flags.md) for the complete default injection rules and opt-out mechanisms.
 
@@ -25,16 +25,34 @@ claude_runner serves two distinct consumers from one crate:
 
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
-### Cross-References
+### APIs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [api/001_public_api.md](../api/001_public_api.md) | COMMANDS_YAML and VerbosityLevel public API |
-| doc | [invariant/001_default_flags.md](../invariant/001_default_flags.md) | Default flag injection rules and opt-out mechanism |
-| doc | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace deps, binary deps gated by enabled |
-| source | `../../src/lib.rs` | run_cli() entry point; mode dispatch (run_print_mode, run_interactive) |
+| File | Relationship |
+|------|--------------|
+| [api/001_public_api.md](../api/001_public_api.md) | COMMANDS_YAML and VerbosityLevel public API |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/001_default_flags.md](../invariant/001_default_flags.md) | Default flag injection rules and opt-out mechanism |
+| [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace deps, binary deps gated by enabled |
 
 ### Sources
+
+| File | Relationship |
+|------|--------------|
+| `../../src/lib.rs` | run_cli() entry point; mode dispatch (run_print_mode, run_interactive) |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `../../tests/cli_args_test.rs` | T01–T49 flag parsing; --interactive, --print mode dispatch coverage |
+| `../../tests/dry_run_test.rs` | Validates dry-run preview output including all injected flags |
+| `../../tests/execution_mode_test.rs` | E01–E13 live mode dispatch via fake claude binary |
+
+### Provenance
 
 | File | Notes |
 |------|-------|

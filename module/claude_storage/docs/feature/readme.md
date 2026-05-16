@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [CLI Tool](001_cli_tool.md) | CLI tool scope, design principles, and limitations | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

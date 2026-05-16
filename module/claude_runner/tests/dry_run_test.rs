@@ -38,6 +38,8 @@
 //! - `--trace --dry-run` emits nothing to stderr (dry-run returns before trace fires)
 //! - `""` empty positional arg ignored — bare command, no message, no degenerate ultrathink suffix
 
+mod common;
+use common::run_cli;
 use std::process::Command;
 
 fn run_dry( args : &[ &str ] ) -> String
@@ -54,17 +56,6 @@ fn run_dry( args : &[ &str ] ) -> String
     String::from_utf8_lossy( &out.stderr )
   );
   String::from_utf8_lossy( &out.stdout ).into_owned()
-}
-
-/// Raw binary invocation — returns `Output` without asserting success.
-/// Used for tests where a non-zero exit is the expected failure signal (e.g. unknown flags).
-fn run_cli( args : &[ &str ] ) -> std::process::Output
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  Command::new( bin )
-    .args( args )
-    .output()
-    .expect( "Failed to invoke clr binary" )
 }
 
 #[ test ]

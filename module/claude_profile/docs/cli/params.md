@@ -1,6 +1,6 @@
 # Parameters
 
-### All Parameters (18 total)
+### All Parameters (22 total)
 
 | # | Parameter | Type | Default | Valid Values | Purpose | Used In |
 |---|-----------|------|---------|--------------|---------|---------|
@@ -22,10 +22,14 @@
 | 16 | `billing::` | `bool` | `0` | `0`, `1` | Show billing type from `oauthAccount`, opt-in | 2 cmds |
 | 17 | `model::` | `bool` | `0` | `0`, `1` | Show active model from settings, opt-in | 2 cmds |
 | 18 | `current::` | `bool` | `1` | `0`, `1` | Show current (live) account line in `.accounts`; suppressed when `~/.claude/.credentials.json` is unreadable | 1 cmd |
+| 19 | `refresh::` | `bool` | `0` | `0`, `1` | On auth error (401/403), refresh token via isolated subprocess before retrying quota fetch (`.usage`) | 1 cmd |
+| 20 | `live::` | `bool` | `0` | `0`, `1` | Enable continuous refresh loop in `.usage`; incompatible with `format::json` | 1 cmd |
+| 21 | `interval::` | `u64` | `30` | ≥ 30 (seconds) | Seconds between full refresh cycles in live mode; validated only when `live::1` | 1 cmd |
+| 22 | `jitter::` | `u64` | `0` | 0 ≤ jitter ≤ interval | Max random seconds added to `interval` in live mode; validated only when `live::1` | 1 cmd |
 
-**Total:** 18 parameters
+**Total:** 22 parameters
 
-*Parameter 2 forms the Output Control group; parameters 5-18 form the Field Presence group*
+*Parameter 2 forms the Output Control group; parameters 5-18 form the Field Presence group; parameters 19-22 form the Fetch Behavior group*
 
 ---
 
@@ -403,3 +407,98 @@ current::0   → line omitted
 **Notes:**
 - When `~/.claude/.credentials.json` is unreadable, the `Current:` line is suppressed for all accounts (equivalent to `current::0`). This prevents misleading `Current: no` output when the live token cannot be determined.
 - `format::json` always includes `is_current` per account object regardless of this toggle.
+
+---
+
+### Parameter :: 19. `refresh::`
+
+When an account's quota fetch returns an HTTP authentication error (401 or 403), silently attempt a token refresh via `claude_runner_core::run_isolated()` and retry the fetch once before reporting failure.
+
+- **Type:** `bool`
+- **Default:** `0` (off — auth errors pass through to the table as error rows)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`; effective only under `#[cfg(feature = "enabled")]` — in offline builds the parameter is accepted but has no effect
+- **Commands:** [`.usage`](commands.md#command--9-usage)
+- **Purpose:** Allows `.usage` to silently recover expired OAuth tokens without requiring a manual `clp .account.use` rotation, so the table shows current quota rather than per-account auth error rows.
+- **Group:** Fetch Behavior
+
+**Examples:**
+
+```text
+refresh::0   → auth errors appear as error rows in the table (default)
+refresh::1   → on 401/403, attempt token refresh via isolated subprocess, then retry once
+```
+
+**Notes:**
+- Only HTTP 4xx auth errors trigger a refresh attempt; network timeouts and non-auth HTTP errors are not retried.
+- Exactly one retry per account per invocation. If the retried fetch also fails, the final error is shown in the account's row.
+- When a refresh succeeds, the updated credential JSON is written back to `{credential_store}/{name}.credentials.json` before the retry.
+- See [feature/017_token_refresh.md](../feature/017_token_refresh.md) for the full algorithm.
+
+---
+
+### Parameter :: 20. `live::`
+
+Enables continuous refresh mode for `.usage`. When `live::1`, the command enters a loop: fetch all accounts, clear the screen, render the table, display a countdown footer, wait `interval::` seconds (plus up to `jitter::` seconds), then repeat. Ctrl-C exits cleanly.
+
+- **Type:** `bool`
+- **Default:** `0` (single-shot — fetch once, render, exit)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`; incompatible with `format::json` (exits 1 before first fetch if combined); effective only under `#[cfg(feature = "enabled")]`
+- **Commands:** [`.usage`](commands.md#command--9-usage)
+- **Purpose:** Provides an ambient monitoring dashboard showing live quota utilization for all accounts, refreshing automatically without re-invoking the command.
+- **Group:** Fetch Behavior
+
+**Examples:**
+
+```text
+live::0   → single fetch, render, exit (default)
+live::1   → continuous refresh loop until Ctrl-C
+```
+
+**Notes:**
+- `live::1 format::json` exits 1 before any fetch with `"live monitor mode is incompatible with format::json"`.
+- `interval::` and `jitter::` are only validated when `live::1` is present.
+- See [feature/018_live_monitor.md](../feature/018_live_monitor.md) for the full algorithm including screen-clear sequence and countdown footer format.
+
+---
+
+### Parameter :: 21. `interval::`
+
+Sets the number of seconds between full refresh cycles in live mode. Ignored (and not validated) when `live::0`.
+
+- **Type:** `u64`
+- **Default:** `30` (seconds)
+- **Constraints:** Must be ≥ 30 when `live::1`; values < 30 exit 1 with `"interval must be >= 30"`
+- **Commands:** [`.usage`](commands.md#command--9-usage)
+- **Purpose:** Controls how frequently the live quota table refreshes. The minimum of 30 seconds prevents excessive API pressure on Anthropic's quota endpoint.
+- **Group:** Fetch Behavior
+
+**Examples:**
+
+```text
+interval::30    → refresh every 30 seconds (default)
+interval::60    → refresh every minute
+interval::120   → refresh every 2 minutes
+interval::29    → exit 1: "interval must be >= 30" (only when live::1)
+```
+
+---
+
+### Parameter :: 22. `jitter::`
+
+Adds a random number of seconds in the range `[0, jitter]` to each outer cycle delay, preventing synchronized refreshes when multiple users run `.usage live::1` with the same `interval::`. Ignored (and not validated) when `live::0`.
+
+- **Type:** `u64`
+- **Default:** `0` (no jitter — exact `interval::` timing)
+- **Constraints:** Must satisfy `jitter ≤ interval` when `live::1`; violation exits 1 with `"jitter must not exceed interval"`
+- **Commands:** [`.usage`](commands.md#command--9-usage)
+- **Purpose:** Thunder-herd mitigation — when many users share the same refresh cadence, jitter spreads the API call bursts across a wider time window.
+- **Group:** Fetch Behavior
+
+**Examples:**
+
+```text
+jitter::0    → no jitter, exact interval timing (default)
+jitter::10   → each cycle waits interval + random[0..=10] seconds
+jitter::30   → each cycle waits interval + random[0..=30] seconds
+jitter::70   → exit 1: "jitter must not exceed interval" (when interval::60)
+```

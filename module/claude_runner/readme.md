@@ -27,8 +27,8 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 
 ### Files
 
-| File / Directory | Responsibility |
-|------------------|----------------|
+| File | Responsibility |
+|------|----------------|
 | `Cargo.toml` | Crate manifest: lib + binary, optional feature-gated deps |
 | `claude.commands.yaml` | Command definitions for `.claude` and `.claude.help` |
 | `src/` | Library and binary source: `COMMANDS_YAML`, `VerbosityLevel`, `clr` CLI |
@@ -36,6 +36,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 | `docs/` | CLI reference and design documentation |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |
+| `run/` | Shell scripts for container-orchestrated operations. |
 
 ### Architecture
 

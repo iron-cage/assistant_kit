@@ -2,13 +2,6 @@
 
 Rationale for key design choices made during the `--flag value` CLI redesign (task 031).
 
-## D1 — Interactive REPL when no message; print by default when message given
-
-Running `clr` without a message opens an interactive REPL via `execute_interactive()`.
-When a message is provided, `clr` defaults to print mode (`execute()` + `--print`) —
-capturing stdout for pipeline/scripting use. Use `--interactive` to opt into TTY
-passthrough when a message is given.
-
 ## D2 — `--verbose` vs `--verbosity`
 
 `--verbose` passes through to claude (it's a claude-native flag). `--verbosity <0-5>` controls
@@ -46,9 +39,7 @@ that a framework adds complexity without benefit.
 
 ## D9 — Session continuation by default
 
-Every invocation passes `-c` to claude unless `--new-session` is given. The
-explicit `-c`/`--continue` flag is removed from the public CLI surface — it is
-now internalized as the default.
+Behavioral specification: [invariant/001_default_flags.md](invariant/001_default_flags.md).
 
 **Rationale:** `clr` adds value over the raw `claude` binary by managing
 session continuity automatically. Most invocations are continuations of ongoing work.
@@ -62,9 +53,9 @@ This also decouples `clr` from external session orchestration (formerly
 ## D8 — Three-layer docs/cli/ replaces 42-file structure
 
 The previous `docs/cli/` contained 42 files documenting `param::value` syntax. Restored as
-a proper three-layer reference (commands.md, params.md, types.md) with parameter groups,
-dictionary, and workflows — adapted to the new `--flag value` syntax. Extended to L5 in a
-subsequent pass: testing/ added with per-command and per-param test case coverage.
+a proper three-layer reference (command.md, param/, type.md) with parameter groups,
+dictionary, and workflows — adapted to the new `--flag value` syntax. Extended to L4 in a
+subsequent pass: tests/docs/cli/ added with per-command, per-param, per-type, and per-group test case coverage.
 
 ## D11 — Print by default when message given; `--interactive` to opt into TTY
 
@@ -100,7 +91,7 @@ instructions, output style. Claude gets raw tool access with no behavioral scaff
 
 **Recommendation in docs:** `--append-system-prompt` is documented as the default
 recommendation. `--system-prompt` is documented as an explicit opt-in for full-control
-scenarios, with the capability table in `parameter_interactions.md` making the tradeoffs
+scenarios, with the capability table in `command.md` (Command :: 1. run, Notes) making the tradeoffs
 visible.
 
 **Note on CLI vs SDK distinction:** This behavior applies to the CLI `--system-prompt`

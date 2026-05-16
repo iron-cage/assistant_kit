@@ -15,8 +15,10 @@ parsing. No credentials handling, no output formatting — those belong to consu
 
 | Feature   | Adds                         | Extra dep |
 |-----------|------------------------------|-----------|
-| (none)    | `RateLimitData`, `OauthUsageData`, `PeriodUsage`, `QuotaError`, `parse_headers`, `parse_oauth_usage` | — |
-| `enabled` | `fetch_rate_limits(token)`, `fetch_oauth_usage(token)` | `ureq ~2` |
+| (none)    | `RateLimitData`, `QuotaError`, `parse_headers` | — |
+| (none)    | `OauthUsageData`, `PeriodUsage`, `parse_oauth_usage` (to add — task 135) | — |
+| `enabled` | `fetch_rate_limits(token)` | `ureq ~2` |
+| `enabled` | `fetch_oauth_usage(token)` (to add — task 135) | `ureq ~2` |
 
 ## Public API
 
@@ -25,25 +27,26 @@ parsing. No credentials handling, no output formatting — those belong to consu
 pub struct RateLimitData { utilization_5h, reset_5h, utilization_7d, reset_7d, status }
 pub fn     parse_headers<F: Fn(&str) -> Option<String>>(get: F) -> Result<RateLimitData, QuotaError>
 
-// Always available — OAuth usage endpoint (used by .usage)
+// Always available — OAuth usage endpoint (to add — task 135)
 pub struct OauthUsageData { five_hour: Option<PeriodUsage>, seven_day: Option<PeriodUsage>, seven_day_sonnet: Option<PeriodUsage> }
 pub struct PeriodUsage    { utilization: f64, resets_at: Option<String> }
 pub fn     parse_oauth_usage(body: &str) -> Result<OauthUsageData, QuotaError>
 
-// Shared error type
+// Shared error type (ResponseParse variant to add — task 135)
 pub enum QuotaError { HttpTransport(String), MissingHeader(String), MalformedHeader(String), ResponseParse(String) }
 
 // Only under `enabled` feature
 pub fn fetch_rate_limits(token: &str) -> Result<RateLimitData, QuotaError>
-pub fn fetch_oauth_usage(token: &str) -> Result<OauthUsageData, QuotaError>
+pub fn fetch_oauth_usage(token: &str) -> Result<OauthUsageData, QuotaError>  // to add — task 135
 ```
 
 ## Files
 
 | File | Responsibility |
 |------|---------------|
-| src/lib.rs | Types, errors, constants, `parse_headers`, `parse_oauth_usage`, `fetch_rate_limits`, `fetch_oauth_usage` |
+| src/lib.rs | Types, errors, constants, `parse_headers`, `parse_oauth_usage` (to create — task 135), `fetch_rate_limits`, `fetch_oauth_usage` (to create — task 135) |
 | tests/readme.md | Test directory organization guide |
 | tests/rate_limit_test.rs | Unit tests T01–T16 for `parse_headers` (offline, closure-based) |
-| tests/oauth_usage_test.rs | Unit tests T17–T28 for `parse_oauth_usage` (offline, JSON string-based) |
+| tests/oauth_usage_test.rs | Unit tests T17–T28 for `parse_oauth_usage` (to create — task 135) |
 | `verb/` | Shell scripts for each `do` protocol verb. |
+| `run/` | Shell scripts for container-orchestrated operations. |

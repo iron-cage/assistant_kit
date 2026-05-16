@@ -30,3 +30,4 @@ ast .version.install          # install/update claude
 | `docs/` | Behavioral requirements: feature and invariant doc instances |
 | `tests/` | Compile and link sanity checks for the `ast` binary |
 | `verb/` | Shell scripts for each `do` protocol verb. |
+| `run/` | Shell scripts for container-orchestrated operations. |

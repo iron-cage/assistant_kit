@@ -13,3 +13,4 @@
 |----|------|---------|--------|
 | 001 | [Default Flags](001_default_flags.md) | Automatic flag injection and opt-out mechanism | ✅ |
 | 002 | [Dependency Constraints](002_dep_constraints.md) | Zero consumer workspace deps, binary deps gated by enabled, no routines.rs | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating invariant doc instances | ✅ |

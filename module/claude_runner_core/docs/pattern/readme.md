@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Command Builder](001_command_builder.md) | Fluent builder pattern for Claude Code command construction | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating pattern doc instances | ✅ |

@@ -21,4 +21,4 @@ Adding invariant document `006_quota_always_checked`:
 
 1. Check `readme.md` Overview Table — current highest ID is `005`
 2. Create `006_quota_always_checked.md` in this directory
-3. Add row: `| 006 | Invariant Name | [006_quota_always_checked.md](006_quota_always_checked.md) | Active |`
+3. Add row: `| 006 | Invariant Name | [006_quota_always_checked.md](006_quota_always_checked.md) | ✅ |`

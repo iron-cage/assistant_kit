@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# runbox wrapper — auto-discovers runbox-run by walking up the directory tree.
+# Copy verbatim to any project's run/ directory; no path calculation needed.
+set -euo pipefail
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+_find_runbox_run() {
+  local dir="$1"
+  while [[ "$dir" != "/" ]]; do
+    [[ -x "$dir/run/runbox-run" ]] && echo "$dir/run/runbox-run" && return
+    dir="$( dirname "$dir" )"
+  done
+  echo "error: runbox-run not found in any parent directory" >&2
+  exit 1
+}
+
+exec "$(_find_runbox_run "$SCRIPT_DIR")" "$SCRIPT_DIR/runbox.yml" "$@"

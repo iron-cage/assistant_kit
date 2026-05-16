@@ -7,7 +7,7 @@
 - **In Scope**: All 18 clr parameter edge case files.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
-Per-parameter edge case indices for `clr`. See [params.md](../../../../docs/cli/params.md) for specification.
+Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
 
 ### Responsibility Table
 

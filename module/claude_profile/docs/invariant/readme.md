@@ -16,3 +16,4 @@
 | 003 | [Clear Error Messages](003_clear_errors.md) | All errors name the relevant resource and state corrective action | ✅ |
 | 004 | [No Process Execution](004_no_process_execution.md) | `std::process::Command` is forbidden anywhere in the library | ✅ |
 | 005 | [Atomic Account Switching](005_atomic_switching.md) | Account switching uses write-then-rename to prevent credential corruption | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating invariant doc instances | ✅ |

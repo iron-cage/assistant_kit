@@ -14,3 +14,4 @@
 | 001 | [Core Library](001_core_library.md) | Library purpose, design principles, and scope | ✅ |
 | 002 | [Content Search](002_content_search.md) | Streaming search across conversation sessions | ✅ |
 | 003 | [Export Formats](003_export_formats.md) | Markdown, JSON, and text conversation export | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

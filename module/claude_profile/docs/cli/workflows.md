@@ -256,3 +256,66 @@ clp .accounts
 ```
 
 **When to use:** Fresh Claude Code installations, CI/CD machines, or any environment where the credential store has never been initialized.
+
+### 8. Live Quota Monitoring Dashboard
+
+Run `.usage` as a continuous ambient display that auto-refreshes without re-invoking the command.
+
+```bash
+# Start the live monitor (default: refresh every 30 seconds)
+clp .usage live::1
+# Quota
+#
+#   Account          Expires     5h Left  5h Reset    7d Left  7d(Son)  7d Reset
+# ✓ i12@wbox.pro    in 7h 24m  86%      in 3h 19m  65%      35%      in 4d 23h
+# → i6@wbox.pro     in 5h 02m  100%     in 4h 58m  88%      28%      in 6d 14h
+#   i7@wbox.pro     EXPIRED    —        —           —        —        (missing accessToken)
+#
+# Valid: 2 / 3   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 02m)
+#
+#   Next update in 0:29 (at 14:32:07 UTC)  [Ctrl-C to exit]
+# (refreshes every 30 seconds; press Ctrl-C to exit cleanly)
+
+# Slower refresh with jitter to spread out API calls across time
+clp .usage live::1 interval::120 jitter::15
+
+# Combine with auto token refresh for long-running sessions
+clp .usage live::1 refresh::1 interval::60
+
+# Incompatible: live mode with JSON output exits 1 before any fetch
+clp .usage live::1 format::json
+# error: live monitor mode is incompatible with format::json
+```
+
+**When to use:** Long-running work sessions where you want an always-visible quota dashboard in a side terminal. Set `interval::` to 120+ and `jitter::` to 10–30 to reduce API call frequency over many hours.
+
+### 9. Quota Fetch with Auto Token Refresh
+
+Use `refresh::1` to silently refresh expired tokens so every account shows current quota data rather than auth error rows.
+
+```bash
+# Without refresh::1 — expired accounts show error rows
+clp .usage
+#   Account          Expires   5h Left  ...
+# ✓ i12@wbox.pro    in 7h     86%      ...
+#   i6@wbox.pro     EXPIRED   —        (auth error: 401)
+
+# With refresh::1 — expired tokens silently refreshed before the fetch
+clp .usage refresh::1
+#   Account          Expires     5h Left  ...
+# ✓ i12@wbox.pro    in 7h 24m  86%      ...
+#   i6@wbox.pro     in 5h 02m  100%     ...
+# (i6's token was refreshed in-place; credential file updated on disk)
+
+# Combine with live mode for sessions where tokens may expire mid-session
+clp .usage live::1 refresh::1 interval::60
+
+# JSON output is also supported; refresh is invisible in JSON output
+clp .usage refresh::1 format::json
+# [
+#   {"account":"i12@wbox.pro","session_5h_left_pct":86,...},
+#   {"account":"i6@wbox.pro","session_5h_left_pct":100,...}
+# ]
+```
+
+**When to use:** When accounts have expired tokens and you want quota data for all of them without manually triggering a re-login. The credential file is updated on disk so subsequent `.usage` calls (without `refresh::1`) also use the fresh token.

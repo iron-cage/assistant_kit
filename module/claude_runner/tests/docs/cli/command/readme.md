@@ -7,7 +7,7 @@
 - **In Scope**: `run` command tests, `help` command tests.
 - **Out of Scope**: Per-parameter edge cases (→ `param/`), parameter group interactions (→ `param_group/`).
 
-Per-command integration test case indices for `clr`. See [commands.md](../../../../docs/cli/commands.md) for specification.
+Per-command integration test case indices for `clr`. See [command.md](../../../../docs/cli/command.md) for specification.
 
 ### Responsibility Table
 
@@ -20,5 +20,5 @@ Per-command integration test case indices for `clr`. See [commands.md](../../../
 
 | Command | File | Tests |
 |---------|------|-------|
-| `run` (default) | [01_run.md](01_run.md) | 14 TC |
-| `help` | [02_help.md](02_help.md) | 5 TC |
+| `run` (default) | [01_run.md](01_run.md) | 16 TC |
+| `help` | [02_help.md](02_help.md) | 8 TC |

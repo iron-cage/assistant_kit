@@ -12,3 +12,4 @@
 | ID | Name | Purpose | Status |
 |----|------|---------|--------|
 | 001 | [Facade Aggregation](001_aggregation.md) | Smoke-test coverage for FR-1 through FR-10 | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

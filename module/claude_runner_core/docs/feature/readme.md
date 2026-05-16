@@ -14,3 +14,5 @@
 | 001 | [Execution Control](001_execution_control.md) | Interactive vs. non-interactive execution modes | ✅ |
 | 002 | [Dry Run](002_dry_run.md) | Command preview without process execution | ✅ |
 | 003 | [Describe](003_describe.md) | Human-readable command inspection output | ✅ |
+| 004 | [Isolated Subprocess Execution](004_run_isolated.md) | `run_isolated()` — temp-HOME subprocess spawn for OAuth token refresh; `IsolatedRunResult`, `RunnerError` types | 🎯 |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

@@ -1,5 +1,9 @@
 # Dictionary
 
+### Core Terms
+
+Domain vocabulary for the `clr` CLI. Terms are organized by category below.
+
 ### Commands
 
 | Term | Definition |

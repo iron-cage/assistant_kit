@@ -4,8 +4,9 @@
 |-------|------------|---------|
 | [Output Control](#group--1-output-control) | `format::` | `.accounts` (format only), `.token.status`, `.paths`, `.usage`, `.account.limits` |
 | [Field Presence](#group--2-field-presence) | `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | `.accounts`, `.credentials.status` |
+| [Fetch Behavior](#group--3-fetch-behavior) | `refresh::`, `live::`, `interval::`, `jitter::` | `.usage` only |
 
-**Total:** 2 groups
+**Total:** 3 groups
 
 ---
 
@@ -147,3 +148,71 @@ All members pass. No false inclusions.
 - [commands.md](commands.md#command--3-accounts) — `.accounts` command spec
 - [commands.md](commands.md#command--10-credentialsstatus) — `.credentials.status` command spec
 - [parameter_interactions.md](parameter_interactions.md) — `format::json` override rule for field-presence params
+
+---
+
+### Group :: 3. Fetch Behavior
+
+**Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`
+**Pattern:** Per-invocation fetch control
+**Purpose:** Controls how `.usage` fetches and re-fetches quota data — whether to refresh expired tokens on auth errors and whether to run as a continuous monitor loop.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| [`refresh::`](params.md#parameter--19-refresh) | `bool` | `0` | On 401/403 auth error, refresh token via isolated subprocess and retry once per account |
+| [`live::`](params.md#parameter--20-live) | `bool` | `0` | Enable continuous refresh loop (Ctrl-C to exit cleanly) |
+| [`interval::`](params.md#parameter--21-interval) | `u64` | `30` | Seconds between refresh cycles (≥ 30; validated only when `live::1`) |
+| [`jitter::`](params.md#parameter--22-jitter) | `u64` | `0` | Max random seconds added to each cycle delay (0 ≤ jitter ≤ interval; validated only when `live::1`) |
+
+**Used By (1 command):** [`.usage`](commands.md#command--9-usage)
+
+**Typical Patterns:**
+
+```bash
+# Refresh expired tokens automatically before showing quota
+clp .usage refresh::1
+
+# Continuous live monitor, refresh every 60 seconds with up to 10s jitter
+clp .usage live::1 interval::60 jitter::10
+
+# Combine: live monitor that also auto-refreshes expired tokens
+clp .usage live::1 refresh::1 interval::60
+
+# Default: single fetch, no refresh, no loop
+clp .usage
+```
+
+**Semantic Coherence Test**
+
+> "Does parameter X control **how `.usage` fetches quota data** (retry strategy or iteration mode)?"
+
+| Parameter | Controls fetch strategy or iteration? | In group? |
+|-----------|---------------------------------------|-----------|
+| `refresh::` | Yes — triggers subprocess retry on auth error | Yes |
+| `live::` | Yes — enables continuous fetch loop | Yes |
+| `interval::` | Yes — controls loop cycle duration | Yes |
+| `jitter::` | Yes — adds random variance to loop timing | Yes |
+| `format::` | No — controls output serialisation, not fetch strategy | No (Output Control) |
+| `active::` | No — controls which fields appear in output | No (Field Presence) |
+
+All members pass. No false inclusions.
+
+**Why NOT These Parameters**
+
+- **`format::`** — Selects output serialisation format, not fetch strategy. `format::json` is incompatible with `live::1` (see [parameter_interactions.md](parameter_interactions.md)) but that is an incompatibility, not membership in this group.
+- **Field Presence params** — Control which output lines are rendered, completely orthogonal to how data is fetched.
+- **`dry::`, `name::`, `threshold::`** — Mutation control, account targeting, and classification — none are fetch-strategy concerns.
+
+**Invariants**
+
+- `interval::` and `jitter::` are only validated when `live::1`; their values have no effect when `live::0`.
+- `refresh::` is orthogonal to `live::` — both may be set simultaneously without conflict.
+- `live::1 format::json` is rejected before any fetch (see [parameter_interactions.md](parameter_interactions.md#interaction--4-live1-is-incompatible-with-formatjson)).
+
+**Cross-References**
+
+- [params.md](params.md) — individual Fetch Behavior parameter specifications
+- [commands.md](commands.md#command--9-usage) — `.usage` command spec
+- [parameter_interactions.md](parameter_interactions.md) — `live::1 format::json` incompatibility rule
+- [../feature/017_token_refresh.md](../feature/017_token_refresh.md) — `refresh::` feature design
+- [../feature/018_live_monitor.md](../feature/018_live_monitor.md) — `live::` / `interval::` / `jitter::` feature design

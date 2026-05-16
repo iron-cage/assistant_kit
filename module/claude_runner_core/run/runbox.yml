@@ -1,0 +1,31 @@
+# All simple cargo modules share the workspace image.
+# Build the image with: dev/run/runbox .build
+image: workspace_test
+
+# non-root so chmod-000 file-permission tests fail correctly (root bypasses checks)
+test_user: testuser
+# workspace scope — simple modules share the workspace image; no per-module build
+cmd_scope: --workspace
+# baked into the image default CMD; excludes tests needing external I/O (offline-safe default)
+cmd_filter: "!test(lim_it) & !binary(behavior)"
+
+# script invoked by `.test` inside the container (path relative to /workspace)
+test_script: module/claude_runner_core/verb/test.d/l1
+
+# script invoked by `.lint` inside the container (path relative to /workspace)
+lint_script: module/claude_runner_core/verb/lint.d/l1
+
+# optional binary plugin: name:container_path (binary found via 'which name' on host)
+bin_plugin: w3:/usr/local/bin/w3
+# container mount point for bin_plugin working volume (persists compilation artifacts)
+bin_plugin_volume: /tmp/will_test_targets
+# data directory plugin: host_path:container_path:check_type
+# .test mounts as required+rw; .shell mounts as optional+ro
+plugin_mount: ~/.claude:/workspace/.claude:directory
+
+# ── Formerly hardcoded parameters (now configurable) ─────────────────────────
+# base_image: rust:slim          # FROM for chef and test stages
+# rustup_components: clippy      # space-separated; e.g. "clippy rustfmt"
+system_packages: curl procps
+# cargo_features: --all-features # passed to nextest list and offline run CMD
+# workspace_dir: /workspace      # container WORKDIR; must match in run/runbox.dockerfile and runbox-run

@@ -10,3 +10,4 @@ Layer 1 domain helpers for Claude Code version management and settings. Depends 
 | `src/` | Version detection, settings I/O domain logic |
 | `tests/` | Unit tests for domain helpers |
 | `verb/` | Shell scripts for each `do` protocol verb. |
+| `run/` | Shell scripts for container-orchestrated operations. |

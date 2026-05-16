@@ -13,3 +13,4 @@
 |----|------|---------|--------|
 | 001 | [Safety Guarantees](001_safety_guarantees.md) | Append-only semantics and atomic write correctness | ✅ |
 | 002 | [Performance](002_performance.md) | Measurable throughput and memory targets | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating invariant doc instances | ✅ |

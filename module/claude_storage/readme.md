@@ -4,8 +4,8 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 
 ## Files
 
-| File / Directory | Responsibility |
-|------------------|----------------|
+| File | Responsibility |
+|------|----------------|
 | `Cargo.toml` | Crate manifest: deps, features, build script |
 | `build.rs` | Transforms YAML command definitions to static PHF registry |
 | `unilang.commands.yaml` | Command definitions (9 commands) |
@@ -16,6 +16,7 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |
+| `run/` | Shell scripts for container-orchestrated operations. |
 
 ## overview
 

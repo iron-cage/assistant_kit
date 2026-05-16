@@ -27,16 +27,8 @@
 //! - T69: repeated `--effort` flags — last value wins
 //! - T70: `--no-effort-max` suppresses `--effort` regardless of flag order
 
-use std::process::Command;
-
-fn run_cli( args : &[ &str ] ) -> std::process::Output
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  Command::new( bin )
-    .args( args )
-    .output()
-    .expect( "Failed to invoke clr binary" )
-}
+mod common;
+use common::run_cli;
 
 // T59: --effort max injected by default (no explicit flag required)
 #[ test ]

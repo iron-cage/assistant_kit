@@ -24,7 +24,7 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 
 **Current Level:** L4 (Workflow Complete)
 **Design Completeness:** 100%
-**Implementation Status:** 100% (11/11 commands implemented, 17/17 params implemented)
+**Implementation Status:** 82% (11/11 commands, 18/22 params implemented; params 19–22 pending tasks 137–138)
 
 ### Navigation
 

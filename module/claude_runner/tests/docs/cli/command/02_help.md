@@ -1,6 +1,6 @@
 # Test: `help`
 
-Integration test planning for help output. See [commands.md](../../../../docs/cli/commands.md#command--2-help) for specification.
+Integration test planning for help output. See [command.md](../../../../docs/cli/command.md#command--2-help) for specification.
 
 ## Test Case Index
 
@@ -8,7 +8,7 @@ Integration test planning for help output. See [commands.md](../../../../docs/cl
 |----|-----------|----------|
 | IT-1 | `clr --help` → help output, exit 0 | Happy Path |
 | IT-2 | `clr -h` → same as `--help` | Alias |
-| IT-3 | Help output lists `--system-prompt`, `--append-system-prompt`, and `--no-ultrathink` | Completeness |
+| IT-3 | Help output lists `--system-prompt`, `--append-system-prompt`, `--no-ultrathink`, `--effort`, and `--no-effort-max` | Completeness |
 | IT-4 | `--help` anywhere in argv → help wins | Override |
 | IT-5 | `--help` wins even when unknown flags are present | Override |
 | IT-6 | `--help` output goes to stdout; stderr is empty | Output Stream |
@@ -34,7 +34,7 @@ Integration test planning for help output. See [commands.md](../../../../docs/cl
 - **When:** `clr --help`
 - **Then:** Contains "USAGE:", "OPTIONS:", known flags.; help listing present
 - **Exit:** 0
-- **Source:** [commands.md — help](../../../../docs/cli/commands.md#command--2-help)
+- **Source:** [command.md — help](../../../../docs/cli/command.md#command--2-help)
 
 ---
 
@@ -44,7 +44,7 @@ Integration test planning for help output. See [commands.md](../../../../docs/cl
 - **When:** `clr -h`
 - **Then:** Same as `clr --help`.; help listing present
 - **Exit:** 0
-- **Source:** [commands.md — help](../../../../docs/cli/commands.md#command--2-help)
+- **Source:** [command.md — help](../../../../docs/cli/command.md#command--2-help)
 
 ---
 
@@ -54,7 +54,7 @@ Integration test planning for help output. See [commands.md](../../../../docs/cl
 - **When:** `clr --help`
 - **Then:** Contains `--system-prompt`, `--append-system-prompt`, `--no-ultrathink`, `--effort`, and `--no-effort-max`.; all five flags present in help
 - **Exit:** 0
-- **Source:** [params.md — --system-prompt](../../../../docs/cli/params.md#parameter--15---system-prompt), [params.md — --append-system-prompt](../../../../docs/cli/params.md#parameter--16---append-system-prompt), [params.md — --no-ultrathink](../../../../docs/cli/params.md#parameter--14---no-ultrathink), [params.md — --effort](../../../../docs/cli/params.md#parameter--17---effort), [params.md — --no-effort-max](../../../../docs/cli/params.md#parameter--18---no-effort-max)
+- **Source:** [--system-prompt](../../../../docs/cli/param/15_system_prompt.md), [--append-system-prompt](../../../../docs/cli/param/16_append_system_prompt.md), [--no-ultrathink](../../../../docs/cli/param/14_no_ultrathink.md), [--effort](../../../../docs/cli/param/17_effort.md), [--no-effort-max](../../../../docs/cli/param/18_no_effort_max.md)
 
 ---
 
@@ -64,7 +64,7 @@ Integration test planning for help output. See [commands.md](../../../../docs/cl
 - **When:** `clr --model sonnet --help "Fix bug"`
 - **Then:** Help output shown; not an execution.; help listing wins over message and other flags
 - **Exit:** 0
-- **Source:** [commands.md — help](../../../../docs/cli/commands.md#command--2-help)
+- **Source:** [command.md — help](../../../../docs/cli/command.md#command--2-help)
 
 ---
 
@@ -74,7 +74,7 @@ Integration test planning for help output. See [commands.md](../../../../docs/cl
 - **When:** `clr --unknown-flag --help "msg"` and `clr --help --unknown-flag "msg"`
 - **Then:** Help shown; exit 0 for both orderings; unknown flags are ignored when `--help` is present
 - **Exit:** 0
-- **Source:** [commands.md — help](../../../../docs/cli/commands.md#command--2-help)
+- **Source:** [command.md — help](../../../../docs/cli/command.md#command--2-help)
 
 ---
 
@@ -84,7 +84,7 @@ Integration test planning for help output. See [commands.md](../../../../docs/cl
 - **When:** `clr --help`
 - **Then:** stdout is non-empty; stderr is empty
 - **Exit:** 0
-- **Source:** [commands.md — help](../../../../docs/cli/commands.md#command--2-help)
+- **Source:** [command.md — help](../../../../docs/cli/command.md#command--2-help)
 
 ---
 
@@ -94,7 +94,7 @@ Integration test planning for help output. See [commands.md](../../../../docs/cl
 - **When:** `clr -h` and `clr --help`
 - **Then:** stdout of both invocations is byte-identical
 - **Exit:** 0
-- **Source:** [commands.md — help](../../../../docs/cli/commands.md#command--2-help)
+- **Source:** [command.md — help](../../../../docs/cli/command.md#command--2-help)
 
 ---
 
@@ -104,4 +104,4 @@ Integration test planning for help output. See [commands.md](../../../../docs/cl
 - **When:** `clr --help` (run 3 times)
 - **Then:** all 3 stdout captures are byte-identical
 - **Exit:** 0
-- **Source:** [commands.md — help](../../../../docs/cli/commands.md#command--2-help)
+- **Source:** [command.md — help](../../../../docs/cli/command.md#command--2-help)

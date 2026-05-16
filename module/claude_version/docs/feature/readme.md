@@ -16,3 +16,4 @@
 | 003 | [Settings Management](003_settings_management.md) | Read/write settings.json, type inference, nested preservation | ✅ |
 | 004 | [Dry Run](004_dry_run.md) | Mutation preview via dry::1 across all mutation commands | ✅ |
 | 005 | [CLI Design](005_cli_design.md) | Command routing, parameter parsing, exit codes, help listing | ✅ |
+| — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

@@ -2,14 +2,14 @@
 
 Edge case tests for the trace flag. Tests validate command echoing to stderr before execution.
 
-**Source:** [params.md](../../../../docs/cli/params.md#parameter--13---trace)
+**Source:** [13_trace.md](../../../../docs/cli/param/13_trace.md)
 
 ## Test Case Index
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | `--trace` → assembled command echoed to stderr before execution | Happy Path |
-| EC-2 | Without `--trace` → no command echo to stderr | Default |
+| EC-1 | `--trace` → assembled command echoed to stderr; exit varies with claude availability | Behavioral Divergence |
+| EC-2 | Without `--trace` → no command echo to stderr | Behavioral Divergence |
 | EC-3 | `--trace` + `--dry-run` → preview shown but trace still on stderr | Interaction |
 | EC-4 | `--trace` without message → trace output on stderr; no error | Edge Case |
 | EC-5 | `--help` lists `--trace` | Documentation |
@@ -17,8 +17,7 @@ Edge case tests for the trace flag. Tests validate command echoing to stderr bef
 
 ## Test Coverage Summary
 
-- Happy Path: 1 test (EC-1)
-- Default: 1 test (EC-2)
+- Behavioral Divergence: 2 tests (EC-1, EC-2)
 - Interaction: 1 test (EC-3)
 - Edge Case: 1 test (EC-4)
 - Documentation: 1 test (EC-5)
@@ -26,60 +25,59 @@ Edge case tests for the trace flag. Tests validate command echoing to stderr bef
 
 **Total:** 6 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
 
 ## Test Cases
 ---
 
-### EC-1: `--trace` → command echoed to stderr:
+### EC-1: `--trace` → command echoed to stderr before invocation
 
 - **Given:** clean environment
-- **When:** `clr --trace "Fix bug"`
-- **Then:** Assembled command printed to stderr before claude invocation
-- **Exit:** 0
-- **Source:** [params.md](../../../../docs/cli/params.md#parameter--13---trace)
+- **When:** `clr --trace "Fix bug"` (no `--dry-run`; trace fires before invocation)
+- **Then:** Stderr contains assembled command (trace output written before claude is invoked); exit varies with claude availability
+- **Exit:** 0 (claude present) or 1 (claude absent in test environment)
+- **Source:** [13_trace.md](../../../../docs/cli/param/13_trace.md)
 ---
 
-### EC-2: Without `--trace` → no command echo:
+### EC-2: Without `--trace` → no command echo
 
 - **Given:** clean environment
 - **When:** `clr --dry-run "Fix bug"`
 - **Then:** Stderr is empty (no command echo)
 - **Exit:** 0
-- **Source:** [params.md](../../../../docs/cli/params.md#parameter--13---trace)
+- **Source:** [13_trace.md](../../../../docs/cli/param/13_trace.md)
 ---
 
-### EC-3: `--trace` + `--dry-run` → trace on stderr, preview on stdout:
+### EC-3: `--trace` + `--dry-run` → preview on stdout; trace NOT on stderr (dry-run wins)
 
 - **Given:** clean environment
 - **When:** `clr --trace --dry-run "Fix bug"`
-- **Then:** Command preview on stdout; command also echoed on stderr
+- **Then:** Command preview on stdout; stderr is EMPTY (`handle_dry_run` returns before trace fires)
 - **Exit:** 0
-- **Source:** [params.md](../../../../docs/cli/params.md#parameter--13---trace)
+- **Source:** [13_trace.md](../../../../docs/cli/param/13_trace.md)
 ---
 
-### EC-4: `--trace` without message → trace output, no error:
+### EC-4: `--trace --dry-run` without message → stdout preview; stderr empty (dry-run wins)
 
 - **Given:** clean environment
 - **When:** `clr --trace --dry-run`
-- **Then:** Exit 0; assembled command echoed to stderr; no rejection
+- **Then:** Exit 0; assembled command on stdout (dry-run output); stderr is EMPTY (trace does not fire when dry-run wins)
 - **Exit:** 0
-- **Source:** [params.md](../../../../docs/cli/params.md#parameter--13---trace)
+- **Source:** [13_trace.md](../../../../docs/cli/param/13_trace.md)
 ---
 
-### EC-5: `--help` lists `--trace`:
+### EC-5: `--help` lists `--trace`
 
 - **Given:** clean environment
 - **When:** `clr --help`
 - **Then:** Stdout contains `--trace`
 - **Exit:** 0
-- **Source:** [commands.md](../../../../docs/cli/commands.md#command--2-help)
+- **Source:** [command.md](../../../../docs/cli/command.md#command--2-help)
 ---
 
-### EC-6: `--trace` output includes environment context:
+### EC-6: `--trace` output includes environment context (without `--dry-run`)
 
 - **Given:** clean environment
-- **When:** `clr --trace --dry-run "Fix bug"`
-- **Then:** Stderr trace output includes env vars and assembled command line
-- **Exit:** 0
-- **Source:** [params.md](../../../../docs/cli/params.md#parameter--13---trace)
+- **When:** `clr --trace "Fix bug"` (no `--dry-run`; claude absent in test environment)
+- **Then:** Stderr contains env vars and assembled command line (trace fires before invocation attempt); stdout empty or shows error from failed subprocess
+- **Exit:** 1 (claude absent in test environment)
+- **Source:** [13_trace.md](../../../../docs/cli/param/13_trace.md)

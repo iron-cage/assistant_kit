@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Document integration and edge case test plans for all clr commands and parameters.
-- **Responsibility**: Index of per-command, per-parameter, and per-group test case planning files.
-- **In Scope**: All 2 clr commands, all 18 parameters, and all 3 parameter groups.
+- **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
+- **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
+- **In Scope**: All 2 clr commands, all 18 parameters, all 7 types, all 3 parameter groups, 1 env parameter, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -16,6 +16,8 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | command/ | Per-command integration test case indices |
 | param/ | Per-parameter edge case indices |
 | param_group/ | Per-parameter-group interaction test indices |
+| type/ | Per-type validation test indices |
+| env_param/ | Per-env-parameter edge case indices |
 
 ### Coverage Summary
 
@@ -23,7 +25,9 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 |-------|-------|-----------|
 | Commands | 2 | ≥8 IT each |
 | Parameters | 18 | ≥6 EC each |
-| Parameter groups | 3 | ≥4 IT each |
+| Parameter groups | 3 | ≥4 CC each |
+| Types | 7 | ≥4 TC each |
+| Env params | 1 | ≥6 EC each |
 
 ### Navigation
 
@@ -55,3 +59,15 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [Claude-Native Flags](param_group/01_claude_native_flags.md)
 - [Runner Control](param_group/02_runner_control.md)
 - [System Prompt](param_group/03_system_prompt.md)
+
+#### Types
+- [`MessageText`](type/01_message_text.md)
+- [`DirectoryPath`](type/02_directory_path.md)
+- [`TokenLimit`](type/03_token_limit.md)
+- [`ModelName`](type/04_model_name.md)
+- [`VerbosityLevel`](type/05_verbosity_level.md)
+- [`SystemPromptText`](type/06_system_prompt_text.md)
+- [`EffortLevel`](type/07_effort_level.md)
+
+#### Env Params
+- [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)

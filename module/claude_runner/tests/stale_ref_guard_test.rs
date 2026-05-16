@@ -207,3 +207,42 @@ fn no_dream_agent_ref_in_readme()
     violations.join( "\n" )
   );
 }
+
+/// `src/routines.rs` must not exist.
+///
+/// This crate does not define an internal `routines` module. If this file appears,
+/// it signals a structural regression (dependency on an abstraction layer that was
+/// never part of this crate's design).
+///
+/// Spec: `tests/docs/invariant/002_dep_constraints.md` IT-2
+#[ test ]
+
+fn no_routines_rs_in_src()
+{
+  let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
+  let path = manifest.join( "src/routines.rs" );
+  assert!(
+    !path.exists(),
+    "src/routines.rs must not exist (dep constraint IT-2): {}",
+    path.display()
+  );
+}
+
+/// `build.rs` must not exist at crate root.
+///
+/// `claude_runner` has no build-time code generation. A `build.rs` would introduce
+/// an undocumented build-time dependency and is not permitted by the dep constraints.
+///
+/// Spec: `tests/docs/invariant/002_dep_constraints.md` IT-3
+#[ test ]
+
+fn no_build_rs_at_crate_root()
+{
+  let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
+  let path = manifest.join( "build.rs" );
+  assert!(
+    !path.exists(),
+    "build.rs must not exist at crate root (dep constraint IT-3): {}",
+    path.display()
+  );
+}
