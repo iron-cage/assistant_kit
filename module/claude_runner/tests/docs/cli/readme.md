@@ -83,3 +83,4 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)
+- [`CLR_* (24 vars)`](env_param/02_clr_input_vars.md)
