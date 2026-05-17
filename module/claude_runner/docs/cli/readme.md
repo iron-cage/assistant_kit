@@ -31,14 +31,14 @@ clr [OPTIONS] [MESSAGE]
 | format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A |
 | tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
 | tests/docs/cli/command/*.md (3 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/param/*.md (24 files) | ➖ | ➖ | ➖ | ✅ | ⏳ | L4 Complete |
+| tests/docs/cli/param/*.md (24 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param_group/*.md (4 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/type/*.md (11 files) | ➖ | ➖ | ➖ | ✅ | ⏳ | L4 Complete |
-| tests/docs/cli/env_param/*.md (1 file) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/type/*.md (11 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/env_param/*.md (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 
-**Current Level:** L4 (4 new params spec'd; implementation pending tasks 144–148)
-**Design Completeness:** 100% (L4 complete for existing; new param specs at L3)
-**Implementation Status:** 75% (3/3 commands implemented; 4 new params + env-var support pending)
+**Current Level:** L5
+**Design Completeness:** 100%
+**Implementation Status:** 100% (3/3 commands, 24/24 params, 24 CLR_* env vars implemented)
 
 ### Navigation
 
@@ -48,7 +48,7 @@ clr [OPTIONS] [MESSAGE]
 - [Parameter Groups](param_group.md) — logical parameter groupings (4 groups)
 - [Dictionary](dictionary.md) — domain vocabulary
 - [Workflows](workflow_scenario.md) — common usage patterns (10 workflows)
-- [Env Parameters](env_param.md) — subprocess environment variables (1 variable)
+- [Env Parameters](env_param.md) — input and subprocess environment variables (25 variables)
 
 ### See Also
 

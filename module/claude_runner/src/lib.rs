@@ -79,6 +79,10 @@ mod cli
     pub( super ) no_ultrathink        : bool,
     pub( super ) effort               : Option< EffortLevel >,
     pub( super ) no_effort_max        : bool,
+    pub( super ) no_chrome            : bool,
+    pub( super ) no_persist           : bool,
+    pub( super ) json_schema          : Option< String >,
+    pub( super ) mcp_config           : Vec< String >,
   }
 
   /// Parsed arguments for the `isolated` subcommand.
@@ -122,6 +126,10 @@ mod cli
     println!( "  --no-ultrathink                    Disable automatic \"\\n\\nultrathink\" message suffix" );
     println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max)" );
     println!( "  --no-effort-max                    Suppress default --effort max injection" );
+    println!( "  --no-chrome                        Suppress default --chrome injection" );
+    println!( "  --no-persist                       Disable session persistence (--no-session-persistence)" );
+    println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
+    println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
     println!( "  --verbosity <0-5>                  Runner output verbosity level (default: 3)" );
     println!( "  -h, --help                         Show this help" );
     println!();
@@ -174,6 +182,32 @@ mod cli
     )
   }
 
+  /// Print help for the `isolated` subcommand and exit 0.
+  ///
+  /// Called when `parse_isolated_args` encounters `-h` or `--help`.
+  /// Terminates the process via `std::process::exit(0)` so the caller
+  /// never needs to handle a return value.
+  fn print_isolated_help() -> !
+  {
+    println!( "clr isolated — Run Claude Code with credential-isolated temp HOME" );
+    println!();
+    println!( "USAGE:" );
+    println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [MESSAGE] [-- PASSTHROUGH...]" );
+    println!();
+    println!( "ARGUMENTS:" );
+    println!( "  [MESSAGE]                          Prompt message for Claude" );
+    println!();
+    println!( "ISOLATED OPTIONS:" );
+    println!( "  --creds <FILE>                     Credentials JSON file (required)" );
+    println!( "  --timeout <SECS>                   Max seconds to wait for subprocess (default: 30)" );
+    println!( "  -h, --help                         Show this help" );
+    println!();
+    println!( "EXIT CODES:" );
+    println!( "  0    Success" );
+    println!( "  1    Error (bad arguments, subprocess failure)" );
+    std::process::exit( 0 );
+  }
+
   /// Parse `tokens` as arguments to the `isolated` subcommand.
   ///
   /// Recognises `--creds <FILE>`, `--timeout <SECS>`, a positional `[MESSAGE]`,
@@ -207,6 +241,13 @@ mod cli
           timeout_secs = parse_timeout( raw )?;
           i += 1;
         }
+        // Fix(issue-isolated-help): parse_isolated_args fell through --help to the
+        // starts_with('-') catch-all, returning Err("unknown option: --help") → exit 1.
+        // Root cause: no explicit --help arm in parse_isolated_args; global parse_args has
+        // one but parse_isolated_args was written without it.
+        // Pitfall: any catch-all for unknown flags silently swallows --help and -h;
+        // always add an explicit --help arm before the catch-all in every subcommand parser.
+        "-h" | "--help" => { print_isolated_help(); }
         s if s.starts_with( '-' ) =>
         {
           return Err( Error::msg( format!(
@@ -220,10 +261,10 @@ mod cli
       }
       i += 1;
     }
-    let creds_path = creds_path.ok_or_else( ||
-      Error::msg( "missing required argument: --creds\nRun with --help for usage." )
-    )?;
-    let message = if message_parts.is_empty() { None } else { Some( message_parts.join( " " ) ) };
+    // Note: creds_path validation is deferred to after apply_isolated_env_vars() is called
+    // in run_cli() so that CLR_CREDS env var can supply the value before the check.
+    let creds_path   = creds_path.unwrap_or_default();
+    let message      = if message_parts.is_empty() { None } else { Some( message_parts.join( " " ) ) };
     Ok( IsolatedArgs { creds_path, timeout_secs, message, passthrough_args } )
   }
 
@@ -271,6 +312,14 @@ mod cli
       "--dir" =>
       {
         parsed.dir = Some( next_value( tokens, next, "--dir" )?.to_string() );
+      }
+      "--json-schema" =>
+      {
+        parsed.json_schema = Some( next_value( tokens, next, "--json-schema" )?.to_string() );
+      }
+      "--mcp-config" =>
+      {
+        parsed.mcp_config.push( next_value( tokens, next, "--mcp-config" )?.to_string() );
       }
       "--verbosity" =>
       {
@@ -352,6 +401,14 @@ mod cli
         {
           parsed.no_effort_max = true;
         }
+        "--no-chrome" =>
+        {
+          parsed.no_chrome = true;
+        }
+        "--no-persist" =>
+        {
+          parsed.no_persist = true;
+        }
         "--" =>
         {
           // Everything after `--` is positional.
@@ -400,6 +457,86 @@ mod cli
     Ok( parsed )
   }
 
+  /// Returns `true` if `var` is set to `"1"` or `"true"` (case-insensitive).
+  ///
+  /// Any other value — including `"yes"`, `"0"`, `"false"`, empty, or absent — returns `false`.
+  fn env_bool( var : &str ) -> bool
+  {
+    std::env::var( var ).ok()
+      .is_some_and( | v | matches!( v.to_lowercase().as_str(), "1" | "true" ) )
+  }
+
+  /// Returns `Some(value)` if `var` is set to a non-empty string; `None` otherwise.
+  fn env_str( var : &str ) -> Option< String >
+  {
+    std::env::var( var ).ok().filter( | v | !v.is_empty() )
+  }
+
+  /// Apply `CLR_*` environment variable fallbacks for the 22 run parameters.
+  ///
+  /// Each field is updated only when it is still at its zero/default value — the CLI
+  /// flag always wins when both are present (CLI-wins field-default check).
+  pub( super ) fn apply_env_vars( parsed : &mut CliArgs )
+  {
+    if parsed.message.is_none()              { parsed.message              = env_str( "CLR_MESSAGE" ); }
+    if !parsed.print_mode                    { parsed.print_mode           = env_bool( "CLR_PRINT" ); }
+    if parsed.model.is_none()               { parsed.model                = env_str( "CLR_MODEL" ); }
+    if !parsed.verbose                       { parsed.verbose              = env_bool( "CLR_VERBOSE" ); }
+    if !parsed.no_skip_permissions           { parsed.no_skip_permissions  = env_bool( "CLR_NO_SKIP_PERMISSIONS" ); }
+    if !parsed.interactive                   { parsed.interactive          = env_bool( "CLR_INTERACTIVE" ); }
+    if !parsed.new_session                   { parsed.new_session          = env_bool( "CLR_NEW_SESSION" ); }
+    if parsed.dir.is_none()                 { parsed.dir                  = env_str( "CLR_DIR" ); }
+    if parsed.max_tokens.is_none()
+    {
+      if let Some( v ) = env_str( "CLR_MAX_TOKENS" ) { parsed.max_tokens = v.parse::< u32 >().ok(); }
+    }
+    if parsed.session_dir.is_none()         { parsed.session_dir          = env_str( "CLR_SESSION_DIR" ); }
+    if !parsed.dry_run                       { parsed.dry_run              = env_bool( "CLR_DRY_RUN" ); }
+    if parsed.verbosity == VerbosityLevel::default()
+    {
+      if let Some( v ) = env_str( "CLR_VERBOSITY" )
+      {
+        if let Ok( level ) = v.parse::< VerbosityLevel >() { parsed.verbosity = level; }
+      }
+    }
+    if !parsed.trace                         { parsed.trace                = env_bool( "CLR_TRACE" ); }
+    if !parsed.no_ultrathink                 { parsed.no_ultrathink        = env_bool( "CLR_NO_ULTRATHINK" ); }
+    if parsed.system_prompt.is_none()       { parsed.system_prompt        = env_str( "CLR_SYSTEM_PROMPT" ); }
+    if parsed.append_system_prompt.is_none(){ parsed.append_system_prompt = env_str( "CLR_APPEND_SYSTEM_PROMPT" ); }
+    if parsed.effort.is_none()
+    {
+      if let Some( v ) = env_str( "CLR_EFFORT" ) { parsed.effort = v.parse::< EffortLevel >().ok(); }
+    }
+    if !parsed.no_effort_max                 { parsed.no_effort_max        = env_bool( "CLR_NO_EFFORT_MAX" ); }
+    if !parsed.no_chrome                     { parsed.no_chrome            = env_bool( "CLR_NO_CHROME" ); }
+    if !parsed.no_persist                    { parsed.no_persist           = env_bool( "CLR_NO_PERSIST" ); }
+    if parsed.json_schema.is_none()         { parsed.json_schema          = env_str( "CLR_JSON_SCHEMA" ); }
+    if parsed.mcp_config.is_empty()
+    {
+      if let Some( v ) = env_str( "CLR_MCP_CONFIG" ) { parsed.mcp_config.push( v ); }
+    }
+  }
+
+  /// Apply `CLR_CREDS` and `CLR_TIMEOUT` env var fallbacks for the `isolated` subcommand.
+  ///
+  /// `CLR_CREDS` applies when `creds_path` is empty (no `--creds` on CLI).
+  /// `CLR_TIMEOUT` applies when `timeout_secs == 30` (the default); explicit `--timeout 30`
+  /// is indistinguishable from the default and is an accepted limitation.
+  pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs )
+  {
+    if parsed.creds_path.is_empty()
+    {
+      parsed.creds_path = env_str( "CLR_CREDS" ).unwrap_or_default();
+    }
+    if parsed.timeout_secs == 30
+    {
+      if let Some( v ) = env_str( "CLR_TIMEOUT" )
+      {
+        if let Ok( secs ) = v.parse::< u64 >() { parsed.timeout_secs = secs; }
+      }
+    }
+  }
+
   /// Translate parsed CLI args into a `ClaudeCommand` builder.
   ///
   /// Session continuation (`-c`) is applied by default unless `--new-session` is set.
@@ -428,6 +565,22 @@ mod cli
       builder = builder.with_effort(
         cli.effort.unwrap_or( EffortLevel::Max )
       );
+    }
+    if cli.no_chrome
+    {
+      builder = builder.with_chrome( None );
+    }
+    if cli.no_persist
+    {
+      builder = builder.with_no_session_persistence( true );
+    }
+    if let Some( ref schema ) = cli.json_schema
+    {
+      builder = builder.with_json_schema( schema.as_str() );
+    }
+    if !cli.mcp_config.is_empty()
+    {
+      builder = builder.with_mcp_config( cli.mcp_config.iter().map( String::as_str ) );
     }
     if cli.verbose
     {
@@ -635,6 +788,7 @@ pub fn run_cli()
   use cli::{
     parse_args, parse_isolated_args, build_claude_command, handle_dry_run,
     print_help, run_print_mode, run_interactive, run_isolated_command,
+    apply_env_vars, apply_isolated_env_vars,
   };
 
   let tokens : Vec< String > = std::env::args().skip( 1 ).collect();
@@ -642,7 +796,7 @@ pub fn run_cli()
   // Dispatch `isolated` subcommand before the standard flag parser.
   if tokens.first().map( String::as_str ) == Some( "isolated" )
   {
-    let isolated_cli = match parse_isolated_args( &tokens[ 1 .. ] )
+    let mut isolated_cli = match parse_isolated_args( &tokens[ 1 .. ] )
     {
       Ok( c )  => c,
       Err( e ) =>
@@ -651,6 +805,12 @@ pub fn run_cli()
         std::process::exit( 1 );
       }
     };
+    apply_isolated_env_vars( &mut isolated_cli );
+    if isolated_cli.creds_path.is_empty()
+    {
+      eprintln!( "Error: missing required argument: --creds\nRun with --help for usage." );
+      std::process::exit( 1 );
+    }
     run_isolated_command(
       &isolated_cli.creds_path,
       isolated_cli.timeout_secs,
@@ -659,7 +819,7 @@ pub fn run_cli()
     );
   }
 
-  let cli = match parse_args( &tokens )
+  let mut cli = match parse_args( &tokens )
   {
     Ok( c )  => c,
     Err( e ) =>
@@ -668,6 +828,7 @@ pub fn run_cli()
       std::process::exit( 1 );
     }
   };
+  apply_env_vars( &mut cli );
 
   if cli.help
   {

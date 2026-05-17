@@ -12,7 +12,7 @@
 | 6 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::alice@oldco.com` |
 | 7 | `.token.status` | Show active OAuth token expiry classification | 2 | `clp .token.status` |
 | 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 1 | `clp .paths` |
-| 9 | `.usage` | Show live rate-limit quota for all saved accounts | 5 | `clp .usage` |
+| 9 | `.usage` | Show live rate-limit quota for all saved accounts | 6 | `clp .usage` |
 | 10 | `.credentials.status` | Show live credential metadata without account store dependency | 13 | `clp .credentials.status` |
 | 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 2 | `clp .account.limits name::alice@acme.com` |
 
@@ -454,7 +454,7 @@ clp .paths format::json
 
 Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`). Renders results as a `data_fmt` table with per-account Expires, 5h Left, 5h Reset, 7d Left, 7d(Son), and 7d Reset columns, plus a footer recommendation line. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
--- **Parameters:** [`format::`](params.md#parameter--2-format), [`refresh::`](params.md#parameter--19-refresh), [`live::`](params.md#parameter--20-live), [`interval::`](params.md#parameter--21-interval), [`jitter::`](params.md#parameter--22-jitter)
+-- **Parameters:** [`format::`](params.md#parameter--2-format), [`refresh::`](params.md#parameter--19-refresh), [`live::`](params.md#parameter--20-live), [`interval::`](params.md#parameter--21-interval), [`jitter::`](params.md#parameter--22-jitter), [`trace::`](params.md#parameter--23-trace)
 -- **Exit:** 0 (success) | 1 (usage: invalid param combination) | 2 (runtime: credential store unreadable, HOME unset)
 
 **Syntax:**
@@ -466,6 +466,7 @@ clp .usage refresh::1
 clp .usage live::1
 clp .usage live::1 interval::60 jitter::10
 clp .usage live::1 refresh::1 interval::60
+clp .usage refresh::1 trace::1
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -475,6 +476,7 @@ clp .usage live::1 refresh::1 interval::60
 | `live::` | `bool` | `0` | Enable continuous refresh loop (Ctrl-C to exit) |
 | `interval::` | `u64` | `30` | Seconds between refresh cycles (≥ 30; only validated when `live::1`) |
 | `jitter::` | `u64` | `0` | Max random seconds added to each cycle delay (≤ interval; only validated when `live::1`) |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
 
 **Examples:**
 

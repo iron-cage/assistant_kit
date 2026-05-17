@@ -1,6 +1,9 @@
 # Parameter Group :: Runner Control
 
-Interaction tests for Group 2 (Runner Control): `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--no-effort-max`. Tests validate these flags coexist without conflict.
+Interaction tests for Group 2 (Runner Control): `--no-skip-permissions`, `--interactive`,
+`--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`,
+`--trace`, `--no-ultrathink`, `--no-effort-max`, `--no-chrome`. Tests validate these flags
+coexist without conflict and are consumed by the runner, not forwarded to claude.
 
 **Source:** [param_group.md#group--2-runner-control](../../../../docs/cli/param_group.md#group--2-runner-control)
 
@@ -53,7 +56,7 @@ Interaction tests for Group 2 (Runner Control): `--no-skip-permissions`, `--inte
 ### CC-4: All runner control flags together → no conflict
 
 - **Given:** clean environment
-- **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --max-tokens 100000 --session-dir /tmp/sessions --verbosity 2 --trace --no-ultrathink --no-effort-max "Fix bug"`
-- **Then:** Exit 0; all flags applied without conflict; command assembled correctly; no unknown-flag error for any runner-control flag
+- **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --max-tokens 100000 --session-dir /tmp/sessions --verbosity 2 --trace --no-ultrathink --no-effort-max --no-chrome "Fix bug"`
+- **Then:** Exit 0; all twelve flags accepted without conflict; command assembled correctly; `--chrome` is absent from assembled command; no unknown-flag error for any runner-control flag
 - **Exit:** 0
 - **Source:** [param_group.md](../../../../docs/cli/param_group.md#group--2-runner-control)

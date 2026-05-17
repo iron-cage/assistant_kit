@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clp parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 17 active clp parameter edge case files (`name::` through `model::`).
+- **In Scope**: 17 active clp parameter edge case files (`name::` through `model::`, params 1–18 except param 2); test specs for params 19–23 (`refresh::` through `trace::`) are pending.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 ### Responsibility Table

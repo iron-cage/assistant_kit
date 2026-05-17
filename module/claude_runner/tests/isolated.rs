@@ -7,6 +7,7 @@
 //! | IT-2 | `--creds missing.json` → exit 1 | No |
 //! | IT-7 | `--timeout abc` → exit 1, invalid timeout | No |
 //! | IT-8 | Missing `--creds` → exit 1, required arg | No |
+//! | IT-9 | `clr isolated --help` → exit 0, help text shown | No |
 //! | EC-creds-4 | Nonexistent creds file → exit 1 | No |
 //! | EC-creds-5 | `--creds` without value → exit 1 | No |
 //! | EC-creds-6 | `--creds` omitted → exit 1 | No |
@@ -476,5 +477,51 @@ fn ec_creds3_lim_it_relative_path()
   assert!(
     !err.contains( "cannot read" ) && !err.contains( "No such file" ),
     "unexpected file-not-found error for relative path; got: {err}"
+  );
+}
+
+/// IT-9: `clr isolated --help` exits 0 and prints isolated-specific help text.
+///
+/// bug_reproducer(issue-isolated-help)
+///
+/// Root Cause: `parse_isolated_args()` had no `"-h" | "--help"` arm before the
+/// `s if s.starts_with('-')` catch-all, so `--help` matched the catch-all and
+/// returned `Err("unknown option: --help")`, causing exit 1.
+///
+/// Why Not Caught: only happy-path and error-flag tests existed for `isolated`;
+/// no test exercised `--help` on the subcommand.
+///
+/// Fix Applied: added `print_isolated_help()` function (exits 0) and inserted a
+/// `"-h" | "--help"` match arm before the catch-all in `parse_isolated_args()`.
+///
+/// Prevention: test both `-h` and `--help` exit codes and stdout content for
+/// every subcommand that accepts flags.
+///
+/// Pitfall: `print_isolated_help()` must call `std::process::exit(0)` directly —
+/// returning `Ok(...)` from the arm is insufficient because the caller checks
+/// `creds_path` and would error on the missing `--creds` argument.
+#[ test ]
+fn it9_isolated_help_exits_zero()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "isolated", "--help" ] )
+    .output()
+    .expect( "failed to invoke clr isolated --help" );
+  assert_eq!(
+    out.status.code(),
+    Some( 0 ),
+    "clr isolated --help must exit 0; got: {:?}\nstderr: {}",
+    out.status.code(),
+    String::from_utf8_lossy( &out.stderr ),
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--creds" ),
+    "help text must mention --creds; got:\n{stdout}",
+  );
+  assert!(
+    stdout.contains( "--timeout" ),
+    "help text must mention --timeout; got:\n{stdout}",
   );
 }

@@ -3,7 +3,7 @@
 //! Covers CC-N interaction cases for all three parameter groups.
 //! Source: `tests/docs/cli/param_group/`
 //!
-//! - Group 1 (Claude-Native Flags): G1CC1–G1CC4 (`01_claude_native_flags.md`)
+//! - Group 1 (Claude-Native Flags): G1CC1–G1CC5 (`01_claude_native_flags.md`)
 //! - Group 2 (Runner Control):      G2CC1–G2CC4 (`02_runner_control.md`)
 //! - Group 3 (System Prompt):       G3CC1–G3CC4 (`03_system_prompt.md`)
 
@@ -13,10 +13,10 @@ use common::run_cli;
 // ─── Group 1: Claude-Native Flags ─────────────────────────────────────────────
 // Source: tests/docs/cli/param_group/01_claude_native_flags.md
 
-/// G1CC1: All four claude-native flags forwarded together without conflict.
+/// G1CC1: All seven claude-native flags forwarded together without conflict.
 ///
-/// `--print`, `--model sonnet`, `--verbose`, `--effort high` all appear in the
-/// assembled command; exit 0.
+/// `--print`, `--model sonnet`, `--verbose`, `--effort high`, `--no-persist`,
+/// `--json-schema`, and `--mcp-config` all appear in the assembled command; exit 0.
 ///
 /// Spec: `01_claude_native_flags.md` CC-1
 #[ test ]
@@ -24,16 +24,27 @@ use common::run_cli;
 fn g1cc1_all_claude_native_flags_forwarded_together()
 {
   let out = run_cli( &[
-    "--dry-run", "--print", "--model", "sonnet", "--verbose", "--effort", "high", "Fix bug",
+    "--dry-run",
+    "--print",
+    "--model", "sonnet",
+    "--verbose",
+    "--effort", "high",
+    "--no-persist",
+    "--json-schema", r#"{"type":"string"}"#,
+    "--mcp-config", "/tmp/mcp.json",
+    "Fix bug",
   ] );
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!( stdout.contains( "--print" ),   "output must contain --print: {stdout}" );
-  assert!( stdout.contains( "--model" ),   "output must contain --model: {stdout}" );
-  assert!( stdout.contains( "sonnet" ),    "output must contain model value: {stdout}" );
-  assert!( stdout.contains( "--verbose" ), "output must contain --verbose: {stdout}" );
-  assert!( stdout.contains( "--effort" ),  "output must contain --effort: {stdout}" );
-  assert!( stdout.contains( "high" ),      "output must contain effort value: {stdout}" );
+  assert!( stdout.contains( "--print" ),                 "output must contain --print: {stdout}" );
+  assert!( stdout.contains( "--model" ),                 "output must contain --model: {stdout}" );
+  assert!( stdout.contains( "sonnet" ),                  "output must contain model value: {stdout}" );
+  assert!( stdout.contains( "--verbose" ),               "output must contain --verbose: {stdout}" );
+  assert!( stdout.contains( "--effort" ),                "output must contain --effort: {stdout}" );
+  assert!( stdout.contains( "high" ),                    "output must contain effort value: {stdout}" );
+  assert!( stdout.contains( "--no-session-persistence" ), "output must contain --no-session-persistence: {stdout}" );
+  assert!( stdout.contains( "--json-schema" ),           "output must contain --json-schema: {stdout}" );
+  assert!( stdout.contains( "--mcp-config" ),            "output must contain --mcp-config: {stdout}" );
 }
 
 /// G1CC2: `--model` and `--verbose` coexist without conflict.
@@ -85,6 +96,39 @@ fn g1cc4_no_group_flags_only_defaults_injected()
   assert!( stdout.contains( "--print" ),   "default --print must be present: {stdout}" );
   assert!( !stdout.contains( "--verbose" ), "no --verbose without explicit flag: {stdout}" );
   assert!( !stdout.contains( "--model" ),   "no --model without explicit flag: {stdout}" );
+}
+
+/// G1CC5: `--no-persist` + `--json-schema` + `--mcp-config` → all three new members forwarded.
+///
+/// `--no-session-persistence`, `--json-schema`, and `--mcp-config` all appear in the
+/// assembled command without conflict; exit 0.
+///
+/// Spec: `01_claude_native_flags.md` CC-5
+#[ test ]
+
+fn g1cc5_new_claude_native_flags_forwarded_together()
+{
+  let out = run_cli( &[
+    "--dry-run",
+    "--no-persist",
+    "--json-schema", r#"{"type":"object"}"#,
+    "--mcp-config", "/tmp/servers.json",
+    "Fix bug",
+  ] );
+  assert!( out.status.success(), "exit must be 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--no-session-persistence" ),
+    "output must contain --no-session-persistence: {stdout}",
+  );
+  assert!(
+    stdout.contains( "--json-schema" ),
+    "output must contain --json-schema: {stdout}",
+  );
+  assert!(
+    stdout.contains( "/tmp/servers.json" ),
+    "output must contain mcp-config path: {stdout}",
+  );
 }
 
 // ─── Group 2: Runner Control ───────────────────────────────────────────────────
@@ -155,10 +199,10 @@ fn g2cc3_no_skip_permissions_and_no_effort_max_both_suppressed()
   );
 }
 
-/// G2CC4: All 11 runner control flags together → exit 0; no unknown-flag error.
+/// G2CC4: All 12 runner control flags together → exit 0; no unknown-flag error.
 ///
 /// Every runner control flag accepted without conflict. `--dry-run` wins over `--trace`,
-/// so stderr is empty (dry-run returns before trace fires).
+/// so stderr is empty. `--no-chrome` suppresses the default `--chrome` injection.
 ///
 /// Spec: `02_runner_control.md` CC-4
 #[ test ]
@@ -177,6 +221,7 @@ fn g2cc4_all_runner_control_flags_no_conflict()
     "--trace",
     "--no-ultrathink",
     "--no-effort-max",
+    "--no-chrome",
     "Fix bug",
   ] );
   assert!(
@@ -187,6 +232,11 @@ fn g2cc4_all_runner_control_flags_no_conflict()
     out.stderr.is_empty(),
     "stderr must be empty (dry-run wins over trace): {:?}",
     String::from_utf8_lossy( &out.stderr ),
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "--chrome" ),
+    "--no-chrome must suppress --chrome injection: {stdout}",
   );
 }
 

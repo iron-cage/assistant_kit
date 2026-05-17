@@ -4,7 +4,7 @@
 |-------|------------|---------|
 | [Output Control](#group--1-output-control) | `format::` | `.accounts` (format only), `.token.status`, `.paths`, `.usage`, `.account.limits` |
 | [Field Presence](#group--2-field-presence) | `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | `.accounts`, `.credentials.status` |
-| [Fetch Behavior](#group--3-fetch-behavior) | `refresh::`, `live::`, `interval::`, `jitter::` | `.usage` only |
+| [Fetch Behavior](#group--3-fetch-behavior) | `refresh::`, `live::`, `interval::`, `jitter::`, `trace::` | `.usage` only |
 
 **Total:** 3 groups
 
@@ -153,7 +153,7 @@ All members pass. No false inclusions.
 
 ### Group :: 3. Fetch Behavior
 
-**Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`
+**Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`
 **Pattern:** Per-invocation fetch control
 **Purpose:** Controls how `.usage` fetches and re-fetches quota data — whether to refresh expired tokens on auth errors and whether to run as a continuous monitor loop.
 
@@ -163,6 +163,7 @@ All members pass. No false inclusions.
 | [`live::`](params.md#parameter--20-live) | `bool` | `0` | Enable continuous refresh loop (Ctrl-C to exit cleanly) |
 | [`interval::`](params.md#parameter--21-interval) | `u64` | `30` | Seconds between refresh cycles (≥ 30; validated only when `live::1`) |
 | [`jitter::`](params.md#parameter--22-jitter) | `u64` | `0` | Max random seconds added to each cycle delay (0 ≤ jitter ≤ interval; validated only when `live::1`) |
+| [`trace::`](params.md#parameter--23-trace) | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
 
 **Used By (1 command):** [`.usage`](commands.md#command--9-usage)
 
@@ -192,6 +193,7 @@ clp .usage
 | `live::` | Yes — enables continuous fetch loop | Yes |
 | `interval::` | Yes — controls loop cycle duration | Yes |
 | `jitter::` | Yes — adds random variance to loop timing | Yes |
+| `trace::` | Yes — controls diagnostic output during fetch operations | Yes |
 | `format::` | No — controls output serialisation, not fetch strategy | No (Output Control) |
 | `active::` | No — controls which fields appear in output | No (Field Presence) |
 

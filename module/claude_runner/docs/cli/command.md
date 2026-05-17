@@ -4,7 +4,7 @@
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
-| 1 | `run` (default) | Execute Claude Code with given parameters | 18 | `clr "Fix bug" --model sonnet` |
+| 1 | `run` (default) | Execute Claude Code with given parameters | 22 | `clr "Fix bug" --model sonnet` |
 | 2 | `isolated` | Run Claude with credential-isolated temp HOME | 3 | `clr isolated --creds creds.json "Fix bug"` |
 | 3 | `help` | Print usage information and exit | 0 | `clr --help` |
 
@@ -45,6 +45,10 @@ clr [OPTIONS] [MESSAGE]
 | [`--append-system-prompt`](param/16_append_system_prompt.md) | [`SystemPromptText`](type.md#type--6-systemprompttext) | — | Append text to the default system prompt |
 | [`--effort`](param/17_effort.md) | [`EffortLevel`](type.md#type--7-effortlevel) | max | Override reasoning effort level (default: max) |
 | [`--no-effort-max`](param/18_no_effort_max.md) | bool | false | Suppress default `--effort max` injection |
+| [`--no-chrome`](param/21_no_chrome.md) | bool | false | Suppress default `--chrome` injection |
+| [`--no-persist`](param/22_no_persist.md) | bool | false | Disable session persistence (`--no-session-persistence`) |
+| [`--json-schema`](param/23_json_schema.md) | [`JsonSchemaText`](type.md#type--10-jsonschematext) | — | JSON schema for structured output |
+| [`--mcp-config`](param/24_mcp_config.md) | [`McpConfigPath`](type.md#type--11-mcpconfigpath) | — | MCP server config file (repeatable, 0+) |
 
 **Parameter Groups:** [Claude-Native Flags](param_group.md#group--1-claude-native-flags), [Runner Control](param_group.md#group--2-runner-control), [System Prompt](param_group.md#group--3-system-prompt)
 
