@@ -55,15 +55,4 @@ if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clippy -p claude_profile --al
 exec cargo clippy -p claude_profile --all-features -- -D warnings
 ```
 
-`verb/lint.d/l2` (universal — identical across all cargo modules; default host-side invocation):
-```bash
-#!/usr/bin/env bash
-# l2 — host orchestration; delegates to runbox (Docker-orchestrated execution).
-set -euo pipefail
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "./run/runbox .lint"; exit 0; fi
-exec ./run/runbox .lint
-```
-
 Each module's `run/runbox.yml` must declare `lint_script: module/<name>/verb/lint.d/l1` — the container entry point is the l1 layer directly. See `run/docs/parameter/014_lint_script.md`. The linter is ecosystem-specific: ruff for Python, eslint for Node.js, cargo clippy for Rust. `verb/lint` is `available` for all project types — linting is universal.

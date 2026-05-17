@@ -1,7 +1,7 @@
 # Parameter: `test_script`
 
 - **Status:** ✅ Configured — present in `runbox.yml`
-- **Current State:** `verb/test` for standalone projects; module-relative path (e.g., `module/claude_profile/verb/test`) for workspace modules
+- **Current State:** `verb/test` for standalone projects; module-relative path to l1 directly (e.g., `module/claude_profile/verb/test.d/l1`) for workspace modules
 - **Where It Flows:** `docker run /workspace/$TEST_SCRIPT` — executed after plugin mounts are wired
 
 ### Notes
@@ -10,7 +10,7 @@ Full-test entrypoint. May invoke bin plugins (e.g., `w3`) and assumes plugin mou
 
 Use `$SCRIPT_DIR`-relative paths in the layer script body — inside the container `SCRIPT_DIR` resolves to `$WORKSPACE_DIR/verb/test.d`, so `$SCRIPT_DIR/../..` is `$WORKSPACE_DIR`. The dispatcher (`verb/test`) itself does not use SCRIPT_DIR for execution paths.
 
-Module-level runboxes point at `verb/test` (the canonical `do`-protocol test verb) rather than a bespoke `run/test` script. This makes `verb/test` the single source of truth for what "run tests" means for a module.
+Module-level runboxes point at `verb/test.d/l1` directly (bypassing the dispatcher) rather than at `verb/test`. Since `VERB_LAYER=l1` is always set by `runbox-run`, the dispatcher would route to l1 anyway — pointing directly is explicit and avoids dispatcher overhead. Standalone projects may point at `verb/test` (the dispatcher) when the dispatcher's l0 default is also useful on host.
 
 ### Multi-Layer Verbs
 
@@ -28,7 +28,7 @@ test_script: verb/test
 ```
 Module `runbox.yml` (`claude_profile`):
 ```yaml
-test_script: module/claude_profile/verb/test
+test_script: module/claude_profile/verb/test.d/l1
 ```
 `cmd_test()` builds the full docker invocation:
 ```bash
@@ -38,6 +38,6 @@ docker run --rm \
   -v /usr/local/bin/w3:/usr/local/bin/w3:ro \
   -v /home/user/.claude:/workspace/.claude:rw \
   claude_profile_test \
-  /workspace/module/claude_profile/verb/test
+  /workspace/module/claude_profile/verb/test.d/l1
 ```
 The script runs inside the container after all plugin mounts are wired, so it can invoke `w3` and read credentials from `/workspace/.claude`. This is the full-test path; `cmd_test_offline()` skips the script entirely and runs the baked CMD directly.

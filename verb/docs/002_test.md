@@ -66,11 +66,13 @@ exec "$DIR/l0" "$@"
 `verb/test.d/l1` (universal — identical across all cargo modules; entered via `VERB_LAYER=l1`):
 ```bash
 #!/usr/bin/env bash
-# l1 — bare test execution (VERB_LAYER=l1); runs w3 directly.
+# l1 — bare test execution; runs inside the container (VERB_LAYER=l1 set by runbox-run).
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
 if [[ "${1:-}" == "--dry-run" ]]; then echo "w3 .test level::3"; exit 0; fi
+export CARGO_NET_OFFLINE=true   # deps pre-cooked; no registry update inside container
+export NO_COLOR=1               # prevent nextest PTY progress bar (invisible via wrun_core)
 exec w3 .test level::3
 ```
 
@@ -78,6 +80,11 @@ exec w3 .test level::3
 ```bash
 #!/usr/bin/env bash
 # l0 — host-native test execution; runs w3 .test level::3 directly on the host.
+# Default when no VERB_LAYER set; also invoked directly via VERB_LAYER=l0.
+#
+# Differs from l1 (container-internal):
+#   - CARGO_NET_OFFLINE is NOT set — host cargo may update registry index
+#   - NO_COLOR is NOT set — real terminal controls colour; no PTY wrapping issue
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."

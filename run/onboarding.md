@@ -271,7 +271,7 @@ resolve(verb_name):
   else                 →  error
 ```
 
-Callers use `verb-run test` or `bash verb/test` — both work identically since `verb/test` is always a file. `runbox-run` sets `VERB_LAYER=l1` and points `test_script` at `verb/test`; the dispatcher inside routes to `test.d/l1`.
+Callers use `verb-run test` or `bash verb/test` — both work identically since `verb/test` is always a file. `runbox-run` sets `VERB_LAYER=l1`. Workspace modules point `test_script` at `verb/test.d/l1` directly (bypassing the dispatcher); standalone projects may use `verb/test` (the dispatcher routes to `test.d/l1` via `VERB_LAYER=l1`).
 
 ---
 

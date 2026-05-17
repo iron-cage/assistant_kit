@@ -10,7 +10,7 @@ Optional script path (relative to `/workspace`) executed by `.run`. When absent,
 
 `_ensure_image()` probes for the script inside the image (alongside `test_script` and `lint_script`) in a single container run. If any configured script is absent from the image, the image is automatically rebuilt rather than emitting a cryptic "not found" error.
 
-Library-only projects typically omit `run_script` entirely. Binary projects (Python modules, Node.js services, Rust binaries) set this to `verb/run` — a self-dispatching dispatcher that routes to `verb/run.d/l1` inside the container (via `VERB_LAYER=l1`) or delegates to runbox via `verb/run.d/l2` when invoked on the host.
+Library-only projects typically omit `run_script` entirely. Binary projects (Python modules, Node.js services, Rust binaries) set this to `verb/run` — a self-dispatching dispatcher that routes to `verb/run.d/l1` inside the container (via `VERB_LAYER=l1`) or runs `verb/run.d/l1` directly as the default when invoked on the host. `verb/run` has no knowledge of `run/runbox`.
 
 ### Example
 
@@ -25,10 +25,10 @@ set -euo pipefail
 DIR="$(dirname "${BASH_SOURCE[0]}")/run.d"
 LAYER="${VERB_LAYER:-}"
 [[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-exec "$DIR/l2" "$@"
+exec "$DIR/l1" "$@"
 ```
 
-`verb/run.d/l1` — container execution layer (ecosystem-specific):
+`verb/run.d/l1` — container execution layer (ecosystem-specific; also the default host-side layer):
 
 Python:
 ```bash
@@ -52,12 +52,3 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 exec "$SCRIPT_DIR/../../target/debug/rust_example"
 ```
 
-`verb/run.d/l2` — host orchestration layer (identical for all ecosystems):
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "./run/runbox .run"; exit 0; fi
-exec ./run/runbox .run
-```
