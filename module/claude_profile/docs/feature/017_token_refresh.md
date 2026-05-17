@@ -21,7 +21,7 @@ When `refresh::1`, the command wraps `fetch_oauth_usage` with a retry layer: on 
 results = fetch_all_quota(credential_store, live_creds_file)   // all accounts
 
 if refresh_param == 1:
-    for each account_quota in results where result is auth_error("401"/"403"/"429"):
+    for each account_quota in results where result is auth_error("401"/"403"):
         creds_path = credential_store / "{name}.credentials.json"
         creds_json = read_file(creds_path)   // PER-ACCOUNT file
         run_result = run_isolated(creds_json, [], timeout_secs=30)
@@ -33,7 +33,7 @@ if refresh_param == 1:
 render results as table
 ```
 
-**Current implementation (deviates in two ways — see Scope Limitations 1 and 2):**
+**Current implementation (deviates in one way — see Scope Limitation 1):**
 
 ```
 if refresh_param == 1 AND any(result in results is auth_error("401"/"403")):
@@ -43,12 +43,11 @@ if refresh_param == 1 AND any(result in results is auth_error("401"/"403")):
     if run_result is Ok(r) AND r.credentials is Some(new_json):
         write new_json to live_creds_file on disk   // live file only — Scope Limitation 1
         results = fetch_all_quota(...)   // retry ALL accounts — not per-account
-                                         // 429 never matches guard — Scope Limitation 2
 ```
 
 **Scope limitation 1 — live-session-only refresh (known implementation deviation):** The current implementation reads and refreshes only the live session credentials file (`~/.claude/.credentials.json`). Stored account credential files (`{credential_store}/{name}.credentials.json`) for non-active accounts are never updated by `refresh::1`. This means `refresh::1` can only help when the currently active account's token is expired — it cannot refresh tokens for other saved accounts (e.g., `i12@wbox.pro`, `i3@wbox.pro`) that appear as `EXPIRED` in the quota table.
 
-**Scope limitation 2 — 429 guard mismatch (known implementation deviation):** The `is_auth_error(e)` guard checks `e.contains("401") || e.contains("403")` only. When `fetch_oauth_usage()` returns HTTP 429, `claude_quota::QuotaError::HttpTransport` formats the error as `"HTTP transport error: HTTP 429"` (`claude_quota/src/lib.rs:444-446`, `lib.rs:82-84`). This string contains neither "401" nor "403", so `has_auth_error` evaluates `false` and the entire refresh block is unconditionally skipped — `refresh::1` is completely inert for 429 responses. HTTP 429 from this endpoint is observed after repeated calls with expired tokens (rate limiting). Task 142 tracks the fix: extend the guard to `e.contains("401") || e.contains("403") || e.contains("429")` and implement the per-account loop simultaneously.
+**Rate-limit pass-through (intentional design):** HTTP 429 responses from `fetch_oauth_usage()` are passed through as-is — the guard `e.contains("401") || e.contains("403")` intentionally excludes 429. A rate-limit response is not an authentication failure; the OAuth token is still valid when the server returns 429. Spawning an isolated subprocess to refresh a valid token would be pointless and adds a 30-second wait per rate-limited account. Accounts with HTTP 429 errors appear as error rows immediately with no subprocess launch. `shorten_error()` renders `"HTTP transport error: HTTP 429"` as `"rate limited (429)"` in the Status column.
 
 **Retry semantics:** Exactly one retry per account per invocation. If the retried `fetch_oauth_usage` also fails, the final error is shown in the account's row — the table continues processing remaining accounts (non-aborting).
 
@@ -65,7 +64,7 @@ if refresh_param == 1 AND any(result in results is auth_error("401"/"403")):
 ### Acceptance Criteria
 
 - **AC-18**: `refresh::0` (default) produces no calls to `run_isolated`; `.usage` behavior is unchanged from the baseline.
-- **AC-19**: `refresh::1` invokes `claude_runner_core::run_isolated()` for any account whose `fetch_oauth_usage` returns an HTTP auth error (401, 403, or 429 — task 142 extends the guard to include 429).
+- **AC-19**: `refresh::1` invokes `claude_runner_core::run_isolated()` for any account whose `fetch_oauth_usage` returns an HTTP authentication error (401 or 403). HTTP 429 (rate limit) is passed through unchanged — it is not an authentication failure.
 - **AC-20**: When `run_isolated` returns `credentials: Some(new_json)`, the credential file for that account is updated on disk before the retry fetch.
 - **AC-21**: If the refresh attempt fails (subprocess error, or retried fetch still fails), the account's row shows the final error; the remaining accounts are still processed and the table is still rendered.
 - **AC-22**: `refresh::` does not affect `format::json` output structure — refreshed accounts appear as normal data objects, failed-refresh accounts appear as error objects.

@@ -12,11 +12,11 @@
 |------|---------------|
 | `build` | Compile project artifacts via `cargo build`. |
 | `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
-| `test.d/` | Layer directory: `l0` (host-native), `l1` (container-internal), `l2` (runbox, default). |
+| `test.d/` | Layer directory: `l0` (host-native, default), `l1` (container-internal). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `run` | Execute entry point binary — unavailable for this library crate. |
 | `lint` | Dispatcher: run linter; delegates to `lint.d/` layer by `VERB_LAYER`. |
-| `lint.d/` | Layer directory: `l1` (direct, `VERB_LAYER=l1`), `l2` (runbox, default). |
+| `lint.d/` | Layer directory: `l1` (direct; default). |
 | `verify` | Run full pre-push gate: tests, deps analysis, audit. |
 | `verbs` | List all available verbs and their availability (meta). |
 | `package_info` | Report deterministic package metadata as JSON (meta). |

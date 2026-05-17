@@ -4,4 +4,4 @@ set -euo pipefail
 DIR="$(dirname "${BASH_SOURCE[0]}")/run.d"
 LAYER="${VERB_LAYER:-}"
 [[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-exec "$DIR/l2" "$@"
+exec "$DIR/l1" "$@"

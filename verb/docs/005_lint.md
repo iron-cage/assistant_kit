@@ -41,10 +41,10 @@ set -euo pipefail
 DIR="$(dirname "${BASH_SOURCE[0]}")/lint.d"
 LAYER="${VERB_LAYER:-}"
 [[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-exec "$DIR/l2" "$@"
+exec "$DIR/l1" "$@"
 ```
 
-`verb/lint.d/l1` (module-specific, entered via `VERB_LAYER=l1`; example: `claude_profile`):
+`verb/lint.d/l1` (module-specific, default; example: `claude_profile`):
 ```bash
 #!/usr/bin/env bash
 # l1 — run cargo clippy directly (cargo ecosystem).

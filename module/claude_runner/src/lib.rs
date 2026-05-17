@@ -72,7 +72,7 @@ mod cli
     pub( super ) dir                  : Option< String >,
     pub( super ) dry_run              : bool,
     pub( super ) trace                : bool,
-    pub( super ) verbosity            : VerbosityLevel,
+    pub( super ) verbosity            : Option< VerbosityLevel >,
     pub( super ) help                 : bool,
     pub( super ) system_prompt        : Option< String >,
     pub( super ) append_system_prompt : Option< String >,
@@ -324,7 +324,7 @@ mod cli
       "--verbosity" =>
       {
         let raw = next_value( tokens, next, "--verbosity" )?;
-        parsed.verbosity = raw.parse::< VerbosityLevel >().map_err( Error::msg )?;
+        parsed.verbosity = Some( raw.parse::< VerbosityLevel >().map_err( Error::msg )? );
       }
       _ => return Ok( false ),
     }
@@ -476,6 +476,14 @@ mod cli
   ///
   /// Each field is updated only when it is still at its zero/default value — the CLI
   /// flag always wins when both are present (CLI-wins field-default check).
+  ///
+  /// Fix(issue-verbosity-cli-wins): verbosity was `VerbosityLevel` (non-optional) with the
+  /// check `parsed.verbosity == VerbosityLevel::default()`, making explicit `--verbosity 3`
+  /// (which equals the default 3) indistinguishable from "not set". `CLR_VERBOSITY` then
+  /// overwrote the explicit CLI value, violating the "CLI always wins" contract.
+  /// Root cause: non-optional field with default value 3 cannot signal "explicitly provided."
+  /// Pitfall: always use `Option<T>` (never `T == default()`) for env-var-fallback fields
+  /// whose default is a non-false/non-zero value — equality-with-default is ambiguous.
   pub( super ) fn apply_env_vars( parsed : &mut CliArgs )
   {
     if parsed.message.is_none()              { parsed.message              = env_str( "CLR_MESSAGE" ); }
@@ -492,11 +500,11 @@ mod cli
     }
     if parsed.session_dir.is_none()         { parsed.session_dir          = env_str( "CLR_SESSION_DIR" ); }
     if !parsed.dry_run                       { parsed.dry_run              = env_bool( "CLR_DRY_RUN" ); }
-    if parsed.verbosity == VerbosityLevel::default()
+    if parsed.verbosity.is_none()
     {
       if let Some( v ) = env_str( "CLR_VERBOSITY" )
       {
-        if let Ok( level ) = v.parse::< VerbosityLevel >() { parsed.verbosity = level; }
+        if let Ok( level ) = v.parse::< VerbosityLevel >() { parsed.verbosity = Some( level ); }
       }
     }
     if !parsed.trace                         { parsed.trace                = env_bool( "CLR_TRACE" ); }
@@ -851,8 +859,10 @@ pub fn run_cli()
     return;
   }
 
+  let verbosity = cli.verbosity.unwrap_or_default();
+
   // Trace / verbose detail preview: show command to stderr before executing.
-  if cli.trace || cli.verbosity.shows_verbose_detail()
+  if cli.trace || verbosity.shows_verbose_detail()
   {
     let env = builder.describe_env();
     let command = builder.describe();
@@ -866,10 +876,10 @@ pub fn run_cli()
   // --interactive overrides the message-default back to TTY passthrough.
   if cli.print_mode || ( cli.message.is_some() && !cli.interactive )
   {
-    run_print_mode( &builder, cli.verbosity );
+    run_print_mode( &builder, verbosity );
   }
   else
   {
-    run_interactive( &builder, cli.verbosity );
+    run_interactive( &builder, verbosity );
   }
 }

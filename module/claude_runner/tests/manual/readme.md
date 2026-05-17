@@ -274,8 +274,73 @@ cargo run -p claude_runner -- --dry-run --max-tokens 1 "test"
 
 **Expected:** Dry-run output shows `CLAUDE_CODE_MAX_OUTPUT_TOKENS=1`. Exit code 0.
 
+### TC-36: No-Ultrathink Suppresses Suffix
+```sh
+cargo run -p claude_runner -- --dry-run --no-ultrathink "do something"
+```
+
+**Expected:** Dry-run output message is `do something` with no `ultrathink` suffix. Exit code 0.
+
+### TC-37: Effort Level Override
+```sh
+cargo run -p claude_runner -- --dry-run --effort medium "test"
+```
+
+**Expected:** Dry-run output contains `--effort medium` (not `--effort max`). Exit code 0.
+
+### TC-38: No-Effort-Max Suppresses Effort Flag
+```sh
+cargo run -p claude_runner -- --dry-run --no-effort-max "test"
+```
+
+**Expected:** Dry-run output contains NO `--effort` flag at all. Exit code 0.
+
+Note: combining `--no-effort-max --effort medium` also produces no `--effort` flag — `--no-effort-max` suppresses the entire effort injection block.
+
+### TC-39: No-Chrome Suppresses Chrome Flag
+```sh
+cargo run -p claude_runner -- --dry-run --no-chrome "test"
+```
+
+**Expected:** Dry-run output contains NO `--chrome` flag. Exit code 0.
+
+### TC-40: No-Persist Adds Session-Persistence Flag
+```sh
+cargo run -p claude_runner -- --dry-run --no-persist "test"
+```
+
+**Expected:** Dry-run output contains `--no-session-persistence`. Exit code 0.
+
+### TC-41: JSON Schema
+```sh
+cargo run -p claude_runner -- --dry-run --json-schema '{"type":"string"}' "test"
+```
+
+**Expected:** Dry-run output contains `--json-schema` and `{"type":"string"}`. Exit code 0.
+
+### TC-42: MCP Config (Single)
+```sh
+cargo run -p claude_runner -- --dry-run --mcp-config /tmp/mcp.json "test"
+```
+
+**Expected:** Dry-run output contains `--mcp-config /tmp/mcp.json`. Exit code 0.
+
+### TC-42b: MCP Config (Repeatable)
+```sh
+cargo run -p claude_runner -- --dry-run --mcp-config /tmp/a.json --mcp-config /tmp/b.json "test"
+```
+
+**Expected:** Dry-run output contains both `--mcp-config /tmp/a.json` and `--mcp-config /tmp/b.json`. Exit code 0.
+
+### TC-43: Interactive Flag Suppresses Auto-Print
+```sh
+cargo run -p claude_runner -- --dry-run --interactive "message"
+```
+
+**Expected:** Dry-run output does NOT contain `--print` (interactive mode suppresses auto-print even when a message is given). Exit code 0.
+
 ## Pass Criteria
 
-All TC-1 through TC-35 must pass without unexpected errors or panics.
-TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-35 are runnable without a configured Claude API key.
+All TC-1 through TC-43 must pass without unexpected errors or panics.
+TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-43 are runnable without a configured Claude API key.
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.

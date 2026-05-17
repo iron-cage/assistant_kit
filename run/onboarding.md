@@ -116,11 +116,11 @@ _plugin_list_cmd() {
 
 ---
 
-### Step 5 — `verb/test`, `verb/test.d/l0`, `verb/test.d/l1`, `verb/test.d/l2`
+### Step 5 — `verb/test`, `verb/test.d/l0`, `verb/test.d/l1`
 
 `verb/test` is a self-dispatching dispatcher. When `VERB_LAYER=l1` (set by `runbox-run`
 before entering the container), it routes to `verb/test.d/l1`; invoked directly on the
-host it falls through to `l2`.
+host it falls through to `l0`.
 
 ```bash
 # verb/test — dispatcher (identical for all ecosystems)
@@ -130,10 +130,20 @@ set -euo pipefail
 DIR="$(dirname "${BASH_SOURCE[0]}")/test.d"
 LAYER="${VERB_LAYER:-}"
 [[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-exec "$DIR/l2" "$@"
+exec "$DIR/l0" "$@"
 ```
 
-`verb/test.d/l1` runs directly inside the container. Inside the container `SCRIPT_DIR`
+`verb/test.d/l0` is the default host-native layer — runs tests directly without Docker:
+
+```bash
+# verb/test.d/l0 — host-native layer (default; no Docker, no runbox)
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec "$SCRIPT_DIR/../../.venv/bin/pytest" "$SCRIPT_DIR/../../tests/" -v
+```
+
+`verb/test.d/l1` runs inside the container. Inside the container `SCRIPT_DIR`
 resolves to `/workspace/verb/test.d`, so `$SCRIPT_DIR/../..` is `/workspace`.
 
 ```bash
@@ -144,29 +154,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 exec "$SCRIPT_DIR/../../.venv/bin/pytest" "$SCRIPT_DIR/../../tests/" -v
 ```
 
-`verb/test.d/l2` delegates to runbox from the host:
-
-```bash
-# verb/test.d/l2 — host orchestration layer
-#!/usr/bin/env bash
-set -euo pipefail
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$SCRIPT_DIR/../.."
-if [[ "${1:-}" == "--dry-run" ]]; then echo "./run/runbox .test"; exit 0; fi
-exec ./run/runbox .test
-```
-
-`verb/test.d/l0` runs directly on the host without Docker — use when Docker is unavailable or to skip container startup overhead:
-
-```bash
-# verb/test.d/l0 — host-native layer (no Docker, no runbox)
-#!/usr/bin/env bash
-set -euo pipefail
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-exec "$SCRIPT_DIR/../../.venv/bin/pytest" "$SCRIPT_DIR/../../tests/" -v
-```
-
-Invoke via `VERB_LAYER=l0 ./verb/test` or directly as `./verb/test.d/l0`. Does not require Docker or runbox.
+`verb/` has no knowledge of Docker or `run/`. The Docker path is owned entirely by `run/runbox`: it sets `VERB_LAYER=l1`, calls `verb/test.d/l1` directly inside the container, and returns results. `verb/test` never references `run/`.
 
 Not needed for `.test.offline` — that command uses the baked image `CMD` directly.
 
@@ -185,7 +173,7 @@ set -euo pipefail
 DIR="$(dirname "${BASH_SOURCE[0]}")/lint.d"
 LAYER="${VERB_LAYER:-}"
 [[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-exec "$DIR/l2" "$@"
+exec "$DIR/l1" "$@"
 
 # verb/lint.d/l1 — container execution layer (Python example)
 #!/usr/bin/env bash
@@ -201,7 +189,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 exec "$SCRIPT_DIR/../../.venv/bin/python" -m my_package
 ```
 
-The `l2` layer for lint and run is identical to `verb/test.d/l2` but calls `.lint` / `.run`.
+Like `verb/test`, the lint and run dispatchers default to `l1` — direct execution without Docker.
 
 ---
 
@@ -209,9 +197,9 @@ The `l2` layer for lint and run is identical to `verb/test.d/l2` but calls `.lin
 
 ```bash
 chmod +x run/runbox run/verb-run
-chmod +x verb/test verb/test.d/l0 verb/test.d/l1 verb/test.d/l2
-chmod +x verb/lint verb/lint.d/l1 verb/lint.d/l2  # if using lint
-chmod +x verb/run  verb/run.d/l1  verb/run.d/l2   # if using run
+chmod +x verb/test verb/test.d/l0 verb/test.d/l1
+chmod +x verb/lint verb/lint.d/l1  # if using lint
+chmod +x verb/run  verb/run.d/l1   # if using run
 ```
 
 ### Usage
@@ -230,7 +218,7 @@ chmod +x verb/run  verb/run.d/l1  verb/run.d/l2   # if using run
 
 ### Multi-Layer Verbs
 
-A verb can define separate implementations for different execution layers. This is the mechanism for expressing that the same logical operation — "test this module" — means different things depending on where it runs: on the host, it means "orchestrate Docker"; inside the container, it means "run the test suite directly."
+A verb can define separate implementations for different execution layers. `verb/` has no knowledge of Docker or `run/` — it only knows two contexts: host-native (l0, default) and container-internal (l1, set by whoever invokes the container). `run/runbox` orchestrates the Docker path independently, calling `verb/test.d/l1` directly inside the container without going through the dispatcher.
 
 **Verb structure — dispatcher + `.d/` layers:**
 
@@ -238,15 +226,14 @@ A verb can define separate implementations for different execution layers. This 
 verb/
   test          ← dispatcher file (always executable; reads VERB_LAYER, self-dispatches)
   test.d/
-    l0          # host-native: direct execution on host (no Docker)
-    l1          # innermost: bare execution inside container (direct test runner call)
-    l2          # default: orchestration wrapper (delegates to runbox or equivalent)
+    l0          # default: host-native direct execution (no Docker)
+    l1          # container-internal: set by runbox-run via VERB_LAYER=l1
   lint          ← flat file (no .d/ directory; same behavior everywhere)
 ```
 
 `verb/test` is always a regular executable file — never a directory. The layers live in the adjacent `verb/test.d/` directory. Callers always invoke `bash verb/test` directly; the dispatcher selects the appropriate layer internally.
 
-**Layer naming is positional, not semantic.** `l0` = host-native direct execution (no Docker). `l1` = most direct execution inside the container (no wrappers). Higher numbers = more orchestration layers around it. What each layer does is documented inside the layer file itself, not in its name.
+**Layer naming is positional, not semantic.** `l0` = host-native direct execution (default, no Docker). `l1` = container-internal execution (set by runbox-run). What each layer does is documented inside the layer file itself, not in its name.
 
 ---
 
@@ -267,10 +254,10 @@ set -euo pipefail
 DIR="$(dirname "${BASH_SOURCE[0]}")/test.d"
 LAYER="${VERB_LAYER:-}"
 [[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-exec "$DIR/l2" "$@"   # default → l2 (Docker-orchestrated; developer-standard entry point)
+exec "$DIR/l0" "$@"   # default → l0 (host-native; developer-standard entry point)
 ```
 
-The last `exec` line encodes the default: `l2` for runbox-backed modules (reproducible Docker isolation), `l1` for simple modules that run directly. No separate `default` file is needed.
+The last `exec` line encodes the default: `l0` for modules with host-native and container layers, `l1` for simple modules that use a single execution layer. No separate `default` file is needed.
 
 ---
 
@@ -288,15 +275,14 @@ Callers use `verb-run test` or `bash verb/test` — both work identically since 
 
 ---
 
-**Example — a module using Docker for test isolation:**
+**Example — a module with host-native and container layers:**
 
 ```
 verb/
-  test          → dispatcher (default → l2)
+  test          → dispatcher (default → l0)
   test.d/
-    l0          → exec w3 .test level::3          # host-native (no Docker)
-    l1          → exec w3 .test level::3          # bare execution inside container
-    l2          → exec bash run/runbox .test       # host orchestration via Docker
+    l0          → exec w3 .test level::3          # host-native (default)
+    l1          → exec w3 .test level::3          # container-internal (VERB_LAYER=l1)
   lint          → exec cargo clippy ...            # flat: same everywhere
 ```
 
@@ -304,11 +290,6 @@ Invocation flows:
 
 ```
 Host (VERB_LAYER unset):
-  bash verb/test → dispatcher → test.d/l2 → bash run/runbox .test
-    runbox sets VERB_LAYER=l1 → bash verb/test inside container
-      → dispatcher → test.d/l1 → w3 .test level::3 → nextest ✓
-
-Host (VERB_LAYER=l0):
   bash verb/test → dispatcher → test.d/l0 → w3 .test level::3 → nextest ✓
 
 Host (VERB_LAYER unset):
@@ -316,6 +297,9 @@ Host (VERB_LAYER unset):
 
 Container (VERB_LAYER=l1, set by runbox):
   bash verb/test → dispatcher → test.d/l1 → w3 .test level::3 ✓
+
+Via Docker (run/runbox .test — run/ is fully independent of verb/):
+  ./run/runbox .test → docker run ... verb/test.d/l1 directly → w3 .test level::3 ✓
 ```
 
 ---

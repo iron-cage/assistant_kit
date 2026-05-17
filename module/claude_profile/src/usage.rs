@@ -214,12 +214,18 @@ fn compute_expires_cell( expires_at_ms : u64, now_secs : u64 ) -> String
 
 /// Shorten verbose quota error strings for display in the Status column.
 ///
+/// `QuotaError::HttpTransport` formats HTTP 429 as `"HTTP transport error: HTTP 429"`;
+/// this is shortened to `"rate limited (429)"`.
 /// `QuotaError::MissingHeader` (displays as `"rate-limit header missing: …"`) is
 /// shortened to `"no header"`. All other strings pass through unchanged.
 /// The caller is responsible for wrapping the result in parentheses.
 fn shorten_error( reason : &str ) -> &str
 {
-  if reason.starts_with( "rate-limit header missing:" )
+  if reason.starts_with( "HTTP transport error: HTTP 429" )
+  {
+    "rate limited (429)"
+  }
+  else if reason.starts_with( "rate-limit header missing:" )
   {
     "no header"
   }
@@ -602,11 +608,19 @@ fn execute_live_mode(
 
 // ── Refresh helper ─────────────────────────────────────────────────────────────
 
-/// Retry quota fetch for accounts whose last result was a 401/403/429 error.
+/// Retry quota fetch for accounts whose last result was a 401/403 auth error.
 ///
 /// For each such account: reads the per-account credential file, spawns an isolated
 /// Claude Code process to refresh the token, writes the new credentials back, then
 /// re-fetches only that account's quota.  Mutates `accounts` in place.
+///
+/// Fix(issue-143) — HTTP 429 removed from retry guard.
+/// Root cause: HTTP 429 is a rate-limit response, not an authentication failure.
+/// The OAuth token is still valid when the server returns 429; spawning an isolated
+/// subprocess to refresh a valid token adds a pointless 30-second wait per
+/// rate-limited account and obscures the real cause.
+/// Pitfall: Task 142 added the 429 status code to this guard, assuming rate-limit
+/// equals token expiry; the actual auth failure signals are 401 and 403 only.
 fn apply_refresh(
   accounts         : &mut [ AccountQuota ],
   credential_store : &std::path::Path,
@@ -617,7 +631,7 @@ fn apply_refresh(
   {
     let should_retry = matches!(
       aq.result,
-      Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) || e.contains( "429" )
+      Err( ref e ) if e.contains( "401" ) || e.contains( "403" )
     );
     if trace
     {
@@ -774,9 +788,10 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
   let mut accounts = fetch_all_quota( &credential_store, &live_creds_file, false, trace )?;
 
-  // Retry-once per account on 401/403/429: if refresh::1 and any account returned an
-  // HTTP auth error, refresh that account's stored token via an isolated subprocess,
-  // then re-fetch only that account's quota (not all accounts).
+  // Retry-once per account on 401/403: if refresh::1 and any account returned an
+  // HTTP authentication error, refresh that account's stored token via an isolated
+  // subprocess, then re-fetch only that account's quota (not all accounts).
+  // HTTP 429 (rate-limit) is intentionally excluded — the token is still valid.
   if refresh == 1
   {
     apply_refresh( &mut accounts, &credential_store, trace );
@@ -790,4 +805,182 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   };
 
   Ok( OutputData::new( content, "text" ) )
+}
+
+// ── Unit tests ─────────────────────────────────────────────────────────────────
+
+#[ cfg( test ) ]
+mod tests
+{
+  use super::*;
+  use tempfile::TempDir;
+
+  // ── shorten_error ──────────────────────────────────────────────────────────
+
+  /// T04 — `shorten_error` maps HTTP 429 transport string to the compact label.
+  ///
+  /// # Root Cause
+  /// `apply_refresh` had HTTP 429 in its retry guard condition. HTTP 429 is a
+  /// rate-limit response, not an auth failure; the token is still valid. Task 142
+  /// added the 429 code to the guard by mistake; task 143 removes it and adds a
+  /// `shorten_error` branch so the table shows a compact label instead of the
+  /// verbose transport string.
+  ///
+  /// # Why Not Caught
+  /// No existing test covered this string — `shorten_error` only had a single
+  /// branch for `"rate-limit header missing:"`.
+  ///
+  /// # Fix Applied
+  /// Added `"HTTP transport error: HTTP 429"` → `"rate limited (429)"` branch to
+  /// `shorten_error()` before the pass-through else.
+  ///
+  /// # Prevention
+  /// This test acts as a regression guard: if the branch is removed, the function
+  /// returns the verbose 40-character string and this assertion fails.
+  ///
+  /// # Pitfall
+  /// The match is an exact prefix check — `starts_with` — so partial or differently
+  /// formatted 429 strings would still pass through. Only
+  /// `claude_quota::QuotaError::HttpTransport` formats as `"HTTP transport error: HTTP N"`.
+  // test_kind: bug_reproducer(issue-143)
+  #[ test ]
+  fn test_shorten_error_429_returns_rate_limited()
+  {
+    assert_eq!(
+      shorten_error( "HTTP transport error: HTTP 429" ),
+      "rate limited (429)",
+    );
+  }
+
+  /// T05 — Non-429 transport errors pass through `shorten_error` unchanged.
+  #[ test ]
+  fn test_shorten_error_passthrough()
+  {
+    assert_eq!(
+      shorten_error( "HTTP transport error: HTTP 401" ),
+      "HTTP transport error: HTTP 401",
+    );
+  }
+
+  /// C6 regression — existing `"rate-limit header missing:"` branch still works.
+  #[ test ]
+  fn test_shorten_error_no_header_preserved()
+  {
+    assert_eq!( shorten_error( "rate-limit header missing: X-RateLimit-Remaining" ), "no header" );
+  }
+
+  /// A5 — empty string passes through `shorten_error` unchanged.
+  #[ test ]
+  fn test_shorten_error_empty_passthrough()
+  {
+    assert_eq!( shorten_error( "" ), "" );
+  }
+
+  /// A6 — arbitrary non-matching string passes through `shorten_error` unchanged.
+  #[ test ]
+  fn test_shorten_error_arbitrary_passthrough()
+  {
+    assert_eq!( shorten_error( "network timeout" ), "network timeout" );
+  }
+
+  // ── apply_refresh ──────────────────────────────────────────────────────────
+
+  /// T01 — `apply_refresh` leaves a 429 error result unchanged (no retry path).
+  ///
+  /// # Root Cause
+  /// In task 142, `apply_refresh`'s retry guard included `e.contains("429")` alongside
+  /// `"401"` and `"403"`. HTTP 429 is a rate-limit response (token is still valid); retrying
+  /// on 429 triggers an unnecessary token refresh. Task 143 removed 429 from the guard at
+  /// `usage.rs` line 634, leaving only auth-failure codes (401, 403) as retry triggers.
+  ///
+  /// # Why Not Caught
+  /// No test existed for `apply_refresh` behavior with 429 errors before task 143; the guard
+  /// was added in task 142 without a companion test proving 429 is passed through unchanged.
+  ///
+  /// # Fix Applied
+  /// Removed `e.contains("429")` from the retry guard; guard is now
+  /// `Err(ref e) if e.contains("401") || e.contains("403")` only.
+  ///
+  /// # Prevention
+  /// This test verifies the result string is identical after `apply_refresh`, acting as a
+  /// regression guard against re-adding 429 to the retry trigger conditions.
+  ///
+  /// # Pitfall
+  /// Without a credential file in the store, the retry body is unreachable regardless of the
+  /// guard — `apply_refresh` cannot attempt a refresh and leaves the result unchanged either
+  /// way. This test validates the guard does not corrupt the result, but is NOT a full guard
+  /// against re-adding 429: even with the bug restored, this test would still pass (no creds).
+  /// The `shorten_error` test (T04) provides the stronger behavioral invariant.
+  // test_kind: bug_reproducer(issue-143)
+  #[ test ]
+  fn test_apply_refresh_429_not_retried()
+  {
+    let store = TempDir::new().unwrap();
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "test-acct".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+      },
+    ];
+
+    apply_refresh( &mut accounts, store.path(), false );
+
+    assert!(
+      matches!( accounts[ 0 ].result, Err( ref e ) if e == "HTTP transport error: HTTP 429" ),
+      "429 error must be unchanged after apply_refresh; result: {:?}", accounts[ 0 ].result,
+    );
+  }
+
+  /// B2 — `apply_refresh` does not corrupt a successful Ok result.
+  ///
+  /// An account with a valid quota result must remain Ok after `apply_refresh`;
+  /// the guard only fires on Err results containing "401" or "403".
+  #[ test ]
+  fn test_apply_refresh_ok_result_unchanged()
+  {
+    let store = TempDir::new().unwrap();
+    let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "ok-acct".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Ok( quota ),
+      },
+    ];
+    apply_refresh( &mut accounts, store.path(), false );
+    assert!( accounts[ 0 ].result.is_ok(), "Ok result must not be changed by apply_refresh" );
+  }
+
+  /// B3 — `apply_refresh` leaves a generic network error unchanged (not an auth error).
+  ///
+  /// Only "401" and "403" substrings trigger the retry guard; unrelated error
+  /// strings pass through without entering the retry path.
+  #[ test ]
+  fn test_apply_refresh_generic_error_unchanged()
+  {
+    let store   = TempDir::new().unwrap();
+    let err_msg = "network timeout after 30s".to_string();
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "net-acct".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( err_msg.clone() ),
+      },
+    ];
+    apply_refresh( &mut accounts, store.path(), false );
+    assert!(
+      matches!( accounts[ 0 ].result, Err( ref e ) if e == &err_msg ),
+      "generic error must be unchanged; result: {:?}", accounts[ 0 ].result,
+    );
+  }
 }

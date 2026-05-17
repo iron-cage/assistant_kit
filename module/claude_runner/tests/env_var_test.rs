@@ -306,6 +306,65 @@ fn e12_clr_verbosity_sets_level()
   );
 }
 
+/// E12 CLI-wins: explicit `--verbosity 3` must win over `CLR_VERBOSITY=5`.
+///
+/// # Root Cause
+///
+/// `apply_env_vars` used `parsed.verbosity == VerbosityLevel::default()` (== 3) as a proxy
+/// for "verbosity was not explicitly set". This is wrong: explicitly passing `--verbosity 3`
+/// produces the same field value as "not set" because 3 is the default. The env var check
+/// fired and overwrote the explicit CLI value, causing `shows_verbose_detail()` to fire
+/// and emit the command preview to stderr even though the user asked for level 3.
+///
+/// # Why Not Caught
+///
+/// Existing verbosity tests used non-default values (0, 5) or omitted `--verbosity` entirely;
+/// no test combined explicit `--verbosity 3` with a `CLR_VERBOSITY` env var, so the
+/// equality-with-default failure was invisible until a user observed the preview appearing
+/// unexpectedly when running `--verbosity 3` alongside a `CLR_VERBOSITY=5` env var.
+///
+/// # Fix Applied
+///
+/// Changed `verbosity: VerbosityLevel` to `verbosity: Option<VerbosityLevel>` in `CliArgs`.
+/// `None` means "not set"; `Some(v)` means explicitly provided. `apply_env_vars` now checks
+/// `parsed.verbosity.is_none()`, which correctly excludes explicit `--verbosity 3`.
+///
+/// # Prevention
+///
+/// Use `Option<T>` (not `T`) for fields whose default is a non-false value; equality-with-
+/// default cannot distinguish "not set" from "explicitly set to default".
+///
+/// # Pitfall
+///
+/// `--timeout 30` in `isolated` has the same limitation and is intentionally documented as
+/// accepted (see `apply_isolated_env_vars` comment). Verbosity is fixed here because the
+/// `apply_env_vars` doc comment promises "CLI flag always wins when both are present".
+// test_kind: bug_reproducer(issue-verbosity-cli-wins)
+#[ test ]
+fn e12_verbosity_bug_cli_wins_when_env_overrides_default()
+{
+  use std::process::Command;
+
+  // Run with PATH=/nonexistent so execution fails immediately after the trace/preview check.
+  // With --verbosity 3: shows_verbose_detail() == false → no preview on stderr (correct).
+  // Bug: with CLR_VERBOSITY=5 overwriting --verbosity 3, shows_verbose_detail() == true
+  // and the assembled command preview (containing "--effort") appears on stderr.
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "--verbosity", "3", "task" ] )
+    .env( "CLR_VERBOSITY", "5" )
+    .env( "PATH", "/nonexistent" )
+    .output()
+    .expect( "failed to invoke clr binary" );
+
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "--effort" ),
+    "explicit --verbosity 3 must win over CLR_VERBOSITY=5; \
+     verbose detail preview (containing --effort) must NOT appear on stderr. Got:\n{stderr}"
+  );
+}
+
 // ─── E13: CLR_TRACE ───────────────────────────────────────────────────────────
 
 /// E13: `CLR_TRACE=1` enables trace mode, printing the command preview to stderr before execution.
