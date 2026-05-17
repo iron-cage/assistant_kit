@@ -1,6 +1,6 @@
 # Types
 
-### All Types (7 total)
+### All Types (11 total)
 
 | # | Type | Base | Used By | Purpose |
 |---|------|------|---------|---------|
@@ -11,8 +11,12 @@
 | 5 | `VerbosityLevel` | u8 | [`--verbosity`](param/12_verbosity.md) | Runner output gate (0–5) |
 | 6 | `SystemPromptText` | String | [`--system-prompt`](param/15_system_prompt.md), [`--append-system-prompt`](param/16_append_system_prompt.md) | Free-form system prompt text |
 | 7 | `EffortLevel` | enum | [`--effort`](param/17_effort.md) | Reasoning effort level (low/medium/high/max) |
+| 8 | `CredentialsFilePath` | String | [`--creds`](param/19_creds.md) | Path to existing credentials JSON file |
+| 9 | `TimeoutSecs` | u64 | [`--timeout`](param/20_timeout.md) | Subprocess wait limit in seconds |
+| 10 | `JsonSchemaText` | String | [`--json-schema`](param/23_json_schema.md) | JSON Schema object string for structured output |
+| 11 | `McpConfigPath` | String | [`--mcp-config`](param/24_mcp_config.md) | Filesystem path to MCP config JSON file |
 
-**Total:** 7 types
+**Total:** 11 types
 
 ---
 
@@ -191,4 +195,83 @@ clr --effort high "Fix bug"    # extended reasoning
 clr --effort medium "Fix bug"  # claude binary's default
 clr --effort low "Fix bug"     # fast, minimal reasoning
 clr --effort bad "Fix bug"     # error: unknown effort level
+```
+
+---
+
+### Type :: 8. `CredentialsFilePath`
+
+Filesystem path to an existing JSON file containing Claude OAuth credentials.
+The file is read before subprocess launch and written back in-place if Claude
+refreshes its OAuth token during the run.
+
+- **Base type:** String
+- **Constraints:** file must exist and be readable at invocation time
+- **Parsing:** consumed as the next token after `--creds`; path resolved
+  against the caller's working directory, not the isolated temp `HOME`
+- **Used by:** [`--creds`](param/19_creds.md)
+
+```sh
+clr isolated --creds ~/.claude/.credentials.json "Fix bug"
+clr isolated --creds /tmp/test_creds.json --timeout 10 "hi"
+```
+
+---
+
+### Type :: 9. `TimeoutSecs`
+
+Unsigned integer representing seconds to wait for the isolated Claude
+subprocess to complete. Zero causes immediate expiry — useful for testing
+the credential-refresh path without waiting for Claude to start.
+
+- **Base type:** u64 (unsigned 64-bit integer)
+- **Constraints:** non-negative integer; no upper bound enforced by clr
+- **Default:** 30
+- **Parsing:** `str::parse::<u64>()`; rejects negative, float, non-numeric
+- **Validation errors:**
+  - Non-numeric: `"invalid --timeout value: {raw}\nExpected non-negative integer"`
+- **Used by:** [`--timeout`](param/20_timeout.md)
+
+```sh
+clr isolated --creds creds.json --timeout 0 "test"    # immediate timeout
+clr isolated --creds creds.json --timeout 30 "test"   # default (same as omitting)
+clr isolated --creds creds.json --timeout 120 "test"  # 2-minute window
+clr isolated --creds creds.json --timeout -1 "test"   # error: negative
+```
+
+---
+
+### Type :: 10. `JsonSchemaText`
+
+JSON Schema document passed as a string to `--json-schema`. Must be a valid
+JSON object conforming to JSON Schema specification (draft-07 or later).
+
+- **Base type:** String
+- **Constraints:** must parse as valid JSON; must be a JSON object (`{…}`)
+- **Parsing:** consumed as the next token after `--json-schema`
+- **Validation errors:**
+  - Not valid JSON: forwarded to `claude`; subprocess rejects with error
+- **Used by:** [`--json-schema`](param/23_json_schema.md)
+
+```sh
+clr --json-schema '{"type":"object","properties":{"n":{"type":"string"}}}' "task"
+clr --json-schema "$(cat schema.json)" "task"
+```
+
+---
+
+### Type :: 11. `McpConfigPath`
+
+Filesystem path to an MCP (Model Context Protocol) configuration JSON file.
+Each value becomes one `--mcp-config` argument forwarded to the `claude`
+subprocess.
+
+- **Base type:** String
+- **Constraints:** must be a valid filesystem path; file should exist and be valid JSON
+- **Parsing:** consumed as the next token after `--mcp-config`; repeatable
+- **Used by:** [`--mcp-config`](param/24_mcp_config.md)
+
+```sh
+clr --mcp-config /path/to/mcp.json "task"
+clr --mcp-config server1.json --mcp-config server2.json "task"
 ```

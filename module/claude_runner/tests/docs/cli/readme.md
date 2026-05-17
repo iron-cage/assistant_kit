@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 2 clr commands, all 18 parameters, all 7 types, all 3 parameter groups, 1 env parameter, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 3 clr commands, all 24 parameters, all 11 types, all 4 parameter groups, 1 env parameter, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -23,10 +23,10 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
-| Commands | 2 | ≥8 IT each |
-| Parameters | 18 | ≥6 EC each |
-| Parameter groups | 3 | ≥4 CC each |
-| Types | 7 | ≥4 TC each |
+| Commands | 3 | ≥8 IT each |
+| Parameters | 24 | ≥6 EC each |
+| Parameter groups | 4 | ≥4 CC each |
+| Types | 11 | ≥4 TC each |
 | Env params | 1 | ≥6 EC each |
 
 ### Navigation
@@ -34,6 +34,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 #### Commands
 - [`run`](command/01_run.md)
 - [`help`](command/02_help.md)
+- [`isolated`](command/03_isolated.md)
 
 #### Parameters
 - [`[MESSAGE]`](param/01_message.md)
@@ -54,11 +55,18 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`--append-system-prompt`](param/16_append_system_prompt.md)
 - [`--effort`](param/17_effort.md)
 - [`--no-effort-max`](param/18_no_effort_max.md)
+- [`--creds`](param/19_creds.md)
+- [`--timeout`](param/20_timeout.md)
+- [`--no-chrome`](param/21_no_chrome.md)
+- [`--no-persist`](param/22_no_persist.md)
+- [`--json-schema`](param/23_json_schema.md)
+- [`--mcp-config`](param/24_mcp_config.md)
 
 #### Parameter Groups
 - [Claude-Native Flags](param_group/01_claude_native_flags.md)
 - [Runner Control](param_group/02_runner_control.md)
 - [System Prompt](param_group/03_system_prompt.md)
+- [Isolated Subcommand](param_group/04_isolated_subcommand.md)
 
 #### Types
 - [`MessageText`](type/01_message_text.md)
@@ -68,6 +76,10 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`VerbosityLevel`](type/05_verbosity_level.md)
 - [`SystemPromptText`](type/06_system_prompt_text.md)
 - [`EffortLevel`](type/07_effort_level.md)
+- [`CredentialsFilePath`](type/08_credentials_file_path.md)
+- [`TimeoutSecs`](type/09_timeout_secs.md)
+- [`JsonSchemaText`](type/10_json_schema_text.md)
+- [`McpConfigPath`](type/11_mcp_config_path.md)
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)

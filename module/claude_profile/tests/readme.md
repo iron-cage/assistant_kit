@@ -8,6 +8,7 @@
 | `responsibility_no_process_execution_test.rs` | Guard: no std::process import anywhere in crate source. |
 | `lib_test.rs` | Library exports: COMMANDS_YAML, register_commands(), command presence. |
 | `cli_adapter_test.rs` | Adapter and output module: argv conversion, aliases, bool normalization, validation, json_escape, format_duration_secs. |
+| `cli_clp_alias_test.rs` | Binary alias smoke tests: both `clp` and `claude_profile` aliases run and self-identify. |
 | `cli_integration_test.rs` | CLI binary integration: entry point for cli/ modules. |
 | `cli/` | Split integration test modules (help, accounts, mutations, token, paths, usage, persist, credentials, limits, dot, cross-cutting). |
 | `manual/` | Manual testing plan: live Claude Code account switching. |
@@ -24,6 +25,7 @@ token status classification, canonical path resolution, and the `clp` CLI binary
 
 - Library unit tests (account, token, paths): real tmpdir HOME, no subprocess
 - CLI integration tests (`cli/`): subprocess invocation of compiled `clp` binary
+- Binary alias smoke tests (`cli_clp_alias_test.rs`): both `clp` and `claude_profile` aliases
 - Library-level export verification (`lib_test.rs`)
 - Adapter and output module logic (`cli_adapter_test.rs`)
 - Responsibility boundary guards (no `std::process::Command` in crate source)
@@ -51,6 +53,7 @@ tests/
 ├── paths_tests.rs                        # ClaudePaths library tests
 ├── lib_test.rs                           # library export smoke tests
 ├── cli_adapter_test.rs                   # adapter + output unit tests
+├── cli_clp_alias_test.rs                 # binary alias smoke tests (clp + claude_profile)
 ├── cli_integration_test.rs               # integration test entry point
 ├── responsibility_no_process_execution_test.rs  # arch boundary guard
 ├── cli/
@@ -85,6 +88,7 @@ tests/
 | Path resolution (library) | `paths_tests.rs` | ClaudePaths construction and all path methods |
 | Library exports | `lib_test.rs` | COMMANDS_YAML, register_commands, command presence |
 | Adapter + output | `cli_adapter_test.rs` | argv_to_unilang_tokens, OutputOptions, json_escape, format_duration_secs |
+| Binary alias smoke | `cli_clp_alias_test.rs` | `clp` and `claude_profile` aliases run and self-identify |
 | Help CLI | `cli/accounts_test.rs` (H series) | --help, .help, no-args, unknown command |
 | Accounts CLI | `cli/accounts_test.rs` (acc series) | list text/json, empty dir, sorted, field-presence, named-account |
 | Account save/use/delete CLI | `cli/account_mutations_test.rs` | save, use, delete with all edge cases |

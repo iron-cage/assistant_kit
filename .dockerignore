@@ -8,3 +8,4 @@ target/
 
 # Git history is not needed inside the image.
 .git/
+

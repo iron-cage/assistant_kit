@@ -1,6 +1,6 @@
 # Parameters
 
-### All Parameters (22 total)
+### All Parameters (23 total)
 
 | # | Parameter | Type | Default | Valid Values | Purpose | Used In |
 |---|-----------|------|---------|--------------|---------|---------|
@@ -22,14 +22,15 @@
 | 16 | `billing::` | `bool` | `0` | `0`, `1` | Show billing type from `oauthAccount`, opt-in | 2 cmds |
 | 17 | `model::` | `bool` | `0` | `0`, `1` | Show active model from settings, opt-in | 2 cmds |
 | 18 | `current::` | `bool` | `1` | `0`, `1` | Show current (live) account line in `.accounts`; suppressed when `~/.claude/.credentials.json` is unreadable | 1 cmd |
-| 19 | `refresh::` | `bool` | `0` | `0`, `1` | On auth error (401/403), refresh token via isolated subprocess before retrying quota fetch (`.usage`) | 1 cmd |
+| 19 | `refresh::` | `bool` | `0` | `0`, `1` | On auth error (401/403/429), refresh token via isolated subprocess before retrying quota fetch (`.usage`) | 1 cmd |
 | 20 | `live::` | `bool` | `0` | `0`, `1` | Enable continuous refresh loop in `.usage`; incompatible with `format::json` | 1 cmd |
 | 21 | `interval::` | `u64` | `30` | ≥ 30 (seconds) | Seconds between full refresh cycles in live mode; validated only when `live::1` | 1 cmd |
 | 22 | `jitter::` | `u64` | `0` | 0 ≤ jitter ≤ interval | Max random seconds added to `interval` in live mode; validated only when `live::1` | 1 cmd |
+| 23 | `trace::` | `bool` | `0` | `0`, `1` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps (`.usage`) | 1 cmd |
 
-**Total:** 22 parameters
+**Total:** 23 parameters
 
-*Parameter 2 forms the Output Control group; parameters 5-18 form the Field Presence group; parameters 19-22 form the Fetch Behavior group*
+*Parameter 2 forms the Output Control group; parameters 5-18 form the Field Presence group; parameters 19-23 form the Fetch Behavior group*
 
 ---
 
@@ -412,7 +413,7 @@ current::0   → line omitted
 
 ### Parameter :: 19. `refresh::`
 
-When an account's quota fetch returns an HTTP authentication error (401 or 403), silently attempt a token refresh via `claude_runner_core::run_isolated()` and retry the fetch once before reporting failure.
+When an account's quota fetch returns an HTTP auth or rate-limit error (401, 403, or 429), silently attempt a token refresh via `claude_runner_core::run_isolated()` and retry the fetch once before reporting failure.
 
 - **Type:** `bool`
 - **Default:** `0` (off — auth errors pass through to the table as error rows)
@@ -425,13 +426,15 @@ When an account's quota fetch returns an HTTP authentication error (401 or 403),
 
 ```text
 refresh::0   → auth errors appear as error rows in the table (default)
-refresh::1   → on 401/403, attempt token refresh via isolated subprocess, then retry once
+refresh::1   → on 401/403/429, attempt token refresh via isolated subprocess, then retry once
 ```
 
 **Notes:**
-- Only HTTP 401/403 responses trigger a refresh attempt. HTTP 429 responses are NOT matched by the current guard (`e.contains("401") || e.contains("403")`), so rate-limit responses pass through as error rows with `refresh::1` having no effect. Network timeouts and non-4xx errors are also not retried. See [feature/017_token_refresh.md](../feature/017_token_refresh.md) § Scope Limitation 2 for the root cause.
+- HTTP 401, 403, and 429 responses all trigger a refresh attempt (guard: `e.contains("401") || e.contains("403") || e.contains("429")`). Network timeouts and non-4xx errors are not retried.
+- The refresh may silently have no effect when: (a) the token is not actually server-expired (claude detects no need to refresh), (b) `run_isolated` times out before credentials are updated, or (c) the refreshToken itself is also expired. Use `trace::1` to see exactly which step stopped the refresh for each account.
+- A 429 response from the quota API can mean genuine rate-limiting rather than token expiry. In that case the token is still valid, claude does not refresh it, and `refresh::1` has no effect — the rate limit is the real blocker.
 - Exactly one retry per account per invocation. If the retried fetch also fails, the final error is shown in the account's row.
-- When a refresh succeeds, the updated credential JSON is written back to the live session credentials file (`~/.claude/.credentials.json`) before retrying all accounts. Stored credential files for non-active accounts are not updated — `refresh::1` can only recover the currently active session's token, not tokens for other saved accounts. See [feature/017_token_refresh.md](../feature/017_token_refresh.md) § Scope Limitation 1 for the root cause. Both limitations are fixed by task 142.
+- The updated credential JSON is written back to the per-account credential file (`{credential_store}/{account}.credentials.json`); the shared live session file (`~/.claude/.credentials.json`) is not touched.
 
 ---
 
@@ -501,3 +504,35 @@ jitter::10   → each cycle waits interval + random[0..=10] seconds
 jitter::30   → each cycle waits interval + random[0..=30] seconds
 jitter::70   → exit 1: "jitter must not exceed interval" (when interval::60)
 ```
+
+---
+
+### Parameter :: 23. `trace::`
+
+When enabled, writes one `[trace]` diagnostic line to stderr for each internal operation performed by `.usage`: credential file reads, API calls (URL + token prefix), API results, and every step of the `refresh::1` retry path.
+
+- **Type:** `bool`
+- **Default:** `0` (off — no diagnostic output)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`; ignored in live monitor mode (`live::1`)
+- **Commands:** [`.usage`](commands.md#command--9-usage)
+- **Purpose:** Exposes the internal fetch and refresh mechanics so failures can be diagnosed without guessing. Particularly useful when `refresh::1` appears to have no effect — trace shows exactly whether the refresh was triggered, what `run_isolated` returned, and why the retry was skipped.
+- **Group:** Fetch Behavior
+
+**Examples:**
+
+```text
+trace::0   → no diagnostic output (default)
+trace::1   → print [trace] lines to stderr; stdout output unchanged
+```
+
+**Notes:**
+- Output goes to stderr so it does not interfere with `format::json` parsing on stdout.
+- Token values are truncated to the first 8 characters followed by `...` (`abc12345...`).
+- The fetch phase emits one `reading` line and one `GET` + `result` pair per account. The refresh phase emits one `should_retry` line per account plus detailed step lines for accounts where a refresh is attempted.
+- Typical trace lines when refresh has no effect (token not server-expired, rate-limited):
+  ```
+  [trace] refresh  i12@wbox.pro  should_retry=true (reason: HTTP transport error: HTTP 429)
+  [trace] refresh  i12@wbox.pro  reading /home/user/.pro/.../i12@wbox.pro.credentials.json
+  [trace] refresh  i12@wbox.pro  spawning run_isolated (timeout=30s)
+  [trace] refresh  i12@wbox.pro  run_isolated Err(claude timed out after 30 seconds) — skipping
+  ```

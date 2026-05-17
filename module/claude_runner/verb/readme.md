@@ -12,7 +12,7 @@
 |------|---------------|
 | `build` | Compile project artifacts via `cargo build`. |
 | `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
-| `test.d/` | Layer directory: `l1` (direct, `VERB_LAYER=l1`), `l2` (runbox, default). |
+| `test.d/` | Layer directory: `l0` (host-native), `l1` (container-internal), `l2` (runbox, default). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `run` | Dispatcher: execute entry point; delegates to `run.d/` layer by `VERB_LAYER`. |
 | `run.d/` | Layer directory: `l1` (direct, `VERB_LAYER=l1`), `l2` (runbox, default). |

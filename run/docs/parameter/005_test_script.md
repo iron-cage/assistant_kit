@@ -14,7 +14,7 @@ Module-level runboxes point at `verb/test` (the canonical `do`-protocol test ver
 
 ### Multi-Layer Verbs
 
-`test_script` may point to a verb dispatcher — a plain executable file that reads `VERB_LAYER` and self-dispatches to `test.d/l1` (container invocation, `VERB_LAYER=l1` set by `runbox-run`) or to `test.d/l2` by default (host invocation). `verb/test` is always a file; no directory detection is needed in `runbox-run`.
+`test_script` may point to a verb dispatcher — a plain executable file that reads `VERB_LAYER` and self-dispatches to `test.d/l0` (host-native, `VERB_LAYER=l0`), `test.d/l1` (container invocation, `VERB_LAYER=l1` set by `runbox-run`), or `test.d/l2` by default (host orchestration via runbox). `verb/test` is always a file; no directory detection is needed in `runbox-run`.
 
 `runbox-run` passes `-e VERB_LAYER=l1` to the container run. The dispatcher inside `verb/test` routes to `test.d/l1` for direct execution.
 

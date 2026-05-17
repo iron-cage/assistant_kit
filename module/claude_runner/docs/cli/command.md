@@ -1,13 +1,14 @@
 # Commands
 
-### All Commands (2 total)
+### All Commands (3 total)
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
 | 1 | `run` (default) | Execute Claude Code with given parameters | 18 | `clr "Fix bug" --model sonnet` |
-| 2 | `help` | Print usage information and exit | 0 | `clr --help` |
+| 2 | `isolated` | Run Claude with credential-isolated temp HOME | 3 | `clr isolated --creds creds.json "Fix bug"` |
+| 3 | `help` | Print usage information and exit | 0 | `clr --help` |
 
-**Total:** 2 commands
+**Total:** 3 commands
 
 ---
 
@@ -116,7 +117,69 @@ Claude attempts tool calls in a live conversation.
 
 ---
 
-### Command :: 2. `help`
+### Command :: 2. `isolated`
+
+Run Claude in a credential-isolated subprocess. Creates a temporary `HOME`
+directory containing only `.claude/.credentials.json` populated from
+`--creds`, then spawns Claude with `HOME=<temp>`. Waits at most `--timeout`
+seconds, then deletes the temp HOME unconditionally. If Claude refreshes its
+OAuth token, the updated credentials are written back to `--creds` in-place.
+
+**Syntax:**
+
+```sh
+clr isolated --creds <FILE> [--timeout <SECS>] [MESSAGE]
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| [`[MESSAGE]`](param/01_message.md) | [`MessageText`](type.md#type--1-messagetext) | — | Prompt forwarded to Claude |
+| [`--creds`](param/19_creds.md) | [`CredentialsFilePath`](type.md#type--8-credentialsfilepath) | — | Credentials JSON file path (required) |
+| [`--timeout`](param/20_timeout.md) | [`TimeoutSecs`](type.md#type--9-timeoutsecs) | 30 | Max seconds to wait for subprocess |
+| `-h`/`--help` | — | — | Print isolated subcommand help and exit 0 |
+
+**Exit Codes:**
+
+| Code | Meaning |
+|------|---------|
+| 0 | Claude exited successfully (may have refreshed creds in-place) |
+| 1 | Error (creds file not found, claude not in PATH, I/O failure) |
+| 2 | Timeout — subprocess did not finish within `--timeout` seconds |
+| N | Passthrough from claude subprocess (non-zero) |
+
+**Examples:**
+
+```sh
+# Quick prompt with isolated credentials
+clr isolated --creds ~/.claude/.credentials.json "What is 2+2?"
+
+# Custom timeout for long-running tasks
+clr isolated --creds /path/to/creds.json --timeout 120 "Refactor this module"
+
+# Verify credentials work (--version exits fast)
+clr isolated --creds /path/to/creds.json -- --version
+
+# Interactive isolated session (no message — REPL mode)
+clr isolated --creds /path/to/creds.json
+```
+
+**Notes:**
+
+The isolated subprocess has no access to the caller's real `$HOME` — no
+`~/.claude/settings.json`, no previous conversation state, no CLAUDE.md
+from the user's home. Only `.claude/.credentials.json` is present.
+
+If the subprocess times out but already wrote refreshed credentials (OAuth
+token refresh at startup before blocking on input), `clr isolated` exits 0
+and writes updated credentials back to `--creds` instead of returning exit 2.
+This matches the `IsolatedRunResult { exit_code: -1, credentials: Some(…) }`
+path in `claude_runner_core::run_isolated()`.
+
+---
+
+### Command :: 3. `help`
 
 Print usage information listing all commands, flags, and their defaults,
 then exit with code 0.

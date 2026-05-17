@@ -65,10 +65,14 @@ fn read_token( credential_store : &std::path::Path, name : &str ) -> Result< Str
 ///
 /// When `stagger` is `true`, each account fetch is preceded by a pseudo-random sleep
 /// of 200–1500 ms (thunder-herd mitigation for live monitor mode).
+///
+/// When `trace` is `true`, one `[trace]` line is written to stderr before reading
+/// each account's credentials and one after receiving the API response.
 fn fetch_all_quota(
   credential_store : &std::path::Path,
   live_creds_file  : &std::path::Path,
   stagger          : bool,
+  trace            : bool,
 ) -> Result< Vec< AccountQuota >, ErrorData >
 {
   let accounts = crate::account::list( credential_store )
@@ -103,10 +107,36 @@ fn fetch_all_quota(
       read_token( credential_store, &acct.name )
         .is_ok_and( |stored| stored == *live )
     } );
+    if trace
+    {
+      let creds_path = credential_store.join( format!( "{}.credentials.json", acct.name ) );
+      eprintln!( "[trace] {}  reading {}", acct.name, creds_path.display() );
+    }
     let result = match read_token( credential_store, &acct.name )
     {
-      Ok( token ) => claude_quota::fetch_oauth_usage( &token ).map_err( |e| e.to_string() ),
-      Err( e )    => Err( e ),
+      Ok( token ) =>
+      {
+        if trace
+        {
+          let prefix = if token.len() >= 8 { &token[ ..8 ] } else { &token };
+          eprintln!( "[trace] {}  GET {} (token: {}...)", acct.name, claude_quota::OAUTH_USAGE_URL, prefix );
+        }
+        let r = claude_quota::fetch_oauth_usage( &token ).map_err( |e| e.to_string() );
+        if trace
+        {
+          match &r
+          {
+            Ok( _ )  => eprintln!( "[trace] {}  result: OK", acct.name ),
+            Err( e ) => eprintln!( "[trace] {}  result: Err({})", acct.name, e ),
+          }
+        }
+        r
+      }
+      Err( e )    =>
+      {
+        if trace { eprintln!( "[trace] {}  cannot read token: {}", acct.name, e ); }
+        Err( e )
+      }
     };
     results.push( AccountQuota
     {
@@ -526,7 +556,7 @@ fn execute_live_mode(
     let _ = std::io::stdout().flush();
 
     // Fetch with per-account stagger delays (thunder-herd mitigation).
-    let accounts = fetch_all_quota( credential_store, live_creds_file, true )?;
+    let accounts = fetch_all_quota( credential_store, live_creds_file, true, false )?;
 
     let text = render_text( &accounts );
     print!( "{text}" );
@@ -568,6 +598,90 @@ fn execute_live_mode(
 
   println!( "\nMonitor stopped." );
   Ok( OutputData::new( String::new(), "text" ) )
+}
+
+// ── Refresh helper ─────────────────────────────────────────────────────────────
+
+/// Retry quota fetch for accounts whose last result was a 401/403/429 error.
+///
+/// For each such account: reads the per-account credential file, spawns an isolated
+/// Claude Code process to refresh the token, writes the new credentials back, then
+/// re-fetches only that account's quota.  Mutates `accounts` in place.
+fn apply_refresh(
+  accounts         : &mut [ AccountQuota ],
+  credential_store : &std::path::Path,
+  trace            : bool,
+)
+{
+  for aq in accounts
+  {
+    let should_retry = matches!(
+      aq.result,
+      Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) || e.contains( "429" )
+    );
+    if trace
+    {
+      let reason = aq.result.as_ref().err().map_or( "ok", String::as_str );
+      eprintln!( "[trace] refresh  {}  should_retry={} (reason: {})", aq.name, should_retry, reason );
+    }
+    if !should_retry { continue; }
+
+    // Read this account's credential file — not the shared live session file.
+    let creds_path = credential_store.join( format!( "{}.credentials.json", aq.name ) );
+    if trace { eprintln!( "[trace] refresh  {}  reading {}", aq.name, creds_path.display() ); }
+    let Ok( creds_json ) = std::fs::read_to_string( &creds_path )
+    else
+    {
+      if trace { eprintln!( "[trace] refresh  {}  cannot read credential file — skipping", aq.name ); }
+      continue;
+    };
+
+    // Attempt to refresh the token via an isolated subprocess.
+    if trace { eprintln!( "[trace] refresh  {}  spawning run_isolated (timeout=30s)", aq.name ); }
+    let isolated = match claude_runner_core::run_isolated( &creds_json, vec![], 30 )
+    {
+      Ok( r )  => r,
+      Err( e ) =>
+      {
+        if trace { eprintln!( "[trace] refresh  {}  run_isolated Err({}) — skipping", aq.name, e ); }
+        continue;
+      }
+    };
+    if trace
+    {
+      eprintln!( "[trace] refresh  {}  exit={} credentials_updated={}",
+        aq.name, isolated.exit_code, isolated.credentials.is_some() );
+    }
+
+    // Write the refreshed credentials back to the same per-account file.
+    let Some( new_creds ) = isolated.credentials
+    else
+    {
+      if trace { eprintln!( "[trace] refresh  {}  no credential change — skipping retry", aq.name ); }
+      continue;
+    };
+    if std::fs::write( &creds_path, &new_creds ).is_err()
+    {
+      if trace { eprintln!( "[trace] refresh  {}  write failed — skipping retry", aq.name ); }
+      continue;
+    }
+
+    // Re-read the refreshed token and retry only this account's quota.
+    if trace { eprintln!( "[trace] refresh  {}  token refreshed, retrying quota fetch", aq.name ); }
+    let Ok( token ) = read_token( credential_store, &aq.name ) else { continue; };
+    match claude_quota::fetch_oauth_usage( &token )
+    {
+      Ok( retried ) =>
+      {
+        if trace { eprintln!( "[trace] refresh  {}  retry OK", aq.name ); }
+        aq.result = Ok( retried );
+      }
+      Err( e ) =>
+      {
+        if trace { eprintln!( "[trace] refresh  {}  retry Err({})", aq.name, e ); }
+      }
+    }
+  }
 }
 
 // ── Command handler ────────────────────────────────────────────────────────────
@@ -614,6 +728,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( 0 ),
     _ => 0_u64,
   };
+  let trace = matches!( cmd.arguments.get( "trace" ), Some( Value::Integer( 1 ) ) );
 
   // Live-mode guards — fire BEFORE any network fetch, only when live::1 (AC-31).
   // Pitfall: placing these inside execute_live_mode() (after fetch_all_quota) would
@@ -657,41 +772,14 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     return execute_live_mode( &credential_store, &live_creds_file, interval, jitter );
   }
 
-  let mut accounts = fetch_all_quota( &credential_store, &live_creds_file, false )?;
+  let mut accounts = fetch_all_quota( &credential_store, &live_creds_file, false, trace )?;
 
   // Retry-once per account on 401/403/429: if refresh::1 and any account returned an
   // HTTP auth error, refresh that account's stored token via an isolated subprocess,
   // then re-fetch only that account's quota (not all accounts).
   if refresh == 1
   {
-    for aq in &mut accounts
-    {
-      let should_retry = matches!(
-        aq.result,
-        Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) || e.contains( "429" )
-      );
-      if !should_retry { continue; }
-
-      // Read this account's credential file — not the shared live session file.
-      let creds_path = credential_store.join( format!( "{}.credentials.json", aq.name ) );
-      let Ok( creds_json ) = std::fs::read_to_string( &creds_path )
-      else { continue; };
-
-      // Attempt to refresh the token via an isolated subprocess.
-      let Ok( isolated ) = claude_runner_core::run_isolated( &creds_json, vec![], 30 )
-      else { continue; };
-
-      // Write the refreshed credentials back to the same per-account file.
-      let Some( new_creds ) = isolated.credentials else { continue; };
-      if std::fs::write( &creds_path, &new_creds ).is_err() { continue; }
-
-      // Re-read the refreshed token and retry only this account's quota.
-      let Ok( token ) = read_token( &credential_store, &aq.name ) else { continue; };
-      if let Ok( retried ) = claude_quota::fetch_oauth_usage( &token )
-      {
-        aq.result = Ok( retried );
-      }
-    }
+    apply_refresh( &mut accounts, &credential_store, trace );
   }
 
   let content = match opts.format

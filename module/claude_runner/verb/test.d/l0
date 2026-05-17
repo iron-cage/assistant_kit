@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# l0 — host-native test execution; runs w3 .test level::3 directly on the host.
+# Entered via VERB_LAYER=l0 or by calling this script directly.
+# Use when Docker is unavailable or container startup overhead is undesirable.
+#
+# Differs from l1 (container-internal):
+#   - CARGO_NET_OFFLINE is NOT set — host cargo may update registry index
+#   - NO_COLOR is NOT set — real terminal controls colour; no PTY wrapping issue
+# Differs from l2 (runbox orchestration):
+#   - Does not invoke run/runbox or require Docker/Podman
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+if [[ "${1:-}" == "--dry-run" ]]; then echo "w3 .test level::3"; exit 0; fi
+exec w3 .test level::3

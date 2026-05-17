@@ -43,6 +43,7 @@ if [[ -z "$_workspace_root_raw" ]]; then
 else
   WORKSPACE_ROOT="$( cd "$CONFIG_DIR/$_workspace_root_raw" && pwd )"
 fi
+EXTRA_BUILD_CONTEXT="$(cfg_or extra_build_context "")"  # name=relpath; relpath resolved relative to CONFIG_DIR
 
 # ── Plugin hooks (no-ops; overridden by run/plugins.sh if present) ───────────
 _plugin_build_volumes()    { extra_volumes=();                  }
@@ -113,6 +114,14 @@ _build()
   # Skipping cleanup avoids this and lets the final tagged image survive.
   # Accumulated intermediate containers are pruned here before each build.
   "$CONTAINER_CMD" container prune -f &>/dev/null || true
+  local _extra_ctx_args=()
+  if [[ -n "$EXTRA_BUILD_CONTEXT" ]]; then
+    local _bc_name _bc_relpath _bc_abspath
+    _bc_name="${EXTRA_BUILD_CONTEXT%%=*}"
+    _bc_relpath="${EXTRA_BUILD_CONTEXT#*=}"
+    _bc_abspath="$( cd "$CONFIG_DIR/$_bc_relpath" && pwd )"
+    _extra_ctx_args=( "--build-context" "${_bc_name}=${_bc_abspath}" )
+  fi
   # shellcheck disable=SC2086
   "$CONTAINER_CMD" build \
     --rm=false \
@@ -125,6 +134,7 @@ _build()
     --build-arg "SYSTEM_PACKAGES=$SYSTEM_PACKAGES" \
     --build-arg "CARGO_FEATURES=$CARGO_FEATURES" \
     --build-arg "WORKSPACE_DIR=$WORKSPACE_DIR" \
+    "${_extra_ctx_args[@]+"${_extra_ctx_args[@]}"}" \
     -t "$IMAGE" \
     "$WORKSPACE_ROOT"
 

@@ -1,6 +1,6 @@
 # Workflows
 
-### All Workflows (9 total)
+### All Workflows (10 total)
 
 | # | Workflow | Primary Flags | Use Case |
 |---|----------|---------------|----------|
@@ -13,8 +13,9 @@
 | 7 | Fresh session | `--new-session` | Starting a new unrelated task |
 | 8 | Trace execution | `--trace` | See command on stderr then execute |
 | 9 | Custom system prompt | `--system-prompt` | Domain-specific behavior injection |
+| 10 | Credential-isolated execution | `isolated --creds` | Run Claude with separate credentials |
 
-**Total:** 9 workflows
+**Total:** 10 workflows
 
 ---
 
@@ -186,3 +187,30 @@ clr --system-prompt "You are a Rust expert." \
     --append-system-prompt "Be concise." \
     "Explain this trait"
 ```
+
+---
+
+### Workflow :: 10. Credential-Isolated Execution
+
+Run Claude with a separate set of credentials in a fully isolated environment.
+The subprocess sees only the provided credentials file — no access to the
+caller's real `$HOME`, settings, or previous conversation state.
+
+```sh
+# Quick prompt with isolated credentials
+clr isolated --creds ~/.claude/.credentials.json "What is 2+2?"
+
+# Custom timeout for longer tasks
+clr isolated --creds /path/to/creds.json --timeout 120 "Refactor this module"
+
+# Verify credentials without running a task (fast --version check)
+clr isolated --creds /path/to/creds.json -- --version
+
+# Interactive REPL in isolation (no message — REPL mode)
+clr isolated --creds /path/to/creds.json
+```
+
+**Note:** If Claude refreshes its OAuth token during the run, the updated
+credentials are written back to the `--creds` file before `clr isolated` exits.
+Use `--timeout 0` to force the credential-refresh path without waiting for a
+full session to complete.

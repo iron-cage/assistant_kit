@@ -52,7 +52,7 @@ pub fn register_commands( _registry : &mut unilang::registry::CommandRegistry ) 
 mod cli
 {
   use super::VerbosityLevel;
-  use claude_runner_core::{ ClaudeCommand, EffortLevel };
+  use claude_runner_core::{ ClaudeCommand, EffortLevel, RunnerError, run_isolated };
   use error_tools::{ Error, Result };
 
   /// Parsed CLI arguments.
@@ -81,12 +81,26 @@ mod cli
     pub( super ) no_effort_max        : bool,
   }
 
+  /// Parsed arguments for the `isolated` subcommand.
+  #[ derive( Default ) ]
+  pub( super ) struct IsolatedArgs
+  {
+    pub( super ) creds_path       : String,
+    pub( super ) timeout_secs     : u64,
+    pub( super ) message          : Option< String >,
+    pub( super ) passthrough_args : Vec< String >,
+  }
+
   pub( super ) fn print_help()
   {
     println!( "clr — Execute Claude Code with configurable parameters" );
     println!();
     println!( "USAGE:" );
     println!( "  clr [OPTIONS] [MESSAGE]" );
+    println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [MESSAGE]" );
+    println!();
+    println!( "COMMANDS:" );
+    println!( "  isolated                           Run Claude with credential-isolated temp HOME" );
     println!();
     println!( "ARGUMENTS:" );
     println!( "  [MESSAGE]                          Prompt message for Claude" );
@@ -110,6 +124,10 @@ mod cli
     println!( "  --no-effort-max                    Suppress default --effort max injection" );
     println!( "  --verbosity <0-5>                  Runner output verbosity level (default: 3)" );
     println!( "  -h, --help                         Show this help" );
+    println!();
+    println!( "ISOLATED OPTIONS:" );
+    println!( "  --creds <FILE>                     Credentials JSON file (required for isolated)" );
+    println!( "  --timeout <SECS>                   Max seconds to wait for subprocess (default: 30)" );
   }
 
   /// Consume the next argv element as a flag's value.
@@ -140,6 +158,73 @@ mod cli
   fn parse_effort_level( raw : &str ) -> Result< EffortLevel >
   {
     raw.parse::< EffortLevel >().map_err( Error::msg )
+  }
+
+  /// Parse a raw string as a `u64` timeout in seconds.
+  ///
+  /// Rejects negative numbers (which start with `-` and fail `u64` parsing)
+  /// and non-numeric strings with a clear error message.
+  fn parse_timeout( raw : &str ) -> Result< u64 >
+  {
+    raw.parse::< u64 >().map_err( | _ |
+      Error::msg( format!(
+        "invalid --timeout value: {raw}\n\
+         Expected non-negative integer"
+      ) )
+    )
+  }
+
+  /// Parse `tokens` as arguments to the `isolated` subcommand.
+  ///
+  /// Recognises `--creds <FILE>`, `--timeout <SECS>`, a positional `[MESSAGE]`,
+  /// and `-- <PASSTHROUGH...>`. Everything after `--` is collected verbatim.
+  /// Unknown flags (before `--`) are rejected with an error.
+  pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedArgs >
+  {
+    let mut creds_path       : Option< String > = None;
+    let mut timeout_secs     : u64              = 30;
+    let mut message_parts    : Vec< String >    = Vec::new();
+    let mut passthrough_args : Vec< String >    = Vec::new();
+    let mut i = 0;
+    while i < tokens.len()
+    {
+      let token = tokens[ i ].as_str();
+      match token
+      {
+        "--" =>
+        {
+          passthrough_args.extend( tokens[ i + 1 .. ].iter().cloned() );
+          break;
+        }
+        "--creds" =>
+        {
+          creds_path = Some( next_value( tokens, i + 1, "--creds" )?.to_string() );
+          i += 1;
+        }
+        "--timeout" =>
+        {
+          let raw      = next_value( tokens, i + 1, "--timeout" )?;
+          timeout_secs = parse_timeout( raw )?;
+          i += 1;
+        }
+        s if s.starts_with( '-' ) =>
+        {
+          return Err( Error::msg( format!(
+            "unknown option: {s}\nRun with --help for usage."
+          ) ) );
+        }
+        _ =>
+        {
+          if !tokens[ i ].is_empty() { message_parts.push( tokens[ i ].clone() ); }
+        }
+      }
+      i += 1;
+    }
+    let creds_path = creds_path.ok_or_else( ||
+      Error::msg( "missing required argument: --creds\nRun with --help for usage." )
+    )?;
+    let message = if message_parts.is_empty() { None } else { Some( message_parts.join( " " ) ) };
+    Ok( IsolatedArgs { creds_path, timeout_secs, message, passthrough_args } )
   }
 
   /// Parse a value-consuming flag (`--flag value` pair) into `parsed`.
@@ -469,6 +554,75 @@ mod cli
       std::process::exit( status.code().unwrap_or( 1 ) );
     }
   }
+
+  /// Execute the `isolated` subcommand.
+  ///
+  /// Reads the credentials file at `creds_path`, builds the argument list for
+  /// `run_isolated`, then handles the result:
+  ///
+  /// - **Success (`exit_code >= 0`):** propagates the subprocess exit code.
+  /// - **Success (`exit_code == -1`, creds refreshed at startup before timeout):**
+  ///   writes back updated credentials and exits 0.
+  /// - **`Err(Timeout)`:** subprocess exceeded the deadline without refreshing
+  ///   credentials — exits 2.
+  /// - **Other errors:** exits 1 with an error message.
+  ///
+  /// This function never returns; it always calls `std::process::exit`.
+  pub( super ) fn run_isolated_command
+  (
+    creds_path       : &str,
+    timeout_secs     : u64,
+    message          : Option< &str >,
+    passthrough_args : &[ String ],
+  ) -> !
+  {
+    let creds_json = match std::fs::read_to_string( creds_path )
+    {
+      Ok( s )  => s,
+      Err( e ) =>
+      {
+        eprintln!( "Error: cannot read credentials file '{creds_path}': {e}" );
+        std::process::exit( 1 );
+      }
+    };
+    // Build the args to forward: --print + message when a message is given,
+    // then any passthrough args supplied after `--`.
+    let mut args : Vec< String > = message
+      .map( | m | vec![ "--print".to_string(), m.to_string() ] )
+      .unwrap_or_default();
+    args.extend_from_slice( passthrough_args );
+    match run_isolated( &creds_json, args, timeout_secs )
+    {
+      Ok( result ) =>
+      {
+        // Write back refreshed credentials if Claude updated them before
+        // the subprocess finished (or before the timeout killed it).
+        if let Some( ref new_creds ) = result.credentials
+        {
+          if let Err( e ) = std::fs::write( creds_path, new_creds )
+          {
+            eprintln!( "Warning: could not write back refreshed credentials to '{creds_path}': {e}" );
+          }
+        }
+        if !result.stderr.is_empty() { eprint!( "{}", result.stderr ); }
+        if !result.stdout.is_empty() { print!( "{}", result.stdout ); }
+        // exit_code == -1: subprocess was killed by timeout BUT credentials were
+        // refreshed before the kill — per spec, exit 0 and write-back already done.
+        let exit_code = if result.exit_code == -1 { 0 } else { result.exit_code };
+        std::process::exit( exit_code );
+      }
+      Err( RunnerError::Timeout { secs } ) =>
+      {
+        eprintln!( "Error: isolated subprocess timed out after {secs} seconds" );
+        std::process::exit( 2 );
+      }
+      Err( e ) =>
+      {
+        eprintln!( "Error: {e}" );
+        std::process::exit( 1 );
+      }
+    }
+  }
 }
 
 #[ cfg( feature = "enabled" ) ]
@@ -478,9 +632,32 @@ mod cli
 #[ inline ]
 pub fn run_cli()
 {
-  use cli::{ parse_args, build_claude_command, handle_dry_run, print_help, run_print_mode, run_interactive };
+  use cli::{
+    parse_args, parse_isolated_args, build_claude_command, handle_dry_run,
+    print_help, run_print_mode, run_interactive, run_isolated_command,
+  };
 
   let tokens : Vec< String > = std::env::args().skip( 1 ).collect();
+
+  // Dispatch `isolated` subcommand before the standard flag parser.
+  if tokens.first().map( String::as_str ) == Some( "isolated" )
+  {
+    let isolated_cli = match parse_isolated_args( &tokens[ 1 .. ] )
+    {
+      Ok( c )  => c,
+      Err( e ) =>
+      {
+        eprintln!( "Error: {e}" );
+        std::process::exit( 1 );
+      }
+    };
+    run_isolated_command(
+      &isolated_cli.creds_path,
+      isolated_cli.timeout_secs,
+      isolated_cli.message.as_deref(),
+      &isolated_cli.passthrough_args,
+    );
+  }
 
   let cli = match parse_args( &tokens )
   {

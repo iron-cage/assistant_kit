@@ -23,7 +23,6 @@ members = [
   "module/claude_quota",
   "module/dream",
   "module/assistant",
-  "module/cli_fmt",
 ]
 exclude = [ "-*" ]
 
@@ -175,7 +174,7 @@ features = [ "enabled", "approach_yaml_multi_build" ]
 default-features = false
 
 [workspace.dependencies.cli_fmt]
-path = "module/cli_fmt"
+path = "../../wtools/dev/module/core/cli_fmt"
 default-features = false
 features = [ "cli_help_template" ]
 

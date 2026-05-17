@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clr parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 18 clr parameter edge case files.
+- **In Scope**: All 24 clr parameter edge case files.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
@@ -31,6 +31,12 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | 16_append_system_prompt.md | Edge cases for `--append-system-prompt` flag |
 | 17_effort.md | Edge cases for `--effort` flag |
 | 18_no_effort_max.md | Edge cases for `--no-effort-max` flag |
+| 19_creds.md | Edge cases for `--creds` flag |
+| 20_timeout.md | Edge cases for `--timeout` flag |
+| 21_no_chrome.md | Edge cases for `--no-chrome` flag |
+| 22_no_persist.md | Edge cases for `--no-persist` flag |
+| 23_json_schema.md | Edge cases for `--json-schema` parameter |
+| 24_mcp_config.md | Edge cases for `--mcp-config` parameter |
 
 ### Index
 
@@ -54,3 +60,9 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `--append-system-prompt` | [16_append_system_prompt.md](16_append_system_prompt.md) | 6 EC |
 | `--effort` | [17_effort.md](17_effort.md) | 8 EC |
 | `--no-effort-max` | [18_no_effort_max.md](18_no_effort_max.md) | 6 EC |
+| `--creds` | [19_creds.md](19_creds.md) | 6 EC |
+| `--timeout` | [20_timeout.md](20_timeout.md) | 6 EC |
+| `--no-chrome` | [21_no_chrome.md](21_no_chrome.md) | 6 EC |
+| `--no-persist` | [22_no_persist.md](22_no_persist.md) | 6 EC |
+| `--json-schema` | [23_json_schema.md](23_json_schema.md) | 6 EC |
+| `--mcp-config` | [24_mcp_config.md](24_mcp_config.md) | 6 EC |

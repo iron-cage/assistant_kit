@@ -1,14 +1,15 @@
 # Parameter Groups
 
-### All Groups (3 total)
+### All Groups (4 total)
 
 | # | Group | Parameters | Purpose |
 |---|-------|------------|---------|
-| 1 | Claude-Native Flags | 4 | Flags passed through to the claude subprocess |
-| 2 | Runner Control | 11 | Flags consumed by the runner itself |
+| 1 | Claude-Native Flags | 7 | Flags passed through to the claude subprocess |
+| 2 | Runner Control | 12 | Flags consumed by the runner itself |
 | 3 | System Prompt | 2 | Flags that inject or extend the system prompt sent to claude |
+| 4 | Isolated Subcommand | 2 | Flags exclusive to the `isolated` subcommand |
 
-**Total:** 3 groups
+**Total:** 4 groups
 
 ---
 
@@ -26,7 +27,7 @@ Use `--no-skip-permissions` (Runner Control) to disable the automatic bypass.
 **Note:** `--effort max` is injected automatically by `clr` (default-on).
 Use `--effort <level>` to override or `--no-effort-max` (Runner Control) to suppress entirely.
 
-**Coherence test:** "Is this flag consumed by the claude subprocess?" — YES for all 4.
+**Coherence test:** "Is this flag consumed by the claude subprocess?" — YES for all 7.
 
 **Parameters:**
 
@@ -36,6 +37,9 @@ Use `--effort <level>` to override or `--no-effort-max` (Runner Control) to supp
 | [`--model`](param/03_model.md) | [`ModelName`](type.md#type--4-modelname) | Model selection |
 | [`--verbose`](param/04_verbose.md) | bool | Claude verbose output |
 | [`--effort`](param/17_effort.md) | [`EffortLevel`](type.md#type--7-effortlevel) | Reasoning effort level (default: max) |
+| [`--no-persist`](param/22_no_persist.md) | bool | Disable session persistence (`--no-session-persistence`) |
+| [`--json-schema`](param/23_json_schema.md) | [`JsonSchemaText`](type.md#type--10-jsonschematext) | JSON Schema for structured output |
+| [`--mcp-config`](param/24_mcp_config.md) | [`McpConfigPath`](type.md#type--11-mcpconfigpath) | MCP server config file (repeatable) |
 
 **Used by:** [`run`](command.md#command--1-run)
 
@@ -46,6 +50,7 @@ Use `--effort <level>` to override or `--no-effort-max` (Runner Control) to supp
 - `--new-session`: controls runner session behavior, not forwarded to claude
 - `--no-skip-permissions`: controls whether runner injects `--dangerously-skip-permissions`; consumed by runner, not forwarded to claude
 - `--no-effort-max`: controls whether runner injects `--effort max`; consumed by runner, not forwarded to claude
+- `--no-chrome`: controls whether runner injects `--chrome`; consumed by runner, not forwarded to claude
 
 **Typical usage:**
 
@@ -61,7 +66,7 @@ Flags consumed by the runner itself before or instead of invoking the
 claude subprocess. These control execution behavior, not Claude Code
 behavior.
 
-**Coherence test:** "Is this flag consumed by the runner, not Claude?" — YES for all 11.
+**Coherence test:** "Is this flag consumed by the runner, not Claude?" — YES for all 12.
 
 **Parameters:**
 
@@ -78,6 +83,7 @@ behavior.
 | [`--trace`](param/13_trace.md) | bool | Print env+command to stderr then execute |
 | [`--no-ultrathink`](param/14_no_ultrathink.md) | bool | Disable default ultrathink message suffix |
 | [`--no-effort-max`](param/18_no_effort_max.md) | bool | Suppress default `--effort max` injection |
+| [`--no-chrome`](param/21_no_chrome.md) | bool | Suppress default `--chrome` injection |
 
 **Used by:** [`run`](command.md#command--1-run)
 
@@ -132,4 +138,34 @@ sent to claude?" — YES for both.
 ```sh
 clr --system-prompt "You are a Rust expert." "Review this PR"
 clr --append-system-prompt "Always respond in JSON." "List failing tests"
+```
+
+---
+
+### Group :: 4. Isolated Subcommand
+
+Parameters exclusive to the `isolated` subcommand. They configure the
+credential-isolated execution environment and are not available on the
+`run` command.
+
+**Coherence test:** "Is this parameter exclusive to `clr isolated`?" — YES for both.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| [`--creds`](param/19_creds.md) | [`CredentialsFilePath`](type.md#type--8-credentialsfilepath) | Credentials JSON file for isolation (required) |
+| [`--timeout`](param/20_timeout.md) | [`TimeoutSecs`](type.md#type--9-timeoutsecs) | Max seconds to wait for isolated subprocess |
+
+**Used by:** [`isolated`](command.md#command--2-isolated)
+
+**Why NOT in other groups:**
+- `--creds`: exclusive to `isolated`; sets credentials file — not applicable to `run`
+- `--timeout`: exclusive to `isolated`; controls subprocess wait time — not applicable to `run`
+
+**Typical usage:**
+
+```sh
+clr isolated --creds ~/.claude/.credentials.json "Fix bug"
+clr isolated --creds /path/to/creds.json --timeout 120 "Refactor this"
 ```

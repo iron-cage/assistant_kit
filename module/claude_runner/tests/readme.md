@@ -19,6 +19,7 @@
 | YAML structure | `commands_yaml_test.rs` | `.claude` and `.claude.help` command definitions |
 | Library API | `lib_test.rs` | `register_commands()` callability |
 | Stale-ref guards | `stale_ref_guard_test.rs` | No `claude_runner_plugin` or `dream_agent` references |
+| Isolated subcommand | `isolated.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs |
 | Shared helpers | `common.rs` | Shared test helper: `run_cli()` binary invocation |
 
 ### Responsibility Table
@@ -34,6 +35,7 @@
 | `commands_yaml_test.rs` | Verify YAML defines `.claude`, `.claude.help`, and rejects `.please`. |
 | `lib_test.rs` | Library API: `register_commands()` callable. |
 | `stale_ref_guard_test.rs` | Guard against stale `claude_runner_plugin` and `dream_agent` references. |
+| `isolated.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs. |
 | `common.rs` | Shared test helper: `run_cli()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

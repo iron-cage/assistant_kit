@@ -17,4 +17,3 @@
 | claude_quota | Layer * standalone primitive: Anthropic API rate-limit HTTP transport |
 | dream | Layer 2 library facade re-exporting all core crates (Layer 0, *, 1) |
 | assistant | Layer 3 super-app aggregating all Layer 2 CLI tools into ast |
-| cli_fmt | Local copy of wtools cli_fmt for Docker build context isolation |

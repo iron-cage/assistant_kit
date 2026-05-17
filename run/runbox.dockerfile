@@ -143,6 +143,9 @@ FROM chef AS planner
 ARG WORKSPACE_DIR=/workspace
 WORKDIR $WORKSPACE_DIR
 COPY . .
+# cli_fmt lives in wtools outside the build context; injected via --build-context wtools_cli_fmt.
+# Cargo resolves path = "../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
+COPY --from=wtools_cli_fmt . /wtools/dev/module/core/cli_fmt/
 RUN cargo chef prepare --recipe-path recipe.json
 
 # ── Stage 2: cook — compiles dependencies ─────────────────────────────────────
@@ -157,6 +160,9 @@ ARG WORKSPACE_DIR=/workspace
 ARG CMD_SCOPE=--workspace
 WORKDIR $WORKSPACE_DIR
 COPY --from=planner $WORKSPACE_DIR/recipe.json recipe.json
+# cli_fmt lives in wtools outside the build context; injected via --build-context wtools_cli_fmt.
+# Cargo resolves path = "../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
+COPY --from=wtools_cli_fmt . /wtools/dev/module/core/cli_fmt/
 RUN CARGO_BUILD_JOBS=1 cargo chef cook \
       --recipe-path recipe.json \
       $CMD_SCOPE \
@@ -223,6 +229,9 @@ COPY --from=cook $WORKSPACE_DIR/target     $WORKSPACE_DIR/target
 
 # Full workspace source (includes test_script paths invoked by cmd_test).
 COPY . .
+# cli_fmt lives in wtools outside the build context; injected via --build-context wtools_cli_fmt.
+# Cargo resolves path = "../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
+COPY --from=wtools_cli_fmt . /wtools/dev/module/core/cli_fmt/
 
 # Create the seed mount point so Docker initialises the named volume with TEST_USER
 # ownership when _ensure_build_cache first mounts it.  Without this mkdir, Docker

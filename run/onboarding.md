@@ -60,6 +60,11 @@ lint_script: verb/lint
 
 # Optional: script path executed by .run.
 run_script: verb/run
+
+# Optional: extra named build context passed as --build-context to the container build.
+# Format: name=relpath  (relpath resolved relative to this config file's directory)
+# Use when a Dockerfile stage references FROM <name> pointing outside WORKSPACE_ROOT.
+# extra_build_context: shared=../../shared
 ```
 
 → Full parameter reference: `run/docs/parameter/`
@@ -111,7 +116,7 @@ _plugin_list_cmd() {
 
 ---
 
-### Step 5 — `verb/test`, `verb/test.d/l1`, `verb/test.d/l2`
+### Step 5 — `verb/test`, `verb/test.d/l0`, `verb/test.d/l1`, `verb/test.d/l2`
 
 `verb/test` is a self-dispatching dispatcher. When `VERB_LAYER=l1` (set by `runbox-run`
 before entering the container), it routes to `verb/test.d/l1`; invoked directly on the
@@ -150,6 +155,18 @@ cd "$SCRIPT_DIR/../.."
 if [[ "${1:-}" == "--dry-run" ]]; then echo "./run/runbox .test"; exit 0; fi
 exec ./run/runbox .test
 ```
+
+`verb/test.d/l0` runs directly on the host without Docker — use when Docker is unavailable or to skip container startup overhead:
+
+```bash
+# verb/test.d/l0 — host-native layer (no Docker, no runbox)
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec "$SCRIPT_DIR/../../.venv/bin/pytest" "$SCRIPT_DIR/../../tests/" -v
+```
+
+Invoke via `VERB_LAYER=l0 ./verb/test` or directly as `./verb/test.d/l0`. Does not require Docker or runbox.
 
 Not needed for `.test.offline` — that command uses the baked image `CMD` directly.
 
@@ -192,7 +209,7 @@ The `l2` layer for lint and run is identical to `verb/test.d/l2` but calls `.lin
 
 ```bash
 chmod +x run/runbox run/verb-run
-chmod +x verb/test verb/test.d/l1 verb/test.d/l2
+chmod +x verb/test verb/test.d/l0 verb/test.d/l1 verb/test.d/l2
 chmod +x verb/lint verb/lint.d/l1 verb/lint.d/l2  # if using lint
 chmod +x verb/run  verb/run.d/l1  verb/run.d/l2   # if using run
 ```
@@ -221,14 +238,15 @@ A verb can define separate implementations for different execution layers. This 
 verb/
   test          ← dispatcher file (always executable; reads VERB_LAYER, self-dispatches)
   test.d/
-    l1          # innermost: bare execution (direct test runner call)
-    l2          # next: orchestration wrapper (delegates to runbox or equivalent)
+    l0          # host-native: direct execution on host (no Docker)
+    l1          # innermost: bare execution inside container (direct test runner call)
+    l2          # default: orchestration wrapper (delegates to runbox or equivalent)
   lint          ← flat file (no .d/ directory; same behavior everywhere)
 ```
 
 `verb/test` is always a regular executable file — never a directory. The layers live in the adjacent `verb/test.d/` directory. Callers always invoke `bash verb/test` directly; the dispatcher selects the appropriate layer internally.
 
-**Layer naming is positional, not semantic.** `l1` = most direct execution (no wrappers). Higher numbers = more orchestration layers around it. What each layer does is documented inside the layer file itself, not in its name.
+**Layer naming is positional, not semantic.** `l0` = host-native direct execution (no Docker). `l1` = most direct execution inside the container (no wrappers). Higher numbers = more orchestration layers around it. What each layer does is documented inside the layer file itself, not in its name.
 
 ---
 
@@ -276,6 +294,7 @@ Callers use `verb-run test` or `bash verb/test` — both work identically since 
 verb/
   test          → dispatcher (default → l2)
   test.d/
+    l0          → exec w3 .test level::3          # host-native (no Docker)
     l1          → exec w3 .test level::3          # bare execution inside container
     l2          → exec bash run/runbox .test       # host orchestration via Docker
   lint          → exec cargo clippy ...            # flat: same everywhere
@@ -288,6 +307,9 @@ Host (VERB_LAYER unset):
   bash verb/test → dispatcher → test.d/l2 → bash run/runbox .test
     runbox sets VERB_LAYER=l1 → bash verb/test inside container
       → dispatcher → test.d/l1 → w3 .test level::3 → nextest ✓
+
+Host (VERB_LAYER=l0):
+  bash verb/test → dispatcher → test.d/l0 → w3 .test level::3 → nextest ✓
 
 Host (VERB_LAYER unset):
   bash verb/lint → verb/lint (flat file) → cargo clippy ✓

@@ -31,3 +31,4 @@ Parameters have fixed presence — they always exist; only their value changes.
 | [013](013_workspace_root.md) | `workspace_root` | ✅ | Infrastructure |
 | [014](014_lint_script.md) | `lint_script` | ✅ | Execution |
 | [015](015_run_script.md) | `run_script` | ✅ | Execution |
+| [016](016_extra_build_context.md) | `extra_build_context` | ✅ | Infrastructure |

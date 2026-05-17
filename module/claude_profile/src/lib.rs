@@ -164,10 +164,11 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".usage",          "Show live rate-limit quota for all saved accounts",
     vec![
       fmt(),
-      reg_arg_opt( "refresh",   Kind::Integer ).with_description( "Retry once on 401 by refreshing OAuth token (0 = disabled; 1 = enabled)" ),
+      reg_arg_opt( "refresh",   Kind::Integer ).with_description( "Retry once on 401/403/429 by refreshing OAuth token via isolated subprocess (0 = disabled; 1 = enabled)" ),
       reg_arg_opt( "live",      Kind::Integer ).with_description( "Continuous monitor mode (0 = off, default; 1 = on)" ),
       reg_arg_opt( "interval",  Kind::Integer ).with_description( "Seconds between refreshes (minimum 30, default 30)" ),
       reg_arg_opt( "jitter",    Kind::Integer ).with_description( "Max random seconds added to interval (0 = none, default)" ),
+      reg_arg_opt( "trace",     Kind::Integer ).with_description( "Print [trace] lines to stderr showing each credential read, API call, and refresh step (0 = off; 1 = on)" ),
     ],
     Box::new( usage_routine          ) );
 }

@@ -19,35 +19,35 @@ clr [OPTIONS] [MESSAGE]
 
 | File | L1 | L2 | L3 | L4 | L5 | Status |
 |------|----|----|----|----|----|----|
-| readme.md | ✅ | ✅ | ✅ | ➖ | ➖ | ✅ Complete |
-| command.md | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
-| param/readme.md | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Complete |
-| dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | ✅ Complete |
-| type.md | ✅ | ➖ | ✅ | ✅ | ✅ | ✅ Complete |
-| param_group.md | ✅ | ➖ | ✅ | ✅ | ✅ | ✅ Complete |
-| workflow_scenario.md | ✅ | ➖ | ✅ | ➖ | ➖ | ✅ Complete |
-| env_param.md | ✅ | ➖ | ✅ | ✅ | ✅ | ✅ Complete |
-| config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ N/A |
-| format.md | ➖ | ➖ | ➖ | ➖ | ➖ | ➖ N/A |
-| tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ✅ | ✅ Complete |
-| tests/docs/cli/command/*.md | ➖ | ➖ | ➖ | ✅ | ✅ | ✅ Complete |
-| tests/docs/cli/param/*.md | ➖ | ➖ | ➖ | ✅ | ✅ | ✅ Complete |
-| tests/docs/cli/param_group/*.md | ➖ | ➖ | ➖ | ✅ | ✅ | ✅ Complete |
-| tests/docs/cli/type/*.md | ➖ | ➖ | ➖ | ✅ | ✅ | ✅ Complete |
-| tests/docs/cli/env_param/*.md | ➖ | ➖ | ➖ | ✅ | ✅ | ✅ Complete |
+| readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
+| command.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param/readme.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
+| type.md | ✅ | ➖ | ✅ | ➖ | ➖ | Complete |
+| param_group.md | ✅ | ➖ | ✅ | ➖ | ➖ | Complete |
+| workflow_scenario.md | ✅ | ➖ | ✅ | ➖ | ➖ | Complete |
+| env_param.md | ✅ | ➖ | ✅ | ➖ | ➖ | Complete |
+| config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A |
+| format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A |
+| tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
+| tests/docs/cli/command/*.md (3 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/param/*.md (24 files) | ➖ | ➖ | ➖ | ✅ | ⏳ | L4 Complete |
+| tests/docs/cli/param_group/*.md (4 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/type/*.md (11 files) | ➖ | ➖ | ➖ | ✅ | ⏳ | L4 Complete |
+| tests/docs/cli/env_param/*.md (1 file) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 
-**Current Level:** L5 (Test Detail Complete)
-**Design Completeness:** 100%
-**Implementation Status:** 100%
+**Current Level:** L4 (4 new params spec'd; implementation pending tasks 144–148)
+**Design Completeness:** 100% (L4 complete for existing; new param specs at L3)
+**Implementation Status:** 75% (3/3 commands implemented; 4 new params + env-var support pending)
 
 ### Navigation
 
-- [Commands](command.md) — command reference (2 commands)
-- [Parameters](param/readme.md) — flag and argument reference (18 parameters)
-- [Types](type.md) — semantic type definitions (7 types)
-- [Parameter Groups](param_group.md) — logical parameter groupings (3 groups)
+- [Commands](command.md) — command reference (3 commands)
+- [Parameters](param/readme.md) — flag and argument reference (24 parameters)
+- [Types](type.md) — semantic type definitions (11 types)
+- [Parameter Groups](param_group.md) — logical parameter groupings (4 groups)
 - [Dictionary](dictionary.md) — domain vocabulary
-- [Workflows](workflow_scenario.md) — common usage patterns (9 workflows)
+- [Workflows](workflow_scenario.md) — common usage patterns (10 workflows)
 - [Env Parameters](env_param.md) — subprocess environment variables (1 variable)
 
 ### See Also

@@ -22,12 +22,18 @@
 | 16_append_system_prompt.md | `--append-system-prompt` parameter spec |
 | 17_effort.md | `--effort` parameter spec |
 | 18_no_effort_max.md | `--no-effort-max` flag spec |
+| 19_creds.md | `--creds` parameter spec |
+| 20_timeout.md | `--timeout` parameter spec |
+| 21_no_chrome.md | `--no-chrome` flag spec |
+| 22_no_persist.md | `--no-persist` flag spec |
+| 23_json_schema.md | `--json-schema` parameter spec |
+| 24_mcp_config.md | `--mcp-config` parameter spec |
 
-### All Parameters (18 total)
+### All Parameters (24 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
-| 1 | `[MESSAGE]` | [`MessageText`](../type.md#type--1-messagetext) | — | Any text | Prompt text for Claude | 1 cmd |
+| 1 | `[MESSAGE]` | [`MessageText`](../type.md#type--1-messagetext) | — | Any text | Prompt text for Claude | 2 cmds |
 | 2 | `-p`/`--print` | bool | auto | present/absent | Explicit print mode (default when message given) | 1 cmd |
 | 3 | `--model` | [`ModelName`](../type.md#type--4-modelname) | — | Any model name | Claude model to use | 1 cmd |
 | 4 | `--verbose` | bool | false | present/absent | Enable Claude verbose output | 1 cmd |
@@ -45,10 +51,16 @@
 | 16 | `--append-system-prompt` | [`SystemPromptText`](../type.md#type--6-systemprompttext) | — | Any text | Append text to the default system prompt | 1 cmd |
 | 17 | `--effort` | [`EffortLevel`](../type.md#type--7-effortlevel) | max | low/medium/high/max | Reasoning effort level forwarded to claude | 1 cmd |
 | 18 | `--no-effort-max` | bool | false | present/absent | Suppress default `--effort max` injection | 1 cmd |
+| 19 | `--creds` | [`CredentialsFilePath`](../type.md#type--8-credentialsfilepath) | — | Any existing file path | Credentials JSON file for isolation (required) | 1 cmd |
+| 20 | `--timeout` | [`TimeoutSecs`](../type.md#type--9-timeoutsecs) | 30 | Non-negative integer | Max seconds to wait for isolated subprocess | 1 cmd |
+| 21 | `--no-chrome` | bool | false | present/absent | Suppress default `--chrome` injection | 1 cmd |
+| 22 | `--no-persist` | bool | false | present/absent | Disable session persistence (`--no-session-persistence`) | 1 cmd |
+| 23 | `--json-schema` | [`JsonSchemaText`](../type.md#type--10-jsonschematext) | — | Valid JSON object string | JSON Schema for structured output validation | 1 cmd |
+| 24 | `--mcp-config` | [`McpConfigPath`](../type.md#type--11-mcpconfigpath) | — | Any existing file path | MCP server config file (repeatable) | 1 cmd |
 
-**Total:** 18 parameters
+**Total:** 24 parameters
 
-**Groups:** Parameters 2–4 and 17 form [Claude-Native Flags](../param_group.md#group--1-claude-native-flags). Parameters 5–14 and 18 form [Runner Control](../param_group.md#group--2-runner-control). Parameters 15–16 form [System Prompt](../param_group.md#group--3-system-prompt).
+**Groups:** Parameters 2–4, 17, and 22–24 form [Claude-Native Flags](../param_group.md#group--1-claude-native-flags). Parameters 5–14, 18, and 21 form [Runner Control](../param_group.md#group--2-runner-control). Parameters 15–16 form [System Prompt](../param_group.md#group--3-system-prompt). Parameters 19–20 form [Isolated Subcommand](../param_group.md#group--4-isolated-subcommand).
 
 ### Navigation
 
@@ -70,6 +82,12 @@
 - [`--append-system-prompt`](16_append_system_prompt.md)
 - [`--effort`](17_effort.md)
 - [`--no-effort-max`](18_no_effort_max.md)
+- [`--creds`](19_creds.md)
+- [`--timeout`](20_timeout.md)
+- [`--no-chrome`](21_no_chrome.md)
+- [`--no-persist`](22_no_persist.md)
+- [`--json-schema`](23_json_schema.md)
+- [`--mcp-config`](24_mcp_config.md)
 
 ### Quick Reference
 
@@ -77,4 +95,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt).
 
-**Commands by parameter count:** `run` = 18 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 22 parameters, `isolated` = 3 parameters, `help` = 0 parameters.
