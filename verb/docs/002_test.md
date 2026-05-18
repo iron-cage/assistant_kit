@@ -66,7 +66,7 @@ exec "$DIR/l0" "$@"
 `verb/test.d/l1` (universal — identical across all cargo modules; entered via `VERB_LAYER=l1`):
 ```bash
 #!/usr/bin/env bash
-# l1 — bare test execution; runs inside the container (VERB_LAYER=l1 set by runbox-run).
+# l1 — bare test execution (VERB_LAYER=l1); runs w3 directly.
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."

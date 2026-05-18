@@ -1,7 +1,7 @@
 # Parameter: `run_script`
 
 - **Status:** ✅ Configured — via `runbox.yml`; optional (entry-point execution disabled if absent)
-- **Current State:** (unset for Rust workspace modules; set in standalone example projects)
+- **Current State:** `module/<name>/verb/run.d/l1` for binary workspace modules (6 of 15); unset for library-only modules; `verb/run` (dispatcher) for standalone projects
 - **Where It Flows:** `runbox.yml run_script:` → `RUN_SCRIPT` in `runbox-run` → `docker run /workspace/$RUN_SCRIPT` executed by `cmd_run()`
 
 ### Notes

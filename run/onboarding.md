@@ -228,7 +228,7 @@ verb/
   test.d/
     l0          # default: host-native direct execution (no Docker)
     l1          # container-internal: set by runbox-run via VERB_LAYER=l1
-  lint          ← flat file (no .d/ directory; same behavior everywhere)
+  build         ← flat file (no .d/ directory; same behavior everywhere)
 ```
 
 `verb/test` is always a regular executable file — never a directory. The layers live in the adjacent `verb/test.d/` directory. Callers always invoke `bash verb/test` directly; the dispatcher selects the appropriate layer internally.
@@ -283,7 +283,7 @@ verb/
   test.d/
     l0          → exec w3 .test level::3          # host-native (default)
     l1          → exec w3 .test level::3          # container-internal (VERB_LAYER=l1)
-  lint          → exec cargo clippy ...            # flat: same everywhere
+  build         → exec cargo build -p <name>       # flat: same everywhere
 ```
 
 Invocation flows:
@@ -306,11 +306,14 @@ Via Docker (run/runbox .test — run/ is fully independent of verb/):
 
 **Configuration in `runbox.yml`:**
 
-Point `test_script` (and `lint_script`, `run_script`) at the verb file. Since `verb/test` is always a file, `runbox-run` uses `test -f` throughout — no directory detection needed:
+Point `test_script` (and `lint_script`, `run_script`) at the appropriate layer. Since `verb/test` is always a file, `runbox-run` uses `test -f` throughout — no directory detection needed:
 
 ```yaml
-# Points at the verb file; executed with VERB_LAYER=l1 set inside the container
-test_script: module/my_module/verb/test
+# Workspace module: point at l1 directly (bypasses dispatcher; runbox-run sets VERB_LAYER=l1 anyway)
+test_script: module/my_module/verb/test.d/l1
+
+# Standalone project: point at dispatcher (routes to l0 on host, l1 in container via VERB_LAYER=l1)
+test_script: verb/test
 ```
 
 ---

@@ -827,6 +827,34 @@ pub fn run_cli()
     );
   }
 
+  // Fix(issue-unknown-subcommand): Guard against typos/truncations of known subcommand names.
+  // Root cause: `run_cli():805` dispatched `isolated` by exact string match only — any
+  //   non-matching first token silently fell through to `parse_args()` where the global
+  //   `--help` short-circuit fired and showed generic help with no diagnostic.
+  // Pitfall: Bare string comparison only guards exact matches; typos and truncations pass
+  //   silently unless a prefix-match guard is also placed before the main argument parser.
+  const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "isolated" ];
+  if let Some( first ) = tokens.first()
+  {
+    let is_identifier = !first.starts_with( '-' )
+      && first.len() >= 4
+      && first.chars().all( | c | c.is_alphanumeric() || c == '_' || c == '-' );
+    if is_identifier
+    {
+      for &sub in KNOWN_SUBCOMMANDS
+      {
+        if first != sub
+          && ( sub.starts_with( first.as_str() ) || first.starts_with( sub ) )
+        {
+          eprintln!(
+            "Error: unknown subcommand: {first}. Did you mean '{sub}'?\nRun with --help for usage."
+          );
+          std::process::exit( 1 );
+        }
+      }
+    }
+  }
+
   let mut cli = match parse_args( &tokens )
   {
     Ok( c )  => c,

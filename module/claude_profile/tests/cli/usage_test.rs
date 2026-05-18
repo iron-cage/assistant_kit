@@ -46,6 +46,7 @@
 //! | it30 | `it30_live_sigint_exits_0`                      | `live::1`; after 3s send SIGINT → exit 0, stdout has "Monitor stopped."  | P | no |
 //! | it31 | `it31_usage_help_shows_live_params`             | `.usage.help` → exit 0, stdout contains `live`, `interval`, `jitter`     | P | no |
 //! | it32 | `it32_lim_it_refresh_per_account`               | real token + `refresh::1` → exit 0, account name visible (AC-19)         | P | yes |
+//! | it33 | `it33_mre_refresh_help_excludes_429`            | `.usage.help` refresh says 401/403 not 401/403/429 (issue-refresh-help-429) | P | no |
 
 use crate::helpers::{
   BIN,
@@ -997,6 +998,45 @@ fn it31_usage_help_shows_live_params()
       ".usage.help must list param `{param}` (AC-32), got:\n{text}",
     );
   }
+}
+
+// ── it33 ──────────────────────────────────────────────────────────────────────
+
+/// it33: `.usage.help` refresh description mentions 401/403 but NOT 429.
+///
+/// # Root Cause
+/// Task 150 removed 429 from the `apply_refresh` retry guard, but the parameter
+/// description in `lib.rs register_commands()` was not updated — it still said
+/// "401/403/429". Users reading `--help` would believe 429 triggers a refresh.
+///
+/// # Why Not Caught
+/// Existing help test (it31) only checked for `live`, `interval`, `jitter` params.
+/// No test verified the refresh description text excluded 429.
+///
+/// # Fix Applied
+/// Changed description from "401/403/429" to "401/403" in `lib.rs:167`.
+///
+/// # Prevention
+/// This test asserts `help` output contains "401/403" but NOT "401/403/429".
+///
+/// # Pitfall
+/// The assertion relies on the exact substring "401/403/429" — a reformulated
+/// description that mentions 429 in different phrasing would not be caught.
+// test_kind: bug_reproducer(issue-refresh-help-429)
+#[ test ]
+fn it33_mre_refresh_help_excludes_429()
+{
+  let out = run_cs( &[ ".usage.help" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "401/403" ),
+    "refresh description must mention 401/403, got:\n{text}",
+  );
+  assert!(
+    !text.contains( "401/403/429" ),
+    "refresh description must NOT mention 429 (task 150 removed it), got:\n{text}",
+  );
 }
 
 // ── it32 ──────────────────────────────────────────────────────────────────────

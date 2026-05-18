@@ -538,5 +538,5 @@ trace::1   → print [trace] lines to stderr; stdout output unchanged
   ```
 - For rate-limited accounts (429), the refresh path is not entered:
   ```
-  [trace] refresh  i12@wbox.pro  should_retry=false (reason: HTTP transport error: HTTP 429 — rate-limit not retried)
+  [trace] refresh  i12@wbox.pro  should_retry=false (reason: HTTP transport error: HTTP 429)
   ```

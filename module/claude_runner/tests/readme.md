@@ -21,7 +21,7 @@
 | YAML structure | `commands_yaml_test.rs` | `.claude` and `.claude.help` command definitions |
 | Library API | `lib_test.rs` | `register_commands()` callability |
 | Stale-ref guards | `stale_ref_guard_test.rs` | No `claude_runner_plugin` or `dream_agent` references |
-| Isolated subcommand | `isolated.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs |
+| Isolated subcommand | `isolated.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection |
 | CLR_* env vars (E01–E24) | `env_var_test.rs` | CLR_* env var fallback for all 24 params, CLI-wins checks |
 | Shared helpers | `common.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
@@ -38,7 +38,7 @@
 | `commands_yaml_test.rs` | Verify YAML defines `.claude`, `.claude.help`, and rejects `.please`. |
 | `lib_test.rs` | Library API: `register_commands()` callable. |
 | `stale_ref_guard_test.rs` | Guard against stale `claude_runner_plugin` and `dream_agent` references. |
-| `isolated.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs. |
+| `isolated.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs, unknown-subcommand detection. |
 | `param_edge_cases_test.rs` | Per-param edge cases (EC-N): positive/negative for all 24 CLI params. |
 | `param_group_test.rs` | Param group combined invocations (CC-N): multi-flag interaction tests. |
 | `env_var_test.rs` | CLR_* env var fallback: E01–E24, one per param, CLI-wins verification. |

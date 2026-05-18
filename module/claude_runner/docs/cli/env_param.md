@@ -38,7 +38,7 @@ invalid values (parse failure → field stays at default).
 | 9 | `CLR_MAX_TOKENS` | [`--max-tokens`](param/09_max_tokens.md) | u32 | Invalid values silently ignored |
 | 10 | `CLR_SESSION_DIR` | [`--session-dir`](param/10_session_dir.md) | string | |
 | 11 | `CLR_DRY_RUN` | [`--dry-run`](param/11_dry_run.md) | bool | |
-| 12 | `CLR_VERBOSITY` | [`--verbosity`](param/12_verbosity.md) | 0–5 | Applied only when CLI verbosity == default (3); `--verbosity 3` explicit is indistinguishable |
+| 12 | `CLR_VERBOSITY` | [`--verbosity`](param/12_verbosity.md) | 0–5 | Applied only when `--verbosity` is absent from CLI |
 | 13 | `CLR_TRACE` | [`--trace`](param/13_trace.md) | bool | |
 | 14 | `CLR_NO_ULTRATHINK` | [`--no-ultrathink`](param/14_no_ultrathink.md) | bool | |
 | 15 | `CLR_SYSTEM_PROMPT` | [`--system-prompt`](param/15_system_prompt.md) | string | |

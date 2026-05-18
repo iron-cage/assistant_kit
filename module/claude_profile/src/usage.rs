@@ -614,7 +614,7 @@ fn execute_live_mode(
 /// Claude Code process to refresh the token, writes the new credentials back, then
 /// re-fetches only that account's quota.  Mutates `accounts` in place.
 ///
-/// Fix(issue-143) — HTTP 429 removed from retry guard.
+/// Fix(issue-150) — HTTP 429 removed from retry guard.
 /// Root cause: HTTP 429 is a rate-limit response, not an authentication failure.
 /// The OAuth token is still valid when the server returns 429; spawning an isolated
 /// subprocess to refresh a valid token adds a pointless 30-second wait per
@@ -650,9 +650,18 @@ fn apply_refresh(
       continue;
     };
 
-    // Attempt to refresh the token via an isolated subprocess.
+    // Fix(issue-apply-refresh-args): pass --print args so Claude Code triggers an API call.
+    // Root cause: `vec![]` left Claude Code in piped non-TTY mode with no message — it never
+    //   initiated an API call and therefore never triggered OAuth token refresh; credentials
+    //   remained unchanged even when the refresh token was still valid.
+    // Pitfall: Claude Code only refreshes tokens on API call attempt, not at subprocess startup;
+    //   an empty args list silently skips refresh with no error and no credential change.
     if trace { eprintln!( "[trace] refresh  {}  spawning run_isolated (timeout=30s)", aq.name ); }
-    let isolated = match claude_runner_core::run_isolated( &creds_json, vec![], 30 )
+    let isolated = match claude_runner_core::run_isolated(
+      &creds_json,
+      vec![ "--print".to_string(), ".".to_string(), "--max-tokens".to_string(), "1".to_string() ],
+      30,
+    )
     {
       Ok( r )  => r,
       Err( e ) =>
@@ -842,7 +851,7 @@ mod tests
   /// The match is an exact prefix check — `starts_with` — so partial or differently
   /// formatted 429 strings would still pass through. Only
   /// `claude_quota::QuotaError::HttpTransport` formats as `"HTTP transport error: HTTP N"`.
-  // test_kind: bug_reproducer(issue-143)
+  // test_kind: bug_reproducer(issue-150)
   #[ test ]
   fn test_shorten_error_429_returns_rate_limited()
   {
@@ -911,7 +920,7 @@ mod tests
   /// way. This test validates the guard does not corrupt the result, but is NOT a full guard
   /// against re-adding 429: even with the bug restored, this test would still pass (no creds).
   /// The `shorten_error` test (T04) provides the stronger behavioral invariant.
-  // test_kind: bug_reproducer(issue-143)
+  // test_kind: bug_reproducer(issue-150)
   #[ test ]
   fn test_apply_refresh_429_not_retried()
   {
@@ -981,6 +990,343 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e == &err_msg ),
       "generic error must be unchanged; result: {:?}", accounts[ 0 ].result,
+    );
+  }
+
+  // ── apply_refresh: corner cases ─────────────────────────────────────────────
+
+  /// C1 — `apply_refresh` on an empty accounts slice is a no-op.
+  #[ test ]
+  fn test_apply_refresh_empty_accounts()
+  {
+    let store = TempDir::new().unwrap();
+    let mut accounts : Vec< AccountQuota > = vec![];
+    apply_refresh( &mut accounts, store.path(), false );
+    assert!( accounts.is_empty(), "empty slice must remain empty" );
+  }
+
+  /// C2 — `apply_refresh` with 401 error but no credential file on disk.
+  ///
+  /// The guard fires (`should_retry=true`) but `read_to_string` fails on the
+  /// missing credential file, so the loop continues without modifying the result.
+  #[ test ]
+  fn test_apply_refresh_401_no_cred_file()
+  {
+    let store = TempDir::new().unwrap();
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "ghost@example.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+      },
+    ];
+    apply_refresh( &mut accounts, store.path(), false );
+    assert!(
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
+      "401 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
+    );
+  }
+
+  /// C3 — `apply_refresh` with 403 error but no credential file on disk.
+  ///
+  /// Same as C2 but with HTTP 403. Both 401 and 403 are auth-error triggers,
+  /// but without a credential file the retry body is unreachable.
+  #[ test ]
+  fn test_apply_refresh_403_no_cred_file()
+  {
+    let store = TempDir::new().unwrap();
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "ghost@example.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 403".to_string() ),
+      },
+    ];
+    apply_refresh( &mut accounts, store.path(), false );
+    assert!(
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "403" ) ),
+      "403 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
+    );
+  }
+
+  /// C4 — `apply_refresh` with mixed results: only auth errors enter the retry path.
+  ///
+  /// Four accounts: Ok, 429, 401, generic error. After `apply_refresh`, only
+  /// the 401 account enters the retry guard (and stays unchanged because no
+  /// credential file exists). The other three are untouched.
+  #[ test ]
+  fn test_apply_refresh_mixed_accounts()
+  {
+    let store = TempDir::new().unwrap();
+    let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "a@ok.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Ok( quota ),
+      },
+      AccountQuota
+      {
+        name          : "b@ratelimited.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+      },
+      AccountQuota
+      {
+        name          : "c@expired.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+      },
+      AccountQuota
+      {
+        name          : "d@network.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "connection refused".to_string() ),
+      },
+    ];
+
+    apply_refresh( &mut accounts, store.path(), false );
+
+    assert!( accounts[ 0 ].result.is_ok(), "Ok account must remain Ok" );
+    assert!(
+      matches!( accounts[ 1 ].result, Err( ref e ) if e.contains( "429" ) ),
+      "429 must be unchanged",
+    );
+    assert!(
+      matches!( accounts[ 2 ].result, Err( ref e ) if e.contains( "401" ) ),
+      "401 stays unchanged when no cred file exists",
+    );
+    assert!(
+      matches!( accounts[ 3 ].result, Err( ref e ) if e == "connection refused" ),
+      "generic error must be unchanged",
+    );
+  }
+
+  /// C5 — `apply_refresh` with trace=true does not panic.
+  ///
+  /// Verifies the trace code path executes without crashing, even when the
+  /// credential file is absent and the retry path short-circuits.
+  #[ test ]
+  fn test_apply_refresh_trace_does_not_panic()
+  {
+    let store = TempDir::new().unwrap();
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "trace@test.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+      },
+    ];
+    apply_refresh( &mut accounts, store.path(), true );
+  }
+
+  // ── compute_expires_cell ────────────────────────────────────────────────────
+
+  /// C6 — Both zero: `expires_at_ms=0, now_secs=0` → "EXPIRED".
+  #[ test ]
+  fn test_compute_expires_cell_both_zero()
+  {
+    assert_eq!( compute_expires_cell( 0, 0 ), "EXPIRED" );
+  }
+
+  /// C7 — Sub-second truncation: `expires_at_ms=999` rounds down to 0 seconds → "EXPIRED".
+  #[ test ]
+  fn test_compute_expires_cell_subsecond_truncation()
+  {
+    assert_eq!( compute_expires_cell( 999, 0 ), "EXPIRED" );
+  }
+
+  /// C8 — Exactly 1 second remaining → "in ..." (not "EXPIRED").
+  #[ test ]
+  fn test_compute_expires_cell_one_second_remaining()
+  {
+    let result = compute_expires_cell( 1000, 0 );
+    assert!( result.starts_with( "in " ), "1 second remaining must start with 'in ', got: {result}" );
+  }
+
+  /// C9 — Saturating subtraction: now exceeds expires → "EXPIRED", no underflow.
+  #[ test ]
+  fn test_compute_expires_cell_now_exceeds_expires()
+  {
+    assert_eq!( compute_expires_cell( 1000, 9999 ), "EXPIRED" );
+  }
+
+  // ── find_recommendation ─────────────────────────────────────────────────────
+
+  const FAR_FUTURE_MS : u64 = 9_999_999_999_000;
+
+  /// C10 — Empty accounts slice → None.
+  #[ test ]
+  fn test_find_recommendation_empty()
+  {
+    let accounts : Vec< AccountQuota > = vec![];
+    assert!( find_recommendation( &accounts, 0 ).is_none() );
+  }
+
+  /// C11 — All accounts are `is_active` → None (no eligible candidates).
+  #[ test ]
+  fn test_find_recommendation_all_ineligible()
+  {
+    let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let accounts = vec![
+      AccountQuota
+      {
+        name : "active@test.com".to_string(), is_current : false, is_active : true,
+        expires_at_ms : FAR_FUTURE_MS, result : Ok( quota ),
+      },
+    ];
+    assert!( find_recommendation( &accounts, 0 ).is_none() );
+  }
+
+  /// C12 — Account with expired token (`expires_at_ms`=0) is skipped by recommendation.
+  #[ test ]
+  fn test_find_recommendation_expired_token_skipped()
+  {
+    let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let accounts = vec![
+      AccountQuota
+      {
+        name : "expired@test.com".to_string(), is_current : false, is_active : false,
+        expires_at_ms : 0, result : Ok( quota ),
+      },
+    ];
+    assert!( find_recommendation( &accounts, 1 ).is_none() );
+  }
+
+  /// C13 — Picks the account with highest `5h_left` (lowest utilization).
+  #[ test ]
+  fn test_find_recommendation_picks_lowest_utilization()
+  {
+    let mk = |name : &str, util : f64| -> AccountQuota
+    {
+      let period = claude_quota::PeriodUsage { utilization : util, resets_at : None };
+      let data   = claude_quota::OauthUsageData
+      {
+        five_hour : Some( period ), seven_day : None, seven_day_sonnet : None,
+      };
+      AccountQuota
+      {
+        name : name.to_string(), is_current : false, is_active : false,
+        expires_at_ms : FAR_FUTURE_MS, result : Ok( data ),
+      }
+    };
+    let accounts = vec![ mk( "high@use.com", 80.0 ), mk( "low@use.com", 20.0 ) ];
+    assert_eq!( find_recommendation( &accounts, 0 ), Some( 1 ) );
+  }
+
+  /// C14 — Account with Err result is skipped by recommendation.
+  #[ test ]
+  fn test_find_recommendation_err_skipped()
+  {
+    let accounts = vec![
+      AccountQuota
+      {
+        name : "err@test.com".to_string(), is_current : false, is_active : false,
+        expires_at_ms : FAR_FUTURE_MS, result : Err( "fail".to_string() ),
+      },
+    ];
+    assert!( find_recommendation( &accounts, 0 ).is_none() );
+  }
+
+  // ── secs_to_hms_utc ────────────────────────────────────────────────────────
+
+  /// C15 — Zero seconds → "00:00:00".
+  #[ test ]
+  fn test_secs_to_hms_utc_zero()
+  {
+    assert_eq!( secs_to_hms_utc( 0 ), "00:00:00" );
+  }
+
+  /// C16 — End of day → "23:59:59".
+  #[ test ]
+  fn test_secs_to_hms_utc_end_of_day()
+  {
+    assert_eq!( secs_to_hms_utc( 86399 ), "23:59:59" );
+  }
+
+  /// C17 — Exactly one day wraps to "00:00:00".
+  #[ test ]
+  fn test_secs_to_hms_utc_day_wrap()
+  {
+    assert_eq!( secs_to_hms_utc( 86400 ), "00:00:00" );
+  }
+
+  /// C18 — Mid-day timestamp.
+  #[ test ]
+  fn test_secs_to_hms_utc_midday()
+  {
+    assert_eq!( secs_to_hms_utc( 45045 ), "12:30:45" );
+  }
+
+  // ── render_text ─────────────────────────────────────────────────────────────
+
+  /// C19 — Empty accounts → "(no accounts configured)".
+  #[ test ]
+  fn test_render_text_empty()
+  {
+    let result = render_text( &[] );
+    assert!( result.contains( "no accounts configured" ), "empty must say no accounts, got: {result}" );
+  }
+
+  // ── render_json ─────────────────────────────────────────────────────────────
+
+  /// C20 — Empty accounts → "[]".
+  #[ test ]
+  fn test_render_json_empty()
+  {
+    let result = render_json( &[] );
+    assert_eq!( result.trim(), "[]" );
+  }
+
+  /// C21 — Err account → JSON contains "error" field.
+  #[ test ]
+  fn test_render_json_error_account()
+  {
+    let accounts = vec![
+      AccountQuota
+      {
+        name : "fail@test.com".to_string(), is_current : false, is_active : false,
+        expires_at_ms : 0, result : Err( "auth failed".to_string() ),
+      },
+    ];
+    let result = render_json( &accounts );
+    assert!( result.contains( "\"error\":" ), "Err account must have error field, got: {result}" );
+    assert!( result.contains( "auth failed" ), "error message must be preserved, got: {result}" );
+  }
+
+  /// C22 — Account name with quotes is JSON-escaped.
+  #[ test ]
+  fn test_render_json_escapes_quotes_in_name()
+  {
+    let accounts = vec![
+      AccountQuota
+      {
+        name : "test\"@evil.com".to_string(), is_current : false, is_active : false,
+        expires_at_ms : 0, result : Err( "fail".to_string() ),
+      },
+    ];
+    let result = render_json( &accounts );
+    assert!(
+      result.contains( r#"test\"@evil.com"# ),
+      "quotes in name must be escaped, got: {result}",
     );
   }
 }

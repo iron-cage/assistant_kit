@@ -480,6 +480,91 @@ fn ec_creds3_lim_it_relative_path()
   );
 }
 
+/// IT-10: `clr isolate --help` and `clr isol` exit 1 with unknown-subcommand error.
+///
+/// Reproduces the silent unknown-subcommand fallthrough when the first CLI token
+/// resembles a known subcommand but is not an exact match (issue-unknown-subcommand).
+///
+/// ## Root Cause
+/// `run_cli()` in `src/lib.rs` dispatches `isolated` via exact string match at line 805.
+/// Any non-matching first token silently fell through to `parse_args()`, whose global
+/// `--help` short-circuit then fired and showed generic help with no indication the first
+/// token was unrecognised.  No unknown-subcommand guard existed between the dispatch
+/// block and the `parse_args()` call.
+///
+/// ## Why Not Caught Initially
+/// All previous tests used the correct spelling (`clr isolated …`).  Typos and truncations
+/// of `"isolated"` were never exercised, so the silent fallthrough was never observed.
+///
+/// ## Fix Applied
+/// Added an identifier-like prefix-match guard in `run_cli()` (`src/lib.rs`) immediately
+/// after the `isolated` dispatch block and before `parse_args()`.  The guard checks whether
+/// the first token has `len() >= 4`, contains only alphanumeric/`_`/`-` characters, does
+/// not start with `-`, and prefix-matches a name from `KNOWN_SUBCOMMANDS: &[&str] =
+/// &["isolated"]`.  On match it prints `"Error: unknown subcommand: <token>. Did you mean
+/// '<sub>'?"` to stderr and calls `std::process::exit(1)`.
+///
+/// ## Prevention
+/// `KNOWN_SUBCOMMANDS` constant in `run_cli()` makes future subcommands self-documenting;
+/// adding a new subcommand automatically extends guard coverage without touching guard logic.
+///
+/// ## Pitfall to Avoid
+/// A bare string comparison against known subcommands only guards exact matches; typos and
+/// truncations pass silently unless a separate prefix-match guard is also placed between
+/// the subcommand dispatch block and the main argument parser.
+// test_kind: bug_reproducer(issue-unknown-subcommand)
+#[ test ]
+fn it10_bug_unknown_subcommand_typo_exits_one()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  // T01: 7-char prefix "isolate" — misspelling of "isolated"
+  {
+    let out = std::process::Command::new( bin )
+      .args( [ "isolate", "--help" ] )
+      .output()
+      .expect( "failed to invoke clr isolate --help" );
+    let stderr = String::from_utf8_lossy( &out.stderr );
+    assert_eq!(
+      out.status.code(),
+      Some( 1 ),
+      "clr isolate --help must exit 1 (unknown subcommand); got: {:?}\nstderr: {stderr}",
+      out.status.code(),
+    );
+    assert!(
+      stderr.contains( "unknown subcommand" ),
+      "stderr must contain 'unknown subcommand'; got: {stderr}"
+    );
+    assert!(
+      stderr.contains( "isolated" ),
+      "stderr must suggest 'isolated'; got: {stderr}"
+    );
+  }
+
+  // T02: 4-char prefix "isol" — truncation of "isolated"
+  {
+    let out = std::process::Command::new( bin )
+      .args( [ "isol" ] )
+      .output()
+      .expect( "failed to invoke clr isol" );
+    let stderr = String::from_utf8_lossy( &out.stderr );
+    assert_eq!(
+      out.status.code(),
+      Some( 1 ),
+      "clr isol must exit 1 (unknown subcommand); got: {:?}\nstderr: {stderr}",
+      out.status.code(),
+    );
+    assert!(
+      stderr.contains( "unknown subcommand" ),
+      "stderr must contain 'unknown subcommand'; got: {stderr}"
+    );
+    assert!(
+      stderr.contains( "isolated" ),
+      "stderr must suggest 'isolated'; got: {stderr}"
+    );
+  }
+}
+
 /// IT-9: `clr isolated --help` exits 0 and prints isolated-specific help text.
 ///
 /// bug_reproducer(issue-isolated-help)

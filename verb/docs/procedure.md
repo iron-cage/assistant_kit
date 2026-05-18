@@ -24,17 +24,17 @@
 
 ## Add verb/ Directory to a Standalone Runbox Project
 
-For non-Rust standalone projects (Python, Node.js, etc.) the `verb/` scripts delegate to the container runner instead of calling cargo.
+For non-Rust standalone projects (Python, Node.js, etc.) the `verb/` scripts call ecosystem-native tools directly — same independence principle as Rust modules, just different tools.
 
 1. Determine project type: **binary** (has entry point) or **library** (no runnable entry point).
-2. Create `verb/build`: `exec ./run/runbox .build` (universal).
+2. Create `verb/build`: call the ecosystem build tool directly (e.g., `pip install -e .` for Python, `npm install` for Node.js). Does not call `run/runbox` — ecosystem tools run natively on the host.
 3. Create `verb/test` dispatcher (default→l0) + `verb/test.d/l0` (host-native runner) + `verb/test.d/l1` (ecosystem runner). Set `test_script: verb/test.d/l1` in `runbox.yml`.
 4. Create `verb/clean`: remove build artifacts specific to the ecosystem (`.venv/`, `node_modules/`, `target/`).
 5. Create `verb/run`:
    - **Binary project:** dispatcher (default→l1) at `verb/run` + `verb/run.d/l1` (ecosystem entry point); set `run_script: verb/run.d/l1` in `runbox.yml`.
    - **Library project:** `echo "verb 'run' is not available for this project" >&2; exit 3` (no layers needed).
 6. Create `verb/lint` dispatcher (default→l1) + `verb/lint.d/l1` (ecosystem linter). Set `lint_script: verb/lint.d/l1` in `runbox.yml`.
-7. Create `verb/verify`: `exec ./run/runbox .test` (same as test — no level::4 concept outside Rust).
+7. Create `verb/verify`: call ecosystem-native full checks directly (e.g., `ruff check && pytest` for Python, `eslint . && npm test` for Node.js) — equivalent role to Rust's `w3 .test level::4`. Does not call `run/runbox`.
 8. Create `verb/verbs`: same `printf` table format as Rust; ecosystem-specific commands in the table.
 9. Create `verb/package_info`: reads the ecosystem manifest (`pyproject.toml`, `package.json`, `Cargo.toml`) and emits flat JSON. Match the field set used by Rust projects.
 10. Set executable bit: `chmod +x verb/*` (dispatchers + plain scripts) and `chmod +x verb/*.d/*` (layer files).

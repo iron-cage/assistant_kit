@@ -16,7 +16,7 @@ Module-level runboxes point at `verb/test.d/l1` directly (bypassing the dispatch
 
 `test_script` may point to a verb dispatcher — a plain executable file that reads `VERB_LAYER` and self-dispatches to `test.d/l0` (host-native, default when no `VERB_LAYER`) or `test.d/l1` (container invocation, `VERB_LAYER=l1` set by `runbox-run`). `verb/` has no knowledge of `run/` — the dispatcher never calls `run/runbox`. `verb/test` is always a file; no directory detection is needed in `runbox-run`.
 
-`runbox-run` passes `-e VERB_LAYER=l1` to the container run. The dispatcher inside `verb/test` routes to `test.d/l1` for direct execution.
+`runbox-run` passes `-e VERB_LAYER=l1` to the container run. Workspace modules point `test_script` at `verb/test.d/l1` directly — the dispatcher is bypassed entirely. Standalone projects may point at `verb/test` (the dispatcher), which routes to `test.d/l1` via `VERB_LAYER=l1`.
 
 See `onboarding.md § Multi-Layer Verbs` for the complete protocol, layer naming, dispatch rules, and `VERB_LAYER` convention.
 

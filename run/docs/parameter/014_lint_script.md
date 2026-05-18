@@ -1,7 +1,7 @@
 # Parameter: `lint_script`
 
 - **Status:** ✅ Configured — via `runbox.yml`; optional (linting disabled if absent)
-- **Current State:** (unset for Rust workspace modules; set in standalone example projects)
+- **Current State:** `module/<name>/verb/lint.d/l1` for all workspace modules; `verb/lint` (dispatcher) for standalone projects
 - **Where It Flows:** `runbox.yml lint_script:` → `LINT_SCRIPT` in `runbox-run` → `docker run /workspace/$LINT_SCRIPT` executed by `cmd_lint()`
 
 ### Notes
