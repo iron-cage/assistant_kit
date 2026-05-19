@@ -10,23 +10,23 @@
 ./run/runbox .test
 ```
 
-Delegates to runbox, which builds the Docker image if needed and runs the test suite inside the container. The container executes `verb/test.d/l1`, which runs `w3 .test level::3`. Level 3 runs: nextest (all features, warnings-as-errors) + doc tests + clippy (-D warnings). See `CLAUDE.md § Full Verification Commands` for the level breakdown.
+Delegates to `run/runbox`, which builds the Docker image if needed and runs the test suite inside the container. The container executes `verb/test.d/l1`, which runs `w3 .test level::3`. Level 3 runs: nextest (all features, warnings-as-errors) + doc tests + clippy (-D warnings). See `CLAUDE.md § Full Verification Commands` for the level breakdown.
 
 ### Layers
 
-| Layer | Context | Docker required | `CARGO_NET_OFFLINE` | Default |
-|-------|---------|-----------------|---------------------|---------|
-| runbox | Docker via `run/runbox .test` | yes | yes (inside container) | yes — no `VERB_LAYER` set |
-| `l0` | host | no | no | no — `VERB_LAYER=l0` only |
-| `l1` | container (called by runbox-run) | n/a | yes | no — `VERB_LAYER=l1` |
+| Layer | Context | Docker | `CARGO_NET_OFFLINE` | Default |
+|-------|---------|--------|---------------------|---------|
+| runbox | host → Docker via `run/runbox .test` | yes | yes (inside container) | yes — no `VERB_LAYER` set |
+| `l0` | host-native | no | no | no — `VERB_LAYER=l0` only |
+| `l1` | container-internal | n/a | yes | no — `VERB_LAYER=l1` (set by runbox-run) |
 
 ### Notes
 
-The `test` verb is **identical across all modules** — the dispatcher always delegates to the module's own `run/runbox .test`, which scopes the container run to that module's `runbox.yml`.
+`verb/test` (default, no `VERB_LAYER`) calls `../run/runbox .test` — Docker is the default. `run/runbox` handles image management and mounts, then executes `verb/test.d/l1` inside the container.
 
-`verb/test.d/l1` serves as the runbox `test_script`: `cmd_test()` in `runbox-run` mounts and executes `/workspace/module/<name>/verb/test.d/l1` directly inside the container — bypassing the dispatcher entirely. The `_ensure_image()` probe checks for this file inside the image before running; a stale image (missing the script) triggers an automatic rebuild. See `run/docs/parameter/005_test_script.md`.
+`verb/test.d/l1` is the container-internal implementation: runs `w3 .test level::3` with `CARGO_NET_OFFLINE=true` and `NO_COLOR=1`. It is the `test_script` entry point called by `runbox-run`.
 
-`verb/test.d/l0` is the host-native layer: runs `w3 .test level::3` directly on the host without Docker or runbox. Use `VERB_LAYER=l0` to invoke it, or call `./verb/test.d/l0` directly. Does not set `CARGO_NET_OFFLINE` (cargo has full network access) and does not force `NO_COLOR` (no PTY wrapping on a real terminal).
+`verb/test.d/l0` is the host-native layer: runs `w3 .test level::3` directly on the host without Docker. Use `VERB_LAYER=l0` to invoke, or call `./verb/test.d/l0` directly.
 
 `--dry-run` prints `./run/runbox .test` and exits 0 — no tests run.
 
@@ -42,18 +42,8 @@ VERB_LAYER=l0 ./verb/test     # host: w3 .test level::3 directly
 ./verb/test.d/l0              # same, called directly
 
 # Container-internal (set by runbox-run via VERB_LAYER=l1):
-VERB_LAYER=l1 ./verb/test     # container context: CARGO_NET_OFFLINE=true, NO_COLOR=1
+VERB_LAYER=l1 ./verb/test     # container: CARGO_NET_OFFLINE=true, NO_COLOR=1
 ./verb/test.d/l1              # same, called directly
-```
-
-Runbox invocation inside Docker:
-```bash
-docker run --rm \
-  -v claude_profile_test_plugin_targets:/tmp/will_test_targets \
-  -v /usr/local/bin/w3:/usr/local/bin/w3:ro \
-  -v /home/user/.claude:/workspace/.claude:rw \
-  claude_profile_test \
-  /workspace/module/claude_profile/verb/test.d/l1
 ```
 
 `verb/test` dispatcher (universal — identical across all cargo modules):
@@ -81,15 +71,10 @@ export NO_COLOR=1               # prevent nextest PTY progress bar (invisible vi
 exec w3 .test level::3
 ```
 
-`verb/test.d/l0` (universal — identical across all cargo modules; host-side invocation via `VERB_LAYER=l0`):
+`verb/test.d/l0` (universal — host-native; entered via `VERB_LAYER=l0`):
 ```bash
 #!/usr/bin/env bash
 # l0 — host-native test execution; runs w3 .test level::3 directly on the host.
-# Entered via VERB_LAYER=l0 or called directly as ./verb/test.d/l0.
-#
-# Differs from l1 (container-internal):
-#   - CARGO_NET_OFFLINE is NOT set — host cargo may update registry index
-#   - NO_COLOR is NOT set — real terminal controls colour; no PTY wrapping issue
 set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR/../.."
@@ -97,4 +82,4 @@ if [[ "${1:-}" == "--dry-run" ]]; then echo "w3 .test level::3"; exit 0; fi
 exec w3 .test level::3
 ```
 
-Each module's `run/runbox.yml` sets `test_script: module/<name>/verb/test.d/l1` — the container entry point is the l1 layer directly, with no dispatcher involved. `runbox-run` still injects `VERB_LAYER=l1` as a safety guard, but the script path makes container execution robust without relying on it.
+Each module's `run/runbox.yml` sets `test_script: module/<name>/verb/test.d/l1` — the container entry point is `l1` directly. `runbox-run` injects `VERB_LAYER=l1` as a safety guard, but the explicit path makes container execution robust without relying on it.

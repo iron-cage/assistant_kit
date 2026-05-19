@@ -31,10 +31,12 @@
 //! | p06 | `p06_paths_contain_home_value` | HOME set → output contains HOME value | P |
 //! | p07 | `p07_paths_home_with_spaces` | HOME path with spaces → works | P |
 //! | p08 | `p08_paths_home_empty_exits_2` | HOME="" → exit 2 | N |
+//! | p09 | `p09_paths_field_returns_single_value` | field::credential_store → 1-line raw path; exit 0 | P |
+//! | p10 | `p10_paths_field_unknown_exits_1` | field::nonexistent → exit 1; stderr names the bad field | N |
 
 use crate::helpers::{
   run_cs_with_env, run_cs_without_home,
-  stdout, assert_exit,
+  stdout, stderr, assert_exit,
   write_credentials,
   FAR_FUTURE_MS, PAST_MS, near_future_ms,
 };
@@ -276,4 +278,76 @@ fn p08_paths_home_empty_exits_2()
 {
   let out = run_cs_with_env( &[ ".paths" ], &[ ( "HOME", "" ) ] );
   assert_exit( &out, 2 );
+}
+
+/// p09 — `field::credential_store` outputs exactly one raw path line with no label prefix.
+///
+/// # Root Cause
+/// No `field::` parameter existed; scripts required `jq` to extract a single path value from
+/// `clp .paths format::json` output, creating an external tool dependency.
+///
+/// # Why Not Caught
+/// New feature, not a regression.
+///
+/// # Fix Applied
+/// Added `field::` parameter with early-return in `paths_routine()` that outputs the named
+/// field value followed by `\n`, bypassing format selection entirely.
+///
+/// # Prevention
+/// p09 verifies single-line raw output; p10 verifies the unknown-field error path.
+///
+/// # Pitfall
+/// `field::` names match JSON key form (underscore), not text-label form: use `session_env`
+/// not `session-env`. An empty `field::` falls through to the full listing unchanged.
+#[ test ]
+fn p09_paths_field_returns_single_value()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".paths", "field::credential_store" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  let lines : Vec< &str > = text.lines().collect();
+  assert_eq!( lines.len(), 1, "expected exactly 1 line, got: {:?}", lines );
+  assert!( !lines[ 0 ].is_empty(), "expected non-empty path value" );
+  assert!(
+    !lines[ 0 ].contains( "credential_store:" ),
+    "must not contain label prefix, got: {}",
+    lines[ 0 ]
+  );
+}
+
+/// p10 — unknown `field::` name exits 1 and names the bad field in stderr.
+///
+/// # Root Cause
+/// No `field::` parameter existed; scripts required `jq` to extract a single path value from
+/// `clp .paths format::json` output, creating an external tool dependency.
+///
+/// # Why Not Caught
+/// New feature, not a regression.
+///
+/// # Fix Applied
+/// Added `field::` parameter that returns `ErrorCode::ArgumentTypeMismatch` with a message
+/// enumerating all 8 valid field names when an unknown name is supplied.
+///
+/// # Prevention
+/// p10 locks in the exit-1 contract for unknown field names so callers get clear diagnostics.
+///
+/// # Pitfall
+/// The error message must list all valid names — silent rejection would leave the caller with
+/// no guidance on what values are accepted.
+#[ test ]
+fn p10_paths_field_unknown_exits_1()
+{
+  let dir = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".paths", "field::nonexistent" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "nonexistent" ),
+    "stderr must mention the unknown field name, got:\n{err}"
+  );
 }

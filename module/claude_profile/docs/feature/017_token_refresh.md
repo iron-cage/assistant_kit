@@ -13,7 +13,7 @@ The `refresh::` parameter takes `1` (default, on) or `0` (off). When `0`, `.usag
 
 When `refresh::1`, the command wraps `fetch_oauth_usage` with a retry layer: on an HTTP authentication error (401 or 403), it calls `claude_runner_core::run_isolated()` with that account's stored credentials JSON, then retries the quota fetch if updated credentials are returned.
 
-**Trigger condition:** Only HTTP auth errors trigger a refresh attempt. Network failures, timeouts, and non-auth HTTP errors are passed through as-is. This prevents unnecessary subprocess launches on transient connectivity issues.
+**Trigger condition:** HTTP auth errors (401, 403) always trigger a refresh attempt. Additionally, HTTP 429 (rate-limit) triggers a refresh when the per-account credential file has a locally-expired `expiresAt` — this handles the case where Claude Code updated `~/.claude/.credentials.json` in the live session but the saved per-account copy was never re-saved, leaving a stale token. Network failures, timeouts, and 429 with a non-expired local token are passed through as-is, preventing unnecessary subprocess launches.
 
 **Algorithm (per-account loop):**
 
@@ -21,21 +21,28 @@ When `refresh::1`, the command wraps `fetch_oauth_usage` with a retry layer: on 
 results = fetch_all_quota(credential_store, live_creds_file)   // all accounts
 
 if refresh_param == 1:
-    for each account_quota in results where result is auth_error("401"/"403"):
+    now_secs = current_unix_timestamp()
+    for each account_quota in results where should_refresh(account_quota, now_secs):
+        // should_refresh returns true for:
+        //   - result is auth_error("401") or auth_error("403")
+        //   - result is rate_limit("429") AND expires_at_ms / 1000 <= now_secs
         creds_path = credential_store / "{name}.credentials.json"
         creds_json = read_file(creds_path)   // PER-ACCOUNT file
         run_result = run_isolated(creds_json, ["--print", ".", "--max-tokens", "1"], timeout_secs=30)
 
         if run_result is Ok(r) AND r.credentials is Some(new_json):
             write new_json to creds_path on disk   // write-back to per-account file
+            account_quota.expires_at_ms = parse_expires_at(creds_path)   // update in-memory expiry
             account_quota.result = fetch_oauth_usage(new_token)   // retry this account only
+        else:
+            account_quota.result = Err(run_result.error)   // propagate retry failure
 
 render results as table
 ```
 
 **Expired refresh token (expected limitation):** When an account's OAuth refresh token has itself expired (distinct from access token expiry), `run_isolated` cannot obtain new credentials — Claude Code contacts the OAuth server with the expired refresh token, gets rejected, and does not update the credential file. In this case `credentials` is `None`, the account is skipped, and the original auth error persists in the output. The operational remedy is to re-authenticate the affected account via browser-based OAuth flow and `clp .account.save`.
 
-**Rate-limit pass-through (intentional design):** HTTP 429 responses from `fetch_oauth_usage()` are passed through as-is — the guard `e.contains("401") || e.contains("403")` intentionally excludes 429. A rate-limit response is not an authentication failure; the OAuth token is still valid when the server returns 429. Spawning an isolated subprocess to refresh a valid token would be pointless and adds a 30-second wait per rate-limited account. Accounts with HTTP 429 errors appear as error rows immediately with no subprocess launch. `shorten_error()` renders `"HTTP transport error: HTTP 429"` as `"rate limited (429)"` in the Status column.
+**Rate-limit handling (conditional refresh):** HTTP 429 responses are handled conditionally via `should_refresh()`. When the per-account credential file has a non-expired `expiresAt` (local token appears valid), 429 is passed through without retry — the token is valid and the rate limit must resolve on its own. When `expiresAt` is past (locally expired), 429 may indicate that the rate-limit check ran before auth, and the per-account file may be stale (Claude Code updated `~/.claude/.credentials.json` but not the saved per-account copy). In this case, a refresh attempt is made. Refreshing ALL 429 responses unconditionally (as an earlier task did) added a pointless 30-second wait for valid-but-rate-limited accounts; refreshing NONE (as the task-150 fix did) broke recovery for accounts with stale per-account files. `shorten_error()` renders `"HTTP transport error: HTTP 429"` as `"rate limited (429)"` in the Status column.
 
 **Retry semantics:** Exactly one retry per account per invocation. If the retried `fetch_oauth_usage` also fails, the final error is shown in the account's row — the table continues processing remaining accounts (non-aborting).
 
@@ -52,7 +59,8 @@ render results as table
 ### Acceptance Criteria
 
 - **AC-18**: `refresh::0` produces no calls to `run_isolated`; `.usage` behavior is unchanged from the baseline. Use `refresh::0` to explicitly disable the default refresh behavior.
-- **AC-19**: `refresh::1` (default) invokes `claude_runner_core::run_isolated()` for any account whose `fetch_oauth_usage` returns an HTTP authentication error (401 or 403). HTTP 429 (rate limit) is passed through unchanged — it is not an authentication failure.
+- **AC-19**: `refresh::1` (default) invokes `claude_runner_core::run_isolated()` for any account whose `fetch_oauth_usage` returns an HTTP authentication error (401 or 403), or an HTTP 429 rate-limit error when the per-account credential file has a locally-expired `expiresAt`. HTTP 429 with a non-expired local token is passed through unchanged.
+- **AC-24**: The `refresh::` parameter description in `.usage --help` documents the conditional 429 case ("429 when token is locally expired") and does NOT describe 429 as unconditionally excluded from refresh.
 - **AC-20**: When `run_isolated` returns `credentials: Some(new_json)`, the credential file for that account is updated on disk before the retry fetch.
 - **AC-21**: If the refresh attempt fails (subprocess error, or retried fetch still fails), the account's row shows the final error; the remaining accounts are still processed and the table is still rendered.
 - **AC-22**: `refresh::` does not affect `format::json` output structure — refreshed accounts appear as normal data objects, failed-refresh accounts appear as error objects.
@@ -69,7 +77,8 @@ render results as table
 | task | `task/claude_runner_core/136_run_isolated_subprocess.md` | Prerequisite: implement `run_isolated()` |
 | task | `task/claude_profile/137_usage_refresh_param.md` | Implementation task for this feature |
 | task | `task/claude_profile/142_fix_refresh_per_account.md` | Per-account loop fix (replaced batch refresh) |
-| task | `task/claude_profile/150_fix_apply_refresh_429_trigger.md` | Removed 429 from retry guard |
+| task | `task/claude_profile/150_fix_apply_refresh_429_trigger.md` | Removed 429 from unconditional retry guard |
+| bug | `task/claude_profile/bug/156_refresh_429_expired_not_refreshed.md` | BUG-156: conditional 429+expired refresh fix |
 | task | `task/claude_profile/151_refresh_failure_message.md` | Fixed empty args in `run_isolated` call |
 | doc | [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm that this extends |
 | doc | `claude_runner_core/docs/feature/004_run_isolated.md` | `run_isolated()` API contract |

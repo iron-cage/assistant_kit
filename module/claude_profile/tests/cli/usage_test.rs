@@ -51,6 +51,7 @@
 //! | it35 | `it35_empty_store_json_format`                  | empty store + `format::json` → output is `[]`                              | P | no |
 //! | it36 | `it36_no_footer_when_no_valid_accounts`         | single failed account → no "Valid:" footer line                            | P | no |
 //! | it37 | `it37_mre_bug155_refresh_defaults_to_1`         | `.usage.help` shows "1 = enabled, default" for refresh (BUG-155)           | P | no |
+//! | it38 | `it38_mre_bug156_refresh_help_mentions_429_expired` | `.usage.help` refresh mentions 429+locally-expired case (BUG-156)      | P | no |
 
 use crate::helpers::{
   BIN,
@@ -1184,6 +1185,53 @@ fn it37_mre_bug155_refresh_defaults_to_1()
   assert!(
     !text.contains( "0 = disabled, default" ),
     "refresh help must NOT say '0 = disabled, default' (BUG-155), got:\n{text}",
+  );
+}
+
+// ── it38 ──────────────────────────────────────────────────────────────────────
+
+/// it38: `.usage.help` refresh description mentions 429 with locally-expired token.
+///
+/// ## Root Cause
+/// `apply_refresh()` unconditionally excluded 429 from its retry guard. Accounts
+/// returning 429 with a locally-expired `expiresAt` (stale per-account credentials
+/// file) were never refreshed — the `Expires` column showed `EXPIRED` and the
+/// 429 was displayed with no refresh attempt made. The guard now conditionally
+/// includes 429 when `expires_at_ms / 1000 ≤ now_secs`.
+///
+/// ## Why Not Caught
+/// Existing tests (it33, it19/it20) checked 401/403 refresh and the absence of
+/// "401/403/429" as a combined string. None verified the 429+locally-expired case.
+///
+/// ## Fix Applied
+/// `should_refresh()` extracted as a private helper; extended to return `true` for
+/// 429 when `expires_at_ms / 1000 <= now_secs`. Description in `lib.rs:167` and
+/// `unilang.commands.yaml` updated to document the conditional 429 case.
+/// `apply_refresh()` propagates retry errors to `aq.result` (was: silent discard).
+/// `aq.expires_at_ms` updated from credentials file after successful write (was: stale).
+///
+/// ## Prevention
+/// This test asserts `.usage.help` contains "429", confirming the description was
+/// updated — the code and docs are consistent with the new 429+expired behavior.
+///
+/// ## Pitfall
+/// it33 still guards against the old "401/403/429" combined string. This test
+/// adds the positive check: "429" appears separately for the conditional case.
+// test_kind: bug_reproducer(issue-156)
+#[ test ]
+fn it38_mre_bug156_refresh_help_mentions_429_expired()
+{
+  let out = run_cs( &[ ".usage.help" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "429" ),
+    "refresh help must mention 429 case (BUG-156), got:\n{text}",
+  );
+  // Ensure 429 appears in the conditional context, not as the old "401/403/429" pattern.
+  assert!(
+    !text.contains( "401/403/429" ),
+    "refresh help must NOT say '401/403/429' (old incorrect format), got:\n{text}",
   );
 }
 

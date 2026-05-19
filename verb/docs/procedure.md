@@ -9,7 +9,7 @@
 1. Determine module type: **binary** (has a `[[bin]]` entry in `Cargo.toml`) or **library** (lib-only).
 2. Create `module/<name>/verb/` directory.
 3. Create `verb/build`: `cargo build -p <name>` (universal).
-4. Create `verb/test` dispatcher (default→l0) + `verb/test.d/l0` (host-native, default) + `verb/test.d/l1` (container-internal, `VERB_LAYER=l1`). All three are universal — identical across all cargo modules.
+4. Create `verb/verb.yml` (image name, build context, plugin targets) + `verb/test` dispatcher (default→docker) + `verb/test.d/docker` (Docker via verb-run, default) + `verb/test.d/l0` (host-native, `VERB_LAYER=l0`) + `verb/test.d/l1` (container-internal, `VERB_LAYER=l1`). All five are universal — identical across all cargo modules.
 5. Create `verb/clean`: `cargo clean -p <name>` (universal).
 6. Create `verb/run`:
    - **Binary module:** dispatcher (default→l1) + `verb/run.d/l1` (direct: `cargo run -p <name> --bin <binary>`).

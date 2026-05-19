@@ -413,7 +413,7 @@ current::0   → line omitted
 
 ### Parameter :: 19. `refresh::`
 
-When an account's quota fetch returns an HTTP auth error (401 or 403), silently attempt a token refresh via `claude_runner_core::run_isolated()` and retry the fetch once before reporting failure.
+When an account's quota fetch returns an HTTP auth error (401 or 403), or an HTTP 429 rate-limit error when the per-account credential file has a locally-expired `expiresAt`, silently attempt a token refresh via `claude_runner_core::run_isolated()` and retry the fetch once before reporting failure.
 
 - **Type:** `bool`
 - **Default:** `1` (on — expired tokens silently refreshed before reporting failure)
@@ -430,9 +430,9 @@ refresh::0   → auth errors appear as error rows in the table (explicit disable
 ```
 
 **Notes:**
-- HTTP 401 and 403 responses trigger a refresh attempt. 429 (rate-limit), network timeouts, and other non-auth errors are not retried — they pass through as error rows in the table.
+- HTTP 401 and 403 always trigger a refresh attempt. HTTP 429 triggers a refresh only when the per-account credential file has a locally-expired `expiresAt` (`expiresAt / 1000 ≤ now`) — this recovers accounts where Claude Code updated the live session file but the saved per-account copy was never re-saved, leaving a stale token. HTTP 429 with a non-expired local token is passed through as-is (the token is valid; no refresh needed).
 - The refresh may silently have no effect when: (a) the token is not actually server-expired (claude detects no need to refresh), (b) `run_isolated` times out before credentials are updated, or (c) the refreshToken itself is also expired. Use `trace::1` to see exactly which step stopped the refresh for each account.
-- A 429 response indicates per-token rate-limiting from the quota API, not an expired token. No retry is attempted; the rate limit is the real blocker and must resolve on its own.
+- Network timeouts and other non-auth/non-ratelimit errors are not retried — they pass through as error rows in the table.
 - Exactly one retry per account per invocation. If the retried fetch also fails, the final error is shown in the account's row.
 - The updated credential JSON is written back to the per-account credential file (`{credential_store}/{account}.credentials.json`); the shared live session file (`~/.claude/.credentials.json`) is not touched.
 
@@ -540,3 +540,30 @@ trace::1   → print [trace] lines to stderr; stdout output unchanged
   ```
   [trace] refresh  i12@wbox.pro  should_retry=false (reason: HTTP transport error: HTTP 429)
   ```
+
+---
+
+### Parameter :: 24. `field::`
+
+When set, outputs the raw resolved path value for a single named field instead of the full path listing. Useful for shell scripts that need one specific path without parsing multi-line output or piping through `jq`.
+
+- **Type:** `String`
+- **Default:** `""` (omit to show all paths)
+- **Constraints:** Must be one of: `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions`; unknown value exits 1 with an error message listing all valid field names
+- **Commands:** [`.paths`](commands.md#command--8-paths)
+- **Purpose:** Script integration — eliminates parsing or `jq` when only one path value is needed (e.g., locating the credential store in a refresh script).
+- **Group:** Output Selection
+
+**Examples:**
+
+```text
+field::credential_store   → /home/user/.persistent/claude/credential/
+field::credentials        → /home/user/.claude/.credentials.json
+field::base               → /home/user/.claude
+field::session_env        → /home/user/.claude/session-env/
+field::unknown            → exit 1: "unknown field 'unknown'; valid: base, credentials, credential_store, projects, stats, settings, session_env, sessions"
+```
+
+**Notes:**
+- When `field::` is set, `format::` is ignored — output is always the raw string value followed by a newline.
+- Field names match the JSON keys from `clp .paths format::json` output (underscores, not hyphens).

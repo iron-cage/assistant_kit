@@ -11,8 +11,9 @@
 | File | Responsibility |
 |------|---------------|
 | `build` | Compile project artifacts via `cargo build`. |
+| `verb.yml` | Verb framework configuration: image name, build context, plugin targets. |
 | `test` | Dispatcher: run full test suite; delegates to `test.d/` layer by `VERB_LAYER`. |
-| `test.d/` | Layer directory: `l0` (host-native, default), `l1` (container-internal). |
+| `test.d/` | Layer directory: `docker` (Docker via verb-run, default), `l0` (host-native), `l1` (container-internal). |
 | `clean` | Remove generated artifacts and caches via `cargo clean`. |
 | `run` | Execute entry point binary — unavailable for this library crate. |
 | `lint` | Dispatcher: run linter; delegates to `lint.d/` layer by `VERB_LAYER`. |

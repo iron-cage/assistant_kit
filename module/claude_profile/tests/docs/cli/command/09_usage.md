@@ -44,6 +44,7 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 | IT-36 | Empty store + `format::json` → output is `[]` | Output Format |
 | IT-37 | Single failed account → no "Valid:" footer line emitted | Footer |
 | IT-38 | `.usage.help` shows `refresh::` default as `1` (enabled) | Help Output |
+| IT-39 | `.usage.help` refresh description mentions `429` and locally-expired case | Help Output |
 
 ### Test Coverage Summary
 
@@ -66,10 +67,10 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 - Live Monitor: 2 tests (IT-22, IT-31)
 - Live Guards: 6 tests (IT-23, IT-24, IT-25, IT-27, IT-29, IT-30)
 - JSON Output: 1 test (IT-28)
-- Help Output: 3 tests (IT-32, IT-34, IT-38)
+- Help Output: 4 tests (IT-32, IT-34, IT-38, IT-39)
 - Trace: 1 test (IT-35)
 
-**Total:** 37 integration tests in `usage_test.rs`; source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; IT-17 covered by `ft02_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02)
+**Total:** 38 integration tests in `usage_test.rs`; source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft02_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02)
 
 ---
 
@@ -477,3 +478,15 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 - **Fix:** BUG-155 (`task/claude_profile/bug/155_refresh_wrong_default.md`)
 - **Source fn:** `it37_mre_bug155_refresh_defaults_to_1`
 - **Source:** [017_token_refresh.md AC-23](../../../../docs/feature/017_token_refresh.md)
+
+---
+
+### IT-39: `.usage.help` refresh description mentions `429` and locally-expired case
+
+- **Given:** Standard environment.
+- **When:** `clp .usage.help`
+- **Then:** Exits 0; stdout contains `"429"` (the conditional 429+locally-expired refresh case is documented in the parameter description); stdout does NOT contain the old combined string `"401/403/429"`.
+- **Exit:** 0
+- **Fix:** BUG-156 (`task/claude_profile/bug/156_refresh_429_expired_not_refreshed.md`)
+- **Source fn:** `it38_mre_bug156_refresh_help_mentions_429_expired`
+- **Source:** [017_token_refresh.md AC-24](../../../../docs/feature/017_token_refresh.md)

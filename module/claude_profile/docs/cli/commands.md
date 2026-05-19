@@ -11,7 +11,7 @@
 | 5 | `.account.use` | Switch active account by name with atomic credential rotation | 2 | `clp .account.use name::alice@home.com` |
 | 6 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::alice@oldco.com` |
 | 7 | `.token.status` | Show active OAuth token expiry classification | 2 | `clp .token.status` |
-| 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 1 | `clp .paths` |
+| 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 2 | `clp .paths` |
 | 9 | `.usage` | Show live rate-limit quota for all saved accounts | 6 | `clp .usage` |
 | 10 | `.credentials.status` | Show live credential metadata without account store dependency | 13 | `clp .credentials.status` |
 | 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 2 | `clp .account.limits name::alice@acme.com` |
@@ -33,8 +33,7 @@
 | Count | Commands |
 |-------|----------|
 | 0 | `.`, `.help` |
-| 1 | `.paths` |
-| 2 | `.account.save`, `.account.use`, `.account.delete`, `.token.status`, `.account.limits` |
+| 2 | `.paths`, `.account.save`, `.account.use`, `.account.delete`, `.token.status`, `.account.limits` |
 | 5 | `.usage` |
 | 12 | `.accounts` |
 | 13 | `.credentials.status` |
@@ -418,19 +417,22 @@ clp .token.status format::json
 
 Displays all canonical `~/.claude/` file and directory paths resolved from `HOME`. Use this for diagnostics and tooling integration.
 
--- **Parameters:** [`format::`](params.md#parameter--2-format)
--- **Exit:** 0 (success) | 2 (runtime: HOME not set)
+-- **Parameters:** [`format::`](params.md#parameter--2-format), [`field::`](params.md#parameter--24-field)
+-- **Exit:** 0 (success) | 1 (usage: unknown `field::` value) | 2 (runtime: HOME not set)
 
 **Syntax:**
 
 ```bash
 clp .paths
 clp .paths format::json
+clp .paths field::credential_store
+clp .paths field::credentials
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `format::` | [`OutputFormat`] | `text` | Output format |
+| `field::` | `String` | `""` (show all) | Output a single named path value; valid: `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions` |
 
 **Examples:**
 
@@ -446,7 +448,17 @@ clp .paths
 
 clp .paths format::json
 # {"base":"/home/user/.claude","credentials":"/home/user/.claude/.credentials.json",...}
+
+clp .paths field::credential_store
+# /home/user/.persistent/claude/credential/
+
+clp .paths field::unknown
+# exit 1: "unknown field 'unknown'; valid: base, credentials, credential_store, ..."
 ```
+
+**Notes:**
+- `field::` takes priority over `format::` — when both are provided, `format::` is ignored.
+- Field names use underscores (`session_env`), matching the JSON key names from `format::json`.
 
 ---
 
@@ -472,7 +484,7 @@ clp .usage refresh::1 trace::1
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `format::` | [`OutputFormat`](types.md#type--3-outputformat) | `text` | Output format (`text` or `json`; `json` incompatible with `live::1`) |
-| `refresh::` | `bool` | `0` | On 401/403 auth error, refresh token via isolated subprocess and retry |
+| `refresh::` | `bool` | `1` | On 401/403 auth error or 429 with locally-expired token, refresh via isolated subprocess and retry |
 | `live::` | `bool` | `0` | Enable continuous refresh loop (Ctrl-C to exit) |
 | `interval::` | `u64` | `30` | Seconds between refresh cycles (≥ 30; only validated when `live::1`) |
 | `jitter::` | `u64` | `0` | Max random seconds added to each cycle delay (≤ interval; only validated when `live::1`) |
@@ -517,7 +529,7 @@ clp .usage live::1 interval::60 jitter::10
 - Accounts with expired or missing `accessToken` show `—` for quota columns and a shortened error reason in the last column; other accounts continue processing (per-account errors are non-fatal).
 - Footer "Valid: X / Y   →  Next: ..." appears when ≥2 accounts have valid quota data; omitted when 0 or 1. In live mode this footer is followed by the countdown line.
 - Empty credential store exits 0 with `(no accounts configured)`.
-- `refresh::1` triggers at most one retry per account per cycle; only HTTP 401/403 errors trigger the subprocess. See [feature/017_token_refresh.md](../feature/017_token_refresh.md).
+- `refresh::1` triggers at most one retry per account per cycle; HTTP 401/403 always trigger refresh; HTTP 429 triggers refresh only when `expiresAt` is locally expired (stale per-account credential file). See [feature/017_token_refresh.md](../feature/017_token_refresh.md).
 - `live::1 format::json` exits 1 before any fetch. `interval::` and `jitter::` are validated only when `live::1`. See [feature/018_live_monitor.md](../feature/018_live_monitor.md).
 - `refresh::` and `live::1` are composable — token refresh runs on every cycle in live mode.
 - See [feature/009_token_usage.md](../feature/009_token_usage.md) for the baseline algorithm and AC criteria.

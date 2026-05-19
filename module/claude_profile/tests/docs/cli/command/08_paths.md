@@ -11,15 +11,18 @@ Integration test planning for the `.paths` command. See [commands.md](../../../.
 | IT-3 | HOME not set exits 2 | Error Handling |
 | IT-4 | All output paths are absolute | Path Correctness |
 | IT-5 | Paths resolve from actual HOME value | Path Correctness |
+| IT-6 | `field::credential_store` outputs single raw path value | Field Selection |
+| IT-7 | `field::` with unknown name exits 1 | Error Handling |
 
 ### Test Coverage Summary
 
 - Basic Invocation: 1 test
 - Output Format: 1 test
-- Error Handling: 1 test
+- Error Handling: 2 tests
 - Path Correctness: 2 tests
+- Field Selection: 1 test
 
-**Total:** 5 integration tests
+**Total:** 7 integration tests
 
 ---
 
@@ -69,4 +72,26 @@ Integration test planning for the `.paths` command. See [commands.md](../../../.
 - **When:** `HOME=/tmp/test_home_12345 clp .paths`
 - **Then:** All paths rooted under `/tmp/test_home_12345/.claude/`, exit 0.; all paths rooted under the custom HOME value
 - **Exit:** 0
+- **Source:** [commands.md — .paths](../../../../docs/cli/commands.md#command--8-paths)
+
+---
+
+### IT-6: `field::credential_store` outputs single raw path value
+
+- **Given:** `HOME` is set to a valid temporary directory.
+- **When:** `clp .paths field::credential_store`
+- **Then:** A single line on stdout containing the credential store path (no label prefix, no JSON wrapper). Exit 0.
+- **Exit:** 0
+- **Status:** ⏳ Pending
+- **Source:** [commands.md — .paths](../../../../docs/cli/commands.md#command--8-paths)
+
+---
+
+### IT-7: `field::` with unknown name exits 1
+
+- **Given:** `HOME` is set to a valid temporary directory.
+- **When:** `clp .paths field::nonexistent`
+- **Then:** Error message on stderr listing valid field names. Exit 1.
+- **Exit:** 1
+- **Status:** ⏳ Pending
 - **Source:** [commands.md — .paths](../../../../docs/cli/commands.md#command--8-paths)

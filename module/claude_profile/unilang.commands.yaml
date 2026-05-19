@@ -323,10 +323,20 @@
       validation_rules: []
       aliases: ["fmt"]
       tags: []
+    - name: "field"
+      kind: "String"
+      description: "Output a single named path value; valid: base, credentials, credential_store, projects, stats, settings, session_env, sessions"
+      hint: "Single field name"
+      optional: true
+      default: ""
+      validation_rules: []
+      aliases: []
+      tags: []
 
   examples:
     - ".paths"
     - ".paths format::json"
+    - ".paths field::credential_store"
   auto_help_enabled: true
 
 - name: ".usage"
@@ -355,8 +365,8 @@
 
     - name: "refresh"
       kind: "Integer"
-      description: "Retry once on 401/403 by refreshing OAuth token via isolated subprocess (1 = enabled, default; 0 = disabled)"
-      hint: "Retry on 401/403"
+      description: "Retry once on 401/403 (auth errors) or 429 when token is locally expired, via isolated subprocess (1 = enabled, default; 0 = disabled)"
+      hint: "Retry on auth/expired"
       optional: true
       default: "1"
       validation_rules: []

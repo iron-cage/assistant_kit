@@ -627,31 +627,56 @@ fn execute_live_mode(
 
 // ── Refresh helper ─────────────────────────────────────────────────────────────
 
-/// Retry quota fetch for accounts whose last result was a 401/403 auth error.
+/// Return `true` when `apply_refresh` should attempt a token refresh for `aq`.
+///
+/// Triggers on:
+/// - 401 or 403 — authentication failure; token rejected by the server.
+/// - 429 AND locally expired (`expires_at_ms / 1000 ≤ now_secs`) — the per-account
+///   credentials file may be stale (Claude Code updated the live session file but not
+///   the saved per-account copy). Refreshing updates both the token and `expiresAt`.
+///
+/// Returns `false` for 429 with a non-expired local token: the token is valid;
+/// refreshing would add a 30-second subprocess wait with no benefit.
+fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
+{
+  if matches!( aq.result, Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) )
+  {
+    return true;
+  }
+  // Fix(issue-156): also refresh when rate-limited AND locally expired.
+  // Root cause: 429+expired accounts were unconditionally excluded; the guard
+  //   assumed "429 = valid token" but a past `expiresAt` indicates the per-account
+  //   file may be stale — the token may need refreshing despite the 429 response.
+  // Pitfall: don't refresh ALL 429 accounts (as task 142 did) — that adds a
+  //   pointless 30-second wait for valid-but-rate-limited accounts.
+  matches!( aq.result, Err( ref e ) if e.contains( "429" ) )
+    && ( aq.expires_at_ms / 1000 ) <= now_secs
+}
+
+/// Retry quota fetch for accounts that need token refresh (401/403 auth errors,
+/// or 429 rate-limit with locally-expired credentials).
 ///
 /// For each such account: reads the per-account credential file, spawns an isolated
 /// Claude Code process to refresh the token, writes the new credentials back, then
 /// re-fetches only that account's quota.  Mutates `accounts` in place.
 ///
-/// Fix(issue-150) — HTTP 429 removed from retry guard.
+/// Fix(issue-150) — HTTP 429 removed from unconditional retry guard.
 /// Root cause: HTTP 429 is a rate-limit response, not an authentication failure.
-/// The OAuth token is still valid when the server returns 429; spawning an isolated
-/// subprocess to refresh a valid token adds a pointless 30-second wait per
-/// rate-limited account and obscures the real cause.
-/// Pitfall: Task 142 added the 429 status code to this guard, assuming rate-limit
-/// equals token expiry; the actual auth failure signals are 401 and 403 only.
+/// Pitfall: Task 142 added 429 unconditionally; task 150 removed it. The correct
+/// behaviour (issue-156) is to refresh only when 429 AND locally expired.
 fn apply_refresh(
   accounts         : &mut [ AccountQuota ],
   credential_store : &std::path::Path,
   trace            : bool,
 )
 {
+  let now_secs = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH )
+    .unwrap_or_default()
+    .as_secs();
   for aq in accounts
   {
-    let should_retry = matches!(
-      aq.result,
-      Err( ref e ) if e.contains( "401" ) || e.contains( "403" )
-    );
+    let should_retry = should_refresh( aq, now_secs );
     if trace
     {
       let reason = aq.result.as_ref().err().map_or( "ok", String::as_str );
@@ -707,6 +732,15 @@ fn apply_refresh(
       if trace { eprintln!( "[trace] refresh  {}  write failed — skipping retry", aq.name ); }
       continue;
     }
+    // Fix(issue-156): update in-memory expiry from the newly written credentials.
+    // Root cause: `aq.expires_at_ms` was never updated after the isolated subprocess
+    //   wrote fresh credentials, so `Expires` showed EXPIRED for the rest of the run.
+    // Pitfall: always re-read from file — the subprocess may have updated `expiresAt`
+    //   even when the access token bytes were unchanged.
+    if let Some( new_exp ) = parse_u64_field( &creds_path, "expiresAt" )
+    {
+      aq.expires_at_ms = new_exp;
+    }
 
     // Re-read the refreshed token and retry only this account's quota.
     if trace { eprintln!( "[trace] refresh  {}  token refreshed, retrying quota fetch", aq.name ); }
@@ -721,6 +755,11 @@ fn apply_refresh(
       Err( e ) =>
       {
         if trace { eprintln!( "[trace] refresh  {}  retry Err({})", aq.name, e ); }
+        // Fix(issue-156): propagate the retry error to show the current post-refresh status.
+        // Root cause: on retry failure the original error (e.g. "401 expired") was kept,
+        //   hiding the actual post-refresh state (e.g. "429 rate-limited after refresh").
+        // Pitfall: ignoring the retry error masks the true current state after refresh.
+        aq.result = Err( e.to_string() );
       }
     }
   }
@@ -822,10 +861,11 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
   let mut accounts = fetch_all_quota( &credential_store, &live_creds_file, false, trace )?;
 
-  // Retry-once per account on 401/403: if refresh::1 and any account returned an
-  // HTTP authentication error, refresh that account's stored token via an isolated
-  // subprocess, then re-fetch only that account's quota (not all accounts).
-  // HTTP 429 (rate-limit) is intentionally excluded — the token is still valid.
+  // Retry-once per account on 401/403 auth errors or 429+locally-expired: if
+  // refresh::1 and any account's quota fetch failed with an auth error OR a
+  // rate-limit response while its local `expiresAt` is past, refresh that token
+  // via an isolated subprocess, then re-fetch only that account's quota.
+  // Pure 429 with a non-expired local token is not retried — the token is valid.
   if refresh == 1
   {
     apply_refresh( &mut accounts, &credential_store, trace );
@@ -1151,11 +1191,12 @@ mod tests
     );
   }
 
-  /// C4 — `apply_refresh` with mixed results: only auth errors enter the retry path.
+  /// C4 — `apply_refresh` with mixed results: auth errors and 429+expired enter retry path.
   ///
-  /// Four accounts: Ok, 429, 401, generic error. After `apply_refresh`, only
-  /// the 401 account enters the retry guard (and stays unchanged because no
-  /// credential file exists). The other three are untouched.
+  /// Four accounts: Ok, 429+expired (`expires_at_ms=0`), 401, generic error.
+  /// After `apply_refresh`, the 401 and the 429+expired accounts enter the retry guard
+  /// but stay unchanged because no credential file exists on disk. Ok and generic error
+  /// are untouched (Ok never retries; generic error has no auth/429 signal).
   #[ test ]
   fn test_apply_refresh_mixed_accounts()
   {
@@ -1201,7 +1242,7 @@ mod tests
     assert!( accounts[ 0 ].result.is_ok(), "Ok account must remain Ok" );
     assert!(
       matches!( accounts[ 1 ].result, Err( ref e ) if e.contains( "429" ) ),
-      "429 must be unchanged",
+      "429+expired with no credential file must be unchanged (retry attempted, no cred file → continue)",
     );
     assert!(
       matches!( accounts[ 2 ].result, Err( ref e ) if e.contains( "401" ) ),
@@ -1232,6 +1273,112 @@ mod tests
       },
     ];
     apply_refresh( &mut accounts, store.path(), true );
+  }
+
+  // ── should_refresh ──────────────────────────────────────────────────────────
+
+  /// SR-1 — 401 triggers refresh regardless of `expires_at_ms` (far-future token).
+  #[ test ]
+  fn test_should_refresh_401_triggers()
+  {
+    let aq = AccountQuota
+    {
+      name          : "a@test.com".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+    };
+    assert!( should_refresh( &aq, 0 ), "401 must trigger refresh" );
+  }
+
+  /// SR-2 — 403 triggers refresh regardless of `expires_at_ms`.
+  #[ test ]
+  fn test_should_refresh_403_triggers()
+  {
+    let aq = AccountQuota
+    {
+      name          : "a@test.com".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Err( "HTTP transport error: HTTP 403".to_string() ),
+    };
+    assert!( should_refresh( &aq, 0 ), "403 must trigger refresh" );
+  }
+
+  /// SR-3 — 429 + locally expired (`expires_at_ms=0`, `now_secs=9999`) triggers refresh.
+  ///
+  /// Verifies BUG-156 fix: a rate-limited account with a stale (past) `expiresAt`
+  /// must enter the refresh path so the credentials file gets updated.
+  // test_kind: bug_reproducer(issue-156)
+  #[ test ]
+  fn test_should_refresh_mre_bug156_429_expired_triggers()
+  {
+    let aq = AccountQuota
+    {
+      name          : "a@test.com".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : 0, // locally expired
+      result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+    };
+    assert!(
+      should_refresh( &aq, 9_999 ),
+      "429+expired must trigger refresh (BUG-156), expires=0 now=9999",
+    );
+  }
+
+  /// SR-4 — 429 with non-expired token must NOT trigger refresh.
+  ///
+  /// When the local `expiresAt` is in the future, 429 means the token is valid but
+  /// the account is rate-limited. Refreshing would add a 30-second wait with no benefit.
+  #[ test ]
+  fn test_should_refresh_429_valid_token_no_trigger()
+  {
+    let aq = AccountQuota
+    {
+      name          : "a@test.com".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : FAR_FUTURE_MS, // not expired
+      result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+    };
+    assert!(
+      !should_refresh( &aq, 0 ),
+      "429 with valid (non-expired) token must NOT trigger refresh",
+    );
+  }
+
+  /// SR-5 — Ok result never triggers refresh.
+  #[ test ]
+  fn test_should_refresh_ok_no_trigger()
+  {
+    let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let aq = AccountQuota
+    {
+      name          : "a@test.com".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : 0,
+      result        : Ok( quota ),
+    };
+    assert!( !should_refresh( &aq, 9_999 ), "Ok result must not trigger refresh" );
+  }
+
+  /// SR-6 — Generic (non-HTTP) error does not trigger refresh.
+  #[ test ]
+  fn test_should_refresh_generic_error_no_trigger()
+  {
+    let aq = AccountQuota
+    {
+      name          : "a@test.com".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : 0,
+      result        : Err( "connection refused".to_string() ),
+    };
+    assert!( !should_refresh( &aq, 9_999 ), "generic error must not trigger refresh" );
   }
 
   // ── compute_expires_cell ────────────────────────────────────────────────────
