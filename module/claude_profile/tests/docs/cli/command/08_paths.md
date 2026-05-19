@@ -82,8 +82,8 @@ Integration test planning for the `.paths` command. See [commands.md](../../../.
 - **When:** `clp .paths field::credential_store`
 - **Then:** A single line on stdout containing the credential store path (no label prefix, no JSON wrapper). Exit 0.
 - **Exit:** 0
-- **Status:** ⏳ Pending
-- **Source:** [commands.md — .paths](../../../../docs/cli/commands.md#command--8-paths)
+- **Status:** ✅ Implemented
+- **Source:** tests/cli/token_paths_test.rs :: p09_paths_field_returns_single_value
 
 ---
 
@@ -93,5 +93,5 @@ Integration test planning for the `.paths` command. See [commands.md](../../../.
 - **When:** `clp .paths field::nonexistent`
 - **Then:** Error message on stderr listing valid field names. Exit 1.
 - **Exit:** 1
-- **Status:** ⏳ Pending
-- **Source:** [commands.md — .paths](../../../../docs/cli/commands.md#command--8-paths)
+- **Status:** ✅ Implemented
+- **Source:** tests/cli/token_paths_test.rs :: p10_paths_field_unknown_exits_1

@@ -55,4 +55,4 @@ if [[ "${1:-}" == "--dry-run" ]]; then echo "cargo clippy -p claude_profile --al
 exec cargo clippy -p claude_profile --all-features -- -D warnings
 ```
 
-Each module's `run/runbox.yml` must declare `lint_script: module/<name>/verb/lint.d/l1` — the container entry point is the l1 layer directly. See `run/docs/parameter/014_lint_script.md`. The linter is ecosystem-specific: ruff for Python, eslint for Node.js, cargo clippy for Rust. `verb/lint` is `available` for all project types — linting is universal.
+Each module's `runbox/runbox.yml` must declare `lint_script: module/<name>/verb/lint.d/l1` — the container entry point is the l1 layer directly. See `runbox/docs/parameter/014_lint_script.md`. The linter is ecosystem-specific: ruff for Python, eslint for Node.js, cargo clippy for Rust. `verb/lint` is `available` for all project types — linting is universal.

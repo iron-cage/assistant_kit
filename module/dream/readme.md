@@ -12,7 +12,7 @@ Zero own logic — every public item originates from a core crate.
 | `docs/` | Crate doc entities: aggregation feature spec and zero-own-logic invariant |
 | `tests/` | Integration smoke tests verifying re-export paths per feature |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `run/` | Shell scripts for container-orchestrated operations. |
+| `runbox/` | Shell scripts for container-orchestrated operations. |
 
 ## Feature Flags
 

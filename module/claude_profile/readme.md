@@ -11,7 +11,7 @@ Claude Code account credential management.
 | `tests/` | Test suite for credential management |
 | `docs/` | Behavioral requirements: features (FR-6–FR-20), invariants, CLI reference |
 | `unilang.commands.yaml` | YAML command metadata for 9 profile commands |
-| `run/` | Container runner: thin wrapper, config manifest, and test script. |
+| `runbox/` | Container runner: thin wrapper, config manifest, and test script. |
 | `verb/` | Shell scripts for each `do` protocol verb (build, test, clean, run, lint). |
 | `vision.md` | Crate vision, design decisions, and open problems |
 | `vision_ua.md` | Crate vision in Ukrainian |
@@ -114,20 +114,20 @@ clp .paths                 # show ~/.claude/ canonical paths
 
 **Container (all tests — credentials required):**
 ```bash
-./run/runbox .test
+./runbox/runbox .test
 ```
 
 **Container (offline — no credentials needed):**
 ```bash
-./run/runbox .test.offline
+./runbox/runbox .test.offline
 ```
 
 **Container (interactive shell):**
 ```bash
-./run/runbox .shell
+./runbox/runbox .shell
 ```
 
 **Local (Docker-orchestrated):**
 ```bash
-./run/verb-run test
+./runbox/verb-run test
 ```

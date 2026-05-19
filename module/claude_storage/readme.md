@@ -16,7 +16,7 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `run/` | Shell scripts for container-orchestrated operations. |
+| `runbox/` | Shell scripts for container-orchestrated operations. |
 
 ## overview
 
@@ -409,7 +409,7 @@ fn main() -> claude_storage_core::Result< () >
 
 ## testing
 
-**Container tests**: Run via workspace runbox (`./run/runbox .test` from workspace root, using `--workspace` scope).
+**Container tests**: Run via workspace runbox (`./runbox/runbox .test` from workspace root, using `--workspace` scope).
 
 **Core library tests**: 105 tests in `claude_storage_core` crate
 - Entry parsing and validation
@@ -430,7 +430,7 @@ fn main() -> claude_storage_core::Result< () >
 
 **Local (w3 required):**
 ```bash
-./run/test
+./runbox/test
 ```
 
 ## license

@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# claude_profile runbox test runner — delegates to universal runbox/runbox-run.
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+RUNNER="$( cd "$SCRIPT_DIR/../../../runbox" && pwd )/runbox-run"
+exec "$RUNNER" "$SCRIPT_DIR/runbox.yml" "$@"

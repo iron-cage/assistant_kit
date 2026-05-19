@@ -1,0 +1,397 @@
+#!/usr/bin/env bash
+# Universal runbox test runner.
+# Usage: runbox-run <config.yml> [command]
+#   command: .build | .run | .test | .test.offline | .lint | .list | .shell | .help  (default: help)
+set -euo pipefail
+
+CONFIG="$1"
+COMMAND="${2:-.}"
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+CONFIG_DIR="$( cd "$( dirname "$CONFIG" )" && pwd )"
+
+# ── Config reader (flat YAML — no external parser required) ───────────────────
+# Strips "key: " prefix and surrounding double-quotes from value.
+
+cfg()     { grep -m1 "^$1:" "$CONFIG" | sed 's/^[^:]*:[[:space:]]*//' | tr -d '"' || :; }
+cfg_or()  { local v; v="$(cfg "$1")"; echo "${v:-$2}"; }
+
+IMAGE="$(cfg image)"                              # image tag for -t at build and image lookup at run
+_dockerfile_raw="$(cfg_or dockerfile "")"         # resolved relative to CONFIG_DIR
+if [[ -z "$_dockerfile_raw" ]]; then
+  DOCKERFILE="$SCRIPT_DIR/runbox.dockerfile"
+elif [[ "$_dockerfile_raw" = /* ]]; then
+  DOCKERFILE="$_dockerfile_raw"
+else
+  DOCKERFILE="$CONFIG_DIR/$_dockerfile_raw"
+fi
+TEST_USER="$(cfg test_user)"                      # forwarded as --build-arg; non-root for chmod-000 tests
+CMD_SCOPE="$(cfg cmd_scope)"                      # crate filter for nextest run and cargo chef cook
+CMD_FILTER="$(cfg cmd_filter)"                    # forwarded as --build-arg; nextest filter baked into offline CMD
+TEST_SCRIPT="$(cfg test_script)"                  # path (relative to /workspace) exec'd by cmd_test
+LINT_SCRIPT="$(cfg lint_script)"                  # path (relative to /workspace) exec'd by cmd_lint
+RUN_SCRIPT="$(cfg run_script)"                    # path (relative to /workspace) exec'd by cmd_run
+BASE_IMAGE="$(cfg_or base_image rust:slim)"             # FROM image for chef and test stages
+RUSTUP_COMPONENTS="$(cfg_or rustup_components clippy)"  # space-separated rustup components
+SYSTEM_PACKAGES="$(cfg_or system_packages '')"          # space-separated apt packages; empty = skip install
+CARGO_FEATURES="$(cfg_or cargo_features --all-features)" # feature flags for nextest list and offline run
+WORKSPACE_DIR="$(cfg_or workspace_dir /workspace)"      # container working directory
+CACHE_DIR="$(cfg_or cache_dir target)"                  # build artifact dir; seeded volume + container mount
+_workspace_root_raw="$(cfg_or workspace_root "")"       # project root; resolved relative to CONFIG_DIR
+if [[ -z "$_workspace_root_raw" ]]; then
+  WORKSPACE_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+else
+  WORKSPACE_ROOT="$( cd "$CONFIG_DIR/$_workspace_root_raw" && pwd )"
+fi
+EXTRA_BUILD_CONTEXT="$(cfg_or extra_build_context "")"  # name=relpath; relpath resolved relative to CONFIG_DIR
+
+# ── Plugin hooks (no-ops; overridden by runbox/plugins.sh if present) ───────────
+_plugin_build_volumes()    { extra_volumes=();                  }
+_plugin_test_args()        { bin_args=();    mount_args=();     }
+_plugin_list_args()        { vol_args=();    cargo_env="";      }
+_plugin_list_cmd()         { list_cmd="${cargo_env}cargo nextest list $CMD_SCOPE $CARGO_FEATURES"; }
+_plugin_shell_extra_args() { plugin_extra_args=();              }
+_plugin_help_hint()        { plugin_hint="";                    }
+
+# Source core plugins first (SCRIPT_DIR/plugins.sh), then project-local overrides (CONFIG_DIR/plugins.sh).
+PLUGINS_FILE="${SCRIPT_DIR}/plugins.sh"
+[[ -f "$PLUGINS_FILE" ]] && source "$PLUGINS_FILE"
+if [[ "$CONFIG_DIR" != "$SCRIPT_DIR" ]]; then
+  CONFIG_PLUGINS_FILE="${CONFIG_DIR}/plugins.sh"
+  [[ -f "$CONFIG_PLUGINS_FILE" ]] && source "$CONFIG_PLUGINS_FILE"
+fi
+
+# ── Container runtime ─────────────────────────────────────────────────────────
+# CONTAINER_CMD env override: export CONTAINER_CMD=docker before calling this
+# script to bypass auto-detection.  Useful when both runtimes are installed but
+# one has storage issues (e.g. Podman fuse-overlayfs instability on aarch64).
+
+if [[ -z "${CONTAINER_CMD:-}" ]]
+then
+  if command -v podman &>/dev/null
+  then
+    CONTAINER_CMD=podman
+  elif command -v docker &>/dev/null
+  then
+    CONTAINER_CMD=docker
+  else
+    echo "error: neither podman nor docker found" >&2
+    exit 1
+  fi
+fi
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
+_build()
+{
+  echo "Building $IMAGE using $CONTAINER_CMD..."
+
+  # Fix(issue-runbox-build-safety): Serialize concurrent _build() calls via atomic mkdir lock.
+  # Root cause: Multiple simultaneous `runbox .build` / `_ensure_image` invocations (7 observed
+  #   in production) each spawn an independent `podman build` process with no coordination,
+  #   causing disk oscillation (9.9 G–54 G), storage corruption, and graphroot migration mid-build.
+  # Pitfall: mkdir is atomic on POSIX — use it (not lockfile) for reliable mutual exclusion in bash.
+  local _build_lockdir="/tmp/runbox_build_${IMAGE//[^a-zA-Z0-9_-]/_}.lock"
+  local _build_deadline
+  _build_deadline=$(( $(date +%s) + 300 ))
+  while ! mkdir "$_build_lockdir" 2>/dev/null
+  do
+    if (( $(date +%s) >= _build_deadline ))
+    then
+      echo "error: build lock timeout for '$IMAGE' after 5 min — another build may be stuck." >&2
+      echo "       Remove $_build_lockdir manually if the other process is gone." >&2
+      exit 1
+    fi
+    echo "Waiting for a concurrent build of '$IMAGE' to finish..."
+    sleep 2
+  done
+  # shellcheck disable=SC2064
+  trap "rm -rf '$_build_lockdir'" EXIT
+
+  # --rm=false: skip intermediate-container cleanup after build.
+  # Rootless Podman + fuse-overlayfs can lose overlay mounts during multi-stage
+  # cleanup; when cleanup fails, Podman removes the committed image as a rollback.
+  # Skipping cleanup avoids this and lets the final tagged image survive.
+  # Accumulated intermediate containers are pruned here before each build.
+  "$CONTAINER_CMD" container prune -f &>/dev/null || true
+  local _extra_ctx_args=()
+  if [[ -n "$EXTRA_BUILD_CONTEXT" ]]; then
+    local _bc_name _bc_relpath _bc_abspath
+    _bc_name="${EXTRA_BUILD_CONTEXT%%=*}"
+    _bc_relpath="${EXTRA_BUILD_CONTEXT#*=}"
+    _bc_abspath="$( cd "$CONFIG_DIR/$_bc_relpath" && pwd )"
+    _extra_ctx_args=( "--build-context" "${_bc_name}=${_bc_abspath}" )
+  fi
+  # shellcheck disable=SC2086
+  "$CONTAINER_CMD" build \
+    --rm=false \
+    -f "$DOCKERFILE" \
+    --build-arg "BASE_IMAGE=$BASE_IMAGE" \
+    --build-arg "TEST_USER=$TEST_USER" \
+    --build-arg "CMD_SCOPE=$CMD_SCOPE" \
+    --build-arg "CMD_FILTER=$CMD_FILTER" \
+    --build-arg "RUSTUP_COMPONENTS=$RUSTUP_COMPONENTS" \
+    --build-arg "SYSTEM_PACKAGES=$SYSTEM_PACKAGES" \
+    --build-arg "CARGO_FEATURES=$CARGO_FEATURES" \
+    --build-arg "WORKSPACE_DIR=$WORKSPACE_DIR" \
+    "${_extra_ctx_args[@]+"${_extra_ctx_args[@]}"}" \
+    -t "$IMAGE" \
+    "$WORKSPACE_ROOT"
+
+  # Fix(issue-runbox-build-safety): Verify image is accessible immediately after build.
+  # Root cause: `podman build` exits 0 when the image tag is written to storage, but if the
+  #   storage.conf graphroot was migrated mid-build (triggered by concurrent builds corrupting
+  #   storage), the image is orphaned in the old graphroot. Subsequent `image inspect` fails
+  #   with "image not known" despite BUILD COMPLETE appearing in the output.
+  # Pitfall: Build exit code 0 ≠ image accessible; always verify with image inspect before returning.
+  if ! "$CONTAINER_CMD" image inspect "$IMAGE" &>/dev/null
+  then
+    echo "error: Build completed (exit 0) but '$IMAGE' is not accessible via image inspect." >&2
+    echo "       The storage.conf graphroot may have been migrated mid-build." >&2
+    echo "       Try: $CONTAINER_CMD system migrate  (Podman only)" >&2
+    rm -rf "$_build_lockdir"
+    exit 1
+  fi
+
+  rm -rf "$_build_lockdir"
+}
+
+_ensure_image()
+{
+  if ! "$CONTAINER_CMD" image inspect "$IMAGE" &>/dev/null
+  then
+    echo "Image $IMAGE not found — building first..."
+    _build
+    return
+  fi
+  # Build a single probe that tests all configured scripts in one container run.
+  # Any missing file means the image predates a script addition — rebuild automatically
+  # rather than emitting a cryptic "not found" error.
+  local probe_parts=()
+  [[ -n "$TEST_SCRIPT" ]] && probe_parts+=( "test -f $WORKSPACE_DIR/$TEST_SCRIPT" )
+  [[ -n "$LINT_SCRIPT" ]] && probe_parts+=( "test -f $WORKSPACE_DIR/$LINT_SCRIPT" )
+  [[ -n "$RUN_SCRIPT"  ]] && probe_parts+=( "test -f $WORKSPACE_DIR/$RUN_SCRIPT" )
+  if [[ ${#probe_parts[@]} -gt 0 ]]
+  then
+    local probe_cmd="${probe_parts[0]}"
+    for part in "${probe_parts[@]:1}"; do probe_cmd+=" && $part"; done
+    if ! "$CONTAINER_CMD" run --rm "$IMAGE" bash -c "$probe_cmd" 2>/dev/null
+    then
+      echo "Image $IMAGE is stale (one or more configured scripts missing) — rebuilding..."
+      _build
+    fi
+  fi
+}
+
+_ensure_build_cache()
+{
+  local volume="${IMAGE}_$CACHE_DIR"
+  if ! "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
+  then
+    echo "Seeding build cache from image (first run only)..."
+    # Copy pre-compiled dep artifacts from image into the named volume.
+    # The image target/ has deps from the cook stage; without seeding the volume
+    # would start empty and force a full recompile from scratch on first use.
+    # World-writable so the host uid (used by cmd_test via --user) can write build artifacts.
+    "$CONTAINER_CMD" run --rm \
+      -v "${volume}:$WORKSPACE_DIR/${CACHE_DIR}_seed" \
+      "$IMAGE" \
+      bash -c "cp -a $WORKSPACE_DIR/$CACHE_DIR/. $WORKSPACE_DIR/${CACHE_DIR}_seed/ && chmod -R a+rwX $WORKSPACE_DIR/${CACHE_DIR}_seed/"
+  fi
+}
+
+_ensure_plugin_targets()
+{
+  if [[ -z "$BIN_PLUGIN_VOLUME" ]]; then return; fi
+  local volume="${IMAGE}_plugin_targets"
+  if ! "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
+  then
+    echo "Initializing plugin targets volume (first run only)..."
+    # Docker creates new named volumes with root ownership (mode 755).  When cmd_test
+    # runs as the host uid (--user flag), cargo cannot write build artifacts into the
+    # freshly-created volume and fails with EPERM.  Running chmod a+rwX here seeds the
+    # volume with world-writable permissions before the first test invocation.
+    # Must run as root (--user 0) because the image default user (testuser) cannot
+    # chmod a root-owned directory.
+    "$CONTAINER_CMD" run --rm \
+      --user 0 \
+      -v "${volume}:$BIN_PLUGIN_VOLUME" \
+      "$IMAGE" \
+      bash -c "chmod a+rwX $BIN_PLUGIN_VOLUME"
+  fi
+}
+
+# ── Commands ──────────────────────────────────────────────────────────────────
+
+cmd_build()
+{
+  _build
+  # Drop stale build caches so next use re-seeds from the new image.
+  local extra_volumes=()
+  _plugin_build_volumes
+  for volume in "${IMAGE}_$CACHE_DIR" "${extra_volumes[@]}"
+  do
+    if "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
+    then
+      echo "Removing stale build cache volume: $volume..."
+      "$CONTAINER_CMD" volume rm "$volume"
+    fi
+  done
+}
+
+cmd_test()
+{
+  # Pre-flight: verify test_script exists on host; a missing file here means a wrong
+  # path in runbox.yml — a rebuild won't help and _ensure_image's probe would rebuild
+  # endlessly without this guard.
+  if [[ -n "$TEST_SCRIPT" ]] && [[ ! -f "$WORKSPACE_ROOT/$TEST_SCRIPT" ]]
+  then
+    echo "error: test_script '$TEST_SCRIPT' not found at $WORKSPACE_ROOT/$TEST_SCRIPT" >&2
+    echo "Check test_script path in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  local bin_args=() mount_args=()
+  _plugin_test_args
+  _ensure_image
+  _ensure_plugin_targets
+  echo "▶ $IMAGE ($CONTAINER_CMD)"
+  # Run as the host user so mounted credential files (owned by host uid) are readable.
+  # Rootless Podman remaps container uid 0 → host uid, so without --userns=keep-id
+  # files owned by the host user appear as root inside the container and are unreadable
+  # by a non-root container process.  keep-id preserves the host UID mapping so the
+  # running uid matches the owner uid of the mounted credential files.
+  # workspace and cargo dirs are world-writable (a+rwX in runbox/runbox.dockerfile) so the host
+  # uid can write cargo lock files and build artifacts without owning those files.
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
+    -e VERB_LAYER=l1 \
+    "${bin_args[@]}" \
+    "${mount_args[@]}" \
+    "$IMAGE" \
+    "$WORKSPACE_DIR/$TEST_SCRIPT"
+}
+
+cmd_test_offline()
+{
+  _ensure_image
+  _ensure_build_cache
+  "$CONTAINER_CMD" run --rm \
+    -v "${IMAGE}_$CACHE_DIR:$WORKSPACE_DIR/$CACHE_DIR" \
+    "$IMAGE"
+}
+
+cmd_lint()
+{
+  if [[ -z "$LINT_SCRIPT" ]]; then
+    echo "error: lint_script not configured in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  if [[ ! -f "$WORKSPACE_ROOT/$LINT_SCRIPT" ]]; then
+    echo "error: lint_script '$LINT_SCRIPT' not found at $WORKSPACE_ROOT/$LINT_SCRIPT" >&2
+    echo "Check lint_script path in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  _ensure_image
+  "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
+    -e VERB_LAYER=l1 \
+    "$IMAGE" \
+    "$WORKSPACE_DIR/$LINT_SCRIPT"
+}
+
+cmd_run()
+{
+  if [[ -z "$RUN_SCRIPT" ]]; then
+    echo "error: run_script not configured in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  if [[ ! -f "$WORKSPACE_ROOT/$RUN_SCRIPT" ]]; then
+    echo "error: run_script '$RUN_SCRIPT' not found at $WORKSPACE_ROOT/$RUN_SCRIPT" >&2
+    echo "Check run_script path in $(basename "$CONFIG")" >&2
+    exit 1
+  fi
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  _ensure_image
+  "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
+    -e VERB_LAYER=l1 \
+    "$IMAGE" \
+    "$WORKSPACE_DIR/$RUN_SCRIPT"
+}
+
+cmd_list()
+{
+  _ensure_image
+  _ensure_plugin_targets
+  local userns_arg=() vol_args=() cargo_env="" list_cmd=""
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  # Same volume as cmd_test so .list artifacts persist between repeated .list calls.
+  _plugin_list_args
+  _plugin_list_cmd
+  "$CONTAINER_CMD" run --rm \
+    "${userns_arg[@]}" \
+    --user "$(id -u):$(id -g)" \
+    "${vol_args[@]}" \
+    "$IMAGE" \
+    bash -c "$list_cmd"
+}
+
+cmd_shell()
+{
+  _ensure_image
+  _ensure_build_cache
+  local args=( --rm -it -v "${IMAGE}_$CACHE_DIR:$WORKSPACE_DIR/$CACHE_DIR" )
+  local plugin_extra_args=()
+  _plugin_shell_extra_args
+  args+=( "${plugin_extra_args[@]}" )
+  "$CONTAINER_CMD" run "${args[@]}" "$IMAGE" bash
+}
+
+cmd_help()
+{
+  local plugin_hint=""
+  _plugin_help_hint
+  echo "Usage: ./runbox/runbox <command>"
+  echo ""
+  echo "Image Management:"
+  echo "  .build          Build the $IMAGE container image"
+  echo ""
+  echo "Running:"
+  echo "  .run            Run the entry point (requires run_script in runbox.yml)"
+  echo ""
+  echo "Testing:"
+  echo "  .test           Run all tests${plugin_hint}"
+  echo "  .test.offline   Run offline tests only (no external data needed)"
+  echo "  .lint           Run linter (requires lint_script in runbox.yml)"
+  echo "  .list           List all test names without running"
+  echo "  .shell          Interactive bash shell (mounts available)"
+  echo ""
+  echo "Help:"
+  echo "  .help           Show this help"
+}
+
+# ── Dispatch ──────────────────────────────────────────────────────────────────
+
+case "$COMMAND" in
+  .build)        cmd_build ;;
+  .run)          cmd_run ;;
+  .test)         cmd_test ;;
+  .test.offline) cmd_test_offline ;;
+  .lint)         cmd_lint ;;
+  .list)         cmd_list ;;
+  .shell)        cmd_shell ;;
+  .|.help)       cmd_help ;;
+  *)
+    echo "error: unknown command '$COMMAND'" >&2
+    echo "run './runbox/runbox .help' for available commands" >&2
+    exit 1
+    ;;
+esac

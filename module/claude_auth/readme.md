@@ -37,4 +37,4 @@ pub fn refresh_token(refresh_tok: &str, scope: &str) -> Result<TokenRefreshResul
 | `tests/readme.md` | Test directory organization guide |
 | `tests/auth_test.rs` | Unit tests T01–T06 for `parse_response` and `AuthError` (offline, no ureq) |
 | `verb/` | Shell scripts for each `do` protocol verb. |
-| `run/` | Shell scripts for container-orchestrated operations. |
+| `runbox/` | Shell scripts for container-orchestrated operations. |
