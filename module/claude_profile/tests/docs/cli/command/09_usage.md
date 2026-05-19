@@ -22,7 +22,6 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 | IT-14 | When credentials file unreadable: no `✓`; `*` still marks `_active` account | Active Divergence |
 | IT-15 | When current = active, only `✓` appears; no `*` on any row | Active Divergence |
 | IT-16 | JSON output uses `is_current` (not `active`) and includes `is_active` per object | JSON Schema |
-<!-- BUG-152 /home/user1/pro/lib/wip_core/claude_tools/task/claude_profile/bug/152_shorten_error_omits_401.md — add IT-17 -->
 | IT-17 | HTTP 401 from usage API shows `(auth expired (401))` in 7d Reset column | Error Shortening |
 | IT-18 | `.usage format::table` exits 1 (`ArgumentTypeMismatch`) | Argument Rejection |
 | IT-19 | Live token unmatched → synthetic `(current session)` row | Synthetic Row |
@@ -41,19 +40,22 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 | IT-32 | `.usage.help` lists `live`, `interval`, `jitter` params | Help Output |
 | IT-33 | `refresh::1` per-account refresh loop — no panic, exit 0 (lim_it) | Token Refresh |
 | IT-34 | `.usage.help` refresh description includes "401/403" but NOT "401/403/429" | Help Output |
+| IT-35 | `trace::1` with no-token account → stderr contains `[trace]` lines | Trace |
+| IT-36 | Empty store + `format::json` → output is `[]` | Output Format |
+| IT-37 | Single failed account → no "Valid:" footer line emitted | Footer |
 
 ### Test Coverage Summary
 
 - Basic Invocation: 1 test (IT-1)
 - Current Marker: 1 test (IT-2)
 - Error Inline: 2 tests (IT-3, IT-9)
-- Output Format: 1 test (IT-4)
+- Output Format: 2 tests (IT-4, IT-36)
 - Edge Case: 1 test (IT-5)
 - Error Handling: 2 tests (IT-6, IT-7)
 - Ordering: 1 test (IT-8)
 - Expires Column: 1 test (IT-10)
 - Recommendation: 1 test (IT-11)
-- Footer: 1 test (IT-12)
+- Footer: 2 tests (IT-12, IT-37)
 - Active Divergence: 3 tests (IT-13, IT-14, IT-15)
 - JSON Schema: 1 test (IT-16)
 - Error Shortening: 1 test (IT-17)
@@ -64,8 +66,9 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 - Live Guards: 6 tests (IT-23, IT-24, IT-25, IT-27, IT-29, IT-30)
 - JSON Output: 1 test (IT-28)
 - Help Output: 2 tests (IT-32, IT-34)
+- Trace: 1 test (IT-35)
 
-**Total:** 34 integration tests (IT-17 unimplemented pending TSK-153; source functions it17–it33 map to spec IT-18–IT-34)
+**Total:** 37 integration tests; source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; IT-17 implemented as network test `it37_mre_bug152_auth_expired_401_shows_shortened` (appended after numbering shift)
 
 ---
 
@@ -427,3 +430,36 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 - **Exit:** 0
 - **Source fn:** `it33_mre_refresh_help_excludes_429`
 - **Source:** [017_token_refresh.md AC-23](../../../../docs/feature/017_token_refresh.md)
+
+---
+
+### IT-35: `trace::1` with no-token account → stderr contains `[trace]` lines
+
+- **Given:** One saved account whose credential file has no `accessToken` field.
+- **When:** `clp .usage trace::1`
+- **Then:** Exits 0; stderr contains `[trace]` lines including the account name; stdout still shows the account row.
+- **Exit:** 0
+- **Source fn:** `it34_trace_param_writes_to_stderr`
+- **Source:** [commands.md — .usage](../../../../docs/cli/commands.md#command--9-usage)
+
+---
+
+### IT-36: Empty store + `format::json` → output is `[]`
+
+- **Given:** Credential store directory exists but contains no `*.credentials.json` files.
+- **When:** `clp .usage format::json`
+- **Then:** Exits 0; stdout (trimmed) equals `[]`; no text-format "no accounts configured" message.
+- **Exit:** 0
+- **Source fn:** `it35_empty_store_json_format`
+- **Source:** [commands.md — .usage](../../../../docs/cli/commands.md#command--9-usage)
+
+---
+
+### IT-37: Single failed account → no "Valid:" footer line emitted
+
+- **Given:** One saved account whose credential file has no `accessToken` (quota fetch fails; `valid_count = 0`).
+- **When:** `clp .usage`
+- **Then:** Exits 0; stdout does NOT contain "Valid:" (footer is suppressed when `valid_count < 2`).
+- **Exit:** 0
+- **Source fn:** `it36_no_footer_when_no_valid_accounts`
+- **Source:** [commands.md — .usage](../../../../docs/cli/commands.md#command--9-usage)
