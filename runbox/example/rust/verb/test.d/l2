@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# test.d/l2 — host orchestration layer: run tests via Docker (runbox)
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+if [[ "${1:-}" == "--dry-run" ]]; then echo "./run/runbox .test"; exit 0; fi
+exec ./run/runbox .test

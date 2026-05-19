@@ -1,0 +1,8 @@
+image: rust_example_test
+dockerfile: runbox.dockerfile
+test_user: root
+workspace_root: ..
+cache_dir: target
+test_script: verb/test
+lint_script: verb/lint
+run_script: verb/run

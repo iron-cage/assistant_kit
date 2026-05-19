@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# do verbs — list available verbs for this project (protocol meta-verb)
+set -euo pipefail
+printf '%-13s %-11s %s\n' build   available   "./run/runbox .build"
+printf '%-13s %-11s %s\n' test    available   "./run/runbox .test"
+printf '%-13s %-11s %s\n' clean   available   "remove container image and .venv volume"
+printf '%-13s %-11s %s\n' run     available   "./run/runbox .run"
+printf '%-13s %-11s %s\n' lint    available   "./run/runbox .lint"
+printf '%-13s %-11s %s\n' verify  available   "./run/runbox .test.offline"
+printf '%-13s %-11s %s\n' verbs   built-in    "list all verbs with status"
+printf '%-13s %-11s %s\n' package_info built-in    "print package metadata as JSON"

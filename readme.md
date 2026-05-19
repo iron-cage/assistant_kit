@@ -28,6 +28,7 @@ ast .help                    # all ~40 commands in one place
 | `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
 | `../task/workspace/` | Workspace task registry — External Layout (see `../task/`) |
 | `run/` | Container runner: scripts, Dockerfile, config, and variability analysis docs. |
+| `runbox/` | Container test runner framework: runbox-run discovery symlink and ecosystem examples. |
 | `verb/` | Universal Action Protocol: per-verb reference docs for all 7 `do` protocol verbs. |
 | `vision.md` | Project vision, design rationale, and open problems |
 | `../locales.md` | Locale and internationalisation notes |

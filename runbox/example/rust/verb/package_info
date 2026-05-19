@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# do package_info — print deterministic package metadata as JSON (protocol meta-verb)
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/.."
+
+name="$(grep -m1 '^name' Cargo.toml | sed 's/^name[[:space:]]*=[[:space:]]*//' | tr -d '"')"
+version="$(grep -m1 '^version' Cargo.toml | sed 's/^version[[:space:]]*=[[:space:]]*//' | tr -d '"')"
+
+printf '{"name":"%s","version":"%s","language":"rust","type":"binary"}\n' "$name" "$version"

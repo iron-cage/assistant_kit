@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# run.d/l2 — execute entry point via runbox (host orchestration layer).
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/../.."
+if [[ "${1:-}" == "--dry-run" ]]; then echo "./run/runbox .run"; exit 0; fi
+exec ./run/runbox .run

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# do clean — remove container image and target named volume
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/.."
+
+if command -v podman &>/dev/null; then
+  CONTAINER_CMD=podman
+elif command -v docker &>/dev/null; then
+  CONTAINER_CMD=docker
+else
+  echo "error: neither podman nor docker found" >&2
+  exit 1
+fi
+
+IMAGE=rust_example_test
+VOLUME="${IMAGE}_target"
+
+if [[ "${1:-}" == "--dry-run" ]]
+then
+  echo "$CONTAINER_CMD rmi $IMAGE; $CONTAINER_CMD volume rm $VOLUME"
+  exit 0
+fi
+
+if "$CONTAINER_CMD" image inspect "$IMAGE" &>/dev/null
+then
+  echo "Removing image $IMAGE..."
+  "$CONTAINER_CMD" rmi "$IMAGE"
+fi
+
+if "$CONTAINER_CMD" volume inspect "$VOLUME" &>/dev/null
+then
+  echo "Removing volume $VOLUME..."
+  "$CONTAINER_CMD" volume rm "$VOLUME"
+fi

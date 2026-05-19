@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# do package_info — print deterministic package metadata as JSON (protocol meta-verb)
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/.."
+
+name="$(grep -m1 '^name' pyproject.toml | sed 's/^name[[:space:]]*=[[:space:]]*//' | tr -d '"')"
+version="$(grep -m1 '^version' pyproject.toml | sed 's/^version[[:space:]]*=[[:space:]]*//' | tr -d '"')"
+
+printf '{"name":"%s","version":"%s","language":"python","type":"library"}\n' "$name" "$version"

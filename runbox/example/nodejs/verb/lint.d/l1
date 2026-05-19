@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# lint.d/l1 — run eslint directly (container execution layer).
+set -euo pipefail
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+exec "$SCRIPT_DIR/../../node_modules/.bin/eslint" "$SCRIPT_DIR/../../src/" "$SCRIPT_DIR/../../tests/"
