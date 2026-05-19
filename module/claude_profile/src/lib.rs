@@ -160,7 +160,12 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".account.use",    "Switch active account by name with atomic credential rotation",  vec![ nam(), dry() ],      Box::new( account_use_routine    ) );
   reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                  vec![ nam(), dry() ],      Box::new( account_delete_routine ) );
   reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr() ],      Box::new( token_status_routine   ) );
-  reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",              vec![ fmt() ],             Box::new( paths_routine          ) );
+  reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",
+    vec![
+      fmt(),
+      reg_arg_opt( "field", Kind::String ).with_description( "Output a single named path value; format:: is ignored when set. Valid: base, credentials, credential_store, projects, stats, settings, session_env, sessions" ),
+    ],
+    Box::new( paths_routine ) );
   reg_cmd( registry, ".usage",          "Show live rate-limit quota for all saved accounts",
     vec![
       fmt(),

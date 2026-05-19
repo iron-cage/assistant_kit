@@ -13,3 +13,4 @@ Shell scripts for workspace container operations.
 | `onboarding.md` | New project integration guide: how to add runbox to any ecosystem. |
 | `docs/` | Variability analysis: runbox infrastructure parameters and plugins. |
 | `tests/` | Regression tests for the runbox shell script infrastructure. |
+| `example/` | Working integration examples: one per ecosystem (rust, nodejs, python). |

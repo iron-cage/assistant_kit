@@ -1020,6 +1020,33 @@ pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 #[ inline ]
 pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
+  if let Some( Value::String( field ) ) = cmd.arguments.get( "field" )
+  {
+    if !field.is_empty()
+    {
+      let paths            = require_claude_paths()?;
+      let credential_store = require_credential_store()?;
+      let raw = match field.as_str()
+      {
+        "base"             => paths.base().display().to_string(),
+        "credentials"      => paths.credentials_file().display().to_string(),
+        "credential_store" => credential_store.display().to_string(),
+        "projects"         => paths.projects_dir().display().to_string(),
+        "stats"            => paths.stats_file().display().to_string(),
+        "settings"         => paths.settings_file().display().to_string(),
+        "session_env"      => paths.session_env_dir().display().to_string(),
+        "sessions"         => paths.sessions_dir().display().to_string(),
+        other =>
+        {
+          return Err( ErrorData::new(
+            ErrorCode::ArgumentTypeMismatch,
+            format!( "unknown field '{other}'; valid: base, credentials, credential_store, projects, stats, settings, session_env, sessions" ),
+          ) );
+        }
+      };
+      return Ok( OutputData::new( format!( "{raw}\n" ), "text" ) );
+    }
+  }
   let opts             = OutputOptions::from_cmd( &cmd )?;
   if opts.is_table()
   {
