@@ -212,10 +212,21 @@ fn compute_expires_cell( expires_at_ms : u64, now_secs : u64 ) -> String
   }
 }
 
-/// Shorten verbose quota error strings for display in the Status column.
+// Fix(BUG-152)
+// Root cause: shorten_error had no HTTP 401 branch; the else { reason } arm returned the
+//   verbose "HTTP transport error: HTTP 401" string verbatim into the 7d Reset column,
+//   violating AC-03 ("shortened error reason"). HTTP 401 was added to T05 as a
+//   pass-through regression guard in task 150, inadvertently documenting the wrong behaviour.
+//   task/claude_profile/bug/152_shorten_error_omits_401.md
+// Pitfall: shorten_error is a manual allowlist — each new HTTP error code from
+//   QuotaError::HttpTransport needs an explicit branch. The else arm is NOT a shortener;
+//   it is a verbatim passthrough. test_shorten_error_no_raw_http_transport_passthrough
+//   enforces this invariant for known codes (401, 403, 429).
+/// Shorten verbose quota error strings for display in the final table column.
 ///
-/// `QuotaError::HttpTransport` formats HTTP 429 as `"HTTP transport error: HTTP 429"`;
-/// this is shortened to `"rate limited (429)"`.
+/// `QuotaError::HttpTransport` formats errors as `"HTTP transport error: HTTP NNN"`.
+/// Handled codes: `429` → `"rate limited (429)"`; `401` → `"auth expired (401)"`;
+/// `403` → `"auth forbidden (403)"` (permission error returned by the usage API).
 /// `QuotaError::MissingHeader` (displays as `"rate-limit header missing: …"`) is
 /// shortened to `"no header"`. All other strings pass through unchanged.
 /// The caller is responsible for wrapping the result in parentheses.
@@ -224,6 +235,14 @@ fn shorten_error( reason : &str ) -> &str
   if reason.starts_with( "HTTP transport error: HTTP 429" )
   {
     "rate limited (429)"
+  }
+  else if reason.starts_with( "HTTP transport error: HTTP 401" )
+  {
+    "auth expired (401)"
+  }
+  else if reason.starts_with( "HTTP transport error: HTTP 403" )
+  {
+    "auth forbidden (403)"
   }
   else if reason.starts_with( "rate-limit header missing:" )
   {
@@ -861,14 +880,85 @@ mod tests
     );
   }
 
-  /// T05 — Non-429 transport errors pass through `shorten_error` unchanged.
+  /// T05 — `shorten_error` must return `"auth expired (401)"` for HTTP 401 transport strings.
+  ///
+  /// # Root Cause
+  /// `shorten_error` is an explicit allowlist. When task 150 added the HTTP 429 branch, it
+  /// also added an HTTP 401 case to T05 as a regression guard — but as a pass-through check,
+  /// documenting the wrong (non-AC-03) behaviour: HTTP 401 was not shortened.
+  /// AC-03 (`docs/feature/009_token_usage.md:116`) requires "a shortened error reason" in the
+  /// final column for ALL error cases, not only 429.
+  ///
+  /// # Why Not Caught
+  /// T05 was written to assert the pass-through (current) behaviour, not the AC-03 requirement.
+  /// No test verified the AC-03 invariant holistically — that ALL HTTP transport codes are
+  /// shortened before reaching the table column.
+  ///
+  /// # Fix Applied
+  /// Added `else if reason.starts_with( "HTTP transport error: HTTP 401" ) { "auth expired (401)" }`
+  /// branch in `shorten_error()` between the 429 branch and the `"rate-limit header missing:"`
+  /// branch. Fix(BUG-152).
+  ///
+  /// # Prevention
+  /// `test_shorten_error_no_raw_http_transport_passthrough` asserts that no `"HTTP transport
+  /// error:"` string passes through `shorten_error` unchanged. This test will fail for any
+  /// future unshortened HTTP code, catching the gap early.
+  ///
+  /// # Pitfall
+  /// `shorten_error` is a manual allowlist — each new HTTP error code from
+  /// `QuotaError::HttpTransport` needs an explicit branch. The `else { reason }` arm is NOT
+  /// a shortener; it is a verbatim passthrough. A new auth-failure code (e.g., 403) that the
+  /// quota API might return in the future would silently appear in full in the table.
+  // test_kind: bug_reproducer(issue-152)
   #[ test ]
-  fn test_shorten_error_passthrough()
+  fn test_shorten_error_mre_401_shortened()
   {
     assert_eq!(
       shorten_error( "HTTP transport error: HTTP 401" ),
-      "HTTP transport error: HTTP 401",
+      "auth expired (401)",
+      "HTTP 401 transport string must be shortened per AC-03 (BUG-152)",
     );
+  }
+
+  /// T06 — `shorten_error` maps HTTP 403 transport string to compact label.
+  ///
+  /// HTTP 403 (Forbidden) is returned by the usage API as a permission error and is handled
+  /// by `apply_refresh` as an auth-failure trigger. Without `refresh::1`, a 403 error would
+  /// previously appear verbatim as "(HTTP transport error: HTTP 403)" in the table column,
+  /// violating AC-03 ("shortened error reason"). This branch shortens it to "auth forbidden (403)".
+  // test_kind: regression_guard
+  #[ test ]
+  fn test_shorten_error_403_returns_auth_forbidden()
+  {
+    assert_eq!(
+      shorten_error( "HTTP transport error: HTTP 403" ),
+      "auth forbidden (403)",
+      "HTTP 403 transport string must be shortened per AC-03",
+    );
+  }
+
+  /// Invariant — `shorten_error` must never return a raw `"HTTP transport error:"` string
+  /// for HTTP error codes that appear in the current shortening allowlist.
+  ///
+  /// When adding a new HTTP error code to `claude_quota` fetch paths AND to `shorten_error`,
+  /// add it to `shortened_codes` here too.
+  #[ test ]
+  fn test_shorten_error_no_raw_http_transport_passthrough()
+  {
+    // All codes with explicit branches in shorten_error are listed here.
+    let shortened_codes = &[
+      "HTTP transport error: HTTP 401",  // Fix(BUG-152): "auth expired (401)"
+      "HTTP transport error: HTTP 403",  // "auth forbidden (403)" — usage API permission error
+      "HTTP transport error: HTTP 429",  // task 150: "rate limited (429)"
+    ];
+    for &e in shortened_codes
+    {
+      let shortened = shorten_error( e );
+      assert!(
+        !shortened.starts_with( "HTTP transport error:" ),
+        "shorten_error must shorten {e:?}; got verbatim passthrough {shortened:?}",
+      );
+    }
   }
 
   /// C6 regression — existing `"rate-limit header missing:"` branch still works.

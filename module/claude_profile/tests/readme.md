@@ -12,7 +12,7 @@
 | `cli_integration_test.rs` | CLI binary integration: entry point for cli/ modules. |
 | `cli/` | Split integration test modules (help, accounts, mutations, token, paths, usage, persist, credentials, limits, dot, cross-cutting). |
 | `manual/` | Manual testing plan: live Claude Code account switching. |
-| `docs/` | Test-lens documentation: per-command, per-parameter, and per-group test case indices. |
+| `docs/` | Test-lens documentation: per-command, per-parameter, per-group, and per-feature test case indices. |
 
 ## Scope
 
@@ -72,11 +72,15 @@ tests/
 ├── manual/
 │   └── readme.md                         # manual testing plan
 └── docs/
-    └── cli/
-        ├── readme.md                     # CLI test-lens index
-        ├── command/                      # per-command test case files (00–11)
-        ├── param/                        # per-parameter test case files (01–05)
-        └── param_group/                  # per-group test case files (01–02)
+    ├── readme.md                         # test docs surface index
+    ├── cli/
+    │   ├── readme.md                     # CLI test-lens index
+    │   ├── command/                      # per-command test case files (00–11)
+    │   ├── param/                        # per-parameter test case files (01–18)
+    │   └── param_group/                  # per-group test case files (01–03)
+    └── feature/
+        ├── readme.md                     # feature test-lens index
+        └── 09_token_usage.md             # FT cases for Feature 009 (FR-14)
 ```
 
 ## Domain Map

@@ -15,6 +15,7 @@
 //! | `token_paths_test` | token status, paths | TS, P |
 //! | `cross_cutting_test` | idempotency, param order, exit codes, env | X, E |
 //! | `usage_test` | .usage live quota (all accounts) | IT |
+//! | `usage_feature_test` | .usage feature AC coverage | FT |
 //! | `persist_test` | `PersistPaths` resolution | P |
 //! | `credentials_test` | .credentials.status | cred |
 //! | `credentials_status_help_test` | .credentials.status.help descriptions | csh |
@@ -47,6 +48,9 @@ mod cross_cutting_test;
 
 #[ path = "cli/usage_test.rs" ]
 mod usage_test;
+
+#[ path = "cli/usage_feature_test.rs" ]
+mod usage_feature_test;
 
 #[ path = "cli/persist_test.rs" ]
 mod persist_test;

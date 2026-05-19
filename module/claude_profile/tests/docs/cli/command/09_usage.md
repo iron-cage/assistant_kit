@@ -22,6 +22,25 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 | IT-14 | When credentials file unreadable: no `✓`; `*` still marks `_active` account | Active Divergence |
 | IT-15 | When current = active, only `✓` appears; no `*` on any row | Active Divergence |
 | IT-16 | JSON output uses `is_current` (not `active`) and includes `is_active` per object | JSON Schema |
+<!-- BUG-152 /home/user1/pro/lib/wip_core/claude_tools/task/claude_profile/bug/152_shorten_error_omits_401.md — add IT-17 -->
+| IT-17 | HTTP 401 from usage API shows `(auth expired (401))` in 7d Reset column | Error Shortening |
+| IT-18 | `.usage format::table` exits 1 (`ArgumentTypeMismatch`) | Argument Rejection |
+| IT-19 | Live token unmatched → synthetic `(current session)` row | Synthetic Row |
+| IT-20 | `refresh::0` accepted; empty store exits 0 | Token Refresh |
+| IT-21 | `refresh::1` accepted; no retry triggered without HTTP | Token Refresh |
+| IT-22 | `live::1 interval::30 jitter::0` — live loop shows countdown (lim_it) | Live Monitor |
+| IT-23 | `live::1 interval::60 jitter::70` — jitter > interval → exit 1 | Live Guards |
+| IT-24 | `live::1 interval::5` — interval < 30 → exit 1, error mentions "30" | Live Guards |
+| IT-25 | `live::1 format::json` — incompatible with live mode → exit 1 | Live Guards |
+| IT-26 | Live token unmatched + `.claude.json` email → synthetic row shows email | Synthetic Row |
+| IT-27 | `live::1 interval::30 jitter::30` — jitter = interval accepted → exit 2 | Live Guards |
+| IT-28 | `format::json` for failed account → JSON has `"error"` field | JSON Output |
+| IT-29 | `interval::5 jitter::70` without `live::1` → guards not triggered, exit 0 | Live Guards |
+| IT-30 | `live::1` alone — default interval 30 satisfies >= 30 guard | Live Guards |
+| IT-31 | SIGINT in live mode → clean exit 0; stdout contains "Monitor stopped." | Live Monitor |
+| IT-32 | `.usage.help` lists `live`, `interval`, `jitter` params | Help Output |
+| IT-33 | `refresh::1` per-account refresh loop — no panic, exit 0 (lim_it) | Token Refresh |
+| IT-34 | `.usage.help` refresh description includes "401/403" but NOT "401/403/429" | Help Output |
 
 ### Test Coverage Summary
 
@@ -37,8 +56,16 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 - Footer: 1 test (IT-12)
 - Active Divergence: 3 tests (IT-13, IT-14, IT-15)
 - JSON Schema: 1 test (IT-16)
+- Error Shortening: 1 test (IT-17)
+- Argument Rejection: 1 test (IT-18)
+- Synthetic Row: 2 tests (IT-19, IT-26)
+- Token Refresh: 3 tests (IT-20, IT-21, IT-33)
+- Live Monitor: 2 tests (IT-22, IT-31)
+- Live Guards: 6 tests (IT-23, IT-24, IT-25, IT-27, IT-29, IT-30)
+- JSON Output: 1 test (IT-28)
+- Help Output: 2 tests (IT-32, IT-34)
 
-**Total:** 16 integration tests
+**Total:** 34 integration tests (IT-17 unimplemented pending TSK-153; source functions it17–it33 map to spec IT-18–IT-34)
 
 ---
 
@@ -201,3 +228,202 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 - **Then:** Valid JSON array; the current account object has `"is_current":true` and `"is_active":false`; the `_active` account object has `"is_current":false` and `"is_active":true`; no object has a top-level `"active"` key.
 - **Exit:** 0
 - **Source:** [016_current_account_awareness.md AC-08](../../../../docs/feature/016_current_account_awareness.md)
+
+---
+
+### IT-17: HTTP 401 from usage API shows `(auth expired (401))` in 7d Reset column
+
+- **Given:** One saved account whose `expiresAt` in the credential file is a past timestamp and whose `accessToken` the usage API rejects with HTTP 401.
+- **When:** `clp .usage`
+- **Then:** That account's row shows `EXPIRED` in Expires and `—` for all quota columns (5h Left, 5h Reset, 7d Left, 7d(Son)); the 7d Reset column shows `(auth expired (401))` — NOT `(HTTP transport error: HTTP 401)`. Exit 0.
+- **Exit:** 0
+- **Fix:** BUG-152 (`task/claude_profile/bug/152_shorten_error_omits_401.md`)
+- **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-18: `.usage format::table` exits 1 (`ArgumentTypeMismatch`)
+
+- **Given:** Any environment (empty credential store).
+- **When:** `clp .usage format::table`
+- **Then:** Exits 1. `format::table` is valid only for `.accounts`; all other commands reject it.
+- **Exit:** 1
+- **Source fn:** `it17_format_table_rejected`
+- **Source:** [commands.md — .usage](../../../../docs/cli/commands.md#command--9-usage)
+
+---
+
+### IT-19: Live token unmatched → synthetic `(current session)` row prepended
+
+- **Given:** One saved account `alice@acme.com` with token `tok-alice`; live `~/.claude/.credentials.json` uses a different token `tok-unsaved`.
+- **When:** `clp .usage`
+- **Then:** Table contains a `(current session)` row with `✓` in the flag column; `alice@acme.com` does NOT have `✓`. Exit 0.
+- **Exit:** 0
+- **Source fn:** `it18_synthetic_row_when_no_saved_match`
+- **Source:** [009_token_usage.md AC-11](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-20: `refresh::0` accepted; empty store exits 0
+
+- **Given:** Empty credential store; `refresh::0` param passed.
+- **When:** `clp .usage refresh::0`
+- **Then:** Exits 0 with "no accounts configured" message. `refresh::0` (the default) must not break baseline behavior.
+- **Exit:** 0
+- **Source fn:** `it19_refresh_disabled_param_accepted`
+- **Source:** [017_token_refresh.md AC-18](../../../../docs/feature/017_token_refresh.md)
+
+---
+
+### IT-21: `refresh::1` accepted; no retry triggered when HTTP is not reached
+
+- **Given:** One account with no `accessToken` in the credential file (read_token returns Err without any HTTP call); `refresh::1` param.
+- **When:** `clp .usage refresh::1`
+- **Then:** Exits 0; account name appears in output. No HTTP call is made, so no 401 is triggered and no retry loop fires.
+- **Exit:** 0
+- **Source fn:** `it20_refresh_enabled_offline_no_retry_triggered`
+- **Source:** [017_token_refresh.md AC-19](../../../../docs/feature/017_token_refresh.md)
+
+---
+
+### IT-22: `live::1 interval::30 jitter::0` — live loop emits countdown footer (lim_it)
+
+- **Given:** One saved account with a valid live token; `live::1 interval::30 jitter::0`; process killed after 10 s.
+- **When:** `clp .usage live::1 interval::30 jitter::0`
+- **Then:** stdout (captured from raw bytes) contains "Next update". Exit determined by kill signal.
+- **Live:** yes (lim_it — requires live credentials)
+- **Source fn:** `it21_lim_it_live_mode`
+- **Source:** [018_live_monitor.md AC-28](../../../../docs/feature/018_live_monitor.md)
+
+---
+
+### IT-23: `live::1 interval::60 jitter::70` — jitter > interval → exit 1
+
+- **Given:** Any environment; guard fires before any fetch.
+- **When:** `clp .usage live::1 interval::60 jitter::70`
+- **Then:** Exits 1; stderr is non-empty (validation error).
+- **Exit:** 1
+- **Source fn:** `it22_live_jitter_exceeds_interval`
+- **Source:** [018_live_monitor.md AC-27](../../../../docs/feature/018_live_monitor.md)
+
+---
+
+### IT-24: `live::1 interval::5` — interval below 30 → exit 1, error mentions "30"
+
+- **Given:** Any environment; guard fires before any fetch.
+- **When:** `clp .usage live::1 interval::5 jitter::0`
+- **Then:** Exits 1; stderr contains "30" (the minimum interval).
+- **Exit:** 1
+- **Source fn:** `it23_live_interval_below_minimum`
+- **Source:** [018_live_monitor.md AC-26](../../../../docs/feature/018_live_monitor.md)
+
+---
+
+### IT-25: `live::1 format::json` — incompatible with live mode → exit 1
+
+- **Given:** Any environment; guard fires before any fetch.
+- **When:** `clp .usage live::1 format::json`
+- **Then:** Exits 1; stderr is non-empty.
+- **Exit:** 1
+- **Source fn:** `it24_live_incompatible_with_json`
+- **Source:** [018_live_monitor.md AC-25](../../../../docs/feature/018_live_monitor.md)
+
+---
+
+### IT-26: Live token unmatched + `.claude.json` email → synthetic row shows email
+
+- **Given:** One saved account `alice@acme.com` with `tok-alice`; live credentials use `tok-unsaved`; `~/.claude.json` has `emailAddress = "unsaved@example.com"`.
+- **When:** `clp .usage`
+- **Then:** Table shows `unsaved@example.com` with `✓` in the flag column; does NOT show `(current session)` fallback. Exit 0.
+- **Exit:** 0
+- **Source fn:** `it25_synthetic_row_uses_claude_json_email`
+- **Source:** [009_token_usage.md AC-11](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-27: `live::1 interval::30 jitter::30` — jitter equal to interval is accepted
+
+- **Given:** Credential store directory chmod 000 (unreadable); `live::1 interval::30 jitter::30`. Guard uses strict greater-than (`jitter > interval`), so equal values must not fire.
+- **When:** `clp .usage live::1 interval::30 jitter::30`
+- **Then:** Exits 2 (store unreadable — proves `execute_live_mode()` was entered; guards passed); stderr does NOT contain "jitter".
+- **Exit:** 2
+- **Source fn:** `it26_live_jitter_equals_interval_accepted`
+- **Source:** [018_live_monitor.md AC-27](../../../../docs/feature/018_live_monitor.md)
+
+---
+
+### IT-28: `format::json` for failed account → JSON has `"error"` field
+
+- **Given:** One account with no `accessToken` in the credential file (read_token returns Err).
+- **When:** `clp .usage format::json`
+- **Then:** Exits 0; JSON contains `"error":` key; does NOT contain `"session_5h_left_pct"`; does contain `"is_current"`, `"is_active"`, `"expires_in_secs"`.
+- **Exit:** 0
+- **Source fn:** `it27_json_error_field_on_failed_account`
+- **Source:** [009_token_usage.md AC-05](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-29: `interval::5 jitter::70` without `live::1` → guards not triggered, exits 0
+
+- **Given:** Empty credential store; `interval::5 jitter::70` without `live::1`.
+- **When:** `clp .usage interval::5 jitter::70`
+- **Then:** Exits 0 with "no accounts" message; live-mode guards (interval minimum, jitter ceiling) do NOT fire.
+- **Exit:** 0
+- **Source fn:** `it28_interval_jitter_ignored_when_not_live`
+- **Source:** [018_live_monitor.md AC-31](../../../../docs/feature/018_live_monitor.md)
+
+---
+
+### IT-30: `live::1` alone — default interval 30 satisfies >= 30 guard
+
+- **Given:** Credential store directory chmod 000; `live::1` with no explicit interval or jitter. Defaults: `interval=30`, `jitter=0`. Guard is `interval < 30` (strict less-than).
+- **When:** `clp .usage live::1`
+- **Then:** Exits 2 (store unreadable — proves interval guard did NOT fire); stderr does NOT contain "interval".
+- **Exit:** 2
+- **Source fn:** `it29_live_default_interval_accepted`
+- **Source:** [018_live_monitor.md AC-28](../../../../docs/feature/018_live_monitor.md)
+
+---
+
+### IT-31: SIGINT in live mode → clean exit 0; stdout contains "Monitor stopped."
+
+- **Given:** One account with no `accessToken` (fetch fails instantly without HTTP, ensuring render + countdown start within 3 s); `live::1 interval::30 jitter::0`; SIGINT sent via `kill -INT` after 3 s.
+- **When:** `clp .usage live::1 interval::30 jitter::0` (then SIGINT)
+- **Then:** Process exits with code 0; stdout contains "Monitor stopped."
+- **Exit:** 0
+- **Source fn:** `it30_live_sigint_exits_0`
+- **Source:** [018_live_monitor.md AC-30](../../../../docs/feature/018_live_monitor.md)
+
+---
+
+### IT-32: `.usage.help` lists `live`, `interval`, `jitter` params
+
+- **Given:** Standard environment.
+- **When:** `clp .usage.help`
+- **Then:** Exits 0; stdout contains "live", "interval", and "jitter".
+- **Exit:** 0
+- **Source fn:** `it31_usage_help_shows_live_params`
+- **Source:** [018_live_monitor.md AC-32](../../../../docs/feature/018_live_monitor.md)
+
+---
+
+### IT-33: `refresh::1` per-account refresh loop — no panic, exit 0 (lim_it)
+
+- **Given:** One saved account with a valid live token (from `live_active_token()`); `refresh::1`.
+- **When:** `clp .usage refresh::1`
+- **Then:** Exits 0; no panic; per-account refresh loop runs (happy-path: quota fetch succeeds on first pass, no retry needed).
+- **Exit:** 0
+- **Live:** yes (lim_it — requires live credentials)
+- **Source fn:** `it32_lim_it_refresh_per_account`
+- **Source:** [017_token_refresh.md AC-19](../../../../docs/feature/017_token_refresh.md)
+
+---
+
+### IT-34: `.usage.help` refresh description includes "401/403" but NOT "401/403/429"
+
+- **Given:** Standard environment. Task 150 removed HTTP 429 from the refresh retry guard; the parameter description must no longer mention it.
+- **When:** `clp .usage.help`
+- **Then:** Exits 0; stdout contains "401/403"; stdout does NOT contain the substring "401/403/429".
+- **Exit:** 0
+- **Source fn:** `it33_mre_refresh_help_excludes_429`
+- **Source:** [017_token_refresh.md AC-23](../../../../docs/feature/017_token_refresh.md)

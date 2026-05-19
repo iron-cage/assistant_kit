@@ -47,6 +47,9 @@
 //! | it31 | `it31_usage_help_shows_live_params`             | `.usage.help` → exit 0, stdout contains `live`, `interval`, `jitter`     | P | no |
 //! | it32 | `it32_lim_it_refresh_per_account`               | real token + `refresh::1` → exit 0, account name visible (AC-19)         | P | yes |
 //! | it33 | `it33_mre_refresh_help_excludes_429`            | `.usage.help` refresh says 401/403 not 401/403/429 (issue-refresh-help-429) | P | no |
+//! | it34 | `it34_trace_param_writes_to_stderr`             | `trace::1` with no-token account → stderr contains `[trace]` lines         | P | no |
+//! | it35 | `it35_empty_store_json_format`                  | empty store + `format::json` → output is `[]`                              | P | no |
+//! | it36 | `it36_no_footer_when_no_valid_accounts`         | single failed account → no "Valid:" footer line                            | P | no |
 
 use crate::helpers::{
   BIN,
@@ -1071,6 +1074,88 @@ fn it32_lim_it_refresh_per_account()
   assert!(
     text.contains( "test-acct" ),
     "account must appear in output with refresh::1 (AC-19), got:\n{text}",
+  );
+}
+
+// ── it34 ──────────────────────────────────────────────────────────────────────
+
+/// it34: `trace::1` with a no-token account → stderr contains `[trace]` lines.
+///
+/// `trace::1` causes `fetch_all_quota` to emit `[trace]` lines per account to
+/// stderr — one before reading credentials and one after. With a credential file
+/// that has no `accessToken`, `read_token()` returns Err → trace emits
+/// "cannot read token: missing accessToken". This test confirms the `trace`
+/// parameter is accepted, wired through to `fetch_all_quota`, and produces
+/// observable stderr output without affecting exit code or stdout.
+#[ test ]
+fn it34_trace_param_writes_to_stderr()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "trace-acct", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "[trace]" ),
+    "trace::1 must write [trace] lines to stderr, got:\n{err}",
+  );
+  assert!(
+    err.contains( "trace-acct" ),
+    "trace::1 must mention the account name, got:\n{err}",
+  );
+}
+
+// ── it35 ──────────────────────────────────────────────────────────────────────
+
+/// it35: empty credential store + `format::json` → output is `[]`.
+///
+/// `render_json(&[])` returns `"[]\n"` via the short-circuit branch. This verifies
+/// that `format::json` and the empty-store path are compatible — no crash, no
+/// "no accounts configured" text (that message is text-format-only).
+#[ test ]
+fn it35_empty_store_json_format()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path()
+    .join( ".persistent" )
+    .join( "claude" )
+    .join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out  = run_cs_with_env( &[ ".usage", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert_eq!(
+    text.trim(),
+    "[]",
+    "empty store with format::json must output '[]', got:\n{text}",
+  );
+}
+
+// ── it36 ──────────────────────────────────────────────────────────────────────
+
+/// it36: single no-token account → no "Valid:" footer (`valid_count` = 0 < 2).
+///
+/// The footer line "Valid: X / Y   →  Next: ..." is only emitted when
+/// `valid_count >= 2` AND a recommendation exists. With one account whose quota
+/// fetch fails (no `accessToken`), `valid_count = 0` → the footer is suppressed.
+/// This guards against a regression where footer threshold checking is removed.
+#[ test ]
+fn it36_no_footer_when_no_valid_accounts()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "no-quota@test.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "Valid:" ),
+    "single failed account must NOT show 'Valid:' footer line, got:\n{text}",
   );
 }
 
