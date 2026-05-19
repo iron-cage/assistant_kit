@@ -749,10 +749,16 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       "format::table is only supported by .accounts".to_string(),
     ) );
   }
+  // Fix(issue-155): default changed from 0 to 1 — refresh enabled by default.
+  // Root cause: fallback `_ => 0` silently disabled token refresh whenever the
+  //   caller omitted `refresh::`, causing stale 401 error rows instead of
+  //   transparent auto-refresh.
+  // Pitfall: omitting a param ≠ "user wants disabled" — always choose the safer
+  //   default (auto-refresh) over the noisier one (silent 401 row).
   let refresh = match cmd.arguments.get( "refresh" )
   {
     Some( Value::Integer( n ) ) => *n,
-    _ => 0,
+    _ => 1,
   };
   let live = match cmd.arguments.get( "live" )
   {

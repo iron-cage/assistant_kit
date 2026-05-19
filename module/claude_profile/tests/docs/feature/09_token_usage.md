@@ -32,6 +32,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `clp .usage`
 - **Then:** The account's row appears in the table; the last visible column shows a short error reason in parentheses (e.g., `(missing accessToken)`); the string does NOT begin with `HTTP transport error:`; all other accounts (none here) are still processed. Exit 0.
 - **Exit:** 0
+- **Source fn:** `ft01_missing_access_token_short_error`
 - **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -42,7 +43,8 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `clp .usage`
 - **Then:** That account's row shows `EXPIRED` in the Expires column; the 7d Reset column shows `(auth expired (401))` — NOT the verbose string `(HTTP transport error: HTTP 401)`. Exit 0.
 - **Exit:** 0
-- **Note:** Fix for BUG-152; implemented by TSK-153 (`shorten_error` HTTP 401 branch); pending until `test_shorten_error_mre_401_shortened` passes in Docker.
+- **Source fn:** `ft02_lim_it_http_401_shortens_to_auth_expired`
+- **Note:** Fix for BUG-152; implemented by TSK-153 (`shorten_error` HTTP 401 branch).
 - **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -53,6 +55,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `clp .usage`
 - **Then:** Stdout contains both `alice@a.com` and `bob@a.com`. Exit 0.
 - **Exit:** 0
+- **Source fn:** `ft03_both_accounts_appear_regardless_of_active`
 - **Source:** [009_token_usage.md AC-01](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -63,6 +66,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `clp .usage`
 - **Then:** A line in stdout contains `✓` and `work@a.com`; no line contains `✓` and `alice@a.com`. Exit 0.
 - **Exit:** 0
+- **Source fn:** `ft04_check_mark_follows_live_token_not_active`
 - **Source:** [009_token_usage.md AC-02](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -73,4 +77,5 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `clp .usage`
 - **Then:** Exits 2; stderr contains a non-empty error message.
 - **Exit:** 2
+- **Source fn:** `ft05_unreadable_credential_store_exits_2`
 - **Source:** [009_token_usage.md AC-06](../../../../docs/feature/009_token_usage.md)

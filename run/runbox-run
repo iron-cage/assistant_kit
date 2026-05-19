@@ -254,6 +254,7 @@ cmd_test()
   _plugin_test_args
   _ensure_image
   _ensure_plugin_targets
+  echo "▶ $IMAGE ($CONTAINER_CMD)"
   # Run as the host user so mounted credential files (owned by host uid) are readable.
   # Rootless Podman remaps container uid 0 → host uid, so without --userns=keep-id
   # files owned by the host user appear as root inside the container and are unreadable

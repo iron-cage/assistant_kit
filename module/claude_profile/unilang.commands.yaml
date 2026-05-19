@@ -355,10 +355,10 @@
 
     - name: "refresh"
       kind: "Integer"
-      description: "Retry once on 401 by refreshing OAuth token (0 = disabled; 1 = enabled)"
-      hint: "Retry on 401"
+      description: "Retry once on 401/403 by refreshing OAuth token via isolated subprocess (1 = enabled, default; 0 = disabled)"
+      hint: "Retry on 401/403"
       optional: true
-      default: "0"
+      default: "1"
       validation_rules: []
       aliases: []
       tags: []

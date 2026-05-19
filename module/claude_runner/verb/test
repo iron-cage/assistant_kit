@@ -4,4 +4,5 @@ set -euo pipefail
 DIR="$(dirname "${BASH_SOURCE[0]}")/test.d"
 LAYER="${VERB_LAYER:-}"
 [[ -n "$LAYER" && -f "$DIR/$LAYER" ]] && exec "$DIR/$LAYER" "$@"
-exec "$DIR/l0" "$@"
+if [[ "${1:-}" == "--dry-run" ]]; then echo "./run/runbox .test"; exit 0; fi
+exec "$(dirname "${BASH_SOURCE[0]}")/../run/runbox" .test

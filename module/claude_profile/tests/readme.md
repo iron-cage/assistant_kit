@@ -63,7 +63,8 @@ tests/
 │   ├── account_mutations_test.rs         # account save, use, delete
 │   ├── token_paths_test.rs               # token status + paths commands
 │   ├── cross_cutting_test.rs             # idempotency, param order, exit codes
-│   ├── usage_test.rs                     # .usage command tests
+│   ├── usage_test.rs                     # .usage command tests (IT-1–IT-37, 36 fns)
+│   ├── usage_feature_test.rs             # .usage feature AC coverage (FT-01–FT-05)
 │   ├── persist_test.rs                   # PersistPaths resolution tests
 │   ├── credentials_test.rs               # .credentials.status command tests
 │   ├── credentials_status_help_test.rs   # .credentials.status help descriptions
@@ -99,6 +100,7 @@ tests/
 | Token status + paths CLI | `cli/token_paths_test.rs` | .token.status and .paths all verbosity/format |
 | Cross-cutting CLI | `cli/cross_cutting_test.rs` | idempotency, param order, exit code contracts, env |
 | Usage CLI | `cli/usage_test.rs` | .usage live quota table, JSON output, error paths |
+| Usage feature AC | `cli/usage_feature_test.rs` | .usage acceptance criteria (AC-01–AC-06) |
 | Persist paths | `cli/persist_test.rs` | PersistPaths PRO/HOME resolution, ensure_exists |
 | Credentials status CLI | `cli/credentials_test.rs` | .credentials.status without account store |
 | Credentials status help CLI | `cli/credentials_status_help_test.rs` | .credentials.status help descriptions |

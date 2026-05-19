@@ -416,7 +416,7 @@ current::0   → line omitted
 When an account's quota fetch returns an HTTP auth error (401 or 403), silently attempt a token refresh via `claude_runner_core::run_isolated()` and retry the fetch once before reporting failure.
 
 - **Type:** `bool`
-- **Default:** `0` (off — auth errors pass through to the table as error rows)
+- **Default:** `1` (on — expired tokens silently refreshed before reporting failure)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`; effective only under `#[cfg(feature = "enabled")]` — in offline builds the parameter is accepted but has no effect
 - **Commands:** [`.usage`](commands.md#command--9-usage)
 - **Purpose:** Allows `.usage` to silently recover expired OAuth tokens without requiring a manual `clp .account.use` rotation, so the table shows current quota rather than per-account auth error rows.
@@ -425,8 +425,8 @@ When an account's quota fetch returns an HTTP auth error (401 or 403), silently 
 **Examples:**
 
 ```text
-refresh::0   → auth errors appear as error rows in the table (default)
-refresh::1   → on 401/403 auth error, attempt token refresh via isolated subprocess, then retry once
+refresh::1   → on 401/403 auth error, attempt token refresh via isolated subprocess, then retry once (default)
+refresh::0   → auth errors appear as error rows in the table (explicit disable)
 ```
 
 **Notes:**

@@ -43,6 +43,7 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 | IT-35 | `trace::1` with no-token account → stderr contains `[trace]` lines | Trace |
 | IT-36 | Empty store + `format::json` → output is `[]` | Output Format |
 | IT-37 | Single failed account → no "Valid:" footer line emitted | Footer |
+| IT-38 | `.usage.help` shows `refresh::` default as `1` (enabled) | Help Output |
 
 ### Test Coverage Summary
 
@@ -65,10 +66,10 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 - Live Monitor: 2 tests (IT-22, IT-31)
 - Live Guards: 6 tests (IT-23, IT-24, IT-25, IT-27, IT-29, IT-30)
 - JSON Output: 1 test (IT-28)
-- Help Output: 2 tests (IT-32, IT-34)
+- Help Output: 3 tests (IT-32, IT-34, IT-38)
 - Trace: 1 test (IT-35)
 
-**Total:** 37 integration tests; source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; IT-17 implemented as network test `it37_mre_bug152_auth_expired_401_shows_shortened` (appended after numbering shift)
+**Total:** 37 integration tests in `usage_test.rs`; source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; IT-17 covered by `ft02_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02)
 
 ---
 
@@ -241,6 +242,7 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 - **Then:** That account's row shows `EXPIRED` in Expires and `—` for all quota columns (5h Left, 5h Reset, 7d Left, 7d(Son)); the 7d Reset column shows `(auth expired (401))` — NOT `(HTTP transport error: HTTP 401)`. Exit 0.
 - **Exit:** 0
 - **Fix:** BUG-152 (`task/claude_profile/bug/152_shorten_error_omits_401.md`)
+- **Source fn:** `ft02_lim_it_http_401_shortens_to_auth_expired` (in `usage_feature_test.rs`)
 - **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -271,7 +273,7 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 
 - **Given:** Empty credential store; `refresh::0` param passed.
 - **When:** `clp .usage refresh::0`
-- **Then:** Exits 0 with "no accounts configured" message. `refresh::0` (the default) must not break baseline behavior.
+- **Then:** Exits 0 with "no accounts configured" message. `refresh::0` explicitly disables the default refresh behavior without breaking baseline output.
 - **Exit:** 0
 - **Source fn:** `it19_refresh_disabled_param_accepted`
 - **Source:** [017_token_refresh.md AC-18](../../../../docs/feature/017_token_refresh.md)
@@ -463,3 +465,15 @@ Integration test planning for the `.usage` command. See [commands.md](../../../.
 - **Exit:** 0
 - **Source fn:** `it36_no_footer_when_no_valid_accounts`
 - **Source:** [commands.md — .usage](../../../../docs/cli/commands.md#command--9-usage)
+
+---
+
+### IT-38: `.usage.help` shows `refresh::` default as `1` (enabled)
+
+- **Given:** Standard environment.
+- **When:** `clp .usage.help`
+- **Then:** Exits 0; stdout contains `"1 = enabled, default"` (indicating `refresh::1` is the default); stdout does NOT contain `"0 = disabled, default"`.
+- **Exit:** 0
+- **Fix:** BUG-155 (`task/claude_profile/bug/155_refresh_wrong_default.md`)
+- **Source fn:** `it37_mre_bug155_refresh_defaults_to_1`
+- **Source:** [017_token_refresh.md AC-23](../../../../docs/feature/017_token_refresh.md)

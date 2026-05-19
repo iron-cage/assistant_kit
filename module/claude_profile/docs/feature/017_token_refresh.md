@@ -9,7 +9,7 @@
 
 ### Design
 
-The `refresh::` parameter takes `0` (default, off) or `1` (on). When `0`, `.usage` behaves identically to the baseline — auth errors appear as error rows in the table and no subprocess is spawned.
+The `refresh::` parameter takes `1` (default, on) or `0` (off). When `0`, `.usage` behaves identically to the baseline — auth errors appear as error rows in the table and no subprocess is spawned.
 
 When `refresh::1`, the command wraps `fetch_oauth_usage` with a retry layer: on an HTTP authentication error (401 or 403), it calls `claude_runner_core::run_isolated()` with that account's stored credentials JSON, then retries the quota fetch if updated credentials are returned.
 
@@ -45,18 +45,18 @@ render results as table
 
 **Feature gate:** The retry logic is compiled only under `#[cfg(feature = "enabled")]`, matching `fetch_oauth_usage`. When `enabled` is absent, `refresh::1` is accepted as a parameter but no refresh attempt is made (offline builds cannot spawn subprocesses).
 
-**No behavioral change at default:** `refresh::0` introduces no new overhead, no subprocess spawn, and no credential file writes. Existing tests are unaffected.
+**Default is on:** `refresh::1` is the default — every `clp .usage` call automatically retries on 401/403. Use `refresh::0` to explicitly disable. `refresh::0` introduces no subprocess spawn and no credential file writes.
 
 **Output format:** When refresh succeeds, the account's row shows normal quota data — the refresh is invisible to the user. When refresh fails (subprocess error or second fetch also fails), the error reason appears in the account's row exactly as it would without `refresh::`.
 
 ### Acceptance Criteria
 
-- **AC-18**: `refresh::0` (default) produces no calls to `run_isolated`; `.usage` behavior is unchanged from the baseline.
-- **AC-19**: `refresh::1` invokes `claude_runner_core::run_isolated()` for any account whose `fetch_oauth_usage` returns an HTTP authentication error (401 or 403). HTTP 429 (rate limit) is passed through unchanged — it is not an authentication failure.
+- **AC-18**: `refresh::0` produces no calls to `run_isolated`; `.usage` behavior is unchanged from the baseline. Use `refresh::0` to explicitly disable the default refresh behavior.
+- **AC-19**: `refresh::1` (default) invokes `claude_runner_core::run_isolated()` for any account whose `fetch_oauth_usage` returns an HTTP authentication error (401 or 403). HTTP 429 (rate limit) is passed through unchanged — it is not an authentication failure.
 - **AC-20**: When `run_isolated` returns `credentials: Some(new_json)`, the credential file for that account is updated on disk before the retry fetch.
 - **AC-21**: If the refresh attempt fails (subprocess error, or retried fetch still fails), the account's row shows the final error; the remaining accounts are still processed and the table is still rendered.
 - **AC-22**: `refresh::` does not affect `format::json` output structure — refreshed accounts appear as normal data objects, failed-refresh accounts appear as error objects.
-- **AC-23**: The `refresh::` parameter appears in `.usage --help` output with its default value (`0`).
+- **AC-23**: The `refresh::` parameter appears in `.usage --help` output with its default value (`1`).
 
 ### Cross-References
 

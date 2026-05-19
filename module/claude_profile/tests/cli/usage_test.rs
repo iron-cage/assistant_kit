@@ -50,6 +50,7 @@
 //! | it34 | `it34_trace_param_writes_to_stderr`             | `trace::1` with no-token account → stderr contains `[trace]` lines         | P | no |
 //! | it35 | `it35_empty_store_json_format`                  | empty store + `format::json` → output is `[]`                              | P | no |
 //! | it36 | `it36_no_footer_when_no_valid_accounts`         | single failed account → no "Valid:" footer line                            | P | no |
+//! | it37 | `it37_mre_bug155_refresh_defaults_to_1`         | `.usage.help` shows "1 = enabled, default" for refresh (BUG-155)           | P | no |
 
 use crate::helpers::{
   BIN,
@@ -614,7 +615,9 @@ fn it17_format_table_rejected()
 /// it19: `refresh::0` is accepted by the command parser; empty store exits 0.
 ///
 /// TDD guard — fails before `refresh` is registered (unilang rejects unknown arg).
-/// After registration, verifies `refresh::0` has no effect on empty-store output.
+/// After registration, verifies `refresh::0` (explicit disable) has no effect on
+/// empty-store output. Note: `refresh::1` is the default; this test explicitly
+/// exercises the opt-out path.
 #[ test ]
 fn it19_refresh_disabled_param_accepted()
 {
@@ -1132,6 +1135,55 @@ fn it35_empty_store_json_format()
     text.trim(),
     "[]",
     "empty store with format::json must output '[]', got:\n{text}",
+  );
+}
+
+// ── it37 ──────────────────────────────────────────────────────────────────────
+
+/// it37: `.usage.help` shows `refresh::` default as `1` (enabled), not `0`.
+///
+/// ## Root Cause
+/// `usage_routine()` in `src/usage.rs` matched `refresh` with fallback `_ => 0`,
+/// making `refresh` default to disabled. Every `clp .usage` call without `refresh::`
+/// skipped `apply_refresh()`, showing stale `(auth expired (401))` rows instead
+/// of refreshing the token and retrying. Both the runtime default and the help-text
+/// description were wrong — `lib.rs` said "(0 = disabled; 1 = enabled)" with no
+/// indication which is default; `unilang.commands.yaml` carried `default: "0"`.
+///
+/// ## Why Not Caught
+/// Existing tests (it19/it20) checked that both `refresh::0` and `refresh::1` are
+/// accepted. Neither verified that the DEFAULT (no arg) was 1. The help text test
+/// (it33) only checked the 429 exclusion, not the default value annotation.
+///
+/// ## Fix Applied
+/// `usage_routine()` fallback changed from `_ => 0` to `_ => 1`. Description in
+/// `lib.rs:167` updated to "(1 = enabled, default; 0 = disabled)". `unilang.commands.yaml`
+/// default updated to `"1"`. All feature/CLI docs and IT specs updated to reflect
+/// the new default.
+///
+/// ## Prevention
+/// This test asserts `.usage.help` output contains `"1 = enabled, default"` — the
+/// exact phrase added to the description — and does NOT contain `"0 = disabled, default"`.
+///
+/// ## Pitfall
+/// Any future edit to the description string in `lib.rs` that removes `"1 = enabled, default"`
+/// (e.g., reformulation keeping 429 but changing default wording) would break this test.
+// test_kind: bug_reproducer(issue-155)
+#[ test ]
+fn it37_mre_bug155_refresh_defaults_to_1()
+{
+  let out = run_cs( &[ ".usage.help" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "1 = enabled, default" ),
+    "refresh help must indicate 1 is the default (BUG-155), got:\n{text}",
+  );
+  // The `live` description legitimately contains "0 = off, default"; only check that
+  // the refresh-specific "(0 = disabled, default)" phrasing is absent.
+  assert!(
+    !text.contains( "0 = disabled, default" ),
+    "refresh help must NOT say '0 = disabled, default' (BUG-155), got:\n{text}",
   );
 }
 

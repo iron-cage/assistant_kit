@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # l0 — host-native test execution; runs w3 .test level::3 directly on the host.
-# Default when no VERB_LAYER set; also invoked directly via VERB_LAYER=l0.
+# Entered via VERB_LAYER=l0 or called directly as ./verb/test.d/l0.
 #
 # Differs from l1 (container-internal):
 #   - CARGO_NET_OFFLINE is NOT set — host cargo may update registry index
