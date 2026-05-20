@@ -309,7 +309,7 @@ fn p09_paths_field_returns_single_value()
   assert_exit( &out, 0 );
   let text = stdout( &out );
   let lines : Vec< &str > = text.lines().collect();
-  assert_eq!( lines.len(), 1, "expected exactly 1 line, got: {:?}", lines );
+  assert_eq!( lines.len(), 1, "expected exactly 1 line, got: {lines:?}" );
   assert!( !lines[ 0 ].is_empty(), "expected non-empty path value" );
   assert!(
     !lines[ 0 ].contains( "credential_store:" ),

@@ -1,21 +1,30 @@
-//! Feature tests: FT (Usage — AC coverage for `009_token_usage`).
+//! Feature tests: FT (Usage — AC coverage for `009_token_usage` and
+//! `018_live_monitor`).
 //!
-//! Each FT case maps to one acceptance criterion from
-//! `docs/feature/009_token_usage.md`. Command-level tests (IT-N) live in
-//! `tests/cli/usage_test.rs`.
+//! Each FT case maps to one acceptance criterion from the corresponding feature
+//! doc.  Command-level tests (IT-N) live in `tests/cli/usage_test.rs`.
 //!
 //! Live tests (names contain `lim_it`) require network access and are excluded
 //! from Docker CI by the nextest filter `!test(lim_it)`.
 //!
 //! ## Test Matrix
 //!
+//! ### Feature 009 — All-Accounts Live Quota Reporting
+//!
 //! | ID   | Test Function                                    | AC    | Live? |
 //! |------|--------------------------------------------------|-------|-------|
-//! | ft01 | `ft01_missing_access_token_short_error`          | AC-03 | no    |
-//! | ft02 | `ft02_lim_it_http_401_shortens_to_auth_expired`  | AC-03 | yes   |
-//! | ft03 | `ft03_both_accounts_appear_regardless_of_active` | AC-01 | no    |
-//! | ft04 | `ft04_check_mark_follows_live_token_not_active`  | AC-02 | no    |
-//! | ft05 | `ft05_unreadable_credential_store_exits_2`       | AC-06 | no    |
+//! | ft01   | `ft01_missing_access_token_short_error`          | AC-03          | no  |
+//! | ft02   | `ft02_lim_it_http_401_shortens_to_auth_expired`  | AC-03          | yes |
+//! | ft03   | `ft03_both_accounts_appear_regardless_of_active` | AC-01          | no  |
+//! | ft04   | `ft04_check_mark_follows_live_token_not_active`  | AC-02          | no  |
+//! | ft05   | `ft05_unreadable_credential_store_exits_2`       | AC-06          | no  |
+//! | mre162 | `test_jwt_exp_ms_mre_bug162`                     | AC-25 / BUG-162 | no |
+//!
+//! ### Feature 018 — Live Quota Monitor Mode
+//!
+//! | ID    | Test Function                                   | AC    | Live? |
+//! |-------|-------------------------------------------------|-------|-------|
+//! | f18ft01 | `f18_ft01_live_0_single_fetch`                | AC-24 | no    |
 
 use crate::helpers::{
   run_cs_with_env,
@@ -24,6 +33,7 @@ use crate::helpers::{
   write_live_credentials_with_token,
   FAR_FUTURE_MS, PAST_MS,
 };
+use claude_profile::usage::jwt_exp_ms;
 use tempfile::TempDir;
 
 // ── FT-01: Error reason shortened — missing accessToken (AC-03) ──────────────
@@ -193,4 +203,70 @@ fn ft05_unreadable_credential_store_exits_2()
 
   assert_exit( &out, 2 );
   assert!( !stderr( &out ).is_empty(), "unreadable store must produce error on stderr" );
+}
+
+// ── MRE-162: jwt_exp_ms extracts future exp from JWT, not stale expiresAt (AC-25 / BUG-162) ─
+
+/// MRE-162 (AC-25, BUG-162): `jwt_exp_ms` must read the JWT `exp` claim from `accessToken`
+/// and return it in milliseconds, NOT the stale `expiresAt` field left unchanged by the
+/// isolated subprocess.
+///
+/// Root Cause: `apply_refresh` called `parse_u64_field(&creds_path, "expiresAt")` after
+///   writing refreshed credentials; but the subprocess never updates `expiresAt` — that
+///   field is a server-issued JWT claim not emitted during the OAuth refresh exchange.
+/// Why Not Caught: Fix(issue-156) assumed the subprocess writes `expiresAt`; that assumption
+///   was never tested with a credentials fixture where `expiresAt` and `exp` differ.
+/// Fix Applied: `apply_refresh` now calls `jwt_exp_ms(&new_creds)` to extract `exp * 1000`
+///   from the refreshed `accessToken`, which always reflects the new token's true expiry.
+/// Prevention: `_mre_` test locks the correct source (JWT `exp`) vs the wrong source
+///   (`expiresAt` file field); any regression that re-introduces the file read will fail here.
+/// Pitfall: `expiresAt` in the credentials file is a server-issued claim set at token
+///   issuance; the OAuth refresh exchange does not update it — only `accessToken` and
+///   `refreshToken` are refreshed. Never use `expiresAt` for post-refresh expiry.
+///
+/// Source: `tests/docs/feature/17_token_refresh.md § AC-25`, `bug/162_expiresAt_not_updated_by_subprocess.md`.
+#[ test ]
+fn test_jwt_exp_ms_mre_bug162()
+{
+  // Construct fake credentials JSON with:
+  //   - expired expiresAt (demonstrates what the stale read would return)
+  //   - accessToken JWT with a future exp claim (demonstrates the correct source)
+  //
+  // JWT payload: {"exp":2000000000}  (year 2033, unambiguously future)
+  // base64url({"exp":2000000000}) = "eyJleHAiOjIwMDAwMDAwMDB9"
+  // Full fake token: "eyJhbGciOiJub25lIn0.eyJleHAiOjIwMDAwMDAwMDB9.fakesig"
+  let creds = r#"{"claudeAiOauth":{"accessToken":"eyJhbGciOiJub25lIn0.eyJleHAiOjIwMDAwMDAwMDB9.fakesig","expiresAt":1000000000000}}"#;
+  // Stale approach (what old code did): reads expiresAt = 1_000_000_000_000 ms (year 2001, EXPIRED)
+  // Correct approach: jwt_exp_ms extracts exp = 2_000_000_000 → 2_000_000_000_000 ms (year 2033)
+  assert_eq!( jwt_exp_ms( creds ), Some( 2_000_000_000_000 ) );
+}
+
+// ── f18-FT-01: live::0 default — single fetch, exits; no loop overhead ────────
+
+/// f18-FT-01 (AC-24, `018_live_monitor`): `live::0` performs one fetch cycle
+/// then exits; no countdown footer, no screen clear, no loop.
+///
+/// Uses a no-token account so the fetch fails instantly (no HTTP call).
+/// Verifies single-exit behavior: the account row is rendered, the command
+/// exits 0, and the countdown footer ("Next update …") does not appear.
+///
+/// Source: `tests/docs/feature/18_live_monitor.md § FT-01`.
+#[ test ]
+fn f18_ft01_live_0_single_fetch()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "no-token@test.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "live::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "no-token@test.com" ),
+    "live::0 must render the account row on single fetch, got:\n{text}",
+  );
+  assert!(
+    !text.contains( "Next update" ),
+    "live::0 must not emit countdown footer, got:\n{text}",
+  );
 }

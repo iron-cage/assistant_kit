@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clp parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: 17 active clp parameter edge case files (`name::` through `model::`, params 1–18 except param 2); test specs for params 19–23 (`refresh::` through `trace::`) are pending.
+- **In Scope**: 23 active clp parameter edge case files (`name::` through `field::`, params 1–24 except param 2); all parameters covered.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 ### Responsibility Table
@@ -28,3 +28,9 @@
 | 16_role.md | Edge cases for `role::` parameter |
 | 17_billing.md | Edge cases for `billing::` parameter |
 | 18_model.md | Edge cases for `model::` parameter |
+| 19_refresh.md | Edge cases for `refresh::` parameter |
+| 20_live.md | Edge cases for `live::` parameter |
+| 21_interval.md | Edge cases for `interval::` parameter |
+| 22_jitter.md | Edge cases for `jitter::` parameter |
+| 23_trace.md | Edge cases for `trace::` parameter |
+| 24_field.md | Edge cases for `field::` parameter |

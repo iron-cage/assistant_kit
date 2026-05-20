@@ -1,6 +1,6 @@
 # Parameters
 
-### All Parameters (23 total)
+### All Parameters (24 total)
 
 | # | Parameter | Type | Default | Valid Values | Purpose | Used In |
 |---|-----------|------|---------|--------------|---------|---------|
@@ -22,15 +22,16 @@
 | 16 | `billing::` | `bool` | `0` | `0`, `1` | Show billing type from `oauthAccount`, opt-in | 2 cmds |
 | 17 | `model::` | `bool` | `0` | `0`, `1` | Show active model from settings, opt-in | 2 cmds |
 | 18 | `current::` | `bool` | `1` | `0`, `1` | Show current (live) account line in `.accounts`; suppressed when `~/.claude/.credentials.json` is unreadable | 1 cmd |
-| 19 | `refresh::` | `bool` | `0` | `0`, `1` | On auth error (401/403), refresh token via isolated subprocess before retrying quota fetch (`.usage`) | 1 cmd |
+| 19 | `refresh::` | `bool` | `1` | `0`, `1` | On auth error (401/403) or 429 with locally-expired token, refresh via isolated subprocess and retry quota fetch (`.usage`); default on | 1 cmd |
 | 20 | `live::` | `bool` | `0` | `0`, `1` | Enable continuous refresh loop in `.usage`; incompatible with `format::json` | 1 cmd |
 | 21 | `interval::` | `u64` | `30` | ≥ 30 (seconds) | Seconds between full refresh cycles in live mode; validated only when `live::1` | 1 cmd |
 | 22 | `jitter::` | `u64` | `0` | 0 ≤ jitter ≤ interval | Max random seconds added to `interval` in live mode; validated only when `live::1` | 1 cmd |
 | 23 | `trace::` | `bool` | `0` | `0`, `1` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps (`.usage`) | 1 cmd |
+| 24 | `field::` | `String` | `""` (show all) | `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions` | Output a single named path value from `.paths`; overrides `format::` | 1 cmd |
 
-**Total:** 23 parameters
+**Total:** 24 parameters
 
-*Parameter 2 forms the Output Control group; parameters 5-18 form the Field Presence group; parameters 19-23 form the Fetch Behavior group*
+*Parameter 2 forms the Output Control group; parameters 5-18 form the Field Presence group; parameters 19-23 form the Fetch Behavior group; parameter 24 forms the Output Selection group*
 
 ---
 

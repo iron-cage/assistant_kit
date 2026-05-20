@@ -34,7 +34,7 @@
 |-------|----------|
 | 0 | `.`, `.help` |
 | 2 | `.paths`, `.account.save`, `.account.use`, `.account.delete`, `.token.status`, `.account.limits` |
-| 5 | `.usage` |
+| 6 | `.usage` |
 | 12 | `.accounts` |
 | 13 | `.credentials.status` |
 

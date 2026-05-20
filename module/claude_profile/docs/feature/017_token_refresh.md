@@ -32,13 +32,15 @@ if refresh_param == 1:
 
         if run_result is Ok(r) AND r.credentials is Some(new_json):
             write new_json to creds_path on disk   // write-back to per-account file
-            account_quota.expires_at_ms = parse_expires_at(creds_path)   // update in-memory expiry
+            account_quota.expires_at_ms = jwt_exp_ms(new_json.access_token) * 1000  // derive from JWT — NOT from file (BUG-162)
             account_quota.result = fetch_oauth_usage(new_token)   // retry this account only
         else:
             account_quota.result = Err(run_result.error)   // propagate retry failure
 
 render results as table
 ```
+
+**`expiresAt` not written by subprocess (BUG-162):** The isolated subprocess updates `accessToken` and `refreshToken` in the credentials file but does NOT update `expiresAt` — that field is a server-side claim set at token issuance and is not written back during the OAuth refresh exchange. Reading `expiresAt` from the credentials file after the subprocess returns therefore yields the **original expired timestamp**, causing `compute_expires_cell` to continue showing `EXPIRED` regardless of the successful refresh. The correct source for post-refresh expiry is the JWT `exp` claim embedded in the new `accessToken` (second `.`-separated base64url segment, `"exp"` field, seconds → multiply by 1000 for ms). See [BUG-162](../../../../task/claude_profile/bug/162_expiresAt_not_updated_by_subprocess.md) and TSK-163.
 
 **Expired refresh token (expected limitation):** When an account's OAuth refresh token has itself expired (distinct from access token expiry), `run_isolated` cannot obtain new credentials — Claude Code contacts the OAuth server with the expired refresh token, gets rejected, and does not update the credential file. In this case `credentials` is `None`, the account is skipped, and the original auth error persists in the output. The operational remedy is to re-authenticate the affected account via browser-based OAuth flow and `clp .account.save`.
 
@@ -65,6 +67,7 @@ render results as table
 - **AC-21**: If the refresh attempt fails (subprocess error, or retried fetch still fails), the account's row shows the final error; the remaining accounts are still processed and the table is still rendered.
 - **AC-22**: `refresh::` does not affect `format::json` output structure — refreshed accounts appear as normal data objects, failed-refresh accounts appear as error objects.
 - **AC-23**: The `refresh::` parameter appears in `.usage --help` output with its default value (`1`).
+- **AC-25**: After `run_isolated` returns `credentials: Some(new_json)`, `account_quota.expires_at_ms` is set from the JWT `exp` claim of the new `accessToken` (decoded from `new_json`), NOT from the `expiresAt` field of the credentials file (which the subprocess does not update). If JWT decoding fails, `expires_at_ms` is left unchanged as a safe fallback.
 
 ### Cross-References
 
@@ -79,6 +82,8 @@ render results as table
 | task | `task/claude_profile/142_fix_refresh_per_account.md` | Per-account loop fix (replaced batch refresh) |
 | task | `task/claude_profile/150_fix_apply_refresh_429_trigger.md` | Removed 429 from unconditional retry guard |
 | bug | `task/claude_profile/bug/156_refresh_429_expired_not_refreshed.md` | BUG-156: conditional 429+expired refresh fix |
+| bug | `task/claude_profile/bug/162_expiresAt_not_updated_by_subprocess.md` | BUG-162: subprocess never writes `expiresAt`; use JWT `exp` instead |
+| task | `task/claude_profile/163_fix_expiresAt_jwt_decode.md` | TSK-163: implement `jwt_exp_ms()` and fix `apply_refresh` expiry derivation |
 | task | `task/claude_profile/151_refresh_failure_message.md` | Fixed empty args in `run_isolated` call |
 | doc | [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm that this extends |
 | doc | `claude_runner_core/docs/feature/004_run_isolated.md` | `run_isolated()` API contract |

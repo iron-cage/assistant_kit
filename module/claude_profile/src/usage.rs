@@ -195,6 +195,75 @@ fn parse_u64_field( path : &std::path::Path, key : &str ) -> Option< u64 >
   rest[ ..end ].parse().ok()
 }
 
+fn base64url_decode( s : &str ) -> Option< Vec< u8 > >
+{
+  // Translate URL-safe alphabet to standard and add padding.
+  let pad = match s.len() % 4 { 0 => 0, 2 => 2, 3 => 1, _ => return None };
+  let b64 : String = s.chars()
+    .map( |c| match c { '-' => '+', '_' => '/', c => c } )
+    .chain( core::iter::repeat( '=' ).take( pad ) )
+    .collect();
+  // Decode groups of 4 base64 characters → 3 bytes.
+  const ALPHA : &[ u8 ] =
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  // ALPHA has 64 entries (positions 0–63), so the position always fits in u32.
+  let val = |c : u8| ALPHA.iter().position( |&a| a == c )
+    .and_then( |v| u32::try_from( v ).ok() );
+  let bytes = b64.as_bytes();
+  let mut out = Vec::with_capacity( b64.len() / 4 * 3 );
+  let mut i = 0;
+  while i + 3 < bytes.len()
+  {
+    let v0 = val( bytes[ i ] )?;
+    let v1 = val( bytes[ i + 1 ] )?;
+    // `& 0xFF` makes the narrowing cast lossless — the upper bits are always zero.
+    out.push( ( ( ( v0 << 2 ) | ( v1 >> 4 ) ) & 0xFF ) as u8 );
+    if bytes[ i + 2 ] != b'='
+    {
+      let v2 = val( bytes[ i + 2 ] )?;
+      out.push( ( ( ( v1 << 4 ) | ( v2 >> 2 ) ) & 0xFF ) as u8 );
+    }
+    if bytes[ i + 3 ] != b'='
+    {
+      let v2 = val( bytes[ i + 2 ] )?;
+      let v3 = val( bytes[ i + 3 ] )?;
+      out.push( ( ( ( v2 << 6 ) | v3 ) & 0xFF ) as u8 );
+    }
+    i += 4;
+  }
+  Some( out )
+}
+
+/// Extracts the `exp` claim from the `accessToken` JWT inside a credentials JSON string.
+///
+/// Returns `Some(exp_ms)` where `exp_ms = exp_secs * 1000`, or `None` if the token is
+/// absent, malformed, or missing the `exp` field.  No signature verification is performed —
+/// the claim is used only for display purposes.
+#[ must_use ]
+#[ inline ]
+pub fn jwt_exp_ms( creds_json : &str ) -> Option< u64 >
+{
+  // Locate the accessToken string value.
+  let key   = "\"accessToken\":\"";
+  let start = creds_json.find( key )? + key.len();
+  let rest  = &creds_json[ start.. ];
+  let end   = rest.find( '"' )?;
+  let token = &rest[ ..end ];
+  // Split JWT into header.payload.signature — take payload (second segment).
+  let mut parts   = token.splitn( 3, '.' );
+  let _header     = parts.next()?;
+  let payload_b64 = parts.next()?;
+  // Base64url-decode and UTF-8-decode the payload.
+  let payload_bytes = base64url_decode( payload_b64 )?;
+  let payload       = core::str::from_utf8( &payload_bytes ).ok()?;
+  // Extract the numeric `exp` field.
+  let needle    = "\"exp\":";
+  let after     = &payload[ payload.find( needle )? + needle.len().. ];
+  let digits_end = after.find( |c : char| !c.is_ascii_digit() ).unwrap_or( after.len() );
+  let exp_secs : u64 = after[ ..digits_end ].parse().ok()?;
+  Some( exp_secs * 1000 )
+}
+
 /// Compute the `Expires` cell value for a given token expiry and current time.
 ///
 /// Returns `"EXPIRED"` when `expires_at_ms / 1000 ≤ now_secs` (saturating), or
@@ -732,14 +801,14 @@ fn apply_refresh(
       if trace { eprintln!( "[trace] refresh  {}  write failed — skipping retry", aq.name ); }
       continue;
     }
-    // Fix(issue-156): update in-memory expiry from the newly written credentials.
-    // Root cause: `aq.expires_at_ms` was never updated after the isolated subprocess
-    //   wrote fresh credentials, so `Expires` showed EXPIRED for the rest of the run.
-    // Pitfall: always re-read from file — the subprocess may have updated `expiresAt`
-    //   even when the access token bytes were unchanged.
-    if let Some( new_exp ) = parse_u64_field( &creds_path, "expiresAt" )
+    // Fix(issue-162): derive expiry from JWT exp claim — subprocess does not update expiresAt.
+    // Root cause: the isolated subprocess writes refreshed accessToken/refreshToken but leaves
+    //   expiresAt at the original expired timestamp; re-reading from file gives stale value.
+    // Pitfall: expiresAt is a server-issued claim the subprocess cannot update; always derive
+    //   post-refresh expiry from jwt_exp_ms(), never by re-reading the credentials file.
+    if let Some( exp_ms ) = jwt_exp_ms( &new_creds )
     {
-      aq.expires_at_ms = new_exp;
+      aq.expires_at_ms = exp_ms;
     }
 
     // Re-read the refreshed token and retry only this account's quota.
@@ -767,6 +836,85 @@ fn apply_refresh(
 
 // ── Command handler ────────────────────────────────────────────────────────────
 
+/// Parsed `.usage` parameters extracted from a `VerifiedCommand`.
+struct UsageParams
+{
+  /// 1 = auto-refresh expired tokens (default); 0 = show errors as-is.
+  refresh  : i64,
+  /// 1 = continuous live-monitor loop; 0 = single fetch (default).
+  live     : i64,
+  /// Seconds between live-loop cycles (default 30; only validated when live=1).
+  interval : u64,
+  /// Max random seconds added to each cycle (default 0; only validated when live=1).
+  jitter   : u64,
+  /// true = emit `[trace]` diagnostic lines to stderr.
+  trace    : bool,
+}
+
+/// Parse and validate the five `.usage`-specific parameters.
+///
+/// # Errors
+///
+/// Returns `ErrorData` (exit 1 / `ArgumentTypeMismatch`) for any out-of-range
+/// or wrong-type value. `interval` and `jitter` constraint validation is deferred
+/// to `usage_routine` because it only applies when `live = 1`.
+///
+/// Fix(issue-155): `refresh` default is 1 (enabled). Omitting the param ≠
+/// "user wants disabled" — auto-refresh is the safer default.
+/// Fix(issue-157): strict 0/1 range guard added for `refresh`, `live`, `trace`.
+/// Pitfall: `Kind::Integer` registration doesn't block string values — the parser
+/// delivers them as `Value::String`, so this function is the sole enforcement point.
+fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorData >
+{
+  let refresh = match cmd.arguments.get( "refresh" )
+  {
+    None | Some( Value::Integer( 1 ) ) => 1,
+    Some( Value::Integer( 0 ) )        => 0,
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "refresh:: must be 0 or 1".to_string(),
+    ) ),
+  };
+  let live = match cmd.arguments.get( "live" )
+  {
+    None | Some( Value::Integer( 0 ) ) => 0_i64,
+    Some( Value::Integer( 1 ) )        => 1_i64,
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "live:: must be 0 or 1".to_string(),
+    ) ),
+  };
+  // Negative values map to 0, which is < 30 and will hit the interval guard.
+  let interval = match cmd.arguments.get( "interval" )
+  {
+    None                        => 30_u64,
+    Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( 0 ),
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "interval:: must be a non-negative integer".to_string(),
+    ) ),
+  };
+  let jitter = match cmd.arguments.get( "jitter" )
+  {
+    None                        => 0_u64,
+    Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( 0 ),
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "jitter:: must be a non-negative integer".to_string(),
+    ) ),
+  };
+  let trace = match cmd.arguments.get( "trace" )
+  {
+    None | Some( Value::Integer( 0 ) ) => false,
+    Some( Value::Integer( 1 ) )        => true,
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "trace:: must be 0 or 1".to_string(),
+    ) ),
+  };
+  Ok( UsageParams { refresh, live, interval, jitter, trace } )
+}
+
 /// `.usage` — show live quota utilization for all saved accounts.
 ///
 /// Enumerates `{credential_store}/*.credentials.json`, fetches rate-limit
@@ -780,7 +928,7 @@ fn apply_refresh(
 #[ inline ]
 pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let opts    = OutputOptions::from_cmd( &cmd )?;
+  let opts   = OutputOptions::from_cmd( &cmd )?;
   if opts.is_table()
   {
     return Err( ErrorData::new(
@@ -788,34 +936,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       "format::table is only supported by .accounts".to_string(),
     ) );
   }
-  // Fix(issue-155): default changed from 0 to 1 — refresh enabled by default.
-  // Root cause: fallback `_ => 0` silently disabled token refresh whenever the
-  //   caller omitted `refresh::`, causing stale 401 error rows instead of
-  //   transparent auto-refresh.
-  // Pitfall: omitting a param ≠ "user wants disabled" — always choose the safer
-  //   default (auto-refresh) over the noisier one (silent 401 row).
-  let refresh = match cmd.arguments.get( "refresh" )
-  {
-    Some( Value::Integer( n ) ) => *n,
-    _ => 1,
-  };
-  let live = match cmd.arguments.get( "live" )
-  {
-    Some( Value::Integer( n ) ) => *n,
-    _ => 0_i64,
-  };
-  // Negative values map to 0, which is < 30 and will hit the interval guard.
-  let interval = match cmd.arguments.get( "interval" )
-  {
-    Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( 0 ),
-    _ => 30_u64,
-  };
-  let jitter = match cmd.arguments.get( "jitter" )
-  {
-    Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( 0 ),
-    _ => 0_u64,
-  };
-  let trace = matches!( cmd.arguments.get( "trace" ), Some( Value::Integer( 1 ) ) );
+  let UsageParams { refresh, live, interval, jitter, trace } = parse_usage_params( &cmd )?;
 
   // Live-mode guards — fire BEFORE any network fetch, only when live::1 (AC-31).
   // Pitfall: placing these inside execute_live_mode() (after fetch_all_quota) would

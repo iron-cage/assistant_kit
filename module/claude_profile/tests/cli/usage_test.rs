@@ -52,6 +52,20 @@
 //! | it36 | `it36_no_footer_when_no_valid_accounts`         | single failed account → no "Valid:" footer line                            | P | no |
 //! | it37 | `it37_mre_bug155_refresh_defaults_to_1`         | `.usage.help` shows "1 = enabled, default" for refresh (BUG-155)           | P | no |
 //! | it38 | `it38_mre_bug156_refresh_help_mentions_429_expired` | `.usage.help` refresh mentions 429+locally-expired case (BUG-156)      | P | no |
+//! | it39 | `it39_refresh_2_rejected`                           | `refresh::2` out of range → exit 1 (EC-3)                | N | no |
+//! | it40 | `it40_refresh_yes_rejected`                         | `refresh::yes` type error → exit 1 (EC-4)                | N | no |
+//! | it41 | `it41_live_0_single_fetch_exits_0`                  | `live::0` explicit → exit 0, no countdown footer (EC-2)     | P | no |
+//! | it42 | `it42_live_2_rejected`                              | `live::2` out of range → exit 1 (EC-4)                      | N | no |
+//! | it43 | `it43_live_yes_rejected`                            | `live::yes` type error → exit 1 (EC-5)                      | N | no |
+//! | it44 | `it44_interval_abc_rejected`                        | `interval::abc` type error → exit 1 (EC-6)              | N | no |
+//! | it45 | `it45_interval_60_live_accepted`                    | `live::1 interval::60` guard passes (exit 2, not 1) (EC-3) | P | no |
+//! | it46 | `it46_jitter_0_explicit_live_accepted`              | `live::1 jitter::0` explicit zero guard passes (EC-1)     | P | no |
+//! | it47 | `it47_jitter_10_live_accepted`                      | `live::1 interval::30 jitter::10` guard passes (EC-2)     | P | no |
+//! | it48 | `it48_jitter_abc_rejected`                          | `jitter::abc` type error → exit 1 (EC-7)                  | N | no |
+//! | it49 | `it49_trace_0_no_trace_on_stderr`                   | `trace::0` explicit → no [trace] on stderr (EC-2)          | P | no |
+//! | it50 | `it50_trace_2_rejected`                             | `trace::2` out of range → exit 1 (EC-3)                    | N | no |
+//! | it51 | `it51_trace_yes_rejected`                           | `trace::yes` type error → exit 1 (EC-4)                    | N | no |
+//! | it52 | `it52_trace_default_off`                            | no `trace::` → no [trace] lines on stderr (EC-5)           | P | no |
 
 use crate::helpers::{
   BIN,
@@ -1259,3 +1273,351 @@ fn it36_no_footer_when_no_valid_accounts()
   );
 }
 
+// ── it39 ──────────────────────────────────────────────────────────────────────
+
+/// it39 (EC-3): `refresh::2` is out of range for the boolean
+/// parameter (only 0 and 1 are valid) → exit 1 with error on stderr.
+///
+/// Source: `tests/docs/cli/param/19_refresh.md § EC-3`.
+#[ test ]
+fn it39_refresh_2_rejected()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "refresh::2" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    !stderr( &out ).is_empty(),
+    "refresh::2 must produce error on stderr",
+  );
+}
+
+// ── it40 ──────────────────────────────────────────────────────────────────────
+
+/// it40 (EC-4): `refresh::yes` is a type mismatch — the param
+/// is a boolean integer, not a string → exit 1.
+///
+/// Source: `tests/docs/cli/param/19_refresh.md § EC-4`.
+#[ test ]
+fn it40_refresh_yes_rejected()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "refresh::yes" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    !stderr( &out ).is_empty(),
+    "refresh::yes must produce error on stderr",
+  );
+}
+
+// ── it41 ──────────────────────────────────────────────────────────────────────
+
+/// it41 (EC-2): `live::0` explicit — single fetch exits 0; no
+/// countdown footer emitted.
+///
+/// `live::0` disables live-monitor mode.  The command performs one fetch cycle
+/// (here: empty store → "no accounts") and exits immediately without entering
+/// the continuous loop.  The countdown footer ("Next update …") must not appear.
+/// Source: `tests/docs/cli/param/20_live.md § EC-2`.
+#[ test ]
+fn it41_live_0_single_fetch_exits_0()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let out  = run_cs_with_env( &[ ".usage", "live::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "Next update" ),
+    "live::0 must not emit countdown footer, got:\n{text}",
+  );
+}
+
+// ── it42 ──────────────────────────────────────────────────────────────────────
+
+/// it42 (EC-4): `live::2` is out of range for the boolean parameter
+/// (only 0 and 1 are valid) → exit 1.
+///
+/// Source: `tests/docs/cli/param/20_live.md § EC-4`.
+#[ test ]
+fn it42_live_2_rejected()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "live::2" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    !stderr( &out ).is_empty(),
+    "live::2 must produce error on stderr",
+  );
+}
+
+// ── it43 ──────────────────────────────────────────────────────────────────────
+
+/// it43 (EC-5): `live::yes` is a type mismatch → exit 1.
+///
+/// Source: `tests/docs/cli/param/20_live.md § EC-5`.
+#[ test ]
+fn it43_live_yes_rejected()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "live::yes" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    !stderr( &out ).is_empty(),
+    "live::yes must produce error on stderr",
+  );
+}
+
+// ── it44 ──────────────────────────────────────────────────────────────────────
+
+/// it44 (EC-6): `interval::abc` is a type error — the param is
+/// `u64`, not a string → exit 1 before any credential or live-mode processing.
+///
+/// Type validation fires at argument parse time; the `live::` mode flag does not
+/// affect it (contrast EC-5 where a valid-type but out-of-range value is accepted
+/// in non-live mode).
+/// Source: `tests/docs/cli/param/21_interval.md § EC-6`.
+#[ test ]
+fn it44_interval_abc_rejected()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "interval::abc" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    !stderr( &out ).is_empty(),
+    "interval::abc must produce error on stderr",
+  );
+}
+
+// ── it45 ──────────────────────────────────────────────────────────────────────
+
+/// it45 (EC-3): `live::1 interval::60` — non-default value
+/// accepted; the interval guard (≥ 30) passes for 60 → live mode is entered.
+///
+/// A chmod-000 credential store forces exit 2 after the guards pass, proving
+/// live mode was entered.  Exit 1 would indicate a guard incorrectly fired.
+/// Source: `tests/docs/cli/param/21_interval.md § EC-3`.
+#[ cfg( unix ) ]
+#[ test ]
+fn it45_interval_60_live_accepted()
+{
+  use std::os::unix::fs::PermissionsExt;
+
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::set_permissions( &store, std::fs::Permissions::from_mode( 0o000 ) ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".usage", "live::1", "interval::60" ],
+    &[ ( "HOME", home ) ],
+  );
+
+  std::fs::set_permissions( &store, std::fs::Permissions::from_mode( 0o755 ) ).unwrap();
+
+  // Exit 2 = live mode entered (interval guard passed); exit 1 = guard fired (bug).
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "interval" ),
+    "interval::60 must not trigger the interval guard, stderr:\n{err}",
+  );
+}
+
+// ── it46 ──────────────────────────────────────────────────────────────────────
+
+/// it46 (EC-1): `live::1 jitter::0` — explicit zero jitter accepted;
+/// the jitter guard (jitter ≤ interval) passes for 0 ≤ 30 → live mode is entered.
+///
+/// Uses a chmod-000 store for offline verification.  Distinct from `it29` which
+/// uses the implicit default (no `jitter::` param) — this test exercises the
+/// explicit `jitter::0` path.
+/// Source: `tests/docs/cli/param/22_jitter.md § EC-1`.
+#[ cfg( unix ) ]
+#[ test ]
+fn it46_jitter_0_explicit_live_accepted()
+{
+  use std::os::unix::fs::PermissionsExt;
+
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::set_permissions( &store, std::fs::Permissions::from_mode( 0o000 ) ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".usage", "live::1", "jitter::0" ],
+    &[ ( "HOME", home ) ],
+  );
+
+  std::fs::set_permissions( &store, std::fs::Permissions::from_mode( 0o755 ) ).unwrap();
+
+  // Exit 2 = live mode entered; exit 1 = guard fired (bug).
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "jitter" ),
+    "explicit jitter::0 must not trigger the jitter guard, stderr:\n{err}",
+  );
+}
+
+// ── it47 ──────────────────────────────────────────────────────────────────────
+
+/// it47 (EC-2): `live::1 interval::30 jitter::10` — jitter less
+/// than interval is accepted; the guard (jitter ≤ interval) passes → live mode
+/// is entered.
+///
+/// Uses a chmod-000 store for offline verification.
+/// Source: `tests/docs/cli/param/22_jitter.md § EC-2`.
+#[ cfg( unix ) ]
+#[ test ]
+fn it47_jitter_10_live_accepted()
+{
+  use std::os::unix::fs::PermissionsExt;
+
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::set_permissions( &store, std::fs::Permissions::from_mode( 0o000 ) ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".usage", "live::1", "interval::30", "jitter::10" ],
+    &[ ( "HOME", home ) ],
+  );
+
+  std::fs::set_permissions( &store, std::fs::Permissions::from_mode( 0o755 ) ).unwrap();
+
+  // Exit 2 = live mode entered (jitter::10 ≤ interval::30); exit 1 = guard fired (bug).
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "jitter" ),
+    "jitter::10 with interval::30 must not trigger the jitter guard, stderr:\n{err}",
+  );
+}
+
+// ── it48 ──────────────────────────────────────────────────────────────────────
+
+/// it48 (EC-7): `jitter::abc` is a type error — the param is `u64`,
+/// not a string → exit 1.
+///
+/// Source: `tests/docs/cli/param/22_jitter.md § EC-7`.
+#[ test ]
+fn it48_jitter_abc_rejected()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "jitter::abc" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    !stderr( &out ).is_empty(),
+    "jitter::abc must produce error on stderr",
+  );
+}
+
+// ── it49 ──────────────────────────────────────────────────────────────────────
+
+/// it49 (EC-2): `trace::0` explicit disable — no `[trace]` lines
+/// appear on stderr; exit 0.
+///
+/// Uses a no-token account so the fetch path is exercised (increasing the chance
+/// of accidental trace leakage if the disable is broken).
+/// Source: `tests/docs/cli/param/23_trace.md § EC-2`.
+#[ test ]
+fn it49_trace_0_no_trace_on_stderr()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "trace-off-acct", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "trace::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "[trace]" ),
+    "trace::0 must not emit [trace] lines on stderr, got:\n{err}",
+  );
+}
+
+// ── it50 ──────────────────────────────────────────────────────────────────────
+
+/// it50 (EC-3): `trace::2` is out of range for the boolean parameter
+/// (only 0 and 1 are valid) → exit 1.
+///
+/// Source: `tests/docs/cli/param/23_trace.md § EC-3`.
+#[ test ]
+fn it50_trace_2_rejected()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "trace::2" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    !stderr( &out ).is_empty(),
+    "trace::2 must produce error on stderr",
+  );
+}
+
+// ── it51 ──────────────────────────────────────────────────────────────────────
+
+/// it51 (EC-4): `trace::yes` is a type mismatch → exit 1.
+///
+/// Source: `tests/docs/cli/param/23_trace.md § EC-4`.
+#[ test ]
+fn it51_trace_yes_rejected()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "trace::yes" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!(
+    !stderr( &out ).is_empty(),
+    "trace::yes must produce error on stderr",
+  );
+}
+
+// ── it52 ──────────────────────────────────────────────────────────────────────
+
+/// it52 (EC-5): default behavior (no `trace::` param) — no `[trace]`
+/// lines appear on stderr; trace is off by default (default = 0).
+///
+/// Uses a no-token account to exercise the fetch path; absence of `[trace]` lines
+/// confirms the default is correctly set to disabled.
+/// Source: `tests/docs/cli/param/23_trace.md § EC-5`.
+#[ test ]
+fn it52_trace_default_off()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "no-trace-acct", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "[trace]" ),
+    "default (no trace:: param) must not emit [trace] lines on stderr, got:\n{err}",
+  );
+}

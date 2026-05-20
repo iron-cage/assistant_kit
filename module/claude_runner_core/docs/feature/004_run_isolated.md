@@ -96,6 +96,8 @@ The temp directory structure is:
 
 After the subprocess exits (or before cleanup on timeout), the function reads the `.claude.json` file back from the temp HOME and compares it byte-by-byte with the original `credentials_json` input. If the bytes differ and the content is valid UTF-8, `credentials: Some(new_json)` is returned. If the subprocess did not modify the file, or the file is unreadable, `credentials: None` is returned. The comparison is exact — no JSON normalisation.
 
+**Caller note — `expiresAt` is NOT updated by the subprocess:** Claude Code's OAuth refresh exchange updates `accessToken` and `refreshToken` in the credentials file but does NOT write `expiresAt`. Callers that need the post-refresh token expiry must derive it from the JWT `exp` claim of the returned `accessToken` (base64url-decode the second `.`-separated segment, parse `"exp"` as Unix seconds, multiply by 1000 for ms) rather than reading `expiresAt` from the credentials file. See BUG-162.
+
 **Unconditional cleanup:**
 
 The temp directory is removed in all code paths: success, timeout, and I/O error. A failed cleanup is logged (best-effort) but does not cause `run_isolated()` to return an error.
