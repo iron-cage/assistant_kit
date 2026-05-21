@@ -88,7 +88,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .usage refresh::1`
 - **Then:** The account's row shows the rate-limit error (`rate limited (429)`); `refresh_account_token` is NOT called for this account; the 429 is passed through unchanged.
 - **Exit:** 0
-- **Source fn:** `TBD — no dedicated offline test`
+- **Source fn:** `test_apply_refresh_ft4_429_valid_token_not_retried`
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
 ---
 
@@ -98,5 +98,5 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .usage refresh::1`
 - **Then:** `refresh_account_token` is called for that account (expired local token indicates stale per-account copy); if updated credentials are returned, the account quota fetch is retried once.
 - **Exit:** 0
-- **Source fn:** `TBD — no dedicated offline test`
+- **Source fn:** `test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred`
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)

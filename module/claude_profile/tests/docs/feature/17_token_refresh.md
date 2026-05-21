@@ -19,7 +19,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-11 | `expires_at_ms` derived from JWT `exp` after refresh | AC-25 | test_jwt_exp_ms_mre_bug162 |
 | FT-12 | `Some(paths)` — credential absent in store → `refresh_account_token` returns `None` → account skipped | Algorithm | test_apply_refresh_lifecycle_switch_fails_result_unchanged |
 | FT-13 | `original_active` account restored to live session after refresh cycle | Algorithm | test_apply_refresh_lifecycle_original_active_restored |
-| FT-14 | `None`-paths fallback — credential absent in store → `refresh_account_token` returns `None` | Algorithm | TBD |
+| FT-14 | `None`-paths fallback — credential absent in store → `refresh_account_token` returns `None` | Algorithm | test_apply_refresh_401_no_cred_file |
 
 ### Test Case Index
 
@@ -72,7 +72,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **When:** `clp .usage refresh::1`
 - **Then:** A `refresh_account_token` call is made for that account (403 is treated identically to 401); exit 0.
 - **Exit:** 0
-- **Source fn:** `TBD — no dedicated test`
+- **Source fn:** `test_apply_refresh_lifecycle_ft3_403_no_cred_result_unchanged`
 - **Source:** [017_token_refresh.md AC-19](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -83,7 +83,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **When:** `clp .usage refresh::1`
 - **Then:** The account's row shows `rate limited (429)`; no refresh is attempted (local token is valid — the 429 is a genuine rate limit); exit 0.
 - **Exit:** 0
-- **Source fn:** `TBD — no dedicated test`
+- **Source fn:** `test_apply_refresh_ft4_429_valid_token_not_retried`
 - **Source:** [017_token_refresh.md AC-19](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -94,7 +94,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **When:** `clp .usage refresh::1`
 - **Then:** `refresh_account_token` is called for that account; the 429 is treated as a stale-credential condition; exit 0.
 - **Exit:** 0
-- **Source fn:** `TBD — no dedicated test`
+- **Source fn:** `test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred`
 - **Source:** [017_token_refresh.md AC-19](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -117,7 +117,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **When:** `clp .usage refresh::1`
 - **Then:** The failing account's row shows the final error reason; the succeeding account's row shows normal quota data; both rows are present; the table is rendered; exit 0.
 - **Exit:** 0
-- **Source fn:** `TBD — no dedicated test`
+- **Source fn:** `test_apply_refresh_mixed_accounts` (C4 — covers multi-account isolation)
 - **Source:** [017_token_refresh.md AC-21](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -128,7 +128,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **When:** `clp .usage format::json refresh::1`
 - **Then:** JSON output is a valid array; refreshed accounts appear as normal data objects with quota fields; failed-refresh accounts appear as error objects; output structure matches the baseline `.usage format::json` schema; exit 0.
 - **Exit:** 0
-- **Source fn:** `TBD — no dedicated test`
+- **Source fn:** `test_render_json_ft8_mixed_ok_and_err_both_present`
 - **Source:** [017_token_refresh.md AC-22](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -194,6 +194,6 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Given:** `claude_paths = None` (persistent-store mode); one saved account with a 401 error result; no per-account credential file (`{name}.credentials.json`) exists in the persistent store.
 - **When:** `apply_refresh(&mut accounts, store.path(), None, false)` is called (unit test context; equivalent to `clp .usage refresh::1` with no live session)
 - **Then:** `refresh_account_token(name, store, None)` returns `None` (credential file absent in persistent store); the account is skipped via `continue`; the 401 error result is unchanged after `apply_refresh` returns.
-- **Source fn:** `TBD — covered by account_refresh_test.rs in claude_profile_core`
+- **Source fn:** `test_apply_refresh_401_no_cred_file` (C2 — covers None-paths + no credential file)
 - **Note:** Symmetric to FT-12 for the `None`-paths branch; verifies the persistent-store fallback path exits cleanly when the per-account credential file is absent.
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)

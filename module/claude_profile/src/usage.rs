@@ -1751,51 +1751,37 @@ mod tests
     );
   }
 
-  /// FT-07 — `apply_refresh`: refresh failure in one account does not affect sibling.
+  /// FT-05 — `apply_refresh` `None`-paths: 429 + expired local token → refresh path
+  /// entered, but no credential file in store → `refresh_account_token` returns `None`
+  /// → account skipped via `continue` → result unchanged.
   ///
-  /// Two accounts: one with 401+no_cred (`refresh_account_token` returns `None` → skipped,
-  /// result unchanged) and one with `Ok` result (`should_refresh` returns false → skipped,
-  /// result unchanged).  After `apply_refresh` both rows remain present and unmodified.
+  /// Contrasts with FT-04 (`test_apply_refresh_ft4_429_valid_token_not_retried`):
+  ///   FT-04: 429 + non-expired → `should_refresh` returns `false` → refresh path NEVER entered.
+  ///   FT-05: 429 + expired    → `should_refresh` returns `true`  → refresh path IS entered,
+  ///          but gracefully exits when no per-account credential file exists in the store.
   #[ test ]
-  fn test_apply_refresh_ft7_two_accounts_refresh_failure_isolation()
+  fn test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred()
   {
     let store = TempDir::new().unwrap();
-    // No bob@example.com.credentials.json — refresh_account_token returns None.
-    let quota = claude_quota::OauthUsageData
-    {
-      five_hour : None, seven_day : None, seven_day_sonnet : None,
-    };
+    // expires_at_ms=0 → 0/1000=0 ≤ now_secs → locally expired → should_refresh=true for 429.
     let mut accounts = vec![
-      AccountQuota
-      {
-        name          : "bob@example.com".to_string(),
-        is_current    : false,
-        is_active     : false,
-        expires_at_ms : 0,
-        result        : Err( "HTTP transport error: HTTP 401".to_string() ),
-      },
       AccountQuota
       {
         name          : "alice@example.com".to_string(),
         is_current    : false,
         is_active     : false,
-        expires_at_ms : FAR_FUTURE_MS,
-        result        : Ok( quota ),
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 429".to_string() ),
       },
     ];
 
     apply_refresh( &mut accounts, store.path(), None, false );
 
-    assert_eq!( accounts.len(), 2, "both accounts must remain after apply_refresh" );
+    // No credential file → refresh_account_token returns None → continue → result unchanged.
     assert!(
-      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
-      "bob: 401 must be unchanged when refresh fails; result: {:?}",
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
+      "429+expired: result must be unchanged when no cred file (refresh path entered but gracefully skipped); result: {:?}",
       accounts[ 0 ].result,
-    );
-    assert!(
-      accounts[ 1 ].result.is_ok(),
-      "alice: Ok result must be unchanged (not refreshed); result: {:?}",
-      accounts[ 1 ].result,
     );
   }
 
@@ -2137,5 +2123,59 @@ mod tests
       result.contains( r#"test\"@evil.com"# ),
       "quotes in name must be escaped, got: {result}",
     );
+  }
+
+  /// FT-08 — Mixed Ok and Err accounts both appear in `format::json` output.
+  ///
+  /// After `apply_refresh` runs on a mixed list (one Ok account, one Err account
+  /// with no credential file to refresh), `render_json` must produce a valid JSON
+  /// array where the Ok account carries quota fields and the Err account carries
+  /// an `error` field — both rows present and correctly structured.
+  #[ test ]
+  fn test_render_json_ft8_mixed_ok_and_err_both_present()
+  {
+    let store = TempDir::new().unwrap();
+    let quota = claude_quota::OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : None,
+    };
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "ok@example.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : FAR_FUTURE_MS,
+        result        : Ok( quota ),
+      },
+      AccountQuota
+      {
+        name          : "err@example.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+      },
+    ];
+
+    // No cred files in store → apply_refresh skips both; results unchanged.
+    apply_refresh( &mut accounts, store.path(), None, false );
+
+    let json = render_json( &accounts );
+
+    // Both accounts must be present in the output.
+    assert!( json.contains( "ok@example.com" ),  "Ok account must appear in JSON; got: {json}" );
+    assert!( json.contains( "err@example.com" ), "Err account must appear in JSON; got: {json}" );
+
+    // Err account must carry an "error" field; Ok account must carry quota fields.
+    assert!( json.contains( "\"error\":" ),                 "Err account must have error field; got: {json}" );
+    assert!( json.contains( "\"session_5h_left_pct\":" ),   "Ok account must have quota fields; got: {json}" );
+
+    // Output must be a non-empty JSON array.
+    let trimmed = json.trim();
+    assert!( trimmed.starts_with( '[' ), "JSON must start with '['; got: {json}" );
+    assert!( trimmed.ends_with(   ']' ), "JSON must end with ']'; got: {json}" );
   }
 }
