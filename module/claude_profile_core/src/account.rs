@@ -348,6 +348,11 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
 /// Returns `None` on any failure — any step failing short-circuits the refresh.
 /// Never panics.
 ///
+/// When `trace` is `true`, one `[trace] refresh  {name}  …` line is written to
+/// stderr at each key step: `switch_account` result, `run_isolated` invocation,
+/// `run_isolated` outcome (including whether credentials were updated), and
+/// `save` result. Failure-path lines include the error string.
+///
 /// # Consumer Crate Note
 ///
 /// Gated on `#[cfg(feature = "enabled")]`. Consumer crates whose workspace dep on
@@ -361,29 +366,109 @@ pub fn refresh_account_token(
   name             : &str,
   credential_store : &Path,
   paths            : Option< &ClaudePaths >,
+  trace            : bool,
 ) -> Option< String >
 {
-  let args = vec![
-    "--print".to_string(), ".".to_string(),
-    "--max-tokens".to_string(), "1".to_string(),
-  ];
+  // Fix(issue-166): added `trace: bool` param; all `?` operators replaced with explicit `match` + `eprintln!` blocks.
+  // Fix(issue-168): replaced broken `--print . --max-tokens 1` args with empty arg list (interactive mode).
+  // Root cause (166): function had no `trace` param so `apply_refresh`'s `trace` flag could not propagate
+  //   into it; every failure step (switch_account, file read, run_isolated, credentials check, file write,
+  //   save) returned `None` silently — `clp .usage refresh::1 trace::1` produced no diagnostic signal.
+  // Root cause (168): `--print . --max-tokens 1` triggers an API call that fails without issuing a 401;
+  //   credentials are written to disk only on a successful response, so the file stays byte-identical and
+  //   `run_isolated` always returns `credentials: None`. Interactive mode (no args) causes Claude to refresh
+  //   the OAuth token at startup before blocking on stdin; the 35s timeout fires and the updated credentials
+  //   are captured via the `issue-isolated-credentials-on-timeout` fix in `isolated.rs`.
+  // Pitfall: (a) prefer interactive-mode startup OAuth refresh over API-call-side-effect refresh — the
+  //   startup path is unconditional; the API path requires a 401 which a rejected call will not produce.
+  //   (b) carry all cross-cutting params (`trace`, error context) into extracted functions — silent `?`
+  //   propagation becomes a diagnostic black hole.
+  let args : Vec< String > = vec![];
   if let Some( p ) = paths
   {
-    switch_account( name, credential_store, p ).ok()?;
-    let creds_json = std::fs::read_to_string( p.credentials_file() ).ok()?;
-    let isolated   = claude_runner_core::run_isolated( &creds_json, args, 35 ).ok()?;
-    let new_creds  = isolated.credentials?;
-    std::fs::write( p.credentials_file(), &new_creds ).ok()?;
-    save( name, credential_store, p ).ok()?;
+    match switch_account( name, credential_store, p )
+    {
+      Ok( () ) => { if trace { eprintln!( "[trace] refresh  {name}  switch_account: OK" ); } }
+      Err( e ) =>
+      {
+        if trace { eprintln!( "[trace] refresh  {name}  switch_account: Err({e})" ); }
+        return None;
+      }
+    }
+    let creds_json = match std::fs::read_to_string( p.credentials_file() )
+    {
+      Ok( s )  => s,
+      Err( e ) =>
+      {
+        if trace { eprintln!( "[trace] refresh  {name}  read credentials: Err({e})" ); }
+        return None;
+      }
+    };
+    if trace { eprintln!( "[trace] refresh  {name}  run_isolated: invoking claude (timeout=35s)" ); }
+    let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35 )
+    {
+      Ok( r )  => r,
+      Err( e ) =>
+      {
+        if trace { eprintln!( "[trace] refresh  {name}  run_isolated: Err({e})" ); }
+        return None;
+      }
+    };
+    if trace
+    {
+      let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
+      eprintln!( "[trace] refresh  {name}  run_isolated: OK credentials={creds_status}" );
+    }
+    let new_creds = isolated.credentials?;
+    if let Err( e ) = std::fs::write( p.credentials_file(), &new_creds )
+    {
+      if trace { eprintln!( "[trace] refresh  {name}  write credentials: Err({e})" ); }
+      return None;
+    }
+    match save( name, credential_store, p )
+    {
+      Ok( () ) => { if trace { eprintln!( "[trace] refresh  {name}  save: OK" ); } }
+      Err( e ) =>
+      {
+        if trace { eprintln!( "[trace] refresh  {name}  save: Err({e})" ); }
+        return None;
+      }
+    }
     Some( new_creds )
   }
   else
   {
-    let path       = credential_store.join( format!( "{name}.credentials.json" ) );
-    let creds_json = std::fs::read_to_string( &path ).ok()?;
-    let isolated   = claude_runner_core::run_isolated( &creds_json, args, 35 ).ok()?;
-    let new_creds  = isolated.credentials?;
-    std::fs::write( &path, &new_creds ).ok()?;
+    let path = credential_store.join( format!( "{name}.credentials.json" ) );
+    let creds_json = match std::fs::read_to_string( &path )
+    {
+      Ok( s )  => s,
+      Err( e ) =>
+      {
+        if trace { eprintln!( "[trace] refresh  {name}  read credentials: Err({e})" ); }
+        return None;
+      }
+    };
+    if trace { eprintln!( "[trace] refresh  {name}  run_isolated: invoking claude (timeout=35s)" ); }
+    let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35 )
+    {
+      Ok( r )  => r,
+      Err( e ) =>
+      {
+        if trace { eprintln!( "[trace] refresh  {name}  run_isolated: Err({e})" ); }
+        return None;
+      }
+    };
+    if trace
+    {
+      let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
+      eprintln!( "[trace] refresh  {name}  run_isolated: OK credentials={creds_status}" );
+    }
+    let new_creds = isolated.credentials?;
+    if let Err( e ) = std::fs::write( &path, &new_creds )
+    {
+      if trace { eprintln!( "[trace] refresh  {name}  write credentials: Err({e})" ); }
+      return None;
+    }
     Some( new_creds )
   }
 }

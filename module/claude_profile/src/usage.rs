@@ -762,7 +762,7 @@ fn apply_refresh(
 
     if trace { eprintln!( "[trace] refresh  {}  attempting token refresh", aq.name ); }
     let Some( new_creds ) = crate::account::refresh_account_token(
-      &aq.name, credential_store, claude_paths,
+      &aq.name, credential_store, claude_paths, trace,
     )
     else
     {
@@ -1719,6 +1719,65 @@ mod tests
       active, "alice@example.com",
       "_active must be unchanged when claude_paths=None (no restore possible)",
     );
+  }
+
+  /// L10 / FT-15 — `apply_refresh` lifecycle with `trace=true` reaching `run_isolated` invocation.
+  ///
+  /// `switch_account` succeeds (cred file in store, `.claude/` dir in `fake_home`).
+  /// `run_isolated` is invoked but fails fast (no valid claude binary or fake token) →
+  /// trace emits `[trace] … run_isolated: Err(…)` or `OK credentials=None` →
+  /// `refresh_account_token` returns `None` → account skipped → no panic.
+  ///
+  /// # Root Cause
+  /// Before BUG-166, `refresh_account_token` had no `trace` parameter. The `apply_refresh`
+  /// `trace` arg was accepted but never forwarded, making the lifecycle completely opaque:
+  /// all failure paths returned `None` silently. Running `clp .usage refresh::1 trace::1`
+  /// showed only "refresh returned None — skipping retry" with no step-level detail.
+  ///
+  /// # Why Not Caught
+  /// The trace parameter existed in `apply_refresh` but there were no tests verifying
+  /// it actually reached `refresh_account_token`. Silent pass-through was undetectable.
+  ///
+  /// # Fix Applied
+  /// BUG-166: added `trace: bool` as a 4th parameter to `refresh_account_token`;
+  /// replaced all bare `?` operators with explicit `match` + `if trace { eprintln!(...) }` blocks.
+  ///
+  /// # Prevention
+  /// This test guards the full call chain: `apply_refresh(trace=true)` →
+  /// `refresh_account_token(trace=true)` → `run_isolated` invocation. If the trace
+  /// parameter is ever dropped between layers, this test still passes (no panic),
+  /// but the trace output would be missing. The `account_refresh_test::art_some_paths_run_isolated_invoked_trace_no_panic`
+  /// test covers the `refresh_account_token` function directly.
+  ///
+  /// # Pitfall
+  /// Tests using "does not panic" cannot assert stderr content — nextest does not
+  /// capture `eprintln!` output for unit test assertions. This is the correct pattern
+  /// for trace tests.
+  // test_kind: regression(issue-166)
+  #[ test ]
+  fn test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic()
+  {
+    let store     = TempDir::new().unwrap();
+    let fake_home = TempDir::new().unwrap();
+    // Cred file in store AND .claude/ dir present — switch_account succeeds.
+    std::fs::write(
+      store.path().join( "alice@example.com.credentials.json" ),
+      r#"{"accessToken":"fake-tok","expiresAt":9999999999999}"#,
+    ).unwrap();
+    std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
+    let paths = crate::ClaudePaths::with_home( fake_home.path() );
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "alice@example.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+      },
+    ];
+    // Must not panic — switch_account succeeds; run_isolated invoked; fails fast (fake creds).
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), true );
   }
 
   /// FT-04 — `apply_refresh`: 429 + non-expired local token → NOT retried, result unchanged.

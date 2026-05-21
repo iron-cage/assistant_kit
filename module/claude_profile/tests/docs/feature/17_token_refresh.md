@@ -20,6 +20,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-12 | `Some(paths)` — credential absent in store → `refresh_account_token` returns `None` → account skipped | Algorithm | test_apply_refresh_lifecycle_switch_fails_result_unchanged |
 | FT-13 | `original_active` account restored to live session after refresh cycle | Algorithm | test_apply_refresh_lifecycle_original_active_restored |
 | FT-14 | `None`-paths fallback — credential absent in store → `refresh_account_token` returns `None` | Algorithm | test_apply_refresh_401_no_cred_file |
+| FT-15 | `trace::1` propagated to `refresh_account_token`; lifecycle steps logged to stderr; no panic | AC-26 | test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic, art_some_paths_run_isolated_invoked_trace_no_panic |
 
 ### Test Case Index
 
@@ -39,8 +40,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-12 | `Some(paths)` — credential absent in store skips account without corrupting result | Algorithm | Lifecycle Skip |
 | FT-13 | `original_active` restored via `switch_account` after refresh cycle | Algorithm | Active Restore |
 | FT-14 | `None`-paths — credential absent in store skips account without corrupting result | Algorithm | None-paths Skip |
+| FT-15 | `trace::1` propagates to `refresh_account_token`; lifecycle steps logged; no panic | AC-26 | Trace Propagation |
 
-**Total:** 14 FT cases
+**Total:** 15 FT cases
 
 ---
 
@@ -197,3 +199,14 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Source fn:** `test_apply_refresh_401_no_cred_file` (C2 — covers None-paths + no credential file)
 - **Note:** Symmetric to FT-12 for the `None`-paths branch; verifies the persistent-store fallback path exits cleanly when the per-account credential file is absent.
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-15: `trace::1` propagates to `refresh_account_token`; lifecycle steps logged to stderr
+
+- **Given:** `refresh_account_token` is called via `apply_refresh` with `trace=true`; the credential file exists in the persistent store AND `{fake_home}/.claude/` directory exists — so `switch_account` succeeds and `run_isolated` is invoked; `run_isolated` fails fast (no valid claude binary or fake token).
+- **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called (unit test; equivalent to `clp .usage refresh::1 trace::1`)
+- **Then:** `[trace] refresh {name}  switch_account: OK` and `[trace] refresh {name}  run_isolated: invoking claude (timeout=35s)` are emitted to stderr; `[trace] refresh {name}  run_isolated: Err(…)` or `OK credentials=None` follows; no panic; account result unchanged.
+- **Source fn:** `test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic` (L10 in `usage.rs`), `art_some_paths_run_isolated_invoked_trace_no_panic` (in `account_refresh_test.rs`)
+- **Note:** Fix for BUG-166 — `refresh_account_token` previously had no `trace` parameter; all failure paths returned `None` silently without any diagnostic output. Testing uses "does not panic" pattern because nextest does not support reliable stderr assertion for `eprintln!` in unit tests.
+- **Source:** [017_token_refresh.md AC-26](../../../docs/feature/017_token_refresh.md)

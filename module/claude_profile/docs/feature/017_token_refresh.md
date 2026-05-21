@@ -27,8 +27,8 @@ if refresh_param == 1:
         // should_refresh returns true for:
         //   - result is auth_error("401") or auth_error("403")
         //   - result is rate_limit("429") AND expires_at_ms / 1000 <= now_secs
-        new_json = account::refresh_account_token(account_quota.name, credential_store, claude_paths)
-        // Encapsulates: switch_account → run_isolated(["--print",".",max-tokens=1], 35s) → save
+        new_json = account::refresh_account_token(account_quota.name, credential_store, claude_paths, trace)
+        // Encapsulates: switch_account → run_isolated([], 35s) → save
         // Returns Some(new_creds_json) if lifecycle succeeds; None on any failure
 
         if new_json is Some(json):
@@ -53,7 +53,9 @@ render results as table
 
 **Credential write-back:** When `run_isolated` returns `credentials: Some(new_json)`, the live session file (`~/.claude/.credentials.json`) is overwritten with `new_json`, then `account::save()` copies it to `{credential_store}/{name}.credentials.json` and updates the `_active` marker and companion files atomically. This ensures the live session, persistent store, and companion files are all consistent after a successful refresh. See [BUG-165](../../../../task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md) — the previous implementation wrote only to the persistent store, leaving the live session stale.
 
-**Subprocess trigger mechanism:** `run_isolated` must be called with `--print` args (e.g., `["--print", ".", "--max-tokens", "1"]`) to trigger Claude Code's internal OAuth refresh. The refresh occurs as a side-effect of attempting an API call — Claude detects the expired access token, uses the stored `refreshToken` to obtain a fresh token from the OAuth server, writes updated credentials to `$HOME/.claude/.credentials.json`, then processes the message. Without `--print`, Claude Code in piped non-TTY mode does not initiate any API call and exits without refreshing. The `isolated.rs` timeout-with-credentials fix (`issue-isolated-credentials-on-timeout`) handles cases where refresh completes but the subprocess hasn't exited yet.
+**Subprocess trigger mechanism:** `run_isolated` must be invoked with **no arguments** (empty arg list) so Claude Code enters interactive mode and performs its startup OAuth token refresh. In interactive mode, Claude Code refreshes the OAuth token at process startup — before waiting for any user input — writing updated credentials to `$HOME/.claude/.credentials.json`. The subprocess then blocks on stdin indefinitely. The `isolated.rs` `issue-isolated-credentials-on-timeout` fix handles this exactly: when the credentials file changes before the 35-second timeout fires, `run_isolated` returns `Ok(IsolatedRunResult { credentials: Some(new_json), exit_code: -1 })` — the updated credentials are captured even though the subprocess was terminated by timeout.
+
+Using `--print . --max-tokens 1` (the previous broken approach) does not produce updated credentials. In `--print` mode, token refresh is a side-effect of an API call — it requires the server to return a 401 to trigger the OAuth exchange, and credentials are written only after a successful API response. In practice `--print . --max-tokens 1` always returns `credentials: None`: the API call fails (invalid parameter or rejected by server) without triggering the OAuth flow, and credentials are byte-identical to the input. See [TSK-168](../../../../task/claude_profile/168_fix_refresh_account_token_args.md) for the implementation fix.
 
 **Feature gate:** The retry logic is compiled only under `#[cfg(feature = "enabled")]`, matching `fetch_oauth_usage`. When `enabled` is absent, `refresh::1` is accepted as a parameter but no refresh attempt is made (offline builds cannot spawn subprocesses).
 
@@ -71,6 +73,7 @@ render results as table
 - **AC-22**: `refresh::` does not affect `format::json` output structure — refreshed accounts appear as normal data objects, failed-refresh accounts appear as error objects.
 - **AC-23**: The `refresh::` parameter appears in `.usage --help` output with its default value (`1`).
 - **AC-25**: After `run_isolated` returns `credentials: Some(new_json)`, `account_quota.expires_at_ms` is set from the JWT `exp` claim of the new `accessToken` (decoded from `new_json`), NOT from the `expiresAt` field of the credentials file (which the subprocess does not update). If JWT decoding fails, `expires_at_ms` is left unchanged as a safe fallback.
+- **AC-26**: When `trace=true`, `refresh_account_token` emits `[trace] refresh {name}  {step}: {outcome}` lines to stderr for each lifecycle step — `switch_account`, `read credentials`, `run_isolated` (with "invoking claude (timeout=35s)" before the call), `write credentials`, and `save`. Each outcome is either `OK` (or `OK credentials={Some|None}` for `run_isolated`) or `Err({error})`. The `trace` parameter is forwarded by `apply_refresh` into `refresh_account_token` so the full lifecycle is observable from `clp .usage refresh::1 trace::1`. Fix for [BUG-166](../../../../task/claude_profile/bug/166_refresh_account_token_no_trace.md).
 
 ### Cross-References
 
@@ -88,8 +91,10 @@ render results as table
 | bug | `task/claude_profile/bug/156_refresh_429_expired_not_refreshed.md` | BUG-156: conditional 429+expired refresh fix |
 | bug | `task/claude_profile/bug/162_expiresAt_not_updated_by_subprocess.md` | BUG-162: subprocess never writes `expiresAt`; use JWT `exp` instead |
 | bug | `task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md` | BUG-165: live session not updated after refresh; fixed by account lifecycle |
+| bug | `task/claude_profile/bug/166_refresh_account_token_no_trace.md` | BUG-166: `refresh_account_token` had no trace param; all failure paths silently returned `None` |
 | task | `task/claude_profile/163_fix_expiresAt_jwt_decode.md` | TSK-163: implement `jwt_exp_ms()` and fix `apply_refresh` expiry derivation |
 | task | `task/claude_profile/151_refresh_failure_message.md` | Fixed empty args in `run_isolated` call |
+| task | `task/claude_profile/168_fix_refresh_account_token_args.md` | TSK-168: fix broken `--print . --max-tokens 1` args — use no-args interactive mode |
 | doc | [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm that this extends |
 | doc | `claude_runner_core/docs/feature/004_run_isolated.md` | `run_isolated()` API contract |
 | doc | [cli/commands.md](../cli/commands.md#command--9-usage) | `.usage` CLI command specification |
