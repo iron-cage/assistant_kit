@@ -1245,10 +1245,12 @@ mod tests
     assert!( accounts.is_empty(), "empty slice must remain empty" );
   }
 
-  /// C2 — `apply_refresh` with 401 error but no credential file on disk.
+  /// C2 / FT-14 — `apply_refresh` `None`-paths: 401 + no credential file → result unchanged.
   ///
-  /// The guard fires (`should_retry=true`) but `read_to_string` fails on the
-  /// missing credential file, so the loop continues without modifying the result.
+  /// `should_refresh` fires (`should_retry=true`); `crate::account::refresh_account_token`
+  /// is called with `paths=None`; internally it reads `{store}/{name}.credentials.json`
+  /// which is absent, so it returns `None`; `apply_refresh` skips the account via
+  /// `continue` without modifying the result.
   #[ test ]
   fn test_apply_refresh_401_no_cred_file()
   {
@@ -1295,12 +1297,14 @@ mod tests
     );
   }
 
-  /// C4 — `apply_refresh` with mixed results: auth errors and 429+expired enter retry path.
+  /// C4 / FT-07 — `apply_refresh` with mixed results: refresh failure does not affect siblings.
   ///
   /// Four accounts: Ok, 429+expired (`expires_at_ms=0`), 401, generic error.
   /// After `apply_refresh`, the 401 and the 429+expired accounts enter the retry guard
-  /// but stay unchanged because no credential file exists on disk. Ok and generic error
-  /// are untouched (Ok never retries; generic error has no auth/429 signal).
+  /// but stay unchanged (no credential file → `refresh_account_token` returns `None`
+  /// → `continue`).  Ok and generic error are untouched (Ok never retries; generic
+  /// error has no auth/429 signal).  Implements FT-07: refresh failure in one account
+  /// does not corrupt any sibling's result.
   #[ test ]
   fn test_apply_refresh_mixed_accounts()
   {
@@ -1714,38 +1718,6 @@ mod tests
     assert_eq!(
       active, "alice@example.com",
       "_active must be unchanged when claude_paths=None (no restore possible)",
-    );
-  }
-
-  /// FT-14 — `apply_refresh` `None`-paths: credential absent in store → result unchanged.
-  ///
-  /// The `None`-paths (persistent-store fallback) branch: `refresh_account_token` reads
-  /// `{store}/{name}.credentials.json`; when the file is absent, it returns `None` and
-  /// `apply_refresh` skips the account via `continue`.  The 401 error result is left
-  /// unchanged.  Symmetric to L1 (`Some(paths)` branch), confirming both early-exit paths
-  /// are safe.
-  #[ test ]
-  fn test_apply_refresh_ft14_none_paths_no_cred_result_unchanged()
-  {
-    let store = TempDir::new().unwrap();
-    // No alice@example.com.credentials.json — refresh_account_token(None) returns None.
-    let mut accounts = vec![
-      AccountQuota
-      {
-        name          : "alice@example.com".to_string(),
-        is_current    : false,
-        is_active     : false,
-        expires_at_ms : 0,
-        result        : Err( "HTTP transport error: HTTP 401".to_string() ),
-      },
-    ];
-
-    apply_refresh( &mut accounts, store.path(), None, false );
-
-    assert!(
-      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
-      "None-paths: 401 result must be unchanged when credential file absent; result: {:?}",
-      accounts[ 0 ].result,
     );
   }
 
