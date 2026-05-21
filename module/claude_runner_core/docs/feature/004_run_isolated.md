@@ -37,7 +37,7 @@ pub enum RunnerError {
 #[cfg(feature = "enabled")]
 pub fn run_isolated(
     credentials_json: &str,
-    args:             &[&str],
+    args:             Vec<String>,
     timeout_secs:     u64,
 ) -> Result<IsolatedRunResult, RunnerError>
 ```
@@ -45,32 +45,31 @@ pub fn run_isolated(
 **Algorithm:**
 
 ```
-1.  create temp dir (e.g. /tmp/clp-iso-XXXXXXXX)
+1.  create temp dir: {tmp_dir}/claude_isolated_{pid}
     on failure → RunnerError::TempDirFailed
-2.  write credentials_json to <temp>/home/.claude.json
+2.  write credentials_json to <temp>/.claude/.credentials.json
     on write failure → cleanup temp, return RunnerError::Io
-3.  build command:
+3.  build command via ClaudeCommand::new().with_home(<temp>).with_args(args):
       claude <args...>
-      env HOME=<temp>/home
+      env HOME=<temp>
       (all other env vars inherited from parent process)
       stdout and stderr piped
-4.  spawn command
+4.  spawn command (single execution point: ClaudeCommand::execute())
     if "claude" binary not found → RunnerError::ClaudeNotFound
 5.  transfer Child ownership to thread T
-    T calls child.wait_with_output() → sends (output, exit_code) via mpsc::Sender
-6.  caller blocks on receiver.recv_timeout(timeout_secs)
-    on timeout → RunnerError::Timeout { secs: timeout_secs }
-              → kill child by pid (best-effort)
-7.  on Ok(output):
-      original_bytes = content of credentials_json argument (UTF-8 bytes)
-      written_bytes  = read <temp>/home/.claude.json
-      if written_bytes != original_bytes AND written_bytes is valid UTF-8:
-          credentials = Some(written_bytes_as_string)
-      else:
-          credentials = None
-8.  unconditionally remove temp dir (even on timeout or error paths)
-9.  return Ok(IsolatedRunResult { exit_code, stdout, stderr, credentials })
+    T calls execute() → sends result via mpsc::Sender
+6.  read credentials from <temp>/.claude/.credentials.json (before cleanup — order matters)
+    compare bytes with original credentials_json argument
+    if different AND valid UTF-8: credentials = Some(new_json)
+    else: credentials = None
+7.  unconditionally remove temp dir (even on timeout or error paths)
+8.  caller blocks on receiver.recv_timeout(timeout_secs)
+    on timeout AND credentials is Some: return Ok (credentials refreshed before blocking)
+    on timeout AND credentials is None: RunnerError::Timeout { secs: timeout_secs }
+    on Ok(output): return Ok(IsolatedRunResult { exit_code, stdout, stderr, credentials })
 ```
+
+**Timeout-with-credentials fix (`issue-isolated-credentials-on-timeout`):** Claude Code refreshes OAuth tokens at startup before blocking for user input. A subprocess that successfully refreshes credentials may then block waiting for a message — triggering the timeout before producing any output. In this case, the subprocess has already written refreshed credentials to `<temp>/.claude/.credentials.json`. The fix: credentials are read from disk _before_ the timeout check. If timeout fires but `credentials` is `Some`, `run_isolated()` returns `Ok` so callers receive the refreshed credentials despite the timeout.
 
 **Single-execution-point constraint:**
 
@@ -85,16 +84,16 @@ pub fn run_isolated(
 The temp directory structure is:
 
 ```
-/tmp/clp-iso-XXXXXXXX/
-  home/
-    .claude.json     ← credentials_json written here
+{tmp}/claude_isolated_{pid}/
+  .claude/
+    .credentials.json     ← credentials_json written here
 ```
 
-`HOME` is set to `/tmp/clp-iso-XXXXXXXX/home`. Other env vars are inherited. The subprocess sees a fresh `~/.claude.json` with the provided credentials and nothing else — no other `~/.claude/` subdirectories, no `settings.json`, no session state.
+`HOME` is set to `{tmp}/claude_isolated_{pid}`. Other env vars are inherited. The subprocess sees a fresh `~/.claude/.credentials.json` with the provided credentials and nothing else — no other `~/.claude/` files, no `settings.json`, no session state.
 
 **Credential change detection:**
 
-After the subprocess exits (or before cleanup on timeout), the function reads the `.claude.json` file back from the temp HOME and compares it byte-by-byte with the original `credentials_json` input. If the bytes differ and the content is valid UTF-8, `credentials: Some(new_json)` is returned. If the subprocess did not modify the file, or the file is unreadable, `credentials: None` is returned. The comparison is exact — no JSON normalisation.
+After the subprocess exits (or before cleanup on timeout), the function reads `.claude/.credentials.json` back from the temp HOME and compares it byte-by-byte with the original `credentials_json` input. If the bytes differ and the content is valid UTF-8, `credentials: Some(new_json)` is returned. If the subprocess did not modify the file, or the file is unreadable, `credentials: None` is returned. The comparison is exact — no JSON normalisation.
 
 **Caller note — `expiresAt` is NOT updated by the subprocess:** Claude Code's OAuth refresh exchange updates `accessToken` and `refreshToken` in the credentials file but does NOT write `expiresAt`. Callers that need the post-refresh token expiry must derive it from the JWT `exp` claim of the returned `accessToken` (base64url-decode the second `.`-separated segment, parse `"exp"` as Unix seconds, multiply by 1000 for ms) rather than reading `expiresAt` from the credentials file. See BUG-162.
 
@@ -108,7 +107,7 @@ The temp directory is removed in all code paths: success, timeout, and I/O error
 
 ### Acceptance Criteria
 
-- **AC-33**: `run_isolated(creds_json, args, timeout_secs)` spawns `claude` with `HOME` overridden to a temp directory containing only `.claude.json` populated with `creds_json`.
+- **AC-33**: `run_isolated(creds_json, args, timeout_secs)` spawns `claude` with `HOME` overridden to a temp directory containing only `.claude/.credentials.json` populated with `creds_json`.
 - **AC-34**: When the subprocess exits normally, `run_isolated()` returns `Ok(IsolatedRunResult)` with the correct `exit_code`, `stdout`, and `stderr`.
 - **AC-35**: When the subprocess rewrites `.claude.json`, `credentials` is `Some(new_json)` with the updated content.
 - **AC-36**: When the subprocess does not modify `.claude.json`, `credentials` is `None`.

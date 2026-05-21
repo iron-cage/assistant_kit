@@ -22,7 +22,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | Feature | File | Cases | Status |
 |---------|------|-------|--------|
 | 009_token_usage | [09_token_usage.md](09_token_usage.md) | FT-01 … FT-05 | ✅ |
-| 017_token_refresh | [17_token_refresh.md](17_token_refresh.md) | FT-01 … FT-11 | ✅ |
+| 017_token_refresh | [17_token_refresh.md](17_token_refresh.md) | FT-01 … FT-13 | ✅ |
 | 018_live_monitor | [18_live_monitor.md](18_live_monitor.md) | FT-01 … FT-09 | ✅ |
 
-**Total:** 3 feature specs fully implemented. 15 of 18 feature instances not yet covered by dedicated FT specs.
+**Total:** 3 feature specs, all fully implemented. 15 of 18 feature instances not yet covered by dedicated FT specs.

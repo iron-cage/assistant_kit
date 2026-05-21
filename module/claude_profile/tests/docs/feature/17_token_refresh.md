@@ -11,12 +11,14 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-03 | HTTP 403 triggers refresh attempt | AC-19 | — |
 | FT-04 | 429 + non-expired local token — NOT retried | AC-19 | — |
 | FT-05 | 429 + expired local token — refresh triggered | AC-19 | — |
-| FT-06 | Credential file updated on disk before retry fetch | AC-20 | it32 |
+| FT-06 | Live session updated first; `account::save()` propagates before retry fetch | AC-20 | it32 |
 | FT-07 | Refresh failure shown in row; other accounts still rendered | AC-21 | — |
 | FT-08 | `format::json` output structure unchanged by refresh | AC-22 | — |
 | FT-09 | `refresh::` in `.usage --help` with default `1` | AC-23 | it37 |
 | FT-10 | Help text documents conditional 429 case | AC-24 | it33, it38 |
 | FT-11 | `expires_at_ms` derived from JWT `exp` after refresh | AC-25 | test_jwt_exp_ms_mre_bug162 |
+| FT-12 | `Some(paths)` lifecycle — `switch_account` fails → account skipped, result unchanged | Algorithm | test_apply_refresh_lifecycle_switch_fails_result_unchanged |
+| FT-13 | `original_active` account restored to live session after refresh cycle | Algorithm | test_apply_refresh_lifecycle_original_active_restored |
 
 ### Test Case Index
 
@@ -27,14 +29,16 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-03 | HTTP 403 triggers `run_isolated` + retry | AC-19 | Auth Error Trigger |
 | FT-04 | 429 + non-expired local token passes through unchanged | AC-19 | Conditional 429 |
 | FT-05 | 429 + expired local token triggers `run_isolated` | AC-19 | Conditional 429 |
-| FT-06 | Credential file written to disk before retry fetch | AC-20 | Write-back |
+| FT-06 | Live session updated first; `account::save()` propagates to store + `_active` | AC-20 | Write-back |
 | FT-07 | Refresh failure in row; remaining accounts processed | AC-21 | Non-aborting |
 | FT-08 | `format::json` structure contains refreshed data unchanged | AC-22 | Format Interaction |
 | FT-09 | `refresh::` appears in `.usage --help` with default `1` | AC-23 | Help Output |
 | FT-10 | Help documents conditional 429 case (not unconditionally excluded) | AC-24 | Help Output |
 | FT-11 | Post-refresh `expires_at_ms` from JWT `exp`; not from file `expiresAt` | AC-25 | JWT Expiry |
+| FT-12 | `Some(paths)` — `switch_account` failure skips account without corrupting result | Algorithm | Lifecycle Skip |
+| FT-13 | `original_active` restored via `switch_account` after refresh cycle | Algorithm | Active Restore |
 
-**Total:** 11 FT cases
+**Total:** 13 FT cases
 
 ---
 
@@ -93,13 +97,14 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ---
 
-### FT-06: Credential file written to disk before retry fetch
+### FT-06: Live session updated first; `account::save()` propagates to store and `_active`
 
-- **Given:** One saved account whose credential is expired; `run_isolated` returns updated credentials.
+- **Given:** One saved account whose credential is expired; `run_isolated` returns updated credentials (`credentials: Some(new_json)`).
 - **When:** `clp .usage refresh::1`
-- **Then:** The per-account credential file at `{credential_store}/{name}.credentials.json` is overwritten with the new JSON before the retry fetch; subsequent reads of that file yield the refreshed token.
+- **Then:** The live session file (`~/.claude/.credentials.json`) is overwritten with `new_json` first; then `account::save()` propagates to `{credential_store}/{name}.credentials.json`, the `_active` marker, and companion files; all writes complete before the retry `fetch_oauth_usage` call; subsequent reads of the per-account credential file yield the refreshed token.
 - **Exit:** 0
 - **Source fn:** `it32_lim_it_refresh_per_account` [live — requires credentials]
+- **Note:** BUG-165 fix; before the fix, only the persistent store was updated, leaving the live session stale.
 - **Source:** [017_token_refresh.md AC-20](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -157,3 +162,25 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Source fn:** `test_jwt_exp_ms_mre_bug162`
 - **Note:** Fix for BUG-162; implemented by TSK-163 (`jwt_exp_ms()` in `src/usage.rs`).
 - **Source:** [017_token_refresh.md AC-25](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-12: `Some(paths)` — `switch_account` failure skips account without corrupting result
+
+- **Given:** `claude_paths = Some(paths)` (lifecycle mode); one saved account with a 401 error result; no per-account credential file exists in the persistent store for that account.
+- **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), false)` is called (unit test context; equivalent to `clp .usage refresh::1` when the lifecycle path is active)
+- **Then:** `switch_account(account_name, store, paths)` returns `NotFound` (no cred file); the account is skipped via `continue`; the 401 error result is unchanged after `apply_refresh` returns; `run_isolated` is never called.
+- **Source fn:** `test_apply_refresh_lifecycle_switch_fails_result_unchanged`
+- **Note:** BUG-165 regression guard; covers the `Some(paths)` early-exit path not testable at CLI level without spawning live subprocess.
+- **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-13: `original_active` account restored to live session after refresh cycle
+
+- **Given:** `_active` file contains `"alice@example.com"`; `alice@example.com.credentials.json` exists in the persistent store; `{fake_home}/.claude/` directory exists for the live session; one account `"bob@example.com"` has a 401 error but no credential file in the persistent store.
+- **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), false)` is called (unit test context; equivalent to `clp .usage refresh::1` cycling through accounts)
+- **Then:** `switch_account("bob@example.com", ...)` fails and bob is skipped; after the loop, `switch_account("alice@example.com", store, paths)` runs (restore); `{store}/_active` contains `"alice@example.com"`; `{fake_home}/.claude/.credentials.json` contains alice's credential content.
+- **Source fn:** `test_apply_refresh_lifecycle_original_active_restored`
+- **Note:** BUG-165 regression guard; the restore call at `usage.rs:897-904` had zero unit test coverage before TSK-166.
+- **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)

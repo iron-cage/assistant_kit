@@ -725,17 +725,21 @@ fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
 /// Retry quota fetch for accounts that need token refresh (401/403 auth errors,
 /// or 429 rate-limit with locally-expired credentials).
 ///
-/// For each such account: reads the per-account credential file, spawns an isolated
-/// Claude Code process to refresh the token, writes the new credentials back, then
-/// re-fetches only that account's quota.  Mutates `accounts` in place.
+/// Uses the account lifecycle when `claude_paths` is available: `switch_account` copies
+/// the named account's credentials to the live session, the isolated subprocess refreshes
+/// the token via an API call side-effect, then `save` propagates the updated credentials
+/// back to the persistent store and all companion files.  Falls back to direct persistent-
+/// store reads/writes when `claude_paths` is `None`.  Mutates `accounts` in place.
 ///
 /// Fix(issue-150) — HTTP 429 removed from unconditional retry guard.
 /// Root cause: HTTP 429 is a rate-limit response, not an authentication failure.
 /// Pitfall: Task 142 added 429 unconditionally; task 150 removed it. The correct
 /// behaviour (issue-156) is to refresh only when 429 AND locally expired.
+#[ allow( clippy::too_many_lines ) ]
 fn apply_refresh(
   accounts         : &mut [ AccountQuota ],
   credential_store : &std::path::Path,
+  claude_paths     : Option< &crate::ClaudePaths >,
   trace            : bool,
 )
 {
@@ -743,6 +747,10 @@ fn apply_refresh(
     .duration_since( std::time::UNIX_EPOCH )
     .unwrap_or_default()
     .as_secs();
+
+  // Snapshot active account to restore after cycling through per-account refreshes.
+  let original_active = std::fs::read_to_string( credential_store.join( "_active" ) ).ok();
+
   for aq in accounts
   {
     let should_retry = should_refresh( aq, now_secs );
@@ -753,14 +761,40 @@ fn apply_refresh(
     }
     if !should_retry { continue; }
 
-    // Read this account's credential file — not the shared live session file.
-    let creds_path = credential_store.join( format!( "{}.credentials.json", aq.name ) );
-    if trace { eprintln!( "[trace] refresh  {}  reading {}", aq.name, creds_path.display() ); }
-    let Ok( creds_json ) = std::fs::read_to_string( &creds_path )
+    // Fix(issue-165): use account lifecycle to keep live session in sync after refresh.
+    // Root cause: previous implementation read/wrote only the persistent store; the live
+    //   session (~/.claude/.credentials.json) was never updated, leaving it stale.
+    // Pitfall: direct persistent-store writes leave live session stale — always use
+    //   switch_account → run_isolated → save when ClaudePaths is available.
+    let creds_json = if let Some( paths ) = claude_paths
+    {
+      if trace { eprintln!( "[trace] refresh  {}  switch_account", aq.name ); }
+      if crate::account::switch_account( &aq.name, credential_store, paths ).is_err()
+      {
+        if trace { eprintln!( "[trace] refresh  {}  switch_account failed — skipping", aq.name ); }
+        continue;
+      }
+      let live = paths.credentials_file();
+      let Ok( json ) = std::fs::read_to_string( &live )
+      else
+      {
+        if trace { eprintln!( "[trace] refresh  {}  cannot read live creds — skipping", aq.name ); }
+        continue;
+      };
+      json
+    }
     else
     {
-      if trace { eprintln!( "[trace] refresh  {}  cannot read credential file — skipping", aq.name ); }
-      continue;
+      // Fallback: no ClaudePaths — read directly from persistent store.
+      let creds_path = credential_store.join( format!( "{}.credentials.json", aq.name ) );
+      if trace { eprintln!( "[trace] refresh  {}  reading {}", aq.name, creds_path.display() ); }
+      let Ok( json ) = std::fs::read_to_string( &creds_path )
+      else
+      {
+        if trace { eprintln!( "[trace] refresh  {}  cannot read credential file — skipping", aq.name ); }
+        continue;
+      };
+      json
     };
 
     // Fix(issue-apply-refresh-args): pass --print args so Claude Code triggers an API call.
@@ -769,11 +803,11 @@ fn apply_refresh(
     //   remained unchanged even when the refresh token was still valid.
     // Pitfall: Claude Code only refreshes tokens on API call attempt, not at subprocess startup;
     //   an empty args list silently skips refresh with no error and no credential change.
-    if trace { eprintln!( "[trace] refresh  {}  spawning run_isolated (timeout=30s)", aq.name ); }
+    if trace { eprintln!( "[trace] refresh  {}  spawning run_isolated (timeout=35s)", aq.name ); }
     let isolated = match claude_runner_core::run_isolated(
       &creds_json,
       vec![ "--print".to_string(), ".".to_string(), "--max-tokens".to_string(), "1".to_string() ],
-      30,
+      35,
     )
     {
       Ok( r )  => r,
@@ -789,18 +823,44 @@ fn apply_refresh(
         aq.name, isolated.exit_code, isolated.credentials.is_some() );
     }
 
-    // Write the refreshed credentials back to the same per-account file.
     let Some( new_creds ) = isolated.credentials
     else
     {
       if trace { eprintln!( "[trace] refresh  {}  no credential change — skipping retry", aq.name ); }
       continue;
     };
-    if std::fs::write( &creds_path, &new_creds ).is_err()
+
+    // Write refreshed credentials and sync account state.
+    let write_ok = if let Some( paths ) = claude_paths
     {
-      if trace { eprintln!( "[trace] refresh  {}  write failed — skipping retry", aq.name ); }
-      continue;
+      // Lifecycle path: write to live session, then save to persistent store.
+      let live = paths.credentials_file();
+      if std::fs::write( &live, &new_creds ).is_err()
+      {
+        if trace { eprintln!( "[trace] refresh  {}  live write failed — skipping retry", aq.name ); }
+        false
+      }
+      else if crate::account::save( &aq.name, credential_store, paths ).is_err()
+      {
+        if trace { eprintln!( "[trace] refresh  {}  save failed — skipping retry", aq.name ); }
+        false
+      }
+      else { true }
     }
+    else
+    {
+      // Fallback: write directly to persistent store.
+      let creds_path = credential_store.join( format!( "{}.credentials.json", aq.name ) );
+      if std::fs::write( &creds_path, &new_creds ).is_err()
+      {
+        if trace { eprintln!( "[trace] refresh  {}  write failed — skipping retry", aq.name ); }
+        false
+      }
+      else { true }
+    };
+
+    if !write_ok { continue; }
+
     // Fix(issue-162): derive expiry from JWT exp claim — subprocess does not update expiresAt.
     // Root cause: the isolated subprocess writes refreshed accessToken/refreshToken but leaves
     //   expiresAt at the original expired timestamp; re-reading from file gives stale value.
@@ -830,6 +890,16 @@ fn apply_refresh(
         // Pitfall: ignoring the retry error masks the true current state after refresh.
         aq.result = Err( e.to_string() );
       }
+    }
+  }
+
+  // Restore original active account after cycling through per-account refreshes.
+  if let ( Some( original ), Some( paths ) ) = ( original_active.as_deref(), claude_paths )
+  {
+    let name = original.trim();
+    if !name.is_empty()
+    {
+      let _ = crate::account::switch_account( name, credential_store, paths );
     }
   }
 }
@@ -989,7 +1059,8 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   // Pure 429 with a non-expired local token is not retried — the token is valid.
   if refresh == 1
   {
-    apply_refresh( &mut accounts, &credential_store, trace );
+    let claude_paths = crate::ClaudePaths::new();
+    apply_refresh( &mut accounts, &credential_store, claude_paths.as_ref(), trace );
   }
 
   let content = match opts.format
@@ -1193,7 +1264,7 @@ mod tests
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), false );
+    apply_refresh( &mut accounts, store.path(), None, false );
 
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e == "HTTP transport error: HTTP 429" ),
@@ -1220,7 +1291,7 @@ mod tests
         result        : Ok( quota ),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), false );
+    apply_refresh( &mut accounts, store.path(), None, false );
     assert!( accounts[ 0 ].result.is_ok(), "Ok result must not be changed by apply_refresh" );
   }
 
@@ -1243,7 +1314,7 @@ mod tests
         result        : Err( err_msg.clone() ),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), false );
+    apply_refresh( &mut accounts, store.path(), None, false );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e == &err_msg ),
       "generic error must be unchanged; result: {:?}", accounts[ 0 ].result,
@@ -1258,7 +1329,7 @@ mod tests
   {
     let store = TempDir::new().unwrap();
     let mut accounts : Vec< AccountQuota > = vec![];
-    apply_refresh( &mut accounts, store.path(), false );
+    apply_refresh( &mut accounts, store.path(), None, false );
     assert!( accounts.is_empty(), "empty slice must remain empty" );
   }
 
@@ -1280,7 +1351,7 @@ mod tests
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), false );
+    apply_refresh( &mut accounts, store.path(), None, false );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
       "401 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
@@ -1305,7 +1376,7 @@ mod tests
         result        : Err( "HTTP transport error: HTTP 403".to_string() ),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), false );
+    apply_refresh( &mut accounts, store.path(), None, false );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "403" ) ),
       "403 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
@@ -1358,7 +1429,7 @@ mod tests
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), false );
+    apply_refresh( &mut accounts, store.path(), None, false );
 
     assert!( accounts[ 0 ].result.is_ok(), "Ok account must remain Ok" );
     assert!(
@@ -1393,7 +1464,309 @@ mod tests
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
       },
     ];
-    apply_refresh( &mut accounts, store.path(), true );
+    apply_refresh( &mut accounts, store.path(), None, true );
+  }
+
+  // ── apply_refresh: lifecycle (Some(paths)) ──────────────────────────────────
+
+  /// L1 — `apply_refresh` skips lifecycle path when `switch_account` fails (no cred file).
+  ///
+  /// # Root Cause
+  /// Before BUG-165, `apply_refresh` bypassed `switch_account` entirely, writing credentials
+  /// directly to the persistent store while leaving the live session stale. After the fix,
+  /// `apply_refresh` calls `switch_account` first when `claude_paths` is `Some`; if it fails
+  /// (account not found in store), the account is skipped and its error result is left unchanged.
+  ///
+  /// # Why Not Caught
+  /// All prior inline tests passed `apply_refresh(..., None, ...)`, exercising only the `None`
+  /// (fallback/test) branch. Zero tests exercised `Some(paths)` (lifecycle/production branch).
+  ///
+  /// # Fix Applied
+  /// BUG-165 / issue-165: rewrote `apply_refresh` lifecycle path to `switch_account →
+  /// run_isolated → save`; skips the account with `continue` if `switch_account` returns Err.
+  ///
+  /// # Prevention
+  /// This test guards the `Some(paths)` early-exit: when `switch_account` fails, `apply_refresh`
+  /// must `continue` without spawning `run_isolated` or corrupting the account result.
+  ///
+  /// # Pitfall
+  /// Tests that make `switch_account` succeed will reach `run_isolated`, which spawns the
+  /// `claude` binary and blocks for up to 35 s. Only test scenarios where `switch_account`
+  /// fails (missing cred file) or where no account needs refresh to avoid subprocess blocking.
+  // test_kind: regression(issue-165)
+  #[ test ]
+  fn test_apply_refresh_lifecycle_switch_fails_result_unchanged()
+  {
+    let store     = TempDir::new().unwrap();
+    let fake_home = TempDir::new().unwrap();
+    // No alice@example.com.credentials.json in store — switch_account returns NotFound.
+    let paths = crate::ClaudePaths::with_home( fake_home.path() );
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "alice@example.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+      },
+    ];
+
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+
+    assert!(
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
+      "lifecycle path: 401 result must be unchanged when switch_account fails; result: {:?}",
+      accounts[ 0 ].result,
+    );
+  }
+
+  /// L2 — `apply_refresh` restores the original active account after the refresh cycle.
+  ///
+  /// # Root Cause
+  /// `apply_refresh` snapshots `original_active` before iterating accounts, then restores it
+  /// with `switch_account` after the loop. Without this restore, the active account would
+  /// change permanently to whichever account was processed last — breaking the user's session.
+  ///
+  /// # Why Not Caught
+  /// All prior inline tests passed `None` for `claude_paths`. The `None` branch never calls
+  /// `switch_account`, so the restore code at `usage.rs:897-904` had zero unit test coverage.
+  ///
+  /// # Fix Applied
+  /// BUG-165 / issue-165: added `original_active` snapshot before the loop and
+  /// `switch_account(original_active, store, paths)` restore after the loop.
+  ///
+  /// # Prevention
+  /// This test guards the restore: after a refresh cycle where bob's `switch_account` fails,
+  /// the restore runs `switch_account("alice@example.com", ...)` which succeeds (alice has a
+  /// cred file), writing alice's creds to the live file and "alice@example.com" to `_active`.
+  ///
+  /// # Pitfall
+  /// The `{fake_home}/.claude/` directory MUST exist before `apply_refresh` is called.
+  /// `switch_account` calls `fs::copy(src, tmp)` where `tmp` is inside `{fake_home}/.claude/`;
+  /// if the directory is absent, `copy` fails and the restore silently does nothing —
+  /// `_active` remains unchanged but for the wrong reason (silent failure, not correct restore).
+  // test_kind: regression(issue-165)
+  #[ test ]
+  fn test_apply_refresh_lifecycle_original_active_restored()
+  {
+    let store     = TempDir::new().unwrap();
+    let fake_home = TempDir::new().unwrap();
+
+    // Alice's credential file in store — needed for restore switch_account to succeed.
+    let alice_creds = r#"{"accessToken":"alice-token"}"#;
+    std::fs::write(
+      store.path().join( "alice@example.com.credentials.json" ),
+      alice_creds,
+    ).unwrap();
+
+    // Set active account to alice before the loop.
+    std::fs::write( store.path().join( "_active" ), "alice@example.com" ).unwrap();
+
+    // Create {fake_home}/.claude/ so switch_account can write the live credentials file.
+    std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
+
+    let paths = crate::ClaudePaths::with_home( fake_home.path() );
+
+    // Bob has 401 but no credential file — switch_account fails, loop continues to next account.
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "bob@example.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+      },
+    ];
+
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+
+    // Restore ran: switch_account("alice@example.com", ...) wrote _active and live creds.
+    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    assert_eq!(
+      active, "alice@example.com",
+      "_active must be restored to original account after refresh cycle",
+    );
+
+    let live_creds = std::fs::read_to_string( paths.credentials_file() ).unwrap();
+    assert_eq!(
+      live_creds, alice_creds,
+      "live credentials file must contain alice's creds after restore",
+    );
+  }
+
+  /// L3 — `apply_refresh` lifecycle: 429+expired + `Some(paths)` + no cred file → skipped.
+  ///
+  /// 429 with an expired local token meets `should_refresh` but `switch_account` fails
+  /// (no cred file in the persistent store), so the account is skipped and the result
+  /// is left unchanged — same guarantee as L1 but for the 429+expired trigger path.
+  #[ test ]
+  fn test_apply_refresh_lifecycle_429_expired_switch_fails_unchanged()
+  {
+    let store     = TempDir::new().unwrap();
+    let fake_home = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( fake_home.path() );
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "alice@example.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,  // expired: 0/1000=0 <= now_secs
+        result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+      },
+    ];
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    assert!(
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
+      "lifecycle: 429+expired result must be unchanged when switch_account fails; result: {:?}",
+      accounts[ 0 ].result,
+    );
+  }
+
+  /// L4 — `apply_refresh` lifecycle: cred file exists but `{home}/.claude/` dir missing
+  /// → `fs::copy` fails inside `switch_account` → account is skipped, result unchanged.
+  ///
+  /// `switch_account` copies the credential to a temp file inside `{home}/.claude/`.
+  /// If that directory does not exist, `fs::copy` returns an `Err`, causing `apply_refresh`
+  /// to `continue` without modifying the account result.
+  #[ test ]
+  fn test_apply_refresh_lifecycle_copy_fails_no_dot_claude_dir()
+  {
+    let store     = TempDir::new().unwrap();
+    let fake_home = TempDir::new().unwrap();
+    // Cred file exists — check_switch_preconditions passes.
+    std::fs::write(
+      store.path().join( "alice@example.com.credentials.json" ),
+      r#"{"accessToken":"tok"}"#,
+    ).unwrap();
+    // {fake_home}/.claude/ deliberately NOT created → fs::copy target parent missing.
+    let paths = crate::ClaudePaths::with_home( fake_home.path() );
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "alice@example.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+      },
+    ];
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    assert!(
+      matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
+      "lifecycle: 401 result must be unchanged when fs::copy fails (no .claude/ dir); result: {:?}",
+      accounts[ 0 ].result,
+    );
+  }
+
+  /// L5 — `apply_refresh` lifecycle: no `_active` file → `original_active = None` → no restore.
+  ///
+  /// `read_to_string` on the absent `_active` file returns `Err`; `.ok()` maps that to `None`.
+  /// The restore block requires `Some(original)`, so it is skipped entirely.
+  #[ test ]
+  fn test_apply_refresh_lifecycle_no_active_file_no_restore()
+  {
+    let store     = TempDir::new().unwrap();
+    let fake_home = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( fake_home.path() );
+    let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → no loop body
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    assert!(
+      !store.path().join( "_active" ).exists(),
+      "_active must not be created when it was absent before apply_refresh",
+    );
+  }
+
+  /// L6 — `apply_refresh` lifecycle with `trace=true` and `switch_account` failure does not panic.
+  ///
+  /// Exercises the trace code path in the `Some(paths)` branch: logs the switch attempt
+  /// and the skip message, then returns without crashing.
+  #[ test ]
+  fn test_apply_refresh_lifecycle_trace_switch_fails_no_panic()
+  {
+    let store     = TempDir::new().unwrap();
+    let fake_home = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( fake_home.path() );
+    let mut accounts = vec![
+      AccountQuota
+      {
+        name          : "trace@example.com".to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+      },
+    ];
+    // Must not panic — switch_account fails (no cred file), trace logs to stderr.
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), true );
+  }
+
+  /// L7 — `_active` file with trailing newline: `trim()` strips whitespace → correct restore.
+  ///
+  /// `read_to_string` returns `"alice@example.com\n"`.  `original.trim()` strips the newline,
+  /// yielding the valid name used in `switch_account` → restore succeeds.
+  #[ test ]
+  fn test_apply_refresh_lifecycle_active_newline_trimmed_restore()
+  {
+    let store     = TempDir::new().unwrap();
+    let fake_home = TempDir::new().unwrap();
+    let alice_creds = r#"{"accessToken":"alice-tok"}"#;
+    std::fs::write(
+      store.path().join( "alice@example.com.credentials.json" ),
+      alice_creds,
+    ).unwrap();
+    std::fs::write( store.path().join( "_active" ), "alice@example.com\n" ).unwrap();
+    std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
+    let paths = crate::ClaudePaths::with_home( fake_home.path() );
+    let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → restore path only
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    assert_eq!(
+      active, "alice@example.com",
+      "trailing-newline _active must be trimmed before restore; _active after = {active:?}",
+    );
+  }
+
+  /// L8 — `_active` file containing only whitespace: `trim().is_empty()` → restore skipped.
+  ///
+  /// An `_active` file with content `"   \n  "` trims to `""`.  `is_empty()` is `true`,
+  /// so `switch_account` is never called and the file content is not modified.
+  #[ test ]
+  fn test_apply_refresh_lifecycle_active_whitespace_only_no_restore()
+  {
+    let store     = TempDir::new().unwrap();
+    let fake_home = TempDir::new().unwrap();
+    let ws = "   \n  ";
+    std::fs::write( store.path().join( "_active" ), ws ).unwrap();
+    let paths = crate::ClaudePaths::with_home( fake_home.path() );
+    let mut accounts : Vec< AccountQuota > = vec![];
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    assert_eq!(
+      active, ws,
+      "whitespace-only _active must not trigger restore; content must be unchanged",
+    );
+  }
+
+  /// L9 — `claude_paths = None`: restore guard `if let (Some(original), Some(paths))`
+  /// short-circuits on `paths = None` → `_active` is never modified by restore.
+  ///
+  /// Verifies the `None` branch guard: an existing `_active` file must be unchanged
+  /// after `apply_refresh` using the fallback (non-lifecycle) path.
+  #[ test ]
+  fn test_apply_refresh_none_paths_active_unchanged()
+  {
+    let store = TempDir::new().unwrap();
+    std::fs::write( store.path().join( "_active" ), "alice@example.com" ).unwrap();
+    let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → no loop body
+    apply_refresh( &mut accounts, store.path(), None, false );
+    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    assert_eq!(
+      active, "alice@example.com",
+      "_active must be unchanged when claude_paths=None (no restore possible)",
+    );
   }
 
   // ── should_refresh ──────────────────────────────────────────────────────────
@@ -1471,7 +1844,49 @@ mod tests
     );
   }
 
-  /// SR-5 — Ok result never triggers refresh.
+  /// SR-5 — 429 with `expires_at_ms` exactly equal to `now_secs * 1000` → triggers refresh.
+  ///
+  /// The guard uses `(expires_at_ms / 1000) <= now_secs`.  When `expires_at_ms = 5000`
+  /// and `now_secs = 5`, `5000/1000 = 5 <= 5` is `true` — the token is treated as expired.
+  #[ test ]
+  fn test_should_refresh_429_exact_boundary_expired_triggers()
+  {
+    let aq = AccountQuota
+    {
+      name          : "a@test.com".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : 5_000,
+      result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+    };
+    assert!(
+      should_refresh( &aq, 5 ),
+      "429 with expires_at_ms=5000, now_secs=5 → 5000/1000=5<=5 → must trigger refresh",
+    );
+  }
+
+  /// SR-6 — 429 with `expires_at_ms` one second in the future → no refresh triggered.
+  ///
+  /// When `expires_at_ms = 6000` and `now_secs = 5`, `6000/1000 = 6 <= 5` is `false` —
+  /// the token is still valid; no refresh triggered.
+  #[ test ]
+  fn test_should_refresh_429_one_sec_future_no_trigger()
+  {
+    let aq = AccountQuota
+    {
+      name          : "a@test.com".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : 6_000,  // one second ahead of now_secs=5
+      result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+    };
+    assert!(
+      !should_refresh( &aq, 5 ),
+      "429 with expires_at_ms=6000, now_secs=5 → 6000/1000=6<=5 false → must not trigger refresh",
+    );
+  }
+
+  /// SR-7 — Ok result never triggers refresh.
   #[ test ]
   fn test_should_refresh_ok_no_trigger()
   {
@@ -1487,7 +1902,7 @@ mod tests
     assert!( !should_refresh( &aq, 9_999 ), "Ok result must not trigger refresh" );
   }
 
-  /// SR-6 — Generic (non-HTTP) error does not trigger refresh.
+  /// SR-8 — Generic (non-HTTP) error does not trigger refresh.
   #[ test ]
   fn test_should_refresh_generic_error_no_trigger()
   {

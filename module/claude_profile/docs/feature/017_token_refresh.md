@@ -22,20 +22,28 @@ results = fetch_all_quota(credential_store, live_creds_file)   // all accounts
 
 if refresh_param == 1:
     now_secs = current_unix_timestamp()
+    original_active = read_file(credential_store / "_active")   // snapshot for restore
     for each account_quota in results where should_refresh(account_quota, now_secs):
         // should_refresh returns true for:
         //   - result is auth_error("401") or auth_error("403")
         //   - result is rate_limit("429") AND expires_at_ms / 1000 <= now_secs
-        creds_path = credential_store / "{name}.credentials.json"
-        creds_json = read_file(creds_path)   // PER-ACCOUNT file
-        run_result = run_isolated(creds_json, ["--print", ".", "--max-tokens", "1"], timeout_secs=30)
+        account::switch_account(account_quota.name, credential_store, claude_paths)
+        // live session (~/.claude/.credentials.json) now has account's credentials
+        live_creds_path = claude_paths.credentials_file()
+        creds_json = read_file(live_creds_path)
+        run_result = run_isolated(creds_json, ["--print", ".", "--max-tokens", "1"], timeout_secs=35)
 
         if run_result is Ok(r) AND r.credentials is Some(new_json):
-            write new_json to creds_path on disk   // write-back to per-account file
+            write new_json to live_creds_path          // update live session
+            account::save(account_quota.name, credential_store, claude_paths)
+            // persistent store + _active + companion files updated atomically
             account_quota.expires_at_ms = jwt_exp_ms(new_json.access_token) * 1000  // derive from JWT — NOT from file (BUG-162)
             account_quota.result = fetch_oauth_usage(new_token)   // retry this account only
         else:
             account_quota.result = Err(run_result.error)   // propagate retry failure
+
+    if original_active is Some(name):
+        account::switch_account(name, credential_store, claude_paths)   // restore
 
 render results as table
 ```
@@ -48,7 +56,7 @@ render results as table
 
 **Retry semantics:** Exactly one retry per account per invocation. If the retried `fetch_oauth_usage` also fails, the final error is shown in the account's row — the table continues processing remaining accounts (non-aborting).
 
-**Credential write-back:** When `run_isolated` returns `credentials: Some(new_json)`, the account's credential file at `{credential_store}/{name}.credentials.json` is overwritten with `new_json` before the per-account retry fetch. This ensures future invocations use the refreshed token without requiring another subprocess launch.
+**Credential write-back:** When `run_isolated` returns `credentials: Some(new_json)`, the live session file (`~/.claude/.credentials.json`) is overwritten with `new_json`, then `account::save()` copies it to `{credential_store}/{name}.credentials.json` and updates the `_active` marker and companion files atomically. This ensures the live session, persistent store, and companion files are all consistent after a successful refresh. See [BUG-165](../../../../task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md) — the previous implementation wrote only to the persistent store, leaving the live session stale.
 
 **Subprocess trigger mechanism:** `run_isolated` must be called with `--print` args (e.g., `["--print", ".", "--max-tokens", "1"]`) to trigger Claude Code's internal OAuth refresh. The refresh occurs as a side-effect of attempting an API call — Claude detects the expired access token, uses the stored `refreshToken` to obtain a fresh token from the OAuth server, writes updated credentials to `$HOME/.claude/.credentials.json`, then processes the message. Without `--print`, Claude Code in piped non-TTY mode does not initiate any API call and exits without refreshing. The `isolated.rs` timeout-with-credentials fix (`issue-isolated-credentials-on-timeout`) handles cases where refresh completes but the subprocess hasn't exited yet.
 
@@ -63,7 +71,7 @@ render results as table
 - **AC-18**: `refresh::0` produces no calls to `run_isolated`; `.usage` behavior is unchanged from the baseline. Use `refresh::0` to explicitly disable the default refresh behavior.
 - **AC-19**: `refresh::1` (default) invokes `claude_runner_core::run_isolated()` for any account whose `fetch_oauth_usage` returns an HTTP authentication error (401 or 403), or an HTTP 429 rate-limit error when the per-account credential file has a locally-expired `expiresAt`. HTTP 429 with a non-expired local token is passed through unchanged.
 - **AC-24**: The `refresh::` parameter description in `.usage --help` documents the conditional 429 case ("429 when token is locally expired") and does NOT describe 429 as unconditionally excluded from refresh.
-- **AC-20**: When `run_isolated` returns `credentials: Some(new_json)`, the credential file for that account is updated on disk before the retry fetch.
+- **AC-20**: When `run_isolated` returns `credentials: Some(new_json)`, the live session file is updated first, then `account::save()` propagates the new credentials to the persistent store, `_active` marker, and companion files before the retry fetch.
 - **AC-21**: If the refresh attempt fails (subprocess error, or retried fetch still fails), the account's row shows the final error; the remaining accounts are still processed and the table is still rendered.
 - **AC-22**: `refresh::` does not affect `format::json` output structure — refreshed accounts appear as normal data objects, failed-refresh accounts appear as error objects.
 - **AC-23**: The `refresh::` parameter appears in `.usage --help` output with its default value (`1`).
@@ -83,6 +91,7 @@ render results as table
 | task | `task/claude_profile/150_fix_apply_refresh_429_trigger.md` | Removed 429 from unconditional retry guard |
 | bug | `task/claude_profile/bug/156_refresh_429_expired_not_refreshed.md` | BUG-156: conditional 429+expired refresh fix |
 | bug | `task/claude_profile/bug/162_expiresAt_not_updated_by_subprocess.md` | BUG-162: subprocess never writes `expiresAt`; use JWT `exp` instead |
+| bug | `task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md` | BUG-165: live session not updated after refresh; fixed by account lifecycle |
 | task | `task/claude_profile/163_fix_expiresAt_jwt_decode.md` | TSK-163: implement `jwt_exp_ms()` and fix `apply_refresh` expiry derivation |
 | task | `task/claude_profile/151_refresh_failure_message.md` | Fixed empty args in `run_isolated` call |
 | doc | [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm that this extends |
