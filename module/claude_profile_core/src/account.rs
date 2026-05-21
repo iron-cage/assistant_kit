@@ -339,6 +339,55 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
   Ok( () )
 }
 
+/// Obtain refreshed OAuth credentials for `name` via an isolated subprocess.
+///
+/// `Some(paths)` branch: `switch_account` → read live creds → `run_isolated`
+///   → write live creds → `save` → return `Some(new_creds_json)`.
+/// `None` branch: read persistent-store creds → `run_isolated` → write back.
+///
+/// Returns `None` on any failure — any step failing short-circuits the refresh.
+/// Never panics.
+///
+/// # Consumer Crate Note
+///
+/// Gated on `#[cfg(feature = "enabled")]`. Consumer crates whose workspace dep on
+/// `claude_profile_core` has `default-features = false` must explicitly add
+/// `features = ["enabled"]` to their dep declaration — without it this function
+/// compiles away at call sites.
+#[ cfg( feature = "enabled" ) ]
+#[ inline ]
+#[ must_use = "None means the refresh failed — caller must handle the missing credentials case" ]
+pub fn refresh_account_token(
+  name             : &str,
+  credential_store : &Path,
+  paths            : Option< &ClaudePaths >,
+) -> Option< String >
+{
+  let args = vec![
+    "--print".to_string(), ".".to_string(),
+    "--max-tokens".to_string(), "1".to_string(),
+  ];
+  if let Some( p ) = paths
+  {
+    switch_account( name, credential_store, p ).ok()?;
+    let creds_json = std::fs::read_to_string( p.credentials_file() ).ok()?;
+    let isolated   = claude_runner_core::run_isolated( &creds_json, args, 35 ).ok()?;
+    let new_creds  = isolated.credentials?;
+    std::fs::write( p.credentials_file(), &new_creds ).ok()?;
+    save( name, credential_store, p ).ok()?;
+    Some( new_creds )
+  }
+  else
+  {
+    let path       = credential_store.join( format!( "{name}.credentials.json" ) );
+    let creds_json = std::fs::read_to_string( &path ).ok()?;
+    let isolated   = claude_runner_core::run_isolated( &creds_json, args, 35 ).ok()?;
+    let new_creds  = isolated.credentials?;
+    std::fs::write( &path, &new_creds ).ok()?;
+    Some( new_creds )
+  }
+}
+
 // ── Private helpers ───────────────────────────────────────────────────────────
 
 fn read_active_marker( credential_store : &Path ) -> Option< String >

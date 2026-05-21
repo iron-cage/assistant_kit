@@ -128,8 +128,8 @@
 # ── Base: cargo-chef installed once, reused by planner and cook ───────────────
 # Pre-FROM ARG: available in all FROM instructions in this file.
 
-ARG BASE_IMAGE=rust:slim
-ARG CHEF_IMAGE=lukemathwalker/cargo-chef:latest-rust-slim
+ARG BASE_IMAGE=docker.io/rust:slim
+ARG CHEF_IMAGE=docker.io/lukemathwalker/cargo-chef:latest-rust-slim
 
 FROM $CHEF_IMAGE AS chef
 # cargo-chef binary pre-installed — no compilation step.
@@ -154,6 +154,12 @@ RUN cargo chef prepare --recipe-path recipe.json
 # This layer is cache-stable: rebuilds only when Cargo.toml or Cargo.lock change,
 # not when .rs files change.
 # CMD_SCOPE scopes which crates' deps to precompile — the same value drives nextest run.
+#
+# RUSTFLAGS="-D warnings" must match the test runner.
+# Cargo includes RUSTFLAGS in its fingerprint hash.  A mismatch between cook and test
+# causes cargo to discard all cook-stage artifacts and recompile every external dep from
+# scratch on every test run — defeating the entire purpose of the cook stage.
+# Fix(issue-rustflags-fingerprint): set the same RUSTFLAGS here as in the test runner.
 
 FROM chef AS cook
 ARG WORKSPACE_DIR=/workspace
@@ -163,7 +169,7 @@ COPY --from=planner $WORKSPACE_DIR/recipe.json recipe.json
 # cli_fmt lives in wtools outside the build context; injected via --build-context wtools_cli_fmt.
 # Cargo resolves path = "../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
 COPY --from=wtools_cli_fmt . /wtools/dev/module/core/cli_fmt/
-RUN CARGO_BUILD_JOBS=1 cargo chef cook \
+RUN CARGO_BUILD_JOBS=1 RUSTFLAGS="-D warnings" cargo chef cook \
       --recipe-path recipe.json \
       $CMD_SCOPE \
       --tests

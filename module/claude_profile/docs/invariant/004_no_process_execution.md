@@ -23,7 +23,7 @@
 
 - Automated test: `tests/responsibility_no_process_execution_test.rs` greps `src/` for `std::process` and fails if found
 - Code review: immediate rejection of any PR importing `std::process`
-- Architecture: `claude_runner_core` owns the `ClaudeCommand` builder; `claude_profile` never holds a reference to it
+- Architecture: `claude_runner_core` owns the `ClaudeCommand` builder; `claude_profile` does not reference it directly — token refresh is coordinated through `claude_profile_core::account::refresh_account_token()`, which delegates subprocess spawning to `claude_runner_core::run_isolated()`
 
 ### Violation Consequences
 

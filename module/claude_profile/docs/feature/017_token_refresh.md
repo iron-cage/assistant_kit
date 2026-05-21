@@ -3,15 +3,15 @@
 ### Scope
 
 - **Purpose**: Allow `.usage` to silently refresh expired OAuth tokens before fetching quota, so users see current quota data rather than per-account auth error rows.
-- **Responsibility**: Documents the `refresh::` parameter, its retry-on-auth-error trigger, the `claude_runner_core::run_isolated()` invocation, and credential write-back to disk.
-- **In Scope**: `refresh::` parameter semantics; HTTP auth error detection from `fetch_oauth_usage`; `run_isolated()` call chain from `usage.rs`; credential write-back; one-retry-per-account semantics; non-aborting error handling.
+- **Responsibility**: Documents the `refresh::` parameter, its retry-on-auth-error trigger, the `claude_profile_core::account::refresh_account_token()` call from `usage.rs`, and credential write-back to disk.
+- **In Scope**: `refresh::` parameter semantics; HTTP auth error detection from `fetch_oauth_usage`; `account::refresh_account_token()` call from `usage.rs`; credential write-back; one-retry-per-account semantics; non-aborting error handling.
 - **Out of Scope**: `run_isolated()` internals (→ `claude_runner_core/docs/feature/004_run_isolated.md`); live monitor mode (→ `018_live_monitor.md`); `fetch_oauth_usage` implementation (→ `claude_quota`); proactive expiry detection before any API call.
 
 ### Design
 
 The `refresh::` parameter takes `1` (default, on) or `0` (off). When `0`, `.usage` behaves identically to the baseline — auth errors appear as error rows in the table and no subprocess is spawned.
 
-When `refresh::1`, the command wraps `fetch_oauth_usage` with a retry layer: on an HTTP authentication error (401 or 403), it calls `claude_runner_core::run_isolated()` with that account's stored credentials JSON, then retries the quota fetch if updated credentials are returned.
+When `refresh::1`, the command wraps `fetch_oauth_usage` with a retry layer: on an HTTP authentication error (401 or 403), it calls `claude_profile_core::account::refresh_account_token()` for that account, then retries the quota fetch if updated credentials are returned. `refresh_account_token()` encapsulates the full account lifecycle: `switch_account` → `run_isolated` (via `claude_runner_core`) → `save`; it returns `Some(new_creds_json)` on success or `None` on any failure in the lifecycle.
 
 **Trigger condition:** HTTP auth errors (401, 403) always trigger a refresh attempt. Additionally, HTTP 429 (rate-limit) triggers a refresh when the per-account credential file has a locally-expired `expiresAt` — this handles the case where Claude Code updated `~/.claude/.credentials.json` in the live session but the saved per-account copy was never re-saved, leaving a stale token. Network failures, timeouts, and 429 with a non-expired local token are passed through as-is, preventing unnecessary subprocess launches.
 
@@ -27,20 +27,15 @@ if refresh_param == 1:
         // should_refresh returns true for:
         //   - result is auth_error("401") or auth_error("403")
         //   - result is rate_limit("429") AND expires_at_ms / 1000 <= now_secs
-        account::switch_account(account_quota.name, credential_store, claude_paths)
-        // live session (~/.claude/.credentials.json) now has account's credentials
-        live_creds_path = claude_paths.credentials_file()
-        creds_json = read_file(live_creds_path)
-        run_result = run_isolated(creds_json, ["--print", ".", "--max-tokens", "1"], timeout_secs=35)
+        new_json = account::refresh_account_token(account_quota.name, credential_store, claude_paths)
+        // Encapsulates: switch_account → run_isolated(["--print",".",max-tokens=1], 35s) → save
+        // Returns Some(new_creds_json) if lifecycle succeeds; None on any failure
 
-        if run_result is Ok(r) AND r.credentials is Some(new_json):
-            write new_json to live_creds_path          // update live session
-            account::save(account_quota.name, credential_store, claude_paths)
-            // persistent store + _active + companion files updated atomically
-            account_quota.expires_at_ms = jwt_exp_ms(new_json.access_token) * 1000  // derive from JWT — NOT from file (BUG-162)
+        if new_json is Some(json):
+            account_quota.expires_at_ms = jwt_exp_ms(json.access_token) * 1000  // derive from JWT — NOT from file (BUG-162)
             account_quota.result = fetch_oauth_usage(new_token)   // retry this account only
         else:
-            account_quota.result = Err(run_result.error)   // propagate retry failure
+            // original error preserved; account row shows pre-refresh error state
 
     if original_active is Some(name):
         account::switch_account(name, credential_store, claude_paths)   // restore
@@ -69,7 +64,7 @@ render results as table
 ### Acceptance Criteria
 
 - **AC-18**: `refresh::0` produces no calls to `run_isolated`; `.usage` behavior is unchanged from the baseline. Use `refresh::0` to explicitly disable the default refresh behavior.
-- **AC-19**: `refresh::1` (default) invokes `claude_runner_core::run_isolated()` for any account whose `fetch_oauth_usage` returns an HTTP authentication error (401 or 403), or an HTTP 429 rate-limit error when the per-account credential file has a locally-expired `expiresAt`. HTTP 429 with a non-expired local token is passed through unchanged.
+- **AC-19**: `refresh::1` (default) invokes `claude_profile_core::account::refresh_account_token()` (which internally calls `claude_runner_core::run_isolated()`) for any account whose `fetch_oauth_usage` returns an HTTP authentication error (401 or 403), or an HTTP 429 rate-limit error when the per-account credential file has a locally-expired `expiresAt`. HTTP 429 with a non-expired local token is passed through unchanged.
 - **AC-24**: The `refresh::` parameter description in `.usage --help` documents the conditional 429 case ("429 when token is locally expired") and does NOT describe 429 as unconditionally excluded from refresh.
 - **AC-20**: When `run_isolated` returns `credentials: Some(new_json)`, the live session file is updated first, then `account::save()` propagates the new credentials to the persistent store, `_active` marker, and companion files before the retry fetch.
 - **AC-21**: If the refresh attempt fails (subprocess error, or retried fetch still fails), the account's row shows the final error; the remaining accounts are still processed and the table is still rendered.
@@ -81,9 +76,10 @@ render results as table
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/usage.rs` | `refresh::` param read; retry-on-auth-error logic; credential write-back |
+| source | `src/usage.rs` | `refresh::` param read; retry trigger; calls `account::refresh_account_token()`; expiry derivation; retry fetch |
 | source | `src/lib.rs` | `refresh::` parameter registration via `register_commands()` |
-| dep | `claude_runner_core` | `run_isolated()` — isolated subprocess; `IsolatedRunResult`, `RunnerError` types |
+| source | `claude_profile_core/src/account.rs` | `refresh_account_token()` — `switch_account → run_isolated → save` lifecycle |
+| dep | `claude_runner_core` | `run_isolated()` — called by `refresh_account_token()` in `_core`; `IsolatedRunResult`, `RunnerError` types |
 | dep | `claude_quota` | `fetch_oauth_usage()` — quota HTTP transport; `QuotaError::HttpTransport` |
 | task | `task/claude_runner_core/136_run_isolated_subprocess.md` | Prerequisite: implement `run_isolated()` |
 | task | `task/claude_profile/137_usage_refresh_param.md` | Implementation task for this feature |

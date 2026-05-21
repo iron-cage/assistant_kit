@@ -32,7 +32,7 @@ Master index of all documentation entities and their instances for `claude_profi
 | 014 | [feature/014_rich_account_metadata.md](feature/014_rich_account_metadata.md) | FR-20 | Rich OAuth metadata fields on `.credentials.status` and `.accounts` |
 | 015 | [feature/015_name_shortcut_syntax.md](feature/015_name_shortcut_syntax.md) | FR-21 | Positional bare arg and prefix resolution for `name::` on four account commands |
 | 016 | [feature/016_current_account_awareness.md](feature/016_current_account_awareness.md) | FR-22 | Current account detection via token match; divergence display in `.accounts` and `.usage` |
-| 017 | [feature/017_token_refresh.md](feature/017_token_refresh.md) | — | `refresh::` param; retry-on-auth-error via `run_isolated()`; credential write-back |
+| 017 | [feature/017_token_refresh.md](feature/017_token_refresh.md) | — | `refresh::` param; retry-on-auth-error via `account::refresh_account_token()`; credential write-back |
 | 018 | [feature/018_live_monitor.md](feature/018_live_monitor.md) | — | `live::`, `interval::`, `jitter::` params; continuous refresh with staggered fetches |
 
 ---

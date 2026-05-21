@@ -36,7 +36,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 
 - **Given:** `.usage` environment with valid credentials.
 - **When:** `clp .usage refresh::1`
-- **Then:** Command accepted; on auth error accounts silently retry via `run_isolated`; behavior identical to omitting `refresh::`.
+- **Then:** Command accepted; on auth error accounts silently retry via `account::refresh_account_token()`; behavior identical to omitting `refresh::`.
 - **Exit:** 0
 - **Source fn:** `it20_refresh_enabled_offline_no_retry_triggered`
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
@@ -46,7 +46,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 
 - **Given:** One saved account whose credential is expired (returns 401 on fetch).
 - **When:** `clp .usage refresh::0`
-- **Then:** The account's row shows the auth error string (e.g., `auth expired (401)`); `run_isolated` is never called; exit 0.
+- **Then:** The account's row shows the auth error string (e.g., `auth expired (401)`); `refresh_account_token` is never called; exit 0.
 - **Exit:** 0
 - **Source fn:** `it19_refresh_disabled_param_accepted`
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
@@ -86,7 +86,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 
 - **Given:** One saved account with a non-expired `expiresAt` in its per-account credential file (`expiresAt / 1000 > now`); the usage API returns HTTP 429 for that account.
 - **When:** `clp .usage refresh::1`
-- **Then:** The account's row shows the rate-limit error (`rate limited (429)`); `run_isolated` is NOT called for this account; the 429 is passed through unchanged.
+- **Then:** The account's row shows the rate-limit error (`rate limited (429)`); `refresh_account_token` is NOT called for this account; the 429 is passed through unchanged.
 - **Exit:** 0
 - **Source fn:** `TBD — no dedicated offline test`
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
@@ -96,7 +96,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 
 - **Given:** One saved account with an expired `expiresAt` in its per-account credential file (`expiresAt / 1000 <= now`); the usage API returns HTTP 429 for that account.
 - **When:** `clp .usage refresh::1`
-- **Then:** `run_isolated` is invoked for that account (expired local token indicates stale per-account copy); if updated credentials are returned, the account quota fetch is retried once.
+- **Then:** `refresh_account_token` is called for that account (expired local token indicates stale per-account copy); if updated credentials are returned, the account quota fetch is retried once.
 - **Exit:** 0
 - **Source fn:** `TBD — no dedicated offline test`
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)

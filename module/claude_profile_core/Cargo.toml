@@ -19,10 +19,11 @@ workspace = true
 [features]
 default = [ "enabled" ]
 full = [ "enabled" ]
-enabled = []
+enabled = [ "dep:claude_runner_core" ]
 
 [dependencies]
-claude_core = { workspace = true }
+claude_core         = { workspace = true }
+claude_runner_core  = { workspace = true, optional = true, features = [ "enabled" ] }
 
 [dev-dependencies]
 test_tools = { workspace = true, features = [ "full" ] }

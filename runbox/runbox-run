@@ -62,22 +62,23 @@ if [[ "$CONFIG_DIR" != "$SCRIPT_DIR" ]]; then
 fi
 
 # ── Container runtime ─────────────────────────────────────────────────────────
-# Auto-detect: docker preferred; podman fallback.
-# Fix(issue-podman-aarch64): Podman (fuse-overlayfs) fails to commit large images (~25 GB)
-#   on aarch64 with "no space left on device" even when disk has ample free space.
-#   Docker rootless uses native overlay2 which is stable for large Rust builds on aarch64.
-# Override: export CONTAINER_CMD=podman to force podman when needed.
+# Auto-detect: podman preferred; docker fallback.
+# Override: CONTAINER_CMD=docker ./runbox/runbox .build
+#   On aarch64 with fuse-overlayfs, podman can fail to commit large images with
+#   "no space left on device" even when disk has free space.  Docker rootless uses
+#   native overlay2 and avoids that.  Set CONTAINER_CMD=docker if that happens.
+# Note: docker and podman use separate image/volume stores — use one consistently.
 
 if [[ -z "${CONTAINER_CMD:-}" ]]
 then
-  if command -v docker &>/dev/null
-  then
-    CONTAINER_CMD=docker
-  elif command -v podman &>/dev/null
+  if command -v podman &>/dev/null
   then
     CONTAINER_CMD=podman
+  elif command -v docker &>/dev/null
+  then
+    CONTAINER_CMD=docker
   else
-    echo "error: neither docker nor podman found" >&2
+    echo "error: neither podman nor docker found" >&2
     exit 1
   fi
 fi

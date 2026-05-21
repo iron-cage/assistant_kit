@@ -6,7 +6,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 | FT | Criterion | AC | Command IT |
 |----|-----------|-----|------------|
-| FT-01 | `refresh::0` — no `run_isolated` calls; errors shown as rows | AC-18 | it19, it20 |
+| FT-01 | `refresh::0` — no `refresh_account_token` calls; errors shown as rows | AC-18 | it19, it20 |
 | FT-02 | HTTP 401 triggers refresh attempt | AC-19 | — |
 | FT-03 | HTTP 403 triggers refresh attempt | AC-19 | — |
 | FT-04 | 429 + non-expired local token — NOT retried | AC-19 | — |
@@ -17,28 +17,30 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-09 | `refresh::` in `.usage --help` with default `1` | AC-23 | it37 |
 | FT-10 | Help text documents conditional 429 case | AC-24 | it33, it38 |
 | FT-11 | `expires_at_ms` derived from JWT `exp` after refresh | AC-25 | test_jwt_exp_ms_mre_bug162 |
-| FT-12 | `Some(paths)` lifecycle — `switch_account` fails → account skipped, result unchanged | Algorithm | test_apply_refresh_lifecycle_switch_fails_result_unchanged |
+| FT-12 | `Some(paths)` — credential absent in store → `refresh_account_token` returns `None` → account skipped | Algorithm | test_apply_refresh_lifecycle_switch_fails_result_unchanged |
 | FT-13 | `original_active` account restored to live session after refresh cycle | Algorithm | test_apply_refresh_lifecycle_original_active_restored |
+| FT-14 | `None`-paths fallback — credential absent in store → `refresh_account_token` returns `None` | Algorithm | TBD |
 
 ### Test Case Index
 
 | ID | Test Name | AC | Category |
 |----|-----------|-----|----------|
 | FT-01 | `refresh::0` produces no retry — auth error shown in row | AC-18 | Disable Refresh |
-| FT-02 | HTTP 401 triggers `run_isolated` + retry | AC-19 | Auth Error Trigger |
-| FT-03 | HTTP 403 triggers `run_isolated` + retry | AC-19 | Auth Error Trigger |
+| FT-02 | HTTP 401 triggers `refresh_account_token` + retry | AC-19 | Auth Error Trigger |
+| FT-03 | HTTP 403 triggers `refresh_account_token` + retry | AC-19 | Auth Error Trigger |
 | FT-04 | 429 + non-expired local token passes through unchanged | AC-19 | Conditional 429 |
-| FT-05 | 429 + expired local token triggers `run_isolated` | AC-19 | Conditional 429 |
+| FT-05 | 429 + expired local token triggers `refresh_account_token` | AC-19 | Conditional 429 |
 | FT-06 | Live session updated first; `account::save()` propagates to store + `_active` | AC-20 | Write-back |
 | FT-07 | Refresh failure in row; remaining accounts processed | AC-21 | Non-aborting |
 | FT-08 | `format::json` structure contains refreshed data unchanged | AC-22 | Format Interaction |
 | FT-09 | `refresh::` appears in `.usage --help` with default `1` | AC-23 | Help Output |
 | FT-10 | Help documents conditional 429 case (not unconditionally excluded) | AC-24 | Help Output |
 | FT-11 | Post-refresh `expires_at_ms` from JWT `exp`; not from file `expiresAt` | AC-25 | JWT Expiry |
-| FT-12 | `Some(paths)` — `switch_account` failure skips account without corrupting result | Algorithm | Lifecycle Skip |
+| FT-12 | `Some(paths)` — credential absent in store skips account without corrupting result | Algorithm | Lifecycle Skip |
 | FT-13 | `original_active` restored via `switch_account` after refresh cycle | Algorithm | Active Restore |
+| FT-14 | `None`-paths — credential absent in store skips account without corrupting result | Algorithm | None-paths Skip |
 
-**Total:** 13 FT cases
+**Total:** 14 FT cases
 
 ---
 
@@ -53,22 +55,22 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ---
 
-### FT-02: HTTP 401 triggers `run_isolated` + retry
+### FT-02: HTTP 401 triggers `refresh_account_token` + retry
 
 - **Given:** One saved account whose credential is expired; the usage API returns HTTP 401 for that account.
 - **When:** `clp .usage refresh::1`
-- **Then:** A `run_isolated` call is attempted for that account; if updated credentials are returned, the quota fetch is retried and the row shows live data; exit 0.
+- **Then:** A `refresh_account_token` call is made for that account; if updated credentials are returned, the quota fetch is retried and the row shows live data; exit 0.
 - **Exit:** 0
 - **Source fn:** `it32_lim_it_refresh_per_account` [live — requires credentials]
 - **Source:** [017_token_refresh.md AC-19](../../../docs/feature/017_token_refresh.md)
 
 ---
 
-### FT-03: HTTP 403 triggers `run_isolated` + retry
+### FT-03: HTTP 403 triggers `refresh_account_token` + retry
 
 - **Given:** One saved account whose credential returns HTTP 403 from the usage API.
 - **When:** `clp .usage refresh::1`
-- **Then:** A `run_isolated` call is attempted for that account (403 is treated identically to 401); exit 0.
+- **Then:** A `refresh_account_token` call is made for that account (403 is treated identically to 401); exit 0.
 - **Exit:** 0
 - **Source fn:** `TBD — no dedicated test`
 - **Source:** [017_token_refresh.md AC-19](../../../docs/feature/017_token_refresh.md)
@@ -86,11 +88,11 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ---
 
-### FT-05: 429 + expired local token triggers `run_isolated`
+### FT-05: 429 + expired local token triggers `refresh_account_token`
 
 - **Given:** One saved account with an expired `expiresAt` in its per-account credential file (`expiresAt / 1000 <= now`); the usage API returns HTTP 429.
 - **When:** `clp .usage refresh::1`
-- **Then:** `run_isolated` is invoked for that account; the 429 is treated as a stale-credential condition; exit 0.
+- **Then:** `refresh_account_token` is called for that account; the 429 is treated as a stale-credential condition; exit 0.
 - **Exit:** 0
 - **Source fn:** `TBD — no dedicated test`
 - **Source:** [017_token_refresh.md AC-19](../../../docs/feature/017_token_refresh.md)
@@ -99,7 +101,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ### FT-06: Live session updated first; `account::save()` propagates to store and `_active`
 
-- **Given:** One saved account whose credential is expired; `run_isolated` returns updated credentials (`credentials: Some(new_json)`).
+- **Given:** One saved account whose credential is expired; `account::refresh_account_token()` returns `Some(new_creds)` (updated credentials from subprocess).
 - **When:** `clp .usage refresh::1`
 - **Then:** The live session file (`~/.claude/.credentials.json`) is overwritten with `new_json` first; then `account::save()` propagates to `{credential_store}/{name}.credentials.json`, the `_active` marker, and companion files; all writes complete before the retry `fetch_oauth_usage` call; subsequent reads of the per-account credential file yield the refreshed token.
 - **Exit:** 0
@@ -111,7 +113,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ### FT-07: Refresh failure shown in row; remaining accounts processed
 
-- **Given:** Two saved accounts: one whose refresh fails (e.g., `run_isolated` times out), one whose fetch succeeds normally.
+- **Given:** Two saved accounts: one whose refresh fails (e.g., `refresh_account_token` returns `None`), one whose fetch succeeds normally.
 - **When:** `clp .usage refresh::1`
 - **Then:** The failing account's row shows the final error reason; the succeeding account's row shows normal quota data; both rows are present; the table is rendered; exit 0.
 - **Exit:** 0
@@ -155,7 +157,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ### FT-11: Post-refresh `expires_at_ms` derived from JWT `exp`; not from file `expiresAt`
 
-- **Given:** One saved account whose credential is expired; `run_isolated` returns a new `accessToken` with a future JWT `exp` claim; the credential file's `expiresAt` field is NOT updated by the subprocess.
+- **Given:** One saved account whose credential is expired; `account::refresh_account_token()` returns `Some(new_creds)` containing a new `accessToken` with a future JWT `exp` claim; the credential file's `expiresAt` field is NOT updated by the subprocess.
 - **When:** `clp .usage refresh::1`
 - **Then:** After refresh, the account's Expires column shows a future time (not `EXPIRED`); the expiry is derived from the JWT `exp` claim of the new `accessToken`, not from the stale `expiresAt` field in the credential file.
 - **Exit:** 0
@@ -165,11 +167,11 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ---
 
-### FT-12: `Some(paths)` — `switch_account` failure skips account without corrupting result
+### FT-12: `Some(paths)` — credential absent in store skips account without corrupting result
 
 - **Given:** `claude_paths = Some(paths)` (lifecycle mode); one saved account with a 401 error result; no per-account credential file exists in the persistent store for that account.
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), false)` is called (unit test context; equivalent to `clp .usage refresh::1` when the lifecycle path is active)
-- **Then:** `switch_account(account_name, store, paths)` returns `NotFound` (no cred file); the account is skipped via `continue`; the 401 error result is unchanged after `apply_refresh` returns; `run_isolated` is never called.
+- **Then:** `refresh_account_token(name, store, Some(&paths))` returns `None` (no per-account credential file in store); the account is skipped via `continue`; the 401 error result is unchanged after `apply_refresh` returns.
 - **Source fn:** `test_apply_refresh_lifecycle_switch_fails_result_unchanged`
 - **Note:** BUG-165 regression guard; covers the `Some(paths)` early-exit path not testable at CLI level without spawning live subprocess.
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
@@ -183,4 +185,15 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Then:** `switch_account("bob@example.com", ...)` fails and bob is skipped; after the loop, `switch_account("alice@example.com", store, paths)` runs (restore); `{store}/_active` contains `"alice@example.com"`; `{fake_home}/.claude/.credentials.json` contains alice's credential content.
 - **Source fn:** `test_apply_refresh_lifecycle_original_active_restored`
 - **Note:** BUG-165 regression guard; the restore call at `usage.rs:897-904` had zero unit test coverage before TSK-166.
+- **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-14: `None`-paths — credential absent in store skips account without corrupting result
+
+- **Given:** `claude_paths = None` (persistent-store mode); one saved account with a 401 error result; no per-account credential file (`{name}.credentials.json`) exists in the persistent store.
+- **When:** `apply_refresh(&mut accounts, store.path(), None, false)` is called (unit test context; equivalent to `clp .usage refresh::1` with no live session)
+- **Then:** `refresh_account_token(name, store, None)` returns `None` (credential file absent in persistent store); the account is skipped via `continue`; the 401 error result is unchanged after `apply_refresh` returns.
+- **Source fn:** `TBD — covered by account_refresh_test.rs in claude_profile_core`
+- **Note:** Symmetric to FT-12 for the `None`-paths branch; verifies the persistent-store fallback path exits cleanly when the per-account credential file is absent.
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
