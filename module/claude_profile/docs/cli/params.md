@@ -435,7 +435,7 @@ refresh::0   → auth errors appear as error rows in the table (explicit disable
 - The refresh may silently have no effect when: (a) the token is not actually server-expired (claude detects no need to refresh), (b) `run_isolated` times out before credentials are updated, or (c) the refreshToken itself is also expired. Use `trace::1` to see exactly which step stopped the refresh for each account.
 - Network timeouts and other non-auth/non-ratelimit errors are not retried — they pass through as error rows in the table.
 - Exactly one retry per account per invocation. If the retried fetch also fails, the final error is shown in the account's row.
-- The updated credential JSON is written back to the per-account credential file (`{credential_store}/{account}.credentials.json`); the shared live session file (`~/.claude/.credentials.json`) is not touched.
+- When `claude_paths` is available (normal runtime case), the new credentials are written to the live session file (`~/.claude/.credentials.json`) first, then `account::save()` propagates them to `{credential_store}/{account}.credentials.json` and companion files atomically. (See [BUG-165](../../../../task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md).)
 
 ---
 
@@ -528,17 +528,26 @@ trace::1   → print [trace] lines to stderr; stdout output unchanged
 
 **Notes:**
 - Output goes to stderr so it does not interfere with `format::json` parsing on stdout.
-- Token values are truncated to the first 8 characters followed by `...` (`abc12345...`).
-- The fetch phase emits one `reading` line and one `GET` + `result` pair per account. The refresh phase emits one `should_retry` line per account plus detailed step lines for accounts where a refresh is attempted.
-- Typical trace lines when refresh has no effect (token not server-expired):
+- Token values in GET lines are truncated to the first 20 characters followed by `...` (`sk-ant-oA3Txy6P1wRmV2...`).
+- The fetch phase emits one `reading` line, one `GET` line (with token prefix and expiry status), and one `result` line per account. The refresh phase emits one `should_retry` line per account, then detailed lifecycle step lines from `refresh_account_token` for accounts where a refresh is attempted.
+- Full trace output for an expired account whose OAuth refresh succeeds:
   ```
+  [trace] i12@wbox.pro  reading /home/user/.pro/.../i12@wbox.pro.credentials.json
+  [trace] i12@wbox.pro  GET https://api.anthropic.com/api/oauth/usage  token=sk-ant-oA3Txy6P1w...  exp=expired(2d 3h ago)
+  [trace] i12@wbox.pro  result: Err(HTTP transport error: HTTP 401)
   [trace] refresh  i12@wbox.pro  should_retry=true (reason: HTTP transport error: HTTP 401)
-  [trace] refresh  i12@wbox.pro  reading /home/user/.pro/.../i12@wbox.pro.credentials.json
-  [trace] refresh  i12@wbox.pro  spawning run_isolated (timeout=30s)
-  [trace] refresh  i12@wbox.pro  run_isolated Err(claude timed out after 30 seconds) — skipping
+  [trace] refresh  i12@wbox.pro  attempting token refresh
+  [trace] refresh  i12@wbox.pro  switch_account: OK
+  [trace] refresh  i12@wbox.pro  run_isolated: invoking claude  args=["--print", "."]  timeout=35s
+  [trace] refresh  i12@wbox.pro  run_isolated: OK credentials=Some
+  [trace] refresh  i12@wbox.pro  save: OK
+  [trace] refresh  i12@wbox.pro  token refreshed, retrying quota fetch
+  [trace] refresh  i12@wbox.pro  retry OK
   ```
-- For rate-limited accounts (429), the refresh path is not entered:
+- For a rate-limited account with a non-expired token (refresh not triggered):
   ```
+  [trace] i12@wbox.pro  GET https://api.anthropic.com/api/oauth/usage  token=sk-ant-oA3Txy6P1w...  exp=valid(1h 22m left)
+  [trace] i12@wbox.pro  result: Err(HTTP transport error: HTTP 429)
   [trace] refresh  i12@wbox.pro  should_retry=false (reason: HTTP transport error: HTTP 429)
   ```
 
