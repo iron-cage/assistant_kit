@@ -143,6 +143,9 @@ fn art_some_paths_run_isolated_invoked_trace_no_panic()
   let paths = ClaudePaths::with_home( fake_home.path() );
   // FT-15 / BUG-166: trace must reach run_isolated invocation without panic.
   // BUG-168: `let _ =` required — discards `#[must_use]` return value intentionally.
+  // BUG-169: args corrected to `["--print", "."]` — vec\![] regression fixed.
   // This test validates "does not panic", not the return value.
   let _ = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), true );
 }
+
+

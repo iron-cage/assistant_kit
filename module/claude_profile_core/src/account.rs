@@ -370,20 +370,27 @@ pub fn refresh_account_token(
 ) -> Option< String >
 {
   // Fix(issue-166): added `trace: bool` param; all `?` operators replaced with explicit `match` + `eprintln!` blocks.
-  // Fix(issue-168): replaced broken `--print . --max-tokens 1` args with empty arg list (interactive mode).
+
+  // Fix(issue-169): corrected issue-168 regression — empty args (vec\![]) broken; correct args are `--print .`.
   // Root cause (166): function had no `trace` param so `apply_refresh`'s `trace` flag could not propagate
-  //   into it; every failure step (switch_account, file read, run_isolated, credentials check, file write,
+  //   into it; every failure step (switch_account, file read, run_isolated,
   //   save) returned `None` silently — `clp .usage refresh::1 trace::1` produced no diagnostic signal.
-  // Root cause (168): `--print . --max-tokens 1` triggers an API call that fails without issuing a 401;
-  //   credentials are written to disk only on a successful response, so the file stays byte-identical and
-  //   `run_isolated` always returns `credentials: None`. Interactive mode (no args) causes Claude to refresh
-  //   the OAuth token at startup before blocking on stdin; the 35s timeout fires and the updated credentials
-  //   are captured via the `issue-isolated-credentials-on-timeout` fix in `isolated.rs`.
-  // Pitfall: (a) prefer interactive-mode startup OAuth refresh over API-call-side-effect refresh — the
-  //   startup path is unconditional; the API path requires a 401 which a rejected call will not produce.
+  // Root cause (169): issue-168 misdiagnosed issue-151's root cause as `--print` mode itself being broken.
+  //   The real culprit in issue-151 was `--max-tokens 1`: it triggers an API error response (not 401)
+  //   before OAuth token refresh can happen, so credentials are never rewritten.
+  //   issue-168's "fix" swapped to empty args (vec\![]) instead, which also breaks: Claude Code in non-TTY
+  //   mode with no args exits immediately without performing startup OAuth token refresh at all.
+  //   `--print .` alone is correct: Claude performs OAuth token refresh at startup before the API call;
+  //   the API call to `.` either succeeds or times out, but creds are written regardless.
+  //   (The `issue-isolated-credentials-on-timeout` fix in `isolated.rs` captures creds even on timeout.)
+  // Pitfall: (a) `--print .` (no `--max-tokens`) is the only working isolated-refresh invocation:
+  //   empty args → immediate exit without OAuth refresh in non-TTY mode;
+  //   `--max-tokens 1` → API rejection before refresh path; `--print .` → startup refresh + API call.
   //   (b) carry all cross-cutting params (`trace`, error context) into extracted functions — silent `?`
   //   propagation becomes a diagnostic black hole.
-  let args : Vec< String > = vec![];
+
+  let args = vec![ "--print".to_string(), ".".to_string() ];
+
   if let Some( p ) = paths
   {
     match switch_account( name, credential_store, p )
@@ -404,7 +411,7 @@ pub fn refresh_account_token(
         return None;
       }
     };
-    if trace { eprintln!( "[trace] refresh  {name}  run_isolated: invoking claude (timeout=35s)" ); }
+    if trace { eprintln!( "[trace] refresh  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
     let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35 )
     {
       Ok( r )  => r,
@@ -448,7 +455,7 @@ pub fn refresh_account_token(
         return None;
       }
     };
-    if trace { eprintln!( "[trace] refresh  {name}  run_isolated: invoking claude (timeout=35s)" ); }
+    if trace { eprintln!( "[trace] refresh  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
     let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35 )
     {
       Ok( r )  => r,
@@ -576,3 +583,5 @@ pub fn parse_u64_field( json : &str, key : &str ) -> Option< u64 >
   if end == 0 { return None; }
   rest[ ..end ].parse().ok()
 }
+
+

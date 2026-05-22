@@ -118,8 +118,8 @@ fn fetch_all_quota(
       {
         if trace
         {
-          let prefix = if token.len() >= 8 { &token[ ..8 ] } else { &token };
-          eprintln!( "[trace] {}  GET {} (token: {}...)", acct.name, claude_quota::OAUTH_USAGE_URL, prefix );
+          let prefix = if token.len() >= 20 { &token[ ..20 ] } else { &token };
+          eprintln!( "[trace] {}  GET {}  token={}...  exp={}", acct.name, claude_quota::OAUTH_USAGE_URL, prefix, token_exp_label( acct.expires_at_ms ) );
         }
         let r = claude_quota::fetch_oauth_usage( &token ).map_err( |e| e.to_string() );
         if trace
@@ -179,6 +179,28 @@ fn fetch_all_quota(
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+
+/// Format token expiry as a human-readable label for trace output.
+///
+/// Returns `"expired(Xd Yh ago)"` or `"valid(Xd Yh left)"` using the same
+/// duration format as `format_duration_secs`.
+fn token_exp_label( expires_at_ms : u64 ) -> String
+{
+  let now_ms = u64::try_from(
+    std::time::SystemTime::now()
+      .duration_since( std::time::UNIX_EPOCH )
+      .unwrap_or_default()
+      .as_millis()
+  ).unwrap_or( u64::MAX );
+  if now_ms >= expires_at_ms
+  {
+    format!( "expired({} ago)", format_duration_secs( ( now_ms - expires_at_ms ) / 1000 ) )
+  }
+  else
+  {
+    format!( "valid({} left)", format_duration_secs( ( expires_at_ms - now_ms ) / 1000 ) )
+  }
+}
 
 /// Parse a raw numeric JSON field from a file without an external JSON parser.
 ///
