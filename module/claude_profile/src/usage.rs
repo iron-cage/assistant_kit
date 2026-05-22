@@ -2259,4 +2259,59 @@ mod tests
     assert!( trimmed.starts_with( '[' ), "JSON must start with '['; got: {json}" );
     assert!( trimmed.ends_with(   ']' ), "JSON must end with ']'; got: {json}" );
   }
+
+  // ── token_exp_label ────────────────────────────────────────────────────────
+
+  /// EC-1 — epoch timestamp (ms=0) is always in the past → `expired(... ago)`.
+  ///
+  /// # Root Cause
+  /// `token_exp_label` is a private helper used in the `[trace]` GET line.
+  /// It branches on `now_ms >= expires_at_ms`. Epoch zero is always ≤ now,
+  /// so the expired branch must fire for any realistic system clock.
+  ///
+  /// # Why Not Caught
+  /// New function added in BUG-169 trace enhancement; no tests existed.
+  ///
+  /// # Fix Applied
+  /// Added unit test with deterministic input (ms=0 is always past).
+  ///
+  /// # Prevention
+  /// Cover both branches of `token_exp_label` with deterministic inputs that
+  /// are guaranteed past (0) and guaranteed future (`u64::MAX`).
+  ///
+  /// # Pitfall
+  /// `token_exp_label` calls `SystemTime::now()` internally — cannot be mocked.
+  /// Use extreme boundary values (0 and `u64::MAX`) to guarantee branch coverage
+  /// regardless of wall-clock time.
+  #[ test ]
+  fn tel_epoch_zero_is_expired()
+  {
+    let label = token_exp_label( 0 );
+    assert!( label.starts_with( "expired(" ), "expected expired prefix; got: {label}" );
+    assert!( label.ends_with( " ago)" ),      "expected ' ago)' suffix; got: {label}" );
+  }
+
+  /// EC-2 — far-future timestamp (`u64::MAX` ms) is always in the future → `valid(... left)`.
+  ///
+  /// # Root Cause
+  /// See `tel_epoch_zero_is_expired` — covers the `valid` branch of `token_exp_label`.
+  ///
+  /// # Why Not Caught
+  /// New function; no tests existed.
+  ///
+  /// # Fix Applied
+  /// Added unit test with `u64::MAX` as the expiry — always future for any real clock.
+  ///
+  /// # Prevention
+  /// Use `u64::MAX` to guarantee the `valid` branch fires without mocking `SystemTime`.
+  ///
+  /// # Pitfall
+  /// `u64::MAX` milliseconds is ~584 million years from epoch — safe for all foreseeable use.
+  #[ test ]
+  fn tel_far_future_is_valid()
+  {
+    let label = token_exp_label( u64::MAX );
+    assert!( label.starts_with( "valid(" ), "expected valid prefix; got: {label}" );
+    assert!( label.ends_with( " left)" ),   "expected ' left)' suffix; got: {label}" );
+  }
 }
