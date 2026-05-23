@@ -143,9 +143,9 @@ FROM chef AS planner
 ARG WORKSPACE_DIR=/workspace
 WORKDIR $WORKSPACE_DIR
 COPY . .
-# cli_fmt lives in wtools outside the build context; injected via --build-context wtools_cli_fmt.
-# Cargo resolves path = "../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
-COPY --from=wtools_cli_fmt . /wtools/dev/module/core/cli_fmt/
+# cli_fmt is a co-developed companion crate injected via --build-context cli_fmt.
+# Cargo resolves path = "../cli_fmt" from /workspace/ → /cli_fmt.
+COPY --from=cli_fmt . /cli_fmt/
 RUN cargo chef prepare --recipe-path recipe.json
 
 # ── Stage 2: cook — compiles dependencies ─────────────────────────────────────
@@ -172,9 +172,9 @@ ARG WORKSPACE_DIR=/workspace
 ARG CMD_SCOPE=--workspace
 WORKDIR $WORKSPACE_DIR
 COPY --from=planner $WORKSPACE_DIR/recipe.json recipe.json
-# cli_fmt lives in wtools outside the build context; injected via --build-context wtools_cli_fmt.
-# Cargo resolves path = "../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
-COPY --from=wtools_cli_fmt . /wtools/dev/module/core/cli_fmt/
+# cli_fmt is a co-developed companion crate injected via --build-context cli_fmt.
+# Cargo resolves path = "../cli_fmt" from /workspace/ → /cli_fmt.
+COPY --from=cli_fmt . /cli_fmt/
 RUN CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 RUSTFLAGS="-D warnings" cargo chef cook \
       --recipe-path recipe.json \
       $CMD_SCOPE \
@@ -219,7 +219,7 @@ RUN set -e && \
       *)       CARGO_BUILD_JOBS=1 cargo install cargo-nextest --locked ;; \
     esac
 
-# clippy: rust:slim ships without it; w3 .test level::3 runs clippy -D warnings.
+# clippy: rust:slim ships without it; test level 3 runs clippy -D warnings.
 RUN rustup component add $RUSTUP_COMPONENTS
 
 # TEST_USER: testuser when tests require:
@@ -241,9 +241,9 @@ COPY --from=cook $WORKSPACE_DIR/target     $WORKSPACE_DIR/target
 
 # Full workspace source (includes test_script paths invoked by cmd_test).
 COPY . .
-# cli_fmt lives in wtools outside the build context; injected via --build-context wtools_cli_fmt.
-# Cargo resolves path = "../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
-COPY --from=wtools_cli_fmt . /wtools/dev/module/core/cli_fmt/
+# cli_fmt is a co-developed companion crate injected via --build-context cli_fmt.
+# Cargo resolves path = "../cli_fmt" from /workspace/ → /cli_fmt.
+COPY --from=cli_fmt . /cli_fmt/
 
 # Populate the full workspace dep registry so nextest can run `cargo metadata --offline`
 # without network access.  The cook stage only compiles deps for CMD_SCOPE (e.g.

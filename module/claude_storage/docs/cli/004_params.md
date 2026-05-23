@@ -354,9 +354,9 @@ Path argument. Semantics differ by command — see command sections for exact be
 .session.ensure path::/home/user/project
 
 # .projects / .count / .search / .show / .export: scope anchor
-.projects scope::under path::/home/user1/pro
-.count scope::under path::/home/user1/pro
-.search query::error scope::under path::/home/user1/pro
+.projects scope::under path::/home/alice/projects
+.count scope::under path::/home/alice/projects
+.search query::error scope::under path::/home/alice/projects
 ```
 
 **Group (scope anchor context):** [Scope Configuration](003_parameter_groups.md#scope-configuration) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.count`, `.search`, `.show`, and `.export`; its role in `.status`, `.list`, `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
@@ -383,16 +383,16 @@ Project identifier for scoping operations to a specific project.
 **Purpose:** Restricts an operation to a specific project. Without `project::`, most commands default to the current directory's project. Use `project::` when working with a project other than the current directory.
 
 **Accepted formats:**
-- Absolute path: `project::/home/user1/pro/lib/consumer`
-- Path-encoded ID: `project::-home-user1-pro-lib-consumer`
+- Absolute path: `project::/home/alice/projects/my-app`
+- Path-encoded ID: `project::-home-alice-projects-my-app`
 - UUID: `project::8d795a1c-c81d-4010-8d29-b4e678272419`
-- `Path(...)` form from `.list`: `project::Path("/home/user1/pro/lib/consumer")`
+- `Path(...)` form from `.list`: `project::Path("/home/alice/projects/my-app")`
 
 **Examples:**
 ```bash
 # All equivalent — identify the same project
-project::/home/user1/pro/lib/consumer
-project::-home-user1-pro-lib-consumer
+project::/home/alice/projects/my-app
+project::-home-alice-projects-my-app
 project::8d795a1c-c81d-4010-8d29-b4e678272419
 
 # Invalid
@@ -648,13 +648,13 @@ Project naming scheme filter for `.list`.
 **Commands:** `.list`
 (See [001_commands.md#command--2-list](001_commands.md#command--2-list))
 
-**Purpose:** Filters projects by how their directory is named in `~/.claude/projects/`. Path-encoded projects (`-home-user1-pro`) are opened by filesystem path. UUID projects (`8d795a1c-...`) are created by other means. `conversation` lists conversation IDs within a specific project (one per line).
+**Purpose:** Filters projects by how their directory is named in `~/.claude/projects/`. Path-encoded projects (e.g., `-home-alice-projects`) are opened by filesystem path. UUID projects (`8d795a1c-...`) are created by other means. `conversation` lists conversation IDs within a specific project (one per line).
 
 **Examples:**
 ```bash
 # Valid values
 type::all           # No filter (default)
-type::path          # Path-encoded projects only (e.g., -home-user1-pro)
+type::path          # Path-encoded projects only (e.g., -home-alice-projects)
 type::uuid          # UUID-named projects only (e.g., 8d795a1c-...)
 type::conversation  # List conversation IDs for a project (requires project::)
 

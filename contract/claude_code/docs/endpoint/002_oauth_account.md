@@ -25,11 +25,11 @@ HTTP 200 on success. Body is a JSON object.
 
 | Field | Type | Example |
 |-------|------|---------|
-| `tagged_id` | string | `"user_01BDCWiki5PxAn3hFN1Whvrx"` |
-| `uuid` | string | `"52af6817-f911-408f-b033-5e1d977af315"` |
-| `email_address` | string | `"i11@wbox.pro"` |
-| `full_name` | string | `"i11"` |
-| `display_name` | string | `"i11"` |
+| `tagged_id` | string | `"user_01ABCDEFGhijklmnopqrstuvwx"` |
+| `uuid` | string | `"00000000-0000-0000-0000-000000000001"` |
+| `email_address` | string | `"alice@example.com"` |
+| `full_name` | string | `"Alice"` |
+| `display_name` | string | `"Alice"` |
 | `is_verified` | bool | `true` |
 | `age_is_verified` | bool | `true` |
 | `is_anonymous` | bool | `false` |
@@ -102,17 +102,17 @@ No subscription expiry or next-renewal date is returned. Stripe anchors monthly 
 next_renewal ≈ next_occurrence_of( day(org.created_at) ) after today
 ```
 
-Example (observed, sampled 2026-05-23):
+Example:
 
 | Account | `org.created_at` | Billing day | Next renewal |
 |---------|-----------------|-------------|--------------|
-| i3@wbox.pro | 2025-11-11 | 11th | Jun 11, 2026 |
-| i6@wbox.pro | 2025-12-06 | 6th | Jun 6, 2026 |
-| i7@wbox.pro | 2026-03-03 | 3rd | Jun 3, 2026 |
-| i8@wbox.pro | 2026-03-03 | 3rd | Jun 3, 2026 |
-| illia.t@obox.systems | 2026-04-03 | 3rd | Jun 3, 2026 |
-| i11@wbox.pro | 2026-05-05 | 5th | Jun 5, 2026 |
-| i12@wbox.pro | 2026-05-05 | 5th | Jun 5, 2026 |
+| alice@example.com | 2025-11-11 | 11th | Jun 11, 2026 |
+| bob@example.com | 2025-12-06 | 6th | Jun 6, 2026 |
+| carol@example.com | 2026-03-03 | 3rd | Jun 3, 2026 |
+| dave@example.com | 2026-03-03 | 3rd | Jun 3, 2026 |
+| eve@example.com | 2026-04-03 | 3rd | Jun 3, 2026 |
+| frank@example.com | 2026-05-05 | 5th | Jun 5, 2026 |
+| grace@example.com | 2026-05-05 | 5th | Jun 5, 2026 |
 
 This is an estimate. Annual plans, mid-cycle prorations, or Stripe billing anchor adjustments are not accounted for.
 
@@ -128,15 +128,15 @@ This is an estimate. Annual plans, mid-cycle prorations, or Stripe billing ancho
 
 ### Example Response
 
-HTTP 200 (personal Max account, i11@wbox.pro, sampled 2026-05-23). `settings` and `organization.settings` are large objects (~50–60 keys each) that are all `null` for personal organizations — shown as `{}` here for brevity.
+HTTP 200 (personal Max account). `settings` and `organization.settings` are large objects (~50–60 keys each) that are all `null` for personal organizations — shown as `{}` here for brevity.
 
 ```json
 {
-  "tagged_id": "user_01BDCWiki5PxAn3hFN1Whvrx",
-  "uuid": "52af6817-f911-408f-b033-5e1d977af315",
-  "email_address": "i11@wbox.pro",
-  "full_name": "i11",
-  "display_name": "i11",
+  "tagged_id": "user_01ABCDEFGhijklmnopqrstuvwx",
+  "uuid": "00000000-0000-0000-0000-000000000001",
+  "email_address": "alice@example.com",
+  "full_name": "Alice",
+  "display_name": "Alice",
   "is_verified": true,
   "age_is_verified": true,
   "is_anonymous": false,

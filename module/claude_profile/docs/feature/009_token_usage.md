@@ -62,13 +62,13 @@
 Quota
 
   ●  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
-✓ 🟢 i12@wbox.pro    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
-→ 🟢 i6@wbox.pro     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
-  🟡 i9@wbox.pro     in 1h 12m  max  Jun  8   3%       in 0h 23m  52%      18%      in 2d 11h
-  🔴 i7@wbox.pro     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
-  🔴 i8@wbox.pro     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
+✓ 🟢 alice@example.com    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
+→ 🟢 bob@example.com      in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
+  🟡 carol@example.com    in 1h 12m  max  Jun  8   3%       in 0h 23m  52%      18%      in 2d 11h
+  🔴 dave@example.com     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
+  🔴 eve@example.com      EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
 
-Valid: 3 / 5   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 02m)
+Valid: 3 / 5   →  Next: bob@example.com  (100% session left, token expires in 5h 02m)
 ```
 
 (`?` in Sub/~Renews = account fetch failed or skipped due to token read error)
@@ -79,14 +79,14 @@ Valid: 3 / 5   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 0
 Quota
 
   ●  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
-✓ 🟢 i12@wbox.pro    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
-* 🟢 i6@wbox.pro     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
-→ 🟢 i3@wbox.pro     in 6h 11m  max  Jun 11   95%      in 3h 44m  72%      54%      in 5d 01h
+✓ 🟢 alice@example.com    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
+* 🟢 bob@example.com      in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
+→ 🟢 carol@example.com   in 6h 11m  max  Jun 11   95%      in 3h 44m  72%      54%      in 5d 01h
 
-Valid: 3 / 3   →  Next: i3@wbox.pro  (95% session left, token expires in 6h 11m)
+Valid: 3 / 3   →  Next: carol@example.com  (95% session left, token expires in 6h 11m)
 ```
 
-(`*` = `_active` marker points here, but live credentials belong to `i12@wbox.pro`)
+(`*` = `_active` marker points here, but live credentials belong to `alice@example.com`)
 
 **Output format (text) — unsaved account is live (synthetic row):**
 
@@ -95,20 +95,20 @@ Quota
 
   ●  Account              Expires    Sub  ~Renews  5h Left  5h Reset   7d Left  7d(Son)  7d Reset
 ✓ 🟢 (current session)   in 4h 39m  max  Jun  5   64%      in 1h 39m  39%      —        in 3d 17h 39m
-→ 🟢 i3@wbox.pro         in 5h 02m  max  Jun 11   100%     in 4h 58m  88%      28%      in 6d 14h
-  🔴 i7@wbox.pro         EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
+→ 🟢 alice@example.com   in 5h 02m  max  Jun 11   100%     in 4h 58m  88%      28%      in 6d 14h
+  🔴 bob@example.com     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
 
-Valid: 2 / 3   →  Next: i3@wbox.pro  (100% session left, token expires in 5h 02m)
+Valid: 2 / 3   →  Next: alice@example.com  (100% session left, token expires in 5h 02m)
 ```
 
 **Output format (JSON):**
 
 ```json
 [
-  {"account":"i12@wbox.pro","is_current":true,"is_active":false,"expires_in_secs":26640,"billing_type":"stripe_subscription","has_max":true,"next_renewal_est":"Jun  5","session_5h_left_pct":86,"session_5h_resets_in_secs":11940,"weekly_7d_left_pct":65,"weekly_7d_sonnet_left_pct":35,"weekly_7d_resets_in_secs":432540},
-  {"account":"i6@wbox.pro","is_current":false,"is_active":true,"expires_in_secs":18120,"billing_type":"stripe_subscription","has_max":true,"next_renewal_est":"Jun  6","session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_sonnet_left_pct":28,"weekly_7d_resets_in_secs":500040},
-  {"account":"i7@wbox.pro","is_current":false,"is_active":false,"expires_in_secs":0,"billing_type":null,"has_max":null,"next_renewal_est":null,"error":"missing accessToken"},
-  {"account":"i8@wbox.pro","is_current":false,"is_active":false,"expires_in_secs":0,"billing_type":null,"has_max":null,"next_renewal_est":null,"error":"missing accessToken"}
+  {"account":"alice@example.com","is_current":true,"is_active":false,"expires_in_secs":26640,"billing_type":"stripe_subscription","has_max":true,"next_renewal_est":"Jun  5","session_5h_left_pct":86,"session_5h_resets_in_secs":11940,"weekly_7d_left_pct":65,"weekly_7d_sonnet_left_pct":35,"weekly_7d_resets_in_secs":432540},
+  {"account":"bob@example.com","is_current":false,"is_active":true,"expires_in_secs":18120,"billing_type":"stripe_subscription","has_max":true,"next_renewal_est":"Jun  6","session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_sonnet_left_pct":28,"weekly_7d_resets_in_secs":500040},
+  {"account":"carol@example.com","is_current":false,"is_active":false,"expires_in_secs":0,"billing_type":null,"has_max":null,"next_renewal_est":null,"error":"missing accessToken"},
+  {"account":"dave@example.com","is_current":false,"is_active":false,"expires_in_secs":0,"billing_type":null,"has_max":null,"next_renewal_est":null,"error":"missing accessToken"}
 ]
 ```
 

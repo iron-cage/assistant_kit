@@ -231,10 +231,10 @@ Force browser-based re-authentication for a named account whose `refreshToken` i
 
 ```bash
 clp .account.relogin                   # default: active account
-clp .account.relogin name::i3@wbox.pro
-clp .account.relogin i3@wbox.pro       # positional
+clp .account.relogin name::carol@example.com
+clp .account.relogin carol@example.com       # positional
 clp .account.relogin i3               # prefix
-clp .account.relogin name::i3@wbox.pro dry::1
+clp .account.relogin name::carol@example.com dry::1
 clp .account.relogin dry::1            # dry-run for active account
 ```
 
@@ -255,13 +255,13 @@ clp .account.relogin dry::1            # dry-run for active account
 
 ```bash
 clp .account.relogin dry::1
-# [dry-run] would re-authenticate 'i12@wbox.pro' via browser login
+# [dry-run] would re-authenticate 'alice@example.com' via browser login
 
-clp .account.relogin name::i3@wbox.pro
-# re-authenticated 'i3@wbox.pro' — credentials saved
+clp .account.relogin name::carol@example.com
+# re-authenticated 'carol@example.com' — credentials saved
 
-clp .account.relogin name::i3@wbox.pro dry::1
-# [dry-run] would re-authenticate 'i3@wbox.pro' via browser login
+clp .account.relogin name::carol@example.com dry::1
+# [dry-run] would re-authenticate 'carol@example.com' via browser login
 ```
 
 **Notes:**

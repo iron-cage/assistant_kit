@@ -146,7 +146,7 @@ Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.m
 ### Sample Project (Current Directory)
 
 ```bash
-~/.claude/projects/-home-user1-pro/
+~/.claude/projects/-home-alice-projects/
 ```
 
 ### Examining Real Data
@@ -156,10 +156,10 @@ Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.m
 ls ~/.claude/projects/
 
 # List sessions in current project
-ls ~/.claude/projects/-home-user1-pro/
+ls ~/.claude/projects/-home-alice-projects/
 
 # View first entry
-head -1 ~/.claude/projects/-home-user1-pro/SESSION_ID.jsonl | jq .
+head -1 ~/.claude/projects/-home-alice-projects/SESSION_ID.jsonl | jq .
 
 # View user message
 head -1 FILE.jsonl | jq '.message'

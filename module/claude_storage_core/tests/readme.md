@@ -207,8 +207,7 @@ Tests must use real implementations:
 
 ```bash
 # Run all effective tests (excludes ignored)
-w3 .test l::3           # Default (recommended)
-ctest3                  # Alias
+RUSTFLAGS="-D warnings" cargo nextest run --all-features
 
 # Run single test file
 cargo nextest run --test json_surrogate_pair_bug --all-features

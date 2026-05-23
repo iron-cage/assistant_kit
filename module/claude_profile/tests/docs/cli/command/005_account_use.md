@@ -19,7 +19,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 | IT-11 | `.credentials.status` shows new account email after use | Email Consistency |
 | IT-12 | Use with path-unsafe chars in email local part exits 1 | Validation |
 | IT-13 | Positional bare arg `alice@home.com` (no `name::`) switches account | Positional Syntax |
-| IT-14 | Prefix `i3` resolves to `i3@wbox.pro` and switches account | Prefix Resolution |
+| IT-14 | Prefix `i3` resolves to `carol@example.com` and switches account | Prefix Resolution |
 | IT-15 | Ambiguous prefix matches two accounts → exit 1 | Prefix Resolution / Error |
 
 ### Test Coverage Summary
@@ -174,9 +174,9 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-14: Prefix resolves to single account
 
-- **Given:** Two accounts saved: `i3@wbox.pro` and `i5@wbox.pro`. `_active` = `i5@wbox.pro`.
+- **Given:** Two accounts saved: `carol@example.com` and `amy@example.com`. `_active` = `amy@example.com`.
 - **When:** `clp .account.use i3` (prefix form, no `@`)
-- **Then:** Exits 0; `switched to 'i3@wbox.pro'` on stdout; credentials overwritten with `i3@wbox.pro` content.
+- **Then:** Exits 0; `switched to 'carol@example.com'` on stdout; credentials overwritten with `carol@example.com` content.
 - **Exit:** 0
 - **Source:** [015_name_shortcut_syntax.md AC-05](../../../../docs/feature/015_name_shortcut_syntax.md)
 
@@ -184,7 +184,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-15: Ambiguous prefix exits 1
 
-- **Given:** Two accounts saved: `i3@wbox.pro` and `i5@wbox.pro`.
+- **Given:** Two accounts saved: `carol@example.com` and `amy@example.com`.
 - **When:** `clp .account.use i` (prefix matches both accounts)
 - **Then:** Exits 1; stderr contains "ambiguous" and lists both matching account names.
 - **Exit:** 1

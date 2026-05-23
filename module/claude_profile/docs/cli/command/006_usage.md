@@ -46,12 +46,12 @@ clp .usage
 # Quota
 #
 #   ●  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
-# ✓ 🟢 i12@wbox.pro    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
-# → 🟢 i6@wbox.pro     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
-#   🟡 i9@wbox.pro     in 1h 12m  max  Jun  8   3%       in 0h 23m  52%      18%      in 2d 11h
-#   🔴 i7@wbox.pro     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
+# ✓ 🟢 alice@example.com    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
+# → 🟢 bob@example.com     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
+#   🟡 frank@example.com     in 1h 12m  max  Jun  8   3%       in 0h 23m  52%      18%      in 2d 11h
+#   🔴 dave@example.com     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
 #
-# Valid: 3 / 4   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 02m)
+# Valid: 3 / 4   →  Next: bob@example.com  (100% session left, token expires in 5h 02m)
 
 clp .usage live::1 interval::60 jitter::10
 # Quota

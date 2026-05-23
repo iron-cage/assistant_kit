@@ -32,11 +32,11 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .account.relogin name::i3@wbox.pro dry::1` exits 0 with `[dry-run] would re-authenticate 'i3@wbox.pro' via browser login`; no files mutated.
+- **AC-01**: `clp .account.relogin name::carol@example.com dry::1` exits 0 with `[dry-run] would re-authenticate 'carol@example.com' via browser login`; no files mutated.
 - **AC-02**: `clp .account.relogin` (no `name::`) with an active account uses the active account; `dry::1` outputs `[dry-run] would re-authenticate '{active}' via browser login`.
 - **AC-03**: `clp .account.relogin` (no `name::`) with no active account exits 2 with an actionable message.
 - **AC-04**: Non-existent account name exits 2 with "not found".
-- **AC-05**: Positional bare arg `clp .account.relogin i3@wbox.pro` is accepted (AccountSelector).
+- **AC-05**: Positional bare arg `clp .account.relogin carol@example.com` is accepted (AccountSelector).
 - **AC-06**: Prefix form `clp .account.relogin i3` resolves to the single matching account.
 - **AC-07**: After successful browser login, the named account's credential file in the store is updated (same as if `.account.save` had been run).
 - **AC-08**: After re-authentication, the original active account is restored — the user's session context is unchanged.

@@ -76,7 +76,7 @@ A top-level Claude Code conversation, as opposed to an agent session. Stored as 
 
 ### Path Encoding
 
-The algorithm Claude Code uses to convert a filesystem path into a safe directory name for `~/.claude/projects/`. Slashes (`/`) become hyphens (`-`); no other transformation is applied. Example: `/home/user1/pro` → `-home-user1-pro`. Path-encoded IDs are accepted by the `project::` parameter.
+The algorithm Claude Code uses to convert a filesystem path into a safe directory name for `~/.claude/projects/`. Slashes (`/`) become hyphens (`-`); no other transformation is applied. Example: `/home/alice/projects` → `-home-alice-projects`. Path-encoded IDs are accepted by the `project::` parameter.
 
 See [002_storage_organization.md](../../../../contract/claude_code/docs/behavior/002_storage_organization.md) for the encoding specification.
 
@@ -90,7 +90,7 @@ A directory on the filesystem that has been opened in Claude Code. Each project 
 
 ### Scope
 
-The discovery boundary for project and conversation listing. Controls which projects are searched: `local` (current project only), `relevant` (all ancestor projects up to `/`), `under` (all descendant projects), `around` (bidirectional: ancestors + current + descendants), or `global` (all projects in storage). Applies to `.projects` (scope default: `around`), `.list` (scope default: `global`), `.search`, and `.count`. Mirrors the `scope` concept in `kbase` for consistent mental model across tools.
+The discovery boundary for project and conversation listing. Controls which projects are searched: `local` (current project only), `relevant` (all ancestor projects up to `/`), `under` (all descendant projects), `around` (bidirectional: ancestors + current + descendants), or `global` (all projects in storage). Applies to `.projects` (scope default: `around`), `.list` (scope default: `global`), `.search`, and `.count`.
 
 ---
 

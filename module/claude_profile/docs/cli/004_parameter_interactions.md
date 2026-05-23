@@ -178,7 +178,7 @@ clp .usage sort::drain prefer::sonnet
 
 **Parameters:** [`sort::`](param/025_sort.md), [`desc::`](param/026_desc.md), [`format::`](param/002_format.md)
 
-**Effect:** When `format::json` is specified, the JSON array order is always alphabetical by account name regardless of `sort::` or `desc::` values.
+**Effect:** When `format::json` is specified, the JSON array order is unaffected by `sort::` or `desc::` — `render_json` preserves the input slice order without re-sorting. Alphabetical in practice because `fetch_all_quota` returns accounts alphabetically.
 
 **Rationale:** JSON consumers rely on stable, predictable schemas. Row ordering is a visual/display concern for human-readable text output; injecting sort-strategy-dependent ordering into JSON would break pipeline consumers that expect consistent structure and make scripts fragile to `sort::` changes.
 
@@ -189,9 +189,9 @@ clp .usage sort::drain prefer::sonnet
 ```bash
 # sort::endurance has no effect on JSON array order
 clp .usage sort::endurance format::json
-# [...array always alphabetical by name...]
+# [...array in fetch_all_quota order (alphabetical in practice)...]
 
 # desc::1 has no effect on JSON array order
 clp .usage sort::drain desc::1 format::json
-# [...array always alphabetical by name...]
+# [...array in fetch_all_quota order (alphabetical in practice)...]
 ```

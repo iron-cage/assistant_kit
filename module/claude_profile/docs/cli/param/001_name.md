@@ -16,5 +16,5 @@ Identifies the target account. Accepted as an explicit `name::EMAIL` pair, as a 
 name::alice@acme.com   → explicit form → {credential_store}/alice@acme.com.credentials.json
 alice@acme.com         → positional form (bare arg after command) → same as above
 alice                  → prefix form → resolves to first saved account starting with "alice"
-i3                     → prefix form → resolves to e.g. i3@wbox.pro
+i3                     → prefix form → resolves to e.g. carol@example.com
 ```

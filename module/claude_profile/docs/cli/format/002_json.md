@@ -28,8 +28,8 @@ clp .account.limits format::json
 
 clp .usage format::json
 # [
-#   {"account":"i12@wbox.pro","expires_at_ms":1748033040000,"session_5h_left_pct":86,...},
-#   {"account":"i6@wbox.pro","expires_at_ms":1748028720000,"session_5h_left_pct":100,...}
+#   {"account":"alice@example.com","expires_at_ms":1748033040000,"session_5h_left_pct":86,...},
+#   {"account":"bob@example.com","expires_at_ms":1748028720000,"session_5h_left_pct":100,...}
 # ]
 ```
 

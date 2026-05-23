@@ -347,7 +347,7 @@ fn decode_component( component : &str, is_hyphen_prefixed : bool ) -> String
   // Normal component: use pattern matching heuristics
   const PATH_COMPONENTS : &[ &str ] = &[
     "home", "usr", "opt", "tmp", "var", "etc", "bin", "lib", "src",
-    "pro", "user1", "user", "root",
+    "projects", "user", "root",
   ];
 
   const PROJECT_COMPONENTS : &[ &str ] = &[
@@ -507,8 +507,8 @@ mod tests
   fn test_decode_real_world_claude_path()
   {
     // Actual path from user's storage causing double-slash bug
-    let decoded = decode_path( "-home-user1-pro-genai-claude-commands--default_topic" ).unwrap();
-    assert_eq!( decoded, PathBuf::from( "/home/user1/pro/genai/claude/commands/-default_topic" ) );
+    let decoded = decode_path( "-home-alice-projects-claude-commands--default_topic" ).unwrap();
+    assert_eq!( decoded, PathBuf::from( "/home/alice/projects/claude/commands/-default_topic" ) );
   }
 
   #[test]
@@ -605,7 +605,7 @@ mod tests
   {
     // Real path from user's storage
     // Encoding is lossy for ALL components (both `/` and `_` → `-`)
-    let path = Path::new( "/home/user1/pro/lib/consumer/module/wplan_agent/-default_topic" );
+    let path = Path::new( "/home/alice/projects/consumer-app/module/wplan_agent/-default_topic" );
     let encoded = encode_path( path ).unwrap();
 
     // wplan_agent → wplan-agent (underscore replaced)
@@ -613,7 +613,7 @@ mod tests
     assert_eq!
     (
       encoded,
-      "-home-user1-pro-lib-consumer-module-wplan-agent--default-topic"
+      "-home-alice-projects-consumer-app-module-wplan-agent--default-topic"
     );
 
     let decoded = decode_path( &encoded ).unwrap();
@@ -623,7 +623,7 @@ mod tests
     assert_eq!
     (
       decoded,
-      PathBuf::from( "/home/user1/pro/lib/consumer/module/wplan_agent/-default_topic" )
+      PathBuf::from( "/home/alice/projects/consumer-app/module/wplan_agent/-default_topic" )
     );
   }
 

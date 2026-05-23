@@ -21,7 +21,7 @@ claude_runner_core = { path = "../../claude_tools/dev/module/claude_runner_core"
 
 **Required co-location:** Both workspaces must be siblings under the same parent directory for these relative paths to resolve:
 ```
-~/pro/lib/wip_core/
+<shared-parent>/
   claude_tools/dev/   ← assistant workspace
   consumer/dev/       ← consumer workspace
 ```

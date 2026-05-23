@@ -19,7 +19,7 @@ Source: **[002](002_oauth_account.md)** only.
 |-------|------|---------|-----------|
 | `tagged_id` | string | `"user_01BDCWiki5PxAn3hFN1Whvrx"` | Stable user ID with type prefix |
 | `uuid` | string | `"52af6817-f911-408f-b033-5e1d977af315"` | UUID form of user ID |
-| `email_address` | string | `"i11@wbox.pro"` | Primary account email |
+| `email_address` | string | `"alice@example.com"` | Primary account email |
 | `full_name` | string | `"i11"` | Full display name |
 | `display_name` | string | `"i11"` | Short display name |
 | `is_verified` | bool | `true` | Email address verified |
@@ -113,7 +113,7 @@ Source: **[002](002_oauth_account.md)** (`memberships[]`), **[005](005_claude_cl
 | Field | Type | Observed | Semantics |
 |-------|------|----------|-----------|
 | `organization_uuid` | string | UUID | Organization UUID |
-| `organization_name` | string | `"i11@wbox.pro's Organization"` | Organization display name |
+| `organization_name` | string | `"alice@example.com's Organization"` | Organization display name |
 | `organization_role` | string | `"admin"` | User's role in the organization |
 | `workspace_uuid` | string\|null | `null` | Workspace UUID (enterprise feature) |
 | `workspace_name` | string\|null | `null` | Workspace display name |

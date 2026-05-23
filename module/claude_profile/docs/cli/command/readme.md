@@ -28,7 +28,7 @@
 | 9 | `.usage` | Show live rate-limit quota for all saved accounts | 6 | `clp .usage` |
 | 10 | `.credentials.status` | Show live credential metadata without account store dependency | 13 | `clp .credentials.status` |
 | 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 2 | `clp .account.limits name::alice@acme.com` |
-| 12 | `.account.relogin` | Force browser re-authentication for a named account | 2 | `clp .account.relogin name::i3@wbox.pro` |
+| 12 | `.account.relogin` | Force browser re-authentication for a named account | 2 | `clp .account.relogin name::carol@example.com` |
 | 13 | `.account.rotate` | Auto-rotate to the best inactive account by token expiry | 1 | `clp .account.rotate` |
 
 ### Quick Reference

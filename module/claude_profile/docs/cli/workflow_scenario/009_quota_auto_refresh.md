@@ -6,14 +6,14 @@ Use `refresh::1` to silently refresh expired tokens so every account shows curre
 # Without refresh::1 — expired accounts show error rows
 clp .usage
 #   Account          Expires   Sub  ~Renews  5h Left  ...
-# ✓ i12@wbox.pro    in 7h     86%      ...
-#   i6@wbox.pro     EXPIRED   —        (auth error: 401)
+# ✓ alice@example.com    in 7h     86%      ...
+#   bob@example.com     EXPIRED   —        (auth error: 401)
 
 # With refresh::1 — expired tokens silently refreshed before the fetch
 clp .usage refresh::1
 #   Account          Expires     Sub  ~Renews  5h Left  ...
-# ✓ i12@wbox.pro    in 7h 24m  86%      ...
-#   i6@wbox.pro     in 5h 02m  100%     ...
+# ✓ alice@example.com    in 7h 24m  86%      ...
+#   bob@example.com     in 5h 02m  100%     ...
 # (i6's token was refreshed in-place; credential file updated on disk)
 
 # Combine with live mode for sessions where tokens may expire mid-session
@@ -22,8 +22,8 @@ clp .usage live::1 refresh::1 interval::60
 # JSON output is also supported; refresh is invisible in JSON output
 clp .usage refresh::1 format::json
 # [
-#   {"account":"i12@wbox.pro","session_5h_left_pct":86,...},
-#   {"account":"i6@wbox.pro","session_5h_left_pct":100,...}
+#   {"account":"alice@example.com","session_5h_left_pct":86,...},
+#   {"account":"bob@example.com","session_5h_left_pct":100,...}
 # ]
 ```
 

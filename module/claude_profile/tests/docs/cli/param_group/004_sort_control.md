@@ -57,7 +57,7 @@ Interaction tests for Group 4 (Sort Control: `sort::`, `desc::`, `prefer::`). Se
 - **When-A:** `sort_indices(..., SortStrategy::Drain, None, PreferStrategy::Sonnet, 0)` — tiebreak uses `7d(Son)`.
 - **When-B:** `sort_indices(..., SortStrategy::Drain, None, PreferStrategy::Any, 0)` — tiebreak uses `min(7d Left, 7d(Son))`.
 - **Then-A:** `son_leader@test.com` ranks first (80% `7d(Son)` > 30% under `prefer::sonnet`).
-- **Then-B:** `any_leader@test.com` ranks first (60% `7d Left` > 20% under `prefer::any`).
+- **Then-B:** `any_leader@test.com` ranks first (`prefer::any`: min(60%, 30%) = 30% > min(20%, 80%) = 20%).
 - **Exit:** n/a (unit test — function return assertion)
 - **Source fn:** `test_sort_drain_prefer_sonnet_tiebreak`, `test_sort_drain_prefer_any_tiebreak` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-08](../../../../docs/feature/020_usage_sort_strategies.md)

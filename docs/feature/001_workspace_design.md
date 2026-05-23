@@ -11,7 +11,7 @@
 
 **Purpose:** assistant is a standalone Rust workspace for coding agent tooling: credential management, session storage, and process execution. The current implementation covers Claude Code in depth; the layered architecture is designed to expand to additional coding agents following the same crate pattern.
 
-This workspace is a clean extraction from wtools. It has no knowledge of consumer workspace's architecture, job queues, AI orchestration, or any private workspace concerns. It depends only on published wtools crates (error_tools, unilang, former) and the Rust standard library.
+This workspace is self-contained and has no knowledge of consumer workspace architecture, job queues, AI orchestration, or any private workspace concerns. It depends only on published companion crates (error_tools, unilang, former) and the Rust standard library.
 
 **Crate inventory:**
 

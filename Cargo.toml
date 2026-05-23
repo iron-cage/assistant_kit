@@ -2,7 +2,7 @@
 #
 # Standalone workspace for coding agent tooling: credentials, sessions, and process execution.
 # Privacy invariant: this workspace has ZERO knowledge of any private consumer workspace.
-# Can use published wtools crates (error_tools, unilang, etc.).
+# Uses published companion crates (error_tools, unilang, etc.).
 #
 
 [workspace]
@@ -31,7 +31,7 @@ exclude = [ "-*" ]
 version = "1.1.0"
 edition = "2021"
 rust-version = "1.74"
-authors    = [ "Kostiantyn Mysnyk <wandalen@obox.systems>" ]
+authors    = [ "wandalen" ]
 license    = "MIT"
 repository = "https://github.com/iron-cage/claude_tools"
 homepage   = "https://github.com/iron-cage/claude_tools"
@@ -163,7 +163,7 @@ path = "module/claude_quota"
 version = "~0.1.0"
 default-features = false
 
-## External — published wtools crates
+## External — published companion crates
 
 [workspace.dependencies.error_tools]
 version = "~0.37"
@@ -175,7 +175,10 @@ features = [ "enabled", "approach_yaml_multi_build" ]
 default-features = false
 
 [workspace.dependencies.cli_fmt]
-path = "../../wtools/dev/module/core/cli_fmt"
+# Co-developed companion crate; not yet published to crates.io.
+# Docker builds inject this crate via --build-context cli_fmt into /cli_fmt/.
+# For local (non-Docker) development, update the path to the actual cli_fmt source location.
+path = "../cli_fmt"
 default-features = false
 features = [ "cli_help_template" ]
 

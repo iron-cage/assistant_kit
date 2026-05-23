@@ -82,10 +82,10 @@ See [004_params.md](004_params.md) for individual parameter specs and [001_comma
 
 **Accepted formats:**
 ```bash
-project::/home/user1/pro/lib/consumer         # Absolute path
-project::-home-user1-pro-lib-consumer         # Path-encoded ID
+project::/home/alice/projects/my-app         # Absolute path
+project::-home-alice-projects-my-app         # Path-encoded ID
 project::8d795a1c-c81d-4010-8d29-b4e678272419  # UUID
-project::Path("/home/user1/pro/lib/consumer") # Path(...) from .list output
+project::Path("/home/alice/projects/my-app") # Path(...) from .list output
 ```
 
 ---
@@ -207,7 +207,7 @@ Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact mat
 | `global` | Ignored (all projects regardless of path) | all |
 | `around` | Bidirectional anchor: ancestor walk + subtree (default: cwd) | ↑↓ |
 
-**Mirrors kbase `DiscoveryConfig`:** The `scope` + `path` pair directly mirrors kbase's `DiscoveryConfig` group (scope, path, depth, role). This intentional alignment creates a consistent mental model across tools.
+The `scope` + `path` pair uses a consistent discovery model across tools (scope, path, depth).
 
 **Parameter Details:**
 
@@ -221,6 +221,6 @@ Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact mat
 .projects scope::around
 .projects scope::local
 .projects scope::relevant
-.projects scope::under path::/home/user1/pro
+.projects scope::under path::/home/alice/projects
 .projects scope::global
 ```

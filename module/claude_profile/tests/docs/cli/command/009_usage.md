@@ -84,7 +84,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Sort Acceptance: 4 tests (IT-44, IT-45, IT-46, IT-47)
 - Sort Rejection: 2 tests (IT-48, IT-49)
 
-**Total:** 62 spec entries (IT-1 through IT-50; IT-40–IT-50 pending implementation); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
+**Total:** 62 spec entries (IT-1 through IT-50; IT-40–IT-43 implemented by TSK-178, IT-44–IT-50 implemented by TSK-177); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
 
 ---
 

@@ -24,7 +24,7 @@ HTTP 200 on success. Body is a JSON object.
 | Field | Type | Observed | Semantics |
 |-------|------|----------|-----------|
 | `organization_uuid` | string | UUID | The org the user belongs to |
-| `organization_name` | string | `"i11@wbox.pro's Organization"` | Display name of the org |
+| `organization_name` | string | `"alice@example.com's Organization"` | Display name of the org |
 | `organization_role` | string | `"admin"` | User's role in the org |
 | `workspace_uuid` | string\|null | `null` | Workspace UUID (enterprise feature) |
 | `workspace_name` | string\|null | `null` | Workspace display name |
@@ -34,12 +34,12 @@ HTTP 200 on success. Body is a JSON object.
 
 ### Example Response
 
-HTTP 200 (personal Max account, i11@wbox.pro, sampled 2026-05-23):
+HTTP 200 (personal Max account, alice@example.com, sampled 2026-05-23):
 
 ```json
 {
   "organization_uuid": "05122eb7-d5c1-4e65-9245-7f05cb2dc8db",
-  "organization_name": "i11@wbox.pro's Organization",
+  "organization_name": "alice@example.com's Organization",
   "organization_role": "admin",
   "workspace_uuid": null,
   "workspace_name": null,

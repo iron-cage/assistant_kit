@@ -54,7 +54,7 @@ claude_storage .list path::assistant sessions::1
 # Output: same projects, now with their sessions listed
 
 # Step 3: Show the session content
-claude_storage .show project::/home/user1/pro/lib/consumer session_id::-default_topic
+claude_storage .show project::/home/alice/projects/my-app session_id::-default_topic
 # Output: conversation content
 ```
 
@@ -114,11 +114,11 @@ claude_storage .count
 # Output: projects: N
 
 # Count sessions in a project
-claude_storage .count target::sessions project::-home-user1-pro-lib-consumer
+claude_storage .count target::sessions project::-home-alice-projects-my-app
 # Output: sessions: N
 
 # Count entries in a session
-claude_storage .count target::entries project::-home-user1-pro-lib-consumer session::-default_topic
+claude_storage .count target::entries project::-home-alice-projects-my-app session::-default_topic
 # Output: entries: N
 ```
 
@@ -158,11 +158,11 @@ clg .projects scope::relevant
 # Output: project summary for cwd + every ancestor that has sessions
 
 # Narrow to a specific starting path
-clg .projects scope::relevant path::/home/user1/pro/lib/my_crate
-# Output: project summaries for my_crate and all its ancestor projects
+clg .projects scope::relevant path::/home/alice/projects/my-app
+# Output: project summaries for my-app and all its ancestor projects
 
 # Check if a specific directory has any recorded history (scripting)
-clg .project.exists path::/home/user1/pro
+clg .project.exists path::/home/alice/projects
 # Exit 0: has history; Exit 1: no history
 ```
 

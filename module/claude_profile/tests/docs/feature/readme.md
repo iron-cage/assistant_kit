@@ -25,6 +25,6 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-09 | ✅ |
 | 017_token_refresh | [017_token_refresh.md](017_token_refresh.md) | FT-01 … FT-16 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](018_live_monitor.md) | FT-01 … FT-09 | ✅ |
-| 020_usage_sort_strategies | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | FT-01 … FT-11 | ✅ |
+| 020_usage_sort_strategies | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | FT-01 … FT-12 | ✅ |
 
 **Total:** 4 feature specs; 15 of 20 feature instances not yet covered by dedicated FT specs.

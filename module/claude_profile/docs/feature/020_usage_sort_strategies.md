@@ -73,15 +73,15 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 - **AC-02**: `sort::endurance` ranks qualified accounts (5h Reset 15–60 min, weekly(prefer) ≥ 30%) above unqualified accounts; within qualified, highest weekly first then soonest reset.
 - **AC-03**: `sort::drain` sorts by `5h Left` ascending; accounts with ≤ 5% `5h Left` are sunk to the bottom.
 - **AC-04**: `sort::reset` sorts by `5h Reset` ascending; accounts with ≤ 5% `5h Left` are sunk to the bottom.
-- **AC-05**: `desc::1` reverses the sort direction; `desc::0` uses the strategy's natural direction.
+- **AC-05**: `desc::1` reverses the sort direction; `desc::0` uses the strategy's natural direction. The exhausted floor (accounts with ≤ 5% `5h Left`) remains pinned to the bottom regardless of `desc::` direction.
 - **AC-06**: Each strategy has a context-sensitive `desc::` default: `name`→`0`, `endurance`→`1`, `drain`→`0`, `reset`→`0`.
 - **AC-07**: `prefer::any` (default) uses `min(7d Left, 7d(Son))` as weekly quota; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
-- **AC-08**: `prefer::` affects all strategies that reference weekly availability (endurance qualification, drain/reset tiebreaking).
+- **AC-08**: `prefer::` affects all strategies that reference weekly availability (endurance qualification, drain tiebreaking). `sort::reset` does not use weekly quota — its tiebreak is `5h Left` ascending.
 - **AC-09**: Invalid `sort::` value exits 1 with an error naming the valid values.
 - **AC-10**: Invalid `prefer::` value exits 1 with an error naming the valid values.
 - **AC-11**: `sort::` and `desc::` do not affect the `→ Next` recommendation marker or footer — those use the recommendation algorithm from 009_token_usage.md.
 - **AC-12**: `sort::` and `desc::` work correctly with `live::1` — sort order is stable within each refresh cycle.
-- **AC-13**: `format::json` output is NOT affected by `sort::` or `desc::` — JSON array order remains alphabetical (stable schema for pipeline consumers).
+- **AC-13**: `format::json` output is NOT affected by `sort::` or `desc::` — `render_json` preserves the input slice order without re-sorting (alphabetical in practice since `fetch_all_quota` returns accounts alphabetically; stable schema for pipeline consumers).
 
 ### Cross-References
 

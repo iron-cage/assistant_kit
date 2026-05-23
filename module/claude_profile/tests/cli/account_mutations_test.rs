@@ -44,7 +44,7 @@
 //! | aw11 | `aw11_switch_slash_in_email_local_part_exits_1` | `/` in email local part → exit 1 | N |
 //! | — | `switch_restores_claude_json` | `~/.claude.json` restored after switch (issue-122) | P |
 //! | aw13 | `aw13_use_positional_bare_arg` | positional email `personal@home.com` → switches | P |
-//! | aw14 | `aw14_use_prefix_resolves` | prefix `i3` resolves to `i3@wbox.pro`, switches | P |
+//! | aw14 | `aw14_use_prefix_resolves` | prefix `i3` resolves to `carol@example.com`, switches | P |
 //! | aw15 | `aw15_use_prefix_ambiguous_exits_1` | ambiguous prefix `i` → exit 1 with "ambiguous" | N |
 //!
 //! ### AD — Account Delete
@@ -816,18 +816,18 @@ fn aw13_use_positional_bare_arg()
 #[ test ]
 fn aw14_use_prefix_resolves()
 {
-  // AC-05: prefix `i3` resolves uniquely to `i3@wbox.pro` and switches.
+  // AC-05: prefix `i3` resolves uniquely to `carol@example.com` and switches.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_account( dir.path(), "i3@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
-  write_account( dir.path(), "i5@wbox.pro", "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "carol@example.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "amy@example.com", "pro", "standard", FAR_FUTURE_MS, true  );
 
   let out = run_cs_with_env( &[ ".account.use", "i3" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   let active = std::fs::read_to_string( store.join( "_active" ) ).expect( "_active must exist" );
-  assert_eq!( active.trim(), "i3@wbox.pro", "prefix i3 must resolve to i3@wbox.pro" );
+  assert_eq!( active.trim(), "carol@example.com", "prefix i3 must resolve to carol@example.com" );
 }
 
 // ── aw15 ──────────────────────────────────────────────────────────────────────
@@ -835,12 +835,12 @@ fn aw14_use_prefix_resolves()
 #[ test ]
 fn aw15_use_prefix_ambiguous_exits_1()
 {
-  // AC-06: ambiguous prefix `i` matches both `i3@wbox.pro` and `i5@wbox.pro` → exit 1.
+  // AC-06: ambiguous prefix `i` matches both `carol@example.com` and `amy@example.com` → exit 1.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_account( dir.path(), "i3@wbox.pro", "pro", "standard", FAR_FUTURE_MS, true  );
-  write_account( dir.path(), "i5@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "carol@example.com", "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "amy@example.com", "pro", "standard", FAR_FUTURE_MS, false );
 
   let out = run_cs_with_env( &[ ".account.use", "i" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );

@@ -23,7 +23,7 @@ session in `.projects` output), see [001_commands.md § .projects](cli/001_comma
 
 **Flat format (older projects, B7):**
 ```
-projects/-home-user1-pro-lib-consumer-module--default-topic/
+projects/-home-alice-projects-my-app-module--default-topic/
 ├── 9425242b-1185-4788-993e-09852db0516d.jsonl    # Main session
 ├── agent-64bdad98.jsonl                           # Agent session 1
 ├── agent-e360ed21.jsonl                           # Agent session 2
@@ -33,7 +33,7 @@ projects/-home-user1-pro-lib-consumer-module--default-topic/
 
 **Hierarchical format (newer projects, B13):**
 ```
-projects/-home-user1-pro-lib-project--default-topic/
+projects/-home-alice-projects-project-a--default-topic/
 ├── 43860c56-f828-44bd-953a-432920676b63.jsonl         # Root session
 └── 43860c56-f828-44bd-953a-432920676b63/
     ├── subagents/
@@ -57,7 +57,7 @@ Both formats form a **Session Family** — a root session and all its agents. Se
   "parentUuid": null,
   "isSidechain": true,
   "userType": "external",
-  "cwd": "/home/user1/pro/lib/consumer/module/wplan_agent/-default_topic",
+  "cwd": "/home/alice/projects/my-app/module/wplan_agent/-default_topic",
   "sessionId": "9425242b-1185-4788-993e-09852db0516d",
   "version": "2.0.31",
   "gitBranch": "master",
@@ -462,7 +462,7 @@ You will be provided with the following real-time repository information to info
 
 **Shell commands** (from CLI):
 ```json
-"display": "└ ~/pro/lib/consumer/module/reasoner ─> cargo run --"
+"display": "└ ~/projects/my-app/module/reasoner ─> cargo run --"
 "display": " curl -X GET \"https://www.youtube.com/watch?v=dQw4"
 ```
 
@@ -505,15 +505,15 @@ let millis = now.duration_since(UNIX_EPOCH)?.as_millis() as u64;
 
 **Always absolute paths**:
 ```
-/home/user1/pro/lib/consumer/module/reasoner
-/home/user1/pro/lib/knowledge-hr
-/home/user1/pro/lib/knowledge-trial-tasks
+/home/alice/projects/my-app/module/reasoner
+/home/alice/projects/my-project
+/home/alice/projects/project-a
 ```
 
 **Mapping to storage**:
-- Path: `/home/user1/pro/lib/consumer/module/reasoner`
-- Encoded: `-home-user1-pro-lib-consumer-module-reasoner`
-- Storage: `~/.claude/projects/-home-user1-pro-lib-consumer-module-reasoner/`
+- Path: `/home/alice/projects/my-app/module/reasoner`
+- Encoded: `-home-alice-projects-my-app-module-reasoner`
+- Storage: `~/.claude/projects/-home-alice-projects-my-app-module-reasoner/`
 
 ### history usage patterns
 

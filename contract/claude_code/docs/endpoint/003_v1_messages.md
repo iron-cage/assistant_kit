@@ -50,7 +50,7 @@ Rate-limit headers are present on **all** responses — including HTTP 4xx and 5
 
 ### Example Response Headers
 
-HTTP 200 (i11@wbox.pro, sampled 2026-05-23, mid-session):
+HTTP 200 (alice@example.com, sampled 2026-05-23, mid-session):
 
 ```
 HTTP/1.1 200 OK

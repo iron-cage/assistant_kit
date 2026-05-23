@@ -172,9 +172,9 @@ Validate non-empty string:
 **Usage:**
 ```
 .list path::assistant
-# Matches: /home/user1/pro/lib/wip_core/assistant/module/core
-# Matches: /home/user1/pro/lib/assistant
-# Does not match: /home/user1/pro/lib/claude_storage
+# Matches: /home/alice/projects/assistant/module/core
+# Matches: /home/alice/projects/assistant
+# Does not match: /home/alice/projects/claude-storage
 ```
 
 ---
@@ -189,10 +189,10 @@ Validate non-empty string:
 - DEFAULT = current working directory (resolved at runtime)
 
 **Accepted Formats:**
-- Absolute path: `/home/user1/pro/lib/consumer`
-- Path-encoded ID: `-home-user1-pro-lib-consumer`
+- Absolute path: `/home/alice/projects/my-app`
+- Path-encoded ID: `-home-alice-projects-my-app`
 - UUID: `8d795a1c-c81d-4010-8d29-b4e678272419`
-- `Path(...)` form from `.list`: `Path("/home/user1/pro/lib/consumer")`
+- `Path(...)` form from `.list`: `Path("/home/alice/projects/my-app")`
 
 **Constraints:**
 - Non-empty string
@@ -255,7 +255,7 @@ Parse string to enum variant (case-insensitive):
 
 ### Type :: 7. `ScopeValue`
 
-**Purpose:** Controls the discovery boundary for session listing in `.projects`. Mirrors `kbase` scope semantics for consistent cross-tool mental model.
+**Purpose:** Controls the discovery boundary for session listing in `.projects`. Defines how broadly to search for matching projects relative to a filesystem anchor path.
 
 **Fundamental Type:** Wrapper around string enum
 

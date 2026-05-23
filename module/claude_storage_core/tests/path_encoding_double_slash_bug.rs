@@ -135,7 +135,7 @@ use std::path::{ Path, PathBuf };
 ///
 /// Real-world failure case discovered when running `claude_storage .list`:
 /// ```text
-/// Path("/home/user1/pro/lib/consumer/module/wplan/agent//default/topic")
+/// Path("/home/alice/projects/consumer-app/module/wplan/agent//default/topic")
 /// ```
 ///
 /// The double slash (`//default`) should be `/-default_topic` (hyphen-prefixed directory).
@@ -143,7 +143,7 @@ use std::path::{ Path, PathBuf };
 fn bug_reproducer_double_slash_in_path_decoding()
 {
   // Actual encoded directory from ~/.claude/projects/
-  let encoded = "-home-user1-pro-genai-claude-commands--default-topic";
+  let encoded = "-home-alice-projects-claude-commands--default-topic";
 
   // Decode using fixed decoder
   let decoded = decode_path( encoded ).expect( "Failed to decode path" );
@@ -153,7 +153,7 @@ fn bug_reproducer_double_slash_in_path_decoding()
   assert!( !decoded_str.contains( "//" ), "Decoded path should not contain double slashes: {decoded_str}" );
 
   // Should correctly decode to hyphen-prefixed directory
-  assert_eq!( decoded, PathBuf::from( "/home/user1/pro/genai/claude/commands/-default_topic" ) );
+  assert_eq!( decoded, PathBuf::from( "/home/alice/projects/claude/commands/-default_topic" ) );
 }
 
 #[test]
@@ -162,21 +162,21 @@ fn bug_reproducer_wplan_agent_path()
   // Another real-world case
   // Note: Due to lossy encoding, decoder uses heuristics and prefers underscore after "module/"
   // matching actual filesystem structure (wplan_agent is a module directory)
-  let encoded = "-home-user1-pro-lib-consumer-module-wplan-agent--default-topic";
+  let encoded = "-home-alice-projects-consumer-app-module-wplan-agent--default-topic";
   let decoded = decode_path( encoded ).expect( "Failed to decode" );
 
   assert!( !decoded.to_str().unwrap().contains( "//" ) );
-  assert_eq!( decoded, PathBuf::from( "/home/user1/pro/lib/consumer/module/wplan_agent/-default_topic" ) );
+  assert_eq!( decoded, PathBuf::from( "/home/alice/projects/consumer-app/module/wplan_agent/-default_topic" ) );
 }
 
 #[test]
 fn bug_reproducer_commit_directory()
 {
   // Hyphen-prefixed directory at end of path
-  let encoded = "-home-user1-pro--commit";
+  let encoded = "-home-alice-projects--commit";
   let decoded = decode_path( encoded ).expect( "Failed to decode" );
 
-  assert_eq!( decoded, PathBuf::from( "/home/user1/pro/-commit" ) );
+  assert_eq!( decoded, PathBuf::from( "/home/alice/projects/-commit" ) );
   assert!( !decoded.to_str().unwrap().contains( "//" ) );
 }
 
