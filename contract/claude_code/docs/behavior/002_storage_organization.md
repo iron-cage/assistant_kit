@@ -273,7 +273,7 @@ chmod 644 ~/.claude/settings.json
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| doc | [`001_session_behaviors.md`](001_session_behaviors.md) | Session behavior evidence (B1–B16h) including agent layouts |
+| doc | [`001_session_behaviors.md`](001_session_behaviors.md) | Session behavior evidence (B1–B24) including agent layouts |
 | doc | [`004_jsonl_format.md`](004_jsonl_format.md) | Entry-level JSONL field schema and content blocks |
 | doc | [`005_settings_format.md`](005_settings_format.md) | Settings.json structure and atomic write protocol |
 | doc | [`003_filesystem_layout.md`](003_filesystem_layout.md) | claude_version runtime path reference table |

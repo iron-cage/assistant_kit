@@ -22,8 +22,8 @@
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | `../../module/claude_storage_core/docs/feature/001_core_library.md` | Core library this CLI wraps |
-| doc | `../cli/commands.md` | All CLI commands with syntax and examples |
-| doc | `../advanced_topics.md` | Agent sessions and advanced storage topics |
+| doc | `../cli/001_commands.md` | All CLI commands with syntax and examples |
+| doc | `../001_advanced_topics.md` | Agent sessions and advanced storage topics |
 
 ### See Also
 

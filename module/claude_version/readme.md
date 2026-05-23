@@ -6,7 +6,7 @@ Claude Code version manager: install, upgrade, and session lifecycle.
 
 | File | Responsibility |
 |------|----------------|
-| `docs/` | Design and CLI documentation (feature/, invariant/, algorithm/, etc.) |
+| `docs/` | Design and CLI documentation (feature/, algorithm/, pattern/, cli/) |
 | `src/` | Binary and library source code |
 | `tests/` | Unit and integration test suite |
 | `Cargo.toml` | Crate manifest |

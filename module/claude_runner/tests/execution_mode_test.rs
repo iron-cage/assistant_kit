@@ -410,7 +410,7 @@ fn s77_keep_claudecode_preserves_env_in_subprocess()
   let ( _tmp, path ) = fake_claude( script );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( &[ "--keep-claudecode", "--no-ultrathink", "t" ] )
+    .args( [ "--keep-claudecode", "--no-ultrathink", "t" ] )
     .env( "PATH", &path )
     .env( "CLAUDECODE", "test_val" )
     .output()

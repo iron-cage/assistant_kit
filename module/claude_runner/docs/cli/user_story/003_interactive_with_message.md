@@ -19,13 +19,13 @@ Send an initial message to Claude and stay in interactive mode for follow-up tur
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | `--interactive` activates TTY passthrough |
+| 1 | [`run`](../001_command.md#command--1-run) | `--interactive` activates TTY passthrough |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--interactive`](../param/06_interactive.md) | Opt out of print mode; enable TTY passthrough |
-| 2 | [`[MESSAGE]`](../param/01_message.md) | Initial prompt sent before the REPL session |
-| 3 | [`--dir`](../param/08_dir.md) | Set working directory for the session |
-| 4 | [`--new-session`](../param/07_new_session.md) | Discard prior context |
+| 1 | [`--interactive`](../param/006_interactive.md) | Opt out of print mode; enable TTY passthrough |
+| 2 | [`[MESSAGE]`](../param/001_message.md) | Initial prompt sent before the REPL session |
+| 3 | [`--dir`](../param/008_dir.md) | Set working directory for the session |
+| 4 | [`--new-session`](../param/007_new_session.md) | Discard prior context |

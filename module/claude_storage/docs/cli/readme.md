@@ -13,12 +13,12 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 
 | File | Responsibility |
 |------|----------------|
-| `commands.md` | All command specs, syntax, parameters, exit codes, examples |
-| `params.md` | Parameter definitions, types, validation rules, cross-refs |
-| `types.md` | Semantic type system with constants, parsing, methods |
-| `dictionary.md` | Domain vocabulary and term definitions |
-| `parameter_groups.md` | Shared parameter groups with coherence tests |
-| `workflows.md` | Usage scenarios, best practices, complexity matrix |
+| `001_commands.md` | All command specs, syntax, parameters, exit codes, examples |
+| `004_params.md` | Parameter definitions, types, validation rules, cross-refs |
+| `005_types.md` | Semantic type system with constants, parsing, methods |
+| `002_dictionary.md` | Domain vocabulary and term definitions |
+| `003_parameter_groups.md` | Shared parameter groups with coherence tests |
+| `006_workflows.md` | Usage scenarios, best practices, complexity matrix |
 | `format/` | Output format catalog for export rendering modes |
 
 ### Completion Matrix
@@ -26,12 +26,12 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | File | L1 | L2 | L3 | L4 | L5 | Status |
 |------|----|----|----|----|----|----|
 | `readme.md` | ✅ | ✅ | ✅ | ✅ | ➖ | Complete |
-| `commands.md` | ✅ | ✅ | ✅ | ✅ | ➖ | Complete |
-| `params.md` | ✅ | ✅ | ✅ | ✅ | ➖ | Complete |
-| `dictionary.md` | ➖ | ✅ | ✅ | ✅ | ➖ | Complete |
-| `types.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
-| `parameter_groups.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
-| `workflows.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
+| `001_commands.md` | ✅ | ✅ | ✅ | ✅ | ➖ | Complete |
+| `004_params.md` | ✅ | ✅ | ✅ | ✅ | ➖ | Complete |
+| `002_dictionary.md` | ➖ | ✅ | ✅ | ✅ | ➖ | Complete |
+| `005_types.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
+| `003_parameter_groups.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
+| `006_workflows.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 | `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 | `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
 **Current Level:** L4 (Specification Complete)
@@ -40,12 +40,12 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 
 ### Navigation
 
-- [Commands](commands.md) — What operations exist and how to invoke them
-- [Parameters](params.md) — What inputs control each command
-- [Types](types.md) — Semantic type constraints and validation rules
-- [Dictionary](dictionary.md) — Domain vocabulary
-- [Parameter Groups](parameter_groups.md) — Related parameter sets and their coherence
-- [Workflows](workflows.md) — Common usage patterns and best practices
+- [Commands](001_commands.md) — What operations exist and how to invoke them
+- [Parameters](004_params.md) — What inputs control each command
+- [Types](005_types.md) — Semantic type constraints and validation rules
+- [Dictionary](002_dictionary.md) — Domain vocabulary
+- [Parameter Groups](003_parameter_groups.md) — Related parameter sets and their coherence
+- [Workflows](006_workflows.md) — Common usage patterns and best practices
 - [Formats](format/readme.md) — Export output format rendering specifications
 ### Related Documentation
 

@@ -19,12 +19,12 @@ Start a genuinely new Claude conversation without session continuation so prior 
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | `--new-session` suppresses default `-c` |
+| 1 | [`run`](../001_command.md#command--1-run) | `--new-session` suppresses default `-c` |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--new-session`](../param/07_new_session.md) | Suppress default session continuation |
-| 2 | [`--model`](../param/03_model.md) | Optional: choose model for the fresh task |
-| 3 | [`--dir`](../param/08_dir.md) | Optional: set project directory for the new task |
+| 1 | [`--new-session`](../param/007_new_session.md) | Suppress default session continuation |
+| 2 | [`--model`](../param/003_model.md) | Optional: choose model for the fresh task |
+| 3 | [`--dir`](../param/008_dir.md) | Optional: set project directory for the new task |

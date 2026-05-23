@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_version
-  node_count: 7
-  edge_count: 16
+  node_count: 15
+  edge_count: 34
   component_count: 1
-  generated: 2026-04-07
+  generated: 2026-05-23
 
 nodes:
   - id: feature/001
@@ -40,6 +40,46 @@ nodes:
     file: algorithm/001_settings_type_inference.md
     label: Settings Type Inference
     entity: algorithm
+
+  - id: design_decisions/001
+    file: 001_design_decisions.md
+    label: Design Decisions
+    entity: standalone
+
+  - id: cli/001
+    file: cli/001_commands.md
+    label: Commands
+    entity: cli
+
+  - id: cli/002
+    file: cli/002_dictionary.md
+    label: Dictionary
+    entity: cli
+
+  - id: cli/003
+    file: cli/003_parameter_groups.md
+    label: Parameter Groups
+    entity: cli
+
+  - id: cli/004
+    file: cli/004_parameter_interactions.md
+    label: Parameter Interactions
+    entity: cli
+
+  - id: cli/005
+    file: cli/005_params.md
+    label: Parameters
+    entity: cli
+
+  - id: cli/006
+    file: cli/006_types.md
+    label: Types
+    entity: cli
+
+  - id: cli/007
+    file: cli/007_workflows.md
+    label: Workflows
+    entity: cli
 
 edges:
   - from: feature/001
@@ -98,6 +138,14 @@ edges:
     to: feature/003
     via: cross_references
 
+  - from: feature/005
+    to: cli/001
+    via: cross_references
+
+  - from: feature/005
+    to: cli/005
+    via: cross_references
+
   - from: pattern/001
     to: feature/001
     via: cross_references
@@ -106,10 +154,74 @@ edges:
     to: feature/003
     via: cross_references
 
+  - from: design_decisions/001
+    to: feature/005
+    via: cross_references
+
+  - from: feature/005
+    to: design_decisions/001
+    via: cross_references
+
+  - from: cli/001
+    to: feature/001
+    via: cross_references
+
+  - from: cli/001
+    to: feature/002
+    via: cross_references
+
+  - from: cli/001
+    to: feature/003
+    via: cross_references
+
+  - from: cli/002
+    to: cli/001
+    via: cross_references
+
+  - from: cli/003
+    to: cli/005
+    via: cross_references
+
+  - from: cli/004
+    to: cli/003
+    via: cross_references
+
+  - from: cli/004
+    to: cli/005
+    via: cross_references
+
+  - from: cli/005
+    to: feature/001
+    via: cross_references
+
+  - from: cli/005
+    to: feature/003
+    via: cross_references
+
+  - from: cli/005
+    to: feature/004
+    via: cross_references
+
+  - from: cli/006
+    to: cli/005
+    via: cross_references
+
+  - from: cli/007
+    to: feature/001
+    via: cross_references
+
+  - from: cli/007
+    to: feature/003
+    via: cross_references
+
+  - from: cli/007
+    to: cli/001
+    via: cross_references
+
 components:
   - id: 1
     label: Main corpus
-    size: 7
+    size: 15
     isolated: false
     nodes:
       - feature/001
@@ -119,5 +231,13 @@ components:
       - feature/005
       - pattern/001
       - algorithm/001
+      - cli/001
+      - cli/002
+      - cli/003
+      - cli/004
+      - cli/005
+      - cli/006
+      - cli/007
+      - design_decisions/001
 
 dangling_refs: []

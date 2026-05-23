@@ -20,13 +20,13 @@ Send a prompt to Claude and capture the response on stdout with no interactive T
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | Default command; message triggers print mode |
+| 1 | [`run`](../001_command.md#command--1-run) | Default command; message triggers print mode |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`[MESSAGE]`](../param/01_message.md) | Prompt text; presence triggers print mode |
-| 2 | [`--print`](../param/02_print.md) | Explicit print mode selector (alias) |
-| 3 | [`--strip-fences`](../param/26_strip_fences.md) | Remove outermost code fence from captured output |
-| 4 | [`--model`](../param/03_model.md) | Select model for the response |
+| 1 | [`[MESSAGE]`](../param/001_message.md) | Prompt text; presence triggers print mode |
+| 2 | [`--print`](../param/002_print.md) | Explicit print mode selector (alias) |
+| 3 | [`--strip-fences`](../param/026_strip_fences.md) | Remove outermost code fence from captured output |
+| 4 | [`--model`](../param/003_model.md) | Select model for the response |

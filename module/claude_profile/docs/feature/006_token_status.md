@@ -41,4 +41,4 @@
 | source | `src/token.rs` | `status()`, `status_with_threshold()`, `TokenStatus` enum |
 | source | `src/commands.rs` | `token_status_routine()` — CLI handler |
 | test | `tests/token_tests.rs` | Valid/ExpiringSoon/Expired classification tests |
-| doc | [command/token.md](../cli/command/token.md#command--7-tokenstatus) | CLI command specification |
+| doc | [command/005_token.md](../cli/command/005_token.md#command--7-tokenstatus) | CLI command specification |

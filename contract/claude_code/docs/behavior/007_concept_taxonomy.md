@@ -116,7 +116,7 @@ Two-layer architecture with all six pairwise cardinalities:
 | Access | `.projects` lists conversations grouped by project |
 | Isolation | Conversations from different projects never share sessions or entries |
 
-A Project is the organizational unit; Conversation is the interaction unit. A project with many `--new-session` invocations accumulates many conversations.
+A Project is the organizational unit; Conversation is the interaction unit. A project with many separate invocations (each `claude` call without `--continue`) accumulates many sessions; these sessions may represent many conversations or a single long conversation spanning multiple runs.
 
 #### Conversation ↔ Session
 
@@ -128,7 +128,7 @@ A Project is the organizational unit; Conversation is the interaction unit. A pr
 | Future implementation | 1:N — session chain detection groups multiple consecutive sessions into one Conversation |
 | User visibility | Users see Conversations; Sessions are the storage detail surfaced only at higher verbosity levels |
 
-The key insight: default Claude Code behavior (`claude` with no `--new-session`) appends to the **same** JSONL file — one session, one growing conversation. When `--new-session` is used or a new run creates a separate file, two sessions may represent the same logical conversation continued across runs. The Conversation Chain algorithm (task 021) detects and groups these.
+The key insight: when `--continue` / `-c` is passed, `claude` appends to the **same** JSONL file — one session, one growing conversation. When a new session starts (invocation without `--continue`, or via `--new-session` in the `clr` wrapper), a new JSONL file is created. Two consecutive sessions with no `--continue` link may represent the same logical conversation continued across runs. The Conversation Chain algorithm (task 021) detects and groups these.
 
 #### Session ↔ Entry
 

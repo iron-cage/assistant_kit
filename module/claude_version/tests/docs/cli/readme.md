@@ -16,6 +16,7 @@
 | `command/` | Integration test cases per command |
 | `param/` | Edge case tests per parameter |
 | `param_group/` | Interaction tests per parameter group |
+| `procedure.md` | Workflow for creating and updating CLI test tiers |
 
 ### Overview
 
@@ -32,32 +33,32 @@
 - [Parameter Group Tests](param_group/) — Interaction tests per group
 
 ### Commands
-- [`.help`](command/01_help.md)
-- [`.status`](command/02_status.md)
-- [`.version.show`](command/03_version_show.md)
-- [`.version.install`](command/04_version_install.md)
-- [`.version.guard`](command/05_version_guard.md)
-- [`.version.list`](command/06_version_list.md)
-- [`.processes`](command/07_processes.md)
-- [`.processes.kill`](command/08_processes_kill.md)
-- [`.settings.show`](command/09_settings_show.md)
-- [`.settings.get`](command/10_settings_get.md)
-- [`.settings.set`](command/11_settings_set.md)
-- [`.version.history`](command/12_version_history.md)
+- [`.help`](command/001_help.md)
+- [`.status`](command/002_status.md)
+- [`.version.show`](command/003_version_show.md)
+- [`.version.install`](command/004_version_install.md)
+- [`.version.guard`](command/005_version_guard.md)
+- [`.version.list`](command/006_version_list.md)
+- [`.processes`](command/007_processes.md)
+- [`.processes.kill`](command/008_processes_kill.md)
+- [`.settings.show`](command/009_settings_show.md)
+- [`.settings.get`](command/010_settings_get.md)
+- [`.settings.set`](command/011_settings_set.md)
+- [`.version.history`](command/012_version_history.md)
 
 ### Parameters
-- [`version::`](param/01_version.md)
-- [`dry::`](param/02_dry.md)
-- [`force::`](param/03_force.md)
-- [`v::` / `verbosity::`](param/04_verbosity.md)
-- [`format::`](param/05_format.md)
-- [`key::`](param/06_key.md)
-- [`value::`](param/07_value.md)
-- [`interval::`](param/08_interval.md)
-- [`count::`](param/09_count.md)
-- [`.help`](param/10_help_param.md)
+- [`version::`](param/001_version.md)
+- [`dry::`](param/002_dry.md)
+- [`force::`](param/003_force.md)
+- [`v::` / `verbosity::`](param/004_verbosity.md)
+- [`format::`](param/005_format.md)
+- [`key::`](param/006_key.md)
+- [`value::`](param/007_value.md)
+- [`interval::`](param/008_interval.md)
+- [`count::`](param/009_count.md)
+- [`.help`](param/010_help_param.md)
 
 ### Parameter Groups
-- [Output Control](param_group/01_output_control.md)
-- [Execution Control](param_group/02_execution_control.md)
-- [Settings Identity](param_group/03_settings_identity.md)
+- [Output Control](param_group/001_output_control.md)
+- [Execution Control](param_group/002_execution_control.md)
+- [Settings Identity](param_group/003_settings_identity.md)

@@ -20,16 +20,16 @@ Pipe a file's content as stdin to the claude subprocess using a single `clr` inv
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | `--file` applies to the `run` subcommand |
+| 1 | [`run`](../001_command.md#command--1-run) | `--file` applies to the `run` subcommand |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--file`](../param/25_file.md) | Path to file piped as subprocess stdin |
-| 2 | [`[MESSAGE]`](../param/01_message.md) | Prompt sent alongside the file content |
-| 3 | [`--print`](../param/02_print.md) | Print mode (typically used with file input) |
-| 4 | [`--strip-fences`](../param/26_strip_fences.md) | Strip output fences after file-driven generation |
+| 1 | [`--file`](../param/025_file.md) | Path to file piped as subprocess stdin |
+| 2 | [`[MESSAGE]`](../param/001_message.md) | Prompt sent alongside the file content |
+| 3 | [`--print`](../param/002_print.md) | Print mode (typically used with file input) |
+| 4 | [`--strip-fences`](../param/026_strip_fences.md) | Strip output fences after file-driven generation |
 
 ### Related User Stories
 

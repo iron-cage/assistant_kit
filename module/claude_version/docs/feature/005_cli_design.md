@@ -5,7 +5,7 @@
 - **Purpose**: Document the overall CLI architecture of claude_version including command routing, parameter parsing, exit codes, and help output.
 - **Responsibility**: Describe the 5-phase unilang pipeline, parameter validation rules, exit code semantics, and help listing behavior.
 - **In Scope**: Command syntax (`.command param::value`), 5-phase pipeline, parameter validation, exit codes 0/1/2, help listing, adapter layer.
-- **Out of Scope**: Individual command behavior (→ other feature/ instances), version lock pattern (→ `pattern/`), type inference (→ `algorithm/`).
+- **Out of Scope**: Individual command behavior (→ other feature/ instances), version lock pattern (→ `pattern/`), type inference (→ `algorithm/`), CLI reference surface — syntax tables, type definitions, parameter defaults (→ `../cli/`).
 
 ### Design
 

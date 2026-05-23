@@ -1,6 +1,6 @@
 //! Behavioral contract tests for the external `claude` binary.
 //!
-//! Validates B1–B18 from `docs/behavior/001_session_behaviors.md`.
+//! Validates B1–B24 (plus B16h) from `docs/behavior/001_session_behaviors.md`.
 //! Tests read real `~/.claude/` storage and invoke `claude --help` / `--version`.
 //!
 //! These are not unit tests of any workspace crate. They verify that the

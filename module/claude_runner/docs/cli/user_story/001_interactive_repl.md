@@ -19,12 +19,12 @@ Open the Claude Code REPL with automatic session continuation so the conversatio
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | Default command; no message triggers REPL mode |
+| 1 | [`run`](../001_command.md#command--1-run) | Default command; no message triggers REPL mode |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--dir`](../param/08_dir.md) | Set working directory for the REPL session |
-| 2 | [`--new-session`](../param/07_new_session.md) | Discard prior context; start fresh |
-| 3 | [`--session-dir`](../param/10_session_dir.md) | Override session storage location |
+| 1 | [`--dir`](../param/008_dir.md) | Set working directory for the REPL session |
+| 2 | [`--new-session`](../param/007_new_session.md) | Discard prior context; start fresh |
+| 3 | [`--session-dir`](../param/010_session_dir.md) | Override session storage location |

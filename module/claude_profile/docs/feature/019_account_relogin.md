@@ -50,5 +50,5 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 | source | `src/account.rs` | `switch_account()`, `save()` — credential rotation and store write-back |
 | invariant | [invariant/006_param_defaults.md](../invariant/006_param_defaults.md) | Governing principle: `name::` defaults to active account when omitted |
 | doc | [017_token_refresh.md](017_token_refresh.md) | Automated refresh path — use `.account.relogin` when `refresh::1` returns `credentials=None` |
-| doc | [command/account.md](../cli/command/account.md#command--12-accountrelogin) | CLI command specification |
-| doc | [tests/docs/cli/command/12_account_relogin.md](../../tests/docs/cli/command/12_account_relogin.md) | Integration test plan |
+| doc | [command/001_account.md](../cli/command/001_account.md#command--12-accountrelogin) | CLI command specification |
+| doc | [tests/docs/cli/command/012_account_relogin.md](../../tests/docs/cli/command/012_account_relogin.md) | Integration test plan |

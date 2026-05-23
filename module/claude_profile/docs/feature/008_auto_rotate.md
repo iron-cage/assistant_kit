@@ -44,7 +44,7 @@
 | source | `src/account.rs` | `auto_rotate()` implementation |
 | source | `src/commands.rs` | `account_rotate_routine()` — CLI handler for `.account.rotate` |
 | test | `tests/account_tests.rs::auto_rotate_*` | Rotation selection and switch tests |
-| test | `tests/docs/cli/command/13_account_rotate.md` | CLI integration test spec (IT-1..IT-8) |
-| doc | [cli/command/account.md#command--13-accountrotate](../cli/command/account.md#command--13-accountrotate) | CLI command specification |
+| test | `tests/docs/cli/command/013_account_rotate.md` | CLI integration test spec (IT-1..IT-8) |
+| doc | [cli/command/001_account.md#command--13-accountrotate](../cli/command/001_account.md#command--13-accountrotate) | CLI command specification |
 | doc | [004_account_use.md](004_account_use.md) | Switch primitive used by auto_rotate |
 | doc | [006_token_status.md](006_token_status.md) | Token detection to trigger rotation |

@@ -42,4 +42,4 @@
 | source | `src/account.rs` | `delete()` — validate, remove file, clear `_active` if active |
 | source | `src/commands.rs` | `account_delete_routine()` — CLI handler |
 | test | `tests/account_tests.rs::delete_active_account_succeeds` | Verifies active account deletion clears `_active` |
-| doc | [command/account.md](../cli/command/account.md#command--6-accountdelete) | CLI command specification |
+| doc | [command/001_account.md](../cli/command/001_account.md#command--6-accountdelete) | CLI command specification |

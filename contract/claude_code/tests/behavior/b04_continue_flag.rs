@@ -1,5 +1,5 @@
 #![ allow( clippy::doc_markdown ) ]
-//! B4: `-c` / `--continue` is an explicit alias for the default continuation behavior.
+//! B4: `-c` / `--continue` is the explicit opt-in for resuming the most recent session; continuation is NOT the binary default — a fresh `claude` invocation always starts a new session.
 //!
 //! Validates via `claude --help` that `-c` / `--continue` exists and is described
 //! with continuation semantics.

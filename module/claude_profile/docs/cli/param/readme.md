@@ -4,30 +4,30 @@ All `clp` CLI parameters with type, default, and command coverage.
 
 | File | Responsibility |
 |------|----------------|
-| [01_name.md](01_name.md) | `name::` — target account identifier |
-| [02_format.md](02_format.md) | `format::` / `fmt::` — output serialization format |
-| [03_threshold.md](03_threshold.md) | `threshold::` — token expiry warning boundary |
-| [04_dry.md](04_dry.md) | `dry::` — dry-run simulation mode |
-| [05_account.md](05_account.md) | `account::` — account name field toggle |
-| [06_sub.md](06_sub.md) | `sub::` — subscription type field toggle |
-| [07_tier.md](07_tier.md) | `tier::` — rate-limit tier field toggle |
-| [08_token.md](08_token.md) | `token::` — token status field toggle |
-| [09_expires.md](09_expires.md) | `expires::` — token expiry field toggle |
-| [10_email.md](10_email.md) | `email::` — email address field toggle |
-| [11_file.md](11_file.md) | `file::` — credentials file path field toggle |
-| [12_saved.md](12_saved.md) | `saved::` — saved account count field toggle |
-| [13_active.md](13_active.md) | `active::` — active/inactive status field toggle |
-| [14_display_name.md](14_display_name.md) | `display_name::` — display name field toggle |
-| [15_role.md](15_role.md) | `role::` — organisation role field toggle |
-| [16_billing.md](16_billing.md) | `billing::` — billing type field toggle |
-| [17_model.md](17_model.md) | `model::` — active model field toggle |
-| [18_current.md](18_current.md) | `current::` — current live account field toggle |
-| [19_refresh.md](19_refresh.md) | `refresh::` — expired token auto-refresh on auth error |
-| [20_live.md](20_live.md) | `live::` — continuous quota refresh loop |
-| [21_interval.md](21_interval.md) | `interval::` — live mode cycle duration |
-| [22_jitter.md](22_jitter.md) | `jitter::` — live mode cycle timing variance |
-| [23_trace.md](23_trace.md) | `trace::` — diagnostic trace output to stderr |
-| [24_field.md](24_field.md) | `field::` — single-path output selector |
+| [001_name.md](001_name.md) | `name::` — target account identifier |
+| [002_format.md](002_format.md) | `format::` / `fmt::` — output serialization format |
+| [003_threshold.md](003_threshold.md) | `threshold::` — token expiry warning boundary |
+| [004_dry.md](004_dry.md) | `dry::` — dry-run simulation mode |
+| [005_account.md](005_account.md) | `account::` — account name field toggle |
+| [006_sub.md](006_sub.md) | `sub::` — subscription type field toggle |
+| [007_tier.md](007_tier.md) | `tier::` — rate-limit tier field toggle |
+| [008_token.md](008_token.md) | `token::` — token status field toggle |
+| [009_expires.md](009_expires.md) | `expires::` — token expiry field toggle |
+| [010_email.md](010_email.md) | `email::` — email address field toggle |
+| [011_file.md](011_file.md) | `file::` — credentials file path field toggle |
+| [012_saved.md](012_saved.md) | `saved::` — saved account count field toggle |
+| [013_active.md](013_active.md) | `active::` — active/inactive status field toggle |
+| [014_display_name.md](014_display_name.md) | `display_name::` — display name field toggle |
+| [015_role.md](015_role.md) | `role::` — organisation role field toggle |
+| [016_billing.md](016_billing.md) | `billing::` — billing type field toggle |
+| [017_model.md](017_model.md) | `model::` — active model field toggle |
+| [018_current.md](018_current.md) | `current::` — current live account field toggle |
+| [019_refresh.md](019_refresh.md) | `refresh::` — expired token auto-refresh on auth error |
+| [020_live.md](020_live.md) | `live::` — continuous quota refresh loop |
+| [021_interval.md](021_interval.md) | `interval::` — live mode cycle duration |
+| [022_jitter.md](022_jitter.md) | `jitter::` — live mode cycle timing variance |
+| [023_trace.md](023_trace.md) | `trace::` — diagnostic trace output to stderr |
+| [024_field.md](024_field.md) | `field::` — single-path output selector |
 
 **Total:** 24 parameters
 

@@ -21,17 +21,17 @@ Print diagnostic details to stderr — like shell `set -x` — then execute norm
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | `--trace` shows env vars + assembled claude command |
-| 2 | [`isolated`](../command.md#command--2-isolated) | `--trace` shows credential isolation details |
-| 3 | [`refresh`](../command.md#command--3-refresh) | `--trace` shows refresh call details |
+| 1 | [`run`](../001_command.md#command--1-run) | `--trace` shows env vars + assembled claude command |
+| 2 | [`isolated`](../001_command.md#command--2-isolated) | `--trace` shows credential isolation details |
+| 3 | [`refresh`](../001_command.md#command--3-refresh) | `--trace` shows refresh call details |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--trace`](../param/13_trace.md) | Print env+command to stderr then execute |
-| 2 | [`--dry-run`](../param/11_dry_run.md) | Related: preview only, no execution |
-| 3 | [`--verbosity`](../param/12_verbosity.md) | Level 4 also shows preview but via different path |
+| 1 | [`--trace`](../param/013_trace.md) | Print env+command to stderr then execute |
+| 2 | [`--dry-run`](../param/011_dry_run.md) | Related: preview only, no execution |
+| 3 | [`--verbosity`](../param/012_verbosity.md) | Level 4 also shows preview but via different path |
 
 ### Related User Stories
 

@@ -119,7 +119,7 @@ Config keys read by `claude` at startup from `settings.json`. No CLI flag or env
 | `fileCheckpointingEnabled` | G | bool | `false` | Save a checkpoint copy of each file before editing |
 | `remoteControlAtStartup` | G | bool | `false` | Open remote-control channel on startup for IDE/orchestrator connections |
 
-See [`params/readme.md`](params/readme.md) for the complete parameter table including CLI flags and env vars. Precedence: CLI arg > env var > settings config.
+See [`../params/readme.md`](../params/readme.md) for the complete parameter table including CLI flags and env vars. Precedence: CLI arg > env var > settings config.
 
 ### Account Active Marker
 
@@ -130,7 +130,7 @@ See [`params/readme.md`](params/readme.md) for the complete parameter table incl
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [`003_filesystem_layout.md`](003_filesystem_layout.md) | Path locations and directory tree |
-| doc | [`params/readme.md`](params/readme.md) | Full parameter table including config keys, CLI flags, and env vars |
+| doc | [`../params/readme.md`](../params/readme.md) | Full parameter table including config keys, CLI flags, and env vars |
 | doc | [`../../../../module/claude_version/docs/feature/003_settings_management.md`](../../../../module/claude_version/docs/feature/003_settings_management.md) | Settings JSON, nested preservation feature doc |
 | doc | [`../../../../module/claude_version/docs/pattern/001_version_lock.md`](../../../../module/claude_version/docs/pattern/001_version_lock.md) | Version lock pattern |
 | doc | [`../../../../module/claude_version/docs/feature/001_version_management.md`](../../../../module/claude_version/docs/feature/001_version_management.md) | Preference persistence feature doc |

@@ -20,15 +20,15 @@ Control the level of runner diagnostic output to understand what `clr` is doing:
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | `--verbosity` gates runner diagnostic output |
+| 1 | [`run`](../001_command.md#command--1-run) | `--verbosity` gates runner diagnostic output |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--verbosity`](../param/12_verbosity.md) | Runner output gate level (0–5) |
-| 2 | [`--dry-run`](../param/11_dry_run.md) | Always emits preview regardless of verbosity |
-| 3 | [`--trace`](../param/13_trace.md) | Independent of verbosity: always prints env+cmd |
+| 1 | [`--verbosity`](../param/012_verbosity.md) | Runner output gate level (0–5) |
+| 2 | [`--dry-run`](../param/011_dry_run.md) | Always emits preview regardless of verbosity |
+| 3 | [`--trace`](../param/013_trace.md) | Independent of verbosity: always prints env+cmd |
 
 ### Related User Stories
 

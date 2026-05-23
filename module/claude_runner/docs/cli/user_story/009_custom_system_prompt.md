@@ -19,11 +19,11 @@ Replace or extend the default system prompt to shape Claude's behavior for domai
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | Both system prompt flags apply to `run` |
+| 1 | [`run`](../001_command.md#command--1-run) | Both system prompt flags apply to `run` |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--system-prompt`](../param/15_system_prompt.md) | Full replacement of the system prompt |
-| 2 | [`--append-system-prompt`](../param/16_append_system_prompt.md) | Additive extension of the default |
+| 1 | [`--system-prompt`](../param/015_system_prompt.md) | Full replacement of the system prompt |
+| 2 | [`--append-system-prompt`](../param/016_append_system_prompt.md) | Additive extension of the default |

@@ -20,14 +20,14 @@ clr [OPTIONS] [MESSAGE]
 | File | L1 | L2 | L3 | L4 | L5 | Status |
 |------|----|----|----|----|----|----|
 | readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| command.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| 001_command.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param/readme.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| type.md | ✅ | ➖ | ➖ | ➖ | ➖ | Partial |
-| param_group.md | ✅ | ➖ | ➖ | ➖ | ➖ | Partial |
+| 002_dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
+| 005_type.md | ✅ | ➖ | ➖ | ➖ | ➖ | Partial |
+| 004_param_group.md | ✅ | ➖ | ➖ | ➖ | ➖ | Partial |
 | user_story/readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | user_story/ (14 instances) | ✅ | ✅ | ➖ | ➖ | ➖ | Partial |
-| env_param.md | ✅ | ➖ | ✅ | ➖ | ➖ | Complete |
+| 003_env_param.md | ✅ | ➖ | ✅ | ➖ | ➖ | Complete |
 | config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A |
 | format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A |
 | tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
@@ -43,16 +43,16 @@ clr [OPTIONS] [MESSAGE]
 
 ### Navigation
 
-- [Commands](command.md) — command reference (4 commands)
+- [Commands](001_command.md) — command reference (4 commands)
 - [Parameters](param/readme.md) — flag and argument reference (27 parameters)
-- [Types](type.md) — semantic type definitions (12 types)
-- [Parameter Groups](param_group.md) — logical parameter groupings (4 groups)
-- [Dictionary](dictionary.md) — domain vocabulary
+- [Types](005_type.md) — semantic type definitions (12 types)
+- [Parameter Groups](004_param_group.md) — logical parameter groupings (4 groups)
+- [Dictionary](002_dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (14 user stories)
-- [Env Parameters](env_param.md) — input and subprocess environment variables (29 variables)
+- [Env Parameters](003_env_param.md) — input and subprocess environment variables (29 variables)
 
 ### See Also
 
 - [feature/001_runner_tool.md](../feature/001_runner_tool.md) — architecture, separation of concerns, constraints
-- [design_decisions.md](../design_decisions.md) — CLI redesign rationale
+- [001_design_decisions.md](../001_design_decisions.md) — CLI redesign rationale
 - [tests/docs/cli/](../../tests/docs/cli/readme.md) — test case planning (commands, params, types, groups, env params)

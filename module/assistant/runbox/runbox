@@ -8,6 +8,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 _find_runbox_run() {
   local dir="$1"
   while [[ "$dir" != "/" ]]; do
+    [[ -x "$dir/runbox-run" ]]        && echo "$dir/runbox-run"        && return
     [[ -x "$dir/runbox/runbox-run" ]] && echo "$dir/runbox/runbox-run" && return
     dir="$( dirname "$dir" )"
   done

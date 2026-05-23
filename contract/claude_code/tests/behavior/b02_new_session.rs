@@ -1,8 +1,10 @@
 #![ allow( clippy::doc_markdown ) ]
-//! B2: `--new-session` creates a new `.jsonl` file; does not append to existing.
+//! B2: each `claude` invocation creates a separate `.jsonl` file; does not append to existing.
 //!
-//! Validates that at least one real project has 2+ non-agent `.jsonl` session files,
-//! confirming that Claude Code creates separate files rather than appending.
+//! Note: `--new-session` is a `clr` wrapper flag and is absent from the `claude` binary's
+//! `--help` output. The binary defaults to a new session on every invocation; `--continue`
+//! is the explicit opt-in to resume. This test validates the storage artifact: separate
+//! `.jsonl` files per session confirm that Claude Code never merges sessions into one file.
 
 /// B2: at least one project has multiple session files (evidence of separate creation).
 ///

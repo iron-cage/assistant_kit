@@ -49,7 +49,7 @@
 
 ### Related Documentation
 
-- [commands.md](../../../../docs/cli/commands.md) — Command specifications
-- [params.md](../../../../docs/cli/params.md) — Parameter specifications
-- [parameter_groups.md](../../../../docs/cli/parameter_groups.md) — Group specifications
-- [types.md](../../../../docs/cli/types.md) — Type validation rules (informs edge case design)
+- [001_commands.md](../../../../docs/cli/001_commands.md) — Command specifications
+- [004_params.md](../../../../docs/cli/004_params.md) — Parameter specifications
+- [003_parameter_groups.md](../../../../docs/cli/003_parameter_groups.md) — Group specifications
+- [005_types.md](../../../../docs/cli/005_types.md) — Type validation rules (informs edge case design)

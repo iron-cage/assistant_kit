@@ -1,6 +1,6 @@
 //! Behavior hypothesis invalidation tests.
 //!
-//! Each file covers exactly one behavior from `docs/behavior/001_session_behaviors.md` (B1..B18).
+//! Each file covers exactly one behavior from `docs/behavior/001_session_behaviors.md` (B1..B24).
 //! Tests inspect real `~/.claude/` storage to verify Claude Code's actual output.
 //! If Claude Code changes behavior, the tests go RED.
 //!
@@ -8,10 +8,10 @@
 //!
 //! | File | Behavior | Category |
 //! |------|----------|----------|
-//! | `b01_default_continues.rs` | B1 — default invocation continues most recent session | Continuation |
-//! | `b02_new_session.rs` | B2 — `--new-session` creates separate `.jsonl` | Continuation |
+//! | `b01_default_continues.rs` | B1 — binary defaults to new session; wrapper passes -c by default; resumable sessions must exist | Continuation |
+//! | `b02_new_session.rs` | B2 — each invocation without `--continue` creates a separate `.jsonl` | Storage |
 //! | `b03_print_flag.rs` | B3 — `-p` is output mode, not session flag | Flags |
-//! | `b04_continue_flag.rs` | B4 — `-c` aliases default continuation | Flags |
+//! | `b04_continue_flag.rs` | B4 — `-c` / `--continue` is explicit opt-in for resuming most recent session (not the binary default) | Flags |
 //! | `b05_mtime_selection.rs` | B5 — current session selected by mtime | Selection |
 //! | `b06_session_accumulation.rs` | B6 — sessions accumulate as separate files | Storage |
 //! | `b07_agent_sessions.rs` | B7 — agent sessions are `agent-*.jsonl` siblings | Storage |
@@ -26,6 +26,13 @@
 //! | `b16_tools_disable.rs` | B16 — `--tools ""` disables tool invocation; definitions may or may not be stripped (H1 vs H2 ❓) | Flags |
 //! | `b17_parentuuid_self_contained.rs` | B17 — `parentUuid` orphaned-link rate < 1%; compaction-boundary exception documented | Entries |
 //! | `b18_no_cross_session_links.rs` | B18 — first conversation entry of every session has `parentUuid: null` | Entries |
+//! | `b19_resume_flag.rs` | B19 — `--resume`/`-r` resumes specific session by UUID | Continuation |
+//! | `b20_session_id_flag.rs` | B20 — `--session-id` assigns deterministic UUID to session | Session |
+//! | `b21_fork_session_flag.rs` | B21 — `--fork-session` branches from prior checkpoint without modifying original | Continuation |
+//! | `b22_no_session_persistence_flag.rs` | B22 — `--no-session-persistence` disables disk writes; no `.jsonl` created | Storage |
+//! | `b23_session_dir_override.rs` | B23 — `CLAUDE_CODE_SESSION_DIR` redirects session storage directory | Storage |
+//! | `b24_from_pr_flag.rs` | B24 — `--from-pr` resumes session linked to a GitHub pull request | Continuation |
+//! | `b16h_tools_system_prompt.rs` | B16h — tool definitions stay in system prompt even when `--tools ""` disables invocation (❓ live API `lim_it` test) | Flags |
 
 mod b01_default_continues;
 mod b02_new_session;
@@ -45,6 +52,13 @@ mod b15_agent_slug_field;
 mod b16_tools_disable;
 mod b17_parentuuid_self_contained;
 mod b18_no_cross_session_links;
+mod b19_resume_flag;
+mod b20_session_id_flag;
+mod b21_fork_session_flag;
+mod b22_no_session_persistence_flag;
+mod b23_session_dir_override;
+mod b24_from_pr_flag;
+mod b16h_tools_system_prompt;
 
 // ---------------------------------------------------------------------------
 // Shared helpers for behavior tests

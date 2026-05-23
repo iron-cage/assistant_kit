@@ -20,15 +20,15 @@ Refresh the OAuth credentials in a given file — triggering the `claude` binary
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`refresh`](../command.md#command--3-refresh) | Dedicated subcommand for credential refresh |
+| 1 | [`refresh`](../001_command.md#command--3-refresh) | Dedicated subcommand for credential refresh |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--creds`](../param/19_creds.md) | Path to credentials JSON file (required) |
-| 2 | [`--timeout`](../param/20_timeout.md) | Max seconds to wait (default: 45 for refresh) |
-| 3 | [`--trace`](../param/13_trace.md) | Print underlying call details to stderr |
+| 1 | [`--creds`](../param/019_creds.md) | Path to credentials JSON file (required) |
+| 2 | [`--timeout`](../param/020_timeout.md) | Max seconds to wait (default: 45 for refresh) |
+| 3 | [`--trace`](../param/013_trace.md) | Print underlying call details to stderr |
 
 ### Related User Stories
 

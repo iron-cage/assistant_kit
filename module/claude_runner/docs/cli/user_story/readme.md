@@ -5,7 +5,7 @@
 - **Purpose**: Document canonical user goals for the `clr` CLI.
 - **Responsibility**: Enumerate the user intents that drive `clr` design: what users want to accomplish and when the feature is considered done.
 - **In Scope**: All meaningful usage patterns addressable by a single `clr` invocation or mode.
-- **Out of Scope**: Implementation internals (→ `feature/001_runner_tool.md`), parameter semantics (→ `cli/param/`), type constraints (→ `cli/type.md`).
+- **Out of Scope**: Implementation internals (→ `feature/001_runner_tool.md`), parameter semantics (→ `cli/param/`), type constraints (→ `cli/005_type.md`).
 
 ### Responsibility Table
 

@@ -13,8 +13,8 @@
 | `cli/` | CLI command, parameter, and type specifications |
 | `feature/` | CLI tool functional design and scope |
 | `operation/` | Operational procedures for users and maintainers |
-| `advanced_topics.md` | Agent sessions, command system, advanced search |
-| `cli_design.md` | CLI design decisions (superseded by `cli/`) |
+| `001_001_advanced_topics.md` | Agent sessions, command system, advanced search |
+| `002_002_cli_design.md` | CLI design decisions (superseded by `cli/`) |
 | `doc_graph.yml` | Cross-reference graph for navigability analysis |
 
 ### Overview
@@ -41,11 +41,11 @@ Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.m
 **Complete CLI reference** for all claude_storage commands, parameters, and types.
 
 **Contents**:
-- [commands.md](cli/commands.md) — All 11 commands with syntax, parameters, examples
-- [params.md](cli/params.md) — All parameters with types, validation, bidirectional cross-refs
-- [types.md](cli/types.md) — Semantic type system with validation rules
-- [dictionary.md](cli/dictionary.md) — Domain vocabulary (project, conversation, session, entry, scope, etc.)
-- [parameter_groups.md](cli/parameter_groups.md) — Shared parameter groups (Output Control, Project Scope, Session Filter, etc.)
+- [001_commands.md](cli/001_commands.md) — All 11 commands with syntax, parameters, examples
+- [004_params.md](cli/004_params.md) — All parameters with types, validation, bidirectional cross-refs
+- [005_types.md](cli/005_types.md) — Semantic type system with validation rules
+- [002_dictionary.md](cli/002_dictionary.md) — Domain vocabulary (project, conversation, session, entry, scope, etc.)
+- [003_parameter_groups.md](cli/003_parameter_groups.md) — Shared parameter groups (Output Control, Project Scope, Session Filter, etc.)
 
 **Use this when**:
 - Using or implementing CLI commands
@@ -57,7 +57,7 @@ Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.m
 
 ### Advanced Topics
 
-#### [Advanced Topics](advanced_topics.md)
+#### [Advanced Topics](001_001_001_advanced_topics.md)
 
 **Deep dive into advanced Claude Code storage features**.
 
@@ -94,8 +94,8 @@ Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.m
 ### Key Files to Read First
 
 1. **`../../../contract/claude_code/docs/behavior/`** - Claude Code storage architecture, file formats, JSONL schema
-2. **`advanced_topics.md`** - Understand agent sessions, commands, history, search
-3. **`cli/commands.md`** - Understand CLI commands and parameters
+2. **`001_001_advanced_topics.md`** - Understand agent sessions, commands, history, search
+3. **`cli/001_commands.md`** - Understand CLI commands and parameters
 5. **`feature/001_cli_tool.md`** - Understand overall crate architecture and scope
 6. **`../readme.md`** - User-facing documentation
 

@@ -147,5 +147,5 @@ Valid: 2 / 3   →  Next: i3@wbox.pro  (100% session left, token expires in 5h 0
 | dep | `data_fmt` | Table rendering for all output |
 | test | `tests/cli/usage_test.rs` | All-accounts quota table and JSON output tests |
 | doc | [013_account_limits.md](013_account_limits.md) | `.account.limits` command for single-account quota |
-| doc | [command/usage.md](../cli/command/usage.md#command--9-usage) | CLI command specification |
+| doc | [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | CLI command specification |
 | doc | [016_current_account_awareness.md](016_current_account_awareness.md) | Shared current-account detection algorithm; `*` flag semantics; JSON field renaming |

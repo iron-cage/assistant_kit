@@ -19,13 +19,13 @@ Run Claude scoped to a specific project directory and session storage location s
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | Both `--dir` and `--session-dir` apply to `run` |
+| 1 | [`run`](../001_command.md#command--1-run) | Both `--dir` and `--session-dir` apply to `run` |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--dir`](../param/08_dir.md) | Set subprocess working directory |
-| 2 | [`--session-dir`](../param/10_session_dir.md) | Set project-specific session storage path |
-| 3 | [`--new-session`](../param/07_new_session.md) | Discard prior session at that location |
-| 4 | [`--interactive`](../param/06_interactive.md) | Continue interactively in the project directory |
+| 1 | [`--dir`](../param/008_dir.md) | Set subprocess working directory |
+| 2 | [`--session-dir`](../param/010_session_dir.md) | Set project-specific session storage path |
+| 3 | [`--new-session`](../param/007_new_session.md) | Discard prior session at that location |
+| 4 | [`--interactive`](../param/006_interactive.md) | Continue interactively in the project directory |

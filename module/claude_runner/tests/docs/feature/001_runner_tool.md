@@ -43,7 +43,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --dry-run "Fix bug"`
 - **Then:** Stdout contains at minimum two sections: one showing environment variables set for the subprocess, and one showing the assembled `claude ...` command line
 - **Exit:** 0
-- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [--dry-run](../../../../docs/cli/param/11_dry_run.md)
+- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [--dry-run](../../../../docs/cli/param/011_dry_run.md)
 
 ---
 
@@ -63,7 +63,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --trace --dry-run "Fix bug"`
 - **Then:** Stdout contains the dry-run command preview; stderr is EMPTY (`handle_dry_run` returns before the trace output block fires)
 - **Exit:** 0
-- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [--trace](../../../../docs/cli/param/13_trace.md)
+- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [--trace](../../../../docs/cli/param/013_trace.md)
 
 ---
 
@@ -83,4 +83,4 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **When:** `clr --dry-run "Fix bug"`
 - **Then:** Assembled command contains `--print`; print mode is the default when a message is supplied
 - **Exit:** 0
-- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [--print](../../../../docs/cli/param/02_print.md)
+- **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [--print](../../../../docs/cli/param/002_print.md)

@@ -19,15 +19,15 @@ Inspect the fully assembled `claude` subprocess command — including all defaul
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | `--dry-run` previews the `run` invocation |
+| 1 | [`run`](../001_command.md#command--1-run) | `--dry-run` previews the `run` invocation |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--dry-run`](../param/11_dry_run.md) | Gate: preview without execution |
-| 2 | [`--trace`](../param/13_trace.md) | Related: print to stderr then execute (not dry) |
-| 3 | [`--verbosity`](../param/12_verbosity.md) | Level 4+ also shows preview before execution |
+| 1 | [`--dry-run`](../param/011_dry_run.md) | Gate: preview without execution |
+| 2 | [`--trace`](../param/013_trace.md) | Related: print to stderr then execute (not dry) |
+| 3 | [`--verbosity`](../param/012_verbosity.md) | Level 4+ also shows preview before execution |
 
 ### Related User Stories
 

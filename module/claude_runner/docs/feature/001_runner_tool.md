@@ -15,7 +15,7 @@ claude_runner serves two distinct consumers from one crate:
 
 **CLI binary (`clr`):** The `clr` binary translates `--flag value` syntax to `ClaudeCommand` builder calls and executes Claude Code via `claude_runner_core`. It acts as the user-facing runner for both interactive and non-interactive use.
 
-**Execution modes:** See [command.md](../cli/command.md) for the full invocation mode table.
+**Execution modes:** See [001_command.md](../cli/001_command.md) for the full invocation mode table.
 
 **Default flag injection:** See [invariant/001_default_flags.md](../invariant/001_default_flags.md) for the complete default injection rules and opt-out mechanisms.
 

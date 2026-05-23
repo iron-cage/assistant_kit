@@ -94,6 +94,7 @@ mod cli
   {
     pub( super ) creds_path       : String,
     pub( super ) timeout_secs     : u64,
+    pub( super ) trace            : bool,
     pub( super ) message          : Option< String >,
     pub( super ) passthrough_args : Vec< String >,
   }
@@ -104,10 +105,14 @@ mod cli
     println!();
     println!( "USAGE:" );
     println!( "  clr [OPTIONS] [MESSAGE]" );
-    println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [MESSAGE]" );
+    println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [--trace] [MESSAGE]" );
+    println!( "  clr refresh  --creds <FILE> [--timeout <SECS>] [--trace]" );
+    println!( "  clr help" );
     println!();
     println!( "COMMANDS:" );
     println!( "  isolated                           Run Claude with credential-isolated temp HOME" );
+    println!( "  refresh                            Refresh OAuth credentials without running a task" );
+    println!( "  help                               Print usage information and exit" );
     println!();
     println!( "ARGUMENTS:" );
     println!( "  [MESSAGE]                          Prompt message for Claude" );
@@ -139,9 +144,10 @@ mod cli
     println!( "  --verbosity <0-5>                  Runner output verbosity level (default: 3)" );
     println!( "  -h, --help                         Show this help" );
     println!();
-    println!( "ISOLATED OPTIONS:" );
-    println!( "  --creds <FILE>                     Credentials JSON file (required for isolated)" );
-    println!( "  --timeout <SECS>                   Max seconds to wait for subprocess (default: 30)" );
+    println!( "CREDENTIAL OPTIONS (isolated, refresh):" );
+    println!( "  --creds <FILE>                     Credentials JSON file (required)" );
+    println!( "  --timeout <SECS>                   Max seconds to wait (default: 30 isolated, 45 refresh)" );
+    println!( "  --trace                            Print creds path, timeout, and claude invocation to stderr" );
   }
 
   /// Consume the next argv element as a flag's value.
@@ -203,14 +209,16 @@ mod cli
     println!( "ARGUMENTS:" );
     println!( "  [MESSAGE]                          Prompt message for Claude" );
     println!();
-    println!( "ISOLATED OPTIONS:" );
+    println!( "CREDENTIAL OPTIONS:" );
     println!( "  --creds <FILE>                     Credentials JSON file (required)" );
     println!( "  --timeout <SECS>                   Max seconds to wait for subprocess (default: 30)" );
+    println!( "  --trace                            Print underlying call details to stderr" );
     println!( "  -h, --help                         Show this help" );
     println!();
     println!( "EXIT CODES:" );
     println!( "  0    Success" );
     println!( "  1    Error (bad arguments, subprocess failure)" );
+    println!( "  2    Timeout — subprocess did not finish within --timeout seconds" );
     std::process::exit( 0 );
   }
 
@@ -223,6 +231,7 @@ mod cli
   {
     let mut creds_path       : Option< String > = None;
     let mut timeout_secs     : u64              = 30;
+    let mut trace            : bool             = false;
     let mut message_parts    : Vec< String >    = Vec::new();
     let mut passthrough_args : Vec< String >    = Vec::new();
     let mut i = 0;
@@ -246,6 +255,10 @@ mod cli
           let raw      = next_value( tokens, i + 1, "--timeout" )?;
           timeout_secs = parse_timeout( raw )?;
           i += 1;
+        }
+        "--trace" =>
+        {
+          trace = true;
         }
         // Fix(issue-isolated-help): parse_isolated_args fell through --help to the
         // starts_with('-') catch-all, returning Err("unknown option: --help") → exit 1.
@@ -271,7 +284,7 @@ mod cli
     // in run_cli() so that CLR_CREDS env var can supply the value before the check.
     let creds_path   = creds_path.unwrap_or_default();
     let message      = if message_parts.is_empty() { None } else { Some( message_parts.join( " " ) ) };
-    Ok( IsolatedArgs { creds_path, timeout_secs, message, passthrough_args } )
+    Ok( IsolatedArgs { creds_path, timeout_secs, trace, message, passthrough_args } )
   }
 
   /// Parse a value-consuming flag (`--flag value` pair) into `parsed`.
@@ -564,6 +577,7 @@ mod cli
         if let Ok( secs ) = v.parse::< u64 >() { parsed.timeout_secs = secs; }
       }
     }
+    if !parsed.trace { parsed.trace = env_bool( "CLR_TRACE" ); }
   }
 
   /// Translate parsed CLI args into a `ClaudeCommand` builder.
@@ -687,6 +701,36 @@ mod cli
     println!( "{command}" );
   }
 
+  // Fix(issue-unknown-subcommand): Guard against typos/truncations of known subcommand names.
+  // Root cause: `run_cli()` dispatched subcommands by exact string match only — any
+  //   non-matching first token silently fell through to `parse_args()`.
+  // Pitfall: Bare string comparison only guards exact matches; typos pass silently
+  //   unless a prefix-match guard is also placed before the main argument parser.
+  pub( super ) fn guard_unknown_subcommand( tokens : &[ String ] )
+  {
+    const KNOWN : &[ &str ] = &[ "isolated", "refresh", "help" ];
+    if let Some( first ) = tokens.first()
+    {
+      let is_identifier = !first.starts_with( '-' )
+        && first.len() >= 4
+        && first.chars().all( | c | c.is_alphanumeric() || c == '_' || c == '-' );
+      if is_identifier
+      {
+        for &sub in KNOWN
+        {
+          if first != sub
+            && ( sub.starts_with( first.as_str() ) || first.starts_with( sub ) )
+          {
+            eprintln!(
+              "Error: unknown subcommand: {first}. Did you mean '{sub}'?\nRun with --help for usage."
+            );
+            std::process::exit( 1 );
+          }
+        }
+      }
+    }
+  }
+
   /// Strip the outermost markdown code fence pair from `stdout`.
   ///
   /// Finds the first and last lines starting with ` ``` ` (after optional leading whitespace).
@@ -707,29 +751,6 @@ mod cli
       }
       _ => stdout.to_string(),
     }
-  }
-
-  #[ cfg( test ) ]
-  mod tests
-  {
-    use super::strip_fences;
-
-    #[ test ]
-    fn sf01_basic_fence_pair_stripped() { assert_eq!( strip_fences( "```\nhello\n```\n" ), "hello\n" ); }
-    #[ test ]
-    fn sf02_language_tagged_fence_stripped() { assert_eq!( strip_fences( "```rust\nfn f(){}\n```\n" ), "fn f(){}\n" ); }
-    #[ test ]
-    fn sf03_no_fences_pass_through() { assert_eq!( strip_fences( "plain text\n" ), "plain text\n" ); }
-    #[ test ]
-    fn sf04_single_fence_unchanged() { assert_eq!( strip_fences( "```\n" ), "```\n" ); }
-    #[ test ]
-    fn sf05_empty_string_unchanged() { assert_eq!( strip_fences( "" ), "" ); }
-    #[ test ]
-    fn sf06_inner_fences_preserved() { assert_eq!( strip_fences( "```\n```inner\n```\n```\n" ), "```inner\n```\n" ); }
-    #[ test ]
-    fn sf07_no_trailing_newline_preserved() { assert_eq!( strip_fences( "```\ncontent\n```" ), "content" ); }
-    #[ test ]
-    fn sf08_trailing_newline_preserved() { assert_eq!( strip_fences( "```\ncontent\n```\n" ), "content\n" ); }
   }
 
   /// Execute in non-interactive print mode (captures output).
@@ -770,7 +791,7 @@ mod cli
     }
 
     let out = if strip_fences_flag { strip_fences( &output.stdout ) } else { output.stdout };
-    print!( "{}", out );
+    print!( "{out}" );
   }
 
   /// Execute in interactive mode (TTY passthrough).
@@ -795,6 +816,38 @@ mod cli
     }
   }
 
+  /// Emit trace diagnostics for a credential-operation command (`isolated` or `refresh`).
+  ///
+  /// Reconstructs the `ClaudeCommand` exactly as `run_isolated()` would build it
+  /// (`ClaudeCommand::new().with_home(&temp_dir).with_args(args)`) and prints
+  /// `describe_env()` + `describe()` to stderr, matching the format of `run` trace.
+  ///
+  /// Pitfall: if `run_isolated()` in `claude_runner_core` is updated to modify the
+  /// `ClaudeCommand` beyond `with_home()` + `with_args()`, this trace will diverge —
+  /// update both together.
+  fn emit_credential_trace
+  (
+    label        : &str,
+    creds_path   : &str,
+    args         : &[ String ],
+    timeout_secs : u64,
+  )
+  {
+    // Reproduce the exact temp dir path that run_isolated() will create.
+    let temp_dir = std::env::temp_dir()
+      .join( format!( "claude_isolated_{}", std::process::id() ) );
+    let preview = ClaudeCommand::new()
+      .with_home( &temp_dir )
+      .with_args( args.iter().cloned() );
+    let env_out = preview.describe_env();
+    let cmd_out = preview.describe();
+    eprintln!( "# clr {label}" );
+    eprintln!( "# creds: {creds_path}" );
+    eprintln!( "# timeout: {timeout_secs}s" );
+    if !env_out.is_empty() { eprintln!( "{env_out}" ); }
+    eprintln!( "{cmd_out}" );
+  }
+
   /// Execute the `isolated` subcommand.
   ///
   /// Reads the credentials file at `creds_path`, builds the argument list for
@@ -812,6 +865,7 @@ mod cli
   (
     creds_path       : &str,
     timeout_secs     : u64,
+    trace            : bool,
     message          : Option< &str >,
     passthrough_args : &[ String ],
   ) -> !
@@ -831,6 +885,7 @@ mod cli
       .map( | m | vec![ "--print".to_string(), m.to_string() ] )
       .unwrap_or_default();
     args.extend_from_slice( passthrough_args );
+    if trace { emit_credential_trace( "isolated", creds_path, &args, timeout_secs ); }
     match run_isolated( &creds_json, args, timeout_secs )
     {
       Ok( result ) =>
@@ -863,6 +918,178 @@ mod cli
       }
     }
   }
+
+  /// Parsed arguments for the `refresh` subcommand.
+  pub( super ) struct RefreshArgs
+  {
+    pub( super ) creds_path   : String,
+    pub( super ) timeout_secs : u64,
+    pub( super ) trace        : bool,
+  }
+
+  /// Print help for the `refresh` subcommand and exit 0.
+  fn print_refresh_help() -> !
+  {
+    println!( "clr refresh — Refresh OAuth credentials without running a task" );
+    println!();
+    println!( "USAGE:" );
+    println!( "  clr refresh --creds <FILE> [--timeout <SECS>] [--trace]" );
+    println!();
+    println!( "CREDENTIAL OPTIONS:" );
+    println!( "  --creds <FILE>                     Credentials JSON file (required)" );
+    println!( "  --timeout <SECS>                   Max seconds to wait for refresh (default: 45)" );
+    println!( "  --trace                            Print underlying call details to stderr" );
+    println!( "  -h, --help                         Show this help" );
+    println!();
+    println!( "EXIT CODES:" );
+    println!( "  0    Credentials were refreshed and written back" );
+    println!( "  1    Error (bad arguments, no refresh occurred, subprocess failure)" );
+    println!( "  2    Timeout — subprocess did not finish within --timeout seconds" );
+    std::process::exit( 0 );
+  }
+
+  /// Parse `tokens` as arguments to the `refresh` subcommand.
+  ///
+  /// Recognises `--creds <FILE>`, `--timeout <SECS>`, and `--trace`.
+  /// The `refresh` command takes no positional arguments — only credential options.
+  pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArgs >
+  {
+    let mut creds_path   : Option< String > = None;
+    let mut timeout_secs : u64              = 45;
+    let mut trace        : bool             = false;
+    let mut i = 0;
+    while i < tokens.len()
+    {
+      let token = tokens[ i ].as_str();
+      match token
+      {
+        "--creds" =>
+        {
+          creds_path = Some( next_value( tokens, i + 1, "--creds" )?.to_string() );
+          i += 1;
+        }
+        "--timeout" =>
+        {
+          let raw      = next_value( tokens, i + 1, "--timeout" )?;
+          timeout_secs = parse_timeout( raw )?;
+          i += 1;
+        }
+        "--trace" =>
+        {
+          trace = true;
+        }
+        "-h" | "--help" => { print_refresh_help(); }
+        s if s.starts_with( '-' ) =>
+        {
+          return Err( Error::msg( format!(
+            "unknown option: {s}\nRun with --help for usage."
+          ) ) );
+        }
+        _ => {} // refresh accepts no positional arguments
+      }
+      i += 1;
+    }
+    let creds_path = creds_path.unwrap_or_default();
+    Ok( RefreshArgs { creds_path, timeout_secs, trace } )
+  }
+
+  /// Apply `CLR_CREDS`, `CLR_TIMEOUT`, and `CLR_TRACE` env var fallbacks for the `refresh` subcommand.
+  ///
+  /// `CLR_TIMEOUT` applies when `timeout_secs == 45` (the refresh default); explicit `--timeout 45`
+  /// is indistinguishable from the default and is an accepted limitation (same design as isolated).
+  pub( super ) fn apply_refresh_env_vars( parsed : &mut RefreshArgs )
+  {
+    if parsed.creds_path.is_empty()
+    {
+      parsed.creds_path = env_str( "CLR_CREDS" ).unwrap_or_default();
+    }
+    if parsed.timeout_secs == 45
+    {
+      if let Some( v ) = env_str( "CLR_TIMEOUT" )
+      {
+        if let Ok( secs ) = v.parse::< u64 >() { parsed.timeout_secs = secs; }
+      }
+    }
+    if !parsed.trace { parsed.trace = env_bool( "CLR_TRACE" ); }
+  }
+
+  /// Execute the `refresh` subcommand.
+  ///
+  /// Spawns `claude --print "."` inside an isolated temp HOME so the Claude binary
+  /// performs its OAuth token refresh at startup. Writes the refreshed credentials
+  /// back to `creds_path` if the subprocess updated them.
+  ///
+  /// This function never returns; it always calls `std::process::exit`.
+  pub( super ) fn run_refresh_command
+  (
+    creds_path   : &str,
+    timeout_secs : u64,
+    trace        : bool,
+  ) -> !
+  {
+    // Fixed args: trigger Claude's startup token refresh with a trivial prompt.
+    let fixed_args = vec![ "--print".to_string(), ".".to_string() ];
+    if trace { emit_credential_trace( "refresh", creds_path, &fixed_args, timeout_secs ); }
+    // Pass trace=false: refresh already emitted its own trace above.
+    run_isolated_command( creds_path, timeout_secs, false, None, &fixed_args );
+  }
+
+  /// Parse, validate, and execute the `isolated` subcommand.  Never returns.
+  pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
+  {
+    let mut cli = match parse_isolated_args( &tokens[ 1 .. ] )
+    {
+      Ok( c )  => c,
+      Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    };
+    apply_isolated_env_vars( &mut cli );
+    if cli.creds_path.is_empty()
+    {
+      eprintln!( "Error: missing required argument: --creds\nRun with --help for usage." );
+      std::process::exit( 1 );
+    }
+    run_isolated_command( &cli.creds_path, cli.timeout_secs, cli.trace, cli.message.as_deref(), &cli.passthrough_args )
+  }
+
+  /// Parse, validate, and execute the `refresh` subcommand.  Never returns.
+  pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
+  {
+    let mut cli = match parse_refresh_args( &tokens[ 1 .. ] )
+    {
+      Ok( c )  => c,
+      Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    };
+    apply_refresh_env_vars( &mut cli );
+    if cli.creds_path.is_empty()
+    {
+      eprintln!( "Error: missing required argument: --creds\nRun with --help for usage." );
+      std::process::exit( 1 );
+    }
+    run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace )
+  }
+
+  #[ cfg( test ) ]
+  mod tests
+  {
+    use super::strip_fences;
+
+    #[ test ]
+    fn sf01_basic_fence_pair_stripped() { assert_eq!( strip_fences( "```\nhello\n```\n" ), "hello\n" ); }
+    #[ test ]
+    fn sf02_language_tagged_fence_stripped() { assert_eq!( strip_fences( "```rust\nfn f(){}\n```\n" ), "fn f(){}\n" ); }
+    #[ test ]
+    fn sf03_no_fences_pass_through() { assert_eq!( strip_fences( "plain text\n" ), "plain text\n" ); }
+    #[ test ]
+    fn sf04_single_fence_unchanged() { assert_eq!( strip_fences( "```\n" ), "```\n" ); }
+    #[ test ]
+    fn sf05_empty_string_unchanged() { assert_eq!( strip_fences( "" ), "" ); }
+    #[ test ]
+    fn sf06_inner_fences_preserved() { assert_eq!( strip_fences( "```\n```inner\n```\n```\n" ), "```inner\n```\n" ); }
+    #[ test ]
+    fn sf07_no_trailing_newline_preserved() { assert_eq!( strip_fences( "```\ncontent\n```" ), "content" ); }
+    #[ test ]
+    fn sf08_trailing_newline_preserved() { assert_eq!( strip_fences( "```\ncontent\n```\n" ), "content\n" ); }
+  }
 }
 
 #[ cfg( feature = "enabled" ) ]
@@ -873,66 +1100,26 @@ mod cli
 pub fn run_cli()
 {
   use cli::{
-    parse_args, parse_isolated_args, build_claude_command, handle_dry_run,
-    print_help, run_print_mode, run_interactive, run_isolated_command,
-    apply_env_vars, apply_isolated_env_vars,
+    parse_args, build_claude_command, handle_dry_run,
+    print_help, run_print_mode, run_interactive,
+    dispatch_isolated, dispatch_refresh,
+    apply_env_vars, guard_unknown_subcommand,
   };
 
   let tokens : Vec< String > = std::env::args().skip( 1 ).collect();
 
-  // Dispatch `isolated` subcommand before the standard flag parser.
-  if tokens.first().map( String::as_str ) == Some( "isolated" )
+  // Dispatch `help` subcommand before everything else.
+  if tokens.first().map( String::as_str ) == Some( "help" )
   {
-    let mut isolated_cli = match parse_isolated_args( &tokens[ 1 .. ] )
-    {
-      Ok( c )  => c,
-      Err( e ) =>
-      {
-        eprintln!( "Error: {e}" );
-        std::process::exit( 1 );
-      }
-    };
-    apply_isolated_env_vars( &mut isolated_cli );
-    if isolated_cli.creds_path.is_empty()
-    {
-      eprintln!( "Error: missing required argument: --creds\nRun with --help for usage." );
-      std::process::exit( 1 );
-    }
-    run_isolated_command(
-      &isolated_cli.creds_path,
-      isolated_cli.timeout_secs,
-      isolated_cli.message.as_deref(),
-      &isolated_cli.passthrough_args,
-    );
+    print_help();
+    return;
   }
 
-  // Fix(issue-unknown-subcommand): Guard against typos/truncations of known subcommand names.
-  // Root cause: `run_cli():805` dispatched `isolated` by exact string match only — any
-  //   non-matching first token silently fell through to `parse_args()` where the global
-  //   `--help` short-circuit fired and showed generic help with no diagnostic.
-  // Pitfall: Bare string comparison only guards exact matches; typos and truncations pass
-  //   silently unless a prefix-match guard is also placed before the main argument parser.
-  const KNOWN_SUBCOMMANDS : &[ &str ] = &[ "isolated" ];
-  if let Some( first ) = tokens.first()
-  {
-    let is_identifier = !first.starts_with( '-' )
-      && first.len() >= 4
-      && first.chars().all( | c | c.is_alphanumeric() || c == '_' || c == '-' );
-    if is_identifier
-    {
-      for &sub in KNOWN_SUBCOMMANDS
-      {
-        if first != sub
-          && ( sub.starts_with( first.as_str() ) || first.starts_with( sub ) )
-        {
-          eprintln!(
-            "Error: unknown subcommand: {first}. Did you mean '{sub}'?\nRun with --help for usage."
-          );
-          std::process::exit( 1 );
-        }
-      }
-    }
-  }
+  // Dispatch subcommands — these functions never return.
+  if tokens.first().map( String::as_str ) == Some( "isolated" ) { dispatch_isolated( &tokens ); }
+  if tokens.first().map( String::as_str ) == Some( "refresh" )  { dispatch_refresh( &tokens ); }
+
+  guard_unknown_subcommand( &tokens );
 
   let mut cli = match parse_args( &tokens )
   {

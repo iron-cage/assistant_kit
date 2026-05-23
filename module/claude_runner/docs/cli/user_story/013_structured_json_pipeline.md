@@ -20,16 +20,16 @@ Generate schema-constrained JSON output from Claude and deliver bare JSON to std
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | Both `--json-schema` and `--strip-fences` apply to `run` |
+| 1 | [`run`](../001_command.md#command--1-run) | Both `--json-schema` and `--strip-fences` apply to `run` |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--json-schema`](../param/23_json_schema.md) | JSON Schema for structured output constraint |
-| 2 | [`--strip-fences`](../param/26_strip_fences.md) | Remove fence wrapping from JSON output |
-| 3 | [`--file`](../param/25_file.md) | Optional: supply input data for extraction |
-| 4 | [`--print`](../param/02_print.md) | Print mode (required for stdout capture) |
+| 1 | [`--json-schema`](../param/023_json_schema.md) | JSON Schema for structured output constraint |
+| 2 | [`--strip-fences`](../param/026_strip_fences.md) | Remove fence wrapping from JSON output |
+| 3 | [`--file`](../param/025_file.md) | Optional: supply input data for extraction |
+| 4 | [`--print`](../param/002_print.md) | Print mode (required for stdout capture) |
 
 ### Related User Stories
 

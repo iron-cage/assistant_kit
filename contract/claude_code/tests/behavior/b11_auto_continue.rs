@@ -1,13 +1,20 @@
 #![ allow( clippy::doc_markdown ) ]
 //! B11: `CLAUDE_CODE_AUTO_CONTINUE` environment variable enables automated continuation.
 //!
-//! Validates via `claude --help` that the `CLAUDE_CODE_AUTO_CONTINUE` env var
-//! is recognized or documented.
+//! The env var is not listed in `--help` (Claude Code does not document env vars there),
+//! but is injected by `claude_runner_core` before invoking the binary.
+//!
+//! Validates that the binary does not explicitly reject the env var on startup.
+//! Invalidation: binary prints a rejection referencing `CLAUDE_CODE_AUTO_CONTINUE` by name.
 
-/// B11: `claude --help` mentions auto-continue or the env var is accepted.
+/// B11: binary does not explicitly reject `CLAUDE_CODE_AUTO_CONTINUE` env var.
 ///
-/// If Claude Code removed support for `CLAUDE_CODE_AUTO_CONTINUE`,
-/// our runner's automation defaults would silently stop working.
+/// The prior version of this test used `mentioned || env_accepted` where `env_accepted`
+/// was always true (`claude --version` always exits 0 regardless of env vars), making the
+/// assert trivially pass and unable to go RED. This version asserts on stderr content only.
+///
+/// If Claude Code added explicit rejection of removed/unknown env vars and emitted
+/// `CLAUDE_CODE_AUTO_CONTINUE` in an error message, this test would go RED.
 #[ test ]
 fn b11_auto_continue_env_var_recognized()
 {
@@ -17,30 +24,18 @@ fn b11_auto_continue_env_var_recognized()
     return;
   };
 
-  // Check --help for any mention of auto-continue
-  let out = std::process::Command::new( &claude )
-    .arg( "--help" )
-    .output()
-    .expect( "run claude --help" );
-  let help = super::stdout( &out );
-
-  // Also try running with the env var set to verify it doesn't error
+  // Run with env var set; check that binary does not explicitly reject it by name.
   let env_out = std::process::Command::new( &claude )
     .arg( "--version" )
     .env( "CLAUDE_CODE_AUTO_CONTINUE", "true" )
     .output()
-    .expect( "run claude --version with env var" );
+    .expect( "run claude --version with CLAUDE_CODE_AUTO_CONTINUE set" );
 
-  let env_accepted = env_out.status.success();
-
-  let mentioned = help.contains( "auto" ) && help.contains( "continue" );
+  let err = super::stderr( &env_out );
 
   assert!(
-    mentioned || env_accepted,
-    "B11 violated: `claude` neither mentions auto-continue in --help nor accepts \
-     CLAUDE_CODE_AUTO_CONTINUE env var without error.\n\
-     Help output:\n{help}\n\
-     --version exit code: {}",
-    env_out.status
+    !err.contains( "CLAUDE_CODE_AUTO_CONTINUE" ),
+    "B11 violated: binary explicitly rejected CLAUDE_CODE_AUTO_CONTINUE env var.\n\
+     Stderr:\n{err}"
   );
 }

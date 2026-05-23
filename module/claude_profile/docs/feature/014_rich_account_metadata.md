@@ -81,5 +81,5 @@ This label is NOT a separate field param — it is the formatted output of the e
 | test | `tests/cli/accounts_test.rs` | Test cases for rich metadata fields on `.accounts` |
 | doc | [007_file_topology.md](007_file_topology.md) | `claude_json_file()` path method |
 | doc | [012_live_credentials_status.md](012_live_credentials_status.md) | Base `.credentials.status` command |
-| doc | [command/credentials.md](../cli/command/credentials.md#command--10-credentialsstatus) | CLI command specification |
+| doc | [command/002_credentials.md](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI command specification |
 | doc | [cli/param/readme.md](../cli/param/readme.md) | New param entries (display_name::, role::, billing::, model::) |

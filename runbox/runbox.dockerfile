@@ -175,7 +175,7 @@ COPY --from=planner $WORKSPACE_DIR/recipe.json recipe.json
 # cli_fmt lives in wtools outside the build context; injected via --build-context wtools_cli_fmt.
 # Cargo resolves path = "../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
 COPY --from=wtools_cli_fmt . /wtools/dev/module/core/cli_fmt/
-RUN CARGO_BUILD_JOBS=1 RUSTFLAGS="-D warnings" cargo chef cook \
+RUN CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 RUSTFLAGS="-D warnings" cargo chef cook \
       --recipe-path recipe.json \
       $CMD_SCOPE \
       --tests
@@ -266,9 +266,20 @@ RUN mkdir $WORKSPACE_DIR/target_seed
 # chmod a+rwX makes files writable by any uid so cmd_test can run as the host UID
 # (--user $(id -u):$(id -g)) to access host-owned ~/.claude credentials, while also
 # being able to write build artifacts and cargo lock files as that uid.
+#
+# Fix(issue-chown-fuse-overlayfs): fuse-overlayfs reports phantom registry index cache
+#   entries (e.g. .cache/js, .cache/sm) in readdir that fail stat/chown individually —
+#   a known behaviour when overlay whiteout entries from the cook COPY conflict with
+#   cargo fetch's fresh writes in a later layer.  Suppress chown errors; the affected
+#   paths are read-only registry metadata that testuser only reads, not writes.
+#
+#   /usr/local/cargo is excluded from chmod: the registry and compiled rlibs are
+#   root-owned but world-readable from install; chmod -R on tens of thousands of
+#   registry files through fuse-overlayfs overloads the FUSE daemon ("closed pipe").
+#   Testuser only needs write access to $WORKSPACE_DIR for compilation output.
 RUN [ "$TEST_USER" = "root" ] || ( \
-      chown -R "$TEST_USER":"$TEST_USER" $WORKSPACE_DIR /usr/local/cargo && \
-      chmod -R a+rwX $WORKSPACE_DIR /usr/local/cargo )
+      chown -R "$TEST_USER":"$TEST_USER" $WORKSPACE_DIR 2>/dev/null || true; \
+      chmod -R a+rwX $WORKSPACE_DIR )
 USER $TEST_USER
 
 # Offline tests by default — no ~/.claude/ storage or w3 required.

@@ -11,6 +11,6 @@
 
 | File | Responsibility |
 |------|----------------|
-| 01_output_control.md | Interaction tests for Group 1 (Output Control) |
-| 02_field_presence.md | Interaction tests for Group 2 (Field Presence) |
-| 03_fetch_behavior.md | Interaction tests for Group 3 (Fetch Behavior) |
+| 001_output_control.md | Interaction tests for Group 1 (Output Control) |
+| 002_field_presence.md | Interaction tests for Group 2 (Field Presence) |
+| 003_fetch_behavior.md | Interaction tests for Group 3 (Fetch Behavior) |

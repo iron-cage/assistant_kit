@@ -108,5 +108,5 @@ In live mode, `format::json` is rejected before the first fetch (see Validation)
 | task | `task/claude_profile/138_usage_live_monitor.md` | Implementation task for this feature |
 | doc | [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm and table format that this extends |
 | doc | [017_token_refresh.md](017_token_refresh.md) | `refresh::` parameter — composable with live mode |
-| doc | [command/usage.md](../cli/command/usage.md#command--9-usage) | `.usage` CLI command specification |
-| doc | [cli/param/20_live.md](../cli/param/20_live.md) | `live::`, `interval::`, `jitter::` parameter specifications |
+| doc | [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | `.usage` CLI command specification |
+| doc | [cli/param/020_live.md](../cli/param/020_live.md) | `live::`, `interval::`, `jitter::` parameter specifications |

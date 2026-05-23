@@ -19,10 +19,10 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 | [param_group/](param_group/readme.md) | Parameter group semantics (Output Control, Field Presence, Fetch Behavior) |
 | [workflow_scenario/](workflow_scenario/readme.md) | Composed command workflows for real operational tasks |
 | [format/](format/readme.md) | Output format specifications (text, json, table) |
-| [env_param.md](env_param.md) | Environment variable mechanism ($PRO, $HOME, $USERPROFILE) |
-| [config_param.md](config_param.md) | Configuration file mechanism (not applicable) |
-| [parameter_interactions.md](parameter_interactions.md) | Cross-parameter interaction and incompatibility rules |
-| [dictionary.md](dictionary.md) | Domain term definitions |
+| [003_env_param.md](003_env_param.md) | Environment variable mechanism ($PRO, $HOME, $USERPROFILE) |
+| [001_config_param.md](001_config_param.md) | Configuration file mechanism (not applicable) |
+| [004_parameter_interactions.md](004_parameter_interactions.md) | Cross-parameter interaction and incompatibility rules |
+| [002_dictionary.md](002_dictionary.md) | Domain term definitions |
 
 ### Completion Matrix
 
@@ -35,10 +35,10 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 | param_group/ | ➖ | ➖ | ✅ | ✅ | ✅ | Complete |
 | workflow_scenario/ | ➖ | ➖ | ✅ | ✅ | ✅ | Complete |
 | format/ | ➖ | ➖ | ✅ | ➖ | ➖ | Complete |
-| env_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | Complete |
-| config_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | Complete |
-| dictionary.md | ➖ | ✅ | ✅ | ✅ | ✅ | Complete |
-| parameter_interactions.md | ➖ | ➖ | ✅ | ➖ | ➖ | Complete |
+| 003_env_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | Complete |
+| 001_config_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | Complete |
+| 002_dictionary.md | ➖ | ✅ | ✅ | ✅ | ✅ | Complete |
+| 004_parameter_interactions.md | ➖ | ➖ | ✅ | ➖ | ➖ | Complete |
 
 **Current Level:** L4 (Workflow Complete)
 **Design Completeness:** 100%
@@ -52,10 +52,10 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 - [Parameter Groups](param_group/readme.md) — 3 groups (Output Control, Field Presence, Fetch Behavior)
 - [Workflow Scenarios](workflow_scenario/readme.md) — 10 composed workflows
 - [Output Formats](format/readme.md) — 3 formats (text, json, table)
-- [Environment Parameters](env_param.md) — $PRO, $HOME, $USERPROFILE path resolution
-- [Configuration Parameters](config_param.md) — not applicable (no config file)
-- [Parameter Interactions](parameter_interactions.md) — incompatibility and override rules
-- [Dictionary](dictionary.md) — domain term definitions
+- [Environment Parameters](003_env_param.md) — $PRO, $HOME, $USERPROFILE path resolution
+- [Configuration Parameters](001_config_param.md) — not applicable (no config file)
+- [Parameter Interactions](004_parameter_interactions.md) — incompatibility and override rules
+- [Dictionary](002_dictionary.md) — domain term definitions
 
 ### See Also
 

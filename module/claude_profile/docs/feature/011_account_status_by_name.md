@@ -40,5 +40,5 @@
 | source | `src/commands.rs` | `accounts_routine()` — named-account branch |
 | test | `tests/cli/accounts_test.rs` | Named-account path coverage (acc04, acc05, acc06) |
 | doc | [012_live_credentials_status.md](012_live_credentials_status.md) | Related command — live credentials without account store |
-| doc | [command/account.md](../cli/command/account.md#command--3-accounts) | CLI command specification |
-| doc | [tests/docs/cli/command/03_accounts.md](../../tests/docs/cli/command/03_accounts.md) | Integration tests IT-4, IT-5, IT-6 |
+| doc | [command/001_account.md](../cli/command/001_account.md#command--3-accounts) | CLI command specification |
+| doc | [tests/docs/cli/command/003_accounts.md](../../tests/docs/cli/command/003_accounts.md) | Integration tests IT-4, IT-5, IT-6 |

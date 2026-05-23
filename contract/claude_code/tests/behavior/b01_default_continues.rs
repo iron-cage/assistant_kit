@@ -1,8 +1,11 @@
 #![ allow( clippy::doc_markdown ) ]
-//! B1: default invocation continues the most recent session.
+//! B1: the `claude` binary defaults to a NEW session on each invocation; the `clr` wrapper
+//! inverts this by passing `-c` by default, making continuation appear as the default.
 //!
-//! Validates that real `~/.claude/` storage contains at least one project with
-//! a non-empty, non-agent `.jsonl` session — the precondition for continuation.
+//! Validates that real `~/.claude/` storage contains at least one project with a non-empty,
+//! non-agent `.jsonl` session — the precondition for the wrapper's default continuation to work.
+//! If Claude Code changed its session storage format, this test would fail and continuation
+//! would break at the storage level regardless of what flags are passed.
 
 /// B1: at least one project has a resumable (non-empty, non-agent) session.
 ///

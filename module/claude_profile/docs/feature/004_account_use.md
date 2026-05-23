@@ -45,4 +45,4 @@
 | test | `tests/cli/account_mutations_test.rs` (aw01–aw11) | Verifies atomic overwrite, `_active` update, dry-run, path-unsafe char rejection, edge cases |
 | test | `tests/cli/account_mutations_test.rs::switch_restores_claude_json` | Verifies `~/.claude.json` restored after switch (issue-122) |
 | doc | [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | Atomicity invariant for this feature |
-| doc | [command/account.md](../cli/command/account.md#command--5-accountuse) | CLI command specification |
+| doc | [command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | CLI command specification |

@@ -7,10 +7,11 @@
 - **In Scope**: All 3 cm parameter group test files.
 - **Out of Scope**: Per-command tests (→ `command/`), per-parameter edge cases (→ `param/`).
 
-### Responsibility Table
+### Overview Table
 
-| File | Responsibility |
-|------|----------------|
-| 01_output_control.md | Interaction tests for Group 1 (Output Control) |
-| 02_execution_control.md | Interaction tests for Group 2 (Execution Control) |
-| 03_settings_identity.md | Interaction tests for Group 3 (Settings Identity) |
+| Name | Purpose | Status |
+|------|---------|--------|
+| 001_output_control.md | Interaction tests for Group 1 (Output Control) | ✅ |
+| 002_execution_control.md | Interaction tests for Group 2 (Execution Control) | ✅ |
+| 003_settings_identity.md | Interaction tests for Group 3 (Settings Identity) | ✅ |
+| procedure.md | Workflow for creating and updating parameter group test specs | ✅ |

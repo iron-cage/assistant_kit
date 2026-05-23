@@ -89,7 +89,7 @@ work@acme.com
 | source | `src/usage.rs` | `fetch_all_quota()` — `is_current` via token matching; `is_active` from `_active` marker; `*` flag rendering |
 | doc | [003_account_list.md](003_account_list.md) | `.accounts` base command — field table and AC extended here |
 | doc | [009_token_usage.md](009_token_usage.md) | `.usage` base command — flag column and JSON schema extended here |
-| doc | [cli/param/18_current.md](../cli/param/18_current.md) | `current::` field-presence parameter |
+| doc | [cli/param/018_current.md](../cli/param/018_current.md) | `current::` field-presence parameter |
 | doc | [command/readme.md](../cli/command/readme.md) | Syntax blocks for `.accounts` and `.usage` |
 | test | `tests/cli/accounts_test.rs` | IT-26, IT-27, IT-28 — current detection in `.accounts` |
 | test | `tests/cli/usage_test.rs` | IT-13..IT-16 — live detection and active divergence in `.usage` |

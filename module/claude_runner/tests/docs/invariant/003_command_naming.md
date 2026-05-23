@@ -31,7 +31,7 @@ Test case planning for [invariant/003_command_naming.md](../../../../docs/invari
 - **When:** `clr help`
 - **Then:** exit 0; stdout contains usage information listing `run`, `isolated`, `refresh`, `help`; bare word dispatch works
 - **Exit:** 0
-- **Source:** [invariant/003_command_naming.md](../../../../docs/invariant/003_command_naming.md), [command.md — help](../../../../docs/cli/command.md#command--4-help)
+- **Source:** [invariant/003_command_naming.md](../../../../docs/invariant/003_command_naming.md), [001_command.md — help](../../../../docs/cli/001_command.md#command--4-help)
 
 ---
 
@@ -51,7 +51,7 @@ Test case planning for [invariant/003_command_naming.md](../../../../docs/invari
 - **When:** `clr` (no arguments)
 - **Then:** does NOT print help; enters interactive REPL mode (dispatches `run` default with no message); help requires explicit `clr help` or `clr --help`
 - **Exit:** 0 (when REPL exits)
-- **Source:** [invariant/003_command_naming.md](../../../../docs/invariant/003_command_naming.md), [command.md — help Notes](../../../../docs/cli/command.md#command--4-help)
+- **Source:** [invariant/003_command_naming.md](../../../../docs/invariant/003_command_naming.md), [001_command.md — help Notes](../../../../docs/cli/001_command.md#command--4-help)
 
 ---
 

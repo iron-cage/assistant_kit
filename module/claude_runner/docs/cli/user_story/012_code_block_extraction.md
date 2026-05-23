@@ -20,15 +20,15 @@ Strip the outermost markdown code fence from captured stdout so the bare code is
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | `--strip-fences` post-processes `run` stdout |
+| 1 | [`run`](../001_command.md#command--1-run) | `--strip-fences` post-processes `run` stdout |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--strip-fences`](../param/26_strip_fences.md) | Remove outermost code fence from stdout |
-| 2 | [`--print`](../param/02_print.md) | Print mode captures output for fence stripping |
-| 3 | [`--file`](../param/25_file.md) | Commonly used with file-driven code generation |
+| 1 | [`--strip-fences`](../param/026_strip_fences.md) | Remove outermost code fence from stdout |
+| 2 | [`--print`](../param/002_print.md) | Print mode captures output for fence stripping |
+| 3 | [`--file`](../param/025_file.md) | Commonly used with file-driven code generation |
 
 ### Related User Stories
 

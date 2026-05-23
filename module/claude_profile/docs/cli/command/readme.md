@@ -4,12 +4,12 @@
 
 | File | Responsibility |
 |------|----------------|
-| [meta.md](meta.md) | Meta-commands: `.`, `.help`, `--version` flag |
-| [account.md](account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate` |
-| [token.md](token.md) | Token namespace: `.token.status` |
-| [credentials.md](credentials.md) | Credentials namespace: `.credentials.status` |
-| [usage.md](usage.md) | Usage namespace: `.usage` |
-| [paths.md](paths.md) | Paths namespace: `.paths` |
+| [003_meta.md](003_meta.md) | Meta-commands: `.`, `.help`, `--version` flag |
+| [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate` |
+| [005_token.md](005_token.md) | Token namespace: `.token.status` |
+| [002_credentials.md](002_credentials.md) | Credentials namespace: `.credentials.status` |
+| [006_usage.md](006_usage.md) | Usage namespace: `.usage` |
+| [004_paths.md](004_paths.md) | Paths namespace: `.paths` |
 
 **Total:** 13 commands (11 visible + 2 hidden)
 
