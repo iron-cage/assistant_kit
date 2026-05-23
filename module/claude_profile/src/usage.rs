@@ -33,7 +33,6 @@ struct AccountQuota
   expires_at_ms : u64,
   /// `Ok` = live quota fetched; `Err` = reason string (expired, network, etc.).
   result        : Result< OauthUsageData, String >,
-        account       : None,
   /// Billing state from `GET /api/oauth/account`; `None` if the fetch failed.
   account       : Option< claude_quota::OauthAccountData >,
 }
@@ -137,12 +136,10 @@ fn fetch_all_quota(
           match &r
           {
             Ok( _ )  => eprintln!( "[trace] {}  result: OK", acct.name ),
-        account       : None,
             Err( e ) => eprintln!( "[trace] {}  result: Err({})", acct.name, e ),
-        account       : None,
           }
         }
-        let account_data = account_handle.join().ok().and_then( |r| r.ok() );
+        let account_data = account_handle.join().ok().and_then( std::result::Result::ok );
         ( r, account_data )
       }
       Err( e )    =>
@@ -332,11 +329,11 @@ fn compute_expires_cell( expires_at_ms : u64, now_secs : u64 ) -> String
 ///
 /// Month is 1-based (1 = January). Day is 1-based (1 = first of month).
 /// No external dependencies — hand-rolled Gregorian arithmetic.
-fn unix_to_date( unix_secs : u64 ) -> ( u32, u32, u32 )
+fn unix_to_date( unix_secs : u64 ) -> ( u64, u64, u64 )
 {
-  let is_leap     = |y : u32| ( y % 4 == 0 && y % 100 != 0 ) || y % 400 == 0;
-  let mut days    = ( unix_secs / 86_400 ) as u32;
-  let mut year    = 1970_u32;
+  let is_leap     = |y : u64| ( y % 4 == 0 && y % 100 != 0 ) || y % 400 == 0;
+  let mut days    = unix_secs / 86_400;
+  let mut year    = 1970_u64;
   loop
   {
     let in_year = if is_leap( year ) { 366 } else { 365 };
@@ -345,8 +342,8 @@ fn unix_to_date( unix_secs : u64 ) -> ( u32, u32, u32 )
     year += 1;
   }
   let feb = if is_leap( year ) { 29 } else { 28 };
-  let month_days : [ u32; 12 ] = [ 31, feb, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
-  let mut month = 0_u32;
+  let month_days : [ u64; 12 ] = [ 31, feb, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
+  let mut month = 0_u64;
   for d in &month_days
   {
     if days < *d { break; }
@@ -365,7 +362,7 @@ fn next_billing_label( org_created_at : &str, now_secs : u64 ) -> String
   const MONTHS : [ &str; 12 ] = [ "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ];
   if org_created_at.len() < 10 { return "\u{2014}".to_string(); }
-  let billing_day : u32 = match org_created_at[ 8..10 ].parse() { Ok( d ) => d, Err( _ ) => return "\u{2014}".to_string() };
+  let billing_day : u64 = match org_created_at[ 8..10 ].parse() { Ok( d ) => d, Err( _ ) => return "\u{2014}".to_string() };
   if billing_day == 0 || billing_day > 31 { return "\u{2014}".to_string(); }
   let ( _, current_month, current_day ) = unix_to_date( now_secs );
   let renewal_month = if billing_day > current_day
@@ -380,8 +377,9 @@ fn next_billing_label( org_created_at : &str, now_secs : u64 ) -> String
   {
     current_month + 1
   };
+  #[ allow( clippy::cast_possible_truncation ) ] // renewal_month is always 1–12; cast to usize is safe
   let month_name = MONTHS[ ( renewal_month - 1 ) as usize ];
-  format!( "{} {:2}", month_name, billing_day )
+  format!( "{month_name} {billing_day:2}" )
 }
 
 /// Map account billing state to a short subscription label for the `Sub` column.
@@ -389,7 +387,7 @@ fn next_billing_label( org_created_at : &str, now_secs : u64 ) -> String
 /// - `None`                      → `"?"` (fetch failed — state unknown)
 /// - `billing_type == "none"`    → `"—"` (no active subscription)
 /// - `has_max`                   → `"max"` (Claude Max plan)
-/// - `stripe_subscription` + !has_max → `"pro"` (paid but not Max)
+/// - `"stripe_subscription"` + `!has_max` → `"pro"` (paid but not Max)
 /// - anything else               → `"?"`
 fn sub_label( account : Option< &claude_quota::OauthAccountData > ) -> &'static str
 {
@@ -564,8 +562,7 @@ fn render_text( accounts : &[ AccountQuota ] ) -> String
     let expires_cell = compute_expires_cell( aq.expires_at_ms, now_secs );
 
     let sub_str    = sub_label( aq.account.as_ref() ).to_string();
-    let renews_str = aq.account.as_ref()
-      .map_or_else( || "?".to_string(), |a| next_billing_label( &a.org_created_at, now_secs ) );
+    let renews_str = aq.account.as_ref().map_or_else( || "?".to_string(), |a| next_billing_label( &a.org_created_at, now_secs ) );
 
     match &aq.result
     {
@@ -1329,7 +1326,6 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e == "HTTP transport error: HTTP 429" ),
       "429 error must be unchanged after apply_refresh; result: {:?}", accounts[ 0 ].result,
-        account       : None,
     );
   }
 
@@ -1381,7 +1377,6 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e == &err_msg ),
       "generic error must be unchanged; result: {:?}", accounts[ 0 ].result,
-        account       : None,
     );
   }
 
@@ -1422,7 +1417,6 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
       "401 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
-        account       : None,
     );
   }
 
@@ -1449,7 +1443,6 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "403" ) ),
       "403 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
-        account       : None,
     );
   }
 
@@ -1597,7 +1590,6 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
       "lifecycle path: 401 result must be unchanged when switch_account fails; result: {:?}",
-        account       : None,
       accounts[ 0 ].result,
     );
   }
@@ -1704,7 +1696,6 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
       "lifecycle: 429+expired result must be unchanged when switch_account fails; result: {:?}",
-        account       : None,
       accounts[ 0 ].result,
     );
   }
@@ -1740,7 +1731,6 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "403" ) ),
       "lifecycle: 403 result must be unchanged when switch_account fails; result: {:?}",
-        account       : None,
       accounts[ 0 ].result,
     );
   }
@@ -1778,7 +1768,6 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
       "lifecycle: 401 result must be unchanged when fs::copy fails (no .claude/ dir); result: {:?}",
-        account       : None,
       accounts[ 0 ].result,
     );
   }
@@ -1979,7 +1968,6 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
       "429 with valid (non-expired) token must NOT be retried; result: {:?}",
-        account       : None,
       accounts[ 0 ].result,
     );
   }
@@ -2015,7 +2003,6 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
       "429+expired: result must be unchanged when no cred file (refresh path entered but gracefully skipped); result: {:?}",
-        account       : None,
       accounts[ 0 ].result,
     );
   }

@@ -48,6 +48,25 @@ Rate-limit headers are present on **all** responses — including HTTP 4xx and 5
 
 **Scale difference vs `/api/oauth/usage`**: Utilization here is 0.0–1.0 (fraction). The JSON endpoint (`001_oauth_usage.md`) returns 0.0–100.0 (percent). Convert: `remaining_pct = (1.0 - header_utilization) * 100`.
 
+### Example Response Headers
+
+HTTP 200 (i11@wbox.pro, sampled 2026-05-23, mid-session):
+
+```
+HTTP/1.1 200 OK
+anthropic-ratelimit-unified-5h-utilization: 0.34
+anthropic-ratelimit-unified-5h-reset: 1748001000
+anthropic-ratelimit-unified-7d-utilization: 0.32
+anthropic-ratelimit-unified-7d-reset: 1748131200
+anthropic-ratelimit-unified-status: allowed
+```
+
+Response body (discarded by `fetch_rate_limits` — only headers are consumed):
+
+```json
+{"id":"msg_01...","type":"message","role":"assistant","content":[{"type":"text","text":"quota"}],"model":"claude-haiku-4-5-20251001","stop_reason":"end_turn","usage":{"input_tokens":10,"output_tokens":5}}
+```
+
 ### Headers-on-Error Pattern
 
 ```rust

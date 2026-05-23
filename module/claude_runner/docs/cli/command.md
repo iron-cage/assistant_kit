@@ -1,14 +1,15 @@
 # Commands
 
-### All Commands (3 total)
+### All Commands (4 total)
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
 | 1 | `run` (default) | Execute Claude Code with given parameters | 25 | `clr "Fix bug" --model sonnet` |
-| 2 | `isolated` | Run Claude with credential-isolated temp HOME | 3 | `clr isolated --creds creds.json "Fix bug"` |
-| 3 | `help` | Print usage information and exit | 0 | `clr --help` |
+| 2 | `isolated` | Run Claude with credential-isolated temp HOME | 4 | `clr isolated --creds creds.json "Fix bug"` |
+| 3 | `refresh` | Refresh OAuth credentials without running a task | 3 | `clr refresh --creds creds.json` |
+| 4 | `help` | Print usage information and exit | 0 | `clr help` |
 
-**Total:** 3 commands
+**Total:** 4 commands
 
 ---
 
@@ -144,6 +145,7 @@ clr isolated --creds <FILE> [--timeout <SECS>] [MESSAGE]
 | [`[MESSAGE]`](param/01_message.md) | [`MessageText`](type.md#type--1-messagetext) | — | Prompt forwarded to Claude |
 | [`--creds`](param/19_creds.md) | [`CredentialsFilePath`](type.md#type--8-credentialsfilepath) | — | Credentials JSON file path (required) |
 | [`--timeout`](param/20_timeout.md) | [`TimeoutSecs`](type.md#type--9-timeoutsecs) | 30 | Max seconds to wait for subprocess |
+| [`--trace`](param/13_trace.md) | bool | false | Print underlying call details to stderr then execute |
 | `-h`/`--help` | — | — | Print isolated subcommand help and exit 0 |
 
 **Exit Codes:**
@@ -191,7 +193,69 @@ path in `claude_runner_core::run_isolated()`.
 
 ---
 
-### Command :: 3. `help`
+### Command :: 3. `refresh`
+
+Refresh OAuth credentials without running an actual Claude task. Creates a
+temporary `HOME` (like `isolated`), spawns `claude --print "."` to trigger the
+startup token refresh, then writes the updated credentials back to `--creds`
+in-place. No user task is executed — the subprocess returns immediately after
+the token refresh completes.
+
+**Syntax:**
+
+```sh
+clr refresh --creds <FILE> [--timeout <SECS>] [--trace]
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| [`--creds`](param/19_creds.md) | [`CredentialsFilePath`](type.md#type--8-credentialsfilepath) | — | Credentials JSON file path (required) |
+| [`--timeout`](param/20_timeout.md) | [`TimeoutSecs`](type.md#type--9-timeoutsecs) | 45 | Max seconds to wait for refresh |
+| [`--trace`](param/13_trace.md) | bool | false | Print underlying call details to stderr then execute |
+| `-h`/`--help` | — | — | Print refresh subcommand help and exit 0 |
+
+**Exit Codes:**
+
+| Code | Meaning |
+|------|---------|
+| 0 | Credentials were refreshed and written back to `--creds` |
+| 1 | Error (creds file not found, claude not in PATH, I/O failure, no refresh occurred) |
+| 2 | Timeout — subprocess did not finish within `--timeout` seconds and no refresh occurred |
+
+**Examples:**
+
+```sh
+# Refresh credentials with default 45s timeout
+clr refresh --creds ~/.claude/.credentials.json
+
+# Refresh with custom timeout for slow networks
+clr refresh --creds /path/to/creds.json --timeout 90
+
+# Trace the underlying call to see what happens
+clr refresh --creds creds.json --trace
+```
+
+**Notes:**
+
+Internally calls `run_isolated()` with fixed args `["--print", "."]`. The `claude`
+binary refreshes its OAuth token at startup before processing the trivial `.` prompt,
+then exits. If the token was refreshed, `clr refresh` writes the updated credentials
+back to `--creds` and exits 0.
+
+The default timeout of 45 seconds (vs 30 for `isolated`) allows headroom for slow
+networks and API rate limiting during the OAuth token exchange.
+
+### Referenced User Stories
+
+| # | User Story | Notes |
+|---|-----------|-------|
+| 1 | [014 Credential Refresh](user_story/014_credential_refresh.md) | |
+
+---
+
+### Command :: 4. `help`
 
 Print usage information listing all commands, flags, and their defaults,
 then exit with code 0.
@@ -199,6 +263,7 @@ then exit with code 0.
 **Syntax:**
 
 ```sh
+clr help
 clr -h
 clr --help
 ```
@@ -211,5 +276,7 @@ clr --help
 |------|---------|
 | 0 | Always |
 
-**Notes:** `--help` / `-h` anywhere in argv overrides any other flags and
-triggers help output. Empty argv (no arguments) enters interactive mode.
+**Notes:** `clr help` is the canonical word-subcommand form. `--help` / `-h`
+anywhere in argv are parameter aliases that trigger identical behavior. All
+three forms override any other flags. Empty argv (no arguments) enters
+interactive mode, not help.

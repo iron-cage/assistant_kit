@@ -72,6 +72,12 @@
 //! |----|---------------|-----------|-----|
 //! | ar01 | `relogin_mre_no_name_uses_active` | no `name::` + active account → uses active (dry-run) | P |
 //! | ar02 | `relogin_mre_no_name_no_active_exits2` | no `name::` + no `_active` marker → exit 2 | N |
+//! | ar03 | `ar03_relogin_empty_name_exits_1` | empty `name::` value → exit 1 | N |
+//! | ar04 | `ar04_relogin_not_found_exits_2` | `name::ghost@example.com`, no such account → exit 2 | N |
+//! | ar05 | `ar05_relogin_dry_explicit_name` | `dry::1` with explicit name prints message | P |
+//! | ar07 | `ar07_relogin_positional_bare_arg` | positional `work@acme.com dry::1` → resolves | P |
+//! | ar08 | `ar08_relogin_prefix_resolves` | prefix `work dry::1` → `work@acme.com` | P |
+//! | ar09 | `ar09_relogin_invalid_chars_exits_1` | `name::bad/name` → exit 1 | N |
 
 use crate::helpers::{
   run_cs_with_env,
@@ -930,4 +936,110 @@ fn relogin_mre_no_name_no_active_exits2()
     err.contains( "no active account" ) || err.contains( "name::" ),
     "error must mention missing active account, got:\n{err}",
   );
+}
+
+// ── IT-3 through IT-9 ─────────────────────────────────────────────────────────
+
+#[ test ]
+fn ar03_relogin_empty_name_exits_1()
+{
+  // IT-3: empty `name::` value → exit 1 (ArgumentMissing).
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env( &[ ".account.relogin", "name::" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+#[ test ]
+fn ar04_relogin_not_found_exits_2()
+{
+  // IT-4: named account does not exist in the store → check_switch_preconditions fails → exit 2.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env(
+    &[ ".account.relogin", "name::ghost@example.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 2 );
+}
+
+#[ test ]
+fn ar05_relogin_dry_explicit_name()
+{
+  // IT-5: dry::1 with an existing name prints the re-auth message without spawning claude.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env(
+    &[ ".account.relogin", "name::work@acme.com", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "work@acme.com" ),
+    "dry-run output must name the account, got:\n{text}",
+  );
+  assert!(
+    text.contains( "dry-run" ),
+    "output must include dry-run marker, got:\n{text}",
+  );
+}
+
+#[ test ]
+fn ar07_relogin_positional_bare_arg()
+{
+  // IT-7: positional form `clp .account.relogin work@acme.com dry::1` resolves the account.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env(
+    &[ ".account.relogin", "work@acme.com", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "work@acme.com" ),
+    "positional arg must resolve account name, got:\n{text}",
+  );
+}
+
+#[ test ]
+fn ar08_relogin_prefix_resolves()
+{
+  // IT-8: prefix `work` uniquely resolves to `work@acme.com` and uses it.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",     "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "personal@home.com", "max", "tier4",    FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.relogin", "work", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "work@acme.com" ),
+    "prefix 'work' must resolve to work@acme.com, got:\n{text}",
+  );
+}
+
+#[ test ]
+fn ar09_relogin_invalid_chars_exits_1()
+{
+  // IT-9: `name::bad/name` — no `@`, path-unsafe `/` → ArgumentTypeMismatch → exit 1.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env( &[ ".account.relogin", "name::bad/name" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
 }

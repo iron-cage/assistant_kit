@@ -32,6 +32,7 @@ mod params_extended;
 ///   .execute()?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
+#[ allow( clippy::struct_excessive_bools ) ] // four independent flags (continue, skip_permissions, dry_run, unset_claudecode) — enum refactor adds no clarity
 #[derive( Debug )]
 pub struct ClaudeCommand {
   pub(super) working_directory: Option<PathBuf>,
@@ -69,6 +70,12 @@ pub struct ClaudeCommand {
 
   // Isolation
   pub(super) home_override: Option< PathBuf >,
+
+  // Stdin piping
+  pub(super) stdin_file: Option< PathBuf >,
+
+  // Subprocess environment control
+  pub(super) unset_claudecode: bool,
 }
 
 impl ClaudeCommand {
@@ -134,6 +141,9 @@ impl ClaudeCommand {
       dry_run: false,
 
       home_override: None,
+
+      stdin_file: None,
+      unset_claudecode: true,
     }
   }
 
@@ -260,6 +270,12 @@ impl ClaudeCommand {
       parts.push( format!( "\"{escaped}\"" ) );
     }
 
+    // stdin redirect notation appended to the invocation line (P1: must mirror build_command)
+    if let Some( ref path ) = self.stdin_file
+    {
+      parts.push( format!( "< {}", path.display() ) );
+    }
+
     lines.push( parts.join( " " ) );
     lines.join( "\n" )
   }
@@ -365,6 +381,13 @@ impl ClaudeCommand {
 
     let mut cmd = self.build_command();
 
+    if let Some( ref path ) = self.stdin_file
+    {
+      let file = std::fs::File::open( path )
+        .map_err( | e | Error::msg( format!( "cannot open stdin file '{}': {e}", path.display() ) ) )?;
+      cmd.stdin( std::process::Stdio::from( file ) );
+    }
+
     let output = cmd.output()
       .map_err( |e| Error::msg( format!( "Failed to execute Claude Code: {e}" ) ) )?;
 
@@ -415,6 +438,13 @@ impl ClaudeCommand {
     }
 
     let mut cmd = self.build_command();
+
+    if let Some( ref path ) = self.stdin_file
+    {
+      let file = std::fs::File::open( path )
+        .map_err( | e | Error::msg( format!( "cannot open stdin file '{}': {e}", path.display() ) ) )?;
+      cmd.stdin( std::process::Stdio::from( file ) );
+    }
 
     let status = cmd.status()
       .map_err( |e| Error::msg( format!( "Failed to execute Claude Code: {e}" ) ) )?;
@@ -500,6 +530,11 @@ impl ClaudeCommand {
 
     if let Some( ref home ) = self.home_override {
       cmd.env( "HOME", home );
+    }
+
+    if self.unset_claudecode
+    {
+      cmd.env_remove( "CLAUDECODE" );
     }
 
     // Add skip-permissions flag before custom args

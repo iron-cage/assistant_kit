@@ -20,5 +20,5 @@ Per-feature behavioral test specs for `claude_runner_core`. See [docs/feature/re
 
 | Feature | File | Tests | Status |
 |---------|------|-------|--------|
-| [Stdin File Piping](../../../docs/feature/005_stdin_file.md) | [005_stdin_file.md](005_stdin_file.md) | 5 FT | ⏳ |
-| [CLAUDECODE Unsetting](../../../docs/feature/006_unset_claudecode.md) | [006_unset_claudecode.md](006_unset_claudecode.md) | 5 FT | ⏳ |
+| [Stdin File Piping](../../../docs/feature/005_stdin_file.md) | [005_stdin_file.md](005_stdin_file.md) | 6 FT | ✅ |
+| [CLAUDECODE Unsetting](../../../docs/feature/006_unset_claudecode.md) | [006_unset_claudecode.md](006_unset_claudecode.md) | 5 FT | ✅ |

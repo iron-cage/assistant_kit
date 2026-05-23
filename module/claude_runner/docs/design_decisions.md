@@ -110,3 +110,28 @@ are unaffected; only the `[[bin]] name` in `Cargo.toml` changes.
 
 **Consequence:** `cargo install --path .` installs `clr`; `CARGO_BIN_EXE_clr` is
 used in integration tests; all docs and help text show `clr`.
+
+## D13 — Commands are bare words, not `--` flags
+
+Behavioral specification: [invariant/003_command_naming.md](invariant/003_command_naming.md).
+
+**Rationale:** Commands select a mode of operation (`run`, `isolated`, `refresh`,
+`help`). Parameters modify that mode (`--model`, `--creds`, `--trace`). Mixing these
+namespaces (e.g. `--help` as the only way to invoke help) breaks the lexical distinction
+and confuses shell completers, subcommand typo detection, and user mental models.
+
+**Consequence:** `help` is now invocable as `clr help` (bare word subcommand). `--help`
+and `-h` remain as parameter aliases for POSIX compliance. `KNOWN_SUBCOMMANDS` includes
+`"help"` alongside `"isolated"` and `"refresh"`.
+
+## D14 — Dedicated `refresh` command vs reusing `isolated`
+
+**Rationale:** `clr isolated` is designed for running real tasks in credential isolation.
+Credential refresh is a distinct operational intent: no user task, no output, just token
+renewal. Encoding the `["--print", "."]` invocation trick inside `isolated` forces users
+to know the implementation detail. A dedicated `clr refresh` makes intent self-documenting.
+
+**Consequence:** `clr refresh --creds <FILE>` wraps `run_isolated()` with fixed args
+`["--print", "."]`. Default timeout is 45s (vs 30s for `isolated`) to accommodate slow
+OAuth token exchange. Exit 0 means credentials were refreshed; exit 1 means error or
+no refresh; exit 2 means timeout without refresh.

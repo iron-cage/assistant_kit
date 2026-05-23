@@ -6,7 +6,7 @@ Live quota utilization commands.
 
 ### Command :: 9. `.usage`
 
-Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`). Renders results as a `data_fmt` table with per-account Expires, 5h Left, 5h Reset, 7d Left, 7d(Son), and 7d Reset columns, plus a footer recommendation line. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
+Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with per-account Expires, Sub, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), and 7d Reset columns, plus a footer recommendation line. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
 -- **Parameters:** [`format::`](../param/02_format.md), [`refresh::`](../param/19_refresh.md), [`live::`](../param/20_live.md), [`interval::`](../param/21_interval.md), [`jitter::`](../param/22_jitter.md), [`trace::`](../param/23_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid param combination) | 2 (runtime: credential store unreadable, HOME unset)
@@ -38,10 +38,10 @@ clp .usage refresh::1 trace::1
 clp .usage
 # Quota
 #
-#   Account          Expires     5h Left  5h Reset    7d Left  7d(Son)  7d Reset
-# ✓ i12@wbox.pro    in 7h 24m  86%      in 3h 19m  65%      35%      in 4d 23h
-# → i6@wbox.pro     in 5h 02m  100%     in 4h 58m  88%      28%      in 6d 14h
-#   i7@wbox.pro     EXPIRED    —        —           —        —        (missing accessToken)
+#   Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
+# ✓ i12@wbox.pro    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
+# → i6@wbox.pro     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
+#   i7@wbox.pro     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
 #
 # Valid: 2 / 3   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 02m)
 
@@ -57,6 +57,7 @@ clp .usage live::1 interval::60 jitter::10
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
 - Flag column priority: `✓` = current account, `*` = `_active`-but-not-current (divergence), `→` = recommended next account. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
+- `Sub` and `~Renews` are sourced from `GET /api/oauth/account` (parallel fetch); show `?` when that fetch fails.
 - Accounts with expired or missing `accessToken` show `—` for quota columns and a shortened error reason.
 - Footer "Valid: X / Y   →  Next: ..." appears when ≥2 accounts have valid quota data.
 - Empty credential store exits 0 with `(no accounts configured)`.

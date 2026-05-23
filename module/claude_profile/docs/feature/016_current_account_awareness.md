@@ -62,10 +62,10 @@ work@acme.com
 **Divergence display example (`.usage`):**
 
 ```
-  Account         Expires    5h Left  ...
-✓ alice@acme.com  in 7h 24m  86%     ...   ← current
-* work@acme.com   in 5h 02m  100%    ...   ← _active but not current
-  other@acme.com  EXPIRED    —       ...
+  Account         Expires    Sub  ~Renews  5h Left  ...
+✓ alice@acme.com  in 7h 24m  max  Jun  5   86%     ...   ← current
+* work@acme.com   in 5h 02m  max  Jun 11   100%    ...   ← _active but not current
+  other@acme.com  EXPIRED    ?    ?        —       ...
 ```
 
 ### Acceptance Criteria

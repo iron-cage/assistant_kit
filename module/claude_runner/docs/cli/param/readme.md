@@ -48,14 +48,14 @@
 | 10 | `--session-dir` | [`DirectoryPath`](../type.md#type--2-directorypath) | — | Any path | Session storage directory | 1 cmd |
 | 11 | `--dry-run` | bool | false | present/absent | Print command without executing | 1 cmd |
 | 12 | `--verbosity` | [`VerbosityLevel`](../type.md#type--5-verbositylevel) | 3 | 0 to 5 | Runner output gate level | 1 cmd |
-| 13 | `--trace` | bool | false | present/absent | Print env+command to stderr then execute | 1 cmd |
+| 13 | `--trace` | bool | false | present/absent | Print diagnostic details to stderr then execute | 3 cmds |
 | 14 | `--no-ultrathink` | bool | false | present/absent | Disable default ultrathink message suffix | 1 cmd |
 | 15 | `--system-prompt` | [`SystemPromptText`](../type.md#type--6-systemprompttext) | — | Any text | Set system prompt (replaces the default) | 1 cmd |
 | 16 | `--append-system-prompt` | [`SystemPromptText`](../type.md#type--6-systemprompttext) | — | Any text | Append text to the default system prompt | 1 cmd |
 | 17 | `--effort` | [`EffortLevel`](../type.md#type--7-effortlevel) | max | low/medium/high/max | Reasoning effort level forwarded to claude | 1 cmd |
 | 18 | `--no-effort-max` | bool | false | present/absent | Suppress default `--effort max` injection | 1 cmd |
-| 19 | `--creds` | [`CredentialsFilePath`](../type.md#type--8-credentialsfilepath) | — | Any existing file path | Credentials JSON file for isolation (required) | 1 cmd |
-| 20 | `--timeout` | [`TimeoutSecs`](../type.md#type--9-timeoutsecs) | 30 | Non-negative integer | Max seconds to wait for isolated subprocess | 1 cmd |
+| 19 | `--creds` | [`CredentialsFilePath`](../type.md#type--8-credentialsfilepath) | — | Any existing file path | Credentials JSON file (required) | 2 cmds |
+| 20 | `--timeout` | [`TimeoutSecs`](../type.md#type--9-timeoutsecs) | 30/45 | Non-negative integer | Max seconds to wait for subprocess (30 isolated, 45 refresh) | 2 cmds |
 | 21 | `--no-chrome` | bool | false | present/absent | Suppress default `--chrome` injection | 1 cmd |
 | 22 | `--no-persist` | bool | false | present/absent | Disable session persistence (`--no-session-persistence`) | 1 cmd |
 | 23 | `--json-schema` | [`JsonSchemaText`](../type.md#type--10-jsonschematext) | — | Valid JSON object string | JSON Schema for structured output validation | 1 cmd |
@@ -66,7 +66,7 @@
 
 **Total:** 27 parameters
 
-**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group.md#group--1-claude-native-flags). Parameters 5–14, 18, 21, 22, 25, 26, and 27 form [Runner Control](../param_group.md#group--2-runner-control). Parameters 15–16 form [System Prompt](../param_group.md#group--3-system-prompt). Parameters 19–20 form [Isolated Subcommand](../param_group.md#group--4-isolated-subcommand).
+**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group.md#group--1-claude-native-flags). Parameters 5–14, 18, 21, 22, 25, 26, and 27 form [Runner Control](../param_group.md#group--2-runner-control). Parameters 15–16 form [System Prompt](../param_group.md#group--3-system-prompt). Parameters 19–20 form [Credential Operations](../param_group.md#group--4-credential-operations).
 
 ### Navigation
 
@@ -104,4 +104,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 25 parameters, `isolated` = 3 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 25 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.

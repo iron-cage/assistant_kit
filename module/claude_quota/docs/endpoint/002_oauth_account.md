@@ -126,6 +126,51 @@ This is an estimate. Annual plans, mid-cycle prorations, or Stripe billing ancho
 
 **`/api/organizations` returns 403** for OAuth bearer tokens for the same reason.
 
+### Example Response
+
+HTTP 200 (personal Max account, i11@wbox.pro, sampled 2026-05-23). `settings` and `organization.settings` are large objects (~50–60 keys each) that are all `null` for personal organizations — shown as `{}` here for brevity.
+
+```json
+{
+  "tagged_id": "user_01BDCWiki5PxAn3hFN1Whvrx",
+  "uuid": "52af6817-f911-408f-b033-5e1d977af315",
+  "email_address": "i11@wbox.pro",
+  "full_name": "i11",
+  "display_name": "i11",
+  "is_verified": true,
+  "age_is_verified": true,
+  "is_anonymous": false,
+  "created_at": "2026-05-05T12:00:00.000Z",
+  "updated_at": "2026-05-20T08:00:00.000Z",
+  "completed_verification_at": "2026-05-05T12:05:00.000Z",
+  "verified_phone_number_last4": null,
+  "memberships": [
+    {
+      "role": "admin",
+      "seat_tier": null,
+      "created_at": "2026-05-05T12:00:00.000Z",
+      "updated_at": "2026-05-05T12:00:00.000Z",
+      "organization": {
+        "billing_type": "stripe_subscription",
+        "capabilities": ["claude_max", "chat"],
+        "rate_limit_tier": "default_claude_max_20x",
+        "rate_limit_upsell": "get_more_usage",
+        "free_credits_status": "available",
+        "created_at": "2026-05-05T12:00:00.000Z",
+        "billable_usage_paused_until": null,
+        "api_disabled_reason": null,
+        "api_disabled_until": null,
+        "merchant_of_record": "anthropic",
+        "data_retention": "default",
+        "parent_organization_uuid": null,
+        "settings": {}
+      }
+    }
+  ],
+  "settings": {}
+}
+```
+
 ### Error Codes
 
 | HTTP | Meaning |

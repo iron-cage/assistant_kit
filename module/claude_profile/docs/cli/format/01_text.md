@@ -39,9 +39,9 @@ clp .accounts
 clp .usage
 # Quota
 #
-#   Account          Expires     5h Left  5h Reset    7d Left  7d(Son)  7d Reset
-# ✓ i12@wbox.pro    in 7h 24m  86%      in 3h 19m  65%      35%      in 4d 23h
-# → i6@wbox.pro     in 5h 02m  100%     in 4h 58m  88%      28%      in 6d 14h
+#   Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
+# ✓ i12@wbox.pro    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
+# → i6@wbox.pro     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
 #
 # Valid: 2 / 2   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 02m)
 

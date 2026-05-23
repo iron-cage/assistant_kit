@@ -611,3 +611,85 @@ fn e24_clr_timeout_sets_isolated_timeout()
     "CLR_CREDS+CLR_TIMEOUT env vars must supply isolated args: {stderr}",
   );
 }
+
+// ─── E25–E27 (S70–S75): CLR_FILE, CLR_STRIP_FENCES, CLR_KEEP_CLAUDECODE ──────
+
+// S70: CLR_FILE sets stdin file visible in dry-run describe output
+#[ test ]
+fn s70_clr_file_sets_stdin_file_visible_in_dry_run()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "t" ],
+    &[ ( "CLR_FILE", "/tmp/e70.txt" ) ],
+  );
+  assert!( out.status.success(), "dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "/tmp/e70.txt" ),
+    "CLR_FILE must make path visible in describe output: {stdout}",
+  );
+}
+
+// S71: CLR_STRIP_FENCES=1 enables strip_fences (dry-run accepted)
+#[ test ]
+fn s71_clr_strip_fences_1_enables()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "t" ],
+    &[ ( "CLR_STRIP_FENCES", "1" ) ],
+  );
+  assert!( out.status.success(), "CLR_STRIP_FENCES=1 must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S72: CLR_KEEP_CLAUDECODE=1 enables keep_claudecode (dry-run accepted)
+#[ test ]
+fn s72_clr_keep_claudecode_1_enables()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "t" ],
+    &[ ( "CLR_KEEP_CLAUDECODE", "1" ) ],
+  );
+  assert!( out.status.success(), "CLR_KEEP_CLAUDECODE=1 must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S73: CLI --file wins over CLR_FILE
+#[ test ]
+fn s73_cli_file_wins_over_clr_file()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--file", "/tmp/cli.txt", "t" ],
+    &[ ( "CLR_FILE", "/tmp/env.txt" ) ],
+  );
+  assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "/tmp/cli.txt" ),
+    "CLI --file must win. Got:\n{stdout}",
+  );
+  assert!(
+    !stdout.contains( "/tmp/env.txt" ),
+    "CLR_FILE must NOT appear when CLI wins. Got:\n{stdout}",
+  );
+}
+
+// S74: CLR_STRIP_FENCES=yes rejected (env_bool only accepts 1/true)
+#[ test ]
+fn s74_clr_strip_fences_yes_rejected()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "t" ],
+    &[ ( "CLR_STRIP_FENCES", "yes" ) ],
+  );
+  assert!( out.status.success(), "CLR_STRIP_FENCES=yes must exit 0 (rejected silently). stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S75: CLR_KEEP_CLAUDECODE=yes rejected (env_bool only accepts 1/true)
+#[ test ]
+fn s75_clr_keep_claudecode_yes_rejected()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "t" ],
+    &[ ( "CLR_KEEP_CLAUDECODE", "yes" ) ],
+  );
+  assert!( out.status.success(), "CLR_KEEP_CLAUDECODE=yes must exit 0 (rejected silently). stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}

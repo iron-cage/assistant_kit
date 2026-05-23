@@ -706,6 +706,117 @@ fn t49_help_options_column_aligned()
   }
 }
 
+// ── S58–S69, S79: New flag parsing tests ────────────────────────────────────────
+
+// S58: --strip-fences accepted in dry-run
+#[ test ]
+fn s58_strip_fences_flag_accepted()
+{
+  let out = run_cli( &[ "--dry-run", "--strip-fences", "t" ] );
+  assert!( out.status.success(), "--strip-fences must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S59: --keep-claudecode accepted in dry-run
+#[ test ]
+fn s59_keep_claudecode_flag_accepted()
+{
+  let out = run_cli( &[ "--dry-run", "--keep-claudecode", "t" ] );
+  assert!( out.status.success(), "--keep-claudecode must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S60: --file without value → error
+#[ test ]
+fn s60_file_requires_a_value()
+{
+  let out = run_cli( &[ "--dry-run", "--file" ] );
+  assert!( !out.status.success(), "--file without value must fail" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!( stderr.contains( "requires a value" ), "stderr must mention 'requires a value'. Got: {stderr}" );
+}
+
+// S61: --file with path accepted
+#[ test ]
+fn s61_file_with_path_accepted()
+{
+  let out = run_cli( &[ "--dry-run", "--file", "/tmp/x.txt", "t" ] );
+  assert!( out.status.success(), "--file with path must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S62: strip_fences absent by default
+#[ test ]
+fn s62_strip_fences_absent_by_default()
+{
+  let out = run_cli( &[ "--dry-run", "t" ] );
+  assert!( out.status.success(), "default must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S63: keep_claudecode absent by default
+#[ test ]
+fn s63_keep_claudecode_absent_by_default()
+{
+  let out = run_cli( &[ "--dry-run", "t" ] );
+  assert!( out.status.success(), "default must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S64: --file and --strip-fences together
+#[ test ]
+fn s64_file_and_strip_fences_together()
+{
+  let out = run_cli( &[ "--dry-run", "--file", "/tmp/x.txt", "--strip-fences", "t" ] );
+  assert!( out.status.success(), "combo must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S65: --file and --keep-claudecode together
+#[ test ]
+fn s65_file_and_keep_claudecode_together()
+{
+  let out = run_cli( &[ "--dry-run", "--file", "/tmp/x.txt", "--keep-claudecode", "t" ] );
+  assert!( out.status.success(), "combo must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S66: --strip-fences and --keep-claudecode together
+#[ test ]
+fn s66_strip_fences_and_keep_claudecode_together()
+{
+  let out = run_cli( &[ "--dry-run", "--strip-fences", "--keep-claudecode", "t" ] );
+  assert!( out.status.success(), "combo must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S67: all three new flags together
+#[ test ]
+fn s67_all_three_new_flags_together()
+{
+  let out = run_cli( &[ "--dry-run", "--file", "/tmp/x.txt", "--strip-fences", "--keep-claudecode", "t" ] );
+  assert!( out.status.success(), "all three must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// S68: help includes --file
+#[ test ]
+fn s68_help_includes_file()
+{
+  let out = run_cli( &[ "--help" ] );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( stdout.contains( "--file" ), "help must mention --file. Got:\n{stdout}" );
+}
+
+// S69: help includes --strip-fences
+#[ test ]
+fn s69_help_includes_strip_fences()
+{
+  let out = run_cli( &[ "--help" ] );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( stdout.contains( "--strip-fences" ), "help must mention --strip-fences. Got:\n{stdout}" );
+}
+
+// S79: help includes --keep-claudecode
+#[ test ]
+fn s79_help_includes_keep_claudecode()
+{
+  let out = run_cli( &[ "--help" ] );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( stdout.contains( "--keep-claudecode" ), "help must mention --keep-claudecode. Got:\n{stdout}" );
+}
+
 // T48: --no-skip-permissions --new-session combo disables BOTH automatic defaults
 //
 // When both opt-out flags are present: no --dangerously-skip-permissions AND no -c.

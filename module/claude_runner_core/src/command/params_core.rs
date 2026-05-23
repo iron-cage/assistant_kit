@@ -192,6 +192,51 @@ impl ClaudeCommand {
     self
   }
 
+  /// Set a file whose content is piped to the subprocess stdin
+  ///
+  /// When set, `execute()` and `execute_interactive()` open the file and
+  /// attach it to the subprocess's standard input via `Stdio::from(file)`.
+  /// The file is opened at execution time — not at builder time — so dry-run
+  /// mode does not check file existence.
+  ///
+  /// # Example
+  ///
+  /// ```no_run
+  /// use claude_runner_core::ClaudeCommand;
+  ///
+  /// let cmd = ClaudeCommand::new()
+  ///   .with_stdin_file( std::path::PathBuf::from( "/tmp/input.txt" ) );
+  /// ```
+  #[ inline ]
+  #[ must_use ]
+  pub fn with_stdin_file( mut self, path : std::path::PathBuf ) -> Self
+  {
+    self.stdin_file = Some( path );
+    self
+  }
+
+  /// Control whether `CLAUDECODE` is removed from the subprocess environment
+  ///
+  /// Default: `true` (removes `CLAUDECODE`). Set to `false` to preserve
+  /// the variable in the subprocess, e.g. when the subprocess needs to
+  /// detect it is running inside a Claude Code session.
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// use claude_runner_core::ClaudeCommand;
+  ///
+  /// let cmd = ClaudeCommand::new()
+  ///   .with_unset_claudecode( false );
+  /// ```
+  #[ inline ]
+  #[ must_use ]
+  pub fn with_unset_claudecode( mut self, unset : bool ) -> Self
+  {
+    self.unset_claudecode = unset;
+    self
+  }
+
   /// Enable or disable telemetry
   ///
   /// Default: false. Standard default: true.

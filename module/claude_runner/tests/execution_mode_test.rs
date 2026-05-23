@@ -377,3 +377,85 @@ fn e13_interactive_flag_with_message_uses_interactive_mode()
     "--interactive must suppress --print (interactive mode). Received: {received}"
   );
 }
+
+// ── S76–S78, S80: New flag execution tests ──────────────────────────────────────
+
+// S76: --strip-fences strips outermost fences from captured output
+#[ test ]
+fn s76_strip_fences_applied_to_captured_output()
+{
+  let script = "#!/bin/sh\nprintf '```rust\\nfn main(){}\\n```\\n'\n";
+  let ( _tmp, path ) = fake_claude( script );
+  let out = run_with_path(
+    &[ "--strip-fences", "--no-ultrathink", "t" ],
+    &path,
+  );
+  assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "```" ),
+    "fences must be stripped. Got:\n{stdout}",
+  );
+  assert!(
+    stdout.contains( "fn main(){}" ),
+    "content must remain. Got:\n{stdout}",
+  );
+}
+
+// S77: --keep-claudecode preserves CLAUDECODE env var in subprocess
+#[ test ]
+fn s77_keep_claudecode_preserves_env_in_subprocess()
+{
+  let script = "#!/bin/sh\necho \"CLAUDECODE=$CLAUDECODE\"\n";
+  let ( _tmp, path ) = fake_claude( script );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( &[ "--keep-claudecode", "--no-ultrathink", "t" ] )
+    .env( "PATH", &path )
+    .env( "CLAUDECODE", "test_val" )
+    .output()
+    .expect( "failed to invoke clr" );
+  assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "CLAUDECODE=test_val" ),
+    "--keep-claudecode must preserve env var in subprocess. Got:\n{stdout}",
+  );
+}
+
+// S78: --file pipes file content to subprocess stdin
+#[ test ]
+fn s78_file_content_piped_to_subprocess_stdin()
+{
+  let script = "#!/bin/sh\ncat\n";
+  let ( _tmp, path ) = fake_claude( script );
+  let input_file = tempfile::NamedTempFile::new().expect( "create temp" );
+  std::fs::write( input_file.path(), "piped_content_s78" ).expect( "write" );
+  let out = run_with_path(
+    &[ "--no-ultrathink", "--file", input_file.path().to_str().unwrap(), "t" ],
+    &path,
+  );
+  assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "piped_content_s78" ),
+    "--file must pipe content to subprocess stdin. Got:\n{stdout}",
+  );
+}
+
+// S80: --file with nonexistent path → exit non-zero, stderr contains path
+#[ test ]
+fn s80_file_nonexistent_path_errors()
+{
+  let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho ok\n" );
+  let out = run_with_path(
+    &[ "--no-ultrathink", "--file", "/tmp/nonexistent_99999.txt", "t" ],
+    &path,
+  );
+  assert!( !out.status.success(), "--file with nonexistent path must fail" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "/tmp/nonexistent_99999.txt" ),
+    "stderr must contain the file path. Got: {stderr}",
+  );
+}

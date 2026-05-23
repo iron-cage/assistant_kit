@@ -24,6 +24,7 @@
 | 011_file_input.md | User story: pipe a file's content as subprocess stdin |
 | 012_code_block_extraction.md | User story: strip code fence from captured output |
 | 013_structured_json_pipeline.md | User story: generate schema-constrained JSON for downstream tools |
+| 014_credential_refresh.md | User story: refresh OAuth credentials without running a task |
 
 ### Index
 
@@ -42,3 +43,4 @@
 | 011 | File Input | `--file` | `run` |
 | 012 | Code Block Extraction | `--strip-fences` | `run` |
 | 013 | Structured JSON Pipeline | `--json-schema`, `--strip-fences` | `run` |
+| 014 | Credential Refresh | `--creds`, `--timeout`, `--trace` | `refresh` |

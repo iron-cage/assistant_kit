@@ -10,7 +10,8 @@ Domain vocabulary for the `clr` CLI. Terms are organized by category below.
 |------|------------|
 | run | Default command that builds and executes a `claude` subprocess with the given flags |
 | isolated | Subcommand that runs `claude` in a credential-isolated temporary HOME; requires `--creds` |
-| help | Display usage information and exit; triggered by `-h` / `--help` |
+| refresh | Subcommand that refreshes OAuth credentials via `run_isolated()` with `["--print", "."]`; requires `--creds`; no task executed |
+| help | Display usage information and exit; canonical form `clr help`; `--help`/`-h` are parameter aliases |
 
 ### Modes
 
@@ -25,6 +26,7 @@ Domain vocabulary for the `clr` CLI. Terms are organized by category below.
 | fence stripping | Post-processing of captured stdout by `--strip-fences`; removes the first and last `` ``` `` lines (with optional language tag); content between the fences is emitted unchanged; no-op if no fence pair is found |
 | standalone mode | Default subprocess behavior: `CLAUDECODE` env var is removed before spawn so the subprocess behaves as a first-class Claude Code process, not a nested agent; opt out with `--keep-claudecode` |
 | nested-agent mode | Subprocess behavior when `CLAUDECODE=1` is inherited from the parent; alters permission handling, output format, and tool availability; active when `--keep-claudecode` is set |
+| credential refresh mode | Invocation via `clr refresh`; subprocess runs with `["--print", "."]` in a temporary HOME to trigger OAuth token refresh at startup; no user task is executed; default timeout 45 seconds |
 
 ### Types
 

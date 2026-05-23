@@ -26,7 +26,7 @@ clr [OPTIONS] [MESSAGE]
 | type.md | ✅ | ➖ | ➖ | ➖ | ➖ | Partial |
 | param_group.md | ✅ | ➖ | ➖ | ➖ | ➖ | Partial |
 | user_story/readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| user_story/ (13 instances) | ✅ | ✅ | ➖ | ➖ | ➖ | Partial |
+| user_story/ (14 instances) | ✅ | ✅ | ➖ | ➖ | ➖ | Partial |
 | env_param.md | ✅ | ➖ | ✅ | ➖ | ➖ | Complete |
 | config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A |
 | format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A |
@@ -43,13 +43,13 @@ clr [OPTIONS] [MESSAGE]
 
 ### Navigation
 
-- [Commands](command.md) — command reference (3 commands)
+- [Commands](command.md) — command reference (4 commands)
 - [Parameters](param/readme.md) — flag and argument reference (27 parameters)
 - [Types](type.md) — semantic type definitions (12 types)
 - [Parameter Groups](param_group.md) — logical parameter groupings (4 groups)
 - [Dictionary](dictionary.md) — domain vocabulary
-- [User Stories](user_story/readme.md) — user goals and usage patterns (13 user stories)
-- [Env Parameters](env_param.md) — input and subprocess environment variables (28 variables)
+- [User Stories](user_story/readme.md) — user goals and usage patterns (14 user stories)
+- [Env Parameters](env_param.md) — input and subprocess environment variables (29 variables)
 
 ### See Also
 

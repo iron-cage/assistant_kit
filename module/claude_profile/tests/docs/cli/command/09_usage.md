@@ -78,7 +78,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** At least one saved account with a valid token exists in the credential store.
 - **When:** `clp .usage`
-- **Then:** Stdout contains a table with "Quota" heading and rows showing columns: "Expires", "5h Left", "5h Reset", "7d Left", "7d Reset". Exit 0.
+- **Then:** Stdout contains a table with "Quota" heading and rows showing columns: "Expires", "Sub", "~Renews", "5h Left", "5h Reset", "7d Left", "7d Reset". Exit 0.
 - **Exit:** 0
 - **Source:** [command/usage.md — .usage](../../../../docs/cli/command/usage.md#command--9-usage)
 
@@ -108,7 +108,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** At least one saved account with a valid token.
 - **When:** `clp .usage format::json`
-- **Then:** Valid JSON array on stdout. Each element has `account` (string), `is_current` (boolean), `is_active` (boolean), and `expires_in_secs` (number). Successful elements have `session_5h_left_pct` and `weekly_7d_left_pct` (not `session_5h_pct` or `weekly_7d_pct`). No element has a top-level `active` key. Exit 0.
+- **Then:** Valid JSON array on stdout. Each element has `account` (string), `is_current` (boolean), `is_active` (boolean), `expires_in_secs` (number), `billing_type` (string or null), `has_max` (boolean or null), and `next_renewal_est` (string or null). Successful elements have `session_5h_left_pct` and `weekly_7d_left_pct` (not `session_5h_pct` or `weekly_7d_pct`). No element has a top-level `active` key. Exit 0.
 - **Exit:** 0
 - **Source:** [016_current_account_awareness.md AC-08](../../../../docs/feature/016_current_account_awareness.md)
 
@@ -362,7 +362,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** One account with no `accessToken` in the credential file (read_token returns Err).
 - **When:** `clp .usage format::json`
-- **Then:** Exits 0; JSON contains `"error":` key; does NOT contain `"session_5h_left_pct"`; does contain `"is_current"`, `"is_active"`, `"expires_in_secs"`.
+- **Then:** Exits 0; JSON contains `"error":` key; does NOT contain `"session_5h_left_pct"`; does contain `"is_current"`, `"is_active"`, `"expires_in_secs"`, `"billing_type"` (null — token read failed, no account fetch ran), `"has_max"` (null), `"next_renewal_est"` (null).
 - **Exit:** 0
 - **Source fn:** `it27_json_error_field_on_failed_account`
 - **Source:** [009_token_usage.md AC-05](../../../../docs/feature/009_token_usage.md)

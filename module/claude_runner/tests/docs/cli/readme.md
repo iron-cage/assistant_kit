@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 3 clr commands, all 27 parameters, all 12 types, all 4 parameter groups, 1 env parameter, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 4 clr commands, all 27 parameters, all 12 types, all 4 parameter groups, 1 env parameter, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -23,7 +23,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
-| Commands | 3 | ≥8 IT each |
+| Commands | 4 | ≥8 IT each |
 | Parameters | 27 | ≥6 EC each |
 | Parameter groups | 4 | ≥4 CC each |
 | Types | 12 | ≥4 TC each |
@@ -35,6 +35,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`run`](command/01_run.md)
 - [`help`](command/02_help.md)
 - [`isolated`](command/03_isolated.md)
+- [`refresh`](command/04_refresh.md)
 
 #### Parameters
 - [`[MESSAGE]`](param/01_message.md)
@@ -69,7 +70,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [Claude-Native Flags](param_group/01_claude_native_flags.md)
 - [Runner Control](param_group/02_runner_control.md)
 - [System Prompt](param_group/03_system_prompt.md)
-- [Isolated Subcommand](param_group/04_isolated_subcommand.md)
+- [Credential Operations](param_group/04_credential_operations.md)
 
 #### Types
 - [`MessageText`](type/01_message_text.md)
@@ -87,4 +88,4 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)
-- [`CLR_* (27 vars)`](env_param/02_clr_input_vars.md)
+- [`CLR_* (28 vars)`](env_param/02_clr_input_vars.md)

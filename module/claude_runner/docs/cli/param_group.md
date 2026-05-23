@@ -7,7 +7,7 @@
 | 1 | Claude-Native Flags | 6 | Pass selected `claude` binary flags through without runner modification |
 | 2 | Runner Control | 16 | Control runner execution behavior — before, during, or instead of subprocess invocation |
 | 3 | System Prompt | 2 | Inject or extend the behavioral system context sent to the `claude` subprocess |
-| 4 | Isolated Subcommand | 2 | Configure the credential-isolated environment for `clr isolated` invocations |
+| 4 | Credential Operations | 3 | Configure credential-isolated execution for `clr isolated` and `clr refresh` |
 
 **Total:** 4 groups
 
@@ -232,55 +232,61 @@ clr --append-system-prompt "Always respond in JSON." "List failing tests"
 
 ---
 
-### Group :: 4. Isolated Subcommand
+### Group :: 4. Credential Operations
 
-**Pattern:** Exclusive to the `clr isolated` subcommand; configure the isolated execution environment; not accepted by `clr run`.
+**Pattern:** Shared by `clr isolated` and `clr refresh`; configure the credential-isolated execution environment; not accepted by `clr run`.
 
-**Purpose:** Configure the credential-isolated environment for `clr isolated` invocations.
+**Purpose:** Configure credential-isolated execution for `clr isolated` and `clr refresh`.
 
 ### Semantic Coherence Test
 
-"Is this parameter exclusive to `clr isolated`?" — YES for both.
+"Is this parameter used by credential-operating commands (`isolated`/`refresh`) and not by `run`?" — YES for all 3.
 
 ### Parameters
 
 | Parameter | Type | Default | Role in Group | Description |
 |-----------|------|---------|---------------|-------------|
-| [`--creds`](param/19_creds.md) | [`CredentialsFilePath`](type.md#type--8-credentialsfilepath) | — | Credentials source | Credentials JSON file for isolation (required) |
-| [`--timeout`](param/20_timeout.md) | [`TimeoutSecs`](type.md#type--9-timeoutsecs) | 30 | Duration limit | Max seconds to wait for isolated subprocess |
+| [`--creds`](param/19_creds.md) | [`CredentialsFilePath`](type.md#type--8-credentialsfilepath) | — | Credentials source | Credentials JSON file (required) |
+| [`--timeout`](param/20_timeout.md) | [`TimeoutSecs`](type.md#type--9-timeoutsecs) | 30/45 | Duration limit | Max seconds to wait (30 isolated, 45 refresh) |
+| [`--trace`](param/13_trace.md) | bool | false | Trace mode | Print underlying call details to stderr then execute |
 
 ### Why NOT X
 
-- `--creds`: exclusive to `isolated`; sets credentials file — not applicable to `run`
-- `--timeout`: exclusive to `isolated`; controls subprocess wait time — not applicable to `run`
+- `--creds`: exclusive to credential ops; sets credentials file — not applicable to `run`
+- `--timeout`: exclusive to credential ops; controls subprocess wait time — not applicable to `run`
+- `--trace`: also in Runner Control (Group 2) for `run`; listed here because it applies to credential ops too
 
 ### Invariants
 
-Both parameters are exclusive to `clr isolated`. Neither is accepted or processed by `clr run`.
+`--creds` and `--timeout` are exclusive to `clr isolated` and `clr refresh`. Neither is accepted by `clr run`. `--trace` is cross-command (also in Group 2).
 
 ### Notes
 
-—
+`--timeout` has different defaults per command: 30s for `isolated` (general task execution), 45s for `refresh` (allows headroom for slow OAuth token exchange).
 
 ### Referenced Commands
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|-----------|-----------------|-------|
 | 1 | `isolated` | all | — | |
+| 2 | `refresh` | all | — | |
 
 ### Referenced Tests
 
-- [`tests/docs/cli/param_group/04_isolated_subcommand.md`](../../tests/docs/cli/param_group/04_isolated_subcommand.md)
+- [`tests/docs/cli/param_group/04_credential_operations.md`](../../tests/docs/cli/param_group/04_credential_operations.md)
 
 **Typical usage:**
 
 ```sh
 clr isolated --creds ~/.claude/.credentials.json "Fix bug"
-clr isolated --creds /path/to/creds.json --timeout 120 "Refactor this"
+clr isolated --creds /path/to/creds.json --timeout 120 --trace "Refactor this"
+clr refresh --creds ~/.claude/.credentials.json
+clr refresh --creds creds.json --timeout 90 --trace
 ```
 
 ### Referenced User Stories
 
 | # | User Story | Notes |
 |---|-----------|-------|
-| 1 | [010 Credential-isolated Execution](user_story/010_credential_isolated_execution.md) | Primary user story for this group |
+| 1 | [010 Credential-isolated Execution](user_story/010_credential_isolated_execution.md) | `isolated` user story |
+| 2 | [014 Credential Refresh](user_story/014_credential_refresh.md) | `refresh` user story |

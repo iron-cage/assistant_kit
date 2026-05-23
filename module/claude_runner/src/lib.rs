@@ -83,6 +83,9 @@ mod cli
     pub( super ) no_persist           : bool,
     pub( super ) json_schema          : Option< String >,
     pub( super ) mcp_config           : Vec< String >,
+    pub( super ) file                 : Option< String >,
+    pub( super ) strip_fences         : bool,
+    pub( super ) keep_claudecode      : bool,
   }
 
   /// Parsed arguments for the `isolated` subcommand.
@@ -130,6 +133,9 @@ mod cli
     println!( "  --no-persist                       Disable session persistence (--no-session-persistence)" );
     println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
     println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
+    println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
+    println!( "  --strip-fences                     Strip outermost markdown code fences from stdout" );
+    println!( "  --keep-claudecode                  Preserve CLAUDECODE env var in subprocess (default: removed)" );
     println!( "  --verbosity <0-5>                  Runner output verbosity level (default: 3)" );
     println!( "  -h, --help                         Show this help" );
     println!();
@@ -321,6 +327,10 @@ mod cli
       {
         parsed.mcp_config.push( next_value( tokens, next, "--mcp-config" )?.to_string() );
       }
+      "--file" =>
+      {
+        parsed.file = Some( next_value( tokens, next, "--file" )?.to_string() );
+      }
       "--verbosity" =>
       {
         let raw = next_value( tokens, next, "--verbosity" )?;
@@ -409,6 +419,14 @@ mod cli
         {
           parsed.no_persist = true;
         }
+        "--strip-fences" =>
+        {
+          parsed.strip_fences = true;
+        }
+        "--keep-claudecode" =>
+        {
+          parsed.keep_claudecode = true;
+        }
         "--" =>
         {
           // Everything after `--` is positional.
@@ -472,7 +490,7 @@ mod cli
     std::env::var( var ).ok().filter( | v | !v.is_empty() )
   }
 
-  /// Apply `CLR_*` environment variable fallbacks for the 22 run parameters.
+  /// Apply `CLR_*` environment variable fallbacks for the 25 run parameters.
   ///
   /// Each field is updated only when it is still at its zero/default value — the CLI
   /// flag always wins when both are present (CLI-wins field-default check).
@@ -523,6 +541,9 @@ mod cli
     {
       if let Some( v ) = env_str( "CLR_MCP_CONFIG" ) { parsed.mcp_config.push( v ); }
     }
+    if parsed.file.is_none()             { parsed.file             = env_str( "CLR_FILE" ); }
+    if !parsed.strip_fences              { parsed.strip_fences     = env_bool( "CLR_STRIP_FENCES" ); }
+    if !parsed.keep_claudecode           { parsed.keep_claudecode  = env_bool( "CLR_KEEP_CLAUDECODE" ); }
   }
 
   /// Apply `CLR_CREDS` and `CLR_TIMEOUT` env var fallbacks for the `isolated` subcommand.
@@ -589,6 +610,14 @@ mod cli
     if !cli.mcp_config.is_empty()
     {
       builder = builder.with_mcp_config( cli.mcp_config.iter().map( String::as_str ) );
+    }
+    if let Some( ref path ) = cli.file
+    {
+      builder = builder.with_stdin_file( std::path::PathBuf::from( path ) );
+    }
+    if cli.keep_claudecode
+    {
+      builder = builder.with_unset_claudecode( false );
     }
     if cli.verbose
     {
@@ -658,6 +687,51 @@ mod cli
     println!( "{command}" );
   }
 
+  /// Strip the outermost markdown code fence pair from `stdout`.
+  ///
+  /// Finds the first and last lines starting with ` ``` ` (after optional leading whitespace).
+  /// If both exist and are distinct lines, returns the content between them (preserving
+  /// the original trailing-newline state). If fewer than two fences exist, returns `stdout`
+  /// unchanged.
+  fn strip_fences( stdout : &str ) -> String
+  {
+    let lines : Vec< &str > = stdout.lines().collect();
+    let first_fence = lines.iter().position( | l | l.trim_start().starts_with( "```" ) );
+    let last_fence  = lines.iter().rposition( | l | l.trim_start().starts_with( "```" ) );
+    match ( first_fence, last_fence )
+    {
+      ( Some( f ), Some( l ) ) if f < l =>
+      {
+        let body = lines[ f + 1 .. l ].join( "\n" );
+        if stdout.ends_with( '\n' ) { format!( "{body}\n" ) } else { body }
+      }
+      _ => stdout.to_string(),
+    }
+  }
+
+  #[ cfg( test ) ]
+  mod tests
+  {
+    use super::strip_fences;
+
+    #[ test ]
+    fn sf01_basic_fence_pair_stripped() { assert_eq!( strip_fences( "```\nhello\n```\n" ), "hello\n" ); }
+    #[ test ]
+    fn sf02_language_tagged_fence_stripped() { assert_eq!( strip_fences( "```rust\nfn f(){}\n```\n" ), "fn f(){}\n" ); }
+    #[ test ]
+    fn sf03_no_fences_pass_through() { assert_eq!( strip_fences( "plain text\n" ), "plain text\n" ); }
+    #[ test ]
+    fn sf04_single_fence_unchanged() { assert_eq!( strip_fences( "```\n" ), "```\n" ); }
+    #[ test ]
+    fn sf05_empty_string_unchanged() { assert_eq!( strip_fences( "" ), "" ); }
+    #[ test ]
+    fn sf06_inner_fences_preserved() { assert_eq!( strip_fences( "```\n```inner\n```\n```\n" ), "```inner\n```\n" ); }
+    #[ test ]
+    fn sf07_no_trailing_newline_preserved() { assert_eq!( strip_fences( "```\ncontent\n```" ), "content" ); }
+    #[ test ]
+    fn sf08_trailing_newline_preserved() { assert_eq!( strip_fences( "```\ncontent\n```\n" ), "content\n" ); }
+  }
+
   /// Execute in non-interactive print mode (captures output).
   ///
   /// Both `--print` (passed to claude) and `execute()` (captures stdout) are required:
@@ -665,7 +739,11 @@ mod cli
   /// `execute()` captures that output into memory for programmatic use.
   /// Without `--print`, captured output would be TUI escape codes.
   /// Without `execute()`, clean output would go straight to terminal uncaptured.
-  pub( super ) fn run_print_mode( builder : &ClaudeCommand, verbosity : VerbosityLevel )
+  pub( super ) fn run_print_mode(
+    builder           : &ClaudeCommand,
+    verbosity         : VerbosityLevel,
+    strip_fences_flag : bool,
+  )
   {
     let output = match builder.execute()
     {
@@ -691,7 +769,8 @@ mod cli
       std::process::exit( 1 );
     }
 
-    print!( "{}", output.stdout );
+    let out = if strip_fences_flag { strip_fences( &output.stdout ) } else { output.stdout };
+    print!( "{}", out );
   }
 
   /// Execute in interactive mode (TTY passthrough).
@@ -904,7 +983,7 @@ pub fn run_cli()
   // --interactive overrides the message-default back to TTY passthrough.
   if cli.print_mode || ( cli.message.is_some() && !cli.interactive )
   {
-    run_print_mode( &builder, verbosity );
+    run_print_mode( &builder, verbosity, cli.strip_fences );
   }
   else
   {

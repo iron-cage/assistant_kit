@@ -155,6 +155,12 @@ RUN cargo chef prepare --recipe-path recipe.json
 # not when .rs files change.
 # CMD_SCOPE scopes which crates' deps to precompile — the same value drives nextest run.
 #
+# Note: cook uses $CMD_SCOPE (e.g. -p claude_runner_core) for compiled artifacts.
+# The test stage adds a `cargo fetch` step to populate the full registry
+# so nextest can run `cargo metadata` offline without hitting HTTP for missing transitive
+# deps (e.g. adler2 via claude_profile → ureq → flate2 → miniz_oxide → adler2).
+# Fix(BUG-cook-scope): cargo fetch in test stage ensures offline metadata succeeds.
+#
 # RUSTFLAGS="-D warnings" must match the test runner.
 # Cargo includes RUSTFLAGS in its fingerprint hash.  A mismatch between cook and test
 # causes cargo to discard all cook-stage artifacts and recompile every external dep from
@@ -238,6 +244,17 @@ COPY . .
 # cli_fmt lives in wtools outside the build context; injected via --build-context wtools_cli_fmt.
 # Cargo resolves path = "../wtools/dev/module/core/cli_fmt" from /workspace/ → /wtools/dev/module/core/cli_fmt.
 COPY --from=wtools_cli_fmt . /wtools/dev/module/core/cli_fmt/
+
+# Populate the full workspace dep registry so nextest can run `cargo metadata --offline`
+# without network access.  The cook stage only compiles deps for CMD_SCOPE (e.g.
+# -p claude_runner_core), so transitive deps of other workspace crates (e.g.
+# adler2 via claude_profile → ureq → flate2 → miniz_oxide) are not downloaded
+# by cook.  nextest resolves cargo metadata for the ENTIRE workspace regardless
+# of --package scope, so all workspace deps must be present in the registry.
+# `cargo fetch` downloads source archives only (no compilation) — fast and safe.
+# Fix(BUG-cook-scope): this fetch ensures offline metadata succeeds for full workspace.
+# Note: cargo fetch has no --workspace flag; running from workspace root fetches all deps.
+RUN cargo fetch
 
 # Create the seed mount point so Docker initialises the named volume with TEST_USER
 # ownership when _ensure_build_cache first mounts it.  Without this mkdir, Docker

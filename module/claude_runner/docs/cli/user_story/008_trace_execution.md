@@ -2,15 +2,17 @@
 
 ### Persona
 
-Developer who wants to see exactly what environment variables and command are sent to the claude subprocess, while still letting the subprocess run normally.
+Developer who wants to see exactly what is called under the hood — CLI commands, subprocess arguments, credential paths — while still letting execution proceed normally.
 
 ### Goal
 
-Print the assembled environment and subprocess command to stderr — like shell `set -x` — then execute normally.
+Print diagnostic details to stderr — like shell `set -x` — then execute normally. Works across all commands that spawn a subprocess.
 
 ### Acceptance Criteria
 
-- `--trace` emits env vars and full command to stderr before launching the subprocess
+- `--trace` on `run`: emits env vars and full `claude` command to stderr before launch
+- `--trace` on `isolated`: emits creds path, temp HOME, timeout, forwarded args to stderr
+- `--trace` on `refresh`: emits creds path, temp HOME, timeout, fixed args `["--print", "."]` to stderr
 - Subprocess executes after the trace output (unlike `--dry-run` which does not execute)
 - Trace output goes to stderr only; captured stdout in print mode is unaffected
 - Independent of `--verbosity` level: always prints when set
@@ -19,7 +21,9 @@ Print the assembled environment and subprocess command to stderr — like shell 
 
 | # | Command | Notes |
 |---|---------|-------|
-| 1 | [`run`](../command.md#command--1-run) | `--trace` applies to `run` subprocess |
+| 1 | [`run`](../command.md#command--1-run) | `--trace` shows env vars + assembled claude command |
+| 2 | [`isolated`](../command.md#command--2-isolated) | `--trace` shows credential isolation details |
+| 3 | [`refresh`](../command.md#command--3-refresh) | `--trace` shows refresh call details |
 
 ### Referenced Parameters
 

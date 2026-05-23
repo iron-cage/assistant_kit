@@ -1,8 +1,8 @@
 # Env Param :: CLR_* Input Variables
 
-Edge cases for the 27 `CLR_*` input environment variable fallbacks.
+Edge cases for the 28 `CLR_*` input environment variable fallbacks.
 Source: [`env_param.md`](../../../../docs/cli/env_param.md)
-Implementation: `apply_env_vars()` and `apply_isolated_env_vars()` in `src/lib.rs`
+Implementation: `apply_env_vars()`, `apply_isolated_env_vars()`, and `apply_refresh_env_vars()` in `src/lib.rs`
 Test file: `tests/env_var_test.rs`
 
 ## Test Case Index
@@ -36,17 +36,19 @@ Test file: `tests/env_var_test.rs`
 | E25 | `CLR_FILE` supplies file path | `CLR_FILE` | describe output includes the file path (same as `--file`) |
 | E26 | `CLR_STRIP_FENCES=1` strips fences | `CLR_STRIP_FENCES` | captured stdout has fences removed (same as `--strip-fences`) |
 | E27 | `CLAUDECODE=1 CLR_KEEP_CLAUDECODE=1` preserves env var | `CLR_KEEP_CLAUDECODE` | subprocess env contains `CLAUDECODE` (same as `--keep-claudecode`) |
+| E28 | `CLR_TRACE` enables trace for `isolated`/`refresh` | `CLR_TRACE` | trace output appears in stderr for credential ops (cross-command) |
 
 ## Test Coverage Summary
 
-- Bool vars (truthy only): E02, E04, E05, E06, E07, E11, E13, E14, E18, E19 (10 tests)
+- Bool vars (truthy only): E02, E04, E05, E06, E07, E11, E13, E14, E18, E19, E28 (11 tests)
 - String vars: E01, E03, E08, E10, E15, E16, E21, E22, E23 (9 tests)
 - Parsed vars (with silent-ignore): E09, E12, E17 (3 tests)
 - Negation suppression (suppress default injection): E05, E06, E07, E18, E19 (5 tests)
 - CLI-wins verification: E01, E03 (2 tests)
 - Isolated subcommand: E23, E24 (2 tests)
+- Credential ops (cross-command): E28 (1 test)
 
-**Total:** 27 edge cases (E01–E27)
+**Total:** 28 edge cases (E01–E28)
 
 ## Test Cases
 
@@ -323,3 +325,13 @@ Test file: `tests/env_var_test.rs`
 - **Then:** subprocess env contains `CLAUDECODE` (same as `clr --keep-claudecode task`)
 - **Exit:** 0
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E28: CLR_TRACE enables trace for isolated/refresh subcommands
+
+- **Given:** `CLR_TRACE=1`; `CLR_CREDS=/tmp/e28.creds.json`; no `--trace` on CLI
+- **When:** `clr isolated` (dry-run or parse-only path)
+- **Then:** stderr contains creds path and temp HOME details (cross-command trace output)
+- **Note:** `CLR_TRACE` is shared with `run` (E13); this case validates `apply_isolated_env_vars()` and `apply_refresh_env_vars()` apply it independently
+- **Source:** [env_param.md §2](../../../../docs/cli/env_param.md)

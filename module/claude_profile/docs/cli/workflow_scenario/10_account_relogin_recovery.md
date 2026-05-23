@@ -16,7 +16,7 @@ clp .usage refresh::1 trace::1
 # [trace] refresh i3@wbox.pro  switch_account: OK
 # [trace] refresh i3@wbox.pro  run_isolated: OK credentials=None   <- dead refreshToken
 #
-#   Account          Expires   5h Left
+#   Account          Expires   Sub  ~Renews  5h Left
 # ✓ i12@wbox.pro    in 7h     86%
 #   i3@wbox.pro     EXPIRED   —       (auth error: 401)
 #
@@ -40,7 +40,7 @@ clp .account.relogin name::i3@wbox.pro
 
 ```bash
 clp .usage
-#   Account          Expires     5h Left
+#   Account          Expires     Sub  ~Renews  5h Left
 # ✓ i12@wbox.pro    in 7h 18m  84%
 #   i3@wbox.pro     in 7h 02m  100%    <- restored with fresh token
 ```

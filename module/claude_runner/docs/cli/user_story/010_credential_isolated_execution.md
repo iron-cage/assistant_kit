@@ -28,3 +28,4 @@ Execute a Claude task using a specified credentials file with no access to the c
 |---|-----------|------|
 | 1 | [`--creds`](../param/19_creds.md) | Path to credentials JSON file (required) |
 | 2 | [`--timeout`](../param/20_timeout.md) | Max seconds to wait for isolated subprocess |
+| 3 | [`--trace`](../param/13_trace.md) | Print underlying call details to stderr |

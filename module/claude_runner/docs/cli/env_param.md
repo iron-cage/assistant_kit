@@ -1,14 +1,14 @@
 # Environment Parameters
 
-### All Env Parameters (28 total)
+### All Env Parameters (29 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
 | Input (CLR_*) — `run` subcommand | 25 | Caller env fallbacks for `run` parameters |
-| Input (CLR_*) — `isolated` subcommand | 2 | Caller env fallbacks for `isolated` parameters |
+| Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 28 environment variables
+**Total:** 29 environment variables
 
 ---
 
@@ -68,24 +68,29 @@ CLR_MODEL=sonnet clr --model opus --dry-run "task"  # CLI wins; CLR_MODEL ignore
 
 ---
 
-### Env Param :: 2. CLR_* Input Parameters — `isolated` Subcommand
+### Env Param :: 2. CLR_* Input Parameters — `isolated` and `refresh` Subcommands
 
-Environment variable fallbacks for the 2 `isolated` subcommand parameters.
-`apply_isolated_env_vars()` in `src/lib.rs` reads these after `isolated` argument parsing.
+Environment variable fallbacks for the 3 credential operation parameters.
+`apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/lib.rs` read these
+after subcommand argument parsing.
 
 | # | Variable | CLI Parameter | Type | Notes |
 |---|----------|---------------|------|-------|
 | 1 | `CLR_CREDS` | [`--creds`](param/19_creds.md) | string | Applied when `--creds` absent (`creds_path` is empty string) |
-| 2 | `CLR_TIMEOUT` | [`--timeout`](param/20_timeout.md) | u64 | Applied when CLI timeout == 30 (default); `--timeout 30` explicit is indistinguishable |
+| 2 | `CLR_TIMEOUT` | [`--timeout`](param/20_timeout.md) | u64 | Applied when CLI timeout equals its command default (30 for `isolated`, 45 for `refresh`) |
+| 3 | `CLR_TRACE` | [`--trace`](param/13_trace.md) | bool | Applied when `--trace` absent; also applies to `run` via Section 1 |
 
 **Precedence:**
 
-1. `--creds` / `--timeout` CLI flag (wins)
-2. `CLR_CREDS` / `CLR_TIMEOUT` env var (applied when CLI field absent/default)
+1. `--creds` / `--timeout` / `--trace` CLI flag (wins)
+2. `CLR_CREDS` / `CLR_TIMEOUT` / `CLR_TRACE` env var (applied when CLI field absent/default)
 
-**Limitation (`CLR_TIMEOUT`):** `isolated` defaults to `timeout_secs = 30`. The env var
-check uses `== 30` as the sentinel, so an explicit `--timeout 30` on the CLI is
-indistinguishable from the default — `CLR_TIMEOUT` will still override it.
+**Limitation (`CLR_TIMEOUT`):** The env var check uses equality with the command's default
+timeout as the sentinel, so an explicit `--timeout 30` on `isolated` (or `--timeout 45`
+on `refresh`) is indistinguishable from the default — `CLR_TIMEOUT` will still override it.
+
+**Note (`CLR_TRACE`):** `CLR_TRACE` is also listed in Section 1 (row 13) for the `run`
+subcommand. It is a cross-command env var that applies to all three executing commands.
 
 ---
 
