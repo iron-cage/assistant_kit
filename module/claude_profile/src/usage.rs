@@ -3363,4 +3363,153 @@ mod tests
       "footer must recommend a@x.com regardless of sort::drain display order (AC-11); got:\n{output}",
     );
   }
+
+  /// CC-012 — `sort::reset desc::1` reverses non-exhausted tier; exhausted floor unchanged.
+  #[ test ]
+  fn test_sort_reset_desc1_reverses_non_exhausted_only()
+  {
+    let now : u64 = 1_000_000;
+    let accounts = vec![
+      mk_aq_with_reset( "soon@test.com",      30.0, now, 600  ),  // 70% left, 10min reset
+      mk_aq_with_reset( "late@test.com",      30.0, now, 7200 ),  // 70% left, 2h reset
+      mk_aq_with_reset( "exhausted@test.com", 99.0, now, 600  ),  // ≤5% left — sunk
+    ];
+    // desc::1 reverses non-exhausted: latest reset first, soonest second; exhausted still last.
+    let idx = sort_indices( &accounts, SortStrategy::Reset, Some( true ), PreferStrategy::Any, now );
+    assert_eq!( accounts[ idx[ 0 ] ].name, "late@test.com",      "desc::1 reset: latest reset first" );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "soon@test.com",      "desc::1 reset: soonest second" );
+    assert_eq!( accounts[ idx[ 2 ] ].name, "exhausted@test.com", "exhausted must still be last" );
+  }
+
+  /// CC-026 — `sort::drain prefer::sonnet` tiebreaks by `7d(Son)` descending when `5h_left` tied.
+  #[ test ]
+  fn test_sort_drain_prefer_sonnet_tiebreak()
+  {
+    // Both accounts have 5h_left=50%.
+    // "low_son":  7d(Son)=20% left (son_util=80). "high_son": 7d(Son)=80% left (son_util=20).
+    // Drain tiebreak: higher prefer_weekly first → high_son must be first.
+    let accounts = vec![
+      mk_aq_sort_weekly( "low_son@test.com",  50.0, 0.0, 80.0 ),
+      mk_aq_sort_weekly( "high_son@test.com", 50.0, 0.0, 20.0 ),
+    ];
+    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Sonnet, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "high_son@test.com",
+      "prefer::sonnet drain tiebreak: higher 7d(Son) left must be first",
+    );
+    assert_eq!(
+      accounts[ idx[ 1 ] ].name, "low_son@test.com",
+      "prefer::sonnet drain tiebreak: lower 7d(Son) left must be second",
+    );
+  }
+
+  /// CC-027 — `sort::drain prefer::any` tiebreaks by `min(7d Left, 7d(Son))` descending.
+  #[ test ]
+  fn test_sort_drain_prefer_any_tiebreak()
+  {
+    // Both accounts have 5h_left=50%.
+    // "high_any": 7d_util=30→7d_left=70%, son_util=40→son_left=60% → any=min(70,60)=60%.
+    // "low_any":  7d_util=70→7d_left=30%, son_util=60→son_left=40% → any=min(30,40)=30%.
+    // Drain tiebreak: higher prefer_weekly first → high_any must be first.
+    let accounts = vec![
+      mk_aq_sort_weekly( "high_any@test.com", 50.0, 30.0, 40.0 ),
+      mk_aq_sort_weekly( "low_any@test.com",  50.0, 70.0, 60.0 ),
+    ];
+    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "high_any@test.com",
+      "prefer::any drain tiebreak: higher min(7d,Son) left must be first",
+    );
+    assert_eq!(
+      accounts[ idx[ 1 ] ].name, "low_any@test.com",
+      "prefer::any drain tiebreak: lower min(7d,Son) left must be second",
+    );
+  }
+
+  /// CC-044 — `sort::drain` with all accounts exhausted preserves input order.
+  #[ test ]
+  fn test_sort_drain_all_exhausted_preserves_input_order()
+  {
+    // All three accounts have ≤5% 5h_left — all exhausted.
+    // No non-exhausted tier to sort; all land in the exhausted floor in input order.
+    let accounts = vec![
+      mk_aq_sort( "first@test.com",  99.0, FAR_FUTURE_MS ),  // 1% left — exhausted
+      mk_aq_sort( "second@test.com", 97.0, FAR_FUTURE_MS ),  // 3% left — exhausted
+      mk_aq_sort( "third@test.com",  95.0, FAR_FUTURE_MS ),  // 5% left — exhausted (boundary)
+    ];
+    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
+    assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted drain: input order preserved" );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "second@test.com", "all-exhausted drain: input order preserved" );
+    assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted drain: input order preserved" );
+  }
+
+  /// CC-045 — `sort::reset` with all accounts exhausted preserves input order.
+  #[ test ]
+  fn test_sort_reset_all_exhausted_preserves_input_order()
+  {
+    let now : u64 = 1_000_000;
+    let accounts = vec![
+      mk_aq_with_reset( "first@test.com",  99.0, now, 600  ),  // 1% left — exhausted
+      mk_aq_with_reset( "second@test.com", 97.0, now, 7200 ),  // 3% left — exhausted
+      mk_aq_with_reset( "third@test.com",  95.0, now, 3600 ),  // 5% left — exhausted (boundary)
+    ];
+    let idx = sort_indices( &accounts, SortStrategy::Reset, None, PreferStrategy::Any, now );
+    assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted reset: input order preserved" );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "second@test.com", "all-exhausted reset: input order preserved" );
+    assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted reset: input order preserved" );
+  }
+
+  /// CC-058 — Account with `five_hour: None` is treated as non-exhausted (conservative 100% left).
+  ///
+  /// Why not caught: `five_hour_left` uses `map_or(0.0, ...)` — None → 0% util → 100% left.
+  /// This is intentional conservative behaviour but must be pinned so a silent change
+  /// cannot accidentally sink no-data accounts into the exhausted floor.
+  #[ test ]
+  fn test_sort_drain_none_five_hour_treated_as_non_exhausted()
+  {
+    let mk_no_fh = |name : &str| -> AccountQuota
+    {
+      AccountQuota
+      {
+        name          : name.to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : FAR_FUTURE_MS,
+        result        : Ok( OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
+        account       : None,
+      }
+    };
+    let accounts = vec![
+      mk_aq_sort( "low@test.com",       75.0, FAR_FUTURE_MS ),  // 25% left
+      mk_no_fh(   "no_fh@test.com"                          ),  // None → 100% assumed
+      mk_aq_sort( "exhausted@test.com", 99.0, FAR_FUTURE_MS ),  // 1% left — sunk
+    ];
+    // Drain canonical: ascending 5h_left → low(25%), no_fh(100%); exhausted sunk last.
+    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
+    assert_eq!( accounts[ idx[ 0 ] ].name, "low@test.com",       "25% left drains first" );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "no_fh@test.com",     "None five_hour = 100% left: last among non-exhausted" );
+    assert_eq!( accounts[ idx[ 2 ] ].name, "exhausted@test.com", "exhausted always sunk to bottom" );
+  }
+
+  /// CC-059/CC-060 — `prefer_weekly` with absent period data treats account as fully available (100% left).
+  ///
+  /// None `seven_day` → 100% 7d_left for prefer::opus.
+  /// None `seven_day_sonnet` → 100% sonnet_left for prefer::sonnet.
+  /// Verified via drain tiebreak: no-data account outranks explicit-low-data account when 5h_left tied.
+  #[ test ]
+  fn test_prefer_weekly_none_periods_treated_as_full()
+  {
+    // prefer::opus: "no_data" has seven_day=None → prefer_weekly=100%.
+    // "has_data" has seven_day_util=60 → 7d_left=40%.
+    // Same 5h_left (50%) → tiebreak by prefer_weekly desc → no_data (100%) comes first.
+    let accounts = vec![
+      mk_aq_sort_weekly( "has_data@test.com", 50.0, 60.0, 60.0 ),  // 7d_left=40%
+      mk_aq_sort(        "no_data@test.com",  50.0, FAR_FUTURE_MS ), // seven_day=None → 100%
+    ];
+    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Opus, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "no_data@test.com",
+      "None seven_day treated as 100% left; must rank first in drain prefer::opus tiebreak",
+    );
+  }
 }

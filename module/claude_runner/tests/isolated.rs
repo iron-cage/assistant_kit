@@ -8,6 +8,7 @@
 //! | IT-7 | `--timeout abc` → exit 1, invalid timeout | No |
 //! | IT-8 | Missing `--creds` → exit 1, required arg | No |
 //! | IT-9 | `clr isolated --help` → exit 0, help text shown | No |
+//! | IT-10 | `--creds <f> --trace "msg"` → credential trace on stderr before attempt | No |
 //! | EC-creds-4 | Nonexistent creds file → exit 1 | No |
 //! | EC-creds-5 | `--creds` without value → exit 1 | No |
 //! | EC-creds-6 | `--creds` omitted → exit 1 | No |
@@ -609,4 +610,35 @@ fn it9_isolated_help_exits_zero()
     stdout.contains( "--timeout" ),
     "help text must mention --timeout; got:\n{stdout}",
   );
+}
+
+/// IT-10: `--creds <f> --trace "msg"` → credential trace lines on stderr before subprocess attempt.
+///
+/// `emit_credential_trace` fires before `run_isolated()` in `run_isolated_command`,
+/// so `# clr isolated`, `# creds:`, and `# timeout: 30s` appear on stderr even when
+/// claude is absent.  Uses `NamedTempFile` so the creds file is readable when
+/// `read_to_string` is called inside `clr`.
+///
+/// Source: tests/docs/cli/command/003_isolated.md#it-10
+#[ test ]
+fn it10_isolated_trace_stderr_output()
+{
+  let creds = make_creds_file( "{}" );
+  let path  = creds.path().to_str().expect( "temp path is valid UTF-8" );
+  let out   = run_isolated( &[ "--creds", path, "--trace", "Fix bug" ] );
+  let err   = stderr_str( &out );
+  assert!(
+    err.contains( "# clr isolated" ),
+    "isolated --trace must emit '# clr isolated' on stderr. Got:\n{err}"
+  );
+  assert!(
+    err.contains( "# creds:" ),
+    "isolated --trace must emit '# creds:' on stderr. Got:\n{err}"
+  );
+  assert!(
+    err.contains( "# timeout: 30s" ),
+    "isolated --trace must emit '# timeout: 30s' (default) on stderr. Got:\n{err}"
+  );
+  let code = out.status.code().unwrap_or( -1 );
+  assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );
 }

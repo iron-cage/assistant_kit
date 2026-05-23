@@ -90,14 +90,13 @@ Integration test planning for the `refresh` command. See [001_command.md](../../
 
 ---
 
-### IT-7: `--trace` → call details printed to stderr before execution
+### IT-7: `--trace` → credential trace on stderr before execution attempt
 
-- **Given:** valid credentials JSON at `/tmp/it7_refresh_creds.json`
+- **Given:** credentials JSON written to a temp file at `/tmp/it7_refresh_creds.json` (file is readable; content `{}`; no live credentials needed — trace fires before subprocess attempt)
 - **When:** `clr refresh --creds /tmp/it7_refresh_creds.json --trace`
-- **Then:** stderr contains the credentials path, temp HOME path, timeout value (45), and forwarded args (`["--print", "."]`) before subprocess launch
-- **Exit:** 0 or 1
-- **Note:** lim_it — requires claude binary accessible; verifies `--trace` honoured for `refresh` command specifically
-- **Source:** [001_command.md — refresh](../../../../docs/cli/001_command.md#command--3-refresh), [--trace](../../../../docs/cli/param/013_trace.md)
+- **Then:** stderr contains `# clr refresh`, `# creds: /tmp/it7_refresh_creds.json`, and `# timeout: 45s` before any subprocess attempt; exit 0 or 1
+- **Exit:** 0 or 1 (trace fires before subprocess; exit code depends on claude availability)
+- **Source:** [001_command.md — refresh](../../../../docs/cli/001_command.md#command--3-refresh), [--trace](../../../../docs/cli/param/013_trace.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)
 
 ---
 

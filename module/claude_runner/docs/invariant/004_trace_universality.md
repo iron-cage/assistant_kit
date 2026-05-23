@@ -38,6 +38,27 @@ If a subprocess-executing command does not support `--trace`:
 - Debug parity is broken — some commands are opaque while others are transparent
 - CI/automation pipelines cannot conditionally enable diagnostics across all commands uniformly
 
+### Trace Output Format
+
+#### run / ask commands
+
+Emitted via `describe_env()` + `describe()`:
+- `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` (run) or `=16384` (ask)
+- `CLAUDE_CODE_BASH_TIMEOUT=3600000`
+- `CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000`
+- `CLAUDE_CODE_AUTO_CONTINUE=true`
+- `CLAUDE_CODE_TELEMETRY=false`
+- Command line: `claude --dangerously-skip-permissions --chrome --effort max -c "msg\nultrathink"` (run)
+- Command line: `claude --effort high --print "msg"` (ask — no `--chrome`, no `-c`, no `--dangerously-skip-permissions`)
+
+#### isolated / refresh commands
+
+Emitted via `emit_credential_trace()`:
+- `# clr {label}` (e.g., `# clr isolated`, `# clr refresh`)
+- `# creds: {path}`
+- `# timeout: {N}s` (isolated default: 30s; refresh default: 45s)
+- Then `describe_env()` + `describe()` blocks
+
 ### Features
 
 | File | Relationship |
@@ -56,4 +77,4 @@ If a subprocess-executing command does not support `--trace`:
 |------|--------------|
 | `../../tests/docs/invariant/004_trace_universality.md` | IT-1 through IT-5 trace acceptance across all commands |
 | `../../tests/cli_args_test.rs` | `--trace` flag parsing via `parse_args()` |
-| `../../tests/docs/cli/param/013_trace.md` | EC-1 through EC-6 per-parameter trace edge cases |
+| `../../tests/docs/cli/param/013_trace.md` | EC-1 through EC-8 per-parameter trace edge cases |

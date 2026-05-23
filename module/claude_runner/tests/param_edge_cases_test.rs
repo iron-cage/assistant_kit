@@ -23,6 +23,8 @@
 //! - S04: `--trace "msg"` without `--dry-run` → stderr has command, exit 1 (`01_run.md` IT-5, `13_trace.md` EC-1, `11_dry_run.md` EC-2)
 //! - S05: `--trace --dry-run` no message → stdout preview, stderr empty (`13_trace.md` EC-4)
 //! - S06: `--trace "msg"` stderr contains env vars and command (`13_trace.md` EC-6)
+//! - S58: `isolated --creds <f> --trace "msg"` → `# clr isolated`, `# creds:`, `# timeout: 30s` on stderr (`13_trace.md` EC-7)
+//! - S59: `refresh --creds <f> --trace` → `# clr refresh`, `# creds:`, `# timeout: 45s` on stderr (`13_trace.md` EC-8)
 //!
 //! --model:
 //! - S07: positional then `--model` at end of argv → exit 1 (`03_model.md` EC-3)
@@ -113,7 +115,16 @@
 
 mod common;
 use common::run_cli;
+use std::io::Write as _;
 use std::process::Command;
+use tempfile::NamedTempFile;
+
+fn make_creds_file( content : &str ) -> NamedTempFile
+{
+  let mut f = NamedTempFile::new().expect( "failed to create temp creds file" );
+  f.write_all( content.as_bytes() ).expect( "failed to write creds content" );
+  f
+}
 
 fn run_no_claude( args : &[ &str ] ) -> std::process::Output
 {
@@ -989,4 +1000,52 @@ fn s57_mcp_config_without_message_accepted()
     stdout.contains( "--mcp-config /tmp/mcp.json" ),
     "--mcp-config must appear in assembled command. Got:\n{stdout}"
   );
+}
+
+// S58: `isolated --creds <f> --trace "msg"` → credential trace format on stderr (`13_trace.md` EC-7)
+#[ test ]
+fn s58_isolated_trace_credential_format()
+{
+  let creds = make_creds_file( "{}" );
+  let path  = creds.path().to_str().expect( "temp path is valid UTF-8" );
+  let out   = run_cli( &[ "isolated", "--creds", path, "--trace", "Fix bug" ] );
+  let err   = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    err.contains( "# clr isolated" ),
+    "isolated --trace must emit '# clr isolated' on stderr. Got:\n{err}"
+  );
+  assert!(
+    err.contains( "# creds:" ),
+    "isolated --trace must emit '# creds:' on stderr. Got:\n{err}"
+  );
+  assert!(
+    err.contains( "# timeout: 30s" ),
+    "isolated --trace must emit '# timeout: 30s' (default) on stderr. Got:\n{err}"
+  );
+  let code = out.status.code().unwrap_or( -1 );
+  assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace fires before invoke); got {code}" );
+}
+
+// S59: `refresh --creds <f> --trace` → credential trace format on stderr with 45s timeout (`13_trace.md` EC-8)
+#[ test ]
+fn s59_refresh_trace_credential_format()
+{
+  let creds = make_creds_file( "{}" );
+  let path  = creds.path().to_str().expect( "temp path is valid UTF-8" );
+  let out   = run_cli( &[ "refresh", "--creds", path, "--trace" ] );
+  let err   = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    err.contains( "# clr refresh" ),
+    "refresh --trace must emit '# clr refresh' on stderr. Got:\n{err}"
+  );
+  assert!(
+    err.contains( "# creds:" ),
+    "refresh --trace must emit '# creds:' on stderr. Got:\n{err}"
+  );
+  assert!(
+    err.contains( "# timeout: 45s" ),
+    "refresh --trace must emit '# timeout: 45s' (distinct from isolated's 30s) on stderr. Got:\n{err}"
+  );
+  let code = out.status.code().unwrap_or( -1 );
+  assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace fires before invoke); got {code}" );
 }

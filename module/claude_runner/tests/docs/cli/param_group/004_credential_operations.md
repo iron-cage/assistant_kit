@@ -77,11 +77,11 @@ Interaction tests for Group 4 (Credential Operations): `--creds`, `--timeout`, `
 - **Source:** [004_param_group.md](../../../../docs/cli/004_param_group.md#group--4-credential-operations)
 ---
 
-### CC-6: `--trace` prints call details to stderr before execution
+### CC-6: `--trace` prints credential trace to stderr before execution
 
-- **Given:** `CLR_CREDS=/tmp/cc6.creds.json` (or `--creds`); `--trace` on CLI
-- **When:** `clr isolated --creds /tmp/cc6.creds.json --trace` (parse-only path)
-- **Then:** stderr contains creds path, temp HOME path, timeout value, and forwarded args before subprocess launch
-- **Exit:** varies
-- **Note:** verifies `--trace` is honoured by `apply_isolated_env_vars()` / `apply_refresh_env_vars()` independently of `run` trace path
-- **Source:** [004_param_group.md](../../../../docs/cli/004_param_group.md#group--4-credential-operations)
+- **Given:** credentials JSON written to a temp file at `/tmp/cc6.creds.json` (file is readable; content `{}`; no live credentials needed — trace fires before subprocess attempt)
+- **When:** `clr isolated --creds /tmp/cc6.creds.json --trace`
+- **Then:** stderr contains `# clr isolated`, `# creds: /tmp/cc6.creds.json`, and `# timeout: 30s` before any subprocess attempt; exit 0 or 1
+- **Exit:** 0 or 1 (trace fires before subprocess; exit code depends on claude availability)
+- **Note:** verifies `--trace` is honoured for credential operations independently of `run`/`ask` trace path; does not require live credentials
+- **Source:** [004_param_group.md](../../../../docs/cli/004_param_group.md#group--4-credential-operations), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)

@@ -44,8 +44,7 @@ Behavioral specification: [invariant/001_default_flags.md](invariant/001_default
 **Rationale:** `clr` adds value over the raw `claude` binary by managing
 session continuity automatically. Most invocations are continuations of ongoing work.
 Users who want a genuinely fresh start opt in explicitly with `--new-session`.
-This also decouples `clr` from external session orchestration (formerly
-`dream_agent`'s responsibility).
+This also decouples `clr` from external session orchestration.
 
 **Consequence:** removed `-c`/`--continue` from public flag list (redundant); added
 `--new-session` (the only way to disable default continuation). Net: 11 flags → 11 flags.

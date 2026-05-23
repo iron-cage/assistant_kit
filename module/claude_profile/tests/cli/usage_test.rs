@@ -1793,7 +1793,7 @@ fn it049_usage_help_shows_sort_params()
 
 // ── desc:: parameter acceptance and direction (026_desc EC-1–EC-3, CC-1–CC-2) ─
 
-/// it050 (026_desc EC-1): `desc::0` accepted with empty credential store → exit 0.
+/// it050 (`026_desc` EC-1): `desc::0` accepted with empty credential store → exit 0.
 ///
 /// Verifies the parser accepts `desc::0` as a valid ascending-direction override
 /// without an unknown-parameter or type-mismatch error.
@@ -1815,7 +1815,7 @@ fn it050_desc_0_accepted()
   );
 }
 
-/// it051 (026_desc EC-2): `desc::1` accepted with empty credential store → exit 0.
+/// it051 (`026_desc` EC-2): `desc::1` accepted with empty credential store → exit 0.
 ///
 /// Verifies the parser accepts `desc::1` as a valid descending-direction override.
 /// Source: `tests/docs/cli/param/026_desc.md § EC-2`.
@@ -1836,7 +1836,7 @@ fn it051_desc_1_accepted()
   );
 }
 
-/// it052_desc_2_rejected (026_desc EC-3): `desc::2` out of range → exit 1.
+/// `it052_desc_2_rejected` (`026_desc` EC-3): `desc::2` out of range → exit 1.
 ///
 /// `desc::` is a boolean integer param (0 or 1). The `_` arm in `parse_usage_params`
 /// rejects any other integer with `ArgumentTypeMismatch`. Exit 1, stderr non-empty.
@@ -1853,7 +1853,7 @@ fn it052_desc_2_rejected()
   assert!( !stderr( &out ).is_empty(), "desc::2 must produce error on stderr" );
 }
 
-/// it053 (026_desc CC-1): `sort::name desc::0` and `sort::name` produce identical row order.
+/// it053 (`026_desc` CC-1): `sort::name desc::0` and `sort::name` produce identical row order.
 ///
 /// Explicitly setting `desc::0` on `sort::name` (whose canonical direction is ascending)
 /// must produce the same A→Z output as the implicit default — both display `a@x.com`
@@ -1890,7 +1890,7 @@ fn it053_sort_name_desc_0_identical_to_sort_name()
   );
 }
 
-/// it054 (026_desc CC-2): `sort::name desc::1` reverses alphabetical order — `z@x.com` before `a@x.com`.
+/// it054 (`026_desc` CC-2): `sort::name desc::1` reverses alphabetical order — `z@x.com` before `a@x.com`.
 ///
 /// `desc::1` on `sort::name` (canonical direction: ascending) produces descending (Z→A) row
 /// order — the behavioral divergence from `sort::name desc::0`.
@@ -1917,7 +1917,7 @@ fn it054_sort_name_desc_1_reverses_order()
 
 // ── prefer:: parameter acceptance (027_prefer EC-1–EC-3) ─────────────────────
 
-/// it055 (027_prefer EC-1): `prefer::any` accepted with empty credential store → exit 0.
+/// it055 (`027_prefer` EC-1): `prefer::any` accepted with empty credential store → exit 0.
 ///
 /// Verifies the parser accepts `prefer::any` without unknown-parameter or type error.
 /// Source: `tests/docs/cli/param/027_prefer.md § EC-1`.
@@ -1938,7 +1938,7 @@ fn it055_prefer_any_accepted()
   );
 }
 
-/// it056 (027_prefer EC-2): `prefer::opus` accepted with empty credential store → exit 0.
+/// it056 (`027_prefer` EC-2): `prefer::opus` accepted with empty credential store → exit 0.
 ///
 /// Source: `tests/docs/cli/param/027_prefer.md § EC-2`.
 #[ test ]
@@ -1958,7 +1958,7 @@ fn it056_prefer_opus_accepted()
   );
 }
 
-/// it057 (027_prefer EC-3): `prefer::sonnet` accepted with empty credential store → exit 0.
+/// it057 (`027_prefer` EC-3): `prefer::sonnet` accepted with empty credential store → exit 0.
 ///
 /// Source: `tests/docs/cli/param/027_prefer.md § EC-3`.
 #[ test ]
@@ -1980,7 +1980,7 @@ fn it057_prefer_sonnet_accepted()
 
 // ── Sort × JSON interaction (025_sort CC-1, 004_sort_control CC-1) ────────────
 
-/// it058 (025_sort CC-1 / 004_sort_control CC-1): JSON array order is alphabetical
+/// it058 (`025_sort` CC-1 / `004_sort_control` CC-1): JSON array order is alphabetical
 /// regardless of `sort::` strategy.
 ///
 /// `render_json` always uses the original alphabetical account slice; `sort::` strategy
@@ -2052,4 +2052,49 @@ fn it060_prefer_uppercase_rejected()
   );
   assert_exit( &out, 1 );
   assert!( !stderr( &out ).is_empty(), "prefer::Opus must produce error on stderr (case-sensitive parse)" );
+}
+
+// ── sort::reset desc::1 combination acceptance ────────────────────────────────
+
+/// it061: `sort::reset desc::1` accepted with empty credential store → exit 0.
+///
+/// Verifies that the `sort::reset desc::1` parameter combination does not cause
+/// a parse error — both parameters are individually valid and the combination
+/// must be accepted without `ArgumentTypeMismatch` or unknown-param errors.
+#[ test ]
+fn it061_sort_reset_desc1_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "sort::reset", "desc::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "sort::reset desc::1 must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it062: `sort::endurance desc::0` accepted with empty credential store → exit 0.
+///
+/// `sort::endurance` has canonical direction `desc::1` (qualified first). `desc::0` explicitly
+/// overrides to ascending — the parser must accept this as a valid direction override.
+#[ test ]
+fn it062_sort_endurance_desc0_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "sort::endurance", "desc::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "sort::endurance desc::0 must be accepted and show no-accounts message, got:\n{text}",
+  );
 }

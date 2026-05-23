@@ -10,7 +10,8 @@
 
 | Domain | File | Tests What |
 |--------|------|------------|
-| ask subcommand (IT-1–IT-8) | `ask_command_test.rs` | `clr ask` defaults and CLI overrides |
+| ask subcommand (IT-1–IT-9) | `ask_command_test.rs` | `clr ask` defaults, CLI overrides, and live-trace path |
+| Trace Universality invariant (IT-1–IT-5) | `invariant_trace_universality_test.rs` | `--trace` on all subprocess-executing commands |
 | CLI flags (T01–T49) | `cli_args_test.rs` | Core flag parsing and builder translation |
 | Ultrathink (T50–T58) | `ultrathink_args_test.rs` | Message suffix injection and opt-out |
 | Effort flags (T59–T70) | `effort_args_test.rs` | Default max injection, overrides, suppression |
@@ -30,7 +31,8 @@
 
 | File | Responsibility |
 |------|----------------|
-| `ask_command_test.rs` | `clr ask` subcommand: Q&A defaults and CLI override tests IT-1–IT-8. |
+| `ask_command_test.rs` | `clr ask` subcommand: Q&A defaults, CLI overrides, and live-trace tests IT-1–IT-9. |
+| `invariant_trace_universality_test.rs` | Trace Universality invariant (INV-004): `--trace` on all subprocess-executing commands IT-1–IT-5. |
 | `cli_args_test.rs` | CLI flag parsing: core flags T01–T49, correct translation to builder calls. |
 | `ultrathink_args_test.rs` | Ultrathink suffix injection and `--no-ultrathink` opt-out (T50–T58). |
 | `effort_args_test.rs` | Effort flag defaults, overrides, suppression, and corner cases (T59–T70). |

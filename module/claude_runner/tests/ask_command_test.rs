@@ -7,8 +7,11 @@
 //!
 //! ## Strategy
 //!
-//! Each test invokes `clr ask --dry-run` and inspects `stdout` for the
+//! Tests IT-1 through IT-8 invoke `clr ask --dry-run` and inspect `stdout` for the
 //! assembled command and env-var block.  No real Claude invocation occurs.
+//!
+//! IT-9 is a live-trace variant: it invokes `clr ask --trace` without `--dry-run`
+//! and inspects `stderr` for the diagnostic output emitted before invocation.
 //!
 //! ## Corner Cases Covered
 //!
@@ -20,6 +23,7 @@
 //! - IT-6: `clr ask --dry-run --effort max "X"` — CLI effort overrides ask default
 //! - IT-7: `clr ask --dry-run --max-tokens 200000 "X"` — CLI max-tokens overrides ask default
 //! - IT-8: `clr ask --unknown-flag "X"` — unknown flag rejected (exit 1, stderr error)
+//! - IT-9: `clr ask --trace "X"` — stderr contains ask-default env block + command before invocation
 
 mod common;
 use common::run_cli;
@@ -158,4 +162,28 @@ fn it_08_ask_unknown_flag_rejected()
     stderr.contains( "unknown option" ) || stderr.contains( "Error:" ),
     "error message must appear on stderr. Got:\n{stderr}"
   );
+}
+
+// IT-9: ask --trace → stderr contains ask-default env block + command before invocation
+//
+// Exercises the live trace code path (no --dry-run). Trace fires before subprocess
+// invocation, so exit 1 (claude absent) is acceptable.
+//
+// Source: tests/docs/cli/command/005_ask.md#it-9
+#[ test ]
+fn it_09_ask_trace_stderr_output()
+{
+  let out    = run_cli( &[ "ask", "--trace", "What is X?" ] );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384" ),
+    "ask --trace must emit CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384 on stderr. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "--effort high" ),
+    "ask --trace must emit --effort high on stderr. Got:\n{stderr}"
+  );
+  // exit 1 (claude absent) is acceptable — trace fires before subprocess invocation
+  let code = out.status.code().unwrap_or( -1 );
+  assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );
 }
