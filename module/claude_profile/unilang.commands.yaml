@@ -602,3 +602,71 @@
     - ".account.limits name::work"
     - ".account.limits format::json"
   auto_help_enabled: true
+
+- name: ".account.relogin"
+  namespace: ""
+  description: "Force browser re-authentication for a named account with dead refreshToken"
+  hint: "Re-authenticate account"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "account", "mutation"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "POST"
+
+  arguments:
+    - name: "name"
+      kind: "String"
+      description: "Account name to re-authenticate"
+      hint: "Account name"
+      optional: false
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview without executing (1=dry-run)"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".account.relogin name::alice@acme.com"
+    - ".account.relogin alice@acme.com"
+    - ".account.relogin name::alice@acme.com dry::1"
+  auto_help_enabled: true
+
+- name: ".account.rotate"
+  namespace: ""
+  description: "Auto-rotate to the best inactive account (highest remaining token expiry)"
+  hint: "Auto-select and switch account"
+  version: "1.0.0"
+  status: "stable"
+  aliases: []
+  tags: ["profile", "account", "mutation"]
+  permissions: []
+  idempotent: false
+  deprecation_message: ""
+  http_method_hint: "POST"
+
+  arguments:
+    - name: "dry"
+      kind: "Boolean"
+      description: "Preview which account would be selected without switching (1=dry-run)"
+      hint: "Dry-run mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+  examples:
+    - ".account.rotate"
+    - ".account.rotate dry::1"
+  auto_help_enabled: true

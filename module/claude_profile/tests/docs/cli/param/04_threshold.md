@@ -1,6 +1,6 @@
 # Test: `threshold::`
 
-Edge case coverage for the `threshold::` parameter. See [params.md](../../../../docs/cli/params.md#parameter--4-threshold) and [types.md](../../../../docs/cli/types.md#type--4-warningthreshold) for specification.
+Edge case coverage for the `threshold::` parameter. See [params.md](../../../../docs/cli/param/03_threshold.md) and [types.md](../../../../docs/cli/type/03_warning_threshold.md) for specification.
 
 ### Test Case Index
 
@@ -37,7 +37,7 @@ Edge case coverage for the `threshold::` parameter. See [params.md](../../../../
 - **When:** `clp .token.status threshold::3600`
 - **Then:** Token classified as `valid` with remaining time shown. Exit 0. Output identical to `clp .token.status` (no threshold parameter).; explicit `threshold::3600` output identical to default threshold output
 - **Exit:** 0
-- **Source:** [params.md -- threshold::](../../../../docs/cli/params.md#parameter--4-threshold)
+- **Source:** [params.md -- threshold::](../../../../docs/cli/param/03_threshold.md)
 
 ---
 
@@ -47,7 +47,7 @@ Edge case coverage for the `threshold::` parameter. See [params.md](../../../../
 - **When:** `clp .token.status threshold::0`
 - **Then:** Token classified as `valid` (not `expiring soon`) despite having less than 60 minutes remaining. Exit 0.; token classified as `valid` because ExpiringSoon is disabled at threshold 0
 - **Exit:** 0
-- **Source:** [types.md -- WarningThreshold](../../../../docs/cli/types.md#type--4-warningthreshold)
+- **Source:** [types.md -- WarningThreshold](../../../../docs/cli/type/03_warning_threshold.md)
 
 ---
 
@@ -57,7 +57,7 @@ Edge case coverage for the `threshold::` parameter. See [params.md](../../../../
 - **When:** `clp .token.status threshold::1800`
 - **Then:** Token classified as `valid` (45 minutes > 30 minute threshold). Exit 0.; 30-minute threshold classifies a 45-minute token as `valid`
 - **Exit:** 0
-- **Source:** [params.md -- threshold::](../../../../docs/cli/params.md#parameter--4-threshold)
+- **Source:** [params.md -- threshold::](../../../../docs/cli/param/03_threshold.md)
 
 ---
 
@@ -67,7 +67,7 @@ Edge case coverage for the `threshold::` parameter. See [params.md](../../../../
 - **When:** `clp .token.status threshold::7200`
 - **Then:** Token classified as `expiring soon` (90 minutes < 2 hour threshold). Exit 0.; 2-hour threshold classifies a 90-minute token as `expiring soon`
 - **Exit:** 0
-- **Source:** [params.md -- threshold::](../../../../docs/cli/params.md#parameter--4-threshold)
+- **Source:** [params.md -- threshold::](../../../../docs/cli/param/03_threshold.md)
 
 ---
 
@@ -77,7 +77,7 @@ Edge case coverage for the `threshold::` parameter. See [params.md](../../../../
 - **When:** `clp .token.status threshold::abc`
 - **Then:** Error message containing `invalid threshold 'abc'` with exit 1.; non-integer threshold value rejected with descriptive error
 - **Exit:** 1
-- **Source:** [types.md -- WarningThreshold](../../../../docs/cli/types.md#type--4-warningthreshold)
+- **Source:** [types.md -- WarningThreshold](../../../../docs/cli/type/03_warning_threshold.md)
 
 ---
 
@@ -87,7 +87,7 @@ Edge case coverage for the `threshold::` parameter. See [params.md](../../../../
 - **When:** `clp .token.status threshold::86400`
 - **Then:** Token classified as `expiring soon` because remaining time (4 hours) is less than 24 hours. Exit 0.; 24-hour threshold classifies most tokens as `expiring soon`
 - **Exit:** 0
-- **Source:** [params.md -- threshold::](../../../../docs/cli/params.md#parameter--4-threshold)
+- **Source:** [params.md -- threshold::](../../../../docs/cli/param/03_threshold.md)
 
 ---
 
@@ -97,7 +97,7 @@ Edge case coverage for the `threshold::` parameter. See [params.md](../../../../
 - **When:** `clp .token.status`
 - **Then:** Token classified as `expiring soon` (45 minutes < 60 minute default threshold). Exit 0.; default threshold is 3600, classifying a 45-minute token as `expiring soon`
 - **Exit:** 0
-- **Source:** [params.md -- threshold::](../../../../docs/cli/params.md#parameter--4-threshold)
+- **Source:** [params.md -- threshold::](../../../../docs/cli/param/03_threshold.md)
 
 ---
 
@@ -107,4 +107,4 @@ Edge case coverage for the `threshold::` parameter. See [params.md](../../../../
 - **When:** `clp .token.status threshold::0 threshold::7200`
 - **Then:** Token classified as `expiring soon` (matching `threshold::7200` behavior, not `threshold::0`). Exit 0.; last `threshold::` value (7200) takes effect, producing `expiring soon`
 - **Exit:** 0
-- **Source:** [params.md -- threshold::](../../../../docs/cli/params.md#parameter--4-threshold)
+- **Source:** [params.md -- threshold::](../../../../docs/cli/param/03_threshold.md)

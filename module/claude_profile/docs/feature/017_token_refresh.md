@@ -32,7 +32,13 @@ if refresh_param == 1:
         // Returns Some(new_creds_json) if lifecycle succeeds; None on any failure
 
         if new_json is Some(json):
-            account_quota.expires_at_ms = jwt_exp_ms(json.access_token) * 1000  // derive from JWT — NOT from file (BUG-162)
+            // Step 1: derive expiry from JWT exp claim (works for JWT-format accessTokens)
+            // Step 2: fall back to expiresAt field for opaque sk-ant-oat01-* tokens (BUG-170)
+            if let Some(exp_ms) = jwt_exp_ms(json.access_token):
+                account_quota.expires_at_ms = exp_ms
+            else if let Some(exp_ms) = parse_u64_field(json, "expiresAt"):
+                account_quota.expires_at_ms = exp_ms
+            // else: unchanged (last-resort safe fallback — both strategies failed)
             account_quota.result = fetch_oauth_usage(new_token)   // retry this account only
         else:
             // original error preserved; account row shows pre-refresh error state
@@ -74,7 +80,7 @@ Two other arg combinations are broken and must not be used:
 - **AC-21**: If the refresh attempt fails (subprocess error, or retried fetch still fails), the account's row shows the final error; the remaining accounts are still processed and the table is still rendered.
 - **AC-22**: `refresh::` does not affect `format::json` output structure — refreshed accounts appear as normal data objects, failed-refresh accounts appear as error objects.
 - **AC-23**: The `refresh::` parameter appears in `.usage --help` output with its default value (`1`).
-- **AC-25**: After `run_isolated` returns `credentials: Some(new_json)`, `account_quota.expires_at_ms` is set from the JWT `exp` claim of the new `accessToken` (decoded from `new_json`), NOT from the `expiresAt` field of the credentials file (which the subprocess does not update). If JWT decoding fails, `expires_at_ms` is left unchanged as a safe fallback.
+- **AC-25**: After `run_isolated` returns `credentials: Some(new_json)`, `account_quota.expires_at_ms` is updated using a two-step fallback: (1) decode the JWT `exp` claim from the new `accessToken` via `jwt_exp_ms(new_json)` — preferred for JWT-format tokens; (2) if JWT decoding returns `None` (e.g., opaque `sk-ant-oat01-*` tokens with no `.` separator), read `expiresAt` directly from the credentials JSON via `parse_u64_field(new_json, "expiresAt")`. If both strategies fail, `expires_at_ms` is left unchanged as a last-resort safe fallback. Fix for [BUG-170](../../../../task/claude_profile/bug/170_expires_column_stale_after_refresh_opaque_token.md).
 - **AC-26**: When `trace=true`, `refresh_account_token` emits `[trace] refresh {name}  {step}: {outcome}` lines to stderr for each lifecycle step — `switch_account`, `read credentials`, `run_isolated` (with `"invoking claude  args=["--print", "."]  timeout=35s"` before the call), `write credentials`, and `save`. Each outcome is either `OK` (or `OK credentials={Some|None}` for `run_isolated`) or `Err({error})`. The `trace` parameter is forwarded by `apply_refresh` into `refresh_account_token` so the full lifecycle is observable from `clp .usage refresh::1 trace::1`. Fix for [BUG-166](../../../../task/claude_profile/bug/166_refresh_account_token_no_trace.md).
 
 ### Cross-References
@@ -92,6 +98,7 @@ Two other arg combinations are broken and must not be used:
 | task | `task/claude_profile/150_fix_apply_refresh_429_trigger.md` | Removed 429 from unconditional retry guard |
 | bug | `task/claude_profile/bug/156_refresh_429_expired_not_refreshed.md` | BUG-156: conditional 429+expired refresh fix |
 | bug | `task/claude_profile/bug/162_expiresAt_not_updated_by_subprocess.md` | BUG-162: subprocess never writes `expiresAt`; use JWT `exp` instead |
+| bug | `task/claude_profile/bug/170_expires_column_stale_after_refresh_opaque_token.md` | BUG-170: `jwt_exp_ms` returns None for opaque tokens; add `expiresAt` fallback |
 | bug | `task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md` | BUG-165: live session not updated after refresh; fixed by account lifecycle |
 | bug | `task/claude_profile/bug/166_refresh_account_token_no_trace.md` | BUG-166: `refresh_account_token` had no trace param; all failure paths silently returned `None` |
 | bug | `task/claude_profile/bug/169_refresh_args_interactive_mode_regression.md` | BUG-169: TSK-168 regression — empty args `[]` broken; `["--print", "."]` is the only correct invocation |
@@ -100,5 +107,5 @@ Two other arg combinations are broken and must not be used:
 | task | `task/claude_profile/168_fix_refresh_account_token_args.md` | TSK-168: fix broken `--print . --max-tokens 1` args — use `["--print", "."]` (introduced BUG-169 regression) |
 | doc | [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm that this extends |
 | doc | `claude_runner_core/docs/feature/004_run_isolated.md` | `run_isolated()` API contract |
-| doc | [cli/commands.md](../cli/commands.md#command--9-usage) | `.usage` CLI command specification |
-| doc | [cli/params.md](../cli/params.md#parameter--19-refresh) | `refresh::` parameter specification |
+| doc | [command/usage.md](../cli/command/usage.md#command--9-usage) | `.usage` CLI command specification |
+| doc | [cli/param/19_refresh.md](../cli/param/19_refresh.md) | `refresh::` parameter specification |

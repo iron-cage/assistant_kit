@@ -73,5 +73,5 @@ When all field toggles are disabled, only bare account name lines are printed (n
 |------|------|----------------|
 | source | `src/account.rs` | `list()` — enumerates credential store, reads _active marker |
 | source | `src/commands.rs` | `accounts_routine()` — CLI handler |
-| doc | [cli/commands.md](../cli/commands.md#command--3-accounts) | CLI command specification |
+| doc | [command/account.md](../cli/command/account.md#command--3-accounts) | CLI command specification |
 | doc | [tests/docs/cli/command/03_accounts.md](../../tests/docs/cli/command/03_accounts.md) | Integration test plan |

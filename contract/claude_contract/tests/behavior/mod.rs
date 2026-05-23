@@ -1,6 +1,6 @@
 //! Behavior hypothesis invalidation tests.
 //!
-//! Each file covers exactly one behavior from `docs/claude_code/behavior.md` (B1..B15).
+//! Each file covers exactly one behavior from `docs/claude_code/001_session_behaviors.md` (B1..B18).
 //! Tests inspect real `~/.claude/` storage to verify Claude Code's actual output.
 //! If Claude Code changes behavior, the tests go RED.
 //!
@@ -26,10 +26,6 @@
 //! | `b16_tools_disable.rs` | B16 — `--tools ""` disables tool invocation; definitions may or may not be stripped (H1 vs H2 ❓) | Flags |
 //! | `b17_parentuuid_self_contained.rs` | B17 — `parentUuid` orphaned-link rate < 1%; compaction-boundary exception documented | Entries |
 //! | `b18_no_cross_session_links.rs` | B18 — first conversation entry of every session has `parentUuid: null` | Entries |
-
-#[ allow( dead_code ) ]
-#[ path = "../common/mod.rs" ]
-mod common;
 
 mod b01_default_continues;
 mod b02_new_session;

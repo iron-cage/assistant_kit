@@ -1,6 +1,6 @@
 # Test: `.credentials.status`
 
-Integration test planning for the `.credentials.status` command. See [commands.md](../../../../docs/cli/commands.md#command--10-credentialsstatus) for specification.
+Integration test planning for the `.credentials.status` command. See [command/namespace.md](../../../../docs/cli/command/credentials.md#command--10-credentialsstatus) for specification.
 
 ### Test Case Index
 
@@ -106,4 +106,4 @@ Integration test planning for the `.credentials.status` command. See [commands.m
 - **When:** `clp .credentials.status` (run 3 times)
 - **Then:** All 3 stdout captures are byte-identical
 - **Exit:** 0
-- **Source:** [commands.md — .credentials.status](../../../../docs/cli/commands.md#command--10-credentialsstatus)
+- **Source:** [command/credentials.md — .credentials.status](../../../../docs/cli/command/credentials.md#command--10-credentialsstatus)

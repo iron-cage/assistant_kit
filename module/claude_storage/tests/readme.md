@@ -13,26 +13,6 @@ tests/
 │   └── mod.rs                             # Pre-compiled binary helper (cargo_bin!)
 ├── doc/                                    # Test documentation mirroring docs/ hierarchy
 │   └── cli/testing/                       # CLI test case indexes (command, param, param_group)
-├── behavior/                               # Behavior hypothesis invalidation tests (B1..B18)
-│   ├── mod.rs                             # Test binary root; shared helpers for real ~/.claude/ inspection
-│   ├── b01_default_continues.rs           # B1 — default invocation continues most recent session
-│   ├── b02_new_session.rs                 # B2 — --new-session creates separate .jsonl
-│   ├── b03_print_flag.rs                  # B3 — -p is output mode, not session flag
-│   ├── b04_continue_flag.rs               # B4 — -c aliases default continuation
-│   ├── b05_mtime_selection.rs             # B5 — current session selected by mtime
-│   ├── b06_session_accumulation.rs        # B6 — sessions accumulate as separate files
-│   ├── b07_agent_sessions.rs              # B7 — agent sessions are agent-*.jsonl siblings
-│   ├── b08_zero_byte_init.rs              # B8 — 0-byte .jsonl created as placeholder on startup
-│   ├── b09_storage_path.rs                # B9 — project path uses /→- encoding
-│   ├── b10_entry_threading.rs             # B10 — entries linked via parentUuid
-│   ├── b11_auto_continue.rs               # B11 — CLAUDE_CODE_AUTO_CONTINUE env var
-│   ├── b12_agent_session_id_is_parent.rs  # B12 — agent sessionId matches parent root session
-│   ├── b13_subagent_directory_structure.rs # B13 — subagents live in {root}/{session}/subagents/
-│   ├── b14_agent_meta_json.rs             # B14 — agent-*.meta.json holds agentType
-│   ├── b15_agent_slug_field.rs            # B15 — agent files have slug field in entries
-│   ├── b16_tools_disable.rs               # B16 — tools_disable field present in agent entries
-│   ├── b17_parentuuid_self_contained.rs   # B17 — parentUuid orphaned-link rate < 1% (compaction-boundary exception)
-│   └── b18_no_cross_session_links.rs      # B18 — no entry references uuid from different session
 ├── manual/                                 # Manual testing plans and results
 │   └── readme.md                          # Manual testing plan for this crate
 ├── cli_commands.rs                        # CLI command storage operations
@@ -75,25 +55,6 @@ tests/
 | `doc/` | Test documentation parallel to `docs/` (test case indexes, test plans) |
 | `lib_test.rs` | Library API: `COMMANDS_YAML` exists, `register_commands()` callable |
 | `common/mod.rs` | Pre-compiled binary helper for integration tests |
-| `behavior/mod.rs` | Behavior test binary root; shared helpers for real `~/.claude/` inspection |
-| `behavior/b01_default_continues.rs` | B1: resumable session exists in real storage |
-| `behavior/b02_new_session.rs` | B2: `--new-session` documented in `claude --help` |
-| `behavior/b03_print_flag.rs` | B3: `-p`/`--print` flag documented in `claude --help` |
-| `behavior/b04_continue_flag.rs` | B4: `-c`/`--continue` flag documented in `claude --help` |
-| `behavior/b05_mtime_selection.rs` | B5: multiple sessions have distinct observable mtimes |
-| `behavior/b06_session_accumulation.rs` | B6: sessions accumulate as separate `.jsonl` files |
-| `behavior/b07_agent_sessions.rs` | B7: agent sessions are `agent-*.jsonl` siblings with `isSidechain:true` |
-| `behavior/b08_zero_byte_init.rs` | B8: 0-byte `.jsonl` placeholder files exist in real storage |
-| `behavior/b09_storage_path.rs` | B9: project dir names follow `/`→`-` encoding convention |
-| `behavior/b10_entry_threading.rs` | B10: conversation entries linked via `parentUuid` (null root, non-null chain) |
-| `behavior/b11_auto_continue.rs` | B11: `CLAUDE_CODE_AUTO_CONTINUE` env var recognized by `claude` |
-| `behavior/b12_agent_session_id_is_parent.rs` | B12: agent `sessionId` matches parent root session UUID |
-| `behavior/b13_subagent_directory_structure.rs` | B13: subagents stored in `{root}/{session}/subagents/` |
-| `behavior/b14_agent_meta_json.rs` | B14: `agent-*.meta.json` sidecar holds `agentType` field |
-| `behavior/b15_agent_slug_field.rs` | B15: agent JSONL entries contain `slug` field |
-| `behavior/b16_tools_disable.rs` | B16: agent entries contain `tools_disable` field |
-| `behavior/b17_parentuuid_self_contained.rs` | B17: `parentUuid` orphaned-link rate < 1% (context-compaction boundary exception documented) |
-| `behavior/b18_no_cross_session_links.rs` | B18: no entry `uuid` is referenced as `parentUuid` in a different session |
 | `cli_commands.rs` | Test CLI command storage operations |
 | `cli_sanity.rs` | Verify CLI binary builds and runs |
 | `command_version_consistency_test.rs` | Validate version annotation consistency |

@@ -2,7 +2,7 @@
 
 Edge case tests for the `token::` parameter. Tests validate boolean enforcement, default behavior, and Token status display control.
 
-**Source:** [params.md#parameter--9-token](../../../../docs/cli/params.md#parameter--9-token)
+**Source:** [params.md#parameter--9-token](../../../../docs/cli/param/08_token.md)
 
 ## Test Case Index
 
@@ -36,7 +36,7 @@ Edge case tests for the `token::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status token:::0`
 - **Then:** `Token status` line absent from output
 - **Exit:** 0
-- **Source:** [params.md#parameter--9-token](../../../../docs/cli/params.md#parameter--9-token)
+- **Source:** [params.md#parameter--9-token](../../../../docs/cli/param/08_token.md)
 ---
 
 ### EC-2: `token::::2` rejected:
@@ -45,7 +45,7 @@ Edge case tests for the `token::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status token::::2`
 - **Then:** `token:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--9-token](../../../../docs/cli/params.md#parameter--9-token)
+- **Source:** [params.md#parameter--9-token](../../../../docs/cli/param/08_token.md)
 ---
 
 ### EC-3: `token::::yes` rejected:
@@ -54,7 +54,7 @@ Edge case tests for the `token::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status token::::yes`
 - **Then:** `token:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--9-token](../../../../docs/cli/params.md#parameter--9-token)
+- **Source:** [params.md#parameter--9-token](../../../../docs/cli/param/08_token.md)
 ---
 
 ### EC-4: Default value (present by default):
@@ -63,7 +63,7 @@ Edge case tests for the `token::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status`
 - **Then:** `Token status` line present in default output
 - **Exit:** 0
-- **Source:** [params.md#parameter--9-token](../../../../docs/cli/params.md#parameter--9-token)
+- **Source:** [params.md#parameter--9-token](../../../../docs/cli/param/08_token.md)
 ---
 
 ### EC-5: `token::::1` explicit enable accepted:
@@ -72,7 +72,7 @@ Edge case tests for the `token::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status token::::1`
 - **Then:** `Token status` line present in output
 - **Exit:** 0
-- **Source:** [params.md#parameter--9-token](../../../../docs/cli/params.md#parameter--9-token)
+- **Source:** [params.md#parameter--9-token](../../../../docs/cli/param/08_token.md)
 ---
 
 ### EC-6: `format::json` unaffected by `token::::0`:
@@ -81,4 +81,4 @@ Edge case tests for the `token::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status format::json token::::0`
 - **Then:** JSON output contains all fields regardless of `token::` value
 - **Exit:** 0
-- **Source:** [params.md#parameter--9-token](../../../../docs/cli/params.md#parameter--9-token)
+- **Source:** [params.md#parameter--9-token](../../../../docs/cli/param/08_token.md)

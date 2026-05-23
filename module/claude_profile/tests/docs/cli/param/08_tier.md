@@ -2,7 +2,7 @@
 
 Edge case tests for the `tier::` parameter. Tests validate boolean enforcement, default behavior, and Rate-limit tier display control.
 
-**Source:** [params.md#parameter--8-tier](../../../../docs/cli/params.md#parameter--8-tier)
+**Source:** [params.md#parameter--8-tier](../../../../docs/cli/param/07_tier.md)
 
 ## Test Case Index
 
@@ -36,7 +36,7 @@ Edge case tests for the `tier::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .accounts tier:::0`
 - **Then:** `Rate-limit tier` line absent from output
 - **Exit:** 0
-- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/params.md#parameter--8-tier)
+- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/param/07_tier.md)
 ---
 
 ### EC-2: `tier::::2` rejected:
@@ -45,7 +45,7 @@ Edge case tests for the `tier::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .accounts tier::::2`
 - **Then:** `tier:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/params.md#parameter--8-tier)
+- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/param/07_tier.md)
 ---
 
 ### EC-3: `tier::::yes` rejected:
@@ -54,7 +54,7 @@ Edge case tests for the `tier::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .accounts tier::::yes`
 - **Then:** `tier:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/params.md#parameter--8-tier)
+- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/param/07_tier.md)
 ---
 
 ### EC-4: Default value (present by default):
@@ -63,7 +63,7 @@ Edge case tests for the `tier::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .accounts`
 - **Then:** `Rate-limit tier` line present in default output
 - **Exit:** 0
-- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/params.md#parameter--8-tier)
+- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/param/07_tier.md)
 ---
 
 ### EC-5: `tier::::1` explicit enable accepted:
@@ -72,7 +72,7 @@ Edge case tests for the `tier::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .accounts tier::::1`
 - **Then:** `Rate-limit tier` line present in output
 - **Exit:** 0
-- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/params.md#parameter--8-tier)
+- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/param/07_tier.md)
 ---
 
 ### EC-6: `format::json` unaffected by `tier::::0`:
@@ -81,4 +81,4 @@ Edge case tests for the `tier::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .accounts format::json tier::::0`
 - **Then:** JSON output contains all fields regardless of `tier::` value
 - **Exit:** 0
-- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/params.md#parameter--8-tier)
+- **Source:** [params.md#parameter--8-tier](../../../../docs/cli/param/07_tier.md)

@@ -1,6 +1,6 @@
 # Test: `.account.delete`
 
-Integration test planning for the `.account.delete` command. See [commands.md](../../../../docs/cli/commands.md#command--6-accountdelete) for specification.
+Integration test planning for the `.account.delete` command. See [command/namespace.md](../../../../docs/cli/command/account.md#command--6-accountdelete) for specification.
 
 ### Test Case Index
 
@@ -45,7 +45,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete name::old@archive.com`
 - **Then:** `deleted account 'old@archive.com'` on stdout, exit 0.; account file removed from store
 - **Exit:** 0
-- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+- **Source:** [command/account.md — .account.delete](../../../../docs/cli/command/account.md#command--6-accountdelete)
 
 ---
 
@@ -55,7 +55,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete name::work@acme.com`
 - **Then:** `deleted account 'work@acme.com'` on stdout, exit 0. Both `work@acme.com.credentials.json` and `_active` are absent from the store.
 - **Exit:** 0
-- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+- **Source:** [command/account.md — .account.delete](../../../../docs/cli/command/account.md#command--6-accountdelete)
 
 ---
 
@@ -65,7 +65,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete name::phantom@example.com`
 - **Then:** Error message on stderr containing "not found", exit 2.; stderr contains "not found"; no state mutation
 - **Exit:** 2
-- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+- **Source:** [command/account.md — .account.delete](../../../../docs/cli/command/account.md#command--6-accountdelete)
 
 ---
 
@@ -75,7 +75,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete name::notanemail`
 - **Then:** Error message on stderr indicating the name must be a valid email address, exit 1.; no state mutation
 - **Exit:** 1
-- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+- **Source:** [command/account.md — .account.delete](../../../../docs/cli/command/account.md#command--6-accountdelete)
 
 ---
 
@@ -85,7 +85,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete name::old@archive.com dry::1`
 - **Then:** `[dry-run] would delete account 'old@archive.com'` on stdout, exit 0.; stdout contains dry-run message; account file not removed
 - **Exit:** 0
-- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+- **Source:** [command/account.md — .account.delete](../../../../docs/cli/command/account.md#command--6-accountdelete)
 
 ---
 
@@ -95,7 +95,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete name::old@archive.com`
 - **Then:** `deleted account 'old@archive.com'`, exit 0.; `_active` marker unchanged
 - **Exit:** 0
-- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+- **Source:** [command/account.md — .account.delete](../../../../docs/cli/command/account.md#command--6-accountdelete)
 
 ---
 
@@ -105,7 +105,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete name::old@archive.com`
 - **Then:** `deleted account 'old@archive.com'`, exit 0.; only target account removed; all other files intact
 - **Exit:** 0
-- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+- **Source:** [command/account.md — .account.delete](../../../../docs/cli/command/account.md#command--6-accountdelete)
 
 ---
 
@@ -115,7 +115,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete name::`
 - **Then:** Error message on stderr indicating invalid or empty name, exit 1.; no state mutation
 - **Exit:** 1
-- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+- **Source:** [command/account.md — .account.delete](../../../../docs/cli/command/account.md#command--6-accountdelete)
 
 ---
 
@@ -125,7 +125,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete name::old@archive.com` then `clp .accounts`
 - **Then:** Delete outputs `deleted account 'old@archive.com'`, exit 0. Subsequent accounts output contains `work@acme.com` and `personal@home.com` but not `old@archive.com`.; for both commands; deleted account absent from accounts output
 - **Exit:** 0
-- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+- **Source:** [command/account.md — .account.delete](../../../../docs/cli/command/account.md#command--6-accountdelete)
 
 ---
 
@@ -135,7 +135,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete`
 - **Then:** Error message on stderr indicating missing required parameter `name::`, exit 1.; no state mutation; error message references missing parameter
 - **Exit:** 1
-- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+- **Source:** [command/account.md — .account.delete](../../../../docs/cli/command/account.md#command--6-accountdelete)
 
 ---
 
@@ -145,7 +145,7 @@ Integration test planning for the `.account.delete` command. See [commands.md](.
 - **When:** `clp .account.delete name::old@archive.com`
 - **Then:** `deleted account 'old@archive.com'`, exit 0. All three files — `.credentials.json`, `.claude.json`, `.settings.json` — are absent from the store. No error even if either snapshot file was missing.; credential and both snapshot files removed; no error for absent snapshots
 - **Exit:** 0
-- **Source:** [commands.md — .account.delete](../../../../docs/cli/commands.md#command--6-accountdelete)
+- **Source:** [command/account.md — .account.delete](../../../../docs/cli/command/account.md#command--6-accountdelete)
 
 ---
 

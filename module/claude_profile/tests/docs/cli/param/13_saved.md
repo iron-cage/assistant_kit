@@ -2,7 +2,7 @@
 
 Edge case tests for the `saved::` parameter. Tests validate boolean enforcement, default behavior, and Saved account count display control.
 
-**Source:** [params.md#parameter--13-saved](../../../../docs/cli/params.md#parameter--13-saved)
+**Source:** [params.md#parameter--13-saved](../../../../docs/cli/param/12_saved.md)
 
 ## Test Case Index
 
@@ -36,7 +36,7 @@ Edge case tests for the `saved::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status saved:::1`
 - **Then:** `Saved account count` line absent from output
 - **Exit:** 0
-- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/params.md#parameter--13-saved)
+- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/param/12_saved.md)
 ---
 
 ### EC-2: `saved::::2` rejected:
@@ -45,7 +45,7 @@ Edge case tests for the `saved::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status saved::::2`
 - **Then:** `saved:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/params.md#parameter--13-saved)
+- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/param/12_saved.md)
 ---
 
 ### EC-3: `saved::::yes` rejected:
@@ -54,7 +54,7 @@ Edge case tests for the `saved::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status saved::::yes`
 - **Then:** `saved:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/params.md#parameter--13-saved)
+- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/param/12_saved.md)
 ---
 
 ### EC-4: Default value (absent by default (opt-in)):
@@ -63,7 +63,7 @@ Edge case tests for the `saved::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status`
 - **Then:** `Saved account count` line absent in default output
 - **Exit:** 0
-- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/params.md#parameter--13-saved)
+- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/param/12_saved.md)
 ---
 
 ### EC-5: `saved::::1` explicit enable accepted:
@@ -72,7 +72,7 @@ Edge case tests for the `saved::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status saved::::1`
 - **Then:** `Saved account count` line present in output
 - **Exit:** 0
-- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/params.md#parameter--13-saved)
+- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/param/12_saved.md)
 ---
 
 ### EC-6: `format::json` unaffected by `saved::::0`:
@@ -81,4 +81,4 @@ Edge case tests for the `saved::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status format::json saved::::0`
 - **Then:** JSON output contains all fields regardless of `saved::` value
 - **Exit:** 0
-- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/params.md#parameter--13-saved)
+- **Source:** [params.md#parameter--13-saved](../../../../docs/cli/param/12_saved.md)

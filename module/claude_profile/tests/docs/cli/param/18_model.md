@@ -2,7 +2,7 @@
 
 Edge case tests for the `model::` parameter. Tests validate boolean enforcement, default behavior, and active model field control from settings. Used by `.credentials.status` (live `~/.claude/settings.json`) and `.accounts` (saved `{name}.settings.json` snapshot).
 
-**Source:** [params.md#parameter--18-model](../../../../docs/cli/params.md#parameter--18-model)
+**Source:** [params.md#parameter--18-model](../../../../docs/cli/param/17_model.md)
 
 ## Test Case Index
 
@@ -36,7 +36,7 @@ Edge case tests for the `model::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status model::1`
 - **Then:** Output contains `Model:` line with value `sonnet`
 - **Exit:** 0
-- **Source:** [params.md#parameter--18-model](../../../../docs/cli/params.md#parameter--18-model)
+- **Source:** [params.md#parameter--18-model](../../../../docs/cli/param/17_model.md)
 ---
 
 ### EC-2: `model::2` rejected
@@ -45,7 +45,7 @@ Edge case tests for the `model::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status model::2`
 - **Then:** Exit 1 with error referencing `model::`; must be 0 or 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--18-model](../../../../docs/cli/params.md#parameter--18-model)
+- **Source:** [params.md#parameter--18-model](../../../../docs/cli/param/17_model.md)
 ---
 
 ### EC-3: `model::yes` rejected
@@ -54,7 +54,7 @@ Edge case tests for the `model::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status model::yes`
 - **Then:** Exit 1 with type validation error referencing `model::`
 - **Exit:** 1
-- **Source:** [params.md#parameter--18-model](../../../../docs/cli/params.md#parameter--18-model)
+- **Source:** [params.md#parameter--18-model](../../../../docs/cli/param/17_model.md)
 ---
 
 ### EC-4: Default value (absent by default, opt-in)
@@ -63,7 +63,7 @@ Edge case tests for the `model::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status` (no `model::` param)
 - **Then:** `Model:` line absent from output; active model not exposed unless opted in
 - **Exit:** 0
-- **Source:** [params.md#parameter--18-model](../../../../docs/cli/params.md#parameter--18-model)
+- **Source:** [params.md#parameter--18-model](../../../../docs/cli/param/17_model.md)
 ---
 
 ### EC-5: `model::0` explicit disable accepted — field absent
@@ -72,7 +72,7 @@ Edge case tests for the `model::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status model::0`
 - **Then:** `Model:` line absent from output; explicit 0 same as default-off
 - **Exit:** 0
-- **Source:** [params.md#parameter--18-model](../../../../docs/cli/params.md#parameter--18-model)
+- **Source:** [params.md#parameter--18-model](../../../../docs/cli/param/17_model.md)
 ---
 
 ### EC-6: `format::json` always emits `model` key
@@ -81,4 +81,4 @@ Edge case tests for the `model::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status format::json model::0`
 - **Then:** JSON output contains `"model"` key with value `"sonnet"` regardless of `model::0`
 - **Exit:** 0
-- **Source:** [params.md#parameter--18-model](../../../../docs/cli/params.md#parameter--18-model)
+- **Source:** [params.md#parameter--18-model](../../../../docs/cli/param/17_model.md)

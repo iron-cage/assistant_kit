@@ -53,10 +53,10 @@ Master index of all documentation entities and their instances for `claude_profi
 
 | File | Responsibility |
 |------|----------------|
-| [cli/commands.md](cli/commands.md) | Per-command specification for all 11 commands (9 visible + 2 hidden) |
-| [cli/params.md](cli/params.md) | Per-parameter specification (name, format, dry, field-presence) |
-| [cli/parameter_groups.md](cli/parameter_groups.md) | Parameter grouping, shared behavior, and output-control groups |
+| [cli/command/](cli/command/readme.md) | Per-command specification for all 13 commands (11 visible + 2 hidden) |
+| [cli/param/](cli/param/readme.md) | Per-parameter specification (24 params, one file each) |
+| [cli/param_group/](cli/param_group/readme.md) | Parameter grouping, shared behavior, and output-control groups |
+| [cli/type/](cli/type/readme.md) | Input type definitions and validation rules (4 types) |
+| [cli/workflow_scenario/](cli/workflow_scenario/readme.md) | End-to-end workflow examples (10 scenarios) |
 | [cli/parameter_interactions.md](cli/parameter_interactions.md) | Cross-parameter interaction rules |
-| [cli/types.md](cli/types.md) | Input type definitions and validation rules |
-| [cli/workflows.md](cli/workflows.md) | End-to-end workflow examples |
 | [cli/dictionary.md](cli/dictionary.md) | Canonical domain vocabulary |

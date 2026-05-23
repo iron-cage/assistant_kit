@@ -1,0 +1,20 @@
+# Parameter :: 2. `format::` / `fmt::`
+
+Selects between human-readable text output and machine-parseable JSON. Text is the default for interactive use; JSON enables pipeline integration.
+
+- **Type:** [`OutputFormat`](../type/02_output_format.md)
+- **Default:** `text`
+- **Alias:** `fmt::` (short form; both accepted at runtime)
+- **Constraints:** One of `text`, `json`, `table` (case-insensitive); `table` accepted only on `.accounts`
+- **Commands:** [`.accounts`](../command/account.md#command--3-accounts), [`.token.status`](../command/token.md#command--7-tokenstatus), [`.paths`](../command/paths.md#command--8-paths), [`.usage`](../command/usage.md#command--9-usage), [`.credentials.status`](../command/credentials.md#command--10-credentialsstatus), [`.account.limits`](../command/account.md#command--11-accountlimits)
+- **Purpose:** Enables CLI composability — `format::json` output can be piped to `jq` for structured extraction without parsing fragile text layouts.
+- **Group:** [Output Control](../param_group/01_output_control.md)
+
+**Examples:**
+
+```text
+format::text   → human-readable labeled output (default)
+format::json   → JSON object or array
+fmt::json      → same as format::json (short alias)
+format::table  → compact one-row-per-account table (.accounts only)
+```

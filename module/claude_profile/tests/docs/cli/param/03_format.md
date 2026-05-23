@@ -1,6 +1,6 @@
 # Test: `format::`
 
-Edge case coverage for the `format::` parameter. See [params.md](../../../../docs/cli/params.md#parameter--3-format) and [types.md](../../../../docs/cli/types.md#type--3-outputformat) for specification.
+Edge case coverage for the `format::` parameter. See [params.md](../../../../docs/cli/param/02_format.md) and [types.md](../../../../docs/cli/type/02_output_format.md) for specification.
 
 ### Test Case Index
 
@@ -41,7 +41,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **When:** `clp .accounts format::text`
 - **Then:** Indented key-val blocks with `Active:`, `Sub:`, `Tier:`, `Expires:`, `Email:` lines per account. Exit 0.; output is human-readable labeled text, not JSON
 - **Exit:** 0
-- **Source:** [params.md -- format::](../../../../docs/cli/params.md#parameter--3-format)
+- **Source:** [params.md -- format::](../../../../docs/cli/param/02_format.md)
 
 ---
 
@@ -51,7 +51,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **When:** `clp .accounts format::json`
 - **Then:** A JSON array of account objects. Exit 0.; output is syntactically valid JSON with expected structure
 - **Exit:** 0
-- **Source:** [params.md -- format::](../../../../docs/cli/params.md#parameter--3-format)
+- **Source:** [params.md -- format::](../../../../docs/cli/param/02_format.md)
 
 ---
 
@@ -61,7 +61,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **When:** `clp .accounts format::xml`
 - **Then:** Error message containing `invalid format 'xml'` or similar with exit 1.; unsupported format rejected with descriptive error naming the bad value
 - **Exit:** 1
-- **Source:** [types.md -- OutputFormat](../../../../docs/cli/types.md#type--3-outputformat)
+- **Source:** [types.md -- OutputFormat](../../../../docs/cli/type/02_output_format.md)
 
 ---
 
@@ -71,7 +71,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **When:** `clp .accounts format::TEXT`
 - **Then:** Same human-readable labeled output as `format::text`. Exit 0.; uppercase `TEXT` accepted and produces text output
 - **Exit:** 0
-- **Source:** [types.md -- OutputFormat](../../../../docs/cli/types.md#type--3-outputformat)
+- **Source:** [types.md -- OutputFormat](../../../../docs/cli/type/02_output_format.md)
 
 ---
 
@@ -81,7 +81,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **When:** `clp .accounts format::JSON`
 - **Then:** Same JSON output as `format::json`. Exit 0.; uppercase `JSON` accepted and produces JSON output
 - **Exit:** 0
-- **Source:** [types.md -- OutputFormat](../../../../docs/cli/types.md#type--3-outputformat)
+- **Source:** [types.md -- OutputFormat](../../../../docs/cli/type/02_output_format.md)
 
 ---
 
@@ -91,7 +91,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **When:** `clp .accounts format::text format::json`
 - **Then:** JSON output (matching `format::json` behavior), not text output. Exit 0.; last `format::` value (`json`) takes effect, producing JSON output
 - **Exit:** 0
-- **Source:** [params.md -- format::](../../../../docs/cli/params.md#parameter--3-format)
+- **Source:** [params.md -- format::](../../../../docs/cli/param/02_format.md)
 
 ---
 
@@ -101,7 +101,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **When:** `clp .accounts`
 - **Then:** Human-readable labeled text output with indented key-val blocks, same as `format::text`. Exit 0.; default output is text format with labels
 - **Exit:** 0
-- **Source:** [params.md -- format::](../../../../docs/cli/params.md#parameter--3-format)
+- **Source:** [params.md -- format::](../../../../docs/cli/param/02_format.md)
 
 ---
 
@@ -111,7 +111,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **When:** `clp .accounts format::json | jq .`
 - **Then:** Pretty-printed JSON from `jq` with exit 0 from both pipeline stages.; `jq` successfully parses the JSON output without errors
 - **Exit:** 0
-- **Source:** [params.md -- format::](../../../../docs/cli/params.md#parameter--3-format)
+- **Source:** [params.md -- format::](../../../../docs/cli/param/02_format.md)
 
 ---
 
@@ -131,7 +131,7 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **When:** `clp .accounts format::table`
 - **Then:** Stdout contains `Accounts` title, a dash-separated header row with `Account`, `Sub`, `Tier`, `Expires`, `Email` columns, and one data row per account; the active account row has `✓` in the flag column; non-active rows have a blank flag. Exit 0.; table output with fixed columns and aligned rows
 - **Exit:** 0
-- **Source:** [commands.md — .accounts](../../../../docs/cli/commands.md#command--3-accounts)
+- **Source:** [commands.md — .accounts](../../../../docs/cli/command/account.md#command--3-accounts)
 
 ---
 
@@ -141,4 +141,4 @@ Edge case coverage for the `format::` parameter. See [params.md](../../../../doc
 - **When:** `clp .token.status format::table`
 - **Then:** Exit 1; stderr contains an error message indicating `table` is not supported (or is an unknown format); no output on stdout.; `table` is rejected by commands that only accept `text` or `json`
 - **Exit:** 1
-- **Source:** [types.md -- OutputFormat](../../../../docs/cli/types.md#type--3-outputformat)
+- **Source:** [types.md -- OutputFormat](../../../../docs/cli/type/02_output_format.md)

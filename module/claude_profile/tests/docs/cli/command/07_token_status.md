@@ -1,6 +1,6 @@
 # Test: `.token.status`
 
-Integration test planning for the `.token.status` command. See [commands.md](../../../../docs/cli/commands.md#command--7-tokenstatus) for specification.
+Integration test planning for the `.token.status` command. See [command/namespace.md](../../../../docs/cli/command/token.md#command--7-tokenstatus) for specification.
 
 ### Test Case Index
 
@@ -34,7 +34,7 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 - **When:** `clp .token.status`
 - **Then:** Output on stdout matching pattern `valid — *remaining` (e.g., `valid — 1h59m remaining`), exit 0.; output contains "valid" and remaining time
 - **Exit:** 0
-- **Source:** [commands.md — .token.status](../../../../docs/cli/commands.md#command--7-tokenstatus)
+- **Source:** [command/token.md — .token.status](../../../../docs/cli/command/token.md#command--7-tokenstatus)
 
 ---
 
@@ -44,7 +44,7 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 - **When:** `clp .token.status`
 - **Then:** Output on stdout containing `expired`, exit 0.; output contains "expired"
 - **Exit:** 0
-- **Source:** [commands.md — .token.status](../../../../docs/cli/commands.md#command--7-tokenstatus)
+- **Source:** [command/token.md — .token.status](../../../../docs/cli/command/token.md#command--7-tokenstatus)
 
 ---
 
@@ -54,7 +54,7 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 - **When:** `clp .token.status`
 - **Then:** Output on stdout matching pattern `expiring soon — *remaining` (e.g., `expiring soon — 29m remaining`), exit 0.; output contains "expiring soon" and remaining time
 - **Exit:** 0
-- **Source:** [commands.md — .token.status](../../../../docs/cli/commands.md#command--7-tokenstatus)
+- **Source:** [command/token.md — .token.status](../../../../docs/cli/command/token.md#command--7-tokenstatus)
 
 ---
 
@@ -64,7 +64,7 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 - **When:** `clp .token.status threshold::1800`
 - **Then:** Output on stdout containing `valid`, exit 0.; output contains "valid" under custom threshold
 - **Exit:** 0
-- **Source:** [commands.md — .token.status](../../../../docs/cli/commands.md#command--7-tokenstatus)
+- **Source:** [command/token.md — .token.status](../../../../docs/cli/command/token.md#command--7-tokenstatus)
 
 ---
 
@@ -74,7 +74,7 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 - **When:** `clp .token.status threshold::0`
 - **Then:** Output on stdout containing `valid`, exit 0.; output contains "valid" even with very little time remaining
 - **Exit:** 0
-- **Source:** [commands.md — .token.status](../../../../docs/cli/commands.md#command--7-tokenstatus)
+- **Source:** [command/token.md — .token.status](../../../../docs/cli/command/token.md#command--7-tokenstatus)
 
 ---
 
@@ -84,7 +84,7 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 - **When:** `clp .token.status format::json`
 - **Then:** Valid JSON on stdout (e.g., `{"status":"valid","expires_in_secs":7199}`), exit 0.; output is valid JSON with `status` and `expires_in_secs` keys
 - **Exit:** 0
-- **Source:** [commands.md — .token.status](../../../../docs/cli/commands.md#command--7-tokenstatus)
+- **Source:** [command/token.md — .token.status](../../../../docs/cli/command/token.md#command--7-tokenstatus)
 
 ---
 
@@ -94,7 +94,7 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 - **When:** `clp .token.status`
 - **Then:** Error message on stderr indicating credentials file is unreadable or missing, exit 2.; stderr contains error about missing credentials
 - **Exit:** 2
-- **Source:** [commands.md — .token.status](../../../../docs/cli/commands.md#command--7-tokenstatus)
+- **Source:** [command/token.md — .token.status](../../../../docs/cli/command/token.md#command--7-tokenstatus)
 
 ---
 
@@ -104,5 +104,5 @@ Integration test planning for the `.token.status` command. See [commands.md](../
 - **When:** `clp .token.status`
 - **Then:** Error message on stderr indicating `expiresAt` is unparseable, exit 2.; stderr contains error about unparseable expiresAt
 - **Exit:** 2
-- **Source:** [commands.md — .token.status](../../../../docs/cli/commands.md#command--7-tokenstatus)
+- **Source:** [command/token.md — .token.status](../../../../docs/cli/command/token.md#command--7-tokenstatus)
 

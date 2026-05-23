@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Enable one-call account rotation for automation that needs to swap accounts without writing selection logic.
-- **Responsibility**: Documents the `account::auto_rotate()` API (FR-13). No CLI command — library-only.
-- **In Scope**: Best-inactive-account selection (highest `expires_at_ms`), single-call rotation.
+- **Responsibility**: Documents the `account::auto_rotate()` API (FR-13) and its CLI surface (`.account.rotate`, Command 13).
+- **In Scope**: Best-inactive-account selection (highest `expires_at_ms`), single-call rotation, CLI dry-run preview.
 - **Out of Scope**: Custom selection strategies (caller implements those using `list()` + `switch_account()`), token expiry detection (→ 006_token_status.md).
 
 ### Design
@@ -42,6 +42,9 @@
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/account.rs` | `auto_rotate()` implementation |
+| source | `src/commands.rs` | `account_rotate_routine()` — CLI handler for `.account.rotate` |
 | test | `tests/account_tests.rs::auto_rotate_*` | Rotation selection and switch tests |
+| test | `tests/docs/cli/command/13_account_rotate.md` | CLI integration test spec (IT-1..IT-8) |
+| doc | [cli/command/account.md#command--13-accountrotate](../cli/command/account.md#command--13-accountrotate) | CLI command specification |
 | doc | [004_account_use.md](004_account_use.md) | Switch primitive used by auto_rotate |
 | doc | [006_token_status.md](006_token_status.md) | Token detection to trigger rotation |

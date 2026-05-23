@@ -109,7 +109,7 @@ about credentials. The credential crate knows nothing about execution.
 ## Where the Crate Stands
 
 All four library modules — `account`, `token`, `paths`, `persist` — are implemented and
-fully tested. The CLI binary layer adds `adapter`, `output`, and `commands` (11 commands
+fully tested. The CLI binary layer adds `adapter`, `output`, and `commands` (13 commands
 behind the `enabled` feature). Functional requirements live in [`docs/feature/`](docs/feature/) (FR-6 through FR-20);
 each doc instance maps to named tests via Cross-References sections. All tests pass. No clippy warnings.
 

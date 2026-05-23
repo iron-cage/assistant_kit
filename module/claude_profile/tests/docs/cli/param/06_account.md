@@ -2,7 +2,7 @@
 
 Edge case tests for the `account::` parameter. Tests validate boolean enforcement, default behavior, and Active account name display control.
 
-**Source:** [params.md#parameter--6-account](../../../../docs/cli/params.md#parameter--6-account)
+**Source:** [params.md#parameter--6-account](../../../../docs/cli/param/05_account.md)
 
 ## Test Case Index
 
@@ -36,7 +36,7 @@ Edge case tests for the `account::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status account:::0`
 - **Then:** `Active account name` line absent from output
 - **Exit:** 0
-- **Source:** [params.md#parameter--6-account](../../../../docs/cli/params.md#parameter--6-account)
+- **Source:** [params.md#parameter--6-account](../../../../docs/cli/param/05_account.md)
 ---
 
 ### EC-2: `account::::2` rejected:
@@ -45,7 +45,7 @@ Edge case tests for the `account::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status account::::2`
 - **Then:** `account:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--6-account](../../../../docs/cli/params.md#parameter--6-account)
+- **Source:** [params.md#parameter--6-account](../../../../docs/cli/param/05_account.md)
 ---
 
 ### EC-3: `account::::yes` rejected:
@@ -54,7 +54,7 @@ Edge case tests for the `account::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status account::::yes`
 - **Then:** `account:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--6-account](../../../../docs/cli/params.md#parameter--6-account)
+- **Source:** [params.md#parameter--6-account](../../../../docs/cli/param/05_account.md)
 ---
 
 ### EC-4: Default value (present by default):
@@ -63,7 +63,7 @@ Edge case tests for the `account::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status`
 - **Then:** `Active account name` line present in default output
 - **Exit:** 0
-- **Source:** [params.md#parameter--6-account](../../../../docs/cli/params.md#parameter--6-account)
+- **Source:** [params.md#parameter--6-account](../../../../docs/cli/param/05_account.md)
 ---
 
 ### EC-5: `account::::1` explicit enable accepted:
@@ -72,7 +72,7 @@ Edge case tests for the `account::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status account::::1`
 - **Then:** `Active account name` line present in output
 - **Exit:** 0
-- **Source:** [params.md#parameter--6-account](../../../../docs/cli/params.md#parameter--6-account)
+- **Source:** [params.md#parameter--6-account](../../../../docs/cli/param/05_account.md)
 ---
 
 ### EC-6: `format::json` unaffected by `account::::0`:
@@ -81,4 +81,4 @@ Edge case tests for the `account::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status format::json account::::0`
 - **Then:** JSON output contains all fields regardless of `account::` value
 - **Exit:** 0
-- **Source:** [params.md#parameter--6-account](../../../../docs/cli/params.md#parameter--6-account)
+- **Source:** [params.md#parameter--6-account](../../../../docs/cli/param/05_account.md)

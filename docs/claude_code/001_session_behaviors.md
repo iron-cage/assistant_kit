@@ -58,30 +58,30 @@ or direct inference. All behaviors describe the external `claude` binary.
 | E8  | B9       | Observation | Live storage | `~/.claude/projects/` | Project directory names match `/`→`-` encoding of working directory paths |
 | E9  | B10      | Doc         | `jsonl_format.md` | `## Conversation Threading` | `parentUuid` links each entry to its parent; null on first entry of a thread |
 | E10 | B11      | Code        | `../../module/claude_runner_core/src/command.rs` | line 647-648 | `cmd.env("CLAUDE_CODE_AUTO_CONTINUE", auto_continue.to_string())` — env var set before spawning `claude` |
-| E11 | B1       | Test        | `../../module/claude_storage/tests/behavior/b01_default_continues.rs` | `b1_resumable_session_exists` | At least one non-empty non-agent session exists in real `~/.claude/` storage — prerequisite for default continuation |
-| E12 | B2       | Test        | `../../module/claude_storage/tests/behavior/b02_new_session.rs` | `b2_new_session_flag_documented` | `claude --help` documents `--new-session` flag |
-| E13 | B3       | Test        | `../../module/claude_storage/tests/behavior/b03_print_flag.rs` | `b3_print_flag_documented` | `claude --help` documents `-p` / `--print` as output mode |
-| E14 | B4       | Test        | `../../module/claude_storage/tests/behavior/b04_continue_flag.rs` | `b4_continue_flag_documented` | `claude --help` documents `-c` / `--continue` flag |
-| E15 | B5       | Test        | `../../module/claude_storage/tests/behavior/b05_mtime_selection.rs` | `b5_sessions_have_distinct_mtimes` | Real project with 2+ sessions has distinct mtimes — mtime ordering is possible |
-| E16 | B6       | Test        | `../../module/claude_storage/tests/behavior/b06_session_accumulation.rs` | `b6_project_has_multiple_jsonl` | Real project directory contains 2+ `.jsonl` files |
-| E17 | B7       | Test        | `../../module/claude_storage/tests/behavior/b07_agent_sessions.rs` | `b7_agent_session_has_issidechain` | Real `agent-*.jsonl` file contains `"isSidechain":true` in first entry |
-| E18 | B8       | Test        | `../../module/claude_storage/tests/behavior/b08_zero_byte_init.rs` | `b8_zero_byte_jsonl_exists` | Zero-byte `.jsonl` files observed in real `~/.claude/` storage |
-| E19 | B9       | Test        | `../../module/claude_storage/tests/behavior/b09_storage_path.rs` | `b9_project_dir_names_follow_encoding` | Real project directory names start with `-` (encoded leading `/`) and decode to existing paths |
-| E20 | B10      | Test        | `../../module/claude_storage/tests/behavior/b10_entry_threading.rs` | `b10_first_entry_null_parent` | First conversation entry has `parentUuid:null`; second has non-null `parentUuid` |
-| E21 | B11      | Test        | `../../module/claude_storage/tests/behavior/b11_auto_continue.rs` | `b11_auto_continue_env_var_recognized` | `claude --version` succeeds with `CLAUDE_CODE_AUTO_CONTINUE=true` set |
+| E11 | B1       | Test        | `../../contract/claude_contract/tests/behavior/b01_default_continues.rs` | `b1_resumable_session_exists` | At least one non-empty non-agent session exists in real `~/.claude/` storage — prerequisite for default continuation |
+| E12 | B2       | Test        | `../../contract/claude_contract/tests/behavior/b02_new_session.rs` | `b2_new_session_flag_documented` | `claude --help` documents `--new-session` flag |
+| E13 | B3       | Test        | `../../contract/claude_contract/tests/behavior/b03_print_flag.rs` | `b3_print_flag_documented` | `claude --help` documents `-p` / `--print` as output mode |
+| E14 | B4       | Test        | `../../contract/claude_contract/tests/behavior/b04_continue_flag.rs` | `b4_continue_flag_documented` | `claude --help` documents `-c` / `--continue` flag |
+| E15 | B5       | Test        | `../../contract/claude_contract/tests/behavior/b05_mtime_selection.rs` | `b5_sessions_have_distinct_mtimes` | Real project with 2+ sessions has distinct mtimes — mtime ordering is possible |
+| E16 | B6       | Test        | `../../contract/claude_contract/tests/behavior/b06_session_accumulation.rs` | `b6_project_has_multiple_jsonl` | Real project directory contains 2+ `.jsonl` files |
+| E17 | B7       | Test        | `../../contract/claude_contract/tests/behavior/b07_agent_sessions.rs` | `b7_agent_session_has_issidechain` | Real `agent-*.jsonl` file contains `"isSidechain":true` in first entry |
+| E18 | B8       | Test        | `../../contract/claude_contract/tests/behavior/b08_zero_byte_init.rs` | `b8_zero_byte_jsonl_exists` | Zero-byte `.jsonl` files observed in real `~/.claude/` storage |
+| E19 | B9       | Test        | `../../contract/claude_contract/tests/behavior/b09_storage_path.rs` | `b9_project_dir_names_follow_encoding` | Real project directory names start with `-` (encoded leading `/`) and decode to existing paths |
+| E20 | B10      | Test        | `../../contract/claude_contract/tests/behavior/b10_entry_threading.rs` | `b10_first_entry_null_parent` | First conversation entry has `parentUuid:null`; second has non-null `parentUuid` |
+| E21 | B11      | Test        | `../../contract/claude_contract/tests/behavior/b11_auto_continue.rs` | `b11_auto_continue_env_var_recognized` | `claude --version` succeeds with `CLAUDE_CODE_AUTO_CONTINUE=true` set |
 | E22 | B12      | Observation | Live storage | `~/.claude/projects/*/subagents/agent-*.jsonl` | Agent entry `sessionId` field equals the parent directory UUID, not the agent filename ID |
 | E23 | B13      | Observation | Live storage | `~/.claude/projects/*/` | `{uuid}/subagents/agent-*.jsonl` directories observed; parent UUID in directory name matches root `{uuid}.jsonl` |
 | E24 | B14      | Observation | Live storage | `~/.claude/projects/*/subagents/*.meta.json` | `meta.json` files contain `{"agentType":"Explore"}` or `{"agentType":"general-purpose"}` or `{"agentType":"Plan"}`; some include `description` |
 | E25 | B15      | Observation | Live storage | `~/.claude/projects/*/subagents/agent-*.jsonl` | All sibling agent entries share identical `slug` value (e.g., `"jaunty-painting-hinton"`); root session first entry has no `slug` (type `queue-operation`) |
-| E26 | B12      | Test        | `../../module/claude_storage/tests/behavior/b12_agent_session_id_is_parent.rs` | `b12_agent_session_id_matches_parent_dir` | Agent entry `sessionId` equals the UUID from the parent directory path |
-| E27 | B13      | Test        | `../../module/claude_storage/tests/behavior/b13_subagent_directory_structure.rs` | `b13_subagent_dir_exists_for_root_session` | At least one root session has a matching `{uuid}/subagents/` directory |
-| E28 | B14      | Test        | `../../module/claude_storage/tests/behavior/b14_agent_meta_json.rs` | `b14_meta_json_contains_agent_type` | Real `.meta.json` file contains `agentType` field with known value |
-| E29 | B15      | Test        | `../../module/claude_storage/tests/behavior/b15_agent_slug_field.rs` | `b15_sibling_agents_share_slug` | All sibling agents under one parent share the same `slug` value |
+| E26 | B12      | Test        | `../../contract/claude_contract/tests/behavior/b12_agent_session_id_is_parent.rs` | `b12_agent_session_id_matches_parent_dir` | Agent entry `sessionId` equals the UUID from the parent directory path |
+| E27 | B13      | Test        | `../../contract/claude_contract/tests/behavior/b13_subagent_directory_structure.rs` | `b13_subagent_dir_exists_for_root_session` | At least one root session has a matching `{uuid}/subagents/` directory |
+| E28 | B14      | Test        | `../../contract/claude_contract/tests/behavior/b14_agent_meta_json.rs` | `b14_meta_json_contains_agent_type` | Real `.meta.json` file contains `agentType` field with known value |
+| E29 | B15      | Test        | `../../contract/claude_contract/tests/behavior/b15_agent_slug_field.rs` | `b15_sibling_agents_share_slug` | All sibling agents under one parent share the same `slug` value |
 | E30 | B16      | Observation | `claude --help` live output | `--tools` flag entry | Help text: "Specify the list of available tools from the built-in set. Use `""` to disable all tools, `"default"` to use all tools, or specify tool names (e.g. `"Bash,Edit,Read"`)" |
-| E31 | B16      | Test        | `../../module/claude_storage/tests/behavior/b16_tools_disable.rs` | `b16a_tools_flag_documented_in_help`, `b16b_tools_empty_string_accepted`, `b16c_tools_default_value_accepted` | Flag documented in help and accepted at CLI parse time without parse error |
+| E31 | B16      | Test        | `../../contract/claude_contract/tests/behavior/b16_tools_disable.rs` | `b16a_tools_flag_documented_in_help`, `b16b_tools_empty_string_accepted`, `b16c_tools_default_value_accepted` | Flag documented in help and accepted at CLI parse time without parse error |
 | E32 | B16h     | Inference   | Research: Piebald-AI/claude-code-system-prompts; ClaudeLog (2026-04) | Tool assembly layer analysis | Tool definitions injected into assembled system prompt before behavioral flags are applied (confirmed for `--system-prompt` replacement). `--tools` likely operates at invocation-policy layer, not definition-assembly layer — same architectural split as `--system-prompt`. Unconfirmed: requires live token-count comparison. |
-| E33 | B17      | Test        | `../../module/claude_storage/tests/behavior/b17_parentuuid_self_contained.rs` | `b17_parentuuid_refs_stay_within_session` | For a real multi-entry session file, every non-null `parentUuid` value appears as a `uuid` in the same file; no UUID from another session file is referenced |
-| E34 | B18      | Test        | `../../module/claude_storage/tests/behavior/b18_no_cross_session_links.rs` | `b18_first_entry_of_new_session_has_null_parent` | In a project with 2+ non-agent session files, the first entry of each non-oldest session has `parentUuid: null` — confirming no cross-session continuation pointer is written |
+| E33 | B17      | Test        | `../../contract/claude_contract/tests/behavior/b17_parentuuid_self_contained.rs` | `b17_parentuuid_refs_stay_within_session` | For a real multi-entry session file, every non-null `parentUuid` value appears as a `uuid` in the same file; no UUID from another session file is referenced |
+| E34 | B18      | Test        | `../../contract/claude_contract/tests/behavior/b18_no_cross_session_links.rs` | `b18_first_entry_of_new_session_has_null_parent` | In a project with 2+ non-agent session files, the first entry of each non-oldest session has `parentUuid: null` — confirming no cross-session continuation pointer is written |
 
 ---
 
@@ -250,7 +250,7 @@ See [007_concept_taxonomy.md](007_concept_taxonomy.md) for how Conversation Chai
 ### Invalidation Tests
 
 Each behavior hypothesis has a corresponding invalidation test in
-`module/claude_storage/tests/behavior/`. Tests inspect real `~/.claude/` storage to verify
+`contract/claude_contract/tests/behavior/`. Tests inspect real `~/.claude/` storage to verify
 Claude Code's actual output. If Claude Code changes behavior, the tests go RED.
 
 | File | Behavior |
@@ -273,7 +273,7 @@ Claude Code's actual output. If Claude Code changes behavior, the tests go RED.
 
 To run:
 ```bash
-cargo nextest run --test behavior
+cargo nextest run -p claude_contract --test behavior
 ```
 
 ### Cross-References
@@ -283,7 +283,7 @@ cargo nextest run --test behavior
 | doc | [`002_storage_organization.md`](002_storage_organization.md) | Storage directory layout and containment hierarchy |
 | doc | [`004_jsonl_format.md`](004_jsonl_format.md) | Entry-level JSONL field schema and content block types |
 | doc | [`params/readme.md`](params/readme.md) | Canonical definitions for flags referenced in this table (--print, --continue, --new-session, CLAUDE_CODE_AUTO_CONTINUE) |
-| test | [`../../module/claude_storage/tests/behavior/`](../../module/claude_storage/tests/behavior/) | Invalidation test suite — one file per behavior (B1–B16) |
+| test | [`../../contract/claude_contract/tests/behavior/`](../../contract/claude_contract/tests/behavior/) | Invalidation test suite — one file per behavior (B1–B16) |
 | source | [`../../module/claude_runner/src/main.rs`](../../module/claude_runner/src/main.rs) | Evidence E1–E3: flag definitions (new-session, print, continue) |
 | source | [`../../module/claude_runner_core/src/command.rs`](../../module/claude_runner_core/src/command.rs) | Evidence E2, E10: continuation flag builder and auto-continue env var |
 

@@ -1,6 +1,6 @@
 # Test: `dry::`
 
-Edge case coverage for the `dry::` parameter. See [params.md](../../../../docs/cli/params.md#parameter--5-dry) for specification.
+Edge case coverage for the `dry::` parameter. See [params.md](../../../../docs/cli/param/04_dry.md) for specification.
 
 ### Test Case Index
 
@@ -37,7 +37,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../docs/c
 - **When:** `clp .account.save name::preview dry::1`
 - **Then:** `[dry-run] would save current credentials as 'preview'` with exit 0.; output has `[dry-run]` prefix and no file is created
 - **Exit:** 0
-- **Source:** [params.md -- dry::](../../../../docs/cli/params.md#parameter--5-dry)
+- **Source:** [params.md -- dry::](../../../../docs/cli/param/04_dry.md)
 
 ---
 
@@ -47,7 +47,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../docs/c
 - **When:** `clp .account.save name::real dry::0`
 - **Then:** `saved current credentials as 'real'` with exit 0.; command executes normally with file created
 - **Exit:** 0
-- **Source:** [params.md -- dry::](../../../../docs/cli/params.md#parameter--5-dry)
+- **Source:** [params.md -- dry::](../../../../docs/cli/param/04_dry.md)
 
 ---
 
@@ -57,7 +57,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../docs/c
 - **When:** `clp .account.save name::alias_test dry::true`
 - **Then:** `[dry-run] would save current credentials as 'alias_test'` with exit 0.; `dry::true` behaves identically to `dry::1`
 - **Exit:** 0
-- **Source:** [params.md -- dry::](../../../../docs/cli/params.md#parameter--5-dry)
+- **Source:** [params.md -- dry::](../../../../docs/cli/param/04_dry.md)
 
 ---
 
@@ -67,7 +67,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../docs/c
 - **When:** `clp .account.save name::alias_test2 dry::false`
 - **Then:** `saved current credentials as 'alias_test2'` with exit 0.; `dry::false` behaves identically to `dry::0`
 - **Exit:** 0
-- **Source:** [params.md -- dry::](../../../../docs/cli/params.md#parameter--5-dry)
+- **Source:** [params.md -- dry::](../../../../docs/cli/param/04_dry.md)
 
 ---
 
@@ -77,7 +77,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../docs/c
 - **When:** `clp .account.save name::test dry::abc`
 - **Then:** Error message indicating `abc` is not a valid boolean value with exit 1.; non-boolean `dry::` value rejected with descriptive error
 - **Exit:** 1
-- **Source:** [params.md -- dry::](../../../../docs/cli/params.md#parameter--5-dry)
+- **Source:** [params.md -- dry::](../../../../docs/cli/param/04_dry.md)
 
 ---
 
@@ -87,7 +87,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../docs/c
 - **When:** `clp .account.save name::sideeffect dry::1`
 - **Then:** `[dry-run] would save current credentials as 'sideeffect'` with exit 0.; filesystem state unchanged after dry-run execution
 - **Exit:** 0
-- **Source:** [params.md -- dry::](../../../../docs/cli/params.md#parameter--5-dry)
+- **Source:** [params.md -- dry::](../../../../docs/cli/param/04_dry.md)
 
 ---
 
@@ -100,7 +100,7 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../docs/c
 - **Then:** 1. `[dry-run] would save current credentials as 'fidelity'` with exit 0.
 2. `saved current credentials as 'fidelity'` with exit 0.; for both; dry-run success implies execute success with identical semantics
 - **Exit:** 0
-- **Source:** [params.md -- dry::](../../../../docs/cli/params.md#parameter--5-dry)
+- **Source:** [params.md -- dry::](../../../../docs/cli/param/04_dry.md)
 
 ---
 
@@ -110,4 +110,4 @@ Edge case coverage for the `dry::` parameter. See [params.md](../../../../docs/c
 - **When:** `clp .account.save name::default_test`
 - **Then:** `saved current credentials as 'default_test'` with exit 0.; default behavior is normal execution without dry-run prefix
 - **Exit:** 0
-- **Source:** [params.md -- dry::](../../../../docs/cli/params.md#parameter--5-dry)
+- **Source:** [params.md -- dry::](../../../../docs/cli/param/04_dry.md)

@@ -54,5 +54,5 @@
 | test | `tests/cli/credentials_test.rs` | `cred14` — CLI: `.credentials.status` shows `Account: {name}` after `.account.save` |
 | test | `tests/cli/account_mutations_test.rs` | `as16` — CLI: `_active` file contains saved name after `.account.save`; `as17`/`as18` — path-unsafe chars in local part exit 1 |
 | doc | [001_account_store_init.md](001_account_store_init.md) | Directory initialization triggered by save |
-| doc | [cli/commands.md](../cli/commands.md#command--4-accountsave) | CLI command specification |
+| doc | [command/account.md](../cli/command/account.md#command--4-accountsave) | CLI command specification |
 | doc | [014_rich_account_metadata.md](014_rich_account_metadata.md) | Metadata fields snapshotted by `save()` |

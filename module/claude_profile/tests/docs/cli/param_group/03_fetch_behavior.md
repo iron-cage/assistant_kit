@@ -1,6 +1,6 @@
 # Test: Fetch Behavior Group
 
-Integration and edge case coverage for the Fetch Behavior parameter group (`refresh::`, `live::`, `interval::`, `jitter::`, `trace::`). See [parameter_groups.md](../../../../docs/cli/parameter_groups.md#group--3-fetch-behavior) for specification.
+Integration and edge case coverage for the Fetch Behavior parameter group (`refresh::`, `live::`, `interval::`, `jitter::`, `trace::`). See [parameter_groups.md](../../../../docs/cli/param_group/readme.md#group--3-fetch-behavior) for specification.
 
 ### Test Case Index
 

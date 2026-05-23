@@ -202,19 +202,28 @@ fn token_exp_label( expires_at_ms : u64 ) -> String
   }
 }
 
-/// Parse a raw numeric JSON field from a file without an external JSON parser.
+/// Parse a raw numeric JSON field from a string without an external JSON parser.
 ///
-/// Reads the file at `path`, finds `"key":` by string scan, and parses the
-/// immediately following run of ASCII digits as `u64`. Returns `None` on any
-/// I/O error, missing key, or non-numeric value.
-fn parse_u64_field( path : &std::path::Path, key : &str ) -> Option< u64 >
+/// Finds `"key":` by string scan and parses the immediately following run of
+/// ASCII digits as `u64`. Returns `None` on a missing key or non-numeric value.
+/// Works for both flat (`{"key":N}`) and nested (`{"outer":{"key":N}}`) JSON.
+fn parse_u64_from_str( s : &str, key : &str ) -> Option< u64 >
 {
-  let s      = std::fs::read_to_string( path ).ok()?;
   let needle = format!( "\"{key}\":" );
   let start  = s.find( &needle )? + needle.len();
   let rest   = s[ start.. ].trim_start();
   let end    = rest.find( |c : char| !c.is_ascii_digit() ).unwrap_or( rest.len() );
   rest[ ..end ].parse().ok()
+}
+
+/// Parse a raw numeric JSON field from a file without an external JSON parser.
+///
+/// Reads the file at `path` then delegates to `parse_u64_from_str`. Returns `None`
+/// on any I/O error, missing key, or non-numeric value.
+fn parse_u64_field( path : &std::path::Path, key : &str ) -> Option< u64 >
+{
+  let s = std::fs::read_to_string( path ).ok()?;
+  parse_u64_from_str( &s, key )
 }
 
 fn base64url_decode( s : &str ) -> Option< Vec< u8 > >
@@ -801,6 +810,16 @@ fn apply_refresh(
     // Pitfall: expiresAt is a server-issued claim the subprocess cannot update; always derive
     //   post-refresh expiry from jwt_exp_ms(), never by re-reading the credentials file.
     if let Some( exp_ms ) = jwt_exp_ms( &new_creds )
+    {
+      aq.expires_at_ms = exp_ms;
+    }
+    // Fix(BUG-170): fallback to expiresAt field for opaque sk-ant-oat01-* tokens.
+    // Root cause: jwt_exp_ms returns None for tokens with no '.' separator (not a JWT);
+    //   the if-let above never fires, leaving aq.expires_at_ms at the stale pre-refresh value.
+    // Pitfall: use else-if (not a second if-let) — only update from expiresAt when JWT decode
+    //   fails; a separate if-let would run even on JWT success and silently overwrite with the
+    //   expiresAt field value, which may differ from the JWT exp claim by clock skew.
+    else if let Some( exp_ms ) = parse_u64_from_str( &new_creds, "expiresAt" )
     {
       aq.expires_at_ms = exp_ms;
     }
@@ -1863,6 +1882,99 @@ mod tests
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
       "429+expired: result must be unchanged when no cred file (refresh path entered but gracefully skipped); result: {:?}",
       accounts[ 0 ].result,
+    );
+  }
+
+  // ── BUG-170 MRE: jwt_exp_ms + parse_u64_from_str ────────────────────────────
+
+  /// MRE 1/2 for BUG-170: `jwt_exp_ms` returns `None` for opaque `sk-ant-oat01-*` tokens.
+  ///
+  /// # Root Cause
+  /// `jwt_exp_ms` splits `accessToken` on `.` via `splitn(3, '.')`. Opaque `sk-ant-oat01-*`
+  /// tokens have no `.` separator — the second `parts.next()?` returns `None` and
+  /// `jwt_exp_ms` returns `None`. The `if let Some` guard at `usage.rs:803-806` never fires,
+  /// leaving `aq.expires_at_ms` at its stale pre-refresh expired timestamp.
+  ///
+  /// # Why Not Caught
+  /// BUG-162 tests used synthetic JWT-format tokens. No test verified `jwt_exp_ms` behavior
+  /// for opaque `sk-ant-oat01-*` tokens, nor that `expires_at_ms` is correct post-refresh
+  /// when `jwt_exp_ms` returns `None`.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-170): `parse_u64_from_str` fallback added after `jwt_exp_ms` in `apply_refresh`.
+  /// This test guards the precondition: `jwt_exp_ms` correctly returns `None` for opaque tokens.
+  ///
+  /// # Prevention
+  /// `jwt_exp_ms` returns `None` for any non-JWT token; this is by design. Never "fix"
+  /// `jwt_exp_ms` to handle opaque tokens — the correct fix is a separate `expiresAt` fallback.
+  ///
+  /// # Pitfall
+  /// If `jwt_exp_ms` is modified to handle opaque tokens directly (wrong fix), this test
+  /// fails, alerting that the `parse_u64_from_str` fallback may be redundant. Preserve the
+  /// two-step fallback design regardless — opaque tokens will never have a parseable JWT payload.
+  // test_kind: bug_reproducer(BUG-170)
+  #[ test ]
+  fn test_jwt_exp_ms_mre_bug170_opaque_returns_none()
+  {
+    // Opaque sk-ant-oat01-* token: no '.' separator — splitn(3, '.') yields one part.
+    let opaque_creds = r#"{"accessToken":"sk-ant-oat01-XXXXXXXXXXXX","expiresAt":9999999999999}"#;
+    assert!(
+      jwt_exp_ms( opaque_creds ).is_none(),
+      "jwt_exp_ms must return None for opaque sk-ant-oat01 token (no JWT structure); \
+       if this fails, jwt_exp_ms was changed to handle opaque tokens — review BUG-170 fix",
+    );
+  }
+
+  /// MRE 2/2 for BUG-170: `parse_u64_from_str` extracts `expiresAt` from credentials JSON.
+  ///
+  /// # Root Cause
+  /// `parse_u64_field` takes `&Path` and cannot be used with the in-memory `new_creds: String`
+  /// directly. BUG-170 is that there is no string-based fallback for extracting `expiresAt`
+  /// from `new_creds` when `jwt_exp_ms` returns `None`, leaving `aq.expires_at_ms` stale.
+  ///
+  /// # Why Not Caught
+  /// TSK-163 replaced `parse_u64_field` (stale file) with `jwt_exp_ms` (new token) but added
+  /// no fallback for the case where `jwt_exp_ms` returns `None`. No test verified that the
+  /// `expiresAt` field in `new_creds` is readable and used when JWT decoding fails.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-170): extracted `parse_u64_from_str(s: &str, key: &str) -> Option<u64>` from
+  /// `parse_u64_field`; added as `else if` fallback in `apply_refresh` at lines 803-810.
+  ///
+  /// # Prevention
+  /// When adding an expiry-extraction strategy, always provide a string-based fallback for
+  /// credentials JSON already in memory; never assume all access tokens are JWTs.
+  ///
+  /// # Pitfall
+  /// `parse_u64_from_str` scans for `"key":digits` — works for both flat JSON
+  /// (`{"expiresAt":N}`) and nested JSON (`{"claudeAiOauth":{"expiresAt":N}}`); the plain
+  /// string scan finds the first occurrence of the key regardless of nesting depth.
+  // test_kind: bug_reproducer(BUG-170)
+  #[ test ]
+  fn test_parse_u64_from_str_mre_bug170_extracts_expires_at()
+  {
+    // Flat credentials JSON (common in test fixtures).
+    let flat = r#"{"accessToken":"sk-ant-oat01-XXXX","expiresAt":9999999999999}"#;
+    assert_eq!(
+      parse_u64_from_str( flat, "expiresAt" ),
+      Some( 9_999_999_999_999_u64 ),
+      "parse_u64_from_str must extract expiresAt from flat credentials JSON",
+    );
+
+    // Nested credentials JSON (claudeAiOauth wrapper present in production credentials).
+    let nested =
+      r#"{"claudeAiOauth":{"accessToken":"sk-ant-oat01-XXXX","expiresAt":1779487948931}}"#;
+    assert_eq!(
+      parse_u64_from_str( nested, "expiresAt" ),
+      Some( 1_779_487_948_931_u64 ),
+      "parse_u64_from_str must extract expiresAt from nested claudeAiOauth credentials JSON",
+    );
+
+    // Missing key — must return None, not panic.
+    let no_key = r#"{"accessToken":"sk-ant-oat01-XXXX"}"#;
+    assert!(
+      parse_u64_from_str( no_key, "expiresAt" ).is_none(),
+      "parse_u64_from_str must return None when expiresAt key is absent",
     );
   }
 

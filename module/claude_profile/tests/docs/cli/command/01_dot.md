@@ -1,6 +1,6 @@
 # Test: `.`
 
-Integration test planning for the `.` command. See [commands.md](../../../../docs/cli/commands.md#command--1-) for specification.
+Integration test planning for the `.` command. See [command/namespace.md](../../../../docs/cli/command/meta.md#command--1-) for specification.
 
 ### Test Case Index
 
@@ -9,7 +9,7 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 | IT-1 | `.` produces identical output to `.help` | Delegation |
 | IT-2 | `.` exits 0 | Exit Code |
 | IT-3 | `.` is hidden from help listing | Visibility |
-| IT-4 | `.` output lists all 9 visible commands; removed commands absent | Content |
+| IT-4 | `.` output lists all 11 visible commands; removed commands absent | Content |
 | IT-5 | `.` output excludes bare `.` from listing | Content |
 | IT-6 | `.` output includes usage line with `<command>` syntax | Content |
 | IT-7 | `.` with trailing unknown param still shows help | Robustness |
@@ -40,7 +40,7 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 - **When:** `clp .` and `clp .help`
 - **Then:** stdout of both invocations is byte-identical
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)
 
 ---
 
@@ -50,7 +50,7 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 - **When:** `clp .`
 - **Then:** process exits with code 0
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)
 
 ---
 
@@ -60,7 +60,7 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 - **When:** `clp .`
 - **Then:** stdout does not contain a bare `.` command entry in the Commands section
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)
 
 ---
 
@@ -68,9 +68,9 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .`
-- **Then:** stdout contains all 9 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.token.status`, `.paths`, `.usage`, `.credentials.status`, `.account.limits`); does NOT contain `.account.list` or `.account.status`
+- **Then:** stdout contains all 11 visible command names (`.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.token.status`, `.paths`, `.usage`, `.credentials.status`); does NOT contain `.account.list` or `.account.status`
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)
 
 ---
 
@@ -78,9 +78,9 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 
 - **Given:** clean environment, `clp` on PATH
 - **When:** `clp .`
-- **Then:** the Commands section contains exactly 9 entries; no entry matches a bare `.` standalone command
+- **Then:** the Commands section contains exactly 11 entries; no entry matches a bare `.` standalone command
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)
 
 ---
 
@@ -90,7 +90,7 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 - **When:** `clp .`
 - **Then:** stdout contains `Usage: clp <command>`
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)
 
 ---
 
@@ -100,7 +100,7 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 - **When:** `clp . foo::bar`
 - **Then:** stdout is identical to bare `clp .` output; unknown param silently ignored
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)
 
 ---
 
@@ -110,7 +110,7 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 - **When:** `clp .` (run 3 times)
 - **Then:** all 3 stdout captures are byte-identical
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)
 
 ---
 
@@ -120,7 +120,7 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 - **When:** `clp .`
 - **Then:** stdout contains both "Account management" and "Status & info" as group headers; commands appear indented under each group
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)
 
 ---
 
@@ -130,7 +130,7 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 - **When:** `clp .`
 - **Then:** stdout does NOT contain `[name::EMAIL]`, does NOT contain `format::text|json` within a command line (Options section mentions it, but command rows do not)
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)
 
 ---
 
@@ -140,7 +140,7 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 - **When:** `clp .`
 - **Then:** stdout contains "Options:" followed by "format::text|json", "dry::bool", and "name::EMAIL" on separate lines
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)
 
 ---
 
@@ -150,4 +150,4 @@ Integration test planning for the `.` command. See [commands.md](../../../../doc
 - **When:** `clp .` (stdout captured as bytes, not a terminal)
 - **Then:** stdout contains no ESC (`\x1b`) characters; all text is plain ASCII
 - **Exit:** 0
-- **Source:** [commands.md — .](../../../../docs/cli/commands.md#command--1-)
+- **Source:** [command/meta.md — .](../../../../docs/cli/command/meta.md#command--1-)

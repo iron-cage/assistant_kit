@@ -21,6 +21,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-13 | `original_active` account restored to live session after refresh cycle | Algorithm | test_apply_refresh_lifecycle_original_active_restored |
 | FT-14 | `None`-paths fallback — credential absent in store → `refresh_account_token` returns `None` | Algorithm | test_apply_refresh_401_no_cred_file |
 | FT-15 | `trace::1` propagated to `refresh_account_token`; lifecycle steps logged to stderr; no panic | AC-26 | test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic, art_some_paths_run_isolated_invoked_trace_no_panic |
+| FT-16 | `expires_at_ms` from `expiresAt` field when JWT decode returns `None` (opaque token) | AC-25 | test_parse_u64_from_str_mre_bug170_extracts_expires_at, test_jwt_exp_ms_mre_bug170_opaque_returns_none |
 
 ### Test Case Index
 
@@ -41,8 +42,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-13 | `original_active` restored via `switch_account` after refresh cycle | Algorithm | Active Restore |
 | FT-14 | `None`-paths — credential absent in store skips account without corrupting result | Algorithm | None-paths Skip |
 | FT-15 | `trace::1` propagates to `refresh_account_token`; lifecycle steps logged; no panic | AC-26 | Trace Propagation |
+| FT-16 | Post-refresh `expires_at_ms` from `expiresAt` field for opaque `sk-ant-oat01-*` token | AC-25 | JWT Expiry (Opaque) |
 
-**Total:** 15 FT cases
+**Total:** 16 FT cases
 
 ---
 
@@ -210,3 +212,15 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Source fn:** `test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic` (L10 in `usage.rs`), `art_some_paths_run_isolated_invoked_trace_no_panic` (in `account_refresh_test.rs`)
 - **Note:** Fix for BUG-166 — `refresh_account_token` previously had no `trace` parameter; all failure paths returned `None` silently without any diagnostic output. Testing uses "does not panic" pattern because nextest does not support reliable stderr assertion for `eprintln!` in unit tests.
 - **Source:** [017_token_refresh.md AC-26](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-16: Post-refresh `expires_at_ms` from `expiresAt` field for opaque `sk-ant-oat01-*` token
+
+- **Given:** One saved account whose credential is expired; `account::refresh_account_token()` returns `Some(new_creds)` where the `accessToken` is an opaque `sk-ant-oat01-*` value (no `.` separator — `jwt_exp_ms` returns `None`); the `new_creds` JSON contains a future `expiresAt` value written by the OAuth server.
+- **When:** `apply_refresh` processes `new_creds` (unit test via `test_apply_refresh_mre_bug170_opaque_token_expires_fallback`)
+- **Then:** `account_quota.expires_at_ms` is set to the `expiresAt` value from `new_creds`; the Expires column shows a future time (not `EXPIRED`); expiry is derived from `parse_u64_field(new_creds, "expiresAt")`, not from JWT decode.
+- **Exit:** 0
+- **Source fn:** `test_parse_u64_from_str_mre_bug170_extracts_expires_at` (primary fix guard), `test_jwt_exp_ms_mre_bug170_opaque_returns_none` (precondition guard) — both in `src/usage.rs` `mod tests`
+- **Note:** Fix for BUG-170 — the TSK-163 fix for BUG-162 introduced this gap: `jwt_exp_ms` silently returns `None` for opaque tokens, leaving `expires_at_ms` stale. The `expiresAt` field in the returned credentials JSON is the authoritative post-refresh expiry for opaque tokens.
+- **Source:** [017_token_refresh.md AC-25](../../../docs/feature/017_token_refresh.md)

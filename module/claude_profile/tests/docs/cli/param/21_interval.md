@@ -2,7 +2,7 @@
 
 Edge case tests for the `interval::` parameter. Tests validate u64 type enforcement, minimum boundary (≥ 30), and conditional validation — the constraint is only enforced when `live::1` is present. Used by `.usage` to set seconds between full refresh cycles in live monitor mode.
 
-**Source:** [params.md#parameter--21-interval](../../../../docs/cli/params.md#parameter--21-interval)
+**Source:** [params.md#parameter--21-interval](../../../../docs/cli/param/21_interval.md)
 
 ## Test Case Index
 
@@ -37,7 +37,7 @@ Edge case tests for the `interval::` parameter. Tests validate u64 type enforcem
 - **Then:** Command accepted; enters live loop with 30-second cycle; exits 0 on Ctrl-C.
 - **Exit:** 0
 - **Source fn:** `it29_live_default_interval_accepted`
-- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/params.md#parameter--21-interval)
+- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/param/21_interval.md)
 ---
 
 ### EC-2: `interval::29` with `live::1` — rejected (below minimum)
@@ -47,7 +47,7 @@ Edge case tests for the `interval::` parameter. Tests validate u64 type enforcem
 - **Then:** Exit 1 before any fetch; stderr contains `interval must be >= 30`.
 - **Exit:** 1
 - **Source fn:** `it23_live_interval_below_minimum`
-- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/params.md#parameter--21-interval)
+- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/param/21_interval.md)
 ---
 
 ### EC-3: `interval::60` with `live::1` — non-default value accepted
@@ -57,7 +57,7 @@ Edge case tests for the `interval::` parameter. Tests validate u64 type enforcem
 - **Then:** Command accepted; enters live loop with 60-second cycle; exits 0 on Ctrl-C.
 - **Exit:** 0
 - **Source fn:** `it45_interval_60_live_accepted`
-- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/params.md#parameter--21-interval)
+- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/param/21_interval.md)
 ---
 
 ### EC-4: Default value is `30`
@@ -67,7 +67,7 @@ Edge case tests for the `interval::` parameter. Tests validate u64 type enforcem
 - **Then:** Command accepted with default 30-second cycle; behavior identical to `interval::30`; exits 0 on Ctrl-C.
 - **Exit:** 0
 - **Source fn:** `it31_usage_help_shows_live_params`
-- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/params.md#parameter--21-interval)
+- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/param/21_interval.md)
 ---
 
 ### EC-5: `interval::29` without `live::1` — accepted (validation skipped)
@@ -77,7 +77,7 @@ Edge case tests for the `interval::` parameter. Tests validate u64 type enforcem
 - **Then:** Command accepted; single fetch and render; `interval::` value is ignored when `live::0`; exit 0.
 - **Exit:** 0
 - **Source fn:** `it28_interval_jitter_ignored_when_not_live`
-- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/params.md#parameter--21-interval)
+- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/param/21_interval.md)
 ---
 
 ### EC-6: `interval::abc` rejected
@@ -87,4 +87,4 @@ Edge case tests for the `interval::` parameter. Tests validate u64 type enforcem
 - **Then:** Exit 1 with type validation error referencing `interval::`; value must be a non-negative integer.
 - **Exit:** 1
 - **Source fn:** `it44_interval_abc_rejected`
-- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/params.md#parameter--21-interval)
+- **Source:** [params.md#parameter--21-interval](../../../../docs/cli/param/21_interval.md)

@@ -2,7 +2,7 @@
 
 Edge case tests for the `live::` parameter. Tests validate boolean enforcement, default-off behavior, `format::json` incompatibility guard, and single-shot vs. continuous-loop modes. Used by `.usage` to enable the live monitor loop.
 
-**Source:** [params.md#parameter--20-live](../../../../docs/cli/params.md#parameter--20-live)
+**Source:** [params.md#parameter--20-live](../../../../docs/cli/param/20_live.md)
 
 ## Test Case Index
 
@@ -38,7 +38,7 @@ Edge case tests for the `live::` parameter. Tests validate boolean enforcement, 
 - **Then:** Command clears screen, renders table, displays countdown footer in format `Next update in M:SS (at HH:MM:SS UTC)  [Ctrl-C to exit]`, then waits; exits 0 on Ctrl-C.
 - **Exit:** 0
 - **Source fn:** `it21_lim_it_live_mode` [live — requires credentials]
-- **Source:** [params.md#parameter--20-live](../../../../docs/cli/params.md#parameter--20-live)
+- **Source:** [params.md#parameter--20-live](../../../../docs/cli/param/20_live.md)
 ---
 
 ### EC-2: `live::0` — explicit disable accepted; single fetch
@@ -48,7 +48,7 @@ Edge case tests for the `live::` parameter. Tests validate boolean enforcement, 
 - **Then:** Single fetch and render; exits 0 immediately; no loop, no countdown footer, no screen clear.
 - **Exit:** 0
 - **Source fn:** `it41_live_0_single_fetch_exits_0`
-- **Source:** [params.md#parameter--20-live](../../../../docs/cli/params.md#parameter--20-live)
+- **Source:** [params.md#parameter--20-live](../../../../docs/cli/param/20_live.md)
 ---
 
 ### EC-3: `live::1 format::json` rejected before first fetch
@@ -58,7 +58,7 @@ Edge case tests for the `live::` parameter. Tests validate boolean enforcement, 
 - **Then:** Exit 1 before any fetch; stderr contains `live monitor mode is incompatible with format::json`.
 - **Exit:** 1
 - **Source fn:** `it24_live_incompatible_with_json`
-- **Source:** [params.md#parameter--20-live](../../../../docs/cli/params.md#parameter--20-live)
+- **Source:** [params.md#parameter--20-live](../../../../docs/cli/param/20_live.md)
 ---
 
 ### EC-4: `live::2` rejected
@@ -68,7 +68,7 @@ Edge case tests for the `live::` parameter. Tests validate boolean enforcement, 
 - **Then:** Exit 1 with error referencing `live::`; must be 0 or 1.
 - **Exit:** 1
 - **Source fn:** `it42_live_2_rejected`
-- **Source:** [params.md#parameter--20-live](../../../../docs/cli/params.md#parameter--20-live)
+- **Source:** [params.md#parameter--20-live](../../../../docs/cli/param/20_live.md)
 ---
 
 ### EC-5: `live::yes` rejected
@@ -78,7 +78,7 @@ Edge case tests for the `live::` parameter. Tests validate boolean enforcement, 
 - **Then:** Exit 1 with type validation error referencing `live::`.
 - **Exit:** 1
 - **Source fn:** `it43_live_yes_rejected`
-- **Source:** [params.md#parameter--20-live](../../../../docs/cli/params.md#parameter--20-live)
+- **Source:** [params.md#parameter--20-live](../../../../docs/cli/param/20_live.md)
 ---
 
 ### EC-6: Default value is `0` (single-shot)
@@ -88,4 +88,4 @@ Edge case tests for the `live::` parameter. Tests validate boolean enforcement, 
 - **Then:** Single fetch and render; exits 0; behavior identical to `live::0`; no loop or countdown footer.
 - **Exit:** 0
 - **Source fn:** `it31_usage_help_shows_live_params`
-- **Source:** [params.md#parameter--20-live](../../../../docs/cli/params.md#parameter--20-live)
+- **Source:** [params.md#parameter--20-live](../../../../docs/cli/param/20_live.md)

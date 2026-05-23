@@ -2,7 +2,7 @@
 
 Edge case tests for the `email::` parameter. Tests validate boolean enforcement, default behavior, and email address display control on both `.credentials.status` and `.accounts`.
 
-**Source:** [params.md#parameter--11-email](../../../../docs/cli/params.md#parameter--11-email)
+**Source:** [params.md#parameter--11-email](../../../../docs/cli/param/10_email.md)
 
 ## Test Case Index
 
@@ -38,7 +38,7 @@ Edge case tests for the `email::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status email::0`
 - **Then:** `Email:` line absent from output
 - **Exit:** 0
-- **Source:** [params.md#parameter--11-email](../../../../docs/cli/params.md#parameter--11-email)
+- **Source:** [params.md#parameter--11-email](../../../../docs/cli/param/10_email.md)
 ---
 
 ### EC-2: `email::0` — field suppressed from `.accounts`:
@@ -47,7 +47,7 @@ Edge case tests for the `email::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .accounts email::0`
 - **Then:** `Email:` line absent from each account block
 - **Exit:** 0
-- **Source:** [params.md#parameter--11-email](../../../../docs/cli/params.md#parameter--11-email)
+- **Source:** [params.md#parameter--11-email](../../../../docs/cli/param/10_email.md)
 ---
 
 ### EC-3: `email::::2` rejected:
@@ -56,7 +56,7 @@ Edge case tests for the `email::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status email::::2`
 - **Then:** `email:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--11-email](../../../../docs/cli/params.md#parameter--11-email)
+- **Source:** [params.md#parameter--11-email](../../../../docs/cli/param/10_email.md)
 ---
 
 ### EC-4: `email::::yes` rejected:
@@ -65,7 +65,7 @@ Edge case tests for the `email::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status email::::yes`
 - **Then:** `email:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--11-email](../../../../docs/cli/params.md#parameter--11-email)
+- **Source:** [params.md#parameter--11-email](../../../../docs/cli/param/10_email.md)
 ---
 
 ### EC-5: Default value — present in `.credentials.status` by default:
@@ -74,7 +74,7 @@ Edge case tests for the `email::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status`
 - **Then:** `Email:` line present in default output
 - **Exit:** 0
-- **Source:** [params.md#parameter--11-email](../../../../docs/cli/params.md#parameter--11-email)
+- **Source:** [params.md#parameter--11-email](../../../../docs/cli/param/10_email.md)
 ---
 
 ### EC-6: Default value — present in `.accounts` by default:
@@ -83,7 +83,7 @@ Edge case tests for the `email::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .accounts`
 - **Then:** `Email:` line present in each account block by default
 - **Exit:** 0
-- **Source:** [params.md#parameter--11-email](../../../../docs/cli/params.md#parameter--11-email)
+- **Source:** [params.md#parameter--11-email](../../../../docs/cli/param/10_email.md)
 ---
 
 ### EC-7: `email::::1` explicit enable accepted:
@@ -92,7 +92,7 @@ Edge case tests for the `email::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status email::::1`
 - **Then:** `Email:` line present in output
 - **Exit:** 0
-- **Source:** [params.md#parameter--11-email](../../../../docs/cli/params.md#parameter--11-email)
+- **Source:** [params.md#parameter--11-email](../../../../docs/cli/param/10_email.md)
 ---
 
 ### EC-8: `format::json` unaffected by `email::::0`:
@@ -101,4 +101,4 @@ Edge case tests for the `email::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .credentials.status format::json email::::0`
 - **Then:** JSON output contains `email` key regardless of `email::` value
 - **Exit:** 0
-- **Source:** [params.md#parameter--11-email](../../../../docs/cli/params.md#parameter--11-email)
+- **Source:** [params.md#parameter--11-email](../../../../docs/cli/param/10_email.md)

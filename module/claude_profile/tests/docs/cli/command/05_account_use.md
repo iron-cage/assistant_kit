@@ -1,6 +1,6 @@
 # Test: `.account.use`
 
-Integration test planning for the `.account.use` command. See [commands.md](../../../../docs/cli/commands.md#command--5-accountuse) for specification.
+Integration test planning for the `.account.use` command. See [command/namespace.md](../../../../docs/cli/command/account.md#command--5-accountuse) for specification.
 
 ### Test Case Index
 
@@ -48,7 +48,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use name::personal@home.com`
 - **Then:** `switched to 'personal@home.com'` on stdout, exit 0.; credentials file replaced with `personal` account content
 - **Exit:** 0
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse)
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse)
 
 ---
 
@@ -58,7 +58,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use name::personal@home.com`
 - **Then:** `switched to 'personal@home.com'` on stdout, exit 0.; `_active` marker reads `personal@home.com`
 - **Exit:** 0
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse)
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse)
 
 ---
 
@@ -68,7 +68,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use name::ghost@example.com`
 - **Then:** Error message on stderr containing "not found", exit 2.; stderr contains "not found"; no state mutation
 - **Exit:** 2
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse)
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse)
 
 ---
 
@@ -78,7 +78,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use name::notanemail`
 - **Then:** Error message on stderr indicating the name must be a valid email address, exit 1.; no state mutation
 - **Exit:** 1
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse)
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse)
 
 ---
 
@@ -88,7 +88,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use name::personal@home.com dry::1`
 - **Then:** `[dry-run] would switch to 'personal@home.com'` on stdout, exit 0.; stdout contains dry-run message; no files modified
 - **Exit:** 0
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse)
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse)
 
 ---
 
@@ -98,7 +98,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use name::personal@home.com`
 - **Then:** `switched to 'personal@home.com'`, exit 0.; credentials file is byte-identical to source account file
 - **Exit:** 0
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse)
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse)
 
 ---
 
@@ -108,7 +108,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use name::personal@home.com`
 - **Then:** `switched to 'personal@home.com'`, exit 0.; all non-target account files unchanged; source account file unchanged
 - **Exit:** 0
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse)
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse)
 
 ---
 
@@ -118,7 +118,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use name::work@acme.com`
 - **Then:** `switched to 'work@acme.com'`, exit 0.; state unchanged; no errors
 - **Exit:** 0
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse)
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse)
 
 ---
 
@@ -128,7 +128,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use name::personal@home.com`
 - **Then:** `switched to 'personal@home.com'`, exit 0.; no `.json.tmp` residue; credentials file is always complete
 - **Exit:** 0
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse)
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse)
 
 ---
 
@@ -138,7 +138,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use`
 - **Then:** Error message on stderr indicating missing required parameter `name::`, exit 1.; no state mutation; error message references missing parameter
 - **Exit:** 1
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse)
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse)
 
 ---
 
@@ -148,7 +148,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use name::work@acme.com` then `clp .credentials.status`
 - **Then:** `.credentials.status` output contains `Email: work@acme.com` (not `personal@home.com`). Exit 0.; `~/.claude.json` restored from `work@acme.com`'s snapshot; `credentials.status Email:` field reflects the switched-to account
 - **Exit:** 0
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse), [004_account_use.md AC-05](../../../../docs/feature/004_account_use.md)
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse), [004_account_use.md AC-05](../../../../docs/feature/004_account_use.md)
 
 ---
 
@@ -158,7 +158,7 @@ Integration test planning for the `.account.use` command. See [commands.md](../.
 - **When:** `clp .account.use name::a/b@c.com`
 - **Then:** Error message on stderr indicating the name contains path-unsafe characters, exit 1. No filesystem modification.
 - **Exit:** 1
-- **Source:** [commands.md — .account.use](../../../../docs/cli/commands.md#command--5-accountuse), [004_account_use.md AC-06](../../../../docs/feature/004_account_use.md), [aw11 in account_mutations_test.rs]
+- **Source:** [command/account.md — .account.use](../../../../docs/cli/command/account.md#command--5-accountuse), [004_account_use.md AC-06](../../../../docs/feature/004_account_use.md), [aw11 in account_mutations_test.rs]
 
 ---
 

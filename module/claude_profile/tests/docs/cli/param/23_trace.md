@@ -2,7 +2,7 @@
 
 Edge case tests for the `trace::` parameter. Tests validate boolean enforcement, default-off behavior, stderr output routing (stdout unchanged), and the `[trace]` line format. Used by `.usage` to expose internal fetch and refresh mechanics for diagnostics.
 
-**Source:** [params.md#parameter--23-trace](../../../../docs/cli/params.md#parameter--23-trace)
+**Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/23_trace.md)
 
 ## Test Case Index
 
@@ -38,7 +38,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **Then:** stderr contains at least one line beginning with `[trace]`; exit 0.
 - **Exit:** 0
 - **Source fn:** `it34_trace_param_writes_to_stderr`
-- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/params.md#parameter--23-trace)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/23_trace.md)
 ---
 
 ### EC-2: `trace::0` — explicit disable; no trace output
@@ -48,7 +48,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **Then:** stderr contains no `[trace]` lines; behavior identical to default; exit 0.
 - **Exit:** 0
 - **Source fn:** `it49_trace_0_no_trace_on_stderr`
-- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/params.md#parameter--23-trace)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/23_trace.md)
 ---
 
 ### EC-3: `trace::2` rejected
@@ -58,7 +58,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **Then:** Exit 1 with error referencing `trace::`; must be 0 or 1.
 - **Exit:** 1
 - **Source fn:** `it50_trace_2_rejected`
-- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/params.md#parameter--23-trace)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/23_trace.md)
 ---
 
 ### EC-4: `trace::yes` rejected
@@ -68,7 +68,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **Then:** Exit 1 with type validation error referencing `trace::`.
 - **Exit:** 1
 - **Source fn:** `it51_trace_yes_rejected`
-- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/params.md#parameter--23-trace)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/23_trace.md)
 ---
 
 ### EC-5: Default value is `0` (trace disabled)
@@ -78,7 +78,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **Then:** stderr contains no `[trace]` lines; behavior identical to `trace::0`; exit 0.
 - **Exit:** 0
 - **Source fn:** `it52_trace_default_off`
-- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/params.md#parameter--23-trace)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/23_trace.md)
 ---
 
 ### EC-6: `trace::1` — trace output on stderr does not appear on stdout
@@ -88,4 +88,4 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **Then:** stdout contains the normal quota table output only (no `[trace]` lines); stderr contains `[trace]` lines; the two streams are independent; exit 0.
 - **Exit:** 0
 - **Source fn:** `it34_trace_param_writes_to_stderr`
-- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/params.md#parameter--23-trace)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/23_trace.md)

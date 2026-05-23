@@ -6,7 +6,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 
 - **Purpose**: Document integration and edge case test plans for all clp commands and parameters.
 - **Responsibility**: Index of per-command, per-parameter, and per-group test case planning files.
-- **In Scope**: All 11 clp commands plus binary meta-flags (`--version`/`-V`), all 17 parameters, and all 2 parameter groups.
+- **In Scope**: All 12 clp commands plus binary meta-flags (`--version`/`-V`), all 17 parameters, and all 2 parameter groups.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 ### Responsibility Table
@@ -40,6 +40,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`.usage`](command/09_usage.md)
 - [`.credentials.status`](command/10_credentials_status.md)
 - [`.account.limits`](command/11_account_limits.md)
+- [`.account.relogin`](command/12_account_relogin.md)
 
 **Parameters:**
 - [`name::`](param/01_name.md)

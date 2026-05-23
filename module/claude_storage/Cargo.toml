@@ -42,10 +42,6 @@ name = "clg"
 path = "src/bin/clg.rs"
 required-features = [ "cli" ]
 
-[[test]]
-name = "behavior"
-path = "tests/behavior/mod.rs"
-
 [features]
 default = [ "cli" ]
 enabled = [ "dep:unilang" ]

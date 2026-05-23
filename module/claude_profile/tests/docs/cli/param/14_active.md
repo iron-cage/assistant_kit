@@ -2,7 +2,7 @@
 
 Edge case tests for the `active::` parameter. Tests validate boolean enforcement, default behavior, and Active/inactive status display control.
 
-**Source:** [params.md#parameter--14-active](../../../../docs/cli/params.md#parameter--14-active)
+**Source:** [params.md#parameter--14-active](../../../../docs/cli/param/13_active.md)
 
 ## Test Case Index
 
@@ -36,7 +36,7 @@ Edge case tests for the `active::` parameter. Tests validate boolean enforcement
 - **When:** `clp .accounts active:::0`
 - **Then:** `Active/inactive status` line absent from output
 - **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/params.md#parameter--14-active)
+- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/13_active.md)
 ---
 
 ### EC-2: `active::::2` rejected:
@@ -45,7 +45,7 @@ Edge case tests for the `active::` parameter. Tests validate boolean enforcement
 - **When:** `clp .accounts active::::2`
 - **Then:** `active:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/params.md#parameter--14-active)
+- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/13_active.md)
 ---
 
 ### EC-3: `active::::yes` rejected:
@@ -54,7 +54,7 @@ Edge case tests for the `active::` parameter. Tests validate boolean enforcement
 - **When:** `clp .accounts active::::yes`
 - **Then:** `active:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/params.md#parameter--14-active)
+- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/13_active.md)
 ---
 
 ### EC-4: Default value (present by default):
@@ -63,7 +63,7 @@ Edge case tests for the `active::` parameter. Tests validate boolean enforcement
 - **When:** `clp .accounts`
 - **Then:** `Active/inactive status` line present in default output
 - **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/params.md#parameter--14-active)
+- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/13_active.md)
 ---
 
 ### EC-5: `active::::1` explicit enable accepted:
@@ -72,7 +72,7 @@ Edge case tests for the `active::` parameter. Tests validate boolean enforcement
 - **When:** `clp .accounts active::::1`
 - **Then:** `Active/inactive status` line present in output
 - **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/params.md#parameter--14-active)
+- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/13_active.md)
 ---
 
 ### EC-6: `format::json` unaffected by `active::::0`:
@@ -81,4 +81,4 @@ Edge case tests for the `active::` parameter. Tests validate boolean enforcement
 - **When:** `clp .accounts format::json active::::0`
 - **Then:** JSON output contains all fields regardless of `active::` value
 - **Exit:** 0
-- **Source:** [params.md#parameter--14-active](../../../../docs/cli/params.md#parameter--14-active)
+- **Source:** [params.md#parameter--14-active](../../../../docs/cli/param/13_active.md)

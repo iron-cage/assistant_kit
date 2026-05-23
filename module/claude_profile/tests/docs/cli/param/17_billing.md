@@ -2,7 +2,7 @@
 
 Edge case tests for the `billing::` parameter. Tests validate boolean enforcement, default behavior, and billing type field control from `oauthAccount`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.claude.json` snapshot).
 
-**Source:** [params.md#parameter--17-billing](../../../../docs/cli/params.md#parameter--17-billing)
+**Source:** [params.md#parameter--17-billing](../../../../docs/cli/param/16_billing.md)
 
 ## Test Case Index
 
@@ -36,7 +36,7 @@ Edge case tests for the `billing::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status billing::1`
 - **Then:** Output contains `Billing:` line with value `stripe_subscription`
 - **Exit:** 0
-- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/params.md#parameter--17-billing)
+- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/param/16_billing.md)
 ---
 
 ### EC-2: `billing::2` rejected
@@ -45,7 +45,7 @@ Edge case tests for the `billing::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status billing::2`
 - **Then:** Exit 1 with error referencing `billing::`; must be 0 or 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/params.md#parameter--17-billing)
+- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/param/16_billing.md)
 ---
 
 ### EC-3: `billing::yes` rejected
@@ -54,7 +54,7 @@ Edge case tests for the `billing::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status billing::yes`
 - **Then:** Exit 1 with type validation error referencing `billing::`
 - **Exit:** 1
-- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/params.md#parameter--17-billing)
+- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/param/16_billing.md)
 ---
 
 ### EC-4: Default value (absent by default, opt-in)
@@ -63,7 +63,7 @@ Edge case tests for the `billing::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status` (no `billing::` param)
 - **Then:** `Billing:` line absent from output; billingType not exposed unless opted in
 - **Exit:** 0
-- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/params.md#parameter--17-billing)
+- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/param/16_billing.md)
 ---
 
 ### EC-5: `billing::0` explicit disable accepted — field absent
@@ -72,7 +72,7 @@ Edge case tests for the `billing::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status billing::0`
 - **Then:** `Billing:` line absent from output; explicit 0 same as default-off
 - **Exit:** 0
-- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/params.md#parameter--17-billing)
+- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/param/16_billing.md)
 ---
 
 ### EC-6: `format::json` always emits `billing` key
@@ -81,4 +81,4 @@ Edge case tests for the `billing::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .credentials.status format::json billing::0`
 - **Then:** JSON output contains `"billing"` key with value `"stripe_subscription"` regardless of `billing::0`
 - **Exit:** 0
-- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/params.md#parameter--17-billing)
+- **Source:** [params.md#parameter--17-billing](../../../../docs/cli/param/16_billing.md)

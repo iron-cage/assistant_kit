@@ -11,8 +11,8 @@
 //! | dot01 | `dot01_dot_and_help_byte_identical`     | `.` and `.help` stdout byte-identical         | P   |
 //! | dot02 | `dot02_dot_exits_0`                     | `.` exits 0                                   | P   |
 //! | dot03 | `dot03_dot_hidden_from_listing`         | no bare `.` command row in listing            | P   |
-//! | dot04 | `dot04_all_visible_commands_present`    | 9 commands present; removed commands absent   | P   |
-//! | dot05 | `dot05_exactly_nine_command_rows`       | exactly 9 lines starting with `"    ."`       | P   |
+//! | dot04 | `dot04_all_visible_commands_present`    | 11 commands present; removed commands absent  | P   |
+//! | dot05 | `dot05_exactly_eleven_command_rows`     | exactly 11 lines starting with `"    ."`      | P   |
 //! | dot06 | `dot06_usage_line_present`              | stdout contains `"Usage: clp <command>"`      | P   |
 //! | dot07 | `dot07_unknown_param_ignored`           | `. foo::bar` output identical to bare `.`     | P   |
 //! | dot08 | `dot08_output_stable_across_invocations`| 3 invocations all byte-identical              | P   |
@@ -61,7 +61,7 @@ fn dot03_dot_hidden_from_listing()
   );
 }
 
-// ── dot04 — all 9 visible commands present; removed names absent ──────────────
+// ── dot04 — all 11 visible commands present; removed names absent ─────────────
 
 #[ test ]
 fn dot04_all_visible_commands_present()
@@ -75,6 +75,8 @@ fn dot04_all_visible_commands_present()
     ".account.use",
     ".account.delete",
     ".account.limits",
+    ".account.relogin",
+    ".account.rotate",
     ".credentials.status",
     ".token.status",
     ".paths",
@@ -89,15 +91,15 @@ fn dot04_all_visible_commands_present()
   assert!( !text.contains( ".account.status" ), ".account.status must not appear (removed)" );
 }
 
-// ── dot05 — exactly 9 command rows in listing ─────────────────────────────────
+// ── dot05 — exactly 11 command rows in listing ────────────────────────────────
 
 #[ test ]
-fn dot05_exactly_nine_command_rows()
+fn dot05_exactly_eleven_command_rows()
 {
   let out   = run_cs( &[ "." ] );
   let text  = stdout( &out );
   let count = text.lines().filter( |l| l.starts_with( "    ." ) ).count();
-  assert_eq!( count, 9, "expected 9 command rows starting with '    .', got {count}" );
+  assert_eq!( count, 11, "expected 11 command rows starting with '    .', got {count}" );
 }
 
 // ── dot06 — usage line includes `<command>` syntax ───────────────────────────

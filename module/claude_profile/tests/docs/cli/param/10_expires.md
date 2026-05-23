@@ -2,7 +2,7 @@
 
 Edge case tests for the `expires::` parameter. Tests validate boolean enforcement, default behavior, and Token expiry duration display control.
 
-**Source:** [params.md#parameter--10-expires](../../../../docs/cli/params.md#parameter--10-expires)
+**Source:** [params.md#parameter--10-expires](../../../../docs/cli/param/09_expires.md)
 
 ## Test Case Index
 
@@ -36,7 +36,7 @@ Edge case tests for the `expires::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .accounts expires:::0`
 - **Then:** `Token expiry duration` line absent from output
 - **Exit:** 0
-- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/params.md#parameter--10-expires)
+- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/param/09_expires.md)
 ---
 
 ### EC-2: `expires::::2` rejected:
@@ -45,7 +45,7 @@ Edge case tests for the `expires::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .accounts expires::::2`
 - **Then:** `expires:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/params.md#parameter--10-expires)
+- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/param/09_expires.md)
 ---
 
 ### EC-3: `expires::::yes` rejected:
@@ -54,7 +54,7 @@ Edge case tests for the `expires::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .accounts expires::::yes`
 - **Then:** `expires:: must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/params.md#parameter--10-expires)
+- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/param/09_expires.md)
 ---
 
 ### EC-4: Default value (present by default):
@@ -63,7 +63,7 @@ Edge case tests for the `expires::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .accounts`
 - **Then:** `Token expiry duration` line present in default output
 - **Exit:** 0
-- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/params.md#parameter--10-expires)
+- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/param/09_expires.md)
 ---
 
 ### EC-5: `expires::::1` explicit enable accepted:
@@ -72,7 +72,7 @@ Edge case tests for the `expires::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .accounts expires::::1`
 - **Then:** `Token expiry duration` line present in output
 - **Exit:** 0
-- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/params.md#parameter--10-expires)
+- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/param/09_expires.md)
 ---
 
 ### EC-6: `format::json` unaffected by `expires::::0`:
@@ -81,4 +81,4 @@ Edge case tests for the `expires::` parameter. Tests validate boolean enforcemen
 - **When:** `clp .accounts format::json expires::::0`
 - **Then:** JSON output contains all fields regardless of `expires::` value
 - **Exit:** 0
-- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/params.md#parameter--10-expires)
+- **Source:** [params.md#parameter--10-expires](../../../../docs/cli/param/09_expires.md)

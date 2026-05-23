@@ -730,6 +730,35 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     .map_err( |e| io_err_to_error_data( &e, "account use" ) )?;
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )
 }
+/// `.account.rotate` — auto-rotate to the highest-expiry inactive account.
+///
+/// # Errors
+///
+/// Returns `ErrorData` if HOME is unset, the credential store cannot be read,
+/// or no inactive account is available to rotate to.
+#[ inline ]
+pub fn account_rotate_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  let credential_store = require_credential_store()?;
+  let paths            = require_claude_paths()?;
+  if is_dry( &cmd )
+  {
+    let candidate = crate::account::list( &credential_store )
+      .map_err( |e| io_err_to_error_data( &e, "account rotate" ) )?
+      .into_iter()
+      .filter( |a| !a.is_active )
+      .max_by_key( |a| a.expires_at_ms )
+      .ok_or_else( || ErrorData::new(
+        ErrorCode::InternalError,
+        "no inactive account available to rotate to".to_string(),
+      ) )?;
+    return Ok( OutputData::new( format!( "[dry-run] would rotate to '{}'\n", candidate.name ), "text" ) );
+  }
+  let name = crate::account::auto_rotate( &credential_store, &paths )
+    .map_err( |e| io_err_to_error_data( &e, "account rotate" ) )?;
+  Ok( OutputData::new( format!( "rotated to '{name}'\n" ), "text" ) )
+}
+
 pub use crate::usage::usage_routine;
 
 // ── .account.limits helpers ──────────────────────────────────────────────────
@@ -946,6 +975,102 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   crate::account::delete( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account delete" ) )?;
   Ok( OutputData::new( format!( "deleted account '{name}'\n" ), "text" ) )
+}
+
+/// `.account.relogin` — force browser re-authentication for a named account with dead refreshToken.
+///
+/// Switches to the named account, spawns `claude` with inherited TTY so the user can
+/// complete browser login, then saves the refreshed credentials back into the account store
+/// and restores the original active account.
+///
+/// # Errors
+///
+/// - Exit 1: `name::` missing, empty, or contains invalid characters.
+/// - Exit 2: account not found, HOME unset, `claude` binary cannot be spawned, or save fails.
+/// - Exit 3 (via `process::exit`): `claude` exited without updating `~/.claude/.credentials.json`
+///   (login abandoned or timed out).
+#[ inline ]
+pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
+{
+  let raw_name         = require_nonempty_string_arg( &cmd, "name" )?;
+  let paths            = require_claude_paths()?;
+  let credential_store = require_credential_store()?;
+  let name             = resolve_account_name( &raw_name, &credential_store )?;
+  crate::account::check_switch_preconditions( &name, &credential_store )
+    .map_err( |e| io_err_to_error_data( &e, "account relogin" ) )?;
+
+  // Snapshot original active — best-effort; None when marker absent.
+  let original_active = std::fs::read_to_string( credential_store.join( "_active" ) )
+    .ok()
+    .map( | s | s.trim().to_string() )
+    .filter( | s | !s.is_empty() );
+
+  if is_dry( &cmd )
+  {
+    return Ok( OutputData::new(
+      format!( "[dry-run] would re-authenticate '{name}' via browser login\n" ),
+      "text",
+    ) );
+  }
+
+  // Make the named account the live session so `claude` picks up its refreshToken.
+  crate::account::switch_account( &name, &credential_store, &paths )
+    .map_err( |e| io_err_to_error_data( &e, "account relogin: switch" ) )?;
+
+  // Snapshot credentials content before spawning.
+  let creds_path   = paths.credentials_file();
+  let before_creds = std::fs::read_to_string( &creds_path ).unwrap_or_default();
+
+  // Spawn `claude` with inherited TTY — NOT run_isolated — so the user sees the browser login flow.
+  let spawn_result = std::process::Command::new( "claude" )
+    .stdin( std::process::Stdio::inherit() )
+    .stdout( std::process::Stdio::inherit() )
+    .stderr( std::process::Stdio::inherit() )
+    .status();
+
+  if let Err( e ) = spawn_result
+  {
+    // Restore original before returning — switch already happened above.
+    if let Some( original ) = &original_active
+    {
+      if original != &name
+      {
+        let _ = crate::account::switch_account( original, &credential_store, &paths );
+      }
+    }
+    return Err( ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "cannot spawn claude: {e}" ),
+    ) );
+  }
+
+  // Detect whether credentials were refreshed by comparing file content.
+  let after_creds = std::fs::read_to_string( &creds_path ).unwrap_or_default();
+  let updated     = after_creds != before_creds;
+
+  if updated
+  {
+    // Persist the refreshed credentials into the account store.
+    crate::account::save( &name, &credential_store, &paths )
+      .map_err( |e| io_err_to_error_data( &e, "account relogin: save" ) )?;
+  }
+
+  // Restore the original active account (best-effort — failure is non-fatal).
+  if let Some( original ) = &original_active
+  {
+    if original != &name
+    {
+      let _ = crate::account::switch_account( original, &credential_store, &paths );
+    }
+  }
+
+  if !updated
+  {
+    // claude exited without updating credentials — login abandoned or timed out.
+    std::process::exit( 3 );
+  }
+
+  Ok( OutputData::new( format!( "re-authenticated '{name}' — credentials saved\n" ), "text" ) )
 }
 
 /// `.token.status` — show active OAuth token expiry classification.

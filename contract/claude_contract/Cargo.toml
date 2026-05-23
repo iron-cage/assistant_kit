@@ -1,0 +1,15 @@
+[package]
+name = "claude_contract"
+version = "1.1.0"
+publish = false
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[[test]]
+name = "behavior"
+path = "tests/behavior/mod.rs"

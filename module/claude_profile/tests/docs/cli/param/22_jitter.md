@@ -2,7 +2,7 @@
 
 Edge case tests for the `jitter::` parameter. Tests validate u64 type enforcement, the `jitter <= interval` constraint, default-zero behavior, and conditional validation — the constraint is only enforced when `live::1` is present. Used by `.usage` to add random seconds to the live loop cycle for thunder-herd mitigation.
 
-**Source:** [params.md#parameter--22-jitter](../../../../docs/cli/params.md#parameter--22-jitter)
+**Source:** [params.md#parameter--22-jitter](../../../../docs/cli/param/22_jitter.md)
 
 ## Test Case Index
 
@@ -38,7 +38,7 @@ Edge case tests for the `jitter::` parameter. Tests validate u64 type enforcemen
 - **Then:** Command accepted; live loop cycles on exact `interval::` seconds with no random addition; exits 0 on Ctrl-C.
 - **Exit:** 0
 - **Source fn:** `it46_jitter_0_explicit_live_accepted`
-- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/params.md#parameter--22-jitter)
+- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/param/22_jitter.md)
 ---
 
 ### EC-2: `jitter::10` with `live::1 interval::30` — valid (jitter < interval)
@@ -48,7 +48,7 @@ Edge case tests for the `jitter::` parameter. Tests validate u64 type enforcemen
 - **Then:** Command accepted; each cycle waits 30 + random[0..=10] seconds; exits 0 on Ctrl-C.
 - **Exit:** 0
 - **Source fn:** `it47_jitter_10_live_accepted`
-- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/params.md#parameter--22-jitter)
+- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/param/22_jitter.md)
 ---
 
 ### EC-3: `jitter::30` with `live::1 interval::30` — valid boundary (jitter == interval)
@@ -58,7 +58,7 @@ Edge case tests for the `jitter::` parameter. Tests validate u64 type enforcemen
 - **Then:** Command accepted; jitter equal to interval is the upper boundary and is valid; exits 0 on Ctrl-C.
 - **Exit:** 0
 - **Source fn:** `it26_live_jitter_equals_interval_accepted`
-- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/params.md#parameter--22-jitter)
+- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/param/22_jitter.md)
 ---
 
 ### EC-4: `jitter::31` with `live::1 interval::30` — rejected (jitter > interval)
@@ -68,7 +68,7 @@ Edge case tests for the `jitter::` parameter. Tests validate u64 type enforcemen
 - **Then:** Exit 1 before any fetch; stderr contains `jitter must not exceed interval`.
 - **Exit:** 1
 - **Source fn:** `it22_live_jitter_exceeds_interval`
-- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/params.md#parameter--22-jitter)
+- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/param/22_jitter.md)
 ---
 
 ### EC-5: Default value is `0`
@@ -78,7 +78,7 @@ Edge case tests for the `jitter::` parameter. Tests validate u64 type enforcemen
 - **Then:** Command accepted with default zero jitter; behavior identical to `jitter::0`; exits 0 on Ctrl-C.
 - **Exit:** 0
 - **Source fn:** `it31_usage_help_shows_live_params`
-- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/params.md#parameter--22-jitter)
+- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/param/22_jitter.md)
 ---
 
 ### EC-6: `jitter::70` without `live::1` — accepted (validation skipped)
@@ -88,7 +88,7 @@ Edge case tests for the `jitter::` parameter. Tests validate u64 type enforcemen
 - **Then:** Command accepted; single fetch and render; `jitter::` value is ignored when `live::0`; exit 0.
 - **Exit:** 0
 - **Source fn:** `it28_interval_jitter_ignored_when_not_live`
-- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/params.md#parameter--22-jitter)
+- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/param/22_jitter.md)
 ---
 
 ### EC-7: `jitter::abc` rejected
@@ -98,4 +98,4 @@ Edge case tests for the `jitter::` parameter. Tests validate u64 type enforcemen
 - **Then:** Exit 1 with type validation error referencing `jitter::`; value must be a non-negative integer.
 - **Exit:** 1
 - **Source fn:** `it48_jitter_abc_rejected`
-- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/params.md#parameter--22-jitter)
+- **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/param/22_jitter.md)

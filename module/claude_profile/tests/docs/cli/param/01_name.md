@@ -1,6 +1,6 @@
 # Test: `name::`
 
-Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/cli/params.md#parameter--1-name) and [types.md](../../../../docs/cli/types.md#type--1-accountname) for specification.
+Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/cli/param/01_name.md) and [types.md](../../../../docs/cli/type/01_account_name.md) for specification.
 
 ### Test Case Index
 
@@ -49,7 +49,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.save name::work@acme.com`
 - **Then:** `saved current credentials as 'work@acme.com'` with exit 0.; credential file created with correct name
 - **Exit:** 0
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md)
 
 ---
 
@@ -59,7 +59,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.save name::`
 - **Then:** Error message containing `name:: value cannot be empty` with exit 1.; empty name rejected with descriptive error
 - **Exit:** 1
-- **Source:** [types.md -- AccountName](../../../../docs/cli/types.md#type--1-accountname)
+- **Source:** [types.md -- AccountName](../../../../docs/cli/type/01_account_name.md)
 
 ---
 
@@ -69,7 +69,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.use`
 - **Then:** Error message indicating `name::` is required with exit 1.; missing required parameter clearly reported; `.account.use` has no inference fallback
 - **Exit:** 1
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md)
 
 ---
 
@@ -79,7 +79,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.save name::foo/bar`
 - **Then:** Error message containing `must contain '@'` with exit 1. (No `@` present — `@`-absence check fires before path-safety check.); name without `@` rejected as non-email
 - **Exit:** 1
-- **Source:** [types.md -- AccountName](../../../../docs/cli/types.md#type--1-accountname)
+- **Source:** [types.md -- AccountName](../../../../docs/cli/type/01_account_name.md)
 
 ---
 
@@ -89,7 +89,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.save 'name::foo\bar'`
 - **Then:** Error message containing `must contain '@'` with exit 1. (No `@` present — `@`-absence check fires before path-safety check.); name without `@` rejected as non-email
 - **Exit:** 1
-- **Source:** [types.md -- AccountName](../../../../docs/cli/types.md#type--1-accountname)
+- **Source:** [types.md -- AccountName](../../../../docs/cli/type/01_account_name.md)
 
 ---
 
@@ -99,7 +99,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.save 'name::test*file'`
 - **Then:** Error message containing `must contain '@'` with exit 1. (No `@` present — `@`-absence check fires before path-safety check.); name without `@` rejected as non-email
 - **Exit:** 1
-- **Source:** [types.md -- AccountName](../../../../docs/cli/types.md#type--1-accountname)
+- **Source:** [types.md -- AccountName](../../../../docs/cli/type/01_account_name.md)
 
 ---
 
@@ -109,7 +109,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.save "name::foo$(printf '\0')bar"`
 - **Then:** Error message containing `contains invalid characters` with exit 1.; null byte in name rejected
 - **Exit:** 1
-- **Source:** [types.md -- AccountName](../../../../docs/cli/types.md#type--1-accountname)
+- **Source:** [types.md -- AccountName](../../../../docs/cli/type/01_account_name.md)
 
 ---
 
@@ -119,7 +119,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.save name::client-a@acme.com`
 - **Then:** `saved current credentials as 'client-a@acme.com'` with exit 0.; hyphenated local part in email accepted and credential file created
 - **Exit:** 0
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md)
 
 ---
 
@@ -129,7 +129,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.save name::my_account@acme.com`
 - **Then:** `saved current credentials as 'my_account@acme.com'` with exit 0.; underscored local part in email accepted and credential file created
 - **Exit:** 0
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md)
 
 ---
 
@@ -139,7 +139,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.save name::$(python3 -c "print('a'*256)")`
 - **Then:** Either succeeds (exit 0) creating the file, or exits 1 with a clear error about name length. Must not crash, panic, or segfault.; or 1; no crash or panic on boundary-length name
 - **Exit:** 0
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md)
 
 ---
 
@@ -149,7 +149,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .accounts name::work`
 - **Then:** Exit 0; output contains one indented block starting with `work`.; `name::` scopes output to exactly one account block
 - **Exit:** 0
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md)
 
 ---
 
@@ -159,7 +159,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .accounts`
 - **Then:** Exit 0; output contains two account blocks.; omitting `name::` produces full account list
 - **Exit:** 0
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md)
 
 ---
 
@@ -169,7 +169,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .accounts name::ghost@example.com`
 - **Then:** Exit 2; stderr contains `not found` or `ghost@example.com`.; not-found is a runtime error (2), not a usage error (1)
 - **Exit:** 2
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md)
 
 ---
 
@@ -179,7 +179,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.limits name::work`
 - **Then:** Exit 0; output contains utilization data for `work`.; `name::` behaves as optional lookup selector on `.account.limits`
 - **Exit:** 0
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name) (FR-18)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md) (FR-18)
 
 ---
 
@@ -189,7 +189,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.limits`
 - **Then:** Exit 0; output contains utilization data for the active account.; omitting optional `name::` routes to active-account path
 - **Exit:** 0
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name) (FR-18 backward-compat)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md) (FR-18 backward-compat)
 
 ---
 
@@ -199,7 +199,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.limits name::ghost`
 - **Then:** Exit 2; stderr contains `not found` or `ghost`.; not-found is a runtime error (2), not a usage error (1)
 - **Exit:** 2
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name) (FR-18)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md) (FR-18)
 
 ---
 
@@ -209,7 +209,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.save` (no `name::` argument)
 - **Then:** Exit 0; stdout: `saved current credentials as 'alice@acme.com'`; credential file created using the inferred email as the account name.; `name::` behaves as optional on `.account.save` when `emailAddress` is readable
 - **Exit:** 0
-- **Source:** [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
+- **Source:** [params.md -- name::](../../../../docs/cli/param/01_name.md)
 
 ---
 
@@ -219,4 +219,4 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **When:** `clp .account.save name::a/b@c.com`
 - **Then:** Error message containing `path-unsafe characters` with exit 1. (`@` is present — `@`-check passes; path-safety check fires next and rejects `/` in local part `a/b`.); path-unsafe char in email local part rejected before any filesystem operation
 - **Exit:** 1
-- **Source:** [types.md -- AccountName](../../../../docs/cli/types.md#type--1-accountname), [params.md -- name::](../../../../docs/cli/params.md#parameter--1-name)
+- **Source:** [types.md -- AccountName](../../../../docs/cli/type/01_account_name.md), [params.md -- name::](../../../../docs/cli/param/01_name.md)

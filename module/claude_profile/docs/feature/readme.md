@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: FR-6 through FR-22 plus unassigned FR for 017–018; CLI commands and library API surface.
+- **In Scope**: FR-6 through FR-22 plus unassigned FR for 017–019; CLI commands and library API surface.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -29,4 +29,5 @@
 | 016 | [Current Account Awareness](016_current_account_awareness.md) | Current account detection via token match; divergence display in `.accounts` and `.usage` | ✅ |
 | 017 | [Expired Token Refresh via Isolated Subprocess](017_token_refresh.md) | `refresh::` parameter; retry-on-auth-error via `account::refresh_account_token()`; credential write-back | ✅ |
 | 018 | [Live Quota Monitor Mode](018_live_monitor.md) | `live::`, `interval::`, `jitter::` parameters; continuous refresh with staggered fetches and countdown footer | ✅ |
+| 019 | [Browser Re-Authentication for Named Account](019_account_relogin.md) | `.account.relogin` — spawn `claude` with inherited TTY to refresh a dead `refreshToken`; credential write-back and active restore | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

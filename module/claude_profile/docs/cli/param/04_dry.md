@@ -1,0 +1,22 @@
+# Parameter :: 4. `dry::`
+
+Activates simulation mode for mutation commands. When `dry::1`, the command prints what it *would* do without modifying any files. Part of the standard CLI dry-run pattern.
+
+- **Type:** `bool` (`0` / `1` or `false` / `true`)
+- **Default:** `0` (execute normally)
+- **Constraints:** Accepted values: `0`, `1`, `false`, `true`
+- **Commands:** [`.account.save`](../command/account.md#command--4-accountsave), [`.account.use`](../command/account.md#command--5-accountuse), [`.account.delete`](../command/account.md#command--6-accountdelete), [`.account.relogin`](../command/account.md#command--12-accountrelogin), [`.account.rotate`](../command/account.md#command--13-accountrotate)
+- **Purpose:** Lets users preview credential file changes before committing. Critical for account management where an accidental switch or delete could disrupt active sessions.
+
+**Examples:**
+
+```text
+dry::1     → print intended action, skip execution
+dry::0     → execute normally (default)
+dry::true  → same as dry::1
+dry::false → same as dry::0
+```
+
+**Notes:**
+- Dry-run output uses `[dry-run]` prefix for clear visual distinction.
+- Dry and execute modes share identical validation logic — if `dry::1` succeeds, `dry::0` will perform exactly those actions.

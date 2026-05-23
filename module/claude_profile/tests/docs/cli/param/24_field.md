@@ -2,7 +2,7 @@
 
 Edge case tests for the `field::` parameter. Tests validate String enforcement, the exhaustive list of 8 valid field names, unknown-value rejection with helpful error, default-absent behavior (shows all fields), and `format::` override (raw string output regardless of `format::`). Used by `.paths` to return a single named path value.
 
-**Source:** [params.md#parameter--24-field](../../../../docs/cli/params.md#parameter--24-field)
+**Source:** [params.md#parameter--24-field](../../../../docs/cli/param/24_field.md)
 
 ## Test Case Index
 
@@ -37,7 +37,7 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **Then:** stdout contains exactly the resolved `base` path value followed by a newline; no labels, no JSON wrapper; exit 0.
 - **Exit:** 0
 - **Source fn:** `p09_paths_field_returns_single_value`
-- **Source:** [params.md#parameter--24-field](../../../../docs/cli/params.md#parameter--24-field)
+- **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/24_field.md)
 ---
 
 ### EC-2: `field::credential_store` — valid field; returns path value
@@ -47,7 +47,7 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **Then:** stdout contains exactly the resolved `credential_store` path value followed by a newline; no labels, no JSON wrapper; exit 0.
 - **Exit:** 0
 - **Source fn:** `p09_paths_field_returns_single_value`
-- **Source:** [params.md#parameter--24-field](../../../../docs/cli/params.md#parameter--24-field)
+- **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/24_field.md)
 ---
 
 ### EC-3: `field::unknown` — invalid field; exit 1 with valid-names list
@@ -57,7 +57,7 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **Then:** Exit 1; stderr contains `unknown field 'unknown'` and lists all valid field names: `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions`.
 - **Exit:** 1
 - **Source fn:** `p10_paths_field_unknown_exits_1`
-- **Source:** [params.md#parameter--24-field](../../../../docs/cli/params.md#parameter--24-field)
+- **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/24_field.md)
 ---
 
 ### EC-4: Default is `""` (absent — shows all fields)
@@ -67,7 +67,7 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **Then:** stdout contains labeled output for all paths (multiple lines); behavior is the full path listing, not a single-field extract; exit 0.
 - **Exit:** 0
 - **Source fn:** `p02_paths_text_v1_labeled`
-- **Source:** [params.md#parameter--24-field](../../../../docs/cli/params.md#parameter--24-field)
+- **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/24_field.md)
 ---
 
 ### EC-5: `field::credentials format::json` — `format::` ignored when `field::` set
@@ -77,7 +77,7 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **Then:** stdout contains the raw string path value (not a JSON object); `format::json` is overridden by `field::`; exit 0.
 - **Exit:** 0
 - **Source fn:** `p09_paths_field_returns_single_value`
-- **Source:** [params.md#parameter--24-field](../../../../docs/cli/params.md#parameter--24-field)
+- **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/24_field.md)
 ---
 
 ### EC-6: All 8 valid field names accepted
@@ -87,4 +87,4 @@ Edge case tests for the `field::` parameter. Tests validate String enforcement, 
 - **Then:** Each invocation exits 0 and returns a non-empty path string on stdout; no field name from this set is rejected.
 - **Exit:** 0
 - **Source fn:** `p09_paths_field_returns_single_value`
-- **Source:** [params.md#parameter--24-field](../../../../docs/cli/params.md#parameter--24-field)
+- **Source:** [params.md#parameter--24-field](../../../../docs/cli/param/24_field.md)

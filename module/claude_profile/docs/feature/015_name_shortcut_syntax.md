@@ -56,7 +56,7 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use i3` → 
 | test | `tests/cli/account_mutations_test.rs` | account.use (aw13–aw15) and account.delete (ad13–ad14) positional and prefix cases |
 | test | `tests/cli/accounts_test.rs` | accounts (acc29–acc30) positional and prefix cases |
 | test | `tests/cli/account_limits_test.rs` | account.limits (lim09–lim10) positional and prefix cases |
-| doc | [cli/params.md](../cli/params.md#parameter--1-name) | `name::` parameter specification |
-| doc | [cli/commands.md](../cli/commands.md) | Syntax blocks for affected commands |
+| doc | [cli/param/01_name.md](../cli/param/01_name.md) | `name::` parameter specification |
+| doc | [command/readme.md](../cli/command/readme.md) | Syntax blocks for affected commands |
 | doc | [004_account_use.md](004_account_use.md) | Base switch behavior |
 | doc | [005_account_delete.md](005_account_delete.md) | Base delete behavior |

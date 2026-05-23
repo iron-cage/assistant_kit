@@ -91,7 +91,7 @@ pub use persist::PersistPaths;
 #[ cfg( feature = "enabled" ) ]
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 9 commands (credentials status, account management including limits, token status, paths, usage).
+/// Registers 11 commands (credentials status, account management including limits, relogin, and rotate, token status, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -110,6 +110,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     account_save_routine,
     account_use_routine,
     account_delete_routine,
+    account_relogin_routine,
+    account_rotate_routine,
     token_status_routine,
     paths_routine,
     usage_routine,
@@ -156,9 +158,11 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     ],
     Box::new( accounts_routine ) );
   reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), fmt() ],      Box::new( account_limits_routine ) );
-  reg_cmd( registry, ".account.save",   "Save current credentials as a named account profile",            vec![ nam(), dry() ],      Box::new( account_save_routine   ) );
-  reg_cmd( registry, ".account.use",    "Switch active account by name with atomic credential rotation",  vec![ nam(), dry() ],      Box::new( account_use_routine    ) );
-  reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                  vec![ nam(), dry() ],      Box::new( account_delete_routine ) );
+  reg_cmd( registry, ".account.save",    "Save current credentials as a named account profile",                              vec![ nam(), dry() ], Box::new( account_save_routine    ) );
+  reg_cmd( registry, ".account.use",    "Switch active account by name with atomic credential rotation",                   vec![ nam(), dry() ], Box::new( account_use_routine     ) );
+  reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                                   vec![ nam(), dry() ], Box::new( account_delete_routine  ) );
+  reg_cmd( registry, ".account.relogin", "Force browser re-authentication for a named account with dead refreshToken",     vec![ nam(), dry() ], Box::new( account_relogin_routine ) );
+  reg_cmd( registry, ".account.rotate", "Auto-rotate to the best inactive account (highest remaining token expiry)",       vec![ dry() ],        Box::new( account_rotate_routine ) );
   reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr() ],      Box::new( token_status_routine   ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",
     vec![
@@ -236,7 +240,7 @@ mod cli
 
   /// Register all `claude_profile` commands with their argument definitions and routines.
   ///
-  /// Delegates 9 shared commands to `claude_profile::register_commands()` and
+  /// Delegates 11 shared commands to `claude_profile::register_commands()` and
   /// adds the `.` (dot) hidden command inline (binary-specific).
   pub( super ) fn build_registry() -> CommandRegistry
   {
@@ -257,7 +261,7 @@ mod cli
 
     // `.help` is pre-registered by CommandRegistry::new() — do not register again.
 
-    // Register 9 shared commands (credentials, account, token, paths, usage).
+    // Register 11 shared commands (credentials, account, token, paths, usage).
     crate::register_commands( &mut registry );
 
     registry
@@ -285,8 +289,10 @@ mod cli
             CommandEntry { name : ".accounts".to_string(),       desc : "List all saved accounts".to_string()                    },
             CommandEntry { name : ".account.save".to_string(),   desc : "Save current credentials as a named profile".to_string() },
             CommandEntry { name : ".account.use".to_string(),    desc : "Switch the active account".to_string()                  },
-            CommandEntry { name : ".account.delete".to_string(), desc : "Delete a saved account".to_string()                    },
-            CommandEntry { name : ".account.limits".to_string(), desc : "Show rate-limit utilization (one account)".to_string()  },
+            CommandEntry { name : ".account.delete".to_string(),  desc : "Delete a saved account".to_string()                    },
+            CommandEntry { name : ".account.limits".to_string(),  desc : "Show rate-limit utilization (one account)".to_string()  },
+            CommandEntry { name : ".account.relogin".to_string(), desc : "Re-authenticate via browser login".to_string()          },
+            CommandEntry { name : ".account.rotate".to_string(),  desc : "Auto-rotate to the best inactive account".to_string()   },
           ],
         },
         CommandGroup

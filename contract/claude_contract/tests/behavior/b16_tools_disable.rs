@@ -15,8 +15,8 @@
 //! These tests validate the observable (flag existence, flag acceptance) and flag the
 //! unresolved part (H1 vs H2) as requiring a live conversation test.
 //!
-//! See `docs/claude_code/behavior.md` B16 for the full behavior record.
-//! See `docs/claude_code/behavior.md` E30–E32 for supporting evidence.
+//! See `docs/claude_code/001_session_behaviors.md` B16 for the full behavior record.
+//! See `docs/claude_code/001_session_behaviors.md` E30–E32 for supporting evidence.
 
 /// B16a: `claude --help` documents the `--tools` flag with empty-string syntax.
 ///
@@ -125,7 +125,7 @@ fn b16c_tools_default_value_accepted()
 
 // NOTE: H1 vs H2 (does --tools "" strip definitions from system prompt or just block
 // invocation?) cannot be validated without a live conversation that requires an API key.
-// Manual validation procedure (from behavior.md B16):
+// Manual validation procedure (from 001_session_behaviors.md B16):
 //
 //   # Qualitative test — observe whether Claude acknowledges tool awareness:
 //   claude --tools "" --print "List files in this directory using bash"

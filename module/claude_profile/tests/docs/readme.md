@@ -13,7 +13,7 @@ Test-lens documentation for `claude_profile`. Each surface subdirectory contains
 
 | Surface | Source | Case Prefix | Min Cases | Files |
 |---------|--------|-------------|-----------|-------|
-| CLI commands | `docs/cli/commands.md` | `IT-` | 8 each | [cli/command/](cli/command/readme.md) |
-| CLI parameters | `docs/cli/params.md` | `EC-` | 6 each | [cli/param/](cli/param/readme.md) |
-| CLI param groups | `docs/cli/parameter_groups.md` | `CC-` | 4 each | [cli/param_group/](cli/param_group/readme.md) |
+| CLI commands | `docs/cli/command/` | `IT-` | 8 each | [cli/command/](cli/command/readme.md) |
+| CLI parameters | `docs/cli/param/` | `EC-` | 6 each | [cli/param/](cli/param/readme.md) |
+| CLI param groups | `docs/cli/param_group/readme.md` | `CC-` | 4 each | [cli/param_group/](cli/param_group/readme.md) |
 | Feature docs | `docs/feature/` | `FT-` | 4 each | [feature/](feature/readme.md) |

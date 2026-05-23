@@ -1,6 +1,6 @@
 # Test: `.account.limits`
 
-Integration test specifications for the `.account.limits` command. See [commands.md](../../../../docs/cli/commands.md#command--11-accountlimits) and [feature/013_account_limits.md](../../../../docs/feature/013_account_limits.md) for specification.
+Integration test specifications for the `.account.limits` command. See [command/namespace.md](../../../../docs/cli/command/account.md#command--11-accountlimits) and [feature/013_account_limits.md](../../../../docs/feature/013_account_limits.md) for specification.
 
 ### Test Case Index
 
@@ -39,7 +39,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 - **When:** `clp .account.limits`
 - **Then:** Exit 0; output contains three utilization lines for session (5h), weekly (all), and weekly (sonnet) with percentage and reset time.; all three utilization categories visible
 - **Exit:** 0
-- **Source:** [commands.md — .account.limits](../../../../docs/cli/commands.md#command--11-accountlimits) (FR-18)
+- **Source:** [command/account.md — .account.limits](../../../../docs/cli/command/account.md#command--11-accountlimits) (FR-18)
 
 ---
 
@@ -49,7 +49,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 - **When:** `clp .account.limits format::json`
 - **Then:** Exit 0; stdout is valid JSON containing utilization percentage fields.; valid JSON output
 - **Exit:** 0
-- **Source:** [params.md — format::](../../../../docs/cli/params.md#parameter--2-format)
+- **Source:** [params.md — format::](../../../../docs/cli/param/02_format.md)
 
 ---
 
@@ -59,7 +59,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 - **When:** `clp .account.limits name::work@acme.com`
 - **Then:** Exit 0; output reflects `work` account limits.; named account limits displayed
 - **Exit:** 0
-- **Source:** [commands.md — .account.limits](../../../../docs/cli/commands.md#command--11-accountlimits) (FR-18)
+- **Source:** [command/account.md — .account.limits](../../../../docs/cli/command/account.md#command--11-accountlimits) (FR-18)
 
 ---
 
@@ -69,7 +69,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 - **When:** `clp .account.limits name::ghost@example.com`
 - **Then:** Exit 2; stderr contains `not found` or `ghost@example.com`.; not-found is a runtime error (2), not a usage error (1)
 - **Exit:** 2
-- **Source:** [commands.md — .account.limits](../../../../docs/cli/commands.md#command--11-accountlimits)
+- **Source:** [command/account.md — .account.limits](../../../../docs/cli/command/account.md#command--11-accountlimits)
 
 ---
 
@@ -99,7 +99,7 @@ Integration test specifications for the `.account.limits` command. See [commands
 - **When:** `clp .account.limits name::notanemail`
 - **Then:** Exit 1; stderr contains `email address`.; email validation is a usage error
 - **Exit:** 1
-- **Source:** [params.md — name::](../../../../docs/cli/params.md#parameter--1-name)
+- **Source:** [params.md — name::](../../../../docs/cli/param/01_name.md)
 
 ---
 

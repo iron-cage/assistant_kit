@@ -19,7 +19,7 @@ const VERBOSITY_ALIAS : &str = "v";
 const VERBOSITY_KEY   : &str = "verbosity";
 /// Commands that accept a bare positional first argument as a shortcut for `name::{value}`.
 const POSITIONAL_NAME_COMMANDS : &[ &str ] = &[
-  ".accounts", ".account.use", ".account.delete", ".account.limits",
+  ".accounts", ".account.use", ".account.delete", ".account.limits", ".account.relogin",
 ];
 
 /// Short alias for format param.

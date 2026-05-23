@@ -2,7 +2,7 @@
 
 Edge case tests for the `role::` parameter. Tests validate boolean enforcement, default behavior, and organization role field control from `oauthAccount`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.claude.json` snapshot).
 
-**Source:** [params.md#parameter--16-role](../../../../docs/cli/params.md#parameter--16-role)
+**Source:** [params.md#parameter--16-role](../../../../docs/cli/param/15_role.md)
 
 ## Test Case Index
 
@@ -36,7 +36,7 @@ Edge case tests for the `role::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .credentials.status role::1`
 - **Then:** Output contains `Role:` line with value `admin`
 - **Exit:** 0
-- **Source:** [params.md#parameter--16-role](../../../../docs/cli/params.md#parameter--16-role)
+- **Source:** [params.md#parameter--16-role](../../../../docs/cli/param/15_role.md)
 ---
 
 ### EC-2: `role::2` rejected
@@ -45,7 +45,7 @@ Edge case tests for the `role::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .credentials.status role::2`
 - **Then:** Exit 1 with error referencing `role::`; must be 0 or 1
 - **Exit:** 1
-- **Source:** [params.md#parameter--16-role](../../../../docs/cli/params.md#parameter--16-role)
+- **Source:** [params.md#parameter--16-role](../../../../docs/cli/param/15_role.md)
 ---
 
 ### EC-3: `role::yes` rejected
@@ -54,7 +54,7 @@ Edge case tests for the `role::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .credentials.status role::yes`
 - **Then:** Exit 1 with type validation error referencing `role::`
 - **Exit:** 1
-- **Source:** [params.md#parameter--16-role](../../../../docs/cli/params.md#parameter--16-role)
+- **Source:** [params.md#parameter--16-role](../../../../docs/cli/param/15_role.md)
 ---
 
 ### EC-4: Default value (absent by default, opt-in)
@@ -63,7 +63,7 @@ Edge case tests for the `role::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .credentials.status` (no `role::` param)
 - **Then:** `Role:` line absent from output; organizationRole not exposed unless opted in
 - **Exit:** 0
-- **Source:** [params.md#parameter--16-role](../../../../docs/cli/params.md#parameter--16-role)
+- **Source:** [params.md#parameter--16-role](../../../../docs/cli/param/15_role.md)
 ---
 
 ### EC-5: `role::0` explicit disable accepted — field absent
@@ -72,7 +72,7 @@ Edge case tests for the `role::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .credentials.status role::0`
 - **Then:** `Role:` line absent from output; explicit 0 same as default-off
 - **Exit:** 0
-- **Source:** [params.md#parameter--16-role](../../../../docs/cli/params.md#parameter--16-role)
+- **Source:** [params.md#parameter--16-role](../../../../docs/cli/param/15_role.md)
 ---
 
 ### EC-6: `format::json` always emits `role` key
@@ -81,4 +81,4 @@ Edge case tests for the `role::` parameter. Tests validate boolean enforcement, 
 - **When:** `clp .credentials.status format::json role::0`
 - **Then:** JSON output contains `"role"` key with value `"admin"` regardless of `role::0`
 - **Exit:** 0
-- **Source:** [params.md#parameter--16-role](../../../../docs/cli/params.md#parameter--16-role)
+- **Source:** [params.md#parameter--16-role](../../../../docs/cli/param/15_role.md)

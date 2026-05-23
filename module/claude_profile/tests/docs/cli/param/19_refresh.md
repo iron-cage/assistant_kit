@@ -2,7 +2,7 @@
 
 Edge case tests for the `refresh::` parameter. Tests validate boolean enforcement, default-on behavior, and conditional 429 trigger logic. Used by `.usage` to silently retry expired OAuth tokens before reporting auth errors.
 
-**Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
+**Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/19_refresh.md)
 
 ## Test Case Index
 
@@ -39,7 +39,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **Then:** Command accepted; on auth error accounts silently retry via `account::refresh_account_token()`; behavior identical to omitting `refresh::`.
 - **Exit:** 0
 - **Source fn:** `it20_refresh_enabled_offline_no_retry_triggered`
-- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
+- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/19_refresh.md)
 ---
 
 ### EC-2: `refresh::0` — explicit disable accepted; auth errors shown as rows
@@ -49,7 +49,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **Then:** The account's row shows the auth error string (e.g., `auth expired (401)`); `refresh_account_token` is never called; exit 0.
 - **Exit:** 0
 - **Source fn:** `it19_refresh_disabled_param_accepted`
-- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
+- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/19_refresh.md)
 ---
 
 ### EC-3: `refresh::2` rejected
@@ -59,7 +59,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **Then:** Exit 1 with error referencing `refresh::`; must be 0 or 1.
 - **Exit:** 1
 - **Source fn:** `it39_refresh_2_rejected`
-- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
+- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/19_refresh.md)
 ---
 
 ### EC-4: `refresh::yes` rejected
@@ -69,7 +69,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **Then:** Exit 1 with type validation error referencing `refresh::`.
 - **Exit:** 1
 - **Source fn:** `it40_refresh_yes_rejected`
-- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
+- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/19_refresh.md)
 ---
 
 ### EC-5: Default value is `1` (refresh on by default)
@@ -79,7 +79,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **Then:** Refresh behavior is active — identical to `refresh::1`; on auth error accounts silently retry; exit 0.
 - **Exit:** 0
 - **Source fn:** `it37_mre_bug155_refresh_defaults_to_1`
-- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
+- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/19_refresh.md)
 ---
 
 ### EC-6: 429 + non-expired local token — NOT retried
@@ -89,7 +89,7 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **Then:** The account's row shows the rate-limit error (`rate limited (429)`); `refresh_account_token` is NOT called for this account; the 429 is passed through unchanged.
 - **Exit:** 0
 - **Source fn:** `test_apply_refresh_ft4_429_valid_token_not_retried`
-- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
+- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/19_refresh.md)
 ---
 
 ### EC-7: 429 + expired local token — refresh triggered
@@ -99,4 +99,4 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **Then:** `refresh_account_token` is called for that account (expired local token indicates stale per-account copy); if updated credentials are returned, the account quota fetch is retried once.
 - **Exit:** 0
 - **Source fn:** `test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred`
-- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/params.md#parameter--19-refresh)
+- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/19_refresh.md)
