@@ -54,7 +54,7 @@ This workspace is self-contained and has no knowledge of consumer workspace arch
 
 **In scope:** Reading and parsing Claude Code's filesystem storage (`~/.claude/`); detecting sessions and continuation state; spawning `claude` with controlled parameters; managing Claude Code installation; managing accounts and active sessions; reading and writing Claude Code settings.
 
-**Out of scope:** Job queue management, AI orchestration, wplan daemon integration, and any consumer-workspace-specific types (WorkDir, TopicName, JobId). If a feature requires knowing about queues, topics, or jobs, it does not belong here.
+**Out of scope:** Job queue management, AI orchestration, orchestration daemon integration, and any consumer-workspace-specific types (WorkDir, TopicName, JobId). If a feature requires knowing about queues, topics, or jobs, it does not belong here.
 
 **Performance characteristics:**
 

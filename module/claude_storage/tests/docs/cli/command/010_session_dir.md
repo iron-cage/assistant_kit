@@ -76,7 +76,7 @@ Integration tests for the `.session.dir` command. Tests verify session directory
 ### IT-5: ~ prefix expanded in path::
 
 - **Given:** clean environment
-- **When:** `clg .session.dir path::~/pro/lib/myapp`
+- **When:** `clg .session.dir path::~/projects/myapp`
 - **Then:** An absolute path without `~`; ends with `/-default_topic`.; + `~` expanded in output
 - **Exit:** 0
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)

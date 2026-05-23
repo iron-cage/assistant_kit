@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the zero-upstream-private-workspace-knowledge constraint that the assistant workspace must always maintain.
 - **Responsibility**: State the invariant, enumerate permitted and forbidden dependency types, and explain the rationale.
-- **In Scope**: Permitted upstream deps (published wtools, stdlib), forbidden dep types (private workspace path deps), dependency flow direction.
+- **In Scope**: Permitted upstream deps (published companion crates, stdlib), forbidden dep types (private workspace path deps), dependency flow direction.
 - **Out of Scope**: Versioning strategy (→ `invariant/002_versioning_strategy.md`), cross-workspace protocol (→ `integration/001_consumer_integration.md`).
 
 ### Invariant Statement
@@ -12,7 +12,7 @@
 This workspace has zero knowledge of any upstream private workspace.
 
 **Permitted upstream dependencies:**
-- Published wtools crates (error_tools, unilang, former, …)
+- Published companion crates (error_tools, unilang, former, …)
 - Rust standard library
 - Published ecosystem crates (crates.io)
 
@@ -26,7 +26,7 @@ The workspace `Cargo.toml` lists no path deps to any private workspace. Each cra
 
 Dependency flow is strictly one-way:
 ```
-wtools (published crates)
+published companion crates (error_tools, unilang, …)
   └─ assistant (this workspace)
        └─ consumer workspace (private — depends on assistant via path deps)
 ```

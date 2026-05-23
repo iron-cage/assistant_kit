@@ -88,10 +88,10 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 
 ### IT-1: Default (no args) shows active-project summary
 
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at `/home/user1/pro/alpha` containing at least one session with entries. Run from `/home/user1/pro/alpha`.
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at `/home/alice/projects/alpha` containing at least one session with entries. Run from `/home/alice/projects/alpha`.
 - **When:** `clg .projects`
 - **Then:** ```
-Active project  ~/pro/alpha  (N sessions, last active Xd ago)
+Active project  ~/projects/alpha  (N sessions, last active Xd ago)
 Last session:  {8-char-id}  Xd ago  (N entries)
 
 Last message:
@@ -175,9 +175,9 @@ stdout does NOT contain `Found N projects:` (list-mode header absent).; summary 
 
 ### IT-9: scope::local finds project when path contains underscores
 
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at `/home/user1/wip_core`. Run from `/home/user1/wip_core`.
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at `/home/alice/my_project`. Run from `/home/alice/my_project`.
 - **When:** `clg .projects scope::local`
-- **Then:** stdout lists the session from `/home/user1/wip_core`; exit code 0.; + session from underscore-path project appears in output
+- **Then:** stdout lists the session from `/home/alice/my_project`; exit code 0.; + session from underscore-path project appears in output
 - **Exit:** 0
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
 
@@ -185,9 +185,9 @@ stdout does NOT contain `Found N projects:` (list-mode header absent).; summary 
 
 ### IT-10: scope::under finds subtree when base path has underscores
 
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with projects at `/home/user1/wip_core` and `/home/user1/wip_core/child`. Run from `/home/user1/wip_core`.
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with projects at `/home/alice/my_project` and `/home/alice/my_project/child`. Run from `/home/alice/my_project`.
 - **When:** `clg .projects scope::under`
-- **Then:** stdout lists sessions from both `/home/user1/wip_core` and `/home/user1/wip_core/child`; exit code 0.; + sessions from all underscore-base subtree projects present
+- **Then:** stdout lists sessions from both `/home/alice/my_project` and `/home/alice/my_project/child`; exit code 0.; + sessions from all underscore-base subtree projects present
 - **Exit:** 0
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
 
@@ -195,7 +195,7 @@ stdout does NOT contain `Found N projects:` (list-mode header absent).; summary 
 
 ### IT-11: scope::relevant finds ancestor when path has underscores
 
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with projects at `/home/user1/wip_core` (ancestor) and `/home/user1/wip_core/sub/child` (current). Run from `/home/user1/wip_core/sub/child`.
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with projects at `/home/alice/my_project` (ancestor) and `/home/alice/my_project/sub/child` (current). Run from `/home/alice/my_project/sub/child`.
 - **When:** `clg .projects scope::relevant`
 - **Then:** stdout lists sessions from both projects (current + ancestor with underscores); exit code 0.; + sessions from ancestor with underscore path appear
 - **Exit:** 0
@@ -205,7 +205,7 @@ stdout does NOT contain `Found N projects:` (list-mode header absent).; summary 
 
 ### IT-12: scope::relevant finds topic-scoped ancestor with underscores
 
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at `/home/user1/wip_core` with topic `default_topic` (storage dir ends in `--default-topic`). Run from `/home/user1/wip_core/child`.
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at `/home/alice/my_project` with topic `default_topic` (storage dir ends in `--default-topic`). Run from `/home/alice/my_project/child`.
 - **When:** `clg .projects scope::relevant`
 - **Then:** stdout lists sessions from the topic-scoped ancestor project; exit code 0.; + topic-scoped underscore-path ancestor sessions appear
 - **Exit:** 0
@@ -305,9 +305,9 @@ Found 1 session:
 
 ### IT-20: scope::under displays underscore dirs without splitting at `/`
 
-- **Given:** Create real filesystem directories `/tmp/{tempdir}/wip_core/myproject/` so the FS-guided decoder can verify the correct path. `export CLAUDE_STORAGE_ROOT` pointing to a fixture root with a session in the path-encoded `wip_core/myproject` project.
-- **When:** `clg .projects scope::under path::/tmp/{tempdir}/wip_core verbosity::1`
-- **Then:** stdout contains a line with `wip_core` in the project path header; no line contains `wip/core`.; + `wip_core` present in header + `wip/core` absent
+- **Given:** Create real filesystem directories `/tmp/{tempdir}/my_project/myproject/` so the FS-guided decoder can verify the correct path. `export CLAUDE_STORAGE_ROOT` pointing to a fixture root with a session in the path-encoded `my_project/myproject` project.
+- **When:** `clg .projects scope::under path::/tmp/{tempdir}/my_project verbosity::1`
+- **Then:** stdout contains a line with `my_project` in the project path header; no line contains `wip/core`.; + `my_project` present in header + `wip/core` absent
 - **Exit:** 0
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
 

@@ -9,7 +9,7 @@
 | Form | Example | Resolution |
 |------|---------|------------|
 | Full email (contains `@`) | `alice@acme.com` | Validated as email → `AccountName` |
-| Local-part prefix (no `@`) | `i3`, `alice` | Prefix-matched against saved accounts |
+| Local-part prefix (no `@`) | `car`, `alice` | Prefix-matched against saved accounts |
 | Positional bare arg | `clp .account.use alice@home.com` | Same resolution as the two forms above |
 
 **Resolution Algorithm:**

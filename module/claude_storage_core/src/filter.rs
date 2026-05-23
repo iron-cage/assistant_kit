@@ -17,7 +17,7 @@
 /// let matcher = StringMatcher::new( "MyProject" );
 /// assert!( matcher.matches( "claude_storage/myproject/src" ) );
 /// assert!( matcher.matches( "CLAUDE_STORAGE/MYPROJECT/SRC" ) );
-/// assert!( !matcher.matches( "claude_storage/wplan/src" ) );
+/// assert!( !matcher.matches( "claude_storage/consumer_runner/src" ) );
 /// ```
 ///
 /// ## Empty Pattern

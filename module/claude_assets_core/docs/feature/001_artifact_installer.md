@@ -24,7 +24,7 @@
 
 **Source root resolution:** `AssetPaths::from_env()` resolves the source root in priority order:
 1. `$PRO_CLAUDE` — used directly if set
-2. `$PRO/genai/claude/` — constructed if `$PRO` is set and `$PRO_CLAUDE` is not
+2. `$PRO_CLAUDE/` — constructed if `$PRO` is set and `$PRO_CLAUDE` is not
 3. `AssetPathsError::EnvVarNotSet` — returned when neither env var is present
 
 The target root is always the current working directory. `AssetPaths::new(source, target)` is available for test-controlled construction.

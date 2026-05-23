@@ -1016,6 +1016,7 @@ fn execute_live_mode(
   sort             : SortStrategy,
   desc             : Option< bool >,
   prefer           : PreferStrategy,
+  trace            : bool,
 ) -> Result< OutputData, ErrorData >
 {
   use std::os::raw::{ c_int, c_void };
@@ -1059,7 +1060,7 @@ fn execute_live_mode(
     let _ = std::io::stdout().flush();
 
     // Fetch with per-account stagger delays (thunder-herd mitigation).
-    let accounts = fetch_all_quota( credential_store, live_creds_file, true, false )?;
+    let accounts = fetch_all_quota( credential_store, live_creds_file, true, trace )?;
 
     let text = render_text( &accounts, sort, desc, prefer );
     print!( "{text}" );
@@ -1412,7 +1413,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
   if live == 1
   {
-    return execute_live_mode( &credential_store, &live_creds_file, interval, jitter, sort, desc, prefer );
+    return execute_live_mode( &credential_store, &live_creds_file, interval, jitter, sort, desc, prefer, trace );
   }
 
   let mut accounts = fetch_all_quota( &credential_store, &live_creds_file, false, trace )?;

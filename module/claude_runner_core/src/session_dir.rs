@@ -92,7 +92,7 @@ impl SessionManager
   /// use claude_runner_core::SessionManager;
   /// use std::path::PathBuf;
   ///
-  /// let sessions_dir = PathBuf::from( "/tmp/wplan/abc123/sessions" );
+  /// let sessions_dir = PathBuf::from( "/tmp/consumer_runner/abc123/sessions" );
   /// let mgr = SessionManager::new( &sessions_dir );
   /// ```
   #[ inline ]

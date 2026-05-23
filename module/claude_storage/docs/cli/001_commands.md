@@ -506,7 +506,7 @@ claude_storage .project.path path::/home/user/project
 claude_storage .project.path topic::default_topic
 
 # Storage path with directory and topic
-claude_storage .project.path path::~/pro/lib/myapp topic::work
+claude_storage .project.path path::~/projects/myapp topic::work
 ```
 
 **Notes:**

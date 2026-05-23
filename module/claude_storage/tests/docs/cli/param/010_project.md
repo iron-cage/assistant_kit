@@ -35,8 +35,8 @@ Edge case tests for the `project::` parameter. Tests validate multi-format ident
 ### EC-1: Absolute path format resolves correctly
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-- **When:** `clg .show project::/home/user1/pro/myproject`
-- **Then:** Project view for the project at `/home/user1/pro/myproject` (must exist in fixture).; correct project displayed (same as using the path-encoded or UUID form)
+- **When:** `clg .show project::/home/alice/projects/myproject`
+- **Then:** Project view for the project at `/home/alice/projects/myproject` (must exist in fixture).; correct project displayed (same as using the path-encoded or UUID form)
 - **Exit:** 0
 - **Source:** [004_params.md](../../../../docs/cli/004_params.md)
 
@@ -45,8 +45,8 @@ Edge case tests for the `project::` parameter. Tests validate multi-format ident
 ### EC-2: Path-encoded ID format resolves correctly
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-- **When:** `clg .show project::-home-user1-pro-myproject`
-- **Then:** Project view for the project encoded as `-home-user1-pro-myproject`; identical to absolute path form.; + same project displayed as absolute path form
+- **When:** `clg .show project::-home-alice-projects-myproject`
+- **Then:** Project view for the project encoded as `-home-alice-projects-myproject`; identical to absolute path form.; + same project displayed as absolute path form
 - **Exit:** 0
 - **Source:** [004_params.md](../../../../docs/cli/004_params.md)
 
@@ -65,8 +65,8 @@ Edge case tests for the `project::` parameter. Tests validate multi-format ident
 ### EC-4: Path(...) form from .list resolves correctly
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-- **When:** `clg .show project::Path("/home/user1/pro/myproject")`
-- **Then:** Project view for `/home/user1/pro/myproject`; identical to using the plain absolute path form.; + same project displayed as when using the raw absolute path
+- **When:** `clg .show project::Path("/home/alice/projects/myproject")`
+- **Then:** Project view for `/home/alice/projects/myproject`; identical to using the plain absolute path form.; + same project displayed as when using the raw absolute path
 - **Exit:** 0
 - **Source:** [004_params.md](../../../../docs/cli/004_params.md)
 

@@ -381,7 +381,7 @@ cargo nextest run --all-features -- --include-ignored
 
 ### plan-004: projects_routine output format redesign
 
-- **Issue**: `.projects` output was a flat list of session IDs with opaque encoded project labels (e.g. `"-home-user1-pro"`); no project grouping, no readable paths, no agent collapse at scale
+- **Issue**: `.projects` output was a flat list of session IDs with opaque encoded project labels (e.g. `"-home-alice-projects"`); no project grouping, no readable paths, no agent collapse at scale
 - **Tests**: 6 tests IT-17..IT-22 in `projects_output_format_test.rs` (IT-23 covers display fix issue-029)
 - **Fix**: Redesigned `projects_routine` to group sessions by `BTreeMap<String, Vec<Session>>` keyed by decoded project path; added `decode_project_display()` helper; agent sessions collapsed at v1 with no `agent::` filter; entry counts shown per session at v2+; blank line between project groups
 - **Root Cause**: Original design used flat `Vec<(label, id)>` with labels from `format!("{:?}", project.id())` — debug-format encoded strings, not human-readable paths
@@ -393,10 +393,10 @@ cargo nextest run --all-features -- --include-ignored
 
 ### issue-029: decode_project_display splits underscore dirs as path separators
 
-- **Issue**: `.sessions scope::under` (and all verbosity ≥ 1 scopes) displayed project path headers with underscore-named directories split on `/` — e.g., `~/wip_core/myproject:` shown as `~/wip/core/myproject:`
+- **Issue**: `.sessions scope::under` (and all verbosity ≥ 1 scopes) displayed project path headers with underscore-named directories split on `/` — e.g., `~/my_project/myproject:` shown as `~/wip/core/myproject:`
 - **Test**: `IT-23` (`test_sessions_under_display_preserves_underscores`) in `projects_command_test.rs`; marked `bug_reproducer(issue-029)`
 - **Fix**: Added `decode_path_via_fs()` + `walk_fs()` in `cli/mod.rs`; `decode_project_display` now tries the heuristic result first — if it doesn't exist on disk, falls back to FS-guided DFS that chooses `/` vs `_` at each boundary by calling `is_dir()` on candidate prefixes; final fallback is the heuristic result (handles deleted/remote projects)
-- **Root Cause**: `encode_path` maps both `_` (underscore) and `/` (path separator) to `-`; `decode_component` heuristic defaulted to `/` for all unrecognized `-` boundaries, so `wip-core` always decoded to `wip/core` regardless of whether a real `wip_core` directory exists
+- **Root Cause**: `encode_path` maps both `_` (underscore) and `/` (path separator) to `-`; `decode_component` heuristic defaulted to `/` for all unrecognized `-` boundaries, so `wip-core` always decoded to `wip/core` regardless of whether a real `my_project` directory exists
 - **Documentation**: Fix(issue-029) + 3-field source comment in `cli/mod.rs`; 5-section test doc block in `projects_command_test.rs`
 
 ### issue-031: scope::under includes sibling modules with underscore-suffix names

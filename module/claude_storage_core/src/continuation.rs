@@ -131,7 +131,7 @@ pub fn check_continuation( session_dir : &Path ) -> bool
           continue;
         }
 
-        // Fix(issue-wplan-empty-session-file): Skip empty files in continuation detection
+        // Fix(issue-consumer_runner-empty-session-file): Skip empty files in continuation detection
         //
         // Root cause: Claude Code creates 0-byte .jsonl files during initialization.
         // When Claude crashes before writing content, these 0-byte files remain and

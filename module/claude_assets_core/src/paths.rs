@@ -1,7 +1,7 @@
 //! Source and target path resolution for Claude Code assets.
 //!
-//! `AssetPaths` resolves `$PRO_CLAUDE` (with `$PRO/genai/claude/` fallback)
-//! as the source root and the current working directory as the target root.
+//! `AssetPaths` resolves `$PRO_CLAUDE` as the source root and the current
+//! working directory as the target root.
 
 use std::path::{ Path, PathBuf };
 use crate::artifact::ArtifactKind;
@@ -9,7 +9,7 @@ pub use crate::error::AssetPathsError;
 
 /// Resolved source and target roots for asset installation.
 ///
-/// - `source_root` — absolute path to `$PRO_CLAUDE` (or `$PRO/genai/claude/`)
+/// - `source_root` — absolute path to `$PRO_CLAUDE`
 /// - `target_root` — directory into which `.claude/<kind>/` symlinks are placed
 #[ derive( Debug, Clone ) ]
 pub struct AssetPaths
@@ -24,8 +24,7 @@ impl AssetPaths
   ///
   /// Lookup order:
   /// 1. `$PRO_CLAUDE` — used directly if set
-  /// 2. `$PRO/genai/claude/` — used if `$PRO` is set and `$PRO_CLAUDE` is not
-  /// 3. Error: `AssetPathsError::EnvVarNotSet`
+  /// 2. Error: `AssetPathsError::EnvVarNotSet`
   ///
   /// The target root is the current working directory.
   ///
@@ -38,10 +37,6 @@ impl AssetPaths
     let source_root = if let Ok( v ) = std::env::var( "PRO_CLAUDE" )
     {
       PathBuf::from( v )
-    }
-    else if let Ok( pro ) = std::env::var( "PRO" )
-    {
-      PathBuf::from( pro ).join( "genai" ).join( "claude" )
     }
     else
     {
@@ -80,7 +75,7 @@ impl AssetPaths
     self.target_root.join( ".claude" ).join( kind.target_subdir() )
   }
 
-  /// Absolute path to `$PRO_CLAUDE` (or `$PRO/genai/claude/`) used as source root.
+  /// Absolute path to `$PRO_CLAUDE` used as source root.
   #[ must_use ]
   #[ inline ]
   pub fn source_root( &self ) -> &Path

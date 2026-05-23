@@ -36,7 +36,7 @@ Edge case tests for the `type::` parameter. Tests validate enum parsing and proj
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list type::uuid`
-- **Then:** stdout lists only projects whose directory name matches a UUID pattern (e.g., `8d795a1c-c81d-4010-8d29-b4e678272419`); no path-encoded entries like `-home-user1-pro`.; output contains only UUID-named projects (or empty if none exist)
+- **Then:** stdout lists only projects whose directory name matches a UUID pattern (e.g., `8d795a1c-c81d-4010-8d29-b4e678272419`); no path-encoded entries like `-home-alice-projects`.; output contains only UUID-named projects (or empty if none exist)
 - **Exit:** 0
 - **Source:** [004_params.md](../../../../docs/cli/004_params.md)
 
@@ -46,7 +46,7 @@ Edge case tests for the `type::` parameter. Tests validate enum parsing and proj
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list type::path`
-- **Then:** stdout lists only projects whose directory name is path-encoded (e.g., `-home-user1-pro-lib`); no UUID-format entries.; output contains only path-encoded projects
+- **Then:** stdout lists only projects whose directory name is path-encoded (e.g., `-home-alice-projects`); no UUID-format entries.; output contains only path-encoded projects
 - **Exit:** 0
 - **Source:** [004_params.md](../../../../docs/cli/004_params.md)
 

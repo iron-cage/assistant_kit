@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Path decoding for module names with underscores** (issue-path-decoding-2025-11-30): Fixed decoder heuristic to correctly handle module names like `claude_storage` and `wplan_agent` that were incorrectly decoded as separate directories (`claude/storage`, `wplan/agent`). Enhanced pattern matching recognizes that after `module/` directory, subsequent hyphens within that component decode to underscores, matching actual filesystem structure. This fixes CLI commands like `.list path::claude_storage` that previously returned 0 results.
+- **Path decoding for module names with underscores** (issue-path-decoding-2025-11-30): Fixed decoder heuristic to correctly handle module names like `claude_storage` and `my_agent` that were incorrectly decoded as separate directories (`claude/storage`, `consumer_runner/agent`). Enhanced pattern matching recognizes that after `module/` directory, subsequent hyphens within that component decode to underscores, matching actual filesystem structure. This fixes CLI commands like `.list path::claude_storage` that previously returned 0 results.
 
 ### Technical Details
 

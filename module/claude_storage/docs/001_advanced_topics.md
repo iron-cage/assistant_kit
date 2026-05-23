@@ -57,7 +57,7 @@ Both formats form a **Session Family** — a root session and all its agents. Se
   "parentUuid": null,
   "isSidechain": true,
   "userType": "external",
-  "cwd": "/home/alice/projects/my-app/module/wplan_agent/-default_topic",
+  "cwd": "/home/alice/projects/my-app/module/my_agent/-default_topic",
   "sessionId": "9425242b-1185-4788-993e-09852db0516d",
   "version": "2.0.31",
   "gitBranch": "master",

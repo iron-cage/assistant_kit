@@ -29,7 +29,7 @@ HTTP 200 on success. Body is a JSON object.
 
 ### Example Response
 
-HTTP 200 (`domain=claude.ai`, sampled 2026-05-23):
+HTTP 200 (`domain=claude.ai`, example response):
 
 ```json
 {

@@ -7,8 +7,8 @@
 //!
 //! # Architecture Note
 //!
-//! `.plan.claude` has moved to wplan's runner plugin system. Planning orchestration
-//! (multi-dir execution, `work_dir` expansion) is wplan's responsibility. `claude_runner`
+//! `.plan.claude` has moved to external runner plugin system. Planning orchestration
+//! (multi-dir execution, `work_dir` expansion) is consumer_runner's responsibility. `claude_runner`
 //! provides only the direct AI interaction commands.
 //!
 //! # Verification Method
@@ -17,7 +17,7 @@
 //! 2. YAML content must contain `name: .claude` (primary command).
 //! 3. YAML content must contain `name: .claude.help` (help command).
 //! 4. YAML content must NOT contain `name: .please` (deleted command).
-//! 5. YAML content must NOT contain `name: .plan.claude` (moved to wplan runner plugin).
+//! 5. YAML content must NOT contain `name: .plan.claude` (moved to external runner plugin).
 //!
 //! # Failure Scenarios
 //!
@@ -26,7 +26,7 @@
 //! - `.claude` command name disappears from the YAML (accidental deletion)
 //! - `.claude.help` command name disappears from the YAML (accidental deletion)
 //! - `.please` command name reappears in the YAML (regression)
-//! - `.plan.claude` reappears in the YAML (moved to wplan runner plugin, must not be here)
+//! - `.plan.claude` reappears in the YAML (moved to external runner plugin, must not be here)
 
 #![ allow( unused_crate_dependencies ) ]
 
@@ -98,7 +98,7 @@ fn commands_yaml_no_please_command()
 #[ test ]
 fn commands_yaml_no_plan_claude_command()
 {
-  // `.plan.claude` moved to wplan runner plugin system (`.plan runner::claude`).
+  // `.plan.claude` moved to external runner plugin system (`.plan runner::claude`).
   // It must not appear here — claude_runner handles direct AI commands only.
   let content = std::fs::read_to_string( claude_runner::COMMANDS_YAML )
     .expect( "Failed to read claude.commands.yaml" );
@@ -106,8 +106,8 @@ fn commands_yaml_no_plan_claude_command()
     !content.contains( "- name: \".plan.claude\"" ),
     "ARCHITECTURE VIOLATION: `.plan.claude` found in claude.commands.yaml\n\
      File: {}\n\
-     Planning orchestration has moved to wplan runner plugin system.\n\
-     Fix: Remove `.plan.claude` entry — use `.plan runner::claude` via wplan instead",
+     Planning orchestration has moved to external runner plugin system.\n\
+     Fix: Remove `.plan.claude` entry — use `.plan runner::claude` via the external runner instead",
     claude_runner::COMMANDS_YAML
   );
 }

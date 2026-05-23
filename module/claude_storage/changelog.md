@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`.sessions` command — scope-aware session listing** (2026-03-28)
   - New command providing a session-first view (flat list, not grouped by project)
   - `scope::local` (default) — sessions for the exact matching project only
-  - `scope::relevant` — sessions from all ancestor projects of `path::` (mirrors `kbase`)
+  - `scope::relevant` — sessions from all ancestor projects of `path::`
   - `scope::under` — sessions from all projects under `path::` (subtree)
   - `scope::global` — all sessions across entire storage (UUID projects included)
   - Filters: `session::`, `agent::`, `min_entries::` (same semantics as `.list`)

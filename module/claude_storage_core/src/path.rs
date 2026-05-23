@@ -601,29 +601,29 @@ mod tests
   }
 
   #[test]
-  fn test_real_world_wplan_agent_path()
+  fn test_real_world_my_agent_path()
   {
     // Real path from user's storage
     // Encoding is lossy for ALL components (both `/` and `_` → `-`)
-    let path = Path::new( "/home/alice/projects/consumer-app/module/wplan_agent/-default_topic" );
+    let path = Path::new( "/home/alice/projects/consumer-app/module/my_agent/-default_topic" );
     let encoded = encode_path( path ).unwrap();
 
-    // wplan_agent → wplan-agent (underscore replaced)
+    // my_agent → my-agent (underscore replaced)
     // -default_topic → --default-topic (underscore replaced, even in hyphen-prefixed)
     assert_eq!
     (
       encoded,
-      "-home-alice-projects-consumer-app-module-wplan-agent--default-topic"
+      "-home-alice-projects-consumer-app-module-my-agent--default-topic"
     );
 
     let decoded = decode_path( &encoded ).unwrap();
 
-    // Decoder heuristic: module name components use underscore (wplan-agent → wplan_agent)
+    // Decoder heuristic: module name components use underscore (my-agent → my_agent)
     // Decoder restores underscores in hyphen-prefixed components: -default_topic
     assert_eq!
     (
       decoded,
-      PathBuf::from( "/home/alice/projects/consumer-app/module/wplan_agent/-default_topic" )
+      PathBuf::from( "/home/alice/projects/consumer-app/module/my_agent/-default_topic" )
     );
   }
 

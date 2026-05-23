@@ -135,7 +135,7 @@ use std::path::{ Path, PathBuf };
 ///
 /// Real-world failure case discovered when running `claude_storage .list`:
 /// ```text
-/// Path("/home/alice/projects/consumer-app/module/wplan/agent//default/topic")
+/// Path("/home/alice/projects/consumer-app/module/consumer_runner/agent//default/topic")
 /// ```
 ///
 /// The double slash (`//default`) should be `/-default_topic` (hyphen-prefixed directory).
@@ -157,16 +157,16 @@ fn bug_reproducer_double_slash_in_path_decoding()
 }
 
 #[test]
-fn bug_reproducer_wplan_agent_path()
+fn bug_reproducer_my_agent_path()
 {
   // Another real-world case
   // Note: Due to lossy encoding, decoder uses heuristics and prefers underscore after "module/"
-  // matching actual filesystem structure (wplan_agent is a module directory)
-  let encoded = "-home-alice-projects-consumer-app-module-wplan-agent--default-topic";
+  // matching actual filesystem structure (my_agent is a module directory)
+  let encoded = "-home-alice-projects-consumer-app-module-my-agent--default-topic";
   let decoded = decode_path( encoded ).expect( "Failed to decode" );
 
   assert!( !decoded.to_str().unwrap().contains( "//" ) );
-  assert_eq!( decoded, PathBuf::from( "/home/alice/projects/consumer-app/module/wplan_agent/-default_topic" ) );
+  assert_eq!( decoded, PathBuf::from( "/home/alice/projects/consumer-app/module/my_agent/-default_topic" ) );
 }
 
 #[test]

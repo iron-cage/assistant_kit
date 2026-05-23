@@ -29,7 +29,7 @@ When the `name` value contains no `@` character, the command resolves it as a pr
 4. Zero matches → exit 2 with "account not found: '{prefix}'".
 5. Two or more matches → exit 1 with "ambiguous prefix '{prefix}': matches {A}, {B}, ..." (up to first 3 shown).
 
-Prefix resolution applies AFTER positional rewriting: `clp .account.use i3` → adapter rewrites to `name::i3` → command resolves `i3` → `carol@example.com`.
+Prefix resolution applies AFTER positional rewriting: `clp .account.use car` → adapter rewrites to `name::car` → command resolves `car` → `carol@example.com`.
 
 **Email detection heuristic:** A value containing `@` is treated as a full email address (no prefix resolution). The existing `account::validate_name()` email validation applies to the final resolved name.
 
@@ -39,8 +39,8 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use i3` → 
 - **AC-02**: `clp .account.delete alice@oldco.com` exits 0 and deletes the account — identical to `clp .account.delete name::alice@oldco.com`.
 - **AC-03**: `clp .accounts alice@home.com` exits 0 and shows one indented block — identical to `clp .accounts name::alice@home.com`.
 - **AC-04**: `clp .account.limits alice@acme.com` exits 0 and shows limits — identical to `clp .account.limits name::alice@acme.com`.
-- **AC-05**: `clp .account.use i3` (where `carol@example.com` is saved) resolves to `carol@example.com` and exits 0.
-- **AC-06**: `clp .account.use i` (where `carol@example.com` and `amy@example.com` are saved) exits 1 with an ambiguous-prefix message listing the matches.
+- **AC-05**: `clp .account.use car` (where `carol@example.com` is saved) resolves to `carol@example.com` and exits 0.
+- **AC-06**: `clp .account.use a` (where `alice@example.com` and `amy@example.com` are saved) exits 1 with an ambiguous-prefix message listing the matches.
 - **AC-07**: `clp .account.use ghost` (no account starts with `ghost`) exits 2 with a not-found error.
 - **AC-08**: Existing `name::EMAIL` explicit form continues to work unchanged on all four commands.
 - **AC-09**: `clp .account.use alice@home.com dry::1` works — positional and `dry::` can be combined.

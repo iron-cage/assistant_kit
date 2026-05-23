@@ -226,8 +226,8 @@
   examples:
     - ".show"
     - ".show session_id::abc123"
-    - ".show project::/home/user1/project"
-    - ".show session_id::abc123 project::/home/user1/project"
+    - ".show project::/home/alice/project"
+    - ".show session_id::abc123 project::/home/alice/project"
     - ".show session_id::abc123 metadata::1"
     - ".show session_id::abc123 entries::1"
   auto_help_enabled: true
@@ -496,7 +496,7 @@
     - ".projects"
     - ".projects scope::around"
     - ".projects scope::relevant"
-    - ".projects scope::under path::/home/user1/pro"
+    - ".projects scope::under path::/home/alice/pro"
     - ".projects scope::global agent::1 min_entries::50"
     - ".projects scope::local session::abc123"
     - ".projects limit::5"

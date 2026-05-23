@@ -13,7 +13,7 @@ claude_runner must satisfy all of the following structural constraints simultane
 
 #### Zero Consumer Workspace Dependencies
 
-The library surface of `claude_runner` must not depend on any consumer workspace crate — this includes `wplan`, `wplan_core`, and any `dream` variant. This constraint applies to the library target (`src/lib.rs`), not just `Cargo.toml` dependencies.
+The library surface of `claude_runner` must not depend on any consumer workspace crate — this includes consumer workspace crates. This constraint applies to the library target (`src/lib.rs`), not just `Cargo.toml` dependencies.
 
 **Rationale:** YAML consumers (e.g. `dream`'s `build.rs`) aggregate `COMMANDS_YAML` at compile time. If the library itself depended on consumer workspace crates, aggregating consumers would pull in the entire consumer workspace dependency tree.
 

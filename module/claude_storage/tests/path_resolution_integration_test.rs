@@ -134,7 +134,7 @@ fn test_list_path_pattern_backward_compat()
   );
 }
 
-/// Test: .list `path::`~/pro/lib (home + relative path)
+/// Test: .list `path::`~/projects (home + relative path)
 #[test]
 fn test_list_path_tilde_slash_integration()
 {

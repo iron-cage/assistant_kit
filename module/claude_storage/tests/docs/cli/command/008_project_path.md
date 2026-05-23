@@ -34,9 +34,9 @@ Integration tests for the `.path` command. Tests verify storage path computation
 
 ### IT-1: Default (cwd) computes correct storage path
 
-- **Given:** Run from `/home/user1/pro/lib/consumer`; `CLAUDE_STORAGE_ROOT` is not relevant (`.path` computes the path, not the root).
+- **Given:** Run from `/home/alice/projects/consumer-app`; `CLAUDE_STORAGE_ROOT` is not relevant (`.path` computes the path, not the root).
 - **When:** `clg .path`
-- **Then:** Single line: `~/.claude/projects/-home-user1-pro-lib-consumer/` (or the absolute equivalent).; correct path-encoded directory for cwd
+- **Then:** Single line: `~/.claude/projects/-home-alice-projects-consumer-app/` (or the absolute equivalent).; correct path-encoded directory for cwd
 - **Exit:** 0
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
 
@@ -45,8 +45,8 @@ Integration tests for the `.path` command. Tests verify storage path computation
 ### IT-2: path:: override computes path for given directory
 
 - **Given:** clean environment
-- **When:** `clg .path path::/home/user1/pro/lib/consumer`
-- **Then:** Single line containing `/.claude/projects/-home-user1-pro-lib-consumer/`.; + path-encoded directory for the given path
+- **When:** `clg .path path::/home/alice/projects/consumer-app`
+- **Then:** Single line containing `/.claude/projects/-home-alice-projects-consumer-app/`.; + path-encoded directory for the given path
 - **Exit:** 0
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
 
@@ -55,8 +55,8 @@ Integration tests for the `.path` command. Tests verify storage path computation
 ### IT-3: topic:: appended as suffix to encoded path
 
 - **Given:** clean environment
-- **When:** `clg .path path::/home/user1/pro/lib/consumer topic::default_topic`
-- **Then:** Single line containing `/-home-user1-pro-lib-consumer--default-topic/`.; + topic suffix present in output
+- **When:** `clg .path path::/home/alice/projects/consumer-app topic::default_topic`
+- **Then:** Single line containing `/-home-alice-projects-consumer-app--default-topic/`.; + topic suffix present in output
 - **Exit:** 0
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
 
@@ -65,7 +65,7 @@ Integration tests for the `.path` command. Tests verify storage path computation
 ### IT-4: path:: with topic:: combines both
 
 - **Given:** clean environment
-- **When:** `clg .path path::~/pro/lib/myapp topic::work`
+- **When:** `clg .path path::~/projects/myapp topic::work`
 - **Then:** Single line containing `{encoded_home_pro_lib_myapp}--work/`.; + both base path and topic suffix reflected in output
 - **Exit:** 0
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
@@ -95,7 +95,7 @@ Integration tests for the `.path` command. Tests verify storage path computation
 ### IT-7: ~ prefix expanded in path::
 
 - **Given:** clean environment
-- **When:** `clg .path path::~/pro/lib/consumer`
+- **When:** `clg .path path::~/projects/consumer-app`
 - **Then:** Storage path containing the expanded home directory (not literal `~`).; + `~` expanded to absolute home path
 - **Exit:** 0
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)

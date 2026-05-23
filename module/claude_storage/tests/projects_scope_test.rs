@@ -186,10 +186,10 @@ fn global_scope_returns_all_sessions()
 // issue-024 regression: scope::local/relevant/under return 0 results when the
 // base path contains underscores.
 //
-// Root Cause: encode_path() maps both '_' and '/' to '-', so `wip_core` →
+// Root Cause: encode_path() maps both '_' and '/' to '-', so `my_project` →
 // `wip-core`. decode_component() defaults unknown pairs to '/', so `wip-core`
 // → `wip/core`. The old code compared decoded project paths against the real
-// base_path, and `wip/core ≠ wip_core`, so all projects silently fell through.
+// base_path, and `wip/core ≠ my_project`, so all projects silently fell through.
 //
 // Why Not Caught: All existing tests used alphanumeric path components only
 // (e.g. "proj", "proja", "workspace/a"). No test exercised underscore
@@ -203,10 +203,10 @@ fn global_scope_returns_all_sessions()
 // testing path-scope logic.
 //
 // Pitfall: Paths with underscores and paths with an extra directory component
-// encode identically (e.g. `wip_core` → `wip-core`, `wip/core` → `wip-core`).
+// encode identically (e.g. `my_project` → `wip-core`, `wip/core` → `wip-core`).
 // For scope::under this was resolved in issue-031 (TSK-060): a two-stage predicate
 // uses decode_path_via_fs + Path::starts_with (component-wise) to correctly
-// exclude sibling `wip_core_extra` when base is `wip_core`. See it_25.
+// exclude sibling `my_project_extra` when base is `my_project`. See it_25.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // IT-9: scope::local finds project when path contains underscores
@@ -218,7 +218,7 @@ fn scope_local_finds_project_with_underscore_path()
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
 
-  let project_path = root.path().join( "wip_core" );
+  let project_path = root.path().join( "my_project" );
   let unrelated    = root.path().join( "other" );
   common::write_path_project_session( &storage_root, &project_path, "session-local-underscore", 2 );
   common::write_path_project_session( &storage_root, &unrelated,    "session-unrelated",         2 );
@@ -253,7 +253,7 @@ fn scope_under_finds_project_with_underscore_path()
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
 
-  let base          = root.path().join( "wip_core" );
+  let base          = root.path().join( "my_project" );
   let child         = base.join( "child" );
   let outside       = root.path().join( "other" );
   common::write_path_project_session( &storage_root, &base,    "session-under-base",    2 );
@@ -294,7 +294,7 @@ fn scope_relevant_finds_ancestor_with_underscore_path()
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
 
-  let ancestor  = root.path().join( "wip_core" );
+  let ancestor  = root.path().join( "my_project" );
   let cwd       = ancestor.join( "sub" ).join( "child" );
   let unrelated = root.path().join( "other" );
   common::write_path_project_session( &storage_root, &ancestor,  "session-rel-ancestor",  2 );
@@ -339,7 +339,7 @@ fn scope_relevant_finds_topic_scoped_ancestor()
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
 
-  let ancestor_path = root.path().join( "wip_core" );
+  let ancestor_path = root.path().join( "my_project" );
   let cwd           = ancestor_path.join( "child" );
 
   // Child project (no topic)

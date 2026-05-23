@@ -78,7 +78,7 @@ This test suite covers the claude_runner_core crate's builder pattern API for Cl
 
 **Out of Scope:**
 - Session lifecycle management (→ claude_profile crate)
-- Context injection from wplan (→ dream_agent crate)
+- Context injection from consumer_runner (→ dream_agent crate)
 - Actual process execution (→ dream_agent crate)
 - Interactive terminal UI (→ terminal-based tools)
 - Configuration hierarchy (→ config_hierarchy crate)

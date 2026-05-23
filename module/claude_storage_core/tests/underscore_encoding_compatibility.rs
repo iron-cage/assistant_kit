@@ -123,11 +123,11 @@ fn test_real_claude_storage_path()
 fn test_multiple_underscores()
 {
   // Path with multiple components containing underscores
-  let path = Path::new( "/module/wplan_agent/-default_topic" );
+  let path = Path::new( "/module/my_agent/-default_topic" );
   let encoded = encode_path( path ).unwrap();
 
   // Both underscores replaced
-  assert_eq!( encoded, "-module-wplan-agent--default-topic" );
+  assert_eq!( encoded, "-module-my-agent--default-topic" );
 }
 
 #[ test ]
@@ -176,13 +176,13 @@ fn test_compatibility_with_existing_tests()
 fn test_underscore_in_deeply_nested_path()
 {
   // Real-world complex path
-  let path = Path::new( "/home/alice/projects/consumer-app/module/wplan_agent/tests/test_file.rs" );
+  let path = Path::new( "/home/alice/projects/consumer-app/module/my_agent/tests/test_file.rs" );
   let encoded = encode_path( path ).unwrap();
 
   // All underscores replaced
   assert_eq!
   (
     encoded,
-    "-home-alice-projects-consumer-app-module-wplan-agent-tests-test-file.rs"
+    "-home-alice-projects-consumer-app-module-my-agent-tests-test-file.rs"
   );
 }

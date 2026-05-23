@@ -96,7 +96,7 @@ fn no_match()
   let matcher = StringMatcher::new( "myproject" );
   assert!( !matcher.matches( "claude" ) );
   assert!( !matcher.matches( "storage" ) );
-  assert!( !matcher.matches( "wplan" ) );
+  assert!( !matcher.matches( "consumer_runner" ) );
 }
 
 #[test]
@@ -112,9 +112,9 @@ fn unicode_matching()
 fn real_world_path_matching()
 {
   let matcher = StringMatcher::new( "myproject" );
-  assert!( matcher.matches( "/home/user1/pro/lib/myproject/module/claude_storage" ) );
+  assert!( matcher.matches( "/home/alice/projects/myproject/module/claude_storage" ) );
   assert!( matcher.matches( "/HOME/USER1/PRO/LIB/MYPROJECT/MODULE/CLAUDE_STORAGE" ) );
-  assert!( !matcher.matches( "/home/user1/pro/lib/wplan/src" ) );
+  assert!( !matcher.matches( "/home/alice/projects/consumer_runner/src" ) );
 }
 
 #[test]

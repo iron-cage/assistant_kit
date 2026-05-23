@@ -51,5 +51,5 @@ claude --disable-slash-commands --print "What does /etc/hosts contain?"
 ## Notes
 
 - `/help` and built-in CLI commands (not skills) may still work depending on the claude version
-- Skills are the user-invocable commands in the skills directory (e.g., `$PRO/genai/claude/commands/`)
+- Skills are the user-invocable commands in the Claude Code skills directory
 - Does not affect MCP tools or built-in tools (Bash, Read, etc.)

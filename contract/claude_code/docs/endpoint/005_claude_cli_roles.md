@@ -34,11 +34,11 @@ HTTP 200 on success. Body is a JSON object.
 
 ### Example Response
 
-HTTP 200 (personal Max account, alice@example.com, sampled 2026-05-23):
+HTTP 200 (personal Max account, alice@example.com, example response):
 
 ```json
 {
-  "organization_uuid": "05122eb7-d5c1-4e65-9245-7f05cb2dc8db",
+  "organization_uuid": "00000005-0000-4000-8000-000000000001",
   "organization_name": "alice@example.com's Organization",
   "organization_role": "admin",
   "workspace_uuid": null,

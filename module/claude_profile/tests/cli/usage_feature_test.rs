@@ -25,8 +25,10 @@
 //! | ID    | Test Function                                   | AC    | Live? |
 //! |-------|-------------------------------------------------|-------|-------|
 //! | f18ft01 | `f18_ft01_live_0_single_fetch`                | AC-24 | no    |
+//! | f18ft06 | `f18_ft06_live_stagger_per_account_trace`     | AC-29 | no    |
 
 use crate::helpers::{
+  BIN,
   run_cs_with_env,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token,
@@ -268,5 +270,66 @@ fn f18_ft01_live_0_single_fetch()
   assert!(
     !text.contains( "Next update" ),
     "live::0 must not emit countdown footer, got:\n{text}",
+  );
+}
+
+// ── f18-FT-06: per-account stagger delay present in live mode ─────────────────
+
+/// f18-FT-06 (AC-29): `live::1 trace::1` with 2 no-token accounts — per-account
+/// stagger delay of 200–1500 ms fires before each credential read, confirmed by
+/// ≥ 2 `[trace] … reading` lines on stderr after a SIGINT-terminated run.
+///
+/// Stagger fires before `read_token()` in `fetch_all_quota` (`stagger=true` only
+/// in live mode). No live token required — the credential JSON files have no
+/// `accessToken` field, so `read_token()` fails instantly after the sleep.
+///
+/// Source: `tests/docs/feature/018_live_monitor.md § FT-06`.
+#[ cfg( unix ) ]
+#[ test ]
+fn f18_ft06_live_stagger_per_account_trace()
+{
+  use std::process::Stdio;
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Two no-token accounts: stagger fires (200–1500 ms) then read_token() fails instantly.
+  write_account( dir.path(), "alpha@test.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "beta@test.com",  "max", "default", FAR_FUTURE_MS, false );
+
+  let child = std::process::Command::new( BIN )
+    .args( [ ".usage", "live::1", "trace::1", "interval::30", "jitter::0" ] )
+    .env( "HOME", home )
+    .env_remove( "PRO" )
+    .stdout( Stdio::piped() )
+    .stderr( Stdio::piped() )
+    .spawn()
+    .expect( "failed to spawn clp binary" );
+
+  // Allow both stagger delays to elapse: 2 × max 1500 ms + render overhead → 5 s.
+  std::thread::sleep( core::time::Duration::from_secs( 5 ) );
+
+  let _ = std::process::Command::new( "kill" )
+    .args( [ "-INT", &child.id().to_string() ] )
+    .status();
+
+  let out = child.wait_with_output().expect( "failed to wait on clp binary" );
+  let err = String::from_utf8_lossy( &out.stderr );
+
+  assert_eq!(
+    out.status.code(),
+    Some( 0 ),
+    "SIGINT must cause clean exit 0, got: {:?}\nstdout: {}\nstderr: {err}",
+    out.status,
+    String::from_utf8_lossy( &out.stdout ),
+  );
+
+  let trace_reading_count = err
+    .lines()
+    .filter( |l| l.contains( "[trace]" ) && l.contains( "reading" ) )
+    .count();
+  assert!(
+    trace_reading_count >= 2,
+    "stagger must fire before each account fetch — expected ≥ 2 '[trace] … reading' lines on stderr, \
+     got {trace_reading_count}:\n{err}",
   );
 }

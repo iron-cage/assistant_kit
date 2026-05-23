@@ -193,7 +193,7 @@ Instead it contains the UUID of the parent (root) session. This is the primary p
 link between a sub-agent and the conversation that spawned it.
 
 For example, an agent stored at `43860c56-…/subagents/agent-a6061d6e….jsonl` has
-`"sessionId": "43860c56-f828-44bd-953a-432920676b63"` — the parent directory UUID.
+`"sessionId": "00000004-0000-4000-8000-000000000001"` — the parent directory UUID.
 
 ### B13 — Subagent directory hierarchy
 

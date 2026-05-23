@@ -17,11 +17,11 @@ Source: **[002](002_oauth_account.md)** only.
 
 | Field | Type | Example | Semantics |
 |-------|------|---------|-----------|
-| `tagged_id` | string | `"user_01BDCWiki5PxAn3hFN1Whvrx"` | Stable user ID with type prefix |
-| `uuid` | string | `"52af6817-f911-408f-b033-5e1d977af315"` | UUID form of user ID |
+| `tagged_id` | string | `"user_01ABCDEFGhijklmnopqrstuvwx"` | Stable user ID with type prefix |
+| `uuid` | string | `"00000000-0000-0000-0000-000000000000"` | UUID form of user ID |
 | `email_address` | string | `"alice@example.com"` | Primary account email |
-| `full_name` | string | `"i11"` | Full display name |
-| `display_name` | string | `"i11"` | Short display name |
+| `full_name` | string | `"Alice"` | Full display name |
+| `display_name` | string | `"Alice"` | Short display name |
 | `is_verified` | bool | `true` | Email address verified |
 | `age_is_verified` | bool | `true` | Age gate passed |
 | `is_anonymous` | bool | `false` | Anonymous session flag |
@@ -80,7 +80,7 @@ Pro (no Max): billing_type == "stripe_subscription"  AND  "claude_max" NOT IN ca
 | `extra_usage.currency` | string\|null | `null` | Billing currency |
 | `extra_usage.disabled_reason` | string\|null | `null` | Overage disable reason |
 
-**Inactive buckets** (all `null` or zeroed as of 2026-05-23):
+**Inactive buckets** (all `null` or zeroed in observed responses):
 `seven_day_oauth_apps`, `seven_day_opus`, `seven_day_cowork`, `tangelo`, `iguana_necktie`, `omelette_promotional`; `seven_day_omelette` returns `{"utilization":0.0,"resets_at":null}`.
 
 ### From 003 — `POST /v1/messages` response headers

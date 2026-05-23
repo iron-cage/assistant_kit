@@ -130,7 +130,7 @@ Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.m
 
 **Phase 3: Integration** 🔜 Future
 - Optional integration with `claude_profile`
-- Used by `wplan_agent`
+- Used by `my_agent`
 - Example tools
 
 ---

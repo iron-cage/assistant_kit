@@ -109,12 +109,12 @@ fn it_24_decode_display_includes_hyphen_prefixed_topic_dir()
 //
 // Root Cause: encode_path converts `_` → `-` (lossy). The heuristic decoder
 // defaults to path separator (`/`) for all unrecognized `-` boundaries, so
-// underscore-named directories like `wip_core` decode to `wip/core` in the
+// underscore-named directories like `my_project` decode to `wip/core` in the
 // display path.
 //
 // Why Not Caught: All prior tests used simple single-word project dir names
 // (e.g., "proj", "agent_filter_proj"). No test path had underscore-named
-// intermediate components like `wip_core/project`.
+// intermediate components like `my_project/project`.
 //
 // Fix Applied: decode_project_display now checks whether the heuristic-decoded
 // path exists on the filesystem. If not, it falls back to decode_path_via_fs
@@ -135,7 +135,7 @@ fn it_23_decode_display_preserves_underscore_named_dirs()
   let root = TempDir::new().unwrap();
   let storage_root = root.path().join( ".claude" );
   // Project path with underscore-named directory component
-  let project = root.path().join( "wip_core" ).join( "myproject" );
+  let project = root.path().join( "my_project" ).join( "myproject" );
   // Create the actual directories so filesystem-guided decode can verify existence
   std::fs::create_dir_all( &project ).expect( "create project dir with underscore component" );
   common::write_path_project_session( &storage_root, &project, "session-underscore-test", 2 );
@@ -152,12 +152,12 @@ fn it_23_decode_display_preserves_underscore_named_dirs()
   assert_exit( &out, 0 );
   let s = stdout( &out );
   assert!(
-    s.contains( "wip_core" ),
-    "display path must preserve underscore: 'wip_core' not 'wip/core'; got:\n{s}"
+    s.contains( "my_project" ),
+    "display path must preserve underscore: 'my_project' not 'wip/core'; got:\n{s}"
   );
   assert!(
     !s.lines().any( | l | l.contains( "wip/core" ) ),
-    "display path must NOT split wip_core into wip/core; got:\n{s}"
+    "display path must NOT split my_project into wip/core; got:\n{s}"
   );
   assert!( s.contains( "session-underscore-test" ), "session ID must appear; got:\n{s}" );
 }

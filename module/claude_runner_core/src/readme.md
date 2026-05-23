@@ -45,7 +45,7 @@ src/
 
 **Out of Scope:**
 - Session lifecycle management (→ claude_profile crate)
-- Context injection from wplan (→ dream_agent crate)
+- Context injection from consumer_runner (→ dream_agent crate)
 - Interactive terminal UI (→ terminal-based tools)
 - Configuration hierarchy (→ config_hierarchy crate)
 

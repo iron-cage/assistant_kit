@@ -65,7 +65,7 @@ grep -n "require_nonempty_string_arg" dev/module/claude_profile/src/commands.rs
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| governing principle | `$GENAI/cli/cli_doc.rulebook.md § Parameters Documentation : Default-First Design Principle` | Universal rulebook origin of this invariant — default strategy table, permitted exceptions, design health metric |
+| governing principle | `cli_doc.rulebook.md § Parameters Documentation : Default-First Design Principle` | Universal rulebook origin of this invariant — default strategy table, permitted exceptions, design health metric |
 | feature | `docs/feature/019_account_relogin.md` | First command fixed to satisfy this invariant — `name::` now defaults to active account |
 | source | `src/commands.rs` | `account_limits_routine` (lines 857–881) — reference pattern for optional-name-with-fallback |
 | source | `src/commands.rs` | `account_relogin_routine` — updated to use active-account fallback (TSK-173) |

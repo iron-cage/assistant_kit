@@ -108,15 +108,15 @@ For Entry field schema and content block types see [004_jsonl_format.md](004_jso
 
 **UUID projects** (web/IDE sessions):
 ```
-projects/26dd749d-5b4b-bfee-f4f3-9e03803b8cad/
-├── 8d795a1c-c81d-4010-8d29-b4e678272419.jsonl    # Main session
+projects/00000001-0000-4000-8000-000000000001/
+├── 00000002-0000-4000-8000-000000000001.jsonl    # Main session
 ├── agent-f3e2d1c4-a5b6-8910-1234-567890abcdef.jsonl  # Sub-agent
 └── agent-a1b2c3d4-e5f6-7890-abcd-ef1234567890.jsonl  # Sub-agent
 ```
 
 **Path projects** (CLI sessions):
 ```
-projects/-home-user1-pro-lib-consumer-module-wplan_agent/
+projects/-home-alice-projects-consumer-app-module-my_agent/
 ├── 3a4b5c6d-e7f8-9012-3456-789abcdef012.jsonl    # Session 1
 └── 7e8f9a0b-c1d2-3456-7890-abcdef123456.jsonl    # Session 2
 ```
@@ -183,7 +183,7 @@ projects/-home-user1-pro-lib-consumer-module-wplan_agent/
   "display": "https://www.youtube-transcript.io/api\nread page...",
   "pastedContents": {},
   "timestamp": 1758992388766,
-  "project": "/home/user1/pro/lib/consumer/module/reasoner"
+  "project": "/home/alice/projects/consumer-app/module/reasoner"
 }
 ```
 

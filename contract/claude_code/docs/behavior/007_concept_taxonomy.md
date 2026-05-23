@@ -84,7 +84,7 @@ Two-layer architecture with all six pairwise cardinalities:
 
 ```
 ~/.claude/projects/
-└── -home-user1-pro/                    ← Project
+└── -home-alice-projects/                    ← Project
     │
     ├── [Conversation 1]  ─────────────── user-facing grouping
     │   ├── a1b2c3d4.jsonl              ← Session A (root)
@@ -173,7 +173,7 @@ Zero-entry sessions can exist as startup placeholders (B8 — Claude Code create
 
 Session UUIDs and file names are storage artifacts, not user identifiers. The user interacts with Claude Code and gets a conversation — they don't think in terms of which `.jsonl` file was created. Surfacing session IDs in primary output adds noise without adding value:
 
-- Session IDs are UUIDs: `8d795a1c-c81d-4010-8d29-b4e678272419` — not human-meaningful
+- Session IDs are UUIDs: `00000002-0000-4000-8000-000000000001` — not human-meaningful
 - Multiple sessions may represent the same logical conversation (chain)
 - Agent session IDs are even more opaque: `agent-a6061d6e2a0c37a78`
 

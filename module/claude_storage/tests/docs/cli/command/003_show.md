@@ -102,8 +102,8 @@ Integration tests for the `.show` command. Tests verify project view, session vi
 
 ### IT-8: project:: with path-encoded ID
 
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project stored with path-encoded ID `-home-user1-pro-alpha`)
-- **When:** `clg .show project::-home-user1-pro-alpha`
-- **Then:** Session list for the project with path-encoded ID `-home-user1-pro-alpha`.; + sessions for path-encoded project shown
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project stored with path-encoded ID `-home-alice-projects-alpha`)
+- **When:** `clg .show project::-home-alice-projects-alpha`
+- **Then:** Session list for the project with path-encoded ID `-home-alice-projects-alpha`.; + sessions for path-encoded project shown
 - **Exit:** 0
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)

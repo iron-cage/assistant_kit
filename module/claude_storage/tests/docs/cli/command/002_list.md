@@ -77,7 +77,7 @@ Integration tests for the `.list` command. Tests verify project listing, session
 
 ### IT-5: path:: substring filters project list
 
-- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: projects at `/home/user1/pro/alpha`, `/home/user1/pro/beta`, `/tmp/other`)
+- **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: projects at `/home/alice/projects/alpha`, `/home/alice/projects/beta`, `/tmp/other`)
 - **When:** `clg .list path::pro`
 - **Then:** Only projects whose path contains `pro` are listed (`alpha`, `beta`); `/tmp/other` is absent.; + only projects matching `pro` substring shown
 - **Exit:** 0

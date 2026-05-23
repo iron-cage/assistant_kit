@@ -41,7 +41,7 @@ Claude Code process execution with builder pattern and single execution point.
 **Out of Scope:**
 - ❌ Session storage path resolution → delegated to `claude_profile` crate
 - ❌ Continuation detection → delegated to `claude_profile` crate
-- ❌ Context injection from wplan → delegated to `dream_agent` crate
+- ❌ Context injection from consumer_runner → delegated to `dream_agent` crate
 - ❌ Parameter parsing from CLI → delegated to `dream_agent` crate
 - ❌ Session lifecycle strategy → delegated to `dream_agent` crate
 

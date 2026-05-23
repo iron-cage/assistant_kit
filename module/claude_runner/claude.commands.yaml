@@ -55,7 +55,7 @@
 
     - name: "receiver"
       kind: "String"
-      description: "Inject receiver context from wplan daemon (topic name for context)"
+      description: "Inject receiver context from orchestration daemon (topic name for context)"
       hint: "Receiver context"
       optional: true
       default: ""

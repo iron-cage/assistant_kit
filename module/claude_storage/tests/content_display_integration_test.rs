@@ -18,7 +18,7 @@
 //! 3. Content format is readable (timestamps, role labels, text)
 //!
 //! Fix(issue-content-display-isolation)
-//! Root cause: original tests used `Path::new("/home/user1/.claude/projects")` and silently
+//! Root cause: original tests used `Path::new("/home/alice/.claude/projects")` and silently
 //! returned when the path didn't exist — violating "Never silently pass due to missing
 //! tokens/resources". Tests ran green on CI (path absent) while never actually asserting anything.
 //! Pitfall: `if !path.exists() { return; }` is indistinguishable from a real pass in test output.

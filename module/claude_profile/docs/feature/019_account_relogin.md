@@ -37,7 +37,7 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 - **AC-03**: `clp .account.relogin` (no `name::`) with no active account exits 2 with an actionable message.
 - **AC-04**: Non-existent account name exits 2 with "not found".
 - **AC-05**: Positional bare arg `clp .account.relogin carol@example.com` is accepted (AccountSelector).
-- **AC-06**: Prefix form `clp .account.relogin i3` resolves to the single matching account.
+- **AC-06**: Prefix form `clp .account.relogin car` resolves to the single matching account.
 - **AC-07**: After successful browser login, the named account's credential file in the store is updated (same as if `.account.save` had been run).
 - **AC-08**: After re-authentication, the original active account is restored — the user's session context is unchanged.
 - **AC-09**: If `claude` exits without updating `~/.claude/.credentials.json`, the process exits 3.

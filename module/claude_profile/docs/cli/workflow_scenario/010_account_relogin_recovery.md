@@ -78,7 +78,7 @@ clp .account.relogin name::carol@example.com
 
 ```bash
 # Unique prefix resolves to the matching account
-clp .account.relogin i3
+clp .account.relogin car
 ```
 
 **Multiple dead accounts — run sequentially in an interactive terminal:**

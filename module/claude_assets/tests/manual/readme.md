@@ -11,7 +11,7 @@
 
 ### Prerequisites
 
-- `$PRO_CLAUDE` set to a real claude-assets directory (e.g., `$PRO/genai/claude/`)
+- `$PRO_CLAUDE` set to a real claude-assets directory (e.g., `$PRO_CLAUDE/`)
 - At least one source artifact per kind present (rule `.md`, command `.md`, hook `.yaml`, skill dir, etc.)
 - `cla` binary compiled with `--features enabled`
 

@@ -49,8 +49,8 @@ User messages have this structure:
   "parentUuid": null,
   "isSidechain": false,
   "userType": "external",
-  "cwd": "/home/user1/pro",
-  "sessionId": "8d795a1c-c81d-4010-8d29-b4e678272419",
+  "cwd": "/home/alice/pro",
+  "sessionId": "00000002-0000-4000-8000-000000000001",
   "version": "2.0.31",
   "gitBranch": "master",
   "type": "user",
@@ -58,7 +58,7 @@ User messages have this structure:
     "role": "user",
     "content": "command to repeat something every hour?"
   },
-  "uuid": "a6f3bd8c-5575-4eab-82b0-b856f7a02833",
+  "uuid": "00000003-0000-4000-8000-000000000001",
   "timestamp": "2025-11-08T23:30:10.039Z",
   "thinkingMetadata": {
     "level": "high",
@@ -94,11 +94,11 @@ Assistant messages are more complex, with structured API response data:
 
 ```json
 {
-  "parentUuid": "a6f3bd8c-5575-4eab-82b0-b856f7a02833",
+  "parentUuid": "00000003-0000-4000-8000-000000000001",
   "isSidechain": false,
   "userType": "external",
-  "cwd": "/home/user1/pro",
-  "sessionId": "8d795a1c-c81d-4010-8d29-b4e678272419",
+  "cwd": "/home/alice/pro",
+  "sessionId": "00000002-0000-4000-8000-000000000001",
   "version": "2.0.31",
   "gitBranch": "master",
   "message": {
@@ -139,7 +139,7 @@ Assistant messages are more complex, with structured API response data:
   },
   "requestId": "req_011CUwHuh7iPfwQNAXEeEYrP",
   "type": "assistant",
-  "uuid": "56a226b5-0ec6-4214-af16-b13cc326f8dc",
+  "uuid": "00000003-0000-4000-8000-000000000002",
   "timestamp": "2025-11-08T23:30:21.913Z"
 }
 ```
@@ -265,12 +265,12 @@ Entry 4 (Assistant): uuid=D, parentUuid=C
 Sub-agent conversations (e.g., Task agents) are stored in separate files. Two storage layouts coexist (per-project, neither deprecated):
 
 **Flat format** (older projects): agents as siblings at project root.
-- **Main session**: `8d795a1c-c81d-4010-8d29-b4e678272419.jsonl`
+- **Main session**: `00000002-0000-4000-8000-000000000001.jsonl`
 - **Sub-agent**: `agent-167331a7.jsonl`
 
 **Hierarchical format** (newer projects): agents in `{uuid}/subagents/` subdirectory.
-- **Root session**: `43860c56-f828-44bd-953a-432920676b63.jsonl`
-- **Sub-agent**: `43860c56-f828-44bd-953a-432920676b63/subagents/agent-a6061d6e2a0c37a78.jsonl`
+- **Root session**: `00000004-0000-4000-8000-000000000001.jsonl`
+- **Sub-agent**: `00000004-0000-4000-8000-000000000001/subagents/agent-a6061d6e2a0c37a78.jsonl`
 - **Agent metadata**: `43860c56-…/subagents/agent-a6061d6e2a0c37a78.meta.json`
 
 Sidechain entries have `isSidechain: true` and carry `agentId` and `slug` fields. See [001_session_behaviors.md](001_session_behaviors.md) B7, B12–B15 for detailed behavior evidence.

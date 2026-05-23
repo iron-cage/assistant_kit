@@ -35,7 +35,7 @@ const SECS_PER_MONTH : u64 = 2_592_000;
 /// - same two checks after stripping each `--topic` suffix from `dir_name`
 ///
 /// The `rfind("--")` loop handles topic-scoped project directories
-/// (e.g. `-home-user1-wip-core--default-topic`): it strips from the last `--`
+/// (e.g. `-home-alice-wip-core--default-topic`): it strips from the last `--`
 /// rightward so the remaining base path can be compared against `encoded_base`.
 fn is_relevant_encoded( dir_name : &str, encoded_base : &str ) -> bool
 {
@@ -56,7 +56,7 @@ fn is_relevant_encoded( dir_name : &str, encoded_base : &str ) -> bool
 
 /// Decode a storage directory name into a human-readable display path.
 ///
-/// Path-encoded dirs start with `-` (e.g. `-home-user1-pro`). UUID dirs do not.
+/// Path-encoded dirs start with `-` (e.g. `-home-alice-projects`). UUID dirs do not.
 /// Compress `$HOME` prefix to `~` for display. Returns full path string if HOME unset.
 fn tilde_compress( path : &std::path::Path ) -> String
 {
@@ -255,7 +255,7 @@ fn walk_fs(
 ///
 /// Fix(issue-029)
 /// Root cause: `decode_path` heuristic defaults to path separator `/` for all
-/// unrecognized `-` boundaries. Paths with underscore-named dirs (e.g. `wip_core`,
+/// unrecognized `-` boundaries. Paths with underscore-named dirs (e.g. `my_project`,
 /// `claude_tools`) display incorrectly as `wip/core`, `claude/tools`.
 /// Pitfall: Only call the filesystem walk as fallback — never primary — because it
 /// requires the project directory to exist on disk. Deleted/remote projects fall
@@ -649,7 +649,7 @@ fn aggregate_projects(
 
 /// List sessions with scope control (session-first view).
 ///
-/// Mirrors `kbase` `scope::` semantics:
+/// Scope semantics:
 /// - `local`    — Current project only (`path::` selects the project, defaults to cwd)
 /// - `relevant` — Every project whose path is an ancestor of (or equal to) `path::`
 /// - `under`    — Every project whose path starts with `path::` (default)
@@ -745,7 +745,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   // Fix(issue-024)
   // Root cause: encode_path() maps both '_' and '/' to '-', so decode_component()
-  // defaults unknown pairs to '/', turning `wip_core` → `wip-core` → `wip/core`.
+  // defaults unknown pairs to '/', turning `my_project` → `wip-core` → `wip/core`.
   // Decoded paths never match the real base_path, causing silent 0-result returns.
   // Pitfall: Never decode storage dir names for path comparison — encoding is
   // deterministic but decoding is lossy. Compare encoded ↔ encoded instead.

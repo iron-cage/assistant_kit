@@ -72,7 +72,7 @@ impl From< std::io::Error > for AssetError
 #[ derive( Debug ) ]
 pub enum AssetPathsError
 {
-  /// Neither `$PRO_CLAUDE` nor `$PRO` is set in the environment.
+  /// `$PRO_CLAUDE` is not set in the environment.
   EnvVarNotSet,
 }
 
@@ -86,7 +86,6 @@ impl core::fmt::Display for AssetPathsError
       Self::EnvVarNotSet => write!(
         f,
         "environment variable $PRO_CLAUDE is not set \
-         (fallback: set $PRO and ensure $PRO/genai/claude/ exists) \
          — run: export PRO_CLAUDE=/path/to/your/claude-assets"
       ),
     }

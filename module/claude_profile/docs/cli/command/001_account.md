@@ -17,7 +17,7 @@ List all saved accounts or show a single named account with per-field presence c
 clp .accounts
 clp .accounts name::alice@acme.com
 clp .accounts alice@acme.com         # positional: same as name::alice@acme.com
-clp .accounts i3                     # prefix: first saved account starting with "i3"
+clp .accounts car                     # prefix: first saved account starting with "car"
 clp .accounts sub::0 tier::0
 clp .accounts display_name::1 role::1 billing::1 model::1
 clp .accounts format::json
@@ -123,7 +123,7 @@ Atomically overwrites `~/.claude/.credentials.json` with the named account's cre
 ```bash
 clp .account.use name::alice@home.com
 clp .account.use alice@home.com          # positional: same as name::alice@home.com
-clp .account.use i3                      # prefix: first saved account starting with "i3"
+clp .account.use car                      # prefix: first saved account starting with "car"
 clp .account.use name::alice@home.com dry::1
 ```
 
@@ -156,7 +156,7 @@ Removes `{credential_store}/{name}.credentials.json` from the credential store a
 ```bash
 clp .account.delete name::alice@oldco.com
 clp .account.delete alice@oldco.com         # positional
-clp .account.delete i3                      # prefix
+clp .account.delete car                      # prefix
 clp .account.delete name::alice@oldco.com dry::1
 ```
 
@@ -194,7 +194,7 @@ Show rate-limit utilization for the active or named account. Displays session (5
 clp .account.limits
 clp .account.limits name::alice@acme.com
 clp .account.limits alice@acme.com       # positional
-clp .account.limits i3                   # prefix
+clp .account.limits car                   # prefix
 clp .account.limits format::json
 ```
 
@@ -233,7 +233,7 @@ Force browser-based re-authentication for a named account whose `refreshToken` i
 clp .account.relogin                   # default: active account
 clp .account.relogin name::carol@example.com
 clp .account.relogin carol@example.com       # positional
-clp .account.relogin i3               # prefix
+clp .account.relogin car               # prefix
 clp .account.relogin name::carol@example.com dry::1
 clp .account.relogin dry::1            # dry-run for active account
 ```

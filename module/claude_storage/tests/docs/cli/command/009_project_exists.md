@@ -52,8 +52,8 @@ Integration tests for the `.exists` command. Tests verify exit code semantics, o
 
 ### IT-3: path:: with history exits 0
 
-- **Given:** Create a TempDir as HOME; create a project entry for `/home/user1/pro/alpha`.
-- **When:** `clg .exists path::/home/user1/pro/alpha`
+- **Given:** Create a TempDir as HOME; create a project entry for `/home/alice/projects/alpha`.
+- **When:** `clg .exists path::/home/alice/projects/alpha`
 - **Then:** stdout `"sessions exist\n"`; exit code 0.; + stdout is "sessions exist"
 - **Exit:** 0
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
@@ -63,7 +63,7 @@ Integration tests for the `.exists` command. Tests verify exit code semantics, o
 ### IT-4: path:: without history exits 1
 
 - **Given:** Create a TempDir as HOME; path has no matching project entry.
-- **When:** `clg .exists path::/home/user1/pro/no-history`
+- **When:** `clg .exists path::/home/alice/projects/no-history`
 - **Then:** stderr `"no sessions"`; exit code 1.; + stderr is "no sessions"
 - **Exit:** 1
 - **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)

@@ -13,7 +13,7 @@ Every command that reads from or installs into `$PRO_CLAUDE` MUST call `AssetPat
 
 **Resolution order:**
 1. `$PRO_CLAUDE` — used directly if set in the environment
-2. `$PRO/genai/claude/` — constructed if `$PRO` is set and `$PRO_CLAUDE` is not
+2. `$PRO_CLAUDE/` — constructed if `$PRO` is set and `$PRO_CLAUDE` is not
 3. Error — `AssetPathsError::EnvVarNotSet` when neither variable is present
 
 **Rationale:** The installer has no fallback source root to guess from. Without `$PRO_CLAUDE` (or the `$PRO` fallback), any install operation would write symlinks pointing to nonexistent paths. The error message produced by `AssetPathsError::EnvVarNotSet` includes the exact export command needed to fix the problem, making it actionable without consulting documentation.

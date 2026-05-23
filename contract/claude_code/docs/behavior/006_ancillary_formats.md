@@ -23,7 +23,7 @@
   "display": "https://www.youtube-transcript.io/api\nread page...",
   "pastedContents": {},
   "timestamp": 1758992388766,
-  "project": "/home/user1/pro/lib/consumer/module/reasoner"
+  "project": "/home/alice/projects/consumer-app/module/reasoner"
 }
 ```
 
@@ -70,7 +70,7 @@
 [DEBUG] Watching for changes in setting files...
 [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
 [DEBUG] Total LSP servers loaded: 0
-[DEBUG] Creating shell snapshot at /home/user1/.claude/shell-snapshots/...
+[DEBUG] Creating shell snapshot at /home/alice/.claude/shell-snapshots/...
 ```
 
 **Content types**: Setting file watching, plugin loading, LSP server init, shell snapshot creation, process lifecycle events.

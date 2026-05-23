@@ -6,7 +6,7 @@
 
 ### Notes
 
-Workspace-specific: `curl` for version history fetching; `procps` for `/bin/kill`-based process management tests. `willbe` also needs `git`. Empty string (or absent key) disables the apt-get block entirely — safe for workspaces with no system dependencies.
+Workspace-specific: `curl` for version history fetching; `procps` for `/bin/kill`-based process management tests. Empty string (or absent key) disables the apt-get block entirely — safe for workspaces with no system dependencies.
 
 ### Example
 
