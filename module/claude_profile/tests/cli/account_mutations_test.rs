@@ -52,12 +52,12 @@
 //! | ID | Test Function | Condition | P/N |
 //! |----|---------------|-----------|-----|
 //! | ad01 | `ad01_delete_inactive_removes_file` | delete inactive removes file | P |
-//! | ad02 | `ad02_delete_dry_run_keeps_file` | dry::1 → file kept | P |
+//! | ad02 | `ad02_delete_dry_run_keeps_file` | `dry::1` → file kept | P |
 //! | ad03 | `ad03_delete_active_exits_0` | delete active account → exit 0, `_active` cleaned up | P |
 //! | ad04 | `ad04_delete_nonexistent_exits_2` | unknown account → exit 2 | N |
 //! | ad05 | `ad05_delete_empty_name_exits_1` | empty name → exit 1 | N |
 //! | ad06 | `ad06_delete_slash_name_exits_1` | name with `/` → exit 1 | N |
-//! | ad07 | `ad07_delete_missing_name_param_exits_1` | no name:: param → exit 1 | N |
+//! | ad07 | `ad07_delete_missing_name_param_exits_1` | no `name::` param → exit 1 | N |
 //! | ad08 | `ad08_delete_then_list_absent` | delete then list → account gone | P |
 //! | ad09 | `ad09_double_delete_exits_2` | delete twice → second exit 2 | N |
 //! | ad10 | `ad10_delete_dry_run_active_exits_0` | dry delete active → exit 0, file kept | P |

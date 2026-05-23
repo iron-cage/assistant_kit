@@ -139,7 +139,7 @@ fn fetch_all_quota(
             Err( e ) => eprintln!( "[trace] {}  result: Err({})", acct.name, e ),
           }
         }
-        let account_data = account_handle.join().ok().and_then( std::result::Result::ok );
+        let account_data = account_handle.join().ok().and_then( |r| r.ok() );
         ( r, account_data )
       }
       Err( e )    =>
