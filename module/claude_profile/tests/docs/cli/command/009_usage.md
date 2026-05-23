@@ -45,6 +45,17 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-37 | Single failed account → no "Valid:" footer line emitted | Footer |
 | IT-38 | `.usage.help` shows `refresh::` default as `1` (enabled) | Help Output |
 | IT-39 | `.usage.help` refresh description mentions `429` and locally-expired case | Help Output |
+| IT-40 | Table header row contains `●` column label | Status Emoji |
+| IT-41 | Account with missing token → `🔴` in table row | Status Emoji |
+| IT-42 | `format::json` output does not contain `🔴`, `🟡`, or `🟢` | Status Emoji |
+| IT-43 | Exact 5% boundary: `utilization=95.0` → `🟡`; `utilization=94.9` → `🟢` | Status Emoji |
+| IT-44 | `sort::name` accepted with empty store → exit 0 | Sort Acceptance |
+| IT-45 | `sort::endurance` accepted with empty store → exit 0 | Sort Acceptance |
+| IT-46 | `sort::drain` accepted with empty store → exit 0 | Sort Acceptance |
+| IT-47 | `sort::reset` accepted with empty store → exit 0 | Sort Acceptance |
+| IT-48 | `sort::bogus` → exit 1, stderr names valid values | Sort Rejection |
+| IT-49 | `prefer::bogus` → exit 1, stderr names valid values | Sort Rejection |
+| IT-50 | `.usage.help` lists `sort`, `desc`, `prefer` params | Help Output |
 
 ### Test Coverage Summary
 
@@ -67,10 +78,13 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Live Monitor: 2 tests (IT-22, IT-31)
 - Live Guards: 6 tests (IT-23, IT-24, IT-25, IT-27, IT-29, IT-30)
 - JSON Output: 1 test (IT-28)
-- Help Output: 4 tests (IT-32, IT-34, IT-38, IT-39)
+- Help Output: 5 tests (IT-32, IT-34, IT-38, IT-39, IT-50)
 - Trace: 1 test (IT-35)
+- Status Emoji: 4 tests (IT-40, IT-41, IT-42, IT-43)
+- Sort Acceptance: 4 tests (IT-44, IT-45, IT-46, IT-47)
+- Sort Rejection: 2 tests (IT-48, IT-49)
 
-**Total:** 52 integration tests in `usage_test.rs` + 5 in `usage_feature_test.rs`; source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
+**Total:** 62 spec entries (IT-1 through IT-50; IT-40–IT-50 pending implementation); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -490,3 +504,126 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Fix:** BUG-156 (`task/claude_profile/bug/156_refresh_429_expired_not_refreshed.md`)
 - **Source fn:** `it038_mre_bug156_refresh_help_mentions_429_expired`
 - **Source:** [017_token_refresh.md AC-24](../../../../docs/feature/017_token_refresh.md)
+
+---
+
+### IT-40: Table header row contains `●` column label
+
+- **Given:** One saved account with a valid credential file (no accessToken — produces error row, but table is still rendered).
+- **When:** `clp .usage`
+- **Then:** Exits 0. Stdout contains `"●"` (the status emoji column header).
+- **Exit:** 0
+- **Source fn:** `it039_status_emoji_column_header_present`
+- **Source:** [009_token_usage.md AC-18](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-41: Account with missing token → `🔴` in table row
+
+- **Given:** One saved account whose credential file exists but has no `accessToken` field (result is Err).
+- **When:** `clp .usage`
+- **Then:** Exits 0. Stdout contains `"🔴"`.
+- **Exit:** 0
+- **Source fn:** `it040_status_emoji_red_on_token_error`
+- **Source:** [009_token_usage.md AC-18](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-42: `format::json` output does not contain status emoji
+
+- **Given:** One saved account whose credential file has no `accessToken` field.
+- **When:** `clp .usage format::json`
+- **Then:** Exits 0. Stdout does NOT contain `"🔴"`, `"🟡"`, or `"🟢"`.
+- **Exit:** 0
+- **Source fn:** `it041_status_emoji_absent_from_json`
+- **Source:** [009_token_usage.md AC-20](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-43: Exact 5% boundary — `utilization=95.0` → `🟡`; `utilization=94.9` → `🟢`
+
+- **Given:** Unit test of `status_emoji()`. Two `OauthUsageData` variants:
+  - A: `five_hour.utilization = 95.0` → 5.0% left → expected `🟡`
+  - B: `five_hour.utilization = 94.9` → 5.1% left → expected `🟢`
+- **When:** `status_emoji(&Ok(data_a))` and `status_emoji(&Ok(data_b))`
+- **Then:** A returns `"🟡"`; B returns `"🟢"`. Boundary is `left > 5.0` (strict greater-than).
+- **Exit:** n/a (unit test)
+- **Source fn:** `it042_status_emoji_boundary_precision`
+- **Source:** [009_token_usage.md AC-19](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-44: `sort::name` accepted with empty store → exit 0
+
+- **Given:** Empty credential store.
+- **When:** `clp .usage sort::name`
+- **Then:** Exits 0 with "(no accounts configured)". No unknown-parameter error.
+- **Exit:** 0
+- **Source fn:** `it043_sort_name_accepted`
+- **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### IT-45: `sort::endurance` accepted with empty store → exit 0
+
+- **Given:** Empty credential store.
+- **When:** `clp .usage sort::endurance`
+- **Then:** Exits 0 with "(no accounts configured)". No unknown-parameter error.
+- **Exit:** 0
+- **Source fn:** `it044_sort_endurance_accepted`
+- **Source:** [feature/020_usage_sort_strategies.md AC-02](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### IT-46: `sort::drain` accepted with empty store → exit 0
+
+- **Given:** Empty credential store.
+- **When:** `clp .usage sort::drain`
+- **Then:** Exits 0 with "(no accounts configured)". No unknown-parameter error.
+- **Exit:** 0
+- **Source fn:** `it045_sort_drain_accepted`
+- **Source:** [feature/020_usage_sort_strategies.md AC-03](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### IT-47: `sort::reset` accepted with empty store → exit 0
+
+- **Given:** Empty credential store.
+- **When:** `clp .usage sort::reset`
+- **Then:** Exits 0 with "(no accounts configured)". No unknown-parameter error.
+- **Exit:** 0
+- **Source fn:** `it046_sort_reset_accepted`
+- **Source:** [feature/020_usage_sort_strategies.md AC-04](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### IT-48: `sort::bogus` → exit 1, stderr names valid values
+
+- **Given:** Any environment (empty credential store).
+- **When:** `clp .usage sort::bogus`
+- **Then:** Exits 1. Stderr contains each of the four valid values: `name`, `endurance`, `drain`, `reset`.
+- **Exit:** 1
+- **Source fn:** `it047_sort_invalid_value_exit_1`
+- **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### IT-49: `prefer::bogus` → exit 1, stderr names valid values
+
+- **Given:** Any environment (empty credential store).
+- **When:** `clp .usage prefer::bogus`
+- **Then:** Exits 1. Stderr contains each of the three valid values: `any`, `opus`, `sonnet`.
+- **Exit:** 1
+- **Source fn:** `it048_prefer_invalid_value_exit_1`
+- **Source:** [feature/020_usage_sort_strategies.md AC-10](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### IT-50: `.usage.help` lists `sort`, `desc`, `prefer` params
+
+- **Given:** Standard environment.
+- **When:** `clp .usage.help`
+- **Then:** Exits 0. Stdout contains `"sort"`, `"desc"`, and `"prefer"`.
+- **Exit:** 0
+- **Source fn:** `it049_usage_help_shows_sort_params`
+- **Source:** [feature/020_usage_sort_strategies.md](../../../../docs/feature/020_usage_sort_strategies.md)

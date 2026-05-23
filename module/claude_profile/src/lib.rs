@@ -178,6 +178,9 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "interval",  Kind::Integer ).with_description( "Seconds between refreshes (minimum 30, default 30)" ),
       reg_arg_opt( "jitter",    Kind::Integer ).with_description( "Max random seconds added to interval (0 = none, default)" ),
       reg_arg_opt( "trace",     Kind::Integer ).with_description( "Print [trace] lines to stderr showing each credential read, API call, and refresh step (0 = off; 1 = on)" ),
+      reg_arg_opt( "sort",      Kind::String  ).with_description( "Row ordering strategy: `name` (default), `endurance`, `drain`, `reset`" ),
+      reg_arg_opt( "desc",      Kind::Integer ).with_description( "Sort direction: 0 = ascending (strategy default for name/drain/reset), 1 = descending (strategy default for endurance)" ),
+      reg_arg_opt( "prefer",    Kind::String  ).with_description( "Weekly quota column for strategies: `any` (default, min of both), `opus` (7d Left), `sonnet` (7d(Son))" ),
     ],
     Box::new( usage_routine          ) );
 }

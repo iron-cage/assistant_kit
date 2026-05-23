@@ -11,6 +11,10 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-03 | All saved accounts fetched, not only `_active` | AC-01 | IT-1, IT-8 |
 | FT-04 | Live token match governs `✓`, not `_active` marker | AC-02 | IT-2, IT-13 |
 | FT-05 | Missing credential store → exit 2 | AC-06 | IT-6, IT-7 |
+| FT-06 | `find_recommendation()` tiebreaker: expiry breaks 5h Left tie | AC-09 | IT-11 |
+| FT-07 | Status emoji `🟢`/`🟡`/`🔴` correct per account state | AC-18 | IT-40, IT-41 |
+| FT-08 | Strict 5% boundary: exactly 5% → `🟡`; 5.1% → `🟢` | AC-19 | IT-43 |
+| FT-09 | `format::json` output contains no status emoji | AC-20 | IT-42 |
 
 ### Test Case Index
 
@@ -21,8 +25,12 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-03 | Both accounts appear regardless of `_active` marker | AC-01 | Complete Fetch |
 | FT-04 | `✓` follows live token match, not `_active` marker | AC-02 | Live Detection |
 | FT-05 | Unreadable credential store exits 2 | AC-06 | Error Handling |
+| FT-06 | Tiebreaker: higher expiry wins when 5h Left tied | AC-09 | Recommendation |
+| FT-07 | Status emoji correct for each of three account states | AC-18 | Status Emoji |
+| FT-08 | 5% boundary is strict: 5.0% → yellow, 5.1% → green | AC-19 | Status Emoji |
+| FT-09 | JSON output is emoji-free | AC-20 | Status Emoji |
 
-**Total:** 5 FT cases
+**Total:** 9 FT cases
 
 ---
 
@@ -79,3 +87,52 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** 2
 - **Source fn:** `ft005_unreadable_credential_store_exits_2`
 - **Source:** [009_token_usage.md AC-06](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-06: Tiebreaker — higher expiry wins when `5h Left` is tied
+
+- **Given:** Two `AccountQuota` structs (unit test): `a@x.com` (`five_hour.utilization=50.0`, `expires_at_ms=now+7200000` — 2h expiry) and `b@x.com` (`five_hour.utilization=50.0`, `expires_at_ms=now+3600000` — 1h expiry). Neither is current. Both `result = Ok(...)`.
+- **When:** `find_recommendation(&[a, b], /*current_name=*/None)`
+- **Then:** Returns the index of `a@x.com` (higher expiry wins the tiebreaker at level 2). `b@x.com` is NOT returned despite alphabetical precedence.
+- **Exit:** n/a (unit test — function return assertion)
+- **Source fn:** `test_find_recommendation_tiebreaks_by_expiry`
+- **Source:** [009_token_usage.md AC-09](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-07: Status emoji correct for each of three account states
+
+- **Given:** Unit test. Three `AccountQuota` variants:
+  - Variant A: `result = Err("missing accessToken".to_string())` → expected `🔴`
+  - Variant B: `result = Ok(data)` where `five_hour.utilization = 10.0` (90% left) → expected `🟢`
+  - Variant C: `result = Ok(data)` where `five_hour.utilization = 97.0` (3% left) → expected `🟡`
+- **When:** `status_emoji(&aq.result)` called for each variant.
+- **Then:** Returns `"🔴"` for A, `"🟢"` for B, `"🟡"` for C.
+- **Exit:** n/a (unit test)
+- **Source fn:** `test_status_emoji_red`, `test_status_emoji_green`, `test_status_emoji_yellow`
+- **Source:** [009_token_usage.md AC-18](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-08: 5% boundary is strict — exactly 5% → `🟡`; 5.1% → `🟢`
+
+- **Given:** Unit test. Two `AccountQuota` variants:
+  - Variant A: `five_hour.utilization = 95.0` → exactly 5.0% left → expected `🟡`
+  - Variant B: `five_hour.utilization = 94.9` → 5.1% left → expected `🟢`
+- **When:** `status_emoji(&aq.result)` for each.
+- **Then:** A returns `"🟡"`; B returns `"🟢"`. The boundary is `left > 5.0` (strict greater-than).
+- **Exit:** n/a (unit test)
+- **Source fn:** `test_status_emoji_boundary`
+- **Source:** [009_token_usage.md AC-19](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-09: `format::json` output is emoji-free
+
+- **Given:** One saved account whose credential file has no `accessToken` field.
+- **When:** `clp .usage format::json`
+- **Then:** Exits 0. The output string does NOT contain `🔴`, `🟡`, or `🟢`. The JSON array is present and valid.
+- **Exit:** 0
+- **Source fn:** `test_status_emoji_absent_in_json`
+- **Source:** [009_token_usage.md AC-20](../../../../docs/feature/009_token_usage.md)

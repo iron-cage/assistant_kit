@@ -16,6 +16,7 @@ Per-invariant-doc test case indices for `claude_runner`. See [invariant/readme.m
 | 001_default_flags.md | Test cases for the default flags invariant |
 | 002_dep_constraints.md | Test cases for the dependency constraints invariant |
 | 003_command_naming.md | Test cases for the command naming invariant |
+| 004_trace_universality.md | Test cases for the trace universality invariant |
 
 ### Index
 
@@ -24,3 +25,4 @@ Per-invariant-doc test case indices for `claude_runner`. See [invariant/readme.m
 | 001 — Default Flags | [001_default_flags.md](001_default_flags.md) | 6 TC |
 | 002 — Dependency Constraints | [002_dep_constraints.md](002_dep_constraints.md) | 4 TC |
 | 003 — Command Naming | [003_command_naming.md](003_command_naming.md) | 6 TC |
+| 004 — Trace Universality | [004_trace_universality.md](004_trace_universality.md) | 5 TC |

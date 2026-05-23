@@ -16,13 +16,15 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 009_token_usage.md | FT cases for Feature 009 — All-Accounts Live Quota Reporting (FR-14) |
 | 017_token_refresh.md | FT cases for Feature 017 — Expired Token Refresh via Isolated Subprocess |
 | 018_live_monitor.md | FT cases for Feature 018 — Live Quota Monitor Mode |
+| 020_usage_sort_strategies.md | FT cases for Feature 020 — Usage Sort Strategies |
 
 ### Coverage Summary
 
 | Feature | File | Cases | Status |
 |---------|------|-------|--------|
-| 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-05 | ✅ |
+| 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-09 | ✅ |
 | 017_token_refresh | [017_token_refresh.md](017_token_refresh.md) | FT-01 … FT-16 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](018_live_monitor.md) | FT-01 … FT-09 | ✅ |
+| 020_usage_sort_strategies | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | FT-01 … FT-11 | ✅ |
 
-**Total:** 3 feature specs, all fully implemented. 16 of 19 feature instances not yet covered by dedicated FT specs.
+**Total:** 4 feature specs; 15 of 20 feature instances not yet covered by dedicated FT specs.

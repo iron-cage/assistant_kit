@@ -66,6 +66,24 @@
 //! | it50 | `it50_trace_2_rejected`                             | `trace::2` out of range → exit 1 (EC-3)                    | N | no |
 //! | it51 | `it51_trace_yes_rejected`                           | `trace::yes` type error → exit 1 (EC-4)                    | N | no |
 //! | it52 | `it52_trace_default_off`                            | no `trace::` → no [trace] lines on stderr (EC-5)           | P | no |
+//! | it043 | `it043_sort_name_accepted`                         | `sort::name` + empty store → exit 0 (IT-44/AC-01)          | P | no |
+//! | it044 | `it044_sort_endurance_accepted`                     | `sort::endurance` + empty store → exit 0 (IT-45/AC-02)     | P | no |
+//! | it045 | `it045_sort_drain_accepted`                         | `sort::drain` + empty store → exit 0 (IT-46/AC-03)         | P | no |
+//! | it046 | `it046_sort_reset_accepted`                         | `sort::reset` + empty store → exit 0 (IT-47/AC-04)         | P | no |
+//! | it047 | `it047_sort_invalid_value_exit_1`                   | `sort::bogus` → exit 1, stderr names valid values (IT-48/AC-09) | N | no |
+//! | it048 | `it048_prefer_invalid_value_exit_1`                 | `prefer::bogus` → exit 1, stderr names valid values (IT-49/AC-10) | N | no |
+//! | it049 | `it049_usage_help_shows_sort_params`                | `.usage.help` lists `sort`, `desc`, `prefer` (IT-50)       | P | no |
+//! | it050 | `it050_desc_0_accepted`                             | `desc::0` + empty store → exit 0 (026_desc EC-1)           | P | no |
+//! | it051 | `it051_desc_1_accepted`                             | `desc::1` + empty store → exit 0 (026_desc EC-2)           | P | no |
+//! | it052_desc_2_rejected | `it052_desc_2_rejected`            | `desc::2` out of range → exit 1 (026_desc EC-3)            | N | no |
+//! | it053 | `it053_sort_name_desc_0_identical_to_sort_name`     | `sort::name desc::0` same order as `sort::name` (CC-1)     | P | no |
+//! | it054 | `it054_sort_name_desc_1_reverses_order`             | `sort::name desc::1` shows z before a (CC-2)               | P | no |
+//! | it055 | `it055_prefer_any_accepted`                         | `prefer::any` + empty store → exit 0 (027_prefer EC-1)     | P | no |
+//! | it056 | `it056_prefer_opus_accepted`                        | `prefer::opus` + empty store → exit 0 (027_prefer EC-2)    | P | no |
+//! | it057 | `it057_prefer_sonnet_accepted`                      | `prefer::sonnet` + empty store → exit 0 (027_prefer EC-3)  | P | no |
+//! | it058 | `it058_sort_json_unaffected_by_sort_strategy`       | JSON alphabetical regardless of `sort::` strategy (025_sort CC-1) | P | no |
+//! | it059 | `it059_sort_uppercase_rejected`                     | `sort::Name` (uppercase) → exit 1 (case-sensitive)         | N | no |
+//! | it060 | `it060_prefer_uppercase_rejected`                   | `prefer::Opus` (uppercase) → exit 1 (case-sensitive)       | N | no |
 
 use crate::helpers::{
   BIN,
@@ -1620,4 +1638,418 @@ fn it52_trace_default_off()
     !err.contains( "[trace]" ),
     "default (no trace:: param) must not emit [trace] lines on stderr, got:\n{err}",
   );
+}
+
+// ── Sort parameter acceptance (IT-44 – IT-50) ─────────────────────────────────
+
+/// it043 (IT-44/AC-01): `sort::name` accepted with empty credential store → exit 0.
+///
+/// Verifies the parser accepts the `sort::name` value without an unknown-parameter
+/// error. The empty store produces `(no accounts configured)` — confirms the param
+/// is parsed before any fetch occurs.
+/// Source: `tests/docs/cli/command/009_usage.md § IT-44`.
+#[ test ]
+fn it043_sort_name_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "sort::name" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "sort::name must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it044 (IT-45/AC-02): `sort::endurance` accepted with empty credential store → exit 0.
+///
+/// Source: `tests/docs/cli/command/009_usage.md § IT-45`.
+#[ test ]
+fn it044_sort_endurance_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "sort::endurance" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "sort::endurance must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it045 (IT-46/AC-03): `sort::drain` accepted with empty credential store → exit 0.
+///
+/// Source: `tests/docs/cli/command/009_usage.md § IT-46`.
+#[ test ]
+fn it045_sort_drain_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "sort::drain" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "sort::drain must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it046 (IT-47/AC-04): `sort::reset` accepted with empty credential store → exit 0.
+///
+/// Source: `tests/docs/cli/command/009_usage.md § IT-47`.
+#[ test ]
+fn it046_sort_reset_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "sort::reset" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "sort::reset must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it047 (IT-48/AC-09): unknown `sort::` value → exit 1; stderr names all four
+/// valid values so the operator can correct the typo without consulting docs.
+///
+/// Source: `tests/docs/cli/command/009_usage.md § IT-48`.
+#[ test ]
+fn it047_sort_invalid_value_exit_1()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "sort::bogus" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  for value in &[ "name", "endurance", "drain", "reset" ]
+  {
+    assert!(
+      err.contains( value ),
+      "sort::bogus error must name valid value `{value}` (AC-09), got:\n{err}",
+    );
+  }
+}
+
+/// it048 (IT-49/AC-10): unknown `prefer::` value → exit 1; stderr names all three
+/// valid values so the operator can correct the typo without consulting docs.
+///
+/// Source: `tests/docs/cli/command/009_usage.md § IT-49`.
+#[ test ]
+fn it048_prefer_invalid_value_exit_1()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "prefer::bogus" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  for value in &[ "any", "opus", "sonnet" ]
+  {
+    assert!(
+      err.contains( value ),
+      "prefer::bogus error must name valid value `{value}` (AC-10), got:\n{err}",
+    );
+  }
+}
+
+/// it049 (IT-50): `.usage.help` output includes `sort`, `desc`, and `prefer` params.
+///
+/// Verifies the parameter registration in `lib.rs` surfaced correctly to the
+/// help system after TSK-177 added the three sort-control params.
+/// Source: `tests/docs/cli/command/009_usage.md § IT-50`.
+#[ test ]
+fn it049_usage_help_shows_sort_params()
+{
+  let out = run_cs( &[ ".usage.help" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  for param in &[ "sort", "desc", "prefer" ]
+  {
+    assert!(
+      text.contains( param ),
+      ".usage.help must list param `{param}` (IT-50), got:\n{text}",
+    );
+  }
+}
+
+// ── desc:: parameter acceptance and direction (026_desc EC-1–EC-3, CC-1–CC-2) ─
+
+/// it050 (026_desc EC-1): `desc::0` accepted with empty credential store → exit 0.
+///
+/// Verifies the parser accepts `desc::0` as a valid ascending-direction override
+/// without an unknown-parameter or type-mismatch error.
+/// Source: `tests/docs/cli/param/026_desc.md § EC-1`.
+#[ test ]
+fn it050_desc_0_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "desc::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "desc::0 must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it051 (026_desc EC-2): `desc::1` accepted with empty credential store → exit 0.
+///
+/// Verifies the parser accepts `desc::1` as a valid descending-direction override.
+/// Source: `tests/docs/cli/param/026_desc.md § EC-2`.
+#[ test ]
+fn it051_desc_1_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "desc::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "desc::1 must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it052_desc_2_rejected (026_desc EC-3): `desc::2` out of range → exit 1.
+///
+/// `desc::` is a boolean integer param (0 or 1). The `_` arm in `parse_usage_params`
+/// rejects any other integer with `ArgumentTypeMismatch`. Exit 1, stderr non-empty.
+/// Source: `tests/docs/cli/param/026_desc.md § EC-3`.
+#[ test ]
+fn it052_desc_2_rejected()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "desc::2" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!( !stderr( &out ).is_empty(), "desc::2 must produce error on stderr" );
+}
+
+/// it053 (026_desc CC-1): `sort::name desc::0` and `sort::name` produce identical row order.
+///
+/// Explicitly setting `desc::0` on `sort::name` (whose canonical direction is ascending)
+/// must produce the same A→Z output as the implicit default — both display `a@x.com`
+/// before `z@x.com` in the table. No divergence from omitting `desc::`.
+/// Source: `tests/docs/cli/param/026_desc.md § CC-1`.
+#[ test ]
+fn it053_sort_name_desc_0_identical_to_sort_name()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "z@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out_default  = run_cs_with_env( &[ ".usage", "sort::name"           ], &[ ( "HOME", home ) ] );
+  let out_explicit = run_cs_with_env( &[ ".usage", "sort::name", "desc::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_default,  0 );
+  assert_exit( &out_explicit, 0 );
+
+  let text_d = stdout( &out_default );
+  let text_e = stdout( &out_explicit );
+
+  let a_d = text_d.find( "a@x.com" ).expect( "a@x.com must appear in sort::name output" );
+  let z_d = text_d.find( "z@x.com" ).expect( "z@x.com must appear in sort::name output" );
+  let a_e = text_e.find( "a@x.com" ).expect( "a@x.com must appear in sort::name desc::0 output" );
+  let z_e = text_e.find( "z@x.com" ).expect( "z@x.com must appear in sort::name desc::0 output" );
+
+  assert!(
+    a_d < z_d,
+    "sort::name must show a@x.com before z@x.com (ascending), got:\n{text_d}",
+  );
+  assert!(
+    a_e < z_e,
+    "sort::name desc::0 must show a@x.com before z@x.com (026_desc CC-1 — same as implicit default), got:\n{text_e}",
+  );
+}
+
+/// it054 (026_desc CC-2): `sort::name desc::1` reverses alphabetical order — `z@x.com` before `a@x.com`.
+///
+/// `desc::1` on `sort::name` (canonical direction: ascending) produces descending (Z→A) row
+/// order — the behavioral divergence from `sort::name desc::0`.
+/// Source: `tests/docs/cli/param/026_desc.md § CC-2`.
+#[ test ]
+fn it054_sort_name_desc_1_reverses_order()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "z@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "sort::name", "desc::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  let a_pos = text.find( "a@x.com" ).expect( "a@x.com must appear in output" );
+  let z_pos = text.find( "z@x.com" ).expect( "z@x.com must appear in output" );
+  assert!(
+    z_pos < a_pos,
+    "sort::name desc::1 must show z@x.com before a@x.com (026_desc CC-2 — reversed from ascending default), got:\n{text}",
+  );
+}
+
+// ── prefer:: parameter acceptance (027_prefer EC-1–EC-3) ─────────────────────
+
+/// it055 (027_prefer EC-1): `prefer::any` accepted with empty credential store → exit 0.
+///
+/// Verifies the parser accepts `prefer::any` without unknown-parameter or type error.
+/// Source: `tests/docs/cli/param/027_prefer.md § EC-1`.
+#[ test ]
+fn it055_prefer_any_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "prefer::any" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "prefer::any must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it056 (027_prefer EC-2): `prefer::opus` accepted with empty credential store → exit 0.
+///
+/// Source: `tests/docs/cli/param/027_prefer.md § EC-2`.
+#[ test ]
+fn it056_prefer_opus_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "prefer::opus" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "prefer::opus must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it057 (027_prefer EC-3): `prefer::sonnet` accepted with empty credential store → exit 0.
+///
+/// Source: `tests/docs/cli/param/027_prefer.md § EC-3`.
+#[ test ]
+fn it057_prefer_sonnet_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "prefer::sonnet" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "prefer::sonnet must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+// ── Sort × JSON interaction (025_sort CC-1, 004_sort_control CC-1) ────────────
+
+/// it058 (025_sort CC-1 / 004_sort_control CC-1): JSON array order is alphabetical
+/// regardless of `sort::` strategy.
+///
+/// `render_json` always uses the original alphabetical account slice; `sort::` strategy
+/// only reorders text rendering. Accounts written in non-alpha order (`b@x.com` before
+/// `a@x.com`) are sorted by `account::list()` and stay alphabetical in JSON output
+/// regardless of whether `sort::name` or `sort::endurance` is requested (AC-13).
+/// Source: `tests/docs/cli/param/025_sort.md § CC-1`.
+#[ test ]
+fn it058_sort_json_unaffected_by_sort_strategy()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Write in non-alphabetical order to verify account::list() sorts, not filesystem order.
+  write_account( dir.path(), "b@x.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out_name      = run_cs_with_env( &[ ".usage", "sort::name",      "format::json" ], &[ ( "HOME", home ) ] );
+  let out_endurance = run_cs_with_env( &[ ".usage", "sort::endurance", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_name,      0 );
+  assert_exit( &out_endurance, 0 );
+
+  let json_name      = stdout( &out_name );
+  let json_endurance = stdout( &out_endurance );
+
+  let a_n = json_name.find( "a@x.com" ).expect( "a@x.com in sort::name json" );
+  let b_n = json_name.find( "b@x.com" ).expect( "b@x.com in sort::name json" );
+  assert!(
+    a_n < b_n,
+    "sort::name format::json must place a@x.com before b@x.com (alphabetical), got:\n{json_name}",
+  );
+
+  let a_e = json_endurance.find( "a@x.com" ).expect( "a@x.com in sort::endurance json" );
+  let b_e = json_endurance.find( "b@x.com" ).expect( "b@x.com in sort::endurance json" );
+  assert!(
+    a_e < b_e,
+    "sort::endurance format::json must place a@x.com before b@x.com (sort:: does not affect JSON, AC-13), got:\n{json_endurance}",
+  );
+}
+
+// ── Case-sensitivity corner cases ─────────────────────────────────────────────
+
+/// it059: `sort::Name` (capital N) → exit 1 — `SortStrategy::parse` is case-sensitive.
+///
+/// `"Name"` does not match any branch in `SortStrategy::parse`; the underscore arm
+/// returns `ArgumentTypeMismatch`. Exit 1, stderr contains the error message.
+#[ test ]
+fn it059_sort_uppercase_rejected()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "sort::Name" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!( !stderr( &out ).is_empty(), "sort::Name must produce error on stderr (case-sensitive parse)" );
+}
+
+/// it060: `prefer::Opus` (capital O) → exit 1 — `PreferStrategy::parse` is case-sensitive.
+///
+/// `"Opus"` does not match any branch in `PreferStrategy::parse`; the underscore arm
+/// returns `ArgumentTypeMismatch`. Exit 1, stderr contains the error message.
+#[ test ]
+fn it060_prefer_uppercase_rejected()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "prefer::Opus" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  assert!( !stderr( &out ).is_empty(), "prefer::Opus must produce error on stderr (case-sensitive parse)" );
 }

@@ -21,6 +21,55 @@ use claude_quota::OauthUsageData;
 use data_fmt::{ RowBuilder, TableFormatter, Format };
 use crate::output::{ OutputFormat, OutputOptions, format_duration_secs, json_escape };
 
+// ── Sort and prefer strategies ─────────────────────────────────────────────────
+
+#[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
+enum SortStrategy { Name, Endurance, Drain, Reset }
+
+impl SortStrategy
+{
+  fn parse( s : &str ) -> Result< Self, String >
+  {
+    match s
+    {
+      "name"      => Ok( Self::Name ),
+      "endurance" => Ok( Self::Endurance ),
+      "drain"     => Ok( Self::Drain ),
+      "reset"     => Ok( Self::Reset ),
+      _           => Err( format!(
+        "invalid sort:: value {s:?}: valid values are `name`, `endurance`, `drain`, `reset`",
+      ) ),
+    }
+  }
+
+  /// Context-sensitive default `desc` direction for each strategy.
+  ///
+  /// `Endurance` defaults to `true` (best on top). All others default to `false`.
+  fn default_desc( self ) -> bool
+  {
+    matches!( self, SortStrategy::Endurance )
+  }
+}
+
+#[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
+enum PreferStrategy { Any, Opus, Sonnet }
+
+impl PreferStrategy
+{
+  fn parse( s : &str ) -> Result< Self, String >
+  {
+    match s
+    {
+      "any"    => Ok( Self::Any ),
+      "opus"   => Ok( Self::Opus ),
+      "sonnet" => Ok( Self::Sonnet ),
+      _        => Err( format!(
+        "invalid prefer:: value {s:?}: valid values are `any`, `opus`, `sonnet`",
+      ) ),
+    }
+  }
+}
+
 // ── Per-account quota result ───────────────────────────────────────────────────
 
 struct AccountQuota
@@ -440,20 +489,207 @@ fn shorten_error( reason : &str ) -> &str
   }
 }
 
+/// Return `5h Left` as a percentage for sorting purposes.
+///
+/// Returns `100.0 - five_hour.utilization` for `Ok` accounts, or `-1.0` for `Err`
+/// accounts (treated as below-exhausted for drain/reset floor sinking).
+fn five_hour_left( aq : &AccountQuota ) -> f64
+{
+  if let Ok( data ) = &aq.result
+  {
+    100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization )
+  }
+  else
+  {
+    -1.0
+  }
+}
+
+/// Return the weekly quota left (%) for a given `prefer` strategy.
+///
+/// - `Opus`   → `7d Left` only.
+/// - `Sonnet` → `7d(Son)` only.
+/// - `Any`    → `min(7d Left, 7d(Son))` — conservative: whichever cap is more constrained.
+///
+/// Absent period data is treated as `0.0` left. `Err` accounts return `0.0`.
+fn prefer_weekly( aq : &AccountQuota, prefer : PreferStrategy ) -> f64
+{
+  let Ok( data ) = &aq.result else { return 0.0; };
+  let left_7d  = 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization );
+  let left_son = 100.0 - data.seven_day_sonnet.as_ref().map_or( 0.0, |p| p.utilization );
+  match prefer
+  {
+    PreferStrategy::Opus   => left_7d,
+    PreferStrategy::Sonnet => left_son,
+    PreferStrategy::Any    => left_7d.min( left_son ),
+  }
+}
+
+/// Return indices into `accounts` sorted by `strategy` and `desc`.
+///
+/// Each strategy has a canonical direction (its `default_desc()`). Passing
+/// `desc = Some(!strategy.default_desc())` inverts the canonical order.
+///
+/// For `drain` and `reset`, exhausted accounts (`5h Left ≤ 5%`) are always
+/// appended last regardless of `desc`. For `name` and `endurance`, `desc`
+/// reverses the whole slice (no exhausted floor).
+///
+/// See `docs/feature/020_usage_sort_strategies.md` for full algorithm specs.
+#[ allow( clippy::too_many_lines ) ]
+fn sort_indices(
+  accounts  : &[ AccountQuota ],
+  strategy  : SortStrategy,
+  desc      : Option< bool >,
+  prefer    : PreferStrategy,
+  now_secs  : u64,
+) -> Vec< usize >
+{
+  let effective_desc = desc.unwrap_or( strategy.default_desc() );
+  // `reversed`: true when effective direction deviates from the canonical direction.
+  let reversed = effective_desc != strategy.default_desc();
+
+  let all : Vec< usize > = ( 0..accounts.len() ).collect();
+
+  match strategy
+  {
+    SortStrategy::Name =>
+    {
+      let mut v = all;
+      v.sort_by( |&a, &b| accounts[ a ].name.cmp( &accounts[ b ].name ) );
+      if reversed { v.reverse(); }
+      v
+    }
+
+    SortStrategy::Endurance =>
+    {
+      let reset_secs_of = |i : usize| -> Option< u64 >
+      {
+        if let Ok( data ) = &accounts[ i ].result
+        {
+          data.five_hour.as_ref()
+            .and_then( |p| p.resets_at.as_deref() )
+            .and_then( claude_quota::iso_to_unix_secs )
+            .map( |t| t.saturating_sub( now_secs ) )
+        }
+        else { None }
+      };
+
+      let ( mut qualified, mut unqualified ) : ( Vec< usize >, Vec< usize > ) =
+        all.into_iter().partition( |&i|
+        {
+          reset_secs_of( i ).is_some_and( |r| ( 900..=3600 ).contains( &r ) )
+            && prefer_weekly( &accounts[ i ], prefer ) >= 30.0
+        } );
+
+      // Qualified canonical: highest weekly first, then soonest reset.
+      qualified.sort_by( |&a, &b|
+      {
+        let wa = prefer_weekly( &accounts[ a ], prefer );
+        let wb = prefer_weekly( &accounts[ b ], prefer );
+        wb.partial_cmp( &wa ).unwrap_or( core::cmp::Ordering::Equal )
+          .then_with( ||
+          {
+            let ra = reset_secs_of( a ).unwrap_or( u64::MAX );
+            let rb = reset_secs_of( b ).unwrap_or( u64::MAX );
+            ra.cmp( &rb )
+          } )
+      } );
+
+      // Unqualified canonical: highest 5h_left first.
+      unqualified.sort_by( |&a, &b|
+      {
+        let la = five_hour_left( &accounts[ a ] );
+        let lb = five_hour_left( &accounts[ b ] );
+        lb.partial_cmp( &la ).unwrap_or( core::cmp::Ordering::Equal )
+      } );
+
+      let mut result = qualified;
+      result.extend( unqualified );
+      if reversed { result.reverse(); }
+      result
+    }
+
+    SortStrategy::Drain =>
+    {
+      let ( mut non_exhausted, exhausted_vec ) : ( Vec< usize >, Vec< usize > ) =
+        all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 5.0 );
+
+      // Canonical: ascending 5h_left (lowest = most drained first); tiebreak highest weekly.
+      non_exhausted.sort_by( |&a, &b|
+      {
+        let la = five_hour_left( &accounts[ a ] );
+        let lb = five_hour_left( &accounts[ b ] );
+        la.partial_cmp( &lb ).unwrap_or( core::cmp::Ordering::Equal )
+          .then_with( ||
+          {
+            let wa = prefer_weekly( &accounts[ a ], prefer );
+            let wb = prefer_weekly( &accounts[ b ], prefer );
+            wb.partial_cmp( &wa ).unwrap_or( core::cmp::Ordering::Equal )
+          } )
+      } );
+
+      if reversed { non_exhausted.reverse(); }
+      non_exhausted.extend( exhausted_vec );
+      non_exhausted
+    }
+
+    SortStrategy::Reset =>
+    {
+      let reset_secs_of = |i : usize| -> u64
+      {
+        if let Ok( data ) = &accounts[ i ].result
+        {
+          data.five_hour.as_ref()
+            .and_then( |p| p.resets_at.as_deref() )
+            .and_then( claude_quota::iso_to_unix_secs )
+            .map_or( u64::MAX, |t| t.saturating_sub( now_secs ) )
+        }
+        else { u64::MAX }
+      };
+
+      let ( mut non_exhausted, exhausted_vec ) : ( Vec< usize >, Vec< usize > ) =
+        all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 5.0 );
+
+      // Canonical: ascending reset_secs (soonest first); tiebreak ascending 5h_left.
+      non_exhausted.sort_by( |&a, &b|
+      {
+        reset_secs_of( a ).cmp( &reset_secs_of( b ) )
+          .then_with( ||
+          {
+            let la = five_hour_left( &accounts[ a ] );
+            let lb = five_hour_left( &accounts[ b ] );
+            la.partial_cmp( &lb ).unwrap_or( core::cmp::Ordering::Equal )
+          } )
+      } );
+
+      if reversed { non_exhausted.reverse(); }
+      non_exhausted.extend( exhausted_vec );
+      non_exhausted
+    }
+  }
+}
+
 /// Find the index of the recommended next account in an already-sorted slice.
 ///
-/// Selects the non-active, non-current account with the highest `5h Left` among those
-/// with valid quota data and a non-expired token (`expires_in_secs > 0`). Ties are
-/// broken alphabetically — the first (alphabetically) account with equal `5h Left`
-/// wins because the input is already alpha-sorted and strict-greater comparison
-/// is used.
+/// Selects the non-active, non-current account with the highest composite score
+/// among those with valid quota data and a non-expired token (`expires_in_secs > 0`).
+///
+/// Tiebreaker cascade (highest wins at each level):
+///
+/// 1. `5h Left` — primary criterion (most session quota remaining).
+/// 2. `expires_in_secs` — token expiry (prefer longer-lived token).
+/// 3. `7d Left` — weekly quota remaining (prefer more weekly quota).
+/// 4. Alphabetical stability — input is already alpha-sorted and strict-greater
+///    comparison preserves the first alphabetically equal account.
 ///
 /// Skips `is_current` accounts (including the synthetic row) because the user is
 /// already on that session — recommending it would be a no-op.
 fn find_recommendation( accounts : &[ AccountQuota ], now_secs : u64 ) -> Option< usize >
 {
-  let mut best_idx    : Option< usize > = None;
-  let mut best_5h_left : f64            = -1.0;
+  // Composite key: (5h_left, expires_in_secs, 7d_left).
+  // Tuple comparison is lexicographic — first field dominates; later fields break ties.
+  let mut best_idx : Option< usize >  = None;
+  let mut best_key : ( f64, u64, f64 ) = ( -1.0, 0, -1.0 );
 
   for ( idx, aq ) in accounts.iter().enumerate()
   {
@@ -462,12 +698,13 @@ fn find_recommendation( accounts : &[ AccountQuota ], now_secs : u64 ) -> Option
     if expires_in_secs == 0 { continue; }
     if let Ok( data ) = &aq.result
     {
-      let utilization = data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
-      let left = 100.0 - utilization;
-      if left > best_5h_left
+      let five_hour_left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
+      let seven_day_left = data.seven_day.as_ref().map_or( 0.0, |p| 100.0 - p.utilization );
+      let key = ( five_hour_left, expires_in_secs, seven_day_left );
+      if key > best_key
       {
-        best_5h_left = left;
-        best_idx     = Some( idx );
+        best_key = key;
+        best_idx = Some( idx );
       }
     }
   }
@@ -504,12 +741,41 @@ fn quota_text_cells( data : &OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
   ]
 }
 
+/// Return the single-glyph quota status emoji for an account row.
+///
+/// - `"🔴"` — token is invalid or missing (`result` is `Err`).
+/// - `"🟡"` — token valid, `5h Left ≤ 5%` (nearly exhausted).
+/// - `"🟢"` — token valid, `5h Left > 5%` (ample session quota remaining).
+///
+/// Absent `five_hour` period data is treated as fully available (conservative).
+fn status_emoji( result : &Result< claude_quota::OauthUsageData, String > ) -> &'static str
+{
+  match result
+  {
+    Err( _ ) => "🔴",
+    Ok( data ) =>
+    {
+      let left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
+      if left > 5.0 { "🟢" } else { "🟡" }
+    }
+  }
+}
+
 /// Render quota results as a plain-text table using `data_fmt`.
 ///
 /// Empty store renders `(no accounts configured)` without a table.
 /// When ≥2 accounts have valid quota data and a recommendation exists, appends
 /// a footer line: `Valid: X / Y   →  Next: name  (N% session left, token expires in Xh Ym)`.
-fn render_text( accounts : &[ AccountQuota ] ) -> String
+///
+/// The `→ Next` recommendation is always computed on the original alphabetical order
+/// (unaffected by `sort` / `desc`) — AC-11 in `docs/feature/020_usage_sort_strategies.md`.
+#[ allow( clippy::too_many_lines ) ]
+fn render_text(
+  accounts : &[ AccountQuota ],
+  sort     : SortStrategy,
+  desc     : Option< bool >,
+  prefer   : PreferStrategy,
+) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
 
@@ -523,10 +789,13 @@ fn render_text( accounts : &[ AccountQuota ] ) -> String
     .unwrap_or_default()
     .as_secs();
 
+  // Recommendation always uses the original order (AC-11 — sort does not affect → Next).
   let best_idx = find_recommendation( accounts, now_secs );
+  let sorted_indices = sort_indices( accounts, sort, desc, prefer, now_secs );
 
   let headers = vec![
     String::new(),
+    "●".to_string(),
     "Account".to_string(),
     "Expires".to_string(),
     "Sub".to_string(),
@@ -539,8 +808,9 @@ fn render_text( accounts : &[ AccountQuota ] ) -> String
   ];
 
   let mut builder = RowBuilder::new( headers );
-  for ( idx, aq ) in accounts.iter().enumerate()
+  for orig_idx in sorted_indices.iter().copied()
   {
+    let aq = &accounts[ orig_idx ];
     // Four-level priority: ✓ (is_current) > * (is_active, not current) > → (recommendation) > blank.
     let flag_cell = if aq.is_current
     {
@@ -550,7 +820,7 @@ fn render_text( accounts : &[ AccountQuota ] ) -> String
     {
       "*".to_string()
     }
-    else if best_idx == Some( idx )
+    else if best_idx == Some( orig_idx )
     {
       "→".to_string()
     }
@@ -570,7 +840,8 @@ fn render_text( accounts : &[ AccountQuota ] ) -> String
       {
         let cells = quota_text_cells( data, now_secs );
         builder = builder.add_row( vec![
-          flag_cell.into(), aq.name.clone().into(), expires_cell.into(),
+          flag_cell.into(), status_emoji( &aq.result ).into(),
+          aq.name.clone().into(), expires_cell.into(),
           sub_str.into(), renews_str.into(),
           cells[ 0 ].clone().into(), cells[ 1 ].clone().into(),
           cells[ 2 ].clone().into(), cells[ 3 ].clone().into(), cells[ 4 ].clone().into(),
@@ -581,6 +852,7 @@ fn render_text( accounts : &[ AccountQuota ] ) -> String
         let dash = "\u{2014}".to_string();
         builder = builder.add_row( vec![
           flag_cell.into(),
+          status_emoji( &aq.result ).into(),
           aq.name.clone().into(),
           expires_cell.into(),
           sub_str.into(),
@@ -741,6 +1013,9 @@ fn execute_live_mode(
   live_creds_file  : &std::path::Path,
   interval_secs    : u64,
   jitter_secs      : u64,
+  sort             : SortStrategy,
+  desc             : Option< bool >,
+  prefer           : PreferStrategy,
 ) -> Result< OutputData, ErrorData >
 {
   use std::os::raw::{ c_int, c_void };
@@ -786,7 +1061,7 @@ fn execute_live_mode(
     // Fetch with per-account stagger delays (thunder-herd mitigation).
     let accounts = fetch_all_quota( credential_store, live_creds_file, true, false )?;
 
-    let text = render_text( &accounts );
+    let text = render_text( &accounts, sort, desc, prefer );
     print!( "{text}" );
 
     // Compute next-refresh wall-clock time.
@@ -975,6 +1250,12 @@ struct UsageParams
   jitter   : u64,
   /// true = emit `[trace]` diagnostic lines to stderr.
   trace    : bool,
+  /// Row ordering strategy for the text table.
+  sort     : SortStrategy,
+  /// Sort direction override; `None` = use strategy's context-sensitive default.
+  desc     : Option< bool >,
+  /// Weekly quota column selector for strategies that reference weekly availability.
+  prefer   : PreferStrategy,
 }
 
 /// Parse and validate the five `.usage`-specific parameters.
@@ -1038,7 +1319,35 @@ fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorDat
       "trace:: must be 0 or 1".to_string(),
     ) ),
   };
-  Ok( UsageParams { refresh, live, interval, jitter, trace } )
+  let sort = match cmd.arguments.get( "sort" )
+  {
+    None                         => SortStrategy::Name,
+    Some( Value::String( s ) )   => SortStrategy::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "sort:: must be a string".to_string(),
+    ) ),
+  };
+  let desc_param = match cmd.arguments.get( "desc" )
+  {
+    None                        => None,
+    Some( Value::Integer( 0 ) ) => Some( false ),
+    Some( Value::Integer( 1 ) ) => Some( true ),
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "desc:: must be 0 or 1".to_string(),
+    ) ),
+  };
+  let prefer = match cmd.arguments.get( "prefer" )
+  {
+    None                         => PreferStrategy::Any,
+    Some( Value::String( s ) )   => PreferStrategy::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "prefer:: must be a string".to_string(),
+    ) ),
+  };
+  Ok( UsageParams { refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer } )
 }
 
 /// `.usage` — show live quota utilization for all saved accounts.
@@ -1062,7 +1371,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       "format::table is only supported by .accounts".to_string(),
     ) );
   }
-  let UsageParams { refresh, live, interval, jitter, trace } = parse_usage_params( &cmd )?;
+  let UsageParams { refresh, live, interval, jitter, trace, sort, desc, prefer } = parse_usage_params( &cmd )?;
 
   // Live-mode guards — fire BEFORE any network fetch, only when live::1 (AC-31).
   // Pitfall: placing these inside execute_live_mode() (after fetch_all_quota) would
@@ -1103,7 +1412,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
   if live == 1
   {
-    return execute_live_mode( &credential_store, &live_creds_file, interval, jitter );
+    return execute_live_mode( &credential_store, &live_creds_file, interval, jitter, sort, desc, prefer );
   }
 
   let mut accounts = fetch_all_quota( &credential_store, &live_creds_file, false, trace )?;
@@ -1123,7 +1432,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   {
     OutputFormat::Json  => render_json( &accounts ),
     OutputFormat::Text
-    | OutputFormat::Table => render_text( &accounts ),
+    | OutputFormat::Table => render_text( &accounts, sort, desc, prefer ),
   };
 
   Ok( OutputData::new( content, "text" ) )
@@ -2368,6 +2677,75 @@ mod tests
     assert!( find_recommendation( &accounts, 0 ).is_none() );
   }
 
+  /// Tiebreaker level 2 — when `5h Left` is tied, higher `expires_in_secs` wins.
+  #[ test ]
+  fn test_find_recommendation_tiebreaks_by_expiry()
+  {
+    let mk = |name : &str, expires_at_ms : u64| -> AccountQuota
+    {
+      let data = claude_quota::OauthUsageData
+      {
+        five_hour : Some( claude_quota::PeriodUsage { utilization : 0.0, resets_at : None } ),
+        seven_day : None, seven_day_sonnet : None,
+      };
+      AccountQuota
+      {
+        name : name.to_string(), is_current : false, is_active : false,
+        expires_at_ms, result : Ok( data ), account : None,
+      }
+    };
+    // Account 0 expires soon (1 second), account 1 expires far in future.
+    // Both have 5h_left = 100%. Account 1 must win (higher expiry).
+    let accounts = vec![ mk( "soon@test.com", 1_000 ), mk( "later@test.com", FAR_FUTURE_MS ) ];
+    assert_eq!( find_recommendation( &accounts, 0 ), Some( 1 ) );
+  }
+
+  /// Tiebreaker level 3 — when `5h Left` AND `expires_in_secs` are tied, higher `7d Left` wins.
+  #[ test ]
+  fn test_find_recommendation_tiebreaks_by_7d_left()
+  {
+    let mk = |name : &str, seven_day_util : f64| -> AccountQuota
+    {
+      let data = claude_quota::OauthUsageData
+      {
+        five_hour   : Some( claude_quota::PeriodUsage { utilization : 0.0, resets_at : None } ),
+        seven_day   : Some( claude_quota::PeriodUsage { utilization : seven_day_util, resets_at : None } ),
+        seven_day_sonnet : None,
+      };
+      AccountQuota
+      {
+        name : name.to_string(), is_current : false, is_active : false,
+        expires_at_ms : FAR_FUTURE_MS, result : Ok( data ), account : None,
+      }
+    };
+    // Both have 5h_left=100%, same expires. Account 1 has lower 7d utilization (more left).
+    let accounts = vec![ mk( "low7d@test.com", 80.0 ), mk( "high7d@test.com", 20.0 ) ];
+    assert_eq!( find_recommendation( &accounts, 0 ), Some( 1 ) );
+  }
+
+  /// Tiebreaker level 4 — when all criteria tied, alphabetically first (index 0) wins.
+  #[ test ]
+  fn test_find_recommendation_tiebreaks_alphabetically()
+  {
+    let mk = |name : &str| -> AccountQuota
+    {
+      let data = claude_quota::OauthUsageData
+      {
+        five_hour : Some( claude_quota::PeriodUsage { utilization : 0.0, resets_at : None } ),
+        seven_day : Some( claude_quota::PeriodUsage { utilization : 0.0, resets_at : None } ),
+        seven_day_sonnet : None,
+      };
+      AccountQuota
+      {
+        name : name.to_string(), is_current : false, is_active : false,
+        expires_at_ms : FAR_FUTURE_MS, result : Ok( data ), account : None,
+      }
+    };
+    // Alpha-sorted input: "aaa" before "zzz". Identical metrics → "aaa" (index 0) wins.
+    let accounts = vec![ mk( "aaa@test.com" ), mk( "zzz@test.com" ) ];
+    assert_eq!( find_recommendation( &accounts, 0 ), Some( 0 ) );
+  }
+
   // ── secs_to_hms_utc ────────────────────────────────────────────────────────
 
   /// C15 — Zero seconds → "00:00:00".
@@ -2398,13 +2776,101 @@ mod tests
     assert_eq!( secs_to_hms_utc( 45045 ), "12:30:45" );
   }
 
+  // ── status_emoji ────────────────────────────────────────────────────────────
+
+  fn mk_aq_ok( utilization : f64 ) -> AccountQuota
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization, resets_at : None } ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+    };
+    AccountQuota
+    {
+      name : "test@example.com".to_string(), is_current : false, is_active : false,
+      expires_at_ms : FAR_FUTURE_MS, result : Ok( data ), account : None,
+    }
+  }
+
+  fn mk_aq_err() -> AccountQuota
+  {
+    AccountQuota
+    {
+      name : "bad@example.com".to_string(), is_current : false, is_active : false,
+      expires_at_ms : FAR_FUTURE_MS, result : Err( "missing accessToken".to_string() ),
+      account : None,
+    }
+  }
+
+  /// SE-1 — Err result → 🔴.
+  #[ test ]
+  fn test_status_emoji_red()
+  {
+    let aq = mk_aq_err();
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any );
+    assert!( output.contains( "🔴" ), "Err account must show 🔴. Got:\n{output}" );
+  }
+
+  /// SE-2 — Ok, `5h_left` = 90% (util=10.0) → 🟢.
+  #[ test ]
+  fn test_status_emoji_green()
+  {
+    let aq = mk_aq_ok( 10.0 );
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any );
+    assert!( output.contains( "🟢" ), "90% left must show 🟢. Got:\n{output}" );
+  }
+
+  /// SE-3 — Ok, `5h_left` = 3% (util=97.0) → 🟡.
+  #[ test ]
+  fn test_status_emoji_yellow()
+  {
+    let aq = mk_aq_ok( 97.0 );
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any );
+    assert!( output.contains( "🟡" ), "3% left must show 🟡. Got:\n{output}" );
+  }
+
+  /// SE-4 — Boundary: 5% exactly (util=95.0) → 🟡 (inclusive at 5%).
+  /// SE-4b — Boundary: 5.1% (util=94.9) → 🟢.
+  #[ test ]
+  fn test_status_emoji_boundary()
+  {
+    let aq_5pct   = mk_aq_ok( 95.0 );
+    let aq_5_1pct = mk_aq_ok( 94.9 );
+    let out_5    = render_text( &[ aq_5pct ],   SortStrategy::Name, None, PreferStrategy::Any );
+    let out_5_1  = render_text( &[ aq_5_1pct ], SortStrategy::Name, None, PreferStrategy::Any );
+    assert!( out_5.contains( "🟡" ),   "exactly 5% left must show 🟡. Got:\n{out_5}" );
+    assert!( out_5_1.contains( "🟢" ), "5.1% left must show 🟢. Got:\n{out_5_1}" );
+  }
+
+  /// SE-5 — Synthetic current-session row (`is_current=true`) shows correct emoji.
+  #[ test ]
+  fn test_status_emoji_on_synthetic_row()
+  {
+    let mut aq = mk_aq_ok( 20.0 );
+    aq.is_current = true;
+    aq.name = "(current session)".to_string();
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any );
+    assert!( output.contains( "🟢" ), "80% left synthetic row must show 🟢. Got:\n{output}" );
+  }
+
+  /// SE-6 — JSON output must NOT contain emoji (AC-20 no JSON equivalent).
+  #[ test ]
+  fn test_status_emoji_absent_in_json()
+  {
+    let aq = mk_aq_ok( 50.0 );
+    let json = render_json( &[ aq ] );
+    assert!( !json.contains( "🔴" ) && !json.contains( "🟡" ) && !json.contains( "🟢" ),
+      "JSON must not contain status emoji. Got:\n{json}" );
+  }
+
   // ── render_text ─────────────────────────────────────────────────────────────
 
   /// C19 — Empty accounts → "(no accounts configured)".
   #[ test ]
   fn test_render_text_empty()
   {
-    let result = render_text( &[] );
+    let result = render_text( &[], SortStrategy::Name, None, PreferStrategy::Any );
     assert!( result.contains( "no accounts configured" ), "empty must say no accounts, got: {result}" );
   }
 
@@ -2563,5 +3029,338 @@ mod tests
     let label = token_exp_label( u64::MAX );
     assert!( label.starts_with( "valid(" ), "expected valid prefix; got: {label}" );
     assert!( label.ends_with( " left)" ),   "expected ' left)' suffix; got: {label}" );
+  }
+
+  // ── SortStrategy / PreferStrategy enum parsing ──────────────────────────────
+
+  /// AC-09 — `SortStrategy::parse` rejects unknown values with descriptive error.
+  #[ test ]
+  fn test_sort_strategy_parse_invalid_rejected()
+  {
+    let err = SortStrategy::parse( "bogus" ).unwrap_err();
+    assert!( err.contains( "bogus" ),     "error must name the bad value; got: {err}" );
+    assert!( err.contains( "name" ),      "error must name valid values; got: {err}" );
+    assert!( err.contains( "endurance" ), "error must name valid values; got: {err}" );
+    assert!( err.contains( "drain" ),     "error must name valid values; got: {err}" );
+    assert!( err.contains( "reset" ),     "error must name valid values; got: {err}" );
+  }
+
+  /// AC-10 — `PreferStrategy::parse` rejects unknown values with descriptive error.
+  #[ test ]
+  fn test_prefer_strategy_parse_invalid_rejected()
+  {
+    let err = PreferStrategy::parse( "bogus" ).unwrap_err();
+    assert!( err.contains( "bogus" ),   "error must name the bad value; got: {err}" );
+    assert!( err.contains( "any" ),     "error must name valid values; got: {err}" );
+    assert!( err.contains( "opus" ),    "error must name valid values; got: {err}" );
+    assert!( err.contains( "sonnet" ),  "error must name valid values; got: {err}" );
+  }
+
+  // ── sort_indices / sort strategies ────────────────────────────────────────────
+
+  // Helper: build AccountQuota with controlled 5h_left and name.
+  fn mk_aq_sort( name : &str, five_hour_util : f64, expires_at_ms : u64 ) -> AccountQuota
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : five_hour_util, resets_at : None } ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+    };
+    AccountQuota
+    {
+      name : name.to_string(), is_current : false, is_active : false,
+      expires_at_ms, result : Ok( data ), account : None,
+    }
+  }
+
+  fn mk_aq_sort_weekly( name : &str, five_hour_util : f64, seven_day_util : f64, seven_day_sonnet_util : f64 ) -> AccountQuota
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : five_hour_util, resets_at : None } ),
+      seven_day        : Some( claude_quota::PeriodUsage { utilization : seven_day_util, resets_at : None } ),
+      seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : seven_day_sonnet_util, resets_at : None } ),
+    };
+    AccountQuota
+    {
+      name : name.to_string(), is_current : false, is_active : false,
+      expires_at_ms : FAR_FUTURE_MS, result : Ok( data ), account : None,
+    }
+  }
+
+  // Helper: build ISO-8601 reset string at `now_secs + offset_secs` for sort::endurance / sort::reset tests.
+  fn reset_iso_at( now_secs : u64, offset_secs : u64 ) -> String
+  {
+    let ts = now_secs + offset_secs;
+    // Format as minimal ISO-8601 accepted by iso_to_unix_secs: "YYYY-MM-DDTHH:MM:SSZ".
+    let ( y, mo, d ) = unix_to_date( ts );
+    let sod  = ts % 86400;
+    let h    = sod / 3600;
+    let mi   = ( sod % 3600 ) / 60;
+    let s    = sod % 60;
+    format!( "{y:04}-{mo:02}-{d:02}T{h:02}:{mi:02}:{s:02}Z" )
+  }
+
+  fn mk_aq_with_reset( name : &str, five_hour_util : f64, now_secs : u64, reset_offset_secs : u64 ) -> AccountQuota
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage
+      {
+        utilization : five_hour_util,
+        resets_at   : Some( reset_iso_at( now_secs, reset_offset_secs ) ),
+      } ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+    };
+    AccountQuota
+    {
+      name : name.to_string(), is_current : false, is_active : false,
+      expires_at_ms : FAR_FUTURE_MS, result : Ok( data ), account : None,
+    }
+  }
+
+  /// AC-01 — `sort::name` (default) produces alphabetical order; `render_text` names appear A→Z.
+  #[ test ]
+  fn test_sort_name_alphabetical()
+  {
+    let accounts = vec![
+      mk_aq_sort( "zzz@test.com", 50.0, FAR_FUTURE_MS ),
+      mk_aq_sort( "aaa@test.com", 50.0, FAR_FUTURE_MS ),
+      mk_aq_sort( "mmm@test.com", 50.0, FAR_FUTURE_MS ),
+    ];
+    let indices = sort_indices( &accounts, SortStrategy::Name, None, PreferStrategy::Any, 0 );
+    assert_eq!( accounts[ indices[ 0 ] ].name, "aaa@test.com" );
+    assert_eq!( accounts[ indices[ 1 ] ].name, "mmm@test.com" );
+    assert_eq!( accounts[ indices[ 2 ] ].name, "zzz@test.com" );
+  }
+
+  /// AC-01 / AC-05 — `sort::name desc::1` produces Z→A.
+  #[ test ]
+  fn test_sort_name_desc_reverses()
+  {
+    let accounts = vec![
+      mk_aq_sort( "aaa@test.com", 50.0, FAR_FUTURE_MS ),
+      mk_aq_sort( "zzz@test.com", 50.0, FAR_FUTURE_MS ),
+    ];
+    let indices = sort_indices( &accounts, SortStrategy::Name, Some( true ), PreferStrategy::Any, 0 );
+    assert_eq!( accounts[ indices[ 0 ] ].name, "zzz@test.com", "desc::1 must reverse name order" );
+    assert_eq!( accounts[ indices[ 1 ] ].name, "aaa@test.com" );
+  }
+
+  /// AC-03 — `sort::drain` places exhausted (≤5% `5h_left`) accounts last.
+  /// Non-exhausted sorted by `5h_left` ascending (lowest first = drain targets first).
+  #[ test ]
+  fn test_sort_drain_exhausted_sunk_rest_ascending()
+  {
+    // util: 99% → 1% left (exhausted), 75% → 25% left, 30% → 70% left
+    let accounts = vec![
+      mk_aq_sort( "exhausted@test.com", 99.0, FAR_FUTURE_MS ),  // 1% left → exhausted
+      mk_aq_sort( "low@test.com",       75.0, FAR_FUTURE_MS ),  // 25% left
+      mk_aq_sort( "high@test.com",      30.0, FAR_FUTURE_MS ),  // 70% left
+    ];
+    let indices = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
+    assert_eq!( accounts[ indices[ 0 ] ].name, "low@test.com",      "lowest non-exhausted must be first" );
+    assert_eq!( accounts[ indices[ 1 ] ].name, "high@test.com",     "next lowest non-exhausted second" );
+    assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com","exhausted must be last" );
+  }
+
+  /// AC-03 + AC-05 — `sort::drain desc::1` reverses non-exhausted; exhausted stays last.
+  #[ test ]
+  fn test_sort_drain_desc_reverses_non_exhausted_only()
+  {
+    let accounts = vec![
+      mk_aq_sort( "exhausted@test.com", 99.0, FAR_FUTURE_MS ),  // ≤5% — sunk
+      mk_aq_sort( "low@test.com",       75.0, FAR_FUTURE_MS ),  // 25% left
+      mk_aq_sort( "high@test.com",      30.0, FAR_FUTURE_MS ),  // 70% left
+    ];
+    let indices = sort_indices( &accounts, SortStrategy::Drain, Some( true ), PreferStrategy::Any, 0 );
+    assert_eq!( accounts[ indices[ 0 ] ].name, "high@test.com",     "desc::1 drain: highest non-exhausted first" );
+    assert_eq!( accounts[ indices[ 1 ] ].name, "low@test.com",      "desc::1 drain: second" );
+    assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com","exhausted must still be last" );
+  }
+
+  /// AC-04 — `sort::reset` places exhausted accounts last; non-exhausted sorted by soonest reset.
+  #[ test ]
+  fn test_sort_reset_soonest_first_exhausted_last()
+  {
+    let now : u64 = 1_000_000;
+    let accounts = vec![
+      mk_aq_with_reset( "late@test.com",      30.0, now, 7200  ),  // 70% left, 2h reset
+      mk_aq_with_reset( "exhausted@test.com", 99.0, now, 600   ),  // ≤5% left — exhausted
+      mk_aq_with_reset( "soon@test.com",      30.0, now, 600   ),  // 70% left, 10min reset
+    ];
+    let indices = sort_indices( &accounts, SortStrategy::Reset, None, PreferStrategy::Any, now );
+    assert_eq!( accounts[ indices[ 0 ] ].name, "soon@test.com",      "soonest reset must be first" );
+    assert_eq!( accounts[ indices[ 1 ] ].name, "late@test.com",      "later reset second" );
+    assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com", "exhausted must be last" );
+  }
+
+  /// AC-06 — `sort::endurance` without explicit `desc::` equals `desc::1` (qualified first).
+  #[ test ]
+  fn test_sort_endurance_default_equals_desc1()
+  {
+    let now : u64 = 1_000_000;
+    // One qualified: reset in 30min, weekly=50%; one unqualified: reset in 5h, weekly=10%.
+    let accounts = vec![
+      mk_aq_with_reset( "unqualified@test.com", 50.0, now, 18000 ), // 5h reset — too far
+      mk_aq_with_reset( "qualified@test.com",   50.0, now, 1800  ), // 30min reset ✓
+    ];
+    // Add weekly data to qualified account.
+    let mut accounts = accounts;
+    if let Ok( ref mut data ) = accounts[ 1 ].result
+    {
+      data.seven_day = Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } );
+    }
+
+    let idx_default = sort_indices( &accounts, SortStrategy::Endurance, None,         PreferStrategy::Any, now );
+    let idx_desc1   = sort_indices( &accounts, SortStrategy::Endurance, Some( true ), PreferStrategy::Any, now );
+    assert_eq!( idx_default, idx_desc1, "endurance default must equal desc::1" );
+    assert_eq!( accounts[ idx_default[ 0 ] ].name, "qualified@test.com", "qualified must be first with default" );
+  }
+
+  /// AC-06 — `sort::drain` without explicit `desc::` equals `desc::0` (lowest first).
+  #[ test ]
+  fn test_sort_drain_default_equals_desc0()
+  {
+    let accounts = vec![
+      mk_aq_sort( "high@test.com", 30.0, FAR_FUTURE_MS ),  // 70% left
+      mk_aq_sort( "low@test.com",  75.0, FAR_FUTURE_MS ),  // 25% left
+    ];
+    let idx_default = sort_indices( &accounts, SortStrategy::Drain, None,          PreferStrategy::Any, 0 );
+    let idx_desc0   = sort_indices( &accounts, SortStrategy::Drain, Some( false ), PreferStrategy::Any, 0 );
+    assert_eq!( idx_default, idx_desc0, "drain default must equal desc::0" );
+    assert_eq!( accounts[ idx_default[ 0 ] ].name, "low@test.com", "lowest first with default drain" );
+  }
+
+  /// AC-07 — `prefer::sonnet` uses `7d(Son)` for endurance qualification.
+  /// `prefer::any` uses min(7d Left, 7d(Son)).
+  ///
+  /// Account with 7d(Son)=35% but 7d Left=10% is qualified with `prefer::sonnet`, not with `prefer::any`.
+  #[ test ]
+  fn test_prefer_sonnet_qualifies_by_sonnet_quota()
+  {
+    let now : u64 = 1_000_000;
+    let accounts = vec![
+      mk_aq_with_reset( "target@test.com", 50.0, now, 1800 ), // 30min reset
+    ];
+    let mut accounts = accounts;
+    // 7d(Son)=35% left (util=65%), 7d Left=10% left (util=90%).
+    if let Ok( ref mut data ) = accounts[ 0 ].result
+    {
+      data.seven_day        = Some( claude_quota::PeriodUsage { utilization : 90.0, resets_at : None } );
+      data.seven_day_sonnet = Some( claude_quota::PeriodUsage { utilization : 65.0, resets_at : None } );
+    }
+
+    // prefer::any → min(10%, 35%) = 10% < 30% → NOT qualified.
+    let idx_any    = sort_indices( &accounts, SortStrategy::Endurance, None, PreferStrategy::Any,    now );
+    // prefer::sonnet → 35% ≥ 30% → qualified.
+    let idx_sonnet = sort_indices( &accounts, SortStrategy::Endurance, None, PreferStrategy::Sonnet, now );
+    // prefer::opus → 10% < 30% → NOT qualified.
+    let idx_opus   = sort_indices( &accounts, SortStrategy::Endurance, None, PreferStrategy::Opus,   now );
+
+    // Qualification affects position within endurance groups (qualified vs unqualified).
+    // We check via five_hour_left — qualified vs unqualified doesn't change order for single account,
+    // but we can verify prefer_weekly returns the expected value.
+    assert!(
+      prefer_weekly( &accounts[ 0 ], PreferStrategy::Sonnet ) >= 30.0,
+      "prefer::sonnet must return ≥30% for this account",
+    );
+    assert!(
+      prefer_weekly( &accounts[ 0 ], PreferStrategy::Any ) < 30.0,
+      "prefer::any must return <30% (constrained by 7d Left=10%)",
+    );
+    assert!(
+      prefer_weekly( &accounts[ 0 ], PreferStrategy::Opus ) < 30.0,
+      "prefer::opus must return <30% (7d Left=10%)",
+    );
+    // Indices should still cover all accounts.
+    assert_eq!( idx_any.len(), 1 );
+    assert_eq!( idx_sonnet.len(), 1 );
+    assert_eq!( idx_opus.len(), 1 );
+  }
+
+  /// AC-08 — `prefer::` affects drain tiebreak when two accounts have identical `5h_left`.
+  #[ test ]
+  fn test_prefer_opus_tiebreak_in_drain()
+  {
+    // Two accounts, same 5h_left (50% = util 50.0).
+    // Account A: 7d Left=20% (util 80.0), 7d(Son)=80% — prefer::opus uses 7d Left=20%.
+    // Account B: 7d Left=80% (util 20.0), 7d(Son)=20% — prefer::opus uses 7d Left=80%.
+    let accounts = vec![
+      mk_aq_sort_weekly( "low7d@test.com",  50.0, 80.0, 20.0 ),  // 7d Left=20%
+      mk_aq_sort_weekly( "high7d@test.com", 50.0, 20.0, 80.0 ),  // 7d Left=80%
+    ];
+    // With prefer::opus: tiebreak by 7d Left descending → high7d (80%) ranks first in non-exhausted
+    // ascending group... wait: ascending 5h_left is the PRIMARY sort key, then weekly tiebreak.
+    // Both have same 5h_left (50%), so weekly tiebreak applies.
+    // Drain canonical: lowest 5h_left first; tiebreak: highest weekly (prefer) first.
+    // Here both have same 5h_left, so tiebreak by prefer_weekly desc.
+    // prefer::opus: low7d has 20%, high7d has 80%. High weekly = high7d → it's first (index 1 in input = index 0 in output).
+    let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Opus, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "high7d@test.com",
+      "prefer::opus drain tiebreak: higher 7d Left must be first; got: {:?}", accounts[ idx[ 0 ] ].name,
+    );
+  }
+
+  /// AC-13 — `render_json` output is NOT sorted by `sort::` strategy (stays alphabetical).
+  #[ test ]
+  fn test_json_unaffected_by_sort()
+  {
+    let accounts = vec![
+      mk_aq_sort( "zzz@test.com", 30.0, FAR_FUTURE_MS ),  // 70% left
+      mk_aq_sort( "aaa@test.com", 80.0, FAR_FUTURE_MS ),  // 20% left
+    ];
+    let json = render_json( &accounts );
+    // JSON array preserves input order (alphabetical from fetch_all_quota).
+    let zzz_pos = json.find( "zzz@test.com" ).unwrap_or( 0 );
+    let aaa_pos = json.find( "aaa@test.com" ).unwrap_or( usize::MAX );
+    assert!(
+      zzz_pos < aaa_pos,
+      "render_json must preserve input order (not sort:: strategy order); zzz first in input must appear first in JSON",
+    );
+  }
+
+  /// AC-11 — `sort::drain` display order does not affect `→ Next` recommendation footer.
+  ///
+  /// `a@x.com` (`5h_left`=80%) and `b@x.com` (`5h_left`=25%) are both non-active.
+  /// `sort::drain` places `b@x.com` first in display order (lowest `5h_left` first).
+  /// The recommendation must still point to `a@x.com` because `find_recommendation`
+  /// always runs on the original alphabetical accounts slice, not on the display-sorted order.
+  #[ test ]
+  fn test_sort_recommendation_unaffected_by_sort_strategy()
+  {
+    let accounts = vec![
+      // Input order: alphabetical (a before b). Both non-active, both non-current, valid tokens.
+      mk_aq_sort( "a@x.com", 20.0, FAR_FUTURE_MS ),  // 80% left — best recommendation
+      mk_aq_sort( "b@x.com", 75.0, FAR_FUTURE_MS ),  // 25% left — drain target, first in drain order
+    ];
+
+    // sort::drain would place b@x.com (25% left) first in display order.
+    // But render_text calls find_recommendation on the original `accounts` slice (AC-11).
+    let output = render_text( &accounts, SortStrategy::Drain, None, PreferStrategy::Any );
+
+    // Footer should recommend a@x.com (highest 5h_left = 80%), not b@x.com.
+    assert!(
+      output.contains( "a@x.com" ),
+      "output must contain a@x.com; got:\n{output}",
+    );
+    // The → marker must appear on a@x.com's line, not b@x.com's line.
+    let arrow_line = output.lines()
+      .find( |l| l.contains( '→' ) );
+    if let Some( line ) = arrow_line
+    {
+      assert!(
+        line.contains( "a@x.com" ),
+        "→ recommendation must be a@x.com (highest 5h_left), not b@x.com (AC-11); line: {line}",
+      );
+    }
+    // Footer "→  Next: a@x.com" must be present (valid_count >= 2, recommendation exists).
+    assert!(
+      output.contains( "Next: a@x.com" ),
+      "footer must recommend a@x.com regardless of sort::drain display order (AC-11); got:\n{output}",
+    );
   }
 }

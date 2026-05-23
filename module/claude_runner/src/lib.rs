@@ -105,11 +105,13 @@ mod cli
     println!();
     println!( "USAGE:" );
     println!( "  clr [OPTIONS] [MESSAGE]" );
+    println!( "  clr ask      [OPTIONS] [QUESTION]" );
     println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [--trace] [MESSAGE]" );
     println!( "  clr refresh  --creds <FILE> [--timeout <SECS>] [--trace]" );
     println!( "  clr help" );
     println!();
     println!( "COMMANDS:" );
+    println!( "  ask                                Q&A mode with lightweight defaults (effort high, no -c)" );
     println!( "  isolated                           Run Claude with credential-isolated temp HOME" );
     println!( "  refresh                            Refresh OAuth credentials without running a task" );
     println!( "  help                               Print usage information and exit" );
@@ -708,7 +710,7 @@ mod cli
   //   unless a prefix-match guard is also placed before the main argument parser.
   pub( super ) fn guard_unknown_subcommand( tokens : &[ String ] )
   {
-    const KNOWN : &[ &str ] = &[ "isolated", "refresh", "help" ];
+    const KNOWN : &[ &str ] = &[ "ask", "isolated", "refresh", "help" ];
     if let Some( first ) = tokens.first()
     {
       let is_identifier = !first.starts_with( '-' )
@@ -1034,6 +1036,110 @@ mod cli
     run_isolated_command( creds_path, timeout_secs, false, None, &fixed_args );
   }
 
+  /// Print help for the `ask` subcommand and exit 0.
+  ///
+  /// Called when `--help` or `-h` is detected immediately after parsing in `dispatch_ask`.
+  fn print_ask_help() -> !
+  {
+    println!( "clr ask — Single-turn Q&A with lightweight defaults" );
+    println!();
+    println!( "USAGE:" );
+    println!( "  clr ask [OPTIONS] [QUESTION]" );
+    println!();
+    println!( "ARGUMENTS:" );
+    println!( "  [QUESTION]                         Question to ask Claude" );
+    println!();
+    println!( "DEFAULTS (differ from `clr run`):" );
+    println!( "  --effort high                      Reasoning effort (ask default; run uses max)" );
+    println!( "  --max-tokens 16384                 Max output tokens (ask default; run uses 200000)" );
+    println!( "  --new-session                      Always start fresh (no session continuation)" );
+    println!( "  --no-skip-permissions              No auto permission bypass" );
+    println!( "  --no-ultrathink                    No ultrathink suffix" );
+    println!( "  --no-chrome                        Chrome suppressed" );
+    println!( "  --no-persist                       No session persistence" );
+    println!();
+    println!( "OPTIONS (same as `clr run`, overridable):" );
+    println!( "  --effort <LEVEL>                   Override: low, medium, high, max" );
+    println!( "  --max-tokens <N>                   Override max output tokens" );
+    println!( "  --model <MODEL>                    Model to use" );
+    println!( "  --dry-run                          Print command without executing" );
+    println!( "  --trace                            Print command to stderr then execute" );
+    println!( "  --system-prompt <TEXT>             Set system prompt" );
+    println!( "  --append-system-prompt <TEXT>      Append to default system prompt" );
+    println!( "  --dir <PATH>                       Working directory" );
+    println!( "  --session-dir <PATH>               Session storage directory" );
+    println!( "  --verbosity <0-5>                  Runner output verbosity level" );
+    println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
+    println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
+    println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
+    println!( "  --strip-fences                     Strip outermost markdown code fences" );
+    println!( "  -h, --help                         Show this help" );
+    std::process::exit( 0 );
+  }
+
+  /// Parse, validate, and execute the `ask` subcommand.  Never returns.
+  ///
+  /// `ask` is a facade of `run` with Q&A-optimised defaults:
+  ///
+  /// **Unconditional** (cannot be overridden): `no_skip_permissions`, `new_session`,
+  ///   `no_chrome`, `no_persist`, `no_ultrathink`.
+  ///
+  /// **Soft** (CLI wins if explicitly provided, otherwise applied as default):
+  ///   `effort = High`, `max_tokens = 16384`.
+  ///
+  /// Priority chain: CLI flag > CLR_* env var > ask default.
+  pub( super ) fn dispatch_ask( tokens : &[ String ] ) -> !
+  {
+    let mut cli = match parse_args( &tokens[ 1 .. ] )
+    {
+      Ok( c )  => c,
+      Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    };
+    // Help wins before any default is applied.
+    if cli.help { print_ask_help(); }
+    // Unconditional ask pre-sets — override whatever CLI provided.
+    cli.no_skip_permissions = true;
+    cli.new_session         = true;
+    cli.no_chrome           = true;
+    cli.no_persist          = true;
+    cli.no_ultrathink       = true;
+    // Soft defaults — only applied when CLI did not explicitly set the field.
+    cli.effort     = cli.effort.or( Some( EffortLevel::High ) );
+    cli.max_tokens = cli.max_tokens.or( Some( 16384 ) );
+    // Apply CLR_* env var fallbacks (CLI already took precedence during parse_args).
+    apply_env_vars( &mut cli );
+
+    let builder = build_claude_command( &cli );
+
+    if cli.dry_run
+    {
+      handle_dry_run( &builder );
+      std::process::exit( 0 );
+    }
+
+    let verbosity = cli.verbosity.unwrap_or_default();
+
+    if cli.trace || verbosity.shows_verbose_detail()
+    {
+      let env     = builder.describe_env();
+      let command = builder.describe();
+      let mut preview = String::new();
+      if !env.is_empty() { preview.push_str( &env ); preview.push( '\n' ); }
+      preview.push_str( &command );
+      eprintln!( "{preview}" );
+    }
+
+    if cli.print_mode || ( cli.message.is_some() && !cli.interactive )
+    {
+      run_print_mode( &builder, verbosity, cli.strip_fences );
+    }
+    else
+    {
+      run_interactive( &builder, verbosity );
+    }
+    std::process::exit( 0 );
+  }
+
   /// Parse, validate, and execute the `isolated` subcommand.  Never returns.
   pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   {
@@ -1102,7 +1208,7 @@ pub fn run_cli()
   use cli::{
     parse_args, build_claude_command, handle_dry_run,
     print_help, run_print_mode, run_interactive,
-    dispatch_isolated, dispatch_refresh,
+    dispatch_ask, dispatch_isolated, dispatch_refresh,
     apply_env_vars, guard_unknown_subcommand,
   };
 
@@ -1116,6 +1222,7 @@ pub fn run_cli()
   }
 
   // Dispatch subcommands — these functions never return.
+  if tokens.first().map( String::as_str ) == Some( "ask" )      { dispatch_ask( &tokens ); }
   if tokens.first().map( String::as_str ) == Some( "isolated" ) { dispatch_isolated( &tokens ); }
   if tokens.first().map( String::as_str ) == Some( "refresh" )  { dispatch_refresh( &tokens ); }
 

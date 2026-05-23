@@ -30,5 +30,5 @@
 | 017 | [Expired Token Refresh via Isolated Subprocess](017_token_refresh.md) | `refresh::` parameter; retry-on-auth-error via `account::refresh_account_token()`; credential write-back | ✅ |
 | 018 | [Live Quota Monitor Mode](018_live_monitor.md) | `live::`, `interval::`, `jitter::` parameters; continuous refresh with staggered fetches and countdown footer | ✅ |
 | 019 | [Browser Re-Authentication for Named Account](019_account_relogin.md) | `.account.relogin` — spawn `claude` with inherited TTY to refresh a dead `refreshToken`; credential write-back and active restore | ✅ |
-| 020 | [Usage Sort Strategies](020_usage_sort_strategies.md) | Configurable row ordering in `.usage` output — `sort::`, `desc::`, `prefer::` parameters with `name`, `endurance`, `drain`, `reset` strategies | ⏳ |
+| 020 | [Usage Sort Strategies](020_usage_sort_strategies.md) | Configurable row ordering in `.usage` output — `sort::`, `desc::`, `prefer::` parameters with `name`, `endurance`, `drain`, `reset` strategies | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

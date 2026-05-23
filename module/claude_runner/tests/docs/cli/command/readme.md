@@ -27,4 +27,4 @@ Per-command integration test case indices for `clr`. See [001_command.md](../../
 | `help` | [002_help.md](002_help.md) | 8 TC |
 | `isolated` | [003_isolated.md](003_isolated.md) | 9 TC |
 | `refresh` | [004_refresh.md](004_refresh.md) | 8 TC |
-| `ask` | [005_ask.md](005_ask.md) | 8 TC |
+| `ask` | [005_ask.md](005_ask.md) | 9 TC |

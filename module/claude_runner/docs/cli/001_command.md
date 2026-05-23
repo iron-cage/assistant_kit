@@ -319,6 +319,7 @@ All 25 parameters from [`run`](#command--1-run) are accepted. The following defa
 | `clr ask "What is X?"` | **Print (default)** | `execute()` + `--print` (no `-c`) |
 | `clr ask --interactive "What is X?"` | Interactive | `execute_interactive()` (no `-c`) |
 | `clr ask --dry-run "What is X?"` | Preview only | `describe()` / `describe_env()` |
+| `clr ask --trace "What is X?"` | Trace (print then execute) | `describe_env()` + `describe()` to stderr, then `execute()` |
 
 **Exit Codes:**
 
