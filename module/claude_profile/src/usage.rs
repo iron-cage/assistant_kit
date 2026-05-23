@@ -3493,9 +3493,9 @@ mod tests
 
   /// CC-059/CC-060 — `prefer_weekly` with absent period data treats account as fully available (100% left).
   ///
-  /// None `seven_day` → 100% 7d_left for prefer::opus.
-  /// None `seven_day_sonnet` → 100% sonnet_left for prefer::sonnet.
-  /// Verified via drain tiebreak: no-data account outranks explicit-low-data account when 5h_left tied.
+  /// None `seven_day` → 100% `7d_left` for `prefer::opus`.
+  /// None `seven_day_sonnet` → 100% `sonnet_left` for `prefer::sonnet`.
+  /// Verified via drain tiebreak: no-data account outranks explicit-low-data account when `5h_left` tied.
   #[ test ]
   fn test_prefer_weekly_none_periods_treated_as_full()
   {

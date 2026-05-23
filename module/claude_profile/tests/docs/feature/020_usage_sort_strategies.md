@@ -17,6 +17,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-09 | Invalid `sort::` value exits 1 naming valid values | AC-09 | Integration |
 | FT-10 | Invalid `prefer::` value exits 1 naming valid values | AC-10 | Integration |
 | FT-11 | `sort::` does not affect `→ Next` recommendation | AC-11 | Unit test |
+| FT-12 | `prefer::` governs drain tiebreak for tied `5h_left` | AC-08 | Unit test |
 
 ### Test Case Index
 
@@ -33,8 +34,9 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-09 | Invalid sort value rejected | AC-09 | Validation |
 | FT-10 | Invalid prefer value rejected | AC-10 | Validation |
 | FT-11 | Recommendation unaffected by sort | AC-11 | Independence |
+| FT-12 | prefer:: drain tiebreak divergence | AC-08 | Tiebreak |
 
-**Total:** 11 FT cases
+**Total:** 12 FT cases
 
 ---
 
@@ -162,3 +164,16 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Exit:** n/a (unit test against `render_text` + `find_recommendation`)
 - **Source fn:** `test_sort_recommendation_unaffected_by_sort_strategy` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-11](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### FT-12: `prefer::` governs drain tiebreak for tied `5h_left` accounts
+
+- **Given:** Two `AccountQuota` structs with identical `five_hour.utilization` (50% left): `high_son@test.com` (`seven_day.utilization=80%` → 20% left, `seven_day_sonnet.utilization=20%` → 80% left) and `high_any@test.com` (`seven_day.utilization=40%` → 60% left, `seven_day_sonnet.utilization=70%` → 30% left).
+- **When-A:** `sort_indices(..., SortStrategy::Drain, None, PreferStrategy::Sonnet, 0)` — prefer weekly selects `7d(Son)`.
+- **When-B:** `sort_indices(..., SortStrategy::Drain, None, PreferStrategy::Opus, 0)` — prefer weekly selects `7d Left`.
+- **Then-A:** `high_son@test.com` ranks first (80% `7d(Son)` wins tiebreak under `prefer::sonnet`).
+- **Then-B:** `high_any@test.com` ranks first (60% `7d Left` wins tiebreak under `prefer::opus`).
+- **Exit:** n/a (unit test — function return assertion)
+- **Source fn:** `test_sort_drain_prefer_sonnet_tiebreak`, `test_prefer_opus_tiebreak_in_drain` (in `src/usage.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-08](../../../../docs/feature/020_usage_sort_strategies.md)

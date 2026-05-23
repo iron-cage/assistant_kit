@@ -872,6 +872,14 @@ mod cli
     passthrough_args : &[ String ],
   ) -> !
   {
+    // Build args first so trace can emit them before any I/O that may exit early.
+    // This ensures trace fires even when the creds file is missing (matching
+    // `run_refresh_command` which also emits trace before any validation).
+    let mut args : Vec< String > = message
+      .map( | m | vec![ "--print".to_string(), m.to_string() ] )
+      .unwrap_or_default();
+    args.extend_from_slice( passthrough_args );
+    if trace { emit_credential_trace( "isolated", creds_path, &args, timeout_secs ); }
     let creds_json = match std::fs::read_to_string( creds_path )
     {
       Ok( s )  => s,
@@ -881,13 +889,6 @@ mod cli
         std::process::exit( 1 );
       }
     };
-    // Build the args to forward: --print + message when a message is given,
-    // then any passthrough args supplied after `--`.
-    let mut args : Vec< String > = message
-      .map( | m | vec![ "--print".to_string(), m.to_string() ] )
-      .unwrap_or_default();
-    args.extend_from_slice( passthrough_args );
-    if trace { emit_credential_trace( "isolated", creds_path, &args, timeout_secs ); }
     match run_isolated( &creds_json, args, timeout_secs )
     {
       Ok( result ) =>

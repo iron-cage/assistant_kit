@@ -11,6 +11,7 @@ Edge case coverage for the `prefer::` parameter on `.usage`. See [param/027_pref
 | EC-3 | `prefer::sonnet` accepted with empty store | Valid Value |
 | EC-4 | `prefer::bogus` exits 1 and names valid values | Invalid Value |
 | CC-1 | `prefer::` without `sort::` accepted (no-op on default sort::name) | Isolation |
+| CC-2 | `prefer::sonnet` vs `prefer::any` changes endurance qualification | Behavioral Divergence |
 
 ---
 
@@ -62,3 +63,17 @@ Edge case coverage for the `prefer::` parameter on `.usage`. See [param/027_pref
 - **Then:** Exits 0 with "(no accounts configured)". `prefer::` is parsed silently — it only affects sort heuristics, not name/default ordering.
 - **Exit:** 0
 - **Source:** [param/027_prefer.md](../../../../docs/cli/param/027_prefer.md)
+
+---
+
+### CC-2: `prefer::sonnet` vs `prefer::any` changes endurance qualification
+
+- **Behavioral Divergence:** Same `AccountQuota` data under `sort::endurance prefer::sonnet` vs `sort::endurance prefer::any` produces a different qualified/unqualified tier assignment when `7d(Son) ≥ 30%` but `min(7d Left, 7d(Son)) < 30%`.
+- **Given:** One `AccountQuota` struct: `seven_day.utilization=90%` (10% left), `seven_day_sonnet.utilization=65%` (35% left). 5h_reset within 30 min (reset window satisfied).
+- **When-A:** `sort_indices(..., SortStrategy::Endurance, None, PreferStrategy::Sonnet, now_secs)` — `prefer_weekly` = 35% ≥ 30% → **qualified**.
+- **When-B:** `sort_indices(..., SortStrategy::Endurance, None, PreferStrategy::Any, now_secs)` — `prefer_weekly` = min(10%, 35%) = 10% < 30% → **unqualified**.
+- **Then-A:** Account placed in qualified tier (ranked above any unqualified accounts).
+- **Then-B:** Account placed in unqualified tier (ranked below any qualified accounts).
+- **Exit:** n/a (unit test — function return assertion)
+- **Source fn:** `test_prefer_sonnet_qualifies_by_sonnet_quota` (in `src/usage.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-07](../../../../docs/feature/020_usage_sort_strategies.md)

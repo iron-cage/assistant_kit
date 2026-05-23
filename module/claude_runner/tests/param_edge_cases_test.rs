@@ -25,6 +25,7 @@
 //! - S06: `--trace "msg"` stderr contains env vars and command (`13_trace.md` EC-6)
 //! - S58: `isolated --creds <f> --trace "msg"` → `# clr isolated`, `# creds:`, `# timeout: 30s` on stderr (`13_trace.md` EC-7)
 //! - S59: `refresh --creds <f> --trace` → `# clr refresh`, `# creds:`, `# timeout: 45s` on stderr (`13_trace.md` EC-8)
+//! - S60: `isolated --creds /nonexistent --trace "msg"` → trace fires on stderr before creds-read failure (bug reproducer)
 //!
 //! --model:
 //! - S07: positional then `--model` at end of argv → exit 1 (`03_model.md` EC-3)
@@ -1024,6 +1025,70 @@ fn s58_isolated_trace_credential_format()
   );
   let code = out.status.code().unwrap_or( -1 );
   assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace fires before invoke); got {code}" );
+}
+
+// S60: `isolated --creds /nonexistent --trace "msg"` → trace fires even when creds file is missing
+//
+// ## Root Cause (bug_reproducer(issue-isolated-trace-before-creds-read))
+//
+// `run_isolated_command` read the credentials file first (exiting 1 on failure),
+// then emitted trace.  This meant `--trace` produced no output when the creds
+// file was absent — the opposite of `run_refresh_command`, which emits trace
+// BEFORE calling `run_isolated_command` and therefore always fires trace.
+//
+// ## Why Not Caught
+//
+// All trace tests (IT-10, EC-7, S58) used a readable `NamedTempFile` for creds,
+// so the creds-read always succeeded and the ordering bug was invisible.
+//
+// ## Fix Applied
+//
+// Reordered `run_isolated_command`: build args first, emit trace, THEN read creds.
+// Trace now fires before any I/O that may exit early, matching `run_refresh_command`.
+//
+// ## Prevention
+//
+// When adding a new trace-emitting command: emit trace before any validation step
+// that may exit early (e.g. file reads, argument validation).  The invariant
+// "trace fires before subprocess launch" extends to "trace fires before any early
+// exit" so that --trace is always useful for diagnosing failures.
+//
+// ## Pitfall
+//
+// Do not test `--trace` with only a happy-path creds file.  Also verify that
+// trace fires when creds are absent — otherwise the ordering bug can regress silently.
+// test_kind: bug_reproducer(issue-isolated-trace-before-creds-read)
+#[ test ]
+fn s60_isolated_trace_fires_even_with_missing_creds()
+{
+  let missing = "/tmp/s60_nonexistent_creds_file_that_must_not_exist.json";
+  // Precondition: the file really must not exist.
+  assert!(
+    !std::path::Path::new( missing ).exists(),
+    "precondition: {missing} must not exist for this test to be valid"
+  );
+  let out = run_cli( &[ "isolated", "--creds", missing, "--trace", "Fix bug" ] );
+  let err = String::from_utf8_lossy( &out.stderr );
+  // Trace must appear on stderr BEFORE any creds-related error.
+  assert!(
+    err.contains( "# clr isolated" ),
+    "isolated --trace must emit '# clr isolated' on stderr even when creds file is absent. Got:\n{err}"
+  );
+  assert!(
+    err.contains( "# creds:" ),
+    "isolated --trace must emit '# creds:' on stderr even when creds file is absent. Got:\n{err}"
+  );
+  assert!(
+    err.contains( "# timeout: 30s" ),
+    "isolated --trace must emit '# timeout: 30s' on stderr even when creds file is absent. Got:\n{err}"
+  );
+  // After trace, creds-read fails → exit 1.
+  assert_eq!(
+    out.status.code(),
+    Some( 1 ),
+    "isolated with missing creds must exit 1; got {:?}",
+    out.status.code()
+  );
 }
 
 // S59: `refresh --creds <f> --trace` → credential trace format on stderr with 45s timeout (`13_trace.md` EC-8)
