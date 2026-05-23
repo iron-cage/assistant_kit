@@ -2,12 +2,12 @@
 
 ### Scope
 
-- **Purpose**: Document integration and edge case test plans for all cm commands and parameters.
-- **Responsibility**: Index of per-command, per-parameter, and per-group test case planning files.
-- **In Scope**: All 12 cm commands, all 10 parameters, and all 3 parameter groups.
+- **Purpose**: Document integration and edge case test plans for all cm commands, parameters, types, and parameter groups.
+- **Responsibility**: Index of per-command, per-parameter, per-type, and per-group test case planning files.
+- **In Scope**: All 12 cm commands, all 10 parameters, all 5 types, and all 3 parameter groups.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
-3-tier testing organization for `claude_version` CLI, providing distinct audience focus at each level.
+4-tier testing organization for `claude_version` CLI, providing distinct audience focus at each level.
 
 ### Responsibility Table
 
@@ -15,6 +15,7 @@
 |------|----------------|
 | `command/` | Integration test cases per command |
 | `param/` | Edge case tests per parameter |
+| `type/` | Type validation test cases per semantic type |
 | `param_group/` | Interaction tests per parameter group |
 | `procedure.md` | Workflow for creating and updating CLI test tiers |
 
@@ -23,6 +24,7 @@
 | Tier | Location | Purpose | Audience | Test Types |
 |------|----------|---------|----------|-----------|
 | Parameter | `param/*.md` | Validate individual parameter parsing and constraints | Developers | Unit tests, edge cases |
+| Type | `type/*.md` | Validate semantic type parsing, ranges, and inference | Developers | Type validation, boundary |
 | Group | `param_group/*.md` | Test parameter interactions within groups | Developers | Corner cases, dependencies |
 | Command | `command/*.md` | End-to-end command integration | QA / Users | Integration tests, workflows |
 
@@ -30,6 +32,7 @@
 
 - [Command Tests](command/) — Integration tests per command
 - [Parameter Tests](param/) — Edge case tests per parameter
+- [Type Tests](type/) — Type validation tests per semantic type
 - [Parameter Group Tests](param_group/) — Interaction tests per group
 
 ### Commands
@@ -57,6 +60,13 @@
 - [`interval::`](param/008_interval.md)
 - [`count::`](param/009_count.md)
 - [`.help`](param/010_help_param.md)
+
+### Types
+- [`VerbosityLevel`](type/01_verbosity_level.md)
+- [`OutputFormat`](type/02_output_format.md)
+- [`VersionSpec`](type/03_version_spec.md)
+- [`SettingsKey`](type/04_settings_key.md)
+- [`SettingsValue`](type/05_settings_value.md)
 
 ### Parameter Groups
 - [Output Control](param_group/001_output_control.md)

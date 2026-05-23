@@ -28,8 +28,11 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [022_jitter.md](022_jitter.md) | `jitter::` — live mode cycle timing variance |
 | [023_trace.md](023_trace.md) | `trace::` — diagnostic trace output to stderr |
 | [024_field.md](024_field.md) | `field::` — single-path output selector |
+| [025_sort.md](025_sort.md) | `sort::` — row ordering strategy for quota table |
+| [026_desc.md](026_desc.md) | `desc::` — sort direction with context-sensitive default |
+| [027_prefer.md](027_prefer.md) | `prefer::` — weekly quota column for sort heuristics |
 
-**Total:** 24 parameters
+**Total:** 27 parameters
 
 ### Overview Table
 
@@ -59,8 +62,11 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 22 | `jitter::` | `u64` | `0` | 0 ≤ jitter ≤ interval | Live mode cycle timing variance | 1 cmd |
 | 23 | `trace::` | `bool` | `0` | `0`, `1` | Diagnostic trace output to stderr | 1 cmd |
 | 24 | `field::` | `String` | `""` (show all) | `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions` | Single-path output selector | 1 cmd |
+| 25 | `sort::` | `enum` | `name` | `name`, `endurance`, `drain`, `reset` | Row ordering strategy for quota table | 1 cmd |
+| 26 | `desc::` | `bool` | context-sensitive | `0`, `1`, `false`, `true` | Sort direction; default per `sort::` strategy | 1 cmd |
+| 27 | `prefer::` | `enum` | `any` | `any`, `opus`, `sonnet` | Weekly quota column for sort heuristics | 1 cmd |
 
-*Params 1 = Account Targeting; param 2 = Output Control group; params 5–18 = Field Presence group; params 19–23 = Fetch Behavior group; param 24 = Output Selection group*
+*Params 1 = Account Targeting; param 2 = Output Control group; params 5–18 = Field Presence group; params 19–23 = Fetch Behavior group; param 24 = Output Selection group; params 25–27 = Sort Control group*
 
 ### See Also
 

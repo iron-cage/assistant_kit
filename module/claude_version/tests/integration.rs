@@ -22,3 +22,9 @@ mod cross_cutting_test;
 
 #[ path = "integration/error_messages_test.rs" ]
 mod error_messages_test;
+
+#[ path = "integration/feature_surface_test.rs" ]
+mod feature_surface_test;
+
+#[ path = "integration/algorithm_surface_test.rs" ]
+mod algorithm_surface_test;

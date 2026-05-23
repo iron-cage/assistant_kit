@@ -6,6 +6,7 @@ Edge case coverage for the `value::` parameter. See [005_params.md](../../../../
 
 - **Purpose**: Edge case tests for the `value::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `value::`.
+- **Commands:** `.settings.set`
 - **In Scope**: Single-parameter edge cases, validation errors, type inference integration.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -21,11 +22,11 @@ Edge case coverage for the `value::` parameter. See [005_params.md](../../../../
 | EC-3 | `value::""` → JSON string `""` (empty string valid) | Type Inference |
 | TC-321 | `key::k` present but no `value::` → exit 1 | Absent (required) |
 | TC-239 | Without `value::` → error message mentions `value::` | Error Content |
-| EC-1 | `value::1.5` → JSON float (parseable as f64 but not i64) | Type Inference |
-| EC-2 | `value::NaN` → JSON string (not number, NaN is not finite) | Type Inference (edge) |
-| EC-3 | `value::Infinity` → JSON string (not float, infinite) | Type Inference (edge) |
-| EC-1 | `value::true false` (space in value) → JSON string | Type Inference |
-| EC-2 | `value::` (empty, no quotes) → stores `""` | Empty Value |
+| EC-5 | `value::1.5` → JSON float (parseable as f64 but not i64) | Type Inference |
+| EC-6 | `value::NaN` → JSON string (not number, NaN is not finite) | Type Inference (edge) |
+| EC-8 | `value::Infinity` → JSON string (not float, infinite) | Type Inference (edge) |
+| EC-9 | `value::true false` (space in value) → JSON string | Type Inference |
+| EC-10 | `value::` (empty) → exit 1 (empty value rejected) | Empty Value |
 | EC-4 | `value::` only for `.settings.set` | Command Scope |
 | EC-7 | Round-trip: set then get returns identical value | Persistence |
 
@@ -44,7 +45,7 @@ Edge case coverage for the `value::` parameter. See [005_params.md](../../../../
 
 **Total:** 15 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (`value::true` → JSON boolean `true`, exit 0) ↔ EC-2 (`value::0` → JSON integer `0`, not boolean, exit 0)
 
 ---
 
@@ -93,7 +94,7 @@ as empty string, exit 0 with `"s": ""`. Check FR-04 vs FR-07 interaction.; Consi
 
 ---
 
-### EC-1: `value::1.5` → JSON float
+### EC-5: `value::1.5` → JSON float
 
 - **Given:** `HOME=<tmp>`.
 - **When:** `cm .settings.set key::f value::1.5`
@@ -103,7 +104,7 @@ as empty string, exit 0 with `"s": ""`. Check FR-04 vs FR-07 interaction.; Consi
 
 ---
 
-### EC-2: `value::NaN` → JSON string
+### EC-6: `value::NaN` → JSON string
 
 - **Given:** `HOME=<tmp>`.
 - **When:** `cm .settings.set key::x value::NaN`

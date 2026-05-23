@@ -6,12 +6,12 @@ Test case planning for [invariant/003_command_naming.md](../../../../docs/invari
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | `clr help` (bare word) → exit 0, prints usage | Bare Word Command |
+| IT-1 | `clr help` (bare word) → exit 0, prints usage including `ask` | Bare Word Command |
 | IT-2 | `clr --help` (parameter alias) → exit 0, same output | Parameter Alias |
 | IT-3 | `clr` (no args) → interactive REPL, not help | Default Dispatch |
 | IT-4 | `clr run "msg"` (explicit) → dispatches `run` command | Bare Word Command |
 | IT-5 | `clr unknowncmd` → exit 1, unrecognized subcommand error | Unknown Command |
-| IT-6 | No command name begins with `--` in KNOWN_SUBCOMMANDS | Naming Invariant |
+| IT-6 | `KNOWN_SUBCOMMANDS` contains `ask`; no entry begins with `--` | Naming Invariant |
 
 ## Test Coverage Summary
 
@@ -25,11 +25,11 @@ Test case planning for [invariant/003_command_naming.md](../../../../docs/invari
 
 ---
 
-### IT-1: `clr help` (bare word) → exit 0, prints usage
+### IT-1: `clr help` (bare word) → exit 0, prints usage including `ask`
 
 - **Given:** clean environment
 - **When:** `clr help`
-- **Then:** exit 0; stdout contains usage information listing `run`, `isolated`, `refresh`, `help`; bare word dispatch works
+- **Then:** exit 0; stdout contains usage information listing `run`, `isolated`, `refresh`, `ask`, `help`; bare word dispatch works
 - **Exit:** 0
 - **Source:** [invariant/003_command_naming.md](../../../../docs/invariant/003_command_naming.md), [001_command.md — help](../../../../docs/cli/001_command.md#command--4-help)
 
@@ -75,10 +75,10 @@ Test case planning for [invariant/003_command_naming.md](../../../../docs/invari
 
 ---
 
-### IT-6: No command name in KNOWN_SUBCOMMANDS begins with `--`
+### IT-6: `KNOWN_SUBCOMMANDS` contains `ask`; no entry begins with `--`
 
 - **Given:** static analysis of `run_cli()` dispatch in `src/lib.rs`
 - **When:** inspect `KNOWN_SUBCOMMANDS` constant
-- **Then:** none of the entries in `KNOWN_SUBCOMMANDS` starts with `--` or `-`; all are bare words (`run`, `isolated`, `refresh`, `help`)
+- **Then:** `KNOWN_SUBCOMMANDS` includes `ask`; none of the entries starts with `--` or `-`; all are bare words (`run`, `isolated`, `refresh`, `ask`, `help`)
 - **Exit:** N/A (static check)
 - **Source:** [invariant/003_command_naming.md](../../../../docs/invariant/003_command_naming.md)

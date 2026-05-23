@@ -2,7 +2,7 @@
 
 Formal specification of co-dependencies, mutual exclusions, and cascading effects between clp parameters.
 
-### All Interactions (4 total)
+### All Interactions (7 total)
 
 | # | Interaction | Parameters | Effect |
 |---|-------------|------------|--------|
@@ -10,6 +10,9 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 | 2 | `format::json` overrides field-presence params | `format::`, `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::` | JSON output includes all fields regardless of field-presence param values |
 | 3 | `format::table` ignores field-presence params | `format::`, `active::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `role::`, `billing::`, `model::` | Table output uses fixed columns regardless of field-presence param values |
 | 4 | `live::1` is incompatible with `format::json` | `live::`, `format::` | Exits 1 before any fetch with `"live monitor mode is incompatible with format::json"` |
+| 5 | `desc::` default is determined by `sort::` | `sort::`, `desc::` | Each sort strategy has a context-sensitive `desc::` default; explicit `desc::` overrides it |
+| 6 | `prefer::` selects the weekly column used by all sort heuristics | `sort::`, `prefer::` | `prefer::any/opus/sonnet` controls which weekly quota column `endurance`/`drain`/`reset` strategies read |
+| 7 | `sort::` and `desc::` do not affect `format::json` output | `sort::`, `desc::`, `format::` | JSON array order is always alphabetical regardless of `sort::` or `desc::` (stable schema for pipeline consumers) |
 
 ---
 
@@ -99,4 +102,96 @@ clp .usage live::1 interval::60
 # Valid: single-shot JSON fetch without live mode
 clp .usage format::json
 # [...JSON array...]
+```
+
+---
+
+### Interaction :: 5. `desc::` default is determined by `sort::`
+
+**Parameters:** [`sort::`](param/025_sort.md), [`desc::`](param/026_desc.md)
+
+**Effect:** When `sort::` is specified, the `desc::` default changes to match the strategy's natural direction. An explicit `desc::` always overrides the strategy default.
+
+| `sort::` value | `desc::` default | Natural order |
+|----------------|-----------------|---------------|
+| `name` | `0` | A→Z |
+| `endurance` | `1` | Best-qualified on top |
+| `drain` | `0` | Lowest quota on top |
+| `reset` | `0` | Soonest reset on top |
+
+**Rationale:** Each strategy has a single natural direction that matches its workflow goal. Requiring explicit `desc::` in every invocation would be noisy; the default makes the common case require no extra flag.
+
+**Commands affected:** [`.usage`](commands.md#command--9-usage)
+
+**Examples:**
+
+```bash
+# sort::endurance — desc::1 is the default (best on top)
+clp .usage sort::endurance
+# same as: clp .usage sort::endurance desc::1
+
+# sort::drain — desc::0 is the default (lowest quota on top)
+clp .usage sort::drain
+# same as: clp .usage sort::drain desc::0
+
+# Override: reverse drain direction (freshest on top)
+clp .usage sort::drain desc::1
+```
+
+---
+
+### Interaction :: 6. `prefer::` selects the weekly column used by all sort heuristics
+
+**Parameters:** [`sort::`](param/025_sort.md), [`prefer::`](param/027_prefer.md)
+
+**Effect:** `prefer::` determines which weekly quota column is used by sort strategies that reference weekly availability. `prefer::any` (default) uses `min(7d Left, 7d(Son))`; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
+
+**Affected heuristics:**
+- `sort::endurance`: qualification threshold `weekly(prefer) ≥ 30%`
+- `sort::drain`: tiebreaker — highest `weekly(prefer)` among equal `5h Left`
+- `sort::reset`: does not use weekly quota directly
+- `→ Next` recommendation tiebreaker level 3 (TSK-176): weekly(prefer) breaks ties
+
+**Rationale:** Users who know they intend to run Opus or Sonnet can tell the heuristics which quota matters. `prefer::any` is the safe conservative default.
+
+**Commands affected:** [`.usage`](commands.md#command--9-usage)
+
+**Examples:**
+
+```bash
+# Default: conservative weekly column
+clp .usage sort::endurance
+# endurance qualification uses min(7d Left, 7d(Son))
+
+# Opus sessions: only overall weekly quota matters
+clp .usage sort::endurance prefer::opus
+# endurance qualification uses 7d Left
+
+# Sonnet sessions: Sonnet-specific weekly cap is the constraint
+clp .usage sort::drain prefer::sonnet
+# drain tiebreaker uses 7d(Son)
+```
+
+---
+
+### Interaction :: 7. `sort::` and `desc::` do not affect `format::json` output
+
+**Parameters:** [`sort::`](param/025_sort.md), [`desc::`](param/026_desc.md), [`format::`](param/002_format.md)
+
+**Effect:** When `format::json` is specified, the JSON array order is always alphabetical by account name regardless of `sort::` or `desc::` values.
+
+**Rationale:** JSON consumers rely on stable, predictable schemas. Row ordering is a visual/display concern for human-readable text output; injecting sort-strategy-dependent ordering into JSON would break pipeline consumers that expect consistent structure and make scripts fragile to `sort::` changes.
+
+**Commands affected:** [`.usage`](commands.md#command--9-usage)
+
+**Examples:**
+
+```bash
+# sort::endurance has no effect on JSON array order
+clp .usage sort::endurance format::json
+# [...array always alphabetical by name...]
+
+# desc::1 has no effect on JSON array order
+clp .usage sort::drain desc::1 format::json
+# [...array always alphabetical by name...]
 ```

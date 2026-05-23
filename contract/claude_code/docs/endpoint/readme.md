@@ -24,7 +24,7 @@
 
 ### Supplementary Reference
 
-- [011_account_field_index.md](011_account_field_index.md) — cross-endpoint field inventory: every account field from endpoints 001–005 organized by concept domain (user identity, billing, organization, token lifecycle), with overlap analysis and a coverage matrix.
+- [account_field_index.md](account_field_index.md) — cross-endpoint field inventory: every account field from endpoints 001–005 organized by concept domain (user identity, billing, organization, token lifecycle), with overlap analysis and a coverage matrix.
 
 ### Type-Specific Requirements
 

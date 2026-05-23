@@ -6,9 +6,9 @@ Live quota utilization commands.
 
 ### Command :: 9. `.usage`
 
-Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with per-account Expires, Sub, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), and 7d Reset columns, plus a footer recommendation line. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
+Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus Expires, Sub, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), and 7d Reset columns, and a footer recommendation line. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
--- **Parameters:** [`format::`](../param/002_format.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md)
+-- **Parameters:** [`format::`](../param/002_format.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid param combination) | 2 (runtime: credential store unreadable, HOME unset)
 
 **Syntax:**
@@ -21,6 +21,10 @@ clp .usage live::1
 clp .usage live::1 interval::60 jitter::10
 clp .usage live::1 refresh::1 interval::60
 clp .usage refresh::1 trace::1
+clp .usage sort::endurance
+clp .usage sort::drain prefer::sonnet
+clp .usage sort::endurance desc::0
+clp .usage sort::reset prefer::opus
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -31,6 +35,9 @@ clp .usage refresh::1 trace::1
 | `interval::` | `u64` | `30` | Seconds between refresh cycles (≥ 30; only validated when `live::1`) |
 | `jitter::` | `u64` | `0` | Max random seconds added to each cycle delay (≤ interval; only validated when `live::1`) |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
+| `sort::` | `enum` | `name` | Row ordering strategy: `name` (alphabetical), `endurance` (sustained session), `drain` (use up low-quota first), `reset` (soonest quota refill) |
+| `desc::` | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy (`name`/`drain`/`reset`→`0`, `endurance`→`1`) |
+| `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any` = `min(7d Left, 7d(Son))`, `opus` = `7d Left`, `sonnet` = `7d(Son)` |
 
 **Examples:**
 
@@ -38,12 +45,13 @@ clp .usage refresh::1 trace::1
 clp .usage
 # Quota
 #
-#   Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
-# ✓ i12@wbox.pro    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
-# → i6@wbox.pro     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
-#   i7@wbox.pro     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
+#   ●  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
+# ✓ 🟢 i12@wbox.pro    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
+# → 🟢 i6@wbox.pro     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
+#   🟡 i9@wbox.pro     in 1h 12m  max  Jun  8   3%       in 0h 23m  52%      18%      in 2d 11h
+#   🔴 i7@wbox.pro     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
 #
-# Valid: 2 / 3   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 02m)
+# Valid: 3 / 4   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 02m)
 
 clp .usage live::1 interval::60 jitter::10
 # Quota
@@ -56,6 +64,7 @@ clp .usage live::1 interval::60 jitter::10
 **Notes:**
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
 - Flag column priority: `✓` = current account, `*` = `_active`-but-not-current (divergence), `→` = recommended next account. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
+- Status emoji column (`●`): `🟢` = valid token + 5h Left > 5%; `🟡` = valid token + 5h Left ≤ 5% (session exhausted); `🔴` = invalid/missing token. No JSON equivalent.
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
 - `Sub` and `~Renews` are sourced from `GET /api/oauth/account` (parallel fetch); show `?` when that fetch fails.
 - Accounts with expired or missing `accessToken` show `—` for quota columns and a shortened error reason.

@@ -1,0 +1,39 @@
+# Type :: 5. `SettingsValue`
+
+-- **Summary:** Value to write to a settings entry; automatically type-inferred for JSON storage.
+-- **Base Type:** String (auto-typed for JSON serialization)
+-- **Constraints:** non-empty; any UTF-8 string
+-- **Default:** (required)
+-- **Used By:** `value::`
+
+- **Base type:** String (auto-typed for JSON serialization)
+- **Constraints:** non-empty; any UTF-8 string
+- **Validation:** `"value:: is required"` if missing; `"value:: value cannot be empty"` if empty
+
+**Type Inference Rules:**
+
+| Input | Inferred Type | JSON Output |
+|-------|---------------|-------------|
+| `"true"` / `"false"` | Bool | `true` / `false` |
+| Integer string (e.g., `"42"`) | Number (i64) | `42` |
+| Finite float string (e.g., `"3.14"`) | Number (f64) | `3.14` |
+| `"NaN"`, `"inf"`, `"infinity"` | String | `"NaN"`, `"inf"` |
+| Everything else | String | `"value"` |
+
+**Note:** Non-finite floats (`NaN`, `inf`, `infinity` and variants) are
+classified as strings because they are not valid JSON number literals.
+Special characters (`"`, `\`) in string values are properly escaped.
+
+```sh
+cm .settings.set key::autoUpdate value::true    # -> true (bool)
+cm .settings.set key::timeout value::30         # -> 30 (number)
+cm .settings.set key::theme value::dark         # -> "dark" (string)
+cm .settings.set key::rate value::3.14          # -> 3.14 (number)
+cm .settings.set key::special value::NaN        # -> "NaN" (string)
+```
+
+### Referenced Parameters
+
+| # | Parameter |
+|---|-----------|
+| 1 | [`value::`](../param/07_value.md) |

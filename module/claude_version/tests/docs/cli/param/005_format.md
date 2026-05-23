@@ -6,6 +6,7 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 
 - **Purpose**: Edge case tests for the `format::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `format::`.
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -27,11 +28,11 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 | EC-4 | `format::` (empty) → exit 1 | Empty Value |
 | TC-440 | `.version.history format::xml` → exit 1 | Invalid |
 | TC-441 | `.version.history format::JSON` → exit 1 | Invalid (case) |
-| EC-1 | Default (absent) → `format::text` | Default Behavior |
-| EC-2 | `format::text` explicit → same as absent | Explicit text |
-| EC-3 | `format::csv` → exit 1 | Invalid |
-| EC-4 | `format::` only for output-returning commands | Command Scope |
-| EC-5 | JSON output always starts with `{` or `[` depending on command | Structure |
+| EC-6 | Default (absent) → `format::text` | Default Behavior |
+| EC-7 | `format::text` explicit → same as absent | Explicit text |
+| EC-8 | `format::csv` → exit 1 | Invalid |
+| EC-9 | `format::` only for output-returning commands | Command Scope |
+| EC-10 | JSON output always starts with `{` or `[` depending on command | Structure |
 
 ## Test Coverage Summary
 
@@ -47,7 +48,7 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 
 **Total:** 19 edge cases
 
-**Behavioral Divergence Pair:** EC-5 (valid/expected path) ↔ EC-1 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (`format::json` → JSON output, exit 0) ↔ EC-6 (absent → `format::text` output, exit 0)
 
 ---
 
@@ -101,7 +102,7 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 
 ---
 
-### EC-1: Default (absent) → `format::text`
+### EC-6: Default (absent) → `format::text`
 
 - **Given:** clean environment
 - **When:** `cm .status`
@@ -111,7 +112,17 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 
 ---
 
-### EC-3: `format::csv` → exit 1
+### EC-7: `format::text` explicit → same as absent
+
+- **Given:** clean environment
+- **When:** `cm .status format::text`
+- **Then:** Behavior identical to `cm .status`; no JSON output.; explicit text equals absent
+- **Exit:** 0
+- **Source:** [005_params.md — format:: default: text](../../../../docs/cli/005_params.md)
+
+---
+
+### EC-8: `format::csv` → exit 1
 
 - **Given:** clean environment
 - **When:** `cm .status format::csv`
@@ -121,7 +132,7 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 
 ---
 
-### EC-4: `format::` only for output-returning commands
+### EC-9: `format::` only for output-returning commands
 
 - **Given:** clean environment
 - **When:** `cm .settings.set format::json`
@@ -131,12 +142,13 @@ Edge case coverage for the `format::` parameter. See [005_params.md](../../../..
 
 ---
 
-### EC-5: JSON structure per command
+### EC-10: JSON structure per command
 
 - **Given:** clean environment
-- **When:** 
-- **Then:** see spec
+- **When:** `cm .status format::json` and `cm .version.list format::json`
+- **Then:** `.status` output starts with `{`; `.version.list` output starts with `[`; both parse as valid JSON
 - **Exit:** 0
+- **Source:** [005_params.md](../../../../docs/cli/005_params.md)
 
 ---
 

@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Document the cm command-line interface for Claude Code version and settings management.
-- **Responsibility**: Reference documentation for commands, parameters, types, and workflows.
-- **In Scope**: commands, params, types, parameter groups, dictionary, workflows, parameter interactions.
+- **Responsibility**: Reference documentation for commands, parameters, types, output formats, and user stories.
+- **In Scope**: commands, params, types, parameter groups, dictionary, user stories, output formats, environment parameters, config parameters, parameter interactions.
 - **Out of Scope**: Implementation design and behavioral contracts — validation rules, exit code semantics, pipeline architecture (→ `feature/`), design rationale (→ `001_design_decisions.md`), test planning (→ `tests/docs/cli/`).
 
 Manage Claude Code installation: versions, processes, and settings.
@@ -20,28 +20,34 @@ cm <.command> [param::value ...]
 | File | L1 | L2 | L3 | L4 | L5 | Status |
 |------|----|----|----|----|----|--------|
 | readme.md | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
-| 001_commands.md | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
-| 005_params.md | ✅ | ✅ | ✅ | ✅ | ✅ | Complete |
+| command/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (6 files) |
+| param/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (12 files) |
+| type/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (7 files) |
+| param_group/ | ✅ | ✅ | ✅ | ✅ | ✅ | Complete (5 files) |
 | 002_dictionary.md | ➖ | ✅ | ➖ | ➖ | ➖ | Complete |
-| 006_types.md | ➖ | ➖ | ✅ | ✅ | ✅ | Complete |
-| 003_parameter_groups.md | ➖ | ➖ | ✅ | ✅ | ✅ | Complete |
 | 004_parameter_interactions.md | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| 007_workflows.md | ➖ | ➖ | ✅ | ➖ | ➖ | Complete |
-| procedure.md | ➖ | ➖ | ➖ | ➖ | ➖ | Entity Infrastructure |
+| env_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
+| config_param.md | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity |
+| user_story/ | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity (5 instances) |
+| format/ | ➖ | ➖ | ✅ | ➖ | ➖ | L3 Entity (2 instances) |
+| format/procedure.md | ➖ | ➖ | ➖ | ➖ | ➖ | Entity Infrastructure |
 
-**Current Level:** L4 (Specification Complete)
+**Current Level:** L5 (Bidirectionally Complete)
 **Design Completeness:** 100%
 **Implementation Status:** Complete (12 commands implemented)
 
 ### Navigation
 
-- [Commands](001_commands.md) — command reference
-- [Parameters](005_params.md) — flag reference
-- [Types](006_types.md) — semantic type definitions
-- [Parameter Groups](003_parameter_groups.md) — logical parameter groupings
+- [Commands](command/readme.md) — command reference
+- [Parameters](param/readme.md) — flag reference
+- [Types](type/readme.md) — semantic type definitions
+- [Parameter Groups](param_group/readme.md) — logical parameter groupings
 - [Parameter Interactions](004_parameter_interactions.md) — cross-parameter constraints
 - [Dictionary](002_dictionary.md) — domain vocabulary
-- [Workflows](007_workflows.md) — common usage patterns
+- [User Stories](user_story/readme.md) — persona-goal scenarios
+- [Formats](format/readme.md) — output format catalog
+- [Environment Parameters](env_param.md) — environment variable reference
+- [Config Parameters](config_param.md) — config file reference
 
 ### See Also
 

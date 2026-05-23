@@ -10,7 +10,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `cli/` | CLI reference: commands, flags, types, parameter groups, workflows |
+| `cli/` | CLI reference: commands, flags, types, parameter groups, user stories, formats |
 | `001_design_decisions.md` | Key design rationale for the CLI redesign |
 | `feature/` | Version management, process lifecycle, settings, dry-run, CLI design |
 | `pattern/` | 5-layer version lock design pattern |

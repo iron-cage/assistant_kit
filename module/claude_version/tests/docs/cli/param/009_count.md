@@ -6,6 +6,7 @@ Edge case coverage for the `count::` parameter. See [005_params.md](../../../../
 
 - **Purpose**: Edge case tests for the `count::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `count::`.
+- **Commands:** `.version.history`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -22,10 +23,10 @@ Edge case coverage for the `count::` parameter. See [005_params.md](../../../../
 | EC-4 | `count::-1` → parse error → exit 1 | Invalid: negative |
 | TC-447 | `v::abc` → exit 1 (type mismatch) | (companion: v:: type) |
 | EC-5 | `count::abc` → exit 1 (type mismatch) | Invalid: type |
-| EC-1 | `count::0` exits 0 (empty is not an error) | Empty vs Error |
-| EC-2 | `count::` (empty) → exit 1 | Empty Value |
-| EC-3 | `count::` only accepted by `.version.history` | Command Scope |
-| EC-4 | Very large count (`count::9999`) → capped at data size | Boundary: very large |
+| EC-8 | `count::0` exits 0 (empty is not an error) | Empty vs Error |
+| EC-9 | `count::` (empty) → exit 1 | Empty Value |
+| EC-10 | `count::` only accepted by `.version.history` | Command Scope |
+| EC-11 | Very large count (`count::9999`) → capped at data size | Boundary: very large |
 | EC-6 | `count::18446744073709551615` (u64::MAX) → exit 1 | Overflow: above i64::MAX |
 | EC-7 | `count::9223372036854775807` (i64::MAX) accepted → exit 0 | Boundary: i64::MAX |
 
@@ -43,7 +44,7 @@ Edge case coverage for the `count::` parameter. See [005_params.md](../../../../
 
 **Total:** 15 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (`count::0` → empty output, exit 0) ↔ EC-2 (absent → default 10 entries, exit 0)
 
 ---
 
@@ -98,7 +99,7 @@ Edge case coverage for the `count::` parameter. See [005_params.md](../../../../
 
 ---
 
-### EC-1: `count::0` is valid-empty (not an error)
+### EC-8: `count::0` is valid-empty (not an error)
 
 - **Given:** Network available.
 - **When:** `cm .version.history count::0`
@@ -108,7 +109,7 @@ Edge case coverage for the `count::` parameter. See [005_params.md](../../../../
 
 ---
 
-### EC-2: `count::` (empty) → exit 1
+### EC-9: `count::` (empty) → exit 1
 
 - **Given:** clean environment
 - **When:** `cm .version.history count::`
@@ -118,7 +119,7 @@ Edge case coverage for the `count::` parameter. See [005_params.md](../../../../
 
 ---
 
-### EC-3: `count::` only for `.version.history`
+### EC-10: `count::` only for `.version.history`
 
 - **Given:** clean environment
 - **When:** `cm .version.list count::3`
@@ -128,7 +129,7 @@ Edge case coverage for the `count::` parameter. See [005_params.md](../../../../
 
 ---
 
-### EC-4: Very large `count::9999` → capped at data size
+### EC-11: Very large `count::9999` → capped at data size
 
 - **Given:** Network available.
 - **When:** `cm .version.history count::9999 v::0`

@@ -6,7 +6,7 @@ Add a new file when a new named output format (`format::value`) is introduced to
 
 ### Steps
 
-1. Create `NN_name.md` where `NN` is the next sequential number and `name` matches the format value exactly.
+1. Create `NNN_name.md` where `NNN` is the next sequential three-digit number and `name` matches the format value exactly.
 2. Fill in: Scope, rendering rules, field catalog, Referenced Commands, Referenced User Stories.
 3. Add a row to `format/readme.md` Format File Index.
 4. Add `format::name` to all applicable command parameter tables in `001_commands.md`.

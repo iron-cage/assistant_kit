@@ -1,0 +1,35 @@
+# Parameter :: 27. `prefer::`
+
+Selects which weekly quota column is used by sort strategies and recommendation heuristics. Determines whether the overall weekly quota (`7d Left`), the Sonnet-specific weekly quota (`7d(Son)`), or the more constrained of the two is considered.
+
+- **Type:** `enum`
+- **Default:** `any`
+- **Constraints:** `any`, `opus`, `sonnet`
+- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage)
+- **Purpose:** Tell the sort/recommendation heuristics which model the user intends to run.
+- **Group:** Sort Control
+
+**Values:**
+
+| Value | Weekly column used | When to use |
+|-------|-------------------|-------------|
+| `any` | `min(7d Left, 7d(Son))` | Default — conservative, uses whichever limit is more constrained |
+| `opus` | `7d Left` | Running Opus — only overall weekly quota matters |
+| `sonnet` | `7d(Son)` | Running Sonnet — Sonnet-specific weekly cap matters |
+
+**Affected heuristics:**
+- `sort::endurance` qualification: weekly(prefer) ≥ 30%
+- `sort::drain` tiebreaker: highest weekly(prefer) wins ties
+- `sort::reset` does not use weekly quota directly
+- `→ Next` recommendation tiebreaker level 3 (TSK-176): highest weekly(prefer) breaks `5h Left` + expiry ties
+
+**Examples:**
+
+```text
+prefer::any       → min(7d Left, 7d(Son)) — conservative (default)
+prefer::opus      → 7d Left — for Opus sessions
+prefer::sonnet    → 7d(Son) — for Sonnet sessions
+
+sort::endurance prefer::sonnet   → endurance filter uses 7d(Son) ≥ 30%
+sort::drain prefer::opus         → drain tiebreaker uses 7d Left
+```

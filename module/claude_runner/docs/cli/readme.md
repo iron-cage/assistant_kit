@@ -26,12 +26,12 @@ clr [OPTIONS] [MESSAGE]
 | 005_type.md | ✅ | ➖ | ➖ | ➖ | ➖ | Partial |
 | 004_param_group.md | ✅ | ➖ | ➖ | ➖ | ➖ | Partial |
 | user_story/readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| user_story/ (14 instances) | ✅ | ✅ | ➖ | ➖ | ➖ | Partial |
+| user_story/ (15 instances) | ✅ | ✅ | ➖ | ➖ | ➖ | Partial |
 | 003_env_param.md | ✅ | ➖ | ✅ | ➖ | ➖ | Complete |
 | config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A |
 | format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A |
 | tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
-| tests/docs/cli/command/*.md (3 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/command/*.md (5 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param/*.md (27 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param_group/*.md (4 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/type/*.md (12 types; 12 test specs) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
@@ -43,12 +43,12 @@ clr [OPTIONS] [MESSAGE]
 
 ### Navigation
 
-- [Commands](001_command.md) — command reference (4 commands)
+- [Commands](001_command.md) — command reference (5 commands)
 - [Parameters](param/readme.md) — flag and argument reference (27 parameters)
 - [Types](005_type.md) — semantic type definitions (12 types)
 - [Parameter Groups](004_param_group.md) — logical parameter groupings (4 groups)
 - [Dictionary](002_dictionary.md) — domain vocabulary
-- [User Stories](user_story/readme.md) — user goals and usage patterns (14 user stories)
+- [User Stories](user_story/readme.md) — user goals and usage patterns (15 user stories)
 - [Env Parameters](003_env_param.md) — input and subprocess environment variables (29 variables)
 
 ### See Also

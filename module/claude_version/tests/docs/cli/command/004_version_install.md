@@ -182,88 +182,250 @@ TC-357 verifies dry-run has zero side effects on settings.
 ### IT-1: `dry::1` → `[dry-run]` prefix
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.install dry::1`
-  **Expected:** Exit 0; stdout contains `[dry-run]`.
-- **Then:** dry-run marker present
+- **When:** `cm .version.install dry::1`
+- **Then:** exit 0; stdout contains `[dry-run]`
 - **Exit:** 0
+- **Source:** [feature/004_dry_run.md](../../../../docs/feature/004_dry_run.md)
 
 ---
 
 ### IT-2: `dry::1 force::1` → dry wins
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.install dry::1 force::1`
-  **Expected:** Exit 0; stdout contains `[dry-run]`; no install.
-- **Then:** preview mode only
+- **When:** `cm .version.install dry::1 force::1`
+- **Then:** exit 0; stdout contains `[dry-run]`; no actual install executed
 - **Exit:** 0
+- **Source:** [004_parameter_interactions.md](../../../../docs/cli/004_parameter_interactions.md)
 
 ---
 
 ### IT-3: `version::STABLE` → exit 1
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.install version::STABLE`
-  **Expected:** Exit 1.
-- **Then:** see spec
+- **When:** `cm .version.install version::STABLE`
+- **Then:** exit 1; version alias is case-sensitive; wrong-case alias rejected
 - **Exit:** 1
+- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
 
 ---
 
 ### IT-4: `version::01.02.03` → leading zeros rejected
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.install version::01.02.03`
-  **Expected:** Exit 1.
-- **Then:** see spec
+- **When:** `cm .version.install version::01.02.03`
+- **Then:** exit 1; leading-zero semver is invalid per VersionSpec rules
 - **Exit:** 1
+- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
 
 ---
 
 ### IT-5: `bogus::x` → unknown parameter, exit 1
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.install bogus::x`
-  **Expected:** Exit 1.
-- **Then:** see spec
+- **When:** `cm .version.install bogus::x`
+- **Then:** exit 1; unknown parameter rejected by adapter
 - **Exit:** 1
+- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
 
 ---
 
 ### IT-6: `dry::1 format::json` → JSON object output
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.install dry::1 format::json`
-  **Expected:** Exit 0; stdout starts with `{`.
-- **Then:** JSON object output
+- **When:** `cm .version.install dry::1 format::json`
+- **Then:** exit 0; stdout starts with `{`; valid JSON object
 - **Exit:** 0
+- **Source:** [feature/004_dry_run.md](../../../../docs/feature/004_dry_run.md)
 
 ---
 
 ### IT-7: `format::JSON` (uppercase) → exit 1
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.install format::JSON`
-  **Expected:** Exit 1.
-- **Then:** see spec
+- **When:** `cm .version.install format::JSON`
+- **Then:** exit 1; format value is case-sensitive; uppercase rejected
 - **Exit:** 1
+- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
 
 ---
 
 ### IT-8: `dry::2` → out-of-range boolean, exit 1
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.install dry::2`
-  **Expected:** Exit 1.
-- **Then:** see spec
+- **When:** `cm .version.install dry::2`
+- **Then:** exit 1; boolean value out of range (must be 0 or 1)
 - **Exit:** 1
+- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+
+---
+
+### TC-301: `version::stable dry::1` → preview shows `stable`
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::stable dry::1`
+- **Then:** exit 0; stdout contains `[dry-run]` and mentions `stable`
+- **Exit:** 0
+- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
+
+---
+
+### TC-302: `version::1.2.3 dry::1` → preview shows exact version
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::1.2.3 dry::1`
+- **Then:** exit 0; stdout contains `[dry-run]` and `1.2.3`; semver preserved verbatim
+- **Exit:** 0
+- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
+
+---
+
+### TC-305: `version::` (empty) → exit 1
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::`
+- **Then:** exit 1; empty version value rejected
+- **Exit:** 1
+- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+
+---
+
+### TC-306: `version::1.2` → two-part semver, exit 1
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::1.2`
+- **Then:** exit 1; two-part semver is not a valid VersionSpec
+- **Exit:** 1
+- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+
+---
+
+### TC-307: `version::x` → unknown alias, exit 1
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::x`
+- **Then:** exit 1; unrecognized alias rejected
+- **Exit:** 1
+- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+
+---
+
+### TC-308: Absent `version::` with `dry::1` → defaults to `stable`
+
+- **Given:** clean environment
+- **When:** `cm .version.install dry::1` (no `version::` parameter)
+- **Then:** exit 0; stdout mentions `stable` as the resolved default version
+- **Exit:** 0
+- **Source:** [005_params.md — version:: default: stable](../../../../docs/cli/005_params.md)
+
+---
+
+### TC-309: `version::month dry::1` → resolves to pinned semver
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::month dry::1`
+- **Then:** exit 0; stdout contains pinned semver for the `month` alias (e.g., `2.1.74`)
+- **Exit:** 0
+- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
+
+---
+
+### TC-350: `version::latest dry::1` → autoUpdates=true in preview
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::latest dry::1`
+- **Then:** exit 0; preview output indicates unlock action (`autoUpdates=true`)
+- **Exit:** 0
+- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
+
+---
+
+### TC-351: `version::stable dry::1` → autoUpdates=false in preview
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::stable dry::1`
+- **Then:** exit 0; preview output indicates lock action (`autoUpdates=false`)
+- **Exit:** 0
+- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
+
+---
+
+### TC-352: `version::2.1.50 dry::1` → autoUpdates=false in preview
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::2.1.50 dry::1`
+- **Then:** exit 0; preview shows lock action; semver triggers 5-layer lock
+- **Exit:** 0
+- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
+
+---
+
+### TC-353: `version::latest dry::1` → previews unlock actions
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::latest dry::1`
+- **Then:** exit 0; stdout describes unlock steps (remove DISABLE_AUTOUPDATER, chmod 755)
+- **Exit:** 0
+- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
+
+---
+
+### TC-355: `version::0.0.0 dry::1` → single-zero parts valid
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::0.0.0 dry::1`
+- **Then:** exit 0; `0.0.0` is a valid semver (zeros in all parts are accepted)
+- **Exit:** 0
+- **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+
+---
+
+### TC-356: `dry::1` output mentions preferred version storage
+
+- **Given:** clean environment
+- **When:** `cm .version.install dry::1`
+- **Then:** exit 0; stdout references preference storage action (preview only, not written)
+- **Exit:** 0
+- **Source:** [feature/004_dry_run.md](../../../../docs/feature/004_dry_run.md)
+
+---
+
+### TC-357: `dry::1` does NOT write preference keys
+
+- **Given:** `HOME=<tmp>`; `settings.json` starts empty
+- **When:** `cm .version.install version::stable dry::1`
+- **Then:** exit 0; `settings.json` has no `preferredVersionSpec` key after command
+- **Exit:** 0
+- **Source:** [feature/004_dry_run.md](../../../../docs/feature/004_dry_run.md)
+
+---
+
+### TC-358: Idempotent skip still stores preference
+
+- **Given:** `HOME=<tmp>`; target version already installed
+- **When:** `cm .version.install version::stable`
+- **Then:** exit 0; `settings.json` contains `preferredVersionSpec` = `"stable"`
+- **Exit:** 0
+- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
+
+---
+
+### TC-359: `version::stable dry::1` → output includes purge line
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::stable dry::1`
+- **Then:** exit 0; stdout includes a purge/cleanup step (layer 4 of 5-layer lock)
+- **Exit:** 0
+- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
+
+---
+
+### TC-360: `version::latest dry::1` → output does NOT contain "purge"
+
+- **Given:** clean environment
+- **When:** `cm .version.install version::latest dry::1`
+- **Then:** exit 0; stdout does NOT contain "purge" (unlocking does not purge binaries)
+- **Exit:** 0
+- **Source:** [feature/001_version_management.md](../../../../docs/feature/001_version_management.md)
 
 ---
 

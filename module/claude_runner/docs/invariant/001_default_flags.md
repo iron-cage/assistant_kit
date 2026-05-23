@@ -2,14 +2,14 @@
 
 ### Scope
 
-- **Purpose**: Document the automatic flag injection behavior that must be maintained across all clr invocations.
+- **Purpose**: Document the automatic flag injection behavior that must be maintained across all `clr run` invocations.
 - **Responsibility**: State which flags are injected by default, their opt-out mechanism, and why the defaults exist.
 - **In Scope**: Automatic `-c` injection, `--dangerously-skip-permissions` default-on, `--chrome` builder default, `"\n\nultrathink"` message suffix default-on, `--effort max` default-on, `CLAUDECODE` env var removal default-on, `--new-session` override, `--no-skip-permissions` opt-out, `--no-ultrathink` opt-out, `--no-effort-max` opt-out, `--no-chrome` opt-out, `--keep-claudecode` opt-out.
 - **Out of Scope**: Dependency constraints (→ `invariant/002_dep_constraints.md`), execution mode behavior (→ `feature/001_runner_tool.md`).
 
 ### Invariant Statement
 
-`clr` must inject the following flags on every invocation unless explicitly overridden:
+`clr run` must inject the following flags on every invocation unless explicitly overridden. These defaults apply to the `run` command (including the implicit default when no subcommand is given). The `ask` command is a facade of `run` with a different set of defaults — see [001_command.md — ask](../cli/001_command.md#command--5-ask).
 
 | Flag | Default | Override | Rationale |
 |------|---------|----------|-----------|

@@ -5,11 +5,11 @@
 - **Purpose**: Cross-parameter constraints and dependency rules.
 - **Responsibility**: Interaction table, validation order, mutual exclusions, and combined semantics.
 - **In Scope**: Pairwise and group-level parameter interactions.
-- **Out of Scope**: Individual parameter details (→ `005_params.md`), group membership (→ `003_parameter_groups.md`).
+- **Out of Scope**: Individual parameter details (→ `param/`), group membership (→ `param_group/`).
 
-How cm parameters interact when combined. See [005_params.md](005_params.md) and [003_parameter_groups.md](003_parameter_groups.md) for individual parameter specifications.
+How cm parameters interact when combined. See [param/](param/readme.md) and [param_group/](param_group/readme.md) for individual parameter specifications.
 
-## Interaction Table
+### Interaction Table
 
 | Parameters | Interaction | Outcome |
 |------------|-------------|---------|
@@ -22,7 +22,7 @@ How cm parameters interact when combined. See [005_params.md](005_params.md) and
 | `version::` + `force::1` | Additive | Installs specified version; skips "already installed" guard |
 | `version::` + `dry::1` | Additive | Shows install plan for specified version; no install occurs |
 
-## Required Combinations
+### Required Combinations
 
 `.settings.set` requires both `key::` and `value::`:
 
@@ -32,7 +32,7 @@ How cm parameters interact when combined. See [005_params.md](005_params.md) and
 .settings.set value::dark              -- key:: missing: exit 1
 ```
 
-## Precedence Rules
+### Precedence Rules
 
 When `dry::1` and `force::1` are both present, `dry::` takes precedence:
 
@@ -42,7 +42,7 @@ When `dry::1` and `force::1` are both present, `dry::` takes precedence:
   -- Action: no install executed (dry wins)
 ```
 
-## Independent Parameters
+### Independent Parameters
 
 `v::` and `format::` operate on orthogonal dimensions (depth vs structure) and do not interact:
 
@@ -50,14 +50,14 @@ When `dry::1` and `force::1` are both present, `dry::` takes precedence:
 - `format::json` controls the structure of those fields
 - Combining them applies both transformations independently
 
-## Scope
+### Parameter Applicability
 
-`version::` applies to version commands: `.version.install`, `.version.guard` (override-only on guard; stored preference unchanged).
+`version::` applies to: [`.version.install`](command/version.md#command--4-versioninstall), [`.version.guard`](command/version.md#command--5-versionguard) (override-only on guard; stored preference unchanged).
 
-`dry::` applies to mutation commands: `.version.install`, `.version.guard`, `.processes.kill`, `.settings.set`.
+`dry::` applies to: [`.version.install`](command/version.md#command--4-versioninstall), [`.version.guard`](command/version.md#command--5-versionguard), [`.processes.kill`](command/processes.md#command--8-processeskill), [`.settings.set`](command/settings.md#command--11-settingsset).
 
-`force::` applies to mutation commands with safety guards: `.version.install`, `.version.guard`, `.processes.kill`.
+`force::` applies to: [`.version.install`](command/version.md#command--4-versioninstall), [`.version.guard`](command/version.md#command--5-versionguard), [`.processes.kill`](command/processes.md#command--8-processeskill).
 
-`v::` applies to output-capable commands: `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`.
+`v::` applies to: [`.status`](command/root.md#command--2-status), [`.version.show`](command/version.md#command--3-versionshow), [`.version.install`](command/version.md#command--4-versioninstall), [`.version.list`](001_commands.md#command--6-version-list), [`.version.guard`](command/version.md#command--5-versionguard), [`.version.history`](001_commands.md#command--12-version-history), [`.processes`](001_commands.md#command--7-processes), [`.processes.kill`](command/processes.md#command--8-processeskill), [`.settings.show`](001_commands.md#command--9-settings-show), [`.settings.get`](001_commands.md#command--10-settings-get).
 
-`format::` applies to output-capable commands: `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`.
+`format::` applies to: [`.status`](command/root.md#command--2-status), [`.version.show`](command/version.md#command--3-versionshow), [`.version.install`](command/version.md#command--4-versioninstall), [`.version.list`](001_commands.md#command--6-version-list), [`.version.guard`](command/version.md#command--5-versionguard), [`.version.history`](001_commands.md#command--12-version-history), [`.processes`](001_commands.md#command--7-processes), [`.processes.kill`](command/processes.md#command--8-processeskill), [`.settings.show`](001_commands.md#command--9-settings-show), [`.settings.get`](001_commands.md#command--10-settings-get).

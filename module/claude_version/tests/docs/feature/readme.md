@@ -11,8 +11,8 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| 001_version_management.md | FT- test cases for version install/guard/history/aliases | ⏳ |
-| 002_process_lifecycle.md | FT- test cases for /proc scanning and SIGTERM/SIGKILL | ⏳ |
-| 003_settings_management.md | FT- test cases for settings.json read/write/type-preservation | ⏳ |
-| 004_dry_run.md | FT- test cases for dry::1 preview mode across mutation commands | ⏳ |
-| 005_cli_design.md | FT- test cases for 5-phase unilang pipeline and exit codes | ⏳ |
+| 001_version_management.md | FT- test cases for version install/guard/history/aliases | ✅ |
+| 002_process_lifecycle.md | FT- test cases for /proc scanning and SIGTERM/SIGKILL | ✅ |
+| 003_settings_management.md | FT- test cases for settings.json read/write/type-preservation | ✅ |
+| 004_dry_run.md | FT- test cases for dry::1 preview mode across mutation commands | ✅ |
+| 005_cli_design.md | FT- test cases for 5-phase unilang pipeline and exit codes | ✅ |

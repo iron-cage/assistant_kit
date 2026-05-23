@@ -67,6 +67,7 @@ All parameters are forwarded to the subprocess as-is. The runner applies no tran
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|-----------|-----------------|-------|
 | 1 | `run` | all | — | |
+| 2 | `ask` | all | — | same params as `run`; only defaults differ |
 
 ### Referenced Tests
 
@@ -141,6 +142,7 @@ not a control flag. `--help` is handled separately as a universal override.
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|-----------|-----------------|-------|
 | 1 | `run` | all | — | |
+| 2 | `ask` | all | — | same params as `run`; only defaults differ |
 
 ### Referenced Tests
 
@@ -212,6 +214,7 @@ Both parameters produce system-prompt-related subprocess flags (`--system-prompt
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|-----------|-----------------|-------|
 | 1 | `run` | all | — | |
+| 2 | `ask` | all | — | same params as `run`; only defaults differ |
 
 ### Referenced Tests
 

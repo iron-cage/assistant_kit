@@ -16,7 +16,7 @@ Every `clr` command must be a bare word (no `-` or `--` prefix). Only parameters
 | command | none (bare word) | first positional token | `run`, `isolated`, `refresh`, `help` |
 | parameter | `--` or `-` | anywhere after command | `--model`, `--creds`, `-p`, `--trace` |
 
-**All commands (4):**
+**All commands (5):**
 
 | Command | Dispatch | Notes |
 |---------|----------|-------|
@@ -24,6 +24,7 @@ Every `clr` command must be a bare word (no `-` or `--` prefix). Only parameters
 | `isolated` | explicit first token | `clr isolated --creds ...` |
 | `refresh` | explicit first token | `clr refresh --creds ...` |
 | `help` | explicit first token | `clr help` |
+| `ask` | explicit first token | `clr ask "question"` |
 
 **Convenience aliases:** `--help` and `-h` are parameter-form aliases for the `help` command. They trigger identical behavior (`print_help()` + exit 0). The canonical invocation is `clr help`; the flag aliases exist for POSIX convention compliance.
 
@@ -33,10 +34,11 @@ Command dispatch in `run_cli()` uses exact string matching on the first non-flag
 
 1. `tokens.first() == Some("isolated")` -> dispatch to `parse_isolated_args()`
 2. `tokens.first() == Some("refresh")` -> dispatch to `parse_refresh_args()`
-3. `tokens.first() == Some("help")` -> call `print_help()` and return
-4. Otherwise -> fall through to `parse_args()` (implicit `run`)
+3. `tokens.first() == Some("ask")` -> dispatch to `parse_ask_args()`
+4. `tokens.first() == Some("help")` -> call `print_help()` and return
+5. Otherwise -> fall through to `parse_args()` (implicit `run`)
 
-The `KNOWN_SUBCOMMANDS` guard checks for typos/truncations of all registered subcommands before `parse_args()` is reached.
+The `KNOWN_SUBCOMMANDS` guard checks for typos/truncations of all registered subcommands (`isolated`, `refresh`, `ask`, `help`) before `parse_args()` is reached.
 
 `--help`/`-h` flag aliases are handled inside `parse_args()` as a pre-scan fast-path (before any flag parsing) for backward compatibility.
 

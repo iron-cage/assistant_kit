@@ -11,4 +11,4 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| 001_version_lock.md | PT- test cases for 5-layer version lock strategy | ⏳ |
+| 001_version_lock.md | PT- test cases for 5-layer version lock strategy | ✅ |

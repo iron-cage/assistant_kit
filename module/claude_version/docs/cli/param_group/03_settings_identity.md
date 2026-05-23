@@ -1,0 +1,40 @@
+# Group :: 3. Settings Identity
+
+-- **Summary:** Parameters that identify the settings entry being operated on.
+-- **Parameters:** `key::`, `value::`
+-- **Coherence Test:** "Does this parameter identify the settings entry?"
+
+Both parameters specify the target of a settings read or write.
+
+**Parameters:**
+
+| Parameter | Type | Purpose |
+|-----------|------|---------|
+| [`key::`](../param/06_key.md) | [`SettingsKey`](../type/04_settings_key.md) | Entry name |
+| [`value::`](../param/07_value.md) | [`SettingsValue`](../type/05_settings_value.md) | Entry value (type-inferred) |
+
+**Partial implementors:** `.settings.get` implements `key::` only (read operation — no `value::`).
+
+**Why NOT in this group:**
+- `version::`: specifies installation target, not settings target
+- `dry::`: controls execution mode, not target identification
+
+**Typical usage:**
+
+```sh
+cm .settings.get key::theme
+cm .settings.set key::theme value::dark
+```
+
+### Referenced Commands
+
+| # | Command | Membership |
+|---|---------|-----------|
+| 1 | [`.settings.get`](../command/settings.md#command--10-settingsget) | Partial (`key::` only) |
+| 2 | [`.settings.set`](../command/settings.md#command--11-settingsset) | Full (`key::`, `value::`) |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|-----------|---------|
+| 1 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |

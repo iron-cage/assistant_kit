@@ -6,7 +6,7 @@ Master index of all documentation entities and their instances for `claude_profi
 
 | Entity | Directory | Count | Responsibility |
 |--------|-----------|-------|----------------|
-| Feature | [feature/](feature/readme.md) | 19 | Functional requirements (FR-6 – FR-22) |
+| Feature | [feature/](feature/readme.md) | 20 | Functional requirements (FR-6 – FR-22) |
 | Invariant | [invariant/](invariant/readme.md) | 6 | Non-functional constraints (NFR-1, NFR-3 – NFR-6) + design-time governing principles |
 | CLI Design | [cli/](cli/readme.md) | 7 | Command, parameter, and workflow reference |
 
@@ -35,6 +35,7 @@ Master index of all documentation entities and their instances for `claude_profi
 | 017 | [feature/017_token_refresh.md](feature/017_token_refresh.md) | — | `refresh::` param; retry-on-auth-error via `account::refresh_account_token()`; credential write-back |
 | 018 | [feature/018_live_monitor.md](feature/018_live_monitor.md) | — | `live::`, `interval::`, `jitter::` params; continuous refresh with staggered fetches |
 | 019 | [feature/019_account_relogin.md](feature/019_account_relogin.md) | — | Browser re-authentication for named or active account with dead refreshToken |
+| 020 | [feature/020_usage_sort_strategies.md](feature/020_usage_sort_strategies.md) | — | Configurable `.usage` row ordering: `sort::`, `desc::`, `prefer::` with 4 strategies |
 
 ---
 
@@ -56,7 +57,7 @@ Master index of all documentation entities and their instances for `claude_profi
 | File | Responsibility |
 |------|----------------|
 | [cli/command/](cli/command/readme.md) | Per-command specification for all 13 commands (11 visible + 2 hidden) |
-| [cli/param/](cli/param/readme.md) | Per-parameter specification (24 params, one file each) |
+| [cli/param/](cli/param/readme.md) | Per-parameter specification (27 params, one file each) |
 | [cli/param_group/](cli/param_group/readme.md) | Parameter grouping, shared behavior, and output-control groups |
 | [cli/type/](cli/type/readme.md) | Input type definitions and validation rules (4 types) |
 | [cli/workflow_scenario/](cli/workflow_scenario/readme.md) | End-to-end workflow examples (10 scenarios) |

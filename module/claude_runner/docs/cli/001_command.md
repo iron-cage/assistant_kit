@@ -1,6 +1,6 @@
 # Commands
 
-### All Commands (4 total)
+### All Commands (5 total)
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
@@ -8,8 +8,9 @@
 | 2 | `isolated` | Run Claude with credential-isolated temp HOME | 4 | `clr isolated --creds creds.json "Fix bug"` |
 | 3 | `refresh` | Refresh OAuth credentials without running a task | 3 | `clr refresh --creds creds.json` |
 | 4 | `help` | Print usage information and exit | 0 | `clr help` |
+| 5 | `ask` | Quick Q&A with lightweight defaults (facade of `run`) | 25 | `clr ask "What does X do?"` |
 
-**Total:** 4 commands
+**Total:** 5 commands
 
 ---
 
@@ -280,3 +281,77 @@ clr --help
 anywhere in argv are parameter aliases that trigger identical behavior. All
 three forms override any other flags. Empty argv (no arguments) enters
 interactive mode, not help.
+
+---
+
+### Command :: 5. `ask`
+
+Quick single-turn Q&A with lightweight defaults. Facade of `run` — accepts the same
+25 parameters but with defaults tuned for read-only, single-turn consultation. No
+tools, no session continuation, no extended thinking unless explicitly overridden.
+
+**Syntax:**
+
+```sh
+clr ask [OPTIONS] [MESSAGE]
+```
+
+**Parameters:**
+
+All 25 parameters from [`run`](#command--1-run) are accepted. The following defaults differ:
+
+| Parameter | `run` default | `ask` default | Notes |
+|-----------|---------------|---------------|-------|
+| [`-p`/`--print`](param/002_print.md) | auto | **true** | Always on for `ask` |
+| [`--no-skip-permissions`](param/005_no_skip_permissions.md) | false | **true** | No bypass by default |
+| [`--new-session`](param/007_new_session.md) | false | **true** | No continuation by default |
+| [`--max-tokens`](param/009_max_tokens.md) | 200000 | **16384** | Shorter default for Q&A |
+| [`--no-ultrathink`](param/014_no_ultrathink.md) | false | **true** | No suffix by default |
+| [`--effort`](param/017_effort.md) | max | **high** | Lower reasoning default |
+| [`--no-chrome`](param/021_no_chrome.md) | false | **true** | No browser by default |
+| [`--no-persist`](param/022_no_persist.md) | false | **true** | No session state by default |
+
+**Execution Modes:**
+
+| Invocation | Mode | Path |
+|------------|------|------|
+| `clr ask` | Interactive REPL | `execute_interactive()` (no `-c`) |
+| `clr ask "What is X?"` | **Print (default)** | `execute()` + `--print` (no `-c`) |
+| `clr ask --interactive "What is X?"` | Interactive | `execute_interactive()` (no `-c`) |
+| `clr ask --dry-run "What is X?"` | Preview only | `describe()` / `describe_env()` |
+
+**Exit Codes:**
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Error (parse failure, execution error) |
+| N | Passthrough from claude subprocess |
+
+**Examples:**
+
+```sh
+# Quick Q&A
+clr ask "What does the ClaudeCommand builder do?"
+
+# Ask about a specific file
+clr ask --file src/lib.rs "Summarize the public API"
+
+# Override effort for complex analysis
+clr ask --effort max "Analyze this architectural decision"
+
+# Override token limit for a detailed answer
+clr ask --max-tokens 200000 "Explain Rust lifetime rules in detail"
+```
+
+**Notes:**
+
+`ask` is a facade of `run` — same parameter set, same execution path, different defaults.
+Parameters without a counterpart opt-in flag (e.g., `--no-chrome`, `--no-persist`) cannot
+be reversed within `ask`; use `run` when full control is needed.
+
+### Referenced User Stories
+
+| # | User Story | Notes |
+|---|-----------|-------|
+| 1 | [015 Ask Mode](user_story/015_ask_mode.md) | Primary user story for `ask` |

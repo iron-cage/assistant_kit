@@ -25,6 +25,7 @@
 | 012_code_block_extraction.md | User story: strip code fence from captured output |
 | 013_structured_json_pipeline.md | User story: generate schema-constrained JSON for downstream tools |
 | 014_credential_refresh.md | User story: refresh OAuth credentials without running a task |
+| 015_ask_mode.md | User story: quick Q&A with lightweight defaults |
 
 ### Index
 
@@ -44,3 +45,4 @@
 | 012 | Code Block Extraction | `--strip-fences` | `run` |
 | 013 | Structured JSON Pipeline | `--json-schema`, `--strip-fences` | `run` |
 | 014 | Credential Refresh | `--creds`, `--timeout`, `--trace` | `refresh` |
+| 015 | Ask Mode | `[MESSAGE]`, `--effort`, `--max-tokens` | `ask` |

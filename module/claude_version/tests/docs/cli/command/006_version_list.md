@@ -57,6 +57,8 @@ Every invocation exits 0 in a valid environment. No runtime failures exist.
 | TC-122 | Output includes "month" alias | P | 0 | F1=absent | [read_commands_test.rs] |
 | TC-123 | `v::1` shows pinned versions in parens `(vX.Y.Z)` | P | 0 | F1=1 | [read_commands_test.rs] |
 | TC-124 | `format::json` has `"value"` field | P | 0 | F2=json | [read_commands_test.rs] |
+| IT-7 | `format::json` → valid JSON output | P | 0 | F2=json | new |
+| IT-8 | Output is stable across repeated invocations | P | 0 | F1=absent | new |
 
 ### Negative Tests
 
@@ -65,8 +67,6 @@ Every invocation exits 0 in a valid environment. No runtime failures exist.
 | IT-4 | `bogus::x` → exit 1, unknown parameter | N | 1 | F3=present | new |
 | IT-5 | `format::xml` → exit 1, unknown format | N | 1 | F2=xml | new |
 | IT-6 | `v::3` → exit 1, out of range | N | 1 | F1=3 | new |
-| IT-7 | `format::json` → valid JSON output | P | 0 | F2=json | new |
-| IT-8 | Output is stable across repeated invocations | P | 0 | F1=absent | new |
 
 ### Summary
 
@@ -105,10 +105,8 @@ TC-121 verifies array structure. TC-124 verifies `"value"` field presence.
 ### IT-1: `.version.list` exits 0
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.list`
-  **Expected:** Exit 0 with 3 alias lines.
-- **Then:** see spec
+- **When:** `cm .version.list`
+- **Then:** exit 0; stdout contains 3 alias lines (`stable`, `latest`, `month`)
 - **Exit:** 0
 
 ---
@@ -116,10 +114,8 @@ TC-121 verifies array structure. TC-124 verifies `"value"` field presence.
 ### IT-2: `v::0` → names only
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.list v::0`
-  **Expected:** Exit 0; output lines contain only alias names without ` — ` description separators.
-- **Then:** names only
+- **When:** `cm .version.list v::0`
+- **Then:** exit 0; each output line contains only an alias name; no ` — ` description separator present
 - **Exit:** 0
 
 ---
@@ -127,10 +123,8 @@ TC-121 verifies array structure. TC-124 verifies `"value"` field presence.
 ### IT-3: Deterministic output on two calls
 
 - **Given:** clean environment
-- **When:**
-  Run `.version.list` twice.
-  **Expected:** Both outputs are identical.
-- **Then:** outputs equal
+- **When:** `cm .version.list` (run twice in succession)
+- **Then:** both stdout captures are byte-identical; output order and content do not change between runs
 - **Exit:** 0
 
 ---
@@ -138,10 +132,8 @@ TC-121 verifies array structure. TC-124 verifies `"value"` field presence.
 ### IT-4: `bogus::x` → exit 1
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.list bogus::x`
-  **Expected:** Exit 1.
-- **Then:** see spec
+- **When:** `cm .version.list bogus::x`
+- **Then:** exit 1; stderr or stdout mentions unknown parameter
 - **Exit:** 1
 
 ---
@@ -149,10 +141,8 @@ TC-121 verifies array structure. TC-124 verifies `"value"` field presence.
 ### IT-5: `format::xml` → exit 1
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.list format::xml`
-  **Expected:** Exit 1.
-- **Then:** see spec
+- **When:** `cm .version.list format::xml`
+- **Then:** exit 1; error message references format or valid values
 - **Exit:** 1
 
 ---
@@ -160,10 +150,8 @@ TC-121 verifies array structure. TC-124 verifies `"value"` field presence.
 ### IT-6: `v::3` → exit 1
 
 - **Given:** clean environment
-- **When:**
-  `cm .version.list v::3`
-  **Expected:** Exit 1.
-- **Then:** see spec
+- **When:** `cm .version.list v::3`
+- **Then:** exit 1; error references out-of-range verbosity value
 - **Exit:** 1
 
 ---

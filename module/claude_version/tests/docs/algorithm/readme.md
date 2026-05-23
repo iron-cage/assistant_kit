@@ -11,4 +11,4 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| 001_settings_type_inference.md | AC- test cases for 4-step type inference cascade | ⏳ |
+| 001_settings_type_inference.md | AC- test cases for 4-step type inference cascade | ✅ |

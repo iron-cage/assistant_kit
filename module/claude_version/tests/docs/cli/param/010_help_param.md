@@ -6,6 +6,7 @@ Edge case tests for the `.help` parameter. Tests validate help trigger behavior,
 
 - **Purpose**: Edge case tests for the `.help` parameter.
 - **Responsibility**: Help trigger behavior, output stream routing, stability, and visibility rules.
+- **Commands:** all 12 commands (universal override)
 - **In Scope**: Single-parameter edge cases, argv position independence, output verification.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -33,7 +34,7 @@ Edge case tests for the `.help` parameter. Tests validate help trigger behavior,
 
 **Total:** 6 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (`.help` present → help listing, exit 0) ↔ EC-2 (`.help` absent → normal `.status` output, exit 0)
 
 ## Test Cases
 ---

@@ -35,9 +35,14 @@
 5. Post-process:
    a. Mark the live account (detected in step 3) with `✓` in the flag column (`is_current = true`).
    b. Mark the `_active` account with `*` in the flag column when `is_active = true` AND `is_current = false`. No `*` is emitted when the active and current accounts are the same.
-   c. From non-live accounts with valid quota data and `expires_in_secs > 0`, select the one with the highest `5h Left`; mark it `→` (recommended next). If no such account exists, no `→` is emitted.
+   c. From non-live accounts with valid quota data and `expires_in_secs > 0`, select the best candidate using a multi-level tiebreaker: (1) highest `5h Left`, (2) highest `expires_in_secs` (token expiry), (3) highest `7d Left`, (4) alphabetically first (stable tiebreaker from alpha-sorted input). Mark the winner `→` (recommended next). If no such account exists, no `→` is emitted.
 6. Render results as a table using `data_fmt`:
-   - Columns: flag (`✓`/`*`/`→`/ , priority: `✓` > `*` > `→` > blank), Account, Expires, Sub, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset
+   - Columns: flag (`✓`/`*`/`→`/ blank, priority `✓` > `*` > `→` > blank), status (`🔴`/`🟡`/`🟢`, header `●`), Account, Expires, Sub, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset
+   - **Status emoji column (`●`):** placed between the flag and Account columns; populated on every row:
+     - `🔴` — token read failed or API returned an error (no valid quota data; `result` is `Err`)
+     - `🟡` — valid token, `5h Left ≤ 5.0%` (session quota exhausted; `result` is `Ok`)
+     - `🟢` — valid token, `5h Left > 5.0%` (session quota available; `result` is `Ok`)
+     - No JSON equivalent — the status is a display-only column derived from existing fields
    - `Expires`: "in Xh Ym" when `expires_in_secs > 0`; "EXPIRED" when `expires_in_secs == 0`
    - `Sub`: `"max"` (`billing_type == "stripe_subscription"` + `has_max`), `"pro"` (`billing_type == "stripe_subscription"` + `!has_max`), `"—"` (`billing_type == "none"`), `"?"` (`OauthAccountData` unavailable)
    - `~Renews`: `"Mon DD"` format — day-of-month from `org_created_at` projected to next occurrence after today (e.g. `"Jun  5"`); `"?"` when `OauthAccountData` unavailable; `"—"` when parsing fails
@@ -56,13 +61,14 @@
 ```
 Quota
 
-  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
-✓ i12@wbox.pro    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
-→ i6@wbox.pro     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
-  i7@wbox.pro     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
-  i8@wbox.pro     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
+  ●  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
+✓ 🟢 i12@wbox.pro    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
+→ 🟢 i6@wbox.pro     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
+  🟡 i9@wbox.pro     in 1h 12m  max  Jun  8   3%       in 0h 23m  52%      18%      in 2d 11h
+  🔴 i7@wbox.pro     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
+  🔴 i8@wbox.pro     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
 
-Valid: 2 / 4   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 02m)
+Valid: 3 / 5   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 02m)
 ```
 
 (`?` in Sub/~Renews = account fetch failed or skipped due to token read error)
@@ -72,10 +78,10 @@ Valid: 2 / 4   →  Next: i6@wbox.pro  (100% session left, token expires in 5h 0
 ```
 Quota
 
-  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
-✓ i12@wbox.pro    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
-* i6@wbox.pro     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
-→ i3@wbox.pro     in 6h 11m  max  Jun 11   95%      in 3h 44m  72%      54%      in 5d 01h
+  ●  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
+✓ 🟢 i12@wbox.pro    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
+* 🟢 i6@wbox.pro     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
+→ 🟢 i3@wbox.pro     in 6h 11m  max  Jun 11   95%      in 3h 44m  72%      54%      in 5d 01h
 
 Valid: 3 / 3   →  Next: i3@wbox.pro  (95% session left, token expires in 6h 11m)
 ```
@@ -87,10 +93,10 @@ Valid: 3 / 3   →  Next: i3@wbox.pro  (95% session left, token expires in 6h 11
 ```
 Quota
 
-  Account              Expires    Sub  ~Renews  5h Left  5h Reset   7d Left  7d(Son)  7d Reset
-✓ (current session)   in 4h 39m  max  Jun  5   64%      in 1h 39m  39%      —        in 3d 17h 39m
-→ i3@wbox.pro         in 5h 02m  max  Jun 11   100%     in 4h 58m  88%      28%      in 6d 14h
-  i7@wbox.pro         EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
+  ●  Account              Expires    Sub  ~Renews  5h Left  5h Reset   7d Left  7d(Son)  7d Reset
+✓ 🟢 (current session)   in 4h 39m  max  Jun  5   64%      in 1h 39m  39%      —        in 3d 17h 39m
+→ 🟢 i3@wbox.pro         in 5h 02m  max  Jun 11   100%     in 4h 58m  88%      28%      in 6d 14h
+  🔴 i7@wbox.pro         EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
 
 Valid: 2 / 3   →  Next: i3@wbox.pro  (100% session left, token expires in 5h 02m)
 ```
@@ -128,7 +134,7 @@ Valid: 2 / 3   →  Next: i3@wbox.pro  (100% session left, token expires in 5h 0
 - **AC-07**: The `Expires` column shows token TTL ("in Xh Ym") for valid tokens and "EXPIRED" for tokens whose `expiresAt` is in the past; sourced from the credential file without an API call.
 - **AC-08**: `5h Left` and `7d Left` show remaining quota percentage (100 − consumed); `7d(Son)` shows remaining Sonnet-only weekly quota (100 − consumed) or `—` when absent; `5h Reset` and `7d Reset` show independent reset countdowns as separate columns; all quota data sourced from `claude_quota::fetch_oauth_usage()` → `OauthUsageData`.
 - **AC-17**: `7d(Son)` column is populated when `OauthUsageData.seven_day_sonnet` is `Some`; shows `—` when `None`. JSON field `weekly_7d_sonnet_left_pct` is an integer when present and `null` when absent.
-- **AC-09**: The `→` flag marks the non-live account with the highest remaining session quota among those with valid quota data and a non-expired token; no `→` is emitted when no such account exists.
+- **AC-09**: The `→` flag marks the best non-live candidate selected by: (1) highest `5h Left`, (2) highest token expiry, (3) highest `7d Left`, (4) alphabetically first; among those with valid quota data and a non-expired token. No `→` is emitted when no such account exists.
 - **AC-10**: A footer line "Valid: X / Y   →  Next: name  (...)" is appended when ≥2 accounts have valid quota data; the footer is absent when 0 or 1 valid account.
 - **AC-11**: When the live `~/.claude/.credentials.json` token does not match any saved account's token, a synthetic row is prepended at the top of the table with `✓`, quota fetched via the live token, and the name set to the email from `~/.claude/.claude.json` (or `(current session)` when that file is unavailable or the field is empty).
 - **AC-12**: When `~/.claude/.credentials.json` is unreadable, no `✓` is emitted on any row; all saved accounts are still shown.
@@ -136,6 +142,9 @@ Valid: 2 / 3   →  Next: i3@wbox.pro  (100% session left, token expires in 5h 0
 - **AC-14**: When current = active (normal case), only `✓` appears on the current row; no `*` is emitted on any row.
 - **AC-15**: When `~/.claude/.credentials.json` is unreadable, no `✓` is emitted; `*` is still emitted for the `_active` account. See [016_current_account_awareness.md](016_current_account_awareness.md).
 - **AC-16**: `format::json` output uses `is_current` (replacing the former `active` field) and includes a new `is_active` boolean field per object.
+- **AC-18**: Every table row has a status emoji in the `●` column (second column, after flag): `🟢` when `result` is `Ok` and `5h Left > 5%`, `🟡` when `result` is `Ok` and `5h Left ≤ 5%`, `🔴` when `result` is `Err`. The emoji appears on every row including the synthetic current-session row.
+- **AC-19**: The 5% boundary is exclusive for `🟢` and inclusive for `🟡`: an account with exactly `5h Left = 5%` shows `🟡`, an account with `5h Left = 6%` shows `🟢`.
+- **AC-20**: The `●` status emoji column has no JSON equivalent — `format::json` output is unchanged; pipeline consumers derive status from `session_5h_left_pct` and the `error` field.
 
 ### Cross-References
 

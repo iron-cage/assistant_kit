@@ -6,6 +6,7 @@ Edge case coverage for the `force::` parameter. See [005_params.md](../../../../
 
 - **Purpose**: Edge case tests for the `force::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `force::`.
+- **Commands:** `.version.install`, `.version.guard`, `.processes.kill`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -17,8 +18,8 @@ Edge case coverage for the `force::` parameter. See [005_params.md](../../../../
 | TC-312 | `dry::1 force::1` on `.processes.kill` → dry wins | Interaction (dry wins) |
 | TC-406 | `.version.guard force::1 dry::1` → dry wins | Interaction (dry wins) |
 | EC-2 | `force::1` on `.version.guard` → reinstalls despite match | Explicit True |
-| EC-1 | Default (absent) → `force::0` (guard active) | Default Behavior |
-| EC-2 | `force::0` explicit → same as absent | Explicit False |
+| EC-8 | Default (absent) → `force::0` (guard active) | Default Behavior |
+| EC-9 | `force::0` explicit → same as absent | Explicit False |
 | EC-3 | `force::2` → exit 1, out of range | Invalid Value |
 | EC-4 | `force::-1` → exit 1, out of range | Invalid Value |
 | EC-5 | `force::abc` → exit 1, non-integer | Format Violation |
@@ -38,7 +39,7 @@ Edge case coverage for the `force::` parameter. See [005_params.md](../../../../
 
 **Total:** 12 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (`dry::1 force::1` → `[dry-run]` prefix, no install, exit 0) ↔ EC-2 (`force::1` alone → real install proceeds, no dry-run prefix, exit 0)
 
 ---
 
@@ -109,6 +110,26 @@ Edge case coverage for the `force::` parameter. See [005_params.md](../../../../
 - **Then:** exit code 1; unknown parameter.
 - **Exit:** 1
 - **Source:** [feature/005_cli_design.md](../../../../docs/feature/005_cli_design.md)
+
+---
+
+### EC-8: Default (absent) → `force::0`
+
+- **Given:** preferred version installed; version matches
+- **When:** `cm .version.guard dry::1`
+- **Then:** output shows guard check passed; no forced reinstall; force::0 is the default
+- **Exit:** 0
+- **Source:** [005_params.md — force:: default: 0](../../../../docs/cli/005_params.md)
+
+---
+
+### EC-9: `force::0` explicit → same as absent
+
+- **Given:** preferred version installed; version matches
+- **When:** `cm .version.guard force::0 dry::1`
+- **Then:** behavior identical to `cm .version.guard dry::1`; explicitly zero equals absent
+- **Exit:** 0
+- **Source:** [005_params.md — force:: default: 0](../../../../docs/cli/005_params.md)
 
 ---
 

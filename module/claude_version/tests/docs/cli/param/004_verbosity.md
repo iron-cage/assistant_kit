@@ -6,6 +6,7 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [005
 
 - **Purpose**: Edge case tests for the `v::` / `verbosity::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `v::`.
+- **Commands:** `.status`, `.version.show`, `.version.install`, `.version.list`, `.version.guard`, `.version.history`, `.processes`, `.processes.kill`, `.settings.show`, `.settings.get`
 - **In Scope**: Single-parameter edge cases, validation errors, alias resolution, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -24,13 +25,13 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [005
 | EC-1 | Last `v::` wins when duplicated | Duplication |
 | TC-428 | `.version.history v::0` → bare version+date | Explicit 0 |
 | TC-430 | `.version.history v::2` → full changelog | Explicit 2 |
-| EC-1 | Default (absent) resolves to `v::1` | Default Behavior |
-| EC-1 | `v::0` consistently minimal across all commands | Cross-Command |
-| EC-1 | `v::3` → exit 1, out of range | Invalid: out-of-range |
-| EC-1 | `v::-1` → exit 1, out of range | Invalid: negative |
-| EC-1 | `v::abc` → exit 1, non-integer | Format Violation |
-| EC-1 | `v::` (empty) → exit 1 | Empty Value |
-| EC-1 | `v::` accepted by 10 commands, rejected by 2 | Command Scope |
+| EC-5 | Default (absent) resolves to `v::1` | Default Behavior |
+| EC-6 | `v::0` consistently minimal across all commands | Cross-Command |
+| EC-7 | `v::3` → exit 1, out of range | Invalid: out-of-range |
+| EC-8 | `v::-1` → exit 1, out of range | Invalid: negative |
+| EC-9 | `v::abc` → exit 1, non-integer | Format Violation |
+| EC-10 | `v::` (empty) → exit 1 | Empty Value |
+| EC-11 | `v::` accepted by 10 commands, rejected by 2 | Command Scope |
 | EC-2 | `verbosity::3` → exit 1 (canonical key, over-range) | Invalid: canonical over-range |
 | EC-3 | `verbosity::-1` → exit 1 (canonical key, negative) | Invalid: canonical negative |
 | EC-4 | `verbosity::0` accepted via canonical key → exit 0 | Valid: canonical form |
@@ -52,7 +53,7 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [005
 
 **Total:** 20 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-1 (invalid/rejected path)
+**Behavioral Divergence Pair:** TC-097 (`.status v::0` → 3 bare lines, exit 0) ↔ TC-098 (`.status v::1` → labeled lines, exit 0)
 
 ---
 
@@ -66,7 +67,7 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [005
 
 ---
 
-### EC-1: Default (absent) → `v::1`
+### EC-5: Default (absent) → `v::1`
 
 - **Given:** clean environment
 - **When:** `cm .version.list` (no v:: param).
@@ -76,17 +77,17 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [005
 
 ---
 
-### EC-1: `v::0` consistently minimal across commands
+### EC-6: `v::0` consistently minimal across commands
 
 - **Given:** clean environment
-- **When:** 
-- **Then:** All produce bare data without labels.; Consistent minimum-output behavior across commands
+- **When:** `cm .status v::0`, `cm .version.list v::0`, `cm .version.history v::0`
+- **Then:** each command produces bare data without label prefixes; no "Version:", "Status:", or other label strings in output
 - **Exit:** 0
 - **Source:** [006_types.md — verbosity levels](../../../../docs/cli/006_types.md)
 
 ---
 
-### EC-1: `v::3` → exit 1
+### EC-7: `v::3` → exit 1
 
 - **Given:** clean environment
 - **When:** `cm .version.list v::3`
@@ -96,7 +97,7 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [005
 
 ---
 
-### EC-1: `v::-1` → exit 1
+### EC-8: `v::-1` → exit 1
 
 - **Given:** clean environment
 - **When:** `cm .version.list v::-1`
@@ -106,7 +107,7 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [005
 
 ---
 
-### EC-1: `v::abc` → exit 1
+### EC-9: `v::abc` → exit 1
 
 - **Given:** clean environment
 - **When:** `cm .version.list v::abc`
@@ -116,7 +117,7 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [005
 
 ---
 
-### EC-1: `v::` (empty) → exit 1
+### EC-10: `v::` (empty) → exit 1
 
 - **Given:** clean environment
 - **When:** `cm .version.list v::`
@@ -126,7 +127,7 @@ Edge case coverage for the `v::` alias and `verbosity::` canonical key. See [005
 
 ---
 
-### EC-1: `v::` only for output-formatting commands
+### EC-11: `v::` only for output-formatting commands
 
 - **Given:** clean environment
 - **When:** `cm .settings.set v::1`

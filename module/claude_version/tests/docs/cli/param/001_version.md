@@ -6,6 +6,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 
 - **Purpose**: Edge case tests for the `version::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `version::`.
+- **Commands:** `.version.install`, `.version.guard`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -25,10 +26,10 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 | EC-4 | `version::1.2` → two-part semver, exit 1 | Invalid: format |
 | TC-307 | `version::x` → unknown alias, exit 1 | Invalid: unknown |
 | EC-5 | `version::01.02.03` → leading zeros, exit 1 | Invalid: format |
-| EC-1 | `version::1.2.3.4` (four-part) → exit 1 | Invalid: format |
-| EC-2 | `version::LATEST` → wrong case, exit 1 | Invalid: case |
-| EC-3 | `version::MONTH` → wrong case, exit 1 | Invalid: case |
-| EC-4 | `version::` only accepted by `.version.install` and `.version.guard` | Command Scope |
+| EC-6 | `version::1.2.3.4` (four-part) → exit 1 | Invalid: format |
+| EC-7 | `version::LATEST` → wrong case, exit 1 | Invalid: case |
+| EC-8 | `version::MONTH` → wrong case, exit 1 | Invalid: case |
+| EC-9 | `version::` only accepted by `.version.install` and `.version.guard` | Command Scope |
 
 ## Test Coverage Summary
 
@@ -43,7 +44,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 
 **Total:** 16 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** TC-301 (`version::stable dry::1` → output contains "2.1.78", exit 0) ↔ TC-309 (`version::month dry::1` → output contains "2.1.74", exit 0)
 
 ---
 
@@ -97,7 +98,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 
 ---
 
-### EC-1: `version::1.2.3.4` (four-part) → exit 1
+### EC-6: `version::1.2.3.4` (four-part) → exit 1
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::1.2.3.4`
@@ -107,7 +108,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 
 ---
 
-### EC-2: `version::LATEST` → wrong case
+### EC-7: `version::LATEST` → wrong case
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::LATEST`
@@ -116,7 +117,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 
 ---
 
-### EC-3: `version::MONTH` → wrong case
+### EC-8: `version::MONTH` → wrong case
 
 - **Given:** clean environment
 - **When:** `cm .version.install version::MONTH`
@@ -125,7 +126,7 @@ Edge case coverage for the `version::` parameter. See [005_params.md](../../../.
 
 ---
 
-### EC-4: `version::` only for `.version.install` and `.version.guard`
+### EC-9: `version::` only for `.version.install` and `.version.guard`
 
 - **Given:** clean environment
 - **When:** `cm .processes version::stable`

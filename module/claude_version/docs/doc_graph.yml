@@ -1,7 +1,7 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_version
-  node_count: 15
-  edge_count: 34
+  node_count: 23
+  edge_count: 40
   component_count: 1
   generated: 2026-05-23
 
@@ -76,10 +76,50 @@ nodes:
     label: Types
     entity: cli
 
-  - id: cli/007
-    file: cli/007_workflows.md
-    label: Workflows
+  - id: cli/env_param
+    file: cli/env_param.md
+    label: Environment Parameters
     entity: cli
+
+  - id: cli/config_param
+    file: cli/config_param.md
+    label: Config Parameters
+    entity: cli
+
+  - id: user_story/001
+    file: cli/user_story/001_environment_check.md
+    label: "US: Environment Check"
+    entity: user_story
+
+  - id: user_story/002
+    file: cli/user_story/002_version_upgrade.md
+    label: "US: Version Upgrade"
+    entity: user_story
+
+  - id: user_story/003
+    file: cli/user_story/003_process_lifecycle.md
+    label: "US: Process Lifecycle"
+    entity: user_story
+
+  - id: user_story/004
+    file: cli/user_story/004_settings_management.md
+    label: "US: Settings Management"
+    entity: user_story
+
+  - id: user_story/005
+    file: cli/user_story/005_version_pinning.md
+    label: "US: Version Pinning"
+    entity: user_story
+
+  - id: format/001
+    file: cli/format/001_text.md
+    label: "Format: text"
+    entity: format
+
+  - id: format/002
+    file: cli/format/002_json.md
+    label: "Format: json"
+    entity: format
 
 edges:
   - from: feature/001
@@ -206,22 +246,46 @@ edges:
     to: cli/005
     via: cross_references
 
-  - from: cli/007
-    to: feature/001
-    via: cross_references
-
-  - from: cli/007
-    to: feature/003
-    via: cross_references
-
-  - from: cli/007
+  - from: user_story/001
     to: cli/001
+    via: cross_references
+
+  - from: user_story/002
+    to: cli/001
+    via: cross_references
+
+  - from: user_story/003
+    to: cli/001
+    via: cross_references
+
+  - from: user_story/004
+    to: cli/001
+    via: cross_references
+
+  - from: user_story/005
+    to: cli/001
+    via: cross_references
+
+  - from: format/001
+    to: cli/001
+    via: cross_references
+
+  - from: format/002
+    to: cli/001
+    via: cross_references
+
+  - from: format/001
+    to: cli/005
+    via: cross_references
+
+  - from: format/002
+    to: cli/005
     via: cross_references
 
 components:
   - id: 1
     label: Main corpus
-    size: 15
+    size: 23
     isolated: false
     nodes:
       - feature/001
@@ -237,7 +301,15 @@ components:
       - cli/004
       - cli/005
       - cli/006
-      - cli/007
+      - cli/env_param
+      - cli/config_param
+      - user_story/001
+      - user_story/002
+      - user_story/003
+      - user_story/004
+      - user_story/005
+      - format/001
+      - format/002
       - design_decisions/001
 
 dangling_refs: []

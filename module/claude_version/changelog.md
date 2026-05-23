@@ -48,6 +48,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 - **CLI documentation synced with unilang 5-phase pipeline migration** (task 040)
-  - `docs/cli/01_commands.md`, `params.md`, `types.md`, `dictionary.md`,
-    `parameter_groups.md`, `workflows.md` updated to reflect 5-phase architecture
-  - Testing documentation files added under `docs/cli/testing/`
+  - `docs/cli/001_commands.md`, `005_params.md`, `006_types.md`, `002_dictionary.md`,
+    `003_parameter_groups.md`, `007_workflows.md` updated to reflect 5-phase architecture
+  - Testing documentation files added under `tests/docs/cli/`

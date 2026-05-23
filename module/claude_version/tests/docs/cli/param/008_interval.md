@@ -6,6 +6,7 @@ Edge case coverage for the `interval::` parameter. See [005_params.md](../../../
 
 - **Purpose**: Edge case tests for the `interval::` parameter.
 - **Responsibility**: Boundary values, invalid inputs, type violations, and default behavior for `interval::`.
+- **Commands:** `.version.guard`
 - **In Scope**: Single-parameter edge cases, validation errors, type checking.
 - **Out of Scope**: Command integration (→ `../command/`), group interactions (→ `../param_group/`).
 
@@ -34,7 +35,7 @@ Edge case coverage for the `interval::` parameter. See [005_params.md](../../../
 
 **Total:** 8 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (`interval::0` → one-shot, process exits immediately) ↔ EC-6 (`interval::5` → watch mode, process stays alive until killed)
 
 ---
 

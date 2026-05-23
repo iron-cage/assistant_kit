@@ -11,10 +11,13 @@
 
 | Term | Definition |
 |------|------------|
+| `.help` | Display full command listing, all parameters, and usage examples; triggered by `.help`, empty argv, or bare `.` |
 | `.status` | Overview command showing version, session count, and active account |
 | `.version.show` | Print the currently installed Claude Code version |
 | `.version.install` | Install a Claude Code version via official installer (`curl -fsSL https://claude.ai/install.sh`) |
+| `.version.guard` | Check for version drift and restore preferred version; supports one-shot and watch-mode (`interval::N`) |
 | `.version.list` | List all named version aliases and their resolution targets |
+| `.version.history` | Fetch and display recent release history from GitHub Releases API; cached locally for 1 hour |
 | `.processes` | List running Claude Code processes detected by scanning `/proc` |
 | `.processes.kill` | Terminate processes: SIGTERM -> 2s -> SIGKILL (normal) or SIGKILL (force) |
 | `.settings.show` | Print all key-value pairs from `~/.claude/settings.json` |
@@ -42,7 +45,7 @@
 
 | Term | Definition |
 |------|------------|
-| type inference | Settings value auto-typing via `infer_type()`: bool -> number -> string cascade |
+| type inference | Settings value auto-typing: bool -> number -> string cascade |
 | atomic write | Settings written via temp-file rename (`settings.json.tmp` -> `settings.json`) to prevent corruption |
 | version alias | Named reference (`stable`, `month`, `latest`) resolving to a specific version string |
 | active account | Current account marker stored in `$PRO/.persistent/claude/credential/_active` (or `$HOME/.persistent/...`) |

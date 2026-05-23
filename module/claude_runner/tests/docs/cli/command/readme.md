@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration test cases for each clr command.
 - **Responsibility**: Index of per-command integration test case files covering command-level behavior.
-- **In Scope**: `run` command tests, `help` command tests, `isolated` command tests, `refresh` command tests.
+- **In Scope**: `run` command tests, `help` command tests, `isolated` command tests, `refresh` command tests, `ask` command tests.
 - **Out of Scope**: Per-parameter edge cases (→ `param/`), parameter group interactions (→ `param_group/`).
 
 Per-command integration test case indices for `clr`. See [001_command.md](../../../../docs/cli/001_command.md) for specification.
@@ -17,6 +17,7 @@ Per-command integration test case indices for `clr`. See [001_command.md](../../
 | 002_help.md | Integration tests for the `help` command (`--help` / `-h`) |
 | 003_isolated.md | Integration tests for the `isolated` command |
 | 004_refresh.md | Integration tests for the `refresh` command |
+| 005_ask.md | Integration tests for the `ask` command |
 
 ### Index
 
@@ -26,3 +27,4 @@ Per-command integration test case indices for `clr`. See [001_command.md](../../
 | `help` | [002_help.md](002_help.md) | 8 TC |
 | `isolated` | [003_isolated.md](003_isolated.md) | 9 TC |
 | `refresh` | [004_refresh.md](004_refresh.md) | 8 TC |
+| `ask` | [005_ask.md](005_ask.md) | 8 TC |
