@@ -1,6 +1,6 @@
 # Env Param :: CLR_* Input Variables
 
-Edge cases for the 24 `CLR_*` input environment variable fallbacks.
+Edge cases for the 27 `CLR_*` input environment variable fallbacks.
 Source: [`env_param.md`](../../../../docs/cli/env_param.md)
 Implementation: `apply_env_vars()` and `apply_isolated_env_vars()` in `src/lib.rs`
 Test file: `tests/env_var_test.rs`
@@ -33,6 +33,9 @@ Test file: `tests/env_var_test.rs`
 | E22 | `CLR_MCP_CONFIG` adds config path | `CLR_MCP_CONFIG` | `--mcp-config` and path appear in assembled command |
 | E23 | `CLR_CREDS` supplies isolated creds path | `CLR_CREDS` | "missing required argument: --creds" NOT in stderr |
 | E24 | `CLR_TIMEOUT` sets isolated timeout | `CLR_TIMEOUT` | argument parsing succeeds with `CLR_CREDS+CLR_TIMEOUT` |
+| E25 | `CLR_FILE` supplies file path | `CLR_FILE` | describe output includes the file path (same as `--file`) |
+| E26 | `CLR_STRIP_FENCES=1` strips fences | `CLR_STRIP_FENCES` | captured stdout has fences removed (same as `--strip-fences`) |
+| E27 | `CLAUDECODE=1 CLR_KEEP_CLAUDECODE=1` preserves env var | `CLR_KEEP_CLAUDECODE` | subprocess env contains `CLAUDECODE` (same as `--keep-claudecode`) |
 
 ## Test Coverage Summary
 
@@ -43,7 +46,7 @@ Test file: `tests/env_var_test.rs`
 - CLI-wins verification: E01, E03 (2 tests)
 - Isolated subcommand: E23, E24 (2 tests)
 
-**Total:** 24 edge cases (E01–E24)
+**Total:** 27 edge cases (E01–E27)
 
 ## Test Cases
 
@@ -289,3 +292,34 @@ Test file: `tests/env_var_test.rs`
 - **Then:** stderr does NOT contain `missing required argument: --creds`
 - **Note:** combined with CLR_CREDS to pass argument validation; confirms both vars applied
 - **Source:** [env_param.md §2](../../../../docs/cli/env_param.md)
+
+---
+
+### E25: CLR_FILE supplies file path
+
+- **Given:** `CLR_FILE=/tmp/x.txt`; no `--file` on CLI; `/tmp/x.txt` exists
+- **When:** `clr --dry-run task`
+- **Then:** describe output includes the file path (same as `clr --dry-run --file /tmp/x.txt task`)
+- **Exit:** 0
+- **CLI-wins:** `clr --dry-run --file /tmp/other.txt task` with `CLR_FILE=/tmp/x.txt` → `/tmp/other.txt` used, NOT `/tmp/x.txt`
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E26: CLR_STRIP_FENCES=1 strips fences from captured stdout
+
+- **Given:** `CLR_STRIP_FENCES=1`; no `--strip-fences` on CLI; fake claude emits fenced output
+- **When:** `clr -p task`
+- **Then:** captured stdout has fence lines removed (same as `clr -p --strip-fences task`)
+- **Exit:** 0
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E27: CLR_KEEP_CLAUDECODE=1 preserves CLAUDECODE in subprocess env
+
+- **Given:** parent env has `CLAUDECODE=1`; `CLR_KEEP_CLAUDECODE=1`; no `--keep-claudecode` on CLI
+- **When:** `clr task` (via fake claude that prints its env)
+- **Then:** subprocess env contains `CLAUDECODE` (same as `clr --keep-claudecode task`)
+- **Exit:** 0
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)

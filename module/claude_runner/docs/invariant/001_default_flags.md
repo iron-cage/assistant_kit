@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the automatic flag injection behavior that must be maintained across all clr invocations.
 - **Responsibility**: State which flags are injected by default, their opt-out mechanism, and why the defaults exist.
-- **In Scope**: Automatic `-c` injection, `--dangerously-skip-permissions` default-on, `--chrome` builder default, `"\n\nultrathink"` message suffix default-on, `--effort max` default-on, `--new-session` override, `--no-skip-permissions` opt-out, `--no-ultrathink` opt-out, `--no-effort-max` opt-out.
+- **In Scope**: Automatic `-c` injection, `--dangerously-skip-permissions` default-on, `--chrome` builder default, `"\n\nultrathink"` message suffix default-on, `--effort max` default-on, `CLAUDECODE` env var removal default-on, `--new-session` override, `--no-skip-permissions` opt-out, `--no-ultrathink` opt-out, `--no-effort-max` opt-out, `--no-chrome` opt-out, `--keep-claudecode` opt-out.
 - **Out of Scope**: Dependency constraints (→ `invariant/002_dep_constraints.md`), execution mode behavior (→ `feature/001_runner_tool.md`).
 
 ### Invariant Statement
@@ -15,9 +15,10 @@
 |------|---------|----------|-----------|
 | `-c` (continue conversation) | ON | `--new-session` | Automation expects session continuity by default |
 | `--dangerously-skip-permissions` | ON | `--no-skip-permissions` | Automation pipelines must not stall on permission prompts |
-| `--chrome` | ON | none at clr level | Browser context is essential for web-aware automation |
+| `--chrome` | ON | `--no-chrome` | Browser context is essential for web-aware automation |
 | `"\n\nultrathink"` message suffix | ON | `--no-ultrathink` | Extended thinking mode should be the automation default |
 | `--effort max` | ON | `--effort <level>` or `--no-effort-max` | Agentic automation requires maximum reasoning; claude binary default (`medium`) undershoots |
+| `CLAUDECODE` removal | ON | `--keep-claudecode` | Subprocess must behave as standalone; inheriting `CLAUDECODE=1` triggers nested-agent mode which alters permissions, output format, and tool availability |
 
 These defaults are intentional and must not be removed without explicit design decision. They represent the automation-optimized defaults for the `clr` runner.
 
@@ -25,9 +26,10 @@ These defaults are intentional and must not be removed without explicit design d
 
 The flag injection is implemented at three layers:
 - `-c` and `--dangerously-skip-permissions`: injected explicitly by `build_claude_command()` (the function that translates `CliArgs` to a `ClaudeCommand` builder). Added unconditionally unless the corresponding opt-out flag is present in `CliArgs`.
-- `--chrome`: injected via `ClaudeCommand::new()` builder default (`chrome: Some(true)`). No clr-level opt-out exists — callers using the Rust API can override with `with_chrome(None)` or `with_chrome(Some(false))`.
+- `--chrome`: injected via `ClaudeCommand::new()` builder default (`chrome: Some(true)`). CLI opt-out: `--no-chrome`. Rust API callers can also override with `with_chrome(None)` or `with_chrome(Some(false))`.
 - `"\n\nultrathink"` message suffix: appended to the message string inside `build_claude_command()` before `builder.with_message()` is called. Skipped when `cli.no_ultrathink` is set or the message already ends with `"ultrathink"` (idempotent guard — `msg.trim_end().ends_with("ultrathink")`).
 - `--effort max`: injected by `build_claude_command()` via `builder.with_effort(cli.effort.unwrap_or(EffortLevel::Max))`. Skipped entirely when `cli.no_effort_max` is set. Overridden to a different level when `cli.effort` is `Some(level)`.
+- `CLAUDECODE` removal: `std::env::remove_var("CLAUDECODE")` called on the subprocess environment before spawn. Skipped when `cli.keep_claudecode` is set.
 
 `--dangerously-skip-permissions` is no longer user-facing as a positive flag. Users disable it via `--no-skip-permissions`. This prevents confusion between "skip permissions" as an intentional choice vs. the default behavior.
 
@@ -40,6 +42,7 @@ If any default injection is removed:
 - Each invocation starts a new session, losing conversation context (continuation removed)
 - Claude performs fast (non-extended) thinking on every automation request (ultrathink suffix removed)
 - Claude uses medium-effort reasoning instead of maximum for every automation request (effort max removed)
+- Subprocess detects nested-agent context and alters permissions, output format, and tool availability (`CLAUDECODE` removal skipped)
 - Automation pipelines that depend on these defaults will behave differently without a version change
 
 ### Features
@@ -58,7 +61,7 @@ If any default injection is removed:
 
 | File | Relationship |
 |------|--------------|
-| `../../tests/cli_args_test.rs` | T01–T49 flag parsing; --new-session, --no-skip-permissions, --no-ultrathink, --no-effort-max |
+| `../../tests/cli_args_test.rs` | T01–T49 flag parsing; --new-session, --no-skip-permissions, --no-ultrathink, --no-effort-max, --no-chrome, --keep-claudecode |
 | `../../tests/ultrathink_args_test.rs` | T50–T58 ultrathink suffix injection, idempotent guard, and --no-ultrathink opt-out |
 | `../../tests/effort_args_test.rs` | T59–T70 --effort max default injection and override behavior |
 

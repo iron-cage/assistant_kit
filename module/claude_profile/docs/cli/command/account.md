@@ -224,21 +224,23 @@ clp .account.limits format::json
 
 Force browser-based re-authentication for a named account whose `refreshToken` is expired or revoked. This is the recovery path when `refresh::1` silently fails (trace shows `run_isolated: OK credentials=None` — Claude starts but performs no OAuth refresh because the refresh token itself is dead).
 
--- **Parameters:** [`name::`](../param/01_name.md) **(required)**, [`dry::`](../param/04_dry.md)
--- **Exit:** 0 (success: credentials refreshed and saved) | 1 (usage: missing or invalid name) | 2 (runtime: account not found or Claude spawn failed) | 3 (timeout or login abandoned: claude exited without updating credentials)
+-- **Parameters:** [`name::`](../param/01_name.md) *(optional, defaults to active)*, [`dry::`](../param/04_dry.md)
+-- **Exit:** 0 (success: credentials refreshed and saved) | 1 (usage: invalid name value) | 2 (runtime: name omitted and no active account; account not found; or Claude spawn failed) | 3 (timeout or login abandoned: claude exited without updating credentials)
 
 **Syntax:**
 
 ```bash
+clp .account.relogin                   # default: active account
 clp .account.relogin name::i3@wbox.pro
 clp .account.relogin i3@wbox.pro       # positional
 clp .account.relogin i3               # prefix
 clp .account.relogin name::i3@wbox.pro dry::1
+clp .account.relogin dry::1            # dry-run for active account
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `name::` | [`AccountName`](../type/01_account_name.md) | **(required)** | Account to re-authenticate |
+| `name::` | [`AccountName`](../type/01_account_name.md) | *(active account)* | Account to re-authenticate; omit to use the currently active account |
 | `dry::` | `bool` | `0` | Preview the steps without executing |
 
 **Mechanism (6 steps):**
@@ -252,21 +254,14 @@ clp .account.relogin name::i3@wbox.pro dry::1
 **Examples:**
 
 ```bash
+clp .account.relogin dry::1
+# [dry-run] would re-authenticate 'i12@wbox.pro' via browser login
+
 clp .account.relogin name::i3@wbox.pro
-# [relogin] switching to i3@wbox.pro...
-# [relogin] spawning claude for browser re-authentication (Ctrl-C to abort)
-# ... (user completes browser login) ...
-# [relogin] credentials updated — saving as i3@wbox.pro
-# [relogin] restored active account: i12@wbox.pro
-# relogin successful
+# re-authenticated 'i3@wbox.pro' — credentials saved
 
 clp .account.relogin name::i3@wbox.pro dry::1
-# [dry-run] would relogin i3@wbox.pro:
-#   1. switch_account(i3@wbox.pro)
-#   2. spawn claude (inherited TTY)
-#   3. wait for credential file change
-#   4. account::save(i3@wbox.pro)
-#   5. switch_account(i12@wbox.pro)  [restore]
+# [dry-run] would re-authenticate 'i3@wbox.pro' via browser login
 ```
 
 **Notes:**

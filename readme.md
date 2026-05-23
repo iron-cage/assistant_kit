@@ -26,7 +26,7 @@ ast .help                    # all ~40 commands in one place
 |------|----------------|
 | `module/` | Fifteen workspace crates (see Crates below) |
 | `contract/` | Behavioral contract test suites for external dependencies |
-| `docs/` | Workspace doc entities: feature, invariant, pattern, integration, Claude Code knowledge |
+| `docs/` | Workspace doc entities: feature, invariant, pattern, integration, error |
 | `../task/workspace/` | Workspace task registry — External Layout (see `../task/`) |
 | `runbox/` | Container runner: scripts, Dockerfile, config, variability analysis docs, and ecosystem examples. |
 | `verb/` | Universal Action Protocol: per-verb reference docs for all 7 `do` protocol verbs. |

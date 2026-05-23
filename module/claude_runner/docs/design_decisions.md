@@ -34,7 +34,7 @@ Enables wrapper scripts to override defaults.
 ## D7 — Hand-rolled parser over clap/unilang
 
 Hand-rolled parser. Zero external dependencies for CLI parsing. Exact control over
-error messages and behavior. The flag surface (18 flags + 1 positional) is small enough
+error messages and behavior. The flag surface (24 flags + 1 positional) is small enough
 that a framework adds complexity without benefit.
 
 ## D9 — Session continuation by default
@@ -54,7 +54,7 @@ This also decouples `clr` from external session orchestration (formerly
 
 The previous `docs/cli/` contained 42 files documenting `param::value` syntax. Restored as
 a proper three-layer reference (command.md, param/, type.md) with parameter groups,
-dictionary, and workflows — adapted to the new `--flag value` syntax. Extended to L4 in a
+dictionary, and user stories (originally workflow_scenario.md; migrated to user_story/ in a subsequent pass) — adapted to the new `--flag value` syntax. Extended to L4 in a
 subsequent pass: tests/docs/cli/ added with per-command, per-param, per-type, and per-group test case coverage.
 
 ## D11 — Print by default when message given; `--interactive` to opt into TTY

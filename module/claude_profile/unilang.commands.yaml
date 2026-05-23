@@ -619,9 +619,10 @@
   arguments:
     - name: "name"
       kind: "String"
-      description: "Account name to re-authenticate"
+      description: "Account name to re-authenticate (omit to use the active account)"
       hint: "Account name"
-      optional: false
+      optional: true
+      default: ""
       validation_rules: []
       aliases: []
       tags: []
@@ -637,6 +638,8 @@
       tags: []
 
   examples:
+    - ".account.relogin"
+    - ".account.relogin dry::1"
     - ".account.relogin name::alice@acme.com"
     - ".account.relogin alice@acme.com"
     - ".account.relogin name::alice@acme.com dry::1"

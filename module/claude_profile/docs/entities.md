@@ -6,8 +6,8 @@ Master index of all documentation entities and their instances for `claude_profi
 
 | Entity | Directory | Count | Responsibility |
 |--------|-----------|-------|----------------|
-| Feature | [feature/](feature/readme.md) | 18 | Functional requirements (FR-6 – FR-22) |
-| Invariant | [invariant/](invariant/readme.md) | 5 | Non-functional constraints (NFR-1, NFR-3 – NFR-6) |
+| Feature | [feature/](feature/readme.md) | 19 | Functional requirements (FR-6 – FR-22) |
+| Invariant | [invariant/](invariant/readme.md) | 6 | Non-functional constraints (NFR-1, NFR-3 – NFR-6) + design-time governing principles |
 | CLI Design | [cli/](cli/readme.md) | 7 | Command, parameter, and workflow reference |
 
 ---
@@ -34,6 +34,7 @@ Master index of all documentation entities and their instances for `claude_profi
 | 016 | [feature/016_current_account_awareness.md](feature/016_current_account_awareness.md) | FR-22 | Current account detection via token match; divergence display in `.accounts` and `.usage` |
 | 017 | [feature/017_token_refresh.md](feature/017_token_refresh.md) | — | `refresh::` param; retry-on-auth-error via `account::refresh_account_token()`; credential write-back |
 | 018 | [feature/018_live_monitor.md](feature/018_live_monitor.md) | — | `live::`, `interval::`, `jitter::` params; continuous refresh with staggered fetches |
+| 019 | [feature/019_account_relogin.md](feature/019_account_relogin.md) | — | Browser re-authentication for named or active account with dead refreshToken |
 
 ---
 
@@ -46,6 +47,7 @@ Master index of all documentation entities and their instances for `claude_profi
 | 003 | [invariant/003_clear_errors.md](invariant/003_clear_errors.md) | NFR-4 | All errors name the relevant resource and state a corrective action |
 | 004 | [invariant/004_no_process_execution.md](invariant/004_no_process_execution.md) | NFR-5 | `std::process::Command` is forbidden in the library path |
 | 005 | [invariant/005_atomic_switching.md](invariant/005_atomic_switching.md) | NFR-6 | Account switching uses write-then-rename to prevent corruption |
+| 006 | [invariant/006_param_defaults.md](invariant/006_param_defaults.md) | — | Parameters default to active context; every CLI param must have a sensible default |
 
 ---
 

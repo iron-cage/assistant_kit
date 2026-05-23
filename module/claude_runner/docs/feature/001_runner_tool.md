@@ -23,6 +23,12 @@ claude_runner serves two distinct consumers from one crate:
 
 **Trace mode:** `--trace` prints environment variables and the full command to stderr (like `set -x`), then executes normally. This is independent of verbosity level.
 
+**Stdin file piping:** `--file <PATH>` opens the given file and pipes its content as standard input to the `claude` subprocess. Equivalent to `cat file | clr -p "..."` but without a shell pipeline. The file is opened at spawn time; a non-readable path causes `clr` to exit with an error.
+
+**Output fence stripping:** `--strip-fences` post-processes captured stdout after the subprocess exits: the first and last markdown code fence lines (`` ``` `` with optional language tag) are removed and the content between them is emitted unchanged. If no fence pair is found, stdout passes through unmodified.
+
+**CLAUDECODE removal:** `clr` removes the `CLAUDECODE` environment variable from the subprocess environment before spawning (default-on). This prevents the subprocess from detecting a parent Claude Code session, which would alter its behaviour. Use `--keep-claudecode` to opt out and preserve `CLAUDECODE` in the subprocess environment.
+
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
 ### APIs

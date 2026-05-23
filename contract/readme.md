@@ -8,4 +8,4 @@ the corresponding contract test goes RED.
 
 | Directory | Responsibility |
 |-----------|----------------|
-| `claude_contract/` | Behavioral contract tests for the `claude` binary |
+| `claude_code/` | Behavioral contract suite and documentation for the `claude` binary |

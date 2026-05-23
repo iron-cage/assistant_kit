@@ -985,16 +985,34 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
 ///
 /// # Errors
 ///
-/// - Exit 1: `name::` missing, empty, or contains invalid characters.
-/// - Exit 2: account not found, HOME unset, `claude` binary cannot be spawned, or save fails.
+/// - Exit 1: `name::` value is empty or contains invalid characters.
+/// - Exit 2: `name::` omitted and no active account; account not found; HOME unset;
+///   `claude` binary cannot be spawned; or save fails.
 /// - Exit 3 (via `process::exit`): `claude` exited without updating `~/.claude/.credentials.json`
 ///   (login abandoned or timed out).
 #[ inline ]
 pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let raw_name         = require_nonempty_string_arg( &cmd, "name" )?;
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
+  let raw_name         = match cmd.arguments.get( "name" )
+  {
+    Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
+    Some( Value::String( _ ) )                  =>
+      return Err( ErrorData::new(
+        ErrorCode::ArgumentMissing,
+        "name:: value cannot be empty".to_string(),
+      ) ),
+    _ =>
+      std::fs::read_to_string( credential_store.join( "_active" ) )
+        .ok()
+        .map( | s | s.trim().to_string() )
+        .filter( | s | !s.is_empty() )
+        .ok_or_else( || ErrorData::new(
+          ErrorCode::InternalError,
+          "name:: omitted and no active account — set an active account via .account.use or pass name:: explicitly".to_string(),
+        ) )?,
+  };
   let name             = resolve_account_name( &raw_name, &credential_store )?;
   crate::account::check_switch_preconditions( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account relogin" ) )?;
@@ -1022,11 +1040,10 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let before_creds = std::fs::read_to_string( &creds_path ).unwrap_or_default();
 
   // Spawn `claude` with inherited TTY — NOT run_isolated — so the user sees the browser login flow.
-  let spawn_result = std::process::Command::new( "claude" )
-    .stdin( std::process::Stdio::inherit() )
-    .stdout( std::process::Stdio::inherit() )
-    .stderr( std::process::Stdio::inherit() )
-    .status();
+  // Delegates to claude_runner_core::ClaudeCommand::execute_interactive() to respect the Single
+  // Execution Point Rule: all process spawning goes through claude_runner_core.
+  let spawn_result = claude_runner_core::ClaudeCommand::new()
+    .execute_interactive();
 
   if let Err( e ) = spawn_result
   {

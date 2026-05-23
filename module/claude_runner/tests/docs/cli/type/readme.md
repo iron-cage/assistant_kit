@@ -4,7 +4,7 @@
 
 - **Purpose**: Document validation edge cases for clr semantic types.
 - **Responsibility**: Index of per-type validation test files covering type-level parsing and constraint enforcement.
-- **In Scope**: All 11 clr semantic types.
+- **In Scope**: All 12 clr semantic types.
 - **Out of Scope**: Command-level tests (→ `command/`), per-parameter tests (→ `param/`).
 
 Per-type validation test indices for `clr`. See [type.md](../../../../docs/cli/type.md) for specification.
@@ -24,6 +24,7 @@ Per-type validation test indices for `clr`. See [type.md](../../../../docs/cli/t
 | 09_timeout_secs.md | Validation tests for `TimeoutSecs` type |
 | 10_json_schema_text.md | Validation tests for `JsonSchemaText` type |
 | 11_mcp_config_path.md | Validation tests for `McpConfigPath` type |
+| 12_file_path.md | Validation tests for `FilePath` type |
 
 ### Index
 
@@ -40,3 +41,4 @@ Per-type validation test indices for `clr`. See [type.md](../../../../docs/cli/t
 | `TimeoutSecs` | [09_timeout_secs.md](09_timeout_secs.md) | 6 TC |
 | `JsonSchemaText` | [10_json_schema_text.md](10_json_schema_text.md) | 4 TC |
 | `McpConfigPath` | [11_mcp_config_path.md](11_mcp_config_path.md) | 4 TC |
+| `FilePath` | [12_file_path.md](12_file_path.md) | 5 TC |

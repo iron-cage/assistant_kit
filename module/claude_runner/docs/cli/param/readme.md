@@ -28,8 +28,11 @@
 | 22_no_persist.md | `--no-persist` flag spec |
 | 23_json_schema.md | `--json-schema` parameter spec |
 | 24_mcp_config.md | `--mcp-config` parameter spec |
+| 25_file.md | `--file` parameter spec |
+| 26_strip_fences.md | `--strip-fences` flag spec |
+| 27_keep_claudecode.md | `--keep-claudecode` flag spec |
 
-### All Parameters (24 total)
+### All Parameters (27 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -57,10 +60,13 @@
 | 22 | `--no-persist` | bool | false | present/absent | Disable session persistence (`--no-session-persistence`) | 1 cmd |
 | 23 | `--json-schema` | [`JsonSchemaText`](../type.md#type--10-jsonschematext) | — | Valid JSON object string | JSON Schema for structured output validation | 1 cmd |
 | 24 | `--mcp-config` | [`McpConfigPath`](../type.md#type--11-mcpconfigpath) | — | Any existing file path | MCP server config file (repeatable) | 1 cmd |
+| 25 | `--file` | [`FilePath`](../type.md#type--12-filepath) | — | Any readable file path | File content piped as subprocess stdin | 1 cmd |
+| 26 | `--strip-fences` | bool | false | present/absent | Strip outermost markdown code fences from stdout | 1 cmd |
+| 27 | `--keep-claudecode` | bool | false | present/absent | Preserve `CLAUDECODE` env var in subprocess (default: removed) | 1 cmd |
 
-**Total:** 24 parameters
+**Total:** 27 parameters
 
-**Groups:** Parameters 2–4, 17, and 22–24 form [Claude-Native Flags](../param_group.md#group--1-claude-native-flags). Parameters 5–14, 18, and 21 form [Runner Control](../param_group.md#group--2-runner-control). Parameters 15–16 form [System Prompt](../param_group.md#group--3-system-prompt). Parameters 19–20 form [Isolated Subcommand](../param_group.md#group--4-isolated-subcommand).
+**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group.md#group--1-claude-native-flags). Parameters 5–14, 18, 21, 22, 25, 26, and 27 form [Runner Control](../param_group.md#group--2-runner-control). Parameters 15–16 form [System Prompt](../param_group.md#group--3-system-prompt). Parameters 19–20 form [Isolated Subcommand](../param_group.md#group--4-isolated-subcommand).
 
 ### Navigation
 
@@ -88,11 +94,14 @@
 - [`--no-persist`](22_no_persist.md)
 - [`--json-schema`](23_json_schema.md)
 - [`--mcp-config`](24_mcp_config.md)
+- [`--file`](25_file.md)
+- [`--strip-fences`](26_strip_fences.md)
+- [`--keep-claudecode`](27_keep_claudecode.md)
 
 ### Quick Reference
 
 **Required parameters:** `[MESSAGE]` is required for print mode (which is the default when a message is given).
 
-**Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt).
+**Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 22 parameters, `isolated` = 3 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 25 parameters, `isolated` = 3 parameters, `help` = 0 parameters.

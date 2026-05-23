@@ -14,7 +14,7 @@
 //! # Verification Method
 //!
 //! 1. Grep source code for `use std::process::Command`
-//! 2. Grep source code for `Command::new`
+//! 2. Grep source code for `process::Command::new`
 //! 3. Both must return zero matches
 //!
 //! # Test Strategy
@@ -38,7 +38,7 @@
 //! | Test Function | What It Checks | P/N |
 //! |---------------|----------------|-----|
 //! | `no_std_process_command_import` | `use std::process::Command` absent in src/ | P |
-//! | `no_command_new_calls` | `Command::new` absent in src/ | P |
+//! | `no_command_new_calls` | `process::Command::new` absent in src/ | P |
 //! | `no_process_spawning_logic` | spawn/output/status/.wait/ExitStatus absent in non-comment src/ | P |
 //! | `responsibility_documented_in_readme` | readme.md references claude_runner + has Out of Scope section | P |
 
@@ -81,15 +81,16 @@ fn no_std_process_command_import()
 #[ test ]
 fn no_command_new_calls()
 {
-  // Verify: claude_profile MUST NOT call Command::new()
+  // Verify: claude_profile MUST NOT call std::process::Command::new()
   // Rationale: Process spawning belongs in claude_runner_core
+  // Pattern: "process::Command::new" is specific — does NOT match ClaudeCommand::new()
 
   let src_dir = Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src" );
 
   let output = Command::new( "/usr/bin/grep" )
     .args( [
       "-r",
-      "Command::new",
+      "process::Command::new",
       src_dir.to_str().unwrap(),
     ] )
     .output()

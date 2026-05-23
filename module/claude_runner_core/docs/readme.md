@@ -14,6 +14,6 @@
 | `pattern/` | Builder pattern design and rationale |
 | `api/` | Execution API contracts and method signatures |
 | `data_structure/` | Type-safe configuration enum definitions |
-| `feature/` | Execution control, dry-run, describe, and isolated subprocess features |
+| `feature/` | Execution control, dry-run, describe, isolated subprocess, stdin file piping, and CLAUDECODE unsetting features |
 | `invariant/` | Single execution point and NFR conformance constraints |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

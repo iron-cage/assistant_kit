@@ -33,6 +33,9 @@ struct AccountQuota
   expires_at_ms : u64,
   /// `Ok` = live quota fetched; `Err` = reason string (expired, network, etc.).
   result        : Result< OauthUsageData, String >,
+        account       : None,
+  /// Billing state from `GET /api/oauth/account`; `None` if the fetch failed.
+  account       : Option< claude_quota::OauthAccountData >,
 }
 
 // ── Fetch helpers ──────────────────────────────────────────────────────────────
@@ -112,10 +115,17 @@ fn fetch_all_quota(
       let creds_path = credential_store.join( format!( "{}.credentials.json", acct.name ) );
       eprintln!( "[trace] {}  reading {}", acct.name, creds_path.display() );
     }
-    let result = match read_token( credential_store, &acct.name )
+    let ( result, account ) = match read_token( credential_store, &acct.name )
     {
       Ok( token ) =>
       {
+        // Spawn account fetch in parallel with usage fetch — keeps latency additive-free.
+        let token_for_account = token.clone();
+        let account_handle = std::thread::spawn( move ||
+        {
+          claude_quota::fetch_oauth_account( &token_for_account )
+        } );
+
         if trace
         {
           let prefix = if token.len() >= 20 { &token[ ..20 ] } else { &token };
@@ -127,15 +137,18 @@ fn fetch_all_quota(
           match &r
           {
             Ok( _ )  => eprintln!( "[trace] {}  result: OK", acct.name ),
+        account       : None,
             Err( e ) => eprintln!( "[trace] {}  result: Err({})", acct.name, e ),
+        account       : None,
           }
         }
-        r
+        let account_data = account_handle.join().ok().and_then( |r| r.ok() );
+        ( r, account_data )
       }
       Err( e )    =>
       {
         if trace { eprintln!( "[trace] {}  cannot read token: {}", acct.name, e ); }
-        Err( e )
+        ( Err( e ), None )
       }
     };
     results.push( AccountQuota
@@ -145,6 +158,7 @@ fn fetch_all_quota(
       is_active     : acct.is_active,
       expires_at_ms : acct.expires_at_ms,
       result,
+      account,
     } );
   }
 
@@ -164,6 +178,7 @@ fn fetch_all_quota(
         .unwrap_or_else( || "(current session)".to_string() );
       let expires_at_ms = parse_u64_field( live_creds_file, "expiresAt" ).unwrap_or( 0 );
       let result        = claude_quota::fetch_oauth_usage( token ).map_err( |e| e.to_string() );
+      let account       = claude_quota::fetch_oauth_account( token ).ok();
       results.insert( 0, AccountQuota
       {
         name : synthetic_name,
@@ -171,6 +186,7 @@ fn fetch_all_quota(
         is_active     : false,
         expires_at_ms,
         result,
+        account,
       } );
     }
   }
@@ -312,6 +328,78 @@ fn compute_expires_cell( expires_at_ms : u64, now_secs : u64 ) -> String
   }
 }
 
+/// Convert a Unix timestamp (seconds) to a Gregorian `(year, month, day)` tuple.
+///
+/// Month is 1-based (1 = January). Day is 1-based (1 = first of month).
+/// No external dependencies — hand-rolled Gregorian arithmetic.
+fn unix_to_date( unix_secs : u64 ) -> ( u32, u32, u32 )
+{
+  let is_leap     = |y : u32| ( y % 4 == 0 && y % 100 != 0 ) || y % 400 == 0;
+  let mut days    = ( unix_secs / 86_400 ) as u32;
+  let mut year    = 1970_u32;
+  loop
+  {
+    let in_year = if is_leap( year ) { 366 } else { 365 };
+    if days < in_year { break; }
+    days -= in_year;
+    year += 1;
+  }
+  let feb = if is_leap( year ) { 29 } else { 28 };
+  let month_days : [ u32; 12 ] = [ 31, feb, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
+  let mut month = 0_u32;
+  for d in &month_days
+  {
+    if days < *d { break; }
+    days -= d;
+    month += 1;
+  }
+  ( year, month + 1, days + 1 )
+}
+
+/// Format the estimated next billing renewal as `"Mon DD"` (e.g. `"Jun  5"`).
+///
+/// Billing day is taken from `org_created_at` (ISO-8601 `"YYYY-MM-DD..."`).
+/// Returns em-dash if parsing fails or `org_created_at` is too short.
+fn next_billing_label( org_created_at : &str, now_secs : u64 ) -> String
+{
+  const MONTHS : [ &str; 12 ] = [ "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ];
+  if org_created_at.len() < 10 { return "\u{2014}".to_string(); }
+  let billing_day : u32 = match org_created_at[ 8..10 ].parse() { Ok( d ) => d, Err( _ ) => return "\u{2014}".to_string() };
+  if billing_day == 0 || billing_day > 31 { return "\u{2014}".to_string(); }
+  let ( _, current_month, current_day ) = unix_to_date( now_secs );
+  let renewal_month = if billing_day > current_day
+  {
+    current_month
+  }
+  else if current_month == 12
+  {
+    1
+  }
+  else
+  {
+    current_month + 1
+  };
+  let month_name = MONTHS[ ( renewal_month - 1 ) as usize ];
+  format!( "{} {:2}", month_name, billing_day )
+}
+
+/// Map account billing state to a short subscription label for the `Sub` column.
+///
+/// - `None`                      → `"?"` (fetch failed — state unknown)
+/// - `billing_type == "none"`    → `"—"` (no active subscription)
+/// - `has_max`                   → `"max"` (Claude Max plan)
+/// - `stripe_subscription` + !has_max → `"pro"` (paid but not Max)
+/// - anything else               → `"?"`
+fn sub_label( account : Option< &claude_quota::OauthAccountData > ) -> &'static str
+{
+  let Some( a ) = account else { return "?"; };
+  if a.billing_type == "none"                { return "\u{2014}"; }
+  if a.has_max                               { return "max"; }
+  if a.billing_type == "stripe_subscription" { return "pro"; }
+  "?"
+}
+
 // Fix(BUG-152)
 // Root cause: shorten_error had no HTTP 401 branch; the else { reason } arm returned the
 //   verbose "HTTP transport error: HTTP 401" string verbatim into the 7d Reset column,
@@ -443,6 +531,8 @@ fn render_text( accounts : &[ AccountQuota ] ) -> String
     String::new(),
     "Account".to_string(),
     "Expires".to_string(),
+    "Sub".to_string(),
+    "~Renews".to_string(),
     "5h Left".to_string(),
     "5h Reset".to_string(),
     "7d Left".to_string(),
@@ -473,6 +563,10 @@ fn render_text( accounts : &[ AccountQuota ] ) -> String
 
     let expires_cell = compute_expires_cell( aq.expires_at_ms, now_secs );
 
+    let sub_str    = sub_label( aq.account.as_ref() ).to_string();
+    let renews_str = aq.account.as_ref()
+      .map_or_else( || "?".to_string(), |a| next_billing_label( &a.org_created_at, now_secs ) );
+
     match &aq.result
     {
       Ok( data ) =>
@@ -480,6 +574,7 @@ fn render_text( accounts : &[ AccountQuota ] ) -> String
         let cells = quota_text_cells( data, now_secs );
         builder = builder.add_row( vec![
           flag_cell.into(), aq.name.clone().into(), expires_cell.into(),
+          sub_str.into(), renews_str.into(),
           cells[ 0 ].clone().into(), cells[ 1 ].clone().into(),
           cells[ 2 ].clone().into(), cells[ 3 ].clone().into(), cells[ 4 ].clone().into(),
         ] );
@@ -491,6 +586,8 @@ fn render_text( accounts : &[ AccountQuota ] ) -> String
           flag_cell.into(),
           aq.name.clone().into(),
           expires_cell.into(),
+          sub_str.into(),
+          renews_str.into(),
           dash.clone().into(),
           dash.clone().into(),
           dash.clone().into(),
@@ -558,6 +655,12 @@ fn render_json( accounts : &[ AccountQuota ] ) -> String
     let is_current_str   = if aq.is_current { "true" } else { "false" };
     let is_active_str    = if aq.is_active  { "true" } else { "false" };
     let expires_in_secs  = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
+    let billing_type_str = aq.account.as_ref()
+      .map_or_else( || "null".to_string(), |a| format!( "\"{}\"", json_escape( &a.billing_type ) ) );
+    let has_max_str      = aq.account.as_ref()
+      .map_or( "null", |a| if a.has_max { "true" } else { "false" } );
+    let next_renewal_str = aq.account.as_ref()
+      .map_or_else( || "null".to_string(), |a| format!( "\"{}\"", json_escape( &next_billing_label( &a.org_created_at, now_secs ) ) ) );
     let entry = match &aq.result
     {
       Ok( data ) =>
@@ -581,6 +684,7 @@ fn render_json( accounts : &[ AccountQuota ] ) -> String
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
 \"expires_in_secs\":{expires_in_secs},\
+\"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\"next_renewal_est\":{next_renewal_str},\
 \"session_5h_left_pct\":{session_pct},\"session_5h_resets_in_secs\":{session_reset},\
 \"weekly_7d_left_pct\":{weekly_pct},\"weekly_7d_sonnet_left_pct\":{sonnet_pct},\
 \"weekly_7d_resets_in_secs\":{weekly_reset}}}",
@@ -590,7 +694,9 @@ fn render_json( accounts : &[ AccountQuota ] ) -> String
       {
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
-\"expires_in_secs\":{expires_in_secs},\"error\":\"{}\"}}",
+\"expires_in_secs\":{expires_in_secs},\
+\"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\"next_renewal_est\":{next_renewal_str},\
+\"error\":\"{}\"}}",
           json_escape( reason ),
         )
       }
@@ -1214,6 +1320,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+        account       : None,
       },
     ];
 
@@ -1222,6 +1329,7 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e == "HTTP transport error: HTTP 429" ),
       "429 error must be unchanged after apply_refresh; result: {:?}", accounts[ 0 ].result,
+        account       : None,
     );
   }
 
@@ -1242,6 +1350,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Ok( quota ),
+        account       : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false );
@@ -1265,12 +1374,14 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( err_msg.clone() ),
+        account       : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e == &err_msg ),
       "generic error must be unchanged; result: {:?}", accounts[ 0 ].result,
+        account       : None,
     );
   }
 
@@ -1304,12 +1415,14 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+        account       : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
       "401 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
+        account       : None,
     );
   }
 
@@ -1329,12 +1442,14 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 403".to_string() ),
+        account       : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "403" ) ),
       "403 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
+        account       : None,
     );
   }
 
@@ -1359,6 +1474,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Ok( quota ),
+        account       : None,
       },
       AccountQuota
       {
@@ -1367,6 +1483,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+        account       : None,
       },
       AccountQuota
       {
@@ -1375,6 +1492,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+        account       : None,
       },
       AccountQuota
       {
@@ -1383,6 +1501,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "connection refused".to_string() ),
+        account       : None,
       },
     ];
 
@@ -1419,6 +1538,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+        account       : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, true );
@@ -1468,6 +1588,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+        account       : None,
       },
     ];
 
@@ -1476,6 +1597,7 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
       "lifecycle path: 401 result must be unchanged when switch_account fails; result: {:?}",
+        account       : None,
       accounts[ 0 ].result,
     );
   }
@@ -1536,6 +1658,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+        account       : None,
       },
     ];
 
@@ -1574,12 +1697,14 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,  // expired: 0/1000=0 <= now_secs
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+        account       : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
       "lifecycle: 429+expired result must be unchanged when switch_account fails; result: {:?}",
+        account       : None,
       accounts[ 0 ].result,
     );
   }
@@ -1606,6 +1731,7 @@ mod tests
         is_active     : false,
         expires_at_ms : FAR_FUTURE_MS,  // non-expired; 403 triggers regardless of expiry
         result        : Err( "HTTP transport error: HTTP 403".to_string() ),
+        account       : None,
       },
     ];
 
@@ -1614,6 +1740,7 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "403" ) ),
       "lifecycle: 403 result must be unchanged when switch_account fails; result: {:?}",
+        account       : None,
       accounts[ 0 ].result,
     );
   }
@@ -1644,12 +1771,14 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+        account       : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
       "lifecycle: 401 result must be unchanged when fs::copy fails (no .claude/ dir); result: {:?}",
+        account       : None,
       accounts[ 0 ].result,
     );
   }
@@ -1690,6 +1819,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+        account       : None,
       },
     ];
     // Must not panic — switch_account fails (no cred file), trace logs to stderr.
@@ -1815,6 +1945,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+        account       : None,
       },
     ];
     // Must not panic — switch_account succeeds; run_isolated invoked; fails fast (fake creds).
@@ -1839,6 +1970,7 @@ mod tests
         is_active     : false,
         expires_at_ms : FAR_FUTURE_MS,  // non-expired → 429 is genuine rate-limit
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+        account       : None,
       },
     ];
 
@@ -1847,6 +1979,7 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
       "429 with valid (non-expired) token must NOT be retried; result: {:?}",
+        account       : None,
       accounts[ 0 ].result,
     );
   }
@@ -1872,6 +2005,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+        account       : None,
       },
     ];
 
@@ -1881,6 +2015,7 @@ mod tests
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
       "429+expired: result must be unchanged when no cred file (refresh path entered but gracefully skipped); result: {:?}",
+        account       : None,
       accounts[ 0 ].result,
     );
   }
@@ -1991,6 +2126,7 @@ mod tests
       is_active     : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+        account       : None,
     };
     assert!( should_refresh( &aq, 0 ), "401 must trigger refresh" );
   }
@@ -2006,6 +2142,7 @@ mod tests
       is_active     : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "HTTP transport error: HTTP 403".to_string() ),
+        account       : None,
     };
     assert!( should_refresh( &aq, 0 ), "403 must trigger refresh" );
   }
@@ -2025,6 +2162,7 @@ mod tests
       is_active     : false,
       expires_at_ms : 0, // locally expired
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+        account       : None,
     };
     assert!(
       should_refresh( &aq, 9_999 ),
@@ -2046,6 +2184,7 @@ mod tests
       is_active     : false,
       expires_at_ms : FAR_FUTURE_MS, // not expired
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+        account       : None,
     };
     assert!(
       !should_refresh( &aq, 0 ),
@@ -2067,6 +2206,7 @@ mod tests
       is_active     : false,
       expires_at_ms : 5_000,
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+        account       : None,
     };
     assert!(
       should_refresh( &aq, 5 ),
@@ -2088,6 +2228,7 @@ mod tests
       is_active     : false,
       expires_at_ms : 6_000,  // one second ahead of now_secs=5
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
+        account       : None,
     };
     assert!(
       !should_refresh( &aq, 5 ),
@@ -2107,6 +2248,7 @@ mod tests
       is_active     : false,
       expires_at_ms : 0,
       result        : Ok( quota ),
+        account       : None,
     };
     assert!( !should_refresh( &aq, 9_999 ), "Ok result must not trigger refresh" );
   }
@@ -2122,6 +2264,7 @@ mod tests
       is_active     : false,
       expires_at_ms : 0,
       result        : Err( "connection refused".to_string() ),
+        account       : None,
     };
     assert!( !should_refresh( &aq, 9_999 ), "generic error must not trigger refresh" );
   }
@@ -2179,6 +2322,7 @@ mod tests
       {
         name : "active@test.com".to_string(), is_current : false, is_active : true,
         expires_at_ms : FAR_FUTURE_MS, result : Ok( quota ),
+        account       : None,
       },
     ];
     assert!( find_recommendation( &accounts, 0 ).is_none() );
@@ -2194,6 +2338,7 @@ mod tests
       {
         name : "expired@test.com".to_string(), is_current : false, is_active : false,
         expires_at_ms : 0, result : Ok( quota ),
+        account       : None,
       },
     ];
     assert!( find_recommendation( &accounts, 1 ).is_none() );
@@ -2214,6 +2359,7 @@ mod tests
       {
         name : name.to_string(), is_current : false, is_active : false,
         expires_at_ms : FAR_FUTURE_MS, result : Ok( data ),
+        account       : None,
       }
     };
     let accounts = vec![ mk( "high@use.com", 80.0 ), mk( "low@use.com", 20.0 ) ];
@@ -2229,6 +2375,7 @@ mod tests
       {
         name : "err@test.com".to_string(), is_current : false, is_active : false,
         expires_at_ms : FAR_FUTURE_MS, result : Err( "fail".to_string() ),
+        account       : None,
       },
     ];
     assert!( find_recommendation( &accounts, 0 ).is_none() );
@@ -2293,6 +2440,7 @@ mod tests
       {
         name : "fail@test.com".to_string(), is_current : false, is_active : false,
         expires_at_ms : 0, result : Err( "auth failed".to_string() ),
+        account       : None,
       },
     ];
     let result = render_json( &accounts );
@@ -2309,6 +2457,7 @@ mod tests
       {
         name : "test\"@evil.com".to_string(), is_current : false, is_active : false,
         expires_at_ms : 0, result : Err( "fail".to_string() ),
+        account       : None,
       },
     ];
     let result = render_json( &accounts );
@@ -2342,6 +2491,7 @@ mod tests
         is_active     : false,
         expires_at_ms : FAR_FUTURE_MS,
         result        : Ok( quota ),
+        account       : None,
       },
       AccountQuota
       {
@@ -2350,6 +2500,7 @@ mod tests
         is_active     : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
+        account       : None,
       },
     ];
 

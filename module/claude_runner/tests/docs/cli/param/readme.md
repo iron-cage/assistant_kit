@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clr parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 24 clr parameter edge case files.
+- **In Scope**: All 27 clr parameter edge case files.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
@@ -37,6 +37,9 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | 22_no_persist.md | Edge cases for `--no-persist` flag |
 | 23_json_schema.md | Edge cases for `--json-schema` parameter |
 | 24_mcp_config.md | Edge cases for `--mcp-config` parameter |
+| 25_file.md | Edge cases for `--file` parameter |
+| 26_strip_fences.md | Edge cases for `--strip-fences` flag |
+| 27_keep_claudecode.md | Edge cases for `--keep-claudecode` flag |
 
 ### Index
 
@@ -66,3 +69,6 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `--no-persist` | [22_no_persist.md](22_no_persist.md) | 6 EC |
 | `--json-schema` | [23_json_schema.md](23_json_schema.md) | 6 EC |
 | `--mcp-config` | [24_mcp_config.md](24_mcp_config.md) | 6 EC |
+| `--file` | [25_file.md](25_file.md) | 6 EC |
+| `--strip-fences` | [26_strip_fences.md](26_strip_fences.md) | 6 EC |
+| `--keep-claudecode` | [27_keep_claudecode.md](27_keep_claudecode.md) | 6 EC |

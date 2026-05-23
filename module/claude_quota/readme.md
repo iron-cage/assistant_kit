@@ -48,5 +48,6 @@ pub fn fetch_oauth_usage(token: &str) -> Result<OauthUsageData, QuotaError>  // 
 | tests/readme.md | Test directory organization guide |
 | tests/rate_limit_test.rs | Unit tests T01–T16 for `parse_headers` (offline, closure-based) |
 | tests/oauth_usage_test.rs | Unit tests T17–T28 for `parse_oauth_usage` (to create — task 135) |
+| `docs/` | Endpoint reference and API documentation. |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 | `runbox/` | Shell scripts for container-orchestrated operations. |

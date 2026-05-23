@@ -37,6 +37,7 @@ Each `with_*()` method takes `self` by move and returns `Self`, enabling method 
 - `auto_continue`: true (enables programmatic automation)
 - `telemetry`: false (disables telemetry in automation)
 - `bash_timeout_ms`: 3,600,000ms (1 hour)
+- `unset_claudecode`: true (removes `CLAUDECODE` env var before spawning)
 
 ### Applicability
 
@@ -55,11 +56,32 @@ This pattern does not apply when the command is simple (1–2 parameters) or whe
 - Callers chain only the parameters they need; unused parameters take safe defaults
 - New parameters added as `with_*()` methods without breaking existing callers
 - Deprecated factory method (`generate()`) is removed entirely — old API cannot compile
+- `unset_claudecode: true` default enables safe nested invocation from within Claude Code sessions
 
 **Costs:**
 - Move semantics require callers to own the builder (not pass `&ClaudeCommand` between functions)
 - No compile-time validation of required parameters; `execute()` can fail at runtime if configuration is invalid
 - 40+ methods creates a large API surface to maintain
+
+**Stdin file method (`with_stdin_file`):**
+
+```rust
+ClaudeCommand::new()
+  .with_stdin_file(PathBuf::from("input.md"))
+  .execute()
+```
+
+Pipes the file's content as the subprocess's standard input. The file is opened at `execute()` time; open failure returns `Err`. See [feature/005_stdin_file.md](../feature/005_stdin_file.md) for full semantics.
+
+**CLAUDECODE unsetting method (`with_unset_claudecode`):**
+
+```rust
+ClaudeCommand::new()
+  .with_unset_claudecode(false)  // keep CLAUDECODE — default is true (remove it)
+  .execute()
+```
+
+Controls whether `CLAUDECODE` is removed from the subprocess environment. Default `true` is correct for virtually all automation use-cases. See [feature/006_unset_claudecode.md](../feature/006_unset_claudecode.md).
 
 ### Cross-References
 

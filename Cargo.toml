@@ -8,7 +8,7 @@
 [workspace]
 resolver = "2"
 members = [
-  "contract/claude_contract",
+  "contract/claude_code",
   "module/claude_auth",
   "module/claude_assets_core",
   "module/claude_assets",

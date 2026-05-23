@@ -1,7 +1,7 @@
 meta:
   description: Cross-reference graph for all doc instances in the assistant workspace
-  node_count: 20
-  edge_count: 39
+  node_count: 21
+  edge_count: 41
   component_count: 3
   generated: '2026-04-22'
 nodes:
@@ -54,36 +54,40 @@ nodes:
   label: API Overloaded
   entity: error
 - id: claude_code/001
-  file: claude_code/001_session_behaviors.md
+  file: ../contract/claude_code/docs/behavior/001_session_behaviors.md
   label: Session Behaviors
   entity: claude_code
 - id: claude_code/002
-  file: claude_code/002_storage_organization.md
+  file: ../contract/claude_code/docs/behavior/002_storage_organization.md
   label: Storage Organization
   entity: claude_code
 - id: claude_code/003
-  file: claude_code/003_filesystem_layout.md
+  file: ../contract/claude_code/docs/behavior/003_filesystem_layout.md
   label: Filesystem Layout
   entity: claude_code
 - id: claude_code/004
-  file: claude_code/004_jsonl_format.md
+  file: ../contract/claude_code/docs/behavior/004_jsonl_format.md
   label: JSONL Format
   entity: claude_code
 - id: claude_code/005
-  file: claude_code/005_settings_format.md
+  file: ../contract/claude_code/docs/behavior/005_settings_format.md
   label: Settings Format
   entity: claude_code
 - id: claude_code/006
-  file: claude_code/006_ancillary_formats.md
+  file: ../contract/claude_code/docs/behavior/006_ancillary_formats.md
   label: Ancillary Formats
   entity: claude_code
 - id: claude_code/params
-  file: claude_code/params/readme.md
+  file: ../contract/claude_code/docs/behavior/params/readme.md
   label: Parameters
   entity: claude_code
 - id: claude_code/007
-  file: claude_code/007_concept_taxonomy.md
+  file: ../contract/claude_code/docs/behavior/007_concept_taxonomy.md
   label: Concept Taxonomy
+  entity: claude_code
+- id: claude_code/entities
+  file: ../contract/claude_code/docs/entities.md
+  label: Doc Entities Index
   entity: claude_code
 edges:
 - from: feature/001
@@ -203,6 +207,12 @@ edges:
 - from: claude_code/004
   to: claude_code/007
   via: cross_references
+- from: claude_code/entities
+  to: claude_code/001
+  via: indexes
+- from: claude_code/entities
+  to: claude_code/params
+  via: indexes
 components:
 - id: 1
   label: Main corpus
@@ -228,7 +238,7 @@ components:
   - error/005
 - id: 3
   label: Claude Code knowledge
-  size: 8
+  size: 9
   isolated: true
   nodes:
   - claude_code/001
@@ -239,4 +249,5 @@ components:
   - claude_code/006
   - claude_code/params
   - claude_code/007
+  - claude_code/entities
 dangling_refs: []

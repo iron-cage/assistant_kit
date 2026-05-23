@@ -7,9 +7,9 @@
 //!
 //! | Feature   | Adds                                                    | Extra dep |
 //! |-----------|---------------------------------------------------------|-----------|
-//! | (none)    | `RateLimitData`, `OauthUsageData`, `PeriodUsage`, `QuotaError` | —  |
-//! | (none)    | `parse_headers`, `parse_oauth_usage`, `iso_to_unix_secs` | —        |
-//! | `enabled` | `fetch_rate_limits(token)`, `fetch_oauth_usage(token)`  | `ureq`    |
+//! | (none)    | `RateLimitData`, `OauthUsageData`, `OauthAccountData`, `PeriodUsage`, `QuotaError` | — |
+//! | (none)    | `parse_headers`, `parse_oauth_usage`, `parse_oauth_account`, `iso_to_unix_secs` | — |
+//! | `enabled` | `fetch_rate_limits(token)`, `fetch_oauth_usage(token)`, `fetch_oauth_account(token)` | `ureq` |
 //!
 //! # Testability
 //!
@@ -312,6 +312,30 @@ pub fn parse_oauth_usage( body : &str ) -> Result< OauthUsageData, QuotaError >
   Ok( OauthUsageData { five_hour, seven_day, seven_day_sonnet } )
 }
 
+/// Extract a `{...}` object block from the start of `s` using brace counting.
+///
+/// `s` must start with `'{'`. Returns the slice `s[..end]` including both braces,
+/// or `None` if the input doesn't start with `'{'` or has unmatched braces.
+fn extract_object_block( s : &str ) -> Option< &str >
+{
+  if !s.starts_with( '{' ) { return None; }
+  let mut depth = 0_i32;
+  for ( i, c ) in s.char_indices()
+  {
+    match c
+    {
+      '{' => depth += 1,
+      '}' =>
+      {
+        depth -= 1;
+        if depth == 0 { return Some( &s[ ..i + 1 ] ); }
+      }
+      _ => {}
+    }
+  }
+  None
+}
+
 /// Extract a single period bucket from the usage JSON body.
 ///
 /// Finds `"key":` needle, inspects the value:
@@ -342,31 +366,8 @@ fn parse_period( body : &str, key : &str ) -> Result< Option< PeriodUsage >, Quo
     return Err( QuotaError::ResponseParse( format!( "{key}: expected object or null" ) ) );
   }
 
-  // Find the closing '}' by counting brace depth
-  let mut depth  = 0_i32;
-  let mut end    = 0;
-  for ( i, c ) in value_start.char_indices()
-  {
-    match c
-    {
-      '{' => depth += 1,
-      '}' =>
-      {
-        depth -= 1;
-        if depth == 0
-        {
-          end = i + 1;
-          break;
-        }
-      }
-      _ => {}
-    }
-  }
-  if end == 0
-  {
-    return Err( QuotaError::ResponseParse( format!( "{key}: unclosed object" ) ) );
-  }
-  let block = &value_start[ ..end ];
+  let block = extract_object_block( value_start )
+    .ok_or_else( || QuotaError::ResponseParse( format!( "{key}: unclosed object" ) ) )?;
 
   // Parse `utilization` (required f64)
   let utilization = parse_f64_in_block( block, "utilization" )
@@ -451,4 +452,100 @@ pub fn fetch_oauth_usage( token : &str ) -> Result< OauthUsageData, QuotaError >
   };
 
   parse_oauth_usage( &body )
+}
+
+// ── OauthAccountData ──────────────────────────────────────────────────────────
+
+/// OAuth account URL — GET endpoint returning account identity and org membership.
+pub const OAUTH_ACCOUNT_URL : &str = "https://api.anthropic.com/api/oauth/account";
+
+/// Account identity and subscription state parsed from `GET /api/oauth/account`.
+///
+/// Only the billing-relevant fields from `memberships[0].organization` are captured.
+/// The full response also contains user identity fields and large `settings` objects
+/// not needed for quota display.
+///
+/// # Pitfall
+///
+/// `credentials.json` `subscriptionType` is written at OAuth-token-creation time and
+/// goes stale after subscription changes. `billing_type` from this endpoint is the
+/// authoritative current state — prefer it over the cached credential field.
+#[ derive( Debug ) ]
+pub struct OauthAccountData
+{
+  /// Current subscription status: `"stripe_subscription"` = active, `"none"` = cancelled.
+  pub billing_type   : String,
+  /// Whether the account has Claude Max capability (`"claude_max"` in org capabilities array).
+  pub has_max        : bool,
+  /// ISO-8601 UTC org creation timestamp — Stripe billing cycle anchor date.
+  pub org_created_at : String,
+}
+
+/// Parse the body of `GET /api/oauth/account` into [`OauthAccountData`].
+///
+/// Locates `memberships[0].organization` by string-needle scanning and extracts
+/// `billing_type`, `capabilities`, and `created_at`.
+///
+/// # Errors
+///
+/// Returns [`QuotaError::ResponseParse`] if `memberships`, `organization`,
+/// `billing_type`, or `created_at` are absent or the object block is malformed.
+pub fn parse_oauth_account( body : &str ) -> Result< OauthAccountData, QuotaError >
+{
+  let memberships_pos = body
+    .find( "\"memberships\":" )
+    .ok_or_else( || QuotaError::ResponseParse( "memberships".to_string() ) )?;
+
+  let after_memberships = &body[ memberships_pos + "\"memberships\":".len() .. ];
+
+  let org_pos = after_memberships
+    .find( "\"organization\":" )
+    .ok_or_else( || QuotaError::ResponseParse( "organization".to_string() ) )?;
+
+  let after_org = after_memberships[ org_pos + "\"organization\":".len() .. ].trim_start();
+  let org_block = extract_object_block( after_org )
+    .ok_or_else( || QuotaError::ResponseParse( "organization: unclosed object".to_string() ) )?;
+
+  let billing_type = parse_optional_string_in_block( org_block, "billing_type" )
+    .ok_or_else( || QuotaError::ResponseParse( "organization.billing_type".to_string() ) )?;
+
+  let org_created_at = parse_optional_string_in_block( org_block, "created_at" )
+    .ok_or_else( || QuotaError::ResponseParse( "organization.created_at".to_string() ) )?;
+
+  // capabilities is a JSON array — check for the literal string token
+  let has_max = org_block.contains( "\"claude_max\"" );
+
+  Ok( OauthAccountData { billing_type, has_max, org_created_at } )
+}
+
+/// Fetch account identity and subscription state from the Anthropic OAuth account endpoint.
+///
+/// Makes a `GET /api/oauth/account` request using the provided OAuth access token.
+///
+/// # Errors
+///
+/// Returns [`QuotaError::HttpTransport`] on network failure, or
+/// [`QuotaError::ResponseParse`] if the response body cannot be parsed.
+#[ cfg( feature = "enabled" ) ]
+pub fn fetch_oauth_account( token : &str ) -> Result< OauthAccountData, QuotaError >
+{
+  let resp = ureq::get( OAUTH_ACCOUNT_URL )
+    .set( "Authorization",     &format!( "Bearer {token}" ) )
+    .set( "anthropic-version", ANTHROPIC_VERSION )
+    .call();
+
+  let body = match resp
+  {
+    Ok( r ) => r.into_string().map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?,
+    Err( ureq::Error::Status( _, r ) ) =>
+    {
+      return Err( QuotaError::HttpTransport( format!( "HTTP {}", r.status() ) ) );
+    }
+    Err( ureq::Error::Transport( t ) ) =>
+    {
+      return Err( QuotaError::HttpTransport( t.to_string() ) );
+    }
+  };
+
+  parse_oauth_account( &body )
 }

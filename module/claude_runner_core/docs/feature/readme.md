@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Document user-facing capabilities of the claude_runner_core library for consumers building Claude Code automation.
-- **Responsibility**: Index of feature doc instances covering execution control, dry-run, and command inspection.
-- **In Scope**: Execution mode design, dry-run semantics, describe/describe_compact output format.
+- **Responsibility**: Index of feature doc instances covering execution control, dry-run, command inspection, stdin file piping, and CLAUDECODE environment unsetting.
+- **In Scope**: Execution mode design, dry-run semantics, describe/describe_compact output format, stdin_file piping, unset_claudecode default-on behavior.
 - **Out of Scope**: Builder pattern design (→ `pattern/`), API contracts (→ `api/`), type definitions (→ `data_structure/`).
 
 ### Overview Table
@@ -15,4 +15,6 @@
 | 002 | [Dry Run](002_dry_run.md) | Command preview without process execution | ✅ |
 | 003 | [Describe](003_describe.md) | Human-readable command inspection output | ✅ |
 | 004 | [Isolated Subprocess Execution](004_run_isolated.md) | `run_isolated()` — temp-HOME subprocess spawn for OAuth token refresh; `IsolatedRunResult`, `RunnerError` types | ✅ |
+| 005 | [Stdin File Piping](005_stdin_file.md) | `stdin_file` field — pipes file content as subprocess stdin via `with_stdin_file()` | ✅ |
+| 006 | [CLAUDECODE Unsetting](006_unset_claudecode.md) | `unset_claudecode` field — removes `CLAUDECODE` env var before spawning (default-on) | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

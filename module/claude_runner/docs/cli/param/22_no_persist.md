@@ -6,7 +6,7 @@ Disable session persistence. Forwards `--no-session-persistence` to the
 - **Type:** bool (standalone flag)
 - **Default:** false (session persistence is **ON** by default; this flag turns it **OFF**)
 - **Command:** [`run`](../command.md#command--1-run)
-- **Group:** [Claude-Native Flags](../param_group.md#group--1-claude-native-flags)
+- **Group:** [Runner Control](../param_group.md#group--2-runner-control)
 
 ```sh
 clr "Fix bug"              # session saved to disk (default)

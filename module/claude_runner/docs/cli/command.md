@@ -4,7 +4,7 @@
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
-| 1 | `run` (default) | Execute Claude Code with given parameters | 22 | `clr "Fix bug" --model sonnet` |
+| 1 | `run` (default) | Execute Claude Code with given parameters | 25 | `clr "Fix bug" --model sonnet` |
 | 2 | `isolated` | Run Claude with credential-isolated temp HOME | 3 | `clr isolated --creds creds.json "Fix bug"` |
 | 3 | `help` | Print usage information and exit | 0 | `clr --help` |
 
@@ -49,6 +49,9 @@ clr [OPTIONS] [MESSAGE]
 | [`--no-persist`](param/22_no_persist.md) | bool | false | Disable session persistence (`--no-session-persistence`) |
 | [`--json-schema`](param/23_json_schema.md) | [`JsonSchemaText`](type.md#type--10-jsonschematext) | — | JSON schema for structured output |
 | [`--mcp-config`](param/24_mcp_config.md) | [`McpConfigPath`](type.md#type--11-mcpconfigpath) | — | MCP server config file (repeatable, 0+) |
+| [`--file`](param/25_file.md) | [`FilePath`](type.md#type--12-filepath) | — | File content piped as subprocess stdin |
+| [`--strip-fences`](param/26_strip_fences.md) | bool | false | Strip outermost markdown code fences from stdout |
+| [`--keep-claudecode`](param/27_keep_claudecode.md) | bool | false | Preserve `CLAUDECODE` env var in subprocess (default: removed) |
 
 **Parameter Groups:** [Claude-Native Flags](param_group.md#group--1-claude-native-flags), [Runner Control](param_group.md#group--2-runner-control), [System Prompt](param_group.md#group--3-system-prompt)
 
@@ -101,23 +104,22 @@ clr --dry-run "Run tests" --max-tokens 50000
 
 `--dry-run` takes precedence over execution regardless of other flags. If present, no subprocess is launched.
 
-**Hypothesis (H1) — `--tools ""`:** Passing an empty tools list blocks tool *invocation*
-but does NOT strip tool *definitions* from the assembled system prompt. The ~12k token cost
-is paid regardless — Claude knows about tools but cannot call them. Status: ❓ unverified.
-Validation: run `claude --tools "" --print "hi" --output-format json | jq '.usage'` and
-compare input token count against a baseline without `--tools ""`; then observe whether
-Claude attempts tool calls in a live conversation.
+### Referenced User Stories
 
-| Layer | `--system-prompt` | `--append-system-prompt` | `--tools ""` ❓ |
-|-------|------------------|--------------------------|-----------------|
-| Tool definitions (~12k tokens) | ✅ Preserved | ✅ Preserved | ❓ Likely preserved (unverified) |
-| Tool invocation | ✅ Enabled | ✅ Enabled | ❓ Likely blocked (unverified) |
-| Coding guidelines and style | ❌ Removed | ✅ Kept | ✅ Kept |
-| Git safety rules | ❌ Removed | ✅ Kept | ✅ Kept |
-| Security constraints | ❌ Removed | ✅ Kept | ✅ Kept |
-| CLAUDE.md handling instructions | ❌ Removed | ✅ Kept | ✅ Kept |
-| Output style (conciseness, no emojis) | ❌ Removed | ✅ Kept | ✅ Kept |
-| Sub-agent coordination prompts | ❌ Removed | ✅ Kept | ✅ Kept |
+| # | User Story | Notes |
+|---|-----------|-------|
+| 1 | [001 Interactive REPL](user_story/001_interactive_repl.md) | |
+| 2 | [002 Print Mode Capture](user_story/002_print_mode_capture.md) | |
+| 3 | [003 Interactive With Message](user_story/003_interactive_with_message.md) | |
+| 4 | [004 Dry-run Preview](user_story/004_dry_run_preview.md) | |
+| 5 | [005 Project-specific Execution](user_story/005_project_specific_execution.md) | |
+| 6 | [006 Verbose Debugging](user_story/006_verbose_debugging.md) | |
+| 7 | [007 Fresh Session](user_story/007_fresh_session.md) | |
+| 8 | [008 Trace Execution](user_story/008_trace_execution.md) | |
+| 9 | [009 Custom System Prompt](user_story/009_custom_system_prompt.md) | |
+| 10 | [011 File Input](user_story/011_file_input.md) | |
+| 11 | [012 Code Block Extraction](user_story/012_code_block_extraction.md) | |
+| 12 | [013 Structured JSON Pipeline](user_story/013_structured_json_pipeline.md) | |
 
 ---
 
@@ -180,6 +182,12 @@ token refresh at startup before blocking on input), `clr isolated` exits 0
 and writes updated credentials back to `--creds` instead of returning exit 2.
 This matches the `IsolatedRunResult { exit_code: -1, credentials: Some(…) }`
 path in `claude_runner_core::run_isolated()`.
+
+### Referenced User Stories
+
+| # | User Story | Notes |
+|---|-----------|-------|
+| 1 | [010 Credential-isolated Execution](user_story/010_credential_isolated_execution.md) | |
 
 ---
 

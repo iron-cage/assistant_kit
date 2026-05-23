@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 3 clr commands, all 24 parameters, all 11 types, all 4 parameter groups, 1 env parameter, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 3 clr commands, all 27 parameters, all 12 types, all 4 parameter groups, 1 env parameter, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -24,9 +24,9 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
 | Commands | 3 | ≥8 IT each |
-| Parameters | 24 | ≥6 EC each |
+| Parameters | 27 | ≥6 EC each |
 | Parameter groups | 4 | ≥4 CC each |
-| Types | 11 | ≥4 TC each |
+| Types | 12 | ≥4 TC each |
 | Env params | 1 | ≥6 EC each |
 
 ### Navigation
@@ -61,6 +61,9 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`--no-persist`](param/22_no_persist.md)
 - [`--json-schema`](param/23_json_schema.md)
 - [`--mcp-config`](param/24_mcp_config.md)
+- [`--file`](param/25_file.md)
+- [`--strip-fences`](param/26_strip_fences.md)
+- [`--keep-claudecode`](param/27_keep_claudecode.md)
 
 #### Parameter Groups
 - [Claude-Native Flags](param_group/01_claude_native_flags.md)
@@ -80,7 +83,8 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`TimeoutSecs`](type/09_timeout_secs.md)
 - [`JsonSchemaText`](type/10_json_schema_text.md)
 - [`McpConfigPath`](type/11_mcp_config_path.md)
+- [`FilePath`](type/12_file_path.md)
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)
-- [`CLR_* (24 vars)`](env_param/02_clr_input_vars.md)
+- [`CLR_* (27 vars)`](env_param/02_clr_input_vars.md)

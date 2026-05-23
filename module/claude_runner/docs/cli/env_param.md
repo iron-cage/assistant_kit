@@ -1,20 +1,20 @@
 # Environment Parameters
 
-### All Env Parameters (25 total)
+### All Env Parameters (28 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
-| Input (CLR_*) — `run` subcommand | 22 | Caller env fallbacks for `run` parameters |
+| Input (CLR_*) — `run` subcommand | 25 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` subcommand | 2 | Caller env fallbacks for `isolated` parameters |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 25 environment variables
+**Total:** 28 environment variables
 
 ---
 
 ### Env Param :: 1. CLR_* Input Parameters — `run` Subcommand
 
-Environment variable fallbacks for the 22 `run` subcommand parameters.
+Environment variable fallbacks for all 25 `run` subcommand parameters.
 `apply_env_vars()` in `src/lib.rs` reads these immediately after CLI parsing, before command
 dispatch. Each variable is applied **only when the corresponding CLI field is still at its
 zero/absent value** — the CLI flag always wins when both are present.
@@ -49,6 +49,9 @@ invalid values (parse failure → field stays at default).
 | 20 | `CLR_NO_PERSIST` | [`--no-persist`](param/22_no_persist.md) | bool | |
 | 21 | `CLR_JSON_SCHEMA` | [`--json-schema`](param/23_json_schema.md) | string | |
 | 22 | `CLR_MCP_CONFIG` | [`--mcp-config`](param/24_mcp_config.md) | string | Only one value via env var; multiple configs require CLI repeats (`--mcp-config A --mcp-config B`) |
+| 23 | `CLR_FILE` | [`--file`](param/25_file.md) | string | Applied when `--file` absent; value is the file path |
+| 24 | `CLR_STRIP_FENCES` | [`--strip-fences`](param/26_strip_fences.md) | bool | |
+| 25 | `CLR_KEEP_CLAUDECODE` | [`--keep-claudecode`](param/27_keep_claudecode.md) | bool | |
 
 **Precedence:**
 

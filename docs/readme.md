@@ -6,7 +6,6 @@ Documentation for the `assistant` workspace covering behavioral requirements, st
 
 | File/Directory | Responsibility |
 |----------------|----------------|
-| `claude_code/` | Shared Claude Code knowledge (filesystem, settings format, storage layout) |
 | `feature/` | Workspace design and crate inventory |
 | `invariant/` | Privacy, versioning, testing, and performance constraints |
 | `pattern/` | Four-layer crate dependency architecture pattern |

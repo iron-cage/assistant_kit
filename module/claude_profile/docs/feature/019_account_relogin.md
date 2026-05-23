@@ -11,7 +11,9 @@
 
 When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), the `refreshToken` itself is expired and cannot be renewed without user interaction. `.account.relogin` handles this recovery path by:
 
-1. Resolving `name::` via AccountSelector (full email or prefix) → validate account exists.
+**Name resolution**: When `name::` is omitted, the active account (`_active` marker) is used. If `name::` is omitted AND no `_active` marker exists, the command exits 2 with an actionable message. This follows invariant [006_param_defaults.md](../invariant/006_param_defaults.md): parameters must default to active context when possible.
+
+1. Resolving `name::` via AccountSelector (full email or prefix), or reading the `_active` marker when `name::` is omitted → validate account exists.
 2. Snapshotting the current `_active` marker (best-effort; `None` when absent).
 3. Calling `switch_account(name)` to copy the named account's credentials into `~/.claude/.credentials.json` so `claude` picks up its `refreshToken`.
 4. Spawning `claude` with **inherited TTY** (`stdin`/`stdout`/`stderr` connected) — the user completes browser re-authentication interactively.
@@ -24,20 +26,21 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 
 **Exit codes:**
 - 0: success — credentials refreshed and saved, original active restored.
-- 1: usage error — `name::` missing, empty, or contains invalid characters.
-- 2: runtime error — account not found, HOME unset, `claude` binary cannot be spawned, or `save()` fails after credential update.
+- 1: usage error — empty or invalid characters in `name::` value.
+- 2: runtime error — `name::` omitted and no active account; account not found; HOME unset; `claude` binary cannot be spawned; or `save()` fails after credential update.
 - 3 (via `process::exit`): login abandoned — `claude` exited without updating `~/.claude/.credentials.json`.
 
 ### Acceptance Criteria
 
 - **AC-01**: `clp .account.relogin name::i3@wbox.pro dry::1` exits 0 with `[dry-run] would re-authenticate 'i3@wbox.pro' via browser login`; no files mutated.
-- **AC-02**: Missing `name::` exits 1.
-- **AC-03**: Non-existent account exits 2 with "not found".
-- **AC-04**: Positional bare arg `clp .account.relogin i3@wbox.pro` is accepted (AccountSelector).
-- **AC-05**: Prefix form `clp .account.relogin i3` resolves to the single matching account.
-- **AC-06**: After successful browser login, the named account's credential file in the store is updated (same as if `.account.save` had been run).
-- **AC-07**: After re-authentication, the original active account is restored — the user's session context is unchanged.
-- **AC-08**: If `claude` exits without updating `~/.claude/.credentials.json`, the process exits 3.
+- **AC-02**: `clp .account.relogin` (no `name::`) with an active account uses the active account; `dry::1` outputs `[dry-run] would re-authenticate '{active}' via browser login`.
+- **AC-03**: `clp .account.relogin` (no `name::`) with no active account exits 2 with an actionable message.
+- **AC-04**: Non-existent account name exits 2 with "not found".
+- **AC-05**: Positional bare arg `clp .account.relogin i3@wbox.pro` is accepted (AccountSelector).
+- **AC-06**: Prefix form `clp .account.relogin i3` resolves to the single matching account.
+- **AC-07**: After successful browser login, the named account's credential file in the store is updated (same as if `.account.save` had been run).
+- **AC-08**: After re-authentication, the original active account is restored — the user's session context is unchanged.
+- **AC-09**: If `claude` exits without updating `~/.claude/.credentials.json`, the process exits 3.
 
 ### Cross-References
 
@@ -45,6 +48,7 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 |------|------|----------------|
 | source | `src/commands.rs` | `account_relogin_routine()` — CLI handler; 6-step TTY spawn and credential capture |
 | source | `src/account.rs` | `switch_account()`, `save()` — credential rotation and store write-back |
+| invariant | [invariant/006_param_defaults.md](../invariant/006_param_defaults.md) | Governing principle: `name::` defaults to active account when omitted |
 | doc | [017_token_refresh.md](017_token_refresh.md) | Automated refresh path — use `.account.relogin` when `refresh::1` returns `credentials=None` |
 | doc | [command/account.md](../cli/command/account.md#command--12-accountrelogin) | CLI command specification |
 | doc | [tests/docs/cli/command/12_account_relogin.md](../../tests/docs/cli/command/12_account_relogin.md) | Integration test plan |

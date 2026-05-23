@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the non-functional constraints that `claude_profile` must maintain at all times.
 - **Responsibility**: Documents all quality invariants with their statements, enforcement mechanisms, and violation consequences.
-- **In Scope**: NFR-1, NFR-3, NFR-4, NFR-5, NFR-6 — the five non-functional requirements from the original spec.
+- **In Scope**: NFR-1, NFR-3, NFR-4, NFR-5, NFR-6 — the five original non-functional requirements; plus design-time invariants derived from governing principles.
 - **Out of Scope**: Functional requirements (→ feature/), CLI design constraints (→ cli/).
 
 ### Overview Table
@@ -16,4 +16,5 @@
 | 003 | [Clear Error Messages](003_clear_errors.md) | All errors name the relevant resource and state corrective action | ✅ |
 | 004 | [No Process Execution](004_no_process_execution.md) | `std::process::Command` is forbidden anywhere in the library | ✅ |
 | 005 | [Atomic Account Switching](005_atomic_switching.md) | Account switching uses write-then-rename to prevent credential corruption | ✅ |
+| 006 | [Parameters Default to Active Context](006_param_defaults.md) | Every parameter must have a default unless requiring an explicit value is absolutely necessary | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating invariant doc instances | ✅ |

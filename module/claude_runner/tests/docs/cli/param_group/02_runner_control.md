@@ -2,7 +2,8 @@
 
 Interaction tests for Group 2 (Runner Control): `--no-skip-permissions`, `--interactive`,
 `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`,
-`--trace`, `--no-ultrathink`, `--no-effort-max`, `--no-chrome`. Tests validate these flags
+`--trace`, `--no-ultrathink`, `--no-effort-max`, `--no-chrome`, `--no-persist`,
+`--file`, `--strip-fences`, `--keep-claudecode`. Tests validate these flags
 coexist without conflict and are consumed by the runner, not forwarded to claude.
 
 **Source:** [param_group.md#group--2-runner-control](../../../../docs/cli/param_group.md#group--2-runner-control)
@@ -15,13 +16,14 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 | CC-2 | `--new-session` + `--session-dir` → both accepted | Interaction |
 | CC-3 | `--no-skip-permissions` + `--no-effort-max` → both suppressed | Interaction |
 | CC-4 | All runner control flags together → no conflict | Combined |
+| CC-5 | `--file` + `--strip-fences` + `--keep-claudecode` together → all accepted | Interaction |
 
 ## Test Coverage Summary
 
-- Interaction: 3 tests (CC-1, CC-2, CC-3)
+- Interaction: 4 tests (CC-1, CC-2, CC-3, CC-5)
 - Combined: 1 test (CC-4)
 
-**Total:** 4 edge cases
+**Total:** 5 corner cases
 
 ## Test Cases
 ---
@@ -55,8 +57,18 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 
 ### CC-4: All runner control flags together → no conflict
 
-- **Given:** clean environment
-- **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --max-tokens 100000 --session-dir /tmp/sessions --verbosity 2 --trace --no-ultrathink --no-effort-max --no-chrome "Fix bug"`
-- **Then:** Exit 0; all twelve flags accepted without conflict; command assembled correctly; `--chrome` is absent from assembled command; no unknown-flag error for any runner-control flag
+- **Given:** `/tmp/rc_test.txt` exists and is readable; clean environment
+- **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --max-tokens 100000 --session-dir /tmp/sessions --verbosity 2 --trace --no-ultrathink --no-effort-max --no-chrome --no-persist --file /tmp/rc_test.txt --strip-fences --keep-claudecode "Fix bug"`
+- **Then:** Exit 0; all sixteen flags accepted without conflict; command assembled correctly; `--chrome` and `--dangerously-skip-permissions` are absent from assembled command; no unknown-flag error for any runner-control flag
+- **Exit:** 0
+- **Source:** [param_group.md](../../../../docs/cli/param_group.md#group--2-runner-control)
+
+---
+
+### CC-5: `--file` + `--strip-fences` + `--keep-claudecode` → all accepted
+
+- **Given:** `/tmp/cc5_input.txt` exists and is readable; parent env has `CLAUDECODE=1`
+- **When:** `clr --dry-run --file /tmp/cc5_input.txt --strip-fences --keep-claudecode "task"`
+- **Then:** Exit 0; describe output includes the file path; `CLAUDECODE` is present in the subprocess environment; no conflict between the three flags
 - **Exit:** 0
 - **Source:** [param_group.md](../../../../docs/cli/param_group.md#group--2-runner-control)

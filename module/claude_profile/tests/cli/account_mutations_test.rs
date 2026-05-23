@@ -1,4 +1,4 @@
-//! Integration tests: AS (Account Save), AW (Account Use), AD (Account Delete).
+//! Integration tests: AS (Account Save), AW (Account Use), AD (Account Delete), AR (Account Relogin).
 //!
 //! Tests invoke the compiled `clp` binary as a subprocess via `CARGO_BIN_EXE_clp`.
 //!
@@ -65,6 +65,13 @@
 //! | ad12 | `ad12_delete_removes_snapshot_files` | delete removes .claude.json + .settings.json snapshots | P |
 //! | ad13 | `ad13_delete_positional_bare_arg` | positional email `old@archive.com` → deletes account | P |
 //! | ad14 | `ad14_delete_prefix_resolves` | prefix `old` resolves to `old@archive.com`, deletes | P |
+//!
+//! ### AR — Account Relogin
+//!
+//! | ID | Test Function | Condition | P/N |
+//! |----|---------------|-----------|-----|
+//! | ar01 | `relogin_mre_no_name_uses_active` | no `name::` + active account → uses active (dry-run) | P |
+//! | ar02 | `relogin_mre_no_name_no_active_exits2` | no `name::` + no `_active` marker → exit 2 | N |
 
 use crate::helpers::{
   run_cs_with_env,
@@ -869,4 +876,58 @@ fn ad14_delete_prefix_resolves()
   let out = run_cs_with_env( &[ ".account.delete", "old" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   assert!( !account_exists( dir.path(), "old@archive.com" ), "prefix old must resolve to old@archive.com and delete it" );
+}
+
+// ── relogin: optional-name default-to-active tests ────────────────────────────
+
+/// IT-1 / AC-02: `.account.relogin` with no `name::` uses the active account.
+///
+/// Verifies that when `name::` is omitted and the `_active` marker names
+/// `work@acme.com`, the dry-run output names that account — confirming the
+/// active-account fallback per `invariant/006_param_defaults.md`.
+#[ test ]
+fn relogin_mre_no_name_uses_active()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env(
+    &[ ".account.relogin", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "work@acme.com" ),
+    "dry-run must name the active account, got:\n{text}",
+  );
+  assert!(
+    text.contains( "dry-run" ),
+    "must include dry-run marker, got:\n{text}",
+  );
+}
+
+/// IT-2 / AC-03: `.account.relogin` with no `name::` and no `_active` marker exits 2.
+///
+/// Verifies that omitting `name::` when no active account is set produces
+/// exit 2 with an actionable message — not exit 1 (usage error).
+#[ test ]
+fn relogin_mre_no_name_no_active_exits2()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Account file exists but no _active marker written (make_active = false).
+  write_account( dir.path(), "work@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.relogin" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 2 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "no active account" ) || err.contains( "name::" ),
+    "error must mention missing active account, got:\n{err}",
+  );
 }

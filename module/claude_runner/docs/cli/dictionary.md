@@ -22,6 +22,9 @@ Domain vocabulary for the `clr` CLI. Terms are organized by category below.
 | new session | Invocation with `--new-session`; starts a fresh Claude conversation with no prior context (omits the default `-c`) |
 | ultrathink suffix | Text `"\n\nultrathink"` appended after every message before it is sent to the claude subprocess; activates Claude's extended thinking mode; default-on, suppressed with `--no-ultrathink` |
 | credential-isolated mode | Invocation via `clr isolated`; subprocess runs with a temporary HOME containing only the provided credentials file; the caller's real HOME, settings, and conversation history are invisible to the subprocess |
+| fence stripping | Post-processing of captured stdout by `--strip-fences`; removes the first and last `` ``` `` lines (with optional language tag); content between the fences is emitted unchanged; no-op if no fence pair is found |
+| standalone mode | Default subprocess behavior: `CLAUDECODE` env var is removed before spawn so the subprocess behaves as a first-class Claude Code process, not a nested agent; opt out with `--keep-claudecode` |
+| nested-agent mode | Subprocess behavior when `CLAUDECODE=1` is inherited from the parent; alters permission handling, output format, and tool availability; active when `--keep-claudecode` is set |
 
 ### Types
 
@@ -34,6 +37,11 @@ Domain vocabulary for the `clr` CLI. Terms are organized by category below.
 | MessageText | Free-form prompt text; multiple positional words joined with space |
 | CredentialsFilePath | Path to an existing credentials JSON file; resolved against caller's cwd; written back in-place if OAuth token refreshed |
 | TimeoutSecs | Non-negative integer seconds to wait for an isolated subprocess; 0 = immediate expiry; default 30 |
+| SystemPromptText | Free-form text that sets or extends the system prompt sent to the `claude` subprocess; semantically distinct from MessageText (system turn vs user turn) |
+| EffortLevel | Reasoning effort enum: `low`, `medium`, `high`, `max`; `clr` defaults to `max`; the `claude` binary's own default is `medium` |
+| JsonSchemaText | Valid JSON object string passed to `--json-schema` for structured output; must parse as a JSON object `{…}` |
+| McpConfigPath | Filesystem path to an MCP configuration JSON file; each value maps to one `--mcp-config` forwarded to the subprocess; repeatable |
+| FilePath | Filesystem path to a readable file whose content is piped as standard input to the `claude` subprocess |
 
 ### Architecture
 
