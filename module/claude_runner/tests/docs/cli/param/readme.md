@@ -57,7 +57,7 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `--session-dir` | [010_session_dir.md](010_session_dir.md) | 6 EC |
 | `--dry-run` | [011_dry_run.md](011_dry_run.md) | 6 EC |
 | `--verbosity` | [012_verbosity.md](012_verbosity.md) | 6 EC |
-| `--trace` | [013_trace.md](013_trace.md) | 6 EC |
+| `--trace` | [013_trace.md](013_trace.md) | 8 EC |
 | `--no-ultrathink` | [014_no_ultrathink.md](014_no_ultrathink.md) | 6 EC |
 | `--system-prompt` | [015_system_prompt.md](015_system_prompt.md) | 6 EC |
 | `--append-system-prompt` | [016_append_system_prompt.md](016_append_system_prompt.md) | 6 EC |

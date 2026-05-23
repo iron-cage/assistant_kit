@@ -15,8 +15,8 @@ Every `clr` command that invokes or manages a subprocess must accept `--trace` a
 |---------|-----------|-------------------|--------------------------|
 | `run` | `claude` binary | yes | env vars + assembled `claude` command line |
 | `ask` | `claude` binary | yes | env vars + assembled `claude` command line (ask defaults) |
-| `isolated` | `claude` binary (temp HOME) | yes | `creds=`, `timeout=`, `args=` line |
-| `refresh` | `claude` binary (temp HOME, fixed args) | yes | `creds=`, `timeout=`, `args=["--print", "."]` line |
+| `isolated` | `claude` binary (temp HOME) | yes | `# clr isolated`, `# creds: {path}`, `# timeout: {N}s` |
+| `refresh` | `claude` binary (temp HOME, fixed args) | yes | `# clr refresh`, `# creds: {path}`, `# timeout: {N}s` |
 | `help` | — | exempt | no subprocess; `--trace` is not parsed |
 
 `--trace` prints to stderr so it does not pollute captured stdout in print mode. The subprocess is always launched after trace output (unlike `--dry-run`, which suppresses execution).

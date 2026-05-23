@@ -123,9 +123,9 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 ### FT-08: `format::json` output alphabetical regardless of `sort::`
 
-- **Given:** Two `AccountQuota` structs `a@x.com` and `b@x.com` in non-alpha input order.
+- **Given:** Two `AccountQuota` structs `zzz@test.com` (70% left) and `aaa@test.com` (20% left) in that order (reverse-alphabetical input).
 - **When:** `render_json(&accounts)` — no sort applied.
-- **Then:** JSON array preserves input order (alphabetical from `fetch_all_quota`). `zzz@test.com` at index 0 appears before `aaa@test.com` when input is in that order.
+- **Then:** JSON output preserves input order — `zzz@test.com` appears before `aaa@test.com`, confirming `render_json` does not re-sort.
 - **Exit:** n/a (unit test against `render_json`)
 - **Source fn:** `test_json_unaffected_by_sort` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-13](../../../../docs/feature/020_usage_sort_strategies.md)

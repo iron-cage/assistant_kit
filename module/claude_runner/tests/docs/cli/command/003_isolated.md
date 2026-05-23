@@ -15,6 +15,7 @@ Integration test planning for the `isolated` command. See [001_command.md](../..
 | IT-7 | `--creds file.json --timeout abc` → exit 1, invalid timeout error | Error: Invalid Timeout |
 | IT-8 | Missing `--creds` → exit 1, missing required argument error | Error: Missing Creds Flag |
 | IT-9 | `clr isolated --help` → exit 0, prints isolated-specific help | Help |
+| IT-10 | `--creds <f> --trace "msg"` → call details on stderr before execution attempt | Trace |
 
 ## Test Coverage Summary
 
@@ -23,8 +24,9 @@ Integration test planning for the `isolated` command. See [001_command.md](../..
 - Timeout Behavior: 2 tests (IT-3, IT-4)
 - Mode Selection: 2 tests (IT-5, IT-6)
 - Help: 1 test (IT-9)
+- Trace: 1 test (IT-10)
 
-**Total:** 9 test cases
+**Total:** 10 test cases
 
 ---
 
@@ -115,3 +117,13 @@ Integration test planning for the `isolated` command. See [001_command.md](../..
 - **Then:** exit 0; stdout contains `--creds`, `--timeout`, and `--help`; no subprocess launched; no error in stderr
 - **Exit:** 0
 - **Source:** [001_command.md — isolated](../../../../docs/cli/001_command.md#command--2-isolated)
+
+---
+
+### IT-10: `--creds <f> --trace "msg"` → call details on stderr before execution attempt
+
+- **Given:** credentials JSON written to a temp file `<f>` (file is readable); claude binary absent in test environment
+- **When:** `clr isolated --creds <f> --trace "Fix bug"` (no `--dry-run`; trace fires before subprocess attempt)
+- **Then:** stderr contains `# clr isolated`, `# creds: <path>`, and `# timeout: 30s` before any subprocess attempt; exit 1 (claude absent) or 0
+- **Exit:** 1 (claude absent in test environment) or 0 (claude present)
+- **Source:** [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md), [--trace](../../../../docs/cli/param/013_trace.md)

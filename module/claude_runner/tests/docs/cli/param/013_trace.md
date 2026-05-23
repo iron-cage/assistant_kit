@@ -14,6 +14,8 @@ Edge case tests for the trace flag. Tests validate command echoing to stderr bef
 | EC-4 | `--trace` without message → trace output on stderr; no error | Edge Case |
 | EC-5 | `--help` lists `--trace` | Documentation |
 | EC-6 | `--trace` + env vars → env vars included in trace output | Trace Content |
+| EC-7 | `isolated --creds <f> --trace "msg"` → `# clr isolated` / `# creds:` / `# timeout: 30s` on stderr | Trace Content |
+| EC-8 | `refresh --creds <f> --trace` → `# clr refresh` / `# creds:` / `# timeout: 45s` on stderr | Trace Content |
 
 ## Test Coverage Summary
 
@@ -21,9 +23,9 @@ Edge case tests for the trace flag. Tests validate command echoing to stderr bef
 - Interaction: 1 test (EC-3)
 - Edge Case: 1 test (EC-4)
 - Documentation: 1 test (EC-5)
-- Trace Content: 1 test (EC-6)
+- Trace Content: 3 tests (EC-6, EC-7, EC-8)
 
-**Total:** 6 edge cases
+**Total:** 8 edge cases
 
 
 ## Test Cases
@@ -81,3 +83,21 @@ Edge case tests for the trace flag. Tests validate command echoing to stderr bef
 - **Then:** Stderr contains env vars and assembled command line (trace fires before invocation attempt); stdout empty or shows error from failed subprocess
 - **Exit:** 1 (claude absent in test environment)
 - **Source:** [013_trace.md](../../../../docs/cli/param/013_trace.md)
+---
+
+### EC-7: `isolated --creds <f> --trace "msg"` → credential trace format on stderr
+
+- **Given:** credentials JSON written to a temp file `<f>` (file is readable); claude binary absent
+- **When:** `clr isolated --creds <f> --trace "Fix bug"` (trace fires before subprocess attempt)
+- **Then:** Stderr contains exactly `# clr isolated`, `# creds: <path>`, and `# timeout: 30s` (the default isolated timeout); exit 1 (claude absent) or 0
+- **Exit:** 1 (claude absent in test environment) or 0
+- **Source:** [013_trace.md](../../../../docs/cli/param/013_trace.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)
+---
+
+### EC-8: `refresh --creds <f> --trace` → credential trace format on stderr with 45s timeout
+
+- **Given:** credentials JSON written to a temp file `<f>` (file is readable); claude binary absent
+- **When:** `clr refresh --creds <f> --trace` (trace fires before subprocess attempt)
+- **Then:** Stderr contains exactly `# clr refresh`, `# creds: <path>`, and `# timeout: 45s` (the default refresh timeout, distinct from isolated's 30s); exit 1 (claude absent) or 0
+- **Exit:** 1 (claude absent in test environment) or 0
+- **Source:** [013_trace.md](../../../../docs/cli/param/013_trace.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)

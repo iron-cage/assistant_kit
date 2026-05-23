@@ -30,12 +30,16 @@ clr ask --trace "What is X?"
 
 # Trace on isolated
 clr isolated --creds creds.json --trace "Fix bug"
-# Stderr: creds=/path/to/creds.json timeout=30 args=["--print", "Fix bug"]
+# Stderr: # clr isolated
+# Stderr: # creds: /path/to/creds.json
+# Stderr: # timeout: 30s
 # Then: run_isolated() executes
 
 # Trace on refresh
 clr refresh --creds creds.json --trace
-# Stderr: creds=/path/to/creds.json timeout=45 args=["--print", "."]
+# Stderr: # clr refresh
+# Stderr: # creds: /path/to/creds.json
+# Stderr: # timeout: 45s
 # Then: run_isolated() executes
 ```
 
