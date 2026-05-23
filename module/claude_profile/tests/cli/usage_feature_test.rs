@@ -332,4 +332,14 @@ fn f18_ft06_live_stagger_per_account_trace()
     "stagger must fire before each account fetch — expected ≥ 2 '[trace] … reading' lines on stderr, \
      got {trace_reading_count}:\n{err}",
   );
+  // Both accounts must appear individually in trace output — catches regressions
+  // that skip one account during the stagger loop.
+  assert!(
+    err.contains( "alpha@test.com" ),
+    "trace must include alpha@test.com, got:\n{err}",
+  );
+  assert!(
+    err.contains( "beta@test.com" ),
+    "trace must include beta@test.com, got:\n{err}",
+  );
 }

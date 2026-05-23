@@ -176,6 +176,6 @@ Precedence: CLI arg > env var > settings config.
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [`../behavior/readme.md`](../behavior/readme.md) | Claude Code behavior doc entity master file |
-| doc | [`../behavior/001_session_behaviors.md`](../behavior/001_session_behaviors.md) | Observed flag behavior in practice |
-| doc | [`../behavior/005_settings_format.md`](../behavior/005_settings_format.md) | settings.json write semantics and structure |
+| doc | [`../behavior/readme.md`](../behavior/readme.md) | Observed flag behavior in practice |
+| doc | [`../settings/readme.md`](../settings/readme.md) | settings.json write semantics and structure |
 | doc | [`../../../../../module/claude_runner_core/docs/claude_params/readme.md`](../../../../../module/claude_runner_core/docs/claude_params/readme.md) | Builder-API perspective with Rust `with_*()` methods |

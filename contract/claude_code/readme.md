@@ -2,7 +2,7 @@
 
 Behavioral contract tests for the external `claude` binary.
 
-Validates B1–B24 (plus B16h) from `docs/behavior/001_session_behaviors.md`. Tests read
+Validates B1–B24 (plus B16h) from `docs/behavior/readme.md`. Tests read
 real `~/.claude/` storage and invoke `claude --help` / `--version`. If Claude
 Code changes behavior, the corresponding test goes RED.
 
@@ -10,7 +10,7 @@ Code changes behavior, the corresponding test goes RED.
 
 | Path | Responsibility |
 |------|----------------|
-| `docs/behavior/` | Behavioral documentation for the `claude` binary |
+| `docs/` | Claude Code contract specifications (9 entity types, 137 instances) |
 | `src/lib.rs` | Crate documentation |
 | `tests/behavior/` | Behavior hypothesis invalidation test suite (B1–B24 + B16h) |
 

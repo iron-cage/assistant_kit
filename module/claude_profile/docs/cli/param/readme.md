@@ -31,8 +31,12 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [025_sort.md](025_sort.md) | `sort::` — row ordering strategy for quota table |
 | [026_desc.md](026_desc.md) | `desc::` — sort direction with context-sensitive default |
 | [027_prefer.md](027_prefer.md) | `prefer::` — weekly quota column for sort heuristics |
+| [028_uuid.md](028_uuid.md) | `uuid::` — stable user ID field toggle (opt-in) |
+| [029_capabilities.md](029_capabilities.md) | `capabilities::` — product capabilities list toggle (opt-in) |
+| [030_org_uuid.md](030_org_uuid.md) | `org_uuid::` — organisation UUID field toggle (opt-in) |
+| [031_org_name.md](031_org_name.md) | `org_name::` — organisation display name field toggle (opt-in) |
 
-**Total:** 27 parameters
+**Total:** 31 parameters
 
 ### Overview Table
 
@@ -65,8 +69,12 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 25 | `sort::` | `enum` | `name` | `name`, `endurance`, `drain`, `reset` | Row ordering strategy for quota table | 1 cmd |
 | 26 | `desc::` | `bool` | context-sensitive | `0`, `1`, `false`, `true` | Sort direction; default per `sort::` strategy | 1 cmd |
 | 27 | `prefer::` | `enum` | `any` | `any`, `opus`, `sonnet` | Weekly quota column for sort heuristics | 1 cmd |
+| 28 | `uuid::` | `bool` | `0` | `0`, `1` | Stable user ID toggle (opt-in) | 2 cmds |
+| 29 | `capabilities::` | `bool` | `0` | `0`, `1` | Product capabilities list toggle (opt-in) | 2 cmds |
+| 30 | `org_uuid::` | `bool` | `0` | `0`, `1` | Organisation UUID toggle (opt-in) | 2 cmds |
+| 31 | `org_name::` | `bool` | `0` | `0`, `1` | Organisation display name toggle (opt-in) | 2 cmds |
 
-*Params 1 = Account Targeting; param 2 = Output Control group; params 5–18 = Field Presence group; params 19–23 = Fetch Behavior group; param 24 = Output Selection group; params 25–27 = Sort Control group*
+*Params 1 = Account Targeting; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23 = Fetch Behavior group; param 24 = Output Selection group; params 25–27 = Sort Control group*
 
 ### See Also
 

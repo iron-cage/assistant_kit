@@ -4,8 +4,8 @@
 
 - **Purpose**: Expose rich account identity fields from `~/.claude.json` in `.credentials.status` and `.accounts` output.
 - **Responsibility**: Documents the `display_name::`, `role::`, `billing::`, and `model::` field-presence params (FR-20).
-- **In Scope**: Reading `oauthAccount` fields from `~/.claude.json`; reading `model` from `~/.claude/settings.json`; opt-in field-presence params on `.credentials.status` and `.accounts`; per-account metadata snapshots via `account::save()`.
-- **Out of Scope**: Mutations to `~/.claude.json` (read-only); OAuth API calls.
+- **In Scope**: Reading `oauthAccount` fields from `~/.claude.json`; reading `model` from `~/.claude/settings.json`; opt-in field-presence params `display_name::`, `role::`, `billing::`, `model::` on `.credentials.status` and `.accounts`; per-account metadata snapshots via `account::save()`.
+- **Out of Scope**: Mutations to `~/.claude.json` (read-only); OAuth API calls; additional snapshot fields (`tagged_id`, `uuid`, `capabilities` → 021_extended_snapshot_fields.md); org identity from endpoint 005 (`org_uuid::`, `org_name::` → 022_org_identity_snapshot.md).
 
 ### Design
 
@@ -83,3 +83,5 @@ This label is NOT a separate field param — it is the formatted output of the e
 | doc | [012_live_credentials_status.md](012_live_credentials_status.md) | Base `.credentials.status` command |
 | doc | [command/002_credentials.md](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI command specification |
 | doc | [cli/param/readme.md](../cli/param/readme.md) | New param entries (display_name::, role::, billing::, model::) |
+| doc | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | Extends this feature: `uuid::`, `capabilities::` params |
+| doc | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Extends this feature: `org_uuid::`, `org_name::` params via endpoint 005 |

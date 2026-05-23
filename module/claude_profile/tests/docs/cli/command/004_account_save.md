@@ -22,6 +22,8 @@ Integration test planning for the `.account.save` command. See [command/namespac
 | IT-13 | Save succeeds when `settings.json` absent — credential + `.claude.json` created, no `.settings.json` | Metadata Snapshot / Best-Effort |
 | IT-15 | Save writes `_active` marker — `.credentials.status` shows `Account: {name}` immediately after save | Active Marker |
 | IT-16 | Save with path-unsafe chars in email local part (`/`, `\`) exits 1 | Validation |
+| IT-17 | Save writes `{name}.roles.json` when endpoint 005 returns org identity | Org Identity Snapshot |
+| IT-18 | Save succeeds even when endpoint 005 call fails — no `roles.json`, no error | Org Identity Snapshot / Best-Effort |
 
 ### Test Coverage Summary
 
@@ -37,8 +39,10 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - Metadata Snapshot: 1 test
 - Metadata Snapshot / Best-Effort: 2 tests
 - Active Marker: 1 test
+- Org Identity Snapshot: 1 test
+- Org Identity Snapshot / Best-Effort: 1 test
 
-**Total:** 16 integration tests
+**Total:** 18 integration tests
 
 ---
 
@@ -199,3 +203,23 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **Then:** Error message on stderr indicating path-unsafe characters in account name, exit 1. No credential file created in the store.
 - **Exit:** 1
 - **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave), [002_account_save.md AC-11](../../../../docs/feature/002_account_save.md), [as17/as18 in account_mutations_test.rs]
+
+---
+
+### IT-17: Save writes `{name}.roles.json` when endpoint 005 returns org identity
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials that allow endpoint 005 to return `{"organization_uuid":"org-xyz","organization_name":"Acme Corp"}`.
+- **When:** `clp .account.save name::work@acme.com`
+- **Then:** `{credential_store}/work@acme.com.roles.json` created and contains `organization_uuid` and `organization_name` fields with the returned values. Credential file and metadata snapshots also created. Exit 0 with normal success message.
+- **Exit:** 0
+- **Source:** [022_org_identity_snapshot.md AC-01](../../../../docs/feature/022_org_identity_snapshot.md), [002_account_save.md AC-12](../../../../docs/feature/002_account_save.md)
+
+---
+
+### IT-18: Save succeeds even when endpoint 005 call fails — best-effort
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. Endpoint 005 is unreachable or returns an error (simulate with invalid/expired credentials or network mock if available).
+- **When:** `clp .account.save name::work@acme.com`
+- **Then:** Exit 0 with normal success message. Credential file and metadata snapshots created. `{credential_store}/work@acme.com.roles.json` is NOT created. No error message on stderr referencing endpoint 005 failure.
+- **Exit:** 0
+- **Source:** [022_org_identity_snapshot.md AC-02](../../../../docs/feature/022_org_identity_snapshot.md), [002_account_save.md AC-13](../../../../docs/feature/002_account_save.md)

@@ -14,6 +14,12 @@ Integration test planning for the `.credentials.status` command. See [command/na
 | IT-6 | All default-on fields suppressed — only token line shown | Field Presence (suppress) |
 | IT-7 | `file::1 saved::1` — File and Saved lines appended | Field Presence (opt-in) |
 | IT-8 | Output is stable across repeated invocations | Stability |
+| IT-9 | `uuid::1` shows `ID:` line from live `~/.claude.json` `taggedId` | Extended Fields (opt-in) |
+| IT-10 | `capabilities::1` shows `Capabilities:` as comma-separated list from live `~/.claude.json` | Extended Fields (opt-in) |
+| IT-11 | `org_uuid::1` shows `Org ID:` from `{_active}.roles.json` in credential store | Org Identity (opt-in) |
+| IT-12 | `org_name::1` shows `Org:` from `{_active}.roles.json` in credential store | Org Identity (opt-in) |
+| IT-13 | `uuid::`, `capabilities::`, `org_uuid::`, `org_name::` all absent by default | Extended Fields / Default |
+| IT-14 | `format::json` includes `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` keys | Extended Fields / JSON |
 
 ### Test Coverage Summary
 
@@ -25,8 +31,12 @@ Integration test planning for the `.credentials.status` command. See [command/na
 - Field Presence (suppress): 1 test
 - Field Presence (opt-in): 1 test
 - Stability: 1 test
+- Extended Fields (opt-in): 2 tests (IT-9, IT-10)
+- Org Identity (opt-in): 2 tests (IT-11, IT-12)
+- Extended Fields / Default: 1 test (IT-13)
+- Extended Fields / JSON: 1 test (IT-14)
 
-**Total:** 8 integration tests
+**Total:** 14 integration tests
 
 ---
 
@@ -50,11 +60,11 @@ Integration test planning for the `.credentials.status` command. See [command/na
 
 ---
 
-### IT-3: `format::json` — returns parseable JSON with all 12 fields
+### IT-3: `format::json` — returns parseable JSON with all 16 fields
 
 - **Given:** Claude Code's `~/.claude/.credentials.json` present (subscriptionType="pro", rateLimitTier="standard", expiresAt=far future). Claude Code's `~/.claude/.claude.json` present (emailAddress="user@example.com").
 - **When:** `clp .credentials.status format::json`
-- **Then:** Valid JSON object on stdout containing all 12 keys: subscription, tier, token, expires_in_secs, email, account, file, saved, display_name, role, billing, model; exit 0.
+- **Then:** Valid JSON object on stdout containing all 16 keys: subscription, tier, token, expires_in_secs, email, account, file, saved, display_name, role, billing, model, tagged_id, capabilities, organization_uuid, organization_name; exit 0.
 - **Exit:** 0
 - **Source:** [FR-17](../../../../docs/feature/012_live_credentials_status.md)
 
@@ -107,3 +117,63 @@ Integration test planning for the `.credentials.status` command. See [command/na
 - **Then:** All 3 stdout captures are byte-identical
 - **Exit:** 0
 - **Source:** [command/002_credentials.md — .credentials.status](../../../../docs/cli/command/002_credentials.md#command--10-credentialsstatus)
+
+---
+
+### IT-9: `uuid::1` shows `ID:` line from live `~/.claude.json`
+
+- **Given:** `~/.claude/.credentials.json` present. `~/.claude.json` present and contains `{"oauthAccount":{"taggedId":"user_abc123"}}`.
+- **When:** `clp .credentials.status uuid::1`
+- **Then:** Stdout contains `ID:      user_abc123`.
+- **Exit:** 0
+- **Source:** [021_extended_snapshot_fields.md AC-01](../../../../docs/feature/021_extended_snapshot_fields.md)
+
+---
+
+### IT-10: `capabilities::1` shows `Capabilities:` as comma-separated list
+
+- **Given:** `~/.claude/.credentials.json` present. `~/.claude.json` present and contains `{"oauthAccount":{"capabilities":["claude_code","pro"]}}`.
+- **When:** `clp .credentials.status capabilities::1`
+- **Then:** Stdout contains `Capabilities: claude_code, pro`.
+- **Exit:** 0
+- **Source:** [021_extended_snapshot_fields.md AC-02](../../../../docs/feature/021_extended_snapshot_fields.md)
+
+---
+
+### IT-11: `org_uuid::1` shows `Org ID:` from `{_active}.roles.json`
+
+- **Given:** `~/.claude/.credentials.json` present. Credential store has `_active` = `work@acme.com` and `{credential_store}/work@acme.com.roles.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`.
+- **When:** `clp .credentials.status org_uuid::1`
+- **Then:** Stdout contains `Org ID:  org-xyz-789`.
+- **Exit:** 0
+- **Source:** [022_org_identity_snapshot.md AC-07](../../../../docs/feature/022_org_identity_snapshot.md)
+
+---
+
+### IT-12: `org_name::1` shows `Org:` from `{_active}.roles.json`
+
+- **Given:** Same setup as IT-11 (active account with `roles.json` in credential store).
+- **When:** `clp .credentials.status org_name::1`
+- **Then:** Stdout contains `Org:     Acme Corp`.
+- **Exit:** 0
+- **Source:** [022_org_identity_snapshot.md AC-08](../../../../docs/feature/022_org_identity_snapshot.md)
+
+---
+
+### IT-13: Extended params absent by default
+
+- **Given:** `~/.claude/.credentials.json` present. `~/.claude.json` contains taggedId and capabilities. Credential store has `_active` with `roles.json` containing org fields.
+- **When:** `clp .credentials.status` (no extended params)
+- **Then:** Stdout does NOT contain `ID:`, `Capabilities:`, `Org ID:`, or `Org:` lines. Only default-on fields shown.
+- **Exit:** 0
+- **Source:** [021_extended_snapshot_fields.md AC-05](../../../../docs/feature/021_extended_snapshot_fields.md), [022_org_identity_snapshot.md](../../../../docs/feature/022_org_identity_snapshot.md) Design §New field-presence params
+
+---
+
+### IT-14: `format::json` includes extended and org fields
+
+- **Given:** `~/.claude/.credentials.json` present. `~/.claude.json` contains `taggedId="user_abc"` and `capabilities=["claude_code"]`. Credential store has active account with `roles.json` containing `organization_uuid="org-xyz"` and `organization_name="Acme"`.
+- **When:** `clp .credentials.status format::json`
+- **Then:** Valid JSON object containing `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` keys; `tagged_id` = `"user_abc"`, `capabilities` = `["claude_code"]`, `organization_uuid` = `"org-xyz"`, `organization_name` = `"Acme"`.
+- **Exit:** 0
+- **Source:** [021_extended_snapshot_fields.md AC-06](../../../../docs/feature/021_extended_snapshot_fields.md), [022_org_identity_snapshot.md AC-09](../../../../docs/feature/022_org_identity_snapshot.md)

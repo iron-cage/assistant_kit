@@ -25,7 +25,6 @@ plugin_mount: ~/.claude:/workspace/.claude:directory
 
 # cli_fmt is a co-developed companion crate; passed as a named build context (--build-context cli_fmt).
 # Path is resolved relative to this file's directory (run/).
-# Update extra_build_context path to point to your local cli_fmt source.
 extra_build_context: cli_fmt=../../../../../wtools/dev/module/core/cli_fmt
 
 # ── Formerly hardcoded parameters (now configurable) ─────────────────────────

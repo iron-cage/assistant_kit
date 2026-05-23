@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clp parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: 26 active clp parameter edge case files (`name::` through `prefer::`, params 1–27 except param 2); all parameters covered.
+- **In Scope**: 30 active clp parameter edge case files (`name::` through `org_name::`, params 1–31 except param 2); all parameters covered.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 ### Responsibility Table
@@ -37,3 +37,7 @@
 | 025_sort.md | Edge cases for `sort::` parameter |
 | 026_desc.md | Edge cases for `desc::` parameter |
 | 027_prefer.md | Edge cases for `prefer::` parameter |
+| 028_uuid.md | Edge cases for `uuid::` parameter |
+| 029_capabilities.md | Edge cases for `capabilities::` parameter |
+| 030_org_uuid.md | Edge cases for `org_uuid::` parameter |
+| 031_org_name.md | Edge cases for `org_name::` parameter |

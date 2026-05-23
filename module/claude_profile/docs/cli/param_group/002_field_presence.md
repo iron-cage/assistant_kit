@@ -1,8 +1,8 @@
 # Group :: 2. Field Presence
 
-**Parameters:** `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::`
+**Parameters:** `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`
 **Pattern:** Per-field boolean presence control
-**Purpose:** Each param independently controls whether one output line appears in text output. Shared params (`sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `role::`, `billing::`, `model::`) work identically across both commands.
+**Purpose:** Each param independently controls whether one output line appears in text output. Shared params (`sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::`) work identically across both commands.
 
 | Parameter | Type | Default | Commands | Controls |
 |-----------|------|---------|----------|----------|
@@ -19,6 +19,10 @@
 | [`role::`](../param/015_role.md) | `bool` | `0` | Both | Organisation role line (opt-in) |
 | [`billing::`](../param/016_billing.md) | `bool` | `0` | Both | Billing type line (opt-in) |
 | [`model::`](../param/017_model.md) | `bool` | `0` | Both | Active model line (opt-in) |
+| [`uuid::`](../param/028_uuid.md) | `bool` | `0` | Both | Stable user ID line (opt-in) |
+| [`capabilities::`](../param/029_capabilities.md) | `bool` | `0` | Both | Product capabilities list line (opt-in) |
+| [`org_uuid::`](../param/030_org_uuid.md) | `bool` | `0` | Both | Organisation UUID line (opt-in) |
+| [`org_name::`](../param/031_org_name.md) | `bool` | `0` | Both | Organisation display name line (opt-in) |
 
 **Used By (2 commands):** [`.accounts`](../command/001_account.md#command--3-accounts), [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus)
 
@@ -47,7 +51,7 @@ clp .credentials.status account::0 sub::0 tier::0 expires::0 email::0
 
 > "Does parameter X independently control ONE output field?"
 
-All 13 members pass — each controls exactly one output line. `format::` fails (controls serialisation format, not field selection) and is correctly excluded.
+All 17 members pass — each controls exactly one output line. `format::` fails (controls serialisation format, not field selection) and is correctly excluded.
 
 **Why NOT `format::`**
 

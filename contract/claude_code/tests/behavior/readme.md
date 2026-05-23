@@ -1,6 +1,6 @@
 # Behavior Hypothesis Invalidation Tests
 
-One file per behavior hypothesis from `docs/behavior/001_session_behaviors.md` (B1–B24 + B16h).
+One file per behavior hypothesis from `docs/behavior/readme.md` (B1–B24 + B16h).
 Each test inspects real `~/.claude/` storage or invokes `claude --help` / `--version` directly.
 If Claude Code changes behavior, the corresponding test goes RED.
 

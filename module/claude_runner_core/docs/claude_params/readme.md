@@ -148,7 +148,7 @@ These parameters are only settable via environment variables. All have dedicated
 
 ### Settings Config (`~/.claude/settings.json`)
 
-These parameters are read from the settings file on startup. No builder method — managed by `claude_version`. Full write semantics in [005_settings_format.md](../../../../contract/claude_code/docs/behavior/005_settings_format.md).
+These parameters are read from the settings file on startup. No builder method — managed by `claude_version`. Full write semantics in [settings/readme.md](../../../../contract/claude_code/docs/settings/readme.md).
 
 | # | Key | Type | Values | Default | Description |
 |---|-----|------|--------|---------|-------------|
@@ -172,4 +172,4 @@ These parameters are read from the settings file on startup. No builder method �
 - **Config vs runtime**: Settings config parameters (#61–#70) are loaded once at startup from `~/.claude/settings.json`; runtime parameters (#1–#60) are passed per-invocation via CLI flags or env vars.
 - **Precedence**: CLI arg > env var > settings config.
 - **Dual-form params**: `model` (#5) and `effort` (#27) each have both a CLI flag form (with builder method) and a config key form (`model`, `effortLevel`). Similarly, `allowed_tools` (#19), `disallowed_tools` (#20), and `permission_mode` (#12) accept a `allowedTools`/`disallowedTools`/`permissionMode` config key in project-level `.claude/settings.json`. These dual forms are not listed separately in this table; see `contract/claude_code/docs/params/readme.md` for the complete picture.
-- **Source**: CLI flags from `claude --help`; env vars from `src/command.rs` `build_command()`; settings keys from `contract/claude_code/docs/behavior/005_settings_format.md`.
+- **Source**: CLI flags from `claude --help`; env vars from `src/command.rs` `build_command()`; settings keys from `contract/claude_code/docs/settings/readme.md`.

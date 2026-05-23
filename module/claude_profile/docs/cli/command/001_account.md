@@ -8,7 +8,7 @@ Account management commands: list, save, use, delete, limits, and relogin.
 
 List all saved accounts or show a single named account with per-field presence control. Without `name::`: shows every account in the credential store as an indented key-val block; with `name::EMAIL`: shows that account's block only.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`active::`](../param/013_active.md), [`current::`](../param/018_current.md), [`sub::`](../param/006_sub.md), [`tier::`](../param/007_tier.md), [`expires::`](../param/009_expires.md), [`email::`](../param/010_email.md), [`display_name::`](../param/014_display_name.md), [`role::`](../param/015_role.md), [`billing::`](../param/016_billing.md), [`model::`](../param/017_model.md), [`format::`](../param/002_format.md)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`active::`](../param/013_active.md), [`current::`](../param/018_current.md), [`sub::`](../param/006_sub.md), [`tier::`](../param/007_tier.md), [`expires::`](../param/009_expires.md), [`email::`](../param/010_email.md), [`display_name::`](../param/014_display_name.md), [`role::`](../param/015_role.md), [`billing::`](../param/016_billing.md), [`model::`](../param/017_model.md), [`uuid::`](../param/028_uuid.md), [`capabilities::`](../param/029_capabilities.md), [`org_uuid::`](../param/030_org_uuid.md), [`org_name::`](../param/031_org_name.md), [`format::`](../param/002_format.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
@@ -37,6 +37,10 @@ clp .accounts format::table
 | `role::` | `bool` | `0` | Show organisation role from saved `~/.claude.json` snapshot (opt-in) |
 | `billing::` | `bool` | `0` | Show billing type from saved `~/.claude.json` snapshot (opt-in) |
 | `model::` | `bool` | `0` | Show active model from saved `settings.json` snapshot (opt-in) |
+| `uuid::` | `bool` | `0` | Show stable user ID (`taggedId`) from saved `.claude.json` snapshot (opt-in) |
+| `capabilities::` | `bool` | `0` | Show product capabilities list from saved `.claude.json` snapshot (opt-in) |
+| `org_uuid::` | `bool` | `0` | Show organisation UUID from saved `{name}.roles.json` snapshot (opt-in) |
+| `org_name::` | `bool` | `0` | Show organisation display name from saved `{name}.roles.json` snapshot (opt-in) |
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
 
 **Examples:**
@@ -73,6 +77,8 @@ clp .accounts format::table
 - Field params affect text output only; `format::json` always includes all fields regardless of presence params.
 - `format::table` renders a compact one-row-per-account table with fixed columns (flag, Account, Sub, Tier, Expires, Email) — field-presence params are ignored in table mode.
 - `current::` shows `Current: yes` for the account whose `accessToken` matches `~/.claude/.credentials.json`. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
+- `uuid::`, `capabilities::` source from `{name}.claude.json` snapshot — `N/A` when snapshot absent. See [feature/021_extended_snapshot_fields.md](../../feature/021_extended_snapshot_fields.md).
+- `org_uuid::`, `org_name::` source from `{name}.roles.json` snapshot (written by `.account.save` via endpoint 005) — `N/A` when snapshot absent. See [feature/022_org_identity_snapshot.md](../../feature/022_org_identity_snapshot.md).
 
 ---
 
@@ -108,6 +114,8 @@ clp .account.save name::alice@acme.com dry::1
 
 **Notes:**
 - Also writes `{credential_store}/_active` = `{name}` on every successful save.
+- Also calls endpoint 005 (`GET /api/oauth/claude_cli/roles`) and writes `{name}.roles.json` (best-effort: failure is silently skipped).
+- **Metadata refresh:** Re-running `.account.save` for an existing name overwrites all snapshot files and re-fetches endpoint 005 — this is the canonical way to refresh cached org identity without re-login.
 
 ---
 

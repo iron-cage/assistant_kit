@@ -22,4 +22,4 @@ to the running instance.
 | Type | File | Responsibility |
 |------|------|----------------|
 | doc | [`readme.md`](readme.md) | Master parameter table |
-| doc | [`../005_settings_format.md`](../005_settings_format.md) | Settings JSON structure |
+| doc | [`../settings/readme.md`](../settings/readme.md) | Settings JSON structure |

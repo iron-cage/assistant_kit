@@ -1003,20 +1003,14 @@ fn secs_to_hms_utc( unix_secs : u64 ) -> String
 /// renders the table, displays a countdown footer rewritten in-place each second,
 /// and repeats until Ctrl-C (SIGINT) sets `STOP_FLAG`.
 ///
-/// # Parameters
-///
-/// - `interval_secs` — minimum seconds between full refresh cycles (≥ 30).
-/// - `jitter_secs`   — maximum random seconds added to the cycle delay (0 = none).
+/// Timing is governed by `params.interval` (minimum seconds between cycles, ≥ 30)
+/// and `params.jitter` (maximum random seconds added per cycle, 0 = none).
+/// When `params.trace` is `true`, per-account `[trace]` lines are emitted to stderr.
 #[ allow( unsafe_code ) ]
 fn execute_live_mode(
   credential_store : &std::path::Path,
   live_creds_file  : &std::path::Path,
-  interval_secs    : u64,
-  jitter_secs      : u64,
-  sort             : SortStrategy,
-  desc             : Option< bool >,
-  prefer           : PreferStrategy,
-  trace            : bool,
+  params           : &UsageParams,
 ) -> Result< OutputData, ErrorData >
 {
   use std::os::raw::{ c_int, c_void };
@@ -1060,23 +1054,23 @@ fn execute_live_mode(
     let _ = std::io::stdout().flush();
 
     // Fetch with per-account stagger delays (thunder-herd mitigation).
-    let accounts = fetch_all_quota( credential_store, live_creds_file, true, trace )?;
+    let accounts = fetch_all_quota( credential_store, live_creds_file, true, params.trace )?;
 
-    let text = render_text( &accounts, sort, desc, prefer );
+    let text = render_text( &accounts, params.sort, params.desc, params.prefer );
     print!( "{text}" );
 
     // Compute next-refresh wall-clock time.
     let now_secs = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_secs();
-    let jitter_extra = if jitter_secs > 0
+    let jitter_extra = if params.jitter > 0
     {
       let nanos = u64::from( SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().subsec_nanos() );
-      nanos % ( jitter_secs + 1 ) // 0..=jitter_secs seconds
+      nanos % ( params.jitter + 1 ) // 0..=jitter seconds
     }
     else
     {
       0
     };
-    let wait_secs = interval_secs + jitter_extra;
+    let wait_secs = params.interval + jitter_extra;
     let next_at   = now_secs + wait_secs;
 
     // Countdown footer — rewritten in-place each second via \r.
@@ -1372,12 +1366,12 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
       "format::table is only supported by .accounts".to_string(),
     ) );
   }
-  let UsageParams { refresh, live, interval, jitter, trace, sort, desc, prefer } = parse_usage_params( &cmd )?;
+  let params = parse_usage_params( &cmd )?;
 
   // Live-mode guards — fire BEFORE any network fetch, only when live::1 (AC-31).
   // Pitfall: placing these inside execute_live_mode() (after fetch_all_quota) would
   // require live credentials for offline guard tests it22–it24.
-  if live == 1
+  if params.live == 1
   {
     if matches!( opts.format, OutputFormat::Json )
     {
@@ -1386,14 +1380,14 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
         "live monitor mode is incompatible with format::json".to_string(),
       ) );
     }
-    if interval < 30
+    if params.interval < 30
     {
       return Err( ErrorData::new(
         ErrorCode::ArgumentTypeMismatch,
         "interval must be >= 30".to_string(),
       ) );
     }
-    if jitter > interval
+    if params.jitter > params.interval
     {
       return Err( ErrorData::new(
         ErrorCode::ArgumentTypeMismatch,
@@ -1411,29 +1405,29 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   let live_creds_file  = crate::ClaudePaths::new()
     .map_or_else( || std::path::PathBuf::from( "/dev/null" ), |p| p.credentials_file() );
 
-  if live == 1
+  if params.live == 1
   {
-    return execute_live_mode( &credential_store, &live_creds_file, interval, jitter, sort, desc, prefer, trace );
+    return execute_live_mode( &credential_store, &live_creds_file, &params );
   }
 
-  let mut accounts = fetch_all_quota( &credential_store, &live_creds_file, false, trace )?;
+  let mut accounts = fetch_all_quota( &credential_store, &live_creds_file, false, params.trace )?;
 
   // Retry-once per account on 401/403 auth errors or 429+locally-expired: if
   // refresh::1 and any account's quota fetch failed with an auth error OR a
   // rate-limit response while its local `expiresAt` is past, refresh that token
   // via an isolated subprocess, then re-fetch only that account's quota.
   // Pure 429 with a non-expired local token is not retried — the token is valid.
-  if refresh == 1
+  if params.refresh == 1
   {
     let claude_paths = crate::ClaudePaths::new();
-    apply_refresh( &mut accounts, &credential_store, claude_paths.as_ref(), trace );
+    apply_refresh( &mut accounts, &credential_store, claude_paths.as_ref(), params.trace );
   }
 
   let content = match opts.format
   {
     OutputFormat::Json  => render_json( &accounts ),
     OutputFormat::Text
-    | OutputFormat::Table => render_text( &accounts, sort, desc, prefer ),
+    | OutputFormat::Table => render_text( &accounts, params.sort, params.desc, params.prefer ),
   };
 
   Ok( OutputData::new( content, "text" ) )

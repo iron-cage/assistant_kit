@@ -34,6 +34,15 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 | IT-26 | Account matching live `accessToken` shows `Current:  yes`; others show `Current:  no` | Current Account |
 | IT-27 | `Current:` line suppressed when `~/.claude/.credentials.json` is unreadable | Current Account |
 | IT-28 | `current::0` suppresses `Current:` line; `format::json` includes `is_current` field | Current Account |
+| IT-29 | `uuid::1` shows `ID:` line from `taggedId` in saved `.claude.json` snapshot | Extended Snapshot |
+| IT-30 | `capabilities::1` shows `Capabilities:` line as comma-separated list | Extended Snapshot |
+| IT-31 | Empty capabilities array in snapshot → `Capabilities: N/A` | Extended Snapshot / Edge Case |
+| IT-32 | Account without `.claude.json` snapshot → `ID: N/A`, `Capabilities: N/A` | Extended Snapshot / Edge Case |
+| IT-33 | `org_uuid::1` shows `Org ID:` line from saved `{name}.roles.json` | Org Identity |
+| IT-34 | `org_name::1` shows `Org:` line from saved `{name}.roles.json` | Org Identity |
+| IT-35 | Account without `roles.json` snapshot → `Org ID: N/A`, `Org: N/A` | Org Identity / Edge Case |
+| IT-36 | `format::json` includes `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` | Extended Snapshot / JSON |
+| IT-37 | `uuid::`, `capabilities::`, `org_uuid::`, `org_name::` all absent by default | Extended Snapshot / Default |
 
 ### Test Coverage Summary
 
@@ -52,8 +61,14 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - Positional Syntax: 1 test (IT-24)
 - Prefix Resolution: 1 test (IT-25)
 - Current Account: 3 tests (IT-26, IT-27, IT-28)
+- Extended Snapshot: 4 tests (IT-29, IT-30, IT-31, IT-32)
+- Extended Snapshot / Edge Case: 2 tests (IT-31, IT-32)
+- Org Identity: 2 tests (IT-33, IT-34)
+- Org Identity / Edge Case: 1 test (IT-35)
+- Extended Snapshot / JSON: 1 test (IT-36)
+- Extended Snapshot / Default: 1 test (IT-37)
 
-**Total:** 28 integration tests
+**Total:** 37 integration tests
 
 ---
 
@@ -334,3 +349,93 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **When (b):** `clp .accounts format::json` → valid JSON array; each object contains `is_current` boolean field.
 - **Exit:** 0
 - **Source:** [016_current_account_awareness.md AC-03, AC-04](../../../../docs/feature/016_current_account_awareness.md)
+
+---
+
+### IT-29: `uuid::1` shows `ID:` line from taggedId
+
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.claude.json` containing `{"oauthAccount":{"taggedId":"user_abc123"}}`.
+- **When:** `clp .accounts uuid::1`
+- **Then:** Output block for `work@acme.com` contains `ID:      user_abc123`.
+- **Exit:** 0
+- **Source:** [021_extended_snapshot_fields.md AC-03](../../../../docs/feature/021_extended_snapshot_fields.md)
+
+---
+
+### IT-30: `capabilities::1` shows `Capabilities:` as comma-separated list
+
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.claude.json` containing `{"oauthAccount":{"capabilities":["claude_code","pro"]}}`.
+- **When:** `clp .accounts capabilities::1`
+- **Then:** Output block contains `Capabilities: claude_code, pro`.
+- **Exit:** 0
+- **Source:** [021_extended_snapshot_fields.md AC-04](../../../../docs/feature/021_extended_snapshot_fields.md)
+
+---
+
+### IT-31: Empty capabilities array → `Capabilities: N/A`
+
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.claude.json` containing `{"oauthAccount":{"capabilities":[]}}`.
+- **When:** `clp .accounts capabilities::1`
+- **Then:** Output block contains `Capabilities: N/A`.
+- **Exit:** 0
+- **Source:** [021_extended_snapshot_fields.md AC-09](../../../../docs/feature/021_extended_snapshot_fields.md)
+
+---
+
+### IT-32: Account without `.claude.json` snapshot → N/A for uuid and capabilities
+
+- **Given:** `work@acme.com` with credential file only — no `{credential_store}/work@acme.com.claude.json` snapshot.
+- **When:** `clp .accounts uuid::1 capabilities::1`
+- **Then:** Output block contains `ID:      N/A` and `Capabilities: N/A`.
+- **Exit:** 0
+- **Source:** [021_extended_snapshot_fields.md AC-07](../../../../docs/feature/021_extended_snapshot_fields.md)
+
+---
+
+### IT-33: `org_uuid::1` shows `Org ID:` from roles.json
+
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.roles.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`.
+- **When:** `clp .accounts org_uuid::1`
+- **Then:** Output block contains `Org ID:  org-xyz-789`.
+- **Exit:** 0
+- **Source:** [022_org_identity_snapshot.md AC-05](../../../../docs/feature/022_org_identity_snapshot.md)
+
+---
+
+### IT-34: `org_name::1` shows `Org:` from roles.json
+
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.roles.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`.
+- **When:** `clp .accounts org_name::1`
+- **Then:** Output block contains `Org:     Acme Corp`.
+- **Exit:** 0
+- **Source:** [022_org_identity_snapshot.md AC-06](../../../../docs/feature/022_org_identity_snapshot.md)
+
+---
+
+### IT-35: Account without `roles.json` → N/A for org fields
+
+- **Given:** `work@acme.com` saved with credential file only — no `{credential_store}/work@acme.com.roles.json` snapshot.
+- **When:** `clp .accounts org_uuid::1 org_name::1`
+- **Then:** Output block contains `Org ID:  N/A` and `Org:     N/A`.
+- **Exit:** 0
+- **Source:** [022_org_identity_snapshot.md AC-05, AC-06](../../../../docs/feature/022_org_identity_snapshot.md)
+
+---
+
+### IT-36: `format::json` includes extended snapshot and org fields
+
+- **Given:** `work@acme.com` saved with `.claude.json` snapshot (taggedId="user_abc123", capabilities=["claude_code"]) and `roles.json` snapshot (organization_uuid="org-xyz", organization_name="Acme").
+- **When:** `clp .accounts format::json`
+- **Then:** Valid JSON array where each object contains `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` keys; `work@acme.com` has non-null values for all four.
+- **Exit:** 0
+- **Source:** [021_extended_snapshot_fields.md AC-06](../../../../docs/feature/021_extended_snapshot_fields.md), [022_org_identity_snapshot.md AC-09](../../../../docs/feature/022_org_identity_snapshot.md)
+
+---
+
+### IT-37: Extended params absent by default
+
+- **Given:** `work@acme.com` saved with `.claude.json` containing taggedId and capabilities, and `roles.json` containing org fields.
+- **When:** `clp .accounts` (no extended params)
+- **Then:** Stdout does NOT contain `ID:`, `Capabilities:`, `Org ID:`, `Org:` lines. Only default-on fields present.
+- **Exit:** 0
+- **Source:** [021_extended_snapshot_fields.md AC-05](../../../../docs/feature/021_extended_snapshot_fields.md), [022_org_identity_snapshot.md](../../../../docs/feature/022_org_identity_snapshot.md) Design §New field-presence params

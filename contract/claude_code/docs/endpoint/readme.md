@@ -15,7 +15,7 @@
 | [002](002_oauth_account.md) | OAuth Account | `api.anthropic.com/api/oauth/account` | GET | `claude_quota::fetch_oauth_account` | ✅ implemented |
 | [003](003_v1_messages.md) | Messages Rate-Limit Headers | `api.anthropic.com/v1/messages` | POST | `claude_quota::fetch_rate_limits` | ✅ implemented |
 | [004](004_oauth_token.md) | OAuth Token Refresh | `platform.claude.com/v1/oauth/token` | POST | `claude_auth::refresh_token` | ✅ implemented |
-| [005](005_claude_cli_roles.md) | Claude CLI Roles | `api.anthropic.com/api/oauth/claude_cli/roles` | GET | — | 📄 documented only |
+| [005](005_claude_cli_roles.md) | Claude CLI Roles | `api.anthropic.com/api/oauth/claude_cli/roles` | GET | `claude_quota::fetch_claude_cli_roles` | 🔲 planned |
 | [006](006_create_api_key.md) | Create API Key | `api.anthropic.com/api/oauth/claude_cli/create_api_key` | POST | — | 🔒 requires `org:create_api_key` scope |
 | [007](007_metrics_enabled.md) | Metrics Enabled | `api.anthropic.com/api/claude_code/organizations/metrics_enabled` | GET | — | 🔒 enterprise accounts only |
 | [008](008_shared_session_transcripts.md) | Shared Session Transcripts | `api.anthropic.com/api/claude_code_shared_session_transcripts` | POST | — | 🔒 scope insufficient |
@@ -47,3 +47,4 @@ All `endpoint` doc instances must include:
 - `module/claude_profile/docs/feature/009_token_usage.md` — `.usage` command (endpoints 001 + 002)
 - `module/claude_profile/docs/feature/013_account_limits.md` — `.account.limits` command (endpoint 003)
 - `module/claude_profile/docs/feature/017_token_refresh.md` — refresh policy (endpoint 004)
+- `module/claude_profile/docs/feature/022_org_identity_snapshot.md` — `.account.save` org snapshot (endpoint 005)

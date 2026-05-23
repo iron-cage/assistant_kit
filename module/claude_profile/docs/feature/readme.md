@@ -31,4 +31,6 @@
 | 018 | [Live Quota Monitor Mode](018_live_monitor.md) | `live::`, `interval::`, `jitter::` parameters; continuous refresh with staggered fetches and countdown footer | ✅ |
 | 019 | [Browser Re-Authentication for Named Account](019_account_relogin.md) | `.account.relogin` — spawn `claude` with inherited TTY to refresh a dead `refreshToken`; credential write-back and active restore | ✅ |
 | 020 | [Usage Sort Strategies](020_usage_sort_strategies.md) | Configurable row ordering in `.usage` output — `sort::`, `desc::`, `prefer::` parameters with `name`, `endurance`, `drain`, `reset` strategies | ✅ |
+| 021 | [Extended Snapshot Fields](021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` from existing `{name}.claude.json`; `uuid::` and `capabilities::` opt-in params | 🔲 |
+| 022 | [Org Identity Snapshot](022_org_identity_snapshot.md) | `{name}.roles.json` via endpoint 005 at save-time; `org_uuid::` and `org_name::` opt-in params | 🔲 |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

@@ -176,7 +176,7 @@ default-features = false
 
 [workspace.dependencies.cli_fmt]
 # Co-developed companion crate; not yet published to crates.io.
-# Docker builds inject this crate via --build-context cli_fmt into /cli_fmt/.
+# Docker builds inject this crate via --build-context cli_fmt into /wtools/dev/module/core/cli_fmt/.
 path = "../../wtools/dev/module/core/cli_fmt"
 default-features = false
 features = [ "cli_help_template" ]

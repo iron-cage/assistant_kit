@@ -4,7 +4,7 @@
 
 - **Purpose**: Snapshot the current active credentials as a named account profile for later restoration.
 - **Responsibility**: Documents the `account::save()` API and the `.account.save` CLI command (FR-7).
-- **In Scope**: Credential copy, metadata snapshot (`~/.claude.json`, `settings.json`), name validation, directory init, CLI dry-run behaviour.
+- **In Scope**: Credential copy, metadata snapshot (`~/.claude.json`, `settings.json`), org identity snapshot (`{name}.roles.json` via endpoint 005), name validation, directory init, CLI dry-run behaviour, idempotent re-save as metadata refresh.
 - **Out of Scope**: Account switching (→ 004_account_use.md), store initialization (→ 001_account_store_init.md).
 
 ### Design
@@ -25,7 +25,10 @@
 5. Write contents to `{credential_store}/{name}.credentials.json` (creates or overwrites).
 6. Copy `~/.claude.json` → `{credential_store}/{name}.claude.json` (best-effort: skip silently if source absent).
 7. Copy `~/.claude/settings.json` → `{credential_store}/{name}.settings.json` (best-effort: skip silently if source absent).
-8. Write `{credential_store}/_active` = `{name}` — mark the saved account as the current active account.
+8. Call `claude_quota::fetch_claude_cli_roles(&access_token)` (feature-gated, best-effort): on success, write response to `{credential_store}/{name}.roles.json`; on any failure, skip silently — save still succeeds.
+9. Write `{credential_store}/_active` = `{name}` — mark the saved account as the current active account.
+
+**Idempotency as metadata refresh:** `save()` overwrites all snapshot files on every invocation. Re-running `clp .account.save` for an existing account name re-fetches endpoint 005 and overwrites `{name}.roles.json` alongside all other snapshots. This is the canonical mechanism for refreshing cached metadata when org membership or role changes — no separate command required.
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would save current credentials as '{name}'` without modifying any files.
 
@@ -42,6 +45,9 @@
 - **AC-09**: `clp .account.save` (no `name::`) when `~/.claude.json` has no `emailAddress` exits 1 with `cannot infer account name: emailAddress absent from ~/.claude.json — pass name:: explicitly`.
 - **AC-10**: After a successful `clp .account.save`, `{credential_store}/_active` contains the saved account name; `clp .credentials.status` shows `Account: {name}` immediately.
 - **AC-11**: `clp .account.save name::a/b@c.com` exits 1 — path-unsafe characters (`/`, `\`, `*`) in the email local part are rejected by `validate_name()` before any filesystem operation.
+- **AC-12**: When endpoint 005 responds successfully, `{credential_store}/{name}.roles.json` is created alongside the credential file.
+- **AC-13**: When endpoint 005 fails (network error, scope issue, or feature not enabled), no `{name}.roles.json` is written and save still exits 0.
+- **AC-14**: Re-running `clp .account.save` for an existing account name overwrites `{name}.roles.json` with a fresh endpoint 005 response; this is the metadata refresh mechanism.
 
 ### Cross-References
 
@@ -56,3 +62,4 @@
 | doc | [001_account_store_init.md](001_account_store_init.md) | Directory initialization triggered by save |
 | doc | [command/001_account.md](../cli/command/001_account.md#command--4-accountsave) | CLI command specification |
 | doc | [014_rich_account_metadata.md](014_rich_account_metadata.md) | Metadata fields snapshotted by `save()` |
+| doc | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | `{name}.roles.json` lifecycle and org fields |

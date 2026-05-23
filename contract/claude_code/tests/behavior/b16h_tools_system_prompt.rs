@@ -11,7 +11,7 @@
 //! to compare `input_tokens` between `--tools ""` and default. Excluded from default test
 //! filter because it requires live Anthropic credentials (`ANTHROPIC_API_KEY`).
 //!
-//! See `docs/behavior/001_session_behaviors.md` B16h / E32 for full evidence record.
+//! See `docs/behavior/readme.md` B16h / E32 for full evidence record.
 
 /// B16h: compare `input_tokens` between `--tools ""` and default to confirm H1 vs H2.
 ///
@@ -71,7 +71,7 @@ fn lim_it_b16h_tools_system_prompt_token_comparison()
         eprintln!( "B16h → H1 supported: tool definitions present (only {diff} token diff)" );
       }
       // The test itself passes either way — it is a measurement, not a pass/fail assertion.
-      // Update 001_session_behaviors.md B16h status based on the measurement result.
+      // Update behavior/readme.md B16h status based on the measurement result.
     }
     _ =>
     {

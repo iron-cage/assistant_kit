@@ -2,9 +2,9 @@
 
 Definitions for terms used in `claude_storage` CLI documentation.
 
-For conceptual hierarchy diagrams (containment, threading, agent session layout) see [002_storage_organization.md](../../../../contract/claude_code/docs/behavior/002_storage_organization.md#conceptual-model).
+For conceptual hierarchy diagrams (containment, threading, agent session layout) see [storage/readme.md](../../../../contract/claude_code/docs/storage/readme.md#conceptual-model).
 
-For the complete four-level taxonomy (Project / Conversation / Session / Entry) with pairwise relationship descriptions and ASCII containment diagram, see [007_concept_taxonomy.md](../../../../contract/claude_code/docs/behavior/007_concept_taxonomy.md).
+For the complete four-level taxonomy (Project / Conversation / Session / Entry) with pairwise relationship descriptions and ASCII containment diagram, see [taxonomy/readme.md](../../../../contract/claude_code/docs/taxonomy/readme.md).
 
 ## Core Terms
 
@@ -22,7 +22,7 @@ The most-recently modified session (JSONL file) within the current scope. Comput
 
 ### Agent Session
 
-A sub-agent conversation spawned during a main session. Two storage layouts coexist (per-project, neither deprecated): **flat** (older projects) where `agent-*.jsonl` files are siblings of the main session at project root, and **hierarchical** (newer projects) where agents live in `{session-uuid}/subagents/agent-{agentId}.jsonl` with optional `.meta.json` sidecars. Agents have `isSidechain: true` in their entries. The `sessionId` field in agent entries references the parent session UUID. Use `agent::1` in `.list` or `.projects` to filter to agent sessions only. See [002_storage_organization.md](../../../../contract/claude_code/docs/behavior/002_storage_organization.md#conceptual-model) for layout diagrams.
+A sub-agent conversation spawned during a main session. Two storage layouts coexist (per-project, neither deprecated): **flat** (older projects) where `agent-*.jsonl` files are siblings of the main session at project root, and **hierarchical** (newer projects) where agents live in `{session-uuid}/subagents/agent-{agentId}.jsonl` with optional `.meta.json` sidecars. Agents have `isSidechain: true` in their entries. The `sessionId` field in agent entries references the parent session UUID. Use `agent::1` in `.list` or `.projects` to filter to agent sessions only. See [storage/readme.md](../../../../contract/claude_code/docs/storage/readme.md#conceptual-model) for layout diagrams.
 
 ---
 
@@ -36,7 +36,7 @@ The user-facing logical interaction unit within a project. Each conversation rep
 
 **Agent sessions**: Each conversation owns zero or more agent sessions. Agents are sub-sessions spawned during the conversation; they are part of the conversation but not themselves conversations.
 
-See also: [Session](#session), [Session Family](#session-family), [Entry](#entry), [007_concept_taxonomy.md](../../../../contract/claude_code/docs/behavior/007_concept_taxonomy.md).
+See also: [Session](#session), [Session Family](#session-family), [Entry](#entry), [taxonomy/readme.md](../../../../contract/claude_code/docs/taxonomy/readme.md).
 
 ---
 
@@ -46,7 +46,7 @@ A sequence of two or more sessions within a project that represent logically con
 
 Chain detection is the algorithm that groups sessions into conversations when more than one session file represents a single logical interaction. Until task 021 is implemented, each session (Session Family) is treated as its own conversation.
 
-See also: [Conversation](#conversation), [Session](#session), [007_concept_taxonomy.md](../../../../contract/claude_code/docs/behavior/007_concept_taxonomy.md).
+See also: [Conversation](#conversation), [Session](#session), [taxonomy/readme.md](../../../../contract/claude_code/docs/taxonomy/readme.md).
 
 ---
 
@@ -64,7 +64,7 @@ A single line in a JSONL session file representing one conversation turn. Each E
 
 Entries are append-only: once written to a `.jsonl` file they are never modified.
 
-See [004_jsonl_format.md](../../../../contract/claude_code/docs/behavior/004_jsonl_format.md) for the full field schema and content block types.
+See [jsonl/readme.md](../../../../contract/claude_code/docs/jsonl/readme.md) for the full field schema and content block types.
 
 ---
 
@@ -78,7 +78,7 @@ A top-level Claude Code conversation, as opposed to an agent session. Stored as 
 
 The algorithm Claude Code uses to convert a filesystem path into a safe directory name for `~/.claude/projects/`. Slashes (`/`) become hyphens (`-`); no other transformation is applied. Example: `/home/alice/projects` → `-home-alice-projects`. Path-encoded IDs are accepted by the `project::` parameter.
 
-See [002_storage_organization.md](../../../../contract/claude_code/docs/behavior/002_storage_organization.md) for the encoding specification.
+See [storage/readme.md](../../../../contract/claude_code/docs/storage/readme.md) for the encoding specification.
 
 ---
 
@@ -118,7 +118,7 @@ The storage-layer artifact for one Claude Code interaction: a single `.jsonl` fi
 
 **Session vs Conversation**: Session is the implementation detail (JSONL file on disk); Conversation is the user-facing concept. In the current implementation one session = one conversation, but the conversation chain detection algorithm (task 021) will allow one conversation to span multiple sessions.
 
-A session is a container of Entries. Entries are appended as the conversation progresses and are never modified. Entries within a session are linked by `parentUuid` into a thread (see [002_storage_organization.md](../../../../contract/claude_code/docs/behavior/002_storage_organization.md#conceptual-model)).
+A session is a container of Entries. Entries are appended as the conversation progresses and are never modified. Entries within a session are linked by `parentUuid` into a thread (see [storage/readme.md](../../../../contract/claude_code/docs/storage/readme.md#conceptual-model)).
 
 Session files have no explicit cross-file links — no `parentUuid` or `continuedFrom` field points from one session to another. Any cross-session relationships (Conversation Chains) must be inferred externally.
 

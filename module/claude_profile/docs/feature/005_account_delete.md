@@ -18,7 +18,8 @@
 2. Remove `{credential_store}/{name}.credentials.json` → `NotFound` if absent.
 3. Best-effort: remove `{credential_store}/{name}.claude.json` if present (silently skip if absent).
 4. Best-effort: remove `{credential_store}/{name}.settings.json` if present (silently skip if absent).
-5. Best-effort: read `_active` marker; if it matches `name`, remove `{credential_store}/_active`.
+5. Best-effort: remove `{credential_store}/{name}.roles.json` if present (silently skip if absent).
+6. Best-effort: read `_active` marker; if it matches `name`, remove `{credential_store}/_active`.
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would delete account '{name}'` without removing any files.
 
@@ -33,12 +34,13 @@
 - **AC-02**: `clp .account.delete name::alice@acme.com` (active account) exits 0; removes the credential file and the `_active` marker, leaving no active account.
 - **AC-03**: `clp .account.delete name::ghost@example.com` (non-existent) exits 2 with not-found error.
 - **AC-04**: `clp .account.delete name::alice@oldco.com dry::1` exits 0 with `[dry-run]` prefix; no files removed.
-- **AC-05**: After a successful delete, `{credential_store}/{name}.claude.json` and `{credential_store}/{name}.settings.json` are also removed if they existed; absent snapshot files cause no error.
+- **AC-05**: After a successful delete, `{credential_store}/{name}.claude.json`, `{credential_store}/{name}.settings.json`, and `{credential_store}/{name}.roles.json` are also removed if they existed; absent snapshot files cause no error.
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
+| doc | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | `{name}.roles.json` lifecycle — delete removes it best-effort |
 | source | `src/account.rs` | `delete()` — validate, remove file, clear `_active` if active |
 | source | `src/commands.rs` | `account_delete_routine()` — CLI handler |
 | test | `tests/account_tests.rs::delete_active_account_succeeds` | Verifies active account deletion clears `_active` |

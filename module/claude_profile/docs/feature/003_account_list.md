@@ -24,6 +24,11 @@
 | `role` | Saved `{name}.claude.json` → `oauthAccount.organizationRole` | Empty or absent → shown as `N/A` |
 | `billing` | Saved `{name}.claude.json` → `oauthAccount.billingType` | Empty or absent → shown as `N/A` |
 | `model` | Saved `{name}.settings.json` → `model` | Empty or absent → shown as `N/A` |
+| `tagged_id` | Saved `{name}.claude.json` → `oauthAccount.taggedId` | Empty or absent → shown as `N/A` |
+| `uuid` | Saved `{name}.claude.json` → `oauthAccount.uuid` | Empty or absent → shown as `N/A` |
+| `capabilities` | Saved `{name}.claude.json` → `oauthAccount.capabilities[]` | Empty array or absent → shown as `N/A` |
+| `organization_uuid` | Saved `{name}.roles.json` → `organization_uuid` | Empty or absent → shown as `N/A` |
+| `organization_name` | Saved `{name}.roles.json` → `organization_name` | Empty or absent → shown as `N/A` |
 
 **Without `name::`:** Lists all accounts as indented key-val blocks, sorted alphabetically. Each block is a header line (email) followed by indented `Key:  value` lines. A blank line separates consecutive blocks.
 
@@ -44,10 +49,14 @@
 - `role::1` — show the `Role:` line
 - `billing::1` — show the `Billing:` line
 - `model::1` — show the `Model:` line
+- `uuid::1` — show the `ID:` line (tagged user ID)
+- `capabilities::1` — show the `Capabilities:` line
+- `org_uuid::1` — show the `Org ID:` line
+- `org_name::1` — show the `Org:` line
 
 When all field toggles are disabled, only bare account name lines are printed (no indentation, no blank-line separators).
 
-**`format::json`:** Returns a JSON array with all fields regardless of field-presence toggle values. Each object contains `name`, `is_active`, `is_current`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `email`, `display_name`, `role`, `billing`, `model`.
+**`format::json`:** Returns a JSON array with all fields regardless of field-presence toggle values. Each object contains `name`, `is_active`, `is_current`, `subscription_type`, `rate_limit_tier`, `expires_at_ms`, `email`, `display_name`, `role`, `billing`, `model`, `tagged_id`, `capabilities`, `organization_uuid`, `organization_name`.
 
 ### Acceptance Criteria
 
@@ -62,10 +71,14 @@ When all field toggles are disabled, only bare account name lines are printed (n
 - **AC-09**: `display_name::1` shows `Display:` line per account from saved `{name}.claude.json`.
 - **AC-10**: `role::1`, `billing::1`, `model::1` show corresponding lines per account from saved snapshots.
 - **AC-11**: Accounts without saved metadata files show `N/A` for `email`, `display_name`, `role`, `billing`, `model`.
-- **AC-12**: `format::json` includes `email`, `display_name`, `role`, `billing`, `model` keys per account object.
+- **AC-12**: `format::json` includes `email`, `display_name`, `role`, `billing`, `model`, `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` keys per account object.
 - **AC-13**: `Current:  yes` is shown for the account whose `accessToken` matches `~/.claude/.credentials.json`; `Current:  no` for all others. See [016_current_account_awareness.md](016_current_account_awareness.md).
 - **AC-14**: `current::0` suppresses the `Current:` line; the line is also suppressed when `~/.claude/.credentials.json` is unreadable.
 - **AC-15**: `format::json` includes `is_current` boolean field per account object.
+- **AC-16**: `uuid::1` shows `ID:` line from `tagged_id` field; `N/A` when absent from snapshot.
+- **AC-17**: `capabilities::1` shows `Capabilities:` line as comma-separated list; `N/A` when absent or empty.
+- **AC-18**: `org_uuid::1` shows `Org ID:` line from `{name}.roles.json`; `N/A` when roles.json absent.
+- **AC-19**: `org_name::1` shows `Org:` line from `{name}.roles.json`; `N/A` when roles.json absent.
 
 ### Cross-References
 
@@ -75,3 +88,5 @@ When all field toggles are disabled, only bare account name lines are printed (n
 | source | `src/commands.rs` | `accounts_routine()` — CLI handler |
 | doc | [command/001_account.md](../cli/command/001_account.md#command--3-accounts) | CLI command specification |
 | doc | [tests/docs/cli/command/003_accounts.md](../../tests/docs/cli/command/003_accounts.md) | Integration test plan |
+| doc | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` fields and `uuid::`, `capabilities::` params |
+| doc | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Org identity fields and `org_uuid::`, `org_name::` params |

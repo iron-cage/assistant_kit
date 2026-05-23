@@ -1,6 +1,6 @@
 //! Behavior hypothesis invalidation tests.
 //!
-//! Each file covers exactly one behavior from `docs/behavior/001_session_behaviors.md` (B1..B24).
+//! Each file covers exactly one behavior from `docs/behavior/readme.md` (B1..B24).
 //! Tests inspect real `~/.claude/` storage to verify Claude Code's actual output.
 //! If Claude Code changes behavior, the tests go RED.
 //!

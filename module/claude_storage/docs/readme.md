@@ -26,11 +26,10 @@ This directory contains comprehensive documentation for the `claude_storage` cra
 ### Claude Code Knowledge (shared)
 
 Core specifications for Claude Code's storage layout, file formats, and JSONL schema have moved
-to the workspace-level [`contract/claude_code/docs/`](../../../contract/claude_code/docs/behavior/) directory, since they are
+to the workspace-level [`contract/claude_code/docs/`](../../../contract/claude_code/docs/) directory, since they are
 consumed by multiple crates (`claude_storage`, `claude_version`, `claude_runner`, `claude_profile`).
 
-Key doc instances there: `001_session_behaviors.md`, `002_storage_organization.md`, `003_filesystem_layout.md`,
-`004_jsonl_format.md`, `005_settings_format.md`, `006_ancillary_formats.md`, `007_concept_taxonomy.md`.
+Key entity directories there: `behavior/` (25 hypotheses), `storage/`, `filesystem/`, `jsonl/`, `settings/`, `formats/`, `taxonomy/`, `params/` (73 params), `endpoint/`.
 
 ---
 
@@ -329,7 +328,7 @@ for result in results {
 
 ### Before Starting Implementation
 
-1. ✅ Read [`contract/claude_code/docs/behavior/004_jsonl_format.md`](../../../contract/claude_code/docs/behavior/004_jsonl_format.md) - Understand data format
+1. ✅ Read [`contract/claude_code/docs/jsonl/readme.md`](../../../contract/claude_code/docs/jsonl/readme.md) - Understand data format
 2. ✅ Read `development_plan.md` - Understand approach
 3. ✅ Examine real data - Run jq commands above
 4. ✅ Review existing code - Understand current structure

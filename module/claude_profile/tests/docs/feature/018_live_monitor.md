@@ -95,7 +95,7 @@ Feature behavioral requirement test cases for `docs/feature/018_live_monitor.md`
 - **When:** `clp .usage live::1 trace::1` (interrupted after first cycle)
 - **Then:** trace output on stderr shows per-account fetch steps interleaved with observed delays in the 200–1500 ms range; accounts are not fetched simultaneously (stagger present); exit 0.
 - **Exit:** 0
-- **Source fn:** `TBD — no dedicated test`
+- **Source fn:** `f18_ft06_live_stagger_per_account_trace`
 - **Source:** [018_live_monitor.md AC-29](../../../docs/feature/018_live_monitor.md)
 
 ---
