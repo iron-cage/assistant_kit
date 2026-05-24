@@ -45,7 +45,7 @@
      - `🟡` — valid token, either `5h Left ≤ 15.0%` or `7d Left ≤ 5.0%` (at least one quota exhausted; `result` is `Ok`)
      - `🟢` — valid token, both `5h Left > 15.0%` and `7d Left > 5.0%` (both quotas healthy; `result` is `Ok`)
      - No JSON equivalent — the status is a display-only column derived from existing fields
-   - **Per-column emoji:** `5h Left` and `7d Left` column values embed an individual 🟢/🟡 emoji based on their own ≤5% threshold: `🟢 86%` when > 5%, `🟡 3%` when ≤ 5%. This provides drill-down visibility beyond the composite `●`.
+   - **Per-column emoji:** `5h Left` and `7d Left` column values embed an individual 🟢/🟡 emoji based on their own threshold: `5h Left` uses ≤15% (`🟢 86%` when > 15%, `🟡 12%` when ≤ 15%); `7d Left` uses ≤5% (`🟢 65%` when > 5%, `🟡 3%` when ≤ 5%). This provides drill-down visibility beyond the composite `●`.
    - `Expires`: "in Xh Ym" when `expires_in_secs > 0`; "EXPIRED" when `expires_in_secs == 0`
    - `Sub` (hidden by default): `"max"` (`billing_type == "stripe_subscription"` + `has_max`), `"pro"` (`billing_type == "stripe_subscription"` + `!has_max`), `"—"` (`billing_type == "none"`), `"?"` (`OauthAccountData` unavailable)
    - `~Renews`: `"Mon DD"` format — day-of-month from `org_created_at` projected to next occurrence after today (e.g. `"Jun  5"`); `"?"` when `OauthAccountData` unavailable; `"—"` when parsing fails
