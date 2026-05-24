@@ -8,25 +8,25 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | session_id:: in .show displays session content | Cross-Command |
-| EC-2 | session_id:: in .export exports the same session | Cross-Command |
-| EC-3 | Same session_id:: value resolves same session in both commands | Cross-Command Consistency |
-| EC-4 | session_id:: required in .export, optional in .show | Required vs Optional |
-| EC-5 | session_id:: depends on project:: for scoping | Dependency |
-| EC-6 | session_id:: without project:: resolves via cwd | Dependency |
+| CC-1 | session_id:: in .show displays session content | Cross-Command |
+| CC-2 | session_id:: in .export exports the same session | Cross-Command |
+| CC-3 | Same session_id:: value resolves same session in both commands | Cross-Command Consistency |
+| CC-4 | session_id:: required in .export, optional in .show | Required vs Optional |
+| CC-5 | session_id:: depends on project:: for scoping | Dependency |
+| CC-6 | session_id:: without project:: resolves via cwd | Dependency |
 
 ## Test Coverage Summary
 
-- Cross-Command: 2 tests (EC-1, EC-2)
-- Cross-Command Consistency: 1 test (EC-3)
-- Required vs Optional: 1 test (EC-4)
-- Dependency: 2 tests (EC-5, EC-6)
+- Cross-Command: 2 tests (CC-1, CC-2)
+- Cross-Command Consistency: 1 test (CC-3)
+- Required vs Optional: 1 test (CC-4)
+- Dependency: 2 tests (CC-5, CC-6)
 
 ## Test Cases
 
 ---
 
-### EC-1: session_id:: in .show displays session content
+### CC-1: session_id:: in .show displays session content
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at cwd containing session `test-session-uuid`.
 - **When:** `clg .show session_id::test-session-uuid`
@@ -36,7 +36,7 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 
 ---
 
-### EC-2: session_id:: in .export exports the same session
+### CC-2: session_id:: in .export exports the same session
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at cwd containing session `test-session-uuid`.
 - **When:** `clg .export session_id::test-session-uuid`
@@ -46,7 +46,7 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 
 ---
 
-### EC-3: Same session_id:: value resolves same session in both commands
+### CC-3: Same session_id:: value resolves same session in both commands
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at cwd containing session `test-session-uuid` with a known entry count of 4.
 - **When:** `clg .show session_id::test-session-uuid` and `clg .export session_id::test-session-uuid`
@@ -56,7 +56,7 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 
 ---
 
-### EC-4: session_id:: required in .export, optional in .show
+### CC-4: session_id:: required in .export, optional in .show
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project at cwd.
 - **When:** `clg .export` (no `session_id::`) and `clg .show` (no `session_id::`)
@@ -66,7 +66,7 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 
 ---
 
-### EC-5: session_id:: depends on project:: for scoping
+### CC-5: session_id:: depends on project:: for scoping
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with two projects — `/home/testuser/project-a` and `/home/testuser/project-b` — each having a session named `-default_topic`. Run from a directory that is not either project.
 - **When:** `clg .show session_id::-default_topic project::/home/testuser/project-a`
@@ -76,7 +76,7 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 
 ---
 
-### EC-6: session_id:: without project:: resolves via cwd
+### CC-6: session_id:: without project:: resolves via cwd
 
 - **Given:** `cd /home/testuser/project-a && export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with project at `/home/testuser/project-a` having session `-default_topic`.
 - **When:** `clg .show session_id::-default_topic` (no `project::`)

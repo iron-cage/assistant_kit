@@ -2,7 +2,7 @@
 
 Integration tests for the `.session.dir` command. Tests verify session directory path computation, topic handling, and validation.
 
-**Source:** [001_commands.md#command--12-sessiondir](../../../../docs/cli/001_commands.md#command--12-sessiondir)
+**Source:** [001_commands.md#command--10-session-dir](../../../../docs/cli/001_commands.md#command--10-session-dir)
 
 ## Test Case Index
 

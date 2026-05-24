@@ -44,8 +44,9 @@
 
 | Prefix | Category | Used In |
 |--------|----------|---------|
-| `IT-N` | Integration test | Command tests |
-| `EC-N` | Edge case | Parameter tests and parameter group tests |
+| `IT-N` | Integration test | Command tests (`command/`) |
+| `EC-N` | Edge case | Parameter tests (`param/`) |
+| `CC-N` | Cross-command interaction | Parameter group tests (`param_group/`) |
 
 ### Related Documentation
 

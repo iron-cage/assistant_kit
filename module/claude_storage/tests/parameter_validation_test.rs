@@ -85,7 +85,7 @@
 mod common;
 
 /// Test that .list rejects invalid `type::` values
-#[test]
+#[ test ]
 fn test_list_type_parameter_validation()
 {
   let output = common::clg_cmd()
@@ -111,7 +111,7 @@ fn test_list_type_parameter_validation()
 }
 
 /// Test that .list accepts valid `type::` values
-#[test]
+#[ test ]
 fn test_list_type_parameter_valid_values()
 {
   // type::uuid
@@ -140,7 +140,7 @@ fn test_list_type_parameter_valid_values()
 }
 
 /// Test that .status rejects negative verbosity
-#[test]
+#[ test ]
 fn test_status_verbosity_negative_validation()
 {
   let output = common::clg_cmd()
@@ -166,7 +166,7 @@ fn test_status_verbosity_negative_validation()
 }
 
 /// Test that .status rejects out-of-range verbosity
-#[test]
+#[ test ]
 fn test_status_verbosity_out_of_range_validation()
 {
   let output = common::clg_cmd()
@@ -192,7 +192,7 @@ fn test_status_verbosity_out_of_range_validation()
 }
 
 /// Test that .status accepts valid verbosity range
-#[test]
+#[ test ]
 fn test_status_verbosity_valid_range()
 {
   // Create empty temp storage to avoid processing thousands of real sessions
@@ -227,7 +227,7 @@ fn test_status_verbosity_valid_range()
 }
 
 /// Test that .show rejects negative verbosity
-#[test]
+#[ test ]
 fn test_show_verbosity_negative_validation()
 {
   let output = common::clg_cmd()
@@ -248,7 +248,7 @@ fn test_show_verbosity_negative_validation()
 }
 
 /// Test that .show rejects out-of-range verbosity
-#[test]
+#[ test ]
 fn test_show_verbosity_out_of_range_validation()
 {
   let output = common::clg_cmd()
@@ -269,7 +269,7 @@ fn test_show_verbosity_out_of_range_validation()
 }
 
 /// Test that .list rejects negative `min_entries`
-#[test]
+#[ test ]
 fn test_list_min_entries_negative_validation()
 {
   let output = common::clg_cmd()
@@ -321,7 +321,7 @@ fn test_list_min_entries_negative_validation()
 /// ## Pitfall
 /// Over-correcting a "garbage parameter" issue by rejecting spec-valid combinations.
 /// A no-op is always preferable to an error when the spec documents the combination.
-#[test]
+#[ test ]
 fn test_show_entries_accepted_in_content_mode()
 {
   // session_id::test-session-id won't exist, so we get a project-not-found error,
@@ -345,7 +345,7 @@ fn test_show_entries_accepted_in_content_mode()
 }
 
 /// Test that .show entries works correctly in metadata mode
-#[test]
+#[ test ]
 fn test_show_entries_works_in_metadata_mode()
 {
   // This test verifies that entries::1 IS accepted when in metadata mode
@@ -465,7 +465,7 @@ fn test_show_entries_valid_with_verbosity_zero()
 /// Don't assume unilang parser validates enum value constraints. Parser only
 /// validates type (String), not value constraints. Application code must
 /// validate enumerated parameter values explicitly.
-#[test]
+#[ test ]
 fn test_count_target_invalid_value()
 {
   let output = common::clg_cmd()
@@ -491,7 +491,7 @@ fn test_count_target_invalid_value()
 }
 
 /// Test .count target accepts valid values
-#[test]
+#[ test ]
 fn test_count_target_valid_values()
 {
   // target::projects (default) - should always succeed
@@ -542,7 +542,7 @@ fn test_count_target_valid_values()
 }
 
 /// Test .count target singular form (common typo)
-#[test]
+#[ test ]
 fn test_count_target_singular_form()
 {
   let output = common::clg_cmd()
@@ -567,7 +567,7 @@ fn test_count_target_singular_form()
 }
 
 /// Test .count target empty value
-#[test]
+#[ test ]
 fn test_count_target_empty_value()
 {
   let output = common::clg_cmd()

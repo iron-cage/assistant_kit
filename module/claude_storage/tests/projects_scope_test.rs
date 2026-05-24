@@ -57,7 +57,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 // ────────────────────────────────────────────────────────────────────────────
 // Behavioural: scope::local returns only sessions for the exact matching project
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn local_scope_returns_only_matching_project_sessions()
 {
   let root = TempDir::new().unwrap();
@@ -86,7 +86,7 @@ fn local_scope_returns_only_matching_project_sessions()
 // ────────────────────────────────────────────────────────────────────────────
 // Behavioural: scope::under returns sessions from all projects in subtree
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn under_scope_returns_all_projects_in_subtree()
 {
   let root = TempDir::new().unwrap();
@@ -120,7 +120,7 @@ fn under_scope_returns_all_projects_in_subtree()
 // ────────────────────────────────────────────────────────────────────────────
 // Behavioural: scope::relevant returns sessions from ancestor projects
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn relevant_scope_includes_ancestor_projects()
 {
   let root = TempDir::new().unwrap();
@@ -156,7 +156,7 @@ fn relevant_scope_includes_ancestor_projects()
 // ────────────────────────────────────────────────────────────────────────────
 // Behavioural: scope::global returns sessions from all projects
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn global_scope_returns_all_sessions()
 {
   let root = TempDir::new().unwrap();
@@ -212,7 +212,7 @@ fn global_scope_returns_all_sessions()
 // IT-9: scope::local finds project when path contains underscores
 //
 // bug_reproducer(issue-024)
-#[test]
+#[ test ]
 fn scope_local_finds_project_with_underscore_path()
 {
   let root = TempDir::new().unwrap();
@@ -247,7 +247,7 @@ fn scope_local_finds_project_with_underscore_path()
 // IT-10: scope::under finds projects in subtree when base path has underscores
 //
 // bug_reproducer(issue-024)
-#[test]
+#[ test ]
 fn scope_under_finds_project_with_underscore_path()
 {
   let root = TempDir::new().unwrap();
@@ -288,7 +288,7 @@ fn scope_under_finds_project_with_underscore_path()
 // IT-11: scope::relevant finds ancestor when ancestor path has underscores
 //
 // bug_reproducer(issue-024)
-#[test]
+#[ test ]
 fn scope_relevant_finds_ancestor_with_underscore_path()
 {
   let root = TempDir::new().unwrap();
@@ -333,7 +333,7 @@ fn scope_relevant_finds_ancestor_with_underscore_path()
 // must strip the topic suffix via rfind("--") before comparing.
 //
 // bug_reproducer(issue-024)
-#[test]
+#[ test ]
 fn scope_relevant_finds_topic_scoped_ancestor()
 {
   let root = TempDir::new().unwrap();
@@ -379,7 +379,7 @@ fn scope_relevant_finds_topic_scoped_ancestor()
 // the comparison must work correctly across all of them.
 //
 // bug_reproducer(issue-024)
-#[test]
+#[ test ]
 fn scope_under_finds_deeply_nested_with_multiple_underscore_components()
 {
   let root = TempDir::new().unwrap();
@@ -421,7 +421,7 @@ fn scope_under_finds_deeply_nested_with_multiple_underscore_components()
 // ─────────────────────────────────────────────────────────────────────────────
 // Coverage: UUID projects only match scope::global, excluded from local/under
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn uuid_project_only_matches_global_scope()
 {
   let root = TempDir::new().unwrap();
@@ -490,7 +490,7 @@ fn uuid_project_only_matches_global_scope()
 // `scope::local` semantic: project path == base path (exact), including
 // topic suffix variants of that project.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn scope_local_matches_topic_scoped_directory()
 {
   let root = TempDir::new().unwrap();

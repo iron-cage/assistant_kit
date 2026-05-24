@@ -1,8 +1,8 @@
-# Command :: `.exists`
+# Command :: `.project.exists`
 
-Integration tests for the `.exists` command. Tests verify exit code semantics, output format, topic handling, and shell composability.
+Integration tests for the `.project.exists` command. Tests verify exit code semantics, output format, topic handling, and shell composability.
 
-**Source:** [001_commands.md#command--11-exists](../../../../docs/cli/001_commands.md#command--11-exists)
+**Source:** [001_commands.md#command--9-project-exists](../../../../docs/cli/001_commands.md#command--9-project-exists)
 
 ## Test Case Index
 

@@ -11,8 +11,8 @@ tests/
 ├── readme.md                              # This file - test suite organization
 ├── common/                                 # Shared test utilities
 │   └── mod.rs                             # Pre-compiled binary helper (cargo_bin!)
-├── doc/                                    # Test documentation mirroring docs/ hierarchy
-│   └── cli/testing/                       # CLI test case indexes (command, param, param_group)
+├── docs/                                   # Test documentation mirroring docs/ hierarchy
+│   └── cli/                               # CLI test case indexes (command, param, param_group)
 ├── manual/                                 # Manual testing plans and results
 │   └── readme.md                          # Manual testing plan for this crate
 ├── cli_commands.rs                        # CLI command storage operations
@@ -45,14 +45,16 @@ tests/
 ├── projects_zero_byte_count_bug.rs        # .projects zero-byte session exclusion from header count (issue-034, IT-54..IT-56)
 ├── smart_show_command.rs                  # .show smart parameter detection tests
 ├── status_path_test.rs                    # .status path parameter tests (Phase 1D)
-└── truncate_utf8_bug.rs                   # Truncation safety on multibyte UTF-8 (issue-018)
+├── truncate_utf8_bug.rs                   # Truncation safety on multibyte UTF-8 (issue-018)
+├── feature_cli_tool_test.rs               # Feature tests for the CLI tool (FT-1..FT-6)
+└── operation_migration_guide_test.rs      # Migration guide procedure tests (OP-1..OP-5)
 ```
 
 ## Responsibility Table
 
 | File | Responsibility |
 |------|----------------|
-| `doc/` | Test documentation parallel to `docs/` (test case indexes, test plans) |
+| `docs/` | Test documentation parallel to `docs/` (test case indexes, test plans) |
 | `lib_test.rs` | Library API: `COMMANDS_YAML` exists, `register_commands()` callable |
 | `common/mod.rs` | Pre-compiled binary helper for integration tests |
 | `cli_commands.rs` | Test CLI command storage operations |
@@ -85,6 +87,8 @@ tests/
 | `smart_show_command.rs` | Test location-aware .show command |
 | `status_path_test.rs` | Test path parameter in .status command |
 | `truncate_utf8_bug.rs` | Test truncation safety on multibyte UTF-8 (issue-018) |
+| `feature_cli_tool_test.rs` | Test feature-level CLI tool cases (FT-1..FT-6) |
+| `operation_migration_guide_test.rs` | Test migration guide procedure cases (OP-1..OP-5) |
 
 ## Test Documentation Standards
 
@@ -153,25 +157,12 @@ fn test_{command}_{parameter}_{issue}()
 - Test: `tests/search_command_test.rs::test_search_verbosity_invalid`
 - Fix comment: `src/cli/mod.rs:1183-1200` (Finding #010)
 
-## Integration Test Strategy
+## Integration Test Isolation
 
-Tests that depend on real storage state or external resources should be marked `#[ignore]`:
+All integration tests use `CLAUDE_STORAGE_ROOT` + `TempDir` for full isolation.
+No tests depend on real `~/.claude/` state; none are marked `#[ignore]`.
 
-```rust
-#[test]
-#[ignore = "Integration test - depends on actual ~/.claude/ storage state"]
-fn test_status_default_path()
-```
-
-**Why**:
-- Prevents test failures due to environmental factors (corrupted sessions, missing directories)
-- Allows tests to be run selectively with `cargo test -- --ignored`
-- Separates unit/validation tests from integration tests
-
-**Examples**:
-- `tests/status_path_test.rs::test_status_default_path` - depends on ~/.claude/ state
-- `tests/search_command_test.rs::test_search_entry_type_valid` - requires real session data
-- `tests/export_command_test.rs::test_export_format_valid` - requires real session data
+See "Test Isolation with `CLAUDE_STORAGE_ROOT`" below for the pattern.
 
 ## Test Naming Conventions
 

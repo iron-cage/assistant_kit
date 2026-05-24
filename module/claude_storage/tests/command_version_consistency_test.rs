@@ -154,7 +154,7 @@ fn get_command_versions() -> Vec< ( String, String ) >
 }
 
 /// Validate that command versions follow the versioning policy
-#[test]
+#[ test ]
 fn test_command_version_consistency()
 {
   let crate_version = get_crate_version();
@@ -200,7 +200,7 @@ fn test_command_version_consistency()
 }
 
 /// Validate current crate version expectations for v1.3.0 release
-#[test]
+#[ test ]
 fn test_v1_3_0_release_versions()
 {
   let crate_version = get_crate_version();

@@ -27,54 +27,60 @@ Edge case tests for the `limit::` parameter. Tests validate integer enforcement,
 **Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
 
 ## Test Cases
+
 ---
 
-### EC-1: `limit::5` → max 5 sessions per project:
+### EC-1: `limit::5` → max 5 sessions per project
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project with 10 sessions)
 - **When:** `clg .projects limit::5`
 - **Then:** At most 5 sessions shown per project; excess sessions omitted
 - **Exit:** 0
 - **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--22-limit)
+
 ---
 
-### EC-2: `limit::0` → all sessions shown (no cap):
+### EC-2: `limit::0` → all sessions shown (no cap)
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .projects limit::0`
 - **Then:** All sessions shown per project; no capping applied
 - **Exit:** 0
 - **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--22-limit)
+
 ---
 
-### EC-3: Negative limit rejected:
+### EC-3: Negative limit rejected
 
 - **Given:** clean environment
 - **When:** `clg .projects limit::-1`
 - **Then:** Exit 1; error indicating `limit` must be a non-negative integer
 - **Exit:** 1
 - **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--22-limit)
+
 ---
 
-### EC-4: Empty value rejected:
+### EC-4: Empty value rejected
 
 - **Given:** clean environment
 - **When:** `clg .projects limit::`
 - **Then:** Exit 1; error indicating `limit` requires a value
 - **Exit:** 1
 - **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--22-limit)
+
 ---
 
-### EC-5: `limit::100` when project has fewer sessions → all shown:
+### EC-5: `limit::100` when project has fewer sessions → all shown
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project with 3 sessions)
 - **When:** `clg .projects limit::100`
 - **Then:** All 3 sessions shown (limit not reached); no error
 - **Exit:** 0
 - **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--22-limit)
+
 ---
 
-### EC-6: Non-integer value rejected:
+### EC-6: Non-integer value rejected
 
 - **Given:** clean environment
 - **When:** `clg .projects limit::five`

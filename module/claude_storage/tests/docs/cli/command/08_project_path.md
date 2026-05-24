@@ -1,8 +1,8 @@
-# Command :: `.path`
+# Command :: `.project.path`
 
-Integration tests for the `.path` command. Tests verify storage path computation, topic suffix handling, and path resolution.
+Integration tests for the `.project.path` command. Tests verify storage path computation, topic suffix handling, and path resolution.
 
-**Source:** [001_commands.md#command--10-path](../../../../docs/cli/001_commands.md#command--10-path)
+**Source:** [001_commands.md#command--8-project-path](../../../../docs/cli/001_commands.md#command--8-project-path)
 
 ## Test Case Index
 

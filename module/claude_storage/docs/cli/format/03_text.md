@@ -52,8 +52,15 @@ Only `ContentBlock::Text` variants are rendered for assistant entries. All other
 
 `claude_storage_core/src/export.rs` — `write_text_entry()`, `export_session()`
 
-### Cross-References
+### CLI
 
-- [004_params.md § format::](../004_params.md#parameter--5-format) — parameter definition and validation
-- [005_types.md § ExportFormat](../005_types.md#exportformat) — type constants and parsing
-- [005_format.md](../../../tests/doc/cli/testing/param/005_format.md) — test case EC-3
+| File | Relationship |
+|------|-------------|
+| [004_params.md § format::](../004_params.md#parameter--5-format) | Parameter definition and validation |
+| [005_types.md § ExportFormat](../005_types.md#exportformat) | Type constants and parsing |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [05_format.md](../../../tests/docs/cli/param/05_format.md) | Test case EC-3 |

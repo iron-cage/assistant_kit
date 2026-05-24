@@ -5,7 +5,7 @@
 
 mod common;
 
-#[test]
+#[ test ]
 fn cli_builds()
 {
   // This test simply verifies the CLI dependencies and features compile.
@@ -14,8 +14,8 @@ fn cli_builds()
   assert_eq!( package_name, "claude_storage" );
 }
 
-#[test]
-#[cfg( feature = "cli" )]
+#[ test ]
+#[ cfg( feature = "cli" ) ]
 fn cli_feature_enabled()
 {
   // Verify the CLI feature is enabled when running tests
@@ -26,8 +26,8 @@ fn cli_feature_enabled()
 // `claude_storage` (invocable as `clg`) is the canonical binary built from `src/main.rs`.
 // These tests verify the binary is present and functional.
 
-#[test]
-#[cfg( feature = "cli" )]
+#[ test ]
+#[ cfg( feature = "cli" ) ]
 fn binary_is_present()
 {
   // Verify clg binary exists in the build output.

@@ -28,15 +28,20 @@ All compilation errors of the form `could not find module claude_storage` are re
 
 Revert `Cargo.toml` to point back to `claude_storage` and revert `use` statements. No data is modified by this migration.
 
-### Cross-References
+### APIs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | `../../module/claude_storage_core/docs/api/001_public_api.md` | API stability guarantees for migrated consumers |
-| doc | `../../module/claude_storage_core/docs/feature/001_core_library.md` | Core library design rationale |
+| File | Relationship |
+|------|-------------|
+| `../../module/claude_storage_core/docs/api/001_public_api.md` | API stability guarantees for migrated consumers |
 
-### Sources
+### Features
 
-| File | Notes |
-|------|-------|
-| `spec.md` (deleted — migrated here) | Combined specification; migration guide section extracted here |
+| File | Relationship |
+|------|-------------|
+| `../../module/claude_storage_core/docs/feature/001_core_library.md` | Core library design rationale |
+
+### Provenance
+
+| File | Relationship |
+|------|-------------|
+| `spec.md` (deleted) | Combined specification; migration guide section extracted here |

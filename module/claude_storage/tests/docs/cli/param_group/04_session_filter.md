@@ -8,26 +8,26 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | session:: alone auto-enables session display | Auto-Enable |
-| EC-2 | agent:: alone auto-enables session display | Auto-Enable |
-| EC-3 | min_entries:: alone auto-enables session display | Auto-Enable |
-| EC-4 | sessions::0 suppresses display even with all three filters | Override Interaction |
-| EC-5 | session:: + agent:: combined filters sessions by both | Combined Filter |
-| EC-6 | session:: + min_entries:: combined filters by both criteria | Combined Filter |
-| EC-7 | All three filters are AND-combined (not OR) | Filter Logic |
+| CC-1 | session:: alone auto-enables session display | Auto-Enable |
+| CC-2 | agent:: alone auto-enables session display | Auto-Enable |
+| CC-3 | min_entries:: alone auto-enables session display | Auto-Enable |
+| CC-4 | sessions::0 suppresses display even with all three filters | Override Interaction |
+| CC-5 | session:: + agent:: combined filters sessions by both | Combined Filter |
+| CC-6 | session:: + min_entries:: combined filters by both criteria | Combined Filter |
+| CC-7 | All three filters are AND-combined (not OR) | Filter Logic |
 
 ## Test Coverage Summary
 
-- Auto-Enable: 3 tests (EC-1, EC-2, EC-3)
-- Override Interaction: 1 test (EC-4)
-- Combined Filter: 2 tests (EC-5, EC-6)
-- Filter Logic: 1 test (EC-7)
+- Auto-Enable: 3 tests (CC-1, CC-2, CC-3)
+- Override Interaction: 1 test (CC-4)
+- Combined Filter: 2 tests (CC-5, CC-6)
+- Filter Logic: 1 test (CC-7)
 
 ## Test Cases
 
 ---
 
-### EC-1: session:: alone auto-enables session display
+### CC-1: session:: alone auto-enables session display
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project having sessions `-commit` and `-default_topic`.
 - **When:** `clg .list session::commit`
@@ -37,7 +37,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 
 ---
 
-### EC-2: agent:: alone auto-enables session display
+### CC-2: agent:: alone auto-enables session display
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project having both main sessions and agent sessions (`agent-*.jsonl`).
 - **When:** `clg .list agent::1`
@@ -47,7 +47,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 
 ---
 
-### EC-3: min_entries:: alone auto-enables session display
+### CC-3: min_entries:: alone auto-enables session display
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project having sessions of 2, 5, and 10 entries.
 - **When:** `clg .list min_entries::5`
@@ -57,7 +57,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 
 ---
 
-### EC-4: sessions::0 suppresses display even with all three filters
+### CC-4: sessions::0 suppresses display even with all three filters
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project having agent sessions and varied entry counts.
 - **When:** `clg .list sessions::0 session::commit agent::1 min_entries::2`
@@ -67,7 +67,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 
 ---
 
-### EC-5: session:: + agent:: combined filters sessions by both
+### CC-5: session:: + agent:: combined filters sessions by both
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project having: `-commit` (main session), `agent-commit-123` (agent session), `agent-other-456` (agent session).
 - **When:** `clg .list session::commit agent::1`
@@ -77,7 +77,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 
 ---
 
-### EC-6: session:: + min_entries:: combined filters by both criteria
+### CC-6: session:: + min_entries:: combined filters by both criteria
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project having: `-commit` (3 entries), `-commit-long` (10 entries), `-default_topic` (8 entries).
 - **When:** `clg .list session::commit min_entries::5`
@@ -87,7 +87,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 
 ---
 
-### EC-7: All three filters are AND-combined (not OR)
+### CC-7: All three filters are AND-combined (not OR)
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project having: `agent-commit-5entries` (agent, contains "commit", 5 entries), `agent-other-5entries` (agent, no "commit", 5 entries), `-commit-5entries` (main, contains "commit", 5 entries).
 - **When:** `clg .list session::commit agent::1 min_entries::5`

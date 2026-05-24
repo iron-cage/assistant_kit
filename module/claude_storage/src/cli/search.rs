@@ -12,11 +12,11 @@ use super::storage::{ create_storage, validate_verbosity, load_project_for_param
 ///
 /// Returns error if query is missing, verbosity is out of range, entry type
 /// is invalid, storage creation fails, project loading fails, or search fails.
-#[allow(clippy::too_many_lines)]
+#[ allow( clippy::too_many_lines ) ]
 // CLI routine handler processes multiple scope branches and verbosity levels —
 // extraction would obscure the command's logic without reducing complexity.
-#[allow(clippy::needless_pass_by_value)]
-#[inline]
+#[ allow( clippy::needless_pass_by_value ) ]
+#[ inline ]
 pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {

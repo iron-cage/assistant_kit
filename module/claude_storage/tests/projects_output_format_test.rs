@@ -78,7 +78,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 // ─────────────────────────────────────────────────────────────────────────────
 
 // IT-17: v1 output groups sessions under project path headers
-#[test]
+#[ test ]
 fn it_17_v1_groups_sessions_by_project_path()
 {
   let root = TempDir::new().unwrap();
@@ -110,7 +110,7 @@ fn it_17_v1_groups_sessions_by_project_path()
 }
 
 // IT-18: path header always present at v1 for scope::local single project
-#[test]
+#[ test ]
 fn it_18_path_header_present_at_v1_single_project()
 {
   let root = TempDir::new().unwrap();
@@ -142,7 +142,7 @@ fn it_18_path_header_present_at_v1_single_project()
 // Updated for family display (TSK-002): agents are shown as family brackets
 // `[N agents: breakdown]` per root, not as a flat `+ N agent sessions` collapse.
 // Flat agents without valid parent linkage become orphan families with `?` marker.
-#[test]
+#[ test ]
 fn it_19_agent_sessions_collapsed_at_v1_no_filter()
 {
   let root = TempDir::new().unwrap();
@@ -188,7 +188,7 @@ fn it_19_agent_sessions_collapsed_at_v1_no_filter()
 }
 
 // IT-20: agent sessions shown individually at v2+
-#[test]
+#[ test ]
 fn it_20_agent_sessions_shown_individually_at_v2()
 {
   let root = TempDir::new().unwrap();
@@ -228,7 +228,7 @@ fn it_20_agent_sessions_shown_individually_at_v2()
 }
 
 // IT-21: entry count shown per session at v2+
-#[test]
+#[ test ]
 fn it_21_entry_count_shown_at_v2()
 {
   let root = TempDir::new().unwrap();
@@ -256,7 +256,7 @@ fn it_21_entry_count_shown_at_v2()
 }
 
 // IT-22: agent::1 explicit filter disables collapse at v1
-#[test]
+#[ test ]
 fn it_22_agent_filter_disables_collapse_at_v1()
 {
   let root = TempDir::new().unwrap();
@@ -310,7 +310,7 @@ fn it_22_agent_filter_disables_collapse_at_v1()
 //
 // Pitfall: Synthetic test IDs are not UUID-format (len != 36), so short_id
 // returns them intact — assertions against full IDs still pass at v1.
-#[test]
+#[ test ]
 fn it_27_entry_count_shown_at_v1()
 {
   let root = TempDir::new().unwrap();
@@ -352,7 +352,7 @@ fn it_27_entry_count_shown_at_v1()
 //
 // Pitfall: limit::0 means unlimited (not zero sessions). Only positive values
 // activate truncation.
-#[test]
+#[ test ]
 fn it_28_limit_truncates_display()
 {
   let root = TempDir::new().unwrap();
@@ -402,7 +402,7 @@ fn it_28_limit_truncates_display()
 // Pitfall: fs::metadata().len() == 0 is the check — do not rely on entry count
 // because count_entries() reads the file and returns Ok(0) for a valid empty
 // file, same as a zero-byte file.
-#[test]
+#[ test ]
 fn it_29_zero_byte_sessions_excluded_at_v1()
 {
   let root = TempDir::new().unwrap();
@@ -462,7 +462,7 @@ fn it_29_zero_byte_sessions_excluded_at_v1()
 //
 // Pitfall: FileTimes must be set AFTER writing the file. File::create() and
 // write() set mtime to "now"; explicit set_times() must be the last step.
-#[test]
+#[ test ]
 fn it_list_mode_shows_projects_sorted_by_recency()
 {
   let root = TempDir::new().unwrap();
@@ -535,7 +535,7 @@ fn it_list_mode_shows_projects_sorted_by_recency()
 // Pitfall: The output contains DECODED paths (e.g. /tmp/.../proj_v0), not
 // encoded storage dir names. Assert for the directory name component, not the
 // full encoded form.
-#[test]
+#[ test ]
 fn it_verbosity_0_shows_paths_only()
 {
   let root = TempDir::new().unwrap();
@@ -590,7 +590,7 @@ fn it_verbosity_0_shows_paths_only()
 // ─────────────────────────────────────────────────────────────────────────────
 
 // CC-P03: limit::1 with 2 sessions → singular "1 more conversation"
-#[test]
+#[ test ]
 fn it_truncation_noun_singular_one_hidden()
 {
   let root = TempDir::new().unwrap();
@@ -623,7 +623,7 @@ fn it_truncation_noun_singular_one_hidden()
 }
 
 // CC-P04: limit::1 with 3 sessions → plural "2 more conversations"
-#[test]
+#[ test ]
 fn it_truncation_noun_plural_two_hidden()
 {
   let root = TempDir::new().unwrap();

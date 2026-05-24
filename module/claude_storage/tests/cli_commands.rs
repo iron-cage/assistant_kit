@@ -149,7 +149,7 @@ fn write_test_session( storage_dir : &Path, project_id : &str, session_id : &str
 
 // Storage operations tests (.status command logic)
 
-#[test]
+#[ test ]
 fn global_stats_empty_storage()
 {
   let temp_dir = create_test_storage();
@@ -166,7 +166,7 @@ fn global_stats_empty_storage()
   assert_eq!( stats.total_entries, 0, "Empty storage should have 0 entries" );
 }
 
-#[test]
+#[ test ]
 fn global_stats_multiple_projects()
 {
   let temp_dir = create_test_storage();
@@ -187,7 +187,7 @@ fn global_stats_multiple_projects()
   assert_eq!( stats.total_entries, 22, "Should have 22 entries" );
 }
 
-#[test]
+#[ test ]
 fn global_stats_counts_entries_correctly()
 {
   let temp_dir = create_test_storage();
@@ -204,7 +204,7 @@ fn global_stats_counts_entries_correctly()
 
 // Project listing tests (.list command logic)
 
-#[test]
+#[ test ]
 fn list_projects_empty()
 {
   let temp_dir = create_test_storage();
@@ -218,7 +218,7 @@ fn list_projects_empty()
   assert_eq!( projects.len(), 0, "Empty storage should have 0 projects" );
 }
 
-#[test]
+#[ test ]
 fn list_projects_all_types()
 {
   let temp_dir = create_test_storage();
@@ -241,7 +241,7 @@ fn list_projects_all_types()
   assert_eq!( path_projects.len(), 2, "Should have 2 path projects" );
 }
 
-#[test]
+#[ test ]
 fn list_sessions_for_project()
 {
   let temp_dir = create_test_storage();
@@ -266,7 +266,7 @@ fn list_sessions_for_project()
   assert_eq!( all_sessions.len(), 4, "all_sessions should return 4 total sessions (including agent)" );
 }
 
-#[test]
+#[ test ]
 fn project_stats_comprehensive()
 {
   let temp_dir = create_test_storage();
@@ -290,7 +290,7 @@ fn project_stats_comprehensive()
 
 // Session operations tests (.show command logic)
 
-#[test]
+#[ test ]
 fn show_session_stats()
 {
   let temp_dir = create_test_storage();
@@ -314,7 +314,7 @@ fn show_session_stats()
   assert!( stats.last_timestamp.is_some(), "Should have last timestamp" );
 }
 
-#[test]
+#[ test ]
 fn show_session_nonexistent()
 {
   let temp_dir = create_test_storage();
@@ -333,7 +333,7 @@ fn show_session_nonexistent()
   assert!( non_existent.is_none(), "Non-existent session should not be found" );
 }
 
-#[test]
+#[ test ]
 fn session_entry_counts()
 {
   let temp_dir = create_test_storage();
@@ -359,7 +359,7 @@ fn session_entry_counts()
 
 // Counting operations tests (.count command logic)
 
-#[test]
+#[ test ]
 fn count_projects_multiple()
 {
   let temp_dir = create_test_storage();
@@ -375,7 +375,7 @@ fn count_projects_multiple()
   assert_eq!( count, 3, "Should count 3 projects" );
 }
 
-#[test]
+#[ test ]
 fn count_sessions_in_project()
 {
   let temp_dir = create_test_storage();
@@ -399,7 +399,7 @@ fn count_sessions_in_project()
   assert_eq!( total_count, 3, "Should count 3 total sessions (including agent)" );
 }
 
-#[test]
+#[ test ]
 fn count_entries_in_session()
 {
   let temp_dir = create_test_storage();
@@ -421,7 +421,7 @@ fn count_entries_in_session()
   assert_eq!( count, 42, "Should count 42 entries" );
 }
 
-#[test]
+#[ test ]
 fn count_empty_storage()
 {
   let temp_dir = create_test_storage();
@@ -437,7 +437,7 @@ fn count_empty_storage()
 
 // Integration test combining multiple operations
 
-#[test]
+#[ test ]
 fn full_workflow_integration()
 {
   let temp_dir = create_test_storage();

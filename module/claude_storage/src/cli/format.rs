@@ -130,8 +130,8 @@ pub( super ) fn format_timestamp( timestamp : &str ) -> String
 /// UTF-8 sequence (emoji, CJK, accented chars).
 /// Pitfall: `str::len()` returns bytes, not characters — never use it
 /// directly as a slice bound on user-supplied text.
-#[must_use]
-#[inline]
+#[ must_use ]
+#[ inline ]
 pub fn truncate_if_needed( text : &str, max_length : Option< usize > ) -> String
 {
   match max_length

@@ -43,7 +43,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 // ────────────────────────────────────────────────────────────────────────────
 // EC-1: scope::local accepted — exit 0
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn ec1_scope_local_accepted()
 {
   let root = TempDir::new().unwrap();
@@ -59,7 +59,7 @@ fn ec1_scope_local_accepted()
 // ────────────────────────────────────────────────────────────────────────────
 // EC-2: scope::relevant accepted — exit 0
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn ec2_scope_relevant_accepted()
 {
   let root = TempDir::new().unwrap();
@@ -75,7 +75,7 @@ fn ec2_scope_relevant_accepted()
 // ────────────────────────────────────────────────────────────────────────────
 // EC-3: scope::under accepted — exit 0 with path::
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn ec3_scope_under_accepted()
 {
   let root = TempDir::new().unwrap();
@@ -92,7 +92,7 @@ fn ec3_scope_under_accepted()
 // ────────────────────────────────────────────────────────────────────────────
 // EC-4: scope::global accepted — exit 0
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn ec4_scope_global_accepted()
 {
   let root = TempDir::new().unwrap();
@@ -108,7 +108,7 @@ fn ec4_scope_global_accepted()
 // ────────────────────────────────────────────────────────────────────────────
 // EC-5: scope::RELEVANT (uppercase) is case-insensitive — same output as lowercase
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn ec5_scope_case_insensitive()
 {
   let root = TempDir::new().unwrap();
@@ -135,7 +135,7 @@ fn ec5_scope_case_insensitive()
 // ────────────────────────────────────────────────────────────────────────────
 // EC-6: scope::all (invalid) → exit 1 with exact error message
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn ec6_invalid_scope_rejected()
 {
   let root = TempDir::new().unwrap();
@@ -161,7 +161,7 @@ fn ec6_invalid_scope_rejected()
 // produce different results. Around includes the child; local doesn't.
 // (No ancestor projects in storage → around output equals under output here.)
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn ec7_omitted_scope_defaults_to_around()
 {
   let root = TempDir::new().unwrap();
@@ -203,7 +203,7 @@ fn ec7_omitted_scope_defaults_to_around()
 // ────────────────────────────────────────────────────────────────────────────
 // EC-8: scope::global ignores path:: — output identical with or without path::
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn ec8_global_ignores_path()
 {
   let root = TempDir::new().unwrap();
@@ -234,7 +234,7 @@ fn ec8_global_ignores_path()
 // fails with exit 1 and a clear error. scope::global is exempt because it
 // never encodes the path. See also EC-8 which confirms scope::global succeeds.
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn root_path_rejected_for_non_global_scope()
 {
   let root = TempDir::new().unwrap();

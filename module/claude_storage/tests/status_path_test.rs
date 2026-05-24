@@ -45,7 +45,7 @@ use tempfile::TempDir;
 ///
 /// ## Related Requirements
 /// `.status` path parameter: default behavior uses `CLAUDE_STORAGE_ROOT` or `~/.claude/`
-#[test]
+#[ test ]
 fn test_status_default_path()
 {
   let storage = TempDir::new().expect( "create temp storage" );
@@ -93,7 +93,7 @@ fn test_status_default_path()
 ///
 /// ## Related Requirements
 /// .status path parameter: accepts custom storage location
-#[test]
+#[ test ]
 fn test_status_custom_path()
 {
   // Create temp directory structure
@@ -142,7 +142,7 @@ fn test_status_custom_path()
 ///
 /// ## Related Requirements
 /// .status path parameter: gracefully handles nonexistent paths
-#[test]
+#[ test ]
 fn test_status_nonexistent_path()
 {
   let output = common::clg_cmd()
@@ -183,7 +183,7 @@ fn test_status_nonexistent_path()
 ///
 /// ## Related Requirements
 /// .status path parameter: rejects empty path values
-#[test]
+#[ test ]
 fn test_status_empty_path()
 {
   let output = common::clg_cmd()
@@ -231,7 +231,7 @@ fn test_status_empty_path()
 /// ## Pitfall
 /// Adding new commands by copying existing code without understanding shared
 /// utilities leads to inconsistent behavior between commands.
-#[test]
+#[ test ]
 fn test_status_path_dot_resolves_to_cwd()
 {
   let manifest_dir = env!( "CARGO_MANIFEST_DIR" );
@@ -263,7 +263,7 @@ fn test_status_path_dot_resolves_to_cwd()
 ///
 /// ## Purpose
 /// Validates that `status_routine` resolves ~ to home directory.
-#[test]
+#[ test ]
 fn test_status_path_tilde_resolves_to_home()
 {
   let manifest_dir = env!( "CARGO_MANIFEST_DIR" );
@@ -310,7 +310,7 @@ fn test_status_path_tilde_resolves_to_home()
 ///
 /// ## Related Requirements
 /// .status path parameter: works with other parameters
-#[test]
+#[ test ]
 fn test_status_path_with_verbosity()
 {
   // Create temp directory structure
@@ -371,7 +371,7 @@ fn test_status_path_with_verbosity()
 /// "For now, we approximate" comments in code are time-bombs. They signal incomplete
 /// implementation. Always leave a failing test or a TODO compile error (via
 /// `compile_error!`) rather than a silent wrong value.
-#[test]
+#[ test ]
 fn test_status_verbosity2_user_assistant_counts_bug_reproducer_issue_020()
 {
   let storage = TempDir::new().expect( "create temp dir" );

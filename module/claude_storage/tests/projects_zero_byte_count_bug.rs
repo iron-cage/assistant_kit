@@ -93,7 +93,7 @@ fn write_zero_byte_path_session(
 // Pitfall: The render layer and the count expression must stay in sync. If the
 // render layer changes its zero-byte handling, the count expression must change too.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 // bug_reproducer(issue-034)
 fn it54_use_families_zero_byte_excluded_from_header_count()
 {
@@ -158,7 +158,7 @@ fn it54_use_families_zero_byte_excluded_from_header_count()
 // render loop will skip. Derive the count from the rendered collection, not
 // the raw input.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 // bug_reproducer(issue-034)
 fn it55_flat_branch_zero_byte_excluded_from_header_count()
 {
@@ -225,7 +225,7 @@ fn it55_flat_branch_zero_byte_excluded_from_header_count()
 // list mode. Do not add a "(0 sessions)" fallback row — that would leak
 // placeholder state into the UI.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 // bug_reproducer(issue-034)
 fn it56_zero_byte_only_project_excluded_from_list_output()
 {

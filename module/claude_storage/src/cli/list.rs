@@ -31,11 +31,11 @@ use super::projects::{ build_families, group_into_conversations };
 ///
 /// Returns error if `min_entries` is negative, path resolution fails,
 /// project type is invalid, storage creation fails, or listing projects fails.
-#[allow(clippy::too_many_lines)]
+#[ allow( clippy::too_many_lines ) ]
 // CLI routine handler processes many parameters and verbosity branches — extraction
 // would obscure the command's logic without reducing complexity.
-#[allow(clippy::needless_pass_by_value)]
-#[inline]
+#[ allow( clippy::needless_pass_by_value ) ]
+#[ inline ]
 pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
@@ -103,7 +103,7 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       );
     }
     // min_entries validated as non-negative above, so cast is safe
-    #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    #[ allow( clippy::cast_sign_loss, clippy::cast_possible_truncation ) ]
     Some( n as usize )
   }
   else

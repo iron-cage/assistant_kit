@@ -20,6 +20,8 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 | `003_parameter_groups.md` | Shared parameter groups with coherence tests |
 | `006_workflows.md` | Usage scenarios, best practices, complexity matrix |
 | `format/` | Output format catalog for export rendering modes |
+| `env_param.md` | Environment variable catalog with precedence rules |
+| `user_story/` | User story index covering persona goals and acceptance criteria |
 
 ### Completion Matrix
 
@@ -47,6 +49,9 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 - [Parameter Groups](003_parameter_groups.md) — Related parameter sets and their coherence
 - [Workflows](006_workflows.md) — Common usage patterns and best practices
 - [Formats](format/readme.md) — Export output format rendering specifications
+- [Environment Parameters](env_param.md) — Environment variables and precedence rules
+- [User Stories](user_story/readme.md) — Persona goals, acceptance criteria, and workflows
+
 ### Related Documentation
 
 - [`../feature/001_cli_tool.md`](../feature/001_cli_tool.md) — Crate architecture and overall design
@@ -54,4 +59,4 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 - [`contract/claude_code/docs/taxonomy/readme.md`](../../../../contract/claude_code/docs/taxonomy/readme.md) — Four-level taxonomy (Project / Conversation / Session / Entry) — authoritative terminology reference
 - [`contract/claude_code/docs/storage/readme.md`](../../../../contract/claude_code/docs/storage/readme.md) — Storage layout (`~/.claude/projects/`)
 - `../../unilang.commands.yaml` — Machine-readable command definitions
-- [tests/doc/cli/](../../tests/doc/cli/readme.md) — test case planning (commands, params, groups)
+- [tests/docs/cli/](../../tests/docs/cli/readme.md) — test case planning (commands, params, groups)

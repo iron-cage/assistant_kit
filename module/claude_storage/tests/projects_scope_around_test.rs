@@ -69,7 +69,7 @@ fn assert_exit_0( out : &std::process::Output )
 /// ## Related Requirements
 ///
 /// `docs/cli/types.md` § `ScopeValue` — AROUND constant, bidirectional semantics
-#[test]
+#[ test ]
 fn it57_scope_around_includes_ancestor_self_descendant_excludes_sibling()
 {
   let root         = TempDir::new().unwrap();
@@ -146,7 +146,7 @@ fn it57_scope_around_includes_ancestor_self_descendant_excludes_sibling()
 /// ## Related Requirements
 ///
 /// `docs/cli/params.md` § `scope::` — default value changed to `around`
-#[test]
+#[ test ]
 fn it58_default_scope_equals_around_when_path_is_explicit()
 {
   let root         = TempDir::new().unwrap();
@@ -211,7 +211,7 @@ fn it58_default_scope_equals_around_when_path_is_explicit()
 /// ## Related Requirements
 ///
 /// `docs/cli/types.md` § `ScopeValue` — AROUND semantics in empty neighborhood
-#[test]
+#[ test ]
 fn it59_scope_around_degenerate_shows_only_self_when_no_relatives()
 {
   let root         = TempDir::new().unwrap();

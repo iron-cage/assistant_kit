@@ -7,14 +7,6 @@
 - **In Scope**: Three named export formats (markdown, json, text) produced by `.export`.
 - **Out of Scope**: Verbosity-driven output (→ `001_commands.md` per-command), parameter specs (→ `004_params.md`).
 
-### Responsibility Table
-
-| File | Responsibility |
-|------|----------------|
-| `markdown.md` | Markdown export format rendering spec |
-| `json.md` | JSON export format rendering spec |
-| `text.md` | Plain text export format rendering spec |
-
 ### Taxonomy
 
 The CLI produces two categories of output:
@@ -28,13 +20,13 @@ Export formats are mutually exclusive (one per invocation) and produce structura
 
 | # | Format | Category | Trigger | File | Extension | Machine-Parseable |
 |---|--------|----------|---------|------|-----------|-------------------|
-| 1 | markdown | Export | `format::markdown` (default when omitted) | [002_markdown.md](002_markdown.md) | `.md` | No |
-| 2 | json | Export | `format::json` | [001_json.md](001_json.md) | `.json` | Yes |
-| 3 | text | Export | `format::text` | [003_text.md](003_text.md) | `.txt` | No |
+| 1 | markdown | Export | `format::markdown` (default when omitted) | [01_markdown.md](01_markdown.md) | `.md` | No |
+| 2 | json | Export | `format::json` | [02_json.md](02_json.md) | `.json` | Yes |
+| 3 | text | Export | `format::text` | [03_text.md](03_text.md) | `.txt` | No |
 
 **Parameter:** [`format::` in 004_params.md](../004_params.md#parameter--5-format) | **Type:** [`ExportFormat` in 005_types.md](../005_types.md#exportformat)
 
-### Rendering Conventions
+### Rendering Convention
 
 All three formats share these conventions:
 

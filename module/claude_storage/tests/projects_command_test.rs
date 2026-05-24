@@ -51,7 +51,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 // ────────────────────────────────────────────────────────────────────────────
 // Behavioural: verbosity::0 → no header, just project paths
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn verbosity_zero_no_header()
 {
   let root = TempDir::new().unwrap();
@@ -77,7 +77,7 @@ fn verbosity_zero_no_header()
 // ────────────────────────────────────────────────────────────────────────────
 // Behavioural: session:: filter narrows results
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn session_filter_narrows_results()
 {
   let root = TempDir::new().unwrap();
@@ -106,7 +106,7 @@ fn session_filter_narrows_results()
 // ────────────────────────────────────────────────────────────────────────────
 // Validation: verbosity out of range → exit 1
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn invalid_verbosity_rejected()
 {
   let root = TempDir::new().unwrap();
@@ -125,7 +125,7 @@ fn invalid_verbosity_rejected()
 // ────────────────────────────────────────────────────────────────────────────
 // Validation: min_entries negative → exit 1
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn invalid_min_entries_rejected()
 {
   let root = TempDir::new().unwrap();
@@ -144,7 +144,7 @@ fn invalid_min_entries_rejected()
 // ────────────────────────────────────────────────────────────────────────────
 // Coverage: agent::1 returns only agent sessions, agent::0 excludes them
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn agent_filter_includes_only_agent_sessions()
 {
   let root = TempDir::new().unwrap();
@@ -171,7 +171,7 @@ fn agent_filter_includes_only_agent_sessions()
   assert!( !s.contains( "session-main" ), "agent::1 must exclude main session; got:\n{s}" );
 }
 
-#[test]
+#[ test ]
 fn agent_filter_excludes_agent_sessions()
 {
   let root = TempDir::new().unwrap();
@@ -201,7 +201,7 @@ fn agent_filter_excludes_agent_sessions()
 // ────────────────────────────────────────────────────────────────────────────
 // Coverage: min_entries:: filters by actual entry count
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn min_entries_filters_by_entry_count()
 {
   let root = TempDir::new().unwrap();
@@ -231,7 +231,7 @@ fn min_entries_filters_by_entry_count()
 // ────────────────────────────────────────────────────────────────────────────
 // Coverage: verbosity::2 shows project path header (grouped format)
 // ────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn verbosity_two_includes_project_label()
 {
   let root = TempDir::new().unwrap();
@@ -282,7 +282,7 @@ fn verbosity_two_includes_project_label()
 // IT-14: singular noun when exactly 1 session found
 //
 // bug_reproducer(issue-025)
-#[test]
+#[ test ]
 fn output_uses_singular_noun_when_exactly_one_session_found()
 {
   let root = TempDir::new().unwrap();
@@ -317,7 +317,7 @@ fn output_uses_singular_noun_when_exactly_one_session_found()
 // IT-15: plural noun when 2 or more sessions found
 //
 // bug_reproducer(issue-025)
-#[test]
+#[ test ]
 fn output_uses_plural_noun_when_multiple_sessions_found()
 {
   let root = TempDir::new().unwrap();
@@ -349,7 +349,7 @@ fn output_uses_plural_noun_when_multiple_sessions_found()
 // IT-16: zero sessions header still uses plural ("Found 0 sessions:")
 //
 // bug_reproducer(issue-025)
-#[test]
+#[ test ]
 fn output_uses_plural_noun_when_zero_sessions_found()
 {
   let root = TempDir::new().unwrap();
@@ -391,7 +391,7 @@ fn output_uses_plural_noun_when_zero_sessions_found()
 // ## Related Requirements
 // Same validation contract as `status_routine`, `search_routine`, etc.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn verbosity_negative_one_rejected()
 {
   let root = TempDir::new().unwrap();
@@ -425,7 +425,7 @@ fn verbosity_negative_one_rejected()
 // ## Related Requirements
 // `agent::` is documented as accepting 0 or 1 only.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn agent_value_out_of_range_rejected()
 {
   let root = TempDir::new().unwrap();
@@ -455,7 +455,7 @@ fn agent_value_out_of_range_rejected()
 // ## Related Requirements
 // Consistent with standard "minimum N means N or more" semantics.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn min_entries_zero_includes_all_sessions()
 {
   let root = TempDir::new().unwrap();

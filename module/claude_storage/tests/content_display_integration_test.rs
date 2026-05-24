@@ -42,7 +42,7 @@ use tempfile::TempDir;
 /// **Prevention**: Test actual CLI invocation and output parsing
 ///
 /// **Pitfall**: Integration tests must use real storage, not mocks
-#[test]
+#[ test ]
 fn show_displays_content_by_default()
 {
   use claude_storage_core::encode_path;
@@ -131,7 +131,7 @@ fn show_displays_content_by_default()
 /// **Prevention**: Test all parameter combinations
 ///
 /// **Pitfall**: Backward compat modes must be tested, not just new defaults
-#[test]
+#[ test ]
 fn show_metadata_only_parameter()
 {
   use claude_storage_core::encode_path;
@@ -214,7 +214,7 @@ fn show_metadata_only_parameter()
 /// **Prevention**: Test verbosity level equivalences
 ///
 /// **Pitfall**: Don't have multiple ways to specify same behavior without tests
-#[test]
+#[ test ]
 fn show_verbosity_zero_is_metadata_only()
 {
   use claude_storage_core::encode_path;
@@ -302,7 +302,7 @@ fn show_verbosity_zero_is_metadata_only()
 // encoded name shares the base prefix (e.g. myproject-extra matches myproject).
 // ─────────────────────────────────────────────────────────────────────────────
 
-#[test]
+#[ test ]
 // bug_reproducer(issue-036)
 fn show_finds_session_in_topic_dir()
 {
@@ -332,7 +332,7 @@ fn show_finds_session_in_topic_dir()
   assert!( s.contains( "Session:" ), "output must have Session header; got:\n{s}" );
 }
 
-#[test]
+#[ test ]
 fn show_finds_session_in_base_dir()
 {
   use claude_storage_core::encode_path;
@@ -360,7 +360,7 @@ fn show_finds_session_in_base_dir()
   assert!( s.contains( "Session:" ), "output must have Session header; got:\n{s}" );
 }
 
-#[test]
+#[ test ]
 fn show_session_not_found_in_unrelated_dir()
 {
   use claude_storage_core::encode_path;
@@ -386,7 +386,7 @@ fn show_session_not_found_in_unrelated_dir()
   );
 }
 
-#[test]
+#[ test ]
 // bug_reproducer(issue-036)
 fn show_finds_session_in_default_topic_dir()
 {
@@ -440,7 +440,7 @@ fn show_finds_session_in_default_topic_dir()
 // limiting the scan to genuine topic subdirectories of the current project.
 // ─────────────────────────────────────────────────────────────────────────────
 
-#[test]
+#[ test ]
 fn show_session_not_found_in_single_hyphen_sibling_dir()
 {
   use claude_storage_core::encode_path;

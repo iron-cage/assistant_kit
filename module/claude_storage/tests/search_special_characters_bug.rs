@@ -127,7 +127,7 @@ mod common;
 /// Uses `CLAUDE_STORAGE_ROOT` + isolated project so no real `~/.claude/` is required.
 ///
 /// **Test Status:** Active integration test (framework bug fixed)
-#[test]
+#[ test ]
 fn test_search_query_with_hash_character()
 {
   use tempfile::TempDir;
@@ -161,7 +161,7 @@ fn test_search_query_with_hash_character()
 /// Uses `CLAUDE_STORAGE_ROOT` + isolated project so no real `~/.claude/` is required.
 ///
 /// **Test Status:** Active integration test (framework bug fixed)
-#[test]
+#[ test ]
 fn test_search_query_with_question_mark()
 {
   use tempfile::TempDir;
@@ -196,7 +196,7 @@ fn test_search_query_with_question_mark()
 ///
 /// Tests all ASCII special characters to document which work and which fail.
 /// This provides a complete picture of framework limitations.
-#[test]
+#[ test ]
 fn test_special_character_matrix() {
     // Characters that WORK (verified during manual testing):
     let working_chars = vec![

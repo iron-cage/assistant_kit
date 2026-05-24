@@ -13,8 +13,8 @@ use super::storage::{ create_storage, validate_verbosity, resolve_path_parameter
 ///
 /// Returns error if verbosity is out of range, path resolution fails,
 /// storage creation fails, or statistics retrieval fails.
-#[allow(clippy::needless_pass_by_value)]
-#[inline]
+#[ allow( clippy::needless_pass_by_value ) ]
+#[ inline ]
 pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {

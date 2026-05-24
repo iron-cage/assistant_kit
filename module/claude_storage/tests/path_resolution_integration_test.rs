@@ -8,7 +8,7 @@ mod common;
 use std::env;
 
 /// Test: .list `path::`. finds projects in current directory
-#[test]
+#[ test ]
 fn test_list_path_dot_integration()
 {
   // Change to claude_storage directory (where this project's storage should be)
@@ -49,7 +49,7 @@ fn test_list_path_dot_integration()
 }
 
 /// Test: .list `path::`.. finds projects in parent directory
-#[test]
+#[ test ]
 fn test_list_path_dotdot_integration()
 {
   let test_dir = env::current_dir().unwrap();
@@ -77,7 +77,7 @@ fn test_list_path_dotdot_integration()
 }
 
 /// Test: .list `path::`~ finds projects in home directory
-#[test]
+#[ test ]
 fn test_list_path_tilde_integration()
 {
   let test_dir = env::current_dir().unwrap();
@@ -105,7 +105,7 @@ fn test_list_path_tilde_integration()
 }
 
 /// Test: .list `path::claude_tools` still works (backward compatibility)
-#[test]
+#[ test ]
 fn test_list_path_pattern_backward_compat()
 {
   let test_dir = env::current_dir().unwrap();
@@ -135,7 +135,7 @@ fn test_list_path_pattern_backward_compat()
 }
 
 /// Test: .list `path::`~/projects (home + relative path)
-#[test]
+#[ test ]
 fn test_list_path_tilde_slash_integration()
 {
   let test_dir = env::current_dir().unwrap();
@@ -163,7 +163,7 @@ fn test_list_path_tilde_slash_integration()
 }
 
 /// Test: .list `path::/absolute/path` works
-#[test]
+#[ test ]
 fn test_list_path_absolute_integration()
 {
   let test_dir = env::current_dir().unwrap();

@@ -63,7 +63,7 @@ pub fn clg_cmd() -> std::process::Command
 /// # Panics
 ///
 /// Panics if directory creation or file write fails.
-#[allow(dead_code)]
+#[ allow( dead_code ) ]
 pub fn write_test_session(
   root : &std::path::Path,
   project_id : &str,
@@ -109,7 +109,7 @@ pub fn write_test_session(
 /// # Panics
 ///
 /// Panics if path encoding or file write fails.
-#[allow(dead_code)]
+#[ allow( dead_code ) ]
 pub fn write_path_project_session(
   root : &std::path::Path,
   project_path : &std::path::Path,
@@ -136,7 +136,7 @@ pub fn write_path_project_session(
 /// # Panics
 ///
 /// Panics if directory creation or file write fails.
-#[allow(dead_code)]
+#[ allow( dead_code ) ]
 pub fn write_test_session_with_last_message(
   root       : &std::path::Path,
   project_id : &str,
@@ -187,7 +187,7 @@ pub fn write_test_session_with_last_message(
 /// # Panics
 ///
 /// Panics if file write fails.
-#[allow(dead_code)]
+#[ allow( dead_code ) ]
 pub fn write_agent_meta_json(
   dir        : &std::path::Path,
   agent_id   : &str,
@@ -218,7 +218,7 @@ pub fn write_agent_meta_json(
 /// # Panics
 ///
 /// Panics if directory creation or file write fails.
-#[allow(dead_code)]
+#[ allow( dead_code ) ]
 pub fn write_hierarchical_session(
   root             : &std::path::Path,
   project_id       : &str,
@@ -276,7 +276,7 @@ pub fn write_hierarchical_session(
 /// # Panics
 ///
 /// Panics if path encoding or file write fails.
-#[allow(dead_code)]
+#[ allow( dead_code ) ]
 pub fn write_hierarchical_path_session(
   root             : &std::path::Path,
   project_path     : &std::path::Path,
@@ -299,7 +299,7 @@ pub fn write_hierarchical_path_session(
 /// # Panics
 ///
 /// Panics if directory creation or file write fails.
-#[allow(dead_code)]
+#[ allow( dead_code ) ]
 pub fn write_flat_agent_session(
   root               : &std::path::Path,
   project_id         : &str,
@@ -343,7 +343,7 @@ pub fn write_flat_agent_session(
 /// # Panics
 ///
 /// Panics if path encoding or file write fails.
-#[allow(dead_code)]
+#[ allow( dead_code ) ]
 pub fn write_path_project_session_with_last_message(
   root         : &std::path::Path,
   project_path : &std::path::Path,

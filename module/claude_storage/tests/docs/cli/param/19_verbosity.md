@@ -2,7 +2,7 @@
 
 Edge case tests for the `verbosity::` parameter. Tests validate range enforcement, alias handling, and per-command defaults.
 
-**Source:** [004_params.md#parameter--18-verbosity](../../../../docs/cli/004_params.md#parameter--18-verbosity) | [005_types.md#verbositylevel](../../../../docs/cli/005_types.md#verbositylevel)
+**Source:** [004_params.md#parameter--19-verbosity](../../../../docs/cli/004_params.md#parameter--19-verbosity) | [005_types.md#type--12-verbositylevel](../../../../docs/cli/005_types.md#type--12-verbositylevel)
 
 ## Test Case Index
 

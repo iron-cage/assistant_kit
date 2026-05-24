@@ -43,7 +43,7 @@ use std::path::PathBuf;
 // For now, we'll test through integration tests or make the function pub(crate)
 
 /// Test: "." resolves to current working directory
-#[test]
+#[ test ]
 fn test_dot_resolves_to_current_dir()
 {
   // This test verifies that calling .list path::. will resolve to the current directory
@@ -60,7 +60,7 @@ fn test_dot_resolves_to_current_dir()
 }
 
 /// Test: ".." resolves to parent directory
-#[test]
+#[ test ]
 fn test_dotdot_resolves_to_parent_dir()
 {
   let current = env::current_dir().unwrap();
@@ -83,7 +83,7 @@ fn test_dotdot_resolves_to_parent_dir()
 }
 
 /// Test: "~" resolves to home directory
-#[test]
+#[ test ]
 fn test_tilde_resolves_to_home_dir()
 {
   let home = env::var( "HOME" );
@@ -103,7 +103,7 @@ fn test_tilde_resolves_to_home_dir()
 }
 
 /// Test: "~/path" resolves to home + path
-#[test]
+#[ test ]
 fn test_tilde_slash_resolves_correctly()
 {
   let home = env::var( "HOME" ).unwrap();
@@ -125,7 +125,7 @@ fn test_tilde_slash_resolves_correctly()
 }
 
 /// Test: Absolute paths start with /
-#[test]
+#[ test ]
 fn test_absolute_path_detection()
 {
   let path = "/home/user/project";
@@ -138,7 +138,7 @@ fn test_absolute_path_detection()
 }
 
 /// Test: Relative paths can be resolved
-#[test]
+#[ test ]
 fn test_relative_path_resolution()
 {
   let current = env::current_dir().unwrap();
@@ -153,7 +153,7 @@ fn test_relative_path_resolution()
 }
 
 /// Test: Patterns without path separators remain unchanged
-#[test]
+#[ test ]
 fn test_pattern_detection()
 {
   let pattern = "claude_tools";
@@ -166,7 +166,7 @@ fn test_pattern_detection()
 }
 
 /// Test: Empty string handling
-#[test]
+#[ test ]
 fn test_empty_string()
 {
   let empty = "";
@@ -174,7 +174,7 @@ fn test_empty_string()
 }
 
 /// Integration test helper: Verify path resolution works with real directories
-#[test]
+#[ test ]
 fn test_path_resolution_integration_readiness()
 {
   // Verify test environment is suitable for integration tests

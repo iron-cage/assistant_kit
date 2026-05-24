@@ -54,8 +54,9 @@
 //! }
 //! ```
 
-#![deny( missing_docs )]
-#![warn( rust_2018_idioms )]
+#![ doc( html_root_url = "https://docs.rs/claude_storage/1.1.0/claude_storage/" ) ]
+#![ deny( missing_docs ) ]
+#![ warn( rust_2018_idioms ) ]
 
 // Re-export core library types for convenience
 pub use claude_storage_core::
@@ -88,13 +89,13 @@ pub use claude_storage_core::
 /// Use in `build.rs` for compile-time aggregation or at runtime for dynamic registration.
 pub const COMMANDS_YAML : &str = concat!( env!( "CARGO_MANIFEST_DIR" ), "/unilang.commands.yaml" );
 
-#[cfg( feature = "cli" )]
+#[ cfg( feature = "cli" ) ]
 pub mod cli;
 
-#[cfg( feature = "cli" )]
+#[ cfg( feature = "cli" ) ]
 pub mod cli_main;
 
-#[cfg( feature = "cli" )]
+#[ cfg( feature = "cli" ) ]
 pub use cli::parse_project_parameter;
 
 #[ cfg( feature = "cli" ) ]

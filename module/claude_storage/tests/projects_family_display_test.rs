@@ -61,7 +61,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 /// ## Verification
 /// - stdout contains `Found` (list-mode header)
 /// - stdout does NOT contain `Active project` (summary block absent)
-#[test]
+#[ test ]
 fn it1_default_shows_list_output()
 {
   let root = tempfile::TempDir::new().unwrap();
@@ -102,7 +102,7 @@ fn it1_default_shows_list_output()
 /// - exit code is 0
 /// - stdout contains "Found 0 projects:"
 /// - stderr is empty
-#[test]
+#[ test ]
 fn it33_no_sessions_shows_zero_result_header()
 {
   let root = tempfile::TempDir::new().unwrap();
@@ -142,7 +142,7 @@ fn it33_no_sessions_shows_zero_result_header()
 /// - stdout contains `conversations`
 /// - stdout contains `agents`
 /// - stdout does NOT contain `+ ` agent collapse line
-#[test]
+#[ test ]
 fn it36_family_header_format()
 {
   let root = tempfile::TempDir::new().unwrap();
@@ -193,7 +193,7 @@ fn it36_family_header_format()
 /// - stdout contains `[3 agents:`
 /// - stdout contains `Explore`
 /// - stdout contains `general-purpose`
-#[test]
+#[ test ]
 fn it37_per_root_agent_breakdown()
 {
   let root = tempfile::TempDir::new().unwrap();
@@ -241,7 +241,7 @@ fn it37_per_root_agent_breakdown()
 ///
 /// ## Verification
 /// - Each root session line has a distinct `[N agents:` count
-#[test]
+#[ test ]
 fn it38_hierarchical_format_detection()
 {
   let root = tempfile::TempDir::new().unwrap();
@@ -293,7 +293,7 @@ fn it38_hierarchical_format_detection()
 ///
 /// ## Verification
 /// - Root session line contains `[2 agents:`
-#[test]
+#[ test ]
 fn it39_flat_format_detection()
 {
   let root = tempfile::TempDir::new().unwrap();
@@ -341,7 +341,7 @@ fn it39_flat_format_detection()
 ///
 /// ## Verification
 /// - stdout contains `?`
-#[test]
+#[ test ]
 fn it40_orphan_family_display()
 {
   let root = tempfile::TempDir::new().unwrap();
@@ -398,7 +398,7 @@ fn it40_orphan_family_display()
 ///
 /// ## Verification
 /// - The root session line does NOT contain `[`
-#[test]
+#[ test ]
 fn it41_childless_root_no_bracket()
 {
   let root = tempfile::TempDir::new().unwrap();
@@ -440,7 +440,7 @@ fn it41_childless_root_no_bracket()
 ///
 /// ## Verification
 /// - stdout contains `Plan`
-#[test]
+#[ test ]
 fn it42_meta_json_agent_type()
 {
   let root = tempfile::TempDir::new().unwrap();
@@ -480,7 +480,7 @@ fn it42_meta_json_agent_type()
 ///
 /// ## Verification
 /// - stdout contains `unknown`
-#[test]
+#[ test ]
 fn it43_empty_meta_json_fallback()
 {
   let root = tempfile::TempDir::new().unwrap();
@@ -557,7 +557,7 @@ fn it43_empty_meta_json_fallback()
 /// ## Pitfall
 /// Testing only `?` presence passes even when the descriptive label is absent.
 // test_kind: bug_reproducer(issue-cc-c1)
-#[test]
+#[ test ]
 fn it44_v1_orphan_shows_orphan_label()
 {
   let root = TempDir::new().unwrap();
@@ -606,7 +606,7 @@ fn it44_v1_orphan_shows_orphan_label()
 /// ## Pitfall
 /// Plural-only tests pass even when singular is grammatically wrong.
 // test_kind: bug_reproducer(issue-cc-singular-v2-root)
-#[test]
+#[ test ]
 fn it45_v2_root_entry_count_singular()
 {
   let root = TempDir::new().unwrap();
@@ -655,7 +655,7 @@ fn it45_v2_root_entry_count_singular()
 /// ## Pitfall
 /// Multi-entry tests pass even when singular-entry display is grammatically wrong.
 // test_kind: bug_reproducer(issue-cc-singular-v2-agent)
-#[test]
+#[ test ]
 fn it46_v2_agent_entry_count_singular()
 {
   let root = TempDir::new().unwrap();
@@ -717,7 +717,7 @@ fn it46_v2_agent_entry_count_singular()
 /// ## Pitfall
 /// `unwrap_or` only catches `None`; it cannot replace an empty `Some("")`.
 // test_kind: bug_reproducer(issue-mt-empty-agenttype)
-#[test]
+#[ test ]
 fn it47_empty_string_agent_type_falls_back_to_unknown()
 {
   let root = TempDir::new().unwrap();
@@ -789,7 +789,7 @@ fn it47_empty_string_agent_type_falls_back_to_unknown()
 /// ## Pitfall
 /// Visual inspection misses whitespace labels because they render as blank space.
 // test_kind: bug_reproducer(issue-mt-whitespace-agenttype)
-#[test]
+#[ test ]
 fn it48_whitespace_agent_type_falls_back_to_unknown()
 {
   let root = TempDir::new().unwrap();

@@ -787,6 +787,5 @@ For hierarchical format discovery, see [detecting agent sessions (hierarchical f
 - [`contract/claude_code/docs/storage/readme.md`](../../../contract/claude_code/docs/storage/readme.md) - Directory structure and storage model
 - [`contract/claude_code/docs/formats/readme.md`](../../../contract/claude_code/docs/formats/readme.md) - Ancillary file format specifications
 - [`contract/claude_code/docs/jsonl/readme.md`](../../../contract/claude_code/docs/jsonl/readme.md) - Conversation entry format details
-- `development_plan.md` - Implementation roadmap
-- `002_cli_design.md` - CLI command specifications
+- [`cli/001_commands.md`](cli/001_commands.md) - CLI command specifications
 - [`feature/001_cli_tool.md`](feature/001_cli_tool.md) - Overall crate scope and design

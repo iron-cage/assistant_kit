@@ -18,7 +18,7 @@
 //! | IT-64 | 035   | Double-topic storage key shows both topic components (T05)    |
 //!
 //! Note: IT-60..IT-64 follow IT-59 (`scope::around` tests in `projects_scope_around_test.rs`).
-//! IT-27..IT-30 were already allocated in `tests/doc/cli/testing/command/07_projects.md`
+//! IT-27..IT-30 were already allocated in `tests/docs/cli/command/007_projects.md`
 //! for unrelated tests, so the next available block was used here.
 
 mod common;
@@ -70,7 +70,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 // verify the absent-dir case. The only remaining existence check is on the base
 // path decode (used for underscore/slash ambiguity resolution), which is correct.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 // bug_reproducer(issue-030)
 fn it_24_decode_display_includes_hyphen_prefixed_topic_dir()
 {
@@ -128,7 +128,7 @@ fn it_24_decode_display_includes_hyphen_prefixed_topic_dir()
 // Pitfall: decode_path_via_fs requires the project directory to exist at display
 // time. Deleted or remote projects fall back to the raw encoded storage dir name.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 // bug_reproducer(issue-029)
 fn it_23_decode_display_preserves_underscore_named_dirs()
 {
@@ -190,7 +190,7 @@ fn it_23_decode_display_preserves_underscore_named_dirs()
 // predicate uses unwrap_or(true) (conservative include) to avoid silently dropping
 // sessions from projects that existed when the session was created.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 // bug_reproducer(issue-031)
 fn it_25_scope_under_excludes_underscore_named_sibling()
 {
@@ -260,7 +260,7 @@ fn it_25_scope_under_excludes_underscore_named_sibling()
 // Pitfall: Same as issue-031 fix for scope::under — decode_path_via_fs returns
 // None for deleted/remote paths; is_none_or provides conservative include.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 // bug_reproducer(issue-032)
 fn it_26_scope_relevant_excludes_underscore_named_sibling()
 {
@@ -332,7 +332,7 @@ fn it_26_scope_relevant_excludes_underscore_named_sibling()
 // ambiguity and is correct. Only the topic-loop guard (`if candidate.exists()`
 // inside `for &topic in &parts[1..]`) is the bug.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 // bug_reproducer(issue-035)
 fn projects_shows_topic_path_when_topic_dir_absent()
 {
@@ -369,7 +369,7 @@ fn projects_shows_topic_path_when_topic_dir_absent()
   assert!( s.contains( "session-t01-absent-commit" ), "session must appear in output; got:\n{s}" );
 }
 
-#[test]
+#[ test ]
 fn projects_shows_topic_path_when_topic_dir_present()
 {
   let root = TempDir::new().unwrap();
@@ -401,7 +401,7 @@ fn projects_shows_topic_path_when_topic_dir_present()
   assert!( s.contains( "session-t02-present-commit" ), "session must appear; got:\n{s}" );
 }
 
-#[test]
+#[ test ]
 // bug_reproducer(issue-035)
 fn projects_shows_default_topic_path_when_topic_dir_absent()
 {
@@ -436,7 +436,7 @@ fn projects_shows_default_topic_path_when_topic_dir_absent()
   );
 }
 
-#[test]
+#[ test ]
 fn projects_shows_base_path_with_no_topic()
 {
   let root = TempDir::new().unwrap();
@@ -490,7 +490,7 @@ fn projects_shows_base_path_with_no_topic()
 // for a session from `base/-default_topic/-commit`. Both topic components must
 // appear in the display path.
 // ─────────────────────────────────────────────────────────────────────────────
-#[test]
+#[ test ]
 fn projects_shows_both_topic_components_for_double_topic_key()
 {
   let root = TempDir::new().unwrap();

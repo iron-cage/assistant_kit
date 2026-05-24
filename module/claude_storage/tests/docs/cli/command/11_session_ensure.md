@@ -2,7 +2,7 @@
 
 Integration tests for the `.session.ensure` command. Tests verify directory creation, strategy detection, strategy forcing, two-line output format, and validation.
 
-**Source:** [001_commands.md#command--13-sessionensure](../../../../docs/cli/001_commands.md#command--13-sessionensure)
+**Source:** [001_commands.md#command--11-session-ensure](../../../../docs/cli/001_commands.md#command--11-session-ensure)
 
 ## Test Case Index
 

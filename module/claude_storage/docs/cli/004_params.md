@@ -72,6 +72,27 @@ agent::yes     # Not a boolean: "agent must be 0 or 1"
 
 **Group:** [Session Filter](003_parameter_groups.md#session-filter)
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| Boolean | Base type | Boolean flag | `0` (false) or `1` (true); unset allowed |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 4 | [Session Filter](003_parameter_groups.md#session-filter) | Full | `session::`, `min_entries::` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 2 | [`.list`](001_commands.md#command--2-list) | unset | Auto-enables `sessions::1`; filters by session type |
+| 7 | [`.projects`](001_commands.md#command--7-projects) | unset | Filters sessions by type |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+
 ---
 
 ### Parameter :: 2. `case_sensitive::`
@@ -104,6 +125,21 @@ case_sensitive::1     # Case-sensitive
 case_sensitive::true  # Not a boolean: "case_sensitive must be 0 or 1"
 ```
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| Boolean | Base type | Boolean flag | `0` (false) or `1` (true) |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 5 | [`.search`](001_commands.md#command--5-search) | `0` | Enables case-sensitive matching |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+
 ---
 
 ### Parameter :: 3. `entries::`
@@ -131,6 +167,21 @@ Show all individual entries in a session display.
 entries::0    # Summary view
 entries::1    # Full entry listing
 ```
+
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| Boolean | Base type | Boolean flag | `0` (false) or `1` (true) |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 3 | [`.show`](001_commands.md#command--3-show) | `0` | Lists all entry records when enabled |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
 
 ---
 
@@ -166,6 +217,21 @@ entry_type::both        # "entry_type must be user|assistant|all, got both"
 entry_type::system      # "entry_type must be user|assistant|all, got system"
 ```
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`EntryType`](005_types.md#entrytype) | String enum wrapper | String | `user`, `assistant`, or `all` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 5 | [`.search`](001_commands.md#command--5-search) | `all` | Restricts search to one entry type |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+
 ---
 
 ### Parameter :: 5. `format::`
@@ -200,6 +266,21 @@ format::html       # "format must be markdown|json|text, got html"
 format::pdf        # "format must be markdown|json|text, got pdf"
 ```
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`ExportFormat`](005_types.md#exportformat) | String enum wrapper | String | `markdown`, `json`, or `text` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 6 | [`.export`](001_commands.md#command--6-export) | `markdown` | Selects export rendering format |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 3 | [Export Session for Review](user_story/003_export_session_for_review.md) | developer |
+
 ---
 
 ### Parameter :: 6. `metadata::`
@@ -227,6 +308,22 @@ Show session metadata only, suppressing conversation content.
 metadata::0    # Show content (default)
 metadata::1    # Metadata only
 ```
+
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| Boolean | Base type | Boolean flag | `0` (false) or `1` (true) |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 3 | [`.show`](001_commands.md#command--3-show) | `0` | Shows metadata only when enabled; mutually exclusive with `entries::` |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+| 3 | [Export Session for Review](user_story/003_export_session_for_review.md) | developer |
 
 ---
 
@@ -266,6 +363,27 @@ min_entries::abc  # "min_entries must be a non-negative integer, got abc"
 
 **Group:** [Session Filter](003_parameter_groups.md#session-filter)
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`EntryCount`](005_types.md#entrycount) | Integer wrapper | Integer (≥0) | Non-negative; negative rejected |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 4 | [Session Filter](003_parameter_groups.md#session-filter) | Full | `session::`, `agent::` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 2 | [`.list`](001_commands.md#command--2-list) | unset | Auto-enables `sessions::1`; excludes sessions below threshold |
+| 7 | [`.projects`](001_commands.md#command--7-projects) | unset | Excludes sessions below threshold |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+
 ---
 
 ### Parameter :: 8. `output::`
@@ -299,6 +417,21 @@ output::~/exports/session.json       # Home-relative path
 output::                             # Empty path error
 output::/nonexistent/dir/file.md     # Parent directory does not exist
 ```
+
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`StoragePath`](005_types.md#storagepath) | String (filesystem path) | String | Non-empty; parent directory must exist |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 6 | [`.export`](001_commands.md#command--6-export) | none — required | Destination path for exported file |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 3 | [Export Session for Review](user_story/003_export_session_for_review.md) | developer |
 
 ---
 
@@ -361,6 +494,41 @@ Path argument. Semantics differ by command — see command sections for exact be
 
 **Group (scope anchor context):** [Scope Configuration](003_parameter_groups.md#scope-configuration) — `path::` acts as the scope anchor paired with `scope::` in `.projects`, `.count`, `.search`, `.show`, and `.export`; its role in `.status`, `.list`, `.project.exists`, `.project.path`, `.session.dir`, and `.session.ensure` is independent and not part of this group.
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`StoragePath`](005_types.md#storagepath) | String (filesystem path) | String | Filesystem path; `~` expansion supported |
+| [`PathSubstring`](005_types.md#pathsubstring) | String | String | In `.list` only: substring filter on project paths |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Full | `scope::` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 1 | [`.status`](001_commands.md#command--1-status) | `~/.claude/` | Storage root override |
+| 2 | [`.list`](001_commands.md#command--2-list) | — | PathSubstring type: substring filter on project paths |
+| 3 | [`.show`](001_commands.md#command--3-show) | cwd | Scope anchor path |
+| 4 | [`.count`](001_commands.md#command--4-count) | cwd | Scope anchor path |
+| 5 | [`.search`](001_commands.md#command--5-search) | cwd | Scope anchor path |
+| 6 | [`.export`](001_commands.md#command--6-export) | cwd | Scope anchor path |
+| 7 | [`.projects`](001_commands.md#command--7-projects) | cwd | Scope anchor path |
+| 8 | [`.project.path`](001_commands.md#command--8-projectpath) | cwd | Directory to compute storage path for |
+| 9 | [`.project.exists`](001_commands.md#command--9-projectexists) | cwd | Directory to check for history |
+| 10 | [`.session.dir`](001_commands.md#command--10-sessiondir) | cwd | Base directory |
+| 11 | [`.session.ensure`](001_commands.md#command--11-sessionensure) | cwd | Base directory |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Audit Session History](user_story/001_audit_session_history.md) | developer |
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+| 3 | [Export Session for Review](user_story/003_export_session_for_review.md) | developer |
+| 4 | [Query Storage Programmatically](user_story/004_query_storage_programmatically.md) | developer |
+| 5 | [Resume Claude Session](user_story/005_resume_claude_session.md) | developer |
+
 ---
 
 ### Parameter :: 10. `project::`
@@ -402,6 +570,31 @@ project::nonexistent    # Project not found error
 
 **Group:** [Project Scope](003_parameter_groups.md#project-scope)
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`ProjectId`](005_types.md#projectid) | String (multi-format) | String | Non-empty; project must exist in storage |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 2 | [Project Scope](003_parameter_groups.md#project-scope) | Full | *(sole member)* |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 2 | [`.list`](001_commands.md#command--2-list) | — | Required for `type::conversation` mode |
+| 3 | [`.show`](001_commands.md#command--3-show) | current dir project | Restricts session search to this project |
+| 4 | [`.count`](001_commands.md#command--4-count) | — | Scopes count to this project |
+| 5 | [`.search`](001_commands.md#command--5-search) | — | Restricts search to this project |
+| 6 | [`.export`](001_commands.md#command--6-export) | current dir | Source project for session lookup |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+| 5 | [Resume Claude Session](user_story/005_resume_claude_session.md) | developer |
+
 ---
 
 ### Parameter :: 11. `query::`
@@ -435,6 +628,21 @@ q::version_bump                     # Using alias
 # Invalid values
 query::                             # "query must be non-empty"
 ```
+
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| String | Base type | String | Non-empty |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 5 | [`.search`](001_commands.md#command--5-search) | none — required | Search term; alias `q` supported |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
 
 ---
 
@@ -484,6 +692,32 @@ scope::all        # "scope must be relevant|local|under|global|around, got all"
 
 **Group:** [Scope Configuration](003_parameter_groups.md#scope-configuration)
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`ScopeValue`](005_types.md#scopevalue) | String enum wrapper | String | `relevant`, `local`, `under`, `global`, `around` |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Full | `path::` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 2 | [`.list`](001_commands.md#command--2-list) | `global` | Discovery boundary for project listing |
+| 3 | [`.show`](001_commands.md#command--3-show) | `local` | Session search scope when `session_id::` given |
+| 4 | [`.count`](001_commands.md#command--4-count) | `global` | Boundary for what gets counted |
+| 5 | [`.search`](001_commands.md#command--5-search) | `global` | Boundary for what gets searched |
+| 6 | [`.export`](001_commands.md#command--6-export) | `local` | Project search boundary |
+| 7 | [`.projects`](001_commands.md#command--7-projects) | `around` | Session discovery scope |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+| 4 | [Query Storage Programmatically](user_story/004_query_storage_programmatically.md) | developer |
+
 ---
 
 ### Parameter :: 13. `session::`
@@ -530,6 +764,30 @@ session::default      # Matches -default_topic.jsonl
 
 **Group (listing context):** [Session Filter](003_parameter_groups.md#session-filter) — applies to `.list` and `.projects` only where `session::` acts as a substring filter alongside `agent::` and `min_entries::`.
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`SessionFilter`](005_types.md#sessionfilter) | String | String | In `.list`/`.projects`: case-insensitive substring |
+| [`SessionId`](005_types.md#sessionid) | String (filename stem) | String | In `.count`/`.search`: exact match |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 4 | [Session Filter](003_parameter_groups.md#session-filter) | Full | `agent::`, `min_entries::` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 2 | [`.list`](001_commands.md#command--2-list) | unset | SessionFilter: substring filter; auto-enables `sessions::1` |
+| 4 | [`.count`](001_commands.md#command--4-count) | unset | SessionId: exact scope pin to a specific session |
+| 5 | [`.search`](001_commands.md#command--5-search) | unset | SessionId: exact scope pin to a specific session |
+| 7 | [`.projects`](001_commands.md#command--7-projects) | unset | SessionFilter: substring filter |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+
 ---
 
 ### Parameter :: 14. `session_id::`
@@ -563,6 +821,28 @@ session_id::8d795a1c-c81d-4010-8d29-b4e678272419
 
 **Group:** [Session Identification](003_parameter_groups.md#session-identification)
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`SessionId`](005_types.md#sessionid) | String (filename stem) | String | Non-empty; session must exist |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 3 | [Session Identification](003_parameter_groups.md#session-identification) | Full | *(sole member)* |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 3 | [`.show`](001_commands.md#command--3-show) | unset — optional | Optional; triggers session search when provided |
+| 6 | [`.export`](001_commands.md#command--6-export) | none — required | Identifies the session to export |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 3 | [Export Session for Review](user_story/003_export_session_for_review.md) | developer |
+| 5 | [Resume Claude Session](user_story/005_resume_claude_session.md) | developer |
+
 ---
 
 ### Parameter :: 15. `sessions::`
@@ -592,6 +872,22 @@ sessions::0    # Force off (suppress even when filters active)
 sessions::1    # Force on (show even with no filters)
                # (unset) — auto-detect from other params
 ```
+
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| Boolean | Base type | Boolean flag | `0` (suppress), `1` (force), or unset (auto) |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 2 | [`.list`](001_commands.md#command--2-list) | `0` (auto) | Explicit override for session display; auto-enabled by `session::`, `agent::`, `min_entries::` |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Audit Session History](user_story/001_audit_session_history.md) | developer |
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
 
 ---
 
@@ -627,6 +923,22 @@ target::conversations  # Count conversations in a project
 target::files      # "Invalid target: files"
 ```
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`TargetType`](005_types.md#targettype) | String enum wrapper | String | `projects`, `sessions`, `entries`, `conversations` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 4 | [`.count`](001_commands.md#command--4-count) | `projects` | Selects counting granularity |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Audit Session History](user_story/001_audit_session_history.md) | developer |
+| 4 | [Query Storage Programmatically](user_story/004_query_storage_programmatically.md) | developer |
+
 ---
 
 ### Parameter :: 18. `type::`
@@ -661,6 +973,21 @@ type::conversation  # List conversation IDs for a project (requires project::)
 # Invalid values
 type::both   # "Invalid type: both. Valid values: uuid, path, all"
 ```
+
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`ProjectType`](005_types.md#projecttype) | String enum wrapper | String | `uuid`, `path`, `all`, `conversation` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 2 | [`.list`](001_commands.md#command--2-list) | `all` | Filters projects by naming scheme |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
 
 ---
 
@@ -701,6 +1028,31 @@ verbosity::abc  # "verbosity must be an integer 0-5, got abc"
 
 **Group:** [Output Control](003_parameter_groups.md#output-control)
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`VerbosityLevel`](005_types.md#verbositylevel) | Integer wrapper | Integer | Range `0`–`5`; out-of-range rejected |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 1 | [Output Control](003_parameter_groups.md#output-control) | Full | *(sole member)* |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 1 | [`.status`](001_commands.md#command--1-status) | `1` | Controls output density; `0` is machine-readable |
+| 2 | [`.list`](001_commands.md#command--2-list) | `1` | Controls output density |
+| 3 | [`.show`](001_commands.md#command--3-show) | `1` | Controls output density |
+| 5 | [`.search`](001_commands.md#command--5-search) | `1` | Controls output density |
+| 7 | [`.projects`](001_commands.md#command--7-projects) | `1` | Controls output density; `0` is machine-readable |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Audit Session History](user_story/001_audit_session_history.md) | developer |
+| 4 | [Query Storage Programmatically](user_story/004_query_storage_programmatically.md) | developer |
+
 ---
 
 ### Parameter :: 17. `topic::`
@@ -738,6 +1090,25 @@ topic::my/topic         # "topic must not contain path separators"
 topic::-default_topic   # (legal — creates /-default_topic... but convention is without leading -)
 ```
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`TopicName`](005_types.md#topicname) | String (identifier) | String | Non-empty; no `/` characters; no leading `-` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 8 | [`.project.path`](001_commands.md#command--8-projectpath) | unset | Appends `-{topic}` suffix to computed storage path |
+| 9 | [`.project.exists`](001_commands.md#command--9-projectexists) | unset | Checks storage path with topic suffix |
+| 10 | [`.session.dir`](001_commands.md#command--10-sessiondir) | `default_topic` | Appends `-{topic}` to base directory |
+| 11 | [`.session.ensure`](001_commands.md#command--11-sessionensure) | `default_topic` | Appends `-{topic}` to base directory |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+| 5 | [Resume Claude Session](user_story/005_resume_claude_session.md) | developer |
+
 ---
 
 ### Parameter :: 20. `strategy::`
@@ -770,6 +1141,21 @@ strategy::fresh     # Force fresh strategy
 strategy::auto      # "strategy must be resume|fresh, got auto"
 strategy::restart   # "strategy must be resume|fresh, got restart"
 ```
+
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`StrategyType`](005_types.md#strategytype) | String enum wrapper | String | `resume` or `fresh`; case-insensitive |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 11 | [`.session.ensure`](001_commands.md#command--11-sessionensure) | auto-detect | Overrides auto-detected resume strategy |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 5 | [Resume Claude Session](user_story/005_resume_claude_session.md) | developer |
 
 ---
 
@@ -805,6 +1191,21 @@ count::0    # Output full listing
 .list type::conversation count::1 project::abc123   # e.g., outputs "3"
 ```
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| Boolean | Base type | Boolean flag | `0` (full listing) or `1` (count only) |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 2 | [`.list`](001_commands.md#command--2-list) | `0` | Only meaningful with `type::conversation` |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 4 | [Query Storage Programmatically](user_story/004_query_storage_programmatically.md) | developer |
+
 ---
 
 ### Parameter :: 22. `limit::`
@@ -839,3 +1240,17 @@ Maximum number of main sessions to display per project at verbosity 1. Zero mean
 .projects scope::global limit::3
 ```
 
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| Integer | Base type | Integer | Non-negative (≥ 0); `0` means no cap |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 7 | [`.projects`](001_commands.md#command--7-projects) | `0` | Caps sessions per project at verbosity 1 |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |

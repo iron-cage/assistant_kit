@@ -44,7 +44,7 @@ mod common;
 ///
 /// ## Related Requirements
 /// REQ-012 V-012.1: Reject missing query parameter
-#[test]
+#[ test ]
 fn test_search_query_required()
 {
   let output = common::clg_cmd()
@@ -86,7 +86,7 @@ fn test_search_query_required()
 ///
 /// ## Related Requirements
 /// REQ-012 V-012.2: Reject empty query string
-#[test]
+#[ test ]
 fn test_search_query_empty()
 {
   let output = common::clg_cmd()
@@ -128,7 +128,7 @@ fn test_search_query_empty()
 ///
 /// ## Related Requirements
 /// REQ-012 V-012.3: Validate `case_sensitive` accepts only 0 or 1
-#[test]
+#[ test ]
 fn test_search_case_sensitive_invalid()
 {
   let output = common::clg_cmd()
@@ -169,7 +169,7 @@ fn test_search_case_sensitive_invalid()
 ///
 /// ## Related Requirements
 /// REQ-012 V-012.4: Validate `entry_type` accepts only user, assistant, or all
-#[test]
+#[ test ]
 fn test_search_entry_type_invalid()
 {
   let output = common::clg_cmd()
@@ -209,7 +209,7 @@ fn test_search_entry_type_invalid()
 ///
 /// ## Related Requirements
 /// REQ-012 V-012.4: `entry_type` enumerated validation — valid values: user, assistant, all
-#[test]
+#[ test ]
 fn test_search_entry_type_valid()
 {
   use tempfile::TempDir;
@@ -279,7 +279,7 @@ fn test_search_entry_type_valid()
 /// it. Test comments that say "X is not valid" without a spec reference are a smell —
 /// always check the YAML spec first.
 // test_kind: bug_reproducer(issue-021)
-#[test]
+#[ test ]
 fn test_search_entry_type_all_is_valid_bug_reproducer_issue_021()
 {
   use tempfile::TempDir;
@@ -339,7 +339,7 @@ fn test_search_entry_type_all_is_valid_bug_reproducer_issue_021()
 /// when defaults are sensible.
 ///
 /// Related: REQ-012 V-012.5
-#[test]
+#[ test ]
 fn test_search_verbosity_invalid()
 {
   // Test negative value
@@ -389,7 +389,7 @@ fn test_search_verbosity_invalid()
 ///
 /// ## Related Requirements
 /// REQ-012 V-012.6: Validate project exists when specified
-#[test]
+#[ test ]
 fn test_search_project_nonexistent()
 {
   use tempfile::TempDir;
@@ -433,7 +433,7 @@ fn test_search_project_nonexistent()
 ///
 /// ## Related Requirements
 /// REQ-012 V-012.7: Validate session exists when specified
-#[test]
+#[ test ]
 fn test_search_session_nonexistent()
 {
   use tempfile::TempDir;
@@ -496,7 +496,7 @@ fn test_search_session_nonexistent()
 ///
 /// bug_reproducer(issue-025)
 // test_kind: bug_reproducer(issue-025)
-#[test]
+#[ test ]
 fn test_search_singular_noun_one_match()
 {
   use tempfile::TempDir;
@@ -532,7 +532,7 @@ fn test_search_singular_noun_one_match()
 ///
 /// bug_reproducer(issue-025)
 // test_kind: bug_reproducer(issue-025)
-#[test]
+#[ test ]
 fn test_search_plural_noun_multiple_matches()
 {
   use tempfile::TempDir;

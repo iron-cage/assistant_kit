@@ -2,7 +2,7 @@
 
 Edge case tests for the `type::` parameter. Tests validate enum parsing and project filtering behavior.
 
-**Source:** [004_params.md#parameter--17-type](../../../../docs/cli/004_params.md#parameter--17-type) | [005_types.md#projecttype](../../../../docs/cli/005_types.md#projecttype)
+**Source:** [004_params.md#parameter--18-type](../../../../docs/cli/004_params.md#parameter--18-type) | [005_types.md#type--6-projecttype](../../../../docs/cli/005_types.md#type--6-projecttype)
 
 ## Test Case Index
 

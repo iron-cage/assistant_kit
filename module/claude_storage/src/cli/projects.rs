@@ -660,9 +660,9 @@ fn aggregate_projects(
 /// Returns error if `scope::` is invalid, `verbosity::` is out of range,
 /// `min_entries::` is negative, `limit::` is negative, path resolution fails,
 /// or storage access fails.
-#[allow(clippy::needless_pass_by_value)]
-#[allow(clippy::too_many_lines)]
-#[inline]
+#[ allow( clippy::needless_pass_by_value ) ]
+#[ allow( clippy::too_many_lines ) ]
+#[ inline ]
 pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
@@ -694,7 +694,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         format!( "Invalid min_entries: {n}. Must be non-negative" ),
       ) );
     }
-    #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    #[ allow( clippy::cast_sign_loss, clippy::cast_possible_truncation ) ]
     Some( n as usize )
   }
   else { None };
@@ -708,7 +708,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         format!( "Invalid limit: {n}. Must be non-negative" ),
       ) );
     }
-    #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    #[ allow( clippy::cast_sign_loss, clippy::cast_possible_truncation ) ]
     let v = n as usize;
     // 0 means unlimited — map to usize::MAX so comparisons work without special-casing
     if v == 0 { usize::MAX } else { v }

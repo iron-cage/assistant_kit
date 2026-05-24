@@ -73,8 +73,15 @@ Activated by `format::markdown` on `.export`, or by omitting `format::` entirely
 
 `claude_storage_core/src/export.rs` — `write_markdown_entry()`, `export_session()`
 
-### Cross-References
+### CLI
 
-- [004_params.md § format::](../004_params.md#parameter--5-format) — parameter definition and validation
-- [005_types.md § ExportFormat](../005_types.md#exportformat) — type constants and parsing
-- [005_format.md](../../../tests/doc/cli/testing/param/005_format.md) — test cases EC-1, EC-4, EC-7
+| File | Relationship |
+|------|-------------|
+| [004_params.md § format::](../004_params.md#parameter--5-format) | Parameter definition and validation |
+| [005_types.md § ExportFormat](../005_types.md#exportformat) | Type constants and parsing |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| [05_format.md](../../../tests/docs/cli/param/05_format.md) | Test cases EC-1, EC-4, EC-7 |

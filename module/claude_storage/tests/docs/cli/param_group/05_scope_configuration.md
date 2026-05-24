@@ -8,23 +8,23 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | scope::local uses path:: as directory anchor | Scope × Path |
-| EC-2 | scope::relevant starts ancestor walk from path:: | Scope × Path |
-| EC-3 | scope::under searches subtree rooted at path:: | Scope × Path |
-| EC-4 | scope::global ignores path:: value | Scope × Path |
-| EC-5 | scope::under without path:: defaults to cwd | Default Behavior |
-| EC-6 | path:: without scope:: defaults to under scope | Default Behavior |
+| CC-1 | scope::local uses path:: as directory anchor | Scope × Path |
+| CC-2 | scope::relevant starts ancestor walk from path:: | Scope × Path |
+| CC-3 | scope::under searches subtree rooted at path:: | Scope × Path |
+| CC-4 | scope::global ignores path:: value | Scope × Path |
+| CC-5 | scope::under without path:: defaults to cwd | Default Behavior |
+| CC-6 | path:: without scope:: defaults to under scope | Default Behavior |
 
 ## Test Coverage Summary
 
-- Scope × Path: 4 tests (EC-1, EC-2, EC-3, EC-4)
-- Default Behavior: 2 tests (EC-5, EC-6)
+- Scope × Path: 4 tests (CC-1, CC-2, CC-3, CC-4)
+- Default Behavior: 2 tests (CC-5, CC-6)
 
 ## Test Cases
 
 ---
 
-### EC-1: scope::local uses path:: as directory anchor
+### CC-1: scope::local uses path:: as directory anchor
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with projects at `/a/b/c`, `/a/b`, and `/a`. Run from `/a/x` (no project there).
 - **When:** `clg .projects scope::local path::/a/b/c`
@@ -34,7 +34,7 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 
 ---
 
-### EC-2: scope::relevant starts ancestor walk from path::
+### CC-2: scope::relevant starts ancestor walk from path::
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with projects at `/a/b/c`, `/a/b`, and `/a`.
 - **When:** `clg .projects scope::relevant path::/a/b/c`
@@ -44,7 +44,7 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 
 ---
 
-### EC-3: scope::under searches subtree rooted at path::
+### CC-3: scope::under searches subtree rooted at path::
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with projects at `/a/b`, `/a/b/c`, `/a/b/c/d`, and `/z` (unrelated).
 - **When:** `clg .projects scope::under path::/a/b`
@@ -54,7 +54,7 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 
 ---
 
-### EC-4: scope::global ignores path:: value
+### CC-4: scope::global ignores path:: value
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with projects at `/a/b`, `/c/d`, and `/e/f`.
 - **When:** `clg .projects scope::global path::/a/b`
@@ -64,7 +64,7 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 
 ---
 
-### EC-5: scope::under without path:: defaults to cwd
+### CC-5: scope::under without path:: defaults to cwd
 
 - **Given:** `cd /a/b && export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with projects at `/a/b`, `/a/b/c`, and `/z`.
 - **When:** `clg .projects scope::under` (no `path::` param)
@@ -74,7 +74,7 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 
 ---
 
-### EC-6: path:: without scope:: defaults to under scope
+### CC-6: path:: without scope:: defaults to under scope
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with projects at `/a/b/c`, `/a/b/c/sub`, and `/z`.
 - **When:** `clg .projects path::/a/b/c` (no `scope::` param)

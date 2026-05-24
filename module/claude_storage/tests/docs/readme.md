@@ -12,3 +12,5 @@
 | File | Responsibility |
 |------|----------------|
 | `cli/` | CLI testing documentation mirroring `docs/cli/` |
+| `feature/` | Feature-level test specs mirroring `docs/feature/` |
+| `operation/` | Operation-level test specs mirroring `docs/operation/` |

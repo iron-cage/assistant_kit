@@ -28,7 +28,7 @@
 
 /// Before fix, this would panic with "byte index 7 is not a char boundary".
 /// After fix, it must truncate gracefully to the nearest char boundary.
-#[test]
+#[ test ]
 fn tc001_truncate_mid_emoji_graceful()
 {
   let text = "Hello \u{1F30D} world";
@@ -41,7 +41,7 @@ fn tc001_truncate_mid_emoji_graceful()
 
 /// After fix, truncation at a mid-character byte must NOT panic and must
 /// produce a valid UTF-8 string ending at the nearest char boundary.
-#[test]
+#[ test ]
 fn tc002_truncate_mid_emoji_no_panic()
 {
   let text = "Hello \u{1F30D} world";
@@ -55,7 +55,7 @@ fn tc002_truncate_mid_emoji_no_panic()
 }
 
 /// Truncation exactly at a char boundary should work cleanly.
-#[test]
+#[ test ]
 fn tc003_truncate_at_char_boundary_works()
 {
   let text = "Hello \u{1F30D} world";
@@ -66,7 +66,7 @@ fn tc003_truncate_at_char_boundary_works()
 }
 
 /// Truncation with None should return the full string.
-#[test]
+#[ test ]
 fn tc004_truncate_none_returns_full()
 {
   let text = "Hello \u{1F30D} world";
@@ -75,7 +75,7 @@ fn tc004_truncate_none_returns_full()
 }
 
 /// Truncation with limit >= length should return the full string.
-#[test]
+#[ test ]
 fn tc005_truncate_at_or_beyond_length()
 {
   let text = "Hello \u{1F30D} world";
@@ -86,7 +86,7 @@ fn tc005_truncate_at_or_beyond_length()
 }
 
 /// CJK characters are 3 bytes each — truncation mid-CJK must not panic.
-#[test]
+#[ test ]
 fn tc006_truncate_mid_cjk_no_panic()
 {
   // Each CJK char is 3 bytes: 你=3, 好=3, 世=3, 界=3 → 12 bytes total
@@ -97,7 +97,7 @@ fn tc006_truncate_mid_cjk_no_panic()
 }
 
 /// Truncation at byte 0 should produce empty prefix with truncation marker.
-#[test]
+#[ test ]
 fn tc007_truncate_at_zero()
 {
   let text = "Hello \u{1F30D} world";

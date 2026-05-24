@@ -45,7 +45,7 @@ use tempfile::TempDir;
 ///
 /// ## Related Requirements
 /// REQ-013 V-013.1: Reject missing `session_id` parameter
-#[test]
+#[ test ]
 fn test_export_session_id_required()
 {
   let output = common::clg_cmd()
@@ -88,7 +88,7 @@ fn test_export_session_id_required()
 ///
 /// ## Related Requirements
 /// REQ-013 V-013.2: Reject missing output parameter
-#[test]
+#[ test ]
 fn test_export_output_required()
 {
   let output = common::clg_cmd()
@@ -129,7 +129,7 @@ fn test_export_output_required()
 ///
 /// ## Related Requirements
 /// REQ-013 V-013.3: Validate format accepts only markdown, json, or text
-#[test]
+#[ test ]
 fn test_export_format_invalid()
 {
   let output = common::clg_cmd()
@@ -168,7 +168,7 @@ fn test_export_format_invalid()
 ///
 /// ## Related Requirements
 /// REQ-013 V-013.3: format enumerated validation
-#[test]
+#[ test ]
 fn test_export_format_valid()
 {
   let storage = TempDir::new().unwrap();
@@ -223,7 +223,7 @@ fn test_export_format_valid()
 ///
 /// ## Related Requirements
 /// REQ-013 V-013.4: Validate session exists in project
-#[test]
+#[ test ]
 fn test_export_session_nonexistent()
 {
   let storage = TempDir::new().unwrap();
@@ -277,7 +277,7 @@ fn test_export_session_nonexistent()
 ///
 /// ## Related Requirements
 /// REQ-013 V-013.5: Validate output path directory exists
-#[test]
+#[ test ]
 fn test_export_output_directory_nonexistent()
 {
   let storage = TempDir::new().unwrap();
@@ -329,7 +329,7 @@ fn test_export_output_directory_nonexistent()
 ///
 /// ## Related Requirements
 /// REQ-013 V-013.1, V-013.2: Required parameters
-#[test]
+#[ test ]
 fn test_export_with_required_parameters()
 {
   let storage = TempDir::new().unwrap();
@@ -386,7 +386,7 @@ fn test_export_with_required_parameters()
 /// The blanket `From<io::Error> for Error` impl unconditionally sets context to
 /// "unknown operation". Every IO error propagated via `?` loses its context.
 /// Use `.map_err(|e| Error::io(e, ctx))` for any IO operation where the path matters.
-#[test]
+#[ test ]
 fn test_export_output_path_in_error_message()
 {
   let storage = TempDir::new().unwrap();
@@ -440,7 +440,7 @@ fn test_export_output_path_in_error_message()
 ///
 /// ## Related Requirements
 /// REQ-013: Default format is markdown
-#[test]
+#[ test ]
 fn test_export_default_format_markdown()
 {
   let storage = TempDir::new().unwrap();

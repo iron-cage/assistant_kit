@@ -8,24 +8,24 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | project:: resolves same project in .show and .search | Cross-Command Consistency |
-| EC-2 | project:: with absolute path format works in .export | Format Resolution |
-| EC-3 | project:: with UUID format works in .count | Format Resolution |
-| EC-4 | Absent project:: defaults to cwd in .show | Default Resolution |
-| EC-5 | Absent project:: defaults to cwd in .export | Default Resolution |
-| EC-6 | Same project:: value returns same project in all 5 commands | Cross-Command Consistency |
+| CC-1 | project:: resolves same project in .show and .search | Cross-Command Consistency |
+| CC-2 | project:: with absolute path format works in .export | Format Resolution |
+| CC-3 | project:: with UUID format works in .count | Format Resolution |
+| CC-4 | Absent project:: defaults to cwd in .show | Default Resolution |
+| CC-5 | Absent project:: defaults to cwd in .export | Default Resolution |
+| CC-6 | Same project:: value returns same project in all 5 commands | Cross-Command Consistency |
 
 ## Test Coverage Summary
 
-- Cross-Command Consistency: 2 tests (EC-1, EC-6)
-- Format Resolution: 2 tests (EC-2, EC-3)
-- Default Resolution: 2 tests (EC-4, EC-5)
+- Cross-Command Consistency: 2 tests (CC-1, CC-6)
+- Format Resolution: 2 tests (CC-2, CC-3)
+- Default Resolution: 2 tests (CC-4, CC-5)
 
 ## Test Cases
 
 ---
 
-### EC-1: project:: resolves same project in .show and .search
+### CC-1: project:: resolves same project in .show and .search
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with project at `/home/testuser/myproject` having a known session `VALID-UUID` and entries containing "hello".
 - **When:** `clg .show session_id::VALID-UUID project::/home/testuser/myproject` and `clg .search query::hello project::/home/testuser/myproject`
@@ -35,7 +35,7 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 
 ---
 
-### EC-2: project:: with absolute path format works in .export
+### CC-2: project:: with absolute path format works in .export
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with project at `/home/testuser/myproject` having session `VALID-UUID`.
 - **When:** `clg .export session_id::VALID-UUID project::/home/testuser/myproject`
@@ -45,7 +45,7 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 
 ---
 
-### EC-3: project:: with UUID format works in .count
+### CC-3: project:: with UUID format works in .count
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project stored under UUID directory `PROJ-UUID` containing 10 known entries.
 - **When:** `clg .count project::PROJ-UUID`
@@ -55,7 +55,7 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 
 ---
 
-### EC-4: Absent project:: defaults to cwd in .show
+### CC-4: Absent project:: defaults to cwd in .show
 
 - **Given:** `cd /home/testuser/myproject && export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with session `VALID-UUID` in that project.
 - **When:** `clg .show session_id::VALID-UUID` (no `project::` param)
@@ -65,7 +65,7 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 
 ---
 
-### EC-5: Absent project:: defaults to cwd in .export
+### CC-5: Absent project:: defaults to cwd in .export
 
 - **Given:** `cd /home/testuser/myproject && export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with session `VALID-UUID` in that project.
 - **When:** `clg .export session_id::VALID-UUID` (no `project::` param)
@@ -75,7 +75,7 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 
 ---
 
-### EC-6: Same project:: value returns same project in all 5 commands
+### CC-6: Same project:: value returns same project in all 5 commands
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with project at `/home/testuser/myproject` having 2 sessions and 10 entries.
 - **When:** `.show`, `.search`, `.export`, `.count`, `.list` all with `project::/home/testuser/myproject`

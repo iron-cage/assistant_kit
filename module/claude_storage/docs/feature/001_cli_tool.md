@@ -17,20 +17,34 @@
 
 **Data model.** The tool exposes a four-level hierarchy: Storage Root → Project → Session → Entry. Projects are either UUID-based (web/IDE sessions) or path-encoded (CLI sessions). Two session storage layouts coexist: flat layout (older projects, B7) and hierarchical layout (newer projects with sub-agent directories, B13/B14/B15). The tool handles both transparently.
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | `../../module/claude_storage_core/docs/feature/001_core_library.md` | Core library this CLI wraps |
-| doc | `../cli/001_commands.md` | All CLI commands with syntax and examples |
-| doc | `../001_advanced_topics.md` | Agent sessions and advanced storage topics |
+| File | Relationship |
+|------|-------------|
+| `../../module/claude_storage_core/docs/feature/001_core_library.md` | Core library this CLI wraps |
 
-### See Also
+### Operations
 
-- [Operation: Migration Guide](../operation/001_migration_guide.md) — operational procedure for migrating between storage layouts
+| File | Relationship |
+|------|-------------|
+| `../operation/001_migration_guide.md` | Migration procedure for storage layout upgrades |
+
+### Provenance
+
+| File | Relationship |
+|------|-------------|
+| `spec.md` (deleted) | Combined specification; responsibility, design principles, and scope sections extracted here; data model extracted to `claude_storage_core/docs/data_structure/001_storage_hierarchy.md` |
 
 ### Sources
 
-| File | Notes |
-|------|-------|
-| `spec.md` (deleted — migrated here) | Combined specification; responsibility, design principles, and scope sections extracted here; data model extracted to `claude_storage_core/docs/data_structure/001_storage_hierarchy.md` |
+| File | Relationship |
+|------|-------------|
+| `../../src/lib.rs` | Crate root; re-exports and top-level documentation |
+| `../../src/cli/` | CLI command implementations |
+
+### Tests
+
+| File | Relationship |
+|------|-------------|
+| `../../tests/cli_commands.rs` | Integration tests for all commands |
+| `../../tests/cli_sanity.rs` | Sanity checks for CLI output |

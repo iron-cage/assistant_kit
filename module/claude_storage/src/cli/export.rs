@@ -11,8 +11,8 @@ use super::storage::{ create_storage, load_project_for_param, find_session_mut }
 ///
 /// Returns error if `session_id` or output are missing, format is invalid,
 /// storage creation fails, project or session loading fails, or export fails.
-#[allow(clippy::needless_pass_by_value)]
-#[inline]
+#[ allow( clippy::needless_pass_by_value ) ]
+#[ inline ]
 pub fn export_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {

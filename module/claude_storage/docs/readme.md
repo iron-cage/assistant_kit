@@ -2,9 +2,10 @@
 
 ### Scope
 
-**Responsibilities:** Documentation for the `claude_storage` CLI crate covering behavioral requirements, CLI reference, and operational procedures.
-**In Scope:** CLI command and parameter reference (`cli/`), feature requirements (`feature/`), operational procedures (`operation/`), advanced topics, and doc cross-reference graph.
-**Out of Scope:** Source code (→ `src/`), automated tests (→ `tests/`), build scripts (→ `verb/`).
+- **Purpose:** Documentation hub for the `claude_storage` CLI crate.
+- **Responsibility:** Behavioral requirements, CLI reference, and operational procedures.
+- **In Scope:** CLI command and parameter reference (`cli/`), feature requirements (`feature/`), operational procedures (`operation/`), advanced topics, and doc cross-reference graph.
+- **Out of Scope:** Source code (→ `src/`), automated tests (→ `tests/`), build scripts (→ `verb/`).
 
 ### Responsibility Table
 
@@ -13,8 +14,7 @@
 | `cli/` | CLI command, parameter, and type specifications |
 | `feature/` | CLI tool functional design and scope |
 | `operation/` | Operational procedures for users and maintainers |
-| `001_001_advanced_topics.md` | Agent sessions, command system, advanced search |
-| `002_002_cli_design.md` | CLI design decisions (superseded by `cli/`) |
+| `001_advanced_topics.md` | Agent sessions, command system, advanced search |
 | `doc_graph.yml` | Cross-reference graph for navigability analysis |
 
 ### Overview
@@ -56,7 +56,7 @@ Key entity directories there: `behavior/` (25 hypotheses), `storage/`, `filesyst
 
 ### Advanced Topics
 
-#### [Advanced Topics](001_001_001_advanced_topics.md)
+#### [Advanced Topics](001_advanced_topics.md)
 
 **Deep dive into advanced Claude Code storage features**.
 
@@ -93,274 +93,8 @@ Key entity directories there: `behavior/` (25 hypotheses), `storage/`, `filesyst
 ### Key Files to Read First
 
 1. **`../../../contract/claude_code/docs/behavior/`** - Claude Code storage architecture, file formats, JSONL schema
-2. **`001_001_advanced_topics.md`** - Understand agent sessions, commands, history, search
+2. **`001_advanced_topics.md`** - Understand agent sessions, commands, history, search
 3. **`cli/001_commands.md`** - Understand CLI commands and parameters
 5. **`feature/001_cli_tool.md`** - Understand overall crate architecture and scope
 6. **`../readme.md`** - User-facing documentation
 
-### Implementation Order
-
-**Phase 2: Read-Only Parsing**
-
-1. ✅ JSON parser foundation (`src/json.rs`)
-2. ✅ Entry type parsing (`src/entry.rs`)
-3. ✅ User message parsing
-4. ✅ Assistant message parsing
-5. ✅ Integration tests (`tests/`)
-6. ✅ Error handling
-7. ✅ Enhanced read API
-8. ✅ Documentation & examples
-
----
-
-### Current Status
-
-**Phase 1: Foundation** ✅ Complete
-- Core types implemented
-- Path encoding working
-- 18 unit tests passing
-- Zero dependencies maintained
-
-**Phase 2: Read-Only Parsing** ✅ Complete
-- JSON parser implemented
-- Entry type parsing (user, assistant)
-- Integration tests passing
-- Enhanced read API with ProjectStats
-
-**Phase 3: Integration** 🔜 Future
-- Optional integration with `claude_profile`
-- Used by `my_agent`
-- Example tools
-
----
-
-### Testing Data
-
-### Real Storage Location
-
-```bash
-~/.claude/projects/
-```
-
-### Sample Project (Current Directory)
-
-```bash
-~/.claude/projects/-home-alice-projects/
-```
-
-### Examining Real Data
-
-```bash
-# List projects
-ls ~/.claude/projects/
-
-# List sessions in current project
-ls ~/.claude/projects/-home-alice-projects/
-
-# View first entry
-head -1 ~/.claude/projects/-home-alice-projects/SESSION_ID.jsonl | jq .
-
-# View user message
-head -1 FILE.jsonl | jq '.message'
-
-# View assistant message
-head -2 FILE.jsonl | tail -1 | jq '.message.content[]'
-```
-
----
-
-### Format Examples
-
-### Minimal User Message
-
-```json
-{
-  "uuid": "a6f3bd8c-5575-4eab-82b0-b856f7a02833",
-  "parentUuid": null,
-  "timestamp": "2025-11-08T23:30:10.039Z",
-  "type": "user",
-  "cwd": "/home/user",
-  "sessionId": "8d795a1c-c81d-4010-8d29-b4e678272419",
-  "version": "2.0.31",
-  "gitBranch": null,
-  "userType": "external",
-  "isSidechain": false,
-  "message": {
-    "role": "user",
-    "content": "Hello"
-  },
-  "thinkingMetadata": {
-    "level": "low",
-    "disabled": true,
-    "triggers": []
-  }
-}
-```
-
-### Minimal Assistant Message
-
-```json
-{
-  "uuid": "56a226b5-0ec6-4214-af16-b13cc326f8dc",
-  "parentUuid": "a6f3bd8c-5575-4eab-82b0-b856f7a02833",
-  "timestamp": "2025-11-08T23:30:21.913Z",
-  "type": "assistant",
-  "cwd": "/home/user",
-  "sessionId": "8d795a1c-c81d-4010-8d29-b4e678272419",
-  "version": "2.0.31",
-  "gitBranch": null,
-  "userType": "external",
-  "isSidechain": false,
-  "message": {
-    "model": "claude-sonnet-4-5-20250929",
-    "id": "msg_01ABC",
-    "type": "message",
-    "role": "assistant",
-    "content": [
-      {
-        "type": "text",
-        "text": "Hi there!"
-      }
-    ],
-    "stop_reason": "end_turn",
-    "stop_sequence": null,
-    "usage": {
-      "input_tokens": 5,
-      "output_tokens": 3,
-      "cache_creation_input_tokens": 0,
-      "cache_read_input_tokens": 0,
-      "service_tier": "standard"
-    }
-  },
-  "requestId": "req_01ABC"
-}
-```
-
----
-
-### Implementation Notes
-
-### Zero Dependencies Strategy
-
-**Rationale**: Hand-written JSON parser instead of `serde_json`
-
-**Pros**:
-- Fast compilation
-- Minimal attack surface
-- No version conflicts
-- Full control over error messages
-
-**Cons**:
-- More implementation work (+8-10 hours)
-
-**Decision**: Worth the tradeoff for long-term maintainability
-
-### Error Handling Approach
-
-**Graceful degradation**:
-- Parse as many entries as possible
-- Skip malformed entries with warnings
-- Return both successes and errors
-- Never panic on user data
-
-**Error messages include**:
-- What failed
-- Why it failed
-- Where it failed (line number)
-- Context (snippet of problematic content)
-
-### Performance Targets
-
-- Parse 1000+ entries/second
-- <100ms for typical session (100 entries)
-- <1 second for large session (10,000 entries)
-- Memory usage scales linearly
-- Streaming available for huge sessions
-
----
-
-### API Examples
-
-### List Projects
-
-```rust
-use claude_storage::Storage;
-
-let storage = Storage::new()?;
-for project in storage.list_projects()? {
-  println!("Project: {:?}", project.id());
-}
-```
-
-### Read Session
-
-```rust
-use claude_storage::Storage;
-
-let storage = Storage::new()?;
-let project = storage.load_project_for_cwd()?;
-
-for mut session in project.sessions()? {
-  println!("Session: {}", session.id());
-
-  for entry in session.entries()? {
-    println!("  [{}] {}", entry.entry_type, entry.uuid);
-  }
-}
-```
-
-### Search History (Future)
-
-```rust
-use claude_storage::Storage;
-
-let storage = Storage::new()?;
-let results = storage.search("version_bump")?;
-
-for result in results {
-  println!("Found in {}: {}", result.session_id, result.snippet);
-}
-```
-
----
-
-### Contributing
-
-### Before Starting Implementation
-
-1. ✅ Read [`contract/claude_code/docs/jsonl/readme.md`](../../../contract/claude_code/docs/jsonl/readme.md) - Understand data format
-2. ✅ Read `development_plan.md` - Understand approach
-3. ✅ Examine real data - Run jq commands above
-4. ✅ Review existing code - Understand current structure
-
-### During Implementation
-
-1. Follow task order from development plan
-2. Write tests first (TDD)
-3. Test against real Claude Code data
-4. Keep zero dependencies
-5. Document as you go
-
-### Testing Checklist
-
-- ✅ Unit tests for each module
-- ✅ Integration tests with real storage
-- ✅ Doc tests for all public APIs
-- ✅ Error handling tests
-- ✅ Performance benchmarks
-- ✅ No panics on any Claude Code data
-
----
-
-### Resources
-
-- **JSONL Spec**: https://jsonlines.org/
-- **Claude API**: https://docs.anthropic.com/en/api/
-- **ISO 8601**: https://www.iso.org/iso-8601-date-and-time-format.html
-- **UUID v4**: RFC 4122
-
----
-
-### Questions?
-
-See the main [readme.md](../readme.md) for more information.

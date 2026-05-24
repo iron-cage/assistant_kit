@@ -185,7 +185,7 @@ pub( super ) fn resolve_path_parameter( param : &str ) -> core::result::Result< 
 ///
 /// Returns error if a path-encoded input cannot be decoded, or if the current
 /// directory cannot be resolved for relative path inputs.
-#[inline]
+#[ inline ]
 pub fn parse_project_parameter( input : &str )
   -> core::result::Result< claude_storage_core::ProjectId, String >
 {
@@ -313,7 +313,7 @@ pub( super ) fn load_project_for_param(
 /// # Errors
 ///
 /// Returns `ErrorData` when no session matches.
-pub( super ) fn find_session_mut<'a>(
+pub( super ) fn find_session_mut< 'a >(
   sessions   : &'a mut [ claude_storage_core::Session ],
   session_id : &str,
 ) -> core::result::Result< &'a mut claude_storage_core::Session, ErrorData >

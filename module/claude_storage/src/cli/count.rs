@@ -15,8 +15,8 @@ use super::projects::{ build_families, group_into_conversations };
 ///
 /// Returns error if storage creation fails, target is invalid, required parameters
 /// (project or session) are missing, or counting operations fail.
-#[allow(clippy::needless_pass_by_value)]
-#[inline]
+#[ allow( clippy::needless_pass_by_value ) ]
+#[ inline ]
 pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {

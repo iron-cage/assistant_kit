@@ -68,6 +68,18 @@ claude_storage .status verbosity::2
 - Default storage path is `~/.claude/`; override with `CLAUDE_STORAGE_ROOT` env var
 - `verbosity::0` is suitable for piping to other tools
 
+### Referenced Parameter Groups
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 1 | [Output Control](003_parameter_groups.md#output-control) | Full | — |
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Partial | `scope::` |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Audit Session History](user_story/001_audit_session_history.md) | developer |
+| 4 | [Query Storage Programmatically](user_story/004_query_storage_programmatically.md) | developer |
+
 ---
 
 ### Command :: 2. `.list`
@@ -137,6 +149,21 @@ claude_storage .list type::conversation count::1 project::abc123
 - `count::1` with `type::conversation` outputs only the count as a bare integer (useful for scripting)
 - `scope::global` is the default — lists all projects regardless of cwd; `scope::relevant` lists only projects in the ancestor chain of cwd
 
+### Referenced Parameter Groups
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 1 | [Output Control](003_parameter_groups.md#output-control) | Full | — |
+| 2 | [Project Scope](003_parameter_groups.md#project-scope) | Full | — |
+| 4 | [Session Filter](003_parameter_groups.md#session-filter) | Full | — |
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Full | — |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Audit Session History](user_story/001_audit_session_history.md) | developer |
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+| 4 | [Query Storage Programmatically](user_story/004_query_storage_programmatically.md) | developer |
+
 ---
 
 ### Command :: 3. `.show`
@@ -189,6 +216,19 @@ claude_storage .show session_id::ID project::/path/to/project
 - When `session_id::` is given without `project::`, the current project and all its topic variants (scope::local) are searched; supply `project::` to restrict lookup to one specific project
 - Without `session_id::`, resolves to current directory project; exits with `2` if cwd has no project in storage
 - `entries::1` and `metadata::1` are mutually exclusive; `entries::1` takes precedence
+
+### Referenced Parameter Groups
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 1 | [Output Control](003_parameter_groups.md#output-control) | Full | — |
+| 2 | [Project Scope](003_parameter_groups.md#project-scope) | Full | — |
+| 3 | [Session Identification](003_parameter_groups.md#session-identification) | Full | — |
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Full | — |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
 
 ---
 
@@ -244,6 +284,18 @@ claude_storage .count target::sessions scope::relevant
 - `target::entries` requires both `project::` and `session::`
 - `target::conversations` requires `project::` (currently 1:1 with sessions; will differ once chain detection is implemented)
 
+### Referenced Parameter Groups
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 2 | [Project Scope](003_parameter_groups.md#project-scope) | Full | — |
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Full | — |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Audit Session History](user_story/001_audit_session_history.md) | developer |
+| 4 | [Query Storage Programmatically](user_story/004_query_storage_programmatically.md) | developer |
+
 ---
 
 ### Command :: 5. `.search`
@@ -297,6 +349,18 @@ claude_storage .search query::error scope::relevant
 - Use `q` alias for shorter syntax: `claude_storage .search q::version_bump`
 - Without `project::`, searches all projects (may be slow on large storage); `scope::` is a more precise alternative for limiting the search boundary
 
+### Referenced Parameter Groups
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 1 | [Output Control](003_parameter_groups.md#output-control) | Full | — |
+| 2 | [Project Scope](003_parameter_groups.md#project-scope) | Full | — |
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Full | — |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+
 ---
 
 ### Command :: 6. `.export`
@@ -346,6 +410,25 @@ claude_storage .export session_id::ID output::PATH scope::global
 **Notes:**
 - Both `session_id::` and `output::` are required; command exits with `1` if either is missing
 - Output file is overwritten without warning if it already exists
+
+### Referenced Formats
+| # | Format | Role |
+|---|--------|------|
+| 1 | [markdown](format/01_markdown.md) | Default human-readable transcript output |
+| 2 | [json](format/02_json.md) | Machine-parseable structured export |
+| 3 | [text](format/03_text.md) | Plain text transcript output |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 2 | [Project Scope](003_parameter_groups.md#project-scope) | Full | — |
+| 3 | [Session Identification](003_parameter_groups.md#session-identification) | Full | — |
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Full | — |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 3 | [Export Session for Review](user_story/003_export_session_for_review.md) | developer |
 
 ---
 
@@ -467,6 +550,18 @@ At `verbosity::2+`, agents are tree-indented under their parent:
 - `verbosity::1` — `Found N projects:` header; grouped per project with family display; project header always shows `(N conversations)` or `(N conversations, M agents)` when agents present
 - `verbosity::2+` — same grouping; agents tree-indented under parent; full IDs; entry count per session
 
+### Referenced Parameter Groups
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 1 | [Output Control](003_parameter_groups.md#output-control) | Full | — |
+| 4 | [Session Filter](003_parameter_groups.md#session-filter) | Full | — |
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Full | — |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](user_story/002_find_past_conversation.md) | developer |
+
 ---
 
 ### Command :: 8. `.project.path`
@@ -513,6 +608,16 @@ claude_storage .project.path path::~/projects/myapp topic::work
 - The returned path does not need to exist on disk
 - Use `.project.exists` to test whether the path has conversation history
 
+### Referenced Parameter Groups
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Partial | `scope::` |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 5 | [Resume Claude Session](user_story/005_resume_claude_session.md) | developer |
+
 ---
 
 ### Command :: 9. `.project.exists`
@@ -557,6 +662,16 @@ if clg .project.exists; then echo "Has history"; else echo "Fresh start"; fi
 - Exit code `1` is an informational result (no history found), not a command error
 - This is the sole history-check command; `.session` was removed as a duplicate (task-014)
 
+### Referenced Parameter Groups
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Partial | `scope::` |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 5 | [Resume Claude Session](user_story/005_resume_claude_session.md) | developer |
+
 ---
 
 ### Command :: 10. `.session.dir`
@@ -599,6 +714,16 @@ claude_storage .session.dir path::/home/user/project topic::work
 - `path::` defaults to cwd when omitted
 - The returned directory path does not need to exist on disk
 - Use `.session.ensure` to create the directory and detect resume strategy
+
+### Referenced Parameter Groups
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Partial | `scope::` |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 5 | [Resume Claude Session](user_story/005_resume_claude_session.md) | developer |
 
 ---
 
@@ -653,3 +778,12 @@ claude_storage .session.ensure path::/home/user/project strategy::resume
 - `path::` defaults to cwd when omitted
 - When `strategy::resume` is forced but no history exists, the output still reports `resume` (caller's intent is respected)
 
+### Referenced Parameter Groups
+| # | Group | Membership | Excluded Params |
+|---|-------|------------|-----------------|
+| 5 | [Scope Configuration](003_parameter_groups.md#scope-configuration) | Partial | `scope::` |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 5 | [Resume Claude Session](user_story/005_resume_claude_session.md) | developer |

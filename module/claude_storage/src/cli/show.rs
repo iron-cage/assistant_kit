@@ -17,8 +17,8 @@ use super::format::format_entry_content;
 ///
 /// Returns error if verbosity is out of range, parameter combinations are
 /// invalid, storage creation fails, or project/session loading fails.
-#[allow(clippy::needless_pass_by_value)]
-#[inline]
+#[ allow( clippy::needless_pass_by_value ) ]
+#[ inline ]
 pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
