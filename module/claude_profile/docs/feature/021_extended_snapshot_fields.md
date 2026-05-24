@@ -30,7 +30,7 @@ The `{name}.claude.json` snapshot (a copy of `~/.claude.json` taken at `save()` 
 
 **Output format:** `capabilities` renders as comma-separated values (e.g. `max, chat`). Empty `Vec` → `N/A`.
 
-**`format::json`:** `format::json` always includes `tagged_id` (string or `""`) and `capabilities` (array or `[]`) regardless of field-presence params.
+**`format::json`:** `format::json` always includes `tagged_id` (string or `""`) and `capabilities` (array or `[]`) regardless of field-presence params. The `uuid` field (UUID form of user ID) is stored in `Account` for completeness but is not exposed in text output or JSON — text output shows `tagged_id` via the `uuid::` param, and JSON output serializes `tagged_id`, not raw `uuid`.
 
 **Missing fields:** All new fields show `N/A` in text and empty string / empty array in JSON when absent from the snapshot. Never error on absent fields.
 

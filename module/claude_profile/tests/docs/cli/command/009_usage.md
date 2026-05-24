@@ -56,10 +56,10 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-48 | `sort::bogus` → exit 1, stderr names valid values | Sort Rejection |
 | IT-49 | `prefer::bogus` → exit 1, stderr names valid values | Sort Rejection |
 | IT-50 | `.usage.help` lists `sort`, `desc`, `prefer` params | Help Output |
-| IT-51 | `next::all` suppresses `→` marker in table body | Next Strategy |
-| IT-52 | `next::session` places `→` on recommended account | Next Strategy |
-| IT-53 | `next::bogus` exits 1 naming valid values | Next Rejection |
-| IT-54 | `next::all` footer shows multi-strategy format | Next Footer |
+| IT-51 | `next::endurance` (default) places `→` on endurance winner | Next Strategy |
+| IT-52 | `next::drain` places `→` on drain winner | Next Strategy |
+| IT-53 | `next::bogus` exits 1 naming both valid values | Next Rejection |
+| IT-54 | Footer always shows both strategy lines regardless of `next::` value | Next Footer |
 | IT-55 | `cols::+sub` shows Sub column in output | Column Visibility |
 | IT-56 | `cols::+bogus` exits 1 naming valid column IDs | Column Rejection |
 | IT-57 | Composite `●` uses AND(5h, 7d): both >5% → 🟢, either ≤5% → 🟡 | Composite Emoji |
@@ -67,6 +67,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-59 | Duration format capped to 2 units: no 3-unit durations in output | Duration Format |
 | IT-60 | Three-tier grouping: 🟢 accounts above 🟡 above 🔴 regardless of sort | Tier Grouping |
 | IT-61 | `.usage.help` lists `next`, `cols` params | Help Output |
+| IT-62 | `touch::0` accepted; empty store exits 0 | Touch Param |
+| IT-63 | `touch::1` with no-token accounts — errored accounts never touched | Touch Param |
+| IT-64 | `.usage.help` lists `touch` param | Help Output |
 
 ### Test Coverage Summary
 
@@ -89,7 +92,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Live Monitor: 2 tests (IT-22, IT-31)
 - Live Guards: 6 tests (IT-23, IT-24, IT-25, IT-27, IT-29, IT-30)
 - JSON Output: 1 test (IT-28)
-- Help Output: 6 tests (IT-32, IT-34, IT-38, IT-39, IT-50, IT-61)
+- Help Output: 7 tests (IT-32, IT-34, IT-38, IT-39, IT-50, IT-61, IT-64)
 - Trace: 1 test (IT-35)
 - Status Emoji: 4 tests (IT-40, IT-41, IT-42, IT-43)
 - Sort Acceptance: 4 tests (IT-44, IT-45, IT-46, IT-47)
@@ -103,8 +106,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Per-Column Emoji: 1 test (IT-58)
 - Duration Format: 1 test (IT-59)
 - Tier Grouping: 1 test (IT-60)
+- Touch Param: 2 tests (IT-62, IT-63)
 
-**Total:** 73 spec entries (IT-1 through IT-61; IT-40–IT-43 implemented by TSK-178, IT-44–IT-50 implemented by TSK-177, IT-51–IT-61 ⏳ pending implementation); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
+**Total:** 76 spec entries (IT-1 through IT-64; IT-40–IT-43 implemented by TSK-178, IT-44–IT-50 implemented by TSK-177, IT-51–IT-64 ⏳ pending implementation); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -651,46 +655,46 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-51: `next::all` suppresses `→` marker in table body
+### IT-51: `next::endurance` (default) places `→` on endurance winner
 
-- **Given:** Two saved accounts with valid tokens and quota data; `next::all` (default).
-- **When:** `clp .usage next::all`
-- **Then:** Exits 0. No line in stdout contains `→` in the flag column. Footer contains "Next by strategy:" with multiple strategy lines.
-- **Exit:** 0
-- **Live:** yes (requires ≥2 accounts with live quota)
-- **Source:** [feature/023_next_account_strategies.md AC-01](../../../../docs/feature/023_next_account_strategies.md)
-
----
-
-### IT-52: `next::session` places `→` on recommended account
-
-- **Given:** Two saved accounts with valid tokens and quota data; `next::session`.
-- **When:** `clp .usage next::session`
-- **Then:** Exits 0. Exactly one line contains `→` in the flag column. Footer contains "Next:" with a single account name.
+- **Given:** Two saved accounts with valid tokens and quota data; default `next::endurance`.
+- **When:** `clp .usage`
+- **Then:** Exits 0. Exactly one line contains `→` in the flag column — the account selected by the endurance strategy. Footer contains "Next by strategy:" with two lines (endurance and drain).
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota)
 - **Source:** [feature/023_next_account_strategies.md AC-03](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
 
-### IT-53: `next::bogus` exits 1 naming valid values
+### IT-52: `next::drain` places `→` on drain winner
 
-- **Given:** Any environment (empty credential store).
-- **When:** `clp .usage next::bogus`
-- **Then:** Exits 1. Stderr contains each of the five valid values: `all`, `session`, `endurance`, `drain`, `reset`.
-- **Exit:** 1
-- **Source:** [feature/023_next_account_strategies.md AC-07](../../../../docs/feature/023_next_account_strategies.md)
+- **Given:** Two saved accounts with valid tokens and quota data; `next::drain`.
+- **When:** `clp .usage next::drain`
+- **Then:** Exits 0. Exactly one line contains `→` — the account selected by the drain strategy (lowest non-exhausted 5h_left). Footer still contains "Next by strategy:" with both strategy lines.
+- **Exit:** 0
+- **Live:** yes (requires ≥2 accounts with live quota)
+- **Source:** [feature/023_next_account_strategies.md AC-04](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
 
-### IT-54: `next::all` footer shows multi-strategy format
+### IT-53: `next::bogus` exits 1 naming both valid values
 
-- **Given:** At least two accounts with valid tokens and quota data; `next::all`.
-- **When:** `clp .usage next::all`
-- **Then:** Exits 0. Footer contains "Next by strategy:" followed by lines containing `session`, `endurance`, `drain`, `reset`.
+- **Given:** Any environment (empty credential store).
+- **When:** `clp .usage next::bogus`
+- **Then:** Exits 1. Stderr contains each of the two valid values: `endurance`, `drain`. Does NOT contain `all`, `session`, or `reset`.
+- **Exit:** 1
+- **Source:** [feature/023_next_account_strategies.md AC-05](../../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### IT-54: Footer always shows both strategy lines regardless of `next::` value
+
+- **Given:** At least two accounts with valid tokens and quota data; `next::drain` (non-default).
+- **When:** `clp .usage next::drain`
+- **Then:** Exits 0. Footer contains "Next by strategy:" followed by a line starting "endurance" AND a line starting "drain". Both appear regardless of which strategy is active.
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota)
-- **Source:** [feature/023_next_account_strategies.md AC-02](../../../../docs/feature/023_next_account_strategies.md)
+- **Source:** [feature/023_next_account_strategies.md AC-01](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
 
@@ -764,3 +768,33 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0. Stdout contains `"next"` and `"cols"`.
 - **Exit:** 0
 - **Source:** [009_token_usage.md AC-09](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-62: `touch::0` accepted; empty store exits 0
+
+- **Given:** Empty credential store; `touch::0` param passed (explicit default).
+- **When:** `clp .usage touch::0`
+- **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned.
+- **Exit:** 0
+- **Source:** [feature/024_session_touch.md AC-01](../../../../docs/feature/024_session_touch.md)
+
+---
+
+### IT-63: `touch::1` with no-token accounts — errored accounts never touched
+
+- **Given:** One saved account whose credential file has no `accessToken` (quota fetch returns Err); `touch::1`.
+- **When:** `clp .usage touch::1`
+- **Then:** Exits 0. Account row shows original error state. No subprocess spawned — touch trigger requires `result = Ok(...)`.
+- **Exit:** 0
+- **Source:** [feature/024_session_touch.md AC-04](../../../../docs/feature/024_session_touch.md)
+
+---
+
+### IT-64: `.usage.help` lists `touch` param
+
+- **Given:** Standard environment.
+- **When:** `clp .usage.help`
+- **Then:** Exits 0. Stdout contains `"touch"` with default value `0`.
+- **Exit:** 0
+- **Source:** [feature/024_session_touch.md AC-10](../../../../docs/feature/024_session_touch.md)

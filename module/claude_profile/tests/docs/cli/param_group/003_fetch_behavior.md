@@ -1,6 +1,6 @@
 # Test: Fetch Behavior Group
 
-Integration and edge case coverage for the Fetch Behavior parameter group (`refresh::`, `live::`, `interval::`, `jitter::`, `trace::`). See [parameter_groups.md](../../../../docs/cli/param_group/readme.md#group--3-fetch-behavior) for specification.
+Integration and edge case coverage for the Fetch Behavior parameter group (`refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`). See [parameter_groups.md](../../../../docs/cli/param_group/readme.md#group--3-fetch-behavior) for specification.
 
 ### Test Case Index
 
@@ -18,6 +18,8 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 | FB-10 | `trace::1` writes `[trace]` lines to stderr; stdout unchanged | trace output |
 | FB-11 | `trace::0` (default) produces no stderr diagnostic output | trace default |
 | FB-12 | `trace::1 refresh::1` shows per-account refresh path steps | trace + refresh |
+| FB-13 | `touch::1` runs after `refresh::1` when both active | touch ordering |
+| FB-14 | `touch::1 trace::1` shows `[trace]` lines for touch subprocess | touch + trace |
 
 ### Test Coverage Summary
 
@@ -31,8 +33,10 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - composability: 1 test
 - trace output: 2 tests
 - trace + refresh: 1 test
+- touch ordering: 1 test
+- touch + trace: 1 test
 
-**Total:** 12 tests
+**Total:** 14 tests
 
 ---
 
@@ -129,3 +133,21 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 - **Given:** One saved account returning a 401 error.
 - **When:** `clp .usage refresh::1 trace::1`
 - **Then:** stderr contains `[trace]` lines showing: credential read, API call attempt, 401 result, subprocess launch, credential re-read, retry API call, retry result. All steps visible per account.
+
+---
+
+### FB-13: `touch::1` runs after `refresh::1` when both active
+
+- **Given:** One account with expired token (quota would fail with 401) and `five_hour.resets_at` absent. `refresh::1 touch::1 trace::1`.
+- **When:** `clp .usage refresh::1 touch::1 trace::1`
+- **Then:** stderr `[trace]` lines show refresh lifecycle before any touch lifecycle. Touch runs on post-refresh quota results (after expired token is resolved). No conflict between the two parameters.
+- **Source:** [feature/024_session_touch.md AC-05](../../../../docs/feature/024_session_touch.md)
+
+---
+
+### FB-14: `touch::1 trace::1` shows `[trace]` lines for touch subprocess lifecycle
+
+- **Given:** One account with valid quota data and `five_hour.resets_at` absent. `touch::1 trace::1`.
+- **When:** `clp .usage touch::1 trace::1`
+- **Then:** stderr contains `[trace]` lines for the touch subprocess lifecycle (same `[trace]` prefix format as refresh). Lines include account name and subprocess status. stdout contains the normal quota table unchanged.
+- **Source:** [feature/024_session_touch.md AC-09](../../../../docs/feature/024_session_touch.md)

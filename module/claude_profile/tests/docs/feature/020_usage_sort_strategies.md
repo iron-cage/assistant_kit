@@ -18,8 +18,9 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-10 | Invalid `prefer::` value exits 1 naming valid values | AC-10 | Integration |
 | FT-11 | `sort::` does not affect `next::` recommendation | AC-11 | Unit test |
 | FT-12 | `prefer::` governs drain tiebreak for tied `5h_left` | AC-08 | Unit test |
-| FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | ⏳ Unit test |
-| FT-14 | `sort::reset` is default when `sort::` omitted | AC-01 | ⏳ Unit test |
+| FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | Unit test |
+| FT-14 | `sort::reset` is default when `sort::` omitted | AC-01 | Unit test |
+| FT-15 | Within 🟡: session-exhausted before weekly-exhausted; `desc::` doesn't swap sub-groups | AC-14 | Unit test |
 
 ### Test Case Index
 
@@ -39,8 +40,9 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-12 | prefer:: drain tiebreak divergence | AC-08 | Tiebreak |
 | FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | Tier Grouping |
 | FT-14 | `sort::reset` is default when `sort::` omitted | AC-01 | Default |
+| FT-15 | Within 🟡: session-exhausted before weekly-exhausted; sub-grouping not reversed by `desc::` | AC-14 | Yellow Sub-Grouping |
 
-**Total:** 14 FT cases
+**Total:** 15 FT cases
 
 ---
 
@@ -190,7 +192,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Name, None, PreferStrategy::Any, 0)` — name sort would place red before yellow alphabetically.
 - **Then:** Output order: `green@test.com` (🟢), `yellow@test.com` (🟡), `red@test.com` (🔴). Three-tier grouping overrides alphabetical sort.
 - **Exit:** n/a (unit test)
-- **Source fn:** ⏳ TBD (in `src/usage.rs`)
+- **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red`
 - **Source:** [feature/020_usage_sort_strategies.md AC-14](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -201,5 +203,21 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Reset, None, PreferStrategy::Any, now_secs)` — default strategy is `reset`.
 - **Then:** `b@test.com` (soonest reset) ranks first, `a@test.com` second.
 - **Exit:** n/a (unit test)
-- **Source fn:** ⏳ TBD (in `src/usage.rs`)
+- **Source fn:** `test_sort_reset_soonest_first_exhausted_last`
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### FT-15: Within 🟡 tier — session-exhausted before weekly-exhausted; `desc::` does not swap sub-groups
+
+- **Given:** Unit test. Three `AccountQuota` structs, all 🟡:
+  - `weekly@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=98.0` (2% left) → **weekly-exhausted** sub-group (alpha first)
+  - `sess_a@x.com`: `five_hour.utilization=99.0` (1% left), `seven_day.utilization=30.0` (70% left) → **session-exhausted** sub-group
+  - `sess_b@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=40.0` (60% left) → **session-exhausted** sub-group
+- **When-A:** `render_text(...)` with `SortStrategy::Name` (default `desc::0`) — alpha order is `sess_a → sess_b → weekly`.
+- **When-B:** `render_text(...)` with `SortStrategy::Name` and `desc::1` — reversed alpha within each sub-group.
+- **Then-A (default):** Output order: `sess_a@x.com` (session sub-group), `sess_b@x.com` (session sub-group), `weekly@x.com` (weekly sub-group). `weekly@x.com` is last despite being alpha-first.
+- **Then-B (desc::1):** Output order: `sess_b@x.com`, `sess_a@x.com` (session sub-group reversed), `weekly@x.com` (weekly sub-group last — not moved to front by `desc::1`).
+- **Exit:** n/a (unit test — position assertion via `output.find()`)
+- **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (When-A), `test_ft15_020_yellow_sub_grouping_not_reversed_by_desc` (When-B) (in `src/usage.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-14](../../../../docs/feature/020_usage_sort_strategies.md)

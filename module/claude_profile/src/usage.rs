@@ -10,7 +10,7 @@
 //! saved account's stored token (e.g. a fresh login not yet saved), `fetch_all_quota()`
 //! prepends a synthetic entry with `is_current: true` and name derived from
 //! `~/.claude.json` `emailAddress` (falling back to `"(current session)"`).
-//! This row is excluded from `find_recommendation()` — it IS the current session.
+//! This row is excluded from `find_next_for_strategy()` recommendations — it IS the current session.
 
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
@@ -71,7 +71,7 @@ impl PreferStrategy
 }
 
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-enum NextStrategy { All, Session, Endurance, Drain, Reset }
+enum NextStrategy { Endurance, Drain }
 
 impl NextStrategy
 {
@@ -79,13 +79,10 @@ impl NextStrategy
   {
     match s
     {
-      "all"       => Ok( Self::All ),
-      "session"   => Ok( Self::Session ),
       "endurance" => Ok( Self::Endurance ),
       "drain"     => Ok( Self::Drain ),
-      "reset"     => Ok( Self::Reset ),
       _           => Err( format!(
-        "invalid next:: value {s:?}: valid values are `all`, `session`, `endurance`, `drain`, `reset`",
+        "invalid next:: value {s:?}: valid values are `endurance`, `drain`",
       ) ),
     }
   }
@@ -782,49 +779,6 @@ fn sort_indices(
   }
 }
 
-/// Find the index of the recommended next account in an already-sorted slice.
-///
-/// Selects the non-active, non-current account with the highest composite score
-/// among those with valid quota data and a non-expired token (`expires_in_secs > 0`).
-///
-/// Tiebreaker cascade (highest wins at each level):
-///
-/// 1. `5h Left` — primary criterion (most session quota remaining).
-/// 2. `expires_in_secs` — token expiry (prefer longer-lived token).
-/// 3. `7d Left` — weekly quota remaining (prefer more weekly quota).
-/// 4. Alphabetical stability — input is already alpha-sorted and strict-greater
-///    comparison preserves the first alphabetically equal account.
-///
-/// Skips `is_current` accounts (including the synthetic row) because the user is
-/// already on that session — recommending it would be a no-op.
-fn find_recommendation( accounts : &[ AccountQuota ], now_secs : u64 ) -> Option< usize >
-{
-  // Composite key: (5h_left, expires_in_secs, 7d_left).
-  // Tuple comparison is lexicographic — first field dominates; later fields break ties.
-  let mut best_idx : Option< usize >  = None;
-  let mut best_key : ( f64, u64, f64 ) = ( -1.0, 0, -1.0 );
-
-  for ( idx, aq ) in accounts.iter().enumerate()
-  {
-    if aq.is_active || aq.is_current { continue; }
-    let expires_in_secs = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
-    if expires_in_secs == 0 { continue; }
-    if let Ok( data ) = &aq.result
-    {
-      let five_hour_left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
-      let seven_day_left = data.seven_day.as_ref().map_or( 0.0, |p| 100.0 - p.utilization );
-      let key = ( five_hour_left, expires_in_secs, seven_day_left );
-      if key > best_key
-      {
-        best_key = key;
-        best_idx = Some( idx );
-      }
-    }
-  }
-
-  best_idx
-}
-
 /// Return the first eligible (non-current, non-active, non-expired, `Ok`) account
 /// from a pre-sorted index slice, or `None` when no eligible account exists.
 fn find_first_eligible( accounts : &[ AccountQuota ], sorted : &[ usize ], now_secs : u64 ) -> Option< usize >
@@ -841,9 +795,7 @@ fn find_first_eligible( accounts : &[ AccountQuota ], sorted : &[ usize ], now_s
 
 /// Find the recommended next account for a specific `next` strategy.
 ///
-/// `All` always returns `None` (the multi-strategy footer handles its own lookups).
-/// `Session` delegates to `find_recommendation()` (lexicographic composite key).
-/// `Endurance`, `Drain`, `Reset` sort via `sort_indices()` then pick the first
+/// `Endurance` and `Drain` sort via `sort_indices()` then pick the first
 /// eligible (non-current, non-active, non-expired, `Ok`) account.
 fn find_next_for_strategy(
   accounts  : &[ AccountQuota ],
@@ -854,8 +806,6 @@ fn find_next_for_strategy(
 {
   match strategy
   {
-    NextStrategy::All       => None,
-    NextStrategy::Session   => find_recommendation( accounts, now_secs ),
     NextStrategy::Endurance =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Endurance, None, prefer, now_secs );
@@ -864,11 +814,6 @@ fn find_next_for_strategy(
     NextStrategy::Drain =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Drain, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs )
-    }
-    NextStrategy::Reset =>
-    {
-      let sorted = sort_indices( accounts, SortStrategy::Reset, None, prefer, now_secs );
       find_first_eligible( accounts, &sorted, now_secs )
     }
   }
@@ -895,14 +840,12 @@ fn strategy_metric(
     .map_or_else( || "\u{2014}".to_string(), |t| format_duration_secs( t.saturating_sub( now_secs ) ) );
   match strategy
   {
-    NextStrategy::All | NextStrategy::Session =>
-      format!( "{session_pct:.0}% session left, expires in {expires_str}" ),
     NextStrategy::Endurance =>
     {
       let weekly_pct = prefer_weekly( aq, prefer );
       format!( "{session_pct:.0}% session, {weekly_pct:.0}% 7d left, expires in {expires_str}" )
     }
-    NextStrategy::Drain | NextStrategy::Reset =>
+    NextStrategy::Drain =>
       format!( "{session_pct:.0}% session, resets in {reset_str}" ),
   }
 }
@@ -971,13 +914,9 @@ fn status_emoji( result : &Result< claude_quota::OauthUsageData, String > ) -> &
 ///
 /// Empty store renders `(no accounts configured)` without a table.
 /// Column visibility is controlled by `cols` (structural `flag` and `account`
-/// columns are always shown). Footer format depends on `next`:
-///
-/// - `next::all` (default): multi-strategy footer with one line per strategy;
-///   `→` marker suppressed in table body.
-/// - Specific strategy: single-line `Valid: X/Y → Next: name (metrics)` footer;
-///   `→` marks the recommended account in the table body.
-///
+/// columns are always shown). Footer (TSK-184): always-visible 2-strategy block
+/// when ≥2 accounts have valid quota — shows `endurance` and `drain` lines.
+/// The `→` marker in the table body points to the active-strategy winner.
 /// Footer is omitted when < 2 accounts have valid quota data.
 #[ allow( clippy::too_many_lines ) ]
 fn render_text(
@@ -1001,26 +940,37 @@ fn render_text(
     .unwrap_or_default()
     .as_secs();
 
-  // For next::all: no → in table body; each strategy picks its own recommendation
-  // in the footer. For specific strategies: compute the single recommended index now.
+  // Compute the winner for the active strategy; placed as → marker in the table body.
   let best_idx       = find_next_for_strategy( accounts, next, prefer, now_secs );
   let sorted_indices = sort_indices( accounts, sort, desc, prefer, now_secs );
 
   // Three-tier grouping: sort order preserved within each tier (🟢 → 🟡 → 🔴).
   // Applied after the sort strategy so each tier's internal order reflects the chosen sort.
-  let ( mut green_indices, mut yellow_indices, mut red_indices ) =
-    ( Vec::new(), Vec::new(), Vec::new() );
+  // AC-26: within 🟡, session-exhausted (5h Left ≤ 5%) precedes weekly-exhausted.
+  // Accounts where both 5h Left ≤ 5% AND 7d Left ≤ 5% fall in the session-exhausted sub-group.
+  let ( mut green_indices, mut red_indices ) = ( Vec::new(), Vec::new() );
+  let ( mut session_yellow, mut weekly_yellow ) = ( Vec::new(), Vec::new() );
   for idx in sorted_indices
   {
     match status_emoji( &accounts[ idx ].result )
     {
       "🟢" => green_indices.push( idx ),
-      "🟡" => yellow_indices.push( idx ),
+      "🟡" =>
+      {
+        let h5_left = if let Ok( data ) = &accounts[ idx ].result
+        {
+          100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization )
+        }
+        else { 100.0 };
+        if h5_left <= 5.0 { session_yellow.push( idx ); }
+        else              { weekly_yellow.push( idx ); }
+      }
       _    => red_indices.push( idx ),
     }
   }
   let sorted_indices : Vec< usize > = green_indices.into_iter()
-    .chain( yellow_indices )
+    .chain( session_yellow )
+    .chain( weekly_yellow )
     .chain( red_indices )
     .collect();
 
@@ -1042,8 +992,7 @@ fn render_text(
   for orig_idx in sorted_indices.iter().copied()
   {
     let aq = &accounts[ orig_idx ];
-    // Four-level priority: ✓ (is_current) > * (is_active, not current) > → (single-strategy) > blank.
-    // For next::all, best_idx is always None, so → is never placed.
+    // Four-level priority: ✓ (is_current) > * (is_active, not current) > → (active-strategy winner) > blank.
     let flag_cell = if aq.is_current
     {
       "✓".to_string()
@@ -1127,12 +1076,13 @@ fn render_text(
   let valid_count = accounts.iter().filter( |aq| aq.result.is_ok() ).count();
   if valid_count < 2 { return body; }
 
-  if next == NextStrategy::All
+  // Responsibility(TSK-184-footer): unconditional 2-strategy footer (Endurance, Drain).
+  // Both lines shown when valid_count >= 2; NOT gated on next:: value.
+  // The → marker in the table body is already placed on the active-strategy winner.
   {
-    // Multi-strategy footer: one line per strategy; omit strategies with no eligible account.
     use core::fmt::Write as _;
-    let strategies = [ NextStrategy::Session, NextStrategy::Endurance, NextStrategy::Drain, NextStrategy::Reset ];
-    let names      = [ "session", "endurance", "drain", "reset" ];
+    let strategies = [ NextStrategy::Endurance, NextStrategy::Drain ];
+    let names      = [ "endurance", "drain" ];
     let mut lines  = String::new();
     for ( strategy, name ) in strategies.iter().zip( names.iter() )
     {
@@ -1147,20 +1097,6 @@ fn render_text(
     if lines.is_empty() { return body; }
     let total = accounts.len();
     format!( "{body}Valid: {valid_count} / {total}   ->  Next by strategy:\n{lines}" )
-  }
-  else
-  {
-    // Single-strategy footer: → marks the winner in the table body.
-    if let Some( idx ) = best_idx
-    {
-      let rec    = &accounts[ idx ];
-      let metric = strategy_metric( rec, next, prefer, now_secs );
-      let total  = accounts.len();
-      let name   = &rec.name;
-      let footer = format!( "Valid: {valid_count} / {total}   \u{2192}  Next: {name}  ({metric})\n" );
-      return format!( "{body}{footer}" );
-    }
-    body
   }
 }
 
@@ -1364,6 +1300,80 @@ fn execute_live_mode(
   Ok( OutputData::new( String::new(), "text" ) )
 }
 
+// ── Touch helper ───────────────────────────────────────────────────────────────
+
+/// Activate an idle 5h session window for `aq` by spawning an isolated subprocess.
+///
+/// The trigger requires both conditions:
+/// - `aq.result.is_ok()` — account must have valid quota data (not an auth error).
+/// - `five_hour.resets_at.is_none()` — 5h window not yet started (rendered as `—`).
+///
+/// After a successful touch, quota is re-fetched so the table shows the concrete
+/// `5h Reset` value. If the subprocess or re-fetch fails the account row is unchanged
+/// (touch failure is non-aborting — other accounts and the render continue normally).
+///
+/// The original `_active` account is restored unconditionally inside this call before
+/// using the new credentials. This prevents a stale `_active` if the process is
+/// interrupted between touches.
+fn apply_touch(
+  aq               : &mut AccountQuota,
+  credential_store : &std::path::Path,
+  claude_paths     : Option< &crate::ClaudePaths >,
+  trace            : bool,
+)
+{
+  // Guard: errored accounts are never touched; trigger requires valid quota data.
+  let Ok( ref data ) = aq.result else { return; };
+
+  // Guard: accounts with an active 5h window are not idle — skip.
+  let is_idle = data.five_hour.as_ref()
+    .and_then( |p| p.resets_at.as_deref() )
+    .is_none();
+  if !is_idle { return; }
+
+  // Save active account before switching for the subprocess lifecycle.
+  let original_active = std::fs::read_to_string( credential_store.join( "_active" ) ).ok();
+
+  let new_creds = crate::account::refresh_account_token(
+    &aq.name, credential_store, claude_paths, trace,
+  );
+
+  // CRITICAL: restore _active unconditionally before using new_creds (Fix(BUG-170) pattern).
+  // If restoration is deferred past the return points below, an interrupted touch leaves
+  // _active pointing at the touched account instead of the original.
+  if let ( Some( original ), Some( paths ) ) = ( original_active.as_deref(), claude_paths )
+  {
+    let name = original.trim();
+    if !name.is_empty()
+    {
+      let _ = crate::account::switch_account( name, credential_store, paths );
+    }
+  }
+
+  let Some( creds ) = new_creds else { return; };
+
+  // Update expiry using JWT exp field with expiresAt fallback (same as apply_refresh).
+  if let Some( exp_ms ) = jwt_exp_ms( &creds )
+  {
+    aq.expires_at_ms = exp_ms;
+  }
+  else if let Some( exp_ms ) = parse_u64_from_str( &creds, "expiresAt" )
+  {
+    aq.expires_at_ms = exp_ms;
+  }
+
+  // Re-read token AFTER subprocess — the pre-subprocess token is stale.
+  let Ok( token ) = read_token( credential_store, &aq.name ) else { return; };
+  if let Ok( new_data ) = claude_quota::fetch_oauth_usage( &token )
+  {
+    aq.result = Ok( new_data );
+    if let Ok( acct ) = claude_quota::fetch_oauth_account( &token )
+    {
+      aq.account = Some( acct );
+    }
+  }
+}
+
 // ── Refresh helper ─────────────────────────────────────────────────────────────
 
 /// Return `true` when `apply_refresh` should attempt a token refresh for `aq`.
@@ -1472,6 +1482,17 @@ fn apply_refresh(
       {
         if trace { eprintln!( "[trace] refresh  {}  retry OK", aq.name ); }
         aq.result = Ok( retried );
+        // Fix(BUG-171): account must be re-fetched after refresh; initial fetch used
+        //   the expired token; quota fetch path and account fetch path diverged.
+        // Root cause: fetch_oauth_account was added to fetch_all_quota later than apply_refresh;
+        //   the refresh retry path never had a corresponding account re-fetch.
+        // Pitfall: use if-let, not unconditional .ok() assignment — preserve existing value
+        //   on network failure; aq.account = fetch_oauth_account(...).ok() silently destroys
+        //   previously-populated account data on transient errors.
+        if let Ok( acct ) = claude_quota::fetch_oauth_account( &token )
+        {
+          aq.account = Some( acct );
+        }
       }
       Err( e ) =>
       {
@@ -1521,6 +1542,8 @@ struct UsageParams
   next     : NextStrategy,
   /// Column visibility modifiers applied to the text table.
   cols     : ColsVisibility,
+  /// 1 = activate idle 5h session windows via subprocess; 0 = off (default).
+  touch    : i64,
 }
 
 /// Parse and validate the five `.usage`-specific parameters.
@@ -1536,26 +1559,36 @@ struct UsageParams
 /// Fix(issue-157): strict 0/1 range guard added for `refresh`, `live`, `trace`.
 /// Pitfall: `Kind::Integer` registration doesn't block string values — the parser
 /// delivers them as `Value::String`, so this function is the sole enforcement point.
+/// Parse an integer `0`-or-`1` flag from `cmd.arguments` with a configurable default.
+///
+/// Returns `default` when absent; rejects non-`Value::Integer` values or integers outside
+/// `{0, 1}` with `ArgumentTypeMismatch`.
+///
+/// Pitfall: `Kind::Integer` registration doesn't block string values — the parser
+/// delivers them as `Value::String`, so this is the sole enforcement point.
+fn parse_int_flag( cmd : &VerifiedCommand, name : &str, default : i64 ) -> Result< i64, ErrorData >
+{
+  match cmd.arguments.get( name )
+  {
+    None                        => Ok( default ),
+    Some( Value::Integer( 0 ) ) => Ok( 0 ),
+    Some( Value::Integer( 1 ) ) => Ok( 1 ),
+    Some( Value::String( s ) ) if s == "true"  => Ok( 1 ),
+    Some( Value::String( s ) ) if s == "false" => Ok( 0 ),
+    _ => Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "{name}:: must be 0 or 1" ),
+    ) ),
+  }
+}
+
 fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorData >
 {
-  let refresh = match cmd.arguments.get( "refresh" )
-  {
-    None | Some( Value::Integer( 1 ) ) => 1,
-    Some( Value::Integer( 0 ) )        => 0,
-    _ => return Err( ErrorData::new(
-      ErrorCode::ArgumentTypeMismatch,
-      "refresh:: must be 0 or 1".to_string(),
-    ) ),
-  };
-  let live = match cmd.arguments.get( "live" )
-  {
-    None | Some( Value::Integer( 0 ) ) => 0_i64,
-    Some( Value::Integer( 1 ) )        => 1_i64,
-    _ => return Err( ErrorData::new(
-      ErrorCode::ArgumentTypeMismatch,
-      "live:: must be 0 or 1".to_string(),
-    ) ),
-  };
+  // refresh default is 1 (enabled); live/trace/touch default is 0 (disabled).
+  let refresh = parse_int_flag( cmd, "refresh", 1 )?;
+  let live    = parse_int_flag( cmd, "live",    0 )?;
+  let trace   = parse_int_flag( cmd, "trace",   0 )? != 0;
+  let touch   = parse_int_flag( cmd, "touch",   0 )?;
   // Negative values map to 0, which is < 30 and will hit the interval guard.
   let interval = match cmd.arguments.get( "interval" )
   {
@@ -1573,15 +1606,6 @@ fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorDat
     _ => return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
       "jitter:: must be a non-negative integer".to_string(),
-    ) ),
-  };
-  let trace = match cmd.arguments.get( "trace" )
-  {
-    None | Some( Value::Integer( 0 ) ) => false,
-    Some( Value::Integer( 1 ) )        => true,
-    _ => return Err( ErrorData::new(
-      ErrorCode::ArgumentTypeMismatch,
-      "trace:: must be 0 or 1".to_string(),
     ) ),
   };
   let sort = match cmd.arguments.get( "sort" )
@@ -1614,7 +1638,7 @@ fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorDat
   };
   let next = match cmd.arguments.get( "next" )
   {
-    None                         => NextStrategy::All,
+    None                         => NextStrategy::Endurance,
     Some( Value::String( s ) )   => NextStrategy::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
     _ => return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
@@ -1630,7 +1654,7 @@ fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorDat
       "cols:: must be a string".to_string(),
     ) ),
   };
-  Ok( UsageParams { refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, next, cols } )
+  Ok( UsageParams { refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, next, cols, touch } )
 }
 
 /// `.usage` — show live quota utilization for all saved accounts.
@@ -1709,6 +1733,18 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   {
     let claude_paths = crate::ClaudePaths::new();
     apply_refresh( &mut accounts, &credential_store, claude_paths.as_ref(), params.trace );
+  }
+
+  // touch::1: activate idle 5h windows — runs after refresh so post-refresh results
+  // are touched (an account that was refreshed and now has valid quota with no resets_at
+  // will be touched; an account that still errors after refresh is skipped by apply_touch).
+  if params.touch == 1
+  {
+    let claude_paths = crate::ClaudePaths::new();
+    for aq in &mut accounts
+    {
+      apply_touch( aq, &credential_store, claude_paths.as_ref(), params.trace );
+    }
   }
 
   let content = match opts.format
@@ -2879,155 +2915,7 @@ mod tests
     assert_eq!( compute_expires_cell( 1000, 9999 ), "EXPIRED" );
   }
 
-  // ── find_recommendation ─────────────────────────────────────────────────────
-
   const FAR_FUTURE_MS : u64 = 9_999_999_999_000;
-
-  /// C10 — Empty accounts slice → None.
-  #[ test ]
-  fn test_find_recommendation_empty()
-  {
-    let accounts : Vec< AccountQuota > = vec![];
-    assert!( find_recommendation( &accounts, 0 ).is_none() );
-  }
-
-  /// C11 — All accounts are `is_active` → None (no eligible candidates).
-  #[ test ]
-  fn test_find_recommendation_all_ineligible()
-  {
-    let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
-    let accounts = vec![
-      AccountQuota
-      {
-        name : "active@test.com".to_string(), is_current : false, is_active : true,
-        expires_at_ms : FAR_FUTURE_MS, result : Ok( quota ),
-        account       : None,
-      },
-    ];
-    assert!( find_recommendation( &accounts, 0 ).is_none() );
-  }
-
-  /// C12 — Account with expired token (`expires_at_ms`=0) is skipped by recommendation.
-  #[ test ]
-  fn test_find_recommendation_expired_token_skipped()
-  {
-    let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
-    let accounts = vec![
-      AccountQuota
-      {
-        name : "expired@test.com".to_string(), is_current : false, is_active : false,
-        expires_at_ms : 0, result : Ok( quota ),
-        account       : None,
-      },
-    ];
-    assert!( find_recommendation( &accounts, 1 ).is_none() );
-  }
-
-  /// C13 — Picks the account with highest `5h_left` (lowest utilization).
-  #[ test ]
-  fn test_find_recommendation_picks_lowest_utilization()
-  {
-    let mk = |name : &str, util : f64| -> AccountQuota
-    {
-      let period = claude_quota::PeriodUsage { utilization : util, resets_at : None };
-      let data   = claude_quota::OauthUsageData
-      {
-        five_hour : Some( period ), seven_day : None, seven_day_sonnet : None,
-      };
-      AccountQuota
-      {
-        name : name.to_string(), is_current : false, is_active : false,
-        expires_at_ms : FAR_FUTURE_MS, result : Ok( data ),
-        account       : None,
-      }
-    };
-    let accounts = vec![ mk( "high@use.com", 80.0 ), mk( "low@use.com", 20.0 ) ];
-    assert_eq!( find_recommendation( &accounts, 0 ), Some( 1 ) );
-  }
-
-  /// C14 — Account with Err result is skipped by recommendation.
-  #[ test ]
-  fn test_find_recommendation_err_skipped()
-  {
-    let accounts = vec![
-      AccountQuota
-      {
-        name : "err@test.com".to_string(), is_current : false, is_active : false,
-        expires_at_ms : FAR_FUTURE_MS, result : Err( "fail".to_string() ),
-        account       : None,
-      },
-    ];
-    assert!( find_recommendation( &accounts, 0 ).is_none() );
-  }
-
-  /// Tiebreaker level 2 — when `5h Left` is tied, higher `expires_in_secs` wins.
-  #[ test ]
-  fn test_find_recommendation_tiebreaks_by_expiry()
-  {
-    let mk = |name : &str, expires_at_ms : u64| -> AccountQuota
-    {
-      let data = claude_quota::OauthUsageData
-      {
-        five_hour : Some( claude_quota::PeriodUsage { utilization : 0.0, resets_at : None } ),
-        seven_day : None, seven_day_sonnet : None,
-      };
-      AccountQuota
-      {
-        name : name.to_string(), is_current : false, is_active : false,
-        expires_at_ms, result : Ok( data ), account : None,
-      }
-    };
-    // Account 0 expires soon (1 second), account 1 expires far in future.
-    // Both have 5h_left = 100%. Account 1 must win (higher expiry).
-    let accounts = vec![ mk( "soon@test.com", 1_000 ), mk( "later@test.com", FAR_FUTURE_MS ) ];
-    assert_eq!( find_recommendation( &accounts, 0 ), Some( 1 ) );
-  }
-
-  /// Tiebreaker level 3 — when `5h Left` AND `expires_in_secs` are tied, higher `7d Left` wins.
-  #[ test ]
-  fn test_find_recommendation_tiebreaks_by_7d_left()
-  {
-    let mk = |name : &str, seven_day_util : f64| -> AccountQuota
-    {
-      let data = claude_quota::OauthUsageData
-      {
-        five_hour   : Some( claude_quota::PeriodUsage { utilization : 0.0, resets_at : None } ),
-        seven_day   : Some( claude_quota::PeriodUsage { utilization : seven_day_util, resets_at : None } ),
-        seven_day_sonnet : None,
-      };
-      AccountQuota
-      {
-        name : name.to_string(), is_current : false, is_active : false,
-        expires_at_ms : FAR_FUTURE_MS, result : Ok( data ), account : None,
-      }
-    };
-    // Both have 5h_left=100%, same expires. Account 1 has lower 7d utilization (more left).
-    let accounts = vec![ mk( "low7d@test.com", 80.0 ), mk( "high7d@test.com", 20.0 ) ];
-    assert_eq!( find_recommendation( &accounts, 0 ), Some( 1 ) );
-  }
-
-  /// Tiebreaker level 4 — when all criteria tied, alphabetically first (index 0) wins.
-  #[ test ]
-  fn test_find_recommendation_tiebreaks_alphabetically()
-  {
-    let mk = |name : &str| -> AccountQuota
-    {
-      let data = claude_quota::OauthUsageData
-      {
-        five_hour : Some( claude_quota::PeriodUsage { utilization : 0.0, resets_at : None } ),
-        seven_day : Some( claude_quota::PeriodUsage { utilization : 0.0, resets_at : None } ),
-        seven_day_sonnet : None,
-      };
-      AccountQuota
-      {
-        name : name.to_string(), is_current : false, is_active : false,
-        expires_at_ms : FAR_FUTURE_MS, result : Ok( data ), account : None,
-      }
-    };
-    // Alpha-sorted input: "aaa" before "zzz". Identical metrics → "aaa" (index 0) wins.
-    let accounts = vec![ mk( "aaa@test.com" ), mk( "zzz@test.com" ) ];
-    assert_eq!( find_recommendation( &accounts, 0 ), Some( 0 ) );
-  }
 
   // ── secs_to_hms_utc ────────────────────────────────────────────────────────
 
@@ -3091,7 +2979,7 @@ mod tests
   fn test_status_emoji_red()
   {
     let aq = mk_aq_err();
-    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set() );
     assert!( output.contains( "🔴" ), "Err account must show 🔴. Got:\n{output}" );
   }
 
@@ -3100,7 +2988,7 @@ mod tests
   fn test_status_emoji_green()
   {
     let aq = mk_aq_ok( 10.0 );
-    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set() );
     assert!( output.contains( "🟢" ), "90% left must show 🟢. Got:\n{output}" );
   }
 
@@ -3109,7 +2997,7 @@ mod tests
   fn test_status_emoji_yellow()
   {
     let aq = mk_aq_ok( 97.0 );
-    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set() );
     assert!( output.contains( "🟡" ), "3% left must show 🟡. Got:\n{output}" );
   }
 
@@ -3120,8 +3008,8 @@ mod tests
   {
     let aq_5pct   = mk_aq_ok( 95.0 );
     let aq_5_1pct = mk_aq_ok( 94.9 );
-    let out_5    = render_text( &[ aq_5pct ],   SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
-    let out_5_1  = render_text( &[ aq_5_1pct ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
+    let out_5    = render_text( &[ aq_5pct ],   SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set() );
+    let out_5_1  = render_text( &[ aq_5_1pct ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set() );
     assert!( out_5.contains( "🟡" ),   "exactly 5% left must show 🟡. Got:\n{out_5}" );
     assert!( out_5_1.contains( "🟢" ), "5.1% left must show 🟢. Got:\n{out_5_1}" );
   }
@@ -3133,7 +3021,7 @@ mod tests
     let mut aq = mk_aq_ok( 20.0 );
     aq.is_current = true;
     aq.name = "(current session)".to_string();
-    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set() );
     assert!( output.contains( "🟢" ), "80% left synthetic row must show 🟢. Got:\n{output}" );
   }
 
@@ -3153,7 +3041,7 @@ mod tests
   #[ test ]
   fn test_render_text_empty()
   {
-    let result = render_text( &[], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
+    let result = render_text( &[], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set() );
     assert!( result.contains( "no accounts configured" ), "empty must say no accounts, got: {result}" );
   }
 
@@ -3622,11 +3510,11 @@ mod tests
     ];
 
     // sort::drain would place b@x.com (25% left) first in display order.
-    // next::session picks the recommendation on the original `accounts` slice (AC-11).
-    // Use next::session (not next::all) so that → appears in the table body.
+    // next::endurance picks the account with the most quota remaining (a@x.com, 80% left).
+    // Use next::endurance so that → appears in the table body on a@x.com.
     let output = render_text(
       &accounts, SortStrategy::Drain, None, PreferStrategy::Any,
-      NextStrategy::Session, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(),
     );
 
     // Footer should recommend a@x.com (highest 5h_left = 80%), not b@x.com.
@@ -3644,10 +3532,12 @@ mod tests
         "→ recommendation must be a@x.com (highest 5h_left), not b@x.com (AC-11); line: {line}",
       );
     }
-    // Footer "→  Next: a@x.com" must be present (valid_count >= 2, recommendation exists).
+    // Footer must show the endurance recommendation pointing to a@x.com
+    // (TSK-184: footer is now 2-strategy unconditional; format: "  endurance   name   metric").
+    let endurance_line = output.lines().find( |l| l.contains( "endurance" ) );
     assert!(
-      output.contains( "Next: a@x.com" ),
-      "footer must recommend a@x.com regardless of sort::drain display order (AC-11); got:\n{output}",
+      endurance_line.is_some_and( |l| l.contains( "a@x.com" ) ),
+      "footer endurance line must recommend a@x.com regardless of sort::drain display order (AC-11); got:\n{output}",
     );
   }
 
@@ -3897,7 +3787,7 @@ mod tests
     let accounts = vec![ a, b, c ];
     let output = render_text(
       &accounts, SortStrategy::Name, None, PreferStrategy::Any,
-      NextStrategy::All, &ColsVisibility::default_set(),
+      NextStrategy::Endurance, &ColsVisibility::default_set(),
     );
     let pos_a = output.find( "a@x.com" ).expect( "a@x.com must appear in output" );
     let pos_b = output.find( "b@x.com" ).expect( "b@x.com must appear in output" );
@@ -3925,6 +3815,256 @@ mod tests
     assert_eq!(
       accounts[ idx[ 0 ] ].name, "no_data@test.com",
       "None seven_day treated as 100% left; must rank first in drain prefer::opus tiebreak",
+    );
+  }
+
+  // ── Per-column emoji formatting unit tests (FT-11/009) ───────────────────
+
+  /// FT-11 of feature/009 — per-column emoji prefix in `5h Left` cell values.
+  ///
+  /// `quota_text_cells` must attach `🟢` prefix when `5h_left` > 5%, `🟡` when ≤ 5%.
+  /// The boundary (exactly 5.0%) is inclusive for `🟡`.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-11]
+  #[ test ]
+  fn test_ft11_009_per_column_emoji_prefix_three_cases()
+  {
+    let mk_5h = |util : f64| -> claude_quota::OauthUsageData
+    {
+      claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : util, resets_at : None } ),
+        seven_day        : None,
+        seven_day_sonnet : None,
+      }
+    };
+
+    // Pct A: util=10.0 → 90% left (> 5%) → 🟢
+    let cells_a = quota_text_cells( &mk_5h( 10.0 ), 0 );
+    assert_eq!( cells_a[ 0 ], "🟢 90%", "Pct A (90% left) must have 🟢 prefix (FT-11/009)" );
+
+    // Pct B: util=97.0 → 3% left (< 5%) → 🟡
+    let cells_b = quota_text_cells( &mk_5h( 97.0 ), 0 );
+    assert_eq!( cells_b[ 0 ], "🟡 3%", "Pct B (3% left) must have 🟡 prefix (FT-11/009)" );
+
+    // Pct C: util=95.0 → exactly 5% left (≤ 5%) → 🟡 (boundary inclusive)
+    let cells_c = quota_text_cells( &mk_5h( 95.0 ), 0 );
+    assert_eq!( cells_c[ 0 ], "🟡 5%", "Pct C (exactly 5% left) must have 🟡 prefix — boundary inclusive (FT-11/009)" );
+  }
+
+  // ── Yellow-tier session-before-weekly sub-grouping (FT-16/009, AC-26) ────
+
+  /// FT-16 of feature/009 — within 🟡 tier, session-exhausted appears before weekly-exhausted.
+  ///
+  /// Three-tier grouping splits 🟡 into two sub-groups (AC-26):
+  ///
+  /// - `session_yellow`: `5h Left ≤ 5%`  — appears first within 🟡
+  /// - `weekly_yellow`:  `5h Left > 5%` AND `7d Left ≤ 5%` — appears after `session_yellow`
+  ///
+  /// Accounts with BOTH ≤ 5% fall in `session_yellow` (by `5h Left` check).
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-16]
+  ///       [`docs/feature/009_token_usage.md` AC-26]
+  #[ test ]
+  fn test_ft16_009_yellow_tier_session_before_weekly()
+  {
+    // a@x.com: 5h=90% left, 7d=2% left → 🟡 WEEKLY-exhausted
+    // b@x.com: 5h=1% left, 7d=70% left → 🟡 SESSION-exhausted
+    // c@x.com: 5h=3% left, 7d=50% left → 🟡 SESSION-exhausted
+    // d@x.com: 5h=90% left, 7d=90% left → 🟢
+    //
+    // With SortStrategy::Name: alpha order a,b,c,d.
+    // Three-tier + AC-26: d (🟢), b (session 🟡), c (session 🟡), a (weekly 🟡).
+    let a = mk_named_aq( "a@x.com", 10.0, 98.0 );  // 5h=90%, 7d=2% → weekly-exhausted
+    let b = mk_named_aq( "b@x.com", 99.0, 30.0 );  // 5h=1%, 7d=70% → session-exhausted
+    let c = mk_named_aq( "c@x.com", 97.0, 50.0 );  // 5h=3%, 7d=50% → session-exhausted
+    let d = mk_named_aq( "d@x.com", 10.0, 10.0 );  // 5h=90%, 7d=90% → 🟢
+    let accounts = vec![ a, b, c, d ];
+
+    let output = render_text(
+      &accounts,
+      SortStrategy::Name,
+      None,
+      PreferStrategy::Any,
+      NextStrategy::Endurance,
+      &ColsVisibility::default_set(),
+    );
+
+    let pos_d = output.find( "d@x.com" ).expect( "d@x.com must appear" );
+    let pos_b = output.find( "b@x.com" ).expect( "b@x.com must appear" );
+    let pos_c = output.find( "c@x.com" ).expect( "c@x.com must appear" );
+    let pos_a = output.find( "a@x.com" ).expect( "a@x.com must appear" );
+
+    assert!( pos_d < pos_b, "🟢(d) must appear before session-yellow(b) (FT-16/009 AC-26);\n{output}" );
+    assert!( pos_b < pos_a, "session-exhausted(b) must appear before weekly-exhausted(a) (FT-16/009 AC-26);\n{output}" );
+    assert!( pos_c < pos_a, "session-exhausted(c) must appear before weekly-exhausted(a) (FT-16/009 AC-26);\n{output}" );
+    // Within session_yellow: b comes before c (alpha order preserved within sub-group).
+    assert!( pos_b < pos_c, "within session-yellow sub-group, alpha order must be preserved: b before c (FT-16/009 AC-26);\n{output}" );
+  }
+
+  /// FT-15 of feature/020 — `desc::1` reverses within each 🟡 sub-group but does NOT swap sub-group order.
+  ///
+  /// `z@x.com` is weekly-exhausted and alphabetically last; `desc::1` + `sort::name` would place it first
+  /// among yellows without the sub-partition. With sub-partition, it stays after session-yellows.
+  ///
+  /// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-15]
+  ///       [`docs/feature/020_usage_sort_strategies.md` AC-14]
+  #[ test ]
+  fn test_ft15_020_yellow_sub_grouping_not_reversed_by_desc()
+  {
+    // a@x.com: 5h=1% left, 7d=70% left → 🟡 SESSION-exhausted (alphabetically first)
+    // b@x.com: 5h=3% left, 7d=50% left → 🟡 SESSION-exhausted
+    // c@x.com: 5h=90% left, 7d=90% left → 🟢
+    // z@x.com: 5h=90% left, 7d=2% left → 🟡 WEEKLY-exhausted (alphabetically last)
+    //
+    // With SortStrategy::Name + desc::1: sorted order = z, c, b, a (reverse alpha).
+    // Without sub-partition: z(weekly) appears first among yellows → WRONG.
+    // With sub-partition: session[b,a] before weekly[z] → b,a,z order among yellows.
+    let a = mk_named_aq( "a@x.com", 99.0, 30.0 );  // 5h=1%, 7d=70% → session-exhausted
+    let b = mk_named_aq( "b@x.com", 97.0, 50.0 );  // 5h=3%, 7d=50% → session-exhausted
+    let c = mk_named_aq( "c@x.com", 10.0, 10.0 );  // 5h=90%, 7d=90% → 🟢
+    let z = mk_named_aq( "z@x.com", 10.0, 98.0 );  // 5h=90%, 7d=2% → weekly-exhausted
+
+    let accounts = vec![ a, b, c, z ];
+
+    let output = render_text(
+      &accounts,
+      SortStrategy::Name,
+      Some( true ), // desc::1
+      PreferStrategy::Any,
+      NextStrategy::Endurance,
+      &ColsVisibility::default_set(),
+    );
+
+    let pos_c = output.find( "c@x.com" ).expect( "c@x.com must appear" );
+    let pos_b = output.find( "b@x.com" ).expect( "b@x.com must appear" );
+    let pos_a = output.find( "a@x.com" ).expect( "a@x.com must appear" );
+    let pos_z = output.find( "z@x.com" ).expect( "z@x.com must appear" );
+
+    // Sub-grouping is not reversed by desc:: — session-yellow still before weekly-yellow.
+    assert!( pos_b < pos_z, "session-exhausted(b) must appear before weekly-exhausted(z) even with desc::1 (FT-15/020 AC-14);\n{output}" );
+    assert!( pos_a < pos_z, "session-exhausted(a) must appear before weekly-exhausted(z) even with desc::1 (FT-15/020 AC-14);\n{output}" );
+    // Green tier still leads.
+    assert!( pos_c < pos_b, "🟢(c) must appear before session-yellow(b) (FT-15/020 AC-14);\n{output}" );
+    // Within session-yellow sub-group, desc::1 reverses alpha → b before a (b > a alphabetically).
+    assert!( pos_b < pos_a, "within session-yellow, desc::1 puts b before a (FT-15/020 AC-14);\n{output}" );
+  }
+
+  // ── find_next_for_strategy unit tests (FT-02/023, FT-06/009) ──────────────
+
+  /// FT-02 of feature/023 — `find_next_for_strategy` places `→` on winner; None when no eligible.
+  ///
+  /// When-A: with B and C eligible (`is_current=false`, `result=Ok`), returns `Some(winner_idx)`.
+  /// When-B: all accounts are `is_current=true` → returns `None` (no eligible candidate → no `→`).
+  ///
+  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-02]
+  #[ test ]
+  fn test_ft02_023_find_next_for_strategy_some_when_eligible_none_when_all_current()
+  {
+    let now = 0u64;
+    // When-A: A is current (ineligible), B and C are eligible.
+    // Endurance strategy picks highest 5h_left first → B (70% left) over C (40% left).
+    let mut a = mk_aq_sort( "a@test.com", 20.0, FAR_FUTURE_MS );
+    a.is_current = true;
+    let b = mk_aq_sort( "b@test.com", 30.0, FAR_FUTURE_MS );  // 70% left
+    let c = mk_aq_sort( "c@test.com", 60.0, FAR_FUTURE_MS );  // 40% left
+    let accounts = vec![ a, b, c ];
+
+    let winner_a = find_next_for_strategy( &accounts, NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!(
+      winner_a.is_some(),
+      "find_next_for_strategy must return Some when eligible candidates exist (FT-02/023 When-A)",
+    );
+    let winner_idx = winner_a.unwrap();
+    assert_eq!(
+      accounts[ winner_idx ].name, "b@test.com",
+      "endurance winner must be b@test.com (highest `5h_left`); got index {winner_idx}",
+    );
+
+    // When-B: all accounts are is_current=true → no eligible candidate → None.
+    let mut a2 = mk_aq_sort( "a@test.com", 20.0, FAR_FUTURE_MS );
+    let mut b2 = mk_aq_sort( "b@test.com", 30.0, FAR_FUTURE_MS );
+    let mut c2 = mk_aq_sort( "c@test.com", 60.0, FAR_FUTURE_MS );
+    a2.is_current = true;
+    b2.is_current = true;
+    c2.is_current = true;
+    let all_current = vec![ a2, b2, c2 ];
+
+    let winner_b = find_next_for_strategy( &all_current, NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!(
+      winner_b.is_none(),
+      "find_next_for_strategy must return None when all accounts are is_current=true (FT-02/023 When-B)",
+    );
+  }
+
+  /// FT-06 of feature/009 — endurance tiebreaker: higher expiry wins when `5h Left` is tied.
+  ///
+  /// When two accounts have identical `five_hour.utilization`, the tiebreaker is
+  /// `expires_at_ms` descending — the account whose token expires later wins.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-06]
+  #[ test ]
+  fn test_ft06_009_endurance_tiebreaker_higher_expiry_wins()
+  {
+    let now_ms   = 1_700_000_000_000u64;  // arbitrary fixed reference
+    let now_secs = now_ms / 1000;
+
+    // Both have identical 5h_left (50%).  "a" expires later (now+7200s), "b" sooner (now+3600s).
+    let a = mk_aq_sort( "a@x.com", 50.0, now_ms + 7_200_000 );  // 2h expiry
+    let b = mk_aq_sort( "b@x.com", 50.0, now_ms + 3_600_000 );  // 1h expiry
+    let accounts = vec![ a, b ];
+
+    let idx = find_next_for_strategy( &accounts, NextStrategy::Endurance, PreferStrategy::Any, now_secs );
+    assert_eq!(
+      idx, Some( 0 ),
+      "endurance tiebreaker must pick a@x.com (higher expiry) when 5h_left tied (FT-06/009)",
+    );
+    assert_eq!(
+      accounts[ idx.unwrap() ].name, "a@x.com",
+      "winner must be a@x.com",
+    );
+  }
+
+  // ── footer rendering unit tests (FT-08/023) ───────────────────────────────
+
+  /// FT-08 of feature/023 — footer omits both strategy lines when no eligible candidate exists.
+  ///
+  /// When all accounts are `is_current=true` (ineligible for recommendation), neither the
+  /// "endurance" nor the "drain" strategy line appears in `render_text` footer output.
+  /// `find_next_for_strategy` returns None for both → `lines` is empty → footer body only.
+  ///
+  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-08]
+  #[ test ]
+  fn test_ft08_023_footer_omits_strategy_lines_when_no_eligible_candidate()
+  {
+    // Two valid accounts (result=Ok → valid_count=2, footer threshold passed),
+    // but both is_current=true → no eligible candidate for either strategy.
+    let mut a = mk_aq_sort( "a@test.com", 30.0, FAR_FUTURE_MS );
+    let mut b = mk_aq_sort( "b@test.com", 60.0, FAR_FUTURE_MS );
+    a.is_current = true;
+    b.is_current = true;
+    let accounts = vec![ a, b ];
+
+    let output = render_text(
+      &accounts,
+      SortStrategy::Name,
+      None,
+      PreferStrategy::Any,
+      NextStrategy::Endurance,
+      &ColsVisibility::default_set(),
+    );
+
+    assert!(
+      !output.contains( "endurance" ),
+      "footer must omit endurance line when no eligible candidate (FT-08/023), got:\n{output}",
+    );
+    assert!(
+      !output.contains( "drain" ),
+      "footer must omit drain line when no eligible candidate (FT-08/023), got:\n{output}",
+    );
+    assert!(
+      !output.contains( "Next by strategy:" ),
+      "footer must not show 'Next by strategy:' when lines is empty (FT-08/023), got:\n{output}",
     );
   }
 }

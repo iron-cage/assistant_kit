@@ -5,7 +5,7 @@
 - **Purpose**: Persist org identity fields from endpoint 005 (`GET /api/oauth/claude_cli/roles`) as `{name}.roles.json` at save-time so that `organization_uuid`, `organization_name`, and workspace fields are available without a live API call.
 - **Responsibility**: Documents the `{name}.roles.json` snapshot lifecycle (write on save, delete on delete), the five org fields added to the `Account` struct, the `org_uuid::` and `org_name::` params, and the endpoint 005 transport in `claude_quota` (FR-22).
 - **In Scope**: `fetch_claude_cli_roles()` transport in `claude_quota`; `{name}.roles.json` created by `save()`, deleted by `delete()`; org fields on `Account`; `org_uuid::` and `org_name::` params on `.credentials.status` and `.accounts`; JSON output; `.account.save` idempotency as the metadata refresh mechanism.
-- **Out of Scope**: Live org identity lookup (no on-demand API calls from display commands); workspace-level params beyond `org_uuid::` and `org_name::` (workspace fields stored but not yet exposed via params); mutations to org membership; user identity fields from `{name}.claude.json` (→ 021_extended_snapshot_fields.md).
+- **Out of Scope**: Live org identity lookup (no on-demand API calls from display commands); workspace-level params beyond `org_uuid::` and `org_name::` (workspace fields stored but not yet exposed via params); `workspace_role` field from API response (present in `{name}.roles.json` raw JSON but not added to `Account` struct — no display use case; deferred per YAGNI); mutations to org membership; user identity fields from `{name}.claude.json` (→ 021_extended_snapshot_fields.md).
 
 ### Design
 
@@ -83,7 +83,7 @@ Applied to `.credentials.status` (reads from live `~/.claude.json` — org field
 - **AC-08**: `clp .credentials.status org_name::1` shows `Org:` from the active account's roles.json; `N/A` when absent.
 - **AC-09**: `format::json` always includes `organization_uuid`, `organization_name`, `organization_role`, `workspace_uuid`, `workspace_name` on both commands.
 - **AC-10**: `fetch_claude_cli_roles()` is feature-gated; `claude_profile_core` with `default-features = false` does not require `claude_quota` dep.
-- **AC-11**: Personal accounts (null workspace fields in API response) → `workspace_uuid`, `workspace_name` are empty string in `Account` and `N/A` in text; excluded from default JSON output as empty strings (or included as `""` per AC-09).
+- **AC-11**: Personal accounts (null workspace fields in API response) → `workspace_uuid`, `workspace_name` are stored as empty string in `Account`, shown as `N/A` in text output, and included as `""` in JSON output (per AC-09).
 
 ### Cross-References
 

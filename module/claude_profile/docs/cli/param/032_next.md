@@ -1,32 +1,28 @@
 # Parameter :: 32. `next::`
 
-Controls which recommendation strategy selects the `->` Next account in the `.usage` footer. The default `all` shows recommendations from every strategy simultaneously.
+Controls which recommendation strategy places the `→` marker on the recommended next account in the `.usage` table. The footer always shows both strategy recommendations; `next::` affects only which account receives the `→` flag.
 
 - **Type:** `enum`
-- **Default:** `all`
-- **Constraints:** `all`, `session`, `endurance`, `drain`, `reset`
+- **Default:** `endurance`
+- **Constraints:** `endurance`, `drain`
 - **Commands:** [`.usage`](../command/006_usage.md#command--9-usage)
-- **Purpose:** Select the recommendation strategy for the footer and `->` table marker.
+- **Purpose:** Select which strategy's winner receives the `→` table marker.
 - **Group:** Sort Control
 
 **Values:**
 
 | Value | Behavior |
 |-------|----------|
-| `all` (default) | Footer shows one recommendation per strategy; `->` suppressed in table |
-| `session` | Best `(5h_left, expires_in_secs, 7d_left)` composite; `->` marks winner in table |
-| `endurance` | Top of endurance sort; `->` marks winner in table |
-| `drain` | Top of drain sort; `->` marks winner in table |
-| `reset` | Top of reset sort; `->` marks winner in table |
+| `endurance` (default) | Top of endurance sort; `→` marks winner in table |
+| `drain` | Top of drain sort; `→` marks winner in table |
+
+The footer always shows one recommendation line per strategy (endurance, drain) regardless of which `next::` value is active.
 
 **Examples:**
 
 ```text
-next::all        -> multi-strategy footer (default)
-next::session    -> single recommendation: best session composite
-next::endurance  -> single recommendation: best for long agent run
-next::drain      -> single recommendation: drain lowest-quota account
-next::reset      -> single recommendation: soonest session reset
+next::endurance  -> arrow on best for long agent run (default)
+next::drain      -> arrow on lowest-quota account to drain
 ```
 
 **See Also:** [feature/023_next_account_strategies.md](../../feature/023_next_account_strategies.md) for strategy algorithms.

@@ -1,6 +1,6 @@
 # Group :: 3. Fetch Behavior
 
-**Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`
+**Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`
 **Pattern:** Per-invocation fetch control
 **Purpose:** Controls how `.usage` fetches and re-fetches quota data — whether to refresh expired tokens on auth errors and whether to run as a continuous monitor loop.
 
@@ -11,6 +11,7 @@
 | [`interval::`](../param/021_interval.md) | `u64` | `30` | Seconds between refresh cycles (≥ 30; validated only when `live::1`) |
 | [`jitter::`](../param/022_jitter.md) | `u64` | `0` | Max random seconds added to each cycle delay (0 ≤ jitter ≤ interval; validated only when `live::1`) |
 | [`trace::`](../param/023_trace.md) | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
+| [`touch::`](../param/034_touch.md) | `bool` | `0` | Activate idle accounts (5h Reset = —) via isolated subprocess; re-fetch quota |
 
 **Used By (1 command):** [`.usage`](../command/006_usage.md#command--9-usage)
 
@@ -34,7 +35,7 @@ clp .usage
 
 > "Does parameter X control **how `.usage` fetches quota data** (retry strategy or iteration mode)?"
 
-All 5 members pass: `refresh::` (retry strategy on auth error), `live::` (iteration mode), `interval::` (loop cycle duration), `jitter::` (loop timing variance), `trace::` (diagnostic output during fetch operations). `format::` fails (output serialisation, not fetch strategy) and is correctly excluded.
+All 6 members pass: `refresh::` (retry strategy on auth error), `live::` (iteration mode), `interval::` (loop cycle duration), `jitter::` (loop timing variance), `trace::` (diagnostic output during fetch operations), `touch::` (idle-account activation strategy). `format::` fails (output serialisation, not fetch strategy) and is correctly excluded.
 
 **Invariants**
 
@@ -47,3 +48,4 @@ All 5 members pass: `refresh::` (retry strategy on auth error), `live::` (iterat
 - [../004_parameter_interactions.md](../004_parameter_interactions.md) — `live::1 format::json` incompatibility rule
 - [../../feature/017_token_refresh.md](../../feature/017_token_refresh.md) — `refresh::` feature design
 - [../../feature/018_live_monitor.md](../../feature/018_live_monitor.md) — `live::` / `interval::` / `jitter::` feature design
+- [../../feature/024_session_touch.md](../../feature/024_session_touch.md) — `touch::` feature design

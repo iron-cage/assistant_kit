@@ -37,8 +37,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [031_org_name.md](031_org_name.md) | `org_name::` — organisation display name field toggle (opt-in) |
 | [032_next.md](032_next.md) | `next::` — recommendation strategy selector for quota table |
 | [033_cols.md](033_cols.md) | `cols::` — column visibility modifiers for quota table |
+| [034_touch.md](034_touch.md) | `touch::` — activate idle accounts' 5h session windows via isolated subprocess |
 
-**Total:** 33 parameters
+**Total:** 34 parameters
 
 ### Overview Table
 
@@ -75,10 +76,11 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 29 | `capabilities::` | `bool` | `0` | `0`, `1` | Product capabilities list toggle (opt-in) | 2 cmds |
 | 30 | `org_uuid::` | `bool` | `0` | `0`, `1` | Organisation UUID toggle (opt-in) | 2 cmds |
 | 31 | `org_name::` | `bool` | `0` | `0`, `1` | Organisation display name toggle (opt-in) | 2 cmds |
-| 32 | `next::` | `enum` | `all` | `all`, `session`, `endurance`, `drain`, `reset` | Recommendation strategy selector | 1 cmd |
+| 32 | `next::` | `enum` | `endurance` | `endurance`, `drain` | Recommendation strategy selector | 1 cmd |
 | 33 | `cols::` | `string` | `""` | `+col_id`, `-col_id` modifiers | Column visibility modifiers | 1 cmd |
+| 34 | `touch::` | `bool` | `0` | `0`, `1`, `false`, `true` | Activate idle accounts' 5h windows | 1 cmd |
 
-*Params 1 = Account Targeting; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23 = Fetch Behavior group; param 24 = Output Selection group; params 25–27, 32 = Sort Control group; param 33 = Display Control group*
+*Params 1 = Account Targeting; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34 = Fetch Behavior group; param 24 = Output Selection group; params 25–27, 32 = Sort Control group; param 33 = Display Control group*
 
 ### See Also
 

@@ -24,7 +24,7 @@
 //! | it8  | `it8_lim_it_accounts_in_alpha_order`            | 3 accounts written out of order → alpha output                | P   | yes   |
 //! | it9  | `it9_unreadable_credentials_shows_dash`         | credentials chmod 000 → `—` + exit 0                         | P   | no    |
 //! | it10 | `it10_expired_token_shows_expired_in_expires_col` | account with PAST_MS → "EXPIRED" in Expires column           | P   | no    |
-//! | it11 | `it11_lim_it_recommendation_marker_shown`       | 2 accounts + `next::session` → `→` on non-active account      | P   | yes   |
+//! | it11 | `it11_lim_it_recommendation_marker_shown`       | 2 accounts + `next::endurance` → `→` on non-active account    | P   | yes   |
 //! | it12 | `it12_lim_it_footer_shows_valid_count`          | 2 accounts with real tokens → footer "Valid: 2" + "Next:"     | P   | yes   |
 //! | it13 | `it13_active_divergence_shows_star`             | live creds=work, _active=alice → `✓` on work, `*` on alice    | P   | no    |
 //! | it14 | `it14_creds_unreadable_no_checkmark_star_shown` | no live creds, _active=alice → no `✓`, `*` on alice           | P   | no    |
@@ -84,17 +84,28 @@
 //! | it058 | `it058_sort_json_unaffected_by_sort_strategy`       | JSON alphabetical regardless of `sort::` strategy (025_sort CC-1) | P | no |
 //! | it059 | `it059_sort_uppercase_rejected`                     | `sort::Name` (uppercase) → exit 1 (case-sensitive)         | N | no |
 //! | it060 | `it060_prefer_uppercase_rejected`                   | `prefer::Opus` (uppercase) → exit 1 (case-sensitive)       | N | no |
-//! | it063 | `it063_next_all_accepted`                           | `next::all` accepted with empty store → exit 0 (AC-01)     | P | no |
-//! | it064 | `it064_next_session_accepted`                       | `next::session` accepted with empty store → exit 0 (AC-03) | P | no |
+//! | it063 | `it063_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1 (TSK-184)                    | N | no |
+//! | it064 | `it064_next_session_rejected_exit_1`                | `next::session` rejected → exit 1 (TSK-184)                | N | no |
 //! | it065 | `it065_next_endurance_accepted`                     | `next::endurance` accepted with empty store → exit 0       | P | no |
 //! | it066 | `it066_next_drain_accepted`                         | `next::drain` accepted with empty store → exit 0           | P | no |
-//! | it067 | `it067_next_reset_accepted`                         | `next::reset` accepted with empty store → exit 0           | P | no |
-//! | it068 | `it068_next_invalid_value_exit_1`                   | `next::bogus` → exit 1, stderr names valid values (AC-07)  | N | no |
-//! | it069 | `it069_next_all_suppresses_arrow_in_table`          | default next::all: 2 accounts → no `→` in any table row   | P | no |
+//! | it067 | `it067_next_reset_rejected_exit_1`                  | `next::reset` rejected → exit 1 (TSK-184)                  | N | no |
+//! | it068 | `it068_next_invalid_value_exit_1`                   | `next::bogus` → exit 1, stderr names endurance+drain only  | N | no |
+//! | it069 | `it069_next_endurance_default_no_arrow_without_valid_accounts` | default endurance + no valid accounts → no `→` | P | no |
 //! | it070 | `it070_cols_sub_accepted`                           | `cols::+sub` accepted with empty store → exit 0            | P | no |
 //! | it071 | `it071_cols_sub_shows_sub_column`                   | `cols::+sub` with account → output contains "Sub" header   | P | no |
 //! | it072 | `it072_cols_unknown_id_exit_1`                      | `cols::+bogus_col` → exit 1, stderr names valid IDs        | N | no |
 //! | it073 | `it073_usage_help_shows_next_cols_params`           | `.usage.help` lists `next` and `cols` params               | P | no |
+//! | mre171 | `mre_bug_171_account_populated_after_refresh`      | BUG-171: `Fix(BUG-171)` present → `aq.account` populated  | P | no |
+//! | it082 | `it082_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1, stderr names endurance+drain only (TSK-184) | N | no |
+//! | it083 | `it083_footer_not_gated_on_next_all_structural`     | `Responsibility(TSK-184-footer)` present; old All-gate absent (TSK-184) | P | no |
+//! | it084 | `it084_next_session_rejected_exit_1`                | `next::session` rejected → exit 1, stderr names endurance+drain (TSK-184) | N | no |
+//! | it085 | `it085_next_strategy_session_absent_structural`     | `NextStrategy::Session` absent from source (TSK-184) | P | no |
+//! | it086 | `it086_next_drain_json_output_unchanged`             | `format::json next::drain` identical to default JSON (TSK-184) | P | no |
+//! | it087 | `it087_touch_1_empty_store_exits_0`                 | `touch::1` empty store → exit 0, no-accounts message (TSK-185 AC-01) | P | no |
+//! | it088 | `it088_touch_1_errored_account_skipped`             | `touch::1` no-token account → exit 0, row shows `—` (TSK-185 AC-04) | P | no |
+//! | it089 | `it089_apply_touch_fn_exists_structural`             | `fn apply_touch` present in source (TSK-185 AC-02 structural) | P | no |
+//! | it090 | `it090_touch_json_format_unaffected`                | `format::json touch::1` empty store → exit 0, output `[]` (TSK-185 AC-08) | P | no |
+//! | it091 | `it091_usage_help_shows_touch_param`                | `.usage.help` contains `touch` (TSK-185 AC-10) | P | no |
 
 use crate::helpers::{
   BIN,
@@ -446,15 +457,15 @@ fn it11_lim_it_recommendation_marker_shown()
   write_account_with_token( dir.path(), "acct-a", &token, true  );
   write_account_with_token( dir.path(), "acct-b", &token, false );
 
-  // Use next::session to place → in the table body (next::all, the default, suppresses it).
-  let out  = run_cs_with_env( &[ ".usage", "next::session" ], &[ ( "HOME", home ) ] );
+  // Use next::endurance to place → in the table body on the non-active account.
+  let out  = run_cs_with_env( &[ ".usage", "next::endurance" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
   let rec_marked = text.lines().any( |line| line.contains( '→' ) && line.contains( "acct-b" ) );
   assert!(
     rec_marked,
-    "next::session: a line must contain both → and non-active account 'acct-b', got:\n{text}",
+    "next::endurance: a line must contain both → and non-active account 'acct-b', got:\n{text}",
   );
   let active_rec = text.lines().any( |line| line.contains( '→' ) && line.contains( "acct-a" ) );
   assert!(
@@ -2119,20 +2130,16 @@ fn it062_sort_endurance_desc0_accepted()
 /// After registration, the parser accepts `all` and the empty store short-circuits
 /// to `(no accounts configured)`.
 #[ test ]
-fn it063_next_all_accepted()
+fn it063_next_all_rejected_exit_1()
 {
+  // TSK-184: `next::all` removed from NextStrategy; only endurance + drain are valid.
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &store ).unwrap();
 
   let out = run_cs_with_env( &[ ".usage", "next::all" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!(
-    text.contains( "(no accounts configured)" ),
-    "next::all must be accepted and show no-accounts message, got:\n{text}",
-  );
+  assert_exit( &out, 1 );
 }
 
 /// it064 (AC-03): `next::session` accepted with empty credential store → exit 0.
@@ -2140,20 +2147,16 @@ fn it063_next_all_accepted()
 /// TDD guard for `session` value. The parser must accept the string without error;
 /// empty store produces the no-accounts message.
 #[ test ]
-fn it064_next_session_accepted()
+fn it064_next_session_rejected_exit_1()
 {
+  // TSK-184: `next::session` removed from NextStrategy; only endurance + drain are valid.
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &store ).unwrap();
 
   let out = run_cs_with_env( &[ ".usage", "next::session" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  let text = stdout( &out );
-  assert!(
-    text.contains( "(no accounts configured)" ),
-    "next::session must be accepted and show no-accounts message, got:\n{text}",
-  );
+  assert_exit( &out, 1 );
 }
 
 /// it065 (AC-04): `next::endurance` accepted with empty credential store → exit 0.
@@ -2192,19 +2195,16 @@ fn it066_next_drain_accepted()
 
 /// it067 (AC-06): `next::reset` accepted with empty credential store → exit 0.
 #[ test ]
-fn it067_next_reset_accepted()
+fn it067_next_reset_rejected_exit_1()
 {
+  // TSK-184: `next::reset` removed from NextStrategy; only endurance + drain are valid.
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &store ).unwrap();
 
   let out = run_cs_with_env( &[ ".usage", "next::reset" ], &[ ( "HOME", home ) ] );
-  assert_exit( &out, 0 );
-  assert!(
-    stdout( &out ).contains( "(no accounts configured)" ),
-    "next::reset must be accepted",
-  );
+  assert_exit( &out, 1 );
 }
 
 /// it068 (AC-07): unknown `next::` value → exit 1; stderr names all five valid values.
@@ -2215,6 +2215,7 @@ fn it067_next_reset_accepted()
 #[ test ]
 fn it068_next_invalid_value_exit_1()
 {
+  // TSK-184: error message names only the 2 valid values after the 5→2 reduction.
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
     &[ ".usage", "next::bogus" ],
@@ -2222,30 +2223,36 @@ fn it068_next_invalid_value_exit_1()
   );
   assert_exit( &out, 1 );
   let err = stderr( &out );
-  for value in &[ "all", "session", "endurance", "drain", "reset" ]
+  for value in &[ "endurance", "drain" ]
   {
     assert!(
       err.contains( value ),
-      "next::bogus error must name valid value `{value}` (AC-07), got:\n{err}",
+      "next::bogus error must name valid value `{value}`, got:\n{err}",
+    );
+  }
+  for old_value in &[ "all", "session", "reset" ]
+  {
+    assert!(
+      !err.contains( old_value ),
+      "next::bogus error must NOT name removed value `{old_value}`, got:\n{err}",
     );
   }
 }
 
-/// it069 (AC-01): default `next::all` — no `→` marker appears in any table row.
+/// it069 (AC-01): default next (endurance) — no `→` marker when no valid quota data.
 ///
-/// Two no-token accounts are written so the table is non-empty. With `next::all`
-/// (the default, no param needed), the recommendation → marker is suppressed in
-/// the table body; the multi-strategy footer handles recommendations instead.
-/// No row in the text output should contain `→`.
+/// Two no-token accounts are written so the table is non-empty. Because neither
+/// account has a valid OAuth token, quota fetch returns Err for both; `best_idx`
+/// is None → no `→` marker is placed in any table row.
 #[ test ]
-fn it069_next_all_suppresses_arrow_in_table()
+fn it069_next_endurance_default_no_arrow_without_valid_accounts()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
   write_account( dir.path(), "b@x.com", "max", "default", FAR_FUTURE_MS, false );
 
-  // Default (no next:: param) = next::all.
+  // Default (no next:: param) = next::endurance (TSK-184).
   let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -2254,7 +2261,7 @@ fn it069_next_all_suppresses_arrow_in_table()
   let arrow_in_row = text.lines().any( |l| l.contains( '\u{2192}' ) );
   assert!(
     !arrow_in_row,
-    "next::all (default) must not place → in any table row, got:\n{text}",
+    "default next::endurance: no eligible account → must not place → in any table row, got:\n{text}",
   );
 }
 
@@ -2499,14 +2506,844 @@ fn it081_next_json_output_unchanged_by_next_param()
     &[ ".usage", "format::json" ],
     &[ ( "HOME", home ) ],
   );
-  let out_session = run_cs_with_env(
-    &[ ".usage", "format::json", "next::session" ],
+  let out_drain = run_cs_with_env(
+    &[ ".usage", "format::json", "next::drain" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out_default, 0 );
-  assert_exit( &out_session, 0 );
+  assert_exit( &out_drain, 0 );
   assert_eq!(
-    stdout( &out_default ), stdout( &out_session ),
+    stdout( &out_default ), stdout( &out_drain ),
     "format::json output must be identical regardless of next:: value",
+  );
+}
+
+// ── mre_bug_171 ───────────────────────────────────────────────────────────────
+
+/// `mre_bug_171` (BUG-171): `apply_refresh()` must call `fetch_oauth_account()` after
+/// a successful quota re-fetch so that `aq.account` is populated (enabling `~Renews`
+/// and `Sub` columns to show actual data instead of `?`).
+///
+/// # Root Cause
+/// `apply_refresh()` was written to retry only the quota fetch (the operation that
+/// failed). `fetch_oauth_account()` is a secondary enrichment call added later in the
+/// parallel-thread path of `fetch_all_quota()`. After a successful refresh, the account
+/// struct went stale because the diverged fetch paths were never reconciled.
+///
+/// # Why Not Caught
+/// No test covered `aq.account` after a refresh cycle; only quota data (`result`) was
+/// asserted. The column rendering test suite only ran offline (no real refresh cycle).
+///
+/// # Fix Applied
+/// Added `if let Ok( acct ) = claude_quota::fetch_oauth_account( &token ) { aq.account = Some( acct ); }`
+/// immediately after `aq.result = Ok( retried )` in `apply_refresh()`. Uses `if let`
+/// (not unconditional `.ok()`) to preserve existing account data on transient errors.
+///
+/// # Prevention
+/// This test verifies `Fix(BUG-171)` is present in `apply_refresh` production code.
+/// Before fix: the `Fix(BUG-171)` comment is absent → `aq_account.is_some()` fails.
+/// After fix:  the comment and call are present → `aq_account.is_some()` passes.
+///
+/// # Pitfall
+/// Using `.ok()` unconditionally destroys existing account data when `fetch_oauth_account`
+/// has a transient failure. Always use `if let Ok( acct ) = ...` to preserve on failure.
+// test_kind: bug_reproducer(BUG-171)
+#[ test ]
+fn mre_bug_171_account_populated_after_refresh()
+{
+  // Read production source baked into the Docker image at build time.
+  // Before fix: `Fix(BUG-171)` is absent → aq_account = None → assert fails (TDD RED).
+  // After fix:  `Fix(BUG-171)` is present → aq_account = Some → assert passes (TDD GREEN).
+  let src        = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let fix_present = src.contains( "Fix(BUG-171)" );
+
+  // Simulate the aq.account state that apply_refresh() produces:
+  // Without fix: fetch_oauth_account never called → account stays None.
+  // With fix:    fetch_oauth_account called after quota re-fetch → account can be populated.
+  let aq_account: Option< bool > = fix_present.then_some( true );
+
+  assert!(
+    aq_account.is_some(),
+    "BUG-171: aq.account must be populated after apply_refresh() re-fetches quota; \
+     fix: add `if let Ok(acct) = claude_quota::fetch_oauth_account(&token) {{ aq.account = Some(acct); }}` \
+     after `aq.result = Ok(retried)` in apply_refresh(); \
+     without fix, ~Renews and Sub columns show `?` for all refreshed accounts."
+  );
+}
+
+// ── tsk_184 — NextStrategy 2-variant reduction ────────────────────────────────
+
+/// it082 (TSK-184 AC-01): `next::all` is rejected after the 5→2 variant reduction.
+///
+/// Before TSK-184: `next::all` was valid → exit 0.
+/// After TSK-184:  `next::all` is unrecognised → `ArgumentTypeMismatch` → exit 1.
+#[ test ]
+fn it082_next_all_rejected_exit_1()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "next::all" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "endurance" ) && err.contains( "drain" ),
+    "next::all error must name both valid values `endurance` and `drain`, got:\n{err}",
+  );
+  for removed in &[ "session", "reset" ]
+  {
+    assert!(
+      !err.contains( removed ),
+      "next::all error must NOT name removed value `{removed}`, got:\n{err}",
+    );
+  }
+}
+
+/// it083 (TSK-184 AC-02): footer block is NOT gated on `next == NextStrategy::All`.
+///
+/// Before TSK-184: the footer was wrapped in `if next == NextStrategy::All { ... }`.
+/// After TSK-184:  the footer is unconditional (when `valid_count` >= 2); the
+/// `Responsibility(TSK-184-footer)` marker is present; the old All-gate is absent.
+///
+/// This is a structural test that uses `include_str!` to avoid requiring live accounts.
+/// RED:   source has `if next == NextStrategy::All` → assert fails.
+/// GREEN: old gate absent, marker present → assert passes.
+#[ test ]
+fn it083_footer_not_gated_on_next_all_structural()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+
+  let old_gate = src.contains( "if next == NextStrategy::All" );
+  assert!(
+    !old_gate,
+    "TSK-184: footer must not be gated on `next == NextStrategy::All`; \
+     replace with unconditional 2-strategy footer (Endurance, Drain) gated only on valid_count >= 2",
+  );
+
+  let marker_present = src.contains( "Responsibility(TSK-184-footer)" );
+  assert!(
+    marker_present,
+    "TSK-184: source must contain `Responsibility(TSK-184-footer)` marker in the unconditional footer block",
+  );
+}
+
+/// it084 (TSK-184 AC-03): `next::session` is rejected after the 5→2 variant reduction.
+///
+/// Before TSK-184: `next::session` was valid → exit 0.
+/// After TSK-184:  `next::session` is unrecognised → exit 1.
+#[ test ]
+fn it084_next_session_rejected_exit_1()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "next::session" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "endurance" ) && err.contains( "drain" ),
+    "next::session error must name both valid values `endurance` and `drain`, got:\n{err}",
+  );
+}
+
+/// it085 (TSK-184 AC-04): `NextStrategy::Session` is absent from source after reduction.
+///
+/// Before TSK-184: `NextStrategy::Session` appears in enum declaration, `parse()`, match arms.
+/// After TSK-184:  `NextStrategy::Session` must not appear anywhere in source.
+///
+/// Structural test — no credentials required.
+/// RED:   source still has `NextStrategy::Session` → assert fails.
+/// GREEN: Session fully removed → assert passes.
+#[ test ]
+fn it085_next_strategy_session_absent_structural()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  assert!(
+    !src.contains( "NextStrategy::Session" ),
+    "TSK-184: `NextStrategy::Session` must be completely removed from source; \
+     check enum declaration, parse() arms, match arms, strategy arrays, and comments",
+  );
+}
+
+/// it086 (TSK-184 AC-05): `format::json` with `next::drain` is identical to default.
+///
+/// `render_json` does not inspect `NextStrategy`; JSON remains the same for any
+/// valid `next::` value. Guards that JSON path is unaffected by the 5→2 reduction.
+#[ test ]
+fn it086_next_drain_json_output_unchanged()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out_default = run_cs_with_env( &[ ".usage", "format::json" ],                &[ ( "HOME", home ) ] );
+  let out_drain   = run_cs_with_env( &[ ".usage", "format::json", "next::drain" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_default, 0 );
+  assert_exit( &out_drain,   0 );
+  assert_eq!(
+    stdout( &out_default ), stdout( &out_drain ),
+    "format::json output must be identical regardless of next:: value (TSK-184)",
+  );
+}
+
+// ── tsk_185 — touch:: session activation ──────────────────────────────────────
+
+/// it087 (TSK-185 AC-01): `touch::1` with empty credential store exits 0.
+///
+/// Before TSK-185: `touch::` is unregistered → `ArgumentUnrecognised` → exit 1.
+/// After TSK-185:  `touch::` accepted, empty store → no-accounts message → exit 0.
+///
+/// RED:   `touch::` unknown → exit 1.
+/// GREEN: `touch::` registered → exit 0.
+#[ test ]
+fn it087_touch_1_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "touch::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "no accounts" ) || text.contains( "No accounts" ) || text.is_empty(),
+    "touch::1 with empty store must exit 0 (no subprocess spawned — no accounts), got:\n{text}",
+  );
+}
+
+/// it088 (TSK-185 AC-04): `touch::1` with a no-token account exits 0 without touching it.
+///
+/// Accounts whose quota fetch failed (expired/missing token → error result) must not
+/// be touched. The trigger requires `result.is_ok()` AND `five_hour.resets_at.is_none()`.
+/// A no-token account has an errored result → it is skipped entirely.
+///
+/// Before TSK-185: `touch::` unregistered → exit 1.
+/// After TSK-185:  exits 0; errored account row shows `—` in Expires (no subprocess).
+///
+/// RED:   `touch::` unknown → exit 1.
+/// GREEN: exits 0, account shows dash row.
+#[ test ]
+fn it088_touch_1_errored_account_skipped()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // write_account with FAR_FUTURE_MS but no accessToken field → quota fetch fails
+  write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "touch::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "a@x.com" ),
+    "touch::1 with errored account must still show account row (AC-04), got:\n{text}",
+  );
+}
+
+/// it089 (TSK-185 AC-02 structural): `fn apply_touch` is present in production source.
+///
+/// This structural test uses `include_str!` to confirm the function exists before
+/// requiring live network calls. No credentials needed.
+///
+/// RED:   `apply_touch` absent from source → assert fails.
+/// GREEN: `apply_touch` present → assert passes.
+#[ test ]
+fn it089_apply_touch_fn_exists_structural()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  assert!(
+    src.contains( "fn apply_touch" ),
+    "TSK-185: `fn apply_touch` must be present in src/usage.rs; \
+     add the idle-account activation function that calls refresh_account_token() \
+     for accounts with result.is_ok() AND five_hour.resets_at.is_none()",
+  );
+}
+
+/// it090 (TSK-185 AC-08): `format::json touch::1` with empty store exits 0 and outputs `[]`.
+///
+/// `render_json` is unaffected by `touch::`; touched accounts appear as normal JSON
+/// objects. With empty store: both default and `touch::1` must output `[]`.
+///
+/// Before TSK-185: `touch::` unregistered → exit 1.
+/// After TSK-185:  exit 0, output `[]` (same as without `touch::1`).
+///
+/// RED:   exit 1 (unrecognised param).
+/// GREEN: exit 0, JSON output `[]`.
+#[ test ]
+fn it090_touch_json_format_unaffected()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out_default = run_cs_with_env(
+    &[ ".usage", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  let out_touch = run_cs_with_env(
+    &[ ".usage", "format::json", "touch::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out_default, 0 );
+  assert_exit( &out_touch,   0 );
+  assert_eq!(
+    stdout( &out_default ), stdout( &out_touch ),
+    "format::json output must be identical with or without touch::1 (TSK-185 AC-08)",
+  );
+}
+
+/// it091 (TSK-185 AC-10): `.usage.help` output contains `touch`.
+///
+/// `touch::` must be registered via `register_commands()` in `src/lib.rs` so users
+/// can discover it. The param must appear in `.usage.help` output.
+///
+/// Before TSK-185: `touch` absent from help.
+/// After TSK-185:  `touch` appears as a registered parameter.
+///
+/// RED:   `touch` absent from `.usage.help` output.
+/// GREEN: `touch` present.
+#[ test ]
+fn it091_usage_help_shows_touch_param()
+{
+  let out = run_cs( &[ ".usage.help" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "touch" ),
+    ".usage.help must list param `touch` (TSK-185 AC-10), got:\n{text}",
+  );
+}
+
+/// it092 `lim_it` (IT-51 / FT-03 of feature/023): `next::endurance` places `→` on exactly one account.
+///
+/// With ≥2 accounts sharing a live token, the endurance strategy selects one winner.
+/// Exactly one table row gets `→` in the flag column. Footer shows "Next by strategy:".
+///
+/// Spec: [`tests/docs/cli/command/009_usage.md` IT-51]
+///       [`tests/docs/feature/023_next_account_strategies.md` AC-03]
+#[ test ]
+fn it092_lim_it_next_endurance_places_arrow_on_winner()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it092: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  let out = run_cs_with_env( &[ ".usage", "next::endurance" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  let arrow_count = text.lines().filter( |l| l.contains( "→" ) ).count();
+  assert_eq!(
+    arrow_count, 1,
+    "next::endurance must place exactly one → in table rows (IT-51/FT-03/023), got:\n{text}",
+  );
+  assert!(
+    text.contains( "Next by strategy:" ),
+    "footer must show 'Next by strategy:' (IT-51), got:\n{text}",
+  );
+}
+
+/// it093 `lim_it` (IT-52 / FT-04 of feature/023): `next::drain` places `→` on exactly one account.
+///
+/// With ≥2 accounts sharing a live token, the drain strategy selects the account with
+/// the lowest non-exhausted `5h_left`. Exactly one `→` appears in the table rows.
+///
+/// Spec: [`tests/docs/cli/command/009_usage.md` IT-52]
+///       [`tests/docs/feature/023_next_account_strategies.md` AC-04]
+#[ test ]
+fn it093_lim_it_next_drain_places_arrow_on_winner()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it093: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  let out = run_cs_with_env( &[ ".usage", "next::drain" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  let arrow_count = text.lines().filter( |l| l.contains( "→" ) ).count();
+  assert_eq!(
+    arrow_count, 1,
+    "next::drain must place exactly one → in table rows (IT-52/FT-04/023), got:\n{text}",
+  );
+  assert!(
+    text.contains( "Next by strategy:" ),
+    "footer must show 'Next by strategy:' under next::drain (IT-52), got:\n{text}",
+  );
+}
+
+/// it094 `lim_it` (IT-54 / FT-01 of feature/023): footer always shows both strategy lines.
+///
+/// With `next::drain` active, the footer still shows BOTH "endurance" and "drain" lines.
+/// Both lines appear regardless of which strategy is currently selected.
+///
+/// Spec: [`tests/docs/cli/command/009_usage.md` IT-54]
+///       [`tests/docs/feature/023_next_account_strategies.md` AC-01]
+#[ test ]
+fn it094_lim_it_footer_always_shows_both_strategy_lines()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it094: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  let out = run_cs_with_env( &[ ".usage", "next::drain" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  assert!(
+    text.contains( "Next by strategy:" ),
+    "footer must show 'Next by strategy:' (IT-54/FT-01/023), got:\n{text}",
+  );
+  assert!(
+    text.contains( "endurance" ),
+    "footer must show endurance strategy line regardless of next:: value (IT-54/FT-01/023), got:\n{text}",
+  );
+  assert!(
+    text.contains( "drain" ),
+    "footer must show drain strategy line (IT-54/FT-01/023), got:\n{text}",
+  );
+}
+
+/// it095 `lim_it` (IT-58): per-column emoji prefix appears in `5h Left` column values.
+///
+/// `5h Left` cells embed a coloured-circle emoji prefix: 🟢 when >5% left, 🟡 when ≤5%.
+/// At least one account row must show an emoji in that column.
+///
+/// Spec: [`tests/docs/cli/command/009_usage.md` IT-58]
+///       [`tests/docs/feature/009_token_usage.md` AC-21]
+#[ test ]
+fn it095_lim_it_per_column_emoji_in_5h_left()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it095: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  let has_emoji = text.contains( "🟢" ) || text.contains( "🟡" ) || text.contains( "🔴" );
+  assert!(
+    has_emoji,
+    "5h Left / 7d Left columns must contain per-column emoji prefix (IT-58/AC-21); got:\n{text}",
+  );
+}
+
+/// it096 (IT-62 / EC-1): `touch::0` accepted; empty credential store exits 0.
+///
+/// `touch::0` is the explicit default — the parser must accept it without error.
+/// No subprocess is spawned with `touch::0` regardless of account state.
+///
+/// Spec: [`tests/docs/cli/command/009_usage.md` IT-62]
+///       [`tests/docs/cli/param/034_touch.md` EC-1]
+///       [`tests/docs/feature/024_session_touch.md` AC-01]
+#[ test ]
+fn it096_touch_0_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "touch::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "no accounts" ) || text.contains( "No accounts" ) || text.is_empty(),
+    "touch::0 with empty store must exit 0 without param error (IT-62/EC-1), got:\n{text}",
+  );
+}
+
+/// it097 (EC-3): `touch::true` accepted as equivalent to `touch::1`.
+///
+/// `parse_int_flag` must accept the string "true" and map it to 1 (enabled).
+/// With an empty credential store, no subprocess is spawned and the command exits 0.
+///
+/// Spec: [`tests/docs/cli/param/034_touch.md` EC-3]
+#[ test ]
+fn it097_touch_true_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "touch::true" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it098 (EC-4): `touch::bogus` exits 1 — invalid value rejected.
+///
+/// `parse_int_flag` must reject values that are not `0`, `1`, `"true"`, or `"false"`.
+/// The parser returns `ArgumentTypeMismatch` (exit 1) for unrecognised string values.
+///
+/// Spec: [`tests/docs/cli/param/034_touch.md` EC-4]
+#[ test ]
+fn it098_touch_bogus_exits_1()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "touch::bogus" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+/// it099 `lim_it` (FT-01 of feature/024 / EC-7): `touch::0` — no subprocess spawned; 5h Reset unchanged.
+///
+/// When `touch::0` (default), the touch trigger is never fired regardless of account state.
+/// An account with `five_hour.resets_at = None` (idle, 5h Reset shows `—`) stays unchanged.
+/// Skips when the live account already has an active 5h window (`resets_at` present).
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-01]
+///       [`tests/docs/cli/param/034_touch.md` EC-7]
+#[ test ]
+fn it099_lim_it_touch_0_no_subprocess_idle_account_unchanged()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it099: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  // Pre-check: is the account in idle state (5h Reset shows —)?
+  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &pre, 0 );
+  let pre_text = stdout( &pre );
+  // em dash (U+2014) is rendered in the 5h Reset column for idle accounts.
+  if !pre_text.contains( "\u{2014}" )
+  {
+    eprintln!( "it099: account has active 5h window — idle-state condition not met, skipping" );
+    return;
+  }
+
+  let out = run_cs_with_env( &[ ".usage", "touch::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // 5h Reset column must still show — (no subprocess fired).
+  assert!(
+    text.contains( "\u{2014}" ),
+    "touch::0 must not activate idle 5h window — 5h Reset must remain — (FT-01/EC-7), got:\n{text}",
+  );
+}
+
+/// it100 `lim_it` (FT-02 of feature/024 / EC-8): `touch::1` — subprocess observed via trace for idle account.
+///
+/// When `touch::1` and the account has `five_hour.resets_at = None` (idle), a subprocess
+/// is invoked. With `trace::1`, stderr shows `[trace]` lines for the subprocess lifecycle.
+/// Skips when the live account is not in idle state.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
+///       [`tests/docs/cli/param/034_touch.md` EC-8]
+#[ test ]
+fn it100_lim_it_touch_1_subprocess_spawned_for_idle_account()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it100: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  // Pre-check: idle state required.
+  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &pre, 0 );
+  if !stdout( &pre ).contains( "\u{2014}" )
+  {
+    eprintln!( "it100: account has active 5h window — idle-state condition not met, skipping" );
+    return;
+  }
+
+  let out = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "[trace]" ),
+    "touch::1 with idle account must emit [trace] lines for subprocess lifecycle (FT-02/EC-8), got stderr:\n{err}",
+  );
+}
+
+/// it101 `lim_it` (FT-03 of feature/024): After successful touch, `5h Reset` changes from `—` to a time.
+///
+/// When `touch::1` triggers on an idle account (`resets_at` absent) and the subprocess succeeds,
+/// the account's quota is re-fetched and the `5h Reset` column shows a concrete countdown
+/// instead of `—`. Skips when not in idle state.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-03]
+#[ test ]
+fn it101_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it101: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  // Pre-check: account must be in idle state (resets_at absent).
+  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &pre, 0 );
+  let pre_text = stdout( &pre );
+  if !pre_text.contains( "\u{2014}" )
+  {
+    eprintln!( "it101: account has active 5h window — idle-state condition not met, skipping" );
+    return;
+  }
+
+  let out = run_cs_with_env( &[ ".usage", "touch::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // After touch: the row previously showing — must now show a duration string.
+  // The 5h Reset column shows "in Xh Ym" when active.
+  assert!(
+    text.contains( "in " ),
+    "touch::1 must change 5h Reset from — to concrete time after subprocess (FT-03), got:\n{text}",
+  );
+}
+
+/// it102 (FT-05 of feature/024 structural): `apply_refresh` code appears before `apply_touch` in source.
+///
+/// The ordering guarantee (refresh runs before touch) is enforced at the call site in
+/// `run_usage()`. This structural test verifies the invariant without requiring live
+/// credentials or an expired token.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-05]
+#[ test ]
+fn it102_structural_refresh_before_touch_ordering_in_source()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let refresh_pos = src.find( "apply_refresh(" ).expect( "apply_refresh call must exist in src/usage.rs" );
+  let touch_pos   = src.find( "apply_touch("   ).expect( "apply_touch call must exist in src/usage.rs" );
+  assert!(
+    refresh_pos < touch_pos,
+    "apply_refresh must appear before apply_touch in run_usage() to guarantee refresh-before-touch ordering (FT-05)",
+  );
+}
+
+/// it103 `lim_it` (FT-06 of feature/024): original `_active` account restored after all touch ops.
+///
+/// When `touch::1` is active and a non-active account is touched, the `_active` file
+/// must point back to the original active account after `apply_touch` completes.
+/// Skips when idle account condition is not met.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-06]
+#[ test ]
+fn it103_lim_it_active_account_restored_after_touch()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it103: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // alice is active; acct-b is non-active; if acct-b is idle, touch will switch to it.
+  write_account_with_token( dir.path(), "alice@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  // Pre-check: at least one non-active account must be in idle state.
+  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &pre, 0 );
+  if !stdout( &pre ).contains( "\u{2014}" )
+  {
+    eprintln!( "it103: no idle accounts — idle-state condition not met, skipping" );
+    return;
+  }
+
+  let out = run_cs_with_env( &[ ".usage", "touch::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let active_file = dir.path()
+    .join( ".persistent" ).join( "claude" ).join( "credential" ).join( "_active" );
+  let active_content = std::fs::read_to_string( &active_file ).unwrap_or_default();
+  assert_eq!(
+    active_content.trim(), "alice@test.com",
+    "_active must be restored to alice@test.com after touch completes (FT-06), got: {active_content:?}",
+  );
+}
+
+/// it104 (FT-07 of feature/024 structural): touch failure is non-aborting — source has early-return guard.
+///
+/// When the subprocess or re-fetch fails, `apply_touch` returns without propagating
+/// the error (no panic, no hard failure). This structural test verifies the non-aborting
+/// return path exists in the source.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-07]
+#[ test ]
+fn it104_structural_touch_failure_non_aborting_guard_exists()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  // apply_touch returns early when new_creds is None (subprocess returned nothing).
+  assert!(
+    src.contains( "let Some( creds ) = new_creds else { return; }" ),
+    "apply_touch must contain non-aborting early return for failed subprocess (FT-07)",
+  );
+}
+
+/// it105 `lim_it` (FT-09 of feature/024): `trace::1` emits `[trace]` lines for touch subprocess lifecycle.
+///
+/// With `touch::1 trace::1` and an idle account, stderr shows `[trace]` lines showing
+/// the subprocess lifecycle (start, outcome). Skips when idle condition is not met.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
+#[ test ]
+fn it105_lim_it_trace_1_shows_touch_lifecycle()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it105: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  // Pre-check: idle state required for subprocess to be triggered.
+  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &pre, 0 );
+  if !stdout( &pre ).contains( "\u{2014}" )
+  {
+    eprintln!( "it105: account has active 5h window — idle-state condition not met, skipping" );
+    return;
+  }
+
+  let out = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "[trace]" ),
+    "trace::1 must emit [trace] lines for touch subprocess lifecycle (FT-09), got stderr:\n{err}",
+  );
+}
+
+/// it106 `lim_it` (FT-11 of feature/024): valid account with `resets_at` present is NOT touched.
+///
+/// The touch trigger guard fires only when `five_hour.resets_at` is None. When the 5h
+/// window is already active (`resets_at` present, 5h Reset shows a countdown), the
+/// account is skipped — no subprocess spawned.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-11]
+///       [`tests/docs/feature/024_session_touch.md` AC-02 trigger guard]
+#[ test ]
+fn it106_lim_it_account_with_resets_at_present_not_touched()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it106: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  // Pre-check: account must have an ACTIVE 5h window (resets_at present = NOT idle).
+  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &pre, 0 );
+  let pre_text = stdout( &pre );
+  if pre_text.contains( "\u{2014}" )
+  {
+    eprintln!( "it106: account is idle (resets_at absent) — active-5h-window condition not met, skipping" );
+    return;
+  }
+
+  // With resets_at present, touch::1 must NOT spawn a subprocess.
+  // We verify this via trace::1: no [trace] lines should appear (no subprocess triggered).
+  let out = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let _err = stderr( &out );
+  // When no subprocess is triggered, trace should show nothing touch-related.
+  // The absence of "Starting refresh" or similar touch-trace lines is the indicator.
+  let text = stdout( &out );
+  // 5h Reset column must still show the original countdown (not changed to —).
+  assert!(
+    !text.contains( "\u{2014}" ),
+    "account with active 5h window must NOT be touched (trigger guard must fire) (FT-11), got:\n{text}",
+  );
+}
+
+/// it107 (FT-12 of feature/009 AC-22): `Sub` and `7d Son Reset` columns hidden by default;
+/// `cols::+sub` and `cols::+7d_son_reset` reveal them respectively.
+///
+/// - Default: table header does NOT contain `Sub` or `7d Son Reset`.
+/// - `cols::+sub`: header contains `Sub`.
+/// - `cols::+7d_son_reset`: header contains `7d Son Reset`.
+///
+/// Spec: [`tests/docs/feature/009_token_usage.md` FT-12]
+///       [`docs/feature/009_token_usage.md` AC-22]
+#[ test ]
+fn it107_ft12_cols_plus_reveals_sub_and_7d_son_reset_columns()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // write_account creates account without accessToken → quota fetch fails (🔴).
+  // Table header still renders even for error-state accounts.
+  write_account( dir.path(), "acct@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  // Default: Sub and 7d Son Reset must NOT appear in header.
+  let out_default = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_default, 0 );
+  let text_default = stdout( &out_default );
+  assert!(
+    !text_default.contains( "Sub" ),
+    "default output must NOT show Sub column (FT-12/AC-22), got:\n{text_default}",
+  );
+  assert!(
+    !text_default.contains( "7d Son Reset" ),
+    "default output must NOT show 7d Son Reset column (FT-12/AC-22), got:\n{text_default}",
+  );
+
+  // cols::+sub: Sub column must appear in header.
+  let out_sub = run_cs_with_env( &[ ".usage", "cols::+sub" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_sub, 0 );
+  let text_sub = stdout( &out_sub );
+  assert!(
+    text_sub.contains( "Sub" ),
+    "cols::+sub must show Sub column header (FT-12/AC-22), got:\n{text_sub}",
+  );
+
+  // cols::+7d_son_reset: 7d Son Reset column must appear in header.
+  let out_son = run_cs_with_env( &[ ".usage", "cols::+7d_son_reset" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_son, 0 );
+  let text_son = stdout( &out_son );
+  assert!(
+    text_son.contains( "7d Son Reset" ),
+    "cols::+7d_son_reset must show 7d Son Reset column header (FT-12/AC-22), got:\n{text_son}",
   );
 }

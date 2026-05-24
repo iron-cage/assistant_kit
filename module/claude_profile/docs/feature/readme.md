@@ -33,5 +33,6 @@
 | 020 | [Usage Sort Strategies](020_usage_sort_strategies.md) | Configurable row ordering in `.usage` output — `sort::`, `desc::`, `prefer::` parameters with `name`, `endurance`, `drain`, `reset` strategies | ✅ |
 | 021 | [Extended Snapshot Fields](021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` from existing `{name}.claude.json`; `uuid::` and `capabilities::` opt-in params | 🔲 |
 | 022 | [Org Identity Snapshot](022_org_identity_snapshot.md) | `{name}.roles.json` via endpoint 005 at save-time; `org_uuid::` and `org_name::` opt-in params | 🔲 |
-| 023 | [Next Account Recommendation Strategies](023_next_account_strategies.md) | Configurable account recommendation in `.usage` output — `next::` parameter with `all`, `session`, `endurance`, `drain`, `reset` strategies | 🔲 |
+| 023 | [Next Account Recommendation Strategies](023_next_account_strategies.md) | Configurable account recommendation in `.usage` output — `next::` parameter with `endurance` (default), `drain` strategies; always-visible 2-strategy footer | 🔲 |
+| 024 | [Session Touch via Isolated Subprocess](024_session_touch.md) | Activate idle accounts' 5h session windows by sending minimal prompt via isolated subprocess; `touch::` parameter | 🔲 |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

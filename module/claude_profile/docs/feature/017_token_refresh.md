@@ -40,6 +40,11 @@ if refresh_param == 1:
                 account_quota.expires_at_ms = exp_ms
             // else: unchanged (last-resort safe fallback — both strategies failed)
             account_quota.result = fetch_oauth_usage(new_token)   // retry this account only
+            if account_quota.result is Ok:
+                // Fix(BUG-171): re-populate account data with new token so ~Renews/Sub show current values
+                if let Some(account_data) = fetch_oauth_account(new_token):
+                    account_quota.account = Some(account_data)
+                // on fetch_oauth_account failure: original account_quota.account preserved (non-aborting)
         else:
             // original error preserved; account row shows pre-refresh error state
 
@@ -82,6 +87,7 @@ Two other arg combinations are broken and must not be used:
 - **AC-23**: The `refresh::` parameter appears in `.usage --help` output with its default value (`1`).
 - **AC-25**: After `run_isolated` returns `credentials: Some(new_json)`, `account_quota.expires_at_ms` is updated using a two-step fallback: (1) decode the JWT `exp` claim from the new `accessToken` via `jwt_exp_ms(new_json)` — preferred for JWT-format tokens; (2) if JWT decoding returns `None` (e.g., opaque `sk-ant-oat01-*` tokens with no `.` separator), read `expiresAt` directly from the credentials JSON via `parse_u064_field(new_json, "expiresAt")`. If both strategies fail, `expires_at_ms` is left unchanged as a last-resort safe fallback. Fix for [BUG-170](../../../../task/claude_profile/bug/170_expires_column_stale_after_refresh_opaque_token.md).
 - **AC-26**: When `trace=true`, `refresh_account_token` emits `[trace] refresh {name}  {step}: {outcome}` lines to stderr for each lifecycle step — `switch_account`, `read credentials`, `run_isolated` (with `"invoking claude  args=["--print", "."]  timeout=35s"` before the call), `write credentials`, and `save`. Each outcome is either `OK` (or `OK credentials={Some|None}` for `run_isolated`) or `Err({error})`. The `trace` parameter is forwarded by `apply_refresh` into `refresh_account_token` so the full lifecycle is observable from `clp .usage refresh::1 trace::1`. Fix for [BUG-166](../../../../task/claude_profile/bug/166_refresh_account_token_no_trace.md).
+- **AC-27**: After `apply_refresh()` successfully re-fetches quota (i.e., `account_quota.result` transitions to `Ok`), `account_quota.account` is re-populated by calling `fetch_oauth_account()` with the new token. Consequence: `~Renews` and `Sub` columns show current data for successfully-refreshed accounts rather than the stale `?` they would show if `aq.account` were left as `None`. If the `fetch_oauth_account()` call fails, the original `account_quota.account` value is preserved unchanged (non-aborting). Fix for BUG-171.
 
 ### Cross-References
 

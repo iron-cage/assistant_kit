@@ -63,7 +63,7 @@ clp .credentials.status file::1 saved::1
 # Saved:   2 account(s)
 
 clp .credentials.status format::json
-# {"subscription":"max","tier":"default_claude_max_20x","token":"valid","expires_in_secs":26640,"email":"alice@acme.com","account":"alice@acme.com","file":"/home/user/.claude/.credentials.json","saved":2,"display_name":"alice","role":"admin","billing":"stripe_subscription","model":"sonnet"}
+# {"subscription":"max","tier":"default_claude_max_20x","token":"valid","expires_in_secs":26640,"email":"alice@acme.com","account":"alice@acme.com","file":"/home/user/.claude/.credentials.json","saved":2,"display_name":"alice","role":"admin","billing":"stripe_subscription","model":"sonnet","tagged_id":"user_01abc","capabilities":["claude_max","chat"],"organization_uuid":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee","organization_name":"alice@example.com's Organization","organization_role":"admin","workspace_uuid":"","workspace_name":""}
 ```
 
 **Notes:**
