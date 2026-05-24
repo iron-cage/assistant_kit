@@ -1,4 +1,11 @@
-# User Story :: 006. Verbose Debugging
+# CLI User Story: Verbose Debugging
+
+### Scope
+
+- **Purpose**: Document verbosity control for runner diagnostic output at different levels.
+- **Responsibility**: Define acceptance criteria for --verbosity gate behavior from 0 to 5.
+- **In Scope**: Verbosity levels 0–5, stderr diagnostic output, --dry-run independence, --trace independence.
+- **Out of Scope**: Subprocess output (unaffected by --verbosity), trace mode (→ 008_trace_execution.md).
 
 ### Persona
 
@@ -18,21 +25,27 @@ Control the level of runner diagnostic output to understand what `clr` is doing:
 
 ### Referenced Commands
 
-| # | Command | Notes |
-|---|---------|-------|
-| 1 | [`run`](../001_command.md#command--1-run) | `--verbosity` gates runner diagnostic output |
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`run`](../command/01_run.md) | Default command; `--verbosity` gates diagnostic output |
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 2 | [Runner Control](../param_group/02_runner_control.md) | `--verbosity` is a runner control flag |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--verbosity`](../param/012_verbosity.md) | Runner output gate level (0–5) |
-| 2 | [`--dry-run`](../param/011_dry_run.md) | Always emits preview regardless of verbosity |
-| 3 | [`--trace`](../param/013_trace.md) | Independent of verbosity: always prints env+cmd |
+| 11 | [`--dry-run`](../param/011_dry_run.md) | Always emits preview regardless of verbosity |
+| 12 | [`--verbosity`](../param/012_verbosity.md) | Runner output gate level (0–5) |
+| 13 | [`--trace`](../param/013_trace.md) | Independent of verbosity: always prints env+cmd |
 
 ### Related User Stories
 
 | # | User Story | Relationship |
-|---|-----------|-------------|
-| 1 | [004 Dry-run Preview](004_dry_run_preview.md) | `--dry-run` is related to diagnosis |
-| 2 | [008 Trace Execution](008_trace_execution.md) | `--trace` is the complementary diagnostic flag |
+|---|------------|--------------|
+| 4 | [Dry-run Preview](004_dry_run_preview.md) | `--dry-run` is related to diagnosis |
+| 8 | [Trace Execution](008_trace_execution.md) | `--trace` is the complementary diagnostic flag |

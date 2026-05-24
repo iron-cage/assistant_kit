@@ -1,4 +1,11 @@
-# User Story :: 012. Code Block Extraction
+# CLI User Story: Code Block Extraction
+
+### Scope
+
+- **Purpose**: Document stripping outermost markdown fences from captured stdout using --strip-fences.
+- **Responsibility**: Define acceptance criteria for fence stripping behavior including no-op case.
+- **In Scope**: Fence removal, content preservation, no-op on missing fence pair, interaction with --file.
+- **Out of Scope**: JSON structured output (→ 013_structured_json_pipeline.md).
 
 ### Persona
 
@@ -18,21 +25,28 @@ Strip the outermost markdown code fence from captured stdout so the bare code is
 
 ### Referenced Commands
 
-| # | Command | Notes |
-|---|---------|-------|
-| 1 | [`run`](../001_command.md#command--1-run) | `--strip-fences` post-processes `run` stdout |
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`run`](../command/01_run.md) | Default command; `--strip-fences` removes code fences |
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 1 | [Claude-Native Flags](../param_group/01_claude_native_flags.md) | `--print` captures stdout for fence stripping |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | `--strip-fences` is a runner control flag |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--strip-fences`](../param/026_strip_fences.md) | Remove outermost code fence from stdout |
 | 2 | [`--print`](../param/002_print.md) | Print mode captures output for fence stripping |
-| 3 | [`--file`](../param/025_file.md) | Commonly used with file-driven code generation |
+| 25 | [`--file`](../param/025_file.md) | Commonly used with file-driven code generation |
+| 26 | [`--strip-fences`](../param/026_strip_fences.md) | Remove outermost code fence from stdout |
 
 ### Related User Stories
 
 | # | User Story | Relationship |
-|---|-----------|-------------|
-| 1 | [011 File Input](011_file_input.md) | Commonly combined: file → generate → strip |
-| 2 | [013 Structured JSON Pipeline](013_structured_json_pipeline.md) | `--strip-fences` also used for JSON extraction |
+|---|------------|--------------|
+| 11 | [File Input](011_file_input.md) | Commonly combined: file → generate → strip |
+| 13 | [Structured JSON Pipeline](013_structured_json_pipeline.md) | `--strip-fences` also used for JSON extraction |

@@ -5,7 +5,7 @@
 - **Purpose**: Document the clr command-line interface for Claude Code execution.
 - **Responsibility**: Reference documentation for commands, parameters, types, and user stories.
 - **In Scope**: commands, parameters, types, parameter groups, dictionary, user stories, env parameters.
-- **Out of Scope**: Implementation design (→ `feature/001_runner_tool.md`), API contracts (→ `api/001_public_api.md`), test planning (→ `tests/docs/cli/`).
+- **Out of Scope**: Implementation design (-> `feature/001_runner_tool.md`), API contracts (-> `api/001_public_api.md`), test planning (-> `tests/docs/cli/`).
 
 Execute Claude Code with configurable `--flag value` parameters.
 
@@ -15,41 +15,53 @@ Execute Claude Code with configurable `--flag value` parameters.
 clr [OPTIONS] [MESSAGE]
 ```
 
+### Responsibility Table
+
+| File | Responsibility |
+|------|----------------|
+| `command/` | Command reference: run, ask, isolated, refresh, help (5 commands) |
+| `dictionary.md` | Domain vocabulary for clr CLI concepts |
+| `env_param.md` | CLR_* env var fallbacks and CLAUDE_CODE_* subprocess vars |
+| `param_group/` | Logical parameter groupings (4 groups) |
+| `type/` | Semantic type definitions (12 types) |
+| `param/` | Individual parameter reference docs (27 parameters) |
+| `user_story/` | User goal and usage pattern docs (16 user stories) |
+
 ### Completion Matrix
 
-| File | L1 | L2 | L3 | L4 | L5 | Status |
-|------|----|----|----|----|----|----|
+| Entity | L1 | L2 | L3 | L4 | L5 | Status |
+|--------|----|----|----|----|----|----|
 | readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| 001_command.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| param/readme.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| 002_dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| 005_type.md | ✅ | ➖ | ➖ | ➖ | ➖ | Partial |
-| 004_param_group.md | ✅ | ➖ | ➖ | ➖ | ➖ | Partial |
-| user_story/readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
-| user_story/ (15 instances) | ✅ | ✅ | ➖ | ➖ | ➖ | Partial |
-| 003_env_param.md | ✅ | ➖ | ✅ | ➖ | ➖ | Complete |
-| config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A |
-| format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A |
+| command/ (5 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param/ (27 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
+| type/ (12 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param_group/ (4 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| user_story/ (16 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no config file mechanism |
+| format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no named output formats |
 | tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
-| tests/docs/cli/command/*.md (5 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/param/*.md (27 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/param_group/*.md (4 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/type/*.md (12 types; 12 test specs) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/env_param/*.md (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/command/ (5 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/param/ (27 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/param_group/ (4 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/type/ (12 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/env_param/ (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/user_story/ (16 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 
-**Current Level:** L3
+**Current Level:** L5
 **Design Completeness:** 100%
-**Implementation Status:** 27/27 params implemented; 25 CLR_* run env vars
+**Implementation Status:** 100% (5/5 commands implemented)
 
 ### Navigation
 
-- [Commands](001_command.md) — command reference (5 commands)
+- [Commands](command/readme.md) — command reference (5 commands)
 - [Parameters](param/readme.md) — flag and argument reference (27 parameters)
-- [Types](005_type.md) — semantic type definitions (12 types)
-- [Parameter Groups](004_param_group.md) — logical parameter groupings (4 groups)
-- [Dictionary](002_dictionary.md) — domain vocabulary
-- [User Stories](user_story/readme.md) — user goals and usage patterns (15 user stories)
-- [Env Parameters](003_env_param.md) — input and subprocess environment variables (29 variables)
+- [Types](type/readme.md) — semantic type definitions (12 types)
+- [Parameter Groups](param_group/readme.md) — logical parameter groupings (4 groups)
+- [Dictionary](dictionary.md) — domain vocabulary
+- [User Stories](user_story/readme.md) — user goals and usage patterns (16 user stories)
+- [Env Parameters](env_param.md) — input and subprocess environment variables (29 variables)
 
 ### See Also
 

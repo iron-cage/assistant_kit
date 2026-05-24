@@ -24,8 +24,8 @@
 //! - T57: empty string positional arg after `--` separator is silently skipped
 //! - T58: message is suffixed (not prefixed) with `"\n\nultrathink"` — suffix position guard
 
-mod common;
-use common::run_cli;
+mod cli_binary_test_helpers;
+use cli_binary_test_helpers::run_cli;
 
 // T50: message is suffixed with "\n\nultrathink" by default
 //

@@ -1,4 +1,11 @@
-# User Story :: 001. Interactive REPL
+# CLI User Story: Interactive REPL
+
+### Scope
+
+- **Purpose**: Document the interactive REPL invocation with automatic session continuation.
+- **Responsibility**: Define acceptance criteria for opening the REPL without an explicit message.
+- **In Scope**: No-message REPL launch, session continuation, --dir project scoping, --new-session override.
+- **Out of Scope**: Message-driven invocation (→ 003_interactive_with_message.md), print mode (→ 002_print_mode_capture.md).
 
 ### Persona
 
@@ -17,14 +24,20 @@ Open the Claude Code REPL with automatic session continuation so the conversatio
 
 ### Referenced Commands
 
-| # | Command | Notes |
-|---|---------|-------|
-| 1 | [`run`](../001_command.md#command--1-run) | Default command; no message triggers REPL mode |
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`run`](../command/01_run.md) | Default command; no message triggers REPL mode |
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 2 | [Runner Control](../param_group/02_runner_control.md) | `--dir`, `--new-session`, `--session-dir` control REPL session |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--dir`](../param/008_dir.md) | Set working directory for the REPL session |
-| 2 | [`--new-session`](../param/007_new_session.md) | Discard prior context; start fresh |
-| 3 | [`--session-dir`](../param/010_session_dir.md) | Override session storage location |
+| 7 | [`--new-session`](../param/007_new_session.md) | Discard prior context; start fresh |
+| 8 | [`--dir`](../param/008_dir.md) | Set working directory for the REPL session |
+| 10 | [`--session-dir`](../param/010_session_dir.md) | Override session storage location |

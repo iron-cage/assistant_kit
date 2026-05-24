@@ -36,37 +36,37 @@
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
-| 1 | `[MESSAGE]` | [`MessageText`](../005_type.md#type--1-messagetext) | — | Any text | Prompt text for Claude | 2 cmds |
+| 1 | `[MESSAGE]` | [`MessageText`](../type/01_message_text.md) | — | Any text | Prompt text for Claude | 2 cmds |
 | 2 | `-p`/`--print` | bool | auto | present/absent | Explicit print mode (default when message given) | 1 cmd |
-| 3 | `--model` | [`ModelName`](../005_type.md#type--4-modelname) | — | Any model name | Claude model to use | 1 cmd |
+| 3 | `--model` | [`ModelName`](../type/04_model_name.md) | — | Any model name | Claude model to use | 1 cmd |
 | 4 | `--verbose` | bool | false | present/absent | Enable Claude verbose output | 1 cmd |
 | 5 | `--no-skip-permissions` | bool | false | present/absent | Disable automatic permission bypass | 1 cmd |
 | 6 | `--interactive` | bool | false | present/absent | Interactive TTY passthrough when message given | 1 cmd |
 | 7 | `--new-session` | bool | false | present/absent | Start fresh session (disables default continuation) | 1 cmd |
-| 8 | `--dir` | [`DirectoryPath`](../005_type.md#type--2-directorypath) | cwd | Any path | Working directory | 1 cmd |
-| 9 | `--max-tokens` | [`TokenLimit`](../005_type.md#type--3-tokenlimit) | 200000 | 0 to 4294967295 | Max output tokens | 1 cmd |
-| 10 | `--session-dir` | [`DirectoryPath`](../005_type.md#type--2-directorypath) | — | Any path | Session storage directory | 1 cmd |
+| 8 | `--dir` | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Any path | Working directory | 1 cmd |
+| 9 | `--max-tokens` | [`TokenLimit`](../type/03_token_limit.md) | 200000 | 0 to 4294967295 | Max output tokens | 1 cmd |
+| 10 | `--session-dir` | [`DirectoryPath`](../type/02_directory_path.md) | — | Any path | Session storage directory | 1 cmd |
 | 11 | `--dry-run` | bool | false | present/absent | Print command without executing | 1 cmd |
-| 12 | `--verbosity` | [`VerbosityLevel`](../005_type.md#type--5-verbositylevel) | 3 | 0 to 5 | Runner output gate level | 1 cmd |
+| 12 | `--verbosity` | [`VerbosityLevel`](../type/05_verbosity_level.md) | 3 | 0 to 5 | Runner output gate level | 1 cmd |
 | 13 | `--trace` | bool | false | present/absent | Print diagnostic details to stderr then execute | 3 cmds |
 | 14 | `--no-ultrathink` | bool | false | present/absent | Disable default ultrathink message suffix | 1 cmd |
-| 15 | `--system-prompt` | [`SystemPromptText`](../005_type.md#type--6-systemprompttext) | — | Any text | Set system prompt (replaces the default) | 1 cmd |
-| 16 | `--append-system-prompt` | [`SystemPromptText`](../005_type.md#type--6-systemprompttext) | — | Any text | Append text to the default system prompt | 1 cmd |
-| 17 | `--effort` | [`EffortLevel`](../005_type.md#type--7-effortlevel) | max | low/medium/high/max | Reasoning effort level forwarded to claude | 1 cmd |
+| 15 | `--system-prompt` | [`SystemPromptText`](../type/06_system_prompt_text.md) | — | Any text | Set system prompt (replaces the default) | 1 cmd |
+| 16 | `--append-system-prompt` | [`SystemPromptText`](../type/06_system_prompt_text.md) | — | Any text | Append text to the default system prompt | 1 cmd |
+| 17 | `--effort` | [`EffortLevel`](../type/07_effort_level.md) | max | low/medium/high/max | Reasoning effort level forwarded to claude | 1 cmd |
 | 18 | `--no-effort-max` | bool | false | present/absent | Suppress default `--effort max` injection | 1 cmd |
-| 19 | `--creds` | [`CredentialsFilePath`](../005_type.md#type--8-credentialsfilepath) | — | Any existing file path | Credentials JSON file (required) | 2 cmds |
-| 20 | `--timeout` | [`TimeoutSecs`](../005_type.md#type--9-timeoutsecs) | 30/45 | Non-negative integer | Max seconds to wait for subprocess (30 isolated, 45 refresh) | 2 cmds |
+| 19 | `--creds` | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | — | Any existing file path | Credentials JSON file (required) | 2 cmds |
+| 20 | `--timeout` | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30/45 | Non-negative integer | Max seconds to wait for subprocess (30 isolated, 45 refresh) | 2 cmds |
 | 21 | `--no-chrome` | bool | false | present/absent | Suppress default `--chrome` injection | 1 cmd |
 | 22 | `--no-persist` | bool | false | present/absent | Disable session persistence (`--no-session-persistence`) | 1 cmd |
-| 23 | `--json-schema` | [`JsonSchemaText`](../005_type.md#type--10-jsonschematext) | — | Valid JSON object string | JSON Schema for structured output validation | 1 cmd |
-| 24 | `--mcp-config` | [`McpConfigPath`](../005_type.md#type--11-mcpconfigpath) | — | Any existing file path | MCP server config file (repeatable) | 1 cmd |
-| 25 | `--file` | [`FilePath`](../005_type.md#type--12-filepath) | — | Any readable file path | File content piped as subprocess stdin | 1 cmd |
+| 23 | `--json-schema` | [`JsonSchemaText`](../type/10_json_schema_text.md) | — | Valid JSON object string | JSON Schema for structured output validation | 1 cmd |
+| 24 | `--mcp-config` | [`McpConfigPath`](../type/11_mcp_config_path.md) | — | Any existing file path | MCP server config file (repeatable) | 1 cmd |
+| 25 | `--file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | File content piped as subprocess stdin | 1 cmd |
 | 26 | `--strip-fences` | bool | false | present/absent | Strip outermost markdown code fences from stdout | 1 cmd |
 | 27 | `--keep-claudecode` | bool | false | present/absent | Preserve `CLAUDECODE` env var in subprocess (default: removed) | 1 cmd |
 
 **Total:** 27 parameters
 
-**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../004_param_group.md#group--1-claude-native-flags). Parameters 5–14, 18, 21, 22, 25, 26, and 27 form [Runner Control](../004_param_group.md#group--2-runner-control). Parameters 15–16 form [System Prompt](../004_param_group.md#group--3-system-prompt). Parameters 19–20 form [Credential Operations](../004_param_group.md#group--4-credential-operations).
+**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25, 26, and 27 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
 
 ### Navigation
 

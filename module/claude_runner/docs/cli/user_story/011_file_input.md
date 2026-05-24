@@ -1,4 +1,11 @@
-# User Story :: 011. File Input
+# CLI User Story: File Input
+
+### Scope
+
+- **Purpose**: Document piping a file's content as subprocess stdin using --file.
+- **Responsibility**: Define acceptance criteria for --file behavior including error handling and path resolution.
+- **In Scope**: --file path piping, error on non-readable path, path resolution relative to caller cwd.
+- **Out of Scope**: JSON-schema structured output (→ 013_structured_json_pipeline.md), shell-pipeline equivalent.
 
 ### Persona
 
@@ -18,22 +25,28 @@ Pipe a file's content as stdin to the claude subprocess using a single `clr` inv
 
 ### Referenced Commands
 
-| # | Command | Notes |
-|---|---------|-------|
-| 1 | [`run`](../001_command.md#command--1-run) | `--file` applies to the `run` subcommand |
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`run`](../command/01_run.md) | Default command; `--file` pipes content as stdin |
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 2 | [Runner Control](../param_group/02_runner_control.md) | `--file` is a runner control flag |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--file`](../param/025_file.md) | Path to file piped as subprocess stdin |
-| 2 | [`[MESSAGE]`](../param/001_message.md) | Prompt sent alongside the file content |
-| 3 | [`--print`](../param/002_print.md) | Print mode (typically used with file input) |
-| 4 | [`--strip-fences`](../param/026_strip_fences.md) | Strip output fences after file-driven generation |
+| 1 | [`--message`](../param/001_message.md) | Prompt sent alongside the file content |
+| 2 | [`--print`](../param/002_print.md) | Print mode (typically used with file input) |
+| 25 | [`--file`](../param/025_file.md) | Path to file piped as subprocess stdin |
+| 26 | [`--strip-fences`](../param/026_strip_fences.md) | Strip output fences after file-driven generation |
 
 ### Related User Stories
 
 | # | User Story | Relationship |
-|---|-----------|-------------|
-| 1 | [012 Code Block Extraction](012_code_block_extraction.md) | Commonly combined with `--file` to extract code |
-| 2 | [013 Structured JSON Pipeline](013_structured_json_pipeline.md) | File input drives JSON extraction pipelines |
+|---|------------|--------------|
+| 12 | [Code Block Extraction](012_code_block_extraction.md) | Commonly combined with `--file` to extract code |
+| 13 | [Structured JSON Pipeline](013_structured_json_pipeline.md) | File input drives JSON extraction pipelines |

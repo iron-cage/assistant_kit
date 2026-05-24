@@ -5,7 +5,7 @@
 - **Purpose**: Document canonical user goals for the `clr` CLI.
 - **Responsibility**: Enumerate the user intents that drive `clr` design: what users want to accomplish and when the feature is considered done.
 - **In Scope**: All meaningful usage patterns addressable by a single `clr` invocation or mode.
-- **Out of Scope**: Implementation internals (→ `feature/001_runner_tool.md`), parameter semantics (→ `cli/param/`), type constraints (→ `cli/005_type.md`).
+- **Out of Scope**: Implementation internals (→ `feature/001_runner_tool.md`), parameter semantics (→ `cli/param/`), type constraints (→ `cli/type/`).
 
 ### Responsibility Table
 
@@ -26,6 +26,7 @@
 | 013_structured_json_pipeline.md | User story: generate schema-constrained JSON for downstream tools |
 | 014_credential_refresh.md | User story: refresh OAuth credentials without running a task |
 | 015_ask_mode.md | User story: quick Q&A with lightweight defaults |
+| 016_cli_discoverability.md | User story: discover CLI commands and usage via help |
 
 ### Index
 
@@ -46,3 +47,4 @@
 | 013 | Structured JSON Pipeline | `--json-schema`, `--strip-fences` | `run` |
 | 014 | Credential Refresh | `--creds`, `--timeout`, `--trace` | `refresh` |
 | 015 | Ask Mode | `[MESSAGE]`, `--effort`, `--max-tokens` | `ask` |
+| 016 | CLI Discoverability | (none) | `help` |

@@ -1,4 +1,11 @@
-# User Story :: 005. Project-specific Execution
+# CLI User Story: Project-specific Execution
+
+### Scope
+
+- **Purpose**: Document project-scoped execution using --dir and --session-dir for isolation.
+- **Responsibility**: Define acceptance criteria for directing Claude to a specific directory with isolated session state.
+- **In Scope**: --dir subprocess cwd, --session-dir session storage, combined usage, --new-session at project start.
+- **Out of Scope**: Credential isolation (→ 010_credential_isolated_execution.md).
 
 ### Persona
 
@@ -17,15 +24,21 @@ Run Claude scoped to a specific project directory and session storage location s
 
 ### Referenced Commands
 
-| # | Command | Notes |
-|---|---------|-------|
-| 1 | [`run`](../001_command.md#command--1-run) | Both `--dir` and `--session-dir` apply to `run` |
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`run`](../command/01_run.md) | Default command; `--dir` and `--session-dir` scope execution |
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 2 | [Runner Control](../param_group/02_runner_control.md) | `--dir` and `--session-dir` are runner control flags |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--dir`](../param/008_dir.md) | Set subprocess working directory |
-| 2 | [`--session-dir`](../param/010_session_dir.md) | Set project-specific session storage path |
-| 3 | [`--new-session`](../param/007_new_session.md) | Discard prior session at that location |
-| 4 | [`--interactive`](../param/006_interactive.md) | Continue interactively in the project directory |
+| 6 | [`--interactive`](../param/006_interactive.md) | Continue interactively in the project directory |
+| 7 | [`--new-session`](../param/007_new_session.md) | Discard prior session at that location |
+| 8 | [`--dir`](../param/008_dir.md) | Set subprocess working directory |
+| 10 | [`--session-dir`](../param/010_session_dir.md) | Set project-specific session storage path |

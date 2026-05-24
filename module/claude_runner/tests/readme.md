@@ -15,7 +15,9 @@
 | CLI flags (T01–T49) | `cli_args_test.rs` | Core flag parsing and builder translation |
 | Ultrathink (T50–T58) | `ultrathink_args_test.rs` | Message suffix injection and opt-out |
 | Effort flags (T59–T70) | `effort_args_test.rs` | Default max injection, overrides, suppression |
-| Param edge cases (EC-N) | `param_edge_cases_test.rs` | Per-param positive/negative edge cases for all 24 params |
+| Param edge cases (EC-N) | `param_edge_cases_test.rs` | Per-param positive/negative edge cases: help, model, verbose, no-skip-permissions, interactive, new-session, dir, session-dir, dry-run, verbosity, print, system-prompt, append-system-prompt, no-effort-max, invariant |
+| Trace edge cases (S04–S06, S58–S60) | `param_trace_edge_cases_test.rs` | `--trace` parameter edge cases including isolated/refresh credential trace format |
+| Extended flag edge cases (S34–S57) | `param_extended_flags_test.rs` | Per-param edge cases for `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config` |
 | Param groups (CC-N) | `param_group_test.rs` | Combined-flag interaction tests for param groups |
 | Dry-run output | `dry_run_test.rs` | Env vars, command line structure, message quoting |
 | Execution modes | `execution_mode_test.rs` | Interactive/print routing, exit codes, stderr |
@@ -23,9 +25,10 @@
 | YAML structure | `commands_yaml_test.rs` | `.claude` and `.claude.help` command definitions |
 | Library API | `lib_test.rs` | `register_commands()` callability |
 | Stale-ref guards | `stale_ref_guard_test.rs` | No `claude_runner_plugin` or `dream_agent` references |
-| Isolated subcommand | `isolated.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection |
+| Isolated subcommand | `isolated_test.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection |
 | CLR_* env vars (E01–E24) | `env_var_test.rs` | CLR_* env var fallback for all 24 params, CLI-wins checks |
-| Shared helpers | `common.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
+| User stories (US-1–US-4 × 15) | `user_story_test.rs` | End-to-end user story workflows for all 15 user stories |
+| Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
 ### Responsibility Table
 
@@ -42,10 +45,13 @@
 | `commands_yaml_test.rs` | Verify YAML defines `.claude`, `.claude.help`, and rejects `.please`. |
 | `lib_test.rs` | Library API: `register_commands()` callable. |
 | `stale_ref_guard_test.rs` | Guard against stale `claude_runner_plugin` and `dream_agent` references. |
-| `isolated.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs, unknown-subcommand detection. |
-| `param_edge_cases_test.rs` | Per-param edge cases (EC-N): positive/negative for all 24 CLI params. |
+| `isolated_test.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs, unknown-subcommand detection. |
+| `param_edge_cases_test.rs` | Per-param edge cases (S01–S33): help, core param flags, and invariant checks. |
+| `param_trace_edge_cases_test.rs` | Trace edge cases (S04–S06, S58–S60): basic trace behavior and credential trace format. |
+| `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`. |
 | `param_group_test.rs` | Param group combined invocations (CC-N): multi-flag interaction tests. |
 | `env_var_test.rs` | CLR_* env var fallback: E01–E24, one per param, CLI-wins verification. |
-| `common.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
+| `user_story_test.rs` | User story end-to-end workflows: US-1–US-4 for all 15 stories from `tests/docs/cli/user_story/`. |
+| `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

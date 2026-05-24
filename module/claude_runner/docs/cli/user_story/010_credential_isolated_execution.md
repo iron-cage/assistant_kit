@@ -1,4 +1,11 @@
-# User Story :: 010. Credential-isolated Execution
+# CLI User Story: Credential-isolated Execution
+
+### Scope
+
+- **Purpose**: Document running Claude with a separate credentials file in a fully isolated environment.
+- **Responsibility**: Define acceptance criteria for the `isolated` subcommand behavior and guarantees.
+- **In Scope**: Temp HOME creation, credential isolation, OAuth token writeback, timeout, temp HOME cleanup.
+- **Out of Scope**: Credential refresh without a task (→ 014_credential_refresh.md).
 
 ### Persona
 
@@ -18,14 +25,20 @@ Execute a Claude task using a specified credentials file with no access to the c
 
 ### Referenced Commands
 
-| # | Command | Notes |
-|---|---------|-------|
-| 1 | [`isolated`](../001_command.md#command--2-isolated) | Dedicated subcommand for credential isolation |
+| # | Command | Role |
+|---|---------|------|
+| 2 | [`isolated`](../command/02_isolated.md) | Credential-isolated subprocess execution |
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 4 | [Credential Operations](../param_group/04_credential_operations.md) | `--creds`, `--timeout`, `--trace` configure isolation |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--creds`](../param/019_creds.md) | Path to credentials JSON file (required) |
-| 2 | [`--timeout`](../param/020_timeout.md) | Max seconds to wait for isolated subprocess |
-| 3 | [`--trace`](../param/013_trace.md) | Print underlying call details to stderr |
+| 13 | [`--trace`](../param/013_trace.md) | Print underlying call details to stderr |
+| 19 | [`--creds`](../param/019_creds.md) | Path to credentials JSON file (required) |
+| 20 | [`--timeout`](../param/020_timeout.md) | Max seconds to wait for isolated subprocess |

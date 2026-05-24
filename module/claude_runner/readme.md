@@ -34,6 +34,7 @@ CLI for executing Claude Code via builder pattern; YAML schema constants for com
 | `src/` | Library and binary source: `COMMANDS_YAML`, `VerbosityLevel`, `clr` CLI |
 | `tests/` | CLI flag parsing, dry-run, verbosity, execution mode tests |
 | `docs/` | CLI reference and design documentation |
+| `task/` | Task registry for crate work items |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |
 | `runbox/` | Shell scripts for container-orchestrated operations. |

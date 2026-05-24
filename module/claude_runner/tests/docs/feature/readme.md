@@ -11,12 +11,6 @@ Per-feature-doc test case indices for `claude_runner`. See [feature/readme.md](.
 
 ### Responsibility Table
 
-| File | Responsibility |
-|------|----------------|
-| 001_runner_tool.md | Test cases for the runner tool feature doc instance |
-
-### Index
-
-| Doc Instance | File | Tests |
-|--------------|------|-------|
-| 001 — Runner Tool | [001_runner_tool.md](001_runner_tool.md) | 6 TC |
+| Name | Purpose | Status |
+|------|---------|--------|
+| `01_runner_tool.md` | Test cases for the runner tool feature doc instance | ✅ |

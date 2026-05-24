@@ -4,41 +4,24 @@
 
 - **Purpose**: Document validation edge cases for clr semantic types.
 - **Responsibility**: Index of per-type validation test files covering type-level parsing and constraint enforcement.
-- **In Scope**: All 12 clr semantic types.
+- **In Scope**: All 12 clr semantic types: `MessageText`, `DirectoryPath`, `TokenLimit`, `ModelName`, `VerbosityLevel`, `SystemPromptText`, `EffortLevel`, `CredentialsFilePath`, `TimeoutSecs`, `JsonSchemaText`, `McpConfigPath`, `FilePath`.
 - **Out of Scope**: Command-level tests (→ `command/`), per-parameter tests (→ `param/`).
 
-Per-type validation test indices for `clr`. See [005_type.md](../../../../docs/cli/005_type.md) for specification.
+Per-type validation test indices for `clr`. See [type/readme.md](../../../../docs/cli/type/readme.md) for specification.
 
 ### Responsibility Table
 
-| File | Responsibility |
-|------|----------------|
-| 001_message_text.md | Validation tests for `MessageText` type |
-| 002_directory_path.md | Validation tests for `DirectoryPath` type |
-| 003_token_limit.md | Validation tests for `TokenLimit` type |
-| 004_model_name.md | Validation tests for `ModelName` type |
-| 005_verbosity_level.md | Validation tests for `VerbosityLevel` type |
-| 006_system_prompt_text.md | Validation tests for `SystemPromptText` type |
-| 007_effort_level.md | Validation tests for `EffortLevel` type |
-| 008_credentials_file_path.md | Validation tests for `CredentialsFilePath` type |
-| 009_timeout_secs.md | Validation tests for `TimeoutSecs` type |
-| 010_json_schema_text.md | Validation tests for `JsonSchemaText` type |
-| 011_mcp_config_path.md | Validation tests for `McpConfigPath` type |
-| 012_file_path.md | Validation tests for `FilePath` type |
-
-### Index
-
-| Type | File | Tests |
-|------|------|-------|
-| `MessageText` | [001_message_text.md](001_message_text.md) | 5 TC |
-| `DirectoryPath` | [002_directory_path.md](002_directory_path.md) | 4 TC |
-| `TokenLimit` | [003_token_limit.md](003_token_limit.md) | 6 TC |
-| `ModelName` | [004_model_name.md](004_model_name.md) | 4 TC |
-| `VerbosityLevel` | [005_verbosity_level.md](005_verbosity_level.md) | 5 TC |
-| `SystemPromptText` | [006_system_prompt_text.md](006_system_prompt_text.md) | 4 TC |
-| `EffortLevel` | [007_effort_level.md](007_effort_level.md) | 6 TC |
-| `CredentialsFilePath` | [008_credentials_file_path.md](008_credentials_file_path.md) | 6 TC |
-| `TimeoutSecs` | [009_timeout_secs.md](009_timeout_secs.md) | 6 TC |
-| `JsonSchemaText` | [010_json_schema_text.md](010_json_schema_text.md) | 4 TC |
-| `McpConfigPath` | [011_mcp_config_path.md](011_mcp_config_path.md) | 4 TC |
-| `FilePath` | [012_file_path.md](012_file_path.md) | 5 TC |
+| Name | Purpose | Status |
+|------|---------|--------|
+| `01_message_text.md` | Validation tests for `MessageText` type | ✅ |
+| `02_directory_path.md` | Validation tests for `DirectoryPath` type | ✅ |
+| `03_token_limit.md` | Validation tests for `TokenLimit` type | ✅ |
+| `04_model_name.md` | Validation tests for `ModelName` type | ✅ |
+| `05_verbosity_level.md` | Validation tests for `VerbosityLevel` type | ✅ |
+| `06_system_prompt_text.md` | Validation tests for `SystemPromptText` type | ✅ |
+| `07_effort_level.md` | Validation tests for `EffortLevel` type | ✅ |
+| `08_credentials_file_path.md` | Validation tests for `CredentialsFilePath` type | ✅ |
+| `09_timeout_secs.md` | Validation tests for `TimeoutSecs` type | ✅ |
+| `10_json_schema_text.md` | Validation tests for `JsonSchemaText` type | ✅ |
+| `11_mcp_config_path.md` | Validation tests for `McpConfigPath` type | ✅ |
+| `12_file_path.md` | Validation tests for `FilePath` type | ✅ |

@@ -8,7 +8,7 @@
 //! # Architecture Note
 //!
 //! `.plan.claude` has moved to external runner plugin system. Planning orchestration
-//! (multi-dir execution, `work_dir` expansion) is consumer_runner's responsibility. `claude_runner`
+//! (multi-dir execution, `work_dir` expansion) is `consumer_runner`'s responsibility. `claude_runner`
 //! provides only the direct AI interaction commands.
 //!
 //! # Verification Method

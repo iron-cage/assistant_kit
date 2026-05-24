@@ -1,7 +1,7 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_runner
-  node_count: 4
-  edge_count: 8
+  node_count: 6
+  edge_count: 12
   component_count: 1
   generated: 2026-05-16
 
@@ -19,6 +19,16 @@ nodes:
   - id: invariant/002
     file: invariant/002_dep_constraints.md
     label: Dependency Constraints
+    entity: invariant
+
+  - id: invariant/003
+    file: invariant/003_command_naming.md
+    label: Command Naming
+    entity: invariant
+
+  - id: invariant/004
+    file: invariant/004_trace_universality.md
+    label: Trace Universality
     entity: invariant
 
   - id: api/001
@@ -59,15 +69,33 @@ edges:
     to: invariant/002
     via: invariants
 
+  - from: feature/001
+    to: invariant/003
+    via: invariants
+
+  - from: invariant/003
+    to: feature/001
+    via: features
+
+  - from: feature/001
+    to: invariant/004
+    via: invariants
+
+  - from: invariant/004
+    to: feature/001
+    via: features
+
 components:
   - id: 1
     label: Main corpus
-    size: 4
+    size: 6
     isolated: false
     nodes:
       - feature/001
       - invariant/001
       - invariant/002
+      - invariant/003
+      - invariant/004
       - api/001
 
 dangling_refs: []

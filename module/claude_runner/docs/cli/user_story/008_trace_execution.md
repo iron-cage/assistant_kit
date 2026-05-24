@@ -1,4 +1,11 @@
-# User Story :: 008. Trace Execution
+# CLI User Story: Trace Execution
+
+### Scope
+
+- **Purpose**: Document --trace mode for printing diagnostic details to stderr before executing.
+- **Responsibility**: Define acceptance criteria for trace output across all executing subcommands.
+- **In Scope**: --trace on run/isolated/refresh, stderr output, execution after trace, verbosity independence.
+- **Out of Scope**: Dry-run (no execution) variant (→ 004_dry_run_preview.md).
 
 ### Persona
 
@@ -19,23 +26,30 @@ Print diagnostic details to stderr — like shell `set -x` — then execute norm
 
 ### Referenced Commands
 
-| # | Command | Notes |
-|---|---------|-------|
-| 1 | [`run`](../001_command.md#command--1-run) | `--trace` shows env vars + assembled claude command |
-| 2 | [`isolated`](../001_command.md#command--2-isolated) | `--trace` shows credential isolation details |
-| 3 | [`refresh`](../001_command.md#command--3-refresh) | `--trace` shows refresh call details |
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`run`](../command/01_run.md) | `--trace` emits env+command before launch |
+| 2 | [`isolated`](../command/02_isolated.md) | `--trace` emits creds path and temp HOME |
+| 3 | [`refresh`](../command/03_refresh.md) | `--trace` emits creds path and fixed args |
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 2 | [Runner Control](../param_group/02_runner_control.md) | `--trace` is a runner control flag |
+| 4 | [Credential Operations](../param_group/04_credential_operations.md) | `--trace` also applies to credential commands |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--trace`](../param/013_trace.md) | Print env+command to stderr then execute |
-| 2 | [`--dry-run`](../param/011_dry_run.md) | Related: preview only, no execution |
-| 3 | [`--verbosity`](../param/012_verbosity.md) | Level 4 also shows preview but via different path |
+| 11 | [`--dry-run`](../param/011_dry_run.md) | Related: preview only, no execution |
+| 12 | [`--verbosity`](../param/012_verbosity.md) | Level 4 also shows preview but via different path |
+| 13 | [`--trace`](../param/013_trace.md) | Print env+command to stderr then execute |
 
 ### Related User Stories
 
 | # | User Story | Relationship |
-|---|-----------|-------------|
-| 1 | [004 Dry-run Preview](004_dry_run_preview.md) | `--dry-run` is the non-executing variant |
-| 2 | [006 Verbose Debugging](006_verbose_debugging.md) | Complementary diagnostic: `--verbosity` gates runner output |
+|---|------------|--------------|
+| 4 | [Dry-run Preview](004_dry_run_preview.md) | `--dry-run` is the non-executing variant |
+| 6 | [Verbose Debugging](006_verbose_debugging.md) | Complementary diagnostic: `--verbosity` gates runner output |

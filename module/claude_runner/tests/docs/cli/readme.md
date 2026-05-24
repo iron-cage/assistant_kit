@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 5 clr commands, all 27 parameters, all 12 types, all 4 parameter groups, 1 env parameter, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 5 clr commands, all 27 parameters, all 12 types, all 4 parameter groups, 2 env parameter specs, 16 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -18,6 +18,8 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | param_group/ | Per-parameter-group interaction test indices |
 | type/ | Per-type validation test indices |
 | env_param/ | Per-env-parameter edge case indices |
+| user_story/ | Per-user-story end-to-end workflow test specs |
+| dictionary.md | Dictionary vocabulary completeness and accuracy checks |
 
 ### Coverage Summary
 
@@ -27,66 +29,86 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | Parameters | 27 | ≥6 EC each |
 | Parameter groups | 4 | ≥4 CC each |
 | Types | 12 | ≥4 TC each |
-| Env params | 1 | ≥6 EC each |
+| Env params | 2 | ≥6 EC each |
+| User stories | 16 | ≥4 US each |
+| Dictionary | 1 | ≥4 DT total |
 
 ### Navigation
 
 #### Commands
-- [`run`](command/001_run.md)
-- [`help`](command/002_help.md)
-- [`isolated`](command/003_isolated.md)
-- [`refresh`](command/004_refresh.md)
-- [`ask`](command/005_ask.md)
+- [`run`](command/01_run.md)
+- [`help`](command/02_help.md)
+- [`isolated`](command/03_isolated.md)
+- [`refresh`](command/04_refresh.md)
+- [`ask`](command/05_ask.md)
 
 #### Parameters
-- [`[MESSAGE]`](param/001_message.md)
-- [`--print`](param/002_print.md)
-- [`--model`](param/003_model.md)
-- [`--verbose`](param/004_verbose.md)
-- [`--no-skip-permissions`](param/005_no_skip_permissions.md)
-- [`--interactive`](param/006_interactive.md)
-- [`--new-session`](param/007_new_session.md)
-- [`--dir`](param/008_dir.md)
-- [`--max-tokens`](param/009_max_tokens.md)
-- [`--session-dir`](param/010_session_dir.md)
-- [`--dry-run`](param/011_dry_run.md)
-- [`--verbosity`](param/012_verbosity.md)
-- [`--trace`](param/013_trace.md)
-- [`--no-ultrathink`](param/014_no_ultrathink.md)
-- [`--system-prompt`](param/015_system_prompt.md)
-- [`--append-system-prompt`](param/016_append_system_prompt.md)
-- [`--effort`](param/017_effort.md)
-- [`--no-effort-max`](param/018_no_effort_max.md)
-- [`--creds`](param/019_creds.md)
-- [`--timeout`](param/020_timeout.md)
-- [`--no-chrome`](param/021_no_chrome.md)
-- [`--no-persist`](param/022_no_persist.md)
-- [`--json-schema`](param/023_json_schema.md)
-- [`--mcp-config`](param/024_mcp_config.md)
-- [`--file`](param/025_file.md)
-- [`--strip-fences`](param/026_strip_fences.md)
-- [`--keep-claudecode`](param/027_keep_claudecode.md)
+- [`[MESSAGE]`](param/01_message.md)
+- [`--print`](param/02_print.md)
+- [`--model`](param/03_model.md)
+- [`--verbose`](param/04_verbose.md)
+- [`--no-skip-permissions`](param/05_no_skip_permissions.md)
+- [`--interactive`](param/06_interactive.md)
+- [`--new-session`](param/07_new_session.md)
+- [`--dir`](param/08_dir.md)
+- [`--max-tokens`](param/09_max_tokens.md)
+- [`--session-dir`](param/10_session_dir.md)
+- [`--dry-run`](param/11_dry_run.md)
+- [`--verbosity`](param/12_verbosity.md)
+- [`--trace`](param/13_trace.md)
+- [`--no-ultrathink`](param/14_no_ultrathink.md)
+- [`--system-prompt`](param/15_system_prompt.md)
+- [`--append-system-prompt`](param/16_append_system_prompt.md)
+- [`--effort`](param/17_effort.md)
+- [`--no-effort-max`](param/18_no_effort_max.md)
+- [`--creds`](param/19_creds.md)
+- [`--timeout`](param/20_timeout.md)
+- [`--no-chrome`](param/21_no_chrome.md)
+- [`--no-persist`](param/22_no_persist.md)
+- [`--json-schema`](param/23_json_schema.md)
+- [`--mcp-config`](param/24_mcp_config.md)
+- [`--file`](param/25_file.md)
+- [`--strip-fences`](param/26_strip_fences.md)
+- [`--keep-claudecode`](param/27_keep_claudecode.md)
 
 #### Parameter Groups
-- [Claude-Native Flags](param_group/001_claude_native_flags.md)
-- [Runner Control](param_group/002_runner_control.md)
-- [System Prompt](param_group/003_system_prompt.md)
-- [Credential Operations](param_group/004_credential_operations.md)
+- [Claude-Native Flags](param_group/01_claude_native_flags.md)
+- [Runner Control](param_group/02_runner_control.md)
+- [System Prompt](param_group/03_system_prompt.md)
+- [Credential Operations](param_group/04_credential_operations.md)
 
 #### Types
-- [`MessageText`](type/001_message_text.md)
-- [`DirectoryPath`](type/002_directory_path.md)
-- [`TokenLimit`](type/003_token_limit.md)
-- [`ModelName`](type/004_model_name.md)
-- [`VerbosityLevel`](type/005_verbosity_level.md)
-- [`SystemPromptText`](type/006_system_prompt_text.md)
-- [`EffortLevel`](type/007_effort_level.md)
-- [`CredentialsFilePath`](type/008_credentials_file_path.md)
-- [`TimeoutSecs`](type/009_timeout_secs.md)
-- [`JsonSchemaText`](type/010_json_schema_text.md)
-- [`McpConfigPath`](type/011_mcp_config_path.md)
-- [`FilePath`](type/012_file_path.md)
+- [`MessageText`](type/01_message_text.md)
+- [`DirectoryPath`](type/02_directory_path.md)
+- [`TokenLimit`](type/03_token_limit.md)
+- [`ModelName`](type/04_model_name.md)
+- [`VerbosityLevel`](type/05_verbosity_level.md)
+- [`SystemPromptText`](type/06_system_prompt_text.md)
+- [`EffortLevel`](type/07_effort_level.md)
+- [`CredentialsFilePath`](type/08_credentials_file_path.md)
+- [`TimeoutSecs`](type/09_timeout_secs.md)
+- [`JsonSchemaText`](type/10_json_schema_text.md)
+- [`McpConfigPath`](type/11_mcp_config_path.md)
+- [`FilePath`](type/12_file_path.md)
+
+#### User Stories
+- [Interactive REPL](user_story/01_interactive_repl.md)
+- [Print Mode Capture](user_story/02_print_mode_capture.md)
+- [Interactive With Message](user_story/03_interactive_with_message.md)
+- [Dry-run Preview](user_story/04_dry_run_preview.md)
+- [Project-specific Execution](user_story/05_project_specific_execution.md)
+- [Verbose Debugging](user_story/06_verbose_debugging.md)
+- [Fresh Session](user_story/07_fresh_session.md)
+- [Trace Execution](user_story/08_trace_execution.md)
+- [Custom System Prompt](user_story/09_custom_system_prompt.md)
+- [Credential-isolated Execution](user_story/10_credential_isolated_execution.md)
+- [File Input](user_story/11_file_input.md)
+- [Code Block Extraction](user_story/12_code_block_extraction.md)
+- [Structured JSON Pipeline](user_story/13_structured_json_pipeline.md)
+- [Credential Refresh](user_story/14_credential_refresh.md)
+- [Ask Mode](user_story/15_ask_mode.md)
+- [CLI Discoverability](user_story/16_cli_discoverability.md)
 
 #### Env Params
-- [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/001_max_output_tokens.md)
-- [`CLR_* (28 vars)`](env_param/002_clr_input_vars.md)
+- [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)
+- [`CLR_* (28 vars)`](env_param/02_clr_input_vars.md)

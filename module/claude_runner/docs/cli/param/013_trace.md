@@ -1,4 +1,4 @@
-# Parameter :: 13. `--trace`
+# CLI Parameter: --trace
 
 Print diagnostic details to stderr before executing the subprocess. Unlike `--dry-run`,
 execution still proceeds — the trace is shown as a diagnostic prefix, then the
@@ -6,8 +6,8 @@ subprocess is launched. Mirrors shell `set -x` semantics.
 
 - **Type:** bool (standalone flag)
 - **Default:** false
-- **Command:** [`run`](../001_command.md#command--1-run), [`ask`](../001_command.md#command--5-ask), [`isolated`](../001_command.md#command--2-isolated), [`refresh`](../001_command.md#command--3-refresh)
-- **Group:** [Runner Control](../004_param_group.md#group--2-runner-control) (for `run` and `ask`), [Credential Operations](../004_param_group.md#group--4-credential-operations) (for `isolated` and `refresh`)
+- **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md), [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
+- **Group:** [Runner Control](../param_group/02_runner_control.md) (for `run` and `ask`), [Credential Operations](../param_group/04_credential_operations.md) (for `isolated` and `refresh`)
 
 What `--trace` shows depends on the command:
 
@@ -45,3 +45,35 @@ clr refresh --creds creds.json --trace
 
 **Note:** `--trace` prints to stderr so it does not pollute captured stdout in print mode.
 Combine with `--dry-run` if you want to preview without executing (`run` and `ask` only — trace fires after dry-run exits for those commands).
+
+### Referenced Type
+
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| bool | Primitive | bool | present/absent |
+
+### Referenced Parameter Groups
+
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | 15 other params |
+| 4 | [Credential Operations](../param_group/04_credential_operations.md) | Full | `--creds`, `--timeout` |
+
+### Referenced Commands
+
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 1 | [`run`](../command/01_run.md) | false | Emits env vars + claude command |
+| 2 | [`isolated`](../command/02_isolated.md) | false | Emits creds path, temp HOME, timeout |
+| 3 | [`refresh`](../command/03_refresh.md) | false | Emits creds path, fixed args |
+| 5 | [`ask`](../command/05_ask.md) | false | Emits env vars + claude command |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 4 | [004_dry_run_preview.md](../user_story/004_dry_run_preview.md) | Developer |
+| 6 | [006_verbose_debugging.md](../user_story/006_verbose_debugging.md) | Developer |
+| 8 | [008_trace_execution.md](../user_story/008_trace_execution.md) | Developer |
+| 10 | [010_credential_isolated_execution.md](../user_story/010_credential_isolated_execution.md) | Developer |
+| 14 | [014_credential_refresh.md](../user_story/014_credential_refresh.md) | Developer |

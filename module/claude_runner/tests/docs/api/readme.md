@@ -11,12 +11,6 @@ Per-api-doc test case indices for `claude_runner`. See [api/readme.md](../../../
 
 ### Responsibility Table
 
-| File | Responsibility |
-|------|----------------|
-| 001_public_api.md | Test cases for the public API doc instance |
-
-### Index
-
-| Doc Instance | File | Tests |
-|--------------|------|-------|
-| 001 — Public API | [001_public_api.md](001_public_api.md) | 6 TC |
+| Name | Purpose | Status |
+|------|---------|--------|
+| `01_public_api.md` | Test cases for the public API doc instance | ✅ |

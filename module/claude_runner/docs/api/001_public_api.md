@@ -15,14 +15,9 @@ The `claude_runner` library exposes three items: a compile-time path constant, a
 
 #### `COMMANDS_YAML: &str`
 
-Absolute path to `claude.commands.yaml`, computed at compile time via `env!("CARGO_MANIFEST_DIR")`. Stable across invocations on the same machine for the same build.
+Absolute path to `claude.commands.yaml`, computed at compile time from the crate manifest directory. Stable across invocations on the same machine for the same build.
 
-**Build-time aggregation (consumer `build.rs`):**
-```
-let claude_yaml = manifest_dir
-  .join("../../claude_tools/dev/module/claude_runner/claude.commands.yaml");
-base_commands.extend(load_yaml_and_transform(&claude_yaml));
-```
+**Build-time aggregation:** Pass the path to a YAML loader in a build script to incorporate `claude_runner` commands into a static command registry.
 
 **Runtime aggregation:**
 ```
@@ -31,7 +26,7 @@ aggregator.add(claude_runner::COMMANDS_YAML);
 
 #### `VerbosityLevel`
 
-Newtype wrapper over `u8` (valid range 0–5, default 3). Controls how much diagnostic output the `clr` binary emits.
+Integer value in the range 0–5 (default 3). Controls how much diagnostic output the `clr` binary emits.
 
 | Level | Behavior |
 |-------|----------|

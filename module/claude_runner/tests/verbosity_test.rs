@@ -20,23 +20,15 @@
 //! | T11 | `--verbosity 4 --dry-run` | verbose detail | Preview printed to stderr before execute |
 
 use claude_runner::VerbosityLevel;
-use std::process::Command;
 
-fn run_bin( args : &[ &str ] ) -> std::process::Output
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  Command::new( bin )
-  .args( args )
-  .output()
-  .expect( "Failed to invoke clr binary" )
-}
+mod cli_binary_test_helpers;
 
 // T01: --verbosity 0 silences runner *diagnostics* but not --dry-run output.
 // --dry-run is core feature output (always shown); stderr diagnostic output is suppressed.
 #[ test ]
 fn t01_verbosity_zero_silences_runner_diagnostics()
 {
-  let out = run_bin( &[ "--verbosity", "0", "--dry-run", "test" ] );
+  let out = cli_binary_test_helpers::run_cli( &[ "--verbosity", "0", "--dry-run", "test" ] );
   assert!( out.status.success(), "--verbosity 0 must not fail" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let stderr = String::from_utf8_lossy( &out.stderr );
@@ -54,7 +46,7 @@ fn t01_verbosity_zero_silences_runner_diagnostics()
 #[ test ]
 fn t02_verbosity_three_shows_normal_output()
 {
-  let out = run_bin( &[ "--verbosity", "3", "--dry-run", "test" ] );
+  let out = cli_binary_test_helpers::run_cli( &[ "--verbosity", "3", "--dry-run", "test" ] );
   assert!( out.status.success(), "--verbosity 3 must succeed" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
@@ -67,7 +59,7 @@ fn t02_verbosity_three_shows_normal_output()
 #[ test ]
 fn t03_verbosity_five_runs_without_crash()
 {
-  let out = run_bin( &[ "--verbosity", "5", "--dry-run", "test" ] );
+  let out = cli_binary_test_helpers::run_cli( &[ "--verbosity", "5", "--dry-run", "test" ] );
   assert!( out.status.success(), "--verbosity 5 must not crash" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
@@ -80,7 +72,7 @@ fn t03_verbosity_five_runs_without_crash()
 #[ test ]
 fn t04_verbosity_six_rejected()
 {
-  let out = run_bin( &[ "--verbosity", "6", "--dry-run", "test" ] );
+  let out = cli_binary_test_helpers::run_cli( &[ "--verbosity", "6", "--dry-run", "test" ] );
   assert!( !out.status.success(), "--verbosity 6 must be rejected" );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
@@ -93,7 +85,7 @@ fn t04_verbosity_six_rejected()
 #[ test ]
 fn t05_default_verbosity_behaves_as_three()
 {
-  let out = run_bin( &[ "--dry-run", "test" ] );
+  let out = cli_binary_test_helpers::run_cli( &[ "--dry-run", "test" ] );
   assert!( out.status.success(), "default verbosity must succeed" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
@@ -107,7 +99,7 @@ fn t05_default_verbosity_behaves_as_three()
 #[ test ]
 fn t06_verbosity_one_shows_dry_run_output()
 {
-  let out = run_bin( &[ "--verbosity", "1", "--dry-run", "test" ] );
+  let out = cli_binary_test_helpers::run_cli( &[ "--verbosity", "1", "--dry-run", "test" ] );
   assert!( out.status.success(), "--verbosity 1 must succeed" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
@@ -190,7 +182,7 @@ fn t10_default_is_three()
 #[ test ]
 fn t11_verbosity_four_shows_stderr_preview()
 {
-  let out = run_bin( &[ "--verbosity", "4", "--dry-run", "test" ] );
+  let out = cli_binary_test_helpers::run_cli( &[ "--verbosity", "4", "--dry-run", "test" ] );
   assert!( out.status.success(), "--verbosity 4 --dry-run must succeed" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   // Dry-run output appears on stdout regardless of verbosity level.

@@ -8,7 +8,7 @@
 use std::io::Write as _;
 use tempfile::NamedTempFile;
 
-mod common;
+mod cli_binary_test_helpers;
 
 // ── helper ───────────────────────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ fn stderr_str( o : &std::process::Output ) -> String
 #[ test ]
 fn it_01_run_trace_stderr_output()
 {
-  let out    = common::run_cli( &[ "--trace", "Fix bug" ] );
+  let out    = cli_binary_test_helpers::run_cli( &[ "--trace", "Fix bug" ] );
   let stderr = stderr_str( &out );
   assert!(
     stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
@@ -64,7 +64,7 @@ fn it_01_run_trace_stderr_output()
 #[ test ]
 fn it_02_ask_trace_stderr_output()
 {
-  let out    = common::run_cli( &[ "ask", "--trace", "What is X?" ] );
+  let out    = cli_binary_test_helpers::run_cli( &[ "ask", "--trace", "What is X?" ] );
   let stderr = stderr_str( &out );
   assert!(
     stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384" ),
@@ -90,7 +90,7 @@ fn it_03_isolated_trace_stderr_output()
 {
   let creds  = make_creds_file( "{}" );
   let path   = creds.path().to_str().expect( "temp path is valid UTF-8" );
-  let out    = common::run_cli( &[ "isolated", "--creds", path, "--trace", "Fix bug" ] );
+  let out    = cli_binary_test_helpers::run_cli( &[ "isolated", "--creds", path, "--trace", "Fix bug" ] );
   let stderr = stderr_str( &out );
   assert!(
     stderr.contains( "# clr isolated" ),
@@ -120,7 +120,7 @@ fn it_04_refresh_trace_stderr_output()
 {
   let creds  = make_creds_file( "{}" );
   let path   = creds.path().to_str().expect( "temp path is valid UTF-8" );
-  let out    = common::run_cli( &[ "refresh", "--creds", path, "--trace" ] );
+  let out    = cli_binary_test_helpers::run_cli( &[ "refresh", "--creds", path, "--trace" ] );
   let stderr = stderr_str( &out );
   assert!(
     stderr.contains( "# clr refresh" ),
@@ -138,7 +138,7 @@ fn it_04_refresh_trace_stderr_output()
   assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );
 }
 
-/// IT-5: Static — `"--trace"` appears ≥ 3× in `src/lib.rs` (one per parse function).
+/// IT-5: Static — `"--trace"` appears ≥ 3× in `src/cli.rs` (one per parse function).
 ///
 /// Verifies that `parse_args()`, `parse_isolated_args()`, and `parse_refresh_args()`
 /// all register the `--trace` flag.  Reads the actual source file at runtime via
@@ -149,13 +149,13 @@ fn it_04_refresh_trace_stderr_output()
 fn it_05_static_trace_universality()
 {
   let manifest_dir = env!( "CARGO_MANIFEST_DIR" );
-  let lib_path     = format!( "{manifest_dir}/src/lib.rs" );
-  let lib_rs       = std::fs::read_to_string( &lib_path )
-    .unwrap_or_else( | e | panic!( "failed to read {lib_path}: {e}" ) );
-  let count = lib_rs.matches( "\"--trace\"" ).count();
+  let cli_path     = format!( "{manifest_dir}/src/cli.rs" );
+  let cli_rs       = std::fs::read_to_string( &cli_path )
+    .unwrap_or_else( | e | panic!( "failed to read {cli_path}: {e}" ) );
+  let count = cli_rs.matches( "\"--trace\"" ).count();
   assert!(
     count >= 3,
-    "expected '\"--trace\"' to appear ≥ 3 times in src/lib.rs \
+    "expected '\"--trace\"' to appear ≥ 3 times in src/cli.rs \
      (parse_args, parse_isolated_args, parse_refresh_args); got {count}"
   );
 }
