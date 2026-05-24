@@ -1,14 +1,15 @@
 //! Parameter Group Interaction Tests
 //!
-//! Covers CC-N interaction cases for all three parameter groups.
+//! Covers CC-N interaction cases for all four parameter groups.
 //! Source: `tests/docs/cli/param_group/`
 //!
 //! - Group 1 (Claude-Native Flags): G1CC1–G1CC5 (`01_claude_native_flags.md`)
-//! - Group 2 (Runner Control):      G2CC1–G2CC4 (`02_runner_control.md`)
+//! - Group 2 (Runner Control):      G2CC1–G2CC5 (`02_runner_control.md`)
 //! - Group 3 (System Prompt):       G3CC1–G3CC4 (`03_system_prompt.md`)
+//! - Group 4 (Credential Ops):      G4CC6       (`04_credential_operations.md`; CC-1–CC-5 are `lim_it`)
 
-mod common;
-use common::run_cli;
+mod cli_binary_test_helpers;
+use cli_binary_test_helpers::run_cli;
 
 // ─── Group 1: Claude-Native Flags ─────────────────────────────────────────────
 // Source: tests/docs/cli/param_group/01_claude_native_flags.md
@@ -240,6 +241,31 @@ fn g2cc4_all_runner_control_flags_no_conflict()
   );
 }
 
+/// G2CC5: `--file` + `--strip-fences` + `--keep-claudecode` → all three accepted.
+///
+/// All three new runner-control flags coexist without conflict; exit 0.
+///
+/// Spec: `02_runner_control.md` CC-5
+#[ test ]
+
+fn g2cc5_file_strip_fences_keep_claudecode_accepted()
+{
+  let tmp = tempfile::NamedTempFile::new().expect( "tmp" );
+  std::io::Write::write_all( &mut tmp.as_file(), b"task input" ).expect( "write" );
+  let path = tmp.path().to_str().expect( "path" );
+
+  let out = run_cli( &[
+    "--dry-run",
+    "--file", path,
+    "--strip-fences",
+    "--keep-claudecode",
+    "task",
+  ] );
+  assert!( out.status.success(), "exit must be 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!( stdout.contains( path ), "output must reference file path: {stdout}" );
+}
+
 // ─── Group 3: System Prompt ────────────────────────────────────────────────────
 // Source: tests/docs/cli/param_group/03_system_prompt.md
 
@@ -331,4 +357,36 @@ fn g3cc4_neither_system_prompt_no_injection()
     !stdout.contains( "--append-system-prompt" ),
     "no --append-system-prompt injected by default: {stdout}",
   );
+}
+
+// ─── Group 4: Credential Operations ──────────────────────────────────────────
+// Source: tests/docs/cli/param_group/04_credential_operations.md
+//
+// CC-1 through CC-5 require live credentials (lim_it) and are covered by
+// `isolated_test.rs`. CC-6 is testable without live creds.
+
+/// G4CC6: `--trace` on credential ops → call details printed to stderr.
+///
+/// `# clr isolated`, `# creds:`, `# timeout: 30s` appear on stderr before any
+/// subprocess attempt; does not require live credentials (trace fires first).
+///
+/// Spec: `04_credential_operations.md` CC-6
+#[ test ]
+
+fn g4cc6_trace_on_credential_ops()
+{
+  use cli_binary_test_helpers::run_cli_with_env;
+
+  let mut tmp = tempfile::NamedTempFile::new().expect( "tmp" );
+  std::io::Write::write_all( &mut tmp, b"{}" ).expect( "write" );
+  let path = tmp.path().to_str().expect( "path" );
+
+  let out = run_cli_with_env(
+    &[ "isolated", "--creds", path, "--trace" ],
+    &[ ( "PATH", "/nonexistent" ) ],
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!( stderr.contains( "# clr isolated" ), "stderr must contain '# clr isolated': {stderr}" );
+  assert!( stderr.contains( "# creds:" ),        "stderr must contain '# creds:': {stderr}" );
+  assert!( stderr.contains( "# timeout: 30s" ),  "stderr must contain '# timeout: 30s': {stderr}" );
 }

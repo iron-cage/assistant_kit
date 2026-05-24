@@ -69,7 +69,7 @@ Emitted via `emit_credential_trace()`:
 
 | File | Relationship |
 |------|--------------|
-| `../../src/lib.rs` | `parse_args()` and `dispatch_ask()` — `trace` field in `CliArgs`; `parse_isolated_args()`, `parse_refresh_args()` — `trace` field in each args struct |
+| `../../src/cli.rs` | `parse_args()` and `dispatch_ask()` — `trace` field in `CliArgs`; `parse_isolated_args()`, `parse_refresh_args()` — `trace` field in each args struct |
 
 ### Tests
 

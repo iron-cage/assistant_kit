@@ -1,4 +1,11 @@
-# User Story :: 014. Credential Refresh
+# CLI User Story: Credential Refresh
+
+### Scope
+
+- **Purpose**: Document refreshing OAuth credentials via clr refresh without executing a user task.
+- **Responsibility**: Define acceptance criteria for the `refresh` subcommand and its exit codes.
+- **In Scope**: Token refresh via --print . invocation, writeback to --creds file, exit codes, default 45s timeout.
+- **Out of Scope**: Full task execution with isolation (→ 010_credential_isolated_execution.md).
 
 ### Persona
 
@@ -18,20 +25,26 @@ Refresh the OAuth credentials in a given file — triggering the `claude` binary
 
 ### Referenced Commands
 
-| # | Command | Notes |
-|---|---------|-------|
-| 1 | [`refresh`](../001_command.md#command--3-refresh) | Dedicated subcommand for credential refresh |
+| # | Command | Role |
+|---|---------|------|
+| 3 | [`refresh`](../command/03_refresh.md) | OAuth credential refresh without task execution |
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 4 | [Credential Operations](../param_group/04_credential_operations.md) | `--creds`, `--timeout`, `--trace` configure refresh |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--creds`](../param/019_creds.md) | Path to credentials JSON file (required) |
-| 2 | [`--timeout`](../param/020_timeout.md) | Max seconds to wait (default: 45 for refresh) |
-| 3 | [`--trace`](../param/013_trace.md) | Print underlying call details to stderr |
+| 13 | [`--trace`](../param/013_trace.md) | Print underlying call details to stderr |
+| 19 | [`--creds`](../param/019_creds.md) | Path to credentials JSON file (required) |
+| 20 | [`--timeout`](../param/020_timeout.md) | Max seconds to wait (default: 45 for refresh) |
 
 ### Related User Stories
 
 | # | User Story | Relationship |
-|---|-----------|-------------|
-| 1 | [010 Credential-isolated Execution](010_credential_isolated_execution.md) | `refresh` reuses `run_isolated()` internally; `isolated` runs a full task |
+|---|------------|--------------|
+| 10 | [Credential-isolated Execution](010_credential_isolated_execution.md) | `refresh` reuses `run_isolated()` internally; `isolated` runs a full task |

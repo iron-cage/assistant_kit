@@ -64,22 +64,12 @@ fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
     .expect( "Failed to invoke clr binary" )
 }
 
-fn run_no_claude( args : &[ &str ] ) -> std::process::Output
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  Command::new( bin )
-    .args( args )
-    .env( "PATH", "/nonexistent" )
-    .output()
-    .expect( "Failed to invoke clr binary" )
-}
-
 // E01: Interactive mode: binary not found exits 1 with error on stderr.
 #[ test ]
 
 fn e01_interactive_binary_not_found()
 {
-  let out = run_no_claude( &[ "test message" ] );
+  let out = run_with_path( &[ "test message" ], "/nonexistent" );
   assert!( !out.status.success(), "must exit non-zero when claude not found" );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
@@ -93,7 +83,7 @@ fn e01_interactive_binary_not_found()
 
 fn e02_print_binary_not_found()
 {
-  let out = run_no_claude( &[ "-p", "test message" ] );
+  let out = run_with_path( &[ "-p", "test message" ], "/nonexistent" );
   assert!( !out.status.success(), "must exit non-zero when claude not found" );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(

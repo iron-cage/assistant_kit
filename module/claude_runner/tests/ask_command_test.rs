@@ -25,8 +25,8 @@
 //! - IT-8: `clr ask --unknown-flag "X"` — unknown flag rejected (exit 1, stderr error)
 //! - IT-9: `clr ask --trace "X"` — stderr contains ask-default env block + command before invocation
 
-mod common;
-use common::run_cli;
+mod cli_binary_test_helpers;
+use cli_binary_test_helpers::run_cli;
 use std::process::Command;
 
 /// Invoke `clr ask --dry-run` with the given args and return stdout.

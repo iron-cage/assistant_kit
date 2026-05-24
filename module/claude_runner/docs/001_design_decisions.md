@@ -2,42 +2,42 @@
 
 Rationale for key design choices made during the `--flag value` CLI redesign (task 031).
 
-## D2 — `--verbose` vs `--verbosity`
+### D2 — `--verbose` vs `--verbosity`
 
 `--verbose` passes through to claude (it's a claude-native flag). `--verbosity <0-5>` controls
 the runner's own output gating level. At `--verbosity 4` (verbose detail), the runner prints
 a command preview to stderr before execution.
 
-## D3 — Print mode requires a message
+### D3 — Print mode requires a message
 
 Fail fast with a clear error if print mode is active without a message. Silent no-op
 would be confusing; claude in print mode without input produces nothing useful. Print
 mode is triggered by: message present (default) or explicit `-p`/`--print`. Either
 way, a message is required.
 
-## D4 — Positional args joined as message
+### D4 — Positional args joined as message
 
 Multiple positional arguments are joined with spaces: `clr Fix the bug` becomes
 message `"Fix the bug"`. Standard CLI convention (like `git commit -m`). Eliminates the need
 to quote simple messages.
 
-## D5 — Unknown flags rejected
+### D5 — Unknown flags rejected
 
 Explicit whitelist of known flags. Unknown flags produce an error with `--help` hint.
 Prevents typos from being silently ignored and avoids accidental passthrough to claude.
 
-## D6 — Duplicate value-flags: last wins
+### D6 — Duplicate value-flags: last wins
 
 When a flag like `--model` appears twice, the last value wins. Matches curl/git convention.
 Enables wrapper scripts to override defaults.
 
-## D7 — Hand-rolled parser over clap/unilang
+### D7 — Hand-rolled parser over clap/unilang
 
 Hand-rolled parser. Zero external dependencies for CLI parsing. Exact control over
 error messages and behavior. The flag surface (24 flags + 1 positional) is small enough
 that a framework adds complexity without benefit.
 
-## D9 — Session continuation by default
+### D9 — Session continuation by default
 
 Behavioral specification: [invariant/001_default_flags.md](invariant/001_default_flags.md).
 
@@ -49,14 +49,14 @@ This also decouples `clr` from external session orchestration.
 **Consequence:** removed `-c`/`--continue` from public flag list (redundant); added
 `--new-session` (the only way to disable default continuation). Net: 11 flags → 11 flags.
 
-## D8 — Three-layer docs/cli/ replaces 42-file structure
+### D8 — Three-layer docs/cli/ replaces 42-file structure
 
 The previous `docs/cli/` contained 42 files documenting `param::value` syntax. Restored as
-a proper three-layer reference (001_command.md, param/, 005_type.md) with parameter groups,
+a proper three-layer reference (command/, param/, type/) with parameter groups,
 dictionary, and user stories (originally workflow_scenario.md; migrated to user_story/ in a subsequent pass) — adapted to the new `--flag value` syntax. Extended to L4 in a
 subsequent pass: tests/docs/cli/ added with per-command, per-param, per-type, and per-group test case coverage.
 
-## D11 — Print by default when message given; `--interactive` to opt into TTY
+### D11 — Print by default when message given; `--interactive` to opt into TTY
 
 When `[MESSAGE]` is provided, `clr` defaults to print mode (captured stdout via
 `execute()` + `--print`). Interactive TTY passthrough requires explicit `--interactive`.
@@ -72,7 +72,7 @@ The `-p`/`--print` flag is kept as a backward-compatible explicit alias. The new
 `--interactive` flag opts into TTY passthrough when a message is given. Bare `clr`
 (no message) still opens the interactive REPL as before.
 
-## D12 — Expose `--system-prompt` (replace) despite capability loss
+### D12 — Expose `--system-prompt` (replace) despite capability loss
 
 Both `--system-prompt` (replace) and `--append-system-prompt` (extend) are exposed,
 even though `--system-prompt` strips Claude Code's behavioral guardrails.
@@ -90,7 +90,7 @@ instructions, output style. Claude gets raw tool access with no behavioral scaff
 
 **Recommendation in docs:** `--append-system-prompt` is documented as the default
 recommendation. `--system-prompt` is documented as an explicit opt-in for full-control
-scenarios, with the capability table in `001_command.md` (Command :: 1. run, Notes) making the tradeoffs
+scenarios, with the capability table in `command/01_run.md` (Notes) making the tradeoffs
 visible.
 
 **Note on CLI vs SDK distinction:** This behavior applies to the CLI `--system-prompt`
@@ -98,7 +98,7 @@ flag. The Agent SDK `systemPrompt:` parameter has different semantics — tools 
 be automatically preserved without using `preset: "claude_code"`. The CLI always
 preserves tool definitions regardless of replacement.
 
-## D10 — Binary named `clr`, crate named `claude_runner`
+### D10 — Binary named `clr`, crate named `claude_runner`
 
 The installed binary is `clr`; the Rust crate/lib remains `claude_runner`.
 
@@ -110,7 +110,7 @@ are unaffected; only the `[[bin]] name` in `Cargo.toml` changes.
 **Consequence:** `cargo install --path .` installs `clr`; `CARGO_BIN_EXE_clr` is
 used in integration tests; all docs and help text show `clr`.
 
-## D13 — Commands are bare words, not `--` flags
+### D13 — Commands are bare words, not `--` flags
 
 Behavioral specification: [invariant/003_command_naming.md](invariant/003_command_naming.md).
 
@@ -123,7 +123,7 @@ and confuses shell completers, subcommand typo detection, and user mental models
 and `-h` remain as parameter aliases for POSIX compliance. `KNOWN_SUBCOMMANDS` includes
 `"help"` alongside `"isolated"` and `"refresh"`.
 
-## D14 — Dedicated `refresh` command vs reusing `isolated`
+### D14 — Dedicated `refresh` command vs reusing `isolated`
 
 **Rationale:** `clr isolated` is designed for running real tasks in credential isolation.
 Credential refresh is a distinct operational intent: no user task, no output, just token

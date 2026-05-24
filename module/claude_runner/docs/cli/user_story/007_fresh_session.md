@@ -1,4 +1,11 @@
-# User Story :: 007. Fresh Session
+# CLI User Story: Fresh Session
+
+### Scope
+
+- **Purpose**: Document starting a new conversation without prior session context using --new-session.
+- **Responsibility**: Define acceptance criteria for omitting default session continuation.
+- **In Scope**: --new-session suppressing -c, clean slate start, remaining defaults unchanged, both modes.
+- **Out of Scope**: Session continuation (default behavior, covered in 001_interactive_repl.md).
 
 ### Persona
 
@@ -17,14 +24,20 @@ Start a genuinely new Claude conversation without session continuation so prior 
 
 ### Referenced Commands
 
-| # | Command | Notes |
-|---|---------|-------|
-| 1 | [`run`](../001_command.md#command--1-run) | `--new-session` suppresses default `-c` |
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`run`](../command/01_run.md) | Default command; `--new-session` suppresses continuation |
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 2 | [Runner Control](../param_group/02_runner_control.md) | `--new-session` is a runner control flag |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--new-session`](../param/007_new_session.md) | Suppress default session continuation |
-| 2 | [`--model`](../param/003_model.md) | Optional: choose model for the fresh task |
-| 3 | [`--dir`](../param/008_dir.md) | Optional: set project directory for the new task |
+| 3 | [`--model`](../param/003_model.md) | Optional: choose model for the fresh task |
+| 7 | [`--new-session`](../param/007_new_session.md) | Suppress default session continuation |
+| 8 | [`--dir`](../param/008_dir.md) | Optional: set project directory for the new task |

@@ -27,8 +27,8 @@
 //! - T69: repeated `--effort` flags — last value wins
 //! - T70: `--no-effort-max` suppresses `--effort` regardless of flag order
 
-mod common;
-use common::run_cli;
+mod cli_binary_test_helpers;
+use cli_binary_test_helpers::run_cli;
 
 // T59: --effort max injected by default (no explicit flag required)
 #[ test ]

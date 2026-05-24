@@ -1,4 +1,11 @@
-# User Story :: 003. Interactive With Message
+# CLI User Story: Interactive With Message
+
+### Scope
+
+- **Purpose**: Document interactive TTY mode when an initial message is provided.
+- **Responsibility**: Define acceptance criteria for --interactive overriding default print mode when a message is given.
+- **In Scope**: --interactive with message, TTY passthrough, initial message delivery, session continuation.
+- **Out of Scope**: No-message REPL (→ 001_interactive_repl.md), print mode capture (→ 002_print_mode_capture.md).
 
 ### Persona
 
@@ -17,15 +24,21 @@ Send an initial message to Claude and stay in interactive mode for follow-up tur
 
 ### Referenced Commands
 
-| # | Command | Notes |
-|---|---------|-------|
-| 1 | [`run`](../001_command.md#command--1-run) | `--interactive` activates TTY passthrough |
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`run`](../command/01_run.md) | Default command; `--interactive` overrides print mode |
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 2 | [Runner Control](../param_group/02_runner_control.md) | `--interactive` is a runner control flag |
 
 ### Referenced Parameters
 
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`--interactive`](../param/006_interactive.md) | Opt out of print mode; enable TTY passthrough |
-| 2 | [`[MESSAGE]`](../param/001_message.md) | Initial prompt sent before the REPL session |
-| 3 | [`--dir`](../param/008_dir.md) | Set working directory for the session |
-| 4 | [`--new-session`](../param/007_new_session.md) | Discard prior context |
+| 1 | [`--message`](../param/001_message.md) | Initial prompt sent before the REPL session |
+| 6 | [`--interactive`](../param/006_interactive.md) | Opt out of print mode; enable TTY passthrough |
+| 7 | [`--new-session`](../param/007_new_session.md) | Discard prior context |
+| 8 | [`--dir`](../param/008_dir.md) | Set working directory for the session |

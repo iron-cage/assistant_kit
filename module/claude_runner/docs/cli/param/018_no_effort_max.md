@@ -1,12 +1,12 @@
-# Parameter :: 18. `--no-effort-max`
+# CLI Parameter: --no-effort-max
 
 Suppress the automatic `--effort max` injection. When set, no `--effort` flag
 is forwarded to the `claude` subprocess at all.
 
 - **Type:** bool (standalone flag)
 - **Default:** false (effort max injection is **ON** by default; this flag turns it **OFF**)
-- **Command:** [`run`](../001_command.md#command--1-run)
-- **Group:** [Runner Control](../004_param_group.md#group--2-runner-control)
+- **Command:** [`run`](../command/01_run.md)
+- **Group:** [Runner Control](../param_group/02_runner_control.md)
 
 ```sh
 clr "Fix bug"                      # sends: --effort max (default)
@@ -19,3 +19,26 @@ effort level without any override.
 
 **Note:** `--effort <level>` and `--no-effort-max` are mutually exclusive.
 If `--no-effort-max` is set, any `--effort` value is ignored.
+
+### Referenced Type
+
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| bool | Primitive | bool | present/absent |
+
+### Referenced Parameter Groups
+
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | 15 other params |
+
+### Referenced Commands
+
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 1 | [`run`](../command/01_run.md) | false | — |
+| 5 | [`ask`](../command/05_ask.md) | false | — |
+
+### Referenced User Stories
+
+*None — no user story directly exercises `--no-effort-max`.*

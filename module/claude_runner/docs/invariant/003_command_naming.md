@@ -60,7 +60,8 @@ If a command were prefixed with `--`:
 
 | File | Relationship |
 |------|--------------|
-| `../../src/lib.rs` | `run_cli()` command dispatch, `KNOWN_SUBCOMMANDS` guard |
+| `../../src/lib.rs` | `run_cli()` command dispatch |
+| `../../src/cli.rs` | `guard_unknown_subcommand()` with `KNOWN` subcommand list |
 
 ### Tests
 

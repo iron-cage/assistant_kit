@@ -1,12 +1,12 @@
-# Parameter :: 15. `--system-prompt`
+# CLI Parameter: --system-prompt
 
 Replace the default system prompt sent to the `claude` subprocess with a
 custom text. When omitted, Claude's built-in system prompt remains in effect.
 
-- **Type:** [`SystemPromptText`](../005_type.md#type--6-systemprompttext)
+- **Type:** [`SystemPromptText`](../type/06_system_prompt_text.md)
 - **Default:** — (built-in system prompt unchanged when absent)
-- **Command:** [`run`](../001_command.md#command--1-run)
-- **Group:** [System Prompt](../004_param_group.md#group--3-system-prompt)
+- **Command:** [`run`](../command/01_run.md)
+- **Group:** [System Prompt](../param_group/03_system_prompt.md)
 - **Validation:** requires a value; `--system-prompt` at end of argv → error
 
 ```sh
@@ -27,3 +27,28 @@ prompts. Claude has raw tool access but no guidance on when or how to use tools 
 **Use case:** Specialized single-purpose agents that need complete control over behavior
 and are prepared to re-specify everything Claude Code normally handles automatically.
 For most use cases, `--append-system-prompt` is the correct choice.
+
+### Referenced Type
+
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`SystemPromptText`](../type/06_system_prompt_text.md) | Semantic | String | any UTF-8 text |
+
+### Referenced Parameter Groups
+
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 3 | [System Prompt](../param_group/03_system_prompt.md) | Full | `--append-system-prompt` |
+
+### Referenced Commands
+
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 1 | [`run`](../command/01_run.md) | — | — |
+| 5 | [`ask`](../command/05_ask.md) | — | — |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 9 | [009_custom_system_prompt.md](../user_story/009_custom_system_prompt.md) | Developer |

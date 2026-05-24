@@ -38,8 +38,8 @@
 //! - `--trace --dry-run` emits nothing to stderr (dry-run returns before trace fires)
 //! - `""` empty positional arg ignored — bare command, no message, no degenerate ultrathink suffix
 
-mod common;
-use common::run_cli;
+mod cli_binary_test_helpers;
+use cli_binary_test_helpers::run_cli;
 use std::process::Command;
 
 fn run_dry( args : &[ &str ] ) -> String

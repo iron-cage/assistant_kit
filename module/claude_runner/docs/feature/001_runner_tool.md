@@ -11,11 +11,11 @@
 
 claude_runner serves two distinct consumers from one crate:
 
-**YAML library consumer:** The library surface exposes `COMMANDS_YAML` — an absolute path (computed at compile time via `env!("CARGO_MANIFEST_DIR")`) to `claude.commands.yaml`. Consumers such as `dream` aggregate this YAML at compile time via `build.rs` to build a PHF static command registry for `.claude` and `.claude.help` commands. The library has zero consumer workspace dependencies.
+**YAML library consumer:** The library surface exposes `COMMANDS_YAML` — an absolute path (computed at compile time from the crate manifest directory) to `claude.commands.yaml`. Consumers such as `dream` aggregate this YAML at compile time via a build script to build a PHF static command registry for `.claude` and `.claude.help` commands. The library has zero consumer workspace dependencies.
 
 **CLI binary (`clr`):** The `clr` binary translates `--flag value` syntax to `ClaudeCommand` builder calls and executes Claude Code via `claude_runner_core`. It acts as the user-facing runner for both interactive and non-interactive use.
 
-**Execution modes:** See [001_command.md](../cli/001_command.md) for the full invocation mode table.
+**Execution modes:** See [command/](../cli/command/readme.md) for the full invocation mode table.
 
 **Default flag injection:** See [invariant/001_default_flags.md](../invariant/001_default_flags.md) for the complete default injection rules and opt-out mechanisms.
 
@@ -43,12 +43,15 @@ claude_runner serves two distinct consumers from one crate:
 |------|--------------|
 | [invariant/001_default_flags.md](../invariant/001_default_flags.md) | Default flag injection rules and opt-out mechanism |
 | [invariant/002_dep_constraints.md](../invariant/002_dep_constraints.md) | Zero consumer workspace deps, binary deps gated by enabled |
+| [invariant/003_command_naming.md](../invariant/003_command_naming.md) | Command naming convention (clr / clr run / clr ask) |
+| [invariant/004_trace_universality.md](../invariant/004_trace_universality.md) | --trace applies to all executing subcommands |
 
 ### Sources
 
 | File | Relationship |
 |------|--------------|
-| `../../src/lib.rs` | run_cli() entry point; mode dispatch (run_print_mode, run_interactive) |
+| `../../src/lib.rs` | `run_cli()` entry point |
+| `../../src/cli.rs` | Mode dispatch (`run_print_mode`, `run_interactive`), CLI parsing, command builder |
 
 ### Tests
 

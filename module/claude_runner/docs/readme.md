@@ -12,7 +12,7 @@
 |------|----------------|
 | `api/` | Public library API contracts (COMMANDS_YAML, VerbosityLevel) |
 | `cli/` | CLI reference: commands, flags, modes, examples |
-| `001_001_design_decisions.md` | Design rationale for `--flag value` CLI redesign |
+| `001_design_decisions.md` | Design rationale for `--flag value` CLI redesign |
 | `002_entities.md` | Cross-entity index: Master Doc Entities Table and Master Doc Instances Table |
 | `feature/` | Runner tool design: execution modes, defaults, YAML library |
 | `invariant/` | Default flag injection, dependency constraints, and command naming convention |

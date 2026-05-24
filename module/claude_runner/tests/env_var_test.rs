@@ -36,8 +36,8 @@
 //! | E23  | `CLR_CREDS`                | stderr NOT contains `missing required argument: --creds`    |
 //! | E24  | `CLR_TIMEOUT`              | stderr NOT contains `missing required argument: --creds`    |
 
-mod common;
-use common::run_cli_with_env;
+mod cli_binary_test_helpers;
+use cli_binary_test_helpers::run_cli_with_env;
 
 // ─── E01: CLR_MESSAGE ─────────────────────────────────────────────────────────
 
