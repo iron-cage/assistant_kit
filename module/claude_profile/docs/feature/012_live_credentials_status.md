@@ -13,7 +13,7 @@
 - The credential store directory
 - Any account store setup
 
-The `_active` marker is read opportunistically for the `Account:` line if it exists; the command still succeeds and shows `N/A` when it is absent (e.g. a machine where no account has ever been saved).
+The per-machine active marker is read opportunistically for the `Account:` line if it exists; the command still succeeds and shows `N/A` when it is absent (e.g. a machine where no account has ever been saved).
 
 **Field Presence Parameters:**
 
@@ -21,7 +21,7 @@ Each output line is independently controlled by a boolean param. All default to 
 
 | Param | Default | Output Line |
 |-------|---------|-------------|
-| `account::` | `1` | `Account: {active_account_or_N/A}` (from `_active` marker if present) |
+| `account::` | `1` | `Account: {active_account_or_N/A}` (from per-machine active marker if present) |
 | `sub::` | `1` | `Sub:     {subscriptionType}` |
 | `tier::` | `1` | `Tier:    {rateLimitTier}` |
 | `token::` | `1` | `Token:   valid / expiring in Xm / expired` |
@@ -37,13 +37,13 @@ Each output line is independently controlled by a boolean param. All default to 
 **`format::json`:** Returns all 12 fields regardless of field-presence params:
 `{"subscription":"…","tier":"…","token":"…","expires_in_secs":N,"email":"…","account":"…","file":"…","saved":N,"display_name":"…","role":"…","billing":"…","model":"…"}`.
 
-**`Account:` line:** Reads `_active` marker if it exists. Shows `N/A` when no `_active` marker is present (fresh install or uninitialised account store). Because `.account.save` writes `_active` on every successful save, the account name is always present after any save operation.
+**`Account:` line:** Reads per-machine active marker if it exists. Shows `N/A` when no per-machine active marker is present (fresh install or uninitialised account store). Because `.account.save` writes the active marker on every successful save, the account name is always present after any save operation.
 
 **Missing fields:** Email shows `N/A` when `~/.claude.json` is absent or the field is empty.
 
 **Absent credentials file:** Exit non-zero (exit 2) with an actionable error naming the full path to `~/.claude/.credentials.json`.
 
-**Must NOT call:** `account::list()` or scan the credential store (reading `_active` is permitted for the `account::` line only).
+**Must NOT call:** `account::list()` or scan the credential store (reading the active marker is permitted for the `account::` line only).
 
 ### Acceptance Criteria
 
@@ -51,7 +51,7 @@ Each output line is independently controlled by a boolean param. All default to 
 - **AC-02**: Default output (no params) shows all 6 default-on fields: account, sub, tier, token, expires, email.
 - **AC-03**: `format::json` returns valid JSON with all 12 fields: subscription, tier, token, expires_in_secs, email, account, file, saved, display_name, role, billing, model.
 - **AC-04**: Absent `~/.claude/.credentials.json` exits 2 with error naming the file path.
-- **AC-05**: Missing or empty email and absent `_active` marker → shown as `N/A`.
+- **AC-05**: Missing or empty email and absent per-machine active marker → shown as `N/A`.
 - **AC-06**: `sub::0 tier::0 expires::0 email::0 account::0` → only Token line shown.
 - **AC-07**: `file::1 saved::1` → File and Saved lines appended after default-on fields.
 

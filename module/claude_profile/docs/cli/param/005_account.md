@@ -1,6 +1,6 @@
 # Parameter :: 5. `account::`
 
-Controls whether the active account name line appears in `.credentials.status` output. Reads the `_active` marker file; shows `N/A` when no account store has been initialised.
+Controls whether the active account name line appears in `.credentials.status` output. Reads the per-machine active marker file; shows `N/A` when no account store has been initialised.
 
 - **Type:** `bool`
 - **Default:** `1` (shown)

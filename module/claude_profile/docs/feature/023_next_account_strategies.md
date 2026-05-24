@@ -18,7 +18,7 @@
 | `endurance` (default) | Endurance Top | First non-current, non-active account from endurance sort order (qualified accounts first by weekly desc then reset asc; unqualified by 5h_left desc). |
 | `drain` | Drain Top | First non-current, non-active account from drain sort order (5h_left ascending, h-exhausted sunk; tiebreak weekly desc). |
 
-**Recommendation eligibility:** All strategies skip accounts that are `is_current` (user is already on that session) or `is_active` (the `_active` marker account when it differs from current). Only accounts with valid quota data and `expires_in_secs > 0` are eligible. Strategies select from all eligible accounts regardless of their composite health tier (-> 009_token_usage.md three-tier grouping) -- the tier affects table display ordering, not recommendation eligibility.
+**Recommendation eligibility:** All strategies skip accounts that are `is_current` (user is already on that session) or `is_active` (the active marker account when it differs from current). Only accounts with valid quota data and `expires_in_secs > 0` are eligible. Strategies select from all eligible accounts regardless of their composite health tier (-> 009_token_usage.md three-tier grouping) -- the tier affects table display ordering, not recommendation eligibility.
 
 **Footer format (always shown when ≥2 valid accounts):**
 

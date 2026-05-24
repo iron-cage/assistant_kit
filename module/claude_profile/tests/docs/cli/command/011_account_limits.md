@@ -75,7 +75,7 @@ Integration test specifications for the `.account.limits` command. See [command/
 
 ### IT-6: Error Handling — No Active Account
 
-- **Given:** No `_active` marker set, no active credentials.
+- **Given:** No per-machine active marker set, no active credentials.
 - **When:** `clp .account.limits`
 - **Then:** Exit 2; stderr contains actionable message.; actionable error message shown
 - **Exit:** 2

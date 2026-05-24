@@ -18,7 +18,7 @@
 5. Best-effort restore `{credential_store}/{name}.claude.json` → `~/.claude.json` (missing snapshot is silently skipped).
 6. Best-effort restore `{credential_store}/{name}.settings.json` → `~/.claude/settings.json` (missing snapshot is silently skipped).
 
-**Atomicity guarantee:** The rename in step 3 ensures that a crash between steps 2 and 4 leaves either the old credentials or the new ones in place — never a partially-written file. Step 4 (_active marker) is a best-effort metadata update; steps 5–6 are best-effort restores. A crash after step 3 always leaves the credentials correct; the marker and companion files may be stale but are not load-bearing for authentication.
+**Atomicity guarantee:** The rename in step 3 ensures that a crash between steps 2 and 4 leaves either the old credentials or the new ones in place — never a partially-written file. Step 4 (active marker) is a best-effort metadata update; steps 5–6 are best-effort restores. A crash after step 3 always leaves the credentials correct; the marker and companion files may be stale but are not load-bearing for authentication.
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would switch to '{name}'` without modifying any files.
 

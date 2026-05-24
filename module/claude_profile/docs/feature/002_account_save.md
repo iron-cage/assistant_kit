@@ -56,9 +56,9 @@
 | source | `src/account.rs` | `save()` implementation — validate, init dir, copy credentials |
 | source | `src/commands.rs` | `account_save_routine()` — CLI handler |
 | test | `tests/cli/accounts_test.rs` | Verifies credential file and metadata snapshots created with correct content |
-| test | `claude_profile_core/tests/account_test.rs` | `as_save_writes_active_marker` — unit test: `_active` written after `save()` |
+| test | `claude_profile_core/tests/account_test.rs` | `as_save_writes_active_marker` — unit test: active marker written after `save()` |
 | test | `tests/cli/credentials_test.rs` | `cred14` — CLI: `.credentials.status` shows `Account: {name}` after `.account.save` |
-| test | `tests/cli/account_mutations_test.rs` | `as16` — CLI: `_active` file contains saved name after `.account.save`; `as17`/`as18` — path-unsafe chars in local part exit 1 |
+| test | `tests/cli/account_mutations_test.rs` | `as16` — CLI: active marker file contains saved name after `.account.save`; `as17`/`as18` — path-unsafe chars in local part exit 1 |
 | doc | [001_account_store_init.md](001_account_store_init.md) | Directory initialization triggered by save |
 | doc | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine marker naming convention used in step 9 |
 | doc | [command/001_account.md](../cli/command/001_account.md#command--4-accountsave) | CLI command specification |

@@ -74,7 +74,7 @@ clp .usage live::1 interval::60 jitter::10
 
 **Notes:**
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
-- Flag column priority: `✓` = current account, `*` = `_active`-but-not-current (divergence), `→` = recommended next account. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
+- Flag column priority: `✓` = current account, `*` = active-but-not-current (divergence), `→` = recommended next account. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
 - Status emoji column (`●`): composite AND of 5h and 7d — `🟢` = valid token + both 5h Left > 5% and 7d Left > 5%; `🟡` = valid token + either 5h Left ≤ 5% or 7d Left ≤ 5%; `🔴` = invalid/missing token. Per-column emoji also embedded in `5h Left` and `7d Left` values (🟢/🟡 at ≤5% threshold). No JSON equivalent.
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
 - `Sub` and `~Renews` are sourced from `GET /api/oauth/account` (parallel fetch); show `?` when that fetch fails.

@@ -4,18 +4,18 @@
 
 - **Purpose**: Surface live quota utilization for all saved accounts and the currently live session via `GET /api/oauth/usage`, showing 5h, 7d, and Sonnet-specific weekly quota remaining.
 - **Responsibility**: Documents the `usage` module and `.usage` CLI command.
-- **In Scope**: Per-account quota fetch via `claude_quota::fetch_oauth_usage()` calling `GET /api/oauth/usage`, `OauthUsageData` parsing with `five_hour`/`seven_day`/`seven_day_sonnet` fields, parallel fetch of account billing state via `claude_quota::fetch_oauth_account()` → `OauthAccountData` (`billing_type`, `has_max`, `org_created_at`), token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for `_active`-but-not-current accounts), synthetic `(current session)` row when live credentials are unsaved, `Sub` column (subscription label: `max`/`pro`/`—`/`?`, hidden by default — `cols::+sub` to show), `~Renews` column (estimated next Stripe billing date from `org_created_at` day-of-month), table output using `data_fmt`, graceful handling of expired/missing tokens, composite `●` status emoji (AND of 5h and 7d), per-column emoji in `5h Left` and `7d Left` values, three-tier universal display grouping (🟢 → 🟡 → 🔴) with h-exhausted sub-group before weekly-exhausted sub-group within 🟡, `cols::` column visibility modifiers, `next::` recommendation strategy parameter, multi-strategy footer, `7d Son Reset` column (hidden by default), duration format capped to 2 significant units, `format::json` output.
-- **Out of Scope**: Historical token counts from stats-cache.json (replaced by live API data); verbosity levels (single fixed output level per command design); relying on `_active` marker for `✓` determination (live credential matching via `accessToken` comparison determines `✓`; `_active` determines `*` only).
+- **In Scope**: Per-account quota fetch via `claude_quota::fetch_oauth_usage()` calling `GET /api/oauth/usage`, `OauthUsageData` parsing with `five_hour`/`seven_day`/`seven_day_sonnet` fields, parallel fetch of account billing state via `claude_quota::fetch_oauth_account()` → `OauthAccountData` (`billing_type`, `has_max`, `org_created_at`), token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for active-marker-but-not-current accounts), synthetic `(current session)` row when live credentials are unsaved, `Sub` column (subscription label: `max`/`pro`/`—`/`?`, hidden by default — `cols::+sub` to show), `~Renews` column (estimated next Stripe billing date from `org_created_at` day-of-month), table output using `data_fmt`, graceful handling of expired/missing tokens, composite `●` status emoji (AND of 5h and 7d), per-column emoji in `5h Left` and `7d Left` values, three-tier universal display grouping (🟢 → 🟡 → 🔴) with h-exhausted sub-group before weekly-exhausted sub-group within 🟡, `cols::` column visibility modifiers, `next::` recommendation strategy parameter, multi-strategy footer, `7d Son Reset` column (hidden by default), duration format capped to 2 significant units, `format::json` output.
+- **Out of Scope**: Historical token counts from stats-cache.json (replaced by live API data); verbosity levels (single fixed output level per command design); relying on per-machine active marker for `✓` determination (live credential matching via `accessToken` comparison determines `✓`; active marker determines `*` only).
 
 ### Design
 
 `claude_profile` CLI provides a `.usage` command that fetches live quota utilization for every saved account by calling `claude_quota::fetch_oauth_usage(&token)` which issues `GET /api/oauth/usage` to `api.anthropic.com`. Results are displayed as a table.
 
-**Live account detection:** The `_active` marker is NOT used to determine which account is currently in use. Instead, the command reads the `accessToken` from `~/.claude/.credentials.json` (the live credentials file used by Claude Code) and compares it against each saved account's stored token. This is correct even when an external actor (Claude Code, `claude auth login`, another process) has changed the credentials without going through `clp`.
+**Live account detection:** The per-machine active marker is NOT used to determine which account is currently in use. Instead, the command reads the `accessToken` from `~/.claude/.credentials.json` (the live credentials file used by Claude Code) and compares it against each saved account's stored token. This is correct even when an external actor (Claude Code, `claude auth login`, another process) has changed the credentials without going through `clp`.
 
 **Algorithm:**
 1. Read the credential store — enumerate all saved accounts (`{credential_store}/*.credentials.json`) via `account::list()`; each `Account` struct includes `expires_at_ms`.
-2. Read `~/.claude/.credentials.json` to obtain the **live** `accessToken` and `expiresAt`. This identifies the credentials currently in use by Claude Code regardless of the `_active` marker.
+2. Read `~/.claude/.credentials.json` to obtain the **live** `accessToken` and `expiresAt`. This identifies the credentials currently in use by Claude Code regardless of the per-machine active marker.
 3. Detect the **live account** by comparing the live `accessToken` against each saved account's stored token:
    a. If exactly one saved account's token matches, that account is the live account (it will receive `✓`).
    b. If no saved account's token matches (credentials were set by an external actor and not yet saved, or are from a fresh login), construct a **synthetic entry**:
@@ -34,7 +34,7 @@
    e. On any failure (token read or API): record the error reason.
 5. Post-process:
    a. Mark the live account (detected in step 3) with `✓` in the flag column (`is_current = true`).
-   b. Mark the `_active` account with `*` in the flag column when `is_active = true` AND `is_current = false`. No `*` is emitted when the active and current accounts are the same.
+   b. Mark the active account with `*` in the flag column when `is_active = true` AND `is_current = false`. No `*` is emitted when the active and current accounts are the same.
    c. Recommendation is controlled by the `next::` parameter (see [023_next_account_strategies.md](023_next_account_strategies.md)). The account selected by the active strategy receives `→` in the table body; the footer always shows one recommendation per strategy. Default strategy is `endurance`.
 6. Render results as a table using `data_fmt`:
    - **Default columns:** flag (`✓`/`*`/`→`/ blank, priority `✓` > `*` > `→` > blank), status (`🔴`/`🟡`/`🟢`, header `●`), Account, Expires, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset
@@ -94,7 +94,7 @@ Valid: 3 / 3   ->  Next by strategy:
   drain      carol@example.com   95% session, resets in 3h 44m
 ```
 
-(`*` = `_active` marker points here, but live credentials belong to `alice@example.com`. Both strategies agree — carol is the only eligible account.)
+(`*` = active marker points here, but live credentials belong to `alice@example.com`. Both strategies agree — carol is the only eligible account.)
 
 **Output format (text) — unsaved account is live (synthetic row):**
 
@@ -129,14 +129,14 @@ Valid: 2 / 3   ->  Next by strategy:
 **Error handling:**
 - `HOME` unset → `InternalError`
 - Credential store unreadable → `InternalError`
-- `~/.claude/.credentials.json` unreadable → live detection skipped; no `✓` is emitted on any row; `*` is still emitted for the `_active` account; saved accounts still rendered
+- `~/.claude/.credentials.json` unreadable → live detection skipped; no `✓` is emitted on any row; `*` is still emitted for the active account; saved accounts still rendered
 - Individual account token expired or invalid → inline `error` field in that row (non-fatal; other accounts still processed)
 - Empty credential store (and no synthetic row) → empty table with `(no accounts configured)` message
 
 ### Acceptance Criteria
 
 - **AC-01**: `.usage` fetches quota for every saved account, not only the active one.
-- **AC-02**: The **live account** — the saved account whose `accessToken` matches the live `~/.claude/.credentials.json` token — has `✓` in the flag column. The `_active` marker is NOT used for `✓` determination.
+- **AC-02**: The **live account** — the saved account whose `accessToken` matches the live `~/.claude/.credentials.json` token — has `✓` in the flag column. The per-machine active marker is NOT used for `✓` determination.
 - **AC-03**: Accounts with expired or missing tokens show `—` in quota columns and a shortened error reason in the final column.
 - **AC-04**: Table output is rendered by `data_fmt`.
 - **AC-05**: `format::json` returns a valid JSON array with one object per account; each object includes `expires_in_secs`, `is_current` (bool), `is_active` (bool), `billing_type` (string or `null`), `has_max` (bool or `null`), and `next_renewal_est` (string or `null`); successful rows also include `session_5h_left_pct`, `weekly_7d_left_pct`, and `weekly_7d_sonnet_left_pct` (all remaining, not consumed); `weekly_7d_sonnet_left_pct` is `null` when Sonnet quota data is absent from the API response; `billing_type`, `has_max`, and `next_renewal_est` are `null` when the account fetch failed.
@@ -148,9 +148,9 @@ Valid: 2 / 3   ->  Next by strategy:
 - **AC-10**: A footer is appended when ≥2 accounts have valid quota data; the footer is absent when 0 or 1 valid account. The footer always shows both strategy recommendations (endurance, drain) regardless of `next::` value.
 - **AC-11**: When the live `~/.claude/.credentials.json` token does not match any saved account's token, a synthetic row is prepended at the top of the table with `✓`, quota fetched via the live token, and the name set to the email from `~/.claude/.claude.json` (or `(current session)` when that file is unavailable or the field is empty).
 - **AC-12**: When `~/.claude/.credentials.json` is unreadable, no `✓` is emitted on any row; all saved accounts are still shown.
-- **AC-13**: `*` in the flag column marks the account with the `_active` marker when it differs from the current (live) account; no `*` appears when active and current are the same account.
+- **AC-13**: `*` in the flag column marks the account with the per-machine active marker when it differs from the current (live) account; no `*` appears when active and current are the same account.
 - **AC-14**: When current = active (normal case), only `✓` appears on the current row; no `*` is emitted on any row.
-- **AC-15**: When `~/.claude/.credentials.json` is unreadable, no `✓` is emitted; `*` is still emitted for the `_active` account. See [016_current_account_awareness.md](016_current_account_awareness.md).
+- **AC-15**: When `~/.claude/.credentials.json` is unreadable, no `✓` is emitted; `*` is still emitted for the active account. See [016_current_account_awareness.md](016_current_account_awareness.md).
 - **AC-16**: `format::json` output uses `is_current` (replacing the former `active` field) and includes a new `is_active` boolean field per object.
 - **AC-18**: Every table row has a composite status emoji in the `●` column (second column, after flag) using AND logic: `🟢` when `result` is `Ok` and both `5h Left > 5%` and `7d Left > 5%`, `🟡` when `result` is `Ok` and either `5h Left ≤ 5%` or `7d Left ≤ 5%`, `🔴` when `result` is `Err`. The emoji appears on every row including the synthetic current-session row.
 - **AC-19**: The 5% boundary for composite `●` is exclusive for `🟢` and inclusive for `🟡` on both dimensions: an account with exactly `5h Left = 5%` OR `7d Left = 5%` shows `🟡`; both must be `> 5%` for `🟢`.

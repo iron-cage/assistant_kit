@@ -187,7 +187,7 @@ struct AccountQuota
   name          : String,
   /// Live-token match: `accessToken` in `~/.claude/.credentials.json` equals this account's stored token.
   is_current    : bool,
-  /// Active-marker match: `_active` file in the credential store names this account.
+  /// Active-marker match: per-machine active marker file in the credential store names this account.
   is_active     : bool,
   expires_at_ms : u64,
   /// `Ok` = live quota fetched; `Err` = reason string (expired, network, etc.).
@@ -1455,8 +1455,8 @@ fn apply_refresh(
 /// `5h Reset` value. If the subprocess or re-fetch fails the account row is unchanged
 /// (touch failure is non-aborting — other accounts and the render continue normally).
 ///
-/// The original `_active` account is restored unconditionally inside this call before
-/// using the new credentials. This prevents a stale `_active` if the process is
+/// The original active account is restored unconditionally inside this call before
+/// using the new credentials. This prevents a stale active marker if the process is
 /// interrupted between touches.
 fn apply_touch(
   aq               : &mut AccountQuota,
@@ -1481,9 +1481,9 @@ fn apply_touch(
     &aq.name, credential_store, claude_paths, trace,
   );
 
-  // CRITICAL: restore _active unconditionally before using new_creds (Fix(BUG-170) pattern).
+  // CRITICAL: restore active marker unconditionally before using new_creds (Fix(BUG-170) pattern).
   // If restoration is deferred past the return points below, an interrupted touch leaves
-  // _active pointing at the touched account instead of the original.
+  // the active marker pointing at the touched account instead of the original.
   if let ( Some( original ), Some( paths ) ) = ( original_active.as_deref(), claude_paths )
   {
     let name = original.trim();
@@ -2242,13 +2242,13 @@ mod tests
   /// # Prevention
   /// This test guards the restore: after a refresh cycle where bob's `switch_account` fails,
   /// the restore runs `switch_account("alice@example.com", ...)` which succeeds (alice has a
-  /// cred file), writing alice's creds to the live file and "alice@example.com" to `_active`.
+  /// cred file), writing alice's creds to the live file and "alice@example.com" to the active marker.
   ///
   /// # Pitfall
   /// The `{fake_home}/.claude/` directory MUST exist before `apply_refresh` is called.
   /// `switch_account` calls `fs::copy(src, tmp)` where `tmp` is inside `{fake_home}/.claude/`;
   /// if the directory is absent, `copy` fails and the restore silently does nothing —
-  /// `_active` remains unchanged but for the wrong reason (silent failure, not correct restore).
+  /// the active marker remains unchanged but for the wrong reason (silent failure, not correct restore).
   // test_kind: regression(issue-165)
   #[ test ]
   fn test_apply_refresh_lifecycle_original_active_restored()
@@ -2286,11 +2286,11 @@ mod tests
 
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
 
-    // Restore ran: switch_account("alice@example.com", ...) wrote _active and live creds.
+    // Restore ran: switch_account("alice@example.com", ...) wrote active marker and live creds.
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
-      "_active must be restored to original account after refresh cycle",
+      "per-machine active marker must be restored to original account after refresh cycle",
     );
 
     let live_creds = std::fs::read_to_string( paths.credentials_file() ).unwrap();
@@ -2402,9 +2402,9 @@ mod tests
     );
   }
 
-  /// L5 — `apply_refresh` lifecycle: no `_active` file → `original_active = None` → no restore.
+  /// L5 — `apply_refresh` lifecycle: no active marker file → `original_active = None` → no restore.
   ///
-  /// `read_to_string` on the absent `_active` file returns `Err`; `.ok()` maps that to `None`.
+  /// `read_to_string` on the absent active marker file returns `Err`; `.ok()` maps that to `None`.
   /// The restore block requires `Some(original)`, so it is skipped entirely.
   #[ test ]
   fn test_apply_refresh_lifecycle_no_active_file_no_restore()
@@ -2416,7 +2416,7 @@ mod tests
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
     assert!(
       !store.path().join( crate::account::active_marker_filename() ).exists(),
-      "_active must not be created when it was absent before apply_refresh",
+      "per-machine active marker must not be created when it was absent before apply_refresh",
     );
   }
 
@@ -2445,7 +2445,7 @@ mod tests
     apply_refresh( &mut accounts, store.path(), Some( &paths ), true );
   }
 
-  /// L7 — `_active` file with trailing newline: `trim()` strips whitespace → correct restore.
+  /// L7 — active marker file with trailing newline: `trim()` strips whitespace → correct restore.
   ///
   /// `read_to_string` returns `"alice@example.com\n"`.  `original.trim()` strips the newline,
   /// yielding the valid name used in `switch_account` → restore succeeds.
@@ -2467,13 +2467,13 @@ mod tests
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
-      "trailing-newline _active must be trimmed before restore; _active after = {active:?}",
+      "trailing-newline active marker must be trimmed before restore; active marker after = {active:?}",
     );
   }
 
-  /// L8 — `_active` file containing only whitespace: `trim().is_empty()` → restore skipped.
+  /// L8 — active marker file containing only whitespace: `trim().is_empty()` → restore skipped.
   ///
-  /// An `_active` file with content `"   \n  "` trims to `""`.  `is_empty()` is `true`,
+  /// An active marker file with content `"   \n  "` trims to `""`.  `is_empty()` is `true`,
   /// so `switch_account` is never called and the file content is not modified.
   #[ test ]
   fn test_apply_refresh_lifecycle_active_whitespace_only_no_restore()
@@ -2488,14 +2488,14 @@ mod tests
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, ws,
-      "whitespace-only _active must not trigger restore; content must be unchanged",
+      "whitespace-only active marker must not trigger restore; content must be unchanged",
     );
   }
 
   /// L9 — `claude_paths = None`: restore guard `if let (Some(original), Some(paths))`
-  /// short-circuits on `paths = None` → `_active` is never modified by restore.
+  /// short-circuits on `paths = None` → active marker is never modified by restore.
   ///
-  /// Verifies the `None` branch guard: an existing `_active` file must be unchanged
+  /// Verifies the `None` branch guard: an existing active marker file must be unchanged
   /// after `apply_refresh` using the fallback (non-lifecycle) path.
   #[ test ]
   fn test_apply_refresh_none_paths_active_unchanged()
@@ -2507,7 +2507,7 @@ mod tests
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
-      "_active must be unchanged when claude_paths=None (no restore possible)",
+      "per-machine active marker must be unchanged when claude_paths=None (no restore possible)",
     );
   }
 

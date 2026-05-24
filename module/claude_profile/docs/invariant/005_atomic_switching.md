@@ -4,7 +4,7 @@
 
 - **Purpose**: Prevent credential corruption on crash or power loss during account switches.
 - **Responsibility**: Documents the write-then-rename atomicity requirement for `switch_account()` (NFR-6).
-- **In Scope**: The atomic rename guarantee for `~/.claude/.credentials.json` writes; `_active` marker durability.
+- **In Scope**: The atomic rename guarantee for `~/.claude/.credentials.json` writes; active marker durability.
 - **Out of Scope**: What happens after switching (caller responsibility: terminate old processes, verify new account).
 
 ### Invariant Statement

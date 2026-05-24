@@ -67,7 +67,7 @@ Issues `GET https://api.anthropic.com/api/oauth/claude_cli/roles` with the Beare
 
 Applied to `.credentials.status` (reads from live `~/.claude.json` — org fields only available if `{name}.roles.json` was saved for the active account and is re-read from the credential store) and `.accounts` (reads from `{name}.roles.json` snapshot).
 
-**`.credentials.status` note:** `.credentials.status` reads live credential data without requiring the credential store. For `org_uuid::` and `org_name::`, it reads from `{credential_store}/{_active}.roles.json` using the active account name from `_active` marker. If no active account or no roles.json — shows `N/A`.
+**`.credentials.status` note:** `.credentials.status` reads live credential data without requiring the credential store. For `org_uuid::` and `org_name::`, it reads from `{credential_store}/{active_account}.roles.json` using the active account name from the per-machine active marker. If no active account or no roles.json — shows `N/A`.
 
 **`format::json`:** Always includes `organization_uuid`, `organization_name`, `organization_role`, `workspace_uuid`, `workspace_name` regardless of params.
 

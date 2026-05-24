@@ -23,7 +23,7 @@ touch::0   → idle accounts appear as-is (default)
 - When both `refresh::1` and `touch::1` are active, refresh runs first (retries auth errors); touch runs second on post-refresh results.
 - In `live::1` mode, `touch::1` applies on every cycle. Once an account is touched, subsequent fetches return a concrete `resets_at`, so the trigger does not fire again until the 5h window fully resets and the account goes idle.
 - Each touch spawns an isolated subprocess (~35s timeout). With N idle accounts, this adds up to N * 35s. Off by default to avoid unexpected subprocess spawning.
-- After all touch operations complete, the original `_active` account is restored.
+- After all touch operations complete, the original active account is restored.
 - `touch::` does not affect `format::json` output structure.
 
 **See Also:** [feature/024_session_touch.md](../../feature/024_session_touch.md) for trigger conditions, algorithm, and AC criteria.

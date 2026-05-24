@@ -74,7 +74,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-1: Lists all accounts as indented key-val blocks
 
-- **Given:** Create `~/.persistent/claude/credential/` with two credential files: `work@acme.com.credentials.json` and `personal@home.com.credentials.json`. Set `work@acme.com` as the active account via the `_active` marker.
+- **Given:** Create `~/.persistent/claude/credential/` with two credential files: `work@acme.com.credentials.json` and `personal@home.com.credentials.json`. Set `work@acme.com` as the active account via the per-machine active marker.
 - **When:** `clp .accounts`
 - **Then:** Output contains two indented blocks, one starting with `work@acme.com` and one with `personal@home.com`. Each block has `Active:`, `Sub:`, `Tier:`, `Expires:`, `Email:` lines.; both accounts listed as indented key-val blocks
 - **Exit:** 0

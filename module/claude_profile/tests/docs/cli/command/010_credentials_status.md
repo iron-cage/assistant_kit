@@ -16,8 +16,8 @@ Integration test planning for the `.credentials.status` command. See [command/na
 | IT-8 | Output is stable across repeated invocations | Stability |
 | IT-9 | `uuid::1` shows `ID:` line from live `~/.claude.json` `taggedId` | Extended Fields (opt-in) |
 | IT-10 | `capabilities::1` shows `Capabilities:` as comma-separated list from live `~/.claude.json` | Extended Fields (opt-in) |
-| IT-11 | `org_uuid::1` shows `Org ID:` from `{_active}.roles.json` in credential store | Org Identity (opt-in) |
-| IT-12 | `org_name::1` shows `Org:` from `{_active}.roles.json` in credential store | Org Identity (opt-in) |
+| IT-11 | `org_uuid::1` shows `Org ID:` from `{active_account}.roles.json` in credential store | Org Identity (opt-in) |
+| IT-12 | `org_name::1` shows `Org:` from `{active_account}.roles.json` in credential store | Org Identity (opt-in) |
 | IT-13 | `uuid::`, `capabilities::`, `org_uuid::`, `org_name::` all absent by default | Extended Fields / Default |
 | IT-14 | `format::json` includes `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` keys | Extended Fields / JSON |
 
@@ -82,7 +82,7 @@ Integration test planning for the `.credentials.status` command. See [command/na
 
 ### IT-5: Default output without `.claude.json` — email and account show N/A
 
-- **Given:** Claude Code's `~/.claude/.credentials.json` present (subscriptionType="pro"). No `~/.claude/.claude.json`. No `clp` credential store (no `_active` marker).
+- **Given:** Claude Code's `~/.claude/.credentials.json` present (subscriptionType="pro"). No `~/.claude/.claude.json`. No `clp` credential store (no per-machine active marker).
 - **When:** `clp .credentials.status`
 - **Then:** Stdout shows "N/A" for email and account fields, exit 0.; N/A displayed for missing email and account
 - **Exit:** 0
@@ -140,9 +140,9 @@ Integration test planning for the `.credentials.status` command. See [command/na
 
 ---
 
-### IT-11: `org_uuid::1` shows `Org ID:` from `{_active}.roles.json`
+### IT-11: `org_uuid::1` shows `Org ID:` from `{active_account}.roles.json`
 
-- **Given:** `~/.claude/.credentials.json` present. Credential store has `_active` = `work@acme.com` and `{credential_store}/work@acme.com.roles.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`.
+- **Given:** `~/.claude/.credentials.json` present. Credential store has per-machine active marker pointing to `work@acme.com` and `{credential_store}/work@acme.com.roles.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`.
 - **When:** `clp .credentials.status org_uuid::1`
 - **Then:** Stdout contains `Org ID:  org-xyz-789`.
 - **Exit:** 0
@@ -150,7 +150,7 @@ Integration test planning for the `.credentials.status` command. See [command/na
 
 ---
 
-### IT-12: `org_name::1` shows `Org:` from `{_active}.roles.json`
+### IT-12: `org_name::1` shows `Org:` from `{active_account}.roles.json`
 
 - **Given:** Same setup as IT-11 (active account with `roles.json` in credential store).
 - **When:** `clp .credentials.status org_name::1`
@@ -162,7 +162,7 @@ Integration test planning for the `.credentials.status` command. See [command/na
 
 ### IT-13: Extended params absent by default
 
-- **Given:** `~/.claude/.credentials.json` present. `~/.claude.json` contains taggedId and capabilities. Credential store has `_active` with `roles.json` containing org fields.
+- **Given:** `~/.claude/.credentials.json` present. `~/.claude.json` contains taggedId and capabilities. Credential store has per-machine active marker with `roles.json` containing org fields.
 - **When:** `clp .credentials.status` (no extended params)
 - **Then:** Stdout does NOT contain `ID:`, `Capabilities:`, `Org ID:`, or `Org:` lines. Only default-on fields shown.
 - **Exit:** 0

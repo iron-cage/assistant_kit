@@ -130,7 +130,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".credentials.status", "Show live credential metadata without account store dependency",
     vec![
       reg_arg_opt( "format", Kind::String ).with_description( "Output format: `text` (default) or `json`" ),
-      bfd( "account", "Show account name from `_active` marker (default on)"   ),
+      bfd( "account", "Show account name from per-machine active marker (default on)"   ),
       bfd( "sub",     "Show subscription type from credentials (default on)"    ),
       bfd( "tier",    "Show rate-limit tier from credentials (default on)"      ),
       bfd( "token",   "Show OAuth token validity state (default on)"            ),
