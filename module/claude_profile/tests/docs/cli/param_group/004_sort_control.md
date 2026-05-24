@@ -41,11 +41,11 @@ Interaction tests for Group 4 (Sort Control: `sort::`, `desc::`, `prefer::`). Se
 ### CC-3: `sort::` does not affect `→ Next` recommendation in footer
 
 - **Behavioral Divergence:** The `→ Next` footer recommendation is determined by `find_recommendation()` algorithm (highest `5h Left` → highest expiry → highest `7d Left` → alpha), not by `sort::`. Sort changes display order but not the recommended account. An account ranked 3rd by `sort::drain` can still be the `→ Next` recommendation.
-- **Given:** Unit-level or integration test. Three accounts: `a@x.com` (5h Left=80%, non-exhausted), `b@x.com` (5h Left=50%, non-exhausted), `c@x.com` (5h Left=3%, exhausted by drain/reset floor). `sort::drain` order: `b@x.com`, `a@x.com`, then `c@x.com` sunk.
+- **Given:** Unit-level or integration test. Three accounts: `a@x.com` (5h Left=80%, non-exhausted), `b@x.com` (5h Left=50%, non-exhausted), `c@x.com` (5h Left=3%, exhausted by drain/reset floor at ≤15%). `sort::drain` order: `b@x.com`, `a@x.com`, then `c@x.com` sunk.
 - **When-A:** `clp .usage sort::name`
 - **When-B:** `clp .usage sort::drain`
 - **Then-A:** Row order: a, b, c. Footer: "Next: a@x.com" (highest 5h Left).
-- **Then-B:** Row order: b (25%), a (80%), c (3% sunk). Footer: still "Next: a@x.com" — same recommendation regardless of sort.
+- **Then-B:** Row order: b (50%), a (80%), c (3% sunk). Footer: still "Next: a@x.com" — same recommendation regardless of sort.
 - **Source:** [feature/020_usage_sort_strategies.md AC-11](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---

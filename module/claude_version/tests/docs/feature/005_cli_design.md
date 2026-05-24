@@ -94,8 +94,8 @@ Both are valid invocations; output length differs.
 
 | Function | File |
 |----------|------|
-| TBD (ft001_unknown_param_exits_1) | `integration/feature_surface_test.rs` |
-| TBD (ft002_missing_value_exits_1) | `integration/feature_surface_test.rs` |
-| TBD (ft003_last_param_wins) | `integration/feature_surface_test.rs` |
+| `ft005_1_unknown_param_exits_1` | `integration/feature_surface_test.rs` |
+| `ft005_2_empty_bool_param_value_exits_1` | `integration/feature_surface_test.rs` |
+| `ft005_3_last_param_wins` | `integration/feature_surface_test.rs` |
 | `tc093_empty_args_exits_0` | `integration/framework_test.rs` |
 | `tc04_help_anywhere_wins` | `integration/read_commands_test.rs` |

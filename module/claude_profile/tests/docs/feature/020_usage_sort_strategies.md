@@ -21,6 +21,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | Unit test |
 | FT-14 | `sort::reset` is default when `sort::` omitted | AC-01 | Unit test |
 | FT-15 | Within 🟡: h-exhausted before weekly-exhausted; `desc::` doesn't swap sub-groups | AC-14 | Unit test |
+| FT-16 | `sort::endurance` unqualified tiebreak by highest weekly when session quotas tied | AC-02 | Unit test |
 
 ### Test Case Index
 
@@ -41,8 +42,9 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | Tier Grouping |
 | FT-14 | `sort::reset` is default when `sort::` omitted | AC-01 | Default |
 | FT-15 | Within 🟡: h-exhausted before weekly-exhausted; sub-grouping not reversed by `desc::` | AC-14 | Yellow Sub-Grouping |
+| FT-16 | sort::endurance unqualified tiebreak by weekly | AC-02 | Tiebreak |
 
-**Total:** 15 FT cases
+**Total:** 16 FT cases
 
 ---
 
@@ -188,7 +190,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 ### FT-13: Three-tier grouping: 🟢 above 🟡 above 🔴
 
-- **Given:** Three `AccountQuota` structs: `green@test.com` (5h_left=80%, 7d_left=60% — both >5%, tier 🟢), `yellow@test.com` (5h_left=3%, 7d_left=50% — 5h ≤5%, tier 🟡), `red@test.com` (result=Err — tier 🔴). Any sort strategy.
+- **Given:** Three `AccountQuota` structs: `green@test.com` (5h_left=80%, 7d_left=60% — 5h >15% and 7d >5%, tier 🟢), `yellow@test.com` (5h_left=3%, 7d_left=50% — 5h ≤15%, tier 🟡), `red@test.com` (result=Err — tier 🔴). Any sort strategy.
 - **When:** `sort_indices(&accounts, SortStrategy::Name, None, PreferStrategy::Any, 0)` — name sort would place red before yellow alphabetically.
 - **Then:** Output order: `green@test.com` (🟢), `yellow@test.com` (🟡), `red@test.com` (🔴). Three-tier grouping overrides alphabetical sort.
 - **Exit:** n/a (unit test)
@@ -221,3 +223,14 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
 - **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (When-A), `test_ft15_020_yellow_sub_grouping_not_reversed_by_desc` (When-B) (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-14](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### FT-16: `sort::endurance` unqualified bucket tiebreak by highest weekly
+
+- **Given:** Three `AccountQuota` structs, all in the unqualified bucket (none qualify for endurance): equal `five_hour.utilization=50%` (50% left), `seven_day` utilization = [98%, 0%, 73%] (2%, 100%, 27% left). Alphabetical name order: A (2% weekly), B (100% weekly), C (73% weekly).
+- **When:** `sort_indices(&accounts, SortStrategy::Endurance, None, PreferStrategy::Any, now_secs)` — endurance default `desc::1`, all unqualified.
+- **Then:** Order: B (100% weekly), C (73% weekly), A (2% weekly). When session quotas are equal, highest `weekly(prefer)` wins the tiebreak — not alphabetical insertion order.
+- **Exit:** n/a (unit test — index assertion)
+- **Source fn:** `test_bug173_mre_endurance_unqualified_prefers_highest_weekly` (in `src/usage.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-02](../../../../docs/feature/020_usage_sort_strategies.md)

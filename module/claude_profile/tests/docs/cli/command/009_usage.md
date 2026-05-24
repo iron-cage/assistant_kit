@@ -48,7 +48,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-40 | Table header row contains `●` column label | Status Emoji |
 | IT-41 | Account with missing token → `🔴` in table row | Status Emoji |
 | IT-42 | `format::json` output does not contain `🔴`, `🟡`, or `🟢` | Status Emoji |
-| IT-43 | Exact 5% boundary: `utilization=95.0` → `🟡`; `utilization=94.9` → `🟢` | Status Emoji |
+| IT-43 | Exact boundary: 5h at 15% (`utilization=85.0` → `🟡`), 7d at 5% | Status Emoji |
 | IT-44 | `sort::name` accepted with empty store → exit 0 | Sort Acceptance |
 | IT-45 | `sort::endurance` accepted with empty store → exit 0 | Sort Acceptance |
 | IT-46 | `sort::drain` accepted with empty store → exit 0 | Sort Acceptance |
@@ -62,7 +62,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-54 | Footer always shows both strategy lines regardless of `next::` value | Next Footer |
 | IT-55 | `cols::+sub` shows Sub column in output | Column Visibility |
 | IT-56 | `cols::+bogus` exits 1 naming valid column IDs | Column Rejection |
-| IT-57 | Composite `●` uses AND(5h, 7d): both >5% → 🟢, either ≤5% → 🟡 | Composite Emoji |
+| IT-57 | Composite `●` uses AND(5h, 7d): 5h >15% and 7d >5% → 🟢, either below → 🟡 | Composite Emoji |
 | IT-58 | Per-column emoji in `5h Left` value: `🟢 86%` / `🟡 3%` | Per-Column Emoji |
 | IT-59 | Duration format capped to 2 units: no 3-unit durations in output | Duration Format |
 | IT-60 | Three-tier grouping: 🟢 accounts above 🟡 above 🔴 regardless of sort | Tier Grouping |
@@ -564,14 +564,14 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-43: Exact 5% boundary — composite AND: 5h boundary + 7d boundary
+### IT-43: Exact boundary — composite AND: 5h at 15%, 7d at 5%
 
 - **Given:** Unit test of `status_emoji()`. Three `OauthUsageData` variants:
-  - A: `five_hour.utilization = 95.0` (5.0% left), `seven_day.utilization = 50.0` (50% left) → expected `🟡` (5h at boundary)
-  - B: `five_hour.utilization = 94.9` (5.1% left), `seven_day.utilization = 50.0` (50% left) → expected `🟢` (both > 5%)
+  - A: `five_hour.utilization = 85.0` (15.0% left), `seven_day.utilization = 50.0` (50% left) → expected `🟡` (5h at boundary)
+  - B: `five_hour.utilization = 84.9` (15.1% left), `seven_day.utilization = 50.0` (50% left) → expected `🟢` (both above threshold)
   - C: `five_hour.utilization = 50.0` (50% left), `seven_day.utilization = 95.0` (5.0% left) → expected `🟡` (7d at boundary)
 - **When:** `status_emoji(&Ok(data_a))`, `status_emoji(&Ok(data_b))`, `status_emoji(&Ok(data_c))`
-- **Then:** A returns `"🟡"`; B returns `"🟢"`; C returns `"🟡"`. Composite AND boundary: both must be `> 5.0%` for `🟢`.
+- **Then:** A returns `"🟡"`; B returns `"🟢"`; C returns `"🟡"`. Composite AND: `5h Left > 15.0%` and `7d Left > 5.0%` required for `🟢`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it042_status_emoji_boundary_precision`
 - **Source:** [009_token_usage.md AC-19](../../../../docs/feature/009_token_usage.md)
@@ -724,7 +724,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-57: Composite `●` uses AND(5h, 7d): both >5% → 🟢, either ≤5% → 🟡
+### IT-57: Composite `●` uses AND(5h, 7d): 5h >15% and 7d >5% → 🟢, either below → 🟡
 
 - **Given:** Unit test of `status_emoji()`. Two `OauthUsageData` variants:
   - A: `five_hour.utilization = 50%` (50% left), `seven_day.utilization = 96%` (4% left) → expected `🟡` (7d exhausted)
@@ -762,7 +762,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ### IT-60: Three-tier grouping: 🟢 accounts above 🟡 above 🔴 regardless of sort
 
-- **Given:** Three `AccountQuota` structs: `A` (both 5h and 7d > 5% — 🟢), `B` (5h ≤ 5% — 🟡), `C` (error — 🔴). Any sort strategy.
+- **Given:** Three `AccountQuota` structs: `A` (5h > 15% and 7d > 5% — 🟢), `B` (5h ≤ 15% — 🟡), `C` (error — 🔴). Any sort strategy.
 - **When:** `render_text(...)` with any sort strategy.
 - **Then:** In the output, `A` appears before `B`, and `B` appears before `C`.
 - **Exit:** n/a (unit test)

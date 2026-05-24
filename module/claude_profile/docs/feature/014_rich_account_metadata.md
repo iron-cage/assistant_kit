@@ -11,7 +11,7 @@
 
 `.credentials.status` reads `emailAddress` from `~/.claude.json` via `read_live_cred_meta()`. This feature extends that read to expose additional `oauthAccount` fields and the active model setting — both on `.credentials.status` (live data) and `.accounts` (per-account snapshots).
 
-**`.accounts` integration:** `account::save()` snapshots `~/.claude.json` and `~/.claude/settings.json` alongside the credential file. `account::list()` reads these saved snapshots to populate the new fields per account. This makes rich metadata available for all saved accounts, not just the currently active session.
+**`.accounts` integration:** `account::save()` extracts the `oauthAccount` subtree from `~/.claude.json` into `{name}.claude.json`. `account::list()` reads that snapshot to populate the `oauthAccount`-derived fields (`display_name`, `role`, `billing`) per account. The `model` field for `.accounts` always returns `N/A` — `settings.json` is not captured in the per-account snapshot (machine-global session preference; BUG-174 fix).
 
 **New field-presence params (all opt-in, default `0`):**
 
@@ -65,8 +65,8 @@ This label is NOT a separate field param — it is the formatted output of the e
 - **AC-07**: Absent `~/.claude.json` → all three oauthAccount fields show `N/A` without error.
 - **AC-08**: Absent `~/.claude/settings.json` → `model` shows `N/A` without error.
 - **AC-09**: `clp .accounts display_name::1` shows `Display:` line per account from saved `~/.claude.json` snapshot.
-- **AC-10**: `clp .accounts role::1 billing::1 model::1` shows corresponding lines per account.
-- **AC-11**: Accounts saved before the snapshot feature (no `.claude.json` / `.settings.json` on disk) show `N/A` for all 4 fields.
+- **AC-10**: `clp .accounts role::1 billing::1` shows corresponding lines per account; `model::1` always shows `N/A` for saved accounts (settings.json not captured in snapshot — BUG-174 fix).
+- **AC-11**: Accounts saved before the snapshot feature (no `.claude.json` on disk) show `N/A` for `display_name`, `role`, `billing`; `model` is always `N/A` regardless.
 - **AC-12**: `clp .accounts format::json` includes `display_name`, `role`, `billing`, `model` keys per account object.
 
 ### Cross-References

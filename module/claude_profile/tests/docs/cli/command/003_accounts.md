@@ -274,7 +274,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-21: New metadata fields absent by default
 
-- **Given:** `work@acme.com` with saved `.claude.json` and `.settings.json` snapshots containing rich metadata.
+- **Given:** `work@acme.com` with saved `.claude.json` snapshot containing `oauthAccount` rich metadata (no `.settings.json` — not captured in snapshot since BUG-174 fix).
 - **When:** `clp .accounts`
 - **Then:** Stdout does NOT contain `Display:`, `Role:`, `Billing:`, `Model:` lines.; opt-in fields absent by default
 - **Exit:** 0
