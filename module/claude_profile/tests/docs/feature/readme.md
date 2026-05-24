@@ -30,8 +30,8 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 017_token_refresh | [017_token_refresh.md](017_token_refresh.md) | FT-01 … FT-16 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](018_live_monitor.md) | FT-01 … FT-09 | ✅ |
 | 020_usage_sort_strategies | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | FT-01 … FT-14 | ✅ |
-| 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | FT-01 … FT-09 | 🔲 pending impl |
-| 022_org_identity_snapshot | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | FT-01 … FT-11 | 🔲 pending impl |
+| 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | FT-01 … FT-09 | ✅ |
+| 022_org_identity_snapshot | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | FT-01 … FT-11 | ✅ |
 | 023_next_account_strategies | [023_next_account_strategies.md](023_next_account_strategies.md) | FT-01 … FT-08 | ✅ |
 | 024_session_touch | [024_session_touch.md](024_session_touch.md) | FT-01 … FT-12 | ✅ |
 

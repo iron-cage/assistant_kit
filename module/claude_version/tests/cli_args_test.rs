@@ -26,7 +26,7 @@
 //! | TC-024 | Bare token without `::` after command → exit 1 | N |
 //! | TC-025 | Bare token without `.` prefix and without `::` → exit 1 | N |
 //! | TC-026 | `.help` subcommand explicitly → help output, exit 0 | P |
-//! | TC-027 | `--` double-dash token → exit 1 (not param::value) | N |
+//! | TC-027 | `--` double-dash token → exit 1 (not `param::value`) | N |
 //! | TC-028 | `.version.install version::1.2.3.4` → exit 1 | N |
 //! | TC-029 | `.version.install version::01.02.03` → exit 1 | P |
 //! | TC-030 | `format::TEXT` (wrong case) → exit 1 | N |
@@ -48,8 +48,8 @@
 //! | TC-489 | bare `help` after command → routes to `.help`, exit 0 | N→P |
 //! | TC-490 | bare `help` after params → routes to `.help`, exit 0 | N→P |
 //! | TC-491 | `interval::18446744073709551615` (u64 max) → clear error, exit 1 | N |
-//! | TC-493 | `dry::0 dry::1` last-wins → dry::1 wins, shows `[dry-run]` | P |
-//! | TC-494 | `dry::1 dry::0` last-wins → dry::0 wins, file actually written | P |
+//! | TC-493 | `dry::0 dry::1` last-wins → `dry::1` wins, shows `[dry-run]` | P |
+//! | TC-494 | `dry::1 dry::0` last-wins → `dry::0` wins, file actually written | P |
 //! | TC-495 | `format::text format::json` last-wins → json output | P |
 //!
 //! ## Type Surface Tests
@@ -837,11 +837,28 @@ fn tc_verbosity_level_0_minimal()
 }
 
 // Type test: v::2 produces verbose output (more detail than v::1)
+// Requires a preferred version in settings for the Preferred line to appear.
 #[ test ]
 fn tc_verbosity_level_2_verbose()
 {
-  let out_v1 = run( &[ ".status", "v::1" ] );
-  let out_v2 = run( &[ ".status", "v::2" ] );
+  let dir = tempfile::TempDir::new().expect( "tmpdir" );
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write(
+    claude_dir.join( "settings.json" ),
+    r#"{ "preferredVersionSpec": "stable", "preferredVersionResolved": "2.1.78" }"#,
+  ).unwrap();
+  let bin = env!( "CARGO_BIN_EXE_claude_version" );
+  let out_v1 = std::process::Command::new( bin )
+    .args( [ ".status", "v::1" ] )
+    .env( "HOME", dir.path() )
+    .output()
+    .expect( "run v1" );
+  let out_v2 = std::process::Command::new( bin )
+    .args( [ ".status", "v::2" ] )
+    .env( "HOME", dir.path() )
+    .output()
+    .expect( "run v2" );
   assert_eq!( code( &out_v1 ), 0 );
   assert_eq!( code( &out_v2 ), 0 );
   let text_v1 = out_stdout( &out_v1 );
