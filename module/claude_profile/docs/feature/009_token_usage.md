@@ -152,15 +152,15 @@ Valid: 2 / 3   ->  Next by strategy:
 - **AC-14**: When current = active (normal case), only `✓` appears on the current row; no `*` is emitted on any row.
 - **AC-15**: When `~/.claude/.credentials.json` is unreadable, no `✓` is emitted; `*` is still emitted for the active account. See [016_current_account_awareness.md](016_current_account_awareness.md).
 - **AC-16**: `format::json` output uses `is_current` (replacing the former `active` field) and includes a new `is_active` boolean field per object.
-- **AC-18**: Every table row has a composite status emoji in the `●` column (second column, after flag) using AND logic: `🟢` when `result` is `Ok` and both `5h Left > 5%` and `7d Left > 5%`, `🟡` when `result` is `Ok` and either `5h Left ≤ 5%` or `7d Left ≤ 5%`, `🔴` when `result` is `Err`. The emoji appears on every row including the synthetic current-session row.
-- **AC-19**: The 5% boundary for composite `●` is exclusive for `🟢` and inclusive for `🟡` on both dimensions: an account with exactly `5h Left = 5%` OR `7d Left = 5%` shows `🟡`; both must be `> 5%` for `🟢`.
+- **AC-18**: Every table row has a composite status emoji in the `●` column (second column, after flag) using AND logic: `🟢` when `result` is `Ok` and `5h Left > 15%` and `7d Left > 5%`, `🟡` when `result` is `Ok` and either `5h Left ≤ 15%` or `7d Left ≤ 5%`, `🔴` when `result` is `Err`. The emoji appears on every row including the synthetic current-session row.
+- **AC-19**: The exhaustion boundary for composite `●` is exclusive for `🟢` and inclusive for `🟡`: 5h dimension uses 15% (`5h Left = 15%` → `🟡`; `> 15%` needed for `🟢`), 7d dimension uses 5% (`7d Left = 5%` → `🟡`; `> 5%` needed for `🟢`).
 - **AC-20**: The `●` status emoji column has no JSON equivalent — `format::json` output is unchanged; pipeline consumers derive status from `session_5h_left_pct`, `weekly_7d_left_pct`, and the `error` field.
-- **AC-21**: `5h Left` and `7d Left` column values each embed a per-column emoji prefix: `🟢` when that column's value `> 5%`, `🟡` when `≤ 5%`. This provides individual-dimension visibility beyond the composite `●`.
+- **AC-21**: `5h Left` and `7d Left` column values each embed a per-column emoji prefix using their respective thresholds: `5h Left` shows `🟢` when `> 15%`, `🟡` when `≤ 15%`; `7d Left` shows `🟢` when `> 5%`, `🟡` when `≤ 5%`. This provides individual-dimension visibility beyond the composite `●`.
 - **AC-22**: `Sub` column is hidden by default; shown via `cols::+sub`. `7d Son Reset` column is hidden by default; shown via `cols::+7d_son_reset`.
 - **AC-23**: `cols::` parameter accepts comma-separated `+col_id` / `-col_id` modifiers. `flag` and `account` columns are structural and always visible. Invalid column IDs exit 1 with an error naming valid column IDs.
 - **AC-24**: Three-tier display grouping: accounts are grouped 🟢 → 🟡 → 🔴 by composite health before any sort strategy is applied. Sort strategy applies within each tier. The grouping is never reversed by `desc::`.
 - **AC-25**: `format_duration_secs` output is capped to 2 significant units: shows at most 2 time components (e.g., `1d 2h`, `3h 19m`, `23m`), never 3.
-- **AC-26**: Within the 🟡 tier, h-exhausted accounts (`5h Left ≤ 5%`) appear before weekly-exhausted accounts (`5h Left > 5%` and `7d Left ≤ 5%`). Accounts where both `5h Left ≤ 5%` and `7d Left ≤ 5%` fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. The sub-grouping is never reversed by `desc::`.
+- **AC-26**: Within the 🟡 tier, h-exhausted accounts (`5h Left ≤ 15%`) appear before weekly-exhausted accounts (`5h Left > 15%` and `7d Left ≤ 5%`). Accounts where both `5h Left ≤ 15%` and `7d Left ≤ 5%` fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. The sub-grouping is never reversed by `desc::`.
 
 ### Cross-References
 
