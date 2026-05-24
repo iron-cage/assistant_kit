@@ -146,6 +146,26 @@ where
   } )
 }
 
+// ── http_agent ───────────────────────────────────────────────────────────────
+
+/// Build an HTTP agent with explicit read and connect timeouts.
+///
+/// # Fix(BUG-172)
+///
+/// Root cause: bare ureq convenience functions use the global agent whose
+/// `timeout_read` defaults to `None` (indefinite), causing ~75–99s hangs when
+/// a server TCP-connects but stalls the response body.
+/// Pitfall: all new HTTP call sites must use this helper, not bare ureq calls.
+#[ cfg( feature = "enabled" ) ]
+#[ inline ]
+fn http_agent() -> ureq::Agent
+{
+  ureq::AgentBuilder::new()
+    .timeout_read( std::time::Duration::from_secs( 10 ) )
+    .timeout_connect( std::time::Duration::from_secs( 5 ) )
+    .build()
+}
+
 // ── fetch_rate_limits ─────────────────────────────────────────────────────────
 
 /// Fetch rate-limit utilization data from the Anthropic API.
@@ -172,7 +192,7 @@ pub fn fetch_rate_limits( token : &str ) -> Result< RateLimitData, QuotaError >
 {
   let body = r#"{"model":"claude-haiku-4-5-20251001","max_tokens":1,"messages":[{"role":"user","content":"quota"}]}"#;
 
-  let req_result = ureq::post( API_URL )
+  let req_result = http_agent().post( API_URL )
     .set( "Authorization",    &format!( "Bearer {token}" ) )
     .set( "anthropic-beta",   ANTHROPIC_BETA )
     .set( "anthropic-version", ANTHROPIC_VERSION )
@@ -434,7 +454,7 @@ fn parse_optional_string_in_block( block : &str, key : &str ) -> Option< String 
 #[ inline ]
 pub fn fetch_oauth_usage( token : &str ) -> Result< OauthUsageData, QuotaError >
 {
-  let resp = ureq::get( OAUTH_USAGE_URL )
+  let resp = http_agent().get( OAUTH_USAGE_URL )
     .set( "Authorization", &format!( "Bearer {token}" ) )
     .call();
 
@@ -529,7 +549,7 @@ pub fn parse_oauth_account( body : &str ) -> Result< OauthAccountData, QuotaErro
 #[ cfg( feature = "enabled" ) ]
 pub fn fetch_oauth_account( token : &str ) -> Result< OauthAccountData, QuotaError >
 {
-  let resp = ureq::get( OAUTH_ACCOUNT_URL )
+  let resp = http_agent().get( OAUTH_ACCOUNT_URL )
     .set( "Authorization",     &format!( "Bearer {token}" ) )
     .set( "anthropic-version", ANTHROPIC_VERSION )
     .call();
@@ -620,7 +640,7 @@ pub fn parse_claude_cli_roles( body : &str ) -> Result< ClaudeCliRolesData, Quot
 #[ cfg( feature = "enabled" ) ]
 pub fn fetch_claude_cli_roles( token : &str ) -> Result< ClaudeCliRolesData, QuotaError >
 {
-  let resp = ureq::get( CLAUDE_CLI_ROLES_URL )
+  let resp = http_agent().get( CLAUDE_CLI_ROLES_URL )
     .set( "Authorization",     &format!( "Bearer {token}" ) )
     .set( "anthropic-version", ANTHROPIC_VERSION )
     .call();

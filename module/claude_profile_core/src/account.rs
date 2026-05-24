@@ -195,16 +195,28 @@ pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths ) -> Re
   std::fs::create_dir_all( credential_store )?;
   let dest = credential_store.join( format!( "{name}.credentials.json" ) );
   std::fs::copy( paths.credentials_file(), dest )?;
-  // Best-effort: snapshot ~/.claude.json and settings.json alongside credentials.
-  // Missing source files are silently skipped — save() must not fail for absent optionals.
-  let _ = std::fs::copy(
-    paths.claude_json_file(),
-    credential_store.join( format!( "{name}.claude.json" ) ),
-  );
-  let _ = std::fs::copy(
-    paths.settings_file(),
-    credential_store.join( format!( "{name}.settings.json" ) ),
-  );
+  // Best-effort: extract oauthAccount subtree from ~/.claude.json and save it.
+  // Fix(BUG-174): save() previously used std::fs::copy for the entire ~/.claude.json,
+  //   including machine-global keys (commands.*, mcpServers, projects). On switch_account(),
+  //   restoring the full copy clobbered the current machine's config state.
+  // Root cause: wholesale copy/restore treated per-account auth data and machine-global
+  //   config as a single unit.
+  // Pitfall: the extraction must be surgical — only the oauthAccount subtree is
+  //   per-account; everything else belongs to the machine.
+  if let Ok( live_text ) = std::fs::read_to_string( paths.claude_json_file() )
+  {
+    if let Ok( live_val ) = serde_json::from_str::< serde_json::Value >( &live_text )
+    {
+      if let Some( oauth ) = live_val.get( "oauthAccount" )
+      {
+        let snapshot = serde_json::json!( { "oauthAccount": oauth } );
+        let _ = std::fs::write(
+          credential_store.join( format!( "{name}.claude.json" ) ),
+          serde_json::to_string( &snapshot ).unwrap_or_default(),
+        );
+      }
+    }
+  }
   // Best-effort: fetch org identity from endpoint 005 and persist as {name}.roles.json.
   // Requires accessToken in the credentials file. Network errors or absent token are silently
   // skipped — save() must not fail for network unavailability or missing optional data.
@@ -291,22 +303,36 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
   let marker = credential_store.join( active_marker_filename() );
   std::fs::write( marker, name )?;
 
-  // Fix(issue-122): switch_account() restored only .credentials.json; ~/.claude.json
-  //   was never updated, so credentials_status_routine() showed the previous account's
-  //   email after every switch.
-  // Root cause: save() added ~/.claude.json snapshotting (best-effort) but switch_account()
-  //   was not updated to mirror the restore, leaving an asymmetric save/restore pair.
-  // Pitfall: any future extension to save() that captures additional companion files must
-  //   add a corresponding best-effort restore in switch_account() — the two functions
-  //   must stay symmetric.
-  let _ = std::fs::copy(
-    credential_store.join( format!( "{name}.claude.json" ) ),
-    paths.claude_json_file(),
-  );
-  let _ = std::fs::copy(
-    credential_store.join( format!( "{name}.settings.json" ) ),
-    paths.settings_file(),
-  );
+  // Fix(BUG-174): switch_account() previously used std::fs::copy to wholesale overwrite
+  //   ~/.claude.json with the saved snapshot. This clobbered machine-global keys
+  //   (commands.*, mcpServers, projects) with stale values from the snapshot.
+  // Root cause: save() captured the full file; switch_account() restored it wholesale.
+  //   Both sides now use surgical oauthAccount extraction/patching.
+  // Pitfall: the live ~/.claude.json must be READ before patching — if it's missing or
+  //   invalid JSON, the saved snapshot's oauthAccount is written as a new file (safe
+  //   fallback since there's nothing to clobber).
+  {
+    let saved_path = credential_store.join( format!( "{name}.claude.json" ) );
+    if let Ok( saved_text ) = std::fs::read_to_string( &saved_path )
+    {
+      if let Ok( saved_val ) = serde_json::from_str::< serde_json::Value >( &saved_text )
+      {
+        if let Some( oauth ) = saved_val.get( "oauthAccount" ).cloned()
+        {
+          let live_path = paths.claude_json_file();
+          let mut live_val = std::fs::read_to_string( &live_path )
+            .ok()
+            .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+            .unwrap_or_else( || serde_json::json!( {} ) );
+          if let Some( obj ) = live_val.as_object_mut()
+          {
+            obj.insert( "oauthAccount".to_string(), oauth );
+          }
+          let _ = std::fs::write( live_path, serde_json::to_string( &live_val ).unwrap_or_default() );
+        }
+      }
+    }
+  }
 
   Ok( () )
 }

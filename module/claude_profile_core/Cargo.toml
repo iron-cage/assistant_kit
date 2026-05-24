@@ -25,6 +25,7 @@ enabled = [ "dep:claude_runner_core", "dep:claude_quota" ]
 claude_core         = { workspace = true }
 claude_runner_core  = { workspace = true, optional = true, features = [ "enabled" ] }
 claude_quota        = { workspace = true, optional = true, features = [ "enabled" ] }
+serde_json          = { workspace = true }
 
 [dev-dependencies]
 test_tools = { workspace = true, features = [ "full" ] }

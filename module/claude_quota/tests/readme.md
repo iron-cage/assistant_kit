@@ -7,6 +7,7 @@
 | readme.md | Test directory organization guide (this file) |
 | rate_limit_test.rs | Unit tests T01–T16: parse_headers, QuotaError, RateLimitData, constants |
 | oauth_usage_test.rs | Unit tests T17–T28: parse_oauth_usage, iso_to_unix_secs, OauthUsageData, PeriodUsage |
+| bug172_guard_test.rs | Static-analysis guard: no bare ureq::get()/post() without timeout |
 
 ## Organization
 

@@ -705,12 +705,18 @@ fn sort_indices(
           } )
       } );
 
-      // Unqualified canonical: highest 5h_left first.
+      // Unqualified canonical: highest 5h_left first; tiebreak highest weekly.
       unqualified.sort_by( |&a, &b|
       {
         let la = five_hour_left( &accounts[ a ] );
         let lb = five_hour_left( &accounts[ b ] );
         lb.partial_cmp( &la ).unwrap_or( core::cmp::Ordering::Equal )
+          .then_with( ||
+          {
+            let wa = prefer_weekly( &accounts[ a ], prefer );
+            let wb = prefer_weekly( &accounts[ b ], prefer );
+            wb.partial_cmp( &wa ).unwrap_or( core::cmp::Ordering::Equal )
+          } )
       } );
 
       let mut result = qualified;
@@ -4157,6 +4163,86 @@ mod tests
     assert_eq!(
       cells[ 0 ], "\u{2014}",
       "five_hour=None must produce em-dash in cells[0], not a percentage",
+    );
+  }
+
+  // ── sort_indices: endurance tiebreaker ────────────────────────────────────
+
+  /// bug_reproducer(BUG-173): endurance unqualified sort must tiebreak by
+  /// highest weekly when `5h Left` values are equal.
+  ///
+  /// # Root Cause
+  ///
+  /// `unqualified.sort_by` compared only `five_hour_left` — when multiple
+  /// accounts had identical 5h utilization, insertion order silently selected
+  /// the wrong account, ignoring weekly quota.
+  ///
+  /// # Why Not Caught
+  ///
+  /// Existing sort tests used accounts with distinct `five_hour_left` values,
+  /// so the tiebreaker path was never exercised.
+  ///
+  /// # Fix Applied
+  ///
+  /// Added `.then_with(prefer_weekly)` to the `unqualified.sort_by` closure,
+  /// mirroring the drain strategy tiebreaker.
+  ///
+  /// # Prevention
+  ///
+  /// This test constructs 3 accounts with identical `five_hour.utilization`
+  /// but varying `seven_day.utilization`, asserting deterministic sort order.
+  ///
+  /// # Pitfall
+  ///
+  /// The tiebreaker uses `prefer_weekly(prefer)` — the `prefer` parameter
+  /// must be forwarded, not hardcoded. Changing the prefer strategy changes
+  /// which weekly field is used for the tiebreaker.
+  #[ test ]
+  fn test_bug173_mre_endurance_unqualified_prefers_highest_weekly()
+  {
+    let make_account = |name : &str, five_h_util : f64, seven_d_util : f64| -> AccountQuota
+    {
+      AccountQuota
+      {
+        name          : name.to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : u64::MAX,
+        result        : Ok( claude_quota::OauthUsageData
+        {
+          five_hour : Some( claude_quota::PeriodUsage
+          {
+            utilization : five_h_util,
+            resets_at   : None,
+          } ),
+          seven_day : Some( claude_quota::PeriodUsage
+          {
+            utilization : seven_d_util,
+            resets_at   : None,
+          } ),
+          seven_day_sonnet : None,
+        } ),
+        account : None,
+      }
+    };
+
+    // All three have five_hour.utilization = 50.0 (i.e. 50% left).
+    // Weekly utilization differs: 98%, 0%, 27% → weekly LEFT = 2%, 100%, 73%.
+    let accounts = vec![
+      make_account( "acct_a", 50.0, 98.0 ),  // 2% weekly left
+      make_account( "acct_b", 50.0,  0.0 ),  // 100% weekly left
+      make_account( "acct_c", 50.0, 27.0 ),  // 73% weekly left
+    ];
+
+    // No resets_at → all unqualified.  prefer=Any → left_7d.min(left_son);
+    // seven_day_sonnet=None → left_son=100.0 → prefer_weekly = left_7d.
+    let sorted = sort_indices( &accounts, SortStrategy::Endurance, None, PreferStrategy::Any, 0 );
+
+    // Expected canonical: highest weekly left first → B(100%), C(73%), A(2%).
+    assert_eq!(
+      sorted, vec![ 1, 2, 0 ],
+      "BUG-173: endurance unqualified sort must tiebreak by weekly; \
+       expected [B=1,C=2,A=0], got {sorted:?}",
     );
   }
 }

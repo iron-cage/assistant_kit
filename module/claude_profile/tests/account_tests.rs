@@ -534,3 +534,92 @@ fn validate_name_must_be_email()
   let msg = format!( "{err}" );
   assert!( msg.contains( "email address" ), "error must mention email address, got: {msg}" );
 }
+
+// ── BUG-174: surgical oauthAccount merge ──────────────────────────────────────
+
+/// bug_reproducer(BUG-174): `switch_account()` must preserve machine-global
+/// keys in `~/.claude.json` (e.g., `commands.*`, `mcpServers`).
+///
+/// # Root Cause
+///
+/// `save()` used `std::fs::copy` to snapshot the entire `~/.claude.json`,
+/// and `switch_account()` used `std::fs::copy` to restore it wholesale —
+/// clobbering machine-global state with stale snapshot values.
+///
+/// # Why Not Caught
+///
+/// No existing test verified the contents of `~/.claude.json` after a
+/// save→switch round-trip; tests only checked `.credentials.json`.
+///
+/// # Fix Applied
+///
+/// `save()` extracts only the `oauthAccount` subtree. `switch_account()`
+/// patches only the `oauthAccount` key in the live `~/.claude.json`,
+/// leaving all other keys untouched.
+///
+/// # Prevention
+///
+/// This test creates a `~/.claude.json` with both `oauthAccount` and
+/// `commands` keys, performs save→switch→switch-back, and asserts
+/// `commands.foo` is preserved.
+///
+/// # Pitfall
+///
+/// The saved `{name}.claude.json` must contain ONLY `oauthAccount` —
+/// any extra keys indicate a wholesale copy regression.
+#[ test ]
+fn test_bug174_mre_switch_preserves_machine_global_commands()
+{
+  let ( dir, credential_store ) = setup_home( CREDENTIALS );
+  let paths = ClaudePaths::new().expect( "HOME set" );
+
+  // Write ~/.claude.json with both oauthAccount and commands keys.
+  let claude_json_a = r#"{"oauthAccount":{"emailAddress":"a@x.com","displayName":"A"},"commands":{"foo":42},"mcpServers":{"local":true}}"#;
+  std::fs::write( paths.claude_json_file(), claude_json_a ).expect( "write .claude.json" );
+
+  // Save as account A — snapshot must contain only oauthAccount.
+  account::save( "a@x.com", &credential_store, &paths ).expect( "save A" );
+  let saved_a = std::fs::read_to_string( credential_store.join( "a@x.com.claude.json" ) )
+    .expect( "read saved A .claude.json" );
+  assert!(
+    saved_a.contains( "oauthAccount" ),
+    "saved snapshot must contain oauthAccount",
+  );
+  assert!(
+    !saved_a.contains( "commands" ),
+    "saved snapshot must NOT contain commands (wholesale copy regression); got: {saved_a}",
+  );
+  assert!(
+    !saved_a.contains( "mcpServers" ),
+    "saved snapshot must NOT contain mcpServers; got: {saved_a}",
+  );
+
+  // Write new credentials and claude.json for account B.
+  let claude = dir.path().join( ".claude" );
+  std::fs::write( claude.join( ".credentials.json" ), CREDENTIALS_B ).expect( "write creds B" );
+  let claude_json_b = r#"{"oauthAccount":{"emailAddress":"b@y.com","displayName":"B"},"commands":{"foo":42},"mcpServers":{"local":true}}"#;
+  std::fs::write( paths.claude_json_file(), claude_json_b ).expect( "write .claude.json B" );
+  account::save( "b@y.com", &credential_store, &paths ).expect( "save B" );
+
+  // Mutate commands.foo in live file to simulate machine-local state change.
+  let claude_json_live = r#"{"oauthAccount":{"emailAddress":"b@y.com","displayName":"B"},"commands":{"foo":99},"mcpServers":{"local":true}}"#;
+  std::fs::write( paths.claude_json_file(), claude_json_live ).expect( "mutate live .claude.json" );
+
+  // Switch to A — oauthAccount should change, commands.foo must stay 99.
+  account::switch_account( "a@x.com", &credential_store, &paths ).expect( "switch to A" );
+  let after_switch = std::fs::read_to_string( paths.claude_json_file() )
+    .expect( "read .claude.json after switch" );
+
+  assert!(
+    after_switch.contains( r#""emailAddress":"a@x.com"# ),
+    "oauthAccount must be patched to A's data; got: {after_switch}",
+  );
+  assert!(
+    after_switch.contains( r#""foo":99"# ),
+    "BUG-174: commands.foo must be preserved (99, not 42); got: {after_switch}",
+  );
+  assert!(
+    after_switch.contains( "mcpServers" ),
+    "mcpServers must be preserved; got: {after_switch}",
+  );
+}
