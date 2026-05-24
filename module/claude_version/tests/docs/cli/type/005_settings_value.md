@@ -121,4 +121,4 @@ Type compliance and validation tests for `SettingsValue`. See [type/05_settings_
 
 ### Source Functions
 
-Pending implementation. See [task 176](../../../../../task/claude_version/unverified/176_cli_type_test_surface.md).
+Pending implementation. See [task 002](../../../../task/claude_version/unverified/002_cli_type_test_surface.md).

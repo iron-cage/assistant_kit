@@ -108,4 +108,9 @@ Type compliance and validation tests for `OutputFormat`. See [type/02_output_for
 
 ### Source Functions
 
-Pending implementation. See [task 176](../../../../../task/claude_version/unverified/176_cli_type_test_surface.md).
+| Function | File |
+|----------|------|
+| `tc258_status_format_json_is_valid_json` | `integration/cross_cutting_test.rs` |
+| `tc260_format_uppercase_rejected` | `integration/cross_cutting_test.rs` |
+
+Remaining implementation pending. See [task 002](../../../../task/claude_version/unverified/002_cli_type_test_surface.md).

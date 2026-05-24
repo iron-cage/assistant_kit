@@ -1300,80 +1300,6 @@ fn execute_live_mode(
   Ok( OutputData::new( String::new(), "text" ) )
 }
 
-// ── Touch helper ───────────────────────────────────────────────────────────────
-
-/// Activate an idle 5h session window for `aq` by spawning an isolated subprocess.
-///
-/// The trigger requires both conditions:
-/// - `aq.result.is_ok()` — account must have valid quota data (not an auth error).
-/// - `five_hour.resets_at.is_none()` — 5h window not yet started (rendered as `—`).
-///
-/// After a successful touch, quota is re-fetched so the table shows the concrete
-/// `5h Reset` value. If the subprocess or re-fetch fails the account row is unchanged
-/// (touch failure is non-aborting — other accounts and the render continue normally).
-///
-/// The original `_active` account is restored unconditionally inside this call before
-/// using the new credentials. This prevents a stale `_active` if the process is
-/// interrupted between touches.
-fn apply_touch(
-  aq               : &mut AccountQuota,
-  credential_store : &std::path::Path,
-  claude_paths     : Option< &crate::ClaudePaths >,
-  trace            : bool,
-)
-{
-  // Guard: errored accounts are never touched; trigger requires valid quota data.
-  let Ok( ref data ) = aq.result else { return; };
-
-  // Guard: accounts with an active 5h window are not idle — skip.
-  let is_idle = data.five_hour.as_ref()
-    .and_then( |p| p.resets_at.as_deref() )
-    .is_none();
-  if !is_idle { return; }
-
-  // Save active account before switching for the subprocess lifecycle.
-  let original_active = std::fs::read_to_string( credential_store.join( "_active" ) ).ok();
-
-  let new_creds = crate::account::refresh_account_token(
-    &aq.name, credential_store, claude_paths, trace,
-  );
-
-  // CRITICAL: restore _active unconditionally before using new_creds (Fix(BUG-170) pattern).
-  // If restoration is deferred past the return points below, an interrupted touch leaves
-  // _active pointing at the touched account instead of the original.
-  if let ( Some( original ), Some( paths ) ) = ( original_active.as_deref(), claude_paths )
-  {
-    let name = original.trim();
-    if !name.is_empty()
-    {
-      let _ = crate::account::switch_account( name, credential_store, paths );
-    }
-  }
-
-  let Some( creds ) = new_creds else { return; };
-
-  // Update expiry using JWT exp field with expiresAt fallback (same as apply_refresh).
-  if let Some( exp_ms ) = jwt_exp_ms( &creds )
-  {
-    aq.expires_at_ms = exp_ms;
-  }
-  else if let Some( exp_ms ) = parse_u64_from_str( &creds, "expiresAt" )
-  {
-    aq.expires_at_ms = exp_ms;
-  }
-
-  // Re-read token AFTER subprocess — the pre-subprocess token is stale.
-  let Ok( token ) = read_token( credential_store, &aq.name ) else { return; };
-  if let Ok( new_data ) = claude_quota::fetch_oauth_usage( &token )
-  {
-    aq.result = Ok( new_data );
-    if let Ok( acct ) = claude_quota::fetch_oauth_account( &token )
-    {
-      aq.account = Some( acct );
-    }
-  }
-}
-
 // ── Refresh helper ─────────────────────────────────────────────────────────────
 
 /// Return `true` when `apply_refresh` should attempt a token refresh for `aq`.
@@ -1517,6 +1443,80 @@ fn apply_refresh(
   }
 }
 
+// ── Touch helper ───────────────────────────────────────────────────────────────
+
+/// Activate an idle 5h session window for `aq` by spawning an isolated subprocess.
+///
+/// The trigger requires both conditions:
+/// - `aq.result.is_ok()` — account must have valid quota data (not an auth error).
+/// - `five_hour.resets_at.is_none()` — 5h window not yet started (rendered as `—`).
+///
+/// After a successful touch, quota is re-fetched so the table shows the concrete
+/// `5h Reset` value. If the subprocess or re-fetch fails the account row is unchanged
+/// (touch failure is non-aborting — other accounts and the render continue normally).
+///
+/// The original `_active` account is restored unconditionally inside this call before
+/// using the new credentials. This prevents a stale `_active` if the process is
+/// interrupted between touches.
+fn apply_touch(
+  aq               : &mut AccountQuota,
+  credential_store : &std::path::Path,
+  claude_paths     : Option< &crate::ClaudePaths >,
+  trace            : bool,
+)
+{
+  // Guard: errored accounts are never touched; trigger requires valid quota data.
+  let Ok( ref data ) = aq.result else { return; };
+
+  // Guard: accounts with an active 5h window are not idle — skip.
+  let is_idle = data.five_hour.as_ref()
+    .and_then( |p| p.resets_at.as_deref() )
+    .is_none();
+  if !is_idle { return; }
+
+  // Save active account before switching for the subprocess lifecycle.
+  let original_active = std::fs::read_to_string( credential_store.join( "_active" ) ).ok();
+
+  let new_creds = crate::account::refresh_account_token(
+    &aq.name, credential_store, claude_paths, trace,
+  );
+
+  // CRITICAL: restore _active unconditionally before using new_creds (Fix(BUG-170) pattern).
+  // If restoration is deferred past the return points below, an interrupted touch leaves
+  // _active pointing at the touched account instead of the original.
+  if let ( Some( original ), Some( paths ) ) = ( original_active.as_deref(), claude_paths )
+  {
+    let name = original.trim();
+    if !name.is_empty()
+    {
+      let _ = crate::account::switch_account( name, credential_store, paths );
+    }
+  }
+
+  let Some( creds ) = new_creds else { return; };
+
+  // Update expiry using JWT exp field with expiresAt fallback (same as apply_refresh).
+  if let Some( exp_ms ) = jwt_exp_ms( &creds )
+  {
+    aq.expires_at_ms = exp_ms;
+  }
+  else if let Some( exp_ms ) = parse_u64_from_str( &creds, "expiresAt" )
+  {
+    aq.expires_at_ms = exp_ms;
+  }
+
+  // Re-read token AFTER subprocess — the pre-subprocess token is stale.
+  let Ok( token ) = read_token( credential_store, &aq.name ) else { return; };
+  if let Ok( new_data ) = claude_quota::fetch_oauth_usage( &token )
+  {
+    aq.result = Ok( new_data );
+    if let Ok( acct ) = claude_quota::fetch_oauth_account( &token )
+    {
+      aq.account = Some( acct );
+    }
+  }
+}
+
 // ── Command handler ────────────────────────────────────────────────────────────
 
 /// Parsed `.usage` parameters extracted from a `VerifiedCommand`.
@@ -1557,22 +1557,24 @@ struct UsageParams
 /// Fix(issue-155): `refresh` default is 1 (enabled). Omitting the param ≠
 /// "user wants disabled" — auto-refresh is the safer default.
 /// Fix(issue-157): strict 0/1 range guard added for `refresh`, `live`, `trace`.
-/// Pitfall: `Kind::Integer` registration doesn't block string values — the parser
-/// delivers them as `Value::String`, so this function is the sole enforcement point.
+/// Pitfall: bool-typed params (e.g. `touch::`) use `Kind::String` registration so
+/// `"true"`/`"false"` pass through; `parse_int_flag` is the sole normalisation point.
 /// Parse an integer `0`-or-`1` flag from `cmd.arguments` with a configurable default.
 ///
 /// Returns `default` when absent; rejects non-`Value::Integer` values or integers outside
 /// `{0, 1}` with `ArgumentTypeMismatch`.
 ///
-/// Pitfall: `Kind::Integer` registration doesn't block string values — the parser
-/// delivers them as `Value::String`, so this is the sole enforcement point.
+/// Pitfall: params registered as `Kind::String` (e.g. `touch::`) deliver all values
+/// including `"0"` and `"1"` as `Value::String` — the integer arms handle `Kind::Integer` params.
 fn parse_int_flag( cmd : &VerifiedCommand, name : &str, default : i64 ) -> Result< i64, ErrorData >
 {
   match cmd.arguments.get( name )
   {
-    None                        => Ok( default ),
-    Some( Value::Integer( 0 ) ) => Ok( 0 ),
-    Some( Value::Integer( 1 ) ) => Ok( 1 ),
+    None                                       => Ok( default ),
+    Some( Value::Integer( 0 ) )                => Ok( 0 ),
+    Some( Value::Integer( 1 ) )                => Ok( 1 ),
+    Some( Value::String( s ) ) if s == "0"     => Ok( 0 ),
+    Some( Value::String( s ) ) if s == "1"     => Ok( 1 ),
     Some( Value::String( s ) ) if s == "true"  => Ok( 1 ),
     Some( Value::String( s ) ) if s == "false" => Ok( 0 ),
     _ => Err( ErrorData::new(

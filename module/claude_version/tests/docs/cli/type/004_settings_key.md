@@ -86,4 +86,4 @@ Type compliance and validation tests for `SettingsKey`. See [type/04_settings_ke
 
 ### Source Functions
 
-Pending implementation. See [task 176](../../../../../task/claude_version/unverified/176_cli_type_test_surface.md).
+Pending implementation. See [task 002](../../../../task/claude_version/unverified/002_cli_type_test_surface.md).

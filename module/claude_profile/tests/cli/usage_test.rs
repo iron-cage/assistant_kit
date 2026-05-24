@@ -3149,8 +3149,12 @@ fn it101_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
 fn it102_structural_refresh_before_touch_ordering_in_source()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
-  let refresh_pos = src.find( "apply_refresh(" ).expect( "apply_refresh call must exist in src/usage.rs" );
-  let touch_pos   = src.find( "apply_touch("   ).expect( "apply_touch call must exist in src/usage.rs" );
+  // Use call-site patterns that only match the production calls in run_usage(),
+  // not the function definitions (fn apply_touch/fn apply_refresh) which appear earlier.
+  let refresh_pos = src.find( "apply_refresh( &mut accounts, &credential_store" )
+    .expect( "apply_refresh call site must exist in src/usage.rs" );
+  let touch_pos = src.find( "apply_touch( aq, &credential_store" )
+    .expect( "apply_touch call site must exist in src/usage.rs" );
   assert!(
     refresh_pos < touch_pos,
     "apply_refresh must appear before apply_touch in run_usage() to guarantee refresh-before-touch ordering (FT-05)",

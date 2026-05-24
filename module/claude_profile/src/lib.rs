@@ -194,7 +194,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "prefer",    Kind::String  ).with_description( "Weekly quota column for strategies: `any` (default, min of both), `opus` (7d Left), `sonnet` (7d(Son))" ),
       reg_arg_opt( "next",      Kind::String  ).with_description( "Recommendation strategy: `endurance` (default), `drain`" ),
       reg_arg_opt( "cols",      Kind::String  ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default shows all except `sub` and `7d_son_reset`" ),
-      reg_arg_opt( "touch",     Kind::Integer ).with_description( "Activate idle 5h session windows via isolated subprocess for accounts with no active reset time (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "touch",     Kind::String  ).with_description( "Activate idle 5h session windows via isolated subprocess for accounts with no active reset time (0/false = off, default; 1/true = on)" ),
     ],
     Box::new( usage_routine          ) );
 }

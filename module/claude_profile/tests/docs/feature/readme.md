@@ -26,13 +26,13 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | Feature | File | Cases | Status |
 |---------|------|-------|--------|
-| 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-15 | ✅ |
+| 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-16 | ✅ |
 | 017_token_refresh | [017_token_refresh.md](017_token_refresh.md) | FT-01 … FT-16 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](018_live_monitor.md) | FT-01 … FT-09 | ✅ |
 | 020_usage_sort_strategies | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | FT-01 … FT-14 | ✅ |
 | 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | FT-01 … FT-09 | 🔲 pending impl |
 | 022_org_identity_snapshot | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | FT-01 … FT-11 | 🔲 pending impl |
-| 023_next_account_strategies | [023_next_account_strategies.md](023_next_account_strategies.md) | FT-01 … FT-08 | 🔲 pending impl |
-| 024_session_touch | [024_session_touch.md](024_session_touch.md) | FT-01 … FT-11 | 🔲 pending impl |
+| 023_next_account_strategies | [023_next_account_strategies.md](023_next_account_strategies.md) | FT-01 … FT-08 | ✅ |
+| 024_session_touch | [024_session_touch.md](024_session_touch.md) | FT-01 … FT-12 | 🔲 FT-12 pending |
 
 **Total:** 8 feature specs; 11 of 24 feature instances not yet covered by dedicated FT specs.

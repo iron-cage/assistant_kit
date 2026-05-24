@@ -33,13 +33,14 @@ Aliases are resolved to their semver before passing to the installer. `latest` i
 
 **Preferred version persistence:** After every successful `.version.install` (including idempotent early-return), two keys are written to `settings.json`:
 - `preferredVersionSpec` — the alias or semver requested
-- `preferredVersionResolved` — concrete semver at install time, or `null` for `latest`
+- `preferredVersionResolved` — concrete semver at install time, or `null` for `latest`; advisory for alias specs (the guard re-resolves `preferredVersionSpec` through the current alias table at guard time and uses that as the target); authoritative only for concrete semver specs
 
 **Version guard:** `.version.guard` reads the preferred version from settings and:
 1. No preference → defaults to `stable`
 2. Preference is `latest` → verifies auto-update config, fixes if wrong
-3. Installed matches preferred → exits 0
-4. Drift detected → reinstalls preferred version
+3. For alias specs: re-resolves `preferredVersionSpec` through the current alias table; uses the result as the target semver (`preferredVersionResolved` is not used as the target for alias specs)
+4. Installed version matches resolved target → exits 0
+5. Drift detected → reinstalls target version
 
 Optional `version::SPEC` overrides the stored preference for a single invocation without writing to `settings.json`.
 

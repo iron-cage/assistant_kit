@@ -118,4 +118,8 @@ Type compliance and validation tests for `VerbosityLevel`. See [type/01_verbosit
 
 ### Source Functions
 
-Pending implementation. See [task 176](../../../../../task/claude_version/unverified/176_cli_type_test_surface.md).
+| Function | File |
+|----------|------|
+| `tc245_last_occurrence_wins_for_verbosity` | `integration/read_commands_test.rs` |
+
+Remaining implementation pending. See [task 002](../../../../task/claude_version/unverified/002_cli_type_test_surface.md).

@@ -25,7 +25,7 @@ After a successful `.version.install` for a **pinned** version, apply all 5 laye
 2. **`env.DISABLE_AUTOUPDATER = "1"`** in `settings.json` — official environment variable recognized by the Anthropic auto-updater; stored in Claude's own settings so it is visible to auto-update subprocesses
 3. **`chmod 555 ~/.local/share/claude/versions/`** — hard lock on the versions directory; prevents new binary writes
 4. **Purge all other cached binaries** from `~/.local/share/claude/versions/` — closes the symlink-retarget loophole (Layer 3 blocks new downloads but cannot prevent retargeting to an already-cached binary)
-5. **Store `preferredVersionSpec` + `preferredVersionResolved`** in `settings.json` — recovery signal; `.version.guard` reads these to detect drift and reinstall if any of Layers 1–4 are bypassed or manually undone
+5. **Store `preferredVersionSpec` + `preferredVersionResolved`** in `settings.json` — recovery signal; `.version.guard` re-resolves `preferredVersionSpec` through the current alias table at guard time to determine the target semver; `preferredVersionResolved` is advisory for alias specs and authoritative only for concrete semver specs
 
 For **`latest`**, the lock is reversed:
 1. `autoUpdates = true`
@@ -37,7 +37,7 @@ For **`latest`**, the lock is reversed:
 This pattern applies whenever:
 - A specific Claude Code version must be pinned for reproducibility
 - Multiple lock layers are needed because any single layer has a known bypass vector
-- A recovery mechanism (`preferredVersionResolved`) is required to restore after accidental or automatic override
+- A recovery mechanism is required to restore after accidental or automatic override — `preferredVersionSpec` (the alias or semver) is the recovery driver; `.version.guard` re-resolves it through the current alias table at runtime to determine the target semver
 
 This pattern does not apply when tracking `latest` is desired — for `latest`, the pattern is inverted to remove all locks.
 

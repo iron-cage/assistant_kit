@@ -142,4 +142,9 @@ Type compliance and validation tests for `VersionSpec`. See [type/03_version_spe
 
 ### Source Functions
 
-Pending implementation. See [task 176](../../../../../task/claude_version/unverified/176_cli_type_test_surface.md).
+| Function | File |
+|----------|------|
+| `tc304_version_install_wrong_case_exits_1` | `integration/mutation_commands_test.rs` |
+| `tc305_version_install_empty_version_exits_1` | `integration/mutation_commands_test.rs` |
+
+Remaining implementation pending. See [task 002](../../../../task/claude_version/unverified/002_cli_type_test_surface.md).

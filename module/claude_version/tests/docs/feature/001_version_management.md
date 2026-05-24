@@ -27,6 +27,7 @@ Both are valid invocations; the resolved semver strings differ.
 | FT-3 | Guard with no preference stored → defaults to `stable` | Guard Default |
 | FT-4 | Guard with `version::latest` preference → skips pin, shows "no version pin" | Guard Latest |
 | FT-5 | `dry::1` does not write `preferredVersionSpec` to settings | Preference Isolation |
+| FT-6 | Guard with stale `preferredVersionResolved` re-resolves alias and uses current semver | Guard Alias Re-resolution |
 
 ## Test Coverage Summary
 
@@ -34,8 +35,9 @@ Both are valid invocations; the resolved semver strings differ.
 - Guard Default: 1 test (FT-3)
 - Guard Latest: 1 test (FT-4)
 - Preference Isolation: 1 test (FT-5)
+- Guard Alias Re-resolution: 1 test (FT-6)
 
-**Total:** 5 tests
+**Total:** 6 tests
 
 ---
 
@@ -89,6 +91,16 @@ Both are valid invocations; the resolved semver strings differ.
 
 ---
 
+### FT-6: Guard with stale `preferredVersionResolved` re-resolves alias
+
+- **Given:** isolated HOME with `settings.json` containing `preferredVersionSpec = "month"` and `preferredVersionResolved = "2.1.50"` (stale — alias has since been bumped)
+- **When:** `cm .version.guard dry::1`
+- **Then:** stdout contains the current alias semver (not `"2.1.50"`); exit 0; stale stored value ignored
+- **Exit:** 0
+- **Source:** [feature/001_version_management.md — Version guard (alias re-resolution)](../../../../docs/feature/001_version_management.md)
+
+---
+
 ### Source Functions
 
 | Function | File |
@@ -98,3 +110,4 @@ Both are valid invocations; the resolved semver strings differ.
 | `tc400_guard_no_preference_defaults_stable` | `integration/mutation_commands_test.rs` |
 | `tc403_guard_preference_latest_dry` | `integration/mutation_commands_test.rs` |
 | `tc357_version_install_dry_does_not_write_preference` | `integration/mutation_commands_test.rs` |
+| `tc410_guard_reresoves_stale_alias` | `integration/mutation_commands_test.rs` |
