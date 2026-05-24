@@ -16,7 +16,7 @@
 
 ### Quota State Terms
 
-**h-exhausted** — Account with `5h Left ≤ 5%`; the current 5-hour session window is nearly or fully consumed. May still have weekly quota. Within the 🟡 tier, h-exhausted accounts appear before weekly-exhausted accounts.
+**h-exhausted** — Account with `5h Left ≤ 15%`; the current 5-hour session window is nearly or fully consumed. May still have weekly quota. Within the 🟡 tier, h-exhausted accounts appear before weekly-exhausted accounts.
 
 **weekly-exhausted** — Account with `7d Left ≤ 5%`; the rolling 7-day quota is nearly or fully consumed. May still have session (5h) quota available.
 

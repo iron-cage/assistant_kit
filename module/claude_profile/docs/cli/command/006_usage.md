@@ -75,7 +75,7 @@ clp .usage live::1 interval::60 jitter::10
 **Notes:**
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
 - Flag column priority: `✓` = current account, `*` = active-but-not-current (divergence), `→` = recommended next account. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
-- Status emoji column (`●`): composite AND of 5h and 7d — `🟢` = valid token + both 5h Left > 5% and 7d Left > 5%; `🟡` = valid token + either 5h Left ≤ 5% or 7d Left ≤ 5%; `🔴` = invalid/missing token. Per-column emoji also embedded in `5h Left` and `7d Left` values (🟢/🟡 at ≤5% threshold). No JSON equivalent.
+- Status emoji column (`●`): composite AND of 5h and 7d — `🟢` = valid token + `5h Left > 15%` and `7d Left > 5%`; `🟡` = valid token + either `5h Left ≤ 15%` or `7d Left ≤ 5%`; `🔴` = invalid/missing token. Per-column emoji also embedded in `5h Left` (🟢/🟡 at ≤15% threshold) and `7d Left` (🟢/🟡 at ≤5% threshold). No JSON equivalent.
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
 - `Sub` and `~Renews` are sourced from `GET /api/oauth/account` (parallel fetch); show `?` when that fetch fails.
 - Accounts with expired or missing `accessToken` show `—` for quota columns and a shortened error reason.
@@ -83,7 +83,7 @@ clp .usage live::1 interval::60 jitter::10
 - Empty credential store exits 0 with `(no accounts configured)`.
 - `refresh::1` triggers at most one retry per account per cycle. See [feature/017_token_refresh.md](../../feature/017_token_refresh.md).
 - `live::1 format::json` exits 1 before any fetch. See [feature/018_live_monitor.md](../../feature/018_live_monitor.md).
-- Three-tier display grouping (🟢 → 🟡 → 🔴) applied before sort strategy within each tier. Within 🟡, h-exhausted accounts (`5h Left ≤ 5%`) appear before weekly-exhausted accounts (`5h Left > 5%`, `7d Left ≤ 5%`).
+- Three-tier display grouping (🟢 → 🟡 → 🔴) applied before sort strategy within each tier. Within 🟡, h-exhausted accounts (`5h Left ≤ 15%`) appear before weekly-exhausted accounts (`5h Left > 15%`, `7d Left ≤ 5%`).
 - `Sub` column hidden by default; show via `cols::+sub`. `7d Son Reset` column also hidden by default; show via `cols::+7d_son_reset`.
 - Duration format (`format_duration_secs`) capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`).
 - See [feature/009_token_usage.md](../../feature/009_token_usage.md) for the baseline algorithm and AC criteria.

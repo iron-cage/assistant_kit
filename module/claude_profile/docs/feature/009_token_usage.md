@@ -42,8 +42,8 @@
    - **Column visibility:** The `cols::` parameter accepts comma-separated `+col_id` / `-col_id` modifiers relative to the default column set. The `flag` and `account` columns are structural and always visible. See [param/033_cols.md](../cli/param/033_cols.md).
    - **Composite status emoji column (`●`):** placed between the flag and Account columns; populated on every row; uses AND logic of 5h and 7d:
      - `🔴` — token read failed or API returned an error (no valid quota data; `result` is `Err`)
-     - `🟡` — valid token, either `5h Left ≤ 5.0%` or `7d Left ≤ 5.0%` (at least one quota exhausted; `result` is `Ok`)
-     - `🟢` — valid token, both `5h Left > 5.0%` and `7d Left > 5.0%` (both quotas healthy; `result` is `Ok`)
+     - `🟡` — valid token, either `5h Left ≤ 15.0%` or `7d Left ≤ 5.0%` (at least one quota exhausted; `result` is `Ok`)
+     - `🟢` — valid token, both `5h Left > 15.0%` and `7d Left > 5.0%` (both quotas healthy; `result` is `Ok`)
      - No JSON equivalent — the status is a display-only column derived from existing fields
    - **Per-column emoji:** `5h Left` and `7d Left` column values embed an individual 🟢/🟡 emoji based on their own ≤5% threshold: `🟢 86%` when > 5%, `🟡 3%` when ≤ 5%. This provides drill-down visibility beyond the composite `●`.
    - `Expires`: "in Xh Ym" when `expires_in_secs > 0`; "EXPIRED" when `expires_in_secs == 0`
