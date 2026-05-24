@@ -123,6 +123,9 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let thr = || reg_arg_opt( "threshold", Kind::Integer );
   let bfd = | nm : &'static str, desc : &'static str |
     reg_arg_opt( nm, Kind::Boolean ).with_description( desc );
+  // Strict opt-in flags: only "0" or "1" accepted (not "yes"/"no"/"true").
+  let bfs = | nm : &'static str, desc : &'static str |
+    reg_arg_opt( nm, Kind::String ).with_description( desc );
 
   reg_cmd( registry, ".credentials.status", "Show live credential metadata without account store dependency",
     vec![
@@ -139,21 +142,29 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfd( "role",         "Show organisation role from `~/.claude.json` oauthAccount (opt-in)"      ),
       bfd( "billing",      "Show billing type from `~/.claude.json` oauthAccount (opt-in)"           ),
       bfd( "model",        "Show active model from `~/.claude/settings.json` (opt-in)"               ),
+      bfs( "uuid",         "Show stable user identifier (`taggedId`) from `~/.claude.json` (opt-in)"          ),
+      bfs( "capabilities", "Show enabled capabilities list from `~/.claude.json` (opt-in)"                    ),
+      bfs( "org_uuid",     "Show organisation UUID from active account's `{name}.roles.json` (opt-in)"       ),
+      bfs( "org_name",     "Show organisation display name from active account's `{name}.roles.json` (opt-in)" ),
     ],
     Box::new( credentials_status_routine ) );
   reg_cmd( registry, ".accounts",       "List all saved accounts with field-presence control",
     vec![
       nam(),
-      bfd( "active",       "Show active/inactive status per account (default on)"                      ),
-      bfd( "current",      "Show current (live) session match per account (default on)"                ),
-      bfd( "sub",          "Show subscription type per account (default on)"                           ),
-      bfd( "tier",         "Show rate-limit tier per account (default on)"                             ),
-      bfd( "expires",      "Show token expiry duration per account (default on)"                       ),
-      bfd( "email",        "Show email address per account (default on)"                               ),
-      bfd( "display_name", "Show display name from saved `{name}.claude.json` snapshot (opt-in)"       ),
-      bfd( "role",         "Show organisation role from saved `{name}.claude.json` snapshot (opt-in)"  ),
-      bfd( "billing",      "Show billing type from saved `{name}.claude.json` snapshot (opt-in)"       ),
-      bfd( "model",        "Show active model from saved `{name}.settings.json` snapshot (opt-in)"     ),
+      bfd( "active",       "Show active/inactive status per account (default on)"                                   ),
+      bfd( "current",      "Show current (live) session match per account (default on)"                             ),
+      bfd( "sub",          "Show subscription type per account (default on)"                                        ),
+      bfd( "tier",         "Show rate-limit tier per account (default on)"                                          ),
+      bfd( "expires",      "Show token expiry duration per account (default on)"                                    ),
+      bfd( "email",        "Show email address per account (default on)"                                            ),
+      bfd( "display_name", "Show display name from saved `{name}.claude.json` snapshot (opt-in)"                   ),
+      bfd( "role",         "Show organisation role from saved `{name}.claude.json` snapshot (opt-in)"               ),
+      bfd( "billing",      "Show billing type from saved `{name}.claude.json` snapshot (opt-in)"                    ),
+      bfd( "model",        "Show active model from saved `{name}.settings.json` snapshot (opt-in)"                  ),
+      bfs( "uuid",         "Show stable user identifier (`taggedId`) from saved snapshot (opt-in)"                  ),
+      bfs( "capabilities", "Show enabled capabilities list from saved `{name}.claude.json` snapshot (opt-in)"       ),
+      bfs( "org_uuid",     "Show organisation UUID from saved `{name}.roles.json` snapshot (opt-in)"               ),
+      bfs( "org_name",     "Show organisation display name from saved `{name}.roles.json` snapshot (opt-in)"       ),
       fmt(),
     ],
     Box::new( accounts_routine ) );
@@ -178,9 +189,11 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "interval",  Kind::Integer ).with_description( "Seconds between refreshes (minimum 30, default 30)" ),
       reg_arg_opt( "jitter",    Kind::Integer ).with_description( "Max random seconds added to interval (0 = none, default)" ),
       reg_arg_opt( "trace",     Kind::Integer ).with_description( "Print [trace] lines to stderr showing each credential read, API call, and refresh step (0 = off; 1 = on)" ),
-      reg_arg_opt( "sort",      Kind::String  ).with_description( "Row ordering strategy: `name` (default), `endurance`, `drain`, `reset`" ),
+      reg_arg_opt( "sort",      Kind::String  ).with_description( "Row ordering strategy: `reset` (default), `name`, `endurance`, `drain`" ),
       reg_arg_opt( "desc",      Kind::Integer ).with_description( "Sort direction: 0 = ascending (strategy default for name/drain/reset), 1 = descending (strategy default for endurance)" ),
       reg_arg_opt( "prefer",    Kind::String  ).with_description( "Weekly quota column for strategies: `any` (default, min of both), `opus` (7d Left), `sonnet` (7d(Son))" ),
+      reg_arg_opt( "next",      Kind::String  ).with_description( "Recommendation strategy: `all` (default, multi-strategy footer), `session`, `endurance`, `drain`, `reset`" ),
+      reg_arg_opt( "cols",      Kind::String  ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default shows all except `sub` and `7d_son_reset`" ),
     ],
     Box::new( usage_routine          ) );
 }

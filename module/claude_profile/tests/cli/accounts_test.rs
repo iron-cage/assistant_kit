@@ -54,12 +54,27 @@
 //! | acc32 | `acc32_accounts_suppresses_current_when_creds_absent` | no live creds → no `Current:` line | P |
 //! | acc33 | `acc33_accounts_current_param_and_json` | `current::0` → no `Current:`; `format::json` → `is_current` field | P |
 //! | acc34 | `acc34_accounts_table_format` | `format::table` → exit 0, output contains column headers | P |
+//! | acc35 | `acc35_uuid_shows_id_from_snapshot` | `uuid::1` → ID: line from saved snapshot | P |
+//! | acc36 | `acc36_uuid_absent_by_default` | no `uuid::` → ID: absent | P |
+//! | acc37 | `acc37_json_includes_tagged_id` | `format::json` → tagged_id key always present | P |
+//! | acc38 | `acc38_capabilities_shows_list_from_snapshot` | `capabilities::1` → Capabilities: from snapshot | P |
+//! | acc39 | `acc39_capabilities_absent_by_default` | no `capabilities::` → Capabilities: absent | P |
+//! | acc40 | `acc40_json_includes_capabilities` | `format::json` → capabilities key always present | P |
+//! | acc41 | `acc41_no_snapshot_uuid_capabilities_na` | no snapshot → uuid/capabilities show N/A | P |
+//! | acc42 | `acc42_org_uuid_shows_from_roles_json` | `org_uuid::1` → Org ID: line from roles.json | P |
+//! | acc43 | `acc43_org_uuid_absent_by_default` | no `org_uuid::` → Org ID: absent | P |
+//! | acc44 | `acc44_org_uuid_missing_roles_json_na` | `org_uuid::1`, no roles.json → Org ID: N/A | P |
+//! | acc45 | `acc45_json_includes_org_uuid` | `format::json` → organization_uuid key always present | P |
+//! | acc46 | `acc46_org_name_shows_from_roles_json` | `org_name::1` → Org: line from roles.json | P |
+//! | acc47 | `acc47_org_name_absent_by_default` | no `org_name::` → Org: absent | P |
+//! | acc48 | `acc48_org_name_missing_roles_json_na` | `org_name::1`, no roles.json → Org: N/A | P |
 
 use crate::helpers::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token, write_credentials, write_claude_json_full, write_settings_json,
   write_account_claude_json, write_account_settings_json, write_live_credentials_with_token,
+  write_account_claude_json_extended, write_account_roles_json,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
@@ -1098,4 +1113,242 @@ fn acc34_accounts_table_format()
     text.contains( "work@acme.com" ),
     "format::table must include work@acme.com in output, got:\n{text}",
   );
+}
+
+// ── acc35–acc41: uuid:: and capabilities:: on .accounts (FR-21) ──────────────
+
+/// acc35: `uuid::1` shows `ID:` line from saved snapshot.
+#[ test ]
+fn acc35_uuid_shows_id_from_snapshot()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json_extended( dir.path(), "alice@acme.com", "user_abc123", "some-uuid", &[ "claude_code" ] );
+
+  let out  = run_cs_with_env( &[ ".accounts", "uuid::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "ID:" ),         "uuid::1 must emit ID: line, got:\n{text}" );
+  assert!( text.contains( "user_abc123" ), "ID: must show taggedId from snapshot, got:\n{text}" );
+}
+
+/// acc36: Default — `ID:` absent when `uuid::` not specified.
+#[ test ]
+fn acc36_uuid_absent_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json_extended( dir.path(), "alice@acme.com", "user_abc123", "some-uuid", &[] );
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "ID:" ), "ID: must be absent by default, got:\n{text}" );
+}
+
+/// acc37: `format::json` always includes `tagged_id` key regardless of `uuid::`.
+#[ test ]
+fn acc37_json_includes_tagged_id()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json_extended( dir.path(), "alice@acme.com", "user_abc123", "some-uuid", &[] );
+
+  let out  = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"tagged_id\"" ), "format::json must include tagged_id key, got:\n{text}" );
+  assert!( text.contains( "user_abc123" ),   "tagged_id must contain the snapshot value, got:\n{text}" );
+}
+
+/// acc38: `capabilities::1` shows `Capabilities:` line from saved snapshot.
+#[ test ]
+fn acc38_capabilities_shows_list_from_snapshot()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json_extended( dir.path(), "alice@acme.com", "", "", &[ "claude_max", "chat" ] );
+
+  let out  = run_cs_with_env( &[ ".accounts", "capabilities::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Capabilities:" ), "capabilities::1 must emit Capabilities: line, got:\n{text}" );
+  assert!( text.contains( "claude_max" ),    "Capabilities: must list claude_max, got:\n{text}" );
+  assert!( text.contains( "chat" ),          "Capabilities: must list chat, got:\n{text}" );
+}
+
+/// acc39: Default — `Capabilities:` absent when `capabilities::` not specified.
+#[ test ]
+fn acc39_capabilities_absent_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json_extended( dir.path(), "alice@acme.com", "", "", &[ "claude_max" ] );
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Capabilities:" ), "Capabilities: must be absent by default, got:\n{text}" );
+}
+
+/// acc40: `format::json` always includes `capabilities` key.
+#[ test ]
+fn acc40_json_includes_capabilities()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_claude_json_extended( dir.path(), "alice@acme.com", "", "", &[ "claude_max" ] );
+
+  let out  = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"capabilities\"" ), "format::json must include capabilities key, got:\n{text}" );
+  assert!( text.contains( "claude_max" ),       "capabilities must contain the snapshot value, got:\n{text}" );
+}
+
+/// acc41: No snapshot → `ID: N/A` and `Capabilities: N/A` when opted in.
+#[ test ]
+fn acc41_no_snapshot_uuid_capabilities_na()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  // No snapshot files written.
+
+  let out  = run_cs_with_env( &[ ".accounts", "uuid::1", "capabilities::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "ID:" ),           "ID: line must appear with uuid::1, got:\n{text}" );
+  assert!( text.contains( "Capabilities:" ), "Capabilities: line must appear, got:\n{text}" );
+  assert!( text.contains( "N/A" ),           "absent snapshot must show N/A for new fields, got:\n{text}" );
+}
+
+// ── acc42 ─────────────────────────────────────────────────────────────────────
+
+/// acc42 (EC-1): `org_uuid::1` shows `Org ID:` line with value from `{name}.roles.json`.
+#[ test ]
+fn acc42_org_uuid_shows_from_roles_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "alice@acme.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out  = run_cs_with_env( &[ ".accounts", "org_uuid::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Org ID:" ),    "org_uuid::1 must emit Org ID: line, got:\n{text}" );
+  assert!( text.contains( "org-xyz-789" ), "Org ID: must show organization_uuid from roles.json, got:\n{text}" );
+}
+
+// ── acc43 ─────────────────────────────────────────────────────────────────────
+
+/// acc43 (EC-4): Default — `Org ID:` absent when `org_uuid::` not specified.
+#[ test ]
+fn acc43_org_uuid_absent_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "alice@acme.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Org ID:" ), "Org ID: must be absent by default, got:\n{text}" );
+}
+
+// ── acc44 ─────────────────────────────────────────────────────────────────────
+
+/// acc44 (EC-7): Missing roles.json → `Org ID:  N/A` when `org_uuid::1`.
+#[ test ]
+fn acc44_org_uuid_missing_roles_json_na()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  // No roles.json written.
+
+  let out  = run_cs_with_env( &[ ".accounts", "org_uuid::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Org ID:" ), "Org ID: line must appear with org_uuid::1, got:\n{text}" );
+  assert!( text.contains( "N/A" ),     "absent roles.json must show N/A, got:\n{text}" );
+}
+
+// ── acc45 ─────────────────────────────────────────────────────────────────────
+
+/// acc45 (EC-6): `format::json` always includes `organization_uuid` key.
+#[ test ]
+fn acc45_json_includes_org_uuid()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "alice@acme.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out  = run_cs_with_env( &[ ".accounts", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"organization_uuid\"" ), "JSON must include organization_uuid key, got:\n{text}" );
+  assert!( text.contains( "org-xyz-789" ),           "organization_uuid must contain the snapshot value, got:\n{text}" );
+}
+
+// ── acc46 ─────────────────────────────────────────────────────────────────────
+
+/// acc46 (EC-1): `org_name::1` shows `Org:` line with value from `{name}.roles.json`.
+#[ test ]
+fn acc46_org_name_shows_from_roles_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "alice@acme.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out  = run_cs_with_env( &[ ".accounts", "org_name::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Org:" ),      "org_name::1 must emit Org: line, got:\n{text}" );
+  assert!( text.contains( "Acme Corp" ), "Org: must show organization_name from roles.json, got:\n{text}" );
+}
+
+// ── acc47 ─────────────────────────────────────────────────────────────────────
+
+/// acc47 (EC-4): Default — `Org:` absent when `org_name::` not specified.
+#[ test ]
+fn acc47_org_name_absent_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "alice@acme.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out  = run_cs_with_env( &[ ".accounts" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Org:" ), "Org: must be absent by default, got:\n{text}" );
+}
+
+// ── acc48 ─────────────────────────────────────────────────────────────────────
+
+/// acc48 (EC-7): Missing roles.json → `Org:     N/A` when `org_name::1`.
+#[ test ]
+fn acc48_org_name_missing_roles_json_na()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
+  // No roles.json written.
+
+  let out  = run_cs_with_env( &[ ".accounts", "org_name::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Org:" ), "Org: line must appear with org_name::1, got:\n{text}" );
+  assert!( text.contains( "N/A" ),  "absent roles.json must show N/A, got:\n{text}" );
 }

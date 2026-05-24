@@ -3,7 +3,7 @@
 Controls row ordering in the `.usage` quota table. Each value implements a distinct heuristic optimized for a specific operational workflow.
 
 - **Type:** `enum`
-- **Default:** `name`
+- **Default:** `reset`
 - **Constraints:** `name`, `endurance`, `drain`, `reset`
 - **Commands:** [`.usage`](../command/006_usage.md#command--9-usage)
 - **Purpose:** Select the row sorting strategy for the quota table.
@@ -21,10 +21,10 @@ Controls row ordering in the `.usage` quota table. Each value implements a disti
 **Examples:**
 
 ```text
-sort::name       → alphabetical A→Z (default)
+sort::reset      → use accounts resetting soonest (default)
+sort::name       → alphabetical A→Z
 sort::endurance  → best for uninterrupted agent run
 sort::drain      → drain almost-exhausted accounts
-sort::reset      → use accounts resetting soonest
 ```
 
 **See Also:** [feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md) for strategy algorithms.

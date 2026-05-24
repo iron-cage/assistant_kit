@@ -56,6 +56,17 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-48 | `sort::bogus` → exit 1, stderr names valid values | Sort Rejection |
 | IT-49 | `prefer::bogus` → exit 1, stderr names valid values | Sort Rejection |
 | IT-50 | `.usage.help` lists `sort`, `desc`, `prefer` params | Help Output |
+| IT-51 | `next::all` suppresses `→` marker in table body | Next Strategy |
+| IT-52 | `next::session` places `→` on recommended account | Next Strategy |
+| IT-53 | `next::bogus` exits 1 naming valid values | Next Rejection |
+| IT-54 | `next::all` footer shows multi-strategy format | Next Footer |
+| IT-55 | `cols::+sub` shows Sub column in output | Column Visibility |
+| IT-56 | `cols::+bogus` exits 1 naming valid column IDs | Column Rejection |
+| IT-57 | Composite `●` uses AND(5h, 7d): both >5% → 🟢, either ≤5% → 🟡 | Composite Emoji |
+| IT-58 | Per-column emoji in `5h Left` value: `🟢 86%` / `🟡 3%` | Per-Column Emoji |
+| IT-59 | Duration format capped to 2 units: no 3-unit durations in output | Duration Format |
+| IT-60 | Three-tier grouping: 🟢 accounts above 🟡 above 🔴 regardless of sort | Tier Grouping |
+| IT-61 | `.usage.help` lists `next`, `cols` params | Help Output |
 
 ### Test Coverage Summary
 
@@ -78,13 +89,22 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Live Monitor: 2 tests (IT-22, IT-31)
 - Live Guards: 6 tests (IT-23, IT-24, IT-25, IT-27, IT-29, IT-30)
 - JSON Output: 1 test (IT-28)
-- Help Output: 5 tests (IT-32, IT-34, IT-38, IT-39, IT-50)
+- Help Output: 6 tests (IT-32, IT-34, IT-38, IT-39, IT-50, IT-61)
 - Trace: 1 test (IT-35)
 - Status Emoji: 4 tests (IT-40, IT-41, IT-42, IT-43)
 - Sort Acceptance: 4 tests (IT-44, IT-45, IT-46, IT-47)
 - Sort Rejection: 2 tests (IT-48, IT-49)
+- Next Strategy: 2 tests (IT-51, IT-52)
+- Next Rejection: 1 test (IT-53)
+- Next Footer: 1 test (IT-54)
+- Column Visibility: 1 test (IT-55)
+- Column Rejection: 1 test (IT-56)
+- Composite Emoji: 1 test (IT-57)
+- Per-Column Emoji: 1 test (IT-58)
+- Duration Format: 1 test (IT-59)
+- Tier Grouping: 1 test (IT-60)
 
-**Total:** 62 spec entries (IT-1 through IT-50; IT-40–IT-43 implemented by TSK-178, IT-44–IT-50 implemented by TSK-177); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
+**Total:** 73 spec entries (IT-1 through IT-61; IT-40–IT-43 implemented by TSK-178, IT-44–IT-50 implemented by TSK-177, IT-51–IT-61 ⏳ pending implementation); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -540,13 +560,14 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-43: Exact 5% boundary — `utilization=95.0` → `🟡`; `utilization=94.9` → `🟢`
+### IT-43: Exact 5% boundary — composite AND: 5h boundary + 7d boundary
 
-- **Given:** Unit test of `status_emoji()`. Two `OauthUsageData` variants:
-  - A: `five_hour.utilization = 95.0` → 5.0% left → expected `🟡`
-  - B: `five_hour.utilization = 94.9` → 5.1% left → expected `🟢`
-- **When:** `status_emoji(&Ok(data_a))` and `status_emoji(&Ok(data_b))`
-- **Then:** A returns `"🟡"`; B returns `"🟢"`. Boundary is `left > 5.0` (strict greater-than).
+- **Given:** Unit test of `status_emoji()`. Three `OauthUsageData` variants:
+  - A: `five_hour.utilization = 95.0` (5.0% left), `seven_day.utilization = 50.0` (50% left) → expected `🟡` (5h at boundary)
+  - B: `five_hour.utilization = 94.9` (5.1% left), `seven_day.utilization = 50.0` (50% left) → expected `🟢` (both > 5%)
+  - C: `five_hour.utilization = 50.0` (50% left), `seven_day.utilization = 95.0` (5.0% left) → expected `🟡` (7d at boundary)
+- **When:** `status_emoji(&Ok(data_a))`, `status_emoji(&Ok(data_b))`, `status_emoji(&Ok(data_c))`
+- **Then:** A returns `"🟡"`; B returns `"🟢"`; C returns `"🟡"`. Composite AND boundary: both must be `> 5.0%` for `🟢`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it042_status_emoji_boundary_precision`
 - **Source:** [009_token_usage.md AC-19](../../../../docs/feature/009_token_usage.md)
@@ -627,3 +648,119 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Exit:** 0
 - **Source fn:** `it049_usage_help_shows_sort_params`
 - **Source:** [feature/020_usage_sort_strategies.md](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### IT-51: `next::all` suppresses `→` marker in table body
+
+- **Given:** Two saved accounts with valid tokens and quota data; `next::all` (default).
+- **When:** `clp .usage next::all`
+- **Then:** Exits 0. No line in stdout contains `→` in the flag column. Footer contains "Next by strategy:" with multiple strategy lines.
+- **Exit:** 0
+- **Live:** yes (requires ≥2 accounts with live quota)
+- **Source:** [feature/023_next_account_strategies.md AC-01](../../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### IT-52: `next::session` places `→` on recommended account
+
+- **Given:** Two saved accounts with valid tokens and quota data; `next::session`.
+- **When:** `clp .usage next::session`
+- **Then:** Exits 0. Exactly one line contains `→` in the flag column. Footer contains "Next:" with a single account name.
+- **Exit:** 0
+- **Live:** yes (requires ≥2 accounts with live quota)
+- **Source:** [feature/023_next_account_strategies.md AC-03](../../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### IT-53: `next::bogus` exits 1 naming valid values
+
+- **Given:** Any environment (empty credential store).
+- **When:** `clp .usage next::bogus`
+- **Then:** Exits 1. Stderr contains each of the five valid values: `all`, `session`, `endurance`, `drain`, `reset`.
+- **Exit:** 1
+- **Source:** [feature/023_next_account_strategies.md AC-07](../../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### IT-54: `next::all` footer shows multi-strategy format
+
+- **Given:** At least two accounts with valid tokens and quota data; `next::all`.
+- **When:** `clp .usage next::all`
+- **Then:** Exits 0. Footer contains "Next by strategy:" followed by lines containing `session`, `endurance`, `drain`, `reset`.
+- **Exit:** 0
+- **Live:** yes (requires ≥2 accounts with live quota)
+- **Source:** [feature/023_next_account_strategies.md AC-02](../../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### IT-55: `cols::+sub` shows Sub column in output
+
+- **Given:** One saved account with valid credentials.
+- **When:** `clp .usage cols::+sub`
+- **Then:** Exits 0. Table header contains `Sub`.
+- **Exit:** 0
+- **Source:** [009_token_usage.md AC-22](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-56: `cols::+bogus` exits 1 naming valid column IDs
+
+- **Given:** Any environment (empty credential store).
+- **When:** `clp .usage cols::+bogus`
+- **Then:** Exits 1. Stderr names valid column IDs.
+- **Exit:** 1
+- **Source:** [009_token_usage.md AC-23](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-57: Composite `●` uses AND(5h, 7d): both >5% → 🟢, either ≤5% → 🟡
+
+- **Given:** Unit test of `status_emoji()`. Two `OauthUsageData` variants:
+  - A: `five_hour.utilization = 50%` (50% left), `seven_day.utilization = 96%` (4% left) → expected `🟡` (7d exhausted)
+  - B: `five_hour.utilization = 50%` (50% left), `seven_day.utilization = 50%` (50% left) → expected `🟢` (both healthy)
+- **When:** `status_emoji(&Ok(data_a))` and `status_emoji(&Ok(data_b))`
+- **Then:** A returns `"🟡"`; B returns `"🟢"`.
+- **Exit:** n/a (unit test)
+- **Source:** [009_token_usage.md AC-18](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-58: Per-column emoji in `5h Left` value: `🟢 86%` / `🟡 3%`
+
+- **Given:** Two accounts: one with `five_hour.utilization=14%` (86% left), one with `five_hour.utilization=97%` (3% left).
+- **When:** `clp .usage`
+- **Then:** Exits 0. The first account's `5h Left` column contains `🟢`; the second contains `🟡`.
+- **Exit:** 0
+- **Live:** yes (requires real tokens)
+- **Source:** [009_token_usage.md AC-21](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-59: Duration format capped to 2 units: no 3-unit durations in output
+
+- **Given:** Unit test of `format_duration_secs()`. Input: `90061` seconds (1d 1h 1m 1s).
+- **When:** `format_duration_secs(90061)`
+- **Then:** Returns `"1d 1h"` (not `"1d 1h 1m"` or `"1d 1h 1m 1s"`).
+- **Exit:** n/a (unit test)
+- **Source:** [009_token_usage.md AC-25](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-60: Three-tier grouping: 🟢 accounts above 🟡 above 🔴 regardless of sort
+
+- **Given:** Three `AccountQuota` structs: `A` (both 5h and 7d > 5% — 🟢), `B` (5h ≤ 5% — 🟡), `C` (error — 🔴). Any sort strategy.
+- **When:** `render_text(...)` with any sort strategy.
+- **Then:** In the output, `A` appears before `B`, and `B` appears before `C`.
+- **Exit:** n/a (unit test)
+- **Source:** [009_token_usage.md AC-24](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-61: `.usage.help` lists `next`, `cols` params
+
+- **Given:** Standard environment.
+- **When:** `clp .usage.help`
+- **Then:** Exits 0. Stdout contains `"next"` and `"cols"`.
+- **Exit:** 0
+- **Source:** [009_token_usage.md AC-09](../../../../docs/feature/009_token_usage.md)

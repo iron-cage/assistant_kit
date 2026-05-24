@@ -4,7 +4,7 @@
 
 - **Purpose**: Surface live quota utilization for all saved accounts and the currently live session via `GET /api/oauth/usage`, showing 5h, 7d, and Sonnet-specific weekly quota remaining.
 - **Responsibility**: Documents the `usage` module and `.usage` CLI command.
-- **In Scope**: Per-account quota fetch via `claude_quota::fetch_oauth_usage()` calling `GET /api/oauth/usage`, `OauthUsageData` parsing with `five_hour`/`seven_day`/`seven_day_sonnet` fields, parallel fetch of account billing state via `claude_quota::fetch_oauth_account()` → `OauthAccountData` (`billing_type`, `has_max`, `org_created_at`), token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for `_active`-but-not-current accounts), synthetic `(current session)` row when live credentials are unsaved, `Sub` column (subscription label: `max`/`pro`/`—`/`?`), `~Renews` column (estimated next Stripe billing date from `org_created_at` day-of-month), table output using `data_fmt`, graceful handling of expired/missing tokens, recommendation marker for best next account, footer summary line, `format::json` output.
+- **In Scope**: Per-account quota fetch via `claude_quota::fetch_oauth_usage()` calling `GET /api/oauth/usage`, `OauthUsageData` parsing with `five_hour`/`seven_day`/`seven_day_sonnet` fields, parallel fetch of account billing state via `claude_quota::fetch_oauth_account()` → `OauthAccountData` (`billing_type`, `has_max`, `org_created_at`), token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for `_active`-but-not-current accounts), synthetic `(current session)` row when live credentials are unsaved, `Sub` column (subscription label: `max`/`pro`/`—`/`?`, hidden by default — `cols::+sub` to show), `~Renews` column (estimated next Stripe billing date from `org_created_at` day-of-month), table output using `data_fmt`, graceful handling of expired/missing tokens, composite `●` status emoji (AND of 5h and 7d), per-column emoji in `5h Left` and `7d Left` values, three-tier universal display grouping (🟢 → 🟡 → 🔴), `cols::` column visibility modifiers, `next::` recommendation strategy parameter, multi-strategy footer, `7d Son Reset` column (hidden by default), duration format capped to 2 significant units, `format::json` output.
 - **Out of Scope**: Historical token counts from stats-cache.json (replaced by live API data); verbosity levels (single fixed output level per command design); relying on `_active` marker for `✓` determination (live credential matching via `accessToken` comparison determines `✓`; `_active` determines `*` only).
 
 ### Design
@@ -35,55 +35,66 @@
 5. Post-process:
    a. Mark the live account (detected in step 3) with `✓` in the flag column (`is_current = true`).
    b. Mark the `_active` account with `*` in the flag column when `is_active = true` AND `is_current = false`. No `*` is emitted when the active and current accounts are the same.
-   c. From non-live accounts with valid quota data and `expires_in_secs > 0`, select the best candidate using a multi-level tiebreaker: (1) highest `5h Left`, (2) highest `expires_in_secs` (token expiry), (3) highest `7d Left`, (4) alphabetically first (stable tiebreaker from alpha-sorted input). Mark the winner `→` (recommended next). If no such account exists, no `→` is emitted.
+   c. Recommendation is controlled by the `next::` parameter (see [023_next_account_strategies.md](023_next_account_strategies.md)). When `next::all` (default), no `→` marker is placed in the table body; the footer shows one recommendation per strategy. When a specific strategy is chosen (`session`, `endurance`, `drain`, `reset`), the selected account receives `→` and the footer shows a single recommendation line.
 6. Render results as a table using `data_fmt`:
-   - Columns: flag (`✓`/`*`/`→`/ blank, priority `✓` > `*` > `→` > blank), status (`🔴`/`🟡`/`🟢`, header `●`), Account, Expires, Sub, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset
-   - **Status emoji column (`●`):** placed between the flag and Account columns; populated on every row:
+   - **Default columns:** flag (`✓`/`*`/`→`/ blank, priority `✓` > `*` > `→` > blank), status (`🔴`/`🟡`/`🟢`, header `●`), Account, Expires, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset
+   - **Hidden-by-default columns:** Sub, 7d Son Reset — available via `cols::+sub`, `cols::+7d_son_reset`
+   - **Column visibility:** The `cols::` parameter accepts comma-separated `+col_id` / `-col_id` modifiers relative to the default column set. The `flag` and `account` columns are structural and always visible. See [param/033_cols.md](../cli/param/033_cols.md).
+   - **Composite status emoji column (`●`):** placed between the flag and Account columns; populated on every row; uses AND logic of 5h and 7d:
      - `🔴` — token read failed or API returned an error (no valid quota data; `result` is `Err`)
-     - `🟡` — valid token, `5h Left ≤ 5.0%` (session quota exhausted; `result` is `Ok`)
-     - `🟢` — valid token, `5h Left > 5.0%` (session quota available; `result` is `Ok`)
+     - `🟡` — valid token, either `5h Left ≤ 5.0%` or `7d Left ≤ 5.0%` (at least one quota exhausted; `result` is `Ok`)
+     - `🟢` — valid token, both `5h Left > 5.0%` and `7d Left > 5.0%` (both quotas healthy; `result` is `Ok`)
      - No JSON equivalent — the status is a display-only column derived from existing fields
+   - **Per-column emoji:** `5h Left` and `7d Left` column values embed an individual 🟢/🟡 emoji based on their own ≤5% threshold: `🟢 86%` when > 5%, `🟡 3%` when ≤ 5%. This provides drill-down visibility beyond the composite `●`.
    - `Expires`: "in Xh Ym" when `expires_in_secs > 0`; "EXPIRED" when `expires_in_secs == 0`
-   - `Sub`: `"max"` (`billing_type == "stripe_subscription"` + `has_max`), `"pro"` (`billing_type == "stripe_subscription"` + `!has_max`), `"—"` (`billing_type == "none"`), `"?"` (`OauthAccountData` unavailable)
+   - `Sub` (hidden by default): `"max"` (`billing_type == "stripe_subscription"` + `has_max`), `"pro"` (`billing_type == "stripe_subscription"` + `!has_max`), `"—"` (`billing_type == "none"`), `"?"` (`OauthAccountData` unavailable)
    - `~Renews`: `"Mon DD"` format — day-of-month from `org_created_at` projected to next occurrence after today (e.g. `"Jun  5"`); `"?"` when `OauthAccountData` unavailable; `"—"` when parsing fails
-   - `5h Left` / `7d Left`: remaining percentage (0–100, rounded to nearest integer); sourced from `OauthUsageData.five_hour.utilization` / `seven_day.utilization` (0.0–100.0 scale, remaining = `100 - utilization`)
+   - `5h Left` / `7d Left`: remaining percentage (0–100, rounded to nearest integer) with per-column emoji prefix; sourced from `OauthUsageData.five_hour.utilization` / `seven_day.utilization` (0.0–100.0 scale, remaining = `100 - utilization`)
    - `7d(Son)`: remaining Sonnet-only weekly quota percentage; sourced from `OauthUsageData.seven_day_sonnet.utilization`; shows `—` when `seven_day_sonnet` is `None`
-   - `5h Reset` / `7d Reset`: countdown formatted via `format_duration_secs`; sourced from `five_hour.resets_at` / `seven_day.resets_at` (ISO-8601 UTC string → Unix seconds via `iso_to_unix_secs`)
+   - `5h Reset` / `7d Reset`: countdown formatted via `format_duration_secs` (capped to 2 significant units); sourced from `five_hour.resets_at` / `seven_day.resets_at` (ISO-8601 UTC string → Unix seconds via `iso_to_unix_secs`)
+   - `7d Son Reset` (hidden by default): countdown to Sonnet-specific weekly reset; shows `—` when `seven_day_sonnet` is `None`
    - Unavailable accounts show `—` for all quota columns and a shortened error reason in parentheses in the last visible column
    - `Sub` and `~Renews` are populated from `OauthAccountData` regardless of whether the quota fetch succeeded; both show `"?"` when the account fetch failed
-7. Append footer line when ≥2 accounts with valid quota data exist:
-   `Valid: X / Y   →  Next: name  (N% session left, token expires in Xh Ym)`
+   - **Three-tier display grouping:** Before applying the sort strategy, accounts are grouped by composite health tier: 🟢 tier (both > 5%) → 🟡 tier (either ≤ 5%) → 🔴 tier (error). Sort strategy applies within each tier. This ensures healthy accounts always appear above exhausted or errored accounts regardless of sort strategy or direction.
+   - **Duration format:** `format_duration_secs` output is capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`, `3h 19m` not `3h 19m 5s`).
+7. Append footer when ≥2 accounts with valid quota data exist. Footer format depends on `next::` parameter (see [023_next_account_strategies.md](023_next_account_strategies.md)):
+   - `next::all` (default): multi-strategy footer with one line per strategy (session, endurance, drain, reset); no `→` in table body.
+   - `next::session` / `next::endurance` / `next::drain` / `next::reset`: single-line footer `Valid: X / Y   →  Next: name  (metrics)`; `→` marks the winner in the table body.
    Omit footer when 0 or 1 valid account.
 8. For `format::json`: output a JSON array with one object per account (synthetic first if present, then alphabetical saved), always including `expires_in_secs`.
 
-**Output format (text) — saved account is live:**
+**Output format (text) — saved account is live, `next::all` default:**
 
 ```
 Quota
 
-  ●  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
-✓ 🟢 alice@example.com    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
-→ 🟢 bob@example.com      in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
-  🟡 carol@example.com    in 1h 12m  max  Jun  8   3%       in 0h 23m  52%      18%      in 2d 11h
-  🔴 dave@example.com     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
-  🔴 eve@example.com      EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
+  ●  Account              Expires    ~Renews  5h Left     5h Reset  7d Left     7d(Son)  7d Reset
+✓ 🟢 alice@example.com    in 7h 24m  Jun  5   🟢 86%     in 3h 19m 🟢 65%     35%      in 4d 23h
+  🟢 bob@example.com      in 5h 02m  Jun  6   🟢 100%    in 4h 58m 🟢 88%     28%      in 6d 14h
+  🟡 carol@example.com    in 1h 12m  Jun  8   🟡 3%      in 0h 23m 🟢 52%     18%      in 2d 11h
+  🔴 dave@example.com     EXPIRED    ?        —          —          —          —        (missing accessToken)
+  🔴 eve@example.com      EXPIRED    ?        —          —          —          —        (missing accessToken)
 
-Valid: 3 / 5   →  Next: bob@example.com  (100% session left, token expires in 5h 02m)
+Valid: 3 / 5   ->  Next by strategy:
+  session    bob@example.com     100% session left, expires in 5h 02m
+  endurance  bob@example.com     100% session, 88% 7d left, expires in 5h 02m
+  drain      carol@example.com   3% session, resets in 23m
+  reset      carol@example.com   3% session, resets in 23m
 ```
 
-(`?` in Sub/~Renews = account fetch failed or skipped due to token read error)
+(Sub column hidden by default; show with `cols::+sub`. Three-tier grouping: 🟢 tier → 🟡 tier → 🔴 tier. No `→` marker in table body when `next::all`.)
 
-**Output format (text) — divergence (active ≠ current):**
+**Output format (text) — divergence, `next::session`:**
 
 ```
 Quota
 
-  ●  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
-✓ 🟢 alice@example.com    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
-* 🟢 bob@example.com      in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
-→ 🟢 carol@example.com   in 6h 11m  max  Jun 11   95%      in 3h 44m  72%      54%      in 5d 01h
+  ●  Account              Expires    ~Renews  5h Left     5h Reset  7d Left     7d(Son)  7d Reset
+✓ 🟢 alice@example.com    in 7h 24m  Jun  5   🟢 86%     in 3h 19m 🟢 65%     35%      in 4d 23h
+* 🟢 bob@example.com      in 5h 02m  Jun  6   🟢 100%    in 4h 58m 🟢 88%     28%      in 6d 14h
+→ 🟢 carol@example.com    in 6h 11m  Jun 11   🟢 95%     in 3h 44m 🟢 72%     54%      in 5d 01h
 
-Valid: 3 / 3   →  Next: carol@example.com  (95% session left, token expires in 6h 11m)
+Valid: 3 / 3   →  Next: carol@example.com  (95% session left, expires in 6h 11m)
 ```
 
 (`*` = `_active` marker points here, but live credentials belong to `alice@example.com`)
@@ -93,12 +104,16 @@ Valid: 3 / 3   →  Next: carol@example.com  (95% session left, token expires in
 ```
 Quota
 
-  ●  Account              Expires    Sub  ~Renews  5h Left  5h Reset   7d Left  7d(Son)  7d Reset
-✓ 🟢 (current session)   in 4h 39m  max  Jun  5   64%      in 1h 39m  39%      —        in 3d 17h 39m
-→ 🟢 alice@example.com   in 5h 02m  max  Jun 11   100%     in 4h 58m  88%      28%      in 6d 14h
-  🔴 bob@example.com     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
+  ●  Account              Expires    ~Renews  5h Left     5h Reset  7d Left     7d(Son)  7d Reset
+✓ 🟢 (current session)    in 4h 39m  Jun  5   🟢 64%     in 1h 39m 🟢 39%     —        in 3d 17h
+  🟢 alice@example.com    in 5h 02m  Jun 11   🟢 100%    in 4h 58m 🟢 88%     28%      in 6d 14h
+  🔴 bob@example.com      EXPIRED    ?        —          —          —          —        (missing accessToken)
 
-Valid: 2 / 3   →  Next: alice@example.com  (100% session left, token expires in 5h 02m)
+Valid: 2 / 3   ->  Next by strategy:
+  session    alice@example.com   100% session left, expires in 5h 02m
+  endurance  alice@example.com   100% session, 88% 7d left, expires in 5h 02m
+  drain      alice@example.com   100% session, resets in 4h 58m
+  reset      alice@example.com   100% session, resets in 4h 58m
 ```
 
 **Output format (JSON):**
@@ -134,17 +149,22 @@ Valid: 2 / 3   →  Next: alice@example.com  (100% session left, token expires i
 - **AC-07**: The `Expires` column shows token TTL ("in Xh Ym") for valid tokens and "EXPIRED" for tokens whose `expiresAt` is in the past; sourced from the credential file without an API call.
 - **AC-08**: `5h Left` and `7d Left` show remaining quota percentage (100 − consumed); `7d(Son)` shows remaining Sonnet-only weekly quota (100 − consumed) or `—` when absent; `5h Reset` and `7d Reset` show independent reset countdowns as separate columns; all quota data sourced from `claude_quota::fetch_oauth_usage()` → `OauthUsageData`.
 - **AC-17**: `7d(Son)` column is populated when `OauthUsageData.seven_day_sonnet` is `Some`; shows `—` when `None`. JSON field `weekly_7d_sonnet_left_pct` is an integer when present and `null` when absent.
-- **AC-09**: The `→` flag marks the best non-live candidate selected by: (1) highest `5h Left`, (2) highest token expiry, (3) highest `7d Left`, (4) alphabetically first; among those with valid quota data and a non-expired token. No `→` is emitted when no such account exists.
-- **AC-10**: A footer line "Valid: X / Y   →  Next: name  (...)" is appended when ≥2 accounts have valid quota data; the footer is absent when 0 or 1 valid account.
+- **AC-09**: The `→` flag and footer are controlled by the `next::` parameter (see [023_next_account_strategies.md](023_next_account_strategies.md)). When `next::all` (default), no `→` appears in the table body; the footer shows one recommendation per strategy. When a specific strategy is chosen, the selected account receives `→` and the footer shows a single line.
+- **AC-10**: A footer is appended when ≥2 accounts have valid quota data; the footer is absent when 0 or 1 valid account. Footer format depends on `next::` value: `next::all` expands to multi-strategy format; specific strategies use single-line format.
 - **AC-11**: When the live `~/.claude/.credentials.json` token does not match any saved account's token, a synthetic row is prepended at the top of the table with `✓`, quota fetched via the live token, and the name set to the email from `~/.claude/.claude.json` (or `(current session)` when that file is unavailable or the field is empty).
 - **AC-12**: When `~/.claude/.credentials.json` is unreadable, no `✓` is emitted on any row; all saved accounts are still shown.
 - **AC-13**: `*` in the flag column marks the account with the `_active` marker when it differs from the current (live) account; no `*` appears when active and current are the same account.
 - **AC-14**: When current = active (normal case), only `✓` appears on the current row; no `*` is emitted on any row.
 - **AC-15**: When `~/.claude/.credentials.json` is unreadable, no `✓` is emitted; `*` is still emitted for the `_active` account. See [016_current_account_awareness.md](016_current_account_awareness.md).
 - **AC-16**: `format::json` output uses `is_current` (replacing the former `active` field) and includes a new `is_active` boolean field per object.
-- **AC-18**: Every table row has a status emoji in the `●` column (second column, after flag): `🟢` when `result` is `Ok` and `5h Left > 5%`, `🟡` when `result` is `Ok` and `5h Left ≤ 5%`, `🔴` when `result` is `Err`. The emoji appears on every row including the synthetic current-session row.
-- **AC-19**: The 5% boundary is exclusive for `🟢` and inclusive for `🟡`: an account with exactly `5h Left = 5%` shows `🟡`, an account with `5h Left = 6%` shows `🟢`.
-- **AC-20**: The `●` status emoji column has no JSON equivalent — `format::json` output is unchanged; pipeline consumers derive status from `session_5h_left_pct` and the `error` field.
+- **AC-18**: Every table row has a composite status emoji in the `●` column (second column, after flag) using AND logic: `🟢` when `result` is `Ok` and both `5h Left > 5%` and `7d Left > 5%`, `🟡` when `result` is `Ok` and either `5h Left ≤ 5%` or `7d Left ≤ 5%`, `🔴` when `result` is `Err`. The emoji appears on every row including the synthetic current-session row.
+- **AC-19**: The 5% boundary for composite `●` is exclusive for `🟢` and inclusive for `🟡` on both dimensions: an account with exactly `5h Left = 5%` OR `7d Left = 5%` shows `🟡`; both must be `> 5%` for `🟢`.
+- **AC-20**: The `●` status emoji column has no JSON equivalent — `format::json` output is unchanged; pipeline consumers derive status from `session_5h_left_pct`, `weekly_7d_left_pct`, and the `error` field.
+- **AC-21**: `5h Left` and `7d Left` column values each embed a per-column emoji prefix: `🟢` when that column's value `> 5%`, `🟡` when `≤ 5%`. This provides individual-dimension visibility beyond the composite `●`.
+- **AC-22**: `Sub` column is hidden by default; shown via `cols::+sub`. `7d Son Reset` column is hidden by default; shown via `cols::+7d_son_reset`.
+- **AC-23**: `cols::` parameter accepts comma-separated `+col_id` / `-col_id` modifiers. `flag` and `account` columns are structural and always visible. Invalid column IDs exit 1 with an error naming valid column IDs.
+- **AC-24**: Three-tier display grouping: accounts are grouped 🟢 → 🟡 → 🔴 by composite health before any sort strategy is applied. Sort strategy applies within each tier. The grouping is never reversed by `desc::`.
+- **AC-25**: `format_duration_secs` output is capped to 2 significant units: shows at most 2 time components (e.g., `1d 2h`, `3h 19m`, `23m`), never 3.
 
 ### Cross-References
 
@@ -158,3 +178,7 @@ Valid: 2 / 3   →  Next: alice@example.com  (100% session left, token expires i
 | doc | [013_account_limits.md](013_account_limits.md) | `.account.limits` command for single-account quota |
 | doc | [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | CLI command specification |
 | doc | [016_current_account_awareness.md](016_current_account_awareness.md) | Shared current-account detection algorithm; `*` flag semantics; JSON field renaming |
+| doc | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies; three-tier grouping; `sort::`, `desc::`, `prefer::` parameters |
+| doc | [023_next_account_strategies.md](023_next_account_strategies.md) | Recommendation strategies; `next::` parameter; multi-strategy footer |
+| param | [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter specification |
+| param | [cli/param/033_cols.md](../cli/param/033_cols.md) | `cols::` parameter specification |

@@ -65,6 +65,8 @@
 //! | ad12 | `ad12_delete_removes_snapshot_files` | delete removes .claude.json + .settings.json snapshots | P |
 //! | ad13 | `ad13_delete_positional_bare_arg` | positional email `old@archive.com` → deletes account | P |
 //! | ad14 | `ad14_delete_prefix_resolves` | prefix `old` resolves to `old@archive.com`, deletes | P |
+//! | ad15 | `ad15_delete_removes_roles_json` | delete removes .roles.json snapshot | P |
+//! | as19 | `as19_save_best_effort_no_roles_json` | save with no valid token → exit 0; no roles.json | P |
 //!
 //! ### AR — Account Relogin
 //!
@@ -83,7 +85,7 @@ use crate::helpers::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
   write_credentials, write_account, write_claude_json, account_exists,
-  write_account_claude_json, write_account_settings_json,
+  write_account_claude_json, write_account_settings_json, write_account_roles_json,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -1042,4 +1044,43 @@ fn ar09_relogin_invalid_chars_exits_1()
 
   let out = run_cs_with_env( &[ ".account.relogin", "name::bad/name" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
+}
+
+// ── ad15 ──────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn ad15_delete_removes_roles_json()
+{
+  // AC-04: delete removes {name}.roles.json alongside credentials and other snapshots.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com",   "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "old@archive.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account_roles_json( dir.path(), "old@archive.com", "org-del-123", "Delete Corp", "admin" );
+
+  let out = run_cs_with_env( &[ ".account.delete", "name::old@archive.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  assert!( !store.join( "old@archive.com.credentials.json" ).exists(), "credentials must be removed" );
+  assert!( !store.join( "old@archive.com.roles.json" ).exists(),       "roles.json snapshot must be removed after delete" );
+}
+
+// ── as19 ──────────────────────────────────────────────────────────────────────
+
+#[ test ]
+fn as19_save_best_effort_no_roles_json()
+{
+  // AC-02: save with no valid accessToken in credentials → exit 0; roles.json not created.
+  // The roles.json fetch is best-effort: network failure or absent token is silently skipped.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  // credentials JSON has no accessToken field, so fetch_claude_cli_roles is never called.
+
+  let out = run_cs_with_env( &[ ".account.save", "name::user@example.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  assert!( !store.join( "user@example.com.roles.json" ).exists(), "roles.json must not be created when no accessToken" );
 }

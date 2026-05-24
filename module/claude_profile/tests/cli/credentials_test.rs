@@ -50,11 +50,41 @@
 //! | cred13 | `cred13_new_params_absent_by_default` | all 4 new opt-in params absent in single default invocation | P |
 //! | cred14 | `cred14_save_writes_active_shown_in_credentials_status` | after .account.save → Account: {name} in .credentials.status | P |
 //! | cred15 | `cred15_save_infers_name_from_email` | save (no name::) → infers email → _active → Account: shows inferred name | P |
+//! | cred16 | `cred16_uuid_opt_in_shows_id_line` | `uuid::1` → ID: line with taggedId value | P |
+//! | cred17 | `cred17_uuid_out_of_range_rejected` | `uuid::2` → exit 1 | N |
+//! | cred18 | `cred18_uuid_string_value_rejected` | `uuid::yes` → exit 1 | N |
+//! | cred19 | `cred19_uuid_absent_by_default` | no `uuid::` → ID: absent | P |
+//! | cred20 | `cred20_uuid_explicit_zero_no_id_line` | `uuid::0` → ID: absent | P |
+//! | cred21 | `cred21_uuid_json_always_includes_tagged_id` | `format::json uuid::0` → tagged_id key present | P |
+//! | cred22 | `cred22_uuid_missing_tagged_id_shows_na` | missing taggedId → ID: N/A | P |
+//! | cred23 | `cred23_capabilities_opt_in_shows_list` | `capabilities::1` → comma-separated list | P |
+//! | cred24 | `cred24_capabilities_out_of_range_rejected` | `capabilities::2` → exit 1 | N |
+//! | cred25 | `cred25_capabilities_string_value_rejected` | `capabilities::yes` → exit 1 | N |
+//! | cred26 | `cred26_capabilities_absent_by_default` | no `capabilities::` → Capabilities: absent | P |
+//! | cred27 | `cred27_capabilities_explicit_zero_absent` | `capabilities::0` → absent | P |
+//! | cred28 | `cred28_capabilities_json_always_emits_key` | `format::json capabilities::0` → capabilities key present | P |
+//! | cred29 | `cred29_capabilities_empty_array_shows_na` | empty array → Capabilities: N/A | P |
+//! | cred30 | `cred30_capabilities_missing_field_shows_na` | missing field → Capabilities: N/A | P |
+//! | cred31 | `cred31_org_uuid_shows_org_id_line` | `org_uuid::1` → Org ID: with org UUID | P |
+//! | cred32 | `cred32_org_uuid_out_of_range_rejected` | `org_uuid::2` → exit 1 | N |
+//! | cred33 | `cred33_org_uuid_string_value_rejected` | `org_uuid::yes` → exit 1 | N |
+//! | cred34 | `cred34_org_uuid_absent_by_default` | no `org_uuid::` → Org ID: absent | P |
+//! | cred35 | `cred35_org_uuid_explicit_zero_absent` | `org_uuid::0` → Org ID: absent | P |
+//! | cred36 | `cred36_org_uuid_json_always_emits_key` | `format::json org_uuid::0` → organization_uuid key present | P |
+//! | cred37 | `cred37_org_uuid_missing_roles_json_na` | missing roles.json → Org ID:  N/A | P |
+//! | cred38 | `cred38_org_name_shows_org_line` | `org_name::1` → Org: with org name | P |
+//! | cred39 | `cred39_org_name_out_of_range_rejected` | `org_name::2` → exit 1 | N |
+//! | cred40 | `cred40_org_name_string_value_rejected` | `org_name::yes` → exit 1 | N |
+//! | cred41 | `cred41_org_name_absent_by_default` | no `org_name::` → Org: absent | P |
+//! | cred42 | `cred42_org_name_explicit_zero_absent` | `org_name::0` → Org: absent | P |
+//! | cred43 | `cred43_org_name_json_always_emits_key` | `format::json org_name::0` → organization_name key present | P |
+//! | cred44 | `cred44_org_name_missing_roles_json_na` | missing roles.json → Org:     N/A | P |
 
 use crate::helpers::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
   write_credentials, write_claude_json, write_claude_json_full, write_settings_json,
+  write_claude_json_extended, write_account, write_account_roles_json,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -474,4 +504,463 @@ fn cred15_save_infers_name_from_email()
     text.contains( "Account: inferred@example.com" ),
     "Account: must show inferred email after nameless .account.save, got:\n{text}",
   );
+}
+
+// ── cred16–cred22: uuid:: parameter (028_uuid.md EC-1 through EC-7) ──────────
+
+/// cred16 (EC-1): `uuid::1` shows `ID:` line with taggedId value.
+#[ test ]
+fn cred16_uuid_opt_in_shows_id_line()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json_extended( dir.path(), "user_abc123", "some-uuid", &[ "claude_code" ] );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "uuid::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "ID:" ),       "uuid::1 must emit ID: line, got:\n{text}" );
+  assert!( text.contains( "user_abc123" ), "ID: line must show taggedId value, got:\n{text}" );
+}
+
+/// cred17 (EC-2): `uuid::2` rejected — out of range for boolean param.
+#[ test ]
+fn cred17_uuid_out_of_range_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "uuid::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+/// cred18 (EC-3): `uuid::yes` rejected — type validation.
+#[ test ]
+fn cred18_uuid_string_value_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "uuid::yes" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+/// cred19 (EC-4): Default — `ID:` absent when `uuid::` not specified.
+#[ test ]
+fn cred19_uuid_absent_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json_extended( dir.path(), "user_abc123", "some-uuid", &[ "claude_code" ] );
+
+  let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "ID:" ), "ID: must be absent by default, got:\n{text}" );
+}
+
+/// cred20 (EC-5): `uuid::0` explicit disable — `ID:` absent.
+#[ test ]
+fn cred20_uuid_explicit_zero_no_id_line()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json_extended( dir.path(), "user_abc123", "some-uuid", &[ "claude_code" ] );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "uuid::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "ID:" ), "ID: must be absent with uuid::0, got:\n{text}" );
+}
+
+/// cred21 (EC-6): `format::json uuid::0` — `tagged_id` always in JSON output.
+#[ test ]
+fn cred21_uuid_json_always_includes_tagged_id()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json_extended( dir.path(), "user_abc123", "some-uuid", &[] );
+
+  let out = run_cs_with_env(
+    &[ ".credentials.status", "format::json", "uuid::0" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"tagged_id\"" ), "format::json must emit tagged_id key, got:\n{text}" );
+  assert!( text.contains( "user_abc123" ),   "tagged_id must contain taggedId value, got:\n{text}" );
+}
+
+/// cred22 (EC-7): Missing `taggedId` in `~/.claude.json` → `ID: N/A`.
+#[ test ]
+fn cred22_uuid_missing_tagged_id_shows_na()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  // Write claude.json without taggedId
+  write_claude_json( dir.path(), "user@example.com" );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "uuid::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "ID:" ),    "ID: line must appear with uuid::1, got:\n{text}" );
+  assert!( text.contains( "N/A" ),    "missing taggedId must show N/A, got:\n{text}" );
+}
+
+// ── cred23–cred30: capabilities:: parameter (029_capabilities.md EC-1 through EC-8) ─
+
+/// cred23 (EC-1): `capabilities::1` shows `Capabilities:` line as comma-separated list.
+#[ test ]
+fn cred23_capabilities_opt_in_shows_list()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json_extended( dir.path(), "", "", &[ "claude_code", "pro" ] );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "capabilities::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Capabilities:" ), "capabilities::1 must emit Capabilities: line, got:\n{text}" );
+  assert!( text.contains( "claude_code" ),   "Capabilities: must list claude_code, got:\n{text}" );
+  assert!( text.contains( "pro" ),           "Capabilities: must list pro, got:\n{text}" );
+}
+
+/// cred24 (EC-2): `capabilities::2` rejected — out of range.
+#[ test ]
+fn cred24_capabilities_out_of_range_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "capabilities::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+/// cred25 (EC-3): `capabilities::yes` rejected — type validation.
+#[ test ]
+fn cred25_capabilities_string_value_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "capabilities::yes" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+/// cred26 (EC-4): Default — `Capabilities:` absent when `capabilities::` not specified.
+#[ test ]
+fn cred26_capabilities_absent_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json_extended( dir.path(), "", "", &[ "claude_code" ] );
+
+  let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Capabilities:" ), "Capabilities: must be absent by default, got:\n{text}" );
+}
+
+/// cred27 (EC-5): `capabilities::0` explicit disable — `Capabilities:` absent.
+#[ test ]
+fn cred27_capabilities_explicit_zero_absent()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json_extended( dir.path(), "", "", &[ "claude_code" ] );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "capabilities::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Capabilities:" ), "Capabilities: must be absent with capabilities::0, got:\n{text}" );
+}
+
+/// cred28 (EC-6): `format::json capabilities::0` — `capabilities` always in JSON output.
+#[ test ]
+fn cred28_capabilities_json_always_emits_key()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json_extended( dir.path(), "", "", &[ "claude_code" ] );
+
+  let out = run_cs_with_env(
+    &[ ".credentials.status", "format::json", "capabilities::0" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"capabilities\"" ), "format::json must emit capabilities key, got:\n{text}" );
+  assert!( text.contains( "claude_code" ),      "capabilities array must contain the value, got:\n{text}" );
+}
+
+/// cred29 (EC-7): Empty capabilities array → `Capabilities: N/A`.
+#[ test ]
+fn cred29_capabilities_empty_array_shows_na()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_claude_json_extended( dir.path(), "", "", &[] );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "capabilities::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Capabilities:" ), "Capabilities: line must appear, got:\n{text}" );
+  assert!( text.contains( "N/A" ),           "empty capabilities must show N/A, got:\n{text}" );
+}
+
+/// cred30 (EC-8): Missing capabilities field in `~/.claude.json` → `Capabilities: N/A`.
+#[ test ]
+fn cred30_capabilities_missing_field_shows_na()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  // Write claude.json without capabilities field
+  write_claude_json( dir.path(), "user@example.com" );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "capabilities::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Capabilities:" ), "Capabilities: line must appear, got:\n{text}" );
+  assert!( text.contains( "N/A" ),           "missing capabilities must show N/A, got:\n{text}" );
+}
+
+// ── cred31–cred44: org_uuid:: and org_name:: parameters (030/031 EC-1 through EC-7) ─
+
+/// cred31 (EC-1): `org_uuid::1` shows `Org ID:` line with `organization_uuid` from active account's roles.json.
+#[ test ]
+fn cred31_org_uuid_shows_org_id_line()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "user@example.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "org_uuid::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Org ID:" ),     "org_uuid::1 must emit Org ID: line, got:\n{text}" );
+  assert!( text.contains( "org-xyz-789" ), "Org ID: must show organization_uuid, got:\n{text}" );
+}
+
+/// cred32 (EC-2): `org_uuid::2` rejected — out of range.
+#[ test ]
+fn cred32_org_uuid_out_of_range_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "org_uuid::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!( err.contains( "org_uuid" ), "error must reference org_uuid::, got:\n{err}" );
+}
+
+/// cred33 (EC-3): `org_uuid::yes` rejected — type validation.
+#[ test ]
+fn cred33_org_uuid_string_value_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "org_uuid::yes" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+/// cred34 (EC-4): Default — `Org ID:` absent when `org_uuid::` not specified.
+#[ test ]
+fn cred34_org_uuid_absent_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "user@example.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Org ID:" ), "Org ID: must be absent by default, got:\n{text}" );
+}
+
+/// cred35 (EC-5): `org_uuid::0` explicit disable — `Org ID:` absent.
+#[ test ]
+fn cred35_org_uuid_explicit_zero_absent()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "user@example.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "org_uuid::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Org ID:" ), "Org ID: must be absent with org_uuid::0, got:\n{text}" );
+}
+
+/// cred36 (EC-6): `format::json org_uuid::0` — `organization_uuid` always in JSON output.
+#[ test ]
+fn cred36_org_uuid_json_always_emits_key()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "user@example.com", "org-xyz", "Acme Corp", "admin" );
+
+  let out = run_cs_with_env(
+    &[ ".credentials.status", "format::json", "org_uuid::0" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"organization_uuid\"" ), "format::json must emit organization_uuid key, got:\n{text}" );
+  assert!( text.contains( "org-xyz" ),               "organization_uuid must contain the value, got:\n{text}" );
+}
+
+/// cred37 (EC-7): Missing roles.json → `Org ID:  N/A` when `org_uuid::1`.
+#[ test ]
+fn cred37_org_uuid_missing_roles_json_na()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  // No roles.json written.
+
+  let out = run_cs_with_env( &[ ".credentials.status", "org_uuid::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Org ID:" ), "Org ID: line must appear with org_uuid::1, got:\n{text}" );
+  assert!( text.contains( "N/A" ),     "missing roles.json must show N/A, got:\n{text}" );
+}
+
+/// cred38 (EC-1): `org_name::1` shows `Org:` line with `organization_name` from active account's roles.json.
+#[ test ]
+fn cred38_org_name_shows_org_line()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "user@example.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "org_name::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Org:" ),      "org_name::1 must emit Org: line, got:\n{text}" );
+  assert!( text.contains( "Acme Corp" ), "Org: must show organization_name, got:\n{text}" );
+}
+
+/// cred39 (EC-2): `org_name::2` rejected — out of range.
+#[ test ]
+fn cred39_org_name_out_of_range_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "org_name::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!( err.contains( "org_name" ), "error must reference org_name::, got:\n{err}" );
+}
+
+/// cred40 (EC-3): `org_name::yes` rejected — type validation.
+#[ test ]
+fn cred40_org_name_string_value_rejected()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "org_name::yes" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+/// cred41 (EC-4): Default — `Org:` absent when `org_name::` not specified.
+#[ test ]
+fn cred41_org_name_absent_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "user@example.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out = run_cs_with_env( &[ ".credentials.status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Org:" ), "Org: must be absent by default, got:\n{text}" );
+}
+
+/// cred42 (EC-5): `org_name::0` explicit disable — `Org:` absent.
+#[ test ]
+fn cred42_org_name_explicit_zero_absent()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "user@example.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "org_name::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "Org:" ), "Org: must be absent with org_name::0, got:\n{text}" );
+}
+
+/// cred43 (EC-6): `format::json org_name::0` — `organization_name` always in JSON output.
+#[ test ]
+fn cred43_org_name_json_always_emits_key()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "user@example.com", "org-xyz-789", "Acme Corp", "admin" );
+
+  let out = run_cs_with_env(
+    &[ ".credentials.status", "format::json", "org_name::0" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"organization_name\"" ), "format::json must emit organization_name key, got:\n{text}" );
+  assert!( text.contains( "Acme Corp" ),             "organization_name must contain the value, got:\n{text}" );
+}
+
+/// cred44 (EC-7): Missing roles.json → `Org:     N/A` when `org_name::1`.
+#[ test ]
+fn cred44_org_name_missing_roles_json_na()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  // No roles.json written.
+
+  let out = run_cs_with_env( &[ ".credentials.status", "org_name::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Org:" ), "Org: line must appear with org_name::1, got:\n{text}" );
+  assert!( text.contains( "N/A" ),  "missing roles.json must show N/A, got:\n{text}" );
 }

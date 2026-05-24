@@ -68,6 +68,30 @@ pub struct Account
   /// Active model from saved `{name}.settings.json` `model` field.
   /// Empty string when snapshot absent or field missing.
   pub model : String,
+  /// Stable user identifier from saved `{name}.claude.json` `oauthAccount.taggedId`.
+  /// Empty string when snapshot absent or field missing.
+  pub tagged_id : String,
+  /// UUID form of user identifier from saved `{name}.claude.json` `oauthAccount.uuid`.
+  /// Empty string when snapshot absent or field missing.
+  pub uuid : String,
+  /// Enabled product capabilities from saved `{name}.claude.json` `oauthAccount.capabilities`.
+  /// Empty vec when snapshot absent or field missing.
+  pub capabilities : Vec< String >,
+  /// Organisation UUID from saved `{name}.roles.json` `organization_uuid`.
+  /// Empty string when snapshot absent or field missing.
+  pub organization_uuid : String,
+  /// Organisation display name from saved `{name}.roles.json` `organization_name`.
+  /// Empty string when snapshot absent or field missing.
+  pub organization_name : String,
+  /// User's role in the organisation from saved `{name}.roles.json` `organization_role`.
+  /// Empty string when snapshot absent or field missing.
+  pub organization_role : String,
+  /// Workspace UUID from saved `{name}.roles.json` `workspace_uuid`.
+  /// Empty string when snapshot absent or field missing (personal accounts have `null`).
+  pub workspace_uuid : String,
+  /// Workspace display name from saved `{name}.roles.json` `workspace_name`.
+  /// Empty string when snapshot absent or field missing (personal accounts have `null`).
+  pub workspace_name : String,
 }
 
 /// List all accounts in `credential_store`.
@@ -111,6 +135,18 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
     let role         = parse_string_field( &claude_json, "organizationRole" ).unwrap_or_default();
     let billing      = parse_string_field( &claude_json, "billingType"      ).unwrap_or_default();
     let model        = parse_string_field( &settings_json, "model"          ).unwrap_or_default();
+    let tagged_id    = parse_string_field( &claude_json, "taggedId"         ).unwrap_or_default();
+    let uuid         = parse_string_field( &claude_json, "uuid"             ).unwrap_or_default();
+    let capabilities = parse_string_array_field( &claude_json, "capabilities" );
+
+    let roles_json = std::fs::read_to_string(
+      credential_store.join( format!( "{name}.roles.json" ) )
+    ).unwrap_or_default();
+    let organization_uuid = parse_string_field( &roles_json, "organization_uuid" ).unwrap_or_default();
+    let organization_name = parse_string_field( &roles_json, "organization_name" ).unwrap_or_default();
+    let organization_role = parse_string_field( &roles_json, "organization_role" ).unwrap_or_default();
+    let workspace_uuid    = parse_string_field( &roles_json, "workspace_uuid"    ).unwrap_or_default();
+    let workspace_name    = parse_string_field( &roles_json, "workspace_name"    ).unwrap_or_default();
 
     accounts.push( Account
     {
@@ -124,6 +160,14 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
       role,
       billing,
       model,
+      tagged_id,
+      uuid,
+      capabilities,
+      organization_uuid,
+      organization_name,
+      organization_role,
+      workspace_uuid,
+      workspace_name,
     } );
   }
 
@@ -158,6 +202,34 @@ pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths ) -> Re
     paths.settings_file(),
     credential_store.join( format!( "{name}.settings.json" ) ),
   );
+  // Best-effort: fetch org identity from endpoint 005 and persist as {name}.roles.json.
+  // Requires accessToken in the credentials file. Network errors or absent token are silently
+  // skipped — save() must not fail for network unavailability or missing optional data.
+  #[ cfg( feature = "enabled" ) ]
+  {
+    let creds_text = std::fs::read_to_string( paths.credentials_file() ).unwrap_or_default();
+    if let Some( token ) = parse_string_field( &creds_text, "accessToken" )
+    {
+      if let Ok( roles ) = claude_quota::fetch_claude_cli_roles( &token )
+      {
+        let null_str = | s : &str | -> String
+        {
+          if s.is_empty() { "null".to_string() }
+          else { format!( "\"{}\"", s.replace( '"', "\\\"" ) ) }
+        };
+        let roles_json = format!(
+          "{{\"organization_uuid\":\"{}\",\"organization_name\":\"{}\",\
+           \"organization_role\":\"{}\",\"workspace_uuid\":{},\"workspace_name\":{}}}",
+          roles.organization_uuid.replace( '"', "\\\"" ),
+          roles.organization_name.replace( '"', "\\\"" ),
+          roles.organization_role.replace( '"', "\\\"" ),
+          null_str( &roles.workspace_uuid ),
+          null_str( &roles.workspace_name ),
+        );
+        let _ = std::fs::write( credential_store.join( format!( "{name}.roles.json" ) ), roles_json );
+      }
+    }
+  }
   // Mark this account as the current active account.
   // Fix(issue-active-marker): save() never wrote _active; only switch_account() did,
   // so .credentials.status showed Account: N/A immediately after every .account.save.
@@ -327,6 +399,7 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
   std::fs::remove_file( target )?;
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.claude.json" ) ) );
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.settings.json" ) ) );
+  let _ = std::fs::remove_file( credential_store.join( format!( "{name}.roles.json" ) ) );
   // Fix(issue-delete-active):
   // Root cause: `PermissionDenied` guard blocked deleting the active account; `delete()`
   //   never cleaned up `_active`, leaving a stale marker after any deletion.
@@ -582,6 +655,43 @@ pub fn parse_u64_field( json : &str, key : &str ) -> Option< u64 >
     .unwrap_or( rest.len() );
   if end == 0 { return None; }
   rest[ ..end ].parse().ok()
+}
+
+/// Extract a string array field from a JSON blob without external dependencies.
+///
+/// Handles optional whitespace after the colon. Returns an empty `Vec` when
+/// the key is absent, the value is not an array, or no quoted strings are found.
+#[ doc( hidden ) ]
+#[ must_use ]
+#[ inline ]
+pub fn parse_string_array_field( json : &str, key : &str ) -> Vec< String >
+{
+  let search    = format!( "\"{key}\":" );
+  let colon_end = match json.find( &search )
+  {
+    Some( p ) => p + search.len(),
+    None      => return Vec::new(),
+  };
+  let rest = json[ colon_end.. ].trim_start();
+  if !rest.starts_with( '[' ) { return Vec::new(); }
+  let end = match rest[ 1.. ].find( ']' )
+  {
+    Some( p ) => 1 + p,
+    None      => return Vec::new(),
+  };
+  let inner = &rest[ 1..end ];
+  let mut values = Vec::new();
+  let mut pos    = 0_usize;
+  while pos < inner.len()
+  {
+    let Some( q_start ) = inner[ pos.. ].find( '"' ) else { break };
+    let start_val = pos + q_start + 1;
+    let Some( q_end ) = inner[ start_val.. ].find( '"' ) else { break };
+    let end_val = start_val + q_end;
+    values.push( inner[ start_val..end_val ].to_string() );
+    pos = end_val + 1;
+  }
+  values
 }
 
 

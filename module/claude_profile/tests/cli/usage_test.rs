@@ -24,7 +24,7 @@
 //! | it8  | `it8_lim_it_accounts_in_alpha_order`            | 3 accounts written out of order → alpha output                | P   | yes   |
 //! | it9  | `it9_unreadable_credentials_shows_dash`         | credentials chmod 000 → `—` + exit 0                         | P   | no    |
 //! | it10 | `it10_expired_token_shows_expired_in_expires_col` | account with PAST_MS → "EXPIRED" in Expires column           | P   | no    |
-//! | it11 | `it11_lim_it_recommendation_marker_shown`       | 2 accounts with real tokens → `→` on non-active account       | P   | yes   |
+//! | it11 | `it11_lim_it_recommendation_marker_shown`       | 2 accounts + `next::session` → `→` on non-active account      | P   | yes   |
 //! | it12 | `it12_lim_it_footer_shows_valid_count`          | 2 accounts with real tokens → footer "Valid: 2" + "Next:"     | P   | yes   |
 //! | it13 | `it13_active_divergence_shows_star`             | live creds=work, _active=alice → `✓` on work, `*` on alice    | P   | no    |
 //! | it14 | `it14_creds_unreadable_no_checkmark_star_shown` | no live creds, _active=alice → no `✓`, `*` on alice           | P   | no    |
@@ -84,6 +84,17 @@
 //! | it058 | `it058_sort_json_unaffected_by_sort_strategy`       | JSON alphabetical regardless of `sort::` strategy (025_sort CC-1) | P | no |
 //! | it059 | `it059_sort_uppercase_rejected`                     | `sort::Name` (uppercase) → exit 1 (case-sensitive)         | N | no |
 //! | it060 | `it060_prefer_uppercase_rejected`                   | `prefer::Opus` (uppercase) → exit 1 (case-sensitive)       | N | no |
+//! | it063 | `it063_next_all_accepted`                           | `next::all` accepted with empty store → exit 0 (AC-01)     | P | no |
+//! | it064 | `it064_next_session_accepted`                       | `next::session` accepted with empty store → exit 0 (AC-03) | P | no |
+//! | it065 | `it065_next_endurance_accepted`                     | `next::endurance` accepted with empty store → exit 0       | P | no |
+//! | it066 | `it066_next_drain_accepted`                         | `next::drain` accepted with empty store → exit 0           | P | no |
+//! | it067 | `it067_next_reset_accepted`                         | `next::reset` accepted with empty store → exit 0           | P | no |
+//! | it068 | `it068_next_invalid_value_exit_1`                   | `next::bogus` → exit 1, stderr names valid values (AC-07)  | N | no |
+//! | it069 | `it069_next_all_suppresses_arrow_in_table`          | default next::all: 2 accounts → no `→` in any table row   | P | no |
+//! | it070 | `it070_cols_sub_accepted`                           | `cols::+sub` accepted with empty store → exit 0            | P | no |
+//! | it071 | `it071_cols_sub_shows_sub_column`                   | `cols::+sub` with account → output contains "Sub" header   | P | no |
+//! | it072 | `it072_cols_unknown_id_exit_1`                      | `cols::+bogus_col` → exit 1, stderr names valid IDs        | N | no |
+//! | it073 | `it073_usage_help_shows_next_cols_params`           | `.usage.help` lists `next` and `cols` params               | P | no |
 
 use crate::helpers::{
   BIN,
@@ -435,14 +446,15 @@ fn it11_lim_it_recommendation_marker_shown()
   write_account_with_token( dir.path(), "acct-a", &token, true  );
   write_account_with_token( dir.path(), "acct-b", &token, false );
 
-  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  // Use next::session to place → in the table body (next::all, the default, suppresses it).
+  let out  = run_cs_with_env( &[ ".usage", "next::session" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
   let rec_marked = text.lines().any( |line| line.contains( '→' ) && line.contains( "acct-b" ) );
   assert!(
     rec_marked,
-    "a line must contain both → and non-active account 'acct-b', got:\n{text}",
+    "next::session: a line must contain both → and non-active account 'acct-b', got:\n{text}",
   );
   let active_rec = text.lines().any( |line| line.contains( '→' ) && line.contains( "acct-a" ) );
   assert!(
@@ -2096,5 +2108,405 @@ fn it062_sort_endurance_desc0_accepted()
   assert!(
     text.contains( "(no accounts configured)" ),
     "sort::endurance desc::0 must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+// ── next:: parameter acceptance (023_next_account_strategies AC-01/AC-03–AC-07) ─
+
+/// it063 (AC-01): `next::all` accepted with empty credential store → exit 0.
+///
+/// TDD guard: fails before `next` is registered (unknown-parameter error).
+/// After registration, the parser accepts `all` and the empty store short-circuits
+/// to `(no accounts configured)`.
+#[ test ]
+fn it063_next_all_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "next::all" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "next::all must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it064 (AC-03): `next::session` accepted with empty credential store → exit 0.
+///
+/// TDD guard for `session` value. The parser must accept the string without error;
+/// empty store produces the no-accounts message.
+#[ test ]
+fn it064_next_session_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "next::session" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "next::session must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it065 (AC-04): `next::endurance` accepted with empty credential store → exit 0.
+#[ test ]
+fn it065_next_endurance_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "next::endurance" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  assert!(
+    stdout( &out ).contains( "(no accounts configured)" ),
+    "next::endurance must be accepted",
+  );
+}
+
+/// it066 (AC-05): `next::drain` accepted with empty credential store → exit 0.
+#[ test ]
+fn it066_next_drain_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "next::drain" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  assert!(
+    stdout( &out ).contains( "(no accounts configured)" ),
+    "next::drain must be accepted",
+  );
+}
+
+/// it067 (AC-06): `next::reset` accepted with empty credential store → exit 0.
+#[ test ]
+fn it067_next_reset_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "next::reset" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  assert!(
+    stdout( &out ).contains( "(no accounts configured)" ),
+    "next::reset must be accepted",
+  );
+}
+
+/// it068 (AC-07): unknown `next::` value → exit 1; stderr names all five valid values.
+///
+/// `NextStrategy::parse` returns an error for unrecognised strings; `parse_usage_params`
+/// converts it to `ArgumentTypeMismatch` → exit 1. The error message must name every
+/// valid value so the operator can correct a typo.
+#[ test ]
+fn it068_next_invalid_value_exit_1()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "next::bogus" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  for value in &[ "all", "session", "endurance", "drain", "reset" ]
+  {
+    assert!(
+      err.contains( value ),
+      "next::bogus error must name valid value `{value}` (AC-07), got:\n{err}",
+    );
+  }
+}
+
+/// it069 (AC-01): default `next::all` — no `→` marker appears in any table row.
+///
+/// Two no-token accounts are written so the table is non-empty. With `next::all`
+/// (the default, no param needed), the recommendation → marker is suppressed in
+/// the table body; the multi-strategy footer handles recommendations instead.
+/// No row in the text output should contain `→`.
+#[ test ]
+fn it069_next_all_suppresses_arrow_in_table()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "b@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  // Default (no next:: param) = next::all.
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  // No table row should contain the → Unicode arrow (U+2192).
+  let arrow_in_row = text.lines().any( |l| l.contains( '\u{2192}' ) );
+  assert!(
+    !arrow_in_row,
+    "next::all (default) must not place → in any table row, got:\n{text}",
+  );
+}
+
+// ── cols:: parameter acceptance and column visibility (AC-22–AC-23) ──────────
+
+/// it070 (AC-23): `cols::+sub` accepted with empty credential store → exit 0.
+///
+/// TDD guard: fails before `cols` is registered (unknown-parameter error).
+/// After registration, the parser accepts `+sub` without error; empty store
+/// produces the no-accounts message.
+#[ test ]
+fn it070_cols_sub_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "cols::+sub" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "cols::+sub must be accepted and show no-accounts message, got:\n{text}",
+  );
+}
+
+/// it071 (AC-22): `cols::+sub` with an account → output table contains the "Sub" header.
+///
+/// By default `sub` is OFF. `cols::+sub` adds it. This test writes a no-token
+/// account (quota cells will be dashes) and verifies the "Sub" header appears
+/// in the rendered table, confirming the column is actually emitted.
+#[ test ]
+fn it071_cols_sub_shows_sub_column()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "cols::+sub" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Sub" ),
+    "cols::+sub must include the Sub column header in output, got:\n{text}",
+  );
+}
+
+/// it072 (AC-23): `cols::+bogus_col` — unknown column ID → exit 1; stderr names valid IDs.
+///
+/// `ColsVisibility::apply_modifier` returns an error for unknown IDs; `parse_usage_params`
+/// converts it to `ArgumentTypeMismatch` → exit 1. The error must name at least one
+/// valid ID so the operator can identify the typo.
+#[ test ]
+fn it072_cols_unknown_id_exit_1()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_cs_with_env(
+    &[ ".usage", "cols::+bogus_col" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  // The error must mention at least one valid column ID.
+  let mentions_valid = [ "status", "expires", "sub", "renews", "5h_left" ]
+    .iter()
+    .any( |id| err.contains( id ) );
+  assert!(
+    mentions_valid,
+    "cols::+bogus_col error must name at least one valid column ID, got:\n{err}",
+  );
+}
+
+/// it073: `.usage.help` output includes `next` and `cols` params.
+///
+/// Verifies the parameter registrations in `lib.rs` are surfaced correctly
+/// to the help system after Phase 3 added both params.
+#[ test ]
+fn it073_usage_help_shows_next_cols_params()
+{
+  let out = run_cs( &[ ".usage.help" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  for param in &[ "next", "cols" ]
+  {
+    assert!(
+      text.contains( param ),
+      ".usage.help must list param `{param}`, got:\n{text}",
+    );
+  }
+}
+
+// ── cols:: column visibility defaults and modifiers ───────────────────────────
+
+/// it074 (AC-22): Sub absent by default — no `cols::` → "Sub" not in table header.
+///
+/// `sub` is off in `ColsVisibility::default_set()`. This test verifies that the
+/// rendered table omits the "Sub" column header when `cols::` is not specified.
+#[ test ]
+fn it074_sub_hidden_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "Sub" ),
+    "without cols::+sub, the Sub column must not appear in output, got:\n{text}",
+  );
+}
+
+/// it075 (AC-23): `cols::+7d_son_reset` → "7d Son Reset" appears in table header.
+///
+/// `7d_son_reset` is off by default. `cols::+7d_son_reset` adds it to the header.
+#[ test ]
+fn it075_cols_plus_7d_son_reset_shows_header()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "cols::+7d_son_reset" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "7d Son Reset" ),
+    "cols::+7d_son_reset must include 7d Son Reset header, got:\n{text}",
+  );
+}
+
+/// it076 (AC-22): "7d Son Reset" absent by default — no `cols::` → column not in header.
+#[ test ]
+fn it076_7d_son_reset_hidden_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "7d Son Reset" ),
+    "without cols::+7d_son_reset, the column must not appear in output, got:\n{text}",
+  );
+}
+
+/// it077 (AC-22): `cols::-renews` → "~Renews" absent from table header.
+#[ test ]
+fn it077_cols_minus_renews_hides_header()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "cols::-renews" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "~Renews" ),
+    "cols::-renews must hide the ~Renews column header, got:\n{text}",
+  );
+}
+
+/// it078 (AC-22): `cols::+sub,-7d_son` composite modifier — Sub present, 7d(Son) absent.
+#[ test ]
+fn it078_cols_composite_add_and_remove()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "cols::+sub,-7d_son" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "Sub" ),       "cols::+sub must add Sub header, got:\n{text}" );
+  assert!( !text.contains( "7d(Son)" ),  "cols::-7d_son must remove 7d(Son) header, got:\n{text}" );
+}
+
+/// it079 (AC-22): flag and account (name) columns always present regardless of `cols::` removals.
+///
+/// Removing all optional columns still leaves the structural flag (blank) and
+/// Account (name) columns. The account name must appear in the output.
+#[ test ]
+fn it079_cols_structural_cols_always_present()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "user@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "cols::-status,-expires,-renews,-5h_left,-5h_reset,-7d_left,-7d_son,-7d_reset" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "user@x.com" ),
+    "account name must always appear in output regardless of cols:: removals, got:\n{text}",
+  );
+}
+
+// ── next:: footer threshold (023_next_account_strategies AC-09) ───────────────
+
+/// it080 (AC-09): footer absent when < 2 valid accounts.
+///
+/// Two no-token accounts result in zero valid (Ok) quota fetches.
+/// The footer (Valid: X / Y …) must not appear when `valid_count < 2`.
+#[ test ]
+fn it080_next_footer_absent_when_no_valid_accounts()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "b@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "Valid:" ),
+    "footer must not appear when no accounts have valid quota data, got:\n{text}",
+  );
+}
+
+/// it081 (AC-06): `format::json` output is identical regardless of `next::` value.
+///
+/// `render_json` does not reference `NextStrategy`; JSON output is unaffected.
+/// Tests with an empty store (JSON = `[]`) to avoid network calls.
+#[ test ]
+fn it081_next_json_output_unchanged_by_next_param()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out_default = run_cs_with_env(
+    &[ ".usage", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  let out_session = run_cs_with_env(
+    &[ ".usage", "format::json", "next::session" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out_default, 0 );
+  assert_exit( &out_session, 0 );
+  assert_eq!(
+    stdout( &out_default ), stdout( &out_session ),
+    "format::json output must be identical regardless of next:: value",
   );
 }

@@ -72,12 +72,14 @@ impl OutputOptions
 
 /// Format a duration in seconds as a compact human-readable string.
 ///
-/// Output form: `Nd Nh Nm` — only non-zero components are shown, with minutes
-/// always present as the most-granular unit (sub-minute precision is dropped).
+/// At most 2 non-zero components from `Nd Nh Nm`; the least-significant component
+/// is dropped when 3 non-zero components would otherwise appear. Sub-minute
+/// precision is dropped; `"0m"` is emitted when the duration is zero.
 ///
 /// - `0` → `"0m"` (special case: the only time minutes appear as zero)
 /// - `60` → `"1m"`, `3600` → `"1h"`, `86400` → `"1d"`
 /// - `3660` → `"1h 1m"`, `86460` → `"1d 1m"`, `90000` → `"1d 1h"`
+/// - `90300` (1d 1h 5m) → `"1d 1h"` (minutes dropped — 2-unit cap)
 ///
 /// Used to display rate-limit reset times (`resets in …`).
 #[ inline ]
@@ -104,6 +106,7 @@ pub fn format_duration_secs( secs : u64 ) -> String
   {
     parts.push( format!( "{mins}m" ) );
   }
+  parts.truncate( 2 );
   parts.join( " " )
 }
 
@@ -128,4 +131,50 @@ pub fn json_escape( s : &str ) -> String
     }
   }
   out
+}
+
+// ── Unit tests ──────────────────────────────────────────────────────────────
+
+#[ cfg( test ) ]
+mod tests
+{
+  use super::format_duration_secs;
+
+  /// FD-1: 3-component input — minutes (least-significant) dropped.
+  /// 90300 = 1d 1h 5m → cap yields "1d 1h".
+  #[ test ]
+  fn test_format_duration_secs_caps_at_two_units()
+  {
+    assert_eq!( format_duration_secs( 90300 ), "1d 1h" );
+  }
+
+  /// FD-2: 2-component input — unaffected by cap.
+  /// 11940 = 3h 19m (no seconds component) → "3h 19m".
+  #[ test ]
+  fn test_format_duration_secs_two_component_unchanged()
+  {
+    assert_eq!( format_duration_secs( 11940 ), "3h 19m" );
+  }
+
+  /// FD-3: exactly 2 non-zero units (days + hours) — no minutes.
+  /// 90000 = 1d 1h 0m → "1d 1h" (minutes pushed only when non-zero or only unit).
+  #[ test ]
+  fn test_format_duration_secs_day_hour_no_minutes()
+  {
+    assert_eq!( format_duration_secs( 90000 ), "1d 1h" );
+  }
+
+  /// FD-4: zero seconds — special case; returns "0m" before parts loop.
+  #[ test ]
+  fn test_format_duration_secs_zero()
+  {
+    assert_eq!( format_duration_secs( 0 ), "0m" );
+  }
+
+  /// FD-5: single non-zero unit — cap has no effect.
+  #[ test ]
+  fn test_format_duration_secs_single_unit()
+  {
+    assert_eq!( format_duration_secs( 3600 ), "1h" );
+  }
 }

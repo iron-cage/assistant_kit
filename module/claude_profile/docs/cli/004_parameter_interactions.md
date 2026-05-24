@@ -2,7 +2,7 @@
 
 Formal specification of co-dependencies, mutual exclusions, and cascading effects between clp parameters.
 
-### All Interactions (7 total)
+### All Interactions (9 total)
 
 | # | Interaction | Parameters | Effect |
 |---|-------------|------------|--------|
@@ -13,6 +13,8 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 | 5 | `desc::` default is determined by `sort::` | `sort::`, `desc::` | Each sort strategy has a context-sensitive `desc::` default; explicit `desc::` overrides it |
 | 6 | `prefer::` selects the weekly column used by all sort heuristics | `sort::`, `prefer::` | `prefer::any/opus/sonnet` controls which weekly quota column `endurance`/`drain`/`reset` strategies read |
 | 7 | `sort::` and `desc::` do not affect `format::json` output | `sort::`, `desc::`, `format::` | JSON array order is always alphabetical regardless of `sort::` or `desc::` (stable schema for pipeline consumers) |
+| 8 | `cols::` does not affect `format::json` output | `cols::`, `format::` | JSON output is unaffected by column visibility modifiers; all schema fields always present |
+| 9 | `next::` does not affect `format::json` output | `next::`, `format::` | JSON array order is always alphabetical and no `→` marker appears regardless of `next::` value |
 
 ---
 
@@ -194,4 +196,52 @@ clp .usage sort::endurance format::json
 # desc::1 has no effect on JSON array order
 clp .usage sort::drain desc::1 format::json
 # [...array in fetch_all_quota order (alphabetical in practice)...]
+```
+
+---
+
+### Interaction :: 8. `cols::` does not affect `format::json` output
+
+**Parameters:** [`cols::`](param/033_cols.md), [`format::`](param/002_format.md)
+
+**Effect:** When `format::json` is specified, column visibility modifiers from `cols::` have no effect. The JSON output always includes all schema fields regardless of which columns are shown in text-format table output.
+
+**Rationale:** Column visibility is a text-format display concern — it controls which columns appear in the human-readable table. JSON consumers rely on a stable schema and must not receive partial objects based on display preferences. Injecting column-visibility decisions into JSON would break pipeline consumers that expect consistent structure.
+
+**Commands affected:** [`.usage`](commands.md#command--9-usage)
+
+**Examples:**
+
+```bash
+# cols::+sub has no effect on JSON schema
+clp .usage cols::+sub format::json
+# [...JSON array without "sub" key — JSON schema is fixed...]
+
+# cols::-renews has no effect on JSON
+clp .usage cols::-renews format::json
+# [...JSON array with "next_renewal_est" field still present...]
+```
+
+---
+
+### Interaction :: 9. `next::` does not affect `format::json` output
+
+**Parameters:** [`next::`](param/032_next.md), [`format::`](param/002_format.md)
+
+**Effect:** When `format::json` is specified, the `next::` recommendation strategy has no effect. The JSON array order is always alphabetical and no `→` markers appear — recommendation control is a text-format display concern.
+
+**Rationale:** JSON consumers that parse `.usage` output need a stable, predictable array structure for scripting and automation. Injecting recommendation-strategy-dependent ordering or marker fields into JSON would make scripts fragile to `next::` changes. The recommendation marker and footer are human-readable text affordances; they have no JSON equivalent.
+
+**Commands affected:** [`.usage`](commands.md#command--9-usage)
+
+**Examples:**
+
+```bash
+# next::session has no effect on JSON array order
+clp .usage next::session format::json
+# [...array in fetch_all_quota order (alphabetical in practice)...]
+
+# next::all (default) has no effect on JSON — no "strategy" fields injected
+clp .usage format::json
+# [...array without recommendation fields...]
 ```

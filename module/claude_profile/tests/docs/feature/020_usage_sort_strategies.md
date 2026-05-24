@@ -16,8 +16,10 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-08 | `format::json` order unaffected by `sort::` | AC-13 | Integration |
 | FT-09 | Invalid `sort::` value exits 1 naming valid values | AC-09 | Integration |
 | FT-10 | Invalid `prefer::` value exits 1 naming valid values | AC-10 | Integration |
-| FT-11 | `sort::` does not affect `→ Next` recommendation | AC-11 | Unit test |
+| FT-11 | `sort::` does not affect `next::` recommendation | AC-11 | Unit test |
 | FT-12 | `prefer::` governs drain tiebreak for tied `5h_left` | AC-08 | Unit test |
+| FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | ⏳ Unit test |
+| FT-14 | `sort::reset` is default when `sort::` omitted | AC-01 | ⏳ Unit test |
 
 ### Test Case Index
 
@@ -35,8 +37,10 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-10 | Invalid prefer value rejected | AC-10 | Validation |
 | FT-11 | Recommendation unaffected by sort | AC-11 | Independence |
 | FT-12 | prefer:: drain tiebreak divergence | AC-08 | Tiebreak |
+| FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | Tier Grouping |
+| FT-14 | `sort::reset` is default when `sort::` omitted | AC-01 | Default |
 
-**Total:** 12 FT cases
+**Total:** 14 FT cases
 
 ---
 
@@ -177,3 +181,25 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Exit:** n/a (unit test — function return assertion)
 - **Source fn:** `test_sort_drain_prefer_sonnet_tiebreak`, `test_prefer_opus_tiebreak_in_drain` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-08](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### FT-13: Three-tier grouping: 🟢 above 🟡 above 🔴
+
+- **Given:** Three `AccountQuota` structs: `green@test.com` (5h_left=80%, 7d_left=60% — both >5%, tier 🟢), `yellow@test.com` (5h_left=3%, 7d_left=50% — 5h ≤5%, tier 🟡), `red@test.com` (result=Err — tier 🔴). Any sort strategy.
+- **When:** `sort_indices(&accounts, SortStrategy::Name, None, PreferStrategy::Any, 0)` — name sort would place red before yellow alphabetically.
+- **Then:** Output order: `green@test.com` (🟢), `yellow@test.com` (🟡), `red@test.com` (🔴). Three-tier grouping overrides alphabetical sort.
+- **Exit:** n/a (unit test)
+- **Source fn:** ⏳ TBD (in `src/usage.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-14](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### FT-14: `sort::reset` is default when `sort::` omitted
+
+- **Given:** Two `AccountQuota` structs: `a@test.com` (5h_reset in 3h), `b@test.com` (5h_reset in 30m). Both non-exhausted.
+- **When:** `sort_indices(&accounts, SortStrategy::Reset, None, PreferStrategy::Any, now_secs)` — default strategy is `reset`.
+- **Then:** `b@test.com` (soonest reset) ranks first, `a@test.com` second.
+- **Exit:** n/a (unit test)
+- **Source fn:** ⏳ TBD (in `src/usage.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../../docs/feature/020_usage_sort_strategies.md)

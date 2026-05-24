@@ -549,3 +549,94 @@ pub fn fetch_oauth_account( token : &str ) -> Result< OauthAccountData, QuotaErr
 
   parse_oauth_account( &body )
 }
+
+// ── ClaudeCliRolesData ────────────────────────────────────────────────────────
+
+/// Claude CLI roles URL — GET endpoint returning org and workspace identity.
+pub const CLAUDE_CLI_ROLES_URL : &str = "https://api.anthropic.com/api/oauth/claude_cli/roles";
+
+/// Org identity snapshot parsed from `GET /api/oauth/claude_cli/roles`.
+///
+/// Personal accounts have empty `workspace_uuid` and `workspace_name` (API returns `null`).
+/// Enterprise accounts have non-null workspace fields.
+#[ derive( Debug ) ]
+pub struct ClaudeCliRolesData
+{
+  /// Organisation UUID.
+  pub organization_uuid : String,
+  /// Organisation display name.
+  pub organization_name : String,
+  /// User's role within the organisation (e.g., `"admin"`, `"member"`).
+  pub organization_role : String,
+  /// Workspace UUID — empty string for personal accounts (API returns `null`).
+  pub workspace_uuid    : String,
+  /// Workspace display name — empty string for personal accounts (API returns `null`).
+  pub workspace_name    : String,
+}
+
+/// Parse the body of `GET /api/oauth/claude_cli/roles` into [`ClaudeCliRolesData`].
+///
+/// Uses string-needle scanning (no `serde_json`) so it is always available
+/// regardless of feature flags.
+///
+/// Nullable fields (`workspace_uuid`, `workspace_name`) become empty strings when
+/// the server returns `null`.
+///
+/// # Errors
+///
+/// Returns [`QuotaError::ResponseParse`] if `organization_uuid` or `organization_name`
+/// are absent or the body is not valid JSON.
+pub fn parse_claude_cli_roles( body : &str ) -> Result< ClaudeCliRolesData, QuotaError >
+{
+  let organization_uuid = parse_optional_string_in_block( body, "organization_uuid" )
+    .ok_or_else( || QuotaError::ResponseParse( "organization_uuid".to_string() ) )?;
+  let organization_name = parse_optional_string_in_block( body, "organization_name" )
+    .ok_or_else( || QuotaError::ResponseParse( "organization_name".to_string() ) )?;
+  let organization_role = parse_optional_string_in_block( body, "organization_role" )
+    .unwrap_or_default();
+  let workspace_uuid    = parse_optional_string_in_block( body, "workspace_uuid" )
+    .unwrap_or_default();
+  let workspace_name    = parse_optional_string_in_block( body, "workspace_name" )
+    .unwrap_or_default();
+
+  Ok( ClaudeCliRolesData
+  {
+    organization_uuid,
+    organization_name,
+    organization_role,
+    workspace_uuid,
+    workspace_name,
+  } )
+}
+
+/// Fetch org identity from the Claude CLI roles endpoint.
+///
+/// Makes a `GET /api/oauth/claude_cli/roles` request using the provided OAuth access token.
+///
+/// # Errors
+///
+/// Returns [`QuotaError::HttpTransport`] on network failure, or
+/// [`QuotaError::ResponseParse`] if the response body cannot be parsed.
+#[ cfg( feature = "enabled" ) ]
+pub fn fetch_claude_cli_roles( token : &str ) -> Result< ClaudeCliRolesData, QuotaError >
+{
+  let resp = ureq::get( CLAUDE_CLI_ROLES_URL )
+    .set( "Authorization",     &format!( "Bearer {token}" ) )
+    .set( "anthropic-version", ANTHROPIC_VERSION )
+    .call();
+
+  let body = match resp
+  {
+    Ok( r ) => r.into_string().map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?,
+    Err( ureq::Error::Status( _, r ) ) =>
+    {
+      return Err( QuotaError::HttpTransport( format!( "HTTP {}", r.status() ) ) );
+    }
+    Err( ureq::Error::Transport( t ) ) =>
+    {
+      return Err( QuotaError::HttpTransport( t.to_string() ) );
+    }
+  };
+
+  parse_claude_cli_roles( &body )
+}

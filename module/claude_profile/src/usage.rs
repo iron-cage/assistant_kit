@@ -70,6 +70,119 @@ impl PreferStrategy
   }
 }
 
+#[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
+enum NextStrategy { All, Session, Endurance, Drain, Reset }
+
+impl NextStrategy
+{
+  fn parse( s : &str ) -> Result< Self, String >
+  {
+    match s
+    {
+      "all"       => Ok( Self::All ),
+      "session"   => Ok( Self::Session ),
+      "endurance" => Ok( Self::Endurance ),
+      "drain"     => Ok( Self::Drain ),
+      "reset"     => Ok( Self::Reset ),
+      _           => Err( format!(
+        "invalid next:: value {s:?}: valid values are `all`, `session`, `endurance`, `drain`, `reset`",
+      ) ),
+    }
+  }
+}
+
+/// Column visibility state for the `.usage` quota table.
+///
+/// `flag` (first col) and `account` (name) are structural and always visible.
+/// All other columns follow the default set; `cols::` modifiers toggle each one.
+#[ allow( clippy::struct_excessive_bools ) ]
+struct ColsVisibility
+{
+  /// `●` composite status emoji column (default ON).
+  status      : bool,
+  /// `Expires` token TTL column (default ON).
+  expires     : bool,
+  /// `Sub` subscription label column (default OFF).
+  sub         : bool,
+  /// `~Renews` next billing date column (default ON).
+  renews      : bool,
+  /// `5h Left` session quota remaining (default ON).
+  h5_left     : bool,
+  /// `5h Reset` session reset countdown (default ON).
+  h5_reset    : bool,
+  /// `7d Left` weekly quota remaining (default ON).
+  d7_left     : bool,
+  /// `7d(Son)` Sonnet-only weekly quota remaining (default ON).
+  d7_son      : bool,
+  /// `7d Reset` weekly reset countdown (default ON).
+  d7_reset    : bool,
+  /// `7d Son Reset` Sonnet weekly reset countdown (default OFF).
+  d7_son_reset : bool,
+}
+
+impl ColsVisibility
+{
+  fn default_set() -> Self
+  {
+    Self
+    {
+      status       : true,
+      expires      : true,
+      sub          : false,
+      renews       : true,
+      h5_left      : true,
+      h5_reset     : true,
+      d7_left      : true,
+      d7_son       : true,
+      d7_reset     : true,
+      d7_son_reset : false,
+    }
+  }
+
+  fn apply_modifier( &mut self, modifier : &str ) -> Result< (), String >
+  {
+    let ( show, id ) = if let Some( rest ) = modifier.strip_prefix( '+' )
+    {
+      ( true, rest )
+    }
+    else if let Some( rest ) = modifier.strip_prefix( '-' )
+    {
+      ( false, rest )
+    }
+    else
+    {
+      return Err( format!( "cols:: modifier {modifier:?} must start with `+` or `-`" ) );
+    };
+    match id
+    {
+      "status"       => self.status       = show,
+      "expires"      => self.expires      = show,
+      "sub"          => self.sub          = show,
+      "renews"       => self.renews       = show,
+      "5h_left"      => self.h5_left      = show,
+      "5h_reset"     => self.h5_reset     = show,
+      "7d_left"      => self.d7_left      = show,
+      "7d_son"       => self.d7_son       = show,
+      "7d_reset"     => self.d7_reset     = show,
+      "7d_son_reset" => self.d7_son_reset = show,
+      _              => return Err( format!(
+        "cols:: unknown column {id:?}: valid IDs are `status`, `expires`, `sub`, `renews`, `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `7d_son_reset`",
+      ) ),
+    }
+    Ok( () )
+  }
+
+  fn parse( s : &str ) -> Result< Self, String >
+  {
+    let mut vis = Self::default_set();
+    for modifier in s.split( ',' ).map( str::trim ).filter( |m| !m.is_empty() )
+    {
+      vis.apply_modifier( modifier )?;
+    }
+    Ok( vis )
+  }
+}
+
 // ── Per-account quota result ───────────────────────────────────────────────────
 
 struct AccountQuota
@@ -712,11 +825,94 @@ fn find_recommendation( accounts : &[ AccountQuota ], now_secs : u64 ) -> Option
   best_idx
 }
 
+/// Return the first eligible (non-current, non-active, non-expired, `Ok`) account
+/// from a pre-sorted index slice, or `None` when no eligible account exists.
+fn find_first_eligible( accounts : &[ AccountQuota ], sorted : &[ usize ], now_secs : u64 ) -> Option< usize >
+{
+  for &idx in sorted
+  {
+    let aq = &accounts[ idx ];
+    if aq.is_current || aq.is_active { continue; }
+    if ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) == 0 { continue; }
+    if aq.result.is_ok() { return Some( idx ); }
+  }
+  None
+}
+
+/// Find the recommended next account for a specific `next` strategy.
+///
+/// `All` always returns `None` (the multi-strategy footer handles its own lookups).
+/// `Session` delegates to `find_recommendation()` (lexicographic composite key).
+/// `Endurance`, `Drain`, `Reset` sort via `sort_indices()` then pick the first
+/// eligible (non-current, non-active, non-expired, `Ok`) account.
+fn find_next_for_strategy(
+  accounts  : &[ AccountQuota ],
+  strategy  : NextStrategy,
+  prefer    : PreferStrategy,
+  now_secs  : u64,
+) -> Option< usize >
+{
+  match strategy
+  {
+    NextStrategy::All       => None,
+    NextStrategy::Session   => find_recommendation( accounts, now_secs ),
+    NextStrategy::Endurance =>
+    {
+      let sorted = sort_indices( accounts, SortStrategy::Endurance, None, prefer, now_secs );
+      find_first_eligible( accounts, &sorted, now_secs )
+    }
+    NextStrategy::Drain =>
+    {
+      let sorted = sort_indices( accounts, SortStrategy::Drain, None, prefer, now_secs );
+      find_first_eligible( accounts, &sorted, now_secs )
+    }
+    NextStrategy::Reset =>
+    {
+      let sorted = sort_indices( accounts, SortStrategy::Reset, None, prefer, now_secs );
+      find_first_eligible( accounts, &sorted, now_secs )
+    }
+  }
+}
+
+/// Format the key metric string for one strategy recommendation line.
+///
+/// Used in both single-strategy (`→ Next: name  (metric)`) and multi-strategy
+/// (`Next by strategy:` / `  endurance  name   metric`) footers.
+fn strategy_metric(
+  aq       : &AccountQuota,
+  strategy : NextStrategy,
+  prefer   : PreferStrategy,
+  now_secs : u64,
+) -> String
+{
+  let expires_in_secs = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
+  let expires_str     = format_duration_secs( expires_in_secs );
+  let Ok( data ) = &aq.result else { return String::new(); };
+  let session_pct = data.five_hour.as_ref().map_or( 0.0, |p| 100.0 - p.utilization );
+  let reset_str   = data.five_hour.as_ref()
+    .and_then( |p| p.resets_at.as_deref() )
+    .and_then( claude_quota::iso_to_unix_secs )
+    .map_or_else( || "\u{2014}".to_string(), |t| format_duration_secs( t.saturating_sub( now_secs ) ) );
+  match strategy
+  {
+    NextStrategy::All | NextStrategy::Session =>
+      format!( "{session_pct:.0}% session left, expires in {expires_str}" ),
+    NextStrategy::Endurance =>
+    {
+      let weekly_pct = prefer_weekly( aq, prefer );
+      format!( "{session_pct:.0}% session, {weekly_pct:.0}% 7d left, expires in {expires_str}" )
+    }
+    NextStrategy::Drain | NextStrategy::Reset =>
+      format!( "{session_pct:.0}% session, resets in {reset_str}" ),
+  }
+}
+
 // ── Output renderers ───────────────────────────────────────────────────────────
 
 /// Compute the 5 quota display cells for a successful OAuth usage fetch.
 ///
 /// Returns `[5h_left, 5h_reset, 7d_left, 7d_son, 7d_reset]` as display strings.
+/// `5h Left` and `7d Left` cells carry a `🟢`/`🟡` prefix (same threshold as `status_emoji`).
 /// Absent periods render as em-dash; absent reset timestamps render as em-dash.
 fn quota_text_cells( data : &OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
 {
@@ -724,6 +920,15 @@ fn quota_text_cells( data : &OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
   let pct_cell  = |util : Option< f64 >| -> String
   {
     util.map_or_else( || dash.clone(), |u| format!( "{:.0}%", 100.0 - u ) )
+  };
+  let pct_emoji = |util : Option< f64 >| -> String
+  {
+    util.map_or_else( || dash.clone(), |u|
+    {
+      let left  = 100.0 - u;
+      let emoji = if left > 5.0 { "🟢" } else { "🟡" };
+      format!( "{emoji} {left:.0}%" )
+    } )
   };
   let reset_cell = |iso : Option< &str >| -> String
   {
@@ -733,10 +938,10 @@ fn quota_text_cells( data : &OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
       )
   };
   [
-    pct_cell( data.five_hour.as_ref().map( |p| p.utilization ) ),
+    pct_emoji( data.five_hour.as_ref().map( |p| p.utilization ) ),
     reset_cell( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
-    pct_cell( data.seven_day.as_ref().map( |p| p.utilization ) ),
-    pct_cell( data.seven_day_sonnet.as_ref().map( |p| p.utilization ) ),
+    pct_emoji( data.seven_day.as_ref().map( |p| p.utilization ) ),
+    pct_cell(  data.seven_day_sonnet.as_ref().map( |p| p.utilization ) ),
     reset_cell( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
   ]
 }
@@ -744,10 +949,10 @@ fn quota_text_cells( data : &OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
 /// Return the single-glyph quota status emoji for an account row.
 ///
 /// - `"🔴"` — token is invalid or missing (`result` is `Err`).
-/// - `"🟡"` — token valid, `5h Left ≤ 5%` (nearly exhausted).
-/// - `"🟢"` — token valid, `5h Left > 5%` (ample session quota remaining).
+/// - `"🟡"` — token valid, but at least one of `5h Left` or `7d Left` is `≤ 5%`.
+/// - `"🟢"` — token valid, BOTH `5h Left > 5%` AND `7d Left > 5%`.
 ///
-/// Absent `five_hour` period data is treated as fully available (conservative).
+/// Absent period data is treated as fully available (conservative, 0% utilised).
 fn status_emoji( result : &Result< claude_quota::OauthUsageData, String > ) -> &'static str
 {
   match result
@@ -755,8 +960,9 @@ fn status_emoji( result : &Result< claude_quota::OauthUsageData, String > ) -> &
     Err( _ ) => "🔴",
     Ok( data ) =>
     {
-      let left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
-      if left > 5.0 { "🟢" } else { "🟡" }
+      let h5_left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
+      let d7_left = 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization );
+      if h5_left > 5.0 && d7_left > 5.0 { "🟢" } else { "🟡" }
     }
   }
 }
@@ -764,17 +970,23 @@ fn status_emoji( result : &Result< claude_quota::OauthUsageData, String > ) -> &
 /// Render quota results as a plain-text table using `data_fmt`.
 ///
 /// Empty store renders `(no accounts configured)` without a table.
-/// When ≥2 accounts have valid quota data and a recommendation exists, appends
-/// a footer line: `Valid: X / Y   →  Next: name  (N% session left, token expires in Xh Ym)`.
+/// Column visibility is controlled by `cols` (structural `flag` and `account`
+/// columns are always shown). Footer format depends on `next`:
 ///
-/// The `→ Next` recommendation is always computed on the original alphabetical order
-/// (unaffected by `sort` / `desc`) — AC-11 in `docs/feature/020_usage_sort_strategies.md`.
+/// - `next::all` (default): multi-strategy footer with one line per strategy;
+///   `→` marker suppressed in table body.
+/// - Specific strategy: single-line `Valid: X/Y → Next: name (metrics)` footer;
+///   `→` marks the recommended account in the table body.
+///
+/// Footer is omitted when < 2 accounts have valid quota data.
 #[ allow( clippy::too_many_lines ) ]
 fn render_text(
   accounts : &[ AccountQuota ],
   sort     : SortStrategy,
   desc     : Option< bool >,
   prefer   : PreferStrategy,
+  next     : NextStrategy,
+  cols     : &ColsVisibility,
 ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -789,29 +1001,49 @@ fn render_text(
     .unwrap_or_default()
     .as_secs();
 
-  // Recommendation always uses the original order (AC-11 — sort does not affect → Next).
-  let best_idx = find_recommendation( accounts, now_secs );
+  // For next::all: no → in table body; each strategy picks its own recommendation
+  // in the footer. For specific strategies: compute the single recommended index now.
+  let best_idx       = find_next_for_strategy( accounts, next, prefer, now_secs );
   let sorted_indices = sort_indices( accounts, sort, desc, prefer, now_secs );
 
-  let headers = vec![
-    String::new(),
-    "●".to_string(),
-    "Account".to_string(),
-    "Expires".to_string(),
-    "Sub".to_string(),
-    "~Renews".to_string(),
-    "5h Left".to_string(),
-    "5h Reset".to_string(),
-    "7d Left".to_string(),
-    "7d(Son)".to_string(),
-    "7d Reset".to_string(),
-  ];
+  // Three-tier grouping: sort order preserved within each tier (🟢 → 🟡 → 🔴).
+  // Applied after the sort strategy so each tier's internal order reflects the chosen sort.
+  let ( mut green_indices, mut yellow_indices, mut red_indices ) =
+    ( Vec::new(), Vec::new(), Vec::new() );
+  for idx in sorted_indices
+  {
+    match status_emoji( &accounts[ idx ].result )
+    {
+      "🟢" => green_indices.push( idx ),
+      "🟡" => yellow_indices.push( idx ),
+      _    => red_indices.push( idx ),
+    }
+  }
+  let sorted_indices : Vec< usize > = green_indices.into_iter()
+    .chain( yellow_indices )
+    .chain( red_indices )
+    .collect();
+
+  // Build headers conditionally — structural cols always first and always visible.
+  let mut headers = vec![ String::new() ]; // flag col
+  if cols.status       { headers.push( "●".to_string() ); }
+  headers.push( "Account".to_string() ); // account name — structural
+  if cols.expires      { headers.push( "Expires".to_string() ); }
+  if cols.sub          { headers.push( "Sub".to_string() ); }
+  if cols.renews       { headers.push( "~Renews".to_string() ); }
+  if cols.h5_left      { headers.push( "5h Left".to_string() ); }
+  if cols.h5_reset     { headers.push( "5h Reset".to_string() ); }
+  if cols.d7_left      { headers.push( "7d Left".to_string() ); }
+  if cols.d7_son       { headers.push( "7d(Son)".to_string() ); }
+  if cols.d7_reset     { headers.push( "7d Reset".to_string() ); }
+  if cols.d7_son_reset { headers.push( "7d Son Reset".to_string() ); }
 
   let mut builder = RowBuilder::new( headers );
   for orig_idx in sorted_indices.iter().copied()
   {
     let aq = &accounts[ orig_idx ];
-    // Four-level priority: ✓ (is_current) > * (is_active, not current) > → (recommendation) > blank.
+    // Four-level priority: ✓ (is_current) > * (is_active, not current) > → (single-strategy) > blank.
+    // For next::all, best_idx is always None, so → is never placed.
     let flag_cell = if aq.is_current
     {
       "✓".to_string()
@@ -830,39 +1062,59 @@ fn render_text(
     };
 
     let expires_cell = compute_expires_cell( aq.expires_at_ms, now_secs );
-
-    let sub_str    = sub_label( aq.account.as_ref() ).to_string();
-    let renews_str = aq.account.as_ref().map_or_else( || "?".to_string(), |a| next_billing_label( &a.org_created_at, now_secs ) );
+    let sub_str      = sub_label( aq.account.as_ref() ).to_string();
+    let renews_str   = aq.account.as_ref()
+      .map_or_else( || "?".to_string(), |a| next_billing_label( &a.org_created_at, now_secs ) );
 
     match &aq.result
     {
       Ok( data ) =>
       {
-        let cells = quota_text_cells( data, now_secs );
-        builder = builder.add_row( vec![
-          flag_cell.into(), status_emoji( &aq.result ).into(),
-          aq.name.clone().into(), expires_cell.into(),
-          sub_str.into(), renews_str.into(),
-          cells[ 0 ].clone().into(), cells[ 1 ].clone().into(),
-          cells[ 2 ].clone().into(), cells[ 3 ].clone().into(), cells[ 4 ].clone().into(),
-        ] );
+        let cells        = quota_text_cells( data, now_secs );
+        let son_reset    = data.seven_day_sonnet.as_ref()
+          .and_then( |p| p.resets_at.as_deref() )
+          .and_then( claude_quota::iso_to_unix_secs )
+          .map_or_else(
+            || "\u{2014}".to_string(),
+            |t| format!( "in {}", format_duration_secs( t.saturating_sub( now_secs ) ) ),
+          );
+
+        let mut row : Vec< String > = vec![ flag_cell ];
+        if cols.status       { row.push( status_emoji( &aq.result ).to_string() ); }
+        row.push( aq.name.clone() );
+        if cols.expires      { row.push( expires_cell ); }
+        if cols.sub          { row.push( sub_str ); }
+        if cols.renews       { row.push( renews_str ); }
+        if cols.h5_left      { row.push( cells[ 0 ].clone() ); }
+        if cols.h5_reset     { row.push( cells[ 1 ].clone() ); }
+        if cols.d7_left      { row.push( cells[ 2 ].clone() ); }
+        if cols.d7_son       { row.push( cells[ 3 ].clone() ); }
+        if cols.d7_reset     { row.push( cells[ 4 ].clone() ); }
+        if cols.d7_son_reset { row.push( son_reset ); }
+        builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
       }
       Err( reason ) =>
       {
-        let dash = "\u{2014}".to_string();
-        builder = builder.add_row( vec![
-          flag_cell.into(),
-          status_emoji( &aq.result ).into(),
-          aq.name.clone().into(),
-          expires_cell.into(),
-          sub_str.into(),
-          renews_str.into(),
-          dash.clone().into(),
-          dash.clone().into(),
-          dash.clone().into(),
-          dash.clone().into(),
-          format!( "({})", shorten_error( reason ) ).into(),
-        ] );
+        let dash      = "\u{2014}".to_string();
+        let error_str = format!( "({})", shorten_error( reason ) );
+        // Data columns visible mask (order matches col rendering above).
+        let data_vis  = [ cols.h5_left, cols.h5_reset, cols.d7_left, cols.d7_son, cols.d7_reset, cols.d7_son_reset ];
+        let last_vis  = data_vis.iter().rposition( |&v| v );
+
+        let mut row : Vec< String > = vec![ flag_cell ];
+        if cols.status  { row.push( status_emoji( &aq.result ).to_string() ); }
+        row.push( aq.name.clone() );
+        if cols.expires { row.push( expires_cell ); }
+        if cols.sub     { row.push( sub_str ); }
+        if cols.renews  { row.push( renews_str ); }
+        for ( i, &vis ) in data_vis.iter().enumerate()
+        {
+          if vis
+          {
+            row.push( if last_vis == Some( i ) { error_str.clone() } else { dash.clone() } );
+          }
+        }
+        builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
       }
     }
   }
@@ -871,31 +1123,45 @@ fn render_text(
   let table = Format::format( &TableFormatter::new(), &view ).unwrap_or_default();
   let body  = format!( "Quota\n\n{table}\n" );
 
-  // Footer: shown when ≥2 valid accounts and a recommendation exists.
+  // Footer: shown only when ≥2 valid accounts (AC-09 from 023_next_account_strategies.md).
   let valid_count = accounts.iter().filter( |aq| aq.result.is_ok() ).count();
-  if valid_count >= 2
+  if valid_count < 2 { return body; }
+
+  if next == NextStrategy::All
   {
-    if let Some( idx ) = best_idx
+    // Multi-strategy footer: one line per strategy; omit strategies with no eligible account.
+    use core::fmt::Write as _;
+    let strategies = [ NextStrategy::Session, NextStrategy::Endurance, NextStrategy::Drain, NextStrategy::Reset ];
+    let names      = [ "session", "endurance", "drain", "reset" ];
+    let mut lines  = String::new();
+    for ( strategy, name ) in strategies.iter().zip( names.iter() )
     {
-      let rec = &accounts[ idx ];
-      if let Ok( data ) = &rec.result
+      if let Some( idx ) = find_next_for_strategy( accounts, *strategy, prefer, now_secs )
       {
-        let expires_in_secs = ( rec.expires_at_ms / 1000 ).saturating_sub( now_secs );
-        let expires_str     = format_duration_secs( expires_in_secs );
-        let footer = format!(
-          "Valid: {} / {}   →  Next: {}  ({:.0}% session left, token expires in {})\n",
-          valid_count,
-          accounts.len(),
-          rec.name,
-          data.five_hour.as_ref().map_or( 0.0, |p| 100.0 - p.utilization ),
-          expires_str,
-        );
-        return format!( "{body}{footer}" );
+        let rec      = &accounts[ idx ];
+        let metric   = strategy_metric( rec, *strategy, prefer, now_secs );
+        let rec_name = &rec.name;
+        let _ = writeln!( lines, "  {name:<10}{rec_name}   {metric}" );
       }
     }
+    if lines.is_empty() { return body; }
+    let total = accounts.len();
+    format!( "{body}Valid: {valid_count} / {total}   ->  Next by strategy:\n{lines}" )
   }
-
-  body
+  else
+  {
+    // Single-strategy footer: → marks the winner in the table body.
+    if let Some( idx ) = best_idx
+    {
+      let rec    = &accounts[ idx ];
+      let metric = strategy_metric( rec, next, prefer, now_secs );
+      let total  = accounts.len();
+      let name   = &rec.name;
+      let footer = format!( "Valid: {valid_count} / {total}   \u{2192}  Next: {name}  ({metric})\n" );
+      return format!( "{body}{footer}" );
+    }
+    body
+  }
 }
 
 /// Render quota results as a JSON array (one object per account).
@@ -1056,7 +1322,7 @@ fn execute_live_mode(
     // Fetch with per-account stagger delays (thunder-herd mitigation).
     let accounts = fetch_all_quota( credential_store, live_creds_file, true, params.trace )?;
 
-    let text = render_text( &accounts, params.sort, params.desc, params.prefer );
+    let text = render_text( &accounts, params.sort, params.desc, params.prefer, params.next, &params.cols );
     print!( "{text}" );
 
     // Compute next-refresh wall-clock time.
@@ -1251,6 +1517,10 @@ struct UsageParams
   desc     : Option< bool >,
   /// Weekly quota column selector for strategies that reference weekly availability.
   prefer   : PreferStrategy,
+  /// Recommendation strategy controlling `→` marker and footer format.
+  next     : NextStrategy,
+  /// Column visibility modifiers applied to the text table.
+  cols     : ColsVisibility,
 }
 
 /// Parse and validate the five `.usage`-specific parameters.
@@ -1316,7 +1586,7 @@ fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorDat
   };
   let sort = match cmd.arguments.get( "sort" )
   {
-    None                         => SortStrategy::Name,
+    None                         => SortStrategy::Reset,
     Some( Value::String( s ) )   => SortStrategy::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
     _ => return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
@@ -1342,7 +1612,25 @@ fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorDat
       "prefer:: must be a string".to_string(),
     ) ),
   };
-  Ok( UsageParams { refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer } )
+  let next = match cmd.arguments.get( "next" )
+  {
+    None                         => NextStrategy::All,
+    Some( Value::String( s ) )   => NextStrategy::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "next:: must be a string".to_string(),
+    ) ),
+  };
+  let cols = match cmd.arguments.get( "cols" )
+  {
+    None                         => ColsVisibility::default_set(),
+    Some( Value::String( s ) )   => ColsVisibility::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "cols:: must be a string".to_string(),
+    ) ),
+  };
+  Ok( UsageParams { refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, next, cols } )
 }
 
 /// `.usage` — show live quota utilization for all saved accounts.
@@ -1427,7 +1715,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   {
     OutputFormat::Json  => render_json( &accounts ),
     OutputFormat::Text
-    | OutputFormat::Table => render_text( &accounts, params.sort, params.desc, params.prefer ),
+    | OutputFormat::Table => render_text( &accounts, params.sort, params.desc, params.prefer, params.next, &params.cols ),
   };
 
   Ok( OutputData::new( content, "text" ) )
@@ -2803,7 +3091,7 @@ mod tests
   fn test_status_emoji_red()
   {
     let aq = mk_aq_err();
-    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any );
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
     assert!( output.contains( "🔴" ), "Err account must show 🔴. Got:\n{output}" );
   }
 
@@ -2812,7 +3100,7 @@ mod tests
   fn test_status_emoji_green()
   {
     let aq = mk_aq_ok( 10.0 );
-    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any );
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
     assert!( output.contains( "🟢" ), "90% left must show 🟢. Got:\n{output}" );
   }
 
@@ -2821,7 +3109,7 @@ mod tests
   fn test_status_emoji_yellow()
   {
     let aq = mk_aq_ok( 97.0 );
-    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any );
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
     assert!( output.contains( "🟡" ), "3% left must show 🟡. Got:\n{output}" );
   }
 
@@ -2832,8 +3120,8 @@ mod tests
   {
     let aq_5pct   = mk_aq_ok( 95.0 );
     let aq_5_1pct = mk_aq_ok( 94.9 );
-    let out_5    = render_text( &[ aq_5pct ],   SortStrategy::Name, None, PreferStrategy::Any );
-    let out_5_1  = render_text( &[ aq_5_1pct ], SortStrategy::Name, None, PreferStrategy::Any );
+    let out_5    = render_text( &[ aq_5pct ],   SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
+    let out_5_1  = render_text( &[ aq_5_1pct ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
     assert!( out_5.contains( "🟡" ),   "exactly 5% left must show 🟡. Got:\n{out_5}" );
     assert!( out_5_1.contains( "🟢" ), "5.1% left must show 🟢. Got:\n{out_5_1}" );
   }
@@ -2845,7 +3133,7 @@ mod tests
     let mut aq = mk_aq_ok( 20.0 );
     aq.is_current = true;
     aq.name = "(current session)".to_string();
-    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any );
+    let output = render_text( &[ aq ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
     assert!( output.contains( "🟢" ), "80% left synthetic row must show 🟢. Got:\n{output}" );
   }
 
@@ -2865,7 +3153,7 @@ mod tests
   #[ test ]
   fn test_render_text_empty()
   {
-    let result = render_text( &[], SortStrategy::Name, None, PreferStrategy::Any );
+    let result = render_text( &[], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::All, &ColsVisibility::default_set() );
     assert!( result.contains( "no accounts configured" ), "empty must say no accounts, got: {result}" );
   }
 
@@ -3334,8 +3622,12 @@ mod tests
     ];
 
     // sort::drain would place b@x.com (25% left) first in display order.
-    // But render_text calls find_recommendation on the original `accounts` slice (AC-11).
-    let output = render_text( &accounts, SortStrategy::Drain, None, PreferStrategy::Any );
+    // next::session picks the recommendation on the original `accounts` slice (AC-11).
+    // Use next::session (not next::all) so that → appears in the table body.
+    let output = render_text(
+      &accounts, SortStrategy::Drain, None, PreferStrategy::Any,
+      NextStrategy::Session, &ColsVisibility::default_set(),
+    );
 
     // Footer should recommend a@x.com (highest 5h_left = 80%), not b@x.com.
     assert!(
@@ -3484,6 +3776,134 @@ mod tests
     assert_eq!( accounts[ idx[ 0 ] ].name, "low@test.com",       "25% left drains first" );
     assert_eq!( accounts[ idx[ 1 ] ].name, "no_fh@test.com",     "None five_hour = 100% left: last among non-exhausted" );
     assert_eq!( accounts[ idx[ 2 ] ].name, "exhausted@test.com", "exhausted always sunk to bottom" );
+  }
+
+  // ── status_emoji AND logic (T01–T04) ──────────────────────────────────────
+
+  fn mk_aq_ok_both( h5_util : f64, d7_util : f64 ) -> AccountQuota
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : h5_util, resets_at : None } ),
+      seven_day        : Some( claude_quota::PeriodUsage { utilization : d7_util, resets_at : None } ),
+      seven_day_sonnet : None,
+    };
+    AccountQuota
+    {
+      name : "test@example.com".to_string(), is_current : false, is_active : false,
+      expires_at_ms : FAR_FUTURE_MS, result : Ok( data ), account : None,
+    }
+  }
+
+  /// SE-AND-T01: `5h_left`=50%, `7d_left`=50% → 🟢 (both > 5%).
+  #[ test ]
+  fn test_status_emoji_and_both_ample_green()
+  {
+    let aq = mk_aq_ok_both( 50.0, 50.0 );
+    assert_eq!( status_emoji( &aq.result ), "🟢", "both > 5% → 🟢" );
+  }
+
+  /// SE-AND-T02: `5h_left`=50%, `7d_left`=3% (`d7_util`=97) → 🟡 (7d ≤ 5%).
+  #[ test ]
+  fn test_status_emoji_and_7d_low_yellow()
+  {
+    let aq = mk_aq_ok_both( 50.0, 97.0 );
+    assert_eq!( status_emoji( &aq.result ), "🟡", "7d ≤ 5% despite 5h ample → 🟡" );
+  }
+
+  /// SE-AND-T03: `5h_left`=3% (`h5_util`=97), `7d_left`=50% → 🟡 (5h ≤ 5%).
+  #[ test ]
+  fn test_status_emoji_and_5h_low_yellow()
+  {
+    let aq = mk_aq_ok_both( 97.0, 50.0 );
+    assert_eq!( status_emoji( &aq.result ), "🟡", "5h ≤ 5% despite 7d ample → 🟡" );
+  }
+
+  /// SE-AND-T04: `5h_left`=5%, `7d_left`=5% → 🟡 (exclusive > 5% boundary).
+  #[ test ]
+  fn test_status_emoji_and_both_at_threshold_yellow()
+  {
+    let aq = mk_aq_ok_both( 95.0, 95.0 );
+    assert_eq!( status_emoji( &aq.result ), "🟡", "both exactly 5% left → 🟡 (not > 5%)" );
+  }
+
+  // ── quota_text_cells emoji prefix (T05–T06) ────────────────────────────────
+
+  /// QT-T05: `5h_left`=86% (util=14.0) → cells[0] = "🟢 86%".
+  #[ test ]
+  fn test_quota_text_cells_5h_emoji_green()
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 14.0, resets_at : None } ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+    };
+    let cells = quota_text_cells( &data, 0 );
+    assert_eq!( cells[ 0 ], "🟢 86%", "86% 5h left → 🟢 86%" );
+  }
+
+  /// QT-T06: `5h_left`=3% (util=97.0) → cells[0] = "🟡 3%".
+  #[ test ]
+  fn test_quota_text_cells_5h_emoji_yellow()
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 97.0, resets_at : None } ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+    };
+    let cells = quota_text_cells( &data, 0 );
+    assert_eq!( cells[ 0 ], "🟡 3%", "3% 5h left → 🟡 3%" );
+  }
+
+  // ── Three-tier grouping (T07–T08) ─────────────────────────────────────────
+
+  fn mk_named_aq( name : &str, h5_util : f64, d7_util : f64 ) -> AccountQuota
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : h5_util, resets_at : None } ),
+      seven_day        : Some( claude_quota::PeriodUsage { utilization : d7_util, resets_at : None } ),
+      seven_day_sonnet : None,
+    };
+    AccountQuota
+    {
+      name : name.to_string(), is_current : false, is_active : false,
+      expires_at_ms : FAR_FUTURE_MS, result : Ok( data ), account : None,
+    }
+  }
+
+  fn mk_named_aq_err( name : &str ) -> AccountQuota
+  {
+    AccountQuota
+    {
+      name : name.to_string(), is_current : false, is_active : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result : Err( "missing accessToken".to_string() ),
+      account : None,
+    }
+  }
+
+  /// TT-T07/T08 — three-tier grouping: 🟢 → 🟡 → 🔴 overrides sort order.
+  ///
+  /// `sort::name` gives alpha order a→b→c, but tier order yields b(🟢)→a(🟡)→c(🔴).
+  #[ test ]
+  fn test_three_tier_grouping_green_before_yellow_before_red()
+  {
+    let a = mk_named_aq(     "a@x.com", 97.0, 0.0  ); // 5h=3% → 🟡
+    let b = mk_named_aq(     "b@x.com", 10.0, 10.0 ); // 5h=90%, 7d=90% → 🟢
+    let c = mk_named_aq_err( "c@x.com"             ); // Err → 🔴
+    let accounts = vec![ a, b, c ];
+    let output = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any,
+      NextStrategy::All, &ColsVisibility::default_set(),
+    );
+    let pos_a = output.find( "a@x.com" ).expect( "a@x.com must appear in output" );
+    let pos_b = output.find( "b@x.com" ).expect( "b@x.com must appear in output" );
+    let pos_c = output.find( "c@x.com" ).expect( "c@x.com must appear in output" );
+    assert!( pos_b < pos_a, "🟢(b) must appear before 🟡(a). Got:\n{output}" );
+    assert!( pos_a < pos_c, "🟡(a) must appear before 🔴(c). Got:\n{output}" );
   }
 
   /// CC-059/CC-060 — `prefer_weekly` with absent period data treats account as fully available (100% left).

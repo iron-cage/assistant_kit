@@ -41,6 +41,32 @@ fn is_dry( cmd : &VerifiedCommand ) -> bool
   matches!( cmd.arguments.get( "dry" ), Some( Value::Boolean( true ) ) )
 }
 
+/// Parse a strict opt-in flag registered with `Kind::String`: absent or `"0"` → false, `"1"` → true.
+///
+/// Rejects any other value (e.g. `"yes"`, `"2"`) with an error naming the parameter.
+/// Used for opt-in display flags where the framework's lenient boolean parsing
+/// (`"yes"` → true) is too permissive.
+fn parse_opt_bool_strict( cmd : &VerifiedCommand, name : &str ) -> Result< bool, ErrorData >
+{
+  match cmd.arguments.get( name )
+  {
+    None                       => Ok( false ),
+    Some( Value::String( s ) ) => match s.as_str()
+    {
+      "0" => Ok( false ),
+      "1" => Ok( true ),
+      _   => Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        format!( "invalid value for {name}:: — expected 0 or 1, got {s:?}" ),
+      ) ),
+    },
+    Some( _ ) => Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      format!( "invalid value for {name}:: — expected 0 or 1" ),
+    ) ),
+  }
+}
+
 /// Classify a token from its stored `expiresAt` millisecond value.
 ///
 /// Used for non-active named accounts where reading the live credentials file
@@ -284,6 +310,18 @@ fn derive_token_state(
   ( tok, exp, exp_secs )
 }
 
+/// Render a `Vec<String>` capability list as a JSON array string.
+///
+/// Empty vec renders as `[]`. Each element is JSON-escaped.
+fn caps_to_json( caps : &[ String ] ) -> String
+{
+  if caps.is_empty() { return "[]".to_string(); }
+  let inner : Vec< String > = caps.iter()
+    .map( | c | format!( "\"{}\"", json_escape( c ) ) )
+    .collect();
+  format!( "[{}]", inner.join( "," ) )
+}
+
 // ── Command handlers ──────────────────────────────────────────────────────────
 
 /// `.credentials.status` — show live credential metadata without account store dependency.
@@ -297,6 +335,9 @@ fn derive_token_state(
 /// # Errors
 ///
 /// Returns `ErrorData` if HOME is unset or `.credentials.json` is missing.
+// Reading 16 field-presence flags and rendering both JSON and text formats
+// in one pass; splitting would scatter tightly-coupled field reads.
+#[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
@@ -337,6 +378,10 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
   let show_role         = matches!( cmd.arguments.get( "role"         ), Some( Value::Boolean( true ) ) );
   let show_billing      = matches!( cmd.arguments.get( "billing"      ), Some( Value::Boolean( true ) ) );
   let show_model        = matches!( cmd.arguments.get( "model"        ), Some( Value::Boolean( true ) ) );
+  let show_uuid         = parse_opt_bool_strict( &cmd, "uuid" )?;
+  let show_capabilities = parse_opt_bool_strict( &cmd, "capabilities" )?;
+  let show_org_uuid     = parse_opt_bool_strict( &cmd, "org_uuid" )?;
+  let show_org_name     = parse_opt_bool_strict( &cmd, "org_name" )?;
 
   let ( tok, exp, exp_secs ) = derive_token_state(
     &crate::token::status_with_threshold( crate::token::WARNING_THRESHOLD_SECS ),
@@ -344,13 +389,29 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
 
   let ( sub, tier, email, display, role, billing ) = read_live_cred_meta( &paths );
   let model = read_settings_model( &paths );
+  // Read extended snapshot fields from live ~/.claude.json — same file, best-effort.
+  let live_claude_json  = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
+  let tagged_id         = crate::account::parse_string_field( &live_claude_json, "taggedId" ).unwrap_or_default();
+  let live_capabilities = crate::account::parse_string_array_field( &live_claude_json, "capabilities" );
 
   // Account: reads _active opportunistically — N/A when absent (no hard dependency).
-  let account = std::fs::read_to_string( credential_store.join( "_active" ) )
+  let active_name = std::fs::read_to_string( credential_store.join( "_active" ) )
     .ok()
     .map( | s | s.trim().to_string() )
-    .filter( | s | !s.is_empty() )
-    .unwrap_or_else( || "N/A".to_string() );
+    .filter( | s | !s.is_empty() );
+  let account = active_name.clone().unwrap_or_else( || "N/A".to_string() );
+
+  // Org identity: read from {_active}.roles.json best-effort; empty when absent.
+  let roles_json = active_name.as_deref()
+    .and_then( | name | std::fs::read_to_string(
+      credential_store.join( format!( "{name}.roles.json" ) )
+    ).ok() )
+    .unwrap_or_default();
+  let org_uuid = crate::account::parse_string_field( &roles_json, "organization_uuid" ).unwrap_or_default();
+  let org_name = crate::account::parse_string_field( &roles_json, "organization_name" ).unwrap_or_default();
+  let org_role = crate::account::parse_string_field( &roles_json, "organization_role" ).unwrap_or_default();
+  let ws_uuid  = crate::account::parse_string_field( &roles_json, "workspace_uuid"    ).unwrap_or_default();
+  let ws_name  = crate::account::parse_string_field( &roles_json, "workspace_name"    ).unwrap_or_default();
 
   // Saved: count *.credentials.json files; 0 when credential_store absent.
   let saved = std::fs::read_dir( &credential_store )
@@ -364,21 +425,31 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
   {
     OutputFormat::Json =>
     {
-      let s   = json_escape( &sub );
-      let t   = json_escape( &tier );
-      let tk  = json_escape( &tok );
-      let em  = json_escape( &email );
-      let ac  = json_escape( &account );
-      let fp  = json_escape( &file_path );
-      let dn  = json_escape( &display );
-      let rl  = json_escape( &role );
-      let bl  = json_escape( &billing );
-      let md  = json_escape( &model );
+      let s    = json_escape( &sub );
+      let t    = json_escape( &tier );
+      let tk   = json_escape( &tok );
+      let em   = json_escape( &email );
+      let ac   = json_escape( &account );
+      let fp   = json_escape( &file_path );
+      let dn   = json_escape( &display );
+      let rl   = json_escape( &role );
+      let bl   = json_escape( &billing );
+      let md   = json_escape( &model );
+      let ti   = json_escape( &tagged_id );
+      let caps = caps_to_json( &live_capabilities );
+      let ou   = json_escape( &org_uuid );
+      let on_  = json_escape( &org_name );
+      let or_  = json_escape( &org_role );
+      let wu   = json_escape( &ws_uuid );
+      let wn   = json_escape( &ws_name );
       format!(
         "{{\"subscription\":\"{s}\",\"tier\":\"{t}\",\"token\":\"{tk}\",\
          \"expires_in_secs\":{exp_secs},\"email\":\"{em}\",\
          \"account\":\"{ac}\",\"file\":\"{fp}\",\"saved\":{saved},\
-         \"display_name\":\"{dn}\",\"role\":\"{rl}\",\"billing\":\"{bl}\",\"model\":\"{md}\"}}\n"
+         \"display_name\":\"{dn}\",\"role\":\"{rl}\",\"billing\":\"{bl}\",\"model\":\"{md}\",\
+         \"tagged_id\":\"{ti}\",\"capabilities\":{caps},\
+         \"organization_uuid\":\"{ou}\",\"organization_name\":\"{on_}\",\
+         \"organization_role\":\"{or_}\",\"workspace_uuid\":\"{wu}\",\"workspace_name\":\"{wn}\"}}\n"
       )
     }
     OutputFormat::Text =>
@@ -396,6 +467,33 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
       if show_role         { let _ = writeln!( out, "Role:    {role}"    ); }
       if show_billing      { let _ = writeln!( out, "Billing: {billing}" ); }
       if show_model        { let _ = writeln!( out, "Model:   {model}"   ); }
+      if show_uuid
+      {
+        let id_val = if tagged_id.is_empty() { "N/A" } else { &tagged_id };
+        let _ = writeln!( out, "ID:      {id_val}" );
+      }
+      if show_capabilities
+      {
+        let cap_val = if live_capabilities.is_empty()
+        {
+          "N/A".to_string()
+        }
+        else
+        {
+          live_capabilities.join( ", " )
+        };
+        let _ = writeln!( out, "Capabilities: {cap_val}" );
+      }
+      if show_org_uuid
+      {
+        let val = if org_uuid.is_empty() { "N/A" } else { &org_uuid };
+        let _ = writeln!( out, "Org ID:  {val}" );
+      }
+      if show_org_name
+      {
+        let val = if org_name.is_empty() { "N/A" } else { &org_name };
+        let _ = writeln!( out, "Org:     {val}" );
+      }
       out
     }
     // Table rejected above via is_table() guard; unreachable.
@@ -409,7 +507,9 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
 /// Returns `"(no accounts configured)\n"` when `accounts` is empty.
 /// When any field flag is `true`, each account block is followed by its fields
 /// and separated from the next account by a blank line.
-#[ allow( clippy::fn_params_excessive_bools, clippy::too_many_arguments ) ]
+// Conditional rendering for 16 optional account fields; extraction into a helper
+// would require passing all booleans again — no readability gain.
+#[ allow( clippy::fn_params_excessive_bools, clippy::too_many_arguments, clippy::too_many_lines ) ]
 #[ inline ]
 fn render_accounts_text(
   accounts          : &[ &crate::account::Account ],
@@ -424,13 +524,18 @@ fn render_accounts_text(
   show_role         : bool,
   show_billing      : bool,
   show_model        : bool,
+  show_uuid         : bool,
+  show_capabilities : bool,
+  show_org_uuid     : bool,
+  show_org_name     : bool,
 ) -> String
 {
   if accounts.is_empty() { return "(no accounts configured)\n".to_string(); }
   // show_current is false when current::0 or when creds file is unreadable (current_name=None).
   let emit_current = show_current && current_name.is_some();
   let any_field = show_active || emit_current || show_sub || show_tier || show_expires || show_email
-    || show_display_name || show_role || show_billing || show_model;
+    || show_display_name || show_role || show_billing || show_model || show_uuid || show_capabilities
+    || show_org_uuid || show_org_name;
   let mut out   = String::new();
   let last_idx  = accounts.len() - 1;
   for ( idx, a ) in accounts.iter().enumerate()
@@ -500,6 +605,33 @@ fn render_accounts_text(
         let model = if a.model.is_empty() { "N/A" } else { &a.model };
         let _ = writeln!( out, "  Model:   {model}" );
       }
+      if show_uuid
+      {
+        let id_val = if a.tagged_id.is_empty() { "N/A" } else { &a.tagged_id };
+        let _ = writeln!( out, "  ID:      {id_val}" );
+      }
+      if show_capabilities
+      {
+        let cap_val = if a.capabilities.is_empty()
+        {
+          "N/A".to_string()
+        }
+        else
+        {
+          a.capabilities.join( ", " )
+        };
+        let _ = writeln!( out, "  Capabilities: {cap_val}" );
+      }
+      if show_org_uuid
+      {
+        let val = if a.organization_uuid.is_empty() { "N/A" } else { &a.organization_uuid };
+        let _ = writeln!( out, "  Org ID:  {val}" );
+      }
+      if show_org_name
+      {
+        let val = if a.organization_name.is_empty() { "N/A" } else { &a.organization_name };
+        let _ = writeln!( out, "  Org:     {val}" );
+      }
       if idx < last_idx { out.push( '\n' ); }
     }
   }
@@ -521,7 +653,10 @@ fn render_accounts_json( accounts : &[ &crate::account::Account ], current_name 
     format!(
       "{{\"name\":\"{}\",\"is_active\":{},\"is_current\":{},\"subscription_type\":\"{}\",\
        \"rate_limit_tier\":\"{}\",\"expires_at_ms\":{},\"email\":\"{}\",\
-       \"display_name\":\"{}\",\"role\":\"{}\",\"billing\":\"{}\",\"model\":\"{}\"}}",
+       \"display_name\":\"{}\",\"role\":\"{}\",\"billing\":\"{}\",\"model\":\"{}\",\
+       \"tagged_id\":\"{}\",\"capabilities\":{},\
+       \"organization_uuid\":\"{}\",\"organization_name\":\"{}\",\
+       \"organization_role\":\"{}\",\"workspace_uuid\":\"{}\",\"workspace_name\":\"{}\"}}",
       json_escape( &a.name ),
       a.is_active,
       is_current,
@@ -533,6 +668,13 @@ fn render_accounts_json( accounts : &[ &crate::account::Account ], current_name 
       json_escape( &a.role ),
       json_escape( &a.billing ),
       json_escape( &a.model ),
+      json_escape( &a.tagged_id ),
+      caps_to_json( &a.capabilities ),
+      json_escape( &a.organization_uuid ),
+      json_escape( &a.organization_name ),
+      json_escape( &a.organization_role ),
+      json_escape( &a.workspace_uuid ),
+      json_escape( &a.workspace_name ),
     )
   } ).collect();
   format!( "[{}]\n", entries.join( "," ) )
@@ -674,6 +816,10 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
   let show_role         = matches!( cmd.arguments.get( "role"         ), Some( Value::Boolean( true ) ) );
   let show_billing      = matches!( cmd.arguments.get( "billing"      ), Some( Value::Boolean( true ) ) );
   let show_model        = matches!( cmd.arguments.get( "model"        ), Some( Value::Boolean( true ) ) );
+  let show_uuid         = parse_opt_bool_strict( &cmd, "uuid" )?;
+  let show_capabilities = parse_opt_bool_strict( &cmd, "capabilities" )?;
+  let show_org_uuid     = parse_opt_bool_strict( &cmd, "org_uuid" )?;
+  let show_org_name     = parse_opt_bool_strict( &cmd, "org_name" )?;
 
   // Detect which account matches the live session token (graceful: None when creds absent).
   let live_creds = crate::ClaudePaths::new()
@@ -690,6 +836,8 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
         show_active, show_current, current_name.as_deref(),
         show_sub, show_tier, show_expires, show_email,
         show_display_name, show_role, show_billing, show_model,
+        show_uuid, show_capabilities,
+        show_org_uuid, show_org_name,
       )
     }
     OutputFormat::Table =>

@@ -81,7 +81,7 @@
 //! | D-08 | `dur_86400s_shows_1d_no_hours` | 86400s → `"1d"` | P |
 //! | D-09 | `dur_86460s_shows_1d_1m` | 86460s → `"1d 1m"` | P |
 //! | D-10 | `dur_90000s_shows_1d_1h_no_minutes` | 90000s → `"1d 1h"` | P |
-//! | D-11 | `dur_90060s_shows_1d_1h_1m` | 90060s → `"1d 1h 1m"` | P |
+//! | D-11 | `dur_90060s_shows_1d_1h_capped` | 90060s → `"1d 1h"` (2-unit cap) | P |
 //! | D-12 | `dur_max_u64_does_not_panic` | `u64::MAX` → does not panic | P |
 
 // ── Adapter tests ─────────────────────────────────────────────────────────────
@@ -684,11 +684,11 @@ mod format_duration
     assert_eq!( format_duration_secs( 90000 ), "1d 1h" );
   }
 
-  // D-11: 90060 seconds (1d 1h 1m) → "1d 1h 1m"
+  // D-11: 90060 seconds (1d 1h 1m) → "1d 1h" (2-unit cap drops minutes)
   #[ test ]
-  fn dur_90060s_shows_1d_1h_1m()
+  fn dur_90060s_shows_1d_1h_capped()
   {
-    assert_eq!( format_duration_secs( 90060 ), "1d 1h 1m" );
+    assert_eq!( format_duration_secs( 90060 ), "1d 1h" );
   }
 
   // D-12: u64::MAX — must not panic (overflow safety)

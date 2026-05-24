@@ -183,6 +183,31 @@ pub fn write_claude_json_full(
   std::fs::write( home.join( ".claude.json" ), content ).unwrap();
 }
 
+/// Write `~/.claude.json` with extended fields: `taggedId`, `uuid`, and `capabilities`.
+///
+/// Used to test `uuid::1` and `capabilities::1` in `.credentials.status`.
+///
+/// # Panics
+///
+/// Panics if the file cannot be written.
+#[ inline ]
+pub fn write_claude_json_extended(
+  home         : &std::path::Path,
+  tagged_id    : &str,
+  uuid         : &str,
+  capabilities : &[ &str ],
+)
+{
+  let caps = capabilities.iter()
+    .map( | c | format!( "\"{c}\"" ) )
+    .collect::< Vec< _ > >()
+    .join( "," );
+  let content = format!(
+    r#"{{"oauthAccount":{{"taggedId":"{tagged_id}","uuid":"{uuid}","capabilities":[{caps}]}}}}"#,
+  );
+  std::fs::write( home.join( ".claude.json" ), content ).unwrap();
+}
+
 /// Write `~/.claude/settings.json` with the given model value.
 ///
 /// Used to test `model::1` field in `.credentials.status`.
@@ -225,6 +250,35 @@ pub fn write_account_claude_json(
   std::fs::write( credential_store.join( format!( "{name}.claude.json" ) ), content ).unwrap();
 }
 
+/// Write `{credential_store}/{name}.claude.json` with `taggedId`, `uuid`, and `capabilities`.
+///
+/// Used to test `uuid::1` and `capabilities::1` in `.accounts`.
+/// Mirrors what `account::save()` produces (extended snapshot format).
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_account_claude_json_extended(
+  home         : &std::path::Path,
+  name         : &str,
+  tagged_id    : &str,
+  uuid         : &str,
+  capabilities : &[ &str ],
+)
+{
+  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  let caps = capabilities.iter()
+    .map( | c | format!( "\"{c}\"" ) )
+    .collect::< Vec< _ > >()
+    .join( "," );
+  let content = format!(
+    r#"{{"oauthAccount":{{"taggedId":"{tagged_id}","uuid":"{uuid}","capabilities":[{caps}]}}}}"#,
+  );
+  std::fs::write( credential_store.join( format!( "{name}.claude.json" ) ), content ).unwrap();
+}
+
 /// Write `{credential_store}/{name}.settings.json` with a `model` field.
 ///
 /// Used to pre-populate `.accounts` snapshot data for `model` field tests.
@@ -240,6 +294,31 @@ pub fn write_account_settings_json( home : &std::path::Path, name : &str, model 
   std::fs::create_dir_all( &credential_store ).unwrap();
   let content = format!( r#"{{"model":"{model}"}}"# );
   std::fs::write( credential_store.join( format!( "{name}.settings.json" ) ), content ).unwrap();
+}
+
+/// Write `{credential_store}/{name}.roles.json` with org identity fields.
+///
+/// Used to pre-populate `.accounts` and `.credentials.status` org field tests.
+/// Mirrors the format written by `account::save()` when `fetch_claude_cli_roles` succeeds.
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_account_roles_json(
+  home     : &std::path::Path,
+  name     : &str,
+  org_uuid : &str,
+  org_name : &str,
+  org_role : &str,
+)
+{
+  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  let content = format!(
+    r#"{{"organization_uuid":"{org_uuid}","organization_name":"{org_name}","organization_role":"{org_role}","workspace_uuid":null,"workspace_name":null}}"#,
+  );
+  std::fs::write( credential_store.join( format!( "{name}.roles.json" ) ), content ).unwrap();
 }
 
 /// Check whether an account credential file exists.
