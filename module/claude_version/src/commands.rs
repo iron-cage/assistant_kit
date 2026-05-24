@@ -623,6 +623,13 @@ fn check_installed_guard(
 }
 
 /// Guard path for pinned versions: compare installed vs preferred and restore on drift.
+///
+/// `resolved` is the stored `preferredVersionResolved` value from settings.
+/// For alias specs (e.g. "stable", "month") it is advisory only — this function
+/// re-resolves `spec` through [`resolve_version_spec()`] at call time and uses the
+/// fresh `resolved_now` as the install target. `resolved` is authoritative only
+/// when `spec` is a concrete semver string (where `resolve_version_spec` returns
+/// `spec` unchanged).
 fn guard_once_pinned( dry : bool, force : bool, spec : &str, resolved : &str, verbosity : u8, format : OutputFormat ) -> Result< OutputData, ErrorData >
 {
   // Re-resolve alias through current table so stale settings don't trigger false drift.

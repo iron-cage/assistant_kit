@@ -4069,4 +4069,94 @@ mod tests
       "footer must not show 'Next by strategy:' when lines is empty (FT-08/023), got:\n{output}",
     );
   }
+
+  // ── find_next_for_strategy::Drain unit tests ──────────────────────────────
+
+  /// FT-04/023 unit A — drain picks lowest non-exhausted (> 5% left) account first.
+  ///
+  /// Two non-exhausted accounts: `a` has 6% left, `b` has 80% left.
+  /// Drain canonical: ascending `5h_left` → `a` before `b`.
+  /// `find_next_for_strategy` with Drain must return index of `a`.
+  #[ test ]
+  fn test_find_next_drain_picks_lowest_nonexhausted()
+  {
+    let now    = 0u64;
+    let a = mk_aq_sort( "a@test.com", 94.0, FAR_FUTURE_MS );  // 6% left — non-exhausted
+    let b = mk_aq_sort( "b@test.com", 20.0, FAR_FUTURE_MS );  // 80% left — non-exhausted
+    let accounts = vec![ b, a ];  // intentionally reversed to confirm sort, not input order
+
+    let idx = find_next_for_strategy( &accounts, NextStrategy::Drain, PreferStrategy::Any, now );
+    assert!(
+      idx.is_some(),
+      "drain must find a winner among two non-exhausted accounts",
+    );
+    assert_eq!(
+      accounts[ idx.unwrap() ].name, "a@test.com",
+      "drain must pick a@test.com (6% left, lowest non-exhausted); got index {idx:?}",
+    );
+  }
+
+  /// FT-04/023 unit B — drain puts exhausted accounts (≤ 5% left) after non-exhausted.
+  ///
+  /// `exhausted` has 3% left (≤ 5%) and `healthy` has 80% left (> 5%).
+  /// Even though `exhausted` has lower `5h_left`, drain picks `healthy` first.
+  #[ test ]
+  fn test_find_next_drain_prefers_nonexhausted_over_exhausted()
+  {
+    let now       = 0u64;
+    let exhausted = mk_aq_sort( "exhausted@test.com", 97.0, FAR_FUTURE_MS );  // 3% left — exhausted
+    let healthy   = mk_aq_sort( "healthy@test.com",   20.0, FAR_FUTURE_MS );  // 80% left — non-exhausted
+    let accounts  = vec![ exhausted, healthy ];  // exhausted first in input order
+
+    let idx = find_next_for_strategy( &accounts, NextStrategy::Drain, PreferStrategy::Any, now );
+    assert!(
+      idx.is_some(),
+      "drain must find a winner when at least one non-exhausted account exists",
+    );
+    assert_eq!(
+      accounts[ idx.unwrap() ].name, "healthy@test.com",
+      "drain must pick healthy (80% left, non-exhausted) before exhausted (3% left); got index {idx:?}",
+    );
+  }
+
+  // ── status_emoji with absent period data ─────────────────────────────────
+
+  /// SE-7 — `five_hour=None` treated as 100% left → 🟢 (conservative, 0% utilised).
+  ///
+  /// Doc comment: "Absent period data is treated as fully available (conservative, 0% utilised)."
+  /// `five_hour`=None → `map_or`(0.0) → `h5_left`=100% > 5% → 🟢 (given `seven_day` also absent → 100%).
+  #[ test ]
+  fn test_status_emoji_five_hour_none_is_green()
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour : None, seven_day : None, seven_day_sonnet : None,
+    };
+    let result : Result< claude_quota::OauthUsageData, String > = Ok( data );
+    assert_eq!(
+      status_emoji( &result ), "🟢",
+      "five_hour=None must yield 🟢 (conservative 100% left)",
+    );
+  }
+
+  // ── quota_text_cells with absent period data ──────────────────────────────
+
+  /// QT-T07 — `five_hour=None` in `quota_text_cells` → cells[0] = "—" (em dash).
+  ///
+  /// `pct_emoji(None)` → `util.map_or_else(|| dash.clone(), ...)` → "—".
+  /// The absence of period data is displayed as em dash, not as a percentage.
+  /// This is semantically distinct from `status_emoji` which treats None as 100% left.
+  #[ test ]
+  fn test_quota_text_cells_five_hour_none_shows_dash()
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour : None, seven_day : None, seven_day_sonnet : None,
+    };
+    let cells = quota_text_cells( &data, 0 );
+    assert_eq!(
+      cells[ 0 ], "\u{2014}",
+      "five_hour=None must produce em-dash in cells[0], not a percentage",
+    );
+  }
 }

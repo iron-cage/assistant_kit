@@ -694,4 +694,51 @@ pub fn parse_string_array_field( json : &str, key : &str ) -> Vec< String >
   values
 }
 
+#[ cfg( test ) ]
+mod tests
+{
+  use super::*;
+
+  // ── FT-08 (021): parse_string_array_field ───────────────────────────────────
+
+  /// ft08_a: Two-element array returns both values in order.
+  ///
+  /// Given: `{"capabilities":["claude_max","chat"]}`
+  /// When: `parse_string_array_field(json, "capabilities")`
+  /// Then: Returns `["claude_max", "chat"]`
+  #[ test ]
+  fn ft08_parse_string_array_field_two_elements()
+  {
+    let json   = r#"{"capabilities":["claude_max","chat"]}"#;
+    let result = parse_string_array_field( json, "capabilities" );
+    assert_eq!( result, vec![ "claude_max", "chat" ] );
+  }
+
+  /// ft08_b: Missing key returns empty Vec.
+  ///
+  /// Given: JSON with no "capabilities" key
+  /// When: `parse_string_array_field(json, "capabilities")`
+  /// Then: Returns empty Vec
+  #[ test ]
+  fn ft08_parse_string_array_field_missing_key_returns_empty()
+  {
+    let json   = r#"{"other_field":"value"}"#;
+    let result = parse_string_array_field( json, "capabilities" );
+    assert!( result.is_empty(), "missing key must return empty Vec, got: {:?}", result );
+  }
+
+  /// ft08_c: Empty array `[]` returns empty Vec.
+  ///
+  /// Given: `{"capabilities":[]}`
+  /// When: `parse_string_array_field(json, "capabilities")`
+  /// Then: Returns empty Vec
+  #[ test ]
+  fn ft08_parse_string_array_field_empty_array_returns_empty()
+  {
+    let json   = r#"{"capabilities":[]}"#;
+    let result = parse_string_array_field( json, "capabilities" );
+    assert!( result.is_empty(), "empty array must return empty Vec, got: {:?}", result );
+  }
+}
+
 

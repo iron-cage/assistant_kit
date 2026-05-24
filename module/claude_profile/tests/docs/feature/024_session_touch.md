@@ -174,5 +174,5 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** On the first cycle the touch trigger fires (subprocess spawned). On subsequent cycles, since `resets_at` is now present, the trigger does not fire for that account. The 5h window must fully expire (account goes idle again) before the trigger re-arms.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires live credential + idle 5h window + two live::1 cycles)
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it110_lim_it_ft12_touch_trigger_once_per_idle_window` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-11](../../../../docs/feature/024_session_touch.md)

@@ -79,6 +79,8 @@
 //! | cred42 | `cred42_org_name_explicit_zero_absent` | `org_name::0` → Org: absent | P |
 //! | cred43 | `cred43_org_name_json_always_emits_key` | `format::json org_name::0` → organization_name key present | P |
 //! | cred44 | `cred44_org_name_missing_roles_json_na` | missing roles.json → Org:     N/A | P |
+//! | cred45 | `cred45_ft09_format_json_includes_all_5_org_fields` | format::json includes all 5 org fields | P |
+//! | cred46 | `cred46_ft11_null_workspace_fields_render_as_empty_string` | null workspace_uuid/workspace_name → `""` in JSON | P |
 
 use crate::helpers::{
   run_cs_with_env,
@@ -963,4 +965,57 @@ fn cred44_org_name_missing_roles_json_na()
   let text = stdout( &out );
   assert!( text.contains( "Org:" ), "Org: line must appear with org_name::1, got:\n{text}" );
   assert!( text.contains( "N/A" ),  "missing roles.json must show N/A, got:\n{text}" );
+}
+
+// ── cred45–cred46: FR-22 FT-09 and FT-11 org JSON completeness ────────────────
+
+/// cred45 (FT-09): `format::json` always includes all 5 org fields regardless of opt-in params.
+///
+/// Verifies `organization_uuid`, `organization_name`, `organization_role`, `workspace_uuid`,
+/// and `workspace_name` are all present in JSON output even without `org_uuid::` or `org_name::` params.
+#[ test ]
+fn cred45_ft09_format_json_includes_all_5_org_fields()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  write_account_roles_json( dir.path(), "user@example.com", "uuid-org-001", "Test Org", "member" );
+
+  let out = run_cs_with_env(
+    &[ ".credentials.status", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"organization_uuid\""  ), "format::json must emit organization_uuid key, got:\n{text}" );
+  assert!( text.contains( "\"organization_name\""  ), "format::json must emit organization_name key, got:\n{text}" );
+  assert!( text.contains( "\"organization_role\""  ), "format::json must emit organization_role key, got:\n{text}" );
+  assert!( text.contains( "\"workspace_uuid\""     ), "format::json must emit workspace_uuid key, got:\n{text}" );
+  assert!( text.contains( "\"workspace_name\""     ), "format::json must emit workspace_name key, got:\n{text}" );
+}
+
+/// cred46 (FT-11): Null `workspace_uuid` and `workspace_name` in `roles.json` render as `""` in JSON.
+///
+/// The roles.json fixture always writes `workspace_uuid:null` and `workspace_name:null` (personal
+/// account / no workspace membership). The CLI normalises null to empty string so the JSON field
+/// value is `""`, not `null`.
+#[ test ]
+fn cred46_ft11_null_workspace_fields_render_as_empty_string()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "max", "tier4", FAR_FUTURE_MS );
+  write_account( dir.path(), "user@example.com", "max", "tier4", FAR_FUTURE_MS, true );
+  // write_account_roles_json always writes workspace_uuid:null and workspace_name:null.
+  write_account_roles_json( dir.path(), "user@example.com", "uuid-org-002", "Personal Org", "owner" );
+
+  let out = run_cs_with_env(
+    &[ ".credentials.status", "format::json" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "\"workspace_uuid\":\"\"" ), "null workspace_uuid must render as empty string in JSON, got:\n{text}" );
+  assert!( text.contains( "\"workspace_name\":\"\"" ), "null workspace_name must render as empty string in JSON, got:\n{text}" );
 }

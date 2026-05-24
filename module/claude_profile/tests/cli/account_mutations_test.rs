@@ -67,6 +67,8 @@
 //! | ad14 | `ad14_delete_prefix_resolves` | prefix `old` resolves to `old@archive.com`, deletes | P |
 //! | ad15 | `ad15_delete_removes_roles_json` | delete removes .roles.json snapshot | P |
 //! | as19 | `as19_save_best_effort_no_roles_json` | save with no valid token → exit 0; no roles.json | P |
+//! | as20 | `as20_lim_it_save_writes_roles_json` | save with valid token → roles.json created (`lim_it`) | P |
+//! | as21 | `as21_lim_it_resave_overwrites_roles_json` | second save overwrites roles.json (`lim_it`) | P |
 //!
 //! ### AR — Account Relogin
 //!
@@ -86,6 +88,7 @@ use crate::helpers::{
   stdout, stderr, assert_exit,
   write_credentials, write_account, write_claude_json, account_exists,
   write_account_claude_json, write_account_settings_json, write_account_roles_json,
+  live_active_token, write_account_with_token,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -1083,4 +1086,79 @@ fn as19_save_best_effort_no_roles_json()
 
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   assert!( !store.join( "user@example.com.roles.json" ).exists(), "roles.json must not be created when no accessToken" );
+}
+
+// ── as20 (lim_it) ─────────────────────────────────────────────────────────────
+
+#[ test ]
+fn as20_lim_it_save_writes_roles_json()
+{
+  // AC-01 (FT-01): .account.save with a valid accessToken calls fetch_claude_cli_roles and
+  // writes {name}.roles.json to the credential store. Requires live Anthropic credentials.
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "as20: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "user@example.com", &token, false );
+  // Copy credentials.json into ~/.claude/.credentials.json so the binary can read it.
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  let cred_src = dir.path()
+    .join( ".persistent" ).join( "claude" ).join( "credential" )
+    .join( "user@example.com.credentials.json" );
+  std::fs::copy( &cred_src, claude_dir.join( ".credentials.json" ) ).unwrap();
+
+  let out = run_cs_with_env( &[ ".account.save", "name::user@example.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let roles_path = store.join( "user@example.com.roles.json" );
+  assert!( roles_path.exists(), "roles.json must be created after save with valid token" );
+  let content = std::fs::read_to_string( &roles_path ).unwrap();
+  assert!( content.contains( "\"organization_uuid\"" ), "roles.json must contain organization_uuid, got:\n{content}" );
+  assert!( content.contains( "\"organization_name\"" ), "roles.json must contain organization_name, got:\n{content}" );
+}
+
+// ── as21 (lim_it) ─────────────────────────────────────────────────────────────
+
+#[ test ]
+fn as21_lim_it_resave_overwrites_roles_json()
+{
+  // AC-03 (FT-03): Second .account.save overwrites existing roles.json with fresh data.
+  // Idempotency: stale roles.json is replaced by new API response. Requires live credentials.
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "as21: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "user@example.com", &token, false );
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  let cred_src = dir.path()
+    .join( ".persistent" ).join( "claude" ).join( "credential" )
+    .join( "user@example.com.credentials.json" );
+  std::fs::copy( &cred_src, claude_dir.join( ".credentials.json" ) ).unwrap();
+  // Pre-seed stale roles.json with a sentinel value.
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::write(
+    store.join( "user@example.com.roles.json" ),
+    r#"{"organization_uuid":"stale-sentinel","organization_name":"Stale","organization_role":"none","workspace_uuid":null,"workspace_name":null}"#,
+  ).unwrap();
+
+  // Second save must overwrite.
+  let out = run_cs_with_env( &[ ".account.save", "name::user@example.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let roles_path = store.join( "user@example.com.roles.json" );
+  assert!( roles_path.exists(), "roles.json must still exist after re-save" );
+  let content = std::fs::read_to_string( &roles_path ).unwrap();
+  assert!(
+    !content.contains( "stale-sentinel" ),
+    "re-save must overwrite stale roles.json; sentinel must be gone, got:\n{content}",
+  );
 }
