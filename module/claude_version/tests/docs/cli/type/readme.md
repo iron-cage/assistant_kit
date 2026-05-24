@@ -11,11 +11,11 @@
 
 | Name | Purpose | Status |
 |------|---------|--------|
-| 001_verbosity_level.md | Type validation tests for `VerbosityLevel` (u8 0–2) | ⏳ |
-| 002_output_format.md | Type validation tests for `OutputFormat` (text\|json) | ⏳ |
-| 003_version_spec.md | Type validation tests for `VersionSpec` (aliases + semver) | ⏳ |
-| 004_settings_key.md | Type validation tests for `SettingsKey` (non-empty string) | ⏳ |
-| 005_settings_value.md | Type validation tests for `SettingsValue` (type-inferred string) | ⏳ |
+| 001_verbosity_level.md | Type validation tests for `VerbosityLevel` (u8 0–2) | ✅ |
+| 002_output_format.md | Type validation tests for `OutputFormat` (text\|json) | ✅ |
+| 003_version_spec.md | Type validation tests for `VersionSpec` (aliases + semver) | ✅ |
+| 004_settings_key.md | Type validation tests for `SettingsKey` (non-empty string) | ✅ |
+| 005_settings_value.md | Type validation tests for `SettingsValue` (type-inferred string) | ✅ |
 | procedure.md | Workflow for creating and updating type test specs | ✅ |
 
 ### Navigation

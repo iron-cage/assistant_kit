@@ -2,9 +2,10 @@
 
 ## Execution State
 
-- **State:** 🎯 (Verified)
+- **State:** ✅ (Complete)
 - **Executor:** dev
 - **Created:** 2026-05-24
+- **Completed:** 2026-05-24
 
 ## Scope
 
@@ -53,6 +54,7 @@ Disproved: BUG-001 root cause analysis confirmed that the existing doc comment (
 ## History
 
 - **[2026-05-24]** `CREATED` — Fix `guard_once_pinned` doc comment to document advisory semantics of `resolved` for alias specs; completes BUG-001 fix.
+- **[2026-05-24]** `COMPLETE` — Doc comment expanded at `src/commands.rs:625`; Level 3 verification passes (303/303 tests, 0 clippy warnings).
 
 ## Verification Record
 
