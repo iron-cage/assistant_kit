@@ -83,7 +83,7 @@ clp .usage live::1 interval::60 jitter::10
 - Empty credential store exits 0 with `(no accounts configured)`.
 - `refresh::1` triggers at most one retry per account per cycle. See [feature/017_token_refresh.md](../../feature/017_token_refresh.md).
 - `live::1 format::json` exits 1 before any fetch. See [feature/018_live_monitor.md](../../feature/018_live_monitor.md).
-- Three-tier display grouping (🟢 → 🟡 → 🔴) applied before sort strategy within each tier. Within 🟡, session-exhausted accounts (`5h Left ≤ 5%`) appear before weekly-exhausted accounts (`5h Left > 5%`, `7d Left ≤ 5%`).
+- Three-tier display grouping (🟢 → 🟡 → 🔴) applied before sort strategy within each tier. Within 🟡, h-exhausted accounts (`5h Left ≤ 5%`) appear before weekly-exhausted accounts (`5h Left > 5%`, `7d Left ≤ 5%`).
 - `Sub` column hidden by default; show via `cols::+sub`. `7d Son Reset` column also hidden by default; show via `cols::+7d_son_reset`.
 - Duration format (`format_duration_secs`) capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`).
 - See [feature/009_token_usage.md](../../feature/009_token_usage.md) for the baseline algorithm and AC criteria.

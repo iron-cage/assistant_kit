@@ -21,7 +21,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-13 | Invalid `cols::` column ID exits 1 with error | AC-23 | — |
 | FT-14 | Three-tier grouping: 🟢 before 🟡 before 🔴 independent of sort | AC-24 | — |
 | FT-15 | `format_duration_secs` capped to 2 significant time units | AC-25 | — |
-| FT-16 | Within 🟡 tier: session-exhausted (`5h Left ≤ 5%`) before weekly-exhausted | AC-26 | — |
+| FT-16 | Within 🟡 tier: h-exhausted (`5h Left ≤ 5%`) before weekly-exhausted | AC-26 | — |
 
 ### Test Case Index
 
@@ -42,7 +42,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-13 | Invalid cols:: column ID exits 1 | AC-23 | Column Modifiers |
 | FT-14 | Three-tier grouping preserved regardless of sort strategy | AC-24 | Three-Tier Grouping |
 | FT-15 | format_duration_secs shows at most 2 time components | AC-25 | Duration Format |
-| FT-16 | Session-exhausted 🟡 before weekly-exhausted 🟡 regardless of sort | AC-26 | Yellow Sub-Grouping |
+| FT-16 | h-exhausted 🟡 before weekly-exhausted 🟡 regardless of sort | AC-26 | Yellow Sub-Grouping |
 
 **Total:** 16 FT cases
 
@@ -234,17 +234,17 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-16: Session-exhausted 🟡 before weekly-exhausted 🟡 regardless of sort
+### FT-16: h-exhausted 🟡 before weekly-exhausted 🟡 regardless of sort
 
 - **Given:** Unit test. Three `AccountQuota` structs all in 🟡 tier (plus one 🟢 as anchor). Input order: alphabetical.
   - `a@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=98.0` (2% left) → tier 🟡, **weekly-exhausted** sub-group
-  - `b@x.com`: `five_hour.utilization=99.0` (1% left), `seven_day.utilization=30.0` (70% left) → tier 🟡, **session-exhausted** sub-group
-  - `c@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=50.0` (50% left) → tier 🟡, **session-exhausted** sub-group (5h ≤ 5%)
+  - `b@x.com`: `five_hour.utilization=99.0` (1% left), `seven_day.utilization=30.0` (70% left) → tier 🟡, **h-exhausted** sub-group
+  - `c@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=50.0` (50% left) → tier 🟡, **h-exhausted** sub-group (5h ≤ 5%)
   - `d@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=10.0` (90% left) → tier 🟢
   - Alpha sort would produce: a → b → c → d. Three-tier would place d (🟢) first, then a, b, c (all 🟡), then any 🔴.
 - **When:** `render_text(&accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set())`
-- **Then:** Output row order is: `d@x.com` (🟢), then among 🟡 — `b@x.com` and `c@x.com` (session-exhausted, in alpha order), then `a@x.com` (weekly-exhausted). `a@x.com` must appear AFTER both `b@x.com` and `c@x.com` despite being alpha-first.
-- **Edge case:** An account with both `5h Left ≤ 5%` AND `7d Left ≤ 5%` falls in the session-exhausted sub-group (verified by `c@x.com` if `seven_day.utilization` is set ≥ 95%).
+- **Then:** Output row order is: `d@x.com` (🟢), then among 🟡 — `b@x.com` and `c@x.com` (h-exhausted, in alpha order), then `a@x.com` (weekly-exhausted). `a@x.com` must appear AFTER both `b@x.com` and `c@x.com` despite being alpha-first.
+- **Edge case:** An account with both `5h Left ≤ 5%` AND `7d Left ≤ 5%` falls in the h-exhausted sub-group (verified by `c@x.com` if `seven_day.utilization` is set ≥ 95%).
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
 - **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (in `src/usage.rs`)
 - **Source:** [009_token_usage.md AC-26](../../../../docs/feature/009_token_usage.md)

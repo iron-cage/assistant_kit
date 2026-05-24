@@ -435,16 +435,16 @@ fn cred13_new_params_absent_by_default()
 
 /// cred14: after `.account.save`, `.credentials.status` shows `Account: {name}`.
 ///
-/// Regression guard for the bug where `save()` did not write `_active`,
+/// Regression guard for the bug where `save()` did not write the active marker,
 /// leaving `.credentials.status Account:` as `N/A` after every save.
 ///
 /// ## Fix Documentation — issue-active-marker
 ///
-/// - **Root Cause:** `save()` never wrote `_active`; only `switch_account()` did.
+/// - **Root Cause:** `save()` never wrote the active marker; only `switch_account()` did.
 /// - **Why Not Caught:** No cross-command test verified `Account:` output immediately after `.account.save`.
-/// - **Fix Applied:** Added `std::fs::write(credential_store.join("_active"), name)?;` to `save()`.
+/// - **Fix Applied:** Added `std::fs::write( credential_store.join( active_marker_filename() ), name )?;` to `save()`. (Originally `join("_active")`; updated to per-machine `active_marker_filename()` per Feature 025.)
 /// - **Prevention:** This test will catch any regression that drops the write.
-/// - **Pitfall:** `_active` write must be non-best-effort (`?`) — a silent drop leaves `.credentials.status` showing `Account: N/A`.
+/// - **Pitfall:** Active marker write must be non-best-effort (`?`) — a silent drop leaves `.credentials.status` showing `Account: N/A`.
 #[ test ]
 fn cred14_save_writes_active_shown_in_credentials_status()
 {

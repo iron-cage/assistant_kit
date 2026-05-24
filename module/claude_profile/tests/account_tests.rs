@@ -186,7 +186,7 @@ fn list_marks_active_account_via_active_marker()
   account::save( "alice@home.com", &credential_store, &paths ).expect( "save alice@home.com" );
 
   // Write _active marker manually to "alice@acme.com".
-  let marker = credential_store.join( "_active" );
+  let marker = credential_store.join( account::active_marker_filename() );
   std::fs::write( &marker, "alice@acme.com" ).expect( "write _active" );
 
   let accounts = account::list( &credential_store ).expect( "list" );
@@ -249,7 +249,7 @@ fn switch_account_updates_active_marker()
 
   account::switch_account( "alice@home.com", &credential_store, &paths ).expect( "switch" );
 
-  let marker = std::fs::read_to_string( credential_store.join( "_active" ) )
+  let marker = std::fs::read_to_string( credential_store.join( account::active_marker_filename() ) )
     .expect( "read _active" );
   assert_eq!( marker.trim(), "alice@home.com" );
 }
@@ -278,7 +278,7 @@ fn delete_removes_credential_file()
   assert!( file.exists() );
   // save() now writes _active = "alice@oldco.com"; switch to a different account
   // so alice@oldco.com is inactive and deletion is permitted.
-  std::fs::write( credential_store.join( "_active" ), "work@acme.com" ).expect( "overwrite _active" );
+  std::fs::write( credential_store.join( account::active_marker_filename() ), "work@acme.com" ).expect( "overwrite _active" );
 
   account::delete( "alice@oldco.com", &credential_store ).expect( "delete" );
 
@@ -308,7 +308,7 @@ fn delete_active_account_succeeds()
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
   account::save( "alice@acme.com", &credential_store, &paths ).expect( "save" );
-  let marker = credential_store.join( "_active" );
+  let marker = credential_store.join( account::active_marker_filename() );
   std::fs::write( &marker, "alice@acme.com" ).expect( "write _active" );
 
   account::delete( "alice@acme.com", &credential_store )
@@ -348,11 +348,11 @@ fn auto_rotate_switches_to_inactive_account()
   std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
   std::fs::write( credential_store.join( "alice@acme.com.credentials.json" ), CREDENTIALS ).expect( "save alice@acme.com" );
   std::fs::write( credential_store.join( "alice@home.com.credentials.json" ), CREDENTIALS_B ).expect( "save alice@home.com" );
-  std::fs::write( credential_store.join( "_active" ), "alice@acme.com" ).expect( "_active" );
+  std::fs::write( credential_store.join( account::active_marker_filename() ), "alice@acme.com" ).expect( "_active" );
 
   account::auto_rotate( &credential_store, &paths ).expect( "auto_rotate" );
 
-  let marker = std::fs::read_to_string( credential_store.join( "_active" ) ).expect( "read _active" );
+  let marker = std::fs::read_to_string( credential_store.join( account::active_marker_filename() ) ).expect( "read _active" );
   assert_eq!( marker.trim(), "alice@home.com" );
 }
 
@@ -365,7 +365,7 @@ fn auto_rotate_returns_switched_account_name()
   std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
   std::fs::write( credential_store.join( "alice@acme.com.credentials.json" ), CREDENTIALS ).expect( "save alice@acme.com" );
   std::fs::write( credential_store.join( "alice@home.com.credentials.json" ), CREDENTIALS_B ).expect( "save alice@home.com" );
-  std::fs::write( credential_store.join( "_active" ), "alice@home.com" ).expect( "_active" );
+  std::fs::write( credential_store.join( account::active_marker_filename() ), "alice@home.com" ).expect( "_active" );
 
   let switched_to = account::auto_rotate( &credential_store, &paths ).expect( "auto_rotate" );
   assert_eq!( switched_to, "alice@acme.com" );
@@ -385,7 +385,7 @@ fn auto_rotate_picks_account_with_highest_expires_at()
   std::fs::write( credential_store.join( "alpha@acme.com.credentials.json" ), CREDENTIALS_EXPIRE_LOW ).expect( "save alpha" );
   std::fs::write( credential_store.join( "beta@acme.com.credentials.json" ), CREDENTIALS_EXPIRE_HIGH ).expect( "save beta" );
   std::fs::write( credential_store.join( "current@acme.com.credentials.json" ), CREDENTIALS ).expect( "save current" );
-  std::fs::write( credential_store.join( "_active" ), "current@acme.com" ).expect( "_active" );
+  std::fs::write( credential_store.join( account::active_marker_filename() ), "current@acme.com" ).expect( "_active" );
 
   // beta@acme.com has expiresAt=9000000000000 > alpha@acme.com's 2000000000000.
   let switched_to = account::auto_rotate( &credential_store, &paths ).expect( "auto_rotate" );
@@ -403,7 +403,7 @@ fn auto_rotate_fails_when_no_inactive_accounts()
   let paths = ClaudePaths::new().expect( "HOME set" );
   std::fs::create_dir_all( &credential_store ).expect( "credential_store dir" );
   std::fs::write( credential_store.join( "solo@example.com.credentials.json" ), CREDENTIALS ).expect( "save solo" );
-  std::fs::write( credential_store.join( "_active" ), "solo@example.com" ).expect( "_active" );
+  std::fs::write( credential_store.join( account::active_marker_filename() ), "solo@example.com" ).expect( "_active" );
 
   let err = account::auto_rotate( &credential_store, &paths )
     .expect_err( "must fail with no inactive accounts" );

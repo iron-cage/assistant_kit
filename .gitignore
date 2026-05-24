@@ -27,6 +27,9 @@ Thumbs.db
 -*
 *~
 
+# Per-machine active-account markers (never commit — each machine has its own)
+_active_*
+
 # Transient runtime state (never commit)
 .transient/
 

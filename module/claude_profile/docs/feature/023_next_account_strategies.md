@@ -16,7 +16,7 @@
 | Value | Name | Selection algorithm |
 |-------|------|---------------------|
 | `endurance` (default) | Endurance Top | First non-current, non-active account from endurance sort order (qualified accounts first by weekly desc then reset asc; unqualified by 5h_left desc). |
-| `drain` | Drain Top | First non-current, non-active account from drain sort order (5h_left ascending, exhausted sunk; tiebreak weekly desc). |
+| `drain` | Drain Top | First non-current, non-active account from drain sort order (5h_left ascending, h-exhausted sunk; tiebreak weekly desc). |
 
 **Recommendation eligibility:** All strategies skip accounts that are `is_current` (user is already on that session) or `is_active` (the `_active` marker account when it differs from current). Only accounts with valid quota data and `expires_in_secs > 0` are eligible. Strategies select from all eligible accounts regardless of their composite health tier (-> 009_token_usage.md three-tier grouping) -- the tier affects table display ordering, not recommendation eligibility.
 
@@ -43,11 +43,11 @@ The account selected by the active `next::` strategy receives the `→` flag in 
 | Dimension | `endurance` | `drain` |
 |---|---|---|
 | Primary sort key | qualified-first, then `weekly` desc | `5h_left` asc |
-| Exhausted handling | treated as unqualified | ≤ 5% sunk to bottom |
+| h-exhausted handling | treated as unqualified | sunk to bottom |
 | Secondary sort | within qualified: `5h_reset` asc | `weekly` desc |
 | Qualification gate | `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` | none |
 | Uses weekly quota | yes (gate + rank) | yes (tiebreak) |
-| Picks account with… | freshest 5h reset + weekly runway | least remaining session (not exhausted) |
+| Picks account with… | freshest 5h reset + weekly runway | least remaining session (not h-exhausted) |
 | Best for | starting a long 5h+ agent run | active workstation rotation |
 
 ### Worked Example
@@ -71,7 +71,7 @@ Eight accounts, two ineligible (`✓` current, `*` active-but-not-current), six 
 a: reset=33m ✓, weekly=34% ✓ → qualified. b: reset=33m ✓, weekly=34% ✓ → qualified. c/d/e/f: weekly < 30% → unqualified.
 Within qualified: weekly=34% tied, reset=33m tied → alphabetical: a before b. **Winner: a@example.com.**
 
-**`drain`** — `5h_left` ascending (none ≤ 5% exhausted):
+**`drain`** — `5h_left` ascending (none h-exhausted):
 a=32% < b=99% < {c,d,e,f}=100%. Within 100% group, `weekly` desc: c=3%, d=2%, e=0%=f. **Winner: a@example.com.**
 
 Both strategies agree on a@example.com in this dataset. The footer always exposes both picks regardless of which `next::` value is active:

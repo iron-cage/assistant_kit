@@ -3196,7 +3196,7 @@ fn it103_lim_it_active_account_restored_after_touch()
   assert_exit( &out, 0 );
 
   let active_file = dir.path()
-    .join( ".persistent" ).join( "claude" ).join( "credential" ).join( "_active" );
+    .join( ".persistent" ).join( "claude" ).join( "credential" ).join( claude_profile::account::active_marker_filename() );
   let active_content = std::fs::read_to_string( &active_file ).unwrap_or_default();
   assert_eq!(
     active_content.trim(), "alice@test.com",

@@ -7,7 +7,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 | ID | Test Name | Category |
 |----|-----------|----------|
 | IT-1 | Use overwrites `~/.claude/.credentials.json` with named account | Basic Invocation |
-| IT-2 | Use updates `_active` marker to new name | Marker Update |
+| IT-2 | Use updates per-machine active marker to new name | Marker Update |
 | IT-3 | Use with nonexistent account exits 2 with "not found" message | Error Handling |
 | IT-4 | Use with non-email name exits 1 | Validation |
 | IT-5 | `dry::1` prints action without modifying credentials | Dry Run |
@@ -21,6 +21,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 | IT-13 | Positional bare arg `alice@home.com` (no `name::`) switches account | Positional Syntax |
 | IT-14 | Prefix `car` resolves to `carol@example.com` and switches account | Prefix Resolution |
 | IT-15 | Ambiguous prefix matches two accounts → exit 1 | Prefix Resolution / Error |
+| IT-16 | Exact local-part wins over longer ambiguous prefix | Prefix Resolution |
 
 ### Test Coverage Summary
 
@@ -36,15 +37,15 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - Required Param: 1 test
 - Email Consistency: 1 test
 - Positional Syntax: 1 test
-- Prefix Resolution: 2 tests
+- Prefix Resolution: 3 tests
 
-**Total:** 15 integration tests
+**Total:** 16 integration tests
 
 ---
 
 ### IT-1: Use overwrites credentials with named account
 
-- **Given:** Two accounts saved in `~/.persistent/claude/credential/`: `work@acme.com.credentials.json` and `personal@home.com.credentials.json`. `_active` marker set to `work`. `~/.claude/.credentials.json` contains `work` credentials.
+- **Given:** Two accounts saved in `~/.persistent/claude/credential/`: `work@acme.com.credentials.json` and `personal@home.com.credentials.json`. Per-machine active marker (`_active_{hostname}_{user}`) set to `work`. `~/.claude/.credentials.json` contains `work` credentials.
 - **When:** `clp .account.use name::personal@home.com`
 - **Then:** `switched to 'personal@home.com'` on stdout, exit 0.; credentials file replaced with `personal` account content
 - **Exit:** 0
@@ -52,11 +53,11 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ---
 
-### IT-2: Use updates `_active` marker to new name
+### IT-2: Use updates per-machine active marker to new name
 
-- **Given:** Two accounts saved: `work@acme.com` and `personal@home.com`. `_active` contains `work@acme.com`.
+- **Given:** Two accounts saved: `work@acme.com` and `personal@home.com`. Per-machine active marker (`_active_{hostname}_{user}`) contains `work@acme.com`.
 - **When:** `clp .account.use name::personal@home.com`
-- **Then:** `switched to 'personal@home.com'` on stdout, exit 0.; `_active` marker reads `personal@home.com`
+- **Then:** `switched to 'personal@home.com'` on stdout, exit 0.; per-machine active marker reads `personal@home.com`
 - **Exit:** 0
 - **Source:** [command/001_account.md — .account.use](../../../../docs/cli/command/001_account.md#command--5-accountuse)
 
@@ -74,7 +75,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-4: Use with non-email name exits 1
 
-- **Given:** Account store contains `work@acme.com.credentials.json`. `_active` is `work@acme.com`.
+- **Given:** Account store contains `work@acme.com.credentials.json`. Per-machine active marker is `work@acme.com`.
 - **When:** `clp .account.use name::notanemail`
 - **Then:** Error message on stderr indicating the name must be a valid email address, exit 1.; no state mutation
 - **Exit:** 1
@@ -84,7 +85,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-5: Dry run prints action without modifying credentials
 
-- **Given:** Two accounts saved: `work@acme.com` (active) and `personal@home.com`. Record SHA-256 of `~/.claude/.credentials.json` and `_active` before command.
+- **Given:** Two accounts saved: `work@acme.com` (active) and `personal@home.com`. Record SHA-256 of `~/.claude/.credentials.json` and the per-machine active marker before command.
 - **When:** `clp .account.use name::personal@home.com dry::1`
 - **Then:** `[dry-run] would switch to 'personal@home.com'` on stdout, exit 0.; stdout contains dry-run message; no files modified
 - **Exit:** 0
@@ -114,7 +115,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-8: Use with already-active account succeeds
 
-- **Given:** Account `work@acme.com` saved and active. `_active` contains `work@acme.com`. `~/.claude/.credentials.json` matches `work@acme.com` credentials.
+- **Given:** Account `work@acme.com` saved and active. Per-machine active marker contains `work@acme.com`. `~/.claude/.credentials.json` matches `work@acme.com` credentials.
 - **When:** `clp .account.use name::work@acme.com`
 - **Then:** `switched to 'work@acme.com'`, exit 0.; state unchanged; no errors
 - **Exit:** 0
@@ -174,7 +175,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-14: Prefix resolves to single account
 
-- **Given:** Two accounts saved: `carol@example.com` and `amy@example.com`. `_active` = `amy@example.com`.
+- **Given:** Two accounts saved: `carol@example.com` and `amy@example.com`. Per-machine active marker = `amy@example.com`.
 - **When:** `clp .account.use car` (prefix form, no `@`)
 - **Then:** Exits 0; `switched to 'carol@example.com'` on stdout; credentials overwritten with `carol@example.com` content.
 - **Exit:** 0
@@ -189,3 +190,15 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - **Then:** Exits 1; stderr contains "ambiguous" and lists both matching account names.
 - **Exit:** 1
 - **Source:** [015_name_shortcut_syntax.md AC-06](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source fn:** `aw15_use_prefix_ambiguous_exits_1`
+
+---
+
+### IT-16: Exact local-part wins over longer ambiguous prefix
+
+- **Given:** Three accounts saved: `i1@wbox.pro`, `i11@wbox.pro`, `i12@wbox.pro`. `i1@wbox.pro` is active.
+- **When:** `clp .account.use i1`
+- **Then:** Exits 0; `switched to 'i1@wbox.pro'` on stdout; active marker set to `i1@wbox.pro` (exact local-part match wins — no ambiguous-prefix error).
+- **Exit:** 0
+- **Source:** [015_name_shortcut_syntax.md AC-11](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix`

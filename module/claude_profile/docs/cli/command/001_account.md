@@ -113,7 +113,7 @@ clp .account.save name::alice@acme.com dry::1
 ```
 
 **Notes:**
-- Also writes `{credential_store}/_active` = `{name}` on every successful save.
+- Also writes `{credential_store}/_active_{hostname}_{user}` = `{name}` on every successful save (per-machine active marker via `active_marker_filename()`).
 - Also calls endpoint 005 (`GET /api/oauth/claude_cli/roles`) and writes `{name}.roles.json` (best-effort: failure is silently skipped).
 - **Metadata refresh:** Re-running `.account.save` for an existing name overwrites all snapshot files and re-fetches endpoint 005 — this is the canonical way to refresh cached org identity without re-login.
 
@@ -121,7 +121,7 @@ clp .account.save name::alice@acme.com dry::1
 
 ### Command :: 5. `.account.use`
 
-Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the `_active` marker, and best-effort restores the account's `~/.claude.json` and `~/.claude/settings.json` snapshots.
+Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort restores the account's `~/.claude.json` and `~/.claude/settings.json` snapshots.
 
 -- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found)
@@ -185,7 +185,7 @@ clp .account.delete name::alice@oldco.com dry::1
 
 **Notes:**
 - Snapshot files (`{name}.claude.json`, `{name}.settings.json`) are removed best-effort: missing snapshots are silently skipped.
-- Deleting the active account also removes the `_active` marker.
+- Deleting the active account also removes the active marker (`_active_{hostname}_{user}`).
 
 ---
 
@@ -314,7 +314,7 @@ clp .account.rotate
 
 **Notes:**
 - Selects the inactive account with the highest `expiresAt` value across all saved credential files.
-- "Inactive" = any saved account whose name differs from the `_active` marker.
+- "Inactive" = any saved account whose name differs from the active marker (`_active_{hostname}_{user}`).
 - Equivalent to `clp .account.use $(best_account)` but without requiring the caller to determine the best candidate.
 - If only one account is configured, or all saved accounts match the active one, exits 2.
 - For explicit selection by name, use [`.account.use`](#command--5-accountuse).

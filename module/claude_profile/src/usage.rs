@@ -1354,7 +1354,7 @@ fn apply_refresh(
     .as_secs();
 
   // Snapshot active account to restore after cycling through per-account refreshes.
-  let original_active = std::fs::read_to_string( credential_store.join( "_active" ) ).ok();
+  let original_active = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) ).ok();
 
   for aq in accounts
   {
@@ -1475,7 +1475,7 @@ fn apply_touch(
   if !is_idle { return; }
 
   // Save active account before switching for the subprocess lifecycle.
-  let original_active = std::fs::read_to_string( credential_store.join( "_active" ) ).ok();
+  let original_active = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) ).ok();
 
   let new_creds = crate::account::refresh_account_token(
     &aq.name, credential_store, claude_paths, trace,
@@ -2264,7 +2264,7 @@ mod tests
     ).unwrap();
 
     // Set active account to alice before the loop.
-    std::fs::write( store.path().join( "_active" ), "alice@example.com" ).unwrap();
+    std::fs::write( store.path().join( crate::account::active_marker_filename() ), "alice@example.com" ).unwrap();
 
     // Create {fake_home}/.claude/ so switch_account can write the live credentials file.
     std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
@@ -2287,7 +2287,7 @@ mod tests
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
 
     // Restore ran: switch_account("alice@example.com", ...) wrote _active and live creds.
-    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
       "_active must be restored to original account after refresh cycle",
@@ -2415,7 +2415,7 @@ mod tests
     let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → no loop body
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
     assert!(
-      !store.path().join( "_active" ).exists(),
+      !store.path().join( crate::account::active_marker_filename() ).exists(),
       "_active must not be created when it was absent before apply_refresh",
     );
   }
@@ -2459,12 +2459,12 @@ mod tests
       store.path().join( "alice@example.com.credentials.json" ),
       alice_creds,
     ).unwrap();
-    std::fs::write( store.path().join( "_active" ), "alice@example.com\n" ).unwrap();
+    std::fs::write( store.path().join( crate::account::active_marker_filename() ), "alice@example.com\n" ).unwrap();
     std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
     let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → restore path only
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
-    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
       "trailing-newline _active must be trimmed before restore; _active after = {active:?}",
@@ -2481,11 +2481,11 @@ mod tests
     let store     = TempDir::new().unwrap();
     let fake_home = TempDir::new().unwrap();
     let ws = "   \n  ";
-    std::fs::write( store.path().join( "_active" ), ws ).unwrap();
+    std::fs::write( store.path().join( crate::account::active_marker_filename() ), ws ).unwrap();
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
     let mut accounts : Vec< AccountQuota > = vec![];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
-    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, ws,
       "whitespace-only _active must not trigger restore; content must be unchanged",
@@ -2501,10 +2501,10 @@ mod tests
   fn test_apply_refresh_none_paths_active_unchanged()
   {
     let store = TempDir::new().unwrap();
-    std::fs::write( store.path().join( "_active" ), "alice@example.com" ).unwrap();
+    std::fs::write( store.path().join( crate::account::active_marker_filename() ), "alice@example.com" ).unwrap();
     let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → no loop body
     apply_refresh( &mut accounts, store.path(), None, false );
-    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
       "_active must be unchanged when claude_paths=None (no restore possible)",

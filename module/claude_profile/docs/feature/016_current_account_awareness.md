@@ -13,7 +13,7 @@ Two distinct concepts govern account identity:
 
 | Concept | Source | Managed by |
 |---------|--------|-----------|
-| **Active account** | `{credential_store}/_active` file content | `clp .account.use` |
+| **Active account** | `{credential_store}/_active_{hostname}_{user}` file content (per `active_marker_filename()`) | `clp .account.use` |
 | **Current account** | `accessToken` match in `~/.claude/.credentials.json` | `claude auth login` or any external credential change |
 
 These diverge when an external actor (`claude auth login`, a direct credential write, or automated rotation) changes `~/.claude/.credentials.json` without going through `clp`. The divergence is a normal operational state that the user needs to see clearly.
