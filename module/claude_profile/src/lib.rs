@@ -160,7 +160,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfd( "display_name", "Show display name from saved `{name}.claude.json` snapshot (opt-in)"                   ),
       bfd( "role",         "Show organisation role from saved `{name}.claude.json` snapshot (opt-in)"               ),
       bfd( "billing",      "Show billing type from saved `{name}.claude.json` snapshot (opt-in)"                    ),
-      bfd( "model",        "Show active model from saved `{name}.settings.json` snapshot (opt-in)"                  ),
+      bfd( "model",        "Show active model (always N/A for saved accounts — settings.json not captured) (opt-in)" ),
       bfs( "uuid",         "Show stable user identifier (`taggedId`) from saved snapshot (opt-in)"                  ),
       bfs( "capabilities", "Show enabled capabilities list from saved `{name}.claude.json` snapshot (opt-in)"       ),
       bfs( "org_uuid",     "Show organisation UUID from saved `{name}.roles.json` snapshot (opt-in)"               ),

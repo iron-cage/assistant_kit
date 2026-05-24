@@ -1,5 +1,10 @@
 # BUG-001 — `preferredVersionResolved` Described as Authoritative Recovery Mechanism
 
+## Execution State
+
+- **State:** Fixed
+- **Fixed:** 2026-05-24
+
 ## Symptom
 
 Three primary documentation containers describe `preferredVersionResolved` as the recovery mechanism for version drift, while the actual implementation at `commands.rs:629-630` treats the stored value as advisory for alias specs — re-resolving through the live alias table instead. The advisory nature is documented only in a test pitfall comment, never in primary docs.
@@ -108,3 +113,4 @@ A bug fix correctly changes runtime behavior but does not update the primary doc
 | Date | Event | Note |
 |------|-------|------|
 | 2026-05-23 | filed | Source: `/bugs -problem.md` output audit; dual-agent validation (confirmatory CONFIRMED, adversarial UNABLE_TO_DISPROVE) |
+| 2026-05-24 | fixed | All 5 fix locations applied: docs/pattern/001 (×2), docs/feature/001 (×2), src/commands.rs doc comment; TSK-001 + TSK-002 completed |

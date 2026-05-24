@@ -1,6 +1,6 @@
 # Parameter :: 17. `model::`
 
-Controls whether the active model line appears in output. Opt-in (default `0`). Source: `model` field in `settings.json` — read from live `~/.claude/settings.json` (`.credentials.status`) or from the saved `{name}.settings.json` snapshot (`.accounts`).
+Controls whether the active model line appears in output. Opt-in (default `0`). Source: `model` field in `settings.json` — read from live `~/.claude/settings.json` for `.credentials.status`. For `.accounts`, always returns `N/A` since `settings.json` is not captured in per-account snapshots (BUG-174 fix — machine-global session preference).
 
 - **Type:** `bool`
 - **Default:** `0` (hidden)

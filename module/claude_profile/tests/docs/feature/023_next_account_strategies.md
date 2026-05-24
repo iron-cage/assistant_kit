@@ -72,7 +72,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 
 ### FT-04: `next::drain` places `→` on drain top candidate
 
-- **Given:** Two accounts with valid quota: `high_usage@test.com` (5h_left=5%, non-exhausted), `low_usage@test.com` (5h_left=90%). `next::drain` selects lowest non-exhausted 5h_left first.
+- **Given:** Two accounts with valid quota: `high_usage@test.com` (5h_left=20%, non-exhausted), `low_usage@test.com` (5h_left=90%). `next::drain` selects lowest non-exhausted 5h_left first.
 - **When:** `clp .usage next::drain`
 - **Then:** The row for `high_usage@test.com` contains `→` (lowest non-exhausted 5h_left). `low_usage@test.com` does NOT have `→`.
 - **Exit:** 0

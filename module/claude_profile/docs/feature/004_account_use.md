@@ -4,7 +4,7 @@
 
 - **Purpose**: Atomically rotate the active credential set to a named account without credential corruption risk.
 - **Responsibility**: Documents the `account::switch_account()` API and `.account.use` CLI command (FR-9).
-- **In Scope**: Atomic write-then-rename, active marker (`_active_{hostname}_{user}`) update, best-effort `~/.claude.json` + `settings.json` restore, not-found guard, dry-run.
+- **In Scope**: Atomic write-then-rename, active marker (`_active_{hostname}_{user}`) update, best-effort `oauthAccount` patch in `~/.claude.json`, not-found guard, dry-run.
 - **Out of Scope**: Selecting which account to switch to (→ 008_auto_rotate.md), process termination (caller responsibility).
 
 ### Design
@@ -15,10 +15,9 @@
 2. Write contents to a temp file adjacent to `~/.claude/.credentials.json`.
 3. Rename temp file to `~/.claude/.credentials.json` — atomic on same filesystem (POSIX rename semantics).
 4. Write account name to `{credential_store}/_active_{hostname}_{user}` (per-machine marker via `active_marker_filename()`).
-5. Best-effort restore `{credential_store}/{name}.claude.json` → `~/.claude.json` (missing snapshot is silently skipped).
-6. Best-effort restore `{credential_store}/{name}.settings.json` → `~/.claude/settings.json` (missing snapshot is silently skipped).
+5. Best-effort patch `~/.claude.json["oauthAccount"]` from `{credential_store}/{name}.claude.json`; all other keys in `~/.claude.json` (machine-global state: `commands.*`, `mcpServers`, `projects`) are preserved untouched. Missing snapshot is silently skipped.
 
-**Atomicity guarantee:** The rename in step 3 ensures that a crash between steps 2 and 4 leaves either the old credentials or the new ones in place — never a partially-written file. Step 4 (active marker) is a best-effort metadata update; steps 5–6 are best-effort restores. A crash after step 3 always leaves the credentials correct; the marker and companion files may be stale but are not load-bearing for authentication.
+**Atomicity guarantee:** The rename in step 3 ensures that a crash between steps 2 and 4 leaves either the old credentials or the new ones in place — never a partially-written file. Step 4 (active marker) is a best-effort metadata update; step 5 is a best-effort `oauthAccount` patch. A crash after step 3 always leaves the credentials correct; the marker and companion files may be stale but are not load-bearing for authentication.
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would switch to '{name}'` without modifying any files.
 
@@ -40,7 +39,7 @@
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/account.rs` | `switch_account()` — read, temp write, atomic rename, active marker update, best-effort `~/.claude.json` + `settings.json` restore |
+| source | `src/account.rs` | `switch_account()` — read, temp write, atomic rename, active marker update, best-effort `oauthAccount` patch in `~/.claude.json` |
 | source | `src/commands.rs` | `account_use_routine()` — CLI handler |
 | test | `tests/cli/account_mutations_test.rs` (aw01–aw11) | Verifies atomic overwrite, active marker update, dry-run, path-unsafe char rejection, edge cases |
 | test | `tests/cli/account_mutations_test.rs::switch_restores_claude_json` | Verifies `~/.claude.json` restored after switch (issue-122) |

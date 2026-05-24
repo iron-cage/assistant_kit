@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-05 | Missing credential store → exit 2 | AC-06 | IT-6, IT-7 |
 | FT-06 | Endurance strategy tiebreaker: expiry breaks 5h Left tie | AC-09 | IT-11 |
 | FT-07 | Status emoji `🟢`/`🟡`/`🔴` correct per account state | AC-18 | IT-40, IT-41 |
-| FT-08 | Strict 5% boundary: exactly 5% → `🟡`; 5.1% → `🟢` | AC-19 | IT-43 |
+| FT-08 | Strict boundary: 5h at 15%, 7d at 5% — at boundary → `🟡`; above → `🟢` | AC-19 | IT-43 |
 | FT-09 | `format::json` output contains no status emoji | AC-20 | IT-42 |
 | FT-10 | After token refresh, `~Renews` shows actual date (not `?`) | BUG-171 | — |
 | FT-11 | `5h Left` / `7d Left` values embed per-column emoji prefix | AC-21 | — |
@@ -21,7 +21,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-13 | Invalid `cols::` column ID exits 1 with error | AC-23 | — |
 | FT-14 | Three-tier grouping: 🟢 before 🟡 before 🔴 independent of sort | AC-24 | — |
 | FT-15 | `format_duration_secs` capped to 2 significant time units | AC-25 | — |
-| FT-16 | Within 🟡 tier: h-exhausted (`5h Left ≤ 5%`) before weekly-exhausted | AC-26 | — |
+| FT-16 | Within 🟡 tier: h-exhausted (`5h Left ≤ 15%`) before weekly-exhausted | AC-26 | — |
 
 ### Test Case Index
 
@@ -34,7 +34,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-05 | Unreadable credential store exits 2 | AC-06 | Error Handling |
 | FT-06 | Tiebreaker: higher expiry wins when 5h Left tied | AC-09 | Recommendation |
 | FT-07 | Status emoji correct for each of three account states | AC-18 | Status Emoji |
-| FT-08 | 5% boundary is strict: 5.0% → yellow, 5.1% → green | AC-19 | Status Emoji |
+| FT-08 | Exhaustion boundary is strict: 5h at 15%, 7d at 5% | AC-19 | Status Emoji |
 | FT-09 | JSON output is emoji-free | AC-20 | Status Emoji |
 | FT-10 | ~Renews shows actual date after refresh (BUG-171) | BUG-171 | Account After Refresh |
 | FT-11 | Per-column emoji in 5h Left and 7d Left column values | AC-21 | Per-Column Emoji |
@@ -42,7 +42,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-13 | Invalid cols:: column ID exits 1 | AC-23 | Column Modifiers |
 | FT-14 | Three-tier grouping preserved regardless of sort strategy | AC-24 | Three-Tier Grouping |
 | FT-15 | format_duration_secs shows at most 2 time components | AC-25 | Duration Format |
-| FT-16 | h-exhausted 🟡 before weekly-exhausted 🟡 regardless of sort | AC-26 | Yellow Sub-Grouping |
+| FT-16 | h-exhausted (`5h Left ≤ 15%`) 🟡 before weekly-exhausted 🟡 regardless of sort | AC-26 | Yellow Sub-Grouping |
 
 **Total:** 16 FT cases
 
@@ -130,13 +130,14 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-08: 5% boundary is strict — exactly 5% → `🟡`; 5.1% → `🟢`
+### FT-08: Exhaustion boundary is strict — 5h at 15%, 7d at 5%
 
-- **Given:** Unit test. Two `AccountQuota` variants:
-  - Variant A: `five_hour.utilization = 95.0` → exactly 5.0% left → expected `🟡`
-  - Variant B: `five_hour.utilization = 94.9` → 5.1% left → expected `🟢`
+- **Given:** Unit test. Three `AccountQuota` variants:
+  - Variant A: `five_hour.utilization = 85.0` (15.0% left), `seven_day.utilization = 50.0` (50% left) → expected `🟡` (5h at boundary)
+  - Variant B: `five_hour.utilization = 84.9` (15.1% left), `seven_day.utilization = 50.0` (50% left) → expected `🟢` (both above threshold)
+  - Variant C: `five_hour.utilization = 50.0` (50% left), `seven_day.utilization = 95.0` (5.0% left) → expected `🟡` (7d at boundary)
 - **When:** `status_emoji(&aq.result)` for each.
-- **Then:** A returns `"🟡"`; B returns `"🟢"`. The boundary is `left > 5.0` (strict greater-than).
+- **Then:** A returns `"🟡"`; B returns `"🟢"`; C returns `"🟡"`. The 5h boundary is `left > 15.0`; the 7d boundary is `left > 5.0` (both strict greater-than).
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_status_emoji_boundary`
 - **Source:** [009_token_usage.md AC-19](../../../../docs/feature/009_token_usage.md)
@@ -169,12 +170,11 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ### FT-11: Per-column emoji in `5h Left` and `7d Left` column values
 
-- **Given:** Unit test. Two percentage values:
-  - Pct A: `90.0` (> 5% — expected prefix `🟢`)
-  - Pct B: `3.0` (≤ 5% — expected prefix `🟡`)
-  - Boundary Pct C: `5.0` (exactly 5% — inclusive for `🟡`, expected prefix `🟡`)
-- **When:** Per-column emoji formatting applied to each value.
-- **Then:** Pct A produces a string with `🟢` prefix (e.g., `🟢 90%`). Pct B produces a string with `🟡` prefix (e.g., `🟡 3%`). Pct C produces `🟡` (boundary is inclusive for `🟡`).
+- **Given:** Unit test. Per-column emoji uses dimension-specific thresholds: `5h Left` at 15%, `7d Left` at 5%.
+  - 5h dimension: `86.0` (> 15% → `🟢`), `12.0` (≤ 15% → `🟡`), boundary `15.0` (exactly 15% → `🟡`)
+  - 7d dimension: `65.0` (> 5% → `🟢`), `3.0` (≤ 5% → `🟡`), boundary `5.0` (exactly 5% → `🟡`)
+- **When:** Per-column emoji formatting applied to each value with its dimension's threshold.
+- **Then:** Values above threshold produce `🟢` prefix; values at or below produce `🟡` prefix. Each dimension uses its own threshold independently.
 - **Exit:** n/a (unit test — string return assertion)
 - **Source fn:** `test_ft11_009_per_column_emoji_prefix_three_cases` (in `src/usage.rs`)
 - **Source:** [009_token_usage.md AC-21](../../../../docs/feature/009_token_usage.md)
@@ -239,12 +239,12 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Given:** Unit test. Three `AccountQuota` structs all in 🟡 tier (plus one 🟢 as anchor). Input order: alphabetical.
   - `a@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=98.0` (2% left) → tier 🟡, **weekly-exhausted** sub-group
   - `b@x.com`: `five_hour.utilization=99.0` (1% left), `seven_day.utilization=30.0` (70% left) → tier 🟡, **h-exhausted** sub-group
-  - `c@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=50.0` (50% left) → tier 🟡, **h-exhausted** sub-group (5h ≤ 5%)
+  - `c@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=50.0` (50% left) → tier 🟡, **h-exhausted** sub-group (5h ≤ 15%)
   - `d@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=10.0` (90% left) → tier 🟢
   - Alpha sort would produce: a → b → c → d. Three-tier would place d (🟢) first, then a, b, c (all 🟡), then any 🔴.
 - **When:** `render_text(&accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set())`
 - **Then:** Output row order is: `d@x.com` (🟢), then among 🟡 — `b@x.com` and `c@x.com` (h-exhausted, in alpha order), then `a@x.com` (weekly-exhausted). `a@x.com` must appear AFTER both `b@x.com` and `c@x.com` despite being alpha-first.
-- **Edge case:** An account with both `5h Left ≤ 5%` AND `7d Left ≤ 5%` falls in the h-exhausted sub-group (verified by `c@x.com` if `seven_day.utilization` is set ≥ 95%).
+- **Edge case:** An account with both `5h Left ≤ 15%` AND `7d Left ≤ 5%` falls in the h-exhausted sub-group (verified by `c@x.com` if `seven_day.utilization` is set ≥ 95%).
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
 - **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (in `src/usage.rs`)
 - **Source:** [009_token_usage.md AC-26](../../../../docs/feature/009_token_usage.md)

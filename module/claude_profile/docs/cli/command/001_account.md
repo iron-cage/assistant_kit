@@ -36,7 +36,7 @@ clp .accounts format::table
 | `display_name::` | `bool` | `0` | Show display name from saved `~/.claude.json` snapshot (opt-in) |
 | `role::` | `bool` | `0` | Show organisation role from saved `~/.claude.json` snapshot (opt-in) |
 | `billing::` | `bool` | `0` | Show billing type from saved `~/.claude.json` snapshot (opt-in) |
-| `model::` | `bool` | `0` | Show active model from saved `settings.json` snapshot (opt-in) |
+| `model::` | `bool` | `0` | Show active model (always `N/A` for saved accounts — settings.json not captured in snapshot) (opt-in) |
 | `uuid::` | `bool` | `0` | Show stable user ID (`taggedId`) from saved `.claude.json` snapshot (opt-in) |
 | `capabilities::` | `bool` | `0` | Show product capabilities list from saved `.claude.json` snapshot (opt-in) |
 | `org_uuid::` | `bool` | `0` | Show organisation UUID from saved `{name}.roles.json` snapshot (opt-in) |
@@ -84,7 +84,7 @@ clp .accounts format::table
 
 ### Command :: 4. `.account.save`
 
-Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and snapshots `~/.claude.json` and `~/.claude/settings.json` as named per-account files. Use this to preserve the full current account state before switching.
+Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and extracts the `oauthAccount` subtree from `~/.claude.json` into `{name}.claude.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`, `settings.json`) is not captured. Use this to preserve account identity before switching.
 
 -- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid name or cannot infer email) | 2 (runtime: credentials unreadable)
@@ -121,7 +121,7 @@ clp .account.save name::alice@acme.com dry::1
 
 ### Command :: 5. `.account.use`
 
-Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort restores the account's `~/.claude.json` and `~/.claude/settings.json` snapshots.
+Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched.
 
 -- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found)

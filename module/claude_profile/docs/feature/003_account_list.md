@@ -23,7 +23,7 @@
 | `display_name` | Saved `{name}.claude.json` → `oauthAccount.displayName` | Empty or absent → shown as `N/A` |
 | `role` | Saved `{name}.claude.json` → `oauthAccount.organizationRole` | Empty or absent → shown as `N/A` |
 | `billing` | Saved `{name}.claude.json` → `oauthAccount.billingType` | Empty or absent → shown as `N/A` |
-| `model` | Saved `{name}.settings.json` → `model` | Empty or absent → shown as `N/A` |
+| `model` | Not captured in per-account snapshot (settings.json not saved — BUG-174 fix) | Always `N/A` |
 | `tagged_id` | Saved `{name}.claude.json` → `oauthAccount.taggedId` | Empty or absent → shown as `N/A` |
 | `uuid` | Saved `{name}.claude.json` → `oauthAccount.uuid` | Empty or absent → shown as `N/A` |
 | `capabilities` | Saved `{name}.claude.json` → `oauthAccount.capabilities[]` | Empty array or absent → shown as `N/A` |

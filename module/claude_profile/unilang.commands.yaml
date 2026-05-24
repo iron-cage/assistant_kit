@@ -108,7 +108,7 @@
 
     - name: "model"
       kind: "Boolean"
-      description: "Show active model from saved settings.json snapshot (opt-in)"
+      description: "Show active model (always N/A for saved accounts — settings.json not captured) (opt-in)"
       hint: "Show Model: line"
       optional: true
       default: "false"

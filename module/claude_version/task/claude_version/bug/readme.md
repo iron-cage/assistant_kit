@@ -18,4 +18,4 @@ Filed bug reports for the `claude_version` crate. Each file documents a confirme
 
 | ID | Title | Status | Date | File |
 |----|-------|--------|------|------|
-| BUG-001 | `preferredVersionResolved` described as authoritative recovery mechanism in primary docs | open | 2026-05-23 | [001_preferred_version_resolved_doc_mismatch.md](001_preferred_version_resolved_doc_mismatch.md) |
+| BUG-001 | `preferredVersionResolved` described as authoritative recovery mechanism in primary docs | fixed | 2026-05-23 | [001_preferred_version_resolved_doc_mismatch.md](001_preferred_version_resolved_doc_mismatch.md) |

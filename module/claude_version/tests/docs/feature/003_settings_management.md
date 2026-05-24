@@ -95,6 +95,6 @@ Both are valid invocations; the stored JSON type differs.
 |----------|------|
 | `tc322_settings_set_value_true_stores_bool` | `integration/mutation_commands_test.rs` |
 | `tc325_settings_set_value_42_stores_number` | `integration/mutation_commands_test.rs` |
-| TBD (ft003_set_get_round_trip) | `integration/feature_surface_test.rs` |
+| `ft003_settings_set_get_round_trip` | `integration/feature_surface_test.rs` |
 | `tc328_settings_set_creates_file_when_absent` | `integration/mutation_commands_test.rs` |
 | `tc331_settings_set_home_not_set_exits_2` | `integration/mutation_commands_test.rs` |

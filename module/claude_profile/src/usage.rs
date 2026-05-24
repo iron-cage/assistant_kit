@@ -640,7 +640,7 @@ fn prefer_weekly( aq : &AccountQuota, prefer : PreferStrategy ) -> f64
 /// Each strategy has a canonical direction (its `default_desc()`). Passing
 /// `desc = Some(!strategy.default_desc())` inverts the canonical order.
 ///
-/// For `drain` and `reset`, exhausted accounts (`5h Left ≤ 5%`) are always
+/// For `drain` and `reset`, exhausted accounts (`5h Left ≤ 15%`) are always
 /// appended last regardless of `desc`. For `name` and `endurance`, `desc`
 /// reverses the whole slice (no exhausted floor).
 ///
@@ -728,7 +728,7 @@ fn sort_indices(
     SortStrategy::Drain =>
     {
       let ( mut non_exhausted, exhausted_vec ) : ( Vec< usize >, Vec< usize > ) =
-        all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 5.0 );
+        all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 15.0 );
 
       // Canonical: ascending 5h_left (lowest = most drained first); tiebreak highest weekly.
       non_exhausted.sort_by( |&a, &b|
@@ -764,7 +764,7 @@ fn sort_indices(
       };
 
       let ( mut non_exhausted, exhausted_vec ) : ( Vec< usize >, Vec< usize > ) =
-        all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 5.0 );
+        all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 15.0 );
 
       // Canonical: ascending reset_secs (soonest first); tiebreak ascending 5h_left.
       non_exhausted.sort_by( |&a, &b|
@@ -870,12 +870,12 @@ fn quota_text_cells( data : &OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
   {
     util.map_or_else( || dash.clone(), |u| format!( "{:.0}%", 100.0 - u ) )
   };
-  let pct_emoji = |util : Option< f64 >| -> String
+  let pct_emoji = |util : Option< f64 >, threshold : f64| -> String
   {
     util.map_or_else( || dash.clone(), |u|
     {
       let left  = 100.0 - u;
-      let emoji = if left > 5.0 { "🟢" } else { "🟡" };
+      let emoji = if left > threshold { "🟢" } else { "🟡" };
       format!( "{emoji} {left:.0}%" )
     } )
   };
@@ -887,9 +887,9 @@ fn quota_text_cells( data : &OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
       )
   };
   [
-    pct_emoji( data.five_hour.as_ref().map( |p| p.utilization ) ),
+    pct_emoji( data.five_hour.as_ref().map( |p| p.utilization ), 15.0 ),
     reset_cell( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
-    pct_emoji( data.seven_day.as_ref().map( |p| p.utilization ) ),
+    pct_emoji( data.seven_day.as_ref().map( |p| p.utilization ), 5.0 ),
     pct_cell(  data.seven_day_sonnet.as_ref().map( |p| p.utilization ) ),
     reset_cell( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
   ]
@@ -898,8 +898,8 @@ fn quota_text_cells( data : &OauthUsageData, now_secs : u64 ) -> [ String; 5 ]
 /// Return the single-glyph quota status emoji for an account row.
 ///
 /// - `"🔴"` — token is invalid or missing (`result` is `Err`).
-/// - `"🟡"` — token valid, but at least one of `5h Left` or `7d Left` is `≤ 5%`.
-/// - `"🟢"` — token valid, BOTH `5h Left > 5%` AND `7d Left > 5%`.
+/// - `"🟡"` — token valid, but `5h Left ≤ 15%` or `7d Left ≤ 5%`.
+/// - `"🟢"` — token valid, `5h Left > 15%` AND `7d Left > 5%`.
 ///
 /// Absent period data is treated as fully available (conservative, 0% utilised).
 fn status_emoji( result : &Result< claude_quota::OauthUsageData, String > ) -> &'static str
@@ -911,7 +911,7 @@ fn status_emoji( result : &Result< claude_quota::OauthUsageData, String > ) -> &
     {
       let h5_left = 100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization );
       let d7_left = 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization );
-      if h5_left > 5.0 && d7_left > 5.0 { "🟢" } else { "🟡" }
+      if h5_left > 15.0 && d7_left > 5.0 { "🟢" } else { "🟡" }
     }
   }
 }
@@ -952,8 +952,8 @@ fn render_text(
 
   // Three-tier grouping: sort order preserved within each tier (🟢 → 🟡 → 🔴).
   // Applied after the sort strategy so each tier's internal order reflects the chosen sort.
-  // AC-26: within 🟡, session-exhausted (5h Left ≤ 5%) precedes weekly-exhausted.
-  // Accounts where both 5h Left ≤ 5% AND 7d Left ≤ 5% fall in the session-exhausted sub-group.
+  // AC-26: within 🟡, session-exhausted (5h Left ≤ 15%) precedes weekly-exhausted.
+  // Accounts where both 5h Left ≤ 15% AND 7d Left ≤ 5% fall in the session-exhausted sub-group.
   let ( mut green_indices, mut red_indices ) = ( Vec::new(), Vec::new() );
   let ( mut session_yellow, mut weekly_yellow ) = ( Vec::new(), Vec::new() );
   for idx in sorted_indices
@@ -968,8 +968,8 @@ fn render_text(
           100.0 - data.five_hour.as_ref().map_or( 0.0, |p| p.utilization )
         }
         else { 100.0 };
-        if h5_left <= 5.0 { session_yellow.push( idx ); }
-        else              { weekly_yellow.push( idx ); }
+        if h5_left <= 15.0 { session_yellow.push( idx ); }
+        else               { weekly_yellow.push( idx ); }
       }
       _    => red_indices.push( idx ),
     }
@@ -3009,17 +3009,17 @@ mod tests
     assert!( output.contains( "🟡" ), "3% left must show 🟡. Got:\n{output}" );
   }
 
-  /// SE-4 — Boundary: 5% exactly (util=95.0) → 🟡 (inclusive at 5%).
-  /// SE-4b — Boundary: 5.1% (util=94.9) → 🟢.
+  /// SE-4 — Boundary: 15% exactly (util=85.0) → 🟡 (inclusive at 15% for 5h).
+  /// SE-4b — Boundary: 15.1% (util=84.9) → 🟢.
   #[ test ]
   fn test_status_emoji_boundary()
   {
-    let aq_5pct   = mk_aq_ok( 95.0 );
-    let aq_5_1pct = mk_aq_ok( 94.9 );
-    let out_5    = render_text( &[ aq_5pct ],   SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set() );
-    let out_5_1  = render_text( &[ aq_5_1pct ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set() );
-    assert!( out_5.contains( "🟡" ),   "exactly 5% left must show 🟡. Got:\n{out_5}" );
-    assert!( out_5_1.contains( "🟢" ), "5.1% left must show 🟢. Got:\n{out_5_1}" );
+    let aq_15pct   = mk_aq_ok( 85.0 );
+    let aq_15_1pct = mk_aq_ok( 84.9 );
+    let out_15   = render_text( &[ aq_15pct ],   SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set() );
+    let out_15_1 = render_text( &[ aq_15_1pct ], SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set() );
+    assert!( out_15.contains( "🟡" ),   "exactly 15% left must show 🟡. Got:\n{out_15}" );
+    assert!( out_15_1.contains( "🟢" ), "15.1% left must show 🟢. Got:\n{out_15_1}" );
   }
 
   /// SE-5 — Synthetic current-session row (`is_current=true`) shows correct emoji.
@@ -3328,7 +3328,7 @@ mod tests
     assert_eq!( accounts[ indices[ 1 ] ].name, "aaa@test.com" );
   }
 
-  /// AC-03 — `sort::drain` places exhausted (≤5% `5h_left`) accounts last.
+  /// AC-03 — `sort::drain` places exhausted (≤15% `5h_left`) accounts last.
   /// Non-exhausted sorted by `5h_left` ascending (lowest first = drain targets first).
   #[ test ]
   fn test_sort_drain_exhausted_sunk_rest_ascending()
@@ -3350,7 +3350,7 @@ mod tests
   fn test_sort_drain_desc_reverses_non_exhausted_only()
   {
     let accounts = vec![
-      mk_aq_sort( "exhausted@test.com", 99.0, FAR_FUTURE_MS ),  // ≤5% — sunk
+      mk_aq_sort( "exhausted@test.com", 99.0, FAR_FUTURE_MS ),  // ≤15% — sunk
       mk_aq_sort( "low@test.com",       75.0, FAR_FUTURE_MS ),  // 25% left
       mk_aq_sort( "high@test.com",      30.0, FAR_FUTURE_MS ),  // 70% left
     ];
@@ -3367,7 +3367,7 @@ mod tests
     let now : u64 = 1_000_000;
     let accounts = vec![
       mk_aq_with_reset( "late@test.com",      30.0, now, 7200  ),  // 70% left, 2h reset
-      mk_aq_with_reset( "exhausted@test.com", 99.0, now, 600   ),  // ≤5% left — exhausted
+      mk_aq_with_reset( "exhausted@test.com", 99.0, now, 600   ),  // ≤15% left — exhausted
       mk_aq_with_reset( "soon@test.com",      30.0, now, 600   ),  // 70% left, 10min reset
     ];
     let indices = sort_indices( &accounts, SortStrategy::Reset, None, PreferStrategy::Any, now );
@@ -3557,7 +3557,7 @@ mod tests
     let accounts = vec![
       mk_aq_with_reset( "soon@test.com",      30.0, now, 600  ),  // 70% left, 10min reset
       mk_aq_with_reset( "late@test.com",      30.0, now, 7200 ),  // 70% left, 2h reset
-      mk_aq_with_reset( "exhausted@test.com", 99.0, now, 600  ),  // ≤5% left — sunk
+      mk_aq_with_reset( "exhausted@test.com", 99.0, now, 600  ),  // ≤15% left — sunk
     ];
     // desc::1 reverses non-exhausted: latest reset first, soonest second; exhausted still last.
     let idx = sort_indices( &accounts, SortStrategy::Reset, Some( true ), PreferStrategy::Any, now );
@@ -3615,12 +3615,12 @@ mod tests
   #[ test ]
   fn test_sort_drain_all_exhausted_preserves_input_order()
   {
-    // All three accounts have ≤5% 5h_left — all exhausted.
+    // All three accounts have ≤15% 5h_left — all exhausted.
     // No non-exhausted tier to sort; all land in the exhausted floor in input order.
     let accounts = vec![
       mk_aq_sort( "first@test.com",  99.0, FAR_FUTURE_MS ),  // 1% left — exhausted
       mk_aq_sort( "second@test.com", 97.0, FAR_FUTURE_MS ),  // 3% left — exhausted
-      mk_aq_sort( "third@test.com",  95.0, FAR_FUTURE_MS ),  // 5% left — exhausted (boundary)
+      mk_aq_sort( "third@test.com",  95.0, FAR_FUTURE_MS ),  // 5% left — exhausted
     ];
     let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
     assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted drain: input order preserved" );
@@ -3636,7 +3636,7 @@ mod tests
     let accounts = vec![
       mk_aq_with_reset( "first@test.com",  99.0, now, 600  ),  // 1% left — exhausted
       mk_aq_with_reset( "second@test.com", 97.0, now, 7200 ),  // 3% left — exhausted
-      mk_aq_with_reset( "third@test.com",  95.0, now, 3600 ),  // 5% left — exhausted (boundary)
+      mk_aq_with_reset( "third@test.com",  95.0, now, 3600 ),  // 5% left — exhausted
     ];
     let idx = sort_indices( &accounts, SortStrategy::Reset, None, PreferStrategy::Any, now );
     assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted reset: input order preserved" );
@@ -3693,12 +3693,12 @@ mod tests
     }
   }
 
-  /// SE-AND-T01: `5h_left`=50%, `7d_left`=50% → 🟢 (both > 5%).
+  /// SE-AND-T01: `5h_left`=50%, `7d_left`=50% → 🟢 (5h > 15% and 7d > 5%).
   #[ test ]
   fn test_status_emoji_and_both_ample_green()
   {
     let aq = mk_aq_ok_both( 50.0, 50.0 );
-    assert_eq!( status_emoji( &aq.result ), "🟢", "both > 5% → 🟢" );
+    assert_eq!( status_emoji( &aq.result ), "🟢", "5h > 15% and 7d > 5% → 🟢" );
   }
 
   /// SE-AND-T02: `5h_left`=50%, `7d_left`=3% (`d7_util`=97) → 🟡 (7d ≤ 5%).
@@ -3709,20 +3709,20 @@ mod tests
     assert_eq!( status_emoji( &aq.result ), "🟡", "7d ≤ 5% despite 5h ample → 🟡" );
   }
 
-  /// SE-AND-T03: `5h_left`=3% (`h5_util`=97), `7d_left`=50% → 🟡 (5h ≤ 5%).
+  /// SE-AND-T03: `5h_left`=3% (`h5_util`=97), `7d_left`=50% → 🟡 (5h ≤ 15%).
   #[ test ]
   fn test_status_emoji_and_5h_low_yellow()
   {
     let aq = mk_aq_ok_both( 97.0, 50.0 );
-    assert_eq!( status_emoji( &aq.result ), "🟡", "5h ≤ 5% despite 7d ample → 🟡" );
+    assert_eq!( status_emoji( &aq.result ), "🟡", "5h ≤ 15% despite 7d ample → 🟡" );
   }
 
-  /// SE-AND-T04: `5h_left`=5%, `7d_left`=5% → 🟡 (exclusive > 5% boundary).
+  /// SE-AND-T04: `5h_left`=15%, `7d_left`=5% → 🟡 (5h at boundary, 7d at boundary).
   #[ test ]
   fn test_status_emoji_and_both_at_threshold_yellow()
   {
-    let aq = mk_aq_ok_both( 95.0, 95.0 );
-    assert_eq!( status_emoji( &aq.result ), "🟡", "both exactly 5% left → 🟡 (not > 5%)" );
+    let aq = mk_aq_ok_both( 85.0, 95.0 );
+    assert_eq!( status_emoji( &aq.result ), "🟡", "5h=15% and 7d=5% → 🟡 (neither > threshold)" );
   }
 
   // ── quota_text_cells emoji prefix (T05–T06) ────────────────────────────────
@@ -3830,8 +3830,8 @@ mod tests
 
   /// FT-11 of feature/009 — per-column emoji prefix in `5h Left` cell values.
   ///
-  /// `quota_text_cells` must attach `🟢` prefix when `5h_left` > 5%, `🟡` when ≤ 5%.
-  /// The boundary (exactly 5.0%) is inclusive for `🟡`.
+  /// `quota_text_cells` must attach `🟢` prefix when `5h_left` > 15%, `🟡` when ≤ 15%.
+  /// The boundary (exactly 15.0%) is inclusive for `🟡`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-11]
   #[ test ]
@@ -3847,17 +3847,17 @@ mod tests
       }
     };
 
-    // Pct A: util=10.0 → 90% left (> 5%) → 🟢
+    // Pct A: util=10.0 → 90% left (> 15%) → 🟢
     let cells_a = quota_text_cells( &mk_5h( 10.0 ), 0 );
     assert_eq!( cells_a[ 0 ], "🟢 90%", "Pct A (90% left) must have 🟢 prefix (FT-11/009)" );
 
-    // Pct B: util=97.0 → 3% left (< 5%) → 🟡
+    // Pct B: util=97.0 → 3% left (≤ 15%) → 🟡
     let cells_b = quota_text_cells( &mk_5h( 97.0 ), 0 );
     assert_eq!( cells_b[ 0 ], "🟡 3%", "Pct B (3% left) must have 🟡 prefix (FT-11/009)" );
 
-    // Pct C: util=95.0 → exactly 5% left (≤ 5%) → 🟡 (boundary inclusive)
-    let cells_c = quota_text_cells( &mk_5h( 95.0 ), 0 );
-    assert_eq!( cells_c[ 0 ], "🟡 5%", "Pct C (exactly 5% left) must have 🟡 prefix — boundary inclusive (FT-11/009)" );
+    // Pct C: util=85.0 → exactly 15% left (≤ 15%) → 🟡 (boundary inclusive)
+    let cells_c = quota_text_cells( &mk_5h( 85.0 ), 0 );
+    assert_eq!( cells_c[ 0 ], "🟡 15%", "Pct C (exactly 15% left) must have 🟡 prefix — boundary inclusive (FT-11/009)" );
   }
 
   // ── Yellow-tier session-before-weekly sub-grouping (FT-16/009, AC-26) ────
@@ -3866,10 +3866,10 @@ mod tests
   ///
   /// Three-tier grouping splits 🟡 into two sub-groups (AC-26):
   ///
-  /// - `session_yellow`: `5h Left ≤ 5%`  — appears first within 🟡
-  /// - `weekly_yellow`:  `5h Left > 5%` AND `7d Left ≤ 5%` — appears after `session_yellow`
+  /// - `session_yellow`: `5h Left ≤ 15%`  — appears first within 🟡
+  /// - `weekly_yellow`:  `5h Left > 15%` AND `7d Left ≤ 5%` — appears after `session_yellow`
   ///
-  /// Accounts with BOTH ≤ 5% fall in `session_yellow` (by `5h Left` check).
+  /// Accounts with BOTH ≤ 15% (5h) fall in `session_yellow` (by `5h Left` check).
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-16]
   ///       [`docs/feature/009_token_usage.md` AC-26]
@@ -4078,16 +4078,16 @@ mod tests
 
   // ── find_next_for_strategy::Drain unit tests ──────────────────────────────
 
-  /// FT-04/023 unit A — drain picks lowest non-exhausted (> 5% left) account first.
+  /// FT-04/023 unit A — drain picks lowest non-exhausted (> 15% left) account first.
   ///
-  /// Two non-exhausted accounts: `a` has 6% left, `b` has 80% left.
+  /// Two non-exhausted accounts: `a` has 20% left, `b` has 80% left.
   /// Drain canonical: ascending `5h_left` → `a` before `b`.
   /// `find_next_for_strategy` with Drain must return index of `a`.
   #[ test ]
   fn test_find_next_drain_picks_lowest_nonexhausted()
   {
     let now    = 0u64;
-    let a = mk_aq_sort( "a@test.com", 94.0, FAR_FUTURE_MS );  // 6% left — non-exhausted
+    let a = mk_aq_sort( "a@test.com", 80.0, FAR_FUTURE_MS );  // 20% left — non-exhausted
     let b = mk_aq_sort( "b@test.com", 20.0, FAR_FUTURE_MS );  // 80% left — non-exhausted
     let accounts = vec![ b, a ];  // intentionally reversed to confirm sort, not input order
 
@@ -4098,13 +4098,13 @@ mod tests
     );
     assert_eq!(
       accounts[ idx.unwrap() ].name, "a@test.com",
-      "drain must pick a@test.com (6% left, lowest non-exhausted); got index {idx:?}",
+      "drain must pick a@test.com (20% left, lowest non-exhausted); got index {idx:?}",
     );
   }
 
-  /// FT-04/023 unit B — drain puts exhausted accounts (≤ 5% left) after non-exhausted.
+  /// FT-04/023 unit B — drain puts exhausted accounts (≤ 15% left) after non-exhausted.
   ///
-  /// `exhausted` has 3% left (≤ 5%) and `healthy` has 80% left (> 5%).
+  /// `exhausted` has 3% left (≤ 15%) and `healthy` has 80% left (> 15%).
   /// Even though `exhausted` has lower `5h_left`, drain picks `healthy` first.
   #[ test ]
   fn test_find_next_drain_prefers_nonexhausted_over_exhausted()
@@ -4130,7 +4130,7 @@ mod tests
   /// SE-7 — `five_hour=None` treated as 100% left → 🟢 (conservative, 0% utilised).
   ///
   /// Doc comment: "Absent period data is treated as fully available (conservative, 0% utilised)."
-  /// `five_hour`=None → `map_or`(0.0) → `h5_left`=100% > 5% → 🟢 (given `seven_day` also absent → 100%).
+  /// `five_hour`=None → `map_or`(0.0) → `h5_left`=100% > 15% → 🟢 (given `seven_day` also absent → 100%).
   #[ test ]
   fn test_status_emoji_five_hour_none_is_green()
   {

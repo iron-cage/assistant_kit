@@ -45,7 +45,7 @@
 //! | acc23 | `acc23_json_includes_new_fields` | `format::json` → includes display_name, role, billing, model | P |
 //! | acc24 | `acc24_new_fields_absent_by_default` | no opt-in → Display/Role/Billing/Model absent | P |
 //! | acc25 | `acc25_email_reads_from_snapshot` | Email: default-on → real email from snapshot | P |
-//! | acc26 | `acc26_save_creates_snapshot_files` | `save` creates `{name}.claude.json` and `.settings.json` | P |
+//! | acc26 | `acc26_save_creates_snapshot_files` | `save` creates `{name}.claude.json` (no `.settings.json` since BUG-174) | P |
 //! | acc27 | `acc27_save_succeeds_without_claude_json` | save OK when `~/.claude.json` absent (best-effort) | P |
 //! | acc28 | `acc28_save_succeeds_without_settings_json` | save OK when `settings.json` absent but `.claude.json` present | P |
 //! | acc29 | `acc29_accounts_positional_bare_arg` | positional email → shows single account block | P |
@@ -853,9 +853,10 @@ fn acc26_save_creates_snapshot_files()
     store.join( "alice@acme.com.claude.json" ).exists(),
     "save must create .claude.json snapshot, store: {}", store.display(),
   );
+  // Fix(BUG-174): settings.json is no longer per-account — save() no longer copies it.
   assert!(
-    store.join( "alice@acme.com.settings.json" ).exists(),
-    "save must create settings.json snapshot, store: {}", store.display(),
+    !store.join( "alice@acme.com.settings.json" ).exists(),
+    "save must NOT create settings.json snapshot (BUG-174: removed), store: {}", store.display(),
   );
 }
 

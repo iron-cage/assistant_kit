@@ -11,7 +11,7 @@
 
 `.usage` accepts a `sort::` parameter to control row ordering. The default (`sort::reset`) puts accounts with the soonest quota refill at the top — the most operationally actionable ordering. Alphabetical ordering (`sort::name`) is available for positional stability, especially in `live::1` monitor mode. Three heuristic strategies are available for single-shot decision-making.
 
-**Three-tier display grouping:** Regardless of the chosen sort strategy, accounts are first grouped by composite health tier: 🟢 tier (both `5h Left > 5%` and `7d Left > 5%`) → 🟡 tier (either `5h Left ≤ 5%` or `7d Left ≤ 5%`) → 🔴 tier (error/missing token). Within the 🟡 tier, accounts are further ordered into two sub-groups: **h-exhausted** (`5h Left ≤ 5%`) first, then **weekly-exhausted** (`5h Left > 5%` and `7d Left ≤ 5%`). Accounts where both quotas are ≤ 5% fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. This ensures healthy accounts always appear above exhausted or errored accounts, regardless of sort direction or strategy.
+**Three-tier display grouping:** Regardless of the chosen sort strategy, accounts are first grouped by composite health tier: 🟢 tier (`5h Left > 15%` and `7d Left > 5%`) → 🟡 tier (either `5h Left ≤ 15%` or `7d Left ≤ 5%`) → 🔴 tier (error/missing token). Within the 🟡 tier, accounts are further ordered into two sub-groups: **h-exhausted** (`5h Left ≤ 15%`) first, then **weekly-exhausted** (`5h Left > 15%` and `7d Left ≤ 5%`). Accounts where both quotas are below threshold fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. This ensures healthy accounts always appear above exhausted or errored accounts, regardless of sort direction or strategy.
 
 **The `prefer::` parameter** determines which weekly quota column is used by all strategies that reference weekly availability:
 
@@ -43,7 +43,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
    - Qualified: `5h Reset` is 15–60 minutes away AND `weekly(prefer)` ≥ 30%.
    - All others: unqualified.
 2. Qualified accounts are ranked first. Within qualified: highest `weekly(prefer)` → soonest `5h Reset`.
-3. Unqualified accounts follow, sorted by `5h Left` descending.
+3. Unqualified accounts follow, sorted by `5h Left` descending; tiebreak by highest `weekly(prefer)` first.
 
 **Rationale:** An account whose 5h window resets in 15–60 minutes will soon have 100% fresh session quota. Combined with ≥30% weekly runway, it can sustain a full 5-hour agent run without hitting any limit. The 15-minute floor avoids accounts that reset imminently (race condition with session start).
 
@@ -52,7 +52,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 **Goal:** Use up almost-exhausted accounts first, preserving fresh accounts for later.
 
 **Algorithm:**
-1. **h-exhausted** accounts (`5h Left` ≤ 5%): sunk to bottom.
+1. **h-exhausted** accounts (`5h Left` ≤ 15%): sunk to bottom.
 2. Remaining accounts sorted by `5h Left` ascending (lowest first — drain these).
 3. Tiebreak: highest `weekly(prefer)` (more weekly runway among equally low session accounts).
 
@@ -63,7 +63,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 **Goal:** Use accounts whose session quota refills soonest.
 
 **Algorithm:**
-1. **h-exhausted** accounts (`5h Left` ≤ 5%): sunk to bottom.
+1. **h-exhausted** accounts (`5h Left` ≤ 15%): sunk to bottom.
 2. Remaining accounts sorted by `5h Reset` ascending (soonest reset first).
 3. Tiebreak: `5h Left` ascending (among similar reset times, drain lower ones first).
 
@@ -72,9 +72,9 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 ### Acceptance Criteria
 
 - **AC-01**: `sort::reset` (default) sorts rows by `5h Reset` ascending within each tier. `sort::name` sorts alphabetically. When `sort::` is omitted, `reset` is used.
-- **AC-02**: `sort::endurance` ranks qualified accounts (5h Reset 15–60 min, weekly(prefer) ≥ 30%) above unqualified accounts; within qualified, highest weekly first then soonest reset.
-- **AC-03**: `sort::drain` sorts by `5h Left` ascending; h-exhausted accounts (`5h Left` ≤ 5%) are sunk to the bottom.
-- **AC-04**: `sort::reset` sorts by `5h Reset` ascending; h-exhausted accounts (`5h Left` ≤ 5%) are sunk to the bottom.
+- **AC-02**: `sort::endurance` ranks qualified accounts (5h Reset 15–60 min, weekly(prefer) ≥ 30%) above unqualified accounts; within qualified, highest weekly first then soonest reset; within unqualified, highest `weekly(prefer)` first as tiebreaker when session quotas are equal.
+- **AC-03**: `sort::drain` sorts by `5h Left` ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
+- **AC-04**: `sort::reset` sorts by `5h Reset` ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
 - **AC-05**: `desc::1` reverses the sort direction within each tier; `desc::0` uses the strategy's natural direction. The three-tier grouping (🟢 → 🟡 → 🔴) and the 🟡 h-/weekly-exhausted sub-grouping are never reversed by `desc::`.
 - **AC-06**: Each strategy has a context-sensitive `desc::` default: `name`→`0`, `endurance`→`1`, `drain`→`0`, `reset`→`0`.
 - **AC-07**: `prefer::any` (default) uses `min(7d Left, 7d(Son))` as weekly quota; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
@@ -84,7 +84,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 - **AC-11**: `sort::` and `desc::` do not affect the `→` recommendation marker or footer — those are controlled by the `next::` parameter (see 023_next_account_strategies.md). The footer always shows both strategy recommendations (endurance, drain) regardless of `sort::` or `next::` values. The `next::endurance` and `next::drain` strategies reuse the same sort algorithms but select independently from the table sort order.
 - **AC-12**: `sort::` and `desc::` work correctly with `live::1` — sort order is stable within each refresh cycle.
 - **AC-13**: `format::json` output is NOT affected by `sort::` or `desc::` — `render_json` preserves the input slice order without re-sorting (alphabetical in practice since `fetch_all_quota` returns accounts alphabetically; stable schema for pipeline consumers).
-- **AC-14**: Three-tier display grouping (🟢 → 🟡 → 🔴) is applied universally before any sort strategy. Accounts are grouped by composite health: 🟢 (both `5h Left > 5%` and `7d Left > 5%`), 🟡 (either ≤ 5%), 🔴 (error). Within 🟡, h-exhausted accounts (`5h Left ≤ 5%`) appear before weekly-exhausted accounts (`5h Left > 5%` and `7d Left ≤ 5%`); accounts with both ≤ 5% fall in the h-exhausted sub-group. Sort strategy applies within each sub-group.
+- **AC-14**: Three-tier display grouping (🟢 → 🟡 → 🔴) is applied universally before any sort strategy. Accounts are grouped by composite health: 🟢 (`5h Left > 15%` and `7d Left > 5%`), 🟡 (either `5h Left ≤ 15%` or `7d Left ≤ 5%`), 🔴 (error). Within 🟡, h-exhausted accounts (`5h Left ≤ 15%`) appear before weekly-exhausted accounts (`5h Left > 15%` and `7d Left ≤ 5%`); accounts with both below threshold fall in the h-exhausted sub-group. Sort strategy applies within each sub-group.
 
 ### Cross-References
 

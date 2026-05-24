@@ -85,4 +85,4 @@ Both are valid invocations; the output prefix differs.
 | `tc310_processes_kill_no_processes` | `integration/mutation_commands_test.rs` |
 | `tc311_processes_kill_dry_no_processes` | `integration/mutation_commands_test.rs` |
 | `tc312_processes_kill_dry_force_no_processes` | `integration/mutation_commands_test.rs` |
-| TBD (ft004_force_no_processes) | `integration/feature_surface_test.rs` |
+| `ft004_processes_kill_force_no_procs` | `integration/feature_surface_test.rs` |

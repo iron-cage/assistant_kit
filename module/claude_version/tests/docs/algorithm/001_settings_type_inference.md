@@ -108,6 +108,6 @@ Both are valid values; the stored JSON type differs because `"1"` is not `"true"
 | `tc322_settings_set_value_true_stores_bool` | `integration/mutation_commands_test.rs` |
 | `tc323_settings_set_value_false_stores_bool` | `integration/mutation_commands_test.rs` |
 | `tc324_settings_set_value_0_stores_number` | `integration/mutation_commands_test.rs` |
-| TBD (ac004_float_inference) | `integration/algorithm_surface_test.rs` |
-| TBD (ac005_nan_stores_string) | `integration/algorithm_surface_test.rs` |
+| `ac004_float_inference` | `integration/algorithm_surface_test.rs` |
+| `ac005_nan_stores_string` | `integration/algorithm_surface_test.rs` |
 | `tc326_settings_set_value_hello_stores_string` | `integration/mutation_commands_test.rs` |
