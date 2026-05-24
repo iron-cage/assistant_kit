@@ -18,8 +18,8 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-10 | Account with expired token shows `EXPIRED` in Expires column | Expires Column |
 | IT-11 | Best non-current account is marked with `→` in flag column | Recommendation |
 | IT-12 | Footer line shows valid count and recommended next account | Footer |
-| IT-13 | `*` marks `_active` account when it differs from the current account | Active Divergence |
-| IT-14 | When credentials file unreadable: no `✓`; `*` still marks `_active` account | Active Divergence |
+| IT-13 | `*` marks active account when it differs from the current account | Active Divergence |
+| IT-14 | When credentials file unreadable: no `✓`; `*` still marks active account | Active Divergence |
 | IT-15 | When current = active, only `✓` appears; no `*` on any row | Active Divergence |
 | IT-16 | JSON output uses `is_current` (not `active`) and includes `is_active` per object | JSON Schema |
 | IT-17 | HTTP 401 from usage API shows `(auth expired (401))` in 7d Reset column | Error Shortening |
@@ -108,7 +108,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Tier Grouping: 1 test (IT-60)
 - Touch Param: 2 tests (IT-62, IT-63)
 
-**Total:** 76 spec entries (IT-1 through IT-64; IT-40–IT-43 implemented by TSK-178, IT-44–IT-50 implemented by TSK-177, IT-51–IT-64 ⏳ pending implementation); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
+**Total:** 76 spec entries (IT-1 through IT-64; IT-40–IT-43 implemented by TSK-178, IT-44–IT-50 implemented by TSK-177, IT-51–IT-64 implemented by TSK-184/TSK-185); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -124,7 +124,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ### IT-2: Current account (live-token match) has `✓` in flag column
 
-- **Given:** Two saved accounts; live `~/.claude/.credentials.json` has an `accessToken` matching `work@acme.com`'s stored token. `_active` also points to `work@acme.com` (current = active, normal case).
+- **Given:** Two saved accounts; live `~/.claude/.credentials.json` has an `accessToken` matching `work@acme.com`'s stored token. Per-machine active marker also points to `work@acme.com` (current = active, normal case).
 - **When:** `clp .usage`
 - **Then:** A line in stdout contains both `✓` and `work@acme.com`; no line contains `✓` and any other account name; no `*` appears (current = active). Exit 0.
 - **Exit:** 0
@@ -234,9 +234,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-13: `*` marks `_active` account when it differs from current
+### IT-13: `*` marks active account when it differs from current
 
-- **Given:** Two saved accounts: `alice@acme.com` (stored as `_active`) and `work@acme.com`. Live `~/.claude/.credentials.json` `accessToken` matches `work@acme.com`'s stored token (not `alice`'s).
+- **Given:** Two saved accounts: `alice@acme.com` (active account) and `work@acme.com`. Live `~/.claude/.credentials.json` `accessToken` matches `work@acme.com`'s stored token (not `alice`'s).
 - **When:** `clp .usage`
 - **Then:** A line contains `✓` and `work@acme.com`; a different line contains `*` and `alice@acme.com`. No line contains both `✓` and `alice`, or both `*` and `work`.
 - **Exit:** 0
@@ -244,9 +244,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-14: Credentials file unreadable — no `✓`; `*` still marks `_active`
+### IT-14: Credentials file unreadable — no `✓`; `*` still marks active account
 
-- **Given:** Two saved accounts: `alice@acme.com` (stored as `_active`) and `work@acme.com`. `~/.claude/.credentials.json` is absent or unreadable.
+- **Given:** Two saved accounts: `alice@acme.com` (active account) and `work@acme.com`. `~/.claude/.credentials.json` is absent or unreadable.
 - **When:** `clp .usage`
 - **Then:** No line contains `✓`; a line contains `*` and `alice@acme.com`. All saved accounts are still shown. Exit 0.
 - **Exit:** 0
@@ -256,7 +256,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ### IT-15: When current = active, only `✓` appears; no `*` on any row
 
-- **Given:** Two saved accounts: `alice@acme.com` (stored as `_active`) and `work@acme.com`. Live `~/.claude/.credentials.json` `accessToken` matches `alice@acme.com`'s stored token (current = active).
+- **Given:** Two saved accounts: `alice@acme.com` (active account) and `work@acme.com`. Live `~/.claude/.credentials.json` `accessToken` matches `alice@acme.com`'s stored token (current = active).
 - **When:** `clp .usage`
 - **Then:** A line contains `✓` and `alice@acme.com`; no line contains `*`.
 - **Exit:** 0
@@ -266,9 +266,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ### IT-16: JSON output uses `is_current` and `is_active`; no `active` key
 
-- **Given:** Two saved accounts; live credentials match one of them; `_active` points to the other (divergence case).
+- **Given:** Two saved accounts; live credentials match one of them; per-machine active marker points to the other (divergence case).
 - **When:** `clp .usage format::json`
-- **Then:** Valid JSON array; the current account object has `"is_current":true` and `"is_active":false`; the `_active` account object has `"is_current":false` and `"is_active":true`; no object has a top-level `"active"` key.
+- **Then:** Valid JSON array; the current account object has `"is_current":true` and `"is_active":false`; the active account object has `"is_current":false` and `"is_active":true`; no object has a top-level `"active"` key.
 - **Exit:** 0
 - **Source:** [016_current_account_awareness.md AC-08](../../../../docs/feature/016_current_account_awareness.md)
 
@@ -662,6 +662,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0. Exactly one line contains `→` in the flag column — the account selected by the endurance strategy. Footer contains "Next by strategy:" with two lines (endurance and drain).
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota)
+- **Source fn:** `it092_lim_it_next_endurance_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-03](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -673,6 +674,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0. Exactly one line contains `→` — the account selected by the drain strategy (lowest non-exhausted 5h_left). Footer still contains "Next by strategy:" with both strategy lines.
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota)
+- **Source fn:** `it093_lim_it_next_drain_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-04](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -683,6 +685,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage next::bogus`
 - **Then:** Exits 1. Stderr contains each of the two valid values: `endurance`, `drain`. Does NOT contain `all`, `session`, or `reset`.
 - **Exit:** 1
+- **Source fn:** `it082_next_all_rejected_exit_1`, `it084_next_session_rejected_exit_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-05](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -694,6 +697,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0. Footer contains "Next by strategy:" followed by a line starting "endurance" AND a line starting "drain". Both appear regardless of which strategy is active.
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota)
+- **Source fn:** `it094_lim_it_footer_always_shows_both_strategy_lines` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-01](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -704,6 +708,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage cols::+sub`
 - **Then:** Exits 0. Table header contains `Sub`.
 - **Exit:** 0
+- **Source fn:** `it071_cols_sub_shows_sub_column` (in `tests/cli/usage_test.rs`)
 - **Source:** [009_token_usage.md AC-22](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -714,6 +719,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage cols::+bogus`
 - **Then:** Exits 1. Stderr names valid column IDs.
 - **Exit:** 1
+- **Source fn:** `it072_cols_unknown_id_exit_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [009_token_usage.md AC-23](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -726,6 +732,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `status_emoji(&Ok(data_a))` and `status_emoji(&Ok(data_b))`
 - **Then:** A returns `"🟡"`; B returns `"🟢"`.
 - **Exit:** n/a (unit test)
+- **Source fn:** `test_status_emoji_and_both_ample_green`, `test_status_emoji_and_7d_low_yellow` (in `src/usage.rs`)
 - **Source:** [009_token_usage.md AC-18](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -737,6 +744,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0. The first account's `5h Left` column contains `🟢`; the second contains `🟡`.
 - **Exit:** 0
 - **Live:** yes (requires real tokens)
+- **Source fn:** `it095_lim_it_per_column_emoji_in_5h_left` (in `tests/cli/usage_test.rs`)
 - **Source:** [009_token_usage.md AC-21](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -747,6 +755,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `format_duration_secs(90061)`
 - **Then:** Returns `"1d 1h"` (not `"1d 1h 1m"` or `"1d 1h 1m 1s"`).
 - **Exit:** n/a (unit test)
+- **Source fn:** `test_format_duration_secs_caps_at_two_units` (in `src/output.rs`)
 - **Source:** [009_token_usage.md AC-25](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -757,6 +766,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `render_text(...)` with any sort strategy.
 - **Then:** In the output, `A` appears before `B`, and `B` appears before `C`.
 - **Exit:** n/a (unit test)
+- **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `src/usage.rs`)
 - **Source:** [009_token_usage.md AC-24](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -767,6 +777,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0. Stdout contains `"next"` and `"cols"`.
 - **Exit:** 0
+- **Source fn:** `it073_usage_help_shows_next_cols_params` (in `tests/cli/usage_test.rs`)
 - **Source:** [009_token_usage.md AC-09](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -777,6 +788,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage touch::0`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned.
 - **Exit:** 0
+- **Source fn:** `it096_touch_0_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-01](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -787,6 +799,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage touch::1`
 - **Then:** Exits 0. Account row shows original error state. No subprocess spawned — touch trigger requires `result = Ok(...)`.
 - **Exit:** 0
+- **Source fn:** `it088_touch_1_errored_account_skipped` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-04](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -797,4 +810,5 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage.help`
 - **Then:** Exits 0. Stdout contains `"touch"` with default value `0`.
 - **Exit:** 0
+- **Source fn:** `it091_usage_help_shows_touch_param` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-10](../../../../docs/feature/024_session_touch.md)

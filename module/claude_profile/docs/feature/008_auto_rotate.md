@@ -27,7 +27,7 @@
 1. Detect token state:    token::status() → TokenStatus::Expired
 2. List candidates:       account::list( credential_store ) → Vec<Account>
 3. Select best:           filter is_active==false, pick max expires_at_ms
-4. Switch:                account::switch_account(name, credential_store, paths) → writes credentials + _active
+4. Switch:                account::switch_account(name, credential_store, paths) → writes credentials + active marker
 5. Confirm (caller):      invoke claude_runner with minimal message to verify
 ```
 

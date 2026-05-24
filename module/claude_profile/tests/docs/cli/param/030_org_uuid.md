@@ -1,6 +1,6 @@
 # Parameter :: `org_uuid::`
 
-Edge case tests for the `org_uuid::` parameter. Tests validate boolean enforcement, default behavior, and organisation UUID field control from `{name}.roles.json`. Used by `.accounts` (saved credential store snapshot) and `.credentials.status` (active account's `{_active}.roles.json`).
+Edge case tests for the `org_uuid::` parameter. Tests validate boolean enforcement, default behavior, and organisation UUID field control from `{name}.roles.json`. Used by `.accounts` (saved credential store snapshot) and `.credentials.status` (active account's `{active_account}.roles.json`).
 
 **Source:** [params.md#parameter--30-org_uuid](../../../../docs/cli/param/030_org_uuid.md)
 
@@ -34,7 +34,7 @@ Edge case tests for the `org_uuid::` parameter. Tests validate boolean enforceme
 
 ### EC-1: `org_uuid::1` — Org ID: field included in output
 
-- **Given:** Active account with `{credential_store}/{_active}.roles.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`
+- **Given:** Active account with `{credential_store}/{active_account}.roles.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`
 - **When:** `clp .credentials.status org_uuid::1`
 - **Then:** Output contains `Org ID:` line with value `org-xyz-789`
 - **Exit:** 0
@@ -88,7 +88,7 @@ Edge case tests for the `org_uuid::` parameter. Tests validate boolean enforceme
 
 ### EC-7: Missing `roles.json` → `Org ID: N/A`
 
-- **Given:** Active account set in `_active` marker but no `{_active}.roles.json` file in credential store
+- **Given:** Active account set via per-machine active marker but no `{active_account}.roles.json` file in credential store
 - **When:** `clp .credentials.status org_uuid::1`
 - **Then:** Output contains `Org ID:  N/A`
 - **Exit:** 0

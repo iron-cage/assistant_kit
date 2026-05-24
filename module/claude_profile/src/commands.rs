@@ -152,7 +152,8 @@ fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> ErrorData
 /// - Contains `@` → returned as-is (treated as full email; downstream `validate_name` catches format errors).
 /// - No `@` with path-unsafe chars (`/`, `\`, `*`) → `ArgumentTypeMismatch` (exit 1).
 /// - No `@` (prefix) → prefix-match all saved account names:
-///   - Exactly 1 match → return that name.
+///   - Exactly 1 account has a local part (before `@`) equal to `raw` → resolve to that account (exact local-part match wins).
+///   - Exactly 1 prefix match → return that name.
 ///   - 0 matches → `InternalError` (exit 2): not found.
 ///   - 2+ matches → `ArgumentTypeMismatch` (exit 1): ambiguous prefix.
 // Fix(issue-name-shortcut):
@@ -160,6 +161,11 @@ fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> ErrorData
 //   with exit 1 ("not an email address"), masking the correct "not found" (exit 2) outcome.
 // Pitfall: Prefix resolution must occur BEFORE validate_name(); calling validate_name() on a
 //   bare prefix always returns exit 1, preventing the resolver from running at all.
+// Fix(issue-exact-local-part):
+// Root cause: `starts_with("i1")` matched `i1@wbox.pro`, `i11@wbox.pro`, `i12@wbox.pro`, all
+//   reported as ambiguous even though `i1` is an exact local-part match for `i1@wbox.pro`.
+// Pitfall: Always check exact-local-part match before prefix scanning; prefix scanning is
+//   only meaningful when no account's local part equals the input exactly.
 fn resolve_account_name( raw : &str, store : &std::path::Path ) -> Result< String, ErrorData >
 {
   if raw.contains( '@' )
@@ -175,6 +181,16 @@ fn resolve_account_name( raw : &str, store : &std::path::Path ) -> Result< Strin
   }
   let accounts = crate::account::list( store )
     .map_err( |e| ErrorData::new( ErrorCode::InternalError, format!( "cannot list accounts: {e}" ) ) )?;
+  // Exact local-part match: if exactly one account has a local part equal to `raw`, resolve to it.
+  // This prevents `i1` from being ambiguous when both `i1@host` and `i11@host` exist.
+  let exact : Vec< &str > = accounts.iter()
+    .filter( | a | a.name.split_once( '@' ).is_some_and( | ( local, _ ) | local == raw ) )
+    .map( | a | a.name.as_str() )
+    .collect();
+  if exact.len() == 1
+  {
+    return Ok( exact[ 0 ].to_string() );
+  }
   let matches : Vec< &str > = accounts.iter()
     .filter( |a| a.name.starts_with( raw ) )
     .map( |a| a.name.as_str() )
@@ -395,7 +411,7 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
   let live_capabilities = crate::account::parse_string_array_field( &live_claude_json, "capabilities" );
 
   // Account: reads _active opportunistically — N/A when absent (no hard dependency).
-  let active_name = std::fs::read_to_string( credential_store.join( "_active" ) )
+  let active_name = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) )
     .ok()
     .map( | s | s.trim().to_string() )
     .filter( | s | !s.is_empty() );
@@ -1152,7 +1168,7 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         "name:: value cannot be empty".to_string(),
       ) ),
     _ =>
-      std::fs::read_to_string( credential_store.join( "_active" ) )
+      std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) )
         .ok()
         .map( | s | s.trim().to_string() )
         .filter( | s | !s.is_empty() )
@@ -1166,7 +1182,7 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     .map_err( |e| io_err_to_error_data( &e, "account relogin" ) )?;
 
   // Snapshot original active — best-effort; None when marker absent.
-  let original_active = std::fs::read_to_string( credential_store.join( "_active" ) )
+  let original_active = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) )
     .ok()
     .map( | s | s.trim().to_string() )
     .filter( | s | !s.is_empty() );

@@ -65,7 +65,7 @@ fn rot03_rotates_to_best_inactive()
   assert_exit( &out, 0 );
 
   let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let active = std::fs::read_to_string( store.join( "_active" ) )
+  let active = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) )
     .expect( "_active must exist after rotate" );
   assert_eq!(
     active.trim(),
@@ -91,7 +91,7 @@ fn rot04_selects_highest_expires_at()
   assert_exit( &out, 0 );
 
   let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let active = std::fs::read_to_string( store.join( "_active" ) )
+  let active = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) )
     .expect( "_active must exist after rotate" );
   assert_eq!(
     active.trim(),
@@ -110,13 +110,13 @@ fn rot05_dry_no_mutation()
   write_account( dir.path(), "best@candidate.com", "max", "tier4",    FAR_FUTURE_MS, false );
 
   let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let before = std::fs::read_to_string( store.join( "_active" ) )
+  let before = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) )
     .expect( "_active must exist before dry-run" );
 
   let out = run_cs_with_env( &[ ".account.rotate", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
 
-  let after = std::fs::read_to_string( store.join( "_active" ) )
+  let after = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) )
     .expect( "_active must still exist after dry-run" );
   assert_eq!(
     before.trim(),

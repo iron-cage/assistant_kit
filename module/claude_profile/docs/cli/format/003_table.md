@@ -19,7 +19,7 @@ Accounts
 
 **Columns:** flag (`✓`/`*`/`→`/space), Account, Sub, Tier, Expires, Email.
 
-**Flag semantics:** `✓` = current (live session) account; `*` = `_active`-marker-but-not-current (divergence); `→` = recommended next account (most quota remaining).
+**Flag semantics:** `✓` = current (live session) account; `*` = active-marker-but-not-current (divergence); `→` = recommended next account (most quota remaining).
 
 ### Rendering Mechanism
 

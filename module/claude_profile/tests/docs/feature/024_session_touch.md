@@ -46,7 +46,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **When:** `clp .usage touch::0`
 - **Then:** Exits 0. No subprocess spawned for touch. Account row shows `—` in `5h Reset` column (unchanged from quota fetch).
 - **Exit:** 0
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it099_lim_it_touch_0_no_subprocess_idle_account_unchanged` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-01](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -58,7 +58,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** `refresh_account_token()` is called for that account (observable via `trace::1` output showing subprocess lifecycle). Accounts with `resets_at` present are not touched.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires live credential + idle 5h window)
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it100_lim_it_touch_1_subprocess_spawned_for_idle_account` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-02](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -70,7 +70,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** Account row shows a concrete `5h Reset` value (e.g., "in 5h 0m") instead of `—`.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires live credential + idle 5h window)
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it101_lim_it_touch_1_5h_reset_changes_from_dash_to_time` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-03](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -93,7 +93,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** Stderr `[trace]` lines show refresh lifecycle before any touch lifecycle. Touch runs on post-refresh results (if refresh succeeded and resulting quota still has missing `resets_at`).
 - **Exit:** 0
 - **Live:** yes (lim_it — requires expired token + idle 5h window)
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it102_structural_refresh_before_touch_ordering_in_source` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-05](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -105,7 +105,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** After touch subprocess for `idle@test.com` completes, `_active` file points back to `alice@test.com` (original active account restored).
 - **Exit:** 0
 - **Live:** yes (lim_it)
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it103_lim_it_active_account_restored_after_touch` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-06](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -116,7 +116,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **When:** `clp .usage touch::1`
 - **Then:** Exits 0. Account row shows original quota data (not a hard error). Table still renders. Touch failure does not abort the command.
 - **Exit:** 0
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it104_structural_touch_failure_non_aborting_guard_exists` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-07](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -140,7 +140,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** Stderr contains `[trace]` lines showing the touch subprocess lifecycle (same format as refresh trace output). Lines include account name and subprocess status.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires idle account for subprocess to be triggered)
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it105_lim_it_trace_1_shows_touch_lifecycle` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-09](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -162,7 +162,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **When:** `clp .usage touch::1`
 - **Then:** Exits 0. No subprocess spawned for this account. The `5h Reset` column shows the existing countdown value (e.g., "in 3h 12m") — unchanged. The trigger guard `resets_at.is_some() → skip` fires before any subprocess is invoked.
 - **Exit:** 0
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it106_lim_it_account_with_resets_at_present_not_touched` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-02](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -174,5 +174,5 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Then:** On the first cycle the touch trigger fires (subprocess spawned). On subsequent cycles, since `resets_at` is now present, the trigger does not fire for that account. The 5h window must fully expire (account goes idle again) before the trigger re-arms.
 - **Exit:** 0
 - **Live:** yes (lim_it — requires live credential + idle 5h window + two live::1 cycles)
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it110_lim_it_ft12_touch_trigger_once_per_idle_window` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-11](../../../../docs/feature/024_session_touch.md)

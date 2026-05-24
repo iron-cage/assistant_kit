@@ -138,7 +138,7 @@ pub fn write_account( home : &std::path::Path, name : &str, sub_type : &str, tie
   std::fs::write( dest, credential_json( sub_type, tier, expires_at_ms ) ).unwrap();
   if make_active
   {
-    std::fs::write( credential_store.join( "_active" ), name ).unwrap();
+    std::fs::write( credential_store.join( claude_profile::account::active_marker_filename() ), name ).unwrap();
   }
 }
 
@@ -457,7 +457,7 @@ pub fn write_account_with_token(
   std::fs::write( dest, credential_json_with_token( token ) ).unwrap();
   if make_active
   {
-    std::fs::write( credential_store.join( "_active" ), name ).unwrap();
+    std::fs::write( credential_store.join( claude_profile::account::active_marker_filename() ), name ).unwrap();
   }
 }
 

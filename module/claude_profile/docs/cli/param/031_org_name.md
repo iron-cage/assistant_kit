@@ -12,7 +12,7 @@ Show the organization display name from `{name}.roles.json` (populated at `save(
 
 When `org_name::1`, appends an `Org:` line showing the account's `organization_name` value (e.g. `"alice@example.com's Organization"`). Sources from `{name}.roles.json` in the credential store. Shows `N/A` when `{name}.roles.json` is absent or the field is missing.
 
-For `.credentials.status`: reads from the active account's `{_active}.roles.json`; `N/A` when no active account or no roles snapshot.
+For `.credentials.status`: reads from the active account's `{active_account}.roles.json`; `N/A` when no active account or no roles snapshot.
 
 `format::json` always includes `organization_name` regardless of this param.
 

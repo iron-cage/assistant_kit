@@ -187,7 +187,7 @@ struct AccountQuota
   name          : String,
   /// Live-token match: `accessToken` in `~/.claude/.credentials.json` equals this account's stored token.
   is_current    : bool,
-  /// Active-marker match: `_active` file in the credential store names this account.
+  /// Active-marker match: per-machine active marker file in the credential store names this account.
   is_active     : bool,
   expires_at_ms : u64,
   /// `Ok` = live quota fetched; `Err` = reason string (expired, network, etc.).
@@ -1300,80 +1300,6 @@ fn execute_live_mode(
   Ok( OutputData::new( String::new(), "text" ) )
 }
 
-// ── Touch helper ───────────────────────────────────────────────────────────────
-
-/// Activate an idle 5h session window for `aq` by spawning an isolated subprocess.
-///
-/// The trigger requires both conditions:
-/// - `aq.result.is_ok()` — account must have valid quota data (not an auth error).
-/// - `five_hour.resets_at.is_none()` — 5h window not yet started (rendered as `—`).
-///
-/// After a successful touch, quota is re-fetched so the table shows the concrete
-/// `5h Reset` value. If the subprocess or re-fetch fails the account row is unchanged
-/// (touch failure is non-aborting — other accounts and the render continue normally).
-///
-/// The original `_active` account is restored unconditionally inside this call before
-/// using the new credentials. This prevents a stale `_active` if the process is
-/// interrupted between touches.
-fn apply_touch(
-  aq               : &mut AccountQuota,
-  credential_store : &std::path::Path,
-  claude_paths     : Option< &crate::ClaudePaths >,
-  trace            : bool,
-)
-{
-  // Guard: errored accounts are never touched; trigger requires valid quota data.
-  let Ok( ref data ) = aq.result else { return; };
-
-  // Guard: accounts with an active 5h window are not idle — skip.
-  let is_idle = data.five_hour.as_ref()
-    .and_then( |p| p.resets_at.as_deref() )
-    .is_none();
-  if !is_idle { return; }
-
-  // Save active account before switching for the subprocess lifecycle.
-  let original_active = std::fs::read_to_string( credential_store.join( "_active" ) ).ok();
-
-  let new_creds = crate::account::refresh_account_token(
-    &aq.name, credential_store, claude_paths, trace,
-  );
-
-  // CRITICAL: restore _active unconditionally before using new_creds (Fix(BUG-170) pattern).
-  // If restoration is deferred past the return points below, an interrupted touch leaves
-  // _active pointing at the touched account instead of the original.
-  if let ( Some( original ), Some( paths ) ) = ( original_active.as_deref(), claude_paths )
-  {
-    let name = original.trim();
-    if !name.is_empty()
-    {
-      let _ = crate::account::switch_account( name, credential_store, paths );
-    }
-  }
-
-  let Some( creds ) = new_creds else { return; };
-
-  // Update expiry using JWT exp field with expiresAt fallback (same as apply_refresh).
-  if let Some( exp_ms ) = jwt_exp_ms( &creds )
-  {
-    aq.expires_at_ms = exp_ms;
-  }
-  else if let Some( exp_ms ) = parse_u64_from_str( &creds, "expiresAt" )
-  {
-    aq.expires_at_ms = exp_ms;
-  }
-
-  // Re-read token AFTER subprocess — the pre-subprocess token is stale.
-  let Ok( token ) = read_token( credential_store, &aq.name ) else { return; };
-  if let Ok( new_data ) = claude_quota::fetch_oauth_usage( &token )
-  {
-    aq.result = Ok( new_data );
-    if let Ok( acct ) = claude_quota::fetch_oauth_account( &token )
-    {
-      aq.account = Some( acct );
-    }
-  }
-}
-
 // ── Refresh helper ─────────────────────────────────────────────────────────────
 
 /// Return `true` when `apply_refresh` should attempt a token refresh for `aq`.
@@ -1428,7 +1354,7 @@ fn apply_refresh(
     .as_secs();
 
   // Snapshot active account to restore after cycling through per-account refreshes.
-  let original_active = std::fs::read_to_string( credential_store.join( "_active" ) ).ok();
+  let original_active = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) ).ok();
 
   for aq in accounts
   {
@@ -1517,6 +1443,80 @@ fn apply_refresh(
   }
 }
 
+// ── Touch helper ───────────────────────────────────────────────────────────────
+
+/// Activate an idle 5h session window for `aq` by spawning an isolated subprocess.
+///
+/// The trigger requires both conditions:
+/// - `aq.result.is_ok()` — account must have valid quota data (not an auth error).
+/// - `five_hour.resets_at.is_none()` — 5h window not yet started (rendered as `—`).
+///
+/// After a successful touch, quota is re-fetched so the table shows the concrete
+/// `5h Reset` value. If the subprocess or re-fetch fails the account row is unchanged
+/// (touch failure is non-aborting — other accounts and the render continue normally).
+///
+/// The original active account is restored unconditionally inside this call before
+/// using the new credentials. This prevents a stale active marker if the process is
+/// interrupted between touches.
+fn apply_touch(
+  aq               : &mut AccountQuota,
+  credential_store : &std::path::Path,
+  claude_paths     : Option< &crate::ClaudePaths >,
+  trace            : bool,
+)
+{
+  // Guard: errored accounts are never touched; trigger requires valid quota data.
+  let Ok( ref data ) = aq.result else { return; };
+
+  // Guard: accounts with an active 5h window are not idle — skip.
+  let is_idle = data.five_hour.as_ref()
+    .and_then( |p| p.resets_at.as_deref() )
+    .is_none();
+  if !is_idle { return; }
+
+  // Save active account before switching for the subprocess lifecycle.
+  let original_active = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) ).ok();
+
+  let new_creds = crate::account::refresh_account_token(
+    &aq.name, credential_store, claude_paths, trace,
+  );
+
+  // CRITICAL: restore active marker unconditionally before using new_creds (Fix(BUG-170) pattern).
+  // If restoration is deferred past the return points below, an interrupted touch leaves
+  // the active marker pointing at the touched account instead of the original.
+  if let ( Some( original ), Some( paths ) ) = ( original_active.as_deref(), claude_paths )
+  {
+    let name = original.trim();
+    if !name.is_empty()
+    {
+      let _ = crate::account::switch_account( name, credential_store, paths );
+    }
+  }
+
+  let Some( creds ) = new_creds else { return; };
+
+  // Update expiry using JWT exp field with expiresAt fallback (same as apply_refresh).
+  if let Some( exp_ms ) = jwt_exp_ms( &creds )
+  {
+    aq.expires_at_ms = exp_ms;
+  }
+  else if let Some( exp_ms ) = parse_u64_from_str( &creds, "expiresAt" )
+  {
+    aq.expires_at_ms = exp_ms;
+  }
+
+  // Re-read token AFTER subprocess — the pre-subprocess token is stale.
+  let Ok( token ) = read_token( credential_store, &aq.name ) else { return; };
+  if let Ok( new_data ) = claude_quota::fetch_oauth_usage( &token )
+  {
+    aq.result = Ok( new_data );
+    if let Ok( acct ) = claude_quota::fetch_oauth_account( &token )
+    {
+      aq.account = Some( acct );
+    }
+  }
+}
+
 // ── Command handler ────────────────────────────────────────────────────────────
 
 /// Parsed `.usage` parameters extracted from a `VerifiedCommand`.
@@ -1557,22 +1557,24 @@ struct UsageParams
 /// Fix(issue-155): `refresh` default is 1 (enabled). Omitting the param ≠
 /// "user wants disabled" — auto-refresh is the safer default.
 /// Fix(issue-157): strict 0/1 range guard added for `refresh`, `live`, `trace`.
-/// Pitfall: `Kind::Integer` registration doesn't block string values — the parser
-/// delivers them as `Value::String`, so this function is the sole enforcement point.
+/// Pitfall: bool-typed params (e.g. `touch::`) use `Kind::String` registration so
+/// `"true"`/`"false"` pass through; `parse_int_flag` is the sole normalisation point.
 /// Parse an integer `0`-or-`1` flag from `cmd.arguments` with a configurable default.
 ///
 /// Returns `default` when absent; rejects non-`Value::Integer` values or integers outside
 /// `{0, 1}` with `ArgumentTypeMismatch`.
 ///
-/// Pitfall: `Kind::Integer` registration doesn't block string values — the parser
-/// delivers them as `Value::String`, so this is the sole enforcement point.
+/// Pitfall: params registered as `Kind::String` (e.g. `touch::`) deliver all values
+/// including `"0"` and `"1"` as `Value::String` — the integer arms handle `Kind::Integer` params.
 fn parse_int_flag( cmd : &VerifiedCommand, name : &str, default : i64 ) -> Result< i64, ErrorData >
 {
   match cmd.arguments.get( name )
   {
-    None                        => Ok( default ),
-    Some( Value::Integer( 0 ) ) => Ok( 0 ),
-    Some( Value::Integer( 1 ) ) => Ok( 1 ),
+    None                                       => Ok( default ),
+    Some( Value::Integer( 0 ) )                => Ok( 0 ),
+    Some( Value::Integer( 1 ) )                => Ok( 1 ),
+    Some( Value::String( s ) ) if s == "0"     => Ok( 0 ),
+    Some( Value::String( s ) ) if s == "1"     => Ok( 1 ),
     Some( Value::String( s ) ) if s == "true"  => Ok( 1 ),
     Some( Value::String( s ) ) if s == "false" => Ok( 0 ),
     _ => Err( ErrorData::new(
@@ -2240,13 +2242,13 @@ mod tests
   /// # Prevention
   /// This test guards the restore: after a refresh cycle where bob's `switch_account` fails,
   /// the restore runs `switch_account("alice@example.com", ...)` which succeeds (alice has a
-  /// cred file), writing alice's creds to the live file and "alice@example.com" to `_active`.
+  /// cred file), writing alice's creds to the live file and "alice@example.com" to the active marker.
   ///
   /// # Pitfall
   /// The `{fake_home}/.claude/` directory MUST exist before `apply_refresh` is called.
   /// `switch_account` calls `fs::copy(src, tmp)` where `tmp` is inside `{fake_home}/.claude/`;
   /// if the directory is absent, `copy` fails and the restore silently does nothing —
-  /// `_active` remains unchanged but for the wrong reason (silent failure, not correct restore).
+  /// the active marker remains unchanged but for the wrong reason (silent failure, not correct restore).
   // test_kind: regression(issue-165)
   #[ test ]
   fn test_apply_refresh_lifecycle_original_active_restored()
@@ -2262,7 +2264,7 @@ mod tests
     ).unwrap();
 
     // Set active account to alice before the loop.
-    std::fs::write( store.path().join( "_active" ), "alice@example.com" ).unwrap();
+    std::fs::write( store.path().join( crate::account::active_marker_filename() ), "alice@example.com" ).unwrap();
 
     // Create {fake_home}/.claude/ so switch_account can write the live credentials file.
     std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
@@ -2284,11 +2286,11 @@ mod tests
 
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
 
-    // Restore ran: switch_account("alice@example.com", ...) wrote _active and live creds.
-    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    // Restore ran: switch_account("alice@example.com", ...) wrote active marker and live creds.
+    let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
-      "_active must be restored to original account after refresh cycle",
+      "per-machine active marker must be restored to original account after refresh cycle",
     );
 
     let live_creds = std::fs::read_to_string( paths.credentials_file() ).unwrap();
@@ -2400,9 +2402,9 @@ mod tests
     );
   }
 
-  /// L5 — `apply_refresh` lifecycle: no `_active` file → `original_active = None` → no restore.
+  /// L5 — `apply_refresh` lifecycle: no active marker file → `original_active = None` → no restore.
   ///
-  /// `read_to_string` on the absent `_active` file returns `Err`; `.ok()` maps that to `None`.
+  /// `read_to_string` on the absent active marker file returns `Err`; `.ok()` maps that to `None`.
   /// The restore block requires `Some(original)`, so it is skipped entirely.
   #[ test ]
   fn test_apply_refresh_lifecycle_no_active_file_no_restore()
@@ -2413,8 +2415,8 @@ mod tests
     let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → no loop body
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
     assert!(
-      !store.path().join( "_active" ).exists(),
-      "_active must not be created when it was absent before apply_refresh",
+      !store.path().join( crate::account::active_marker_filename() ).exists(),
+      "per-machine active marker must not be created when it was absent before apply_refresh",
     );
   }
 
@@ -2443,7 +2445,7 @@ mod tests
     apply_refresh( &mut accounts, store.path(), Some( &paths ), true );
   }
 
-  /// L7 — `_active` file with trailing newline: `trim()` strips whitespace → correct restore.
+  /// L7 — active marker file with trailing newline: `trim()` strips whitespace → correct restore.
   ///
   /// `read_to_string` returns `"alice@example.com\n"`.  `original.trim()` strips the newline,
   /// yielding the valid name used in `switch_account` → restore succeeds.
@@ -2457,21 +2459,21 @@ mod tests
       store.path().join( "alice@example.com.credentials.json" ),
       alice_creds,
     ).unwrap();
-    std::fs::write( store.path().join( "_active" ), "alice@example.com\n" ).unwrap();
+    std::fs::write( store.path().join( crate::account::active_marker_filename() ), "alice@example.com\n" ).unwrap();
     std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
     let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → restore path only
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
-    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
-      "trailing-newline _active must be trimmed before restore; _active after = {active:?}",
+      "trailing-newline active marker must be trimmed before restore; active marker after = {active:?}",
     );
   }
 
-  /// L8 — `_active` file containing only whitespace: `trim().is_empty()` → restore skipped.
+  /// L8 — active marker file containing only whitespace: `trim().is_empty()` → restore skipped.
   ///
-  /// An `_active` file with content `"   \n  "` trims to `""`.  `is_empty()` is `true`,
+  /// An active marker file with content `"   \n  "` trims to `""`.  `is_empty()` is `true`,
   /// so `switch_account` is never called and the file content is not modified.
   #[ test ]
   fn test_apply_refresh_lifecycle_active_whitespace_only_no_restore()
@@ -2479,33 +2481,33 @@ mod tests
     let store     = TempDir::new().unwrap();
     let fake_home = TempDir::new().unwrap();
     let ws = "   \n  ";
-    std::fs::write( store.path().join( "_active" ), ws ).unwrap();
+    std::fs::write( store.path().join( crate::account::active_marker_filename() ), ws ).unwrap();
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
     let mut accounts : Vec< AccountQuota > = vec![];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
-    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, ws,
-      "whitespace-only _active must not trigger restore; content must be unchanged",
+      "whitespace-only active marker must not trigger restore; content must be unchanged",
     );
   }
 
   /// L9 — `claude_paths = None`: restore guard `if let (Some(original), Some(paths))`
-  /// short-circuits on `paths = None` → `_active` is never modified by restore.
+  /// short-circuits on `paths = None` → active marker is never modified by restore.
   ///
-  /// Verifies the `None` branch guard: an existing `_active` file must be unchanged
+  /// Verifies the `None` branch guard: an existing active marker file must be unchanged
   /// after `apply_refresh` using the fallback (non-lifecycle) path.
   #[ test ]
   fn test_apply_refresh_none_paths_active_unchanged()
   {
     let store = TempDir::new().unwrap();
-    std::fs::write( store.path().join( "_active" ), "alice@example.com" ).unwrap();
+    std::fs::write( store.path().join( crate::account::active_marker_filename() ), "alice@example.com" ).unwrap();
     let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → no loop body
     apply_refresh( &mut accounts, store.path(), None, false );
-    let active = std::fs::read_to_string( store.path().join( "_active" ) ).unwrap();
+    let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
-      "_active must be unchanged when claude_paths=None (no restore possible)",
+      "per-machine active marker must be unchanged when claude_paths=None (no restore possible)",
     );
   }
 
@@ -4065,6 +4067,96 @@ mod tests
     assert!(
       !output.contains( "Next by strategy:" ),
       "footer must not show 'Next by strategy:' when lines is empty (FT-08/023), got:\n{output}",
+    );
+  }
+
+  // ── find_next_for_strategy::Drain unit tests ──────────────────────────────
+
+  /// FT-04/023 unit A — drain picks lowest non-exhausted (> 5% left) account first.
+  ///
+  /// Two non-exhausted accounts: `a` has 6% left, `b` has 80% left.
+  /// Drain canonical: ascending `5h_left` → `a` before `b`.
+  /// `find_next_for_strategy` with Drain must return index of `a`.
+  #[ test ]
+  fn test_find_next_drain_picks_lowest_nonexhausted()
+  {
+    let now    = 0u64;
+    let a = mk_aq_sort( "a@test.com", 94.0, FAR_FUTURE_MS );  // 6% left — non-exhausted
+    let b = mk_aq_sort( "b@test.com", 20.0, FAR_FUTURE_MS );  // 80% left — non-exhausted
+    let accounts = vec![ b, a ];  // intentionally reversed to confirm sort, not input order
+
+    let idx = find_next_for_strategy( &accounts, NextStrategy::Drain, PreferStrategy::Any, now );
+    assert!(
+      idx.is_some(),
+      "drain must find a winner among two non-exhausted accounts",
+    );
+    assert_eq!(
+      accounts[ idx.unwrap() ].name, "a@test.com",
+      "drain must pick a@test.com (6% left, lowest non-exhausted); got index {idx:?}",
+    );
+  }
+
+  /// FT-04/023 unit B — drain puts exhausted accounts (≤ 5% left) after non-exhausted.
+  ///
+  /// `exhausted` has 3% left (≤ 5%) and `healthy` has 80% left (> 5%).
+  /// Even though `exhausted` has lower `5h_left`, drain picks `healthy` first.
+  #[ test ]
+  fn test_find_next_drain_prefers_nonexhausted_over_exhausted()
+  {
+    let now       = 0u64;
+    let exhausted = mk_aq_sort( "exhausted@test.com", 97.0, FAR_FUTURE_MS );  // 3% left — exhausted
+    let healthy   = mk_aq_sort( "healthy@test.com",   20.0, FAR_FUTURE_MS );  // 80% left — non-exhausted
+    let accounts  = vec![ exhausted, healthy ];  // exhausted first in input order
+
+    let idx = find_next_for_strategy( &accounts, NextStrategy::Drain, PreferStrategy::Any, now );
+    assert!(
+      idx.is_some(),
+      "drain must find a winner when at least one non-exhausted account exists",
+    );
+    assert_eq!(
+      accounts[ idx.unwrap() ].name, "healthy@test.com",
+      "drain must pick healthy (80% left, non-exhausted) before exhausted (3% left); got index {idx:?}",
+    );
+  }
+
+  // ── status_emoji with absent period data ─────────────────────────────────
+
+  /// SE-7 — `five_hour=None` treated as 100% left → 🟢 (conservative, 0% utilised).
+  ///
+  /// Doc comment: "Absent period data is treated as fully available (conservative, 0% utilised)."
+  /// `five_hour`=None → `map_or`(0.0) → `h5_left`=100% > 5% → 🟢 (given `seven_day` also absent → 100%).
+  #[ test ]
+  fn test_status_emoji_five_hour_none_is_green()
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour : None, seven_day : None, seven_day_sonnet : None,
+    };
+    let result : Result< claude_quota::OauthUsageData, String > = Ok( data );
+    assert_eq!(
+      status_emoji( &result ), "🟢",
+      "five_hour=None must yield 🟢 (conservative 100% left)",
+    );
+  }
+
+  // ── quota_text_cells with absent period data ──────────────────────────────
+
+  /// QT-T07 — `five_hour=None` in `quota_text_cells` → cells[0] = "—" (em dash).
+  ///
+  /// `pct_emoji(None)` → `util.map_or_else(|| dash.clone(), ...)` → "—".
+  /// The absence of period data is displayed as em dash, not as a percentage.
+  /// This is semantically distinct from `status_emoji` which treats None as 100% left.
+  #[ test ]
+  fn test_quota_text_cells_five_hour_none_shows_dash()
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour : None, seven_day : None, seven_day_sonnet : None,
+    };
+    let cells = quota_text_cells( &data, 0 );
+    assert_eq!(
+      cells[ 0 ], "\u{2014}",
+      "five_hour=None must produce em-dash in cells[0], not a percentage",
     );
   }
 }

@@ -1149,3 +1149,105 @@ fn tc417_guard_v0_shorter_than_v1()
     s0.len(), s1.len()
   );
 }
+
+// ─── Type Surface: SettingsValue (inference) ─────────────────────────────────
+
+// Type test: value::true → JSON boolean true (not quoted string)
+#[ test ]
+fn tc_settings_value_bool_true_inferred()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.set", "key::flag", "value::true" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
+  let content = std::fs::read_to_string(
+    dir.path().join( ".claude/settings.json" )
+  ).unwrap();
+  assert!( content.contains( "\"flag\": true" ), "must infer bool true: {content}" );
+  assert!( !content.contains( "\"flag\": \"true\"" ), "must NOT store as string: {content}" );
+}
+
+// Type test: value::false → JSON boolean false (not quoted string)
+#[ test ]
+fn tc_settings_value_bool_false_inferred()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.set", "key::flag", "value::false" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
+  let content = std::fs::read_to_string(
+    dir.path().join( ".claude/settings.json" )
+  ).unwrap();
+  assert!( content.contains( "\"flag\": false" ), "must infer bool false: {content}" );
+  assert!( !content.contains( "\"flag\": \"false\"" ), "must NOT store as string: {content}" );
+}
+
+// Type test: value::42 → JSON integer 42 (not string "42")
+#[ test ]
+fn tc_settings_value_integer_inferred()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.set", "key::count", "value::42" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
+  let content = std::fs::read_to_string(
+    dir.path().join( ".claude/settings.json" )
+  ).unwrap();
+  assert!( content.contains( "\"count\": 42" ), "must infer integer 42: {content}" );
+  assert!( !content.contains( "\"count\": \"42\"" ), "must NOT store as string: {content}" );
+}
+
+// Type test: value::3.14 → JSON float 3.14 (not string "3.14")
+#[ test ]
+fn tc_settings_value_float_inferred()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.set", "key::rate", "value::3.14" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
+  let content = std::fs::read_to_string(
+    dir.path().join( ".claude/settings.json" )
+  ).unwrap();
+  assert!( content.contains( "\"rate\": 3.14" ), "must infer float 3.14: {content}" );
+  assert!( !content.contains( "\"rate\": \"3.14\"" ), "must NOT store as string: {content}" );
+}
+
+// Type test: value::dark → JSON string "dark" (string fallback)
+#[ test ]
+fn tc_settings_value_string_fallback()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.set", "key::theme", "value::dark" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
+  let content = std::fs::read_to_string(
+    dir.path().join( ".claude/settings.json" )
+  ).unwrap();
+  assert!( content.contains( "\"theme\": \"dark\"" ), "must store as quoted string: {content}" );
+}
+
+// Type test: value::NaN → JSON string "NaN" (non-finite float not valid JSON)
+#[ test ]
+fn tc_settings_value_nan_as_string()
+{
+  let dir = TempDir::new().unwrap();
+  let out = run_clm_with_env(
+    &[ ".settings.set", "key::special", "value::NaN" ],
+    &[ ( "HOME", dir.path().to_str().unwrap() ) ],
+  );
+  assert_exit( &out, 0 );
+  let content = std::fs::read_to_string(
+    dir.path().join( ".claude/settings.json" )
+  ).unwrap();
+  assert!( content.contains( "\"special\": \"NaN\"" ), "NaN must be stored as string: {content}" );
+}

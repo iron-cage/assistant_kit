@@ -6,8 +6,11 @@
 //! $PRO/.persistent/claude/credential/
 //!   alice@acme.com.credentials.json   ← saved credential snapshot
 //!   alice@home.com.credentials.json
-//!   _active                           ← text: name of active account
+//!   _active_w003_user1                ← text: name of active account (per-machine)
 //! ```
+//!
+//! The active marker filename is `_active_{hostname}_{user}` (see [`active_marker_filename`]).
+//! Each machine maintains its own marker independently; add `_active_*` to `.gitignore`.
 //!
 //! # Examples
 //!
@@ -236,7 +239,7 @@ pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths ) -> Re
   // Root cause: _active write was omitted when save() was first implemented.
   // Pitfall: must be non-best-effort (?): a save that silently drops _active leaves
   // .credentials.status inconsistent with the just-saved account.
-  std::fs::write( credential_store.join( "_active" ), name )?;
+  std::fs::write( credential_store.join( active_marker_filename() ), name )?;
   Ok( () )
 }
 
@@ -285,7 +288,7 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
   std::fs::rename( &tmp, &creds )?;
 
   // Update active marker after credentials are safely in place.
-  let marker = credential_store.join( "_active" );
+  let marker = credential_store.join( active_marker_filename() );
   std::fs::write( marker, name )?;
 
   // Fix(issue-122): switch_account() restored only .credentials.json; ~/.claude.json
@@ -407,7 +410,7 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
   //   deployed; clean up the stale marker after deletion rather than refusing the operation.
   if read_active_marker( credential_store ).as_deref() == Some( name )
   {
-    let _ = std::fs::remove_file( credential_store.join( "_active" ) );
+    let _ = std::fs::remove_file( credential_store.join( active_marker_filename() ) );
   }
   Ok( () )
 }
@@ -553,11 +556,45 @@ pub fn refresh_account_token(
   }
 }
 
+/// Return the filename for the per-machine active-account marker.
+///
+/// Format: `` `_active_{hostname}_{user}` `` where `hostname` and `user` are
+/// sanitized (only alphanumeric, `-`, and `.` are kept; everything else becomes `_`).
+/// Reads `HOSTNAME` env var first, falls back to `/etc/hostname`; reads `USER`
+/// env var first, falls back to `USERNAME`, then to the literal `"user"`.
+///
+/// The per-machine name means that switching accounts on one machine does not
+/// affect other machines sharing the same credential store via version control.
+/// Add `` `_active_*` `` to `.gitignore` to prevent these files from being tracked.
+#[ inline ]
+#[ must_use ]
+pub fn active_marker_filename() -> String
+{
+  let hostname = std::env::var( "HOSTNAME" )
+    .unwrap_or_else( |_|
+    {
+      std::fs::read_to_string( "/etc/hostname" )
+        .unwrap_or_else( |_| "local".to_string() )
+        .trim()
+        .to_string()
+    } );
+  let user = std::env::var( "USER" )
+    .or_else( |_| std::env::var( "USERNAME" ) )
+    .unwrap_or_else( |_| "user".to_string() );
+  let clean = | s : &str | -> String
+  {
+    s.chars()
+      .map( | c | if c.is_alphanumeric() || c == '-' || c == '.' { c } else { '_' } )
+      .collect()
+  };
+  format!( "_active_{}_{}", clean( &hostname ), clean( &user ) )
+}
+
 // ── Private helpers ───────────────────────────────────────────────────────────
 
 fn read_active_marker( credential_store : &Path ) -> Option< String >
 {
-  let marker = credential_store.join( "_active" );
+  let marker = credential_store.join( active_marker_filename() );
   std::fs::read_to_string( marker )
     .ok()
     .map( | s | s.trim().to_string() )
@@ -692,6 +729,53 @@ pub fn parse_string_array_field( json : &str, key : &str ) -> Vec< String >
     pos = end_val + 1;
   }
   values
+}
+
+#[ cfg( test ) ]
+mod tests
+{
+  use super::*;
+
+  // ── FT-08 (021): parse_string_array_field ───────────────────────────────────
+
+  /// ft08_a: Two-element array returns both values in order.
+  ///
+  /// Given: `{"capabilities":["claude_max","chat"]}`
+  /// When: `parse_string_array_field(json, "capabilities")`
+  /// Then: Returns `["claude_max", "chat"]`
+  #[ test ]
+  fn ft08_parse_string_array_field_two_elements()
+  {
+    let json   = r#"{"capabilities":["claude_max","chat"]}"#;
+    let result = parse_string_array_field( json, "capabilities" );
+    assert_eq!( result, vec![ "claude_max", "chat" ] );
+  }
+
+  /// ft08_b: Missing key returns empty Vec.
+  ///
+  /// Given: JSON with no "capabilities" key
+  /// When: `parse_string_array_field(json, "capabilities")`
+  /// Then: Returns empty Vec
+  #[ test ]
+  fn ft08_parse_string_array_field_missing_key_returns_empty()
+  {
+    let json   = r#"{"other_field":"value"}"#;
+    let result = parse_string_array_field( json, "capabilities" );
+    assert!( result.is_empty(), "missing key must return empty Vec, got: {:?}", result );
+  }
+
+  /// ft08_c: Empty array `[]` returns empty Vec.
+  ///
+  /// Given: `{"capabilities":[]}`
+  /// When: `parse_string_array_field(json, "capabilities")`
+  /// Then: Returns empty Vec
+  #[ test ]
+  fn ft08_parse_string_array_field_empty_array_returns_empty()
+  {
+    let json   = r#"{"capabilities":[]}"#;
+    let result = parse_string_array_field( json, "capabilities" );
+    assert!( result.is_empty(), "empty array must return empty Vec, got: {:?}", result );
+  }
 }
 
 

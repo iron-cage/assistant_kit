@@ -23,7 +23,7 @@
 //! | as13 | `as13_save_dry_then_exec_match` | dry then exec → same output | P |
 //! | as14 | `as14_save_file_matches_source` | saved content matches source | P |
 //! | as15 | `as15_save_infers_email_from_claude_json` | no `name::`, emailAddress present → exit 0 | P |
-//! | as16 | `as16_save_writes_active_marker` | save writes `_active` = name | P |
+//! | as16 | `as16_save_writes_active_marker` | save writes active marker = name | P |
 //! | as17 | `as17_save_slash_in_email_local_part_exits_1` | `/` in email local part → exit 1 | N |
 //! | as18 | `as18_save_backslash_in_email_local_part_exits_1` | `\` in email local part → exit 1 | N |
 //!
@@ -37,7 +37,7 @@
 //! | aw04 | `aw04_switch_empty_name_exits_1` | empty name → exit 1 | N |
 //! | aw05 | `aw05_switch_slash_name_exits_1` | name with `/` → exit 1 | N |
 //! | aw06 | `aw06_switch_missing_name_param_exits_1` | no `name::` param → exit 1 | N |
-//! | aw07 | `aw07_switch_updates_active_marker` | switch writes _active marker | P |
+//! | aw07 | `aw07_switch_updates_active_marker` | switch writes active marker | P |
 //! | aw08 | `aw08_switch_same_account_idempotent` | switch to same account succeeds | P |
 //! | aw09 | `aw09_switch_copies_credentials` | switch copies correct cred content | P |
 //! | aw10 | `aw10_switch_dry_run_nonexistent_exits_2` | dry-run nonexistent → exit 2 | N |
@@ -53,7 +53,7 @@
 //! |----|---------------|-----------|-----|
 //! | ad01 | `ad01_delete_inactive_removes_file` | delete inactive removes file | P |
 //! | ad02 | `ad02_delete_dry_run_keeps_file` | `dry::1` → file kept | P |
-//! | ad03 | `ad03_delete_active_exits_0` | delete active account → exit 0, `_active` cleaned up | P |
+//! | ad03 | `ad03_delete_active_exits_0` | delete active account → exit 0, active marker cleaned up | P |
 //! | ad04 | `ad04_delete_nonexistent_exits_2` | unknown account → exit 2 | N |
 //! | ad05 | `ad05_delete_empty_name_exits_1` | empty name → exit 1 | N |
 //! | ad06 | `ad06_delete_slash_name_exits_1` | name with `/` → exit 1 | N |
@@ -67,6 +67,8 @@
 //! | ad14 | `ad14_delete_prefix_resolves` | prefix `old` resolves to `old@archive.com`, deletes | P |
 //! | ad15 | `ad15_delete_removes_roles_json` | delete removes .roles.json snapshot | P |
 //! | as19 | `as19_save_best_effort_no_roles_json` | save with no valid token → exit 0; no roles.json | P |
+//! | as20 | `as20_lim_it_save_writes_roles_json` | save with valid token → roles.json created (`lim_it`) | P |
+//! | as21 | `as21_lim_it_resave_overwrites_roles_json` | second save overwrites roles.json (`lim_it`) | P |
 //!
 //! ### AR — Account Relogin
 //!
@@ -86,6 +88,7 @@ use crate::helpers::{
   stdout, stderr, assert_exit,
   write_credentials, write_account, write_claude_json, account_exists,
   write_account_claude_json, write_account_settings_json, write_account_roles_json,
+  live_active_token, write_account_with_token,
   FAR_FUTURE_MS,
 };
 use tempfile::TempDir;
@@ -383,7 +386,7 @@ fn aw07_switch_updates_active_marker()
   let _ = run_cs_with_env( &[ ".account.use", "name::alice@home.com" ], &[ ( "HOME", home ) ] );
 
   let marker = std::fs::read_to_string(
-    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( "_active" )
+    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( claude_profile::account::active_marker_filename() )
   ).unwrap();
   assert_eq!( marker.trim(), "alice@home.com" );
 }
@@ -470,7 +473,7 @@ fn ad03_delete_active_exits_0()
   let out = run_cs_with_env( &[ ".account.delete", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   assert!( !account_exists( dir.path(), "alice@acme.com" ), "active account must be deleted" );
-  let active_marker = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( "_active" );
+  let active_marker = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" ).join( claude_profile::account::active_marker_filename() );
   assert!( !active_marker.exists(), "_active marker must be cleaned up after deleting active account" );
 }
 
@@ -630,17 +633,17 @@ fn ad12_delete_removes_snapshot_files()
 
 // ── as16 ──────────────────────────────────────────────────────────────────────
 
-/// as16: `.account.save name::work@acme.com` writes `{store}/_active` = `"work@acme.com"`.
+/// as16: `.account.save name::work@acme.com` writes `{store}/_active_{hostname}_{user}` = `"work@acme.com"`.
 ///
-/// CLI-level symmetry test with aw07: reads `_active` directly (not via
+/// CLI-level symmetry test with aw07: reads the active marker directly (not via
 /// `.credentials.status`) to confirm the write happened at the filesystem level.
 ///
 /// ## Fix Documentation — issue-active-marker
 ///
-/// - **Root Cause:** `save()` never wrote `_active`; only `switch_account()` did.
-/// - **Why Not Caught:** No AS test verified the `_active` file after `.account.save`.
-/// - **Fix Applied:** Added `std::fs::write(credential_store.join("_active"), name)?;` to `save()`.
-/// - **Prevention:** This test guards `_active` at the filesystem level, independently of `.credentials.status`.
+/// - **Root Cause:** `save()` never wrote the active marker; only `switch_account()` did.
+/// - **Why Not Caught:** No AS test verified the active marker file after `.account.save`.
+/// - **Fix Applied:** Added `std::fs::write( credential_store.join( active_marker_filename() ), name )?;` to `save()`. (Originally `join("_active")`; updated to per-machine `active_marker_filename()` per Feature 025.)
+/// - **Prevention:** This test guards the active marker at the filesystem level, independently of `.credentials.status`.
 /// - **Pitfall:** Must assert the raw file content — not just exit code — to catch a write that produces wrong content.
 #[ test ]
 fn as16_save_writes_active_marker()
@@ -657,7 +660,7 @@ fn as16_save_writes_active_marker()
 
   let store  = dir.path()
     .join( ".persistent" ).join( "claude" ).join( "credential" );
-  let active = std::fs::read_to_string( store.join( "_active" ) )
+  let active = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) )
     .expect( "_active must exist after .account.save" );
   assert_eq!(
     active.trim(),
@@ -809,7 +812,7 @@ fn aw13_use_positional_bare_arg()
   let text = stdout( &out );
   assert!( text.contains( "switched" ), "must confirm switch, got:\n{text}" );
   let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let active = std::fs::read_to_string( store.join( "_active" ) ).expect( "_active must exist" );
+  let active = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) ).expect( "_active must exist" );
   assert_eq!( active.trim(), "personal@home.com", "_active must point at switched-to account" );
 }
 
@@ -828,7 +831,7 @@ fn aw14_use_prefix_resolves()
   let out = run_cs_with_env( &[ ".account.use", "car" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let active = std::fs::read_to_string( store.join( "_active" ) ).expect( "_active must exist" );
+  let active = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) ).expect( "_active must exist" );
   assert_eq!( active.trim(), "carol@example.com", "prefix car must resolve to carol@example.com" );
 }
 
@@ -850,6 +853,35 @@ fn aw15_use_prefix_ambiguous_exits_1()
   assert!(
     err.to_lowercase().contains( "ambiguous" ),
     "error must say 'ambiguous', got:\n{err}",
+  );
+}
+
+// ── aw16 ──────────────────────────────────────────────────────────────────────
+
+/// aw16 (AC-11 / `015_name_shortcut_syntax.md`): exact local-part match wins over ambiguous prefix.
+///
+/// Three accounts: `i1@wbox.pro`, `i11@wbox.pro`, `i12@wbox.pro`.
+/// Prefix `i1` matches all three via `starts_with`, but `i1@wbox.pro` has
+/// local part equal to `i1` exactly — the exact-local-part check resolves
+/// it unambiguously without reaching the prefix scan.
+#[ test ]
+fn aw16_exact_local_part_wins_over_ambiguous_prefix()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "i1@wbox.pro",  "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "i11@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "i12@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".account.use", "i1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let active = std::fs::read_to_string( store.join( claude_profile::account::active_marker_filename() ) )
+    .expect( "active marker must exist after use" );
+  assert_eq!(
+    active.trim(), "i1@wbox.pro",
+    "exact local-part match must resolve to i1@wbox.pro, not be reported as ambiguous",
   );
 }
 
@@ -1083,4 +1115,79 @@ fn as19_save_best_effort_no_roles_json()
 
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   assert!( !store.join( "user@example.com.roles.json" ).exists(), "roles.json must not be created when no accessToken" );
+}
+
+// ── as20 (lim_it) ─────────────────────────────────────────────────────────────
+
+#[ test ]
+fn as20_lim_it_save_writes_roles_json()
+{
+  // AC-01 (FT-01): .account.save with a valid accessToken calls fetch_claude_cli_roles and
+  // writes {name}.roles.json to the credential store. Requires live Anthropic credentials.
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "as20: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "user@example.com", &token, false );
+  // Copy credentials.json into ~/.claude/.credentials.json so the binary can read it.
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  let cred_src = dir.path()
+    .join( ".persistent" ).join( "claude" ).join( "credential" )
+    .join( "user@example.com.credentials.json" );
+  std::fs::copy( &cred_src, claude_dir.join( ".credentials.json" ) ).unwrap();
+
+  let out = run_cs_with_env( &[ ".account.save", "name::user@example.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let roles_path = store.join( "user@example.com.roles.json" );
+  assert!( roles_path.exists(), "roles.json must be created after save with valid token" );
+  let content = std::fs::read_to_string( &roles_path ).unwrap();
+  assert!( content.contains( "\"organization_uuid\"" ), "roles.json must contain organization_uuid, got:\n{content}" );
+  assert!( content.contains( "\"organization_name\"" ), "roles.json must contain organization_name, got:\n{content}" );
+}
+
+// ── as21 (lim_it) ─────────────────────────────────────────────────────────────
+
+#[ test ]
+fn as21_lim_it_resave_overwrites_roles_json()
+{
+  // AC-03 (FT-03): Second .account.save overwrites existing roles.json with fresh data.
+  // Idempotency: stale roles.json is replaced by new API response. Requires live credentials.
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "as21: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "user@example.com", &token, false );
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  let cred_src = dir.path()
+    .join( ".persistent" ).join( "claude" ).join( "credential" )
+    .join( "user@example.com.credentials.json" );
+  std::fs::copy( &cred_src, claude_dir.join( ".credentials.json" ) ).unwrap();
+  // Pre-seed stale roles.json with a sentinel value.
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::write(
+    store.join( "user@example.com.roles.json" ),
+    r#"{"organization_uuid":"stale-sentinel","organization_name":"Stale","organization_role":"none","workspace_uuid":null,"workspace_name":null}"#,
+  ).unwrap();
+
+  // Second save must overwrite.
+  let out = run_cs_with_env( &[ ".account.save", "name::user@example.com" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let roles_path = store.join( "user@example.com.roles.json" );
+  assert!( roles_path.exists(), "roles.json must still exist after re-save" );
+  let content = std::fs::read_to_string( &roles_path ).unwrap();
+  assert!(
+    !content.contains( "stale-sentinel" ),
+    "re-save must overwrite stale roles.json; sentinel must be gone, got:\n{content}",
+  );
 }

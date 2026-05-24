@@ -12,7 +12,7 @@ Show the organization UUID from `{name}.roles.json` (populated at `save()` time 
 
 When `org_uuid::1`, appends an `Org ID:` line showing the account's `organization_uuid` value (a UUID string). Sources from `{name}.roles.json` in the credential store. Shows `N/A` when `{name}.roles.json` is absent or the field is missing.
 
-For `.credentials.status`: reads from the active account's `{_active}.roles.json`; `N/A` when no active account or no roles snapshot.
+For `.credentials.status`: reads from the active account's `{active_account}.roles.json`; `N/A` when no active account or no roles snapshot.
 
 `format::json` always includes `organization_uuid` regardless of this param.
 

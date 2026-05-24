@@ -27,7 +27,7 @@ let raw_name = require_nonempty_string_arg( &cmd, "name" )?;
 ```
 
 **Default sources by context:**
-- Account-scoped commands → active account (`_active` marker) when `name::` omitted
+- Account-scoped commands → active account (per-machine active marker) when `name::` omitted
 - Credential-scoped commands → live credentials (`~/.claude/.credentials.json`) when `name::` omitted
 - Format output commands → `text` when `format::` omitted
 - Dry-run commands → `0` (live mode) when `dry::` omitted

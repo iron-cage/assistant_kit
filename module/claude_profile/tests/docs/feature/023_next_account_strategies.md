@@ -39,7 +39,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then:** Footer contains "Next by strategy:" followed by two lines — one starting "endurance" and one starting "drain". Both lines appear regardless of which `next::` value is active.
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota)
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it094_lim_it_footer_always_shows_both_strategy_lines` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-01](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -53,7 +53,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then-B:** Returns `None` — no `→` placed.
 - **Exit:** n/a (unit test)
 - **Note:** TSK-184 deleted `find_recommendation()`; this case now calls `find_next_for_strategy()` directly.
-- **Source fn:** ⏳ TBD (in `src/usage.rs`)
+- **Source fn:** `test_ft02_023_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `src/usage.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-02](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -65,7 +65,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then:** The row for `end_winner@test.com` contains `→` in the flag column. `drain_winner@test.com` does NOT have `→`.
 - **Exit:** 0
 - **Live:** yes (requires live quota data)
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it092_lim_it_next_endurance_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-03](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -77,7 +77,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then:** The row for `high_usage@test.com` contains `→` (lowest non-exhausted 5h_left). `low_usage@test.com` does NOT have `→`.
 - **Exit:** 0
 - **Live:** yes (requires live quota data)
-- **Source fn:** ⏳ TBD (integration test in `tests/cli/usage_test.rs`)
+- **Source fn:** `it093_lim_it_next_drain_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-04](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -122,5 +122,5 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When:** Unit test of footer rendering with zero eligible candidates.
 - **Then:** Neither "endurance" nor "drain" strategy lines appear in the footer output (both omitted — no eligible candidate for either).
 - **Exit:** n/a (unit test)
-- **Source fn:** ⏳ TBD (in `src/usage.rs`)
+- **Source fn:** `test_ft08_023_footer_omits_strategy_lines_when_no_eligible_candidate` (in `src/usage.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-08](../../../../docs/feature/023_next_account_strategies.md)

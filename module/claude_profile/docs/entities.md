@@ -4,7 +4,7 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|-----------|
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 24 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 25 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 6 |
 | `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 34 |
@@ -41,6 +41,7 @@
 | feature | 022 | Org Identity Snapshot | [feature/022_org_identity_snapshot.md](feature/022_org_identity_snapshot.md) |
 | feature | 023 | Next Account Recommendation Strategies | [feature/023_next_account_strategies.md](feature/023_next_account_strategies.md) |
 | feature | 024 | Session Touch via Isolated Subprocess | [feature/024_session_touch.md](feature/024_session_touch.md) |
+| feature | 025 | Per-Machine Active Marker | [feature/025_per_machine_active_marker.md](feature/025_per_machine_active_marker.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](cli/003_env_param.md) |

@@ -21,12 +21,12 @@
 | feature | 005 | CLI Design | [feature/005_cli_design.md](feature/005_cli_design.md) |
 | pattern | 001 | Version Lock | [pattern/001_version_lock.md](pattern/001_version_lock.md) |
 | algorithm | 001 | Settings Type Inference | [algorithm/001_settings_type_inference.md](algorithm/001_settings_type_inference.md) |
-| cli | 001 | Commands | [cli/001_commands.md](cli/001_commands.md) |
+| cli | 001 | Commands | [cli/command/readme.md](cli/command/readme.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](cli/002_dictionary.md) |
-| cli | 003 | Parameter Groups | [cli/003_parameter_groups.md](cli/003_parameter_groups.md) |
+| cli | 003 | Parameter Groups | [cli/param_group/readme.md](cli/param_group/readme.md) |
 | cli | 004 | Parameter Interactions | [cli/004_parameter_interactions.md](cli/004_parameter_interactions.md) |
-| cli | 005 | Parameters | [cli/005_params.md](cli/005_params.md) |
-| cli | 006 | Types | [cli/006_types.md](cli/006_types.md) |
+| cli | 005 | Parameters | [cli/param/readme.md](cli/param/readme.md) |
+| cli | 006 | Types | [cli/type/readme.md](cli/type/readme.md) |
 | cli | 007 | Environment Parameters | [cli/env_param.md](cli/env_param.md) |
 | cli | 008 | Config Parameters | [cli/config_param.md](cli/config_param.md) |
 | user_story | 001 | Environment Check | [cli/user_story/001_environment_check.md](cli/user_story/001_environment_check.md) |
@@ -34,6 +34,6 @@
 | user_story | 003 | Process Lifecycle | [cli/user_story/003_process_lifecycle.md](cli/user_story/003_process_lifecycle.md) |
 | user_story | 004 | Settings Management | [cli/user_story/004_settings_management.md](cli/user_story/004_settings_management.md) |
 | user_story | 005 | Version Pinning | [cli/user_story/005_version_pinning.md](cli/user_story/005_version_pinning.md) |
-| format | 001 | text | [cli/format/001_text.md](cli/format/001_text.md) |
-| format | 002 | json | [cli/format/002_json.md](cli/format/002_json.md) |
+| format | 001 | text | [cli/format/01_text.md](cli/format/01_text.md) |
+| format | 002 | json | [cli/format/02_json.md](cli/format/02_json.md) |
 | standalone | 001 | Design Decisions | [001_design_decisions.md](001_design_decisions.md) |

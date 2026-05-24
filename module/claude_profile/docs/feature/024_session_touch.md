@@ -23,7 +23,7 @@ When `touch::1`, after the initial quota fetch the command identifies accounts w
 results = fetch_all_quota(credential_store, live_creds_file)
 
 if touch_param == 1:
-    original_active = read_file(credential_store / "_active")
+    original_active = read_file(credential_store / active_marker_filename())
     for each account_quota in results:
         if account_quota.result is Ok
            AND account_quota.five_hour_resets_at is None:
@@ -58,7 +58,7 @@ render results as table
 - **AC-03**: After a successful touch, the account's quota is re-fetched and the table shows a concrete `5h Reset` value instead of `—`.
 - **AC-04**: Accounts with errored quota fetch (expired token, auth error, etc.) are never touched — the trigger requires a successful quota result with missing `resets_at`.
 - **AC-05**: When both `refresh::1` and `touch::1` are active, refresh runs first; touch runs on post-refresh results.
-- **AC-06**: After all touch operations complete, the original `_active` account is restored.
+- **AC-06**: After all touch operations complete, the original active account is restored.
 - **AC-07**: If the touch subprocess fails, the account's row shows its original quota data unchanged (touch failure is non-aborting).
 - **AC-08**: `touch::` does not affect `format::json` output structure — touched accounts appear as normal data objects with their re-fetched quota.
 - **AC-09**: When `trace=true`, touch operations emit `[trace]` lines showing the subprocess lifecycle (same format as refresh trace output).

@@ -14,7 +14,7 @@
 | Field | Source | Notes |
 |-------|--------|-------|
 | `name` | Filename stem | e.g. `alice@acme.com` from `alice@acme.com.credentials.json` |
-| `is_active` | Name matches `_active` marker content | `true` if name == contents of `{credential_store}/_active` |
+| `is_active` | Name matches per-machine active marker content | `true` if name == contents of per-machine active marker file |
 | `is_current` | `accessToken` matches `~/.claude/.credentials.json` | `true` for at most one account; `false` for all when credentials file unreadable |
 | `subscriptionType` | Credential file JSON field | Empty or absent → shown as `N/A` |
 | `rateLimitTier` | Credential file JSON field | Empty or absent → shown as `N/A` |
@@ -62,7 +62,7 @@ When all field toggles are disabled, only bare account name lines are printed (n
 
 - **AC-01**: Empty credential store returns `(no accounts configured)`, exit 0.
 - **AC-02**: Each entry reports `name`, `is_active`, `subscriptionType`, `rateLimitTier`, `expiresAt`, `email`; opt-in fields `display_name`, `role`, `billing`, `model` are available when enabled.
-- **AC-03**: The account matching `_active` marker has `is_active: true`; all others `false`.
+- **AC-03**: The account matching the per-machine active marker has `is_active: true`; all others `false`.
 - **AC-04**: `format::json` output is a valid JSON array.
 - **AC-05**: `name::EMAIL` scopes to single account; exit 2 if not found; exit 1 if invalid format.
 - **AC-06**: Field-presence toggles suppress individual lines from text output only.
@@ -84,7 +84,7 @@ When all field toggles are disabled, only bare account name lines are printed (n
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/account.rs` | `list()` — enumerates credential store, reads _active marker |
+| source | `src/account.rs` | `list()` — enumerates credential store, reads per-machine active marker |
 | source | `src/commands.rs` | `accounts_routine()` — CLI handler |
 | doc | [command/001_account.md](../cli/command/001_account.md#command--3-accounts) | CLI command specification |
 | doc | [tests/docs/cli/command/003_accounts.md](../../tests/docs/cli/command/003_accounts.md) | Integration test plan |

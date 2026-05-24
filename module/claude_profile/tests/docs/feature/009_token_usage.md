@@ -21,7 +21,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-13 | Invalid `cols::` column ID exits 1 with error | AC-23 | — |
 | FT-14 | Three-tier grouping: 🟢 before 🟡 before 🔴 independent of sort | AC-24 | — |
 | FT-15 | `format_duration_secs` capped to 2 significant time units | AC-25 | — |
-| FT-16 | Within 🟡 tier: session-exhausted (`5h Left ≤ 5%`) before weekly-exhausted | AC-26 | — |
+| FT-16 | Within 🟡 tier: h-exhausted (`5h Left ≤ 5%`) before weekly-exhausted | AC-26 | — |
 
 ### Test Case Index
 
@@ -42,7 +42,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-13 | Invalid cols:: column ID exits 1 | AC-23 | Column Modifiers |
 | FT-14 | Three-tier grouping preserved regardless of sort strategy | AC-24 | Three-Tier Grouping |
 | FT-15 | format_duration_secs shows at most 2 time components | AC-25 | Duration Format |
-| FT-16 | Session-exhausted 🟡 before weekly-exhausted 🟡 regardless of sort | AC-26 | Yellow Sub-Grouping |
+| FT-16 | h-exhausted 🟡 before weekly-exhausted 🟡 regardless of sort | AC-26 | Yellow Sub-Grouping |
 
 **Total:** 16 FT cases
 
@@ -111,7 +111,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Returns the index of `a@x.com` (higher expiry wins the tiebreaker when 5h utilization is equal). `b@x.com` is NOT returned.
 - **Exit:** n/a (unit test — function return assertion)
 - **Note:** TSK-184 deleted `find_recommendation()`; tiebreaker now verified via `find_next_for_strategy()` with `NextStrategy::Endurance`.
-- **Source fn:** ⏳ TBD (unit test of `find_next_for_strategy` in `src/usage.rs`)
+- **Source fn:** `test_ft06_009_endurance_tiebreaker_higher_expiry_wins` (in `src/usage.rs`)
 - **Source:** [009_token_usage.md AC-09](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -176,7 +176,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** Per-column emoji formatting applied to each value.
 - **Then:** Pct A produces a string with `🟢` prefix (e.g., `🟢 90%`). Pct B produces a string with `🟡` prefix (e.g., `🟡 3%`). Pct C produces `🟡` (boundary is inclusive for `🟡`).
 - **Exit:** n/a (unit test — string return assertion)
-- **Source fn:** ⏳ TBD (unit test of per-column emoji formatting in `src/usage.rs`)
+- **Source fn:** `test_ft11_009_per_column_emoji_prefix_three_cases` (in `src/usage.rs`)
 - **Source:** [009_token_usage.md AC-21](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -190,7 +190,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `cols::+sub`: stdout contains `Sub` in the table header. Exit 0.
   - `cols::+7d_son_reset`: stdout contains `7d Son Reset` in the table header. Exit 0.
 - **Exit:** 0
-- **Source fn:** ⏳ TBD
+- **Source fn:** `it107_ft12_cols_plus_reveals_sub_and_7d_son_reset_columns` (in `tests/cli/usage_test.rs`)
 - **Source:** [009_token_usage.md AC-22](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -201,7 +201,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `clp .usage cols::+not_a_real_column`
 - **Then:** Exit 1. Stderr contains an error message naming valid column IDs (e.g., `sub`, `7d_son_reset`).
 - **Exit:** 1
-- **Source fn:** ⏳ TBD
+- **Source fn:** `it072_cols_unknown_id_exit_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [009_token_usage.md AC-23](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -215,7 +215,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** Three-tier grouping applied with alphabetical sort within each tier.
 - **Then:** Output order is `carol@x.com` (🟢) → `bob@x.com` (🟡) → `alice@x.com` (🔴). The tier ordering 🟢 → 🟡 → 🔴 is preserved regardless of alphabetical order.
 - **Exit:** n/a (unit test — order assertion on sorted list)
-- **Source fn:** ⏳ TBD (unit test of three-tier grouping logic in `src/usage.rs`)
+- **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `src/usage.rs`)
 - **Source:** [009_token_usage.md AC-24](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -229,22 +229,22 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `format_duration_secs(n)` for each input.
 - **Then:** Returns `"1d 1h"` (minutes dropped; 2 units shown), `"3h 19m"` (seconds dropped; 2 units shown), `"23m"` (1 unit — within the cap). No input produces a 3-component string.
 - **Exit:** n/a (unit test — string return assertion)
-- **Source fn:** ⏳ TBD (unit test of `format_duration_secs` in `src/usage.rs`)
+- **Source fn:** `test_format_duration_secs_caps_at_two_units` (in `src/output.rs`)
 - **Source:** [009_token_usage.md AC-25](../../../../docs/feature/009_token_usage.md)
 
 ---
 
-### FT-16: Session-exhausted 🟡 before weekly-exhausted 🟡 regardless of sort
+### FT-16: h-exhausted 🟡 before weekly-exhausted 🟡 regardless of sort
 
 - **Given:** Unit test. Three `AccountQuota` structs all in 🟡 tier (plus one 🟢 as anchor). Input order: alphabetical.
   - `a@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=98.0` (2% left) → tier 🟡, **weekly-exhausted** sub-group
-  - `b@x.com`: `five_hour.utilization=99.0` (1% left), `seven_day.utilization=30.0` (70% left) → tier 🟡, **session-exhausted** sub-group
-  - `c@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=50.0` (50% left) → tier 🟡, **session-exhausted** sub-group (5h ≤ 5%)
+  - `b@x.com`: `five_hour.utilization=99.0` (1% left), `seven_day.utilization=30.0` (70% left) → tier 🟡, **h-exhausted** sub-group
+  - `c@x.com`: `five_hour.utilization=97.0` (3% left), `seven_day.utilization=50.0` (50% left) → tier 🟡, **h-exhausted** sub-group (5h ≤ 5%)
   - `d@x.com`: `five_hour.utilization=10.0` (90% left), `seven_day.utilization=10.0` (90% left) → tier 🟢
   - Alpha sort would produce: a → b → c → d. Three-tier would place d (🟢) first, then a, b, c (all 🟡), then any 🔴.
 - **When:** `render_text(&accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &ColsVisibility::default_set())`
-- **Then:** Output row order is: `d@x.com` (🟢), then among 🟡 — `b@x.com` and `c@x.com` (session-exhausted, in alpha order), then `a@x.com` (weekly-exhausted). `a@x.com` must appear AFTER both `b@x.com` and `c@x.com` despite being alpha-first.
-- **Edge case:** An account with both `5h Left ≤ 5%` AND `7d Left ≤ 5%` falls in the session-exhausted sub-group (verified by `c@x.com` if `seven_day.utilization` is set ≥ 95%).
+- **Then:** Output row order is: `d@x.com` (🟢), then among 🟡 — `b@x.com` and `c@x.com` (h-exhausted, in alpha order), then `a@x.com` (weekly-exhausted). `a@x.com` must appear AFTER both `b@x.com` and `c@x.com` despite being alpha-first.
+- **Edge case:** An account with both `5h Left ≤ 5%` AND `7d Left ≤ 5%` falls in the h-exhausted sub-group (verified by `c@x.com` if `seven_day.utilization` is set ≥ 95%).
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
 - **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (in `src/usage.rs`)
 - **Source:** [009_token_usage.md AC-26](../../../../docs/feature/009_token_usage.md)

@@ -7,11 +7,11 @@ Integration test planning for the `.account.delete` command. See [command/namesp
 | ID | Test Name | Category |
 |----|-----------|----------|
 | IT-1 | Delete removes credential file from account store | Basic Invocation |
-| IT-2 | Delete active account exits 0, credential file and _active marker removed | Active Account Deletion |
+| IT-2 | Delete active account exits 0, credential file and active marker removed | Active Account Deletion |
 | IT-3 | Delete nonexistent account exits 2 with "not found" message | Error Handling |
 | IT-4 | Delete with non-email name exits 1 | Validation |
 | IT-5 | `dry::1` prints action without removing file | Dry Run |
-| IT-6 | Delete preserves `_active` marker when deleting non-active account | Marker Preservation |
+| IT-6 | Delete preserves active marker when deleting non-active account | Marker Preservation |
 | IT-7 | Delete preserves other accounts in store | Isolation |
 | IT-8 | Delete with empty `name::` exits 1 | Validation |
 | IT-9 | After delete, `.accounts` no longer shows deleted account | Post-Condition |
@@ -41,7 +41,7 @@ Integration test planning for the `.account.delete` command. See [command/namesp
 
 ### IT-1: Delete removes credential file from account store
 
-- **Given:** Two accounts saved: `work@acme.com` (active) and `old@archive.com`. Both have `.credentials.json` files in `~/.persistent/claude/credential/`. `_active` marker reads `work@acme.com`.
+- **Given:** Two accounts saved: `work@acme.com` (active) and `old@archive.com`. Both have `.credentials.json` files in `~/.persistent/claude/credential/`. Active marker (`_active_{hostname}_{user}`) reads `work@acme.com`.
 - **When:** `clp .account.delete name::old@archive.com`
 - **Then:** `deleted account 'old@archive.com'` on stdout, exit 0.; account file removed from store
 - **Exit:** 0
@@ -49,11 +49,11 @@ Integration test planning for the `.account.delete` command. See [command/namesp
 
 ---
 
-### IT-2: Delete active account exits 0, credential file and `_active` marker removed
+### IT-2: Delete active account exits 0, credential file and active marker removed
 
-- **Given:** Account `work@acme.com` saved and active. `_active` marker reads `work@acme.com`.
+- **Given:** Account `work@acme.com` saved and active. Active marker (`_active_{hostname}_{user}`) reads `work@acme.com`.
 - **When:** `clp .account.delete name::work@acme.com`
-- **Then:** `deleted account 'work@acme.com'` on stdout, exit 0. Both `work@acme.com.credentials.json` and `_active` are absent from the store.
+- **Then:** `deleted account 'work@acme.com'` on stdout, exit 0. Both `work@acme.com.credentials.json` and the active marker (`_active_{hostname}_{user}`) are absent from the store.
 - **Exit:** 0
 - **Source:** [command/001_account.md — .account.delete](../../../../docs/cli/command/001_account.md#command--6-accountdelete)
 
@@ -89,11 +89,11 @@ Integration test planning for the `.account.delete` command. See [command/namesp
 
 ---
 
-### IT-6: Delete preserves `_active` marker when deleting non-active
+### IT-6: Delete preserves active marker when deleting non-active
 
-- **Given:** Two accounts saved: `work@acme.com` (active) and `old@archive.com`. `_active` marker reads `work@acme.com`. Record SHA-256 of `_active` before command.
+- **Given:** Two accounts saved: `work@acme.com` (active) and `old@archive.com`. Active marker (`_active_{hostname}_{user}`) reads `work@acme.com`. Record content of active marker before command.
 - **When:** `clp .account.delete name::old@archive.com`
-- **Then:** `deleted account 'old@archive.com'`, exit 0.; `_active` marker unchanged
+- **Then:** `deleted account 'old@archive.com'`, exit 0.; active marker unchanged
 - **Exit:** 0
 - **Source:** [command/001_account.md — .account.delete](../../../../docs/cli/command/001_account.md#command--6-accountdelete)
 

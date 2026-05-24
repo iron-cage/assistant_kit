@@ -32,7 +32,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-03 | HTTP 403 triggers `refresh_account_token` + retry | AC-19 | Auth Error Trigger |
 | FT-04 | 429 + non-expired local token passes through unchanged | AC-19 | Conditional 429 |
 | FT-05 | 429 + expired local token triggers `refresh_account_token` | AC-19 | Conditional 429 |
-| FT-06 | Live session updated first; `account::save()` propagates to store + `_active` | AC-20 | Write-back |
+| FT-06 | Live session updated first; `account::save()` propagates to store + active marker | AC-20 | Write-back |
 | FT-07 | Refresh failure in row; remaining accounts processed | AC-21 | Non-aborting |
 | FT-08 | `format::json` structure contains refreshed data unchanged | AC-22 | Format Interaction |
 | FT-09 | `refresh::` appears in `.usage --help` with default `1` | AC-23 | Help Output |
@@ -103,11 +103,11 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ---
 
-### FT-06: Live session updated first; `account::save()` propagates to store and `_active`
+### FT-06: Live session updated first; `account::save()` propagates to store and active marker
 
 - **Given:** One saved account whose credential is expired; `account::refresh_account_token()` returns `Some(new_creds)` (updated credentials from subprocess).
 - **When:** `clp .usage refresh::1`
-- **Then:** The live session file (`~/.claude/.credentials.json`) is overwritten with `new_json` first; then `account::save()` propagates to `{credential_store}/{name}.credentials.json`, the `_active` marker, and companion files; all writes complete before the retry `fetch_oauth_usage` call; subsequent reads of the per-account credential file yield the refreshed token.
+- **Then:** The live session file (`~/.claude/.credentials.json`) is overwritten with `new_json` first; then `account::save()` propagates to `{credential_store}/{name}.credentials.json`, the active marker (`_active_{hostname}_{user}`), and companion files; all writes complete before the retry `fetch_oauth_usage` call; subsequent reads of the per-account credential file yield the refreshed token.
 - **Exit:** 0
 - **Source fn:** `it032_lim_it_refresh_per_account` [live — requires credentials]
 - **Note:** BUG-165 fix; before the fix, only the persistent store was updated, leaving the live session stale.
@@ -184,9 +184,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ### FT-13: `original_active` account restored to live session after refresh cycle
 
-- **Given:** `_active` file contains `"alice@example.com"`; `alice@example.com.credentials.json` exists in the persistent store; `{fake_home}/.claude/` directory exists for the live session; one account `"bob@example.com"` has a 401 error but no credential file in the persistent store.
+- **Given:** Active marker (`_active_{hostname}_{user}`) contains `"alice@example.com"`; `alice@example.com.credentials.json` exists in the persistent store; `{fake_home}/.claude/` directory exists for the live session; one account `"bob@example.com"` has a 401 error but no credential file in the persistent store.
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), false)` is called (unit test context; equivalent to `clp .usage refresh::1` cycling through accounts)
-- **Then:** `switch_account("bob@example.com", ...)` fails and bob is skipped; after the loop, `switch_account("alice@example.com", store, paths)` runs (restore); `{store}/_active` contains `"alice@example.com"`; `{fake_home}/.claude/.credentials.json` contains alice's credential content.
+- **Then:** `switch_account("bob@example.com", ...)` fails and bob is skipped; after the loop, `switch_account("alice@example.com", store, paths)` runs (restore); `{store}/_active_{hostname}_{user}` contains `"alice@example.com"`; `{fake_home}/.claude/.credentials.json` contains alice's credential content.
 - **Source fn:** `test_apply_refresh_lifecycle_original_active_restored`
 - **Note:** BUG-165 regression guard; the restore call at `usage.rs:897-904` had zero unit test coverage before TSK-166.
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)

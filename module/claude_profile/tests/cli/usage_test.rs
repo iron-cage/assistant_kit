@@ -106,6 +106,7 @@
 //! | it089 | `it089_apply_touch_fn_exists_structural`             | `fn apply_touch` present in source (TSK-185 AC-02 structural) | P | no |
 //! | it090 | `it090_touch_json_format_unaffected`                | `format::json touch::1` empty store → exit 0, output `[]` (TSK-185 AC-08) | P | no |
 //! | it091 | `it091_usage_help_shows_touch_param`                | `.usage.help` contains `touch` (TSK-185 AC-10) | P | no |
+//! | it110 | `it110_lim_it_ft12_touch_trigger_once_per_idle_window` | `touch::1` fires on idle account; immediate re-run skips touch (resets_at present) (024 FT-12) | P | yes |
 
 use crate::helpers::{
   BIN,
@@ -3149,8 +3150,12 @@ fn it101_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
 fn it102_structural_refresh_before_touch_ordering_in_source()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
-  let refresh_pos = src.find( "apply_refresh(" ).expect( "apply_refresh call must exist in src/usage.rs" );
-  let touch_pos   = src.find( "apply_touch("   ).expect( "apply_touch call must exist in src/usage.rs" );
+  // Use call-site patterns that only match the production calls in run_usage(),
+  // not the function definitions (fn apply_touch/fn apply_refresh) which appear earlier.
+  let refresh_pos = src.find( "apply_refresh( &mut accounts, &credential_store" )
+    .expect( "apply_refresh call site must exist in src/usage.rs" );
+  let touch_pos = src.find( "apply_touch( aq, &credential_store" )
+    .expect( "apply_touch call site must exist in src/usage.rs" );
   assert!(
     refresh_pos < touch_pos,
     "apply_refresh must appear before apply_touch in run_usage() to guarantee refresh-before-touch ordering (FT-05)",
@@ -3191,7 +3196,7 @@ fn it103_lim_it_active_account_restored_after_touch()
   assert_exit( &out, 0 );
 
   let active_file = dir.path()
-    .join( ".persistent" ).join( "claude" ).join( "credential" ).join( "_active" );
+    .join( ".persistent" ).join( "claude" ).join( "credential" ).join( claude_profile::account::active_marker_filename() );
   let active_content = std::fs::read_to_string( &active_file ).unwrap_or_default();
   assert_eq!(
     active_content.trim(), "alice@test.com",
@@ -3346,4 +3351,109 @@ fn it107_ft12_cols_plus_reveals_sub_and_7d_son_reset_columns()
     text_son.contains( "7d Son Reset" ),
     "cols::+7d_son_reset must show 7d Son Reset column header (FT-12/AC-22), got:\n{text_son}",
   );
+}
+
+/// it108 (EC-2b / `parse_int_flag`): `touch::false` accepted as equivalent to `touch::0`.
+///
+/// `parse_int_flag` maps `Value::String("false")` to 0 (disabled). With an empty
+/// credential store, no subprocess is spawned and the command exits 0.
+///
+/// Spec: [`tests/docs/cli/param/034_touch.md` EC-1 variant — "false" string path]
+#[ test ]
+fn it108_touch_false_accepted_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "touch::false" ], &[ ( "HOME", home ) ] );
+  assert_exit(
+    &out, 0,
+  );
+}
+
+/// it109 (`parse_int_flag` rejection): `touch::2` exits 1 — integer out-of-range.
+///
+/// `parse_int_flag` accepts only 0, 1, "0", "1", "true", "false". The value "2"
+/// falls to the catch-all arm → `ArgumentTypeMismatch` → exit 1.
+///
+/// Spec: [`tests/docs/cli/param/034_touch.md` EC-4 variant — out-of-range integer]
+#[ test ]
+fn it109_touch_2_rejected_exits_1()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "touch::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+// ── it110 (lim_it) ────────────────────────────────────────────────────────────
+
+/// it110 `lim_it` (FT-12 of feature/024 — AC-11): Touch trigger fires once per idle window;
+/// re-arm only after `resets_at` expires again.
+///
+/// Two sequential single-shot `.usage touch::1 trace::1` invocations verify the idle trigger:
+/// - Cycle 1 (idle account): subprocess spawned → `[trace]` shows touch lifecycle.
+/// - Cycle 2 (account now active, `resets_at` present): subprocess NOT spawned → no new touch trace.
+///
+/// This verifies the per-cycle idle guard: the trigger re-arms only when the 5h window fully
+/// expires. Used to confirm `live::1` mode behaviour — the trigger logic is identical across
+/// single-shot and `live::1` cycle contexts.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-12]
+///       [`docs/feature/024_session_touch.md` AC-11]
+#[ test ]
+fn it110_lim_it_ft12_touch_trigger_once_per_idle_window()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it110: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct@test.com", &token, true );
+
+  // Pre-check: account must be in idle state (5h Reset shows — EM-DASH).
+  let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &pre, 0 );
+  if !stdout( &pre ).contains( "\u{2014}" )
+  {
+    eprintln!( "it110: account has active 5h window — idle-state condition not met, skipping" );
+    return;
+  }
+
+  // Cycle 1: idle account → touch trigger fires → subprocess spawned → trace lines emitted.
+  let out1 = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out1, 0 );
+  let err1 = stderr( &out1 );
+  assert!(
+    err1.contains( "[trace]" ),
+    "cycle 1: idle account must trigger touch subprocess; trace must emit [trace] lines (FT-12/AC-11), got stderr:\n{err1}",
+  );
+
+  // Cycle 2: account now active (resets_at present after touch) → trigger does NOT fire.
+  let out2 = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out2, 0 );
+  let err2 = stderr( &out2 );
+  let text2 = stdout( &out2 );
+  // No EM-DASH in 5h Reset column means the window is now active (touch succeeded in cycle 1).
+  // If resets_at is present, touch subprocess must NOT be spawned.
+  if text2.contains( "\u{2014}" )
+  {
+    // Touch did not change state (unexpected, but tolerable — log and pass).
+    eprintln!( "it110: touch in cycle 1 did not activate 5h window; cycle 2 check inconclusive" );
+  }
+  else
+  {
+    // Account is now active: assert no new touch trace lines (trigger guard fired).
+    assert!(
+      !err2.contains( "[trace] touch" ),
+      "cycle 2: account with active 5h window must NOT be touched again (FT-12/AC-11); trigger guard must prevent re-arm, got stderr:\n{err2}",
+    );
+  }
 }

@@ -68,5 +68,5 @@ clp .credentials.status format::json
 
 **Notes:**
 - Field-presence params only affect text output. `format::json` always includes all fields regardless of field-presence params.
-- `account::` reads the `_active` marker; shows `N/A` on machines where no account has ever been saved.
+- `account::` reads the per-machine active marker; shows `N/A` on machines where no account has ever been saved.
 - `saved::` counts `*.credentials.json` files in the credential store; shows `0` when the credential store is absent.

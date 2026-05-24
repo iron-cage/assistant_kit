@@ -35,7 +35,7 @@ interactive TTY and live Anthropic credentials. Those are covered by manual test
 
 ### IT-1: Missing `name::` with active account uses active account
 
-- **Given:** Account store contains `work@acme.com.credentials.json`. `_active` marker contains `work@acme.com`. `dry::1` used to avoid spawning claude.
+- **Given:** Account store contains `work@acme.com.credentials.json`. Per-machine active marker points to `work@acme.com`. `dry::1` used to avoid spawning claude.
 - **When:** `clp .account.relogin dry::1` (no `name::`)
 - **Then:** `[dry-run] would re-authenticate 'work@acme.com' via browser login` on stdout, exit 0. No state mutation.
 - **Exit:** 0
@@ -45,7 +45,7 @@ interactive TTY and live Anthropic credentials. Those are covered by manual test
 
 ### IT-2: Missing `name::` with no active account exits 2
 
-- **Given:** Account store contains `work@acme.com.credentials.json`. No `_active` marker present.
+- **Given:** Account store contains `work@acme.com.credentials.json`. No per-machine active marker present.
 - **When:** `clp .account.relogin`
 - **Then:** Error message on stderr containing "no active account" or equivalent, exit 2. No state mutation.
 - **Exit:** 2
@@ -75,9 +75,9 @@ interactive TTY and live Anthropic credentials. Those are covered by manual test
 
 ### IT-5: Dry run with explicit name prints action without mutation
 
-- **Given:** Account `work@acme.com` saved. Record SHA-256 of `work@acme.com.credentials.json` and `_active` before command.
+- **Given:** Account `work@acme.com` saved. Record SHA-256 of `work@acme.com.credentials.json` and the per-machine active marker before command.
 - **When:** `clp .account.relogin name::work@acme.com dry::1`
-- **Then:** `[dry-run] would re-authenticate 'work@acme.com' via browser login` on stdout, exit 0. No credential files modified; `_active` marker unchanged.
+- **Then:** `[dry-run] would re-authenticate 'work@acme.com' via browser login` on stdout, exit 0. No credential files modified; per-machine active marker unchanged.
 - **Exit:** 0
 - **Source:** [feature/019_account_relogin.md AC-01](../../../../docs/feature/019_account_relogin.md)
 
@@ -85,7 +85,7 @@ interactive TTY and live Anthropic credentials. Those are covered by manual test
 
 ### IT-6: Dry run with no name uses active account
 
-- **Given:** Account `work@acme.com` saved. `_active` = `work@acme.com`. `dry::1` used.
+- **Given:** Account `work@acme.com` saved. Per-machine active marker points to `work@acme.com`. `dry::1` used.
 - **When:** `clp .account.relogin dry::1`
 - **Then:** `[dry-run] would re-authenticate 'work@acme.com' via browser login` on stdout, exit 0. No credential files modified.
 - **Exit:** 0

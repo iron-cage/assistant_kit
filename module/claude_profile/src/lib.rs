@@ -130,7 +130,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".credentials.status", "Show live credential metadata without account store dependency",
     vec![
       reg_arg_opt( "format", Kind::String ).with_description( "Output format: `text` (default) or `json`" ),
-      bfd( "account", "Show account name from `_active` marker (default on)"   ),
+      bfd( "account", "Show account name from per-machine active marker (default on)"   ),
       bfd( "sub",     "Show subscription type from credentials (default on)"    ),
       bfd( "tier",    "Show rate-limit tier from credentials (default on)"      ),
       bfd( "token",   "Show OAuth token validity state (default on)"            ),
@@ -194,7 +194,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "prefer",    Kind::String  ).with_description( "Weekly quota column for strategies: `any` (default, min of both), `opus` (7d Left), `sonnet` (7d(Son))" ),
       reg_arg_opt( "next",      Kind::String  ).with_description( "Recommendation strategy: `endurance` (default), `drain`" ),
       reg_arg_opt( "cols",      Kind::String  ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default shows all except `sub` and `7d_son_reset`" ),
-      reg_arg_opt( "touch",     Kind::Integer ).with_description( "Activate idle 5h session windows via isolated subprocess for accounts with no active reset time (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "touch",     Kind::String  ).with_description( "Activate idle 5h session windows via isolated subprocess for accounts with no active reset time (0/false = off, default; 1/true = on)" ),
     ],
     Box::new( usage_routine          ) );
 }

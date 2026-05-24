@@ -11,10 +11,10 @@
 
 When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), the `refreshToken` itself is expired and cannot be renewed without user interaction. `.account.relogin` handles this recovery path by:
 
-**Name resolution**: When `name::` is omitted, the active account (`_active` marker) is used. If `name::` is omitted AND no `_active` marker exists, the command exits 2 with an actionable message. This follows invariant [006_param_defaults.md](../invariant/006_param_defaults.md): parameters must default to active context when possible.
+**Name resolution**: When `name::` is omitted, the active account (per-machine active marker) is used. If `name::` is omitted AND no per-machine active marker exists, the command exits 2 with an actionable message. This follows invariant [006_param_defaults.md](../invariant/006_param_defaults.md): parameters must default to active context when possible.
 
-1. Resolving `name::` via AccountSelector (full email or prefix), or reading the `_active` marker when `name::` is omitted → validate account exists.
-2. Snapshotting the current `_active` marker (best-effort; `None` when absent).
+1. Resolving `name::` via AccountSelector (full email or prefix), or reading the per-machine active marker when `name::` is omitted → validate account exists.
+2. Snapshotting the per-machine active marker (best-effort; `None` when absent).
 3. Calling `switch_account(name)` to copy the named account's credentials into `~/.claude/.credentials.json` so `claude` picks up its `refreshToken`.
 4. Spawning `claude` with **inherited TTY** (`stdin`/`stdout`/`stderr` connected) — the user completes browser re-authentication interactively.
 5. After `claude` exits: comparing `~/.claude/.credentials.json` content before and after. If changed → call `account::save(name)` to write the refreshed credentials back to the store.

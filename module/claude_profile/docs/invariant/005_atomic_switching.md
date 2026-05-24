@@ -4,7 +4,7 @@
 
 - **Purpose**: Prevent credential corruption on crash or power loss during account switches.
 - **Responsibility**: Documents the write-then-rename atomicity requirement for `switch_account()` (NFR-6).
-- **In Scope**: The atomic rename guarantee for `~/.claude/.credentials.json` writes; `_active` marker durability.
+- **In Scope**: The atomic rename guarantee for `~/.claude/.credentials.json` writes; active marker durability.
 - **Out of Scope**: What happens after switching (caller responsibility: terminate old processes, verify new account).
 
 ### Invariant Statement
@@ -17,10 +17,10 @@ Account switching (FR-9) must use write-then-rename to prevent credential corrup
 
 **Formal crash analysis:**
 - Crash after temp write, before rename → temp file cleaned up on restart; old credentials intact
-- Crash after rename, before `_active` update → new credentials active; `_active` marker stale (advisory only — not enforced by Claude Code)
+- Crash after rename, before `_active_{hostname}_{user}` update → new credentials active; active marker stale (advisory only — not enforced by Claude Code)
 - Crash during rename → OS guarantees rename is atomic on same filesystem (POSIX rename semantics)
 
-**`_active` marker:** Best-effort metadata. A stale `_active` after a crash is acceptable — `.credentials.json` is the authoritative state.
+**Active marker:** Best-effort metadata. A stale `_active_{hostname}_{user}` after a crash is acceptable — `.credentials.json` is the authoritative state.
 
 ### Enforcement Mechanism
 

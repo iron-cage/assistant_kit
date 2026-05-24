@@ -20,7 +20,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 | IT-11 | Save creates `{name}.claude.json` and `{name}.settings.json` snapshots when both sources exist | Metadata Snapshot |
 | IT-12 | Save succeeds when `~/.claude.json` absent — only credential file created | Metadata Snapshot / Best-Effort |
 | IT-13 | Save succeeds when `settings.json` absent — credential + `.claude.json` created, no `.settings.json` | Metadata Snapshot / Best-Effort |
-| IT-15 | Save writes `_active` marker — `.credentials.status` shows `Account: {name}` immediately after save | Active Marker |
+| IT-15 | Save writes active marker — `.credentials.status` shows `Account: {name}` immediately after save | Active Marker |
 | IT-16 | Save with path-unsafe chars in email local part (`/`, `\`) exits 1 | Validation |
 | IT-17 | Save writes `{name}.roles.json` when endpoint 005 returns org identity | Org Identity Snapshot |
 | IT-18 | Save succeeds even when endpoint 005 call fails — no `roles.json`, no error | Org Identity Snapshot / Best-Effort |
@@ -186,11 +186,11 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 ---
 
-### IT-15: Save writes `_active` marker — `.credentials.status` shows account immediately
+### IT-15: Save writes active marker — `.credentials.status` shows account immediately
 
-- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `{credential_store}/_active` does NOT exist.
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. No active marker (`_active_{hostname}_{user}`) exists in `{credential_store}`.
 - **When:** `clp .account.save name::work@acme.com`
-- **Then:** `{credential_store}/_active` contains the text `work@acme.com`. Subsequent `clp .credentials.status` shows `Account: work@acme.com` (not `N/A`).
+- **Then:** `{credential_store}/_active_{hostname}_{user}` contains the text `work@acme.com`. Subsequent `clp .credentials.status` shows `Account: work@acme.com` (not `N/A`).
 - **Exit:** 0
 - **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
 

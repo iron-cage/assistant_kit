@@ -24,10 +24,11 @@ The `name::` form continues to work unchanged — positional and explicit forms 
 **Prefix resolution (command layer):**
 When the `name` value contains no `@` character, the command resolves it as a prefix against saved account names. Resolution algorithm:
 1. Sort all saved account names alphabetically.
-2. Find all names that start with the given prefix string.
-3. Exactly one match → use the resolved full name (proceed as with an explicit `name::EMAIL`).
-4. Zero matches → exit 2 with "account not found: '{prefix}'".
-5. Two or more matches → exit 1 with "ambiguous prefix '{prefix}': matches {A}, {B}, ..." (up to first 3 shown).
+2. Check for an exact local-part match: if exactly one account's local part (the portion before `@`) equals the prefix string exactly, resolve to that account immediately. This prevents `i1` from being ambiguous when `i1@host`, `i11@host`, and `i12@host` all exist.
+3. Find all names that start with the given prefix string.
+4. Exactly one match → use the resolved full name (proceed as with an explicit `name::EMAIL`).
+5. Zero matches → exit 2 with "account not found: '{prefix}'".
+6. Two or more matches → exit 1 with "ambiguous prefix '{prefix}': matches {A}, {B}, ..." (up to first 3 shown).
 
 Prefix resolution applies AFTER positional rewriting: `clp .account.use car` → adapter rewrites to `name::car` → command resolves `car` → `carol@example.com`.
 
@@ -45,6 +46,7 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use car` →
 - **AC-08**: Existing `name::EMAIL` explicit form continues to work unchanged on all four commands.
 - **AC-09**: `clp .account.use alice@home.com dry::1` works — positional and `dry::` can be combined.
 - **AC-10**: The `print_usage()` Examples section shows `clp .account.use alice@acme.com` (without `name::` prefix).
+- **AC-11**: `clp .account.use i1` where `i1@wbox.pro`, `i11@wbox.pro`, and `i12@wbox.pro` all exist → exits 0 and switches to `i1@wbox.pro` (exact local-part match wins over longer prefix matches).
 
 ### Cross-References
 

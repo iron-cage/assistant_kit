@@ -86,4 +86,9 @@ Type compliance and validation tests for `SettingsKey`. See [type/04_settings_ke
 
 ### Source Functions
 
-Pending implementation. See [task 176](../../../../../task/claude_version/unverified/176_cli_type_test_surface.md).
+| Function | File |
+|----------|------|
+| `tc_settings_key_empty_exits_1` | `cli_args_test.rs` |
+| `tc_settings_key_absent_exits_1` | `cli_args_test.rs` |
+| `tc_settings_key_dot_literal` | `cli_args_test.rs` |
+| `tc_settings_key_valid_accepted` | `cli_args_test.rs` |

@@ -22,7 +22,7 @@ results = fetch_all_quota(credential_store, live_creds_file)   // all accounts
 
 if refresh_param == 1:
     now_secs = current_unix_timestamp()
-    original_active = read_file(credential_store / "_active")   // snapshot for restore
+    original_active = read_file(credential_store / active_marker_filename())   // snapshot for restore
     for each account_quota in results where should_refresh(account_quota, now_secs):
         // should_refresh returns true for:
         //   - result is auth_error("401") or auth_error("403")
@@ -62,7 +62,7 @@ render results as table
 
 **Retry semantics:** Exactly one retry per account per invocation. If the retried `fetch_oauth_usage` also fails, the final error is shown in the account's row — the table continues processing remaining accounts (non-aborting).
 
-**Credential write-back:** When `run_isolated` returns `credentials: Some(new_json)`, the live session file (`~/.claude/.credentials.json`) is overwritten with `new_json`, then `account::save()` copies it to `{credential_store}/{name}.credentials.json` and updates the `_active` marker and companion files atomically. This ensures the live session, persistent store, and companion files are all consistent after a successful refresh. See [BUG-165](../../../../task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md) — the previous implementation wrote only to the persistent store, leaving the live session stale.
+**Credential write-back:** When `run_isolated` returns `credentials: Some(new_json)`, the live session file (`~/.claude/.credentials.json`) is overwritten with `new_json`, then `account::save()` copies it to `{credential_store}/{name}.credentials.json` and updates the per-machine active marker and companion files atomically. This ensures the live session, persistent store, and companion files are all consistent after a successful refresh. See [BUG-165](../../../../task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md) — the previous implementation wrote only to the persistent store, leaving the live session stale.
 
 **Subprocess trigger mechanism:** `run_isolated` must be invoked with `["--print", "."]` so Claude Code performs its startup OAuth token refresh before making the API call. At process startup, Claude Code refreshes the OAuth access token if expired — writing updated credentials to `$HOME/.claude/.credentials.json` — then attempts the `--print .` API call. The API call may succeed, fail, or time out, but credentials are written at startup regardless. The `isolated.rs` `issue-isolated-credentials-on-timeout` fix handles timeout exactly: when the credentials file changes before the 35-second timeout fires, `run_isolated` returns `Ok(IsolatedRunResult { credentials: Some(new_json), exit_code: -1 })` — the updated credentials are captured even when the subprocess was terminated by timeout.
 
@@ -81,7 +81,7 @@ Two other arg combinations are broken and must not be used:
 - **AC-18**: `refresh::0` produces no calls to `run_isolated`; `.usage` behavior is unchanged from the baseline. Use `refresh::0` to explicitly disable the default refresh behavior.
 - **AC-19**: `refresh::1` (default) invokes `claude_profile_core::account::refresh_account_token()` (which internally calls `claude_runner_core::run_isolated()`) for any account whose `fetch_oauth_usage` returns an HTTP authentication error (401 or 403), or an HTTP 429 rate-limit error when the per-account credential file has a locally-expired `expiresAt`. HTTP 429 with a non-expired local token is passed through unchanged.
 - **AC-24**: The `refresh::` parameter description in `.usage --help` documents the conditional 429 case ("429 when token is locally expired") and does NOT describe 429 as unconditionally excluded from refresh.
-- **AC-20**: When `run_isolated` returns `credentials: Some(new_json)`, the live session file is updated first, then `account::save()` propagates the new credentials to the persistent store, `_active` marker, and companion files before the retry fetch.
+- **AC-20**: When `run_isolated` returns `credentials: Some(new_json)`, the live session file is updated first, then `account::save()` propagates the new credentials to the persistent store, per-machine active marker, and companion files before the retry fetch.
 - **AC-21**: If the refresh attempt fails (subprocess error, or retried fetch still fails), the account's row shows the final error; the remaining accounts are still processed and the table is still rendered.
 - **AC-22**: `refresh::` does not affect `format::json` output structure — refreshed accounts appear as normal data objects, failed-refresh accounts appear as error objects.
 - **AC-23**: The `refresh::` parameter appears in `.usage --help` output with its default value (`1`).

@@ -121,4 +121,13 @@ Type compliance and validation tests for `SettingsValue`. See [type/05_settings_
 
 ### Source Functions
 
-Pending implementation. See [task 176](../../../../../task/claude_version/unverified/176_cli_type_test_surface.md).
+| Function | File |
+|----------|------|
+| `tc_settings_value_bool_true_inferred` | `integration/mutation_commands_test.rs` |
+| `tc_settings_value_bool_false_inferred` | `integration/mutation_commands_test.rs` |
+| `tc_settings_value_integer_inferred` | `integration/mutation_commands_test.rs` |
+| `tc_settings_value_float_inferred` | `integration/mutation_commands_test.rs` |
+| `tc_settings_value_string_fallback` | `integration/mutation_commands_test.rs` |
+| `tc_settings_value_nan_as_string` | `integration/mutation_commands_test.rs` |
+| `tc_settings_value_empty_exits_1` | `cli_args_test.rs` |
+| `tc_settings_value_absent_exits_1` | `cli_args_test.rs` |
