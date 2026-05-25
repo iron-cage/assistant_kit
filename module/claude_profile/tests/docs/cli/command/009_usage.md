@@ -71,6 +71,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-62 | `touch::0` accepted; empty store exits 0 | Touch Param |
 | IT-63 | `touch::1` with no-token accounts — errored accounts never touched | Touch Param |
 | IT-64 | `.usage.help` lists `touch` param with default `1` | Help Output |
+| IT-65 | `sort::next` accepted with empty store → exit 0 | Sort Acceptance |
 | IT-66 | `imodel::auto` accepted; empty store exits 0 | imodel Param |
 | IT-67 | `imodel::bogus` → exit 1, stderr names all four valid values | imodel Param |
 | IT-68 | `effort::auto` accepted; empty store exits 0 | effort Param |
@@ -116,7 +117,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - imodel Param: 2 tests (IT-66, IT-67)
 - effort Param: 2 tests (IT-68, IT-69)
 
-**Total:** 82 spec entries (IT-1 through IT-70, skipping IT-66–IT-70 gap — sequential); IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
+**Total:** 82 spec entries (IT-1 through IT-70); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
 
 ---
 

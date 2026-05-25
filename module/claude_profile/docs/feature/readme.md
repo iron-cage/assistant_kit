@@ -36,5 +36,5 @@
 | 023 | [Next Account Recommendation Strategies](023_next_account_strategies.md) | Configurable account recommendation in `.usage` output — `next::` parameter with `drain` (default), `endurance` strategies; always-visible 2-strategy footer | ✅ |
 | 024 | [Session Touch via Isolated Subprocess](024_session_touch.md) | Keep active accounts' 5h session windows alive by sending minimal prompt via isolated subprocess; `touch::` parameter | ✅ |
 | 025 | [Per-Machine Active Marker](025_per_machine_active_marker.md) | Machine-specific `_active_{hostname}_{user}` marker; exact local-part prefix resolution | ✅ |
-| 026 | [Subprocess Model and Effort Control](026_subprocess_model_effort.md) | `imodel::` and `effort::` parameters; per-account auto model selection (30% threshold); effort resolution | 📋 |
+| 026 | [Subprocess Model and Effort Control](026_subprocess_model_effort.md) | `imodel::` and `effort::` parameters; per-account auto model selection (30% threshold); effort resolution | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

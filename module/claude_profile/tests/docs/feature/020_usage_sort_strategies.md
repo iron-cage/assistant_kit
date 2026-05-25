@@ -207,7 +207,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0)` — default strategy is `drain`.
 - **Then:** `low@test.com` (least 5h quota remaining) ranks first, `high@test.com` second.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_drain_default_equals_desc0`
+- **Source fn:** `test_sort_drain_default_equals_desc0`, `it127_sort_default_is_drain_structural` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -247,5 +247,5 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then-A:** Exits 0 with "(no accounts configured)". `sort::next` resolves to `sort::drain` and is accepted without error.
 - **Then-B:** Exits 0 with "(no accounts configured)". `sort::next` resolves to `sort::endurance` and is accepted without error.
 - **Exit:** 0 both cases
-- **Source fn:** `it111_sort_next_accepted`
+- **Source fn:** `it111_sort_next_accepted`, `it128_sort_next_resolves_to_drain_structural`, `it129_sort_next_resolves_to_endurance_structural` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-15](../../../../docs/feature/020_usage_sort_strategies.md)

@@ -194,7 +194,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "prefer",    Kind::String  ).with_description( "Weekly quota column for strategies: `any` (default, min of both), `opus` (7d Left), `sonnet` (7d(Son))" ),
       reg_arg_opt( "next",      Kind::String  ).with_description( "Recommendation strategy: `drain` (default), `endurance`" ),
       reg_arg_opt( "cols",      Kind::String  ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default shows all except `sub` and `7d_son_reset`" ),
-      reg_arg_opt( "touch",  Kind::String  ).with_description( "Activate idle 5h session windows via isolated subprocess for accounts with no active reset time (0/false = off; 1/true = on, default)" ),
+      reg_arg_opt( "touch",  Kind::String  ).with_description( "Extend active 5h session windows via isolated subprocess for accounts with an active reset countdown (0/false = off; 1/true = on, default)" ),
       reg_arg_opt( "imodel", Kind::String  ).with_description( "Subprocess model for touch/refresh: `auto` (default, ≥30% 7d(Son) remaining → sonnet, else → opus), `sonnet` (claude-sonnet-4-6), `opus` (claude-opus-4-6), `keep` (no --model flag)" ),
       reg_arg_opt( "effort", Kind::String  ).with_description( "Subprocess effort level: `auto` (default, max for model: high for Sonnet, max for Opus), `high` (always --effort high), `max` (always --effort max)" ),
     ],

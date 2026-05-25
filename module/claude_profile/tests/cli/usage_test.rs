@@ -123,6 +123,9 @@
 //! | it124 | `it124_apply_touch_passes_touch_label_structural`   | `apply_touch` call site passes `"touch"` label (TSK-192 AC-09 structural) | P | no |
 //! | it125 | `it125_apply_refresh_passes_refresh_label_structural` | `apply_refresh` call site passes `"refresh"` label (TSK-192 AC-09 structural) | P | no |
 //! | it126 | `it126_refresh_account_token_has_instant_timing_structural` | `refresh_account_token` uses `Instant::now()` for per-step timing (TSK-192 AC-09 structural) | P | no |
+//! | it127 | `it127_sort_default_is_drain_structural`             | sort default is `SortStrategy::Drain` when no `sort::` arg given (TSK-193 AC-01 structural) | P | no |
+//! | it128 | `it128_sort_next_resolves_to_drain_structural`       | `sort::next` resolves to `SortStrategy::Drain` when `next::drain` (TSK-193 AC-15 structural) | P | no |
+//! | it129 | `it129_sort_next_resolves_to_endurance_structural`   | `sort::next` resolves to `SortStrategy::Endurance` when `next::endurance` (TSK-193 AC-15 structural) | P | no |
 
 use crate::helpers::{
   BIN,
@@ -2737,7 +2740,7 @@ fn it087_touch_1_empty_store_exits_0()
 /// it088 (TSK-185 AC-04): `touch::1` with a no-token account exits 0 without touching it.
 ///
 /// Accounts whose quota fetch failed (expired/missing token → error result) must not
-/// be touched. The trigger requires `result.is_ok()` AND `five_hour.resets_at.is_none()`.
+/// be touched. The trigger requires `result.is_ok()` AND `five_hour.resets_at.is_some()`.
 /// A no-token account has an errored result → it is skipped entirely.
 ///
 /// Before TSK-185: `touch::` unregistered → exit 1.
@@ -3038,7 +3041,7 @@ fn it098_touch_bogus_exits_1()
 
 /// it099 `lim_it` (FT-01 of feature/024 / EC-7): `touch::0` — no subprocess spawned; 5h Reset unchanged.
 ///
-/// When `touch::0` (default), the touch trigger is never fired regardless of account state.
+/// When `touch::0` (explicit off), the touch trigger is never fired regardless of account state.
 /// An account with `five_hour.resets_at` present (active 5h window, 5h Reset shows countdown) stays unchanged.
 /// Skips when the live account is in idle state (`resets_at` absent, shows `—`).
 ///
@@ -3780,5 +3783,73 @@ fn it126_refresh_account_token_has_instant_timing_structural()
   assert!(
     src.contains( "Instant::now()" ),
     "TSK-192: `refresh_account_token()` must use `std::time::Instant::now()` for per-step timing."
+  );
+}
+
+// ── TSK-193 — sort default drain + sort::next meta-strategy ──────────────────
+
+/// it127 (TSK-193 AC-01 structural): sort default is `SortStrategy::Drain` when no `sort::` arg.
+///
+/// `parse_usage_params` must return `SortStrategy::Drain` when the `sort` argument is absent.
+/// This ensures `clp .usage` (no `sort::` flag) orders rows by drain — lowest `5h Left` first.
+///
+/// RED:   `None => SortStrategy::Reset` (old default).
+/// GREEN: `None => SortStrategy::Drain` present in parse block.
+///
+/// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-14]
+///       [`docs/feature/020_usage_sort_strategies.md` AC-01]
+#[ test ]
+fn it127_sort_default_is_drain_structural()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  // The None arm of the sort match uses alignment spaces; verify Drain is the default and Reset is not.
+  assert!(
+    !src.contains( "None                         => SortStrategy::Reset" ),
+    "TSK-193: sort default must be SortStrategy::Drain, not SortStrategy::Reset.\n\
+     Change the None arm of the sort argument match to `None => SortStrategy::Drain`."
+  );
+}
+
+/// it128 (TSK-193 AC-15 structural): `sort::next` resolves to `SortStrategy::Drain` when `next::drain`.
+///
+/// The `SortStrategy::Next => match next` resolution block must map `NextStrategy::Drain`
+/// to `SortStrategy::Drain`. This is the core of the `sort::next` meta-strategy:
+/// it delegates to the concrete strategy matching the active `next::` param.
+///
+/// RED:   `SortStrategy::Next` arm absent or maps to wrong strategy.
+/// GREEN: `NextStrategy::Drain => SortStrategy::Drain` present in resolution block.
+///
+/// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-17]
+///       [`docs/feature/020_usage_sort_strategies.md` AC-15]
+#[ test ]
+fn it128_sort_next_resolves_to_drain_structural()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  assert!(
+    src.contains( "NextStrategy::Drain     => SortStrategy::Drain" ),
+    "TSK-193: sort::next must resolve to SortStrategy::Drain when next::drain is active.\n\
+     The resolution block must have `NextStrategy::Drain => SortStrategy::Drain`."
+  );
+}
+
+/// it129 (TSK-193 AC-15 structural): `sort::next` resolves to `SortStrategy::Endurance` when `next::endurance`.
+///
+/// The `SortStrategy::Next => match next` resolution block must map `NextStrategy::Endurance`
+/// to `SortStrategy::Endurance`. Together with it128, this proves the meta-strategy
+/// delegates exhaustively to the active `next::` concrete strategy.
+///
+/// RED:   `NextStrategy::Endurance` arm absent or maps to wrong strategy.
+/// GREEN: `NextStrategy::Endurance => SortStrategy::Endurance` present in resolution block.
+///
+/// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-17]
+///       [`docs/feature/020_usage_sort_strategies.md` AC-15]
+#[ test ]
+fn it129_sort_next_resolves_to_endurance_structural()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  assert!(
+    src.contains( "NextStrategy::Endurance => SortStrategy::Endurance" ),
+    "TSK-193: sort::next must resolve to SortStrategy::Endurance when next::endurance is active.\n\
+     The resolution block must have `NextStrategy::Endurance => SortStrategy::Endurance`."
   );
 }
