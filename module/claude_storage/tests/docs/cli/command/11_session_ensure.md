@@ -2,200 +2,272 @@
 
 Integration tests for the `.session.ensure` command. Tests verify directory creation, strategy detection, strategy forcing, two-line output format, and validation.
 
-**Source:** [001_commands.md#command--11-session-ensure](../../../../docs/cli/001_commands.md#command--11-session-ensure)
+**Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
 
 ## Test Case Index
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | path:: required — missing returns error | Validation |
-| IT-2 | Creates directory when it does not exist | Directory Creation |
-| IT-3 | Does not fail if directory already exists | Idempotency |
-| IT-4 | Auto-detects resume when history exists | Strategy Detection |
-| IT-5 | Auto-detects fresh when no history | Strategy Detection |
-| IT-6 | Output line 1 is absolute session dir path | Output Format |
-| IT-7 | Output line 2 is strategy (resume or fresh) | Output Format |
-| IT-8 | strategy::resume forces resume even when no history | Strategy Forcing |
-| IT-9 | strategy::fresh forces fresh even when history exists | Strategy Forcing |
-| IT-10 | Default topic is default_topic | Topic Defaults |
-| IT-11 | Custom topic produces {base}/-{topic} | Topic Handling |
-| IT-12 | Empty topic:: rejected | Validation |
-| IT-13 | topic:: with slash rejected | Validation |
-| IT-14 | Invalid strategy:: rejected | Validation |
-| IT-15 | Exits with code 0 on success | Exit Codes |
+| INT-1 | path:: required — missing returns error | Validation |
+| INT-2 | Creates directory when it does not exist | Directory Creation |
+| INT-3 | Does not fail if directory already exists | Idempotency |
+| INT-4 | Auto-detects resume when history exists | Strategy Detection |
+| INT-5 | Auto-detects fresh when no history | Strategy Detection |
+| INT-6 | Output line 1 is absolute session dir path | Output Format |
+| INT-7 | Output line 2 is strategy (resume or fresh) | Output Format |
+| INT-8 | strategy::resume forces resume even when no history | Strategy Forcing |
+| INT-9 | strategy::fresh forces fresh even when history exists | Strategy Forcing |
+| INT-10 | Default topic is default_topic | Topic Defaults |
+| INT-11 | Custom topic produces {base}/-{topic} | Topic Handling |
+| INT-12 | Empty topic:: rejected | Validation |
+| INT-13 | topic:: with slash rejected | Validation |
+| INT-14 | Invalid strategy:: rejected | Validation |
+| INT-15 | Exits with code 0 on success | Exit Codes |
 
 ## Test Coverage Summary
 
-- Validation: 4 tests (IT-1, IT-12, IT-13, IT-14)
-- Directory Creation: 1 test (IT-2)
-- Idempotency: 1 test (IT-3)
-- Strategy Detection: 2 tests (IT-4, IT-5)
-- Output Format: 2 tests (IT-6, IT-7)
-- Strategy Forcing: 2 tests (IT-8, IT-9)
-- Topic Defaults: 1 test (IT-10)
-- Topic Handling: 1 test (IT-11)
-- Exit Codes: 1 test (IT-15)
+- Validation: 4 tests (INT-1, INT-12, INT-13, INT-14)
+- Directory Creation: 1 test (INT-2)
+- Idempotency: 1 test (INT-3)
+- Strategy Detection: 2 tests (INT-4, INT-5)
+- Output Format: 2 tests (INT-6, INT-7)
+- Strategy Forcing: 2 tests (INT-8, INT-9)
+- Topic Defaults: 1 test (INT-10)
+- Topic Handling: 1 test (INT-11)
+- Exit Codes: 1 test (INT-15)
 
 ## Test Cases
 
 ---
 
-### IT-1: path:: required — missing returns error
+### INT-1: path:: required — missing returns error
 
-- **Given:** clean environment
-- **When:** `clg .session.ensure`
-- **Then:** Error on stderr about missing path; exit code 1.; error about required path
-- **Exit:** 1
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.ensure
+```
 
----
-
-### IT-2: Creates directory when it does not exist
-
-- **Given:** Create a TempDir as HOME and as base path. Session dir does not exist yet.
-- **When:** `clg .session.ensure path::{base}`
-- **Then:** Two lines; the session directory is created.; + directory created
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Expected behavior:**
+- Error message on stderr about missing path
+- Exit code: 1
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
 
 ---
 
-### IT-3: Does not fail if directory already exists
+### INT-2: Creates directory when it does not exist
 
-- **Given:** Pre-create `{base}/-default_topic` directory.
-- **When:** `clg .session.ensure path::{base}`
-- **Then:** Two lines; exit code 0.; on re-invocation with existing directory
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.ensure path::{base}
+```
 
----
-
-### IT-4: Auto-detects resume when history exists
-
-- **Given:** Create a TempDir as HOME; create `~/.claude/projects/{encoded_session_dir}/` with a non-empty `.jsonl` file.
-- **When:** `clg .session.ensure path::{base} topic::{topic}`
-- **Then:** ```
-{base}/-{topic}
-resume
-```; + line 2 is "resume"
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Expected behavior:**
+- Fixture: create a TempDir as HOME and as base path; session dir does not exist yet
+- Two lines on stdout; the session directory is created on disk
+- Exit code: 0
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
 
 ---
 
-### IT-5: Auto-detects fresh when no history
+### INT-3: Does not fail if directory already exists
 
-- **Given:** Create a TempDir as HOME; no matching project in storage.
-- **When:** `clg .session.ensure path::{base}`
-- **Then:** ```
-{base}/-default_topic
-fresh
-```; + line 2 is "fresh"
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.ensure path::{base}
+```
 
----
-
-### IT-6: Output line 1 is absolute session dir path
-
-- **Given:** clean environment
-- **When:** `clg .session.ensure path::/home/user/project topic::work`
-- **Then:** Line 1 is `/home/user/project/-work`.; line 1 is absolute filesystem path to session dir
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Expected behavior:**
+- Fixture: pre-create `{base}/-default_topic` directory
+- Two lines on stdout; no failure on re-invocation with existing directory
+- Exit code: 0
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
 
 ---
 
-### IT-7: Output line 2 is strategy (resume or fresh)
+### INT-4: Auto-detects resume when history exists
 
-- **Given:** Any valid invocation.
-- **When:** `clg .session.ensure path::{base}`
-- **Then:** Line 2 is either `resume` or `fresh` (no other values).; line 2 is exactly "resume" or "fresh"
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.ensure path::{base} topic::{topic}
+```
 
----
-
-### IT-8: strategy::resume forces resume even when no history
-
-- **Given:** Create a TempDir as HOME; no matching project in storage (would normally be `fresh`).
-- **When:** `clg .session.ensure path::{base} strategy::resume`
-- **Then:** ```
-{base}/-default_topic
-resume
-```; + line 2 is "resume" despite no history
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Expected behavior:**
+- Fixture: create a TempDir as HOME; create `~/.claude/projects/{encoded_session_dir}/` with a non-empty `.jsonl` file
+- Output:
+  ```
+  {base}/-{topic}
+  resume
+  ```
+- Exit code: 0
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
 
 ---
 
-### IT-9: strategy::fresh forces fresh even when history exists
+### INT-5: Auto-detects fresh when no history
 
-- **Given:** Create a TempDir as HOME; create storage history for the session directory.
-- **When:** `clg .session.ensure path::{base} topic::{topic} strategy::fresh`
-- **Then:** ```
-{base}/-{topic}
-fresh
-```; + line 2 is "fresh" despite existing history
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.ensure path::{base}
+```
 
----
-
-### IT-10: Default topic is default_topic
-
-- **Given:** clean environment
-- **When:** `clg .session.ensure path::/home/user/project`
-- **Then:** Line 1 ends with `/-default_topic`.; line 1 uses `default_topic` as default topic suffix
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Expected behavior:**
+- Fixture: create a TempDir as HOME; no matching project in storage
+- Output:
+  ```
+  {base}/-default_topic
+  fresh
+  ```
+- Exit code: 0
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
 
 ---
 
-### IT-11: Custom topic produces {base}/-{topic}
+### INT-6: Output line 1 is absolute session dir path
 
-- **Given:** clean environment
-- **When:** `clg .session.ensure path::/home/user/project topic::work`
-- **Then:** Line 1 is `/home/user/project/-work`.; line 1 reflects custom topic
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.ensure path::/home/user/project topic::work
+```
 
----
-
-### IT-12: Empty topic:: rejected
-
-- **Given:** clean environment
-- **When:** `clg .session.ensure path::/home/user/project topic::`
-- **Then:** Error about empty topic; exit code 1.; + error about empty topic
-- **Exit:** 1
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Expected behavior:**
+- Line 1 is `/home/user/project/-work`
+- Exit code: 0
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
 
 ---
 
-### IT-13: topic:: with slash rejected
+### INT-7: Output line 2 is strategy (resume or fresh)
 
-- **Given:** clean environment
-- **When:** `clg .session.ensure path::/home/user/project topic::a/b`
-- **Then:** Error about path separators; exit code 1.; + error about slash in topic
-- **Exit:** 1
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.ensure path::{base}
+```
 
----
-
-### IT-14: Invalid strategy:: rejected
-
-- **Given:** clean environment
-- **When:** `clg .session.ensure path::/home/user/project strategy::auto`
-- **Then:** Error about invalid strategy; exit code 1.; + error about invalid strategy value
-- **Exit:** 1
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Expected behavior:**
+- Fixture: any valid invocation
+- Line 2 is either `resume` or `fresh` (no other values)
+- Exit code: 0
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
 
 ---
 
-### IT-15: Exits with code 0 on success
+### INT-8: strategy::resume forces resume even when no history
 
-- **Given:** Valid base directory; any topic.
-- **When:** `clg .session.ensure path::{valid_base}`
-- **Then:** Two lines; exit code 0.; on success
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.ensure path::{base} strategy::resume
+```
+
+**Expected behavior:**
+- Fixture: create a TempDir as HOME; no matching project in storage (would normally be `fresh`)
+- Output:
+  ```
+  {base}/-default_topic
+  resume
+  ```
+- Exit code: 0
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
+
+---
+
+### INT-9: strategy::fresh forces fresh even when history exists
+
+**Command:**
+```
+clg .session.ensure path::{base} topic::{topic} strategy::fresh
+```
+
+**Expected behavior:**
+- Fixture: create a TempDir as HOME; create storage history for the session directory
+- Output:
+  ```
+  {base}/-{topic}
+  fresh
+  ```
+- Exit code: 0
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
+
+---
+
+### INT-10: Default topic is default_topic
+
+**Command:**
+```
+clg .session.ensure path::/home/user/project
+```
+
+**Expected behavior:**
+- Line 1 ends with `/-default_topic`
+- Exit code: 0
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
+
+---
+
+### INT-11: Custom topic produces {base}/-{topic}
+
+**Command:**
+```
+clg .session.ensure path::/home/user/project topic::work
+```
+
+**Expected behavior:**
+- Line 1 is `/home/user/project/-work`
+- Exit code: 0
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
+
+---
+
+### INT-12: Empty topic:: rejected
+
+**Command:**
+```
+clg .session.ensure path::/home/user/project topic::
+```
+
+**Expected behavior:**
+- Error message on stderr about empty topic
+- Exit code: 1
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
+
+---
+
+### INT-13: topic:: with slash rejected
+
+**Command:**
+```
+clg .session.ensure path::/home/user/project topic::a/b
+```
+
+**Expected behavior:**
+- Error message on stderr about path separators in topic
+- Exit code: 1
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
+
+---
+
+### INT-14: Invalid strategy:: rejected
+
+**Command:**
+```
+clg .session.ensure path::/home/user/project strategy::auto
+```
+
+**Expected behavior:**
+- Error message on stderr about invalid strategy value
+- Exit code: 1
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)
+
+---
+
+### INT-15: Exits with code 0 on success
+
+**Command:**
+```
+clg .session.ensure path::{valid_base}
+```
+
+**Expected behavior:**
+- Fixture: valid base directory; any topic
+- Two lines on stdout
+- Exit code: 0
+- **Source:** [command/11_session_ensure.md](../../../../docs/cli/command/11_session_ensure.md)

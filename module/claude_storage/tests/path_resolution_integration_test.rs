@@ -1,6 +1,6 @@
 //! Integration test for path resolution in list command
 //!
-//! Verifies that `claude_storage .list path::.` correctly finds projects
+//! Verifies that `claude_storage .list ``path::``.` correctly finds projects
 //! in the current working directory using the smart path resolution.
 
 mod common;

@@ -6,11 +6,11 @@
 - **Actor:** null
 - **Claimed At:** null
 - **Reopen Count:** 0
-- **State:** 🎯 (Verified)
+- **State:** ✅ (Complete)
 - **Closes:** null
 - **Blocked Reason:** null
-- **Validated By:** null
-- **Validation Date:** null
+- **Validated By:** independent Agent subagent (3 rounds)
+- **Validation Date:** 2026-05-25
 
 ## Goal
 
@@ -290,9 +290,24 @@ Task is complete when ALL of the following hold:
 - `tests/docs/feature/` — new spec file created
 - `tests/docs/operation/` — new spec file created
 
+## Outcomes
+
+- **AC-001:** 0 three-digit-prefixed spec files remain (was 38 — command/11 + param/22 + param_group/5 renamed across prior sessions; user_story/5 renamed 2026-05-25)
+- **AC-002:** `tests/docs/feature/01_cli_tool.md` exists with 20 FT- cases
+- **AC-003:** `tests/docs/operation/01_migration_guide.md` exists with 17 OP- cases
+- **AC-004:** All 22 param spec files contain `Commands:` field (0 missing)
+- **AC-005:** 0 EC- headings in param_group specs (all converted to CC-)
+- **AC-006:** 0 `- **Given:**` lines in command specs (all converted to Command/Expected behavior format)
+- **AC-007:** All 5 subdirectory readmes use `| Name | Purpose | Status |` format
+- **AC-008:** 0 occurrences of `"invalid/rejected path"` in param specs
+- **AC-009/010:** 0 duplicate INT-N headings in `07_projects.md`
+- **AC-012 (C-2):** `21_count.md` no longer uses `type::conversation` (replaced with valid `.list count::1` without type filter)
+- **Bonus — docs consistency:** `docs/cli/readme.md` updated to register `command/` and `user_story/readme.md` in Responsibility Table, Completion Matrix, and Navigation; `.projects` param count corrected from 6 to 7 in both `001_commands.md` and `command/readme.md`
+
 ## History
 
 - **[2026-05-24]** `CREATED` — Fix all 38 test surface spec violations identified in the 2026-05-24 audit.
+- **[2026-05-25]** `COMPLETE` — All 10 ACs pass; validated by 3 rounds of independent Agent subagents.
 
 ## Verification Record
 

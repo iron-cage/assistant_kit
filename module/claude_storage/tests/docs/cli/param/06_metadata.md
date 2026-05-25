@@ -2,7 +2,7 @@
 
 Edge case tests for the `metadata::` parameter. Tests validate boolean enforcement and content suppression in `.show`.
 
-**Source:** [004_params.md#parameter--6-metadata](../../../../docs/cli/004_params.md#parameter--6-metadata)
+**Source:** [param/06_metadata.md](../../../../docs/cli/param/06_metadata.md)
 
 ## Test Case Index
 
@@ -24,7 +24,7 @@ Edge case tests for the `metadata::` parameter. Tests validate boolean enforceme
 
 **Total:** 6 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (metadata::0, content shown) ↔ EC-2 (metadata::1, metadata only)
 
 ## Test Cases
 
@@ -32,58 +32,64 @@ Edge case tests for the `metadata::` parameter. Tests validate boolean enforceme
 
 ### EC-1: Value 0 shows conversation content
 
+- **Commands:** `.show`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .show session_id::-default_topic metadata::0`
 - **Then:** stdout contains conversation message content (user and assistant message text from the session).; conversation content present in output
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/06_metadata.md](../../../../docs/cli/param/06_metadata.md)
 
 ---
 
 ### EC-2: Value 1 suppresses content, shows metadata
 
+- **Commands:** `.show`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .show session_id::-default_topic metadata::1`
 - **Then:** stdout contains technical metadata fields (session ID, entry count, timestamps, token usage) without conversation message text.; metadata fields present, conversation content absent
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/06_metadata.md](../../../../docs/cli/param/06_metadata.md)
 
 ---
 
 ### EC-3: Value "true" rejected
 
+- **Commands:** `.show`
 - **Given:** clean environment
 - **When:** `clg .show session_id::-default_topic metadata::true`
 - **Then:** stderr contains an error indicating `metadata` must be 0 or 1.; error message indicating non-boolean value rejected
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/06_metadata.md](../../../../docs/cli/param/06_metadata.md)
 
 ---
 
 ### EC-4: Omitted defaults to 0 (show content)
 
+- **Commands:** `.show`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .show session_id::-default_topic`
 - **Then:** stdout contains conversation message content, identical to running with explicit `metadata::0`.; conversation content shown (default applied)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/06_metadata.md](../../../../docs/cli/param/06_metadata.md)
 
 ---
 
 ### EC-5: metadata::1 output includes entry count
 
+- **Commands:** `.show`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .show session_id::-default_topic metadata::1`
 - **Then:** stdout contains a field showing the number of entries in the session (e.g., `entries: 12` or similar).; entry count present in metadata output
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/06_metadata.md](../../../../docs/cli/param/06_metadata.md)
 
 ---
 
 ### EC-6: metadata::1 output includes session timestamps
 
+- **Commands:** `.show`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .show session_id::-default_topic metadata::1`
 - **Then:** stdout contains timestamp fields for the session's first and last entries (ISO 8601 format or similar).; timestamp fields present in metadata output
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/06_metadata.md](../../../../docs/cli/param/06_metadata.md)

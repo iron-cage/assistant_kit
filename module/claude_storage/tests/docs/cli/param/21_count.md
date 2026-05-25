@@ -2,7 +2,7 @@
 
 Edge case tests for the `count::` parameter. Tests validate boolean enforcement, count-only output, and empty-state behavior.
 
-**Source:** [004_params.md#parameter--21-count](../../../../docs/cli/004_params.md#parameter--21-count)
+**Source:** [param/21_count.md](../../../../docs/cli/param/21_count.md)
 
 ## Test Case Index
 
@@ -26,7 +26,7 @@ Edge case tests for the `count::` parameter. Tests validate boolean enforcement,
 
 **Total:** 6 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (count::1, integer output only) ↔ EC-2 (count::0, full list)
 
 ## Test Cases
 
@@ -34,58 +34,64 @@ Edge case tests for the `count::` parameter. Tests validate boolean enforcement,
 
 ### EC-1: `count::1` → integer count only
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-- **When:** `clg .list type::conversation count::1`
-- **Then:** stdout is a single integer (the conversation count); no list items shown
+- **When:** `clg .list count::1`
+- **Then:** stdout is a single integer (the project count); no list items shown
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--21-count)
+- **Source:** [param/21_count.md](../../../../docs/cli/param/21_count.md)
 
 ---
 
 ### EC-2: `count::0` → full list (default behavior)
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-- **When:** `clg .list type::conversation count::0`
-- **Then:** Full list of conversations shown (same as without `count::1`)
+- **When:** `clg .list count::0`
+- **Then:** Full list of projects shown (same as without `count::1`)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--21-count)
+- **Source:** [param/21_count.md](../../../../docs/cli/param/21_count.md)
 
 ---
 
 ### EC-3: `count::2` → rejected
 
+- **Commands:** `.list`
 - **Given:** clean environment
 - **When:** `clg .list count::2`
 - **Then:** `count must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--21-count)
+- **Source:** [param/21_count.md](../../../../docs/cli/param/21_count.md)
 
 ---
 
 ### EC-4: `count::yes` → rejected
 
+- **Commands:** `.list`
 - **Given:** clean environment
 - **When:** `clg .list count::yes`
 - **Then:** `count must be 0 or 1`; exit 1
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--21-count)
+- **Source:** [param/21_count.md](../../../../docs/cli/param/21_count.md)
 
 ---
 
 ### EC-5: `count::1` with empty storage → outputs `0`
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/empty-fixture`
-- **When:** `clg .list type::conversation count::1`
-- **Then:** stdout is `0` (no sessions); exit 0
+- **When:** `clg .list count::1`
+- **Then:** stdout is `0` (no projects); exit 0
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--21-count)
+- **Source:** [param/21_count.md](../../../../docs/cli/param/21_count.md)
 
 ---
 
 ### EC-6: `count::1` exit code is 0 regardless of result
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
-- **When:** `clg .list type::conversation count::1`
+- **When:** `clg .list count::1`
 - **Then:** Exit code is 0 whether result is 0 or positive
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--21-count)
+- **Source:** [param/21_count.md](../../../../docs/cli/param/21_count.md)

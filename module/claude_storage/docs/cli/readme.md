@@ -4,7 +4,7 @@
 
 - **Purpose**: Document the clg command-line interface for Claude Code conversation storage exploration.
 - **Responsibility**: Reference documentation for commands, parameters, types, workflows, and test planning.
-- **In Scope**: commands, params, types, parameter groups, dictionary, workflows, format/.
+- **In Scope**: commands, params, types, parameter groups, dictionary, workflows, format/, user_story/.
 - **Out of Scope**: CLI tool design (→ `feature/001_cli_tool.md`), quality constraints (→ `invariant/`).
 
 Reference documentation for the `claude_storage` CLI binary — a tool for exploring Claude Code conversation storage. All commands are read-only except `.session.ensure`, which creates the session working directory on disk.
@@ -13,11 +13,11 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 
 | File | Responsibility |
 |------|----------------|
-| `001_commands.md` | All command specs, syntax, parameters, exit codes, examples |
-| `004_params.md` | Parameter definitions, types, validation rules, cross-refs |
-| `005_types.md` | Semantic type system with constants, parsing, methods |
+| `command/` | Per-command detail pages with full parameter tables and cross-refs |
+| `param/` | Per-parameter detail pages with type, defaults, and command cross-refs |
+| `type/` | Per-type constraint and parsing reference (14 type pages) |
 | `002_dictionary.md` | Domain vocabulary and term definitions |
-| `003_parameter_groups.md` | Shared parameter groups with coherence tests |
+| `param_group/` | Per-group detail pages with membership, examples, and cross-refs |
 | `006_workflows.md` | Usage scenarios, best practices, complexity matrix |
 | `format/` | Output format catalog for export rendering modes |
 | `env_param.md` | Environment variable catalog with precedence rules |
@@ -27,26 +27,33 @@ Reference documentation for the `claude_storage` CLI binary — a tool for explo
 
 | File | L1 | L2 | L3 | L4 | L5 | Status |
 |------|----|----|----|----|----|----|
-| `readme.md` | ✅ | ✅ | ✅ | ✅ | ➖ | Complete |
-| `001_commands.md` | ✅ | ✅ | ✅ | ✅ | ➖ | Complete |
-| `004_params.md` | ✅ | ✅ | ✅ | ✅ | ➖ | Complete |
-| `002_dictionary.md` | ➖ | ✅ | ✅ | ✅ | ➖ | Complete |
-| `005_types.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
-| `003_parameter_groups.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
-| `006_workflows.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
-| `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
-| `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ➖ | Complete |
-**Current Level:** L4 (Specification Complete)
-**Design Completeness:** 100% (4/4 levels passed)
-**Implementation Status:** 100% (11/11 commands implemented; 0 deprecated)
+| `readme.md` | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
+| `command/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `command/*.md` (11 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `param/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `param/*.md` (22 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `002_dictionary.md` | ➖ | ✅ | ✅ | ✅ | ✅ | L5 |
+| `type/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `type/*.md` (14 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `param_group/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `param_group/*.md` (5 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `006_workflows.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `format/readme.md` | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `format/*.md` (3 files) | ➖ | ➖ | ✅ | ✅ | ✅ | L5 |
+| `env_param.md` | ✅ | ✅ | ✅ | ➖ | ➖ | L3 |
+| `user_story/readme.md` | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
+| `user_story/*.md` (5 files) | ✅ | ✅ | ✅ | ✅ | ✅ | L5 |
+**Current Level:** L5 (Implementation Complete)
+**Design Completeness:** 94% (env_param.md pending test mirror at L4)
+**Implementation Status:** 100% (11/11 commands implemented)
 
 ### Navigation
 
-- [Commands](001_commands.md) — What operations exist and how to invoke them
-- [Parameters](004_params.md) — What inputs control each command
-- [Types](005_types.md) — Semantic type constraints and validation rules
+- [Commands](command/readme.md) — What operations exist and how to invoke them
+- [Parameters](param/readme.md) — What inputs control each command
+- [Types](type/readme.md) — Semantic type constraints and validation rules
 - [Dictionary](002_dictionary.md) — Domain vocabulary
-- [Parameter Groups](003_parameter_groups.md) — Related parameter sets and their coherence
+- [Parameter Groups](param_group/readme.md) — Related parameter sets and their coherence
 - [Workflows](006_workflows.md) — Common usage patterns and best practices
 - [Formats](format/readme.md) — Export output format rendering specifications
 - [Environment Parameters](env_param.md) — Environment variables and precedence rules

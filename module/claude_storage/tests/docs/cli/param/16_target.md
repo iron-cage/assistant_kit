@@ -2,7 +2,7 @@
 
 Edge case tests for the `target::` parameter. Tests validate enum parsing and hierarchy requirements.
 
-**Source:** [004_params.md#parameter--16-target](../../../../docs/cli/004_params.md#parameter--16-target) | [005_types.md#targettype](../../../../docs/cli/005_types.md#targettype)
+**Source:** [param/16_target.md](../../../../docs/cli/param/16_target.md) | [type/11_target_type.md](../../../../docs/cli/type/11_target_type.md)
 
 ## Test Case Index
 
@@ -26,7 +26,7 @@ Edge case tests for the `target::` parameter. Tests validate enum parsing and hi
 
 **Total:** 7 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (target::projects) ↔ EC-2 (target::sessions)
 
 ## Test Cases
 
@@ -34,68 +34,75 @@ Edge case tests for the `target::` parameter. Tests validate enum parsing and hi
 
 ### EC-1: Value "projects" accepted
 
+- **Commands:** `.count`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .count target::projects`
 - **Then:** stdout contains a non-negative integer representing the number of projects.; numeric output representing project count
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/16_target.md](../../../../docs/cli/param/16_target.md)
 
 ---
 
 ### EC-2: Value "sessions" accepted
 
+- **Commands:** `.count`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .count target::sessions`
 - **Then:** stdout contains a non-negative integer representing the number of sessions.; numeric output representing session count
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/16_target.md](../../../../docs/cli/param/16_target.md)
 
 ---
 
 ### EC-3: Value "entries" accepted
 
+- **Commands:** `.count`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .count target::entries session_id::-default_topic`
 - **Then:** stdout contains a non-negative integer representing the number of entries.; numeric output representing entry count
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/16_target.md](../../../../docs/cli/param/16_target.md)
 
 ---
 
 ### EC-4: Value "SESSIONS" accepted (case-insensitive)
 
+- **Commands:** `.count`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .count target::SESSIONS`
 - **Then:** No error; output is identical to using lowercase `target::sessions`.; numeric output (case normalization applied)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/16_target.md](../../../../docs/cli/param/16_target.md)
 
 ---
 
 ### EC-5: Invalid value "files" rejected with error
 
+- **Commands:** `.count`
 - **Given:** clean environment
 - **When:** `clg .count target::files`
 - **Then:** stderr contains `target must be projects|sessions|entries, got files`; error message `target must be projects|sessions|entries, got files`
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/16_target.md](../../../../docs/cli/param/16_target.md)
 
 ---
 
 ### EC-6: Omitted defaults to "projects"
 
+- **Commands:** `.count`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .count`
 - **Then:** stdout contains a non-negative integer equal to the project count (same as EC-1 with `target::projects`).; numeric output matching project count (default applied)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/16_target.md](../../../../docs/cli/param/16_target.md)
 
 ---
 
 ### EC-7: target::sessions without project:: counts all sessions
 
+- **Commands:** `.count`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .count target::sessions`
 - **Then:** stdout contains a count that reflects sessions across all projects in storage (not limited to the current directory project).; count reflects all sessions in storage (no implicit project filter)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/16_target.md](../../../../docs/cli/param/16_target.md)

@@ -1,4 +1,4 @@
-//! Operation tests for the claude_storage → claude_storage_core migration guide.
+//! Operation tests for the `claude_storage` → `claude_storage_core` migration guide.
 //!
 //! ## Source
 //!
@@ -31,7 +31,7 @@ use tempfile::TempDir;
 /// Assert unrelated deps unchanged.
 ///
 /// ## Related Requirements
-/// docs/operation/001_migration_guide.md — Procedure Step 1
+/// `docs/operation/001_migration_guide.md` — Procedure Step 1
 #[ test ]
 fn op_1_cargo_toml_updated_old_dep_removed_new_dep_added()
 {
@@ -83,7 +83,7 @@ fn op_1_cargo_toml_updated_old_dep_removed_new_dep_added()
 /// unrelated imports are untouched.
 ///
 /// ## Related Requirements
-/// docs/operation/001_migration_guide.md — Procedure Step 2
+/// `docs/operation/001_migration_guide.md` — Procedure Step 2
 #[ test ]
 fn op_2_use_statements_updated_no_claude_storage_imports_remain()
 {
@@ -137,15 +137,14 @@ fn op_2_use_statements_updated_no_claude_storage_imports_remain()
 /// confirm the binary is functional, not just present.
 ///
 /// ## Related Requirements
-/// docs/operation/001_migration_guide.md — Procedure Step 3
+/// `docs/operation/001_migration_guide.md` — Procedure Step 3
 #[ test ]
 fn op_3_crate_compiles_after_cargo_toml_and_import_migration()
 {
   let binary = std::path::PathBuf::from( env!( "CARGO_BIN_EXE_clg" ) );
   assert!(
     binary.exists(),
-    "OP-3: migrated crate binary must exist after cargo build; expected at {:?}",
-    binary
+    "OP-3: migrated crate binary must exist after cargo build; expected at {binary:?}"
   );
 
   // Verify Cargo.toml reflects the migration (claude_storage_core dep present)
@@ -190,7 +189,7 @@ fn op_3_crate_compiles_after_cargo_toml_and_import_migration()
 /// — identical to the pre-migration API surface.
 ///
 /// ## Related Requirements
-/// docs/operation/001_migration_guide.md — Procedure Step 3
+/// `docs/operation/001_migration_guide.md` — Procedure Step 3
 #[ test ]
 fn op_4_test_suite_passes_after_migration_api_identical()
 {
@@ -242,7 +241,7 @@ fn op_4_test_suite_passes_after_migration_api_identical()
 /// users would access via `use claude_storage::` after rollback.
 ///
 /// ## Related Requirements
-/// docs/operation/001_migration_guide.md — Rollback Procedure
+/// `docs/operation/001_migration_guide.md` — Rollback Procedure
 #[ test ]
 fn op_5_rollback_restores_compilation_from_previous_state()
 {

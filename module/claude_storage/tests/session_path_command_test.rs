@@ -104,7 +104,7 @@ fn it_path_default_cwd()
   );
 }
 
-/// `.project.path path::PATH` returns storage path for given directory
+/// `.project.path ``path::PAT``H` returns storage path for given directory
 #[ test ]
 fn it_path_explicit_path()
 {
@@ -131,7 +131,7 @@ fn it_path_explicit_path()
   );
 }
 
-/// `.project.path topic::NAME` appends topic suffix to storage path
+/// `.project.path ``topic::NAM``E` appends topic suffix to storage path
 #[ test ]
 fn it_path_with_topic()
 {
@@ -201,7 +201,7 @@ fn it_path_empty_topic_rejected()
   );
 }
 
-/// `.project.path topic::sub/dir` (slash in topic) rejected
+/// `.project.path ``topic::sub``/dir` (slash in topic) rejected
 #[ test ]
 fn it_path_slash_in_topic_rejected()
 {
@@ -433,7 +433,7 @@ fn it_exists_empty_topic_rejected()
 
 // ─── .session.dir tests ───────────────────────────────────────────────────────
 
-/// `.session.dir path::PATH` returns `{path}/-default_topic`
+/// `.session.dir ``path::PAT``H` returns `{path}/-default_topic`
 #[ test ]
 fn it_session_dir_default_topic()
 {
@@ -463,7 +463,7 @@ fn it_session_dir_default_topic()
   );
 }
 
-/// `.session.dir path::PATH topic::TOPIC` returns `{path}/-{topic}`
+/// `.session.dir ``path::PATH`` ``topic::TOPI``C` returns `{path}/-{topic}`
 #[ test ]
 fn it_session_dir_custom_topic()
 {
@@ -747,7 +747,7 @@ fn it_session_ensure_line1_is_session_dir_path()
   );
 }
 
-/// `.session.ensure strategy::resume` forces resume even when no history
+/// `.session.ensure ``strategy::resum``e` forces resume even when no history
 #[ test ]
 fn it_session_ensure_force_resume_overrides_fresh()
 {
@@ -779,7 +779,7 @@ fn it_session_ensure_force_resume_overrides_fresh()
   );
 }
 
-/// `.session.ensure strategy::fresh` forces fresh even when history exists
+/// `.session.ensure ``strategy::fres``h` forces fresh even when history exists
 #[ test ]
 fn it_session_ensure_force_fresh_overrides_resume()
 {
@@ -908,7 +908,7 @@ fn it_session_ensure_cwd_default()
   );
 }
 
-/// `.session.ensure strategy::invalid` rejected
+/// `.session.ensure ``strategy::invali``d` rejected
 #[ test ]
 fn it_session_ensure_invalid_strategy_rejected()
 {
@@ -996,7 +996,7 @@ fn it_path_output_single_line_ending_slash()
   );
 }
 
-/// `.path path::~` expands tilde to home directory (IT-7)
+/// `.path ``path::``~` expands tilde to home directory (IT-7)
 #[ test ]
 fn it_path_tilde_expansion()
 {
@@ -1026,7 +1026,7 @@ fn it_path_tilde_expansion()
   );
 }
 
-/// `.path path::.` resolves to cwd (IT-8)
+/// `.path ``path::``.` resolves to cwd (IT-8)
 #[ test ]
 fn it_path_dot_resolves_to_cwd()
 {
@@ -1059,7 +1059,7 @@ fn it_path_dot_resolves_to_cwd()
 
 // ─── .session.dir additional coverage ────────────────────────────────────────
 
-/// `.session.dir path::~` expands tilde in `path::` (IT-5)
+/// `.session.dir ``path::``~` expands tilde in `path::` (IT-5)
 #[ test ]
 fn it_session_dir_tilde_expansion()
 {
@@ -1089,7 +1089,7 @@ fn it_session_dir_tilde_expansion()
   );
 }
 
-/// `.session.dir path::.` resolves to cwd (IT-6)
+/// `.session.dir ``path::``.` resolves to cwd (IT-6)
 #[ test ]
 fn it_session_dir_dot_resolves_to_cwd()
 {

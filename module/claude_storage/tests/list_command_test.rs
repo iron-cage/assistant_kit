@@ -24,7 +24,7 @@
 
 mod common;
 
-/// Test `.list verbosity::-1` fails — negative verbosity rejected (Finding #015)
+/// Test `.list ```verbosity::```-1` fails — negative verbosity rejected (Finding #015)
 ///
 /// ## Root Cause
 ///
@@ -88,7 +88,7 @@ fn test_list_verbosity_negative()
   );
 }
 
-/// Test `.list verbosity::6` fails — above-range verbosity rejected (Finding #015)
+/// Test `.list ```verbosity::```6` fails — above-range verbosity rejected (Finding #015)
 ///
 /// Same root cause and fix as `test_list_verbosity_negative`. Tests the upper
 /// boundary: `verbosity::5` is the maximum, `verbosity::6` must be rejected.
@@ -123,7 +123,7 @@ fn test_list_verbosity_out_of_range()
   );
 }
 
-/// Test `.list verbosity::0` succeeds — minimum boundary accepted (Finding #015)
+/// Test `.list ```verbosity::```0` succeeds — minimum boundary accepted (Finding #015)
 ///
 /// Verifies that the lower boundary of the valid range (0) is accepted after
 /// Fix(issue-015). `verbosity::0` suppresses most output but is a valid value.
@@ -151,7 +151,7 @@ fn test_list_verbosity_zero()
   );
 }
 
-/// Test `.list verbosity::3` succeeds — mid-range value accepted (Finding #015)
+/// Test `.list ```verbosity::```3` succeeds — mid-range value accepted (Finding #015)
 ///
 /// Related: Finding #015
 // test_kind: validation(finding-015)
@@ -176,7 +176,7 @@ fn test_list_verbosity_mid_range()
   );
 }
 
-/// Test `.list verbosity::5` succeeds — maximum boundary accepted (Finding #015)
+/// Test `.list ```verbosity::```5` succeeds — maximum boundary accepted (Finding #015)
 ///
 /// Related: Finding #015
 // test_kind: validation(finding-015)
@@ -201,7 +201,7 @@ fn test_list_verbosity_max()
   );
 }
 
-/// Test `.list agent::2` fails — Boolean parameter rejects non-Boolean value
+/// Test `.list ```agent::```2` fails — Boolean parameter rejects non-Boolean value
 ///
 /// `agent` is declared as `Boolean` type in the CLI YAML specification. The
 /// framework validates Boolean parameters and only accepts 0 or 1. Any other
@@ -228,7 +228,7 @@ fn test_list_agent_invalid()
   );
 }
 
-/// Test `.list agent::0` succeeds — Boolean false value
+/// Test `.list ```agent::```0` succeeds — Boolean false value
 #[ test ]
 fn test_list_agent_zero()
 {
@@ -249,7 +249,7 @@ fn test_list_agent_zero()
   );
 }
 
-/// Test `.list agent::1` succeeds — Boolean true value
+/// Test `.list ```agent::```1` succeeds — Boolean true value
 #[ test ]
 fn test_list_agent_one()
 {
@@ -271,7 +271,7 @@ fn test_list_agent_one()
   );
 }
 
-/// Test `.list session::abc` succeeds — non-empty session substring filter
+/// Test `.list ```session::ab```c` succeeds — non-empty session substring filter
 #[ test ]
 fn test_list_session_filter()
 {
@@ -333,7 +333,7 @@ fn test_list_session_filter_empty()
   );
 }
 
-/// Test `.list sessions::2` fails — Boolean parameter rejects non-Boolean value
+/// Test `.list ```sessions::```2` fails — Boolean parameter rejects non-Boolean value
 ///
 /// `sessions` is declared as `Boolean` type. Framework validation rejects
 /// any value other than 0 or 1.
@@ -359,7 +359,7 @@ fn test_list_sessions_invalid()
   );
 }
 
-/// Pairwise: `.list type::uuid sessions::1` succeeds
+/// Pairwise: `.list ```type::uuid``` ```sessions::```1` succeeds
 #[ test ]
 fn test_list_type_uuid_with_sessions()
 {
@@ -381,7 +381,7 @@ fn test_list_type_uuid_with_sessions()
   );
 }
 
-/// Pairwise: `.list type::path verbosity::2` succeeds
+/// Pairwise: `.list ```type::path``` ```verbosity::```2` succeeds
 #[ test ]
 fn test_list_type_path_with_verbosity()
 {
@@ -403,7 +403,7 @@ fn test_list_type_path_with_verbosity()
   );
 }
 
-/// Pairwise: `.list sessions::0 verbosity::-1` fails — invalid verbosity
+/// Pairwise: `.list ```sessions::0``` ```verbosity::```-1` fails — invalid verbosity
 ///
 /// When multiple parameters are provided with one invalid value, the command
 /// must fail. Verbosity range validation happens before storage access.
@@ -452,7 +452,7 @@ fn test_list_no_params()
   );
 }
 
-/// Test `.list sessions::0` succeeds — explicit sessions-off
+/// Test `.list ```sessions::```0` succeeds — explicit sessions-off
 #[ test ]
 fn test_list_sessions_zero()
 {
@@ -474,7 +474,7 @@ fn test_list_sessions_zero()
   );
 }
 
-/// Test `.list sessions::1` succeeds — explicit sessions-on
+/// Test `.list ```sessions::```1` succeeds — explicit sessions-on
 #[ test ]
 fn test_list_sessions_one()
 {
@@ -496,7 +496,7 @@ fn test_list_sessions_one()
   );
 }
 
-/// Test `.list min_entries::0` succeeds — zero `min_entries` is valid lower bound
+/// Test `.list ```min_entries::```0` succeeds — zero `min_entries` is valid lower bound
 #[ test ]
 fn test_list_min_entries_zero()
 {
@@ -518,7 +518,7 @@ fn test_list_min_entries_zero()
   );
 }
 
-/// Test `.list path::/tmp` succeeds — substring path filter
+/// Test `.list ```path::```/tmp` succeeds — substring path filter
 #[ test ]
 fn test_list_path_filter()
 {
@@ -539,7 +539,7 @@ fn test_list_path_filter()
   );
 }
 
-/// Test `.list type::all` succeeds — explicit all-types filter
+/// Test `.list ```type::al```l` succeeds — explicit all-types filter
 #[ test ]
 fn test_list_type_all()
 {
@@ -561,7 +561,7 @@ fn test_list_type_all()
   );
 }
 
-/// Test `.list type::notvalid` fails — type parameter validates against allowed values
+/// Test `.list ```type::notvali```d` fails — type parameter validates against allowed values
 ///
 /// `list_routine` validates `type` against "uuid", "path", and "all". Any other
 /// value returns `"Invalid type: X. Valid values: uuid, path, all"`.
@@ -593,7 +593,7 @@ fn test_list_type_invalid()
   );
 }
 
-/// Test `.list verbosity::1` succeeds — default value accepted explicitly
+/// Test `.list ```verbosity::```1` succeeds — default value accepted explicitly
 #[ test ]
 fn test_list_verbosity_default_explicit()
 {
@@ -718,7 +718,7 @@ fn test_list_plural_noun_multiple_projects()
 // A targeted fix for one occurrence may miss siblings with identical patterns.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Test `.list sessions::1` shows "(1 conversation)" (singular) when project has 1 conversation.
+/// Test `.list ```sessions::```1` shows "(1 conversation)" (singular) when project has 1 conversation.
 ///
 /// bug_reproducer(issue-027)
 // test_kind: bug_reproducer(issue-027)
@@ -751,7 +751,7 @@ fn test_list_session_count_singular_when_one_session()
   );
 }
 
-/// Test `.list sessions::1` shows "(2 conversations)" (plural) when project has 2 conversations.
+/// Test `.list ```sessions::```1` shows "(2 conversations)" (plural) when project has 2 conversations.
 ///
 /// Regression guard for issue-027: plural form must remain correct for counts > 1.
 // test_kind: regression_guard(issue-027)
@@ -785,7 +785,7 @@ fn test_list_session_count_plural_when_multiple_sessions()
 // ────────────────────────────────────────────────────────────────────────────
 // IT-T01: `.list type::conversation project::<id>` outputs conversation IDs
 // ────────────────────────────────────────────────────────────────────────────
-/// IT-T01: `.list type::conversation` outputs one conversation ID per line when `project::` is given.
+/// IT-T01: `.list ```type::conversatio```n` outputs one conversation ID per line when `project::` is given.
 ///
 /// Verifies the conversation type filter lists IDs and exits 0.
 #[ test ]
@@ -818,7 +818,7 @@ fn it_list_type_conversation_outputs_ids()
 // ────────────────────────────────────────────────────────────────────────────
 // IT-T02: `.list type::conversation` without `project::` returns error
 // ────────────────────────────────────────────────────────────────────────────
-/// IT-T02: `.list type::conversation` without `project::` must return a clear error.
+/// IT-T02: `.list ```type::conversatio```n` without `project::` must return a clear error.
 ///
 /// Conversations require a project scope; without it the command must fail.
 #[ test ]
@@ -846,7 +846,7 @@ fn it_list_type_conversation_requires_project()
 // ────────────────────────────────────────────────────────────────────────────
 /// IT-T03: `count::1` mode outputs only the count as a bare integer.
 ///
-/// Useful for scripting: `clg .list type::conversation count::1 project::abc123` → `2`
+/// Useful for scripting: `clg .list ```type::conversation``` ```count::1``` ```project::abc12```3` → `2`
 #[ test ]
 fn it_list_count_mode_outputs_integer()
 {
@@ -883,7 +883,7 @@ fn it_list_count_mode_outputs_integer()
 // ────────────────────────────────────────────────────────────────────────────
 // IT-T09 (CC-L01): `.list type::conversation project::<id>` line count = N sessions
 // ────────────────────────────────────────────────────────────────────────────
-/// IT-T09: `.list type::conversation` outputs exactly N lines for N conversations.
+/// IT-T09: `.list ```type::conversatio```n` outputs exactly N lines for N conversations.
 ///
 /// IT-T01 only checks non-empty. This test verifies the line count precisely
 /// matches the session count (1:1 identity mapping — no duplicates, no missing).
@@ -924,7 +924,7 @@ fn it_list_type_conversation_exact_line_count()
 // ────────────────────────────────────────────────────────────────────────────
 // IT-T10 (CC-L02): `.list type::conversation project::<id>` with 0 sessions → empty
 // ────────────────────────────────────────────────────────────────────────────
-/// IT-T10: `.list type::conversation` on an empty project outputs nothing.
+/// IT-T10: `.list ```type::conversatio```n` on an empty project outputs nothing.
 ///
 /// Project dir exists in storage but has no JSONL files.
 /// Must exit 0 and produce empty output — not an error.
@@ -1087,7 +1087,7 @@ fn it_list_count_mode_one_session()
 // ────────────────────────────────────────────────────────────────────────────
 // IT-T14 (CC-L06): `.list type::conversation project::<nonexistent>` → error
 // ────────────────────────────────────────────────────────────────────────────
-/// IT-T14: `.list type::conversation` with a nonexistent project must fail.
+/// IT-T14: `.list ```type::conversatio```n` with a nonexistent project must fail.
 ///
 /// A valid encoded project ID whose storage directory does not exist is an error.
 /// Must exit non-0 — silently returning empty output would hide a user mistake.

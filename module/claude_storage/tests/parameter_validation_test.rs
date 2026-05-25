@@ -8,17 +8,17 @@
 //!
 //! Specifically:
 //!
-//! 1. **`.list type::invalid`** - The `type` parameter accepts ANY value without validation.
+//! 1. **`.list ``type::invali``d`** - The `type` parameter accepts ANY value without validation.
 //!    The code has a catch-all `_` pattern in the match statement that treats all invalid
 //!    values as "all", silently listing all projects instead of erroring.
 //!
-//! 2. **`.status verbosity::-1`** - Negative verbosity values are silently accepted and
+//! 2. **`.status ``verbosity::``-1`** - Negative verbosity values are silently accepted and
 //!    processed as some positive value.
 //!
-//! 3. **`.status verbosity::10`** - Out-of-range verbosity values (valid: 0-5) are silently
+//! 3. **`.status ``verbosity::1``0`** - Out-of-range verbosity values (valid: 0-5) are silently
 //!    accepted.
 //!
-//! 4. **`.count target::invalid`** (Finding #009) - The `target` parameter accepts ANY string
+//! 4. **`.count ``target::invali``d`** (Finding #009) - The `target` parameter accepts ANY string
 //!    value without validation. Invalid values like "project" (singular) are processed with
 //!    confusing errors instead of clear parameter validation messages.
 //!
@@ -300,7 +300,7 @@ fn test_list_min_entries_negative_validation()
 /// A prior "fix" (issue-008) added an error when `entries::1` was used in content
 /// mode (verbosity >= 1 && !`metadata_only`), intending to prevent silent-ignore of
 /// the parameter. However, the YAML spec example 6 explicitly lists
-/// `.show session_id::abc123 entries::1` as valid without `metadata::1`.
+/// `.show ``session_id::abc123`` ``entries::``1` as valid without `metadata::1`.
 /// Content mode already displays all entries by default — `entries::1` is a valid
 /// no-op in this context, not an invalid parameter combination.
 ///
@@ -377,21 +377,21 @@ fn test_show_entries_works_in_metadata_mode()
   );
 }
 
-/// Test that `entries::1 verbosity::0` is NOT a parameter validation error
+/// Test that `entries::1 ``verbosity::``0` is NOT a parameter validation error
 ///
 /// ## Purpose
 ///
 /// The error message for `entries` mode incompatibility says:
-/// `"Use '.show session_id::<id> metadata::1 entries::1' or`
-/// `'.show session_id::<id> verbosity::0 entries::1'."`
+/// `"Use '.show ``session_id::``<id> ``metadata::1`` ``entries::1``' or`
+/// `'.show ``session_id::``<id> ``verbosity::0`` ``entries::1``'."`
 ///
-/// This confirms that `verbosity::0 + entries::1` is the documented second valid
+/// This confirms that `verbosity::0 + ``entries::``1` is the documented second valid
 /// form. The validation guard is `show_entries && verbosity >= 1 && !metadata_only`,
 /// so `verbosity::0` bypasses it. This test verifies the guard is correct.
 ///
 /// ## Coverage
 ///
-/// Confirms `entries::1 + verbosity::0 + session_id::X` passes parameter
+/// Confirms `entries::1 + ``verbosity::0`` + ``session_id::``X` passes parameter
 /// validation and fails only at session lookup (not at validation).
 ///
 /// ## Validation Strategy
@@ -512,32 +512,32 @@ fn test_count_target_valid_values()
 
   assert!( output.status.success(), "target::projects should be valid" );
 
-  // target::sessions (will fail with missing project, but target is valid)
+  // target::sessions — counts all sessions globally; no project required
   let output = common::clg_cmd()
     .args( [ ".count", "target::sessions" ] )
     .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
     .output()
     .expect( "Failed to execute command" );
 
-  // This will fail due to missing project parameter, but NOT due to invalid target
   let stderr = String::from_utf8_lossy( &output.stderr );
   let stdout = String::from_utf8_lossy( &output.stdout );
   let combined = format!( "{stderr}{stdout}" );
 
-  // Should NOT mention "invalid target" - should mention "project parameter required"
+  // target::sessions succeeds without project:: (counts across all projects)
   assert!(
-    !output.status.success(),
-    "Command should fail (missing project parameter)"
+    output.status.success(),
+    "target::sessions must succeed without project:: parameter. Got: {combined}"
   );
 
+  assert!(
+    stdout.trim().parse::< u64 >().is_ok(),
+    "target::sessions must output a bare integer. Got: {combined}"
+  );
+
+  // Must NOT produce an "invalid target" error
   assert!(
     !combined.to_lowercase().contains( "invalid" ) || !combined.to_lowercase().contains( "target" ),
     "Should not error on target validation. Got: {combined}"
-  );
-
-  assert!(
-    combined.to_lowercase().contains( "project" ) && combined.to_lowercase().contains( "required" ),
-    "Error should mention project parameter required. Got: {combined}"
   );
 }
 

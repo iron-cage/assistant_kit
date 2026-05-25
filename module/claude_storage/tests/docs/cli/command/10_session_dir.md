@@ -2,131 +2,173 @@
 
 Integration tests for the `.session.dir` command. Tests verify session directory path computation, topic handling, and validation.
 
-**Source:** [001_commands.md#command--10-session-dir](../../../../docs/cli/001_commands.md#command--10-session-dir)
+**Source:** [command/10_session_dir.md](../../../../docs/cli/command/10_session_dir.md)
 
 ## Test Case Index
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | path:: with default topic produces {base}/-default_topic | Basic Behavior |
-| IT-2 | path:: with custom topic produces {base}/-{topic} | Topic Handling |
-| IT-3 | path:: required — missing path:: returns error | Validation |
-| IT-4 | Output is a single line (absolute path) | Output Format |
-| IT-5 | ~ prefix expanded in path:: | Path Resolution |
-| IT-6 | path::. resolves to cwd | Path Resolution |
-| IT-7 | Empty topic:: rejected | Validation |
-| IT-8 | topic:: with slash rejected | Validation |
-| IT-9 | Does not create directory | Behavior Boundary |
-| IT-10 | Exits 0 even if path does not exist on disk | Exit Codes |
+| INT-1 | path:: with default topic produces {base}/-default_topic | Basic Behavior |
+| INT-2 | path:: with custom topic produces {base}/-{topic} | Topic Handling |
+| INT-3 | path:: required — missing path:: returns error | Validation |
+| INT-4 | Output is a single line (absolute path) | Output Format |
+| INT-5 | ~ prefix expanded in path:: | Path Resolution |
+| INT-6 | path::. resolves to cwd | Path Resolution |
+| INT-7 | Empty topic:: rejected | Validation |
+| INT-8 | topic:: with slash rejected | Validation |
+| INT-9 | Does not create directory | Behavior Boundary |
+| INT-10 | Exits 0 even if path does not exist on disk | Exit Codes |
 
 ## Test Coverage Summary
 
-- Basic Behavior: 1 test (IT-1)
-- Topic Handling: 1 test (IT-2)
-- Validation: 3 tests (IT-3, IT-7, IT-8)
-- Output Format: 1 test (IT-4)
-- Path Resolution: 2 tests (IT-5, IT-6)
-- Behavior Boundary: 1 test (IT-9)
-- Exit Codes: 1 test (IT-10)
+- Basic Behavior: 1 test (INT-1)
+- Topic Handling: 1 test (INT-2)
+- Validation: 3 tests (INT-3, INT-7, INT-8)
+- Output Format: 1 test (INT-4)
+- Path Resolution: 2 tests (INT-5, INT-6)
+- Behavior Boundary: 1 test (INT-9)
+- Exit Codes: 1 test (INT-10)
 
 ## Test Cases
 
 ---
 
-### IT-1: path:: with default topic produces {base}/-default_topic
+### INT-1: path:: with default topic produces {base}/-default_topic
 
-- **Given:** clean environment
-- **When:** `clg .session.dir path::/home/user/project`
-- **Then:** `/home/user/project/-default_topic`; correct default topic path
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.dir path::/home/user/project
+```
 
----
-
-### IT-2: path:: with custom topic produces {base}/-{topic}
-
-- **Given:** clean environment
-- **When:** `clg .session.dir path::/home/user/project topic::work`
-- **Then:** `/home/user/project/-work`; + `/-work` suffix in output
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Expected behavior:**
+- Output: `/home/user/project/-default_topic`
+- Exit code: 0
+- **Source:** [command/10_session_dir.md](../../../../docs/cli/command/10_session_dir.md)
 
 ---
 
-### IT-3: path:: required — missing path:: returns error
+### INT-2: path:: with custom topic produces {base}/-{topic}
 
-- **Given:** clean environment
-- **When:** `clg .session.dir`
-- **Then:** Error on stderr; exit code 1.; + error message about required path
-- **Exit:** 1
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.dir path::/home/user/project topic::work
+```
 
----
-
-### IT-4: Output is a single line (absolute path)
-
-- **Given:** clean environment
-- **When:** `clg .session.dir path::/home/user/project`
-- **Then:** Exactly one line starting with `/`.; single-line absolute path output
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Expected behavior:**
+- Output: `/home/user/project/-work`
+- Exit code: 0
+- **Source:** [command/10_session_dir.md](../../../../docs/cli/command/10_session_dir.md)
 
 ---
 
-### IT-5: ~ prefix expanded in path::
+### INT-3: path:: required — missing path:: returns error
 
-- **Given:** clean environment
-- **When:** `clg .session.dir path::~/projects/myapp`
-- **Then:** An absolute path without `~`; ends with `/-default_topic`.; + `~` expanded in output
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.dir
+```
 
----
-
-### IT-6: path::. resolves to cwd
-
-- **Given:** clean environment
-- **When:** `clg .session.dir path::.`
-- **Then:** `{cwd}/-default_topic`; + output is absolute cwd-based path
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Expected behavior:**
+- Error message on stderr about required path
+- Exit code: 1
+- **Source:** [command/10_session_dir.md](../../../../docs/cli/command/10_session_dir.md)
 
 ---
 
-### IT-7: Empty topic:: rejected
+### INT-4: Output is a single line (absolute path)
 
-- **Given:** clean environment
-- **When:** `clg .session.dir path::/home/user/project topic::`
-- **Then:** Error about empty topic; exit code 1.; + error about empty topic
-- **Exit:** 1
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.dir path::/home/user/project
+```
 
----
-
-### IT-8: topic:: with slash rejected
-
-- **Given:** clean environment
-- **When:** `clg .session.dir path::/home/user/project topic::sub/dir`
-- **Then:** Error about path separators in topic; exit code 1.; + error about slash in topic
-- **Exit:** 1
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Expected behavior:**
+- Exactly one non-empty line starting with `/`
+- Exit code: 0
+- **Source:** [command/10_session_dir.md](../../../../docs/cli/command/10_session_dir.md)
 
 ---
 
-### IT-9: Does not create directory
+### INT-5: ~ prefix expanded in path::
 
-- **Given:** Use a base path that definitely does not have a `-default_topic` subdirectory.
-- **When:** `clg .session.dir path::/tmp/no-such-base-abc topic::default_topic`
-- **Then:** Single-line path output; the directory `/tmp/no-such-base-abc/-default_topic` is NOT created.; + no directory created on disk
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.dir path::~/projects/myapp
+```
+
+**Expected behavior:**
+- An absolute path without `~`; ends with `/-default_topic`
+- Exit code: 0
+- **Source:** [command/10_session_dir.md](../../../../docs/cli/command/10_session_dir.md)
 
 ---
 
-### IT-10: Exits 0 even if path does not exist on disk
+### INT-6: path::. resolves to cwd
 
-- **Given:** Use a path that does not exist.
-- **When:** `clg .session.dir path::/tmp/nonexistent-xyz-abc`
-- **Then:** Single-line path; exit code 0.; — path computation is filesystem-independent
-- **Exit:** 0
-- **Source:** [001_commands.md](../../../../docs/cli/001_commands.md)
+**Command:**
+```
+clg .session.dir path::.
+```
+
+**Expected behavior:**
+- Output: `{cwd}/-default_topic` (absolute cwd-based path)
+- Exit code: 0
+- **Source:** [command/10_session_dir.md](../../../../docs/cli/command/10_session_dir.md)
+
+---
+
+### INT-7: Empty topic:: rejected
+
+**Command:**
+```
+clg .session.dir path::/home/user/project topic::
+```
+
+**Expected behavior:**
+- Error message on stderr about empty topic
+- Exit code: 1
+- **Source:** [command/10_session_dir.md](../../../../docs/cli/command/10_session_dir.md)
+
+---
+
+### INT-8: topic:: with slash rejected
+
+**Command:**
+```
+clg .session.dir path::/home/user/project topic::sub/dir
+```
+
+**Expected behavior:**
+- Error message on stderr about path separators in topic
+- Exit code: 1
+- **Source:** [command/10_session_dir.md](../../../../docs/cli/command/10_session_dir.md)
+
+---
+
+### INT-9: Does not create directory
+
+**Command:**
+```
+clg .session.dir path::/tmp/no-such-base-abc topic::default_topic
+```
+
+**Expected behavior:**
+- Fixture: use a base path that definitely does not have a `-default_topic` subdirectory
+- Single-line path output; the directory `/tmp/no-such-base-abc/-default_topic` is NOT created
+- Exit code: 0
+- **Source:** [command/10_session_dir.md](../../../../docs/cli/command/10_session_dir.md)
+
+---
+
+### INT-10: Exits 0 even if path does not exist on disk
+
+**Command:**
+```
+clg .session.dir path::/tmp/nonexistent-xyz-abc
+```
+
+**Expected behavior:**
+- Fixture: use a path that does not exist on disk
+- Single-line path output; path computation is filesystem-independent
+- Exit code: 0
+- **Source:** [command/10_session_dir.md](../../../../docs/cli/command/10_session_dir.md)

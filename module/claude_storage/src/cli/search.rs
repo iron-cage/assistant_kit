@@ -20,8 +20,23 @@ use super::storage::{ create_storage, validate_verbosity, load_project_for_param
 pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
-  let query = cmd.get_string( "query" )
+  let query_raw = cmd.get_string( "query" )
     .ok_or_else( || ErrorData::new( ErrorCode::InternalError, "query is required".to_string() ) )?;
+
+  // Fix(issue-030): Reject whitespace-only query values.
+  //
+  // Root cause: cli_main.rs quotes argv values containing spaces before joining into the
+  // REPL command line, so `query::   ` (spaces only) becomes `query::"   "`. The REPL
+  // parser preserves the 3-space string (non-empty), so `ok_or_else` alone no longer
+  // catches whitespace-only input.
+  //
+  // Pitfall: Always trim-validate string parameters with a "must be non-empty" constraint.
+  // `is_some()` and `!is_empty()` are insufficient — `"   ".is_empty()` is false.
+  let query = query_raw.trim();
+  if query.is_empty()
+  {
+    return Err( ErrorData::new( ErrorCode::InternalError, "query must be non-empty".to_string() ) );
+  }
 
   let project_id = cmd.get_string( "project" );
   let session_id = cmd.get_string( "session" );
@@ -144,24 +159,27 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   }
   else
   {
-    // Search all projects and sessions (current working directory project only)
-    let project = storage.load_project_for_cwd()
-      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load project: {e}" ) ) )?;
+    // No project or session specified: search all projects globally
+    let projects = storage.list_projects()
+      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list projects: {e}" ) ) )?;
 
-    let mut sessions = project.sessions()
-      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
-
-    for session in &mut sessions
+    for project in &projects
     {
-      let matches = match session.search( &filter )
-      {
-        Ok( m )  => m,
-        Err( e ) => { eprintln!( "warning: search skipped session {}: {e}", session.id() ); continue; }
-      };
+      let mut sessions = project.sessions()
+        .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions for {:?}: {e}", project.id() ) ) )?;
 
-      for m in matches
+      for session in &mut sessions
       {
-        all_matches.push( ( project.id().clone(), session.id().to_string(), m ) );
+        let matches = match session.search( &filter )
+        {
+          Ok( m )  => m,
+          Err( e ) => { eprintln!( "warning: search skipped session {}: {e}", session.id() ); continue; }
+        };
+
+        for m in matches
+        {
+          all_matches.push( ( project.id().clone(), session.id().to_string(), m ) );
+        }
       }
     }
   }

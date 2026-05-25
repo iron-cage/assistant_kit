@@ -5,7 +5,7 @@
 //! `parse_project_parameter()` at line 641 does not handle relative paths like ".",
 //! "..", "~", or "foo/bar". These inputs fall through to the default UUID case,
 //! causing them to be treated as literal UUID strings instead of being resolved
-//! to filesystem paths. For example, `.show project::.` creates a project lookup
+//! to filesystem paths. For example, `.show ``project::``.` creates a project lookup
 //! for `Uuid(".")` instead of resolving "." to the current working directory.
 //!
 //! ## Why Not Caught
@@ -39,7 +39,7 @@
 
 mod common;
 
-/// Test `.show project::.` resolves "." to current working directory (Finding #013)
+/// Test `.show ``project::``.` resolves "." to current working directory (Finding #013)
 ///
 /// ## Purpose
 /// Validates that `parse_project_parameter` handles "." as current directory marker.
@@ -100,7 +100,7 @@ fn test_show_project_dot_resolves_to_cwd()
   );
 }
 
-/// Test `.show project::..` resolves ".." to parent directory (Finding #013)
+/// Test `.show ``project::``..` resolves ".." to parent directory (Finding #013)
 ///
 /// ## Purpose
 /// Validates that `parse_project_parameter` handles ".." as parent directory marker.
@@ -137,7 +137,7 @@ fn test_show_project_dotdot_resolves_to_parent()
   );
 }
 
-/// Test `.show project::~` resolves "~" to home directory (Finding #013)
+/// Test `.show ``project::``~` resolves "~" to home directory (Finding #013)
 ///
 /// ## Purpose
 /// Validates that `parse_project_parameter` handles "~" as home directory marker.

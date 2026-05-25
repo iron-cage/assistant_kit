@@ -2,7 +2,7 @@
 
 Interaction tests for the Session Identification group (`session_id::`). Tests verify direct session access behavior in `.show` and `.export`.
 
-**Source:** [003_parameter_groups.md#session-identification](../../../../docs/cli/003_parameter_groups.md#session-identification)
+**Source:** [param_group/03_session_identification.md](../../../../docs/cli/param_group/03_session_identification.md)
 
 ## Test Case Index
 
@@ -32,7 +32,7 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 - **When:** `clg .show session_id::test-session-uuid`
 - **Then:** Conversation content from the specified session with user/assistant entries.; session content displayed
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-identification](../../../../docs/cli/003_parameter_groups.md#session-identification)
+- **Source:** [param_group/03_session_identification.md](../../../../docs/cli/param_group/03_session_identification.md)
 
 ---
 
@@ -42,7 +42,7 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 - **When:** `clg .export session_id::test-session-uuid`
 - **Then:** Valid JSONL content from the specified session written to stdout.; valid JSONL output for the specified session
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-identification](../../../../docs/cli/003_parameter_groups.md#session-identification)
+- **Source:** [param_group/03_session_identification.md](../../../../docs/cli/param_group/03_session_identification.md)
 
 ---
 
@@ -52,7 +52,7 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 - **When:** `clg .show session_id::test-session-uuid` and `clg .export session_id::test-session-uuid`
 - **Then:** Both commands operate on the same session; `.export` JSONL line count matches entry count visible in `.show`.; in both + consistent session resolution and entry counts
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-identification](../../../../docs/cli/003_parameter_groups.md#session-identification)
+- **Source:** [param_group/03_session_identification.md](../../../../docs/cli/param_group/03_session_identification.md)
 
 ---
 
@@ -62,7 +62,7 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 - **When:** `clg .export` (no `session_id::`) and `clg .show` (no `session_id::`)
 - **Then:** `.export` exits 1 with error about missing required `session_id::`; `.show` exits 0 with project-level output.; `.export` exits 1 + missing-required error; `.show` exits 0 + valid output
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-identification](../../../../docs/cli/003_parameter_groups.md#session-identification)
+- **Source:** [param_group/03_session_identification.md](../../../../docs/cli/param_group/03_session_identification.md)
 
 ---
 
@@ -72,7 +72,7 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 - **When:** `clg .show session_id::-default_topic project::/home/testuser/project-a`
 - **Then:** Session content from `project-a`'s `-default_topic` session, not from `project-b`.; session resolved within the specified project scope
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-identification](../../../../docs/cli/003_parameter_groups.md#session-identification)
+- **Source:** [param_group/03_session_identification.md](../../../../docs/cli/param_group/03_session_identification.md)
 
 ---
 
@@ -82,4 +82,4 @@ Interaction tests for the Session Identification group (`session_id::`). Tests v
 - **When:** `clg .show session_id::-default_topic` (no `project::`)
 - **Then:** Session content from `project-a`'s `-default_topic` session.; session resolved via cwd-matched project
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-identification](../../../../docs/cli/003_parameter_groups.md#session-identification)
+- **Source:** [param_group/03_session_identification.md](../../../../docs/cli/param_group/03_session_identification.md)

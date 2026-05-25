@@ -319,6 +319,6 @@ pub( super ) fn find_session_mut< 'a >(
 ) -> core::result::Result< &'a mut claude_storage_core::Session, ErrorData >
 {
   sessions.iter_mut()
-    .find( | s | s.id() == session_id || s.id().starts_with( session_id ) )
+    .find( | s | s.id() == session_id || s.id().contains( session_id ) )
     .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {session_id}" ) ) )
 }

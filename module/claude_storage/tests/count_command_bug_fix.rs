@@ -259,7 +259,7 @@ fn test_count_explicit_target_projects()
   );
 }
 
-/// Test `.count target::entries session::existing-id` succeeds
+/// Test `.count ```target::entries``` ```session::existing```-id` succeeds
 ///
 /// Verifies that providing a valid `session` filter with `target::entries`
 /// counts only entries in that specific session.
@@ -297,7 +297,7 @@ fn test_count_entries_with_session_filter()
   );
 }
 
-/// Test `.count target::entries session::` (empty) fails — framework parse error
+/// Test `.count ```target::entries``` session::` (empty) fails — framework parse error
 ///
 /// The framework rejects `session::` (empty String parameter value) with a
 /// parse error before the command reaches application code.
@@ -328,7 +328,7 @@ fn test_count_entries_session_empty()
   );
 }
 
-/// Test `.count target::entries` with partial UUID session ID (issue-019)
+/// Test `.count ```target::entrie```s` with partial UUID session ID (issue-019)
 ///
 /// ## Root Cause
 ///
@@ -336,7 +336,7 @@ fn test_count_entries_session_empty()
 /// to locate the session, while `.show` and `.export` use prefix matching
 /// (`s.id() == sid || s.id().starts_with(sid)`). A user who copies the first 8
 /// characters of a UUID from `.list` output can count entries with `.show` and
-/// `.export` but not with `.count target::entries`, making the UX inconsistent.
+/// `.export` but not with `.count ```target::entrie```s`, making the UX inconsistent.
 ///
 /// ## Why Not Caught
 ///
@@ -403,7 +403,7 @@ fn test_count_entries_partial_uuid_match()
   );
 }
 
-/// Test `.count target::invalid` exits 1 (argument error)
+/// Test `.count ```target::invali```d` exits 1 (argument error)
 ///
 /// ## Purpose
 ///

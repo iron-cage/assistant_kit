@@ -1,0 +1,66 @@
+# Parameter :: 13. `session::`
+
+Session identifier parameter — acts as substring filter in listing commands, as exact identifier in counting/search commands.
+
+**Type:** [`SessionFilter`](../type/08_session_filter.md) (in `.list`, `.projects`) / [`SessionId`](../type/09_session_id.md) (in `.count`, `.search`)
+
+**Fundamental Type:** String
+
+**Constraints:**
+- Non-empty string expected
+- In `.list` and `.projects`: case-insensitive substring match against session filename stem
+- In `.count` and `.search`: exact match (used to scope to a specific session)
+
+**Default:** unset (no filter / no scope restriction)
+
+**Commands:** `.list`, `.count`, `.search`, `.projects`
+
+**Per-command semantics:**
+
+| Command | Type | Semantics |
+|---------|------|-----------|
+| `.list` | SessionFilter | Substring filter — shows sessions whose ID contains this string |
+| `.projects` | SessionFilter | Substring filter — shows sessions whose ID contains this string |
+| `.count` | SessionId | Exact scope — counts entries within this specific session |
+| `.search` | SessionId | Exact scope — restricts search to this specific session |
+
+**Purpose:** Narrows results by session identity. In listing contexts (`.list`, `.projects`), acts as a substring filter for discovery. In counting/search contexts (`.count`, `.search`), acts as an exact scope pin to a specific session.
+
+**Side effect:** Auto-enables `sessions::1` in `.list`.
+
+**Examples:**
+```bash
+# Listing: substring filter
+session::commit       # Matches -commit.jsonl, auto-commit.jsonl
+session::default      # Matches -default_topic.jsonl
+
+# Counting/search: exact scope
+.count target::entries project::abc session::-default_topic
+.search query::error session::-default_topic
+```
+
+**Group (listing context):** [Session Filter](../param_group/04_session_filter.md) — applies to `.list` and `.projects` only where `session::` acts as a substring filter alongside `agent::` and `min_entries::`.
+
+### Referenced Type
+| Type | Kind | Fundamental | Key Constraint |
+|------|------|-------------|----------------|
+| [`SessionFilter`](../type/08_session_filter.md) | String | String | In `.list`/`.projects`: case-insensitive substring |
+| [`SessionId`](../type/09_session_id.md) | String (filename stem) | String | In `.count`/`.search`: exact match |
+
+### Referenced Parameter Groups
+| # | Group | Membership | Co-members |
+|---|-------|------------|------------|
+| 4 | [Session Filter](../param_group/04_session_filter.md) | Full | `agent::`, `min_entries::` |
+
+### Referenced Commands
+| # | Command | Default | Notes |
+|---|---------|---------|-------|
+| 2 | [`.list`](../command/02_list.md) | unset | SessionFilter: substring filter; auto-enables `sessions::1` |
+| 4 | [`.count`](../command/04_count.md) | unset | SessionId: exact scope pin to a specific session |
+| 5 | [`.search`](../command/05_search.md) | unset | SessionId: exact scope pin to a specific session |
+| 7 | [`.projects`](../command/07_projects.md) | unset | SessionFilter: substring filter |
+
+### Referenced User Stories
+| # | User Story | Persona |
+|---|------------|---------|
+| 2 | [Find Past Conversation](../user_story/002_find_past_conversation.md) | developer |

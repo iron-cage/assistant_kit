@@ -153,7 +153,34 @@ fn extract_user_message( error : &str ) -> String
 fn execute_oneshot( registry : CommandRegistry, args : Vec< String > ) -> !
 {
   let pipeline    = Pipeline::new( registry );
-  let command_line = args[ 1.. ].join( " " );
+  // Fix(issue-030): Quote parameter values that contain spaces before joining argv into
+  // a REPL-style command line string.
+  //
+  // Root cause: `args[1..].join(" ")` destroys arg boundaries — a space inside a single
+  // argv element (e.g., `query::session management`) is indistinguishable from the space
+  // between two separate args after joining. The REPL parser then splits on all spaces,
+  // causing `management` to become an unknown positional token.
+  //
+  // Pitfall: Any `name::value` parameter where the value contains a space will silently
+  // lose the second word unless the value is quoted before joining. Always quote `::` values
+  // that contain spaces; the REPL parser strips the surrounding `"..."` during parsing.
+  let command_line = args[ 1.. ]
+    .iter()
+    .map( | arg |
+    {
+      if let Some( sep ) = arg.find( "::" )
+      {
+        let key   = &arg[ ..sep + 2 ];
+        let value = &arg[ sep + 2.. ];
+        if value.contains( ' ' )
+        {
+          return format!( "{}\"{}\"", key, value.replace( '"', "\\\"" ) );
+        }
+      }
+      arg.clone()
+    } )
+    .collect::< Vec< _ > >()
+    .join( " " );
   let result      = pipeline.process_command_simple( &command_line );
 
   if result.success

@@ -2,7 +2,7 @@
 
 Edge case tests for the `verbosity::` parameter. Tests validate range enforcement, alias handling, and per-command defaults.
 
-**Source:** [004_params.md#parameter--19-verbosity](../../../../docs/cli/004_params.md#parameter--19-verbosity) | [005_types.md#type--12-verbositylevel](../../../../docs/cli/005_types.md#type--12-verbositylevel)
+**Source:** [param/19_verbosity.md](../../../../docs/cli/param/19_verbosity.md) | [type/12_verbosity_level.md](../../../../docs/cli/type/12_verbosity_level.md)
 
 ## Test Case Index
 
@@ -26,7 +26,7 @@ Edge case tests for the `verbosity::` parameter. Tests validate range enforcemen
 
 **Total:** 8 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (verbosity::0, silent) ↔ EC-2 (verbosity::5, max verbose)
 
 ## Test Cases
 
@@ -34,78 +34,86 @@ Edge case tests for the `verbosity::` parameter. Tests validate range enforcemen
 
 ### EC-1: Value 0 accepted (silent mode)
 
+- **Commands:** `.status`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .status verbosity::0`
 - **Then:** Minimal output with no decorative headers or labels; machine-readable format only.; output is reduced/minimal compared to default level
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/19_verbosity.md](../../../../docs/cli/param/19_verbosity.md)
 
 ---
 
 ### EC-2: Value 5 accepted (max allowed)
 
+- **Commands:** `.status`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .status verbosity::5`
 - **Then:** Full verbose output with all available fields shown.; + command produces output (not an error)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/19_verbosity.md](../../../../docs/cli/param/19_verbosity.md)
 
 ---
 
 ### EC-3: Value 6 rejected with error message
 
+- **Commands:** `.status`
 - **Given:** clean environment
 - **When:** `clg .status verbosity::6`
 - **Then:** `verbosity must be 0-5, got 6`; + error message `verbosity must be 0-5, got 6`
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/19_verbosity.md](../../../../docs/cli/param/19_verbosity.md)
 
 ---
 
 ### EC-4: Negative value rejected
 
+- **Commands:** `.status`
 - **Given:** clean environment
 - **When:** `clg .status verbosity::-1`
 - **Then:** `verbosity must be 0-5, got -1`; + error message `verbosity must be 0-5, got -1`
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/19_verbosity.md](../../../../docs/cli/param/19_verbosity.md)
 
 ---
 
 ### EC-5: Non-integer string rejected
 
+- **Commands:** `.status`
 - **Given:** clean environment
 - **When:** `clg .status verbosity::high`
 - **Then:** `verbosity must be an integer 0-5, got high`; + error message `verbosity must be an integer 0-5, got high`
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/19_verbosity.md](../../../../docs/cli/param/19_verbosity.md)
 
 ---
 
 ### EC-6: Alias v:: accepted same as verbosity::
 
+- **Commands:** `.status`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .status v::2`
 - **Then:** Same output as `clg .status verbosity::2`; detailed view with extended information.; + output identical to `verbosity::2` output
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/19_verbosity.md](../../../../docs/cli/param/19_verbosity.md)
 
 ---
 
 ### EC-7: Omitted uses default of 1
 
+- **Commands:** `.status`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .status`
 - **Then:** Standard summary output; same as `clg .status verbosity::1`.; + output is the standard summary (equivalent to `verbosity::1`)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/19_verbosity.md](../../../../docs/cli/param/19_verbosity.md)
 
 ---
 
 ### EC-8: Float value rejected
 
+- **Commands:** `.status`
 - **Given:** clean environment
 - **When:** `clg .status verbosity::1.5`
 - **Then:** `verbosity must be an integer 0-5, got 1.5`; + error message `verbosity must be an integer 0-5, got 1.5`
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/19_verbosity.md](../../../../docs/cli/param/19_verbosity.md)

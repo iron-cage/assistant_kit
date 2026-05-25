@@ -4,13 +4,20 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|----------:|
+| `cli/command/` | Per-command detail pages with full parameter tables and cross-refs | [cli/command/readme.md](cli/command/readme.md) | 11 |
 | `cli/format/` | Index of format doc instances covering all export rendering modes | [cli/format/readme.md](cli/format/readme.md) | 3 |
+| `cli/param/` | Per-parameter detail pages with type, defaults, and command cross-refs | [cli/param/readme.md](cli/param/readme.md) | 22 |
+| `cli/param_group/` | Per-group detail pages with membership, examples, and cross-refs | [cli/param_group/readme.md](cli/param_group/readme.md) | 5 |
+| `cli/type/` | Per-type constraint and parsing reference | [cli/type/readme.md](cli/type/readme.md) | 14 |
+| `cli/user_story/` | Index of user story instances capturing persona intent and acceptance criteria | [cli/user_story/readme.md](cli/user_story/readme.md) | 5 |
 | `feature/` | Index of feature doc instances covering CLI tool scope and design decisions | [feature/readme.md](feature/readme.md) | 1 |
 | `operation/` | Index of operation doc instances covering upgrade and migration procedures | [operation/readme.md](operation/readme.md) | 1 |
 | `tests/docs/cli/command/` | Index of per-command integration test case files covering command-level behavior | [../../tests/docs/cli/command/readme.md](../../tests/docs/cli/command/readme.md) | 11 |
 | `tests/docs/cli/param/` | Index of per-parameter edge case test files covering parameter-level behavior | [../../tests/docs/cli/param/readme.md](../../tests/docs/cli/param/readme.md) | 22 |
 | `tests/docs/cli/param_group/` | Index of per-group interaction test files covering parameter group behavior | [../../tests/docs/cli/param_group/readme.md](../../tests/docs/cli/param_group/readme.md) | 5 |
-| `cli/user_story/` | Index of user story instances capturing persona intent and acceptance criteria | [cli/user_story/readme.md](cli/user_story/readme.md) | 5 |
+| `tests/docs/cli/type/` | Index of per-type constraint test case files covering type parsing and validation | [../../tests/docs/cli/type/readme.md](../../tests/docs/cli/type/readme.md) | 14 |
+| `tests/docs/cli/format/` | Index of per-format output verification test case files covering export format structure | [../../tests/docs/cli/format/readme.md](../../tests/docs/cli/format/readme.md) | 3 |
+| `tests/docs/cli/user_story/` | Index of per-story acceptance test case files covering user story criteria | [../../tests/docs/cli/user_story/readme.md](../../tests/docs/cli/user_story/readme.md) | 5 |
 
 ## Master Doc Instances Table
 

@@ -13,7 +13,7 @@
 //! - Quoted strings (`"..."`) should protect all characters, but don't
 //!
 //! **Error Flow:**
-//! 1. User types: `claude_storage .search query::"Bug #003"`
+//! 1. User types: `claude_storage .search ``query::``"Bug #003"`
 //! 2. Unilang tokenizer scans input character-by-character
 //! 3. Finds `#` at position 19 (inside quoted string)
 //! 4. Raises parse error: "Unexpected token '#' in arguments"

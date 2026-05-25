@@ -124,24 +124,23 @@ fn test_status_custom_path()
   );
 }
 
-/// Test .status handles nonexistent path gracefully
+/// Test .status rejects nonexistent path with an error
 ///
 /// ## Purpose
-/// Validates that .status command succeeds with nonexistent path and reports
-/// empty storage (0 projects) rather than failing.
+/// Validates that .status command fails with a clear error message when
+/// the specified storage root does not exist.
 ///
 /// ## Coverage
-/// Tests graceful handling of nonexistent paths. Command should succeed and
-/// report 0 projects for nonexistent paths, allowing users to check status
-/// of new/empty storage locations.
+/// Tests error handling for nonexistent paths. Command should fail (exit non-zero)
+/// and emit an error message on stderr describing the missing path.
 ///
 /// ## Validation Strategy
 /// Execute .status with `path::/nonexistent/path/12345`. Assert:
-/// - Command succeeds (zero exit)
-/// - Reports 0 projects (empty storage)
+/// - Command fails (non-zero exit)
+/// - Error message present on stderr
 ///
 /// ## Related Requirements
-/// .status path parameter: gracefully handles nonexistent paths
+/// .status path parameter: rejects nonexistent storage roots with exit 2
 #[ test ]
 fn test_status_nonexistent_path()
 {
@@ -156,14 +155,14 @@ fn test_status_nonexistent_path()
   let combined = format!( "{stderr}{stdout}" );
 
   assert!(
-    output.status.success(),
-    "Should succeed with nonexistent path. Got: {combined}"
+    !output.status.success(),
+    "Should fail with nonexistent path. Got: {combined}"
   );
 
-  // Should report 0 projects for nonexistent path
+  // Error message must be present
   assert!(
-    combined.contains( '0' ) && combined.to_lowercase().contains( "project" ),
-    "Should show 0 projects for nonexistent path. Got: {combined}"
+    !stderr.is_empty(),
+    "Should emit error on stderr for nonexistent path. Got stdout: {stdout}"
   );
 }
 

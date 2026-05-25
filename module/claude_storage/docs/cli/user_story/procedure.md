@@ -8,9 +8,9 @@
 1. Choose next NNN number (3-digit, check User Story Index for current highest)
 2. Create `NNN_{slug}.md` following canonical template (`cli_doc.rulebook.md § Documentation Style : User Stories`)
 3. Add row to `readme.md` User Story Index table
-4. For each command in `### Referenced Commands`: add a back-reference row to that command's `### Referenced User Stories` in `001_commands.md`
-5. For each parameter in `### Referenced Parameters`: add a back-reference row to that parameter's `### Referenced User Stories` in `004_params.md`
-6. For each group in `### Referenced Parameter Groups`: add a back-reference row to that group's `### Referenced User Stories` in `003_parameter_groups.md`
+4. For each command in `### Referenced Commands`: add a back-reference row to that command's `### Referenced User Stories` in `command/NN_name.md`
+5. For each parameter in `### Referenced Parameters`: add a back-reference row to that parameter's `### Referenced User Stories` in `param/NN_name.md`
+6. For each group in `### Referenced Parameter Groups`: add a back-reference row to that group's `### Referenced User Stories` in `param_group/NN_name.md`
 7. For each format in `### Referenced Formats`: add a back-reference row to that format's `### Referenced User Stories` in `format/NN_*.md`
 8. For each story in `### Related User Stories`: add a reciprocal row to that story's `### Related User Stories`
 9. Update `docs/entities.md` — increment `cli/user_story/` Instances column

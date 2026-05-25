@@ -567,7 +567,7 @@ fn test_search_plural_noun_multiple_matches()
   }
 }
 
-/// Test `.search q::TEXT` alias produces same result as `query::TEXT` (EC-5)
+/// Test `.search ``q::TEX``T` alias produces same result as `query::TEXT` (EC-5)
 ///
 /// ## Purpose
 ///

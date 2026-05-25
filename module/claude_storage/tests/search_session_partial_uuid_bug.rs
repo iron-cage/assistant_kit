@@ -40,7 +40,7 @@ mod common;
 
 use tempfile::TempDir;
 
-/// Test `.search session::PREFIX` finds matches using a partial UUID (issue-020)
+/// Test `.search ``session::PREFI``X` finds matches using a partial UUID (issue-020)
 ///
 /// ## Root Cause
 ///

@@ -2,7 +2,7 @@
 
 Interaction tests for the Session Filter group (`session::`, `agent::`, `min_entries::`). Tests verify auto-enable behavior, combined filter semantics, and `sessions::` override interactions.
 
-**Source:** [003_parameter_groups.md#session-filter](../../../../docs/cli/003_parameter_groups.md#session-filter)
+**Source:** [param_group/04_session_filter.md](../../../../docs/cli/param_group/04_session_filter.md)
 
 ## Test Case Index
 
@@ -33,7 +33,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 - **When:** `clg .list session::commit`
 - **Then:** Project listing with sessions enabled; only `-commit` is shown under its project; `-default_topic` is absent.; session list auto-enabled and filtered by "commit"
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-filter](../../../../docs/cli/003_parameter_groups.md#session-filter)
+- **Source:** [param_group/04_session_filter.md](../../../../docs/cli/param_group/04_session_filter.md)
 
 ---
 
@@ -43,7 +43,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 - **When:** `clg .list agent::1`
 - **Then:** Project listing with sessions enabled; only agent sessions are shown.; session list auto-enabled and filtered to agent sessions only
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-filter](../../../../docs/cli/003_parameter_groups.md#session-filter)
+- **Source:** [param_group/04_session_filter.md](../../../../docs/cli/param_group/04_session_filter.md)
 
 ---
 
@@ -53,7 +53,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 - **When:** `clg .list min_entries::5`
 - **Then:** Project listing with sessions enabled; only sessions with 5 or more entries are shown.; session list auto-enabled and filtered by minimum entry count
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-filter](../../../../docs/cli/003_parameter_groups.md#session-filter)
+- **Source:** [param_group/04_session_filter.md](../../../../docs/cli/param_group/04_session_filter.md)
 
 ---
 
@@ -63,7 +63,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 - **When:** `clg .list sessions::0 session::commit agent::1 min_entries::2`
 - **Then:** Project listing with no session section despite all filter parameters being present.; no session list in output
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-filter](../../../../docs/cli/003_parameter_groups.md#session-filter)
+- **Source:** [param_group/04_session_filter.md](../../../../docs/cli/param_group/04_session_filter.md)
 
 ---
 
@@ -73,7 +73,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 - **When:** `clg .list session::commit agent::1`
 - **Then:** Only `agent-commit-123` is listed under its project (matches "commit" substring AND is an agent session).; only sessions matching both the substring and agent filters
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-filter](../../../../docs/cli/003_parameter_groups.md#session-filter)
+- **Source:** [param_group/04_session_filter.md](../../../../docs/cli/param_group/04_session_filter.md)
 
 ---
 
@@ -83,7 +83,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 - **When:** `clg .list session::commit min_entries::5`
 - **Then:** Only `-commit-long` is listed under its project (matches "commit" substring AND has ≥5 entries).; only sessions satisfying both the substring and minimum entry count
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-filter](../../../../docs/cli/003_parameter_groups.md#session-filter)
+- **Source:** [param_group/04_session_filter.md](../../../../docs/cli/param_group/04_session_filter.md)
 
 ---
 
@@ -93,4 +93,4 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 - **When:** `clg .list session::commit agent::1 min_entries::5`
 - **Then:** Only `agent-commit-5entries` is listed under its project (satisfies all three filters).; only sessions satisfying ALL three filters simultaneously
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#session-filter](../../../../docs/cli/003_parameter_groups.md#session-filter)
+- **Source:** [param_group/04_session_filter.md](../../../../docs/cli/param_group/04_session_filter.md)

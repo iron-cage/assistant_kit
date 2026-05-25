@@ -2,7 +2,7 @@
 
 Common usage patterns for the `claude_storage` CLI. Each workflow shows a practical scenario with commands, expected output shape, and notes.
 
-See [001_commands.md](001_commands.md) for command reference and [004_params.md](004_params.md) for parameter details.
+See [command/readme.md](command/readme.md) for command reference and [param/readme.md](param/readme.md) for parameter details.
 
 ## Workflow Complexity Matrix
 

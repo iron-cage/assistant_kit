@@ -2,7 +2,7 @@
 
 Edge case tests for the `sessions::` boolean override parameter in `.list`. Tests validate override behavior against auto-enable logic.
 
-**Source:** [004_params.md#parameter--15-sessions-bool](../../../../docs/cli/004_params.md#parameter--15-sessions-bool)
+**Source:** [param/15_sessions.md](../../../../docs/cli/param/15_sessions.md)
 
 ## Test Case Index
 
@@ -24,7 +24,7 @@ Edge case tests for the `sessions::` boolean override parameter in `.list`. Test
 
 **Total:** 7 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (sessions::1, force display) ↔ EC-2 (sessions::0, suppress display)
 
 ## Test Cases
 
@@ -32,68 +32,75 @@ Edge case tests for the `sessions::` boolean override parameter in `.list`. Test
 
 ### EC-1: sessions::1 forces session display with no filters
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list sessions::1`
 - **Then:** stdout includes session entries under each project; sessions are shown despite no `session::`, `agent::`, or `min_entries::` being set.; sessions displayed (override active with no session filters present)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/15_sessions.md](../../../../docs/cli/param/15_sessions.md)
 
 ---
 
 ### EC-2: sessions::0 suppresses session display even with session::
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list sessions::0 session::default`
 - **Then:** stdout lists matching projects but does not expand sessions under them; `session::default` acts as a project filter but sessions are not shown.; no sessions displayed despite session:: filter (suppression override applied)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/15_sessions.md](../../../../docs/cli/param/15_sessions.md)
 
 ---
 
 ### EC-3: sessions::0 suppresses session display even with agent::
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list sessions::0 agent::1`
 - **Then:** stdout lists projects (filtered to those with agent sessions) but does not display the session entries themselves.; no sessions displayed despite agent:: filter (suppression override applied)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/15_sessions.md](../../../../docs/cli/param/15_sessions.md)
 
 ---
 
 ### EC-4: sessions::0 suppresses session display even with min_entries::
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list sessions::0 min_entries::2`
 - **Then:** stdout lists projects (filtered to those meeting the min_entries threshold) but does not display session entries.; no sessions displayed despite min_entries:: filter (suppression override applied)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/15_sessions.md](../../../../docs/cli/param/15_sessions.md)
 
 ---
 
 ### EC-5: Omitted + no session filters = no sessions shown
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list`
 - **Then:** stdout lists projects as summaries only; no session-level entries are expanded under projects.; only project summaries shown (auto-detect: no filters → no sessions)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/15_sessions.md](../../../../docs/cli/param/15_sessions.md)
 
 ---
 
 ### EC-6: Omitted + session:: present = sessions auto-shown
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list session::default`
 - **Then:** stdout includes session entries matching the `session::default` filter; sessions are shown automatically without explicit `sessions::1`.; sessions displayed automatically (auto-enable triggered by session:: filter)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/15_sessions.md](../../../../docs/cli/param/15_sessions.md)
 
 ---
 
 ### EC-7: Value "yes" rejected (not a boolean)
 
+- **Commands:** `.list`
 - **Given:** clean environment
 - **When:** `clg .list sessions::yes`
 - **Then:** stderr contains an error indicating `sessions` must be 0 or 1.; error indicating non-boolean value rejected
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/15_sessions.md](../../../../docs/cli/param/15_sessions.md)

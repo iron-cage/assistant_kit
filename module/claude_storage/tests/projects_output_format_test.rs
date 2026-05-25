@@ -14,20 +14,20 @@
 //! | ID | Test Name | Category |
 //! |----|-----------|----------|
 //! | IT-17 | v1 output groups sessions under project path headers | Output Format |
-//! | IT-18 | path header always present at v1 for scope::local single project | Output Format |
-//! | IT-19 | agent sessions collapsed to count line at v1 without agent:: filter | Output Format |
+//! | IT-18 | path header always present at v1 for `scope::local` single project | Output Format |
+//! | IT-19 | agent sessions collapsed to count line at v1 without `agent::` filter | Output Format |
 //! | IT-20 | agent sessions shown individually at v2+ | Output Format |
 //! | IT-21 | entry count shown per session at v2+ | Output Format |
-//! | IT-22 | agent::1 explicit filter disables collapse at v1 | Output Format |
+//! | IT-22 | `agent::1` explicit filter disables collapse at v1 | Output Format |
 //! | IT-27 | entry count shown per session at v1 | Output Format |
-//! | IT-28 | limit::N truncates main sessions shown at v1 | Output Format |
+//! | IT-28 | `limit::N` truncates main sessions shown at v1 | Output Format |
 //! | IT-29 | zero-byte sessions excluded from v1 display | Output Format |
 //! | IT-50 | summary mode shows "Active project" not "Active session" | Project-Centric |
 //! | IT-51 | summary mode shows session count aggregate "(N sessions," | Project-Centric |
 //! | IT-52 | list mode shows projects sorted by recency (most recently active first) | Project-Centric |
-//! | IT-53 | verbosity::0 shows project paths only — no session IDs | Project-Centric |
-//! | CC-P03 | limit::1 with 2 sessions uses singular "conversation" in truncation | Truncation Noun |
-//! | CC-P04 | limit::1 with 3 sessions uses plural "conversations" in truncation | Truncation Noun |
+//! | IT-53 | `verbosity::0` shows project paths only — no session IDs | Project-Centric |
+//! | CC-P03 | `limit::1` with 2 sessions uses singular "conversation" in truncation | Truncation Noun |
+//! | CC-P04 | `limit::1` with 3 sessions uses plural "conversations" in truncation | Truncation Noun |
 
 mod common;
 

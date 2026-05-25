@@ -5,7 +5,7 @@
 - **Purpose**: Document user goals, personas, and acceptance criteria for the `claude_storage` CLI.
 - **Responsibility**: Index of user story instances capturing persona intent and benefit.
 - **In Scope**: Personas, goals, acceptance criteria, step-by-step workflows, cross-references to satisfying commands and parameters.
-- **Out of Scope**: Command specifications (→ `001_commands.md`), parameter definitions (→ `004_params.md`), output formats (→ `format/`).
+- **Out of Scope**: Command specifications (→ `command/`), parameter definitions (→ `param/`), output formats (→ `format/`).
 
 ### User Story Index
 

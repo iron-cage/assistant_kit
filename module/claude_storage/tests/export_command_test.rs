@@ -364,7 +364,7 @@ fn test_export_with_required_parameters()
 ///
 /// ## Root Cause
 /// `export_session_to_file` used bare `?` on `File::create(output_path)`, which
-/// converts `io::Error` via the blanket `From<io::Error> for Error` impl. That impl
+/// converts `io::Error` via the blanket `From<``io::Error``> for Error` impl. That impl
 /// always sets context to "unknown operation", producing "I/O error during unknown
 /// operation: No such file or directory" with no mention of which path failed.
 ///
@@ -383,7 +383,7 @@ fn test_export_with_required_parameters()
 /// context. Bare `?` on IO operations silently strips identifying information.
 ///
 /// ## Pitfall
-/// The blanket `From<io::Error> for Error` impl unconditionally sets context to
+/// The blanket `From<``io::Error``> for Error` impl unconditionally sets context to
 /// "unknown operation". Every IO error propagated via `?` loses its context.
 /// Use `.map_err(|e| Error::io(e, ctx))` for any IO operation where the path matters.
 #[ test ]

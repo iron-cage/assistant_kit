@@ -13,7 +13,7 @@
 //! **Pitfall**: Always test the user-facing output, not just internal functions
 //!
 //! This integration test validates that:
-//! 1. Default `.show session_id::X` displays conversation content
+//! 1. Default `.show ``session_id::``X` displays conversation content
 //! 2. `metadata::1` parameter shows only metadata (old behavior)
 //! 3. Content format is readable (timestamps, role labels, text)
 //!

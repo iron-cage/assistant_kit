@@ -53,7 +53,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 /// `CLAUDE_STORAGE_ROOT` pointing to it. Assert exit 0 and stdout non-empty.
 ///
 /// ## Related Requirements
-/// docs/feature/001_cli_tool.md — one-shot invocation mode
+/// `docs/feature/001_cli_tool.md` — one-shot invocation mode
 #[ test ]
 fn ft_1_one_shot_command_executes_and_exits_cleanly()
 {
@@ -89,7 +89,7 @@ fn ft_1_one_shot_command_executes_and_exits_cleanly()
 /// and no "panicked at" text in stderr.
 ///
 /// ## Related Requirements
-/// docs/feature/001_cli_tool.md — one-shot invocation mode
+/// `docs/feature/001_cli_tool.md` — one-shot invocation mode
 #[ test ]
 fn ft_2_unknown_command_rejected_with_non_zero_exit()
 {
@@ -124,7 +124,7 @@ fn ft_2_unknown_command_rejected_with_non_zero_exit()
 /// appears in stdout. Assert exit 0.
 ///
 /// ## Related Requirements
-/// docs/feature/001_cli_tool.md — path-encoded project scheme
+/// `docs/feature/001_cli_tool.md` — path-encoded project scheme
 #[ test ]
 fn ft_3_path_encoded_project_returned_in_project_list()
 {
@@ -160,7 +160,7 @@ fn ft_3_path_encoded_project_returned_in_project_list()
 /// assert both identifiers appear in stdout. Assert exit 0.
 ///
 /// ## Related Requirements
-/// docs/feature/001_cli_tool.md — UUID-based project scheme
+/// `docs/feature/001_cli_tool.md` — UUID-based project scheme
 #[ test ]
 fn ft_4_uuid_named_project_returned_in_project_list()
 {
@@ -193,18 +193,18 @@ fn ft_4_uuid_named_project_returned_in_project_list()
 ///
 /// ## Purpose
 /// Verify that sessions in the flat layout (`.jsonl` directly in the project
-/// directory) are visible via `.list sessions::1`, with no layout error.
+/// directory) are visible via `.list ``sessions::``1`, with no layout error.
 ///
 /// ## Coverage
 /// Flat-layout (B7) storage transparency; sessions appear in listing; exit 0.
 ///
 /// ## Validation Strategy
 /// Write a flat-layout project (`write_path_project_session` produces
-/// `{project_id}/{session_id}.jsonl` directly), run `clg .list sessions::1`,
+/// `{project_id}/{session_id}.jsonl` directly), run `clg .list ``sessions::``1`,
 /// assert stdout non-empty and no layout error on stderr. Assert exit 0.
 ///
 /// ## Related Requirements
-/// docs/feature/001_cli_tool.md — flat layout (B7) transparent handling
+/// `docs/feature/001_cli_tool.md` — flat layout (B7) transparent handling
 #[ test ]
 fn ft_5_flat_layout_project_sessions_accessible()
 {
@@ -236,18 +236,18 @@ fn ft_5_flat_layout_project_sessions_accessible()
 ///
 /// ## Purpose
 /// Verify that sessions in the hierarchical layout (subagent directory structure,
-/// B13+) appear in `.list sessions::1` output alongside flat-layout sessions.
+/// B13+) appear in `.list ``sessions::``1` output alongside flat-layout sessions.
 ///
 /// ## Coverage
 /// Hierarchical-layout (B13+) storage transparency; both layouts in one listing; exit 0.
 ///
 /// ## Validation Strategy
 /// Write one flat-layout and one hierarchical project (`write_hierarchical_path_session`),
-/// run `clg .list sessions::1`, assert stdout non-empty and no layout error on
+/// run `clg .list ``sessions::``1`, assert stdout non-empty and no layout error on
 /// stderr. Assert exit 0.
 ///
 /// ## Related Requirements
-/// docs/feature/001_cli_tool.md — hierarchical layout (B13+) transparent handling
+/// `docs/feature/001_cli_tool.md` — hierarchical layout (B13+) transparent handling
 #[ test ]
 fn ft_6_hierarchical_layout_project_sessions_accessible()
 {

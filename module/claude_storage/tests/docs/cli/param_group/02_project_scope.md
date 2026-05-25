@@ -2,7 +2,7 @@
 
 Interaction tests for the Project Scope group (`project::`). Tests verify consistent project resolution across commands using this group.
 
-**Source:** [003_parameter_groups.md#project-scope](../../../../docs/cli/003_parameter_groups.md#project-scope)
+**Source:** [param_group/02_project_scope.md](../../../../docs/cli/param_group/02_project_scope.md)
 
 ## Test Case Index
 
@@ -31,7 +31,7 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 - **When:** `clg .show session_id::VALID-UUID project::/home/testuser/myproject` and `clg .search query::hello project::/home/testuser/myproject`
 - **Then:** `.show` returns session content from `myproject`; `.search` returns results scoped to `myproject` only.; in both commands + results scoped to the specified project
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#project-scope](../../../../docs/cli/003_parameter_groups.md#project-scope)
+- **Source:** [param_group/02_project_scope.md](../../../../docs/cli/param_group/02_project_scope.md)
 
 ---
 
@@ -41,7 +41,7 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 - **When:** `clg .export session_id::VALID-UUID project::/home/testuser/myproject`
 - **Then:** Session exported as valid JSONL to stdout.; valid JSONL output for the correct session
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#project-scope](../../../../docs/cli/003_parameter_groups.md#project-scope)
+- **Source:** [param_group/02_project_scope.md](../../../../docs/cli/param_group/02_project_scope.md)
 
 ---
 
@@ -51,7 +51,7 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 - **When:** `clg .count project::PROJ-UUID`
 - **Then:** Entry count of 10 for the UUID-identified project.; correct count for the UUID-identified project
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#project-scope](../../../../docs/cli/003_parameter_groups.md#project-scope)
+- **Source:** [param_group/02_project_scope.md](../../../../docs/cli/param_group/02_project_scope.md)
 
 ---
 
@@ -61,7 +61,7 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 - **When:** `clg .show session_id::VALID-UUID` (no `project::` param)
 - **Then:** Session content from the cwd-matched project.
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#project-scope](../../../../docs/cli/003_parameter_groups.md#project-scope)
+- **Source:** [param_group/02_project_scope.md](../../../../docs/cli/param_group/02_project_scope.md)
 
 ---
 
@@ -71,7 +71,7 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 - **When:** `clg .export session_id::VALID-UUID` (no `project::` param)
 - **Then:** Session exported as JSONL from the cwd-matched project.; valid export from the cwd-resolved project
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#project-scope](../../../../docs/cli/003_parameter_groups.md#project-scope)
+- **Source:** [param_group/02_project_scope.md](../../../../docs/cli/param_group/02_project_scope.md)
 
 ---
 
@@ -81,4 +81,4 @@ Interaction tests for the Project Scope group (`project::`). Tests verify consis
 - **When:** `.show`, `.search`, `.export`, `.count`, `.list` all with `project::/home/testuser/myproject`
 - **Then:** All commands operate on the same project; counts and session lists are consistent.; in all commands + consistent project resolution across all 5 commands
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#project-scope](../../../../docs/cli/003_parameter_groups.md#project-scope)
+- **Source:** [param_group/02_project_scope.md](../../../../docs/cli/param_group/02_project_scope.md)

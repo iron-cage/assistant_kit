@@ -2,7 +2,7 @@
 
 Edge case tests for the `scope::` parameter. Tests validate enum parsing and per-variant behavior.
 
-**Source:** [004_params.md#parameter--12-scope](../../../../docs/cli/004_params.md#parameter--12-scope) | [005_types.md#scopevalue](../../../../docs/cli/005_types.md#scopevalue) | [003_parameter_groups.md#scope-configuration](../../../../docs/cli/003_parameter_groups.md#scope-configuration)
+**Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md) | [type/07_scope_value.md](../../../../docs/cli/type/07_scope_value.md) | [param_group/05_scope_configuration.md](../../../../docs/cli/param_group/05_scope_configuration.md)
 
 ## Test Case Index
 
@@ -27,7 +27,7 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 
 **Total:** 8 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (scope::local, current project only) ↔ EC-2 (scope::relevant, ancestors included)
 
 ## Test Cases
 
@@ -35,66 +35,73 @@ Edge case tests for the `scope::` parameter. Tests validate enum parsing and per
 
 ### EC-1: Value "local" accepted
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list scope::local`
 - **Then:** stdout lists sessions belonging to the current directory project only; sessions from parent or sibling projects are absent.; output scoped to current project only
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)
 
 ---
 
 ### EC-2: Value "relevant" accepted
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list scope::relevant`
 - **Then:** stdout lists sessions from the current project and sessions from projects at ancestor path levels.; output includes ancestor-level sessions (broader than `scope::local`)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)
 
 ---
 
 ### EC-3: Value "under" accepted
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list scope::under path::/tmp/test-fixture`
 - **Then:** stdout lists sessions from all projects whose path is under the given base path.; output includes sessions from descendant projects
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)
 
 ---
 
 ### EC-4: Value "global" accepted
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list scope::global`
 - **Then:** stdout lists sessions from all projects in storage, regardless of path hierarchy.; output includes all sessions across all projects in storage
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)
 
 ---
 
 ### EC-5: Value "RELEVANT" accepted (case-insensitive)
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list scope::RELEVANT`
 - **Then:** No error; output is identical to using lowercase `scope::relevant`.; output identical to lowercase variant (case normalization applied)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)
 
 ---
 
 ### EC-6: Invalid value "all" rejected with error
 
+- **Commands:** `.list`
 - **Given:** clean environment
 - **When:** `clg .list scope::all`
 - **Then:** stderr contains `scope must be relevant|local|under|global, got all`; error message `scope must be relevant|local|under|global, got all`
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)
 
 ---
 
 ### EC-7: Omitted defaults to "under" scope (summary mode output)
 
+- **Commands:** `.projects`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a parent project at `/tmp/test-fixture/parent` and a child project at `/tmp/test-fixture/parent/child`. The most-recent session is in the child project. Run from `/tmp/test-fixture/parent`.
 - **When:** `clg .projects` (run from `/tmp/test-fixture/parent`)
 - **Then:** ```
@@ -106,14 +113,15 @@ Last message:
 ```
 The project path in the summary header belongs to the child project, confirming that `scope::under` is active (sub-project sessions are in scope). stdout does NOT contain `Found N projects:`.; `Active project` header present + `Found N projects:` absent + child project path in header
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)
 
 ---
 
 ### EC-8: scope::global ignores path::
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list scope::global path::/tmp/nonexistent-subpath`
 - **Then:** stdout lists sessions from all projects in storage; the `path::` value has no filtering effect with `scope::global`.; output unaffected by path parameter when scope is global
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/12_scope.md](../../../../docs/cli/param/12_scope.md)

@@ -58,15 +58,15 @@ Activated by `format::json` on `.export`.
 
 `claude_storage_core/src/export.rs` — `write_json_value()`, `export_session()`
 
-### CLI
+### Referenced Commands
 
-| File | Relationship |
-|------|-------------|
-| [004_params.md § format::](../004_params.md#parameter--5-format) | Parameter definition and validation |
-| [005_types.md § ExportFormat](../005_types.md#exportformat) | Type constants and parsing |
+| # | Command | Role |
+|---|---------|------|
+| 6 | [`.export`](../command/06_export.md) | Activated when `format::json` is supplied |
 
-### Tests
+### Referenced User Stories
 
-| File | Relationship |
-|------|-------------|
-| [05_format.md](../../../tests/docs/cli/param/05_format.md) | Test case EC-2 |
+| # | User Story | Persona |
+|---|------------|---------|
+| 3 | [Export Session for Review](../user_story/003_export_session_for_review.md) | developer |
+| 4 | [Query Storage Programmatically](../user_story/004_query_storage_programmatically.md) | developer |

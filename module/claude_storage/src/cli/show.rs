@@ -22,7 +22,28 @@ use super::format::format_entry_content;
 pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
-  let session_id = cmd.get_string( "session_id" );
+  let session_id_raw = cmd.get_string( "session_id" );
+  // Fix(issue-030): Reject whitespace-only session_id values.
+  //
+  // Root cause: cli_main.rs quotes argv values containing spaces before joining into the
+  // REPL command line, so `session_id::   ` (spaces only) becomes `session_id::"   "`.
+  // The REPL parser preserves the whitespace-only string as a non-empty value, bypassing
+  // the prior implicit empty-check that relied on the REPL splitting spaces away.
+  //
+  // Pitfall: Always trim-validate string parameters with a "must be non-empty" constraint.
+  let session_id : Option< &str > = match session_id_raw
+  {
+    Some( s ) if s.trim().is_empty() =>
+    {
+      return Err
+      (
+        ErrorData::new( ErrorCode::InternalError, "session_id must be non-empty".to_string() )
+      );
+    }
+    Some( s ) => Some( s.trim() ),
+    None => None,
+  };
+
   let project_param = cmd.get_string( "project" );
   let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
   let show_entries = cmd.get_boolean( "entries" ).unwrap_or( false );

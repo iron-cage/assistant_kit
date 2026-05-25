@@ -3,17 +3,17 @@
 //! ## Coverage
 //!
 //! - `target::conversations` requires `project::` parameter
-//! - `target::conversations project::<id>` outputs bare integer conversation count
-//! - `target::conversations project::<id>` with 1 session → "1" (singular edge case)
-//! - `target::conversations project::<id>` with 0 sessions → "0" (empty project)
-//! - `target::conversations project::<nonexistent>` → error (invalid project)
+//! - `target::conversations ``project::``<id>` outputs bare integer conversation count
+//! - `target::conversations ``project::``<id>` with 1 session → "1" (singular edge case)
+//! - `target::conversations ``project::``<id>` with 0 sessions → "0" (empty project)
+//! - `target::conversations ``project::``<nonexistent>` → error (invalid project)
 
 mod common;
 
 // ────────────────────────────────────────────────────────────────────────────
 // IT-T04: `.count target::conversations project::<id>` outputs bare integer
 // ────────────────────────────────────────────────────────────────────────────
-/// IT-T04: `.count target::conversations` outputs a bare integer conversation count.
+/// IT-T04: `.count ``target::conversation``s` outputs a bare integer conversation count.
 ///
 /// With two sessions in the project and the 1:1 identity mapping, expects count = 2.
 #[ test ]
@@ -51,7 +51,7 @@ fn it_count_target_conversations()
 // ────────────────────────────────────────────────────────────────────────────
 // IT-T05: `.count target::conversations` without `project::` returns error
 // ────────────────────────────────────────────────────────────────────────────
-/// IT-T05: `.count target::conversations` without `project::` must fail with a clear error.
+/// IT-T05: `.count ``target::conversation``s` without `project::` must fail with a clear error.
 ///
 /// Conversations require project scope; omitting `project::` is an error.
 #[ test ]
@@ -77,7 +77,7 @@ fn it_count_conversations_requires_project()
 // ────────────────────────────────────────────────────────────────────────────
 // IT-T06: `.count target::conversations project::<id>` with 1 session → "1"
 // ────────────────────────────────────────────────────────────────────────────
-/// IT-T06: `.count target::conversations` with exactly 1 session outputs "1".
+/// IT-T06: `.count ``target::conversation``s` with exactly 1 session outputs "1".
 ///
 /// Singular edge case complementary to IT-T04 (count=2).
 /// With the 1:1 identity mapping one session = one conversation, so count must be "1".
@@ -111,7 +111,7 @@ fn it_count_one_conversation()
 // ────────────────────────────────────────────────────────────────────────────
 // IT-T07: `.count target::conversations project::<id>` with 0 sessions → "0"
 // ────────────────────────────────────────────────────────────────────────────
-/// IT-T07: `.count target::conversations` on an empty project outputs "0".
+/// IT-T07: `.count ``target::conversation``s` on an empty project outputs "0".
 ///
 /// Project directory exists in storage but has no JSONL files.
 /// Must exit 0 and output "0", not crash or error.
@@ -150,7 +150,7 @@ fn it_count_zero_conversations_empty_project()
 // ────────────────────────────────────────────────────────────────────────────
 // IT-T08: `.count target::conversations project::<nonexistent>` → error
 // ────────────────────────────────────────────────────────────────────────────
-/// IT-T08: `.count target::conversations` with a nonexistent project must fail.
+/// IT-T08: `.count ``target::conversation``s` with a nonexistent project must fail.
 ///
 /// A valid encoded project ID with no storage directory is an error condition.
 /// Must exit non-0 — silently returning 0 would hide a user mistake.

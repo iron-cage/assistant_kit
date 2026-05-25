@@ -2,7 +2,7 @@
 
 Edge case tests for the `type::` parameter. Tests validate enum parsing and project filtering behavior.
 
-**Source:** [004_params.md#parameter--18-type](../../../../docs/cli/004_params.md#parameter--18-type) | [005_types.md#type--6-projecttype](../../../../docs/cli/005_types.md#type--6-projecttype)
+**Source:** [param/18_type.md](../../../../docs/cli/param/18_type.md) | [type/06_project_type.md](../../../../docs/cli/type/06_project_type.md)
 
 ## Test Case Index
 
@@ -26,7 +26,7 @@ Edge case tests for the `type::` parameter. Tests validate enum parsing and proj
 
 **Total:** 7 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (type::uuid) ↔ EC-2 (type::path)
 
 ## Test Cases
 
@@ -34,68 +34,75 @@ Edge case tests for the `type::` parameter. Tests validate enum parsing and proj
 
 ### EC-1: Value "uuid" accepted
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list type::uuid`
 - **Then:** stdout lists only projects whose directory name matches a UUID pattern (e.g., `8d795a1c-c81d-4010-8d29-b4e678272419`); no path-encoded entries like `-home-alice-projects`.; output contains only UUID-named projects (or empty if none exist)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/18_type.md](../../../../docs/cli/param/18_type.md)
 
 ---
 
 ### EC-2: Value "path" accepted
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list type::path`
 - **Then:** stdout lists only projects whose directory name is path-encoded (e.g., `-home-alice-projects`); no UUID-format entries.; output contains only path-encoded projects
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/18_type.md](../../../../docs/cli/param/18_type.md)
 
 ---
 
 ### EC-3: Value "all" accepted
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list type::all`
 - **Then:** stdout lists all projects in storage — both path-encoded and UUID-named.; output contains all projects (no naming-scheme filter)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/18_type.md](../../../../docs/cli/param/18_type.md)
 
 ---
 
 ### EC-4: Value "PATH" accepted (case-insensitive)
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list type::PATH`
 - **Then:** No error; output is identical to using lowercase `type::path`.; output identical to lowercase variant (case normalization applied)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/18_type.md](../../../../docs/cli/param/18_type.md)
 
 ---
 
 ### EC-5: Invalid value "both" rejected with error
 
+- **Commands:** `.list`
 - **Given:** clean environment
 - **When:** `clg .list type::both`
 - **Then:** stderr contains `type must be uuid|path|all, got both`; error message `type must be uuid|path|all, got both`
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/18_type.md](../../../../docs/cli/param/18_type.md)
 
 ---
 
 ### EC-6: Omitted defaults to "all"
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list`
 - **Then:** stdout lists all projects in storage, identical to running with `type::all`.; output includes all projects (default applied)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/18_type.md](../../../../docs/cli/param/18_type.md)
 
 ---
 
 ### EC-7: type::uuid returns only UUID-named projects
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture must contain at least one path-encoded project and at least one UUID project)
 - **When:** `clg .list type::uuid`
 - **Then:** Output contains UUID-named entries only; path-encoded project entries are absent.; path-encoded projects absent from output when fixture contains both types
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/18_type.md](../../../../docs/cli/param/18_type.md)

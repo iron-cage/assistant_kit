@@ -2,7 +2,7 @@
 
 Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests verify scope × path interaction semantics for the `.projects` command.
 
-**Source:** [003_parameter_groups.md#scope-configuration](../../../../docs/cli/003_parameter_groups.md#scope-configuration)
+**Source:** [param_group/05_scope_configuration.md](../../../../docs/cli/param_group/05_scope_configuration.md)
 
 ## Test Case Index
 
@@ -30,7 +30,7 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 - **When:** `clg .projects scope::local path::/a/b/c`
 - **Then:** Only the project at `/a/b/c` appears in the project list; ancestor projects `/a/b` and `/a` are absent.; only the path-anchored project in output
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#scope-configuration](../../../../docs/cli/003_parameter_groups.md#scope-configuration)
+- **Source:** [param_group/05_scope_configuration.md](../../../../docs/cli/param_group/05_scope_configuration.md)
 
 ---
 
@@ -40,7 +40,7 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 - **When:** `clg .projects scope::relevant path::/a/b/c`
 - **Then:** All three projects appear in output: `/a/b/c`, `/a/b`, and `/a`.; all ancestor projects up to filesystem root in output
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#scope-configuration](../../../../docs/cli/003_parameter_groups.md#scope-configuration)
+- **Source:** [param_group/05_scope_configuration.md](../../../../docs/cli/param_group/05_scope_configuration.md)
 
 ---
 
@@ -50,7 +50,7 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 - **When:** `clg .projects scope::under path::/a/b`
 - **Then:** Projects `/a/b`, `/a/b/c`, and `/a/b/c/d` appear in output; project `/z` is absent.; all projects in the subtree in output
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#scope-configuration](../../../../docs/cli/003_parameter_groups.md#scope-configuration)
+- **Source:** [param_group/05_scope_configuration.md](../../../../docs/cli/param_group/05_scope_configuration.md)
 
 ---
 
@@ -60,7 +60,7 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 - **When:** `clg .projects scope::global path::/a/b`
 - **Then:** All projects appear (`/a/b`, `/c/d`, `/e/f`), not just `/a/b`.; all projects in storage in output
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#scope-configuration](../../../../docs/cli/003_parameter_groups.md#scope-configuration)
+- **Source:** [param_group/05_scope_configuration.md](../../../../docs/cli/param_group/05_scope_configuration.md)
 
 ---
 
@@ -70,7 +70,7 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 - **When:** `clg .projects scope::under` (no `path::` param)
 - **Then:** Only projects `/a/b` and `/a/b/c` appear; project `/z` is absent.; subtree projects anchored at cwd in output
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#scope-configuration](../../../../docs/cli/003_parameter_groups.md#scope-configuration)
+- **Source:** [param_group/05_scope_configuration.md](../../../../docs/cli/param_group/05_scope_configuration.md)
 
 ---
 
@@ -80,4 +80,4 @@ Interaction tests for the Scope Configuration group (`scope::`, `path::`). Tests
 - **When:** `clg .projects path::/a/b/c` (no `scope::` param)
 - **Then:** Projects `/a/b/c` and `/a/b/c/sub` appear in output (under scope default); project `/z` is absent.; projects at path and all sub-paths in output (under scope default)
 - **Exit:** 0
-- **Source:** [003_parameter_groups.md#scope-configuration](../../../../docs/cli/003_parameter_groups.md#scope-configuration)
+- **Source:** [param_group/05_scope_configuration.md](../../../../docs/cli/param_group/05_scope_configuration.md)

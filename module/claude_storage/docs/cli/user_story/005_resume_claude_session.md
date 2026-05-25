@@ -15,26 +15,26 @@
 ### Referenced Commands
 | # | Command | Role |
 |---|---------|------|
-| 8 | [`.project.path`](../001_commands.md#command--8-projectpath) | Compute encoded storage path for a project directory |
-| 9 | [`.project.exists`](../001_commands.md#command--9-projectexists) | Verify project has conversation history (exit code check) |
-| 10 | [`.session.dir`](../001_commands.md#command--10-sessiondir) | Compute session working directory path |
-| 11 | [`.session.ensure`](../001_commands.md#command--11-sessionensure) | Create session directory and report resume strategy |
+| 8 | [`.project.path`](../command/08_project_path.md) | Compute encoded storage path for a project directory |
+| 9 | [`.project.exists`](../command/09_project_exists.md) | Verify project has conversation history (exit code check) |
+| 10 | [`.session.dir`](../command/10_session_dir.md) | Compute session working directory path |
+| 11 | [`.session.ensure`](../command/11_session_ensure.md) | Create session directory and report resume strategy |
 
 ### Referenced Parameters
 | # | Parameter | Role |
 |---|-----------|------|
-| 9 | [`path::`](../004_params.md#parameter--9-path) | Override default storage root |
-| 10 | [`project::`](../004_params.md#parameter--10-project) | Specify project directory for path computation |
-| 14 | [`session_id::`](../004_params.md#parameter--14-session_id) | Identify the session to resume |
-| 17 | [`topic::`](../004_params.md#parameter--17-topic) | Session topic suffix for workspace organization |
-| 20 | [`strategy::`](../004_params.md#parameter--20-strategy) | Override auto-detected resume strategy |
+| 9 | [`path::`](../param/09_path.md) | Override default storage root |
+| 10 | [`project::`](../param/10_project.md) | Specify project directory for path computation |
+| 14 | [`session_id::`](../param/14_session_id.md) | Identify the session to resume |
+| 17 | [`topic::`](../param/17_topic.md) | Session topic suffix for workspace organization |
+| 20 | [`strategy::`](../param/20_strategy.md) | Override auto-detected resume strategy |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 2 | [Project Scope](../003_parameter_groups.md#project-scope) | Scope operations to a specific project |
-| 3 | [Session Identification](../003_parameter_groups.md#session-identification) | Identify session by ID or topic |
-| 5 | [Scope Configuration](../003_parameter_groups.md#scope-configuration) | path:: override for non-default storage |
+| 2 | [Project Scope](../param_group/02_project_scope.md) | Scope operations to a specific project |
+| 3 | [Session Identification](../param_group/03_session_identification.md) | Identify session by ID or topic |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: override for non-default storage |
 
 ### Related User Stories
 | # | User Story | Relationship |

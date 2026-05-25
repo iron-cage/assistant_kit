@@ -15,36 +15,36 @@
 ### Referenced Commands
 | # | Command | Role |
 |---|---------|------|
-| 2 | [`.list`](../001_commands.md#command--2-list) | Browse all projects and their sessions |
-| 3 | [`.show`](../001_commands.md#command--3-show) | Display full details of a specific session |
-| 5 | [`.search`](../001_commands.md#command--5-search) | Full-text search across session content |
-| 7 | [`.projects`](../001_commands.md#command--7-projects) | View per-project conversation tree |
+| 2 | [`.list`](../command/02_list.md) | Browse all projects and their sessions |
+| 3 | [`.show`](../command/03_show.md) | Display full details of a specific session |
+| 5 | [`.search`](../command/05_search.md) | Full-text search across session content |
+| 7 | [`.projects`](../command/07_projects.md) | View per-project conversation tree |
 
 ### Referenced Parameters
 | # | Parameter | Role |
 |---|-----------|------|
-| 1 | [`agent::`](../004_params.md#parameter--1-agent) | Include or exclude agent sub-sessions |
-| 2 | [`case_sensitive::`](../004_params.md#parameter--2-case_sensitive) | Enable case-sensitive keyword matching |
-| 3 | [`entries::`](../004_params.md#parameter--3-entries) | Show all session entries in detail view |
-| 4 | [`entry_type::`](../004_params.md#parameter--4-entry_type) | Filter search results by entry type |
-| 7 | [`min_entries::`](../004_params.md#parameter--7-min_entries) | Filter sessions by minimum entry count |
-| 9 | [`path::`](../004_params.md#parameter--9-path) | Restrict to a specific storage root |
-| 10 | [`project::`](../004_params.md#parameter--10-project) | Pin search or listing to a specific project |
-| 11 | [`query::`](../004_params.md#parameter--11-query) | Keyword to search in session content |
-| 12 | [`scope::`](../004_params.md#parameter--12-scope) | Discovery scope for search and listing |
-| 13 | [`session::`](../004_params.md#parameter--13-session) | Filter sessions by ID substring |
-| 15 | [`sessions::`](../004_params.md#parameter--15-sessions) | Show sessions per project in list view |
-| 17 | [`topic::`](../004_params.md#parameter--17-topic) | Filter by session topic suffix |
-| 18 | [`type::`](../004_params.md#parameter--18-type) | Filter projects by naming scheme |
-| 22 | [`limit::`](../004_params.md#parameter--22-limit) | Cap sessions per project when browsing |
+| 1 | [`agent::`](../param/01_agent.md) | Include or exclude agent sub-sessions |
+| 2 | [`case_sensitive::`](../param/02_case_sensitive.md) | Enable case-sensitive keyword matching |
+| 3 | [`entries::`](../param/03_entries.md) | Show all session entries in detail view |
+| 4 | [`entry_type::`](../param/04_entry_type.md) | Filter search results by entry type |
+| 7 | [`min_entries::`](../param/07_min_entries.md) | Filter sessions by minimum entry count |
+| 9 | [`path::`](../param/09_path.md) | Restrict to a specific storage root |
+| 10 | [`project::`](../param/10_project.md) | Pin search or listing to a specific project |
+| 11 | [`query::`](../param/11_query.md) | Keyword to search in session content |
+| 12 | [`scope::`](../param/12_scope.md) | Discovery scope for search and listing |
+| 13 | [`session::`](../param/13_session.md) | Filter sessions by ID substring |
+| 15 | [`sessions::`](../param/15_sessions.md) | Show sessions per project in list view |
+| 17 | [`topic::`](../param/17_topic.md) | Filter by session topic suffix |
+| 18 | [`type::`](../param/18_type.md) | Filter projects by naming scheme |
+| 22 | [`limit::`](../param/22_limit.md) | Cap sessions per project when browsing |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 2 | [Project Scope](../003_parameter_groups.md#project-scope) | Pin lookup to a specific project |
-| 3 | [Session Identification](../003_parameter_groups.md#session-identification) | Identify session by ID for `.show` |
-| 4 | [Session Filter](../003_parameter_groups.md#session-filter) | Filter sessions by type, agent flag, entry count |
-| 5 | [Scope Configuration](../003_parameter_groups.md#scope-configuration) | Narrow discovery scope |
+| 2 | [Project Scope](../param_group/02_project_scope.md) | Pin lookup to a specific project |
+| 3 | [Session Identification](../param_group/03_session_identification.md) | Identify session by ID for `.show` |
+| 4 | [Session Filter](../param_group/04_session_filter.md) | Filter sessions by type, agent flag, entry count |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Narrow discovery scope |
 
 ### Related User Stories
 | # | User Story | Relationship |

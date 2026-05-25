@@ -2,7 +2,7 @@
 
 Edge case tests for the `limit::` parameter. Tests validate integer enforcement, capping behavior, and default (uncapped) behavior.
 
-**Source:** [004_params.md#parameter--22-limit](../../../../docs/cli/004_params.md#parameter--22-limit)
+**Source:** [param/22_limit.md](../../../../docs/cli/param/22_limit.md)
 
 ## Test Case Index
 
@@ -24,7 +24,7 @@ Edge case tests for the `limit::` parameter. Tests validate integer enforcement,
 
 **Total:** 6 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (limit::5, capped) ↔ EC-2 (limit::0, uncapped)
 
 ## Test Cases
 
@@ -32,58 +32,64 @@ Edge case tests for the `limit::` parameter. Tests validate integer enforcement,
 
 ### EC-1: `limit::5` → max 5 sessions per project
 
+- **Commands:** `.projects`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project with 10 sessions)
 - **When:** `clg .projects limit::5`
 - **Then:** At most 5 sessions shown per project; excess sessions omitted
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--22-limit)
+- **Source:** [param/22_limit.md](../../../../docs/cli/param/22_limit.md)
 
 ---
 
 ### EC-2: `limit::0` → all sessions shown (no cap)
 
+- **Commands:** `.projects`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .projects limit::0`
 - **Then:** All sessions shown per project; no capping applied
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--22-limit)
+- **Source:** [param/22_limit.md](../../../../docs/cli/param/22_limit.md)
 
 ---
 
 ### EC-3: Negative limit rejected
 
+- **Commands:** `.projects`
 - **Given:** clean environment
 - **When:** `clg .projects limit::-1`
 - **Then:** Exit 1; error indicating `limit` must be a non-negative integer
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--22-limit)
+- **Source:** [param/22_limit.md](../../../../docs/cli/param/22_limit.md)
 
 ---
 
 ### EC-4: Empty value rejected
 
+- **Commands:** `.projects`
 - **Given:** clean environment
 - **When:** `clg .projects limit::`
 - **Then:** Exit 1; error indicating `limit` requires a value
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--22-limit)
+- **Source:** [param/22_limit.md](../../../../docs/cli/param/22_limit.md)
 
 ---
 
 ### EC-5: `limit::100` when project has fewer sessions → all shown
 
+- **Commands:** `.projects`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` (fixture: project with 3 sessions)
 - **When:** `clg .projects limit::100`
 - **Then:** All 3 sessions shown (limit not reached); no error
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--22-limit)
+- **Source:** [param/22_limit.md](../../../../docs/cli/param/22_limit.md)
 
 ---
 
 ### EC-6: Non-integer value rejected
 
+- **Commands:** `.projects`
 - **Given:** clean environment
 - **When:** `clg .projects limit::five`
 - **Then:** Exit 1; error indicating `limit` requires a non-negative integer
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md#parameter--22-limit)
+- **Source:** [param/22_limit.md](../../../../docs/cli/param/22_limit.md)

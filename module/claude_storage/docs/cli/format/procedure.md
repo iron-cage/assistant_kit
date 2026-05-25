@@ -12,5 +12,5 @@
 
 ## Update Format Documentation
 
-1. Edit the target `NNN_*.md` file
+1. Edit the target `NN_*.md` file
 2. If format name or trigger changed: update `readme.md` Catalog row

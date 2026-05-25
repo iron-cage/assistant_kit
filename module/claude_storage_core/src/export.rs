@@ -253,6 +253,9 @@ fn write_markdown_entry< W : Write >
 }
 
 /// Export session as JSON
+///
+/// Writes JSONL format: one JSON object per line, preserving the original
+/// JSONL structure from the session file. Each line is parseable independently.
 fn export_json< W : Write >
 (
   session : &mut Session,
@@ -262,115 +265,19 @@ fn export_json< W : Write >
   use std::io::{ BufRead, BufReader };
   use std::fs::File as StdFile;
 
-  // Get session metadata before opening file (to avoid borrow issues)
-  let session_id = session.id().to_string();
   let storage_path = session.storage_path().to_path_buf();
 
-  // Open session file
+  // Open session file and stream each JSONL line directly — preserves original format
+  // and produces valid JSONL (one JSON object per line) for programmatic processing.
   let file = StdFile::open( &storage_path )?;
   let reader = BufReader::new( file );
 
-  // Write JSON array opening
-  writeln!( writer, "{{" )?;
-  writeln!( writer, "  \"session_id\": \"{session_id}\"," )?;
-  writeln!( writer, "  \"storage_path\": \"{}\",", storage_path.display() )?;
-  writeln!( writer, "  \"entries\": [" )?;
-
-  let mut first = true;
-
-  // Stream entries
   for line in reader.lines()
   {
     let line = line?;
-
-    if !first
+    if !line.trim().is_empty()
     {
-      writeln!( writer, "," )?;
-    }
-    first = false;
-
-    // Pretty-print the JSON line with indentation
-    let parsed = crate::json::parse_json( &line )?;
-    write_json_value( writer, &parsed, 4 )?;
-  }
-
-  writeln!( writer, "\n  ]" )?;
-  writeln!( writer, "}}" )?;
-
-  Ok( () )
-}
-
-/// Write JSON value with indentation
-fn write_json_value< W : Write >
-(
-  writer : &mut W,
-  value : &crate::JsonValue,
-  indent : usize,
-) -> Result< () >
-{
-  use crate::JsonValue;
-
-  let indent_str = " ".repeat( indent );
-
-  match value
-  {
-    JsonValue::Null => write!( writer, "null" )?,
-    JsonValue::Bool( b ) => write!( writer, "{b}" )?,
-    JsonValue::Number( n ) => write!( writer, "{n}" )?,
-    JsonValue::String( s ) =>
-    {
-      // Escape string for JSON
-      write!( writer, "\"" )?;
-      for ch in s.chars()
-      {
-        match ch
-        {
-          '"' => write!( writer, "\\\"" )?,
-          '\\' => write!( writer, "\\\\" )?,
-          '\n' => write!( writer, "\\n" )?,
-          '\r' => write!( writer, "\\r" )?,
-          '\t' => write!( writer, "\\t" )?,
-          _ => write!( writer, "{ch}" )?,
-        }
-      }
-      write!( writer, "\"" )?;
-    }
-    JsonValue::Array( arr ) =>
-    {
-      writeln!( writer, "[" )?;
-      for ( i, item ) in arr.iter().enumerate()
-      {
-        write!( writer, "{}", " ".repeat( indent + 2 ) )?;
-        write_json_value( writer, item, indent + 2 )?;
-        if i < arr.len() - 1
-        {
-          writeln!( writer, "," )?;
-        }
-        else
-        {
-          writeln!( writer )?;
-        }
-      }
-      write!( writer, "{indent_str}]" )?;
-    }
-    JsonValue::Object( obj ) =>
-    {
-      writeln!( writer, "{{" )?;
-      let keys : Vec< &String > = obj.keys().collect();
-      for ( i, key ) in keys.iter().enumerate()
-      {
-        write!( writer, "{}\"{}\": ", " ".repeat( indent + 2 ), key )?;
-        write_json_value( writer, &obj[ *key ], indent + 2 )?;
-        if i < keys.len() - 1
-        {
-          writeln!( writer, "," )?;
-        }
-        else
-        {
-          writeln!( writer )?;
-        }
-      }
-      write!( writer, "{indent_str}}}" )?;
+      writeln!( writer, "{line}" )?;
     }
   }
 

@@ -9,12 +9,12 @@
 //!
 //! ## Root Cause (Original Issue)
 //!
-//! User discovered that `.list session::X` parameter had no effect:
+//! User discovered that `.list ``session::``X` parameter had no effect:
 //!
 //! ```bash
-//! .list path::claude_storage session::commit   # Same output
-//! .list path::claude_storage session::commitx  # Same output
-//! .list path::claude_storage session::0        # Same output
+//! .list `path::claude_storage` `session::commit`   # Same output
+//! .list `path::claude_storage` `session::commitx`  # Same output
+//! .list `path::claude_storage` `session::0`        # Same output
 //! ```
 //!
 //! **Observation**: `session::` parameter accepted but completely ignored (garbage parameter)
@@ -348,7 +348,7 @@ fn test_explicit_sessions_1_backward_compatible()
   );
 }
 
-/// Test `.list min_entries::N` auto-enables sessions and filters correctly (Bug Reproducer: issue-list-hang)
+/// Test `.list ``min_entries::``N` auto-enables sessions and filters correctly (Bug Reproducer: issue-list-hang)
 ///
 /// ## Root Cause
 ///

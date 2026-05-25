@@ -37,6 +37,16 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     )
     .transpose()?;
 
+  // Exit code 2 when the storage root path does not exist (not found = usage error, not command error)
+  if let Some( ref path ) = resolved_path
+  {
+    if !std::path::Path::new( path ).exists()
+    {
+      eprintln!( "Storage root does not exist: {path}" );
+      std::process::exit( 2 );
+    }
+  }
+
   // Create storage instance
   let storage = if let Some( path ) = resolved_path
   {
@@ -67,8 +77,8 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     {
       0 =>
       {
-        // Minimal: just project count
-        format!( "Projects: {}", stats.total_projects )
+        // Minimal: machine-readable key=value pairs for scripting (lowercase keys, no decorations)
+        format!( "projects: {}\nsessions: {}", stats.total_projects, stats.total_sessions )
       }
       _ =>
       {

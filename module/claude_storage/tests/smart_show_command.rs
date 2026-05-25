@@ -378,7 +378,7 @@ fn test_show_partial_uuid_matching()
   );
 }
 
-/// Test `.show session_id::...` with 1-entry session shows "Session: id (1 entry)"
+/// Test `.show ```session_id::```...` with 1-entry session shows "Session: id (1 entry)"
 ///
 /// ## Root Cause
 ///

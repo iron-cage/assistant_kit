@@ -15,24 +15,24 @@
 ### Referenced Commands
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.status`](../001_commands.md#command--1-status) | Machine-readable storage summary at verbosity::0 |
-| 2 | [`.list`](../001_commands.md#command--2-list) | Enumerate projects for scripted iteration |
-| 4 | [`.count`](../001_commands.md#command--4-count) | Bare integer count output for comparison and thresholds |
+| 1 | [`.status`](../command/01_status.md) | Machine-readable storage summary at verbosity::0 |
+| 2 | [`.list`](../command/02_list.md) | Enumerate projects for scripted iteration |
+| 4 | [`.count`](../command/04_count.md) | Bare integer count output for comparison and thresholds |
 
 ### Referenced Parameters
 | # | Parameter | Role |
 |---|-----------|------|
-| 9 | [`path::`](../004_params.md#parameter--9-path) | Point to a specific storage root |
-| 12 | [`scope::`](../004_params.md#parameter--12-scope) | Constrain discovery to a project or subtree |
-| 16 | [`target::`](../004_params.md#parameter--16-target) | Specify what to count (projects, sessions, entries) |
-| 19 | [`verbosity::`](../004_params.md#parameter--19-verbosity) | Set to 0 for machine-readable output |
-| 21 | [`count::`](../004_params.md#parameter--21-count) | Output count only as bare integer for scripting |
+| 9 | [`path::`](../param/09_path.md) | Point to a specific storage root |
+| 12 | [`scope::`](../param/12_scope.md) | Constrain discovery to a project or subtree |
+| 16 | [`target::`](../param/16_target.md) | Specify what to count (projects, sessions, entries) |
+| 19 | [`verbosity::`](../param/19_verbosity.md) | Set to 0 for machine-readable output |
+| 21 | [`count::`](../param/21_count.md) | Output count only as bare integer for scripting |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 1 | [Output Control](../003_parameter_groups.md#output-control) | verbosity::0 enables machine-readable mode |
-| 5 | [Scope Configuration](../003_parameter_groups.md#scope-configuration) | path:: and scope:: for integration targets |
+| 1 | [Output Control](../param_group/01_output_control.md) | verbosity::0 enables machine-readable mode |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: and scope:: for integration targets |
 
 ### Referenced Formats
 | # | Format | Role |

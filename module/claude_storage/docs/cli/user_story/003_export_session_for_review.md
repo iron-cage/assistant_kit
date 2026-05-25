@@ -15,22 +15,22 @@
 ### Referenced Commands
 | # | Command | Role |
 |---|---------|------|
-| 6 | [`.export`](../001_commands.md#command--6-export) | Write session transcript to a file in chosen format |
+| 6 | [`.export`](../command/06_export.md) | Write session transcript to a file in chosen format |
 
 ### Referenced Parameters
 | # | Parameter | Role |
 |---|-----------|------|
-| 5 | [`format::`](../004_params.md#parameter--5-format) | Select export rendering mode (markdown, json, text) |
-| 6 | [`metadata::`](../004_params.md#parameter--6-metadata) | Export session metadata only, without entry content |
-| 8 | [`output::`](../004_params.md#parameter--8-output) | Output file path for the exported file |
-| 9 | [`path::`](../004_params.md#parameter--9-path) | Override default storage root |
-| 14 | [`session_id::`](../004_params.md#parameter--14-session_id) | Identify the exact session to export |
+| 5 | [`format::`](../param/05_format.md) | Select export rendering mode (markdown, json, text) |
+| 6 | [`metadata::`](../param/06_metadata.md) | Export session metadata only, without entry content |
+| 8 | [`output::`](../param/08_output.md) | Output file path for the exported file |
+| 9 | [`path::`](../param/09_path.md) | Override default storage root |
+| 14 | [`session_id::`](../param/14_session_id.md) | Identify the exact session to export |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 3 | [Session Identification](../003_parameter_groups.md#session-identification) | Pin the export to a specific session by ID |
-| 5 | [Scope Configuration](../003_parameter_groups.md#scope-configuration) | path:: override for non-default storage |
+| 3 | [Session Identification](../param_group/03_session_identification.md) | Pin the export to a specific session by ID |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: override for non-default storage |
 
 ### Referenced Formats
 | # | Format | Role |

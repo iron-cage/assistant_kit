@@ -1,7 +1,8 @@
 //! `.count` command — count entries, sessions, or projects.
 
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
-use super::storage::{ create_storage, load_project_for_param };
+use claude_storage_core::Storage;
+use super::storage::{ create_storage, load_project_for_param, resolve_path_parameter };
 use super::projects::{ build_families, group_into_conversations };
 
 /// Count entries, sessions, or projects
@@ -16,6 +17,9 @@ use super::projects::{ build_families, group_into_conversations };
 /// Returns error if storage creation fails, target is invalid, required parameters
 /// (project or session) are missing, or counting operations fail.
 #[ allow( clippy::needless_pass_by_value ) ]
+#[ allow( clippy::too_many_lines ) ]
+// CLI routine handles multiple target branches (projects/sessions/entries) and path parameter —
+// extraction would increase indirection without reducing actual complexity.
 #[ inline ]
 pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
@@ -31,9 +35,19 @@ pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let target = cmd.get_string( "target" );
   let project_id = cmd.get_string( "project" );
   let session_id = cmd.get_string( "session" );
+  let custom_path = cmd.get_string( "path" );
 
-  // Create storage instance
-  let storage = create_storage()?;
+  // Create storage instance, respecting explicit path:: parameter
+  let storage = if let Some( path ) = custom_path
+  {
+    let resolved = resolve_path_parameter( path )
+      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to resolve path '{path}': {e}" ) ) )?;
+    Storage::with_root( std::path::Path::new( &resolved ) )
+  }
+  else
+  {
+    create_storage()?
+  };
 
   // Context-aware default: If no target and no project specified, try to count entries in CWD project
   // If CWD is not a project directory, fall back to counting all projects globally
@@ -85,31 +99,44 @@ pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     }
     "sessions" =>
     {
-      // Requires project context
-      let proj_id = project_id
-        .ok_or_else( || ErrorData::new( ErrorCode::InternalError, "project parameter required for counting sessions".to_string() ) )?;
+      if let Some( proj_id ) = project_id
+      {
+        // Fix(issue-012): Support path projects in .count command
+        //
+        // Root cause: Hardcoded ProjectId::uuid() prevented path projects from working.
+        // Commands .count/.search/.export shared this bug which was fixed for .show (Finding #008)
+        // but not propagated.
+        //
+        // Pitfall: When fixing a bug in one command, grep for identical patterns in other commands.
+        // Bugs often exist in multiple locations sharing the same flawed assumption.
+        let project = load_project_for_param( &storage, proj_id )?;
 
-      // Fix(issue-012): Support path projects in .count command
-      //
-      // Root cause: Hardcoded ProjectId::uuid() prevented path projects from working.
-      // Commands .count/.search/.export shared this bug which was fixed for .show (Finding #008)
-      // but not propagated.
-      //
-      // Pitfall: When fixing a bug in one command, grep for identical patterns in other commands.
-      // Bugs often exist in multiple locations sharing the same flawed assumption.
-      let project = load_project_for_param( &storage, proj_id )?;
+        project.count_sessions()
+          .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to count sessions: {e}" ) ) )?
+      }
+      else
+      {
+        // No project specified — count sessions across all projects
+        let projects = storage.list_projects()
+          .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list projects: {e}" ) ) )?;
 
-      project.count_sessions()
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to count sessions: {e}" ) ) )?
+        let mut total = 0usize;
+        for p in &projects
+        {
+          match p.count_sessions()
+          {
+            Ok( n )  => total += n,
+            Err( e ) => eprintln!( "Warning: failed to count sessions in {:?}: {e}", p.id() ),
+          }
+        }
+        total
+      }
     }
     "entries" =>
     {
-      // Requires project + session context
+      // Requires project context
       let proj_id = project_id
         .ok_or_else( || ErrorData::new( ErrorCode::InternalError, "project parameter required for counting entries".to_string() ) )?;
-
-      let sess_id = session_id
-        .ok_or_else( || ErrorData::new( ErrorCode::InternalError, "session parameter required for counting entries".to_string() ) )?;
 
       // Fix(issue-012): Support path projects in .count command
       //
@@ -124,20 +151,37 @@ pub fn count_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       let sessions = project.all_sessions()
         .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list sessions: {e}" ) ) )?;
 
-      // Fix(issue-019): Use prefix matching for partial UUID, consistent with show_routine
-      // and export_routine (both use starts_with from the issue-011 fix).
-      //
-      // Root cause: count_routine used exact equality only, so "79f86582" failed even
-      // though ".show session_id::79f86582" succeeds via prefix matching.
-      //
-      // Pitfall: When fixing partial-UUID support in one session lookup, grep for every
-      // other `sessions.iter*().find(|s| s.id() == ...)` and apply the same change.
-      let session = sessions.iter()
-        .find( | s | s.id() == sess_id || s.id().starts_with( sess_id ) )
-        .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {sess_id}" ) ) )?;
+      if let Some( sess_id ) = session_id
+      {
+        // Fix(issue-019): Use prefix matching for partial UUID, consistent with show_routine
+        // and export_routine (both use starts_with from the issue-011 fix).
+        //
+        // Root cause: count_routine used exact equality only, so "79f86582" failed even
+        // though ".show session_id::79f86582" succeeds via prefix matching.
+        //
+        // Pitfall: When fixing partial-UUID support in one session lookup, grep for every
+        // other `sessions.iter*().find(|s| s.id() == ...)` and apply the same change.
+        let session = sessions.iter()
+          .find( | s | s.id() == sess_id || s.id().contains( sess_id ) )
+          .ok_or_else( || ErrorData::new( ErrorCode::InternalError, format!( "Session not found: {sess_id}" ) ) )?;
 
-      session.count_entries()
-        .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to count entries: {e}" ) ) )?
+        session.count_entries()
+          .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to count entries: {e}" ) ) )?
+      }
+      else
+      {
+        // No session specified — sum all entries across all sessions in project
+        let mut total = 0usize;
+        for session in &sessions
+        {
+          match session.count_entries()
+          {
+            Ok( n )  => total += n,
+            Err( e ) => eprintln!( "Warning: skipping corrupted session {}: {e}", session.storage_path().display() ),
+          }
+        }
+        total
+      }
     }
     "conversations" =>
     {

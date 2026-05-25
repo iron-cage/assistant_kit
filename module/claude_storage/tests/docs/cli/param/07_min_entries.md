@@ -2,7 +2,7 @@
 
 Edge case tests for the `min_entries::` parameter. Tests validate non-negative integer enforcement and auto-enable behavior.
 
-**Source:** [004_params.md#parameter--7-min_entries](../../../../docs/cli/004_params.md#parameter--7-min_entries) | [005_types.md#entrycount](../../../../docs/cli/005_types.md#entrycount)
+**Source:** [param/07_min_entries.md](../../../../docs/cli/param/07_min_entries.md) | [type/01_entry_count.md](../../../../docs/cli/type/01_entry_count.md)
 
 ## Test Case Index
 
@@ -26,7 +26,7 @@ Edge case tests for the `min_entries::` parameter. Tests validate non-negative i
 
 **Total:** 8 edge cases
 
-**Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Behavioral Divergence Pair:** EC-1 (min_entries::0, all sessions) ↔ EC-2 (min_entries::1, filtered sessions)
 
 ## Test Cases
 
@@ -34,78 +34,86 @@ Edge case tests for the `min_entries::` parameter. Tests validate non-negative i
 
 ### EC-1: Value 0 accepted (no minimum)
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list min_entries::0`
 - **Then:** All sessions listed regardless of entry count, including sessions with very few entries.; result set matches the unfiltered session count for the fixture
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/07_min_entries.md](../../../../docs/cli/param/07_min_entries.md)
 
 ---
 
 ### EC-2: Value 1 accepted
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list min_entries::1`
 - **Then:** Sessions with at least 1 entry listed; empty sessions excluded.; + only sessions with ≥ 1 entry appear in output
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/07_min_entries.md](../../../../docs/cli/param/07_min_entries.md)
 
 ---
 
 ### EC-3: Large value (e.g., 10000) accepted
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list min_entries::10000`
 - **Then:** Empty session list (no sessions in the fixture have 10000+ entries).; + empty result (large threshold accepted, no sessions match)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/07_min_entries.md](../../../../docs/cli/param/07_min_entries.md)
 
 ---
 
 ### EC-4: Negative value rejected
 
+- **Commands:** `.list`
 - **Given:** clean environment
 - **When:** `clg .list min_entries::-1`
 - **Then:** `min_entries must be ≥ 0, got -1`; + error message `min_entries must be ≥ 0, got -1`
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/07_min_entries.md](../../../../docs/cli/param/07_min_entries.md)
 
 ---
 
 ### EC-5: Float value rejected
 
+- **Commands:** `.list`
 - **Given:** clean environment
 - **When:** `clg .list min_entries::2.5`
 - **Then:** `min_entries must be a non-negative integer, got 2.5`; + error message `min_entries must be a non-negative integer, got 2.5`
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/07_min_entries.md](../../../../docs/cli/param/07_min_entries.md)
 
 ---
 
 ### EC-6: String "ten" rejected
 
+- **Commands:** `.list`
 - **Given:** clean environment
 - **When:** `clg .list min_entries::ten`
 - **Then:** `min_entries must be a non-negative integer, got ten`; + error message `min_entries must be a non-negative integer, got ten`
 - **Exit:** 1
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/07_min_entries.md](../../../../docs/cli/param/07_min_entries.md)
 
 ---
 
 ### EC-7: Auto-enables sessions display in .list
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list min_entries::2`
 - **Then:** Project list with per-project session rows shown; only sessions with ≥ 2 entries appear.; + sessions section visible in output (auto-enabled by `min_entries::2`)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/07_min_entries.md](../../../../docs/cli/param/07_min_entries.md)
 
 ---
 
 ### EC-8: Unset shows all sessions (no threshold)
 
+- **Commands:** `.list`
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture`
 - **When:** `clg .list`
 - **Then:** All sessions listed without any entry-count filter applied.; + all sessions in fixture are included (no implicit threshold applied)
 - **Exit:** 0
-- **Source:** [004_params.md](../../../../docs/cli/004_params.md)
+- **Source:** [param/07_min_entries.md](../../../../docs/cli/param/07_min_entries.md)

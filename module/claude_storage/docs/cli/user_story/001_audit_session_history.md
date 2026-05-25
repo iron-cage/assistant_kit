@@ -15,23 +15,23 @@
 ### Referenced Commands
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.status`](../001_commands.md#command--1-status) | Primary overview: project totals, session totals, storage root |
-| 2 | [`.list`](../001_commands.md#command--2-list) | Enumerate projects with per-project session expansion |
-| 4 | [`.count`](../001_commands.md#command--4-count) | Precise item counts for specific targets |
+| 1 | [`.status`](../command/01_status.md) | Primary overview: project totals, session totals, storage root |
+| 2 | [`.list`](../command/02_list.md) | Enumerate projects with per-project session expansion |
+| 4 | [`.count`](../command/04_count.md) | Precise item counts for specific targets |
 
 ### Referenced Parameters
 | # | Parameter | Role |
 |---|-----------|------|
-| 9 | [`path::`](../004_params.md#parameter--9-path) | Override default storage root for inspection |
-| 15 | [`sessions::`](../004_params.md#parameter--15-sessions) | Expand session list per project in `.list` |
-| 16 | [`target::`](../004_params.md#parameter--16-target) | Specify count target (projects, sessions, entries) |
-| 19 | [`verbosity::`](../004_params.md#parameter--19-verbosity) | Control output detail level |
+| 9 | [`path::`](../param/09_path.md) | Override default storage root for inspection |
+| 15 | [`sessions::`](../param/15_sessions.md) | Expand session list per project in `.list` |
+| 16 | [`target::`](../param/16_target.md) | Specify count target (projects, sessions, entries) |
+| 19 | [`verbosity::`](../param/19_verbosity.md) | Control output detail level |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 1 | [Output Control](../003_parameter_groups.md#output-control) | Controls verbosity across status, list, and count |
-| 5 | [Scope Configuration](../003_parameter_groups.md#scope-configuration) | path:: override to inspect alternate storage |
+| 1 | [Output Control](../param_group/01_output_control.md) | Controls verbosity across status, list, and count |
+| 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: override to inspect alternate storage |
 
 ### Related User Stories
 | # | User Story | Relationship |

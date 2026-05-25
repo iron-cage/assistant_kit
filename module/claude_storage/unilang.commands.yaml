@@ -274,11 +274,21 @@
       aliases: []
       tags: []
 
+    - name: "path"
+      kind: "String"
+      description: "Custom storage root path (default: ~/.claude/)"
+      hint: "Custom storage path"
+      optional: true
+      validation_rules: []
+      aliases: []
+      tags: []
+
   examples:
     - ".count"
     - ".count target::sessions project::abc123"
     - ".count target::entries project::abc123 session::xyz789"
     - ".count target::conversations project::abc123"
+    - ".count path::/alt/storage/root"
   auto_help_enabled: true
 
 - name: ".search"
