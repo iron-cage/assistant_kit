@@ -504,10 +504,10 @@ pub fn refresh_account_token(
     let t_switch = std::time::Instant::now();
     match switch_account( name, credential_store, p )
     {
-      Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}switch_account: OK  ({:.1}s)", t_switch.elapsed().as_secs_f64() ); } }
+      Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}  switch_account: OK  ({:.1}s)", t_switch.elapsed().as_secs_f64() ); } }
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] {label}  {name}switch_account: Err({e})  ({:.1}s)", t_switch.elapsed().as_secs_f64() ); }
+        if trace { eprintln!( "[trace] {label}  {name}  switch_account: Err({e})  ({:.1}s)", t_switch.elapsed().as_secs_f64() ); }
         return None;
       }
     }
@@ -516,38 +516,38 @@ pub fn refresh_account_token(
       Ok( s )  => s,
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] {label}  {name}read credentials: Err({e})" ); }
+        if trace { eprintln!( "[trace] {label}  {name}  read credentials: Err({e})" ); }
         return None;
       }
     };
     let t_run = std::time::Instant::now();
-    if trace { eprintln!( "[trace] {label}  {name}run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
+    if trace { eprintln!( "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
     let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, model )
     {
       Ok( r )  => r,
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] {label}  {name}run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
+        if trace { eprintln!( "[trace] {label}  {name}  run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
         return None;
       }
     };
     if trace
     {
       let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
-      eprintln!( "[trace] {label}  {name}run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
+      eprintln!( "[trace] {label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
     }
     let new_creds = isolated.credentials?;
     if let Err( e ) = std::fs::write( p.credentials_file(), &new_creds )
     {
-      if trace { eprintln!( "[trace] {label}  {name}write credentials: Err({e})" ); }
+      if trace { eprintln!( "[trace] {label}  {name}  write credentials: Err({e})" ); }
       return None;
     }
     match save( name, credential_store, p )
     {
-      Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}save: OK" ); } }
+      Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}  save: OK" ); } }
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] {label}  {name}save: Err({e})" ); }
+        if trace { eprintln!( "[trace] {label}  {name}  save: Err({e})" ); }
         return None;
       }
     }
@@ -561,30 +561,30 @@ pub fn refresh_account_token(
       Ok( s )  => s,
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] {label}  {name}read credentials: Err({e})" ); }
+        if trace { eprintln!( "[trace] {label}  {name}  read credentials: Err({e})" ); }
         return None;
       }
     };
     let t_run = std::time::Instant::now();
-    if trace { eprintln!( "[trace] {label}  {name}run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
+    if trace { eprintln!( "[trace] {label}  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
     let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, model )
     {
       Ok( r )  => r,
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] {label}  {name}run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
+        if trace { eprintln!( "[trace] {label}  {name}  run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
         return None;
       }
     };
     if trace
     {
       let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
-      eprintln!( "[trace] {label}  {name}run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
+      eprintln!( "[trace] {label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
     }
     let new_creds = isolated.credentials?;
     if let Err( e ) = std::fs::write( &path, &new_creds )
     {
-      if trace { eprintln!( "[trace] {label}  {name}write credentials: Err({e})" ); }
+      if trace { eprintln!( "[trace] {label}  {name}  write credentials: Err({e})" ); }
       return None;
     }
     Some( new_creds )

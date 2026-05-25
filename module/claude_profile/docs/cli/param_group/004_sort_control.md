@@ -25,7 +25,7 @@ clp .usage sort::endurance
 # Same, but user knows they're running Sonnet
 clp .usage sort::endurance prefer::sonnet
 
-# Drain lowest-quota accounts before their session resets
+# Drain accounts with the lowest weekly quota first
 clp .usage sort::drain
 
 # Use accounts whose quota refills soonest
@@ -47,7 +47,7 @@ All 4 members pass: `sort::` (ordering strategy), `desc::` (sort direction), `pr
 **Invariants**
 
 - `desc::` default changes when `sort::` changes — see [../004_parameter_interactions.md#interaction--5](../004_parameter_interactions.md).
-- `prefer::` affects `endurance` and `drain` strategies; `reset` does not reference weekly quota directly.
+- `prefer::` affects `endurance` (qualification gate), `drain` (primary sort key), and `reset` (tiebreak) strategies.
 - `sort::` and `desc::` have no effect when `format::json` is specified — JSON array order is always alphabetical.
 - Sort order is preserved within each `live::1` refresh cycle; alphabetical `sort::name` is recommended for monitor mode to prevent rows jumping.
 

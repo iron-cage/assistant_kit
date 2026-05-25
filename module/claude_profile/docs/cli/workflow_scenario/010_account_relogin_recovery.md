@@ -16,9 +16,9 @@ clp .usage refresh::1 trace::1
 # [trace] refresh carol@example.com  switch_account: OK
 # [trace] refresh carol@example.com  run_isolated: OK credentials=None   <- dead refreshToken
 #
-#   Account          Expires   Sub  ~Renews  5h Left
-# ✓ alice@example.com    in 7h     86%
-#   carol@example.com     EXPIRED   —       (auth error: 401)
+#   Account          5h Left  ...  Expires   Sub  ~Renews
+# ✓ alice@example.com    86%      in 7h
+#   carol@example.com     —        EXPIRED   —       (auth error: 401)
 #
 # credentials=None means refresh::1 cannot renew the token — browser login required.
 ```
@@ -40,9 +40,9 @@ clp .account.relogin name::carol@example.com
 
 ```bash
 clp .usage
-#   Account          Expires     Sub  ~Renews  5h Left
-# ✓ alice@example.com    in 7h 18m  84%
-#   carol@example.com     in 7h 02m  100%    <- restored with fresh token
+#   Account          5h Left  ...  Expires     Sub  ~Renews
+# ✓ alice@example.com    84%      in 7h 18m
+#   carol@example.com     100%     in 7h 02m    <- restored with fresh token
 ```
 
 ### Error Handling

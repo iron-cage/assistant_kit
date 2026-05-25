@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Allow `.usage` to keep active 5h session windows alive by sending a minimal prompt in an isolated subprocess, so accounts with `five_hour.resets_at` present get their 5h countdown extended and remain available for sustained use.
-- **Responsibility**: Documents the `touch::` parameter, its trigger condition (present `five_hour.resets_at`), subprocess invocation via the existing `refresh_account_token()` infrastructure, and quota re-fetch after the window is extended.
-- **In Scope**: `touch::` parameter semantics; trigger condition (account has valid quota data and `five_hour.resets_at` is present); subprocess invocation via `account::refresh_account_token()` with `["--print", "."]`; quota re-fetch for touched accounts; active-account restore; interaction with `refresh::` and `live::`.
+- **Responsibility**: Documents the `touch::` parameter, its trigger condition (present `five_hour.resets_at` AND `five_hour_left > 15%`), subprocess invocation via the existing `refresh_account_token()` infrastructure, quota re-fetch after any successful subprocess, and skip-reason trace lines for non-qualifying accounts.
+- **In Scope**: `touch::` parameter semantics; trigger condition (account has valid quota data, `five_hour.resets_at` is present, and `five_hour_left > 15%`); subprocess invocation via `account::refresh_account_token()` with `["--print", "."]`; quota re-fetch after any successful subprocess (unconditional on credentials); skip-reason trace line for non-qualifying accounts; active-account restore; interaction with `refresh::` and `live::`.
 - **Out of Scope**: `run_isolated()` internals (-> `claude_runner_core/docs/feature/004_run_isolated.md`); the refresh trigger logic itself (-> 017_token_refresh.md); endurance qualification algorithm (-> 020_usage_sort_strategies.md); recommendation strategies (-> 023_next_account_strategies.md).
 
 ### Design
@@ -25,17 +25,23 @@ results = fetch_all_quota(credential_store, live_creds_file)
 if touch_param == 1:
     original_active = read_file(credential_store / active_marker_filename())
     for each account_quota in results:
-        if account_quota.result is Ok
-           AND account_quota.five_hour_resets_at is Some(_):
-            // Account has valid quota and an active 5h window
-            new_json = account::refresh_account_token(
-                account_quota.name, credential_store, claude_paths, trace
-            )
-            if new_json is Some(json):
-                // Update expiry same as refresh (JWT exp → expiresAt fallback)
-                update_expiry(account_quota, json)
-                account_quota.result = fetch_oauth_usage(new_token)
-            // else: touch failed; account row unchanged
+        if account_quota.result is Err
+           OR account_quota.five_hour_resets_at is None
+           OR five_hour_left(account_quota) <= 15.0%:
+            // Skip: no valid quota, no active 5h window, or h-exhausted
+            if trace:
+                emit "[trace] touch  <name>  skipped (reason: ...)"
+            continue
+        // Account qualifies: valid quota, active 5h window, not h-exhausted
+        new_json = account::refresh_account_token(
+            account_quota.name, credential_store, claude_paths, trace
+        )
+        if new_json is Some(json):
+            // Update expiry same as refresh (JWT exp → expiresAt fallback)
+            update_expiry(account_quota, json)
+        // Re-fetch quota unconditionally after any successful subprocess
+        account_quota.result = fetch_oauth_usage(new_token)
+        // (if re-fetch fails, account row shows pre-touch data)
 
     if original_active is Some(name):
         account::switch_account(name, credential_store, claude_paths)
@@ -54,14 +60,15 @@ render results as table
 ### Acceptance Criteria
 
 - **AC-01**: `touch::1` (default) invokes subprocess activation for accounts with `five_hour.resets_at` present (active 5h window). `touch::0` produces no subprocess spawning; all accounts appear as-is.
-- **AC-02**: `touch::1` invokes `account::refresh_account_token()` for each account whose quota fetch succeeded and `five_hour.resets_at` is present.
-- **AC-03**: After a successful touch, the account's quota is re-fetched and the table shows an updated `5h Reset` countdown value extended ~5h forward from the current time.
+- **AC-02**: `touch::1` invokes `account::refresh_account_token()` for each account whose quota fetch succeeded (`result is Ok`), `five_hour.resets_at` is present (active 5h window), AND `five_hour_left > 15%` (not h-exhausted). Accounts failing any of these three conditions are skipped.
+- **AC-03**: After a successful touch subprocess, quota is re-fetched unconditionally (regardless of whether the subprocess returned credentials). The table shows an updated `5h Reset` countdown value extended ~5h forward from the current time.
 - **AC-04**: Accounts with errored quota fetch (expired token, auth error, etc.) are never touched — the trigger requires a successful quota result with `five_hour.resets_at` present.
 - **AC-05**: When both `refresh::1` and `touch::1` are active, refresh runs first; touch runs on post-refresh results.
 - **AC-06**: After all touch operations complete, the original active account is restored.
 - **AC-07**: If the touch subprocess fails, the account's row shows its original quota data unchanged (touch failure is non-aborting).
 - **AC-08**: `touch::` does not affect `format::json` output structure — touched accounts appear as normal data objects with their re-fetched quota.
-- **AC-09**: When `trace=true`, touch operations emit `[trace]` lines showing the subprocess lifecycle with per-step elapsed time (switch_account duration, run_isolated duration).
+- **AC-09**: When `trace=true`, every account processed by `apply_touch` emits a `[trace] touch` line: touched accounts show subprocess lifecycle with per-step elapsed time (switch_account duration, run_isolated duration); accounts skipped because they do not qualify (inactive, h-exhausted, or errored) emit a `[trace] touch  <name>  skipped (reason: ...)` line.
+- **AC-12**: When `trace=true`, accounts skipped by the touch trigger emit a skip-reason trace line covering all skip cases: `resets_at = None` (no active 5h window) AND `five_hour_left ≤ 15%` (h-exhausted with active reset timer). Both skip cases are diagnostically distinct and produce a trace line.
 - **AC-10**: `touch::` parameter appears in `.usage --help` output with its default value (`1`).
 - **AC-11**: In `live::1` mode with `touch::1` active, touch runs on every cycle. For each cycle where an account's `five_hour.resets_at` is present, the touch trigger fires and the subprocess extends the 5h window. The trigger does not fire for accounts with `resets_at` absent.
 

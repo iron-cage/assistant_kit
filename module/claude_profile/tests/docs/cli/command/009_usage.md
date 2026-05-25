@@ -125,7 +125,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** At least one saved account with a valid token exists in the credential store.
 - **When:** `clp .usage`
-- **Then:** Stdout contains a table with "Quota" heading and rows showing columns: "Expires", "Sub", "~Renews", "5h Left", "5h Reset", "7d Left", "7d Reset". Exit 0.
+- **Then:** Stdout contains a table with "Quota" heading and rows showing columns: "5h Left", "5h Reset", "7d Left", "7d Reset", "Expires", "~Renews". Column order: quota columns (5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset) appear before billing-metadata columns (Expires, ~Renews). Exit 0.
 - **Exit:** 0
 - **Source:** [command/006_usage.md — .usage](../../../../docs/cli/command/006_usage.md#command--9-usage)
 
@@ -668,7 +668,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** Two saved accounts with valid tokens and quota data; default `next::drain`.
 - **When:** `clp .usage`
-- **Then:** Exits 0. Exactly one line contains `→` in the flag column — the account selected by the drain strategy (lowest non-exhausted 5h_left). Footer contains "Next by strategy:" with two lines (endurance and drain).
+- **Then:** Exits 0. Exactly one line contains `→` in the flag column — the account selected by the drain strategy (lowest non-exhausted `prefer_weekly` / 7d Left). Footer contains "Next by strategy:" with two lines (endurance and drain).
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota)
 - **Source fn:** `it093_lim_it_next_drain_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
@@ -680,7 +680,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** Two saved accounts with valid tokens and quota data; `next::drain`.
 - **When:** `clp .usage next::drain`
-- **Then:** Exits 0. Exactly one line contains `→` — the account selected by the drain strategy (lowest non-exhausted 5h_left). Footer still contains "Next by strategy:" with both strategy lines.
+- **Then:** Exits 0. Exactly one line contains `→` — the account selected by the drain strategy (lowest non-exhausted `prefer_weekly` / 7d Left). Footer still contains "Next by strategy:" with both strategy lines.
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota)
 - **Source fn:** `it093_lim_it_next_drain_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)

@@ -3234,10 +3234,11 @@ fn it103_lim_it_active_account_restored_after_touch()
 fn it104_structural_touch_failure_non_aborting_guard_exists()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
-  // apply_touch returns early when new_creds is None (subprocess returned nothing).
+  // apply_touch handles new_creds=None gracefully: expiry update is conditional,
+  // re-fetch runs unconditionally (Fix(BUG-179) — no early return on credentials=None).
   assert!(
-    src.contains( "let Some( creds ) = new_creds else { return; }" ),
-    "apply_touch must contain non-aborting early return for failed subprocess (FT-07)",
+    src.contains( "if let Some( ref creds ) = new_creds" ),
+    "apply_touch must conditionally update expiry when credentials returned (FT-07 + BUG-179)",
   );
 }
 

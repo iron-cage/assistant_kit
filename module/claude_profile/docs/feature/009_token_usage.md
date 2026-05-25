@@ -37,7 +37,7 @@
    b. Mark the active account with `*` in the flag column when `is_active = true` AND `is_current = false`. No `*` is emitted when the active and current accounts are the same.
    c. Recommendation is controlled by the `next::` parameter (see [023_next_account_strategies.md](023_next_account_strategies.md)). The account selected by the active strategy receives `→` in the table body; the footer always shows one recommendation per strategy. Default strategy is `drain`.
 6. Render results as a table using `data_fmt`:
-   - **Default columns:** flag (`✓`/`*`/`→`/ blank, priority `✓` > `*` > `→` > blank), status (`🔴`/`🟡`/`🟢`, header `●`), Account, Expires, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset
+   - **Default columns:** flag (`✓`/`*`/`→`/ blank, priority `✓` > `*` > `→` > blank), status (`🔴`/`🟡`/`🟢`, header `●`), Account, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews
    - **Hidden-by-default columns:** Sub, 7d Son Reset — available via `cols::+sub`, `cols::+7d_son_reset`
    - **Column visibility:** The `cols::` parameter accepts comma-separated `+col_id` / `-col_id` modifiers relative to the default column set. The `flag` and `account` columns are structural and always visible. See [param/033_cols.md](../cli/param/033_cols.md).
    - **Composite status emoji column (`●`):** placed between the flag and Account columns; populated on every row; uses AND logic of 5h and 7d:
@@ -65,12 +65,12 @@
 ```
 Quota
 
-  ●  Account              Expires    ~Renews  5h Left     5h Reset  7d Left     7d(Son)  7d Reset
-✓ 🟢 alice@example.com    in 7h 24m  Jun  5   🟢 86%     in 3h 19m 🟢 65%     35%      in 4d 23h
-  🟢 bob@example.com      in 5h 02m  Jun  6   🟢 100%    in 4h 58m 🟢 88%     28%      in 6d 14h
-→ 🟡 carol@example.com    in 1h 12m  Jun  8   🟡 3%      in 0h 23m 🟢 52%     18%      in 2d 11h
-  🔴 dave@example.com     EXPIRED    ?        —          —          —          —        (missing accessToken)
-  🔴 eve@example.com      EXPIRED    ?        —          —          —          —        (missing accessToken)
+  ●  Account              5h Left     5h Reset  7d Left     7d(Son)  7d Reset   Expires    ~Renews
+✓ 🟢 alice@example.com    🟢 86%     in 3h 19m 🟢 65%     35%      in 4d 23h  in 7h 24m  Jun  5
+  🟢 bob@example.com      🟢 100%    in 4h 58m 🟢 88%     28%      in 6d 14h  in 5h 02m  Jun  6
+→ 🟡 carol@example.com    🟡 3%      in 0h 23m 🟢 52%     18%      in 2d 11h  in 1h 12m  Jun  8
+  🔴 dave@example.com     —          —          —          —        —          EXPIRED    (missing accessToken)
+  🔴 eve@example.com      —          —          —          —        —          EXPIRED    (missing accessToken)
 
 Valid: 3 / 5   ->  Next by strategy:
   endurance  bob@example.com     100% session, 88% 7d left, expires in 5h 02m
@@ -84,10 +84,10 @@ Valid: 3 / 5   ->  Next by strategy:
 ```
 Quota
 
-  ●  Account              Expires    ~Renews  5h Left     5h Reset  7d Left     7d(Son)  7d Reset
-✓ 🟢 alice@example.com    in 7h 24m  Jun  5   🟢 86%     in 3h 19m 🟢 65%     35%      in 4d 23h
-* 🟢 bob@example.com      in 5h 02m  Jun  6   🟢 100%    in 4h 58m 🟢 88%     28%      in 6d 14h
-→ 🟢 carol@example.com    in 6h 11m  Jun 11   🟢 95%     in 3h 44m 🟢 72%     54%      in 5d 01h
+  ●  Account              5h Left     5h Reset  7d Left     7d(Son)  7d Reset   Expires    ~Renews
+✓ 🟢 alice@example.com    🟢 86%     in 3h 19m 🟢 65%     35%      in 4d 23h  in 7h 24m  Jun  5
+* 🟢 bob@example.com      🟢 100%    in 4h 58m 🟢 88%     28%      in 6d 14h  in 5h 02m  Jun  6
+→ 🟢 carol@example.com    🟢 95%     in 3h 44m 🟢 72%     54%      in 5d 01h  in 6h 11m  Jun 11
 
 Valid: 3 / 3   ->  Next by strategy:
   endurance  carol@example.com   95% session, 72% 7d left, expires in 6h 11m
@@ -101,10 +101,10 @@ Valid: 3 / 3   ->  Next by strategy:
 ```
 Quota
 
-  ●  Account              Expires    ~Renews  5h Left     5h Reset  7d Left     7d(Son)  7d Reset
-✓ 🟢 (current session)    in 4h 39m  Jun  5   🟢 64%     in 1h 39m 🟢 39%     —        in 3d 17h
-→ 🟢 alice@example.com    in 5h 02m  Jun 11   🟢 100%    in 4h 58m 🟢 88%     28%      in 6d 14h
-  🔴 bob@example.com      EXPIRED    ?        —          —          —          —        (missing accessToken)
+  ●  Account              5h Left     5h Reset  7d Left     7d(Son)  7d Reset   Expires    ~Renews
+✓ 🟢 (current session)    🟢 64%     in 1h 39m 🟢 39%     —        in 3d 17h  in 4h 39m  Jun  5
+→ 🟢 alice@example.com    🟢 100%    in 4h 58m 🟢 88%     28%      in 6d 14h  in 5h 02m  Jun 11
+  🔴 bob@example.com      —          —          —          —        —          EXPIRED    (missing accessToken)
 
 Valid: 2 / 3   ->  Next by strategy:
   endurance  alice@example.com   100% session, 88% 7d left, expires in 5h 02m

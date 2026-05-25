@@ -8,8 +8,8 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 |----|-----------|-----|-------|
 | FT-01 | `sort::name` preserves alphabetical order | AC-01 | Unit test |
 | FT-02 | `sort::endurance` qualified accounts ranked first | AC-02 | Unit test |
-| FT-03 | `sort::drain` sinks h-exhausted accounts to bottom | AC-03 | Unit test |
-| FT-04 | `sort::reset` sinks h-exhausted accounts to bottom | AC-04 | Unit test |
+| FT-03 | `sort::drain` sinks h-exhausted; non-exhausted sorted by `7d Left` ascending | AC-03 | Unit test |
+| FT-04 | `sort::reset` sinks h-exhausted; non-exhausted sorted by `7d Reset` ascending | AC-04 | Unit test |
 | FT-05 | `desc::1` reverses non-h-exhausted tier; h-exhausted floor unchanged | AC-05 | Unit test |
 | FT-06 | Context-sensitive `desc::` defaults per strategy | AC-06 | Unit test |
 | FT-07 | `prefer::sonnet` uses `7d(Son)` for endurance qualification | AC-07 | Unit test |
@@ -17,7 +17,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-09 | Invalid `sort::` value exits 1 naming valid values | AC-09 | Integration |
 | FT-10 | Invalid `prefer::` value exits 1 naming valid values | AC-10 | Integration |
 | FT-11 | `sort::` does not affect `next::` recommendation | AC-11 | Unit test |
-| FT-12 | `prefer::` governs drain tiebreak for tied `5h_left` | AC-08 | Unit test |
+| FT-12 | `prefer::` governs drain primary sort key (`7d Left` ascending, prefer-aware) | AC-08 | Unit test |
 | FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | Unit test |
 | FT-14 | `sort::drain` is default when `sort::` omitted | AC-01 | Unit test |
 | FT-15 | Within 🟡: h-exhausted before weekly-exhausted; `desc::` doesn't swap sub-groups | AC-14 | Unit test |
@@ -39,7 +39,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-09 | Invalid sort value rejected | AC-09 | Validation |
 | FT-10 | Invalid prefer value rejected | AC-10 | Validation |
 | FT-11 | Recommendation unaffected by sort | AC-11 | Independence |
-| FT-12 | prefer:: drain tiebreak divergence | AC-08 | Tiebreak |
+| FT-12 | prefer:: drain primary key divergence | AC-08 | Primary Key |
 | FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | Tier Grouping |
 | FT-14 | `sort::drain` is default when `sort::` omitted | AC-01 | Default |
 | FT-15 | Within 🟡: h-exhausted before weekly-exhausted; sub-grouping not reversed by `desc::` | AC-14 | Yellow Sub-Grouping |
@@ -72,22 +72,22 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 ---
 
-### FT-03: `sort::drain` sinks h-exhausted accounts to bottom
+### FT-03: `sort::drain` sinks h-exhausted accounts to bottom; non-exhausted sorted by `7d Left` ascending
 
-- **Given:** Three `AccountQuota` structs: `A` (five_hour.utilization=99%, 1% left — **h-exhausted**), `B` (five_hour.utilization=75%, 25% left), `C` (five_hour.utilization=30%, 70% left). All `result = Ok(...)`.
+- **Given:** Three `AccountQuota` structs: `A` (`five_hour_util=99%` — **h-exhausted**, `seven_day_util=40%` → 60% 7d Left), `B` (`five_hour_util=30%`, `seven_day_util=70%` → 30% 7d Left — lowest weekly), `C` (`five_hour_util=30%`, `seven_day_util=0%` → 100% 7d Left — most weekly). All `result = Ok(...)`.
 - **When:** `sort_indices(&accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0)` (desc=false is the default for drain)
-- **Then:** Order: `B` (25%), `C` (70%), then `A` (1%, sunk). h-exhausted floor is at bottom; non-h-exhausted sorted by 5h Left ascending.
+- **Then:** Order: `B` (30% 7d Left — lowest non-exhausted weekly), `C` (100% 7d Left), then `A` (h-exhausted, sunk). h-exhausted floor at bottom; non-h-exhausted sorted by `7d Left` ascending; tiebreak `5h Left`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_sort_drain_exhausted_sunk_rest_ascending` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-03](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
 
-### FT-04: `sort::reset` sinks h-exhausted accounts to bottom
+### FT-04: `sort::reset` sinks h-exhausted accounts to bottom; non-exhausted sorted by `7d Reset` ascending
 
-- **Given:** Four `AccountQuota` structs: `A` (5h_reset=now+600s, 5h_left=50%), `B` (5h_reset=now+2700s, 5h_left=50%), `C` (5h_reset=now+7200s, 5h_left=50%), `D` (utilization=99% — **h-exhausted**). All `result = Ok(...)`.
+- **Given:** Four `AccountQuota` structs: `A` (`seven_day.resets_at=now+600s`, `5h_left=50%`), `B` (`seven_day.resets_at=now+2700s`, `5h_left=50%`), `C` (`seven_day.resets_at=now+7200s`, `5h_left=50%`), `D` (`five_hour_util=99%` — **h-exhausted**). All `result = Ok(...)`.
 - **When:** `sort_indices(&accounts, SortStrategy::Reset, None, PreferStrategy::Any, now_secs)`
-- **Then:** Order: `A`, `B`, `C`, then `D` (sunk). Non-h-exhausted sorted by soonest reset first.
+- **Then:** Order: `A`, `B`, `C`, then `D` (sunk). Non-h-exhausted sorted by soonest `7d Reset` countdown first.
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_sort_reset_soonest_first_exhausted_last` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-04](../../../../docs/feature/020_usage_sort_strategies.md)
@@ -97,9 +97,9 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 ### FT-05: `desc::1` reversal preserves h-exhausted floor
 
 - **Given:** Three `AccountQuota` structs: `A` (5h_left=70%, not h-exhausted), `B` (5h_left=25%, not h-exhausted), `C` (utilization=99%, **h-exhausted**). Strategy: `sort::drain`.
-- **When-A:** `sort_indices(..., SortStrategy::Drain, None, ...)` → natural: `B`, `A`, `C`.
+- **When-A:** `sort_indices(..., SortStrategy::Drain, None, ...)` → natural: `B`, `A`, `C`. (No weekly data → 7d Left=100% tied; tiebreak `5h Left` asc: B=25% < A=70%.)
 - **When-B:** `sort_indices(..., SortStrategy::Drain, Some(true), ...)` → reversed non-h-exhausted: `A`, `B`, then `C` still last.
-- **Then-A:** Order: `B` (25%), `A` (70%), `C` (1%, sunk).
+- **Then-A:** Order: `B` (25% 5h Left, 7d Left tied at 100% — tiebreak wins), `A` (70%), `C` (1%, sunk).
 - **Then-B:** Order: `A` (70%), `B` (25%), `C` (1%, still sunk — h-exhausted floor is not reversed).
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_sort_drain_desc_reverses_non_exhausted_only` (in `src/usage.rs`)
@@ -113,7 +113,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When-A:** `sort_indices(..., SortStrategy::Endurance, None, ...)` — no explicit desc = endurance default (desc=true).
 - **When-B:** `sort_indices(..., SortStrategy::Drain, None, ...)` — no explicit desc = drain default (desc=false).
 - **Then-A (endurance no desc):** Same as `desc::1` — best on top.
-- **Then-B (drain no desc):** Same as `desc::0` — drain targets (lowest 5h_left) on top.
+- **Then-B (drain no desc):** Same as `desc::0` — drain targets on top (7d Left=100% tied; tiebreak `5h_left` asc: B=20% < A=80%).
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_sort_endurance_default_equals_desc1`, `test_sort_drain_default_equals_desc0` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-06](../../../../docs/feature/020_usage_sort_strategies.md)
@@ -177,15 +177,15 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 ---
 
-### FT-12: `prefer::` governs drain tiebreak for tied `5h_left` accounts
+### FT-12: `prefer::` governs drain primary sort key (`7d Left` ascending, prefer-aware)
 
-- **Given:** Two `AccountQuota` structs with identical `five_hour.utilization` (50% left): `high_son@test.com` (`seven_day.utilization=80%` → 20% left, `seven_day_sonnet.utilization=20%` → 80% left) and `high_any@test.com` (`seven_day.utilization=40%` → 60% left, `seven_day_sonnet.utilization=70%` → 30% left).
+- **Given:** Two `AccountQuota` structs with identical `five_hour.utilization` (50% left): `high_son@test.com` (`seven_day.utilization=80%` → 20% 7d Left, `seven_day_sonnet.utilization=20%` → 80% 7d(Son)) and `high_any@test.com` (`seven_day.utilization=40%` → 60% 7d Left, `seven_day_sonnet.utilization=70%` → 30% 7d(Son)).
 - **When-A:** `sort_indices(..., SortStrategy::Drain, None, PreferStrategy::Sonnet, 0)` — prefer weekly selects `7d(Son)`.
 - **When-B:** `sort_indices(..., SortStrategy::Drain, None, PreferStrategy::Opus, 0)` — prefer weekly selects `7d Left`.
-- **Then-A:** `high_son@test.com` ranks first (80% `7d(Son)` wins tiebreak under `prefer::sonnet`).
-- **Then-B:** `high_any@test.com` ranks first (60% `7d Left` wins tiebreak under `prefer::opus`).
+- **Then-A:** `high_any@test.com` ranks first (30% `7d(Son)` < 80% → ascending → lower weekly first under `prefer::sonnet`).
+- **Then-B:** `high_son@test.com` ranks first (20% `7d Left` < 60% → ascending → lower weekly first under `prefer::opus`).
 - **Exit:** n/a (unit test — function return assertion)
-- **Source fn:** `test_sort_drain_prefer_sonnet_tiebreak`, `test_prefer_opus_tiebreak_in_drain` (in `src/usage.rs`)
+- **Source fn:** `test_sort_drain_prefer_sonnet_primary`, `test_prefer_opus_primary_in_drain` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-08](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -203,9 +203,9 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 ### FT-14: `sort::drain` is default when `sort::` omitted
 
-- **Given:** Two `AccountQuota` structs: `high@test.com` (`five_hour.utilization=30.0` — 70% left), `low@test.com` (`five_hour.utilization=75.0` — 25% left). Both non-exhausted.
+- **Given:** Two `AccountQuota` structs: `high@test.com` (`five_hour.utilization=30.0` — 70% 5h Left), `low@test.com` (`five_hour.utilization=75.0` — 25% 5h Left). Neither has weekly data (`seven_day=None` → 7d Left=100% for both). Both non-exhausted.
 - **When:** `sort_indices(&accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0)` — default strategy is `drain`.
-- **Then:** `low@test.com` (least 5h quota remaining) ranks first, `high@test.com` second.
+- **Then:** `low@test.com` ranks first (7d Left tied at 100% → tiebreak by `5h Left` ascending: 25% < 70%), `high@test.com` second. Confirms drain default = `desc::0`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_sort_drain_default_equals_desc0`, `it127_sort_default_is_drain_structural` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../../docs/feature/020_usage_sort_strategies.md)

@@ -15,14 +15,14 @@ Controls row ordering in the `.usage` quota table. Each value implements a disti
 |-------|---------|-------------------|
 | `name` | Alphabetical — stable layout for `live::1` monitor | `0` (A→Z) |
 | `endurance` | Sustained 5h+ session — qualified accounts first | `1` (best on top) |
-| `drain` | Cherry-pick low-quota accounts to finish them off | `0` (lowest on top) |
-| `reset` | Use accounts whose quota refills soonest | `0` (soonest on top) |
+| `drain` | Drain accounts with the lowest 7d weekly quota first | `0` (lowest on top) |
+| `reset` | Use accounts whose 7d weekly quota refills soonest | `0` (soonest on top) |
 | `next` | Mirror the active `next::` strategy — `→` winner always appears first | inherits from resolved strategy |
 
 **Examples:**
 
 ```text
-sort::drain      → drain almost-exhausted accounts (default)
+sort::drain      → drain accounts with the lowest 7d weekly quota first (default)
 sort::name       → alphabetical A→Z
 sort::endurance  → best for uninterrupted agent run
 sort::reset      → use accounts resetting soonest

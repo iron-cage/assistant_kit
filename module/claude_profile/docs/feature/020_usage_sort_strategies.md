@@ -9,7 +9,7 @@
 
 ### Design
 
-`.usage` accepts a `sort::` parameter to control row ordering. The default (`sort::drain`) puts almost-exhausted accounts at the top — aligned with the `next::drain` recommendation strategy for a coherent default UX. Alphabetical ordering (`sort::name`) is available for positional stability, especially in `live::1` monitor mode. Four heuristic strategies are available for single-shot decision-making, plus `sort::next` — a meta-strategy that dynamically mirrors whatever `next::` algorithm is active, guaranteeing the `→` recommended account always appears at the top of the table.
+`.usage` accepts a `sort::` parameter to control row ordering. The default (`sort::drain`) puts accounts with the lowest weekly quota at the top — aligned with the `next::drain` recommendation strategy for a coherent default UX. Alphabetical ordering (`sort::name`) is available for positional stability, especially in `live::1` monitor mode. Four heuristic strategies are available for single-shot decision-making, plus `sort::next` — a meta-strategy that dynamically mirrors whatever `next::` algorithm is active, guaranteeing the `→` recommended account always appears at the top of the table.
 
 **Three-tier display grouping:** Regardless of the chosen sort strategy, accounts are first grouped by composite health tier: 🟢 tier (`5h Left > 15%` and `7d Left > 5%`) → 🟡 tier (either `5h Left ≤ 15%` or `7d Left ≤ 5%`) → 🔴 tier (error/missing token). Within the 🟡 tier, accounts are further ordered into two sub-groups: **h-exhausted** (`5h Left ≤ 15%`) first, then **weekly-exhausted** (`5h Left > 15%` and `7d Left ≤ 5%`). Accounts where both quotas are below threshold fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. This ensures healthy accounts always appear above exhausted or errored accounts, regardless of sort direction or strategy.
 
@@ -49,25 +49,25 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 #### Strategy 3: `sort::drain` (default)
 
-**Goal:** Use up almost-exhausted accounts first, preserving fresh accounts for later.
+**Goal:** Use accounts with the lowest weekly (7d) quota first, preserving high-quota accounts for later.
 
 **Algorithm:**
 1. **h-exhausted** accounts (`5h Left` ≤ 15%): sunk to bottom.
-2. Remaining accounts sorted by `5h Left` ascending (lowest first — drain these).
-3. Tiebreak: highest `weekly(prefer)` (more weekly runway among equally low session accounts).
+2. Remaining accounts sorted by `7d Left` (prefer-aware, via `prefer::`) ascending (lowest first — drain these).
+3. Tiebreak: `5h Left` ascending (among equal weekly quota, drain lower session ones first).
 
-**Rationale:** When actively working at a workstation, draining low-quota accounts first avoids wasting session quota that would expire at reset. Fresh accounts are preserved for future sessions.
+**Rationale:** Weekly quota is the scarcest resource — it doesn't reset for 7 days. Draining accounts with the lowest 7d runway first ensures the limited weekly budget is consumed before expiry, rather than targeting only session-depleted accounts (which reset every 5 hours anyway).
 
 #### Strategy 4: `sort::reset`
 
-**Goal:** Use accounts whose session quota refills soonest.
+**Goal:** Use accounts whose weekly quota (7d) refills soonest.
 
 **Algorithm:**
 1. **h-exhausted** accounts (`5h Left` ≤ 15%): sunk to bottom.
-2. Remaining accounts sorted by `5h Reset` ascending (soonest reset first).
-3. Tiebreak: `5h Left` ascending (among similar reset times, drain lower ones first).
+2. Remaining accounts sorted by `7d Reset` countdown ascending (soonest weekly quota reset first; no `resets_at` → placed at end of non-exhausted).
+3. Tiebreak: `7d Left` (prefer-aware, via `prefer::`) ascending (among same reset time, drain more weekly-depleted first).
 
-**Rationale:** An account whose quota resets in 16 minutes can be freely drained — even if h-exhausted, it refills soon. This maximizes throughput by consuming quota that would be wasted at reset.
+**Rationale:** An account whose weekly quota resets soon can be freely drained — the 7d budget will be replenished. This maximizes throughput by consuming quota that would otherwise expire unused before the weekly reset.
 
 #### Strategy 5: `sort::next`
 
@@ -81,14 +81,14 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 ### Acceptance Criteria
 
-- **AC-01**: `sort::drain` (default) sorts rows by `5h Left` ascending within each tier. `sort::name` sorts alphabetically. When `sort::` is omitted, `drain` is used.
+- **AC-01**: `sort::drain` (default) sorts rows by `7d Left` (prefer-aware) ascending within each tier; tiebreak is `5h Left` ascending. `sort::name` sorts alphabetically. When `sort::` is omitted, `drain` is used.
 - **AC-02**: `sort::endurance` ranks qualified accounts (5h Reset 15–60 min, weekly(prefer) ≥ 30%) above unqualified accounts; within qualified, highest weekly first then soonest reset; within unqualified, highest `weekly(prefer)` first as tiebreaker when session quotas are equal.
-- **AC-03**: `sort::drain` sorts by `5h Left` ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
-- **AC-04**: `sort::reset` sorts by `5h Reset` ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
+- **AC-03**: `sort::drain` sorts by `7d Left` (prefer-aware) ascending; tiebreak is `5h Left` ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
+- **AC-04**: `sort::reset` sorts by `7d Reset` countdown ascending (soonest weekly reset first); tiebreak is `7d Left` (prefer-aware) ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
 - **AC-05**: `desc::1` reverses the sort direction within each tier; `desc::0` uses the strategy's natural direction. The three-tier grouping (🟢 → 🟡 → 🔴) and the 🟡 h-/weekly-exhausted sub-grouping are never reversed by `desc::`.
 - **AC-06**: Each strategy has a context-sensitive `desc::` default: `name`→`0`, `endurance`→`1`, `drain`→`0`, `reset`→`0`.
 - **AC-07**: `prefer::any` (default) uses `min(7d Left, 7d(Son))` as weekly quota; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
-- **AC-08**: `prefer::` affects all strategies that reference weekly availability (endurance qualification, drain tiebreaking). `sort::reset` does not use weekly quota — its tiebreak is `5h Left` ascending.
+- **AC-08**: `prefer::` affects `sort::endurance` (qualification gate ≥ 30%), `sort::drain` (primary sort key), and `sort::reset` (tiebreak). For drain: `prefer_weekly` is the primary sort key (ascending — lowest first); `5h Left` is the tiebreak. For reset: `7d Reset` countdown is the primary key; `prefer_weekly` is the tiebreak (ascending).
 - **AC-09**: Invalid `sort::` value exits 1 with an error naming the valid values.
 - **AC-10**: Invalid `prefer::` value exits 1 with an error naming the valid values.
 - **AC-11**: `sort::` and `desc::` do not affect the `→` recommendation marker or footer — those are controlled by the `next::` parameter (see 023_next_account_strategies.md). The footer always shows both strategy recommendations (endurance, drain) regardless of `sort::` or `next::` values. The `next::endurance` and `next::drain` strategies reuse the same sort algorithms but select independently from the table sort order.

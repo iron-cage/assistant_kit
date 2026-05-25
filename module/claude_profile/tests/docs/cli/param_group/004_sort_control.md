@@ -9,7 +9,7 @@ Interaction tests for Group 4 (Sort Control: `sort::`, `desc::`, `prefer::`). Se
 | CC-1 | `sort::` and `desc::` have no effect on `format::json` output | JSON No-op |
 | CC-2 | `prefer::` interacts with `sort::endurance` qualification | Prefer × Endurance |
 | CC-3 | `sort::` does not affect `→ Next` recommendation in footer | Sort × Recommendation |
-| CC-4 | `prefer::` changes winning account in `sort::drain` when `5h_left` tied | Prefer × Drain |
+| CC-4 | `prefer::` governs `sort::drain` primary sort key (lowest `7d Left` first) | Prefer × Drain |
 
 ---
 
@@ -50,14 +50,14 @@ Interaction tests for Group 4 (Sort Control: `sort::`, `desc::`, `prefer::`). Se
 
 ---
 
-### CC-4: `prefer::` changes winning account in `sort::drain` when `5h_left` tied
+### CC-4: `prefer::` governs `sort::drain` primary sort key (lowest `7d Left` first, prefer-aware)
 
-- **Behavioral Divergence:** `sort::drain prefer::sonnet` vs `sort::drain prefer::any` ranks differently when two accounts have identical `5h_left` but differ in `7d(Son)` vs `7d Left` — `prefer::` selects which weekly column breaks the tie.
+- **Behavioral Divergence:** `sort::drain prefer::sonnet` vs `sort::drain prefer::any` ranks differently when accounts differ in `7d(Son)` vs `7d Left` — `prefer::` selects which weekly column is the primary sort key (ascending — lowest first).
 - **Given:** Two `AccountQuota` structs with identical `five_hour.utilization` (50% left): `son_leader@test.com` (`7d Left=20%`, `7d(Son)=80%`) and `any_leader@test.com` (`7d Left=60%`, `7d(Son)=30%`). Neither is exhausted.
-- **When-A:** `sort_indices(..., SortStrategy::Drain, None, PreferStrategy::Sonnet, 0)` — tiebreak uses `7d(Son)`.
-- **When-B:** `sort_indices(..., SortStrategy::Drain, None, PreferStrategy::Any, 0)` — tiebreak uses `min(7d Left, 7d(Son))`.
-- **Then-A:** `son_leader@test.com` ranks first (80% `7d(Son)` > 30% under `prefer::sonnet`).
-- **Then-B:** `any_leader@test.com` ranks first (`prefer::any`: min(60%, 30%) = 30% > min(20%, 80%) = 20%).
+- **When-A:** `sort_indices(..., SortStrategy::Drain, None, PreferStrategy::Sonnet, 0)` — primary uses `7d(Son)`.
+- **When-B:** `sort_indices(..., SortStrategy::Drain, None, PreferStrategy::Any, 0)` — primary uses `min(7d Left, 7d(Son))`.
+- **Then-A:** `any_leader@test.com` ranks first (30% `7d(Son)` < 80% → ascending → lower weekly first under `prefer::sonnet`).
+- **Then-B:** `son_leader@test.com` ranks first (`prefer::any`: min(20%,80%)=20% < min(60%,30%)=30% → lower min-weekly first).
 - **Exit:** n/a (unit test — function return assertion)
-- **Source fn:** `test_sort_drain_prefer_sonnet_tiebreak`, `test_sort_drain_prefer_any_tiebreak` (in `src/usage.rs`)
+- **Source fn:** `test_sort_drain_prefer_sonnet_primary`, `test_sort_drain_prefer_any_primary` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-08](../../../../docs/feature/020_usage_sort_strategies.md)

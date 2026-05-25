@@ -733,17 +733,17 @@ fn sort_indices(
       let ( mut non_exhausted, exhausted_vec ) : ( Vec< usize >, Vec< usize > ) =
         all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 15.0 );
 
-      // Canonical: ascending 5h_left (lowest = most drained first); tiebreak highest weekly.
+      // Canonical: ascending prefer_weekly (lowest 7d Left first); tiebreak ascending 5h_left.
       non_exhausted.sort_by( |&a, &b|
       {
-        let la = five_hour_left( &accounts[ a ] );
-        let lb = five_hour_left( &accounts[ b ] );
-        la.partial_cmp( &lb ).unwrap_or( core::cmp::Ordering::Equal )
+        let wa = prefer_weekly( &accounts[ a ], prefer );
+        let wb = prefer_weekly( &accounts[ b ], prefer );
+        wa.partial_cmp( &wb ).unwrap_or( core::cmp::Ordering::Equal )
           .then_with( ||
           {
-            let wa = prefer_weekly( &accounts[ a ], prefer );
-            let wb = prefer_weekly( &accounts[ b ], prefer );
-            wb.partial_cmp( &wa ).unwrap_or( core::cmp::Ordering::Equal )
+            let la = five_hour_left( &accounts[ a ] );
+            let lb = five_hour_left( &accounts[ b ] );
+            la.partial_cmp( &lb ).unwrap_or( core::cmp::Ordering::Equal )
           } )
       } );
 
@@ -758,7 +758,7 @@ fn sort_indices(
       {
         if let Ok( data ) = &accounts[ i ].result
         {
-          data.five_hour.as_ref()
+          data.seven_day.as_ref()
             .and_then( |p| p.resets_at.as_deref() )
             .and_then( claude_quota::iso_to_unix_secs )
             .map_or( u64::MAX, |t| t.saturating_sub( now_secs ) )
@@ -769,15 +769,15 @@ fn sort_indices(
       let ( mut non_exhausted, exhausted_vec ) : ( Vec< usize >, Vec< usize > ) =
         all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 15.0 );
 
-      // Canonical: ascending reset_secs (soonest first); tiebreak ascending 5h_left.
+      // Canonical: ascending 7d reset_secs (soonest weekly reset first); tiebreak ascending prefer_weekly.
       non_exhausted.sort_by( |&a, &b|
       {
         reset_secs_of( a ).cmp( &reset_secs_of( b ) )
           .then_with( ||
           {
-            let la = five_hour_left( &accounts[ a ] );
-            let lb = five_hour_left( &accounts[ b ] );
-            la.partial_cmp( &lb ).unwrap_or( core::cmp::Ordering::Equal )
+            let wa = prefer_weekly( &accounts[ a ], prefer );
+            let wb = prefer_weekly( &accounts[ b ], prefer );
+            wa.partial_cmp( &wb ).unwrap_or( core::cmp::Ordering::Equal )
           } )
       } );
 
@@ -991,15 +991,15 @@ fn render_text(
   let mut headers = vec![ String::new() ]; // flag col
   if cols.status       { headers.push( "●".to_string() ); }
   headers.push( "Account".to_string() ); // account name — structural
-  if cols.expires      { headers.push( "Expires".to_string() ); }
-  if cols.sub          { headers.push( "Sub".to_string() ); }
-  if cols.renews       { headers.push( "~Renews".to_string() ); }
   if cols.h5_left      { headers.push( "5h Left".to_string() ); }
   if cols.h5_reset     { headers.push( "5h Reset".to_string() ); }
   if cols.d7_left      { headers.push( "7d Left".to_string() ); }
   if cols.d7_son       { headers.push( "7d(Son)".to_string() ); }
   if cols.d7_reset     { headers.push( "7d Reset".to_string() ); }
   if cols.d7_son_reset { headers.push( "7d Son Reset".to_string() ); }
+  if cols.expires      { headers.push( "Expires".to_string() ); }
+  if cols.sub          { headers.push( "Sub".to_string() ); }
+  if cols.renews       { headers.push( "~Renews".to_string() ); }
 
   let mut builder = RowBuilder::new( headers );
   for orig_idx in sorted_indices.iter().copied()
@@ -1044,37 +1044,39 @@ fn render_text(
         let mut row : Vec< String > = vec![ flag_cell ];
         if cols.status       { row.push( status_emoji( &aq.result ).to_string() ); }
         row.push( aq.name.clone() );
-        if cols.expires      { row.push( expires_cell ); }
-        if cols.sub          { row.push( sub_str ); }
-        if cols.renews       { row.push( renews_str ); }
         if cols.h5_left      { row.push( cells[ 0 ].clone() ); }
         if cols.h5_reset     { row.push( cells[ 1 ].clone() ); }
         if cols.d7_left      { row.push( cells[ 2 ].clone() ); }
         if cols.d7_son       { row.push( cells[ 3 ].clone() ); }
         if cols.d7_reset     { row.push( cells[ 4 ].clone() ); }
         if cols.d7_son_reset { row.push( son_reset ); }
+        if cols.expires      { row.push( expires_cell ); }
+        if cols.sub          { row.push( sub_str ); }
+        if cols.renews       { row.push( renews_str ); }
         builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
       }
       Err( reason ) =>
       {
         let dash      = "\u{2014}".to_string();
         let error_str = format!( "({})", shorten_error( reason ) );
-        // Data columns visible mask (order matches col rendering above).
-        let data_vis  = [ cols.h5_left, cols.h5_reset, cols.d7_left, cols.d7_son, cols.d7_reset, cols.d7_son_reset ];
-        let last_vis  = data_vis.iter().rposition( |&v| v );
 
         let mut row : Vec< String > = vec![ flag_cell ];
-        if cols.status  { row.push( status_emoji( &aq.result ).to_string() ); }
+        if cols.status       { row.push( status_emoji( &aq.result ).to_string() ); }
         row.push( aq.name.clone() );
-        if cols.expires { row.push( expires_cell ); }
-        if cols.sub     { row.push( sub_str ); }
-        if cols.renews  { row.push( renews_str ); }
-        for ( i, &vis ) in data_vis.iter().enumerate()
+        let structural_len = row.len();
+        if cols.h5_left      { row.push( dash.clone() ); }
+        if cols.h5_reset     { row.push( dash.clone() ); }
+        if cols.d7_left      { row.push( dash.clone() ); }
+        if cols.d7_son       { row.push( dash.clone() ); }
+        if cols.d7_reset     { row.push( dash.clone() ); }
+        if cols.d7_son_reset { row.push( dash.clone() ); }
+        if cols.expires      { row.push( expires_cell ); }
+        if cols.sub          { row.push( sub_str ); }
+        if cols.renews       { row.push( renews_str ); }
+        // Error reason replaces the last visible non-structural column (009 AC-03).
+        if row.len() > structural_len
         {
-          if vis
-          {
-            row.push( if last_vis == Some( i ) { error_str.clone() } else { dash.clone() } );
-          }
+          *row.last_mut().unwrap() = error_str;
         }
         builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
       }
@@ -1487,13 +1489,20 @@ fn apply_touch(
   // Guard: errored accounts are never touched; trigger requires valid quota data.
   let Ok( ref data ) = aq.result else { return; };
 
-  // Guard: only accounts with an active 5h window need their token refreshed — skip idle accounts.
-  // TSK-192 AC-02: trigger on is_some() (active) not is_none() (idle); idle accounts have no
-  // running session so there is nothing to keep alive via token refresh.
+  // Guard: only accounts with an active 5h window AND not h-exhausted need touching.
+  // AC-02: trigger on is_some() (active 5h window) AND five_hour_left > 15% (not h-exhausted).
   let is_active = data.five_hour.as_ref()
     .and_then( |p| p.resets_at.as_deref() )
     .is_some();
-  if !is_active { return; }
+  if !is_active || five_hour_left( aq ) <= 15.0
+  {
+    if trace
+    {
+      let reason = if is_active { "h-exhausted" } else { "no active 5h window" };
+      eprintln!( "[trace] touch  {}  skipped (reason: {})", aq.name, reason );
+    }
+    return;
+  }
 
   // Save active account before switching for the subprocess lifecycle.
   let original_active = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) ).ok();
@@ -1516,19 +1525,21 @@ fn apply_touch(
     }
   }
 
-  let Some( creds ) = new_creds else { return; };
-
-  // Update expiry using JWT exp field with expiresAt fallback (same as apply_refresh).
-  if let Some( exp_ms ) = jwt_exp_ms( &creds )
+  // Update expiry if credentials were returned (optional — touch may return None).
+  if let Some( ref creds ) = new_creds
   {
-    aq.expires_at_ms = exp_ms;
-  }
-  else if let Some( exp_ms ) = parse_u64_from_str( &creds, "expiresAt" )
-  {
-    aq.expires_at_ms = exp_ms;
+    if let Some( exp_ms ) = jwt_exp_ms( creds )
+    {
+      aq.expires_at_ms = exp_ms;
+    }
+    else if let Some( exp_ms ) = parse_u64_from_str( creds, "expiresAt" )
+    {
+      aq.expires_at_ms = exp_ms;
+    }
   }
 
   // Re-read token AFTER subprocess — the pre-subprocess token is stale.
+  // AC-03: unconditional re-fetch regardless of whether subprocess returned credentials.
   let Ok( token ) = read_token( credential_store, &aq.name ) else { return; };
   if let Ok( new_data ) = claude_quota::fetch_oauth_usage( &token )
   {
@@ -3397,7 +3408,12 @@ mod tests
 
   // ── sort_indices / sort strategies ────────────────────────────────────────────
 
-  // Helper: build AccountQuota with controlled 5h_left and name.
+  // Helper: build AccountQuota with controlled 5h_left and no weekly data.
+  //
+  // Pitfall: `seven_day=None` → `prefer_weekly=100.0` for all accounts (absent data treated as 0%
+  // utilization). Tests using this helper for `sort::drain` exercise the TIEBREAK path (5h_left
+  // ascending), not the primary key path (prefer_weekly ascending). To test drain primary-key
+  // behaviour with distinct weekly quotas, use `mk_aq_sort_weekly` instead.
   fn mk_aq_sort( name : &str, five_hour_util : f64, expires_at_ms : u64 ) -> AccountQuota
   {
     let data = claude_quota::OauthUsageData
@@ -3413,6 +3429,11 @@ mod tests
     }
   }
 
+  // Helper: build AccountQuota with controlled 5h_left AND weekly quota data.
+  //
+  // Use for `sort::drain` tests that need to exercise the PRIMARY sort key (prefer_weekly
+  // ascending). Provides all three period fields: five_hour, seven_day, seven_day_sonnet.
+  // `resets_at` is None for all periods — use `mk_aq_with_7d_reset` when reset countdown matters.
   fn mk_aq_sort_weekly( name : &str, five_hour_util : f64, seven_day_util : f64, seven_day_sonnet_util : f64 ) -> AccountQuota
   {
     let data = claude_quota::OauthUsageData
@@ -3441,6 +3462,13 @@ mod tests
     format!( "{y:04}-{mo:02}-{d:02}T{h:02}:{mi:02}:{s:02}Z" )
   }
 
+  // Helper: build AccountQuota with `five_hour.resets_at` set to `now_secs + reset_offset_secs`.
+  //
+  // Use for `sort::endurance` tests (qualification window reads `five_hour.resets_at`).
+  //
+  // Pitfall: Do NOT use for `sort::reset` tests — the Reset arm reads `seven_day.resets_at`.
+  // If used there, `reset_secs_of` returns `u64::MAX` for all accounts (stable sort, not by time).
+  // Use `mk_aq_with_7d_reset` for Reset arm tests.
   fn mk_aq_with_reset( name : &str, five_hour_util : f64, now_secs : u64, reset_offset_secs : u64 ) -> AccountQuota
   {
     let data = claude_quota::OauthUsageData
@@ -3451,6 +3479,35 @@ mod tests
         resets_at   : Some( reset_iso_at( now_secs, reset_offset_secs ) ),
       } ),
       seven_day        : None,
+      seven_day_sonnet : None,
+    };
+    AccountQuota
+    {
+      name : name.to_string(), is_current : false, is_active : false,
+      expires_at_ms : FAR_FUTURE_MS, result : Ok( data ), account : None,
+    }
+  }
+
+  // Helper: build AccountQuota with `seven_day.resets_at` set to `now_secs + reset_offset_secs`.
+  //
+  // Use for `sort::reset` tests — the Reset arm reads `seven_day.resets_at` as its primary key.
+  // `seven_day.utilization` is 0.0 (100% left). `five_hour.resets_at` is None.
+  //
+  // Pitfall: Do NOT use for `sort::endurance` tests — the Endurance arm reads `five_hour.resets_at`.
+  fn mk_aq_with_7d_reset( name : &str, five_hour_util : f64, now_secs : u64, reset_offset_secs : u64 ) -> AccountQuota
+  {
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage
+      {
+        utilization : five_hour_util,
+        resets_at   : None,
+      } ),
+      seven_day        : Some( claude_quota::PeriodUsage
+      {
+        utilization : 0.0,
+        resets_at   : Some( reset_iso_at( now_secs, reset_offset_secs ) ),
+      } ),
       seven_day_sonnet : None,
     };
     AccountQuota
@@ -3489,20 +3546,22 @@ mod tests
   }
 
   /// AC-03 — `sort::drain` places exhausted (≤15% `5h_left`) accounts last.
-  /// Non-exhausted sorted by `5h_left` ascending (lowest first = drain targets first).
+  /// Non-exhausted sorted by `prefer_weekly` ascending (lowest 7d Left first).
   #[ test ]
   fn test_sort_drain_exhausted_sunk_rest_ascending()
   {
-    // util: 99% → 1% left (exhausted), 75% → 25% left, 30% → 70% left
+    // 5h util: 99% → h-exhausted; 30% → 70% 5h_left (equal for both non-exhausted)
+    // 7d util: exhausted@ 40% → 60% 7d Left; low_weekly@ 70% → 30% 7d Left; high_weekly@ 0% → 100% 7d Left
+    // prefer::any (default): prefer_weekly = min(7d_left, son_left); son_util mirrors 7d_util.
     let accounts = vec![
-      mk_aq_sort( "exhausted@test.com", 99.0, FAR_FUTURE_MS ),  // 1% left → exhausted
-      mk_aq_sort( "low@test.com",       75.0, FAR_FUTURE_MS ),  // 25% left
-      mk_aq_sort( "high@test.com",      30.0, FAR_FUTURE_MS ),  // 70% left
+      mk_aq_sort_weekly( "exhausted@test.com",   99.0, 40.0, 40.0 ),  // h-exhausted (1% 5h left), 60% 7d Left
+      mk_aq_sort_weekly( "low_weekly@test.com",  30.0, 70.0, 70.0 ),  // 30% 7d Left — lowest weekly
+      mk_aq_sort_weekly( "high_weekly@test.com", 30.0,  0.0,  0.0 ),  // 100% 7d Left
     ];
     let indices = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
-    assert_eq!( accounts[ indices[ 0 ] ].name, "low@test.com",      "lowest non-exhausted must be first" );
-    assert_eq!( accounts[ indices[ 1 ] ].name, "high@test.com",     "next lowest non-exhausted second" );
-    assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com","exhausted must be last" );
+    assert_eq!( accounts[ indices[ 0 ] ].name, "low_weekly@test.com",  "lowest 7d Left non-exhausted must be first" );
+    assert_eq!( accounts[ indices[ 1 ] ].name, "high_weekly@test.com", "highest 7d Left non-exhausted second" );
+    assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com",   "h-exhausted must be last" );
   }
 
   /// AC-03 + AC-05 — `sort::drain desc::1` reverses non-exhausted; exhausted stays last.
@@ -3520,19 +3579,19 @@ mod tests
     assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com","exhausted must still be last" );
   }
 
-  /// AC-04 — `sort::reset` places exhausted accounts last; non-exhausted sorted by soonest reset.
+  /// AC-04 — `sort::reset` places exhausted accounts last; non-exhausted sorted by soonest `7d Reset`.
   #[ test ]
   fn test_sort_reset_soonest_first_exhausted_last()
   {
     let now : u64 = 1_000_000;
     let accounts = vec![
-      mk_aq_with_reset( "late@test.com",      30.0, now, 7200  ),  // 70% left, 2h reset
-      mk_aq_with_reset( "exhausted@test.com", 99.0, now, 600   ),  // ≤15% left — exhausted
-      mk_aq_with_reset( "soon@test.com",      30.0, now, 600   ),  // 70% left, 10min reset
+      mk_aq_with_7d_reset( "late@test.com",      30.0, now, 7200  ),  // 70% left, 2h 7d reset
+      mk_aq_with_7d_reset( "exhausted@test.com", 99.0, now, 600   ),  // ≤15% left — exhausted
+      mk_aq_with_7d_reset( "soon@test.com",      30.0, now, 600   ),  // 70% left, 10min 7d reset
     ];
     let indices = sort_indices( &accounts, SortStrategy::Reset, None, PreferStrategy::Any, now );
-    assert_eq!( accounts[ indices[ 0 ] ].name, "soon@test.com",      "soonest reset must be first" );
-    assert_eq!( accounts[ indices[ 1 ] ].name, "late@test.com",      "later reset second" );
+    assert_eq!( accounts[ indices[ 0 ] ].name, "soon@test.com",      "soonest 7d reset must be first" );
+    assert_eq!( accounts[ indices[ 1 ] ].name, "late@test.com",      "later 7d reset second" );
     assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com", "exhausted must be last" );
   }
 
@@ -3620,9 +3679,9 @@ mod tests
     assert_eq!( idx_opus.len(), 1 );
   }
 
-  /// AC-08 — `prefer::` affects drain tiebreak when two accounts have identical `5h_left`.
+  /// AC-08 — `prefer::` governs drain primary sort key; lowest `prefer_weekly` wins.
   #[ test ]
-  fn test_prefer_opus_tiebreak_in_drain()
+  fn test_prefer_opus_primary_in_drain()
   {
     // Two accounts, same 5h_left (50% = util 50.0).
     // Account A: 7d Left=20% (util 80.0), 7d(Son)=80% — prefer::opus uses 7d Left=20%.
@@ -3631,16 +3690,13 @@ mod tests
       mk_aq_sort_weekly( "low7d@test.com",  50.0, 80.0, 20.0 ),  // 7d Left=20%
       mk_aq_sort_weekly( "high7d@test.com", 50.0, 20.0, 80.0 ),  // 7d Left=80%
     ];
-    // With prefer::opus: tiebreak by 7d Left descending → high7d (80%) ranks first in non-exhausted
-    // ascending group... wait: ascending 5h_left is the PRIMARY sort key, then weekly tiebreak.
-    // Both have same 5h_left (50%), so weekly tiebreak applies.
-    // Drain canonical: lowest 5h_left first; tiebreak: highest weekly (prefer) first.
-    // Here both have same 5h_left, so tiebreak by prefer_weekly desc.
-    // prefer::opus: low7d has 20%, high7d has 80%. High weekly = high7d → it's first (index 1 in input = index 0 in output).
+    // Drain primary: prefer_weekly ascending — lower 7d Left appears first.
+    // prefer::opus → 7d Left column. low7d has 20%, high7d has 80%.
+    // Ascending → low7d (20%) must be first.
     let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Opus, 0 );
     assert_eq!(
-      accounts[ idx[ 0 ] ].name, "high7d@test.com",
-      "prefer::opus drain tiebreak: higher 7d Left must be first; got: {:?}", accounts[ idx[ 0 ] ].name,
+      accounts[ idx[ 0 ] ].name, "low7d@test.com",
+      "prefer::opus drain primary: lower 7d Left must be first; got: {:?}", accounts[ idx[ 0 ] ].name,
     );
   }
 
@@ -3665,7 +3721,8 @@ mod tests
   /// AC-11 — `sort::drain` display order does not affect `→ Next` recommendation footer.
   ///
   /// `a@x.com` (`5h_left`=80%) and `b@x.com` (`5h_left`=25%) are both non-active.
-  /// `sort::drain` places `b@x.com` first in display order (lowest `5h_left` first).
+  /// `sort::drain` places `b@x.com` first in display order (both accounts use `mk_aq_sort` →
+  /// `prefer_weekly` tied at 100%; tiebreak by `5h_left` ascending → `b@x.com` 25% < `a@x.com` 80%).
   /// The recommendation must still point to `a@x.com` because `find_recommendation`
   /// always runs on the original alphabetical accounts slice, not on the display-sorted order.
   #[ test ]
@@ -3715,59 +3772,59 @@ mod tests
   {
     let now : u64 = 1_000_000;
     let accounts = vec![
-      mk_aq_with_reset( "soon@test.com",      30.0, now, 600  ),  // 70% left, 10min reset
-      mk_aq_with_reset( "late@test.com",      30.0, now, 7200 ),  // 70% left, 2h reset
-      mk_aq_with_reset( "exhausted@test.com", 99.0, now, 600  ),  // ≤15% left — sunk
+      mk_aq_with_7d_reset( "soon@test.com",      30.0, now, 600  ),  // 70% left, 10min 7d reset
+      mk_aq_with_7d_reset( "late@test.com",      30.0, now, 7200 ),  // 70% left, 2h 7d reset
+      mk_aq_with_7d_reset( "exhausted@test.com", 99.0, now, 600  ),  // ≤15% left — sunk
     ];
-    // desc::1 reverses non-exhausted: latest reset first, soonest second; exhausted still last.
+    // desc::1 reverses non-exhausted: latest 7d reset first, soonest second; exhausted still last.
     let idx = sort_indices( &accounts, SortStrategy::Reset, Some( true ), PreferStrategy::Any, now );
-    assert_eq!( accounts[ idx[ 0 ] ].name, "late@test.com",      "desc::1 reset: latest reset first" );
-    assert_eq!( accounts[ idx[ 1 ] ].name, "soon@test.com",      "desc::1 reset: soonest second" );
+    assert_eq!( accounts[ idx[ 0 ] ].name, "late@test.com",      "desc::1 reset: latest 7d reset first" );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "soon@test.com",      "desc::1 reset: soonest 7d reset second" );
     assert_eq!( accounts[ idx[ 2 ] ].name, "exhausted@test.com", "exhausted must still be last" );
   }
 
-  /// CC-026 — `sort::drain prefer::sonnet` tiebreaks by `7d(Son)` descending when `5h_left` tied.
+  /// CC-026 — `sort::drain prefer::sonnet` primary sort key: lowest `7d(Son)` ascending.
   #[ test ]
-  fn test_sort_drain_prefer_sonnet_tiebreak()
+  fn test_sort_drain_prefer_sonnet_primary()
   {
     // Both accounts have 5h_left=50%.
     // "low_son":  7d(Son)=20% left (son_util=80). "high_son": 7d(Son)=80% left (son_util=20).
-    // Drain tiebreak: higher prefer_weekly first → high_son must be first.
+    // Drain primary: prefer_weekly ascending → lower 7d(Son) first → low_son must be first.
     let accounts = vec![
       mk_aq_sort_weekly( "low_son@test.com",  50.0, 0.0, 80.0 ),
       mk_aq_sort_weekly( "high_son@test.com", 50.0, 0.0, 20.0 ),
     ];
     let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Sonnet, 0 );
     assert_eq!(
-      accounts[ idx[ 0 ] ].name, "high_son@test.com",
-      "prefer::sonnet drain tiebreak: higher 7d(Son) left must be first",
+      accounts[ idx[ 0 ] ].name, "low_son@test.com",
+      "prefer::sonnet drain primary: lower 7d(Son) left must be first",
     );
     assert_eq!(
-      accounts[ idx[ 1 ] ].name, "low_son@test.com",
-      "prefer::sonnet drain tiebreak: lower 7d(Son) left must be second",
+      accounts[ idx[ 1 ] ].name, "high_son@test.com",
+      "prefer::sonnet drain primary: higher 7d(Son) left must be second",
     );
   }
 
-  /// CC-027 — `sort::drain prefer::any` tiebreaks by `min(7d Left, 7d(Son))` descending.
+  /// CC-027 — `sort::drain prefer::any` primary sort key: lowest `min(7d Left, 7d(Son))` ascending.
   #[ test ]
-  fn test_sort_drain_prefer_any_tiebreak()
+  fn test_sort_drain_prefer_any_primary()
   {
     // Both accounts have 5h_left=50%.
     // "high_any": 7d_util=30→7d_left=70%, son_util=40→son_left=60% → any=min(70,60)=60%.
     // "low_any":  7d_util=70→7d_left=30%, son_util=60→son_left=40% → any=min(30,40)=30%.
-    // Drain tiebreak: higher prefer_weekly first → high_any must be first.
+    // Drain primary: prefer_weekly ascending → lower any-min first → low_any (30%) must be first.
     let accounts = vec![
       mk_aq_sort_weekly( "high_any@test.com", 50.0, 30.0, 40.0 ),
       mk_aq_sort_weekly( "low_any@test.com",  50.0, 70.0, 60.0 ),
     ];
     let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
     assert_eq!(
-      accounts[ idx[ 0 ] ].name, "high_any@test.com",
-      "prefer::any drain tiebreak: higher min(7d,Son) left must be first",
+      accounts[ idx[ 0 ] ].name, "low_any@test.com",
+      "prefer::any drain primary: lower min(7d,Son) left must be first",
     );
     assert_eq!(
-      accounts[ idx[ 1 ] ].name, "low_any@test.com",
-      "prefer::any drain tiebreak: lower min(7d,Son) left must be second",
+      accounts[ idx[ 1 ] ].name, "high_any@test.com",
+      "prefer::any drain primary: higher min(7d,Son) left must be second",
     );
   }
 
@@ -3968,21 +4025,29 @@ mod tests
   ///
   /// None `seven_day` → 100% `7d_left` for `prefer::opus`.
   /// None `seven_day_sonnet` → 100% `sonnet_left` for `prefer::sonnet`.
-  /// Verified via drain tiebreak: no-data account outranks explicit-low-data account when `5h_left` tied.
+  ///
+  /// Verified via drain primary sort: `has_data` (40% left) ranks first because drain sorts
+  /// `prefer_weekly` ascending (lowest first). `no_data` (None → 100% left = highest `prefer_weekly`)
+  /// ranks second — confirming None treatment is 100%, not 0% or NaN.
   #[ test ]
   fn test_prefer_weekly_none_periods_treated_as_full()
   {
     // prefer::opus: "no_data" has seven_day=None → prefer_weekly=100%.
     // "has_data" has seven_day_util=60 → 7d_left=40%.
-    // Same 5h_left (50%) → tiebreak by prefer_weekly desc → no_data (100%) comes first.
+    // Same 5h_left (50%). Drain primary: prefer_weekly asc → has_data (40%) comes first.
+    // no_data (100%) ranks second — confirms None is treated as 100%, not 0%.
     let accounts = vec![
       mk_aq_sort_weekly( "has_data@test.com", 50.0, 60.0, 60.0 ),  // 7d_left=40%
       mk_aq_sort(        "no_data@test.com",  50.0, FAR_FUTURE_MS ), // seven_day=None → 100%
     ];
     let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Opus, 0 );
     assert_eq!(
-      accounts[ idx[ 0 ] ].name, "no_data@test.com",
-      "None seven_day treated as 100% left; must rank first in drain prefer::opus tiebreak",
+      accounts[ idx[ 0 ] ].name, "has_data@test.com",
+      "has_data (40% left) must rank first under drain ascending prefer_weekly (lowest first)",
+    );
+    assert_eq!(
+      accounts[ idx[ 1 ] ].name, "no_data@test.com",
+      "no_data (None seven_day = 100% left) must rank second — confirms None treated as full, not zero",
     );
   }
 

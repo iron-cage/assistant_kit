@@ -18,6 +18,8 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-10 | `touch::` appears in `.usage.help` with default `1` | AC-10 | Integration |
 | FT-11 | Valid account with `resets_at` present IS touched (positive trigger) | AC-02 | Trigger |
 | FT-12 | In `live::1` mode, touch fires each cycle for accounts with `resets_at` present | AC-11 | Live Mode |
+| FT-13 | H-exhausted account with `resets_at` present is NOT touched | AC-02, AC-12 | Trigger Guard |
+| FT-14 | Skip trace line emitted for each account not qualifying for touch | AC-09, AC-12 | Trace |
 
 ### Test Case Index
 
@@ -35,8 +37,10 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-10 | touch:: in help with default 1 | AC-10 | Help Output |
 | FT-11 | Valid account with resets_at present IS touched | AC-02 | Trigger |
 | FT-12 | live::1 touch fires each cycle when resets_at present | AC-11 | Live Mode |
+| FT-13 | H-exhausted account with resets_at present NOT touched | AC-02, AC-12 | Trigger Guard |
+| FT-14 | Skip trace line emitted for each non-qualifying account | AC-09, AC-12 | Trace |
 
-**Total:** 12 FT cases
+**Total:** 14 FT cases
 
 ---
 
@@ -177,3 +181,25 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Live:** yes (lim_it — requires live credential + idle 5h window + two live::1 cycles)
 - **Source fn:** `it110_lim_it_ft12_touch_trigger_fires_per_active_window_cycle` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-11](../../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-13: H-exhausted account with `resets_at` present is NOT touched (trigger guard)
+
+- **Given:** One account with valid quota data, `five_hour.resets_at` present (active 5h window), and `five_hour_left ≤ 15%` (h-exhausted — nearly fully consumed 5h session).
+- **When:** `clp .usage touch::1`
+- **Then:** Exits 0. No subprocess spawned for that account. The trigger guard rejects accounts with `five_hour_left ≤ 15%` even when `resets_at` is present — only accounts with `five_hour_left > 15%` qualify. Account row shows original quota data unchanged.
+- **Exit:** 0
+- **Source fn:** ⏳ `it130_touch_1_h_exhausted_account_with_resets_at_not_touched` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/024_session_touch.md AC-02, AC-12](../../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-14: Skip trace line emitted for each account not qualifying for touch
+
+- **Given:** Two accounts: one with `resets_at` absent (no active 5h window); one with `resets_at` present but `five_hour_left ≤ 15%` (h-exhausted). `touch::1 trace::1`.
+- **When:** `clp .usage touch::1 trace::1`
+- **Then:** Stderr contains two `[trace] touch  <name>  skipped (reason: ...)` lines — one for each non-qualifying account. The `resets_at = None` case and the `five_hour_left ≤ 15%` case each produce a diagnostically distinct skip-reason line. No subprocess spawned for either account.
+- **Exit:** 0
+- **Source fn:** ⏳ `it131_trace_skip_lines_emitted_for_non_qualifying_accounts` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/024_session_touch.md AC-09, AC-12](../../../../docs/feature/024_session_touch.md)

@@ -19,8 +19,8 @@ Selects which weekly quota column is used by sort strategies and recommendation 
 
 **Affected heuristics:**
 - `sort::endurance` qualification: weekly(prefer) ≥ 30%
-- `sort::drain` tiebreaker: highest weekly(prefer) wins ties
-- `sort::reset` does not use weekly quota directly
+- `sort::drain` primary sort key: lowest weekly(prefer) first (ascending)
+- `sort::reset` tiebreak: lowest weekly(prefer) first (ascending)
 - `→ Next` recommendation tiebreaker level 3 (TSK-176): highest weekly(prefer) breaks `5h Left` + expiry ties
 
 **Examples:**
@@ -31,5 +31,6 @@ prefer::opus      → 7d Left — for Opus sessions
 prefer::sonnet    → 7d(Son) — for Sonnet sessions
 
 sort::endurance prefer::sonnet   → endurance filter uses 7d(Son) ≥ 30%
-sort::drain prefer::opus         → drain tiebreaker uses 7d Left
+sort::drain prefer::opus         → drain primary key uses 7d Left ascending
+sort::reset prefer::sonnet       → reset tiebreak uses 7d(Son) ascending
 ```

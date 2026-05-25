@@ -6,7 +6,7 @@ Live quota utilization commands.
 
 ### Command :: 9. `.usage`
 
-Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus Expires, Sub, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), and 7d Reset columns, and a footer recommendation line. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
+Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, Sub, and ~Renews columns, and a footer recommendation line. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
 -- **Parameters:** [`format::`](../param/002_format.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`next::`](../param/032_next.md), [`cols::`](../param/033_cols.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid param combination) | 2 (runtime: credential store unreadable, HOME unset)
@@ -45,7 +45,7 @@ clp .usage imodel::keep effort::high
 | `interval::` | `u64` | `30` | Seconds between refresh cycles (≥ 30; only validated when `live::1`) |
 | `jitter::` | `u64` | `0` | Max random seconds added to each cycle delay (≤ interval; only validated when `live::1`) |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
-| `sort::` | `enum` | `drain` | Row ordering strategy: `drain` (use up low-quota first), `name` (alphabetical), `endurance` (sustained session), `reset` (soonest quota refill), `next` (mirrors active `next::` strategy) |
+| `sort::` | `enum` | `drain` | Row ordering strategy: `drain` (lowest weekly quota first), `name` (alphabetical), `endurance` (sustained session), `reset` (soonest quota refill), `next` (mirrors active `next::` strategy) |
 | `desc::` | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy (`name`/`drain`/`reset`→`0`, `endurance`→`1`) |
 | `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any` = `min(7d Left, 7d(Son))`, `opus` = `7d Left`, `sonnet` = `7d(Son)` |
 | `next::` | `enum` | `drain` | Strategy placing `→` on recommended account: `drain`, `endurance`; footer always shows both |
@@ -60,11 +60,11 @@ clp .usage imodel::keep effort::high
 clp .usage
 # Quota
 #
-#   ●  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
-# ✓ 🟢 alice@example.com    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
-#   🟢 bob@example.com      in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
-# → 🟡 frank@example.com    in 1h 12m  max  Jun  8   3%       in 0h 23m  52%      18%      in 2d 11h
-#   🔴 dave@example.com     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
+#   ●  Account          5h Left  5h Reset    7d Left  7d(Son)  7d Reset  Expires     Sub  ~Renews
+# ✓ 🟢 alice@example.com    86%      in 3h 19m  65%      35%      in 4d 23h  in 7h 24m  max  Jun  5
+#   🟢 bob@example.com      100%     in 4h 58m  88%      28%      in 6d 14h  in 5h 02m  max  Jun  6
+# → 🟡 frank@example.com    3%       in 0h 23m  52%      18%      in 2d 11h  in 1h 12m  max  Jun  8
+#   🔴 dave@example.com     —        —           —        —        —          EXPIRED    ?    (missing accessToken)
 #
 # Valid: 3 / 4   ->  Next by strategy:
 #   endurance  bob@example.com     100% session, 88% 7d left, expires in 5h 02m

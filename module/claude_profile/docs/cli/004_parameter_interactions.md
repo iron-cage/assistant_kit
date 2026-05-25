@@ -153,8 +153,8 @@ clp .usage sort::drain desc::1
 
 **Affected heuristics:**
 - `sort::endurance`: qualification threshold `weekly(prefer) ≥ 30%`
-- `sort::drain`: tiebreaker — highest `weekly(prefer)` among equal `5h Left`
-- `sort::reset`: does not use weekly quota directly
+- `sort::drain`: primary sort key — lowest `weekly(prefer)` ascending (lowest 7d quota first)
+- `sort::reset`: tiebreak — lowest `weekly(prefer)` ascending
 - `→ Next` recommendation tiebreaker level 3 (TSK-176): weekly(prefer) breaks ties
 
 **Rationale:** Users who know they intend to run Opus or Sonnet can tell the heuristics which quota matters. `prefer::any` is the safe conservative default.
@@ -174,7 +174,7 @@ clp .usage sort::endurance prefer::opus
 
 # Sonnet sessions: Sonnet-specific weekly cap is the constraint
 clp .usage sort::drain prefer::sonnet
-# drain tiebreaker uses 7d(Son)
+# drain primary sort key uses 7d(Son) ascending
 ```
 
 ---
