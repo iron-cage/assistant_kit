@@ -70,7 +70,12 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-61 | `.usage.help` lists `next`, `cols` params | Help Output |
 | IT-62 | `touch::0` accepted; empty store exits 0 | Touch Param |
 | IT-63 | `touch::1` with no-token accounts — errored accounts never touched | Touch Param |
-| IT-64 | `.usage.help` lists `touch` param | Help Output |
+| IT-64 | `.usage.help` lists `touch` param with default `1` | Help Output |
+| IT-66 | `imodel::auto` accepted; empty store exits 0 | imodel Param |
+| IT-67 | `imodel::bogus` → exit 1, stderr names all four valid values | imodel Param |
+| IT-68 | `effort::auto` accepted; empty store exits 0 | effort Param |
+| IT-69 | `effort::bogus` → exit 1, stderr names all three valid values | effort Param |
+| IT-70 | `.usage.help` lists `imodel` and `effort` params with default `auto` | Help Output |
 
 ### Test Coverage Summary
 
@@ -93,7 +98,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Live Monitor: 2 tests (IT-22, IT-31)
 - Live Guards: 6 tests (IT-23, IT-24, IT-25, IT-27, IT-29, IT-30)
 - JSON Output: 1 test (IT-28)
-- Help Output: 7 tests (IT-32, IT-34, IT-38, IT-39, IT-50, IT-61, IT-64)
+- Help Output: 8 tests (IT-32, IT-34, IT-38, IT-39, IT-50, IT-61, IT-64, IT-70)
 - Trace: 1 test (IT-35)
 - Status Emoji: 4 tests (IT-40, IT-41, IT-42, IT-43)
 - Sort Acceptance: 5 tests (IT-44, IT-45, IT-46, IT-47, IT-65)
@@ -108,8 +113,10 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Duration Format: 1 test (IT-59)
 - Tier Grouping: 1 test (IT-60)
 - Touch Param: 2 tests (IT-62, IT-63)
+- imodel Param: 2 tests (IT-66, IT-67)
+- effort Param: 2 tests (IT-68, IT-69)
 
-**Total:** 77 spec entries (IT-1 through IT-65; IT-40–IT-43 implemented by TSK-178, IT-44–IT-50 implemented by TSK-177, IT-51–IT-64 implemented by TSK-184/TSK-185, IT-65 implemented by `sort::next` feature); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
+**Total:** 82 spec entries (IT-1 through IT-70, skipping IT-66–IT-70 gap — sequential); IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -805,11 +812,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-64: `.usage.help` lists `touch` param
+### IT-64: `.usage.help` lists `touch` param with default `1`
 
 - **Given:** Standard environment.
 - **When:** `clp .usage.help`
-- **Then:** Exits 0. Stdout contains `"touch"` with default value `0`.
+- **Then:** Exits 0. Stdout contains `"touch"` with default value `1` (on).
 - **Exit:** 0
 - **Source fn:** `it091_usage_help_shows_touch_param` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-10](../../../../docs/feature/024_session_touch.md)
@@ -824,3 +831,58 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Exit:** 0
 - **Source fn:** `it111_sort_next_accepted` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-15](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### IT-66: `imodel::auto` accepted; empty store exits 0
+
+- **Given:** Empty credential store.
+- **When:** `clp .usage imodel::auto`
+- **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. `auto` is the default; no subprocess spawned (no accounts).
+- **Exit:** 0
+- **Source fn:** `it112_imodel_auto_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### IT-67: `imodel::bogus` → exit 1, stderr names all four valid values
+
+- **Given:** Any environment (empty credential store).
+- **When:** `clp .usage imodel::bogus`
+- **Then:** Exits 1. Stderr contains each of the four valid values: `auto`, `sonnet`, `opus`, `keep`.
+- **Exit:** 1
+- **Source fn:** `it113_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-10](../../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### IT-68: `effort::auto` accepted; empty store exits 0
+
+- **Given:** Empty credential store.
+- **When:** `clp .usage effort::auto`
+- **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. `auto` is the default; no subprocess spawned (no accounts).
+- **Exit:** 0
+- **Source fn:** `it114_effort_auto_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### IT-69: `effort::bogus` → exit 1, stderr names all three valid values
+
+- **Given:** Any environment (empty credential store).
+- **When:** `clp .usage effort::bogus`
+- **Then:** Exits 1. Stderr contains each of the three valid values: `auto`, `high`, `max`.
+- **Exit:** 1
+- **Source fn:** `it115_effort_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-11](../../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### IT-70: `.usage.help` lists `imodel` and `effort` params with default `auto`
+
+- **Given:** Standard environment.
+- **When:** `clp .usage.help`
+- **Then:** Exits 0. Stdout contains `"imodel"` and `"effort"`, each showing default value `auto`.
+- **Exit:** 0
+- **Source fn:** `it116_usage_help_shows_imodel_effort_params` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-12](../../../../docs/feature/026_subprocess_model_effort.md)

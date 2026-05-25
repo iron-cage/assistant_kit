@@ -2,7 +2,7 @@
 
 Formal specification of co-dependencies, mutual exclusions, and cascading effects between clp parameters.
 
-### All Interactions (9 total)
+### All Interactions (11 total)
 
 | # | Interaction | Parameters | Effect |
 |---|-------------|------------|--------|
@@ -15,6 +15,8 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 | 7 | `sort::` and `desc::` do not affect `format::json` output | `sort::`, `desc::`, `format::` | JSON array order is always alphabetical regardless of `sort::` or `desc::` (stable schema for pipeline consumers) |
 | 8 | `cols::` does not affect `format::json` output | `cols::`, `format::` | JSON output is unaffected by column visibility modifiers; all schema fields always present |
 | 9 | `next::` does not affect `format::json` output | `next::`, `format::` | JSON array order is always alphabetical and no `→` marker appears regardless of `next::` value |
+| 10 | `imodel::` and `effort::` do not affect `format::json` output | `imodel::`, `effort::`, `format::` | Subprocess model and effort control only subprocess invocations; JSON output structure is unchanged |
+| 11 | `imodel::keep` + `effort::auto` injects no `--effort` flag | `imodel::`, `effort::` | When `imodel::keep`, no model is known at dispatch time; `effort::auto` resolves to no `--effort` flag to avoid incompatible model/effort combinations |
 
 ---
 
@@ -245,4 +247,52 @@ clp .usage next::endurance format::json
 # next::drain (default) has no effect on JSON — no "strategy" fields injected
 clp .usage format::json
 # [...array without recommendation fields...]
+```
+
+---
+
+### Interaction :: 10. `imodel::` and `effort::` do not affect `format::json` output
+
+**Parameters:** [`imodel::`](param/035_imodel.md), [`effort::`](param/036_effort.md), [`format::`](param/002_format.md)
+
+**Effect:** When `format::json` is specified, `imodel::` and `effort::` have no effect on JSON output structure. These parameters control which model and effort level are injected into isolated subprocesses spawned by `touch::` and `refresh::`; they do not alter the data rendered in the output.
+
+**Rationale:** JSON consumers rely on a stable schema. Subprocess configuration (which model runs internally) is a fetch-behavior concern, not an output-structure concern. The JSON array fields are fixed regardless of how subprocesses are invoked.
+
+**Commands affected:** [`.usage`](command/006_usage.md#command--9-usage)
+
+**Examples:**
+
+```bash
+# imodel::opus has no effect on JSON structure
+clp .usage imodel::opus format::json
+# [...JSON array with standard fields — no model or effort fields...]
+
+# effort::max has no effect on JSON output
+clp .usage effort::max format::json
+# [...JSON array identical to clp .usage format::json...]
+```
+
+---
+
+### Interaction :: 11. `imodel::keep` + `effort::auto` injects no `--effort` flag
+
+**Parameters:** [`imodel::`](param/035_imodel.md), [`effort::`](param/036_effort.md)
+
+**Effect:** When `imodel::keep` is combined with `effort::auto`, no `--effort` flag is injected into subprocess args. The subprocess runs with neither `--model` nor `--effort` overrides.
+
+**Rationale:** `effort::auto` resolves to `high` (Sonnet) or `max` (Opus) based on the known model. When `imodel::keep`, the model is unknown at dispatch time; injecting an effort level without knowing the model risks sending `--effort max` to a Sonnet model (which may downgrade silently or behave unexpectedly). The safe resolution is no effort override.
+
+**Commands affected:** [`.usage`](command/006_usage.md#command--9-usage)
+
+**Examples:**
+
+```bash
+# imodel::keep + effort::auto: no --model and no --effort injected
+clp .usage imodel::keep effort::auto
+# subprocess runs: claude --print .   (no model or effort overrides)
+
+# imodel::keep + effort::high: --effort high is injected (explicit, model-independent)
+clp .usage imodel::keep effort::high
+# subprocess runs: claude --effort high --print .
 ```

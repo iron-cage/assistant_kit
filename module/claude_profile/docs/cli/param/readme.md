@@ -37,9 +37,11 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [031_org_name.md](031_org_name.md) | `org_name::` — organisation display name field toggle (opt-in) |
 | [032_next.md](032_next.md) | `next::` — recommendation strategy selector for quota table |
 | [033_cols.md](033_cols.md) | `cols::` — column visibility modifiers for quota table |
-| [034_touch.md](034_touch.md) | `touch::` — activate idle accounts' 5h session windows via isolated subprocess |
+| [034_touch.md](034_touch.md) | `touch::` — keep active accounts' 5h windows alive via isolated subprocess |
+| [035_imodel.md](035_imodel.md) | `imodel::` — isolated subprocess model selection (`auto`, `sonnet`, `opus`, `keep`) |
+| [036_effort.md](036_effort.md) | `effort::` — isolated subprocess effort level (`auto`, `high`, `max`) |
 
-**Total:** 34 parameters
+**Total:** 36 parameters
 
 ### Overview Table
 
@@ -78,9 +80,11 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 31 | `org_name::` | `bool` | `0` | `0`, `1` | Organisation display name toggle (opt-in) | 2 cmds |
 | 32 | `next::` | `enum` | `drain` | `endurance`, `drain` | Recommendation strategy selector | 1 cmd |
 | 33 | `cols::` | `string` | `""` | `+col_id`, `-col_id` modifiers | Column visibility modifiers | 1 cmd |
-| 34 | `touch::` | `bool` | `0` | `0`, `1`, `false`, `true` | Activate idle accounts' 5h windows | 1 cmd |
+| 34 | `touch::` | `bool` | `1` | `0`, `1`, `false`, `true` | Keep active accounts' 5h windows alive | 1 cmd |
+| 35 | `imodel::` | `enum` | `auto` | `auto`, `sonnet`, `opus`, `keep` | Isolated subprocess model selection | 1 cmd |
+| 36 | `effort::` | `enum` | `auto` | `auto`, `high`, `max` | Isolated subprocess effort level | 1 cmd |
 
-*Params 1 = Account Targeting; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34 = Fetch Behavior group; param 24 = Output Selection group; params 25–27, 32 = Sort Control group; param 33 = Display Control group*
+*Params 1 = Account Targeting; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36 = Fetch Behavior group; param 24 = Output Selection group; params 25–27, 32 = Sort Control group; param 33 = Display Control group*
 
 ### See Also
 

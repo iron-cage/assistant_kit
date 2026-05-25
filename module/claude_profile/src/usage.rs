@@ -1359,6 +1359,8 @@ fn apply_refresh(
   credential_store : &std::path::Path,
   claude_paths     : Option< &crate::ClaudePaths >,
   trace            : bool,
+  imodel           : SubprocessModel,
+  effort           : SubprocessEffort,
 )
 {
   let now_secs = std::time::SystemTime::now()
@@ -1380,8 +1382,10 @@ fn apply_refresh(
     if !should_retry { continue; }
 
     if trace { eprintln!( "[trace] refresh  {}  attempting token refresh", aq.name ); }
+    let model      = resolve_model( aq, imodel );
+    let pre_args   = effort_pre_args( &model, effort );
     let Some( new_creds ) = crate::account::refresh_account_token(
-      &aq.name, credential_store, claude_paths, trace,
+      &aq.name, credential_store, claude_paths, trace, "refresh", model, &pre_args,
     )
     else
     {
@@ -1458,11 +1462,11 @@ fn apply_refresh(
 
 // ── Touch helper ───────────────────────────────────────────────────────────────
 
-/// Activate an idle 5h session window for `aq` by spawning an isolated subprocess.
+/// Refresh the token for an active 5h session window for `aq` by spawning an isolated subprocess.
 ///
 /// The trigger requires both conditions:
 /// - `aq.result.is_ok()` — account must have valid quota data (not an auth error).
-/// - `five_hour.resets_at.is_none()` — 5h window not yet started (rendered as `—`).
+/// - `five_hour.resets_at.is_some()` — 5h window is currently active (`resets_at` present).
 ///
 /// After a successful touch, quota is re-fetched so the table shows the concrete
 /// `5h Reset` value. If the subprocess or re-fetch fails the account row is unchanged
@@ -1476,22 +1480,28 @@ fn apply_touch(
   credential_store : &std::path::Path,
   claude_paths     : Option< &crate::ClaudePaths >,
   trace            : bool,
+  imodel           : SubprocessModel,
+  effort           : SubprocessEffort,
 )
 {
   // Guard: errored accounts are never touched; trigger requires valid quota data.
   let Ok( ref data ) = aq.result else { return; };
 
-  // Guard: accounts with an active 5h window are not idle — skip.
-  let is_idle = data.five_hour.as_ref()
+  // Guard: only accounts with an active 5h window need their token refreshed — skip idle accounts.
+  // TSK-192 AC-02: trigger on is_some() (active) not is_none() (idle); idle accounts have no
+  // running session so there is nothing to keep alive via token refresh.
+  let is_active = data.five_hour.as_ref()
     .and_then( |p| p.resets_at.as_deref() )
-    .is_none();
-  if !is_idle { return; }
+    .is_some();
+  if !is_active { return; }
 
   // Save active account before switching for the subprocess lifecycle.
   let original_active = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) ).ok();
 
+  let model    = resolve_model( aq, imodel );
+  let pre_args = effort_pre_args( &model, effort );
   let new_creds = crate::account::refresh_account_token(
-    &aq.name, credential_store, claude_paths, trace,
+    &aq.name, credential_store, claude_paths, trace, "touch", model, &pre_args,
   );
 
   // CRITICAL: restore active marker unconditionally before using new_creds (Fix(BUG-170) pattern).
@@ -1555,8 +1565,12 @@ struct UsageParams
   next     : NextStrategy,
   /// Column visibility modifiers applied to the text table.
   cols     : ColsVisibility,
-  /// 1 = activate idle 5h session windows via subprocess; 0 = off (default).
+  /// 1 = activate idle 5h session windows via subprocess (default); 0 = off.
   touch    : i64,
+  /// Subprocess model selection (default: `auto`).
+  imodel   : SubprocessModel,
+  /// Subprocess effort level (default: `auto`).
+  effort   : SubprocessEffort,
 }
 
 /// Parse and validate the five `.usage`-specific parameters.
@@ -1597,13 +1611,123 @@ fn parse_int_flag( cmd : &VerifiedCommand, name : &str, default : i64 ) -> Resul
   }
 }
 
+// ── Subprocess model / effort enums ───────────────────────────────────────────
+
+/// `imodel::` parameter value — determines how the subprocess model is selected.
+#[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
+enum SubprocessModel { Auto, Sonnet, Opus, Keep }
+
+impl SubprocessModel
+{
+  fn parse( s : &str ) -> Result< Self, String >
+  {
+    match s
+    {
+      "auto"   => Ok( Self::Auto ),
+      "sonnet" => Ok( Self::Sonnet ),
+      "opus"   => Ok( Self::Opus ),
+      "keep"   => Ok( Self::Keep ),
+      _ => Err( format!( "imodel:: must be one of: auto, sonnet, opus, keep; got {s:?}" ) ),
+    }
+  }
+}
+
+/// `effort::` parameter value — determines the `--effort` flag injected into subprocesses.
+#[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
+enum SubprocessEffort { Auto, High, Max }
+
+impl SubprocessEffort
+{
+  fn parse( s : &str ) -> Result< Self, String >
+  {
+    match s
+    {
+      "auto" => Ok( Self::Auto ),
+      "high" => Ok( Self::High ),
+      "max"  => Ok( Self::Max ),
+      _ => Err( format!( "effort:: must be one of: auto, high, max; got {s:?}" ) ),
+    }
+  }
+}
+
+/// Resolve the subprocess model for one account based on `imodel::` and quota data.
+///
+/// AC-01: `auto` selects Sonnet when 7d(Son) remaining ≥ 30%; otherwise Opus (conservative).
+///         `None` `seven_day_sonnet` → treated as 0% remaining → Opus.
+/// AC-02: `sonnet` always maps to `claude-sonnet-4-6`.
+/// AC-03: `opus` always maps to `claude-opus-4-6`.
+/// AC-04: `keep` passes `IsolatedModel::KeepCurrent` — no `--model` flag injected.
+#[ inline ]
+fn resolve_model( aq : &AccountQuota, imodel : SubprocessModel ) -> claude_runner_core::IsolatedModel
+{
+  use claude_runner_core::IsolatedModel;
+  match imodel
+  {
+    SubprocessModel::Sonnet => IsolatedModel::Specific( "claude-sonnet-4-6".to_string() ),
+    SubprocessModel::Opus   => IsolatedModel::Specific( "claude-opus-4-6".to_string() ),
+    SubprocessModel::Keep   => IsolatedModel::KeepCurrent,
+    SubprocessModel::Auto   =>
+    {
+      // AC-01: ≥30% Sonnet headroom → sonnet; else → opus.  None quota data → 0% → opus.
+      let sonnet_left = aq.result.as_ref().ok()
+        .and_then( |d| d.seven_day_sonnet.as_ref() )
+        .map( |p| 100.0 - p.utilization );
+      if sonnet_left.is_some_and( |pct| pct >= 30.0 )
+      {
+        IsolatedModel::Specific( "claude-sonnet-4-6".to_string() )
+      }
+      else
+      {
+        IsolatedModel::Specific( "claude-opus-4-6".to_string() )
+      }
+    }
+  }
+}
+
+/// Resolve the `--effort` flag value for a subprocess given the resolved model.
+///
+/// Returns `None` when no `--effort` flag should be injected (`imodel::keep` + auto).
+/// AC-05: `auto` → max for resolved model: `high` (Sonnet), `max` (Opus).
+///         `KeepCurrent` → `None` (model unknown at dispatch time).
+/// AC-06: `high` always injects `--effort high`.
+/// AC-07: `max` always injects `--effort max`.
+#[ inline ]
+fn resolve_effort( model : &claude_runner_core::IsolatedModel, effort : SubprocessEffort ) -> Option< &'static str >
+{
+  use claude_runner_core::IsolatedModel;
+  match effort
+  {
+    SubprocessEffort::High => Some( "high" ),
+    SubprocessEffort::Max  => Some( "max" ),
+    SubprocessEffort::Auto => match model
+    {
+      IsolatedModel::Specific( m ) if m.as_str() == "claude-sonnet-4-6" => Some( "high" ),
+      IsolatedModel::Specific( _ )                                       => Some( "max" ),
+      IsolatedModel::KeepCurrent | IsolatedModel::Default               => None,
+    },
+  }
+}
+
+/// Build the `extra_pre_args` slice to prepend before `["--print", "."]` in a subprocess.
+///
+/// Returns `["--effort", value]` when effort resolves to `Some`, otherwise an empty vec.
+#[ inline ]
+fn effort_pre_args( model : &claude_runner_core::IsolatedModel, effort : SubprocessEffort ) -> Vec< String >
+{
+  match resolve_effort( model, effort )
+  {
+    Some( e ) => vec![ "--effort".to_string(), e.to_string() ],
+    None      => vec![],
+  }
+}
+
 fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorData >
 {
-  // refresh default is 1 (enabled); live/trace/touch default is 0 (disabled).
+  // refresh default is 1 (enabled); live/trace default is 0 (disabled); touch default is 1 (enabled).
   let refresh = parse_int_flag( cmd, "refresh", 1 )?;
   let live    = parse_int_flag( cmd, "live",    0 )?;
   let trace   = parse_int_flag( cmd, "trace",   0 )? != 0;
-  let touch   = parse_int_flag( cmd, "touch",   0 )?;
+  let touch   = parse_int_flag( cmd, "touch",   1 )?;
   // Negative values map to 0, which is < 30 and will hit the interval guard.
   let interval = match cmd.arguments.get( "interval" )
   {
@@ -1679,7 +1803,25 @@ fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorDat
       "cols:: must be a string".to_string(),
     ) ),
   };
-  Ok( UsageParams { refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, next, cols, touch } )
+  let imodel = match cmd.arguments.get( "imodel" )
+  {
+    None                       => SubprocessModel::Auto,
+    Some( Value::String( s ) ) => SubprocessModel::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "imodel:: must be a string".to_string(),
+    ) ),
+  };
+  let effort = match cmd.arguments.get( "effort" )
+  {
+    None                       => SubprocessEffort::Auto,
+    Some( Value::String( s ) ) => SubprocessEffort::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "effort:: must be a string".to_string(),
+    ) ),
+  };
+  Ok( UsageParams { refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, next, cols, touch, imodel, effort } )
 }
 
 /// `.usage` — show live quota utilization for all saved accounts.
@@ -1757,7 +1899,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   if params.refresh == 1
   {
     let claude_paths = crate::ClaudePaths::new();
-    apply_refresh( &mut accounts, &credential_store, claude_paths.as_ref(), params.trace );
+    apply_refresh( &mut accounts, &credential_store, claude_paths.as_ref(), params.trace, params.imodel, params.effort );
   }
 
   // touch::1: activate idle 5h windows — runs after refresh so post-refresh results
@@ -1768,7 +1910,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     let claude_paths = crate::ClaudePaths::new();
     for aq in &mut accounts
     {
-      apply_touch( aq, &credential_store, claude_paths.as_ref(), params.trace );
+      apply_touch( aq, &credential_store, claude_paths.as_ref(), params.trace, params.imodel, params.effort );
     }
   }
 
@@ -1974,7 +2116,7 @@ mod tests
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), None, false );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e == "HTTP transport error: HTTP 429" ),
@@ -2002,7 +2144,7 @@ mod tests
         account       : None,
       },
     ];
-    apply_refresh( &mut accounts, store.path(), None, false );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
     assert!( accounts[ 0 ].result.is_ok(), "Ok result must not be changed by apply_refresh" );
   }
 
@@ -2026,7 +2168,7 @@ mod tests
         account       : None,
       },
     ];
-    apply_refresh( &mut accounts, store.path(), None, false );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e == &err_msg ),
       "generic error must be unchanged; result: {:?}", accounts[ 0 ].result,
@@ -2041,7 +2183,7 @@ mod tests
   {
     let store = TempDir::new().unwrap();
     let mut accounts : Vec< AccountQuota > = vec![];
-    apply_refresh( &mut accounts, store.path(), None, false );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
     assert!( accounts.is_empty(), "empty slice must remain empty" );
   }
 
@@ -2066,7 +2208,7 @@ mod tests
         account       : None,
       },
     ];
-    apply_refresh( &mut accounts, store.path(), None, false );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
       "401 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
@@ -2092,7 +2234,7 @@ mod tests
         account       : None,
       },
     ];
-    apply_refresh( &mut accounts, store.path(), None, false );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "403" ) ),
       "403 with no cred file must be unchanged; result: {:?}", accounts[ 0 ].result,
@@ -2151,7 +2293,7 @@ mod tests
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), None, false );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
     assert!( accounts[ 0 ].result.is_ok(), "Ok account must remain Ok" );
     assert!(
@@ -2187,7 +2329,7 @@ mod tests
         account       : None,
       },
     ];
-    apply_refresh( &mut accounts, store.path(), None, true );
+    apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
   }
 
   // ── apply_refresh: lifecycle (Some(paths)) ──────────────────────────────────
@@ -2238,7 +2380,7 @@ mod tests
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
@@ -2307,7 +2449,7 @@ mod tests
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
     // Restore ran: switch_account("alice@example.com", ...) wrote active marker and live creds.
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
@@ -2345,7 +2487,7 @@ mod tests
         account       : None,
       },
     ];
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
       "lifecycle: 429+expired result must be unchanged when switch_account fails; result: {:?}",
@@ -2379,7 +2521,7 @@ mod tests
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "403" ) ),
@@ -2417,7 +2559,7 @@ mod tests
         account       : None,
       },
     ];
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "401" ) ),
       "lifecycle: 401 result must be unchanged when fs::copy fails (no .claude/ dir); result: {:?}",
@@ -2436,7 +2578,7 @@ mod tests
     let fake_home = TempDir::new().unwrap();
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
     let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → no loop body
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
     assert!(
       !store.path().join( crate::account::active_marker_filename() ).exists(),
       "per-machine active marker must not be created when it was absent before apply_refresh",
@@ -2465,7 +2607,7 @@ mod tests
       },
     ];
     // Must not panic — switch_account fails (no cred file), trace logs to stderr.
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), true );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto );
   }
 
   /// L7 — active marker file with trailing newline: `trim()` strips whitespace → correct restore.
@@ -2486,7 +2628,7 @@ mod tests
     std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
     let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → restore path only
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
@@ -2507,7 +2649,7 @@ mod tests
     std::fs::write( store.path().join( crate::account::active_marker_filename() ), ws ).unwrap();
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
     let mut accounts : Vec< AccountQuota > = vec![];
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), false );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, ws,
@@ -2526,7 +2668,7 @@ mod tests
     let store = TempDir::new().unwrap();
     std::fs::write( store.path().join( crate::account::active_marker_filename() ), "alice@example.com" ).unwrap();
     let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → no loop body
-    apply_refresh( &mut accounts, store.path(), None, false );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
@@ -2591,7 +2733,7 @@ mod tests
       },
     ];
     // Must not panic — switch_account succeeds; run_isolated invoked; fails fast (fake creds).
-    apply_refresh( &mut accounts, store.path(), Some( &paths ), true );
+    apply_refresh( &mut accounts, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto );
   }
 
   /// FT-04 — `apply_refresh`: 429 + non-expired local token → NOT retried, result unchanged.
@@ -2616,7 +2758,7 @@ mod tests
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), None, false );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
     assert!(
       matches!( accounts[ 0 ].result, Err( ref e ) if e.contains( "429" ) ),
@@ -2650,7 +2792,7 @@ mod tests
       },
     ];
 
-    apply_refresh( &mut accounts, store.path(), None, false );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
     // No credential file → refresh_account_token returns None → continue → result unchanged.
     assert!(
@@ -3154,7 +3296,7 @@ mod tests
     ];
 
     // No cred files in store → apply_refresh skips both; results unchanged.
-    apply_refresh( &mut accounts, store.path(), None, false );
+    apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
     let json = render_json( &accounts );
 
@@ -4261,6 +4403,317 @@ mod tests
       sorted, vec![ 1, 2, 0 ],
       "BUG-173: endurance unqualified sort must tiebreak by weekly; \
        expected [B=1,C=2,A=0], got {sorted:?}",
+    );
+  }
+
+  // ── TSK-191: resolve_model / resolve_effort ────────────────────────────────
+
+  fn mk_aq_with_sonnet_util( utilization : f64 ) -> AccountQuota
+  {
+    AccountQuota
+    {
+      name          : "test@example.com".to_string(),
+      expires_at_ms : FAR_FUTURE_MS,
+      is_current    : false,
+      is_active     : false,
+      result        : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : None,
+        seven_day        : None,
+        seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization, resets_at : None } ),
+      } ),
+      account       : None,
+    }
+  }
+
+  fn mk_aq_no_sonnet_data() -> AccountQuota
+  {
+    AccountQuota
+    {
+      name          : "test@example.com".to_string(),
+      expires_at_ms : FAR_FUTURE_MS,
+      is_current    : false,
+      is_active     : false,
+      result        : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : None,
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account       : None,
+    }
+  }
+
+  // Note: mk_aq_err() is defined earlier in this mod tests block (line ~3132); reused here.
+
+  /// FT-01 / EC-9: `imodel::auto` with 7d(Son) utilization 75% (25% left, below 30%) → opus.
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-01]
+  ///       [`tests/docs/cli/param/035_imodel.md` EC-9]
+  #[ test ]
+  fn it_imodel_auto_selects_opus_when_sonnet_low()
+  {
+    // 75% utilization → 25% remaining → below 30% threshold → opus.
+    let aq      = mk_aq_with_sonnet_util( 75.0 );
+    let model   = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-opus-4-6",
+      "imodel::auto with 25% sonnet remaining must select opus (below 30% threshold)",
+    );
+  }
+
+  /// FT-02 / EC-10: `imodel::auto` with 7d(Son) utilization 65% (35% left, above 30%) → sonnet.
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-02]
+  ///       [`tests/docs/cli/param/035_imodel.md` EC-10]
+  #[ test ]
+  fn it_imodel_auto_selects_sonnet_above_threshold()
+  {
+    // 65% utilization → 35% remaining → above 30% threshold → sonnet.
+    let aq      = mk_aq_with_sonnet_util( 65.0 );
+    let model   = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-sonnet-4-6",
+      "imodel::auto with 35% sonnet remaining must select sonnet (above 30% threshold)",
+    );
+  }
+
+  /// FT-03: `imodel::auto` at exactly 30% remaining (utilization 70%) → sonnet (boundary).
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-03]
+  #[ test ]
+  fn it_imodel_auto_selects_sonnet_at_boundary()
+  {
+    // 70% utilization → exactly 30% remaining → boundary → sonnet (≥30% condition).
+    let aq      = mk_aq_with_sonnet_util( 70.0 );
+    let model   = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-sonnet-4-6",
+      "imodel::auto at exactly 30% remaining must select sonnet (boundary: ≥30% is true)",
+    );
+  }
+
+  /// FT-04: `imodel::auto` with absent `seven_day_sonnet` data → opus (conservative fallback).
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-04]
+  #[ test ]
+  fn it_imodel_auto_fallback_when_quota_unavailable()
+  {
+    // None seven_day_sonnet → cannot confirm ≥30% → opus conservative fallback.
+    let aq      = mk_aq_no_sonnet_data();
+    let model   = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-opus-4-6",
+      "imodel::auto with absent seven_day_sonnet must fall back to opus",
+    );
+  }
+
+  /// EC-9a: `imodel::auto` with account error result → opus (conservative fallback).
+  ///
+  /// Auth-errored accounts have no quota data; `auto` falls to opus.
+  #[ test ]
+  fn it_imodel_auto_err_result_falls_to_opus()
+  {
+    let aq      = mk_aq_err();
+    let model   = resolve_model( &aq, SubprocessModel::Auto );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-opus-4-6",
+      "imodel::auto with Err result must fall back to opus",
+    );
+  }
+
+  /// EC-6: `imodel::sonnet` always returns `IsolatedModel::Specific("claude-sonnet-4-6")`.
+  ///
+  /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-6]
+  #[ test ]
+  fn it_imodel_sonnet_explicit()
+  {
+    let aq      = mk_aq_no_sonnet_data();
+    let model   = resolve_model( &aq, SubprocessModel::Sonnet );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-sonnet-4-6",
+      "imodel::sonnet must always return claude-sonnet-4-6",
+    );
+  }
+
+  /// EC-7: `imodel::opus` always returns `IsolatedModel::Specific("claude-opus-4-6")`.
+  ///
+  /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-7]
+  #[ test ]
+  fn it_imodel_opus_explicit()
+  {
+    let aq      = mk_aq_no_sonnet_data();
+    let model   = resolve_model( &aq, SubprocessModel::Opus );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-opus-4-6",
+      "imodel::opus must always return claude-opus-4-6",
+    );
+  }
+
+  /// EC-8: `imodel::keep` returns `IsolatedModel::KeepCurrent` — no `--model` flag.
+  ///
+  /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-8]
+  #[ test ]
+  fn it_imodel_keep_no_model_flag()
+  {
+    let aq    = mk_aq_no_sonnet_data();
+    let model = resolve_model( &aq, SubprocessModel::Keep );
+    assert!(
+      matches!( model, claude_runner_core::IsolatedModel::KeepCurrent ),
+      "imodel::keep must return KeepCurrent (no --model flag)",
+    );
+  }
+
+  /// `effort::high` always returns `Some("high")` regardless of model.
+  ///
+  /// Spec: [`tests/docs/cli/param/036_effort.md` EC-5]
+  #[ test ]
+  fn it_effort_high_explicit()
+  {
+    let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
+    let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-6".to_string() );
+    let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
+    assert_eq!( resolve_effort( &sonnet, SubprocessEffort::High ), Some( "high" ) );
+    assert_eq!( resolve_effort( &opus,   SubprocessEffort::High ), Some( "high" ) );
+    assert_eq!( resolve_effort( &keep,   SubprocessEffort::High ), Some( "high" ) );
+  }
+
+  /// `effort::max` always returns `Some("max")` regardless of model.
+  ///
+  /// Spec: [`tests/docs/cli/param/036_effort.md` EC-6]
+  #[ test ]
+  fn it_effort_max_explicit()
+  {
+    let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
+    let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-6".to_string() );
+    let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
+    assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Max ), Some( "max" ) );
+    assert_eq!( resolve_effort( &opus,   SubprocessEffort::Max ), Some( "max" ) );
+    assert_eq!( resolve_effort( &keep,   SubprocessEffort::Max ), Some( "max" ) );
+  }
+
+  /// `effort::auto` + Sonnet → `Some("high")`; + Opus → `Some("max")`; + `KeepCurrent` → `None`.
+  ///
+  /// Spec: [`tests/docs/cli/param/036_effort.md` EC-7–EC-9]
+  #[ test ]
+  fn it_effort_auto_model_dependent()
+  {
+    let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
+    let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-6".to_string() );
+    let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
+    assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Auto ), Some( "high" ), "auto+sonnet must be high" );
+    assert_eq!( resolve_effort( &opus,   SubprocessEffort::Auto ), Some( "max" ),  "auto+opus must be max" );
+    assert_eq!( resolve_effort( &keep,   SubprocessEffort::Auto ), None,           "auto+keep must be None" );
+  }
+
+  /// `imodel::keep` + `effort::auto` → no `--effort` flag (`effort_pre_args` returns empty vec).
+  ///
+  /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-8 interaction note]
+  #[ test ]
+  fn it_imodel_keep_effort_auto_no_effort_flag()
+  {
+    let aq      = mk_aq_no_sonnet_data();
+    let model   = resolve_model( &aq, SubprocessModel::Keep );
+    let pre_args = effort_pre_args( &model, SubprocessEffort::Auto );
+    assert!(
+      pre_args.is_empty(),
+      "imodel::keep + effort::auto must produce no pre-args (no --effort flag), got: {pre_args:?}",
+    );
+  }
+
+  // ── TSK-192: apply_touch trigger behavioral tests ────────────────────────────
+
+  /// Build an `AccountQuota` with `five_hour.resets_at` set to the given value.
+  ///
+  /// Used by trigger tests to distinguish active (Some) from idle (None) 5h windows.
+  fn mk_aq_with_resets_at( resets_at : Option< &str > ) -> AccountQuota
+  {
+    AccountQuota
+    {
+      name          : "test@example.com".to_string(),
+      expires_at_ms : FAR_FUTURE_MS,
+      is_current    : false,
+      is_active     : false,
+      result        : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage
+        {
+          utilization : 50.0,
+          resets_at   : resets_at.map( str::to_string ),
+        } ),
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account       : None,
+    }
+  }
+
+  /// TSK-192 AC-02 / FT-02 behavioral: `apply_touch` fires when `resets_at` is `Some`.
+  ///
+  /// When `five_hour.resets_at` is present (active 5h window), `apply_touch` must
+  /// attempt to reach `refresh_account_token`, observable via `switch_account` writing
+  /// credentials to `fake_home/.claude/credentials.json`.
+  ///
+  /// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
+  ///       [`docs/feature/024_session_touch.md` AC-02]
+  #[ test ]
+  fn it_apply_touch_trigger_fires_resets_at_some()
+  {
+    let dir       = tempfile::TempDir::new().unwrap();
+    let store     = dir.path().join( "store" );
+    let fake_home = dir.path().join( "home" );
+    std::fs::create_dir_all( &store ).unwrap();
+    std::fs::create_dir_all( fake_home.join( ".claude" ) ).unwrap();
+    // Credentials file in store — switch_account can proceed past NotFound guard.
+    std::fs::write(
+      store.join( "test@example.com.credentials.json" ),
+      r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+    ).unwrap();
+    let mut aq = mk_aq_with_resets_at( Some( "2099-01-01T00:00:00Z" ) );
+    let paths  = crate::ClaudePaths::with_home( &fake_home );
+    apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    // Trigger fired → switch_account atomically wrote credentials to paths.credentials_file().
+    assert!(
+      paths.credentials_file().exists(),
+      "apply_touch must call switch_account when resets_at is Some (active 5h window)"
+    );
+  }
+
+  /// TSK-192 AC-02 / FT-02 behavioral: `apply_touch` skips when `resets_at` is `None`.
+  ///
+  /// When `five_hour.resets_at` is absent (idle 5h window), `apply_touch` must return
+  /// early without calling `switch_account`. The credentials file in `fake_home/.claude/`
+  /// must NOT be written.
+  ///
+  /// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
+  ///       [`docs/feature/024_session_touch.md` AC-02]
+  #[ test ]
+  fn it_apply_touch_trigger_skips_resets_at_none()
+  {
+    let dir       = tempfile::TempDir::new().unwrap();
+    let store     = dir.path().join( "store" );
+    let fake_home = dir.path().join( "home" );
+    std::fs::create_dir_all( &store ).unwrap();
+    std::fs::create_dir_all( fake_home.join( ".claude" ) ).unwrap();
+    // Credentials file in store — present so that any accidental switch_account call could proceed.
+    std::fs::write(
+      store.join( "test@example.com.credentials.json" ),
+      r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
+    ).unwrap();
+    let mut aq = mk_aq_with_resets_at( None );
+    let paths  = crate::ClaudePaths::with_home( &fake_home );
+    apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
+    // Trigger skipped → switch_account NOT called → credentials file NOT written.
+    assert!(
+      !fake_home.join( ".claude" ).join( ".credentials.json" ).exists(),
+      "apply_touch must skip switch_account when resets_at is None (idle 5h window)"
     );
   }
 }

@@ -1,8 +1,8 @@
 # Group :: 3. Fetch Behavior
 
-**Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`
+**Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::`
 **Pattern:** Per-invocation fetch control
-**Purpose:** Controls how `.usage` fetches and re-fetches quota data — whether to refresh expired tokens on auth errors and whether to run as a continuous monitor loop.
+**Purpose:** Controls how `.usage` fetches and re-fetches quota data — whether to refresh expired tokens on auth errors, whether to run as a continuous monitor loop, and how isolated subprocesses are configured.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -11,7 +11,9 @@
 | [`interval::`](../param/021_interval.md) | `u64` | `30` | Seconds between refresh cycles (≥ 30; validated only when `live::1`) |
 | [`jitter::`](../param/022_jitter.md) | `u64` | `0` | Max random seconds added to each cycle delay (0 ≤ jitter ≤ interval; validated only when `live::1`) |
 | [`trace::`](../param/023_trace.md) | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
-| [`touch::`](../param/034_touch.md) | `bool` | `0` | Activate idle accounts (5h Reset = —) via isolated subprocess; re-fetch quota |
+| [`touch::`](../param/034_touch.md) | `bool` | `1` | Extend active 5h windows via isolated subprocess; re-fetch quota |
+| [`imodel::`](../param/035_imodel.md) | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `keep` |
+| [`effort::`](../param/036_effort.md) | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (max for model), `high`, `max` |
 
 **Used By (1 command):** [`.usage`](../command/006_usage.md#command--9-usage)
 
@@ -35,7 +37,7 @@ clp .usage
 
 > "Does parameter X control **how `.usage` fetches quota data** (retry strategy or iteration mode)?"
 
-All 6 members pass: `refresh::` (retry strategy on auth error), `live::` (iteration mode), `interval::` (loop cycle duration), `jitter::` (loop timing variance), `trace::` (diagnostic output during fetch operations), `touch::` (idle-account activation strategy). `format::` fails (output serialisation, not fetch strategy) and is correctly excluded.
+All 8 members pass: `refresh::` (retry strategy on auth error), `live::` (iteration mode), `interval::` (loop cycle duration), `jitter::` (loop timing variance), `trace::` (diagnostic output during fetch operations), `touch::` (active-window extension strategy), `imodel::` (subprocess model configuration), `effort::` (subprocess effort configuration). `format::` fails (output serialisation, not fetch strategy) and is correctly excluded.
 
 **Invariants**
 
@@ -49,3 +51,4 @@ All 6 members pass: `refresh::` (retry strategy on auth error), `live::` (iterat
 - [../../feature/017_token_refresh.md](../../feature/017_token_refresh.md) — `refresh::` feature design
 - [../../feature/018_live_monitor.md](../../feature/018_live_monitor.md) — `live::` / `interval::` / `jitter::` feature design
 - [../../feature/024_session_touch.md](../../feature/024_session_touch.md) — `touch::` feature design
+- [../../feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md) — `imodel::` / `effort::` feature design

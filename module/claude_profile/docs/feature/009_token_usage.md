@@ -177,7 +177,7 @@ Valid: 2 / 3   ->  Next by strategy:
 | doc | [017_token_refresh.md](017_token_refresh.md) | Token refresh extension; `apply_refresh()` and `refresh::` parameter |
 | doc | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies; three-tier grouping; `sort::`, `desc::`, `prefer::` parameters |
 | doc | [023_next_account_strategies.md](023_next_account_strategies.md) | Recommendation strategies; `next::` parameter; multi-strategy footer |
-| doc | [024_session_touch.md](024_session_touch.md) | Session touch extension; idle-account activation; `touch::` parameter |
+| doc | [024_session_touch.md](024_session_touch.md) | Session touch; active 5h window extension; `touch::` parameter |
 | param | [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter specification |
 | param | [cli/param/033_cols.md](../cli/param/033_cols.md) | `cols::` parameter specification |
 | param | [cli/param/034_touch.md](../cli/param/034_touch.md) | `touch::` parameter specification |

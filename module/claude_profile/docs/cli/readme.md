@@ -14,7 +14,7 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 | Entry | Responsibility |
 |-------|----------------|
 | [command/](command/readme.md) | Per-namespace command specifications (account, token, credentials, usage, paths, meta) |
-| [param/](param/readme.md) | Individual parameter specifications (24 params, one file each) |
+| [param/](param/readme.md) | Individual parameter specifications (36 params, one file each) |
 | [type/](type/readme.md) | CLI type definitions (AccountName, OutputFormat, WarningThreshold, AccountSelector) |
 | [param_group/](param_group/readme.md) | Parameter group semantics (Output Control, Field Presence, Fetch Behavior) |
 | [workflow_scenario/](workflow_scenario/readme.md) | Composed command workflows for real operational tasks |
@@ -47,7 +47,7 @@ Manage Claude Code account credentials: save, list, use, and delete named profil
 ### Navigation
 
 - [Commands](command/readme.md) — 13 commands across 6 namespaces
-- [Parameters](param/readme.md) — 24 individual parameter specifications
+- [Parameters](param/readme.md) — 36 individual parameter specifications
 - [Types](type/readme.md) — 4 CLI types (AccountName, OutputFormat, WarningThreshold, AccountSelector)
 - [Parameter Groups](param_group/readme.md) — 3 groups (Output Control, Field Presence, Fetch Behavior)
 - [Workflow Scenarios](workflow_scenario/readme.md) — 10 composed workflows

@@ -64,7 +64,7 @@ fn art_some_paths_no_store_cred_returns_none()
   let fake_home = TempDir::new().unwrap();
   // No {name}.credentials.json in store — switch_account returns NotFound.
   let paths  = ClaudePaths::with_home( fake_home.path() );
-  let result = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), false );
+  let result = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), false, "test", claude_runner_core::IsolatedModel::Default, &[] );
   assert_eq!( result, None, "must return None when store credential file absent" );
 }
 
@@ -78,7 +78,7 @@ fn art_some_paths_dot_claude_absent_returns_none()
   // Pitfall: do NOT create fake_home/.claude/ — its absence causes fs::copy to fail.
   write_cred_file( store.path(), "ghost@example.com" );
   let paths  = ClaudePaths::with_home( fake_home.path() );
-  let result = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), false );
+  let result = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), false, "test", claude_runner_core::IsolatedModel::Default, &[] );
   assert_eq!( result, None, "must return None when .claude/ directory absent (switch_account fails Io)" );
 }
 
@@ -88,7 +88,7 @@ fn art_none_paths_no_store_cred_returns_none()
 {
   let store  = TempDir::new().unwrap();
   // No {name}.credentials.json in store — read_to_string fails, None branch early-exit.
-  let result = account::refresh_account_token( "ghost@example.com", store.path(), None, false );
+  let result = account::refresh_account_token( "ghost@example.com", store.path(), None, false, "test", claude_runner_core::IsolatedModel::Default, &[] );
   assert_eq!( result, None, "must return None when store credential file absent (None branch)" );
 }
 
@@ -102,7 +102,7 @@ fn art_some_paths_no_store_cred_trace_does_not_panic()
   let fake_home = TempDir::new().unwrap();
   // No {name}.credentials.json — switch_account returns NotFound; trace logs the Err.
   let paths  = ClaudePaths::with_home( fake_home.path() );
-  let result = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), true );
+  let result = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), true, "test", claude_runner_core::IsolatedModel::Default, &[] );
   assert_eq!( result, None, "trace=true must still return None when store credential file absent" );
 }
 
@@ -115,7 +115,7 @@ fn art_some_paths_dot_claude_absent_trace_does_not_panic()
   // Cred file in store but {fake_home}/.claude/ absent — switch_account fails Io; trace logs the Err.
   write_cred_file( store.path(), "ghost@example.com" );
   let paths  = ClaudePaths::with_home( fake_home.path() );
-  let result = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), true );
+  let result = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), true, "test", claude_runner_core::IsolatedModel::Default, &[] );
   assert_eq!( result, None, "trace=true must still return None when .claude/ dir absent" );
 }
 
@@ -125,7 +125,7 @@ fn art_none_paths_no_store_cred_trace_does_not_panic()
 {
   let store  = TempDir::new().unwrap();
   // No {name}.credentials.json — read_to_string fails; trace logs the Err.
-  let result = account::refresh_account_token( "ghost@example.com", store.path(), None, true );
+  let result = account::refresh_account_token( "ghost@example.com", store.path(), None, true, "test", claude_runner_core::IsolatedModel::Default, &[] );
   assert_eq!( result, None, "trace=true must still return None when store credential file absent (None branch)" );
 }
 
@@ -145,7 +145,7 @@ fn art_some_paths_run_isolated_invoked_trace_no_panic()
   // BUG-168: `let _ =` required — discards `#[must_use]` return value intentionally.
   // BUG-169: args corrected to `["--print", "."]` — vec\![] regression fixed.
   // This test validates "does not panic", not the return value.
-  let _ = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), true );
+  let _ = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), true, "test", claude_runner_core::IsolatedModel::Default, &[] );
 }
 
 

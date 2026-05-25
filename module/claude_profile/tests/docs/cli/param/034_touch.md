@@ -12,8 +12,8 @@ Edge case coverage for the `touch::` parameter on `.usage`. See [param/034_touch
 | EC-4 | `touch::bogus` exits 1 (invalid value) | Invalid Value |
 | EC-5 | `touch::1` with errored-quota account — errored accounts are never touched | Trigger Guard |
 | EC-6 | `touch::1 format::json` — `touch::` does not affect JSON output structure | JSON No-op |
-| EC-7 | `touch::0` with idle account — no subprocess spawned, 5h Reset stays `—` | Behavioral Divergence |
-| EC-8 | `touch::1` with idle account — subprocess spawned, 5h Reset changes (Behavioral Divergence B) | Behavioral Divergence |
+| EC-7 | `touch::0` with active account — no subprocess spawned, 5h Reset unchanged | Behavioral Divergence |
+| EC-8 | `touch::1` with active account — subprocess spawned, 5h Reset extended (Behavioral Divergence B) | Behavioral Divergence |
 
 ---
 
@@ -63,7 +63,7 @@ Edge case coverage for the `touch::` parameter on `.usage`. See [param/034_touch
 
 ### EC-5: `touch::1` with errored-quota account — errored accounts are never touched
 
-- **Given:** One saved account whose credential file has no `accessToken` (quota fetch fails with Err — not a successful result with missing `resets_at`).
+- **Given:** One saved account whose credential file has no `accessToken` (quota fetch fails with Err).
 - **When:** `clp .usage touch::1`
 - **Then:** Exits 0. No subprocess spawned for the errored account. Account row shows original error state unchanged. Touch trigger requires `result = Ok(...)` — Err accounts are never touched.
 - **Exit:** 0
@@ -84,24 +84,24 @@ Edge case coverage for the `touch::` parameter on `.usage`. See [param/034_touch
 
 ---
 
-### EC-7: `touch::0` with idle account — no subprocess spawned (Behavioral Divergence A)
+### EC-7: `touch::0` with active account — no subprocess spawned (Behavioral Divergence A)
 
-- **Given:** One saved account with valid token and quota data where `five_hour.resets_at` is `None` (idle state — 5h window has not started).
+- **Given:** One saved account with valid token and quota data where `five_hour.resets_at` is present (active 5h window — would be touched with `touch::1`).
 - **When:** `clp .usage touch::0`
-- **Then:** Exits 0. No subprocess spawned. The 5h Reset column shows `—` (unchanged idle state). `touch::0` disables the touch trigger regardless of account state.
+- **Then:** Exits 0. No subprocess spawned. The 5h Reset column shows original countdown unchanged. `touch::0` disables the touch trigger regardless of account state.
 - **Exit:** 0
-- **Live:** yes (requires live quota data)
-- **Source fn:** `it099_lim_it_touch_0_no_subprocess_idle_account_unchanged` (in `tests/cli/usage_test.rs`)
+- **Live:** yes (requires live quota data with active 5h window)
+- **Source fn:** `it099_lim_it_touch_0_no_subprocess_active_account_unchanged` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-01](../../../../docs/feature/024_session_touch.md)
 
 ---
 
-### EC-8: `touch::1` with idle account — subprocess spawned (Behavioral Divergence B)
+### EC-8: `touch::1` with active account — subprocess spawned, window extended (Behavioral Divergence B)
 
-- **Given:** Same account as EC-7: valid token, `five_hour.resets_at = None` (idle state). Neither is current.
+- **Given:** Same account as EC-7: valid token, `five_hour.resets_at` present (active 5h window). Neither is current.
 - **When:** `clp .usage touch::1`
-- **Then:** Exits 0. A subprocess IS spawned for the idle account (touch trigger fires: `result = Ok(...)` AND `resets_at = None`). After the subprocess, quota is re-fetched; the 5h Reset column changes from `—` to a concrete countdown. Divergence from EC-7: the SAME idle account produces DIFFERENT output under `touch::0` vs `touch::1`, proving the parameter governs subprocess dispatch.
+- **Then:** Exits 0. A subprocess IS spawned for the active account (touch trigger fires: `result = Ok(...)` AND `resets_at` is present). After the subprocess, quota is re-fetched; the 5h Reset column shows a countdown extended ~5h forward. Divergence from EC-7: the SAME active account produces DIFFERENT output under `touch::0` vs `touch::1`, proving the parameter governs subprocess dispatch.
 - **Exit:** 0
-- **Live:** yes (requires live quota data)
-- **Source fn:** `it100_lim_it_touch_1_subprocess_spawned_for_idle_account` (in `tests/cli/usage_test.rs`)
+- **Live:** yes (requires live quota data with active 5h window)
+- **Source fn:** `it100_lim_it_touch_1_subprocess_spawned_for_active_account` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-01, AC-03](../../../../docs/feature/024_session_touch.md)

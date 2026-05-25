@@ -22,6 +22,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 023_next_account_strategies.md | FT cases for Feature 023 — Next Account Recommendation Strategies |
 | 024_session_touch.md | FT cases for Feature 024 — Session Touch via Isolated Subprocess |
 | 025_per_machine_active_marker.md | FT cases for Feature 025 — Per-Machine Active Marker |
+| 026_subprocess_model_effort.md | FT cases for Feature 026 — Subprocess Model and Effort Control |
 
 ### Coverage Summary
 
@@ -36,5 +37,6 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 023_next_account_strategies | [023_next_account_strategies.md](023_next_account_strategies.md) | FT-01 … FT-08 | ✅ |
 | 024_session_touch | [024_session_touch.md](024_session_touch.md) | FT-01 … FT-12 | ✅ |
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | FT-01 … FT-08 | ✅ (FT-08 ⏳) |
+| 026_subprocess_model_effort | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | FT-01 … FT-17 | ✅ |
 
-**Total:** 9 feature specs; 10 of 25 feature instances not yet covered by dedicated FT specs.
+**Total:** 10 feature specs; 16 of 26 feature instances not yet covered by dedicated FT specs.

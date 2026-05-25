@@ -469,6 +469,9 @@ pub fn refresh_account_token(
   credential_store : &Path,
   paths            : Option< &ClaudePaths >,
   trace            : bool,
+  label            : &str,
+  model            : claude_runner_core::IsolatedModel,
+  extra_pre_args   : &[ String ],
 ) -> Option< String >
 {
   // Fix(issue-166): added `trace: bool` param; all `?` operators replaced with explicit `match` + `eprintln!` blocks.
@@ -491,16 +494,20 @@ pub fn refresh_account_token(
   //   (b) carry all cross-cutting params (`trace`, error context) into extracted functions — silent `?`
   //   propagation becomes a diagnostic black hole.
 
-  let args = vec![ "--print".to_string(), ".".to_string() ];
+  // TSK-191: extra_pre_args (e.g. ["--effort", "high"]) are prepended before ["--print", "."].
+  let mut args : Vec< String > = extra_pre_args.to_vec();
+  args.push( "--print".to_string() );
+  args.push( ".".to_string() );
 
   if let Some( p ) = paths
   {
+    let t_switch = std::time::Instant::now();
     match switch_account( name, credential_store, p )
     {
-      Ok( () ) => { if trace { eprintln!( "[trace] refresh  {name}  switch_account: OK" ); } }
+      Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}switch_account: OK  ({:.1}s)", t_switch.elapsed().as_secs_f64() ); } }
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] refresh  {name}  switch_account: Err({e})" ); }
+        if trace { eprintln!( "[trace] {label}  {name}switch_account: Err({e})  ({:.1}s)", t_switch.elapsed().as_secs_f64() ); }
         return None;
       }
     }
@@ -509,37 +516,38 @@ pub fn refresh_account_token(
       Ok( s )  => s,
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] refresh  {name}  read credentials: Err({e})" ); }
+        if trace { eprintln!( "[trace] {label}  {name}read credentials: Err({e})" ); }
         return None;
       }
     };
-    if trace { eprintln!( "[trace] refresh  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
-    let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, claude_runner_core::IsolatedModel::Default )
+    let t_run = std::time::Instant::now();
+    if trace { eprintln!( "[trace] {label}  {name}run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
+    let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, model )
     {
       Ok( r )  => r,
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] refresh  {name}  run_isolated: Err({e})" ); }
+        if trace { eprintln!( "[trace] {label}  {name}run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
         return None;
       }
     };
     if trace
     {
       let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
-      eprintln!( "[trace] refresh  {name}  run_isolated: OK credentials={creds_status}" );
+      eprintln!( "[trace] {label}  {name}run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
     }
     let new_creds = isolated.credentials?;
     if let Err( e ) = std::fs::write( p.credentials_file(), &new_creds )
     {
-      if trace { eprintln!( "[trace] refresh  {name}  write credentials: Err({e})" ); }
+      if trace { eprintln!( "[trace] {label}  {name}write credentials: Err({e})" ); }
       return None;
     }
     match save( name, credential_store, p )
     {
-      Ok( () ) => { if trace { eprintln!( "[trace] refresh  {name}  save: OK" ); } }
+      Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}save: OK" ); } }
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] refresh  {name}  save: Err({e})" ); }
+        if trace { eprintln!( "[trace] {label}  {name}save: Err({e})" ); }
         return None;
       }
     }
@@ -553,29 +561,30 @@ pub fn refresh_account_token(
       Ok( s )  => s,
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] refresh  {name}  read credentials: Err({e})" ); }
+        if trace { eprintln!( "[trace] {label}  {name}read credentials: Err({e})" ); }
         return None;
       }
     };
-    if trace { eprintln!( "[trace] refresh  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
-    let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, claude_runner_core::IsolatedModel::Default )
+    let t_run = std::time::Instant::now();
+    if trace { eprintln!( "[trace] {label}  {name}run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
+    let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, model )
     {
       Ok( r )  => r,
       Err( e ) =>
       {
-        if trace { eprintln!( "[trace] refresh  {name}  run_isolated: Err({e})" ); }
+        if trace { eprintln!( "[trace] {label}  {name}run_isolated: Err({e})  ({:.1}s)", t_run.elapsed().as_secs_f64() ); }
         return None;
       }
     };
     if trace
     {
       let creds_status = if isolated.credentials.is_some() { "Some" } else { "None" };
-      eprintln!( "[trace] refresh  {name}  run_isolated: OK credentials={creds_status}" );
+      eprintln!( "[trace] {label}  {name}run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
     }
     let new_creds = isolated.credentials?;
     if let Err( e ) = std::fs::write( &path, &new_creds )
     {
-      if trace { eprintln!( "[trace] refresh  {name}  write credentials: Err({e})" ); }
+      if trace { eprintln!( "[trace] {label}  {name}write credentials: Err({e})" ); }
       return None;
     }
     Some( new_creds )
@@ -764,7 +773,7 @@ mod tests
 
   // ── FT-08 (021): parse_string_array_field ───────────────────────────────────
 
-  /// ft08_a: Two-element array returns both values in order.
+  /// `ft08_a`: Two-element array returns both values in order.
   ///
   /// Given: `{"capabilities":["claude_max","chat"]}`
   /// When: `parse_string_array_field(json, "capabilities")`
@@ -777,7 +786,7 @@ mod tests
     assert_eq!( result, vec![ "claude_max", "chat" ] );
   }
 
-  /// ft08_b: Missing key returns empty Vec.
+  /// `ft08_b`: Missing key returns empty Vec.
   ///
   /// Given: JSON with no "capabilities" key
   /// When: `parse_string_array_field(json, "capabilities")`
@@ -787,10 +796,10 @@ mod tests
   {
     let json   = r#"{"other_field":"value"}"#;
     let result = parse_string_array_field( json, "capabilities" );
-    assert!( result.is_empty(), "missing key must return empty Vec, got: {:?}", result );
+    assert!( result.is_empty(), "missing key must return empty Vec, got: {result:?}" );
   }
 
-  /// ft08_c: Empty array `[]` returns empty Vec.
+  /// `ft08_c`: Empty array `[]` returns empty Vec.
   ///
   /// Given: `{"capabilities":[]}`
   /// When: `parse_string_array_field(json, "capabilities")`
@@ -800,7 +809,7 @@ mod tests
   {
     let json   = r#"{"capabilities":[]}"#;
     let result = parse_string_array_field( json, "capabilities" );
-    assert!( result.is_empty(), "empty array must return empty Vec, got: {:?}", result );
+    assert!( result.is_empty(), "empty array must return empty Vec, got: {result:?}" );
   }
 }
 

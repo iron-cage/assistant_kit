@@ -25,7 +25,7 @@
 | 6 | `.account.delete` | Delete a saved account from the account store | 2 | `clp .account.delete name::alice@oldco.com` |
 | 7 | `.token.status` | Show active OAuth token expiry classification | 2 | `clp .token.status` |
 | 8 | `.paths` | Show all resolved ~/.claude/ canonical file paths | 2 | `clp .paths` |
-| 9 | `.usage` | Show live rate-limit quota for all saved accounts | 6 | `clp .usage` |
+| 9 | `.usage` | Show live rate-limit quota for all saved accounts | 14 | `clp .usage` |
 | 10 | `.credentials.status` | Show live credential metadata without account store dependency | 13 | `clp .credentials.status` |
 | 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 2 | `clp .account.limits name::alice@acme.com` |
 | 12 | `.account.relogin` | Force browser re-authentication for a named account | 2 | `clp .account.relogin name::carol@example.com` |
@@ -46,8 +46,8 @@
 | 0 | `.`, `.help` |
 | 1 | `.account.rotate` |
 | 2 | `.paths`, `.account.save`, `.account.use`, `.account.delete`, `.token.status`, `.account.limits`, `.account.relogin` |
-| 6 | `.usage` |
 | 12 | `.accounts` |
+| 14 | `.usage` |
 | 13 | `.credentials.status` |
 
 ### See Also

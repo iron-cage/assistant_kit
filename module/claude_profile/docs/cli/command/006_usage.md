@@ -8,7 +8,7 @@ Live quota utilization commands.
 
 Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus Expires, Sub, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), and 7d Reset columns, and a footer recommendation line. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
--- **Parameters:** [`format::`](../param/002_format.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`next::`](../param/032_next.md), [`cols::`](../param/033_cols.md), [`touch::`](../param/034_touch.md)
+-- **Parameters:** [`format::`](../param/002_format.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`next::`](../param/032_next.md), [`cols::`](../param/033_cols.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid param combination) | 2 (runtime: credential store unreadable, HOME unset)
 
 **Syntax:**
@@ -30,8 +30,11 @@ clp .usage next::drain
 clp .usage sort::next
 clp .usage cols::+sub
 clp .usage cols::+sub,-7d_son
-clp .usage touch::1
-clp .usage touch::1 refresh::1 trace::1
+clp .usage touch::0
+clp .usage touch::0 refresh::1 trace::1
+clp .usage imodel::sonnet
+clp .usage imodel::opus effort::max
+clp .usage imodel::keep effort::high
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -47,7 +50,9 @@ clp .usage touch::1 refresh::1 trace::1
 | `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any` = `min(7d Left, 7d(Son))`, `opus` = `7d Left`, `sonnet` = `7d(Son)` |
 | `next::` | `enum` | `drain` | Strategy placing `→` on recommended account: `drain`, `endurance`; footer always shows both |
 | `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to default set |
-| `touch::` | `bool` | `0` | Activate idle accounts (5h Reset = —) by sending minimal prompt via isolated subprocess; re-fetch quota |
+| `touch::` | `bool` | `1` | Keep accounts with active 5h countdown alive by sending minimal prompt via isolated subprocess; re-fetch quota |
+| `imodel::` | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `keep` |
+| `effort::` | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (max for model: `high`/sonnet, `max`/opus), `high`, `max` |
 
 **Examples:**
 
@@ -89,4 +94,6 @@ clp .usage live::1 interval::60 jitter::10
 - Duration format (`format_duration_secs`) capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`).
 - See [feature/009_token_usage.md](../../feature/009_token_usage.md) for the baseline algorithm and AC criteria.
 - See [feature/023_next_account_strategies.md](../../feature/023_next_account_strategies.md) for recommendation strategies.
-- `touch::1` activates idle accounts whose 5h window hasn't started; runs after `refresh::` when both active. See [feature/024_session_touch.md](../../feature/024_session_touch.md).
+- `touch::` (default `1`) keeps accounts with an active 5h window alive by sending a minimal prompt that resets the 5h countdown; pass `touch::0` to suppress. Runs after `refresh::` when both active. See [feature/024_session_touch.md](../../feature/024_session_touch.md).
+- `imodel::` controls the Claude model injected into `touch::` and `refresh::` subprocesses. `auto` (default) selects Sonnet when an account's `7d(Son) ≥ 30%` and Opus otherwise. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
+- `effort::` controls the effort level (`--effort` flag) for those subprocesses. `auto` (default) uses `high` for Sonnet and `max` for Opus; no flag when `imodel::keep`. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).

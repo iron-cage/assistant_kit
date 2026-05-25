@@ -124,7 +124,8 @@ fn as_save_writes_active_marker()
 
   account::save( "alice@acme.com", &store, &paths ).unwrap();
 
-  let active = std::fs::read_to_string( store.join( "_active" ) )
+  let marker_name = account::active_marker_filename();
+  let active = std::fs::read_to_string( store.join( &marker_name ) )
     .expect( "_active must exist after save()" );
   assert_eq!(
     active.trim(),

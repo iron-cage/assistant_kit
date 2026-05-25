@@ -4,10 +4,10 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|-----------|
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 25 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 26 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 6 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 34 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 36 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](cli/param_group/readme.md) | 5 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 4 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](cli/format/readme.md) | 3 |
@@ -42,6 +42,7 @@
 | feature | 023 | Next Account Recommendation Strategies | [feature/023_next_account_strategies.md](feature/023_next_account_strategies.md) |
 | feature | 024 | Session Touch via Isolated Subprocess | [feature/024_session_touch.md](feature/024_session_touch.md) |
 | feature | 025 | Per-Machine Active Marker | [feature/025_per_machine_active_marker.md](feature/025_per_machine_active_marker.md) |
+| feature | 026 | Subprocess Model and Effort Control | [feature/026_subprocess_model_effort.md](feature/026_subprocess_model_effort.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](cli/003_env_param.md) |
@@ -86,6 +87,8 @@
 | param | 032 | `next::` | [cli/param/032_next.md](cli/param/032_next.md) |
 | param | 033 | `cols::` | [cli/param/033_cols.md](cli/param/033_cols.md) |
 | param | 034 | `touch::` | [cli/param/034_touch.md](cli/param/034_touch.md) |
+| param | 035 | `imodel::` | [cli/param/035_imodel.md](cli/param/035_imodel.md) |
+| param | 036 | `effort::` | [cli/param/036_effort.md](cli/param/036_effort.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](cli/param_group/003_fetch_behavior.md) |

@@ -106,8 +106,23 @@
 //! | it089 | `it089_apply_touch_fn_exists_structural`             | `fn apply_touch` present in source (TSK-185 AC-02 structural) | P | no |
 //! | it090 | `it090_touch_json_format_unaffected`                | `format::json touch::1` empty store → exit 0, output `[]` (TSK-185 AC-08) | P | no |
 //! | it091 | `it091_usage_help_shows_touch_param`                | `.usage.help` contains `touch` (TSK-185 AC-10) | P | no |
-//! | it110 | `it110_lim_it_ft12_touch_trigger_once_per_idle_window` | `touch::1` fires on idle account; immediate re-run skips touch (resets_at present) (024 FT-12) | P | yes |
+//! | it110 | `it110_lim_it_ft12_touch_trigger_fires_per_active_window_cycle` | `touch::1` fires each cycle for active accounts (resets_at present); idle skipped (024 FT-12) | P | yes |
 //! | it111 | `it111_sort_next_accepted`                          | `sort::next` accepted → exit 0 (drain default + endurance explicit) (IT-65/AC-15) | P | no |
+//! | it112 | `it112_imodel_auto_accepted_empty_store_exits_0`    | `imodel::auto` accepted; empty store exits 0 (IT-66/EC-1) | P | no |
+//! | it113 | `it113_imodel_bogus_exits_1`                        | `imodel::bogus` → exit 1, stderr names all 4 valid values (IT-67/EC-5) | N | no |
+//! | it114 | `it114_effort_auto_accepted_empty_store_exits_0`    | `effort::auto` accepted; empty store exits 0 (IT-68/EC-1) | P | no |
+//! | it115 | `it115_effort_bogus_exits_1`                        | `effort::bogus` → exit 1, stderr names all 3 valid values (IT-69/EC-4) | N | no |
+//! | it116 | `it116_usage_help_shows_imodel_effort_params`       | `.usage.help` lists `imodel` and `effort` params (IT-70) | P | no |
+//! | it117 | `it117_imodel_sonnet_accepted_empty_store_exits_0`  | `imodel::sonnet` accepted; empty store exits 0 (EC-2) | P | no |
+//! | it118 | `it118_imodel_opus_accepted_empty_store_exits_0`    | `imodel::opus` accepted; empty store exits 0 (EC-3) | P | no |
+//! | it119 | `it119_imodel_keep_accepted_empty_store_exits_0`    | `imodel::keep` accepted; empty store exits 0 (EC-4) | P | no |
+//! | it120 | `it120_effort_high_accepted_empty_store_exits_0`    | `effort::high` accepted; empty store exits 0 | P | no |
+//! | it121 | `it121_effort_max_accepted_empty_store_exits_0`     | `effort::max` accepted; empty store exits 0 | P | no |
+//! | it122 | `it122_apply_touch_trigger_is_is_some_structural`   | apply_touch uses `is_some()` trigger (TSK-192 AC-02 structural) | P | no |
+//! | it123 | `it123_refresh_account_token_has_label_param_structural` | `refresh_account_token` uses label var not hardcoded "refresh" (TSK-192 AC-09 structural) | P | no |
+//! | it124 | `it124_apply_touch_passes_touch_label_structural`   | `apply_touch` call site passes `"touch"` label (TSK-192 AC-09 structural) | P | no |
+//! | it125 | `it125_apply_refresh_passes_refresh_label_structural` | `apply_refresh` call site passes `"refresh"` label (TSK-192 AC-09 structural) | P | no |
+//! | it126 | `it126_refresh_account_token_has_instant_timing_structural` | `refresh_account_token` uses `Instant::now()` for per-step timing (TSK-192 AC-09 structural) | P | no |
 
 use crate::helpers::{
   BIN,
@@ -2761,8 +2776,8 @@ fn it089_apply_touch_fn_exists_structural()
   assert!(
     src.contains( "fn apply_touch" ),
     "TSK-185: `fn apply_touch` must be present in src/usage.rs; \
-     add the idle-account activation function that calls refresh_account_token() \
-     for accounts with result.is_ok() AND five_hour.resets_at.is_none()",
+     add the active-window extension function that calls refresh_account_token() \
+     for accounts with result.is_ok() AND five_hour.resets_at.is_some()",
   );
 }
 
@@ -2962,7 +2977,7 @@ fn it095_lim_it_per_column_emoji_in_5h_left()
 
 /// it096 (IT-62 / EC-1): `touch::0` accepted; empty credential store exits 0.
 ///
-/// `touch::0` is the explicit default — the parser must accept it without error.
+/// `touch::0` is the explicit off value — the parser must accept it without error.
 /// No subprocess is spawned with `touch::0` regardless of account state.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-62]
@@ -3024,13 +3039,13 @@ fn it098_touch_bogus_exits_1()
 /// it099 `lim_it` (FT-01 of feature/024 / EC-7): `touch::0` — no subprocess spawned; 5h Reset unchanged.
 ///
 /// When `touch::0` (default), the touch trigger is never fired regardless of account state.
-/// An account with `five_hour.resets_at = None` (idle, 5h Reset shows `—`) stays unchanged.
-/// Skips when the live account already has an active 5h window (`resets_at` present).
+/// An account with `five_hour.resets_at` present (active 5h window, 5h Reset shows countdown) stays unchanged.
+/// Skips when the live account is in idle state (`resets_at` absent, shows `—`).
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-01]
 ///       [`tests/docs/cli/param/034_touch.md` EC-7]
 #[ test ]
-fn it099_lim_it_touch_0_no_subprocess_idle_account_unchanged()
+fn it099_lim_it_touch_0_no_subprocess_active_account_unchanged()
 {
   let Some( token ) = live_active_token() else
   {
@@ -3041,37 +3056,37 @@ fn it099_lim_it_touch_0_no_subprocess_idle_account_unchanged()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: is the account in idle state (5h Reset shows —)?
+  // Pre-check: is the account in active state (5h Reset shows countdown)?
+  // em dash (U+2014) in the 5h Reset column means idle — skip.
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
   let pre_text = stdout( &pre );
-  // em dash (U+2014) is rendered in the 5h Reset column for idle accounts.
-  if !pre_text.contains( "\u{2014}" )
+  if pre_text.contains( "\u{2014}" )
   {
-    eprintln!( "it099: account has active 5h window — idle-state condition not met, skipping" );
+    eprintln!( "it099: account is idle (no active 5h window) — active-state condition not met, skipping" );
     return;
   }
 
   let out = run_cs_with_env( &[ ".usage", "touch::0" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // 5h Reset column must still show — (no subprocess fired).
+  // 5h Reset column must still show countdown (touch::0 must not fire subprocess).
   assert!(
-    text.contains( "\u{2014}" ),
-    "touch::0 must not activate idle 5h window — 5h Reset must remain — (FT-01/EC-7), got:\n{text}",
+    !text.contains( "\u{2014}" ),
+    "touch::0 must not modify active 5h window — 5h Reset must remain as countdown (FT-01/EC-7), got:\n{text}",
   );
 }
 
-/// it100 `lim_it` (FT-02 of feature/024 / EC-8): `touch::1` — subprocess observed via trace for idle account.
+/// it100 `lim_it` (FT-02 of feature/024 / EC-8): `touch::1` — subprocess observed via trace for active account.
 ///
-/// When `touch::1` and the account has `five_hour.resets_at = None` (idle), a subprocess
+/// When `touch::1` and the account has `five_hour.resets_at` present (active 5h window), a subprocess
 /// is invoked. With `trace::1`, stderr shows `[trace]` lines for the subprocess lifecycle.
-/// Skips when the live account is not in idle state.
+/// Skips when the live account is in idle state (`resets_at` absent).
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
 ///       [`tests/docs/cli/param/034_touch.md` EC-8]
 #[ test ]
-fn it100_lim_it_touch_1_subprocess_spawned_for_idle_account()
+fn it100_lim_it_touch_1_subprocess_spawned_for_active_account()
 {
   let Some( token ) = live_active_token() else
   {
@@ -3082,12 +3097,12 @@ fn it100_lim_it_touch_1_subprocess_spawned_for_idle_account()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: idle state required.
+  // Pre-check: active state required (resets_at present).
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
-  if !stdout( &pre ).contains( "\u{2014}" )
+  if stdout( &pre ).contains( "\u{2014}" )
   {
-    eprintln!( "it100: account has active 5h window — idle-state condition not met, skipping" );
+    eprintln!( "it100: account is idle (no active 5h window) — active-state condition not met, skipping" );
     return;
   }
 
@@ -3096,15 +3111,15 @@ fn it100_lim_it_touch_1_subprocess_spawned_for_idle_account()
   let err = stderr( &out );
   assert!(
     err.contains( "[trace]" ),
-    "touch::1 with idle account must emit [trace] lines for subprocess lifecycle (FT-02/EC-8), got stderr:\n{err}",
+    "touch::1 with active account must emit [trace] lines for subprocess lifecycle (FT-02/EC-8), got stderr:\n{err}",
   );
 }
 
-/// it101 `lim_it` (FT-03 of feature/024): After successful touch, `5h Reset` changes from `—` to a time.
+/// it101 `lim_it` (FT-03 of feature/024): After successful touch, `5h Reset` shows extended countdown.
 ///
-/// When `touch::1` triggers on an idle account (`resets_at` absent) and the subprocess succeeds,
-/// the account's quota is re-fetched and the `5h Reset` column shows a concrete countdown
-/// instead of `—`. Skips when not in idle state.
+/// When `touch::1` triggers on an active account (`resets_at` present) and the subprocess succeeds,
+/// the account's quota is re-fetched and the `5h Reset` column shows a countdown extended ~5h forward.
+/// Skips when not in active state.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-03]
 #[ test ]
@@ -3119,24 +3134,24 @@ fn it101_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: account must be in idle state (resets_at absent).
+  // Pre-check: account must be in active state (resets_at present).
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
   let pre_text = stdout( &pre );
-  if !pre_text.contains( "\u{2014}" )
+  if pre_text.contains( "\u{2014}" )
   {
-    eprintln!( "it101: account has active 5h window — idle-state condition not met, skipping" );
+    eprintln!( "it101: account is idle (no active 5h window) — active-state condition not met, skipping" );
     return;
   }
 
   let out = run_cs_with_env( &[ ".usage", "touch::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // After touch: the row previously showing — must now show a duration string.
+  // After touch: the row must still show a countdown (5h window extended ~5h forward).
   // The 5h Reset column shows "in Xh Ym" when active.
   assert!(
     text.contains( "in " ),
-    "touch::1 must change 5h Reset from — to concrete time after subprocess (FT-03), got:\n{text}",
+    "touch::1 must extend active 5h window; 5h Reset must show countdown after subprocess (FT-03), got:\n{text}",
   );
 }
 
@@ -3225,8 +3240,8 @@ fn it104_structural_touch_failure_non_aborting_guard_exists()
 
 /// it105 `lim_it` (FT-09 of feature/024): `trace::1` emits `[trace]` lines for touch subprocess lifecycle.
 ///
-/// With `touch::1 trace::1` and an idle account, stderr shows `[trace]` lines showing
-/// the subprocess lifecycle (start, outcome). Skips when idle condition is not met.
+/// With `touch::1 trace::1` and an account with `resets_at` present (active 5h window), stderr shows
+/// `[trace]` lines showing the subprocess lifecycle (start, outcome). Skips when account is idle.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 #[ test ]
@@ -3241,12 +3256,12 @@ fn it105_lim_it_trace_1_shows_touch_lifecycle()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: idle state required for subprocess to be triggered.
+  // Pre-check: active state required for subprocess to be triggered.
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
-  if !stdout( &pre ).contains( "\u{2014}" )
+  if stdout( &pre ).contains( "\u{2014}" )
   {
-    eprintln!( "it105: account has active 5h window — idle-state condition not met, skipping" );
+    eprintln!( "it105: account is idle (no active 5h window) — active-state condition not met, skipping" );
     return;
   }
 
@@ -3259,16 +3274,16 @@ fn it105_lim_it_trace_1_shows_touch_lifecycle()
   );
 }
 
-/// it106 `lim_it` (FT-11 of feature/024): valid account with `resets_at` present is NOT touched.
+/// it106 `lim_it` (FT-11 of feature/024): valid account with `resets_at` present IS touched (positive trigger).
 ///
-/// The touch trigger guard fires only when `five_hour.resets_at` is None. When the 5h
-/// window is already active (`resets_at` present, 5h Reset shows a countdown), the
-/// account is skipped — no subprocess spawned.
+/// The touch trigger fires when `five_hour.resets_at` is present. When the 5h window is
+/// active (`resets_at` present, 5h Reset shows a countdown), the subprocess IS spawned
+/// and the window is extended. Observable via `trace::1` output.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-11]
 ///       [`tests/docs/feature/024_session_touch.md` AC-02 trigger guard]
 #[ test ]
-fn it106_lim_it_account_with_resets_at_present_not_touched()
+fn it106_lim_it_account_with_resets_at_present_is_touched()
 {
   let Some( token ) = live_active_token() else
   {
@@ -3279,7 +3294,7 @@ fn it106_lim_it_account_with_resets_at_present_not_touched()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: account must have an ACTIVE 5h window (resets_at present = NOT idle).
+  // Pre-check: account must have an ACTIVE 5h window (resets_at present).
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
   let pre_text = stdout( &pre );
@@ -3289,18 +3304,14 @@ fn it106_lim_it_account_with_resets_at_present_not_touched()
     return;
   }
 
-  // With resets_at present, touch::1 must NOT spawn a subprocess.
-  // We verify this via trace::1: no [trace] lines should appear (no subprocess triggered).
+  // With resets_at present, touch::1 MUST spawn a subprocess.
+  // Verified via trace::1: [trace] lines must appear (subprocess triggered).
   let out = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
-  let _err = stderr( &out );
-  // When no subprocess is triggered, trace should show nothing touch-related.
-  // The absence of "Starting refresh" or similar touch-trace lines is the indicator.
-  let text = stdout( &out );
-  // 5h Reset column must still show the original countdown (not changed to —).
+  let err = stderr( &out );
   assert!(
-    !text.contains( "\u{2014}" ),
-    "account with active 5h window must NOT be touched (trigger guard must fire) (FT-11), got:\n{text}",
+    err.contains( "[trace]" ),
+    "account with active 5h window must be touched — [trace] lines must appear in stderr (FT-11), got stderr:\n{err}",
   );
 }
 
@@ -3394,21 +3405,19 @@ fn it109_touch_2_rejected_exits_1()
 
 // ── it110 (lim_it) ────────────────────────────────────────────────────────────
 
-/// it110 `lim_it` (FT-12 of feature/024 — AC-11): Touch trigger fires once per idle window;
-/// re-arm only after `resets_at` expires again.
+/// it110 `lim_it` (FT-12 of feature/024 — AC-11): Touch trigger fires each cycle for active accounts.
 ///
-/// Two sequential single-shot `.usage touch::1 trace::1` invocations verify the idle trigger:
-/// - Cycle 1 (idle account): subprocess spawned → `[trace]` shows touch lifecycle.
-/// - Cycle 2 (account now active, `resets_at` present): subprocess NOT spawned → no new touch trace.
+/// Two sequential single-shot `.usage touch::1 trace::1` invocations verify the active trigger:
+/// - Cycle 1 (active account, `resets_at` present): subprocess spawned → `[trace]` shows touch lifecycle.
+/// - Cycle 2 (account still active, `resets_at` extended): subprocess spawned again → `[trace]` appears.
 ///
-/// This verifies the per-cycle idle guard: the trigger re-arms only when the 5h window fully
-/// expires. Used to confirm `live::1` mode behaviour — the trigger logic is identical across
-/// single-shot and `live::1` cycle contexts.
+/// This verifies that the trigger fires every cycle while the 5h window is active, extending
+/// it further each time. Idle accounts (no `resets_at`) are always skipped.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-12]
 ///       [`docs/feature/024_session_touch.md` AC-11]
 #[ test ]
-fn it110_lim_it_ft12_touch_trigger_once_per_idle_window()
+fn it110_lim_it_ft12_touch_trigger_fires_per_active_window_cycle()
 {
   let Some( token ) = live_active_token() else
   {
@@ -3419,42 +3428,40 @@ fn it110_lim_it_ft12_touch_trigger_once_per_idle_window()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct@test.com", &token, true );
 
-  // Pre-check: account must be in idle state (5h Reset shows — EM-DASH).
+  // Pre-check: account must have an ACTIVE 5h window (resets_at present, EM-DASH absent).
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
-  if !stdout( &pre ).contains( "\u{2014}" )
+  if stdout( &pre ).contains( "\u{2014}" )
   {
-    eprintln!( "it110: account has active 5h window — idle-state condition not met, skipping" );
+    eprintln!( "it110: account is idle (no active 5h window) — active-state condition not met, skipping" );
     return;
   }
 
-  // Cycle 1: idle account → touch trigger fires → subprocess spawned → trace lines emitted.
+  // Cycle 1: active account → touch trigger fires → subprocess spawned → trace lines emitted.
   let out1 = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out1, 0 );
   let err1 = stderr( &out1 );
   assert!(
     err1.contains( "[trace]" ),
-    "cycle 1: idle account must trigger touch subprocess; trace must emit [trace] lines (FT-12/AC-11), got stderr:\n{err1}",
+    "cycle 1: active account must trigger touch subprocess; trace must emit [trace] lines (FT-12/AC-11), got stderr:\n{err1}",
   );
 
-  // Cycle 2: account now active (resets_at present after touch) → trigger does NOT fire.
+  // Cycle 2: account still active (resets_at extended after cycle 1) → trigger fires again.
   let out2 = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out2, 0 );
   let err2 = stderr( &out2 );
   let text2 = stdout( &out2 );
-  // No EM-DASH in 5h Reset column means the window is now active (touch succeeded in cycle 1).
-  // If resets_at is present, touch subprocess must NOT be spawned.
+  // EM-DASH present means cycle 1 touch did not succeed (idle state) — cycle 2 inconclusive.
   if text2.contains( "\u{2014}" )
   {
-    // Touch did not change state (unexpected, but tolerable — log and pass).
-    eprintln!( "it110: touch in cycle 1 did not activate 5h window; cycle 2 check inconclusive" );
+    eprintln!( "it110: cycle 1 touch did not extend 5h window; cycle 2 check inconclusive" );
   }
   else
   {
-    // Account is now active: assert no new touch trace lines (trigger guard fired).
+    // Account is still active: touch must fire again in cycle 2.
     assert!(
-      !err2.contains( "[trace] touch" ),
-      "cycle 2: account with active 5h window must NOT be touched again (FT-12/AC-11); trigger guard must prevent re-arm, got stderr:\n{err2}",
+      err2.contains( "[trace]" ),
+      "cycle 2: account still active must trigger touch subprocess again (FT-12/AC-11); trigger must fire each active cycle, got stderr:\n{err2}",
     );
   }
 }
@@ -3491,5 +3498,287 @@ fn it111_sort_next_accepted()
   assert!(
     text2.contains( "(no accounts configured)" ),
     "sort::next next::endurance must be accepted and show no-accounts message, got:\n{text2}",
+  );
+}
+
+// ── TSK-191 — imodel:: and effort:: parameters ────────────────────────────────
+
+/// it112 (IT-66 / EC-1): `imodel::auto` accepted with empty credential store exits 0.
+///
+/// Before TSK-191: `imodel::` is unregistered → `ArgumentUnrecognised` → exit 1.
+/// After TSK-191:  `imodel::` accepted, empty store → no-accounts message → exit 0.
+///
+/// Spec: [`tests/docs/cli/param/035_imodel.md` EC-1]
+///       [`tests/docs/cli/command/009_usage.md` IT-66]
+#[ test ]
+fn it112_imodel_auto_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out  = run_cs_with_env( &[ ".usage", "imodel::auto" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "no accounts" ) || text.contains( "No accounts" ),
+    "imodel::auto with empty store must exit 0 (IT-66/EC-1), got:\n{text}",
+  );
+}
+
+/// it113 (IT-67 / EC-5): `imodel::bogus` exits 1; stderr names all four valid values.
+///
+/// The parser rejects any value not in {auto, sonnet, opus, keep} with exit 1.
+/// All four valid values must appear in stderr to help the user correct the mistake.
+///
+/// Spec: [`tests/docs/cli/param/035_imodel.md` EC-5]
+///       [`tests/docs/cli/command/009_usage.md` IT-67]
+#[ test ]
+fn it113_imodel_bogus_exits_1()
+{
+  let out  = run_cs( &[ ".usage", "imodel::bogus" ] );
+  assert_exit( &out, 1 );
+  let err  = stderr( &out );
+  assert!( err.contains( "auto" ),   "stderr must name valid value 'auto', got:\n{err}" );
+  assert!( err.contains( "sonnet" ), "stderr must name valid value 'sonnet', got:\n{err}" );
+  assert!( err.contains( "opus" ),   "stderr must name valid value 'opus', got:\n{err}" );
+  assert!( err.contains( "keep" ),   "stderr must name valid value 'keep', got:\n{err}" );
+}
+
+/// it114 (IT-68 / EC-1): `effort::auto` accepted with empty credential store exits 0.
+///
+/// Before TSK-191: `effort::` is unregistered → `ArgumentUnrecognised` → exit 1.
+/// After TSK-191:  `effort::` accepted, empty store → no-accounts message → exit 0.
+///
+/// Spec: [`tests/docs/cli/param/036_effort.md` EC-1]
+///       [`tests/docs/cli/command/009_usage.md` IT-68]
+#[ test ]
+fn it114_effort_auto_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out  = run_cs_with_env( &[ ".usage", "effort::auto" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "no accounts" ) || text.contains( "No accounts" ),
+    "effort::auto with empty store must exit 0 (IT-68/EC-1), got:\n{text}",
+  );
+}
+
+/// it115 (IT-69 / EC-4): `effort::bogus` exits 1; stderr names all three valid values.
+///
+/// Spec: [`tests/docs/cli/param/036_effort.md` EC-4]
+///       [`tests/docs/cli/command/009_usage.md` IT-69]
+#[ test ]
+fn it115_effort_bogus_exits_1()
+{
+  let out = run_cs( &[ ".usage", "effort::bogus" ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!( err.contains( "auto" ), "stderr must name valid value 'auto', got:\n{err}" );
+  assert!( err.contains( "high" ), "stderr must name valid value 'high', got:\n{err}" );
+  assert!( err.contains( "max" ),  "stderr must name valid value 'max', got:\n{err}" );
+}
+
+/// it116 (IT-70): `.usage.help` lists `imodel` and `effort` as registered parameters.
+///
+/// Both params must appear in the help output after TSK-191 registration.
+///
+/// Spec: [`tests/docs/cli/command/009_usage.md` IT-70]
+#[ test ]
+fn it116_usage_help_shows_imodel_effort_params()
+{
+  let out  = run_cs( &[ ".usage.help" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "imodel" ), ".usage.help must list param `imodel` (IT-70), got:\n{text}" );
+  assert!( text.contains( "effort" ), ".usage.help must list param `effort` (IT-70), got:\n{text}" );
+}
+
+/// it117 (EC-2): `imodel::sonnet` accepted with empty credential store exits 0.
+///
+/// Spec: [`tests/docs/cli/param/035_imodel.md` EC-2]
+#[ test ]
+fn it117_imodel_sonnet_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "imodel::sonnet" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it118 (EC-3): `imodel::opus` accepted with empty credential store exits 0.
+///
+/// Spec: [`tests/docs/cli/param/035_imodel.md` EC-3]
+#[ test ]
+fn it118_imodel_opus_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "imodel::opus" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it119 (EC-4): `imodel::keep` accepted with empty credential store exits 0.
+///
+/// Spec: [`tests/docs/cli/param/035_imodel.md` EC-4]
+#[ test ]
+fn it119_imodel_keep_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "imodel::keep" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it120 (EC-2 for effort): `effort::high` accepted with empty credential store exits 0.
+///
+/// Spec: [`tests/docs/cli/param/036_effort.md` EC-2]
+#[ test ]
+fn it120_effort_high_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "effort::high" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it121 (EC-3 for effort): `effort::max` accepted with empty credential store exits 0.
+///
+/// Spec: [`tests/docs/cli/param/036_effort.md` EC-3]
+#[ test ]
+fn it121_effort_max_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "effort::max" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+// ── TSK-192: trigger flip + label param (RED structural gates) ────────────────
+
+/// it122 (TSK-192 AC-02 structural): `apply_touch` trigger uses `is_some()`, not `is_none()`.
+///
+/// The touch trigger must fire for accounts whose `five_hour.resets_at` is **present**
+/// (active 5h window). Current code (`is_none()`) fires for idle accounts, which is
+/// ineffective — `run_isolated` on idle accounts exits early without OAuth refresh.
+///
+/// The guard must read: `let is_active = ...is_some(); if !is_active { return; }`.
+///
+/// RED:   source contains `let is_idle` (old guard using `is_none()`).
+/// GREEN: source contains `let is_active` + `is_some()` guard.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-11]
+///       [`docs/feature/024_session_touch.md` AC-02]
+#[ test ]
+fn it122_apply_touch_trigger_is_is_some_structural()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  assert!(
+    !src.contains( "let is_idle" ),
+    "TSK-192: `apply_touch` trigger must use `is_active` + `is_some()`, not `is_idle` + `is_none()`.\n\
+     Flip the guard: `let is_active = data.five_hour.as_ref().and_then(|p| p.resets_at.as_deref()).is_some();\n\
+     if !is_active {{ return; }}`",
+  );
+}
+
+/// it123 (TSK-192 AC-09 structural): `refresh_account_token` uses `label` variable, not hardcoded `"refresh"`.
+///
+/// All 14 trace `eprintln!` calls in `refresh_account_token()` must use a `label: &str`
+/// parameter so callers can inject `"touch"` or `"refresh"` to distinguish subprocess types
+/// in trace output. Currently all calls hardcode `"refresh"` making touch trace indistinguishable.
+///
+/// RED:   `account.rs` contains `"[trace] refresh  {name}  switch_account: OK"` (hardcoded).
+/// GREEN: all calls use `{label}` variable; that literal string is absent.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
+///       [`docs/feature/024_session_touch.md` AC-09]
+#[ test ]
+fn it123_refresh_account_token_has_label_param_structural()
+{
+  let src = include_str!( concat!(
+    env!( "CARGO_MANIFEST_DIR" ),
+    "/../claude_profile_core/src/account.rs"
+  ) );
+  assert!(
+    !src.contains( "[trace] refresh  {name}  switch_account: OK" ),
+    "TSK-192: `refresh_account_token()` must accept `label: &str` and use `{{label}}` in all\n\
+     trace `eprintln!` calls instead of the hardcoded string `\"refresh\"`.\n\
+     Add `label: &str` after `trace: bool` in the signature and replace all\n\
+     `\"[trace] refresh  {{name}}  ...\"` patterns with `\"[trace] {{label}}  {{name}}  ...\"`.",
+  );
+}
+
+/// it124 (TSK-192 AC-09 structural): `apply_touch` call site passes `"touch"` label.
+///
+/// The `refresh_account_token()` call in `apply_touch()` must pass the literal `"touch"`
+/// as the `label` argument so trace output reads `[trace] touch ...` (not `[trace] refresh ...`).
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
+///       [`docs/feature/024_session_touch.md` AC-09]
+#[ test ]
+fn it124_apply_touch_passes_touch_label_structural()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  assert!(
+    src.contains( r#"credential_store, claude_paths, trace, "touch","# ),
+    "TSK-192: `apply_touch()` must pass `\"touch\"` as the label argument to `refresh_account_token()`."
+  );
+}
+
+/// it125 (TSK-192 AC-09 structural): `apply_refresh` call site passes `"refresh"` label.
+///
+/// The `refresh_account_token()` call in `apply_refresh()` must pass the literal `"refresh"`
+/// as the `label` argument so trace output reads `[trace] refresh ...`.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
+///       [`docs/feature/024_session_touch.md` AC-09]
+#[ test ]
+fn it125_apply_refresh_passes_refresh_label_structural()
+{
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  assert!(
+    src.contains( r#"credential_store, claude_paths, trace, "refresh","# ),
+    "TSK-192: `apply_refresh()` must pass `\"refresh\"` as the label argument to `refresh_account_token()`."
+  );
+}
+
+/// it126 (TSK-192 AC-09 structural): `refresh_account_token` has per-step `Instant` timing.
+///
+/// Both `switch_account` and `run_isolated` steps in `refresh_account_token()` must be
+/// wrapped with `std::time::Instant::now()` so elapsed seconds appear in trace output.
+///
+/// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
+///       [`docs/feature/024_session_touch.md` AC-09]
+#[ test ]
+fn it126_refresh_account_token_has_instant_timing_structural()
+{
+  let src = include_str!( concat!(
+    env!( "CARGO_MANIFEST_DIR" ),
+    "/../claude_profile_core/src/account.rs"
+  ) );
+  assert!(
+    src.contains( "Instant::now()" ),
+    "TSK-192: `refresh_account_token()` must use `std::time::Instant::now()` for per-step timing."
   );
 }
