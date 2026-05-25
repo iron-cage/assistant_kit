@@ -69,14 +69,14 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 22 | `jitter::` | `u64` | `0` | 0 ≤ jitter ≤ interval | Live mode cycle timing variance | 1 cmd |
 | 23 | `trace::` | `bool` | `0` | `0`, `1` | Diagnostic trace output to stderr | 1 cmd |
 | 24 | `field::` | `String` | `""` (show all) | `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions` | Single-path output selector | 1 cmd |
-| 25 | `sort::` | `enum` | `reset` | `name`, `endurance`, `drain`, `reset` | Row ordering strategy for quota table | 1 cmd |
+| 25 | `sort::` | `enum` | `drain` | `name`, `endurance`, `drain`, `reset`, `next` | Row ordering strategy for quota table | 1 cmd |
 | 26 | `desc::` | `bool` | context-sensitive | `0`, `1`, `false`, `true` | Sort direction; default per `sort::` strategy | 1 cmd |
 | 27 | `prefer::` | `enum` | `any` | `any`, `opus`, `sonnet` | Weekly quota column for sort heuristics | 1 cmd |
 | 28 | `uuid::` | `bool` | `0` | `0`, `1` | Stable user ID toggle (opt-in) | 2 cmds |
 | 29 | `capabilities::` | `bool` | `0` | `0`, `1` | Product capabilities list toggle (opt-in) | 2 cmds |
 | 30 | `org_uuid::` | `bool` | `0` | `0`, `1` | Organisation UUID toggle (opt-in) | 2 cmds |
 | 31 | `org_name::` | `bool` | `0` | `0`, `1` | Organisation display name toggle (opt-in) | 2 cmds |
-| 32 | `next::` | `enum` | `endurance` | `endurance`, `drain` | Recommendation strategy selector | 1 cmd |
+| 32 | `next::` | `enum` | `drain` | `endurance`, `drain` | Recommendation strategy selector | 1 cmd |
 | 33 | `cols::` | `string` | `""` | `+col_id`, `-col_id` modifiers | Column visibility modifiers | 1 cmd |
 | 34 | `touch::` | `bool` | `0` | `0`, `1`, `false`, `true` | Activate idle accounts' 5h windows | 1 cmd |
 

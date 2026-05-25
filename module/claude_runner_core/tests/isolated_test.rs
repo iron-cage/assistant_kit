@@ -16,8 +16,9 @@
 //! | T07 | `run_isolated()` with valid creds → exit_code -1/0    | `IsolatedRunResult` returned         | yes   |
 //! | T08 | `run_isolated()` with timeout 0 → `Err(Timeout)`      | `RunnerError::Timeout { secs: 0 }`   | yes   |
 //! | T09 | timeout-with-credentials sentinel: `exit_code = -1`   | `Ok` with `credentials: Some(...)`   | no    |
+//! | T10 | `IsolatedModel::model_id()` all 3 variants + constant | correct `Option<&str>` per variant   | no    |
 
-use claude_runner_core::{ IsolatedRunResult, RunnerError };
+use claude_runner_core::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLATED_DEFAULT_MODEL };
 
 // ── T01 ───────────────────────────────────────────────────────────────────────
 
@@ -131,7 +132,7 @@ fn t07_lim_it_run_isolated_returns_result()
   use claude_runner_core::run_isolated;
 
   let creds = r#"{"accessToken":"tok-test","refreshToken":"rtok-test","expiresAt":9999999999}"#;
-  let result = run_isolated( creds, vec![ "--version".to_string() ], 30 );
+  let result = run_isolated( creds, vec![ "--version".to_string() ], 30, IsolatedModel::Default );
   assert!( result.is_ok(), "run_isolated must return Ok for valid args, got: {:?}", result.err() );
   let out = result.unwrap();
   // exit_code of 0 is expected for --version; -1 is acceptable if binary returns none
@@ -150,7 +151,7 @@ fn t08_lim_it_run_isolated_timeout()
   use claude_runner_core::run_isolated;
 
   let creds = r#"{"accessToken":"tok-test","refreshToken":"rtok-test","expiresAt":9999999999}"#;
-  let result = run_isolated( creds, vec![ "--version".to_string() ], 0 );
+  let result = run_isolated( creds, vec![ "--version".to_string() ], 0, IsolatedModel::Default );
   match result
   {
     Err( RunnerError::Timeout { secs } ) =>
@@ -206,5 +207,46 @@ fn t09_timeout_with_changed_credentials_result_type()
   assert!(
     result.credentials.is_some(),
     "timeout-with-credentials result must carry the refreshed credentials",
+  );
+}
+
+// ── T10 ───────────────────────────────────────────────────────────────────────
+
+/// T10: `IsolatedModel::model_id()` returns the correct `Option<&str>` for all
+/// three variants, and `ISOLATED_DEFAULT_MODEL` equals `"claude-sonnet-4-6"`.
+///
+/// Covers FT-1 through FT-4 from `tests/docs/feature/004_run_isolated.md`:
+/// - FT-1: `Default.model_id()` → `Some(ISOLATED_DEFAULT_MODEL)`
+/// - FT-2: `KeepCurrent.model_id()` → `None` (no `--model` flag injected)
+/// - FT-3: `Specific("custom-model").model_id()` → `Some("custom-model")`
+/// - FT-4: `ISOLATED_DEFAULT_MODEL == "claude-sonnet-4-6"` (constant stability)
+#[ test ]
+fn t10_isolated_model_model_id_all_variants()
+{
+  // FT-4: constant value pinned to the current production Sonnet model ID.
+  assert_eq!(
+    ISOLATED_DEFAULT_MODEL, "claude-sonnet-4-6",
+    "ISOLATED_DEFAULT_MODEL must equal the current production Sonnet ID",
+  );
+
+  // FT-1: Default → Some(ISOLATED_DEFAULT_MODEL).
+  assert_eq!(
+    IsolatedModel::Default.model_id(),
+    Some( ISOLATED_DEFAULT_MODEL ),
+    "IsolatedModel::Default.model_id() must return Some(ISOLATED_DEFAULT_MODEL)",
+  );
+
+  // FT-2: KeepCurrent → None (caller wants no --model flag).
+  assert!(
+    IsolatedModel::KeepCurrent.model_id().is_none(),
+    "IsolatedModel::KeepCurrent.model_id() must return None",
+  );
+
+  // FT-3: Specific(id) → Some(id) — round-trip the supplied string.
+  let custom = "claude-haiku-4-5-20251001";
+  assert_eq!(
+    IsolatedModel::Specific( custom.to_string() ).model_id(),
+    Some( custom ),
+    "IsolatedModel::Specific.model_id() must return Some of the given model ID",
   );
 }

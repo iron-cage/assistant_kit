@@ -19,9 +19,10 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-11 | `sort::` does not affect `next::` recommendation | AC-11 | Unit test |
 | FT-12 | `prefer::` governs drain tiebreak for tied `5h_left` | AC-08 | Unit test |
 | FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | Unit test |
-| FT-14 | `sort::reset` is default when `sort::` omitted | AC-01 | Unit test |
+| FT-14 | `sort::drain` is default when `sort::` omitted | AC-01 | Unit test |
 | FT-15 | Within 🟡: h-exhausted before weekly-exhausted; `desc::` doesn't swap sub-groups | AC-14 | Unit test |
 | FT-16 | `sort::endurance` unqualified tiebreak by highest weekly when session quotas tied | AC-02 | Unit test |
+| FT-17 | `sort::next` delegates to active `next::` strategy; `→` winner appears at row 1 | AC-15 | Integration |
 
 ### Test Case Index
 
@@ -40,11 +41,12 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-11 | Recommendation unaffected by sort | AC-11 | Independence |
 | FT-12 | prefer:: drain tiebreak divergence | AC-08 | Tiebreak |
 | FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | Tier Grouping |
-| FT-14 | `sort::reset` is default when `sort::` omitted | AC-01 | Default |
+| FT-14 | `sort::drain` is default when `sort::` omitted | AC-01 | Default |
 | FT-15 | Within 🟡: h-exhausted before weekly-exhausted; sub-grouping not reversed by `desc::` | AC-14 | Yellow Sub-Grouping |
 | FT-16 | sort::endurance unqualified tiebreak by weekly | AC-02 | Tiebreak |
+| FT-17 | sort::next delegates to active next:: strategy | AC-15 | Meta-Strategy |
 
-**Total:** 16 FT cases
+**Total:** 17 FT cases
 
 ---
 
@@ -146,7 +148,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 - **Given:** Any environment.
 - **When:** `clp .usage sort::bogus`
-- **Then:** Exits 1. Stderr names the four valid values: `name`, `endurance`, `drain`, `reset`.
+- **Then:** Exits 1. Stderr names the five valid values: `name`, `endurance`, `drain`, `reset`, `next`.
 - **Exit:** 1
 - **Source fn:** `it047_sort_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_sort_strategy_parse_invalid_rejected` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../../docs/feature/020_usage_sort_strategies.md)
@@ -199,13 +201,13 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 ---
 
-### FT-14: `sort::reset` is default when `sort::` omitted
+### FT-14: `sort::drain` is default when `sort::` omitted
 
-- **Given:** Two `AccountQuota` structs: `a@test.com` (5h_reset in 3h), `b@test.com` (5h_reset in 30m). Both non-exhausted.
-- **When:** `sort_indices(&accounts, SortStrategy::Reset, None, PreferStrategy::Any, now_secs)` — default strategy is `reset`.
-- **Then:** `b@test.com` (soonest reset) ranks first, `a@test.com` second.
+- **Given:** Two `AccountQuota` structs: `high@test.com` (`five_hour.utilization=30.0` — 70% left), `low@test.com` (`five_hour.utilization=75.0` — 25% left). Both non-exhausted.
+- **When:** `sort_indices(&accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0)` — default strategy is `drain`.
+- **Then:** `low@test.com` (least 5h quota remaining) ranks first, `high@test.com` second.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_reset_soonest_first_exhausted_last`
+- **Source fn:** `test_sort_drain_default_equals_desc0`
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -234,3 +236,16 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Exit:** n/a (unit test — index assertion)
 - **Source fn:** `test_bug173_mre_endurance_unqualified_prefers_highest_weekly` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-02](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### FT-17: `sort::next` delegates to active `next::` strategy
+
+- **Given:** Empty credential store.
+- **When-A:** `clp .usage sort::next` (with default `next::drain`)
+- **When-B:** `clp .usage sort::next next::endurance`
+- **Then-A:** Exits 0 with "(no accounts configured)". `sort::next` resolves to `sort::drain` and is accepted without error.
+- **Then-B:** Exits 0 with "(no accounts configured)". `sort::next` resolves to `sort::endurance` and is accepted without error.
+- **Exit:** 0 both cases
+- **Source fn:** `it111_sort_next_accepted`
+- **Source:** [feature/020_usage_sort_strategies.md AC-15](../../../../docs/feature/020_usage_sort_strategies.md)

@@ -1,5 +1,5 @@
 use super::VerbosityLevel;
-use claude_runner_core::{ ClaudeCommand, EffortLevel, RunnerError, run_isolated };
+use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel, RunnerError, run_isolated };
 use error_tools::{ Error, Result };
 
 /// Parsed CLI arguments.
@@ -768,26 +768,34 @@ pub( super ) fn run_interactive( builder : &ClaudeCommand, verbosity : Verbosity
 /// Emit trace diagnostics for a credential-operation command (`isolated` or `refresh`).
 ///
 /// Reconstructs the `ClaudeCommand` exactly as `run_isolated()` would build it
-/// (`ClaudeCommand::new().with_home(&temp_dir).with_args(args)`) and prints
-/// `describe_env()` + `describe()` to stderr, matching the format of `run` trace.
+/// (model flag prepended, then `with_home(&temp_dir)`, then `with_args(args)`) and
+/// prints `describe_env()` + `describe()` to stderr, matching the format of `run` trace.
 ///
 /// Pitfall: if `run_isolated()` in `claude_runner_core` is updated to modify the
-/// `ClaudeCommand` beyond `with_home()` + `with_args()`, this trace will diverge —
-/// update both together.
+/// `ClaudeCommand` beyond prepending the model flag, `with_home()`, and `with_args()`,
+/// this trace will diverge — update both together.
 fn emit_credential_trace
 (
   label        : &str,
   creds_path   : &str,
+  model        : &IsolatedModel,
   args         : &[ String ],
   timeout_secs : u64,
 )
 {
-  // Reproduce the exact temp dir path that run_isolated() will create.
+  // Reproduce the exact temp dir path and arg list that run_isolated() will create.
   let temp_dir = std::env::temp_dir()
     .join( format!( "claude_isolated_{}", std::process::id() ) );
+  let mut full_args = Vec::with_capacity( args.len() + 2 );
+  if let Some( id ) = model.model_id()
+  {
+    full_args.push( "--model".to_string() );
+    full_args.push( id.to_string() );
+  }
+  full_args.extend_from_slice( args );
   let preview = ClaudeCommand::new()
     .with_home( &temp_dir )
-    .with_args( args.iter().cloned() );
+    .with_args( full_args.iter().cloned() );
   let env_out = preview.describe_env();
   let cmd_out = preview.describe();
   eprintln!( "# clr {label}" );
@@ -815,6 +823,7 @@ pub( super ) fn run_isolated_command
   creds_path       : &str,
   timeout_secs     : u64,
   trace            : bool,
+  model            : IsolatedModel,
   message          : Option< &str >,
   passthrough_args : &[ String ],
 ) -> !
@@ -826,7 +835,7 @@ pub( super ) fn run_isolated_command
     .map( | m | vec![ "--print".to_string(), m.to_string() ] )
     .unwrap_or_default();
   args.extend_from_slice( passthrough_args );
-  if trace { emit_credential_trace( "isolated", creds_path, &args, timeout_secs ); }
+  if trace { emit_credential_trace( "isolated", creds_path, &model, &args, timeout_secs ); }
   let creds_json = match std::fs::read_to_string( creds_path )
   {
     Ok( s )  => s,
@@ -836,7 +845,7 @@ pub( super ) fn run_isolated_command
       std::process::exit( 1 );
     }
   };
-  match run_isolated( &creds_json, args, timeout_secs )
+  match run_isolated( &creds_json, args, timeout_secs, model )
   {
     Ok( result ) =>
     {
@@ -979,9 +988,9 @@ pub( super ) fn run_refresh_command
 {
   // Fixed args: trigger Claude's startup token refresh with a trivial prompt.
   let fixed_args = vec![ "--print".to_string(), ".".to_string() ];
-  if trace { emit_credential_trace( "refresh", creds_path, &fixed_args, timeout_secs ); }
+  if trace { emit_credential_trace( "refresh", creds_path, &IsolatedModel::Default, &fixed_args, timeout_secs ); }
   // Pass trace=false: refresh already emitted its own trace above.
-  run_isolated_command( creds_path, timeout_secs, false, None, &fixed_args );
+  run_isolated_command( creds_path, timeout_secs, false, IsolatedModel::Default, None, &fixed_args );
 }
 
 /// Print help for the `ask` subcommand and exit 0.
@@ -1102,7 +1111,7 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     eprintln!( "Error: missing required argument: --creds\nRun with --help for usage." );
     std::process::exit( 1 );
   }
-  run_isolated_command( &cli.creds_path, cli.timeout_secs, cli.trace, cli.message.as_deref(), &cli.passthrough_args )
+  run_isolated_command( &cli.creds_path, cli.timeout_secs, cli.trace, IsolatedModel::Default, cli.message.as_deref(), &cli.passthrough_args )
 }
 
 /// Parse, validate, and execute the `refresh` subcommand.  Never returns.

@@ -24,7 +24,7 @@ use crate::output::{ OutputFormat, OutputOptions, format_duration_secs, json_esc
 // ── Sort and prefer strategies ─────────────────────────────────────────────────
 
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-enum SortStrategy { Name, Endurance, Drain, Reset }
+enum SortStrategy { Name, Endurance, Drain, Reset, Next }
 
 impl SortStrategy
 {
@@ -36,8 +36,9 @@ impl SortStrategy
       "endurance" => Ok( Self::Endurance ),
       "drain"     => Ok( Self::Drain ),
       "reset"     => Ok( Self::Reset ),
+      "next"      => Ok( Self::Next ),
       _           => Err( format!(
-        "invalid sort:: value {s:?}: valid values are `name`, `endurance`, `drain`, `reset`",
+        "invalid sort:: value {s:?}: valid values are `name`, `endurance`, `drain`, `reset`, `next`",
       ) ),
     }
   }
@@ -45,6 +46,8 @@ impl SortStrategy
   /// Context-sensitive default `desc` direction for each strategy.
   ///
   /// `Endurance` defaults to `true` (best on top). All others default to `false`.
+  /// `Next` is always resolved to a concrete strategy before `default_desc` is called
+  /// (see `parse_usage_params`), so this arm is unreachable in practice.
   fn default_desc( self ) -> bool
   {
     matches!( self, SortStrategy::Endurance )
@@ -782,6 +785,10 @@ fn sort_indices(
       non_exhausted.extend( exhausted_vec );
       non_exhausted
     }
+
+    // sort::next is always resolved to Drain or Endurance in parse_usage_params
+    // before sort_indices is called — this arm is unreachable in production code.
+    SortStrategy::Next => unreachable!( "sort::Next must be resolved to a concrete strategy in parse_usage_params" ),
   }
 }
 
@@ -1618,7 +1625,7 @@ fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorDat
   };
   let sort = match cmd.arguments.get( "sort" )
   {
-    None                         => SortStrategy::Reset,
+    None                         => SortStrategy::Drain,
     Some( Value::String( s ) )   => SortStrategy::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
     _ => return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
@@ -1646,12 +1653,22 @@ fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorDat
   };
   let next = match cmd.arguments.get( "next" )
   {
-    None                         => NextStrategy::Endurance,
+    None                         => NextStrategy::Drain,
     Some( Value::String( s ) )   => NextStrategy::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
     _ => return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
       "next:: must be a string".to_string(),
     ) ),
+  };
+  // sort::next delegates to the active next:: strategy so the → winner always appears first.
+  let sort = match sort
+  {
+    SortStrategy::Next => match next
+    {
+      NextStrategy::Drain     => SortStrategy::Drain,
+      NextStrategy::Endurance => SortStrategy::Endurance,
+    },
+    other => other,
   };
   let cols = match cmd.arguments.get( "cols" )
   {
@@ -3222,6 +3239,7 @@ mod tests
     assert!( err.contains( "endurance" ), "error must name valid values; got: {err}" );
     assert!( err.contains( "drain" ),     "error must name valid values; got: {err}" );
     assert!( err.contains( "reset" ),     "error must name valid values; got: {err}" );
+    assert!( err.contains( "next" ),      "error must name valid values; got: {err}" );
   }
 
   /// AC-10 — `PreferStrategy::parse` rejects unknown values with descriptive error.

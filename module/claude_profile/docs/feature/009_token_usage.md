@@ -35,7 +35,7 @@
 5. Post-process:
    a. Mark the live account (detected in step 3) with `✓` in the flag column (`is_current = true`).
    b. Mark the active account with `*` in the flag column when `is_active = true` AND `is_current = false`. No `*` is emitted when the active and current accounts are the same.
-   c. Recommendation is controlled by the `next::` parameter (see [023_next_account_strategies.md](023_next_account_strategies.md)). The account selected by the active strategy receives `→` in the table body; the footer always shows one recommendation per strategy. Default strategy is `endurance`.
+   c. Recommendation is controlled by the `next::` parameter (see [023_next_account_strategies.md](023_next_account_strategies.md)). The account selected by the active strategy receives `→` in the table body; the footer always shows one recommendation per strategy. Default strategy is `drain`.
 6. Render results as a table using `data_fmt`:
    - **Default columns:** flag (`✓`/`*`/`→`/ blank, priority `✓` > `*` > `→` > blank), status (`🔴`/`🟡`/`🟢`, header `●`), Account, Expires, ~Renews, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset
    - **Hidden-by-default columns:** Sub, 7d Son Reset — available via `cols::+sub`, `cols::+7d_son_reset`
@@ -60,15 +60,15 @@
 7. Append footer when ≥2 accounts with valid quota data exist. Footer always shows one recommendation line per strategy (endurance, drain). The `→` table marker appears on the account selected by the `next::` strategy (see [023_next_account_strategies.md](023_next_account_strategies.md)). Omit footer when 0 or 1 valid account.
 8. For `format::json`: output a JSON array with one object per account (synthetic first if present, then alphabetical saved), always including `expires_in_secs`.
 
-**Output format (text) — saved account is live, `next::endurance` (default):**
+**Output format (text) — saved account is live, `next::drain` (default):**
 
 ```
 Quota
 
   ●  Account              Expires    ~Renews  5h Left     5h Reset  7d Left     7d(Son)  7d Reset
 ✓ 🟢 alice@example.com    in 7h 24m  Jun  5   🟢 86%     in 3h 19m 🟢 65%     35%      in 4d 23h
-→ 🟢 bob@example.com      in 5h 02m  Jun  6   🟢 100%    in 4h 58m 🟢 88%     28%      in 6d 14h
-  🟡 carol@example.com    in 1h 12m  Jun  8   🟡 3%      in 0h 23m 🟢 52%     18%      in 2d 11h
+  🟢 bob@example.com      in 5h 02m  Jun  6   🟢 100%    in 4h 58m 🟢 88%     28%      in 6d 14h
+→ 🟡 carol@example.com    in 1h 12m  Jun  8   🟡 3%      in 0h 23m 🟢 52%     18%      in 2d 11h
   🔴 dave@example.com     EXPIRED    ?        —          —          —          —        (missing accessToken)
   🔴 eve@example.com      EXPIRED    ?        —          —          —          —        (missing accessToken)
 
@@ -79,7 +79,7 @@ Valid: 3 / 5   ->  Next by strategy:
 
 (Sub column hidden by default; show with `cols::+sub`. Three-tier grouping: 🟢 tier → 🟡 tier → 🔴 tier. `→` marks the account selected by `next::` strategy.)
 
-**Output format (text) — divergence, `next::endurance` (default):**
+**Output format (text) — divergence, `next::drain` (default):**
 
 ```
 Quota
@@ -144,7 +144,7 @@ Valid: 2 / 3   ->  Next by strategy:
 - **AC-07**: The `Expires` column shows token TTL ("in Xh Ym") for valid tokens and "EXPIRED" for tokens whose `expiresAt` is in the past; sourced from the credential file without an API call.
 - **AC-08**: `5h Left` and `7d Left` show remaining quota percentage (100 − consumed); `7d(Son)` shows remaining Sonnet-only weekly quota (100 − consumed) or `—` when absent; `5h Reset` and `7d Reset` show independent reset countdowns as separate columns; all quota data sourced from `claude_quota::fetch_oauth_usage()` → `OauthUsageData`.
 - **AC-17**: `7d(Son)` column is populated when `OauthUsageData.seven_day_sonnet` is `Some`; shows `—` when `None`. JSON field `weekly_7d_sonnet_left_pct` is an integer when present and `null` when absent.
-- **AC-09**: The `→` flag in the table body is controlled by the `next::` parameter (see [023_next_account_strategies.md](023_next_account_strategies.md)). The footer always shows one recommendation per strategy (endurance, drain); `next::` controls only which account receives the `→` marker. Default is `next::endurance`.
+- **AC-09**: The `→` flag in the table body is controlled by the `next::` parameter (see [023_next_account_strategies.md](023_next_account_strategies.md)). The footer always shows one recommendation per strategy (endurance, drain); `next::` controls only which account receives the `→` marker. Default is `next::drain`.
 - **AC-10**: A footer is appended when ≥2 accounts have valid quota data; the footer is absent when 0 or 1 valid account. The footer always shows both strategy recommendations (endurance, drain) regardless of `next::` value.
 - **AC-11**: When the live `~/.claude/.credentials.json` token does not match any saved account's token, a synthetic row is prepended at the top of the table with `✓`, quota fetched via the live token, and the name set to the email from `~/.claude/.claude.json` (or `(current session)` when that file is unavailable or the field is empty).
 - **AC-12**: When `~/.claude/.credentials.json` is unreadable, no `✓` is emitted on any row; all saved accounts are still shown.

@@ -120,6 +120,7 @@ clp .usage format::json
 | `endurance` | `1` | Best-qualified on top |
 | `drain` | `0` | Lowest quota on top |
 | `reset` | `0` | Soonest reset on top |
+| `next` | inherits | Resolved to concrete strategy at parse time; inherits that strategy's `desc::` default |
 
 **Rationale:** Each strategy has a single natural direction that matches its workflow goal. Requiring explicit `desc::` in every invocation would be noisy; the default makes the common case require no extra flag.
 
@@ -237,11 +238,11 @@ clp .usage cols::-renews format::json
 **Examples:**
 
 ```bash
-# next::session has no effect on JSON array order
-clp .usage next::session format::json
+# next::endurance has no effect on JSON array order
+clp .usage next::endurance format::json
 # [...array in fetch_all_quota order (alphabetical in practice)...]
 
-# next::all (default) has no effect on JSON — no "strategy" fields injected
+# next::drain (default) has no effect on JSON — no "strategy" fields injected
 clp .usage format::json
 # [...array without recommendation fields...]
 ```

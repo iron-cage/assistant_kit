@@ -514,7 +514,7 @@ pub fn refresh_account_token(
       }
     };
     if trace { eprintln!( "[trace] refresh  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
-    let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35 )
+    let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, claude_runner_core::IsolatedModel::Default )
     {
       Ok( r )  => r,
       Err( e ) =>
@@ -558,7 +558,7 @@ pub fn refresh_account_token(
       }
     };
     if trace { eprintln!( "[trace] refresh  {name}  run_isolated: invoking claude  args={args:?}  timeout=35s" ); }
-    let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35 )
+    let isolated = match claude_runner_core::run_isolated( &creds_json, args, 35, claude_runner_core::IsolatedModel::Default )
     {
       Ok( r )  => r,
       Err( e ) =>

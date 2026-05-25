@@ -52,6 +52,11 @@ back to `--creds` and exits 0.
 The default timeout of 45 seconds (vs 30 for `isolated`) allows headroom for slow
 networks and API rate limiting during the OAuth token exchange.
 
+The subprocess is always invoked with `--chrome` and `--model claude-sonnet-4-6`
+(injected via `ClaudeCommand::new()` defaults and `IsolatedModel::Default`). No
+`--dangerously-skip-permissions` or `-c` flags are injected — refresh is a
+credential-only operation, not a full-permissions run.
+
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Excluded Params |

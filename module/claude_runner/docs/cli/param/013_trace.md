@@ -12,8 +12,8 @@ subprocess is launched. Mirrors shell `set -x` semantics.
 What `--trace` shows depends on the command:
 
 - **`run`** / **`ask`**: assembled env vars + full `claude` subprocess command (printed to stderr before execution)
-- **`isolated`**: creds path, temp HOME path, timeout, forwarded args, `claude` invocation
-- **`refresh`**: creds path, temp HOME path, timeout, fixed args `["--print", "."]`
+- **`isolated`**: header lines (`# clr isolated`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation (including `--model claude-sonnet-4-6`)
+- **`refresh`**: header lines (`# clr refresh`, `# creds:`, `# timeout:`), then env vars, then assembled `claude` invocation with fixed args and `--model claude-sonnet-4-6`
 
 ```sh
 # Trace on run
@@ -33,6 +33,12 @@ clr isolated --creds creds.json --trace "Fix bug"
 # Stderr: # clr isolated
 # Stderr: # creds: /path/to/creds.json
 # Stderr: # timeout: 30s
+# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+# Stderr: CLAUDE_CODE_BASH_TIMEOUT=3600000
+# Stderr: CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
+# Stderr: CLAUDE_CODE_AUTO_CONTINUE=true
+# Stderr: CLAUDE_CODE_TELEMETRY=false
+# Stderr: claude --chrome --model claude-sonnet-4-6 --print "Fix bug"
 # Then: run_isolated() executes
 
 # Trace on refresh
@@ -40,6 +46,12 @@ clr refresh --creds creds.json --trace
 # Stderr: # clr refresh
 # Stderr: # creds: /path/to/creds.json
 # Stderr: # timeout: 45s
+# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+# Stderr: CLAUDE_CODE_BASH_TIMEOUT=3600000
+# Stderr: CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000
+# Stderr: CLAUDE_CODE_AUTO_CONTINUE=true
+# Stderr: CLAUDE_CODE_TELEMETRY=false
+# Stderr: claude --chrome --model claude-sonnet-4-6 --print "."
 # Then: run_isolated() executes
 ```
 
