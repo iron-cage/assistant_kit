@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Provide a way to spawn `claude` with a temporary, isolated HOME directory containing only a single credential file, capture the exit code and output, detect any credential changes written by the subprocess, and return them to the caller — all without contaminating the host environment.
-- **Responsibility**: Documents the `run_isolated()` function API, the `IsolatedRunResult` and `RunnerError` types, the temp-HOME construction algorithm, the thread-based timeout mechanism, credential change detection by byte comparison, unconditional temp-dir cleanup, and the single-execution-point constraint.
-- **In Scope**: `run_isolated()` signature and contract; `IsolatedRunResult` and `RunnerError` types; temp HOME construction; SIGINT/timeout handling via `mpsc::channel + recv_timeout`; credential write-back detection; thread ownership and cleanup; `#[cfg(feature = "enabled")]` gate; `lim_it` test categorisation.
+- **Responsibility**: Documents the `run_isolated()` function API, the `IsolatedRunResult`, `RunnerError`, and `IsolatedModel` types, the temp-HOME construction algorithm, the thread-based timeout mechanism, credential change detection by byte comparison, unconditional temp-dir cleanup, and the single-execution-point constraint.
+- **In Scope**: `run_isolated()` signature and contract; `IsolatedRunResult`, `RunnerError`, and `IsolatedModel` types; temp HOME construction; SIGINT/timeout handling via `mpsc::channel + recv_timeout`; credential write-back detection; thread ownership and cleanup; `#[cfg(feature = "enabled")]` gate; `lim_it` test categorisation.
 - **Out of Scope**: `refresh::` retry logic (→ `claude_profile/docs/feature/017_token_refresh.md`); how callers use the returned credentials; `run_isolated()` argument construction (caller responsibility).
 
 ### Design
@@ -27,9 +27,18 @@ pub enum RunnerError {
     Timeout { secs: u64 },
     Io(String),
 }
+
+/// Default model ID injected by IsolatedModel::Default.
+pub const ISOLATED_DEFAULT_MODEL: &str = "claude-sonnet-4-6";
+
+pub enum IsolatedModel {
+    Default,           // prepends --model claude-sonnet-4-6
+    KeepCurrent,       // no --model flag; Claude binary chooses
+    Specific(String),  // prepends --model <id>
+}
 ```
 
-`IsolatedRunResult` and `RunnerError` are defined in `src/isolated.rs` and re-exported from `src/lib.rs`. They are unconditionally available so callers can name the types in function signatures and test code without `#[cfg]` guards.
+`IsolatedRunResult`, `RunnerError`, `IsolatedModel`, and `ISOLATED_DEFAULT_MODEL` are defined in `src/isolated.rs` and re-exported from `src/lib.rs`. They are unconditionally available so callers can name the types in function signatures and test code without `#[cfg]` guards.
 
 **Function signature:**
 
@@ -39,6 +48,7 @@ pub fn run_isolated(
     credentials_json: &str,
     args:             Vec<String>,
     timeout_secs:     u64,
+    model:            IsolatedModel,
 ) -> Result<IsolatedRunResult, RunnerError>
 ```
 
@@ -49,8 +59,8 @@ pub fn run_isolated(
     on failure → RunnerError::TempDirFailed
 2.  write credentials_json to <temp>/.claude/.credentials.json
     on write failure → cleanup temp, return RunnerError::Io
-3.  build command via ClaudeCommand::new().with_home(<temp>).with_args(args):
-      claude <args...>
+3.  build command; if model != KeepCurrent, prepend ["--model", <id>] to args:
+      ClaudeCommand::new().with_home(<temp>).with_args([--model <id>, <args...>])
       env HOME=<temp>
       (all other env vars inherited from parent process)
       stdout and stderr piped
@@ -107,21 +117,21 @@ The temp directory is removed in all code paths: success, timeout, and I/O error
 
 ### Acceptance Criteria
 
-- **AC-33**: `run_isolated(creds_json, args, timeout_secs)` spawns `claude` with `HOME` overridden to a temp directory containing only `.claude/.credentials.json` populated with `creds_json`.
+- **AC-33**: `run_isolated(creds_json, args, timeout_secs, model)` spawns `claude` with `HOME` overridden to a temp directory containing only `.claude/.credentials.json` populated with `creds_json`. When `model` is not `KeepCurrent`, `--model <id>` is prepended to `args` before the subprocess is spawned.
 - **AC-34**: When the subprocess exits normally, `run_isolated()` returns `Ok(IsolatedRunResult)` with the correct `exit_code`, `stdout`, and `stderr`.
 - **AC-35**: When the subprocess rewrites `.claude.json`, `credentials` is `Some(new_json)` with the updated content.
 - **AC-36**: When the subprocess does not modify `.claude.json`, `credentials` is `None`.
 - **AC-37**: When `timeout_secs` elapses before the subprocess exits, `run_isolated()` returns `Err(RunnerError::Timeout { secs })` and terminates the child process.
 - **AC-38**: The temp directory is removed in all code paths — success, timeout, and I/O error — with no temp-dir leak.
 - **AC-39**: `run_isolated()` does not call `Command::new("claude")` directly; it routes through `ClaudeCommand::with_home()` and the existing `execute()` path (single-execution-point invariant).
-- **AC-40**: `IsolatedRunResult` and `RunnerError` are available without `#[cfg(feature = "enabled")]`; `run_isolated()` is available only with it.
+- **AC-40**: `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, and `ISOLATED_DEFAULT_MODEL` are available without `#[cfg(feature = "enabled")]`; `run_isolated()` is available only with it.
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/isolated.rs` | `run_isolated()` implementation; `IsolatedRunResult`, `RunnerError` types |
-| source | `src/lib.rs` | Re-exports `IsolatedRunResult`, `RunnerError`, `run_isolated` |
+| source | `src/lib.rs` | Re-exports `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, `ISOLATED_DEFAULT_MODEL`, `run_isolated` |
 | source | `src/command.rs` | `ClaudeCommand::with_home()` builder method (single execution point) |
 | invariant | [invariant/001_single_execution_point.md](../invariant/001_single_execution_point.md) | `Command::new("claude")` must appear exactly once |
 | task | `task/claude_runner_core/136_run_isolated_subprocess.md` | Implementation task for this feature |

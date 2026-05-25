@@ -9,13 +9,51 @@
 //!
 //! | Item               | Requires `enabled` |
 //! |--------------------|--------------------|
-//! | `IsolatedRunResult`| No                 |
-//! | `RunnerError`      | No                 |
-//! | `run_isolated()`   | Yes                |
+//! | `IsolatedRunResult`     | No                 |
+//! | `RunnerError`           | No                 |
+//! | `IsolatedModel`         | No                 |
+//! | `ISOLATED_DEFAULT_MODEL`| No                 |
+//! | `run_isolated()`        | Yes                |
 
 use core::fmt;
 
 // ── Public types ─────────────────────────────────────────────────────────────
+
+/// Default model ID used by [`IsolatedModel::Default`].
+pub const ISOLATED_DEFAULT_MODEL : &str = "claude-sonnet-4-6";
+
+/// Claude model selection for isolated subprocess invocations.
+///
+/// Controls whether `--model <id>` is prepended to the subprocess argument list.
+/// The `Default` variant targets the current production Sonnet; callers that want
+/// the Claude binary to use whatever model it would normally select should pass
+/// `KeepCurrent`.
+#[ derive( Debug, Clone ) ]
+pub enum IsolatedModel
+{
+  /// Prepend `--model claude-sonnet-4-6` to subprocess args.
+  Default,
+  /// Pass no `--model` flag; the Claude binary chooses the model.
+  KeepCurrent,
+  /// Prepend `--model <id>` to subprocess args.
+  Specific( String ),
+}
+
+impl IsolatedModel
+{
+  /// Returns the model ID to inject via `--model`, or `None` for `KeepCurrent`.
+  #[ inline ]
+  #[ must_use ]
+  pub fn model_id( &self ) -> Option< &str >
+  {
+    match self
+    {
+      IsolatedModel::Default        => Some( ISOLATED_DEFAULT_MODEL ),
+      IsolatedModel::KeepCurrent    => None,
+      IsolatedModel::Specific( id ) => Some( id.as_str() ),
+    }
+  }
+}
 
 /// Result of an isolated Claude subprocess invocation.
 ///
@@ -82,6 +120,9 @@ impl core::error::Error for RunnerError {}
 /// thread drives the subprocess; the caller blocks for at most `timeout_secs`
 /// seconds.
 ///
+/// If `model` is not `IsolatedModel::KeepCurrent`, `--model <id>` is prepended
+/// to `args` before the subprocess is spawned.
+///
 /// The temp directory is removed unconditionally after execution or timeout.
 ///
 /// # Errors
@@ -97,6 +138,7 @@ pub fn run_isolated
   credentials_json : &str,
   args             : Vec< String >,
   timeout_secs     : u64,
+  model            : IsolatedModel,
 ) -> Result< IsolatedRunResult, RunnerError >
 {
   use std::sync::mpsc;
@@ -114,10 +156,17 @@ pub fn run_isolated
   std::fs::write( &creds_path, credentials_json )
     .map_err( |e| RunnerError::Io( e.to_string() ) )?;
 
-  // Step 3: Build command — single execution point via ClaudeCommand::execute()
+  // Step 3: Build command — prepend --model flag then user args
+  let mut full_args = Vec::with_capacity( args.len() + 2 );
+  if let Some( id ) = model.model_id()
+  {
+    full_args.push( "--model".to_string() );
+    full_args.push( id.to_string() );
+  }
+  full_args.extend( args );
   let cmd = crate::ClaudeCommand::new()
     .with_home( &temp_dir )
-    .with_args( args );
+    .with_args( full_args );
 
   // Step 4: Spawn thread; subprocess result arrives via channel
   let ( tx, rx ) = mpsc::channel();

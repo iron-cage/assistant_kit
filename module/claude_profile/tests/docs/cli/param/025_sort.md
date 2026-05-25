@@ -10,7 +10,8 @@ Edge case coverage for the `sort::` parameter on `.usage`. See [param/025_sort.m
 | EC-2 | `sort::endurance` accepted with empty credential store | Valid Value |
 | EC-3 | `sort::drain` accepted with empty credential store | Valid Value |
 | EC-4 | `sort::reset` accepted with empty credential store | Valid Value |
-| EC-5 | `sort::bogus` exits 1 and names all valid values | Invalid Value |
+| EC-5 | `sort::bogus` exits 1 and names all five valid values | Invalid Value |
+| EC-7 | `sort::next` accepted with empty credential store | Valid Value |
 | EC-6 | `sort::name` vs `sort::endurance` produces different TEXT row order | Behavioral Divergence |
 | CC-1 | `sort::name` and no `sort::` produce identical JSON output | JSON No-op |
 
@@ -56,13 +57,23 @@ Edge case coverage for the `sort::` parameter on `.usage`. See [param/025_sort.m
 
 ---
 
-### EC-5: `sort::bogus` exits 1 and names all valid values
+### EC-5: `sort::bogus` exits 1 and names all five valid values
 
 - **Given:** Any environment (empty credential store).
 - **When:** `clp .usage sort::bogus`
-- **Then:** Exits 1. Stderr contains the four valid values: "name", "endurance", "drain", "reset".
+- **Then:** Exits 1. Stderr contains all five valid values: "name", "endurance", "drain", "reset", "next".
 - **Exit:** 1
 - **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### EC-7: `sort::next` accepted with empty credential store
+
+- **Given:** Empty credential store.
+- **When:** `clp .usage sort::next`
+- **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter.
+- **Exit:** 0
+- **Source:** [feature/020_usage_sort_strategies.md AC-15](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
 

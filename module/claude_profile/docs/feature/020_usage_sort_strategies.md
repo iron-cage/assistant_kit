@@ -3,13 +3,13 @@
 ### Scope
 
 - **Purpose**: Provide configurable row ordering in `.usage` output, optimized for distinct operational workflows — long-running agent sessions, draining low-quota accounts, and exploiting upcoming quota resets.
-- **Responsibility**: Documents the `sort::`, `desc::`, and `prefer::` parameters on `.usage`, including the 3 heuristic sort strategies and the `reset` default.
-- **In Scope**: Sort strategies (`name`, `endurance`, `drain`, `reset`), direction control (`desc::`), model preference for weekly quota selection (`prefer::`), context-sensitive `desc::` defaults per strategy, three-tier universal display grouping (🟢 → 🟡 → 🔴 applied before sort within each tier, with h-exhausted sub-group before weekly-exhausted sub-group within 🟡), `reset` as the default strategy.
+- **Responsibility**: Documents the `sort::`, `desc::`, and `prefer::` parameters on `.usage`, including the 4 heuristic sort strategies, the `drain` default, and the `next` meta-strategy.
+- **In Scope**: Sort strategies (`name`, `endurance`, `drain`, `reset`, `next`), direction control (`desc::`), model preference for weekly quota selection (`prefer::`), context-sensitive `desc::` defaults per strategy, three-tier universal display grouping (🟢 → 🟡 → 🔴 applied before sort within each tier, with h-exhausted sub-group before weekly-exhausted sub-group within 🟡), `drain` as the default strategy, `next` as a meta-strategy that mirrors the active `next::` algorithm so the `→` winner always appears first.
 - **Out of Scope**: Row rendering (→ 009_token_usage.md), `→ Next` recommendation algorithm (→ 023_next_account_strategies.md), `.account.rotate` selection (→ 008_auto_rotate.md), `live::` monitor loop mechanics (→ 018_live_monitor.md).
 
 ### Design
 
-`.usage` accepts a `sort::` parameter to control row ordering. The default (`sort::reset`) puts accounts with the soonest quota refill at the top — the most operationally actionable ordering. Alphabetical ordering (`sort::name`) is available for positional stability, especially in `live::1` monitor mode. Three heuristic strategies are available for single-shot decision-making.
+`.usage` accepts a `sort::` parameter to control row ordering. The default (`sort::drain`) puts almost-exhausted accounts at the top — aligned with the `next::drain` recommendation strategy for a coherent default UX. Alphabetical ordering (`sort::name`) is available for positional stability, especially in `live::1` monitor mode. Four heuristic strategies are available for single-shot decision-making, plus `sort::next` — a meta-strategy that dynamically mirrors whatever `next::` algorithm is active, guaranteeing the `→` recommended account always appears at the top of the table.
 
 **Three-tier display grouping:** Regardless of the chosen sort strategy, accounts are first grouped by composite health tier: 🟢 tier (`5h Left > 15%` and `7d Left > 5%`) → 🟡 tier (either `5h Left ≤ 15%` or `7d Left ≤ 5%`) → 🔴 tier (error/missing token). Within the 🟡 tier, accounts are further ordered into two sub-groups: **h-exhausted** (`5h Left ≤ 15%`) first, then **weekly-exhausted** (`5h Left > 15%` and `7d Left ≤ 5%`). Accounts where both quotas are below threshold fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. This ensures healthy accounts always appear above exhausted or errored accounts, regardless of sort direction or strategy.
 
@@ -47,7 +47,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 **Rationale:** An account whose 5h window resets in 15–60 minutes will soon have 100% fresh session quota. Combined with ≥30% weekly runway, it can sustain a full 5-hour agent run without hitting any limit. The 15-minute floor avoids accounts that reset imminently (race condition with session start).
 
-#### Strategy 3: `sort::drain`
+#### Strategy 3: `sort::drain` (default)
 
 **Goal:** Use up almost-exhausted accounts first, preserving fresh accounts for later.
 
@@ -58,7 +58,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 **Rationale:** When actively working at a workstation, draining low-quota accounts first avoids wasting session quota that would expire at reset. Fresh accounts are preserved for future sessions.
 
-#### Strategy 4: `sort::reset` (default)
+#### Strategy 4: `sort::reset`
 
 **Goal:** Use accounts whose session quota refills soonest.
 
@@ -69,9 +69,19 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 **Rationale:** An account whose quota resets in 16 minutes can be freely drained — even if h-exhausted, it refills soon. This maximizes throughput by consuming quota that would be wasted at reset.
 
+#### Strategy 5: `sort::next`
+
+**Goal:** Guarantee the `→` recommended account always appears at the top of the table, regardless of which `next::` strategy is active.
+
+**Algorithm:**
+1. Resolve `sort::next` to the concrete sort strategy matching the active `next::` parameter: `next::drain` → `sort::drain`; `next::endurance` → `sort::endurance`.
+2. Apply the resolved strategy's full algorithm (including h-exhausted sinking and tiebreaks).
+
+**Rationale:** Keeps sort and recommendation aligned without requiring the user to specify both `sort::drain next::drain` (or both endurance variants) separately. When `sort::next` is used, the account the footer recommends is always visible at row 1.
+
 ### Acceptance Criteria
 
-- **AC-01**: `sort::reset` (default) sorts rows by `5h Reset` ascending within each tier. `sort::name` sorts alphabetically. When `sort::` is omitted, `reset` is used.
+- **AC-01**: `sort::drain` (default) sorts rows by `5h Left` ascending within each tier. `sort::name` sorts alphabetically. When `sort::` is omitted, `drain` is used.
 - **AC-02**: `sort::endurance` ranks qualified accounts (5h Reset 15–60 min, weekly(prefer) ≥ 30%) above unqualified accounts; within qualified, highest weekly first then soonest reset; within unqualified, highest `weekly(prefer)` first as tiebreaker when session quotas are equal.
 - **AC-03**: `sort::drain` sorts by `5h Left` ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
 - **AC-04**: `sort::reset` sorts by `5h Reset` ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
@@ -85,6 +95,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 - **AC-12**: `sort::` and `desc::` work correctly with `live::1` — sort order is stable within each refresh cycle.
 - **AC-13**: `format::json` output is NOT affected by `sort::` or `desc::` — `render_json` preserves the input slice order without re-sorting (alphabetical in practice since `fetch_all_quota` returns accounts alphabetically; stable schema for pipeline consumers).
 - **AC-14**: Three-tier display grouping (🟢 → 🟡 → 🔴) is applied universally before any sort strategy. Accounts are grouped by composite health: 🟢 (`5h Left > 15%` and `7d Left > 5%`), 🟡 (either `5h Left ≤ 15%` or `7d Left ≤ 5%`), 🔴 (error). Within 🟡, h-exhausted accounts (`5h Left ≤ 15%`) appear before weekly-exhausted accounts (`5h Left > 15%` and `7d Left ≤ 5%`); accounts with both below threshold fall in the h-exhausted sub-group. Sort strategy applies within each sub-group.
+- **AC-15**: `sort::next` resolves to the concrete sort strategy matching the active `next::` parameter: `next::drain` → `sort::drain`; `next::endurance` → `sort::endurance`. The resolution happens at param-parse time, so `sort::next` is never stored as a distinct strategy — it is transparent to all downstream logic. The `→` recommended account always appears at row 1 when `sort::next` is used.
 
 ### Cross-References
 

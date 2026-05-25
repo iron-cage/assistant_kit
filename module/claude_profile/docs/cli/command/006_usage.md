@@ -27,6 +27,7 @@ clp .usage sort::endurance desc::0
 clp .usage sort::reset prefer::opus
 clp .usage next::endurance
 clp .usage next::drain
+clp .usage sort::next
 clp .usage cols::+sub
 clp .usage cols::+sub,-7d_son
 clp .usage touch::1
@@ -41,10 +42,10 @@ clp .usage touch::1 refresh::1 trace::1
 | `interval::` | `u64` | `30` | Seconds between refresh cycles (≥ 30; only validated when `live::1`) |
 | `jitter::` | `u64` | `0` | Max random seconds added to each cycle delay (≤ interval; only validated when `live::1`) |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
-| `sort::` | `enum` | `reset` | Row ordering strategy: `reset` (soonest quota refill), `name` (alphabetical), `endurance` (sustained session), `drain` (use up low-quota first) |
+| `sort::` | `enum` | `drain` | Row ordering strategy: `drain` (use up low-quota first), `name` (alphabetical), `endurance` (sustained session), `reset` (soonest quota refill), `next` (mirrors active `next::` strategy) |
 | `desc::` | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy (`name`/`drain`/`reset`→`0`, `endurance`→`1`) |
 | `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any` = `min(7d Left, 7d(Son))`, `opus` = `7d Left`, `sonnet` = `7d(Son)` |
-| `next::` | `enum` | `endurance` | Strategy placing `→` on recommended account: `endurance`, `drain`; footer always shows both |
+| `next::` | `enum` | `drain` | Strategy placing `→` on recommended account: `drain`, `endurance`; footer always shows both |
 | `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to default set |
 | `touch::` | `bool` | `0` | Activate idle accounts (5h Reset = —) by sending minimal prompt via isolated subprocess; re-fetch quota |
 
@@ -56,8 +57,8 @@ clp .usage
 #
 #   ●  Account          Expires     Sub  ~Renews  5h Left  5h Reset    7d Left  7d(Son)  7d Reset
 # ✓ 🟢 alice@example.com    in 7h 24m  max  Jun  5   86%      in 3h 19m  65%      35%      in 4d 23h
-# → 🟢 bob@example.com     in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
-#   🟡 frank@example.com     in 1h 12m  max  Jun  8   3%       in 0h 23m  52%      18%      in 2d 11h
+#   🟢 bob@example.com      in 5h 02m  max  Jun  6   100%     in 4h 58m  88%      28%      in 6d 14h
+# → 🟡 frank@example.com    in 1h 12m  max  Jun  8   3%       in 0h 23m  52%      18%      in 2d 11h
 #   🔴 dave@example.com     EXPIRED    ?    ?        —        —           —        —        (missing accessToken)
 #
 # Valid: 3 / 4   ->  Next by strategy:

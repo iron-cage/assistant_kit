@@ -59,6 +59,11 @@ and writes updated credentials back to `--creds` instead of returning exit 2.
 This matches the `IsolatedRunResult { exit_code: -1, credentials: Some(…) }`
 path in `claude_runner_core::run_isolated()`.
 
+The subprocess is always invoked with `--chrome` and `--model claude-sonnet-4-6`
+(injected via `ClaudeCommand::new()` defaults and `IsolatedModel::Default`). No
+`--dangerously-skip-permissions` or `-c` flags are injected — isolated mode is
+not a full-permissions interactive run.
+
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Excluded Params |

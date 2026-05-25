@@ -90,7 +90,7 @@
 //! | it066 | `it066_next_drain_accepted`                         | `next::drain` accepted with empty store → exit 0           | P | no |
 //! | it067 | `it067_next_reset_rejected_exit_1`                  | `next::reset` rejected → exit 1 (TSK-184)                  | N | no |
 //! | it068 | `it068_next_invalid_value_exit_1`                   | `next::bogus` → exit 1, stderr names endurance+drain only  | N | no |
-//! | it069 | `it069_next_endurance_default_no_arrow_without_valid_accounts` | default endurance + no valid accounts → no `→` | P | no |
+//! | it069 | `it069_next_drain_default_no_arrow_without_valid_accounts` | default drain + no valid accounts → no `→`        | P | no |
 //! | it070 | `it070_cols_sub_accepted`                           | `cols::+sub` accepted with empty store → exit 0            | P | no |
 //! | it071 | `it071_cols_sub_shows_sub_column`                   | `cols::+sub` with account → output contains "Sub" header   | P | no |
 //! | it072 | `it072_cols_unknown_id_exit_1`                      | `cols::+bogus_col` → exit 1, stderr names valid IDs        | N | no |
@@ -107,6 +107,7 @@
 //! | it090 | `it090_touch_json_format_unaffected`                | `format::json touch::1` empty store → exit 0, output `[]` (TSK-185 AC-08) | P | no |
 //! | it091 | `it091_usage_help_shows_touch_param`                | `.usage.help` contains `touch` (TSK-185 AC-10) | P | no |
 //! | it110 | `it110_lim_it_ft12_touch_trigger_once_per_idle_window` | `touch::1` fires on idle account; immediate re-run skips touch (resets_at present) (024 FT-12) | P | yes |
+//! | it111 | `it111_sort_next_accepted`                          | `sort::next` accepted → exit 0 (drain default + endurance explicit) (IT-65/AC-15) | P | no |
 
 use crate::helpers::{
   BIN,
@@ -1763,7 +1764,7 @@ fn it047_sort_invalid_value_exit_1()
   );
   assert_exit( &out, 1 );
   let err = stderr( &out );
-  for value in &[ "name", "endurance", "drain", "reset" ]
+  for value in &[ "name", "endurance", "drain", "reset", "next" ]
   {
     assert!(
       err.contains( value ),
@@ -2240,20 +2241,20 @@ fn it068_next_invalid_value_exit_1()
   }
 }
 
-/// it069 (AC-01): default next (endurance) — no `→` marker when no valid quota data.
+/// it069 (AC-01): default next (drain) — no `→` marker when no valid quota data.
 ///
 /// Two no-token accounts are written so the table is non-empty. Because neither
 /// account has a valid OAuth token, quota fetch returns Err for both; `best_idx`
 /// is None → no `→` marker is placed in any table row.
 #[ test ]
-fn it069_next_endurance_default_no_arrow_without_valid_accounts()
+fn it069_next_drain_default_no_arrow_without_valid_accounts()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
   write_account( dir.path(), "b@x.com", "max", "default", FAR_FUTURE_MS, false );
 
-  // Default (no next:: param) = next::endurance (TSK-184).
+  // Default (no next:: param) = next::drain.
   let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -2262,7 +2263,7 @@ fn it069_next_endurance_default_no_arrow_without_valid_accounts()
   let arrow_in_row = text.lines().any( |l| l.contains( '\u{2192}' ) );
   assert!(
     !arrow_in_row,
-    "default next::endurance: no eligible account → must not place → in any table row, got:\n{text}",
+    "default next::drain: no eligible account → must not place → in any table row, got:\n{text}",
   );
 }
 
@@ -2821,7 +2822,7 @@ fn it091_usage_help_shows_touch_param()
   );
 }
 
-/// it092 `lim_it` (IT-51 / FT-03 of feature/023): `next::endurance` places `→` on exactly one account.
+/// it092 `lim_it` (IT-51 / FT-03 of feature/023): explicit `next::endurance` places `→` on exactly one account.
 ///
 /// With ≥2 accounts sharing a live token, the endurance strategy selects one winner.
 /// Exactly one table row gets `→` in the flag column. Footer shows "Next by strategy:".
@@ -3456,4 +3457,39 @@ fn it110_lim_it_ft12_touch_trigger_once_per_idle_window()
       "cycle 2: account with active 5h window must NOT be touched again (FT-12/AC-11); trigger guard must prevent re-arm, got stderr:\n{err2}",
     );
   }
+}
+
+// ── sort::next meta-strategy ──────────────────────────────────────────────────
+
+/// it111 (IT-65/AC-15): `sort::next` accepted with empty credential store → exit 0.
+///
+/// `sort::next` resolves to `sort::drain` (default `next::drain`) at parse time.
+/// Both `sort::next` alone and `sort::next next::endurance` must be accepted without error.
+///
+/// Source: `tests/docs/cli/command/009_usage.md § IT-65`.
+#[ test ]
+fn it111_sort_next_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  // sort::next with default next::drain
+  let out = run_cs_with_env( &[ ".usage", "sort::next" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "sort::next must be accepted and show no-accounts message, got:\n{text}",
+  );
+
+  // sort::next with explicit next::endurance
+  let out2 = run_cs_with_env( &[ ".usage", "sort::next", "next::endurance" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out2, 0 );
+  let text2 = stdout( &out2 );
+  assert!(
+    text2.contains( "(no accounts configured)" ),
+    "sort::next next::endurance must be accepted and show no-accounts message, got:\n{text2}",
+  );
 }

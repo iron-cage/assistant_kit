@@ -9,14 +9,14 @@
 
 ### Design
 
-`.usage` accepts a `next::` parameter controlling which account receives the `→` marker in the table body — the recommended next account to switch to. The footer always shows both strategy recommendations simultaneously, providing full operational context regardless of `next::` value. Default is `next::endurance`.
+`.usage` accepts a `next::` parameter controlling which account receives the `→` marker in the table body — the recommended next account to switch to. The footer always shows both strategy recommendations simultaneously, providing full operational context regardless of `next::` value. Default is `next::drain`.
 
 **Strategy table:**
 
 | Value | Name | Selection algorithm |
 |-------|------|---------------------|
-| `endurance` (default) | Endurance Top | First non-current, non-active account from endurance sort order (qualified accounts first by weekly desc then reset asc; unqualified by 5h_left desc, tiebreak weekly desc). |
-| `drain` | Drain Top | First non-current, non-active account from drain sort order (5h_left ascending, h-exhausted sunk; tiebreak weekly desc). |
+| `endurance` | Endurance Top | First non-current, non-active account from endurance sort order (qualified accounts first by weekly desc then reset asc; unqualified by 5h_left desc, tiebreak weekly desc). |
+| `drain` (default) | Drain Top | First non-current, non-active account from drain sort order (5h_left ascending, h-exhausted sunk; tiebreak weekly desc). |
 
 **Recommendation eligibility:** All strategies skip accounts that are `is_current` (user is already on that session) or `is_active` (the active marker account when it differs from current). Only accounts with valid quota data and `expires_in_secs > 0` are eligible. Strategies select from all eligible accounts regardless of their composite health tier (-> 009_token_usage.md three-tier grouping) -- the tier affects table display ordering, not recommendation eligibility.
 
@@ -52,7 +52,7 @@ The account selected by the active `next::` strategy receives the `→` flag in 
 
 ### Worked Example
 
-Eight accounts, two ineligible (`✓` current, `*` active-but-not-current), six eligible candidates. `prefer::any` (default), `sort::reset` (default).
+Eight accounts, two ineligible (`✓` current, `*` active-but-not-current), six eligible candidates. `prefer::any` (default), `sort::drain` (default).
 
 **Eligible candidates:**
 
@@ -93,14 +93,14 @@ Valid: 8 / 8   ->  Next by strategy:
   drain      a@example.com   32% session, resets in 33m
 ```
 
-(`next::endurance` default — `→` on a@example.com. Both strategies agree here. Footer is identical either way.)
+(`next::drain` default — `→` on a@example.com. Both strategies agree here. Footer is identical either way.)
 
 ### Acceptance Criteria
 
 - **AC-01**: The footer always shows one recommendation line per strategy (endurance, drain) with account name and key metric, regardless of the `next::` parameter value. The footer is never suppressed by a `next::` value choice.
 - **AC-02**: Exactly one account receives the `→` flag in the table body — the account selected by the active `next::` strategy. No `→` is placed when no eligible candidate exists for that strategy.
-- **AC-03**: `next::endurance` (default) places `→` on the top non-current, non-active account from endurance sort order.
-- **AC-04**: `next::drain` places `→` on the top non-current, non-active account from drain sort order.
+- **AC-03**: `next::endurance` places `→` on the top non-current, non-active account from endurance sort order.
+- **AC-04**: `next::drain` (default) places `→` on the top non-current, non-active account from drain sort order.
 - **AC-05**: Invalid `next::` value exits 1 with an error naming the valid values (`endurance`, `drain`).
 - **AC-06**: `next::` does not affect `format::json` output — JSON always uses alphabetical order without recommendation markers.
 - **AC-07**: Footer is omitted when 0 or 1 accounts have valid quota data (same threshold as 009_token_usage.md AC-10).

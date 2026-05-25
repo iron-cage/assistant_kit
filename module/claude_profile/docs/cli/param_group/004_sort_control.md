@@ -6,17 +6,17 @@
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| [`sort::`](../param/025_sort.md) | `enum` | `reset` | Row ordering strategy: `reset`, `name`, `endurance`, `drain` |
+| [`sort::`](../param/025_sort.md) | `enum` | `drain` | Row ordering strategy: `drain`, `name`, `endurance`, `reset`, `next` |
 | [`desc::`](../param/026_desc.md) | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy |
 | [`prefer::`](../param/027_prefer.md) | `enum` | `any` | Weekly quota column for sort heuristics: `any`, `opus`, `sonnet` |
-| [`next::`](../param/032_next.md) | `enum` | `all` | Recommendation strategy: `all` (multi-strategy footer), `session`, `endurance`, `drain`, `reset` |
+| [`next::`](../param/032_next.md) | `enum` | `drain` | Recommendation strategy placing `→` on recommended account: `drain`, `endurance`; footer always shows both |
 
 **Used By (1 command):** [`.usage`](../command/006_usage.md#command--9-usage)
 
 **Typical Patterns:**
 
 ```bash
-# Default: sort::reset — soonest quota refill on top
+# Default: sort::drain — drain lowest-quota accounts first
 clp .usage
 
 # Find accounts suitable for a long uninterrupted agent run
@@ -30,6 +30,9 @@ clp .usage sort::drain
 
 # Use accounts whose quota refills soonest
 clp .usage sort::reset
+
+# Mirror the active next:: recommendation strategy for consistent sort behavior
+clp .usage sort::next
 
 # Reverse the endurance order (worst candidates on top, for inspection)
 clp .usage sort::endurance desc::0

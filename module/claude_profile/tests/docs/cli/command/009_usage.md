@@ -53,10 +53,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-45 | `sort::endurance` accepted with empty store → exit 0 | Sort Acceptance |
 | IT-46 | `sort::drain` accepted with empty store → exit 0 | Sort Acceptance |
 | IT-47 | `sort::reset` accepted with empty store → exit 0 | Sort Acceptance |
-| IT-48 | `sort::bogus` → exit 1, stderr names valid values | Sort Rejection |
+| IT-48 | `sort::bogus` → exit 1, stderr names all five valid values | Sort Rejection |
+| IT-65 | `sort::next` accepted with empty store → exit 0 | Sort Acceptance |
 | IT-49 | `prefer::bogus` → exit 1, stderr names valid values | Sort Rejection |
 | IT-50 | `.usage.help` lists `sort`, `desc`, `prefer` params | Help Output |
-| IT-51 | `next::endurance` (default) places `→` on endurance winner | Next Strategy |
+| IT-51 | `next::drain` (default) places `→` on drain winner | Next Strategy |
 | IT-52 | `next::drain` places `→` on drain winner | Next Strategy |
 | IT-53 | `next::bogus` exits 1 naming both valid values | Next Rejection |
 | IT-54 | Footer always shows both strategy lines regardless of `next::` value | Next Footer |
@@ -95,7 +96,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Help Output: 7 tests (IT-32, IT-34, IT-38, IT-39, IT-50, IT-61, IT-64)
 - Trace: 1 test (IT-35)
 - Status Emoji: 4 tests (IT-40, IT-41, IT-42, IT-43)
-- Sort Acceptance: 4 tests (IT-44, IT-45, IT-46, IT-47)
+- Sort Acceptance: 5 tests (IT-44, IT-45, IT-46, IT-47, IT-65)
 - Sort Rejection: 2 tests (IT-48, IT-49)
 - Next Strategy: 2 tests (IT-51, IT-52)
 - Next Rejection: 1 test (IT-53)
@@ -108,7 +109,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - Tier Grouping: 1 test (IT-60)
 - Touch Param: 2 tests (IT-62, IT-63)
 
-**Total:** 76 spec entries (IT-1 through IT-64; IT-40–IT-43 implemented by TSK-178, IT-44–IT-50 implemented by TSK-177, IT-51–IT-64 implemented by TSK-184/TSK-185); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
+**Total:** 77 spec entries (IT-1 through IT-65; IT-40–IT-43 implemented by TSK-178, IT-44–IT-50 implemented by TSK-177, IT-51–IT-64 implemented by TSK-184/TSK-185, IT-65 implemented by `sort::next` feature); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -622,11 +623,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-48: `sort::bogus` → exit 1, stderr names valid values
+### IT-48: `sort::bogus` → exit 1, stderr names all five valid values
 
 - **Given:** Any environment (empty credential store).
 - **When:** `clp .usage sort::bogus`
-- **Then:** Exits 1. Stderr contains each of the four valid values: `name`, `endurance`, `drain`, `reset`.
+- **Then:** Exits 1. Stderr contains each of the five valid values: `name`, `endurance`, `drain`, `reset`, `next`.
 - **Exit:** 1
 - **Source fn:** `it047_sort_invalid_value_exit_1`
 - **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../../docs/feature/020_usage_sort_strategies.md)
@@ -655,15 +656,15 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-51: `next::endurance` (default) places `→` on endurance winner
+### IT-51: `next::drain` (default) places `→` on drain winner
 
-- **Given:** Two saved accounts with valid tokens and quota data; default `next::endurance`.
+- **Given:** Two saved accounts with valid tokens and quota data; default `next::drain`.
 - **When:** `clp .usage`
-- **Then:** Exits 0. Exactly one line contains `→` in the flag column — the account selected by the endurance strategy. Footer contains "Next by strategy:" with two lines (endurance and drain).
+- **Then:** Exits 0. Exactly one line contains `→` in the flag column — the account selected by the drain strategy (lowest non-exhausted 5h_left). Footer contains "Next by strategy:" with two lines (endurance and drain).
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota)
-- **Source fn:** `it092_lim_it_next_endurance_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/023_next_account_strategies.md AC-03](../../../../docs/feature/023_next_account_strategies.md)
+- **Source fn:** `it093_lim_it_next_drain_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/023_next_account_strategies.md AC-04](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
 
@@ -812,3 +813,14 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Exit:** 0
 - **Source fn:** `it091_usage_help_shows_touch_param` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-10](../../../../docs/feature/024_session_touch.md)
+
+---
+
+### IT-65: `sort::next` accepted with empty store → exit 0
+
+- **Given:** Empty credential store.
+- **When:** `clp .usage sort::next`
+- **Then:** Exits 0 with "(no accounts configured)". `sort::next` resolves to `sort::drain` (default `next::drain`) and is accepted without error.
+- **Exit:** 0
+- **Source fn:** `it111_sort_next_accepted` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-15](../../../../docs/feature/020_usage_sort_strategies.md)

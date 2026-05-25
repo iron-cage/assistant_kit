@@ -819,18 +819,21 @@ fn acc25_email_reads_from_snapshot()
   );
 }
 
-/// acc26 (T09 — save with both snapshot sources): `account::save` writes both snapshot files.
+/// acc26 (T09 — save with claude.json snapshot): `account::save` writes credential + `.claude.json`
+/// snapshot files; `settings.json` is NOT written (machine-global, not per-account — BUG-174).
 ///
 /// Root Cause (before fix): `save()` only called `std::fs::copy(paths.credentials_file(), dest)`.
-///   The `.claude.json` and `settings.json` sources were never copied to the store.
+///   The `oauthAccount` data from `~/.claude.json` was never persisted to the credential store.
 /// Why Not Caught: No save test verified the presence of snapshot files after save.
-/// Fix Applied: `save()` calls `let _ = std::fs::copy(paths.claude_json_file(), ...)` and
-///   `let _ = std::fs::copy(paths.settings_file(), ...)` after the credential copy.
-/// Prevention: After any `save()` implementation change, verify ALL expected output files
-///   exist — not just the primary credential file.
-/// Pitfall: `let _ = std::fs::copy(...)` silently discards errors — this is intentional
-///   (best-effort), but means a wrong SOURCE path would pass the `save()` return value.
-///   This test catches that by asserting the destination files EXIST.
+/// Fix Applied: `save()` surgically extracts the `oauthAccount` subtree from `~/.claude.json`
+///   and writes it to `{name}.claude.json`. `settings.json` is machine-global and is NOT saved
+///   (BUG-174: wholesale copy of `~/.claude.json` was replaced by surgical `oauthAccount` extraction
+///   to avoid clobbering machine-global config on `switch_account`).
+/// Prevention: After any `save()` implementation change, verify ALL expected output files exist
+///   and verify machine-global files (settings.json, commands.*, mcpServers) are NOT saved.
+/// Pitfall: The `oauthAccount` extraction silently skips if the key is absent — this is
+///   intentional best-effort, but means a wrong source path would silently produce no output.
+///   This test catches that by asserting `{name}.claude.json` EXISTS after save.
 #[ test ]
 fn acc26_save_creates_snapshot_files()
 {
@@ -862,16 +865,17 @@ fn acc26_save_creates_snapshot_files()
 
 /// acc27 (T09 — save without `~/.claude.json`): save succeeds even when source is absent.
 ///
-/// Root Cause (before fix): If `let _ = std::fs::copy(paths.claude_json_file(), ...)` were
-///   written as a hard `?` copy, a missing `~/.claude.json` would fail the entire save.
+/// Root Cause (before fix): `save()` only copied credentials; no `.claude.json` snapshot
+///   was ever created. After BUG-174, oauthAccount extraction was added but must silently
+///   skip if `~/.claude.json` is absent or unparseable.
 /// Why Not Caught: All prior save tests relied on a credentials file being present;
-///   no test verified the best-effort behaviour for the new optional sources.
-/// Fix Applied: Use `let _ = std::fs::copy(...)` (discard result) for both snapshot copies —
-///   missing source silently skips; credential copy still uses `?` (required).
+///   no test verified the best-effort behaviour for the optional `.claude.json` source.
+/// Fix Applied: `save()` wraps the oauthAccount extraction in `if let Ok(text) = read_to_string(...)` —
+///   absent or malformed `~/.claude.json` silently skips; credential copy still uses `?` (required).
 /// Prevention: For every best-effort file operation, add a test where the source is absent
-///   to confirm the operation succeeds and downstream callers are not affected.
-/// Pitfall: `let _ = expr` discards the `Result` ENTIRELY — compilation will not warn
-///   about missing files. Always add a best-effort-absent test like this one.
+///   to confirm the operation succeeds and no partial output is written.
+/// Pitfall: Silently-discarded read errors mean a wrong path never fails — always add an
+///   absent-source test to confirm no snapshot is created when source is missing.
 #[ test ]
 fn acc27_save_succeeds_without_claude_json()
 {
@@ -895,17 +899,20 @@ fn acc27_save_succeeds_without_claude_json()
   );
 }
 
-/// acc28 (T09 — save with claude.json but without settings.json): partial snapshot scenario.
+/// acc28 (T09 — save with `.claude.json` but without `settings.json`): confirms oauthAccount
+/// extraction succeeds when `settings.json` is absent (it is never copied after BUG-174).
 ///
-/// Root Cause (before fix): Same as acc27 — the settings.json copy used a hard `?`, so a
-///   missing `settings.json` would abort save even when `~/.claude.json` was present.
-/// Why Not Caught: No test exercised the partial-source scenario.
-/// Fix Applied: Both snapshot copies use `let _ = std::fs::copy(...)` independently so
-///   one absent source does not block the other copy.
-/// Prevention: Test each source file independently — one present, one absent — to confirm
-///   the two best-effort copies are truly independent and not short-circuit-evaluated.
-/// Pitfall: If `save()` used a single compound expression for both copies, one absent
-///   source would prevent the other snapshot from being created. Independence is required.
+/// Root Cause (before fix): After the initial snapshot feature was added, `save()` tried
+///   to copy both `.claude.json` and `settings.json`; a missing `settings.json` could
+///   interfere. BUG-174 removed the `settings.json` copy entirely (machine-global config).
+/// Why Not Caught: No test verified that `settings.json` absence did not affect the
+///   `.claude.json` snapshot creation.
+/// Fix Applied (BUG-174): `settings.json` is never copied — it is machine-global config
+///   and must not be stored per-account. Only the `oauthAccount` subtree is extracted.
+/// Prevention: Explicitly verify `settings.json` is NOT created; confirm `.claude.json`
+///   snapshot is independent of `settings.json` presence.
+/// Pitfall: Machine-global files (settings.json, commands.*, mcpServers) must never be
+///   stored per-account — restoring them on `switch_account()` clobbers machine config.
 #[ test ]
 fn acc28_save_succeeds_without_settings_json()
 {
