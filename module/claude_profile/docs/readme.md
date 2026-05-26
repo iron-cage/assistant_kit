@@ -14,3 +14,4 @@
 | invariant/ | Non-functional constraint doc instances (NFR-1, NFR-3–NFR-6) |
 | entities.md | Master index of all doc entities and their instances |
 | doc_graph.yml | Cross-reference graph for all doc instances |
+| research_interactive/ | Investigation findings on Claude binary behavior and interaction modes |

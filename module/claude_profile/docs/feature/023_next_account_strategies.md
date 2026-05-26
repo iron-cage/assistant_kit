@@ -18,7 +18,7 @@
 | `endurance` | Endurance Top | First non-current, non-active account from endurance sort order (qualified accounts first by weekly desc then reset asc; unqualified by 5h_left desc, tiebreak weekly desc). |
 | `drain` (default) | Drain Top | First non-current, non-active account from drain sort order (`prefer_weekly` ascending, h-exhausted sunk; tiebreak `5h_left` asc). |
 
-**Recommendation eligibility:** All strategies skip accounts that are `is_current` (user is already on that session) or `is_active` (the active marker account when it differs from current). Only accounts with valid quota data and `expires_in_secs > 0` are eligible. Strategies select from all eligible accounts regardless of their composite health tier (-> 009_token_usage.md three-tier grouping) -- the tier affects table display ordering, not recommendation eligibility.
+**Recommendation eligibility:** All strategies skip accounts that are `is_current` (user is already on that session) or `is_active` (the active marker account when it differs from current). Only accounts with valid quota data and `expires_in_secs > 0` are eligible. Strategies select from all eligible accounts regardless of their composite health tier (-> 009_token_usage.md three-tier grouping) — the tier affects table display ordering, not recommendation eligibility. Exception: `drain` additionally skips accounts where `prefer_weekly == 0` — an account with zero weekly quota remaining has nothing to drain, so recommending it is self-defeating.
 
 **Footer format (always shown when ≥2 valid accounts):**
 
@@ -71,10 +71,10 @@ Eight accounts, two ineligible (`✓` current, `*` active-but-not-current), six 
 a: reset=33m ✓, weekly=34% ✓ → qualified. b: reset=33m ✓, weekly=34% ✓ → qualified. c/d/e/f: weekly < 30% → unqualified.
 Within qualified: weekly=34% tied, reset=33m tied → alphabetical: a before b. **Winner: a@example.com.**
 
-**`drain`** — `prefer_weekly` ascending (none h-exhausted; `prefer::any`):
-weekly(any): e=0%=f < d=2% < c=3% < active=13% (skip: is_active) < a=34%=b (tiebreak `5h_left`: a=32% < b=99%) < current=61% (skip: is_current). First eligible: **Winner: e@example.com.**
+**`drain`** — `prefer_weekly` ascending, skipping `prefer_weekly == 0` (nothing to drain); `prefer::any`:
+weekly(any): e=0% → skip (exhausted); f=0% → skip (exhausted); d=2% < c=3% < active=13% (skip: is_active) < a=34%=b (tiebreak `5h_left`: a=32% < b=99%) < current=61% (skip: is_current). First eligible non-exhausted: **Winner: d@example.com.**
 
-Strategies disagree in this dataset: endurance picks a@example.com (qualified, most reset/weekly runway); drain picks e@example.com (lowest weekly quota = 0%). The footer always exposes both picks regardless of which `next::` value is active:
+Strategies disagree in this dataset: endurance picks a@example.com (qualified, most reset/weekly runway); drain picks d@example.com (lowest non-zero weekly quota = 2%). e and f are skipped — `prefer_weekly == 0` means nothing remains to drain. The footer always exposes both picks regardless of which `next::` value is active:
 
 ```
    ●   Account              5h Left   5h Reset   7d Left  7d(Son)  7d Reset  Expires    ~Renews
@@ -84,16 +84,16 @@ Strategies disagree in this dataset: endurance picks a@example.com (qualified, m
    🟢  a@example.com        🟢 32%    in 33m     🟢 60%   34%      ...       in 5m      ...
    🟢  b@example.com        🟢 99%    in 33m     🟢 52%   34%      ...       in 5m      ...
 ✓  🟢  current@example.com  🟢 88%    in 4h 13m  🟢 73%   61%      ...       in 5m      ...
-→  🟡  e@example.com        🟢 100%   in 4h 23m  🟡 4%    0%       ...       in 7h 27m  ...
+   🟡  e@example.com        🟢 100%   in 4h 23m  🟡 4%    0%       ...       in 7h 27m  ...
    🟡  f@example.com        🟢 100%   —          🟡 2%    0%       ...       in 1h 49m  ...
-   🟡  d@example.com        🟢 100%   in 4h 23m  🟡 2%    4%       ...       in 7h 27m  ...
+→  🟡  d@example.com        🟢 100%   in 4h 23m  🟡 2%    4%       ...       in 7h 27m  ...
 
 Valid: 8 / 8   ->  Next by strategy:
   endurance  a@example.com   32% session, 34% 7d left, expires in 5m
-  drain      e@example.com   0% 7d left, 7d resets in 6d 1h
+  drain      d@example.com   2% 7d left, 7d resets in 2d 8h
 ```
 
-(`next::drain` default — `→` on e@example.com. Strategies disagree here: endurance recommends the qualified a@example.com while drain targets the lowest-weekly e@example.com.)
+(`next::drain` default — `→` on d@example.com. e and f are skipped by drain despite ranking first in drain sort order (prefer_weekly == 0 — nothing to drain). Strategies disagree here: endurance recommends the qualified a@example.com while drain targets d@example.com, the lowest-weekly account with remaining capacity.)
 
 ### Acceptance Criteria
 

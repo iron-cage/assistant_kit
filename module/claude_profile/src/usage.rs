@@ -793,15 +793,23 @@ fn sort_indices(
 }
 
 /// Return the first eligible (non-current, non-active, non-expired, `Ok`) account
-/// from a pre-sorted index slice, or `None` when no eligible account exists.
-fn find_first_eligible( accounts : &[ AccountQuota ], sorted : &[ usize ], now_secs : u64 ) -> Option< usize >
+/// from a pre-sorted index slice that also satisfies `extra`, or `None` when none exist.
+fn find_first_eligible< F >(
+  accounts  : &[ AccountQuota ],
+  sorted    : &[ usize ],
+  now_secs  : u64,
+  extra     : F,
+) -> Option< usize >
+where F : Fn( &AccountQuota ) -> bool
 {
   for &idx in sorted
   {
     let aq = &accounts[ idx ];
     if aq.is_current || aq.is_active { continue; }
     if ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) == 0 { continue; }
-    if aq.result.is_ok() { return Some( idx ); }
+    if aq.result.is_err() { continue; }
+    if !extra( aq ) { continue; }
+    return Some( idx );
   }
   None
 }
@@ -810,6 +818,8 @@ fn find_first_eligible( accounts : &[ AccountQuota ], sorted : &[ usize ], now_s
 ///
 /// `Endurance` and `Drain` sort via `sort_indices()` then pick the first
 /// eligible (non-current, non-active, non-expired, `Ok`) account.
+/// `Drain` additionally skips accounts where `prefer_weekly == 0` — nothing
+/// remains to drain, so recommending them would be self-defeating.
 fn find_next_for_strategy(
   accounts  : &[ AccountQuota ],
   strategy  : NextStrategy,
@@ -822,12 +832,15 @@ fn find_next_for_strategy(
     NextStrategy::Endurance =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Endurance, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs )
+      find_first_eligible( accounts, &sorted, now_secs, |_| true )
     }
     NextStrategy::Drain =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Drain, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs )
+      // Fix(BUG-206): skip weekly-exhausted accounts — prefer_weekly == 0 means nothing to drain.
+      // Root cause: spec omitted this gate; ascending sort puts 0%-weekly accounts first.
+      // Pitfall: "sort by X ascending" ≠ "recommend even when X is zero".
+      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 0.0 )
     }
   }
 }
@@ -4451,6 +4464,54 @@ mod tests
     assert_eq!(
       accounts[ idx.unwrap() ].name, "healthy@test.com",
       "drain must pick healthy (80% left, non-exhausted) before exhausted (3% left); got index {idx:?}",
+    );
+  }
+
+  /// FT-09/023 (BUG-206) — drain skips accounts where `prefer_weekly == 0` (nothing to drain).
+  ///
+  /// Root Cause: drain sort put `prefer_weekly=0` accounts first (ascending), and
+  ///   `find_first_eligible` had no `prefer_weekly > 0` gate, so drain recommended an
+  ///   account with zero remaining weekly capacity.
+  /// Why Not Caught: worked example in 023 spec explicitly showed 0%-weekly winner as correct.
+  /// Fix Applied: `find_first_eligible` predicate in Drain arm: `prefer_weekly(aq, prefer) > 0.0`.
+  /// Prevention: ascending-sort strategies must define a minimum-viable eligibility threshold;
+  ///   "sort by X asc" ≠ "recommend even when X is zero".
+  /// Pitfall: verify BUG-206 reproducer with `PreferStrategy::Any` — `prefer_weekly=min(7d,Son)`,
+  ///   so Sonnet fully exhausted (`Son util=100%`) drives `prefer_weekly` to 0 even if 7d has quota.
+  ///
+  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-09]
+  ///       [`docs/feature/023_next_account_strategies.md` AC-04]
+  #[ test ]
+  fn mre_bug_206_drain_skips_prefer_weekly_zero_accounts()
+  {
+    let now = 0u64;
+
+    // weekly_zero: 7d Left=4%, 7d(Son)=0% → prefer_weekly(Any)=min(4%,0%)=0 — nothing to drain.
+    // weekly_ten:  7d Left=15%, 7d(Son)=10% → prefer_weekly(Any)=min(15%,10%)=10% — drainable.
+    // Drain sort puts weekly_zero first (0% < 10%), but the preference_weekly>0 gate must skip it.
+    let weekly_zero = mk_aq_sort_weekly( "weekly_zero@test.com", 0.0, 96.0, 100.0 );
+    let weekly_ten  = mk_aq_sort_weekly( "weekly_ten@test.com",  0.0, 85.0, 90.0 );
+    let accounts    = vec![ weekly_zero, weekly_ten ];
+
+    let idx = find_next_for_strategy( &accounts, NextStrategy::Drain, PreferStrategy::Any, now );
+    assert!(
+      idx.is_some(),
+      "BUG-206: drain must find weekly_ten (prefer_weekly=10%) even when weekly_zero (0%) exists",
+    );
+    assert_eq!(
+      accounts[ idx.unwrap() ].name, "weekly_ten@test.com",
+      "BUG-206: drain must skip weekly_zero (prefer_weekly=0) and pick weekly_ten (10%); got {idx:?}",
+    );
+
+    // When ALL accounts have prefer_weekly=0, drain returns None — nothing to drain anywhere.
+    let zero_a = mk_aq_sort_weekly( "zero_a@test.com", 0.0, 96.0, 100.0 );
+    let zero_b = mk_aq_sort_weekly( "zero_b@test.com", 0.0, 99.0, 100.0 );
+    let all_zero = vec![ zero_a, zero_b ];
+
+    let idx2 = find_next_for_strategy( &all_zero, NextStrategy::Drain, PreferStrategy::Any, now );
+    assert!(
+      idx2.is_none(),
+      "BUG-206: drain must return None when all accounts have prefer_weekly=0 (nothing to drain); got {idx2:?}",
     );
   }
 
