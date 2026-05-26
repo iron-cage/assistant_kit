@@ -21,7 +21,8 @@ Selects which weekly quota column is used by sort strategies and recommendation 
 - `sort::endurance` qualification: weekly(prefer) ≥ 30%
 - `sort::drain` primary sort key: lowest weekly(prefer) first (ascending)
 - `sort::reset` tiebreak: lowest weekly(prefer) first (ascending)
-- `→ Next` recommendation tiebreaker level 3 (TSK-176): highest weekly(prefer) breaks `5h Left` + expiry ties
+- `→ Next drain` recommendation: prefer_weekly is the primary sort key (and the `> 0` exclusion threshold)
+- `→ Next endurance` recommendation: prefer_weekly used as qualification gate (≥ 30%) and within-qualified sort key
 
 **Examples:**
 

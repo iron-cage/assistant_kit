@@ -155,7 +155,7 @@ clp .usage sort::drain desc::1
 - `sort::endurance`: qualification threshold `weekly(prefer) ≥ 30%`
 - `sort::drain`: primary sort key — lowest `weekly(prefer)` ascending (lowest 7d quota first)
 - `sort::reset`: tiebreak — lowest `weekly(prefer)` ascending
-- `→ Next` recommendation tiebreaker level 3 (TSK-176): weekly(prefer) breaks ties
+- `→ Next` recommendation: both strategies inherit `prefer_weekly` from the underlying sort algorithm (drain: primary sort key + exclusion threshold `> 0`; endurance: qualification gate + within-qualified sort key)
 
 **Rationale:** Users who know they intend to run Opus or Sonnet can tell the heuristics which quota matters. `prefer::any` is the safe conservative default.
 

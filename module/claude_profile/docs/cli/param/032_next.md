@@ -14,14 +14,14 @@ Controls which recommendation strategy places the `→` marker on the recommende
 | Value | Behavior |
 |-------|----------|
 | `endurance` | Top of endurance sort; `→` marks winner in table |
-| `drain` (default) | Top of drain sort; `→` marks winner in table |
+| `drain` (default) | Lowest non-zero `prefer_weekly` account (skips `prefer_weekly == 0`); `→` marks winner in table |
 
 The footer always shows one recommendation line per strategy (endurance, drain) regardless of which `next::` value is active.
 
 **Examples:**
 
 ```text
-next::drain      -> arrow on lowest-quota account to drain (default)
+next::drain      -> arrow on lowest non-zero weekly quota account (default)
 next::endurance  -> arrow on best for long agent run
 ```
 

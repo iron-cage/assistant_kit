@@ -19,6 +19,7 @@
 //! | `art_some_paths_dot_claude_absent_trace_does_not_panic` | `Some(paths)` | `trace=true`; cred in store; `.claude/` absent    | no panic, `None`   |
 //! | `art_none_paths_no_store_cred_trace_does_not_panic`     | `None`        | `trace=true`; cred absent in store                | no panic, `None`   |
 //! | `art_some_paths_run_isolated_invoked_trace_no_panic`    | `Some(paths)` | `trace=true`; cred in store; `.claude/` exists    | no panic, `None`   |
+//! | `bug_mre_bug205_refresh_token_read_write_ok_trace_structural` | structural | grep account.rs for `"read credentials: OK"` and `"write credentials: OK"` | ≥2 each |
 //!
 //! ## Pitfall: Consumer Feature Activation
 //!
@@ -146,6 +147,34 @@ fn art_some_paths_run_isolated_invoked_trace_no_panic()
   // BUG-169: args corrected to `["--print", "."]` — vec\![] regression fixed.
   // This test validates "does not panic", not the return value.
   let _ = account::refresh_account_token( "ghost@example.com", store.path(), Some( &paths ), true, "test", claude_runner_core::IsolatedModel::Default, &[] );
+}
+
+// ── structural (BUG-205) ──────────────────────────────────────────────────────
+
+#[ test ]
+// Root Cause: Ok(s) => s bare arms in refresh_account_token() emitted no trace on
+//   success — only Err arms had instrumentation, creating a silent gap in trace::1 output.
+// Why Not Caught: AC-26 implemented incrementally; Ok arms left uninstrumented;
+//   no assertion checked both arms per step.
+// Fix Applied: if trace { eprintln!(...) } after Ok(s) arms and after fs::write success
+//   blocks in both Some(paths) and else branches (4 insertions total).
+// Prevention: Lifecycle trace functions must instrument both Ok and Err for every step.
+// Pitfall: Multi-branch functions duplicate lifecycle steps — both branches must be updated.
+fn bug_mre_bug205_refresh_token_read_write_ok_trace_structural()
+{
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let content    = std::fs::read_to_string( &account_rs )
+    .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
+  let read_ok_count  = content.matches( "read credentials: OK" ).count();
+  let write_ok_count = content.matches( "write credentials: OK" ).count();
+  assert!(
+    read_ok_count >= 2,
+    "BUG-205: expected ≥2 occurrences of 'read credentials: OK' in account.rs, found {read_ok_count}"
+  );
+  assert!(
+    write_ok_count >= 2,
+    "BUG-205: expected ≥2 occurrences of 'write credentials: OK' in account.rs, found {write_ok_count}"
+  );
 }
 
 

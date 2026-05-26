@@ -474,6 +474,9 @@ pub fn refresh_account_token(
   extra_pre_args   : &[ String ],
 ) -> Option< String >
 {
+  // Fix(BUG-205): read credentials: OK and write credentials: OK trace lines were missing
+  // Root cause: Ok(s) => s bare arms had no instrumentation; only Err arms emitted trace
+  // Pitfall: multi-step lifecycle functions must instrument BOTH Ok and Err arms per AC-26
   // Fix(issue-166): added `trace: bool` param; all `?` operators replaced with explicit `match` + `eprintln!` blocks.
 
   // Fix(issue-169): corrected issue-168 regression — empty args (vec\![]) broken; correct args are `--print .`.
@@ -513,7 +516,7 @@ pub fn refresh_account_token(
     }
     let creds_json = match std::fs::read_to_string( p.credentials_file() )
     {
-      Ok( s )  => s,
+      Ok( s )  => { if trace { eprintln!( "[trace] {label}  {name}  read credentials: OK" ); } s }
       Err( e ) =>
       {
         if trace { eprintln!( "[trace] {label}  {name}  read credentials: Err({e})" ); }
@@ -542,6 +545,7 @@ pub fn refresh_account_token(
       if trace { eprintln!( "[trace] {label}  {name}  write credentials: Err({e})" ); }
       return None;
     }
+    if trace { eprintln!( "[trace] {label}  {name}  write credentials: OK" ); }
     match save( name, credential_store, p )
     {
       Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}  save: OK" ); } }
@@ -558,7 +562,7 @@ pub fn refresh_account_token(
     let path = credential_store.join( format!( "{name}.credentials.json" ) );
     let creds_json = match std::fs::read_to_string( &path )
     {
-      Ok( s )  => s,
+      Ok( s )  => { if trace { eprintln!( "[trace] {label}  {name}  read credentials: OK" ); } s }
       Err( e ) =>
       {
         if trace { eprintln!( "[trace] {label}  {name}  read credentials: Err({e})" ); }
@@ -587,6 +591,7 @@ pub fn refresh_account_token(
       if trace { eprintln!( "[trace] {label}  {name}  write credentials: Err({e})" ); }
       return None;
     }
+    if trace { eprintln!( "[trace] {label}  {name}  write credentials: OK" ); }
     Some( new_creds )
   }
 }

@@ -23,6 +23,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 024_session_touch.md | FT cases for Feature 024 — Session Touch via Isolated Subprocess |
 | 025_per_machine_active_marker.md | FT cases for Feature 025 — Per-Machine Active Marker |
 | 026_subprocess_model_effort.md | FT cases for Feature 026 — Subprocess Model and Effort Control |
+| 027_account_use_post_switch_touch.md | FT cases for Feature 027 — `.account.use` Post-Switch Touch |
 
 ### Coverage Summary
 
@@ -38,5 +39,6 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 024_session_touch | [024_session_touch.md](024_session_touch.md) | FT-01 … FT-14 | ✅ (FT-13 ⏳) |
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | FT-01 … FT-08 | ✅ (FT-08 ⏳) |
 | 026_subprocess_model_effort | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | FT-01 … FT-17 | ✅ |
+| 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | FT-01 … FT-10 | ✅ |
 
-**Total:** 10 feature specs; 16 of 26 feature instances not yet covered by dedicated FT specs.
+**Total:** 11 feature specs; 16 of 27 feature instances not yet covered by dedicated FT specs.

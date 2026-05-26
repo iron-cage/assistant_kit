@@ -47,7 +47,7 @@ The account selected by the active `next::` strategy receives the `→` flag in 
 | Secondary sort | within qualified: `5h_reset` asc; within unqualified: `weekly` desc | `5h_left` asc |
 | Qualification gate | `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` | none |
 | Uses weekly quota | yes (gate + rank) | yes (primary sort key) |
-| Picks account with… | freshest 5h reset + weekly runway | least weekly quota remaining (not h-exhausted) |
+| Picks account with… | freshest 5h reset + weekly runway | least weekly quota remaining (not h-exhausted; skips `prefer_weekly == 0`) |
 | Best for | starting a long 5h+ agent run | active workstation rotation |
 
 ### Worked Example
