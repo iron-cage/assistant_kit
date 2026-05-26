@@ -847,10 +847,6 @@ fn strategy_metric(
   let expires_str     = format_duration_secs( expires_in_secs );
   let Ok( data ) = &aq.result else { return String::new(); };
   let session_pct = data.five_hour.as_ref().map_or( 0.0, |p| 100.0 - p.utilization );
-  let reset_str   = data.five_hour.as_ref()
-    .and_then( |p| p.resets_at.as_deref() )
-    .and_then( claude_quota::iso_to_unix_secs )
-    .map_or_else( || "\u{2014}".to_string(), |t| format_duration_secs( t.saturating_sub( now_secs ) ) );
   match strategy
   {
     NextStrategy::Endurance =>
@@ -859,7 +855,18 @@ fn strategy_metric(
       format!( "{session_pct:.0}% session, {weekly_pct:.0}% 7d left, expires in {expires_str}" )
     }
     NextStrategy::Drain =>
-      format!( "{session_pct:.0}% session, resets in {reset_str}" ),
+    {
+      let weekly_pct = prefer_weekly( aq, prefer );
+      let weekly_reset_str = match prefer
+      {
+        PreferStrategy::Sonnet => data.seven_day_sonnet.as_ref(),
+        _                      => data.seven_day.as_ref(),
+      }
+        .and_then( |p| p.resets_at.as_deref() )
+        .and_then( claude_quota::iso_to_unix_secs )
+        .map_or_else( || "\u{2014}".to_string(), |t| format_duration_secs( t.saturating_sub( now_secs ) ) );
+      format!( "{weekly_pct:.0}% 7d left, 7d resets in {weekly_reset_str}" )
+    }
   }
 }
 
@@ -4780,5 +4787,142 @@ mod tests
       !fake_home.join( ".claude" ).join( ".credentials.json" ).exists(),
       "apply_touch must skip switch_account when resets_at is Some (already active)"
     );
+  }
+
+  // ── BUG-182 ─────────────────────────────────────────────────────────────────
+
+  /// BUG-182 MRE: drain footer must show weekly metric (matching drain's prefer_weekly sort key),
+  /// not the stale session metric left over from the pre-TSK-194 five_hour_left sort key.
+  ///
+  /// # Root Cause
+  ///
+  /// `strategy_metric` drain arm formatted `session_pct` (from `five_hour.utilization`)
+  /// and `reset_str` (from `five_hour.resets_at`) after TSK-194 changed drain's primary
+  /// sort key to `prefer_weekly` ascending.
+  ///
+  /// # Why Not Caught
+  ///
+  /// TSK-194 only tested sort ORDER; no test existed for the footer metric string.
+  ///
+  /// # Fix Applied
+  ///
+  /// Drain arm now computes `prefer_weekly(aq, prefer)` and `seven_day.resets_at` —
+  /// the same data sources drain uses for sorting.
+  ///
+  /// # Prevention
+  ///
+  /// Footer metric tests now assert content substring matching the sort criterion.
+  ///
+  /// # Pitfall
+  ///
+  /// When changing a sort key, audit ALL downstream consumers — not just the
+  /// comparator. Footer/display code silently becomes stale.
+  #[test]
+  #[doc = "bug_reproducer(BUG-182)"]
+  fn test_bug182_mre_drain_footer_shows_weekly_metric()
+  {
+    let now = 1_700_000_000_u64;
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 40.0, resets_at : None } ),
+      seven_day        : Some( claude_quota::PeriodUsage
+      {
+        utilization : 60.0,
+        resets_at   : Some( reset_iso_at( now, 3600 ) ),
+      } ),
+      seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 80.0, resets_at : None } ),
+    };
+    let aq = AccountQuota
+    {
+      name : "test@example.com".to_string(), is_current : false, is_active : false,
+      expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
+    };
+
+    let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
+
+    // prefer::any → min(40%, 20%) = 20% 7d left
+    assert!( metric.contains( "7d left" ), "drain footer must show weekly metric: {metric}" );
+    assert!( metric.contains( "7d resets in" ), "drain footer must show weekly reset: {metric}" );
+    assert!( !metric.contains( "session" ), "drain footer must NOT show session metric: {metric}" );
+  }
+
+  #[test]
+  #[doc = "bug_reproducer(BUG-182)"]
+  fn test_bug182_drain_footer_prefer_sonnet()
+  {
+    let now = 1_700_000_000_u64;
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 40.0, resets_at : None } ),
+      seven_day        : Some( claude_quota::PeriodUsage { utilization : 60.0, resets_at : None } ),
+      seven_day_sonnet : Some( claude_quota::PeriodUsage
+      {
+        utilization : 80.0,
+        resets_at   : Some( reset_iso_at( now, 7200 ) ),
+      } ),
+    };
+    let aq = AccountQuota
+    {
+      name : "test@example.com".to_string(), is_current : false, is_active : false,
+      expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
+    };
+
+    let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Sonnet, now );
+
+    // prefer::sonnet → seven_day_sonnet.utilization=80 → 20% 7d left
+    assert!( metric.contains( "20% 7d left" ), "sonnet drain must show sonnet weekly: {metric}" );
+    assert!( metric.contains( "7d resets in" ), "sonnet drain must show weekly reset: {metric}" );
+  }
+
+  #[test]
+  #[doc = "bug_reproducer(BUG-182)"]
+  fn test_bug182_drain_footer_prefer_opus()
+  {
+    let now = 1_700_000_000_u64;
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 40.0, resets_at : None } ),
+      seven_day        : Some( claude_quota::PeriodUsage
+      {
+        utilization : 60.0,
+        resets_at   : Some( reset_iso_at( now, 3600 ) ),
+      } ),
+      seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization : 80.0, resets_at : None } ),
+    };
+    let aq = AccountQuota
+    {
+      name : "test@example.com".to_string(), is_current : false, is_active : false,
+      expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
+    };
+
+    let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Opus, now );
+
+    // prefer::opus → seven_day.utilization=60 → 40% 7d left
+    assert!( metric.contains( "40% 7d left" ), "opus drain must show opus weekly: {metric}" );
+    assert!( metric.contains( "7d resets in" ), "opus drain must show weekly reset: {metric}" );
+  }
+
+  #[test]
+  #[doc = "bug_reproducer(BUG-182)"]
+  fn test_bug182_drain_footer_no_weekly_data()
+  {
+    let now = 1_700_000_000_u64;
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 40.0, resets_at : None } ),
+      seven_day        : None,
+      seven_day_sonnet : None,
+    };
+    let aq = AccountQuota
+    {
+      name : "test@example.com".to_string(), is_current : false, is_active : false,
+      expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
+    };
+
+    let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
+
+    // No weekly data → 100% 7d left, reset = —
+    assert!( metric.contains( "100% 7d left" ), "no-data drain must show 100%%: {metric}" );
+    assert!( metric.contains( "\u{2014}" ), "no-data drain must show em-dash for reset: {metric}" );
   }
 }

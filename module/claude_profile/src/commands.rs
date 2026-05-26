@@ -1247,7 +1247,10 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   if !updated
   {
-    // claude exited without updating credentials — login abandoned or timed out.
+    // Fix(BUG-183): bare exit(3) produced no user-visible output.
+    // Root cause: all other paths return OutputData, but this branch bypassed the dispatcher.
+    // Pitfall: process::exit bypasses return-based output — always add eprintln before it.
+    eprintln!( "relogin abandoned \u{2014} credentials unchanged for '{name}'" );
     std::process::exit( 3 );
   }
 

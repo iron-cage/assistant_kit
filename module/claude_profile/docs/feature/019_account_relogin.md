@@ -28,7 +28,7 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 - 0: success — credentials refreshed and saved, original active restored.
 - 1: usage error — empty or invalid characters in `name::` value.
 - 2: runtime error — `name::` omitted and no active account; account not found; HOME unset; `claude` binary cannot be spawned; or `save()` fails after credential update.
-- 3 (via `process::exit`): login abandoned — `claude` exited without updating `~/.claude/.credentials.json`.
+- 3 (via `process::exit`): login abandoned — `claude` exited without updating `~/.claude/.credentials.json`. A diagnostic message must be printed to stderr before exiting.
 
 ### Acceptance Criteria
 
@@ -40,7 +40,7 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 - **AC-06**: Prefix form `clp .account.relogin car` resolves to the single matching account.
 - **AC-07**: After successful browser login, the named account's credential file in the store is updated (same as if `.account.save` had been run).
 - **AC-08**: After re-authentication, the original active account is restored — the user's session context is unchanged.
-- **AC-09**: If `claude` exits without updating `~/.claude/.credentials.json`, the process exits 3.
+- **AC-09**: If `claude` exits without updating `~/.claude/.credentials.json`, a diagnostic message is printed to stderr indicating credentials were unchanged, and the process exits 3.
 
 ### Cross-References
 

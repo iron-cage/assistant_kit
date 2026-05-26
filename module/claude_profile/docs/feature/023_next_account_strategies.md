@@ -27,10 +27,10 @@ The footer shows each strategy's recommendation on its own line with key qualify
 ```
 Valid: 7 / 8   ->  Next by strategy:
   endurance  bob@example.com     100% session, 76% 7d left, expires in 7h 56m
-  drain      carol@example.com   98% session, resets in 5m
+  drain      carol@example.com   2% 7d left, 7d resets in 1d 4h
 ```
 
-Each footer line shows: strategy name (left-aligned, 10 chars), account name (left-aligned), key metric string. When both strategies recommend the same account, both lines appear independently (the agreement is itself useful signal). Strategy lines for which no eligible account exists are omitted rather than showing an empty line.
+Each footer line shows: strategy name (left-aligned, 10 chars), account name (left-aligned), key metric string. The key metric reflects the strategy's selection criterion — endurance shows session + weekly + expires; drain shows weekly quota remaining + weekly reset countdown (matching drain's `prefer_weekly` ascending sort key). When both strategies recommend the same account, both lines appear independently (the agreement is itself useful signal). Strategy lines for which no eligible account exists are omitted rather than showing an empty line.
 
 **`→` table marker:**
 
@@ -56,14 +56,14 @@ Eight accounts, two ineligible (`✓` current, `*` active-but-not-current), six 
 
 **Eligible candidates:**
 
-| Account | 5h Left | Expires | 7d Left | 7d(Son) | weekly(any)¹ | 5h Reset |
-|---------|---------|---------|---------|---------|--------------|----------|
-| a@example.com | 32% | 5m | 60% | 34% | 34% | 33m |
-| b@example.com | 99% | 5m | 52% | 34% | 34% | 33m |
-| c@example.com | 100% | 5m | 19% | 3% | 3% | — |
-| d@example.com | 100% | 7h 27m | 2% | 4% | 2% | 4h 23m |
-| e@example.com | 100% | 7h 27m | 4% | 0% | 0% | 4h 23m |
-| f@example.com | 100% | 1h 49m | 2% | 0% | 0% | — |
+| Account | 5h Left | Expires | 7d Left | 7d(Son) | weekly(any)¹ | 5h Reset | 7d Reset |
+|---------|---------|---------|---------|---------|--------------|----------|----------|
+| a@example.com | 32% | 5m | 60% | 34% | 34% | 33m | 5d 12h |
+| b@example.com | 99% | 5m | 52% | 34% | 34% | 33m | 5d 12h |
+| c@example.com | 100% | 5m | 19% | 3% | 3% | — | 3d 2h |
+| d@example.com | 100% | 7h 27m | 2% | 4% | 2% | 4h 23m | 2d 8h |
+| e@example.com | 100% | 7h 27m | 4% | 0% | 0% | 4h 23m | 6d 1h |
+| f@example.com | 100% | 1h 49m | 2% | 0% | 0% | — | — |
 
 ¹ `weekly(any)` = `min(7d Left, 7d(Son))`
 
@@ -90,7 +90,7 @@ Strategies disagree in this dataset: endurance picks a@example.com (qualified, m
 
 Valid: 8 / 8   ->  Next by strategy:
   endurance  a@example.com   32% session, 34% 7d left, expires in 5m
-  drain      e@example.com   100% session, resets in 4h 23m
+  drain      e@example.com   0% 7d left, 7d resets in 6d 1h
 ```
 
 (`next::drain` default — `→` on e@example.com. Strategies disagree here: endurance recommends the qualified a@example.com while drain targets the lowest-weekly e@example.com.)

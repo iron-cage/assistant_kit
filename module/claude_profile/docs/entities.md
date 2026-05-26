@@ -12,6 +12,7 @@
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 4 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](cli/format/readme.md) | 3 |
 | `cli/workflow_scenario/` | End-to-end CLI workflow examples | [cli/workflow_scenario/readme.md](cli/workflow_scenario/readme.md) | 10 |
+| `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](invariant/readme.md) | 6 |
 
 ## Master Doc Instances Table
 
@@ -111,3 +112,9 @@
 | workflow_scenario | 008 | Live Quota Dashboard | [cli/workflow_scenario/008_live_quota_dashboard.md](cli/workflow_scenario/008_live_quota_dashboard.md) |
 | workflow_scenario | 009 | Quota Auto-Refresh | [cli/workflow_scenario/009_quota_auto_refresh.md](cli/workflow_scenario/009_quota_auto_refresh.md) |
 | workflow_scenario | 010 | Account Relogin Recovery | [cli/workflow_scenario/010_account_relogin_recovery.md](cli/workflow_scenario/010_account_relogin_recovery.md) |
+| invariant | 001 | Zero Third-Party Dependencies | [invariant/001_zero_third_party_deps.md](invariant/001_zero_third_party_deps.md) |
+| invariant | 002 | Cross-Platform Compatibility | [invariant/002_cross_platform.md](invariant/002_cross_platform.md) |
+| invariant | 003 | Clear Error Messages | [invariant/003_clear_errors.md](invariant/003_clear_errors.md) |
+| invariant | 004 | No Process Execution | [invariant/004_no_process_execution.md](invariant/004_no_process_execution.md) |
+| invariant | 005 | Atomic Account Switching | [invariant/005_atomic_switching.md](invariant/005_atomic_switching.md) |
+| invariant | 006 | Parameters Default to Active Context | [invariant/006_param_defaults.md](invariant/006_param_defaults.md) |

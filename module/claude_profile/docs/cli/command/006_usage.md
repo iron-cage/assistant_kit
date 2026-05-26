@@ -60,15 +60,15 @@ clp .usage imodel::keep effort::high
 clp .usage
 # Quota
 #
-#   ●  Account          5h Left  5h Reset    7d Left  7d(Son)  7d Reset  Expires     Sub  ~Renews
-# ✓ 🟢 alice@example.com    86%      in 3h 19m  65%      35%      in 4d 23h  in 7h 24m  max  Jun  5
-#   🟢 bob@example.com      100%     in 4h 58m  88%      28%      in 6d 14h  in 5h 02m  max  Jun  6
-# → 🟡 frank@example.com    3%       in 0h 23m  52%      18%      in 2d 11h  in 1h 12m  max  Jun  8
-#   🔴 dave@example.com     —        —           —        —        —          EXPIRED    ?    (missing accessToken)
+#   ●  Account              5h Left  5h Reset    7d Left  7d(Son)  7d Reset   Expires     Sub  ~Renews
+# → 🟢 bob@example.com      100%     in 4h 58m   88%      28%      in 6d 14h  in 5h 02m  max  Jun  6
+# ✓ 🟢 alice@example.com    86%      in 3h 19m   65%      35%      in 4d 23h  in 7h 24m  max  Jun  5
+#   🟡 frank@example.com    3%       in 0h 23m   52%      18%      in 2d 11h  in 1h 12m  max  Jun  8
+#   🔴 dave@example.com     —        —            —        —        —          EXPIRED    ?    (missing accessToken)
 #
 # Valid: 3 / 4   ->  Next by strategy:
-#   endurance  bob@example.com     100% session, 88% 7d left, expires in 5h 02m
-#   drain      frank@example.com   3% session, resets in 23m
+#   endurance  bob@example.com     100% session, 28% 7d left, expires in 5h 02m
+#   drain      bob@example.com     28% 7d left, 7d resets in 6d 14h
 
 clp .usage live::1 interval::60 jitter::10
 # Quota
