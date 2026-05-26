@@ -4,7 +4,7 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|-----------|
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 26 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 27 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 6 |
 | `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 36 |
@@ -44,6 +44,7 @@
 | feature | 024 | Session Touch via Isolated Subprocess | [feature/024_session_touch.md](feature/024_session_touch.md) |
 | feature | 025 | Per-Machine Active Marker | [feature/025_per_machine_active_marker.md](feature/025_per_machine_active_marker.md) |
 | feature | 026 | Subprocess Model and Effort Control | [feature/026_subprocess_model_effort.md](feature/026_subprocess_model_effort.md) |
+| feature | 027 | `.account.use` Post-Switch Touch | [feature/027_account_use_post_switch_touch.md](feature/027_account_use_post_switch_touch.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](cli/003_env_param.md) |

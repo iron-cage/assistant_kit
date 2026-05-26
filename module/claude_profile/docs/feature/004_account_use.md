@@ -5,7 +5,7 @@
 - **Purpose**: Atomically rotate the active credential set to a named account without credential corruption risk.
 - **Responsibility**: Documents the `account::switch_account()` API and `.account.use` CLI command (FR-9).
 - **In Scope**: Atomic write-then-rename, active marker (`_active_{hostname}_{user}`) update, best-effort `oauthAccount` patch in `~/.claude.json`, not-found guard, dry-run.
-- **Out of Scope**: Selecting which account to switch to (→ 008_auto_rotate.md), process termination (caller responsibility).
+- **Out of Scope**: Selecting which account to switch to (→ 008_auto_rotate.md), process termination (caller responsibility), post-switch subprocess activation (→ 027_account_use_post_switch_touch.md).
 
 ### Design
 
@@ -45,3 +45,4 @@
 | test | `tests/cli/account_mutations_test.rs::switch_restores_claude_json` | Verifies `~/.claude.json` restored after switch (issue-122) |
 | doc | [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | Atomicity invariant for this feature |
 | doc | [command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | CLI command specification |
+| doc | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch subprocess activation of idle 5h session window |

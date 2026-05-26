@@ -5,7 +5,7 @@ Controls the effort level (`--effort` flag) injected into isolated subprocesses 
 - **Type:** `enum`
 - **Default:** `auto`
 - **Constraints:** `auto`, `high`, `max`
-- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage)
+- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage), [`.account.use`](../command/001_account.md#command--5-accountuse)
 - **Purpose:** Set subprocess effort level; `auto` uses the maximum supported by the resolved model (Sonnet max = `high`, Opus max = `max`).
 - **Group:** [Fetch Behavior](../param_group/003_fetch_behavior.md)
 
@@ -27,8 +27,9 @@ effort::max      → always --effort max
 
 **Notes:**
 - `auto` derives from the `imodel::` resolution: Sonnet → `high`; Opus → `max`; `imodel::keep` → no effort flag (model unknown at dispatch time).
-- Applies to both `touch::` and `refresh::` subprocess calls within the same `.usage` invocation.
-- Has no effect when neither `touch::1` nor `refresh::1` is active (no subprocesses are spawned).
+- On `.usage`: applies to both `touch::` and `refresh::` subprocess calls within the same invocation.
+- On `.account.use`: applies to the single post-switch subprocess spawned when `touch::1` and the target account is idle.
+- Has no effect when no subprocess is spawned (`.usage` with neither `touch::1` nor `refresh::1` active; `.account.use` with `touch::0` or target already active).
 - Does not affect `format::json` output structure.
 
 **See Also:** [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md) for the full effort-resolution algorithm and AC criteria.

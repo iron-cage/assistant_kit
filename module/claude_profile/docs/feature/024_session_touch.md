@@ -88,3 +88,4 @@ render results as table
 | invariant | [invariant/004_no_process_execution.md](../invariant/004_no_process_execution.md) | `claude_profile` delegates all process execution to `claude_runner_core` |
 | param | [cli/param/034_touch.md](../cli/param/034_touch.md) | `touch::` parameter specification |
 | param | [cli/param/019_refresh.md](../cli/param/019_refresh.md) | `refresh::` — runs before touch when both active |
+| doc | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch touch on `.account.use` — extends the touch concept to account switching |

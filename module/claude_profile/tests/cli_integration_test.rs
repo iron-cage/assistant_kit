@@ -22,6 +22,7 @@
 //! | `account_limits_test` | .account.limits error paths | lim |
 //! | `account_rotate_test` | .account.rotate auto-rotation | ROT |
 //! | `dot_test` | `.` / `.help` help output | dot |
+//! | `param_help_test` | convenience closure param descriptions + optionality | phd, pho |
 //!
 //! ## Parallel Execution Note
 //!
@@ -70,3 +71,6 @@ mod account_rotate_test;
 
 #[ path = "cli/dot_test.rs" ]
 mod dot_test;
+
+#[ path = "cli/param_help_test.rs" ]
+mod param_help_test;

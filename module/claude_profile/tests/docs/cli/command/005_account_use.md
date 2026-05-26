@@ -22,13 +22,20 @@ Integration test planning for the `.account.use` command. See [command/namespace
 | IT-14 | Prefix `car` resolves to `carol@example.com` and switches account | Prefix Resolution |
 | IT-15 | Ambiguous prefix matches two accounts → exit 1 | Prefix Resolution / Error |
 | IT-16 | Exact local-part wins over longer ambiguous prefix | Prefix Resolution |
+| IT-17 | `touch::1` with idle account — subprocess spawned after switch | Touch Subprocess |
+| IT-18 | `touch::0` with idle account — pure rotation, no subprocess | Touch Subprocess |
+| IT-19 | `touch::1` with already-active account — no subprocess spawned | Touch Subprocess |
+| IT-20 | `touch::1` with fetch failure — switch completes, exits 0 | Touch Subprocess |
+| IT-21 | `imodel::bad` on `.account.use` exits 1 with valid values in stderr | Validation |
+| IT-22 | `effort::bad` on `.account.use` exits 1 with valid values in stderr | Validation |
+| IT-23 | `touch::`, `imodel::`, `effort::` appear in `.account.use --help` | Help Output |
 
 ### Test Coverage Summary
 
 - Basic Invocation: 1 test
 - Marker Update: 1 test
 - Error Handling: 1 test
-- Validation: 2 tests
+- Validation: 4 tests
 - Dry Run: 1 test
 - Data Integrity: 1 test
 - Isolation: 1 test
@@ -38,8 +45,10 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - Email Consistency: 1 test
 - Positional Syntax: 1 test
 - Prefix Resolution: 3 tests
+- Touch Subprocess: 4 tests
+- Help Output: 1 test
 
-**Total:** 16 integration tests
+**Total:** 23 integration tests
 
 ---
 
@@ -202,3 +211,82 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - **Exit:** 0
 - **Source:** [015_name_shortcut_syntax.md AC-11](../../../../docs/feature/015_name_shortcut_syntax.md)
 - **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix`
+
+---
+
+### IT-17: `touch::1` with idle account — subprocess spawned
+
+- **Given:** One account `alice@home.com` saved with valid token and idle 5h window (`five_hour.resets_at` is absent). Per-machine active marker set to a different account.
+- **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
+- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; an isolated subprocess is dispatched to start a 5h session for the idle account.
+- **Exit:** 0
+- **Live:** yes (requires valid token with idle 5h window to observe subprocess dispatch)
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-01](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source fn:** `aw27_lim_it_touch_with_live_token`
+
+---
+
+### IT-18: `touch::0` with idle account — pure rotation, no subprocess
+
+- **Given:** One account `alice@home.com` saved with valid token and idle 5h window (`five_hour.resets_at` is absent). Per-machine active marker set to a different account.
+- **When:** `clp .account.use name::alice@home.com touch::0`
+- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; no subprocess spawned.
+- **Exit:** 0
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-02](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source fn:** `aw22_touch_disabled_switch_succeeds`
+
+---
+
+### IT-19: `touch::1` with already-active account — no subprocess spawned
+
+- **Given:** Account `alice@home.com` saved with valid token and active 5h window (`five_hour.resets_at` is set). Per-machine active marker set to a different account.
+- **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
+- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; no subprocess spawned (account already has active 5h session).
+- **Exit:** 0
+- **Live:** yes (requires valid token with active `five_hour.resets_at`)
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-03](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source fn:** `aw27_lim_it_touch_with_live_token`
+
+---
+
+### IT-20: `touch::1` with fetch failure — switch completes, exits 0
+
+- **Given:** Account `alice@home.com` saved with an invalid/expired `accessToken` (quota fetch will fail with auth error). Per-machine active marker set to a different account.
+- **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
+- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; touch skipped silently due to fetch failure. No error message surfaces.
+- **Exit:** 0
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-04](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source fn:** `aw23_touch_skipped_no_access_token`
+
+---
+
+### IT-21: `imodel::bad` exits 1 with valid values in stderr
+
+- **Given:** Any account store state (empty is fine).
+- **When:** `clp .account.use name::alice@home.com imodel::bad`
+- **Then:** Exits 1; stderr contains all four valid values: `auto`, `sonnet`, `opus`, `keep`.
+- **Exit:** 1
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-07](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source fn:** `aw24_imodel_bad_value_exits_1`
+
+---
+
+### IT-22: `effort::bad` exits 1 with valid values in stderr
+
+- **Given:** Any account store state (empty is fine).
+- **When:** `clp .account.use name::alice@home.com effort::bad`
+- **Then:** Exits 1; stderr contains all three valid values: `auto`, `high`, `max`.
+- **Exit:** 1
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-07](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source fn:** `aw25_effort_bad_value_exits_1`
+
+---
+
+### IT-23: `touch::`, `imodel::`, `effort::` appear in `.account.use --help`
+
+- **Given:** Any state.
+- **When:** `clp .account.use --help` (or `.account.use help::1`)
+- **Then:** Exits 0; help output contains `touch::` with default `1`, `imodel::` with default `auto`, and `effort::` with default `auto`.
+- **Exit:** 0
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-09](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source fn:** `aw26_help_shows_touch_imodel_effort`

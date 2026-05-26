@@ -1,6 +1,6 @@
 # Test: `touch::` Parameter
 
-Edge case coverage for the `touch::` parameter on `.usage`. See [param/034_touch.md](../../../../docs/cli/param/034_touch.md) for specification.
+Edge case coverage for the `touch::` parameter on `.usage`. For `.account.use` touch behavior, see [command/005_account_use.md](../command/005_account_use.md) (IT-17 through IT-20). See [param/034_touch.md](../../../../docs/cli/param/034_touch.md) for specification.
 
 ### Test Case Index
 

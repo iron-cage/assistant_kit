@@ -1,6 +1,6 @@
 # Test: `effort::` Parameter
 
-Edge case coverage for the `effort::` parameter on `.usage`. See [param/036_effort.md](../../../../docs/cli/param/036_effort.md) for specification.
+Edge case coverage for the `effort::` parameter on `.usage`. For `.account.use` `effort::` validation, see [command/005_account_use.md](../command/005_account_use.md) (IT-22). See [param/036_effort.md](../../../../docs/cli/param/036_effort.md) for specification.
 
 ### Test Case Index
 

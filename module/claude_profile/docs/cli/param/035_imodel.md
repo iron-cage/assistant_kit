@@ -5,7 +5,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 - **Type:** `enum`
 - **Default:** `auto`
 - **Constraints:** `auto`, `sonnet`, `opus`, `keep`
-- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage)
+- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage), [`.account.use`](../command/001_account.md#command--5-accountuse)
 - **Purpose:** Preserve Sonnet quota automatically (via `auto`) or override subprocess model selection explicitly.
 - **Group:** [Fetch Behavior](../param_group/003_fetch_behavior.md)
 
@@ -30,8 +30,9 @@ imodel::keep     → no --model flag injected
 **Notes:**
 - `auto` reads `7d(Son)` from the already-fetched quota data — no extra API call is made.
 - Fallback when `7d(Son)` is unavailable (e.g., `refresh::` accounts with failed quota fetch): `claude-opus-4-6`. Auth-error accounts have authentication failures, not quota exhaustion; Opus is the appropriate conservative choice.
-- Applies to both `touch::` and `refresh::` subprocess calls within the same `.usage` invocation.
-- Has no effect when neither `touch::1` nor `refresh::1` is active (no subprocesses are spawned).
+- On `.usage`: applies to both `touch::` and `refresh::` subprocess calls within the same invocation.
+- On `.account.use`: applies to the single post-switch subprocess spawned when `touch::1` and the target account is idle.
+- Has no effect when no subprocess is spawned (`.usage` with neither `touch::1` nor `refresh::1` active; `.account.use` with `touch::0` or target already active).
 - Does not affect `format::json` output structure.
 
 **See Also:** [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md) for the full model-selection algorithm and AC criteria.

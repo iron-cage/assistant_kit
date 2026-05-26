@@ -1,6 +1,6 @@
 # Test: `imodel::` Parameter
 
-Edge case coverage for the `imodel::` parameter on `.usage`. See [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md) for specification.
+Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` `imodel::` validation, see [command/005_account_use.md](../command/005_account_use.md) (IT-21). See [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md) for specification.
 
 ### Test Case Index
 

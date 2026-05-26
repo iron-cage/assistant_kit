@@ -6,7 +6,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 
 - **Purpose**: Document integration and edge case test plans for all clp commands and parameters.
 - **Responsibility**: Index of per-command, per-parameter, and per-group test case planning files.
-- **In Scope**: All 12 clp commands plus binary meta-flags (`--version`/`-V`), all 17 parameters, and all 2 parameter groups.
+- **In Scope**: All 13 clp commands plus binary meta-flags (`--version`/`-V`), all 35 parameters, and all 5 parameter groups.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 ### Responsibility Table
@@ -21,9 +21,9 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
-| Commands + meta-flags | 12 | >=8 IT each |
-| Parameters | 17 | >=6 EC each |
-| Parameter groups | 2 | >=4 IT each |
+| Commands + meta-flags | 14 | >=8 IT each |
+| Parameters | 35 | >=6 EC each |
+| Parameter groups | 5 | >=4 IT each |
 
 ### Navigation
 
@@ -41,6 +41,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`.credentials.status`](command/010_credentials_status.md)
 - [`.account.limits`](command/011_account_limits.md)
 - [`.account.relogin`](command/012_account_relogin.md)
+- [`.account.rotate`](command/013_account_rotate.md)
 
 **Parameters:**
 - [`name::`](param/001_name.md)
@@ -60,7 +61,28 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`role::`](param/016_role.md)
 - [`billing::`](param/017_billing.md)
 - [`model::`](param/018_model.md)
+- [`refresh::`](param/019_refresh.md)
+- [`live::`](param/020_live.md)
+- [`interval::`](param/021_interval.md)
+- [`jitter::`](param/022_jitter.md)
+- [`trace::`](param/023_trace.md)
+- [`field::`](param/024_field.md)
+- [`sort::`](param/025_sort.md)
+- [`desc::`](param/026_desc.md)
+- [`prefer::`](param/027_prefer.md)
+- [`uuid::`](param/028_uuid.md)
+- [`capabilities::`](param/029_capabilities.md)
+- [`org_uuid::`](param/030_org_uuid.md)
+- [`org_name::`](param/031_org_name.md)
+- [`next::`](param/032_next.md)
+- [`cols::`](param/033_cols.md)
+- [`touch::`](param/034_touch.md)
+- [`imodel::`](param/035_imodel.md)
+- [`effort::`](param/036_effort.md)
 
 **Parameter Groups:**
 - [Output Control](param_group/001_output_control.md)
 - [Field Presence](param_group/002_field_presence.md)
+- [Fetch Behavior](param_group/003_fetch_behavior.md)
+- [Sort Control](param_group/004_sort_control.md)
+- [Display Control](param_group/005_display_control.md)

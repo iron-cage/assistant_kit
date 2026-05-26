@@ -873,12 +873,35 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
 #[ inline ]
 pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  // Fix(issue-switch-dry-validation):
-  // Root cause: is_dry() was checked before existence validation, so dry-run silently
-  //   succeeded for non-existent accounts instead of reporting NotFound (exit 2).
-  // Pitfall: Always run input validation + precondition checks before the dry-run guard;
-  //   only the mutating operation (file copy + marker write) is skipped in dry-run.
-  let raw_name         = require_nonempty_string_arg( &cmd, "name" )?;
+  // Validate all CLI arguments before any I/O (fast-fail on bad values before filesystem access).
+  // Fix(issue-switch-dry-validation): is_dry() check comes after existence validation so
+  //   dry-run on nonexistent accounts correctly exits 2 (not silently succeeds).
+  // Pitfall: Only the mutating step (file copy + marker write) is skipped in dry-run;
+  //   all validation and precondition checks must run unconditionally.
+  let raw_name   = require_nonempty_string_arg( &cmd, "name" )?;
+  let touch      = crate::usage::parse_int_flag( &cmd, "touch", 1 )?;
+  let imodel_str = match cmd.arguments.get( "imodel" )
+  {
+    None                       => "auto".to_string(),
+    Some( Value::String( s ) ) =>
+    {
+      crate::usage::validate_imodel_str( s )
+        .map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?;
+      s.clone()
+    }
+    _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "imodel:: must be a string".to_string() ) ),
+  };
+  let effort_str = match cmd.arguments.get( "effort" )
+  {
+    None                       => "auto".to_string(),
+    Some( Value::String( s ) ) =>
+    {
+      crate::usage::validate_effort_str( s )
+        .map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?;
+      s.clone()
+    }
+    _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "effort:: must be a string".to_string() ) ),
+  };
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
   let name             = resolve_account_name( &raw_name, &credential_store )?;
@@ -890,8 +913,25 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     return Ok( OutputData::new( format!( "[dry-run] would switch to '{name}'\n" ), "text" ) );
   }
 
+  // Pre-fetch quota before the switch while the target credential file is still readable.
+  let touch_ctx = if touch != 0
+  {
+    crate::usage::pre_switch_touch_ctx( &name, &credential_store )
+  }
+  else
+  {
+    None
+  };
+
   crate::account::switch_account( &name, &credential_store, &paths )
     .map_err( |e| io_err_to_error_data( &e, "account use" ) )?;
+
+  // Post-switch: activate idle session if quota indicated it was idle before switch.
+  if let Some( ctx ) = touch_ctx
+  {
+    crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str );
+  }
+
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )
 }
 /// `.account.rotate` — auto-rotate to the highest-expiry inactive account.

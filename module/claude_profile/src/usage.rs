@@ -1618,7 +1618,7 @@ struct UsageParams
 ///
 /// Pitfall: params registered as `Kind::String` (e.g. `touch::`) deliver all values
 /// including `"0"` and `"1"` as `Value::String` — the integer arms handle `Kind::Integer` params.
-fn parse_int_flag( cmd : &VerifiedCommand, name : &str, default : i64 ) -> Result< i64, ErrorData >
+pub(crate) fn parse_int_flag( cmd : &VerifiedCommand, name : &str, default : i64 ) -> Result< i64, ErrorData >
 {
   match cmd.arguments.get( name )
   {
@@ -1744,6 +1744,96 @@ fn effort_pre_args( model : &claude_runner_core::IsolatedModel, effort : Subproc
     Some( e ) => vec![ "--effort".to_string(), e.to_string() ],
     None      => vec![],
   }
+}
+
+// ── Post-switch touch API (called from commands.rs) ────────────────────────────
+
+/// Opaque context holding pre-fetched data for the post-switch idle touch.
+///
+/// Created by [`pre_switch_touch_ctx`] before the account switch; consumed by
+/// [`apply_post_switch_touch`] after. `commands.rs` treats this as a black box.
+pub(crate) struct TouchCtx
+{
+  /// Raw credentials JSON read from the account credential file before the switch.
+  credentials_json : String,
+  /// Pre-fetched quota data used to resolve the subprocess model.
+  quota            : OauthUsageData,
+}
+
+/// Validate an `imodel::` string value.
+///
+/// Returns `Err(message)` if unrecognised. Called by `account_use_routine` during
+/// argument parsing, before any switch occurs.
+pub(crate) fn validate_imodel_str( s : &str ) -> Result< (), String >
+{
+  SubprocessModel::parse( s ).map( |_| () )
+}
+
+/// Validate an `effort::` string value.
+///
+/// Returns `Err(message)` if unrecognised. Called by `account_use_routine` during
+/// argument parsing, before any switch occurs.
+pub(crate) fn validate_effort_str( s : &str ) -> Result< (), String >
+{
+  SubprocessEffort::parse( s ).map( |_| () )
+}
+
+/// Pre-fetch quota for `name` and return a [`TouchCtx`] when the account is idle.
+///
+/// Returns `None` when any of the following hold:
+/// - credentials file missing or lacks `accessToken`
+/// - quota API fetch fails
+/// - account already has an active 5h reset countdown (`five_hour.resets_at.is_some()`)
+///
+/// Called BEFORE the switch so the target account's credential file still holds the
+/// pre-switch token. The returned `TouchCtx` is passed through the switch and consumed
+/// by [`apply_post_switch_touch`] after `switch_account()` returns.
+pub(crate) fn pre_switch_touch_ctx(
+  name       : &str,
+  store_path : &std::path::Path,
+) -> Option< TouchCtx >
+{
+  let path             = store_path.join( format!( "{name}.credentials.json" ) );
+  let credentials_json = std::fs::read_to_string( &path ).ok()?;
+  let token            = crate::account::parse_string_field( &credentials_json, "accessToken" )?;
+  let quota            = claude_quota::fetch_oauth_usage( &token ).ok()?;
+  let is_idle = quota.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_none();
+  if !is_idle { return None; }
+  Some( TouchCtx { credentials_json, quota } )
+}
+
+/// Spawn an isolated subprocess to activate the idle 5h session window for `name`.
+///
+/// Called AFTER `switch_account()` succeeds. Uses quota data fetched before the switch
+/// (held in `ctx`) for model resolution. The subprocess is fire-and-forget; any
+/// failure is silently ignored — the switch has already succeeded.
+///
+/// `imodel_str` and `effort_str` must have been pre-validated by [`validate_imodel_str`]
+/// / [`validate_effort_str`]; the `parse()` calls below are infallible on validated input.
+pub(crate) fn apply_post_switch_touch(
+  name       : &str,
+  ctx        : TouchCtx,
+  imodel_str : &str,
+  effort_str : &str,
+)
+{
+  let imodel = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
+  let effort = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
+  // Build a minimal AccountQuota to reuse the existing resolve_model() path.
+  let aq = AccountQuota
+  {
+    name          : name.to_string(),
+    is_current    : false,
+    is_active     : false,
+    expires_at_ms : 0,
+    result        : Ok( ctx.quota ),
+    account       : None,
+  };
+  let model    = resolve_model( &aq, imodel );
+  let mut args = effort_pre_args( &model, effort );
+  args.push( "--print".to_string() );
+  args.push( ".".to_string() );
+  let _ = claude_runner_core::run_isolated( &ctx.credentials_json, args, 120, model );
 }
 
 fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorData >
@@ -4798,8 +4888,8 @@ mod tests
 
   // ── BUG-182 ─────────────────────────────────────────────────────────────────
 
-  /// BUG-182 MRE: drain footer must show weekly metric (matching drain's prefer_weekly sort key),
-  /// not the stale session metric left over from the pre-TSK-194 five_hour_left sort key.
+  /// BUG-182 MRE: drain footer must show weekly metric (matching drain's `prefer_weekly` sort key),
+  /// not the stale session metric left over from the pre-TSK-194 `five_hour_left` sort key.
   ///
   /// # Root Cause
   ///

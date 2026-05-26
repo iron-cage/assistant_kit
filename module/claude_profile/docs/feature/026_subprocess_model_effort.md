@@ -2,14 +2,14 @@
 
 ### Scope
 
-- **Purpose**: Allow `.usage` to configure which Claude model and effort level are used by isolated subprocesses spawned during `touch::` and `refresh::` operations, with a per-account automatic selection mode based on remaining weekly Sonnet quota.
+- **Purpose**: Allow `.usage` and `.account.use` to configure which Claude model and effort level are used by isolated subprocesses spawned during `touch::` and `refresh::` operations, with a per-account automatic selection mode based on remaining weekly Sonnet quota.
 - **Responsibility**: Documents the `imodel::` and `effort::` parameters, the `auto` model-selection algorithm (30% `7d(Son)` threshold), the effort resolution rule (model-dependent maximum), and the interaction with `IsolatedModel` in `claude_runner_core`.
-- **In Scope**: `imodel::` parameter with 4 values (`auto`, `sonnet`, `opus`, `keep`); `effort::` parameter with 3 values (`auto`, `high`, `max`); `auto` model-selection logic reading per-account `7d(Son)` from already-fetched quota data; `auto` effort resolution (`high` for sonnet, `max` for opus); fallback rules when `7d(Son)` is unavailable; application to both `touch::` and `refresh::` subprocess calls; no effect on `format::json` output.
+- **In Scope**: `imodel::` parameter with 4 values (`auto`, `sonnet`, `opus`, `keep`); `effort::` parameter with 3 values (`auto`, `high`, `max`); `auto` model-selection logic reading per-account `7d(Son)` from already-fetched quota data; `auto` effort resolution (`high` for sonnet, `max` for opus); fallback rules when `7d(Son)` is unavailable; application to `touch::` and `refresh::` subprocess calls on `.usage`, and to the single post-switch subprocess on `.account.use`; no effect on `format::json` output.
 - **Out of Scope**: `run_isolated()` internals (-> `claude_runner_core/src/isolated.rs`); `IsolatedModel` type definition (-> `claude_runner_core`); subprocess timeout (-> 024_session_touch.md, 017_token_refresh.md); endurance qualification (-> 020_usage_sort_strategies.md).
 
 ### Design
 
-`.usage` accepts two new parameters, `imodel::` and `effort::`, that control the Claude binary invocation for all isolated subprocesses spawned during the current command run. These apply to both `touch::` subprocess calls (session activation) and `refresh::` subprocess calls (OAuth token refresh on auth error).
+`.usage` and `.account.use` accept `imodel::` and `effort::` parameters that control the Claude binary invocation for isolated subprocesses. On `.usage`, these apply to both `touch::` subprocess calls (session activation) and `refresh::` subprocess calls (OAuth token refresh on auth error). On `.account.use`, they apply to the single post-switch subprocess spawned when `touch::1` and the target account is idle.
 
 **`imodel::` — isolated subprocess model:**
 
@@ -83,9 +83,10 @@ if let Some(effort) = effort_opt {
 }
 ```
 
-**Applies to both subprocess types:**
-- `touch::` subprocesses — model and effort injected for each active-window extension call
-- `refresh::` subprocesses — model and effort injected for each auth-error retry call
+**Subprocess applicability:**
+- `.usage` `touch::` subprocesses — model and effort injected for each active-window extension call
+- `.usage` `refresh::` subprocesses — model and effort injected for each auth-error retry call
+- `.account.use` post-switch subprocess — model and effort injected for the single idle-account activation call
 
 **No effect on `format::json`:** `imodel::` and `effort::` control subprocess invocation, not output rendering. JSON output structure is unchanged regardless of these parameter values.
 
@@ -100,7 +101,7 @@ if let Some(effort) = effort_opt {
 - **AC-05**: `effort::auto` (default) injects `--effort high` when the subprocess model is Sonnet and `--effort max` when the subprocess model is Opus; injects no `--effort` flag when `imodel::keep`.
 - **AC-06**: `effort::high` always injects `--effort high` regardless of model.
 - **AC-07**: `effort::max` always injects `--effort max` regardless of model.
-- **AC-08**: `imodel::` and `effort::` apply to both `touch::` and `refresh::` subprocess calls within the same `.usage` invocation.
+- **AC-08**: On `.usage`: `imodel::` and `effort::` apply to both `touch::` and `refresh::` subprocess calls within the same invocation. On `.account.use`: they apply to the single post-switch subprocess when `touch::1` and the target account is idle.
 - **AC-09**: `imodel::` and `effort::` have no effect on `format::json` output structure.
 - **AC-10**: Invalid `imodel::` value exits 1 with an error naming the valid values (`auto`, `sonnet`, `opus`, `keep`).
 - **AC-11**: Invalid `effort::` value exits 1 with an error naming the valid values (`auto`, `high`, `max`).
@@ -118,3 +119,4 @@ if let Some(effort) = effort_opt {
 | param | [cli/param/035_imodel.md](../cli/param/035_imodel.md) | `imodel::` parameter specification |
 | param | [cli/param/036_effort.md](../cli/param/036_effort.md) | `effort::` parameter specification |
 | dep | [claude_runner_core/src/isolated.rs](../../../../claude_runner_core/src/isolated.rs) | `IsolatedModel` enum definition and `run_isolated()` signature |
+| doc | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | `.account.use` post-switch subprocess — also uses `resolve_model()` and `resolve_effort()` |

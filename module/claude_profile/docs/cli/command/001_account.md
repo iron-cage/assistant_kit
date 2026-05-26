@@ -121,34 +121,48 @@ clp .account.save name::alice@acme.com dry::1
 
 ### Command :: 5. `.account.use`
 
-Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched.
+Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent.
 
--- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found)
+-- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::` value) | 2 (runtime: account not found or HOME unset)
 
 **Syntax:**
 
 ```bash
 clp .account.use name::alice@home.com
-clp .account.use alice@home.com          # positional: same as name::alice@home.com
-clp .account.use car                      # prefix: first saved account starting with "car"
+clp .account.use alice@home.com               # positional: same as name::alice@home.com
+clp .account.use car                           # prefix: first saved account starting with "car"
 clp .account.use name::alice@home.com dry::1
+clp .account.use name::alice@home.com touch::0
+clp .account.use name::alice@home.com imodel::opus effort::max
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | **(required)** | Account email to switch to |
 | `dry::` | `bool` | `0` | Preview action without executing |
+| `touch::` | `bool` | `1` | Activate idle 5h session window via subprocess after switch |
+| `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `keep` |
+| `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (high for sonnet, max for opus), `high`, `max` |
 
 **Examples:**
 
 ```bash
 clp .account.use name::alice@home.com
-# switched to 'alice@home.com'
+# switched to 'alice@home.com'   (idle account: subprocess spawned to activate 5h session)
+
+clp .account.use name::alice@home.com touch::0
+# switched to 'alice@home.com'   (pure credential rotation — no subprocess)
 
 clp .account.use name::alice@home.com dry::1
 # [dry-run] would switch to 'alice@home.com'
 ```
+
+**Notes:**
+- `touch::1` (default): fetches quota for the target account; if `five_hour.resets_at` is absent (idle), spawns `run_isolated(["--print", "."])` with resolved model/effort to start a 5h session. Quota fetch failure skips touch silently — the switch always completes.
+- `touch::0`: pure credential rotation — no quota fetch, no subprocess. Pre-Feature-027 behavior.
+- `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `resolve_model()` selects Sonnet when `7d(Son) ≥ 30%`, Opus otherwise; `resolve_effort()` maps Sonnet → `high`, Opus → `max`.
+- See [feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) for full execution sequence and acceptance criteria.
 
 ---
 

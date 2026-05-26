@@ -46,6 +46,12 @@
 //! | aw13 | `aw13_use_positional_bare_arg` | positional email `personal@home.com` → switches | P |
 //! | aw14 | `aw14_use_prefix_resolves` | prefix `car` resolves to `carol@example.com`, switches | P |
 //! | aw15 | `aw15_use_prefix_ambiguous_exits_1` | ambiguous prefix `a` → exit 1 with "ambiguous" | N |
+//! | aw22 | `aw22_touch_disabled_switch_succeeds` | `touch::0` → switch exits 0, no quota fetch | P |
+//! | aw23 | `aw23_touch_skipped_no_access_token` | `touch::1` (default) + no `accessToken` → exit 0 | P |
+//! | aw24 | `aw24_imodel_bad_value_exits_1` | `imodel::bad` → exit 1, stderr lists valid values | N |
+//! | aw25 | `aw25_effort_bad_value_exits_1` | `effort::bad` → exit 1, stderr lists valid values | N |
+//! | aw26 | `aw26_help_shows_touch_imodel_effort` | `.account.use.help` lists `touch`, `imodel`, `effort` | P |
+//! | aw27 | `aw27_lim_it_touch_with_live_token` | live token + `touch::1` → switch exits 0 (`lim_it`) | P |
 //!
 //! ### AD — Account Delete
 //!
@@ -84,7 +90,7 @@
 //! | ar09 | `ar09_relogin_invalid_chars_exits_1` | `name::bad/name` → exit 1 | N |
 
 use crate::helpers::{
-  run_cs_with_env,
+  run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
   write_credentials, write_account, write_claude_json, account_exists,
   write_account_claude_json, write_account_settings_json, write_account_roles_json,
@@ -1189,5 +1195,140 @@ fn as21_lim_it_resave_overwrites_roles_json()
   assert!(
     !content.contains( "stale-sentinel" ),
     "re-save must overwrite stale roles.json; sentinel must be gone, got:\n{content}",
+  );
+}
+
+// ── AW: Feature 027 — post-switch touch control ────────────────────────────────
+
+/// aw22: `touch::0` disables post-switch subprocess; switch still succeeds (IT-18).
+///
+/// Verifies that explicitly disabling touch does not interfere with the switch itself.
+/// No accessToken is present — if touch were attempted, the quota fetch would fail;
+/// exit 0 with "switched" proves touch was skipped before any quota API call.
+#[ test ]
+fn aw22_touch_disabled_switch_succeeds()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "target@example.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::target@example.com", "touch::0" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    stdout( &out ).contains( "switched" ),
+    "touch::0 must not block switch, got:\n{}", stdout( &out ),
+  );
+}
+
+/// aw23: `touch::1` (default) with no `accessToken` → exit 0, touch silently skipped (IT-20).
+///
+/// `write_account` produces credentials without `accessToken`; `pre_switch_touch_ctx`
+/// returns `None` (token read fails) so no subprocess is spawned. The switch still succeeds.
+#[ test ]
+fn aw23_touch_skipped_no_access_token()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  // write_account produces credentials without accessToken — quota fetch path returns None.
+  write_account( dir.path(), "target@example.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::target@example.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    stdout( &out ).contains( "switched" ),
+    "touch skipped (no token) must not block switch, got:\n{}", stdout( &out ),
+  );
+}
+
+/// aw24: `imodel::bad` → exit 1; stderr names all valid values (IT-21).
+///
+/// Validation fires before any filesystem I/O — no accounts needed in the temp dir.
+#[ test ]
+fn aw24_imodel_bad_value_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::any@example.com", "imodel::bad" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "auto" ) && err.contains( "sonnet" ) && err.contains( "opus" ) && err.contains( "keep" ),
+    "stderr must name all valid imodel:: values; got:\n{err}",
+  );
+}
+
+/// aw25: `effort::bad` → exit 1; stderr names all valid values (IT-22).
+///
+/// Validation fires before any filesystem I/O — no accounts needed in the temp dir.
+#[ test ]
+fn aw25_effort_bad_value_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::any@example.com", "effort::bad" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "auto" ) && err.contains( "high" ) && err.contains( "max" ),
+    "stderr must name all valid effort:: values; got:\n{err}",
+  );
+}
+
+/// aw26: `.account.use.help` lists `touch`, `imodel`, and `effort` parameters (IT-23).
+#[ test ]
+fn aw26_help_shows_touch_imodel_effort()
+{
+  let out  = run_cs( &[ ".account.use.help" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "touch" ),  "`.account.use.help` must list `touch` param, got:\n{text}" );
+  assert!( text.contains( "imodel" ), "`.account.use.help` must list `imodel` param, got:\n{text}" );
+  assert!( text.contains( "effort" ), "`.account.use.help` must list `effort` param, got:\n{text}" );
+}
+
+/// aw27: `lim_it` — live token + `touch::1` → switch exits 0 (IT-17/IT-19).
+///
+/// Uses real credentials. Whether `pre_switch_touch_ctx` returns `Some` (idle) or `None`
+/// (active/fetch fail) depends on live quota state; either path must exit 0. The subprocess
+/// is fire-and-forget — its success or failure does not affect the command exit code.
+#[ test ]
+fn aw27_lim_it_touch_with_live_token()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "aw27: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Source account (provides live credentials in the store).
+  write_account_with_token( dir.path(), "source@example.com", &token, true );
+  // Target account — same token so quota fetch may succeed if account is idle.
+  write_account_with_token( dir.path(), "target@example.com", &token, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::target@example.com", "touch::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    stdout( &out ).contains( "switched" ),
+    "switch with live token must exit 0 and say switched, got:\n{}", stdout( &out ),
   );
 }

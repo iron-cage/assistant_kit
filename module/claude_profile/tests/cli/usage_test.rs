@@ -3244,7 +3244,7 @@ fn it104_structural_touch_failure_non_aborting_guard_exists()
 /// it105 `lim_it` (FT-09 of feature/024): `trace::1` emits `[trace]` lines for touch subprocess lifecycle.
 ///
 /// With `touch::1 trace::1` and an account with `resets_at` absent (idle), stderr shows
-/// `[trace]` lines showing the subprocess lifecycle (switch_account, run_isolated). Skips when active.
+/// `[trace]` lines showing the subprocess lifecycle (`switch_account`, `run_isolated`). Skips when active.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 #[ test ]
@@ -3415,7 +3415,7 @@ fn it109_touch_2_rejected_exits_1()
 /// - Cycle 2 (account now active after cycle 1 activated it): touch skips → `skipped` in trace.
 ///
 /// This verifies that the trigger fires for idle accounts (activating them) and correctly
-/// skips accounts that are already active (resets_at present after cycle 1).
+/// skips accounts that are already active (`resets_at` present after cycle 1).
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-12]
 ///       [`docs/feature/024_session_touch.md` AC-11]

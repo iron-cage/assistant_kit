@@ -117,10 +117,14 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     usage_routine,
   };
 
-  let fmt = || reg_arg_opt( "format",    Kind::String  );
-  let dry = || reg_arg_opt( "dry",       Kind::Boolean );
-  let nam = || reg_arg_opt( "name",      Kind::String  );
-  let thr = || reg_arg_opt( "threshold", Kind::Integer );
+  // Fix(BUG-203): convenience closures must chain `.with_description()` so that
+  // per-command `.help` output shows meaningful param descriptions.
+  // Root cause: bare `reg_arg_opt()` emits a blank description line.
+  // Pitfall: `.with_description()` is not enforced by the type system — only tests catch the omission.
+  let fmt = || reg_arg_opt( "format",    Kind::String  ).with_description( "Output format: text (default) or json" );
+  let dry = || reg_arg_opt( "dry",       Kind::Boolean ).with_description( "Dry run mode (0 = off, default; 1 = on)" );
+  let nam = || reg_arg_opt( "name",      Kind::String  ).with_description( "Account name to operate on" );
+  let thr = || reg_arg_opt( "threshold", Kind::Integer ).with_description( "Token expiry warning threshold in seconds (default 3600)" );
   let bfd = | nm : &'static str, desc : &'static str |
     reg_arg_opt( nm, Kind::Boolean ).with_description( desc );
   // Strict opt-in flags: only "0" or "1" accepted (not "yes"/"no"/"true").
@@ -170,8 +174,13 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     Box::new( accounts_routine ) );
   reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), fmt() ],      Box::new( account_limits_routine ) );
   reg_cmd( registry, ".account.save",    "Save current credentials as a named account profile",                              vec![ nam(), dry() ], Box::new( account_save_routine    ) );
-  reg_cmd( registry, ".account.use",    "Switch active account by name with atomic credential rotation",                   vec![ nam(), dry() ], Box::new( account_use_routine     ) );
-  reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                                   vec![ nam(), dry() ], Box::new( account_delete_routine  ) );
+  reg_cmd( registry, ".account.use",    "Switch active account by name with atomic credential rotation",
+    vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry(),
+      reg_arg_opt( "touch",  Kind::String ).with_description( "Activate idle 5h session window via subprocess after switch (0/false = off; 1/true = on, default)" ),
+      reg_arg_opt( "imodel", Kind::String ).with_description( "Subprocess model: `auto` (default, ≥30% 7d(Son) remaining → sonnet, else → opus), `sonnet`, `opus`, `keep`" ),
+      reg_arg_opt( "effort", Kind::String ).with_description( "Subprocess effort level: `auto` (default, high for Sonnet, max for Opus), `high`, `max`" ) ],
+    Box::new( account_use_routine     ) );
+  reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                                   vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry() ], Box::new( account_delete_routine  ) );
   reg_cmd( registry, ".account.relogin", "Force browser re-authentication for a named account with dead refreshToken",     vec![ nam(), dry() ], Box::new( account_relogin_routine ) );
   reg_cmd( registry, ".account.rotate", "Auto-rotate to the best inactive account (highest remaining token expiry)",       vec![ dry() ],        Box::new( account_rotate_routine ) );
   reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr() ],      Box::new( token_status_routine   ) );
@@ -205,6 +214,16 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
 fn reg_arg_opt( name : &str, kind : unilang::data::Kind ) -> unilang::data::ArgumentDefinition
 {
   unilang::data::ArgumentDefinition::new( name, kind ).with_optional( None::< String > )
+}
+
+// Fix(BUG-204): required-parameter registration helper.
+// Root cause: `reg_arg_opt` unconditionally sets `optional: true`; commands like `.account.use`
+// enforce `name` as required at runtime but the help system showed `optional`.
+// Pitfall: `ArgumentDefinition::new()` defaults to `optional: false` — do NOT chain `.with_optional()`.
+#[ cfg( feature = "enabled" ) ]
+fn reg_arg_req( name : &str, kind : unilang::data::Kind ) -> unilang::data::ArgumentDefinition
+{
+  unilang::data::ArgumentDefinition::new( name, kind )
 }
 
 #[ cfg( feature = "enabled" ) ]

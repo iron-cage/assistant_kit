@@ -11,11 +11,11 @@
 | [`interval::`](../param/021_interval.md) | `u64` | `30` | Seconds between refresh cycles (≥ 30; validated only when `live::1`) |
 | [`jitter::`](../param/022_jitter.md) | `u64` | `0` | Max random seconds added to each cycle delay (0 ≤ jitter ≤ interval; validated only when `live::1`) |
 | [`trace::`](../param/023_trace.md) | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
-| [`touch::`](../param/034_touch.md) | `bool` | `1` | Activate idle 5h windows via isolated subprocess; re-fetch quota |
+| [`touch::`](../param/034_touch.md) | `bool` | `1` | Activate idle 5h windows via isolated subprocess |
 | [`imodel::`](../param/035_imodel.md) | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `keep` |
 | [`effort::`](../param/036_effort.md) | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (max for model), `high`, `max` |
 
-**Used By (1 command):** [`.usage`](../command/006_usage.md#command--9-usage)
+**Used By:** [`.usage`](../command/006_usage.md#command--9-usage) (all 8 params), [`.account.use`](../command/001_account.md#command--5-accountuse) (`touch::`, `imodel::`, `effort::` only)
 
 **Typical Patterns:**
 
@@ -52,3 +52,4 @@ All 8 members pass: `refresh::` (retry strategy on auth error), `live::` (iterat
 - [../../feature/018_live_monitor.md](../../feature/018_live_monitor.md) — `live::` / `interval::` / `jitter::` feature design
 - [../../feature/024_session_touch.md](../../feature/024_session_touch.md) — `touch::` feature design
 - [../../feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md) — `imodel::` / `effort::` feature design
+- [../../feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) — `touch::`, `imodel::`, `effort::` on `.account.use`
