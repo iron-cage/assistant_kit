@@ -126,6 +126,7 @@
 //! | it127 | `it127_sort_default_is_drain_structural`             | sort default is `SortStrategy::Drain` when no `sort::` arg given (TSK-193 AC-01 structural) | P | no |
 //! | it128 | `it128_sort_next_resolves_to_drain_structural`       | `sort::next` resolves to `SortStrategy::Drain` when `next::drain` (TSK-193 AC-15 structural) | P | no |
 //! | it129 | `it129_sort_next_resolves_to_endurance_structural`   | `sort::next` resolves to `SortStrategy::Endurance` when `next::endurance` (TSK-193 AC-15 structural) | P | no |
+//! | it131 | `it131_trace_skip_lines_emitted_for_non_qualifying_accounts` | `touch::1 trace::1` errored account → `[trace] touch <name> skipped (reason: error account)` (BUG-202 / 024 FT-14) | P | no |
 
 use crate::helpers::{
   BIN,
@@ -3850,5 +3851,57 @@ fn it129_sort_next_resolves_to_endurance_structural()
     src.contains( "NextStrategy::Endurance => SortStrategy::Endurance" ),
     "TSK-193: sort::next must resolve to SortStrategy::Endurance when next::endurance is active.\n\
      The resolution block must have `NextStrategy::Endurance => SortStrategy::Endurance`."
+  );
+}
+
+/// it131 (BUG-202 / 024 FT-14): errored account emits skip trace in touch phase.
+///
+/// ## Root Cause
+///
+/// `apply_touch()` error guard at `usage.rs:1497` (`let Ok(ref data) = aq.result
+/// else { return; }`) exited before any trace emission point. Error-tier accounts
+/// silently vanished from the touch phase trace while appearing in fetch and refresh.
+///
+/// ## Why Not Caught
+///
+/// TSK-196 (BUG-177) added trace for the is_active/h-exhausted guard at lines
+/// 1504-1511 but did not address the error guard at line 1497. The BUG-177 MRE
+/// used OK-result accounts only.
+///
+/// ## Fix Applied
+///
+/// Added `if trace { eprintln!("[trace] touch  {}  skipped (reason: error account)",
+/// aq.name); }` before the `return` in the `else` branch at line 1497.
+///
+/// ## Prevention
+///
+/// When adding trace to a function with multiple early-return guards, each guard
+/// needs its own trace emission — audit ALL return paths, not just the "interesting" ones.
+///
+/// ## Pitfall
+///
+/// Error guard was deemed uninteresting (error accounts can't be touched) but the
+/// diagnostic contract requires visibility into all skip decisions.
+///
+/// RED:   errored account has no touch trace line → assert fails.
+/// GREEN: error guard emits `[trace] touch  <name>  skipped (reason: error account)`.
+#[ test ]
+fn it131_trace_skip_lines_emitted_for_non_qualifying_accounts()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // write_account with FAR_FUTURE_MS but no accessToken → quota fetch fails → Err result
+  write_account( dir.path(), "err@x.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "touch::1", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "[trace] touch  err@x.com  skipped (reason: error account)" ),
+    "BUG-202: errored account must emit `[trace] touch  <name>  skipped (reason: error account)` \
+     when trace=true (AC-09/AC-12 of Feature 024). Got stderr:\n{err}",
   );
 }

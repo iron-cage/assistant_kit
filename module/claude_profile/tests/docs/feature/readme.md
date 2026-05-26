@@ -35,7 +35,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | FT-01 … FT-09 | ✅ |
 | 022_org_identity_snapshot | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | FT-01 … FT-11 | ✅ |
 | 023_next_account_strategies | [023_next_account_strategies.md](023_next_account_strategies.md) | FT-01 … FT-08 | ✅ |
-| 024_session_touch | [024_session_touch.md](024_session_touch.md) | FT-01 … FT-14 | ✅ (FT-13, FT-14 ⏳) |
+| 024_session_touch | [024_session_touch.md](024_session_touch.md) | FT-01 … FT-14 | ✅ (FT-13 ⏳) |
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | FT-01 … FT-08 | ✅ (FT-08 ⏳) |
 | 026_subprocess_model_effort | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | FT-01 … FT-17 | ✅ |
 

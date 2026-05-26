@@ -201,5 +201,5 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **When:** `clp .usage touch::1 trace::1`
 - **Then:** Stderr contains `[trace] touch  <name>  skipped (reason: ...)` lines for each non-qualifying account. The `resets_at` present case and the errored case each produce a diagnostically distinct skip-reason line. No subprocess spawned for either account.
 - **Exit:** 0
-- **Source fn:** ⏳ `it131_trace_skip_lines_emitted_for_non_qualifying_accounts` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it131_trace_skip_lines_emitted_for_non_qualifying_accounts` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-09, AC-12](../../../../docs/feature/024_session_touch.md)

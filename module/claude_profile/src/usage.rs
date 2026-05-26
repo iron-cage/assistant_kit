@@ -1494,7 +1494,14 @@ fn apply_touch(
 )
 {
   // Guard: errored accounts are never touched; trigger requires valid quota data.
-  let Ok( ref data ) = aq.result else { return; };
+  // Fix(BUG-202): bare return produced no trace for error-tier accounts.
+  // Root cause: error guard preceded all trace emission points (lines 1506-1510).
+  // Pitfall: multiple early-return guards each need their own trace emission.
+  let Ok( ref data ) = aq.result else
+  {
+    if trace { eprintln!( "[trace] touch  {}  skipped (reason: error account)", aq.name ); }
+    return;
+  };
 
   // Guard: only idle accounts (no active 5h window) AND not h-exhausted need touching.
   // AC-02: trigger on is_none() (idle — no resets_at) AND five_hour_left > 15% (not h-exhausted).
