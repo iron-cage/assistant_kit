@@ -1464,11 +1464,11 @@ fn apply_refresh(
 
 // ── Touch helper ───────────────────────────────────────────────────────────────
 
-/// Refresh the token for an active 5h session window for `aq` by spawning an isolated subprocess.
+/// Activate an idle 5h session window for `aq` by spawning an isolated subprocess.
 ///
 /// The trigger requires both conditions:
 /// - `aq.result.is_ok()` — account must have valid quota data (not an auth error).
-/// - `five_hour.resets_at.is_some()` — 5h window is currently active (`resets_at` present).
+/// - `five_hour.resets_at.is_none()` — 5h window is idle (no active session).
 ///
 /// After a successful touch, quota is re-fetched so the table shows the concrete
 /// `5h Reset` value. If the subprocess or re-fetch fails the account row is unchanged
@@ -1489,16 +1489,16 @@ fn apply_touch(
   // Guard: errored accounts are never touched; trigger requires valid quota data.
   let Ok( ref data ) = aq.result else { return; };
 
-  // Guard: only accounts with an active 5h window AND not h-exhausted need touching.
-  // AC-02: trigger on is_some() (active 5h window) AND five_hour_left > 15% (not h-exhausted).
-  let is_active = data.five_hour.as_ref()
+  // Guard: only idle accounts (no active 5h window) AND not h-exhausted need touching.
+  // AC-02: trigger on is_none() (idle — no resets_at) AND five_hour_left > 15% (not h-exhausted).
+  let is_idle = data.five_hour.as_ref()
     .and_then( |p| p.resets_at.as_deref() )
-    .is_some();
-  if !is_active || five_hour_left( aq ) <= 15.0
+    .is_none();
+  if !is_idle || five_hour_left( aq ) <= 15.0
   {
     if trace
     {
-      let reason = if is_active { "h-exhausted" } else { "no active 5h window" };
+      let reason = if is_idle { "h-exhausted" } else { "already active" };
       eprintln!( "[trace] touch  {}  skipped (reason: {})", aq.name, reason );
     }
     return;
@@ -4720,16 +4720,16 @@ mod tests
     }
   }
 
-  /// TSK-192 AC-02 / FT-02 behavioral: `apply_touch` fires when `resets_at` is `Some`.
+  /// BUG-181 AC-02 / FT-02 behavioral: `apply_touch` fires when `resets_at` is `None` (idle).
   ///
-  /// When `five_hour.resets_at` is present (active 5h window), `apply_touch` must
+  /// When `five_hour.resets_at` is absent (idle 5h window), `apply_touch` must
   /// attempt to reach `refresh_account_token`, observable via `switch_account` writing
   /// credentials to `fake_home/.claude/credentials.json`.
   ///
   /// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
   ///       [`docs/feature/024_session_touch.md` AC-02]
   #[ test ]
-  fn it_apply_touch_trigger_fires_resets_at_some()
+  fn it_apply_touch_trigger_fires_resets_at_none()
   {
     let dir       = tempfile::TempDir::new().unwrap();
     let store     = dir.path().join( "store" );
@@ -4741,26 +4741,26 @@ mod tests
       store.join( "test@example.com.credentials.json" ),
       r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
     ).unwrap();
-    let mut aq = mk_aq_with_resets_at( Some( "2099-01-01T00:00:00Z" ) );
+    let mut aq = mk_aq_with_resets_at( None );
     let paths  = crate::ClaudePaths::with_home( &fake_home );
     apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
     // Trigger fired → switch_account atomically wrote credentials to paths.credentials_file().
     assert!(
       paths.credentials_file().exists(),
-      "apply_touch must call switch_account when resets_at is Some (active 5h window)"
+      "apply_touch must call switch_account when resets_at is None (idle account)"
     );
   }
 
-  /// TSK-192 AC-02 / FT-02 behavioral: `apply_touch` skips when `resets_at` is `None`.
+  /// BUG-181 AC-02 / FT-02 behavioral: `apply_touch` skips when `resets_at` is `Some` (active).
   ///
-  /// When `five_hour.resets_at` is absent (idle 5h window), `apply_touch` must return
-  /// early without calling `switch_account`. The credentials file in `fake_home/.claude/`
+  /// When `five_hour.resets_at` is present (already active 5h window), `apply_touch` must
+  /// return early without calling `switch_account`. The credentials file in `fake_home/.claude/`
   /// must NOT be written.
   ///
   /// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
   ///       [`docs/feature/024_session_touch.md` AC-02]
   #[ test ]
-  fn it_apply_touch_trigger_skips_resets_at_none()
+  fn it_apply_touch_trigger_skips_resets_at_some()
   {
     let dir       = tempfile::TempDir::new().unwrap();
     let store     = dir.path().join( "store" );
@@ -4772,13 +4772,13 @@ mod tests
       store.join( "test@example.com.credentials.json" ),
       r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
     ).unwrap();
-    let mut aq = mk_aq_with_resets_at( None );
+    let mut aq = mk_aq_with_resets_at( Some( "2099-01-01T00:00:00Z" ) );
     let paths  = crate::ClaudePaths::with_home( &fake_home );
     apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
     // Trigger skipped → switch_account NOT called → credentials file NOT written.
     assert!(
       !fake_home.join( ".claude" ).join( ".credentials.json" ).exists(),
-      "apply_touch must skip switch_account when resets_at is None (idle 5h window)"
+      "apply_touch must skip switch_account when resets_at is Some (already active)"
     );
   }
 }

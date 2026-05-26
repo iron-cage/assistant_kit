@@ -106,7 +106,7 @@
 //! | it089 | `it089_apply_touch_fn_exists_structural`             | `fn apply_touch` present in source (TSK-185 AC-02 structural) | P | no |
 //! | it090 | `it090_touch_json_format_unaffected`                | `format::json touch::1` empty store → exit 0, output `[]` (TSK-185 AC-08) | P | no |
 //! | it091 | `it091_usage_help_shows_touch_param`                | `.usage.help` contains `touch` (TSK-185 AC-10) | P | no |
-//! | it110 | `it110_lim_it_ft12_touch_trigger_fires_per_active_window_cycle` | `touch::1` fires each cycle for active accounts (resets_at present); idle skipped (024 FT-12) | P | yes |
+//! | it110 | `it110_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle` | `touch::1` fires for idle accounts (resets_at absent); active skipped after activation (024 FT-12) | P | yes |
 //! | it111 | `it111_sort_next_accepted`                          | `sort::next` accepted → exit 0 (drain default + endurance explicit) (IT-65/AC-15) | P | no |
 //! | it112 | `it112_imodel_auto_accepted_empty_store_exits_0`    | `imodel::auto` accepted; empty store exits 0 (IT-66/EC-1) | P | no |
 //! | it113 | `it113_imodel_bogus_exits_1`                        | `imodel::bogus` → exit 1, stderr names all 4 valid values (IT-67/EC-5) | N | no |
@@ -118,7 +118,7 @@
 //! | it119 | `it119_imodel_keep_accepted_empty_store_exits_0`    | `imodel::keep` accepted; empty store exits 0 (EC-4) | P | no |
 //! | it120 | `it120_effort_high_accepted_empty_store_exits_0`    | `effort::high` accepted; empty store exits 0 | P | no |
 //! | it121 | `it121_effort_max_accepted_empty_store_exits_0`     | `effort::max` accepted; empty store exits 0 | P | no |
-//! | it122 | `it122_apply_touch_trigger_is_is_some_structural`   | apply_touch uses `is_some()` trigger (TSK-192 AC-02 structural) | P | no |
+//! | it122 | `it122_apply_touch_trigger_is_is_none_structural`   | apply_touch uses `is_none()` trigger (BUG-181 fix AC-02 structural) | P | no |
 //! | it123 | `it123_refresh_account_token_has_label_param_structural` | `refresh_account_token` uses label var not hardcoded "refresh" (TSK-192 AC-09 structural) | P | no |
 //! | it124 | `it124_apply_touch_passes_touch_label_structural`   | `apply_touch` call site passes `"touch"` label (TSK-192 AC-09 structural) | P | no |
 //! | it125 | `it125_apply_refresh_passes_refresh_label_structural` | `apply_refresh` call site passes `"refresh"` label (TSK-192 AC-09 structural) | P | no |
@@ -3039,16 +3039,16 @@ fn it098_touch_bogus_exits_1()
   assert_exit( &out, 1 );
 }
 
-/// it099 `lim_it` (FT-01 of feature/024 / EC-7): `touch::0` — no subprocess spawned; 5h Reset unchanged.
+/// it099 `lim_it` (FT-01 of feature/024 / EC-7): `touch::0` — no subprocess spawned; idle account unchanged.
 ///
 /// When `touch::0` (explicit off), the touch trigger is never fired regardless of account state.
-/// An account with `five_hour.resets_at` present (active 5h window, 5h Reset shows countdown) stays unchanged.
-/// Skips when the live account is in idle state (`resets_at` absent, shows `—`).
+/// An idle account (`five_hour.resets_at` absent, 5h Reset shows `—`) stays unchanged.
+/// Skips when the live account is in active state (`resets_at` present).
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-01]
 ///       [`tests/docs/cli/param/034_touch.md` EC-7]
 #[ test ]
-fn it099_lim_it_touch_0_no_subprocess_active_account_unchanged()
+fn it099_lim_it_touch_0_no_subprocess_idle_account_unchanged()
 {
   let Some( token ) = live_active_token() else
   {
@@ -3059,37 +3059,36 @@ fn it099_lim_it_touch_0_no_subprocess_active_account_unchanged()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: is the account in active state (5h Reset shows countdown)?
-  // em dash (U+2014) in the 5h Reset column means idle — skip.
+  // Pre-check: account must be IDLE (resets_at absent — EM-DASH present in 5h Reset column).
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
   let pre_text = stdout( &pre );
-  if pre_text.contains( "\u{2014}" )
+  if !pre_text.contains( "\u{2014}" )
   {
-    eprintln!( "it099: account is idle (no active 5h window) — active-state condition not met, skipping" );
+    eprintln!( "it099: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
   let out = run_cs_with_env( &[ ".usage", "touch::0" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // 5h Reset column must still show countdown (touch::0 must not fire subprocess).
+  // 5h Reset column must still show EM-DASH (touch::0 must not fire subprocess).
   assert!(
-    !text.contains( "\u{2014}" ),
-    "touch::0 must not modify active 5h window — 5h Reset must remain as countdown (FT-01/EC-7), got:\n{text}",
+    text.contains( "\u{2014}" ),
+    "touch::0 must not activate idle account — 5h Reset must remain as `\u{2014}` (FT-01/EC-7), got:\n{text}",
   );
 }
 
-/// it100 `lim_it` (FT-02 of feature/024 / EC-8): `touch::1` — subprocess observed via trace for active account.
+/// it100 `lim_it` (FT-02 of feature/024 / EC-8): `touch::1` — subprocess observed via trace for idle account.
 ///
-/// When `touch::1` and the account has `five_hour.resets_at` present (active 5h window), a subprocess
-/// is invoked. With `trace::1`, stderr shows `[trace]` lines for the subprocess lifecycle.
-/// Skips when the live account is in idle state (`resets_at` absent).
+/// When `touch::1` and the account has `five_hour.resets_at` absent (idle), a subprocess
+/// is invoked to activate the 5h session. With `trace::1`, stderr shows `[trace]` lines
+/// for the subprocess lifecycle. Skips when the live account is in active state (`resets_at` present).
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
 ///       [`tests/docs/cli/param/034_touch.md` EC-8]
 #[ test ]
-fn it100_lim_it_touch_1_subprocess_spawned_for_active_account()
+fn it100_lim_it_touch_1_subprocess_spawned_for_idle_account()
 {
   let Some( token ) = live_active_token() else
   {
@@ -3100,12 +3099,12 @@ fn it100_lim_it_touch_1_subprocess_spawned_for_active_account()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: active state required (resets_at present).
+  // Pre-check: account must be IDLE (resets_at absent — EM-DASH present).
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
-  if stdout( &pre ).contains( "\u{2014}" )
+  if !stdout( &pre ).contains( "\u{2014}" )
   {
-    eprintln!( "it100: account is idle (no active 5h window) — active-state condition not met, skipping" );
+    eprintln!( "it100: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
@@ -3113,16 +3112,16 @@ fn it100_lim_it_touch_1_subprocess_spawned_for_active_account()
   assert_exit( &out, 0 );
   let err = stderr( &out );
   assert!(
-    err.contains( "[trace]" ),
-    "touch::1 with active account must emit [trace] lines for subprocess lifecycle (FT-02/EC-8), got stderr:\n{err}",
+    err.contains( "switch_account" ),
+    "touch::1 with idle account must spawn subprocess — switch_account must appear (FT-02/EC-8), got stderr:\n{err}",
   );
 }
 
-/// it101 `lim_it` (FT-03 of feature/024): After successful touch, `5h Reset` shows extended countdown.
+/// it101 `lim_it` (FT-03 of feature/024): After successful touch, `5h Reset` transitions from `—` to countdown.
 ///
-/// When `touch::1` triggers on an active account (`resets_at` present) and the subprocess succeeds,
-/// the account's quota is re-fetched and the `5h Reset` column shows a countdown extended ~5h forward.
-/// Skips when not in active state.
+/// When `touch::1` triggers on an idle account (`resets_at` absent) and the subprocess succeeds,
+/// the account's quota is re-fetched and the `5h Reset` column shows a concrete countdown (~5h)
+/// where it previously showed `—`. Skips when account is already active.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-03]
 #[ test ]
@@ -3137,24 +3136,23 @@ fn it101_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: account must be in active state (resets_at present).
+  // Pre-check: account must be IDLE (resets_at absent — EM-DASH present).
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
   let pre_text = stdout( &pre );
-  if pre_text.contains( "\u{2014}" )
+  if !pre_text.contains( "\u{2014}" )
   {
-    eprintln!( "it101: account is idle (no active 5h window) — active-state condition not met, skipping" );
+    eprintln!( "it101: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
   let out = run_cs_with_env( &[ ".usage", "touch::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  // After touch: the row must still show a countdown (5h window extended ~5h forward).
-  // The 5h Reset column shows "in Xh Ym" when active.
+  // After touch: the 5h Reset column must show a countdown (session activated — "in Xh Ym").
   assert!(
     text.contains( "in " ),
-    "touch::1 must extend active 5h window; 5h Reset must show countdown after subprocess (FT-03), got:\n{text}",
+    "touch::1 must activate idle account; 5h Reset must show countdown after subprocess (FT-03), got:\n{text}",
   );
 }
 
@@ -3244,8 +3242,8 @@ fn it104_structural_touch_failure_non_aborting_guard_exists()
 
 /// it105 `lim_it` (FT-09 of feature/024): `trace::1` emits `[trace]` lines for touch subprocess lifecycle.
 ///
-/// With `touch::1 trace::1` and an account with `resets_at` present (active 5h window), stderr shows
-/// `[trace]` lines showing the subprocess lifecycle (start, outcome). Skips when account is idle.
+/// With `touch::1 trace::1` and an account with `resets_at` absent (idle), stderr shows
+/// `[trace]` lines showing the subprocess lifecycle (switch_account, run_isolated). Skips when active.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 #[ test ]
@@ -3260,12 +3258,12 @@ fn it105_lim_it_trace_1_shows_touch_lifecycle()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: active state required for subprocess to be triggered.
+  // Pre-check: account must be IDLE (resets_at absent) for subprocess to be triggered.
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
-  if stdout( &pre ).contains( "\u{2014}" )
+  if !stdout( &pre ).contains( "\u{2014}" )
   {
-    eprintln!( "it105: account is idle (no active 5h window) — active-state condition not met, skipping" );
+    eprintln!( "it105: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
@@ -3278,16 +3276,16 @@ fn it105_lim_it_trace_1_shows_touch_lifecycle()
   );
 }
 
-/// it106 `lim_it` (FT-11 of feature/024): valid account with `resets_at` present IS touched (positive trigger).
+/// it106 `lim_it` (FT-11 of feature/024): valid account with `resets_at` absent IS touched (positive trigger).
 ///
-/// The touch trigger fires when `five_hour.resets_at` is present. When the 5h window is
-/// active (`resets_at` present, 5h Reset shows a countdown), the subprocess IS spawned
-/// and the window is extended. Observable via `trace::1` output.
+/// The touch trigger fires when `five_hour.resets_at` is absent (idle account). When the
+/// 5h window is idle (`resets_at` absent, 5h Reset shows `—`), the subprocess IS spawned
+/// and a new 5h session is activated. Observable via `switch_account` in `trace::1` output.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-11]
-///       [`tests/docs/feature/024_session_touch.md` AC-02 trigger guard]
+///       [`docs/feature/024_session_touch.md` AC-02 trigger guard]
 #[ test ]
-fn it106_lim_it_account_with_resets_at_present_is_touched()
+fn it106_lim_it_account_with_resets_at_absent_is_touched()
 {
   let Some( token ) = live_active_token() else
   {
@@ -3298,24 +3296,24 @@ fn it106_lim_it_account_with_resets_at_present_is_touched()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
 
-  // Pre-check: account must have an ACTIVE 5h window (resets_at present).
+  // Pre-check: account must be IDLE (resets_at absent — EM-DASH in output).
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
   let pre_text = stdout( &pre );
-  if pre_text.contains( "\u{2014}" )
+  if !pre_text.contains( "\u{2014}" )
   {
-    eprintln!( "it106: account is idle (resets_at absent) — active-5h-window condition not met, skipping" );
+    eprintln!( "it106: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
-  // With resets_at present, touch::1 MUST spawn a subprocess.
-  // Verified via trace::1: [trace] lines must appear (subprocess triggered).
+  // With resets_at absent, touch::1 MUST spawn a subprocess to activate the 5h session.
+  // Verified via trace::1: switch_account line must appear (subprocess triggered).
   let out = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let err = stderr( &out );
   assert!(
-    err.contains( "[trace]" ),
-    "account with active 5h window must be touched — [trace] lines must appear in stderr (FT-11), got stderr:\n{err}",
+    err.contains( "switch_account" ),
+    "idle account must be touched — switch_account must appear in stderr (FT-11), got stderr:\n{err}",
   );
 }
 
@@ -3409,19 +3407,19 @@ fn it109_touch_2_rejected_exits_1()
 
 // ── it110 (lim_it) ────────────────────────────────────────────────────────────
 
-/// it110 `lim_it` (FT-12 of feature/024 — AC-11): Touch trigger fires each cycle for active accounts.
+/// it110 `lim_it` (FT-12 of feature/024 — AC-11): Touch trigger fires for idle accounts each cycle.
 ///
-/// Two sequential single-shot `.usage touch::1 trace::1` invocations verify the active trigger:
-/// - Cycle 1 (active account, `resets_at` present): subprocess spawned → `[trace]` shows touch lifecycle.
-/// - Cycle 2 (account still active, `resets_at` extended): subprocess spawned again → `[trace]` appears.
+/// Two sequential single-shot `.usage touch::1 trace::1` invocations verify the idle trigger:
+/// - Cycle 1 (idle account, `resets_at` absent): subprocess spawned → `switch_account` in trace.
+/// - Cycle 2 (account now active after cycle 1 activated it): touch skips → `skipped` in trace.
 ///
-/// This verifies that the trigger fires every cycle while the 5h window is active, extending
-/// it further each time. Idle accounts (no `resets_at`) are always skipped.
+/// This verifies that the trigger fires for idle accounts (activating them) and correctly
+/// skips accounts that are already active (resets_at present after cycle 1).
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-12]
 ///       [`docs/feature/024_session_touch.md` AC-11]
 #[ test ]
-fn it110_lim_it_ft12_touch_trigger_fires_per_active_window_cycle()
+fn it110_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
 {
   let Some( token ) = live_active_token() else
   {
@@ -3432,40 +3430,40 @@ fn it110_lim_it_ft12_touch_trigger_fires_per_active_window_cycle()
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct@test.com", &token, true );
 
-  // Pre-check: account must have an ACTIVE 5h window (resets_at present, EM-DASH absent).
+  // Pre-check: account must be IDLE (resets_at absent — EM-DASH present in output).
   let pre = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &pre, 0 );
-  if stdout( &pre ).contains( "\u{2014}" )
+  if !stdout( &pre ).contains( "\u{2014}" )
   {
-    eprintln!( "it110: account is idle (no active 5h window) — active-state condition not met, skipping" );
+    eprintln!( "it110: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
-  // Cycle 1: active account → touch trigger fires → subprocess spawned → trace lines emitted.
+  // Cycle 1: idle account → touch trigger fires → subprocess spawned → switch_account in trace.
   let out1 = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out1, 0 );
   let err1 = stderr( &out1 );
   assert!(
-    err1.contains( "[trace]" ),
-    "cycle 1: active account must trigger touch subprocess; trace must emit [trace] lines (FT-12/AC-11), got stderr:\n{err1}",
+    err1.contains( "switch_account" ),
+    "cycle 1: idle account must trigger touch subprocess; switch_account must appear (FT-12/AC-11), got stderr:\n{err1}",
   );
 
-  // Cycle 2: account still active (resets_at extended after cycle 1) → trigger fires again.
+  // Cycle 2: account now active after cycle 1 activation → touch skips.
   let out2 = run_cs_with_env( &[ ".usage", "touch::1", "trace::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out2, 0 );
   let err2 = stderr( &out2 );
   let text2 = stdout( &out2 );
-  // EM-DASH present means cycle 1 touch did not succeed (idle state) — cycle 2 inconclusive.
+  // EM-DASH present means cycle 1 did not activate (subprocess failed) — cycle 2 inconclusive.
   if text2.contains( "\u{2014}" )
   {
-    eprintln!( "it110: cycle 1 touch did not extend 5h window; cycle 2 check inconclusive" );
+    eprintln!( "it110: cycle 1 did not activate account; cycle 2 check inconclusive" );
   }
   else
   {
-    // Account is still active: touch must fire again in cycle 2.
+    // Account is now active: touch must skip in cycle 2.
     assert!(
-      err2.contains( "[trace]" ),
-      "cycle 2: account still active must trigger touch subprocess again (FT-12/AC-11); trigger must fire each active cycle, got stderr:\n{err2}",
+      err2.contains( "skipped" ),
+      "cycle 2: account now active must be skipped by touch (FT-12/AC-11), got stderr:\n{err2}",
     );
   }
 }
@@ -3679,30 +3677,30 @@ fn it121_effort_max_accepted_empty_store_exits_0()
   assert_exit( &out, 0 );
 }
 
-// ── TSK-192: trigger flip + label param (RED structural gates) ────────────────
+// ── BUG-181: trigger inversion fix + structural gates ─────────────────────────
 
-/// it122 (TSK-192 AC-02 structural): `apply_touch` trigger uses `is_some()`, not `is_none()`.
+/// it122 (BUG-181 fix AC-02 structural): `apply_touch` trigger uses `is_none()`, not `is_some()`.
 ///
-/// The touch trigger must fire for accounts whose `five_hour.resets_at` is **present**
-/// (active 5h window). Current code (`is_none()`) fires for idle accounts, which is
-/// ineffective — `run_isolated` on idle accounts exits early without OAuth refresh.
+/// The touch trigger must fire for accounts whose `five_hour.resets_at` is **absent**
+/// (idle account — no active 5h window). BUG-181: previous code (`is_some()`) fired for
+/// active accounts, wasting subprocess cost while skipping idle accounts that need activation.
 ///
-/// The guard must read: `let is_active = ...is_some(); if !is_active { return; }`.
+/// The guard must read: `let is_idle = ...is_none(); if !is_idle { return; }`.
 ///
-/// RED:   source contains `let is_idle` (old guard using `is_none()`).
-/// GREEN: source contains `let is_active` + `is_some()` guard.
+/// RED:   source contains `let is_active` (old inverted guard using `is_some()`).
+/// GREEN: source contains `let is_idle` + `is_none()` guard.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-11]
 ///       [`docs/feature/024_session_touch.md` AC-02]
 #[ test ]
-fn it122_apply_touch_trigger_is_is_some_structural()
+fn it122_apply_touch_trigger_is_is_none_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
   assert!(
-    !src.contains( "let is_idle" ),
-    "TSK-192: `apply_touch` trigger must use `is_active` + `is_some()`, not `is_idle` + `is_none()`.\n\
-     Flip the guard: `let is_active = data.five_hour.as_ref().and_then(|p| p.resets_at.as_deref()).is_some();\n\
-     if !is_active {{ return; }}`",
+    !src.contains( "let is_active = data.five_hour" ),
+    "BUG-181: `apply_touch` trigger must use `is_idle` + `is_none()`, not `is_active` + `is_some()`.\n\
+     Fix the guard: `let is_idle = data.five_hour.as_ref().and_then(|p| p.resets_at.as_deref()).is_none();\n\
+     if !is_idle {{ return; }}`",
   );
 }
 

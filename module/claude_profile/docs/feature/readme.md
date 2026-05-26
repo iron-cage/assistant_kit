@@ -34,7 +34,7 @@
 | 021 | [Extended Snapshot Fields](021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` from existing `{name}.claude.json`; `uuid::` and `capabilities::` opt-in params | ✅ |
 | 022 | [Org Identity Snapshot](022_org_identity_snapshot.md) | `{name}.roles.json` via endpoint 005 at save-time; `org_uuid::` and `org_name::` opt-in params | ✅ |
 | 023 | [Next Account Recommendation Strategies](023_next_account_strategies.md) | Configurable account recommendation in `.usage` output — `next::` parameter with `drain` (default), `endurance` strategies; always-visible 2-strategy footer | ✅ |
-| 024 | [Session Touch via Isolated Subprocess](024_session_touch.md) | Keep active accounts' 5h session windows alive by sending minimal prompt via isolated subprocess; `touch::` parameter | ✅ |
+| 024 | [Session Touch via Isolated Subprocess](024_session_touch.md) | Activate idle accounts' 5h session windows by sending minimal prompt via isolated subprocess; `touch::` parameter | ✅ |
 | 025 | [Per-Machine Active Marker](025_per_machine_active_marker.md) | Machine-specific `_active_{hostname}_{user}` marker; exact local-part prefix resolution | ✅ |
 | 026 | [Subprocess Model and Effort Control](026_subprocess_model_effort.md) | `imodel::` and `effort::` parameters; per-account auto model selection (30% threshold); effort resolution | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

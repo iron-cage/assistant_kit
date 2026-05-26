@@ -136,18 +136,18 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 
 ---
 
-### FB-13: `touch::1` runs after `refresh::1` when both active
+### FB-13: `touch::1` runs after `refresh::1` — refreshed accounts skipped by touch
 
-- **Given:** One account with expired token (quota would fail with 401); after token refresh, `five_hour.resets_at` is present (active 5h window). `refresh::1 touch::1 trace::1`.
+- **Given:** One account with expired token (quota would fail with 401); after token refresh, `five_hour.resets_at` is present (session activated by refresh). `refresh::1 touch::1 trace::1`.
 - **When:** `clp .usage refresh::1 touch::1 trace::1`
-- **Then:** stderr `[trace]` lines show refresh lifecycle before any touch lifecycle. Touch runs on post-refresh quota results; since `resets_at` is present after refresh, touch fires and extends the window. No conflict between the two parameters.
+- **Then:** stderr `[trace]` lines show refresh lifecycle completing first. Touch then evaluates post-refresh quota: since `resets_at` is now present (session started by refresh), touch correctly SKIPS the account (already active). No redundant double-subprocess. Trace shows `skipped (reason: already active)`.
 - **Source:** [feature/024_session_touch.md AC-05](../../../../docs/feature/024_session_touch.md)
 
 ---
 
 ### FB-14: `touch::1 trace::1` shows `[trace]` lines for touch subprocess lifecycle
 
-- **Given:** One account with valid quota data and `five_hour.resets_at` present (active 5h window). `touch::1 trace::1`.
+- **Given:** One account with valid quota data and `five_hour.resets_at` absent (idle — no active 5h window). `touch::1 trace::1`.
 - **When:** `clp .usage touch::1 trace::1`
 - **Then:** stderr contains `[trace]` lines for the touch subprocess lifecycle (same `[trace]` prefix format as refresh) with per-step elapsed time. Lines include account name and subprocess status. stdout contains the normal quota table unchanged.
 - **Source:** [feature/024_session_touch.md AC-09](../../../../docs/feature/024_session_touch.md)

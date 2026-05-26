@@ -94,6 +94,6 @@ clp .usage live::1 interval::60 jitter::10
 - Duration format (`format_duration_secs`) capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`).
 - See [feature/009_token_usage.md](../../feature/009_token_usage.md) for the baseline algorithm and AC criteria.
 - See [feature/023_next_account_strategies.md](../../feature/023_next_account_strategies.md) for recommendation strategies.
-- `touch::` (default `1`) keeps accounts with an active 5h window alive by sending a minimal prompt that resets the 5h countdown; pass `touch::0` to suppress. Runs after `refresh::` when both active. See [feature/024_session_touch.md](../../feature/024_session_touch.md).
+- `touch::` (default `1`) activates idle accounts (no active 5h window) by sending a minimal prompt that starts a 5h session; pass `touch::0` to suppress. Runs after `refresh::` when both active. See [feature/024_session_touch.md](../../feature/024_session_touch.md).
 - `imodel::` controls the Claude model injected into `touch::` and `refresh::` subprocesses. `auto` (default) selects Sonnet when an account's `7d(Son) ≥ 30%` and Opus otherwise. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
 - `effort::` controls the effort level (`--effort` flag) for those subprocesses. `auto` (default) uses `high` for Sonnet and `max` for Opus; no flag when `imodel::keep`. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).

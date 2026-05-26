@@ -11,7 +11,7 @@
 | [`interval::`](../param/021_interval.md) | `u64` | `30` | Seconds between refresh cycles (≥ 30; validated only when `live::1`) |
 | [`jitter::`](../param/022_jitter.md) | `u64` | `0` | Max random seconds added to each cycle delay (0 ≤ jitter ≤ interval; validated only when `live::1`) |
 | [`trace::`](../param/023_trace.md) | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
-| [`touch::`](../param/034_touch.md) | `bool` | `1` | Extend active 5h windows via isolated subprocess; re-fetch quota |
+| [`touch::`](../param/034_touch.md) | `bool` | `1` | Activate idle 5h windows via isolated subprocess; re-fetch quota |
 | [`imodel::`](../param/035_imodel.md) | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `keep` |
 | [`effort::`](../param/036_effort.md) | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (max for model), `high`, `max` |
 
