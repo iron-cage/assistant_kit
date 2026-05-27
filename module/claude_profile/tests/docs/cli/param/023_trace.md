@@ -1,6 +1,6 @@
 # Parameter :: `trace::`
 
-Edge case tests for the `trace::` parameter. Tests validate boolean enforcement, default-off behavior, stderr output routing (stdout unchanged), and the `[trace]` line format. Used by `.usage` to expose internal fetch and refresh mechanics for diagnostics.
+Edge case tests for the `trace::` parameter. Tests validate boolean enforcement, default-off behavior, stderr output routing (stdout unchanged), and the `[trace]` line format. Available on all `clp` commands to expose internal mechanics for diagnostics. Current test cases cover `.usage`; per-command cases are added as `trace::` is registered on each additional command (TSK-210).
 
 **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 
@@ -14,6 +14,17 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 | EC-4 | `trace::yes` rejected (type validation) | Type Validation |
 | EC-5 | Default value is `0` (trace disabled) | Default |
 | EC-6 | `trace::1` — trace goes to stderr; stdout output unchanged | Output Routing |
+| EC-7 | `.account.use trace::1 touch::0` — accepted; no `[trace] account.use` lines (no fetch ops) | Acceptance: `.account.use` |
+| EC-8 | `.credentials.status trace::1` — accepted; `[trace]` lines emitted for credential read | Acceptance: `.credentials.status` |
+| EC-9 | `.accounts trace::1` — accepted on empty store; `[trace]` line for store not-found | Acceptance: `.accounts` |
+| EC-10 | `.account.limits trace::1` — accepted; `[trace]` line emitted before API call | Acceptance: `.account.limits` |
+| EC-11 | `.account.save trace::1 dry::1` — accepted; `[trace]` line emitted for credential read | Acceptance: `.account.save` |
+| EC-12 | `.account.use trace::1` — accepted; account not found → exit 2; no "Unknown parameter" error | Acceptance: `.account.use` (2) |
+| EC-13 | `.account.delete trace::1 dry::1` — accepted; `[trace]` line emitted for store read | Acceptance: `.account.delete` |
+| EC-14 | `.account.relogin trace::1 dry::1` — accepted; `[trace]` line emitted for store read | Acceptance: `.account.relogin` |
+| EC-15 | `.account.rotate trace::1 dry::1` — accepted; `[trace]` line emitted for store read | Acceptance: `.account.rotate` |
+| EC-16 | `.token.status trace::1` — accepted; `[trace]` line emitted for credential read | Acceptance: `.token.status` |
+| EC-17 | `.paths trace::1` — accepted; `[trace]` line emitted for path resolution | Acceptance: `.paths` |
 
 ## Test Coverage Summary
 
@@ -23,8 +34,18 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - Type Validation: 1 test (EC-4)
 - Default: 1 test (EC-5)
 - Output Routing: 1 test (EC-6)
+- Acceptance\: `.account.use`: 2 tests (EC-7, EC-12)
+- Acceptance\: `.credentials.status`: 1 test (EC-8)
+- Acceptance\: `.accounts`: 1 test (EC-9)
+- Acceptance\: `.account.limits`: 1 test (EC-10)
+- Acceptance\: `.account.save`: 1 test (EC-11)
+- Acceptance\: `.account.delete`: 1 test (EC-13)
+- Acceptance\: `.account.relogin`: 1 test (EC-14)
+- Acceptance\: `.account.rotate`: 1 test (EC-15)
+- Acceptance\: `.token.status`: 1 test (EC-16)
+- Acceptance\: `.paths`: 1 test (EC-17)
 
-**Total:** 6 edge cases
+**Total:** 17 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (trace enabled — diagnostics on stderr) ↔ EC-5 (absent by default — no diagnostic output)
 
@@ -88,4 +109,125 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **Then:** stdout contains the normal quota table output only (no `[trace]` lines); stderr contains `[trace]` lines; the two streams are independent; exit 0.
 - **Exit:** 0
 - **Source fn:** `it034_trace_param_writes_to_stderr`
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-7: `.account.use trace::1 touch::0` — accepted; no `[trace] account.use` lines emitted
+
+- **Given:** Account `alice@home.com` saved. `touch::0` suppresses all fetch operations.
+- **When:** `clp .account.use name::alice@home.com touch::0 trace::1`
+- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; stderr contains no `[trace] account.use` lines; `trace::1` is accepted without "unrecognized parameter" error.
+- **Exit:** 0
+- **Source fn:** `aw31_trace_touch_disabled_no_trace_lines` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-8: `.credentials.status trace::1` — accepted; trace emitted for credential read
+
+- **Given:** Valid credentials file present.
+- **When:** `clp .credentials.status trace::1`
+- **Then:** Exits 0; stderr contains at least one `[trace]` line for the credential file read; no "Unknown parameter" error.
+- **Exit:** 0
+- **Source fn:** `it_trace_credentials_status_accepted` (in `tests/cli/credentials_test.rs`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-9: `.accounts trace::1` — accepted on empty store; trace emitted
+
+- **Given:** Empty credential store (no accounts configured).
+- **When:** `clp .accounts trace::1`
+- **Then:** Exits 0; stderr contains `[trace]` line for store not-found; stdout shows "(no accounts configured)"; no "Unknown parameter" error.
+- **Exit:** 0
+- **Source fn:** `it_trace_accounts_accepted` (in `tests/cli/accounts_test.rs`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-10: `.account.limits trace::1` — accepted; trace emitted before API call
+
+- **Given:** Valid credentials and credential store directory present.
+- **When:** `clp .account.limits trace::1`
+- **Then:** stderr contains `[trace]` line for store read; no "Unknown parameter" error; command may exit 2 (API failure) but must not exit 1 for unknown-param.
+- **Exit:** 0 or 2
+- **Source fn:** `it_trace_account_limits_accepted` (in `tests/cli/account_limits_test.rs`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-11: `.account.save trace::1 dry::1` — accepted; trace emitted for credential read
+
+- **Given:** Valid credentials file and credential store present; `dry::1` suppresses write.
+- **When:** `clp .account.save name::test@example.com dry::1 trace::1`
+- **Then:** Exits 0 (dry-run); stderr contains `[trace]` line for credential file read; no "Unknown parameter" error.
+- **Exit:** 0
+- **Source fn:** `it_trace_account_save_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-12: `.account.use trace::1` — accepted; unknown account → exit 2
+
+- **Given:** Empty credential store (account not found).
+- **When:** `clp .account.use name::test@example.com trace::1`
+- **Then:** Exits 2 (account not found); no "Unknown parameter" error; `trace::1` is accepted by the framework.
+- **Exit:** 2
+- **Source fn:** `it_trace_account_use_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-13: `.account.delete trace::1 dry::1` — accepted; trace emitted for store read
+
+- **Given:** Account `test@example.com` saved; `dry::1` suppresses deletion.
+- **When:** `clp .account.delete name::test@example.com dry::1 trace::1`
+- **Then:** Exits 0 (dry-run); stderr contains `[trace]` line for store read; no "Unknown parameter" error.
+- **Exit:** 0
+- **Source fn:** `it_trace_account_delete_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-14: `.account.relogin trace::1 dry::1` — accepted; trace emitted
+
+- **Given:** Account `work@acme.com` saved and active; `dry::1` suppresses re-auth.
+- **When:** `clp .account.relogin dry::1 trace::1`
+- **Then:** Exits 0 (dry-run); stderr contains `[trace]` line; no "Unknown parameter" error.
+- **Exit:** 0
+- **Source fn:** `it_trace_account_relogin_accepted` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-15: `.account.rotate trace::1 dry::1` — accepted; trace emitted for store read
+
+- **Given:** One active account present; `dry::1` suppresses rotation.
+- **When:** `clp .account.rotate dry::1 trace::1`
+- **Then:** stderr contains `[trace]` line for store read; no "Unknown parameter" error; command may exit 2 (no inactive candidate) but must not exit 1 for unknown-param.
+- **Exit:** 0 or 2
+- **Source fn:** `it_trace_account_rotate_accepted` (in `tests/cli/account_rotate_test.rs`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-16: `.token.status trace::1` — accepted; trace emitted for credential read
+
+- **Given:** Valid credentials file present.
+- **When:** `clp .token.status trace::1`
+- **Then:** Exits 0; stderr contains `[trace]` line for credential file read; no "Unknown parameter" error.
+- **Exit:** 0
+- **Source fn:** `it_trace_token_status_accepted` (in `tests/cli/token_paths_test.rs`)
+- **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
+
+---
+
+### EC-17: `.paths trace::1` — accepted; trace emitted for path resolution
+
+- **Given:** Valid HOME set.
+- **When:** `clp .paths trace::1`
+- **Then:** Exits 0; stderr contains `[trace]` line for base path; no "Unknown parameter" error.
+- **Exit:** 0
+- **Source fn:** `it_trace_paths_accepted` (in `tests/cli/token_paths_test.rs`)
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)

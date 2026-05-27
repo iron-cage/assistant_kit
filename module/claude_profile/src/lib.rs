@@ -98,6 +98,7 @@ pub use persist::PersistPaths;
 /// # Panics
 ///
 /// Panics if a command fails to register (duplicate name = programming error).
+#[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
 {
@@ -130,6 +131,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   // Strict opt-in flags: only "0" or "1" accepted (not "yes"/"no"/"true").
   let bfs = | nm : &'static str, desc : &'static str |
     reg_arg_opt( nm, Kind::String ).with_description( desc );
+  let trc = || reg_arg_opt( "trace", Kind::Integer ).with_description( "Print [trace] lines to stderr for each file read and write step (0 = off, default; 1 = on)" );
 
   reg_cmd( registry, ".credentials.status", "Show live credential metadata without account store dependency",
     vec![
@@ -150,6 +152,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfs( "capabilities", "Show enabled capabilities list from `~/.claude.json` (opt-in)"                    ),
       bfs( "org_uuid",     "Show organisation UUID from active account's `{name}.roles.json` (opt-in)"       ),
       bfs( "org_name",     "Show organisation display name from active account's `{name}.roles.json` (opt-in)" ),
+      trc(),
     ],
     Box::new( credentials_status_routine ) );
   reg_cmd( registry, ".accounts",       "List all saved accounts with field-presence control",
@@ -169,25 +172,28 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfs( "capabilities", "Show enabled capabilities list from saved `{name}.claude.json` snapshot (opt-in)"       ),
       bfs( "org_uuid",     "Show organisation UUID from saved `{name}.roles.json` snapshot (opt-in)"               ),
       bfs( "org_name",     "Show organisation display name from saved `{name}.roles.json` snapshot (opt-in)"       ),
+      trc(),
       fmt(),
     ],
     Box::new( accounts_routine ) );
-  reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), fmt() ],      Box::new( account_limits_routine ) );
-  reg_cmd( registry, ".account.save",    "Save current credentials as a named account profile",                              vec![ nam(), dry() ], Box::new( account_save_routine    ) );
+  reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), fmt(), trc() ], Box::new( account_limits_routine ) );
+  reg_cmd( registry, ".account.save",    "Save current credentials as a named account profile",         vec![ nam(), dry(), trc() ], Box::new( account_save_routine    ) );
   reg_cmd( registry, ".account.use",    "Switch active account by name with atomic credential rotation",
     vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry(),
       reg_arg_opt( "touch",  Kind::String ).with_description( "Activate idle 5h session window via subprocess after switch (0/false = off; 1/true = on, default)" ),
-      reg_arg_opt( "imodel", Kind::String ).with_description( "Subprocess model: `auto` (default, ≥30% 7d(Son) remaining → sonnet, else → opus), `sonnet`, `opus`, `keep`" ),
-      reg_arg_opt( "effort", Kind::String ).with_description( "Subprocess effort level: `auto` (default, high for Sonnet, max for Opus), `high`, `max`" ) ],
+      reg_arg_opt( "imodel", Kind::String ).with_description( "Subprocess model: `auto` (default, ≥30% 7d(Son) remaining → sonnet, else → opus), `sonnet`, `opus`, `haiku` (claude-haiku-4-5-20251001), `keep`" ),
+      reg_arg_opt( "effort", Kind::String ).with_description( "Subprocess effort level: `auto` (default, high for Sonnet, max for Opus), `low`, `normal`, `high`, `max`" ),
+      reg_arg_opt( "trace",  Kind::String ).with_description( "Print [trace] lines to stderr for each internal operation (0 = off, default; 1 = on)" ) ],
     Box::new( account_use_routine     ) );
-  reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                                   vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry() ], Box::new( account_delete_routine  ) );
-  reg_cmd( registry, ".account.relogin", "Force browser re-authentication for a named account with dead refreshToken",     vec![ nam(), dry() ], Box::new( account_relogin_routine ) );
-  reg_cmd( registry, ".account.rotate", "Auto-rotate to the best inactive account (highest remaining token expiry)",       vec![ dry() ],        Box::new( account_rotate_routine ) );
-  reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr() ],      Box::new( token_status_routine   ) );
+  reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                                   vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry(), trc() ], Box::new( account_delete_routine  ) );
+  reg_cmd( registry, ".account.relogin", "Force browser re-authentication for a named account with dead refreshToken",     vec![ nam(), dry(), trc() ], Box::new( account_relogin_routine ) );
+  reg_cmd( registry, ".account.rotate", "Auto-rotate to the best inactive account (highest remaining token expiry)",       vec![ dry(), trc() ], Box::new( account_rotate_routine ) );
+  reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr(), trc() ], Box::new( token_status_routine   ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",
     vec![
       fmt(),
       reg_arg_opt( "field", Kind::String ).with_description( "Output a single named path value; format:: is ignored when set. Valid: base, credentials, credential_store, projects, stats, settings, session_env, sessions" ),
+      trc(),
     ],
     Box::new( paths_routine ) );
   reg_cmd( registry, ".usage",          "Show live rate-limit quota for all saved accounts",
@@ -204,8 +210,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "next",      Kind::String  ).with_description( "Recommendation strategy: `drain` (default), `endurance`" ),
       reg_arg_opt( "cols",      Kind::String  ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default shows all except `sub` and `7d_son_reset`" ),
       reg_arg_opt( "touch",  Kind::String  ).with_description( "Extend active 5h session windows via isolated subprocess for accounts with an active reset countdown (0/false = off; 1/true = on, default)" ),
-      reg_arg_opt( "imodel", Kind::String  ).with_description( "Subprocess model for touch/refresh: `auto` (default, ≥30% 7d(Son) remaining → sonnet, else → opus), `sonnet` (claude-sonnet-4-6), `opus` (claude-opus-4-6), `keep` (no --model flag)" ),
-      reg_arg_opt( "effort", Kind::String  ).with_description( "Subprocess effort level: `auto` (default, max for model: high for Sonnet, max for Opus), `high` (always --effort high), `max` (always --effort max)" ),
+      reg_arg_opt( "imodel", Kind::String  ).with_description( "Subprocess model for touch/refresh: `auto` (default, ≥30% 7d(Son) remaining → sonnet, else → opus), `sonnet` (claude-sonnet-4-6), `opus` (claude-opus-4-6), `haiku` (claude-haiku-4-5-20251001), `keep` (no --model flag)" ),
+      reg_arg_opt( "effort", Kind::String  ).with_description( "Subprocess effort level: `auto` (default, high for Sonnet, max for Opus), `low` (always --effort low), `normal` (always --effort normal), `high` (always --effort high), `max` (always --effort max)" ),
     ],
     Box::new( usage_routine          ) );
 }

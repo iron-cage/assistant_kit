@@ -837,10 +837,11 @@ fn find_next_for_strategy(
     NextStrategy::Drain =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Drain, None, prefer, now_secs );
-      // Fix(BUG-206): skip weekly-exhausted accounts — prefer_weekly == 0 means nothing to drain.
-      // Root cause: spec omitted this gate; ascending sort puts 0%-weekly accounts first.
-      // Pitfall: "sort by X ascending" ≠ "recommend even when X is zero".
-      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 0.0 )
+      // Fix(BUG-206): skip weekly-exhausted accounts — prefer_weekly ≤ 5.0 means nothing meaningful to drain.
+      // Root cause: Round 1 used > 0.0 gate; correct boundary is > 5.0 (aligns with status_emoji 🟢/🟡 threshold).
+      // Pitfall: ascending sort + > 0.0 gate naturally selects lowest non-zero (1-5%) accounts first;
+      //   eligibility gate must use the UI tier boundary (> 5.0), not the mathematical zero.
+      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 )
     }
   }
 }
@@ -1644,7 +1645,7 @@ pub(crate) fn parse_int_flag( cmd : &VerifiedCommand, name : &str, default : i64
     Some( Value::String( s ) ) if s == "false" => Ok( 0 ),
     _ => Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
-      format!( "{name}:: must be 0 or 1" ),
+      format!( "{name}:: must be 0, 1, false, or true" ),
     ) ),
   }
 }
@@ -1653,7 +1654,7 @@ pub(crate) fn parse_int_flag( cmd : &VerifiedCommand, name : &str, default : i64
 
 /// `imodel::` parameter value — determines how the subprocess model is selected.
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-enum SubprocessModel { Auto, Sonnet, Opus, Keep }
+enum SubprocessModel { Auto, Sonnet, Opus, Keep, Haiku }
 
 impl SubprocessModel
 {
@@ -1665,14 +1666,15 @@ impl SubprocessModel
       "sonnet" => Ok( Self::Sonnet ),
       "opus"   => Ok( Self::Opus ),
       "keep"   => Ok( Self::Keep ),
-      _ => Err( format!( "imodel:: must be one of: auto, sonnet, opus, keep; got {s:?}" ) ),
+      "haiku"  => Ok( Self::Haiku ),
+      _ => Err( format!( "imodel:: must be one of: auto, sonnet, opus, keep, haiku; got {s:?}" ) ),
     }
   }
 }
 
 /// `effort::` parameter value — determines the `--effort` flag injected into subprocesses.
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-enum SubprocessEffort { Auto, High, Max }
+enum SubprocessEffort { Auto, High, Max, Low, Normal }
 
 impl SubprocessEffort
 {
@@ -1680,10 +1682,12 @@ impl SubprocessEffort
   {
     match s
     {
-      "auto" => Ok( Self::Auto ),
-      "high" => Ok( Self::High ),
-      "max"  => Ok( Self::Max ),
-      _ => Err( format!( "effort:: must be one of: auto, high, max; got {s:?}" ) ),
+      "auto"   => Ok( Self::Auto ),
+      "high"   => Ok( Self::High ),
+      "max"    => Ok( Self::Max ),
+      "low"    => Ok( Self::Low ),
+      "normal" => Ok( Self::Normal ),
+      _ => Err( format!( "effort:: must be one of: auto, high, max, low, normal; got {s:?}" ) ),
     }
   }
 }
@@ -1695,6 +1699,7 @@ impl SubprocessEffort
 /// AC-02: `sonnet` always maps to `claude-sonnet-4-6`.
 /// AC-03: `opus` always maps to `claude-opus-4-6`.
 /// AC-04: `keep` passes `IsolatedModel::KeepCurrent` — no `--model` flag injected.
+/// AC-13: `haiku` always maps to `claude-haiku-4-5-20251001` (explicit-only; `auto` never selects it).
 #[ inline ]
 fn resolve_model( aq : &AccountQuota, imodel : SubprocessModel ) -> claude_runner_core::IsolatedModel
 {
@@ -1704,6 +1709,7 @@ fn resolve_model( aq : &AccountQuota, imodel : SubprocessModel ) -> claude_runne
     SubprocessModel::Sonnet => IsolatedModel::Specific( "claude-sonnet-4-6".to_string() ),
     SubprocessModel::Opus   => IsolatedModel::Specific( "claude-opus-4-6".to_string() ),
     SubprocessModel::Keep   => IsolatedModel::KeepCurrent,
+    SubprocessModel::Haiku  => IsolatedModel::Specific( "claude-haiku-4-5-20251001".to_string() ),
     SubprocessModel::Auto   =>
     {
       // AC-01: ≥30% Sonnet headroom → sonnet; else → opus.  None quota data → 0% → opus.
@@ -1724,24 +1730,30 @@ fn resolve_model( aq : &AccountQuota, imodel : SubprocessModel ) -> claude_runne
 
 /// Resolve the `--effort` flag value for a subprocess given the resolved model.
 ///
-/// Returns `None` when no `--effort` flag should be injected (`imodel::keep` + auto).
-/// AC-05: `auto` → max for resolved model: `high` (Sonnet), `max` (Opus).
+/// Returns `None` when no `--effort` flag should be injected.
+/// AC-05: `auto` → model-dependent: `high` (Sonnet), `max` (Opus), `None` (Haiku, `KeepCurrent`).
+///         Haiku has no extended thinking; injecting `--effort` would have no effect or API error.
 ///         `KeepCurrent` → `None` (model unknown at dispatch time).
 /// AC-06: `high` always injects `--effort high`.
 /// AC-07: `max` always injects `--effort max`.
+/// AC-14: `low` always injects `--effort low`.
+/// AC-15: `normal` always injects `--effort normal`.
 #[ inline ]
 fn resolve_effort( model : &claude_runner_core::IsolatedModel, effort : SubprocessEffort ) -> Option< &'static str >
 {
   use claude_runner_core::IsolatedModel;
   match effort
   {
-    SubprocessEffort::High => Some( "high" ),
-    SubprocessEffort::Max  => Some( "max" ),
+    SubprocessEffort::High   => Some( "high" ),
+    SubprocessEffort::Max    => Some( "max" ),
+    SubprocessEffort::Low    => Some( "low" ),
+    SubprocessEffort::Normal => Some( "normal" ),
     SubprocessEffort::Auto => match model
     {
-      IsolatedModel::Specific( m ) if m.as_str() == "claude-sonnet-4-6" => Some( "high" ),
-      IsolatedModel::Specific( _ )                                       => Some( "max" ),
-      IsolatedModel::KeepCurrent | IsolatedModel::Default               => None,
+      IsolatedModel::Specific( m ) if m.as_str() == "claude-haiku-4-5-20251001" => None,
+      IsolatedModel::Specific( m ) if m.as_str() == "claude-sonnet-4-6"         => Some( "high" ),
+      IsolatedModel::Specific( _ )                                               => Some( "max" ),
+      IsolatedModel::KeepCurrent | IsolatedModel::Default                       => None,
     },
   }
 }
@@ -1798,21 +1810,76 @@ pub(crate) fn validate_effort_str( s : &str ) -> Result< (), String >
 /// - quota API fetch fails
 /// - account already has an active 5h reset countdown (`five_hour.resets_at.is_some()`)
 ///
+/// When `trace` is true, emits `[trace] account.use  {name}  {step}` lines to stderr
+/// for each internal operation, including the reason when `None` is returned.
+///
 /// Called BEFORE the switch so the target account's credential file still holds the
 /// pre-switch token. The returned `TouchCtx` is passed through the switch and consumed
 /// by [`apply_post_switch_touch`] after `switch_account()` returns.
+// Fix(BUG-207): `pre_switch_touch_ctx` had no `trace` param — credential read, quota fetch,
+//   idle check, and skip-reason were all invisible; the caller always saw "switched to '{name}'".
+// Root cause: Feature 027 scope explicitly deferred trace:: as "Out of Scope"; no rule required
+//   trace:: on commands performing fetch operations.
+// Pitfall: Any command extended to perform HTTP/file/subprocess operations must add trace:: in
+//   the same pass — grep [trace] emission sites in source and verify each emitting command registers trace::.
 pub(crate) fn pre_switch_touch_ctx(
   name       : &str,
   store_path : &std::path::Path,
+  trace      : bool,
 ) -> Option< TouchCtx >
 {
-  let path             = store_path.join( format!( "{name}.credentials.json" ) );
-  let credentials_json = std::fs::read_to_string( &path ).ok()?;
-  let token            = crate::account::parse_string_field( &credentials_json, "accessToken" )?;
-  let quota            = claude_quota::fetch_oauth_usage( &token ).ok()?;
+  let path = store_path.join( format!( "{name}.credentials.json" ) );
+  if trace { eprintln!( "[trace] account.use  {name}  reading {}", path.display() ) }
+  let credentials_json = match std::fs::read_to_string( &path )
+  {
+    Ok( s )  => { if trace { eprintln!( "[trace] account.use  {name}  reading: OK" ) } s }
+    Err( e ) =>
+    {
+      if trace
+      {
+        eprintln!( "[trace] account.use  {name}  reading: Err({e})" );
+        eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)" );
+      }
+      return None;
+    }
+  };
+  let Some( token ) = crate::account::parse_string_field( &credentials_json, "accessToken" ) else
+  {
+    if trace
+    {
+      eprintln!( "[trace] account.use  {name}  quota fetch: Err(no accessToken in credentials)" );
+      eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)" );
+    }
+    return None;
+  };
+  let quota = match claude_quota::fetch_oauth_usage( &token )
+  {
+    Ok( q )  => { if trace { eprintln!( "[trace] account.use  {name}  quota fetch: OK" ) } q }
+    Err( e ) =>
+    {
+      if trace
+      {
+        eprintln!( "[trace] account.use  {name}  quota fetch: Err({e})" );
+        eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)" );
+      }
+      return None;
+    }
+  };
   let is_idle = quota.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_none();
-  if !is_idle { return None; }
-  Some( TouchCtx { credentials_json, quota } )
+  if is_idle
+  {
+    if trace { eprintln!( "[trace] account.use  {name}  idle check: resets_at=absent → idle" ) }
+    Some( TouchCtx { credentials_json, quota } )
+  }
+  else
+  {
+    if trace
+    {
+      eprintln!( "[trace] account.use  {name}  idle check: resets_at=present → already active" );
+      eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: already active)" );
+    }
+    None
+  }
 }
 
 /// Spawn an isolated subprocess to activate the idle 5h session window for `name`.
@@ -1821,13 +1888,23 @@ pub(crate) fn pre_switch_touch_ctx(
 /// (held in `ctx`) for model resolution. The subprocess is fire-and-forget; any
 /// failure is silently ignored — the switch has already succeeded.
 ///
+/// When `trace` is true, emits `[trace] account.use  {name}  model: ...  effort: ...` and
+/// `[trace] account.use  {name}  subprocess: spawned` to stderr after dispatching.
+///
 /// `imodel_str` and `effort_str` must have been pre-validated by [`validate_imodel_str`]
 /// / [`validate_effort_str`]; the `parse()` calls below are infallible on validated input.
+// Fix(BUG-207): `apply_post_switch_touch` had no `trace` param — model/effort resolution
+//   and subprocess spawn were invisible; only the missing [trace] lines in `pre_switch_touch_ctx`
+//   were apparent; both functions required the same fix.
+// Root cause: Same as `pre_switch_touch_ctx` — Feature 027 "Out of Scope" deferral.
+// Pitfall: When a function is split across pre/post phases, both halves need the same diagnostic
+//   param — adding trace:: to one without the other leaves half the operation blind.
 pub(crate) fn apply_post_switch_touch(
   name       : &str,
   ctx        : TouchCtx,
   imodel_str : &str,
   effort_str : &str,
+  trace      : bool,
 )
 {
   let imodel = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
@@ -1842,11 +1919,24 @@ pub(crate) fn apply_post_switch_touch(
     result        : Ok( ctx.quota ),
     account       : None,
   };
-  let model    = resolve_model( &aq, imodel );
-  let mut args = effort_pre_args( &model, effort );
+  let model        = resolve_model( &aq, imodel );
+  let effort_val   = resolve_effort( &model, effort );
+  let model_str    = match &model
+  {
+    claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(),
+    _                                                => "keep-current",
+  };
+  let effort_label = effort_val.unwrap_or( "(none)" );
+  if trace { eprintln!( "[trace] account.use  {name}  model: {model_str}  effort: {effort_label}" ) }
+  let mut args = match effort_val
+  {
+    Some( e ) => vec![ "--effort".to_string(), e.to_string() ],
+    None      => vec![],
+  };
   args.push( "--print".to_string() );
   args.push( ".".to_string() );
   let _ = claude_runner_core::run_isolated( &ctx.credentials_json, args, 120, model );
+  if trace { eprintln!( "[trace] account.use  {name}  subprocess: spawned" ) }
 }
 
 fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorData >
@@ -4467,15 +4557,15 @@ mod tests
     );
   }
 
-  /// FT-09/023 (BUG-206) — drain skips accounts where `prefer_weekly == 0` (nothing to drain).
+  /// FT-09/023 (BUG-206) — drain never recommends `prefer_weekly ≤ 5.0` accounts (weekly-exhausted, 🟡 tier).
   ///
-  /// Root Cause: drain sort put `prefer_weekly=0` accounts first (ascending), and
-  ///   `find_first_eligible` had no `prefer_weekly > 0` gate, so drain recommended an
-  ///   account with zero remaining weekly capacity.
-  /// Why Not Caught: worked example in 023 spec explicitly showed 0%-weekly winner as correct.
-  /// Fix Applied: `find_first_eligible` predicate in Drain arm: `prefer_weekly(aq, prefer) > 0.0`.
-  /// Prevention: ascending-sort strategies must define a minimum-viable eligibility threshold;
-  ///   "sort by X asc" ≠ "recommend even when X is zero".
+  /// Root Cause: Round 1 fix used `> 0.0`; accounts in (0.0, 5.0] (🟡 tier) were still admitted.
+  ///   drain sort ascending puts lowest-weekly accounts first, so a 1% account ranked before 10%.
+  /// Why Not Caught: original MRE only tested the `== 0` boundary; the (0.0, 5.0] gap was untested.
+  /// Fix Applied: `find_first_eligible` predicate: `prefer_weekly(aq, prefer) > 5.0` (aligns with
+  ///   `status_emoji` 🟢/🟡 boundary: 7d Left ≤ 5% = 🟡 = weekly-exhausted = skip).
+  /// Prevention: eligibility gate must use the UI tier boundary (> 5.0), not the mathematical zero;
+  ///   cover the full ≤ 5.0 range in the MRE, not just the `== 0` boundary.
   /// Pitfall: verify BUG-206 reproducer with `PreferStrategy::Any` — `prefer_weekly=min(7d,Son)`,
   ///   so Sonnet fully exhausted (`Son util=100%`) drives `prefer_weekly` to 0 even if 7d has quota.
   ///
@@ -4512,6 +4602,35 @@ mod tests
     assert!(
       idx2.is_none(),
       "BUG-206: drain must return None when all accounts have prefer_weekly=0 (nothing to drain); got {idx2:?}",
+    );
+
+    // BUG-206 reopen: accounts in (0.0, 5.0] (🟡 tier) must also be skipped, not just exactly 0%.
+    // weekly_one: prefer_weekly(Any)=min(1%,1%)=1% — above zero but still weekly-exhausted (🟡).
+    // With > 0.0 predicate, drain would pick weekly_one (1%) over weekly_ten_r (10%) — wrong.
+    let weekly_zero_r = mk_aq_sort_weekly( "weekly_zero_r@test.com", 0.0, 96.0, 100.0 );  // prefer_weekly=0%
+    let weekly_one    = mk_aq_sort_weekly( "weekly_one@test.com",    0.0, 99.0,  99.0 );  // prefer_weekly=1%
+    let weekly_ten_r  = mk_aq_sort_weekly( "weekly_ten_r@test.com",  0.0, 85.0,  90.0 );  // prefer_weekly=10%
+    let accounts_r    = vec![ weekly_zero_r, weekly_one, weekly_ten_r ];
+
+    let idx3 = find_next_for_strategy( &accounts_r, NextStrategy::Drain, PreferStrategy::Any, now );
+    assert!(
+      idx3.is_some(),
+      "BUG-206 reopen: drain must find weekly_ten_r (10%) even when weekly_zero_r (0%) and weekly_one (1%) exist",
+    );
+    assert_eq!(
+      accounts_r[ idx3.unwrap() ].name, "weekly_ten_r@test.com",
+      "BUG-206 reopen: drain must skip both 0% and 1% (≤ 5.0); got {idx3:?}",
+    );
+
+    // When ALL accounts are ≤ 5.0 (covering the (0, 5] range), drain returns None.
+    let lo_a = mk_aq_sort_weekly( "lo_a@test.com", 0.0, 96.0, 100.0 );  // prefer_weekly=0%
+    let lo_b = mk_aq_sort_weekly( "lo_b@test.com", 0.0, 99.0,  99.0 );  // prefer_weekly=1%
+    let all_lo = vec![ lo_a, lo_b ];
+
+    let idx4 = find_next_for_strategy( &all_lo, NextStrategy::Drain, PreferStrategy::Any, now );
+    assert!(
+      idx4.is_none(),
+      "BUG-206 reopen: drain must return None when all accounts have prefer_weekly ≤ 5.0; got {idx4:?}",
     );
   }
 
@@ -4858,6 +4977,74 @@ mod tests
     );
   }
 
+  // ── TSK-209: haiku model + low/normal effort ─────────────────────────────────
+
+  /// FT-18 / EC-12 (035): `imodel::haiku` → `IsolatedModel::Specific("claude-haiku-4-5-20251001")`.
+  ///
+  /// Haiku is explicit-only; `imodel::auto` continues to select between Sonnet and Opus only.
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-18]
+  ///       [`tests/docs/cli/param/035_imodel.md` EC-12]
+  #[ test ]
+  fn it_imodel_haiku_explicit()
+  {
+    let aq       = mk_aq_no_sonnet_data();
+    let model    = resolve_model( &aq, SubprocessModel::Haiku );
+    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
+    assert_eq!(
+      model_id, "claude-haiku-4-5-20251001",
+      "imodel::haiku must always return claude-haiku-4-5-20251001",
+    );
+  }
+
+  /// FT-20 / EC-12 (036): `effort::low` always returns `Some("low")` regardless of model.
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-20]
+  ///       [`tests/docs/cli/param/036_effort.md` EC-12]
+  #[ test ]
+  fn it_effort_low_explicit()
+  {
+    let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
+    let haiku  = claude_runner_core::IsolatedModel::Specific( "claude-haiku-4-5-20251001".to_string() );
+    let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
+    assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Low ), Some( "low" ), "effort::low with sonnet must be low" );
+    assert_eq!( resolve_effort( &haiku,  SubprocessEffort::Low ), Some( "low" ), "effort::low with haiku must be low" );
+    assert_eq!( resolve_effort( &keep,   SubprocessEffort::Low ), Some( "low" ), "effort::low with keep must be low" );
+  }
+
+  /// FT-21 / EC-13 (036): `effort::normal` always returns `Some("normal")` regardless of model.
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-21]
+  ///       [`tests/docs/cli/param/036_effort.md` EC-13]
+  #[ test ]
+  fn it_effort_normal_explicit()
+  {
+    let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
+    let haiku  = claude_runner_core::IsolatedModel::Specific( "claude-haiku-4-5-20251001".to_string() );
+    let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
+    assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Normal ), Some( "normal" ), "effort::normal with sonnet must be normal" );
+    assert_eq!( resolve_effort( &haiku,  SubprocessEffort::Normal ), Some( "normal" ), "effort::normal with haiku must be normal" );
+    assert_eq!( resolve_effort( &keep,   SubprocessEffort::Normal ), Some( "normal" ), "effort::normal with keep must be normal" );
+  }
+
+  /// FT-19 / EC-14 (036): `imodel::haiku` + `effort::auto` → `None` (Haiku lacks extended thinking).
+  ///
+  /// Injecting `--effort` with Haiku would either have no effect or be rejected by the API.
+  /// Haiku is the only concrete model that maps to `None` under `effort::auto`.
+  ///
+  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-19]
+  ///       [`tests/docs/cli/param/036_effort.md` EC-14]
+  #[ test ]
+  fn it_imodel_haiku_effort_auto_no_effort_flag()
+  {
+    let haiku    = claude_runner_core::IsolatedModel::Specific( "claude-haiku-4-5-20251001".to_string() );
+    let pre_args = effort_pre_args( &haiku, SubprocessEffort::Auto );
+    assert!(
+      pre_args.is_empty(),
+      "imodel::haiku + effort::auto must produce no pre-args (no --effort flag), got: {pre_args:?}",
+    );
+  }
+
   // ── TSK-192: apply_touch trigger behavioral tests ────────────────────────────
 
   /// Build an `AccountQuota` with `five_hour.resets_at` set to the given value.
@@ -4888,8 +5075,12 @@ mod tests
   /// BUG-181 AC-02 / FT-02 behavioral: `apply_touch` fires when `resets_at` is `None` (idle).
   ///
   /// When `five_hour.resets_at` is absent (idle 5h window), `apply_touch` must
-  /// attempt to reach `refresh_account_token`, observable via `switch_account` writing
-  /// credentials to `fake_home/.claude/credentials.json`.
+  /// attempt `refresh_account_token`. Observable: the active-account restore path in
+  /// `apply_touch` calls `switch_account` (with the `_active` marker account), writing
+  /// credentials to `fake_home/.claude/.credentials.json`.
+  ///
+  /// Fix(BUG-175): `refresh_account_token` no longer calls `switch_account` internally;
+  ///   the observable is now the unconditional restore call in `apply_touch` itself.
   ///
   /// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
   ///       [`docs/feature/024_session_touch.md` AC-02]
@@ -4901,18 +5092,25 @@ mod tests
     let fake_home = dir.path().join( "home" );
     std::fs::create_dir_all( &store ).unwrap();
     std::fs::create_dir_all( fake_home.join( ".claude" ) ).unwrap();
-    // Credentials file in store — switch_account can proceed past NotFound guard.
+    // Credentials file in store — restore switch_account can copy to paths.credentials_file().
     std::fs::write(
       store.join( "test@example.com.credentials.json" ),
       r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
     ).unwrap();
+    // _active marker → apply_touch reads it as original_active → restore switch_account runs.
+    // Fix(BUG-175): without _active marker, restore never runs (original_active is None).
+    std::fs::write(
+      store.join( crate::account::active_marker_filename() ),
+      "test@example.com",
+    ).unwrap();
     let mut aq = mk_aq_with_resets_at( None );
     let paths  = crate::ClaudePaths::with_home( &fake_home );
     apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
-    // Trigger fired → switch_account atomically wrote credentials to paths.credentials_file().
+    // Trigger fired → refresh_account_token entered → original_active restored via switch_account
+    // → paths.credentials_file() written by the unconditional restore in apply_touch.
     assert!(
       paths.credentials_file().exists(),
-      "apply_touch must call switch_account when resets_at is None (idle account)"
+      "apply_touch must enter refresh path when resets_at is None (idle account)"
     );
   }
 
@@ -4932,15 +5130,23 @@ mod tests
     let fake_home = dir.path().join( "home" );
     std::fs::create_dir_all( &store ).unwrap();
     std::fs::create_dir_all( fake_home.join( ".claude" ) ).unwrap();
-    // Credentials file in store — present so that any accidental switch_account call could proceed.
+    // Credentials file in store — present so that any accidental trigger would write credentials_file.
     std::fs::write(
       store.join( "test@example.com.credentials.json" ),
       r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
     ).unwrap();
+    // _active marker present — if trigger erroneously fired, restore would write credentials_file;
+    // the negative assertion is therefore discriminating: file NOT written proves trigger skipped.
+    // Fix(BUG-175): restore is unconditional when original_active is Some, so this marker makes the
+    //   negative test stronger than it was without it.
+    std::fs::write(
+      store.join( crate::account::active_marker_filename() ),
+      "test@example.com",
+    ).unwrap();
     let mut aq = mk_aq_with_resets_at( Some( "2099-01-01T00:00:00Z" ) );
     let paths  = crate::ClaudePaths::with_home( &fake_home );
     apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
-    // Trigger skipped → switch_account NOT called → credentials file NOT written.
+    // Trigger skipped → early return before restore path → credentials_file NOT written.
     assert!(
       !fake_home.join( ".claude" ).join( ".credentials.json" ).exists(),
       "apply_touch must skip switch_account when resets_at is Some (already active)"

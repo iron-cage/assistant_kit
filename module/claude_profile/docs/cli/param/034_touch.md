@@ -18,7 +18,7 @@ touch::0   → no subprocess spawned; idle accounts remain idle
 
 **Notes:**
 - Trigger condition: account's quota fetch succeeded (valid token, no error) AND `five_hour.resets_at` is absent (idle — no active 5h session). Accounts with errored quota (expired token, auth failure) are never touched. Accounts with `resets_at` present (already active 5h window) are skipped — they already have a running session.
-- **On `.usage`:** Uses the same `account::refresh_account_token()` lifecycle as `refresh::` — `switch_account -> read credentials -> run_isolated(["--print", "."]) -> write credentials -> save`. After the subprocess completes, quota is re-fetched unconditionally for that account. After all touch operations complete, the original active account is restored. `touch::` does not affect `format::json` output structure.
+- **On `.usage`:** Uses the same `account::refresh_account_token()` lifecycle as `refresh::` — `read credentials -> run_isolated(["--print", "."]) -> write credentials -> save`. After the subprocess completes, quota is re-fetched unconditionally for that account. After all touch operations complete, the original active account is restored. `touch::` does not affect `format::json` output structure.
 - **On `.usage`:** When both `refresh::1` and `touch::1` are active, refresh runs first (retries auth errors); touch runs second on post-refresh results. Accounts whose refresh already started a session are skipped by touch.
 - **On `.usage`:** In `live::1` mode, `touch::1` applies on every cycle. Accounts whose sessions expired since the last cycle (becoming idle) are re-activated.
 - **On `.usage`:** Each touch spawns an isolated subprocess (~35s timeout). With N idle accounts, touch adds up to N × 35s.

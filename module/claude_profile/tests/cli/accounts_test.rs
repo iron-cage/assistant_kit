@@ -1360,3 +1360,26 @@ fn acc48_org_name_missing_roles_json_na()
   assert!( text.contains( "Org:" ), "Org: line must appear with org_name::1, got:\n{text}" );
   assert!( text.contains( "N/A" ),  "absent roles.json must show N/A, got:\n{text}" );
 }
+
+// ── it_trace_accounts_accepted ─────────────────────────────────────────────────
+
+/// EC-9 (023): `trace::1` accepted by `.accounts` on empty store — no "Unknown parameter" error.
+/// TSK-210 RED gate: fails before `trace::` is registered (exit 1 + Unknown parameter).
+#[ test ]
+fn it_trace_accounts_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".accounts", "trace::1" ], &[ ( "HOME", home ) ] );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "Unknown parameter" ),
+    "trace::1 must be accepted by .accounts, got stderr:\n{err}",
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    err.contains( "[trace]" ),
+    "trace::1 must emit [trace] lines to stderr for .accounts, got:\n{err}",
+  );
+}

@@ -11,7 +11,7 @@
 
 The `refresh::` parameter takes `1` (default, on) or `0` (off). When `0`, `.usage` behaves identically to the baseline — auth errors appear as error rows in the table and no subprocess is spawned.
 
-When `refresh::1`, the command wraps `fetch_oauth_usage` with a retry layer: on an HTTP authentication error (401 or 403), it calls `claude_profile_core::account::refresh_account_token()` for that account, then retries the quota fetch if updated credentials are returned. `refresh_account_token()` encapsulates the full account lifecycle: `switch_account` → `read credentials` → `run_isolated` (via `claude_runner_core`) → `write credentials` → `save`; it returns `Some(new_creds_json)` on success or `None` on any failure in the lifecycle.
+When `refresh::1`, the command wraps `fetch_oauth_usage` with a retry layer: on an HTTP authentication error (401 or 403), it calls `claude_profile_core::account::refresh_account_token()` for that account, then retries the quota fetch if updated credentials are returned. `refresh_account_token()` encapsulates the full account lifecycle: `read credentials` → `run_isolated` (via `claude_runner_core`) → `write credentials` → `save`; it returns `Some(new_creds_json)` on success or `None` on any failure in the lifecycle.
 
 **Trigger condition:** HTTP auth errors (401, 403) always trigger a refresh attempt. Additionally, HTTP 429 (rate-limit) triggers a refresh when the per-account credential file has a locally-expired `expiresAt` — this handles the case where Claude Code updated `~/.claude/.credentials.json` in the live session but the saved per-account copy was never re-saved, leaving a stale token. Network failures, timeouts, and 429 with a non-expired local token are passed through as-is, preventing unnecessary subprocess launches.
 
@@ -28,7 +28,7 @@ if refresh_param == 1:
         //   - result is auth_error("401") or auth_error("403")
         //   - result is rate_limit("429") AND expires_at_ms / 1000 <= now_secs
         new_json = account::refresh_account_token(account_quota.name, credential_store, claude_paths, trace)
-        // Encapsulates: switch_account → read credentials → run_isolated(["--print", "."], 35s) → write credentials → save
+        // Encapsulates: read credentials → run_isolated(["--print", "."], 35s) → write credentials → save
         // Returns Some(new_creds_json) if lifecycle succeeds; None on any failure
 
         if new_json is Some(json):
@@ -48,8 +48,12 @@ if refresh_param == 1:
         else:
             // original error preserved; account row shows pre-refresh error state
 
-    if original_active is Some(name):
-        account::switch_account(name, credential_store, claude_paths)   // restore
+    if original_active is Some(name) and name.trim().is_not_empty():
+        result = account::switch_account(name, credential_store, claude_paths)
+        if trace:
+            emit "[trace] refresh {name}  restore switch_account: OK"  // or Err(e)
+        if result is Err(e):
+            emit to stderr unconditionally (not trace-gated): "[warn] restore switch_account failed for {name}: {e}"
 
 render results as table
 ```
@@ -86,8 +90,9 @@ Two other arg combinations are broken and must not be used:
 - **AC-22**: `refresh::` does not affect `format::json` output structure — refreshed accounts appear as normal data objects, failed-refresh accounts appear as error objects.
 - **AC-23**: The `refresh::` parameter appears in `.usage --help` output with its default value (`1`).
 - **AC-25**: After `run_isolated` returns `credentials: Some(new_json)`, `account_quota.expires_at_ms` is updated using a two-step fallback: (1) decode the JWT `exp` claim from the new `accessToken` via `jwt_exp_ms(new_json)` — preferred for JWT-format tokens; (2) if JWT decoding returns `None` (e.g., opaque `sk-ant-oat01-*` tokens with no `.` separator), read `expiresAt` directly from the credentials JSON via `parse_u064_field(new_json, "expiresAt")`. If both strategies fail, `expires_at_ms` is left unchanged as a last-resort safe fallback. Fix for [BUG-170](../../../../task/claude_profile/bug/170_expires_column_stale_after_refresh_opaque_token.md).
-- **AC-26**: When `trace=true`, `refresh_account_token` emits `[trace] refresh {name}  {step}: {outcome}` lines to stderr for each lifecycle step — `switch_account`, `read credentials`, `run_isolated` (with `"invoking claude  args=["--print", "."]  timeout=35s"` before the call), `write credentials`, and `save`. Each outcome is either `OK` (or `OK credentials={Some|None}` for `run_isolated`) or `Err({error})`. The `trace` parameter is forwarded by `apply_refresh` into `refresh_account_token` so the full lifecycle is observable from `clp .usage refresh::1 trace::1`. Fix for [BUG-166](../../../../task/claude_profile/bug/166_refresh_account_token_no_trace.md).
+- **AC-26**: When `trace=true`, `refresh_account_token` emits `[trace] refresh {name}  {step}: {outcome}` lines to stderr for each lifecycle step — `read credentials`, `run_isolated` (with `"invoking claude  args=["--print", "."]  timeout=35s"` before the call), `write credentials`, and `save`. Each outcome is either `OK` (or `OK credentials={Some|None}` for `run_isolated`) or `Err({error})`. The `trace` parameter is forwarded by `apply_refresh` into `refresh_account_token` so the full lifecycle is observable from `clp .usage refresh::1 trace::1`. Fix for [BUG-166](../../../../task/claude_profile/bug/166_refresh_account_token_no_trace.md).
 - **AC-27**: After `apply_refresh()` successfully re-fetches quota (i.e., `account_quota.result` transitions to `Ok`), `account_quota.account` is re-populated by calling `fetch_oauth_account()` with the new token. Consequence: `~Renews` and `Sub` columns show current data for successfully-refreshed accounts rather than the stale `?` they would show if `aq.account` were left as `None`. If the `fetch_oauth_account()` call fails, the original `account_quota.account` value is preserved unchanged (non-aborting). Fix for BUG-171.
+- **AC-28**: After the per-account refresh loop completes, the active-account restore step (calling `switch_account(original_active_name, ...)`) is fully instrumented: when `trace=true`, emits `[trace] refresh  {original_name}  restore switch_account: OK` on success or `[trace] refresh  {original_name}  restore switch_account: Err({e})` on failure. IO errors during restore are also logged to stderr unconditionally (not trace-gated) so restore failures are always visible regardless of `trace` setting. Fix for [BUG-208](../../../../task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md).
 
 ### Cross-References
 
@@ -95,7 +100,7 @@ Two other arg combinations are broken and must not be used:
 |------|------|----------------|
 | source | `src/usage.rs` | `refresh::` param read; retry trigger; calls `account::refresh_account_token()`; expiry derivation; retry fetch |
 | source | `src/lib.rs` | `refresh::` parameter registration via `register_commands()` |
-| source | `claude_profile_core/src/account.rs` | `refresh_account_token()` — `switch_account → read credentials → run_isolated → write credentials → save` lifecycle |
+| source | `claude_profile_core/src/account.rs` | `refresh_account_token()` — `read credentials → run_isolated → write credentials → save` lifecycle |
 | dep | `claude_runner_core` | `run_isolated()` — called by `refresh_account_token()` in `_core`; `IsolatedRunResult`, `RunnerError` types |
 | dep | `claude_quota` | `fetch_oauth_usage()` — quota HTTP transport; `QuotaError::HttpTransport` |
 | task | `task/claude_runner_core/136_run_isolated_subprocess.md` | Prerequisite: implement `run_isolated()` |
@@ -106,6 +111,8 @@ Two other arg combinations are broken and must not be used:
 | bug | `task/claude_profile/bug/162_expiresAt_not_updated_by_subprocess.md` | BUG-162: subprocess never writes `expiresAt`; use JWT `exp` instead |
 | bug | `task/claude_profile/bug/170_expires_column_stale_after_refresh_opaque_token.md` | BUG-170: `jwt_exp_ms` returns None for opaque tokens; add `expiresAt` fallback |
 | bug | `task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md` | BUG-165: live session not updated after refresh; fixed by account lifecycle |
+| bug | `task/claude_profile/bug/175_switch_account_before_run_isolated_unnecessary_global_write.md` | BUG-175: `Some(paths)` branch called `switch_account` before reading creds — unnecessary global write; removed |
+| bug | `task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md` | BUG-208: restore `switch_account` calls wrapped in `let _ = ...` — silent error discard, no `[trace]` line under `trace::1` |
 | bug | `task/claude_profile/bug/166_refresh_account_token_no_trace.md` | BUG-166: `refresh_account_token` had no trace param; all failure paths silently returned `None` |
 | bug | `task/claude_profile/bug/169_refresh_args_interactive_mode_regression.md` | BUG-169: TSK-168 regression — empty args `[]` broken; `["--print", "."]` is the only correct invocation |
 | task | `task/claude_profile/163_fix_expiresAt_jwt_decode.md` | TSK-163: implement `jwt_exp_ms()` and fix `apply_refresh` expiry derivation |

@@ -38,8 +38,8 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [032_next.md](032_next.md) | `next::` — recommendation strategy selector for quota table |
 | [033_cols.md](033_cols.md) | `cols::` — column visibility modifiers for quota table |
 | [034_touch.md](034_touch.md) | `touch::` — activate idle accounts' 5h windows via isolated subprocess |
-| [035_imodel.md](035_imodel.md) | `imodel::` — isolated subprocess model selection (`auto`, `sonnet`, `opus`, `keep`) |
-| [036_effort.md](036_effort.md) | `effort::` — isolated subprocess effort level (`auto`, `high`, `max`) |
+| [035_imodel.md](035_imodel.md) | `imodel::` — isolated subprocess model selection (`auto`, `sonnet`, `opus`, `haiku`, `keep`) |
+| [036_effort.md](036_effort.md) | `effort::` — isolated subprocess effort level (`auto`, `low`, `normal`, `high`, `max`) |
 
 **Total:** 36 parameters
 
@@ -69,7 +69,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 20 | `live::` | `bool` | `0` | `0`, `1` | Continuous refresh loop | 1 cmd |
 | 21 | `interval::` | `u64` | `30` | ≥ 30 (seconds) | Live mode cycle duration | 1 cmd |
 | 22 | `jitter::` | `u64` | `0` | 0 ≤ jitter ≤ interval | Live mode cycle timing variance | 1 cmd |
-| 23 | `trace::` | `bool` | `0` | `0`, `1` | Diagnostic trace output to stderr | 1 cmd |
+| 23 | `trace::` | `bool` | `0` | `0`, `1` | Diagnostic trace output to stderr | 11 cmds |
 | 24 | `field::` | `String` | `""` (show all) | `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions` | Single-path output selector | 1 cmd |
 | 25 | `sort::` | `enum` | `drain` | `name`, `endurance`, `drain`, `reset`, `next` | Row ordering strategy for quota table | 1 cmd |
 | 26 | `desc::` | `bool` | context-sensitive | `0`, `1`, `false`, `true` | Sort direction; default per `sort::` strategy | 1 cmd |
@@ -80,9 +80,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 31 | `org_name::` | `bool` | `0` | `0`, `1` | Organisation display name toggle (opt-in) | 2 cmds |
 | 32 | `next::` | `enum` | `drain` | `endurance`, `drain` | Recommendation strategy selector | 1 cmd |
 | 33 | `cols::` | `string` | `""` | `+col_id`, `-col_id` modifiers | Column visibility modifiers | 1 cmd |
-| 34 | `touch::` | `bool` | `1` | `0`, `1`, `false`, `true` | Activate idle accounts' 5h windows | 1 cmd |
-| 35 | `imodel::` | `enum` | `auto` | `auto`, `sonnet`, `opus`, `keep` | Isolated subprocess model selection | 1 cmd |
-| 36 | `effort::` | `enum` | `auto` | `auto`, `high`, `max` | Isolated subprocess effort level | 1 cmd |
+| 34 | `touch::` | `bool` | `1` | `0`, `1`, `false`, `true` | Activate idle accounts' 5h windows | 2 cmds |
+| 35 | `imodel::` | `enum` | `auto` | `auto`, `sonnet`, `opus`, `haiku`, `keep` | Isolated subprocess model selection | 2 cmds |
+| 36 | `effort::` | `enum` | `auto` | `auto`, `low`, `normal`, `high`, `max` | Isolated subprocess effort level | 2 cmds |
 
 *Params 1 = Account Targeting; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36 = Fetch Behavior group; param 24 = Output Selection group; params 25–27, 32 = Sort Control group; param 33 = Display Control group*
 

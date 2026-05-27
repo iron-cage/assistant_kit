@@ -4,7 +4,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 
 - **Type:** `enum`
 - **Default:** `auto`
-- **Constraints:** `auto`, `sonnet`, `opus`, `keep`
+- **Constraints:** `auto`, `sonnet`, `opus`, `haiku`, `keep`
 - **Commands:** [`.usage`](../command/006_usage.md#command--9-usage), [`.account.use`](../command/001_account.md#command--5-accountuse)
 - **Purpose:** Preserve Sonnet quota automatically (via `auto`) or override subprocess model selection explicitly.
 - **Group:** [Fetch Behavior](../param_group/003_fetch_behavior.md)
@@ -16,6 +16,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 | `auto` (default) | Per-account | `claude-sonnet-4-6` if account's `7d(Son) ≥ 30%`; `claude-opus-4-6` otherwise |
 | `sonnet` | `claude-sonnet-4-6` | Always Sonnet, regardless of quota |
 | `opus` | `claude-opus-4-6` | Always Opus, regardless of quota |
+| `haiku` | `claude-haiku-4-5-20251001` | Always Haiku — lightweight; no extended thinking (effort::auto → no --effort flag) |
 | `keep` | None | No `--model` flag; Claude binary chooses the model |
 
 **Examples:**
@@ -24,6 +25,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 imodel::auto     → per-account: sonnet when 7d(Son)≥30%, opus when <30% (default)
 imodel::sonnet   → always --model claude-sonnet-4-6
 imodel::opus     → always --model claude-opus-4-6
+imodel::haiku    → always --model claude-haiku-4-5-20251001
 imodel::keep     → no --model flag injected
 ```
 

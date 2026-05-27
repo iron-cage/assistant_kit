@@ -11,7 +11,7 @@
 
 The `touch::` parameter takes `1`/`true` (on, default) or `0`/`false` (off). When `0`, `.usage` behaves identically to the baseline — idle accounts remain idle.
 
-When `touch::1`, after the initial quota fetch the command identifies accounts whose `five_hour.resets_at` is absent (rendered as `—` in the `5h Reset` column — idle, no active session) AND whose quota fetch succeeded (valid token, no error). For each such account, it calls `account::refresh_account_token()` — the same lifecycle used by `refresh::` — which performs `switch_account → read credentials → run_isolated(["--print", "."])  → write credentials → save`. The subprocess sends a minimal prompt to the Claude API, which starts a new 5h session and sets `resets_at` to ~5 hours from now. After the subprocess completes, the command re-fetches quota for that account to obtain the newly-set `five_hour.resets_at` value.
+When `touch::1`, after the initial quota fetch the command identifies accounts whose `five_hour.resets_at` is absent (rendered as `—` in the `5h Reset` column — idle, no active session) AND whose quota fetch succeeded (valid token, no error). For each such account, it calls `account::refresh_account_token()` — the same lifecycle used by `refresh::` — which performs `read credentials → run_isolated(["--print", "."])  → write credentials → save`. The subprocess sends a minimal prompt to the Claude API, which starts a new 5h session and sets `resets_at` to ~5 hours from now. After the subprocess completes, the command re-fetches quota for that account to obtain the newly-set `five_hour.resets_at` value.
 
 **Why this works:** The Anthropic API starts a 5h session window on any API call when no active window exists. Sending any prompt — even `"."` — transitions the account from idle (`resets_at = None`) to active (`resets_at` set to ~5h from now), making the account immediately available with a concrete session countdown.
 
@@ -43,8 +43,12 @@ if touch_param == 1:
         account_quota.result = fetch_oauth_usage(new_token)
         // (if re-fetch fails, account row shows pre-touch data)
 
-    if original_active is Some(name):
-        account::switch_account(name, credential_store, claude_paths)
+    if original_active is Some(name) and name.trim().is_not_empty():
+        result = account::switch_account(name, credential_store, claude_paths)
+        if trace:
+            emit "[trace] touch {name}  restore switch_account: OK"  // or Err(e)
+        if result is Err(e):
+            emit to stderr unconditionally: "[warn] restore switch_account failed for {name}: {e}"
 
 render results as table
 ```
@@ -67,10 +71,11 @@ render results as table
 - **AC-06**: After all touch operations complete, the original active account is restored.
 - **AC-07**: If the touch subprocess fails, the account's row shows its original quota data unchanged (touch failure is non-aborting).
 - **AC-08**: `touch::` does not affect `format::json` output structure — touched accounts appear as normal data objects with their re-fetched quota.
-- **AC-09**: When `trace=true`, every account processed by `apply_touch` emits a `[trace] touch` line: touched accounts show subprocess lifecycle with per-step elapsed time (switch_account duration, run_isolated duration); accounts skipped because they do not qualify (already active, or errored) emit a `[trace] touch  <name>  skipped (reason: ...)` line.
+- **AC-09**: When `trace=true`, every account processed by `apply_touch` emits a `[trace] touch` line: touched accounts show subprocess lifecycle steps (`read credentials`, `run_isolated` with elapsed time, `write credentials`, `save`); accounts skipped because they do not qualify (already active, or errored) emit a `[trace] touch  <name>  skipped (reason: ...)` line.
 - **AC-12**: When `trace=true`, accounts skipped by the touch trigger emit a skip-reason trace line covering all skip cases: `resets_at` present (already active 5h window — skip) and Err result (no valid quota). Both skip cases are diagnostically distinct and produce a trace line.
 - **AC-10**: `touch::` parameter appears in `.usage --help` output with its default value (`1`).
 - **AC-11**: In `live::1` mode with `touch::1` active, touch runs on every cycle. For each cycle where an account's `five_hour.resets_at` is absent (session expired since last cycle), the touch trigger fires and a new session is started. The trigger does not fire for accounts with `resets_at` present (still active).
+- **AC-13**: After all touch operations complete, the active-account restore step (calling `switch_account(original_active_name, ...)`) is fully instrumented: when `trace=true`, emits `[trace] touch  {original_name}  restore switch_account: OK` on success or `[trace] touch  {original_name}  restore switch_account: Err({e})` on failure. IO errors during restore are also logged to stderr unconditionally (not trace-gated). Fix for [BUG-208](../../../../task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md).
 
 ### Cross-References
 
@@ -89,3 +94,4 @@ render results as table
 | param | [cli/param/034_touch.md](../cli/param/034_touch.md) | `touch::` parameter specification |
 | param | [cli/param/019_refresh.md](../cli/param/019_refresh.md) | `refresh::` — runs before touch when both active |
 | doc | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch touch on `.account.use` — extends the touch concept to account switching |
+| bug | `task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md` | BUG-208: restore `switch_account` calls wrapped in `let _ = ...` — silent error discard, no `[trace]` line under `trace::1` |

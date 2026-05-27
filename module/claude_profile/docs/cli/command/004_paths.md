@@ -8,7 +8,7 @@ File path resolution commands.
 
 Displays all canonical `~/.claude/` file and directory paths resolved from `HOME`. Use this for diagnostics and tooling integration.
 
--- **Parameters:** [`format::`](../param/002_format.md), [`field::`](../param/024_field.md)
+-- **Parameters:** [`format::`](../param/002_format.md), [`field::`](../param/024_field.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: unknown `field::` value) | 2 (runtime: HOME not set)
 
 **Syntax:**
@@ -24,6 +24,7 @@ clp .paths field::credentials
 |-----------|------|---------|---------|
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
 | `field::` | `String` | `""` (show all) | Output a single named path value; valid: `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions` |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for home resolution source and each resolved path |
 
 **Examples:**
 

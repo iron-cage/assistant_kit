@@ -341,3 +341,31 @@ fn lim10_limits_prefix_resolves()
   );
 }
 
+// ── it_trace_account_limits_accepted ──────────────────────────────────────────
+
+/// EC-10 (023): `trace::1` accepted by `.account.limits` — no "Unknown parameter" error.
+/// Command may exit 2 (fetch failure) but must not exit 1 for unknown-param.
+/// TSK-210 RED gate: fails before `trace::` is registered (exit 1 + Unknown parameter).
+#[ test ]
+fn it_trace_account_limits_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Write credentials so require_credential_store succeeds and trace is emitted before API call.
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
+  std::fs::create_dir_all(
+    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" )
+  ).unwrap();
+
+  let out = run_cs_with_env( &[ ".account.limits", "trace::1" ], &[ ( "HOME", home ) ] );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "Unknown parameter" ),
+    "trace::1 must be accepted by .account.limits, got stderr:\n{err}",
+  );
+  assert!(
+    err.contains( "[trace]" ),
+    "trace::1 must emit [trace] lines to stderr for .account.limits, got:\n{err}",
+  );
+}
+

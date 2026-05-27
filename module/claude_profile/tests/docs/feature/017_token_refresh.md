@@ -22,6 +22,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-14 | `None`-paths fallback — credential absent in store → `refresh_account_token` returns `None` | Algorithm | test_apply_refresh_401_no_cred_file |
 | FT-15 | `trace::1` propagated to `refresh_account_token`; lifecycle steps logged to stderr; no panic | AC-26 | test_apply_refresh_lifecycle_l010_trace_run_isolated_invoked_no_panic, art_some_paths_run_isolated_invoked_trace_no_panic |
 | FT-16 | `expires_at_ms` from `expiresAt` field when JWT decode returns `None` (opaque token) | AC-25 | test_parse_u064_from_str_mre_bug170_extracts_expires_at, test_jwt_exp_ms_mre_bug170_opaque_returns_none |
+| FT-17 | `trace::1` emits `restore switch_account` line after refresh cycle; error paths emit unconditionally | AC-28 | test_apply_refresh_mre_bug208_restore_trace_emitted |
 
 ### Test Case Index
 
@@ -43,8 +44,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-14 | `None`-paths — credential absent in store skips account without corrupting result | Algorithm | None-paths Skip |
 | FT-15 | `trace::1` propagates to `refresh_account_token`; lifecycle steps logged; no panic | AC-26 | Trace Propagation |
 | FT-16 | Post-refresh `expires_at_ms` from `expiresAt` field for opaque `sk-ant-oat01-*` token | AC-25 | JWT Expiry (Opaque) |
+| FT-17 | `trace::1` emits `restore switch_account` line after refresh cycle; failure always visible | AC-28 | Restore Trace |
 
-**Total:** 16 FT cases
+**Total:** 17 FT cases
 
 ---
 
@@ -206,9 +208,9 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ### FT-15: `trace::1` propagates to `refresh_account_token`; lifecycle steps logged to stderr
 
-- **Given:** `refresh_account_token` is called via `apply_refresh` with `trace=true`; the credential file exists in the persistent store AND `{fake_home}/.claude/` directory exists — so `switch_account` succeeds and `run_isolated` is invoked; `run_isolated` fails fast (no valid claude binary or fake token).
+- **Given:** `refresh_account_token` is called via `apply_refresh` with `trace=true`; the credential file exists in the persistent store (so `read credentials` succeeds) AND `{fake_home}/.claude/` directory exists (so the write-credentials path has a valid parent if reached); `run_isolated` fails fast (no valid claude binary or fake token).
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called (unit test; equivalent to `clp .usage refresh::1 trace::1`)
-- **Then:** `[trace] refresh {name}  switch_account: OK`, `[trace] refresh {name}  read credentials: OK`, and `[trace] refresh {name}  run_isolated: invoking claude  args=["--print", "."]  timeout=35s` are emitted to stderr (in that order); `[trace] refresh {name}  run_isolated: Err(…)` or `OK credentials=None` follows; no panic; account result unchanged.
+- **Then:** `[trace] refresh {name}  read credentials: OK` and `[trace] refresh {name}  run_isolated: invoking claude  args=["--print", "."]  timeout=35s` are emitted to stderr (in that order); `[trace] refresh {name}  run_isolated: Err(…)` or `OK credentials=None` follows; no panic; account result unchanged.
 - **Source fn:** `test_apply_refresh_lifecycle_l010_trace_run_isolated_invoked_no_panic` (L10 in `usage.rs`), `art_some_paths_run_isolated_invoked_trace_no_panic` (in `account_refresh_test.rs`)
 - **Note:** Fix for BUG-166 — `refresh_account_token` previously had no `trace` parameter; all failure paths returned `None` silently without any diagnostic output. Testing uses "does not panic" pattern because nextest does not support reliable stderr assertion for `eprintln!` in unit tests.
 - **Source:** [017_token_refresh.md AC-26](../../../docs/feature/017_token_refresh.md)
@@ -224,3 +226,15 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **Source fn:** `test_parse_u064_from_str_mre_bug170_extracts_expires_at` (primary fix guard), `test_jwt_exp_ms_mre_bug170_opaque_returns_none` (precondition guard) — both in `src/usage.rs` `mod tests`
 - **Note:** Fix for BUG-170 — the TSK-163 fix for BUG-162 introduced this gap: `jwt_exp_ms` silently returns `None` for opaque tokens, leaving `expires_at_ms` stale. The `expiresAt` field in the returned credentials JSON is the authoritative post-refresh expiry for opaque tokens.
 - **Source:** [017_token_refresh.md AC-25](../../../docs/feature/017_token_refresh.md)
+
+---
+
+### FT-17: `trace::1` emits `restore switch_account` line after refresh cycle; failure always logged
+
+- **Given:** `apply_refresh` is called with `trace=true`; at least one account exists so the restore branch is reached; `original_active` is set (active marker contains a non-empty account name); the original account has a credential file in the store so `switch_account` can succeed.
+- **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called (unit test context; equivalent to `clp .usage refresh::1 trace::1` with active marker present)
+- **Then:** Stderr contains `[trace] refresh  {original_name}  restore switch_account: OK`; the restore step is not silent under `trace::1`.
+- **And:** In a separate scenario where `switch_account` fails at restore time (e.g., credential file deleted between snapshot and restore), stderr contains the failure line unconditionally — without requiring `trace=true`.
+- **Source fn:** `test_apply_refresh_mre_bug208_restore_trace_emitted` (in `tests/cli/usage_test.rs` or `src/usage.rs #[cfg(test)]`)
+- **Note:** Fix for BUG-208 — both `apply_refresh` and `apply_touch` used `let _ = switch_account(...)` at the restore site, making restore failures silent and restore trace completeness impossible.
+- **Source:** [017_token_refresh.md AC-28](../../../docs/feature/017_token_refresh.md)

@@ -365,11 +365,14 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
       "format::table is only supported by .accounts".to_string(),
     ) );
   }
+  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let paths            = require_claude_paths()?;
+  if trace { eprintln!( "[trace] credentials.status  reading {}", paths.credentials_file().display() ) }
   let credential_store = require_credential_store()?;
 
   if !paths.credentials_file().exists()
   {
+    if trace { eprintln!( "[trace] credentials.status  reading: Err(not found)" ) }
     return Err( ErrorData::new(
       ErrorCode::InternalError,
       format!(
@@ -378,6 +381,7 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
       ),
     ) );
   }
+  if trace { eprintln!( "[trace] credentials.status  reading: OK" ) }
 
   // Per-field presence flags; None (absent param) = use default.
   // Default-on: account, sub, tier, token, expires, email.
@@ -777,8 +781,10 @@ fn render_accounts_table(
 pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts             = OutputOptions::from_cmd( &cmd )?;
+  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let Ok( credential_store ) = require_credential_store() else
   {
+    if trace { eprintln!( "[trace] accounts  credential store: not found" ) }
     let content = match opts.format
     {
       OutputFormat::Json  => "[]\n".to_string(),
@@ -787,6 +793,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
     };
     return Ok( OutputData::new( content, "text" ) );
   };
+  if trace { eprintln!( "[trace] accounts  reading store: {}", credential_store.display() ) }
 
   let raw_name = match cmd.arguments.get( "name" )
   {
@@ -880,6 +887,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   //   all validation and precondition checks must run unconditionally.
   let raw_name   = require_nonempty_string_arg( &cmd, "name" )?;
   let touch      = crate::usage::parse_int_flag( &cmd, "touch", 1 )?;
+  let trace      = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let imodel_str = match cmd.arguments.get( "imodel" )
   {
     None                       => "auto".to_string(),
@@ -916,7 +924,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   // Pre-fetch quota before the switch while the target credential file is still readable.
   let touch_ctx = if touch != 0
   {
-    crate::usage::pre_switch_touch_ctx( &name, &credential_store )
+    crate::usage::pre_switch_touch_ctx( &name, &credential_store, trace )
   }
   else
   {
@@ -929,7 +937,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   // Post-switch: activate idle session if quota indicated it was idle before switch.
   if let Some( ctx ) = touch_ctx
   {
-    crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str );
+    crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str, trace );
   }
 
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )
@@ -943,7 +951,9 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
 #[ inline ]
 pub fn account_rotate_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
+  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let credential_store = require_credential_store()?;
+  if trace { eprintln!( "[trace] account.rotate  reading store: {}", credential_store.display() ) }
   let paths            = require_claude_paths()?;
   if is_dry( &cmd )
   {
@@ -1055,8 +1065,10 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
       "format::table is only supported by .accounts".to_string(),
     ) );
   }
+  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
+  if trace { eprintln!( "[trace] account.limits  store: {}", credential_store.display() ) }
 
   let raw_name = match cmd.arguments.get( "name" )
   {
@@ -1124,6 +1136,7 @@ pub fn dot_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result<
 pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let paths            = require_claude_paths()?;
+  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let name             = match cmd.arguments.get( "name" )
   {
     Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
@@ -1141,6 +1154,7 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     }
   };
   let credential_store = require_credential_store()?;
+  if trace { eprintln!( "[trace] account.save  reading {}", paths.credentials_file().display() ) }
 
   if is_dry( &cmd )
   {
@@ -1149,6 +1163,7 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 
   crate::account::save( &name, &credential_store, &paths )
     .map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
+  if trace { eprintln!( "[trace] account.save  write: OK" ) }
   Ok( OutputData::new( format!( "saved current credentials as '{name}'\n" ), "text" ) )
 }
 
@@ -1165,8 +1180,10 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   // Root cause: is_dry() was checked before existence check,
   //   so dry-run bypassed NotFound (missing account).
   // Pitfall: precondition checks must run before the dry-run shortcut.
+  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let raw_name         = require_nonempty_string_arg( &cmd, "name" )?;
   let credential_store = require_credential_store()?;
+  if trace { eprintln!( "[trace] account.delete  store: {}", credential_store.display() ) }
   let name             = resolve_account_name( &raw_name, &credential_store )?;
   crate::account::check_delete_preconditions( &name, &credential_store )
     .map_err( |e| io_err_to_error_data( &e, "account delete" ) )?;
@@ -1197,8 +1214,10 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
 #[ inline ]
 pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
+  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
+  if trace { eprintln!( "[trace] account.relogin  store: {}", credential_store.display() ) }
   let raw_name         = match cmd.arguments.get( "name" )
   {
     Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
@@ -1309,7 +1328,7 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 #[ inline ]
 pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let opts = OutputOptions::from_cmd( &cmd )?;
+  let opts  = OutputOptions::from_cmd( &cmd )?;
   if opts.is_table()
   {
     return Err( ErrorData::new(
@@ -1317,7 +1336,9 @@ pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
       "format::table is only supported by .accounts".to_string(),
     ) );
   }
-  require_claude_paths()?;
+  let trace = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
+  let paths = require_claude_paths()?;
+  if trace { eprintln!( "[trace] token.status  reading {}", paths.credentials_file().display() ) }
 
   let threshold_secs = match cmd.arguments.get( "threshold" )
   {
@@ -1369,6 +1390,7 @@ pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 #[ inline ]
 pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
+  let trace = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
   if let Some( Value::String( field ) ) = cmd.arguments.get( "field" )
   {
     if !field.is_empty()
@@ -1405,6 +1427,7 @@ pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     ) );
   }
   let paths            = require_claude_paths()?;
+  if trace { eprintln!( "[trace] paths  base: {}", paths.base().display() ) }
   let credential_store = require_credential_store()?;
 
   let content = match opts.format

@@ -8,7 +8,7 @@ Account management commands: list, save, use, delete, limits, and relogin.
 
 List all saved accounts or show a single named account with per-field presence control. Without `name::`: shows every account in the credential store as an indented key-val block; with `name::EMAIL`: shows that account's block only.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`active::`](../param/013_active.md), [`current::`](../param/018_current.md), [`sub::`](../param/006_sub.md), [`tier::`](../param/007_tier.md), [`expires::`](../param/009_expires.md), [`email::`](../param/010_email.md), [`display_name::`](../param/014_display_name.md), [`role::`](../param/015_role.md), [`billing::`](../param/016_billing.md), [`model::`](../param/017_model.md), [`uuid::`](../param/028_uuid.md), [`capabilities::`](../param/029_capabilities.md), [`org_uuid::`](../param/030_org_uuid.md), [`org_name::`](../param/031_org_name.md), [`format::`](../param/002_format.md)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`active::`](../param/013_active.md), [`current::`](../param/018_current.md), [`sub::`](../param/006_sub.md), [`tier::`](../param/007_tier.md), [`expires::`](../param/009_expires.md), [`email::`](../param/010_email.md), [`display_name::`](../param/014_display_name.md), [`role::`](../param/015_role.md), [`billing::`](../param/016_billing.md), [`model::`](../param/017_model.md), [`uuid::`](../param/028_uuid.md), [`capabilities::`](../param/029_capabilities.md), [`org_uuid::`](../param/030_org_uuid.md), [`org_name::`](../param/031_org_name.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
@@ -42,6 +42,7 @@ clp .accounts format::table
 | `org_uuid::` | `bool` | `0` | Show organisation UUID from saved `{name}.roles.json` snapshot (opt-in) |
 | `org_name::` | `bool` | `0` | Show organisation display name from saved `{name}.roles.json` snapshot (opt-in) |
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each credential file read |
 
 **Examples:**
 
@@ -86,7 +87,7 @@ clp .accounts format::table
 
 Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and extracts the `oauthAccount` subtree from `~/.claude.json` into `{name}.claude.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`, `settings.json`) is not captured. Use this to preserve account identity before switching.
 
--- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md)
+-- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid name or cannot infer email) | 2 (runtime: credentials unreadable)
 
 **Syntax:**
@@ -101,6 +102,7 @@ clp .account.save name::alice@acme.com dry::1
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | `auto` (inferred from `~/.claude.json` `emailAddress`) | Account email to save as |
 | `dry::` | `bool` | `0` | Preview action without executing |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for credential read and file write steps |
 
 **Examples:**
 
@@ -123,8 +125,8 @@ clp .account.save name::alice@acme.com dry::1
 
 Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent.
 
--- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::` value) | 2 (runtime: account not found or HOME unset)
+-- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`trace::`](../param/023_trace.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::`/`trace::` value) | 2 (runtime: account not found or HOME unset)
 
 **Syntax:**
 
@@ -135,6 +137,7 @@ clp .account.use car                           # prefix: first saved account sta
 clp .account.use name::alice@home.com dry::1
 clp .account.use name::alice@home.com touch::0
 clp .account.use name::alice@home.com imodel::opus effort::max
+clp .account.use name::alice@home.com trace::1
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -142,8 +145,9 @@ clp .account.use name::alice@home.com imodel::opus effort::max
 | `name::` | [`AccountName`](../type/001_account_name.md) | **(required)** | Account email to switch to |
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `touch::` | `bool` | `1` | Activate idle 5h session window via subprocess after switch |
-| `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `keep` |
-| `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (high for sonnet, max for opus), `high`, `max` |
+| `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
+| `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (high for sonnet, max for opus, none for haiku/keep), `low`, `normal`, `high`, `max` |
+| `trace::` | `bool` | `0` | Print `[trace] account.use` lines to stderr: credential read, quota fetch, idle check, model resolution, subprocess dispatch |
 
 **Examples:**
 
@@ -156,12 +160,22 @@ clp .account.use name::alice@home.com touch::0
 
 clp .account.use name::alice@home.com dry::1
 # [dry-run] would switch to 'alice@home.com'
+
+clp .account.use name::alice@home.com trace::1
+# [trace] account.use  alice@home.com  reading /...alice@home.com.credentials.json
+# [trace] account.use  alice@home.com  reading: OK
+# [trace] account.use  alice@home.com  quota fetch: OK
+# [trace] account.use  alice@home.com  idle check: resets_at=absent → idle
+# [trace] account.use  alice@home.com  model: claude-opus-4-6  effort: max
+# [trace] account.use  alice@home.com  subprocess: spawned
+# switched to 'alice@home.com'
 ```
 
 **Notes:**
 - `touch::1` (default): fetches quota for the target account; if `five_hour.resets_at` is absent (idle), spawns `run_isolated(["--print", "."])` with resolved model/effort to start a 5h session. Quota fetch failure skips touch silently — the switch always completes.
 - `touch::0`: pure credential rotation — no quota fetch, no subprocess. Pre-Feature-027 behavior.
-- `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `resolve_model()` selects Sonnet when `7d(Son) ≥ 30%`, Opus otherwise; `resolve_effort()` maps Sonnet → `high`, Opus → `max`.
+- `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `resolve_model()` selects Sonnet when `7d(Son) ≥ 30%`, Opus otherwise; `resolve_effort()` maps Sonnet → `high`, Opus → `max`, Haiku → no flag. `imodel::haiku` is explicit only — `auto` never selects it.
+- `trace::1` only produces output when `touch::1`; with `touch::0` there are no fetch operations to trace.
 - See [feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) for full execution sequence and acceptance criteria.
 
 ---
@@ -170,7 +184,7 @@ clp .account.use name::alice@home.com dry::1
 
 Removes `{credential_store}/{name}.credentials.json` from the credential store and best-effort removes the accompanying `{name}.claude.json` and `{name}.settings.json` snapshot files.
 
--- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md)
+-- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found)
 
 **Syntax:**
@@ -186,6 +200,7 @@ clp .account.delete name::alice@oldco.com dry::1
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | **(required)** | Account email to delete |
 | `dry::` | `bool` | `0` | Preview action without executing |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each file removal step |
 
 **Examples:**
 
@@ -207,7 +222,7 @@ clp .account.delete name::alice@oldco.com dry::1
 
 Show rate-limit utilization for the active or named account. Displays session (5h) usage, weekly all-model (7d) usage, and rate-limit status with percentage consumed and reset times.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`format::`](../param/002_format.md)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found, data unavailable, HOME unset)
 
 **Syntax:**
@@ -224,6 +239,7 @@ clp .account.limits format::json
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(omit for active)* | Query a named account instead of the active account |
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for credential store read and API call |
 
 **Examples:**
 
@@ -246,7 +262,7 @@ clp .account.limits format::json
 
 Force browser-based re-authentication for a named account whose `refreshToken` is expired or revoked. This is the recovery path when `refresh::1` silently fails (trace shows `run_isolated: OK credentials=None` — Claude starts but performs no OAuth refresh because the refresh token itself is dead).
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional, defaults to active)*, [`dry::`](../param/004_dry.md)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional, defaults to active)*, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success: credentials refreshed and saved) | 1 (usage: invalid name value) | 2 (runtime: name omitted and no active account; account not found; or Claude spawn failed) | 3 (timeout or login abandoned: claude exited without updating credentials)
 
 **Syntax:**
@@ -264,6 +280,7 @@ clp .account.relogin dry::1            # dry-run for active account
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(active account)* | Account to re-authenticate; omit to use the currently active account |
 | `dry::` | `bool` | `0` | Preview the steps without executing |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each step: store read, switch, spawn, credential change, save, restore |
 
 **Mechanism (6 steps):**
 1. Resolve `name::` via [`AccountSelector`](../type/004_account_selector.md) → validate account exists in credential store
@@ -298,7 +315,7 @@ clp .account.relogin name::carol@example.com dry::1
 
 Auto-rotate to the best inactive account: selects the saved account with the highest remaining token expiry and atomically switches to it. No account name required — selection is fully automatic via `account::auto_rotate()`.
 
--- **Parameters:** [`dry::`](../param/004_dry.md)
+-- **Parameters:** [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success: switched) | 1 (usage: invalid param) | 2 (runtime: no inactive accounts available, or credential store unreadable)
 
 **Syntax:**
@@ -311,6 +328,7 @@ clp .account.rotate dry::1
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `dry::` | `bool` | `0` | Preview which account would be selected without switching |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for account selection and switch step |
 
 **Examples:**
 

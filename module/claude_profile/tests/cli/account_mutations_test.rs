@@ -50,8 +50,13 @@
 //! | aw23 | `aw23_touch_skipped_no_access_token` | `touch::1` (default) + no `accessToken` → exit 0 | P |
 //! | aw24 | `aw24_imodel_bad_value_exits_1` | `imodel::bad` → exit 1, stderr lists valid values | N |
 //! | aw25 | `aw25_effort_bad_value_exits_1` | `effort::bad` → exit 1, stderr lists valid values | N |
-//! | aw26 | `aw26_help_shows_touch_imodel_effort` | `.account.use.help` lists `touch`, `imodel`, `effort` | P |
+//! | aw26 | `aw26_help_shows_touch_imodel_effort` | `.account.use.help` lists `touch`, `imodel`, `effort`, `trace` | P |
 //! | aw27 | `aw27_lim_it_touch_with_live_token` | live token + `touch::1` → switch exits 0 (`lim_it`) | P |
+//! | aw28 | `aw28_trace_idle_account_all_lines` | `trace::1` + live idle token → all 6 trace lines on stderr (`lim_it`) | P |
+//! | aw29 | `aw29_trace_active_account_subprocess_skipped` | `trace::1` + live active token → skipped trace lines (`lim_it`) | P |
+//! | aw30 | `aw30_trace_fetch_failure_skips_idle_model_lines` | `trace::1` + invalid token → fetch-err + subprocess-skipped only | N |
+//! | aw31 | `aw31_trace_touch_disabled_no_trace_lines` | `touch::0 trace::1` → no `[trace] account.use` lines | P |
+//! | aw32 | `aw32_trace_bad_value_exits_1` | `trace::bad` → exit 1, stderr lists valid values | N |
 //!
 //! ### AD — Account Delete
 //!
@@ -1290,7 +1295,9 @@ fn aw25_effort_bad_value_exits_1()
   );
 }
 
-/// aw26: `.account.use.help` lists `touch`, `imodel`, and `effort` parameters (IT-23).
+/// aw26: `.account.use.help` lists `touch`, `imodel`, `effort`, and `trace` parameters (IT-23).
+///
+/// Extended from Feature 027 (touch/imodel/effort) to include `trace::` per BUG-207.
 #[ test ]
 fn aw26_help_shows_touch_imodel_effort()
 {
@@ -1300,6 +1307,7 @@ fn aw26_help_shows_touch_imodel_effort()
   assert!( text.contains( "touch" ),  "`.account.use.help` must list `touch` param, got:\n{text}" );
   assert!( text.contains( "imodel" ), "`.account.use.help` must list `imodel` param, got:\n{text}" );
   assert!( text.contains( "effort" ), "`.account.use.help` must list `effort` param, got:\n{text}" );
+  assert!( text.contains( "trace" ),  "`.account.use.help` must list `trace` param, got:\n{text}" );
 }
 
 /// aw27: `lim_it` — live token + `touch::1` → switch exits 0 (IT-17/IT-19).
@@ -1330,5 +1338,341 @@ fn aw27_lim_it_touch_with_live_token()
   assert!(
     stdout( &out ).contains( "switched" ),
     "switch with live token must exit 0 and say switched, got:\n{}", stdout( &out ),
+  );
+}
+
+/// aw28: `trace::1 touch::1` live token → trace lines appear on stderr (FT-11, IT-24).
+///
+/// `lim_it` — skips without a live OAuth token. Verifies lines common to all trace paths
+/// (reading, quota fetch). Conditionally checks idle-path or active-path depending on the
+/// live account's quota state. This test cannot force idle state — it verifies structural
+/// correctness of whichever path the live account happens to be in.
+///
+/// Fix(BUG-207): `pre_switch_touch_ctx` had no `trace` param — all operations were invisible.
+/// Root cause: Feature 027 put `trace::` Out-of-Scope; no trace lines were emitted for .account.use.
+/// Pitfall: trace lines go to stderr, not stdout — assert on `stderr(&out)`, not `stdout(&out)`.
+#[ test ]
+fn aw28_lim_it_trace_idle_account_all_lines()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "aw28: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "source@example.com", &token, true );
+  write_account_with_token( dir.path(), "target@example.com", &token, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::target@example.com", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    stdout( &out ).contains( "switched" ),
+    "aw28: stdout must contain 'switched', got:\n{}", stdout( &out ),
+  );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "[trace] account.use" ),
+    "aw28: stderr must contain [trace] account.use prefix, got:\n{err}",
+  );
+  assert!(
+    err.contains( "reading" ) && err.contains( "reading: OK" ),
+    "aw28: stderr must contain reading + reading: OK trace lines, got:\n{err}",
+  );
+  assert!(
+    err.contains( "quota fetch: OK" ),
+    "aw28: stderr must contain quota fetch: OK, got:\n{err}",
+  );
+  assert!(
+    err.contains( "idle check:" ),
+    "aw28: stderr must contain idle check: line, got:\n{err}",
+  );
+  // Branch on live quota state — we cannot control which path the test takes.
+  if err.contains( "resets_at=absent" )
+  {
+    assert!(
+      err.contains( "model:" ),
+      "aw28: idle path must emit model: line, got:\n{err}",
+    );
+    assert!(
+      err.contains( "subprocess: spawned" ),
+      "aw28: idle path must emit subprocess: spawned, got:\n{err}",
+    );
+  }
+  else
+  {
+    // Account is active — idle-path assertions not applicable.
+    eprintln!( "aw28: account is active — idle-path assertions skipped" );
+    assert!(
+      err.contains( "subprocess: skipped" ),
+      "aw28: active path must emit subprocess: skipped, got:\n{err}",
+    );
+  }
+}
+
+/// aw29: `trace::1 touch::1` live active account — subprocess-skipped trace lines (FT-12).
+///
+/// `lim_it` — skips without a live OAuth token. Verifies active-path-specific trace lines
+/// (`resets_at=present → already active`, `subprocess: skipped (reason: already active)`)
+/// when the live account has an active 5h window. Skips active-path assertions if the account
+/// is idle (avoids false failures when live state differs from expectation).
+#[ test ]
+fn aw29_lim_it_trace_active_account_subprocess_skipped()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "aw29: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "source@example.com", &token, true );
+  write_account_with_token( dir.path(), "target@example.com", &token, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::target@example.com", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "[trace] account.use" ),
+    "aw29: stderr must contain [trace] account.use prefix, got:\n{err}",
+  );
+  if err.contains( "resets_at=present" )
+  {
+    assert!(
+      err.contains( "subprocess: skipped (reason: already active)" ),
+      "aw29: active path must emit subprocess: skipped (reason: already active), got:\n{err}",
+    );
+    assert!(
+      !err.contains( "model:" ),
+      "aw29: active path must NOT emit model: line, got:\n{err}",
+    );
+    assert!(
+      !err.contains( "subprocess: spawned" ),
+      "aw29: active path must NOT emit subprocess: spawned, got:\n{err}",
+    );
+  }
+  else
+  {
+    eprintln!( "aw29: account is idle — active-path assertions skipped" );
+  }
+}
+
+/// aw30: `trace::1 touch::1` invalid token → fetch-err + subprocess-skipped trace lines (FT-13).
+///
+/// Uses an invalid `accessToken` so quota fetch fails. Verifies that:
+/// - reading: OK and quota fetch: Err( are emitted
+/// - subprocess: skipped (reason: fetch failed) is emitted
+/// - idle check: and model: lines are NOT emitted (short-circuit on fetch failure)
+/// - switch still exits 0 (fetch failure is non-fatal to the switch)
+///
+/// Fix(BUG-207): `pre_switch_touch_ctx` must emit fetch-err trace when quota API fails.
+/// Root cause: original function collapsed all failures into None with no tracing.
+/// Pitfall: the switch exits 0 regardless of fetch failure; assert on stderr, not exit code.
+#[ test ]
+fn aw30_trace_fetch_failure_skips_idle_model_lines()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  // Invalid token ensures quota fetch fails with auth error.
+  write_account_with_token( dir.path(), "target@example.com", "invalid-token-for-fetch-failure", false );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::target@example.com", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    stdout( &out ).contains( "switched" ),
+    "aw30: fetch failure must not block switch, got:\n{}", stdout( &out ),
+  );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "[trace] account.use" ),
+    "aw30: stderr must contain [trace] account.use prefix, got:\n{err}",
+  );
+  assert!(
+    err.contains( "reading: OK" ),
+    "aw30: stderr must contain reading: OK (credential file was read), got:\n{err}",
+  );
+  assert!(
+    err.contains( "quota fetch: Err(" ),
+    "aw30: stderr must contain quota fetch: Err(, got:\n{err}",
+  );
+  assert!(
+    err.contains( "subprocess: skipped (reason: fetch failed)" ),
+    "aw30: stderr must contain subprocess: skipped (reason: fetch failed), got:\n{err}",
+  );
+  assert!(
+    !err.contains( "idle check:" ),
+    "aw30: fetch-failed path must NOT emit idle check: line, got:\n{err}",
+  );
+  assert!(
+    !err.contains( "model:" ),
+    "aw30: fetch-failed path must NOT emit model: line, got:\n{err}",
+  );
+}
+
+/// aw31: `trace::1 touch::0` → no `[trace] account.use` lines emitted (FT-14, EC-7).
+///
+/// When `touch::0` is set, `pre_switch_touch_ctx` is never called — no quota fetch
+/// operations occur, so no `[trace] account.use` lines should appear on stderr.
+/// The `trace::1` parameter is accepted (exit 0) but has no effect without touch operations.
+#[ test ]
+fn aw31_trace_touch_disabled_no_trace_lines()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "target@example.com", "max", "tier4", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::target@example.com", "touch::0", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    stdout( &out ).contains( "switched" ),
+    "aw31: touch::0 trace::1 must not block switch, got:\n{}", stdout( &out ),
+  );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "[trace] account.use" ),
+    "aw31: touch::0 must produce no [trace] account.use lines, got stderr:\n{err}",
+  );
+}
+
+/// aw32: `trace::bad` → exit 1; stderr names all four valid values (FT-16, IT-26).
+///
+/// Validation fires before any filesystem I/O — empty account store is sufficient.
+///
+/// Fix(BUG-207): `trace::` was absent from .account.use; before fix, `trace::bad` produced
+///   "unrecognized parameter" (different message), not an invalid-value exit 1.
+/// Root cause: parameter not registered; `parse_int_flag` never ran; parse never saw the value.
+/// Pitfall: must assert on exit code AND stderr content — exit code alone is insufficient.
+#[ test ]
+fn aw32_trace_bad_value_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::any@example.com", "trace::bad" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( '0' ) && err.contains( '1' ) && err.contains( "false" ) && err.contains( "true" ),
+    "aw32: stderr must name all valid trace:: values (0, 1, false, true), got:\n{err}",
+  );
+}
+
+// ── it_trace_account_save_accepted ────────────────────────────────────────────
+
+/// EC-11 (023): `trace::1` accepted by `.account.save` — no "Unknown parameter" error.
+/// TSK-210 RED gate: fails before `trace::` is registered (exit 1 + Unknown parameter).
+#[ test ]
+fn it_trace_account_save_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  // write_account creates the credential store dir so require_credential_store succeeds.
+  write_account( dir.path(), "existing@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "dry::1", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "Unknown parameter" ),
+    "trace::1 must be accepted by .account.save, got stderr:\n{err}",
+  );
+  assert!(
+    err.contains( "[trace]" ),
+    "trace::1 must emit [trace] lines to stderr for .account.save, got:\n{err}",
+  );
+}
+
+// ── it_trace_account_use_accepted ─────────────────────────────────────────────
+
+/// EC-12 (023): `trace::1` accepted by `.account.use` — no "Unknown parameter" error.
+/// `test@example.com` does not exist so command exits 2, but must not exit 1 for unknown-param.
+/// `.account.use` already has `trace::` registered — this test is expected to pass before impl.
+#[ test ]
+fn it_trace_account_use_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::test@example.com", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "Unknown parameter" ),
+    "trace::1 must be accepted by .account.use, got stderr:\n{err}",
+  );
+}
+
+// ── it_trace_account_delete_accepted ──────────────────────────────────────────
+
+/// EC-13 (023): `trace::1` accepted by `.account.delete` — no "Unknown parameter" error.
+/// TSK-210 RED gate: fails before `trace::` is registered (exit 1 + Unknown parameter).
+#[ test ]
+fn it_trace_account_delete_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // write_account creates the credential store dir and the target account file.
+  write_account( dir.path(), "test@example.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.delete", "name::test@example.com", "dry::1", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "Unknown parameter" ),
+    "trace::1 must be accepted by .account.delete, got stderr:\n{err}",
+  );
+  assert!(
+    err.contains( "[trace]" ),
+    "trace::1 must emit [trace] lines to stderr for .account.delete, got:\n{err}",
+  );
+}
+
+// ── it_trace_account_relogin_accepted ─────────────────────────────────────────
+
+/// EC-14 (023): `trace::1` accepted by `.account.relogin` — no "Unknown parameter" error.
+/// TSK-210 RED gate: fails before `trace::` is registered (exit 1 + Unknown parameter).
+#[ test ]
+fn it_trace_account_relogin_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "work@acme.com", "pro", "standard", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env(
+    &[ ".account.relogin", "dry::1", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "Unknown parameter" ),
+    "trace::1 must be accepted by .account.relogin, got stderr:\n{err}",
+  );
+  assert!(
+    err.contains( "[trace]" ),
+    "trace::1 must emit [trace] lines to stderr for .account.relogin, got:\n{err}",
   );
 }

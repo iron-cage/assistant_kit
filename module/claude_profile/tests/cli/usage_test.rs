@@ -109,9 +109,9 @@
 //! | it110 | `it110_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle` | `touch::1` fires for idle accounts (resets_at absent); active skipped after activation (024 FT-12) | P | yes |
 //! | it111 | `it111_sort_next_accepted`                          | `sort::next` accepted → exit 0 (drain default + endurance explicit) (IT-65/AC-15) | P | no |
 //! | it112 | `it112_imodel_auto_accepted_empty_store_exits_0`    | `imodel::auto` accepted; empty store exits 0 (IT-66/EC-1) | P | no |
-//! | it113 | `it113_imodel_bogus_exits_1`                        | `imodel::bogus` → exit 1, stderr names all 4 valid values (IT-67/EC-5) | N | no |
+//! | it113 | `it113_imodel_bogus_exits_1`                        | `imodel::bogus` → exit 1, stderr names all 5 valid values (IT-67/EC-5) | N | no |
 //! | it114 | `it114_effort_auto_accepted_empty_store_exits_0`    | `effort::auto` accepted; empty store exits 0 (IT-68/EC-1) | P | no |
-//! | it115 | `it115_effort_bogus_exits_1`                        | `effort::bogus` → exit 1, stderr names all 3 valid values (IT-69/EC-4) | N | no |
+//! | it115 | `it115_effort_bogus_exits_1`                        | `effort::bogus` → exit 1, stderr names all 5 valid values (IT-69/EC-4) | N | no |
 //! | it116 | `it116_usage_help_shows_imodel_effort_params`       | `.usage.help` lists `imodel` and `effort` params (IT-70) | P | no |
 //! | it117 | `it117_imodel_sonnet_accepted_empty_store_exits_0`  | `imodel::sonnet` accepted; empty store exits 0 (EC-2) | P | no |
 //! | it118 | `it118_imodel_opus_accepted_empty_store_exits_0`    | `imodel::opus` accepted; empty store exits 0 (EC-3) | P | no |
@@ -127,6 +127,9 @@
 //! | it128 | `it128_sort_next_resolves_to_drain_structural`       | `sort::next` resolves to `SortStrategy::Drain` when `next::drain` (TSK-193 AC-15 structural) | P | no |
 //! | it129 | `it129_sort_next_resolves_to_endurance_structural`   | `sort::next` resolves to `SortStrategy::Endurance` when `next::endurance` (TSK-193 AC-15 structural) | P | no |
 //! | it131 | `it131_trace_skip_lines_emitted_for_non_qualifying_accounts` | `touch::1 trace::1` errored account → `[trace] touch <name> skipped (reason: error account)` (BUG-202 / 024 FT-14) | P | no |
+//! | it132 | `it132_imodel_haiku_accepted_empty_store_exits_0`   | `imodel::haiku` accepted; empty store exits 0 (EC-11 / 035) | P | no |
+//! | it133 | `it133_effort_low_accepted_empty_store_exits_0`     | `effort::low` accepted; empty store exits 0 (EC-10 / 036) | P | no |
+//! | it134 | `it134_effort_normal_accepted_empty_store_exits_0`  | `effort::normal` accepted; empty store exits 0 (EC-11 / 036) | P | no |
 
 use crate::helpers::{
   BIN,
@@ -3530,10 +3533,11 @@ fn it112_imodel_auto_accepted_empty_store_exits_0()
   );
 }
 
-/// it113 (IT-67 / EC-5): `imodel::bogus` exits 1; stderr names all four valid values.
+/// it113 (IT-67 / EC-5): `imodel::bogus` exits 1; stderr names all five valid values.
 ///
-/// The parser rejects any value not in {auto, sonnet, opus, keep} with exit 1.
-/// All four valid values must appear in stderr to help the user correct the mistake.
+/// The parser rejects any value not in {auto, sonnet, opus, keep, haiku} with exit 1.
+/// All five valid values must appear in stderr to help the user correct the mistake.
+/// TSK-209: updated from four to five values (added `haiku`).
 ///
 /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-5]
 ///       [`tests/docs/cli/command/009_usage.md` IT-67]
@@ -3547,6 +3551,7 @@ fn it113_imodel_bogus_exits_1()
   assert!( err.contains( "sonnet" ), "stderr must name valid value 'sonnet', got:\n{err}" );
   assert!( err.contains( "opus" ),   "stderr must name valid value 'opus', got:\n{err}" );
   assert!( err.contains( "keep" ),   "stderr must name valid value 'keep', got:\n{err}" );
+  assert!( err.contains( "haiku" ),  "stderr must name valid value 'haiku', got:\n{err}" );
 }
 
 /// it114 (IT-68 / EC-1): `effort::auto` accepted with empty credential store exits 0.
@@ -3573,7 +3578,10 @@ fn it114_effort_auto_accepted_empty_store_exits_0()
   );
 }
 
-/// it115 (IT-69 / EC-4): `effort::bogus` exits 1; stderr names all three valid values.
+/// it115 (IT-69 / EC-4): `effort::bogus` exits 1; stderr names all five valid values.
+///
+/// The parser rejects any value not in {auto, high, max, low, normal} with exit 1.
+/// TSK-209: updated from three to five values (added `low` and `normal`).
 ///
 /// Spec: [`tests/docs/cli/param/036_effort.md` EC-4]
 ///       [`tests/docs/cli/command/009_usage.md` IT-69]
@@ -3583,9 +3591,11 @@ fn it115_effort_bogus_exits_1()
   let out = run_cs( &[ ".usage", "effort::bogus" ] );
   assert_exit( &out, 1 );
   let err = stderr( &out );
-  assert!( err.contains( "auto" ), "stderr must name valid value 'auto', got:\n{err}" );
-  assert!( err.contains( "high" ), "stderr must name valid value 'high', got:\n{err}" );
-  assert!( err.contains( "max" ),  "stderr must name valid value 'max', got:\n{err}" );
+  assert!( err.contains( "auto" ),   "stderr must name valid value 'auto', got:\n{err}" );
+  assert!( err.contains( "high" ),   "stderr must name valid value 'high', got:\n{err}" );
+  assert!( err.contains( "max" ),    "stderr must name valid value 'max', got:\n{err}" );
+  assert!( err.contains( "low" ),    "stderr must name valid value 'low', got:\n{err}" );
+  assert!( err.contains( "normal" ), "stderr must name valid value 'normal', got:\n{err}" );
 }
 
 /// it116 (IT-70): `.usage.help` lists `imodel` and `effort` as registered parameters.
@@ -3904,4 +3914,60 @@ fn it131_trace_skip_lines_emitted_for_non_qualifying_accounts()
     "BUG-202: errored account must emit `[trace] touch  <name>  skipped (reason: error account)` \
      when trace=true (AC-09/AC-12 of Feature 024). Got stderr:\n{err}",
   );
+}
+
+// ── TSK-209: haiku model + low/normal effort CLI acceptance ───────────────────
+
+/// it132 (EC-11 / 035): `imodel::haiku` accepted with empty credential store exits 0.
+///
+/// Before TSK-209: `imodel::haiku` is unrecognised → `ArgumentTypeMismatch` → exit 1.
+/// After TSK-209:  `haiku` accepted, empty store → no-accounts message → exit 0.
+///
+/// Spec: [`tests/docs/cli/param/035_imodel.md` EC-11]
+#[ test ]
+fn it132_imodel_haiku_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "imodel::haiku" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it133 (EC-10 / 036): `effort::low` accepted with empty credential store exits 0.
+///
+/// Before TSK-209: `effort::low` is unrecognised → `ArgumentTypeMismatch` → exit 1.
+/// After TSK-209:  `low` accepted, empty store → no-accounts message → exit 0.
+///
+/// Spec: [`tests/docs/cli/param/036_effort.md` EC-10]
+#[ test ]
+fn it133_effort_low_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "effort::low" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it134 (EC-11 / 036): `effort::normal` accepted with empty credential store exits 0.
+///
+/// Before TSK-209: `effort::normal` is unrecognised → `ArgumentTypeMismatch` → exit 1.
+/// After TSK-209:  `normal` accepted, empty store → no-accounts message → exit 0.
+///
+/// Spec: [`tests/docs/cli/param/036_effort.md` EC-11]
+#[ test ]
+fn it134_effort_normal_accepted_empty_store_exits_0()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "effort::normal" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
 }

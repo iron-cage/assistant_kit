@@ -351,3 +351,50 @@ fn p10_paths_field_unknown_exits_1()
     "stderr must mention the unknown field name, got:\n{err}"
   );
 }
+
+// ── it_trace_token_status_accepted ────────────────────────────────────────────
+
+/// EC-16 (023): `trace::1` accepted by `.token.status` — no "Unknown parameter" error.
+/// TSK-210 RED gate: fails before `trace::` is registered (exit 1 + Unknown parameter).
+#[ test ]
+fn it_trace_token_status_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".token.status", "trace::1" ], &[ ( "HOME", home ) ] );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "Unknown parameter" ),
+    "trace::1 must be accepted by .token.status, got stderr:\n{err}",
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    err.contains( "[trace]" ),
+    "trace::1 must emit [trace] lines to stderr for .token.status, got:\n{err}",
+  );
+}
+
+// ── it_trace_paths_accepted ───────────────────────────────────────────────────
+
+/// EC-17 (023): `trace::1` accepted by `.paths` — no "Unknown parameter" error.
+/// TSK-210 RED gate: fails before `trace::` is registered (exit 1 + Unknown parameter).
+#[ test ]
+fn it_trace_paths_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".paths", "trace::1" ], &[ ( "HOME", home ) ] );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "Unknown parameter" ),
+    "trace::1 must be accepted by .paths, got stderr:\n{err}",
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    err.contains( "[trace]" ),
+    "trace::1 must emit [trace] lines to stderr for .paths, got:\n{err}",
+  );
+}

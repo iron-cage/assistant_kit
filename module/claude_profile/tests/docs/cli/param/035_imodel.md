@@ -10,12 +10,14 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 | EC-2 | `imodel::sonnet` accepted with empty credential store | Valid Value |
 | EC-3 | `imodel::opus` accepted with empty credential store | Valid Value |
 | EC-4 | `imodel::keep` accepted with empty credential store | Valid Value |
-| EC-5 | `imodel::bad` exits 1, stderr names all four valid values | Invalid Value |
+| EC-5 | `imodel::bad` exits 1, stderr names all five valid values | Invalid Value |
 | EC-6 | `imodel::sonnet` — args contain `--model claude-sonnet-4-6` | Arg Construction |
 | EC-7 | `imodel::opus` — args contain `--model claude-opus-4-6` | Arg Construction |
 | EC-8 | `imodel::keep` — args contain no `--model` flag | Arg Construction |
 | EC-9 | `imodel::auto` with `7d(Son) < 30%` → subprocess uses opus | Behavioral Divergence |
 | EC-10 | `imodel::auto` with `7d(Son) ≥ 30%` → subprocess uses sonnet | Behavioral Divergence |
+| EC-11 | `imodel::haiku` accepted with empty credential store | Valid Value |
+| EC-12 | `imodel::haiku` — args contain `--model claude-haiku-4-5-20251001` | Arg Construction |
 
 ---
 
@@ -67,7 +69,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 
 - **Given:** Any environment (empty credential store).
 - **When:** `clp .usage imodel::bad`
-- **Then:** Exits 1. Stderr contains each of the four valid values: `auto`, `sonnet`, `opus`, `keep`.
+- **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
 - **Source fn:** `it113_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-10](../../../../docs/feature/026_subprocess_model_effort.md)
@@ -126,3 +128,25 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_sonnet_above_threshold` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### EC-11: `imodel::haiku` accepted with empty credential store
+
+- **Given:** Empty credential store.
+- **When:** `clp .usage imodel::haiku`
+- **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned (no accounts to touch).
+- **Exit:** 0
+- **Source fn:** `it132_imodel_haiku_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source:** [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md)
+
+---
+
+### EC-12: `imodel::haiku` — subprocess arg slice contains `--model claude-haiku-4-5-20251001`
+
+- **Given:** Any account quota data; `imodel::haiku`.
+- **When:** Unit test of `resolve_model(&quota, "haiku")`
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Quota state is ignored. `imodel::auto` never selects Haiku — only explicit `imodel::haiku` produces this model.
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_imodel_haiku_explicit` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-13](../../../../docs/feature/026_subprocess_model_effort.md)

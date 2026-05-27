@@ -443,7 +443,7 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
 
 /// Obtain refreshed OAuth credentials for `name` via an isolated subprocess.
 ///
-/// `Some(paths)` branch: `switch_account` → read live creds → `run_isolated`
+/// `Some(paths)` branch: read credentials → `run_isolated`
 ///   → write live creds → `save` → return `Some(new_creds_json)`.
 /// `None` branch: read persistent-store creds → `run_isolated` → write back.
 ///
@@ -451,11 +451,11 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
 /// Never panics.
 ///
 /// When `trace` is `true`, one `[trace] {label}  {name}  …` line is written to
-/// stderr at each key step: `switch_account` result (`Some(paths)` branch only),
-/// `read credentials` result, `run_isolated` invocation, `run_isolated` outcome
-/// (including whether credentials were updated), `write credentials` result (only
-/// when `run_isolated` returns credentials), and `save` result (`Some(paths)` branch
-/// only, only when the write succeeded). Failure-path lines include the error string.
+/// stderr at each key step: `read credentials` result, `run_isolated` invocation,
+/// `run_isolated` outcome (including whether credentials were updated),
+/// `write credentials` result (only when `run_isolated` returns credentials), and
+/// `save` result (`Some(paths)` branch only, only when the write succeeded).
+/// Failure-path lines include the error string.
 ///
 /// # Consumer Crate Note
 ///
@@ -506,17 +506,12 @@ pub fn refresh_account_token(
 
   if let Some( p ) = paths
   {
-    let t_switch = std::time::Instant::now();
-    match switch_account( name, credential_store, p )
-    {
-      Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}  switch_account: OK  ({:.1}s)", t_switch.elapsed().as_secs_f64() ); } }
-      Err( e ) =>
-      {
-        if trace { eprintln!( "[trace] {label}  {name}  switch_account: Err({e})  ({:.1}s)", t_switch.elapsed().as_secs_f64() ); }
-        return None;
-      }
-    }
-    let creds_json = match std::fs::read_to_string( p.credentials_file() )
+    // Fix(BUG-175): removed switch_account call — credentials read directly from credential store
+    // Root cause: Some(paths) branch read via p.credentials_file() forcing switch_account to populate it;
+    //   run_isolated creates its own temp HOME and never reads ~/.claude/, so the write was redundant
+    // Pitfall: switch_account before a read looks like defensive initialization;
+    //   the unnecessary global write is only visible in concurrent multi-account batch scenarios
+    let creds_json = match std::fs::read_to_string( credential_store.join( format!( "{name}.credentials.json" ) ) )
     {
       Ok( s )  => { if trace { eprintln!( "[trace] {label}  {name}  read credentials: OK" ); } s }
       Err( e ) =>

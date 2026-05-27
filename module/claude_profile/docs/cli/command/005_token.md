@@ -8,7 +8,7 @@ Token status commands.
 
 Reads `expiresAt` from `~/.claude/.credentials.json` and classifies the active OAuth token as Valid, ExpiringSoon, or Expired. Use this to detect when account rotation is needed.
 
--- **Parameters:** [`format::`](../param/002_format.md), [`threshold::`](../param/003_threshold.md)
+-- **Parameters:** [`format::`](../param/002_format.md), [`threshold::`](../param/003_threshold.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 2 (runtime: credentials unreadable, expiresAt unparseable)
 
 **Syntax:**
@@ -23,6 +23,7 @@ clp .token.status format::json
 |-----------|------|---------|---------|
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
 | `threshold::` | [`WarningThreshold`](../type/003_warning_threshold.md) | `3600` | ExpiringSoon threshold in seconds |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for the credential file read |
 
 **Examples:**
 

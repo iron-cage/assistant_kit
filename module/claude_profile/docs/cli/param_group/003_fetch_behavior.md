@@ -12,10 +12,10 @@
 | [`jitter::`](../param/022_jitter.md) | `u64` | `0` | Max random seconds added to each cycle delay (0 ≤ jitter ≤ interval; validated only when `live::1`) |
 | [`trace::`](../param/023_trace.md) | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
 | [`touch::`](../param/034_touch.md) | `bool` | `1` | Activate idle 5h windows via isolated subprocess |
-| [`imodel::`](../param/035_imodel.md) | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `keep` |
-| [`effort::`](../param/036_effort.md) | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (max for model), `high`, `max` |
+| [`imodel::`](../param/035_imodel.md) | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
+| [`effort::`](../param/036_effort.md) | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (max for model), `low`, `normal`, `high`, `max` |
 
-**Used By:** [`.usage`](../command/006_usage.md#command--9-usage) (all 8 params), [`.account.use`](../command/001_account.md#command--5-accountuse) (`touch::`, `imodel::`, `effort::` only)
+**Used By:** [`.usage`](../command/006_usage.md#command--9-usage) (all 8 params), [`.account.use`](../command/001_account.md#command--5-accountuse) (`trace::`, `touch::`, `imodel::`, `effort::`)
 
 **Typical Patterns:**
 

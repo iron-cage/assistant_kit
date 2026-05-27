@@ -28,14 +28,17 @@ Integration test planning for the `.account.use` command. See [command/namespace
 | IT-20 | `touch::1` with fetch failure — switch completes, exits 0 | Touch Subprocess |
 | IT-21 | `imodel::bad` on `.account.use` exits 1 with valid values in stderr | Validation |
 | IT-22 | `effort::bad` on `.account.use` exits 1 with valid values in stderr | Validation |
-| IT-23 | `touch::`, `imodel::`, `effort::` appear in `.account.use --help` | Help Output |
+| IT-23 | `touch::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help` | Help Output |
+| IT-24 | `trace::1 touch::1` idle account — 6 trace lines emitted to stderr in order | Trace Output |
+| IT-25 | `trace::1 touch::0` — no `[trace] account.use` lines emitted | Trace Suppression |
+| IT-26 | `trace::bad` exits 1 naming valid values `0`, `1`, `false`, `true` | Validation |
 
 ### Test Coverage Summary
 
 - Basic Invocation: 1 test
 - Marker Update: 1 test
 - Error Handling: 1 test
-- Validation: 4 tests
+- Validation: 5 tests
 - Dry Run: 1 test
 - Data Integrity: 1 test
 - Isolation: 1 test
@@ -47,8 +50,10 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - Prefix Resolution: 3 tests
 - Touch Subprocess: 4 tests
 - Help Output: 1 test
+- Trace Output: 2 tests
+- Trace Suppression: 1 test
 
-**Total:** 23 integration tests
+**Total:** 26 integration tests
 
 ---
 
@@ -264,7 +269,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 - **Given:** Any account store state (empty is fine).
 - **When:** `clp .account.use name::alice@home.com imodel::bad`
-- **Then:** Exits 1; stderr contains all four valid values: `auto`, `sonnet`, `opus`, `keep`.
+- **Then:** Exits 1; stderr contains all five valid values: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-07](../../../../docs/feature/027_account_use_post_switch_touch.md)
 - **Source fn:** `aw24_imodel_bad_value_exits_1`
@@ -275,18 +280,52 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 - **Given:** Any account store state (empty is fine).
 - **When:** `clp .account.use name::alice@home.com effort::bad`
-- **Then:** Exits 1; stderr contains all three valid values: `auto`, `high`, `max`.
+- **Then:** Exits 1; stderr contains all five valid values: `auto`, `low`, `normal`, `high`, `max`.
 - **Exit:** 1
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-07](../../../../docs/feature/027_account_use_post_switch_touch.md)
 - **Source fn:** `aw25_effort_bad_value_exits_1`
 
 ---
 
-### IT-23: `touch::`, `imodel::`, `effort::` appear in `.account.use --help`
+### IT-23: `touch::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help`
 
 - **Given:** Any state.
 - **When:** `clp .account.use --help` (or `.account.use help::1`)
-- **Then:** Exits 0; help output contains `touch::` with default `1`, `imodel::` with default `auto`, and `effort::` with default `auto`.
+- **Then:** Exits 0; help output contains `touch::` with default `1`, `imodel::` with default `auto`, `effort::` with default `auto`, and `trace::` with default `0`.
 - **Exit:** 0
-- **Source:** [feature/027_account_use_post_switch_touch.md AC-09](../../../../docs/feature/027_account_use_post_switch_touch.md)
-- **Source fn:** `aw26_help_shows_touch_imodel_effort`
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-09, AC-16](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source fn:** `aw26_help_shows_touch_imodel_effort` — extend to assert `trace::` + default `0`
+
+---
+
+### IT-24: `trace::1 touch::1` idle account — 6 trace lines emitted to stderr
+
+- **Given:** Account `alice@home.com` saved with valid token and idle 5h window (`five_hour.resets_at` absent).
+- **When:** `clp .account.use name::alice@home.com trace::1`
+- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout. Stderr (in order) contains: `reading {path}`, `reading: OK`, `quota fetch: OK`, `idle check: resets_at=absent → idle`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Prefix of every trace line is `[trace] account.use  alice@home.com`.
+- **Exit:** 0
+- **Live:** yes (requires valid token with idle `five_hour.resets_at = None`)
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-10–AC-14](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source fn:** `aw28_lim_it_trace_idle_account_all_lines`
+
+---
+
+### IT-25: `trace::1 touch::0` — no `[trace] account.use` lines emitted
+
+- **Given:** Account `alice@home.com` saved.
+- **When:** `clp .account.use name::alice@home.com touch::0 trace::1`
+- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout. Stderr contains no `[trace] account.use` lines.
+- **Exit:** 0
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-15](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source fn:** `aw31_trace_touch_disabled_no_trace_lines`
+
+---
+
+### IT-26: `trace::bad` exits 1 naming valid values
+
+- **Given:** Any account store state (empty is fine — validation runs before any I/O).
+- **When:** `clp .account.use name::alice@home.com trace::bad`
+- **Then:** Exits 1; stderr contains the four valid values: `0`, `1`, `false`, `true`.
+- **Exit:** 1
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-16](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source fn:** `aw32_trace_bad_value_exits_1`

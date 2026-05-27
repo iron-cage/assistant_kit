@@ -73,9 +73,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-64 | `.usage.help` lists `touch` param with default `1` | Help Output |
 | IT-65 | `sort::next` accepted with empty store → exit 0 | Sort Acceptance |
 | IT-66 | `imodel::auto` accepted; empty store exits 0 | imodel Param |
-| IT-67 | `imodel::bogus` → exit 1, stderr names all four valid values | imodel Param |
+| IT-67 | `imodel::bogus` → exit 1, stderr names all five valid values | imodel Param |
 | IT-68 | `effort::auto` accepted; empty store exits 0 | effort Param |
-| IT-69 | `effort::bogus` → exit 1, stderr names all three valid values | effort Param |
+| IT-69 | `effort::bogus` → exit 1, stderr names all five valid values | effort Param |
 | IT-70 | `.usage.help` lists `imodel` and `effort` params with default `auto` | Help Output |
 
 ### Test Coverage Summary
@@ -846,11 +846,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-67: `imodel::bogus` → exit 1, stderr names all four valid values
+### IT-67: `imodel::bogus` → exit 1, stderr names all five valid values
 
 - **Given:** Any environment (empty credential store).
 - **When:** `clp .usage imodel::bogus`
-- **Then:** Exits 1. Stderr contains each of the four valid values: `auto`, `sonnet`, `opus`, `keep`.
+- **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
 - **Source fn:** `it113_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-10](../../../../docs/feature/026_subprocess_model_effort.md)
@@ -868,11 +868,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-69: `effort::bogus` → exit 1, stderr names all three valid values
+### IT-69: `effort::bogus` → exit 1, stderr names all five valid values
 
 - **Given:** Any environment (empty credential store).
 - **When:** `clp .usage effort::bogus`
-- **Then:** Exits 1. Stderr contains each of the three valid values: `auto`, `high`, `max`.
+- **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `low`, `normal`, `high`, `max`.
 - **Exit:** 1
 - **Source fn:** `it115_effort_bogus_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-11](../../../../docs/feature/026_subprocess_model_effort.md)

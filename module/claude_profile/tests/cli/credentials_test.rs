@@ -1019,3 +1019,27 @@ fn cred46_ft11_null_workspace_fields_render_as_empty_string()
   assert!( text.contains( "\"workspace_uuid\":\"\"" ), "null workspace_uuid must render as empty string in JSON, got:\n{text}" );
   assert!( text.contains( "\"workspace_name\":\"\"" ), "null workspace_name must render as empty string in JSON, got:\n{text}" );
 }
+
+// ── it_trace_credentials_status_accepted ──────────────────────────────────────
+
+/// EC-8 (023): `trace::1` accepted by `.credentials.status` — no "Unknown parameter" error.
+/// TSK-210 RED gate: fails before `trace::` is registered (exit 1 + Unknown parameter).
+#[ test ]
+fn it_trace_credentials_status_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  let out = run_cs_with_env( &[ ".credentials.status", "trace::1" ], &[ ( "HOME", home ) ] );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "Unknown parameter" ),
+    "trace::1 must be accepted by .credentials.status, got stderr:\n{err}",
+  );
+  assert_exit( &out, 0 );
+  assert!(
+    err.contains( "[trace]" ),
+    "trace::1 must emit [trace] lines to stderr for .credentials.status, got:\n{err}",
+  );
+}

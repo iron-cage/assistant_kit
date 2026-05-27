@@ -51,8 +51,8 @@ clp .usage imodel::keep effort::high
 | `next::` | `enum` | `drain` | Strategy placing `→` on recommended account: `drain`, `endurance`; footer always shows both |
 | `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to default set |
 | `touch::` | `bool` | `1` | Keep accounts with active 5h countdown alive by sending minimal prompt via isolated subprocess; re-fetch quota |
-| `imodel::` | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `keep` |
-| `effort::` | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (max for model: `high`/sonnet, `max`/opus), `high`, `max` |
+| `imodel::` | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
+| `effort::` | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (max for model: `high`/sonnet, `max`/opus, none/haiku), `low`, `normal`, `high`, `max` |
 
 **Examples:**
 
@@ -96,4 +96,4 @@ clp .usage live::1 interval::60 jitter::10
 - See [feature/023_next_account_strategies.md](../../feature/023_next_account_strategies.md) for recommendation strategies.
 - `touch::` (default `1`) activates idle accounts (no active 5h window) by sending a minimal prompt that starts a 5h session; pass `touch::0` to suppress. Runs after `refresh::` when both active. See [feature/024_session_touch.md](../../feature/024_session_touch.md).
 - `imodel::` controls the Claude model injected into `touch::` and `refresh::` subprocesses. `auto` (default) selects Sonnet when an account's `7d(Son) ≥ 30%` and Opus otherwise. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
-- `effort::` controls the effort level (`--effort` flag) for those subprocesses. `auto` (default) uses `high` for Sonnet and `max` for Opus; no flag when `imodel::keep`. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
+- `effort::` controls the effort level (`--effort` flag) for those subprocesses. `auto` (default) uses `high` for Sonnet and `max` for Opus; no flag for `imodel::haiku` or `imodel::keep`. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).

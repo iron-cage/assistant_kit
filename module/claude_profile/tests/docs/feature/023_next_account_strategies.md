@@ -14,7 +14,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-06 | `next::` does not affect `format::json` output | AC-06 | Integration |
 | FT-07 | Footer omitted when 0 or 1 accounts have valid quota data | AC-07 | Integration |
 | FT-08 | Footer omits strategy line when no eligible candidate exists | AC-08 | Unit test |
-| FT-09 | drain skips `prefer_weekly == 0` accounts (BUG-206) | AC-04 | Unit test |
+| FT-09 | drain skips `prefer_weekly ≤ 5.0` accounts (BUG-206) | AC-04 | Unit test |
 
 ### Test Case Index
 
@@ -28,7 +28,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-06 | JSON unaffected by next:: | AC-06 | JSON No-op |
 | FT-07 | Footer suppressed when valid_count < 2 | AC-07 | Footer Threshold |
 | FT-08 | No-eligible-candidate strategy line omitted | AC-08 | Footer |
-| FT-09 | drain never recommends `prefer_weekly == 0` accounts | AC-04 | BUG-206 |
+| FT-09 | drain never recommends `prefer_weekly ≤ 5.0` accounts | AC-04 | BUG-206 |
 
 **Total:** 9 FT cases
 
@@ -129,13 +129,13 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 
 ---
 
-### FT-09: drain never recommends `prefer_weekly == 0` accounts (BUG-206)
+### FT-09: drain never recommends `prefer_weekly ≤ 5.0` accounts (BUG-206)
 
-- **Given:** Two accounts: `weekly_zero` (`prefer_weekly(Any) = min(4%, 0%) = 0%` — Sonnet fully exhausted) and `weekly_ten` (`prefer_weekly(Any) = min(15%, 10%) = 10%`). Drain sort places `weekly_zero` first (ascending `prefer_weekly`).
-- **When-A:** `find_next_for_strategy(&accounts, Drain, Any, now)` with both accounts eligible.
-- **When-B:** Same call with only two `prefer_weekly == 0` accounts.
-- **Then-A:** Returns `Some(index_of_weekly_ten)` — `weekly_zero` skipped despite ranking first in drain sort.
-- **Then-B:** Returns `None` — nothing to drain anywhere.
+- **Given:** Three accounts: `weekly_zero` (`prefer_weekly(Any) = min(4%, 0%) = 0%` — Sonnet fully exhausted), `weekly_one` (`prefer_weekly(Any) = 1%` — 🟡 weekly-exhausted tier, BUG-206 reopen case), and `weekly_ten` (`prefer_weekly(Any) = min(15%, 10%) = 10%`). Drain sort places `weekly_zero` first, `weekly_one` second (ascending `prefer_weekly`).
+- **When-A:** `find_next_for_strategy(&accounts, Drain, Any, now)` with all three accounts eligible.
+- **When-B:** Same call with only `prefer_weekly ≤ 5.0` accounts (weekly_zero + weekly_one).
+- **Then-A:** Returns `Some(index_of_weekly_ten)` — both `weekly_zero` (0%) and `weekly_one` (1%) skipped despite ranking first and second in drain sort; threshold is `> 5.0`.
+- **Then-B:** Returns `None` — all candidates are weekly-exhausted, nothing meaningful to drain.
 - **Exit:** n/a (unit test)
 - **Source fn:** `mre_bug_206_drain_skips_prefer_weekly_zero_accounts` (in `src/usage.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-04](../../../../docs/feature/023_next_account_strategies.md)

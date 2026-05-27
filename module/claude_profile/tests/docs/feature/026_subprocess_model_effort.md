@@ -23,6 +23,10 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 | FT-15 | Invalid `imodel::` value exits 1 naming valid values | AC-10 | Integration |
 | FT-16 | Invalid `effort::` value exits 1 naming valid values | AC-11 | Integration |
 | FT-17 | `imodel::` and `effort::` appear in `.usage --help` | AC-12 | Integration |
+| FT-18 | `imodel::haiku` always injects `--model claude-haiku-4-5-20251001` | AC-13 | Unit |
+| FT-19 | `effort::auto` + haiku → no `--effort` flag | AC-14 | Unit |
+| FT-20 | `effort::low` always injects `--effort low` | AC-15 | Unit |
+| FT-21 | `effort::normal` always injects `--effort normal` | AC-16 | Unit |
 
 ### Test Case Index
 
@@ -42,11 +46,15 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 | FT-12 | effort::max explicit always max | AC-07 | Explicit |
 | FT-13 | both params apply to touch and refresh paths | AC-08 | Structural |
 | FT-14 | imodel::effort:: no effect on json output | AC-09 | JSON No-op |
-| FT-15 | invalid imodel:: exits 1 naming valid values | AC-10 | Rejection |
-| FT-16 | invalid effort:: exits 1 naming valid values | AC-11 | Rejection |
+| FT-15 | invalid imodel:: exits 1 naming five valid values | AC-10 | Rejection |
+| FT-16 | invalid effort:: exits 1 naming five valid values | AC-11 | Rejection |
 | FT-17 | imodel:: and effort:: in usage help | AC-12 | Help Output |
+| FT-18 | imodel::haiku explicit always haiku | AC-13 | Explicit |
+| FT-19 | effort::auto haiku path no effort flag | AC-14 | Interaction |
+| FT-20 | effort::low explicit always low | AC-15 | Explicit |
+| FT-21 | effort::normal explicit always normal | AC-16 | Explicit |
 
-**Total:** 17 FT cases
+**Total:** 21 FT cases
 
 ---
 
@@ -205,22 +213,22 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ---
 
-### FT-15: Invalid `imodel::` value exits 1 naming all four valid values
+### FT-15: Invalid `imodel::` value exits 1 naming all five valid values
 
 - **Given:** Any environment (empty credential store).
 - **When:** `clp .usage imodel::bad`
-- **Then:** Exits 1. Stderr contains each of: `auto`, `sonnet`, `opus`, `keep`.
+- **Then:** Exits 1. Stderr contains each of: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
 - **Source fn:** `it113_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-10](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
-### FT-16: Invalid `effort::` value exits 1 naming all three valid values
+### FT-16: Invalid `effort::` value exits 1 naming all five valid values
 
 - **Given:** Any environment (empty credential store).
 - **When:** `clp .usage effort::bad`
-- **Then:** Exits 1. Stderr contains each of: `auto`, `high`, `max`.
+- **Then:** Exits 1. Stderr contains each of: `auto`, `low`, `normal`, `high`, `max`.
 - **Exit:** 1
 - **Source fn:** `it115_effort_bogus_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-11](../../../../docs/feature/026_subprocess_model_effort.md)
@@ -235,3 +243,47 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Exit:** 0
 - **Source fn:** `it116_usage_help_shows_imodel_effort_params` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-12](../../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-18: `imodel::haiku` always injects `--model claude-haiku-4-5-20251001`
+
+- **Given:** Account quota data with any `seven_day_sonnet_left_pct` value; `imodel::haiku`.
+- **When:** `resolve_model(&quota, "haiku")`
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Quota state is ignored; explicit value always wins. `imodel::auto` never selects Haiku — the auto algorithm only chooses between Sonnet and Opus based on `7d(Son)`.
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_imodel_haiku_explicit` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-13](../../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-19: `effort::auto` + resolved model=haiku → no `--effort` flag injected
+
+- **Given:** Resolved model = `IsolatedModel::Specific("claude-haiku-4-5-20251001")`; `effort::auto`.
+- **When:** `resolve_effort(&IsolatedModel::Specific("claude-haiku-4-5-20251001"), "auto")`
+- **Then:** Returns `None`. No `--effort` flag is prepended to subprocess args. Haiku has no extended thinking support — injecting any effort level under `auto` would be incorrect.
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_imodel_haiku_effort_auto_no_effort_flag` (in `src/usage.rs` `#[cfg(test)]`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-14](../../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-20: `effort::low` always injects `--effort low`
+
+- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")` (would produce `max` under `auto`); `effort::low`.
+- **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-6"), "low")`
+- **Then:** Returns `Some("low")`. Explicit value overrides model-derived maximum.
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_effort_low_explicit` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-15](../../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-21: `effort::normal` always injects `--effort normal`
+
+- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")` (would produce `max` under `auto`); `effort::normal`.
+- **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-6"), "normal")`
+- **Then:** Returns `Some("normal")`. Explicit value overrides model-derived maximum.
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_effort_normal_explicit` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-16](../../../../docs/feature/026_subprocess_model_effort.md)

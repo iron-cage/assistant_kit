@@ -6,7 +6,7 @@ Semantic groupings of parameters that share a common behavioral pattern.
 |------|----------------|
 | [001_output_control.md](001_output_control.md) | Output Control: `format::` — output serialization format |
 | [002_field_presence.md](002_field_presence.md) | Field Presence: 17 boolean field-inclusion toggles |
-| [003_fetch_behavior.md](003_fetch_behavior.md) | Fetch Behavior: `refresh::`, `live::`, `interval::`, `jitter::`, `trace::` |
+| [003_fetch_behavior.md](003_fetch_behavior.md) | Fetch Behavior: `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::` |
 | [004_sort_control.md](004_sort_control.md) | Sort Control: `sort::`, `desc::`, `prefer::`, `next::` |
 | [005_display_control.md](005_display_control.md) | Display Control: `cols::` — column visibility for `.usage` table |
 
@@ -18,7 +18,7 @@ Semantic groupings of parameters that share a common behavioral pattern.
 |-------|------------|---------|
 | [Output Control](001_output_control.md) | `format::` | `.accounts`, `.token.status`, `.paths`, `.usage`, `.account.limits`, `.credentials.status` |
 | [Field Presence](002_field_presence.md) | `active::`, `account::`, `sub::`, `tier::`, `token::`, `expires::`, `email::`, `file::`, `saved::`, `display_name::`, `role::`, `billing::`, `model::`, `uuid::`, `capabilities::`, `org_uuid::`, `org_name::` | `.accounts`, `.credentials.status` |
-| [Fetch Behavior](003_fetch_behavior.md) | `refresh::`, `live::`, `interval::`, `jitter::`, `trace::` | `.usage` only |
+| [Fetch Behavior](003_fetch_behavior.md) | `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::` | `.usage` (all 8); `.account.use` (`trace::`, `touch::`, `imodel::`, `effort::`) |
 | [Sort Control](004_sort_control.md) | `sort::`, `desc::`, `prefer::`, `next::` | `.usage` only |
 | [Display Control](005_display_control.md) | `cols::` | `.usage` only |
 

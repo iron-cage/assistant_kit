@@ -19,7 +19,7 @@
 
 use crate::helpers::{
   run_cs_with_env,
-  stdout, assert_exit,
+  stdout, stderr, assert_exit,
   write_credentials, write_account,
   FAR_FUTURE_MS, PAST_MS,
 };
@@ -180,4 +180,30 @@ fn rot08_unknown_param_exits_1()
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 1 );
+}
+
+// ── it_trace_account_rotate_accepted ──────────────────────────────────────────
+
+/// EC-15 (023): `trace::1` accepted by `.account.rotate` — no "Unknown parameter" error.
+/// TSK-210 RED gate: fails before `trace::` is registered (exit 1 + Unknown parameter).
+#[ test ]
+fn it_trace_account_rotate_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "active@work.com", "pro", "standard", FAR_FUTURE_MS, true );
+
+  let out = run_cs_with_env(
+    &[ ".account.rotate", "dry::1", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  let err = stderr( &out );
+  assert!(
+    !err.contains( "Unknown parameter" ),
+    "trace::1 must be accepted by .account.rotate, got stderr:\n{err}",
+  );
+  assert!(
+    err.contains( "[trace]" ),
+    "trace::1 must emit [trace] lines to stderr for .account.rotate, got:\n{err}",
+  );
 }
