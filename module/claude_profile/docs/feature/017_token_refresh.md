@@ -11,7 +11,7 @@
 
 The `refresh::` parameter takes `1` (default, on) or `0` (off). When `0`, `.usage` behaves identically to the baseline — auth errors appear as error rows in the table and no subprocess is spawned.
 
-When `refresh::1`, the command wraps `fetch_oauth_usage` with a retry layer: on an HTTP authentication error (401 or 403), it calls `claude_profile_core::account::refresh_account_token()` for that account, then retries the quota fetch if updated credentials are returned. `refresh_account_token()` encapsulates the full account lifecycle: `switch_account` → `run_isolated` (via `claude_runner_core`) → `save`; it returns `Some(new_creds_json)` on success or `None` on any failure in the lifecycle.
+When `refresh::1`, the command wraps `fetch_oauth_usage` with a retry layer: on an HTTP authentication error (401 or 403), it calls `claude_profile_core::account::refresh_account_token()` for that account, then retries the quota fetch if updated credentials are returned. `refresh_account_token()` encapsulates the full account lifecycle: `switch_account` → `read credentials` → `run_isolated` (via `claude_runner_core`) → `write credentials` → `save`; it returns `Some(new_creds_json)` on success or `None` on any failure in the lifecycle.
 
 **Trigger condition:** HTTP auth errors (401, 403) always trigger a refresh attempt. Additionally, HTTP 429 (rate-limit) triggers a refresh when the per-account credential file has a locally-expired `expiresAt` — this handles the case where Claude Code updated `~/.claude/.credentials.json` in the live session but the saved per-account copy was never re-saved, leaving a stale token. Network failures, timeouts, and 429 with a non-expired local token are passed through as-is, preventing unnecessary subprocess launches.
 
@@ -28,7 +28,7 @@ if refresh_param == 1:
         //   - result is auth_error("401") or auth_error("403")
         //   - result is rate_limit("429") AND expires_at_ms / 1000 <= now_secs
         new_json = account::refresh_account_token(account_quota.name, credential_store, claude_paths, trace)
-        // Encapsulates: switch_account → run_isolated(["--print", "."], 35s) → save
+        // Encapsulates: switch_account → read credentials → run_isolated(["--print", "."], 35s) → write credentials → save
         // Returns Some(new_creds_json) if lifecycle succeeds; None on any failure
 
         if new_json is Some(json):
@@ -95,7 +95,7 @@ Two other arg combinations are broken and must not be used:
 |------|------|----------------|
 | source | `src/usage.rs` | `refresh::` param read; retry trigger; calls `account::refresh_account_token()`; expiry derivation; retry fetch |
 | source | `src/lib.rs` | `refresh::` parameter registration via `register_commands()` |
-| source | `claude_profile_core/src/account.rs` | `refresh_account_token()` — `switch_account → run_isolated → save` lifecycle |
+| source | `claude_profile_core/src/account.rs` | `refresh_account_token()` — `switch_account → read credentials → run_isolated → write credentials → save` lifecycle |
 | dep | `claude_runner_core` | `run_isolated()` — called by `refresh_account_token()` in `_core`; `IsolatedRunResult`, `RunnerError` types |
 | dep | `claude_quota` | `fetch_oauth_usage()` — quota HTTP transport; `QuotaError::HttpTransport` |
 | task | `task/claude_runner_core/136_run_isolated_subprocess.md` | Prerequisite: implement `run_isolated()` |

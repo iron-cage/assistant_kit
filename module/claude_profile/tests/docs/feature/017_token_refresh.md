@@ -208,7 +208,7 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 - **Given:** `refresh_account_token` is called via `apply_refresh` with `trace=true`; the credential file exists in the persistent store AND `{fake_home}/.claude/` directory exists — so `switch_account` succeeds and `run_isolated` is invoked; `run_isolated` fails fast (no valid claude binary or fake token).
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called (unit test; equivalent to `clp .usage refresh::1 trace::1`)
-- **Then:** `[trace] refresh {name}  switch_account: OK` and `[trace] refresh {name}  run_isolated: invoking claude  args=["--print", "."]  timeout=35s` are emitted to stderr; `[trace] refresh {name}  run_isolated: Err(…)` or `OK credentials=None` follows; no panic; account result unchanged.
+- **Then:** `[trace] refresh {name}  switch_account: OK`, `[trace] refresh {name}  read credentials: OK`, and `[trace] refresh {name}  run_isolated: invoking claude  args=["--print", "."]  timeout=35s` are emitted to stderr (in that order); `[trace] refresh {name}  run_isolated: Err(…)` or `OK credentials=None` follows; no panic; account result unchanged.
 - **Source fn:** `test_apply_refresh_lifecycle_l010_trace_run_isolated_invoked_no_panic` (L10 in `usage.rs`), `art_some_paths_run_isolated_invoked_trace_no_panic` (in `account_refresh_test.rs`)
 - **Note:** Fix for BUG-166 — `refresh_account_token` previously had no `trace` parameter; all failure paths returned `None` silently without any diagnostic output. Testing uses "does not panic" pattern because nextest does not support reliable stderr assertion for `eprintln!` in unit tests.
 - **Source:** [017_token_refresh.md AC-26](../../../docs/feature/017_token_refresh.md)

@@ -450,10 +450,12 @@ pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::E
 /// Returns `None` on any failure — any step failing short-circuits the refresh.
 /// Never panics.
 ///
-/// When `trace` is `true`, one `[trace] refresh  {name}  …` line is written to
-/// stderr at each key step: `switch_account` result, `run_isolated` invocation,
-/// `run_isolated` outcome (including whether credentials were updated), and
-/// `save` result. Failure-path lines include the error string.
+/// When `trace` is `true`, one `[trace] {label}  {name}  …` line is written to
+/// stderr at each key step: `switch_account` result (`Some(paths)` branch only),
+/// `read credentials` result, `run_isolated` invocation, `run_isolated` outcome
+/// (including whether credentials were updated), `write credentials` result (only
+/// when `run_isolated` returns credentials), and `save` result (`Some(paths)` branch
+/// only, only when the write succeeded). Failure-path lines include the error string.
 ///
 /// # Consumer Crate Note
 ///
