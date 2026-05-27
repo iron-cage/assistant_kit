@@ -214,6 +214,6 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **When:** `apply_touch(&mut aq, store.path(), Some(&paths), true, imodel, effort)` is called (unit test context; equivalent to `clp .usage touch::1 trace::1` with active marker present)
 - **Then:** Stderr contains `[trace] touch  {original_name}  restore switch_account: OK`; the restore step is not silent under `trace::1`.
 - **And:** In a separate scenario where `switch_account` fails at restore time, stderr contains the failure line unconditionally — without requiring `trace=true`.
-- **Source fn:** `test_apply_touch_mre_bug208_restore_trace_emitted` (in `tests/cli/usage_test.rs` or `src/usage.rs #[cfg(test)]`)
+- **Source fn:** `test_apply_touch_mre_bug208_restore_trace_emitted` (in `src/usage.rs #[cfg(test)]`)
 - **Note:** Fix for BUG-208 — `apply_touch` used `let _ = switch_account(...)` at the restore site, making restore failures silent and restore trace completeness impossible. Symmetric fix to `apply_refresh` (FT-17 in 017_token_refresh test spec).
 - **Source:** [feature/024_session_touch.md AC-13](../../../../docs/feature/024_session_touch.md)

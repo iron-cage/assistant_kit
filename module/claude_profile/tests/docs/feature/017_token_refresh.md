@@ -235,6 +235,6 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called (unit test context; equivalent to `clp .usage refresh::1 trace::1` with active marker present)
 - **Then:** Stderr contains `[trace] refresh  {original_name}  restore switch_account: OK`; the restore step is not silent under `trace::1`.
 - **And:** In a separate scenario where `switch_account` fails at restore time (e.g., credential file deleted between snapshot and restore), stderr contains the failure line unconditionally — without requiring `trace=true`.
-- **Source fn:** `test_apply_refresh_mre_bug208_restore_trace_emitted` (in `tests/cli/usage_test.rs` or `src/usage.rs #[cfg(test)]`)
+- **Source fn:** `test_apply_refresh_mre_bug208_restore_trace_emitted` (in `src/usage.rs #[cfg(test)]`)
 - **Note:** Fix for BUG-208 — both `apply_refresh` and `apply_touch` used `let _ = switch_account(...)` at the restore site, making restore failures silent and restore trace completeness impossible.
 - **Source:** [017_token_refresh.md AC-28](../../../docs/feature/017_token_refresh.md)
