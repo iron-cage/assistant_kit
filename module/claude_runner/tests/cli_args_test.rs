@@ -70,6 +70,7 @@
 //! - T47: `--dangerously-skip-permissions` explicit → rejected as "unknown option" (now hidden/default-on)
 //! - T48: `--no-skip-permissions --new-session` combo → no `-c`, no `--dangerously-skip-permissions`
 //! - T49: all `--help` option lines have descriptions at the same column (alignment regression guard)
+//! - BUG-212: `clr run <message>` → leading `run` token stripped; output identical to `clr <message>`
 //!
 //! See `ultrathink_args_test.rs` (T50–T58) and `effort_args_test.rs` (T59–T70).
 
@@ -815,6 +816,146 @@ fn s79_help_includes_keep_claudecode()
   let out = run_cli( &[ "--help" ] );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!( stdout.contains( "--keep-claudecode" ), "help must mention --keep-claudecode. Got:\n{stdout}" );
+}
+
+// BUG-212: `clr run <message>` treated "run" as the first positional message word.
+//
+// ## Root Cause (bug_reproducer(BUG-212))
+//
+// `run_cli()` collected argv tokens and passed them directly to `parse_args()` without
+// special-casing the `run` subcommand.  `clr run "Fix bug"` yielded tokens
+// `["run", "Fix bug"]`; both were treated as positional words, producing
+// message "run Fix bug" instead of "Fix bug".
+//
+// ## Why Not Caught
+//
+// All existing message tests invoked `clr <message>` without an explicit `run` prefix.
+// The `run` subcommand appeared in `--help` USAGE but was never exercised in test.
+//
+// ## Fix Applied
+//
+// `lib.rs run_cli()` strips the leading "run" token before passing `tokens` to
+// `parse_args()`, making `clr run <args>` and `clr <args>` parse identically.
+//
+// ## Prevention
+//
+// Pin the invariant: `clr run <args>` and `clr <args>` must produce identical dry-run
+// output.  Any regression that reintroduces "run" in the message causes the equivalence
+// assertion to fail.
+//
+// ## Pitfall
+//
+// Strip only `tokens[0] == "run"` before flag parsing — a message starting with "run"
+// (e.g. `clr "run tests"`) must NOT be stripped.  The check is position-sensitive:
+// only the very first token, only when it equals "run" exactly.
+// test_kind: bug_reproducer(BUG-212)
+#[ test ]
+fn bug_reproducer_212_run_subcommand_strips_token()
+{
+  // Invoke with explicit `run` subcommand prefix.
+  let with_run = run_cli( &[ "run", "--dry-run", "Fix bug" ] );
+  assert!(
+    with_run.status.success(),
+    "clr run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &with_run.stderr )
+  );
+
+  // Invoke without `run` prefix — canonical form; both must be identical.
+  let without_run = run_cli( &[ "--dry-run", "Fix bug" ] );
+  assert!( without_run.status.success(), "clr without run must exit 0" );
+
+  let out_with    = String::from_utf8_lossy( &with_run.stdout );
+  let out_without = String::from_utf8_lossy( &without_run.stdout );
+
+  // Message must be "Fix bug", not "run Fix bug".
+  assert!(
+    out_with.contains( "\"Fix bug\n\nultrathink\"" ),
+    "message must be 'Fix bug' (not 'run Fix bug'). Got:\n{out_with}"
+  );
+
+  // `clr run <args>` and `clr <args>` must produce identical dry-run output.
+  assert_eq!(
+    out_with.trim(), out_without.trim(),
+    "`clr run <args>` and `clr <args>` must produce identical dry-run output"
+  );
+}
+
+// BUG-212 (extended coverage): `clr run` — message content, bare form, and flag passthrough.
+//
+// ## Root Cause (bug_reproducer(BUG-212))
+//
+// Same root as primary reproducer: `run_cli()` passed argv tokens verbatim to
+// `parse_args()`.  Any token at position 0 named "run" was collected as the first
+// positional word of the message.  Three separate observable symptoms: (a) message
+// contamination, (b) bare form divergence from implicit default, (c) flags following
+// "run" were still parsed correctly only by accident because they started with "-".
+//
+// ## Why Not Caught
+//
+// The three symptom variants were never tested in isolation.  Only the equivalence
+// check (`clr run x` == `clr x`) was added in the primary reproducer; the bare
+// no-message form and flag passthrough were not independently asserted.
+//
+// ## Fix Applied
+//
+// `lib.rs run_cli()` strips `tokens[0]` when it equals "run" before calling
+// `parse_args()`.  All three observable symptoms are resolved by the single strip.
+//
+// ## Prevention
+//
+// Test the three distinct behavioural surface areas separately so that a partial
+// regression (e.g. bare form works but message contamination returns) fails visibly
+// rather than hiding behind a passing equivalence check.
+//
+// ## Pitfall
+//
+// Only strip position 0 when it equals "run" exactly.  A message that starts with
+// the word "run" (e.g. `clr "run tests"`) must not be stripped — the guard is
+// position-sensitive and only fires when tokens[0] == "run".
+//
+// test_kind: bug_reproducer(BUG-212)
+#[ test ]
+fn bug_reproducer_212_run_subcommand_args()
+{
+  // (a) `clr run hello --dry-run` — "hello" is the message; "run" must NOT appear in it.
+  let out = run_cli( &[ "run", "hello", "--dry-run" ] );
+  assert!(
+    out.status.success(),
+    "clr run hello --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "\"hello\n\nultrathink\"" ),
+    "message must be 'hello' with ultrathink suffix. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "run hello" ),
+    "'run' must NOT appear in the message (bug: treated as first positional word). Got:\n{stdout}"
+  );
+
+  // (b) `clr run --dry-run` with no message — identical to `clr --dry-run`.
+  let with_run    = run_cli( &[ "run", "--dry-run" ] );
+  let without_run = run_cli( &[ "--dry-run" ] );
+  assert!( with_run.status.success(), "clr run --dry-run must exit 0" );
+  assert_eq!(
+    String::from_utf8_lossy( &with_run.stdout ).trim(),
+    String::from_utf8_lossy( &without_run.stdout ).trim(),
+    "clr run --dry-run must produce same output as clr --dry-run (bare command form)"
+  );
+
+  // (c) `clr run --model sonnet --dry-run` — flag parsed after run token stripped.
+  let out = run_cli( &[ "run", "--model", "sonnet", "--dry-run" ] );
+  assert!(
+    out.status.success(),
+    "clr run --model sonnet --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--model sonnet" ),
+    "--model sonnet must appear in assembled command. Got:\n{stdout}"
+  );
 }
 
 // T48: --no-skip-permissions --new-session combo disables BOTH automatic defaults

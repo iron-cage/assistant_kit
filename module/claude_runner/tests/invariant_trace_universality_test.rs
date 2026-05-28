@@ -32,13 +32,20 @@ fn stderr_str( o : &std::process::Output ) -> String
 
 /// IT-1: `clr --trace "Fix bug"` (run) → stderr contains env+command before invocation.
 ///
-/// Trace fires before subprocess attempt; exit 1 (claude absent) is acceptable.
+/// Trace fires before subprocess attempt; exit is non-zero because PATH=/nonexistent
+/// prevents claude from being found.  PATH is restricted to avoid hanging: without it,
+/// an installed claude binary starts an interactive session and the test never completes.
 ///
 /// Source: tests/docs/invariant/004_trace_universality.md#it-1
 #[ test ]
 fn it_01_run_trace_stderr_output()
 {
-  let out    = cli_binary_test_helpers::run_cli( &[ "--trace", "Fix bug" ] );
+  // PATH=/nonexistent: trace fires first, then spawn fails immediately (claude not found).
+  // Without this, an installed claude binary would open an interactive TTY and hang forever.
+  let out    = cli_binary_test_helpers::run_cli_with_env(
+    &[ "--trace", "Fix bug" ],
+    &[ ( "PATH", "/nonexistent" ) ],
+  );
   let stderr = stderr_str( &out );
   assert!(
     stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
@@ -48,8 +55,6 @@ fn it_01_run_trace_stderr_output()
     stderr.contains( "--dangerously-skip-permissions" ),
     "run --trace must emit --dangerously-skip-permissions on stderr. Got:\n{stderr}"
   );
-  let code = out.status.code().unwrap_or( -1 );
-  assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );
 }
 
 /// IT-2: `clr ask --trace "What is X?"` → stderr contains ask-default env+command.

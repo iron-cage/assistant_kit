@@ -461,14 +461,6 @@ fn env_str( var : &str ) -> Option< String >
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
-///
-/// Fix(issue-verbosity-cli-wins): verbosity was `VerbosityLevel` (non-optional) with the
-/// check `parsed.verbosity == VerbosityLevel::default()`, making explicit `--verbosity 3`
-/// (which equals the default 3) indistinguishable from "not set". `CLR_VERBOSITY` then
-/// overwrote the explicit CLI value, violating the "CLI always wins" contract.
-/// Root cause: non-optional field with default value 3 cannot signal "explicitly provided."
-/// Pitfall: always use `Option<T>` (never `T == default()`) for env-var-fallback fields
-/// whose default is a non-false/non-zero value — equality-with-default is ambiguous.
 pub( super ) fn apply_env_vars( parsed : &mut CliArgs )
 {
   if parsed.message.is_none()              { parsed.message              = env_str( "CLR_MESSAGE" ); }
@@ -485,6 +477,13 @@ pub( super ) fn apply_env_vars( parsed : &mut CliArgs )
   }
   if parsed.session_dir.is_none()         { parsed.session_dir          = env_str( "CLR_SESSION_DIR" ); }
   if !parsed.dry_run                       { parsed.dry_run              = env_bool( "CLR_DRY_RUN" ); }
+  // Fix(BUG-213): `CLR_VERBOSITY` overwrote an explicit `--verbosity N` CLI flag when N equalled
+  // the default (3). Root cause: `verbosity` was `VerbosityLevel` (non-optional), so the guard
+  // `parsed.verbosity == VerbosityLevel::default()` misfired for `--verbosity 3` — the value is
+  // identical to the unset default, making them indistinguishable.
+  // Root cause: non-optional field whose default is non-zero/non-false cannot act as a "set" sentinel.
+  // Pitfall: use `Option<T>` (never `T == default()`) for any env-var-fallback field whose default
+  // is a non-false/non-zero value; equality-with-default is always ambiguous as a set-sentinel.
   if parsed.verbosity.is_none()
   {
     if let Some( v ) = env_str( "CLR_VERBOSITY" )

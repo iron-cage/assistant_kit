@@ -4,7 +4,7 @@
 
 - **Purpose**: Enforce the lexical distinction between commands and parameters in the `clr` CLI.
 - **Responsibility**: State that all commands are bare words and all parameters are `--`/`-` prefixed flags.
-- **In Scope**: Command dispatch convention, bare-word requirement, parameter prefix requirement, `help` word-subcommand, `--help`/`-h` convenience aliases.
+- **In Scope**: Command dispatch convention, bare-word requirement, parameter prefix requirement, `run` explicit subcommand alias, `help` word-subcommand, `--help`/`-h` convenience aliases.
 - **Out of Scope**: Default flag injection (-> `invariant/001_default_flags.md`), individual parameter semantics (-> `cli/param/`).
 
 ### Invariant Statement
@@ -20,7 +20,7 @@ Every `clr` command must be a bare word (no `-` or `--` prefix). Only parameters
 
 | Command | Dispatch | Notes |
 |---------|----------|-------|
-| `run` | implicit default (no token) | Invoked when no subcommand word is given |
+| `run` | implicit default or explicit first token | Invoked when no subcommand word is given; also accepted as `clr run …` — the `run` token is stripped and execution delegates to default run mode |
 | `isolated` | explicit first token | `clr isolated --creds ...` |
 | `refresh` | explicit first token | `clr refresh --creds ...` |
 | `help` | explicit first token | `clr help` |
@@ -36,9 +36,10 @@ Command dispatch in `run_cli()` uses exact string matching on the first non-flag
 2. `tokens.first() == Some("refresh")` -> dispatch to `parse_refresh_args()`
 3. `tokens.first() == Some("ask")` -> dispatch to `parse_ask_args()`
 4. `tokens.first() == Some("help")` -> call `print_help()` and return
-5. Otherwise -> fall through to `parse_args()` (implicit `run`)
+5. `tokens.first() == Some("run")` -> strip `run` token, fall through to `parse_args()` (explicit `run`)
+6. Otherwise -> fall through to `parse_args()` (implicit `run`)
 
-The `KNOWN_SUBCOMMANDS` guard checks for typos/truncations of all registered subcommands (`isolated`, `refresh`, `ask`, `help`) before `parse_args()` is reached.
+The `KNOWN_SUBCOMMANDS` guard checks for typos/truncations of all registered subcommands (`run`, `isolated`, `refresh`, `ask`, `help`) before `parse_args()` is reached.
 
 `--help`/`-h` flag aliases are handled inside `parse_args()` as a pre-scan fast-path (before any flag parsing) for backward compatibility.
 

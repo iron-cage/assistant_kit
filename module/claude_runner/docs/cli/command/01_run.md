@@ -7,7 +7,10 @@ default command — invoked whenever no explicit subcommand is given.
 
 ```sh
 clr [OPTIONS] [MESSAGE]
+clr run [OPTIONS] [MESSAGE]
 ```
+
+The `run` token is optional — both forms are equivalent. When `run` appears as the first positional token it is stripped before delegation to the default run mode.
 
 **Parameters:**
 
@@ -47,8 +50,10 @@ Use `--new-session` to start fresh.
 | Invocation | Mode | Path |
 |------------|------|------|
 | `clr` | Interactive REPL | `execute_interactive()` + `-c` |
+| `clr run` | Interactive REPL (explicit) | strip `run`, `execute_interactive()` + `-c` |
 | `clr "Fix bug"` | **Print (default)** | `execute()` + `--print` + `-c` |
-| `clr -p "Fix bug"` | Print (explicit) | `execute()` + `--print` + `-c` |
+| `clr run "Fix bug"` | Print (explicit alias) | strip `run`, `execute()` + `--print` + `-c` |
+| `clr -p "Fix bug"` | Print (flag explicit) | `execute()` + `--print` + `-c` |
 | `clr --interactive "Fix bug"` | Interactive | `execute_interactive()` + `-c` |
 | `clr --dry-run "Fix bug"` | Preview only | `describe()` / `describe_env()` (shows `-c`) |
 | `clr --trace "Fix bug"` | Trace (print then execute) | `describe_env()` + `describe()` to stderr, then `execute()` |
@@ -70,6 +75,9 @@ clr
 
 # Print mode — default when message given
 clr "Explain this function" --model sonnet
+
+# Explicit run subcommand — identical to implicit form
+clr run "Explain this function" --model sonnet
 
 # Explicit print mode (same as above)
 clr -p "Explain this function" --model sonnet

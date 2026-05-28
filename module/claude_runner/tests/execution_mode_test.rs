@@ -153,6 +153,8 @@ fn e06_print_stdout_captured()
 }
 
 // E07: Interactive mode: binary not found + verbosity 0 → stderr empty.
+// Fix(BUG-213): env_remove CLR_TRACE prevents dev-shell trace activation from
+//   printing the command preview to stderr regardless of --verbosity 0.
 #[ test ]
 
 fn e07_interactive_not_found_verbosity_zero()
@@ -161,6 +163,7 @@ fn e07_interactive_not_found_verbosity_zero()
   let out = Command::new( bin )
     .args( [ "--verbosity", "0", "test" ] )
     .env( "PATH", "/nonexistent" )
+    .env_remove( "CLR_TRACE" ) // Fix(BUG-213)
     .output()
     .expect( "Failed to invoke" );
   assert!( !out.status.success(), "must exit non-zero" );
@@ -172,6 +175,8 @@ fn e07_interactive_not_found_verbosity_zero()
 }
 
 // E08: Print mode: binary not found + verbosity 0 → stderr empty.
+// Fix(BUG-213): env_remove CLR_TRACE prevents dev-shell trace activation from
+//   printing the command preview to stderr regardless of --verbosity 0.
 #[ test ]
 
 fn e08_print_not_found_verbosity_zero()
@@ -180,6 +185,7 @@ fn e08_print_not_found_verbosity_zero()
   let out = Command::new( bin )
     .args( [ "--verbosity", "0", "-p", "test" ] )
     .env( "PATH", "/nonexistent" )
+    .env_remove( "CLR_TRACE" ) // Fix(BUG-213)
     .output()
     .expect( "Failed to invoke" );
   assert!( !out.status.success(), "must exit non-zero" );
