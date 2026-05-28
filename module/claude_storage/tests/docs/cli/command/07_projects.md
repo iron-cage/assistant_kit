@@ -51,9 +51,9 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 | INT-41 | v1 orphan shows `? (orphan)` label (bug-cc-c1) | Family Display |
 | INT-42 | v2 root entry count singular `(1 entry)` | Family Display |
 | INT-43 | v2 agent entry count singular `1 entry` | Family Display |
-| INT-41 | verbosity::1 alone stays in summary mode (bug-is-default-verbosity) | Summary Mode |
-| INT-42 | Summary mode shows "Active project" header (task-016) | Project-Centric Output |
-| INT-43 | Summary mode shows session count aggregate (task-016) | Project-Centric Output |
+| INT-41b | `verbosity::1` alone stays in summary mode (bug-is-default-verbosity) | Summary Mode |
+| INT-42b | Summary mode shows "Active project" header (task-016) | Project-Centric Output |
+| INT-43b | Summary mode shows session count aggregate (task-016) | Project-Centric Output |
 | INT-44 | List mode shows projects sorted by recency (task-016) | Project-Centric Output |
 | INT-45 | verbosity::0 outputs project paths only (task-016) | Project-Centric Output |
 | INT-46 | Topic path shown even when topic dir absent from disk | Topic Existence Guard (issue-035) |
@@ -65,7 +65,7 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 ## Test Coverage Summary
 
 - Summary Mode (default): 1 test (INT-1)
-- Summary Mode: 5 tests (INT-27–INT-30, INT-41)
+- Summary Mode: 5 tests (INT-27–INT-30, INT-41b)
 - Filter Passthrough: 2 tests (INT-31–INT-32)
 - Scope Behavior: 3 tests (INT-2, INT-3, INT-4)
 - Path Anchoring: 1 test (INT-5)
@@ -79,7 +79,7 @@ Integration tests for the `.projects` command. Tests verify summary mode output 
 - Sibling Exclusion (issue-032): 1 test (INT-23)
 - Output Format (v1 enhancement): 3 tests (INT-24, INT-25, INT-26)
 - Family Display: 11 tests (INT-33 through INT-40, INT-41 through INT-43)
-- Project-Centric Output (task-016): 4 tests (INT-42 through INT-45)
+- Project-Centric Output (task-016): 4 tests (INT-42b, INT-43b, INT-44, INT-45)
 - Topic Existence Guard (issue-035): 5 tests (INT-46 through INT-50)
 
 ## Test Cases
@@ -729,7 +729,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects scope::local verbosity::2
 
 ---
 
-### INT-41: verbosity::1 alone stays in summary mode (bug-is-default-verbosity)
+### INT-41b: `verbosity::1` alone stays in summary mode (bug-is-default-verbosity)
 
 **Command:**
 ```
@@ -753,7 +753,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects verbosity::1
 
 ---
 
-### INT-42: Summary mode shows "Active project" header (task-016)
+### INT-42b: Summary mode shows "Active project" header (task-016)
 
 **Command:**
 ```
@@ -768,7 +768,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .projects
 
 ---
 
-### INT-43: Summary mode shows session count aggregate (task-016)
+### INT-43b: Summary mode shows session count aggregate (task-016)
 
 **Command:**
 ```

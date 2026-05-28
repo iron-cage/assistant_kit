@@ -28,11 +28,13 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
 
 ```
 [trace] account.use  {name}  reading {cred_path}
-[trace] account.use  {name}  reading: OK                              ← omitted on Err; Err stops trace
-[trace] account.use  {name}  quota fetch: OK                          ← or Err({msg}); Err skips idle+model+subprocess lines
-[trace] account.use  {name}  idle check: resets_at=absent → idle      ← or resets_at=present → already active
-[trace] account.use  {name}  model: {model}  effort: {effort}         ← when quota fetch OK (idle or already active); omitted when fetch failed
-[trace] account.use  {name}  subprocess: spawned                      ← or skipped (reason: already active | fetch failed)
+[trace] account.use  {name}  reading: OK                                   ← omitted on Err; Err stops trace
+[trace] account.use  {name}  quota fetch: OK                               ← or Err({msg}); Err → expiry check (next line)
+[trace] account.use  {name}  expiry check: expired(4h 21m ago) → refused   ← fetch Err + expired: exits 3; no switch
+                                        OR: valid (expires in 3h 34m)      ← fetch Err + not expired: switch proceeds below
+[trace] account.use  {name}  idle check: resets_at=absent → idle           ← or resets_at=present → already active; fetch OK path only
+[trace] account.use  {name}  model: {model}  effort: {effort}              ← when quota fetch OK; omitted when fetch failed
+[trace] account.use  {name}  subprocess: spawned                           ← or skipped (reason: already active | fetch failed)
 ```
 
 When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operations performed). When `trace::0` (default): no trace output.
@@ -47,25 +49,27 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 - 0: success (switch completed; touch fired if idle, skipped if active or fetch failed)
 - 1: usage error (invalid name format or invalid `imodel::`/`effort::` value)
 - 2: runtime error (account not found or HOME unset)
+- 3: account credentials expired — locally-expired `expiresAt` detected when `touch::1` and quota fetch fails (see AC-17)
 
 ### Acceptance Criteria
 
 - **AC-01**: `clp .account.use name::alice@home.com` (default `touch::1`) fetches quota for the target account, switches credentials, and spawns `run_isolated` if the account's `five_hour.resets_at` is absent (idle).
 - **AC-02**: `clp .account.use name::alice@home.com touch::0` performs pure credential rotation with no quota fetch and no subprocess.
 - **AC-03**: `clp .account.use` against an already-active account (`resets_at.is_some()`) completes without spawning a subprocess; exits 0.
-- **AC-04**: When the quota fetch fails (network error, auth error), touch is skipped silently and the switch still completes; exits 0.
+- **AC-04**: When the quota fetch fails (network error, auth error) AND the target account's token is NOT locally expired (`expiresAt` absent or in the future): touch is skipped silently and the switch still completes; exits 0.
 - **AC-05**: `imodel::auto` selects `claude-sonnet-4-6` when `7d(Son) ≥ 30%` and `claude-opus-4-6` when `7d(Son) < 30%` or unavailable; delegates to `resolve_model()`.
 - **AC-06**: `effort::auto` injects `--effort high` for Sonnet and `--effort max` for Opus; no `--effort` flag for `imodel::keep` or `imodel::haiku`.
 - **AC-07**: `imodel::bad` exits 1 with stderr naming `auto`, `sonnet`, `opus`, `haiku`, `keep`; `effort::bad` exits 1 with stderr naming `auto`, `low`, `normal`, `high`, `max`.
 - **AC-08**: `dry::1` prints `[dry-run] would switch to '{name}'` without modifying credentials or spawning a subprocess.
 - **AC-09**: `touch::`, `imodel::`, `effort::`, and `trace::` appear in `.account.use --help` output with their defaults (`1`, `auto`, `auto`, `0`).
 - **AC-10**: When `trace::1` and `touch::1`: emits `[trace] account.use  {name}  reading {path}` followed by `reading: OK` on success; if the credential file read fails, emits `reading: Err({msg})` and stops — no further trace lines for this invocation.
-- **AC-11**: When `trace::1` and `touch::1` and credential read succeeds: emits `[trace] account.use  {name}  quota fetch: OK` on success or `quota fetch: Err({msg})` on failure; Err stops idle-check and model/subprocess trace lines.
+- **AC-11**: When `trace::1` and `touch::1` and credential read succeeds: emits `[trace] account.use  {name}  quota fetch: OK` on success or `quota fetch: Err({msg})` on failure; Err stops idle-check and model/subprocess trace lines and triggers the expiry check (AC-17) when `expiresAt` is present in the credential file.
 - **AC-12**: When `trace::1` and `touch::1` and quota fetch succeeds: emits `[trace] account.use  {name}  idle check: resets_at=present → already active` (active path) or `idle check: resets_at=absent → idle` (idle path).
 - **AC-13**: When `trace::1` and `touch::1` and quota fetch succeeded: emits `[trace] account.use  {name}  model: {model}  effort: {effort}` (using the resolved model and effort strings) regardless of idle state — appears before `subprocess: spawned` (idle) and before `subprocess: skipped (reason: already active)` (active). Omitted only when fetch failed.
 - **AC-14**: When `trace::1` and `touch::1`: emits `[trace] account.use  {name}  subprocess: spawned` when the subprocess is dispatched (idle + fetch OK), or `subprocess: skipped (reason: already active)` / `subprocess: skipped (reason: fetch failed)` otherwise.
 - **AC-15**: When `trace::1` and `touch::0`: no `[trace] account.use` lines emitted — no quota fetch operations are performed on the `touch::0` path.
 - **AC-16**: `trace::` (Kind::String, default `0`) is registered on `.account.use`; `trace::bad` exits 1 with stderr naming `0`, `1`, `false`, `true`.
+- **AC-17**: When `touch::1` (default) and the quota fetch fails (returns Err) AND the target account's token is locally expired (current time > `expiresAt` from `{credential_store}/{name}.credentials.json`): exits 3 with `account credentials expired: {name} (expired {N}h {M}m ago)` on stderr; `switch_account()` is NOT called. When `trace::1`: emits `[trace] account.use  {name}  expiry check: expired({N}h {M}m ago) → refused` after the `quota fetch: Err(...)` line. (Fix for BUG-213.)
 
 ### Cross-References
 
@@ -83,3 +87,4 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 | param | [cli/param/035_imodel.md](../cli/param/035_imodel.md) | `imodel::` parameter specification (shared with `.usage`) |
 | param | [cli/param/036_effort.md](../cli/param/036_effort.md) | `effort::` parameter specification (shared with `.usage`) |
 | command | [cli/command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | `.account.use` CLI specification |
+| bug | `task/claude_profile/bug/213_account_use_switches_to_expired_token_silently.md` | BUG-213 (Open): `.account.use` switches to locally-expired token when fetch fails; `expiresAt` never checked before `switch_account()` — AC-04 gap; AC-17 defines the fix |
