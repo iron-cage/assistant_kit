@@ -14,7 +14,8 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 | FT-06 | `clp .account.use i1` resolves exact local-part match unambiguously | AC-11 (015) | Integration (→ 015) |
 | FT-07 | `clp .account.use a` exits 1 when no exact local-part match, two prefix hits | AC-06 (015) | Integration (→ 015) |
 | FT-08 | `clp .account.use i1` exits 1 when no `i1@` account and `i11@`/`i12@` both match | AC-06, AC-11 (015) | Integration (→ 015) |
-| FT-09 | `.account.save` (no `name::`) reads `_active` marker, not stale `emailAddress` | AC-08 (002) | Integration (BUG-209) |
+| FT-09 | `.account.save` (no `name::`) — `oauthAccount.emailAddress` absent, falls back to `_active` marker (BUG-209 regression) | AC-08 (002) | Integration (BUG-209) |
+| FT-10 | `.account.save` (no `name::`) — `oauthAccount.emailAddress` present, overrides stale `_active` marker (BUG-212) | AC-08 (002) | Integration (BUG-212) |
 
 ### Test Case Index
 
@@ -28,9 +29,10 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 | FT-06 | Exact local-part match resolves unambiguously | AC-11 (015) | Prefix Resolution |
 | FT-07 | Ambiguous prefix with no exact match exits 1 | AC-06 (015) | Prefix Resolution |
 | FT-08 | Prefix `i1` exits 1 when only `i11@`/`i12@` exist (no exact match) | AC-06, AC-11 (015) | Prefix Resolution |
-| FT-09 | .account.save uses `_active` marker for name resolution | AC-08 (002) | Name Resolution |
+| FT-09 | .account.save falls back to `_active` marker when `oauthAccount.emailAddress` absent | AC-08 (002) | Name Resolution |
+| FT-10 | .account.save uses `oauthAccount.emailAddress` when present, ignores stale `_active` marker | AC-08 (002) | Name Resolution |
 
-**Total:** 9 FT cases
+**Total:** 10 FT cases
 
 ---
 
@@ -123,11 +125,24 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 
 ---
 
-### FT-09: `.account.save` (no `name::`) reads `_active` marker, not stale `emailAddress`
+### FT-09: `.account.save` (no `name::`) — fallback to `_active` marker when `oauthAccount.emailAddress` absent
 
-- **Given:** Two saved accounts: `a@test.com` and `b@test.com`. `~/.claude.json` has `emailAddress = "a@test.com"` (stale — not updated since the last account switch). The per-machine active marker (`_active_{hostname}_{user}`) contains `"b@test.com"` (set by a prior `.account.use b@test.com`).
+- **Given:** Two saved accounts: `a@test.com` and `b@test.com`. `~/.claude.json` has top-level `emailAddress = "a@test.com"` (stale — no `oauthAccount.emailAddress` field present). The per-machine active marker (`_active_{hostname}_{user}`) contains `"b@test.com"` (set by a prior `.account.use b@test.com`).
 - **When:** `clp .account.save` (no `name::` argument)
-- **Then:** Exits 0. Output reads `saved current credentials as 'b@test.com'`. The per-machine active marker still reads `b@test.com`. The stale `emailAddress` value `a@test.com` is NOT used as the save target — the `_active` marker is the authoritative source for name resolution.
+- **Then:** Exits 0. Output reads `saved current credentials as 'b@test.com'`. The per-machine active marker still reads `b@test.com`. The two-level inference: (1) `oauthAccount.emailAddress` is absent from the JSON → None; (2) fallback to `_active` marker → `b@test.com`. Top-level `emailAddress` is never read.
 - **Exit:** 0
 - **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** Tests the fallback path. Primary path (`oauthAccount.emailAddress` present, overrides stale marker) is covered by FT-10 (BUG-212).
 - **Source:** [feature/002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-10: `.account.save` (no `name::`) — `oauthAccount.emailAddress` overrides stale `_active` marker (BUG-212)
+
+- **Given:** `~/.claude/.credentials.json` exists with live credentials. `~/.claude.json` contains `{"oauthAccount":{"emailAddress":"i5@wbox.pro"}}` (fresh — written by external OAuth login). The per-machine active marker (`_active_{hostname}_{user}`) contains `"i2@wbox.pro"` (stale — last written by a prior clp session). No `name::` argument is passed.
+- **When:** `clp .account.save` (no `name::` argument)
+- **Then:** Exits 0. Output reads `saved current credentials as 'i5@wbox.pro'`. `{credential_store}/i5@wbox.pro.credentials.json` created. `{credential_store}/i2@wbox.pro.credentials.json` NOT created. The `_active` marker is not consulted when `oauthAccount.emailAddress` provides a non-empty value.
+- **Exit:** 0
+- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is written by both clp ops and external OAuth login; `_active` is written only by clp ops — external login leaves it stale. Primary over fallback precedence is the two-level inference introduced by TSK-215.
+- **Source:** [feature/002_account_save.md AC-08, AC-16](../../../../docs/feature/002_account_save.md)

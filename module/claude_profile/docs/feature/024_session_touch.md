@@ -26,8 +26,10 @@ if touch_param == 1:
     for each account_quota in results:
         if account_quota.result is Err
            OR account_quota.five_hour_resets_at is Some
-           OR five_hour_left(account_quota) <= 15.0%:
-            // Skip: no valid quota, already active 5h window, or h-exhausted
+           OR five_hour_left(account_quota) <= 15.0%
+           OR seven_day_left(account_quota) <= 0.0%:
+            // Skip: no valid quota, already active 5h window, h-exhausted, or 7d-exhausted
+            // Note: 7d guard (last condition) tracked in BUG-214 (Open — not yet implemented)
             if trace:
                 emit "[trace] touch  <name>  skipped (reason: ...)"
             continue
@@ -69,6 +71,7 @@ render results as table
 - **AC-10**: `touch::` parameter appears in `.usage --help` output with its default value (`1`).
 - **AC-11**: In `live::1` mode with `touch::1` active, touch runs on every cycle. For each cycle where an account's `five_hour.resets_at` is absent (session expired since last cycle), the touch trigger fires and a new session is started. The trigger does not fire for accounts with `resets_at` present (still active).
 - **AC-13**: No `switch_account` call occurs in `apply_touch`. The previous AC-13 restore trace is superseded — trace output for touch lifecycle steps remains unchanged (per AC-09), but no `restore switch_account` line is emitted. Fix for BUG-211.
+- **AC-14**: Accounts with 7d weekly quota fully exhausted (`seven_day_left <= 0%`) are skipped by `apply_touch` even when idle (`five_hour.resets_at` absent) and 5h budget is non-zero. The Anthropic API does not open a new 5h session when the 7d budget is exhausted — spawning a subprocess for such accounts wastes wall time (~2.3s per account for a 429 rejection) and produces misleading `run_isolated: OK credentials=None` trace without establishing a session. BUG-214 (Open) tracks the implementation of this guard.
 
 ### Cross-References
 
@@ -89,3 +92,4 @@ render results as table
 | doc | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch touch on `.account.use` — extends the touch concept to account switching |
 | bug | `task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md` | BUG-208: restore `switch_account` calls wrapped in `let _ = ...` — silent error discard, no `[trace]` line under `trace::1` |
 | bug | `task/claude_profile/bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md` | BUG-211 (Fixed): snapshot+restore removed from `apply_touch`; `save(update_marker=false)` suppresses `_active` writes during per-account cycling |
+| bug | `task/claude_profile/bug/214_touch_fires_for_7d_exhausted_accounts.md` | BUG-214 (Open): `apply_touch` fires subprocess for 7d-exhausted accounts — no 7d skip guard; tracked by AC-14 |
