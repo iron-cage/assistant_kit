@@ -618,6 +618,17 @@ fn five_hour_left( aq : &AccountQuota ) -> f64
   }
 }
 
+/// Return `7d Left` as a percentage for the `apply_touch` skip guard.
+///
+/// Returns `100.0 - seven_day.utilization` for `Ok` accounts with `seven_day` data,
+/// `100.0` for `Ok` accounts where `seven_day` is absent (absent data ≠ exhausted),
+/// or `0.0` for `Err` accounts (treated as fully exhausted — no touch beneficial).
+fn seven_day_left( aq : &AccountQuota ) -> f64
+{
+  let Ok( ref data ) = aq.result else { return 0.0; };
+  100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization )
+}
+
 /// Return the weekly quota left (%) for a given `prefer` strategy.
 ///
 /// - `Opus`   → `7d Left` only.
@@ -1521,16 +1532,26 @@ fn apply_touch(
     return;
   };
 
-  // Guard: only idle accounts (no active 5h window) AND not h-exhausted need touching.
-  // AC-02: trigger on is_none() (idle — no resets_at) AND five_hour_left > 15% (not h-exhausted).
+  // Guard: skip accounts that are already active, h-exhausted, or 7d-exhausted.
+  // AC-02: trigger only for idle (resets_at=None), five_hour_left > 15%, seven_day_left > 0%.
+  // Fix(BUG-214): extend guard to skip 7d-weekly-exhausted accounts (seven_day_left <= 0%).
+  // Root cause: guard only checked five_hour_left (h-exhausted) but not seven_day_left;
+  //   accounts with seven_day.utilization=100% passed the guard and fired a subprocess
+  //   that received HTTP 429 (~2.3s penalty, no session opened).
+  // Pitfall: reason-string logic must have three mutually exclusive arms matching the three
+  //   guard conditions; pre-compute both left values to avoid double calls in trace block.
   let is_idle = data.five_hour.as_ref()
     .and_then( |p| p.resets_at.as_deref() )
     .is_none();
-  if !is_idle || five_hour_left( aq ) <= 15.0
+  let h_left  = five_hour_left( aq );
+  let d7_left = seven_day_left( aq );
+  if !is_idle || h_left <= 15.0 || d7_left <= 0.0
   {
     if trace
     {
-      let reason = if is_idle { "h-exhausted" } else { "already active" };
+      let reason = if !is_idle   { "already active" }
+        else if h_left  <= 15.0 { "h-exhausted"    }
+        else                     { "7d-exhausted"   };
       eprintln!( "[trace] touch  {}  skipped (reason: {})", aq.name, reason );
     }
     return;
@@ -5447,6 +5468,84 @@ mod tests
     assert_eq!(
       marker, "alice@example.com",
       "BUG-211: active marker must be unchanged after apply_touch cycle (no restore)",
+    );
+  }
+
+  // ── BUG-214 ─────────────────────────────────────────────────────────────────
+
+  /// BUG-214 MRE: `apply_touch` must skip idle accounts with 7d quota fully exhausted.
+  ///
+  /// # Root Cause
+  ///
+  /// `apply_touch()` guard checked `five_hour_left(aq) <= 15.0` (h-exhausted) but not
+  /// `seven_day_left(aq) <= 0.0`. An idle account with `seven_day.utilization=100%` passed
+  /// the guard → `refresh_account_token` called → subprocess fired → HTTP 429 (~2.3s
+  /// penalty with no session opened). No "7d-exhausted" trace emitted.
+  ///
+  /// # Why Not Caught
+  ///
+  /// The h-exhausted guard was added in isolation without extending the test surface to
+  /// weekly exhaustion as a skip criterion. `tests/docs/feature/024_session_touch.md`
+  /// FT-16 was absent until this session.
+  ///
+  /// # Fix Applied
+  ///
+  /// Added `seven_day_left()` helper + extended guard:
+  /// `!is_idle || h_left <= 15.0 || d7_left <= 0.0`. Three-arm reason string:
+  /// "already active" / "h-exhausted" / "7d-exhausted".
+  ///
+  /// # Prevention
+  ///
+  /// Any new quota dimension added to `apply_touch` skip logic must have a corresponding
+  /// FT in `tests/docs/feature/024_session_touch.md` before implementation.
+  ///
+  /// # Pitfall
+  ///
+  /// `mk_aq_with_resets_at(None)` sets `seven_day=None`. `seven_day_left()` treats
+  /// `seven_day=None` as 100.0 left (not exhausted — absent data ≠ exhausted). Must
+  /// explicitly set `seven_day=Some(PeriodUsage{utilization:100.0,...})` to express
+  /// "fully exhausted with data present". Using `None` would test the wrong code path.
+  // test_kind: bug_reproducer(BUG-214)
+  #[ test ]
+  fn test_mre_bug214_apply_touch_skips_7d_exhausted_account()
+  {
+    use std::io::Read;
+
+    let store = tempfile::TempDir::new().unwrap();
+
+    // idle (resets_at=None → five_hour_left=50% → NOT h-exhausted)
+    // but 7d fully exhausted (utilization=100% → seven_day_left=0%).
+    let mut aq = mk_aq_with_resets_at( None );
+    if let Ok( ref mut data ) = aq.result
+    {
+      data.seven_day = Some( claude_quota::PeriodUsage
+      {
+        utilization : 100.0,
+        resets_at   : None,
+      } );
+    }
+
+    // Capture stderr — [trace] skip lines go to stderr via eprintln!.
+    let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+    // claude_paths=None: subprocess never spawns (no binary path) even if guard misses.
+    // trace=true: [trace] skip line emitted only when guard fires.
+    apply_touch(
+      &mut aq,
+      store.path(),
+      None,
+      true,
+      SubprocessModel::Auto,
+      SubprocessEffort::Auto,
+    );
+
+    let mut captured = String::new();
+    stderr_buf.read_to_string( &mut captured ).unwrap();
+
+    // Fix: guard fires → "[trace] touch  test@example.com  skipped (reason: 7d-exhausted)".
+    assert!(
+      captured.contains( "7d-exhausted" ),
+      "apply_touch must emit '7d-exhausted' trace for idle 7d-exhausted account; got:\n{captured}",
     );
   }
 
