@@ -52,12 +52,17 @@ pub( super ) fn print_help()
   println!();
   println!( "USAGE:" );
   println!( "  clr [OPTIONS] [MESSAGE]" );
+  println!( "  clr run      [OPTIONS] [MESSAGE]" );
   println!( "  clr ask      [OPTIONS] [QUESTION]" );
   println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [--trace] [MESSAGE]" );
   println!( "  clr refresh  --creds <FILE> [--timeout <SECS>] [--trace]" );
   println!( "  clr help" );
   println!();
   println!( "COMMANDS:" );
+  // Fix(BUG-212): `run` was absent from COMMANDS despite being a valid explicit subcommand.
+  // Root cause: print_help() only listed ask/isolated/refresh/help; discoverability AC violated.
+  // Pitfall: `clr run` must strip the leading token before reaching the parser — see lib.rs.
+  println!( "  run                                Execute Claude Code with configurable parameters (default mode)" );
   println!( "  ask                                Q&A mode with lightweight defaults (effort high, no -c)" );
   println!( "  isolated                           Run Claude with credential-isolated temp HOME" );
   println!( "  refresh                            Refresh OAuth credentials without running a task" );
@@ -657,7 +662,11 @@ pub( super ) fn handle_dry_run( builder : &ClaudeCommand )
 //   unless a prefix-match guard is also placed before the main argument parser.
 pub( super ) fn guard_unknown_subcommand( tokens : &[ String ] )
 {
-  const KNOWN : &[ &str ] = &[ "ask", "isolated", "refresh", "help" ];
+  // Fix(BUG-212): `run` was absent from KNOWN; typing `clr running` produced no helpful error.
+  // Root cause: KNOWN list was never updated when `run` became an explicit subcommand.
+  // Pitfall: `clr run` (len=3) bypasses is_identifier guard (requires len>=4), so it reaches
+  //   the run_cli dispatch before guard is called — that is correct and expected.
+  const KNOWN : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help" ];
   if let Some( first ) = tokens.first()
   {
     let is_identifier = !first.starts_with( '-' )

@@ -27,6 +27,9 @@
 //!
 //! Structure:
 //! - `src_readme_exists`: `src/readme.md` must exist (3+ files require Responsibility Table)
+//! - `no_routines_rs_in_src`: `src/routines.rs` must not exist (dep constraint IT-2)
+//! - `no_build_rs_at_crate_root`: `build.rs` must not exist at crate root (dep constraint IT-3)
+//! - `all_cargo_dependencies_are_optional`: all `[dependencies]` entries have `optional = true` (dep constraint IT-4)
 //!
 //! ## Pitfalls
 //!
@@ -244,5 +247,44 @@ fn no_build_rs_at_crate_root()
     !path.exists(),
     "build.rs must not exist at crate root (dep constraint IT-3): {}",
     path.display()
+  );
+}
+
+/// All `[dependencies]` entries in `Cargo.toml` must declare `optional = true`.
+///
+/// `claude_runner` gates every dependency behind the `enabled` feature flag.
+/// An unconditionally required dep would break `cargo check --no-default-features`
+/// and violate the dep-constraints invariant. This test catches the regression where
+/// a new dependency is added without `optional = true`.
+///
+/// Spec: `tests/docs/invariant/002_dep_constraints.md` IT-4
+#[ test ]
+
+fn all_cargo_dependencies_are_optional()
+{
+  let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
+  let cargo_toml = fs::read_to_string( manifest.join( "Cargo.toml" ) )
+    .expect( "Cannot read Cargo.toml" );
+  let mut in_deps = false;
+  let mut violations = Vec::new();
+  for line in cargo_toml.lines()
+  {
+    let trimmed = line.trim();
+    if trimmed.starts_with( '[' )
+    {
+      in_deps = trimmed == "[dependencies]";
+      continue;
+    }
+    if !in_deps { continue; }
+    if trimmed.is_empty() || trimmed.starts_with( '#' ) { continue; }
+    if !trimmed.contains( "optional = true" )
+    {
+      violations.push( line.to_owned() );
+    }
+  }
+  assert!(
+    violations.is_empty(),
+    "All [dependencies] must declare `optional = true` (dep constraint IT-4).\nViolations:\n{}",
+    violations.join( "\n" )
   );
 }

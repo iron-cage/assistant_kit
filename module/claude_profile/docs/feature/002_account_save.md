@@ -25,7 +25,7 @@
 5. Write contents to `{credential_store}/{name}.credentials.json` (creates or overwrites).
 6. Extract `oauthAccount` subtree from `~/.claude.json`; write `{credential_store}/{name}.claude.json` as `{"oauthAccount": <extracted>}` (best-effort: skip silently if source absent or `oauthAccount` key missing).
 7. Call `claude_quota::fetch_claude_cli_roles(&access_token)` (feature-gated, best-effort): on success, write response to `{credential_store}/{name}.roles.json`; on any failure, skip silently — save still succeeds.
-8. Write `{credential_store}/_active_{hostname}_{user}` = `{name}` via `active_marker_filename()` — mark the saved account as the current active account (per-machine marker, see feature 025).
+8. Write `{credential_store}/_active_{hostname}_{user}` = `{name}` via `active_marker_filename()` — mark the saved account as the current active account (per-machine marker, see feature 025) (when invoked from `.account.save` or `.account.relogin`; background refresh callers pass `update_marker=false` and do not write the marker).
 
 **Idempotency as metadata refresh:** `save()` overwrites all snapshot files on every invocation. Re-running `clp .account.save` for an existing account name re-fetches endpoint 005 and overwrites `{name}.roles.json` alongside all other snapshots. This is the canonical mechanism for refreshing cached metadata when org membership or role changes — no separate command required.
 
@@ -46,6 +46,7 @@
 - **AC-12**: When endpoint 005 responds successfully, `{credential_store}/{name}.roles.json` is created alongside the credential file.
 - **AC-13**: When endpoint 005 fails (network error, scope issue, or feature not enabled), no `{name}.roles.json` is written and save still exits 0.
 - **AC-14**: Re-running `clp .account.save` for an existing account name overwrites `{name}.roles.json` with a fresh endpoint 005 response; this is the metadata refresh mechanism.
+- **AC-15**: Background refresh calls to `save()` (via `refresh_account_token`) pass `update_marker=false`; the per-machine active marker is not written; any concurrent `.account.use` switch is not disturbed.
 
 ### Cross-References
 
@@ -56,7 +57,8 @@
 | test | `tests/cli/accounts_test.rs` | Verifies credential file and metadata snapshots created with correct content |
 | test | `claude_profile_core/tests/account_test.rs` | `as_save_writes_active_marker` — unit test: active marker written after `save()` |
 | test | `tests/cli/credentials_test.rs` | `cred14` — CLI: `.credentials.status` shows `Account: {name}` after `.account.save` |
-| test | `tests/cli/account_mutations_test.rs` | `as16` — CLI: active marker file contains saved name after `.account.save`; `as17`/`as18` — path-unsafe chars in local part exit 1 |
+| test | `tests/cli/account_mutations_test.rs` | `as15` — name inferred from active marker (AC-08); `as16` — active marker written after save (AC-10); `as17`/`as18` — path-unsafe chars in local part exit 1 (AC-11); `mre_bug_209_account_save_uses_active_marker_not_stale_email` — BUG-209 regression: stale `emailAddress` ignored (AC-08) |
+| test-doc | [tests/docs/feature/002_account_save.md](../../tests/docs/feature/002_account_save.md) | FT-01…FT-08 test case planning for Feature 002 |
 | doc | [001_account_store_init.md](001_account_store_init.md) | Directory initialization triggered by save |
 | doc | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine marker naming convention used in step 8 |
 | doc | [command/001_account.md](../cli/command/001_account.md#command--4-accountsave) | CLI command specification |

@@ -24,10 +24,10 @@
 | Verbosity | `verbosity_test.rs` | Output gating levels 0–5, dry-run independence |
 | YAML structure | `commands_yaml_test.rs` | `.claude` and `.claude.help` command definitions |
 | Library API | `lib_test.rs` | `register_commands()` callability |
-| Stale-ref guards | `stale_ref_guard_test.rs` | No `claude_runner_plugin` or `dream_agent` references |
+| Stale-ref guards + dep constraints (IT-2, IT-3, IT-4) | `stale_ref_guard_test.rs` | No `claude_runner_plugin` or `dream_agent` refs; dep constraint invariants |
 | Isolated subcommand | `isolated_test.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection |
 | CLR_* env vars (E01–E24) | `env_var_test.rs` | CLR_* env var fallback for all 24 params, CLI-wins checks |
-| User stories (US-1–US-4 × 15) | `user_story_test.rs` | End-to-end user story workflows for all 15 user stories |
+| User stories (US-1–US-4 × 16) | `user_story_test.rs` | End-to-end user story workflows for all 16 user stories |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
 ### Responsibility Table
@@ -44,14 +44,14 @@
 | `verbosity_test.rs` | Verbosity flag: output gating levels 0–5, default behavior. |
 | `commands_yaml_test.rs` | Verify YAML defines `.claude`, `.claude.help`, and rejects `.please`. |
 | `lib_test.rs` | Library API: `register_commands()` callable. |
-| `stale_ref_guard_test.rs` | Guard against stale `claude_runner_plugin` and `dream_agent` references. |
+| `stale_ref_guard_test.rs` | Guard against stale `claude_runner_plugin` and `dream_agent` references; dep constraint invariants IT-2, IT-3, IT-4. |
 | `isolated_test.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs, unknown-subcommand detection. |
 | `param_edge_cases_test.rs` | Per-param edge cases (S01–S33): help, core param flags, and invariant checks. |
 | `param_trace_edge_cases_test.rs` | Trace edge cases (S04–S06, S58–S60): basic trace behavior and credential trace format. |
 | `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`. |
 | `param_group_test.rs` | Param group combined invocations (CC-N): multi-flag interaction tests. |
 | `env_var_test.rs` | CLR_* env var fallback: E01–E24, one per param, CLI-wins verification. |
-| `user_story_test.rs` | User story end-to-end workflows: US-1–US-4 for all 15 stories from `tests/docs/cli/user_story/`. |
+| `user_story_test.rs` | User story end-to-end workflows: US-1–US-4 for all 16 stories from `tests/docs/cli/user_story/`. |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

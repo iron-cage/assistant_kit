@@ -13,6 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
+| 002_account_save.md | FT cases for Feature 002 — Save Account |
 | 009_token_usage.md | FT cases for Feature 009 — All-Accounts Live Quota Reporting (FR-14) |
 | 017_token_refresh.md | FT cases for Feature 017 — Expired Token Refresh via Isolated Subprocess |
 | 018_live_monitor.md | FT cases for Feature 018 — Live Quota Monitor Mode |
@@ -29,6 +30,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | Feature | File | Cases | Status |
 |---------|------|-------|--------|
+| 002_account_save | [002_account_save.md](002_account_save.md) | FT-01 … FT-08 | ✅ |
 | 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-16 | ✅ |
 | 017_token_refresh | [017_token_refresh.md](017_token_refresh.md) | FT-01 … FT-17 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](018_live_monitor.md) | FT-01 … FT-09 | ✅ |
@@ -41,4 +43,4 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 026_subprocess_model_effort | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | FT-01 … FT-17 | ✅ |
 | 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | FT-01 … FT-16 | ✅ |
 
-**Total:** 11 feature specs; 16 of 27 feature instances not yet covered by dedicated FT specs.
+**Total:** 12 feature specs; 15 of 27 feature instances not yet covered by dedicated FT specs.

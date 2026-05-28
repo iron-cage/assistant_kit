@@ -1,0 +1,133 @@
+# Test: Feature 002 — Save Account
+
+Feature behavioral requirement test cases for `docs/feature/002_account_save.md`. Each FT case maps to one or more acceptance criteria. Name inference cases (AC-08, AC-09) are expanded in [feature/025_per_machine_active_marker.md](025_per_machine_active_marker.md) (FT-09) and the command spec [cli/command/004_account_save.md](../cli/command/004_account_save.md) (IT-10, IT-14).
+
+### AC Coverage Index
+
+| FT | Criterion | AC | Notes |
+|----|-----------|----|-------|
+| FT-01 | `clp .account.save name::alice@acme.com` exits 0 and creates credential file | AC-01 | Integration |
+| FT-02 | `dry::1` prints preview message; no file created | AC-04 | Integration |
+| FT-03 | `oauthAccount` snapshot created alongside credential file; no `.settings.json` | AC-05 | Integration |
+| FT-04 | No `name::` with valid `_active` marker — name inferred, save succeeds | AC-08 | Integration (BUG-209) |
+| FT-05 | No `name::` with no `_active` marker — exits 1 with clear error | AC-09 | Integration (BUG-209) |
+| FT-06 | Active marker written after save — `.credentials.status` shows account | AC-10 | Integration |
+| FT-07 | Path-unsafe chars (`/`) in email local part exits 1 | AC-11 | Integration |
+| FT-08 | Stale `emailAddress` in `~/.claude.json` ignored — `_active` marker wins | AC-08 | Integration (BUG-209 MRE) |
+| FT-09 | `save(update_marker=false)` does not write `_active`; background refresh callers pass `false` | AC-15 | BUG-211 MRE |
+
+### Test Case Index
+
+| ID | Test Name | AC | Category |
+|----|-----------|-----|----------|
+| FT-01 | Core save creates credential file | AC-01 | Basic Invocation |
+| FT-02 | dry::1 previews without writing | AC-04 | Dry Run |
+| FT-03 | `oauthAccount` snapshot created; no `settings.json` | AC-05 | Metadata Snapshot |
+| FT-04 | Name inferred from per-machine active marker | AC-08 | Name Inference |
+| FT-05 | Missing marker exits 1 with actionable error | AC-09 | Inference Failure |
+| FT-06 | Active marker written after save | AC-10 | Active Marker |
+| FT-07 | Path-unsafe chars in local part exit 1 | AC-11 | Validation |
+| FT-08 | Stale `emailAddress` does not override active marker (BUG-209) | AC-08 | Name Inference / Regression |
+| FT-09 | `save(update_marker=false)` does not write `_active` | AC-15 | BUG-211 MRE |
+
+**Total:** 9 FT cases
+
+---
+
+### FT-01: Core save creates credential file
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credential content.
+- **When:** `clp .account.save name::alice@acme.com`
+- **Then:** Exits 0. stdout contains `saved current credentials as 'alice@acme.com'`. `{credential_store}/alice@acme.com.credentials.json` exists with content identical to source credentials.
+- **Exit:** 0
+- **Source fn:** `as01_save_creates_file` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/002_account_save.md AC-01](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-02: `dry::1` previews without writing
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credential content. `{credential_store}` is empty.
+- **When:** `clp .account.save name::alice@acme.com dry::1`
+- **Then:** Exits 0. stdout contains `[dry-run] would save current credentials as 'alice@acme.com'`. No credential file created in `{credential_store}`.
+- **Exit:** 0
+- **Source fn:** `as02_save_dry_run` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/002_account_save.md AC-04](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-03: `oauthAccount` snapshot created; no `.settings.json`
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists with an `oauthAccount` subtree containing account identity fields. `~/.claude/settings.json` exists with machine-global settings.
+- **When:** `clp .account.save name::alice@acme.com`
+- **Then:** Exits 0. `{credential_store}/alice@acme.com.claude.json` is created containing only `{"oauthAccount": {...}}` with the extracted subtree. `{credential_store}/alice@acme.com.settings.json` is NOT created — machine-global settings are never captured.
+- **Exit:** 0
+- **Source fn:** `acc26_save_creates_snapshot_files` (in `tests/cli/accounts_test.rs`)
+- **Source:** [feature/002_account_save.md AC-05](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-04: Name inferred from per-machine active marker
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. The per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"alice@acme.com"`. No `name::` argument is passed.
+- **When:** `clp .account.save`
+- **Then:** Exits 0. stdout contains `saved current credentials as 'alice@acme.com'`. `{credential_store}/alice@acme.com.credentials.json` created. Behaves identically to `clp .account.save name::alice@acme.com`.
+- **Exit:** 0
+- **Source fn:** `as15_save_infers_name_from_active_marker` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-05: Missing marker exits 1 with actionable error
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. No `_active_{hostname}_{user}` marker file exists in `{credential_store}` (or the credential store directory is absent entirely).
+- **When:** `clp .account.save`
+- **Then:** Exits 1. stderr contains `cannot infer account name: no active account set — pass name:: explicitly`. No credential file created.
+- **Exit:** 1
+- **Source fn:** `as10_save_infer_absent_email_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/002_account_save.md AC-09](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-06: Active marker written after save
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `{credential_store}` has no `_active_{hostname}_{user}` file before the command.
+- **When:** `clp .account.save name::alice@acme.com`
+- **Then:** Exits 0. `{credential_store}/_active_{hostname}_{user}` contains `"alice@acme.com"`. A subsequent `clp .credentials.status` shows `Account: alice@acme.com`.
+- **Exit:** 0
+- **Source fn:** `as16_save_writes_active_marker` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/002_account_save.md AC-10](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-07: Path-unsafe chars in local part exit 1
+
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials.
+- **When:** `clp .account.save name::a/b@c.com`
+- **Then:** Exits 1. stderr indicates path-unsafe characters in account name. No file created in `{credential_store}` — validation occurs before any filesystem operation.
+- **Exit:** 1
+- **Source fn:** `as17_save_slash_in_email_local_part_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/002_account_save.md AC-11](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-08: Stale `emailAddress` does not override active marker (BUG-209 regression)
+
+- **Given:** `~/.claude/.credentials.json` exists with credentials for `b@test.com`. `~/.claude.json` has `emailAddress = "a@test.com"` (stale — not updated since the last account switch). The per-machine active marker `_active_{hostname}_{user}` contains `"b@test.com"`.
+- **When:** `clp .account.save` (no `name::`)
+- **Then:** Exits 0. stdout contains `saved current credentials as 'b@test.com'`. The stale `emailAddress` value `a@test.com` is NOT used — the `_active` marker is the authoritative source. The per-machine marker still reads `b@test.com` after save.
+- **Exit:** 0
+- **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-09: `save(update_marker=false)` does not write `_active`; background callers pass `false`
+
+- **Given:** Empty credential store (no `_active` marker file). Valid credentials at `~/.claude/.credentials.json`.
+- **When:** `account::save("alice@test.com", store.path(), &paths, false)` is called (unit test — simulates `refresh_account_token` context).
+- **Then:** The credential file `alice@test.com.credentials.json` is written. The `_active_{hostname}_{user}` marker file does NOT exist — `update_marker=false` suppresses the write. A concurrent `.account.use` switch would be unaffected.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `test_mre_bug211_save_false_leaves_marker_unchanged` (in `claude_profile_core/tests/account_test.rs`)
+- **Note:** BUG-211 MRE — verifies the `update_marker` guard in `save()`. Background refresh calls (`refresh_account_token`) pass `false`; user CLI calls (`.account.save`, `.account.relogin`) pass `true`.
+- **Source:** [feature/002_account_save.md AC-15](../../../../docs/feature/002_account_save.md)

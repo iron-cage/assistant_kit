@@ -1115,10 +1115,11 @@ fn us16_2_flag_aliases_identical()
   );
 }
 
-/// US-3: help output lists all subcommands and available flags.
+/// US-3: help output lists all 5 subcommands and available flags.
 ///
-/// `run` (default) surfaces as `clr [OPTIONS] [MESSAGE]` in USAGE.
-/// The four named subcommands — ask, isolated, refresh, help — appear in COMMANDS.
+/// All 5 named subcommands — run, ask, isolated, refresh, help — appear in COMMANDS.
+/// `run` is both the default invocation form (shown in USAGE as `clr [OPTIONS] [MESSAGE]`)
+/// and an explicit subcommand (`clr run [OPTIONS] [MESSAGE]`).
 #[ test ]
 fn us16_3_all_subcommands_listed()
 {
@@ -1128,6 +1129,17 @@ fn us16_3_all_subcommands_listed()
   assert!(
     stdout.contains( "COMMANDS:" ),
     "clr help must print COMMANDS section. Got:\n{stdout}"
+  );
+  // Extract COMMANDS block to assert each subcommand appears there (not just anywhere in output).
+  let after_cmds = stdout
+    .split_once( "COMMANDS:\n" )
+    .map_or( "", | ( _, rest ) | rest );
+  let cmds_block = after_cmds
+    .split_once( "\nARGUMENTS:" )
+    .map_or( after_cmds, | ( block, _ ) | block );
+  assert!(
+    cmds_block.lines().any( | l | l.trim_start().starts_with( "run" ) ),
+    "COMMANDS section must list 'run' subcommand. Got COMMANDS block:\n{cmds_block}"
   );
   assert!(
     stdout.contains( "ask" ),
@@ -1145,10 +1157,9 @@ fn us16_3_all_subcommands_listed()
     stdout.contains( "help" ),
     "clr help must list 'help' subcommand. Got:\n{stdout}"
   );
-  // run (default) is shown as the bare invocation form in USAGE.
   assert!(
     stdout.contains( "[OPTIONS]" ),
-    "clr help USAGE must show [OPTIONS] for the default run form. Got:\n{stdout}"
+    "clr help USAGE must show [OPTIONS]. Got:\n{stdout}"
   );
   assert!(
     stdout.contains( "--dry-run" ),
@@ -1178,5 +1189,55 @@ fn us16_4_no_side_effects()
   assert!(
     stdout.contains( "USAGE:" ),
     "clr help output must be complete even without claude in PATH. Got:\n{stdout}"
+  );
+}
+
+/// MRE: `clr help` COMMANDS section omits the `run` subcommand.
+///
+/// ## Root Cause
+/// `print_help()` lists only 4 named subcommands in COMMANDS (ask, isolated, refresh, help).
+/// `run` — the default mode, also invocable as `clr run [OPTIONS] [MESSAGE]` — is absent.
+/// The feature doc AC (`docs/cli/user_story/016_cli_discoverability.md`) and test spec
+/// (`tests/docs/cli/user_story/16_cli_discoverability.md` US-3) both require all 5 subcommands
+/// (run, isolated, refresh, ask, help) to appear in the help output.
+///
+/// ## Why Not Caught
+/// `us16_3_all_subcommands_listed` was written to work around the gap: it asserted `[OPTIONS]`
+/// (which appears in USAGE for the default run form) as a proxy for `run`, rather than asserting
+/// the string "run" directly in the COMMANDS section. The validation marked the task complete
+/// without verifying that `run` appeared as a named subcommand per the AC.
+///
+/// ## Fix Applied
+/// `print_help()` now includes `run` as a named subcommand in COMMANDS and in USAGE.
+/// `run_cli()` strips a leading `run` token so `clr run [ARGS]` behaves identically to
+/// `clr [ARGS]`. `guard_unknown_subcommand` adds `run` to KNOWN for prefix-match protection.
+///
+/// ## Prevention
+/// US-3 acceptance criterion must be verified by extracting the COMMANDS block and asserting
+/// each named subcommand, not by checking substrings that could match non-command contexts.
+///
+/// ## Pitfall
+/// `stdout.contains("run")` is ambiguous: "--dry-run" in OPTIONS also matches. Always verify
+/// `run` within the COMMANDS block specifically (between "COMMANDS:" and the next section).
+///
+/// Fix(BUG-212)
+#[ test ]
+fn bug_mre_212_run_subcommand_not_in_help_commands()
+{
+  let out = run_cli( &[ "help" ] );
+  assert!( out.status.success(), "clr help must exit 0" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  // Extract only the COMMANDS block (after "COMMANDS:\n", before "\nARGUMENTS:").
+  let after_cmds = stdout
+    .split_once( "COMMANDS:\n" )
+    .map_or( "", | ( _, rest ) | rest );
+  let cmds_block = after_cmds
+    .split_once( "\nARGUMENTS:" )
+    .map_or( after_cmds, | ( block, _ ) | block );
+  assert!(
+    cmds_block.lines().any( | l | l.trim_start().starts_with( "run" ) ),
+    "COMMANDS section must list 'run' as a named subcommand.\n\
+     Fix(BUG-212): add 'run' to print_help() COMMANDS section.\n\
+     Got COMMANDS block:\n{cmds_block}"
   );
 }

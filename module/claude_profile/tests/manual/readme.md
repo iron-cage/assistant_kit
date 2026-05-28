@@ -28,7 +28,7 @@
    let persist = claude_profile::PersistPaths::new().expect("HOME set");
    let credential_store = persist.credential_store();
    let paths = claude_profile::ClaudePaths::new().expect("HOME set");
-   claude_profile::account::save("work@acme.com", &credential_store, &paths).expect("save");
+   claude_profile::account::save("work@acme.com", &credential_store, &paths, true).expect("save");
    ```
    Verify: `~/.persistent/claude/credential/work@acme.com.credentials.json` exists and matches active credentials.
 
@@ -56,7 +56,7 @@
    Verify: Returns `Valid` or `ExpiringSoon` (not `Expired`) after a fresh switch.
 
 6. **Delete inactive account**
-   - Save a second account: `account::save("temp@test.com", &credential_store, &paths).expect("save")`
+   - Save a second account: `account::save("temp@test.com", &credential_store, &paths, true).expect("save")`
    - Delete it: `account::delete("temp@test.com", &credential_store).expect("delete")`
    - Verify: `~/.persistent/claude/credential/temp@test.com.credentials.json` is gone
 

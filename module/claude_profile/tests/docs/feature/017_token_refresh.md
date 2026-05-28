@@ -18,11 +18,11 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-10 | Help text documents conditional 429 case | AC-24 | it33, it38 |
 | FT-11 | `expires_at_ms` derived from JWT `exp` after refresh | AC-25 | test_jwt_exp_ms_mre_bug162 |
 | FT-12 | `Some(paths)` — credential absent in store → `refresh_account_token` returns `None` → account skipped | Algorithm | test_apply_refresh_lifecycle_switch_fails_result_unchanged |
-| FT-13 | `original_active` account restored to live session after refresh cycle | Algorithm | test_apply_refresh_lifecycle_original_active_restored |
+| FT-13 | `apply_refresh` does not call `switch_account`; `_active` marker unchanged throughout cycle | Algorithm | test_apply_refresh_lifecycle_active_marker_unchanged |
 | FT-14 | `None`-paths fallback — credential absent in store → `refresh_account_token` returns `None` | Algorithm | test_apply_refresh_401_no_cred_file |
 | FT-15 | `trace::1` propagated to `refresh_account_token`; lifecycle steps logged to stderr; no panic | AC-26 | test_apply_refresh_lifecycle_l010_trace_run_isolated_invoked_no_panic, art_some_paths_run_isolated_invoked_trace_no_panic |
 | FT-16 | `expires_at_ms` from `expiresAt` field when JWT decode returns `None` (opaque token) | AC-25 | test_parse_u064_from_str_mre_bug170_extracts_expires_at, test_jwt_exp_ms_mre_bug170_opaque_returns_none |
-| FT-17 | `trace::1` emits `restore switch_account` line after refresh cycle; error paths emit unconditionally | AC-28 | test_apply_refresh_mre_bug208_restore_trace_emitted |
+| FT-17 | No `switch_account` in `apply_refresh`; `_active` unchanged confirms no restore occurred | AC-28 | test_apply_refresh_mre_bug208_restore_trace_emitted |
 
 ### Test Case Index
 
@@ -40,11 +40,11 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 | FT-10 | Help documents conditional 429 case (not unconditionally excluded) | AC-24 | Help Output |
 | FT-11 | Post-refresh `expires_at_ms` from JWT `exp`; not from file `expiresAt` | AC-25 | JWT Expiry |
 | FT-12 | `Some(paths)` — credential absent in store skips account without corrupting result | Algorithm | Lifecycle Skip |
-| FT-13 | `original_active` restored via `switch_account` after refresh cycle | Algorithm | Active Restore |
+| FT-13 | `apply_refresh` does not call `switch_account`; `_active` marker unchanged throughout cycle | Algorithm | Restore Absent |
 | FT-14 | `None`-paths — credential absent in store skips account without corrupting result | Algorithm | None-paths Skip |
 | FT-15 | `trace::1` propagates to `refresh_account_token`; lifecycle steps logged; no panic | AC-26 | Trace Propagation |
 | FT-16 | Post-refresh `expires_at_ms` from `expiresAt` field for opaque `sk-ant-oat01-*` token | AC-25 | JWT Expiry (Opaque) |
-| FT-17 | `trace::1` emits `restore switch_account` line after refresh cycle; failure always visible | AC-28 | Restore Trace |
+| FT-17 | No `switch_account` in `apply_refresh`; `_active` unchanged confirms no restore occurred | AC-28 | Restore Absent |
 
 **Total:** 17 FT cases
 
@@ -184,13 +184,13 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ---
 
-### FT-13: `original_active` account restored to live session after refresh cycle
+### FT-13: `apply_refresh` does not call `switch_account`; `_active` marker unchanged throughout cycle
 
-- **Given:** Active marker (`_active_{hostname}_{user}`) contains `"alice@example.com"`; `alice@example.com.credentials.json` exists in the persistent store; `{fake_home}/.claude/` directory exists for the live session; one account `"bob@example.com"` has a 401 error but no credential file in the persistent store.
+- **Given:** Active marker (`_active_{hostname}_{user}`) contains `"alice@example.com"`; `alice@example.com.credentials.json` exists in the persistent store; `{fake_home}/.claude/` directory exists; one account `"bob@example.com"` has a 401 error but no credential file in the persistent store.
 - **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), false)` is called (unit test context; equivalent to `clp .usage refresh::1` cycling through accounts)
-- **Then:** `switch_account("bob@example.com", ...)` fails and bob is skipped; after the loop, `switch_account("alice@example.com", store, paths)` runs (restore); `{store}/_active_{hostname}_{user}` contains `"alice@example.com"`; `{fake_home}/.claude/.credentials.json` contains alice's credential content.
-- **Source fn:** `test_apply_refresh_lifecycle_original_active_restored`
-- **Note:** BUG-165 regression guard; the restore call at `usage.rs:897-904` had zero unit test coverage before TSK-166.
+- **Then:** `refresh_account_token("bob@example.com", ...)` returns `None` (no credential file) and bob is skipped; `apply_refresh` returns without calling `switch_account`; `{store}/_active_{hostname}_{user}` still contains `"alice@example.com"` (unchanged); `{fake_home}/.claude/.credentials.json` does NOT exist (no `switch_account` was called).
+- **Source fn:** `test_apply_refresh_lifecycle_active_marker_unchanged`
+- **Note:** Fix for BUG-211 — snapshot+restore removed from `apply_refresh`; `refresh_account_token` passes `update_marker=false` to `save()` so `_active` is never written during per-account cycling.
 - **Source:** [017_token_refresh.md Algorithm](../../../docs/feature/017_token_refresh.md)
 
 ---
@@ -229,12 +229,11 @@ Feature behavioral requirement test cases for `docs/feature/017_token_refresh.md
 
 ---
 
-### FT-17: `trace::1` emits `restore switch_account` line after refresh cycle; failure always logged
+### FT-17: No `switch_account` in `apply_refresh`; `_active` unchanged confirms no restore occurred
 
-- **Given:** `apply_refresh` is called with `trace=true`; at least one account exists so the restore branch is reached; `original_active` is set (active marker contains a non-empty account name); the original account has a credential file in the store so `switch_account` can succeed.
-- **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called (unit test context; equivalent to `clp .usage refresh::1 trace::1` with active marker present)
-- **Then:** Stderr contains `[trace] refresh  {original_name}  restore switch_account: OK`; the restore step is not silent under `trace::1`.
-- **And:** In a separate scenario where `switch_account` fails at restore time (e.g., credential file deleted between snapshot and restore), stderr contains the failure line unconditionally — without requiring `trace=true`.
+- **Given:** Active marker contains `"alice@example.com"`; `alice@example.com.credentials.json` exists in the persistent store; `{fake_home}/.claude/` directory exists; one account `"bob@example.com"` has a 401 error but no credential file in the persistent store.
+- **When:** `apply_refresh(&mut accounts, store.path(), Some(&paths), true)` is called with `trace=true` (unit test context; equivalent to `clp .usage refresh::1 trace::1`)
+- **Then:** `apply_refresh` returns without calling `switch_account`; `{fake_home}/.claude/.credentials.json` does NOT exist (no restore occurred); `{store}/_active_{hostname}_{user}` is unchanged (`"alice@example.com"`); no `[trace] refresh  {name}  restore switch_account:` line is emitted (restore step no longer exists).
 - **Source fn:** `test_apply_refresh_mre_bug208_restore_trace_emitted` (in `src/usage.rs #[cfg(test)]`)
-- **Note:** Fix for BUG-208 — both `apply_refresh` and `apply_touch` used `let _ = switch_account(...)` at the restore site, making restore failures silent and restore trace completeness impossible.
+- **Note:** Fix for BUG-211 — snapshot+restore removed from `apply_refresh`. Previous BUG-208 fix (restore trace instrumentation) is superseded: the entire restore block is gone, so there is no restore line to emit.
 - **Source:** [017_token_refresh.md AC-28](../../../docs/feature/017_token_refresh.md)

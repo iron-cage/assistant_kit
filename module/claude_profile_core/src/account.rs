@@ -30,7 +30,7 @@
 //! }
 //!
 //! // Save current credentials as "alice@acme.com"
-//! account::save( "alice@acme.com", credential_store, &paths ).expect( "failed to save" );
+//! account::save( "alice@acme.com", credential_store, &paths, true ).expect( "failed to save" );
 //!
 //! // Switch to "alice@home.com"
 //! account::switch_account( "alice@home.com", credential_store, &paths ).expect( "failed to switch" );
@@ -189,7 +189,7 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
 /// Returns an error if the name is invalid, the credentials file cannot be
 /// read, or the credential store cannot be written.
 #[ inline ]
-pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths ) -> Result< (), std::io::Error >
+pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths, update_marker : bool ) -> Result< (), std::io::Error >
 {
   validate_name( name )?;
   std::fs::create_dir_all( credential_store )?;
@@ -245,13 +245,19 @@ pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths ) -> Re
       }
     }
   }
-  // Mark this account as the current active account.
-  // Fix(issue-active-marker): save() never wrote _active; only switch_account() did,
-  // so .credentials.status showed Account: N/A immediately after every .account.save.
-  // Root cause: _active write was omitted when save() was first implemented.
-  // Pitfall: must be non-best-effort (?): a save that silently drops _active leaves
-  // .credentials.status inconsistent with the just-saved account.
-  std::fs::write( credential_store.join( active_marker_filename() ), name )?;
+  // Fix(BUG-211): guard _active write behind update_marker so background refresh callers
+  //   (refresh_account_token) can pass false, suppressing marker mutation during per-account
+  //   cycling. Without this guard every refresh clobbered _active, enabling the TOCTOU race
+  //   where the subsequent snapshot+restore in apply_refresh/apply_touch overwrote a concurrent
+  //   .account.use switch. See bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md.
+  // Root cause: save() treated _active write as unconditional; callers had no opt-out, so every
+  //   background refresh mutated the active marker as a side effect.
+  // Pitfall: CLI callers (.account.save, .account.relogin) MUST pass true; passing false from a
+  //   user-triggered path leaves .credentials.status showing Account: N/A until next explicit save.
+  if update_marker
+  {
+    std::fs::write( credential_store.join( active_marker_filename() ), name )?;
+  }
   Ok( () )
 }
 
@@ -543,7 +549,7 @@ pub fn refresh_account_token(
       return None;
     }
     if trace { eprintln!( "[trace] {label}  {name}  write credentials: OK" ); }
-    match save( name, credential_store, p )
+    match save( name, credential_store, p, false )
     {
       Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}  save: OK" ); } }
       Err( e ) =>

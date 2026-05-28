@@ -1386,13 +1386,18 @@ fn apply_refresh(
   effort           : SubprocessEffort,
 )
 {
+  // Fix(BUG-211): snapshot+restore pattern removed — refresh_account_token now passes
+  //   update_marker=false to save(), so _active is never written during per-account
+  //   cycling. The post-loop restore clobbered concurrent .account.use switches that
+  //   ran during the ~35s subprocess window.
+  //   See bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md.
+  // Root cause: original design assumed background refresh callers own the active-account
+  //   identity, but .account.use can fire during the ~35s subprocess window.
+  // Pitfall: do NOT re-introduce snapshot+restore here — the fix is in save(), not here.
   let now_secs = std::time::SystemTime::now()
     .duration_since( std::time::UNIX_EPOCH )
     .unwrap_or_default()
     .as_secs();
-
-  // Snapshot active account to restore after cycling through per-account refreshes.
-  let original_active = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) ).ok();
 
   for aq in accounts
   {
@@ -1472,25 +1477,6 @@ fn apply_refresh(
     }
   }
 
-  // Restore original active account after cycling through per-account refreshes.
-  // Fix(BUG-208): `let _ = switch_account(...)` silently discarded IO errors — restore
-  //   failures were undetectable, and no [trace] line confirmed the restore step executed.
-  // Root cause: restore was added as a cleanup concern and never received the same match-arm
-  //   instrumentation as the forward path in `refresh_account_token`.
-  // Pitfall: Err emits unconditionally (not gated on trace) so restore failures are always
-  //   visible; Ok is gated on trace to avoid noise in normal operation.
-  if let ( Some( original ), Some( paths ) ) = ( original_active.as_deref(), claude_paths )
-  {
-    let name = original.trim();
-    if !name.is_empty()
-    {
-      match crate::account::switch_account( name, credential_store, paths )
-      {
-        Ok( () ) => { if trace { eprintln!( "[trace] refresh  {name}  restore switch_account: OK" ); } }
-        Err( e ) => { eprintln!( "[trace] refresh  {name}  restore switch_account: Err({e})" ); }
-      }
-    }
-  }
 }
 
 // ── Touch helper ───────────────────────────────────────────────────────────────
@@ -1517,6 +1503,14 @@ fn apply_touch(
   effort           : SubprocessEffort,
 )
 {
+  // Fix(BUG-211): snapshot+restore removed — same rationale as apply_refresh.
+  //   refresh_account_token passes update_marker=false; _active never written during
+  //   per-account touch cycling; the post-loop restore raced with concurrent .account.use.
+  //   See bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md.
+  // Root cause: apply_touch was added after apply_refresh and inherited the same flawed
+  //   snapshot+restore pattern (see BUG-211).
+  // Pitfall: do NOT re-introduce snapshot+restore here — the fix is in save(), not here.
+
   // Guard: errored accounts are never touched; trigger requires valid quota data.
   // Fix(BUG-202): bare return produced no trace for error-tier accounts.
   // Root cause: error guard preceded all trace emission points (lines 1506-1510).
@@ -1542,32 +1536,11 @@ fn apply_touch(
     return;
   }
 
-  // Save active account before switching for the subprocess lifecycle.
-  let original_active = std::fs::read_to_string( credential_store.join( crate::account::active_marker_filename() ) ).ok();
-
   let model    = resolve_model( aq, imodel );
   let pre_args = effort_pre_args( &model, effort );
   let new_creds = crate::account::refresh_account_token(
     &aq.name, credential_store, claude_paths, trace, "touch", model, &pre_args,
   );
-
-  // CRITICAL: restore active marker unconditionally before using new_creds (Fix(BUG-170) pattern).
-  // If restoration is deferred past the return points below, an interrupted touch leaves
-  // the active marker pointing at the touched account instead of the original.
-  // Fix(BUG-208): same pattern as apply_refresh restore — see that block for root cause and
-  //   pitfall. Err emits unconditionally; Ok emits only when trace=true.
-  if let ( Some( original ), Some( paths ) ) = ( original_active.as_deref(), claude_paths )
-  {
-    let name = original.trim();
-    if !name.is_empty()
-    {
-      match crate::account::switch_account( name, credential_store, paths )
-      {
-        Ok( () ) => { if trace { eprintln!( "[trace] touch  {name}  restore switch_account: OK" ); } }
-        Err( e ) => { eprintln!( "[trace] touch  {name}  restore switch_account: Err({e})" ); }
-      }
-    }
-  }
 
   // Update expiry if credentials were returned (optional — touch may return None).
   if let Some( ref creds ) = new_creds
@@ -2652,52 +2625,56 @@ mod tests
 
   /// L2 — `apply_refresh` restores the original active account after the refresh cycle.
   ///
+  /// FT-13 / BUG-211 MRE — `apply_refresh` does NOT call `switch_account` after per-account cycling.
+  ///
+  /// Fix(BUG-211): the snapshot+restore pattern was removed from `apply_refresh`.
+  /// `refresh_account_token` passes `update_marker=false` to `save()`, so `_active` is
+  /// never written during per-account cycling — no restore is needed or performed.
+  ///
   /// # Root Cause
-  /// `apply_refresh` snapshots `original_active` before iterating accounts, then restores it
-  /// with `switch_account` after the loop. Without this restore, the active account would
-  /// change permanently to whichever account was processed last — breaking the user's session.
+  /// The original `apply_refresh` snapshotted the active marker before the loop and called
+  /// `switch_account(snapshot, ...)` after the loop. This created a TOCTOU race:
+  /// a concurrent `.account.use` switch during the ~35s subprocess window was silently
+  /// overwritten by the post-loop restore.
   ///
   /// # Why Not Caught
-  /// All prior inline tests passed `None` for `claude_paths`. The `None` branch never calls
-  /// `switch_account`, so the restore code at `usage.rs:897-904` had zero unit test coverage.
+  /// All prior tests verified that the restore SUCCEEDED (live creds file written, marker
+  /// restored). No test verified that the live creds file was NOT written when no restore
+  /// should occur — making the absence of side-effects the guard.
   ///
   /// # Fix Applied
-  /// BUG-165 / issue-165: added `original_active` snapshot before the loop and
-  /// `switch_account(original_active, store, paths)` restore after the loop.
+  /// BUG-211: removed snapshot+restore from `apply_refresh`; `refresh_account_token` now
+  /// passes `update_marker=false` to `save()` so background refresh never writes `_active`.
   ///
   /// # Prevention
-  /// This test guards the restore: after a refresh cycle where bob's `switch_account` fails,
-  /// the restore runs `switch_account("alice@example.com", ...)` which succeeds (alice has a
-  /// cred file), writing alice's creds to the live file and "alice@example.com" to the active marker.
+  /// This test guards absence of `switch_account` in `apply_refresh`: after a full refresh
+  /// cycle, the live credentials file must NOT exist (no `switch_account` wrote it) and the
+  /// active marker must be unchanged from its pre-call value.
   ///
   /// # Pitfall
-  /// The `{fake_home}/.claude/` directory MUST exist before `apply_refresh` is called.
-  /// `switch_account` calls `fs::copy(src, tmp)` where `tmp` is inside `{fake_home}/.claude/`;
-  /// if the directory is absent, `copy` fails and the restore silently does nothing —
-  /// the active marker remains unchanged but for the wrong reason (silent failure, not correct restore).
-  // test_kind: regression(issue-165)
+  /// If snapshot+restore is re-introduced into `apply_refresh`, this test fails because
+  /// `switch_account` writes the live credentials file — the `!credentials_file().exists()`
+  /// assertion is the critical guard for regression.
+  // test_kind: bug_reproducer(BUG-211)
   #[ test ]
-  fn test_apply_refresh_lifecycle_original_active_restored()
+  fn test_apply_refresh_lifecycle_active_marker_unchanged()
   {
     let store     = TempDir::new().unwrap();
     let fake_home = TempDir::new().unwrap();
 
-    // Alice's credential file in store — needed for restore switch_account to succeed.
-    let alice_creds = r#"{"accessToken":"alice-token"}"#;
+    // Alice's credential file in store — present but must NOT be copied to the live file.
     std::fs::write(
       store.path().join( "alice@example.com.credentials.json" ),
-      alice_creds,
+      r#"{"accessToken":"alice-token"}"#,
     ).unwrap();
 
     // Set active account to alice before the loop.
     std::fs::write( store.path().join( crate::account::active_marker_filename() ), "alice@example.com" ).unwrap();
 
-    // Create {fake_home}/.claude/ so switch_account can write the live credentials file.
     std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
-
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
 
-    // Bob has 401 but no credential file — switch_account fails, loop continues to next account.
+    // Bob has 401 but no credential file — refresh_account_token returns None, bob skipped.
     let mut accounts = vec![
       AccountQuota
       {
@@ -2712,17 +2689,17 @@ mod tests
 
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
 
-    // Restore ran: switch_account("alice@example.com", ...) wrote active marker and live creds.
+    // Fix(BUG-211): no switch_account in apply_refresh → live credentials file must NOT exist.
+    assert!(
+      !paths.credentials_file().exists(),
+      "BUG-211: apply_refresh must not call switch_account; live credentials file must not exist",
+    );
+
+    // Active marker is unchanged (set to "alice@example.com" before call, never touched).
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, "alice@example.com",
-      "per-machine active marker must be restored to original account after refresh cycle",
-    );
-
-    let live_creds = std::fs::read_to_string( paths.credentials_file() ).unwrap();
-    assert_eq!(
-      live_creds, alice_creds,
-      "live credentials file must contain alice's creds after restore",
+      "per-machine active marker must be unchanged throughout refresh cycle (BUG-211 fix)",
     );
   }
 
@@ -2828,10 +2805,10 @@ mod tests
     );
   }
 
-  /// L5 — `apply_refresh` lifecycle: no active marker file → `original_active = None` → no restore.
+  /// L5 — `apply_refresh` does not create the active marker file when it was absent before.
   ///
-  /// `read_to_string` on the absent active marker file returns `Err`; `.ok()` maps that to `None`.
-  /// The restore block requires `Some(original)`, so it is skipped entirely.
+  /// Fix(BUG-211): `apply_refresh` no longer reads or writes `_active`. If no marker file
+  /// exists before the call, none is created after — the function never touches the marker.
   #[ test ]
   fn test_apply_refresh_lifecycle_no_active_file_no_restore()
   {
@@ -2846,10 +2823,12 @@ mod tests
     );
   }
 
-  /// L6 — `apply_refresh` lifecycle with `trace=true` and `switch_account` failure does not panic.
+  /// L6 — `apply_refresh` with `trace=true` and refresh skip (no cred file) does not panic.
   ///
-  /// Exercises the trace code path in the `Some(paths)` branch: logs the switch attempt
-  /// and the skip message, then returns without crashing.
+  /// Exercises the trace code path for the refresh loop: `should_refresh` triggers for the
+  /// 401 account, `refresh_account_token` is called, `switch_account` fails inside it
+  /// (no cred file), `refresh_account_token` returns `None`, and `apply_refresh` skips
+  /// the account. Fix(BUG-211): no post-loop restore; the function returns cleanly.
   #[ test ]
   fn test_apply_refresh_lifecycle_trace_switch_fails_no_panic()
   {
@@ -2871,36 +2850,31 @@ mod tests
     apply_refresh( &mut accounts, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto );
   }
 
-  /// L7 — active marker file with trailing newline: `trim()` strips whitespace → correct restore.
+  /// L7 — active marker with trailing newline is unchanged after `apply_refresh` (no restore).
   ///
-  /// `read_to_string` returns `"alice@example.com\n"`.  `original.trim()` strips the newline,
-  /// yielding the valid name used in `switch_account` → restore succeeds.
+  /// Fix(BUG-211): `apply_refresh` no longer reads or writes `_active`. A marker written
+  /// as `"alice@example.com\n"` before the call remains exactly `"alice@example.com\n"` after —
+  /// no trim, no `switch_account`, no modification of any kind.
   #[ test ]
   fn test_apply_refresh_lifecycle_active_newline_trimmed_restore()
   {
     let store     = TempDir::new().unwrap();
     let fake_home = TempDir::new().unwrap();
-    let alice_creds = r#"{"accessToken":"alice-tok"}"#;
-    std::fs::write(
-      store.path().join( "alice@example.com.credentials.json" ),
-      alice_creds,
-    ).unwrap();
     std::fs::write( store.path().join( crate::account::active_marker_filename() ), "alice@example.com\n" ).unwrap();
-    std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
-    let mut accounts : Vec< AccountQuota > = vec![];  // no accounts → restore path only
+    let mut accounts : Vec< AccountQuota > = vec![];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
-      active, "alice@example.com",
-      "trailing-newline active marker must be trimmed before restore; active marker after = {active:?}",
+      active, "alice@example.com\n",
+      "active marker must be unchanged after apply_refresh (BUG-211 fix: no restore); got: {active:?}",
     );
   }
 
-  /// L8 — active marker file containing only whitespace: `trim().is_empty()` → restore skipped.
+  /// L8 — `apply_refresh` leaves an existing active marker file with whitespace-only content unchanged.
   ///
-  /// An active marker file with content `"   \n  "` trims to `""`.  `is_empty()` is `true`,
-  /// so `switch_account` is never called and the file content is not modified.
+  /// Fix(BUG-211): `apply_refresh` never reads or writes `_active`. A pre-existing whitespace-
+  /// only marker remains exactly as written — no trim, no `switch_account`, no modification.
   #[ test ]
   fn test_apply_refresh_lifecycle_active_whitespace_only_no_restore()
   {
@@ -2914,15 +2888,14 @@ mod tests
     let active = std::fs::read_to_string( store.path().join( crate::account::active_marker_filename() ) ).unwrap();
     assert_eq!(
       active, ws,
-      "whitespace-only active marker must not trigger restore; content must be unchanged",
+      "apply_refresh must not modify the active marker file (BUG-211 fix); content must be unchanged",
     );
   }
 
-  /// L9 — `claude_paths = None`: restore guard `if let (Some(original), Some(paths))`
-  /// short-circuits on `paths = None` → active marker is never modified by restore.
+  /// L9 — `claude_paths = None`: active marker file is unchanged after `apply_refresh`.
   ///
-  /// Verifies the `None` branch guard: an existing active marker file must be unchanged
-  /// after `apply_refresh` using the fallback (non-lifecycle) path.
+  /// Fix(BUG-211): `apply_refresh` never reads or writes `_active` regardless of whether
+  /// `claude_paths` is `Some` or `None`. A pre-existing marker is unchanged in both cases.
   #[ test ]
   fn test_apply_refresh_none_paths_active_unchanged()
   {
@@ -5115,18 +5088,14 @@ mod tests
     }
   }
 
-  /// BUG-181 AC-02 / FT-02 behavioral: `apply_touch` fires when `resets_at` is `None` (idle).
+  /// BUG-211 MRE / FT-02 behavioral: `apply_touch` fires for idle accounts but does NOT call `switch_account`.
   ///
-  /// When `five_hour.resets_at` is absent (idle 5h window), `apply_touch` must
-  /// attempt `refresh_account_token`. Observable: the active-account restore path in
-  /// `apply_touch` calls `switch_account` (with the `_active` marker account), writing
-  /// credentials to `fake_home/.claude/.credentials.json`.
-  ///
-  /// Fix(BUG-175): `refresh_account_token` no longer calls `switch_account` internally;
-  ///   the observable is now the unconditional restore call in `apply_touch` itself.
+  /// Fix(BUG-211): snapshot+restore removed from `apply_touch`. When `five_hour.resets_at`
+  /// is `None` (idle), `apply_touch` calls `refresh_account_token` but does NOT follow up
+  /// with a restore `switch_account` call — so the live credentials file is never written.
   ///
   /// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
-  ///       [`docs/feature/024_session_touch.md` AC-02]
+  ///       [`docs/feature/024_session_touch.md` AC-02, AC-06]
   #[ test ]
   fn it_apply_touch_trigger_fires_resets_at_none()
   {
@@ -5135,13 +5104,11 @@ mod tests
     let fake_home = dir.path().join( "home" );
     std::fs::create_dir_all( &store ).unwrap();
     std::fs::create_dir_all( fake_home.join( ".claude" ) ).unwrap();
-    // Credentials file in store — restore switch_account can copy to paths.credentials_file().
+    // Credentials file in store — present but must NOT be copied to the live file.
     std::fs::write(
       store.join( "test@example.com.credentials.json" ),
       r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
     ).unwrap();
-    // _active marker → apply_touch reads it as original_active → restore switch_account runs.
-    // Fix(BUG-175): without _active marker, restore never runs (original_active is None).
     std::fs::write(
       store.join( crate::account::active_marker_filename() ),
       "test@example.com",
@@ -5149,19 +5116,18 @@ mod tests
     let mut aq = mk_aq_with_resets_at( None );
     let paths  = crate::ClaudePaths::with_home( &fake_home );
     apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
-    // Trigger fired → refresh_account_token entered → original_active restored via switch_account
-    // → paths.credentials_file() written by the unconditional restore in apply_touch.
+    // Fix(BUG-211): no switch_account in apply_touch restore → live credentials file must NOT exist.
     assert!(
-      paths.credentials_file().exists(),
-      "apply_touch must enter refresh path when resets_at is None (idle account)"
+      !paths.credentials_file().exists(),
+      "BUG-211: apply_touch must not call switch_account; live credentials file must not exist",
     );
   }
 
   /// BUG-181 AC-02 / FT-02 behavioral: `apply_touch` skips when `resets_at` is `Some` (active).
   ///
   /// When `five_hour.resets_at` is present (already active 5h window), `apply_touch` must
-  /// return early without calling `switch_account`. The credentials file in `fake_home/.claude/`
-  /// must NOT be written.
+  /// return early without entering the touch path. The live credentials file must NOT be
+  /// written — `refresh_account_token` is never called.
   ///
   /// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
   ///       [`docs/feature/024_session_touch.md` AC-02]
@@ -5173,15 +5139,10 @@ mod tests
     let fake_home = dir.path().join( "home" );
     std::fs::create_dir_all( &store ).unwrap();
     std::fs::create_dir_all( fake_home.join( ".claude" ) ).unwrap();
-    // Credentials file in store — present so that any accidental trigger would write credentials_file.
     std::fs::write(
       store.join( "test@example.com.credentials.json" ),
       r#"{"accessToken":"tok","expiresAt":9999999999999}"#,
     ).unwrap();
-    // _active marker present — if trigger erroneously fired, restore would write credentials_file;
-    // the negative assertion is therefore discriminating: file NOT written proves trigger skipped.
-    // Fix(BUG-175): restore is unconditional when original_active is Some, so this marker makes the
-    //   negative test stronger than it was without it.
     std::fs::write(
       store.join( crate::account::active_marker_filename() ),
       "test@example.com",
@@ -5189,10 +5150,10 @@ mod tests
     let mut aq = mk_aq_with_resets_at( Some( "2099-01-01T00:00:00Z" ) );
     let paths  = crate::ClaudePaths::with_home( &fake_home );
     apply_touch( &mut aq, &store, Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
-    // Trigger skipped → early return before restore path → credentials_file NOT written.
+    // Trigger skipped → early return → credentials_file NOT written.
     assert!(
       !fake_home.join( ".claude" ).join( ".credentials.json" ).exists(),
-      "apply_touch must skip switch_account when resets_at is Some (already active)"
+      "apply_touch must not enter refresh path when resets_at is Some (already active)"
     );
   }
 
@@ -5335,62 +5296,57 @@ mod tests
 
   // ── BUG-208 ─────────────────────────────────────────────────────────────────
 
-  /// BUG-208 MRE: `apply_refresh` restore `switch_account` must execute and succeed
-  /// when the original account has credentials in the store and `trace=true`.
+  /// FT-17 / BUG-211 MRE — `apply_refresh` does NOT write live credentials file (no `switch_account`).
+  ///
+  /// Fix(BUG-211): the snapshot+restore pattern was removed from `apply_refresh`. With
+  /// `trace=true`, no `[trace] refresh  {name}  restore switch_account: OK/Err` line is
+  /// emitted — the restore step no longer exists.
   ///
   /// # Root Cause
-  /// Both `apply_refresh` and `apply_touch` used `let _ = switch_account(...)` at the
-  /// restore site — the `Result` was silently discarded and no `[trace]` line was emitted,
-  /// making the restore step invisible even with `trace::1`.
+  /// The original `apply_refresh` called `switch_account(snapshot, ...)` after the
+  /// per-account loop. This restore wrote the live credentials file and updated the active
+  /// marker — creating a TOCTOU race with concurrent `.account.use` switches.
   ///
   /// # Why Not Caught
-  /// Existing restore tests pass `trace=false`. No test exercised `apply_refresh` restore
-  /// with `trace=true`, and no test verified that the restore emits a `[trace]` line.
-  /// The `let _ = ...` pattern also prevents the compiler from flagging unused-result.
+  /// BUG-208 tests verified that the restore EXECUTED (live creds written). No test verified
+  /// that the live creds file is NOT written when the restore is absent — the previous
+  /// `[trace]` guard was observing eprintln output which is not assertable in nextest.
   ///
   /// # Fix Applied
-  /// Replaced `let _ = switch_account(...)` with `match` arms at both restore sites in
-  /// `apply_refresh` and `apply_touch`:
-  /// - `Ok`: emits `[trace] refresh/touch  {name}  restore switch_account: OK` when `trace=true`
-  /// - `Err`: emits `[trace] refresh/touch  {name}  restore switch_account: Err({e})`
-  ///   unconditionally (not gated on `trace`) — restore failures are always diagnostic.
+  /// BUG-211: removed snapshot+restore from `apply_refresh`; `refresh_account_token` passes
+  /// `update_marker=false` to `save()` so background refresh never writes `_active`.
   ///
   /// # Prevention
-  /// Every IO call in a traced lifecycle must use `match` arms with `[trace]` emission on
-  /// both branches. `let _ = io_op()` is a forbidden pattern in traced code paths.
+  /// This test guards the absence of `switch_account` in the `apply_refresh` post-loop path:
+  /// after a full cycle, `paths.credentials_file()` must NOT exist (`switch_account` not called),
+  /// and the active marker must remain at its pre-call value.
   ///
   /// # Pitfall
-  /// Trace emission from `eprintln!` is not assertable in nextest unit tests. This test
-  /// verifies the restore EXECUTED (filesystem: alice's live credentials file written,
-  /// active marker = alice) with `trace=true`. The trace line content is validated by
-  /// code review and the Fix(BUG-208) comments at the call sites.
-  // test_kind: bug_reproducer(BUG-208)
+  /// If restore is re-introduced, `credentials_file()` will exist after the call — the
+  /// `!exists()` assertion is the regression guard. Marker assertion alone is insufficient
+  /// because the marker is set to the same value by both restore and the pre-call write.
+  // test_kind: bug_reproducer(BUG-211)
   #[ test ]
   fn test_apply_refresh_mre_bug208_restore_trace_emitted()
   {
     let store     = TempDir::new().unwrap();
     let fake_home = TempDir::new().unwrap();
 
-    // Alice's credential file in store — restore switch_account reads this file.
-    let alice_creds = r#"{"accessToken":"alice-restore-tok","expiresAt":9999999999999}"#;
+    // Alice's credential file in store — present but must NOT be copied to the live file.
     std::fs::write(
       store.path().join( "alice@example.com.credentials.json" ),
-      alice_creds,
+      r#"{"accessToken":"alice-restore-tok","expiresAt":9999999999999}"#,
     ).unwrap();
 
-    // Active marker = alice before the loop.
     std::fs::write(
       store.path().join( crate::account::active_marker_filename() ),
       "alice@example.com",
     ).unwrap();
 
-    // {fake_home}/.claude/ must exist for switch_account to copy the live credentials file.
     std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
-
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
 
-    // Bob has 401 but no credential file — switch_account fails for bob, loop skips.
-    // After the loop, restore runs for alice (original_active).
+    // Bob has 401 but no credential file — refresh_account_token returns None, bob skipped.
     let mut accounts = vec![
       AccountQuota
       {
@@ -5403,112 +5359,94 @@ mod tests
       },
     ];
 
-    // trace=true: Fix(BUG-208) emits `[trace] refresh  alice@example.com  restore switch_account: OK`
-    // to stderr. The assertion below verifies the restore EXECUTED (observable via filesystem).
+    // trace=true: Fix(BUG-211) — no restore switch_account; no [trace] restore line emitted.
     apply_refresh( &mut accounts, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto );
 
-    // Restore ran: live credentials file must contain alice's credentials.
+    // Fix(BUG-211): no switch_account → live credentials file must NOT exist.
     assert!(
-      paths.credentials_file().exists(),
-      "BUG-208: restore switch_account must write alice's live credentials file; file missing"
-    );
-    let live = std::fs::read_to_string( paths.credentials_file() ).unwrap();
-    assert_eq!(
-      live, alice_creds,
-      "BUG-208: live credentials file must contain alice's creds after restore"
+      !paths.credentials_file().exists(),
+      "BUG-211: apply_refresh must not call switch_account; live credentials file must not exist",
     );
 
-    // Restore ran: active marker must point back to alice.
+    // Active marker is unchanged (was "alice@example.com", never touched).
     let marker = std::fs::read_to_string(
       store.path().join( crate::account::active_marker_filename() )
     ).unwrap();
     assert_eq!(
       marker, "alice@example.com",
-      "BUG-208: active marker must be restored to alice@example.com after apply_refresh cycle"
+      "BUG-211: active marker must be unchanged after apply_refresh cycle (no restore)",
     );
   }
 
-  /// BUG-208 MRE: `apply_touch` restore `switch_account` must execute and succeed
-  /// when the original account has credentials in the store and `trace=true`.
+  /// FT-15 / BUG-211 MRE — `apply_touch` does NOT write live credentials file (no `switch_account`).
+  ///
+  /// Fix(BUG-211): the snapshot+restore pattern was removed from `apply_touch`. With
+  /// `trace=true`, no `[trace] touch  {name}  restore switch_account: OK/Err` line is
+  /// emitted — the restore step no longer exists.
   ///
   /// # Root Cause
-  /// `apply_touch` used `let _ = switch_account(...)` at the restore site — the `Result`
-  /// was silently discarded and no `[trace]` line was emitted, making the restore step
-  /// invisible even with `trace::1`. Symmetric defect to `apply_refresh` (BUG-208).
+  /// The original `apply_touch` read the active marker before calling `refresh_account_token`
+  /// and then unconditionally called `switch_account(snapshot, ...)` after. This restore
+  /// created a TOCTOU race: a concurrent `.account.use` switch during the ~35s subprocess
+  /// window was silently overwritten by the restore.
   ///
   /// # Why Not Caught
-  /// Existing restore tests pass `trace=false`. No test exercised `apply_touch` restore
-  /// with `trace=true`, and no test verified that the restore emits a `[trace]` line.
-  /// The `let _ = ...` pattern prevents the compiler from flagging unused-result.
+  /// BUG-208 tests verified that the restore EXECUTED (live creds written). No test verified
+  /// that the live creds file is NOT written when the restore is absent.
   ///
   /// # Fix Applied
-  /// Replaced `let _ = switch_account(...)` with a `match` arm at the restore site in
-  /// `apply_touch`:
-  /// - `Ok`: emits `[trace] touch  {name}  restore switch_account: OK` when `trace=true`
-  /// - `Err`: emits `[trace] touch  {name}  restore switch_account: Err({e})`
-  ///   unconditionally — restore failures are always diagnostic.
+  /// BUG-211: removed snapshot+restore from `apply_touch`; `refresh_account_token` passes
+  /// `update_marker=false` to `save()` so background touch never writes `_active`.
   ///
   /// # Prevention
-  /// Every IO call in a traced lifecycle must use `match` arms with `[trace]` emission on
-  /// both branches. `let _ = io_op()` is a forbidden pattern in traced code paths.
+  /// This test guards absence of `switch_account` in `apply_touch`: after a touch cycle,
+  /// `paths.credentials_file()` must NOT exist (no `switch_account` was called), and the
+  /// active marker must remain at its pre-call value.
   ///
   /// # Pitfall
-  /// Trace emission from `eprintln!` is not assertable in nextest unit tests. This test
-  /// verifies the restore EXECUTED (filesystem: alice's live credentials file written,
-  /// active marker = alice) with `trace=true`. The trace line content is validated by
-  /// code review and the Fix(BUG-208) comments at the call site.
-  // test_kind: bug_reproducer(BUG-208)
+  /// If restore is re-introduced, `credentials_file()` will exist after the call — the
+  /// `!exists()` assertion is the regression guard.
+  // test_kind: bug_reproducer(BUG-211)
   #[ test ]
   fn test_apply_touch_mre_bug208_restore_trace_emitted()
   {
     let store     = TempDir::new().unwrap();
     let fake_home = TempDir::new().unwrap();
 
-    // Alice's credential file in store — restore switch_account reads this file.
-    let alice_creds = r#"{"accessToken":"alice-touch-restore-tok","expiresAt":9999999999999}"#;
+    // Alice's credential file in store — present but must NOT be copied to the live file.
     std::fs::write(
       store.path().join( "alice@example.com.credentials.json" ),
-      alice_creds,
+      r#"{"accessToken":"alice-touch-restore-tok","expiresAt":9999999999999}"#,
     ).unwrap();
 
-    // Active marker = alice before the touch cycle.
     std::fs::write(
       store.path().join( crate::account::active_marker_filename() ),
       "alice@example.com",
     ).unwrap();
 
-    // {fake_home}/.claude/ must exist for switch_account to copy the live credentials file.
     std::fs::create_dir_all( fake_home.path().join( ".claude" ) ).unwrap();
-
     let paths = crate::ClaudePaths::with_home( fake_home.path() );
 
     // test@example.com is idle (resets_at=None) — triggers apply_touch.
-    // No credential file for test@example.com — refresh_account_token returns None fast.
-    // Restore block runs unconditionally after refresh attempt regardless of outcome.
+    // No credential file for test@example.com — refresh_account_token returns None.
     let mut aq = mk_aq_with_resets_at( None );
 
-    // trace=true: Fix(BUG-208) emits `[trace] touch  alice@example.com  restore switch_account: OK`
-    // to stderr. The assertion below verifies the restore EXECUTED (observable via filesystem).
+    // trace=true: Fix(BUG-211) — no restore; no [trace] restore switch_account line emitted.
     apply_touch( &mut aq, store.path(), Some( &paths ), true, SubprocessModel::Auto, SubprocessEffort::Auto );
 
-    // Restore ran: live credentials file must contain alice's credentials.
+    // Fix(BUG-211): no switch_account → live credentials file must NOT exist.
     assert!(
-      paths.credentials_file().exists(),
-      "BUG-208: restore switch_account must write alice's live credentials file; file missing"
-    );
-    let live = std::fs::read_to_string( paths.credentials_file() ).unwrap();
-    assert_eq!(
-      live, alice_creds,
-      "BUG-208: live credentials file must contain alice's creds after apply_touch restore"
+      !paths.credentials_file().exists(),
+      "BUG-211: apply_touch must not call switch_account; live credentials file must not exist",
     );
 
-    // Restore ran: active marker must point back to alice.
+    // Active marker is unchanged (was "alice@example.com", never touched).
     let marker = std::fs::read_to_string(
       store.path().join( crate::account::active_marker_filename() )
     ).unwrap();
     assert_eq!(
       marker, "alice@example.com",
-      "BUG-208: active marker must be restored to alice@example.com after apply_touch cycle"
+      "BUG-211: active marker must be unchanged after apply_touch cycle (no restore)",
     );
   }
 

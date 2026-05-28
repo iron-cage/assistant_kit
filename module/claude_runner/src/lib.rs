@@ -75,6 +75,18 @@ pub fn run_cli()
     return;
   }
 
+  // Fix(BUG-212): `run` is the default mode expressed as an explicit subcommand.
+  // Root cause: `clr run msg` treated "run" as the message argument — silent wrong behavior.
+  // Pitfall: strip only the leading "run" token; remaining args are passed normally.
+  let tokens : Vec< String > = if tokens.first().map( String::as_str ) == Some( "run" )
+  {
+    tokens[ 1.. ].to_vec()
+  }
+  else
+  {
+    tokens
+  };
+
   // Dispatch subcommands — these functions never return.
   if tokens.first().map( String::as_str ) == Some( "ask" )      { dispatch_ask( &tokens ); }
   if tokens.first().map( String::as_str ) == Some( "isolated" ) { dispatch_isolated( &tokens ); }

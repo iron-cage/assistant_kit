@@ -124,7 +124,7 @@ fn as01_save_creates_file()
   let out = run_cs_with_env( &[ ".account.save", "name::alice@acme.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "saved" ), "must confirm save, got:\n{text}" );
+  assert!( text.contains( "saved current credentials as 'alice@acme.com'" ), "must confirm save, got:\n{text}" );
   assert!( account_exists( dir.path(), "alice@acme.com" ), "account file must exist" );
 }
 
@@ -138,7 +138,7 @@ fn as02_save_dry_run()
   let out = run_cs_with_env( &[ ".account.save", "name::alice@acme.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "dry-run" ), "must say dry-run, got:\n{text}" );
+  assert!( text.contains( "[dry-run] would save current credentials as 'alice@acme.com'" ), "must say dry-run preview, got:\n{text}" );
   assert!( !account_exists( dir.path(), "alice@acme.com" ), "dry-run must not create file" );
 }
 
@@ -243,6 +243,13 @@ fn as10_save_infer_absent_email_exits_1()
 
   let out = run_cs_with_env( &[ ".account.save" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "cannot infer account name: no active account set" ),
+    "stderr must explain inference failure, got:\n{err}",
+  );
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  assert!( !store.exists(), "credential store must not be created on inference failure" );
 }
 
 #[ test ]
@@ -264,6 +271,8 @@ fn as15_save_infers_name_from_active_marker()
 
   let out = run_cs_with_env( &[ ".account.save" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "saved current credentials as 'alice@acme.com'" ), "must confirm save with inferred name, got:\n{text}" );
   assert!( account_exists( dir.path(), "alice@acme.com" ), "credential file must be created under inferred name" );
 }
 
@@ -784,6 +793,13 @@ fn as17_save_slash_in_email_local_part_exits_1()
 
   let out = run_cs_with_env( &[ ".account.save", "name::a/b@c.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "path-unsafe characters" ),
+    "stderr must indicate path-unsafe chars, got:\n{err}",
+  );
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  assert!( !store.exists(), "credential store must not be created before validation passes" );
 }
 
 // ── as18 ──────────────────────────────────────────────────────────────────────

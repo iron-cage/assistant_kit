@@ -80,7 +80,7 @@ fn save_creates_credential_store_when_missing()
   let paths = ClaudePaths::new().expect( "HOME set" );
   assert!( !credential_store.exists(), "credential_store must not exist before first save" );
 
-  account::save( "alice@acme.com", &credential_store, &paths ).expect( "save" );
+  account::save( "alice@acme.com", &credential_store, &paths, true ).expect( "save" );
 
   assert!( credential_store.exists(), "credential_store must be created by save()" );
 }
@@ -94,7 +94,7 @@ fn save_copies_credentials_to_named_file()
   //! in the credential store with the same content as `.credentials.json`.
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
-  account::save( "alice@acme.com", &credential_store, &paths ).expect( "save" );
+  account::save( "alice@acme.com", &credential_store, &paths, true ).expect( "save" );
 
   let saved = credential_store.join( "alice@acme.com.credentials.json" );
   assert!( saved.exists(), "alice@acme.com.credentials.json must exist after save" );
@@ -111,12 +111,12 @@ fn save_overwrites_existing_entry()
   //! FR-7 overwrite: saving the same name twice uses the latest credentials.
   let ( dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
-  account::save( "alice@acme.com", &credential_store, &paths ).expect( "first save" );
+  account::save( "alice@acme.com", &credential_store, &paths, true ).expect( "first save" );
 
   // Overwrite active credentials with different content.
   let claude = dir.path().join( ".claude" );
   std::fs::write( claude.join( ".credentials.json" ), CREDENTIALS_B ).expect( "overwrite" );
-  account::save( "alice@acme.com", &credential_store, &paths ).expect( "second save" );
+  account::save( "alice@acme.com", &credential_store, &paths, true ).expect( "second save" );
 
   let saved = credential_store.join( "alice@acme.com.credentials.json" );
   assert_eq!(
@@ -131,7 +131,7 @@ fn save_rejects_empty_name()
 {
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
-  let err = account::save( "", &credential_store, &paths ).expect_err( "empty name must fail" );
+  let err = account::save( "", &credential_store, &paths, true ).expect_err( "empty name must fail" );
   assert_eq!( err.kind(), std::io::ErrorKind::InvalidInput );
 }
 
@@ -140,7 +140,7 @@ fn save_rejects_name_with_slash()
 {
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
-  let err = account::save( "work/home", &credential_store, &paths ).expect_err( "slash must fail" );
+  let err = account::save( "work/home", &credential_store, &paths, true ).expect_err( "slash must fail" );
   assert_eq!( err.kind(), std::io::ErrorKind::InvalidInput );
 }
 
@@ -163,7 +163,7 @@ fn list_returns_saved_accounts_with_metadata()
   //! FR-8: `list()` returns correct metadata from credential files.
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
-  account::save( "alice@acme.com", &credential_store, &paths ).expect( "save" );
+  account::save( "alice@acme.com", &credential_store, &paths, true ).expect( "save" );
 
   let accounts = account::list( &credential_store ).expect( "list" );
   assert_eq!( accounts.len(), 1 );
@@ -182,8 +182,8 @@ fn list_marks_active_account_via_active_marker()
   //! which account is currently in use.
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
-  account::save( "alice@acme.com", &credential_store, &paths ).expect( "save alice@acme.com" );
-  account::save( "alice@home.com", &credential_store, &paths ).expect( "save alice@home.com" );
+  account::save( "alice@acme.com", &credential_store, &paths, true ).expect( "save alice@acme.com" );
+  account::save( "alice@home.com", &credential_store, &paths, true ).expect( "save alice@home.com" );
 
   // Write _active marker manually to "alice@acme.com".
   let marker = credential_store.join( account::active_marker_filename() );
@@ -202,8 +202,8 @@ fn list_returns_accounts_sorted_by_name()
   //! FR-8: list is deterministic — sorted alphabetically by name.
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
-  account::save( "zebra@acme.com", &credential_store, &paths ).expect( "save zebra" );
-  account::save( "alpha@acme.com", &credential_store, &paths ).expect( "save alpha" );
+  account::save( "zebra@acme.com", &credential_store, &paths, true ).expect( "save zebra" );
+  account::save( "alpha@acme.com", &credential_store, &paths, true ).expect( "save alpha" );
 
   let accounts = account::list( &credential_store ).expect( "list" );
   assert_eq!( accounts.len(), 2 );
@@ -273,7 +273,7 @@ fn delete_removes_credential_file()
   //! FR-10: `delete()` removes the named account file from the store.
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
-  account::save( "alice@oldco.com", &credential_store, &paths ).expect( "save" );
+  account::save( "alice@oldco.com", &credential_store, &paths, true ).expect( "save" );
   let file = credential_store.join( "alice@oldco.com.credentials.json" );
   assert!( file.exists() );
   // save() now writes _active = "alice@oldco.com"; switch to a different account
@@ -307,7 +307,7 @@ fn delete_active_account_succeeds()
   //! `~/.claude/.credentials.json` is already live regardless of the marker.
   let ( _dir, credential_store ) = setup_home( CREDENTIALS );
   let paths = ClaudePaths::new().expect( "HOME set" );
-  account::save( "alice@acme.com", &credential_store, &paths ).expect( "save" );
+  account::save( "alice@acme.com", &credential_store, &paths, true ).expect( "save" );
   let marker = credential_store.join( account::active_marker_filename() );
   std::fs::write( &marker, "alice@acme.com" ).expect( "write _active" );
 
@@ -578,7 +578,7 @@ fn test_bug174_mre_switch_preserves_machine_global_commands()
   std::fs::write( paths.claude_json_file(), claude_json_a ).expect( "write .claude.json" );
 
   // Save as account A — snapshot must contain only oauthAccount.
-  account::save( "a@x.com", &credential_store, &paths ).expect( "save A" );
+  account::save( "a@x.com", &credential_store, &paths, true ).expect( "save A" );
   let saved_a = std::fs::read_to_string( credential_store.join( "a@x.com.claude.json" ) )
     .expect( "read saved A .claude.json" );
   assert!(
@@ -599,7 +599,7 @@ fn test_bug174_mre_switch_preserves_machine_global_commands()
   std::fs::write( claude.join( ".credentials.json" ), CREDENTIALS_B ).expect( "write creds B" );
   let claude_json_b = r#"{"oauthAccount":{"emailAddress":"b@y.com","displayName":"B"},"commands":{"foo":42},"mcpServers":{"local":true}}"#;
   std::fs::write( paths.claude_json_file(), claude_json_b ).expect( "write .claude.json B" );
-  account::save( "b@y.com", &credential_store, &paths ).expect( "save B" );
+  account::save( "b@y.com", &credential_store, &paths, true ).expect( "save B" );
 
   // Mutate commands.foo in live file to simulate machine-local state change.
   let claude_json_live = r#"{"oauthAccount":{"emailAddress":"b@y.com","displayName":"B"},"commands":{"foo":99},"mcpServers":{"local":true}}"#;

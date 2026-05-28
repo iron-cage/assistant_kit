@@ -22,7 +22,8 @@
 //!
 //! | Test | Scenario |
 //! |------|----------|
-//! | `as_save_writes_active_marker` | save() → `_active` contains the saved name |
+//! | `as_save_writes_active_marker` | save() with update_marker=true → `_active` written |
+//! | `test_mre_bug211_save_false_leaves_marker_unchanged` | save() with update_marker=false → `_active` not written |
 //! | `ad_delete_also_removes_snapshots` | All 3 files exist → all 3 absent after delete |
 //! | `ad_delete_succeeds_when_snapshots_absent` | Only credentials → delete succeeds, no error |
 
@@ -101,6 +102,57 @@ fn ad_delete_succeeds_when_snapshots_absent()
 
 // ── AS: Account Save ──────────────────────────────────────────────────────────
 
+/// BUG-211 MRE: `save()` with `update_marker=false` must NOT write the `_active` marker file.
+///
+/// # Root Cause
+/// `save()` unconditionally wrote `_active` on every call, including background refresh
+/// calls from `refresh_account_token`. Each per-account refresh clobbered `_active` with
+/// the refreshed account's name, and the subsequent `switch_account` restore in
+/// `apply_refresh`/`apply_touch` then overwrote any concurrent `.account.use` switch.
+/// See `bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md`.
+///
+/// # Why Not Caught
+/// `save()` had no mechanism to suppress the `_active` write; background callers had no
+/// opt-out. The TOCTOU race window is ~35s (subprocess timeout), making it rare in unit
+/// tests that run serially. Only a two-session command chain revealed the symptom.
+///
+/// # Fix Applied
+/// Added `update_marker: bool` as the 4th parameter to `save()`. The `_active` write is
+/// guarded by `if update_marker { ... }`. CLI callers (`.account.save`, `.account.relogin`)
+/// pass `true`; `refresh_account_token` passes `false`.
+///
+/// # Prevention
+/// This test is a compile-gate in Phase 1 (wrong arity → compile error) and a runtime
+/// guard in Phase 2+ (marker absent when `update_marker=false`). Regressions that remove
+/// the guard will fail this test.
+///
+/// # Pitfall
+/// `update_marker=false` must only be used from background/internal callers. Any user-facing
+/// path that omits the write leaves `.credentials.status` showing `Account: N/A` until the
+/// next explicit `.account.save` or `.account.use`.
+// test_kind: bug_reproducer(BUG-211)
+#[ test ]
+fn test_mre_bug211_save_false_leaves_marker_unchanged()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( ".credentials.json" ), r#"{"accessToken":"tok"}"# ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+
+  account::save( "alice@test.com", &store, &paths, false ).unwrap();
+
+  let marker = store.join( account::active_marker_filename() );
+  assert!(
+    !marker.exists(),
+    "save() with update_marker=false must NOT write the _active marker file; found: {marker:?}",
+  );
+}
+
 #[ test ]
 fn as_save_writes_active_marker()
 {
@@ -122,7 +174,7 @@ fn as_save_writes_active_marker()
 
   let paths = ClaudePaths::with_home( tmp.path() );
 
-  account::save( "alice@acme.com", &store, &paths ).unwrap();
+  account::save( "alice@acme.com", &store, &paths, true ).unwrap();
 
   let marker_name = account::active_marker_filename();
   let active = std::fs::read_to_string( store.join( &marker_name ) )

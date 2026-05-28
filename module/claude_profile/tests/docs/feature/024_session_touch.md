@@ -11,7 +11,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-03 | After touch, table shows concrete `5h Reset` value (was `—`) | AC-03 | Integration (lim_it) |
 | FT-04 | Errored accounts are never touched | AC-04 | Integration |
 | FT-05 | When both `refresh::1` and `touch::1`, refresh runs first | AC-05 | Integration |
-| FT-06 | Original active account restored after all touch operations | AC-06 | Integration (lim_it) |
+| FT-06 | apply_touch does not call switch_account; `_active` marker unchanged throughout cycle | AC-06 | BUG-211 MRE |
 | FT-07 | Touch failure is non-aborting; row shows original data | AC-07 | Integration |
 | FT-08 | `touch::` does not affect `format::json` output structure | AC-08 | Integration |
 | FT-09 | `trace=true` emits `[trace]` lines for touch subprocess lifecycle | AC-09 | Integration (lim_it) |
@@ -20,7 +20,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-12 | In `live::1` mode, touch fires each cycle for accounts with `resets_at` absent | AC-11 | Live Mode |
 | FT-13 | Account with `resets_at` present (already active) is NOT touched | AC-02, AC-12 | Trigger Guard |
 | FT-14 | Skip trace line emitted for each account not qualifying for touch | AC-09, AC-12 | Trace |
-| FT-15 | `trace::1` emits `restore switch_account` line after all touch operations; failure always logged | AC-13 | Restore Trace |
+| FT-15 | no switch_account called in apply_touch; `_active` unchanged confirms no restore occurred | AC-13 | BUG-211 MRE |
 
 ### Test Case Index
 
@@ -31,7 +31,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-03 | After touch concrete 5h Reset shown (was —) | AC-03 | Re-fetch |
 | FT-04 | Errored accounts not touched | AC-04 | Trigger Guard |
 | FT-05 | refresh before touch ordering | AC-05 | Ordering |
-| FT-06 | Active account restored after touch | AC-06 | Restore |
+| FT-06 | apply_touch does not call switch_account; _active unchanged | AC-06 | BUG-211 MRE |
 | FT-07 | Touch failure non-aborting | AC-07 | Failure Handling |
 | FT-08 | JSON unaffected by touch | AC-08 | JSON No-op |
 | FT-09 | Trace shows touch lifecycle | AC-09 | Trace |
@@ -40,7 +40,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-12 | live::1 touch fires each cycle when resets_at absent | AC-11 | Live Mode |
 | FT-13 | Account with resets_at present (active) NOT touched | AC-02, AC-12 | Trigger Guard |
 | FT-14 | Skip trace line emitted for each non-qualifying account | AC-09, AC-12 | Trace |
-| FT-15 | `trace::1` emits `restore switch_account` line after all touch operations; failure always logged | AC-13 | Restore Trace |
+| FT-15 | no switch_account called in apply_touch; _active unchanged confirms no restore | AC-13 | BUG-211 MRE |
 
 **Total:** 15 FT cases
 
@@ -104,14 +104,14 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 ---
 
-### FT-06: Original `_active` account restored after all touch operations complete
+### FT-06: apply_touch does not call switch_account; `_active` marker unchanged throughout touch cycle
 
-- **Given:** Two accounts: `alice@test.com` (stored as `_active`) and `idle@test.com` (valid quota, `resets_at` absent — idle). `touch::1`.
-- **When:** `clp .usage touch::1`
-- **Then:** After touch subprocess for `idle@test.com` completes, `_active` file points back to `alice@test.com` (original active account restored).
-- **Exit:** 0
-- **Live:** yes (lim_it)
-- **Source fn:** `it103_lim_it_active_account_restored_after_touch` (in `tests/cli/usage_test.rs`)
+- **Given:** `apply_touch` is called with one qualifying account (valid quota, `resets_at` absent — idle); the `_active` marker is NOT present in the credential store before the call.
+- **When:** `apply_touch` processes the qualifying account and completes.
+- **Then:** The `_active` marker file does NOT exist after the call — no `switch_account` write occurred. `apply_touch` does not restore via `switch_account`; `refresh_account_token` passes `update_marker=false` to `save()` so the marker is never written.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `it_apply_touch_trigger_fires_resets_at_none` (in `src/usage.rs #[cfg(test)]`)
+- **Note:** BUG-211 regression guard — verifies snapshot+restore was not re-introduced in `apply_touch`. Symmetric to FT-13/BUG-211 guard in `017_token_refresh` test spec.
 - **Source:** [feature/024_session_touch.md AC-06](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -208,12 +208,11 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 ---
 
-### FT-15: `trace::1` emits `restore switch_account` line after all touch operations; failure always logged
+### FT-15: No switch_account called in apply_touch; `_active` unchanged confirms no restore occurred
 
-- **Given:** `apply_touch` is called with `trace=true`; `original_active` is set (active marker contains a non-empty account name); the original account has a credential file in the store so `switch_account` can succeed.
-- **When:** `apply_touch(&mut aq, store.path(), Some(&paths), true, imodel, effort)` is called (unit test context; equivalent to `clp .usage touch::1 trace::1` with active marker present)
-- **Then:** Stderr contains `[trace] touch  {original_name}  restore switch_account: OK`; the restore step is not silent under `trace::1`.
-- **And:** In a separate scenario where `switch_account` fails at restore time, stderr contains the failure line unconditionally — without requiring `trace=true`.
+- **Given:** `apply_touch` is called with `trace=true`; one qualifying account with `resets_at` absent; the `_active` marker is NOT present in the credential store before the call.
+- **When:** `apply_touch` processes the qualifying account and completes.
+- **Then:** The credential-store `_active` file does NOT exist after the call — no `switch_account` write occurred during touch cycling, confirming `update_marker=false` suppresses all `_active` writes.
 - **Source fn:** `test_apply_touch_mre_bug208_restore_trace_emitted` (in `src/usage.rs #[cfg(test)]`)
-- **Note:** Fix for BUG-208 — `apply_touch` used `let _ = switch_account(...)` at the restore site, making restore failures silent and restore trace completeness impossible. Symmetric fix to `apply_refresh` (FT-17 in 017_token_refresh test spec).
+- **Note:** BUG-211 MRE — function name preserved from BUG-208 era; now asserts absence of restore side-effects rather than presence of restore trace. Symmetric to FT-17 in `017_token_refresh` test spec.
 - **Source:** [feature/024_session_touch.md AC-13](../../../../docs/feature/024_session_touch.md)

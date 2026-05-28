@@ -1167,7 +1167,7 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     return Ok( OutputData::new( format!( "[dry-run] would save current credentials as '{name}'\n" ), "text" ) );
   }
 
-  crate::account::save( &name, &credential_store, &paths )
+  crate::account::save( &name, &credential_store, &paths, true )
     .map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
   if trace { eprintln!( "[trace] account.save  write: OK" ) }
   Ok( OutputData::new( format!( "saved current credentials as '{name}'\n" ), "text" ) )
@@ -1297,7 +1297,7 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   if updated
   {
     // Persist the refreshed credentials into the account store.
-    crate::account::save( &name, &credential_store, &paths )
+    crate::account::save( &name, &credential_store, &paths, true )
       .map_err( |e| io_err_to_error_data( &e, "account relogin: save" ) )?;
   }
 
