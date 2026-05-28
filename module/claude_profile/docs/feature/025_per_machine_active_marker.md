@@ -39,10 +39,11 @@ The `.gitignore` pattern `_active_*` excludes all per-machine marker files from 
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `module/claude_profile_core/src/account.rs` | `active_marker_filename()` — derives per-machine marker name; `read_active_marker()`, `switch_account()`, `save()`, `delete()` — use it |
-| source | `module/claude_profile/src/commands.rs` | `resolve_account_name()` — exact-local-part match priority; three `_active` read sites updated |
+| source | `module/claude_profile/src/commands.rs` | `resolve_account_name()` — exact-local-part match priority; `account_save_routine()` — reads `_active` marker for name inference when `name::` is omitted (BUG-209 fix, TSK-212) |
 | source | `module/claude_profile/src/usage.rs` | Two production `_active` read sites updated; ten unit test sites updated |
 | config | `.gitignore` | `_active_*` pattern excludes per-machine markers from version control |
+| doc | [002_account_save.md](002_account_save.md) | Name resolution: `account_save_routine()` reads `_active` marker when `name::` is omitted (AC-08, BUG-209) |
 | doc | [004_account_use.md](004_account_use.md) | Base switch behavior; design step 4 updated |
 | doc | [015_name_shortcut_syntax.md](015_name_shortcut_syntax.md) | Prefix resolution; AC-11 added for exact-local-part match |
 | doc | [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | Atomicity invariant; `_active` marker note updated |
-| test | `tests/cli/account_mutations_test.rs` (aw16) | Exact-local-part match wins over ambiguous prefix |
+| test | `tests/cli/account_mutations_test.rs` (aw16, aw17) | aw16: exact-local-part wins over prefix; aw17: no exact match falls through to ambiguous |

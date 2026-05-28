@@ -11,9 +11,10 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 | FT-03 | `active_marker_filename()` returns `_active_<hostname>_<user>` format | AC-02 | Unit (implicit) |
 | FT-04 | Two machines share a credential store without overwriting each other's marker | AC-03 | Design invariant |
 | FT-05 | `_active_*` is excluded from version control via `.gitignore` | AC-04 | Static config |
-| FT-06 | `clp .account.use i1` resolves exact local-part match unambiguously | AC-05 | Integration |
-| FT-07 | `clp .account.use a` exits 1 when no exact local-part match, two prefix hits | AC-06 | Integration |
-| FT-08 | `clp .account.use i1` exits 1 when no `i1@` account and `i11@`/`i12@` both match | AC-07 | Integration (⏳) |
+| FT-06 | `clp .account.use i1` resolves exact local-part match unambiguously | AC-11 (015) | Integration (→ 015) |
+| FT-07 | `clp .account.use a` exits 1 when no exact local-part match, two prefix hits | AC-06 (015) | Integration (→ 015) |
+| FT-08 | `clp .account.use i1` exits 1 when no `i1@` account and `i11@`/`i12@` both match | AC-06, AC-11 (015) | Integration (→ 015) |
+| FT-09 | `.account.save` (no `name::`) reads `_active` marker, not stale `emailAddress` | AC-08 (002) | Integration (BUG-209) |
 
 ### Test Case Index
 
@@ -24,11 +25,12 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 | FT-03 | active_marker_filename format starts with `_active_` | AC-02 | Unit |
 | FT-04 | Machine independence — distinct filenames guarantee isolation | AC-03 | Design |
 | FT-05 | .gitignore excludes `_active_*` | AC-04 | Static Config |
-| FT-06 | Exact local-part match resolves unambiguously | AC-05 | Prefix Resolution |
-| FT-07 | Ambiguous prefix with no exact match exits 1 | AC-06 | Prefix Resolution |
-| FT-08 | Prefix `i1` exits 1 when only `i11@`/`i12@` exist (no exact match) | AC-07 | Prefix Resolution (⏳) |
+| FT-06 | Exact local-part match resolves unambiguously | AC-11 (015) | Prefix Resolution |
+| FT-07 | Ambiguous prefix with no exact match exits 1 | AC-06 (015) | Prefix Resolution |
+| FT-08 | Prefix `i1` exits 1 when only `i11@`/`i12@` exist (no exact match) | AC-06, AC-11 (015) | Prefix Resolution |
+| FT-09 | .account.save uses `_active` marker for name resolution | AC-08 (002) | Name Resolution |
 
-**Total:** 8 FT cases
+**Total:** 9 FT cases
 
 ---
 
@@ -95,7 +97,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** Exits 0. Active marker contains `i1@wbox.pro`. The exact-local-part check resolves `i1@wbox.pro` before reaching the prefix scan — no ambiguity error.
 - **Exit:** 0
 - **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/025_per_machine_active_marker.md AC-05](../../../../docs/feature/025_per_machine_active_marker.md)
+- **Source:** [feature/015_name_shortcut_syntax.md AC-11](../../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -106,7 +108,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** Exits 1. Stderr contains "ambiguous". No account switch occurs. The exact-local-part check finds no match, falling through to prefix scan which reports ambiguity.
 - **Exit:** 1
 - **Source fn:** `aw15_use_prefix_ambiguous_exits_1` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/025_per_machine_active_marker.md AC-06](../../../../docs/feature/025_per_machine_active_marker.md)
+- **Source:** [feature/015_name_shortcut_syntax.md AC-06](../../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -116,5 +118,16 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **When:** `clp .account.use i1`
 - **Then:** Exits 1. Stderr contains "ambiguous". The exact-local-part check finds no match (no account with local part `i1`), falls through to prefix scan, which finds two matches and reports ambiguity.
 - **Exit:** 1
-- **Source fn:** ⏳ TBD — no dedicated test found; this scenario distinguishes AC-07 from AC-06 (prefix looks like exact match but is not)
-- **Source:** [feature/025_per_machine_active_marker.md AC-07](../../../../docs/feature/025_per_machine_active_marker.md)
+- **Source fn:** `aw17_use_prefix_ambiguous_no_exact_local_part_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/015_name_shortcut_syntax.md AC-06, AC-11](../../../../docs/feature/015_name_shortcut_syntax.md)
+
+---
+
+### FT-09: `.account.save` (no `name::`) reads `_active` marker, not stale `emailAddress`
+
+- **Given:** Two saved accounts: `a@test.com` and `b@test.com`. `~/.claude.json` has `emailAddress = "a@test.com"` (stale — not updated since the last account switch). The per-machine active marker (`_active_{hostname}_{user}`) contains `"b@test.com"` (set by a prior `.account.use b@test.com`).
+- **When:** `clp .account.save` (no `name::` argument)
+- **Then:** Exits 0. Output reads `saved current credentials as 'b@test.com'`. The per-machine active marker still reads `b@test.com`. The stale `emailAddress` value `a@test.com` is NOT used as the save target — the `_active` marker is the authoritative source for name resolution.
+- **Exit:** 0
+- **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)

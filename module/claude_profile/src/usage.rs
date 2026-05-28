@@ -1838,10 +1838,17 @@ pub(crate) fn validate_effort_str( s : &str ) -> Result< (), String >
 //   trace:: on commands performing fetch operations.
 // Pitfall: Any command extended to perform HTTP/file/subprocess operations must add trace:: in
 //   the same pass — grep [trace] emission sites in source and verify each emitting command registers trace::.
+// Fix(BUG-210): `pre_switch_touch_ctx` emitted no model/effort trace in the already-active branch.
+// Root cause: model/effort resolution lived in `apply_post_switch_touch` only — unreachable when
+//   the already-active skip path fires.
+// Pitfall: any new skip path that bypasses `apply_post_switch_touch` will also miss model/effort
+//   unless it calls `resolve_model`/`resolve_effort` directly.
 pub(crate) fn pre_switch_touch_ctx(
   name       : &str,
   store_path : &std::path::Path,
   trace      : bool,
+  imodel_str : &str,
+  effort_str : &str,
 ) -> Option< TouchCtx >
 {
   let path = store_path.join( format!( "{name}.credentials.json" ) );
@@ -1892,6 +1899,26 @@ pub(crate) fn pre_switch_touch_ctx(
     if trace
     {
       eprintln!( "[trace] account.use  {name}  idle check: resets_at=present → already active" );
+      let imodel       = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
+      let effort       = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
+      let aq           = AccountQuota
+      {
+        name          : name.to_string(),
+        is_current    : false,
+        is_active     : false,
+        expires_at_ms : 0,
+        result        : Ok( quota ),
+        account       : None,
+      };
+      let model        = resolve_model( &aq, imodel );
+      let effort_val   = resolve_effort( &model, effort );
+      let model_str    = match &model
+      {
+        claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(),
+        _                                                => "keep-current",
+      };
+      let effort_label = effort_val.unwrap_or( "(none)" );
+      eprintln!( "[trace] account.use  {name}  model: {model_str}  effort: {effort_label}" );
       eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: already active)" );
     }
     None
@@ -5482,6 +5509,60 @@ mod tests
     assert_eq!(
       marker, "alice@example.com",
       "BUG-208: active marker must be restored to alice@example.com after apply_touch cycle"
+    );
+  }
+
+  // ── pre_switch_touch_ctx fetch-failure path — BUG-210 regression guard ─────
+
+  /// Structural test: `pre_switch_touch_ctx` with an invalid credential file (no accessToken).
+  ///
+  /// # Root Cause (BUG-210)
+  /// `pre_switch_touch_ctx()` returned `None` in the already-active branch without emitting
+  /// `model:` + `effort:` trace lines. Model/effort resolution lived in `apply_post_switch_touch`
+  /// only, which is never called on the skip path.
+  ///
+  /// # Why Not Caught
+  /// No test called `pre_switch_touch_ctx` directly with a failing credential read; the only
+  /// coverage was via the live `aw29` integration test (`lim_it`, excluded from CI).
+  ///
+  /// # Fix Applied
+  /// Extended `pre_switch_touch_ctx` to accept `imodel_str` and `effort_str` parameters;
+  /// added model/effort resolution and trace emission in the already-active branch.
+  ///
+  /// # Prevention
+  /// This test acts as a compile-time guard: if the function reverts to 3 params, this
+  /// call (with 5 args) causes a compile error. Also verifies that the fetch-failed path does
+  /// NOT emit `model:` lines — the model/effort emission belongs only to quota-fetch-OK paths.
+  ///
+  /// # Pitfall
+  /// The fetch-failed path must NOT emit `model:` even after the BUG-210 fix — model/effort
+  /// resolution requires quota data, which is unavailable when fetch fails.
+  // test_kind: bug_reproducer(BUG-210)
+  #[ test ]
+  fn test_pre_switch_touch_ctx_model_effort_absent_on_fetch_failure()
+  {
+    let store = TempDir::new().unwrap();
+
+    // Write a credential file with no accessToken — quota fetch will fail.
+    std::fs::write(
+      store.path().join( "noaccess@example.com.credentials.json" ),
+      r#"{"subscriptionType":"pro"}"#,
+    ).unwrap();
+
+    // 5-arg signature — compile error before BUG-210 fix extends the function.
+    let result = pre_switch_touch_ctx(
+      "noaccess@example.com",
+      store.path(),
+      true,
+      "auto",
+      "auto",
+    );
+
+    // Fetch-failed path must return None (no touch context, credential read succeeded but
+    // accessToken absent → fetch branch exits early).
+    assert!(
+      result.is_none(),
+      "fetch-failed path must return None, got Some(..)",
     );
   }
 }

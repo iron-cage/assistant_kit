@@ -17,7 +17,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-09 | `dry::1` — no credentials modified, no subprocess spawned | AC-08 | Integration |
 | FT-10 | `touch::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help` with defaults | AC-09, AC-16 | Integration |
 | FT-11 | `trace::1 touch::1` idle account — all 6 trace lines emitted in order | AC-10, AC-11, AC-12, AC-13, AC-14 | Integration |
-| FT-12 | `trace::1 touch::1` active account — read+fetch+idle-check+subprocess-skipped lines | AC-10, AC-11, AC-12, AC-14 | Integration |
+| FT-12 | `trace::1 touch::1` active account — read+fetch+idle-check+model+subprocess-skipped lines | AC-10, AC-11, AC-12, AC-13, AC-14 | Integration |
 | FT-13 | `trace::1 touch::1` fetch failure — read+fetch-err emitted; idle/model/subprocess omitted | AC-10, AC-11, AC-14 | Integration |
 | FT-14 | `trace::1 touch::0` — no `[trace] account.use` lines emitted | AC-15 | Integration |
 | FT-15 | `trace::0` (default) — no `[trace] account.use` lines emitted | AC-15 | Integration |
@@ -38,7 +38,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-09 | dry::1 performs no modification | AC-08 | Dry Run |
 | FT-10 | touch:: imodel:: effort:: trace:: in help with defaults | AC-09, AC-16 | Help Output |
 | FT-11 | trace::1 touch::1 idle account — all 6 trace lines emitted | AC-10, AC-11, AC-12, AC-13, AC-14 | Trace Output |
-| FT-12 | trace::1 touch::1 active account — read+fetch+idle-check+skipped lines | AC-10, AC-11, AC-12, AC-14 | Trace Output |
+| FT-12 | trace::1 touch::1 active account — read+fetch+idle-check+model+skipped lines | AC-10, AC-11, AC-12, AC-13, AC-14 | Trace Output |
 | FT-13 | trace::1 touch::1 fetch failure — read+fetch-err emitted; idle/model/subprocess omitted | AC-10, AC-11, AC-14 | Trace Output |
 | FT-14 | trace::1 touch::0 — no trace lines emitted | AC-15 | Trace Suppression |
 | FT-15 | trace::0 (default) — no trace lines emitted | AC-15 | Trace Default |
@@ -155,7 +155,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When:** `clp .account.use --help` (or `.account.use help::1`)
 - **Then:** Exits 0. Help output contains `touch::` with default `1`, `imodel::` with default `auto`, `effort::` with default `auto`, and `trace::` with default `0`.
 - **Exit:** 0
-- **Source fn:** `aw26_help_shows_touch_imodel_effort` (in `tests/cli/account_mutations_test.rs`) — extend to assert `trace::` + default `0`
+- **Source fn:** `aw26_help_shows_touch_imodel_effort` (in `tests/cli/account_mutations_test.rs`) — `trace::` presence asserted; default `0` value not yet verified
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-09, AC-16](../../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -172,15 +172,15 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ---
 
-### FT-12: `trace::1 touch::1` active account — reading + fetch + idle-check + subprocess-skipped
+### FT-12: `trace::1 touch::1` active account — reading + fetch + idle-check + model + subprocess-skipped
 
 - **Given:** Account `alice@home.com` saved with valid OAuth token and an active 5h window (`five_hour.resets_at` present).
 - **When:** `clp .account.use name::alice@home.com trace::1`
-- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr: `reading {path}`, `reading: OK`, `quota fetch: OK`, `idle check: resets_at=present → already active`, `subprocess: skipped (reason: already active)`. No `model:` line emitted.
+- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr (in order): `reading {path}`, `reading: OK`, `quota fetch: OK`, `idle check: resets_at=present → already active`, `model: {model}  effort: {effort}`, `subprocess: skipped (reason: already active)`. The model/effort line IS emitted — quota fetch succeeded so model/effort can be resolved regardless of idle state.
 - **Exit:** 0
 - **Live:** yes (requires valid OAuth token and `five_hour.resets_at` present in live quota response)
 - **Source fn:** `aw29_lim_it_trace_active_account_subprocess_skipped` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/027_account_use_post_switch_touch.md AC-10, AC-11, AC-12, AC-14](../../../../docs/feature/027_account_use_post_switch_touch.md)
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-10, AC-11, AC-12, AC-13, AC-14](../../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
 

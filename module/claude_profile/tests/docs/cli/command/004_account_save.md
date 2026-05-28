@@ -15,8 +15,8 @@ Integration test planning for the `.account.save` command. See [command/namespac
 | IT-7 | `dry::1` prints action without creating file | Dry Run |
 | IT-8 | `dry::1` then `dry::0` creates file as previewed | Dry Run Fidelity |
 | IT-9 | Saved file content matches active credentials exactly | Data Integrity |
-| IT-10 | Missing `name::` and no inferrable email exits 1 | Inference Failure |
-| IT-14 | Missing `name::` with `emailAddress` in `~/.claude.json` — infers and saves | Name Inference |
+| IT-10 | Missing `name::` and no active marker exits 1 | Inference Failure |
+| IT-14 | Missing `name::` with per-machine active marker set — infers and saves | Name Inference |
 | IT-11 | Save creates `{name}.claude.json` with `oauthAccount` subtree; no `.settings.json` created (BUG-174 fix) | Metadata Snapshot |
 | IT-12 | Save succeeds when `~/.claude.json` absent — only credential file created | Metadata Snapshot / Best-Effort |
 | IT-13 | Save succeeds when `~/.claude.json` present but lacks `oauthAccount` key — no `.claude.json` snapshot created | Metadata Snapshot / Best-Effort |
@@ -136,11 +136,11 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 ---
 
-### IT-10: Missing `name::` — no inferrable email exits 1
+### IT-10: Missing `name::` — no active marker exits 1
 
-- **Given:** Create `~/.claude/.credentials.json` with valid credential content. Ensure `~/.claude.json` does NOT exist (or exists with no `emailAddress` field).
+- **Given:** Create `~/.claude/.credentials.json` with valid credential content. Ensure no `_active_{hostname}_{user}` marker file exists in `{credential_store}` (or credential store itself is absent).
 - **When:** `clp .account.save`
-- **Then:** Error message: `cannot infer account name: emailAddress absent from ~/.claude.json — pass name:: explicitly`. No file created.
+- **Then:** Error message: `cannot infer account name: no active account set — pass name:: explicitly`. No file created.
 - **Exit:** 1
 - **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
 
@@ -176,11 +176,11 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 ---
 
-### IT-14: Missing `name::` — email inferred from `~/.claude.json`
+### IT-14: Missing `name::` — name inferred from per-machine active marker
 
-- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists and contains `"emailAddress": "alice@acme.com"`.
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. Per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"alice@acme.com"`.
 - **When:** `clp .account.save`
-- **Then:** stdout: `saved current credentials as 'alice@acme.com'`. Credential file `{credential_store}/alice@acme.com.credentials.json` created; `name::` inferred from `emailAddress`; behaves identically to explicit `name::alice@acme.com`.
+- **Then:** stdout: `saved current credentials as 'alice@acme.com'`. Credential file `{credential_store}/alice@acme.com.credentials.json` created; `name::` inferred from per-machine active marker; behaves identically to explicit `name::alice@acme.com`.
 - **Exit:** 0
 - **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
 

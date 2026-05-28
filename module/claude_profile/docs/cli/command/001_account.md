@@ -88,19 +88,19 @@ clp .accounts format::table
 Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and extracts the `oauthAccount` subtree from `~/.claude.json` into `{name}.claude.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`, `settings.json`) is not captured. Use this to preserve account identity before switching.
 
 -- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name or cannot infer email) | 2 (runtime: credentials unreadable)
+-- **Exit:** 0 (success) | 1 (usage: invalid name or no active account set) | 2 (runtime: credentials unreadable)
 
 **Syntax:**
 
 ```bash
-clp .account.save                          # infer name from ~/.claude.json emailAddress
+clp .account.save                          # infer name from per-machine active marker (_active_{hostname}_{user})
 clp .account.save name::alice@acme.com    # explicit name
 clp .account.save name::alice@acme.com dry::1
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `name::` | [`AccountName`](../type/001_account_name.md) | `auto` (inferred from `~/.claude.json` `emailAddress`) | Account email to save as |
+| `name::` | [`AccountName`](../type/001_account_name.md) | `auto` (inferred from per-machine active marker — see [Feature 025](../../feature/025_per_machine_active_marker.md)) | Account email to save as |
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for credential read and file write steps |
 
@@ -108,7 +108,7 @@ clp .account.save name::alice@acme.com dry::1
 
 ```bash
 clp .account.save
-# saved current credentials as 'alice@acme.com'   (inferred from ~/.claude.json)
+# saved current credentials as 'alice@acme.com'   (inferred from per-machine active marker)
 
 clp .account.save name::alice@acme.com dry::1
 # [dry-run] would save current credentials as 'alice@acme.com'

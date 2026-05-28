@@ -924,7 +924,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   // Pre-fetch quota before the switch while the target credential file is still readable.
   let touch_ctx = if touch != 0
   {
-    crate::usage::pre_switch_touch_ctx( &name, &credential_store, trace )
+    crate::usage::pre_switch_touch_ctx( &name, &credential_store, trace, &imodel_str, &effort_str )
   }
   else
   {
@@ -1130,7 +1130,7 @@ pub fn dot_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result<
 /// # Errors
 ///
 /// Returns `ErrorData` if the name cannot be resolved (explicit empty value or
-/// `emailAddress` absent from `~/.claude.json`), HOME is unset,
+/// `_active` marker absent from the credential store), HOME is unset,
 /// or the credential copy fails.
 #[ inline ]
 pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
@@ -1144,12 +1144,18 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
       return Err( ErrorData::new( ErrorCode::ArgumentMissing, "name:: value cannot be empty".to_string() ) ),
     _ =>
     {
-      let cj = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
-      crate::account::parse_string_field( &cj, "emailAddress" )
+      // Fix(BUG-209): read _active marker (authoritative) instead of emailAddress (stale after switch_account).
+      // Root cause: switch_account() patches only oauthAccount in ~/.claude.json; emailAddress is never updated.
+      // Pitfall: any caller that reads emailAddress for "current account" gets the prior account after a switch.
+      let cs          = require_credential_store()?;
+      let marker_path = cs.join( crate::account::active_marker_filename() );
+      std::fs::read_to_string( &marker_path )
+        .ok()
+        .map( | s | s.trim().to_string() )
         .filter( | s | !s.is_empty() )
         .ok_or_else( || ErrorData::new(
           ErrorCode::ArgumentMissing,
-          "cannot infer account name: emailAddress absent from ~/.claude.json — pass name:: explicitly".to_string(),
+          "cannot infer account name: no active account set — pass name:: explicitly".to_string(),
         ) )?
     }
   };

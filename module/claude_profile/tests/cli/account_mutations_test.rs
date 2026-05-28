@@ -17,12 +17,12 @@
 //! | as07 | `as07_save_slash_name_exits_1` | name with `/` → exit 1 | N |
 //! | as08 | `as08_save_backslash_name_exits_1` | name with `\` → exit 1 | N |
 //! | as09 | `as09_save_star_name_exits_1` | name with `*` → exit 1 | N |
-//! | as10 | `as10_save_infer_absent_email_exits_1` | no `name::`, no emailAddress → exit 1 | N |
+//! | as10 | `as10_save_infer_absent_email_exits_1` | no `name::`, no `_active` marker → exit 1 | N |
 //! | as11 | `as11_save_missing_credentials_exits_2` | no credentials file → exit 2 | N |
 //! | as12 | `as12_save_auto_creates_credential_store` | credential store auto-created | P |
 //! | as13 | `as13_save_dry_then_exec_match` | dry then exec → same output | P |
 //! | as14 | `as14_save_file_matches_source` | saved content matches source | P |
-//! | as15 | `as15_save_infers_email_from_claude_json` | no `name::`, emailAddress present → exit 0 | P |
+//! | as15 | `as15_save_infers_name_from_active_marker` | no `name::`, `_active` marker present → exit 0 | P |
 //! | as16 | `as16_save_writes_active_marker` | save writes active marker = name | P |
 //! | as17 | `as17_save_slash_in_email_local_part_exits_1` | `/` in email local part → exit 1 | N |
 //! | as18 | `as18_save_backslash_in_email_local_part_exits_1` | `\` in email local part → exit 1 | N |
@@ -46,14 +46,16 @@
 //! | aw13 | `aw13_use_positional_bare_arg` | positional email `personal@home.com` → switches | P |
 //! | aw14 | `aw14_use_prefix_resolves` | prefix `car` resolves to `carol@example.com`, switches | P |
 //! | aw15 | `aw15_use_prefix_ambiguous_exits_1` | ambiguous prefix `a` → exit 1 with "ambiguous" | N |
+//! | aw16 | `aw16_exact_local_part_wins_over_ambiguous_prefix` | `i1` resolves to `i1@` when `i11@`/`i12@` also exist | P |
+//! | aw17 | `aw17_use_prefix_ambiguous_no_exact_local_part_exits_1` | prefix `i1` → exit 1 when only `i11@`/`i12@` exist (no `i1@`) | N |
 //! | aw22 | `aw22_touch_disabled_switch_succeeds` | `touch::0` → switch exits 0, no quota fetch | P |
 //! | aw23 | `aw23_touch_skipped_no_access_token` | `touch::1` (default) + no `accessToken` → exit 0 | P |
 //! | aw24 | `aw24_imodel_bad_value_exits_1` | `imodel::bad` → exit 1, stderr lists valid values | N |
 //! | aw25 | `aw25_effort_bad_value_exits_1` | `effort::bad` → exit 1, stderr lists valid values | N |
 //! | aw26 | `aw26_help_shows_touch_imodel_effort` | `.account.use.help` lists `touch`, `imodel`, `effort`, `trace` | P |
 //! | aw27 | `aw27_lim_it_touch_with_live_token` | live token + `touch::1` → switch exits 0 (`lim_it`) | P |
-//! | aw28 | `aw28_trace_idle_account_all_lines` | `trace::1` + live idle token → all 6 trace lines on stderr (`lim_it`) | P |
-//! | aw29 | `aw29_trace_active_account_subprocess_skipped` | `trace::1` + live active token → skipped trace lines (`lim_it`) | P |
+//! | aw28 | `aw28_lim_it_trace_idle_account_all_lines` | `trace::1` + live idle token → all 6 trace lines on stderr (`lim_it`) | P |
+//! | aw29 | `aw29_lim_it_trace_active_account_subprocess_skipped` | `trace::1` + live active token → read+fetch+idle-check+model+subprocess-skipped lines (`lim_it`) | P |
 //! | aw30 | `aw30_trace_fetch_failure_skips_idle_model_lines` | `trace::1` + invalid token → fetch-err + subprocess-skipped only | N |
 //! | aw31 | `aw31_trace_touch_disabled_no_trace_lines` | `touch::0 trace::1` → no `[trace] account.use` lines | P |
 //! | aw32 | `aw32_trace_bad_value_exits_1` | `trace::bad` → exit 1, stderr lists valid values | N |
@@ -93,6 +95,12 @@
 //! | ar07 | `ar07_relogin_positional_bare_arg` | positional `work@acme.com dry::1` → resolves | P |
 //! | ar08 | `ar08_relogin_prefix_resolves` | prefix `work dry::1` → `work@acme.com` | P |
 //! | ar09 | `ar09_relogin_invalid_chars_exits_1` | `name::bad/name` → exit 1 | N |
+//!
+//! ### Bug Reproducers
+//!
+//! | ID | Test Function | Condition | P/N |
+//! |----|---------------|-----------|-----|
+//! | mre_bug209 | `mre_bug_209_account_save_uses_active_marker_not_stale_email` | `.account.save` reads `_active` marker, not stale `emailAddress` | P |
 
 use crate::helpers::{
   run_cs, run_cs_with_env,
@@ -226,9 +234,9 @@ fn as09_save_star_name_exits_1()
 #[ test ]
 fn as10_save_infer_absent_email_exits_1()
 {
-  // IT-10: no ~/.claude.json → emailAddress absent → inference fails → exit 1.
-  // write_credentials writes only ~/.claude/.credentials.json, not ~/.claude.json,
-  // so the inference branch finds no emailAddress and must exit 1.
+  // IT-10: no _active marker → inference fails → exit 1.
+  // write_credentials writes only ~/.claude/.credentials.json, no _active marker is set,
+  // so the inference branch finds no active account and must exit 1.
   let dir = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
@@ -238,13 +246,21 @@ fn as10_save_infer_absent_email_exits_1()
 }
 
 #[ test ]
-fn as15_save_infers_email_from_claude_json()
+fn as15_save_infers_name_from_active_marker()
 {
-  // IT-14: ~/.claude.json present with emailAddress → inference succeeds → exit 0.
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
+  // IT-14: _active marker present → inference succeeds → exit 0, saves under marker name.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
-  write_claude_json( dir.path(), "alice@acme.com" );
+
+  // Write _active marker = "alice@acme.com" (simulates prior .account.use).
+  let store = dir.path()
+    .join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write(
+    store.join( claude_profile::account::active_marker_filename() ),
+    "alice@acme.com",
+  ).unwrap();
 
   let out = run_cs_with_env( &[ ".account.save" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -896,6 +912,33 @@ fn aw16_exact_local_part_wins_over_ambiguous_prefix()
   );
 }
 
+// ── aw17 ──────────────────────────────────────────────────────────────────────
+
+/// aw17 (AC-06, AC-11 / `015_name_shortcut_syntax.md` FT-08): prefix `i1` is ambiguous
+/// when only `i11@wbox.pro` and `i12@wbox.pro` exist — no `i1@wbox.pro` account.
+///
+/// The exact-local-part check (AC-11) finds no account with local part exactly `i1`.
+/// Falling through to prefix scan, both `i11@` and `i12@` match — ambiguity reported
+/// with exit 1 (AC-06). Complements aw16: positive case where `i1@` exists exits 0.
+#[ test ]
+fn aw17_use_prefix_ambiguous_no_exact_local_part_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  // Only i11 and i12 exist — no i1@wbox.pro. Prefix i1 matches both via starts_with.
+  write_account( dir.path(), "i11@wbox.pro", "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "i12@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".account.use", "i1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.to_lowercase().contains( "ambiguous" ),
+    "error must say 'ambiguous' when prefix i1 matches i11@ and i12@ but no i1@ exists, got:\n{err}",
+  );
+}
+
 // ── ad13 ──────────────────────────────────────────────────────────────────────
 
 #[ test ]
@@ -1413,12 +1456,11 @@ fn aw28_lim_it_trace_idle_account_all_lines()
   }
 }
 
-/// aw29: `trace::1 touch::1` live active account — subprocess-skipped trace lines (FT-12).
+/// aw29: `trace::1 touch::1` live active account — model/effort + subprocess-skipped trace (FT-12).
 ///
-/// `lim_it` — skips without a live OAuth token. Verifies active-path-specific trace lines
-/// (`resets_at=present → already active`, `subprocess: skipped (reason: already active)`)
-/// when the live account has an active 5h window. Skips active-path assertions if the account
-/// is idle (avoids false failures when live state differs from expectation).
+/// `lim_it` — skips without a live OAuth token. Verifies that when quota fetch succeeded AND
+/// the account is already active, the trace emits: idle-check, model/effort, subprocess-skipped.
+/// Skips active-path assertions if the account is idle (live state may differ from expectation).
 #[ test ]
 fn aw29_lim_it_trace_active_account_subprocess_skipped()
 {
@@ -1449,8 +1491,12 @@ fn aw29_lim_it_trace_active_account_subprocess_skipped()
       "aw29: active path must emit subprocess: skipped (reason: already active), got:\n{err}",
     );
     assert!(
-      !err.contains( "model:" ),
-      "aw29: active path must NOT emit model: line, got:\n{err}",
+      err.contains( "model:" ),
+      "aw29: active path must emit model: line when quota fetch OK (BUG-210 fix), got:\n{err}",
+    );
+    assert!(
+      err.contains( "effort:" ),
+      "aw29: active path must emit effort: line when quota fetch OK (BUG-210 fix), got:\n{err}",
     );
     assert!(
       !err.contains( "subprocess: spawned" ),
@@ -1674,5 +1720,68 @@ fn it_trace_account_relogin_accepted()
   assert!(
     err.contains( "[trace]" ),
     "trace::1 must emit [trace] lines to stderr for .account.relogin, got:\n{err}",
+  );
+}
+
+// ── Bug Reproducers ───────────────────────────────────────────────────────────
+
+/// bug_reproducer(BUG-209): `.account.save` reads stale `emailAddress` from `~/.claude.json`
+/// instead of the per-machine `_active` marker after `.account.use B`.
+///
+/// ## Fix Documentation — BUG-209
+///
+/// - **Root Cause:** `account_save_routine()` reads top-level `emailAddress` from `~/.claude.json`
+///   as the fallback name when `name::` is omitted. `switch_account()` patches only the
+///   `oauthAccount` subtree — `emailAddress` remains stale. After `.account.use B`, running
+///   `.account.save` (no `name::`) saves under account `A` and overwrites `_active` with `A`.
+/// - **Why Not Caught:** No test exercised the two-step sequence `.account.use B` →
+///   `.account.save` (no `name::`). `as15` tested emailAddress inference without a stale case.
+/// - **Fix Applied:** Read `_active_{hostname}_{user}` (per `active_marker_filename()`) instead of
+///   `emailAddress`. The `_active` marker is authoritative — `switch_account()` always writes it.
+/// - **Prevention:** Any code that infers "current account name" must read from the `_active`
+///   marker, not from `~/.claude.json` fields that are not synced on every switch.
+/// - **Pitfall:** `emailAddress` in `~/.claude.json` becomes stale immediately after any
+///   `switch_account()` call; never use it as a proxy for the active account name.
+#[ test ]
+fn mre_bug_209_account_save_uses_active_marker_not_stale_email()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Credentials required for save to succeed (write_credentials also creates ~/.claude/).
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  // Write stale ~/.claude.json: top-level emailAddress = "a@test.com" (prior account).
+  // switch_account() never updates this field — it is always stale after a switch.
+  std::fs::write(
+    dir.path().join( ".claude.json" ),
+    r#"{"emailAddress":"a@test.com","oauthAccount":{"emailAddress":"b@test.com"}}"#,
+  ).unwrap();
+
+  // Write _active marker = "b@test.com" — set by prior .account.use b@test.com.
+  let store = dir.path()
+    .join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  let marker = store.join( claude_profile::account::active_marker_filename() );
+  std::fs::write( &marker, "b@test.com" ).unwrap();
+
+  // .account.save with no name:: — must read _active (b@test.com), not emailAddress (a@test.com).
+  let out = run_cs_with_env( &[ ".account.save" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let stdout_text = stdout( &out );
+  assert!(
+    stdout_text.contains( "b@test.com" ),
+    "must save as b@test.com (active marker), got:\n{stdout_text}",
+  );
+  assert!(
+    !stdout_text.contains( "a@test.com" ),
+    "must NOT save as a@test.com (stale emailAddress), got:\n{stdout_text}",
+  );
+
+  // Active marker must still be b@test.com after save (save() writes the marker with the saved name).
+  let marker_content = std::fs::read_to_string( &marker ).unwrap_or_default();
+  assert_eq!(
+    marker_content.trim(), "b@test.com",
+    "active marker must remain b@test.com after save, got: {marker_content}",
   );
 }

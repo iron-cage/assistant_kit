@@ -31,7 +31,7 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
 [trace] account.use  {name}  reading: OK                              ← omitted on Err; Err stops trace
 [trace] account.use  {name}  quota fetch: OK                          ← or Err({msg}); Err skips idle+model+subprocess lines
 [trace] account.use  {name}  idle check: resets_at=absent → idle      ← or resets_at=present → already active
-[trace] account.use  {name}  model: {model}  effort: {effort}         ← only when idle
+[trace] account.use  {name}  model: {model}  effort: {effort}         ← when quota fetch OK (idle or already active); omitted when fetch failed
 [trace] account.use  {name}  subprocess: spawned                      ← or skipped (reason: already active | fetch failed)
 ```
 
@@ -62,7 +62,7 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 - **AC-10**: When `trace::1` and `touch::1`: emits `[trace] account.use  {name}  reading {path}` followed by `reading: OK` on success; if the credential file read fails, emits `reading: Err({msg})` and stops — no further trace lines for this invocation.
 - **AC-11**: When `trace::1` and `touch::1` and credential read succeeds: emits `[trace] account.use  {name}  quota fetch: OK` on success or `quota fetch: Err({msg})` on failure; Err stops idle-check and model/subprocess trace lines.
 - **AC-12**: When `trace::1` and `touch::1` and quota fetch succeeds: emits `[trace] account.use  {name}  idle check: resets_at=present → already active` (active path) or `idle check: resets_at=absent → idle` (idle path).
-- **AC-13**: When `trace::1` and `touch::1` and account is idle: emits `[trace] account.use  {name}  model: {model}  effort: {effort}` (using the resolved `IsolatedModel` display name and effort string) immediately before the subprocess call.
+- **AC-13**: When `trace::1` and `touch::1` and quota fetch succeeded: emits `[trace] account.use  {name}  model: {model}  effort: {effort}` (using the resolved model and effort strings) regardless of idle state — appears before `subprocess: spawned` (idle) and before `subprocess: skipped (reason: already active)` (active). Omitted only when fetch failed.
 - **AC-14**: When `trace::1` and `touch::1`: emits `[trace] account.use  {name}  subprocess: spawned` when the subprocess is dispatched (idle + fetch OK), or `subprocess: skipped (reason: already active)` / `subprocess: skipped (reason: fetch failed)` otherwise.
 - **AC-15**: When `trace::1` and `touch::0`: no `[trace] account.use` lines emitted — no quota fetch operations are performed on the `touch::0` path.
 - **AC-16**: `trace::` (Kind::String, default `0`) is registered on `.account.use`; `trace::bad` exits 1 with stderr naming `0`, `1`, `false`, `true`.

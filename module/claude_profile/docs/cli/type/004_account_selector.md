@@ -34,5 +34,5 @@ input contains '@'?
 **Commands:** [`.accounts`](../command/001_account.md#command--3-accounts) *(optional)*, [`.account.use`](../command/001_account.md#command--5-accountuse), [`.account.delete`](../command/001_account.md#command--6-accountdelete), [`.account.limits`](../command/001_account.md#command--11-accountlimits) *(optional)*
 
 **Notes:**
-- `.account.save` does NOT use prefix resolution — its `name::` value must be a full email (or omitted for auto-inference from `emailAddress` in `~/.claude.json`).
+- `.account.save` does NOT use prefix resolution — its `name::` value must be a full email (or omitted for auto-inference from the per-machine `_active` marker in the credential store).
 - `AccountSelector` is a documentation concept describing the adapter layer's resolution contract. The concrete Rust type that appears in function signatures after resolution is always `AccountName`.

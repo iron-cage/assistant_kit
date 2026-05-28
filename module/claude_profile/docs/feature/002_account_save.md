@@ -11,14 +11,14 @@
 
 `claude_profile` must copy `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json`, creating or overwriting the named entry. It also extracts the `oauthAccount` subtree from `~/.claude.json` and writes it as `{name}.claude.json` — containing only `{"oauthAccount": {...}}` — to preserve account identity for later enumeration by `.accounts`. Machine-global state (`commands.*`, `mcpServers`, `projects`) is never captured in the per-account snapshot. The credential store path is resolved per FR-6 (see `001_account_store_init.md`).
 
-**Name resolution** — when `name::` is omitted, the account name is inferred from `emailAddress` in `~/.claude.json`. If that field is absent, exits 1 with a clear message directing the user to pass `name::` explicitly.
+**Name resolution** — when `name::` is omitted, the account name is read from the per-machine active marker file (`_active_{hostname}_{user}` — see Feature 025). If the marker file is absent or empty, exits 1 with a clear message directing the user to pass `name::` explicitly.
 
 **Name validation** — account names must be valid email addresses:
 - Non-empty
 - Must contain `@` with non-empty local part and domain
 
 **Operation steps:**
-1. Resolve name: use explicit `name::` if provided; otherwise read `emailAddress` from `~/.claude.json` via `parse_string_field`; if absent, exit 1.
+1. Resolve name: use explicit `name::` if provided; otherwise read the per-machine active marker file (`{credential_store}/_active_{hostname}_{user}` via `active_marker_filename()` — see Feature 025) to get the current active account name; if the marker file is absent or empty, exit 1.
 2. Validate `name` against the rules above (exit 1 on violation).
 3. Resolve credential store directory and ensure it exists (`create_dir_all` — see FR-6).
 4. Read `~/.claude/.credentials.json`.
@@ -39,8 +39,8 @@
 - **AC-04**: `clp .account.save name::alice@acme.com dry::1` prints `[dry-run] would save current credentials as 'alice@acme.com'` and creates no files.
 - **AC-05**: When `~/.claude.json` contains an `oauthAccount` key, `{credential_store}/{name}.claude.json` is created alongside the credential file, containing only `{"oauthAccount": {...}}`.
 - **AC-07**: When `~/.claude.json` is absent or lacks an `oauthAccount` key, no `.claude.json` snapshot is created — save still succeeds.
-- **AC-08**: `clp .account.save` (no `name::`) with `emailAddress` present in `~/.claude.json` infers the account name from that field and saves normally; output reads `saved current credentials as '{email}'`.
-- **AC-09**: `clp .account.save` (no `name::`) when `~/.claude.json` has no `emailAddress` exits 1 with `cannot infer account name: emailAddress absent from ~/.claude.json — pass name:: explicitly`.
+- **AC-08**: `clp .account.save` (no `name::`) reads the per-machine active marker file to determine the current active account name and saves normally; output reads `saved current credentials as '{name}'`.
+- **AC-09**: `clp .account.save` (no `name::`) when the per-machine active marker file is absent or empty exits 1 with `cannot infer account name: no active account set — pass name:: explicitly`.
 - **AC-10**: After a successful `clp .account.save`, `{credential_store}/_active_{hostname}_{user}` (the per-machine active marker) contains the saved account name; `clp .credentials.status` shows `Account: {name}` immediately.
 - **AC-11**: `clp .account.save name::a/b@c.com` exits 1 — path-unsafe characters (`/`, `\`, `*`) in the email local part are rejected by `validate_name()` before any filesystem operation.
 - **AC-12**: When endpoint 005 responds successfully, `{credential_store}/{name}.roles.json` is created alongside the credential file.

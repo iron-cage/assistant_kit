@@ -49,7 +49,7 @@
 //! | cred12 | `cred12_json_extended_shape` | format::json → includes display_name, role, billing, model keys | P |
 //! | cred13 | `cred13_new_params_absent_by_default` | all 4 new opt-in params absent in single default invocation | P |
 //! | cred14 | `cred14_save_writes_active_shown_in_credentials_status` | after .account.save → Account: {name} in .credentials.status | P |
-//! | cred15 | `cred15_save_infers_name_from_email` | save (no name::) → infers email → _active → Account: shows inferred name | P |
+//! | cred15 | `cred15_save_infers_name_from_active_marker` | save (no name::) → reads `_active` marker → Account: shows inferred name | P |
 //! | cred16 | `cred16_uuid_opt_in_shows_id_line` | `uuid::1` → ID: line with taggedId value | P |
 //! | cred17 | `cred17_uuid_out_of_range_rejected` | `uuid::2` → exit 1 | N |
 //! | cred18 | `cred18_uuid_string_value_rejected` | `uuid::yes` → exit 1 | N |
@@ -474,27 +474,35 @@ fn cred14_save_writes_active_shown_in_credentials_status()
 
 // ── cred15 ────────────────────────────────────────────────────────────────────
 
-/// cred15: `.account.save` with no `name::` infers email from `~/.claude.json → emailAddress`.
+/// cred15: `.account.save` with no `name::` reads the `_active` marker for the inferred name.
 ///
-/// Confirms the full inferred-name path: `save()` reads emailAddress, writes `_active`,
-/// and `.credentials.status` shows that email as `Account:`.
+/// Confirms the full inferred-name path: `save()` reads the `_active` marker, writes `_active`
+/// (re-affirms the same name), and `.credentials.status` shows that email as `Account:`.
 ///
 /// ## Fix Documentation — issue-inferred-name-save
 ///
 /// - **Root Cause:** No test covered the save-without-name path end-to-end.
 /// - **Why Not Caught:** cred14 only tested the explicit-name save path.
 /// - **Fix Applied:** Added cred15 to guard the inferred-name → _active → Account: path.
-/// - **Prevention:** This test will fail if emailAddress inference or _active write breaks.
-/// - **Pitfall:** `write_claude_json` must be written before `save` so emailAddress is readable.
+/// - **Prevention:** This test will fail if _active marker read or _active write breaks.
+/// - **Pitfall:** The `_active` marker must be written before `.account.save` — it is the source.
 #[ test ]
-fn cred15_save_infers_name_from_email()
+fn cred15_save_infers_name_from_active_marker()
 {
-  let dir  = TempDir::new().unwrap();
-  let home = dir.path().to_str().unwrap();
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
-  write_claude_json( dir.path(), "inferred@example.com" );
 
-  // Save with no name:: — should infer email from ~/.claude.json.
+  // Write _active marker = "inferred@example.com" (simulates prior .account.use).
+  let store = dir.path()
+    .join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write(
+    store.join( claude_profile::account::active_marker_filename() ),
+    "inferred@example.com",
+  ).unwrap();
+
+  // Save with no name:: — must read _active marker.
   let save_out = run_cs_with_env( &[ ".account.save" ], &[ ( "HOME", home ) ] );
   assert_exit( &save_out, 0 );
 
@@ -504,7 +512,7 @@ fn cred15_save_infers_name_from_email()
   let text = stdout( &status_out );
   assert!(
     text.contains( "Account: inferred@example.com" ),
-    "Account: must show inferred email after nameless .account.save, got:\n{text}",
+    "Account: must show inferred name after nameless .account.save, got:\n{text}",
   );
 }
 
