@@ -100,7 +100,7 @@ render results as table
 | param | [cli/param/034_touch.md](../cli/param/034_touch.md) | `touch::` parameter specification |
 | param | [cli/param/019_refresh.md](../cli/param/019_refresh.md) | `refresh::` — runs before touch when both active |
 | doc | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch touch on `.account.use` — extends the touch concept to account switching |
-| bug | `task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md` | BUG-208: restore `switch_account` calls wrapped in `let _ = ...` — silent error discard, no `[trace]` line under `trace::1` |
+| bug | `task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md` | BUG-208 (Closed): restore `switch_account` calls wrapped in `let _ = ...` — silent error discard; superseded by BUG-211 (restore removed from `apply_touch`) |
 | bug | `task/claude_profile/bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md` | BUG-211 (Fixed): snapshot+restore removed from `apply_touch`; `save(update_marker=false)` suppresses `_active` writes during per-account cycling |
 | bug | `task/claude_profile/bug/214_touch_fires_for_7d_exhausted_accounts.md` | BUG-214 (TSK-217, ✅ Fixed): `apply_touch` fired subprocess for 7d-exhausted accounts — fixed via `seven_day_left()` guard |
 | bug | `task/claude_profile/bug/215_touch_idle_detection_ignores_7d_and_7d_sonnet_timers.md` | BUG-215 (TSK-218, ✅ Fixed): `apply_touch` trigger checked only `five_hour.resets_at`; 7d and 7d-Sonnet timer absence was ignored — fixed via 3-timer `all_running` check |

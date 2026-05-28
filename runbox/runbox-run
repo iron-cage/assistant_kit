@@ -281,6 +281,7 @@ cmd_test_offline()
 {
   _ensure_image
   _ensure_build_cache
+  echo "▶ $IMAGE ($CONTAINER_CMD)"
   "$CONTAINER_CMD" run --rm \
     -v "${IMAGE}_$CACHE_DIR:$WORKSPACE_DIR/$CACHE_DIR" \
     "$IMAGE"
@@ -300,6 +301,7 @@ cmd_lint()
   local userns_arg=()
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
   _ensure_image
+  echo "▶ $IMAGE ($CONTAINER_CMD)"
   "$CONTAINER_CMD" run --rm \
     "${userns_arg[@]}" \
     --user "$(id -u):$(id -g)" \
@@ -322,6 +324,7 @@ cmd_run()
   local userns_arg=()
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
   _ensure_image
+  echo "▶ $IMAGE ($CONTAINER_CMD)"
   "$CONTAINER_CMD" run --rm \
     "${userns_arg[@]}" \
     --user "$(id -u):$(id -g)" \
@@ -339,6 +342,7 @@ cmd_list()
   # Same volume as cmd_test so .list artifacts persist between repeated .list calls.
   _plugin_list_args
   _plugin_list_cmd
+  echo "▶ $IMAGE ($CONTAINER_CMD)"
   "$CONTAINER_CMD" run --rm \
     "${userns_arg[@]}" \
     --user "$(id -u):$(id -g)" \
@@ -355,6 +359,7 @@ cmd_shell()
   local plugin_extra_args=()
   _plugin_shell_extra_args
   args+=( "${plugin_extra_args[@]}" )
+  echo "▶ $IMAGE ($CONTAINER_CMD)"
   "$CONTAINER_CMD" run "${args[@]}" "$IMAGE" bash
 }
 

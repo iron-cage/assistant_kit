@@ -3,13 +3,13 @@
 ### Scope
 
 - **Purpose**: Provide configurable row ordering in `.usage` output, optimized for distinct operational workflows — long-running agent sessions, draining low-quota accounts, and exploiting upcoming quota resets.
-- **Responsibility**: Documents the `sort::`, `desc::`, and `prefer::` parameters on `.usage`, including the 4 heuristic sort strategies, the `drain` default, and the `next` meta-strategy.
-- **In Scope**: Sort strategies (`name`, `endurance`, `drain`, `reset`, `next`), direction control (`desc::`), model preference for weekly quota selection (`prefer::`), context-sensitive `desc::` defaults per strategy, three-tier universal display grouping (🟢 → 🟡 → 🔴 applied before sort within each tier, with h-exhausted sub-group before weekly-exhausted sub-group within 🟡), `drain` as the default strategy, `next` as a meta-strategy that mirrors the active `next::` algorithm so the `→` winner always appears first.
+- **Responsibility**: Documents the `sort::`, `desc::`, and `prefer::` parameters on `.usage`, including the 4 heuristic sort strategies, the `renew` default, and the `next` meta-strategy.
+- **In Scope**: Sort strategies (`name`, `endurance`, `drain`, `renew`, `next`), direction control (`desc::`), model preference for weekly quota selection (`prefer::`), context-sensitive `desc::` defaults per strategy, three-tier universal display grouping (🟢 → 🟡 → 🔴 applied before sort within each tier, with h-exhausted sub-group before weekly-exhausted sub-group within 🟡), `renew` as the default strategy, `next` as a meta-strategy that mirrors the active `next::` algorithm so the `→` winner always appears first.
 - **Out of Scope**: Row rendering (→ 009_token_usage.md), `→ Next` recommendation algorithm (→ 023_next_account_strategies.md), `.account.rotate` selection (→ 008_auto_rotate.md), `live::` monitor loop mechanics (→ 018_live_monitor.md).
 
 ### Design
 
-`.usage` accepts a `sort::` parameter to control row ordering. The default (`sort::drain`) puts accounts with the lowest weekly quota at the top — aligned with the `next::drain` recommendation strategy for a coherent default UX. Alphabetical ordering (`sort::name`) is available for positional stability, especially in `live::1` monitor mode. Four heuristic strategies are available for single-shot decision-making, plus `sort::next` — a meta-strategy that dynamically mirrors whatever `next::` algorithm is active, guaranteeing the `→` recommended account always appears at the top of the table.
+`.usage` accepts a `sort::` parameter to control row ordering. The default (`sort::renew`) puts accounts with the soonest weekly quota reset at the top — maximizing throughput by consuming quota that will be replenished first. Alphabetical ordering (`sort::name`) is available for positional stability, especially in `live::1` monitor mode. Four heuristic strategies are available for single-shot decision-making, plus `sort::next` — a meta-strategy that dynamically mirrors whatever `next::` algorithm is active, guaranteeing the `→` recommended account always appears at the top of the table.
 
 **Three-tier display grouping:** Regardless of the chosen sort strategy, accounts are first grouped by composite health tier: 🟢 tier (`5h Left > 15%` and `7d Left > 5%`) → 🟡 tier (either `5h Left ≤ 15%` or `7d Left ≤ 5%`) → 🔴 tier (error/missing token). Within the 🟡 tier, accounts are further ordered into two sub-groups: **h-exhausted** (`5h Left ≤ 15%`) first, then **weekly-exhausted** (`5h Left > 15%` and `7d Left ≤ 5%`). Accounts where both quotas are below threshold fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. This ensures healthy accounts always appear above exhausted or errored accounts, regardless of sort direction or strategy.
 
@@ -28,7 +28,7 @@
 | `name` | `0` (ascending) | A→Z reading order |
 | `endurance` | `1` (descending) | Best-qualified on top |
 | `drain` | `0` (ascending) | Drain targets on top |
-| `reset` | `0` (ascending) | Soonest reset on top |
+| `renew` | `0` (ascending) | Soonest reset on top |
 
 #### Strategy 1: `sort::name`
 
@@ -47,7 +47,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 **Rationale:** An account whose 5h window resets in 15–60 minutes will soon have 100% fresh session quota. Combined with ≥30% weekly runway, it can sustain a full 5-hour agent run without hitting any limit. The 15-minute floor avoids accounts that reset imminently (race condition with session start).
 
-#### Strategy 3: `sort::drain` (default)
+#### Strategy 3: `sort::drain`
 
 **Goal:** Use accounts with the lowest weekly (7d) quota first, preserving high-quota accounts for later.
 
@@ -58,7 +58,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 **Rationale:** Weekly quota is the scarcest resource — it doesn't reset for 7 days. Draining accounts with the lowest 7d runway first ensures the limited weekly budget is consumed before expiry, rather than targeting only session-depleted accounts (which reset every 5 hours anyway).
 
-#### Strategy 4: `sort::reset`
+#### Strategy 4: `sort::renew`
 
 **Goal:** Use accounts whose weekly quota (7d) refills soonest.
 
@@ -81,14 +81,14 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 ### Acceptance Criteria
 
-- **AC-01**: `sort::drain` (default) sorts rows by `7d Left` (prefer-aware) ascending within each tier; tiebreak is `5h Left` ascending. `sort::name` sorts alphabetically. When `sort::` is omitted, `drain` is used.
+- **AC-01**: `sort::drain` sorts rows by `7d Left` (prefer-aware) ascending within each tier; tiebreak is `5h Left` ascending. `sort::name` sorts alphabetically. When `sort::` is omitted, `renew` is used.
 - **AC-02**: `sort::endurance` ranks qualified accounts (5h Reset 15–60 min, weekly(prefer) ≥ 30%) above unqualified accounts; within qualified, highest weekly first then soonest reset; within unqualified, highest `weekly(prefer)` first as tiebreaker when session quotas are equal.
 - **AC-03**: `sort::drain` sorts by `7d Left` (prefer-aware) ascending; tiebreak is `5h Left` ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
-- **AC-04**: `sort::reset` sorts by `7d Reset` countdown ascending (soonest weekly reset first); tiebreak is `7d Left` (prefer-aware) ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
+- **AC-04**: `sort::renew` sorts by `7d Reset` countdown ascending (soonest weekly reset first); tiebreak is `7d Left` (prefer-aware) ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
 - **AC-05**: `desc::1` reverses the sort direction within each tier; `desc::0` uses the strategy's natural direction. The three-tier grouping (🟢 → 🟡 → 🔴) and the 🟡 h-/weekly-exhausted sub-grouping are never reversed by `desc::`.
-- **AC-06**: Each strategy has a context-sensitive `desc::` default: `name`→`0`, `endurance`→`1`, `drain`→`0`, `reset`→`0`.
+- **AC-06**: Each strategy has a context-sensitive `desc::` default: `name`→`0`, `endurance`→`1`, `drain`→`0`, `renew`→`0`.
 - **AC-07**: `prefer::any` (default) uses `min(7d Left, 7d(Son))` as weekly quota; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
-- **AC-08**: `prefer::` affects `sort::endurance` (qualification gate ≥ 30%), `sort::drain` (primary sort key), and `sort::reset` (tiebreak). For drain: `prefer_weekly` is the primary sort key (ascending — lowest first); `5h Left` is the tiebreak. For reset: `7d Reset` countdown is the primary key; `prefer_weekly` is the tiebreak (ascending).
+- **AC-08**: `prefer::` affects `sort::endurance` (qualification gate ≥ 30%), `sort::drain` (primary sort key), and `sort::renew` (tiebreak). For drain: `prefer_weekly` is the primary sort key (ascending — lowest first); `5h Left` is the tiebreak. For renew: `7d Reset` countdown is the primary key; `prefer_weekly` is the tiebreak (ascending).
 - **AC-09**: Invalid `sort::` value exits 1 with an error naming the valid values.
 - **AC-10**: Invalid `prefer::` value exits 1 with an error naming the valid values.
 - **AC-11**: `sort::` and `desc::` do not affect the `→` recommendation marker or footer — those are controlled by the `next::` parameter (see 023_next_account_strategies.md). The footer always shows both strategy recommendations (endurance, drain) regardless of `sort::` or `next::` values. The `next::endurance` and `next::drain` strategies reuse the same sort algorithms but select independently from the table sort order.

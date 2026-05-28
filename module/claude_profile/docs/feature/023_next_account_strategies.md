@@ -52,7 +52,7 @@ The account selected by the active `next::` strategy receives the `→` flag in 
 
 ### Worked Example
 
-Eight accounts, two ineligible (`✓` current, `*` active-but-not-current), six eligible candidates. `prefer::any` (default), `sort::drain` (default).
+Eight accounts, two ineligible (`✓` current, `*` active-but-not-current), six eligible candidates. `prefer::any` (default), `sort::drain`.
 
 **Eligible candidates:**
 

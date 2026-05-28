@@ -24,7 +24,7 @@ clp .usage refresh::1 trace::1
 clp .usage sort::endurance
 clp .usage sort::drain prefer::sonnet
 clp .usage sort::endurance desc::0
-clp .usage sort::reset prefer::opus
+clp .usage sort::renew prefer::opus
 clp .usage next::endurance
 clp .usage next::drain
 clp .usage sort::next
@@ -45,8 +45,8 @@ clp .usage imodel::keep effort::high
 | `interval::` | `u64` | `30` | Seconds between refresh cycles (≥ 30; only validated when `live::1`) |
 | `jitter::` | `u64` | `0` | Max random seconds added to each cycle delay (≤ interval; only validated when `live::1`) |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
-| `sort::` | `enum` | `drain` | Row ordering strategy: `drain` (lowest weekly quota first), `name` (alphabetical), `endurance` (sustained session), `reset` (soonest quota refill), `next` (mirrors active `next::` strategy) |
-| `desc::` | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy (`name`/`drain`/`reset`→`0`, `endurance`→`1`) |
+| `sort::` | `enum` | `renew` | Row ordering strategy: `renew` (soonest quota refill), `drain` (lowest weekly quota first), `name` (alphabetical), `endurance` (sustained session), `next` (mirrors active `next::` strategy) |
+| `desc::` | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy (`name`/`drain`/`renew`→`0`, `endurance`→`1`) |
 | `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any` = `min(7d Left, 7d(Son))`, `opus` = `7d Left`, `sonnet` = `7d(Son)` |
 | `next::` | `enum` | `drain` | Strategy placing `→` on recommended account: `drain`, `endurance`; footer always shows both |
 | `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to default set |
