@@ -36,6 +36,12 @@ pub enum IsolatedModel {
     KeepCurrent,       // no --model flag; Claude binary chooses
     Specific(String),  // prepends --model <id>
 }
+
+impl IsolatedModel {
+    /// Returns the model ID string to inject via `--model`, or `None` for `KeepCurrent`.
+    /// Used internally by `run_isolated()` (algorithm step 3) to build the arg list.
+    pub fn model_id(&self) -> Option<&str>;
+}
 ```
 
 `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, and `ISOLATED_DEFAULT_MODEL` are defined in `src/isolated.rs` and re-exported from `src/lib.rs`. They are unconditionally available so callers can name the types in function signatures and test code without `#[cfg]` guards.

@@ -94,5 +94,5 @@ work@acme.com
 | doc | [command/readme.md](../cli/command/readme.md) | Syntax blocks for `.accounts` and `.usage` |
 | test | `tests/cli/accounts_test.rs` | IT-26, IT-27, IT-28 — current detection in `.accounts` |
 | test | `tests/cli/usage_test.rs` | IT-13..IT-16 — live detection and active divergence in `.usage` |
-| bug | `task/claude_profile/bug/218_fetch_all_quota_synthetic_row_collides_with_existing_account.md` | BUG-218 🔴 Open: `fetch_all_quota()` unconditional `results.insert(0, ...)` — no name-collision guard; fix is `if !results.iter().any(|r| r.name == synthetic_name)` at `usage.rs:341` |
-| bug | `task/claude_profile/bug/217_switch_account_corrupts_claude_json_with_stale_snapshot_emailaddress.md` | BUG-217 🔴 Open: stale `emailAddress` from snapshot causes wrong `synthetic_name` in BUG-218 precondition chain |
+| bug | `task/claude_profile/bug/218_fetch_all_quota_synthetic_row_collides_with_existing_account.md` | BUG-218 🟢 Fixed: `fetch_all_quota()` now guards synthetic-row insertion via `inject_synthetic_if_new()` — suppresses insert when `synthetic_name` already appears in stored-account list |
+| bug | `task/claude_profile/bug/217_switch_account_corrupts_claude_json_with_stale_snapshot_emailaddress.md` | BUG-217 🟢 Fixed: stale `emailAddress` precondition eliminated; `switch_account()` now enforces `emailAddress == name` before insert |
