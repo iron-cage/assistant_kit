@@ -626,7 +626,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage sort::renew`
 - **Then:** Exits 0 with "(no accounts configured)". No unknown-parameter error.
 - **Exit:** 0
-- **Source fn:** ⏳ `it046_sort_renew_accepted` (rename from `it046_sort_reset_accepted`)
+- **Source fn:** `it046_sort_renew_accepted`
 - **Source:** [feature/020_usage_sort_strategies.md AC-04](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---

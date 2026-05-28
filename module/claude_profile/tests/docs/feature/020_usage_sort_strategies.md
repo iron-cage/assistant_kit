@@ -89,7 +89,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, now_secs)`
 - **Then:** Order: `A`, `B`, `C`, then `D` (sunk). Non-h-exhausted sorted by soonest `7d Reset` countdown first.
 - **Exit:** n/a (unit test)
-- **Source fn:** ⏳ `test_sort_renew_soonest_first_exhausted_last` (in `src/usage.rs`) — rename from `test_sort_reset_soonest_first_exhausted_last`
+- **Source fn:** `test_sort_renew_soonest_first_exhausted_last` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-04](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -207,7 +207,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, now_secs)` — default strategy is `renew`.
 - **Then:** `early@test.com` ranks first (resets in 1h — soonest reset first), `late@test.com` second. Confirms renew default = `desc::0`.
 - **Exit:** n/a (unit test)
-- **Source fn:** ⏳ `test_sort_renew_default_equals_desc0` (in `src/usage.rs`); ⏳ `it127_sort_default_is_renew_structural` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `test_sort_renew_default_equals_desc0` (in `src/usage.rs`); `it127_sort_default_is_renew_structural` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---

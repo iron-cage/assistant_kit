@@ -78,18 +78,21 @@ work@acme.com
 - **AC-06**: `.usage` `*` marks the account with the per-machine active marker when it differs from the current account; no `*` appears when current = active.
 - **AC-07**: When `.usage` credentials file is unreadable: no `✓` on any row; `*` still marks the active account.
 - **AC-08**: `.usage` JSON output uses `is_current` (replacing the old `active` field) and adds `is_active` per object.
-- **AC-09**: When no saved account matches the live token, `.usage` prepends a synthetic `(current session)` row with `✓` and no `*`.
+- **AC-09**: When no saved account matches the live token, `.usage` prepends a synthetic current-session row with `✓` and no `*` — provided the derived name (from `~/.claude.json oauthAccount.emailAddress`) does not already appear in the stored-account list. When the derived name collides with an existing stored account name, injection is suppressed; the stored row carries the quota data for that account. Unconditional injection when a collision exists is a defect (BUG-218).
 - **AC-10**: `.accounts` `is_current` and `.usage` `is_current` both use the same detection algorithm (token equality, no hashing, no prefix matching).
+- **AC-11**: The quota table produced by `fetch_all_quota()` contains at most one row per unique account name. The synthetic-row injection path enforces this via a lookup-then-insert (`results.iter().any(|r| r.name == synthetic_name)`) before calling `results.insert(0, ...)`. This invariant prevents the downstream `apply_refresh` and `apply_touch` phases from processing the same account twice, which would cause spurious double-refresh or double-subprocess spawning against the same credential file.
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/commands.rs` | `accounts_routine()` — `is_current` detection, `Current:` line, `current::` param |
-| source | `src/usage.rs` | `fetch_all_quota()` — `is_current` via token matching; `is_active` from per-machine active marker; `*` flag rendering |
+| source | `src/usage.rs` | `fetch_all_quota()` — `is_current` via token matching; `is_active` from per-machine active marker; `*` flag rendering; synthetic-row name-collision guard (AC-09, AC-11) |
 | doc | [003_account_list.md](003_account_list.md) | `.accounts` base command — field table and AC extended here |
 | doc | [009_token_usage.md](009_token_usage.md) | `.usage` base command — flag column and JSON schema extended here |
 | doc | [cli/param/018_current.md](../cli/param/018_current.md) | `current::` field-presence parameter |
 | doc | [command/readme.md](../cli/command/readme.md) | Syntax blocks for `.accounts` and `.usage` |
 | test | `tests/cli/accounts_test.rs` | IT-26, IT-27, IT-28 — current detection in `.accounts` |
 | test | `tests/cli/usage_test.rs` | IT-13..IT-16 — live detection and active divergence in `.usage` |
+| bug | `task/claude_profile/bug/218_fetch_all_quota_synthetic_row_collides_with_existing_account.md` | BUG-218 🔴 Open: `fetch_all_quota()` unconditional `results.insert(0, ...)` — no name-collision guard; fix is `if !results.iter().any(|r| r.name == synthetic_name)` at `usage.rs:341` |
+| bug | `task/claude_profile/bug/217_switch_account_corrupts_claude_json_with_stale_snapshot_emailaddress.md` | BUG-217 🔴 Open: stale `emailAddress` from snapshot causes wrong `synthetic_name` in BUG-218 precondition chain |

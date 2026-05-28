@@ -24,7 +24,7 @@ use crate::output::{ OutputFormat, OutputOptions, format_duration_secs, json_esc
 // ── Sort and prefer strategies ─────────────────────────────────────────────────
 
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-enum SortStrategy { Name, Endurance, Drain, Reset, Next }
+enum SortStrategy { Name, Endurance, Drain, Renew, Next }
 
 impl SortStrategy
 {
@@ -35,10 +35,10 @@ impl SortStrategy
       "name"      => Ok( Self::Name ),
       "endurance" => Ok( Self::Endurance ),
       "drain"     => Ok( Self::Drain ),
-      "reset"     => Ok( Self::Reset ),
+      "renew"     => Ok( Self::Renew ),
       "next"      => Ok( Self::Next ),
       _           => Err( format!(
-        "invalid sort:: value {s:?}: valid values are `name`, `endurance`, `drain`, `reset`, `next`",
+        "invalid sort:: value {s:?}: valid values are `name`, `endurance`, `drain`, `renew`, `next`",
       ) ),
     }
   }
@@ -227,6 +227,19 @@ fn read_token( credential_store : &std::path::Path, name : &str ) -> Result< Str
 /// (AC-09): `is_current: true`, name from `~/.claude.json` email or `(current session)`.
 /// Pitfall: this case is easy to miss when only testing the normal single-account path.
 ///
+/// Prepend `row` to `results` only when no entry with the same `name` is already present.
+///
+/// Enforces the at-most-one-row-per-name invariant for the synthetic current-session row
+/// injected by `fetch_all_quota`. Unconditional `results.insert(0, row)` creates a
+/// duplicate when `row.name` matches an existing stored account (BUG-218).
+fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : AccountQuota )
+{
+  if !results.iter().any( |r| r.name == row.name )
+  {
+    results.insert( 0, row );
+  }
+}
+
 /// When `stagger` is `true`, each account fetch is preceded by a pseudo-random sleep
 /// of 200–1500 ms (thunder-herd mitigation for live monitor mode).
 ///
@@ -338,7 +351,7 @@ fn fetch_all_quota(
       let expires_at_ms = parse_u64_field( live_creds_file, "expiresAt" ).unwrap_or( 0 );
       let result        = claude_quota::fetch_oauth_usage( token ).map_err( |e| e.to_string() );
       let account       = claude_quota::fetch_oauth_account( token ).ok();
-      results.insert( 0, AccountQuota
+      inject_synthetic_if_new( &mut results, AccountQuota
       {
         name : synthetic_name,
         is_current    : true,
@@ -763,7 +776,7 @@ fn sort_indices(
       non_exhausted
     }
 
-    SortStrategy::Reset =>
+    SortStrategy::Renew =>
     {
       let reset_secs_of = |i : usize| -> u64
       {
@@ -2016,7 +2029,7 @@ fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorDat
   };
   let sort = match cmd.arguments.get( "sort" )
   {
-    None                         => SortStrategy::Drain,
+    None                         => SortStrategy::Renew,
     Some( Value::String( s ) )   => SortStrategy::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
     _ => return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
@@ -3647,7 +3660,7 @@ mod tests
     assert!( err.contains( "name" ),      "error must name valid values; got: {err}" );
     assert!( err.contains( "endurance" ), "error must name valid values; got: {err}" );
     assert!( err.contains( "drain" ),     "error must name valid values; got: {err}" );
-    assert!( err.contains( "reset" ),     "error must name valid values; got: {err}" );
+    assert!( err.contains( "renew" ),     "error must name valid values; got: {err}" );
     assert!( err.contains( "next" ),      "error must name valid values; got: {err}" );
   }
 
@@ -3705,7 +3718,7 @@ mod tests
     }
   }
 
-  // Helper: build ISO-8601 reset string at `now_secs + offset_secs` for sort::endurance / sort::reset tests.
+  // Helper: build ISO-8601 reset string at `now_secs + offset_secs` for sort::endurance / sort::renew tests.
   fn reset_iso_at( now_secs : u64, offset_secs : u64 ) -> String
   {
     let ts = now_secs + offset_secs;
@@ -3722,9 +3735,9 @@ mod tests
   //
   // Use for `sort::endurance` tests (qualification window reads `five_hour.resets_at`).
   //
-  // Pitfall: Do NOT use for `sort::reset` tests — the Reset arm reads `seven_day.resets_at`.
+  // Pitfall: Do NOT use for `sort::renew` tests — the Renew arm reads `seven_day.resets_at`.
   // If used there, `reset_secs_of` returns `u64::MAX` for all accounts (stable sort, not by time).
-  // Use `mk_aq_with_7d_reset` for Reset arm tests.
+  // Use `mk_aq_with_7d_reset` for Renew arm tests.
   fn mk_aq_with_reset( name : &str, five_hour_util : f64, now_secs : u64, reset_offset_secs : u64 ) -> AccountQuota
   {
     let data = claude_quota::OauthUsageData
@@ -3746,7 +3759,7 @@ mod tests
 
   // Helper: build AccountQuota with `seven_day.resets_at` set to `now_secs + reset_offset_secs`.
   //
-  // Use for `sort::reset` tests — the Reset arm reads `seven_day.resets_at` as its primary key.
+  // Use for `sort::renew` tests — the Renew arm reads `seven_day.resets_at` as its primary key.
   // `seven_day.utilization` is 0.0 (100% left). `five_hour.resets_at` is None.
   //
   // Pitfall: Do NOT use for `sort::endurance` tests — the Endurance arm reads `five_hour.resets_at`.
@@ -3835,9 +3848,9 @@ mod tests
     assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com","exhausted must still be last" );
   }
 
-  /// AC-04 — `sort::reset` places exhausted accounts last; non-exhausted sorted by soonest `7d Reset`.
+  /// AC-04 — `sort::renew` places exhausted accounts last; non-exhausted sorted by soonest `7d Reset`.
   #[ test ]
-  fn test_sort_reset_soonest_first_exhausted_last()
+  fn test_sort_renew_soonest_first_exhausted_last()
   {
     let now : u64 = 1_000_000;
     let accounts = vec![
@@ -3845,7 +3858,7 @@ mod tests
       mk_aq_with_7d_reset( "exhausted@test.com", 99.0, now, 600   ),  // ≤15% left — exhausted
       mk_aq_with_7d_reset( "soon@test.com",      30.0, now, 600   ),  // 70% left, 10min 7d reset
     ];
-    let indices = sort_indices( &accounts, SortStrategy::Reset, None, PreferStrategy::Any, now );
+    let indices = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, now );
     assert_eq!( accounts[ indices[ 0 ] ].name, "soon@test.com",      "soonest 7d reset must be first" );
     assert_eq!( accounts[ indices[ 1 ] ].name, "late@test.com",      "later 7d reset second" );
     assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com", "exhausted must be last" );
@@ -3886,6 +3899,23 @@ mod tests
     let idx_desc0   = sort_indices( &accounts, SortStrategy::Drain, Some( false ), PreferStrategy::Any, 0 );
     assert_eq!( idx_default, idx_desc0, "drain default must equal desc::0" );
     assert_eq!( accounts[ idx_default[ 0 ] ].name, "low@test.com", "lowest first with default drain" );
+  }
+
+  /// AC-06 / FT-14 — `sort::renew` without explicit `desc::` equals `desc::0` (soonest reset first).
+  ///
+  /// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-14]
+  #[ test ]
+  fn test_sort_renew_default_equals_desc0()
+  {
+    let now : u64 = 1_000_000;
+    let accounts = vec![
+      mk_aq_with_7d_reset( "late@test.com",  30.0, now, 86400 ),  // resets in 24h
+      mk_aq_with_7d_reset( "early@test.com", 30.0, now, 3600  ),  // resets in 1h (soonest)
+    ];
+    let idx_default = sort_indices( &accounts, SortStrategy::Renew, None,          PreferStrategy::Any, now );
+    let idx_desc0   = sort_indices( &accounts, SortStrategy::Renew, Some( false ), PreferStrategy::Any, now );
+    assert_eq!( idx_default, idx_desc0, "renew default must equal desc::0" );
+    assert_eq!( accounts[ idx_default[ 0 ] ].name, "early@test.com", "soonest reset first with default renew" );
   }
 
   /// AC-07 — `prefer::sonnet` uses `7d(Son)` for endurance qualification.
@@ -4022,9 +4052,9 @@ mod tests
     );
   }
 
-  /// CC-012 — `sort::reset desc::1` reverses non-exhausted tier; exhausted floor unchanged.
+  /// CC-012 — `sort::renew desc::1` reverses non-exhausted tier; exhausted floor unchanged.
   #[ test ]
-  fn test_sort_reset_desc1_reverses_non_exhausted_only()
+  fn test_sort_renew_desc1_reverses_non_exhausted_only()
   {
     let now : u64 = 1_000_000;
     let accounts = vec![
@@ -4033,9 +4063,9 @@ mod tests
       mk_aq_with_7d_reset( "exhausted@test.com", 99.0, now, 600  ),  // ≤15% left — sunk
     ];
     // desc::1 reverses non-exhausted: latest 7d reset first, soonest second; exhausted still last.
-    let idx = sort_indices( &accounts, SortStrategy::Reset, Some( true ), PreferStrategy::Any, now );
-    assert_eq!( accounts[ idx[ 0 ] ].name, "late@test.com",      "desc::1 reset: latest 7d reset first" );
-    assert_eq!( accounts[ idx[ 1 ] ].name, "soon@test.com",      "desc::1 reset: soonest 7d reset second" );
+    let idx = sort_indices( &accounts, SortStrategy::Renew, Some( true ), PreferStrategy::Any, now );
+    assert_eq!( accounts[ idx[ 0 ] ].name, "late@test.com",      "desc::1 renew: latest 7d reset first" );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "soon@test.com",      "desc::1 renew: soonest 7d reset second" );
     assert_eq!( accounts[ idx[ 2 ] ].name, "exhausted@test.com", "exhausted must still be last" );
   }
 
@@ -4101,9 +4131,9 @@ mod tests
     assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted drain: input order preserved" );
   }
 
-  /// CC-045 — `sort::reset` with all accounts exhausted preserves input order.
+  /// CC-045 — `sort::renew` with all accounts exhausted preserves input order.
   #[ test ]
-  fn test_sort_reset_all_exhausted_preserves_input_order()
+  fn test_sort_renew_all_exhausted_preserves_input_order()
   {
     let now : u64 = 1_000_000;
     let accounts = vec![
@@ -4111,10 +4141,10 @@ mod tests
       mk_aq_with_reset( "second@test.com", 97.0, now, 7200 ),  // 3% left — exhausted
       mk_aq_with_reset( "third@test.com",  95.0, now, 3600 ),  // 5% left — exhausted
     ];
-    let idx = sort_indices( &accounts, SortStrategy::Reset, None, PreferStrategy::Any, now );
-    assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted reset: input order preserved" );
-    assert_eq!( accounts[ idx[ 1 ] ].name, "second@test.com", "all-exhausted reset: input order preserved" );
-    assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted reset: input order preserved" );
+    let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, now );
+    assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted renew: input order preserved" );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "second@test.com", "all-exhausted renew: input order preserved" );
+    assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted renew: input order preserved" );
   }
 
   /// CC-058 — Account with `five_hour: None` is treated as non-exhausted (conservative 100% left).
@@ -5821,6 +5851,91 @@ mod tests
     assert!(
       result.is_none(),
       "fetch-failed path must return None, got Some(..)",
+    );
+  }
+
+  // ── BUG-218 ─────────────────────────────────────────────────────────────────
+
+  /// BUG-218 MRE: `fetch_all_quota()` must not inject a synthetic row when the derived
+  /// name already appears in the stored-account result list.
+  ///
+  /// # Root Cause
+  /// `results.insert(0, AccountQuota { name: synthetic_name, ... })` at usage.rs:341
+  /// is unconditional when `any_current == false`. When `~/.claude.json emailAddress`
+  /// matches an existing stored account name (a precondition enabled by BUG-217's stale
+  /// email install + subsequent token rotation), a duplicate row is created. `Valid: N+1`
+  /// is reported; `apply_refresh` and `apply_touch` then process the same account twice —
+  /// risking double-refresh or double subprocess spawning against the same credential file.
+  ///
+  /// # Why Not Caught
+  /// The synthetic row path was designed for the case where the live email is genuinely
+  /// unknown (first-run or external credential install). No test exercised the collision
+  /// path where `synthetic_name` matches an existing stored account name.
+  ///
+  /// # Fix Applied
+  /// `inject_synthetic_if_new()` — lookup-then-insert: only inject when `synthetic_name`
+  /// is absent from `results`. Enforces: at most one row per unique account name in the
+  /// quota table.
+  ///
+  /// # Prevention
+  /// Any "inject if not present" operation must be lookup-then-insert, not unconditional
+  /// insert. Collections built from two sources (directory scan + supplemental injection)
+  /// must merge on a unique key.
+  ///
+  /// # Pitfall
+  /// `any_current == false` is also true when BUG-217 installs a stale email that matches
+  /// an existing account — that is the exact collision precondition. Both bugs compound:
+  /// BUG-217 makes collision possible; BUG-218 makes it destructive.
+  // test_kind: bug_reproducer(BUG-218)
+  #[ test ]
+  fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
+  {
+    // Simulate post-fetch state:
+    //   - stored account "i6@wbox.pro" present (is_current=false — live token differs)
+    //   - any_current=false — no stored account matches the live session token
+    //   - synthetic_name derived from ~/.claude.json emailAddress = "i6@wbox.pro"
+    // BUG-218: fetch_all_quota() does results.insert(0, synthetic) unconditionally —
+    //   when synthetic_name == "i6@wbox.pro" which already exists, count becomes 2.
+    let stored_row = AccountQuota
+    {
+      name          : "i6@wbox.pro".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Err( "missing accessToken".to_string() ),
+      account       : None,
+    };
+    let mut results = vec![ stored_row ];
+
+    let synthetic = AccountQuota
+    {
+      name          : "i6@wbox.pro".to_string(),
+      is_current    : true,
+      is_active     : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Err( "missing accessToken".to_string() ),
+      account       : None,
+    };
+
+    // Fix(BUG-218): guarded injection — only insert when name is absent from results.
+    // Root cause: unconditional results.insert(0, ...) when any_current==false created
+    // duplicate rows when synthetic_name matched an existing stored account name;
+    // downstream apply_refresh and apply_touch then processed the same account twice.
+    // Pitfall: any_current==false also occurs when BUG-217's stale email collides with
+    // an existing account — both bugs must be fixed together for full correction.
+    inject_synthetic_if_new( &mut results, synthetic );
+
+    // Invariant: at most one row per unique account name.
+    // FAILS before fix: count == 2 (duplicate row for "i6@wbox.pro").
+    let i6_count = results.iter().filter( |r| r.name == "i6@wbox.pro" ).count();
+    assert_eq!(
+      i6_count, 1,
+      "BUG-218: inject_synthetic creates duplicate — missing collision guard; count={i6_count}",
+    );
+    assert_eq!(
+      results.len(), 1,
+      "BUG-218: quota table must have exactly 1 row for 1 stored account; len={}",
+      results.len(),
     );
   }
 }
