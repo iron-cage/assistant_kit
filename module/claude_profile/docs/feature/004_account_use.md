@@ -47,4 +47,4 @@
 | doc | [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | Atomicity invariant for this feature |
 | doc | [command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | CLI command specification |
 | doc | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch subprocess activation of idle 5h session window; AC-17 adds expiry guard before switch |
-| bug | `task/claude_profile/bug/213_account_use_switches_to_expired_token_silently.md` | BUG-213 (Open): `switch_account()` called unconditionally even when target token is locally expired and quota fetch fails — `expiresAt` never consulted before switch |
+| bug | `task/claude_profile/bug/213_account_use_switches_to_expired_token_silently.md` | BUG-213 ✅ Fixed by TSK-216: expiry guard inserted in `account_use_routine()` before `switch_account()`; exits 3 when `now_ms > expiresAt` on the fetch-failed path (→ Feature 027 AC-17) |

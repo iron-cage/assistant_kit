@@ -78,6 +78,7 @@
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
+use tempfile::TempDir;
 
 #[ test ]
 fn s01_help_flag_stderr_empty()
@@ -521,5 +522,57 @@ fn s33_all_opt_outs_together_remove_all_suppressible_defaults()
     "--effort must be suppressed by --no-effort-max. Got:\n{stdout}" );
   assert!( !stdout.contains( "ultrathink" ),
     "ultrathink suffix must be suppressed by --no-ultrathink. Got:\n{stdout}" );
+}
+
+/// BUG-214 reproducer: empty `--session-dir` must suppress `-c` injection.
+///
+/// ## Root Cause
+///
+/// `build_claude_command()` injected `-c` unconditionally whenever `--new-session`
+/// was not set.  On first use — or any time `--session-dir` points to an empty
+/// directory — there is no conversation to resume.  Claude exits immediately with
+/// "No conversation found to continue" rather than starting a new session.
+///
+/// ## Why Not Caught
+///
+/// All pre-existing dry-run tests used no `--session-dir`, so the existence check
+/// resolved to `~/.claude/`, which always contains files on a development machine.
+/// The guard path (empty dir → no `-c`) was never exercised.
+///
+/// ## Fix Applied
+///
+/// `session_exists( session_dir )` reads the target directory and returns `true`
+/// only if at least one entry is present.  The guard `!cli.new_session &&
+/// session_exists(...)` gates `-c` injection, replacing the unconditional block.
+///
+/// ## Prevention
+///
+/// Always test `--session-dir` pointing to an empty temp directory when the
+/// feature involves session continuation — the empty-dir case is the canonical
+/// first-use scenario that the guard must handle.
+///
+/// ## Pitfall
+///
+/// Do not conflate the `--new-session` opt-out with the session-existence guard.
+/// They are independent: `--new-session` is a user intent signal; the existence
+/// guard is a safety net for cases where the user omitted `--new-session` but
+/// no prior session actually exists.
+// test_kind: bug_reproducer(BUG-214)
+#[ test ]
+fn bug_214_empty_session_dir_suppresses_continue_flag()
+{
+  let session_dir = TempDir::new().expect( "temp dir creation must succeed" );
+  let path        = session_dir.path().to_str().expect( "temp dir path must be valid UTF-8" );
+  let out = run_cli( &[ "--dry-run", "--session-dir", path, "Fix bug" ] );
+  assert!(
+    out.status.success(),
+    "must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( " -c" ),
+    "empty --session-dir must suppress -c (no prior session to resume). Got:\n{stdout}"
+  );
 }
 

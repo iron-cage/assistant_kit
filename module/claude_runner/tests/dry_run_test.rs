@@ -15,7 +15,7 @@
 //! ## Corner Cases Covered
 //!
 //! - Default env vars appear (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`)
-//! - Default `-c` always appears in dry-run output (automatic session continuation)
+//! - Default `-c` appears when `~/.claude/` has session files (session-existence guard)
 //! - `--new-session` suppresses `-c` from dry-run output
 //! - `--dir` emits `cd <path>` prefix line
 //! - `--max-tokens N` overrides the default token env var
@@ -216,14 +216,14 @@ fn new_session_suppresses_continue_flag()
   );
 }
 
-// Default continuation: bare --dry-run always shows -c.
+// Default continuation: bare --dry-run shows -c when ~/.claude/ has session files.
 #[ test ]
-fn default_continuation_always_present()
+fn default_continuation_present_when_sessions_exist()
 {
   let output = run_dry( &[ "--dry-run", "test" ] );
   assert!(
     output.contains( " -c" ),
-    "Dry-run output must always contain -c (automatic session continuation). Got:\n{output}"
+    "Dry-run output must contain -c when ~/.claude/ has session files. Got:\n{output}"
   );
 }
 

@@ -1579,6 +1579,10 @@ fn aw30_trace_fetch_failure_skips_idle_model_lines()
     !err.contains( "model:" ),
     "aw30: fetch-failed path must NOT emit model: line, got:\n{err}",
   );
+  assert!(
+    err.contains( "expiry check: valid" ),
+    "aw30: fetch Err + FAR_FUTURE_MS expiresAt must emit expiry check: valid, got:\n{err}",
+  );
 }
 
 /// aw31: `trace::1 touch::0` → no `[trace] account.use` lines emitted (FT-14, EC-7).
@@ -1879,4 +1883,103 @@ fn mre_bug_212_account_save_stale_marker_uses_oauth_email()
   let i2_file = store.join( "i2@wbox.pro.credentials.json" );
   assert!( i5_file.exists(), "i5@wbox.pro.credentials.json must be created" );
   assert!( !i2_file.exists(), "i2@wbox.pro.credentials.json must NOT be created (stale marker must not win)" );
+}
+
+// ── mre_bug213_account_use_refuses_expired_token_on_fetch_error ───────────────
+
+/// MRE for BUG-213: `.account.use` with `touch::1` (default) must refuse to call
+/// `switch_account()` when the target account's `expiresAt` is in the past and
+/// the quota fetch returns an Err. Before fix: exits 0, installs expired credentials.
+/// After fix: exits 3, `~/.claude/.credentials.json` unchanged.
+///
+/// # Root Cause
+///
+/// `account_use_routine()` calls `pre_switch_touch_ctx()` which returns `None`
+/// when the quota fetch fails (no `accessToken`, HTTP error, etc.). The routine
+/// then calls `switch_account()` unconditionally — never consulting `expiresAt`
+/// from the target's credential file. Expired credentials are silently installed;
+/// subsequent API calls immediately fail with 401, violating the invariant:
+/// "after `.account.use X` reports success, X is usable for API calls."
+///
+/// # Why Not Caught
+///
+/// FT-04 (`aw23`) tests fetch failure with `expiresAt = FAR_FUTURE_MS` — the
+/// non-expired path that silently skips touch and exits 0. AC-04 (pre-fix) said
+/// "touch is skipped silently" without distinguishing expired vs valid credentials.
+/// No test exercised the expired-`expiresAt` + fetch-Err combination that is the
+/// actual BUG-213 failure mode.
+///
+/// # Fix Applied
+///
+/// In `account_use_routine()`, after `pre_switch_touch_ctx()` returns `None`:
+/// when `touch != 0 && touch_ctx.is_none()`, read `expiresAt` from the target
+/// credential file. If `now_ms > expiresAt`, emit a clear error on stderr and
+/// call `std::process::exit(3)` without calling `switch_account()`.
+///
+/// # Prevention
+///
+/// After any probe function returns None due to a fetch error, independently
+/// read credential state before proceeding. Verify that `aw23` (fetch fail +
+/// `FAR_FUTURE_MS`) still exits 0 — the not-expired path must not be blocked.
+/// Use `expiresAt = 1000` (epoch + 1s) for expired fixtures, never `FAR_FUTURE_MS`.
+///
+/// # Pitfall
+///
+/// A `None` return from a probe function that also reads credential state conflates
+/// "valid-but-fetch-failed" with "expired-and-fetch-failed". Never treat all `None`
+/// returns from stateful probe functions identically at the decision point — add
+/// an explicit expiry check for each distinct None cause.
+// test_kind: mre(BUG-213)
+#[ test ]
+fn mre_bug213_account_use_refuses_expired_token_on_fetch_error()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Active session credentials — the file switch_account() would overwrite.
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  // Target account: expiresAt = 1000ms since epoch (~56 years in the past); no accessToken.
+  // No accessToken → quota fetch fails immediately (no HTTP call). expiresAt 1000 → expired.
+  // BUG-213: before fix, switch_account() is called and active creds are overwritten.
+  write_account( dir.path(), "alice@home.com", "max", "default", 1000, false );
+
+  // Capture current main credentials — must be unchanged after exit 3.
+  let creds_path   = dir.path().join( ".claude" ).join( ".credentials.json" );
+  let creds_before = std::fs::read_to_string( &creds_path ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::alice@home.com" ],
+    &[ ( "HOME", home ) ],
+  );
+
+  // BUG-213: before fix this exits 0 and overwrites creds_path with alice's expired token.
+  assert_exit( &out, 3 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "account credentials expired" ),
+    "stderr must contain 'account credentials expired', got:\n{err}",
+  );
+  assert!(
+    err.contains( "alice@home.com" ),
+    "stderr must name the account, got:\n{err}",
+  );
+
+  // switch_account() must NOT have been called — credentials file unchanged.
+  let creds_after = std::fs::read_to_string( &creds_path ).unwrap();
+  assert_eq!(
+    creds_before,
+    creds_after,
+    "~/.claude/.credentials.json must be unchanged when exit 3 fires before switch_account()",
+  );
+
+  // Active marker must NOT have been updated.
+  let store  = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let marker = std::fs::read_to_string(
+    store.join( claude_profile::account::active_marker_filename() )
+  ).unwrap_or_default();
+  assert!(
+    !marker.contains( "alice@home.com" ),
+    "active marker must NOT be updated when exit 3 fires, got: '{marker}'",
+  );
 }

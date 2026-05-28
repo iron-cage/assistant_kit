@@ -931,6 +931,57 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     None
   };
 
+  // Fix(BUG-213): when touch is enabled and the quota fetch failed (touch_ctx is None),
+  //   check expiresAt from the target's credential file before calling switch_account().
+  // Root cause: pre_switch_touch_ctx() returns None for any fetch Err without signaling
+  //   whether the target token is locally expired. account_use_routine() then called
+  //   switch_account() unconditionally, installing credentials that immediately fail
+  //   all API calls with 401 — violating the invariant: "after .account.use X succeeds,
+  //   X is usable for API calls."
+  // Pitfall: a None return from a probe function that also reads credential state conflates
+  //   "valid-but-fetch-failed" with "expired-and-fetch-failed". Callers treating all None
+  //   returns identically must add their own expiry guard at the decision point.
+  if touch != 0 && touch_ctx.is_none()
+  {
+    let cred_path  = credential_store.join( format!( "{name}.credentials.json" ) );
+    if let Ok( cred_str ) = std::fs::read_to_string( &cred_path )
+    {
+      let needle     = "\"expiresAt\":";
+      let expires_ms = cred_str.find( needle ).and_then( | pos |
+      {
+        let rest = cred_str[ pos + needle.len().. ].trim_start();
+        let end  = rest.find( | c : char | !c.is_ascii_digit() ).unwrap_or( rest.len() );
+        rest[ ..end ].parse::< u64 >().ok()
+      } );
+      if let Some( exp_ms ) = expires_ms
+      {
+        use std::time::{ SystemTime, UNIX_EPOCH };
+        let now_ms = u64::try_from(
+          SystemTime::now()
+            .duration_since( UNIX_EPOCH )
+            .unwrap_or_default()
+            .as_millis()
+        ).unwrap_or( u64::MAX );
+        if now_ms > exp_ms
+        {
+          let elapsed_secs = ( now_ms - exp_ms ) / 1000;
+          let h            = elapsed_secs / 3600;
+          let m            = ( elapsed_secs % 3600 ) / 60;
+          if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → refused" ) }
+          eprintln!( "account credentials expired: {name} (expired {h}h {m}m ago)" );
+          std::process::exit( 3 );
+        }
+        else if trace
+        {
+          let remaining_secs = ( exp_ms - now_ms ) / 1000;
+          let h              = remaining_secs / 3600;
+          let m              = ( remaining_secs % 3600 ) / 60;
+          eprintln!( "[trace] account.use  {name}  expiry check: valid (expires in {h}h {m}m)" );
+        }
+      }
+    }
+  }
+
   crate::account::switch_account( &name, &credential_store, &paths )
     .map_err( |e| io_err_to_error_data( &e, "account use" ) )?;
 

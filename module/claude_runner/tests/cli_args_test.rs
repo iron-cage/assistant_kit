@@ -24,7 +24,7 @@
 //! - T01: positional message accepted with `--dry-run`
 //! - T02: `--model` accepted, appears in command
 //! - T03: `--max-tokens` accepted, appears as env var
-//! - T04: bare `--dry-run` always contains `-c` (automatic session continuation)
+//! - T04: bare `--dry-run` contains `-c` when `~/.claude/` has session files (dev machine)
 //! - T05: `--dangerously-skip-permissions` appears in command by default (no explicit flag needed)
 //! - T06: `--verbose` appears in command
 //! - T07: `--session-dir` appears as env var
@@ -107,16 +107,16 @@ fn t03_max_tokens_flag_accepted()
   assert!( stdout.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=1000" ), "token env var must appear. Got:\n{stdout}" );
 }
 
-// T04: bare --dry-run always contains -c (automatic session continuation)
+// T04: bare --dry-run contains -c when ~/.claude/ has session files (dev machine default)
 #[ test ]
-fn t04_dry_run_always_contains_continue()
+fn t04_dry_run_contains_continue_when_sessions_exist()
 {
   let out = run_cli( &[ "--dry-run", "test" ] );
   assert!( out.status.success() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( " -c" ),
-    "dry-run output must always contain -c (automatic continuation). Got:\n{stdout}"
+    "dry-run output must contain -c when ~/.claude/ has session files. Got:\n{stdout}"
   );
 }
 

@@ -28,13 +28,14 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
 
 ```
 [trace] account.use  {name}  reading {cred_path}
-[trace] account.use  {name}  reading: OK                                   ← omitted on Err; Err stops trace
-[trace] account.use  {name}  quota fetch: OK                               ← or Err({msg}); Err → expiry check (next line)
-[trace] account.use  {name}  expiry check: expired(4h 21m ago) → refused   ← fetch Err + expired: exits 3; no switch
-                                        OR: valid (expires in 3h 34m)      ← fetch Err + not expired: switch proceeds below
-[trace] account.use  {name}  idle check: resets_at=absent → idle           ← or resets_at=present → already active; fetch OK path only
-[trace] account.use  {name}  model: {model}  effort: {effort}              ← when quota fetch OK; omitted when fetch failed
-[trace] account.use  {name}  subprocess: spawned                           ← or skipped (reason: already active | fetch failed)
+[trace] account.use  {name}  reading: OK                                        ← omitted on Err; Err → subprocess: skipped (no further lines)
+[trace] account.use  {name}  quota fetch: OK                                    ← or Err({msg}); Err → subprocess: skipped + optional expiry check
+[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)         ← fetch Err path only; always precedes expiry check line
+[trace] account.use  {name}  expiry check: expired(4h 21m ago) → refused        ← fetch Err + expiresAt past: exits 3; no switch
+                                         OR: valid (expires in 3h 34m)         ← fetch Err + expiresAt future; omitted when expiresAt absent
+[trace] account.use  {name}  idle check: resets_at=absent → idle                ← fetch OK path only; or resets_at=present → already active
+[trace] account.use  {name}  model: {model}  effort: {effort}                   ← fetch OK path only
+[trace] account.use  {name}  subprocess: spawned                                ← or skipped (reason: already active); fetch OK path only
 ```
 
 When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operations performed). When `trace::0` (default): no trace output.
@@ -87,4 +88,4 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 | param | [cli/param/035_imodel.md](../cli/param/035_imodel.md) | `imodel::` parameter specification (shared with `.usage`) |
 | param | [cli/param/036_effort.md](../cli/param/036_effort.md) | `effort::` parameter specification (shared with `.usage`) |
 | command | [cli/command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | `.account.use` CLI specification |
-| bug | `task/claude_profile/bug/213_account_use_switches_to_expired_token_silently.md` | BUG-213 (Open): `.account.use` switches to locally-expired token when fetch fails; `expiresAt` never checked before `switch_account()` — AC-04 gap; AC-17 defines the fix |
+| bug | `task/claude_profile/bug/213_account_use_switches_to_expired_token_silently.md` | BUG-213 ✅ Fixed by TSK-216: expiry guard inserted in `account_use_routine()` before `switch_account()`; exits 3 when `now_ms > expiresAt` on the fetch-failed path |

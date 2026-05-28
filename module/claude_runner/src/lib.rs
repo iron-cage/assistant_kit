@@ -7,7 +7,7 @@
 //!
 //! 2. **Binary** (`clr`) — Standalone CLI that mirrors Claude Code's native
 //!    `--flag value` syntax and executes via `claude_runner_core`.
-//!    Session continuation (`-c`) is applied by default; use `--new-session` to start fresh.
+//!    Session continuation (`-c`) is applied when a prior session exists; use `--new-session` to suppress.
 //!
 //! ## Two roles, two consumers
 //!
@@ -56,97 +56,10 @@ mod cli;
 /// Run the `clr`/`claude_runner` CLI.
 ///
 /// Entry point shared by the `clr` and `claude_runner` binary targets.
+/// Collects argv tokens and delegates all dispatch logic to `cli::run_main`.
 #[ inline ]
 pub fn run_cli()
 {
-  use cli::{
-    parse_args, build_claude_command, handle_dry_run,
-    print_help, run_print_mode, run_interactive,
-    dispatch_ask, dispatch_isolated, dispatch_refresh,
-    apply_env_vars, guard_unknown_subcommand,
-  };
-
   let tokens : Vec< String > = std::env::args().skip( 1 ).collect();
-
-  // Dispatch `help` subcommand before everything else.
-  if tokens.first().map( String::as_str ) == Some( "help" )
-  {
-    print_help();
-    return;
-  }
-
-  // Fix(BUG-212): `run` is the default mode expressed as an explicit subcommand.
-  // Root cause: `clr run msg` treated "run" as the message argument — silent wrong behavior.
-  // Pitfall: strip only the leading "run" token; remaining args are passed normally.
-  let tokens : Vec< String > = if tokens.first().map( String::as_str ) == Some( "run" )
-  {
-    tokens[ 1.. ].to_vec()
-  }
-  else
-  {
-    tokens
-  };
-
-  // Dispatch subcommands — these functions never return.
-  if tokens.first().map( String::as_str ) == Some( "ask" )      { dispatch_ask( &tokens ); }
-  if tokens.first().map( String::as_str ) == Some( "isolated" ) { dispatch_isolated( &tokens ); }
-  if tokens.first().map( String::as_str ) == Some( "refresh" )  { dispatch_refresh( &tokens ); }
-
-  guard_unknown_subcommand( &tokens );
-
-  let mut cli = match parse_args( &tokens )
-  {
-    Ok( c )  => c,
-    Err( e ) =>
-    {
-      eprintln!( "Error: {e}" );
-      std::process::exit( 1 );
-    }
-  };
-  apply_env_vars( &mut cli );
-
-  if cli.help
-  {
-    print_help();
-    return;
-  }
-
-  if cli.print_mode && cli.message.is_none()
-  {
-    eprintln!( "Error: --print requires a message argument" );
-    eprintln!( "Run with --help for usage." );
-    std::process::exit( 1 );
-  }
-
-  let builder = build_claude_command( &cli );
-
-  if cli.dry_run
-  {
-    handle_dry_run( &builder );
-    return;
-  }
-
-  let verbosity = cli.verbosity.unwrap_or_default();
-
-  // Trace / verbose detail preview: show command to stderr before executing.
-  if cli.trace || verbosity.shows_verbose_detail()
-  {
-    let env = builder.describe_env();
-    let command = builder.describe();
-    let mut preview = String::new();
-    if !env.is_empty() { preview.push_str( &env ); preview.push( '\n' ); }
-    preview.push_str( &command );
-    eprintln!( "{preview}" );
-  }
-
-  // Dispatch to print mode when message given (default) or -p/--print explicit.
-  // --interactive overrides the message-default back to TTY passthrough.
-  if cli.print_mode || ( cli.message.is_some() && !cli.interactive )
-  {
-    run_print_mode( &builder, verbosity, cli.strip_fences );
-  }
-  else
-  {
-    run_interactive( &builder, verbosity );
-  }
+  cli::run_main( &tokens );
 }
