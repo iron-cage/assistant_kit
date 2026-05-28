@@ -9,7 +9,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-01 | `touch::1` idle account → subprocess dispatched after switch | AC-01 | Live |
 | FT-02 | `touch::0` idle account → pure rotation, no subprocess | AC-02 | Integration |
 | FT-03 | Active account (`resets_at` present) → no subprocess | AC-03 | Live |
-| FT-04 | Quota fetch failure → touch skipped, switch completes, exits 0 | AC-04 | Integration |
+| FT-04 | Quota fetch failure + token NOT expired → touch skipped, switch completes, exits 0 | AC-04 | Integration |
 | FT-05 | `imodel::auto` model selection delegates to `resolve_model()` | AC-05 | Structural (→ Feature 026) |
 | FT-06 | `effort::auto` effort injection delegates to `resolve_effort()` | AC-06 | Structural (→ Feature 026) |
 | FT-07 | `imodel::bad` exits 1 naming all five valid values | AC-07 | Integration |
@@ -22,6 +22,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-14 | `trace::1 touch::0` — no `[trace] account.use` lines emitted | AC-15 | Integration |
 | FT-15 | `trace::0` (default) — no `[trace] account.use` lines emitted | AC-15 | Integration |
 | FT-16 | `trace::` with bad value exits 1 | AC-16 | Integration |
+| FT-17 | `touch::1` + fetch Err + expired `expiresAt` → exits 3; switch NOT executed | AC-17 | Integration (BUG-213 MRE) |
 
 ### Test Case Index
 
@@ -30,7 +31,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-01 | touch::1 idle account dispatches subprocess | AC-01 | Touch Dispatch |
 | FT-02 | touch::0 suppresses subprocess and quota fetch | AC-02 | Touch Suppression |
 | FT-03 | active account suppresses subprocess | AC-03 | Idle Guard |
-| FT-04 | fetch failure — skip silently, exits 0 | AC-04 | Graceful Degradation |
+| FT-04 | fetch failure + not expired — skip silently, exits 0 | AC-04 | Graceful Degradation |
 | FT-05 | imodel::auto delegates to resolve_model() | AC-05 | Model Delegation |
 | FT-06 | effort::auto delegates to resolve_effort() | AC-06 | Effort Delegation |
 | FT-07 | imodel::bad exits 1 with valid values | AC-07 | Rejection |
@@ -43,8 +44,9 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-14 | trace::1 touch::0 — no trace lines emitted | AC-15 | Trace Suppression |
 | FT-15 | trace::0 (default) — no trace lines emitted | AC-15 | Trace Default |
 | FT-16 | trace:: in .account.use --help with default 0 | AC-16 | Help Output |
+| FT-17 | touch::1 + fetch Err + expired expiresAt → exits 3; no switch_account call | AC-17 | BUG-213 MRE |
 
-**Total:** 16 FT cases
+**Total:** 17 FT cases
 
 ---
 
@@ -83,11 +85,11 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ---
 
-### FT-04: Quota fetch failure — touch skipped silently, switch completes
+### FT-04: Quota fetch failure + `expiresAt` absent — touch skipped silently, switch completes
 
-- **Given:** Account `alice@home.com` saved with an invalid/expired `accessToken`. Quota fetch against the saved credential file will fail with an auth error.
+- **Given:** Account `alice@home.com` saved with a credential file that has no `accessToken` field and no `expiresAt` field. Quota fetch against the saved credential file will fail with an auth error. Because `expiresAt` is absent, the expiry check is skipped — this is the non-expired path per AC-04. (See FT-17 for the expired-token case.)
 - **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
-- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; touch skipped silently. No error output. Fetch failure is non-fatal.
+- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout; credentials rotated; touch skipped silently. No error output. Fetch failure with absent `expiresAt` is non-fatal.
 - **Exit:** 0
 - **Source fn:** `aw23_touch_skipped_no_access_token` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-04](../../../../docs/feature/027_account_use_post_switch_touch.md)
@@ -184,11 +186,11 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ---
 
-### FT-13: `trace::1 touch::1` quota fetch failure — read + fetch-err lines only
+### FT-13: `trace::1 touch::1` quota fetch failure + `expiresAt` absent — read + fetch-err lines only
 
-- **Given:** Account `alice@home.com` saved with an invalid/expired `accessToken`. Quota fetch will fail with an auth error.
+- **Given:** Account `alice@home.com` saved with a credential file that has no `accessToken` and no `expiresAt` field. Quota fetch will fail with an auth error. Because `expiresAt` is absent, no `expiry check:` trace line is emitted — the expiry check is skipped. (See FT-17 for the expired-`expiresAt` trace path.)
 - **When:** `clp .account.use name::alice@home.com trace::1`
-- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr contains: `reading {path}`, `reading: OK`, `quota fetch: Err({msg})`, `subprocess: skipped (reason: fetch failed)`. No `idle check:` or `model:` lines emitted.
+- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr contains (in order): `reading {path}`, `reading: OK`, `quota fetch: Err({msg})`, `subprocess: skipped (reason: fetch failed)`. No `idle check:`, `model:`, or `expiry check:` lines emitted.
 - **Exit:** 0
 - **Source fn:** `aw30_trace_fetch_failure_skips_idle_model_lines` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-10, AC-11, AC-14](../../../../docs/feature/027_account_use_post_switch_touch.md)
@@ -225,3 +227,15 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **Exit:** 1
 - **Source fn:** `aw32_trace_bad_value_exits_1` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-16](../../../../docs/feature/027_account_use_post_switch_touch.md)
+
+---
+
+### FT-17: `touch::1` + fetch Err + expired `expiresAt` — exits 3, switch NOT executed (BUG-213 MRE)
+
+- **Given:** Account `alice@home.com` saved with a credential file where `expiresAt` is set to a timestamp in the past (locally expired token). The quota fetch against that token returns an Err (e.g., HTTP 429 or auth error).
+- **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
+- **Then:** Exits 3. Stderr contains `account credentials expired: alice@home.com (expired ...ago)`. `~/.claude/.credentials.json` is NOT overwritten — `switch_account()` was not called. The active marker (`_active_{hostname}_{user}`) is NOT updated.
+- **Exit:** 3
+- **Source fn:** `⏳ mre_bug213_account_use_refuses_expired_token_on_fetch_error` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** BUG-213 MRE — verifies that a locally-expired token causes `.account.use` to refuse the switch rather than silently installing unusable credentials. The complementary `aw23_touch_skipped_no_access_token` (AC-04) must still pass — it uses a credential file with no `accessToken` (and thus no parseable `expiresAt`), which is treated as "not expired" and falls through to the silent-skip path.
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-17](../../../../docs/feature/027_account_use_post_switch_touch.md)

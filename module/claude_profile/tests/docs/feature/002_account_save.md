@@ -69,13 +69,14 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 
 ---
 
-### FT-04: Name inferred from per-machine active marker
+### FT-04: Name inferred from per-machine active marker (fallback path)
 
-- **Given:** `~/.claude/.credentials.json` exists with valid credentials. The per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"alice@acme.com"`. No `name::` argument is passed.
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` is absent (no `oauthAccount.emailAddress` available — fallback path exercised). The per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"alice@acme.com"`. No `name::` argument is passed.
 - **When:** `clp .account.save`
 - **Then:** Exits 0. stdout contains `saved current credentials as 'alice@acme.com'`. `{credential_store}/alice@acme.com.credentials.json` created. Behaves identically to `clp .account.save name::alice@acme.com`.
 - **Exit:** 0
 - **Source fn:** `as15_save_infers_name_from_active_marker` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** Tests the `_active` marker FALLBACK path only. Primary path (`oauthAccount.emailAddress` present) is covered by FT-10.
 - **Source:** [feature/002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)
 
 ---
