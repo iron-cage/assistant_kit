@@ -15,7 +15,8 @@
 //! ## Corner Cases Covered
 //!
 //! - Default env vars appear (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`)
-//! - Default `-c` always appears in dry-run output (automatic session continuation)
+//! - Default `-c` appears in dry-run output when session storage is non-empty (automatic session continuation)
+//! - Empty `--session-dir` suppresses `-c` even without `--new-session` (BUG-214 regression guard)
 //! - `--new-session` suppresses `-c` from dry-run output
 //! - `--dir` emits `cd <path>` prefix line
 //! - `--max-tokens N` overrides the default token env var
@@ -26,7 +27,7 @@
 //! - Message with embedded double quotes is properly escaped
 //! - `--dir` with spaces: `cd` output is unquoted (human-readable per FR-21, not shell-safe)
 //! - All 5 Tier-1 default env vars appear in output (not just max-tokens)
-//! - No message provided: `--dry-run` outputs bare `claude --dangerously-skip-permissions --chrome --effort max -c` command with no message arg
+//! - No message provided: `--dry-run` outputs bare `claude --dangerously-skip-permissions --chrome --effort max -c` command with no message arg (when default session dir has sessions)
 //! - `--dry-run --verbosity 0` still shows output (verbosity does not gate dry-run; bug reproducer)
 //! - `--system-prompt TEXT` appears in command args (param 15 round-trip)
 //! - `--append-system-prompt TEXT` appears in command args (param 16 round-trip)
@@ -483,6 +484,51 @@ fn trace_with_dry_run_emits_no_stderr()
   assert!(
     stdout.contains( "claude " ),
     "--dry-run stdout output must still appear. Got:\n{stdout}"
+  );
+}
+
+// BUG-214: bare `clr` exits with "No conversation found" on first use (empty session dir).
+//
+// ## Root Cause (bug_reproducer(BUG-214))
+//
+// `build_claude_command()` in `cli/mod.rs` injected `-c` unconditionally whenever
+// `--new-session` was absent. On first use with no prior session in claude storage,
+// the claude binary exits "No conversation found to continue" rather than opening
+// the interactive REPL, violating US-1 AC "bare `clr` launches the interactive REPL".
+//
+// ## Why Not Caught
+//
+// All pre-existing tests ran on machines where `~/.claude/` already contained prior
+// sessions, so `-c` always succeeded. The first-use (empty session dir) scenario was
+// never exercised.
+//
+// ## Fix Applied
+//
+// `session_exists(session_dir: Option<&Path>) -> bool` guards the injection site in
+// `cli/mod.rs`: `-c` is now only injected when the resolved session directory is
+// non-empty. An empty or absent directory suppresses the flag.
+//
+// ## Prevention
+//
+// Pin the invariant: `clr --dry-run --session-dir <empty>` must never contain ` -c`.
+// Use a real temp directory — not a stub — so the guard exercises real filesystem I/O.
+//
+// ## Pitfall
+//
+// `-c` / `--continue` require a resumable session. Injecting without an existence check
+// causes silent process exit rather than an actionable error. Always gate resumption flags
+// behind a presence check of the storage directory.
+//
+// test_kind: bug_reproducer(BUG-214)
+#[ test ]
+fn bug_reproducer_214_empty_session_dir_no_continue_flag()
+{
+  let tmp = tempfile::TempDir::new().expect( "create temp dir" );
+  let session_dir = tmp.path().to_str().expect( "valid utf8 path" );
+  let output = run_dry( &[ "--dry-run", "--session-dir", session_dir, "Fix bug" ] );
+  assert!(
+    !output.contains( " -c" ),
+    "empty session dir must not inject -c (BUG-214 regression). Got:\n{output}"
   );
 }
 

@@ -15,8 +15,7 @@ clr --new-session "Analyse this new codebase from scratch"
 clr --new-session "Review this PR fresh" --model opus
 ```
 
-**Note:** Use when switching to a genuinely unrelated task where prior
-conversation context would be misleading or harmful.
+**Note:** Use when switching to a genuinely unrelated task where prior conversation context would be misleading or harmful.
 
 ### Referenced Type
 

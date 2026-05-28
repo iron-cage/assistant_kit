@@ -4,7 +4,7 @@ mod credential;
 use super::VerbosityLevel;
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use parse::{
-  CliArgs, IsolatedArgs, RefreshArgs,
+  CliArgs,
   parse_isolated_args, parse_refresh_args,
   apply_isolated_env_vars, apply_refresh_env_vars,
 };
@@ -160,9 +160,30 @@ fn print_ask_help() -> !
   std::process::exit( 0 );
 }
 
+/// Returns `true` when the resolved session directory exists and contains at least one entry.
+///
+/// When `session_dir` is `None`, falls back to `$HOME/.claude/` (the claude default).
+/// Returns `false` on any I/O error, missing directory, or empty directory.
+fn session_exists( session_dir : Option< &std::path::Path > ) -> bool
+{
+  let path = if let Some( p ) = session_dir
+  {
+    p.to_path_buf()
+  }
+  else
+  {
+    let Ok( home ) = std::env::var( "HOME" ) else { return false; };
+    std::path::PathBuf::from( home ).join( ".claude" )
+  };
+  std::fs::read_dir( &path )
+    .map( | mut entries | entries.next().is_some() )
+    .unwrap_or( false )
+}
+
 /// Translate parsed CLI args into a `ClaudeCommand` builder.
 ///
-/// Session continuation (`-c`) is applied by default unless `--new-session` is set.
+/// Session continuation (`-c`) is applied by default unless `--new-session` is set
+/// or no prior session exists in the configured storage directory.
 pub( super ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
 {
   let mut builder = ClaudeCommand::new();
@@ -175,7 +196,10 @@ pub( super ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
   {
     builder = builder.with_max_output_tokens( n );
   }
-  if !cli.new_session
+  // Fix(BUG-214): inject -c only when a prior session exists in storage
+  // Root cause: unconditional -c causes claude binary to exit on first use with no session
+  // Pitfall: resumption flags (-c, --continue) require state to resume; guard with existence check
+  if !cli.new_session && session_exists( cli.session_dir.as_deref().map( std::path::Path::new ) )
   {
     builder = builder.with_continue_conversation( true );
   }

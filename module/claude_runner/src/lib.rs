@@ -7,14 +7,14 @@
 //!
 //! 2. **Binary** (`clr`) — Standalone CLI that mirrors Claude Code's native
 //!    `--flag value` syntax and executes via `claude_runner_core`.
-//!    Session continuation (`-c`) is applied by default; use `--new-session` to start fresh.
+//!    Session continuation (`-c`) is applied by default when a prior session exists; use `--new-session` to start fresh.
 //!
 //! ## Two roles, two consumers
 //!
 //! ```text
 //! clr binary (standalone CLI)
 //!   invoked directly: clr "Fix bug" --dir /path --model sonnet
-//!     → parse_args() → ClaudeCommand builder → claude subprocess (with -c by default)
+//!     → parse_args() → ClaudeCommand builder → claude subprocess (with -c when session exists)
 //!   message given → print mode (default); bare clr → interactive REPL
 //!
 //! YAML consumers (e.g. consumer workspace's CLI, build.rs)

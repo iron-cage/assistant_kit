@@ -12,6 +12,7 @@
 | US-2 | Default injection | Session continuation flag `-c` present in subprocess args |
 | US-3 | Failure path | Non-interactive environment without message errors |
 | US-4 | Boundary | REPL with `--dir` changes subprocess working directory |
+| US-5 | BUG-214 regression | Empty session dir → no `-c` injected; REPL opens without error |
 
 ---
 
@@ -42,3 +43,13 @@
 - **When:** `clr --dir /tmp/test_project`
 - **Then:** Subprocess launches with working directory set to `/tmp/test_project`; session continuation remains active
 - **Exit:** 0
+
+---
+
+### US-5: Empty session dir → REPL opens without error (BUG-214 regression)
+
+- **Given:** Terminal with TTY attached; `--session-dir` points to a freshly created empty directory (no prior claude session)
+- **When:** `clr --session-dir /tmp/mre214_empty`
+- **Then:** Assembled command (dry-run) does NOT contain `-c`; `session_exists()` guard detected empty directory and suppressed injection; REPL opens without "No conversation found" error
+- **Exit:** 0
+- **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../../docs/invariant/001_default_flags.md), [bug/214_bare_clr_exits_no_session.md](../../../../../../claude_tools/task/claude_runner/bug/214_bare_clr_exits_no_session.md)

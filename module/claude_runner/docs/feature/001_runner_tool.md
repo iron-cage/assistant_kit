@@ -53,6 +53,7 @@ claude_runner serves two distinct consumers from one crate:
 | `../../src/lib.rs` | `run_cli()` entry point |
 | `../../src/cli/mod.rs` | Mode dispatch (`run_print_mode`, `run_interactive`), command builder, subcommand dispatch |
 | `../../src/cli/parse.rs` | CLI argument parsing, env var fallbacks |
+| `../../src/cli/credential.rs` | Credential-isolated execution (`run_isolated_command`, `run_refresh_command`), trace emission for isolated/refresh |
 
 ### Tests
 
@@ -61,6 +62,7 @@ claude_runner serves two distinct consumers from one crate:
 | `../../tests/cli_args_test.rs` | T01–T49 flag parsing; --interactive, --print mode dispatch coverage |
 | `../../tests/dry_run_test.rs` | Validates dry-run preview output including all injected flags |
 | `../../tests/execution_mode_test.rs` | E01–E13 live mode dispatch via fake claude binary |
+| `../../tests/isolated_test.rs` | Credential-isolated and refresh command execution; trace output for isolated/refresh |
 
 ### Provenance
 

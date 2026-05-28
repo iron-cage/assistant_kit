@@ -5,34 +5,34 @@ use error_tools::{ Error, Result };
 /// Parsed CLI arguments.
 #[ allow( clippy::struct_excessive_bools ) ]
 #[ derive( Default ) ]
-pub( super ) struct CliArgs
+pub( crate ) struct CliArgs
 {
-  pub( super ) message              : Option< String >,
-  pub( super ) print_mode           : bool,
-  pub( super ) interactive          : bool,
-  pub( super ) new_session          : bool,
-  pub( super ) model                : Option< String >,
-  pub( super ) verbose              : bool,
-  pub( super ) no_skip_permissions  : bool,
-  pub( super ) max_tokens           : Option< u32 >,
-  pub( super ) session_dir          : Option< String >,
-  pub( super ) dir                  : Option< String >,
-  pub( super ) dry_run              : bool,
-  pub( super ) trace                : bool,
-  pub( super ) verbosity            : Option< VerbosityLevel >,
-  pub( super ) help                 : bool,
-  pub( super ) system_prompt        : Option< String >,
-  pub( super ) append_system_prompt : Option< String >,
-  pub( super ) no_ultrathink        : bool,
-  pub( super ) effort               : Option< EffortLevel >,
-  pub( super ) no_effort_max        : bool,
-  pub( super ) no_chrome            : bool,
-  pub( super ) no_persist           : bool,
-  pub( super ) json_schema          : Option< String >,
-  pub( super ) mcp_config           : Vec< String >,
-  pub( super ) file                 : Option< String >,
-  pub( super ) strip_fences         : bool,
-  pub( super ) keep_claudecode      : bool,
+  pub( crate ) message              : Option< String >,
+  pub( crate ) print_mode           : bool,
+  pub( crate ) interactive          : bool,
+  pub( crate ) new_session          : bool,
+  pub( crate ) model                : Option< String >,
+  pub( crate ) verbose              : bool,
+  pub( crate ) no_skip_permissions  : bool,
+  pub( crate ) max_tokens           : Option< u32 >,
+  pub( crate ) session_dir          : Option< String >,
+  pub( crate ) dir                  : Option< String >,
+  pub( crate ) dry_run              : bool,
+  pub( crate ) trace                : bool,
+  pub( crate ) verbosity            : Option< VerbosityLevel >,
+  pub( crate ) help                 : bool,
+  pub( crate ) system_prompt        : Option< String >,
+  pub( crate ) append_system_prompt : Option< String >,
+  pub( crate ) no_ultrathink        : bool,
+  pub( crate ) effort               : Option< EffortLevel >,
+  pub( crate ) no_effort_max        : bool,
+  pub( crate ) no_chrome            : bool,
+  pub( crate ) no_persist           : bool,
+  pub( crate ) json_schema          : Option< String >,
+  pub( crate ) mcp_config           : Vec< String >,
+  pub( crate ) file                 : Option< String >,
+  pub( crate ) strip_fences         : bool,
+  pub( crate ) keep_claudecode      : bool,
 }
 
 /// Parsed arguments for the `isolated` subcommand.
@@ -237,7 +237,7 @@ fn parse_value_flag(
 ///
 /// `--help`/`-h` wins regardless of other flags or unknown tokens: if either appears
 /// anywhere in `tokens`, parsing short-circuits and returns `CliArgs { help: true, .. }`.
-pub( super ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
+pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
 {
   // --help/-h always wins — return early before any other token is parsed.
   // This ensures help is shown even when unknown flags or other errors are present.
@@ -383,7 +383,7 @@ fn env_str( var : &str ) -> Option< String >
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
-pub( super ) fn apply_env_vars( parsed : &mut CliArgs )
+pub( crate ) fn apply_env_vars( parsed : &mut CliArgs )
 {
   if parsed.message.is_none()              { parsed.message              = env_str( "CLR_MESSAGE" ); }
   if !parsed.print_mode                    { parsed.print_mode           = env_bool( "CLR_PRINT" ); }
