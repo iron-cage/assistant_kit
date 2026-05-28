@@ -6,8 +6,8 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 | FT | Criterion | AC | Notes |
 |----|-----------|-----|-------|
-| FT-01 | `touch::0` — no subprocess; idle accounts not activated when suppressed | AC-01 | Integration |
-| FT-02 | `touch::1` invokes subprocess for accounts with `resets_at` absent (idle) | AC-02 | Integration (lim_it) |
+| FT-01 | `touch::0` — no subprocess; inactive-timer accounts not activated when suppressed | AC-01 | Integration |
+| FT-02 | `touch::1` invokes subprocess for accounts with any quota timer absent | AC-02 | Integration (lim_it) |
 | FT-03 | After touch, table shows concrete `5h Reset` value (was `—`) | AC-03 | Integration (lim_it) |
 | FT-04 | Errored accounts are never touched | AC-04 | Integration |
 | FT-05 | When both `refresh::1` and `touch::1`, refresh runs first | AC-05 | Integration |
@@ -16,12 +16,13 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-08 | `touch::` does not affect `format::json` output structure | AC-08 | Integration |
 | FT-09 | `trace=true` emits `[trace]` lines for touch subprocess lifecycle | AC-09 | Integration (lim_it) |
 | FT-10 | `touch::` appears in `.usage.help` with default `1` | AC-10 | Integration |
-| FT-11 | Valid account with `resets_at` absent IS touched (positive trigger) | AC-02 | Trigger |
-| FT-12 | In `live::1` mode, touch fires each cycle for accounts with `resets_at` absent | AC-11 | Live Mode |
-| FT-13 | Account with `resets_at` present (already active) is NOT touched | AC-02, AC-12 | Trigger Guard |
+| FT-11 | Account with any timer absent IS touched (positive trigger) | AC-02 | Trigger |
+| FT-12 | In `live::1` mode, touch fires each cycle when any timer absent | AC-11 | Live Mode |
+| FT-13 | All three timers running → account NOT touched ("already active") | AC-02, AC-12 | Trigger Guard |
 | FT-14 | Skip trace line emitted for each account not qualifying for touch | AC-09, AC-12 | Trace |
 | FT-15 | no switch_account called in apply_touch; `_active` unchanged confirms no restore occurred | AC-13 | BUG-211 MRE |
 | FT-16 | 7d-exhausted account (7d Left = 0%, 5h idle) is NOT touched — 7d guard fires | AC-14 | BUG-214 MRE |
+| FT-17 | 5h timer running but 7d or 7d-Sonnet timer absent → touch fires (3-timer trigger) | AC-15 | BUG-215 MRE |
 
 ### Test Case Index
 
@@ -39,12 +40,13 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-10 | touch:: in help with default 1 | AC-10 | Help Output |
 | FT-11 | Valid account with resets_at absent IS touched | AC-02 | Trigger |
 | FT-12 | live::1 touch fires each cycle when resets_at absent | AC-11 | Live Mode |
-| FT-13 | Account with resets_at present (active) NOT touched | AC-02, AC-12 | Trigger Guard |
+| FT-13 | All three timers running → account NOT touched (already active) | AC-02, AC-12 | Trigger Guard |
 | FT-14 | Skip trace line emitted for each non-qualifying account | AC-09, AC-12 | Trace |
 | FT-15 | no switch_account called in apply_touch; _active unchanged confirms no restore | AC-13 | BUG-211 MRE |
 | FT-16 | 7d-exhausted account (7d Left = 0%, 5h idle) NOT touched — 7d guard fires | AC-14 | BUG-214 MRE |
+| FT-17 | 5h timer running but 7d or 7d-Sonnet timer absent → touch fires (3-timer trigger) | AC-15 | BUG-215 MRE |
 
-**Total:** 16 FT cases
+**Total:** 17 FT cases
 
 ---
 
@@ -188,11 +190,11 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 
 ---
 
-### FT-13: Account with `resets_at` present (already active) is NOT touched (trigger guard)
+### FT-13: All three quota timers running → account NOT touched ("already active")
 
-- **Given:** One account with valid quota data and `five_hour.resets_at` present (already has an active 5h session window with a countdown).
+- **Given:** One account with valid quota data where all three quota timers have active `resets_at` values: `five_hour.resets_at` present AND `seven_day.resets_at` present AND `seven_day_sonnet.resets_at` present (all windows active).
 - **When:** `clp .usage touch::1`
-- **Then:** Exits 0. No subprocess spawned for that account. The trigger guard skips accounts with `resets_at` present — they already have active sessions and don't need activation. Account row shows original quota data unchanged.
+- **Then:** Exits 0. No subprocess spawned for that account. The trigger guard skips accounts where all three timers are running — all quota windows are active. Account row shows original quota data unchanged. Trace emits `skipped (reason: already active)`.
 - **Exit:** 0
 - **Source fn:** `it_apply_touch_trigger_skips_resets_at_some` (in `src/usage.rs #[cfg(test)]`)
 - **Source:** [feature/024_session_touch.md AC-02, AC-12](../../../../docs/feature/024_session_touch.md)
@@ -227,6 +229,18 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **When:** `apply_touch` processes this account.
 - **Then:** No subprocess is spawned (`refresh_account_token` is NOT called). The account is skipped with a trace line `[trace] touch  <name>  skipped (reason: 7d-exhausted)` (or equivalent). `apply_touch` returns after the skip without calling `run_isolated`.
 - **Exit:** N/A (unit test — no exit code)
-- **Source fn:** ⏳ `test_mre_bug214_apply_touch_skips_7d_exhausted_account` (in `src/usage.rs #[cfg(test)]`) — created by TSK-217; Docker L3 verification pending
-- **Note:** BUG-214 MRE. Mirrors FT-13 (which tests the `resets_at` present guard) and the h-exhausted guard test (BUG-178). The account passes the error guard and the 5h-idle guard but must be caught by the new 7d guard.
+- **Source fn:** `test_mre_bug214_apply_touch_skips_7d_exhausted_account` (in `src/usage.rs #[cfg(test)]`)
+- **Note:** BUG-214 MRE. Mirrors FT-13 (which tests the all-timers-running guard) and the h-exhausted guard test (BUG-178). The account passes the error guard and the 5h-idle guard but must be caught by the new 7d guard.
 - **Source:** [feature/024_session_touch.md AC-14](../../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-17: 5h timer running but 7d or 7d-Sonnet timer absent → touch fires (3-timer trigger)
+
+- **Given:** `apply_touch` is called with one account whose `AccountQuota` has: `result = Ok(data)` with `five_hour.resets_at = Some(...)` (5h session active), `five_hour_left > 15.0` (not h-exhausted), `seven_day_left > 0.0` (not 7d-exhausted), and `seven_day.resets_at = None` (7d window timer absent — period exists but no active countdown). The 3-timer trigger is implemented.
+- **When:** `apply_touch` processes this account.
+- **Then:** The trigger fires — `refresh_account_token` IS called. The account is NOT skipped as "already active" because not all three timers are running. No `[trace] touch  <name>  skipped` line emitted.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `test_mre_bug215_apply_touch_fires_when_7d_timer_absent` (in `src/usage.rs #[cfg(test)]`)
+- **Note:** BUG-215 MRE. The scenario where the 5h session is active but the 7d window was just reset (no `resets_at`) was incorrectly skipped as "already active" before the 3-timer fix. This test verifies the fix: touch fires whenever any timer is absent, not only when the 5h timer is absent.
+- **Source:** [feature/024_session_touch.md AC-15](../../../../docs/feature/024_session_touch.md)

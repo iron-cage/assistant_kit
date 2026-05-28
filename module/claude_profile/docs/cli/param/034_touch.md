@@ -1,6 +1,6 @@
 # Parameter :: 34. `touch::`
 
-Activate idle accounts' 5h session windows by sending a minimal prompt via an isolated subprocess. Trigger condition: `five_hour.resets_at` is absent (no active 5h session — account is idle).
+Activate idle quota windows by sending a minimal prompt via an isolated subprocess. Trigger condition: any of the three quota timers absent — `five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at` — meaning no active session for that quota dimension.
 
 - **Type:** `bool`
 - **Default:** `1` (on — idle accounts are activated automatically)
@@ -17,7 +17,7 @@ touch::0   → no subprocess spawned; idle accounts remain idle
 ```
 
 **Notes:**
-- Trigger condition: account's quota fetch succeeded (valid token, no error) AND `five_hour.resets_at` is absent (idle — no active 5h session). Accounts with errored quota (expired token, auth failure) are never touched. Accounts with `resets_at` present (already active 5h window) are skipped — they already have a running session.
+- Trigger condition: account's quota fetch succeeded (valid token, no error) AND at least one quota timer is absent (`five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at` = None). Accounts with errored quota (expired token, auth failure) are never touched. Accounts where all three timers are present (all windows active) are skipped. If the `seven_day` or `seven_day_sonnet` field is absent entirely (no weekly-quota tracking on the plan), that dimension is treated as running and does not trigger touch.
 - **On `.usage`:** Uses the same `account::refresh_account_token()` lifecycle as `refresh::` — `read credentials -> run_isolated(["--print", "."]) -> write credentials -> save`. After the subprocess completes, quota is re-fetched unconditionally for that account. After all touch operations complete, the original active account is restored. `touch::` does not affect `format::json` output structure.
 - **On `.usage`:** When both `refresh::1` and `touch::1` are active, refresh runs first (retries auth errors); touch runs second on post-refresh results. Accounts whose refresh already started a session are skipped by touch.
 - **On `.usage`:** In `live::1` mode, `touch::1` applies on every cycle. Accounts whose sessions expired since the last cycle (becoming idle) are re-activated.

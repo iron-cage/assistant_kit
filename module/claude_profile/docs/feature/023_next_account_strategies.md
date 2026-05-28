@@ -30,7 +30,7 @@ Valid: 7 / 8   ->  Next by strategy:
   drain      carol@example.com   2% 7d left, 7d resets in 1d 4h
 ```
 
-Each footer line shows: strategy name (left-aligned, 10 chars), account name (left-aligned), key metric string. The key metric reflects the strategy's selection criterion — endurance shows session + weekly + expires; drain shows weekly quota remaining + weekly reset countdown (matching drain's `prefer_weekly` ascending sort key). When both strategies recommend the same account, both lines appear independently (the agreement is itself useful signal). Strategy lines for which no eligible account exists are omitted rather than showing an empty line.
+Each footer line shows: strategy name (left-aligned, 10 chars), account name (left-aligned), key metric string. The key metric reflects the strategy's selection criterion — endurance shows session + weekly + expires; drain shows weekly quota remaining + weekly reset countdown (matching drain's `prefer_weekly` ascending sort key). The drain metric label and reset countdown source reflect the binding weekly dimension: `"% 7d left, 7d resets in …"` when overall weekly quota is binding (`7d_left ≤ 7d_son_left`); `"% 7d(Son) left, 7d(Son) resets in …"` when Sonnet weekly quota is binding (`7d_son_left < 7d_left`). When both strategies recommend the same account, both lines appear independently (the agreement is itself useful signal). Strategy lines for which no eligible account exists are omitted rather than showing an empty line.
 
 **`→` table marker:**
 
@@ -105,6 +105,7 @@ Valid: 8 / 8   ->  Next by strategy:
 - **AC-06**: `next::` does not affect `format::json` output — JSON always uses alphabetical order without recommendation markers.
 - **AC-07**: Footer is omitted when 0 or 1 accounts have valid quota data (same threshold as 009_token_usage.md AC-10).
 - **AC-08**: Footer strategy lines for which no eligible account exists are omitted from the footer rather than showing an empty line.
+- **AC-09**: The drain footer metric label reflects the binding weekly dimension: `"% 7d left"` when overall weekly quota is binding (`7d_left ≤ 7d_son_left`); `"% 7d(Son) left"` when Sonnet weekly quota is binding (`7d_son_left < 7d_left`). The reset countdown sources the same quota's `resets_at` field as the percentage (BUG-216).
 
 ### Cross-References
 

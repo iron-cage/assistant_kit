@@ -15,6 +15,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-07 | Footer omitted when 0 or 1 accounts have valid quota data | AC-07 | Integration |
 | FT-08 | Footer omits strategy line when no eligible candidate exists | AC-08 | Unit test |
 | FT-09 | drain skips `prefer_weekly ≤ 5.0` accounts (BUG-206) | AC-04 | Unit test |
+| FT-10 | drain footer shows `"7d(Son) left"` and Sonnet reset when Sonnet is binding (BUG-216) | AC-09 | Unit test |
 
 ### Test Case Index
 
@@ -29,8 +30,9 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-07 | Footer suppressed when valid_count < 2 | AC-07 | Footer Threshold |
 | FT-08 | No-eligible-candidate strategy line omitted | AC-08 | Footer |
 | FT-09 | drain never recommends `prefer_weekly ≤ 5.0` accounts | AC-04 | BUG-206 |
+| FT-10 | drain footer label and reset source reflect binding weekly dimension | AC-09 | BUG-216 |
 
-**Total:** 9 FT cases
+**Total:** 10 FT cases
 
 ---
 
@@ -126,6 +128,20 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_ft08_023_footer_omits_strategy_lines_when_no_eligible_candidate` (in `src/usage.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-08](../../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### FT-10: drain footer label and reset source reflect binding weekly dimension (BUG-216)
+
+- **Given-A:** `AccountQuota` with `seven_day_left = 61.0`, `seven_day_sonnet_left = 39.0` (Sonnet is binding — `prefer_weekly(Any) = min(61, 39) = 39`). `seven_day.resets_at` = some timestamp T1; `seven_day_sonnet.resets_at` = some timestamp T2 (T1 ≠ T2).
+- **Given-B:** `AccountQuota` with `seven_day_left = 39.0`, `seven_day_sonnet_left = 61.0` (overall 7d is binding — `prefer_weekly(Any) = min(39, 61) = 39`). Same T1/T2 values.
+- **When-A:** Unit test calls `strategy_metric(drain, any, aq_a, now_secs)`.
+- **When-B:** Unit test calls `strategy_metric(drain, any, aq_b, now_secs)`.
+- **Then-A:** Returns a string containing `"39% 7d(Son) left"` (not `"7d left"`). The reset countdown is derived from T2 (`seven_day_sonnet.resets_at`), not T1.
+- **Then-B:** Returns a string containing `"39% 7d left"` (not `"7d(Son) left"`). The reset countdown is derived from T1 (`seven_day.resets_at`), not T2.
+- **Exit:** n/a (unit test)
+- **Source fn:** `mre_bug_216_drain_footer_label_sonnet_binding`, `mre_bug_216_drain_footer_label_7d_binding` (in `src/usage.rs`)
+- **Source:** [feature/023_next_account_strategies.md AC-09](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
 
