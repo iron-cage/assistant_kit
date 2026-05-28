@@ -1144,19 +1144,38 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
       return Err( ErrorData::new( ErrorCode::ArgumentMissing, "name:: value cannot be empty".to_string() ) ),
     _ =>
     {
-      // Fix(BUG-209): read _active marker (authoritative) instead of emailAddress (stale after switch_account).
-      // Root cause: switch_account() patches only oauthAccount in ~/.claude.json; emailAddress is never updated.
-      // Pitfall: any caller that reads emailAddress for "current account" gets the prior account after a switch.
+      // Fix(BUG-212): read oauthAccount.emailAddress from ~/.claude.json as primary inference source;
+      //   fall back to _active marker only when emailAddress is absent or empty.
+      // Root cause: BUG-209 fix replaced stale top-level emailAddress with _active marker, but the marker
+      //   is only written by clp ops (switch_account, save). External OAuth login writes ~/.claude.json
+      //   (including oauthAccount.emailAddress) without updating _active — leaving the marker stale.
+      // Pitfall: any single-source inference fails when other credential-change paths bypass that source.
+      //   oauthAccount.emailAddress is updated by BOTH clp switches (snapshot restore) AND external OAuth
+      //   login (Claude writes ~/.claude.json on every auth). _active is clp-only.
       let cs          = require_credential_store()?;
-      let marker_path = cs.join( crate::account::active_marker_filename() );
-      std::fs::read_to_string( &marker_path )
-        .ok()
-        .map( | s | s.trim().to_string() )
-        .filter( | s | !s.is_empty() )
-        .ok_or_else( || ErrorData::new(
-          ErrorCode::ArgumentMissing,
-          "cannot infer account name: no active account set — pass name:: explicitly".to_string(),
-        ) )?
+      let cj          = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
+      // Extract emailAddress nested inside oauthAccount {…}: locate "oauthAccount": first,
+      // then apply parse_string_field on the suffix so only the nested key is found.
+      let oauth_email = cj
+        .find( "\"oauthAccount\":" )
+        .and_then( | pos | crate::account::parse_string_field( &cj[ pos.. ], "emailAddress" ) )
+        .filter( | s | !s.is_empty() );
+      if let Some( email ) = oauth_email
+      {
+        email
+      }
+      else
+      {
+        let marker_path = cs.join( crate::account::active_marker_filename() );
+        std::fs::read_to_string( &marker_path )
+          .ok()
+          .map( | s | s.trim().to_string() )
+          .filter( | s | !s.is_empty() )
+          .ok_or_else( || ErrorData::new(
+            ErrorCode::ArgumentMissing,
+            "cannot infer account name: no active account set — pass name:: explicitly".to_string(),
+          ) )?
+      }
     }
   };
   let credential_store = require_credential_store()?;

@@ -93,14 +93,14 @@ Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.j
 **Syntax:**
 
 ```bash
-clp .account.save                          # infer name from per-machine active marker (_active_{hostname}_{user})
+clp .account.save                          # infer name from oauthAccount.emailAddress in ~/.claude.json (falls back to _active_{hostname}_{user})
 clp .account.save name::alice@acme.com    # explicit name
 clp .account.save name::alice@acme.com dry::1
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
-| `name::` | [`AccountName`](../type/001_account_name.md) | `auto` (inferred from per-machine active marker — see [Feature 025](../../feature/025_per_machine_active_marker.md)) | Account email to save as |
+| `name::` | [`AccountName`](../type/001_account_name.md) | `auto` (inferred from `oauthAccount.emailAddress` in `~/.claude.json`; falls back to per-machine active marker — see [Feature 025](../../feature/025_per_machine_active_marker.md); exits 1 if neither source present) | Account email to save as |
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for credential read and file write steps |
 
@@ -108,7 +108,7 @@ clp .account.save name::alice@acme.com dry::1
 
 ```bash
 clp .account.save
-# saved current credentials as 'alice@acme.com'   (inferred from per-machine active marker)
+# saved current credentials as 'alice@acme.com'   (inferred from oauthAccount.emailAddress)
 
 clp .account.save name::alice@acme.com dry::1
 # [dry-run] would save current credentials as 'alice@acme.com'
