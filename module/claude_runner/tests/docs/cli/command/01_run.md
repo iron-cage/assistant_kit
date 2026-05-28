@@ -22,6 +22,8 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 | IT-14 | `--no-effort-max` → no `--effort` in assembled command | Effort Opt-Out |
 | IT-15 | Default → `--dangerously-skip-permissions` injected | Default Injection |
 | IT-16 | `--effort invalid` → exit 1, error message | Error Handling |
+| IT-17 | `clr run "msg"` → identical to `clr "msg"` (BUG-212 coverage) | Explicit run alias |
+| IT-18 | Empty `--session-dir` → no `-c` in assembled command (BUG-214 regression) | First-use edge case |
 
 ## Test Coverage Summary
 
@@ -38,8 +40,10 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 - Effort Default: 1 test
 - Effort Opt-Out: 1 test
 - Default Injection: 1 test
+- Explicit run alias: 1 test
+- First-use edge case: 1 test
 
-**Total:** 16 tests
+**Total:** 18 tests
 
 ---
 
@@ -184,3 +188,21 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 - **Expected behavior:** Stderr contains error message listing valid values (`low`, `medium`, `high`, `max`); exit code 1
 - **Exit:** 1
 - **Source:** [type/07_effort_level.md](../../../../docs/cli/type/07_effort_level.md)
+
+---
+
+### IT-17: `clr run "msg"` → identical assembled command to `clr "msg"` (BUG-212 coverage)
+
+- **Command:** `clr --dry-run run "Fix bug"` vs `clr --dry-run "Fix bug"`
+- **Expected behavior:** Both produce an identical assembled command line; the leading `run` token is stripped before parsing; `"Fix bug"` is the message in both cases; command contains `--print` and `ultrathink` suffix
+- **Exit:** 0 for both
+- **Source:** [command/01_run.md](../../../../docs/cli/command/01_run.md), [invariant/003_command_naming.md](../../../../docs/invariant/003_command_naming.md)
+
+---
+
+### IT-18: Empty `--session-dir` → no `-c` in assembled command (BUG-214 regression)
+
+- **Command:** `clr --dry-run --session-dir /tmp/mre214_empty "Fix bug"`
+- **Expected behavior:** Assembled command does NOT include `-c`; `session_exists()` guard detects empty directory and suppresses injection
+- **Exit:** 0
+- **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../../docs/invariant/001_default_flags.md), [--session-dir](../../../../docs/cli/param/010_session_dir.md)

@@ -5,13 +5,14 @@ use super::VerbosityLevel;
 use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
 use parse::{
   CliArgs,
-  parse_args, apply_env_vars,
   parse_isolated_args, parse_refresh_args,
   apply_isolated_env_vars, apply_refresh_env_vars,
 };
 use credential::{ run_isolated_command, run_refresh_command };
 
-fn print_help()
+pub( super ) use parse::{ parse_args, apply_env_vars };
+
+pub( super ) fn print_help()
 {
   println!( "clr — Execute Claude Code with configurable parameters" );
   println!();
@@ -159,31 +160,31 @@ fn print_ask_help() -> !
   std::process::exit( 0 );
 }
 
-/// Return `true` if the candidate session directory contains at least one entry.
+/// Returns `true` when the resolved session directory exists and contains at least one entry.
 ///
-/// When `session_dir` is `None`, falls back to `~/.claude/`.
-/// An absent or empty directory signals no prior session — `-c` must not be injected.
+/// When `session_dir` is `None`, falls back to `$HOME/.claude/` (the claude default).
+/// Returns `false` on any I/O error, missing directory, or empty directory.
 fn session_exists( session_dir : Option< &std::path::Path > ) -> bool
 {
-  let dir = if let Some( p ) = session_dir
+  let path = if let Some( p ) = session_dir
   {
     p.to_path_buf()
   }
   else
   {
-    let Ok( home ) = std::env::var( "HOME" ) else { return false };
+    let Ok( home ) = std::env::var( "HOME" ) else { return false; };
     std::path::PathBuf::from( home ).join( ".claude" )
   };
-  std::fs::read_dir( &dir )
+  std::fs::read_dir( &path )
     .map( | mut entries | entries.next().is_some() )
     .unwrap_or( false )
 }
 
 /// Translate parsed CLI args into a `ClaudeCommand` builder.
 ///
-/// Session continuation (`-c`) is applied only when `--new-session` is not set
-/// AND the session directory (or `~/.claude/` as fallback) contains at least one file.
-fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
+/// Session continuation (`-c`) is applied by default unless `--new-session` is set
+/// or no prior session exists in the configured storage directory.
+pub( super ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
 {
   let mut builder = ClaudeCommand::new();
 
@@ -195,8 +196,8 @@ fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
   {
     builder = builder.with_max_output_tokens( n );
   }
-  // Fix(BUG-214): inject -c only when a prior session exists
-  // Root cause: unconditional -c causes claude to exit on first use with no session
+  // Fix(BUG-214): inject -c only when a prior session exists in storage
+  // Root cause: unconditional -c causes claude binary to exit on first use with no session
   // Pitfall: resumption flags (-c, --continue) require state to resume; guard with existence check
   if !cli.new_session && session_exists( cli.session_dir.as_deref().map( std::path::Path::new ) )
   {
@@ -296,7 +297,7 @@ fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
 // Fix(issue-dry-run-verbosity-gate): always emit; verbosity must not suppress --dry-run output
 // Root cause: prior version gated on shows_progress() (≥3); --verbosity 0–2 produced silent exit
 // Pitfall: Verbosity gates runner diagnostics only, never core feature output like --dry-run
-fn handle_dry_run( builder : &ClaudeCommand )
+pub( super ) fn handle_dry_run( builder : &ClaudeCommand )
 {
   let env = builder.describe_env();
   let command = builder.describe();
@@ -309,7 +310,7 @@ fn handle_dry_run( builder : &ClaudeCommand )
 //   non-matching first token silently fell through to `parse_args()`.
 // Pitfall: Bare string comparison only guards exact matches; typos pass silently
 //   unless a prefix-match guard is also placed before the main argument parser.
-fn guard_unknown_subcommand( tokens : &[ String ] )
+pub( super ) fn guard_unknown_subcommand( tokens : &[ String ] )
 {
   // Fix(BUG-212): `run` was absent from KNOWN; typing `clr running` produced no helpful error.
   // Root cause: KNOWN list was never updated when `run` became an explicit subcommand.
@@ -367,7 +368,7 @@ fn strip_fences( stdout : &str ) -> String
 /// `execute()` captures that output into memory for programmatic use.
 /// Without `--print`, captured output would be TUI escape codes.
 /// Without `execute()`, clean output would go straight to terminal uncaptured.
-fn run_print_mode(
+pub( super ) fn run_print_mode(
   builder           : &ClaudeCommand,
   verbosity         : VerbosityLevel,
   strip_fences_flag : bool,
@@ -402,7 +403,7 @@ fn run_print_mode(
 }
 
 /// Execute in interactive mode (TTY passthrough).
-fn run_interactive( builder : &ClaudeCommand, verbosity : VerbosityLevel )
+pub( super ) fn run_interactive( builder : &ClaudeCommand, verbosity : VerbosityLevel )
 {
   let status = match builder.execute_interactive()
   {
@@ -434,7 +435,7 @@ fn run_interactive( builder : &ClaudeCommand, verbosity : VerbosityLevel )
 ///   `effort = High`, `max_tokens = 16384`.
 ///
 /// Priority chain: CLI flag > CLR_* env var > ask default.
-fn dispatch_ask( tokens : &[ String ] ) -> !
+pub( super ) fn dispatch_ask( tokens : &[ String ] ) -> !
 {
   let mut cli = match parse_args( &tokens[ 1 .. ] )
   {
@@ -487,7 +488,7 @@ fn dispatch_ask( tokens : &[ String ] ) -> !
 }
 
 /// Parse, validate, and execute the `isolated` subcommand.  Never returns.
-fn dispatch_isolated( tokens : &[ String ] ) -> !
+pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
 {
   let mut cli = match parse_isolated_args( &tokens[ 1 .. ] )
   {
@@ -504,7 +505,7 @@ fn dispatch_isolated( tokens : &[ String ] ) -> !
 }
 
 /// Parse, validate, and execute the `refresh` subcommand.  Never returns.
-fn dispatch_refresh( tokens : &[ String ] ) -> !
+pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
 {
   let mut cli = match parse_refresh_args( &tokens[ 1 .. ] )
   {
@@ -518,95 +519,6 @@ fn dispatch_refresh( tokens : &[ String ] ) -> !
     std::process::exit( 1 );
   }
   run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace )
-}
-
-/// Top-level CLI dispatch: parse tokens, build command, and execute.
-///
-/// Handles subcommand routing, session continuation, and print/interactive mode selection.
-/// This is the entry point called by `run_cli()` in `lib.rs` with the collected argv tokens.
-pub( super ) fn run_main( tokens : &[ String ] )
-{
-  // Dispatch `help` subcommand before everything else.
-  if tokens.first().map( String::as_str ) == Some( "help" )
-  {
-    print_help();
-    return;
-  }
-
-  // Fix(BUG-212): `run` is the default mode expressed as an explicit subcommand.
-  // Root cause: `clr run msg` treated "run" as the message argument — silent wrong behavior.
-  // Pitfall: strip only the leading "run" token; remaining args are passed normally.
-  let tokens : Vec< String > = if tokens.first().map( String::as_str ) == Some( "run" )
-  {
-    tokens[ 1.. ].to_vec()
-  }
-  else
-  {
-    tokens.to_vec()
-  };
-
-  // Dispatch subcommands — these functions never return.
-  if tokens.first().map( String::as_str ) == Some( "ask" )      { dispatch_ask( &tokens ); }
-  if tokens.first().map( String::as_str ) == Some( "isolated" ) { dispatch_isolated( &tokens ); }
-  if tokens.first().map( String::as_str ) == Some( "refresh" )  { dispatch_refresh( &tokens ); }
-
-  guard_unknown_subcommand( &tokens );
-
-  let mut cli = match parse_args( &tokens )
-  {
-    Ok( c )  => c,
-    Err( e ) =>
-    {
-      eprintln!( "Error: {e}" );
-      std::process::exit( 1 );
-    }
-  };
-  apply_env_vars( &mut cli );
-
-  if cli.help
-  {
-    print_help();
-    return;
-  }
-
-  if cli.print_mode && cli.message.is_none()
-  {
-    eprintln!( "Error: --print requires a message argument" );
-    eprintln!( "Run with --help for usage." );
-    std::process::exit( 1 );
-  }
-
-  let builder = build_claude_command( &cli );
-
-  if cli.dry_run
-  {
-    handle_dry_run( &builder );
-    return;
-  }
-
-  let verbosity = cli.verbosity.unwrap_or_default();
-
-  // Trace / verbose detail preview: show command to stderr before executing.
-  if cli.trace || verbosity.shows_verbose_detail()
-  {
-    let env = builder.describe_env();
-    let command = builder.describe();
-    let mut preview = String::new();
-    if !env.is_empty() { preview.push_str( &env ); preview.push( '\n' ); }
-    preview.push_str( &command );
-    eprintln!( "{preview}" );
-  }
-
-  // Dispatch to print mode when message given (default) or -p/--print explicit.
-  // --interactive overrides the message-default back to TTY passthrough.
-  if cli.print_mode || ( cli.message.is_some() && !cli.interactive )
-  {
-    run_print_mode( &builder, verbosity, cli.strip_fences );
-  }
-  else
-  {
-    run_interactive( &builder, verbosity );
-  }
 }
 
 #[ cfg( test ) ]

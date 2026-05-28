@@ -13,7 +13,7 @@
 
 | Flag | Default | Override | Rationale |
 |------|---------|----------|-----------|
-| `-c` (continue conversation) | ON | `--new-session` | Automation expects session continuity by default |
+| `-c` (continue conversation) | ON (when session exists) | `--new-session` | Automation expects session continuity by default; injected only when session storage is non-empty (`session_exists()` guard) |
 | `--dangerously-skip-permissions` | ON | `--no-skip-permissions` | Automation pipelines must not stall on permission prompts |
 | `--chrome` | ON | `--no-chrome` | Browser context is essential for web-aware automation |
 | `"\n\nultrathink"` message suffix | ON | `--no-ultrathink` | Extended thinking mode should be the automation default |
@@ -25,7 +25,7 @@ These defaults are intentional and must not be removed without explicit design d
 ### Enforcement Mechanism
 
 The flag injection is implemented at three layers:
-- `-c` and `--dangerously-skip-permissions`: injected explicitly by `build_claude_command()` (the function that translates `CliArgs` to a `ClaudeCommand` builder). Added unconditionally unless the corresponding opt-out flag is present in `CliArgs`.
+- `-c`: injected by `build_claude_command()` via `session_exists()` guard — only when `!cli.new_session` AND the configured session directory (or `$HOME/.claude/` default) is non-empty. `--dangerously-skip-permissions`: injected unconditionally unless `--no-skip-permissions` is set.
 - `--chrome`: injected via `ClaudeCommand::new()` builder default (`chrome: Some(true)`). CLI opt-out: `--no-chrome`. Rust API callers can also override with `with_chrome(None)` or `with_chrome(Some(false))`.
 - `"\n\nultrathink"` message suffix: appended to the message string inside `build_claude_command()` before `builder.with_message()` is called. Skipped when `cli.no_ultrathink` is set or the message already ends with `"ultrathink"` (idempotent guard — `msg.trim_end().ends_with("ultrathink")`).
 - `--effort max`: injected by `build_claude_command()` via `builder.with_effort(cli.effort.unwrap_or(EffortLevel::Max))`. Skipped entirely when `cli.no_effort_max` is set. Overridden to a different level when `cli.effort` is `Some(level)`.
@@ -44,6 +44,14 @@ If any default injection is removed:
 - Claude uses medium-effort reasoning instead of maximum for every automation request (effort max removed)
 - Subprocess detects nested-agent context and alters permissions, output format, and tool availability (`CLAUDECODE` removal skipped)
 - Automation pipelines that depend on these defaults will behave differently without a version change
+
+### Fixed Defects
+
+**BUG-214 (fixed 2026-05-28) — `-c` was injected unconditionally regardless of session existence:**
+`build_claude_command()` now calls `session_exists()` before injecting `-c`. On first invocation or with an empty `--session-dir`, `-c` is suppressed and the REPL opens unconditionally. The invariant above (`-c` on by default) now carries the implicit precondition: session storage must be non-empty.
+
+- **Root cause:** `cli/mod.rs:199-205` — `session_exists()` guard, `Fix(BUG-214)` comment
+- **Bug report:** `claude_tools/task/claude_runner/bug/214_bare_clr_exits_no_session.md` (external to crate)
 
 ### Features
 
