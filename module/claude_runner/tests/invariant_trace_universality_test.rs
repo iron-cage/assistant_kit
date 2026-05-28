@@ -143,7 +143,7 @@ fn it_04_refresh_trace_stderr_output()
   assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );
 }
 
-/// IT-5: Static — `"--trace"` appears ≥ 3× in `src/cli.rs` (one per parse function).
+/// IT-5: Static — `"--trace"` appears ≥ 3× in `src/cli/parse.rs` (one per parse function).
 ///
 /// Verifies that `parse_args()`, `parse_isolated_args()`, and `parse_refresh_args()`
 /// all register the `--trace` flag.  Reads the actual source file at runtime via
@@ -154,13 +154,13 @@ fn it_04_refresh_trace_stderr_output()
 fn it_05_static_trace_universality()
 {
   let manifest_dir = env!( "CARGO_MANIFEST_DIR" );
-  let cli_path     = format!( "{manifest_dir}/src/cli.rs" );
+  let cli_path     = format!( "{manifest_dir}/src/cli/parse.rs" );
   let cli_rs       = std::fs::read_to_string( &cli_path )
     .unwrap_or_else( | e | panic!( "failed to read {cli_path}: {e}" ) );
   let count = cli_rs.matches( "\"--trace\"" ).count();
   assert!(
     count >= 3,
-    "expected '\"--trace\"' to appear ≥ 3 times in src/cli.rs \
+    "expected '\"--trace\"' to appear ≥ 3 times in src/cli/parse.rs \
      (parse_args, parse_isolated_args, parse_refresh_args); got {count}"
   );
 }

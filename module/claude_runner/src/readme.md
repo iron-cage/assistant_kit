@@ -3,7 +3,10 @@
 | File | Responsibility |
 |------|----------------|
 | `lib.rs` | Library API: COMMANDS_YAML constant, VerbosityLevel re-export, register_commands shim, and run_cli() entry point. |
-| `cli.rs` | CLI argument parsing, subcommand dispatch, execution modes, and command builder logic. |
+| `cli/` | CLI module: argument parsing, env fallbacks, subcommand dispatch, and command execution. |
+| `cli/parse.rs` | Structs, parse functions, env helpers, and apply_env_vars for all subcommands. |
+| `cli/credential.rs` | Isolated/refresh execution: emit_credential_trace, run_isolated_command, run_refresh_command. |
+| `cli/mod.rs` | Coordinator: help printing, command building, run/ask dispatch, strip_fences, unit tests. |
 | `main.rs` | `claude_runner` binary entry point; delegates to `run_cli()`. |
 | `verbosity.rs` | `VerbosityLevel` newtype: output gating with semantic level methods. |
 | `bin/` | `clr` binary alias entry point (thin wrapper). |

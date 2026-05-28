@@ -62,7 +62,7 @@ If a command were prefixed with `--`:
 | File | Relationship |
 |------|--------------|
 | `../../src/lib.rs` | `run_cli()` command dispatch |
-| `../../src/cli.rs` | `guard_unknown_subcommand()` with `KNOWN` subcommand list |
+| `../../src/cli/mod.rs` | `guard_unknown_subcommand()` with `KNOWN` subcommand list |
 
 ### Tests
 

@@ -22,7 +22,7 @@
 ### Env Param 1: CLR_* Input Parameters — `run` Subcommand
 
 Environment variable fallbacks for all 25 `run` subcommand parameters.
-`apply_env_vars()` in `src/cli.rs` reads these immediately after CLI parsing, before command
+`apply_env_vars()` in `src/cli/parse.rs` reads these immediately after CLI parsing, before command
 dispatch. Each variable is applied **only when the corresponding CLI field is still at its
 zero/absent value** — the CLI flag always wins when both are present.
 
@@ -78,7 +78,7 @@ CLR_MODEL=sonnet clr --model opus --dry-run "task"  # CLI wins; CLR_MODEL ignore
 ### Env Param 2: CLR_* Input Parameters — `isolated` and `refresh` Subcommands
 
 Environment variable fallbacks for the 3 credential operation parameters.
-`apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli.rs` read these
+`apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/parse.rs` read these
 after subcommand argument parsing.
 
 | # | Variable | CLI Parameter | Type | Notes |
