@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-05 | No `name::` with no `_active` marker — exits 1 with clear error | AC-09 | Integration (BUG-209) |
 | FT-06 | Active marker written after save — `.credentials.status` shows account | AC-10 | Integration |
 | FT-07 | Path-unsafe chars (`/`) in email local part exits 1 | AC-11 | Integration |
-| FT-08 | Stale `emailAddress` in `~/.claude.json` ignored — `_active` marker wins | AC-08 | Integration (BUG-209 MRE) |
+| FT-08 | Stale top-level `emailAddress` ignored; `oauthAccount.emailAddress` absent → `_active` marker fallback (BUG-209) | AC-08 | Integration (BUG-209) |
 | FT-09 | `save(update_marker=false)` does not write `_active`; background refresh callers pass `false` | AC-15 | BUG-211 MRE |
 | FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
 
@@ -28,7 +28,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-05 | Missing marker exits 1 with actionable error | AC-09 | Inference Failure |
 | FT-06 | Active marker written after save | AC-10 | Active Marker |
 | FT-07 | Path-unsafe chars in local part exit 1 | AC-11 | Validation |
-| FT-08 | Stale `emailAddress` does not override active marker (BUG-209) | AC-08 | Name Inference / Regression |
+| FT-08 | Stale top-level `emailAddress` ignored; `oauthAccount.emailAddress` absent → `_active` fallback (BUG-209) | AC-08 | Name Inference / Regression |
 | FT-09 | `save(update_marker=false)` does not write `_active` | AC-15 | BUG-211 MRE |
 | FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
 
@@ -114,13 +114,14 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 
 ---
 
-### FT-08: Stale `emailAddress` does not override active marker (BUG-209 regression)
+### FT-08: Stale top-level `emailAddress` ignored — fallback to `_active` marker (BUG-209 regression)
 
-- **Given:** `~/.claude/.credentials.json` exists with credentials for `b@test.com`. `~/.claude.json` has `emailAddress = "a@test.com"` (stale — not updated since the last account switch). The per-machine active marker `_active_{hostname}_{user}` contains `"b@test.com"`.
+- **Given:** `~/.claude/.credentials.json` exists with credentials for `b@test.com`. `~/.claude.json` has top-level `emailAddress = "a@test.com"` (stale, no `oauthAccount.emailAddress` field). The per-machine active marker `_active_{hostname}_{user}` contains `"b@test.com"`.
 - **When:** `clp .account.save` (no `name::`)
-- **Then:** Exits 0. stdout contains `saved current credentials as 'b@test.com'`. The stale `emailAddress` value `a@test.com` is NOT used — the `_active` marker is the authoritative source. The per-machine marker still reads `b@test.com` after save.
+- **Then:** Exits 0. stdout contains `saved current credentials as 'b@test.com'`. The two-level inference: (1) `oauthAccount.emailAddress` absent from the JSON → None; (2) fallback to `_active` marker → `b@test.com`. Top-level `emailAddress` is never read by the inference logic. The per-machine marker still reads `b@test.com` after save.
 - **Exit:** 0
 - **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** Tests the fallback path — exercises the case where `oauthAccount.emailAddress` is absent, so the `_active` marker is used. The primary path (oauthAccount.emailAddress wins over a stale marker) is covered by FT-10.
 - **Source:** [feature/002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)
 
 ---

@@ -21,6 +21,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-13 | Account with `resets_at` present (already active) is NOT touched | AC-02, AC-12 | Trigger Guard |
 | FT-14 | Skip trace line emitted for each account not qualifying for touch | AC-09, AC-12 | Trace |
 | FT-15 | no switch_account called in apply_touch; `_active` unchanged confirms no restore occurred | AC-13 | BUG-211 MRE |
+| FT-16 | 7d-exhausted account (7d Left = 0%, 5h idle) is NOT touched — 7d guard fires | AC-14 | BUG-214 MRE |
 
 ### Test Case Index
 
@@ -41,8 +42,9 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-13 | Account with resets_at present (active) NOT touched | AC-02, AC-12 | Trigger Guard |
 | FT-14 | Skip trace line emitted for each non-qualifying account | AC-09, AC-12 | Trace |
 | FT-15 | no switch_account called in apply_touch; _active unchanged confirms no restore | AC-13 | BUG-211 MRE |
+| FT-16 | 7d-exhausted account (7d Left = 0%, 5h idle) NOT touched — 7d guard fires | AC-14 | BUG-214 MRE |
 
-**Total:** 15 FT cases
+**Total:** 16 FT cases
 
 ---
 
@@ -216,3 +218,15 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Source fn:** `test_apply_touch_mre_bug208_restore_trace_emitted` (in `src/usage.rs #[cfg(test)]`)
 - **Note:** BUG-211 MRE — function name preserved from BUG-208 era; now asserts absence of restore side-effects rather than presence of restore trace. Symmetric to FT-17 in `017_token_refresh` test spec.
 - **Source:** [feature/024_session_touch.md AC-13](../../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-16: 7d-exhausted account (7d Left = 0%, 5h idle) is NOT touched — 7d guard fires
+
+- **Given:** `apply_touch` is called with one account whose `AccountQuota` has: `result = Ok(data)` with `seven_day_left = 0.0` (weekly quota fully exhausted), `five_hour_left = 100.0` (5h budget non-zero), and `five_hour.resets_at = None` (idle — no active 5h session). The 7d guard is present in `apply_touch`.
+- **When:** `apply_touch` processes this account.
+- **Then:** No subprocess is spawned (`refresh_account_token` is NOT called). The account is skipped with a trace line `[trace] touch  <name>  skipped (reason: 7d-exhausted)` (or equivalent). `apply_touch` returns after the skip without calling `run_isolated`.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** ⏳ `test_mre_bug214_apply_touch_skips_7d_exhausted_account` (in `src/usage.rs #[cfg(test)]`) — to be created by TSK-217
+- **Note:** BUG-214 MRE. Mirrors FT-13 (which tests the `resets_at` present guard) and the h-exhausted guard test (BUG-178). The account passes the error guard and the 5h-idle guard but must be caught by the new 7d guard.
+- **Source:** [feature/024_session_touch.md AC-14](../../../../docs/feature/024_session_touch.md)

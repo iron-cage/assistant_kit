@@ -9,7 +9,9 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 | EC-1 | `name::work` — valid name accepted | Valid Name |
 | EC-2 | `name::` (empty value) rejected with exit 1 | Empty Value |
 | EC-3 | Omitted `name::` on `.account.use` exits 1 | Required Parameter |
-| EC-17 | Omitted `name::` on `.account.save` with `emailAddress` in `~/.claude.json` — infers name | Name Inference |
+| EC-17 | Omitted `name::` on `.account.save` with `oauthAccount.emailAddress` present — inferred (primary path) | Name Inference |
+| EC-19 | Omitted `name::` on `.account.save` with `oauthAccount.emailAddress` absent, `_active` marker present — inferred (fallback path) | Name Inference |
+| EC-20 | Omitted `name::` on `.account.save` — `oauthAccount.emailAddress` disagrees with `_active` marker — `oauthAccount` wins (BUG-212) | Name Inference |
 | EC-4 | `name::` with `/` (no `@`) rejected with exit 1 | Forbidden Characters |
 | EC-5 | `name::` with `\` (no `@`) rejected with exit 1 | Forbidden Characters |
 | EC-6 | `name::` with `*` (no `@`) rejected with exit 1 | Forbidden Characters |
@@ -30,16 +32,17 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - Valid Name: 1 test
 - Empty Value: 1 test
 - Required Parameter: 1 test
-- Name Inference: 1 test
+- Name Inference: 3 tests
 - Forbidden Characters: 5 tests
 - Valid Characters: 2 tests
 - Boundary Value: 1 test
 - Optional on Accounts: 3 tests
 - Optional on Limits (FR-18): 3 tests
 
-**Total:** 18 edge cases
+**Total:** 20 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
+**Name Inference Divergence:** EC-17 (`oauthAccount.emailAddress` primary path) ↔ EC-19 (`_active` marker fallback path)
 
 ---
 
@@ -203,11 +206,11 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 
 ---
 
-### EC-17: Name Inference on `.account.save` — `emailAddress` from `~/.claude.json`
+### EC-17: Name Inference on `.account.save` — `oauthAccount.emailAddress` (primary) from `~/.claude.json`
 
-- **Given:** Active credentials exist at `~/.claude/.credentials.json`. `~/.claude.json` exists and contains `"emailAddress": "alice@acme.com"`.
+- **Given:** Active credentials exist at `~/.claude/.credentials.json`. `~/.claude.json` exists and contains `"oauthAccount":{"emailAddress":"alice@acme.com"}` (primary inference source). No `name::` argument is passed.
 - **When:** `clp .account.save` (no `name::` argument)
-- **Then:** Exit 0; stdout: `saved current credentials as 'alice@acme.com'`; credential file created using the inferred email as the account name.; `name::` behaves as optional on `.account.save` when `emailAddress` is readable
+- **Then:** Exit 0; stdout: `saved current credentials as 'alice@acme.com'`; credential file created using the inferred email as the account name. `name::` behaves as optional on `.account.save` when `oauthAccount.emailAddress` is present. When `oauthAccount.emailAddress` is absent, inference falls back to the per-machine `_active` marker (see FT-04 in [feature/002_account_save.md](../../feature/002_account_save.md)).
 - **Exit:** 0
 - **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md)
 
@@ -220,3 +223,27 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **Then:** Error message containing `path-unsafe characters` with exit 1. (`@` is present — `@`-check passes; path-safety check fires next and rejects `/` in local part `a/b`.); path-unsafe char in email local part rejected before any filesystem operation
 - **Exit:** 1
 - **Source:** [types.md -- AccountName](../../../../docs/cli/type/001_account_name.md), [params.md -- name::](../../../../docs/cli/param/001_name.md)
+
+---
+
+### EC-19: Name Inference Fallback — `oauthAccount.emailAddress` absent, `_active` marker used
+
+- **Given:** Active credentials exist at `~/.claude/.credentials.json`. `~/.claude.json` is absent (no `oauthAccount.emailAddress` available). The per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"alice@acme.com"`. No `name::` argument is passed.
+- **When:** `clp .account.save` (no `name::` argument)
+- **Then:** Exit 0; stdout: `saved current credentials as 'alice@acme.com'`; credential file created using the marker value as the account name. The fallback path is taken when `oauthAccount.emailAddress` is unavailable.
+- **Exit:** 0
+- **Commands:** `.account.save`
+- **Note:** Tests the `_active` marker fallback path. Primary path (`oauthAccount.emailAddress` present) is covered by EC-17. Both paths together form the name inference divergence pair.
+- **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/002_account_save.md FT-04](../../feature/002_account_save.md)
+
+---
+
+### EC-20: Name Inference Conflict — `oauthAccount.emailAddress` wins over stale `_active` marker (BUG-212)
+
+- **Given:** Active credentials exist at `~/.claude/.credentials.json`. `~/.claude.json` contains `{"oauthAccount":{"emailAddress":"i5@wbox.pro"}}` (fresh — written by external OAuth login). The per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"i2@wbox.pro"` (stale — from a prior clp session). No `name::` argument is passed.
+- **When:** `clp .account.save` (no `name::` argument)
+- **Then:** Exit 0; stdout: `saved current credentials as 'i5@wbox.pro'`. `{credential_store}/i5@wbox.pro.credentials.json` created. `{credential_store}/i2@wbox.pro.credentials.json` NOT created. The stale `_active` marker is NOT used when `oauthAccount.emailAddress` provides a valid name.
+- **Exit:** 0
+- **Commands:** `.account.save`
+- **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is updated by both clp ops (snapshot restore) and external OAuth login. `_active` is written only by clp ops — external login leaves it stale.
+- **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/002_account_save.md FT-10](../../feature/002_account_save.md), [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md)
