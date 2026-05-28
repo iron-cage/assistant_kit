@@ -39,10 +39,10 @@ The `.gitignore` pattern `_active_*` excludes all per-machine marker files from 
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `module/claude_profile_core/src/account.rs` | `active_marker_filename()` — derives per-machine marker name; `read_active_marker()`, `switch_account()`, `save()`, `delete()` — use it |
-| source | `module/claude_profile/src/commands.rs` | `resolve_account_name()` — exact-local-part match priority; `account_save_routine()` — reads `_active` marker for name inference when `name::` is omitted (BUG-209 fix, TSK-212) |
+| source | `module/claude_profile/src/commands.rs` | `resolve_account_name()` — exact-local-part match priority; `account_save_routine()` — reads `oauthAccount.emailAddress` from `~/.claude.json` as primary name inference source when `name::` is omitted; falls back to `_active` marker (BUG-212 fix, TSK-215) |
 | source | `module/claude_profile/src/usage.rs` | `apply_refresh` and `apply_touch` snapshot/restore the `_active` marker around per-account processing; snapshot+restore removed by BUG-211 fix (`save()` now writes conditionally via `update_marker=false` — see AC-15 in [002_account_save.md](002_account_save.md)); reads removed in Phases 3/4 of TSK-214 |
 | config | `.gitignore` | `_active_*` pattern excludes per-machine markers from version control |
-| doc | [002_account_save.md](002_account_save.md) | Name resolution: `account_save_routine()` reads `_active` marker when `name::` is omitted (AC-08, BUG-209) |
+| doc | [002_account_save.md](002_account_save.md) | Name resolution: `account_save_routine()` uses `oauthAccount.emailAddress` as primary, `_active` marker as fallback when `name::` is omitted (AC-08, AC-16, BUG-209, BUG-212) |
 | doc | [004_account_use.md](004_account_use.md) | Base switch behavior; design step 4 updated |
 | doc | [015_name_shortcut_syntax.md](015_name_shortcut_syntax.md) | Prefix resolution; AC-11 added for exact-local-part match |
 | doc | [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | Atomicity invariant; `_active` marker note updated |

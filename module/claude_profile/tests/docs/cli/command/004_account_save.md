@@ -16,7 +16,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 | IT-8 | `dry::1` then `dry::0` creates file as previewed | Dry Run Fidelity |
 | IT-9 | Saved file content matches active credentials exactly | Data Integrity |
 | IT-10 | Missing `name::` and no active marker exits 1 | Inference Failure |
-| IT-14 | Missing `name::` with per-machine active marker set — infers and saves | Name Inference |
+| IT-14 | Missing `name::` — infers from `oauthAccount.emailAddress`; falls back to active marker | Name Inference |
 | IT-11 | Save creates `{name}.claude.json` with `oauthAccount` subtree; no `.settings.json` created (BUG-174 fix) | Metadata Snapshot |
 | IT-12 | Save succeeds when `~/.claude.json` absent — only credential file created | Metadata Snapshot / Best-Effort |
 | IT-13 | Save succeeds when `~/.claude.json` present but lacks `oauthAccount` key — no `.claude.json` snapshot created | Metadata Snapshot / Best-Effort |
@@ -24,6 +24,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 | IT-16 | Save with path-unsafe chars in email local part (`/`, `\`) exits 1 | Validation |
 | IT-17 | Save writes `{name}.roles.json` when endpoint 005 returns org identity | Org Identity Snapshot |
 | IT-18 | Save succeeds even when endpoint 005 call fails — no `roles.json`, no error | Org Identity Snapshot / Best-Effort |
+| IT-19 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | Name Inference / Regression |
 
 ### Test Coverage Summary
 
@@ -41,8 +42,9 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - Active Marker: 1 test
 - Org Identity Snapshot: 1 test
 - Org Identity Snapshot / Best-Effort: 1 test
+- Name Inference / Regression: 1 test
 
-**Total:** 18 integration tests
+**Total:** 19 integration tests
 
 ---
 
@@ -176,13 +178,13 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 ---
 
-### IT-14: Missing `name::` — name inferred from per-machine active marker
+### IT-14: Missing `name::` — name inferred from `oauthAccount.emailAddress`; falls back to active marker
 
-- **Given:** `~/.claude/.credentials.json` exists with valid credentials. Per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"alice@acme.com"`.
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` contains `oauthAccount.emailAddress = "alice@acme.com"`. Per-machine active marker `{credential_store}/_active_{hostname}_{user}` also contains `"alice@acme.com"`.
 - **When:** `clp .account.save`
-- **Then:** stdout: `saved current credentials as 'alice@acme.com'`. Credential file `{credential_store}/alice@acme.com.credentials.json` created; `name::` inferred from per-machine active marker; behaves identically to explicit `name::alice@acme.com`.
+- **Then:** stdout: `saved current credentials as 'alice@acme.com'`. Credential file `{credential_store}/alice@acme.com.credentials.json` created; `name::` inferred from `oauthAccount.emailAddress`; behaves identically to explicit `name::alice@acme.com`.
 - **Exit:** 0
-- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
+- **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave), [002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -223,3 +225,14 @@ Integration test planning for the `.account.save` command. See [command/namespac
 - **Then:** Exit 0 with normal success message. Credential file and metadata snapshots created. `{credential_store}/work@acme.com.roles.json` is NOT created. No error message on stderr referencing endpoint 005 failure.
 - **Exit:** 0
 - **Source:** [022_org_identity_snapshot.md AC-02](../../../../docs/feature/022_org_identity_snapshot.md), [002_account_save.md AC-13](../../../../docs/feature/002_account_save.md)
+
+---
+
+### IT-19: Stale `_active` marker — `oauthAccount.emailAddress` wins (BUG-212 regression)
+
+- **Given:** `~/.claude/.credentials.json` exists with live credentials. `~/.claude.json` contains `oauthAccount.emailAddress = "i5@wbox.pro"` (fresh — written by external OAuth login). Per-machine active marker `{credential_store}/_active_{hostname}_{user}` contains `"i2@wbox.pro"` (stale — from prior clp session). No `name::` passed.
+- **When:** `clp .account.save`
+- **Then:** Exit 0. stdout: `saved current credentials as 'i5@wbox.pro'`. `{credential_store}/i5@wbox.pro.credentials.json` created. `{credential_store}/i2@wbox.pro.credentials.json` NOT created or modified — stale marker ignored when `oauthAccount.emailAddress` is available.
+- **Exit:** 0
+- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [002_account_save.md AC-16](../../../../docs/feature/002_account_save.md)

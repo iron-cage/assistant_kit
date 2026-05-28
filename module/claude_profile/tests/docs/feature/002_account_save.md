@@ -15,6 +15,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-07 | Path-unsafe chars (`/`) in email local part exits 1 | AC-11 | Integration |
 | FT-08 | Stale `emailAddress` in `~/.claude.json` ignored — `_active` marker wins | AC-08 | Integration (BUG-209 MRE) |
 | FT-09 | `save(update_marker=false)` does not write `_active`; background refresh callers pass `false` | AC-15 | BUG-211 MRE |
+| FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
 
 ### Test Case Index
 
@@ -29,8 +30,9 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-07 | Path-unsafe chars in local part exit 1 | AC-11 | Validation |
 | FT-08 | Stale `emailAddress` does not override active marker (BUG-209) | AC-08 | Name Inference / Regression |
 | FT-09 | `save(update_marker=false)` does not write `_active` | AC-15 | BUG-211 MRE |
+| FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
 
-**Total:** 9 FT cases
+**Total:** 10 FT cases
 
 ---
 
@@ -131,3 +133,15 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Source fn:** `test_mre_bug211_save_false_leaves_marker_unchanged` (in `claude_profile_core/tests/account_test.rs`)
 - **Note:** BUG-211 MRE — verifies the `update_marker` guard in `save()`. Background refresh calls (`refresh_account_token`) pass `false`; user CLI calls (`.account.save`, `.account.relogin`) pass `true`.
 - **Source:** [feature/002_account_save.md AC-15](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-10: Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212 regression)
+
+- **Given:** `~/.claude/.credentials.json` exists with live credentials. `~/.claude.json` has `oauthAccount.emailAddress = "i5@wbox.pro"` (fresh — written by external OAuth login). The per-machine active marker `_active_{hostname}_{user}` contains `"i2@wbox.pro"` (stale — last written by a prior clp session). No `name::` argument is passed.
+- **When:** `clp .account.save` (no `name::`)
+- **Then:** Exits 0. stdout contains `saved current credentials as 'i5@wbox.pro'`. `{credential_store}/i5@wbox.pro.credentials.json` is created. `{credential_store}/i2@wbox.pro.credentials.json` is NOT created or modified — the stale marker is not used when `oauthAccount.emailAddress` provides a valid name.
+- **Exit:** 0
+- **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** BUG-212 MRE — verifies that `oauthAccount.emailAddress` from `~/.claude.json` is the primary name inference source; the stale `_active` marker is only used as a fallback when `oauthAccount.emailAddress` is absent or empty. External OAuth login updates `oauthAccount.emailAddress` but not the `_active` marker.
+- **Source:** [feature/002_account_save.md AC-16](../../../../docs/feature/002_account_save.md)

@@ -1241,3 +1241,43 @@ fn bug_mre_212_run_subcommand_not_in_help_commands()
      Got COMMANDS block:\n{cmds_block}"
   );
 }
+
+/// IN-4: `clr run [ARGS]` (explicit bare-word) produces identical output to `clr [ARGS]` (default).
+///
+/// ## Root Cause
+/// Before BUG-212, `run_cli()` had no dispatch branch for a leading `run` token.  `clr run msg`
+/// passed `"run"` as a positional message argument to Claude instead of stripping it and routing
+/// through the normal run path — silent wrong behavior with no error.
+///
+/// ## Why Not Caught
+/// No test exercised `clr run --dry-run "…"` to compare output against `clr --dry-run "…"`.
+/// The misbehavior (treating `"run"` as the message) was never observed until BUG-212 audit.
+///
+/// ## Fix Applied
+/// `run_cli()` now strips a leading `"run"` token before passing remaining tokens to
+/// `parse_args()`.  `clr run [ARGS]` is a transparent alias for `clr [ARGS]`.
+///
+/// ## Prevention
+/// When any new explicit subcommand form is added, add a dry-run equivalence test immediately
+/// to confirm the leading token is stripped and the remaining args parse identically.
+///
+/// ## Pitfall
+/// Comparing raw stdout byte-for-byte works only for `--dry-run` (deterministic output).
+/// Never compare live-invocation stdout: it contains subprocess-dependent, timing-sensitive data.
+///
+/// Fix(BUG-212)
+#[ test ]
+fn in4_run_subcommand_explicit_dispatch_identical_to_default()
+{
+  let with_run = run_cli( &[ "run", "--dry-run", "Fix bug" ] );
+  let default  = run_cli( &[ "--dry-run", "Fix bug" ] );
+  assert!( with_run.status.success(), "clr run --dry-run must exit 0" );
+  assert!( default.status.success(), "clr --dry-run must exit 0" );
+  let stdout_run     = String::from_utf8_lossy( &with_run.stdout );
+  let stdout_default = String::from_utf8_lossy( &default.stdout );
+  assert_eq!(
+    stdout_run,
+    stdout_default,
+    "`clr run --dry-run 'Fix bug'` stdout must be identical to `clr --dry-run 'Fix bug'` stdout"
+  );
+}

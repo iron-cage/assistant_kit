@@ -3183,10 +3183,11 @@ fn it102_structural_refresh_before_touch_ordering_in_source()
   );
 }
 
-/// it103 `lim_it` (FT-06 of feature/024): original `_active` account restored after all touch ops.
+/// it103 `lim_it` (FT-06 companion of feature/024): `_active` marker unchanged after all touch ops.
 ///
 /// When `touch::1` is active and a non-active account is touched, the `_active` file
-/// must point back to the original active account after `apply_touch` completes.
+/// must remain unchanged after `apply_touch` completes. Fix for BUG-211: `save(update_marker=false)`
+/// suppresses all `_active` writes during touch cycling — no restore call is made.
 /// Skips when idle account condition is not met.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-06]
@@ -3221,7 +3222,7 @@ fn it103_lim_it_active_account_restored_after_touch()
   let active_content = std::fs::read_to_string( &active_file ).unwrap_or_default();
   assert_eq!(
     active_content.trim(), "alice@test.com",
-    "_active must be restored to alice@test.com after touch completes (FT-06), got: {active_content:?}",
+    "_active must remain alice@test.com after touch (never written during cycling — BUG-211), got: {active_content:?}",
   );
 }
 
