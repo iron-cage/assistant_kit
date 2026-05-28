@@ -1801,3 +1801,82 @@ fn mre_bug_209_account_save_uses_active_marker_not_stale_email()
     "active marker must remain b@test.com after save, got: {marker_content}",
   );
 }
+
+/// # Root Cause
+///
+/// `account_save_routine()` (BUG-209 fix) read the `_active_{hostname}_{user}` marker
+/// as the SOLE name inference source when `name::` is absent. The marker is only written
+/// by clp ops (`switch_account`, `save`). External OAuth login writes `~/.claude.json`
+/// (including `oauthAccount.emailAddress`) without updating `_active` — leaving the marker
+/// stale. BUG-209 fix introduced this regression by swapping one stale source for another.
+///
+/// # Why Not Caught
+///
+/// The BUG-209 MRE (`mre_bug_209_*`) pre-populates the `_active` marker with the correct
+/// target account before calling `.account.save`. It validates that the marker beats stale
+/// top-level `emailAddress` — but does NOT test a stale marker itself. No test simulated
+/// the external-login scenario: set marker=A, write live `oauthAccount.emailAddress`=B,
+/// assert save targets B not A.
+///
+/// # Fix Applied
+///
+/// `account_save_routine()` now reads `oauthAccount.emailAddress` from `~/.claude.json` as
+/// the primary source; falls back to `_active` marker only when emailAddress is absent/empty.
+/// `oauthAccount.emailAddress` is updated by BOTH `switch_account()` (snapshot restore) AND
+/// external OAuth login (Claude writes `~/.claude.json` on every authentication).
+///
+/// # Prevention
+///
+/// Add MRE test: write `_active` = stale account; write `~/.claude.json` with live
+/// `oauthAccount.emailAddress`; call `.account.save` (no `name::`) — assert save targets
+/// the live email, not the stale marker.
+///
+/// # Pitfall
+///
+/// Any inference that relies on a single marker written only by one class of credential-change
+/// ops fails silently when other classes bypass that marker. Always prefer a source that ALL
+/// credential-change paths maintain — `oauthAccount.emailAddress` is the universal source.
+// test_kind: regression(BUG-212)
+#[ test ]
+fn mre_bug_212_account_save_stale_marker_uses_oauth_email()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Credentials required for save to succeed (write_credentials also creates ~/.claude/).
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  // Fresh oauthAccount.emailAddress from external OAuth login (i5 authenticated via browser).
+  // _active marker is NOT updated by external login — only clp ops (.account.use/.account.save) write it.
+  std::fs::write(
+    dir.path().join( ".claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"i5@wbox.pro"}}"#,
+  ).unwrap();
+
+  // Stale _active marker = "i2@wbox.pro" — set by prior .account.use i2; not updated by external login.
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write(
+    store.join( claude_profile::account::active_marker_filename() ),
+    "i2@wbox.pro",
+  ).unwrap();
+
+  // .account.save with no name:: — must use oauthAccount.emailAddress (i5), not _active (i2).
+  let out = run_cs_with_env( &[ ".account.save" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let stdout_text = stdout( &out );
+  assert!(
+    stdout_text.contains( "i5@wbox.pro" ),
+    "must save as i5@wbox.pro (oauthAccount.emailAddress), got:\n{stdout_text}",
+  );
+  assert!(
+    !stdout_text.contains( "i2@wbox.pro" ),
+    "must NOT save as i2@wbox.pro (stale _active marker), got:\n{stdout_text}",
+  );
+
+  // BUG-212: before fix, i2's file is created instead of i5's.
+  let i5_file = store.join( "i5@wbox.pro.credentials.json" );
+  let i2_file = store.join( "i2@wbox.pro.credentials.json" );
+  assert!( i5_file.exists(), "i5@wbox.pro.credentials.json must be created" );
+  assert!( !i2_file.exists(), "i2@wbox.pro.credentials.json must NOT be created (stale marker must not win)" );
+}
