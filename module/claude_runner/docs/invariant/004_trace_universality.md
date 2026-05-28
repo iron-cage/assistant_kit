@@ -70,7 +70,8 @@ Emitted via `emit_credential_trace()`:
 
 | File | Relationship |
 |------|--------------|
-| `../../src/cli.rs` | `parse_args()` and `dispatch_ask()` — `trace` field in `CliArgs`; `parse_isolated_args()`, `parse_refresh_args()` — `trace` field in each args struct |
+| `../../src/cli/parse.rs` | `parse_args()`, `parse_isolated_args()`, `parse_refresh_args()` — `trace` field in each args struct |
+| `../../src/cli/mod.rs` | `dispatch_ask()` — uses `CliArgs.trace` from `parse_args()` |
 
 ### Tests
 

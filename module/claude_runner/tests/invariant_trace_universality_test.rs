@@ -32,13 +32,20 @@ fn stderr_str( o : &std::process::Output ) -> String
 
 /// IT-1: `clr --trace "Fix bug"` (run) → stderr contains env+command before invocation.
 ///
-/// Trace fires before subprocess attempt; exit 1 (claude absent) is acceptable.
+/// Trace fires before subprocess attempt; exit is non-zero because PATH=/nonexistent
+/// prevents claude from being found.  PATH is restricted to avoid hanging: without it,
+/// an installed claude binary starts an interactive session and the test never completes.
 ///
 /// Source: tests/docs/invariant/004_trace_universality.md#it-1
 #[ test ]
 fn it_01_run_trace_stderr_output()
 {
-  let out    = cli_binary_test_helpers::run_cli( &[ "--trace", "Fix bug" ] );
+  // PATH=/nonexistent: trace fires first, then spawn fails immediately (claude not found).
+  // Without this, an installed claude binary would open an interactive TTY and hang forever.
+  let out    = cli_binary_test_helpers::run_cli_with_env(
+    &[ "--trace", "Fix bug" ],
+    &[ ( "PATH", "/nonexistent" ) ],
+  );
   let stderr = stderr_str( &out );
   assert!(
     stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
@@ -48,8 +55,6 @@ fn it_01_run_trace_stderr_output()
     stderr.contains( "--dangerously-skip-permissions" ),
     "run --trace must emit --dangerously-skip-permissions on stderr. Got:\n{stderr}"
   );
-  let code = out.status.code().unwrap_or( -1 );
-  assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );
 }
 
 /// IT-2: `clr ask --trace "What is X?"` → stderr contains ask-default env+command.
@@ -138,7 +143,7 @@ fn it_04_refresh_trace_stderr_output()
   assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );
 }
 
-/// IT-5: Static — `"--trace"` appears ≥ 3× in `src/cli.rs` (one per parse function).
+/// IT-5: Static — `"--trace"` appears ≥ 3× in `src/cli/parse.rs` (one per parse function).
 ///
 /// Verifies that `parse_args()`, `parse_isolated_args()`, and `parse_refresh_args()`
 /// all register the `--trace` flag.  Reads the actual source file at runtime via
@@ -149,13 +154,13 @@ fn it_04_refresh_trace_stderr_output()
 fn it_05_static_trace_universality()
 {
   let manifest_dir = env!( "CARGO_MANIFEST_DIR" );
-  let cli_path     = format!( "{manifest_dir}/src/cli.rs" );
+  let cli_path     = format!( "{manifest_dir}/src/cli/parse.rs" );
   let cli_rs       = std::fs::read_to_string( &cli_path )
     .unwrap_or_else( | e | panic!( "failed to read {cli_path}: {e}" ) );
   let count = cli_rs.matches( "\"--trace\"" ).count();
   assert!(
     count >= 3,
-    "expected '\"--trace\"' to appear ≥ 3 times in src/cli.rs \
+    "expected '\"--trace\"' to appear ≥ 3 times in src/cli/parse.rs \
      (parse_args, parse_isolated_args, parse_refresh_args); got {count}"
   );
 }

@@ -297,8 +297,12 @@ fn e11_clr_dry_run_enables_preview()
 #[ test ]
 fn e12_clr_verbosity_sets_level()
 {
-  let out = run_cli_with_env( &[ "task" ], &[ ( "CLR_VERBOSITY", "5" ) ] );
-  // Exit may be non-0 (Claude not installed in test env), but stderr must have preview.
+  // PATH=/nonexistent: verbose preview fires first, then spawn fails immediately.
+  // Without this, an installed claude binary opens an interactive session and hangs.
+  let out = run_cli_with_env(
+    &[ "task" ],
+    &[ ( "CLR_VERBOSITY", "5" ), ( "PATH", "/nonexistent" ) ],
+  );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     stderr.contains( "--effort" ),
@@ -339,7 +343,7 @@ fn e12_clr_verbosity_sets_level()
 /// `--timeout 30` in `isolated` has the same limitation and is intentionally documented as
 /// accepted (see `apply_isolated_env_vars` comment). Verbosity is fixed here because the
 /// `apply_env_vars` doc comment promises "CLI flag always wins when both are present".
-// test_kind: bug_reproducer(issue-verbosity-cli-wins)
+// test_kind: bug_reproducer(BUG-213)
 #[ test ]
 fn e12_verbosity_bug_cli_wins_when_env_overrides_default()
 {
@@ -354,6 +358,7 @@ fn e12_verbosity_bug_cli_wins_when_env_overrides_default()
     .args( [ "--verbosity", "3", "task" ] )
     .env( "CLR_VERBOSITY", "5" )
     .env( "PATH", "/nonexistent" )
+    .env_remove( "CLR_TRACE" ) // Fix(BUG-213): isolate from dev-shell CLR_TRACE; only verbosity governs here
     .output()
     .expect( "failed to invoke clr binary" );
 
@@ -373,8 +378,12 @@ fn e12_verbosity_bug_cli_wins_when_env_overrides_default()
 #[ test ]
 fn e13_clr_trace_prints_command_to_stderr()
 {
-  let out = run_cli_with_env( &[ "task" ], &[ ( "CLR_TRACE", "1" ) ] );
-  // Exit may be non-0 (Claude not installed in test env), but stderr must have preview.
+  // PATH=/nonexistent: trace fires first, then spawn fails immediately.
+  // Without this, an installed claude binary opens an interactive session and hangs.
+  let out = run_cli_with_env(
+    &[ "task" ],
+    &[ ( "CLR_TRACE", "1" ), ( "PATH", "/nonexistent" ) ],
+  );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
     stderr.contains( "--effort" ),

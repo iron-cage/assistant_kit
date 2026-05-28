@@ -111,6 +111,13 @@ fn t06_verbosity_one_shows_dry_run_output()
 // T07: --verbosity 0 with -p (print mode) — runner output suppressed;
 // Claude subprocess still executes. Uses a fake claude binary.
 // Fix(issue-108): chmod via PermissionsExt is Unix-only.
+//
+// Fix(BUG-213): ambient CLR_TRACE in the dev shell set cli.trace=true, firing the
+//   command preview on stderr even though verbosity was 0.
+// Root cause: .env() adds to the inherited parent environment; CLR_TRACE=1 from the
+//   developer's shell propagates into the subprocess and triggers apply_env_vars.
+// Pitfall: all verbosity-isolation tests that use Command directly must env_remove
+//   CLR_TRACE (and CLR_VERBOSITY) to prevent dev-shell pollution.
 #[ cfg( unix ) ]
 #[ test ]
 fn t07_verbosity_zero_suppresses_print_output()
@@ -133,6 +140,8 @@ fn t07_verbosity_zero_suppresses_print_output()
   let out = std::process::Command::new( bin )
   .args( [ "--verbosity", "0", "-p", "test" ] )
   .env( "PATH", new_path )
+  .env_remove( "CLR_TRACE" )     // Fix(BUG-213): prevent dev-shell CLR_TRACE from firing preview
+  .env_remove( "CLR_VERBOSITY" ) // Fix(BUG-213): prevent dev-shell CLR_VERBOSITY from overriding 0
   .output()
   .expect( "Failed to invoke clr binary" );
 

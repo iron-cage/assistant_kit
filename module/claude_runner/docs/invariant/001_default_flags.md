@@ -55,7 +55,7 @@ If any default injection is removed:
 
 | File | Relationship |
 |------|--------------|
-| `../../src/cli.rs` | `build_claude_command()` flag injection implementation |
+| `../../src/cli/mod.rs` | `build_claude_command()` flag injection implementation |
 
 ### Tests
 
