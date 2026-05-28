@@ -71,6 +71,7 @@
 //! - T48: `--no-skip-permissions --new-session` combo → no `-c`, no `--dangerously-skip-permissions`
 //! - T49: all `--help` option lines have descriptions at the same column (alignment regression guard)
 //! - BUG-212: `clr run <message>` → leading `run` token stripped; output identical to `clr <message>`
+//! - BUG-215: `clr run help` → output identical to `clr help` (help re-dispatched after run-strip)
 //!
 //! See `ultrathink_args_test.rs` (T50–T58) and `effort_args_test.rs` (T59–T70).
 
@@ -983,5 +984,69 @@ fn t48_no_skip_permissions_new_session_combination()
   assert!(
     stdout.contains( "\"hello\"" ),
     "message must still appear. Got:\n{stdout}"
+  );
+}
+
+// BUG-215: `clr run help` fell through to parse_args treating "help" as a positional
+// message — invoking claude instead of printing help.
+//
+// ## Root Cause
+//
+// `run_cli()` in `lib.rs` dispatches `help` before the `run` token stripping. After
+// stripping, the remaining `["help"]` was NOT re-checked against the `help` dispatch.
+// `parse_args(["help"])` collected "help" as a positional argument (message = "help")
+// and the binary proceeded to invoke claude with "help\n\nultrathink" as a prompt.
+//
+// ## Why Not Caught
+//
+// BUG-212 tests verified `clr run <message>` and `clr run --dry-run` but never tested
+// `clr run help`. The subcommand routing for `help` was covered only for bare `clr help`,
+// not for the `run`-prefixed form.
+//
+// ## Fix Applied
+//
+// Added a `help` re-dispatch check in `lib.rs` immediately after the `run` token strip:
+// if the first remaining token is "help", print_help() is called and the function returns.
+//
+// ## Prevention
+//
+// Whenever a token is stripped before subcommand dispatch, all dispatches that were
+// checked before the strip must be re-checked after it. The `help` dispatch lived above
+// the strip and therefore required a matching post-strip guard.
+//
+// ## Pitfall
+//
+// Only the `run` prefix triggers the strip. Other subcommand prefixes do not; `help`
+// appears in KNOWN and is passed to guard_unknown_subcommand — but "help" == "help"
+// means the prefix-check fires for `first != sub` = false, so it passes through silently
+// to parse_args instead of erroring. The re-dispatch is the only correct fix.
+//
+// test_kind: bug_reproducer(BUG-215)
+#[ test ]
+fn bug_reproducer_215_run_help_dispatches_help()
+{
+  // `clr run help` must print help and exit 0 — same as `clr help`.
+  let with_run = run_cli( &[ "run", "help" ] );
+  assert!(
+    with_run.status.success(),
+    "`clr run help` must exit 0 (BUG-215: was hanging invoking claude). stderr: {}",
+    String::from_utf8_lossy( &with_run.stderr )
+  );
+
+  let out_run  = String::from_utf8_lossy( &with_run.stdout );
+  assert!(
+    out_run.contains( "USAGE" ),
+    "`clr run help` must print USAGE. Got:\n{out_run}"
+  );
+
+  // Output must be identical to bare `clr help`.
+  let bare_help = run_cli( &[ "help" ] );
+  assert!(
+    bare_help.status.success(),
+    "`clr help` must exit 0"
+  );
+  assert_eq!(
+    out_run.trim(), String::from_utf8_lossy( &bare_help.stdout ).trim(),
+    "`clr run help` output must be identical to `clr help`"
   );
 }
