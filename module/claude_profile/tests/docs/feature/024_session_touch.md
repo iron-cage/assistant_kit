@@ -227,6 +227,6 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **When:** `apply_touch` processes this account.
 - **Then:** No subprocess is spawned (`refresh_account_token` is NOT called). The account is skipped with a trace line `[trace] touch  <name>  skipped (reason: 7d-exhausted)` (or equivalent). `apply_touch` returns after the skip without calling `run_isolated`.
 - **Exit:** N/A (unit test — no exit code)
-- **Source fn:** ⏳ `test_mre_bug214_apply_touch_skips_7d_exhausted_account` (in `src/usage.rs #[cfg(test)]`) — to be created by TSK-217
+- **Source fn:** ⏳ `test_mre_bug214_apply_touch_skips_7d_exhausted_account` (in `src/usage.rs #[cfg(test)]`) — created by TSK-217; Docker L3 verification pending
 - **Note:** BUG-214 MRE. Mirrors FT-13 (which tests the `resets_at` present guard) and the h-exhausted guard test (BUG-178). The account passes the error guard and the 5h-idle guard but must be caught by the new 7d guard.
 - **Source:** [feature/024_session_touch.md AC-14](../../../../docs/feature/024_session_touch.md)
