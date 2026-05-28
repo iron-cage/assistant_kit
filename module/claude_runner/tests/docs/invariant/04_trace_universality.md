@@ -66,7 +66,7 @@ Test case planning for [invariant/004_trace_universality.md](../../../../docs/in
 
 ### IN-5: Static: `--trace` parsed by all four subprocess-executing commands
 
-- **Given:** static analysis of `src/cli.rs`
+- **Given:** static analysis of `src/cli/parse.rs`
 - **When:** inspect `parse_args()`, `parse_isolated_args()`, `parse_refresh_args()` (and `dispatch_ask()` which calls `parse_args()`)
 - **Then:** all four functions include `--trace` in their flag definitions; no subprocess-executing command omits it; `help` does not accept `--trace` (it is not a subprocess-executing command)
 - **Exit:** 0

@@ -51,7 +51,8 @@ claude_runner serves two distinct consumers from one crate:
 | File | Relationship |
 |------|--------------|
 | `../../src/lib.rs` | `run_cli()` entry point |
-| `../../src/cli.rs` | Mode dispatch (`run_print_mode`, `run_interactive`), CLI parsing, command builder |
+| `../../src/cli/mod.rs` | Mode dispatch (`run_print_mode`, `run_interactive`), command builder, subcommand dispatch |
+| `../../src/cli/parse.rs` | CLI argument parsing, env var fallbacks |
 
 ### Tests
 

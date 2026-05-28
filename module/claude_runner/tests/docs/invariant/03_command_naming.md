@@ -78,7 +78,7 @@ Test case planning for [invariant/003_command_naming.md](../../../../docs/invari
 
 ### IN-6: `KNOWN_SUBCOMMANDS` contains `ask`; no entry begins with `--`
 
-- **Given:** static analysis of `guard_unknown_subcommand()` dispatch in `src/cli.rs`
+- **Given:** static analysis of `guard_unknown_subcommand()` dispatch in `src/cli/mod.rs`
 - **When:** inspect `KNOWN_SUBCOMMANDS` constant
 - **Then:** `KNOWN_SUBCOMMANDS` includes `ask`; none of the entries starts with `--` or `-`; all are bare words (`run`, `isolated`, `refresh`, `ask`, `help`)
 - **Exit:** 0
