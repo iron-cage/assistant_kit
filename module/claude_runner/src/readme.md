@@ -9,4 +9,4 @@
 | `cli/mod.rs` | Coordinator: help printing, command building, run/ask dispatch, strip_fences, unit tests. |
 | `main.rs` | `claude_runner` binary entry point; delegates to `run_cli()`. |
 | `verbosity.rs` | `VerbosityLevel` newtype: output gating with semantic level methods. |
-| `bin/` | `clr` binary alias entry point (thin wrapper). |
+| `bin/` | Binary aliases: `clr` and `c` entry points (thin wrappers). |
