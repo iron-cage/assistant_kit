@@ -4485,7 +4485,7 @@ fn it156_only_active_bad_exits_1()
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "0" ) && err.contains( "1" ),
+    err.contains( '0' ) && err.contains( '1' ),
     "only_active::bad stderr must name valid values (0, 1), got:\n{err}",
   );
 }
@@ -4604,7 +4604,7 @@ fn it161_only_next_bad_exits_1()
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "0" ) && err.contains( "1" ),
+    err.contains( '0' ) && err.contains( '1' ),
     "only_next::bad stderr must name valid values, got:\n{err}",
   );
 }
@@ -4762,7 +4762,7 @@ fn it170_only_valid_bad_exits_1()
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "0" ) && err.contains( "1" ),
+    err.contains( '0' ) && err.contains( '1' ),
     "only_valid::bad stderr must name valid values, got:\n{err}",
   );
 }
@@ -4877,7 +4877,7 @@ fn it175_exclude_exhausted_bad_exits_1()
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "0" ) && err.contains( "1" ),
+    err.contains( '0' ) && err.contains( '1' ),
     "exclude_exhausted::bad stderr must name valid values, got:\n{err}",
   );
 }
@@ -5105,7 +5105,7 @@ fn it185_offset_0_shows_all_rows()
 
 /// it186 — `offset::99` with 2 accounts skips all rows; result is empty.
 ///
-/// After offset::99, accounts slice is empty → render_text returns "(no accounts configured)".
+/// After `offset::99`, accounts slice is empty → `render_text` returns "(no accounts configured)".
 ///
 /// Spec: [`tests/docs/cli/param/038_offset.md` EC-3]
 #[ test ]
@@ -5336,7 +5336,7 @@ fn it196_abs_bad_exits_1()
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "0" ) && err.contains( "1" ),
+    err.contains( '0' ) && err.contains( '1' ),
     "abs::bad stderr must name valid values, got:\n{err}",
   );
 }
@@ -5426,7 +5426,7 @@ fn it200_no_color_bad_exits_1()
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "0" ) && err.contains( "1" ),
+    err.contains( '0' ) && err.contains( '1' ),
     "no_color::bad stderr must name valid values, got:\n{err}",
   );
 }

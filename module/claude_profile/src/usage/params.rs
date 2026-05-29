@@ -129,13 +129,13 @@ pub( super ) fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsagePar
   let count = match cmd.arguments.get( "count" )
   {
     None                        => 0_u64,
-    Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( 0 ),
+    Some( Value::Integer( n ) ) => u64::try_from( *n ).map_err( |_| ErrorData::new( ErrorCode::ArgumentTypeMismatch, "count:: must be a non-negative integer".to_string() ) )?,
     _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "count:: must be a non-negative integer".to_string() ) ),
   };
   let offset = match cmd.arguments.get( "offset" )
   {
     None                        => 0_u64,
-    Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( 0 ),
+    Some( Value::Integer( n ) ) => u64::try_from( *n ).map_err( |_| ErrorData::new( ErrorCode::ArgumentTypeMismatch, "offset:: must be a non-negative integer".to_string() ) )?,
     _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "offset:: must be a non-negative integer".to_string() ) ),
   };
   let only_active       = crate::output::parse_int_flag( cmd, "only_active",       0 )? != 0;

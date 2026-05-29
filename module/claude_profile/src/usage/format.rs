@@ -680,9 +680,9 @@ mod tests
   ///
   /// Composite AND: `5h_left > 15.0%` AND `7d_left > 5.0%` required for 🟢.
   ///
-  /// - A: `h5_util=85.0` (5h_left=15.0%, at threshold) → 🟡; 7d is ample.
-  /// - B: `h5_util=84.9` (5h_left=15.1%, just above) → 🟢; 7d is ample.
-  /// - C: `d7_util=95.0` (7d_left=5.0%, at threshold) → 🟡; 5h is ample.
+  /// - A: `h5_util=85.0` (`5h_left=15.0`%, at threshold) → 🟡; 7d is ample.
+  /// - B: `h5_util=84.9` (`5h_left=15.1`%, just above) → 🟢; 7d is ample.
+  /// - C: `d7_util=95.0` (`7d_left=5.0`%, at threshold) → 🟡; 5h is ample.
   ///
   /// Source: [`009_token_usage.md` AC-19](../../docs/feature/009_token_usage.md)
   #[ test ]
