@@ -41,31 +41,6 @@ fn is_dry( cmd : &VerifiedCommand ) -> bool
   matches!( cmd.arguments.get( "dry" ), Some( Value::Boolean( true ) ) )
 }
 
-/// Parse a strict opt-in flag registered with `Kind::String`: absent or `"0"` → false, `"1"` → true.
-///
-/// Rejects any other value (e.g. `"yes"`, `"2"`) with an error naming the parameter.
-/// Used for opt-in display flags where the framework's lenient boolean parsing
-/// (`"yes"` → true) is too permissive.
-fn parse_opt_bool_strict( cmd : &VerifiedCommand, name : &str ) -> Result< bool, ErrorData >
-{
-  match cmd.arguments.get( name )
-  {
-    None                       => Ok( false ),
-    Some( Value::String( s ) ) => match s.as_str()
-    {
-      "0" => Ok( false ),
-      "1" => Ok( true ),
-      _   => Err( ErrorData::new(
-        ErrorCode::ArgumentTypeMismatch,
-        format!( "invalid value for {name}:: — expected 0 or 1, got {s:?}" ),
-      ) ),
-    },
-    Some( _ ) => Err( ErrorData::new(
-      ErrorCode::ArgumentTypeMismatch,
-      format!( "invalid value for {name}:: — expected 0 or 1" ),
-    ) ),
-  }
-}
 
 /// Classify a token from its stored `expiresAt` millisecond value.
 ///
@@ -365,7 +340,7 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
       "format::table is only supported by .accounts".to_string(),
     ) );
   }
-  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
+  let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let paths            = require_claude_paths()?;
   if trace { eprintln!( "[trace] credentials.status  reading {}", paths.credentials_file().display() ) }
   let credential_store = require_credential_store()?;
@@ -398,10 +373,10 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
   let show_role         = matches!( cmd.arguments.get( "role"         ), Some( Value::Boolean( true ) ) );
   let show_billing      = matches!( cmd.arguments.get( "billing"      ), Some( Value::Boolean( true ) ) );
   let show_model        = matches!( cmd.arguments.get( "model"        ), Some( Value::Boolean( true ) ) );
-  let show_uuid         = parse_opt_bool_strict( &cmd, "uuid" )?;
-  let show_capabilities = parse_opt_bool_strict( &cmd, "capabilities" )?;
-  let show_org_uuid     = parse_opt_bool_strict( &cmd, "org_uuid" )?;
-  let show_org_name     = parse_opt_bool_strict( &cmd, "org_name" )?;
+  let show_uuid         = crate::output::parse_int_flag( &cmd, "uuid",         0 )? != 0;
+  let show_capabilities = crate::output::parse_int_flag( &cmd, "capabilities", 0 )? != 0;
+  let show_org_uuid     = crate::output::parse_int_flag( &cmd, "org_uuid",     0 )? != 0;
+  let show_org_name     = crate::output::parse_int_flag( &cmd, "org_name",     0 )? != 0;
 
   let ( tok, exp, exp_secs ) = derive_token_state(
     &crate::token::status_with_threshold( crate::token::WARNING_THRESHOLD_SECS ),
@@ -781,7 +756,7 @@ fn render_accounts_table(
 pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let opts             = OutputOptions::from_cmd( &cmd )?;
-  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
+  let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let Ok( credential_store ) = require_credential_store() else
   {
     if trace { eprintln!( "[trace] accounts  credential store: not found" ) }
@@ -839,10 +814,10 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
   let show_role         = matches!( cmd.arguments.get( "role"         ), Some( Value::Boolean( true ) ) );
   let show_billing      = matches!( cmd.arguments.get( "billing"      ), Some( Value::Boolean( true ) ) );
   let show_model        = matches!( cmd.arguments.get( "model"        ), Some( Value::Boolean( true ) ) );
-  let show_uuid         = parse_opt_bool_strict( &cmd, "uuid" )?;
-  let show_capabilities = parse_opt_bool_strict( &cmd, "capabilities" )?;
-  let show_org_uuid     = parse_opt_bool_strict( &cmd, "org_uuid" )?;
-  let show_org_name     = parse_opt_bool_strict( &cmd, "org_name" )?;
+  let show_uuid         = crate::output::parse_int_flag( &cmd, "uuid",         0 )? != 0;
+  let show_capabilities = crate::output::parse_int_flag( &cmd, "capabilities", 0 )? != 0;
+  let show_org_uuid     = crate::output::parse_int_flag( &cmd, "org_uuid",     0 )? != 0;
+  let show_org_name     = crate::output::parse_int_flag( &cmd, "org_name",     0 )? != 0;
 
   // Detect which account matches the live session token (graceful: None when creds absent).
   let live_creds = crate::ClaudePaths::new()
@@ -886,8 +861,8 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   // Pitfall: Only the mutating step (file copy + marker write) is skipped in dry-run;
   //   all validation and precondition checks must run unconditionally.
   let raw_name   = require_nonempty_string_arg( &cmd, "name" )?;
-  let touch      = crate::usage::parse_int_flag( &cmd, "touch", 1 )?;
-  let trace      = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
+  let touch      = crate::output::parse_int_flag( &cmd, "touch", 1 )?;
+  let trace      = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let imodel_str = match cmd.arguments.get( "imodel" )
   {
     None                       => "auto".to_string(),
@@ -1002,7 +977,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
 #[ inline ]
 pub fn account_rotate_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
+  let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let credential_store = require_credential_store()?;
   if trace { eprintln!( "[trace] account.rotate  reading store: {}", credential_store.display() ) }
   let paths            = require_claude_paths()?;
@@ -1116,7 +1091,7 @@ pub fn account_limits_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
       "format::table is only supported by .accounts".to_string(),
     ) );
   }
-  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
+  let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
   if trace { eprintln!( "[trace] account.limits  store: {}", credential_store.display() ) }
@@ -1187,7 +1162,7 @@ pub fn dot_routine( _cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result<
 pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   let paths            = require_claude_paths()?;
-  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
+  let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let name             = match cmd.arguments.get( "name" )
   {
     Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
@@ -1256,7 +1231,7 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
   // Root cause: is_dry() was checked before existence check,
   //   so dry-run bypassed NotFound (missing account).
   // Pitfall: precondition checks must run before the dry-run shortcut.
-  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
+  let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let raw_name         = require_nonempty_string_arg( &cmd, "name" )?;
   let credential_store = require_credential_store()?;
   if trace { eprintln!( "[trace] account.delete  store: {}", credential_store.display() ) }
@@ -1290,7 +1265,7 @@ pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) 
 #[ inline ]
 pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let trace            = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
+  let trace            = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
   if trace { eprintln!( "[trace] account.relogin  store: {}", credential_store.display() ) }
@@ -1412,7 +1387,7 @@ pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
       "format::table is only supported by .accounts".to_string(),
     ) );
   }
-  let trace = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
+  let trace = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   let paths = require_claude_paths()?;
   if trace { eprintln!( "[trace] token.status  reading {}", paths.credentials_file().display() ) }
 
@@ -1466,7 +1441,7 @@ pub fn token_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 #[ inline ]
 pub fn paths_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let trace = crate::usage::parse_int_flag( &cmd, "trace", 0 )? != 0;
+  let trace = crate::output::parse_int_flag( &cmd, "trace", 0 )? != 0;
   if let Some( Value::String( field ) ) = cmd.arguments.get( "field" )
   {
     if !field.is_empty()

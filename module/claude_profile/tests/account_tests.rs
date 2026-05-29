@@ -275,7 +275,7 @@ fn delete_removes_credential_file()
   let paths = ClaudePaths::new().expect( "HOME set" );
   account::save( "alice@oldco.com", &credential_store, &paths, true ).expect( "save" );
   let file = credential_store.join( "alice@oldco.com.credentials.json" );
-  assert!( file.exists() );
+  assert!( file.exists(), "credential file must exist immediately after save()" );
   // save() now writes _active = "alice@oldco.com"; switch to a different account
   // so alice@oldco.com is inactive and deletion is permitted.
   std::fs::write( credential_store.join( account::active_marker_filename() ), "work@acme.com" ).expect( "overwrite _active" );
@@ -285,8 +285,6 @@ fn delete_removes_credential_file()
   assert!( !file.exists(), "credential file must be gone after delete" );
 }
 
-// test_kind: bug_reproducer(issue-delete-active)
-//
 // Root Cause: `check_delete_preconditions()` returned `PermissionDenied` when the account
 //   matched the `_active` marker; `delete()` never cleaned up `_active` on any deletion.
 // Why Not Caught: A-14 asserted `PermissionDenied` as correct behavior; no test covered
@@ -297,6 +295,7 @@ fn delete_removes_credential_file()
 //   after deletion rather than refusing the operation.
 // Pitfall: Checking `_active` in preconditions creates a deadlock when no other accounts
 //   exist (must switch before delete, but can't switch with no other accounts).
+#[ doc = "bug_reproducer(issue-delete-active)" ]
 #[ test ]
 fn delete_active_account_succeeds()
 {

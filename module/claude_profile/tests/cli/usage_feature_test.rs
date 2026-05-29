@@ -35,7 +35,7 @@ use crate::helpers::{
   write_live_credentials_with_token,
   FAR_FUTURE_MS, PAST_MS,
 };
-use claude_profile::usage::jwt_exp_ms;
+use claude_profile::output::jwt_exp_ms;
 use tempfile::TempDir;
 
 // ── FT-01: Error reason shortened — missing accessToken (AC-03) ──────────────

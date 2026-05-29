@@ -25,7 +25,7 @@ fn new_returns_none_when_home_not_set()
   // Safe: nextest runs each test in its own process,
   // so removing HOME here does not affect other tests.
   std::env::remove_var( "HOME" );
-  assert!( ClaudePaths::new().is_none() );
+  assert!( ClaudePaths::new().is_none(), "ClaudePaths::new() must return None when HOME is unset" );
 }
 
 #[ test ]

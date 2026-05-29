@@ -441,8 +441,6 @@ fn p13_pro_empty_string_falls_back_to_home()
 /// `$PRO` is a storage root — it must be a directory. If `$PRO` resolves to an
 /// existing file, it is unusable as a root and must be treated as unset (fall
 /// through to `$HOME`).
-// test_kind: bug_reproducer(issue-001)
-//
 // Root Cause: The original guard used `path.exists()` which returns `true` for
 //   both files and directories. A file path passed the guard and was used as root,
 //   producing `<file>/persistent/claude_profile` — a path `ensure_exists()` would
@@ -456,6 +454,7 @@ fn p13_pro_empty_string_falls_back_to_home()
 //   directory root. Reserve `exists()` for cases where file vs. directory is irrelevant.
 // Pitfall: `is_dir()` returns `false` for non-existent paths (same as `exists()`),
 //   so the fallback behaviour for missing paths is preserved — no separate check needed.
+#[ doc = "bug_reproducer(issue-001)" ]
 #[ test ]
 fn p14_pro_set_to_existing_file_falls_back_to_home()
 {

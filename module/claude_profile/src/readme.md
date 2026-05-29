@@ -2,7 +2,9 @@
 
 | File | Responsibility |
 |------|----------------|
-| `lib.rs` | Crate root: module declarations, re-exports, and `register_commands()`. |
+| `lib.rs` | Crate root: module declarations and re-exports. |
+| `registry.rs` | Command registration: argument definitions and routines for 11 commands. |
+| `cli.rs` | CLI pipeline: adapter → parser → semantic analysis → execution. |
 | `paths.rs` | ClaudePaths — all `~/.claude/` canonical paths from HOME. |
 | `token.rs` | TokenStatus — read expiresAt, classify Valid/ExpiringSoon/Expired. |
 | `account.rs` | Account CRUD: save, list, switch, delete, auto_rotate; _active marker. |

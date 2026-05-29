@@ -588,8 +588,6 @@ fn ad09_double_delete_exits_2()
   assert_exit( &second, 2 );
 }
 
-// test_kind: bug_reproducer(issue-switch-dry-validation)
-//
 // Root Cause: `account_use_routine` checked `is_dry()` before validating account
 //   existence, so `.account.use dry::1 name::missing` returned exit 0 ("would switch
 //   to 'missing'") even when the named account does not exist.
@@ -601,6 +599,7 @@ fn ad09_double_delete_exits_2()
 //   mutation step is skipped.
 // Pitfall: Placing `is_dry()` before domain validation produces misleading "would do X"
 //   output for operations that would actually fail — always validate first, then dry-run.
+#[ doc = "bug_reproducer(issue-switch-dry-validation)" ]
 #[ test ]
 fn aw10_switch_dry_run_nonexistent_exits_2()
 {
@@ -626,8 +625,6 @@ fn ad10_delete_dry_run_active_exits_0()
   assert!( account_exists( dir.path(), "alice@acme.com" ), "dry-run must not delete active account" );
 }
 
-// test_kind: bug_reproducer(issue-delete-dry-validation)
-//
 // Root Cause: Same as ad10 — `is_dry()` guard ran before any account existence check,
 //   so `.account.delete dry::1 name::ghost` (nonexistent) returned exit 0 instead of
 //   exit 2 (`NotFound`).
@@ -637,6 +634,7 @@ fn ad10_delete_dry_run_active_exits_0()
 // Prevention: Dry-run path must include all validation; only file-system mutation is omitted.
 // Pitfall: Missing existence check in dry-run gives a false "operation would succeed"
 //   signal, masking configuration errors until the real run.
+#[ doc = "bug_reproducer(issue-delete-dry-validation)" ]
 #[ test ]
 fn ad11_delete_dry_run_nonexistent_exits_2()
 {
@@ -1833,7 +1831,7 @@ fn mre_bug_209_account_save_uses_active_marker_not_stale_email()
 /// Any inference that relies on a single marker written only by one class of credential-change
 /// ops fails silently when other classes bypass that marker. Always prefer a source that ALL
 /// credential-change paths maintain — `oauthAccount.emailAddress` is the universal source.
-// test_kind: regression(BUG-212)
+#[ doc = "bug_reproducer(BUG-212)" ]
 #[ test ]
 fn mre_bug_212_account_save_stale_marker_uses_oauth_email()
 {
@@ -1922,7 +1920,7 @@ fn mre_bug_212_account_save_stale_marker_uses_oauth_email()
 /// "valid-but-fetch-failed" with "expired-and-fetch-failed". Never treat all `None`
 /// returns from stateful probe functions identically at the decision point — add
 /// an explicit expiry check for each distinct None cause.
-// test_kind: mre(BUG-213)
+#[ doc = "bug_reproducer(BUG-213)" ]
 #[ test ]
 fn mre_bug213_account_use_refuses_expired_token_on_fetch_error()
 {
