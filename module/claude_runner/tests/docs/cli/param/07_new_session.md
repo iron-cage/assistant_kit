@@ -8,7 +8,7 @@ Edge case tests for the new session flag. Tests validate continuation suppressio
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | Default → `-c` (continuation) in assembled command | Behavioral Divergence |
+| EC-1 | Default → `-c` in assembled command (when session storage non-empty) | Behavioral Divergence |
 | EC-2 | `--new-session` → no `-c` in assembled command | Behavioral Divergence |
 | EC-3 | `--new-session` without message → accepted, no error | Edge Case |
 | EC-4 | `--new-session` + message → both handled correctly | Interaction |
@@ -28,9 +28,9 @@ Edge case tests for the new session flag. Tests validate continuation suppressio
 ## Test Cases
 ---
 
-### EC-1: Default → `-c` in assembled command
+### EC-1: Default → `-c` in assembled command (when session storage non-empty)
 
-- **Given:** clean environment
+- **Given:** clean environment; default session dir (`~/.claude/`) contains at least one session file (post-BUG-214: `session_exists()` guard injects `-c` only when storage is non-empty)
 - **When:** `clr --dry-run "Fix bug"`
 - **Then:** Assembled command contains `-c` (continuation flag)
 - **Exit:** 0

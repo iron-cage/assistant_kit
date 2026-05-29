@@ -52,7 +52,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-44 | `sort::name` accepted with empty store → exit 0 | Sort Acceptance |
 | IT-45 | `sort::endurance` accepted with empty store → exit 0 | Sort Acceptance |
 | IT-46 | `sort::drain` accepted with empty store → exit 0 | Sort Acceptance |
-| IT-47 | `sort::reset` accepted with empty store → exit 0 | Sort Acceptance |
+| IT-47 | `sort::renew` accepted with empty store → exit 0 | Sort Acceptance |
 | IT-48 | `sort::bogus` → exit 1, stderr names all five valid values | Sort Rejection |
 | IT-65 | `sort::next` accepted with empty store → exit 0 | Sort Acceptance |
 | IT-49 | `prefer::bogus` → exit 1, stderr names valid values | Sort Rejection |
@@ -620,13 +620,13 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-47: `sort::reset` accepted with empty store → exit 0
+### IT-47: `sort::renew` accepted with empty store → exit 0
 
 - **Given:** Empty credential store.
-- **When:** `clp .usage sort::reset`
+- **When:** `clp .usage sort::renew`
 - **Then:** Exits 0 with "(no accounts configured)". No unknown-parameter error.
 - **Exit:** 0
-- **Source fn:** `it046_sort_reset_accepted`
+- **Source fn:** `it046_sort_renew_accepted`
 - **Source:** [feature/020_usage_sort_strategies.md AC-04](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -635,7 +635,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** Any environment (empty credential store).
 - **When:** `clp .usage sort::bogus`
-- **Then:** Exits 1. Stderr contains each of the five valid values: `name`, `endurance`, `drain`, `reset`, `next`.
+- **Then:** Exits 1. Stderr contains each of the five valid values: `name`, `endurance`, `drain`, `renew`, `next`.
 - **Exit:** 1
 - **Source fn:** `it047_sort_invalid_value_exit_1`
 - **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../../docs/feature/020_usage_sort_strategies.md)

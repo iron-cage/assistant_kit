@@ -24,7 +24,7 @@ use crate::output::{ OutputFormat, OutputOptions, format_duration_secs, json_esc
 // ── Sort and prefer strategies ─────────────────────────────────────────────────
 
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-enum SortStrategy { Name, Endurance, Drain, Reset, Next }
+enum SortStrategy { Name, Endurance, Drain, Renew, Next }
 
 impl SortStrategy
 {
@@ -35,10 +35,10 @@ impl SortStrategy
       "name"      => Ok( Self::Name ),
       "endurance" => Ok( Self::Endurance ),
       "drain"     => Ok( Self::Drain ),
-      "reset"     => Ok( Self::Reset ),
+      "renew"     => Ok( Self::Renew ),
       "next"      => Ok( Self::Next ),
       _           => Err( format!(
-        "invalid sort:: value {s:?}: valid values are `name`, `endurance`, `drain`, `reset`, `next`",
+        "invalid sort:: value {s:?}: valid values are `name`, `endurance`, `drain`, `renew`, `next`",
       ) ),
     }
   }
@@ -227,6 +227,19 @@ fn read_token( credential_store : &std::path::Path, name : &str ) -> Result< Str
 /// (AC-09): `is_current: true`, name from `~/.claude.json` email or `(current session)`.
 /// Pitfall: this case is easy to miss when only testing the normal single-account path.
 ///
+/// Prepend `row` to `results` only when no entry with the same `name` is already present.
+///
+/// Enforces the at-most-one-row-per-name invariant for the synthetic current-session row
+/// injected by `fetch_all_quota`. Unconditional `results.insert(0, row)` creates a
+/// duplicate when `row.name` matches an existing stored account (BUG-218).
+fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : AccountQuota )
+{
+  if !results.iter().any( |r| r.name == row.name )
+  {
+    results.insert( 0, row );
+  }
+}
+
 /// When `stagger` is `true`, each account fetch is preceded by a pseudo-random sleep
 /// of 200–1500 ms (thunder-herd mitigation for live monitor mode).
 ///
@@ -338,7 +351,7 @@ fn fetch_all_quota(
       let expires_at_ms = parse_u64_field( live_creds_file, "expiresAt" ).unwrap_or( 0 );
       let result        = claude_quota::fetch_oauth_usage( token ).map_err( |e| e.to_string() );
       let account       = claude_quota::fetch_oauth_account( token ).ok();
-      results.insert( 0, AccountQuota
+      inject_synthetic_if_new( &mut results, AccountQuota
       {
         name : synthetic_name,
         is_current    : true,
@@ -618,6 +631,17 @@ fn five_hour_left( aq : &AccountQuota ) -> f64
   }
 }
 
+/// Return `7d Left` as a percentage for the `apply_touch` skip guard.
+///
+/// Returns `100.0 - seven_day.utilization` for `Ok` accounts with `seven_day` data,
+/// `100.0` for `Ok` accounts where `seven_day` is absent (absent data ≠ exhausted),
+/// or `0.0` for `Err` accounts (treated as fully exhausted — no touch beneficial).
+fn seven_day_left( aq : &AccountQuota ) -> f64
+{
+  let Ok( ref data ) = aq.result else { return 0.0; };
+  100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization )
+}
+
 /// Return the weekly quota left (%) for a given `prefer` strategy.
 ///
 /// - `Opus`   → `7d Left` only.
@@ -752,7 +776,7 @@ fn sort_indices(
       non_exhausted
     }
 
-    SortStrategy::Reset =>
+    SortStrategy::Renew =>
     {
       let reset_secs_of = |i : usize| -> u64
       {
@@ -871,15 +895,23 @@ fn strategy_metric(
     NextStrategy::Drain =>
     {
       let weekly_pct = prefer_weekly( aq, prefer );
-      let weekly_reset_str = match prefer
-      {
-        PreferStrategy::Sonnet => data.seven_day_sonnet.as_ref(),
-        _                      => data.seven_day.as_ref(),
-      }
+      // Fix(BUG-216): label and reset source reflect the binding weekly dimension.
+      // Root cause: label was always "7d left" even when prefer_weekly(Any) returned
+      //   seven_day_sonnet_left (Sonnet is binding), contradicting the table's "7d Left" column.
+      // Pitfall: prefer::Any binds on min(7d, Son); must re-derive left values here because
+      //   prefer_weekly() returns only the min, not which input was binding.
+      let left_7d     = 100.0 - data.seven_day.as_ref().map_or( 0.0, |p| p.utilization );
+      let left_son    = 100.0 - data.seven_day_sonnet.as_ref().map_or( 0.0, |p| p.utilization );
+      let son_binding = matches!( prefer, PreferStrategy::Sonnet )
+        || ( matches!( prefer, PreferStrategy::Any ) && left_son < left_7d );
+      let weekly_label = if son_binding { "7d(Son) left" } else { "7d left" };
+      let reset_label  = if son_binding { "7d(Son) resets in" } else { "7d resets in" };
+      let weekly_reset_str = ( if son_binding { data.seven_day_sonnet.as_ref() }
+                               else           { data.seven_day.as_ref() } )
         .and_then( |p| p.resets_at.as_deref() )
         .and_then( claude_quota::iso_to_unix_secs )
         .map_or_else( || "\u{2014}".to_string(), |t| format_duration_secs( t.saturating_sub( now_secs ) ) );
-      format!( "{weekly_pct:.0}% 7d left, 7d resets in {weekly_reset_str}" )
+      format!( "{weekly_pct:.0}% {weekly_label}, {reset_label} {weekly_reset_str}" )
     }
   }
 }
@@ -1521,16 +1553,30 @@ fn apply_touch(
     return;
   };
 
-  // Guard: only idle accounts (no active 5h window) AND not h-exhausted need touching.
-  // AC-02: trigger on is_none() (idle — no resets_at) AND five_hour_left > 15% (not h-exhausted).
-  let is_idle = data.five_hour.as_ref()
-    .and_then( |p| p.resets_at.as_deref() )
-    .is_none();
-  if !is_idle || five_hour_left( aq ) <= 15.0
+  // Guard: skip accounts with all timers running, h-exhausted, or 7d-exhausted.
+  // AC-02: trigger fires when ANY quota timer is absent and quota is valid (not exhausted).
+  // Fix(BUG-214): d7_left guard skips 7d-weekly-exhausted accounts (seven_day_left <= 0%).
+  // Root cause(BUG-214): guard lacked seven_day_left check; 7d-exhausted accounts fired
+  //   subprocess that received HTTP 429 (~2.3s penalty, no session opened).
+  // Fix(BUG-215): replace is_idle (single 5h timer) with all_running (3-timer check).
+  // Root cause(BUG-215): is_idle only checked five_hour.resets_at; accounts with 5h active
+  //   but 7d/7d-Son timer absent were skipped as "already active" — touch never started
+  //   the missing quota window.
+  // Pitfall: map_or(true, ...) for 7d/7d-Son — field absent means no weekly tracking on
+  //   the plan; treat as "running" to avoid spurious touch for dimensions that don't exist.
+  let five_h_running = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_some();
+  let d7_running     = data.seven_day.as_ref().map_or( true, |p| p.resets_at.is_some() );
+  let son_running    = data.seven_day_sonnet.as_ref().map_or( true, |p| p.resets_at.is_some() );
+  let all_running    = five_h_running && d7_running && son_running;
+  let h_left  = five_hour_left( aq );
+  let d7_left = seven_day_left( aq );
+  if all_running || h_left <= 15.0 || d7_left <= 0.0
   {
     if trace
     {
-      let reason = if is_idle { "h-exhausted" } else { "already active" };
+      let reason = if all_running    { "already active" }
+        else if h_left  <= 15.0     { "h-exhausted"    }
+        else                         { "7d-exhausted"   };
       eprintln!( "[trace] touch  {}  skipped (reason: {})", aq.name, reason );
     }
     return;
@@ -1701,11 +1747,11 @@ fn resolve_model( aq : &AccountQuota, imodel : SubprocessModel ) -> claude_runne
     SubprocessModel::Haiku  => IsolatedModel::Specific( "claude-haiku-4-5-20251001".to_string() ),
     SubprocessModel::Auto   =>
     {
-      // AC-01: ≥30% Sonnet headroom → sonnet; else → opus.  None quota data → 0% → opus.
+      // AC-01: ≥20% Sonnet headroom → sonnet; else → opus.  None quota data → 0% → opus.
       let sonnet_left = aq.result.as_ref().ok()
         .and_then( |d| d.seven_day_sonnet.as_ref() )
         .map( |p| 100.0 - p.utilization );
-      if sonnet_left.is_some_and( |pct| pct >= 30.0 )
+      if sonnet_left.is_some_and( |pct| pct >= 20.0 )
       {
         IsolatedModel::Specific( "claude-sonnet-4-6".to_string() )
       }
@@ -1983,7 +2029,7 @@ fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorDat
   };
   let sort = match cmd.arguments.get( "sort" )
   {
-    None                         => SortStrategy::Drain,
+    None                         => SortStrategy::Renew,
     Some( Value::String( s ) )   => SortStrategy::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
     _ => return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
@@ -3614,7 +3660,7 @@ mod tests
     assert!( err.contains( "name" ),      "error must name valid values; got: {err}" );
     assert!( err.contains( "endurance" ), "error must name valid values; got: {err}" );
     assert!( err.contains( "drain" ),     "error must name valid values; got: {err}" );
-    assert!( err.contains( "reset" ),     "error must name valid values; got: {err}" );
+    assert!( err.contains( "renew" ),     "error must name valid values; got: {err}" );
     assert!( err.contains( "next" ),      "error must name valid values; got: {err}" );
   }
 
@@ -3672,7 +3718,7 @@ mod tests
     }
   }
 
-  // Helper: build ISO-8601 reset string at `now_secs + offset_secs` for sort::endurance / sort::reset tests.
+  // Helper: build ISO-8601 reset string at `now_secs + offset_secs` for sort::endurance / sort::renew tests.
   fn reset_iso_at( now_secs : u64, offset_secs : u64 ) -> String
   {
     let ts = now_secs + offset_secs;
@@ -3689,9 +3735,9 @@ mod tests
   //
   // Use for `sort::endurance` tests (qualification window reads `five_hour.resets_at`).
   //
-  // Pitfall: Do NOT use for `sort::reset` tests — the Reset arm reads `seven_day.resets_at`.
+  // Pitfall: Do NOT use for `sort::renew` tests — the Renew arm reads `seven_day.resets_at`.
   // If used there, `reset_secs_of` returns `u64::MAX` for all accounts (stable sort, not by time).
-  // Use `mk_aq_with_7d_reset` for Reset arm tests.
+  // Use `mk_aq_with_7d_reset` for Renew arm tests.
   fn mk_aq_with_reset( name : &str, five_hour_util : f64, now_secs : u64, reset_offset_secs : u64 ) -> AccountQuota
   {
     let data = claude_quota::OauthUsageData
@@ -3713,7 +3759,7 @@ mod tests
 
   // Helper: build AccountQuota with `seven_day.resets_at` set to `now_secs + reset_offset_secs`.
   //
-  // Use for `sort::reset` tests — the Reset arm reads `seven_day.resets_at` as its primary key.
+  // Use for `sort::renew` tests — the Renew arm reads `seven_day.resets_at` as its primary key.
   // `seven_day.utilization` is 0.0 (100% left). `five_hour.resets_at` is None.
   //
   // Pitfall: Do NOT use for `sort::endurance` tests — the Endurance arm reads `five_hour.resets_at`.
@@ -3802,9 +3848,9 @@ mod tests
     assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com","exhausted must still be last" );
   }
 
-  /// AC-04 — `sort::reset` places exhausted accounts last; non-exhausted sorted by soonest `7d Reset`.
+  /// AC-04 — `sort::renew` places exhausted accounts last; non-exhausted sorted by soonest `7d Reset`.
   #[ test ]
-  fn test_sort_reset_soonest_first_exhausted_last()
+  fn test_sort_renew_soonest_first_exhausted_last()
   {
     let now : u64 = 1_000_000;
     let accounts = vec![
@@ -3812,7 +3858,7 @@ mod tests
       mk_aq_with_7d_reset( "exhausted@test.com", 99.0, now, 600   ),  // ≤15% left — exhausted
       mk_aq_with_7d_reset( "soon@test.com",      30.0, now, 600   ),  // 70% left, 10min 7d reset
     ];
-    let indices = sort_indices( &accounts, SortStrategy::Reset, None, PreferStrategy::Any, now );
+    let indices = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, now );
     assert_eq!( accounts[ indices[ 0 ] ].name, "soon@test.com",      "soonest 7d reset must be first" );
     assert_eq!( accounts[ indices[ 1 ] ].name, "late@test.com",      "later 7d reset second" );
     assert_eq!( accounts[ indices[ 2 ] ].name, "exhausted@test.com", "exhausted must be last" );
@@ -3853,6 +3899,23 @@ mod tests
     let idx_desc0   = sort_indices( &accounts, SortStrategy::Drain, Some( false ), PreferStrategy::Any, 0 );
     assert_eq!( idx_default, idx_desc0, "drain default must equal desc::0" );
     assert_eq!( accounts[ idx_default[ 0 ] ].name, "low@test.com", "lowest first with default drain" );
+  }
+
+  /// AC-06 / FT-14 — `sort::renew` without explicit `desc::` equals `desc::0` (soonest reset first).
+  ///
+  /// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-14]
+  #[ test ]
+  fn test_sort_renew_default_equals_desc0()
+  {
+    let now : u64 = 1_000_000;
+    let accounts = vec![
+      mk_aq_with_7d_reset( "late@test.com",  30.0, now, 86400 ),  // resets in 24h
+      mk_aq_with_7d_reset( "early@test.com", 30.0, now, 3600  ),  // resets in 1h (soonest)
+    ];
+    let idx_default = sort_indices( &accounts, SortStrategy::Renew, None,          PreferStrategy::Any, now );
+    let idx_desc0   = sort_indices( &accounts, SortStrategy::Renew, Some( false ), PreferStrategy::Any, now );
+    assert_eq!( idx_default, idx_desc0, "renew default must equal desc::0" );
+    assert_eq!( accounts[ idx_default[ 0 ] ].name, "early@test.com", "soonest reset first with default renew" );
   }
 
   /// AC-07 — `prefer::sonnet` uses `7d(Son)` for endurance qualification.
@@ -3989,9 +4052,9 @@ mod tests
     );
   }
 
-  /// CC-012 — `sort::reset desc::1` reverses non-exhausted tier; exhausted floor unchanged.
+  /// CC-012 — `sort::renew desc::1` reverses non-exhausted tier; exhausted floor unchanged.
   #[ test ]
-  fn test_sort_reset_desc1_reverses_non_exhausted_only()
+  fn test_sort_renew_desc1_reverses_non_exhausted_only()
   {
     let now : u64 = 1_000_000;
     let accounts = vec![
@@ -4000,9 +4063,9 @@ mod tests
       mk_aq_with_7d_reset( "exhausted@test.com", 99.0, now, 600  ),  // ≤15% left — sunk
     ];
     // desc::1 reverses non-exhausted: latest 7d reset first, soonest second; exhausted still last.
-    let idx = sort_indices( &accounts, SortStrategy::Reset, Some( true ), PreferStrategy::Any, now );
-    assert_eq!( accounts[ idx[ 0 ] ].name, "late@test.com",      "desc::1 reset: latest 7d reset first" );
-    assert_eq!( accounts[ idx[ 1 ] ].name, "soon@test.com",      "desc::1 reset: soonest 7d reset second" );
+    let idx = sort_indices( &accounts, SortStrategy::Renew, Some( true ), PreferStrategy::Any, now );
+    assert_eq!( accounts[ idx[ 0 ] ].name, "late@test.com",      "desc::1 renew: latest 7d reset first" );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "soon@test.com",      "desc::1 renew: soonest 7d reset second" );
     assert_eq!( accounts[ idx[ 2 ] ].name, "exhausted@test.com", "exhausted must still be last" );
   }
 
@@ -4068,9 +4131,9 @@ mod tests
     assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted drain: input order preserved" );
   }
 
-  /// CC-045 — `sort::reset` with all accounts exhausted preserves input order.
+  /// CC-045 — `sort::renew` with all accounts exhausted preserves input order.
   #[ test ]
-  fn test_sort_reset_all_exhausted_preserves_input_order()
+  fn test_sort_renew_all_exhausted_preserves_input_order()
   {
     let now : u64 = 1_000_000;
     let accounts = vec![
@@ -4078,10 +4141,10 @@ mod tests
       mk_aq_with_reset( "second@test.com", 97.0, now, 7200 ),  // 3% left — exhausted
       mk_aq_with_reset( "third@test.com",  95.0, now, 3600 ),  // 5% left — exhausted
     ];
-    let idx = sort_indices( &accounts, SortStrategy::Reset, None, PreferStrategy::Any, now );
-    assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted reset: input order preserved" );
-    assert_eq!( accounts[ idx[ 1 ] ].name, "second@test.com", "all-exhausted reset: input order preserved" );
-    assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted reset: input order preserved" );
+    let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, now );
+    assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted renew: input order preserved" );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "second@test.com", "all-exhausted renew: input order preserved" );
+    assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted renew: input order preserved" );
   }
 
   /// CC-058 — Account with `five_hour: None` is treated as non-exhausted (conservative 100% left).
@@ -4811,53 +4874,53 @@ mod tests
 
   // Note: mk_aq_err() is defined earlier in this mod tests block (line ~3132); reused here.
 
-  /// FT-01 / EC-9: `imodel::auto` with 7d(Son) utilization 75% (25% left, below 30%) → opus.
+  /// FT-01 / EC-9: `imodel::auto` with 7d(Son) utilization 85% (15% left, below 20%) → opus.
   ///
   /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-01]
   ///       [`tests/docs/cli/param/035_imodel.md` EC-9]
   #[ test ]
   fn it_imodel_auto_selects_opus_when_sonnet_low()
   {
-    // 75% utilization → 25% remaining → below 30% threshold → opus.
-    let aq      = mk_aq_with_sonnet_util( 75.0 );
+    // 85% utilization → 15% remaining → below 20% threshold → opus.
+    let aq      = mk_aq_with_sonnet_util( 85.0 );
     let model   = resolve_model( &aq, SubprocessModel::Auto );
     let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
     assert_eq!(
       model_id, "claude-opus-4-6",
-      "imodel::auto with 25% sonnet remaining must select opus (below 30% threshold)",
+      "imodel::auto with 15% sonnet remaining must select opus (below 20% threshold)",
     );
   }
 
-  /// FT-02 / EC-10: `imodel::auto` with 7d(Son) utilization 65% (35% left, above 30%) → sonnet.
+  /// FT-02 / EC-10: `imodel::auto` with 7d(Son) utilization 65% (35% left, above 20%) → sonnet.
   ///
   /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-02]
   ///       [`tests/docs/cli/param/035_imodel.md` EC-10]
   #[ test ]
   fn it_imodel_auto_selects_sonnet_above_threshold()
   {
-    // 65% utilization → 35% remaining → above 30% threshold → sonnet.
+    // 65% utilization → 35% remaining → above 20% threshold → sonnet.
     let aq      = mk_aq_with_sonnet_util( 65.0 );
     let model   = resolve_model( &aq, SubprocessModel::Auto );
     let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
     assert_eq!(
       model_id, "claude-sonnet-4-6",
-      "imodel::auto with 35% sonnet remaining must select sonnet (above 30% threshold)",
+      "imodel::auto with 35% sonnet remaining must select sonnet (above 20% threshold)",
     );
   }
 
-  /// FT-03: `imodel::auto` at exactly 30% remaining (utilization 70%) → sonnet (boundary).
+  /// FT-03: `imodel::auto` at exactly 20% remaining (utilization 80%) → sonnet (boundary).
   ///
   /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-03]
   #[ test ]
   fn it_imodel_auto_selects_sonnet_at_boundary()
   {
-    // 70% utilization → exactly 30% remaining → boundary → sonnet (≥30% condition).
-    let aq      = mk_aq_with_sonnet_util( 70.0 );
+    // 80% utilization → exactly 20% remaining → boundary → sonnet (≥20% condition).
+    let aq      = mk_aq_with_sonnet_util( 80.0 );
     let model   = resolve_model( &aq, SubprocessModel::Auto );
     let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
     assert_eq!(
       model_id, "claude-sonnet-4-6",
-      "imodel::auto at exactly 30% remaining must select sonnet (boundary: ≥30% is true)",
+      "imodel::auto at exactly 20% remaining must select sonnet (boundary: ≥20% is true)",
     );
   }
 
@@ -4867,7 +4930,7 @@ mod tests
   #[ test ]
   fn it_imodel_auto_fallback_when_quota_unavailable()
   {
-    // None seven_day_sonnet → cannot confirm ≥30% → opus conservative fallback.
+    // None seven_day_sonnet → cannot confirm ≥20% → opus conservative fallback.
     let aq      = mk_aq_no_sonnet_data();
     let model   = resolve_model( &aq, SubprocessModel::Auto );
     let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
@@ -5208,9 +5271,9 @@ mod tests
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
 
-    // prefer::any → min(40%, 20%) = 20% 7d left
-    assert!( metric.contains( "7d left" ), "drain footer must show weekly metric: {metric}" );
-    assert!( metric.contains( "7d resets in" ), "drain footer must show weekly reset: {metric}" );
+    // prefer::any → min(40%, 20%) = 20%; Son(20%) < 7d(40%) → Son is binding → "7d(Son) left"
+    assert!( metric.contains( "7d(Son) left" ), "drain footer must show binding label: {metric}" );
+    assert!( metric.contains( "7d(Son) resets in" ), "drain footer must show binding reset: {metric}" );
     assert!( !metric.contains( "session" ), "drain footer must NOT show session metric: {metric}" );
   }
 
@@ -5237,9 +5300,9 @@ mod tests
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Sonnet, now );
 
-    // prefer::sonnet → seven_day_sonnet.utilization=80 → 20% 7d left
-    assert!( metric.contains( "20% 7d left" ), "sonnet drain must show sonnet weekly: {metric}" );
-    assert!( metric.contains( "7d resets in" ), "sonnet drain must show weekly reset: {metric}" );
+    // prefer::sonnet → son_binding=true → seven_day_sonnet.utilization=80 → 20% 7d(Son) left
+    assert!( metric.contains( "20% 7d(Son) left" ), "sonnet drain must show sonnet weekly: {metric}" );
+    assert!( metric.contains( "7d(Son) resets in" ), "sonnet drain must show binding reset: {metric}" );
   }
 
   #[test]
@@ -5450,6 +5513,293 @@ mod tests
     );
   }
 
+  // ── BUG-214 ─────────────────────────────────────────────────────────────────
+
+  /// BUG-214 MRE: `apply_touch` must skip idle accounts with 7d quota fully exhausted.
+  ///
+  /// # Root Cause
+  ///
+  /// `apply_touch()` guard checked `five_hour_left(aq) <= 15.0` (h-exhausted) but not
+  /// `seven_day_left(aq) <= 0.0`. An idle account with `seven_day.utilization=100%` passed
+  /// the guard → `refresh_account_token` called → subprocess fired → HTTP 429 (~2.3s
+  /// penalty with no session opened). No "7d-exhausted" trace emitted.
+  ///
+  /// # Why Not Caught
+  ///
+  /// The h-exhausted guard was added in isolation without extending the test surface to
+  /// weekly exhaustion as a skip criterion. `tests/docs/feature/024_session_touch.md`
+  /// FT-16 was absent until this session.
+  ///
+  /// # Fix Applied
+  ///
+  /// Added `seven_day_left()` helper + extended guard:
+  /// `!is_idle || h_left <= 15.0 || d7_left <= 0.0`. Three-arm reason string:
+  /// "already active" / "h-exhausted" / "7d-exhausted".
+  ///
+  /// # Prevention
+  ///
+  /// Any new quota dimension added to `apply_touch` skip logic must have a corresponding
+  /// FT in `tests/docs/feature/024_session_touch.md` before implementation.
+  ///
+  /// # Pitfall
+  ///
+  /// `mk_aq_with_resets_at(None)` sets `seven_day=None`. `seven_day_left()` treats
+  /// `seven_day=None` as 100.0 left (not exhausted — absent data ≠ exhausted). Must
+  /// explicitly set `seven_day=Some(PeriodUsage{utilization:100.0,...})` to express
+  /// "fully exhausted with data present". Using `None` would test the wrong code path.
+  // test_kind: bug_reproducer(BUG-214)
+  #[ test ]
+  fn test_mre_bug214_apply_touch_skips_7d_exhausted_account()
+  {
+    use std::io::Read;
+
+    let store = tempfile::TempDir::new().unwrap();
+
+    // idle (resets_at=None → five_hour_left=50% → NOT h-exhausted)
+    // but 7d fully exhausted (utilization=100% → seven_day_left=0%).
+    let mut aq = mk_aq_with_resets_at( None );
+    if let Ok( ref mut data ) = aq.result
+    {
+      data.seven_day = Some( claude_quota::PeriodUsage
+      {
+        utilization : 100.0,
+        resets_at   : None,
+      } );
+    }
+
+    // Capture stderr — [trace] skip lines go to stderr via eprintln!.
+    let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+    // claude_paths=None: subprocess never spawns (no binary path) even if guard misses.
+    // trace=true: [trace] skip line emitted only when guard fires.
+    apply_touch(
+      &mut aq,
+      store.path(),
+      None,
+      true,
+      SubprocessModel::Auto,
+      SubprocessEffort::Auto,
+    );
+
+    let mut captured = String::new();
+    stderr_buf.read_to_string( &mut captured ).unwrap();
+
+    // Fix: guard fires → "[trace] touch  test@example.com  skipped (reason: 7d-exhausted)".
+    assert!(
+      captured.contains( "7d-exhausted" ),
+      "apply_touch must emit '7d-exhausted' trace for idle 7d-exhausted account; got:\n{captured}",
+    );
+  }
+
+  // ── BUG-215 ─────────────────────────────────────────────────────────────────
+
+  /// BUG-215 MRE: `apply_touch` must fire when 5h is active but the 7d timer is absent.
+  ///
+  /// # Root Cause
+  ///
+  /// `apply_touch()` computed `is_idle = five_hour.resets_at.is_none()`. When the 5h
+  /// timer is running (`resets_at=Some`), `is_idle=false` → `!is_idle=true` → guard
+  /// fires → "already active" skip, even though `seven_day.resets_at` is absent (7d
+  /// timer not started). The account's 7d quota window was never activated by touch.
+  ///
+  /// # Why Not Caught
+  ///
+  /// All prior trigger tests covered only the 5h-idle case (`resets_at=None` triggers
+  /// touch). The case where 5h is active but 7d is absent was never tested.
+  /// `tests/docs/feature/024_session_touch.md` FT-17 was absent before this session.
+  ///
+  /// # Fix Applied
+  ///
+  /// Replaced `is_idle` (single 5h timer) with `all_running` (3-timer):
+  /// `five_h_running && seven_d_running && seven_ds_running`.
+  /// `seven_d_running = seven_day.as_ref().map_or(true, |p| p.resets_at.is_some())`.
+  /// Guard fires only when all timers are running or quota is exhausted.
+  ///
+  /// # Prevention
+  ///
+  /// Any new quota dimension added to `apply_touch` skip logic must have a
+  /// corresponding FT in `tests/docs/feature/024_session_touch.md` before
+  /// implementation.
+  ///
+  /// # Pitfall
+  ///
+  /// `seven_day=None` (field absent) → `map_or(true)` → `seven_d_running=true`
+  /// (no timer to start — no weekly tracking on this plan). Only
+  /// `seven_day=Some({resets_at:None})` (field present, timer absent) triggers
+  /// touch. Do NOT use `seven_day=None` for this test — absent field ≠ absent timer.
+  // test_kind: bug_reproducer(BUG-215)
+  #[ test ]
+  fn test_mre_bug215_apply_touch_fires_when_7d_timer_absent()
+  {
+    use std::io::Read;
+
+    let store = tempfile::TempDir::new().unwrap();
+
+    // 5h timer running (Some), utilization=50% → five_hour_left=50.0 (NOT h-exhausted).
+    // seven_day field present: utilization=0.0 → seven_day_left=100.0 (NOT 7d-exhausted).
+    // seven_day.resets_at=None → 7d timer absent (period exists but countdown not started).
+    let mut aq = mk_aq_with_resets_at( Some( "2099-01-01T00:00:00Z" ) );
+    if let Ok( ref mut data ) = aq.result
+    {
+      data.seven_day = Some( claude_quota::PeriodUsage
+      {
+        utilization : 0.0,
+        resets_at   : None,
+      } );
+    }
+
+    // Capture stderr — [trace] skip lines go to stderr via eprintln!.
+    let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+
+    // claude_paths=None: no subprocess spawns regardless of guard outcome.
+    // trace=true: "skipped" line emitted ONLY when guard fires.
+    apply_touch(
+      &mut aq,
+      store.path(),
+      None,
+      true,
+      SubprocessModel::Auto,
+      SubprocessEffort::Auto,
+    );
+
+    let mut captured = String::new();
+    stderr_buf.read_to_string( &mut captured ).unwrap();
+
+    // Fix: guard does NOT fire (7d timer absent → all_running=false) → no "skipped" line.
+    // Before fix: guard fires ("already active") → captured contains "skipped" → FAIL.
+    assert!(
+      !captured.contains( "skipped" ),
+      "apply_touch must NOT emit 'skipped' for 5h active but 7d timer absent; got:\n{captured}",
+    );
+  }
+
+  // ── BUG-216 MRE — strategy_metric drain label reflects binding weekly dimension ──
+
+  /// `strategy_metric` drain arm: when Sonnet weekly is the binding constraint
+  /// (`seven_day_sonnet_left < seven_day_left`), the footer must show `"7d(Son) left"` —
+  /// NOT the misleading `"7d left"` which contradicts the `7d Left` table column.
+  ///
+  /// # Root Cause
+  /// The drain arm format string was static: `"{pct:.0}% 7d left, 7d resets in …"`.
+  /// `prefer_weekly(Any)` = `min(7d_left, 7d_son_left)`; when Son is binding the returned
+  /// value is the Sonnet quota but the label said `7d left` — matching the overall-7d column
+  /// header while showing a different (lower) number.
+  ///
+  /// # Why Not Caught
+  /// BUG-182 tests only asserted generic `contains("7d left")` without distinguishing which
+  /// quota was binding. No test had Son < 7d AND asserted the absence of `"7d left"`.
+  ///
+  /// # Fix Applied
+  /// BUG-216: added `son_binding` boolean; label and reset source are selected dynamically.
+  /// `son_binding = matches!(prefer, Sonnet) || (matches!(prefer, Any) && left_son < left_7d)`.
+  ///
+  /// # Prevention
+  /// Tests must assert the EXACT label string AND negate the old label to prevent silent
+  /// pass-through. Distinct `resets_at` timestamps (T1 ≠ T2) are required so reset-source
+  /// selection is verifiable without relying on equality of values.
+  ///
+  /// # Pitfall
+  /// `"7d left"` is not a substring of `"7d(Son) left"` (space vs parenthesis after `7d`).
+  /// Use `contains("7d(Son) left")` for Son-binding assertions — not `contains("left")`.
+  // test_kind: bug_reproducer(BUG-216)
+  #[ test ]
+  fn mre_bug_216_drain_footer_label_sonnet_binding()
+  {
+    let now = 1_700_000_000_u64;
+    // Son (left=39%) < 7d (left=61%) → Son is binding → prefer_weekly(Any)=39.
+    // T1 ≠ T2: seven_day resets in 1h; seven_day_sonnet resets in 2h.
+    // After fix: label="7d(Son) left"; reset comes from T2 (seven_day_sonnet).
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : Some( claude_quota::PeriodUsage
+      {
+        utilization : 39.0,                                          // 7d left=61%
+        resets_at   : Some( reset_iso_at( now, 3600 ) ),            // T1: resets in 1h
+      } ),
+      seven_day_sonnet : Some( claude_quota::PeriodUsage
+      {
+        utilization : 61.0,                                          // Son left=39%
+        resets_at   : Some( reset_iso_at( now, 7200 ) ),            // T2: resets in 2h
+      } ),
+    };
+    let aq = AccountQuota
+    {
+      name : "son_binding@test.com".to_string(), is_current : false, is_active : false,
+      expires_at_ms : ( now + 86400 ) * 1000, result : Ok( data ), account : None,
+    };
+
+    let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
+
+    // Primary: Son-binding label must be "7d(Son) left", not "7d left".
+    assert!(
+      result.contains( "39% 7d(Son) left" ),
+      "BUG-216: Son-binding drain must show '39% 7d(Son) left'; got: {result}",
+    );
+    // Negative: old static label must be absent ("7d left," prevents false match via 7d(Son)).
+    assert!(
+      !result.contains( "7d left," ),
+      "BUG-216: old '7d left,' label must be absent when Son is binding; got: {result}",
+    );
+    // Reset label and source: must say "7d(Son) resets in" and use T2 (2h), not T1 (1h).
+    assert!(
+      result.contains( "7d(Son) resets in" ),
+      "BUG-216: Son-binding reset label must be '7d(Son) resets in'; got: {result}",
+    );
+    assert!(
+      !result.contains( "7d resets in" ),
+      "BUG-216: old '7d resets in' label must be absent when Son is binding; got: {result}",
+    );
+  }
+
+  /// `strategy_metric` drain arm: when overall 7d weekly is the binding constraint
+  /// (`seven_day_left ≤ seven_day_sonnet_left`), the footer must show `"7d left"` as before.
+  ///
+  /// This is the regression guard — ensures `son_binding` does NOT fire for the 7d-binding case.
+  // test_kind: bug_reproducer(BUG-216)
+  #[ test ]
+  fn mre_bug_216_drain_footer_label_7d_binding()
+  {
+    let now = 1_700_000_000_u64;
+    // 7d (left=39%) < Son (left=61%) → 7d is binding → prefer_weekly(Any)=39.
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : Some( claude_quota::PeriodUsage
+      {
+        utilization : 61.0,                                          // 7d left=39%
+        resets_at   : Some( reset_iso_at( now, 3600 ) ),            // T1: resets in 1h
+      } ),
+      seven_day_sonnet : Some( claude_quota::PeriodUsage
+      {
+        utilization : 39.0,                                          // Son left=61%
+        resets_at   : Some( reset_iso_at( now, 7200 ) ),            // T2: resets in 2h
+      } ),
+    };
+    let aq = AccountQuota
+    {
+      name : "7d_binding@test.com".to_string(), is_current : false, is_active : false,
+      expires_at_ms : ( now + 86400 ) * 1000, result : Ok( data ), account : None,
+    };
+
+    let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
+
+    // Primary: 7d-binding label must remain "7d left" (not "7d(Son) left").
+    assert!(
+      result.contains( "39% 7d left" ),
+      "BUG-216 regression: 7d-binding drain must show '39% 7d left'; got: {result}",
+    );
+    assert!(
+      !result.contains( "7d(Son) left" ),
+      "BUG-216 regression: '7d(Son) left' must be absent when 7d is binding; got: {result}",
+    );
+    // Reset must use T1 (seven_day.resets_at = 1h), not T2 (seven_day_sonnet = 2h).
+    assert!(
+      result.contains( "7d resets in" ),
+      "BUG-216 regression: 7d-binding reset label must be '7d resets in'; got: {result}",
+    );
+  }
+
   // ── pre_switch_touch_ctx fetch-failure path — BUG-210 regression guard ─────
 
   /// Structural test: `pre_switch_touch_ctx` with an invalid credential file (no accessToken).
@@ -5501,6 +5851,91 @@ mod tests
     assert!(
       result.is_none(),
       "fetch-failed path must return None, got Some(..)",
+    );
+  }
+
+  // ── BUG-218 ─────────────────────────────────────────────────────────────────
+
+  /// BUG-218 MRE: `fetch_all_quota()` must not inject a synthetic row when the derived
+  /// name already appears in the stored-account result list.
+  ///
+  /// # Root Cause
+  /// `results.insert(0, AccountQuota { name: synthetic_name, ... })` at usage.rs:341
+  /// is unconditional when `any_current == false`. When `~/.claude.json emailAddress`
+  /// matches an existing stored account name (a precondition enabled by BUG-217's stale
+  /// email install + subsequent token rotation), a duplicate row is created. `Valid: N+1`
+  /// is reported; `apply_refresh` and `apply_touch` then process the same account twice —
+  /// risking double-refresh or double subprocess spawning against the same credential file.
+  ///
+  /// # Why Not Caught
+  /// The synthetic row path was designed for the case where the live email is genuinely
+  /// unknown (first-run or external credential install). No test exercised the collision
+  /// path where `synthetic_name` matches an existing stored account name.
+  ///
+  /// # Fix Applied
+  /// `inject_synthetic_if_new()` — lookup-then-insert: only inject when `synthetic_name`
+  /// is absent from `results`. Enforces: at most one row per unique account name in the
+  /// quota table.
+  ///
+  /// # Prevention
+  /// Any "inject if not present" operation must be lookup-then-insert, not unconditional
+  /// insert. Collections built from two sources (directory scan + supplemental injection)
+  /// must merge on a unique key.
+  ///
+  /// # Pitfall
+  /// `any_current == false` is also true when BUG-217 installs a stale email that matches
+  /// an existing account — that is the exact collision precondition. Both bugs compound:
+  /// BUG-217 makes collision possible; BUG-218 makes it destructive.
+  // test_kind: bug_reproducer(BUG-218)
+  #[ test ]
+  fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
+  {
+    // Simulate post-fetch state:
+    //   - stored account "i6@wbox.pro" present (is_current=false — live token differs)
+    //   - any_current=false — no stored account matches the live session token
+    //   - synthetic_name derived from ~/.claude.json emailAddress = "i6@wbox.pro"
+    // BUG-218: fetch_all_quota() does results.insert(0, synthetic) unconditionally —
+    //   when synthetic_name == "i6@wbox.pro" which already exists, count becomes 2.
+    let stored_row = AccountQuota
+    {
+      name          : "i6@wbox.pro".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Err( "missing accessToken".to_string() ),
+      account       : None,
+    };
+    let mut results = vec![ stored_row ];
+
+    let synthetic = AccountQuota
+    {
+      name          : "i6@wbox.pro".to_string(),
+      is_current    : true,
+      is_active     : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Err( "missing accessToken".to_string() ),
+      account       : None,
+    };
+
+    // Fix(BUG-218): guarded injection — only insert when name is absent from results.
+    // Root cause: unconditional results.insert(0, ...) when any_current==false created
+    // duplicate rows when synthetic_name matched an existing stored account name;
+    // downstream apply_refresh and apply_touch then processed the same account twice.
+    // Pitfall: any_current==false also occurs when BUG-217's stale email collides with
+    // an existing account — both bugs must be fixed together for full correction.
+    inject_synthetic_if_new( &mut results, synthetic );
+
+    // Invariant: at most one row per unique account name.
+    // FAILS before fix: count == 2 (duplicate row for "i6@wbox.pro").
+    let i6_count = results.iter().filter( |r| r.name == "i6@wbox.pro" ).count();
+    assert_eq!(
+      i6_count, 1,
+      "BUG-218: inject_synthetic creates duplicate — missing collision guard; count={i6_count}",
+    );
+    assert_eq!(
+      results.len(), 1,
+      "BUG-218: quota table must have exactly 1 row for 1 stored account; len={}",
+      results.len(),
     );
   }
 }

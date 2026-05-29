@@ -104,7 +104,7 @@ Two other arg combinations are broken and must not be used:
 | bug | `task/claude_profile/bug/170_expires_column_stale_after_refresh_opaque_token.md` | BUG-170: `jwt_exp_ms` returns None for opaque tokens; add `expiresAt` fallback |
 | bug | `task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md` | BUG-165: live session not updated after refresh; fixed by account lifecycle |
 | bug | `task/claude_profile/bug/175_switch_account_before_run_isolated_unnecessary_global_write.md` | BUG-175: `Some(paths)` branch called `switch_account` before reading creds — unnecessary global write; removed |
-| bug | `task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md` | BUG-208: restore `switch_account` calls wrapped in `let _ = ...` — silent error discard, no `[trace]` line under `trace::1` |
+| bug | `task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md` | BUG-208 (Closed): restore `switch_account` calls wrapped in `let _ = ...` — silent error discard; `match` arms added for trace; superseded by BUG-211 |
 | bug | `task/claude_profile/bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md` | BUG-211 (Fixed): snapshot+restore removed from `apply_refresh`; `save(update_marker=false)` suppresses `_active` writes during per-account cycling |
 | bug | `task/claude_profile/bug/166_refresh_account_token_no_trace.md` | BUG-166: `refresh_account_token` had no trace param; all failure paths silently returned `None` |
 | bug | `task/claude_profile/bug/169_refresh_args_interactive_mode_regression.md` | BUG-169: TSK-168 regression — empty args `[]` broken; `["--print", "."]` is the only correct invocation |

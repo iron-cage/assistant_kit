@@ -339,8 +339,38 @@ cargo run -p claude_runner -- --dry-run --interactive "message"
 
 **Expected:** Dry-run output does NOT contain `--print` (interactive mode suppresses auto-print even when a message is given). Exit code 0.
 
+### TC-44: `clr run help` Dispatches Help (BUG-215 regression guard)
+```sh
+cargo run -p claude_runner -- run help
+```
+
+**Expected:** Prints USAGE and exits 0 — identical to `clr help`. Does NOT invoke claude. Exit code 0.
+
+**Note:** Before BUG-215 fix, `clr run help` stripped the `run` token but did not re-check for the `help` subcommand, causing "help" to be treated as a positional message and claude to be invoked.
+
+### TC-45: `clr run ask` Dispatches Ask Mode
+```sh
+cargo run -p claude_runner -- run ask --dry-run "question"
+```
+
+**Expected:** Dry-run output shows ask-mode defaults: `--effort high`, max tokens 16384, no `-c`, no `--dangerously-skip-permissions`. Exit code 0.
+
+### TC-46: Empty Session Dir — No `-c` Injected (BUG-214 regression guard)
+```sh
+TMPDIR=$(mktemp -d) && cargo run -p claude_runner -- --dry-run --session-dir "$TMPDIR" "test"
+```
+
+**Expected:** Dry-run output does NOT contain `-c` (empty session dir means no prior session to continue). Exit code 0.
+
+### TC-47: Non-Empty Session Dir — `-c` Injected
+```sh
+cargo run -p claude_runner -- --dry-run --session-dir /tmp "test"
+```
+
+**Expected:** Dry-run output contains `-c` (non-empty `/tmp` means session history present). Exit code 0.
+
 ## Pass Criteria
 
-All TC-1 through TC-43 must pass without unexpected errors or panics.
-TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-43 are runnable without a configured Claude API key.
+All TC-1 through TC-47 must pass without unexpected errors or panics.
+TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-47 are runnable without a configured Claude API key.
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.

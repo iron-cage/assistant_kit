@@ -87,6 +87,17 @@ pub fn run_cli()
     tokens
   };
 
+  // Fix(BUG-215): re-check `help` after stripping `run` — `clr run help` must print help.
+  // Root cause: the `help` dispatch above fires before the `run` strip; after stripping,
+  // remaining `["help"]` fell through to parse_args which treated "help" as a message,
+  // causing claude to be invoked with "help\n\nultrathink" as the prompt.
+  // Pitfall: any subcommand dispatch that precedes a token-strip must be re-checked after.
+  if tokens.first().map( String::as_str ) == Some( "help" )
+  {
+    print_help();
+    return;
+  }
+
   // Dispatch subcommands — these functions never return.
   if tokens.first().map( String::as_str ) == Some( "ask" )      { dispatch_ask( &tokens ); }
   if tokens.first().map( String::as_str ) == Some( "isolated" ) { dispatch_isolated( &tokens ); }

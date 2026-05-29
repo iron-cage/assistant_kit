@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Allow `.usage` and `.account.use` to configure which Claude model and effort level are used by isolated subprocesses spawned during `touch::` and `refresh::` operations, with a per-account automatic selection mode based on remaining weekly Sonnet quota.
-- **Responsibility**: Documents the `imodel::` and `effort::` parameters, the `auto` model-selection algorithm (30% `7d(Son)` threshold), the effort resolution rule (model-dependent maximum), and the interaction with `IsolatedModel` in `claude_runner_core`.
+- **Responsibility**: Documents the `imodel::` and `effort::` parameters, the `auto` model-selection algorithm (20% `7d(Son)` threshold), the effort resolution rule (model-dependent maximum), and the interaction with `IsolatedModel` in `claude_runner_core`.
 - **In Scope**: `imodel::` parameter with 5 values (`auto`, `sonnet`, `opus`, `keep`, `haiku`); `effort::` parameter with 5 values (`auto`, `high`, `max`, `low`, `normal`); `auto` model-selection logic reading per-account `7d(Son)` from already-fetched quota data; `auto` effort resolution (`high` for sonnet, `max` for opus, `None` for haiku — no extended thinking); fallback rules when `7d(Son)` is unavailable; application to `touch::` and `refresh::` subprocess calls on `.usage`, and to the single post-switch subprocess on `.account.use`; no effect on `format::json` output.
 - **Out of Scope**: `run_isolated()` internals (-> `claude_runner_core/src/isolated.rs`); `IsolatedModel` type definition (-> `claude_runner_core`); subprocess timeout (-> 024_session_touch.md, 017_token_refresh.md); endurance qualification (-> 020_usage_sort_strategies.md).
 
@@ -15,7 +15,7 @@
 
 | Value | Model injected via `--model` | When to use |
 |-------|------------------------------|-------------|
-| `auto` (default) | Per-account: `claude-sonnet-4-6` if account's `7d(Son) ≥ 30%`, else `claude-opus-4-6` | Automatically preserves Sonnet quota when running low |
+| `auto` (default) | Per-account: `claude-sonnet-4-6` if account's `7d(Son) ≥ 20%`, else `claude-opus-4-6` | Automatically preserves Sonnet quota when running low |
 | `sonnet` | `claude-sonnet-4-6` always | Force Sonnet regardless of quota state |
 | `opus` | `claude-opus-4-6` always | Force Opus regardless of quota state |
 | `haiku` | `claude-haiku-4-5-20251001` always | Force Haiku — lightweight model; note: no extended thinking support |
@@ -37,13 +37,13 @@ fn resolve_model(account_quota, imodel_param) -> IsolatedModel:
         return KeepCurrent
     // auto:
     sonnet_pct = account_quota.seven_day_sonnet_left_pct  // 100.0 - utilization
-    if sonnet_pct is Some(pct) AND pct >= 30.0:
+    if sonnet_pct is Some(pct) AND pct >= 20.0:
         return Specific("claude-sonnet-4-6")   // plenty of Sonnet headroom
     else:
         return Specific("claude-opus-4-6")     // Sonnet low or unavailable; use Opus
 ```
 
-**Fallback when `7d(Son)` is unavailable** (accounts whose quota fetch failed — only relevant for `refresh::` subprocesses on auth-error accounts): fall back to `claude-opus-4-6`. When quota data is absent, Sonnet headroom cannot be confirmed ≥30%; Opus is the conservative safe choice. The `else` branch of the algorithm handles both the `<30%` and `unavailable` cases uniformly.
+**Fallback when `7d(Son)` is unavailable** (accounts whose quota fetch failed — only relevant for `refresh::` subprocesses on auth-error accounts): fall back to `claude-opus-4-6`. When quota data is absent, Sonnet headroom cannot be confirmed ≥20%; Opus is the conservative safe choice. The `else` branch of the algorithm handles both the `<20%` and `unavailable` cases uniformly.
 
 **`effort::` — isolated subprocess effort level:**
 
@@ -106,7 +106,7 @@ if let Some(effort) = effort_opt {
 
 ### Acceptance Criteria
 
-- **AC-01**: `imodel::auto` (default) selects `claude-sonnet-4-6` for accounts whose `7d(Son) ≥ 30%` and `claude-opus-4-6` for accounts whose `7d(Son) < 30%` or is unavailable.
+- **AC-01**: `imodel::auto` (default) selects `claude-sonnet-4-6` for accounts whose `7d(Son) ≥ 20%` and `claude-opus-4-6` for accounts whose `7d(Son) < 20%` or is unavailable.
 - **AC-02**: `imodel::sonnet` always injects `--model claude-sonnet-4-6` into subprocess args regardless of quota state.
 - **AC-03**: `imodel::opus` always injects `--model claude-opus-4-6` into subprocess args regardless of quota state.
 - **AC-04**: `imodel::keep` injects no `--model` flag; `IsolatedModel::KeepCurrent` is passed to `run_isolated()`.

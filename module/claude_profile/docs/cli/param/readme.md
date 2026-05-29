@@ -71,7 +71,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 22 | `jitter::` | `u64` | `0` | 0 ≤ jitter ≤ interval | Live mode cycle timing variance | 1 cmd |
 | 23 | `trace::` | `bool` | `0` | `0`, `1` | Diagnostic trace output to stderr | 11 cmds |
 | 24 | `field::` | `String` | `""` (show all) | `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions` | Single-path output selector | 1 cmd |
-| 25 | `sort::` | `enum` | `drain` | `name`, `endurance`, `drain`, `reset`, `next` | Row ordering strategy for quota table | 1 cmd |
+| 25 | `sort::` | `enum` | `renew` | `name`, `endurance`, `drain`, `renew`, `next` | Row ordering strategy for quota table | 1 cmd |
 | 26 | `desc::` | `bool` | context-sensitive | `0`, `1`, `false`, `true` | Sort direction; default per `sort::` strategy | 1 cmd |
 | 27 | `prefer::` | `enum` | `any` | `any`, `opus`, `sonnet` | Weekly quota column for sort heuristics | 1 cmd |
 | 28 | `uuid::` | `bool` | `0` | `0`, `1` | Stable user ID toggle (opt-in) | 2 cmds |

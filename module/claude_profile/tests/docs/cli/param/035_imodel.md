@@ -14,8 +14,8 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 | EC-6 | `imodel::sonnet` — args contain `--model claude-sonnet-4-6` | Arg Construction |
 | EC-7 | `imodel::opus` — args contain `--model claude-opus-4-6` | Arg Construction |
 | EC-8 | `imodel::keep` — args contain no `--model` flag | Arg Construction |
-| EC-9 | `imodel::auto` with `7d(Son) < 30%` → subprocess uses opus | Behavioral Divergence |
-| EC-10 | `imodel::auto` with `7d(Son) ≥ 30%` → subprocess uses sonnet | Behavioral Divergence |
+| EC-9 | `imodel::auto` with `7d(Son) < 20%` → subprocess uses opus | Behavioral Divergence |
+| EC-10 | `imodel::auto` with `7d(Son) ≥ 20%` → subprocess uses sonnet | Behavioral Divergence |
 | EC-11 | `imodel::haiku` accepted with empty credential store | Valid Value |
 | EC-12 | `imodel::haiku` — args contain `--model claude-haiku-4-5-20251001` | Arg Construction |
 
@@ -109,10 +109,10 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 
 ---
 
-### EC-9: `imodel::auto` with `7d(Son) < 30%` → subprocess uses opus (Behavioral Divergence A)
+### EC-9: `imodel::auto` with `7d(Son) < 20%` → subprocess uses opus (Behavioral Divergence A)
 
-- **Given:** Account quota data where `7d(Son)` utilization is 75% (25% remaining — below threshold); `imodel::auto`.
-- **When:** Unit test of `resolve_model(quota_with_son_25_pct, "auto")`
+- **Given:** Account quota data where `7d(Son)` utilization is 85% (15% remaining — below threshold); `imodel::auto`.
+- **When:** Unit test of `resolve_model(quota_with_son_15_pct, "auto")`
 - **Then:** Returns `IsolatedModel::Specific("claude-opus-4-6")`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_opus_when_sonnet_low` (in `tests/cli/usage_test.rs`)
@@ -120,7 +120,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 
 ---
 
-### EC-10: `imodel::auto` with `7d(Son) ≥ 30%` → subprocess uses sonnet (Behavioral Divergence B)
+### EC-10: `imodel::auto` with `7d(Son) ≥ 20%` → subprocess uses sonnet (Behavioral Divergence B)
 
 - **Given:** Account quota data where `7d(Son)` utilization is 65% (35% remaining — above threshold); same input as EC-9 except utilization differs.
 - **When:** Unit test of `resolve_model(quota_with_son_35_pct, "auto")`

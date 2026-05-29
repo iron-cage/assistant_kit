@@ -9,7 +9,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-01 | `sort::name` preserves alphabetical order | AC-01 | Unit test |
 | FT-02 | `sort::endurance` qualified accounts ranked first | AC-02 | Unit test |
 | FT-03 | `sort::drain` sinks h-exhausted; non-exhausted sorted by `7d Left` ascending | AC-03 | Unit test |
-| FT-04 | `sort::reset` sinks h-exhausted; non-exhausted sorted by `7d Reset` ascending | AC-04 | Unit test |
+| FT-04 | `sort::renew` sinks h-exhausted; non-exhausted sorted by `7d Reset` ascending | AC-04 | Unit test |
 | FT-05 | `desc::1` reverses non-h-exhausted tier; h-exhausted floor unchanged | AC-05 | Unit test |
 | FT-06 | Context-sensitive `desc::` defaults per strategy | AC-06 | Unit test |
 | FT-07 | `prefer::sonnet` uses `7d(Son)` for endurance qualification | AC-07 | Unit test |
@@ -19,7 +19,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-11 | `sort::` does not affect `next::` recommendation | AC-11 | Unit test |
 | FT-12 | `prefer::` governs drain primary sort key (`7d Left` ascending, prefer-aware) | AC-08 | Unit test |
 | FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | Unit test |
-| FT-14 | `sort::drain` is default when `sort::` omitted | AC-01 | Unit test |
+| FT-14 | `sort::renew` is default when `sort::` omitted | AC-01 | Unit test |
 | FT-15 | Within 🟡: h-exhausted before weekly-exhausted; `desc::` doesn't swap sub-groups | AC-14 | Unit test |
 | FT-16 | `sort::endurance` unqualified tiebreak by highest weekly when session quotas tied | AC-02 | Unit test |
 | FT-17 | `sort::next` delegates to active `next::` strategy; `→` winner appears at row 1 | AC-15 | Integration |
@@ -31,7 +31,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-01 | sort::name alphabetical | AC-01 | Sorting |
 | FT-02 | sort::endurance qualified above unqualified | AC-02 | Sorting |
 | FT-03 | sort::drain h-exhausted sunk | AC-03 | Sorting |
-| FT-04 | sort::reset h-exhausted sunk | AC-04 | Sorting |
+| FT-04 | sort::renew h-exhausted sunk | AC-04 | Sorting |
 | FT-05 | desc::1 reversal preserves h-exhausted floor | AC-05 | Direction |
 | FT-06 | Context-sensitive desc defaults | AC-06 | Direction |
 | FT-07 | prefer::sonnet wires 7d(Son) into endurance | AC-07 | Prefer |
@@ -41,7 +41,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-11 | Recommendation unaffected by sort | AC-11 | Independence |
 | FT-12 | prefer:: drain primary key divergence | AC-08 | Primary Key |
 | FT-13 | Three-tier grouping: 🟢 above 🟡 above 🔴 | AC-14 | Tier Grouping |
-| FT-14 | `sort::drain` is default when `sort::` omitted | AC-01 | Default |
+| FT-14 | `sort::renew` is default when `sort::` omitted | AC-01 | Default |
 | FT-15 | Within 🟡: h-exhausted before weekly-exhausted; sub-grouping not reversed by `desc::` | AC-14 | Yellow Sub-Grouping |
 | FT-16 | sort::endurance unqualified tiebreak by weekly | AC-02 | Tiebreak |
 | FT-17 | sort::next delegates to active next:: strategy | AC-15 | Meta-Strategy |
@@ -83,13 +83,13 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 ---
 
-### FT-04: `sort::reset` sinks h-exhausted accounts to bottom; non-exhausted sorted by `7d Reset` ascending
+### FT-04: `sort::renew` sinks h-exhausted accounts to bottom; non-exhausted sorted by `7d Reset` ascending
 
 - **Given:** Four `AccountQuota` structs: `A` (`seven_day.resets_at=now+600s`, `5h_left=50%`), `B` (`seven_day.resets_at=now+2700s`, `5h_left=50%`), `C` (`seven_day.resets_at=now+7200s`, `5h_left=50%`), `D` (`five_hour_util=99%` — **h-exhausted**). All `result = Ok(...)`.
-- **When:** `sort_indices(&accounts, SortStrategy::Reset, None, PreferStrategy::Any, now_secs)`
+- **When:** `sort_indices(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, now_secs)`
 - **Then:** Order: `A`, `B`, `C`, then `D` (sunk). Non-h-exhausted sorted by soonest `7d Reset` countdown first.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_reset_soonest_first_exhausted_last` (in `src/usage.rs`)
+- **Source fn:** `test_sort_renew_soonest_first_exhausted_last` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-04](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -148,7 +148,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 - **Given:** Any environment.
 - **When:** `clp .usage sort::bogus`
-- **Then:** Exits 1. Stderr names the five valid values: `name`, `endurance`, `drain`, `reset`, `next`.
+- **Then:** Exits 1. Stderr names the five valid values: `name`, `endurance`, `drain`, `renew`, `next`.
 - **Exit:** 1
 - **Source fn:** `it047_sort_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_sort_strategy_parse_invalid_rejected` (in `src/usage.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../../docs/feature/020_usage_sort_strategies.md)
@@ -201,13 +201,13 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 
 ---
 
-### FT-14: `sort::drain` is default when `sort::` omitted
+### FT-14: `sort::renew` is default when `sort::` omitted
 
-- **Given:** Two `AccountQuota` structs: `high@test.com` (`five_hour.utilization=30.0` — 70% 5h Left), `low@test.com` (`five_hour.utilization=75.0` — 25% 5h Left). Neither has weekly data (`seven_day=None` → 7d Left=100% for both). Both non-exhausted.
-- **When:** `sort_indices(&accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0)` — default strategy is `drain`.
-- **Then:** `low@test.com` ranks first (7d Left tied at 100% → tiebreak by `5h Left` ascending: 25% < 70%), `high@test.com` second. Confirms drain default = `desc::0`.
+- **Given:** Two `AccountQuota` structs: `early@test.com` (`seven_day.resets_at=now+3600s` — resets in 1h, `seven_day.utilization=20%` — 80% left), `late@test.com` (`seven_day.resets_at=now+86400s` — resets in 24h, `seven_day.utilization=80%` — 20% left). Both non-exhausted.
+- **When:** `sort_indices(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, now_secs)` — default strategy is `renew`.
+- **Then:** `early@test.com` ranks first (resets in 1h — soonest reset first), `late@test.com` second. Confirms renew default = `desc::0`.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_drain_default_equals_desc0`, `it127_sort_default_is_drain_structural` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `test_sort_renew_default_equals_desc0` (in `src/usage.rs`); `it127_sort_default_is_renew_structural` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---

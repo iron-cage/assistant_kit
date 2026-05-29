@@ -10,7 +10,7 @@ Edge case coverage for the `prefer::` parameter on `.usage`. See [param/027_pref
 | EC-2 | `prefer::opus` accepted with empty store | Valid Value |
 | EC-3 | `prefer::sonnet` accepted with empty store | Valid Value |
 | EC-4 | `prefer::bogus` exits 1 and names valid values | Invalid Value |
-| CC-1 | `prefer::` without `sort::` accepted (no-op on default sort::name) | Isolation |
+| CC-1 | `prefer::` without `sort::` accepted (no-op with default sort::renew on empty store) | Isolation |
 | CC-2 | `prefer::sonnet` vs `prefer::any` changes endurance qualification | Behavioral Divergence |
 
 ---
@@ -57,10 +57,10 @@ Edge case coverage for the `prefer::` parameter on `.usage`. See [param/027_pref
 
 ### CC-1: `prefer::` without `sort::` accepted and does not break default output
 
-- **Behavioral Divergence:** `prefer::sonnet sort::endurance` uses `7d(Son)` for qualification; `prefer::any sort::endurance` uses `min(7d Left, 7d(Son))`. The divergence is in which weekly column governs endurance classification — not tested here (unit-level); this case just confirms `prefer::` is accepted with `sort::drain` (the default) without error.
+- **Behavioral Divergence:** `prefer::sonnet sort::endurance` uses `7d(Son)` for qualification; `prefer::any sort::endurance` uses `min(7d Left, 7d(Son))`. The divergence is in which weekly column governs endurance classification — not tested here (unit-level); this case just confirms `prefer::` is accepted with `sort::renew` (the default) without error.
 - **Given:** Empty credential store.
 - **When:** `clp .usage prefer::sonnet`
-- **Then:** Exits 0 with "(no accounts configured)". `prefer::` is parsed silently — it only affects sort heuristics, not drain/default ordering.
+- **Then:** Exits 0 with "(no accounts configured)". `prefer::` is parsed silently — it only affects sort heuristics, not the default renew sort ordering with empty store.
 - **Exit:** 0
 - **Source:** [param/027_prefer.md](../../../../docs/cli/param/027_prefer.md)
 

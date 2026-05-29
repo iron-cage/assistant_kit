@@ -323,8 +323,20 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
     {
       if let Ok( saved_val ) = serde_json::from_str::< serde_json::Value >( &saved_text )
       {
-        if let Some( oauth ) = saved_val.get( "oauthAccount" ).cloned()
+        if let Some( mut oauth ) = saved_val.get( "oauthAccount" ).cloned()
         {
+          // Fix(BUG-217): enforce emailAddress == name — snapshot may contain stale email
+          // from an earlier BUG-212/BUG-217 corruption cycle; name is always the canonical
+          // identity source, regardless of what the per-account snapshot says.
+          // Root cause: verbatim insert propagated wrong email to ~/.claude.json, causing
+          // downstream save routines to infer the wrong account name.
+          // Pitfall: without this override the error self-perpetuates — stale email installed
+          // in shared file → read by save as primary name → snapshotted with wrong email →
+          // re-installed on next switch.
+          if let Some( oa_obj ) = oauth.as_object_mut()
+          {
+            oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
+          }
           let live_path = paths.claude_json_file();
           let mut live_val = std::fs::read_to_string( &live_path )
             .ok()

@@ -176,8 +176,7 @@ fn session_exists( session_dir : Option< &std::path::Path > ) -> bool
     std::path::PathBuf::from( home ).join( ".claude" )
   };
   std::fs::read_dir( &path )
-    .map( | mut entries | entries.next().is_some() )
-    .unwrap_or( false )
+    .is_ok_and( | mut entries | entries.next().is_some() )
 }
 
 /// Translate parsed CLI args into a `ClaudeCommand` builder.

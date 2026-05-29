@@ -13,7 +13,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 
 | Value | `--model` injected | Selection logic |
 |-------|-------------------|-----------------|
-| `auto` (default) | Per-account | `claude-sonnet-4-6` if account's `7d(Son) ≥ 30%`; `claude-opus-4-6` otherwise |
+| `auto` (default) | Per-account | `claude-sonnet-4-6` if account's `7d(Son) ≥ 20%`; `claude-opus-4-6` otherwise |
 | `sonnet` | `claude-sonnet-4-6` | Always Sonnet, regardless of quota |
 | `opus` | `claude-opus-4-6` | Always Opus, regardless of quota |
 | `haiku` | `claude-haiku-4-5-20251001` | Always Haiku — lightweight; no extended thinking (effort::auto → no --effort flag) |
@@ -22,7 +22,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 **Examples:**
 
 ```text
-imodel::auto     → per-account: sonnet when 7d(Son)≥30%, opus when <30% (default)
+imodel::auto     → per-account: sonnet when 7d(Son)≥20%, opus when <20% (default)
 imodel::sonnet   → always --model claude-sonnet-4-6
 imodel::opus     → always --model claude-opus-4-6
 imodel::haiku    → always --model claude-haiku-4-5-20251001

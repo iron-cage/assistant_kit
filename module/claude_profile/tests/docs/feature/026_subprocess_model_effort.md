@@ -6,9 +6,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 | FT | Criterion | AC | Notes |
 |----|-----------|-----|-------|
-| FT-01 | `imodel::auto` selects opus when `7d(Son) < 30%` | AC-01 | Unit |
-| FT-02 | `imodel::auto` selects sonnet when `7d(Son) ≥ 30%` | AC-01 | Unit |
-| FT-03 | `imodel::auto` selects sonnet at exactly 30% boundary | AC-01 | Unit |
+| FT-01 | `imodel::auto` selects opus when `7d(Son) < 20%` | AC-01 | Unit |
+| FT-02 | `imodel::auto` selects sonnet when `7d(Son) ≥ 20%` | AC-01 | Unit |
+| FT-03 | `imodel::auto` selects sonnet at exactly 20% boundary | AC-01 | Unit |
 | FT-04 | `imodel::auto` fallback to opus when `7d(Son)` unavailable | AC-01 | Unit |
 | FT-05 | `imodel::sonnet` always injects `--model claude-sonnet-4-6` | AC-02 | Unit |
 | FT-06 | `imodel::opus` always injects `--model claude-opus-4-6` | AC-03 | Unit |
@@ -34,7 +34,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 |----|-----------|-----|----------|
 | FT-01 | imodel::auto selects opus when sonnet low | AC-01 | Model Auto |
 | FT-02 | imodel::auto selects sonnet when sonnet above threshold | AC-01 | Model Auto |
-| FT-03 | imodel::auto selects sonnet at exactly 30% boundary | AC-01 | Boundary |
+| FT-03 | imodel::auto selects sonnet at exactly 20% boundary | AC-01 | Boundary |
 | FT-04 | imodel::auto fallback opus when quota unavailable | AC-01 | Fallback |
 | FT-05 | imodel::sonnet explicit always sonnet | AC-02 | Explicit |
 | FT-06 | imodel::opus explicit always opus | AC-03 | Explicit |
@@ -58,9 +58,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ---
 
-### FT-01: `imodel::auto` selects opus when `7d(Son) < 30%`
+### FT-01: `imodel::auto` selects opus when `7d(Son) < 20%`
 
-- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(25.0)` (Sonnet utilization 75%, 25% remaining — below 30% threshold).
+- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(15.0)` (Sonnet utilization 85%, 15% remaining — below 20% threshold).
 - **When:** `resolve_model(&quota, "auto")`
 - **Then:** Returns `IsolatedModel::Specific("claude-opus-4-6")`.
 - **Exit:** n/a (unit test)
@@ -69,9 +69,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ---
 
-### FT-02: `imodel::auto` selects sonnet when `7d(Son) ≥ 30%`
+### FT-02: `imodel::auto` selects sonnet when `7d(Son) ≥ 20%`
 
-- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(35.0)` (above threshold).
+- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(35.0)` (above 20% threshold).
 - **When:** `resolve_model(&quota, "auto")`
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-4-6")`.
 - **Exit:** n/a (unit test)
@@ -80,11 +80,11 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ---
 
-### FT-03: `imodel::auto` selects sonnet at exactly 30% boundary
+### FT-03: `imodel::auto` selects sonnet at exactly 20% boundary
 
-- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(30.0)` (exactly at threshold — boundary case).
+- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(20.0)` (exactly at threshold — boundary case).
 - **When:** `resolve_model(&quota, "auto")`
-- **Then:** Returns `IsolatedModel::Specific("claude-sonnet-4-6")`. The condition is `>= 30.0` (inclusive); 30.0 selects Sonnet.
+- **Then:** Returns `IsolatedModel::Specific("claude-sonnet-4-6")`. The condition is `>= 20.0` (inclusive); 20.0 selects Sonnet.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_sonnet_at_boundary` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
@@ -95,7 +95,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 - **Given:** Account quota data where `seven_day_sonnet_left_pct = None` (quota fetch returned no Sonnet data).
 - **When:** `resolve_model(&quota_without_sonnet_pct, "auto")`
-- **Then:** Returns `IsolatedModel::Specific("claude-opus-4-6")`. The `else` branch treats `None` identically to `<30.0` — Opus is the conservative safe choice.
+- **Then:** Returns `IsolatedModel::Specific("claude-opus-4-6")`. The `else` branch treats `None` identically to `<20.0` — Opus is the conservative safe choice.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_fallback_when_quota_unavailable` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)

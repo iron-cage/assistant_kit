@@ -43,6 +43,7 @@
 //! | aw10 | `aw10_switch_dry_run_nonexistent_exits_2` | dry-run nonexistent → exit 2 | N |
 //! | aw11 | `aw11_switch_slash_in_email_local_part_exits_1` | `/` in email local part → exit 1 | N |
 //! | — | `switch_restores_claude_json` | `~/.claude.json` restored after switch (issue-122) | P |
+//! | — | `mre_bug217_switch_account_enforces_emailaddress` | switch enforces `emailAddress == name` over stale snapshot | P |
 //! | aw13 | `aw13_use_positional_bare_arg` | positional email `personal@home.com` → switches | P |
 //! | aw14 | `aw14_use_prefix_resolves` | prefix `car` resolves to `carol@example.com`, switches | P |
 //! | aw15 | `aw15_use_prefix_ambiguous_exits_1` | ambiguous prefix `a` → exit 1 with "ambiguous" | N |
@@ -1981,5 +1982,82 @@ fn mre_bug213_account_use_refuses_expired_token_on_fetch_error()
   assert!(
     !marker.contains( "alice@home.com" ),
     "active marker must NOT be updated when exit 3 fires, got: '{marker}'",
+  );
+}
+
+// ── BUG-217 ───────────────────────────────────────────────────────────────────
+
+/// bug_reproducer(BUG-217): `switch_account()` inserts `oauthAccount` verbatim from
+/// the per-account snapshot, carrying the stale `emailAddress` field into `~/.claude.json`.
+///
+/// ## Fix Documentation — BUG-217
+///
+/// - **Root Cause:** `switch_account()` calls `obj.insert("oauthAccount", oauth)` where
+///   `oauth` is cloned verbatim from `{name}.claude.json`. When `emailAddress` in the
+///   snapshot is stale (from a prior corruption cycle), the wrong email propagates to
+///   `~/.claude.json`, causing `account_save_routine()` to infer the wrong account name
+///   on subsequent saves.
+/// - **Why Not Caught:** `switch_restores_claude_json` saves via `.account.save` so
+///   snapshots are always correct — it never exercised a pre-existing stale snapshot.
+///   No test seeded `{name}.claude.json` with a wrong `emailAddress` before switching.
+/// - **Fix Applied:** After extracting `oauth` from the snapshot, `as_object_mut()` is
+///   used to overwrite `emailAddress` with `name` before `obj.insert("oauthAccount", oauth)`.
+/// - **Prevention:** Identity fields in per-account snapshots must not be trusted when
+///   the account key IS the canonical source. Override before inserting into shared files.
+/// - **Pitfall:** Corruption is self-perpetuating: stale email installed in shared file →
+///   read by save as primary name source → saved under wrong account → same stale email
+///   re-installed on next switch. Both BUG-217 and BUG-218 must be fixed together.
+#[ test ]
+fn mre_bug217_switch_account_enforces_emailaddress()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Create ~/.claude/.credentials.json so switch_account can write the adjacent temp file.
+  // Without this directory, std::fs::copy to .credentials.json.tmp fails with NotFound.
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  // Target account: credentials in the credential store (no accessToken required — touch::0).
+  write_account( dir.path(), "i7@wbox.pro", "pro", "standard", FAR_FUTURE_MS, false );
+
+  // Stale snapshot: emailAddress is "i1@wbox.pro" — should be "i7@wbox.pro".
+  // BUG-217: switch_account() reads this and installs it verbatim into ~/.claude.json.
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::write(
+    store.join( "i7@wbox.pro.claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"i1@wbox.pro","id":"uuid-placeholder"}}"#,
+  ).unwrap();
+
+  // Initial ~/.claude.json — switch_account() patches oauthAccount in-place.
+  let claude_json_path = dir.path().join( ".claude.json" );
+  std::fs::write(
+    &claude_json_path,
+    r#"{"someGlobalKey":true,"oauthAccount":{"emailAddress":"i9@wbox.pro"}}"#,
+  ).unwrap();
+
+  // touch::0 disables pre-fetch HTTP calls and the expiry guard — tests the pure file switch.
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::i7@wbox.pro", "touch::0" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // After switch: oauthAccount.emailAddress must equal the target account name — not the
+  // stale value from the snapshot.
+  // BUG-217: before fix, actual = "i1@wbox.pro" (verbatim from snapshot).
+  let claude_json = std::fs::read_to_string( &claude_json_path ).unwrap();
+  assert!(
+    claude_json.contains( r#""emailAddress":"i7@wbox.pro""# ),
+    "BUG-217: expected emailAddress='i7@wbox.pro' in ~/.claude.json after switch, got:\n{claude_json}",
+  );
+  assert!(
+    !claude_json.contains( r#""emailAddress":"i1@wbox.pro""# ),
+    "BUG-217: stale emailAddress 'i1@wbox.pro' must not appear in ~/.claude.json, got:\n{claude_json}",
+  );
+
+  // Global keys must be preserved — switch must not wholesale overwrite ~/.claude.json.
+  assert!(
+    claude_json.contains( "\"someGlobalKey\":true" ),
+    "switch_account must preserve global keys in ~/.claude.json, got:\n{claude_json}",
   );
 }

@@ -30,6 +30,11 @@ name = "clr"
 path = "src/bin/clr.rs"
 required-features = [ "enabled" ]
 
+[[bin]]
+name = "c"
+path = "src/bin/c.rs"
+required-features = [ "enabled" ]
+
 [features]
 default = [ "enabled" ]
 full = [ "enabled" ]

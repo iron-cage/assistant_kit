@@ -69,7 +69,7 @@
 //! | it043 | `it043_sort_name_accepted`                         | `sort::name` + empty store → exit 0 (IT-44/AC-01)          | P | no |
 //! | it044 | `it044_sort_endurance_accepted`                     | `sort::endurance` + empty store → exit 0 (IT-45/AC-02)     | P | no |
 //! | it045 | `it045_sort_drain_accepted`                         | `sort::drain` + empty store → exit 0 (IT-46/AC-03)         | P | no |
-//! | it046 | `it046_sort_reset_accepted`                         | `sort::reset` + empty store → exit 0 (IT-47/AC-04)         | P | no |
+//! | it046 | `it046_sort_renew_accepted`                         | `sort::renew` + empty store → exit 0 (IT-47/AC-04)         | P | no |
 //! | it047 | `it047_sort_invalid_value_exit_1`                   | `sort::bogus` → exit 1, stderr names valid values (IT-48/AC-09) | N | no |
 //! | it048 | `it048_prefer_invalid_value_exit_1`                 | `prefer::bogus` → exit 1, stderr names valid values (IT-49/AC-10) | N | no |
 //! | it049 | `it049_usage_help_shows_sort_params`                | `.usage.help` lists `sort`, `desc`, `prefer` (IT-50)       | P | no |
@@ -1752,23 +1752,23 @@ fn it045_sort_drain_accepted()
   );
 }
 
-/// it046 (IT-47/AC-04): `sort::reset` accepted with empty credential store → exit 0.
+/// it046 (IT-47/AC-04): `sort::renew` accepted with empty credential store → exit 0.
 ///
 /// Source: `tests/docs/cli/command/009_usage.md § IT-47`.
 #[ test ]
-fn it046_sort_reset_accepted()
+fn it046_sort_renew_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &store ).unwrap();
 
-  let out = run_cs_with_env( &[ ".usage", "sort::reset" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage", "sort::renew" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "(no accounts configured)" ),
-    "sort::reset must be accepted and show no-accounts message, got:\n{text}",
+    "sort::renew must be accepted and show no-accounts message, got:\n{text}",
   );
 }
 
@@ -1786,7 +1786,7 @@ fn it047_sort_invalid_value_exit_1()
   );
   assert_exit( &out, 1 );
   let err = stderr( &out );
-  for value in &[ "name", "endurance", "drain", "reset", "next" ]
+  for value in &[ "name", "endurance", "drain", "renew", "next" ]
   {
     assert!(
       err.contains( value ),
@@ -2101,27 +2101,27 @@ fn it060_prefer_uppercase_rejected()
   assert!( !stderr( &out ).is_empty(), "prefer::Opus must produce error on stderr (case-sensitive parse)" );
 }
 
-// ── sort::reset desc::1 combination acceptance ────────────────────────────────
+// ── sort::renew desc::1 combination acceptance ────────────────────────────────
 
-/// it061: `sort::reset desc::1` accepted with empty credential store → exit 0.
+/// it061: `sort::renew desc::1` accepted with empty credential store → exit 0.
 ///
-/// Verifies that the `sort::reset desc::1` parameter combination does not cause
+/// Verifies that the `sort::renew desc::1` parameter combination does not cause
 /// a parse error — both parameters are individually valid and the combination
 /// must be accepted without `ArgumentTypeMismatch` or unknown-param errors.
 #[ test ]
-fn it061_sort_reset_desc1_accepted()
+fn it061_sort_renew_desc1_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &store ).unwrap();
 
-  let out = run_cs_with_env( &[ ".usage", "sort::reset", "desc::1" ], &[ ( "HOME", home ) ] );
+  let out = run_cs_with_env( &[ ".usage", "sort::renew", "desc::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
     text.contains( "(no accounts configured)" ),
-    "sort::reset desc::1 must be accepted and show no-accounts message, got:\n{text}",
+    "sort::renew desc::1 must be accepted and show no-accounts message, got:\n{text}",
   );
 }
 
@@ -3797,27 +3797,27 @@ fn it126_refresh_account_token_has_instant_timing_structural()
   );
 }
 
-// ── TSK-193 — sort default drain + sort::next meta-strategy ──────────────────
+// ── TSK-220 — sort default renew + sort::next meta-strategy ──────────────────
 
-/// it127 (TSK-193 AC-01 structural): sort default is `SortStrategy::Drain` when no `sort::` arg.
+/// it127 (TSK-220 AC-01 structural): sort default is `SortStrategy::Renew` when no `sort::` arg.
 ///
-/// `parse_usage_params` must return `SortStrategy::Drain` when the `sort` argument is absent.
-/// This ensures `clp .usage` (no `sort::` flag) orders rows by drain — lowest `5h Left` first.
+/// `parse_usage_params` must return `SortStrategy::Renew` when the `sort` argument is absent.
+/// This ensures `clp .usage` (no `sort::` flag) orders rows by 7d reset — soonest weekly reset first.
 ///
-/// RED:   `None => SortStrategy::Reset` (old default).
-/// GREEN: `None => SortStrategy::Drain` present in parse block.
+/// RED:   `None => SortStrategy::Drain` (old default).
+/// GREEN: `None => SortStrategy::Renew` present in parse block.
 ///
 /// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-14]
 ///       [`docs/feature/020_usage_sort_strategies.md` AC-01]
 #[ test ]
-fn it127_sort_default_is_drain_structural()
+fn it127_sort_default_is_renew_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
-  // The None arm of the sort match uses alignment spaces; verify Drain is the default and Reset is not.
+  // The None arm of the sort match uses alignment spaces; verify Renew is the default and Drain is not.
   assert!(
-    !src.contains( "None                         => SortStrategy::Reset" ),
-    "TSK-193: sort default must be SortStrategy::Drain, not SortStrategy::Reset.\n\
-     Change the None arm of the sort argument match to `None => SortStrategy::Drain`."
+    src.contains( "None                         => SortStrategy::Renew" ),
+    "TSK-220: sort default must be SortStrategy::Renew, not SortStrategy::Drain.\n\
+     Change the None arm of the sort argument match to `None => SortStrategy::Renew`."
   );
 }
 

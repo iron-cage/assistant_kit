@@ -11,7 +11,7 @@ Formal specification of co-dependencies, mutual exclusions, and cascading effect
 | 3 | `format::table` ignores field-presence params | `format::`, `active::`, `sub::`, `tier::`, `expires::`, `email::`, `display_name::`, `role::`, `billing::`, `model::` | Table output uses fixed columns regardless of field-presence param values |
 | 4 | `live::1` is incompatible with `format::json` | `live::`, `format::` | Exits 1 before any fetch with `"live monitor mode is incompatible with format::json"` |
 | 5 | `desc::` default is determined by `sort::` | `sort::`, `desc::` | Each sort strategy has a context-sensitive `desc::` default; explicit `desc::` overrides it |
-| 6 | `prefer::` selects the weekly column used by all sort heuristics | `sort::`, `prefer::` | `prefer::any/opus/sonnet` controls which weekly quota column `endurance`/`drain`/`reset` strategies read |
+| 6 | `prefer::` selects the weekly column used by all sort heuristics | `sort::`, `prefer::` | `prefer::any/opus/sonnet` controls which weekly quota column `endurance`/`drain`/`renew` strategies read |
 | 7 | `sort::` and `desc::` do not affect `format::json` output | `sort::`, `desc::`, `format::` | JSON array order is always alphabetical regardless of `sort::` or `desc::` (stable schema for pipeline consumers) |
 | 8 | `cols::` does not affect `format::json` output | `cols::`, `format::` | JSON output is unaffected by column visibility modifiers; all schema fields always present |
 | 9 | `next::` does not affect `format::json` output | `next::`, `format::` | JSON array order is always alphabetical and no `→` marker appears regardless of `next::` value |
@@ -121,7 +121,7 @@ clp .usage format::json
 | `name` | `0` | A→Z |
 | `endurance` | `1` | Best-qualified on top |
 | `drain` | `0` | Lowest quota on top |
-| `reset` | `0` | Soonest reset on top |
+| `renew` | `0` | Soonest reset on top |
 | `next` | inherits | Resolved to concrete strategy at parse time; inherits that strategy's `desc::` default |
 
 **Rationale:** Each strategy has a single natural direction that matches its workflow goal. Requiring explicit `desc::` in every invocation would be noisy; the default makes the common case require no extra flag.
@@ -154,7 +154,7 @@ clp .usage sort::drain desc::1
 **Affected heuristics:**
 - `sort::endurance`: qualification threshold `weekly(prefer) ≥ 30%`
 - `sort::drain`: primary sort key — lowest `weekly(prefer)` ascending (lowest 7d quota first)
-- `sort::reset`: tiebreak — lowest `weekly(prefer)` ascending
+- `sort::renew`: tiebreak — lowest `weekly(prefer)` ascending
 - `→ Next` recommendation: both strategies inherit `prefer_weekly` from the underlying sort algorithm (drain: primary sort key + exclusion threshold `> 0`; endurance: qualification gate + within-qualified sort key)
 
 **Rationale:** Users who know they intend to run Opus or Sonnet can tell the heuristics which quota matters. `prefer::any` is the safe conservative default.

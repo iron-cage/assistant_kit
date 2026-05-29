@@ -6,7 +6,7 @@
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| [`sort::`](../param/025_sort.md) | `enum` | `drain` | Row ordering strategy: `drain`, `name`, `endurance`, `reset`, `next` |
+| [`sort::`](../param/025_sort.md) | `enum` | `renew` | Row ordering strategy: `renew`, `drain`, `name`, `endurance`, `next` |
 | [`desc::`](../param/026_desc.md) | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy |
 | [`prefer::`](../param/027_prefer.md) | `enum` | `any` | Weekly quota column for sort heuristics: `any`, `opus`, `sonnet` |
 | [`next::`](../param/032_next.md) | `enum` | `drain` | Recommendation strategy placing `→` on recommended account: `drain`, `endurance`; footer always shows both |
@@ -16,7 +16,7 @@
 **Typical Patterns:**
 
 ```bash
-# Default: sort::drain — drain lowest-quota accounts first
+# Default: sort::renew — use accounts whose 7d quota resets soonest
 clp .usage
 
 # Find accounts suitable for a long uninterrupted agent run
@@ -29,7 +29,7 @@ clp .usage sort::endurance prefer::sonnet
 clp .usage sort::drain
 
 # Use accounts whose quota refills soonest
-clp .usage sort::reset
+clp .usage sort::renew
 
 # Mirror the active next:: recommendation strategy for consistent sort behavior
 clp .usage sort::next
@@ -47,7 +47,7 @@ All 4 members pass: `sort::` (ordering strategy), `desc::` (sort direction), `pr
 **Invariants**
 
 - `desc::` default changes when `sort::` changes — see [../004_parameter_interactions.md#interaction--5](../004_parameter_interactions.md).
-- `prefer::` affects `endurance` (qualification gate), `drain` (primary sort key), and `reset` (tiebreak) strategies.
+- `prefer::` affects `endurance` (qualification gate), `drain` (primary sort key), and `renew` (tiebreak) strategies.
 - `sort::` and `desc::` have no effect when `format::json` is specified — JSON array order is always alphabetical.
 - Sort order is preserved within each `live::1` refresh cycle; alphabetical `sort::name` is recommended for monitor mode to prevent rows jumping.
 
