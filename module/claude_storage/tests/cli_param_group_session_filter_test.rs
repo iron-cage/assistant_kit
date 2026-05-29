@@ -9,7 +9,7 @@
 //! - CC-1: `session::` alone auto-enables session display
 //! - CC-2: `agent::` alone auto-enables session display
 //! - CC-3: `min_entries::` alone auto-enables session display
-//! - CC-4: `sessions::0` suppresses display even with all three filters
+//! - CC-4: `show_sessions::0` suppresses display even with all three filters
 //! - CC-5: `session::` + `agent::` combined filters sessions by both
 //! - CC-6: `session::` + `min_entries::` combined filters by both criteria
 //! - CC-7: All three filters are AND-combined (not OR)
@@ -42,7 +42,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 /// CC-1: `session::` alone auto-enables session display.
 ///
 /// ## Purpose
-/// Verify that providing `session::` without explicit `sessions::1` automatically
+/// Verify that providing `session::` without explicit `show_sessions::1` automatically
 /// enables session listing and filters to only sessions matching the substring.
 ///
 /// ## Coverage
@@ -81,7 +81,7 @@ fn cc_1_session_alone_auto_enables_session_display()
 /// CC-2: `agent::` alone auto-enables session display.
 ///
 /// ## Purpose
-/// Verify that providing `agent::1` without explicit `sessions::1` automatically
+/// Verify that providing `agent::1` without explicit `show_sessions::1` automatically
 /// enables session listing and filters to only agent sessions.
 ///
 /// ## Coverage
@@ -122,7 +122,7 @@ fn cc_2_agent_alone_auto_enables_session_display()
 /// CC-3: `min_entries::` alone auto-enables session display.
 ///
 /// ## Purpose
-/// Verify that providing `min_entries::5` without explicit `sessions::1`
+/// Verify that providing `min_entries::5` without explicit `show_sessions::1`
 /// automatically enables session listing and filters to sessions with >= 5 entries.
 ///
 /// ## Coverage
@@ -158,14 +158,14 @@ fn cc_3_min_entries_alone_auto_enables_session_display()
   );
 }
 
-/// CC-4: `sessions::0` suppresses display even with all three filters.
+/// CC-4: `show_sessions::0` suppresses display even with all three filters.
 ///
 /// ## Purpose
-/// Verify that `sessions::0` overrides the auto-enable behavior of
+/// Verify that `show_sessions::0` overrides the auto-enable behavior of
 /// `session::`, `agent::`, and `min_entries::` and suppresses session expansion.
 ///
 /// ## Coverage
-/// `sessions::0` override; output no longer than `sessions::1` despite filter params; exit 0.
+/// `show_sessions::0` override; output no longer than `show_sessions::1` despite filter params; exit 0.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/param_group/04_session_filter.md` — CC-4
@@ -181,7 +181,7 @@ fn cc_4_sessions_0_suppresses_display_even_with_all_three_filters()
   let out_suppressed = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".list" )
-    .arg( "sessions::0" )
+    .arg( "show_sessions::0" )
     .arg( "session::commit" )
     .arg( "agent::1" )
     .arg( "min_entries::2" )
@@ -191,7 +191,7 @@ fn cc_4_sessions_0_suppresses_display_even_with_all_three_filters()
   let out_enabled = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".list" )
-    .arg( "sessions::1" )
+    .arg( "show_sessions::1" )
     .arg( "session::commit" )
     .arg( "agent::1" )
     .arg( "min_entries::2" )
@@ -201,12 +201,12 @@ fn cc_4_sessions_0_suppresses_display_even_with_all_three_filters()
   assert_exit( &out_suppressed, 0 );
   assert_exit( &out_enabled, 0 );
 
-  // sessions::0 must produce output no longer than sessions::1
+  // show_sessions::0 must produce output no longer than show_sessions::1
   let suppressed_len = stdout( &out_suppressed ).len();
   let enabled_len = stdout( &out_enabled ).len();
   assert!(
     suppressed_len <= enabled_len,
-    "CC-4: sessions::0 output must be no longer than sessions::1; suppressed={suppressed_len}, enabled={enabled_len}\nsuppressed:\n{}\nenabled:\n{}",
+    "CC-4: show_sessions::0 output must be no longer than show_sessions::1; suppressed={suppressed_len}, enabled={enabled_len}\nsuppressed:\n{}\nenabled:\n{}",
     stdout( &out_suppressed ),
     stdout( &out_enabled )
   );

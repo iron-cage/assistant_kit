@@ -9,13 +9,13 @@
 //! - INT-1:  Default list shows all projects
 //! - INT-2:  `type::uuid` filters to UUID projects only
 //! - INT-3:  `type::path` filters to path-encoded projects only
-//! - INT-4:  `sessions::1` expands session list per project
+//! - INT-4:  `show_sessions::1` expands session list per project
 //! - INT-5:  `path::` substring filters project list
 //! - INT-6:  `session::` auto-enables sessions display
 //! - INT-7:  `agent::1` filters to agent sessions only
 //! - INT-8:  `agent::0` filters to main sessions only
 //! - INT-9:  `min_entries::` auto-enables sessions display
-//! - INT-10: `sessions::0` suppresses display even with `session::`
+//! - INT-10: `show_sessions::0` suppresses display even with `session::`
 //! - INT-11: Combined `path::` `session::` filter
 //! - INT-12: Exit code 0 on empty storage
 
@@ -186,17 +186,17 @@ fn int_3_type_path_filters_to_path_encoded_projects_only()
   );
 }
 
-/// INT-4: `sessions::1` expands session list per project.
+/// INT-4: `show_sessions::1` expands session list per project.
 ///
 /// ## Purpose
-/// Verify that `sessions::1` shows session IDs nested under each project.
+/// Verify that `show_sessions::1` shows session IDs nested under each project.
 ///
 /// ## Coverage
 /// Both projects listed; 3 session IDs visible (2 under alpha, 1 under beta); exit 0.
 ///
 /// ## Validation Strategy
 /// Write 2 projects: alpha with 2 sessions, beta with 1 session.
-/// Run `.list ``sessions::``1`. Assert session IDs appear in output.
+/// Run `.list ``show_sessions::``1`. Assert session IDs appear in output.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/02_list.md` — INT-4
@@ -214,7 +214,7 @@ fn int_4_sessions_1_expands_session_list_per_project()
   let out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".list" )
-    .arg( "sessions::1" )
+    .arg( "show_sessions::1" )
     .output()
     .unwrap();
 
@@ -222,15 +222,15 @@ fn int_4_sessions_1_expands_session_list_per_project()
   let s = stdout( &out );
   assert!(
     s.contains( "s-alpha-001" ),
-    "INT-4: session 's-alpha-001' must appear with sessions::1; got:\n{s}"
+    "INT-4: session 's-alpha-001' must appear with show_sessions::1; got:\n{s}"
   );
   assert!(
     s.contains( "s-alpha-002" ),
-    "INT-4: session 's-alpha-002' must appear with sessions::1; got:\n{s}"
+    "INT-4: session 's-alpha-002' must appear with show_sessions::1; got:\n{s}"
   );
   assert!(
     s.contains( "s-beta-001" ),
-    "INT-4: session 's-beta-001' must appear with sessions::1; got:\n{s}"
+    "INT-4: session 's-beta-001' must appear with show_sessions::1; got:\n{s}"
   );
 }
 
@@ -286,15 +286,15 @@ fn int_5_path_substring_filters_project_list()
 /// INT-6: `session::` auto-enables sessions display.
 ///
 /// ## Purpose
-/// Verify that providing `session::` without `sessions::1` still shows
+/// Verify that providing `session::` without `show_sessions::1` still shows
 /// matching sessions (sessions display is auto-enabled).
 ///
 /// ## Coverage
-/// Matching session visible without explicit `sessions::1`; exit 0.
+/// Matching session visible without explicit `show_sessions::1`; exit 0.
 ///
 /// ## Validation Strategy
 /// Write 2 projects; alpha has session "abc-session". Run `.list ``session::ab``c`.
-/// Assert the session appears without requiring `sessions::1` explicitly.
+/// Assert the session appears without requiring `show_sessions::1` explicitly.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/02_list.md` — INT-6
@@ -334,7 +334,7 @@ fn int_6_session_filter_auto_enables_sessions_display()
 ///
 /// ## Validation Strategy
 /// Write project alpha with 1 main session and 1 flat agent session.
-/// Run `.list ``agent::1`` ``sessions::``1`. Assert agent appears and main absent.
+/// Run `.list ``agent::1`` ``show_sessions::``1`. Assert agent appears and main absent.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/02_list.md` — INT-7
@@ -355,7 +355,7 @@ fn int_7_agent_1_filters_to_agent_sessions_only()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".list" )
     .arg( "agent::1" )
-    .arg( "sessions::1" )
+    .arg( "show_sessions::1" )
     .output()
     .unwrap();
 
@@ -381,7 +381,7 @@ fn int_7_agent_1_filters_to_agent_sessions_only()
 ///
 /// ## Validation Strategy
 /// Write project alpha with 1 main session and 1 flat agent session.
-/// Run `.list ``agent::0`` ``sessions::``1`. Assert main appears and agent absent.
+/// Run `.list ``agent::0`` ``show_sessions::``1`. Assert main appears and agent absent.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/02_list.md` — INT-8
@@ -402,7 +402,7 @@ fn int_8_agent_0_filters_to_main_sessions_only()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".list" )
     .arg( "agent::0" )
-    .arg( "sessions::1" )
+    .arg( "show_sessions::1" )
     .output()
     .unwrap();
 
@@ -461,17 +461,17 @@ fn int_9_min_entries_auto_enables_sessions_display()
   );
 }
 
-/// INT-10: `sessions::0` suppresses display even with `session::` filter.
+/// INT-10: `show_sessions::0` suppresses display even with `session::` filter.
 ///
 /// ## Purpose
-/// Verify that explicit `sessions::0` suppresses session entries even when
+/// Verify that explicit `show_sessions::0` suppresses session entries even when
 /// a `session::` filter is also provided.
 ///
 /// ## Coverage
 /// No session entries appear in output despite `session::` filter; exit 0.
 ///
 /// ## Validation Strategy
-/// Write project alpha with session "abc-override". Run `.list ``session::abc`` ``sessions::``0`.
+/// Write project alpha with session "abc-override". Run `.list ``session::abc`` ``show_sessions::``0`.
 /// Assert session ID does not appear in output.
 ///
 /// ## Related Requirements
@@ -488,16 +488,16 @@ fn int_10_sessions_0_suppresses_display_even_with_session_filter()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".list" )
     .arg( "session::abc" )
-    .arg( "sessions::0" )
+    .arg( "show_sessions::0" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  // session:: filter auto-enables sessions display regardless of sessions::0
+  // session:: filter auto-enables sessions display regardless of show_sessions::0
   assert!(
     s.contains( "abc-override" ),
-    "INT-10: session:: filter shows sessions even when sessions::0 is set; got:\n{s}"
+    "INT-10: session:: filter shows sessions even when show_sessions::0 is set; got:\n{s}"
   );
 }
 

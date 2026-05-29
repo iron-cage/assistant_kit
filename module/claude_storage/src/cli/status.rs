@@ -2,7 +2,7 @@
 
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
 use claude_storage_core::Storage;
-use super::storage::{ create_storage, validate_verbosity, resolve_path_parameter };
+use super::storage::{ create_storage, resolve_path_parameter };
 
 /// Show storage status and statistics
 ///
@@ -11,16 +11,14 @@ use super::storage::{ create_storage, validate_verbosity, resolve_path_parameter
 ///
 /// # Errors
 ///
-/// Returns error if verbosity is out of range, path resolution fails,
-/// storage creation fails, or statistics retrieval fails.
+/// Returns error if path resolution fails, storage creation fails, or
+/// statistics retrieval fails.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
-  let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
-  validate_verbosity( verbosity )?;
-
+  let show_tokens = cmd.get_boolean( "show_tokens" ).unwrap_or( false );
   let custom_path = cmd.get_string( "path" );
 
   // Fix(issue-014): Resolve path parameter before using
@@ -57,54 +55,24 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     create_storage()?
   };
 
-  // Fix(issue-015): Use fast stats (filesystem-only) for verbosity 0-1; full
-  // JSONL-parsing stats only for verbosity 2+ which the user explicitly requests.
+  // Fix(issue-015): Use fast stats (filesystem-only) by default; full
+  // JSONL-parsing stats only when show_tokens::1 is explicitly requested.
   //
   // Root cause: global_stats() parsed all session JSONL files to count entries and
   // tokens. With 1903 projects / 2449 sessions / 7 GB of JSONL this took >2 minutes,
-  // making .status completely unusable at the default verbosity level.
+  // making .status completely unusable at the default invocation.
   //
   // Pitfall: Never call global_stats() for a command that only needs project/session
   // counts — the entry/token parsing is O(total JSONL bytes), not O(project count).
 
-  let output = if verbosity <= 1
-  {
-    // Fast path: filesystem listing only — no JSONL parsing, completes in < 1 second
-    let stats = storage.global_stats_fast()
-      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to get statistics: {e}" ) ) )?;
-
-    match verbosity
-    {
-      0 =>
-      {
-        // Minimal: machine-readable key=value pairs for scripting (lowercase keys, no decorations)
-        format!( "projects: {}\nsessions: {}", stats.total_projects, stats.total_sessions )
-      }
-      _ =>
-      {
-        // Standard: storage + project + session overview (no entry count — fast path)
-        format!
-        (
-          "Storage: {}\nProjects: {} (UUID: {}, Path: {})\nSessions: {} (Main: {}, Agent: {})",
-          storage.root().display(),
-          stats.total_projects,
-          stats.uuid_projects,
-          stats.path_projects,
-          stats.total_sessions,
-          stats.main_sessions,
-          stats.agent_sessions,
-        )
-      }
-    }
-  }
-  else
+  let output = if show_tokens
   {
     // Full path: parses all JSONL files for entry counts and token usage.
     // Slow for large storage (minutes for thousands of sessions) but gives complete stats.
     let stats = storage.global_stats()
       .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to get statistics: {e}" ) ) )?;
 
-    // Detailed: include entry breakdown and token usage
+    // Detailed: include entry breakdown and token usage (show_tokens::1)
     format!
     (
       "Storage: {}\n\
@@ -130,6 +98,25 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       stats.total_output_tokens,
       stats.total_cache_read_tokens,
       stats.total_cache_creation_tokens
+    )
+  }
+  else
+  {
+    // Fast path: filesystem listing only — no JSONL parsing, completes in < 1 second
+    let stats = storage.global_stats_fast()
+      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to get statistics: {e}" ) ) )?;
+
+    // Standard: storage + project + session overview (no entry count — fast path)
+    format!
+    (
+      "Storage: {}\nProjects: {} (UUID: {}, Path: {})\nSessions: {} (Main: {}, Agent: {})",
+      storage.root().display(),
+      stats.total_projects,
+      stats.uuid_projects,
+      stats.path_projects,
+      stats.total_sessions,
+      stats.main_sessions,
+      stats.agent_sessions,
     )
   };
 

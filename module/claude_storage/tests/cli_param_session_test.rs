@@ -11,7 +11,7 @@
 //! - EC-3: Case-insensitive match
 //! - EC-4: No match returns empty results
 //! - EC-5: Empty value rejected
-//! - EC-6: Auto-enables `sessions::1` in .list
+//! - EC-6: Auto-enables `show_sessions::1` in .list
 //! - EC-7: `session::` in .count restricts to matching session
 
 mod common;
@@ -217,7 +217,7 @@ fn ec_5_session_empty_rejected()
   );
 }
 
-/// EC-6: Auto-enables `sessions::1` in .list.
+/// EC-6: Auto-enables `show_sessions::1` in .list.
 ///
 /// ## Purpose
 /// Validates that `session::` implicitly enables session display in .list output.

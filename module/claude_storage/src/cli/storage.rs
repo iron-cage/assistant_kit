@@ -7,11 +7,6 @@
 use unilang::{ ErrorData, ErrorCode };
 use claude_storage_core::Storage;
 
-// ─── constants ─────────────────────────────────────────────────────────────
-
-/// Maximum accepted verbosity level (inclusive).
-pub( super ) const VERBOSITY_MAX : i64 = 5;
-
 // ─── storage factory ───────────────────────────────────────────────────────
 
 /// Create a `Storage` instance, respecting `CLAUDE_STORAGE_ROOT` env var.
@@ -33,28 +28,6 @@ pub( super ) fn create_storage() -> core::result::Result< Storage, ErrorData >
     _ =>
       Storage::new()
         .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to create storage: {e}" ) ) ),
-  }
-}
-
-// ─── parameter validation ──────────────────────────────────────────────────
-
-/// Validate that `verbosity` is within `0..=VERBOSITY_MAX`.
-///
-/// # Errors
-///
-/// Returns `ErrorData` when `verbosity` is outside the valid range.
-pub( super ) fn validate_verbosity( verbosity : i64 ) -> core::result::Result< (), ErrorData >
-{
-  if ( 0..=VERBOSITY_MAX ).contains( &verbosity )
-  {
-    Ok( () )
-  }
-  else
-  {
-    Err( ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "Invalid verbosity: {verbosity}. Valid range: 0-{VERBOSITY_MAX}" ),
-    ) )
   }
 }
 

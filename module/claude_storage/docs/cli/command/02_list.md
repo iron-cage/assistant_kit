@@ -2,7 +2,7 @@
 
 List projects or conversations in Claude Code storage. Project-first view: all projects are listed, with conversations optionally shown per project. Use this when navigating projects or filtering by project path.
 
-**Parameters:** `type::`, `path::`, `show_sessions::`, `session::`, `agent::`, `min_entries::`, `verbosity::`, `scope::`, `project::`, `count::`
+**Parameters:** `type::`, `path::`, `show_sessions::`, `session::`, `agent::`, `min_entries::`, `scope::`, `project::`, `count::`
 
 **Exit:** `0` success | `1` argument error | `2` storage read error
 
@@ -27,12 +27,11 @@ claude_storage .list type::conversation count::1 project::PROJECT
 | `session::` | [`SessionFilter`](../type/08_session_filter.md) | optional | — | Filter sessions by ID substring |
 | `agent::` | Boolean | optional | — | Session type filter (`0`=main, `1`=agent) |
 | `min_entries::` | [`EntryCount`](../type/01_entry_count.md) | optional | — | Minimum entry count threshold |
-| `verbosity::` | [`VerbosityLevel`](../type/12_verbosity_level.md) | optional | `1` | Output detail level |
 | `scope::` | [`ScopeValue`](../type/07_scope_value.md) | optional | `global` | Project discovery boundary |
 | `project::` | String | required for `type::conversation` | — | Project ID; scopes conversation listing |
 | `count::` | Boolean | optional | `0` | Output only the count as a bare integer |
 
-Session filter parameters belong to the [Session Filter group](../param_group/04_session_filter.md). See [Output Control group](../param_group/01_output_control.md) for `verbosity` semantics. See [Scope Configuration group](../param_group/05_scope_configuration.md) for `scope::` semantics.
+Session filter parameters belong to the [Session Filter group](../param_group/04_session_filter.md). See [Scope Configuration group](../param_group/05_scope_configuration.md) for `scope::` semantics.
 
 **Examples:**
 ```bash
@@ -69,7 +68,6 @@ claude_storage .list type::conversation count::1 project::abc123
 
 | # | Group | Membership | Excluded Params |
 |---|-------|------------|-----------------|
-| 1 | [Output Control](../param_group/01_output_control.md) | Full | — |
 | 2 | [Project Scope](../param_group/02_project_scope.md) | Full | — |
 | 4 | [Session Filter](../param_group/04_session_filter.md) | Full | — |
 | 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Partial | `path::` (PathSubstring) |

@@ -10,7 +10,7 @@
 - [ ] Can drill into per-project session counts
 - [ ] Can count specific targets (projects, sessions, entries) independently
 - [ ] Can override the storage root to inspect an alternate location
-- [ ] Output at verbosity::0 is suitable for use in scripts
+- [ ] Can view token usage breakdown with show_tokens::1
 
 ### Referenced Commands
 | # | Command | Role |
@@ -25,12 +25,12 @@
 | 9 | [`path::`](../param/09_path.md) | Override default storage root for inspection |
 | 15 | [`sessions::`](../param/15_sessions.md) | Expand session list per project in `.list` |
 | 16 | [`target::`](../param/16_target.md) | Specify count target (projects, sessions, entries) |
-| 19 | [`verbosity::`](../param/19_verbosity.md) | Control output detail level |
+| 23 | [`show_tokens::`](../param/23_show_tokens.md) | Show token usage section in .status |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 1 | [Output Control](../param_group/01_output_control.md) | Controls verbosity across status, list, and count |
+| 1 | [Output Control](../param_group/01_output_control.md) | show_tokens:: enables token usage in .status |
 | 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: override to inspect alternate storage |
 
 ### Related User Stories
@@ -46,10 +46,10 @@ cls .status
 # Output: summary table with total projects and sessions
 ```
 
-**Step 2: View per-project breakdown**
+**Step 2: View token usage**
 ```bash
-cls .status verbosity::2
-# Output: per-project session counts and entry breakdowns
+cls .status show_tokens::1
+# Output: adds entry counts and token breakdown (input, output, cache)
 ```
 
 **Step 3: Count sessions precisely**
@@ -72,8 +72,8 @@ cls .status path::/backup/.claude
 cls .count target::projects path::/backup/.claude
 ```
 
-**Machine-readable output for scripts:**
+**Full token audit:**
 ```bash
-cls .status verbosity::0
-# Output: "projects: N, sessions: N" — suitable for piping
+cls .status show_tokens::1
+# Output: includes entry counts and token totals (slow — parses all JSONL)
 ```

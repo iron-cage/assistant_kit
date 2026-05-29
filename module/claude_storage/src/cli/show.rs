@@ -2,7 +2,7 @@
 
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
-use super::storage::{ create_storage, validate_verbosity, parse_project_parameter, find_session_mut };
+use super::storage::{ create_storage, parse_project_parameter, find_session_mut };
 use super::format::format_entry_content;
 
 /// Show session or project details (location-aware)
@@ -15,8 +15,8 @@ use super::format::format_entry_content;
 ///
 /// # Errors
 ///
-/// Returns error if verbosity is out of range, parameter combinations are
-/// invalid, storage creation fails, or project/session loading fails.
+/// Returns error if parameter combinations are invalid, storage creation
+/// fails, or project/session loading fails.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
 pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
@@ -45,11 +45,10 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   };
 
   let project_param = cmd.get_string( "project" );
-  let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
   let show_entries = cmd.get_boolean( "show_entries" ).unwrap_or( false );
   let metadata_only = cmd.get_boolean( "show_metadata" ).unwrap_or( false );
-
-  validate_verbosity( verbosity )?;
+  let show_stat = cmd.get_boolean( "show_stat" ).unwrap_or( false );
+  let show_tokens = cmd.get_boolean( "show_tokens" ).unwrap_or( false );
 
   // Fix(issue-001): Validate entries parameter requires session_id
   //
@@ -77,7 +76,7 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // Fix(issue-022): Accept entries::1 in content mode as a no-op
   //
   // Root cause: A prior "fix" (issue-008) added an error when entries::1 was used
-  // in content mode (verbosity >= 1 && !metadata_only), intending to prevent a
+  // in content mode (!metadata_only), intending to prevent a
   // "garbage parameter" scenario. However, the YAML spec explicitly lists
   // `.show session_id::abc123 entries::1` as a valid example (example 6), and
   // content mode already shows all entries by default — entries::1 is a valid
@@ -94,25 +93,25 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     // Case 1: No parameters → Show current directory project
     ( None, None ) =>
     {
-      show_project_for_cwd_impl( verbosity )
+      show_project_for_cwd_impl()
     }
 
     // Case 2: session_id only → Show session in current project
     ( Some( sid ), None ) =>
     {
-      show_session_in_cwd_impl( sid, verbosity, show_entries, metadata_only )
+      show_session_in_cwd_impl( sid, show_entries, metadata_only, show_stat, show_tokens )
     }
 
     // Case 3: project only → Show that project
     ( None, Some( proj ) ) =>
     {
-      show_project_impl( proj, verbosity )
+      show_project_impl( proj )
     }
 
     // Case 4: Both parameters → Show session in that project
     ( Some( sid ), Some( proj ) ) =>
     {
-      show_session_in_project_impl( sid, proj, verbosity, show_entries, metadata_only )
+      show_session_in_project_impl( sid, proj, show_entries, metadata_only, show_stat, show_tokens )
     }
   }
 }
@@ -120,9 +119,10 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// Helper: Show session in current directory project
 fn show_session_in_cwd_impl(
   session_id : &str,
-  verbosity : i64,
   show_entries : bool,
-  metadata_only : bool
+  metadata_only : bool,
+  show_stat : bool,
+  show_tokens : bool,
 ) -> core::result::Result< OutputData, ErrorData >
 {
   // Fix(issue-036)
@@ -153,7 +153,7 @@ fn show_session_in_cwd_impl(
 
     if dir_name != eb && !dir_name.starts_with( &topic_prefix ) { continue; }
 
-    if let Ok( output ) = format_session_output( project, session_id, verbosity, show_entries, metadata_only )
+    if let Ok( output ) = format_session_output( project, session_id, show_entries, metadata_only, show_stat, show_tokens )
     {
       return Ok( output );
     }
@@ -166,9 +166,10 @@ fn show_session_in_cwd_impl(
 fn show_session_in_project_impl(
   session_id : &str,
   project_param : &str,
-  verbosity : i64,
   show_entries : bool,
-  metadata_only : bool
+  metadata_only : bool,
+  show_stat : bool,
+  show_tokens : bool,
 ) -> core::result::Result< OutputData, ErrorData >
 {
   let storage = create_storage()?;
@@ -188,11 +189,11 @@ fn show_session_in_project_impl(
       format!( "Failed to load project {proj_id:?}: {e}" )
     ))?;
 
-  format_session_output( &project, session_id, verbosity, show_entries, metadata_only )
+  format_session_output( &project, session_id, show_entries, metadata_only, show_stat, show_tokens )
 }
 
 /// Helper: Show project for current directory
-fn show_project_for_cwd_impl( verbosity : i64 )
+fn show_project_for_cwd_impl()
   -> core::result::Result< OutputData, ErrorData >
 {
   let storage = create_storage()?;
@@ -204,11 +205,11 @@ fn show_project_for_cwd_impl( verbosity : i64 )
       format!( "Failed to load project from current directory: {e}" )
     ))?;
 
-  format_project_output( &project, verbosity )
+  format_project_output( &project )
 }
 
 /// Helper: Show specific project
-fn show_project_impl( project_param : &str, verbosity : i64 )
+fn show_project_impl( project_param : &str )
   -> core::result::Result< OutputData, ErrorData >
 {
   let storage = create_storage()?;
@@ -228,21 +229,24 @@ fn show_project_impl( project_param : &str, verbosity : i64 )
       format!( "Failed to load project {proj_id:?}: {e}" )
     ))?;
 
-  format_project_output( &project, verbosity )
+  format_project_output( &project )
 }
 
 /// Helper: Format session output (extracted logic)
 ///
 /// REQ-011: Content-First Display
 ///
-/// By default (`verbosity::1`), shows conversation content in readable chat-log format.
-/// Use `metadata::1` or `verbosity::0` for old metadata-only behavior.
+/// Default shows conversation content in readable chat-log format.
+/// Use `show_metadata::1` for metadata-only behavior.
+/// Use `show_stat::1` to add the session statistics footer.
+/// Use `show_tokens::1` to add token usage counts.
 fn format_session_output(
   project : &claude_storage_core::Project,
   session_id : &str,
-  verbosity : i64,
   show_entries : bool,
-  metadata_only : bool
+  metadata_only : bool,
+  show_stat : bool,
+  show_tokens : bool,
 ) -> core::result::Result< OutputData, ErrorData >
 {
   // Find session
@@ -268,9 +272,10 @@ fn format_session_output(
   let mut output = String::new();
 
   // REQ-011: Content-first paradigm
-  // - verbosity::0 or metadata::1 → Metadata only (old behavior)
-  // - verbosity::1+ (default) → Conversation content (NEW behavior)
-  let show_content = verbosity >= 1 && !metadata_only;
+  // - show_metadata::1 → Metadata only (suppresses conversation content)
+  // - default → Conversation content in chat-log format
+  // - show_stat::1 → Adds session statistics footer after content
+  // - show_tokens::1 → Adds token usage counts section
 
   // Always show basic session header
   // Fix(issue-028): derive "entry"/"entries" from count; same pattern as issue-025/027.
@@ -279,8 +284,8 @@ fn format_session_output(
   let entry_noun = if stats.total_entries == 1 { "entry" } else { "entries" };
   writeln!( output, "Session: {} ({} {entry_noun})", session_id, stats.total_entries ).unwrap();
 
-  // Metadata-only mode (old behavior)
-  if metadata_only || verbosity == 0
+  // Metadata-only mode (show_metadata::1)
+  if metadata_only
   {
     writeln!( output, "Path: {}", session.storage_path().display() ).unwrap();
     writeln!( output, "Agent Session: {}", stats.is_agent_session ).unwrap();
@@ -298,7 +303,7 @@ fn format_session_output(
       writeln!( output, "Last Entry: {last}" ).unwrap();
     }
 
-    if verbosity >= 2
+    if show_tokens
     {
       output.push_str( "\nToken Usage:\n" );
       writeln!( output, "- Input: {}", stats.total_input_tokens ).unwrap();
@@ -329,8 +334,8 @@ fn format_session_output(
       }
     }
   }
-  // Content-first mode (NEW default behavior)
-  else if show_content
+  // Content-first mode (default)
+  else
   {
     let entries = session.entries()
       .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load entries: {e}" ) ) )?;
@@ -349,23 +354,24 @@ fn format_session_output(
 
     output.push_str( "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" );
 
-    // Add metadata footer for verbosity::2+
-    if verbosity >= 2
+    // Session statistics footer (show_stat::1)
+    if show_stat
     {
       output.push( '\n' );
       output.push_str( "Session Metadata:\n" );
       writeln!( output, "- Path: {}", session.storage_path().display() ).unwrap();
       writeln!( output, "- Total Entries: {}", stats.total_entries ).unwrap();
       writeln!( output, "- User/Assistant: {}/{}", stats.user_entries, stats.assistant_entries ).unwrap();
+    }
 
-      if verbosity >= 3
-      {
-        output.push_str( "\nToken Usage:\n" );
-        writeln!( output, "- Input: {}", stats.total_input_tokens ).unwrap();
-        writeln!( output, "- Output: {}", stats.total_output_tokens ).unwrap();
-        writeln!( output, "- Cache Read: {}", stats.total_cache_read_tokens ).unwrap();
-        writeln!( output, "- Cache Creation: {}", stats.total_cache_creation_tokens ).unwrap();
-      }
+    // Token usage section (show_tokens::1)
+    if show_tokens
+    {
+      output.push_str( "\nToken Usage:\n" );
+      writeln!( output, "- Input: {}", stats.total_input_tokens ).unwrap();
+      writeln!( output, "- Output: {}", stats.total_output_tokens ).unwrap();
+      writeln!( output, "- Cache Read: {}", stats.total_cache_read_tokens ).unwrap();
+      writeln!( output, "- Cache Creation: {}", stats.total_cache_creation_tokens ).unwrap();
     }
   }
 
@@ -375,7 +381,6 @@ fn format_session_output(
 /// Helper: Format project output (extracted logic)
 fn format_project_output(
   project : &claude_storage_core::Project,
-  verbosity : i64
 ) -> core::result::Result< OutputData, ErrorData >
 {
   // Get project statistics
@@ -411,13 +416,6 @@ fn format_project_output(
 
   writeln!( output, "Total Entries: {}", stats.total_entries ).unwrap();
 
-  if verbosity >= 2
-  {
-    output.push_str( "Tokens:\n" );
-    writeln!( output, "  Input: {}", stats.total_input_tokens ).unwrap();
-    writeln!( output, "  Output: {}", stats.total_output_tokens ).unwrap();
-  }
-
   output.push( '\n' );
 
   // Sessions list
@@ -438,47 +436,19 @@ fn format_project_output(
           format!( "Failed to get session stats: {e}" )
         ))?;
 
-      if verbosity == 0
-      {
-        // Minimal: just IDs
-        writeln!( output, "  - {}", session.id() ).unwrap();
-      }
-      else if verbosity == 1
-      {
-        // Standard: ID + entry count + last timestamp
-        let last = session_stats.last_timestamp
-          .unwrap_or_else( || "unknown".to_string() );
+      // Standard: ID + entry count + last timestamp
+      let last = session_stats.last_timestamp
+        .unwrap_or_else( || "unknown".to_string() );
 
-        // Fix(issue-028): derive "entry"/"entries" from count — sibling of session_count fix.
-        // Root cause: hardcoded "entries" produced "(1 entries, last: ...)".
-        // Pitfall: "entry" is irregular — singular differs from plural root.
-        let e_noun = if session_stats.total_entries == 1 { "entry" } else { "entries" };
-        writeln!( output, "  - {} ({} {e_noun}, last: {})",
-          session.id(),
-          session_stats.total_entries,
-          last
-        ).unwrap();
-      }
-      else
-      {
-        // Detailed: full stats
-        writeln!( output, "  - {}", session.id() ).unwrap();
-        writeln!( output, "      Entries: {} (User: {}, Assistant: {})",
-          session_stats.total_entries,
-          session_stats.user_entries,
-          session_stats.assistant_entries
-        ).unwrap();
-
-        if let Some( first ) = &session_stats.first_timestamp
-        {
-          writeln!( output, "      First: {first}" ).unwrap();
-        }
-
-        if let Some( last ) = &session_stats.last_timestamp
-        {
-          writeln!( output, "      Last: {last}" ).unwrap();
-        }
-      }
+      // Fix(issue-028): derive "entry"/"entries" from count — sibling of session_count fix.
+      // Root cause: hardcoded "entries" produced "(1 entries, last: ...)".
+      // Pitfall: "entry" is irregular — singular differs from plural root.
+      let e_noun = if session_stats.total_entries == 1 { "entry" } else { "entries" };
+      writeln!( output, "  - {} ({} {e_noun}, last: {})",
+        session.id(),
+        session_stats.total_entries,
+        last
+      ).unwrap();
     }
   }
 

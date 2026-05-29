@@ -126,7 +126,7 @@ Session files have no explicit cross-file links — no `parentUuid` or `continue
 
 ### Session Family
 
-A root (main) session together with all agent sessions it spawned, treated as a single display unit. In the current implementation, one Session Family corresponds to one Conversation — each root `.jsonl` file is one conversation, and its agent sessions are part of that conversation. At `verbosity::1`, `.projects` shows one family per root: the root line carries an inline `[N agents: type breakdown]` suffix and the agents are collapsed. At `verbosity::2+` agents are tree-indented under their root. An orphan family is one whose root session file has been deleted; it is shown with a `?` marker. A childless root (no agents) shows no bracket suffix.
+A root (main) session together with all agent sessions it spawned, treated as a single display unit. In the current implementation, one Session Family corresponds to one Conversation — each root `.jsonl` file is one conversation, and its agent sessions are part of that conversation. By default, `.projects` shows one family per root: the root line carries an inline `[N agents: type breakdown]` suffix and the agents are collapsed. With `show_tree::1`, agents are tree-indented under their root. An orphan family is one whose root session file has been deleted; it is shown with a `?` marker. A childless root (no agents) shows no bracket suffix.
 
 ---
 
@@ -142,6 +142,6 @@ The root directory where Claude Code stores all data. Default: `~/.claude/`. Can
 
 ---
 
-### Verbosity
+### Output Toggle
 
-A 0-5 integer controlling output detail level. `0` = minimal/machine-readable, `1` = standard summary (default), `2` = detailed with counts, `3` = verbose with full fields, `4-5` = reserved. The `v` alias is available for all commands that accept `verbosity`.
+A boolean parameter (0 or 1) enabling an optional output section. The CLI uses per-block toggles: `show_stat::` for statistics footer in `.show`, `show_tokens::` for token usage in `.show`/`.status`, `show_tree::` for agent tree display in `.projects`. See [Output Control group](param_group/01_output_control.md).

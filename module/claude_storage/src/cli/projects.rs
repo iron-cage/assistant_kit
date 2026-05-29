@@ -5,7 +5,7 @@
 
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
-use super::storage::{ create_storage, validate_verbosity, resolve_path_parameter };
+use super::storage::{ create_storage, resolve_path_parameter };
 
 // ─── constants ─────────────────────────────────────────────────────────────
 
@@ -657,9 +657,8 @@ fn aggregate_projects(
 ///
 /// # Errors
 ///
-/// Returns error if `scope::` is invalid, `verbosity::` is out of range,
-/// `min_entries::` is negative, `limit::` is negative, path resolution fails,
-/// or storage access fails.
+/// Returns error if `scope::` is invalid, `min_entries::` is negative,
+/// `limit::` is negative, path resolution fails, or storage access fails.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ allow( clippy::too_many_lines ) ]
 #[ inline ]
@@ -682,8 +681,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     ) );
   }
 
-  let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
-  validate_verbosity( verbosity )?;
+  let show_tree = cmd.get_boolean( "show_tree" ).unwrap_or( false );
 
   let min_entries_filter = if let Some( n ) = cmd.get_integer( "min_entries" )
   {
@@ -864,17 +862,6 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // session lookup by display_path key.
   let summaries = aggregate_projects( &mut groups );
 
-  // v0: one project path per line (machine-readable, no session IDs).
-  if verbosity == 0
-  {
-    let mut output = String::new();
-    for summary in &summaries
-    {
-      writeln!( output, "{}", summary.display_path ).unwrap();
-    }
-    return Ok( OutputData::new( output, "text" ) );
-  }
-
   let total_projects = summaries.len();
   let mut output = String::new();
 
@@ -928,13 +915,13 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         writeln!( output, "{display_path}: ({root_count} {r_noun})" ).unwrap();
       }
 
-      if verbosity == 1
+      if show_tree
       {
-        render_families_v1( &mut output, &families, limit_cap );
+        render_families_v2( &mut output, &families );
       }
       else
       {
-        render_families_v2( &mut output, &families );
+        render_families_v1( &mut output, &families, limit_cap );
       }
     }
     else

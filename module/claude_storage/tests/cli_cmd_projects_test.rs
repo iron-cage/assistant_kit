@@ -19,18 +19,18 @@
 //! - INT-11: `scope::relevant` finds ancestor when path has underscores
 //! - INT-12: `scope::relevant` finds topic-scoped ancestor with underscores
 //! - INT-13: `scope::under` with multiple underscore components finds nested projects
-//! - INT-14: v1 output groups sessions under project path headers
-//! - INT-15: path header always present at v1 for `scope::local` single project
-//! - INT-16: agent sessions collapsed to count line at v1 without `agent::` filter
-//! - INT-17: agent sessions shown individually at v2+
-//! - INT-18: entry count shown per session at v2+
-//! - INT-19: `agent::1` explicit filter disables collapse at v1
+//! - INT-14: default output groups sessions under project path headers
+//! - INT-15: path header always present for `scope::local` single project
+//! - INT-16: agent sessions collapsed to count line without `agent::` filter
+//! - INT-17: `show_tree::1` shows agents tree-indented under parent session
+//! - INT-18: entry count shown per session by default
+//! - INT-19: `agent::1` explicit filter disables collapse
 //! - INT-20: `scope::under` displays underscore dirs without splitting at /
 //! - INT-21: `scope::global` displays hyphen-prefixed topic dir in path header
 //! - INT-22: `scope::under` excludes sibling with underscore-suffix name
 //! - INT-23: `scope::relevant` excludes sibling with underscore-suffix name
-//! - INT-24: entry count shown per session at v1
-//! - INT-25: `limit::N` truncates main sessions shown at v1
+//! - INT-24: entry count shown per session
+//! - INT-25: `limit::N` truncates main sessions
 //!
 //! Tests INT-26..INT-50: → `cli_cmd_projects_summary_test.rs`
 
@@ -488,7 +488,7 @@ fn int_13_scope_under_multiple_underscore_components()
 
 // ─── INT-14 ───────────────────────────────────────────────────────────────────
 
-/// INT-14: v1 output groups sessions under project path headers.
+/// INT-14: default output groups sessions under project path headers.
 #[ test ]
 fn int_14_v1_groups_sessions_under_path_headers()
 {
@@ -505,7 +505,6 @@ fn int_14_v1_groups_sessions_under_path_headers()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -519,7 +518,7 @@ fn int_14_v1_groups_sessions_under_path_headers()
 
 // ─── INT-15 ───────────────────────────────────────────────────────────────────
 
-/// INT-15: path header always present at v1 for `scope::local` single project.
+/// INT-15: path header always present for `scope::local` single project.
 #[ test ]
 fn int_15_v1_path_header_present_for_scope_local()
 {
@@ -535,7 +534,6 @@ fn int_15_v1_path_header_present_for_scope_local()
     .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -548,7 +546,7 @@ fn int_15_v1_path_header_present_for_scope_local()
 
 // ─── INT-16 ───────────────────────────────────────────────────────────────────
 
-/// INT-16: agent sessions collapsed to count line at v1 without `agent::` filter.
+/// INT-16: agent sessions collapsed to count line without `agent::` filter.
 #[ test ]
 fn int_16_v1_agent_sessions_collapsed_without_filter()
 {
@@ -574,7 +572,6 @@ fn int_16_v1_agent_sessions_collapsed_without_filter()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -593,7 +590,7 @@ fn int_16_v1_agent_sessions_collapsed_without_filter()
 
 // ─── INT-17 ───────────────────────────────────────────────────────────────────
 
-/// INT-17: agent sessions shown individually at v2+.
+/// INT-17: `show_tree::1` shows agents tree-indented under parent session.
 #[ test ]
 fn int_17_v2_agent_sessions_shown_individually()
 {
@@ -614,22 +611,22 @@ fn int_17_v2_agent_sessions_shown_individually()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::2" )
+    .arg( "show_tree::1" )
     .output()
     .unwrap();
 
   assert_exit( &out, 0 );
   let s = stdout( &out );
-  // At v2 agent sessions show individually — no collapse line
+  // With show_tree::1 agents appear tree-indented, not as a collapse summary line
   assert!(
     !s.contains( "+ 2 agent sessions" ),
-    "at v2 agent collapse line must be absent; got:\n{s}"
+    "show_tree::1 must not show agent collapse line; got:\n{s}"
   );
 }
 
 // ─── INT-18 ───────────────────────────────────────────────────────────────────
 
-/// INT-18: entry count shown per session at v2+.
+/// INT-18: entry count shown per session by default.
 #[ test ]
 fn int_18_v2_entry_count_shown_per_session()
 {
@@ -644,7 +641,6 @@ fn int_18_v2_entry_count_shown_per_session()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::2" )
     .output()
     .unwrap();
 
@@ -652,13 +648,13 @@ fn int_18_v2_entry_count_shown_per_session()
   let s = stdout( &out );
   assert!(
     s.contains( "4 entries" ) || s.contains( "4 entry" ),
-    "must show entry count at v2+; got:\n{s}"
+    "must show entry count by default; got:\n{s}"
   );
 }
 
 // ─── INT-19 ───────────────────────────────────────────────────────────────────
 
-/// INT-19: `agent::1` explicit filter disables collapse at v1.
+/// INT-19: `agent::1` explicit filter disables collapse.
 #[ test ]
 fn int_19_v1_agent_filter_disables_collapse()
 {
@@ -679,7 +675,6 @@ fn int_19_v1_agent_filter_disables_collapse()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .arg( "agent::1" )
     .output()
     .unwrap();
@@ -713,7 +708,6 @@ fn int_20_scope_under_underscore_dirs_display_correctly()
     .arg( ".projects" )
     .arg( "scope::under" )
     .arg( format!( "path::{}", base.display() ) )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -743,7 +737,6 @@ fn int_21_scope_global_hyphen_topic_dir_in_header()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -826,7 +819,7 @@ fn int_23_scope_relevant_excludes_underscore_suffix_sibling()
 
 // ─── INT-24 ───────────────────────────────────────────────────────────────────
 
-/// INT-24: entry count shown per session at v1.
+/// INT-24: entry count shown per session.
 #[ test ]
 fn int_24_v1_entry_count_shown_per_session()
 {
@@ -841,7 +834,6 @@ fn int_24_v1_entry_count_shown_per_session()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -855,7 +847,7 @@ fn int_24_v1_entry_count_shown_per_session()
 
 // ─── INT-25 ───────────────────────────────────────────────────────────────────
 
-/// INT-25: `limit::N` truncates main sessions shown at v1.
+/// INT-25: `limit::N` truncates main sessions.
 #[ test ]
 fn int_25_v1_limit_truncates_sessions()
 {
@@ -874,7 +866,6 @@ fn int_25_v1_limit_truncates_sessions()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .arg( "limit::2" )
     .output()
     .unwrap();

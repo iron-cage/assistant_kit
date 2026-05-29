@@ -498,9 +498,9 @@ fn test_show_session_multi_entry_header_still_says_entries()
   );
 }
 
-/// IT-5: `metadata::1` suppresses content, shows only session metadata
+/// IT-5: `show_metadata::1` suppresses content, shows only session metadata
 ///
-/// Verifies that `metadata::1` produces output with metadata fields present
+/// Verifies that `show_metadata::1` produces output with metadata fields present
 /// but without the raw message content from entries.
 #[ test ]
 fn test_show_metadata_mode_suppresses_content()
@@ -524,7 +524,7 @@ fn test_show_metadata_mode_suppresses_content()
 {{"type":"assistant","uuid":"uuid-m2","parentUuid":"uuid-m1","timestamp":"2025-11-29T10:00:01Z","cwd":"/tmp","sessionId":"{session_id}","version":"2.0.0","gitBranch":"master","userType":"external","isSidechain":false,"requestId":"req_m2","message":{{"role":"assistant","model":"claude-test","id":"msg_m2","content":[{{"type":"text","text":"response text"}}],"stop_reason":"end_turn","stop_sequence":null,"usage":{{"input_tokens":5,"output_tokens":3,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}}}}}"# )
   ).unwrap();
 
-  // Without metadata::1 — should show content including distinctive_text
+  // Without show_metadata::1 — should show content including distinctive_text
   let out_normal = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .args( [
@@ -535,14 +535,14 @@ fn test_show_metadata_mode_suppresses_content()
     .output()
     .unwrap();
 
-  // With metadata::1 — should suppress content
+  // With show_metadata::1 — should suppress content
   let out_meta = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .args( [
       ".show",
       &format!( "session_id::{session_id}" ),
       &format!( "project::{}", project_path.path().display() ),
-      "metadata::1",
+      "show_metadata::1",
     ] )
     .output()
     .unwrap();
@@ -558,7 +558,7 @@ fn test_show_metadata_mode_suppresses_content()
   );
   assert!(
     out_meta.status.success(),
-    "metadata::1 mode should exit 0. stderr: {stderr_meta}"
+    "show_metadata::1 mode should exit 0. stderr: {stderr_meta}"
   );
 
   // Normal mode must show the distinctive text
@@ -567,16 +567,16 @@ fn test_show_metadata_mode_suppresses_content()
     "Normal mode must show entry content. stdout: {stdout_normal}"
   );
 
-  // metadata::1 mode must NOT show the distinctive entry text
+  // show_metadata::1 mode must NOT show the distinctive entry text
   assert!(
     !stdout_meta.contains( distinctive_text ),
-    "metadata::1 must suppress entry content. stdout: {stdout_meta}"
+    "show_metadata::1 must suppress entry content. stdout: {stdout_meta}"
   );
 }
 
-/// IT-6: `entries::1` shows all individual session entries
+/// IT-6: `show_entries::1` shows all individual session entries
 ///
-/// Verifies that `entries::1` expands the session view to include each entry's
+/// Verifies that `show_entries::1` expands the session view to include each entry's
 /// content, producing more detailed output than the default summary.
 #[ test ]
 fn test_show_entries_mode_expands_content()
@@ -599,7 +599,7 @@ fn test_show_entries_mode_expands_content()
     4,
   );
 
-  // Without entries::1 — default summary mode
+  // Without show_entries::1 — default summary mode
   let out_default = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .args( [
@@ -610,14 +610,14 @@ fn test_show_entries_mode_expands_content()
     .output()
     .unwrap();
 
-  // With entries::1 — expanded entry view
+  // With show_entries::1 — expanded entry view
   let out_entries = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .args( [
       ".show",
       &format!( "session_id::{session_id}" ),
       &format!( "project::{}", project_path.path().display() ),
-      "entries::1",
+      "show_entries::1",
     ] )
     .output()
     .unwrap();
@@ -633,13 +633,13 @@ fn test_show_entries_mode_expands_content()
   );
   assert!(
     out_entries.status.success(),
-    "entries::1 mode should exit 0. stderr: {stderr_entries}"
+    "show_entries::1 mode should exit 0. stderr: {stderr_entries}"
   );
 
-  // entries::1 should produce more output (individual entries expanded)
+  // show_entries::1 should produce more output (individual entries expanded)
   assert!(
     stdout_entries.len() >= stdout_default.len(),
-    "entries::1 output must be at least as long as default output. entries: {} chars, default: {} chars",
+    "show_entries::1 output must be at least as long as default output. entries: {} chars, default: {} chars",
     stdout_entries.len(),
     stdout_default.len()
   );

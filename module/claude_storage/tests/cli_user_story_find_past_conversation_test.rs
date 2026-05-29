@@ -187,7 +187,7 @@ fn rws_3_project_filter_restricts_search_to_one_project()
 ///
 /// ## Purpose
 /// End-to-end acceptance test: developer lists only main sessions with
-/// substantial content using `sessions::1 ``agent::0`` ``min_entries::1``0`.
+/// substantial content using `show_sessions::1 ``agent::0`` ``min_entries::1``0`.
 ///
 /// ## Coverage
 /// Combined filter; below-threshold session excluded; agent session excluded; exit 0.
@@ -211,7 +211,7 @@ fn rws_4_session_metadata_filters_narrow_listing()
   let out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".list" )
-    .arg( "sessions::1" )
+    .arg( "show_sessions::1" )
     .arg( "agent::0" )
     .arg( "min_entries::10" )
     .output()

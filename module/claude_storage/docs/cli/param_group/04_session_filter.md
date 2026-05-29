@@ -24,9 +24,6 @@ Note: In `.count` and `.search`, `session::` behaves as a `SessionId` (exact mat
 - These three parameters determine *which* sessions appear, assuming session display is enabled
 - Different semantic level: tier visibility vs session predicate
 
-**Why NOT `verbosity::`:**
-- `verbosity::` controls how much information appears per session, not which sessions appear
-- Different semantic purpose: output density vs session selection predicate
 
 **Auto-enable behavior:** In `.list`, providing any of `session::`, `agent::`, or `min_entries::` automatically enables `sessions::1`. Override with `sessions::0`.
 
