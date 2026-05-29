@@ -102,7 +102,7 @@ mod adapter
   {
     let ( tokens, needs_help ) = argv_to_unilang_tokens( &[] ).unwrap();
     assert_eq!( tokens, vec![ ".help" ] );
-    assert!( needs_help );
+    assert!( needs_help, "empty argv must set needs_help=true" );
   }
 
   // A-02: single command passes through
@@ -111,7 +111,7 @@ mod adapter
   {
     let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ ".accounts" ] ) ).unwrap();
     assert_eq!( tokens, vec![ ".accounts" ] );
-    assert!( !needs_help );
+    assert!( !needs_help, "explicit command must not set needs_help" );
   }
 
   // A-03: dot → help
@@ -120,7 +120,7 @@ mod adapter
   {
     let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ "." ] ) ).unwrap();
     assert_eq!( tokens, vec![ ".help" ] );
-    assert!( needs_help );
+    assert!( needs_help, "bare dot must set needs_help=true" );
   }
 
   // A-04: --help → unexpected flag error (POSIX flags not supported)
@@ -340,7 +340,7 @@ mod adapter
   {
     let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ ".help" ] ) ).unwrap();
     assert_eq!( tokens, vec![ ".help" ] );
-    assert!( needs_help );
+    assert!( needs_help, ".help as sole arg must set needs_help=true" );
   }
 
   // A-30: v::256 → passes through as verbosity::256 (validation deferred to unilang)
@@ -382,14 +382,14 @@ mod adapter
   // Adding `--help`/`-h` handling does NOT substitute for the pre-scan.
   // `argv[0]` checks are too narrow: users type `clp .accounts .help` or
   // `clp .accounts help` — the help token is not in position 0.
-  // test_kind: bug_reproducer(issue-help-prescan)
+  #[ doc = "bug_reproducer(issue-help-prescan)" ]
   #[ test ]
   fn adapter_dot_help_in_second_position()
   {
     // A-31: `.help` after command name must route to `.help`, not error.
     let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ ".accounts", ".help" ] ) ).unwrap();
     assert_eq!( tokens, vec![ ".help" ] );
-    assert!( needs_help );
+    assert!( needs_help, ".help in second position must set needs_help=true" );
   }
 
   // A-32: bare `help` in second position → routes to `.help` (N→P)
@@ -401,7 +401,7 @@ mod adapter
   {
     let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ ".accounts", "help" ] ) ).unwrap();
     assert_eq!( tokens, vec![ ".help" ] );
-    assert!( needs_help );
+    assert!( needs_help, "bare help in second position must set needs_help=true" );
   }
 
   // A-33: bare `help` as sole argv → routes to `.help`
@@ -410,7 +410,7 @@ mod adapter
   {
     let ( tokens, needs_help ) = argv_to_unilang_tokens( &s( &[ "help" ] ) ).unwrap();
     assert_eq!( tokens, vec![ ".help" ] );
-    assert!( needs_help );
+    assert!( needs_help, "bare help as sole arg must set needs_help=true" );
   }
 
   // A-34: --version → unexpected flag error (POSIX flags not supported)

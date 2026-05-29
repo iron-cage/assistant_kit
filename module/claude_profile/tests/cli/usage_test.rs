@@ -1108,7 +1108,7 @@ fn it31_usage_help_shows_live_params()
 /// # Pitfall
 /// The assertion relies on the exact substring "401/403/429" — a reformulated
 /// description that mentions 429 in different phrasing would not be caught.
-// test_kind: bug_reproducer(issue-refresh-help-429)
+#[ doc = "bug_reproducer(issue-refresh-help-429)" ]
 #[ test ]
 fn it33_mre_refresh_help_excludes_429()
 {
@@ -1248,7 +1248,7 @@ fn it35_empty_store_json_format()
 /// ## Pitfall
 /// Any future edit to the description string in `lib.rs` that removes `"1 = enabled, default"`
 /// (e.g., reformulation keeping 429 but changing default wording) would break this test.
-// test_kind: bug_reproducer(issue-155)
+#[ doc = "bug_reproducer(issue-155)" ]
 #[ test ]
 fn it37_mre_bug155_refresh_defaults_to_1()
 {
@@ -1296,7 +1296,7 @@ fn it37_mre_bug155_refresh_defaults_to_1()
 /// ## Pitfall
 /// it33 still guards against the old "401/403/429" combined string. This test
 /// adds the positive check: "429" appears separately for the conditional case.
-// test_kind: bug_reproducer(issue-156)
+#[ doc = "bug_reproducer(issue-156)" ]
 #[ test ]
 fn it38_mre_bug156_refresh_help_mentions_429_expired()
 {
@@ -2571,7 +2571,7 @@ fn it081_next_json_output_unchanged_by_next_param()
 /// # Pitfall
 /// Using `.ok()` unconditionally destroys existing account data when `fetch_oauth_account`
 /// has a transient failure. Always use `if let Ok( acct ) = ...` to preserve on failure.
-// test_kind: bug_reproducer(BUG-171)
+#[ doc = "bug_reproducer(BUG-171)" ]
 #[ test ]
 fn mre_bug_171_account_populated_after_refresh()
 {

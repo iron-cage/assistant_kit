@@ -413,8 +413,6 @@ fn acc13_blank_line_between_blocks()
 
 // ── acc14: P2 guard — non-active account uses its own stored expires ──────────
 
-// test_kind: bug_reproducer(issue-p2-named-account-token)
-//
 // Root Cause: The old `.account.status` active-account path called `status_with_threshold()`
 //   which reads `~/.claude/.credentials.json` — the ACTIVE account's live credentials file.
 //   For non-active accounts, a similar leak was possible. `.accounts` must always use stored
@@ -428,7 +426,7 @@ fn acc13_blank_line_between_blocks()
 //   per-account data must come from the stored credential struct.
 // Pitfall: Future fields that seem to require live credential reads (e.g. token validation)
 //   must be refused for non-active accounts — use stored data only for consistency.
-
+#[ doc = "bug_reproducer(issue-p2-named-account-token)" ]
 #[ test ]
 fn acc14_nonactive_shows_own_stored_expires()
 {
@@ -454,8 +452,6 @@ fn acc14_nonactive_shows_own_stored_expires()
 
 // ── acc15: missing subscriptionType → Sub: N/A (not blank) ───────────────────
 
-// test_kind: bug_reproducer(issue-empty-field-blank)
-//
 // Root Cause: `account::list()` uses `unwrap_or_default()` for missing JSON fields,
 //   yielding `""` when `subscriptionType` is absent from the credential file. Without
 //   the `.is_empty()` guard, the empty string produces a blank "Sub:     " line rather
@@ -468,7 +464,7 @@ fn acc14_nonactive_shows_own_stored_expires()
 //   `.is_empty()` because `account::list()` returns "" for absent JSON fields.
 // Pitfall: `account::list()` returns "" (not None) for missing fields; Option-based
 //   patterns like `.unwrap_or("N/A")` will NOT catch it — check `.is_empty()`.
-
+#[ doc = "bug_reproducer(issue-empty-field-blank)" ]
 #[ test ]
 fn acc15_missing_sub_field_shows_na()
 {

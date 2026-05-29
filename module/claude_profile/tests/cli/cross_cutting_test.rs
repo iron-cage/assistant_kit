@@ -299,7 +299,7 @@ fn e04_home_with_spaces()
   let out = run_cs_with_env( &[ ".paths" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "path with spaces" ) );
+  assert!( text.contains( "path with spaces" ), "paths output must contain HOME path component; got: {text}" );
 }
 
 #[ test ]
@@ -419,8 +419,8 @@ fn e11_fmt_alias_accounts_json()
   );
 }
 
+#[ doc = "bug_reproducer(issue-fmt-alias)" ]
 #[ test ]
-// test_kind: bug_reproducer(issue-fmt-alias)
 fn e12_fmt_alias_token_status_json()
 {
   let dir  = TempDir::new().unwrap();
@@ -439,8 +439,8 @@ fn e12_fmt_alias_token_status_json()
   );
 }
 
+#[ doc = "bug_reproducer(issue-verbosity-precheck)" ]
 #[ test ]
-// test_kind: bug_reproducer(issue-verbosity-precheck)
 // Root cause: adapter.rs pre-validated verbosity:: range (lines 168-172) for ALL commands
 //   before command dispatch. Commands that don't accept verbosity (e.g. .credentials.status)
 //   received "verbosity out of range: 3 (max 2)" instead of "Unknown parameter 'verbosity'",

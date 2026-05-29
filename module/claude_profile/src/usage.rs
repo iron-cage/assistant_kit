@@ -214,19 +214,6 @@ fn read_token( credential_store : &std::path::Path, name : &str ) -> Result< Str
     .ok_or_else( || "missing accessToken".to_string() )
 }
 
-/// Enumerate all saved accounts and fetch their live quota data.
-///
-/// Accounts are listed in alphabetical order (delegated to `account::list()`).
-/// Per-account failures are stored inline in `AccountQuota::result`; only
-/// fatal errors (credential store unreadable) propagate as `ErrorData`.
-///
-/// `live_creds_file` is read once to extract the live `accessToken`; any failure
-/// (absent file, parse error) silently sets `is_current = false` for all accounts.
-///
-/// If no saved account's token matches the live token, a synthetic entry is prepended
-/// (AC-09): `is_current: true`, name from `~/.claude.json` email or `(current session)`.
-/// Pitfall: this case is easy to miss when only testing the normal single-account path.
-///
 /// Prepend `row` to `results` only when no entry with the same `name` is already present.
 ///
 /// Enforces the at-most-one-row-per-name invariant for the synthetic current-session row
@@ -245,6 +232,19 @@ fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : AccountQuo
   }
 }
 
+/// Enumerate all saved accounts and fetch their live quota data.
+///
+/// Accounts are listed in alphabetical order (delegated to `account::list()`).
+/// Per-account failures are stored inline in `AccountQuota::result`; only
+/// fatal errors (credential store unreadable) propagate as `ErrorData`.
+///
+/// `live_creds_file` is read once to extract the live `accessToken`; any failure
+/// (absent file, parse error) silently sets `is_current = false` for all accounts.
+///
+/// If no saved account's token matches the live token, a synthetic entry is prepended
+/// (AC-09): `is_current: true`, name from `~/.claude.json` email or `(current session)`.
+/// Pitfall: this case is easy to miss when only testing the normal single-account path.
+///
 /// When `stagger` is `true`, each account fetch is preceded by a pseudo-random sleep
 /// of 200–1500 ms (thunder-herd mitigation for live monitor mode).
 ///
@@ -419,74 +419,6 @@ fn parse_u64_field( path : &std::path::Path, key : &str ) -> Option< u64 >
   parse_u64_from_str( &s, key )
 }
 
-fn base64url_decode( s : &str ) -> Option< Vec< u8 > >
-{
-  // Translate URL-safe alphabet to standard and add padding.
-  let pad = match s.len() % 4 { 0 => 0, 2 => 2, 3 => 1, _ => return None };
-  let b64 : String = s.chars()
-    .map( |c| match c { '-' => '+', '_' => '/', c => c } )
-    .chain( core::iter::repeat( '=' ).take( pad ) )
-    .collect();
-  // Decode groups of 4 base64 characters → 3 bytes.
-  const ALPHA : &[ u8 ] =
-    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  // ALPHA has 64 entries (positions 0–63), so the position always fits in u32.
-  let val = |c : u8| ALPHA.iter().position( |&a| a == c )
-    .and_then( |v| u32::try_from( v ).ok() );
-  let bytes = b64.as_bytes();
-  let mut out = Vec::with_capacity( b64.len() / 4 * 3 );
-  let mut i = 0;
-  while i + 3 < bytes.len()
-  {
-    let v0 = val( bytes[ i ] )?;
-    let v1 = val( bytes[ i + 1 ] )?;
-    // `& 0xFF` makes the narrowing cast lossless — the upper bits are always zero.
-    out.push( ( ( ( v0 << 2 ) | ( v1 >> 4 ) ) & 0xFF ) as u8 );
-    if bytes[ i + 2 ] != b'='
-    {
-      let v2 = val( bytes[ i + 2 ] )?;
-      out.push( ( ( ( v1 << 4 ) | ( v2 >> 2 ) ) & 0xFF ) as u8 );
-    }
-    if bytes[ i + 3 ] != b'='
-    {
-      let v2 = val( bytes[ i + 2 ] )?;
-      let v3 = val( bytes[ i + 3 ] )?;
-      out.push( ( ( ( v2 << 6 ) | v3 ) & 0xFF ) as u8 );
-    }
-    i += 4;
-  }
-  Some( out )
-}
-
-/// Extracts the `exp` claim from the `accessToken` JWT inside a credentials JSON string.
-///
-/// Returns `Some(exp_ms)` where `exp_ms = exp_secs * 1000`, or `None` if the token is
-/// absent, malformed, or missing the `exp` field.  No signature verification is performed —
-/// the claim is used only for display purposes.
-#[ must_use ]
-#[ inline ]
-pub fn jwt_exp_ms( creds_json : &str ) -> Option< u64 >
-{
-  // Locate the accessToken string value.
-  let key   = "\"accessToken\":\"";
-  let start = creds_json.find( key )? + key.len();
-  let rest  = &creds_json[ start.. ];
-  let end   = rest.find( '"' )?;
-  let token = &rest[ ..end ];
-  // Split JWT into header.payload.signature — take payload (second segment).
-  let mut parts   = token.splitn( 3, '.' );
-  let _header     = parts.next()?;
-  let payload_b64 = parts.next()?;
-  // Base64url-decode and UTF-8-decode the payload.
-  let payload_bytes = base64url_decode( payload_b64 )?;
-  let payload       = core::str::from_utf8( &payload_bytes ).ok()?;
-  // Extract the numeric `exp` field.
-  let needle    = "\"exp\":";
-  let after     = &payload[ payload.find( needle )? + needle.len().. ];
-  let digits_end = after.find( |c : char| !c.is_ascii_digit() ).unwrap_or( after.len() );
-  let exp_secs : u64 = after[ ..digits_end ].parse().ok()?;
-  Some( exp_secs * 1000 )
-}
 
 /// Compute the `Expires` cell value for a given token expiry and current time.
 ///
@@ -1465,8 +1397,8 @@ fn apply_refresh(
     // Root cause: the isolated subprocess writes refreshed accessToken/refreshToken but leaves
     //   expiresAt at the original expired timestamp; re-reading from file gives stale value.
     // Pitfall: expiresAt is a server-issued claim the subprocess cannot update; always derive
-    //   post-refresh expiry from jwt_exp_ms(), never by re-reading the credentials file.
-    if let Some( exp_ms ) = jwt_exp_ms( &new_creds )
+    //   post-refresh expiry from crate::output::jwt_exp_ms(), never by re-reading the credentials file.
+    if let Some( exp_ms ) = crate::output::jwt_exp_ms( &new_creds )
     {
       aq.expires_at_ms = exp_ms;
     }
@@ -1596,7 +1528,7 @@ fn apply_touch(
   // Update expiry if credentials were returned (optional — touch may return None).
   if let Some( ref creds ) = new_creds
   {
-    if let Some( exp_ms ) = jwt_exp_ms( creds )
+    if let Some( exp_ms ) = crate::output::jwt_exp_ms( creds )
     {
       aq.expires_at_ms = exp_ms;
     }
@@ -1650,44 +1582,6 @@ struct UsageParams
   imodel   : SubprocessModel,
   /// Subprocess effort level (default: `auto`).
   effort   : SubprocessEffort,
-}
-
-/// Parse and validate the five `.usage`-specific parameters.
-///
-/// # Errors
-///
-/// Returns `ErrorData` (exit 1 / `ArgumentTypeMismatch`) for any out-of-range
-/// or wrong-type value. `interval` and `jitter` constraint validation is deferred
-/// to `usage_routine` because it only applies when `live = 1`.
-///
-/// Fix(issue-155): `refresh` default is 1 (enabled). Omitting the param ≠
-/// "user wants disabled" — auto-refresh is the safer default.
-/// Fix(issue-157): strict 0/1 range guard added for `refresh`, `live`, `trace`.
-/// Pitfall: bool-typed params (e.g. `touch::`) use `Kind::String` registration so
-/// `"true"`/`"false"` pass through; `parse_int_flag` is the sole normalisation point.
-/// Parse an integer `0`-or-`1` flag from `cmd.arguments` with a configurable default.
-///
-/// Returns `default` when absent; rejects non-`Value::Integer` values or integers outside
-/// `{0, 1}` with `ArgumentTypeMismatch`.
-///
-/// Pitfall: params registered as `Kind::String` (e.g. `touch::`) deliver all values
-/// including `"0"` and `"1"` as `Value::String` — the integer arms handle `Kind::Integer` params.
-pub(crate) fn parse_int_flag( cmd : &VerifiedCommand, name : &str, default : i64 ) -> Result< i64, ErrorData >
-{
-  match cmd.arguments.get( name )
-  {
-    None                                       => Ok( default ),
-    Some( Value::Integer( 0 ) )                => Ok( 0 ),
-    Some( Value::Integer( 1 ) )                => Ok( 1 ),
-    Some( Value::String( s ) ) if s == "0"     => Ok( 0 ),
-    Some( Value::String( s ) ) if s == "1"     => Ok( 1 ),
-    Some( Value::String( s ) ) if s == "true"  => Ok( 1 ),
-    Some( Value::String( s ) ) if s == "false" => Ok( 0 ),
-    _ => Err( ErrorData::new(
-      ErrorCode::ArgumentTypeMismatch,
-      format!( "{name}:: must be 0, 1, false, or true" ),
-    ) ),
-  }
 }
 
 // ── Subprocess model / effort enums ───────────────────────────────────────────
@@ -2006,13 +1900,26 @@ pub(crate) fn apply_post_switch_touch(
   if trace { eprintln!( "[trace] account.use  {name}  subprocess: spawned" ) }
 }
 
+/// Parse and validate the five `.usage`-specific parameters.
+///
+/// # Errors
+///
+/// Returns `ErrorData` (exit 1 / `ArgumentTypeMismatch`) for any out-of-range
+/// or wrong-type value. `interval` and `jitter` constraint validation is deferred
+/// to `usage_routine` because it only applies when `live = 1`.
+///
+/// Fix(issue-155): `refresh` default is 1 (enabled). Omitting the param ≠
+/// "user wants disabled" — auto-refresh is the safer default.
+/// Fix(issue-157): strict 0/1 range guard added for `refresh`, `live`, `trace`.
+/// Pitfall: bool-typed params (e.g. `touch::`) use `Kind::String` registration so
+/// `"true"`/`"false"` pass through; `crate::output::parse_int_flag` is the sole normalisation point.
 fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorData >
 {
   // refresh default is 1 (enabled); live/trace default is 0 (disabled); touch default is 1 (enabled).
-  let refresh = parse_int_flag( cmd, "refresh", 1 )?;
-  let live    = parse_int_flag( cmd, "live",    0 )?;
-  let trace   = parse_int_flag( cmd, "trace",   0 )? != 0;
-  let touch   = parse_int_flag( cmd, "touch",   1 )?;
+  let refresh = crate::output::parse_int_flag( cmd, "refresh", 1 )?;
+  let live    = crate::output::parse_int_flag( cmd, "live",    0 )?;
+  let trace   = crate::output::parse_int_flag( cmd, "trace",   0 )? != 0;
+  let touch   = crate::output::parse_int_flag( cmd, "touch",   1 )?;
   // Negative values map to 0, which is < 30 and will hit the interval guard.
   let interval = match cmd.arguments.get( "interval" )
   {
@@ -2245,7 +2152,7 @@ mod tests
   /// The match is an exact prefix check — `starts_with` — so partial or differently
   /// formatted 429 strings would still pass through. Only
   /// `claude_quota::QuotaError::HttpTransport` formats as `"HTTP transport error: HTTP N"`.
-  // test_kind: bug_reproducer(issue-150)
+  #[ doc = "bug_reproducer(issue-150)" ]
   #[ test ]
   fn test_shorten_error_429_returns_rate_limited()
   {
@@ -2284,7 +2191,7 @@ mod tests
   /// `QuotaError::HttpTransport` needs an explicit branch. The `else { reason }` arm is NOT
   /// a shortener; it is a verbatim passthrough. A new auth-failure code (e.g., 403) that the
   /// quota API might return in the future would silently appear in full in the table.
-  // test_kind: bug_reproducer(issue-152)
+  #[ doc = "bug_reproducer(issue-152)" ]
   #[ test ]
   fn test_shorten_error_mre_401_shortened()
   {
@@ -2301,7 +2208,6 @@ mod tests
   /// by `apply_refresh` as an auth-failure trigger. Without `refresh::1`, a 403 error would
   /// previously appear verbatim as "(HTTP transport error: HTTP 403)" in the table column,
   /// violating AC-03 ("shortened error reason"). This branch shortens it to "auth forbidden (403)".
-  // test_kind: regression_guard
   #[ test ]
   fn test_shorten_error_403_returns_auth_forbidden()
   {
@@ -2385,7 +2291,7 @@ mod tests
   /// way. This test validates the guard does not corrupt the result, but is NOT a full guard
   /// against re-adding 429: even with the bug restored, this test would still pass (no creds).
   /// The `shorten_error` test (T04) provides the stronger behavioral invariant.
-  // test_kind: bug_reproducer(issue-150)
+  #[ doc = "bug_reproducer(issue-150)" ]
   #[ test ]
   fn test_apply_refresh_429_not_retried()
   {
@@ -2646,7 +2552,6 @@ mod tests
   /// Tests where the credential file exists will reach `refresh_account_token`, which internally
   /// spawns the `claude` binary and blocks for up to 35 s. Only test scenarios where the
   /// credential file is absent (causing `None` early-exit) to avoid subprocess blocking.
-  // test_kind: regression(issue-165)
   #[ test ]
   fn test_apply_refresh_lifecycle_switch_fails_result_unchanged()
   {
@@ -2707,7 +2612,7 @@ mod tests
   /// If snapshot+restore is re-introduced into `apply_refresh`, this test fails because
   /// `switch_account` writes the live credentials file — the `!credentials_file().exists()`
   /// assertion is the critical guard for regression.
-  // test_kind: bug_reproducer(BUG-211)
+  #[ doc = "bug_reproducer(BUG-211)" ]
   #[ test ]
   fn test_apply_refresh_lifecycle_active_marker_unchanged()
   {
@@ -2994,7 +2899,6 @@ mod tests
   /// Tests using "does not panic" cannot assert stderr content — nextest does not
   /// capture `eprintln!` output for unit test assertions. This is the correct pattern
   /// for trace tests.
-  // test_kind: regression(issue-166)
   #[ test ]
   fn test_apply_refresh_lifecycle_l10_trace_run_isolated_invoked_no_panic()
   {
@@ -3115,14 +3019,14 @@ mod tests
   /// If `jwt_exp_ms` is modified to handle opaque tokens directly (wrong fix), this test
   /// fails, alerting that the `parse_u64_from_str` fallback may be redundant. Preserve the
   /// two-step fallback design regardless — opaque tokens will never have a parseable JWT payload.
-  // test_kind: bug_reproducer(BUG-170)
+  #[ doc = "bug_reproducer(BUG-170)" ]
   #[ test ]
   fn test_jwt_exp_ms_mre_bug170_opaque_returns_none()
   {
     // Opaque sk-ant-oat01-* token: no '.' separator — splitn(3, '.') yields one part.
     let opaque_creds = r#"{"accessToken":"sk-ant-oat01-XXXXXXXXXXXX","expiresAt":9999999999999}"#;
     assert!(
-      jwt_exp_ms( opaque_creds ).is_none(),
+      crate::output::jwt_exp_ms( opaque_creds ).is_none(),
       "jwt_exp_ms must return None for opaque sk-ant-oat01 token (no JWT structure); \
        if this fails, jwt_exp_ms was changed to handle opaque tokens — review BUG-170 fix",
     );
@@ -3152,7 +3056,7 @@ mod tests
   /// `parse_u64_from_str` scans for `"key":digits` — works for both flat JSON
   /// (`{"expiresAt":N}`) and nested JSON (`{"claudeAiOauth":{"expiresAt":N}}`); the plain
   /// string scan finds the first occurrence of the key regardless of nesting depth.
-  // test_kind: bug_reproducer(BUG-170)
+  #[ doc = "bug_reproducer(BUG-170)" ]
   #[ test ]
   fn test_parse_u64_from_str_mre_bug170_extracts_expires_at()
   {
@@ -3219,7 +3123,7 @@ mod tests
   ///
   /// Verifies BUG-156 fix: a rate-limited account with a stale (past) `expiresAt`
   /// must enter the refresh path so the credentials file gets updated.
-  // test_kind: bug_reproducer(issue-156)
+  #[ doc = "bug_reproducer(issue-156)" ]
   #[ test ]
   fn test_should_refresh_mre_bug156_429_expired_triggers()
   {
@@ -5394,7 +5298,7 @@ mod tests
   /// If restore is re-introduced, `credentials_file()` will exist after the call — the
   /// `!exists()` assertion is the regression guard. Marker assertion alone is insufficient
   /// because the marker is set to the same value by both restore and the pre-call write.
-  // test_kind: bug_reproducer(BUG-211)
+  #[ doc = "bug_reproducer(BUG-211)" ]
   #[ test ]
   fn test_apply_refresh_mre_bug208_restore_trace_emitted()
   {
@@ -5475,7 +5379,7 @@ mod tests
   /// # Pitfall
   /// If restore is re-introduced, `credentials_file()` will exist after the call — the
   /// `!exists()` assertion is the regression guard.
-  // test_kind: bug_reproducer(BUG-211)
+  #[ doc = "bug_reproducer(BUG-211)" ]
   #[ test ]
   fn test_apply_touch_mre_bug208_restore_trace_emitted()
   {
@@ -5553,7 +5457,7 @@ mod tests
   /// `seven_day=None` as 100.0 left (not exhausted — absent data ≠ exhausted). Must
   /// explicitly set `seven_day=Some(PeriodUsage{utilization:100.0,...})` to express
   /// "fully exhausted with data present". Using `None` would test the wrong code path.
-  // test_kind: bug_reproducer(BUG-214)
+  #[ doc = "bug_reproducer(BUG-214)" ]
   #[ test ]
   fn test_mre_bug214_apply_touch_skips_7d_exhausted_account()
   {
@@ -5633,7 +5537,7 @@ mod tests
   /// (no timer to start — no weekly tracking on this plan). Only
   /// `seven_day=Some({resets_at:None})` (field present, timer absent) triggers
   /// touch. Do NOT use `seven_day=None` for this test — absent field ≠ absent timer.
-  // test_kind: bug_reproducer(BUG-215)
+  #[ doc = "bug_reproducer(BUG-215)" ]
   #[ test ]
   fn test_mre_bug215_apply_touch_fires_when_7d_timer_absent()
   {
@@ -5707,7 +5611,7 @@ mod tests
   /// # Pitfall
   /// `"7d left"` is not a substring of `"7d(Son) left"` (space vs parenthesis after `7d`).
   /// Use `contains("7d(Son) left")` for Son-binding assertions — not `contains("left")`.
-  // test_kind: bug_reproducer(BUG-216)
+  #[ doc = "bug_reproducer(BUG-216)" ]
   #[ test ]
   fn mre_bug_216_drain_footer_label_sonnet_binding()
   {
@@ -5762,7 +5666,7 @@ mod tests
   /// (`seven_day_left ≤ seven_day_sonnet_left`), the footer must show `"7d left"` as before.
   ///
   /// This is the regression guard — ensures `son_binding` does NOT fire for the 7d-binding case.
-  // test_kind: bug_reproducer(BUG-216)
+  #[ doc = "bug_reproducer(BUG-216)" ]
   #[ test ]
   fn mre_bug_216_drain_footer_label_7d_binding()
   {
@@ -5831,7 +5735,7 @@ mod tests
   /// # Pitfall
   /// The fetch-failed path must NOT emit `model:` even after the BUG-210 fix — model/effort
   /// resolution requires quota data, which is unavailable when fetch fails.
-  // test_kind: bug_reproducer(BUG-210)
+  #[ doc = "bug_reproducer(BUG-210)" ]
   #[ test ]
   fn test_pre_switch_touch_ctx_model_effort_absent_on_fetch_failure()
   {
