@@ -89,6 +89,49 @@ tests/
 | `truncate_utf8_bug.rs` | Test truncation safety on multibyte UTF-8 (issue-018) |
 | `feature_cli_tool_test.rs` | Test feature-level CLI tool cases (FT-1..FT-6) |
 | `operation_migration_guide_test.rs` | Test migration guide procedure cases (OP-1..OP-5) |
+| `cli_cmd_status_test.rs` | Spec-driven integration tests for `.status` command |
+| `cli_cmd_list_test.rs` | Spec-driven integration tests for `.list` command |
+| `cli_cmd_show_test.rs` | Spec-driven integration tests for `.show` command |
+| `cli_cmd_count_test.rs` | Spec-driven integration tests for `.count` command |
+| `cli_cmd_search_test.rs` | Spec-driven integration tests for `.search` command |
+| `cli_cmd_export_test.rs` | Spec-driven integration tests for `.export` command |
+| `cli_cmd_projects_test.rs` | Spec-driven integration tests for `.projects` command |
+| `cli_cmd_project_path_test.rs` | Spec-driven integration tests for `.project.path` command |
+| `cli_cmd_project_exists_test.rs` | Spec-driven integration tests for `.project.exists` command |
+| `cli_cmd_session_dir_test.rs` | Spec-driven integration tests for `.session.dir` command |
+| `cli_cmd_session_ensure_test.rs` | Spec-driven integration tests for `.session.ensure` command |
+| `cli_param_agent_test.rs` | Edge case tests for `agent::` parameter |
+| `cli_param_case_sensitive_test.rs` | Edge case tests for `case_sensitive::` parameter |
+| `cli_param_count_test.rs` | Edge case tests for `count::` parameter |
+| `cli_param_entries_test.rs` | Edge case tests for `entries::` parameter |
+| `cli_param_entry_type_test.rs` | Edge case tests for `entry_type::` parameter |
+| `cli_param_format_test.rs` | Edge case tests for `format::` parameter |
+| `cli_param_limit_test.rs` | Edge case tests for `limit::` parameter |
+| `cli_param_metadata_test.rs` | Edge case tests for `metadata::` parameter |
+| `cli_param_min_entries_test.rs` | Edge case tests for `min_entries::` parameter |
+| `cli_param_output_test.rs` | Edge case tests for `output::` parameter |
+| `cli_param_path_test.rs` | Edge case tests for `path::` parameter |
+| `cli_param_project_test.rs` | Edge case tests for `project::` parameter |
+| `cli_param_query_test.rs` | Edge case tests for `query::` parameter |
+| `cli_param_scope_test.rs` | Edge case tests for `scope::` parameter |
+| `cli_param_session_id_test.rs` | Edge case tests for `session_id::` parameter |
+| `cli_param_sessions_bool_test.rs` | Edge case tests for `sessions::` (bool toggle) parameter |
+| `cli_param_session_test.rs` | Edge case tests for `session::` (filter) parameter |
+| `cli_param_strategy_test.rs` | Edge case tests for `strategy::` parameter |
+| `cli_param_target_test.rs` | Edge case tests for `target::` parameter |
+| `cli_param_topic_test.rs` | Edge case tests for `topic::` parameter |
+| `cli_param_type_test.rs` | Edge case tests for `type::` parameter |
+| `cli_param_verbosity_test.rs` | Edge case tests for `verbosity::` parameter |
+| `cli_param_group_output_control_test.rs` | Cross-command interaction tests for Output Control parameter group |
+| `cli_param_group_project_scope_test.rs` | Cross-command interaction tests for Project Scope parameter group |
+| `cli_param_group_scope_configuration_test.rs` | Cross-command interaction tests for Scope Configuration parameter group |
+| `cli_param_group_session_filter_test.rs` | Cross-command interaction tests for Session Filter parameter group |
+| `cli_param_group_session_identification_test.rs` | Cross-command interaction tests for Session Identification parameter group |
+| `cli_user_story_audit_session_history_test.rs` | Acceptance tests for Audit Session History user story |
+| `cli_user_story_find_past_conversation_test.rs` | Acceptance tests for Find Past Conversation user story |
+| `cli_user_story_export_session_for_review_test.rs` | Acceptance tests for Export Session for Review user story |
+| `cli_user_story_query_storage_programmatically_test.rs` | Acceptance tests for Query Storage Programmatically user story |
+| `cli_user_story_resume_claude_session_test.rs` | Acceptance tests for Resume Claude Session user story |
 
 ## Test Documentation Standards
 
@@ -273,9 +316,9 @@ cargo nextest run --all-features -- --include-ignored
 
 ## Test Count Tracking
 
-**Current Status**: 319 tests, 0 ignored
-- Effective tests: 319 (all tests run fully)
-- Ignored tests: 0 (target met — all tests use `CLAUDE_STORAGE_ROOT` + `TempDir` isolation)
+**Current Status**: 0 ignored
+- All tests run fully (none marked `#[ignore]`)
+- All tests use `CLAUDE_STORAGE_ROOT` + `TempDir` isolation
 
 ## Known Findings
 

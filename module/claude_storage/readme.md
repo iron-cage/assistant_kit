@@ -8,11 +8,12 @@ CLI tool for exploring and analyzing Claude Code's filesystem-based conversation
 |------|----------------|
 | `Cargo.toml` | Crate manifest: deps, features, build script |
 | `build.rs` | Transforms YAML command definitions to static PHF registry |
-| `unilang.commands.yaml` | Command definitions (9 commands) |
+| `unilang.commands.yaml` | Command definitions (11 commands) |
 | `src/` | CLI pipeline, command routines, binary entry points |
-| `tests/` | Integration and parameter validation tests (242 tests) |
+| `tests/` | Integration and parameter validation tests |
 | `docs/` | Behavioral requirements: features, CLI reference, operation docs |
-| `../../../task/claude_storage/` | Crate task registry — External Layout (see `claude_tools/task/`) |
+| `task/` | Crate-scoped task tracking (in-repo) |
+| `../../../../claude_tools/task/claude_storage/` | Canonical task registry (external, see `claude_tools/task/`) |
 | `examples/` | Usage examples for storage API |
 | `changelog.md` | Notable changes by version |
 | `verb/` | Shell scripts for each `do` protocol verb. |
@@ -386,14 +387,13 @@ fn main() -> claude_storage_core::Result< () >
 
 **Build system**:
 - `build.rs` - Transforms YAML command definitions to static PHF registry
-- `unilang.commands.yaml` - Command definitions (9 commands)
+- `unilang.commands.yaml` - Command definitions (11 commands)
 - Generated code: Static command map with O(1) lookup
 
 **Command routines** (`src/cli/mod.rs`):
 - `status_routine` - Global statistics aggregation
 - `list_routine` - Filtered listing
 - `show_routine` - Session detail display
-- `show_project_routine` - Project detail display
 - `count_routine` - Fast counting
 - `search_routine` - Content search
 - `export_routine` - Session export
