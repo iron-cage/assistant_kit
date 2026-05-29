@@ -1,4 +1,4 @@
-# Parameter :: 6. `metadata::`
+# Parameter :: 6. `show_metadata::`
 
 Show session metadata only, suppressing conversation content.
 
@@ -19,8 +19,8 @@ Show session metadata only, suppressing conversation content.
 
 **Examples:**
 ```bash
-metadata::0    # Show content (default)
-metadata::1    # Metadata only
+show_metadata::0    # Show content (default)
+show_metadata::1    # Metadata only
 ```
 
 ### Referenced Type

@@ -2,7 +2,7 @@
 
 List projects or conversations in Claude Code storage. Project-first view: all projects are listed, with conversations optionally shown per project. Use this when navigating projects or filtering by project path.
 
-**Parameters:** `type::`, `path::`, `sessions::`, `session::`, `agent::`, `min_entries::`, `verbosity::`, `scope::`, `project::`, `count::`
+**Parameters:** `type::`, `path::`, `show_sessions::`, `session::`, `agent::`, `min_entries::`, `verbosity::`, `scope::`, `project::`, `count::`
 
 **Exit:** `0` success | `1` argument error | `2` storage read error
 
@@ -10,7 +10,7 @@ List projects or conversations in Claude Code storage. Project-first view: all p
 ```bash
 claude_storage .list
 claude_storage .list type::uuid
-claude_storage .list path::SUBSTR [sessions::1]
+claude_storage .list path::SUBSTR [show_sessions::1]
 claude_storage .list session::FILTER [agent::0|1] [min_entries::N]
 claude_storage .list scope::relevant
 claude_storage .list type::conversation project::PROJECT
@@ -23,7 +23,7 @@ claude_storage .list type::conversation count::1 project::PROJECT
 |-----------|------|----------|---------|-------------|
 | `type::` | [`ProjectType`](../type/06_project_type.md) | optional | `all` | Project naming filter (`uuid`, `path`, `all`, `conversation`) |
 | `path::` | [`PathSubstring`](../type/04_path_substring.md) | optional | — | Filter projects by path substring |
-| `sessions::` | Boolean | optional | `0` | Show sessions per project |
+| `show_sessions::` | Boolean | optional | `0` | Show sessions per project |
 | `session::` | [`SessionFilter`](../type/08_session_filter.md) | optional | — | Filter sessions by ID substring |
 | `agent::` | Boolean | optional | — | Session type filter (`0`=main, `1`=agent) |
 | `min_entries::` | [`EntryCount`](../type/01_entry_count.md) | optional | — | Minimum entry count threshold |
@@ -40,7 +40,7 @@ Session filter parameters belong to the [Session Filter group](../param_group/04
 claude_storage .list
 
 # List all sessions for projects matching path
-claude_storage .list path::assistant sessions::1
+claude_storage .list path::assistant show_sessions::1
 
 # Find sessions matching a topic filter
 claude_storage .list session::commit
@@ -59,7 +59,7 @@ claude_storage .list type::conversation count::1 project::abc123
 ```
 
 **Notes:**
-- `session::`, `agent::`, or `min_entries::` auto-enables `sessions::1`; use `sessions::0` to suppress
+- `session::`, `agent::`, or `min_entries::` auto-enables `show_sessions::1`; use `show_sessions::0` to suppress
 - `type::uuid` shows projects identified by UUID rather than path encoding
 - `type::conversation` requires `project::` and lists one conversation ID per line
 - `count::1` with `type::conversation` outputs only the count as a bare integer (useful for scripting)

@@ -138,8 +138,8 @@ fn rot06_dry_output_prefix()
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
-    text.contains( "[dry-run]" ),
-    "dry-run output must contain [dry-run] prefix, got:\n{text}",
+    text.contains( "[dry-run] would rotate to 'best@candidate.com'" ),
+    "dry-run output must print full rotate message, got:\n{text}",
   );
 }
 
