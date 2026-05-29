@@ -103,7 +103,7 @@ cls .list type::all
 
 **Browse by project tree:**
 ```bash
-cls .projects verbosity::1
+cls .projects
 # Output: per-project session listing with grouping
 ```
 

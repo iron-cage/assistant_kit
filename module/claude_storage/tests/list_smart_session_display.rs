@@ -4,7 +4,7 @@
 //!
 //! The `.list` command uses smart parameter detection for session display:
 //! - Providing session filters (`session::`, `agent::`, `min_entries::`) auto-enables session display
-//! - Explicit `sessions::0` or `sessions::1` overrides auto-detection
+//! - Explicit `show_sessions::0` or `show_sessions::1` overrides auto-detection
 //! - No filters → Projects only (default behavior)
 //!
 //! ## Root Cause (Original Issue)
@@ -30,7 +30,7 @@
 //! ## Why Not Caught
 //!
 //! - No tests for `.list` command with session filters
-//! - Test coverage focused on `sessions::1` explicit enable
+//! - Test coverage focused on `show_sessions::1` explicit enable
 //! - Auto-enable behavior not documented in spec
 //! - Same pattern as `.show` bug (fixed in v1.2.0) not recognized proactively
 //!
@@ -254,10 +254,10 @@ fn test_agent_filter_auto_enables_display()
 #[ test ]
 fn test_explicit_sessions_0_with_filter()
 {
-  // Test: .list sessions::0 session::X
-  // Expected: Sessions shown (filter auto-enables, sessions::0 currently doesn't override)
+  // Test: .list show_sessions::0 session::X
+  // Expected: Sessions shown (filter auto-enables, show_sessions::0 currently doesn't override)
   // Purpose: Document current behavior - filters always enable
-  // Note: Future enhancement could allow sessions::0 to override auto-enable
+  // Note: Future enhancement could allow show_sessions::0 to override auto-enable
 
   let storage = TempDir::new().unwrap();
 
@@ -275,7 +275,7 @@ fn test_explicit_sessions_0_with_filter()
 
   let output = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
-    .args( [ ".list", "sessions::0", "session::zzz-commit-explicit" ] )
+    .args( [ ".list", "show_sessions::0", "session::zzz-commit-explicit" ] )
     .output()
     .unwrap();
 
@@ -287,7 +287,7 @@ fn test_explicit_sessions_0_with_filter()
     "Command should succeed. stderr: {stderr}"
   );
 
-  // Should SHOW session (filter auto-enables even with sessions::0)
+  // Should SHOW session (filter auto-enables even with show_sessions::0)
   assert!(
     stdout.contains( session_id ),
     "Sessions should be shown (filter auto-enables). stdout: {stdout}"
@@ -297,7 +297,7 @@ fn test_explicit_sessions_0_with_filter()
 #[ test ]
 fn test_explicit_sessions_1_backward_compatible()
 {
-  // Test: .list sessions::1 session::X
+  // Test: .list show_sessions::1 session::X
   // Expected: Sessions shown, filtered
   // Purpose: Verify backward compatibility (existing usage still works)
 
@@ -323,7 +323,7 @@ fn test_explicit_sessions_1_backward_compatible()
 
   let output = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
-    .args( [ ".list", "sessions::1", "session::zzz-commit-backward" ] )
+    .args( [ ".list", "show_sessions::1", "session::zzz-commit-backward" ] )
     .output()
     .unwrap();
 

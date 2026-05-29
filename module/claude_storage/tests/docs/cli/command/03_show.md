@@ -12,8 +12,8 @@ Integration tests for the `.show` command. Tests verify project view, session vi
 | INT-2 | session_id:: shows conversation content | Session View |
 | INT-3 | project:: selects explicit project | Project View |
 | INT-4 | session_id:: + project:: shows session in named project | Combined |
-| INT-5 | metadata::1 suppresses content, shows metadata | Display Mode |
-| INT-6 | entries::1 shows all session entries | Display Mode |
+| INT-5 | show_metadata::1 suppresses content, shows metadata | Display Mode |
+| INT-6 | show_entries::1 shows all session entries | Display Mode |
 | INT-7 | Exit code 2 when cwd has no project | Exit Codes |
 | INT-8 | project:: with path-encoded ID | Project View |
 
@@ -90,11 +90,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show session_id::s1 project::alpha
 
 ---
 
-### INT-5: metadata::1 suppresses content, shows metadata only
+### INT-5: show_metadata::1 suppresses content, shows metadata only
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show session_id::-default_topic metadata::1
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show session_id::-default_topic show_metadata::1
 ```
 
 **Expected behavior:**
@@ -105,11 +105,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show session_id::-default_topic metad
 
 ---
 
-### INT-6: entries::1 shows all session entries
+### INT-6: show_entries::1 shows all session entries
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show session_id::-default_topic entries::1
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .show session_id::-default_topic show_entries::1
 ```
 
 **Expected behavior:**

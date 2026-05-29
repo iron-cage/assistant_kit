@@ -24,19 +24,19 @@
       aliases: []
       tags: []
 
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level (0-5, default: 1)"
-      hint: "Output verbosity level"
+    - name: "show_tokens"
+      kind: "Boolean"
+      description: "Show token usage statistics (triggers full JSONL parse — slow for large storage)"
+      hint: "Show token usage"
       optional: true
-      default: "1"
+      default: "0"
       validation_rules: []
-      aliases: ["v"]
+      aliases: []
       tags: []
 
   examples:
     - ".status"
-    - ".status verbosity::2"
+    - ".status show_tokens::1"
   auto_help_enabled: true
 
 - name: ".list"
@@ -61,16 +61,6 @@
       default: "all"
       validation_rules: []
       aliases: []
-      tags: []
-
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level (0-5, default: 1)"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
       tags: []
 
     - name: "show_sessions"
@@ -183,16 +173,6 @@
       aliases: []
       tags: []
 
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level (0-5, default: 1)"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
-
     - name: "show_entries"
       kind: "Boolean"
       description: "Show all entries in session"
@@ -207,6 +187,26 @@
       kind: "Boolean"
       description: "Show metadata only (old behavior, default shows conversation content)"
       hint: "Metadata only mode"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "show_stat"
+      kind: "Boolean"
+      description: "Show session statistics footer in content mode (entry counts, timestamps)"
+      hint: "Show statistics footer"
+      optional: true
+      default: "0"
+      validation_rules: []
+      aliases: []
+      tags: []
+
+    - name: "show_tokens"
+      kind: "Boolean"
+      description: "Show token usage section (metadata and content modes)"
+      hint: "Show token usage"
       optional: true
       default: "0"
       validation_rules: []
@@ -230,6 +230,8 @@
     - ".show session_id::abc123 project::/home/alice/project"
     - ".show session_id::abc123 show_metadata::1"
     - ".show session_id::abc123 show_entries::1"
+    - ".show session_id::abc123 show_stat::1"
+    - ".show session_id::abc123 show_tokens::1"
   auto_help_enabled: true
 
 
@@ -350,16 +352,6 @@
       validation_rules: []
       aliases: []
       tags: ["filter"]
-
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level (0-5, default: 1)"
-      hint: "Output verbosity level"
-      optional: true
-      default: "1"
-      validation_rules: []
-      aliases: ["v"]
-      tags: []
 
   examples:
     - ".search query::error"
@@ -493,13 +485,14 @@
       aliases: []
       tags: ["output"]
 
-    - name: "verbosity"
-      kind: "Integer"
-      description: "Output detail level (0-5, default: 1)"
-      hint: "Output verbosity level"
+    - name: "show_tree"
+      kind: "Boolean"
+      description: "Show agent sessions tree-indented under their root session"
+      hint: "Show agent tree"
       optional: true
+      default: "0"
       validation_rules: []
-      aliases: ["v"]
+      aliases: []
       tags: []
 
   examples:
@@ -510,6 +503,7 @@
     - ".projects scope::global agent::1 min_entries::50"
     - ".projects scope::local session::abc123"
     - ".projects limit::5"
+    - ".projects show_tree::1"
   auto_help_enabled: true
 
 - name: ".project.path"

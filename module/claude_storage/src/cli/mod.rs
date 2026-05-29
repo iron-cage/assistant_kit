@@ -7,42 +7,17 @@
 //!
 //! ### Parameter Validation Consistency (Finding #010)
 //!
-//! **Issue**: Default parameter values do not prevent invalid input - parameters
+//! **Issue**: Default parameter values do not prevent invalid input — parameters
 //! with defaults still require explicit validation.
 //!
-//! **Context**: `search_routine` was missing verbosity range validation (0-5)
-//! while `status_routine` and `show_routine` had it. The default value (1) made
-//! it seem like validation was unnecessary, but users can override defaults
-//! with invalid values like -1 or 10.
-//!
 //! **Solution**: All parameters with value constraints must have explicit
-//! validation, regardless of default values. Apply validation patterns
-//! consistently across all command routines:
-//!
-//! ```rust,no_run
-//! # use unilang::{ VerifiedCommand, ErrorData, ErrorCode };
-//! # const VERBOSITY_MAX : i64 = 5;
-//! # fn example( cmd : VerifiedCommand ) -> Result< (), ErrorData >
-//! # {
-//! let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
-//!
-//! // Always validate range, even with defaults
-//! if !( 0..=VERBOSITY_MAX ).contains( &verbosity )
-//! {
-//!   return Err( ErrorData::new(
-//!     ErrorCode::InternalError,
-//!     format!( "Invalid verbosity: {}. Valid range: 0-5", verbosity )
-//!   ));
-//! }
-//! # Ok( () )
-//! # }
-//! ```
+//! validation regardless of default values. Apply validation patterns
+//! consistently across all command routines. Boolean parameters accept only
+//! `0`/`1`; integer parameters (e.g. `min_entries::`, `limit::`) must be
+//! validated as non-negative at point of use.
 //!
 //! **Prevention**: When adding new parameters, check existing command routines
-//! for validation patterns and apply them consistently. Never assume defaults
-//! eliminate the need for validation.
-//!
-//! See: `tests/search_command_test.rs::test_search_verbosity_invalid`
+//! for validation patterns and apply them consistently.
 
 mod storage;
 mod format;

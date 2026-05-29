@@ -9,10 +9,10 @@ navigable.
 | File | Responsibility |
 |------|----------------|
 | `mod.rs` | Module declarations and public re-exports |
-| `storage.rs` | Shared storage factory, verbosity validation, path + project + session helpers |
+| `storage.rs` | Shared storage factory, path resolution, project + session address helpers |
 | `format.rs` | Entry content formatting, timestamp formatting, safe UTF-8 truncation |
 | `status.rs` | `.status` command — project stats for a path |
-| `list.rs` | `.list` command — session/conversation listing with verbosity levels |
+| `list.rs` | `.list` command — session/conversation listing with filters |
 | `show.rs` | `.show` command — session and project content viewer |
 | `count.rs` | `.count` command — fast entry/session/project/conversation counters |
 | `search.rs` | `.search` command — full-text search across session content |

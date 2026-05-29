@@ -95,7 +95,8 @@ tests/
 | `cli_cmd_count_test.rs` | Spec-driven integration tests for `.count` command |
 | `cli_cmd_search_test.rs` | Spec-driven integration tests for `.search` command |
 | `cli_cmd_export_test.rs` | Spec-driven integration tests for `.export` command |
-| `cli_cmd_projects_test.rs` | Spec-driven integration tests for `.projects` command |
+| `cli_cmd_projects_test.rs` | Spec-driven integration tests for `.projects` command (INT-1..INT-25) |
+| `cli_cmd_projects_summary_test.rs` | Spec-driven integration tests for `.projects` display group (INT-26..INT-50) |
 | `cli_cmd_project_path_test.rs` | Spec-driven integration tests for `.project.path` command |
 | `cli_cmd_project_exists_test.rs` | Spec-driven integration tests for `.project.exists` command |
 | `cli_cmd_session_dir_test.rs` | Spec-driven integration tests for `.session.dir` command |

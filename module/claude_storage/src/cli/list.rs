@@ -2,7 +2,7 @@
 
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
-use super::storage::{ create_storage, validate_verbosity, resolve_path_parameter, load_project_for_param };
+use super::storage::{ create_storage, resolve_path_parameter, load_project_for_param };
 use super::projects::{ build_families, group_into_conversations };
 
 /// List projects or sessions
@@ -32,7 +32,7 @@ use super::projects::{ build_families, group_into_conversations };
 /// Returns error if `min_entries` is negative, path resolution fails,
 /// project type is invalid, storage creation fails, or listing projects fails.
 #[ allow( clippy::too_many_lines ) ]
-// CLI routine handler processes many parameters and verbosity branches — extraction
+// CLI routine handler processes many parameters and filter branches — extraction
 // would obscure the command's logic without reducing complexity.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
@@ -70,19 +70,6 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     }
     return Ok( OutputData::new( out, "text" ) );
   }
-
-  let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
-
-  // Fix(issue-015): Validate verbosity range
-  //
-  // Root cause: list_routine retrieved verbosity without range validation, unlike
-  // status_routine and show_routine which include explicit 0-5 checks. Values like
-  // -1 or 10 were silently accepted and used, producing undefined output behavior.
-  //
-  // Pitfall: get_integer().unwrap_or(default) only substitutes the default when the
-  // parameter is absent. An explicit out-of-range value is returned as-is. Range
-  // validation is always the caller's responsibility, even when a default is set.
-  validate_verbosity( verbosity )?;
 
   // Parse filter parameters
   let path_filter = cmd.get_string( "path" );
@@ -231,52 +218,18 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // Format output
   let mut output = String::new();
 
-  if verbosity >= 1
-  {
-    let noun = if projects.len() == 1 { "project" } else { "projects" };
-    writeln!( output, "Found {} {noun}:\n", projects.len() ).unwrap();
-  }
+  let noun = if projects.len() == 1 { "project" } else { "projects" };
+  writeln!( output, "Found {} {noun}:\n", projects.len() ).unwrap();
 
   for mut project in projects
   {
-    // Handle projects that may have been deleted (gracefully skip them)
-    match verbosity
-    {
-      0 =>
-      {
-        // Just ID
-        writeln!( output, "{:?}", project.id() ).unwrap();
-      }
-      1 =>
-      {
-        // ID + conversation count (skip if project was deleted)
-        let Ok( session_count ) = project.count_sessions() else { continue };  // Skip projects that can't be read
-
-        // Fix(issue-027): Use singular "conversation" when count == 1; plural otherwise.
-        // Root cause: hardcoded "sessions" regardless of count produced "(1 sessions)".
-        // Pitfall: same pattern as issue-025 — always derive noun from count, never hardcode.
-        let noun = if session_count == 1 { "conversation" } else { "conversations" };
-        writeln!( output, "{:?} ({session_count} {noun})", project.id() ).unwrap();
-      }
-      _ =>
-      {
-        // Full details (skip if project was deleted)
-        let Ok( project_stats ) = project.project_stats() else { continue };  // Skip projects that can't be read
-
-        write!
-        (
-          output,
-          "{:?}\n  Sessions: {} (Main: {}, Agent: {})\n  Entries: {}\n  Tokens: {} in, {} out\n\n",
-          project.id(),
-          project_stats.session_count,
-          project_stats.main_session_count,
-          project_stats.agent_session_count,
-          project_stats.total_entries,
-          project_stats.total_input_tokens,
-          project_stats.total_output_tokens
-        ).unwrap();
-      }
-    }
+    // ID + conversation count (skip if project was deleted)
+    // Fix(issue-027): Use singular "conversation" when count == 1; plural otherwise.
+    // Root cause: hardcoded "sessions" regardless of count produced "(1 sessions)".
+    // Pitfall: same pattern as issue-025 — always derive noun from count, never hardcode.
+    let Ok( session_count ) = project.count_sessions() else { continue };  // Skip projects that can't be read
+    let noun = if session_count == 1 { "conversation" } else { "conversations" };
+    writeln!( output, "{:?} ({session_count} {noun})", project.id() ).unwrap();
 
     // Show sessions if requested (skip if project was deleted)
     if show_sessions

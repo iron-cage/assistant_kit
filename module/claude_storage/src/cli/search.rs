@@ -2,7 +2,7 @@
 
 use core::fmt::Write as FmtWrite;
 use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCode };
-use super::storage::{ create_storage, validate_verbosity, load_project_for_param, find_session_mut };
+use super::storage::{ create_storage, load_project_for_param, find_session_mut };
 
 /// Search session content for query string
 ///
@@ -10,10 +10,10 @@ use super::storage::{ create_storage, validate_verbosity, load_project_for_param
 ///
 /// # Errors
 ///
-/// Returns error if query is missing, verbosity is out of range, entry type
-/// is invalid, storage creation fails, project loading fails, or search fails.
+/// Returns error if query is missing, entry type is invalid, storage creation
+/// fails, project loading fails, or search fails.
 #[ allow( clippy::too_many_lines ) ]
-// CLI routine handler processes multiple scope branches and verbosity levels —
+// CLI routine handler processes multiple scope branches —
 // extraction would obscure the command's logic without reducing complexity.
 #[ allow( clippy::needless_pass_by_value ) ]
 #[ inline ]
@@ -42,16 +42,6 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let session_id = cmd.get_string( "session" );
   let case_sensitive = cmd.get_boolean( "case_sensitive" ).unwrap_or( false );
   let entry_type = cmd.get_string( "entry_type" );
-  let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
-
-  // Fix(issue-010): Validate verbosity range
-  //
-  // Root cause: search_routine accepted any verbosity value without validation,
-  // inconsistent with status_routine and show_routine which validate 0-5 range.
-  //
-  // Pitfall: Don't assume default values prevent invalid input. Parameters with
-  // defaults still need validation since users can override with invalid values.
-  validate_verbosity( verbosity )?;
 
   // Create storage instance
   let storage = create_storage()?;
@@ -187,54 +177,20 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // Format output
   let mut output = String::new();
 
-  if verbosity >= 1
-  {
-    let noun = if all_matches.len() == 1 { "match" } else { "matches" };
-    writeln!( output, "Found {} {noun}:\n", all_matches.len() ).unwrap();
-  }
+  let noun = if all_matches.len() == 1 { "match" } else { "matches" };
+  writeln!( output, "Found {} {noun}:\n", all_matches.len() ).unwrap();
 
-  for ( proj_id, sess_id, m ) in &all_matches
+  for ( _proj_id, sess_id, m ) in &all_matches
   {
-    match verbosity
-    {
-      0 =>
-      {
-        // Minimal: just excerpt
-        writeln!( output, "{}", m.excerpt() ).unwrap();
-      }
-      1 =>
-      {
-        // Standard: session + excerpt
-        writeln!
-        (
-          output,
-          "[{}] [{:?}] {}",
-          sess_id,
-          m.entry_type(),
-          m.excerpt()
-        ).unwrap();
-      }
-      _ =>
-      {
-        // Detailed: full metadata
-        write!
-        (
-          output,
-          "Project: {:?}\nSession: {}\nEntry: {} ({})\nLine: {}\nExcerpt: {}\nFull Line: {}\n\n",
-          proj_id,
-          sess_id,
-          m.entry_index(),
-          match m.entry_type()
-          {
-            claude_storage_core::EntryType::User => "user",
-            claude_storage_core::EntryType::Assistant => "assistant",
-          },
-          m.line_number(),
-          m.excerpt(),
-          m.full_line()
-        ).unwrap();
-      }
-    }
+    // Standard: session + excerpt
+    writeln!
+    (
+      output,
+      "[{}] [{:?}] {}",
+      sess_id,
+      m.entry_type(),
+      m.excerpt()
+    ).unwrap();
   }
 
   if all_matches.is_empty()

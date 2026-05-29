@@ -1,57 +1,53 @@
 # Parameter Group :: 1. Output Control
 
-**Parameters:** `verbosity::`
+**Parameters:** `show_stat::`, `show_tokens::`, `show_tree::`
 
-**Pattern:** Output verbosity and detail level control
+**Pattern:** Per-block boolean toggles for optional output sections
 
-**Purpose:** Controls how much information each read command outputs, from machine-readable minimal to full-field verbose.
+**Purpose:** Controls which optional information blocks are included in command output. Each parameter independently enables one additional section; the default output is always the standard summary.
 
-**Used By:** `.status`, `.list`, `.show`, `.search`, `.projects` (5 commands total)
+**Used By:** `.show` (show_stat, show_tokens), `.status` (show_tokens), `.projects` (show_tree) — 3 commands total
 
 **Semantic Coherence Test:**
-- "Does `verbosity::` control output detail level?" → YES
+- "Does each parameter toggle a specific optional output block?" → YES
 
 **Why NOT `show_entries::` and `show_metadata::`:**
-- `show_entries::` controls *what content* is shown (all entries vs summary), not *how much detail* per line
-- `show_metadata::` toggles content suppression — a mode switch, not a verbosity adjustment
-- Different semantic purpose: display mode vs output density
+- `show_entries::` controls *what content* is shown (all entries vs summary), not an optional extra block
+- `show_metadata::` is a mode switch (suppresses content), not an additive block
+- Different semantic purpose: display mode vs optional section visibility
 
 **Why NOT `show_sessions::` (bool):**
-- `show_sessions::` controls whether sessions are shown at all — an on/off toggle for the entire session display tier
-- Different semantic level: tier visibility vs density of output
+- `show_sessions::` controls whether the session tier is shown at all — an on/off toggle for the entire session display tier
+- Different semantic level: tier visibility vs optional section within a tier
 
 **Parameter Details:**
 
-| Parameter | Type | Description | Alias |
-|-----------|------|-------------|-------|
-| `verbosity::` | [`VerbosityLevel`](../type/12_verbosity_level.md) | Output detail: 0=silent, 1=normal, 2=detailed, 3=verbose | `v` |
+| Parameter | Type | Description | Commands |
+|-----------|------|-------------|----------|
+| `show_stat::` | Boolean | Append statistics footer (entry counts, timestamps) | `.show` |
+| `show_tokens::` | Boolean | Include token usage section | `.show`, `.status` |
+| `show_tree::` | Boolean | Tree-indent agent sessions under root sessions | `.projects` |
 
 **Examples:**
 ```bash
-.status v::2
-.list verbosity::3
-.search query::error v::0
+.show session_id::abc123 show_stat::1
+.show session_id::abc123 show_tokens::1
+.status show_tokens::1
+.projects show_tree::1
 ```
 
 ### Referenced Commands
 
-| # | Command | Membership | Excluded Params |
-|---|---------|------------|-----------------|
-| 1 | [`.status`](../command/01_status.md) | Full | — |
-| 2 | [`.list`](../command/02_list.md) | Full | — |
-| 3 | [`.show`](../command/03_show.md) | Full | — |
-| 5 | [`.search`](../command/05_search.md) | Full | — |
-| 7 | [`.projects`](../command/07_projects.md) | Full | — |
+| # | Command | Parameters |
+|---|---------|------------|
+| 1 | [`.status`](../command/01_status.md) | `show_tokens::` |
+| 3 | [`.show`](../command/03_show.md) | `show_stat::`, `show_tokens::` |
+| 7 | [`.projects`](../command/07_projects.md) | `show_tree::` |
 
 ### Referenced Parameters
 
 | # | Parameter | Type | Default | Role in Group |
 |---|-----------|------|---------|---------------|
-| 19 | [`verbosity::`](../param/19_verbosity.md) | [`VerbosityLevel`](../type/12_verbosity_level.md) | 1 | Output detail level |
-
-### Referenced User Stories
-
-| # | User Story | Persona |
-|---|------------|---------|
-| 1 | [Audit Session History](../user_story/001_audit_session_history.md) | developer |
-| 4 | [Query Storage Programmatically](../user_story/004_query_storage_programmatically.md) | developer |
+| 19 | [`show_stat::`](../param/19_show_stat.md) | Boolean | `0` | Statistics footer in `.show` content mode |
+| 23 | [`show_tokens::`](../param/23_show_tokens.md) | Boolean | `0` | Token usage section in `.show` and `.status` |
+| 24 | [`show_tree::`](../param/24_show_tree.md) | Boolean | `0` | Tree-indented agent display in `.projects` |

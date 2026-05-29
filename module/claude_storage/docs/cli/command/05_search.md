@@ -2,7 +2,7 @@
 
 Search session content for a query string across projects and sessions. Use this to find conversations by topic, code fragment, or any text that appeared in a session.
 
-**Parameters:** `query::`, `project::`, `session::`, `case_sensitive::`, `entry_type::`, `verbosity::`, `scope::`, `path::`
+**Parameters:** `query::`, `project::`, `session::`, `case_sensitive::`, `entry_type::`, `scope::`, `path::`
 
 **Exit:** `0` success | `1` argument error (missing `query::`) | `2` storage read error
 
@@ -23,11 +23,10 @@ claude_storage .search query::QUERY scope::relevant
 | `session::` | [`SessionId`](../type/09_session_id.md) | optional | — | Restrict to this session |
 | `case_sensitive::` | Boolean | optional | `0` | Enable case-sensitive matching |
 | `entry_type::` | [`EntryType`](../type/02_entry_type.md) | optional | `all` | Filter by entry type |
-| `verbosity::` | [`VerbosityLevel`](../type/12_verbosity_level.md) | optional | `1` | Output detail level |
 | `scope::` | [`ScopeValue`](../type/07_scope_value.md) | optional | `global` | Search boundary |
 | `path::` | [`StoragePath`](../type/10_storage_path.md) | optional | cwd | Scope anchor path |
 
-`project::` belongs to the [Project Scope group](../param_group/02_project_scope.md). `scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md).
+`project::` belongs to the [Project Scope group](../param_group/02_project_scope.md). `scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md). `.search` has no output-control parameters.
 
 **Examples:**
 ```bash
@@ -53,7 +52,6 @@ claude_storage .search query::error scope::relevant
 
 | # | Group | Membership | Excluded Params |
 |---|-------|------------|-----------------|
-| 1 | [Output Control](../param_group/01_output_control.md) | Full | — |
 | 2 | [Project Scope](../param_group/02_project_scope.md) | Full | — |
 | 4 | [Session Filter](../param_group/04_session_filter.md) | Partial | `agent::`, `min_entries::` |
 | 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Full | — |

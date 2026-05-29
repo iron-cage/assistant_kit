@@ -7,8 +7,7 @@
 //! ## Coverage
 //!
 //! - INT-1: Default output with real storage
-//! - INT-2: Verbosity 0 machine-readable output
-//! - INT-3: Verbosity 2 detailed per-project output
+//! - INT-3: show_tokens::1 adds Tokens section in .status
 //! - INT-4: Custom storage path via `path::`
 //! - INT-5: Custom storage path via `CLAUDE_STORAGE_ROOT` env
 //! - INT-6: Exit code 0 on success
@@ -86,65 +85,24 @@ fn int_1_default_output_with_real_storage()
   );
 }
 
-/// INT-2: Verbosity 0 machine-readable output.
+/// INT-3: show_tokens::1 adds Tokens section in .status.
 ///
 /// ## Purpose
-/// Verify that `verbosity::0` produces compact key:value lines with
-/// `projects: 2` and `sessions: 3`, no table borders or extra labels.
+/// Verify that `.status show_tokens::1` includes a "Tokens" section that
+/// bare `.status` omits.
 ///
 /// ## Coverage
-/// Compact format lines present; numeric counts match fixture; exit 0.
+/// Tokens section present with show_tokens::1; more output than baseline; exit 0.
 ///
 /// ## Validation Strategy
-/// Write 2 projects / 3 sessions. Run `.status ```verbosity::```0`.
-/// Assert stdout contains `projects: 2` and `sessions: 3`.
-///
-/// ## Related Requirements
-/// `tests/docs/cli/command/01_status.md` — INT-2
-#[ test ]
-fn int_2_verbosity_0_machine_readable_output()
-{
-  let root = TempDir::new().unwrap();
-
-  let p1 = root.path().join( "int2-alpha" );
-  let p2 = root.path().join( "int2-beta" );
-  common::write_path_project_session( root.path(), &p1, "s001", 2 );
-  common::write_path_project_session( root.path(), &p2, "s002", 2 );
-  common::write_path_project_session( root.path(), &p2, "s003", 2 );
-
-  let out = common::clg_cmd()
-    .env( "CLAUDE_STORAGE_ROOT", root.path() )
-    .arg( ".status" )
-    .arg( "verbosity::0" )
-    .output()
-    .unwrap();
-
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  assert!(
-    s.contains( "Projects: 2" ) || s.contains( "projects: 2" ),
-    "INT-2: verbosity::0 must contain project count 2; got:\n{s}"
-  );
-  // verbosity::0 shows only project count line
-}
-
-/// INT-3: Verbosity 2 detailed per-project output.
-///
-/// ## Purpose
-/// Verify that `verbosity::2` shows per-project rows in addition to
-/// the summary, including session counts and entry type breakdown.
-///
-/// ## Coverage
-/// Per-project rows present; user/assistant breakdown visible; exit 0.
-///
-/// ## Validation Strategy
-/// Write 2 projects each with 1 session of 4 entries (2 user + 2 assistant).
-/// Run `.status ```verbosity::```2`. Assert per-project detail rows appear.
+/// Write 2 projects each with 1 session of 4 entries. Run bare `.status`
+/// and `.status show_tokens::1`. Assert tokens output is longer and contains
+/// the word "token".
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/command/01_status.md` — INT-3
 #[ test ]
-fn int_3_verbosity_2_detailed_per_project_output()
+fn int_3_show_tokens_adds_tokens_section()
 {
   let root = TempDir::new().unwrap();
 
@@ -153,23 +111,35 @@ fn int_3_verbosity_2_detailed_per_project_output()
   common::write_path_project_session( root.path(), &p1, "s001", 4 );
   common::write_path_project_session( root.path(), &p2, "s002", 4 );
 
-  let out = common::clg_cmd()
+  let base_out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".status" )
-    .arg( "verbosity::2" )
     .output()
     .unwrap();
 
-  assert_exit( &out, 0 );
-  let s = stdout( &out );
-  // verbosity::2 must include per-project user/assistant breakdown
+  let tokens_out = common::clg_cmd()
+    .env( "CLAUDE_STORAGE_ROOT", root.path() )
+    .arg( ".status" )
+    .arg( "show_tokens::1" )
+    .output()
+    .unwrap();
+
+  assert_exit( &base_out, 0 );
+  assert_exit( &tokens_out, 0 );
+
+  let base = stdout( &base_out );
+  let tokens = stdout( &tokens_out );
+
   assert!(
-    s.contains( "User" ) || s.contains( "user" ),
-    "INT-3: verbosity::2 must show user entry breakdown; got:\n{s}"
+    tokens.len() > base.len(),
+    "INT-3: show_tokens::1 must produce more output than bare .status;\n  base ({} bytes):\n{base}\n  tokens ({} bytes):\n{tokens}",
+    base.len(),
+    tokens.len()
   );
+
   assert!(
-    s.contains( "Assistant" ) || s.contains( "assistant" ),
-    "INT-3: verbosity::2 must show assistant entry breakdown; got:\n{s}"
+    tokens.to_lowercase().contains( "token" ),
+    "INT-3: show_tokens::1 output must include Tokens section; got:\n{tokens}"
   );
 }
 

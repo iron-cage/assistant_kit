@@ -26,10 +26,12 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | `16_target.md` | target:: — count operation target |
 | `17_topic.md` | topic:: — session topic suffix |
 | `18_type.md` | type:: — project naming scheme filter |
-| `19_verbosity.md` | verbosity:: — output detail level |
+| `19_show_stat.md` | show_stat:: — session statistics footer toggle |
 | `20_strategy.md` | strategy:: — resume strategy override |
 | `21_count.md` | count:: — output count only flag for .list |
 | `22_limit.md` | limit:: — per-project session display cap |
+| `23_show_tokens.md` | show_tokens:: — token usage section toggle |
+| `24_show_tree.md` | show_tree:: — agent tree-indented display toggle |
 
 ### Parameters Table
 
@@ -53,9 +55,11 @@ See [type/readme.md](../type/readme.md) for type definitions and [param_group/re
 | 16 | [`target::`](16_target.md) | [`TargetType`](../type/11_target_type.md) | `projects` | `projects`, `sessions`, `entries`, `conversations` | Count operation target | 1 |
 | 17 | [`topic::`](17_topic.md) | [`TopicName`](../type/13_topic_name.md) | — | identifier string | Session topic suffix | 4 |
 | 18 | [`type::`](18_type.md) | [`ProjectType`](../type/06_project_type.md) | `all` | `uuid`, `path`, `all`, `conversation` | Project naming scheme filter | 1 |
-| 19 | [`verbosity::`](19_verbosity.md) | [`VerbosityLevel`](../type/12_verbosity_level.md) | `1` | `0`–`5` | Output detail level | 5 |
+| 19 | [`show_stat::`](19_show_stat.md) | Boolean | `0` | `0`, `1` | Session statistics footer in content mode | 1 |
 | 20 | [`strategy::`](20_strategy.md) | [`StrategyType`](../type/14_strategy_type.md) | auto-detect | `resume`, `fresh` | Resume strategy override | 1 |
 | 21 | [`count::`](21_count.md) | Boolean | `0` | `0`, `1` | Output count only flag | 1 |
 | 22 | [`limit::`](22_limit.md) | Integer | `0` | Integer ≥ 0 | Per-project session display cap | 1 |
+| 23 | [`show_tokens::`](23_show_tokens.md) | Boolean | `0` | `0`, `1` | Token usage section in output | 2 |
+| 24 | [`show_tree::`](24_show_tree.md) | Boolean | `0` | `0`, `1` | Agent tree-indented display | 1 |
 
-**Total:** 22 parameters
+**Total:** 24 parameters

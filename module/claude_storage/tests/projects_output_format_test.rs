@@ -2,30 +2,29 @@
 //!
 //! ## Coverage
 //!
-//! IT-17 through IT-29: output format behaviour — `verbosity::1` grouping,
+//! IT-17 through IT-29: output format behaviour — default grouping,
 //! agent session collapse, entry counts, filter interaction with collapse,
-//! v1 entry count, limit truncation, and zero-byte session exclusion.
+//! entry count, limit truncation, and zero-byte session exclusion.
 //!
-//! IT-50 through IT-53: project-centric redesign (task 016) — "Active project"
-//! summary header, session count aggregate, recency-sorted list, and v0 paths.
+//! IT-50 through IT-52: project-centric redesign (task 016) — "Active project"
+//! summary header, session count aggregate, recency-sorted list.
 //!
 //! ## Test Case Index
 //!
 //! | ID | Test Name | Category |
 //! |----|-----------|----------|
-//! | IT-17 | v1 output groups sessions under project path headers | Output Format |
-//! | IT-18 | path header always present at v1 for `scope::local` single project | Output Format |
-//! | IT-19 | agent sessions collapsed to count line at v1 without `agent::` filter | Output Format |
-//! | IT-20 | agent sessions shown individually at v2+ | Output Format |
-//! | IT-21 | entry count shown per session at v2+ | Output Format |
-//! | IT-22 | `agent::1` explicit filter disables collapse at v1 | Output Format |
-//! | IT-27 | entry count shown per session at v1 | Output Format |
-//! | IT-28 | `limit::N` truncates main sessions shown at v1 | Output Format |
-//! | IT-29 | zero-byte sessions excluded from v1 display | Output Format |
+//! | IT-17 | default output groups sessions under project path headers | Output Format |
+//! | IT-18 | path header always present for `scope::local` single project | Output Format |
+//! | IT-19 | agent sessions collapsed to count line without `agent::` filter | Output Format |
+//! | IT-20 | `show_tree::1` shows agents tree-indented individually | Output Format |
+//! | IT-21 | entry count shown per session by default | Output Format |
+//! | IT-22 | `agent::1` explicit filter disables collapse | Output Format |
+//! | IT-27 | entry count shown per session | Output Format |
+//! | IT-28 | `limit::N` truncates main sessions | Output Format |
+//! | IT-29 | zero-byte sessions excluded from display | Output Format |
 //! | IT-50 | summary mode shows "Active project" not "Active session" | Project-Centric |
 //! | IT-51 | summary mode shows session count aggregate "(N sessions," | Project-Centric |
 //! | IT-52 | list mode shows projects sorted by recency (most recently active first) | Project-Centric |
-//! | IT-53 | `verbosity::0` shows project paths only — no session IDs | Project-Centric |
 //! | CC-P03 | `limit::1` with 2 sessions uses singular "conversation" in truncation | Truncation Noun |
 //! | CC-P04 | `limit::1` with 3 sessions uses plural "conversations" in truncation | Truncation Noun |
 
@@ -66,9 +65,8 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 // IDs or "Found N" header. No test asserted path-group headers or agent collapse.
 //
 // Fix Applied: projects_routine redesigned to collect into BTreeMap<String,
-// Vec<Session>> keyed by decoded project path. Output loop emits path headers at
-// v1+, collapses agent sessions at v1 when no agent:: filter, shows entry counts
-// at v2+.
+// Vec<Session>> keyed by decoded project path. Output loop emits path headers,
+// collapses agent sessions when no agent:: filter, shows entry counts by default.
 //
 // Prevention: Always add format assertions (path header, agent collapse, entry
 // count) when testing commands with structured grouped output.
@@ -77,7 +75,7 @@ fn assert_exit( out : &std::process::Output, code : i32 )
 // don't start with '-' — guard with starts_with('-') before calling decode.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// IT-17: v1 output groups sessions under project path headers
+// IT-17: default output groups sessions under project path headers
 #[ test ]
 fn it_17_v1_groups_sessions_by_project_path()
 {
@@ -94,7 +92,6 @@ fn it_17_v1_groups_sessions_by_project_path()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -109,7 +106,7 @@ fn it_17_v1_groups_sessions_by_project_path()
   assert!( s.contains( "session-beta-001" ), "must contain session-beta-001; got:\n{s}" );
 }
 
-// IT-18: path header always present at v1 for scope::local single project
+// IT-18: path header always present for scope::local single project
 #[ test ]
 fn it_18_path_header_present_at_v1_single_project()
 {
@@ -125,7 +122,6 @@ fn it_18_path_header_present_at_v1_single_project()
     .arg( ".projects" )
     .arg( "scope::local" )
     .arg( format!( "path::{}", project.display() ) )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 
@@ -137,7 +133,7 @@ fn it_18_path_header_present_at_v1_single_project()
   );
 }
 
-// IT-19: agent sessions grouped in family display at v1 without agent:: filter
+// IT-19: agent sessions grouped in family display without agent:: filter
 //
 // Updated for family display (TSK-002): agents are shown as family brackets
 // `[N agents: breakdown]` per root, not as a flat `+ N agent sessions` collapse.
@@ -162,7 +158,6 @@ fn it_19_agent_sessions_collapsed_at_v1_no_filter()
     .env( "CLAUDE_STORAGE_ROOT", storage_root.to_str().unwrap() )
     .arg( ".projects" )
     .arg( "scope::global" )
-    .arg( "verbosity::1" )
     .output()
     .unwrap();
 

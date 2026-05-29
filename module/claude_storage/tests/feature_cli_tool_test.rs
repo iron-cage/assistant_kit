@@ -193,14 +193,14 @@ fn ft_4_uuid_named_project_returned_in_project_list()
 ///
 /// ## Purpose
 /// Verify that sessions in the flat layout (`.jsonl` directly in the project
-/// directory) are visible via `.list ``sessions::``1`, with no layout error.
+/// directory) are visible via `.list ``show_sessions::``1`, with no layout error.
 ///
 /// ## Coverage
 /// Flat-layout (B7) storage transparency; sessions appear in listing; exit 0.
 ///
 /// ## Validation Strategy
 /// Write a flat-layout project (`write_path_project_session` produces
-/// `{project_id}/{session_id}.jsonl` directly), run `clg .list ``sessions::``1`,
+/// `{project_id}/{session_id}.jsonl` directly), run `clg .list ``show_sessions::``1`,
 /// assert stdout non-empty and no layout error on stderr. Assert exit 0.
 ///
 /// ## Related Requirements
@@ -215,7 +215,7 @@ fn ft_5_flat_layout_project_sessions_accessible()
   let out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".list" )
-    .arg( "sessions::1" )
+    .arg( "show_sessions::1" )
     .output()
     .unwrap();
 
@@ -224,7 +224,7 @@ fn ft_5_flat_layout_project_sessions_accessible()
   let err = stderr( &out );
   assert!(
     !s.is_empty(),
-    "FT-5: flat-layout sessions must appear in .list sessions::1; stderr: {err}"
+    "FT-5: flat-layout sessions must appear in .list show_sessions::1; stderr: {err}"
   );
   assert!(
     !err.contains( "unrecognized layout" ),
@@ -236,14 +236,14 @@ fn ft_5_flat_layout_project_sessions_accessible()
 ///
 /// ## Purpose
 /// Verify that sessions in the hierarchical layout (subagent directory structure,
-/// B13+) appear in `.list ``sessions::``1` output alongside flat-layout sessions.
+/// B13+) appear in `.list ``show_sessions::``1` output alongside flat-layout sessions.
 ///
 /// ## Coverage
 /// Hierarchical-layout (B13+) storage transparency; both layouts in one listing; exit 0.
 ///
 /// ## Validation Strategy
 /// Write one flat-layout and one hierarchical project (`write_hierarchical_path_session`),
-/// run `clg .list ``sessions::``1`, assert stdout non-empty and no layout error on
+/// run `clg .list ``show_sessions::``1`, assert stdout non-empty and no layout error on
 /// stderr. Assert exit 0.
 ///
 /// ## Related Requirements
@@ -268,7 +268,7 @@ fn ft_6_hierarchical_layout_project_sessions_accessible()
   let out = common::clg_cmd()
     .env( "CLAUDE_STORAGE_ROOT", root.path() )
     .arg( ".list" )
-    .arg( "sessions::1" )
+    .arg( "show_sessions::1" )
     .output()
     .unwrap();
 
@@ -277,7 +277,7 @@ fn ft_6_hierarchical_layout_project_sessions_accessible()
   let err = stderr( &out );
   assert!(
     !s.is_empty(),
-    "FT-6: hierarchical-layout sessions must appear in .list sessions::1; stderr: {err}"
+    "FT-6: hierarchical-layout sessions must appear in .list show_sessions::1; stderr: {err}"
   );
   assert!(
     !err.contains( "unrecognized layout" ),

@@ -12,13 +12,7 @@
 //!    The code has a catch-all `_` pattern in the match statement that treats all invalid
 //!    values as "all", silently listing all projects instead of erroring.
 //!
-//! 2. **`.status ``verbosity::``-1`** - Negative verbosity values are silently accepted and
-//!    processed as some positive value.
-//!
-//! 3. **`.status ``verbosity::1``0`** - Out-of-range verbosity values (valid: 0-5) are silently
-//!    accepted.
-//!
-//! 4. **`.count ``target::invali``d`** (Finding #009) - The `target` parameter accepts ANY string
+//! 2. **`.count ``target::invali``d`** (Finding #009) - The `target` parameter accepts ANY string
 //!    value without validation. Invalid values like "project" (singular) are processed with
 //!    confusing errors instead of clear parameter validation messages.
 //!
@@ -42,10 +36,7 @@
 //! 1. **`.list type::` validation**: Replace catch-all `_` pattern with explicit "all" case
 //!    and error return for invalid values.
 //!
-//! 2. **`.status verbosity::` range validation**: Add explicit range check (0-5) before
-//!    processing verbosity value.
-//!
-//! 3. **`.list min_entries::` validation**: Add check to reject negative values.
+//! 2. **`.list min_entries::` validation**: Add check to reject negative values.
 //!
 //! # Prevention
 //!
@@ -56,17 +47,14 @@
 //! 1. **Enum-like parameters** (type, target, etc): Explicitly list all valid values,
 //!    error on anything else. Never use catch-all `_` patterns for parameter values.
 //!
-//! 2. **Numeric ranges** (verbosity, `min_entries`, etc): Explicitly check ranges and
-//!    reject out-of-bounds values with clear error messages stating the valid range.
-//!
-//! 3. **Error messages**: Always include:
+//! 2. **Error messages**: Always include:
 //!    - What value was provided
 //!    - Why it's invalid
 //!    - What values are valid
 //!
 //!    Example: "Invalid type: foo. Valid values: uuid, path, all"
 //!
-//! 4. **Boolean-like integers** (`agent::0|1`, `sessions::0|1)`: Rely on unilang's boolean
+//! 3. **Boolean-like integers** (`agent::0|1`, `show_sessions::0|1)`: Rely on unilang's boolean
 //!    type checking which already validates 0|1 values.
 //!
 //! # Pitfall to Avoid
@@ -139,135 +127,6 @@ fn test_list_type_parameter_valid_values()
   assert!( output.status.success(), "type::all should be valid" );
 }
 
-/// Test that .status rejects negative verbosity
-#[ test ]
-fn test_status_verbosity_negative_validation()
-{
-  let output = common::clg_cmd()
-    .args( [ ".status", "verbosity::-1" ] )
-    .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
-    .output()
-    .expect( "Failed to execute command" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-  let stdout = String::from_utf8_lossy( &output.stdout );
-  let combined = format!( "{stderr}{stdout}" );
-
-  // Should error with clear message
-  assert!(
-    !output.status.success(),
-    "Command should fail with negative verbosity. Got: {combined}"
-  );
-
-  assert!(
-    combined.contains( "verbosity" ) && combined.contains( "negative" ) || combined.contains( "range" ) || combined.contains( "0-5" ),
-    "Error message should mention verbosity range. Got: {combined}"
-  );
-}
-
-/// Test that .status rejects out-of-range verbosity
-#[ test ]
-fn test_status_verbosity_out_of_range_validation()
-{
-  let output = common::clg_cmd()
-    .args( [ ".status", "verbosity::10" ] )
-    .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
-    .output()
-    .expect( "Failed to execute command" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-  let stdout = String::from_utf8_lossy( &output.stdout );
-  let combined = format!( "{stderr}{stdout}" );
-
-  // Should error with clear message
-  assert!(
-    !output.status.success(),
-    "Command should fail with out-of-range verbosity. Got: {combined}"
-  );
-
-  assert!(
-    combined.contains( "verbosity" ) && (combined.contains( "range" ) || combined.contains( "0-5" )),
-    "Error message should mention valid verbosity range (0-5). Got: {combined}"
-  );
-}
-
-/// Test that .status accepts valid verbosity range
-#[ test ]
-fn test_status_verbosity_valid_range()
-{
-  // Create empty temp storage to avoid processing thousands of real sessions
-  let temp_dir = std::env::temp_dir().join( "test-status-verbosity-range" );
-  std::fs::create_dir_all( &temp_dir ).expect( "Failed to create temp dir" );
-  std::fs::create_dir_all( temp_dir.join( "projects" ) ).expect( "Failed to create projects dir" );
-
-  // Test all valid verbosity levels
-  for verbosity in 0..=5
-  {
-    let output = common::clg_cmd()
-      .args
-      (
-        [
-          ".status",
-          &format!( "verbosity::{verbosity}" ),
-          &format!( "path::{}", temp_dir.display() )
-        ]
-      )
-      .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
-      .output()
-      .expect( "Failed to execute command" );
-
-    assert!(
-      output.status.success(),
-      "verbosity::{verbosity} should be valid"
-    );
-  }
-
-  // Cleanup
-  std::fs::remove_dir_all( &temp_dir ).ok();
-}
-
-/// Test that .show rejects negative verbosity
-#[ test ]
-fn test_show_verbosity_negative_validation()
-{
-  let output = common::clg_cmd()
-    .args( [ ".show", "verbosity::-1" ] )
-    .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
-    .output()
-    .expect( "Failed to execute command" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-  let stdout = String::from_utf8_lossy( &output.stdout );
-  let combined = format!( "{stderr}{stdout}" );
-
-  // Should error with clear message
-  assert!(
-    !output.status.success(),
-    "Command should fail with negative verbosity. Got: {combined}"
-  );
-}
-
-/// Test that .show rejects out-of-range verbosity
-#[ test ]
-fn test_show_verbosity_out_of_range_validation()
-{
-  let output = common::clg_cmd()
-    .args( [ ".show", "verbosity::10" ] )
-    .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
-    .output()
-    .expect( "Failed to execute command" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-  let stdout = String::from_utf8_lossy( &output.stdout );
-  let combined = format!( "{stderr}{stdout}" );
-
-  // Should error with clear message
-  assert!(
-    !output.status.success(),
-    "Command should fail with out-of-range verbosity. Got: {combined}"
-  );
-}
-
 /// Test that .list rejects negative `min_entries`
 #[ test ]
 fn test_list_min_entries_negative_validation()
@@ -327,7 +186,7 @@ fn test_show_entries_accepted_in_content_mode()
   // session_id::test-session-id won't exist, so we get a project-not-found error,
   // but the key assertion is that the error is NOT about entries/metadata mode
   let output = common::clg_cmd()
-    .args( [ ".show", "session_id::test-session-id", "entries::1" ] )
+    .args( [ ".show", "session_id::test-session-id", "show_entries::1" ] )
     .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
     .output()
     .expect( "Failed to execute command" );
@@ -353,7 +212,7 @@ fn test_show_entries_works_in_metadata_mode()
   // NOT because of parameter validation
 
   let output = common::clg_cmd()
-    .args( [ ".show", "session_id::test-session-id", "metadata::1", "entries::1" ] )
+    .args( [ ".show", "session_id::test-session-id", "show_metadata::1", "show_entries::1" ] )
     .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
     .output()
     .expect( "Failed to execute command" );
@@ -374,66 +233,6 @@ fn test_show_entries_works_in_metadata_mode()
   assert!(
     !is_param_validation_error,
     "Should fail due to missing session, NOT parameter validation. Got: {combined}"
-  );
-}
-
-/// Test that `entries::1 ``verbosity::``0` is NOT a parameter validation error
-///
-/// ## Purpose
-///
-/// The error message for `entries` mode incompatibility says:
-/// `"Use '.show ``session_id::``<id> ``metadata::1`` ``entries::1``' or`
-/// `'.show ``session_id::``<id> ``verbosity::0`` ``entries::1``'."`
-///
-/// This confirms that `verbosity::0 + ``entries::``1` is the documented second valid
-/// form. The validation guard is `show_entries && verbosity >= 1 && !metadata_only`,
-/// so `verbosity::0` bypasses it. This test verifies the guard is correct.
-///
-/// ## Coverage
-///
-/// Confirms `entries::1 + ``verbosity::0`` + ``session_id::``X` passes parameter
-/// validation and fails only at session lookup (not at validation).
-///
-/// ## Validation Strategy
-///
-/// Execute `.show` with a non-existent session ID, `entries::1`, and
-/// `verbosity::0`. Assert the error is about session lookup, NOT about
-/// the `entries`/metadata incompatibility.
-///
-/// ## Related Requirements
-///
-/// REQ-011 content-first display; entries compatibility validation in `show_routine`.
-#[ test ]
-fn test_show_entries_valid_with_verbosity_zero()
-{
-  // entries::1 + verbosity::0 bypasses the "entries requires metadata mode"
-  // guard because `verbosity >= 1` is false — both forms documented in the error
-  // message must be accepted.
-  let output = common::clg_cmd()
-    .args( [ ".show", "session_id::test-session-id", "verbosity::0", "entries::1" ] )
-    .current_dir( env!( "CARGO_MANIFEST_DIR" ) )
-    .output()
-    .expect( "Failed to execute command" );
-
-  let stderr = String::from_utf8_lossy( &output.stderr );
-  let stdout = String::from_utf8_lossy( &output.stdout );
-  let combined = format!( "{stderr}{stdout}" );
-
-  // Should fail because session does not exist — NOT because of param validation
-  assert!(
-    !output.status.success(),
-    "Command should fail (session not found). Got: {combined}"
-  );
-
-  // Must NOT produce the "entries only works in metadata mode" validation error
-  let is_mode_validation_error =
-    combined.contains( "entries" ) &&
-    combined.contains( "metadata" ) &&
-    combined.contains( "only works" );
-
-  assert!(
-    !is_mode_validation_error,
-    "verbosity::0 + entries::1 must pass validation, not trigger mode error. Got: {combined}"
   );
 }
 

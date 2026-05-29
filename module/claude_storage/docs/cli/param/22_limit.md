@@ -1,6 +1,6 @@
 # Parameter :: 22. `limit::`
 
-Maximum number of main sessions to display per project at verbosity 1. Zero means unlimited.
+Maximum number of main sessions to display per project. Zero means unlimited.
 
 **Type:** Integer
 
@@ -15,7 +15,7 @@ Maximum number of main sessions to display per project at verbosity 1. Zero mean
 
 **Commands:** `.projects`
 
-**Purpose:** Caps how many sessions are shown per project in the default verbosity-1 view of `.projects`. Useful when a project has many sessions and you only want a preview. At verbosity 2+ the cap is not applied.
+**Purpose:** Caps how many sessions are shown per project in the default view of `.projects`. Useful when a project has many sessions and you only want a preview. Does not apply in `show_tree::1` mode.
 
 **Examples:**
 ```bash
@@ -37,7 +37,7 @@ Maximum number of main sessions to display per project at verbosity 1. Zero mean
 ### Referenced Commands
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 7 | [`.projects`](../command/07_projects.md) | `0` | Caps sessions per project at verbosity 1 |
+| 7 | [`.projects`](../command/07_projects.md) | `0` | Caps sessions per project in default display |
 
 ### Referenced User Stories
 | # | User Story | Persona |

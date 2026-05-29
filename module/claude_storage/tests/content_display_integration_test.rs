@@ -167,10 +167,10 @@ fn show_metadata_only_parameter()
       ".show",
       &format!( "session_id::{session_id}" ),
       &format!( "project::{}", project_path.path().display() ),
-      "metadata::1",
+      "show_metadata::1",
     ] )
     .output()
-    .expect( "Failed to execute .show metadata::1" );
+    .expect( "Failed to execute .show show_metadata::1" );
 
   let show_output = String::from_utf8_lossy( &output.stdout );
   let stderr = String::from_utf8_lossy( &output.stderr );

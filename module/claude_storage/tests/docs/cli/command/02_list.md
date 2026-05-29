@@ -11,13 +11,13 @@ Integration tests for the `.list` command. Tests verify project listing, session
 | INT-1 | Default list shows all projects | Read Operations |
 | INT-2 | type::uuid filters to UUID projects only | Filtering |
 | INT-3 | type::path filters to path-encoded projects only | Filtering |
-| INT-4 | sessions::1 expands session list per project | Session Display |
+| INT-4 | show_sessions::1 expands session list per project | Session Display |
 | INT-5 | path:: substring filters project list | Filtering |
 | INT-6 | session:: auto-enables sessions display | Auto-Enable |
 | INT-7 | agent::1 filters to agent sessions only | Filtering |
 | INT-8 | agent::0 filters to main sessions only | Filtering |
 | INT-9 | min_entries:: auto-enables sessions display | Auto-Enable |
-| INT-10 | sessions::0 suppresses display even with session:: | Override |
+| INT-10 | show_sessions::0 suppresses display even with session:: | Override |
 | INT-11 | Combined path:: session:: filter | Filtering |
 | INT-12 | Exit code 0 on empty storage | Exit Codes |
 
@@ -80,11 +80,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list type::path
 
 ---
 
-### INT-4: sessions::1 expands session list per project
+### INT-4: show_sessions::1 expands session list per project
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list sessions::1
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list show_sessions::1
 ```
 
 **Expected behavior:**
@@ -119,7 +119,7 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list session::abc
 
 **Expected behavior:**
 - Fixture: 2 projects; session with ID containing `abc` exists in project `alpha`
-- Sessions matching `abc` appear in output without requiring explicit `sessions::1`
+- Sessions matching `abc` appear in output without requiring explicit `show_sessions::1`
 - Exit code: 0
 - **Source:** [command/02_list.md](../../../../docs/cli/command/02_list.md)
 
@@ -170,11 +170,11 @@ CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list min_entries::10
 
 ---
 
-### INT-10: sessions::0 suppresses display even with session::
+### INT-10: show_sessions::0 suppresses display even with session::
 
 **Command:**
 ```
-CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list session::abc sessions::0
+CLAUDE_STORAGE_ROOT=/tmp/test-fixture clg .list session::abc show_sessions::0
 ```
 
 **Expected behavior:**

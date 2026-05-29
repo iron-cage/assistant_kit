@@ -19,10 +19,6 @@
 - These parameters control *what gets discovered* (where and how)
 - Different semantic layer: discovery configuration vs result filtering
 
-**Why NOT `verbosity::`:**
-- `verbosity::` controls output detail, not discovery behavior
-- Different semantic purpose: output density vs discovery configuration
-
 **Scope × Path interaction:**
 
 | Scope | Path semantics | Direction |

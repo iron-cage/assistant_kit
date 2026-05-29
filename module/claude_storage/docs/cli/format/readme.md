@@ -5,14 +5,14 @@
 - **Purpose**: Document the three named export rendering modes for the `.export` command.
 - **Responsibility**: Index of format doc instances covering all export rendering modes.
 - **In Scope**: Three named export formats (markdown, json, text) produced by `.export`.
-- **Out of Scope**: Verbosity-driven output (→ `command/` per-command), parameter specs (→ `param/`).
+- **Out of Scope**: Per-command output toggles (→ `command/` per-command, `param_group/01_output_control.md`), parameter specs (→ `param/`).
 
 ### Taxonomy
 
 The CLI produces two categories of output:
 
 1. **Export formats** — controlled by the `format::` parameter on `.export`. Each format writes a complete session transcript to a file in a distinct structure. These are the formats documented in this catalog.
-2. **Verbosity-driven output** — controlled by `verbosity::` across multiple commands. These are not named formats but progressive detail levels on the same structural output. Documented in [command/](../command/) per-command.
+2. **Command output** — controlled by per-command boolean toggles (`show_tokens::`, `show_stat::`, `show_tree::`). Not named formats; documented in [command/](../command/) per-command and [param_group/01_output_control.md](../param_group/01_output_control.md).
 
 Export formats are mutually exclusive (one per invocation) and produce structurally different files.
 

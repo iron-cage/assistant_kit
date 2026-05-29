@@ -19,7 +19,6 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 | `09_session_id.md` | SessionId — exact session identifier |
 | `10_storage_path.md` | StoragePath — filesystem path (absolute or ~-prefixed) |
 | `11_target_type.md` | TargetType — count target enum (projects/sessions/entries) |
-| `12_verbosity_level.md` | VerbosityLevel — output detail level integer (0-5) |
 | `13_topic_name.md` | TopicName — session topic identifier string |
 | `14_strategy_type.md` | StrategyType — resume strategy enum (resume/fresh) |
 
@@ -38,8 +37,8 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 | 9 | [`SessionId`](09_session_id.md) | String | `session_id::`, `session::` |
 | 10 | [`StoragePath`](10_storage_path.md) | String (filesystem) | `path::` (most), `output::` |
 | 11 | [`TargetType`](11_target_type.md) | String enum | `target::` |
-| 12 | [`VerbosityLevel`](12_verbosity_level.md) | Integer (0-5) | `verbosity::` |
-| 13 | [`TopicName`](13_topic_name.md) | String (identifier) | `topic::` |
+| 12 | [`TopicName`](13_topic_name.md) | String (identifier) | `topic::` |
+| 13 | [`StrategyType`](14_strategy_type.md) | String enum | `strategy::` |
 | 14 | [`StrategyType`](14_strategy_type.md) | String enum | `strategy::` |
 
 ### Navigation
@@ -55,6 +54,5 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 - [SessionId](09_session_id.md)
 - [StoragePath](10_storage_path.md)
 - [TargetType](11_target_type.md)
-- [VerbosityLevel](12_verbosity_level.md)
 - [TopicName](13_topic_name.md)
 - [StrategyType](14_strategy_type.md)

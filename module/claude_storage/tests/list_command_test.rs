@@ -333,7 +333,7 @@ fn test_list_session_filter_empty()
   );
 }
 
-/// Test `.list ```sessions::```2` fails — Boolean parameter rejects non-Boolean value
+/// Test `.list ```show_sessions::```2` fails — Boolean parameter rejects non-Boolean value
 ///
 /// `sessions` is declared as `Boolean` type. Framework validation rejects
 /// any value other than 0 or 1.
@@ -344,7 +344,7 @@ fn test_list_sessions_invalid()
   let storage = TempDir::new().unwrap();
 
   let output = common::clg_cmd()
-    .args( [ ".list", "sessions::2" ] )
+    .args( [ ".list", "show_sessions::2" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .list" );
@@ -355,11 +355,11 @@ fn test_list_sessions_invalid()
 
   assert!(
     !output.status.success(),
-    "Should fail with invalid Boolean sessions::2. Got: {combined}"
+    "Should fail with invalid Boolean show_sessions::2. Got: {combined}"
   );
 }
 
-/// Pairwise: `.list ```type::uuid``` ```sessions::```1` succeeds
+/// Pairwise: `.list ```type::uuid``` ```show_sessions::```1` succeeds
 #[ test ]
 fn test_list_type_uuid_with_sessions()
 {
@@ -368,7 +368,7 @@ fn test_list_type_uuid_with_sessions()
   common::write_test_session( storage.path(), "list-pair-uuid", "sess-uuid-001", 2 );
 
   let output = common::clg_cmd()
-    .args( [ ".list", "type::uuid", "sessions::1" ] )
+    .args( [ ".list", "type::uuid", "show_sessions::1" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .list" );
@@ -377,7 +377,7 @@ fn test_list_type_uuid_with_sessions()
 
   assert!(
     output.status.success(),
-    ".list type::uuid sessions::1 should succeed. stderr: {stderr}"
+    ".list type::uuid show_sessions::1 should succeed. stderr: {stderr}"
   );
 }
 
@@ -403,7 +403,7 @@ fn test_list_type_path_with_verbosity()
   );
 }
 
-/// Pairwise: `.list ```sessions::0``` ```verbosity::```-1` fails — invalid verbosity
+/// Pairwise: `.list ```show_sessions::0``` ```verbosity::```-1` fails — invalid verbosity
 ///
 /// When multiple parameters are provided with one invalid value, the command
 /// must fail. Verbosity range validation happens before storage access.
@@ -415,7 +415,7 @@ fn test_list_sessions_with_invalid_verbosity()
   let storage = TempDir::new().unwrap();
 
   let output = common::clg_cmd()
-    .args( [ ".list", "sessions::0", "verbosity::-1" ] )
+    .args( [ ".list", "show_sessions::0", "verbosity::-1" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .list" );
@@ -426,7 +426,7 @@ fn test_list_sessions_with_invalid_verbosity()
 
   assert!(
     !output.status.success(),
-    "Should fail with verbosity::-1 even alongside valid sessions::0. Got: {combined}"
+    "Should fail with verbosity::-1 even alongside valid show_sessions::0. Got: {combined}"
   );
 }
 
@@ -452,7 +452,7 @@ fn test_list_no_params()
   );
 }
 
-/// Test `.list ```sessions::```0` succeeds — explicit sessions-off
+/// Test `.list ```show_sessions::```0` succeeds — explicit sessions-off
 #[ test ]
 fn test_list_sessions_zero()
 {
@@ -461,7 +461,7 @@ fn test_list_sessions_zero()
   common::write_test_session( storage.path(), "list-s0-proj", "sess-s0-001", 2 );
 
   let output = common::clg_cmd()
-    .args( [ ".list", "sessions::0" ] )
+    .args( [ ".list", "show_sessions::0" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .list" );
@@ -470,11 +470,11 @@ fn test_list_sessions_zero()
 
   assert!(
     output.status.success(),
-    ".list sessions::0 should succeed. stderr: {stderr}"
+    ".list show_sessions::0 should succeed. stderr: {stderr}"
   );
 }
 
-/// Test `.list ```sessions::```1` succeeds — explicit sessions-on
+/// Test `.list ```show_sessions::```1` succeeds — explicit sessions-on
 #[ test ]
 fn test_list_sessions_one()
 {
@@ -483,7 +483,7 @@ fn test_list_sessions_one()
   common::write_test_session( storage.path(), "list-s1-proj", "sess-s1-001", 2 );
 
   let output = common::clg_cmd()
-    .args( [ ".list", "sessions::1" ] )
+    .args( [ ".list", "show_sessions::1" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .list" );
@@ -492,7 +492,7 @@ fn test_list_sessions_one()
 
   assert!(
     output.status.success(),
-    ".list sessions::1 should succeed. stderr: {stderr}"
+    ".list show_sessions::1 should succeed. stderr: {stderr}"
   );
 }
 
@@ -697,7 +697,7 @@ fn test_list_plural_noun_multiple_projects()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// issue-027 regression: ".list sessions::1" with 1 session shows "(1 sessions)"
+// issue-027 regression: ".list show_sessions::1" with 1 session shows "(1 sessions)"
 // — wrong plural in per-project session count label (verbosity 1).
 //
 // Root Cause: list_routine verbosity==1 branch used hardcoded plural "sessions"
@@ -718,7 +718,7 @@ fn test_list_plural_noun_multiple_projects()
 // A targeted fix for one occurrence may miss siblings with identical patterns.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Test `.list ```sessions::```1` shows "(1 conversation)" (singular) when project has 1 conversation.
+/// Test `.list ```show_sessions::```1` shows "(1 conversation)" (singular) when project has 1 conversation.
 ///
 /// bug_reproducer(issue-027)
 // test_kind: bug_reproducer(issue-027)
@@ -730,7 +730,7 @@ fn test_list_session_count_singular_when_one_session()
   common::write_test_session( storage.path(), "sing-proj", "sess-sing-only", 2 );
 
   let output = common::clg_cmd()
-    .args( [ ".list", "sessions::1" ] )
+    .args( [ ".list", "show_sessions::1" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .list" );
@@ -738,7 +738,7 @@ fn test_list_session_count_singular_when_one_session()
   let stdout = String::from_utf8_lossy( &output.stdout );
   assert!(
     output.status.success(),
-    ".list sessions::1 should succeed; stderr: {}",
+    ".list show_sessions::1 should succeed; stderr: {}",
     String::from_utf8_lossy( &output.stderr )
   );
   assert!(
@@ -751,7 +751,7 @@ fn test_list_session_count_singular_when_one_session()
   );
 }
 
-/// Test `.list ```sessions::```1` shows "(2 conversations)" (plural) when project has 2 conversations.
+/// Test `.list ```show_sessions::```1` shows "(2 conversations)" (plural) when project has 2 conversations.
 ///
 /// Regression guard for issue-027: plural form must remain correct for counts > 1.
 // test_kind: regression_guard(issue-027)
@@ -765,7 +765,7 @@ fn test_list_session_count_plural_when_multiple_sessions()
   common::write_test_session( storage.path(), "plur-proj", "sess-plur-y", 2 );
 
   let output = common::clg_cmd()
-    .args( [ ".list", "sessions::1" ] )
+    .args( [ ".list", "show_sessions::1" ] )
     .env( "CLAUDE_STORAGE_ROOT", storage.path() )
     .output()
     .expect( "Failed to execute .list" );
@@ -773,7 +773,7 @@ fn test_list_session_count_plural_when_multiple_sessions()
   let stdout = String::from_utf8_lossy( &output.stdout );
   assert!(
     output.status.success(),
-    ".list sessions::1 should succeed; stderr: {}",
+    ".list show_sessions::1 should succeed; stderr: {}",
     String::from_utf8_lossy( &output.stderr )
   );
   assert!(

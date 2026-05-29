@@ -31,12 +31,12 @@ See [command/readme.md](command/readme.md) for command reference and [param/read
 claude_storage .status
 # Output: projects: N, sessions: N, storage root path
 
-# Detailed per-project breakdown
-claude_storage .status verbosity::2
-# Output: summary table + per-project session counts and entry counts
+# Full stats including token usage (slow — parses all JSONL)
+claude_storage .status show_tokens::1
+# Output: summary + entry counts + token breakdown (input, output, cache)
 ```
 
-**Notes:** Use `verbosity::0` for scripting: `count=$(claude_storage .status v::0 | grep projects | cut -d: -f2)`.
+**Notes:** For scripting, use `.count` for bare integer output: `count=$(claude_storage .count target::projects)`.
 
 ---
 
@@ -238,7 +238,7 @@ result=$(clg .session.ensure path::/home/user/project topic::work strategy::fres
 
 **Narrow scope before broad search:** Use `project::` or `path::` to restrict expensive operations. Without scoping, `.search` reads every session in storage.
 
-**Use verbosity levels for scripting:** `v::0` produces minimal output suitable for piping; `v::1` is for human review; `v::2` or `v::3` for debugging.
+**Use `.count` for scripting:** `.count` outputs a bare integer — no decorations, no parsing needed. Use `show_tokens::1` on `.status` when you need token breakdowns.
 
 **Prefer `.count` over `.list` for numbers:** `.count` avoids loading session content and is much faster on large storage.
 

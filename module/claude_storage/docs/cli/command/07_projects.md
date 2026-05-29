@@ -2,7 +2,7 @@
 
 Project list with scope control; conversations are grouped by project directory and one entry is shown per project (not per session file). Bare invocation shows all projects in the bidirectional neighborhood (ancestors + current + descendants via `scope::around`).
 
-**Parameters:** `scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`, `verbosity::`
+**Parameters:** `scope::`, `path::`, `session::`, `agent::`, `min_entries::`, `limit::`, `show_tree::`
 
 **Exit:** `0` success | `1` argument error | `2` storage read error
 
@@ -25,14 +25,14 @@ claude_storage .projects limit::5
 | `session::` | [`SessionFilter`](../type/08_session_filter.md) | optional | — | Filter sessions by ID substring |
 | `agent::` | Boolean | optional | — | Session type filter (`0`=main, `1`=agent) |
 | `min_entries::` | [`EntryCount`](../type/01_entry_count.md) | optional | — | Minimum entry count threshold |
-| `limit::` | Integer | optional | `0` | Max main sessions per project at v1 (`0` = unlimited) |
-| `verbosity::` | [`VerbosityLevel`](../type/12_verbosity_level.md) | optional | `1` | Output detail level |
+| `limit::` | Integer | optional | `0` | Max main sessions per project (`0` = unlimited) |
+| `show_tree::` | Boolean | optional | `0` | Tree-indent agent sessions under root sessions |
 
-`scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md). Session filters belong to [Session Filter](../param_group/04_session_filter.md).
+`scope::` and `path::` belong to the [Scope Configuration group](../param_group/05_scope_configuration.md). Session filters belong to [Session Filter](../param_group/04_session_filter.md). `show_tree::` belongs to [Output Control](../param_group/01_output_control.md).
 
 **Default invocation:**
 
-Bare `clg .projects` uses `scope::around` — showing all projects in the bidirectional neighborhood of cwd (ancestors upward to `/` plus all descendants). Output format is the same as any explicit invocation (see Verbosity output format below). No sessions in scope → `No active project found.`
+Bare `clg .projects` uses `scope::around` — showing all projects in the bidirectional neighborhood of cwd (ancestors upward to `/` plus all descendants). No sessions in scope → `No active project found.`
 
 **Examples:**
 ```bash
@@ -59,15 +59,15 @@ claude_storage .projects scope::global limit::5
 - `scope::relevant` walks UP from cwd to `/`, collecting sessions from every project at each ancestor level
 - Distinct from `.project.exists`: that checks existence (exit 0/1); this lists conversations
 - **Fixed (issue-024)**: `scope::local/relevant/under` previously returned 0 results when the base path contained underscores (e.g., `my_project`). Root cause: lossy encoding mapped `_` and `/` identically; decoded paths diverged from real paths. Fixed by comparing encoded paths directly against raw storage directory names.
-- **Fixed (issue-029)**: `scope::under` (and all scopes at verbosity ≥ 1) previously displayed project path headers with underscore-named directories split as path separators (e.g., `my_project` → `my/project`). Root cause: `decode_project_display` heuristic defaulted to `/` for every `-` boundary; underscore-named dirs were indistinguishable from path separators in the encoded form. Fixed by adding a filesystem-guided fallback that walks the real directory tree to resolve ambiguous boundaries.
+- **Fixed (issue-029)**: `scope::under` (and all scopes) previously displayed project path headers with underscore-named directories split as path separators (e.g., `my_project` → `my/project`). Root cause: `decode_project_display` heuristic defaulted to `/` for every `-` boundary; underscore-named dirs were indistinguishable from path separators in the encoded form. Fixed by adding a filesystem-guided fallback that walks the real directory tree to resolve ambiguous boundaries.
 - **Fixed (issue-030)**: Session path headers previously showed only the base directory, truncating hyphen-prefixed topic components (e.g., `src/-default_topic` was shown as `src`). Root cause: `decode_project_display` stripped all `--topic` suffixes before decoding. Fixed by decoding the base path with filesystem guidance (resolves `_` vs `/` ambiguity per issue-029), then appending topic components as hyphen-prefixed directory names. **Display-path invariant**: topic components must always be appended regardless of whether the directory currently exists on disk — the storage key encodes the actual CWD at session time and must be decoded as-is.
 - **Fixed (issue-035)**: The issue-030 fix introduced an incorrect filesystem existence check — topic components were only appended when `candidate.exists()` was true. Sessions recorded in `dir/-commit` displayed as `dir` after the `-commit` directory was deleted, obscuring which working directory the session used. Root cause: `decode_project_display` called `candidate.exists()` and broke at the first missing topic dir. Fixed by removing the existence guard from the topic-extension loop; all topic components are always appended unconditionally — filesystem state at query time must not affect which CWD a session is attributed to. (Task 025.)
 - **Fixed (issue-031)**: `scope::under` previously included sessions from sibling modules whose names start with the base name followed by `_` (e.g., `claude_storage_core` matched when base was `claude_storage`). Root cause: `encode_path` maps both `_` and `/` to `-`, so string `starts_with` cannot distinguish a child path from an underscore-suffixed sibling — both produce the same encoded prefix. Fixed by a two-stage predicate: string prefix is fast-reject only; `decode_path_via_fs` + `Path::starts_with` (component-wise) provides correct disambiguation.
 - **Fixed (issue-032)**: `scope::relevant` previously included sessions from sibling projects whose encoded name is a string prefix of the current path's encoded form (e.g., `/base` matched when current path was `/base_extra`). Root cause: `is_relevant_encoded` used `encoded_base.starts_with(dir_name + "-")` which cannot distinguish a true ancestor (`base/sub`) from a same-level sibling with an underscore suffix (`base_extra`). Fixed by the same two-stage predicate as issue-031: `decode_path_via_fs` + `base_path.starts_with(decoded_path)` (component-wise) for disambiguation.
 
-**Verbosity output format:**
+**Output format:**
 
-All invocations (including bare) use the same list output format. Output is grouped by project at verbosity ≥ 1. Path header is always shown (never suppressed):
+All invocations use the same list format. Path header always shown:
 
 ```
 Found N projects:
@@ -82,7 +82,7 @@ Found N projects:
 
 Family display: agents are grouped by parent session into families. Each root session line shows an inline `[N agents: breakdown]` suffix. Roots with no agents show no bracket suffix. Orphan families (root deleted) use `?` marker. When `agent::` filter is set, family grouping is disabled — flat display.
 
-At `verbosity::2+`, agents are tree-indented under their parent:
+With `show_tree::1`, agents are tree-indented under their parent:
 ```
 ~/path/to/project-a: (2 conversations, 12 agents)
   - a1b2c3d4-e5f6-7890-abcd-ef1234567890  (347 entries)
@@ -93,30 +93,20 @@ At `verbosity::2+`, agents are tree-indented under their parent:
     └─ agent-c1d2e3f4  Explore  15 entries
 ```
 
-**Verbosity matrix:**
-
-| Verbosity | Project output | Session lines | Agent sessions | Mtime | Entry count | Sort |
-|-----------|----------------|---------------|----------------|-------|-------------|------|
-| 0 | Project paths only (one per line, machine-readable) | — | — | — | — | mtime desc |
-| 1 (default) | `~/path: (N conversations, M agents)` | `  * {short-id}  {mtime}  ({n} entries)  [N agents: breakdown]` | family-grouped per parent | ✓ | ✓ | mtime desc |
-| 2+ | `~/path: (N conversations, M agents)` | `  - {full-id}  ({n} entries)` | tree-indented under parent (`├─`/`└─`) | — | ✓ | mtime desc |
-
-**v1 display rules:**
+**Display rules:**
 - `*` marks the first (most recent) root session; `-` marks the rest
 - Short UUID: 36-char UUID IDs are truncated to first 8 chars; non-UUID IDs shown in full
-- Zero-byte sessions excluded (startup placeholders, B8)
+- Zero-byte sessions excluded (startup placeholders)
 - Family display: agents grouped by parent; inline `[N agents: N×Type, …]` per root
 - Orphan families (no root): `  ? (orphan)  [N agents: breakdown]`
 - `limit::N` caps families per project; truncated projects show `... and N more sessions` hint
-- `verbosity::0` — project paths only (one per line, machine-readable); suitable for piping
-- `verbosity::1` — `Found N projects:` header; grouped per project with family display; project header always shows `(N conversations)` or `(N conversations, M agents)` when agents present
-- `verbosity::2+` — same grouping; agents tree-indented under parent; full IDs; entry count per session
+- `show_tree::1` — agents tree-indented under parent (`├─`/`└─`); full IDs shown
 
 ### Referenced Parameter Groups
 
 | # | Group | Membership | Excluded Params |
 |---|-------|------------|-----------------|
-| 1 | [Output Control](../param_group/01_output_control.md) | Full | — |
+| 1 | [Output Control](../param_group/01_output_control.md) | Partial | `show_stat::`, `show_tokens::` |
 | 4 | [Session Filter](../param_group/04_session_filter.md) | Full | — |
 | 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | Full | — |
 

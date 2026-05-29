@@ -1,6 +1,6 @@
 # Parameter Group :: Session Filter
 
-Interaction tests for the Session Filter group (`session::`, `agent::`, `min_entries::`). Tests verify auto-enable behavior, combined filter semantics, and `sessions::` override interactions.
+Interaction tests for the Session Filter group (`session::`, `agent::`, `min_entries::`). Tests verify auto-enable behavior, combined filter semantics, and `show_sessions::` override interactions.
 
 **Source:** [param_group/04_session_filter.md](../../../../docs/cli/param_group/04_session_filter.md)
 
@@ -11,7 +11,7 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 | CC-1 | session:: alone auto-enables session display | Auto-Enable |
 | CC-2 | agent:: alone auto-enables session display | Auto-Enable |
 | CC-3 | min_entries:: alone auto-enables session display | Auto-Enable |
-| CC-4 | sessions::0 suppresses display even with all three filters | Override Interaction |
+| CC-4 | show_sessions::0 suppresses display even with all three filters | Override Interaction |
 | CC-5 | session:: + agent:: combined filters sessions by both | Combined Filter |
 | CC-6 | session:: + min_entries:: combined filters by both criteria | Combined Filter |
 | CC-7 | All three filters are AND-combined (not OR) | Filter Logic |
@@ -57,10 +57,10 @@ Interaction tests for the Session Filter group (`session::`, `agent::`, `min_ent
 
 ---
 
-### CC-4: sessions::0 suppresses display even with all three filters
+### CC-4: show_sessions::0 suppresses display even with all three filters
 
 - **Given:** `export CLAUDE_STORAGE_ROOT=/tmp/test-fixture` with a project having agent sessions and varied entry counts.
-- **When:** `clg .list sessions::0 session::commit agent::1 min_entries::2`
+- **When:** `clg .list show_sessions::0 session::commit agent::1 min_entries::2`
 - **Then:** Project listing with no session section despite all filter parameters being present.; no session list in output
 - **Exit:** 0
 - **Source:** [param_group/04_session_filter.md](../../../../docs/cli/param_group/04_session_filter.md)

@@ -6,7 +6,7 @@
 **Priority:** Medium
 
 ### Acceptance Criteria
-- [ ] `.status verbosity::0` outputs key=value pairs suitable for parsing
+- [ ] `.status` outputs parseable plain-text storage summary
 - [ ] `.count` outputs a bare integer with no decorations
 - [ ] Can query count for a specific target (projects, sessions, entries)
 - [ ] Can scope queries to a specific storage root via `path::` or `CLAUDE_STORAGE_ROOT`
@@ -15,7 +15,7 @@
 ### Referenced Commands
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`.status`](../command/01_status.md) | Machine-readable storage summary at verbosity::0 |
+| 1 | [`.status`](../command/01_status.md) | Plain-text storage summary (parseable) |
 | 2 | [`.list`](../command/02_list.md) | Enumerate projects for scripted iteration |
 | 4 | [`.count`](../command/04_count.md) | Bare integer count output for comparison and thresholds |
 
@@ -25,15 +25,12 @@
 | 9 | [`path::`](../param/09_path.md) | Point to a specific storage root |
 | 12 | [`scope::`](../param/12_scope.md) | Constrain discovery to a project or subtree |
 | 16 | [`target::`](../param/16_target.md) | Specify what to count (projects, sessions, entries) |
-| 19 | [`verbosity::`](../param/19_verbosity.md) | Set to 0 for machine-readable output |
 | 21 | [`count::`](../param/21_count.md) | Output count only as bare integer for scripting |
 
 ### Referenced Parameter Groups
 | # | Parameter Group | Role |
 |---|-----------------|------|
-| 1 | [Output Control](../param_group/01_output_control.md) | verbosity::0 enables machine-readable mode |
 | 5 | [Scope Configuration](../param_group/05_scope_configuration.md) | path:: and scope:: for integration targets |
-
 ### Referenced Formats
 | # | Format | Role |
 |---|--------|------|
@@ -46,10 +43,10 @@
 
 ### Workflow Steps
 
-**Step 1: Get machine-readable storage summary**
+**Step 1: Get storage summary**
 ```bash
-cls .status verbosity::0
-# Output: "projects: N, sessions: N"
+cls .status
+# Output: "Storage: ~/.claude/\nProjects: N (UUID: X, Path: Y)\nSessions: N (Main: X, Agent: Y)"
 ```
 
 **Step 2: Count sessions for a threshold check**
@@ -62,8 +59,8 @@ fi
 
 **Step 3: Iterate over projects in a script**
 ```bash
-cls .list verbosity::0 | while read project; do
-  echo "Processing: $project"
+cls .list | grep '^/' | while read -r project_line; do
+  echo "Processing: $project_line"
 done
 ```
 
@@ -82,7 +79,7 @@ fi
 **Use environment variable instead of path:: flag:**
 ```bash
 export CLAUDE_STORAGE_ROOT=/custom/.claude
-cls .status verbosity::0
+cls .status
 cls .count target::sessions
 ```
 
