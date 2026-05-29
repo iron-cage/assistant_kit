@@ -25,7 +25,6 @@ use crate::commands::
 /// # Panics
 ///
 /// Panics if a command fails to register (duplicate name = programming error).
-#[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
 {

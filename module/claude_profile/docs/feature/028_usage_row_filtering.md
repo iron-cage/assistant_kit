@@ -1,0 +1,108 @@
+# Feature: Usage Row Filtering and Extraction
+
+### Scope
+
+- **Purpose**: Provide row-level filters, count/offset pagination, and single-value extraction for `.usage` table output, enabling scripting and targeted monitoring.
+- **Responsibility**: Documents the filtering parameters (`count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`), the `get::` single-value extraction shorthand, and the associated format extensions (`format::value`, `format::tsv`, `format::plain`, `abs::`, `no_color::`).
+- **In Scope**: Row count limit, row offset, boolean row filters, percentage threshold filters, `get::` field extraction with `format::value` output, `abs::` for absolute values, `no_color::` for plain output.
+- **Out of Scope**: Column visibility (→ 033_cols.md), sort order (→ 020_usage_sort_strategies.md), recommendation strategy (→ 023_next_account_strategies.md), live monitor mode (→ 018_live_monitor.md).
+
+### Design
+
+`.usage` applies row filtering after sort but before rendering. Filters are composable — multiple filters combine with AND logic (a row must satisfy all active filters to appear). After filtering, `count::` and `offset::` apply as a window on the filtered result set.
+
+**Filter evaluation order:**
+1. Per-account quota fetch (existing)
+2. Sort and tier grouping (existing)
+3. Boolean row filters: `only_active::`, `only_next::`, `only_valid::`, `exclude_exhausted::` (skip rows not matching)
+4. Threshold filters: `min_5h::`, `min_7d::` (skip rows below threshold)
+5. Offset: skip first N rows from the filtered result
+6. Count: truncate to at most N rows after offset
+
+**Row filter parameters:**
+
+| Parameter | Type | Default | Behavior |
+|-----------|------|---------|----------|
+| `count::` | `u64` | `0` | Maximum rows to display; `0` means show all remaining rows after offset |
+| `offset::` | `u64` | `0` | Skip first N rows from the filtered result before display |
+| `only_active::` | `bool` | `0` | Show only the row whose account matches the per-machine active marker |
+| `only_next::` | `bool` | `0` | Show only the row that received the `→` marker from the active `next::` strategy |
+| `min_5h::` | `f64` | `0` | Hide rows where `5h Left` is below this percentage (0–100); rows with `—` (no valid quota) are also hidden |
+| `min_7d::` | `f64` | `0` | Hide rows where `7d Left` is below this percentage (0–100); rows with `—` are also hidden |
+| `only_valid::` | `bool` | `0` | Hide rows where status is 🔴 (invalid or missing token) |
+| `exclude_exhausted::` | `bool` | `0` | Hide rows where status is 🟡 (weekly or hourly exhausted) or 🔴 (invalid token) |
+
+**`get::` single-value extraction:**
+
+`get::field_id` extracts the value of one column for the first row in the current (filtered) result set and prints it as a bare string with no table headers, separator lines, or footer. Implies `format::value` output mode. Field IDs match the `cols::` column registry:
+
+| Field ID | Output |
+|----------|--------|
+| `5h_left` | Percentage string, e.g. `88%` |
+| `5h_reset` | Duration string, e.g. `in 3h 19m` or `—` |
+| `7d_left` | Percentage string |
+| `7d_son` | Percentage string |
+| `7d_reset` | Duration string |
+| `expires` | Duration or timestamp string |
+| `renews` | Date string, e.g. `Jun  5` |
+| `sub` | Subscription tier, e.g. `max` |
+| `status` | Emoji: `🟢`, `🟡`, or `🔴` |
+| `account` | Account name string |
+| `host` | Host label string (from account profile metadata) |
+| `role` | Role label string (from account profile metadata) |
+
+`get::` combined with row filters allows extracting any single scalar value: `clp .usage only_next::1 get::7d_left` outputs the 7d Left percentage of the recommended next account.
+
+**Output format extensions:**
+
+| Format | Behavior |
+|--------|----------|
+| `format::value` | Bare value output — no headers, no separator lines, no footer; implied by `get::` |
+| `format::tsv` | Tab-separated values with one header row; no emoji in status column (uses text labels: `ok`, `warn`, `err`) |
+| `format::plain` | Same layout as `format::text` but with no emoji and no ANSI colors |
+
+**`abs::` and `no_color::`:**
+
+- `abs::1` replaces percentage values with absolute token counts where the API provides them.
+- `no_color::1` is equivalent to `format::plain` for text output — strips all emoji and ANSI sequences from the output regardless of format.
+
+### Acceptance Criteria
+
+- **AC-01**: `clp .usage count::3` displays at most 3 rows (the first 3 after sort+tier+filter). Header and footer are still shown.
+- **AC-02**: `clp .usage offset::2 count::3` skips the first 2 rows and displays at most the next 3 rows. `count::0` with any `offset::N` skips N rows and shows all remaining.
+- **AC-03**: `clp .usage only_active::1` displays exactly one row — the active account row; exits 0 even when active account has no valid quota.
+- **AC-04**: `clp .usage only_next::1` displays exactly one row — the account receiving `→` from the active `next::` strategy; exits 0 with 0 rows when no eligible candidate exists.
+- **AC-05**: `clp .usage min_5h::50` hides all rows where `5h Left < 50%` or where `5h Left` is `—`. Rows with `5h Left = 50%` are shown (inclusive boundary).
+- **AC-06**: `clp .usage min_7d::20` hides all rows where `7d Left < 20%` or where `7d Left` is `—`. Rows with `7d Left = 20%` are shown (inclusive boundary).
+- **AC-07**: `clp .usage only_valid::1` hides all 🔴 rows; shows 🟢 and 🟡 rows.
+- **AC-08**: `clp .usage exclude_exhausted::1` hides all 🟡 and 🔴 rows; shows only 🟢 rows.
+- **AC-09**: Multiple row filters combine with AND: `clp .usage only_valid::1 min_7d::30` shows only 🟢/🟡 rows where `7d Left ≥ 30%`.
+- **AC-10**: `clp .usage get::7d_left` outputs the `7d Left` value of the first row (top of sorted, filtered result) as a bare string with no headers, separators, or footer. Exit 0. Implies `format::value`.
+- **AC-11**: `clp .usage only_next::1 get::7d_left` outputs the `7d Left` value for the `→` account. Exit 0.
+- **AC-12**: `clp .usage get::status` outputs one of `🟢`, `🟡`, or `🔴` for the first row.
+- **AC-13**: `clp .usage format::tsv` produces tab-separated output with a header row; status column uses `ok`/`warn`/`err` text labels instead of emoji.
+- **AC-14**: `clp .usage no_color::1` produces output with no emoji and no ANSI sequences; status column renders as plain text labels.
+- **AC-15**: Invalid `get::` field ID exits 1 with an error listing the valid field IDs.
+- **AC-16**: `count::`, `offset::`, filter params, and `get::` all work combined with `sort::`, `next::`, `prefer::`, and `cols::`.
+
+### Cross-References
+
+| Type | File | Responsibility |
+|------|------|----------------|
+| source | `src/usage.rs` | filter application, `get::` field extraction, format::value rendering |
+| param | [cli/param/037_count.md](../cli/param/037_count.md) | `count::` parameter specification |
+| param | [cli/param/038_offset.md](../cli/param/038_offset.md) | `offset::` parameter specification |
+| param | [cli/param/039_only_active.md](../cli/param/039_only_active.md) | `only_active::` parameter specification |
+| param | [cli/param/040_only_next.md](../cli/param/040_only_next.md) | `only_next::` parameter specification |
+| param | [cli/param/041_min_5h.md](../cli/param/041_min_5h.md) | `min_5h::` parameter specification |
+| param | [cli/param/042_min_7d.md](../cli/param/042_min_7d.md) | `min_7d::` parameter specification |
+| param | [cli/param/043_only_valid.md](../cli/param/043_only_valid.md) | `only_valid::` parameter specification |
+| param | [cli/param/044_exclude_exhausted.md](../cli/param/044_exclude_exhausted.md) | `exclude_exhausted::` parameter specification |
+| param | [cli/param/045_get.md](../cli/param/045_get.md) | `get::` parameter specification |
+| param | [cli/param/046_abs.md](../cli/param/046_abs.md) | `abs::` parameter specification |
+| param | [cli/param/047_no_color.md](../cli/param/047_no_color.md) | `no_color::` parameter specification |
+| param | [cli/param/002_format.md](../cli/param/002_format.md) | `format::` extensions (`value`, `tsv`, `plain`) |
+| doc | [009_token_usage.md](009_token_usage.md) | Base `.usage` rendering and column definitions |
+| doc | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort applied before row filtering |
+| doc | [023_next_account_strategies.md](023_next_account_strategies.md) | `next::` strategy used by `only_next::1` and `get::` |
+| command | [cli/command/006_usage.md](../cli/command/006_usage.md) | `.usage` command parameter table |

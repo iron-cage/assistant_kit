@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clp parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: 35 active clp parameter edge case files (`name::` through `effort::`, params 1–36 except param 2); all parameters covered.
+- **In Scope**: 47 active clp parameter edge case files (`name::` through `host::`, params 1–48 except param 2); all parameters covered.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 ### Responsibility Table
@@ -46,3 +46,15 @@
 | 034_touch.md | Edge cases for `touch::` parameter |
 | 035_imodel.md | Edge cases for `imodel::` parameter |
 | 036_effort.md | Edge cases for `effort::` parameter |
+| 037_count.md | Edge cases for `count::` parameter |
+| 038_offset.md | Edge cases for `offset::` parameter |
+| 039_only_active.md | Edge cases for `only_active::` parameter |
+| 040_only_next.md | Edge cases for `only_next::` parameter |
+| 041_min_5h.md | Edge cases for `min_5h::` parameter |
+| 042_min_7d.md | Edge cases for `min_7d::` parameter |
+| 043_only_valid.md | Edge cases for `only_valid::` parameter |
+| 044_exclude_exhausted.md | Edge cases for `exclude_exhausted::` parameter |
+| 045_get.md | Edge cases for `get::` parameter |
+| 046_abs.md | Edge cases for `abs::` parameter |
+| 047_no_color.md | Edge cases for `no_color::` parameter |
+| 048_host.md | Edge cases for `host::` parameter (`.account.save` metadata capture) |

@@ -6,7 +6,7 @@
 //! |----|-------------|-----|
 //! | TC-500 | `COMMANDS_YAML` is a non-empty path string ending in `.yaml` | P |
 //! | TC-501 | `register_commands()` is callable and adds commands to a registry | P |
-//! | TC-502 | all 9 explicitly-registered commands present (`.help` auto-registered = 10 total) | P |
+//! | TC-502 | all 11 explicitly-registered commands present (`.help` auto-registered = 12 total) | P |
 
 #[ cfg( feature = "enabled" ) ]
 mod enabled
@@ -48,6 +48,8 @@ mod enabled
       ".account.save",
       ".account.use",
       ".account.delete",
+      ".account.relogin",
+      ".account.rotate",
       ".credentials.status",
       ".token.status",
       ".paths",

@@ -8,10 +8,10 @@
 | `paths.rs` | ClaudePaths — all `~/.claude/` canonical paths from HOME. |
 | `token.rs` | TokenStatus — read expiresAt, classify Valid/ExpiringSoon/Expired. |
 | `account.rs` | Account CRUD: save, list, switch, delete, auto_rotate; _active marker. |
-| `main.rs` | CLI binary entry point, 5-phase unilang pipeline. |
+| `main.rs` | CLI binary entry point; delegates to `run_cli()`. |
 | `adapter.rs` | Argv-to-unilang token conversion, alias expansion, validation. |
 | `output.rs` | Output format extraction, JSON string escaping, and duration display. |
-| `commands.rs` | CLI command handler routines for 13 commands (12 named + dot fallback). |
+| `commands/` | CLI command handler routines: one module per command group (accounts, account_ops, credentials, limits, token_paths, dot) plus shared utilities. |
 | `usage.rs` | `.usage` command — fetch live rate-limit quota for all saved accounts. |
 | `persist.rs` | PersistPaths — persistent user storage path from $PRO/$HOME. |
 | `bin/` | Separate Cargo compilation units for each binary target. |

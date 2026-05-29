@@ -8,7 +8,7 @@ Live quota utilization commands.
 
 Fetches live quota utilization for every saved account via `claude_quota::fetch_oauth_usage()` (`GET /api/oauth/usage`) and account billing state via `claude_quota::fetch_oauth_account()` (`GET /api/oauth/account`, parallel thread). Renders results as a `data_fmt` table with a status emoji column (`●`: 🟢/🟡/🔴), plus 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, Sub, and ~Renews columns, and a footer recommendation line. Supports optional token refresh on auth errors (`refresh::1`) and continuous live-monitor mode (`live::1`).
 
--- **Parameters:** [`format::`](../param/002_format.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`next::`](../param/032_next.md), [`cols::`](../param/033_cols.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md)
+-- **Parameters:** [`format::`](../param/002_format.md), [`refresh::`](../param/019_refresh.md), [`live::`](../param/020_live.md), [`interval::`](../param/021_interval.md), [`jitter::`](../param/022_jitter.md), [`trace::`](../param/023_trace.md), [`sort::`](../param/025_sort.md), [`desc::`](../param/026_desc.md), [`prefer::`](../param/027_prefer.md), [`next::`](../param/032_next.md), [`cols::`](../param/033_cols.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`count::`](../param/037_count.md), [`offset::`](../param/038_offset.md), [`only_active::`](../param/039_only_active.md), [`only_next::`](../param/040_only_next.md), [`min_5h::`](../param/041_min_5h.md), [`min_7d::`](../param/042_min_7d.md), [`only_valid::`](../param/043_only_valid.md), [`exclude_exhausted::`](../param/044_exclude_exhausted.md), [`get::`](../param/045_get.md), [`abs::`](../param/046_abs.md), [`no_color::`](../param/047_no_color.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid param combination) | 2 (runtime: credential store unreadable, HOME unset)
 
 **Syntax:**
@@ -26,6 +26,7 @@ clp .usage sort::drain prefer::sonnet
 clp .usage sort::endurance desc::0
 clp .usage sort::renew prefer::opus
 clp .usage next::endurance
+clp .usage next::renew
 clp .usage next::drain
 clp .usage sort::next
 clp .usage cols::+sub
@@ -48,11 +49,22 @@ clp .usage imodel::keep effort::high
 | `sort::` | `enum` | `renew` | Row ordering strategy: `renew` (soonest quota refill), `drain` (lowest weekly quota first), `name` (alphabetical), `endurance` (sustained session), `next` (mirrors active `next::` strategy) |
 | `desc::` | `bool` | context-sensitive | Sort direction; default depends on `sort::` strategy (`name`/`drain`/`renew`→`0`, `endurance`→`1`) |
 | `prefer::` | `enum` | `any` | Weekly quota column for sort heuristics: `any` = `min(7d Left, 7d(Son))`, `opus` = `7d Left`, `sonnet` = `7d(Son)` |
-| `next::` | `enum` | `drain` | Strategy placing `→` on recommended account: `drain`, `endurance`; footer always shows both |
+| `next::` | `enum` | `renew` | Strategy placing `→` on recommended account: `renew`, `endurance`, `drain`; footer always shows all three |
 | `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to default set |
 | `touch::` | `bool` | `1` | Activate accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet window) by sending minimal prompt via isolated subprocess; re-fetch quota |
 | `imodel::` | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (max for model: `high`/sonnet, `max`/opus, none/haiku), `low`, `normal`, `high`, `max` |
+| `count::` | `u64` | `0` | Maximum rows to display (0 = all rows) |
+| `offset::` | `u64` | `0` | Skip first N rows from display |
+| `only_active::` | `bool` | `0` | Show only the active (current/starred) account row |
+| `only_next::` | `bool` | `0` | Show only the recommended next account (`→` row) |
+| `min_5h::` | `f64` | `0` | Hide accounts with `5h Left` below this percentage (0–100) |
+| `min_7d::` | `f64` | `0` | Hide accounts with `7d Left` below this percentage (0–100) |
+| `only_valid::` | `bool` | `0` | Hide accounts with invalid/missing tokens (status ≠ 🔴) |
+| `exclude_exhausted::` | `bool` | `0` | Hide weekly-exhausted (🟡) and invalid (🔴) accounts |
+| `get::` | `string` | `""` | Extract a single column value for the first matching row; implies `format::value`; valid field ids: `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `expires`, `renews`, `sub`, `status`, `account`, `host`, `role` |
+| `abs::` | `bool` | `0` | Show absolute token counts instead of percentages |
+| `no_color::` | `bool` | `0` | Strip emoji and ANSI colors from output |
 
 **Examples:**
 
@@ -67,6 +79,7 @@ clp .usage
 #   🔴 dave@example.com     —        —            —        —        —          EXPIRED    ?    (missing accessToken)
 #
 # Valid: 3 / 4   ->  Next by strategy:
+#   renew      bob@example.com     5h resets in 4h 58m
 #   endurance  bob@example.com     100% session, 28% 7d left, expires in 5h 02m
 #   drain      bob@example.com     28% 7d left, 7d resets in 6d 14h
 
@@ -85,7 +98,7 @@ clp .usage live::1 interval::60 jitter::10
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
 - `Sub` and `~Renews` are sourced from `GET /api/oauth/account` (parallel fetch); show `?` when that fetch fails.
 - Accounts with expired or missing `accessToken` show `—` for quota columns and a shortened error reason.
-- Footer: always shows one recommendation per strategy (endurance, drain) when ≥2 accounts have valid quota data; `next::` controls only which account receives `→` in the table body.
+- Footer: always shows one recommendation per strategy (renew, endurance, drain) when ≥2 accounts have valid quota data; `next::` controls only which account receives `→` in the table body.
 - Empty credential store exits 0 with `(no accounts configured)`.
 - `refresh::1` triggers at most one retry per account per cycle. See [feature/017_token_refresh.md](../../feature/017_token_refresh.md).
 - `live::1 format::json` exits 1 before any fetch. See [feature/018_live_monitor.md](../../feature/018_live_monitor.md).

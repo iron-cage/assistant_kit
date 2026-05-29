@@ -5,6 +5,7 @@
 //! Verify the pure logic in `claude_profile_core::token`:
 //! - `parse_expires_at` extracts the millisecond timestamp from credential JSON
 //! - `status_with_threshold` classifies the token as Expired, `ExpiringSoon`, or Valid
+//! - `classify_ms` classifies a stored millisecond timestamp without file I/O
 //!
 //! These are the only functions that can be tested without touching the real
 //! filesystem — `status()` requires `~/.claude/.credentials.json` to exist.
@@ -19,6 +20,9 @@
 //! - `TokenStatus::ExpiringSoon` when remaining ≤ warning threshold
 //! - `TokenStatus::Valid` when remaining > warning threshold
 //! - `WARNING_THRESHOLD_SECS` is exactly 3600 (60 minutes)
+//! - `classify_ms` returns `Expired` for past timestamp
+//! - `classify_ms` returns `ExpiringSoon` within threshold
+//! - `classify_ms` returns `Valid` far from expiry
 //!
 //! ## Test Matrix
 //!
@@ -32,8 +36,11 @@
 //! | `token_expired_when_past_expiry` | past timestamp → Expired |
 //! | `token_expiring_soon_within_threshold` | near future → ExpiringSoon |
 //! | `token_valid_far_from_expiry` | far future → Valid |
+//! | `classify_ms_expired_for_past_timestamp` | past ms → Expired (no file I/O) |
+//! | `classify_ms_expiring_soon_within_threshold` | near future ms → ExpiringSoon |
+//! | `classify_ms_valid_far_from_expiry` | far future ms → Valid |
 
-use claude_profile_core::token::{ parse_expires_at, status_with_threshold, TokenStatus, WARNING_THRESHOLD_SECS };
+use claude_profile_core::token::{ classify_ms, parse_expires_at, status_with_threshold, TokenStatus, WARNING_THRESHOLD_SECS };
 use std::time::{ SystemTime, UNIX_EPOCH };
 
 // ─── parse_expires_at ────────────────────────────────────────────────────────
@@ -140,5 +147,41 @@ fn token_valid_far_from_expiry()
   assert!(
     matches!( status, TokenStatus::Valid { .. } ),
     "token far from expiry must be Valid, got: {status:?}"
+  );
+}
+
+// ─── classify_ms (pure, no I/O) ───────────────────────────────────────────────
+
+#[test]
+fn classify_ms_expired_for_past_timestamp()
+{
+  // Expired 1 hour ago — always in the past
+  let expired_ms = now_ms().saturating_sub( 3_600_000 );
+  assert_eq!(
+    classify_ms( expired_ms, WARNING_THRESHOLD_SECS ),
+    TokenStatus::Expired,
+    "past millisecond must be Expired"
+  );
+}
+
+#[test]
+fn classify_ms_expiring_soon_within_threshold()
+{
+  // Expires in 30 seconds — within a 60-second threshold
+  let soon_ms = now_ms() + 30_000;
+  assert!(
+    matches!( classify_ms( soon_ms, 60 ), TokenStatus::ExpiringSoon { .. } ),
+    "timestamp within threshold must be ExpiringSoon"
+  );
+}
+
+#[test]
+fn classify_ms_valid_far_from_expiry()
+{
+  // Expires in 2 hours — outside a 60-second threshold
+  let far_ms = now_ms() + 7_200_000;
+  assert!(
+    matches!( classify_ms( far_ms, 60 ), TokenStatus::Valid { .. } ),
+    "timestamp far from expiry must be Valid"
   );
 }

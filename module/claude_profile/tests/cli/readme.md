@@ -13,5 +13,6 @@
 | `persist_test.rs` | PersistPaths: $PRO/$HOME/$USERPROFILE resolution, is_dir guard, ensure_exists. |
 | `credentials_test.rs` | FR-17: `.credentials.status` live cred access without account store — cred01–cred05. |
 | `credentials_status_help_test.rs` | FR-17: `.credentials.status` help descriptions — csh01–csh02. |
+| `param_help_test.rs` | Param description presence and optionality guard (BUG-203, BUG-204) — phd01–phd04, pho01–pho04. |
 | `account_limits_test.rs` | FR-18: `.account.limits` error paths — lim01–lim05 (IT-5 through IT-8). |
 | `dot_test.rs` | Help output and `.` / `.help` delegation tests (dot01–dot12). |

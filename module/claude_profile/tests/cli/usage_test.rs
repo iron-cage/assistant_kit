@@ -2578,7 +2578,7 @@ fn mre_bug_171_account_populated_after_refresh()
   // Read production source baked into the Docker image at build time.
   // Before fix: `Fix(BUG-171)` is absent → aq_account = None → assert fails (TDD RED).
   // After fix:  `Fix(BUG-171)` is present → aq_account = Some → assert passes (TDD GREEN).
-  let src        = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let src        = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/refresh.rs" ) );
   let fix_present = src.contains( "Fix(BUG-171)" );
 
   // Simulate the aq.account state that apply_refresh() produces:
@@ -2637,7 +2637,7 @@ fn it082_next_all_rejected_exit_1()
 #[ test ]
 fn it083_footer_not_gated_on_next_all_structural()
 {
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/render.rs" ) );
 
   let old_gate = src.contains( "if next == NextStrategy::All" );
   assert!(
@@ -2685,7 +2685,7 @@ fn it084_next_session_rejected_exit_1()
 #[ test ]
 fn it085_next_strategy_session_absent_structural()
 {
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/types.rs" ) );
   assert!(
     !src.contains( "NextStrategy::Session" ),
     "TSK-184: `NextStrategy::Session` must be completely removed from source; \
@@ -2779,10 +2779,10 @@ fn it088_touch_1_errored_account_skipped()
 #[ test ]
 fn it089_apply_touch_fn_exists_structural()
 {
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
   assert!(
     src.contains( "fn apply_touch" ),
-    "TSK-185: `fn apply_touch` must be present in src/usage.rs; \
+    "TSK-185: `fn apply_touch` must be present in src/usage/touch.rs; \
      add the active-window extension function that calls refresh_account_token() \
      for accounts with result.is_ok() AND five_hour.resets_at.is_some()",
   );
@@ -3170,13 +3170,13 @@ fn it101_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
 #[ test ]
 fn it102_structural_refresh_before_touch_ordering_in_source()
 {
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
-  // Use call-site patterns that only match the production calls in run_usage(),
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/api.rs" ) );
+  // Use call-site patterns that only match the production calls in usage_routine(),
   // not the function definitions (fn apply_touch/fn apply_refresh) which appear earlier.
   let refresh_pos = src.find( "apply_refresh( &mut accounts, &credential_store" )
-    .expect( "apply_refresh call site must exist in src/usage.rs" );
+    .expect( "apply_refresh call site must exist in src/usage/api.rs" );
   let touch_pos = src.find( "apply_touch( aq, &credential_store" )
-    .expect( "apply_touch call site must exist in src/usage.rs" );
+    .expect( "apply_touch call site must exist in src/usage/api.rs" );
   assert!(
     refresh_pos < touch_pos,
     "apply_refresh must appear before apply_touch in run_usage() to guarantee refresh-before-touch ordering (FT-05)",
@@ -3236,7 +3236,7 @@ fn it103_lim_it_active_account_restored_after_touch()
 #[ test ]
 fn it104_structural_touch_failure_non_aborting_guard_exists()
 {
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
   // apply_touch handles new_creds=None gracefully: expiry update is conditional,
   // re-fetch runs unconditionally (Fix(BUG-179) — no early return on credentials=None).
   assert!(
@@ -3707,7 +3707,7 @@ fn it121_effort_max_accepted_empty_store_exits_0()
 #[ test ]
 fn it122_apply_touch_trigger_is_is_none_structural()
 {
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
   assert!(
     !src.contains( "let is_active = data.five_hour" ),
     "BUG-181: `apply_touch` trigger must use `is_idle` + `is_none()`, not `is_active` + `is_some()`.\n\
@@ -3753,7 +3753,7 @@ fn it123_refresh_account_token_has_label_param_structural()
 #[ test ]
 fn it124_apply_touch_passes_touch_label_structural()
 {
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
   assert!(
     src.contains( r#"credential_store, claude_paths, trace, "touch","# ),
     "TSK-192: `apply_touch()` must pass `\"touch\"` as the label argument to `refresh_account_token()`."
@@ -3770,7 +3770,7 @@ fn it124_apply_touch_passes_touch_label_structural()
 #[ test ]
 fn it125_apply_refresh_passes_refresh_label_structural()
 {
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/refresh.rs" ) );
   assert!(
     src.contains( r#"credential_store, claude_paths, trace, "refresh","# ),
     "TSK-192: `apply_refresh()` must pass `\"refresh\"` as the label argument to `refresh_account_token()`."
@@ -3812,7 +3812,7 @@ fn it126_refresh_account_token_has_instant_timing_structural()
 #[ test ]
 fn it127_sort_default_is_renew_structural()
 {
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/params.rs" ) );
   // The None arm of the sort match uses alignment spaces; verify Renew is the default and Drain is not.
   assert!(
     src.contains( "None                         => SortStrategy::Renew" ),
@@ -3835,7 +3835,7 @@ fn it127_sort_default_is_renew_structural()
 #[ test ]
 fn it128_sort_next_resolves_to_drain_structural()
 {
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/params.rs" ) );
   assert!(
     src.contains( "NextStrategy::Drain     => SortStrategy::Drain" ),
     "TSK-193: sort::next must resolve to SortStrategy::Drain when next::drain is active.\n\
@@ -3857,7 +3857,7 @@ fn it128_sort_next_resolves_to_drain_structural()
 #[ test ]
 fn it129_sort_next_resolves_to_endurance_structural()
 {
-  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage.rs" ) );
+  let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/params.rs" ) );
   assert!(
     src.contains( "NextStrategy::Endurance => SortStrategy::Endurance" ),
     "TSK-193: sort::next must resolve to SortStrategy::Endurance when next::endurance is active.\n\

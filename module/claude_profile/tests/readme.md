@@ -10,7 +10,7 @@
 | `cli_adapter_test.rs` | Adapter and output module: argv conversion, aliases, bool normalization, validation, json_escape, format_duration_secs. |
 | `cli_clp_alias_test.rs` | Binary alias smoke tests: both `clp` and `claude_profile` aliases run and self-identify. |
 | `cli_integration_test.rs` | CLI binary integration: entry point for cli/ modules. |
-| `cli/` | Split integration test modules (help, accounts, mutations, token, paths, usage, persist, credentials, limits, dot, cross-cutting). |
+| `cli/` | Split integration test modules (help, accounts, mutations, rotate, token, paths, usage, persist, credentials, limits, param-help, dot, cross-cutting). |
 | `manual/` | Manual testing plan: live Claude Code account switching. |
 | `docs/` | Test-lens documentation: per-command, per-parameter, per-group, and per-feature test case indices. |
 
@@ -61,6 +61,7 @@ tests/
 │   ├── helpers.rs                        # shared binary runner + fixtures
 │   ├── accounts_test.rs                  # help output and .accounts command
 │   ├── account_mutations_test.rs         # account save, use, delete
+│   ├── account_rotate_test.rs            # .account.rotate auto-rotation (rot01–rot08)
 │   ├── token_paths_test.rs               # token status + paths commands
 │   ├── cross_cutting_test.rs             # idempotency, param order, exit codes
 │   ├── usage_test.rs                     # .usage command tests (IT-1–IT-37, 36 fns)
@@ -68,6 +69,7 @@ tests/
 │   ├── persist_test.rs                   # PersistPaths resolution tests
 │   ├── credentials_test.rs               # .credentials.status command tests
 │   ├── credentials_status_help_test.rs   # .credentials.status help descriptions
+│   ├── param_help_test.rs                # param description presence + optionality (BUG-203, BUG-204)
 │   ├── account_limits_test.rs            # .account.limits error paths
 │   └── dot_test.rs                       # . / .help output tests
 ├── manual/
@@ -97,6 +99,7 @@ tests/
 | Help CLI | `cli/accounts_test.rs` (H series) | --help, .help, no-args, unknown command |
 | Accounts CLI | `cli/accounts_test.rs` (acc series) | list text/json, empty dir, sorted, field-presence, named-account |
 | Account save/use/delete CLI | `cli/account_mutations_test.rs` | save, use, delete with all edge cases |
+| Account rotate CLI | `cli/account_rotate_test.rs` | .account.rotate auto-rotation, rot01–rot08 |
 | Token status + paths CLI | `cli/token_paths_test.rs` | .token.status and .paths all verbosity/format |
 | Cross-cutting CLI | `cli/cross_cutting_test.rs` | idempotency, param order, exit code contracts, env |
 | Usage CLI | `cli/usage_test.rs` | .usage live quota table, JSON output, error paths |
@@ -105,6 +108,7 @@ tests/
 | Credentials status CLI | `cli/credentials_test.rs` | .credentials.status without account store |
 | Credentials status help CLI | `cli/credentials_status_help_test.rs` | .credentials.status help descriptions |
 | Account limits CLI | `cli/account_limits_test.rs` | .account.limits error paths |
+| Param help/optionality CLI | `cli/param_help_test.rs` | phd01–phd04 (BUG-203), pho01–pho04 (BUG-204) |
 | Dot / help CLI | `cli/dot_test.rs` | . and .help output, delegation, ANSI suppression |
 | Arch boundary | `responsibility_no_process_execution_test.rs` | no std::process in crate source |
 

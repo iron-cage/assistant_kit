@@ -40,8 +40,20 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [034_touch.md](034_touch.md) | `touch::` — activate idle accounts' 5h windows via isolated subprocess |
 | [035_imodel.md](035_imodel.md) | `imodel::` — isolated subprocess model selection (`auto`, `sonnet`, `opus`, `haiku`, `keep`) |
 | [036_effort.md](036_effort.md) | `effort::` — isolated subprocess effort level (`auto`, `low`, `normal`, `high`, `max`) |
+| [037_count.md](037_count.md) | `count::` — maximum rows to display in quota table (0 = all) |
+| [038_offset.md](038_offset.md) | `offset::` — skip first N rows from filtered result |
+| [039_only_active.md](039_only_active.md) | `only_active::` — show only the active account row |
+| [040_only_next.md](040_only_next.md) | `only_next::` — show only the recommended next account row |
+| [041_min_5h.md](041_min_5h.md) | `min_5h::` — minimum 5h Left percentage threshold filter |
+| [042_min_7d.md](042_min_7d.md) | `min_7d::` — minimum 7d Left percentage threshold filter |
+| [043_only_valid.md](043_only_valid.md) | `only_valid::` — hide invalid-token (🔴) account rows |
+| [044_exclude_exhausted.md](044_exclude_exhausted.md) | `exclude_exhausted::` — hide exhausted (🟡) and invalid (🔴) account rows |
+| [045_get.md](045_get.md) | `get::` — single column value extraction for first filtered row |
+| [046_abs.md](046_abs.md) | `abs::` — show absolute token counts instead of percentages |
+| [047_no_color.md](047_no_color.md) | `no_color::` — strip emoji and ANSI colors from output |
+| [048_host.md](048_host.md) | `host::` — host/machine label captured at account save time |
 
-**Total:** 36 parameters
+**Total:** 48 parameters
 
 ### Overview Table
 
@@ -78,13 +90,25 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 29 | `capabilities::` | `bool` | `0` | `0`, `1` | Product capabilities list toggle (opt-in) | 2 cmds |
 | 30 | `org_uuid::` | `bool` | `0` | `0`, `1` | Organisation UUID toggle (opt-in) | 2 cmds |
 | 31 | `org_name::` | `bool` | `0` | `0`, `1` | Organisation display name toggle (opt-in) | 2 cmds |
-| 32 | `next::` | `enum` | `drain` | `endurance`, `drain` | Recommendation strategy selector | 1 cmd |
+| 32 | `next::` | `enum` | `renew` | `renew`, `endurance`, `drain` | Recommendation strategy selector | 1 cmd |
 | 33 | `cols::` | `string` | `""` | `+col_id`, `-col_id` modifiers | Column visibility modifiers | 1 cmd |
 | 34 | `touch::` | `bool` | `1` | `0`, `1`, `false`, `true` | Activate idle accounts' 5h windows | 2 cmds |
 | 35 | `imodel::` | `enum` | `auto` | `auto`, `sonnet`, `opus`, `haiku`, `keep` | Isolated subprocess model selection | 2 cmds |
 | 36 | `effort::` | `enum` | `auto` | `auto`, `low`, `normal`, `high`, `max` | Isolated subprocess effort level | 2 cmds |
+| 37 | `count::` | `u64` | `0` | Non-negative integer | Max rows to display (0 = all) | 1 cmd |
+| 38 | `offset::` | `u64` | `0` | Non-negative integer | Skip first N rows from result | 1 cmd |
+| 39 | `only_active::` | `bool` | `0` | `0`, `1` | Show only active account row | 1 cmd |
+| 40 | `only_next::` | `bool` | `0` | `0`, `1` | Show only the → recommended row | 1 cmd |
+| 41 | `min_5h::` | `f64` | `0` | `0`–`100` | Minimum 5h Left % filter | 1 cmd |
+| 42 | `min_7d::` | `f64` | `0` | `0`–`100` | Minimum 7d Left % filter | 1 cmd |
+| 43 | `only_valid::` | `bool` | `0` | `0`, `1` | Hide 🔴 invalid-token rows | 1 cmd |
+| 44 | `exclude_exhausted::` | `bool` | `0` | `0`, `1` | Hide 🟡 and 🔴 rows | 1 cmd |
+| 45 | `get::` | `string` | `""` | Field IDs (see 045_get.md) | Single column value extraction | 1 cmd |
+| 46 | `abs::` | `bool` | `0` | `0`, `1` | Absolute token counts instead of % | 1 cmd |
+| 47 | `no_color::` | `bool` | `0` | `0`, `1` | Strip emoji and ANSI from output | 1 cmd |
+| 48 | `host::` | `string` | `""` (auto) | Any string | Machine/host label at account save | 1 cmd |
 
-*Params 1 = Account Targeting; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36 = Fetch Behavior group; param 24 = Output Selection group; params 25–27, 32 = Sort Control group; param 33 = Display Control group*
+*Params 1, 48 = Account Targeting; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36 = Fetch Behavior group; param 24 = Output Selection group; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group*
 
 ### See Also
 

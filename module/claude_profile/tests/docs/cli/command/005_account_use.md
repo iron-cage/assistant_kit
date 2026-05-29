@@ -32,6 +32,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 | IT-24 | `trace::1 touch::1` idle account — 6 trace lines emitted to stderr in order | Trace Output |
 | IT-25 | `trace::1 touch::0` — no `[trace] account.use` lines emitted | Trace Suppression |
 | IT-26 | `trace::bad` exits 1 naming valid values `0`, `1`, `false`, `true` | Validation |
+| IT-27 | `oauthAccount.organizationName` in `~/.claude.json` reflects switched-to account (BUG-219 guard) | Org Identity |
 
 ### Test Coverage Summary
 
@@ -52,8 +53,9 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - Help Output: 1 test
 - Trace Output: 2 tests
 - Trace Suppression: 1 test
+- Org Identity: 1 test
 
-**Total:** 26 integration tests
+**Total:** 27 integration tests
 
 ---
 
@@ -329,3 +331,15 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - **Exit:** 1
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-16](../../../../docs/feature/027_account_use_post_switch_touch.md)
 - **Source fn:** `aw32_trace_bad_value_exits_1`
+
+---
+
+### IT-27: `oauthAccount.organizationName` reflects switched-to account (BUG-219 guard)
+
+- **Given:** Account `i7@test.com` saved with `{credential_store}/i7@test.com.claude.json` containing `oauthAccount.organizationName = "i7 Org"` (and active, so `~/.claude.json` has this org). Account `i6@test.com` saved with `{credential_store}/i6@test.com.claude.json` also containing `organizationName = "i7 Org"` (snapshot was captured while i7 was active — stale cross-account contamination). Account `i6@test.com` has `{credential_store}/i6@test.com.roles.json` with `organization_name = "i6 Org"`.
+- **When:** `clp .account.use name::i6@test.com`
+- **Then:** Exits 0; `switched to 'i6@test.com'` on stdout. `~/.claude.json` contains `oauthAccount.organizationName = "i6 Org"` (reflecting i6's org from `roles.json`), NOT `"i7 Org"` (the stale snapshot value). `oauthAccount.emailAddress = "i6@test.com"`.
+- **Exit:** 0
+- **Source:** [feature/004_account_use.md BUG-219](../../../../docs/feature/004_account_use.md)
+- **Source fn:** ⏳ `mre_bug_219_switch_account_stale_org_name` in `tests/account_tests.rs`
+- **Note:** This test is a BUG-219 guard — fails until the fix is implemented (TSK-221). Mark `#[doc = "bug_reproducer(219)"]` on the test function.

@@ -23,6 +23,8 @@ Controls column visibility in the `.usage` quota table. Accepts comma-separated 
 | `7d_son` | 7d(Son) | ON |
 | `7d_reset` | 7d Reset | ON |
 | `7d_son_reset` | 7d Son Reset | **OFF** |
+| `host` | Host | **OFF** |
+| `role` | Role | **OFF** |
 
 The `flag` (first column) and `account` (name) columns are structural and always visible.
 
@@ -32,7 +34,8 @@ The `flag` (first column) and `account` (name) columns are structural and always
 cols::+sub                     -> add Sub column to default set
 cols::+sub,-7d_son             -> add Sub, remove 7d(Son)
 cols::-renews,-7d_son          -> hide Renews and 7d(Son)
-cols::+sub,+7d_son_reset       -> show both hidden-by-default columns
+cols::+sub,+7d_son_reset       -> show both hidden-by-default quota columns
+cols::+host,+role              -> show machine/host tag and user-defined role label
 ```
 
 **See Also:** [feature/009_token_usage.md](../../feature/009_token_usage.md) for column definitions.

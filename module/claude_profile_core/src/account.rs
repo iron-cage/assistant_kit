@@ -786,6 +786,24 @@ pub fn parse_string_array_field( json : &str, key : &str ) -> Vec< String >
   values
 }
 
+/// Read the OAuth `accessToken` field from a credential JSON file.
+///
+/// Shared base for both the usage quota fetch path and the credential-read
+/// path in command handlers — avoids duplicating file-read + field-extract
+/// logic across two callers.
+///
+/// Returns `Ok(token)` on success.
+/// Returns `Err(reason)` on I/O failure or missing / empty `accessToken` field.
+#[ doc( hidden ) ]
+#[ inline ]
+pub fn read_access_token_from_file( path : &std::path::Path ) -> Result< String, String >
+{
+  let content = std::fs::read_to_string( path )
+    .map_err( |e| format!( "cannot read credentials: {e}" ) )?;
+  parse_string_field( &content, "accessToken" )
+    .ok_or_else( || "missing accessToken".to_string() )
+}
+
 #[ cfg( test ) ]
 mod tests
 {

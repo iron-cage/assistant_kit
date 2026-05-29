@@ -12,6 +12,9 @@ Edge case coverage for the `cols::` parameter on `.usage`. See [param/033_cols.m
 | EC-4 | `cols::+sub,-7d_son` adds Sub and removes 7d(Son) simultaneously | Composite Modifier |
 | EC-5 | `cols::+7d_son_reset` shows 7d Son Reset (off-by-default column) | Show Off-Default Column |
 | EC-6 | `cols::+sub format::json` — `cols::` does not affect JSON output | JSON No-op |
+| EC-7 | `cols::+host` shows Host column (off-by-default metadata column) | Show Off-Default Column |
+| EC-8 | `cols::+role` shows Role column (off-by-default metadata column) | Show Off-Default Column |
+| EC-9 | `cols::+bogus` exits 1 — error message names `host` and `role` among valid IDs | Invalid Column ID |
 | CC-1 | `flag` and `account` columns always present regardless of `cols::` | Structural Columns Always-On |
 
 ---
@@ -73,6 +76,39 @@ Edge case coverage for the `cols::` parameter on `.usage`. See [param/033_cols.m
 - **When-B:** `clp .usage cols::+sub format::json`
 - **Then-A and Then-B:** Both produce identical JSON arrays. No `"sub"` key appears in either output (field-presence params only affect text format; `format::json` always includes all fields through its own schema).
 - **Exit:** 0 both cases
+- **Source:** [param/033_cols.md](../../../../docs/cli/param/033_cols.md)
+
+---
+
+### EC-7: `cols::+host` shows Host column (off-by-default metadata column)
+
+- **Given:** One saved account with `{name}.profile.json` containing `{"host": "mybox", "role": "work"}`.
+- **When:** `clp .usage cols::+host`
+- **Then:** Exits 0. Table header contains "Host". The account row shows "mybox" in the Host column.
+- **Exit:** 0
+- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source:** [param/033_cols.md](../../../../docs/cli/param/033_cols.md), [feature/029_account_host_metadata.md AC-05](../../../../docs/feature/029_account_host_metadata.md)
+
+---
+
+### EC-8: `cols::+role` shows Role column (off-by-default metadata column)
+
+- **Given:** One saved account with `{name}.profile.json` containing `{"host": "mybox", "role": "work"}`.
+- **When:** `clp .usage cols::+role`
+- **Then:** Exits 0. Table header contains "Role". The account row shows "work" in the Role column.
+- **Exit:** 0
+- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source:** [param/033_cols.md](../../../../docs/cli/param/033_cols.md), [feature/029_account_host_metadata.md AC-06](../../../../docs/feature/029_account_host_metadata.md)
+
+---
+
+### EC-9: `cols::+bogus` exits 1 — error message names `host` and `role` among valid IDs
+
+- **Given:** Any environment (empty credential store).
+- **When:** `clp .usage cols::+bogus`
+- **Then:** Exits 1. Stderr names valid column IDs including "host" and "role" (in addition to existing IDs like "status", "expires", "sub", etc.).
+- **Exit:** 1
+- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
 - **Source:** [param/033_cols.md](../../../../docs/cli/param/033_cols.md)
 
 ---

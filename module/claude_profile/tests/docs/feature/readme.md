@@ -21,6 +21,8 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 021_extended_snapshot_fields.md | FT cases for Feature 021 — Extended Snapshot Fields |
 | 022_org_identity_snapshot.md | FT cases for Feature 022 — Org Identity Snapshot |
 | 023_next_account_strategies.md | FT cases for Feature 023 — Next Account Recommendation Strategies |
+| 028_usage_row_filtering.md | FT cases for Feature 028 — Usage Row Filtering and Extraction |
+| 029_account_host_metadata.md | FT cases for Feature 029 — Account Host and Role Metadata |
 | 024_session_touch.md | FT cases for Feature 024 — Session Touch via Isolated Subprocess |
 | 025_per_machine_active_marker.md | FT cases for Feature 025 — Per-Machine Active Marker |
 | 026_subprocess_model_effort.md | FT cases for Feature 026 — Subprocess Model and Effort Control |
@@ -37,10 +39,12 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 020_usage_sort_strategies | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | FT-01 … FT-17 | ✅ |
 | 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | FT-01 … FT-09 | ✅ |
 | 022_org_identity_snapshot | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | FT-01 … FT-11 | ✅ |
-| 023_next_account_strategies | [023_next_account_strategies.md](023_next_account_strategies.md) | FT-01 … FT-09 | ✅ |
+| 023_next_account_strategies | [023_next_account_strategies.md](023_next_account_strategies.md) | FT-01 … FT-11 | ✅ |
 | 024_session_touch | [024_session_touch.md](024_session_touch.md) | FT-01 … FT-17 | ✅ |
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | FT-01 … FT-10 | ✅ |
 | 026_subprocess_model_effort | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | FT-01 … FT-17 | ✅ |
 | 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | FT-01 … FT-17 | ✅ |
+| 028_usage_row_filtering | [028_usage_row_filtering.md](028_usage_row_filtering.md) | FT-01 … FT-16 | ✅ |
+| 029_account_host_metadata | [029_account_host_metadata.md](029_account_host_metadata.md) | FT-01 … FT-10 | ✅ |
 
-**Total:** 12 feature specs; 15 of 27 feature instances not yet covered by dedicated FT specs.
+**Total:** 14 feature specs; 15 of 29 feature instances not yet covered by dedicated FT specs.

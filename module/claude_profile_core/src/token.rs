@@ -127,6 +127,45 @@ pub fn status_with_threshold( warning_secs : u64 ) -> Result< TokenStatus, std::
   }
 }
 
+/// Classify a token expiry millisecond timestamp without reading any file.
+///
+/// Equivalent to the classification step inside [`status_with_threshold`] but
+/// callable for stored `expiresAt` values — avoids reading
+/// `~/.claude/.credentials.json`, which belongs to the **active** account and
+/// would return the wrong state for non-active named accounts.
+///
+/// # Examples
+///
+/// ```
+/// use claude_profile_core::token;
+/// let status = token::classify_ms( 0, token::WARNING_THRESHOLD_SECS );
+/// assert_eq!( status, token::TokenStatus::Expired );
+/// ```
+#[ must_use ]
+#[ inline ]
+pub fn classify_ms( expires_at_ms : u64, warning_secs : u64 ) -> TokenStatus
+{
+  let now_ms = u64::try_from(
+    SystemTime::now()
+      .duration_since( UNIX_EPOCH )
+      .unwrap_or_default()
+      .as_millis()
+  ).unwrap_or( u64::MAX );
+  if now_ms >= expires_at_ms
+  {
+    return TokenStatus::Expired;
+  }
+  let remaining = Duration::from_millis( expires_at_ms - now_ms );
+  if remaining.as_secs() <= warning_secs
+  {
+    TokenStatus::ExpiringSoon { expires_in : remaining }
+  }
+  else
+  {
+    TokenStatus::Valid { expires_in : remaining }
+  }
+}
+
 /// Extract the `expiresAt` integer value from credentials JSON.
 ///
 /// Zero-dependency parser: locates the `"expiresAt":` key and reads the

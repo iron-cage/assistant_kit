@@ -725,6 +725,7 @@ fn as16_save_writes_active_marker()
 /// - **Pitfall:** The `let _ = ...` idiom silences copy errors intentionally —
 ///   `~/.claude.json` may legitimately not exist. The test must explicitly write
 ///   `~/.claude.json` for both accounts before saving so the snapshots exist.
+#[ doc = "bug_reproducer(issue-122)" ]
 #[ test ]
 fn switch_restores_claude_json()
 {
@@ -783,6 +784,7 @@ fn switch_restores_claude_json()
 ///   variants so any regression in the local-part check is caught immediately.
 /// - **Pitfall:** Only the local part (before `@`) needs the check; domain chars
 ///   cannot create path traversal in practice because the `@` separates them.
+#[ doc = "bug_reproducer(issue-123)" ]
 #[ test ]
 fn as17_save_slash_in_email_local_part_exits_1()
 {
@@ -807,6 +809,7 @@ fn as17_save_slash_in_email_local_part_exits_1()
 /// part of the email address.
 ///
 /// See as17 for full fix documentation.
+#[ doc = "bug_reproducer(issue-123)" ]
 #[ test ]
 fn as18_save_backslash_in_email_local_part_exits_1()
 {
@@ -825,6 +828,7 @@ fn as18_save_backslash_in_email_local_part_exits_1()
 /// `switch_account()` fails with a filesystem error.
 ///
 /// See as17 for full fix documentation.
+#[ doc = "bug_reproducer(issue-123)" ]
 #[ test ]
 fn aw11_switch_slash_in_email_local_part_exits_1()
 {

@@ -6,7 +6,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 
 | FT | Criterion | AC | Notes |
 |----|-----------|-----|-------|
-| FT-01 | Footer always shows both strategy lines when ≥2 valid accounts | AC-01 | Integration |
+| FT-01 | Footer always shows all three strategy lines when ≥2 valid accounts | AC-01 | Integration |
 | FT-02 | `→` placed on active strategy winner; omitted when no eligible candidate | AC-02 | Unit test |
 | FT-03 | `next::endurance` places `→` on endurance winner | AC-03 | Integration |
 | FT-04 | `next::drain` places `→` on drain winner | AC-04 | Integration |
@@ -15,13 +15,14 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-07 | Footer omitted when 0 or 1 accounts have valid quota data | AC-07 | Integration |
 | FT-08 | Footer omits strategy line when no eligible candidate exists | AC-08 | Unit test |
 | FT-09 | drain skips `prefer_weekly ≤ 5.0` accounts (BUG-206) | AC-04 | Unit test |
-| FT-10 | drain footer shows `"7d(Son) left"` and Sonnet reset when Sonnet is binding (BUG-216) | AC-09 | Unit test |
+| FT-10 | drain footer label and reset source reflect binding weekly dimension (BUG-216) | AC-09 | Unit test |
+| FT-11 | `next::renew` places `→` on account with soonest quota refill | AC-10 | Integration |
 
 ### Test Case Index
 
 | ID | Test Name | AC | Category |
 |----|-----------|-----|----------|
-| FT-01 | Footer always visible with two strategy lines | AC-01 | Footer |
+| FT-01 | Footer always visible with three strategy lines | AC-01 | Footer |
 | FT-02 | `→` on active strategy winner; absent when no eligible | AC-02 | Marker |
 | FT-03 | next::endurance selects endurance top candidate | AC-03 | Strategy |
 | FT-04 | next::drain selects drain top candidate | AC-04 | Strategy |
@@ -31,16 +32,17 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-08 | No-eligible-candidate strategy line omitted | AC-08 | Footer |
 | FT-09 | drain never recommends `prefer_weekly ≤ 5.0` accounts | AC-04 | BUG-206 |
 | FT-10 | drain footer label and reset source reflect binding weekly dimension | AC-09 | BUG-216 |
+| FT-11 | next::renew places `→` on soonest-refill account | AC-10 | Strategy |
 
-**Total:** 10 FT cases
+**Total:** 11 FT cases
 
 ---
 
-### FT-01: Footer always shows both strategy lines when ≥2 valid accounts
+### FT-01: Footer always shows all three strategy lines when ≥2 valid accounts
 
 - **Given:** Two accounts with valid quota data; `next::drain` (not the default strategy).
 - **When:** `clp .usage next::drain`
-- **Then:** Footer contains "Next by strategy:" followed by two lines — one starting "endurance" and one starting "drain". Both lines appear regardless of which `next::` value is active.
+- **Then:** Footer contains "Next by strategy:" followed by three lines — one starting "renew", one starting "endurance", and one starting "drain". All three lines appear regardless of which `next::` value is active.
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota)
 - **Source fn:** `it094_lim_it_footer_always_shows_both_strategy_lines` (in `tests/cli/usage_test.rs`)
@@ -90,7 +92,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 
 - **Given:** Any environment (empty credential store).
 - **When:** `clp .usage next::bogus`
-- **Then:** Exits 1. Stderr contains "endurance" and "drain" (the two valid values). Does NOT contain "all", "session", or "reset".
+- **Then:** Exits 1. Stderr contains "renew", "endurance", and "drain" (the three valid values). Does NOT contain "all", "session", or "reset".
 - **Exit:** 1
 - **Source fn:** `it082_next_all_rejected_exit_1`, `it084_next_session_rejected_exit_1`
 - **Source:** [feature/023_next_account_strategies.md AC-05](../../../../docs/feature/023_next_account_strategies.md)
@@ -155,3 +157,15 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Exit:** n/a (unit test)
 - **Source fn:** `mre_bug_206_drain_skips_prefer_weekly_zero_accounts` (in `src/usage.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-04](../../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### FT-11: `next::renew` places `→` on account with soonest quota refill
+
+- **Given:** Two accounts with valid quota: `soon@test.com` (5h_reset in 20m), `later@test.com` (5h_reset in 3h). `next::renew` (default).
+- **When:** `clp .usage next::renew`
+- **Then:** The row for `soon@test.com` contains `→` in the flag column. `later@test.com` does NOT have `→`. Footer "renew" line shows `soon@test.com` with `5h resets in 20m`.
+- **Exit:** 0
+- **Live:** yes (requires live quota data with active 5h timers)
+- **Source fn:** ⏳ `it095_lim_it_next_renew_places_arrow_on_soonest_refill` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/023_next_account_strategies.md AC-10](../../../../docs/feature/023_next_account_strategies.md)

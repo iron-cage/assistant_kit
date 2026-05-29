@@ -566,6 +566,7 @@ fn validate_name_must_be_email()
 ///
 /// The saved `{name}.claude.json` must contain ONLY `oauthAccount` —
 /// any extra keys indicate a wholesale copy regression.
+#[ doc = "bug_reproducer(BUG-174)" ]
 #[ test ]
 fn test_bug174_mre_switch_preserves_machine_global_commands()
 {
