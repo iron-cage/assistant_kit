@@ -9,8 +9,8 @@ use data_fmt::{ RowBuilder, TableFormatter, Format };
 use crate::output::{ format_duration_secs, json_escape };
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility, GetField };
 use super::format::{
-  compute_expires_cell, sub_label, next_billing_label, shorten_error,
-  quota_text_cells, status_emoji,
+  compute_expires_cell, sub_label, shorten_error,
+  quota_text_cells, status_emoji, renews_label, next_event_label, next_event_raw, renewal_secs,
 };
 use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
 
@@ -95,6 +95,7 @@ pub( crate ) fn render_text(
   if cols.renews       { headers.push( "~Renews".to_string() ); }
   if cols.host         { headers.push( "Host".to_string() ); }
   if cols.role         { headers.push( "Role".to_string() ); }
+  if cols.next         { headers.push( "\u{2192} Next".to_string() ); }
 
   let mut builder = RowBuilder::new( headers );
   for orig_idx in sorted_indices.iter().copied()
@@ -120,8 +121,11 @@ pub( crate ) fn render_text(
 
     let expires_cell = compute_expires_cell( aq.expires_at_ms, now_secs );
     let sub_str      = sub_label( aq.account.as_ref() ).to_string();
-    let renews_str   = aq.account.as_ref()
-      .map_or_else( || "?".to_string(), |a| next_billing_label( &a.org_created_at, now_secs ) );
+    let renews_str   = renews_label(
+      aq.renewal_at.as_deref(),
+      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+      now_secs,
+    );
 
     match &aq.result
     {
@@ -135,6 +139,22 @@ pub( crate ) fn render_text(
             || "\u{2014}".to_string(),
             |t| format!( "in {}", format_duration_secs( t.saturating_sub( now_secs ) ) ),
           );
+        let ( ren_secs, ren_est ) = renewal_secs(
+          aq.renewal_at.as_deref(),
+          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          now_secs,
+        ).unzip();
+        let next_cell    = next_event_label(
+          ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ),
+          data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() )
+            .and_then( claude_quota::iso_to_unix_secs )
+            .map( |t| t.saturating_sub( now_secs ) ),
+          data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() )
+            .and_then( claude_quota::iso_to_unix_secs )
+            .map( |t| t.saturating_sub( now_secs ) ),
+          ren_secs,
+          ren_est.unwrap_or( false ),
+        );
 
         let mut row : Vec< String > = vec![ flag_cell ];
         if cols.status       { row.push( status_emoji( &aq.result ).to_string() ); }
@@ -150,6 +170,7 @@ pub( crate ) fn render_text(
         if cols.renews       { row.push( renews_str ); }
         if cols.host         { row.push( aq.host.clone() ); }
         if cols.role         { row.push( aq.role.clone() ); }
+        if cols.next         { row.push( next_cell ); }
         builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
       }
       Err( reason ) =>
@@ -167,15 +188,21 @@ pub( crate ) fn render_text(
         if cols.d7_son       { row.push( dash.clone() ); }
         if cols.d7_reset     { row.push( dash.clone() ); }
         if cols.d7_son_reset { row.push( dash.clone() ); }
+        let quota_end_len = row.len();
         if cols.expires      { row.push( expires_cell ); }
         if cols.sub          { row.push( sub_str ); }
         if cols.renews       { row.push( renews_str ); }
         if cols.host         { row.push( aq.host.clone() ); }
         if cols.role         { row.push( aq.role.clone() ); }
-        // Error reason replaces the last visible non-structural column (009 AC-03).
-        if row.len() > structural_len
+        if cols.next         { row.push( "\u{2014}".to_string() ); }
+        // Fix(BUG-220): only the last visible quota-data column carries error_str — non-quota
+        //   metadata columns (expires, sub, renews) are sourced independently and must be preserved.
+        // Root cause: positional last_mut() targeted ~Renews after BUG-180 moved it to trail quota
+        //   columns; AC-03 "last visible column" intent was "last quota column", not "last of all".
+        // Pitfall: quota_end_len == structural_len when all quota cols are hidden — skip override.
+        if quota_end_len > structural_len
         {
-          *row.last_mut().unwrap() = error_str;
+          row[ quota_end_len - 1 ] = error_str;
         }
         builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
       }
@@ -221,6 +248,7 @@ pub( crate ) fn render_text(
 /// Every row includes `expires_in_secs`. Successful accounts include quota
 /// fields using `_left_pct` naming (remaining, not consumed); failed accounts
 /// include `error`.
+#[ allow( clippy::too_many_lines ) ]
 pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
 {
   use std::time::{ SystemTime, UNIX_EPOCH };
@@ -246,8 +274,16 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
       .map_or_else( || "null".to_string(), |a| format!( "\"{}\"", json_escape( &a.billing_type ) ) );
     let has_max_str      = aq.account.as_ref()
       .map_or( "null", |a| if a.has_max { "true" } else { "false" } );
-    let next_renewal_str = aq.account.as_ref()
-      .map_or_else( || "null".to_string(), |a| format!( "\"{}\"", json_escape( &next_billing_label( &a.org_created_at, now_secs ) ) ) );
+    let ren_pair                                       = renewal_secs(
+      aq.renewal_at.as_deref(),
+      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+      now_secs,
+    );
+    let ( renewal_secs_str, renewal_is_estimate_str ) = match ren_pair
+    {
+      Some( ( s, est ) ) => ( s.to_string(), if est { "true".to_string() } else { "false".to_string() } ),
+      None               => ( "null".to_string(), "null".to_string() ),
+    };
     let entry = match &aq.result
     {
       Ok( data ) =>
@@ -268,10 +304,31 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
         let weekly_pct    = pct_str( data.seven_day.as_ref().map( |p| p.utilization ) );
         let sonnet_pct    = pct_str( data.seven_day_sonnet.as_ref().map( |p| p.utilization ) );
         let weekly_reset  = reset_str( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) );
+        let five_reset_secs = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() )
+          .and_then( claude_quota::iso_to_unix_secs )
+          .map( |t| t.saturating_sub( now_secs ) );
+        let seven_reset_secs = data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() )
+          .and_then( claude_quota::iso_to_unix_secs )
+          .map( |t| t.saturating_sub( now_secs ) );
+        let ( next_type_str, next_secs_str ) = match next_event_raw(
+          ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ),
+          five_reset_secs,
+          seven_reset_secs,
+          ren_pair.map( |( s, _ )| s ),
+          ren_pair.is_some_and( |( _, est )| est ),
+        )
+        {
+          None                        => ( "null".to_string(), "null".to_string() ),
+          Some( ( secs, prefix, _ ) ) =>
+            ( format!( "\"{}\"", prefix.trim_start_matches( '+' ).trim_start_matches( '!' ).trim_start_matches( '$' ) ),
+              secs.to_string() ),
+        };
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
 \"expires_in_secs\":{expires_in_secs},\
-\"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\"next_renewal_est\":{next_renewal_str},\
+\"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\
+\"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\
+\"next_event_type\":{next_type_str},\"next_event_secs\":{next_secs_str},\
 \"session_5h_left_pct\":{session_pct},\"session_5h_resets_in_secs\":{session_reset},\
 \"weekly_7d_left_pct\":{weekly_pct},\"weekly_7d_sonnet_left_pct\":{sonnet_pct},\
 \"weekly_7d_resets_in_secs\":{weekly_reset}}}",
@@ -279,10 +336,27 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
       }
       Err( reason ) =>
       {
+        // Err accounts lack quota data but still have token-expiry and optional renewal;
+        // compute next_event from those two sources so JSON callers get useful data.
+        let ( next_type_str, next_secs_str ) = match next_event_raw(
+          expires_in_secs,
+          None,
+          None,
+          ren_pair.map( |( s, _ )| s ),
+          ren_pair.is_some_and( |( _, est )| est ),
+        )
+        {
+          None                         => ( "null".to_string(), "null".to_string() ),
+          Some( ( secs, prefix, _ ) ) =>
+            ( format!( "\"{}\"", prefix.trim_start_matches( '+' ).trim_start_matches( '!' ).trim_start_matches( '$' ) ),
+              secs.to_string() ),
+        };
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
 \"expires_in_secs\":{expires_in_secs},\
-\"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\"next_renewal_est\":{next_renewal_str},\
+\"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\
+\"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\
+\"next_event_type\":{next_type_str},\"next_event_secs\":{next_secs_str},\
 \"error\":\"{}\"}}",
           json_escape( reason ),
         )
@@ -301,6 +375,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
 /// Status column uses plain-text labels (`ok`/`warn`/`err`). Percentage cells in
 /// `5h Left` and `7d Left` are rendered without the emoji prefix. No tier grouping
 /// or footer; rows are in sort strategy order. First row is a header.
+#[ allow( clippy::too_many_lines ) ]
 pub( crate ) fn render_tsv(
   accounts : &[ AccountQuota ],
   sort     : SortStrategy,
@@ -330,6 +405,7 @@ pub( crate ) fn render_tsv(
   if cols.renews       { headers.push( "renews".to_string() ); }
   if cols.host         { headers.push( "host".to_string() ); }
   if cols.role         { headers.push( "role".to_string() ); }
+  if cols.next         { headers.push( "next".to_string() ); }
   let mut out = headers.join( "\t" );
   out.push( '\n' );
 
@@ -348,8 +424,11 @@ pub( crate ) fn render_tsv(
     };
     let expires_str = compute_expires_cell( aq.expires_at_ms, now_secs );
     let sub_str     = sub_label( aq.account.as_ref() ).to_string();
-    let renews_str  = aq.account.as_ref()
-      .map_or_else( || "?".to_string(), |a| next_billing_label( &a.org_created_at, now_secs ) );
+    let renews_str  = renews_label(
+      aq.renewal_at.as_deref(),
+      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+      now_secs,
+    );
 
     let mut row = vec![ flag_cell.to_string() ];
     if cols.status { row.push( status_str.to_string() ); }
@@ -374,6 +453,22 @@ pub( crate ) fn render_tsv(
           .and_then( claude_quota::iso_to_unix_secs )
           .map_or_else( || dash.clone(), |t| format!( "in {}", format_duration_secs( t.saturating_sub( now_secs ) ) ) );
 
+        let ( ren_secs, ren_est ) = renewal_secs(
+          aq.renewal_at.as_deref(),
+          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          now_secs,
+        ).unzip();
+        let next_str = next_event_label(
+          ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ),
+          data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() )
+            .and_then( claude_quota::iso_to_unix_secs )
+            .map( |t| t.saturating_sub( now_secs ) ),
+          data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() )
+            .and_then( claude_quota::iso_to_unix_secs )
+            .map( |t| t.saturating_sub( now_secs ) ),
+          ren_secs,
+          ren_est.unwrap_or( false ),
+        );
         if cols.h5_left      { row.push( h5_left_bare ); }
         if cols.h5_reset     { row.push( cells[ 1 ].clone() ); }
         if cols.d7_left      { row.push( d7_left_bare ); }
@@ -385,6 +480,7 @@ pub( crate ) fn render_tsv(
         if cols.renews       { row.push( renews_str ); }
         if cols.host         { row.push( aq.host.clone() ); }
         if cols.role         { row.push( aq.role.clone() ); }
+        if cols.next         { row.push( next_str ); }
       }
       Err( reason ) =>
       {
@@ -393,11 +489,17 @@ pub( crate ) fn render_tsv(
         let col_count = [ cols.h5_left, cols.h5_reset, cols.d7_left, cols.d7_son,
                           cols.d7_reset, cols.d7_son_reset ].iter().filter( |&&b| b ).count();
         for _ in 0..col_count { row.push( dash.clone() ); }
+        // Fix(BUG-220): replace last quota-dash with error_str (last visible quota column carries
+        //   the error reason); renews cell must push renews_str, not error_str.
+        // Root cause: explicit error_str push for renews cell — same incorrect scope as Site 1.
+        // Pitfall: only replace when col_count > 0 (at least one quota col visible).
+        if col_count > 0 { *row.last_mut().unwrap() = error_str; }
         if cols.expires { row.push( expires_str ); }
         if cols.sub     { row.push( sub_str ); }
-        if cols.renews  { row.push( error_str ); }
+        if cols.renews  { row.push( renews_str ); }  // Fix: was error_str
         if cols.host    { row.push( aq.host.clone() ); }
         if cols.role    { row.push( aq.role.clone() ); }
+        if cols.next    { row.push( "\u{2014}".to_string() ); }
       }
     }
 
@@ -446,12 +548,47 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
     GetField::Status  => status_emoji( &aq.result ).to_string(),
     GetField::Account => aq.name.clone(),
     GetField::Expires => compute_expires_cell( aq.expires_at_ms, now_secs ),
-    GetField::Sub     => sub_label( aq.account.as_ref() ).to_string(),
-    GetField::Renews  => aq.account.as_ref()
-      .map_or_else( || "?".to_string(), |a| next_billing_label( &a.org_created_at, now_secs ) ),
-    GetField::Host                                     => aq.host.clone(),
-    GetField::Role                                     => aq.role.clone(),
-    GetField::NextEventType | GetField::NextEventSecs  => dash.clone(),
+    GetField::Sub    => sub_label( aq.account.as_ref() ).to_string(),
+    GetField::Renews => renews_label(
+      aq.renewal_at.as_deref(),
+      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+      now_secs,
+    ),
+    GetField::Host         => aq.host.clone(),
+    GetField::Role         => aq.role.clone(),
+    GetField::NextEventType | GetField::NextEventSecs =>
+    {
+      if let Ok( data ) = &aq.result
+      {
+        let five_reset  = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() )
+          .and_then( claude_quota::iso_to_unix_secs ).map( |t| t.saturating_sub( now_secs ) );
+        let seven_reset = data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() )
+          .and_then( claude_quota::iso_to_unix_secs ).map( |t| t.saturating_sub( now_secs ) );
+        let ren_pair = renewal_secs(
+          aq.renewal_at.as_deref(),
+          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          now_secs,
+        );
+        match next_event_raw(
+          ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ),
+          five_reset, seven_reset,
+          ren_pair.map( |( s, _ )| s ),
+          ren_pair.is_some_and( |( _, est )| est ),
+        )
+        {
+          None => dash,
+          Some( ( secs, prefix, _ ) ) => match field
+          {
+            GetField::NextEventType => prefix.to_string(),
+            _                       => secs.to_string(),
+          },
+        }
+      }
+      else
+      {
+        dash
+      }
+    }
     _ =>
     {
       let Ok( data ) = &aq.result else { return dash; };
@@ -476,5 +613,102 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
         _ => dash,
       }
     }
+  }
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+#[ cfg( test ) ]
+mod tests
+{
+  use super::{ render_text, render_tsv };
+  use crate::usage::types::{ AccountQuota, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility };
+  use crate::usage::test_support::FAR_FUTURE_MS;
+
+  /// FT-20/009 — `~Renews` must retain billing date (not error reason) for 429-errored accounts.
+  ///
+  /// # Root Cause
+  /// `render_text()` Err arm used `*row.last_mut().unwrap() = error_str` (positional blind
+  /// overwrite). Under default layout (`host`/`role` OFF), `~Renews` was the last pushed
+  /// column, so the billing date was discarded and replaced with the quota API error reason.
+  /// `render_tsv()` Err arm explicitly pushed `error_str` for the renews cell, same effect.
+  ///
+  /// # Why Not Caught
+  /// All prior Err-arm tests used `account: None` (→ `renews_str = "?"`), so the overwrite
+  /// was invisible — both the buggy value and the intended value were "a non-date string".
+  /// No test combined `account: Some(OauthAccountData { ... })` with `result: Err(...)`.
+  ///
+  /// # Fix Applied
+  /// `render_text()`: replaced `last_mut()` with `row[ quota_end_len - 1 ] = error_str`
+  /// (targets only the last visible quota-data column; `~Renews` is outside that range).
+  /// `render_tsv()`: push `col_count - 1` dashes then push `error_str` directly as the last
+  /// quota entry; renews cell changed from `error_str` to `renews_str`.
+  ///
+  /// # Prevention
+  /// Any Err-arm render test covering 429/401/403 accounts must supply `account: Some(...)` and
+  /// assert that the renews cell retains a billing date, not the error reason.
+  ///
+  /// # Pitfall
+  /// `mk_aq_err()` sets `account: None` → `renews_str = "?"` → the assertion
+  /// `!= "?"` would pass even with the bug present. Always construct the struct literal
+  /// directly when testing Err-arm behavior with `OauthAccountData` present.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-20]
+  #[ doc = "bug_reproducer(BUG-220)" ]
+  #[ test ]
+  fn mre_bug_220_renews_preserved_for_429_accounts()
+  {
+    let aq = AccountQuota
+    {
+      name          : "i11@test.com".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Err( "rate limited (429)".to_string() ),
+      account       : Some( claude_quota::OauthAccountData
+      {
+        billing_type   : "stripe_subscription".to_string(),
+        has_max        : true,
+        org_created_at : "1970-01-15T00:00:00Z".to_string(),
+      }),
+      host          : String::new(),
+      role          : String::new(),
+      renewal_at    : None,
+    };
+    let accounts = vec![ aq ];
+    let cols     = ColsVisibility::default_set();
+
+    // TSV: `renews` column must hold the billing date — NOT the error reason.
+    let tsv        = render_tsv( &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols );
+    let mut lines  = tsv.lines();
+    let header     = lines.next().expect( "TSV must have a header row" );
+    let data_row   = lines.next().expect( "TSV must have a data row" );
+    let headers    : Vec< &str > = header.split( '\t' ).collect();
+    let fields     : Vec< &str > = data_row.split( '\t' ).collect();
+    let renews_idx = headers.iter().position( |h| *h == "renews" )
+      .expect( "renews column must be present in TSV header" );
+    let renews_val = fields.get( renews_idx ).copied().unwrap_or( "" );
+
+    assert_ne!(
+      renews_val,
+      "(rate limited (429))",
+      "BUG-220: TSV ~Renews must not contain error_str for 429 accounts with valid \
+       OauthAccountData; got {renews_val:?}",
+    );
+    assert_ne!(
+      renews_val,
+      "?",
+      "BUG-220: TSV ~Renews must show billing date when OauthAccountData is available; \
+       got {renews_val:?}",
+    );
+
+    // Text renderer: the error reason must appear somewhere in output (in a quota column).
+    let text = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &cols,
+    );
+    assert!(
+      text.contains( "(rate limited (429))" ),
+      "BUG-220: error reason must appear in render_text output (in a quota column)",
+    );
   }
 }

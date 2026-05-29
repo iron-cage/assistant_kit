@@ -167,5 +167,5 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then:** The row for `soon@test.com` contains `→` in the flag column. `later@test.com` does NOT have `→`. Footer "renew" line shows `soon@test.com` with `5h resets in 20m`.
 - **Exit:** 0
 - **Live:** yes (requires live quota data with active 5h timers)
-- **Source fn:** ⏳ `it145_lim_it_next_renew_places_arrow_on_soonest_refill` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it145_lim_it_next_renew_places_arrow_on_soonest_refill` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-10](../../../../docs/feature/023_next_account_strategies.md)

@@ -119,6 +119,11 @@
 //! | arn14 | `ft14_account_renewal_past_at_accepted` | past `at::` written verbatim; not auto-advanced at write | P |
 //! | arn15 | `ft15_account_renewal_unknown_param_exits_1` | unknown param rejected → exit 1 | N |
 //! | arn16 | `ft16_account_renewal_creates_new_claude_json` | no prior `.claude.json` → file created | P |
+//! | arn17 | `arn17_from_now_invalid_format_exits_1` | `from_now::invalid` (no +/-) → exit 1 with parse error | N |
+//! | arn18 | `arn18_from_now_unsupported_unit_exits_1` | `from_now::+1s` (unit 's') → exit 1 with parse error | N |
+//! | arn19 | `arn19_clear_no_prior_renewal_at_exits_0` | `clear::1` when no `_renewal_at` → exit 0, no error | P |
+//! | arn20 | `arn20_all_three_conflict_exits_1` | `at:: from_now:: clear::` all together → exit 1 | N |
+//! | arn21 | `arn21_at_invalid_iso_stored_verbatim` | `at::not-a-date` stored verbatim; exit 0 | P |
 //!
 //! ### Bug Reproducers
 //!
@@ -2615,5 +2620,131 @@ fn as_save_writes_profile_json()
   assert!(
     content.contains( r#""role":"dev""# ),
     "profile.json must contain role value, got: {content}",
+  );
+}
+
+// ── ARN corner cases ──────────────────────────────────────────────────────────
+
+#[ test ]
+fn arn17_from_now_invalid_format_exits_1()
+{
+  // `from_now::` must start with '+' or '-'. "invalid" has neither → parse error → exit 1.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "from_now::invalid" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "from_now::" ) || err.contains( "'+'" ) || err.contains( "'-'" ) || err.contains( "must start" ),
+    "must report from_now:: parse error, got: {err}",
+  );
+}
+
+#[ test ]
+fn arn18_from_now_unsupported_unit_exits_1()
+{
+  // `from_now::+1s` — unit 's' is not supported (only d, h, m) → parse error → exit 1.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "from_now::+1s" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "from_now::" ) || err.contains( "unknown unit" ) || err.contains( "'s'" ),
+    "must report unknown unit error, got: {err}",
+  );
+}
+
+#[ test ]
+fn arn19_clear_no_prior_renewal_at_exits_0()
+{
+  // `clear::1` when no `_renewal_at` key exists in the file → exits 0 without error.
+  // The file gets written with an empty JSON object (no _renewal_at, no other keys).
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  // Write a .claude.json with oauthAccount but NO _renewal_at
+  std::fs::write(
+    store.join( "test@example.com.claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"test@example.com"}}"#,
+  ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "clear::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // oauthAccount must be preserved; _renewal_at must not appear.
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    !content.contains( "_renewal_at" ),
+    "clear on no-prior _renewal_at must not introduce the key, got: {content}",
+  );
+  assert!(
+    content.contains( "oauthAccount" ),
+    "clear must preserve oauthAccount when no _renewal_at was present, got: {content}",
+  );
+}
+
+#[ test ]
+fn arn20_all_three_conflict_exits_1()
+{
+  // All three mutually-exclusive params together → at least one conflict check fires → exit 1.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[
+      ".account.renewal", "name::test@example.com",
+      "at::2026-06-29T21:00:00Z", "from_now::+1h", "clear::1",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "mutually exclusive" ) || err.contains( "at::" ) || err.contains( "from_now::" ),
+    "must report conflict error when all three params provided, got: {err}",
+  );
+}
+
+#[ test ]
+fn arn21_at_invalid_iso_stored_verbatim()
+{
+  // `at::` accepts any string verbatim — validation happens only at render time.
+  // A non-ISO value like "not-a-date" is stored as-is; exit 0.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "at::not-a-date" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""_renewal_at":"not-a-date""# ),
+    "malformed at:: value must be stored verbatim, got: {content}",
   );
 }

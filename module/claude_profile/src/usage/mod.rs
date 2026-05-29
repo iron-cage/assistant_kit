@@ -52,6 +52,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 
@@ -68,6 +69,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 
@@ -92,6 +94,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 
@@ -119,6 +122,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 
@@ -149,6 +153,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 
@@ -197,6 +202,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 
@@ -231,6 +237,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 
@@ -255,6 +262,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 
@@ -271,6 +279,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 
@@ -294,6 +303,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 
@@ -317,6 +327,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 
@@ -344,6 +355,7 @@ pub( crate ) mod test_support
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     }
   }
 }
@@ -479,7 +491,7 @@ mod tests
       {
         name : "fail@test.com".to_string(), is_current : false, is_active : false,
         expires_at_ms : 0, result : Err( "auth failed".to_string() ), account : None,
-        host : String::new(), role : String::new(),
+        host : String::new(), role : String::new(), renewal_at : None,
       },
     ];
     let result = render_json( &accounts );
@@ -496,7 +508,7 @@ mod tests
       {
         name : "test\"@evil.com".to_string(), is_current : false, is_active : false,
         expires_at_ms : 0, result : Err( "fail".to_string() ), account : None,
-        host : String::new(), role : String::new(),
+        host : String::new(), role : String::new(), renewal_at : None,
       },
     ];
     let result = render_json( &accounts );
@@ -528,6 +540,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+      renewal_at    : None,
       },
       AccountQuota
       {
@@ -539,6 +552,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+      renewal_at    : None,
       },
     ];
 
@@ -616,7 +630,9 @@ mod tests
     );
 
     assert!( output.contains( "a@x.com" ), "output must contain a@x.com; got:\n{output}" );
-    let arrow_line = output.lines().find( |l| l.contains( '→' ) );
+    // The → flag only appears as the first non-whitespace char in a table row;
+    // the → Next column header also contains → but is not a flag line.
+    let arrow_line = output.lines().find( |l| l.trim_start().starts_with( '→' ) );
     if let Some( line ) = arrow_line
     {
       assert!(

@@ -141,6 +141,7 @@ pub( crate ) fn fetch_all_quota(
     };
     // Read host/role from {name}.profile.json — best-effort, empty on missing/parse error.
     let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
+    let renewal_at = read_renewal_at( credential_store, &acct.name );
     results.push( AccountQuota
     {
       name          : acct.name.clone(),
@@ -151,6 +152,7 @@ pub( crate ) fn fetch_all_quota(
       account,
       host,
       role,
+      renewal_at,
     } );
   }
 
@@ -191,6 +193,7 @@ fn inject_synthetic_row_if_needed(
     account,
     host          : String::new(),
     role          : String::new(),
+    renewal_at    : None,
   } );
 }
 
@@ -199,18 +202,25 @@ fn inject_synthetic_row_if_needed(
 /// Read `host` and `role` from `{name}.profile.json` in the credential store.
 ///
 /// Returns `(String::new(), String::new())` when the file is absent or unparseable —
-/// profile metadata is always optional (AC-09 from docs/feature/029_account_host_metadata.md).
+/// profile metadata is always optional (AC-09 from `docs/feature/029_account_host_metadata.md`).
 fn read_profile_metadata( credential_store : &std::path::Path, name : &str ) -> ( String, String )
 {
   let path = credential_store.join( format!( "{name}.profile.json" ) );
-  let text = match std::fs::read_to_string( &path )
-  {
-    Ok( s )  => s,
-    Err( _ ) => return ( String::new(), String::new() ),
-  };
+  let Ok( text ) = std::fs::read_to_string( &path ) else { return ( String::new(), String::new() ) };
   let host = crate::account::parse_string_field( &text, "host" ).unwrap_or_default();
   let role = crate::account::parse_string_field( &text, "role" ).unwrap_or_default();
   ( host, role )
+}
+
+/// Read `_renewal_at` from `{name}.claude.json` in the credential store.
+///
+/// Returns `None` when the file is absent or `_renewal_at` is missing/unparseable.
+/// The field is written by `.account.renewal` and must survive round-trips through `save()`.
+fn read_renewal_at( credential_store : &std::path::Path, name : &str ) -> Option< String >
+{
+  let path = credential_store.join( format!( "{name}.claude.json" ) );
+  let text = std::fs::read_to_string( &path ).ok()?;
+  crate::account::parse_string_field( &text, "_renewal_at" )
 }
 
 // ── Numeric JSON field parsers ────────────────────────────────────────────────
@@ -355,6 +365,7 @@ mod tests
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     };
     let mut results = vec![ stored_row ];
 
@@ -368,6 +379,7 @@ mod tests
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     };
 
     // Fix(BUG-218): guarded injection — only insert when name is absent from results.

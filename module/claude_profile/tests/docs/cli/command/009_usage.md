@@ -79,6 +79,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 | IT-70 | `.usage.help` lists `imodel` and `effort` params with default `auto` | Help Output |
 | IT-71 | `→ Next` column shows soonest upcoming event label + duration | Next Event Column |
 | IT-72 | `format::json` new fields: `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | JSON Schema |
+| IT-73 | 429 rate-limit error — `~Renews` retains billing date (not error reason) | ~Renews Preservation |
 
 ### Test Coverage Summary
 
@@ -119,8 +120,9 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - imodel Param: 2 tests (IT-66, IT-67)
 - effort Param: 2 tests (IT-68, IT-69)
 - Next Event Column: 1 test (IT-71)
+- ~Renews Preservation: 1 test (IT-73)
 
-**Total:** 84 spec entries (IT-1 through IT-72); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
+**Total:** 85 spec entries (IT-1 through IT-73); IT-65 added for `sort::next`; IT-66–IT-70 added by TSK-191 (`imodel::`/`effort::` params and `touch::` default `1`); IT-71–IT-72 added by Plan 012 (`→ Next` column and JSON new fields); IT-73 added by Plan 013 (BUG-220 `~Renews` preservation); source functions it17–it33 map to spec IT-18–IT-34; it34/it35/it36 map to IT-35/IT-36/IT-37; it37 maps to IT-38; it38 maps to IT-39; IT-17 covered by `ft002_lim_it_http_401_shortens_to_auth_expired` in `usage_feature_test.rs` (live network test; kept in feature test file to avoid duplication with FT-02); it39–it52 covered by param spec docs `tests/docs/cli/param/019_refresh.md`–`023_trace.md` (param EC edge cases, not command spec)
 
 ---
 
@@ -549,7 +551,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage`
 - **Then:** Exits 0. Stdout contains `"●"` (the status emoji column header).
 - **Exit:** 0
-- **Source fn:** ⏳ `it146_status_emoji_column_header_present`
+- **Source fn:** `it148_status_emoji_column_header_present`
 - **Source:** [009_token_usage.md AC-18](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -560,7 +562,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage`
 - **Then:** Exits 0. Stdout contains `"🔴"`.
 - **Exit:** 0
-- **Source fn:** ⏳ `it147_status_emoji_red_on_token_error`
+- **Source fn:** `it149_status_emoji_red_on_token_error`
 - **Source:** [009_token_usage.md AC-18](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -571,7 +573,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `clp .usage format::json`
 - **Then:** Exits 0. Stdout does NOT contain `"🔴"`, `"🟡"`, or `"🟢"`.
 - **Exit:** 0
-- **Source fn:** ⏳ `it148_status_emoji_absent_from_json`
+- **Source fn:** `it150_status_emoji_absent_from_json`
 - **Source:** [009_token_usage.md AC-20](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -585,7 +587,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **When:** `status_emoji(&Ok(data_a))`, `status_emoji(&Ok(data_b))`, `status_emoji(&Ok(data_c))`
 - **Then:** A returns `"🟡"`; B returns `"🟢"`; C returns `"🟡"`. Composite AND: `5h Left > 15.0%` and `7d Left > 5.0%` required for `🟢`.
 - **Exit:** n/a (unit test)
-- **Source fn:** ⏳ `it149_status_emoji_boundary_precision`
+- **Source fn:** `it151_status_emoji_boundary_precision`
 - **Source:** [009_token_usage.md AC-19](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -919,3 +921,22 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Live:** yes
 - **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/009_token_usage.md AC-29](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### IT-73: 429 rate-limit error — `~Renews` retains billing date (not error reason)
+
+- **Given (unit test):** An `AccountQuota` constructed with:
+  - `result = Err("rate limited (429)")` — quota API failed with 429
+  - `account = Some(OauthAccountData { org_created_at: "1970-01-15T00:00:00Z", billing_type: "stripe_subscription", has_max: true })` — account data fetched independently, unaffected by the 429 on the usage API
+  - `expires_at_ms = FAR_FUTURE_MS` — non-expired token
+  - Default `ColsVisibility` (renews ON; host and role OFF)
+  - `now_secs` fixed such that `next_billing_label("1970-01-15T00:00:00Z", now_secs)` returns a known date string (not `"?"`)
+- **When:** The `AccountQuota` is rendered via both `render_text()` and `render_tsv()`.
+- **Then:**
+  - `render_tsv()`: the `~Renews` tab-separated field is NOT `(rate limited (429))` and is NOT `"?"`. It contains the billing date string from `OauthAccountData.org_created_at`.
+  - `render_text()`: the output contains `(rate limited (429))` in at least one quota column (`5h Left`–`7d Reset`); the `~Renews` cell does NOT contain `(rate limited (429))`.
+- **Exit:** n/a (unit test)
+- **Note:** Fix for BUG-220. `render_text()` used `last_mut()` positional overwrite that hit `~Renews` as the last pushed column; `render_tsv()` explicitly pushed `error_str` for the renews cell. Both were incorrect — `~Renews` is sourced from `OauthAccountData` independently of the quota fetch result.
+- **Source fn:** `mre_bug_220_renews_preserved_for_429_accounts` (in `src/usage/render.rs`)
+- **Source:** [feature/009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)

@@ -42,7 +42,7 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 - **When:** `clp .account.save name::test@example.com host::mybox role::work`
 - **Then:** Exits 0. `{credential_store}/test@example.com.profile.json` contains `{"host": "mybox", "role": "work"}`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as_save_writes_profile_json` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-01](../../../../docs/feature/029_account_host_metadata.md)
 
 ---

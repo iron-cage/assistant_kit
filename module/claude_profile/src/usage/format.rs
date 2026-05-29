@@ -79,39 +79,164 @@ pub( crate ) fn unix_to_date( unix_secs : u64 ) -> ( u64, u64, u64 )
   ( year, month + 1, days + 1 )
 }
 
-// ── Billing label ─────────────────────────────────────────────────────────────
+// ── ISO-8601 parsing helpers ──────────────────────────────────────────────────
 
-/// Format the estimated next billing renewal as `"Mon DD"` (e.g. `"Jun  5"`).
+/// Convert a `(year, month, day)` tuple to Unix seconds at midnight UTC.
 ///
-/// Billing day is taken from `org_created_at` (ISO-8601 `"YYYY-MM-DD..."`).
-/// Returns em-dash if parsing fails or `org_created_at` is too short.
-pub( crate ) fn next_billing_label( org_created_at : &str, now_secs : u64 ) -> String
+/// Month is 1-based (1 = January). Day is 1-based. Assumes year ≥ 1970.
+fn date_to_unix( year : u64, month : u64, day : u64 ) -> u64
 {
-  const MONTHS : [ &str; 12 ] = [ "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ];
-  if org_created_at.len() < 10 { return "\u{2014}".to_string(); }
-  let billing_day : u64 = match org_created_at[ 8..10 ].parse()
+  let is_leap  = |y : u64| ( y % 4 == 0 && y % 100 != 0 ) || y % 400 == 0;
+  let mut days = 0_u64;
+  for y in 1970..year { days += if is_leap( y ) { 366 } else { 365 }; }
+  let feb        = if is_leap( year ) { 29 } else { 28 };
+  let month_days : [ u64; 12 ] = [ 31, feb, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
+  for &month_day in month_days.iter().take( usize::try_from( month - 1 ).unwrap_or( 0 ) ) { days += month_day; }
+  days += day - 1;
+  days * 86_400
+}
+
+/// Parse an ISO-8601 UTC timestamp (`"YYYY-MM-DDTHH:MM:SSZ"`) to Unix seconds.
+///
+/// Returns `None` on parse failure or year before 1970.
+fn parse_iso_secs( s : &str ) -> Option< u64 >
+{
+  if s.len() < 19 { return None; }
+  let year  : u64 = s[ 0..4   ].parse().ok()?;
+  let month : u64 = s[ 5..7   ].parse().ok()?;
+  let day   : u64 = s[ 8..10  ].parse().ok()?;
+  let hour  : u64 = s[ 11..13 ].parse().ok()?;
+  let min   : u64 = s[ 14..16 ].parse().ok()?;
+  let sec   : u64 = s[ 17..19 ].parse().ok()?;
+  if year < 1970 || month == 0 || month > 12 || day == 0 || day > 31 { return None; }
+  Some( date_to_unix( year, month, day ) + hour * 3_600 + min * 60 + sec )
+}
+
+// ── Renewal timing ─────────────────────────────────────────────────────────────
+
+/// Compute seconds until the next billing renewal and whether the value is an estimate.
+///
+/// Priority:
+/// 1. **Exact** (`renewal_at_opt` set): parse the ISO-8601 string; auto-advance monthly
+///    (+ 2 592 000 s per step) until the timestamp is in the future; return `(secs, false)`.
+/// 2. **Estimate** (`org_created_at_opt` set): derive the billing day-of-month from the
+///    `org_created_at` string and find the next occurrence; return `(secs, true)`.
+/// 3. **Absent** (both `None`) or parse failure: return `None`.
+pub( crate ) fn renewal_secs(
+  renewal_at_opt     : Option< &str >,
+  org_created_at_opt : Option< &str >,
+  now_secs           : u64,
+) -> Option< ( u64, bool ) >
+{
+  if let Some( renewal_at ) = renewal_at_opt
   {
-    Ok( d ) => d,
-    Err( _ ) => return "\u{2014}".to_string(),
-  };
-  if billing_day == 0 || billing_day > 31 { return "\u{2014}".to_string(); }
-  let ( _, current_month, current_day ) = unix_to_date( now_secs );
-  let renewal_month = if billing_day > current_day
-  {
-    current_month
+    let mut ts = parse_iso_secs( renewal_at )?;
+    while ts < now_secs { ts = ts.saturating_add( 2_592_000 ); }
+    return Some( ( ts.saturating_sub( now_secs ), false ) );
   }
-  else if current_month == 12
+  if let Some( org_created_at ) = org_created_at_opt
   {
-    1
+    if org_created_at.len() < 10 { return None; }
+    let billing_day : u64 = org_created_at[ 8..10 ].parse().ok()?;
+    if billing_day == 0 || billing_day > 31 { return None; }
+    let ( year, month, day ) = unix_to_date( now_secs );
+    let ( renewal_year, renewal_month ) = if billing_day > day
+    {
+      ( year, month )
+    }
+    else if month == 12
+    {
+      ( year + 1, 1 )
+    }
+    else
+    {
+      ( year, month + 1 )
+    };
+    let renewal_ts = date_to_unix( renewal_year, renewal_month, billing_day );
+    return Some( ( renewal_ts.saturating_sub( now_secs ), true ) );
   }
-  else
+  None
+}
+
+/// Format the next billing renewal as a duration string.
+///
+/// - Both absent → `"?"`.
+/// - Parse failure → `"—"` (em-dash).
+/// - Exact (`_renewal_at` set, auto-advanced) → `"in Xh Ym"` (no `~`).
+/// - Estimate (only `org_created_at`) → `"~in Xd"`.
+pub( crate ) fn renews_label(
+  renewal_at_opt     : Option< &str >,
+  org_created_at_opt : Option< &str >,
+  now_secs           : u64,
+) -> String
+{
+  if renewal_at_opt.is_none() && org_created_at_opt.is_none()
   {
-    current_month + 1
+    return "?".to_string();
+  }
+  match renewal_secs( renewal_at_opt, org_created_at_opt, now_secs )
+  {
+    None                    => "\u{2014}".to_string(),
+    Some( ( secs, false ) ) => format!( "in {}",  format_duration_secs( secs ) ),
+    Some( ( secs, true  ) ) => format!( "~in {}", format_duration_secs( secs ) ),
+  }
+}
+
+// ── Next event label ─────────────────────────────────────────────────────────
+
+/// Return the winning next-event candidate as `(secs, prefix, is_estimate)`.
+///
+/// Candidates with `secs == 0` are excluded. Minimum-secs wins; ties by iteration order.
+/// Prefixes: `"!tok"` (token expiry), `"+5h"` (5h reset), `"+7d"` (7d reset), `"$ren"` (renewal).
+pub( crate ) fn next_event_raw(
+  expires_in_secs       : u64,
+  five_hour_resets_secs : Option< u64 >,
+  seven_day_resets_secs : Option< u64 >,
+  renewal_secs_opt      : Option< u64 >,
+  renewal_is_estimate   : bool,
+) -> Option< ( u64, &'static str, bool ) >
+{
+  let consider = |current : Option< ( u64, &'static str, bool ) >,
+                  secs    : u64,
+                  prefix  : &'static str,
+                  est     : bool|
+    -> Option< ( u64, &'static str, bool ) >
+  {
+    if secs == 0 { return current; }
+    match current
+    {
+      None                                   => Some( ( secs, prefix, est ) ),
+      Some( ( best, _, _ ) ) if secs < best => Some( ( secs, prefix, est ) ),
+      other                                  => other,
+    }
   };
-  #[ allow( clippy::cast_possible_truncation ) ] // renewal_month is always 1–12; cast to usize is safe
-  let month_name = MONTHS[ ( renewal_month - 1 ) as usize ];
-  format!( "{month_name} {billing_day:2}" )
+  let mut best = consider( None,  expires_in_secs,   "!tok", false               );
+  if let Some( s ) = five_hour_resets_secs { best = consider( best, s, "+5h",  false               ); }
+  if let Some( s ) = seven_day_resets_secs { best = consider( best, s, "+7d",  false               ); }
+  if let Some( s ) = renewal_secs_opt      { best = consider( best, s, "$ren", renewal_is_estimate ); }
+  best
+}
+
+/// Format the soonest upcoming event as a compact label for the `→ Next` column.
+///
+/// All absent / zero → `"—"` (em-dash). Estimate renewal → `"$ren ~in Xd"`.
+pub( crate ) fn next_event_label(
+  expires_in_secs       : u64,
+  five_hour_resets_secs : Option< u64 >,
+  seven_day_resets_secs : Option< u64 >,
+  renewal_secs_opt      : Option< u64 >,
+  renewal_is_estimate   : bool,
+) -> String
+{
+  match next_event_raw(
+    expires_in_secs, five_hour_resets_secs, seven_day_resets_secs,
+    renewal_secs_opt, renewal_is_estimate,
+  )
+  {
+    None                             => "\u{2014}".to_string(),
+    Some( ( secs, prefix, true  ) ) => format!( "{prefix} ~in {}", format_duration_secs( secs ) ),
+    Some( ( secs, prefix, false ) ) => format!( "{prefix} in {}",  format_duration_secs( secs ) ),
+  }
 }
 
 // ── Subscription label ────────────────────────────────────────────────────────
@@ -551,6 +676,26 @@ mod tests
     assert_eq!( status_emoji( &aq.result ), "🟡", "5h=15% and 7d=5% → 🟡 (neither > threshold)" );
   }
 
+  /// IT-43 — Exact boundary precision: each threshold tested independently.
+  ///
+  /// Composite AND: `5h_left > 15.0%` AND `7d_left > 5.0%` required for 🟢.
+  ///
+  /// - A: `h5_util=85.0` (5h_left=15.0%, at threshold) → 🟡; 7d is ample.
+  /// - B: `h5_util=84.9` (5h_left=15.1%, just above) → 🟢; 7d is ample.
+  /// - C: `d7_util=95.0` (7d_left=5.0%, at threshold) → 🟡; 5h is ample.
+  ///
+  /// Source: [`009_token_usage.md` AC-19](../../docs/feature/009_token_usage.md)
+  #[ test ]
+  fn it151_status_emoji_boundary_precision()
+  {
+    let aq_a = mk_aq_ok_both( 85.0, 50.0 );
+    let aq_b = mk_aq_ok_both( 84.9, 50.0 );
+    let aq_c = mk_aq_ok_both( 50.0, 95.0 );
+    assert_eq!( status_emoji( &aq_a.result ), "🟡", "A: 5h=15.0% (at threshold) → 🟡" );
+    assert_eq!( status_emoji( &aq_b.result ), "🟢", "B: 5h=15.1% (just above) → 🟢" );
+    assert_eq!( status_emoji( &aq_c.result ), "🟡", "C: 7d=5.0% (at threshold) → 🟡" );
+  }
+
   // ── status_emoji with absent period data ──────────────────────────────────
 
   /// SE-7 — `five_hour=None` treated as 100% left → 🟢 (conservative, 0% utilised).
@@ -650,6 +795,161 @@ mod tests
     // Pct C: util=85.0 → exactly 15% left (≤ 15%) → 🟡 (boundary inclusive)
     let cells_c = quota_text_cells( &mk_5h( 85.0 ), 0 );
     assert_eq!( cells_c[ 0 ], "🟡 15%", "Pct C (exactly 15% left) must have 🟡 prefix — boundary inclusive (FT-11/009)" );
+  }
+
+  // ── renews_label (Phase 3 RED gate — TSK-227) ─────────────────────────────
+
+  /// FT-17 — `renews_label` exact: `_renewal_at` set, result has no `~` prefix.
+  ///
+  /// `renewal_at = "2030-01-01T03:47:00Z"` (unix `1_893_469_620`);
+  /// `now_secs = 1_893_456_000` (2030-01-01T00:00:00Z) → delta = 13620s = 3h 47m.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-17]
+  /// Source: [`009_token_usage.md` AC-27]
+  #[ test ]
+  fn rl_exact_from_renewal_at()
+  {
+    let now_secs = 1_893_456_000_u64;
+    let result   = renews_label( Some( "2030-01-01T03:47:00Z" ), None, now_secs );
+    assert_eq!(
+      result, "in 3h 47m",
+      "exact _renewal_at must produce 'in 3h 47m' (no ~ prefix), got: {result}",
+    );
+  }
+
+  /// FT-17 variant — `renews_label` estimate: only `org_created_at` available.
+  ///
+  /// Billing day = 15; now = 2030-01-01 (day 1) → next billing Jan 15 = 14 days away.
+  /// Result must start with `"~in "` (estimate prefix).
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-17]
+  /// Source: [`009_token_usage.md` AC-27]
+  #[ test ]
+  fn rl_estimate_from_org_created_at()
+  {
+    let now_secs = 1_893_456_000_u64;
+    let result   = renews_label( None, Some( "2025-01-15T00:00:00Z" ), now_secs );
+    assert!(
+      result.starts_with( "~in " ),
+      "estimate must start with '~in ', got: {result}",
+    );
+    assert!(
+      result.contains( 'd' ),
+      "estimate must include days unit, got: {result}",
+    );
+  }
+
+  /// FT-17 variant — `renews_label` auto-advance: past `_renewal_at` advanced monthly.
+  ///
+  /// `renewal_at = "2020-01-01T00:00:00Z"` (unix `1_577_836_800`);
+  /// `now_secs = 1_893_456_000` (2030-01-01). After 122 × 30d increments the
+  /// timestamp lands ~7 days ahead of now. Result must start `"in "` (no `~`).
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-17]
+  /// Source: [`009_token_usage.md` AC-27]
+  #[ test ]
+  fn rl_auto_advance_past_renewal_at()
+  {
+    let now_secs = 1_893_456_000_u64;
+    let result   = renews_label( Some( "2020-01-01T00:00:00Z" ), None, now_secs );
+    assert!(
+      result.starts_with( "in " ),
+      "auto-advanced _renewal_at must start with 'in ' (no ~ prefix), got: {result}",
+    );
+    // Must be ≤ 30 days from now (one advance step).
+    assert!(
+      !result.contains( "31d" ) && !result.contains( "32d" ),
+      "auto-advance must land within 30d of now, got: {result}",
+    );
+  }
+
+  /// FT-17 variant — `renews_label` absent: both sources absent → `"?"`.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-17]
+  /// Source: [`009_token_usage.md` AC-27]
+  #[ test ]
+  fn rl_absent_returns_question()
+  {
+    let result = renews_label( None, None, 1_893_456_000 );
+    assert_eq!( result, "?", "both absent must return '?', got: {result}" );
+  }
+
+  // ── next_event_label (Phase 3 RED gate — TSK-227) ─────────────────────────
+
+  /// FT-18 — `next_event_label`: token expiry soonest → `"!tok in 2h"`.
+  ///
+  /// `expires_in_secs=7200` (2h), `5h_reset=Some(14400)` (4h), others absent.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
+  /// Source: [`009_token_usage.md` AC-28]
+  #[ test ]
+  fn ne_tok_soonest()
+  {
+    let result = next_event_label( 7200, Some( 14400 ), None, None, false );
+    assert_eq!( result, "!tok in 2h", "token soonest → '!tok in 2h', got: {result}" );
+  }
+
+  /// FT-18 variant — `next_event_label`: 5h reset soonest → `"+5h in 30m"`.
+  ///
+  /// `expires_in_secs=7200`, `5h_reset=Some(1800)` (30m), others absent.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
+  /// Source: [`009_token_usage.md` AC-28]
+  #[ test ]
+  fn ne_5h_soonest()
+  {
+    let result = next_event_label( 7200, Some( 1800 ), None, None, false );
+    assert_eq!( result, "+5h in 30m", "5h reset soonest → '+5h in 30m', got: {result}" );
+  }
+
+  /// FT-18 variant — `next_event_label`: 7d reset soonest → `"+7d in 2d"`.
+  ///
+  /// `expires_in_secs=10d`, `5h_reset=Some(5d)`, `7d_reset=Some(2d)`, `renewal=None`.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
+  /// Source: [`009_token_usage.md` AC-28]
+  #[ test ]
+  fn ne_7d_soonest()
+  {
+    let result = next_event_label( 10 * 86400, Some( 5 * 86400 ), Some( 2 * 86400 ), None, false );
+    assert_eq!( result, "+7d in 2d", "7d reset soonest → '+7d in 2d', got: {result}" );
+  }
+
+  /// FT-18 variant — `next_event_label`: exact billing renewal soonest → `"$ren in 6h"`.
+  ///
+  /// `expires_in_secs=1d`, `5h_reset=Some(1d)`, `renewal=Some(21600)` (6h), `is_estimate=false`.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
+  /// Source: [`009_token_usage.md` AC-28]
+  #[ test ]
+  fn ne_renewal_soonest_exact()
+  {
+    let result = next_event_label( 86400, Some( 86400 ), None, Some( 21600 ), false );
+    assert_eq!( result, "$ren in 6h", "exact renewal soonest → '$ren in 6h', got: {result}" );
+  }
+
+  /// FT-18 variant — `next_event_label`: estimated billing renewal soonest → `"$ren ~in 3d"`.
+  ///
+  /// `expires_in_secs=10d`, others absent, `renewal=Some(3d)`, `is_estimate=true`.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
+  /// Source: [`009_token_usage.md` AC-28]
+  #[ test ]
+  fn ne_renewal_soonest_estimate()
+  {
+    let result = next_event_label( 10 * 86400, None, None, Some( 3 * 86400 ), true );
+    assert_eq!( result, "$ren ~in 3d", "estimate renewal soonest → '$ren ~in 3d', got: {result}" );
+  }
+
+  /// FT-18 variant — `next_event_label`: all sources absent or zero → em-dash.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
+  /// Source: [`009_token_usage.md` AC-28]
+  #[ test ]
+  fn ne_all_none_returns_dash()
+  {
+    let result = next_event_label( 0, None, None, None, false );
+    assert_eq!( result, "\u{2014}", "all absent → em-dash, got: {result}" );
   }
 
 }

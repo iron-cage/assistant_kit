@@ -321,6 +321,51 @@ pub fn write_account_roles_json(
   std::fs::write( credential_store.join( format!( "{name}.roles.json" ) ), content ).unwrap();
 }
 
+/// Write `{credential_store}/{name}.profile.json` with host and role metadata.
+///
+/// Used to pre-populate host/role fields for `.usage cols::+host` / `.usage cols::+role` tests
+/// and for `.accounts host::1 role::1` display tests.
+/// Mirrors the format written by `account::save()` when `host::` / `role::` params are supplied.
+///
+/// Pass `None` to omit a field entirely from the JSON.
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_account_profile_json(
+  home : &std::path::Path,
+  name : &str,
+  host : Option< &str >,
+  role : Option< &str >,
+)
+{
+  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  let mut fields = Vec::new();
+  if let Some( h ) = host { fields.push( format!( r#""host":"{h}""# ) ); }
+  if let Some( r ) = role { fields.push( format!( r#""role":"{r}""# ) ); }
+  let content = format!( "{{{}}}", fields.join( "," ) );
+  std::fs::write( credential_store.join( format!( "{name}.profile.json" ) ), content ).unwrap();
+}
+
+/// Write `{credential_store}/{name}.claude.json` containing only `_renewal_at`.
+///
+/// Used to pre-populate renewal override tests without touching `oauthAccount`.
+/// The file is created as `{"_renewal_at":"<iso_ts>"}`.
+///
+/// # Panics
+///
+/// Panics if the directory or file cannot be created.
+#[ inline ]
+pub fn write_account_renewal_json( home : &std::path::Path, name : &str, renewal_at_iso : &str )
+{
+  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  let content = format!( r#"{{"_renewal_at":"{renewal_at_iso}"}}"# );
+  std::fs::write( credential_store.join( format!( "{name}.claude.json" ) ), content ).unwrap();
+}
+
 /// Check whether an account credential file exists.
 #[ inline ]
 #[ must_use ]

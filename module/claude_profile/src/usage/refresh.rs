@@ -207,6 +207,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
 
@@ -238,6 +239,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -264,6 +266,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -306,6 +309,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -334,6 +338,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -367,6 +372,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
       AccountQuota
       {
@@ -378,6 +384,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
       AccountQuota
       {
@@ -389,6 +396,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
       AccountQuota
       {
@@ -400,6 +408,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
 
@@ -439,6 +448,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -490,6 +500,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
 
@@ -565,6 +576,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
 
@@ -606,6 +618,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -641,6 +654,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
 
@@ -682,6 +696,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -733,6 +748,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
     // Must not panic — switch_account fails (no cred file), trace logs to stderr.
@@ -854,6 +870,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
     // Must not panic — switch_account succeeds; run_isolated invoked; fails fast (fake creds).
@@ -881,6 +898,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
 
@@ -917,6 +935,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
 
@@ -1034,6 +1053,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       },
     ];
 
@@ -1072,6 +1092,7 @@ mod tests
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     };
     assert!( should_refresh( &aq, 0 ), "401 must trigger refresh" );
   }
@@ -1090,6 +1111,7 @@ mod tests
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     };
     assert!( should_refresh( &aq, 0 ), "403 must trigger refresh" );
   }
@@ -1112,6 +1134,7 @@ mod tests
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     };
     assert!(
       should_refresh( &aq, 9_999 ),
@@ -1136,6 +1159,7 @@ mod tests
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     };
     assert!(
       !should_refresh( &aq, 0 ),
@@ -1160,6 +1184,7 @@ mod tests
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     };
     assert!(
       should_refresh( &aq, 5 ),
@@ -1184,6 +1209,7 @@ mod tests
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     };
     assert!(
       !should_refresh( &aq, 5 ),
@@ -1206,6 +1232,7 @@ mod tests
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     };
     assert!( !should_refresh( &aq, 9_999 ), "Ok result must not trigger refresh" );
   }
@@ -1224,6 +1251,7 @@ mod tests
       account       : None,
       host          : String::new(),
       role          : String::new(),
+      renewal_at    : None,
     };
     assert!( !should_refresh( &aq, 9_999 ), "generic error must not trigger refresh" );
   }

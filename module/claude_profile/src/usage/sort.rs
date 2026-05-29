@@ -482,6 +482,7 @@ mod tests
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       }
     };
     let accounts = vec![
@@ -836,6 +837,7 @@ mod tests
         account : None,
         host    : String::new(),
         role    : String::new(),
+        renewal_at    : None,
       }
     };
 
@@ -894,6 +896,7 @@ mod tests
       name : "test@example.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
+      renewal_at    : None,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -923,6 +926,7 @@ mod tests
       name : "test@example.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
+      renewal_at    : None,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Sonnet, now );
@@ -951,6 +955,7 @@ mod tests
       name : "test@example.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
+      renewal_at    : None,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Opus, now );
@@ -975,6 +980,7 @@ mod tests
       name : "test@example.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
+      renewal_at    : None,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -1030,6 +1036,7 @@ mod tests
       name : "son_binding@test.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 86400 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
+      renewal_at    : None,
     };
 
     let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -1078,6 +1085,7 @@ mod tests
       name : "7d_binding@test.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 86400 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
+      renewal_at    : None,
     };
 
     let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );

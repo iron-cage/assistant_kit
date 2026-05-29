@@ -132,13 +132,72 @@
 //! | it144 | `it144_effort_normal_accepted_empty_store_exits_0`  | `effort::normal` accepted; empty store exits 0 (EC-11 / 036) | P | no |
 //! | it145 | `it145_lim_it_next_renew_places_arrow_on_soonest_refill` | `next::renew` → exit 0, footer shows renew line, `→` placed on winning account (TSK-222) | P | yes |
 //! | ut146 | `ut_filter_only_valid_hides_red_rows`                | `only_valid::1` accepted; empty store exits 0 (TSK-223 RED gate) | P | no |
+//! | it146 | `it146_next_column_visible_by_default`              | `.usage` with account → `→ Next` header visible in default output (FT-18/AC-28) | P | no |
+//! | it147 | `it147_json_renewal_secs_present`                   | `.usage format::json` → JSON has `renewal_secs`, not `next_renewal_est` (FT-19/AC-29) | P | no |
+//! | it148 | `it148_status_emoji_column_header_present`          | `●` header always present (AC-18) | P | no |
+//! | it149 | `it149_status_emoji_red_on_token_error`             | No accessToken → 🔴 in table row (AC-18) | P | no |
+//! | it150 | `it150_status_emoji_absent_from_json`               | `format::json` output has no emoji (AC-20) | P | no |
+//! | it151 | `it151_past_renewal_at_auto_advances_in_usage`      | Past `_renewal_at` auto-advanced monthly at render → `in Xd` no `~` (030 FT-10/AC-10) | P | no |
+//! | it152 | `it152_tsv_next_column_present`                     | `format::tsv` has `next` column header (AC-28) | P | no |
+//! | it153 | `it153_json_all_renewal_fields_present`             | `format::json` has all 4 renewal fields including `next_event_type` and `next_event_secs` (FT-19) | P | no |
+//! | it154 | `it154_only_active_1_shows_active_account_row`      | `only_active::1` shows exactly 1 row — the active account (039 EC-1, 028 FT-03) | P | no |
+//! | it155 | `it155_only_active_0_shows_all_rows`                | `only_active::0` shows all rows (039 EC-2) | P | no |
+//! | it156 | `it156_only_active_bad_exits_1`                     | `only_active::bad` exits 1 naming valid values (039 EC-3) | N | no |
+//! | it157 | `it157_only_active_1_no_active_marker_shows_empty`  | `only_active::1` with no active marker → 0 rows (039 EC-4) | P | no |
+//! | it158 | `it158_only_active_true_accepted`                   | `only_active::true` accepted as alias for 1 (039 EC-5) | P | no |
+//! | it159 | `it159_only_active_false_shows_all_rows`            | `only_active::false` accepted, shows all rows (039 EC-6) | P | no |
+//! | it160 | `it160_only_next_1_no_valid_accounts_shows_empty`   | `only_next::1` with all error accounts → 0 rows (040 EC-2 offline) | P | no |
+//! | it161 | `it161_only_next_bad_exits_1`                       | `only_next::bad` exits 1 naming valid values (040 EC-4) | N | no |
+//! | it162 | `it162_only_next_0_shows_all_rows`                  | `only_next::0` shows all rows (040 EC-5) | P | no |
+//! | it163 | `it163_min_5h_0_shows_all_rows`                     | `min_5h::0` shows all rows (041 EC-3) | P | no |
+//! | it164 | `it164_min_5h_abc_exits_1`                          | `min_5h::abc` exits 1 type error (041 EC-4) | N | no |
+//! | it165 | `it165_min_5h_101_exits_1`                          | `min_5h::101` exits 1 out of range (041 EC-5) | N | no |
+//! | it166 | `it166_min_7d_0_shows_all_rows`                     | `min_7d::0` shows all rows (042 EC-3) | P | no |
+//! | it167 | `it167_min_7d_abc_exits_1`                          | `min_7d::abc` exits 1 type error (042 EC-4) | N | no |
+//! | it168 | `it168_min_7d_101_exits_1`                          | `min_7d::101` exits 1 out of range (042 EC-5) | N | no |
+//! | it169 | `it169_only_valid_0_shows_all_rows`                 | `only_valid::0` shows all rows (043 EC-2) | P | no |
+//! | it170 | `it170_only_valid_bad_exits_1`                      | `only_valid::bad` exits 1 naming valid values (043 EC-3) | N | no |
+//! | it171 | `it171_only_valid_1_all_red_shows_empty`            | `only_valid::1` with all 🔴 → 0 rows (043 EC-4, 028 FT-07) | P | no |
+//! | it172 | `it172_only_valid_true_accepted`                    | `only_valid::true` accepted (043 EC-5) | P | no |
+//! | it173 | `it173_only_valid_false_shows_all_rows`             | `only_valid::false` shows all rows (043 EC-6) | P | no |
+//! | it174 | `it174_exclude_exhausted_0_shows_all_rows`          | `exclude_exhausted::0` shows all rows (044 EC-2) | P | no |
+//! | it175 | `it175_exclude_exhausted_bad_exits_1`               | `exclude_exhausted::bad` exits 1 (044 EC-4) | N | no |
+//! | it176 | `it176_exclude_exhausted_1_all_red_shows_empty`     | `exclude_exhausted::1` with all 🔴 → 0 rows (044 EC-5, 028 FT-08) | P | no |
+//! | it177 | `it177_exclude_exhausted_true_accepted`             | `exclude_exhausted::true` accepted (044 EC-6) | P | no |
+//! | it178 | `it178_count_3_shows_first_3_rows`                  | `count::3 sort::name` with 5 accounts shows first 3 alphabetically (037 EC-1) | P | no |
+//! | it179 | `it179_count_0_shows_all_rows`                      | `count::0` shows all 3 rows (037 EC-2) | P | no |
+//! | it180 | `it180_count_100_exceeding_shows_all`               | `count::100` with 2 accounts shows both (037 EC-3) | P | no |
+//! | it181 | `it181_count_abc_exits_1`                           | `count::abc` exits 1 type error (037 EC-4) | N | no |
+//! | it182 | `it182_count_1_sort_name_shows_only_first`          | `count::1 sort::name` with 3 accounts shows only first (037 EC-5) | P | no |
+//! | it183 | `it183_count_minus_1_exits_1`                       | `count::-1` exits 1 negative rejected (037 EC-6) | N | no |
+//! | it184 | `it184_offset_2_skips_first_2_rows`                 | `offset::2 sort::name` with 4 accounts shows rows 3-4 (038 EC-1) | P | no |
+//! | it185 | `it185_offset_0_shows_all_rows`                     | `offset::0` shows all rows (038 EC-2) | P | no |
+//! | it186 | `it186_offset_99_shows_empty`                       | `offset::99` with 2 accounts → 0 rows (038 EC-3) | P | no |
+//! | it187 | `it187_offset_abc_exits_1`                          | `offset::abc` exits 1 type error (038 EC-4) | N | no |
+//! | it188 | `it188_offset_1_count_1_shows_second_row`           | `offset::1 count::1 sort::name` shows second row (038 EC-5) | P | no |
+//! | it189 | `it189_offset_minus_1_exits_1`                      | `offset::-1` exits 1 negative rejected (038 EC-6) | N | no |
+//! | it190 | `it190_get_account_extracts_first_name`             | `get::account sort::name` extracts first account name bare (045 EC-2) | P | no |
+//! | it191 | `it191_get_account_no_table_chrome`                 | `get::account` output has no column headers or footer (045 EC-6) | P | no |
+//! | it192 | `it192_get_status_err_on_error_account`             | `get::status` on error account outputs `🔴` bare (045 EC-3 offline) | P | no |
+//! | it193 | `it193_get_with_empty_filtered_result_empty_stdout` | `only_valid::1 get::account` with all-error → empty stdout (045 EC-4) | P | no |
+//! | it194 | `it194_abs_1_accepted_empty_store`                  | `abs::1` accepted with empty store → exits 0 (046 EC-1) | P | no |
+//! | it195 | `it195_abs_0_accepted`                              | `abs::0` accepted → exits 0 (046 EC-2) | P | no |
+//! | it196 | `it196_abs_bad_exits_1`                             | `abs::bad` exits 1 naming valid values (046 EC-3) | N | no |
+//! | it197 | `it197_abs_1_on_error_row`                          | `abs::1` on error row shows error unchanged (046 EC-5) | P | no |
+//! | it198 | `it198_no_color_1_no_emoji_in_output`               | `no_color::1` on error account → no emoji in stdout (047 EC-1) | P | no |
+//! | it199 | `it199_no_color_1_status_shows_err_text_label`      | `no_color::1` status column shows `err` text label (047 EC-2) | P | no |
+//! | it200 | `it200_no_color_bad_exits_1`                        | `no_color::bad` exits 1 naming valid values (047 EC-4) | N | no |
+//! | it201 | `it201_no_color_true_accepted`                      | `no_color::true` accepted as alias for 1 (047 EC-6) | P | no |
+//! | it202 | `it202_cols_host_shows_host_column`                 | `cols::+host` shows Host header + profile host value (033 EC-7) | P | no |
+//! | it203 | `it203_cols_role_shows_role_column`                 | `cols::+role` shows Role header + profile role value (033 EC-8) | P | no |
+//! | it204 | `it204_cols_bogus_names_host_and_role_in_error`     | `cols::+bogus` exit 1 stderr names `host` and `role` (033 EC-9) | N | no |
 
 use crate::helpers::{
   BIN,
   run_cs, run_cs_with_env, run_cs_without_home, run_cs_bytes_for_secs,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token, write_claude_json, live_active_token,
-  write_live_credentials_with_token,
+  write_live_credentials_with_token, write_account_renewal_json, write_account_profile_json,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
@@ -2283,11 +2342,12 @@ fn it079_next_drain_default_no_arrow_without_valid_accounts()
   assert_exit( &out, 0 );
   let text = stdout( &out );
 
-  // No table row should contain the → Unicode arrow (U+2192).
-  let arrow_in_row = text.lines().any( |l| l.contains( '\u{2192}' ) );
+  // No table row should have → as its flag (first non-whitespace char).
+  // Note: the → Next column header also contains →, so we check flag position only.
+  let arrow_as_flag = text.lines().any( |l| l.trim_start().starts_with( '\u{2192}' ) );
   assert!(
-    !arrow_in_row,
-    "default next::renew: no eligible account → must not place → in any table row, got:\n{text}",
+    !arrow_as_flag,
+    "default next::renew: no eligible account → must not place → flag in any table row, got:\n{text}",
   );
 }
 
@@ -4088,5 +4148,1392 @@ fn ut_filter_only_valid_hides_red_rows()
   assert!(
     text.contains( "(no accounts configured)" ),
     "only_valid::1 with empty store must show no-accounts message, got:\n{text}",
+  );
+}
+
+// ── → Next column + JSON renewal fields (Phase 3 RED gate — TSK-227) ─────────
+
+/// it146 — `→ Next` column header visible in default `.usage` output.
+///
+/// Before TSK-227: `→ Next` column does not exist → assertion fails.
+/// After TSK-227:  `→ Next` header appears in every default table output.
+///
+/// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
+/// Source: [`009_token_usage.md` AC-28]
+#[ test ]
+fn it146_next_column_visible_by_default()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice", "max", "default", FAR_FUTURE_MS, true );
+
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "\u{2192} Next" ),
+    "default .usage output must contain '→ Next' column header (AC-28), got:\n{text}",
+  );
+}
+
+/// it147 — `format::json` output has all 4 renewal/next-event fields; deprecated field absent.
+///
+/// Before TSK-227: JSON uses `next_renewal_est` → `renewal_secs` assertion fails.
+/// After TSK-227:  JSON has `renewal_secs`, `renewal_is_estimate`, `next_event_type`,
+///                 `next_event_secs`; `next_renewal_est` is removed.
+///
+/// Spec: [`tests/docs/feature/009_token_usage.md` FT-19]
+/// Source: [`009_token_usage.md` AC-29]
+#[ test ]
+fn it147_json_renewal_secs_present()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice", "max", "default", FAR_FUTURE_MS, true );
+
+  let out  = run_cs_with_env( &[ ".usage", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // All four AC-29 fields must be present.
+  assert!(
+    text.contains( "\"renewal_secs\"" ),
+    "format::json must include 'renewal_secs' field (AC-29), got:\n{text}",
+  );
+  assert!(
+    text.contains( "\"renewal_is_estimate\"" ),
+    "format::json must include 'renewal_is_estimate' field (AC-29), got:\n{text}",
+  );
+  assert!(
+    text.contains( "\"next_event_type\"" ),
+    "format::json must include 'next_event_type' field (AC-29), got:\n{text}",
+  );
+  assert!(
+    text.contains( "\"next_event_secs\"" ),
+    "format::json must include 'next_event_secs' field (AC-29), got:\n{text}",
+  );
+  // Deprecated field must be gone.
+  assert!(
+    !text.contains( "\"next_renewal_est\"" ),
+    "format::json must NOT contain deprecated 'next_renewal_est' field, got:\n{text}",
+  );
+}
+
+// ── IT-40: Status emoji column header ─────────────────────────────────────────
+
+/// IT-40: Table header row contains `●` column label.
+///
+/// An account with no accessToken (error row) still causes the table to render;
+/// the `●` header is always present in the status emoji column.
+///
+/// Source: [`009_token_usage.md` AC-18](../docs/feature/009_token_usage.md)
+#[ test ]
+fn it148_status_emoji_column_header_present()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "no-token", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( '●' ),
+    "table header must contain '●' status emoji column label, got:\n{text}",
+  );
+}
+
+// ── IT-41: Error account shows 🔴 ─────────────────────────────────────────────
+
+/// IT-41: Account with missing token shows `🔴` in table row.
+///
+/// `write_account()` writes a credential file without `accessToken`; the
+/// fetch result is `Err(_)` → `status_emoji` returns `🔴`.
+///
+/// Source: [`009_token_usage.md` AC-18](../docs/feature/009_token_usage.md)
+#[ test ]
+fn it149_status_emoji_red_on_token_error()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "no-token", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "🔴" ),
+    "account without accessToken must show 🔴 in table row, got:\n{text}",
+  );
+}
+
+// ── IT-42: JSON output contains no status emoji ────────────────────────────────
+
+/// IT-42: `format::json` output does not contain status emoji.
+///
+/// Emoji are a table-rendering concern only; JSON output must be clean.
+///
+/// Source: [`009_token_usage.md` AC-20](../docs/feature/009_token_usage.md)
+#[ test ]
+fn it150_status_emoji_absent_from_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "no-token", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "🔴" ) && !text.contains( "🟡" ) && !text.contains( "🟢" ),
+    "format::json must NOT contain status emoji, got:\n{text}",
+  );
+}
+
+// ── it151: past _renewal_at auto-advances at render (030 FT-10) ──────────────
+
+/// it151 — Past `_renewal_at` is auto-advanced monthly at render; shows `in Xd` (no `~`).
+///
+/// Root Cause: `renews_label()` advances past timestamps by 30-day increments until future.
+/// The stored value is unchanged; auto-advance is a read-only render-time operation.
+///
+/// Setup: Account has `_renewal_at: "2020-03-15T00:00:00Z"` (deeply past). After auto-advance
+/// the next day-15 occurrence lands within 30 days of today. No live credentials needed —
+/// the account will be in error state but the `~Renews` column is populated from stored data.
+///
+/// Spec: [`tests/docs/feature/030_account_renewal_override.md` FT-10]
+/// Source: [`030_account_renewal_override.md` AC-10]
+#[ test ]
+fn it151_past_renewal_at_auto_advances_in_usage()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "past@renewal.com", "max", "default", FAR_FUTURE_MS, false );
+  write_account_renewal_json( dir.path(), "past@renewal.com", "2020-03-15T00:00:00Z" );
+
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  // Find the ~Renews cell for this account by locating the TSV equivalent or
+  // parsing the text table row that contains the account name.
+  // The column header is "~Renews". Find the row for our account.
+  let renews_line = text.lines()
+    .find( |l| l.contains( "past@renewal.com" ) )
+    .expect( "usage output must have a row for past@renewal.com" );
+
+  // The ~Renews column must show `in Xd` (no ~ prefix) because the timestamp is
+  // an exact override stored via `_renewal_at`, even after auto-advance.
+  // "in " prefix (no ~) and contains "d" for days.
+  assert!(
+    renews_line.contains( "in " ) && !renews_line.contains( "~in " ),
+    "past _renewal_at must auto-advance and show 'in Xd' (no '~'), got row:\n{renews_line}\nfull output:\n{text}",
+  );
+
+  // The file on disk must NOT have been modified — auto-advance is read-only.
+  let store   = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let on_disk = std::fs::read_to_string( store.join( "past@renewal.com.claude.json" ) ).unwrap();
+  assert!(
+    on_disk.contains( "2020-03-15T00:00:00Z" ),
+    "stored _renewal_at must NOT be modified by render-time auto-advance, got: {on_disk}",
+  );
+}
+
+// ── it152: TSV format has `next` column header (AC-28) ───────────────────────
+
+/// it152 — `format::tsv` output contains a `next` column header (→ Next column in text).
+///
+/// The TSV renderer emits `next` as the header for the `→ Next` column (AC-28).
+///
+/// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
+/// Source: [`009_token_usage.md` AC-28]
+#[ test ]
+fn it152_tsv_next_column_present()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "format::tsv" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  let header = text.lines().next().expect( "TSV must have a header row" );
+  let cols   : Vec< &str > = header.split( '\t' ).collect();
+  assert!(
+    cols.contains( &"next" ),
+    "TSV header must contain 'next' column (AC-28), got cols: {cols:?}",
+  );
+}
+
+// ── it153: JSON all 4 renewal fields with _renewal_at set ───────────────────
+
+/// it153 — `format::json` with `_renewal_at` set produces all 4 renewal fields with
+/// correct types: `renewal_secs` (integer), `renewal_is_estimate: false`,
+/// `next_event_type` (string), `next_event_secs` (integer).
+///
+/// Complements it147 (which checks field presence only); this test checks
+/// the semantic content when `_renewal_at` is explicitly set to a future timestamp.
+///
+/// Spec: [`tests/docs/feature/009_token_usage.md` FT-19]
+/// Source: [`009_token_usage.md` AC-29]
+#[ test ]
+fn it153_json_renewal_fields_with_renewal_at()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "alice", "max", "default", FAR_FUTURE_MS, false );
+  // Set a future _renewal_at so renewal_is_estimate=false and renewal_secs is a real integer.
+  write_account_renewal_json( dir.path(), "alice", "2099-01-01T00:00:00Z" );
+
+  let out  = run_cs_with_env( &[ ".usage", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  // renewal_is_estimate must be false (not true) because _renewal_at is set explicitly.
+  assert!(
+    text.contains( "\"renewal_is_estimate\":false" ),
+    "explicit _renewal_at must yield renewal_is_estimate:false, got:\n{text}",
+  );
+  // renewal_secs must be a non-null integer (not null).
+  assert!(
+    text.contains( "\"renewal_secs\":" ) && !text.contains( "\"renewal_secs\":null" ),
+    "explicit _renewal_at must yield non-null renewal_secs, got:\n{text}",
+  );
+  // next_event_type must be a string (not null).
+  assert!(
+    text.contains( "\"next_event_type\":" ) && !text.contains( "\"next_event_type\":null" ),
+    "with _renewal_at set, next_event_type must not be null, got:\n{text}",
+  );
+  // next_event_secs must be a non-null integer.
+  assert!(
+    text.contains( "\"next_event_secs\":" ) && !text.contains( "\"next_event_secs\":null" ),
+    "with _renewal_at set, next_event_secs must not be null, got:\n{text}",
+  );
+}
+
+// ── it154: only_active::1 shows exactly the active account row ────────────────
+
+/// it154 — `only_active::1` shows exactly the active account row; all others absent.
+///
+/// Uses 3 error accounts; one is marked active via the active marker file.
+/// No live token needed — `is_active` is set by the marker file alone.
+///
+/// Spec: [`tests/docs/cli/param/039_only_active.md` EC-1]
+/// Also: [`tests/docs/feature/028_usage_row_filtering.md` FT-03]
+#[ test ]
+fn it154_only_active_1_shows_active_account_row()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, true  ); // active
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "only_active::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "acct-b" ),
+    "only_active::1 must show the active account (acct-b), got:\n{text}",
+  );
+  assert!(
+    !text.contains( "acct-a" ),
+    "only_active::1 must hide non-active account (acct-a), got:\n{text}",
+  );
+  assert!(
+    !text.contains( "acct-c" ),
+    "only_active::1 must hide non-active account (acct-c), got:\n{text}",
+  );
+}
+
+// ── it155: only_active::0 shows all rows ─────────────────────────────────────
+
+/// it155 — `only_active::0` shows all rows (no filter applied).
+///
+/// Spec: [`tests/docs/cli/param/039_only_active.md` EC-2]
+#[ test ]
+fn it155_only_active_0_shows_all_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, true );
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "only_active::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ), "only_active::0 must show acct-a, got:\n{text}" );
+  assert!( text.contains( "acct-b" ), "only_active::0 must show acct-b, got:\n{text}" );
+  assert!( text.contains( "acct-c" ), "only_active::0 must show acct-c, got:\n{text}" );
+}
+
+// ── it156: only_active::bad exits 1 ──────────────────────────────────────────
+
+/// it156 — `only_active::bad` exits 1; stderr names valid values.
+///
+/// Spec: [`tests/docs/cli/param/039_only_active.md` EC-3]
+#[ test ]
+fn it156_only_active_bad_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "only_active::bad" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "0" ) && err.contains( "1" ),
+    "only_active::bad stderr must name valid values (0, 1), got:\n{err}",
+  );
+}
+
+// ── it157: only_active::1 with no active marker shows empty ──────────────────
+
+/// it157 — `only_active::1` with no active marker → 0 rows → "(no accounts configured)".
+///
+/// Three accounts, none is marked active. After `only_active::1` filter, all are retained
+/// only if `is_active`, which requires the marker file to name that account.
+///
+/// Spec: [`tests/docs/cli/param/039_only_active.md` EC-4]
+#[ test ]
+fn it157_only_active_1_no_active_marker_shows_empty()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // None of these has make_active=true → no active marker file
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "only_active::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "only_active::1 with no active account must show no-accounts message, got:\n{text}",
+  );
+}
+
+// ── it158: only_active::true accepted as alias for 1 ─────────────────────────
+
+/// it158 — `only_active::true` accepted as alias for 1; shows active account row.
+///
+/// Spec: [`tests/docs/cli/param/039_only_active.md` EC-5]
+#[ test ]
+fn it158_only_active_true_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, true );
+
+  let out  = run_cs_with_env( &[ ".usage", "only_active::true" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "acct-b" ),
+    "only_active::true must show active account (acct-b), got:\n{text}",
+  );
+  assert!(
+    !text.contains( "acct-a" ),
+    "only_active::true must hide non-active account (acct-a), got:\n{text}",
+  );
+}
+
+// ── it159: only_active::false shows all rows ──────────────────────────────────
+
+/// it159 — `only_active::false` accepted as alias for 0; shows all rows.
+///
+/// Spec: [`tests/docs/cli/param/039_only_active.md` EC-6]
+#[ test ]
+fn it159_only_active_false_shows_all_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, true );
+
+  let out  = run_cs_with_env( &[ ".usage", "only_active::false" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ), "only_active::false must show acct-a, got:\n{text}" );
+  assert!( text.contains( "acct-b" ), "only_active::false must show acct-b, got:\n{text}" );
+}
+
+// ── it160: only_next::1 with no valid accounts shows empty ────────────────────
+
+/// it160 — `only_next::1` with all error accounts (no valid quota) → 0 rows.
+///
+/// `find_next_for_strategy` requires `aq.result.is_ok()` to consider an account as a
+/// candidate. With all-error accounts, no candidate is found → accounts list becomes
+/// empty → "(no accounts configured)" shown.
+///
+/// Spec: [`tests/docs/cli/param/040_only_next.md` EC-2 offline substitute]
+#[ test ]
+fn it160_only_next_1_no_valid_accounts_shows_empty()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "only_next::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "only_next::1 with all-error accounts must show no-accounts message, got:\n{text}",
+  );
+}
+
+// ── it161: only_next::bad exits 1 ────────────────────────────────────────────
+
+/// it161 — `only_next::bad` exits 1; stderr names valid values.
+///
+/// Spec: [`tests/docs/cli/param/040_only_next.md` EC-4]
+#[ test ]
+fn it161_only_next_bad_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "only_next::bad" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "0" ) && err.contains( "1" ),
+    "only_next::bad stderr must name valid values, got:\n{err}",
+  );
+}
+
+// ── it162: only_next::0 shows all rows ───────────────────────────────────────
+
+/// it162 — `only_next::0` is the default (no filter); all rows shown.
+///
+/// Spec: [`tests/docs/cli/param/040_only_next.md` EC-5]
+#[ test ]
+fn it162_only_next_0_shows_all_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "only_next::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ), "only_next::0 must show acct-a, got:\n{text}" );
+  assert!( text.contains( "acct-b" ), "only_next::0 must show acct-b, got:\n{text}" );
+}
+
+// ── it163: min_5h::0 shows all rows ──────────────────────────────────────────
+
+/// it163 — `min_5h::0` disables the threshold filter; all rows shown.
+///
+/// Spec: [`tests/docs/cli/param/041_min_5h.md` EC-3]
+#[ test ]
+fn it163_min_5h_0_shows_all_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "min_5h::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ), "min_5h::0 must show acct-a, got:\n{text}" );
+}
+
+// ── it164: min_5h::abc exits 1 ───────────────────────────────────────────────
+
+/// it164 — `min_5h::abc` exits 1 with type error.
+///
+/// Spec: [`tests/docs/cli/param/041_min_5h.md` EC-4]
+#[ test ]
+fn it164_min_5h_abc_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "min_5h::abc" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+// ── it165: min_5h::101 exits 1 ───────────────────────────────────────────────
+
+/// it165 — `min_5h::101` exits 1 (value above 100% maximum).
+///
+/// Spec: [`tests/docs/cli/param/041_min_5h.md` EC-5]
+#[ test ]
+fn it165_min_5h_101_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "min_5h::101" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+// ── it166: min_7d::0 shows all rows ──────────────────────────────────────────
+
+/// it166 — `min_7d::0` disables the threshold filter; all rows shown.
+///
+/// Spec: [`tests/docs/cli/param/042_min_7d.md` EC-3]
+#[ test ]
+fn it166_min_7d_0_shows_all_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "min_7d::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ), "min_7d::0 must show acct-a, got:\n{text}" );
+}
+
+// ── it167: min_7d::abc exits 1 ───────────────────────────────────────────────
+
+/// it167 — `min_7d::abc` exits 1 with type error.
+///
+/// Spec: [`tests/docs/cli/param/042_min_7d.md` EC-4]
+#[ test ]
+fn it167_min_7d_abc_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "min_7d::abc" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+// ── it168: min_7d::101 exits 1 ───────────────────────────────────────────────
+
+/// it168 — `min_7d::101` exits 1 (value above 100% maximum).
+///
+/// Spec: [`tests/docs/cli/param/042_min_7d.md` EC-5]
+#[ test ]
+fn it168_min_7d_101_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "min_7d::101" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+// ── it169: only_valid::0 shows all rows ──────────────────────────────────────
+
+/// it169 — `only_valid::0` is the default (no filter); all rows shown.
+///
+/// Spec: [`tests/docs/cli/param/043_only_valid.md` EC-2]
+#[ test ]
+fn it169_only_valid_0_shows_all_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "only_valid::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ), "only_valid::0 must show acct-a, got:\n{text}" );
+  assert!( text.contains( "acct-b" ), "only_valid::0 must show acct-b, got:\n{text}" );
+  assert!( text.contains( "acct-c" ), "only_valid::0 must show acct-c, got:\n{text}" );
+}
+
+// ── it170: only_valid::bad exits 1 ───────────────────────────────────────────
+
+/// it170 — `only_valid::bad` exits 1; stderr names valid values.
+///
+/// Spec: [`tests/docs/cli/param/043_only_valid.md` EC-3]
+#[ test ]
+fn it170_only_valid_bad_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "only_valid::bad" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "0" ) && err.contains( "1" ),
+    "only_valid::bad stderr must name valid values, got:\n{err}",
+  );
+}
+
+// ── it171: only_valid::1 with all 🔴 shows empty ─────────────────────────────
+
+/// it171 — `only_valid::1` with all error (🔴) accounts → 0 rows shown.
+///
+/// Error accounts have `result = Err(_)`, which fails `aq.result.is_ok()`.
+/// After filtering, accounts is empty → "(no accounts configured)".
+///
+/// Spec: [`tests/docs/cli/param/043_only_valid.md` EC-4]
+/// Also: [`tests/docs/feature/028_usage_row_filtering.md` FT-07]
+#[ test ]
+fn it171_only_valid_1_all_red_shows_empty()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "only_valid::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "only_valid::1 with all-error accounts must show no-accounts message, got:\n{text}",
+  );
+}
+
+// ── it172: only_valid::true accepted ─────────────────────────────────────────
+
+/// it172 — `only_valid::true` accepted as alias for 1.
+///
+/// With all error accounts, `only_valid::true` behaves like `only_valid::1` →
+/// 0 rows → "(no accounts configured)".
+///
+/// Spec: [`tests/docs/cli/param/043_only_valid.md` EC-5]
+#[ test ]
+fn it172_only_valid_true_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "only_valid::true" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  // Accepted (no exit 1 for unrecognized value)
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "only_valid::true must be accepted and filter error accounts, got:\n{text}",
+  );
+}
+
+// ── it173: only_valid::false shows all rows ───────────────────────────────────
+
+/// it173 — `only_valid::false` accepted as alias for 0; all rows shown.
+///
+/// Spec: [`tests/docs/cli/param/043_only_valid.md` EC-6]
+#[ test ]
+fn it173_only_valid_false_shows_all_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "only_valid::false" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ), "only_valid::false must show acct-a, got:\n{text}" );
+  assert!( text.contains( "acct-b" ), "only_valid::false must show acct-b, got:\n{text}" );
+  assert!( text.contains( "acct-c" ), "only_valid::false must show acct-c, got:\n{text}" );
+}
+
+// ── it174: exclude_exhausted::0 shows all rows ───────────────────────────────
+
+/// it174 — `exclude_exhausted::0` is the default (no filter); all rows shown.
+///
+/// Spec: [`tests/docs/cli/param/044_exclude_exhausted.md` EC-2]
+#[ test ]
+fn it174_exclude_exhausted_0_shows_all_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "exclude_exhausted::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ), "exclude_exhausted::0 must show acct-a, got:\n{text}" );
+  assert!( text.contains( "acct-b" ), "exclude_exhausted::0 must show acct-b, got:\n{text}" );
+  assert!( text.contains( "acct-c" ), "exclude_exhausted::0 must show acct-c, got:\n{text}" );
+}
+
+// ── it175: exclude_exhausted::bad exits 1 ────────────────────────────────────
+
+/// it175 — `exclude_exhausted::bad` exits 1; stderr names valid values.
+///
+/// Spec: [`tests/docs/cli/param/044_exclude_exhausted.md` EC-4]
+#[ test ]
+fn it175_exclude_exhausted_bad_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "exclude_exhausted::bad" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "0" ) && err.contains( "1" ),
+    "exclude_exhausted::bad stderr must name valid values, got:\n{err}",
+  );
+}
+
+// ── it176: exclude_exhausted::1 with all 🔴 shows empty ──────────────────────
+
+/// it176 — `exclude_exhausted::1` with all error (🔴) accounts → 0 rows shown.
+///
+/// `exclude_exhausted` keeps only 🟢 accounts. Error accounts are 🔴 → all removed.
+///
+/// Spec: [`tests/docs/cli/param/044_exclude_exhausted.md` EC-5]
+/// Also: [`tests/docs/feature/028_usage_row_filtering.md` FT-08]
+#[ test ]
+fn it176_exclude_exhausted_1_all_red_shows_empty()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "exclude_exhausted::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "exclude_exhausted::1 with all-error accounts must show no-accounts message, got:\n{text}",
+  );
+}
+
+// ── it177: exclude_exhausted::true accepted ──────────────────────────────────
+
+/// it177 — `exclude_exhausted::true` accepted as alias for 1.
+///
+/// Spec: [`tests/docs/cli/param/044_exclude_exhausted.md` EC-6]
+#[ test ]
+fn it177_exclude_exhausted_true_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "exclude_exhausted::true" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // Accepted (no exit 1); error account is also excluded
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "exclude_exhausted::true must be accepted and filter error accounts, got:\n{text}",
+  );
+}
+
+// ── it178: count::3 sort::name shows first 3 rows ────────────────────────────
+
+/// it178 — `count::3 sort::name` with 5 accounts shows the 3 alphabetically first.
+///
+/// Spec: [`tests/docs/cli/param/037_count.md` EC-1]
+/// Also: [`tests/docs/feature/028_usage_row_filtering.md` FT-01]
+#[ test ]
+fn it178_count_3_shows_first_3_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-d", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-e", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "count::3", "sort::name" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // First 3 alphabetically: acct-a, acct-b, acct-c
+  assert!( text.contains( "acct-a" ), "count::3 must include acct-a (1st), got:\n{text}" );
+  assert!( text.contains( "acct-b" ), "count::3 must include acct-b (2nd), got:\n{text}" );
+  assert!( text.contains( "acct-c" ), "count::3 must include acct-c (3rd), got:\n{text}" );
+  // acct-d and acct-e must be truncated
+  assert!( !text.contains( "acct-d" ), "count::3 must exclude acct-d (4th), got:\n{text}" );
+  assert!( !text.contains( "acct-e" ), "count::3 must exclude acct-e (5th), got:\n{text}" );
+}
+
+// ── it179: count::0 shows all rows ───────────────────────────────────────────
+
+/// it179 — `count::0` is the default (no truncation); all rows shown.
+///
+/// Spec: [`tests/docs/cli/param/037_count.md` EC-2]
+#[ test ]
+fn it179_count_0_shows_all_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "count::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ), "count::0 must show acct-a, got:\n{text}" );
+  assert!( text.contains( "acct-b" ), "count::0 must show acct-b, got:\n{text}" );
+  assert!( text.contains( "acct-c" ), "count::0 must show acct-c, got:\n{text}" );
+}
+
+// ── it180: count::100 with 2 accounts shows both ─────────────────────────────
+
+/// it180 — `count::100` with only 2 accounts shows both (count exceeds available rows).
+///
+/// Spec: [`tests/docs/cli/param/037_count.md` EC-3]
+#[ test ]
+fn it180_count_100_exceeding_shows_all()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "count::100" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ), "count::100 must show acct-a, got:\n{text}" );
+  assert!( text.contains( "acct-b" ), "count::100 must show acct-b, got:\n{text}" );
+}
+
+// ── it181: count::abc exits 1 ────────────────────────────────────────────────
+
+/// it181 — `count::abc` exits 1 with type error (expected non-negative integer).
+///
+/// Spec: [`tests/docs/cli/param/037_count.md` EC-4]
+#[ test ]
+fn it181_count_abc_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "count::abc" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+// ── it182: count::1 sort::name shows only first row ──────────────────────────
+
+/// it182 — `count::1 sort::name` with 3 accounts shows only the alphabetically first.
+///
+/// Spec: [`tests/docs/cli/param/037_count.md` EC-5]
+#[ test ]
+fn it182_count_1_sort_name_shows_only_first()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "count::1", "sort::name" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ),  "count::1 must show acct-a (first), got:\n{text}" );
+  assert!( !text.contains( "acct-b" ), "count::1 must exclude acct-b, got:\n{text}" );
+  assert!( !text.contains( "acct-c" ), "count::1 must exclude acct-c, got:\n{text}" );
+}
+
+// ── it183: count::-1 exits 1 ─────────────────────────────────────────────────
+
+/// it183 — `count::-1` exits 1 (negative integer rejected as non-negative u64).
+///
+/// Spec: [`tests/docs/cli/param/037_count.md` EC-6]
+#[ test ]
+fn it183_count_minus_1_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "count::-1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+// ── it184: offset::2 skips first 2 rows ──────────────────────────────────────
+
+/// it184 — `offset::2 sort::name` with 4 accounts skips first 2; shows rows 3–4.
+///
+/// Spec: [`tests/docs/cli/param/038_offset.md` EC-1]
+/// Also: [`tests/docs/feature/028_usage_row_filtering.md` FT-02]
+#[ test ]
+fn it184_offset_2_skips_first_2_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-d", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "sort::name", "offset::2" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // Rows 3-4 alphabetically: acct-c, acct-d
+  assert!( text.contains( "acct-c" ),  "offset::2 must show acct-c (3rd), got:\n{text}" );
+  assert!( text.contains( "acct-d" ),  "offset::2 must show acct-d (4th), got:\n{text}" );
+  // First 2 must be skipped
+  assert!( !text.contains( "acct-a" ), "offset::2 must skip acct-a (1st), got:\n{text}" );
+  assert!( !text.contains( "acct-b" ), "offset::2 must skip acct-b (2nd), got:\n{text}" );
+}
+
+// ── it185: offset::0 shows all rows ──────────────────────────────────────────
+
+/// it185 — `offset::0` is the default (no skip); all rows shown.
+///
+/// Spec: [`tests/docs/cli/param/038_offset.md` EC-2]
+#[ test ]
+fn it185_offset_0_shows_all_rows()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "offset::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( text.contains( "acct-a" ), "offset::0 must show acct-a, got:\n{text}" );
+  assert!( text.contains( "acct-b" ), "offset::0 must show acct-b, got:\n{text}" );
+  assert!( text.contains( "acct-c" ), "offset::0 must show acct-c, got:\n{text}" );
+}
+
+// ── it186: offset::99 shows empty ────────────────────────────────────────────
+
+/// it186 — `offset::99` with 2 accounts skips all rows; result is empty.
+///
+/// After offset::99, accounts slice is empty → render_text returns "(no accounts configured)".
+///
+/// Spec: [`tests/docs/cli/param/038_offset.md` EC-3]
+#[ test ]
+fn it186_offset_99_shows_empty()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "offset::99" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "acct-a" ), "offset::99 must skip acct-a, got:\n{text}" );
+  assert!( !text.contains( "acct-b" ), "offset::99 must skip acct-b, got:\n{text}" );
+}
+
+// ── it187: offset::abc exits 1 ───────────────────────────────────────────────
+
+/// it187 — `offset::abc` exits 1 with type error.
+///
+/// Spec: [`tests/docs/cli/param/038_offset.md` EC-4]
+#[ test ]
+fn it187_offset_abc_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "offset::abc" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+// ── it188: offset::1 count::1 shows second row ───────────────────────────────
+
+/// it188 — `offset::1 count::1 sort::name` with 3 accounts shows exactly the second.
+///
+/// Spec: [`tests/docs/cli/param/038_offset.md` EC-5]
+#[ test ]
+fn it188_offset_1_count_1_shows_second_row()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env(
+    &[ ".usage", "offset::1", "count::1", "sort::name" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // Second alphabetically: acct-b
+  assert!( text.contains( "acct-b" ),  "offset::1 count::1 must show acct-b (2nd), got:\n{text}" );
+  assert!( !text.contains( "acct-a" ), "offset::1 count::1 must skip acct-a (1st), got:\n{text}" );
+  assert!( !text.contains( "acct-c" ), "offset::1 count::1 must exclude acct-c (3rd), got:\n{text}" );
+}
+
+// ── it189: offset::-1 exits 1 ────────────────────────────────────────────────
+
+/// it189 — `offset::-1` exits 1 (negative integer rejected).
+///
+/// Spec: [`tests/docs/cli/param/038_offset.md` EC-6]
+#[ test ]
+fn it189_offset_minus_1_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "offset::-1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+}
+
+// ── it190: get::account extracts first account name ──────────────────────────
+
+/// it190 — `get::account sort::name` extracts the first account name as a bare string.
+///
+/// Two error accounts alphabetically sorted; first row's account name is returned
+/// as bare stdout with no table headers or other chrome.
+///
+/// Spec: [`tests/docs/cli/param/045_get.md` EC-2]
+#[ test ]
+fn it190_get_account_extracts_first_name()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alpha-acct", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "zeta-acct",  "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env(
+    &[ ".usage", "sort::name", "get::account" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert_eq!(
+    text.trim(),
+    "alpha-acct",
+    "get::account must output only the first account name (alpha-acct), got:\n{text}",
+  );
+}
+
+// ── it191: get::account output has no table chrome ───────────────────────────
+
+/// it191 — `get::account` output contains no column headers, separators, or footer.
+///
+/// Spec: [`tests/docs/cli/param/045_get.md` EC-6]
+#[ test ]
+fn it191_get_account_no_table_chrome()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "get::account" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // No column headers
+  assert!( !text.contains( "5h Left" ), "get::account must not contain '5h Left' header, got:\n{text}" );
+  assert!( !text.contains( "7d Left" ), "get::account must not contain '7d Left' header, got:\n{text}" );
+  // No footer
+  assert!( !text.contains( "Valid:" ),  "get::account must not contain 'Valid:' footer, got:\n{text}" );
+}
+
+// ── it192: get::status on error account outputs 🔴 ───────────────────────────
+
+/// it192 — `get::status` on an error (🔴) account outputs `🔴` as a bare string.
+///
+/// Error accounts have `result = Err(_)` → `status_emoji` = "🔴".
+/// The `get::status` field extraction returns this as a bare value.
+///
+/// Spec: [`tests/docs/cli/param/045_get.md` EC-3 offline substitute]
+#[ test ]
+fn it192_get_status_err_on_error_account()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "get::status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert_eq!(
+    text.trim(),
+    "🔴",
+    "get::status on error account must output exactly '🔴', got:\n{text}",
+  );
+}
+
+// ── it193: get:: with empty filtered result → empty stdout ────────────────────
+
+/// it193 — `get::account` after filtering to 0 rows → empty stdout, exits 0.
+///
+/// `only_valid::1` removes all error accounts → 0 rows → `get` on `accounts.first()` = None
+/// → value is empty → content = empty → stdout is empty.
+///
+/// Spec: [`tests/docs/cli/param/045_get.md` EC-4]
+#[ test ]
+fn it193_get_with_empty_filtered_result_empty_stdout()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env(
+    &[ ".usage", "only_valid::1", "get::account" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.trim().is_empty(),
+    "get:: with empty filtered result must produce empty stdout, got:\n{text}",
+  );
+}
+
+// ── it194: abs::1 accepted with empty store ───────────────────────────────────
+
+/// it194 — `abs::1` accepted with empty credential store; exits 0.
+///
+/// Spec: [`tests/docs/cli/param/046_abs.md` EC-1]
+#[ test ]
+fn it194_abs_1_accepted_empty_store()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "abs::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "abs::1 with empty store must show no-accounts message, got:\n{text}",
+  );
+}
+
+// ── it195: abs::0 accepted ────────────────────────────────────────────────────
+
+/// it195 — `abs::0` accepted; exits 0 (default behavior, no change).
+///
+/// Spec: [`tests/docs/cli/param/046_abs.md` EC-2]
+#[ test ]
+fn it195_abs_0_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "abs::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+// ── it196: abs::bad exits 1 ──────────────────────────────────────────────────
+
+/// it196 — `abs::bad` exits 1; stderr names valid values.
+///
+/// Spec: [`tests/docs/cli/param/046_abs.md` EC-3]
+#[ test ]
+fn it196_abs_bad_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "abs::bad" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "0" ) && err.contains( "1" ),
+    "abs::bad stderr must name valid values, got:\n{err}",
+  );
+}
+
+// ── it197: abs::1 on error row shows error unchanged ─────────────────────────
+
+/// it197 — `abs::1` on an error row; account row still shows dashes + error text.
+///
+/// `abs::1` is currently a no-op pending API token-count support.
+/// Error rows are unaffected regardless.
+///
+/// Spec: [`tests/docs/cli/param/046_abs.md` EC-5]
+#[ test ]
+fn it197_abs_1_on_error_row()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "abs::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // Error account row must still be shown
+  assert!( text.contains( "acct-a" ), "abs::1 must not remove error rows, got:\n{text}" );
+}
+
+// ── it198: no_color::1 produces no emoji in output ───────────────────────────
+
+/// it198 — `no_color::1` with an error account → stdout contains no emoji.
+///
+/// `apply_no_color` replaces `🔴`→`err`, `→`→`->`, `✓`→`*`.
+/// An error account has no live token (no `✓`) and no `→` recommendation marker;
+/// `🔴` in the status column becomes `err`. None of the emoji characters remain.
+///
+/// Spec: [`tests/docs/cli/param/047_no_color.md` EC-1]
+/// Also: [`tests/docs/feature/028_usage_row_filtering.md` FT-14]
+#[ test ]
+fn it198_no_color_1_no_emoji_in_output()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "no_color::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!( !text.contains( "🔴" ), "no_color::1 must remove 🔴, got:\n{text}" );
+  assert!( !text.contains( "🟡" ), "no_color::1 must not contain 🟡, got:\n{text}" );
+  assert!( !text.contains( "🟢" ), "no_color::1 must not contain 🟢, got:\n{text}" );
+  assert!( !text.contains( '→' ),  "no_color::1 must remove → (replaced by ->), got:\n{text}" );
+  assert!( !text.contains( '✓' ),  "no_color::1 must remove ✓, got:\n{text}" );
+}
+
+// ── it199: no_color::1 status column shows `err` text label ──────────────────
+
+/// it199 — `no_color::1` status column shows `err` instead of `🔴`.
+///
+/// Spec: [`tests/docs/cli/param/047_no_color.md` EC-2]
+#[ test ]
+fn it199_no_color_1_status_shows_err_text_label()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "no_color::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "err" ),
+    "no_color::1 must show 'err' text label for error account status, got:\n{text}",
+  );
+}
+
+// ── it200: no_color::bad exits 1 ─────────────────────────────────────────────
+
+/// it200 — `no_color::bad` exits 1; stderr names valid values.
+///
+/// Spec: [`tests/docs/cli/param/047_no_color.md` EC-4]
+#[ test ]
+fn it200_no_color_bad_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "no_color::bad" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "0" ) && err.contains( "1" ),
+    "no_color::bad stderr must name valid values, got:\n{err}",
+  );
+}
+
+// ── it201: no_color::true accepted ───────────────────────────────────────────
+
+/// it201 — `no_color::true` accepted as alias for 1; no emoji in output.
+///
+/// Spec: [`tests/docs/cli/param/047_no_color.md` EC-6]
+#[ test ]
+fn it201_no_color_true_accepted()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "no_color::true" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "🔴" ),
+    "no_color::true must remove 🔴 (same as no_color::1), got:\n{text}",
+  );
+}
+
+// ── it202: cols::+host shows Host column ─────────────────────────────────────
+
+/// it202 — `cols::+host` adds Host column; account row shows value from profile.json.
+///
+/// `write_account_profile_json` creates `{name}.profile.json` with `{"host":"mybox"}`.
+/// The `host` field is loaded regardless of token status.
+///
+/// Spec: [`tests/docs/cli/param/033_cols.md` EC-7]
+/// Also: [`tests/docs/feature/029_account_host_metadata.md` AC-05]
+#[ test ]
+fn it202_cols_host_shows_host_column()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account_profile_json( dir.path(), "acct-a", Some( "mybox" ), Some( "work" ) );
+
+  let out  = run_cs_with_env( &[ ".usage", "cols::+host" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Host" ),
+    "cols::+host must add 'Host' column header, got:\n{text}",
+  );
+  assert!(
+    text.contains( "mybox" ),
+    "cols::+host must show host value 'mybox' in account row, got:\n{text}",
+  );
+}
+
+// ── it203: cols::+role shows Role column ─────────────────────────────────────
+
+/// it203 — `cols::+role` adds Role column; account row shows value from profile.json.
+///
+/// Spec: [`tests/docs/cli/param/033_cols.md` EC-8]
+/// Also: [`tests/docs/feature/029_account_host_metadata.md` AC-06]
+#[ test ]
+fn it203_cols_role_shows_role_column()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+  write_account_profile_json( dir.path(), "acct-a", Some( "mybox" ), Some( "work" ) );
+
+  let out  = run_cs_with_env( &[ ".usage", "cols::+role" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Role" ),
+    "cols::+role must add 'Role' column header, got:\n{text}",
+  );
+  assert!(
+    text.contains( "work" ),
+    "cols::+role must show role value 'work' in account row, got:\n{text}",
+  );
+}
+
+// ── it204: cols::+bogus exits 1 naming host and role ─────────────────────────
+
+/// it204 — `cols::+bogus` exits 1; stderr names `host` and `role` among valid IDs.
+///
+/// After TSK-225, `host` and `role` were added as valid column IDs. The error
+/// message must list them along with existing columns like `status`, `expires`, etc.
+///
+/// Spec: [`tests/docs/cli/param/033_cols.md` EC-9]
+#[ test ]
+fn it204_cols_bogus_names_host_and_role_in_error()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "cols::+bogus" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "host" ),
+    "cols::+bogus error must name 'host' as a valid column ID, got:\n{err}",
+  );
+  assert!(
+    err.contains( "role" ),
+    "cols::+bogus error must name 'role' as a valid column ID, got:\n{err}",
   );
 }

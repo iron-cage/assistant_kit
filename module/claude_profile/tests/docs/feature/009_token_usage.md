@@ -25,6 +25,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-17 | `~Renews` shows exact `in Xh Ym` (no `~`) when `_renewal_at` set | AC-27 | — |
 | FT-18 | `→ Next` column shows soonest upcoming event label and duration | AC-28 | — |
 | FT-19 | JSON includes `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | AC-29 | — |
+| FT-20 | `~Renews` shows renewal date (not error reason) for 429 accounts when `OauthAccountData` is available | AC-03 | — |
 
 ### Test Case Index
 
@@ -49,8 +50,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-17 | `~Renews` exact `in Xh Ym` (no `~`) when `_renewal_at` is set | AC-27 | `~Renews` Format |
 | FT-18 | `→ Next` column shows soonest event label and duration | AC-28 | `→ Next` Column |
 | FT-19 | JSON `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | AC-29 | JSON Fields |
+| FT-20 | `~Renews` shows billing renewal date (not error reason) for 429 accounts with valid `OauthAccountData` | AC-03 | `~Renews` Error Preservation |
 
-**Total:** 19 FT cases
+**Total:** 20 FT cases
 
 ---
 
@@ -263,7 +265,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `renews_label()` called with the above inputs.
 - **Then:** Returns `"in 3h 47m"` — no `~` prefix, exact duration format.
 - **Exit:** n/a (unit test)
-- **Source fn:** ⏳ (in `tests/usage/format_test.rs` or `src/usage/format.rs`)
+- **Source fn:** `rl_exact_from_renewal_at`, `rl_estimate_from_org_created_at`, `rl_auto_advance_past_renewal_at`, `rl_absent_returns_question` (in `src/usage/format.rs`)
 - **Source:** [009_token_usage.md AC-27](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -274,7 +276,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `next_event_label()` called with the above inputs.
 - **Then:** Returns `"!tok in 2h"` — token expiry is soonest; label is `!tok`.
 - **Exit:** n/a (unit test)
-- **Source fn:** ⏳ (in `tests/usage/format_test.rs` or `src/usage/format.rs`)
+- **Source fn:** `ne_tok_soonest`, `ne_5h_soonest`, `ne_7d_soonest`, `ne_renewal_soonest_exact`, `ne_renewal_soonest_estimate`, `ne_all_none_returns_dash` (in `src/usage/format.rs`)
 - **Source:** [009_token_usage.md AC-28](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -286,5 +288,23 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Exits 0. The JSON object for that account contains: `renewal_secs` (u64 integer), `renewal_is_estimate: false`, `next_event_type` (string), `next_event_secs` (u64 integer). No `next_renewal_est` field present (deprecated field removed).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it147_json_renewal_secs_present`, `it153_json_renewal_fields_with_renewal_at` (in `tests/cli/usage_test.rs`)
 - **Source:** [009_token_usage.md AC-29](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-20: `~Renews` shows billing renewal date (not error reason) for 429 accounts with valid `OauthAccountData`
+
+- **Given (unit test):** An `AccountQuota` where:
+  - `result = Err("rate limited (429)")` (quota API failed with 429)
+  - `account = Some(OauthAccountData { org_created_at: <ISO date string for a known billing anchor>, ... })` (account data fetched independently — unaffected by 429 on usage API)
+  - `now_secs` fixed such that `next_billing_label(&a.org_created_at, now_secs)` produces a known date string (e.g., `Jun  6`)
+  - Default `ColsVisibility` (host and role OFF, renews ON)
+- **When:** The `AccountQuota` is rendered via both `render_text()` and `render_tsv()`.
+- **Then:**
+  - In the `render_text()` output: the `~Renews` cell contains the expected renewal date string (e.g., `Jun  6`); the error reason `(rate limited (429))` appears in at least one quota-data column (`5h Left` through `7d Reset`) and does NOT appear in the `~Renews` cell.
+  - In the `render_tsv()` output: the `~Renews` field contains the expected renewal date string; the TSV renews cell is NOT `(rate limited (429))`.
+- **Exit:** n/a (unit test)
+- **Note:** Fix for BUG-220. The defect had `render_text()` using `last_mut()` positional overwrite (hitting `~Renews` as the last non-host/role column) and `render_tsv()` explicitly pushing `error_str` for the renews cell. Both renderers must preserve `renews_str` (from `OauthAccountData`) regardless of `result` error state.
+- **Source fn:** `mre_bug_220_renews_preserved_for_429_accounts` (in `src/usage/render.rs`)
+- **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)

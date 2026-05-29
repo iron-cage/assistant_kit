@@ -34,7 +34,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | Feature | File | Cases | Status |
 |---------|------|-------|--------|
 | 002_account_save | [002_account_save.md](002_account_save.md) | FT-01 … FT-11 | ⏳ |
-| 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-19 | ⏳ |
+| 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-20 | ✅ |
 | 017_token_refresh | [017_token_refresh.md](017_token_refresh.md) | FT-01 … FT-17 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](018_live_monitor.md) | FT-01 … FT-09 | ✅ |
 | 020_usage_sort_strategies | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | FT-01 … FT-17 | ✅ |
@@ -47,6 +47,6 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | FT-01 … FT-17 | ✅ |
 | 028_usage_row_filtering | [028_usage_row_filtering.md](028_usage_row_filtering.md) | FT-01 … FT-16 | ✅ |
 | 029_account_host_metadata | [029_account_host_metadata.md](029_account_host_metadata.md) | FT-01 … FT-10 | ✅ |
-| 030_account_renewal_override | [030_account_renewal_override.md](030_account_renewal_override.md) | FT-01 … FT-15 | ⏳ |
+| 030_account_renewal_override | [030_account_renewal_override.md](030_account_renewal_override.md) | FT-01 … FT-15 | ✅ |
 
 **Total:** 15 feature specs; 15 of 30 feature instances not yet covered by dedicated FT specs.

@@ -480,11 +480,11 @@ pub fn account_renewal_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       .as_secs();
     let target_secs = if delta_secs >= 0
     {
-      now_secs.saturating_add( delta_secs as u64 )
+      now_secs.saturating_add( u64::try_from( delta_secs ).unwrap_or( 0 ) )
     }
     else
     {
-      now_secs.saturating_sub( ( -delta_secs ) as u64 )
+      now_secs.saturating_sub( u64::try_from( -delta_secs ).unwrap_or( 0 ) )
     };
     crate::account::RenewalOperation::At( crate::account::secs_to_iso8601( target_secs ) )
   }

@@ -162,6 +162,7 @@ pub( crate ) fn pre_switch_touch_ctx(
         account       : None,
         host          : String::new(),
         role          : String::new(),
+        renewal_at    : None,
       };
       let model        = resolve_model( &aq, imodel );
       let effort_val   = resolve_effort( &model, effort );
@@ -216,6 +217,7 @@ pub( crate ) fn apply_post_switch_touch(
     account       : None,
     host          : String::new(),
     role          : String::new(),
+    renewal_at    : None,
   };
   let model        = resolve_model( &aq, imodel );
   let effort_val   = resolve_effort( &model, effort );

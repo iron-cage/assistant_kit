@@ -107,6 +107,8 @@ pub( crate ) struct ColsVisibility
   pub( crate ) host         : bool,
   /// `Role` user-defined role tag column (default OFF).
   pub( crate ) role         : bool,
+  /// `→ Next` soonest upcoming event column (default ON).
+  pub( crate ) next         : bool,
 }
 
 impl ColsVisibility
@@ -127,6 +129,7 @@ impl ColsVisibility
       d7_son_reset : false,
       host         : false,
       role         : false,
+      next         : true,
     }
   }
 
@@ -158,8 +161,9 @@ impl ColsVisibility
       "7d_son_reset" => self.d7_son_reset = show,
       "host"         => self.host         = show,
       "role"         => self.role         = show,
+      "next"         => self.next         = show,
       _              => return Err( format!(
-        "cols:: unknown column {id:?}: valid IDs are `status`, `expires`, `sub`, `renews`, `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `7d_son_reset`, `host`, `role`",
+        "cols:: unknown column {id:?}: valid IDs are `status`, `expires`, `sub`, `renews`, `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `7d_son_reset`, `host`, `role`, `next`",
       ) ),
     }
     Ok( () )
@@ -195,6 +199,8 @@ pub( crate ) struct AccountQuota
   pub( crate ) host          : String,
   /// User-defined role tag from `{name}.profile.json`; empty when absent.
   pub( crate ) role          : String,
+  /// Override billing renewal date from `{name}.claude.json`; `None` when not set.
+  pub( crate ) renewal_at    : Option< String >,
 }
 
 // ── Command handler ────────────────────────────────────────────────────────────
