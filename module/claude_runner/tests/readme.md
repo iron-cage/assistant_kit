@@ -26,7 +26,8 @@
 | Library API | `lib_test.rs` | `register_commands()` callability |
 | Stale-ref guards + dep constraints (IT-2, IT-3, IT-4) | `stale_ref_guard_test.rs` | No `claude_runner_plugin` or `dream_agent` refs; dep constraint invariants |
 | Isolated subcommand | `isolated_test.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection |
-| CLR_* env vars (E01–E24) | `env_var_test.rs` | CLR_* env var fallback for all 24 params, CLI-wins checks |
+| Strip-fences unit (sf01–sf08) | `fence_test.rs` | `strip_fences` correctness: pair stripping, pass-through, edge cases |
+| CLR_* env vars (E01–E28) | `env_var_test.rs` | CLR_* env var fallback for all 28 params, CLI-wins checks |
 | User stories (US-1–US-4 × 16) | `user_story_test.rs` | End-to-end user story workflows for all 16 user stories |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
@@ -50,7 +51,8 @@
 | `param_trace_edge_cases_test.rs` | Trace edge cases (S04–S06, S58–S60): basic trace behavior and credential trace format. |
 | `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`. |
 | `param_group_test.rs` | Param group combined invocations (CC-N): multi-flag interaction tests. |
-| `env_var_test.rs` | CLR_* env var fallback: E01–E24, one per param, CLI-wins verification. |
+| `fence_test.rs` | `strip_fences` unit tests: fence-pair stripping, pass-through, edge cases (sf01–sf08). |
+| `env_var_test.rs` | CLR_* env var fallback: E01–E28, one per param, CLI-wins verification. |
 | `user_story_test.rs` | User story end-to-end workflows: US-1–US-4 for all 16 stories from `tests/docs/cli/user_story/`. |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |

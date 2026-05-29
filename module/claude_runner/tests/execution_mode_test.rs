@@ -1,8 +1,8 @@
 //! Execution Mode Tests — interactive and print paths (Unix-only: uses shell scripts and chmod)
-// Fix(issue-108): all tests in this file depend on Unix shell scripts and PermissionsExt.
+#![ cfg( unix ) ]
+// Fix(BUG-226): all tests in this file depend on Unix shell scripts and PermissionsExt.
 // Root cause: PATH-injection strategy uses chmod(0o755) and sh scripts — unavailable on Windows.
 // Pitfall: compiling this file on Windows fails silently — gate the whole file, not individual tests.
-#![ cfg( unix ) ]
 //!
 //! ## Purpose
 //!
@@ -66,7 +66,6 @@ fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
 
 // E01: Interactive mode: binary not found exits 1 with error on stderr.
 #[ test ]
-
 fn e01_interactive_binary_not_found()
 {
   let out = run_with_path( &[ "test message" ], "/nonexistent" );
@@ -80,7 +79,6 @@ fn e01_interactive_binary_not_found()
 
 // E02: Print mode: binary not found exits 1 with error on stderr.
 #[ test ]
-
 fn e02_print_binary_not_found()
 {
   let out = run_with_path( &[ "-p", "test message" ], "/nonexistent" );
@@ -95,7 +93,6 @@ fn e02_print_binary_not_found()
 // E03: Interactive mode: subprocess non-zero exit code is propagated.
 // Uses --interactive to force interactive mode (message alone now defaults to print mode).
 #[ test ]
-
 fn e03_interactive_exit_code_propagated()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\nexit 42\n" );
@@ -109,7 +106,6 @@ fn e03_interactive_exit_code_propagated()
 
 // E04: Print mode: subprocess non-zero exit triggers error message.
 #[ test ]
-
 fn e04_print_exit_nonzero_error()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\nexit 3\n" );
@@ -124,7 +120,6 @@ fn e04_print_exit_nonzero_error()
 
 // E05: Print mode: subprocess stderr is forwarded to runner stderr.
 #[ test ]
-
 fn e05_print_stderr_forwarded()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho STDERR_MARKER >&2\necho STDOUT_OK\n" );
@@ -139,7 +134,6 @@ fn e05_print_stderr_forwarded()
 
 // E06: Print mode: subprocess stdout is captured and printed.
 #[ test ]
-
 fn e06_print_stdout_captured()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho CAPTURED_OUTPUT\n" );
@@ -156,7 +150,6 @@ fn e06_print_stdout_captured()
 // Fix(BUG-213): env_remove CLR_TRACE prevents dev-shell trace activation from
 //   printing the command preview to stderr regardless of --verbosity 0.
 #[ test ]
-
 fn e07_interactive_not_found_verbosity_zero()
 {
   let bin = env!( "CARGO_BIN_EXE_clr" );
@@ -178,7 +171,6 @@ fn e07_interactive_not_found_verbosity_zero()
 // Fix(BUG-213): env_remove CLR_TRACE prevents dev-shell trace activation from
 //   printing the command preview to stderr regardless of --verbosity 0.
 #[ test ]
-
 fn e08_print_not_found_verbosity_zero()
 {
   let bin = env!( "CARGO_BIN_EXE_clr" );
@@ -198,7 +190,6 @@ fn e08_print_not_found_verbosity_zero()
 
 // E09: Verbosity 4 prints command preview to stderr before print-mode execution.
 #[ test ]
-
 fn e09_verbosity_four_stderr_preview()
 {
   let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho OK\n" );
@@ -225,7 +216,6 @@ fn e09_verbosity_four_stderr_preview()
 // that the message and -c are present — not that --print is absent — so it covers both paths.
 // Uses a fake binary that echoes its arguments to a file, then verifies.
 #[ test ]
-
 fn e10_interactive_message_forwarded()
 {
   let tmp = tempfile::tempdir().expect( "create temp dir" );
@@ -267,7 +257,6 @@ fn e10_interactive_message_forwarded()
 
 // E11: --new-session suppresses the default -c flag passed to the subprocess.
 #[ test ]
-
 fn e11_new_session_does_not_pass_continue()
 {
   let tmp = tempfile::tempdir().expect( "create temp dir" );

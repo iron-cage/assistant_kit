@@ -538,7 +538,7 @@ fn bug_reproducer_214_empty_session_dir_no_continue_flag()
 // as the message because the empty token was pushed to positional, joined to Some(""),
 // and the ultrathink prefix fired unconditionally. See cli_args_test.rs T54 for the
 // canonical reproducer with 5-section documentation.
-// test_kind: bug_reproducer(issue-empty-msg-ultrathink)
+// test_kind: bug_reproducer(BUG-219)
 #[ test ]
 fn empty_positional_arg_produces_bare_command()
 {

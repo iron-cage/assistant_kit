@@ -1,6 +1,6 @@
 //! CLR_* Environment Variable Tests
 //!
-//! Covers E01–E24: one test per `CLR_*` env var.
+//! Covers E01–E28: one test per `CLR_*` env var.
 //! Source: `task/claude_runner/148_env_var_all_params.md`
 //!
 //! All tests use `run_cli_with_env()` — no `std::env::set_var`, no thread-global mutation.
@@ -35,6 +35,10 @@
 //! | E22  | `CLR_MCP_CONFIG`           | stdout contains `--mcp-config` and the path                 |
 //! | E23  | `CLR_CREDS`                | stderr NOT contains `missing required argument: --creds`    |
 //! | E24  | `CLR_TIMEOUT`              | stderr NOT contains `missing required argument: --creds`    |
+//! | E25  | `CLR_FILE`                 | describe output includes the file path                      |
+//! | E26  | `CLR_STRIP_FENCES`         | dry-run accepted; fence stripping verified in execution_mode_test.rs S76 |
+//! | E27  | `CLR_KEEP_CLAUDECODE`      | dry-run accepted; env preservation verified in execution_mode_test.rs S77 |
+//! | E28  | `CLR_TRACE` (isolated)     | stderr contains trace output for isolated subcommand        |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli_with_env;
@@ -701,4 +705,30 @@ fn s75_clr_keep_claudecode_yes_rejected()
     &[ ( "CLR_KEEP_CLAUDECODE", "yes" ) ],
   );
   assert!( out.status.success(), "CLR_KEEP_CLAUDECODE=yes must exit 0 (rejected silently). stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+// ─── E28: CLR_TRACE for isolated subcommand ────────────────────────────────────
+
+/// E28: `CLR_TRACE=1` enables trace output for the `isolated` subcommand.
+///
+/// Trace fires before credentials are read, so a nonexistent creds path is
+/// sufficient — the trace lines appear on stderr before the file-not-found error.
+///
+/// Spec: `02_clr_input_vars.md` E28
+#[ test ]
+fn e28_clr_trace_applies_to_isolated()
+{
+  let out = run_cli_with_env(
+    &[ "isolated" ],
+    &[ ( "CLR_CREDS", "/tmp/e28_nonexistent.creds.json" ), ( "CLR_TRACE", "1" ) ],
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "# clr isolated" ),
+    "CLR_TRACE=1 must emit '# clr isolated' trace for isolated subcommand: {stderr}",
+  );
+  assert!(
+    stderr.contains( "# creds:" ),
+    "CLR_TRACE=1 trace must include '# creds:' line: {stderr}",
+  );
 }

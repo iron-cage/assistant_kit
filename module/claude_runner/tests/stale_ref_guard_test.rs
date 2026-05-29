@@ -100,7 +100,6 @@ fn md_files_in_dir( dir : &Path, skip_names : &[ &str ] ) -> Vec< PathBuf >
 }
 
 #[ test ]
-
 fn no_plugin_ref_in_docs()
 {
   // Note lines about proset preservation are exempt: they document historical removal, not stale refs.
@@ -122,7 +121,6 @@ fn no_plugin_ref_in_docs()
 }
 
 #[ test ]
-
 fn no_plugin_ref_in_lib_rs()
 {
   let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
@@ -136,7 +134,6 @@ fn no_plugin_ref_in_lib_rs()
 }
 
 #[ test ]
-
 fn no_plugin_ref_in_readme()
 {
   let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
@@ -150,7 +147,6 @@ fn no_plugin_ref_in_readme()
 }
 
 #[ test ]
-
 fn src_readme_exists()
 {
   let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
@@ -163,7 +159,6 @@ fn src_readme_exists()
 }
 
 #[ test ]
-
 fn no_dream_agent_ref_in_docs()
 {
   // design_decisions.md is exempt: it documents *why* the decoupling happened —
@@ -184,7 +179,6 @@ fn no_dream_agent_ref_in_docs()
 }
 
 #[ test ]
-
 fn no_dream_agent_ref_in_lib_rs()
 {
   let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
@@ -198,7 +192,6 @@ fn no_dream_agent_ref_in_lib_rs()
 }
 
 #[ test ]
-
 fn no_dream_agent_ref_in_readme()
 {
   let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
@@ -219,7 +212,6 @@ fn no_dream_agent_ref_in_readme()
 ///
 /// Spec: `tests/docs/invariant/002_dep_constraints.md` IT-2
 #[ test ]
-
 fn no_routines_rs_in_src()
 {
   let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
@@ -238,7 +230,6 @@ fn no_routines_rs_in_src()
 ///
 /// Spec: `tests/docs/invariant/002_dep_constraints.md` IT-3
 #[ test ]
-
 fn no_build_rs_at_crate_root()
 {
   let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
@@ -259,7 +250,6 @@ fn no_build_rs_at_crate_root()
 ///
 /// Spec: `tests/docs/invariant/002_dep_constraints.md` IT-4
 #[ test ]
-
 fn all_cargo_dependencies_are_optional()
 {
   let manifest = Path::new( env!( "CARGO_MANIFEST_DIR" ) );
