@@ -4,7 +4,7 @@ Semantic newtypes for `claude_storage` CLI parameters. Every parameter uses a na
 
 See [param/readme.md](../param/readme.md) for which parameters use each type.
 
-## Responsibility Table
+### Responsibility Table
 
 | File | Responsibility |
 |------|----------------|
@@ -23,7 +23,7 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 | `13_topic_name.md` | TopicName — session topic identifier string |
 | `14_strategy_type.md` | StrategyType — resume strategy enum (resume/fresh) |
 
-## Type Index
+### Type Index
 
 | # | Type | Fundamental | Used By |
 |---|------|-------------|---------|
@@ -42,7 +42,7 @@ See [param/readme.md](../param/readme.md) for which parameters use each type.
 | 13 | [`TopicName`](13_topic_name.md) | String (identifier) | `topic::` |
 | 14 | [`StrategyType`](14_strategy_type.md) | String enum | `strategy::` |
 
-## Navigation
+### Navigation
 
 - [EntryCount](01_entry_count.md)
 - [EntryType](02_entry_type.md)

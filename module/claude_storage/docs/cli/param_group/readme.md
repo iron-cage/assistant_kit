@@ -4,7 +4,7 @@ Shared parameters reused across command roots. Groups emerge from semantic coher
 
 See [param/readme.md](../param/readme.md) for individual parameter specs and [command/readme.md](../command/readme.md) for per-command usage.
 
-## Responsibility Table
+### Responsibility Table
 
 | File | Responsibility |
 |------|----------------|
@@ -14,7 +14,7 @@ See [param/readme.md](../param/readme.md) for individual parameter specs and [co
 | `04_session_filter.md` | Session Filter — session/agent/min_entries listing filters |
 | `05_scope_configuration.md` | Scope Configuration — scope:: and path:: discovery boundary |
 
-## Overview
+### Overview
 
 | # | Group | Parameters | Used By |
 |---|-------|-----------|---------|

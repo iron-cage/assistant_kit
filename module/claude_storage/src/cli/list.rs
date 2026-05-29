@@ -166,7 +166,7 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     || agent_filter.is_some()
     || min_entries_filter.is_some();
 
-  let show_sessions = has_session_filters || cmd.get_boolean( "sessions" ).unwrap_or( false );
+  let show_sessions = has_session_filters || cmd.get_boolean( "show_sessions" ).unwrap_or( false );
 
   // Create storage instance
   let storage = create_storage()?;

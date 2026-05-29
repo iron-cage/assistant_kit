@@ -25,7 +25,7 @@
 | 12_scope.md | Edge case tests for `scope::` parameter | ✅ |
 | 13_session.md | Edge case tests for `session::` parameter | ✅ |
 | 14_session_id.md | Edge case tests for `session_id::` parameter | ✅ |
-| 15_sessions_bool.md | Edge case tests for `sessions::` (boolean) parameter | ✅ |
+| 15_sessions.md | Edge case tests for `sessions::` parameter | ✅ |
 | 16_target.md | Edge case tests for `target::` parameter | ✅ |
 | 17_topic.md | Edge case tests for `topic::` parameter | ✅ |
 | 18_type.md | Edge case tests for `type::` parameter | ✅ |
