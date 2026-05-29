@@ -33,7 +33,7 @@ pub( crate ) fn require_claude_paths() -> Result< crate::ClaudePaths, ErrorData 
     {
       crate::ClaudePaths::new().ok_or_else( || ErrorData::new(
         ErrorCode::InternalError,
-        "HOME environment variable not set".to_string(),
+        "credential store path could not be resolved".to_string(),
       ) )
     }
     _ => Err( ErrorData::new( ErrorCode::InternalError, "HOME environment variable not set".to_string() ) ),

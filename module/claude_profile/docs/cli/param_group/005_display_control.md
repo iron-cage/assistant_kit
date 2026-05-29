@@ -1,12 +1,22 @@
 # Group :: 5. Display Control
 
-**Parameters:** `cols::`
-**Pattern:** Per-invocation column visibility for the `.usage` quota table
-**Purpose:** Controls which columns appear in the text-format quota table.
+**Parameters:** `cols::`, `count::`, `offset::`, `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::`, `abs::`, `no_color::`
+**Pattern:** Column visibility, row filtering, and display modifiers for `.usage`
+**Purpose:** Controls which columns appear, which rows survive filtering, pagination/truncation, and display rendering (absolute values, color stripping) for the `.usage` quota table.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | [`cols::`](../param/033_cols.md) | `string` | (default set) | Comma-separated `+col_id` / `-col_id` modifiers relative to the default column set |
+| [`count::`](../param/037_count.md) | `u64` | `0` (all) | Limit rows to N after all filtering; `0` = no limit |
+| [`offset::`](../param/038_offset.md) | `u64` | `0` | Skip first N rows before applying `count::` |
+| [`only_active::`](../param/039_only_active.md) | `bool` | `0` | Keep only the currently active account row |
+| [`only_next::`](../param/040_only_next.md) | `bool` | `0` | Keep only the `→` (next-recommended) row |
+| [`min_5h::`](../param/041_min_5h.md) | `u8` | `0` | Keep only rows with 5h quota ≥ N% |
+| [`min_7d::`](../param/042_min_7d.md) | `u8` | `0` | Keep only rows with 7d quota ≥ N% |
+| [`only_valid::`](../param/043_only_valid.md) | `bool` | `0` | Keep only 🟢 rows (non-exhausted, non-expired) |
+| [`exclude_exhausted::`](../param/044_exclude_exhausted.md) | `bool` | `0` | Remove 🔴 exhausted rows |
+| [`abs::`](../param/046_abs.md) | `bool` | `0` | Show absolute token counts instead of percentages |
+| [`no_color::`](../param/047_no_color.md) | `bool` | `0` | Strip emoji and ANSI sequences from output |
 
 **Used By (1 command):** [`.usage`](../command/006_usage.md#command--9-usage)
 
@@ -16,31 +26,51 @@
 # Show Sub column (off by default)
 clp .usage cols::+sub
 
-# Show Sub and 7d Son Reset (both off by default)
-clp .usage cols::+sub,+7d_son_reset
+# Filter to healthy accounts only
+clp .usage only_valid::1
 
-# Hide Renews and 7d(Son) from the default set
-clp .usage cols::-renews,-7d_son
+# Scripting: get next recommended account's 7d quota
+clp .usage only_next::1 get::7d_left
 
-# Show Sub and hide 7d(Son) simultaneously
-clp .usage cols::+sub,-7d_son
+# Top 3 accounts by sort order
+clp .usage count::3
+
+# Paginate: skip first account, show next 2
+clp .usage offset::1 count::2
+
+# Non-TTY output (logs, CI)
+clp .usage no_color::1
+
+# Absolute token counts
+clp .usage abs::1
 ```
 
 **Semantic Coherence Test**
 
-> "Does parameter X control **which columns appear** in the `.usage` text-format quota table?"
+> "Does parameter X control **what rows appear, which columns are visible, or how values are rendered** in the `.usage` quota table?"
 
-`cols::` passes: it selects visible columns via `+col_id` / `-col_id` modifiers. All other `.usage` parameters (sort::, desc::, prefer::, next::, format::, live::) fail — they control ordering, recommendation strategy, serialization format, or fetch behavior, not column visibility.
+All 11 members pass:
+- `cols::` — controls which columns are visible
+- `count::` / `offset::` — control row window (pagination/truncation)
+- `only_active::`, `only_next::`, `min_5h::`, `min_7d::`, `only_valid::`, `exclude_exhausted::` — filter which rows survive
+- `abs::` — controls value rendering (percentages vs absolute counts)
+- `no_color::` — controls symbol rendering (emoji/ANSI vs plain text)
+
+Parameters that fail: `sort::`, `next::` (ordering strategy, not display); `format::` (serialization format, not row selection); `live::`, `refresh::` (fetch behavior, not display).
 
 **Invariants**
 
-- The `flag` (first column) and `account` (name) columns are structural and always visible — `cols::` modifiers cannot remove them.
-- `cols::` has no effect on `format::json` output — JSON always includes all schema fields. See [../004_parameter_interactions.md](../004_parameter_interactions.md) Interaction 8.
-- `Sub` and `7d Son Reset` columns are off by default; all other quota columns are on by default.
-- Invalid column IDs cause exit 1 with an error naming the valid column IDs.
+- `cols::` cannot remove structural `flag` and `account` columns.
+- `cols::` has no effect on `format::json` output — JSON always includes all schema fields.
+- `Sub` and `7d Son Reset` columns are off by default; `host` and `role` columns are off by default; all other quota columns are on by default.
+- Invalid `cols::` column IDs cause exit 1 with an error naming the valid column IDs.
+- Row filters combine with AND logic — a row must pass ALL active filters to survive.
+- `count::` and `offset::` are applied last (after all row filters and sorting).
+- `abs::` and `no_color::` have no effect on `format::json` output.
 
 **Cross-References**
 
 - [../004_parameter_interactions.md](../004_parameter_interactions.md) — Interaction 8: `cols::` does not affect `format::json` output
 - [../../feature/009_token_usage.md](../../feature/009_token_usage.md) — column definitions, AC-22, AC-23; three-tier grouping
+- [../../feature/028_usage_row_filtering.md](../../feature/028_usage_row_filtering.md) — row filter evaluation order and AND-composition rules
 - [../param/033_cols.md](../param/033_cols.md) — complete column registry with IDs and defaults

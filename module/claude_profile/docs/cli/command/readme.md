@@ -5,13 +5,13 @@
 | File | Responsibility |
 |------|----------------|
 | [003_meta.md](003_meta.md) | Meta-commands: `.`, `.help`, `--version` flag |
-| [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate` |
+| [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal` |
 | [005_token.md](005_token.md) | Token namespace: `.token.status` |
 | [002_credentials.md](002_credentials.md) | Credentials namespace: `.credentials.status` |
 | [006_usage.md](006_usage.md) | Usage namespace: `.usage` |
 | [004_paths.md](004_paths.md) | Paths namespace: `.paths` |
 
-**Total:** 13 commands (11 visible + 2 hidden)
+**Total:** 14 commands (12 visible + 2 hidden)
 
 ### All Commands
 
@@ -30,6 +30,7 @@
 | 11 | `.account.limits` | Show rate-limit utilization for the active or named account | 2 | `clp .account.limits name::alice@acme.com` |
 | 12 | `.account.relogin` | Force browser re-authentication for a named account | 2 | `clp .account.relogin name::carol@example.com` |
 | 13 | `.account.rotate` | Auto-rotate to the best inactive account by token expiry | 1 | `clp .account.rotate` |
+| 14 | `.account.renewal` | Set/clear billing renewal timestamp override for one or all accounts | 5 | `clp .account.renewal name::alice@acme.com from_now::+0m` |
 
 ### Quick Reference
 
@@ -46,6 +47,7 @@
 | 0 | `.`, `.help` |
 | 1 | `.account.rotate` |
 | 2 | `.paths`, `.account.save`, `.account.use`, `.account.delete`, `.token.status`, `.account.limits`, `.account.relogin` |
+| 5 | `.account.renewal` |
 | 12 | `.accounts` |
 | 14 | `.usage` |
 | 13 | `.credentials.status` |

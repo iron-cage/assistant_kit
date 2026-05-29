@@ -1,0 +1,92 @@
+# Test: `from_now::` Parameter
+
+Edge case coverage for the `from_now::` parameter on `.account.renewal`. See [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md) for specification.
+
+### Test Case Index
+
+| ID | Test Name | Category |
+|----|-----------|----------|
+| EC-1 | `from_now::+1h30m` writes future ISO-8601 timestamp | Behavioral: write |
+| EC-2 | `from_now::+0m` writes current time as `_renewal_at` | Zero Delta |
+| EC-3 | `from_now::-30m` writes past timestamp (accepted verbatim) | Negative Delta |
+| EC-4 | `from_now::+1d` single-unit delta accepted | Single Unit |
+| EC-5 | `from_now::` combined with `at::` exits 1 | Mutual Exclusion |
+| EC-6 | `from_now::` combined with `clear::` exits 1 | Mutual Exclusion |
+| EC-7 | `from_now::invalid` exits 1 with parse error | Invalid Format |
+
+---
+
+### EC-1: `from_now::+1h30m` writes future ISO-8601 timestamp
+
+- **Given:** Account `test@example.com` exists.
+- **When:** `clp .account.renewal name::test@example.com from_now::+1h30m`
+- **Then:** Exits 0. `_renewal_at` is written as an ISO-8601 UTC string approximately 1h30m in the future (within 5s tolerance from command invocation time).
+- **Exit:** 0
+- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
+
+---
+
+### EC-2: `from_now::+0m` writes current time as `_renewal_at`
+
+- **Given:** Account `test@example.com` exists.
+- **When:** `clp .account.renewal name::test@example.com from_now::+0m`
+- **Then:** Exits 0. `_renewal_at` is written as an ISO-8601 UTC timestamp within 5s of now. `.usage` would auto-advance it monthly at render time.
+- **Exit:** 0
+- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
+
+---
+
+### EC-3: `from_now::-30m` writes past timestamp (accepted verbatim)
+
+- **Given:** Account `test@example.com` exists.
+- **When:** `clp .account.renewal name::test@example.com from_now::-30m`
+- **Then:** Exits 0. `_renewal_at` is written as an ISO-8601 UTC timestamp ~30 minutes in the past. No validation error — past timestamps are accepted; auto-advance happens at read time in `.usage`.
+- **Exit:** 0
+- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
+
+---
+
+### EC-4: `from_now::+1d` single-unit delta accepted
+
+- **Given:** Account `test@example.com` exists.
+- **When:** `clp .account.renewal name::test@example.com from_now::+1d`
+- **Then:** Exits 0. `_renewal_at` is written approximately 24h in the future.
+- **Exit:** 0
+- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
+
+---
+
+### EC-5: `from_now::` combined with `at::` exits 1
+
+- **Given:** Account `test@example.com` exists.
+- **When:** `clp .account.renewal name::test@example.com from_now::+1h at::2026-06-29T21:00:00Z`
+- **Then:** Exits 1. Stderr names the conflicting parameters. No file written.
+- **Exit:** 1
+- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
+
+---
+
+### EC-6: `from_now::` combined with `clear::` exits 1
+
+- **Given:** Account `test@example.com` exists.
+- **When:** `clp .account.renewal name::test@example.com from_now::+1h clear::1`
+- **Then:** Exits 1. Stderr names the conflicting parameters. No file written.
+- **Exit:** 1
+- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
+
+---
+
+### EC-7: `from_now::invalid` exits 1 with parse error
+
+- **Given:** Account `test@example.com` exists.
+- **When:** `clp .account.renewal name::test@example.com from_now::invalid`
+- **Then:** Exits 1. Stderr contains a parse error message. No file written.
+- **Exit:** 1
+- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)

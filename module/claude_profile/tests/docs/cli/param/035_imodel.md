@@ -27,7 +27,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::auto`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned.
 - **Exit:** 0
-- **Source fn:** `it112_imodel_auto_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it122_imodel_auto_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md)
 
 ---
@@ -38,7 +38,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::sonnet`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned (no accounts to touch).
 - **Exit:** 0
-- **Source fn:** `it117_imodel_sonnet_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it127_imodel_sonnet_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md)
 
 ---
@@ -49,7 +49,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::opus`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter.
 - **Exit:** 0
-- **Source fn:** `it118_imodel_opus_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it128_imodel_opus_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md)
 
 ---
@@ -60,7 +60,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::keep`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter.
 - **Exit:** 0
-- **Source fn:** `it119_imodel_keep_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it129_imodel_keep_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md)
 
 ---
@@ -71,7 +71,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::bad`
 - **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
-- **Source fn:** `it113_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it123_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-10](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -137,7 +137,7 @@ Edge case coverage for the `imodel::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage imodel::haiku`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned (no accounts to touch).
 - **Exit:** 0
-- **Source fn:** `it132_imodel_haiku_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it142_imodel_haiku_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/035_imodel.md](../../../../docs/cli/param/035_imodel.md)
 
 ---

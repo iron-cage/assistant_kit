@@ -40,4 +40,5 @@
 | 027 | [`.account.use` Post-Switch Touch](027_account_use_post_switch_touch.md) | Activate idle 5h window after account switch; `touch::`, `imodel::`, `effort::` on `.account.use` | ✅ |
 | 028 | [Usage Row Filtering and Extraction](028_usage_row_filtering.md) | Row-level filters, count/offset pagination, and `get::` single-value extraction for `.usage` output | ✅ |
 | 029 | [Account Host and Role Metadata](029_account_host_metadata.md) | Capture host/role labels at `.account.save` time; display via `cols::+host` and `cols::+role` | ✅ |
+| 030 | [Account Billing Renewal Override](030_account_renewal_override.md) | `.account.renewal` command; `_renewal_at` field in `{name}.claude.json`; exact `~Renews` and `→ Next` columns in `.usage` | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clp parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: 47 active clp parameter edge case files (`name::` through `host::`, params 1–48 except param 2); all parameters covered.
+- **In Scope**: 51 active clp parameter edge case files (`name::` through `role::` (account.save metadata), params 1–52 except param 2); all parameters covered.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 ### Responsibility Table
@@ -58,3 +58,7 @@
 | 046_abs.md | Edge cases for `abs::` parameter |
 | 047_no_color.md | Edge cases for `no_color::` parameter |
 | 048_host.md | Edge cases for `host::` parameter (`.account.save` metadata capture) |
+| 049_at.md | Edge cases for `at::` parameter (`.account.renewal` absolute timestamp) |
+| 050_from_now.md | Edge cases for `from_now::` parameter (`.account.renewal` relative delta) |
+| 051_clear.md | Edge cases for `clear::` parameter (`.account.renewal` renewal removal) |
+| 052_role.md | Edge cases for `role::` parameter (`.account.save` free-text metadata label) |

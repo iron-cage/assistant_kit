@@ -85,7 +85,7 @@ When all field toggles are disabled, only bare account name lines are printed (n
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/account.rs` | `list()` — enumerates credential store, reads per-machine active marker |
-| source | `src/commands.rs` | `accounts_routine()` — CLI handler |
+| source | `src/commands/accounts.rs` | `accounts_routine()` — CLI handler |
 | doc | [command/001_account.md](../cli/command/001_account.md#command--3-accounts) | CLI command specification |
 | doc | [tests/docs/cli/command/003_accounts.md](../../tests/docs/cli/command/003_accounts.md) | Integration test plan |
 | doc | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` fields and `uuid::`, `capabilities::` params |

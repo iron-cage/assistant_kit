@@ -7,15 +7,32 @@ use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
 use unilang::semantic::VerifiedCommand;
 use claude_quota::OauthUsageData;
-use crate::output::{ OutputFormat, OutputOptions };
-use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort };
+use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort, UsageOutputFormat };
 use super::subprocess::{ resolve_model, resolve_effort };
 use super::fetch::fetch_all_quota;
-use super::render::{ render_text, render_json };
+use super::render::{ render_text, render_json, render_tsv, render_plain, extract_get_field };
 use super::live::execute_live_mode;
 use super::refresh::apply_refresh;
 use super::touch::apply_touch;
 use super::params::parse_usage_params;
+use super::sort::find_next_for_strategy;
+use super::format::{ five_hour_left, seven_day_left, status_emoji };
+
+// ── no_color post-processor ────────────────────────────────────────────────────
+
+/// Strip emoji and replace status symbols with plain-text equivalents.
+///
+/// Replaces: `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `→`→`->`, `✓`→`*`.
+/// Used when `no_color::1` is set (AC-14 / TSK-224).
+fn apply_no_color( s : String ) -> String
+{
+  s
+    .replace( "🟢", "ok" )
+    .replace( "🟡", "warn" )
+    .replace( "🔴", "err" )
+    .replace( '→', "->" )
+    .replace( '✓', "*" )
+}
 
 // ── TouchCtx ─────────────────────────────────────────────────────────────────
 
@@ -143,6 +160,8 @@ pub( crate ) fn pre_switch_touch_ctx(
         expires_at_ms : 0,
         result        : Ok( quota ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       };
       let model        = resolve_model( &aq, imodel );
       let effort_val   = resolve_effort( &model, effort );
@@ -195,6 +214,8 @@ pub( crate ) fn apply_post_switch_touch(
     expires_at_ms : 0,
     result        : Ok( ctx.quota ),
     account       : None,
+    host          : String::new(),
+    role          : String::new(),
   };
   let model        = resolve_model( &aq, imodel );
   let effort_val   = resolve_effort( &model, effort );
@@ -228,17 +249,16 @@ pub( crate ) fn apply_post_switch_touch(
 ///
 /// Returns `ErrorData` (exit 2) if HOME/PRO is unset or the credential store
 /// exists but cannot be read. Per-account API errors are displayed inline.
+#[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  let opts   = OutputOptions::from_cmd( &cmd )?;
-  if opts.is_table()
-  {
-    return Err( ErrorData::new(
-      ErrorCode::ArgumentTypeMismatch,
-      "format::table is only supported by .accounts".to_string(),
-    ) );
-  }
+  // Fix(TSK-224): format:: is now parsed inside parse_usage_params so that usage-specific
+  //   format values (tsv, plain, value) are handled without touching the shared OutputFormat enum.
+  // Root cause: OutputFormat is shared across all commands; adding usage-only variants would
+  //   require exhaustive match updates in all other command handlers.
+  // Pitfall: `OutputOptions::from_cmd` was the prior format parser; it is no longer called from
+  //   usage_routine — do NOT reintroduce it here, as it would reject `format::tsv`.
   let params = parse_usage_params( &cmd )?;
 
   // Live-mode guards — fire BEFORE any network fetch, only when live::1 (AC-31).
@@ -246,7 +266,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   // require live credentials for offline guard tests it22–it24.
   if params.live == 1
   {
-    if matches!( opts.format, OutputFormat::Json )
+    if params.format == UsageOutputFormat::Json
     {
       return Err( ErrorData::new(
         ErrorCode::ArgumentTypeMismatch,
@@ -308,11 +328,82 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     }
   }
 
-  let content = match opts.format
+  // ── Row filter pipeline (TSK-223) ─────────────────────────────────────────
+  // Applied after sort/tier (which runs inside render_text), before render.
+  // Filters are AND-composition; count/offset applied last as a window.
   {
-    OutputFormat::Json  => render_json( &accounts ),
-    OutputFormat::Text
-    | OutputFormat::Table => render_text( &accounts, params.sort, params.desc, params.prefer, params.next, &params.cols ),
+    use std::time::{ SystemTime, UNIX_EPOCH };
+    let now_secs = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_secs();
+
+    // only_next: retain only the account that received the → marker.
+    if params.only_next
+    {
+      let best_opt = find_next_for_strategy( &accounts, params.next, params.prefer, now_secs );
+      accounts = match best_opt
+      {
+        Some( i ) => { let w = accounts.swap_remove( i ); vec![ w ] }
+        None      => vec![],
+      };
+    }
+
+    // Boolean row filters.
+    if params.only_active       { accounts.retain( |aq| aq.is_active ); }
+    if params.only_valid        { accounts.retain( |aq| aq.result.is_ok() ); }
+    if params.exclude_exhausted { accounts.retain( |aq| status_emoji( &aq.result ) == "🟢" ); }
+
+    // Threshold filters: rows with no valid quota (Err) score as 0 and are also hidden.
+    if params.min_5h > 0
+    {
+      let threshold = f64::from( params.min_5h );
+      accounts.retain( |aq| five_hour_left( aq ) >= threshold );
+    }
+    if params.min_7d > 0
+    {
+      let threshold = f64::from( params.min_7d );
+      accounts.retain( |aq| seven_day_left( aq ) >= threshold );
+    }
+
+    // Pagination window (applied last, after all boolean/threshold filters).
+    if params.offset > 0
+    {
+      let off = usize::try_from( params.offset ).unwrap_or( usize::MAX );
+      accounts = accounts.into_iter().skip( off ).collect();
+    }
+    if params.count > 0 { accounts.truncate( usize::try_from( params.count ).unwrap_or( usize::MAX ) ); }
+  }
+  // ── End filter pipeline ────────────────────────────────────────────────────
+
+  // abs::1 is registered for future absolute-count display; no-op until API exposes counts.
+  let _ = params.abs;
+
+  // `get::` extraction: output the requested field from the first row as a bare string.
+  // When accounts is empty after filtering, output nothing (exit 0, empty stdout).
+  if let Some( field ) = params.get
+  {
+    use std::time::{ SystemTime, UNIX_EPOCH };
+    let now_secs = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_secs();
+    let value = accounts.first()
+      .map_or_else( String::new, |aq| extract_get_field( aq, field, now_secs ) );
+    let content = if value.is_empty() { String::new() } else { format!( "{value}\n" ) };
+    return Ok( OutputData::new( content, "text" ) );
+  }
+
+  let content = match params.format
+  {
+    UsageOutputFormat::Json  => render_json( &accounts ),
+    UsageOutputFormat::Tsv   => render_tsv( &accounts, params.sort, params.desc, params.prefer, &params.cols ),
+    UsageOutputFormat::Plain => render_plain( &accounts, params.sort, params.desc, params.prefer, params.next, &params.cols ),
+    UsageOutputFormat::Value => String::new(),
+    UsageOutputFormat::Text  => render_text( &accounts, params.sort, params.desc, params.prefer, params.next, &params.cols ),
+  };
+
+  let content = if params.no_color && params.format != UsageOutputFormat::Tsv
+  {
+    apply_no_color( content )
+  }
+  else
+  {
+    content
   };
 
   Ok( OutputData::new( content, "text" ) )

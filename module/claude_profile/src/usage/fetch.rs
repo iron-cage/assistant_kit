@@ -55,7 +55,6 @@ fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : AccountQuo
 ///
 /// When `trace` is `true`, one `[trace]` line is written to stderr before reading
 /// each account's credentials and one after receiving the API response.
-#[ allow( clippy::too_many_lines ) ]
 pub( crate ) fn fetch_all_quota(
   credential_store : &std::path::Path,
   live_creds_file  : &std::path::Path,
@@ -140,6 +139,8 @@ pub( crate ) fn fetch_all_quota(
         ( Err( e ), None )
       }
     };
+    // Read host/role from {name}.profile.json — best-effort, empty on missing/parse error.
+    let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
     results.push( AccountQuota
     {
       name          : acct.name.clone(),
@@ -148,6 +149,8 @@ pub( crate ) fn fetch_all_quota(
       expires_at_ms : acct.expires_at_ms,
       result,
       account,
+      host,
+      role,
     } );
   }
 
@@ -186,7 +189,28 @@ fn inject_synthetic_row_if_needed(
     expires_at_ms,
     result,
     account,
+    host          : String::new(),
+    role          : String::new(),
   } );
+}
+
+// ── Profile metadata reader ───────────────────────────────────────────────────
+
+/// Read `host` and `role` from `{name}.profile.json` in the credential store.
+///
+/// Returns `(String::new(), String::new())` when the file is absent or unparseable —
+/// profile metadata is always optional (AC-09 from docs/feature/029_account_host_metadata.md).
+fn read_profile_metadata( credential_store : &std::path::Path, name : &str ) -> ( String, String )
+{
+  let path = credential_store.join( format!( "{name}.profile.json" ) );
+  let text = match std::fs::read_to_string( &path )
+  {
+    Ok( s )  => s,
+    Err( _ ) => return ( String::new(), String::new() ),
+  };
+  let host = crate::account::parse_string_field( &text, "host" ).unwrap_or_default();
+  let role = crate::account::parse_string_field( &text, "role" ).unwrap_or_default();
+  ( host, role )
 }
 
 // ── Numeric JSON field parsers ────────────────────────────────────────────────
@@ -329,6 +353,8 @@ mod tests
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "missing accessToken".to_string() ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     };
     let mut results = vec![ stored_row ];
 
@@ -340,6 +366,8 @@ mod tests
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "missing accessToken".to_string() ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     };
 
     // Fix(BUG-218): guarded injection — only insert when name is absent from results.

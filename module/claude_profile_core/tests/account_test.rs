@@ -26,6 +26,7 @@
 //! | `test_mre_bug211_save_false_leaves_marker_unchanged` | save() with update_marker=false → `_active` not written |
 //! | `ad_delete_also_removes_snapshots` | All 3 files exist → all 3 absent after delete |
 //! | `ad_delete_succeeds_when_snapshots_absent` | Only credentials → delete succeeds, no error |
+//! | `mre_bug_219_switch_account_stale_org_name` | switch_account() overrides org fields from roles.json |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -150,6 +151,100 @@ fn test_mre_bug211_save_false_leaves_marker_unchanged()
   assert!(
     !marker.exists(),
     "save() with update_marker=false must NOT write the _active marker file; found: {marker:?}",
+  );
+}
+
+/// BUG-219 MRE: `switch_account()` must override `oauthAccount.organizationName`
+/// and `oauthAccount.organizationUuid` from `{name}.roles.json`, not from the stale snapshot.
+///
+/// # Root Cause
+/// The BUG-217 fix block (`account.rs` ~line 338) only inserts `emailAddress`. All other
+/// `oauthAccount` fields — including `organizationName`, `organizationUuid` — are copied
+/// verbatim from the snapshot. When the snapshot was captured while a different account
+/// (`i7@test.com`) was active, these fields carry i7's org identity. Claude Code's `/usage`
+/// command reads `oauthAccount.organizationName` from `~/.claude.json` and displays the
+/// wrong org name.
+///
+/// # Why Not Caught
+/// No test verified org fields post-switch. The BUG-217 fix was scoped to `emailAddress`
+/// only. The two data paths (`clp` reads `roles.json` — correct; Claude Code reads
+/// `~/.claude.json` `oauthAccount` — stale) were never exercised together.
+///
+/// # Fix Applied
+/// After the BUG-217 `emailAddress` insert, read `{name}.roles.json` and override
+/// `organizationName` and `organizationUuid` using `parse_string_field`.
+///
+/// # Prevention
+/// This test catches any regression that removes the `organizationName` override or
+/// reverts the scope of the BUG-217 fix block.
+///
+/// # Pitfall
+/// `parse_string_field` is a simple substring matcher — it requires `"organizationName":`
+/// (double-quoted key) in the output. Do not use `json!()` macro for the assertion;
+/// read `~/.claude.json` as a raw string and use `parse_string_field` to extract.
+/// `claude_json_file()` returns `$HOME/.claude.json` (at HOME level, one level ABOVE
+/// `$HOME/.claude/`). Do NOT use `dot_claude.join("claude.json")` — that path is inside
+/// `.claude/` and is never written by `switch_account()`.
+#[ doc = "bug_reproducer(BUG-219)" ]
+#[ test ]
+fn mre_bug_219_switch_account_stale_org_name()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  // Set up ~/.claude.json with i7's org currently active (simulates i7 being the active session).
+  // NOTE: claude_json_file() returns $HOME/.claude.json (HOME level), NOT $HOME/.claude/claude.json.
+  std::fs::write(
+    tmp.path().join( ".claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"i7@test.com","organizationName":"i7 Org","organizationUuid":"uuid-i7"},"commands":{}}"#,
+  ).unwrap();
+
+  // i6's credentials file (required for switch_account to proceed)
+  std::fs::write(
+    store.join( "i6@test.com.credentials.json" ),
+    r#"{"accessToken":"tok-i6","expiresAt":9999999999999,"subscriptionType":"pro"}"#,
+  ).unwrap();
+
+  // i6's claude.json snapshot — STALE: contains i7's org (captured while i7 was active)
+  std::fs::write(
+    store.join( "i6@test.com.claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"i6@test.com","organizationName":"i7 Org","organizationUuid":"uuid-i7"}}"#,
+  ).unwrap();
+
+  // i6's roles.json — CORRECT: contains i6's actual org from live API
+  std::fs::write(
+    store.join( "i6@test.com.roles.json" ),
+    r#"{"organization_uuid":"uuid-i6","organization_name":"i6 Org","organization_role":"member"}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "i6@test.com", &store, &paths ).unwrap();
+
+  let claude_json = std::fs::read_to_string( tmp.path().join( ".claude.json" ) )
+    .expect( "~/.claude.json must exist after switch_account" );
+
+  let org_name = account::parse_string_field( &claude_json, "organizationName" )
+    .expect( "oauthAccount.organizationName must be present after switch_account" );
+  let org_uuid = account::parse_string_field( &claude_json, "organizationUuid" )
+    .expect( "oauthAccount.organizationUuid must be present after switch_account" );
+  let email    = account::parse_string_field( &claude_json, "emailAddress" )
+    .expect( "oauthAccount.emailAddress must be present after switch_account" );
+
+  assert_eq!(
+    org_name, "i6 Org",
+    "oauthAccount.organizationName must be i6's org from roles.json, not the stale i7 snapshot value",
+  );
+  assert_eq!(
+    org_uuid, "uuid-i6",
+    "oauthAccount.organizationUuid must be i6's UUID from roles.json, not the stale i7 value",
+  );
+  assert_eq!(
+    email, "i6@test.com",
+    "oauthAccount.emailAddress must be enforced to name (BUG-217 invariant preserved)",
   );
 }
 

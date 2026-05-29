@@ -52,8 +52,11 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [046_abs.md](046_abs.md) | `abs::` — show absolute token counts instead of percentages |
 | [047_no_color.md](047_no_color.md) | `no_color::` — strip emoji and ANSI colors from output |
 | [048_host.md](048_host.md) | `host::` — host/machine label captured at account save time |
+| [049_at.md](049_at.md) | `at::` — absolute ISO-8601 UTC renewal timestamp for `.account.renewal` |
+| [050_from_now.md](050_from_now.md) | `from_now::` — signed duration delta from now for `.account.renewal` |
+| [051_clear.md](051_clear.md) | `clear::` — remove billing renewal override from `{name}.claude.json` |
 
-**Total:** 48 parameters
+**Total:** 51 parameters
 
 ### Overview Table
 
@@ -107,8 +110,11 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 46 | `abs::` | `bool` | `0` | `0`, `1` | Absolute token counts instead of % | 1 cmd |
 | 47 | `no_color::` | `bool` | `0` | `0`, `1` | Strip emoji and ANSI from output | 1 cmd |
 | 48 | `host::` | `string` | `""` (auto) | Any string | Machine/host label at account save | 1 cmd |
+| 49 | `at::` | `string` | *(omit)* | ISO-8601 UTC datetime | Absolute renewal timestamp for `.account.renewal` | 1 cmd |
+| 50 | `from_now::` | `string` | *(omit)* | `+`/`-` duration (e.g., `+3h30m`) | Signed delta from now for `.account.renewal` | 1 cmd |
+| 51 | `clear::` | `bool` | `0` | `0`, `1` | Remove billing renewal override | 1 cmd |
 
-*Params 1, 48 = Account Targeting; param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36 = Fetch Behavior group; param 24 = Output Selection group; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group*
+*Param 1 = cross-command account selector (no formal group); param 48 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36 = Fetch Behavior group; param 24 = Output Selection group; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group*
 
 ### See Also
 

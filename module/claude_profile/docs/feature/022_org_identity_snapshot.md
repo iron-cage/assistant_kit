@@ -91,7 +91,7 @@ Applied to `.credentials.status` (reads from live `~/.claude.json` — org field
 |------|------|----------------|
 | source | `claude_profile_core/src/account.rs` | `Account` struct org fields; `save()` writes roles.json (feature-gated); `delete()` removes roles.json best-effort; `list()` reads roles.json |
 | source | `claude_quota/src/lib.rs` | `fetch_claude_cli_roles()` transport; `ClaudeCliRolesData` struct |
-| source | `src/commands.rs` | `credentials_status_routine()` — reads active account roles.json; `accounts_routine()` — renders org fields |
+| source | `src/commands/credentials.rs`, `src/commands/accounts.rs` | `credentials_status_routine()` — reads active account roles.json; `accounts_routine()` — renders org fields |
 | source | `src/lib.rs` | Registration of `org_uuid::` and `org_name::` params |
 | test | `tests/cli/accounts_test.rs` | org field rendering from roles.json snapshot |
 | test | `tests/cli/account_mutations_test.rs` | roles.json created on save; removed on delete |

@@ -50,6 +50,8 @@ pub( crate ) mod test_support
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 
@@ -64,6 +66,8 @@ pub( crate ) mod test_support
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "missing accessToken".to_string() ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 
@@ -86,6 +90,8 @@ pub( crate ) mod test_support
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 
@@ -111,6 +117,8 @@ pub( crate ) mod test_support
       expires_at_ms,
       result        : Ok( data ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 
@@ -139,6 +147,8 @@ pub( crate ) mod test_support
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 
@@ -185,6 +195,8 @@ pub( crate ) mod test_support
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 
@@ -217,6 +229,8 @@ pub( crate ) mod test_support
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 
@@ -239,6 +253,8 @@ pub( crate ) mod test_support
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 
@@ -253,6 +269,8 @@ pub( crate ) mod test_support
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "missing accessToken".to_string() ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 
@@ -274,6 +292,8 @@ pub( crate ) mod test_support
         seven_day_sonnet : Some( claude_quota::PeriodUsage { utilization, resets_at : None } ),
       } ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 
@@ -295,6 +315,8 @@ pub( crate ) mod test_support
         seven_day_sonnet : None,
       } ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 
@@ -320,6 +342,8 @@ pub( crate ) mod test_support
         seven_day_sonnet : None,
       } ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     }
   }
 }
@@ -455,6 +479,7 @@ mod tests
       {
         name : "fail@test.com".to_string(), is_current : false, is_active : false,
         expires_at_ms : 0, result : Err( "auth failed".to_string() ), account : None,
+        host : String::new(), role : String::new(),
       },
     ];
     let result = render_json( &accounts );
@@ -471,6 +496,7 @@ mod tests
       {
         name : "test\"@evil.com".to_string(), is_current : false, is_active : false,
         expires_at_ms : 0, result : Err( "fail".to_string() ), account : None,
+        host : String::new(), role : String::new(),
       },
     ];
     let result = render_json( &accounts );
@@ -500,6 +526,8 @@ mod tests
         expires_at_ms : FAR_FUTURE_MS,
         result        : Ok( quota ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
       AccountQuota
       {
@@ -509,6 +537,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
 

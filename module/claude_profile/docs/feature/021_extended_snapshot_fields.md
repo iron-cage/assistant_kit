@@ -51,7 +51,7 @@ The `{name}.claude.json` snapshot (a copy of `~/.claude.json` taken at `save()` 
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `claude_profile_core/src/account.rs` | `Account` struct new fields; `list()` reads them; `parse_string_array_field` helper |
-| source | `src/commands.rs` | `read_live_cred_meta()` — reads new fields from live `~/.claude.json`; `accounts_routine()`, `credentials_status_routine()` — render params |
+| source | `src/commands/accounts.rs`, `src/commands/credentials.rs` | `read_live_cred_meta()` — reads new fields from live `~/.claude.json`; `accounts_routine()`, `credentials_status_routine()` — render params |
 | source | `src/lib.rs` | Registration of `uuid::` and `capabilities::` params |
 | test | `tests/cli/credentials_test.rs` | Test cases for `uuid::` and `capabilities::` on `.credentials.status` |
 | test | `tests/cli/accounts_test.rs` | Test cases for `uuid::` and `capabilities::` on `.accounts` |

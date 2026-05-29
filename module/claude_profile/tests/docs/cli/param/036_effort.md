@@ -29,7 +29,7 @@ Edge case coverage for the `effort::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage effort::auto`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned.
 - **Exit:** 0
-- **Source fn:** `it114_effort_auto_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it124_effort_auto_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/036_effort.md](../../../../docs/cli/param/036_effort.md)
 
 ---
@@ -40,7 +40,7 @@ Edge case coverage for the `effort::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage effort::high`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter.
 - **Exit:** 0
-- **Source fn:** `it120_effort_high_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it130_effort_high_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/036_effort.md](../../../../docs/cli/param/036_effort.md)
 
 ---
@@ -51,7 +51,7 @@ Edge case coverage for the `effort::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage effort::max`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter.
 - **Exit:** 0
-- **Source fn:** `it121_effort_max_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it131_effort_max_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/036_effort.md](../../../../docs/cli/param/036_effort.md)
 
 ---
@@ -62,7 +62,7 @@ Edge case coverage for the `effort::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage effort::bad`
 - **Then:** Exits 1. Stderr contains each of the five valid values: `auto`, `low`, `normal`, `high`, `max`.
 - **Exit:** 1
-- **Source fn:** `it115_effort_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it125_effort_bogus_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-11](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -128,7 +128,7 @@ Edge case coverage for the `effort::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage effort::low`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned.
 - **Exit:** 0
-- **Source fn:** `it133_effort_low_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it143_effort_low_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/036_effort.md](../../../../docs/cli/param/036_effort.md)
 
 ---
@@ -139,7 +139,7 @@ Edge case coverage for the `effort::` parameter on `.usage`. For `.account.use` 
 - **When:** `clp .usage effort::normal`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned.
 - **Exit:** 0
-- **Source fn:** `it134_effort_normal_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it144_effort_normal_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/036_effort.md](../../../../docs/cli/param/036_effort.md)
 
 ---
@@ -172,5 +172,5 @@ Edge case coverage for the `effort::` parameter on `.usage`. For `.account.use` 
 - **When:** Unit test of `resolve_effort(&IsolatedModel::Specific("claude-haiku-4-5-20251001"), "auto")`
 - **Then:** Returns `None`. No `--effort` flag is prepended. Haiku has no extended thinking support — `effort::auto` correctly injects nothing rather than an unsupported flag.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_haiku_effort_auto_no_effort_flag` (in `src/usage.rs` `#[cfg(test)]`)
+- **Source fn:** `it_imodel_haiku_effort_auto_no_effort_flag` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-14](../../../../docs/feature/026_subprocess_model_effort.md)

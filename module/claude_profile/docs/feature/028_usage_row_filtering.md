@@ -44,7 +44,9 @@
 | `7d_son` | Percentage string |
 | `7d_reset` | Duration string |
 | `expires` | Duration or timestamp string |
-| `renews` | Date string, e.g. `Jun  5` |
+| `renews` | Duration string, e.g. `~in 6d` or `in 3h 47m` |
+| `next_event_type` | Event label string, e.g. `"+5h"` |
+| `next_event_secs` | Seconds to next event, e.g. `10800` |
 | `sub` | Subscription tier, e.g. `max` |
 | `status` | Emoji: `🟢`, `🟡`, or `🔴` |
 | `account` | Account name string |
@@ -89,7 +91,8 @@
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/usage.rs` | filter application, `get::` field extraction, format::value rendering |
+| source | `src/usage/mod.rs` | filter pipeline application and orchestration |
+| source | `src/usage/render.rs` | `get::` field extraction, `format::value`/`tsv`/`plain` rendering |
 | param | [cli/param/037_count.md](../cli/param/037_count.md) | `count::` parameter specification |
 | param | [cli/param/038_offset.md](../cli/param/038_offset.md) | `offset::` parameter specification |
 | param | [cli/param/039_only_active.md](../cli/param/039_only_active.md) | `only_active::` parameter specification |

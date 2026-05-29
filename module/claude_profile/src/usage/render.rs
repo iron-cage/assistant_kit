@@ -1,11 +1,13 @@
 //! Table and JSON renderers for quota results.
 //!
 //! `render_text` produces the human-readable `data_fmt` table; `render_json`
-//! produces a JSON array. Both are consumed by `api.rs::usage_routine`.
+//! produces a JSON array; `render_tsv` produces tab-separated output; `render_plain`
+//! produces a no-emoji version of the text table; `extract_get_field` extracts one
+//! column value as a bare string. All consumed by `api.rs::usage_routine`.
 
 use data_fmt::{ RowBuilder, TableFormatter, Format };
 use crate::output::{ format_duration_secs, json_escape };
-use super::types::{ AccountQuota, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility };
+use super::types::{ AccountQuota, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility, GetField };
 use super::format::{
   compute_expires_cell, sub_label, next_billing_label, shorten_error,
   quota_text_cells, status_emoji,
@@ -91,6 +93,8 @@ pub( crate ) fn render_text(
   if cols.expires      { headers.push( "Expires".to_string() ); }
   if cols.sub          { headers.push( "Sub".to_string() ); }
   if cols.renews       { headers.push( "~Renews".to_string() ); }
+  if cols.host         { headers.push( "Host".to_string() ); }
+  if cols.role         { headers.push( "Role".to_string() ); }
 
   let mut builder = RowBuilder::new( headers );
   for orig_idx in sorted_indices.iter().copied()
@@ -144,6 +148,8 @@ pub( crate ) fn render_text(
         if cols.expires      { row.push( expires_cell ); }
         if cols.sub          { row.push( sub_str ); }
         if cols.renews       { row.push( renews_str ); }
+        if cols.host         { row.push( aq.host.clone() ); }
+        if cols.role         { row.push( aq.role.clone() ); }
         builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
       }
       Err( reason ) =>
@@ -164,6 +170,8 @@ pub( crate ) fn render_text(
         if cols.expires      { row.push( expires_cell ); }
         if cols.sub          { row.push( sub_str ); }
         if cols.renews       { row.push( renews_str ); }
+        if cols.host         { row.push( aq.host.clone() ); }
+        if cols.role         { row.push( aq.role.clone() ); }
         // Error reason replaces the last visible non-structural column (009 AC-03).
         if row.len() > structural_len
         {
@@ -182,13 +190,13 @@ pub( crate ) fn render_text(
   let valid_count = accounts.iter().filter( |aq| aq.result.is_ok() ).count();
   if valid_count < 2 { return body; }
 
-  // Responsibility(TSK-184-footer): unconditional 2-strategy footer (Endurance, Drain).
-  // Both lines shown when valid_count >= 2; NOT gated on next:: value.
+  // Responsibility(TSK-184-footer): unconditional 3-strategy footer (Renew, Endurance, Drain).
+  // All three lines shown when valid_count >= 2; NOT gated on next:: value.
   // The → marker in the table body is already placed on the active-strategy winner.
   {
     use core::fmt::Write as _;
-    let strategies = [ NextStrategy::Endurance, NextStrategy::Drain ];
-    let names      = [ "endurance", "drain" ];
+    let strategies = [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ];
+    let names      = [ "renew", "endurance", "drain" ];
     let mut lines  = String::new();
     for ( strategy, name ) in strategies.iter().zip( names.iter() )
     {
@@ -284,4 +292,189 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
   }
 
   format!( "[\n  {}\n]\n", parts.join( ",\n  " ) )
+}
+
+// ── TSV renderer ───────────────────────────────────────────────────────────────
+
+/// Render quota results as tab-separated values.
+///
+/// Status column uses plain-text labels (`ok`/`warn`/`err`). Percentage cells in
+/// `5h Left` and `7d Left` are rendered without the emoji prefix. No tier grouping
+/// or footer; rows are in sort strategy order. First row is a header.
+pub( crate ) fn render_tsv(
+  accounts : &[ AccountQuota ],
+  sort     : SortStrategy,
+  desc     : Option< bool >,
+  prefer   : PreferStrategy,
+  cols     : &ColsVisibility,
+) -> String
+{
+  use std::time::{ SystemTime, UNIX_EPOCH };
+  let now_secs = SystemTime::now()
+    .duration_since( UNIX_EPOCH )
+    .unwrap_or_default()
+    .as_secs();
+
+  // Build header.
+  let mut headers = vec![ "flag".to_string() ];
+  if cols.status       { headers.push( "status".to_string() ); }
+  headers.push( "account".to_string() );
+  if cols.h5_left      { headers.push( "5h_left".to_string() ); }
+  if cols.h5_reset     { headers.push( "5h_reset".to_string() ); }
+  if cols.d7_left      { headers.push( "7d_left".to_string() ); }
+  if cols.d7_son       { headers.push( "7d_son".to_string() ); }
+  if cols.d7_reset     { headers.push( "7d_reset".to_string() ); }
+  if cols.d7_son_reset { headers.push( "7d_son_reset".to_string() ); }
+  if cols.expires      { headers.push( "expires".to_string() ); }
+  if cols.sub          { headers.push( "sub".to_string() ); }
+  if cols.renews       { headers.push( "renews".to_string() ); }
+  if cols.host         { headers.push( "host".to_string() ); }
+  if cols.role         { headers.push( "role".to_string() ); }
+  let mut out = headers.join( "\t" );
+  out.push( '\n' );
+
+  if accounts.is_empty() { return out; }
+
+  let sorted_indices = sort_indices( accounts, sort, desc, prefer, now_secs );
+  for idx in sorted_indices
+  {
+    let aq         = &accounts[ idx ];
+    let flag_cell  = if aq.is_current { "\u{2713}" } else if aq.is_active { "*" } else { "" };
+    let status_str = match status_emoji( &aq.result )
+    {
+      "🟢" => "ok",
+      "🟡" => "warn",
+      _    => "err",
+    };
+    let expires_str = compute_expires_cell( aq.expires_at_ms, now_secs );
+    let sub_str     = sub_label( aq.account.as_ref() ).to_string();
+    let renews_str  = aq.account.as_ref()
+      .map_or_else( || "?".to_string(), |a| next_billing_label( &a.org_created_at, now_secs ) );
+
+    let mut row = vec![ flag_cell.to_string() ];
+    if cols.status { row.push( status_str.to_string() ); }
+    row.push( aq.name.clone() );
+
+    match &aq.result
+    {
+      Ok( data ) =>
+      {
+        // Plain percentage cells (no emoji prefix).
+        let dash     = "\u{2014}".to_string();
+        let pct_bare = |util : Option< f64 >| -> String
+        {
+          util.map_or_else( || dash.clone(), |u| format!( "{:.0}%", 100.0 - u ) )
+        };
+        let cells = quota_text_cells( data, now_secs );
+        // cells[0] = "🟢 88%" — strip emoji; use bare pct_bare instead.
+        let h5_left_bare  = pct_bare( data.five_hour.as_ref().map( |p| p.utilization ) );
+        let d7_left_bare  = pct_bare( data.seven_day.as_ref().map( |p| p.utilization ) );
+        let d7_son_reset  = data.seven_day_sonnet.as_ref()
+          .and_then( |p| p.resets_at.as_deref() )
+          .and_then( claude_quota::iso_to_unix_secs )
+          .map_or_else( || dash.clone(), |t| format!( "in {}", format_duration_secs( t.saturating_sub( now_secs ) ) ) );
+
+        if cols.h5_left      { row.push( h5_left_bare ); }
+        if cols.h5_reset     { row.push( cells[ 1 ].clone() ); }
+        if cols.d7_left      { row.push( d7_left_bare ); }
+        if cols.d7_son       { row.push( cells[ 3 ].clone() ); }
+        if cols.d7_reset     { row.push( cells[ 4 ].clone() ); }
+        if cols.d7_son_reset { row.push( d7_son_reset ); }
+        if cols.expires      { row.push( expires_str ); }
+        if cols.sub          { row.push( sub_str ); }
+        if cols.renews       { row.push( renews_str ); }
+        if cols.host         { row.push( aq.host.clone() ); }
+        if cols.role         { row.push( aq.role.clone() ); }
+      }
+      Err( reason ) =>
+      {
+        let dash      = "\u{2014}".to_string();
+        let error_str = format!( "({})", shorten_error( reason ) );
+        let col_count = [ cols.h5_left, cols.h5_reset, cols.d7_left, cols.d7_son,
+                          cols.d7_reset, cols.d7_son_reset ].iter().filter( |&&b| b ).count();
+        for _ in 0..col_count { row.push( dash.clone() ); }
+        if cols.expires { row.push( expires_str ); }
+        if cols.sub     { row.push( sub_str ); }
+        if cols.renews  { row.push( error_str ); }
+        if cols.host    { row.push( aq.host.clone() ); }
+        if cols.role    { row.push( aq.role.clone() ); }
+      }
+    }
+
+    out.push_str( &row.join( "\t" ) );
+    out.push( '\n' );
+  }
+
+  out
+}
+
+// ── Plain-text renderer ────────────────────────────────────────────────────────
+
+/// Render quota results as plain text (same as `render_text` with emoji replaced).
+///
+/// `🟢`→`ok`, `🟡`→`warn`, `🔴`→`err`, `→`→`->`, `✓`→`*`.
+pub( crate ) fn render_plain(
+  accounts : &[ AccountQuota ],
+  sort     : SortStrategy,
+  desc     : Option< bool >,
+  prefer   : PreferStrategy,
+  next     : NextStrategy,
+  cols     : &ColsVisibility,
+) -> String
+{
+  let raw = render_text( accounts, sort, desc, prefer, next, cols );
+  raw
+    .replace( "🟢", "ok" )
+    .replace( "🟡", "warn" )
+    .replace( "🔴", "err" )
+    .replace( '→', "->" )
+    .replace( '✓', "*" )
+}
+
+// ── Field extractor ────────────────────────────────────────────────────────────
+
+/// Extract the value of one column for `aq` as a bare string with no table chrome.
+///
+/// The returned string is the same value that would appear in the corresponding
+/// cell of the text table — but without trailing whitespace or ANSI sequences.
+/// `host` and `role` return the values from `{name}.profile.json`, empty when absent.
+pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_secs : u64 ) -> String
+{
+  let dash = "\u{2014}".to_string();
+  match field
+  {
+    GetField::Status  => status_emoji( &aq.result ).to_string(),
+    GetField::Account => aq.name.clone(),
+    GetField::Expires => compute_expires_cell( aq.expires_at_ms, now_secs ),
+    GetField::Sub     => sub_label( aq.account.as_ref() ).to_string(),
+    GetField::Renews  => aq.account.as_ref()
+      .map_or_else( || "?".to_string(), |a| next_billing_label( &a.org_created_at, now_secs ) ),
+    GetField::Host                                     => aq.host.clone(),
+    GetField::Role                                     => aq.role.clone(),
+    GetField::NextEventType | GetField::NextEventSecs  => dash.clone(),
+    _ =>
+    {
+      let Ok( data ) = &aq.result else { return dash; };
+      let pct_bare = |util : Option< f64 >| -> String
+      {
+        util.map_or_else( || dash.clone(), |u| format!( "{:.0}%", 100.0 - u ) )
+      };
+      let reset_cell = |iso : Option< &str >| -> String
+      {
+        iso.and_then( claude_quota::iso_to_unix_secs )
+          .map_or_else( || dash.clone(), |t|
+            format!( "in {}", format_duration_secs( t.saturating_sub( now_secs ) ) )
+          )
+      };
+      match field
+      {
+        GetField::FiveHourLeft  => pct_bare( data.five_hour.as_ref().map( |p| p.utilization ) ),
+        GetField::FiveHourReset => reset_cell( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
+        GetField::SevenDayLeft  => pct_bare( data.seven_day.as_ref().map( |p| p.utilization ) ),
+        GetField::SevenDaySon   => pct_bare( data.seven_day_sonnet.as_ref().map( |p| p.utilization ) ),
+        GetField::SevenDayReset => reset_cell( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ),
+        _ => dash,
+      }
+    }
+  }
 }

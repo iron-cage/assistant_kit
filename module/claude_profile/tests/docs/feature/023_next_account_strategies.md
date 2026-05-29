@@ -45,7 +45,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then:** Footer contains "Next by strategy:" followed by three lines — one starting "renew", one starting "endurance", and one starting "drain". All three lines appear regardless of which `next::` value is active.
 - **Exit:** 0
 - **Live:** yes (requires ≥2 accounts with live quota)
-- **Source fn:** `it094_lim_it_footer_always_shows_both_strategy_lines` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it104_lim_it_footer_always_shows_both_strategy_lines` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-01](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -59,7 +59,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then-B:** Returns `None` — no `→` placed.
 - **Exit:** n/a (unit test)
 - **Note:** TSK-184 deleted `find_recommendation()`; this case now calls `find_next_for_strategy()` directly.
-- **Source fn:** `test_ft02_023_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `src/usage.rs`)
+- **Source fn:** `test_ft02_023_find_next_for_strategy_some_when_eligible_none_when_all_current` (in `src/usage/sort.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-02](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -71,7 +71,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then:** The row for `end_winner@test.com` contains `→` in the flag column. `drain_winner@test.com` does NOT have `→`.
 - **Exit:** 0
 - **Live:** yes (requires live quota data)
-- **Source fn:** `it092_lim_it_next_endurance_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it102_lim_it_next_endurance_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-03](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -83,7 +83,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then:** The row for `low_weekly@test.com` contains `→` (lowest non-exhausted `prefer_weekly`). `high_weekly@test.com` does NOT have `→`.
 - **Exit:** 0
 - **Live:** yes (requires live quota data)
-- **Source fn:** `it093_lim_it_next_drain_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it103_lim_it_next_drain_places_arrow_on_winner` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-04](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -94,7 +94,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When:** `clp .usage next::bogus`
 - **Then:** Exits 1. Stderr contains "renew", "endurance", and "drain" (the three valid values). Does NOT contain "all", "session", or "reset".
 - **Exit:** 1
-- **Source fn:** `it082_next_all_rejected_exit_1`, `it084_next_session_rejected_exit_1`
+- **Source fn:** `it092_next_all_rejected_exit_1`, `it094_next_session_rejected_exit_1`
 - **Source:** [feature/023_next_account_strategies.md AC-05](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -106,7 +106,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When-B:** `clp .usage next::drain format::json`
 - **Then-A and Then-B:** Identical JSON arrays. No `"->"` marker. JSON account order is alphabetical. `next::` has no effect on JSON output.
 - **Exit:** 0 both cases
-- **Source fn:** `it081_next_json_output_unchanged_by_next_param`, `it086_next_drain_json_output_unchanged`
+- **Source fn:** `it091_next_json_output_unchanged_by_next_param`, `it096_next_drain_json_output_unchanged`
 - **Source:** [feature/023_next_account_strategies.md AC-06](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -117,7 +117,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When:** `clp .usage next::endurance`
 - **Then:** Exits 0. Stdout does NOT contain "Next by strategy:". Footer suppressed when fewer than 2 accounts have valid quota data.
 - **Exit:** 0
-- **Source fn:** `it080_next_footer_absent_when_no_valid_accounts`
+- **Source fn:** `it090_next_footer_absent_when_no_valid_accounts`
 - **Source:** [feature/023_next_account_strategies.md AC-07](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -128,7 +128,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When:** Unit test of footer rendering with zero eligible candidates.
 - **Then:** Neither "endurance" nor "drain" strategy lines appear in the footer output (both omitted — no eligible candidate for either).
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_ft08_023_footer_omits_strategy_lines_when_no_eligible_candidate` (in `src/usage.rs`)
+- **Source fn:** `test_ft08_023_footer_omits_strategy_lines_when_no_eligible_candidate` (in `src/usage/mod.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-08](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -142,7 +142,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then-A:** Returns a string containing `"39% 7d(Son) left"` (not `"7d left"`). The reset countdown is derived from T2 (`seven_day_sonnet.resets_at`), not T1.
 - **Then-B:** Returns a string containing `"39% 7d left"` (not `"7d(Son) left"`). The reset countdown is derived from T1 (`seven_day.resets_at`), not T2.
 - **Exit:** n/a (unit test)
-- **Source fn:** `mre_bug_216_drain_footer_label_sonnet_binding`, `mre_bug_216_drain_footer_label_7d_binding` (in `src/usage.rs`)
+- **Source fn:** `mre_bug_216_drain_footer_label_sonnet_binding`, `mre_bug_216_drain_footer_label_7d_binding` (in `src/usage/sort.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-09](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -155,7 +155,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then-A:** Returns `Some(index_of_weekly_ten)` — both `weekly_zero` (0%) and `weekly_one` (1%) skipped despite ranking first and second in drain sort; threshold is `> 5.0`.
 - **Then-B:** Returns `None` — all candidates are weekly-exhausted, nothing meaningful to drain.
 - **Exit:** n/a (unit test)
-- **Source fn:** `mre_bug_206_drain_skips_prefer_weekly_zero_accounts` (in `src/usage.rs`)
+- **Source fn:** `mre_bug_206_drain_skips_prefer_weekly_zero_accounts` (in `src/usage/sort.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-04](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -167,5 +167,5 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Then:** The row for `soon@test.com` contains `→` in the flag column. `later@test.com` does NOT have `→`. Footer "renew" line shows `soon@test.com` with `5h resets in 20m`.
 - **Exit:** 0
 - **Live:** yes (requires live quota data with active 5h timers)
-- **Source fn:** ⏳ `it095_lim_it_next_renew_places_arrow_on_soonest_refill` (in `tests/cli/usage_test.rs`)
+- **Source fn:** ⏳ `it145_lim_it_next_renew_places_arrow_on_soonest_refill` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-10](../../../../docs/feature/023_next_account_strategies.md)

@@ -205,6 +205,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
 
@@ -234,6 +236,8 @@ mod tests
         expires_at_ms : 0,
         result        : Ok( quota ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -258,6 +262,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( err_msg.clone() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -298,6 +304,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -324,6 +332,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 403".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -355,6 +365,8 @@ mod tests
         expires_at_ms : 0,
         result        : Ok( quota ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
       AccountQuota
       {
@@ -364,6 +376,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
       AccountQuota
       {
@@ -373,6 +387,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
       AccountQuota
       {
@@ -382,6 +398,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "connection refused".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
 
@@ -419,6 +437,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -468,6 +488,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
 
@@ -541,6 +563,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
 
@@ -580,6 +604,8 @@ mod tests
         expires_at_ms : 0,  // expired: 0/1000=0 <= now_secs
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -613,6 +639,8 @@ mod tests
         expires_at_ms : FAR_FUTURE_MS,  // non-expired; 403 triggers regardless of expiry
         result        : Err( "HTTP transport error: HTTP 403".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
 
@@ -652,6 +680,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -701,6 +731,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
     // Must not panic — switch_account fails (no cred file), trace logs to stderr.
@@ -820,6 +852,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
     // Must not panic — switch_account succeeds; run_isolated invoked; fails fast (fake creds).
@@ -845,6 +879,8 @@ mod tests
         expires_at_ms : FAR_FUTURE_MS,  // non-expired → 429 is genuine rate-limit
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
 
@@ -879,6 +915,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
 
@@ -994,6 +1032,8 @@ mod tests
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       },
     ];
 
@@ -1030,6 +1070,8 @@ mod tests
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "HTTP transport error: HTTP 401".to_string() ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     };
     assert!( should_refresh( &aq, 0 ), "401 must trigger refresh" );
   }
@@ -1046,6 +1088,8 @@ mod tests
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "HTTP transport error: HTTP 403".to_string() ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     };
     assert!( should_refresh( &aq, 0 ), "403 must trigger refresh" );
   }
@@ -1066,6 +1110,8 @@ mod tests
       expires_at_ms : 0, // locally expired
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     };
     assert!(
       should_refresh( &aq, 9_999 ),
@@ -1088,6 +1134,8 @@ mod tests
       expires_at_ms : FAR_FUTURE_MS, // not expired
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     };
     assert!(
       !should_refresh( &aq, 0 ),
@@ -1110,6 +1158,8 @@ mod tests
       expires_at_ms : 5_000,
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     };
     assert!(
       should_refresh( &aq, 5 ),
@@ -1132,6 +1182,8 @@ mod tests
       expires_at_ms : 6_000,  // one second ahead of now_secs=5
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     };
     assert!(
       !should_refresh( &aq, 5 ),
@@ -1152,6 +1204,8 @@ mod tests
       expires_at_ms : 0,
       result        : Ok( quota ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     };
     assert!( !should_refresh( &aq, 9_999 ), "Ok result must not trigger refresh" );
   }
@@ -1168,6 +1222,8 @@ mod tests
       expires_at_ms : 0,
       result        : Err( "connection refused".to_string() ),
       account       : None,
+      host          : String::new(),
+      role          : String::new(),
     };
     assert!( !should_refresh( &aq, 9_999 ), "generic error must not trigger refresh" );
   }

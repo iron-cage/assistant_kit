@@ -119,7 +119,8 @@ Valid: 8 / 8   ->  Next by strategy:
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/usage.rs` | `find_next_for_strategy()`, `render_text()` footer rendering |
+| source | `src/usage/sort.rs` | `find_next_for_strategy()` — strategy selection logic |
+| source | `src/usage/render.rs` | `render_text()` — footer rendering (three strategy lines) |
 | param | [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter specification |
 | doc | [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm |
 | doc | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategy algorithms reused by endurance/drain next strategies |

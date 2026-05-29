@@ -16,6 +16,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-08 | Stale top-level `emailAddress` ignored; `oauthAccount.emailAddress` absent → `_active` marker fallback (BUG-209) | AC-08 | Integration (BUG-209) |
 | FT-09 | `save(update_marker=false)` does not write `_active`; background refresh callers pass `false` | AC-15 | BUG-211 MRE |
 | FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
+| FT-11 | Re-running `.account.save` preserves `_renewal_at` key (read-merge, not overwrite) | AC-17 | Read-Merge |
 
 ### Test Case Index
 
@@ -31,8 +32,9 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 | FT-08 | Stale top-level `emailAddress` ignored; `oauthAccount.emailAddress` absent → `_active` fallback (BUG-209) | AC-08 | Name Inference / Regression |
 | FT-09 | `save(update_marker=false)` does not write `_active` | AC-15 | BUG-211 MRE |
 | FT-10 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | AC-16 | Name Inference / Regression |
+| FT-11 | Re-running `.account.save` preserves `_renewal_at` (read-merge) | AC-17 | Read-Merge |
 
-**Total:** 10 FT cases
+**Total:** 11 FT cases
 
 ---
 
@@ -147,3 +149,17 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
 - **Note:** BUG-212 MRE — verifies that `oauthAccount.emailAddress` from `~/.claude.json` is the primary name inference source; the stale `_active` marker is only used as a fallback when `oauthAccount.emailAddress` is absent or empty. External OAuth login updates `oauthAccount.emailAddress` but not the `_active` marker.
 - **Source:** [feature/002_account_save.md AC-16](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-11: Re-running `.account.save` preserves `_renewal_at` key (read-merge, not overwrite)
+
+- **Given:** Account `test@example.com` already has `{credential_store}/test@example.com.claude.json` with `_renewal_at: "2026-06-29T21:00:00Z"` and a current `oauthAccount` snapshot. Fresh credentials available at `~/.claude/.credentials.json` with updated `oauthAccount` content.
+- **When:** `clp .account.save name::test@example.com` is run a second time.
+- **Then:** Exits 0. `test@example.com.claude.json` contains:
+  - `_renewal_at: "2026-06-29T21:00:00Z"` — unchanged (preserved from prior run)
+  - `oauthAccount` — updated with fresh content from `~/.claude.json`
+  - No other pre-existing top-level keys are removed.
+- **Exit:** 0
+- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/002_account_save.md AC-17](../../../../docs/feature/002_account_save.md)

@@ -102,7 +102,7 @@ if let Some(effort) = effort_opt {
 
 **No effect on `format::json`:** `imodel::` and `effort::` control subprocess invocation, not output rendering. JSON output structure is unchanged regardless of these parameter values.
 
-**Layer assignment:** `auto` resolution logic lives in `claude_profile/src/usage.rs` — it reads per-account `7d(Son)` from the already-fetched quota data and resolves to a concrete `IsolatedModel` variant before calling `run_isolated()`. `claude_runner_core` always receives a concrete `IsolatedModel` (no quota awareness added to that crate).
+**Layer assignment:** `auto` resolution logic lives in `claude_profile/src/usage/subprocess.rs` — it reads per-account `7d(Son)` from the already-fetched quota data and resolves to a concrete `IsolatedModel` variant before calling `run_isolated()`. `claude_runner_core` always receives a concrete `IsolatedModel` (no quota awareness added to that crate).
 
 ### Acceptance Criteria
 
@@ -127,7 +127,7 @@ if let Some(effort) = effort_opt {
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/usage.rs` | `resolve_model()`, `resolve_effort()`, subprocess arg construction |
+| source | `src/usage/subprocess.rs` | `resolve_model()`, `resolve_effort()`, subprocess arg construction |
 | source | `src/lib.rs` | `imodel::` and `effort::` parameter registration via `register_commands()` |
 | dep | `claude_runner_core` | `IsolatedModel`, `run_isolated()` — subprocess execution |
 | doc | [024_session_touch.md](024_session_touch.md) | `touch::` subprocess trigger conditions; `imodel::`/`effort::` apply here |

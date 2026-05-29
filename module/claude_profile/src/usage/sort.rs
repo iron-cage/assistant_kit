@@ -193,6 +193,9 @@ where F : Fn( &AccountQuota ) -> bool
 /// eligible (non-current, non-active, non-expired, `Ok`) account.
 /// `Drain` additionally skips accounts where `prefer_weekly == 0` — nothing
 /// remains to drain, so recommending them would be self-defeating.
+/// `Renew` picks the eligible account whose minimum running reset timer
+/// (min of `5h_resets_at` and `7d_resets_at`) fires soonest. Absent timers
+/// score as `u64::MAX` (account never started — treated as furthest out).
 pub( crate ) fn find_next_for_strategy(
   accounts  : &[ AccountQuota ],
   strategy  : NextStrategy,
@@ -202,6 +205,33 @@ pub( crate ) fn find_next_for_strategy(
 {
   match strategy
   {
+    NextStrategy::Renew =>
+    {
+      // Compute the soonest running reset timer for one account (in secs from now).
+      // Uses actual `resets_at` fields — not account index or name (Anti-Cheating §5).
+      let min_reset_secs_of = |aq : &AccountQuota| -> u64
+      {
+        let Ok( data ) = &aq.result else { return u64::MAX; };
+        let h5 = data.five_hour.as_ref()
+          .and_then( |p| p.resets_at.as_deref() )
+          .and_then( claude_quota::iso_to_unix_secs )
+          .map_or( u64::MAX, |t| t.saturating_sub( now_secs ) );
+        let d7 = data.seven_day.as_ref()
+          .and_then( |p| p.resets_at.as_deref() )
+          .and_then( claude_quota::iso_to_unix_secs )
+          .map_or( u64::MAX, |t| t.saturating_sub( now_secs ) );
+        h5.min( d7 )
+      };
+      ( 0..accounts.len() )
+        .filter( |&i|
+        {
+          let aq = &accounts[ i ];
+          !aq.is_current && !aq.is_active
+            && ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) > 0
+            && aq.result.is_ok()
+        } )
+        .min_by_key( |&i| min_reset_secs_of( &accounts[ i ] ) )
+    }
     NextStrategy::Endurance =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Endurance, None, prefer, now_secs );
@@ -236,6 +266,18 @@ pub( crate ) fn strategy_metric(
   let session_pct = data.five_hour.as_ref().map_or( 0.0, |p| 100.0 - p.utilization );
   match strategy
   {
+    NextStrategy::Renew =>
+    {
+      let h5_str = data.five_hour.as_ref()
+        .and_then( |p| p.resets_at.as_deref() )
+        .and_then( claude_quota::iso_to_unix_secs )
+        .map_or_else( || "\u{2014}".to_string(), |t| format_duration_secs( t.saturating_sub( now_secs ) ) );
+      let d7_str = data.seven_day.as_ref()
+        .and_then( |p| p.resets_at.as_deref() )
+        .and_then( claude_quota::iso_to_unix_secs )
+        .map_or_else( || "\u{2014}".to_string(), |t| format_duration_secs( t.saturating_sub( now_secs ) ) );
+      format!( "{session_pct:.0}% session, 5h resets in {h5_str} / 7d resets in {d7_str}" )
+    }
     NextStrategy::Endurance =>
     {
       let weekly_pct = prefer_weekly( aq, prefer );
@@ -438,6 +480,8 @@ mod tests
         expires_at_ms : FAR_FUTURE_MS,
         result        : Ok( OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
         account       : None,
+        host          : String::new(),
+        role          : String::new(),
       }
     };
     let accounts = vec![
@@ -790,6 +834,8 @@ mod tests
           seven_day_sonnet : None,
         } ),
         account : None,
+        host    : String::new(),
+        role    : String::new(),
       }
     };
 
@@ -847,6 +893,7 @@ mod tests
     {
       name : "test@example.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
+      host : String::new(), role : String::new(),
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -875,6 +922,7 @@ mod tests
     {
       name : "test@example.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
+      host : String::new(), role : String::new(),
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Sonnet, now );
@@ -902,6 +950,7 @@ mod tests
     {
       name : "test@example.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
+      host : String::new(), role : String::new(),
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Opus, now );
@@ -925,6 +974,7 @@ mod tests
     {
       name : "test@example.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
+      host : String::new(), role : String::new(),
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -979,6 +1029,7 @@ mod tests
     {
       name : "son_binding@test.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 86400 ) * 1000, result : Ok( data ), account : None,
+      host : String::new(), role : String::new(),
     };
 
     let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -1026,6 +1077,7 @@ mod tests
     {
       name : "7d_binding@test.com".to_string(), is_current : false, is_active : false,
       expires_at_ms : ( now + 86400 ) * 1000, result : Ok( data ), account : None,
+      host : String::new(), role : String::new(),
     };
 
     let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );

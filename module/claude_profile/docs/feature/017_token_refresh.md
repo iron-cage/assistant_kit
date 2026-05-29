@@ -90,7 +90,7 @@ Two other arg combinations are broken and must not be used:
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/usage.rs` | `refresh::` param read; retry trigger; calls `account::refresh_account_token()`; expiry derivation; retry fetch |
+| source | `src/usage/refresh.rs` | `refresh::` param read; retry trigger; calls `account::refresh_account_token()`; expiry derivation; retry fetch |
 | source | `src/lib.rs` | `refresh::` parameter registration via `register_commands()` |
 | source | `claude_profile_core/src/account.rs` | `refresh_account_token()` — `read credentials → run_isolated → write credentials → save` lifecycle |
 | dep | `claude_runner_core` | `run_isolated()` — called by `refresh_account_token()` in `_core`; `IsolatedRunResult`, `RunnerError` types |

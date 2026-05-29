@@ -4,11 +4,11 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|-----------|
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 27 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 30 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 6 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 36 |
-| `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](cli/param_group/readme.md) | 5 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 51 |
+| `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](cli/param_group/readme.md) | 6 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 4 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](cli/format/readme.md) | 3 |
 | `cli/workflow_scenario/` | End-to-end CLI workflow examples | [cli/workflow_scenario/readme.md](cli/workflow_scenario/readme.md) | 10 |
@@ -45,6 +45,9 @@
 | feature | 025 | Per-Machine Active Marker | [feature/025_per_machine_active_marker.md](feature/025_per_machine_active_marker.md) |
 | feature | 026 | Subprocess Model and Effort Control | [feature/026_subprocess_model_effort.md](feature/026_subprocess_model_effort.md) |
 | feature | 027 | `.account.use` Post-Switch Touch | [feature/027_account_use_post_switch_touch.md](feature/027_account_use_post_switch_touch.md) |
+| feature | 028 | Usage Row Filtering | [feature/028_usage_row_filtering.md](feature/028_usage_row_filtering.md) |
+| feature | 029 | Account Host Metadata | [feature/029_account_host_metadata.md](feature/029_account_host_metadata.md) |
+| feature | 030 | Account Billing Renewal Override | [feature/030_account_renewal_override.md](feature/030_account_renewal_override.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](cli/003_env_param.md) |
@@ -91,11 +94,27 @@
 | param | 034 | `touch::` | [cli/param/034_touch.md](cli/param/034_touch.md) |
 | param | 035 | `imodel::` | [cli/param/035_imodel.md](cli/param/035_imodel.md) |
 | param | 036 | `effort::` | [cli/param/036_effort.md](cli/param/036_effort.md) |
+| param | 037 | `count::` | [cli/param/037_count.md](cli/param/037_count.md) |
+| param | 038 | `offset::` | [cli/param/038_offset.md](cli/param/038_offset.md) |
+| param | 039 | `only_active::` | [cli/param/039_only_active.md](cli/param/039_only_active.md) |
+| param | 040 | `only_next::` | [cli/param/040_only_next.md](cli/param/040_only_next.md) |
+| param | 041 | `min_5h::` | [cli/param/041_min_5h.md](cli/param/041_min_5h.md) |
+| param | 042 | `min_7d::` | [cli/param/042_min_7d.md](cli/param/042_min_7d.md) |
+| param | 043 | `only_valid::` | [cli/param/043_only_valid.md](cli/param/043_only_valid.md) |
+| param | 044 | `exclude_exhausted::` | [cli/param/044_exclude_exhausted.md](cli/param/044_exclude_exhausted.md) |
+| param | 045 | `get::` | [cli/param/045_get.md](cli/param/045_get.md) |
+| param | 046 | `abs::` | [cli/param/046_abs.md](cli/param/046_abs.md) |
+| param | 047 | `no_color::` | [cli/param/047_no_color.md](cli/param/047_no_color.md) |
+| param | 048 | `host::` | [cli/param/048_host.md](cli/param/048_host.md) |
+| param | 049 | `at::` | [cli/param/049_at.md](cli/param/049_at.md) |
+| param | 050 | `from_now::` | [cli/param/050_from_now.md](cli/param/050_from_now.md) |
+| param | 051 | `clear::` | [cli/param/051_clear.md](cli/param/051_clear.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](cli/param_group/003_fetch_behavior.md) |
 | param_group | 004 | Sort Control | [cli/param_group/004_sort_control.md](cli/param_group/004_sort_control.md) |
 | param_group | 005 | Display Control | [cli/param_group/005_display_control.md](cli/param_group/005_display_control.md) |
+| param_group | 006 | Account Targeting | [cli/param_group/006_account_targeting.md](cli/param_group/006_account_targeting.md) |
 | type | 001 | AccountName | [cli/type/001_account_name.md](cli/type/001_account_name.md) |
 | type | 002 | OutputFormat | [cli/type/002_output_format.md](cli/type/002_output_format.md) |
 | type | 003 | WarningThreshold | [cli/type/003_warning_threshold.md](cli/type/003_warning_threshold.md) |

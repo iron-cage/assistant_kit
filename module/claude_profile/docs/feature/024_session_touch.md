@@ -87,7 +87,7 @@ render results as table
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/usage.rs` | `touch::` param read; idle-account detection (`resets_at` absent); subprocess call; re-fetch |
+| source | `src/usage/touch.rs`, `src/usage/params.rs` | `touch::` param read; idle-account detection (`resets_at` absent); subprocess call; re-fetch |
 | source | `src/lib.rs` | `touch::` parameter registration via `register_commands()` |
 | source | `claude_profile_core/src/account.rs` | `refresh_account_token()` — reused for touch |
 | dep | `claude_runner_core` | `run_isolated()` — subprocess mechanism |

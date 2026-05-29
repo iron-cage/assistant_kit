@@ -192,8 +192,8 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-13: `imodel::`/`effort::` apply to both touch and refresh subprocess call sites
 
-- **Given:** Source code structural assertion (static grep): both the touch call site and the refresh call site in `usage.rs` both call `resolve_model()` / `resolve_effort()` and pass the results into their subprocess arg construction.
-- **When:** `grep -n "resolve_model\|resolve_effort" src/usage.rs`
+- **Given:** Source code structural assertion (static grep): both the touch call site and the refresh call site in `usage/subprocess.rs` both call `resolve_model()` / `resolve_effort()` and pass the results into their subprocess arg construction.
+- **When:** `grep -n "resolve_model\|resolve_effort" src/usage/subprocess.rs`
 - **Then:** Both call sites are present; at least 2 hits for each function.
 - **Exit:** n/a (structural test)
 - **Source fn:** `it_imodel_and_effort_both_paths_structural` (in `tests/cli/usage_test.rs`)
@@ -219,7 +219,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `clp .usage imodel::bad`
 - **Then:** Exits 1. Stderr contains each of: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
-- **Source fn:** `it113_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it123_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-10](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -230,7 +230,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `clp .usage effort::bad`
 - **Then:** Exits 1. Stderr contains each of: `auto`, `low`, `normal`, `high`, `max`.
 - **Exit:** 1
-- **Source fn:** `it115_effort_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it125_effort_bogus_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-11](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -241,7 +241,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `clp .usage.help`
 - **Then:** Exits 0. Stdout contains `"imodel"` with default value `auto` and `"effort"` with default value `auto`.
 - **Exit:** 0
-- **Source fn:** `it116_usage_help_shows_imodel_effort_params` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it126_usage_help_shows_imodel_effort_params` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-12](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -263,7 +263,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **When:** `resolve_effort(&IsolatedModel::Specific("claude-haiku-4-5-20251001"), "auto")`
 - **Then:** Returns `None`. No `--effort` flag is prepended to subprocess args. Haiku has no extended thinking support — injecting any effort level under `auto` would be incorrect.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_haiku_effort_auto_no_effort_flag` (in `src/usage.rs` `#[cfg(test)]`)
+- **Source fn:** `it_imodel_haiku_effort_auto_no_effort_flag` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-14](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---

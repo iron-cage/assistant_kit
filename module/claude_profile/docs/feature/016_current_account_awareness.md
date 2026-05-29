@@ -62,10 +62,10 @@ work@acme.com
 **Divergence display example (`.usage`):**
 
 ```
-  Account         5h Left  ...  Expires    Sub  ~Renews
-✓ alice@acme.com  86%      ...  in 7h 24m  max  Jun  5   ← current
-* work@acme.com   100%     ...  in 5h 02m  max  Jun 11   ← active marker, not current
-  other@acme.com  —        ...  EXPIRED    ?    ?
+  Account         5h Left  ...  Expires    ~Renews   → Next
+✓ alice@acme.com  86%      ...  in 7h 24m  ~in 6d    +5h in 3h 19m   ← current
+* work@acme.com   100%     ...  in 5h 02m  ~in 11d   +5h in 4h 58m   ← active marker, not current
+  other@acme.com  —        ...  EXPIRED    ?         —
 ```
 
 ### Acceptance Criteria
@@ -86,8 +86,8 @@ work@acme.com
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/commands.rs` | `accounts_routine()` — `is_current` detection, `Current:` line, `current::` param |
-| source | `src/usage.rs` | `fetch_all_quota()` — `is_current` via token matching; `is_active` from per-machine active marker; `*` flag rendering; synthetic-row name-collision guard (AC-09, AC-11) |
+| source | `src/commands/accounts.rs` | `accounts_routine()` — `is_current` detection, `Current:` line, `current::` param |
+| source | `src/usage/fetch.rs` | `fetch_all_quota()` — `is_current` via token matching; `is_active` from per-machine active marker; `*` flag rendering; synthetic-row name-collision guard (AC-09, AC-11) |
 | doc | [003_account_list.md](003_account_list.md) | `.accounts` base command — field table and AC extended here |
 | doc | [009_token_usage.md](009_token_usage.md) | `.usage` base command — flag column and JSON schema extended here |
 | doc | [cli/param/018_current.md](../cli/param/018_current.md) | `current::` field-presence parameter |

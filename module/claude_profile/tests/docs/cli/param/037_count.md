@@ -6,10 +6,12 @@ Edge case coverage for the `count::` parameter on `.usage`. See [param/037_count
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | `count::3` with 5 accounts shows at most 3 rows | Row Limit |
-| EC-2 | `count::0` (default) shows all rows | No Limit |
+| EC-1 | `count::3` with 5 accounts shows at most 3 rows | Behavioral Divergence |
+| EC-2 | `count::0` (default) shows all rows | Behavioral Divergence |
 | EC-3 | `count::100` with 2 accounts shows all 2 rows | Over-count |
 | EC-4 | `count::abc` exits 1 with type error | Invalid Value |
+| EC-5 | `count::1 sort::name` shows exactly first row | Extreme Limit |
+| EC-6 | `count::-1` exits 1 (negative integer rejected) | Invalid Value |
 
 ---
 
@@ -51,6 +53,28 @@ Edge case coverage for the `count::` parameter on `.usage`. See [param/037_count
 - **Given:** Any environment.
 - **When:** `clp .usage count::abc`
 - **Then:** Exits 1. Stderr contains a type error message (expected non-negative integer).
+- **Exit:** 1
+- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source:** [param/037_count.md](../../../../docs/cli/param/037_count.md)
+
+---
+
+### EC-5: `count::1 sort::name` shows exactly first row
+
+- **Given:** Three accounts with deterministic name sort.
+- **When:** `clp .usage count::1 sort::name`
+- **Then:** Exits 0. Exactly 1 row in the table body — the alphabetically first account. Remaining 2 accounts not shown.
+- **Exit:** 0
+- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source:** [param/037_count.md](../../../../docs/cli/param/037_count.md)
+
+---
+
+### EC-6: `count::-1` exits 1 (negative value rejected)
+
+- **Given:** Any environment.
+- **When:** `clp .usage count::-1`
+- **Then:** Exits 1. Stderr indicates value must be a non-negative integer.
 - **Exit:** 1
 - **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
 - **Source:** [param/037_count.md](../../../../docs/cli/param/037_count.md)

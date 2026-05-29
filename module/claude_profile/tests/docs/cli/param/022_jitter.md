@@ -37,7 +37,7 @@ Edge case tests for the `jitter::` parameter. Tests validate u64 type enforcemen
 - **When:** `clp .usage live::1 jitter::0` (interrupted with Ctrl-C)
 - **Then:** Command accepted; live loop cycles on exact `interval::` seconds with no random addition; exits 0 on Ctrl-C.
 - **Exit:** 0
-- **Source fn:** `it046_jitter_0_explicit_live_accepted`
+- **Source fn:** `it056_jitter_0_explicit_live_accepted`
 - **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/param/022_jitter.md)
 ---
 
@@ -47,7 +47,7 @@ Edge case tests for the `jitter::` parameter. Tests validate u64 type enforcemen
 - **When:** `clp .usage live::1 interval::30 jitter::10` (interrupted with Ctrl-C)
 - **Then:** Command accepted; each cycle waits 30 + random[0..=10] seconds; exits 0 on Ctrl-C.
 - **Exit:** 0
-- **Source fn:** `it047_jitter_010_live_accepted`
+- **Source fn:** `it057_jitter_010_live_accepted`
 - **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/param/022_jitter.md)
 ---
 
@@ -97,5 +97,5 @@ Edge case tests for the `jitter::` parameter. Tests validate u64 type enforcemen
 - **When:** `clp .usage jitter::abc`
 - **Then:** Exit 1 with type validation error referencing `jitter::`; value must be a non-negative integer.
 - **Exit:** 1
-- **Source fn:** `it048_jitter_abc_rejected`
+- **Source fn:** `it058_jitter_abc_rejected`
 - **Source:** [params.md#parameter--22-jitter](../../../../docs/cli/param/022_jitter.md)

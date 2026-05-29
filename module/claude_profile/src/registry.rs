@@ -10,6 +10,7 @@ use crate::commands::
   account_use_routine,
   account_delete_routine,
   account_relogin_routine,
+  account_renewal_routine,
   account_rotate_routine,
   token_status_routine,
   paths_routine,
@@ -18,13 +19,14 @@ use crate::commands::
 
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 11 commands (credentials status, account management including limits, relogin, and rotate, token status, paths, usage).
+/// Registers 12 commands (credentials status, account management including limits, relogin, rotate, and renewal, token status, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
 /// # Panics
 ///
 /// Panics if a command fails to register (duplicate name = programming error).
+#[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
 {
@@ -87,7 +89,15 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     ],
     Box::new( accounts_routine ) );
   reg_cmd( registry, ".account.limits", "Show rate-limit utilization for the selected account (FR-18)", vec![ nam(), fmt(), trc() ], Box::new( account_limits_routine ) );
-  reg_cmd( registry, ".account.save",    "Save current credentials as a named account profile",         vec![ nam(), dry(), trc() ], Box::new( account_save_routine    ) );
+  reg_cmd( registry, ".account.save", "Save current credentials as a named account profile",
+    vec![
+      nam(),
+      dry(),
+      trc(),
+      reg_arg_opt( "host", Kind::String ).with_description( "Machine label for this account (default: auto-capture `$USER@$HOSTNAME`); written to `{name}.profile.json`" ),
+      reg_arg_opt( "role", Kind::String ).with_description( "User-defined role tag (e.g. `work`, `personal`); written to `{name}.profile.json`" ),
+    ],
+    Box::new( account_save_routine    ) );
   reg_cmd( registry, ".account.use",    "Switch active account by name with atomic credential rotation",
     vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry(),
       reg_arg_opt( "touch",  Kind::String ).with_description( "Activate idle 5h session window via subprocess after switch (0/false = off; 1/true = on, default)" ),
@@ -97,6 +107,16 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     Box::new( account_use_routine     ) );
   reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                                   vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry(), trc() ], Box::new( account_delete_routine  ) );
   reg_cmd( registry, ".account.relogin", "Force browser re-authentication for a named account with dead refreshToken",     vec![ nam(), dry(), trc() ], Box::new( account_relogin_routine ) );
+  reg_cmd( registry, ".account.renewal", "Set or clear a billing renewal timestamp override for one or more accounts",
+    vec![
+      reg_arg_req( "name",     Kind::String ).with_description( "Account name, `all`, or comma-separated list of accounts" ),
+      reg_arg_opt( "at",       Kind::String ).with_description( "Set exact renewal timestamp (ISO-8601 UTC, e.g. 2026-06-29T21:00:00Z); mutually exclusive with from_now:: and clear::" ),
+      reg_arg_opt( "from_now", Kind::String ).with_description( "Set renewal relative to now (e.g. +1h30m, -30m, +0m); mutually exclusive with at:: and clear::" ),
+      bfs( "clear", "Remove the renewal override (restores ~-prefixed estimate in .usage); mutually exclusive with at:: and from_now::" ),
+      dry(),
+      trc(),
+    ],
+    Box::new( account_renewal_routine ) );
   reg_cmd( registry, ".account.rotate", "Auto-rotate to the best inactive account (highest remaining token expiry)",       vec![ dry(), trc() ], Box::new( account_rotate_routine ) );
   reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr(), trc() ], Box::new( token_status_routine   ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",
@@ -108,20 +128,33 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     Box::new( paths_routine ) );
   reg_cmd( registry, ".usage",          "Show live rate-limit quota for all saved accounts",
     vec![
-      fmt(),
+      reg_arg_opt( "format", Kind::String ).with_description( "Output format: `text` (default), `json`, `tsv` (tab-separated, plain status), `plain` (no emoji), `value` (bare, use with `get::`)" ),
       reg_arg_opt( "refresh",   Kind::Integer ).with_description( "Retry once on 401/403 (auth errors) or 429 when token is locally expired, via isolated subprocess (1 = enabled, default; 0 = disabled)" ),
       reg_arg_opt( "live",      Kind::Integer ).with_description( "Continuous monitor mode (0 = off, default; 1 = on)" ),
       reg_arg_opt( "interval",  Kind::Integer ).with_description( "Seconds between refreshes (minimum 30, default 30)" ),
       reg_arg_opt( "jitter",    Kind::Integer ).with_description( "Max random seconds added to interval (0 = none, default)" ),
       reg_arg_opt( "trace",     Kind::Integer ).with_description( "Print [trace] lines to stderr showing each credential read, API call, and refresh step (0 = off; 1 = on)" ),
-      reg_arg_opt( "sort",      Kind::String  ).with_description( "Row ordering strategy: `drain` (default), `name`, `endurance`, `reset`, `next` (mirrors active next:: strategy)" ),
-      reg_arg_opt( "desc",      Kind::Integer ).with_description( "Sort direction: 0 = ascending (strategy default for name/drain/reset), 1 = descending (strategy default for endurance)" ),
+      reg_arg_opt( "sort",      Kind::String  ).with_description( "Row ordering strategy: `renew` (default), `name`, `endurance`, `drain`, `next` (mirrors active next:: strategy)" ),
+      reg_arg_opt( "desc",      Kind::Integer ).with_description( "Sort direction: 0 = ascending (strategy default for name/drain/renew), 1 = descending (strategy default for endurance)" ),
       reg_arg_opt( "prefer",    Kind::String  ).with_description( "Weekly quota column for strategies: `any` (default, min of both), `opus` (7d Left), `sonnet` (7d(Son))" ),
-      reg_arg_opt( "next",      Kind::String  ).with_description( "Recommendation strategy: `drain` (default), `endurance`" ),
+      reg_arg_opt( "next",      Kind::String  ).with_description( "Recommendation strategy: `renew` (default, soonest reset timer), `endurance` (most quota left), `drain` (least quota left)" ),
       reg_arg_opt( "cols",      Kind::String  ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default shows all except `sub` and `7d_son_reset`" ),
-      reg_arg_opt( "touch",  Kind::String  ).with_description( "Extend active 5h session windows via isolated subprocess for accounts with an active reset countdown (0/false = off; 1/true = on, default)" ),
-      reg_arg_opt( "imodel", Kind::String  ).with_description( "Subprocess model for touch/refresh: `auto` (default, ≥30% 7d(Son) remaining → sonnet, else → opus), `sonnet` (claude-sonnet-4-6), `opus` (claude-opus-4-6), `haiku` (claude-haiku-4-5-20251001), `keep` (no --model flag)" ),
-      reg_arg_opt( "effort", Kind::String  ).with_description( "Subprocess effort level: `auto` (default, high for Sonnet, max for Opus), `low` (always --effort low), `normal` (always --effort normal), `high` (always --effort high), `max` (always --effort max)" ),
+      reg_arg_opt( "touch",             Kind::String  ).with_description( "Extend active 5h session windows via isolated subprocess for accounts with an active reset countdown (0/false = off; 1/true = on, default)" ),
+      reg_arg_opt( "imodel",            Kind::String  ).with_description( "Subprocess model for touch/refresh: `auto` (default, ≥30% 7d(Son) remaining → sonnet, else → opus), `sonnet` (claude-sonnet-4-6), `opus` (claude-opus-4-6), `haiku` (claude-haiku-4-5-20251001), `keep` (no --model flag)" ),
+      reg_arg_opt( "effort",            Kind::String  ).with_description( "Subprocess effort level: `auto` (default, high for Sonnet, max for Opus), `low` (always --effort low), `normal` (always --effort normal), `high` (always --effort high), `max` (always --effort max)" ),
+      // Row filtering parameters (TSK-223)
+      reg_arg_opt( "count",             Kind::Integer ).with_description( "Max rows to display; 0 = show all (default)" ),
+      reg_arg_opt( "offset",            Kind::Integer ).with_description( "Skip first N rows from the filtered result before display (default 0)" ),
+      reg_arg_opt( "only_active",       Kind::String  ).with_description( "Show only the per-machine active account row (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "only_next",         Kind::String  ).with_description( "Show only the row receiving the `→` recommendation marker (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "min_5h",            Kind::Integer ).with_description( "Hide rows where 5h Left is below this percentage 0–100 (default 0 = no filter); rows with no quota also hidden" ),
+      reg_arg_opt( "min_7d",            Kind::Integer ).with_description( "Hide rows where 7d Left is below this percentage 0–100 (default 0 = no filter); rows with no quota also hidden" ),
+      reg_arg_opt( "only_valid",        Kind::String  ).with_description( "Hide 🔴 rows (invalid/expired token) (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "exclude_exhausted", Kind::String  ).with_description( "Hide 🟡 and 🔴 rows; show only 🟢 rows (0 = off, default; 1 = on)" ),
+      // Extraction and display (TSK-224)
+      reg_arg_opt( "get",      Kind::String  ).with_description( "Extract bare field value for first row: `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `expires`, `renews`, `sub`, `status`, `account`, `host`, `role`, `next_event_type`, `next_event_secs`" ),
+      reg_arg_opt( "abs",      Kind::String  ).with_description( "Replace percentage columns with absolute token counts where available (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "no_color", Kind::String  ).with_description( "Strip emoji and ANSI sequences; status shows `ok`/`warn`/`err` (0 = off, default; 1 = on)" ),
     ],
     Box::new( usage_routine          ) );
 }

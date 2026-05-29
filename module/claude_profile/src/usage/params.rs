@@ -6,7 +6,7 @@
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use unilang::data::{ ErrorCode, ErrorData };
-use super::types::{ UsageParams, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility, SubprocessModel, SubprocessEffort };
+use super::types::{ UsageParams, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility, SubprocessModel, SubprocessEffort, UsageOutputFormat, GetField };
 
 // ── Parameter parser ──────────────────────────────────────────────────────────
 
@@ -23,6 +23,7 @@ use super::types::{ UsageParams, SortStrategy, PreferStrategy, NextStrategy, Col
 /// Fix(issue-157): strict 0/1 range guard added for `refresh`, `live`, `trace`.
 /// Pitfall: bool-typed params (e.g. `touch::`) use `Kind::String` registration so
 /// `"true"`/`"false"` pass through; `crate::output::parse_int_flag` is the sole normalisation point.
+#[ allow( clippy::too_many_lines ) ]
 pub( super ) fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsageParams, ErrorData >
 {
   // refresh default is 1 (enabled); live/trace default is 0 (disabled); touch default is 1 (enabled).
@@ -79,7 +80,7 @@ pub( super ) fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsagePar
   };
   let next = match cmd.arguments.get( "next" )
   {
-    None                       => NextStrategy::Drain,
+    None                       => NextStrategy::Renew,
     Some( Value::String( s ) ) => NextStrategy::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?,
     _ => return Err( ErrorData::new(
       ErrorCode::ArgumentTypeMismatch,
@@ -91,6 +92,7 @@ pub( super ) fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsagePar
   {
     SortStrategy::Next => match next
     {
+      NextStrategy::Renew     => SortStrategy::Renew,
       NextStrategy::Drain     => SortStrategy::Drain,
       NextStrategy::Endurance => SortStrategy::Endurance,
     },
@@ -123,5 +125,85 @@ pub( super ) fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsagePar
       "effort:: must be a string".to_string(),
     ) ),
   };
-  Ok( UsageParams { refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, next, cols, touch, imodel, effort } )
+  // ── Row filtering (TSK-223) ───────────────────────────────────────────────
+  let count = match cmd.arguments.get( "count" )
+  {
+    None                        => 0_u64,
+    Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( 0 ),
+    _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "count:: must be a non-negative integer".to_string() ) ),
+  };
+  let offset = match cmd.arguments.get( "offset" )
+  {
+    None                        => 0_u64,
+    Some( Value::Integer( n ) ) => u64::try_from( *n ).unwrap_or( 0 ),
+    _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "offset:: must be a non-negative integer".to_string() ) ),
+  };
+  let only_active       = crate::output::parse_int_flag( cmd, "only_active",       0 )? != 0;
+  let only_next         = crate::output::parse_int_flag( cmd, "only_next",         0 )? != 0;
+  let only_valid        = crate::output::parse_int_flag( cmd, "only_valid",        0 )? != 0;
+  let exclude_exhausted = crate::output::parse_int_flag( cmd, "exclude_exhausted", 0 )? != 0;
+  let h5_min = match cmd.arguments.get( "min_5h" )
+  {
+    None                        => 0_u8,
+    Some( Value::Integer( n ) ) =>
+    {
+      u8::try_from( *n ).map_err( |_| ErrorData::new( ErrorCode::ArgumentTypeMismatch, "min_5h:: must be 0–100".to_string() ) )
+        .and_then( |v| if v <= 100 { Ok( v ) } else { Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "min_5h:: must be 0–100".to_string() ) ) } )?
+    }
+    _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "min_5h:: must be an integer 0–100".to_string() ) ),
+  };
+  let d7_min = match cmd.arguments.get( "min_7d" )
+  {
+    None                        => 0_u8,
+    Some( Value::Integer( n ) ) =>
+    {
+      u8::try_from( *n ).map_err( |_| ErrorData::new( ErrorCode::ArgumentTypeMismatch, "min_7d:: must be 0–100".to_string() ) )
+        .and_then( |v| if v <= 100 { Ok( v ) } else { Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "min_7d:: must be 0–100".to_string() ) ) } )?
+    }
+    _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "min_7d:: must be an integer 0–100".to_string() ) ),
+  };
+  // ── Format / extraction (TSK-224) ───────────────────────────────────────────
+  let format = match cmd.arguments.get( "format" )
+  {
+    None                       => UsageOutputFormat::Text,
+    Some( Value::String( s ) ) => match s.as_str()
+    {
+      "text"  => UsageOutputFormat::Text,
+      "json"  => UsageOutputFormat::Json,
+      "tsv"   => UsageOutputFormat::Tsv,
+      "plain" => UsageOutputFormat::Plain,
+      "value" => UsageOutputFormat::Value,
+      "table" => return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        "format::table is only supported by .accounts".to_string(),
+      ) ),
+      other   => return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        format!( "unknown format {other:?}: valid values are `text`, `json`, `tsv`, `plain`, `value`" ),
+      ) ),
+    },
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "format:: must be a string".to_string(),
+    ) ),
+  };
+  let get = match cmd.arguments.get( "get" )
+  {
+    None                       => None,
+    Some( Value::String( s ) ) => Some(
+      GetField::parse( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?
+    ),
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "get:: must be a string".to_string(),
+    ) ),
+  };
+  let abs      = crate::output::parse_int_flag( cmd, "abs",      0 )? != 0;
+  let no_color = crate::output::parse_int_flag( cmd, "no_color", 0 )? != 0;
+  Ok( UsageParams
+  {
+    refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, next, cols, touch, imodel, effort,
+    count, offset, only_active, only_next, min_5h : h5_min, min_7d : d7_min, only_valid, exclude_exhausted,
+    format, get, abs, no_color,
+  } )
 }

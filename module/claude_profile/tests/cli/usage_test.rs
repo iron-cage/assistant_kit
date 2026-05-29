@@ -14,122 +14,124 @@
 //!
 //! | ID   | Test Function                                   | Condition                                                     | P/N | Live? |
 //! |------|-------------------------------------------------|---------------------------------------------------------------|-----|-------|
-//! | it1  | `it1_lim_it_quota_heading_and_columns`          | real token → Quota heading + new column names                 | P   | yes   |
-//! | it2  | `it2_lim_it_active_account_marked`              | 2 accounts; active one has `✓` in flag column                 | P   | yes   |
-//! | it3  | `it3_failed_token_shows_dash_exits_0`           | account without accessToken → `—` + "in …" Expires + exit 0  | P   | no    |
-//! | it4  | `it4_lim_it_json_format_valid_array`            | real token + `format::json` → JSON with `_left_pct` fields + `weekly_7d_sonnet_left_pct` | P | yes |
-//! | it5  | `it5_empty_store_shows_no_accounts`             | empty credential store → no-accounts message                  | P   | no    |
-//! | it6  | `it6_unreadable_store_exits_2`                  | store dir chmod 000 → exit 2                                  | N   | no    |
-//! | it7  | `it7_home_unset_exits_2`                        | HOME unset → exit 2                                           | N   | no    |
-//! | it8  | `it8_lim_it_accounts_in_alpha_order`            | 3 accounts written out of order → alpha output                | P   | yes   |
-//! | it9  | `it9_unreadable_credentials_shows_dash`         | credentials chmod 000 → `—` + exit 0                         | P   | no    |
-//! | it10 | `it10_expired_token_shows_expired_in_expires_col` | account with PAST_MS → "EXPIRED" in Expires column           | P   | no    |
-//! | it11 | `it11_lim_it_recommendation_marker_shown`       | 2 accounts + `next::endurance` → `→` on non-active account    | P   | yes   |
-//! | it12 | `it12_lim_it_footer_shows_valid_count`          | 2 accounts with real tokens → footer "Valid: 2" + "Next:"     | P   | yes   |
-//! | it13 | `it13_active_divergence_shows_star`             | live creds=work, _active=alice → `✓` on work, `*` on alice    | P   | no    |
-//! | it14 | `it14_creds_unreadable_no_checkmark_star_shown` | no live creds, _active=alice → no `✓`, `*` on alice           | P   | no    |
-//! | it15 | `it15_current_equals_active_no_star`            | live creds=alice, _active=alice → `✓` on alice, no `*`        | P   | no    |
-//! | it16 | `it16_json_is_current_is_active`                | JSON has `is_current` + `is_active`, no `active` key          | P   | no    |
-//! | it17 | `it17_format_table_rejected`                    | `format::table` → exit 1 (not supported by .usage)           | N   | no    |
-//! | it18 | `it18_synthetic_row_when_no_saved_match`         | live token unmatched → synthetic (current session) row with ✓ | P   | no    |
-//! | it19 | `it19_refresh_disabled_param_accepted`           | `refresh::0` accepted by parser; empty store → no-accounts    | P   | no    |
-//! | it20 | `it20_refresh_enabled_offline_no_retry_triggered` | `refresh::1` accepted; missing token → dash, no HTTP call   | P   | no    |
-//! | it21 | `it21_lim_it_live_mode`                         | `live::1 interval::30`; real token → "Next update" in output  | P   | yes   |
-//! | it22 | `it22_live_jitter_exceeds_interval`             | `live::1 interval::60 jitter::70` → exit 1 before any fetch   | N   | no    |
-//! | it23 | `it23_live_interval_below_minimum`              | `live::1 interval::5` → exit 1, stderr contains "30"          | N   | no    |
-//! | it24 | `it24_live_incompatible_with_json`              | `live::1 format::json` → exit 1 before any fetch              | N   | no    |
-//! | it25 | `it25_synthetic_row_uses_claude_json_email`     | live token unmatched + `.claude.json` has email → row shows email, not "(current session)" | P | no |
-//! | it26 | `it26_live_jitter_equals_interval_accepted`     | `live::1 interval::30 jitter::30` (boundary) → exit 2, not 1 (guard allows equal) | P | no |
-//! | it27 | `it27_json_error_field_on_failed_account`       | single account without accessToken + format::json → JSON has `"error":` field | P | no |
-//! | it28 | `it28_interval_jitter_ignored_when_not_live`    | `interval::5 jitter::70` without `live::1` → exit 0, guards never fire | P | no |
-//! | it29 | `it29_live_default_interval_accepted`           | `live::1` alone → default interval=30, no guard error (exit 2 from store) | P | no |
-//! | it30 | `it30_live_sigint_exits_0`                      | `live::1`; after 3s send SIGINT → exit 0, stdout has "Monitor stopped."  | P | no |
-//! | it31 | `it31_usage_help_shows_live_params`             | `.usage.help` → exit 0, stdout contains `live`, `interval`, `jitter`     | P | no |
-//! | it32 | `it32_lim_it_refresh_per_account`               | real token + `refresh::1` → exit 0, account name visible (AC-19)         | P | yes |
-//! | it33 | `it33_mre_refresh_help_excludes_429`            | `.usage.help` refresh says 401/403 not 401/403/429 (issue-refresh-help-429) | P | no |
-//! | it34 | `it34_trace_param_writes_to_stderr`             | `trace::1` with no-token account → stderr contains `[trace]` lines         | P | no |
-//! | it35 | `it35_empty_store_json_format`                  | empty store + `format::json` → output is `[]`                              | P | no |
-//! | it36 | `it36_no_footer_when_no_valid_accounts`         | single failed account → no "Valid:" footer line                            | P | no |
-//! | it37 | `it37_mre_bug155_refresh_defaults_to_1`         | `.usage.help` shows "1 = enabled, default" for refresh (BUG-155)           | P | no |
-//! | it38 | `it38_mre_bug156_refresh_help_mentions_429_expired` | `.usage.help` refresh mentions 429+locally-expired case (BUG-156)      | P | no |
-//! | it39 | `it39_refresh_2_rejected`                           | `refresh::2` out of range → exit 1 (EC-3)                | N | no |
-//! | it40 | `it40_refresh_yes_rejected`                         | `refresh::yes` type error → exit 1 (EC-4)                | N | no |
-//! | it41 | `it41_live_0_single_fetch_exits_0`                  | `live::0` explicit → exit 0, no countdown footer (EC-2)     | P | no |
-//! | it42 | `it42_live_2_rejected`                              | `live::2` out of range → exit 1 (EC-4)                      | N | no |
-//! | it43 | `it43_live_yes_rejected`                            | `live::yes` type error → exit 1 (EC-5)                      | N | no |
-//! | it44 | `it44_interval_abc_rejected`                        | `interval::abc` type error → exit 1 (EC-6)              | N | no |
-//! | it45 | `it45_interval_60_live_accepted`                    | `live::1 interval::60` guard passes (exit 2, not 1) (EC-3) | P | no |
-//! | it46 | `it46_jitter_0_explicit_live_accepted`              | `live::1 jitter::0` explicit zero guard passes (EC-1)     | P | no |
-//! | it47 | `it47_jitter_10_live_accepted`                      | `live::1 interval::30 jitter::10` guard passes (EC-2)     | P | no |
-//! | it48 | `it48_jitter_abc_rejected`                          | `jitter::abc` type error → exit 1 (EC-7)                  | N | no |
-//! | it49 | `it49_trace_0_no_trace_on_stderr`                   | `trace::0` explicit → no [trace] on stderr (EC-2)          | P | no |
-//! | it50 | `it50_trace_2_rejected`                             | `trace::2` out of range → exit 1 (EC-3)                    | N | no |
-//! | it51 | `it51_trace_yes_rejected`                           | `trace::yes` type error → exit 1 (EC-4)                    | N | no |
-//! | it52 | `it52_trace_default_off`                            | no `trace::` → no [trace] lines on stderr (EC-5)           | P | no |
-//! | it043 | `it043_sort_name_accepted`                         | `sort::name` + empty store → exit 0 (IT-44/AC-01)          | P | no |
-//! | it044 | `it044_sort_endurance_accepted`                     | `sort::endurance` + empty store → exit 0 (IT-45/AC-02)     | P | no |
-//! | it045 | `it045_sort_drain_accepted`                         | `sort::drain` + empty store → exit 0 (IT-46/AC-03)         | P | no |
-//! | it046 | `it046_sort_renew_accepted`                         | `sort::renew` + empty store → exit 0 (IT-47/AC-04)         | P | no |
-//! | it047 | `it047_sort_invalid_value_exit_1`                   | `sort::bogus` → exit 1, stderr names valid values (IT-48/AC-09) | N | no |
-//! | it048 | `it048_prefer_invalid_value_exit_1`                 | `prefer::bogus` → exit 1, stderr names valid values (IT-49/AC-10) | N | no |
-//! | it049 | `it049_usage_help_shows_sort_params`                | `.usage.help` lists `sort`, `desc`, `prefer` (IT-50)       | P | no |
-//! | it050 | `it050_desc_0_accepted`                             | `desc::0` + empty store → exit 0 (026_desc EC-1)           | P | no |
-//! | it051 | `it051_desc_1_accepted`                             | `desc::1` + empty store → exit 0 (026_desc EC-2)           | P | no |
-//! | it052_desc_2_rejected | `it052_desc_2_rejected`            | `desc::2` out of range → exit 1 (026_desc EC-3)            | N | no |
-//! | it053 | `it053_sort_name_desc_0_identical_to_sort_name`     | `sort::name desc::0` same order as `sort::name` (CC-1)     | P | no |
-//! | it054 | `it054_sort_name_desc_1_reverses_order`             | `sort::name desc::1` shows z before a (CC-2)               | P | no |
-//! | it055 | `it055_prefer_any_accepted`                         | `prefer::any` + empty store → exit 0 (027_prefer EC-1)     | P | no |
-//! | it056 | `it056_prefer_opus_accepted`                        | `prefer::opus` + empty store → exit 0 (027_prefer EC-2)    | P | no |
-//! | it057 | `it057_prefer_sonnet_accepted`                      | `prefer::sonnet` + empty store → exit 0 (027_prefer EC-3)  | P | no |
-//! | it058 | `it058_sort_json_unaffected_by_sort_strategy`       | JSON alphabetical regardless of `sort::` strategy (025_sort CC-1) | P | no |
-//! | it059 | `it059_sort_uppercase_rejected`                     | `sort::Name` (uppercase) → exit 1 (case-sensitive)         | N | no |
-//! | it060 | `it060_prefer_uppercase_rejected`                   | `prefer::Opus` (uppercase) → exit 1 (case-sensitive)       | N | no |
-//! | it063 | `it063_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1 (TSK-184)                    | N | no |
-//! | it064 | `it064_next_session_rejected_exit_1`                | `next::session` rejected → exit 1 (TSK-184)                | N | no |
-//! | it065 | `it065_next_endurance_accepted`                     | `next::endurance` accepted with empty store → exit 0       | P | no |
-//! | it066 | `it066_next_drain_accepted`                         | `next::drain` accepted with empty store → exit 0           | P | no |
-//! | it067 | `it067_next_reset_rejected_exit_1`                  | `next::reset` rejected → exit 1 (TSK-184)                  | N | no |
-//! | it068 | `it068_next_invalid_value_exit_1`                   | `next::bogus` → exit 1, stderr names endurance+drain only  | N | no |
-//! | it069 | `it069_next_drain_default_no_arrow_without_valid_accounts` | default drain + no valid accounts → no `→`        | P | no |
-//! | it070 | `it070_cols_sub_accepted`                           | `cols::+sub` accepted with empty store → exit 0            | P | no |
-//! | it071 | `it071_cols_sub_shows_sub_column`                   | `cols::+sub` with account → output contains "Sub" header   | P | no |
-//! | it072 | `it072_cols_unknown_id_exit_1`                      | `cols::+bogus_col` → exit 1, stderr names valid IDs        | N | no |
-//! | it073 | `it073_usage_help_shows_next_cols_params`           | `.usage.help` lists `next` and `cols` params               | P | no |
+//! | it001  | `it001_lim_it_quota_heading_and_columns`          | real token → Quota heading + new column names                 | P   | yes   |
+//! | it002  | `it002_lim_it_active_account_marked`              | 2 accounts; active one has `✓` in flag column                 | P   | yes   |
+//! | it003  | `it003_failed_token_shows_dash_exits_0`           | account without accessToken → `—` + "in …" Expires + exit 0  | P   | no    |
+//! | it004  | `it004_lim_it_json_format_valid_array`            | real token + `format::json` → JSON with `_left_pct` fields + `weekly_7d_sonnet_left_pct` | P | yes |
+//! | it005  | `it005_empty_store_shows_no_accounts`             | empty credential store → no-accounts message                  | P   | no    |
+//! | it006  | `it006_unreadable_store_exits_2`                  | store dir chmod 000 → exit 2                                  | N   | no    |
+//! | it007  | `it007_home_unset_exits_2`                        | HOME unset → exit 2                                           | N   | no    |
+//! | it008  | `it008_lim_it_accounts_in_alpha_order`            | 3 accounts written out of order → alpha output                | P   | yes   |
+//! | it009  | `it009_unreadable_credentials_shows_dash`         | credentials chmod 000 → `—` + exit 0                         | P   | no    |
+//! | it010 | `it010_expired_token_shows_expired_in_expires_col` | account with PAST_MS → "EXPIRED" in Expires column           | P   | no    |
+//! | it011 | `it011_lim_it_recommendation_marker_shown`       | 2 accounts + `next::endurance` → `→` on non-active account    | P   | yes   |
+//! | it012 | `it012_lim_it_footer_shows_valid_count`          | 2 accounts with real tokens → footer "Valid: 2" + "Next:"     | P   | yes   |
+//! | it013 | `it013_active_divergence_shows_star`             | live creds=work, _active=alice → `✓` on work, `*` on alice    | P   | no    |
+//! | it014 | `it014_creds_unreadable_no_checkmark_star_shown` | no live creds, _active=alice → no `✓`, `*` on alice           | P   | no    |
+//! | it015 | `it015_current_equals_active_no_star`            | live creds=alice, _active=alice → `✓` on alice, no `*`        | P   | no    |
+//! | it016 | `it016_json_is_current_is_active`                | JSON has `is_current` + `is_active`, no `active` key          | P   | no    |
+//! | it017 | `it017_format_table_rejected`                    | `format::table` → exit 1 (not supported by .usage)           | N   | no    |
+//! | it018 | `it018_synthetic_row_when_no_saved_match`         | live token unmatched → synthetic (current session) row with ✓ | P   | no    |
+//! | it019 | `it019_refresh_disabled_param_accepted`           | `refresh::0` accepted by parser; empty store → no-accounts    | P   | no    |
+//! | it020 | `it020_refresh_enabled_offline_no_retry_triggered` | `refresh::1` accepted; missing token → dash, no HTTP call   | P   | no    |
+//! | it021 | `it021_lim_it_live_mode`                         | `live::1 interval::30`; real token → "Next update" in output  | P   | yes   |
+//! | it022 | `it022_live_jitter_exceeds_interval`             | `live::1 interval::60 jitter::70` → exit 1 before any fetch   | N   | no    |
+//! | it023 | `it023_live_interval_below_minimum`              | `live::1 interval::5` → exit 1, stderr contains "30"          | N   | no    |
+//! | it024 | `it024_live_incompatible_with_json`              | `live::1 format::json` → exit 1 before any fetch              | N   | no    |
+//! | it025 | `it025_synthetic_row_uses_claude_json_email`     | live token unmatched + `.claude.json` has email → row shows email, not "(current session)" | P | no |
+//! | it026 | `it026_live_jitter_equals_interval_accepted`     | `live::1 interval::30 jitter::30` (boundary) → exit 2, not 1 (guard allows equal) | P | no |
+//! | it027 | `it027_json_error_field_on_failed_account`       | single account without accessToken + format::json → JSON has `"error":` field | P | no |
+//! | it028 | `it028_interval_jitter_ignored_when_not_live`    | `interval::5 jitter::70` without `live::1` → exit 0, guards never fire | P | no |
+//! | it029 | `it029_live_default_interval_accepted`           | `live::1` alone → default interval=30, no guard error (exit 2 from store) | P | no |
+//! | it030 | `it030_live_sigint_exits_0`                      | `live::1`; after 3s send SIGINT → exit 0, stdout has "Monitor stopped."  | P | no |
+//! | it031 | `it031_usage_help_shows_live_params`             | `.usage.help` → exit 0, stdout contains `live`, `interval`, `jitter`     | P | no |
+//! | it032 | `it032_lim_it_refresh_per_account`               | real token + `refresh::1` → exit 0, account name visible (AC-19)         | P | yes |
+//! | it033 | `it033_mre_refresh_help_excludes_429`            | `.usage.help` refresh says 401/403 not 401/403/429 (issue-refresh-help-429) | P | no |
+//! | it034 | `it034_trace_param_writes_to_stderr`             | `trace::1` with no-token account → stderr contains `[trace]` lines         | P | no |
+//! | it035 | `it035_empty_store_json_format`                  | empty store + `format::json` → output is `[]`                              | P | no |
+//! | it036 | `it036_no_footer_when_no_valid_accounts`         | single failed account → no "Valid:" footer line                            | P | no |
+//! | it037 | `it037_mre_bug155_refresh_defaults_to_1`         | `.usage.help` shows "1 = enabled, default" for refresh (BUG-155)           | P | no |
+//! | it038 | `it038_mre_bug156_refresh_help_mentions_429_expired` | `.usage.help` refresh mentions 429+locally-expired case (BUG-156)      | P | no |
+//! | it039 | `it039_refresh_2_rejected`                           | `refresh::2` out of range → exit 1 (EC-3)                | N | no |
+//! | it040 | `it040_refresh_yes_rejected`                         | `refresh::yes` type error → exit 1 (EC-4)                | N | no |
+//! | it041 | `it041_live_0_single_fetch_exits_0`                  | `live::0` explicit → exit 0, no countdown footer (EC-2)     | P | no |
+//! | it042 | `it042_live_2_rejected`                              | `live::2` out of range → exit 1 (EC-4)                      | N | no |
+//! | it043 | `it043_live_yes_rejected`                            | `live::yes` type error → exit 1 (EC-5)                      | N | no |
+//! | it044 | `it044_interval_abc_rejected`                        | `interval::abc` type error → exit 1 (EC-6)              | N | no |
+//! | it045 | `it045_interval_60_live_accepted`                    | `live::1 interval::60` guard passes (exit 2, not 1) (EC-3) | P | no |
+//! | it046 | `it046_jitter_0_explicit_live_accepted`              | `live::1 jitter::0` explicit zero guard passes (EC-1)     | P | no |
+//! | it047 | `it047_jitter_10_live_accepted`                      | `live::1 interval::30 jitter::10` guard passes (EC-2)     | P | no |
+//! | it048 | `it048_jitter_abc_rejected`                          | `jitter::abc` type error → exit 1 (EC-7)                  | N | no |
+//! | it049 | `it049_trace_0_no_trace_on_stderr`                   | `trace::0` explicit → no [trace] on stderr (EC-2)          | P | no |
+//! | it050 | `it050_trace_2_rejected`                             | `trace::2` out of range → exit 1 (EC-3)                    | N | no |
+//! | it051 | `it051_trace_yes_rejected`                           | `trace::yes` type error → exit 1 (EC-4)                    | N | no |
+//! | it052 | `it052_trace_default_off`                            | no `trace::` → no [trace] lines on stderr (EC-5)           | P | no |
+//! | it053 | `it053_sort_name_accepted`                         | `sort::name` + empty store → exit 0 (IT-44/AC-01)          | P | no |
+//! | it054 | `it054_sort_endurance_accepted`                     | `sort::endurance` + empty store → exit 0 (IT-45/AC-02)     | P | no |
+//! | it055 | `it055_sort_drain_accepted`                         | `sort::drain` + empty store → exit 0 (IT-46/AC-03)         | P | no |
+//! | it056 | `it056_sort_renew_accepted`                         | `sort::renew` + empty store → exit 0 (IT-47/AC-04)         | P | no |
+//! | it057 | `it057_sort_invalid_value_exit_1`                   | `sort::bogus` → exit 1, stderr names valid values (IT-48/AC-09) | N | no |
+//! | it058 | `it058_prefer_invalid_value_exit_1`                 | `prefer::bogus` → exit 1, stderr names valid values (IT-49/AC-10) | N | no |
+//! | it059 | `it059_usage_help_shows_sort_params`                | `.usage.help` lists `sort`, `desc`, `prefer` (IT-50)       | P | no |
+//! | it060 | `it060_desc_0_accepted`                             | `desc::0` + empty store → exit 0 (026_desc EC-1)           | P | no |
+//! | it061 | `it061_desc_1_accepted`                             | `desc::1` + empty store → exit 0 (026_desc EC-2)           | P | no |
+//! | it062_desc_2_rejected | `it062_desc_2_rejected`            | `desc::2` out of range → exit 1 (026_desc EC-3)            | N | no |
+//! | it063 | `it063_sort_name_desc_0_identical_to_sort_name`     | `sort::name desc::0` same order as `sort::name` (CC-1)     | P | no |
+//! | it064 | `it064_sort_name_desc_1_reverses_order`             | `sort::name desc::1` shows z before a (CC-2)               | P | no |
+//! | it065 | `it065_prefer_any_accepted`                         | `prefer::any` + empty store → exit 0 (027_prefer EC-1)     | P | no |
+//! | it066 | `it066_prefer_opus_accepted`                        | `prefer::opus` + empty store → exit 0 (027_prefer EC-2)    | P | no |
+//! | it067 | `it067_prefer_sonnet_accepted`                      | `prefer::sonnet` + empty store → exit 0 (027_prefer EC-3)  | P | no |
+//! | it068 | `it068_sort_json_unaffected_by_sort_strategy`       | JSON alphabetical regardless of `sort::` strategy (025_sort CC-1) | P | no |
+//! | it069 | `it069_sort_uppercase_rejected`                     | `sort::Name` (uppercase) → exit 1 (case-sensitive)         | N | no |
+//! | it070 | `it070_prefer_uppercase_rejected`                   | `prefer::Opus` (uppercase) → exit 1 (case-sensitive)       | N | no |
+//! | it073 | `it073_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1 (TSK-184)                    | N | no |
+//! | it074 | `it074_next_session_rejected_exit_1`                | `next::session` rejected → exit 1 (TSK-184)                | N | no |
+//! | it075 | `it075_next_endurance_accepted`                     | `next::endurance` accepted with empty store → exit 0       | P | no |
+//! | it076 | `it076_next_drain_accepted`                         | `next::drain` accepted with empty store → exit 0           | P | no |
+//! | it077 | `it077_next_reset_rejected_exit_1`                  | `next::reset` rejected → exit 1 (TSK-184)                  | N | no |
+//! | it078 | `it078_next_invalid_value_exit_1`                   | `next::bogus` → exit 1, stderr names renew+endurance+drain | N | no |
+//! | it079 | `it079_next_drain_default_no_arrow_without_valid_accounts` | default renew + no valid accounts → no `→`       | P | no |
+//! | it080 | `it080_cols_sub_accepted`                           | `cols::+sub` accepted with empty store → exit 0            | P | no |
+//! | it081 | `it081_cols_sub_shows_sub_column`                   | `cols::+sub` with account → output contains "Sub" header   | P | no |
+//! | it082 | `it082_cols_unknown_id_exit_1`                      | `cols::+bogus_col` → exit 1, stderr names valid IDs        | N | no |
+//! | it083 | `it083_usage_help_shows_next_cols_params`           | `.usage.help` lists `next` and `cols` params               | P | no |
 //! | mre171 | `mre_bug_171_account_populated_after_refresh`      | BUG-171: `Fix(BUG-171)` present → `aq.account` populated  | P | no |
-//! | it082 | `it082_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1, stderr names endurance+drain only (TSK-184) | N | no |
-//! | it083 | `it083_footer_not_gated_on_next_all_structural`     | `Responsibility(TSK-184-footer)` present; old All-gate absent (TSK-184) | P | no |
-//! | it084 | `it084_next_session_rejected_exit_1`                | `next::session` rejected → exit 1, stderr names endurance+drain (TSK-184) | N | no |
-//! | it085 | `it085_next_strategy_session_absent_structural`     | `NextStrategy::Session` absent from source (TSK-184) | P | no |
-//! | it086 | `it086_next_drain_json_output_unchanged`             | `format::json next::drain` identical to default JSON (TSK-184) | P | no |
-//! | it087 | `it087_touch_1_empty_store_exits_0`                 | `touch::1` empty store → exit 0, no-accounts message (TSK-185 AC-01) | P | no |
-//! | it088 | `it088_touch_1_errored_account_skipped`             | `touch::1` no-token account → exit 0, row shows `—` (TSK-185 AC-04) | P | no |
-//! | it089 | `it089_apply_touch_fn_exists_structural`             | `fn apply_touch` present in source (TSK-185 AC-02 structural) | P | no |
-//! | it090 | `it090_touch_json_format_unaffected`                | `format::json touch::1` empty store → exit 0, output `[]` (TSK-185 AC-08) | P | no |
-//! | it091 | `it091_usage_help_shows_touch_param`                | `.usage.help` contains `touch` (TSK-185 AC-10) | P | no |
-//! | it110 | `it110_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle` | `touch::1` fires for idle accounts (resets_at absent); active skipped after activation (024 FT-12) | P | yes |
-//! | it111 | `it111_sort_next_accepted`                          | `sort::next` accepted → exit 0 (drain default + endurance explicit) (IT-65/AC-15) | P | no |
-//! | it112 | `it112_imodel_auto_accepted_empty_store_exits_0`    | `imodel::auto` accepted; empty store exits 0 (IT-66/EC-1) | P | no |
-//! | it113 | `it113_imodel_bogus_exits_1`                        | `imodel::bogus` → exit 1, stderr names all 5 valid values (IT-67/EC-5) | N | no |
-//! | it114 | `it114_effort_auto_accepted_empty_store_exits_0`    | `effort::auto` accepted; empty store exits 0 (IT-68/EC-1) | P | no |
-//! | it115 | `it115_effort_bogus_exits_1`                        | `effort::bogus` → exit 1, stderr names all 5 valid values (IT-69/EC-4) | N | no |
-//! | it116 | `it116_usage_help_shows_imodel_effort_params`       | `.usage.help` lists `imodel` and `effort` params (IT-70) | P | no |
-//! | it117 | `it117_imodel_sonnet_accepted_empty_store_exits_0`  | `imodel::sonnet` accepted; empty store exits 0 (EC-2) | P | no |
-//! | it118 | `it118_imodel_opus_accepted_empty_store_exits_0`    | `imodel::opus` accepted; empty store exits 0 (EC-3) | P | no |
-//! | it119 | `it119_imodel_keep_accepted_empty_store_exits_0`    | `imodel::keep` accepted; empty store exits 0 (EC-4) | P | no |
-//! | it120 | `it120_effort_high_accepted_empty_store_exits_0`    | `effort::high` accepted; empty store exits 0 | P | no |
-//! | it121 | `it121_effort_max_accepted_empty_store_exits_0`     | `effort::max` accepted; empty store exits 0 | P | no |
-//! | it122 | `it122_apply_touch_trigger_is_is_none_structural`   | apply_touch uses `is_none()` trigger (BUG-181 fix AC-02 structural) | P | no |
-//! | it123 | `it123_refresh_account_token_has_label_param_structural` | `refresh_account_token` uses label var not hardcoded "refresh" (TSK-192 AC-09 structural) | P | no |
-//! | it124 | `it124_apply_touch_passes_touch_label_structural`   | `apply_touch` call site passes `"touch"` label (TSK-192 AC-09 structural) | P | no |
-//! | it125 | `it125_apply_refresh_passes_refresh_label_structural` | `apply_refresh` call site passes `"refresh"` label (TSK-192 AC-09 structural) | P | no |
-//! | it126 | `it126_refresh_account_token_has_instant_timing_structural` | `refresh_account_token` uses `Instant::now()` for per-step timing (TSK-192 AC-09 structural) | P | no |
-//! | it127 | `it127_sort_default_is_drain_structural`             | sort default is `SortStrategy::Drain` when no `sort::` arg given (TSK-193 AC-01 structural) | P | no |
-//! | it128 | `it128_sort_next_resolves_to_drain_structural`       | `sort::next` resolves to `SortStrategy::Drain` when `next::drain` (TSK-193 AC-15 structural) | P | no |
-//! | it129 | `it129_sort_next_resolves_to_endurance_structural`   | `sort::next` resolves to `SortStrategy::Endurance` when `next::endurance` (TSK-193 AC-15 structural) | P | no |
-//! | it131 | `it131_trace_skip_lines_emitted_for_non_qualifying_accounts` | `touch::1 trace::1` errored account → `[trace] touch <name> skipped (reason: error account)` (BUG-202 / 024 FT-14) | P | no |
-//! | it132 | `it132_imodel_haiku_accepted_empty_store_exits_0`   | `imodel::haiku` accepted; empty store exits 0 (EC-11 / 035) | P | no |
-//! | it133 | `it133_effort_low_accepted_empty_store_exits_0`     | `effort::low` accepted; empty store exits 0 (EC-10 / 036) | P | no |
-//! | it134 | `it134_effort_normal_accepted_empty_store_exits_0`  | `effort::normal` accepted; empty store exits 0 (EC-11 / 036) | P | no |
+//! | it092 | `it092_next_all_rejected_exit_1`                    | `next::all` rejected → exit 1, stderr names renew+endurance+drain (TSK-184/TSK-222) | N | no |
+//! | it093 | `it093_footer_not_gated_on_next_all_structural`     | `Responsibility(TSK-184-footer)` present; old All-gate absent (TSK-184) | P | no |
+//! | it094 | `it094_next_session_rejected_exit_1`                | `next::session` rejected → exit 1, stderr names renew+endurance+drain (TSK-184/TSK-222) | N | no |
+//! | it095 | `it095_next_strategy_session_absent_structural`     | `NextStrategy::Session` absent from source (TSK-184) | P | no |
+//! | it096 | `it096_next_drain_json_output_unchanged`             | `format::json next::drain` identical to default JSON (TSK-184) | P | no |
+//! | it097 | `it097_touch_1_empty_store_exits_0`                 | `touch::1` empty store → exit 0, no-accounts message (TSK-185 AC-01) | P | no |
+//! | it098 | `it098_touch_1_errored_account_skipped`             | `touch::1` no-token account → exit 0, row shows `—` (TSK-185 AC-04) | P | no |
+//! | it099 | `it099_apply_touch_fn_exists_structural`             | `fn apply_touch` present in source (TSK-185 AC-02 structural) | P | no |
+//! | it100 | `it100_touch_json_format_unaffected`                | `format::json touch::1` empty store → exit 0, output `[]` (TSK-185 AC-08) | P | no |
+//! | it101 | `it101_usage_help_shows_touch_param`                | `.usage.help` contains `touch` (TSK-185 AC-10) | P | no |
+//! | it120 | `it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle` | `touch::1` fires for idle accounts (resets_at absent); active skipped after activation (024 FT-12) | P | yes |
+//! | it121 | `it121_sort_next_accepted`                          | `sort::next` accepted → exit 0 (renew default + endurance explicit) (IT-65/AC-15) | P | no |
+//! | it122 | `it122_imodel_auto_accepted_empty_store_exits_0`    | `imodel::auto` accepted; empty store exits 0 (IT-66/EC-1) | P | no |
+//! | it123 | `it123_imodel_bogus_exits_1`                        | `imodel::bogus` → exit 1, stderr names all 5 valid values (IT-67/EC-5) | N | no |
+//! | it124 | `it124_effort_auto_accepted_empty_store_exits_0`    | `effort::auto` accepted; empty store exits 0 (IT-68/EC-1) | P | no |
+//! | it125 | `it125_effort_bogus_exits_1`                        | `effort::bogus` → exit 1, stderr names all 5 valid values (IT-69/EC-4) | N | no |
+//! | it126 | `it126_usage_help_shows_imodel_effort_params`       | `.usage.help` lists `imodel` and `effort` params (IT-70) | P | no |
+//! | it127 | `it127_imodel_sonnet_accepted_empty_store_exits_0`  | `imodel::sonnet` accepted; empty store exits 0 (EC-2) | P | no |
+//! | it128 | `it128_imodel_opus_accepted_empty_store_exits_0`    | `imodel::opus` accepted; empty store exits 0 (EC-3) | P | no |
+//! | it129 | `it129_imodel_keep_accepted_empty_store_exits_0`    | `imodel::keep` accepted; empty store exits 0 (EC-4) | P | no |
+//! | it130 | `it130_effort_high_accepted_empty_store_exits_0`    | `effort::high` accepted; empty store exits 0 | P | no |
+//! | it131 | `it131_effort_max_accepted_empty_store_exits_0`     | `effort::max` accepted; empty store exits 0 | P | no |
+//! | it132 | `it132_apply_touch_trigger_is_is_none_structural`   | apply_touch uses `is_none()` trigger (BUG-181 fix AC-02 structural) | P | no |
+//! | it133 | `it133_refresh_account_token_has_label_param_structural` | `refresh_account_token` uses label var not hardcoded "refresh" (TSK-192 AC-09 structural) | P | no |
+//! | it134 | `it134_apply_touch_passes_touch_label_structural`   | `apply_touch` call site passes `"touch"` label (TSK-192 AC-09 structural) | P | no |
+//! | it135 | `it135_apply_refresh_passes_refresh_label_structural` | `apply_refresh` call site passes `"refresh"` label (TSK-192 AC-09 structural) | P | no |
+//! | it136 | `it136_refresh_account_token_has_instant_timing_structural` | `refresh_account_token` uses `Instant::now()` for per-step timing (TSK-192 AC-09 structural) | P | no |
+//! | it137 | `it137_sort_default_is_renew_structural`             | sort default is `SortStrategy::Renew` when no `sort::` arg given (TSK-193/TSK-220 AC-01 structural) | P | no |
+//! | it138 | `it138_sort_next_resolves_to_drain_structural`       | `sort::next` resolves to `SortStrategy::Drain` when `next::drain` (TSK-193 AC-15 structural) | P | no |
+//! | it139 | `it139_sort_next_resolves_to_endurance_structural`   | `sort::next` resolves to `SortStrategy::Endurance` when `next::endurance` (TSK-193 AC-15 structural) | P | no |
+//! | it141 | `it141_trace_skip_lines_emitted_for_non_qualifying_accounts` | `touch::1 trace::1` errored account → `[trace] touch <name> skipped (reason: error account)` (BUG-202 / 024 FT-14) | P | no |
+//! | it142 | `it142_imodel_haiku_accepted_empty_store_exits_0`   | `imodel::haiku` accepted; empty store exits 0 (EC-11 / 035) | P | no |
+//! | it143 | `it143_effort_low_accepted_empty_store_exits_0`     | `effort::low` accepted; empty store exits 0 (EC-10 / 036) | P | no |
+//! | it144 | `it144_effort_normal_accepted_empty_store_exits_0`  | `effort::normal` accepted; empty store exits 0 (EC-11 / 036) | P | no |
+//! | it145 | `it145_lim_it_next_renew_places_arrow_on_soonest_refill` | `next::renew` → exit 0, footer shows renew line, `→` placed on winning account (TSK-222) | P | yes |
+//! | ut146 | `ut_filter_only_valid_hides_red_rows`                | `only_valid::1` accepted; empty store exits 0 (TSK-223 RED gate) | P | no |
 
 use crate::helpers::{
   BIN,
@@ -146,11 +148,11 @@ use tempfile::TempDir;
 /// Live: one account with a real token → output contains "Quota" heading and
 /// the new quota column names; old combined column names are absent.
 #[ test ]
-fn it1_lim_it_quota_heading_and_columns()
+fn it001_lim_it_quota_heading_and_columns()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it1: no live token — skipping" );
+    eprintln!( "it001: no live token — skipping" );
     return;
   };
 
@@ -187,11 +189,11 @@ fn it1_lim_it_quota_heading_and_columns()
 /// Live: two accounts; the active one has `✓` in the flag column on its line;
 /// no line for the inactive account contains `✓`.
 #[ test ]
-fn it2_lim_it_active_account_marked()
+fn it002_lim_it_active_account_marked()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it2: no live token — skipping" );
+    eprintln!( "it002: no live token — skipping" );
     return;
   };
 
@@ -223,7 +225,7 @@ fn it2_lim_it_active_account_marked()
 /// em-dash for quota columns, `(missing accessToken)` in the last column, and "in …"
 /// (not "EXPIRED") in the Expires column because `FAR_FUTURE_MS` is used.
 #[ test ]
-fn it3_failed_token_shows_dash_exits_0()
+fn it003_failed_token_shows_dash_exits_0()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -250,11 +252,11 @@ fn it3_failed_token_shows_dash_exits_0()
 /// (number); successful entries use `session_5h_left_pct` (not `session_5h_pct`)
 /// and include `weekly_7d_sonnet_left_pct` (number or null).
 #[ test ]
-fn it4_lim_it_json_format_valid_array()
+fn it004_lim_it_json_format_valid_array()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it4: no live token — skipping" );
+    eprintln!( "it004: no live token — skipping" );
     return;
   };
 
@@ -299,7 +301,7 @@ fn it4_lim_it_json_format_valid_array()
 /// files → `account::list()` returns an empty vec → output shows the no-accounts
 /// message, exit 0.
 #[ test ]
-fn it5_empty_store_shows_no_accounts()
+fn it005_empty_store_shows_no_accounts()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -327,7 +329,7 @@ fn it5_empty_store_shows_no_accounts()
 /// even when a panic occurs mid-test.
 #[ cfg( unix ) ]
 #[ test ]
-fn it6_unreadable_store_exits_2()
+fn it006_unreadable_store_exits_2()
 {
   use std::os::unix::fs::PermissionsExt;
 
@@ -364,7 +366,7 @@ fn it6_unreadable_store_exits_2()
 //   just $HOME; the full list is $PRO, $HOME, $USERPROFILE.
 // Pitfall: $PRO takes priority over $HOME in PersistPaths resolution — removing only $HOME
 //   leaves a silent fallback that defeats the test's isolation intent.
-fn it7_home_unset_exits_2()
+fn it007_home_unset_exits_2()
 {
   let out = run_cs_without_home( &[ ".usage" ] );
   assert_exit( &out, 2 );
@@ -376,11 +378,11 @@ fn it7_home_unset_exits_2()
 /// Live: three accounts written out of alphabetical order → output lists them
 /// in alphabetical order (delegated to `account::list()` sort).
 #[ test ]
-fn it8_lim_it_accounts_in_alpha_order()
+fn it008_lim_it_accounts_in_alpha_order()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it8: no live token — skipping" );
+    eprintln!( "it008: no live token — skipping" );
     return;
   };
 
@@ -413,7 +415,7 @@ fn it8_lim_it_accounts_in_alpha_order()
 /// Permissions are restored before assertions so `TempDir` cleanup succeeds.
 #[ cfg( unix ) ]
 #[ test ]
-fn it9_unreadable_credentials_shows_dash()
+fn it009_unreadable_credentials_shows_dash()
 {
   use std::os::unix::fs::PermissionsExt;
 
@@ -447,7 +449,7 @@ fn it9_unreadable_credentials_shows_dash()
 /// `compute_expires_cell()` returns `"EXPIRED"` → the Expires column shows
 /// "EXPIRED". Exit 0 (non-fatal per-account error).
 #[ test ]
-fn it10_expired_token_shows_expired_in_expires_col()
+fn it010_expired_token_shows_expired_in_expires_col()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -468,11 +470,11 @@ fn it10_expired_token_shows_expired_in_expires_col()
 /// The non-active account is the only candidate and must be marked `→`.
 /// The active account must not be marked `→`.
 #[ test ]
-fn it11_lim_it_recommendation_marker_shown()
+fn it011_lim_it_recommendation_marker_shown()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it11: no live token — skipping" );
+    eprintln!( "it011: no live token — skipping" );
     return;
   };
 
@@ -503,11 +505,11 @@ fn it11_lim_it_recommendation_marker_shown()
 /// Live: two accounts with real tokens → at least two valid quota results →
 /// footer line shows "Valid: 2" and "Next:".
 #[ test ]
-fn it12_lim_it_footer_shows_valid_count()
+fn it012_lim_it_footer_shows_valid_count()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it12: no live token — skipping" );
+    eprintln!( "it012: no live token — skipping" );
     return;
   };
 
@@ -532,13 +534,13 @@ fn it12_lim_it_footer_shows_valid_count()
 
 // ── Offline: current-vs-active divergence ─────────────────────────────────────
 
-/// it13 (IT-13): live creds match `work@acme.com`; `_active` = `alice@acme.com`.
+/// it013 (IT-13): live creds match `work@acme.com`; `_active` = `alice@acme.com`.
 ///
 /// Flag column: `work@acme.com` gets `✓` (`is_current`), `alice@acme.com` gets `*`
 /// (`is_active` but not `is_current`). This demonstrates divergence: the active marker
 /// and the live session point at different accounts.
 #[ test ]
-fn it13_active_divergence_shows_star()
+fn it013_active_divergence_shows_star()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -558,12 +560,12 @@ fn it13_active_divergence_shows_star()
   assert!( alice_active, "alice@acme.com must have * (is_active, not current), got:\n{text}" );
 }
 
-/// it14 (IT-14): no live credentials file; `_active` = `alice@acme.com`.
+/// it014 (IT-14): no live credentials file; `_active` = `alice@acme.com`.
 ///
 /// With no live creds, `is_current` is false for all — no `✓` shown.
 /// `alice@acme.com` is still `is_active` so `*` is still shown.
 #[ test ]
-fn it14_creds_unreadable_no_checkmark_star_shown()
+fn it014_creds_unreadable_no_checkmark_star_shown()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -582,12 +584,12 @@ fn it14_creds_unreadable_no_checkmark_star_shown()
   assert!( alice_star, "alice@acme.com must still have * (is_active), got:\n{text}" );
 }
 
-/// it15 (IT-15): live creds match `alice@acme.com`; `_active` = `alice@acme.com`.
+/// it015 (IT-15): live creds match `alice@acme.com`; `_active` = `alice@acme.com`.
 ///
 /// When `is_current` and `is_active` point at the same account, `✓` wins (priority)
 /// and `*` does NOT appear on any line (no divergence).
 #[ test ]
-fn it15_current_equals_active_no_star()
+fn it015_current_equals_active_no_star()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -605,13 +607,13 @@ fn it15_current_equals_active_no_star()
   assert!( !has_star, "no * when current == active (no divergence), got:\n{text}" );
 }
 
-/// it16 (IT-16): `format::json` uses `is_current` + `is_active` field names, not `active`.
+/// it016 (IT-16): `format::json` uses `is_current` + `is_active` field names, not `active`.
 ///
 /// Two accounts; live creds match `work@acme.com`; `_active` = `alice@acme.com`.
 /// JSON output must have `"is_current":true` on work and `"is_active":true` on alice.
 /// The old `"active"` key must not appear.
 #[ test ]
-fn it16_json_is_current_is_active()
+fn it016_json_is_current_is_active()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -636,9 +638,9 @@ fn it16_json_is_current_is_active()
   assert!( alice_active, "alice@acme.com must have is_active:true, got:\n{json}" );
 }
 
-// ── it18 ──────────────────────────────────────────────────────────────────────
+// ── it018 ──────────────────────────────────────────────────────────────────────
 
-/// it18 (IT-18): live token does not match any saved account → synthetic row.
+/// it018 (IT-18): live token does not match any saved account → synthetic row.
 ///
 /// `alice@acme.com` is saved with `tok-alice`; live creds use `tok-unsaved`.
 /// No saved account matches the live token → `fetch_all_quota()` prepends a
@@ -650,7 +652,7 @@ fn it16_json_is_current_is_active()
 /// caught the gap. Always add an explicit unmatched-token test alongside the
 /// matched-token test.
 #[ test ]
-fn it18_synthetic_row_when_no_saved_match()
+fn it018_synthetic_row_when_no_saved_match()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -676,13 +678,13 @@ fn it18_synthetic_row_when_no_saved_match()
   assert!( !alice_current, "alice must NOT have ✓ when unsaved session is live, got:\n{text}" );
 }
 
-// ── it17 ──────────────────────────────────────────────────────────────────────
+// ── it017 ──────────────────────────────────────────────────────────────────────
 
-/// it17 (IT-17): `.usage format::table` exits 1 with `ArgumentTypeMismatch`.
+/// it017 (IT-17): `.usage format::table` exits 1 with `ArgumentTypeMismatch`.
 ///
 /// `format::table` is only valid for `.accounts`; all other commands must reject it.
 #[ test ]
-fn it17_format_table_rejected()
+fn it017_format_table_rejected()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -690,16 +692,16 @@ fn it17_format_table_rejected()
   assert_exit( &out, 1 );
 }
 
-// ── it19 ──────────────────────────────────────────────────────────────────────
+// ── it019 ──────────────────────────────────────────────────────────────────────
 
-/// it19: `refresh::0` is accepted by the command parser; empty store exits 0.
+/// it019: `refresh::0` is accepted by the command parser; empty store exits 0.
 ///
 /// TDD guard — fails before `refresh` is registered (unilang rejects unknown arg).
 /// After registration, verifies `refresh::0` (explicit disable) has no effect on
 /// empty-store output. Note: `refresh::1` is the default; this test explicitly
 /// exercises the opt-out path.
 #[ test ]
-fn it19_refresh_disabled_param_accepted()
+fn it019_refresh_disabled_param_accepted()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -712,15 +714,15 @@ fn it19_refresh_disabled_param_accepted()
   );
 }
 
-// ── it20 ──────────────────────────────────────────────────────────────────────
+// ── it020 ──────────────────────────────────────────────────────────────────────
 
-/// it20: `refresh::1` is accepted by the parser; with a missing-token account the
+/// it020: `refresh::1` is accepted by the parser; with a missing-token account the
 /// quota call never reaches HTTP, so no 401 is triggered and no retry occurs.
 ///
 /// TDD guard — fails before `refresh` is registered. After registration, verifies
 /// `refresh::1` does not crash offline (no-HTTP) error paths.
 #[ test ]
-fn it20_refresh_enabled_offline_no_retry_triggered()
+fn it020_refresh_enabled_offline_no_retry_triggered()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -734,9 +736,9 @@ fn it20_refresh_enabled_offline_no_retry_triggered()
   );
 }
 
-// ── it21 ──────────────────────────────────────────────────────────────────────
+// ── it021 ──────────────────────────────────────────────────────────────────────
 
-/// it21 (`lim_it`): `live::1 interval::30 jitter::0` with a real token.
+/// it021 (`lim_it`): `live::1 interval::30 jitter::0` with a real token.
 ///
 /// Runs the live monitor for 10 seconds then kills the process. Within that window
 /// the first fetch cycle completes and the countdown footer is written to stdout —
@@ -745,11 +747,11 @@ fn it20_refresh_enabled_offline_no_retry_triggered()
 /// Requires one saved account with a real token. The process is killed via
 /// `Child::kill()` (SIGKILL); SIGINT clean-exit is covered separately (AC-30).
 #[ test ]
-fn it21_lim_it_live_mode()
+fn it021_lim_it_live_mode()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it21: no live token — skipping" );
+    eprintln!( "it021: no live token — skipping" );
     return;
   };
 
@@ -770,14 +772,14 @@ fn it21_lim_it_live_mode()
   );
 }
 
-// ── it22 ──────────────────────────────────────────────────────────────────────
+// ── it022 ──────────────────────────────────────────────────────────────────────
 
-/// it22: `live::1 interval::60 jitter::70` — jitter exceeds interval → exit 1.
+/// it022: `live::1 interval::60 jitter::70` — jitter exceeds interval → exit 1.
 ///
 /// Validation guard fires before any network call; no credentials required.
 /// Verifies AC-27: `jitter > interval` is rejected.
 #[ test ]
-fn it22_live_jitter_exceeds_interval()
+fn it022_live_jitter_exceeds_interval()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -791,14 +793,14 @@ fn it22_live_jitter_exceeds_interval()
   );
 }
 
-// ── it23 ──────────────────────────────────────────────────────────────────────
+// ── it023 ──────────────────────────────────────────────────────────────────────
 
-/// it23: `live::1 interval::5` — interval below minimum → exit 1, message contains "30".
+/// it023: `live::1 interval::5` — interval below minimum → exit 1, message contains "30".
 ///
 /// Validation guard fires before any network call; no credentials required.
 /// Verifies AC-26: `interval < 30` is rejected; error message cites the minimum (30).
 #[ test ]
-fn it23_live_interval_below_minimum()
+fn it023_live_interval_below_minimum()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -813,14 +815,14 @@ fn it23_live_interval_below_minimum()
   );
 }
 
-// ── it24 ──────────────────────────────────────────────────────────────────────
+// ── it024 ──────────────────────────────────────────────────────────────────────
 
-/// it24: `live::1 format::json` — JSON format rejected in live mode → exit 1.
+/// it024: `live::1 format::json` — JSON format rejected in live mode → exit 1.
 ///
 /// Validation guard fires before any network call; no credentials required.
 /// Verifies AC-25: `live::1 format::json` is incompatible.
 #[ test ]
-fn it24_live_incompatible_with_json()
+fn it024_live_incompatible_with_json()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -834,17 +836,17 @@ fn it24_live_incompatible_with_json()
   );
 }
 
-// ── it25 ──────────────────────────────────────────────────────────────────────
+// ── it025 ──────────────────────────────────────────────────────────────────────
 
-/// it25: live token unmatched + `~/.claude.json` has `emailAddress` →
+/// it025: live token unmatched + `~/.claude.json` has `emailAddress` →
 /// synthetic row shows the email, NOT the `"(current session)"` fallback.
 ///
 /// Pitfall (AC-09): the synthetic row resolution has TWO paths:
 ///   • `.claude.json` present with non-empty `emailAddress` → use it (this test)
-///   • `.claude.json` absent or empty `emailAddress` → `"(current session)"` (it18)
-/// it18 covers the fallback; this test covers the happy path that it18 cannot.
+///   • `.claude.json` absent or empty `emailAddress` → `"(current session)"` (it018)
+/// it018 covers the fallback; this test covers the happy path that it018 cannot.
 #[ test ]
-fn it25_synthetic_row_uses_claude_json_email()
+fn it025_synthetic_row_uses_claude_json_email()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -872,9 +874,9 @@ fn it25_synthetic_row_uses_claude_json_email()
   assert!( synthetic_current, "synthetic row must carry ✓ flag, got:\n{text}" );
 }
 
-// ── it26 ──────────────────────────────────────────────────────────────────────
+// ── it026 ──────────────────────────────────────────────────────────────────────
 
-/// it26: `live::1 interval::30 jitter::30` — jitter EQUAL to interval is accepted.
+/// it026: `live::1 interval::30 jitter::30` — jitter EQUAL to interval is accepted.
 ///
 /// The guard is `jitter > interval` (strict greater-than).  Equal values must not
 /// trigger the error.  Exit 2 (store unreadable) proves the guards were passed and
@@ -882,7 +884,7 @@ fn it25_synthetic_row_uses_claude_json_email()
 /// Exit 1 would indicate a guard fired, which would be a bug.
 #[ cfg( unix ) ]
 #[ test ]
-fn it26_live_jitter_equals_interval_accepted()
+fn it026_live_jitter_equals_interval_accepted()
 {
   use std::os::unix::fs::PermissionsExt;
 
@@ -909,18 +911,18 @@ fn it26_live_jitter_equals_interval_accepted()
   );
 }
 
-// ── it27 ──────────────────────────────────────────────────────────────────────
+// ── it027 ──────────────────────────────────────────────────────────────────────
 
-/// it27: `format::json` for an account whose quota fetch fails → JSON has `"error"` field.
+/// it027: `format::json` for an account whose quota fetch fails → JSON has `"error"` field.
 ///
 /// `write_account()` produces a credential file without `accessToken`, so `read_token()`
 /// returns `Err("missing accessToken")` → `AccountQuota.result = Err(...)` →
 /// `render_json()` emits `{"account":…,"error":"…"}` instead of quota fields.
 ///
-/// Root cause of gap: it4 and it16 verify JSON structure for successful fetches;
+/// Root cause of gap: it004 and it016 verify JSON structure for successful fetches;
 /// neither explicitly asserts the `error` key is present on a failed account.
 #[ test ]
-fn it27_json_error_field_on_failed_account()
+fn it027_json_error_field_on_failed_account()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -945,15 +947,15 @@ fn it27_json_error_field_on_failed_account()
   assert!( json.contains( "\"expires_in_secs\"" ), "must have expires_in_secs, got:\n{json}" );
 }
 
-// ── it28 ──────────────────────────────────────────────────────────────────────
+// ── it028 ──────────────────────────────────────────────────────────────────────
 
-/// it28: `interval::5 jitter::70` without `live::1` → no guard fires, exit 0.
+/// it028: `interval::5 jitter::70` without `live::1` → no guard fires, exit 0.
 ///
 /// Live-mode guards (interval minimum, jitter ceiling) only activate when
 /// `live == 1`.  Specifying invalid interval/jitter in non-live mode must be
 /// silently ignored — the params are undefined outside live mode.
 #[ test ]
-fn it28_interval_jitter_ignored_when_not_live()
+fn it028_interval_jitter_ignored_when_not_live()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -974,9 +976,9 @@ fn it28_interval_jitter_ignored_when_not_live()
   );
 }
 
-// ── it30 ──────────────────────────────────────────────────────────────────────
+// ── it030 ──────────────────────────────────────────────────────────────────────
 
-/// it30: `live::1` with a no-token account — SIGINT after 3s → exit 0, "Monitor stopped." in stdout.
+/// it030: `live::1` with a no-token account — SIGINT after 3s → exit 0, "Monitor stopped." in stdout.
 ///
 /// Verifies AC-30: Ctrl-C (SIGINT) causes a clean exit (code 0) without error output.
 /// Uses an account with no `accessToken` so the per-account fetch fails instantly (no HTTP call),
@@ -984,7 +986,7 @@ fn it28_interval_jitter_ignored_when_not_live()
 /// `kill -INT` is used as a subprocess to avoid a `libc` dev-dependency.
 #[ cfg( unix ) ]
 #[ test ]
-fn it30_live_sigint_exits_0()
+fn it030_live_sigint_exits_0()
 {
   use std::process::Stdio;
 
@@ -1026,9 +1028,9 @@ fn it30_live_sigint_exits_0()
   );
 }
 
-// ── it29 ──────────────────────────────────────────────────────────────────────
+// ── it029 ──────────────────────────────────────────────────────────────────────
 
-/// it29: `live::1` alone — default `interval=30` satisfies the `>= 30` guard.
+/// it029: `live::1` alone — default `interval=30` satisfies the `>= 30` guard.
 ///
 /// When neither `interval::` nor `jitter::` are specified, the binary applies
 /// defaults: `interval=30`, `jitter=0`.  `30 < 30` is false so the interval
@@ -1036,7 +1038,7 @@ fn it30_live_sigint_exits_0()
 /// was entered; exit 1 would mean a guard incorrectly fired.
 #[ cfg( unix ) ]
 #[ test ]
-fn it29_live_default_interval_accepted()
+fn it029_live_default_interval_accepted()
 {
   use std::os::unix::fs::PermissionsExt;
 
@@ -1062,16 +1064,16 @@ fn it29_live_default_interval_accepted()
   );
 }
 
-// ── it31 ──────────────────────────────────────────────────────────────────────
+// ── it031 ──────────────────────────────────────────────────────────────────────
 
-/// it31: `.usage.help` lists `live`, `interval`, and `jitter` params.
+/// it031: `.usage.help` lists `live`, `interval`, and `jitter` params.
 ///
 /// Verifies AC-32: all three live-monitor params must appear in the per-command
 /// help output so users can discover them without reading source code.
 /// The params are registered via `register_commands()` in `src/lib.rs`; this
 /// test confirms the registration produces visible output in `.usage.help`.
 #[ test ]
-fn it31_usage_help_shows_live_params()
+fn it031_usage_help_shows_live_params()
 {
   let out = run_cs( &[ ".usage.help" ] );
   assert_exit( &out, 0 );
@@ -1086,9 +1088,9 @@ fn it31_usage_help_shows_live_params()
   }
 }
 
-// ── it33 ──────────────────────────────────────────────────────────────────────
+// ── it033 ──────────────────────────────────────────────────────────────────────
 
-/// it33: `.usage.help` refresh description mentions 401/403 but NOT 429.
+/// it033: `.usage.help` refresh description mentions 401/403 but NOT 429.
 ///
 /// # Root Cause
 /// Task 150 removed 429 from the `apply_refresh` retry guard, but the parameter
@@ -1096,7 +1098,7 @@ fn it31_usage_help_shows_live_params()
 /// "401/403/429". Users reading `--help` would believe 429 triggers a refresh.
 ///
 /// # Why Not Caught
-/// Existing help test (it31) only checked for `live`, `interval`, `jitter` params.
+/// Existing help test (it031) only checked for `live`, `interval`, `jitter` params.
 /// No test verified the refresh description text excluded 429.
 ///
 /// # Fix Applied
@@ -1110,7 +1112,7 @@ fn it31_usage_help_shows_live_params()
 /// description that mentions 429 in different phrasing would not be caught.
 #[ doc = "bug_reproducer(issue-refresh-help-429)" ]
 #[ test ]
-fn it33_mre_refresh_help_excludes_429()
+fn it033_mre_refresh_help_excludes_429()
 {
   let out = run_cs( &[ ".usage.help" ] );
   assert_exit( &out, 0 );
@@ -1125,9 +1127,9 @@ fn it33_mre_refresh_help_excludes_429()
   );
 }
 
-// ── it32 ──────────────────────────────────────────────────────────────────────
+// ── it032 ──────────────────────────────────────────────────────────────────────
 
-/// it32 (`lim_it`): `refresh::1` with a real saved account — exercises the
+/// it032 (`lim_it`): `refresh::1` with a real saved account — exercises the
 /// per-account refresh loop (AC-19) and verifies no panic + exit 0.
 ///
 /// The per-account loop reads `{credential_store}/{name}.credentials.json`
@@ -1138,11 +1140,11 @@ fn it33_mre_refresh_help_excludes_429()
 ///
 /// Requires one saved account with a live token reachable via `live_active_token()`.
 #[ test ]
-fn it32_lim_it_refresh_per_account()
+fn it032_lim_it_refresh_per_account()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it32: no live token — skipping" );
+    eprintln!( "it032: no live token — skipping" );
     return;
   };
 
@@ -1160,9 +1162,9 @@ fn it32_lim_it_refresh_per_account()
   );
 }
 
-// ── it34 ──────────────────────────────────────────────────────────────────────
+// ── it034 ──────────────────────────────────────────────────────────────────────
 
-/// it34: `trace::1` with a no-token account → stderr contains `[trace]` lines.
+/// it034: `trace::1` with a no-token account → stderr contains `[trace]` lines.
 ///
 /// `trace::1` causes `fetch_all_quota` to emit `[trace]` lines per account to
 /// stderr — one before reading credentials and one after. With a credential file
@@ -1171,7 +1173,7 @@ fn it32_lim_it_refresh_per_account()
 /// parameter is accepted, wired through to `fetch_all_quota`, and produces
 /// observable stderr output without affecting exit code or stdout.
 #[ test ]
-fn it34_trace_param_writes_to_stderr()
+fn it034_trace_param_writes_to_stderr()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -1190,15 +1192,15 @@ fn it34_trace_param_writes_to_stderr()
   );
 }
 
-// ── it35 ──────────────────────────────────────────────────────────────────────
+// ── it035 ──────────────────────────────────────────────────────────────────────
 
-/// it35: empty credential store + `format::json` → output is `[]`.
+/// it035: empty credential store + `format::json` → output is `[]`.
 ///
 /// `render_json(&[])` returns `"[]\n"` via the short-circuit branch. This verifies
 /// that `format::json` and the empty-store path are compatible — no crash, no
 /// "no accounts configured" text (that message is text-format-only).
 #[ test ]
-fn it35_empty_store_json_format()
+fn it035_empty_store_json_format()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -1218,9 +1220,9 @@ fn it35_empty_store_json_format()
   );
 }
 
-// ── it37 ──────────────────────────────────────────────────────────────────────
+// ── it037 ──────────────────────────────────────────────────────────────────────
 
-/// it37: `.usage.help` shows `refresh::` default as `1` (enabled), not `0`.
+/// it037: `.usage.help` shows `refresh::` default as `1` (enabled), not `0`.
 ///
 /// ## Root Cause
 /// `usage_routine()` in `src/usage.rs` matched `refresh` with fallback `_ => 0`,
@@ -1231,9 +1233,9 @@ fn it35_empty_store_json_format()
 /// indication which is default; `unilang.commands.yaml` carried `default: "0"`.
 ///
 /// ## Why Not Caught
-/// Existing tests (it19/it20) checked that both `refresh::0` and `refresh::1` are
+/// Existing tests (it019/it020) checked that both `refresh::0` and `refresh::1` are
 /// accepted. Neither verified that the DEFAULT (no arg) was 1. The help text test
-/// (it33) only checked the 429 exclusion, not the default value annotation.
+/// (it033) only checked the 429 exclusion, not the default value annotation.
 ///
 /// ## Fix Applied
 /// `usage_routine()` fallback changed from `_ => 0` to `_ => 1`. Description in
@@ -1250,7 +1252,7 @@ fn it35_empty_store_json_format()
 /// (e.g., reformulation keeping 429 but changing default wording) would break this test.
 #[ doc = "bug_reproducer(issue-155)" ]
 #[ test ]
-fn it37_mre_bug155_refresh_defaults_to_1()
+fn it037_mre_bug155_refresh_defaults_to_1()
 {
   let out = run_cs( &[ ".usage.help" ] );
   assert_exit( &out, 0 );
@@ -1267,9 +1269,9 @@ fn it37_mre_bug155_refresh_defaults_to_1()
   );
 }
 
-// ── it38 ──────────────────────────────────────────────────────────────────────
+// ── it038 ──────────────────────────────────────────────────────────────────────
 
-/// it38: `.usage.help` refresh description mentions 429 with locally-expired token.
+/// it038: `.usage.help` refresh description mentions 429 with locally-expired token.
 ///
 /// ## Root Cause
 /// `apply_refresh()` unconditionally excluded 429 from its retry guard. Accounts
@@ -1279,7 +1281,7 @@ fn it37_mre_bug155_refresh_defaults_to_1()
 /// includes 429 when `expires_at_ms / 1000 ≤ now_secs`.
 ///
 /// ## Why Not Caught
-/// Existing tests (it33, it19/it20) checked 401/403 refresh and the absence of
+/// Existing tests (it033, it019/it020) checked 401/403 refresh and the absence of
 /// "401/403/429" as a combined string. None verified the 429+locally-expired case.
 ///
 /// ## Fix Applied
@@ -1294,11 +1296,11 @@ fn it37_mre_bug155_refresh_defaults_to_1()
 /// updated — the code and docs are consistent with the new 429+expired behavior.
 ///
 /// ## Pitfall
-/// it33 still guards against the old "401/403/429" combined string. This test
+/// it033 still guards against the old "401/403/429" combined string. This test
 /// adds the positive check: "429" appears separately for the conditional case.
 #[ doc = "bug_reproducer(issue-156)" ]
 #[ test ]
-fn it38_mre_bug156_refresh_help_mentions_429_expired()
+fn it038_mre_bug156_refresh_help_mentions_429_expired()
 {
   let out = run_cs( &[ ".usage.help" ] );
   assert_exit( &out, 0 );
@@ -1314,16 +1316,16 @@ fn it38_mre_bug156_refresh_help_mentions_429_expired()
   );
 }
 
-// ── it36 ──────────────────────────────────────────────────────────────────────
+// ── it036 ──────────────────────────────────────────────────────────────────────
 
-/// it36: single no-token account → no "Valid:" footer (`valid_count` = 0 < 2).
+/// it036: single no-token account → no "Valid:" footer (`valid_count` = 0 < 2).
 ///
 /// The footer line "Valid: X / Y   →  Next: ..." is only emitted when
 /// `valid_count >= 2` AND a recommendation exists. With one account whose quota
 /// fetch fails (no `accessToken`), `valid_count = 0` → the footer is suppressed.
 /// This guards against a regression where footer threshold checking is removed.
 #[ test ]
-fn it36_no_footer_when_no_valid_accounts()
+fn it036_no_footer_when_no_valid_accounts()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -1338,14 +1340,14 @@ fn it36_no_footer_when_no_valid_accounts()
   );
 }
 
-// ── it39 ──────────────────────────────────────────────────────────────────────
+// ── it039 ──────────────────────────────────────────────────────────────────────
 
-/// it39 (EC-3): `refresh::2` is out of range for the boolean
+/// it039 (EC-3): `refresh::2` is out of range for the boolean
 /// parameter (only 0 and 1 are valid) → exit 1 with error on stderr.
 ///
 /// Source: `tests/docs/cli/param/19_refresh.md § EC-3`.
 #[ test ]
-fn it39_refresh_2_rejected()
+fn it039_refresh_2_rejected()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -1359,14 +1361,14 @@ fn it39_refresh_2_rejected()
   );
 }
 
-// ── it40 ──────────────────────────────────────────────────────────────────────
+// ── it040 ──────────────────────────────────────────────────────────────────────
 
-/// it40 (EC-4): `refresh::yes` is a type mismatch — the param
+/// it040 (EC-4): `refresh::yes` is a type mismatch — the param
 /// is a boolean integer, not a string → exit 1.
 ///
 /// Source: `tests/docs/cli/param/19_refresh.md § EC-4`.
 #[ test ]
-fn it40_refresh_yes_rejected()
+fn it040_refresh_yes_rejected()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -1380,9 +1382,9 @@ fn it40_refresh_yes_rejected()
   );
 }
 
-// ── it41 ──────────────────────────────────────────────────────────────────────
+// ── it041 ──────────────────────────────────────────────────────────────────────
 
-/// it41 (EC-2): `live::0` explicit — single fetch exits 0; no
+/// it041 (EC-2): `live::0` explicit — single fetch exits 0; no
 /// countdown footer emitted.
 ///
 /// `live::0` disables live-monitor mode.  The command performs one fetch cycle
@@ -1390,7 +1392,7 @@ fn it40_refresh_yes_rejected()
 /// the continuous loop.  The countdown footer ("Next update …") must not appear.
 /// Source: `tests/docs/cli/param/20_live.md § EC-2`.
 #[ test ]
-fn it41_live_0_single_fetch_exits_0()
+fn it041_live_0_single_fetch_exits_0()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -1403,14 +1405,14 @@ fn it41_live_0_single_fetch_exits_0()
   );
 }
 
-// ── it42 ──────────────────────────────────────────────────────────────────────
+// ── it042 ──────────────────────────────────────────────────────────────────────
 
-/// it42 (EC-4): `live::2` is out of range for the boolean parameter
+/// it042 (EC-4): `live::2` is out of range for the boolean parameter
 /// (only 0 and 1 are valid) → exit 1.
 ///
 /// Source: `tests/docs/cli/param/20_live.md § EC-4`.
 #[ test ]
-fn it42_live_2_rejected()
+fn it042_live_2_rejected()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -1424,13 +1426,13 @@ fn it42_live_2_rejected()
   );
 }
 
-// ── it43 ──────────────────────────────────────────────────────────────────────
+// ── it043 ──────────────────────────────────────────────────────────────────────
 
-/// it43 (EC-5): `live::yes` is a type mismatch → exit 1.
+/// it043 (EC-5): `live::yes` is a type mismatch → exit 1.
 ///
 /// Source: `tests/docs/cli/param/20_live.md § EC-5`.
 #[ test ]
-fn it43_live_yes_rejected()
+fn it043_live_yes_rejected()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -1444,9 +1446,9 @@ fn it43_live_yes_rejected()
   );
 }
 
-// ── it44 ──────────────────────────────────────────────────────────────────────
+// ── it044 ──────────────────────────────────────────────────────────────────────
 
-/// it44 (EC-6): `interval::abc` is a type error — the param is
+/// it044 (EC-6): `interval::abc` is a type error — the param is
 /// `u64`, not a string → exit 1 before any credential or live-mode processing.
 ///
 /// Type validation fires at argument parse time; the `live::` mode flag does not
@@ -1454,7 +1456,7 @@ fn it43_live_yes_rejected()
 /// in non-live mode).
 /// Source: `tests/docs/cli/param/21_interval.md § EC-6`.
 #[ test ]
-fn it44_interval_abc_rejected()
+fn it044_interval_abc_rejected()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -1468,9 +1470,9 @@ fn it44_interval_abc_rejected()
   );
 }
 
-// ── it45 ──────────────────────────────────────────────────────────────────────
+// ── it045 ──────────────────────────────────────────────────────────────────────
 
-/// it45 (EC-3): `live::1 interval::60` — non-default value
+/// it045 (EC-3): `live::1 interval::60` — non-default value
 /// accepted; the interval guard (≥ 30) passes for 60 → live mode is entered.
 ///
 /// A chmod-000 credential store forces exit 2 after the guards pass, proving
@@ -1478,7 +1480,7 @@ fn it44_interval_abc_rejected()
 /// Source: `tests/docs/cli/param/21_interval.md § EC-3`.
 #[ cfg( unix ) ]
 #[ test ]
-fn it45_interval_60_live_accepted()
+fn it045_interval_60_live_accepted()
 {
   use std::os::unix::fs::PermissionsExt;
 
@@ -1504,18 +1506,18 @@ fn it45_interval_60_live_accepted()
   );
 }
 
-// ── it46 ──────────────────────────────────────────────────────────────────────
+// ── it046 ──────────────────────────────────────────────────────────────────────
 
-/// it46 (EC-1): `live::1 jitter::0` — explicit zero jitter accepted;
+/// it046 (EC-1): `live::1 jitter::0` — explicit zero jitter accepted;
 /// the jitter guard (jitter ≤ interval) passes for 0 ≤ 30 → live mode is entered.
 ///
-/// Uses a chmod-000 store for offline verification.  Distinct from `it29` which
+/// Uses a chmod-000 store for offline verification.  Distinct from `it029` which
 /// uses the implicit default (no `jitter::` param) — this test exercises the
 /// explicit `jitter::0` path.
 /// Source: `tests/docs/cli/param/22_jitter.md § EC-1`.
 #[ cfg( unix ) ]
 #[ test ]
-fn it46_jitter_0_explicit_live_accepted()
+fn it046_jitter_0_explicit_live_accepted()
 {
   use std::os::unix::fs::PermissionsExt;
 
@@ -1541,9 +1543,9 @@ fn it46_jitter_0_explicit_live_accepted()
   );
 }
 
-// ── it47 ──────────────────────────────────────────────────────────────────────
+// ── it047 ──────────────────────────────────────────────────────────────────────
 
-/// it47 (EC-2): `live::1 interval::30 jitter::10` — jitter less
+/// it047 (EC-2): `live::1 interval::30 jitter::10` — jitter less
 /// than interval is accepted; the guard (jitter ≤ interval) passes → live mode
 /// is entered.
 ///
@@ -1551,7 +1553,7 @@ fn it46_jitter_0_explicit_live_accepted()
 /// Source: `tests/docs/cli/param/22_jitter.md § EC-2`.
 #[ cfg( unix ) ]
 #[ test ]
-fn it47_jitter_10_live_accepted()
+fn it047_jitter_10_live_accepted()
 {
   use std::os::unix::fs::PermissionsExt;
 
@@ -1577,14 +1579,14 @@ fn it47_jitter_10_live_accepted()
   );
 }
 
-// ── it48 ──────────────────────────────────────────────────────────────────────
+// ── it048 ──────────────────────────────────────────────────────────────────────
 
-/// it48 (EC-7): `jitter::abc` is a type error — the param is `u64`,
+/// it048 (EC-7): `jitter::abc` is a type error — the param is `u64`,
 /// not a string → exit 1.
 ///
 /// Source: `tests/docs/cli/param/22_jitter.md § EC-7`.
 #[ test ]
-fn it48_jitter_abc_rejected()
+fn it048_jitter_abc_rejected()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -1598,16 +1600,16 @@ fn it48_jitter_abc_rejected()
   );
 }
 
-// ── it49 ──────────────────────────────────────────────────────────────────────
+// ── it049 ──────────────────────────────────────────────────────────────────────
 
-/// it49 (EC-2): `trace::0` explicit disable — no `[trace]` lines
+/// it049 (EC-2): `trace::0` explicit disable — no `[trace]` lines
 /// appear on stderr; exit 0.
 ///
 /// Uses a no-token account so the fetch path is exercised (increasing the chance
 /// of accidental trace leakage if the disable is broken).
 /// Source: `tests/docs/cli/param/23_trace.md § EC-2`.
 #[ test ]
-fn it49_trace_0_no_trace_on_stderr()
+fn it049_trace_0_no_trace_on_stderr()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -1622,14 +1624,14 @@ fn it49_trace_0_no_trace_on_stderr()
   );
 }
 
-// ── it50 ──────────────────────────────────────────────────────────────────────
+// ── it050 ──────────────────────────────────────────────────────────────────────
 
-/// it50 (EC-3): `trace::2` is out of range for the boolean parameter
+/// it050 (EC-3): `trace::2` is out of range for the boolean parameter
 /// (only 0 and 1 are valid) → exit 1.
 ///
 /// Source: `tests/docs/cli/param/23_trace.md § EC-3`.
 #[ test ]
-fn it50_trace_2_rejected()
+fn it050_trace_2_rejected()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -1643,13 +1645,13 @@ fn it50_trace_2_rejected()
   );
 }
 
-// ── it51 ──────────────────────────────────────────────────────────────────────
+// ── it051 ──────────────────────────────────────────────────────────────────────
 
-/// it51 (EC-4): `trace::yes` is a type mismatch → exit 1.
+/// it051 (EC-4): `trace::yes` is a type mismatch → exit 1.
 ///
 /// Source: `tests/docs/cli/param/23_trace.md § EC-4`.
 #[ test ]
-fn it51_trace_yes_rejected()
+fn it051_trace_yes_rejected()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -1663,16 +1665,16 @@ fn it51_trace_yes_rejected()
   );
 }
 
-// ── it52 ──────────────────────────────────────────────────────────────────────
+// ── it052 ──────────────────────────────────────────────────────────────────────
 
-/// it52 (EC-5): default behavior (no `trace::` param) — no `[trace]`
+/// it052 (EC-5): default behavior (no `trace::` param) — no `[trace]`
 /// lines appear on stderr; trace is off by default (default = 0).
 ///
 /// Uses a no-token account to exercise the fetch path; absence of `[trace]` lines
 /// confirms the default is correctly set to disabled.
 /// Source: `tests/docs/cli/param/23_trace.md § EC-5`.
 #[ test ]
-fn it52_trace_default_off()
+fn it052_trace_default_off()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -1689,14 +1691,14 @@ fn it52_trace_default_off()
 
 // ── Sort parameter acceptance (IT-44 – IT-50) ─────────────────────────────────
 
-/// it043 (IT-44/AC-01): `sort::name` accepted with empty credential store → exit 0.
+/// it053 (IT-44/AC-01): `sort::name` accepted with empty credential store → exit 0.
 ///
 /// Verifies the parser accepts the `sort::name` value without an unknown-parameter
 /// error. The empty store produces `(no accounts configured)` — confirms the param
 /// is parsed before any fetch occurs.
 /// Source: `tests/docs/cli/command/009_usage.md § IT-44`.
 #[ test ]
-fn it043_sort_name_accepted()
+fn it053_sort_name_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -1712,11 +1714,11 @@ fn it043_sort_name_accepted()
   );
 }
 
-/// it044 (IT-45/AC-02): `sort::endurance` accepted with empty credential store → exit 0.
+/// it054 (IT-45/AC-02): `sort::endurance` accepted with empty credential store → exit 0.
 ///
 /// Source: `tests/docs/cli/command/009_usage.md § IT-45`.
 #[ test ]
-fn it044_sort_endurance_accepted()
+fn it054_sort_endurance_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -1732,11 +1734,11 @@ fn it044_sort_endurance_accepted()
   );
 }
 
-/// it045 (IT-46/AC-03): `sort::drain` accepted with empty credential store → exit 0.
+/// it055 (IT-46/AC-03): `sort::drain` accepted with empty credential store → exit 0.
 ///
 /// Source: `tests/docs/cli/command/009_usage.md § IT-46`.
 #[ test ]
-fn it045_sort_drain_accepted()
+fn it055_sort_drain_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -1752,11 +1754,11 @@ fn it045_sort_drain_accepted()
   );
 }
 
-/// it046 (IT-47/AC-04): `sort::renew` accepted with empty credential store → exit 0.
+/// it056 (IT-47/AC-04): `sort::renew` accepted with empty credential store → exit 0.
 ///
 /// Source: `tests/docs/cli/command/009_usage.md § IT-47`.
 #[ test ]
-fn it046_sort_renew_accepted()
+fn it056_sort_renew_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -1772,12 +1774,12 @@ fn it046_sort_renew_accepted()
   );
 }
 
-/// it047 (IT-48/AC-09): unknown `sort::` value → exit 1; stderr names all four
+/// it057 (IT-48/AC-09): unknown `sort::` value → exit 1; stderr names all four
 /// valid values so the operator can correct the typo without consulting docs.
 ///
 /// Source: `tests/docs/cli/command/009_usage.md § IT-48`.
 #[ test ]
-fn it047_sort_invalid_value_exit_1()
+fn it057_sort_invalid_value_exit_1()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -1795,12 +1797,12 @@ fn it047_sort_invalid_value_exit_1()
   }
 }
 
-/// it048 (IT-49/AC-10): unknown `prefer::` value → exit 1; stderr names all three
+/// it058 (IT-49/AC-10): unknown `prefer::` value → exit 1; stderr names all three
 /// valid values so the operator can correct the typo without consulting docs.
 ///
 /// Source: `tests/docs/cli/command/009_usage.md § IT-49`.
 #[ test ]
-fn it048_prefer_invalid_value_exit_1()
+fn it058_prefer_invalid_value_exit_1()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -1818,13 +1820,13 @@ fn it048_prefer_invalid_value_exit_1()
   }
 }
 
-/// it049 (IT-50): `.usage.help` output includes `sort`, `desc`, and `prefer` params.
+/// it059 (IT-50): `.usage.help` output includes `sort`, `desc`, and `prefer` params.
 ///
 /// Verifies the parameter registration in `lib.rs` surfaced correctly to the
 /// help system after TSK-177 added the three sort-control params.
 /// Source: `tests/docs/cli/command/009_usage.md § IT-50`.
 #[ test ]
-fn it049_usage_help_shows_sort_params()
+fn it059_usage_help_shows_sort_params()
 {
   let out = run_cs( &[ ".usage.help" ] );
   assert_exit( &out, 0 );
@@ -1840,13 +1842,13 @@ fn it049_usage_help_shows_sort_params()
 
 // ── desc:: parameter acceptance and direction (026_desc EC-1–EC-3, CC-1–CC-2) ─
 
-/// it050 (`026_desc` EC-1): `desc::0` accepted with empty credential store → exit 0.
+/// it060 (`026_desc` EC-1): `desc::0` accepted with empty credential store → exit 0.
 ///
 /// Verifies the parser accepts `desc::0` as a valid ascending-direction override
 /// without an unknown-parameter or type-mismatch error.
 /// Source: `tests/docs/cli/param/026_desc.md § EC-1`.
 #[ test ]
-fn it050_desc_0_accepted()
+fn it060_desc_0_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -1862,12 +1864,12 @@ fn it050_desc_0_accepted()
   );
 }
 
-/// it051 (`026_desc` EC-2): `desc::1` accepted with empty credential store → exit 0.
+/// it061 (`026_desc` EC-2): `desc::1` accepted with empty credential store → exit 0.
 ///
 /// Verifies the parser accepts `desc::1` as a valid descending-direction override.
 /// Source: `tests/docs/cli/param/026_desc.md § EC-2`.
 #[ test ]
-fn it051_desc_1_accepted()
+fn it061_desc_1_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -1883,13 +1885,13 @@ fn it051_desc_1_accepted()
   );
 }
 
-/// `it052_desc_2_rejected` (`026_desc` EC-3): `desc::2` out of range → exit 1.
+/// `it062_desc_2_rejected` (`026_desc` EC-3): `desc::2` out of range → exit 1.
 ///
 /// `desc::` is a boolean integer param (0 or 1). The `_` arm in `parse_usage_params`
 /// rejects any other integer with `ArgumentTypeMismatch`. Exit 1, stderr non-empty.
 /// Source: `tests/docs/cli/param/026_desc.md § EC-3`.
 #[ test ]
-fn it052_desc_2_rejected()
+fn it062_desc_2_rejected()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -1900,14 +1902,14 @@ fn it052_desc_2_rejected()
   assert!( !stderr( &out ).is_empty(), "desc::2 must produce error on stderr" );
 }
 
-/// it053 (`026_desc` CC-1): `sort::name desc::0` and `sort::name` produce identical row order.
+/// it063 (`026_desc` CC-1): `sort::name desc::0` and `sort::name` produce identical row order.
 ///
 /// Explicitly setting `desc::0` on `sort::name` (whose canonical direction is ascending)
 /// must produce the same A→Z output as the implicit default — both display `a@x.com`
 /// before `z@x.com` in the table. No divergence from omitting `desc::`.
 /// Source: `tests/docs/cli/param/026_desc.md § CC-1`.
 #[ test ]
-fn it053_sort_name_desc_0_identical_to_sort_name()
+fn it063_sort_name_desc_0_identical_to_sort_name()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -1937,13 +1939,13 @@ fn it053_sort_name_desc_0_identical_to_sort_name()
   );
 }
 
-/// it054 (`026_desc` CC-2): `sort::name desc::1` reverses alphabetical order — `z@x.com` before `a@x.com`.
+/// it064 (`026_desc` CC-2): `sort::name desc::1` reverses alphabetical order — `z@x.com` before `a@x.com`.
 ///
 /// `desc::1` on `sort::name` (canonical direction: ascending) produces descending (Z→A) row
 /// order — the behavioral divergence from `sort::name desc::0`.
 /// Source: `tests/docs/cli/param/026_desc.md § CC-2`.
 #[ test ]
-fn it054_sort_name_desc_1_reverses_order()
+fn it064_sort_name_desc_1_reverses_order()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -1964,12 +1966,12 @@ fn it054_sort_name_desc_1_reverses_order()
 
 // ── prefer:: parameter acceptance (027_prefer EC-1–EC-3) ─────────────────────
 
-/// it055 (`027_prefer` EC-1): `prefer::any` accepted with empty credential store → exit 0.
+/// it065 (`027_prefer` EC-1): `prefer::any` accepted with empty credential store → exit 0.
 ///
 /// Verifies the parser accepts `prefer::any` without unknown-parameter or type error.
 /// Source: `tests/docs/cli/param/027_prefer.md § EC-1`.
 #[ test ]
-fn it055_prefer_any_accepted()
+fn it065_prefer_any_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -1985,11 +1987,11 @@ fn it055_prefer_any_accepted()
   );
 }
 
-/// it056 (`027_prefer` EC-2): `prefer::opus` accepted with empty credential store → exit 0.
+/// it066 (`027_prefer` EC-2): `prefer::opus` accepted with empty credential store → exit 0.
 ///
 /// Source: `tests/docs/cli/param/027_prefer.md § EC-2`.
 #[ test ]
-fn it056_prefer_opus_accepted()
+fn it066_prefer_opus_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -2005,11 +2007,11 @@ fn it056_prefer_opus_accepted()
   );
 }
 
-/// it057 (`027_prefer` EC-3): `prefer::sonnet` accepted with empty credential store → exit 0.
+/// it067 (`027_prefer` EC-3): `prefer::sonnet` accepted with empty credential store → exit 0.
 ///
 /// Source: `tests/docs/cli/param/027_prefer.md § EC-3`.
 #[ test ]
-fn it057_prefer_sonnet_accepted()
+fn it067_prefer_sonnet_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -2027,7 +2029,7 @@ fn it057_prefer_sonnet_accepted()
 
 // ── Sort × JSON interaction (025_sort CC-1, 004_sort_control CC-1) ────────────
 
-/// it058 (`025_sort` CC-1 / `004_sort_control` CC-1): JSON array order is alphabetical
+/// it068 (`025_sort` CC-1 / `004_sort_control` CC-1): JSON array order is alphabetical
 /// regardless of `sort::` strategy.
 ///
 /// `render_json` always uses the original alphabetical account slice; `sort::` strategy
@@ -2036,7 +2038,7 @@ fn it057_prefer_sonnet_accepted()
 /// regardless of whether `sort::name` or `sort::endurance` is requested (AC-13).
 /// Source: `tests/docs/cli/param/025_sort.md § CC-1`.
 #[ test ]
-fn it058_sort_json_unaffected_by_sort_strategy()
+fn it068_sort_json_unaffected_by_sort_strategy()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2069,12 +2071,12 @@ fn it058_sort_json_unaffected_by_sort_strategy()
 
 // ── Case-sensitivity corner cases ─────────────────────────────────────────────
 
-/// it059: `sort::Name` (capital N) → exit 1 — `SortStrategy::parse` is case-sensitive.
+/// it069: `sort::Name` (capital N) → exit 1 — `SortStrategy::parse` is case-sensitive.
 ///
 /// `"Name"` does not match any branch in `SortStrategy::parse`; the underscore arm
 /// returns `ArgumentTypeMismatch`. Exit 1, stderr contains the error message.
 #[ test ]
-fn it059_sort_uppercase_rejected()
+fn it069_sort_uppercase_rejected()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -2085,12 +2087,12 @@ fn it059_sort_uppercase_rejected()
   assert!( !stderr( &out ).is_empty(), "sort::Name must produce error on stderr (case-sensitive parse)" );
 }
 
-/// it060: `prefer::Opus` (capital O) → exit 1 — `PreferStrategy::parse` is case-sensitive.
+/// it070: `prefer::Opus` (capital O) → exit 1 — `PreferStrategy::parse` is case-sensitive.
 ///
 /// `"Opus"` does not match any branch in `PreferStrategy::parse`; the underscore arm
 /// returns `ArgumentTypeMismatch`. Exit 1, stderr contains the error message.
 #[ test ]
-fn it060_prefer_uppercase_rejected()
+fn it070_prefer_uppercase_rejected()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -2103,13 +2105,13 @@ fn it060_prefer_uppercase_rejected()
 
 // ── sort::renew desc::1 combination acceptance ────────────────────────────────
 
-/// it061: `sort::renew desc::1` accepted with empty credential store → exit 0.
+/// it071: `sort::renew desc::1` accepted with empty credential store → exit 0.
 ///
 /// Verifies that the `sort::renew desc::1` parameter combination does not cause
 /// a parse error — both parameters are individually valid and the combination
 /// must be accepted without `ArgumentTypeMismatch` or unknown-param errors.
 #[ test ]
-fn it061_sort_renew_desc1_accepted()
+fn it071_sort_renew_desc1_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -2125,12 +2127,12 @@ fn it061_sort_renew_desc1_accepted()
   );
 }
 
-/// it062: `sort::endurance desc::0` accepted with empty credential store → exit 0.
+/// it072: `sort::endurance desc::0` accepted with empty credential store → exit 0.
 ///
 /// `sort::endurance` has canonical direction `desc::1` (qualified first). `desc::0` explicitly
 /// overrides to ascending — the parser must accept this as a valid direction override.
 #[ test ]
-fn it062_sort_endurance_desc0_accepted()
+fn it072_sort_endurance_desc0_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -2148,13 +2150,13 @@ fn it062_sort_endurance_desc0_accepted()
 
 // ── next:: parameter acceptance (023_next_account_strategies AC-01/AC-03–AC-07) ─
 
-/// it063 (AC-01): `next::all` accepted with empty credential store → exit 0.
+/// it073 (AC-01): `next::all` accepted with empty credential store → exit 0.
 ///
 /// TDD guard: fails before `next` is registered (unknown-parameter error).
 /// After registration, the parser accepts `all` and the empty store short-circuits
 /// to `(no accounts configured)`.
 #[ test ]
-fn it063_next_all_rejected_exit_1()
+fn it073_next_all_rejected_exit_1()
 {
   // TSK-184: `next::all` removed from NextStrategy; only endurance + drain are valid.
   let dir   = TempDir::new().unwrap();
@@ -2166,12 +2168,12 @@ fn it063_next_all_rejected_exit_1()
   assert_exit( &out, 1 );
 }
 
-/// it064 (AC-03): `next::session` accepted with empty credential store → exit 0.
+/// it074 (AC-03): `next::session` accepted with empty credential store → exit 0.
 ///
 /// TDD guard for `session` value. The parser must accept the string without error;
 /// empty store produces the no-accounts message.
 #[ test ]
-fn it064_next_session_rejected_exit_1()
+fn it074_next_session_rejected_exit_1()
 {
   // TSK-184: `next::session` removed from NextStrategy; only endurance + drain are valid.
   let dir   = TempDir::new().unwrap();
@@ -2183,9 +2185,9 @@ fn it064_next_session_rejected_exit_1()
   assert_exit( &out, 1 );
 }
 
-/// it065 (AC-04): `next::endurance` accepted with empty credential store → exit 0.
+/// it075 (AC-04): `next::endurance` accepted with empty credential store → exit 0.
 #[ test ]
-fn it065_next_endurance_accepted()
+fn it075_next_endurance_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -2200,9 +2202,9 @@ fn it065_next_endurance_accepted()
   );
 }
 
-/// it066 (AC-05): `next::drain` accepted with empty credential store → exit 0.
+/// it076 (AC-05): `next::drain` accepted with empty credential store → exit 0.
 #[ test ]
-fn it066_next_drain_accepted()
+fn it076_next_drain_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -2217,9 +2219,9 @@ fn it066_next_drain_accepted()
   );
 }
 
-/// it067 (AC-06): `next::reset` accepted with empty credential store → exit 0.
+/// it077 (AC-06): `next::reset` accepted with empty credential store → exit 0.
 #[ test ]
-fn it067_next_reset_rejected_exit_1()
+fn it077_next_reset_rejected_exit_1()
 {
   // TSK-184: `next::reset` removed from NextStrategy; only endurance + drain are valid.
   let dir   = TempDir::new().unwrap();
@@ -2231,13 +2233,13 @@ fn it067_next_reset_rejected_exit_1()
   assert_exit( &out, 1 );
 }
 
-/// it068 (AC-07): unknown `next::` value → exit 1; stderr names all five valid values.
+/// it078 (AC-07): unknown `next::` value → exit 1; stderr names all five valid values.
 ///
 /// `NextStrategy::parse` returns an error for unrecognised strings; `parse_usage_params`
 /// converts it to `ArgumentTypeMismatch` → exit 1. The error message must name every
 /// valid value so the operator can correct a typo.
 #[ test ]
-fn it068_next_invalid_value_exit_1()
+fn it078_next_invalid_value_exit_1()
 {
   // TSK-184: error message names only the 2 valid values after the 5→2 reduction.
   let dir = TempDir::new().unwrap();
@@ -2247,7 +2249,7 @@ fn it068_next_invalid_value_exit_1()
   );
   assert_exit( &out, 1 );
   let err = stderr( &out );
-  for value in &[ "endurance", "drain" ]
+  for value in &[ "renew", "endurance", "drain" ]
   {
     assert!(
       err.contains( value ),
@@ -2263,20 +2265,20 @@ fn it068_next_invalid_value_exit_1()
   }
 }
 
-/// it069 (AC-01): default next (drain) — no `→` marker when no valid quota data.
+/// it079 (AC-01): default next (renew) — no `→` marker when no valid quota data.
 ///
 /// Two no-token accounts are written so the table is non-empty. Because neither
 /// account has a valid OAuth token, quota fetch returns Err for both; `best_idx`
 /// is None → no `→` marker is placed in any table row.
 #[ test ]
-fn it069_next_drain_default_no_arrow_without_valid_accounts()
+fn it079_next_drain_default_no_arrow_without_valid_accounts()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "a@x.com", "max", "default", FAR_FUTURE_MS, false );
   write_account( dir.path(), "b@x.com", "max", "default", FAR_FUTURE_MS, false );
 
-  // Default (no next:: param) = next::drain.
+  // Default (no next:: param) = next::renew.
   let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -2285,19 +2287,19 @@ fn it069_next_drain_default_no_arrow_without_valid_accounts()
   let arrow_in_row = text.lines().any( |l| l.contains( '\u{2192}' ) );
   assert!(
     !arrow_in_row,
-    "default next::drain: no eligible account → must not place → in any table row, got:\n{text}",
+    "default next::renew: no eligible account → must not place → in any table row, got:\n{text}",
   );
 }
 
 // ── cols:: parameter acceptance and column visibility (AC-22–AC-23) ──────────
 
-/// it070 (AC-23): `cols::+sub` accepted with empty credential store → exit 0.
+/// it080 (AC-23): `cols::+sub` accepted with empty credential store → exit 0.
 ///
 /// TDD guard: fails before `cols` is registered (unknown-parameter error).
 /// After registration, the parser accepts `+sub` without error; empty store
 /// produces the no-accounts message.
 #[ test ]
-fn it070_cols_sub_accepted()
+fn it080_cols_sub_accepted()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -2313,13 +2315,13 @@ fn it070_cols_sub_accepted()
   );
 }
 
-/// it071 (AC-22): `cols::+sub` with an account → output table contains the "Sub" header.
+/// it081 (AC-22): `cols::+sub` with an account → output table contains the "Sub" header.
 ///
 /// By default `sub` is OFF. `cols::+sub` adds it. This test writes a no-token
 /// account (quota cells will be dashes) and verifies the "Sub" header appears
 /// in the rendered table, confirming the column is actually emitted.
 #[ test ]
-fn it071_cols_sub_shows_sub_column()
+fn it081_cols_sub_shows_sub_column()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2334,13 +2336,13 @@ fn it071_cols_sub_shows_sub_column()
   );
 }
 
-/// it072 (AC-23): `cols::+bogus_col` — unknown column ID → exit 1; stderr names valid IDs.
+/// it082 (AC-23): `cols::+bogus_col` — unknown column ID → exit 1; stderr names valid IDs.
 ///
 /// `ColsVisibility::apply_modifier` returns an error for unknown IDs; `parse_usage_params`
 /// converts it to `ArgumentTypeMismatch` → exit 1. The error must name at least one
 /// valid ID so the operator can identify the typo.
 #[ test ]
-fn it072_cols_unknown_id_exit_1()
+fn it082_cols_unknown_id_exit_1()
 {
   let dir = TempDir::new().unwrap();
   let out = run_cs_with_env(
@@ -2359,12 +2361,12 @@ fn it072_cols_unknown_id_exit_1()
   );
 }
 
-/// it073: `.usage.help` output includes `next` and `cols` params.
+/// it083: `.usage.help` output includes `next` and `cols` params.
 ///
 /// Verifies the parameter registrations in `lib.rs` are surfaced correctly
 /// to the help system after Phase 3 added both params.
 #[ test ]
-fn it073_usage_help_shows_next_cols_params()
+fn it083_usage_help_shows_next_cols_params()
 {
   let out = run_cs( &[ ".usage.help" ] );
   assert_exit( &out, 0 );
@@ -2380,12 +2382,12 @@ fn it073_usage_help_shows_next_cols_params()
 
 // ── cols:: column visibility defaults and modifiers ───────────────────────────
 
-/// it074 (AC-22): Sub absent by default — no `cols::` → "Sub" not in table header.
+/// it084 (AC-22): Sub absent by default — no `cols::` → "Sub" not in table header.
 ///
 /// `sub` is off in `ColsVisibility::default_set()`. This test verifies that the
 /// rendered table omits the "Sub" column header when `cols::` is not specified.
 #[ test ]
-fn it074_sub_hidden_by_default()
+fn it084_sub_hidden_by_default()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2400,11 +2402,11 @@ fn it074_sub_hidden_by_default()
   );
 }
 
-/// it075 (AC-23): `cols::+7d_son_reset` → "7d Son Reset" appears in table header.
+/// it085 (AC-23): `cols::+7d_son_reset` → "7d Son Reset" appears in table header.
 ///
 /// `7d_son_reset` is off by default. `cols::+7d_son_reset` adds it to the header.
 #[ test ]
-fn it075_cols_plus_7d_son_reset_shows_header()
+fn it085_cols_plus_7d_son_reset_shows_header()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2419,9 +2421,9 @@ fn it075_cols_plus_7d_son_reset_shows_header()
   );
 }
 
-/// it076 (AC-22): "7d Son Reset" absent by default — no `cols::` → column not in header.
+/// it086 (AC-22): "7d Son Reset" absent by default — no `cols::` → column not in header.
 #[ test ]
-fn it076_7d_son_reset_hidden_by_default()
+fn it086_7d_son_reset_hidden_by_default()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2436,9 +2438,9 @@ fn it076_7d_son_reset_hidden_by_default()
   );
 }
 
-/// it077 (AC-22): `cols::-renews` → "~Renews" absent from table header.
+/// it087 (AC-22): `cols::-renews` → "~Renews" absent from table header.
 #[ test ]
-fn it077_cols_minus_renews_hides_header()
+fn it087_cols_minus_renews_hides_header()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2453,9 +2455,9 @@ fn it077_cols_minus_renews_hides_header()
   );
 }
 
-/// it078 (AC-22): `cols::+sub,-7d_son` composite modifier — Sub present, 7d(Son) absent.
+/// it088 (AC-22): `cols::+sub,-7d_son` composite modifier — Sub present, 7d(Son) absent.
 #[ test ]
-fn it078_cols_composite_add_and_remove()
+fn it088_cols_composite_add_and_remove()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2468,12 +2470,12 @@ fn it078_cols_composite_add_and_remove()
   assert!( !text.contains( "7d(Son)" ),  "cols::-7d_son must remove 7d(Son) header, got:\n{text}" );
 }
 
-/// it079 (AC-22): flag and account (name) columns always present regardless of `cols::` removals.
+/// it089 (AC-22): flag and account (name) columns always present regardless of `cols::` removals.
 ///
 /// Removing all optional columns still leaves the structural flag (blank) and
 /// Account (name) columns. The account name must appear in the output.
 #[ test ]
-fn it079_cols_structural_cols_always_present()
+fn it089_cols_structural_cols_always_present()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2493,12 +2495,12 @@ fn it079_cols_structural_cols_always_present()
 
 // ── next:: footer threshold (023_next_account_strategies AC-09) ───────────────
 
-/// it080 (AC-09): footer absent when < 2 valid accounts.
+/// it090 (AC-09): footer absent when < 2 valid accounts.
 ///
 /// Two no-token accounts result in zero valid (Ok) quota fetches.
 /// The footer (Valid: X / Y …) must not appear when `valid_count < 2`.
 #[ test ]
-fn it080_next_footer_absent_when_no_valid_accounts()
+fn it090_next_footer_absent_when_no_valid_accounts()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2514,12 +2516,12 @@ fn it080_next_footer_absent_when_no_valid_accounts()
   );
 }
 
-/// it081 (AC-06): `format::json` output is identical regardless of `next::` value.
+/// it091 (AC-06): `format::json` output is identical regardless of `next::` value.
 ///
 /// `render_json` does not reference `NextStrategy`; JSON output is unaffected.
 /// Tests with an empty store (JSON = `[]`) to avoid network calls.
 #[ test ]
-fn it081_next_json_output_unchanged_by_next_param()
+fn it091_next_json_output_unchanged_by_next_param()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2597,12 +2599,12 @@ fn mre_bug_171_account_populated_after_refresh()
 
 // ── tsk_184 — NextStrategy 2-variant reduction ────────────────────────────────
 
-/// it082 (TSK-184 AC-01): `next::all` is rejected after the 5→2 variant reduction.
+/// it092 (TSK-184 AC-01): `next::all` is rejected after the 5→2 variant reduction.
 ///
 /// Before TSK-184: `next::all` was valid → exit 0.
 /// After TSK-184:  `next::all` is unrecognised → `ArgumentTypeMismatch` → exit 1.
 #[ test ]
-fn it082_next_all_rejected_exit_1()
+fn it092_next_all_rejected_exit_1()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -2613,8 +2615,8 @@ fn it082_next_all_rejected_exit_1()
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "endurance" ) && err.contains( "drain" ),
-    "next::all error must name both valid values `endurance` and `drain`, got:\n{err}",
+    err.contains( "renew" ) && err.contains( "endurance" ) && err.contains( "drain" ),
+    "next::all error must name all valid values `renew`, `endurance`, and `drain`, got:\n{err}",
   );
   for removed in &[ "session", "reset" ]
   {
@@ -2625,7 +2627,7 @@ fn it082_next_all_rejected_exit_1()
   }
 }
 
-/// it083 (TSK-184 AC-02): footer block is NOT gated on `next == NextStrategy::All`.
+/// it093 (TSK-184 AC-02): footer block is NOT gated on `next == NextStrategy::All`.
 ///
 /// Before TSK-184: the footer was wrapped in `if next == NextStrategy::All { ... }`.
 /// After TSK-184:  the footer is unconditional (when `valid_count` >= 2); the
@@ -2635,7 +2637,7 @@ fn it082_next_all_rejected_exit_1()
 /// RED:   source has `if next == NextStrategy::All` → assert fails.
 /// GREEN: old gate absent, marker present → assert passes.
 #[ test ]
-fn it083_footer_not_gated_on_next_all_structural()
+fn it093_footer_not_gated_on_next_all_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/render.rs" ) );
 
@@ -2653,12 +2655,12 @@ fn it083_footer_not_gated_on_next_all_structural()
   );
 }
 
-/// it084 (TSK-184 AC-03): `next::session` is rejected after the 5→2 variant reduction.
+/// it094 (TSK-184 AC-03): `next::session` is rejected after the 5→2 variant reduction.
 ///
 /// Before TSK-184: `next::session` was valid → exit 0.
 /// After TSK-184:  `next::session` is unrecognised → exit 1.
 #[ test ]
-fn it084_next_session_rejected_exit_1()
+fn it094_next_session_rejected_exit_1()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -2669,12 +2671,12 @@ fn it084_next_session_rejected_exit_1()
   assert_exit( &out, 1 );
   let err = stderr( &out );
   assert!(
-    err.contains( "endurance" ) && err.contains( "drain" ),
-    "next::session error must name both valid values `endurance` and `drain`, got:\n{err}",
+    err.contains( "renew" ) && err.contains( "endurance" ) && err.contains( "drain" ),
+    "next::session error must name all valid values `renew`, `endurance`, and `drain`, got:\n{err}",
   );
 }
 
-/// it085 (TSK-184 AC-04): `NextStrategy::Session` is absent from source after reduction.
+/// it095 (TSK-184 AC-04): `NextStrategy::Session` is absent from source after reduction.
 ///
 /// Before TSK-184: `NextStrategy::Session` appears in enum declaration, `parse()`, match arms.
 /// After TSK-184:  `NextStrategy::Session` must not appear anywhere in source.
@@ -2683,7 +2685,7 @@ fn it084_next_session_rejected_exit_1()
 /// RED:   source still has `NextStrategy::Session` → assert fails.
 /// GREEN: Session fully removed → assert passes.
 #[ test ]
-fn it085_next_strategy_session_absent_structural()
+fn it095_next_strategy_session_absent_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/types.rs" ) );
   assert!(
@@ -2693,12 +2695,12 @@ fn it085_next_strategy_session_absent_structural()
   );
 }
 
-/// it086 (TSK-184 AC-05): `format::json` with `next::drain` is identical to default.
+/// it096 (TSK-184 AC-05): `format::json` with `next::drain` is identical to default.
 ///
 /// `render_json` does not inspect `NextStrategy`; JSON remains the same for any
 /// valid `next::` value. Guards that JSON path is unaffected by the 5→2 reduction.
 #[ test ]
-fn it086_next_drain_json_output_unchanged()
+fn it096_next_drain_json_output_unchanged()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2717,7 +2719,7 @@ fn it086_next_drain_json_output_unchanged()
 
 // ── tsk_185 — touch:: session activation ──────────────────────────────────────
 
-/// it087 (TSK-185 AC-01): `touch::1` with empty credential store exits 0.
+/// it097 (TSK-185 AC-01): `touch::1` with empty credential store exits 0.
 ///
 /// Before TSK-185: `touch::` is unregistered → `ArgumentUnrecognised` → exit 1.
 /// After TSK-185:  `touch::` accepted, empty store → no-accounts message → exit 0.
@@ -2725,7 +2727,7 @@ fn it086_next_drain_json_output_unchanged()
 /// RED:   `touch::` unknown → exit 1.
 /// GREEN: `touch::` registered → exit 0.
 #[ test ]
-fn it087_touch_1_empty_store_exits_0()
+fn it097_touch_1_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -2741,7 +2743,7 @@ fn it087_touch_1_empty_store_exits_0()
   );
 }
 
-/// it088 (TSK-185 AC-04): `touch::1` with a no-token account exits 0 without touching it.
+/// it098 (TSK-185 AC-04): `touch::1` with a no-token account exits 0 without touching it.
 ///
 /// Accounts whose quota fetch failed (expired/missing token → error result) must not
 /// be touched. The trigger requires `result.is_ok()` AND `five_hour.resets_at.is_some()`.
@@ -2753,7 +2755,7 @@ fn it087_touch_1_empty_store_exits_0()
 /// RED:   `touch::` unknown → exit 1.
 /// GREEN: exits 0, account shows dash row.
 #[ test ]
-fn it088_touch_1_errored_account_skipped()
+fn it098_touch_1_errored_account_skipped()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2769,7 +2771,7 @@ fn it088_touch_1_errored_account_skipped()
   );
 }
 
-/// it089 (TSK-185 AC-02 structural): `fn apply_touch` is present in production source.
+/// it099 (TSK-185 AC-02 structural): `fn apply_touch` is present in production source.
 ///
 /// This structural test uses `include_str!` to confirm the function exists before
 /// requiring live network calls. No credentials needed.
@@ -2777,7 +2779,7 @@ fn it088_touch_1_errored_account_skipped()
 /// RED:   `apply_touch` absent from source → assert fails.
 /// GREEN: `apply_touch` present → assert passes.
 #[ test ]
-fn it089_apply_touch_fn_exists_structural()
+fn it099_apply_touch_fn_exists_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
   assert!(
@@ -2788,7 +2790,7 @@ fn it089_apply_touch_fn_exists_structural()
   );
 }
 
-/// it090 (TSK-185 AC-08): `format::json touch::1` with empty store exits 0 and outputs `[]`.
+/// it100 (TSK-185 AC-08): `format::json touch::1` with empty store exits 0 and outputs `[]`.
 ///
 /// `render_json` is unaffected by `touch::`; touched accounts appear as normal JSON
 /// objects. With empty store: both default and `touch::1` must output `[]`.
@@ -2799,7 +2801,7 @@ fn it089_apply_touch_fn_exists_structural()
 /// RED:   exit 1 (unrecognised param).
 /// GREEN: exit 0, JSON output `[]`.
 #[ test ]
-fn it090_touch_json_format_unaffected()
+fn it100_touch_json_format_unaffected()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -2822,7 +2824,7 @@ fn it090_touch_json_format_unaffected()
   );
 }
 
-/// it091 (TSK-185 AC-10): `.usage.help` output contains `touch`.
+/// it101 (TSK-185 AC-10): `.usage.help` output contains `touch`.
 ///
 /// `touch::` must be registered via `register_commands()` in `src/lib.rs` so users
 /// can discover it. The param must appear in `.usage.help` output.
@@ -2833,7 +2835,7 @@ fn it090_touch_json_format_unaffected()
 /// RED:   `touch` absent from `.usage.help` output.
 /// GREEN: `touch` present.
 #[ test ]
-fn it091_usage_help_shows_touch_param()
+fn it101_usage_help_shows_touch_param()
 {
   let out = run_cs( &[ ".usage.help" ] );
   assert_exit( &out, 0 );
@@ -2844,7 +2846,7 @@ fn it091_usage_help_shows_touch_param()
   );
 }
 
-/// it092 `lim_it` (IT-51 / FT-03 of feature/023): explicit `next::endurance` places `→` on exactly one account.
+/// it102 `lim_it` (IT-51 / FT-03 of feature/023): explicit `next::endurance` places `→` on exactly one account.
 ///
 /// With ≥2 accounts sharing a live token, the endurance strategy selects one winner.
 /// Exactly one table row gets `→` in the flag column. Footer shows "Next by strategy:".
@@ -2852,11 +2854,11 @@ fn it091_usage_help_shows_touch_param()
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-51]
 ///       [`tests/docs/feature/023_next_account_strategies.md` AC-03]
 #[ test ]
-fn it092_lim_it_next_endurance_places_arrow_on_winner()
+fn it102_lim_it_next_endurance_places_arrow_on_winner()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it092: no live token — skipping" );
+    eprintln!( "it102: no live token — skipping" );
     return;
   };
   let dir  = TempDir::new().unwrap();
@@ -2879,7 +2881,7 @@ fn it092_lim_it_next_endurance_places_arrow_on_winner()
   );
 }
 
-/// it093 `lim_it` (IT-52 / FT-04 of feature/023): `next::drain` places `→` on exactly one account.
+/// it103 `lim_it` (IT-52 / FT-04 of feature/023): `next::drain` places `→` on exactly one account.
 ///
 /// With ≥2 accounts sharing a live token, the drain strategy selects the account with
 /// the lowest non-exhausted `5h_left`. Exactly one `→` appears in the table rows.
@@ -2887,11 +2889,11 @@ fn it092_lim_it_next_endurance_places_arrow_on_winner()
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-52]
 ///       [`tests/docs/feature/023_next_account_strategies.md` AC-04]
 #[ test ]
-fn it093_lim_it_next_drain_places_arrow_on_winner()
+fn it103_lim_it_next_drain_places_arrow_on_winner()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it093: no live token — skipping" );
+    eprintln!( "it103: no live token — skipping" );
     return;
   };
   let dir  = TempDir::new().unwrap();
@@ -2914,19 +2916,19 @@ fn it093_lim_it_next_drain_places_arrow_on_winner()
   );
 }
 
-/// it094 `lim_it` (IT-54 / FT-01 of feature/023): footer always shows both strategy lines.
+/// it104 `lim_it` (IT-54 / FT-01 of feature/023): footer always shows all three strategy lines.
 ///
-/// With `next::drain` active, the footer still shows BOTH "endurance" and "drain" lines.
-/// Both lines appear regardless of which strategy is currently selected.
+/// With `next::drain` active, the footer still shows all three lines: renew, endurance, drain.
+/// All lines appear regardless of which strategy is currently selected.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-54]
 ///       [`tests/docs/feature/023_next_account_strategies.md` AC-01]
 #[ test ]
-fn it094_lim_it_footer_always_shows_both_strategy_lines()
+fn it104_lim_it_footer_always_shows_both_strategy_lines()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it094: no live token — skipping" );
+    eprintln!( "it104: no live token — skipping" );
     return;
   };
   let dir  = TempDir::new().unwrap();
@@ -2943,6 +2945,10 @@ fn it094_lim_it_footer_always_shows_both_strategy_lines()
     "footer must show 'Next by strategy:' (IT-54/FT-01/023), got:\n{text}",
   );
   assert!(
+    text.contains( "renew" ),
+    "footer must show renew strategy line regardless of next:: value (TSK-222/FT-01/023), got:\n{text}",
+  );
+  assert!(
     text.contains( "endurance" ),
     "footer must show endurance strategy line regardless of next:: value (IT-54/FT-01/023), got:\n{text}",
   );
@@ -2952,7 +2958,7 @@ fn it094_lim_it_footer_always_shows_both_strategy_lines()
   );
 }
 
-/// it095 `lim_it` (IT-58): per-column emoji prefix appears in `5h Left` column values.
+/// it105 `lim_it` (IT-58): per-column emoji prefix appears in `5h Left` column values.
 ///
 /// `5h Left` cells embed a coloured-circle emoji prefix: 🟢 when >5% left, 🟡 when ≤5%.
 /// At least one account row must show an emoji in that column.
@@ -2960,11 +2966,11 @@ fn it094_lim_it_footer_always_shows_both_strategy_lines()
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-58]
 ///       [`tests/docs/feature/009_token_usage.md` AC-21]
 #[ test ]
-fn it095_lim_it_per_column_emoji_in_5h_left()
+fn it105_lim_it_per_column_emoji_in_5h_left()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it095: no live token — skipping" );
+    eprintln!( "it105: no live token — skipping" );
     return;
   };
   let dir  = TempDir::new().unwrap();
@@ -2982,7 +2988,7 @@ fn it095_lim_it_per_column_emoji_in_5h_left()
   );
 }
 
-/// it096 (IT-62 / EC-1): `touch::0` accepted; empty credential store exits 0.
+/// it106 (IT-62 / EC-1): `touch::0` accepted; empty credential store exits 0.
 ///
 /// `touch::0` is the explicit off value — the parser must accept it without error.
 /// No subprocess is spawned with `touch::0` regardless of account state.
@@ -2991,7 +2997,7 @@ fn it095_lim_it_per_column_emoji_in_5h_left()
 ///       [`tests/docs/cli/param/034_touch.md` EC-1]
 ///       [`tests/docs/feature/024_session_touch.md` AC-01]
 #[ test ]
-fn it096_touch_0_accepted_empty_store_exits_0()
+fn it106_touch_0_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3007,14 +3013,14 @@ fn it096_touch_0_accepted_empty_store_exits_0()
   );
 }
 
-/// it097 (EC-3): `touch::true` accepted as equivalent to `touch::1`.
+/// it107 (EC-3): `touch::true` accepted as equivalent to `touch::1`.
 ///
 /// `parse_int_flag` must accept the string "true" and map it to 1 (enabled).
 /// With an empty credential store, no subprocess is spawned and the command exits 0.
 ///
 /// Spec: [`tests/docs/cli/param/034_touch.md` EC-3]
 #[ test ]
-fn it097_touch_true_accepted_empty_store_exits_0()
+fn it107_touch_true_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3025,14 +3031,14 @@ fn it097_touch_true_accepted_empty_store_exits_0()
   assert_exit( &out, 0 );
 }
 
-/// it098 (EC-4): `touch::bogus` exits 1 — invalid value rejected.
+/// it108 (EC-4): `touch::bogus` exits 1 — invalid value rejected.
 ///
 /// `parse_int_flag` must reject values that are not `0`, `1`, `"true"`, or `"false"`.
 /// The parser returns `ArgumentTypeMismatch` (exit 1) for unrecognised string values.
 ///
 /// Spec: [`tests/docs/cli/param/034_touch.md` EC-4]
 #[ test ]
-fn it098_touch_bogus_exits_1()
+fn it108_touch_bogus_exits_1()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3043,7 +3049,7 @@ fn it098_touch_bogus_exits_1()
   assert_exit( &out, 1 );
 }
 
-/// it099 `lim_it` (FT-01 of feature/024 / EC-7): `touch::0` — no subprocess spawned; idle account unchanged.
+/// it109 `lim_it` (FT-01 of feature/024 / EC-7): `touch::0` — no subprocess spawned; idle account unchanged.
 ///
 /// When `touch::0` (explicit off), the touch trigger is never fired regardless of account state.
 /// An idle account (`five_hour.resets_at` absent, 5h Reset shows `—`) stays unchanged.
@@ -3052,11 +3058,11 @@ fn it098_touch_bogus_exits_1()
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-01]
 ///       [`tests/docs/cli/param/034_touch.md` EC-7]
 #[ test ]
-fn it099_lim_it_touch_0_no_subprocess_idle_account_unchanged()
+fn it109_lim_it_touch_0_no_subprocess_idle_account_unchanged()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it099: no live token — skipping" );
+    eprintln!( "it109: no live token — skipping" );
     return;
   };
   let dir  = TempDir::new().unwrap();
@@ -3069,7 +3075,7 @@ fn it099_lim_it_touch_0_no_subprocess_idle_account_unchanged()
   let pre_text = stdout( &pre );
   if !pre_text.contains( "\u{2014}" )
   {
-    eprintln!( "it099: account is active (resets_at present) — idle condition not met, skipping" );
+    eprintln!( "it109: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
@@ -3083,7 +3089,7 @@ fn it099_lim_it_touch_0_no_subprocess_idle_account_unchanged()
   );
 }
 
-/// it100 `lim_it` (FT-02 of feature/024 / EC-8): `touch::1` — subprocess observed via trace for idle account.
+/// it110 `lim_it` (FT-02 of feature/024 / EC-8): `touch::1` — subprocess observed via trace for idle account.
 ///
 /// When `touch::1` and the account has `five_hour.resets_at` absent (idle), a subprocess
 /// is invoked to activate the 5h session. With `trace::1`, stderr shows `[trace]` lines
@@ -3092,11 +3098,11 @@ fn it099_lim_it_touch_0_no_subprocess_idle_account_unchanged()
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-02]
 ///       [`tests/docs/cli/param/034_touch.md` EC-8]
 #[ test ]
-fn it100_lim_it_touch_1_subprocess_spawned_for_idle_account()
+fn it110_lim_it_touch_1_subprocess_spawned_for_idle_account()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it100: no live token — skipping" );
+    eprintln!( "it110: no live token — skipping" );
     return;
   };
   let dir  = TempDir::new().unwrap();
@@ -3108,7 +3114,7 @@ fn it100_lim_it_touch_1_subprocess_spawned_for_idle_account()
   assert_exit( &pre, 0 );
   if !stdout( &pre ).contains( "\u{2014}" )
   {
-    eprintln!( "it100: account is active (resets_at present) — idle condition not met, skipping" );
+    eprintln!( "it110: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
@@ -3121,7 +3127,7 @@ fn it100_lim_it_touch_1_subprocess_spawned_for_idle_account()
   );
 }
 
-/// it101 `lim_it` (FT-03 of feature/024): After successful touch, `5h Reset` transitions from `—` to countdown.
+/// it111 `lim_it` (FT-03 of feature/024): After successful touch, `5h Reset` transitions from `—` to countdown.
 ///
 /// When `touch::1` triggers on an idle account (`resets_at` absent) and the subprocess succeeds,
 /// the account's quota is re-fetched and the `5h Reset` column shows a concrete countdown (~5h)
@@ -3129,11 +3135,11 @@ fn it100_lim_it_touch_1_subprocess_spawned_for_idle_account()
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-03]
 #[ test ]
-fn it101_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
+fn it111_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it101: no live token — skipping" );
+    eprintln!( "it111: no live token — skipping" );
     return;
   };
   let dir  = TempDir::new().unwrap();
@@ -3146,7 +3152,7 @@ fn it101_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
   let pre_text = stdout( &pre );
   if !pre_text.contains( "\u{2014}" )
   {
-    eprintln!( "it101: account is active (resets_at present) — idle condition not met, skipping" );
+    eprintln!( "it111: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
@@ -3160,7 +3166,7 @@ fn it101_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
   );
 }
 
-/// it102 (FT-05 of feature/024 structural): `apply_refresh` code appears before `apply_touch` in source.
+/// it112 (FT-05 of feature/024 structural): `apply_refresh` code appears before `apply_touch` in source.
 ///
 /// The ordering guarantee (refresh runs before touch) is enforced at the call site in
 /// `run_usage()`. This structural test verifies the invariant without requiring live
@@ -3168,7 +3174,7 @@ fn it101_lim_it_touch_1_5h_reset_changes_from_dash_to_time()
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-05]
 #[ test ]
-fn it102_structural_refresh_before_touch_ordering_in_source()
+fn it112_structural_refresh_before_touch_ordering_in_source()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/api.rs" ) );
   // Use call-site patterns that only match the production calls in usage_routine(),
@@ -3183,7 +3189,7 @@ fn it102_structural_refresh_before_touch_ordering_in_source()
   );
 }
 
-/// it103 `lim_it` (FT-06 companion of feature/024): `_active` marker unchanged after all touch ops.
+/// it113 `lim_it` (FT-06 companion of feature/024): `_active` marker unchanged after all touch ops.
 ///
 /// When `touch::1` is active and a non-active account is touched, the `_active` file
 /// must remain unchanged after `apply_touch` completes. Fix for BUG-211: `save(update_marker=false)`
@@ -3192,11 +3198,11 @@ fn it102_structural_refresh_before_touch_ordering_in_source()
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-06]
 #[ test ]
-fn it103_lim_it_active_account_restored_after_touch()
+fn it113_lim_it_active_account_restored_after_touch()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it103: no live token — skipping" );
+    eprintln!( "it113: no live token — skipping" );
     return;
   };
   let dir  = TempDir::new().unwrap();
@@ -3210,7 +3216,7 @@ fn it103_lim_it_active_account_restored_after_touch()
   assert_exit( &pre, 0 );
   if !stdout( &pre ).contains( "\u{2014}" )
   {
-    eprintln!( "it103: no idle accounts — idle-state condition not met, skipping" );
+    eprintln!( "it113: no idle accounts — idle-state condition not met, skipping" );
     return;
   }
 
@@ -3226,7 +3232,7 @@ fn it103_lim_it_active_account_restored_after_touch()
   );
 }
 
-/// it104 (FT-07 of feature/024 structural): touch failure is non-aborting — source has early-return guard.
+/// it114 (FT-07 of feature/024 structural): touch failure is non-aborting — source has early-return guard.
 ///
 /// When the subprocess or re-fetch fails, `apply_touch` returns without propagating
 /// the error (no panic, no hard failure). This structural test verifies the non-aborting
@@ -3234,7 +3240,7 @@ fn it103_lim_it_active_account_restored_after_touch()
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-07]
 #[ test ]
-fn it104_structural_touch_failure_non_aborting_guard_exists()
+fn it114_structural_touch_failure_non_aborting_guard_exists()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
   // apply_touch handles new_creds=None gracefully: expiry update is conditional,
@@ -3245,18 +3251,18 @@ fn it104_structural_touch_failure_non_aborting_guard_exists()
   );
 }
 
-/// it105 `lim_it` (FT-09 of feature/024): `trace::1` emits `[trace]` lines for touch subprocess lifecycle.
+/// it115 `lim_it` (FT-09 of feature/024): `trace::1` emits `[trace]` lines for touch subprocess lifecycle.
 ///
 /// With `touch::1 trace::1` and an account with `resets_at` absent (idle), stderr shows
 /// `[trace]` lines showing the subprocess lifecycle (`switch_account`, `run_isolated`). Skips when active.
 ///
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 #[ test ]
-fn it105_lim_it_trace_1_shows_touch_lifecycle()
+fn it115_lim_it_trace_1_shows_touch_lifecycle()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it105: no live token — skipping" );
+    eprintln!( "it115: no live token — skipping" );
     return;
   };
   let dir  = TempDir::new().unwrap();
@@ -3268,7 +3274,7 @@ fn it105_lim_it_trace_1_shows_touch_lifecycle()
   assert_exit( &pre, 0 );
   if !stdout( &pre ).contains( "\u{2014}" )
   {
-    eprintln!( "it105: account is active (resets_at present) — idle condition not met, skipping" );
+    eprintln!( "it115: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
@@ -3281,7 +3287,7 @@ fn it105_lim_it_trace_1_shows_touch_lifecycle()
   );
 }
 
-/// it106 `lim_it` (FT-11 of feature/024): valid account with `resets_at` absent IS touched (positive trigger).
+/// it116 `lim_it` (FT-11 of feature/024): valid account with `resets_at` absent IS touched (positive trigger).
 ///
 /// The touch trigger fires when `five_hour.resets_at` is absent (idle account). When the
 /// 5h window is idle (`resets_at` absent, 5h Reset shows `—`), the subprocess IS spawned
@@ -3290,11 +3296,11 @@ fn it105_lim_it_trace_1_shows_touch_lifecycle()
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-11]
 ///       [`docs/feature/024_session_touch.md` AC-02 trigger guard]
 #[ test ]
-fn it106_lim_it_account_with_resets_at_absent_is_touched()
+fn it116_lim_it_account_with_resets_at_absent_is_touched()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it106: no live token — skipping" );
+    eprintln!( "it116: no live token — skipping" );
     return;
   };
   let dir  = TempDir::new().unwrap();
@@ -3307,7 +3313,7 @@ fn it106_lim_it_account_with_resets_at_absent_is_touched()
   let pre_text = stdout( &pre );
   if !pre_text.contains( "\u{2014}" )
   {
-    eprintln!( "it106: account is active (resets_at present) — idle condition not met, skipping" );
+    eprintln!( "it116: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
@@ -3322,7 +3328,7 @@ fn it106_lim_it_account_with_resets_at_absent_is_touched()
   );
 }
 
-/// it107 (FT-12 of feature/009 AC-22): `Sub` and `7d Son Reset` columns hidden by default;
+/// it117 (FT-12 of feature/009 AC-22): `Sub` and `7d Son Reset` columns hidden by default;
 /// `cols::+sub` and `cols::+7d_son_reset` reveal them respectively.
 ///
 /// - Default: table header does NOT contain `Sub` or `7d Son Reset`.
@@ -3332,7 +3338,7 @@ fn it106_lim_it_account_with_resets_at_absent_is_touched()
 /// Spec: [`tests/docs/feature/009_token_usage.md` FT-12]
 ///       [`docs/feature/009_token_usage.md` AC-22]
 #[ test ]
-fn it107_ft12_cols_plus_reveals_sub_and_7d_son_reset_columns()
+fn it117_ft12_cols_plus_reveals_sub_and_7d_son_reset_columns()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -3372,14 +3378,14 @@ fn it107_ft12_cols_plus_reveals_sub_and_7d_son_reset_columns()
   );
 }
 
-/// it108 (EC-2b / `parse_int_flag`): `touch::false` accepted as equivalent to `touch::0`.
+/// it118 (EC-2b / `parse_int_flag`): `touch::false` accepted as equivalent to `touch::0`.
 ///
 /// `parse_int_flag` maps `Value::String("false")` to 0 (disabled). With an empty
 /// credential store, no subprocess is spawned and the command exits 0.
 ///
 /// Spec: [`tests/docs/cli/param/034_touch.md` EC-1 variant — "false" string path]
 #[ test ]
-fn it108_touch_false_accepted_exits_0()
+fn it118_touch_false_accepted_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3392,14 +3398,14 @@ fn it108_touch_false_accepted_exits_0()
   );
 }
 
-/// it109 (`parse_int_flag` rejection): `touch::2` exits 1 — integer out-of-range.
+/// it119 (`parse_int_flag` rejection): `touch::2` exits 1 — integer out-of-range.
 ///
 /// `parse_int_flag` accepts only 0, 1, "0", "1", "true", "false". The value "2"
 /// falls to the catch-all arm → `ArgumentTypeMismatch` → exit 1.
 ///
 /// Spec: [`tests/docs/cli/param/034_touch.md` EC-4 variant — out-of-range integer]
 #[ test ]
-fn it109_touch_2_rejected_exits_1()
+fn it119_touch_2_rejected_exits_1()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3410,9 +3416,9 @@ fn it109_touch_2_rejected_exits_1()
   assert_exit( &out, 1 );
 }
 
-// ── it110 (lim_it) ────────────────────────────────────────────────────────────
+// ── it120 (lim_it) ────────────────────────────────────────────────────────────
 
-/// it110 `lim_it` (FT-12 of feature/024 — AC-11): Touch trigger fires for idle accounts each cycle.
+/// it120 `lim_it` (FT-12 of feature/024 — AC-11): Touch trigger fires for idle accounts each cycle.
 ///
 /// Two sequential single-shot `.usage touch::1 trace::1` invocations verify the idle trigger:
 /// - Cycle 1 (idle account, `resets_at` absent): subprocess spawned → `switch_account` in trace.
@@ -3424,11 +3430,11 @@ fn it109_touch_2_rejected_exits_1()
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-12]
 ///       [`docs/feature/024_session_touch.md` AC-11]
 #[ test ]
-fn it110_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
+fn it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
 {
   let Some( token ) = live_active_token() else
   {
-    eprintln!( "it110: no live token — skipping" );
+    eprintln!( "it120: no live token — skipping" );
     return;
   };
   let dir  = TempDir::new().unwrap();
@@ -3440,7 +3446,7 @@ fn it110_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
   assert_exit( &pre, 0 );
   if !stdout( &pre ).contains( "\u{2014}" )
   {
-    eprintln!( "it110: account is active (resets_at present) — idle condition not met, skipping" );
+    eprintln!( "it120: account is active (resets_at present) — idle condition not met, skipping" );
     return;
   }
 
@@ -3461,7 +3467,7 @@ fn it110_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
   // EM-DASH present means cycle 1 did not activate (subprocess failed) — cycle 2 inconclusive.
   if text2.contains( "\u{2014}" )
   {
-    eprintln!( "it110: cycle 1 did not activate account; cycle 2 check inconclusive" );
+    eprintln!( "it120: cycle 1 did not activate account; cycle 2 check inconclusive" );
   }
   else
   {
@@ -3475,21 +3481,21 @@ fn it110_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
 
 // ── sort::next meta-strategy ──────────────────────────────────────────────────
 
-/// it111 (IT-65/AC-15): `sort::next` accepted with empty credential store → exit 0.
+/// it121 (IT-65/AC-15): `sort::next` accepted with empty credential store → exit 0.
 ///
-/// `sort::next` resolves to `sort::drain` (default `next::drain`) at parse time.
+/// `sort::next` resolves to `sort::renew` (default `next::renew`) at parse time.
 /// Both `sort::next` alone and `sort::next next::endurance` must be accepted without error.
 ///
 /// Source: `tests/docs/cli/command/009_usage.md § IT-65`.
 #[ test ]
-fn it111_sort_next_accepted()
+fn it121_sort_next_accepted()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::create_dir_all( &store ).unwrap();
 
-  // sort::next with default next::drain
+  // sort::next with default next::renew
   let out = run_cs_with_env( &[ ".usage", "sort::next" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
@@ -3510,7 +3516,7 @@ fn it111_sort_next_accepted()
 
 // ── TSK-191 — imodel:: and effort:: parameters ────────────────────────────────
 
-/// it112 (IT-66 / EC-1): `imodel::auto` accepted with empty credential store exits 0.
+/// it122 (IT-66 / EC-1): `imodel::auto` accepted with empty credential store exits 0.
 ///
 /// Before TSK-191: `imodel::` is unregistered → `ArgumentUnrecognised` → exit 1.
 /// After TSK-191:  `imodel::` accepted, empty store → no-accounts message → exit 0.
@@ -3518,7 +3524,7 @@ fn it111_sort_next_accepted()
 /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-1]
 ///       [`tests/docs/cli/command/009_usage.md` IT-66]
 #[ test ]
-fn it112_imodel_auto_accepted_empty_store_exits_0()
+fn it122_imodel_auto_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3534,7 +3540,7 @@ fn it112_imodel_auto_accepted_empty_store_exits_0()
   );
 }
 
-/// it113 (IT-67 / EC-5): `imodel::bogus` exits 1; stderr names all five valid values.
+/// it123 (IT-67 / EC-5): `imodel::bogus` exits 1; stderr names all five valid values.
 ///
 /// The parser rejects any value not in {auto, sonnet, opus, keep, haiku} with exit 1.
 /// All five valid values must appear in stderr to help the user correct the mistake.
@@ -3543,7 +3549,7 @@ fn it112_imodel_auto_accepted_empty_store_exits_0()
 /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-5]
 ///       [`tests/docs/cli/command/009_usage.md` IT-67]
 #[ test ]
-fn it113_imodel_bogus_exits_1()
+fn it123_imodel_bogus_exits_1()
 {
   let out  = run_cs( &[ ".usage", "imodel::bogus" ] );
   assert_exit( &out, 1 );
@@ -3555,7 +3561,7 @@ fn it113_imodel_bogus_exits_1()
   assert!( err.contains( "haiku" ),  "stderr must name valid value 'haiku', got:\n{err}" );
 }
 
-/// it114 (IT-68 / EC-1): `effort::auto` accepted with empty credential store exits 0.
+/// it124 (IT-68 / EC-1): `effort::auto` accepted with empty credential store exits 0.
 ///
 /// Before TSK-191: `effort::` is unregistered → `ArgumentUnrecognised` → exit 1.
 /// After TSK-191:  `effort::` accepted, empty store → no-accounts message → exit 0.
@@ -3563,7 +3569,7 @@ fn it113_imodel_bogus_exits_1()
 /// Spec: [`tests/docs/cli/param/036_effort.md` EC-1]
 ///       [`tests/docs/cli/command/009_usage.md` IT-68]
 #[ test ]
-fn it114_effort_auto_accepted_empty_store_exits_0()
+fn it124_effort_auto_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3579,7 +3585,7 @@ fn it114_effort_auto_accepted_empty_store_exits_0()
   );
 }
 
-/// it115 (IT-69 / EC-4): `effort::bogus` exits 1; stderr names all five valid values.
+/// it125 (IT-69 / EC-4): `effort::bogus` exits 1; stderr names all five valid values.
 ///
 /// The parser rejects any value not in {auto, high, max, low, normal} with exit 1.
 /// TSK-209: updated from three to five values (added `low` and `normal`).
@@ -3587,7 +3593,7 @@ fn it114_effort_auto_accepted_empty_store_exits_0()
 /// Spec: [`tests/docs/cli/param/036_effort.md` EC-4]
 ///       [`tests/docs/cli/command/009_usage.md` IT-69]
 #[ test ]
-fn it115_effort_bogus_exits_1()
+fn it125_effort_bogus_exits_1()
 {
   let out = run_cs( &[ ".usage", "effort::bogus" ] );
   assert_exit( &out, 1 );
@@ -3599,13 +3605,13 @@ fn it115_effort_bogus_exits_1()
   assert!( err.contains( "normal" ), "stderr must name valid value 'normal', got:\n{err}" );
 }
 
-/// it116 (IT-70): `.usage.help` lists `imodel` and `effort` as registered parameters.
+/// it126 (IT-70): `.usage.help` lists `imodel` and `effort` as registered parameters.
 ///
 /// Both params must appear in the help output after TSK-191 registration.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-70]
 #[ test ]
-fn it116_usage_help_shows_imodel_effort_params()
+fn it126_usage_help_shows_imodel_effort_params()
 {
   let out  = run_cs( &[ ".usage.help" ] );
   assert_exit( &out, 0 );
@@ -3614,11 +3620,11 @@ fn it116_usage_help_shows_imodel_effort_params()
   assert!( text.contains( "effort" ), ".usage.help must list param `effort` (IT-70), got:\n{text}" );
 }
 
-/// it117 (EC-2): `imodel::sonnet` accepted with empty credential store exits 0.
+/// it127 (EC-2): `imodel::sonnet` accepted with empty credential store exits 0.
 ///
 /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-2]
 #[ test ]
-fn it117_imodel_sonnet_accepted_empty_store_exits_0()
+fn it127_imodel_sonnet_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3629,11 +3635,11 @@ fn it117_imodel_sonnet_accepted_empty_store_exits_0()
   assert_exit( &out, 0 );
 }
 
-/// it118 (EC-3): `imodel::opus` accepted with empty credential store exits 0.
+/// it128 (EC-3): `imodel::opus` accepted with empty credential store exits 0.
 ///
 /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-3]
 #[ test ]
-fn it118_imodel_opus_accepted_empty_store_exits_0()
+fn it128_imodel_opus_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3644,11 +3650,11 @@ fn it118_imodel_opus_accepted_empty_store_exits_0()
   assert_exit( &out, 0 );
 }
 
-/// it119 (EC-4): `imodel::keep` accepted with empty credential store exits 0.
+/// it129 (EC-4): `imodel::keep` accepted with empty credential store exits 0.
 ///
 /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-4]
 #[ test ]
-fn it119_imodel_keep_accepted_empty_store_exits_0()
+fn it129_imodel_keep_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3659,11 +3665,11 @@ fn it119_imodel_keep_accepted_empty_store_exits_0()
   assert_exit( &out, 0 );
 }
 
-/// it120 (EC-2 for effort): `effort::high` accepted with empty credential store exits 0.
+/// it130 (EC-2 for effort): `effort::high` accepted with empty credential store exits 0.
 ///
 /// Spec: [`tests/docs/cli/param/036_effort.md` EC-2]
 #[ test ]
-fn it120_effort_high_accepted_empty_store_exits_0()
+fn it130_effort_high_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3674,11 +3680,11 @@ fn it120_effort_high_accepted_empty_store_exits_0()
   assert_exit( &out, 0 );
 }
 
-/// it121 (EC-3 for effort): `effort::max` accepted with empty credential store exits 0.
+/// it131 (EC-3 for effort): `effort::max` accepted with empty credential store exits 0.
 ///
 /// Spec: [`tests/docs/cli/param/036_effort.md` EC-3]
 #[ test ]
-fn it121_effort_max_accepted_empty_store_exits_0()
+fn it131_effort_max_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3691,7 +3697,7 @@ fn it121_effort_max_accepted_empty_store_exits_0()
 
 // ── BUG-181: trigger inversion fix + structural gates ─────────────────────────
 
-/// it122 (BUG-181 fix AC-02 structural): `apply_touch` trigger uses `is_none()`, not `is_some()`.
+/// it132 (BUG-181 fix AC-02 structural): `apply_touch` trigger uses `is_none()`, not `is_some()`.
 ///
 /// The touch trigger must fire for accounts whose `five_hour.resets_at` is **absent**
 /// (idle account — no active 5h window). BUG-181: previous code (`is_some()`) fired for
@@ -3705,7 +3711,7 @@ fn it121_effort_max_accepted_empty_store_exits_0()
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-11]
 ///       [`docs/feature/024_session_touch.md` AC-02]
 #[ test ]
-fn it122_apply_touch_trigger_is_is_none_structural()
+fn it132_apply_touch_trigger_is_is_none_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
   assert!(
@@ -3716,7 +3722,7 @@ fn it122_apply_touch_trigger_is_is_none_structural()
   );
 }
 
-/// it123 (TSK-192 AC-09 structural): `refresh_account_token` uses `label` variable, not hardcoded `"refresh"`.
+/// it133 (TSK-192 AC-09 structural): `refresh_account_token` uses `label` variable, not hardcoded `"refresh"`.
 ///
 /// All 14 trace `eprintln!` calls in `refresh_account_token()` must use a `label: &str`
 /// parameter so callers can inject `"touch"` or `"refresh"` to distinguish subprocess types
@@ -3728,7 +3734,7 @@ fn it122_apply_touch_trigger_is_is_none_structural()
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 ///       [`docs/feature/024_session_touch.md` AC-09]
 #[ test ]
-fn it123_refresh_account_token_has_label_param_structural()
+fn it133_refresh_account_token_has_label_param_structural()
 {
   let src = include_str!( concat!(
     env!( "CARGO_MANIFEST_DIR" ),
@@ -3743,7 +3749,7 @@ fn it123_refresh_account_token_has_label_param_structural()
   );
 }
 
-/// it124 (TSK-192 AC-09 structural): `apply_touch` call site passes `"touch"` label.
+/// it134 (TSK-192 AC-09 structural): `apply_touch` call site passes `"touch"` label.
 ///
 /// The `refresh_account_token()` call in `apply_touch()` must pass the literal `"touch"`
 /// as the `label` argument so trace output reads `[trace] touch ...` (not `[trace] refresh ...`).
@@ -3751,7 +3757,7 @@ fn it123_refresh_account_token_has_label_param_structural()
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 ///       [`docs/feature/024_session_touch.md` AC-09]
 #[ test ]
-fn it124_apply_touch_passes_touch_label_structural()
+fn it134_apply_touch_passes_touch_label_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/touch.rs" ) );
   assert!(
@@ -3760,7 +3766,7 @@ fn it124_apply_touch_passes_touch_label_structural()
   );
 }
 
-/// it125 (TSK-192 AC-09 structural): `apply_refresh` call site passes `"refresh"` label.
+/// it135 (TSK-192 AC-09 structural): `apply_refresh` call site passes `"refresh"` label.
 ///
 /// The `refresh_account_token()` call in `apply_refresh()` must pass the literal `"refresh"`
 /// as the `label` argument so trace output reads `[trace] refresh ...`.
@@ -3768,7 +3774,7 @@ fn it124_apply_touch_passes_touch_label_structural()
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 ///       [`docs/feature/024_session_touch.md` AC-09]
 #[ test ]
-fn it125_apply_refresh_passes_refresh_label_structural()
+fn it135_apply_refresh_passes_refresh_label_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/refresh.rs" ) );
   assert!(
@@ -3777,7 +3783,7 @@ fn it125_apply_refresh_passes_refresh_label_structural()
   );
 }
 
-/// it126 (TSK-192 AC-09 structural): `refresh_account_token` has per-step `Instant` timing.
+/// it136 (TSK-192 AC-09 structural): `refresh_account_token` has per-step `Instant` timing.
 ///
 /// Both `switch_account` and `run_isolated` steps in `refresh_account_token()` must be
 /// wrapped with `std::time::Instant::now()` so elapsed seconds appear in trace output.
@@ -3785,7 +3791,7 @@ fn it125_apply_refresh_passes_refresh_label_structural()
 /// Spec: [`tests/docs/feature/024_session_touch.md` FT-09]
 ///       [`docs/feature/024_session_touch.md` AC-09]
 #[ test ]
-fn it126_refresh_account_token_has_instant_timing_structural()
+fn it136_refresh_account_token_has_instant_timing_structural()
 {
   let src = include_str!( concat!(
     env!( "CARGO_MANIFEST_DIR" ),
@@ -3799,7 +3805,7 @@ fn it126_refresh_account_token_has_instant_timing_structural()
 
 // ── TSK-220 — sort default renew + sort::next meta-strategy ──────────────────
 
-/// it127 (TSK-220 AC-01 structural): sort default is `SortStrategy::Renew` when no `sort::` arg.
+/// it137 (TSK-220 AC-01 structural): sort default is `SortStrategy::Renew` when no `sort::` arg.
 ///
 /// `parse_usage_params` must return `SortStrategy::Renew` when the `sort` argument is absent.
 /// This ensures `clp .usage` (no `sort::` flag) orders rows by 7d reset — soonest weekly reset first.
@@ -3810,7 +3816,7 @@ fn it126_refresh_account_token_has_instant_timing_structural()
 /// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-14]
 ///       [`docs/feature/020_usage_sort_strategies.md` AC-01]
 #[ test ]
-fn it127_sort_default_is_renew_structural()
+fn it137_sort_default_is_renew_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/params.rs" ) );
   // The None arm of the sort match uses alignment spaces; verify Renew is the default and Drain is not.
@@ -3821,7 +3827,7 @@ fn it127_sort_default_is_renew_structural()
   );
 }
 
-/// it128 (TSK-193 AC-15 structural): `sort::next` resolves to `SortStrategy::Drain` when `next::drain`.
+/// it138 (TSK-193 AC-15 structural): `sort::next` resolves to `SortStrategy::Drain` when `next::drain`.
 ///
 /// The `SortStrategy::Next => match next` resolution block must map `NextStrategy::Drain`
 /// to `SortStrategy::Drain`. This is the core of the `sort::next` meta-strategy:
@@ -3833,7 +3839,7 @@ fn it127_sort_default_is_renew_structural()
 /// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-17]
 ///       [`docs/feature/020_usage_sort_strategies.md` AC-15]
 #[ test ]
-fn it128_sort_next_resolves_to_drain_structural()
+fn it138_sort_next_resolves_to_drain_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/params.rs" ) );
   assert!(
@@ -3843,10 +3849,10 @@ fn it128_sort_next_resolves_to_drain_structural()
   );
 }
 
-/// it129 (TSK-193 AC-15 structural): `sort::next` resolves to `SortStrategy::Endurance` when `next::endurance`.
+/// it139 (TSK-193 AC-15 structural): `sort::next` resolves to `SortStrategy::Endurance` when `next::endurance`.
 ///
 /// The `SortStrategy::Next => match next` resolution block must map `NextStrategy::Endurance`
-/// to `SortStrategy::Endurance`. Together with it128, this proves the meta-strategy
+/// to `SortStrategy::Endurance`. Together with it138, this proves the meta-strategy
 /// delegates exhaustively to the active `next::` concrete strategy.
 ///
 /// RED:   `NextStrategy::Endurance` arm absent or maps to wrong strategy.
@@ -3855,7 +3861,7 @@ fn it128_sort_next_resolves_to_drain_structural()
 /// Spec: [`tests/docs/feature/020_usage_sort_strategies.md` FT-17]
 ///       [`docs/feature/020_usage_sort_strategies.md` AC-15]
 #[ test ]
-fn it129_sort_next_resolves_to_endurance_structural()
+fn it139_sort_next_resolves_to_endurance_structural()
 {
   let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/params.rs" ) );
   assert!(
@@ -3865,7 +3871,7 @@ fn it129_sort_next_resolves_to_endurance_structural()
   );
 }
 
-/// it131 (BUG-202 / 024 FT-14): errored account emits skip trace in touch phase.
+/// it141 (BUG-202 / 024 FT-14): errored account emits skip trace in touch phase.
 ///
 /// ## Root Cause
 ///
@@ -3897,7 +3903,7 @@ fn it129_sort_next_resolves_to_endurance_structural()
 /// RED:   errored account has no touch trace line → assert fails.
 /// GREEN: error guard emits `[trace] touch  <name>  skipped (reason: error account)`.
 #[ test ]
-fn it131_trace_skip_lines_emitted_for_non_qualifying_accounts()
+fn it141_trace_skip_lines_emitted_for_non_qualifying_accounts()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -3919,14 +3925,14 @@ fn it131_trace_skip_lines_emitted_for_non_qualifying_accounts()
 
 // ── TSK-209: haiku model + low/normal effort CLI acceptance ───────────────────
 
-/// it132 (EC-11 / 035): `imodel::haiku` accepted with empty credential store exits 0.
+/// it142 (EC-11 / 035): `imodel::haiku` accepted with empty credential store exits 0.
 ///
 /// Before TSK-209: `imodel::haiku` is unrecognised → `ArgumentTypeMismatch` → exit 1.
 /// After TSK-209:  `haiku` accepted, empty store → no-accounts message → exit 0.
 ///
 /// Spec: [`tests/docs/cli/param/035_imodel.md` EC-11]
 #[ test ]
-fn it132_imodel_haiku_accepted_empty_store_exits_0()
+fn it142_imodel_haiku_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3937,14 +3943,14 @@ fn it132_imodel_haiku_accepted_empty_store_exits_0()
   assert_exit( &out, 0 );
 }
 
-/// it133 (EC-10 / 036): `effort::low` accepted with empty credential store exits 0.
+/// it143 (EC-10 / 036): `effort::low` accepted with empty credential store exits 0.
 ///
 /// Before TSK-209: `effort::low` is unrecognised → `ArgumentTypeMismatch` → exit 1.
 /// After TSK-209:  `low` accepted, empty store → no-accounts message → exit 0.
 ///
 /// Spec: [`tests/docs/cli/param/036_effort.md` EC-10]
 #[ test ]
-fn it133_effort_low_accepted_empty_store_exits_0()
+fn it143_effort_low_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3955,14 +3961,14 @@ fn it133_effort_low_accepted_empty_store_exits_0()
   assert_exit( &out, 0 );
 }
 
-/// it134 (EC-11 / 036): `effort::normal` accepted with empty credential store exits 0.
+/// it144 (EC-11 / 036): `effort::normal` accepted with empty credential store exits 0.
 ///
 /// Before TSK-209: `effort::normal` is unrecognised → `ArgumentTypeMismatch` → exit 1.
 /// After TSK-209:  `normal` accepted, empty store → no-accounts message → exit 0.
 ///
 /// Spec: [`tests/docs/cli/param/036_effort.md` EC-11]
 #[ test ]
-fn it134_effort_normal_accepted_empty_store_exits_0()
+fn it144_effort_normal_accepted_empty_store_exits_0()
 {
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
@@ -3971,4 +3977,116 @@ fn it134_effort_normal_accepted_empty_store_exits_0()
 
   let out = run_cs_with_env( &[ ".usage", "effort::normal" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
+}
+
+// ── next::renew strategy (TSK-222) ────────────────────────────────────────────
+
+/// it145 `lim_it` (TSK-222): `next::renew` accepted, footer shows renew line, `→` placed.
+///
+/// `next::renew` selects the account whose soonest running reset timer (min of 5h and 7d)
+/// fires first. Footer shows 3 lines: renew (first), endurance, drain.
+///
+/// RED:   `next::renew` not recognised → exit 1 (before TSK-222 enum variant is added).
+/// GREEN: renew accepted → exit 0, footer contains "renew".
+///
+/// Spec: [`tests/docs/feature/023_next_account_strategies.md`]
+///       [`docs/feature/023_next_account_strategies.md` AC-10]
+#[ doc = "lim_it" ]
+#[ test ]
+fn it145_lim_it_next_renew_places_arrow_on_soonest_refill()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it145: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  let out = run_cs_with_env( &[ ".usage", "next::renew" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "renew" ),
+    "footer must show renew strategy line (TSK-222/AC-10), got:\n{text}",
+  );
+  assert!(
+    text.contains( "Next by strategy:" ),
+    "footer must show 'Next by strategy:' header (TSK-222), got:\n{text}",
+  );
+}
+
+// ── row filtering parameters (TSK-223) ────────────────────────────────────────
+
+/// ut146 (TSK-223 RED gate): `only_valid::1` accepted; empty store exits 0.
+///
+/// Before TSK-224: `get` is unregistered → `ArgumentUnrecognised` → exit 1.
+/// After TSK-224:  `get::7d_left` accepted; empty store → no rows → bare empty output → exit 0.
+///
+/// Validates AC-10 structural (no table chrome in output when `get::` is set).
+/// Live extraction tests (`lim_it`) cover the actual value output.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md`]
+///       [`docs/feature/028_usage_row_filtering.md` AC-10]
+#[ test ]
+fn ut_get_7d_left_extracts_bare_value()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "get::7d_left" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "Quota" ) && !text.contains( "5h Left" ) && !text.contains( "7d Left" ),
+    "get::7d_left with empty store must produce no table output, got:\n{text}",
+  );
+}
+
+/// Before TSK-224: `get::bogus_field` unregistered → wrong exit/message.
+/// After TSK-224:  exit 1, stderr lists valid field IDs including `5h_left`, `7d_left`, `account`.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md`]
+///       [`docs/feature/028_usage_row_filtering.md` AC-15]
+#[ test ]
+fn ut_get_invalid_field_exits_1()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "get::bogus_field" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "5h_left" ) && err.contains( "7d_left" ) && err.contains( "account" ),
+    "get::bogus_field must list valid field IDs in stderr, got:\n{err}",
+  );
+}
+
+/// Before TSK-223: `only_valid` is unregistered → `ArgumentUnrecognised` → exit 1.
+/// After TSK-223:  `only_valid::1` accepted, empty store → no-accounts message → exit 0.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md`]
+///       [`docs/feature/028_usage_row_filtering.md` AC-07]
+#[ test ]
+fn ut_filter_only_valid_hides_red_rows()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "only_valid::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "only_valid::1 with empty store must show no-accounts message, got:\n{text}",
+  );
 }

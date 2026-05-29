@@ -22,6 +22,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-14 | Three-tier grouping: 🟢 before 🟡 before 🔴 independent of sort | AC-24 | — |
 | FT-15 | `format_duration_secs` capped to 2 significant time units | AC-25 | — |
 | FT-16 | Within 🟡 tier: h-exhausted (`5h Left ≤ 15%`) before weekly-exhausted | AC-26 | — |
+| FT-17 | `~Renews` shows exact `in Xh Ym` (no `~`) when `_renewal_at` set | AC-27 | — |
+| FT-18 | `→ Next` column shows soonest upcoming event label and duration | AC-28 | — |
+| FT-19 | JSON includes `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | AC-29 | — |
 
 ### Test Case Index
 
@@ -43,8 +46,11 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-14 | Three-tier grouping preserved regardless of sort strategy | AC-24 | Three-Tier Grouping |
 | FT-15 | format_duration_secs shows at most 2 time components | AC-25 | Duration Format |
 | FT-16 | h-exhausted (`5h Left ≤ 15%`) 🟡 before weekly-exhausted 🟡 regardless of sort | AC-26 | Yellow Sub-Grouping |
+| FT-17 | `~Renews` exact `in Xh Ym` (no `~`) when `_renewal_at` is set | AC-27 | `~Renews` Format |
+| FT-18 | `→ Next` column shows soonest event label and duration | AC-28 | `→ Next` Column |
+| FT-19 | JSON `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | AC-29 | JSON Fields |
 
-**Total:** 16 FT cases
+**Total:** 19 FT cases
 
 ---
 
@@ -111,7 +117,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Returns the index of `a@x.com` (higher expiry wins the tiebreaker when 5h utilization is equal). `b@x.com` is NOT returned.
 - **Exit:** n/a (unit test — function return assertion)
 - **Note:** TSK-184 deleted `find_recommendation()`; tiebreaker now verified via `find_next_for_strategy()` with `NextStrategy::Endurance`.
-- **Source fn:** `test_ft06_009_endurance_tiebreaker_higher_expiry_wins` (in `src/usage.rs`)
+- **Source fn:** `test_ft06_009_endurance_tiebreaker_higher_expiry_wins` (in `src/usage/sort.rs`)
 - **Source:** [009_token_usage.md AC-09](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -176,7 +182,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** Per-column emoji formatting applied to each value with its dimension's threshold.
 - **Then:** Values above threshold produce `🟢` prefix; values at or below produce `🟡` prefix. Each dimension uses its own threshold independently.
 - **Exit:** n/a (unit test — string return assertion)
-- **Source fn:** `test_ft11_009_per_column_emoji_prefix_three_cases` (in `src/usage.rs`)
+- **Source fn:** `test_ft11_009_per_column_emoji_prefix_three_cases` (in `src/usage/format.rs`)
 - **Source:** [009_token_usage.md AC-21](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -190,7 +196,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `cols::+sub`: stdout contains `Sub` in the table header. Exit 0.
   - `cols::+7d_son_reset`: stdout contains `7d Son Reset` in the table header. Exit 0.
 - **Exit:** 0
-- **Source fn:** `it107_ft12_cols_plus_reveals_sub_and_7d_son_reset_columns` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it117_ft12_cols_plus_reveals_sub_and_7d_son_reset_columns` (in `tests/cli/usage_test.rs`)
 - **Source:** [009_token_usage.md AC-22](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -201,7 +207,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** `clp .usage cols::+not_a_real_column`
 - **Then:** Exit 1. Stderr contains an error message naming valid column IDs (e.g., `sub`, `7d_son_reset`).
 - **Exit:** 1
-- **Source fn:** `it072_cols_unknown_id_exit_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it082_cols_unknown_id_exit_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [009_token_usage.md AC-23](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -215,7 +221,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **When:** Three-tier grouping applied with alphabetical sort within each tier.
 - **Then:** Output order is `carol@x.com` (🟢) → `bob@x.com` (🟡) → `alice@x.com` (🔴). The tier ordering 🟢 → 🟡 → 🔴 is preserved regardless of alphabetical order.
 - **Exit:** n/a (unit test — order assertion on sorted list)
-- **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `src/usage.rs`)
+- **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `src/usage/mod.rs`)
 - **Source:** [009_token_usage.md AC-24](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -246,5 +252,39 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Output row order is: `d@x.com` (🟢), then among 🟡 — `b@x.com` and `c@x.com` (h-exhausted, in alpha order), then `a@x.com` (weekly-exhausted). `a@x.com` must appear AFTER both `b@x.com` and `c@x.com` despite being alpha-first.
 - **Edge case:** An account with both `5h Left ≤ 15%` AND `7d Left ≤ 5%` falls in the h-exhausted sub-group (verified by `c@x.com` if `seven_day.utilization` is set ≥ 95%).
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
-- **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (in `src/usage.rs`)
+- **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (in `src/usage/mod.rs`)
 - **Source:** [009_token_usage.md AC-26](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-17: `~Renews` shows exact `in Xh Ym` (no `~`) when `_renewal_at` is set
+
+- **Given (unit test):** `renews_label(renewal_at_opt, org_created_at_opt, now_secs)` with `renewal_at_opt = Some("2026-06-29T21:00:00Z")` and `now_secs` set such that the timestamp is 3h47m in the future.
+- **When:** `renews_label()` called with the above inputs.
+- **Then:** Returns `"in 3h 47m"` — no `~` prefix, exact duration format.
+- **Exit:** n/a (unit test)
+- **Source fn:** ⏳ (in `tests/usage/format_test.rs` or `src/usage/format.rs`)
+- **Source:** [009_token_usage.md AC-27](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-18: `→ Next` column shows soonest upcoming event label and duration
+
+- **Given (unit test):** `next_event_label(expires_in_secs, five_hour_resets_secs, seven_day_resets_secs, renewal_secs, renewal_is_estimate)` with `expires_in_secs = 7200` (2h), `five_hour_resets_secs = Some(14400)` (4h), `seven_day_resets_secs = None`, `renewal_secs = None`.
+- **When:** `next_event_label()` called with the above inputs.
+- **Then:** Returns `"!tok in 2h"` — token expiry is soonest; label is `!tok`.
+- **Exit:** n/a (unit test)
+- **Source fn:** ⏳ (in `tests/usage/format_test.rs` or `src/usage/format.rs`)
+- **Source:** [009_token_usage.md AC-28](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-19: JSON includes `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs`
+
+- **Given:** One saved account with `_renewal_at` set to a future timestamp.
+- **When:** `clp .usage format::json`
+- **Then:** Exits 0. The JSON object for that account contains: `renewal_secs` (u64 integer), `renewal_is_estimate: false`, `next_event_type` (string), `next_event_secs` (u64 integer). No `next_renewal_est` field present (deprecated field removed).
+- **Exit:** 0
+- **Live:** yes
+- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source:** [009_token_usage.md AC-29](../../../../docs/feature/009_token_usage.md)

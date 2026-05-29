@@ -222,7 +222,7 @@ clp .usage cols::+sub format::json
 
 # cols::-renews has no effect on JSON
 clp .usage cols::-renews format::json
-# [...JSON array with "next_renewal_est" field still present...]
+# [...JSON array with "renewal_secs", "renewal_is_estimate", "next_event_type", "next_event_secs" fields still present...]
 ```
 
 ---

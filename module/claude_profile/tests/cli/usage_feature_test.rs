@@ -18,7 +18,7 @@
 //! | ft03   | `ft03_both_accounts_appear_regardless_of_active` | AC-01          | no  |
 //! | ft04   | `ft04_check_mark_follows_live_token_not_active`  | AC-02          | no  |
 //! | ft05   | `ft05_unreadable_credential_store_exits_2`       | AC-06          | no  |
-//! | mre162 | `test_jwt_exp_ms_mre_bug162`                     | AC-25 / BUG-162 | no |
+//! | mre162 | `mre_bug_162_jwt_exp_ms`                          | AC-25 / BUG-162 | no |
 //!
 //! ### Feature 018 — Live Quota Monitor Mode
 //!
@@ -227,8 +227,9 @@ fn ft05_unreadable_credential_store_exits_2()
 ///   `refreshToken` are refreshed. Never use `expiresAt` for post-refresh expiry.
 ///
 /// Source: `tests/docs/feature/17_token_refresh.md § AC-25`, `bug/162_expiresAt_not_updated_by_subprocess.md`.
+#[ doc = "bug_reproducer(BUG-162)" ]
 #[ test ]
-fn test_jwt_exp_ms_mre_bug162()
+fn mre_bug_162_jwt_exp_ms()
 {
   // Construct fake credentials JSON with:
   //   - expired expiresAt (demonstrates what the stale read would return)

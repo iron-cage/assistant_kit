@@ -76,9 +76,9 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/commands.rs` | `account_use_routine()` — adds quota fetch + subprocess call after credential rotation |
+| source | `src/commands/account_ops.rs` | `account_use_routine()` — adds quota fetch + subprocess call after credential rotation |
 | source | `src/lib.rs` | `touch::`, `imodel::`, `effort::`, `trace::` parameter registration on `.account.use` |
-| source | `src/usage.rs` | `resolve_model()`, `resolve_effort()` reused from Feature 026; new: `TouchCtx`, `validate_imodel_str()`, `validate_effort_str()`, `pre_switch_touch_ctx()`, `apply_post_switch_touch()` |
+| source | `src/usage/subprocess.rs`, `src/usage/api.rs` | `resolve_model()`, `resolve_effort()` reused from Feature 026; new: `TouchCtx`, `validate_imodel_str()`, `validate_effort_str()`, `pre_switch_touch_ctx()`, `apply_post_switch_touch()` |
 | dep | `claude_runner_core` | `run_isolated()`, `IsolatedModel` — subprocess execution |
 | doc | [004_account_use.md](004_account_use.md) | Credential rotation mechanics — prerequisite step |
 | doc | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | Model/effort resolution algorithm (`resolve_model`, `resolve_effort`) |

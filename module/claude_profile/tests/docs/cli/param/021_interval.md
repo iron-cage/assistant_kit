@@ -56,7 +56,7 @@ Edge case tests for the `interval::` parameter. Tests validate u64 type enforcem
 - **When:** `clp .usage live::1 interval::60` (interrupted with Ctrl-C)
 - **Then:** Command accepted; enters live loop with 60-second cycle; exits 0 on Ctrl-C.
 - **Exit:** 0
-- **Source fn:** `it045_interval_060_live_accepted`
+- **Source fn:** `it055_interval_060_live_accepted`
 - **Source:** [params.md#parameter--21-interval](../../../../docs/cli/param/021_interval.md)
 ---
 
@@ -86,5 +86,5 @@ Edge case tests for the `interval::` parameter. Tests validate u64 type enforcem
 - **When:** `clp .usage interval::abc`
 - **Then:** Exit 1 with type validation error referencing `interval::`; value must be a non-negative integer.
 - **Exit:** 1
-- **Source fn:** `it044_interval_abc_rejected`
+- **Source fn:** `it054_interval_abc_rejected`
 - **Source:** [params.md#parameter--21-interval](../../../../docs/cli/param/021_interval.md)

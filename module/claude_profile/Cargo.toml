@@ -62,5 +62,3 @@ enabled = [
   "dep:claude_quota",
   "dep:data_fmt",
 ]
-# Convenience: enables all functionality (currently equivalent to enabled).
-full = [ "enabled" ]

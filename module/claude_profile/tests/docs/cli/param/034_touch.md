@@ -23,7 +23,7 @@ Edge case coverage for the `touch::` parameter on `.usage`. For `.account.use` t
 - **When:** `clp .usage touch::0`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned.
 - **Exit:** 0
-- **Source fn:** `it096_touch_0_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it106_touch_0_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/034_touch.md](../../../../docs/cli/param/034_touch.md)
 
 ---
@@ -34,7 +34,7 @@ Edge case coverage for the `touch::` parameter on `.usage`. For `.account.use` t
 - **When:** `clp .usage touch::1`
 - **Then:** Exits 0 with "(no accounts configured)". No error about unrecognized parameter. No subprocess spawned (no accounts to touch).
 - **Exit:** 0
-- **Source fn:** `it087_touch_1_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it097_touch_1_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/034_touch.md](../../../../docs/cli/param/034_touch.md)
 
 ---
@@ -45,7 +45,7 @@ Edge case coverage for the `touch::` parameter on `.usage`. For `.account.use` t
 - **When:** `clp .usage touch::true`
 - **Then:** Exits 0 with "(no accounts configured)". `true` is accepted as equivalent to `1`.
 - **Exit:** 0
-- **Source fn:** `it097_touch_true_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it107_touch_true_accepted_empty_store_exits_0` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/034_touch.md](../../../../docs/cli/param/034_touch.md)
 
 ---
@@ -56,7 +56,7 @@ Edge case coverage for the `touch::` parameter on `.usage`. For `.account.use` t
 - **When:** `clp .usage touch::bogus`
 - **Then:** Exits 1. Stderr indicates invalid value for `touch::`.
 - **Exit:** 1
-- **Source fn:** `it098_touch_bogus_exits_1` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it108_touch_bogus_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/034_touch.md](../../../../docs/cli/param/034_touch.md)
 
 ---
@@ -67,7 +67,7 @@ Edge case coverage for the `touch::` parameter on `.usage`. For `.account.use` t
 - **When:** `clp .usage touch::1`
 - **Then:** Exits 0. No subprocess spawned for the errored account. Account row shows original error state unchanged. Touch trigger requires `result = Ok(...)` — Err accounts are never touched.
 - **Exit:** 0
-- **Source fn:** `it088_touch_1_errored_account_skipped` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it098_touch_1_errored_account_skipped` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-04](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -79,7 +79,7 @@ Edge case coverage for the `touch::` parameter on `.usage`. For `.account.use` t
 - **When-B:** `clp .usage touch::1 format::json`
 - **Then-A and Then-B:** Both produce JSON arrays with identical schema. `touch::` does not add or remove fields from JSON objects.
 - **Exit:** 0 both cases
-- **Source fn:** `it090_touch_json_format_unaffected` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it100_touch_json_format_unaffected` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-08](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -91,7 +91,7 @@ Edge case coverage for the `touch::` parameter on `.usage`. For `.account.use` t
 - **Then:** Exits 0. No subprocess spawned. The 5h Reset column shows `—` unchanged (still idle). `touch::0` disables the touch trigger regardless of account state.
 - **Exit:** 0
 - **Live:** yes (requires live quota data with idle account)
-- **Source fn:** `it099_lim_it_touch_0_no_subprocess_idle_account_unchanged` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it109_lim_it_touch_0_no_subprocess_idle_account_unchanged` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-01](../../../../docs/feature/024_session_touch.md)
 
 ---
@@ -103,5 +103,5 @@ Edge case coverage for the `touch::` parameter on `.usage`. For `.account.use` t
 - **Then:** Exits 0. A subprocess IS spawned for the idle account (touch trigger fires: `result = Ok(...)` AND `resets_at` is absent). After the subprocess, quota is re-fetched; the 5h Reset column shows a concrete countdown (~5h) where it previously showed `—`. Divergence from EC-7: the SAME idle account produces DIFFERENT output under `touch::0` vs `touch::1`, proving the parameter governs subprocess dispatch.
 - **Exit:** 0
 - **Live:** yes (requires live quota data with idle account)
-- **Source fn:** `it100_lim_it_touch_1_subprocess_spawned_for_idle_account` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it110_lim_it_touch_1_subprocess_spawned_for_idle_account` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/024_session_touch.md AC-01, AC-03](../../../../docs/feature/024_session_touch.md)

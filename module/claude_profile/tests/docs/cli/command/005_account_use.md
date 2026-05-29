@@ -341,5 +341,4 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - **Then:** Exits 0; `switched to 'i6@test.com'` on stdout. `~/.claude.json` contains `oauthAccount.organizationName = "i6 Org"` (reflecting i6's org from `roles.json`), NOT `"i7 Org"` (the stale snapshot value). `oauthAccount.emailAddress = "i6@test.com"`.
 - **Exit:** 0
 - **Source:** [feature/004_account_use.md BUG-219](../../../../docs/feature/004_account_use.md)
-- **Source fn:** ⏳ `mre_bug_219_switch_account_stale_org_name` in `tests/account_tests.rs`
-- **Note:** This test is a BUG-219 guard — fails until the fix is implemented (TSK-221). Mark `#[doc = "bug_reproducer(219)"]` on the test function.
+- **Source fn:** `mre_bug_219_switch_account_stale_org_name` (in `claude_profile_core/tests/account_test.rs`)

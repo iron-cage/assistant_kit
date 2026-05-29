@@ -101,7 +101,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/usage.rs` | Sort implementation in `render_text()` |
+| source | `src/usage/sort.rs`, `src/usage/params.rs` | Sort implementation; strategy parsing |
 | param | [cli/param/025_sort.md](../cli/param/025_sort.md) | `sort::` parameter specification |
 | param | [cli/param/026_desc.md](../cli/param/026_desc.md) | `desc::` parameter specification |
 | param | [cli/param/027_prefer.md](../cli/param/027_prefer.md) | `prefer::` parameter specification |

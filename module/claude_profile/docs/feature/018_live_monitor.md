@@ -101,7 +101,7 @@ In live mode, `format::json` is rejected before the first fetch (see Validation)
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/usage.rs` | `live::` loop; stagger delay; countdown footer; SIGINT handler; param validation |
+| source | `src/usage/live.rs`, `src/usage/params.rs` | `live::` loop; stagger delay; countdown footer; SIGINT handler; param validation |
 | source | `src/lib.rs` | `live::`, `interval::`, `jitter::` parameter registration via `register_commands()` |
 | dep | `libc` | `signal()` for SIGINT handler (transitive dep, no new crate) |
 | test | `tests/cli/usage_test.rs` | it21 (live loop), it22–it24 (guards), it25–it29 (boundary/edge), it30 (SIGINT clean-exit) |

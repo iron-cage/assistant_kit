@@ -45,7 +45,7 @@ This file is created or overwritten on every `save()` invocation (same idempoten
 |------|------|----------------|
 | source | `src/account.rs` | `save()` — profile.json write; host/role capture |
 | source | `src/commands/account_ops.rs` | `account_save_routine()` — host/role param extraction |
-| source | `src/usage.rs` | host/role column rendering in quota table |
+| source | `src/usage/render.rs` | host/role column rendering in quota table |
 | param | [cli/param/048_host.md](../cli/param/048_host.md) | `host::` parameter specification for `.account.save` |
 | param | [cli/param/033_cols.md](../cli/param/033_cols.md) | `cols::` registry — `host` and `role` column IDs |
 | doc | [002_account_save.md](002_account_save.md) | Account save operation this feature extends |

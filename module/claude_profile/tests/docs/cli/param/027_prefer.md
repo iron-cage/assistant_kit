@@ -75,5 +75,5 @@ Edge case coverage for the `prefer::` parameter on `.usage`. See [param/027_pref
 - **Then-A:** Account placed in qualified tier (ranked above any unqualified accounts).
 - **Then-B:** Account placed in unqualified tier (ranked below any qualified accounts).
 - **Exit:** n/a (unit test — function return assertion)
-- **Source fn:** `test_prefer_sonnet_qualifies_by_sonnet_quota` (in `src/usage.rs`)
+- **Source fn:** `test_prefer_sonnet_qualifies_by_sonnet_quota` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-07](../../../../docs/feature/020_usage_sort_strategies.md)

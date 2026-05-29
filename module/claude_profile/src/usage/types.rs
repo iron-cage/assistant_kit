@@ -58,7 +58,7 @@ impl PreferStrategy
 }
 
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-pub( crate ) enum NextStrategy { Endurance, Drain }
+pub( crate ) enum NextStrategy { Renew, Endurance, Drain }
 
 impl NextStrategy
 {
@@ -66,10 +66,11 @@ impl NextStrategy
   {
     match s
     {
+      "renew"     => Ok( Self::Renew ),
       "endurance" => Ok( Self::Endurance ),
       "drain"     => Ok( Self::Drain ),
       _           => Err( format!(
-        "invalid next:: value {s:?}: valid values are `endurance`, `drain`",
+        "invalid next:: value {s:?}: valid values are `renew`, `endurance`, `drain`",
       ) ),
     }
   }
@@ -102,6 +103,10 @@ pub( crate ) struct ColsVisibility
   pub( crate ) d7_reset     : bool,
   /// `7d Son Reset` Sonnet weekly reset countdown (default OFF).
   pub( crate ) d7_son_reset : bool,
+  /// `Host` machine label column (default OFF).
+  pub( crate ) host         : bool,
+  /// `Role` user-defined role tag column (default OFF).
+  pub( crate ) role         : bool,
 }
 
 impl ColsVisibility
@@ -120,6 +125,8 @@ impl ColsVisibility
       d7_son       : true,
       d7_reset     : true,
       d7_son_reset : false,
+      host         : false,
+      role         : false,
     }
   }
 
@@ -149,8 +156,10 @@ impl ColsVisibility
       "7d_son"       => self.d7_son       = show,
       "7d_reset"     => self.d7_reset     = show,
       "7d_son_reset" => self.d7_son_reset = show,
+      "host"         => self.host         = show,
+      "role"         => self.role         = show,
       _              => return Err( format!(
-        "cols:: unknown column {id:?}: valid IDs are `status`, `expires`, `sub`, `renews`, `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `7d_son_reset`",
+        "cols:: unknown column {id:?}: valid IDs are `status`, `expires`, `sub`, `renews`, `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `7d_son_reset`, `host`, `role`",
       ) ),
     }
     Ok( () )
@@ -169,6 +178,7 @@ impl ColsVisibility
 
 // ── Per-account quota result ───────────────────────────────────────────────────
 
+/// Per-account quota fetch result, bundling identity, state flags, and the raw usage data.
 pub( crate ) struct AccountQuota
 {
   pub( crate ) name          : String,
@@ -181,39 +191,139 @@ pub( crate ) struct AccountQuota
   pub( crate ) result        : Result< OauthUsageData, String >,
   /// Billing state from `GET /api/oauth/account`; `None` if the fetch failed.
   pub( crate ) account       : Option< claude_quota::OauthAccountData >,
+  /// Machine label from `{name}.profile.json`; empty when absent.
+  pub( crate ) host          : String,
+  /// User-defined role tag from `{name}.profile.json`; empty when absent.
+  pub( crate ) role          : String,
 }
 
 // ── Command handler ────────────────────────────────────────────────────────────
 
 /// Parsed `.usage` parameters extracted from a `VerifiedCommand`.
+#[ allow( clippy::struct_excessive_bools ) ]
 pub( crate ) struct UsageParams
 {
   /// 1 = auto-refresh expired tokens (default); 0 = show errors as-is.
-  pub( crate ) refresh  : i64,
+  pub( crate ) refresh           : i64,
   /// 1 = continuous live-monitor loop; 0 = single fetch (default).
-  pub( crate ) live     : i64,
+  pub( crate ) live              : i64,
   /// Seconds between live-loop cycles (default 30; only validated when live=1).
-  pub( crate ) interval : u64,
+  pub( crate ) interval          : u64,
   /// Max random seconds added to each cycle (default 0; only validated when live=1).
-  pub( crate ) jitter   : u64,
+  pub( crate ) jitter            : u64,
   /// true = emit `[trace]` diagnostic lines to stderr.
-  pub( crate ) trace    : bool,
+  pub( crate ) trace             : bool,
   /// Row ordering strategy for the text table.
-  pub( crate ) sort     : SortStrategy,
+  pub( crate ) sort              : SortStrategy,
   /// Sort direction override; `None` = use strategy's context-sensitive default.
-  pub( crate ) desc     : Option< bool >,
+  pub( crate ) desc              : Option< bool >,
   /// Weekly quota column selector for strategies that reference weekly availability.
-  pub( crate ) prefer   : PreferStrategy,
+  pub( crate ) prefer            : PreferStrategy,
   /// Recommendation strategy controlling `→` marker and footer format.
-  pub( crate ) next     : NextStrategy,
+  pub( crate ) next              : NextStrategy,
   /// Column visibility modifiers applied to the text table.
-  pub( crate ) cols     : ColsVisibility,
+  pub( crate ) cols              : ColsVisibility,
   /// 1 = activate idle 5h session windows via subprocess (default); 0 = off.
-  pub( crate ) touch    : i64,
+  pub( crate ) touch             : i64,
   /// Subprocess model selection (default: `auto`).
-  pub( crate ) imodel   : SubprocessModel,
+  pub( crate ) imodel            : SubprocessModel,
   /// Subprocess effort level (default: `auto`).
-  pub( crate ) effort   : SubprocessEffort,
+  pub( crate ) effort            : SubprocessEffort,
+  // ── Row filtering (TSK-223) ────────────────────────────────────────────────
+  /// Max rows to display; 0 = show all.
+  pub( crate ) count             : u64,
+  /// Skip first N rows from the filtered result before display.
+  pub( crate ) offset            : u64,
+  /// When true, show only the per-machine active account row.
+  pub( crate ) only_active       : bool,
+  /// When true, show only the row receiving the `→` recommendation marker.
+  pub( crate ) only_next         : bool,
+  /// Minimum 5h quota percentage (0–100); rows below threshold are hidden.
+  pub( crate ) min_5h            : u8,
+  /// Minimum 7d quota percentage (0–100); rows below threshold are hidden.
+  pub( crate ) min_7d            : u8,
+  /// When true, hide 🔴 rows (invalid/expired token).
+  pub( crate ) only_valid        : bool,
+  /// When true, hide 🟡 and 🔴 rows; show only 🟢 rows.
+  pub( crate ) exclude_exhausted : bool,
+  // ── Format / extraction (TSK-224) ─────────────────────────────────────────
+  /// Output format for the result set.
+  pub( crate ) format    : UsageOutputFormat,
+  /// When `Some`, extract this field's value from the first row as bare string.
+  pub( crate ) get       : Option< GetField >,
+  /// When true, replace percentage columns with absolute token counts (no-op when API data absent).
+  pub( crate ) abs       : bool,
+  /// When true, strip emoji and ANSI sequences from the output.
+  pub( crate ) no_color  : bool,
+}
+
+// ── Output format ─────────────────────────────────────────────────────────────
+
+/// Output format for the `.usage` command.
+#[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
+pub( crate ) enum UsageOutputFormat
+{
+  /// Human-readable table (default).
+  Text,
+  /// Machine-readable JSON array.
+  Json,
+  /// Tab-separated values, plain-text status labels (`ok`/`warn`/`err`).
+  Tsv,
+  /// Same layout as `Text` with no emoji or ANSI sequences.
+  Plain,
+  /// Bare value extraction; outputs one field for the first row only.
+  Value,
+}
+
+// ── GetField ──────────────────────────────────────────────────────────────────
+
+/// Field selector for `get::` single-value extraction.
+#[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
+pub( crate ) enum GetField
+{
+  FiveHourLeft,
+  FiveHourReset,
+  SevenDayLeft,
+  SevenDaySon,
+  SevenDayReset,
+  Expires,
+  Renews,
+  Sub,
+  Status,
+  Account,
+  Host,
+  Role,
+  NextEventType,
+  NextEventSecs,
+}
+
+impl GetField
+{
+  pub( crate ) fn parse( s : &str ) -> Result< Self, String >
+  {
+    match s
+    {
+      "5h_left"         => Ok( Self::FiveHourLeft ),
+      "5h_reset"        => Ok( Self::FiveHourReset ),
+      "7d_left"         => Ok( Self::SevenDayLeft ),
+      "7d_son"          => Ok( Self::SevenDaySon ),
+      "7d_reset"        => Ok( Self::SevenDayReset ),
+      "expires"         => Ok( Self::Expires ),
+      "renews"          => Ok( Self::Renews ),
+      "sub"             => Ok( Self::Sub ),
+      "status"          => Ok( Self::Status ),
+      "account"         => Ok( Self::Account ),
+      "host"            => Ok( Self::Host ),
+      "role"            => Ok( Self::Role ),
+      "next_event_type" => Ok( Self::NextEventType ),
+      "next_event_secs" => Ok( Self::NextEventSecs ),
+      _                 => Err( format!(
+        "invalid get:: field {s:?}: valid IDs are \
+`5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `expires`, `renews`, \
+`sub`, `status`, `account`, `host`, `role`, `next_event_type`, `next_event_secs`",
+      ) ),
+    }
+  }
 }
 
 // ── Subprocess model / effort enums ───────────────────────────────────────────

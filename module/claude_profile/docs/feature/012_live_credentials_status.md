@@ -59,7 +59,7 @@ Each output line is independently controlled by a boolean param. All default to 
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/commands.rs` | `credentials_status_routine()` — reads credentials directly, no account store calls |
+| source | `src/commands/credentials.rs` | `credentials_status_routine()` — reads credentials directly, no account store calls |
 | test | `tests/cli/credentials_test.rs::cred01–cred07` | Account-store independence, field presence, JSON, N/A cases |
 | doc | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account-store-aware status command |
 | doc | [command/002_credentials.md](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI command specification |

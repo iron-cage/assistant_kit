@@ -68,7 +68,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage trace::0`
 - **Then:** stderr contains no `[trace]` lines; behavior identical to default; exit 0.
 - **Exit:** 0
-- **Source fn:** `it049_trace_0_no_trace_on_stderr`
+- **Source fn:** `it059_trace_0_no_trace_on_stderr`
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
@@ -78,7 +78,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage trace::2`
 - **Then:** Exit 1 with error referencing `trace::`; must be 0 or 1.
 - **Exit:** 1
-- **Source fn:** `it050_trace_2_rejected`
+- **Source fn:** `it060_trace_2_rejected`
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
@@ -88,7 +88,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage trace::yes`
 - **Then:** Exit 1 with type validation error referencing `trace::`.
 - **Exit:** 1
-- **Source fn:** `it051_trace_yes_rejected`
+- **Source fn:** `it061_trace_yes_rejected`
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 
@@ -98,7 +98,7 @@ Edge case tests for the `trace::` parameter. Tests validate boolean enforcement,
 - **When:** `clp .usage` (no `trace::` param)
 - **Then:** stderr contains no `[trace]` lines; behavior identical to `trace::0`; exit 0.
 - **Exit:** 0
-- **Source fn:** `it052_trace_default_off`
+- **Source fn:** `it062_trace_default_off`
 - **Source:** [params.md#parameter--23-trace](../../../../docs/cli/param/023_trace.md)
 ---
 

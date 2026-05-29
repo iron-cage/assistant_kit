@@ -23,6 +23,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 023_next_account_strategies.md | FT cases for Feature 023 — Next Account Recommendation Strategies |
 | 028_usage_row_filtering.md | FT cases for Feature 028 — Usage Row Filtering and Extraction |
 | 029_account_host_metadata.md | FT cases for Feature 029 — Account Host and Role Metadata |
+| 030_account_renewal_override.md | FT cases for Feature 030 — Account Billing Renewal Override |
 | 024_session_touch.md | FT cases for Feature 024 — Session Touch via Isolated Subprocess |
 | 025_per_machine_active_marker.md | FT cases for Feature 025 — Per-Machine Active Marker |
 | 026_subprocess_model_effort.md | FT cases for Feature 026 — Subprocess Model and Effort Control |
@@ -32,8 +33,8 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | Feature | File | Cases | Status |
 |---------|------|-------|--------|
-| 002_account_save | [002_account_save.md](002_account_save.md) | FT-01 … FT-10 | ✅ |
-| 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-16 | ✅ |
+| 002_account_save | [002_account_save.md](002_account_save.md) | FT-01 … FT-11 | ⏳ |
+| 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-19 | ⏳ |
 | 017_token_refresh | [017_token_refresh.md](017_token_refresh.md) | FT-01 … FT-17 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](018_live_monitor.md) | FT-01 … FT-09 | ✅ |
 | 020_usage_sort_strategies | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | FT-01 … FT-17 | ✅ |
@@ -46,5 +47,6 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | FT-01 … FT-17 | ✅ |
 | 028_usage_row_filtering | [028_usage_row_filtering.md](028_usage_row_filtering.md) | FT-01 … FT-16 | ✅ |
 | 029_account_host_metadata | [029_account_host_metadata.md](029_account_host_metadata.md) | FT-01 … FT-10 | ✅ |
+| 030_account_renewal_override | [030_account_renewal_override.md](030_account_renewal_override.md) | FT-01 … FT-15 | ⏳ |
 
-**Total:** 14 feature specs; 15 of 29 feature instances not yet covered by dedicated FT specs.
+**Total:** 15 feature specs; 15 of 30 feature instances not yet covered by dedicated FT specs.

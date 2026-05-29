@@ -6,10 +6,12 @@ Edge case coverage for the `offset::` parameter on `.usage`. See [param/038_offs
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | `offset::2` skips first 2 rows | Row Skip |
-| EC-2 | `offset::0` (default) shows from first row | No Skip |
+| EC-1 | `offset::2` skips first 2 rows | Behavioral Divergence |
+| EC-2 | `offset::0` (default) shows from first row | Behavioral Divergence |
 | EC-3 | `offset::99` with 2 accounts shows 0 rows, exits 0 | Over-offset |
 | EC-4 | `offset::abc` exits 1 with type error | Invalid Value |
+| EC-5 | `count::1 offset::1 sort::name` shows second row only | Pagination Composition |
+| EC-6 | `offset::-1` exits 1 (negative integer rejected) | Invalid Value |
 
 ---
 
@@ -52,6 +54,28 @@ Edge case coverage for the `offset::` parameter on `.usage`. See [param/038_offs
 - **Given:** Any environment.
 - **When:** `clp .usage offset::abc`
 - **Then:** Exits 1. Stderr contains a type error message.
+- **Exit:** 1
+- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source:** [param/038_offset.md](../../../../docs/cli/param/038_offset.md)
+
+---
+
+### EC-5: `count::1 offset::1 sort::name` shows second row only
+
+- **Given:** Three accounts with deterministic name sort (sorted: `alice`, `bob`, `charlie`).
+- **When:** `clp .usage count::1 offset::1 sort::name`
+- **Then:** Exits 0. Exactly 1 row shown — `bob` (second alphabetically). `alice` skipped by offset; `charlie` excluded by count.
+- **Exit:** 0
+- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source:** [param/038_offset.md](../../../../docs/cli/param/038_offset.md)
+
+---
+
+### EC-6: `offset::-1` exits 1 (negative value rejected)
+
+- **Given:** Any environment.
+- **When:** `clp .usage offset::-1`
+- **Then:** Exits 1. Stderr indicates value must be a non-negative integer.
 - **Exit:** 1
 - **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
 - **Source:** [param/038_offset.md](../../../../docs/cli/param/038_offset.md)

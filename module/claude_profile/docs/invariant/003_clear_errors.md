@@ -46,5 +46,5 @@ All errors produced by `claude_profile` must provide actionable messages — mes
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/commands.rs` | Error message formatting for all CLI command handlers |
+| source | `src/commands/` | Error message formatting for all CLI command handlers |
 | source | `src/account.rs` | Account CRUD error messages (NotFound, PermissionDenied) |

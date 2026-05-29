@@ -4,7 +4,7 @@
 
 - **Purpose**: Allow `name::` to be supplied as a bare positional argument or resolved from a prefix, removing friction when typing account-management commands.
 - **Responsibility**: Documents the positional-argument adapter rewrite and prefix-resolution logic for the four `name::` commands.
-- **In Scope**: Positional rewrite in `src/adapter.rs`; prefix resolution in `src/commands.rs` affecting `.accounts`, `.account.use`, `.account.delete`, `.account.limits`.
+- **In Scope**: Positional rewrite in `src/adapter.rs`; prefix resolution in `src/commands/accounts.rs`, `src/commands/account_ops.rs` affecting `.accounts`, `.account.use`, `.account.delete`, `.account.limits`.
 - **Out of Scope**: Email validation (`account::validate_name()` — unchanged); `.account.save` name inference from `~/.claude.json` (→ 002_account_save.md); `~/.claude/.credentials.json` live account detection (→ 009_token_usage.md).
 
 ### Design
@@ -53,7 +53,7 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use car` →
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/adapter.rs` | `argv_to_unilang_tokens()` — positional rewrite for name-taking commands |
-| source | `src/commands.rs` | `account_use_routine`, `account_delete_routine`, `accounts_routine`, `account_limits_routine` — prefix resolution |
+| source | `src/commands/account_ops.rs`, `src/commands/accounts.rs`, `src/commands/limits.rs` | `account_use_routine`, `account_delete_routine`, `accounts_routine`, `account_limits_routine` — prefix resolution |
 | source | `src/lib.rs` | `cli::print_usage()` — update example to use positional form |
 | test | `tests/cli/account_mutations_test.rs` | account.use (aw13–aw15) and account.delete (ad13–ad14) positional and prefix cases |
 | test | `tests/cli/accounts_test.rs` | accounts (acc29–acc30) positional and prefix cases |

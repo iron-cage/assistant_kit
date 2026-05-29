@@ -59,5 +59,5 @@ Interaction tests for Group 4 (Sort Control: `sort::`, `desc::`, `prefer::`). Se
 - **Then-A:** `any_leader@test.com` ranks first (30% `7d(Son)` < 80% → ascending → lower weekly first under `prefer::sonnet`).
 - **Then-B:** `son_leader@test.com` ranks first (`prefer::any`: min(20%,80%)=20% < min(60%,30%)=30% → lower min-weekly first).
 - **Exit:** n/a (unit test — function return assertion)
-- **Source fn:** `test_sort_drain_prefer_sonnet_primary`, `test_sort_drain_prefer_any_primary` (in `src/usage.rs`)
+- **Source fn:** `test_sort_drain_prefer_sonnet_primary`, `test_sort_drain_prefer_any_primary` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-08](../../../../docs/feature/020_usage_sort_strategies.md)

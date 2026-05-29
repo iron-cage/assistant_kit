@@ -86,7 +86,7 @@ Edge case coverage for the `sort::` parameter on `.usage`. See [param/025_sort.m
 - **Then-A:** Row order: `a_plain@test.com`, `z_qualified@test.com`.
 - **Then-B:** Row order: `z_qualified@test.com`, `a_plain@test.com` (qualified surfaced to top).
 - **Exit:** n/a (unit test — function return assertion)
-- **Source fn:** `test_sort_name_alphabetical`, `test_sort_endurance_default_equals_desc1` (in `src/usage.rs`)
+- **Source fn:** `test_sort_name_alphabetical`, `test_sort_endurance_default_equals_desc1` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-01, AC-02](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---

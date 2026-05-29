@@ -117,7 +117,7 @@ clp .account.save name::alice@acme.com dry::1
 **Notes:**
 - Also writes `{credential_store}/_active_{hostname}_{user}` = `{name}` on every successful save (per-machine active marker via `active_marker_filename()`).
 - Also calls endpoint 005 (`GET /api/oauth/claude_cli/roles`) and writes `{name}.roles.json` (best-effort: failure is silently skipped).
-- **Metadata refresh:** Re-running `.account.save` for an existing name overwrites all snapshot files and re-fetches endpoint 005 — this is the canonical way to refresh cached org identity without re-login.
+- **Metadata refresh:** Re-running `.account.save` for an existing name refreshes all snapshot files and re-fetches endpoint 005 — this is the canonical way to refresh cached org identity without re-login. `{name}.claude.json` is updated via read-merge (not full overwrite): the `oauthAccount` key is replaced but all other keys (e.g., `_renewal_at` set by `.account.renewal`) are preserved.
 
 ---
 
@@ -350,3 +350,58 @@ clp .account.rotate
 - Equivalent to `clp .account.use $(best_account)` but without requiring the caller to determine the best candidate.
 - If only one account is configured, or all saved accounts match the active one, exits 2.
 - For explicit selection by name, use [`.account.use`](#command--5-accountuse).
+
+---
+
+### Command :: 14. `.account.renewal`
+
+Set, preview, or clear the billing renewal timestamp override (`_renewal_at`) stored in `{name}.claude.json`. When set, the `.usage` `~Renews` column shows an exact duration (`in Xh Ym`) instead of the estimated `~`-prefixed value derived from `org_created_at`. Supports single account, comma-separated list, or `name::all` to update every saved account in one operation.
+
+-- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`at::`](../param/049_at.md), [`from_now::`](../param/050_from_now.md), [`clear::`](../param/051_clear.md), [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
+-- **Exit:** 0 (success) | 1 (usage: no operation provided, conflicting params, or invalid format) | 2 (runtime: account not found or credential store unreadable)
+
+**Syntax:**
+
+```bash
+clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z
+clp .account.renewal name::alice@acme.com from_now::+1h30m
+clp .account.renewal name::alice@acme.com from_now::-30m
+clp .account.renewal name::alice@acme.com clear::1
+clp .account.renewal name::all from_now::+0m
+clp .account.renewal name::alice@acme.com,bob@acme.com at::2026-06-29T21:00:00Z
+clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
+```
+
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `name::` | [`AccountName`](../type/001_account_name.md) or `all` or comma-list | **(required)** | Target account(s): single email/prefix, comma-separated list, or `all` for every saved account |
+| `at::` | `string` | *(omit)* | Absolute ISO-8601 UTC renewal timestamp (e.g., `2026-06-29T21:00:00Z`); mutually exclusive with `from_now::` and `clear::` |
+| `from_now::` | `string` | *(omit)* | Signed duration delta from now (e.g., `+3h30m`, `-30m`, `+0m`); mutually exclusive with `at::` and `clear::` |
+| `clear::` | `bool` | `0` | Remove `_renewal_at` from `{name}.claude.json`; mutually exclusive with `at::` and `from_now::` |
+| `dry::` | `bool` | `0` | Preview operation without writing files |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each file read and write step |
+
+**Examples:**
+
+```bash
+clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z
+# renewal set for 'alice@acme.com': 2026-06-29T21:00:00Z  (in 30d 14h)
+
+clp .account.renewal name::all from_now::+0m
+# renewal set for 'alice@acme.com': 2026-05-29T18:34:22Z  (now)
+# renewal set for 'bob@acme.com':   2026-05-29T18:34:22Z  (now)
+# renewal set for 'carol@acme.com': 2026-05-29T18:34:22Z  (now)
+
+clp .account.renewal name::alice@acme.com clear::1
+# renewal cleared for 'alice@acme.com'  (~Renews will show estimate from org_created_at)
+
+clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
+# [dry-run] would set renewal for 'alice@acme.com': 2026-06-29T21:00:00Z  (in 30d 14h)
+```
+
+**Notes:**
+- `_renewal_at` is stored as a top-level key in `{name}.claude.json` alongside `oauthAccount`. It is preserved when `clp .account.save` re-saves that account (read-merge).
+- Past `_renewal_at` values are auto-advanced monthly by `.usage` at render time — no need to re-set after each billing cycle.
+- `from_now::+0m` sets the override to the current time, which immediately enters the monthly auto-advance cycle.
+- `name::all` targets every account in the credential store at the time of execution.
+- See [feature/030_account_renewal_override.md](../../feature/030_account_renewal_override.md) for full semantics, `~Renews` rendering rules, and acceptance criteria.

@@ -56,7 +56,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Name, None, PreferStrategy::Any, 0)`
 - **Then:** Indices reordered to: `a@x.com`, `b@x.com`, `c@x.com`.
 - **Exit:** n/a (unit test — function return assertion)
-- **Source fn:** `test_sort_name_alphabetical` (in `src/usage.rs`)
+- **Source fn:** `test_sort_name_alphabetical` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -67,7 +67,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Endurance, None, PreferStrategy::Any, now_secs)`
 - **Then:** `A` ranks first (only qualified account); `B` and `C` follow (unqualified).
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_endurance_default_equals_desc1` (in `src/usage.rs`)
+- **Source fn:** `test_sort_endurance_default_equals_desc1` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-02](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -78,7 +78,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0)` (desc=false is the default for drain)
 - **Then:** Order: `B` (30% 7d Left — lowest non-exhausted weekly), `C` (100% 7d Left), then `A` (h-exhausted, sunk). h-exhausted floor at bottom; non-h-exhausted sorted by `7d Left` ascending; tiebreak `5h Left`.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_drain_exhausted_sunk_rest_ascending` (in `src/usage.rs`)
+- **Source fn:** `test_sort_drain_exhausted_sunk_rest_ascending` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-03](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -89,7 +89,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, now_secs)`
 - **Then:** Order: `A`, `B`, `C`, then `D` (sunk). Non-h-exhausted sorted by soonest `7d Reset` countdown first.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_renew_soonest_first_exhausted_last` (in `src/usage.rs`)
+- **Source fn:** `test_sort_renew_soonest_first_exhausted_last` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-04](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -102,7 +102,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then-A:** Order: `B` (25% 5h Left, 7d Left tied at 100% — tiebreak wins), `A` (70%), `C` (1%, sunk).
 - **Then-B:** Order: `A` (70%), `B` (25%), `C` (1%, still sunk — h-exhausted floor is not reversed).
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_drain_desc_reverses_non_exhausted_only` (in `src/usage.rs`)
+- **Source fn:** `test_sort_drain_desc_reverses_non_exhausted_only` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-05](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -115,7 +115,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then-A (endurance no desc):** Same as `desc::1` — best on top.
 - **Then-B (drain no desc):** Same as `desc::0` — drain targets on top (7d Left=100% tied; tiebreak `5h_left` asc: B=20% < A=80%).
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_endurance_default_equals_desc1`, `test_sort_drain_default_equals_desc0` (in `src/usage.rs`)
+- **Source fn:** `test_sort_endurance_default_equals_desc1`, `test_sort_drain_default_equals_desc0` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-06](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -128,7 +128,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then-A:** `prefer_weekly` returns ~10.0 (below qualification threshold).
 - **Then-B:** `prefer_weekly` returns ~35.0 (above qualification threshold).
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_prefer_sonnet_qualifies_by_sonnet_quota` (in `src/usage.rs`)
+- **Source fn:** `test_prefer_sonnet_qualifies_by_sonnet_quota` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-07](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -139,7 +139,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `render_json(&accounts)` — no sort applied.
 - **Then:** JSON output preserves input order — `zzz@test.com` appears before `aaa@test.com`, confirming `render_json` does not re-sort.
 - **Exit:** n/a (unit test against `render_json`)
-- **Source fn:** `test_json_unaffected_by_sort` (in `src/usage.rs`)
+- **Source fn:** `test_json_unaffected_by_sort` (in `src/usage/mod.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-13](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -150,7 +150,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `clp .usage sort::bogus`
 - **Then:** Exits 1. Stderr names the five valid values: `name`, `endurance`, `drain`, `renew`, `next`.
 - **Exit:** 1
-- **Source fn:** `it047_sort_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_sort_strategy_parse_invalid_rejected` (in `src/usage.rs`)
+- **Source fn:** `it057_sort_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_sort_strategy_parse_invalid_rejected` (in `src/usage/mod.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-09](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -161,7 +161,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `clp .usage prefer::bogus`
 - **Then:** Exits 1. Stderr names the three valid values: `any`, `opus`, `sonnet`.
 - **Exit:** 1
-- **Source fn:** `it048_prefer_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_prefer_strategy_parse_invalid_rejected` (in `src/usage.rs`)
+- **Source fn:** `it058_prefer_invalid_value_exit_1` (in `tests/cli/usage_test.rs`); unit: `test_prefer_strategy_parse_invalid_rejected` (in `src/usage/mod.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-10](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -172,7 +172,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `render_text(&accounts, SortStrategy::Drain, None, PreferStrategy::Any)` — drain order puts `b@x.com` (25%) first.
 - **Then:** Footer still shows `→ a@x.com` (AC-11: `find_recommendation` always runs on the original alphabetical slice).
 - **Exit:** n/a (unit test against `render_text` + `find_recommendation`)
-- **Source fn:** `test_sort_recommendation_unaffected_by_sort_strategy` (in `src/usage.rs`)
+- **Source fn:** `test_sort_recommendation_unaffected_by_sort_strategy` (in `src/usage/mod.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-11](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -185,7 +185,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then-A:** `high_any@test.com` ranks first (30% `7d(Son)` < 80% → ascending → lower weekly first under `prefer::sonnet`).
 - **Then-B:** `high_son@test.com` ranks first (20% `7d Left` < 60% → ascending → lower weekly first under `prefer::opus`).
 - **Exit:** n/a (unit test — function return assertion)
-- **Source fn:** `test_sort_drain_prefer_sonnet_primary`, `test_prefer_opus_primary_in_drain` (in `src/usage.rs`)
+- **Source fn:** `test_sort_drain_prefer_sonnet_primary`, `test_prefer_opus_primary_in_drain` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-08](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -207,7 +207,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, now_secs)` — default strategy is `renew`.
 - **Then:** `early@test.com` ranks first (resets in 1h — soonest reset first), `late@test.com` second. Confirms renew default = `desc::0`.
 - **Exit:** n/a (unit test)
-- **Source fn:** `test_sort_renew_default_equals_desc0` (in `src/usage.rs`); `it127_sort_default_is_renew_structural` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `test_sort_renew_default_equals_desc0` (in `src/usage/sort.rs`); `it137_sort_default_is_renew_structural` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-01](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -223,7 +223,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then-A (default):** Output order: `sess_a@x.com` (h-exhausted sub-group), `sess_b@x.com` (h-exhausted sub-group), `weekly@x.com` (weekly sub-group). `weekly@x.com` is last despite being alpha-first.
 - **Then-B (desc::1):** Output order: `sess_b@x.com`, `sess_a@x.com` (h-exhausted sub-group reversed), `weekly@x.com` (weekly sub-group last — not moved to front by `desc::1`).
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
-- **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (When-A), `test_ft15_020_yellow_sub_grouping_not_reversed_by_desc` (When-B) (in `src/usage.rs`)
+- **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (When-A), `test_ft15_020_yellow_sub_grouping_not_reversed_by_desc` (When-B) (in `src/usage/mod.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-14](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -234,7 +234,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **When:** `sort_indices(&accounts, SortStrategy::Endurance, None, PreferStrategy::Any, now_secs)` — endurance default `desc::1`, all unqualified.
 - **Then:** Order: B (100% weekly), C (73% weekly), A (2% weekly). When session quotas are equal, highest `weekly(prefer)` wins the tiebreak — not alphabetical insertion order.
 - **Exit:** n/a (unit test — index assertion)
-- **Source fn:** `test_bug173_mre_endurance_unqualified_prefers_highest_weekly` (in `src/usage.rs`)
+- **Source fn:** `test_bug173_mre_endurance_unqualified_prefers_highest_weekly` (in `src/usage/sort.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-02](../../../../docs/feature/020_usage_sort_strategies.md)
 
 ---
@@ -247,5 +247,5 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Then-A:** Exits 0 with "(no accounts configured)". `sort::next` resolves to `sort::drain` and is accepted without error.
 - **Then-B:** Exits 0 with "(no accounts configured)". `sort::next` resolves to `sort::endurance` and is accepted without error.
 - **Exit:** 0 both cases
-- **Source fn:** `it111_sort_next_accepted`, `it128_sort_next_resolves_to_drain_structural`, `it129_sort_next_resolves_to_endurance_structural` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it121_sort_next_accepted`, `it138_sort_next_resolves_to_drain_structural`, `it139_sort_next_resolves_to_endurance_structural` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-15](../../../../docs/feature/020_usage_sort_strategies.md)

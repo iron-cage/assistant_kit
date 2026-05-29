@@ -43,6 +43,6 @@
 | doc | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | `{name}.roles.json` lifecycle — delete removes it best-effort |
 | doc | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine active marker naming convention used in deletion step |
 | source | `src/account.rs` | `delete()` — validate, remove file, clear per-machine active marker if active |
-| source | `src/commands.rs` | `account_delete_routine()` — CLI handler |
+| source | `src/commands/account_ops.rs` | `account_delete_routine()` — CLI handler |
 | test | `tests/account_tests.rs::delete_active_account_succeeds` | Verifies active account deletion clears per-machine active marker |
 | doc | [command/001_account.md](../cli/command/001_account.md#command--6-accountdelete) | CLI command specification |

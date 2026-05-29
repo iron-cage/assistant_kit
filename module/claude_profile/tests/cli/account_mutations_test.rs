@@ -26,6 +26,7 @@
 //! | as16 | `as16_save_writes_active_marker` | save writes active marker = name | P |
 //! | as17 | `as17_save_slash_in_email_local_part_exits_1` | `/` in email local part → exit 1 | N |
 //! | as18 | `as18_save_backslash_in_email_local_part_exits_1` | `\` in email local part → exit 1 | N |
+//! | as22 | `as22_save_preserves_renewal_at` | second `.account.save` preserves `_renewal_at` via read-merge | P |
 //!
 //! ### AW — Account Use
 //!
@@ -83,6 +84,7 @@
 //! | as19 | `as19_save_best_effort_no_roles_json` | save with no valid token → exit 0; no roles.json | P |
 //! | as20 | `as20_lim_it_save_writes_roles_json` | save with valid token → roles.json created (`lim_it`) | P |
 //! | as21 | `as21_lim_it_resave_overwrites_roles_json` | second save overwrites roles.json (`lim_it`) | P |
+//! | as23 | `as_save_writes_profile_json` | `host::testbox role::dev` → `{name}.profile.json` created with JSON | P |
 //!
 //! ### AR — Account Relogin
 //!
@@ -96,6 +98,27 @@
 //! | ar07 | `ar07_relogin_positional_bare_arg` | positional `work@acme.com dry::1` → resolves | P |
 //! | ar08 | `ar08_relogin_prefix_resolves` | prefix `work dry::1` → `work@acme.com` | P |
 //! | ar09 | `ar09_relogin_invalid_chars_exits_1` | `name::bad/name` → exit 1 | N |
+//!
+//! ### ARN — Account Renewal
+//!
+//! | ID | Test Function | Condition | P/N |
+//! |----|---------------|-----------|-----|
+//! | arn01 | `ft01_account_renewal_at_writes_renewal_at` | `at::` writes `_renewal_at`; `oauthAccount` preserved | P |
+//! | arn02 | `ft02_account_renewal_from_now_positive` | `from_now::+1h30m` writes future `_renewal_at` | P |
+//! | arn03 | `ft03_account_renewal_from_now_negative` | `from_now::-30m` writes past `_renewal_at` (verbatim) | P |
+//! | arn04 | `ft04_account_renewal_clear_removes_key` | `clear::1` removes `_renewal_at`; `oauthAccount` preserved | P |
+//! | arn05 | `ft05_account_renewal_name_all_updates_all` | `name::all from_now::+0m` writes to every account | P |
+//! | arn06 | `ft06_account_renewal_dry_no_write` | `dry::1` prints `[dry-run]`; no file written | P |
+//! | arn07 | `ft07_account_renewal_at_from_now_conflict` | `at::` + `from_now::` together exits 1 | N |
+//! | arn08 | `ft08_account_renewal_at_clear_conflict` | `at::` + `clear::` together exits 1 | N |
+//! | arn09 | `ft09_account_renewal_from_now_clear_conflict` | `from_now::` + `clear::` together exits 1 | N |
+//! | arn10 | `ft10_account_renewal_no_operation_exits_1` | no operation param exits 1 | N |
+//! | arn11 | `ft11_account_renewal_unknown_account_exits_2` | unknown account exits 2 | N |
+//! | arn12 | `ft12_account_renewal_comma_list_updates_both` | comma-list updates both accounts | P |
+//! | arn13 | `ft13_account_renewal_partial_comma_list` | unknown in comma-list reported; others processed | N |
+//! | arn14 | `ft14_account_renewal_past_at_accepted` | past `at::` written verbatim; not auto-advanced at write | P |
+//! | arn15 | `ft15_account_renewal_unknown_param_exits_1` | unknown param rejected → exit 1 | N |
+//! | arn16 | `ft16_account_renewal_creates_new_claude_json` | no prior `.claude.json` → file created | P |
 //!
 //! ### Bug Reproducers
 //!
@@ -2065,5 +2088,532 @@ fn mre_bug_217_switch_account_enforces_emailaddress()
   assert!(
     claude_json.contains( "\"someGlobalKey\":true" ),
     "switch_account must preserve global keys in ~/.claude.json, got:\n{claude_json}",
+  );
+}
+
+// ── ARN: Account Renewal ──────────────────────────────────────────────────────
+
+#[ test ]
+fn ft01_account_renewal_at_writes_renewal_at()
+{
+  // FT-01 (FR-030 AC-01): `at::` writes `_renewal_at`; existing `oauthAccount` preserved.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  std::fs::write(
+    store.join( "test@example.com.claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"test@example.com","subscriptionType":"max"}}"#,
+  ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "at::2026-06-29T21:00:00Z" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    "must write exact _renewal_at value, got: {content}",
+  );
+  assert!(
+    content.contains( "oauthAccount" ),
+    "must preserve oauthAccount on write, got: {content}",
+  );
+}
+
+#[ test ]
+fn ft02_account_renewal_from_now_positive()
+{
+  // FT-02 (FR-030 AC-02): `from_now::+1h30m` writes future ISO-8601 UTC timestamp.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "from_now::+1h30m" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""_renewal_at":"202"# ),
+    "must write ISO-8601 timestamp starting with 202x in _renewal_at, got: {content}",
+  );
+  // from_now::+1h30m must not produce the same value as a clearly-past year
+  assert!(
+    !content.contains( r#""_renewal_at":"200"# ),
+    "_renewal_at from from_now::+1h30m must not start with 200x, got: {content}",
+  );
+}
+
+#[ test ]
+fn ft03_account_renewal_from_now_negative()
+{
+  // FT-03 (FR-030 AC-03): `from_now::-30m` writes past timestamp verbatim; no auto-advance at write.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "from_now::-30m" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  // from_now::-30m on 2026-05-29 still gives a 2026 timestamp
+  assert!(
+    content.contains( r#""_renewal_at":"202"# ),
+    "must write ISO-8601 past timestamp in _renewal_at, got: {content}",
+  );
+  // Must not be auto-advanced to far future at write time
+  assert!(
+    !content.contains( r#""_renewal_at":"2099"# ),
+    "past timestamp must not be auto-advanced at write time, got: {content}",
+  );
+}
+
+#[ test ]
+fn ft04_account_renewal_clear_removes_key()
+{
+  // FT-04 (FR-030 AC-04): `clear::1` removes `_renewal_at`; `oauthAccount` preserved.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  std::fs::write(
+    store.join( "test@example.com.claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"test@example.com"},"_renewal_at":"2026-06-29T21:00:00Z"}"#,
+  ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "clear::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    !content.contains( "_renewal_at" ),
+    "clear::1 must remove _renewal_at from file, got: {content}",
+  );
+  assert!(
+    content.contains( "oauthAccount" ),
+    "clear::1 must preserve oauthAccount, got: {content}",
+  );
+}
+
+#[ test ]
+fn ft05_account_renewal_name_all_updates_all()
+{
+  // FT-05 (FR-030 AC-05): `name::all from_now::+0m` writes current timestamp to every account.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "alice@a.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@a.com",   "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::all", "from_now::+0m" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let alice = std::fs::read_to_string( store.join( "alice@a.com.claude.json" ) ).unwrap();
+  let bob   = std::fs::read_to_string( store.join( "bob@a.com.claude.json" ) ).unwrap();
+  assert!(
+    alice.contains( r#""_renewal_at":"202"# ),
+    "alice must have _renewal_at after name::all, got: {alice}",
+  );
+  assert!(
+    bob.contains( r#""_renewal_at":"202"# ),
+    "bob must have _renewal_at after name::all, got: {bob}",
+  );
+}
+
+#[ test ]
+fn ft06_account_renewal_dry_no_write()
+{
+  // FT-06 (FR-030 AC-06): `dry::1` prints would-be value without writing file.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "at::2026-06-29T21:00:00Z", "dry::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  assert!(
+    text.contains( "[dry-run]" ),
+    "dry::1 must print [dry-run] prefix in stdout, got: {text}",
+  );
+  assert!(
+    !store.join( "test@example.com.claude.json" ).exists(),
+    "dry::1 must not create .claude.json",
+  );
+}
+
+#[ test ]
+fn ft07_account_renewal_at_from_now_conflict()
+{
+  // FT-07 (FR-030 AC-07): `at::` and `from_now::` together exits 1 with conflict error.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[
+      ".account.renewal", "name::test@example.com",
+      "at::2026-06-29T21:00:00Z", "from_now::+1h",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "at::" ) && err.contains( "from_now::" ),
+    "must name both conflicting params in error, got: {err}",
+  );
+}
+
+#[ test ]
+fn ft08_account_renewal_at_clear_conflict()
+{
+  // FT-08 (FR-030 AC-08): `at::` and `clear::` together exits 1 with conflict error.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[
+      ".account.renewal", "name::test@example.com",
+      "at::2026-06-29T21:00:00Z", "clear::1",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "at::" ) && err.contains( "clear::" ),
+    "must name both conflicting params in error, got: {err}",
+  );
+}
+
+#[ test ]
+fn ft09_account_renewal_from_now_clear_conflict()
+{
+  // FT-09 (FR-030 AC-09): `from_now::` and `clear::` together exits 1 with conflict error.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[
+      ".account.renewal", "name::test@example.com",
+      "from_now::+1h", "clear::1",
+    ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "from_now::" ) && err.contains( "clear::" ),
+    "must name both conflicting params in error, got: {err}",
+  );
+}
+
+#[ test ]
+fn ft10_account_renewal_no_operation_exits_1()
+{
+  // FT-12 (FR-030 AC-12): no operation param (`at::`, `from_now::`, `clear::`) exits 1.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  // Error must mention one of the required operation params or the word "required"
+  assert!(
+    err.contains( "at::" ) || err.contains( "from_now::" ) || err.contains( "clear::" ) || err.contains( "required" ),
+    "must print usage error naming required operation param, got: {err}",
+  );
+}
+
+#[ test ]
+fn ft11_account_renewal_unknown_account_exits_2()
+{
+  // FT-13 (FR-030 AC-13): account not in credential store exits 2.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Credential store exists but is empty — no accounts saved
+  std::fs::create_dir_all(
+    dir.path().join( ".persistent" ).join( "claude" ).join( "credential" )
+  ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::ghost@example.com", "at::2026-06-29T21:00:00Z" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 2 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "ghost@example.com" ),
+    "must name the unknown account in error message, got: {err}",
+  );
+}
+
+#[ test ]
+fn ft12_account_renewal_comma_list_updates_both()
+{
+  // FT-14 (FR-030 AC-14): comma-list `name::alice,bob` updates both accounts.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "alice@a.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@a.com",   "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::alice@a.com,bob@a.com", "at::2026-06-29T21:00:00Z" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let alice = std::fs::read_to_string( store.join( "alice@a.com.claude.json" ) ).unwrap();
+  let bob   = std::fs::read_to_string( store.join( "bob@a.com.claude.json" ) ).unwrap();
+  assert!(
+    alice.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    "alice must have exact _renewal_at after comma-list, got: {alice}",
+  );
+  assert!(
+    bob.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    "bob must have exact _renewal_at after comma-list, got: {bob}",
+  );
+}
+
+#[ test ]
+fn ft13_account_renewal_partial_comma_list()
+{
+  // FT-15 (FR-030 AC-15): one unknown in comma-list — error reported; known account still processed.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "alice@a.com", "max", "standard", FAR_FUTURE_MS, false );
+  // unknown@a.com is NOT in the credential store
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::alice@a.com,unknown@a.com", "at::2026-06-29T21:00:00Z" ],
+    &[ ( "HOME", home ) ],
+  );
+  let code = out.status.code().unwrap_or( -1 );
+  assert!( code != 0, "partial comma-list must exit non-zero, got exit {code}" );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "unknown@a.com" ),
+    "must report the unknown account in stderr, got: {err}",
+  );
+
+  // alice must still be processed despite the partial failure
+  let alice = std::fs::read_to_string( store.join( "alice@a.com.claude.json" ) ).unwrap();
+  assert!(
+    alice.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    "alice must have _renewal_at even in partial failure, got: {alice}",
+  );
+}
+
+#[ test ]
+fn ft14_account_renewal_past_at_accepted()
+{
+  // IT-13: past `at::` value accepted without error; stored verbatim (auto-advance at render only).
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "at::2020-01-01T00:00:00Z" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""_renewal_at":"2020-01-01T00:00:00Z""# ),
+    "past at:: must be stored verbatim without auto-advance at write time, got: {content}",
+  );
+}
+
+#[ test ]
+fn ft15_account_renewal_unknown_param_exits_1()
+{
+  // IT-14: unknown parameter rejected with exit 1.
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "unknown::x" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  // When .account.renewal exists, unilang rejects the unknown param with "Unknown parameter".
+  // This differs from Phase 1 behavior ("command was not found"), confirming command is registered.
+  assert!(
+    err.contains( "Unknown parameter" ),
+    "must produce 'Unknown parameter' error (not 'command not found'), got: {err}",
+  );
+}
+
+#[ test ]
+fn ft16_account_renewal_creates_new_claude_json()
+{
+  // AC-05 edge: no pre-existing `.claude.json` → `at::` creates the file.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  // Pre-condition: claude.json must not exist before command
+  assert!(
+    !store.join( "test@example.com.claude.json" ).exists(),
+    "pre-condition: .claude.json must not exist before command",
+  );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "at::2026-06-29T21:00:00Z" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    "must create .claude.json with _renewal_at when file did not exist before, got: {content}",
+  );
+}
+
+// ── AS-22: save() read-merge preserving _renewal_at ───────────────────────────
+
+#[ test ]
+fn as22_save_preserves_renewal_at()
+{
+  // FT-11 (FR-002 AC-17): second `.account.save` preserves `_renewal_at` via read-merge (not overwrite).
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  // Setup: source credentials and ~/.claude.json
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  // First save — establishes account credential file and initial claude.json snapshot
+  let first = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &first, 0 );
+
+  // Inject _renewal_at into the existing .claude.json (simulates a prior .account.renewal run)
+  std::fs::write(
+    store.join( "test@example.com.claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"test@example.com","subscriptionType":"max"},"_renewal_at":"2026-06-29T21:00:00Z"}"#,
+  ).unwrap();
+
+  // Update source ~/.claude.json with new oauthAccount content (simulates fresh OAuth login)
+  std::fs::write(
+    dir.path().join( ".claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"test@example.com","subscriptionType":"pro"}}"#,
+  ).unwrap();
+
+  // Second save — must read-merge: preserve _renewal_at, update oauthAccount
+  let second = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &second, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
+    "second .account.save must preserve _renewal_at via read-merge (not overwrite), got: {content}",
+  );
+  assert!(
+    content.contains( "oauthAccount" ),
+    "oauthAccount must remain in claude.json after second save, got: {content}",
+  );
+  assert!(
+    content.contains( "\"subscriptionType\":\"pro\"" ),
+    "oauthAccount must be updated with new content from ~/.claude.json on second save, got: {content}",
+  );
+}
+
+// ── as23: save writes profile.json with host and role ─────────────────────────
+
+#[ test ]
+fn as_save_writes_profile_json()
+{
+  // TSK-225 RED gate: `.account.save host::testbox role::dev` must create
+  // `{name}.profile.json` containing the host and role values as JSON.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "host::testbox", "role::dev" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let profile_path = store.join( "test@example.com.profile.json" );
+  assert!(
+    profile_path.exists(),
+    "profile.json must be created by .account.save when host:: is passed, path: {}",
+    profile_path.display(),
+  );
+  let content = std::fs::read_to_string( &profile_path ).unwrap();
+  assert!(
+    content.contains( r#""host":"testbox""# ),
+    "profile.json must contain host value, got: {content}",
+  );
+  assert!(
+    content.contains( r#""role":"dev""# ),
+    "profile.json must contain role value, got: {content}",
   );
 }

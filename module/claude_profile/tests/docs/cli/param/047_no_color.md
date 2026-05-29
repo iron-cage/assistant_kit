@@ -6,10 +6,12 @@ Edge case coverage for the `no_color::` parameter on `.usage`. See [param/047_no
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | `no_color::1` output contains no emoji characters | Plain Output |
+| EC-1 | `no_color::1` output contains no emoji characters | Behavioral Divergence |
 | EC-2 | `no_color::1` status column shows text labels | Status Labels |
-| EC-3 | `no_color::0` (default) output includes emoji | Default Behavior |
+| EC-3 | `no_color::0` (default) output includes emoji | Behavioral Divergence |
 | EC-4 | `no_color::bad` exits 1 naming valid values | Invalid Value |
+| EC-5 | `no_color::1` footer uses ASCII `->` instead of unicode arrow | ASCII Footer |
+| EC-6 | `no_color::true` accepted (alias for 1) | Alias Acceptance |
 
 ---
 
@@ -53,5 +55,27 @@ Edge case coverage for the `no_color::` parameter on `.usage`. See [param/047_no
 - **When:** `clp .usage no_color::bad`
 - **Then:** Exits 1. Stderr names valid values: `0`, `1`, `false`, `true`.
 - **Exit:** 1
+- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source:** [param/047_no_color.md](../../../../docs/cli/param/047_no_color.md)
+
+---
+
+### EC-5: `no_color::1` footer uses ASCII `->` instead of unicode arrow
+
+- **Given:** Two accounts with valid quota (footer shown).
+- **When:** `clp .usage no_color::1`
+- **Then:** Exits 0. Footer lines use `->` (ASCII) for strategy labels. Unicode arrow `→` not present in footer.
+- **Exit:** 0
+- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source:** [param/047_no_color.md](../../../../docs/cli/param/047_no_color.md)
+
+---
+
+### EC-6: `no_color::true` accepted as alias for 1
+
+- **Given:** One 🟢 account.
+- **When:** `clp .usage no_color::true`
+- **Then:** Exits 0. No emoji in output — same result as `no_color::1`.
+- **Exit:** 0
 - **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
 - **Source:** [param/047_no_color.md](../../../../docs/cli/param/047_no_color.md)

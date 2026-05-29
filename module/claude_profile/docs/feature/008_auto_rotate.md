@@ -42,7 +42,7 @@
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/account.rs` | `auto_rotate()` implementation |
-| source | `src/commands.rs` | `account_rotate_routine()` — CLI handler for `.account.rotate` |
+| source | `src/commands/account_ops.rs` | `account_rotate_routine()` — CLI handler for `.account.rotate` |
 | test | `tests/account_tests.rs::auto_rotate_*` | Rotation selection and switch tests |
 | test | `tests/docs/cli/command/013_account_rotate.md` | CLI integration test spec (IT-1..IT-8) |
 | doc | [cli/command/001_account.md#command--13-accountrotate](../cli/command/001_account.md#command--13-accountrotate) | CLI command specification |
