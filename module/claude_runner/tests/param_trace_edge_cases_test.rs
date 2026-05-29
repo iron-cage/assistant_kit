@@ -110,7 +110,7 @@ fn s58_isolated_trace_credential_format()
 
 // S60: `isolated --creds /nonexistent --trace "msg"` → trace fires even when creds file is missing
 //
-// ## Root Cause (bug_reproducer(issue-isolated-trace-before-creds-read))
+// ## Root Cause (bug_reproducer(BUG-223))
 //
 // `run_isolated_command` read the credentials file first (exiting 1 on failure),
 // then emitted trace.  This meant `--trace` produced no output when the creds
@@ -138,7 +138,7 @@ fn s58_isolated_trace_credential_format()
 //
 // Do not test `--trace` with only a happy-path creds file.  Also verify that
 // trace fires when creds are absent — otherwise the ordering bug can regress silently.
-// test_kind: bug_reproducer(issue-isolated-trace-before-creds-read)
+// test_kind: bug_reproducer(BUG-223)
 #[ test ]
 fn s60_isolated_trace_fires_even_with_missing_creds()
 {

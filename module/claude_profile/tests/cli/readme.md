@@ -5,6 +5,7 @@
 | `helpers.rs` | Shared binary runner, assertion, and fixture helpers. |
 | `accounts_test.rs` | Help output and `.accounts` command tests (h01–h07, acc01–acc16). |
 | `account_mutations_test.rs` | Account save, use, and delete tests. |
+| `account_rotate_test.rs` | `.account.rotate` command tests (rot01–rot08, trace). |
 | `token_paths_test.rs` | Token status classification and paths output tests. |
 | `cross_cutting_test.rs` | Cross-cutting and environment behavior tests. |
 | `usage_test.rs` | Live rate-limit quota table display tests (IT-1–IT-37, 36 functions). |

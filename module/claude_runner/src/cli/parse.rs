@@ -35,27 +35,8 @@ pub( crate ) struct CliArgs
   pub( crate ) keep_claudecode      : bool,
 }
 
-/// Parsed arguments for the `isolated` subcommand.
-#[ derive( Default ) ]
-pub( super ) struct IsolatedArgs
-{
-  pub( super ) creds_path       : String,
-  pub( super ) timeout_secs     : u64,
-  pub( super ) trace            : bool,
-  pub( super ) message          : Option< String >,
-  pub( super ) passthrough_args : Vec< String >,
-}
-
-/// Parsed arguments for the `refresh` subcommand.
-pub( super ) struct RefreshArgs
-{
-  pub( super ) creds_path   : String,
-  pub( super ) timeout_secs : u64,
-  pub( super ) trace        : bool,
-}
-
 /// Consume the next argv element as a flag's value.
-fn next_value<'a>( tokens : &'a [ String ], idx : usize, flag : &str ) -> Result< &'a str >
+pub( super ) fn next_value<'a>( tokens : &'a [ String ], idx : usize, flag : &str ) -> Result< &'a str >
 {
   tokens.get( idx ).map( String::as_str ).ok_or_else( ||
     Error::msg( format!( "{flag} requires a value" ) )
@@ -82,85 +63,6 @@ fn parse_token_limit( raw : &str ) -> Result< u32 >
 fn parse_effort_level( raw : &str ) -> Result< EffortLevel >
 {
   raw.parse::< EffortLevel >().map_err( Error::msg )
-}
-
-/// Parse a raw string as a `u64` timeout in seconds.
-///
-/// Rejects negative numbers (which start with `-` and fail `u64` parsing)
-/// and non-numeric strings with a clear error message.
-fn parse_timeout( raw : &str ) -> Result< u64 >
-{
-  raw.parse::< u64 >().map_err( | _ |
-    Error::msg( format!(
-      "invalid --timeout value: {raw}\n\
-       Expected non-negative integer"
-    ) )
-  )
-}
-
-/// Parse `tokens` as arguments to the `isolated` subcommand.
-///
-/// Recognises `--creds <FILE>`, `--timeout <SECS>`, a positional `[MESSAGE]`,
-/// and `-- <PASSTHROUGH...>`. Everything after `--` is collected verbatim.
-/// Unknown flags (before `--`) are rejected with an error.
-pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedArgs >
-{
-  let mut creds_path       : Option< String > = None;
-  let mut timeout_secs     : u64              = 30;
-  let mut trace            : bool             = false;
-  let mut message_parts    : Vec< String >    = Vec::new();
-  let mut passthrough_args : Vec< String >    = Vec::new();
-  let mut i = 0;
-  while i < tokens.len()
-  {
-    let token = tokens[ i ].as_str();
-    match token
-    {
-      "--" =>
-      {
-        passthrough_args.extend( tokens[ i + 1 .. ].iter().cloned() );
-        break;
-      }
-      "--creds" =>
-      {
-        creds_path = Some( next_value( tokens, i + 1, "--creds" )?.to_string() );
-        i += 1;
-      }
-      "--timeout" =>
-      {
-        let raw      = next_value( tokens, i + 1, "--timeout" )?;
-        timeout_secs = parse_timeout( raw )?;
-        i += 1;
-      }
-      "--trace" =>
-      {
-        trace = true;
-      }
-      // Fix(issue-isolated-help): parse_isolated_args fell through --help to the
-      // starts_with('-') catch-all, returning Err("unknown option: --help") → exit 1.
-      // Root cause: no explicit --help arm in parse_isolated_args; global parse_args has
-      // one but parse_isolated_args was written without it.
-      // Pitfall: any catch-all for unknown flags silently swallows --help and -h;
-      // always add an explicit --help arm before the catch-all in every subcommand parser.
-      "-h" | "--help" => { super::print_isolated_help(); }
-      s if s.starts_with( '-' ) =>
-      {
-        return Err( Error::msg( format!(
-          "unknown option: {s}\nRun with --help for usage."
-        ) ) );
-      }
-      _ =>
-      {
-        if !tokens[ i ].is_empty() { message_parts.push( tokens[ i ].clone() ); }
-      }
-    }
-    i += 1;
-  }
-  // Note: creds_path validation is deferred to after apply_isolated_env_vars() is called
-  // in run_cli() so that CLR_CREDS env var can supply the value before the check.
-  let creds_path   = creds_path.unwrap_or_default();
-  let message      = if message_parts.is_empty() { None } else { Some( message_parts.join( " " ) ) };
-  Ok( IsolatedArgs { creds_path, timeout_secs, trace, message, passthrough_args } )
 }
 
 /// Parse a value-consuming flag (`--flag value` pair) into `parsed`.
@@ -241,7 +143,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
 {
   // --help/-h always wins — return early before any other token is parsed.
   // This ensures help is shown even when unknown flags or other errors are present.
-  // Fix(issue-help-loses-to-unknown): parse_args returned Err on the first unknown flag,
+  // Fix(BUG-221): parse_args returned Err on the first unknown flag,
   // so main() never reached the cli.help check even when --help was present in argv.
   // Root cause: early Err return on unknown flags prevented the help check from firing.
   // Pitfall: checking cli.help after parse_args completes is insufficient — the Err path
@@ -319,7 +221,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       "--" =>
       {
         // Everything after `--` is positional.
-        // Fix(issue-empty-msg-double-dash): filter empty tokens here too — `clr -- ""`
+        // Fix(BUG-220): filter empty tokens here too — `clr -- ""`
         // must behave like bare `clr`, not forward a degenerate "\n\nultrathink" message.
         // Root cause: positional.extend() copies all tokens verbatim; the empty-token
         // guard in the `_` arm does not apply to the `--` code path.
@@ -341,7 +243,7 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
       }
       _ =>
       {
-        // Fix(issue-empty-msg-ultrathink): skip empty tokens so `clr ""` behaves like
+        // Fix(BUG-219): skip empty tokens so `clr ""` behaves like
         // bare `clr` (no message, no --print, no degenerate "\n\nultrathink" forwarded).
         // Root cause: empty string was pushed to positional, joined to message=Some(""),
         // then the ultrathink suffix produced "\n\nultrathink" for an empty payload.
@@ -367,19 +269,19 @@ pub( crate ) fn parse_args( tokens : &[ String ] ) -> Result< CliArgs >
 /// Returns `true` if `var` is set to `"1"` or `"true"` (case-insensitive).
 ///
 /// Any other value — including `"yes"`, `"0"`, `"false"`, empty, or absent — returns `false`.
-fn env_bool( var : &str ) -> bool
+pub( super ) fn env_bool( var : &str ) -> bool
 {
   std::env::var( var ).ok()
     .is_some_and( | v | matches!( v.to_lowercase().as_str(), "1" | "true" ) )
 }
 
 /// Returns `Some(value)` if `var` is set to a non-empty string; `None` otherwise.
-fn env_str( var : &str ) -> Option< String >
+pub( super ) fn env_str( var : &str ) -> Option< String >
 {
   std::env::var( var ).ok().filter( | v | !v.is_empty() )
 }
 
-/// Apply `CLR_*` environment variable fallbacks for the 25 run parameters.
+/// Apply `CLR_*` environment variable fallbacks for the 28 run parameters.
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
@@ -434,88 +336,3 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs )
   if !parsed.keep_claudecode           { parsed.keep_claudecode  = env_bool( "CLR_KEEP_CLAUDECODE" ); }
 }
 
-/// Apply `CLR_CREDS` and `CLR_TIMEOUT` env var fallbacks for the `isolated` subcommand.
-///
-/// `CLR_CREDS` applies when `creds_path` is empty (no `--creds` on CLI).
-/// `CLR_TIMEOUT` applies when `timeout_secs == 30` (the default); explicit `--timeout 30`
-/// is indistinguishable from the default and is an accepted limitation.
-pub( super ) fn apply_isolated_env_vars( parsed : &mut IsolatedArgs )
-{
-  if parsed.creds_path.is_empty()
-  {
-    parsed.creds_path = env_str( "CLR_CREDS" ).unwrap_or_default();
-  }
-  if parsed.timeout_secs == 30
-  {
-    if let Some( v ) = env_str( "CLR_TIMEOUT" )
-    {
-      if let Ok( secs ) = v.parse::< u64 >() { parsed.timeout_secs = secs; }
-    }
-  }
-  if !parsed.trace { parsed.trace = env_bool( "CLR_TRACE" ); }
-}
-
-/// Parse `tokens` as arguments to the `refresh` subcommand.
-///
-/// Recognises `--creds <FILE>`, `--timeout <SECS>`, and `--trace`.
-/// The `refresh` command takes no positional arguments — only credential options.
-pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArgs >
-{
-  let mut creds_path   : Option< String > = None;
-  let mut timeout_secs : u64              = 45;
-  let mut trace        : bool             = false;
-  let mut i = 0;
-  while i < tokens.len()
-  {
-    let token = tokens[ i ].as_str();
-    match token
-    {
-      "--creds" =>
-      {
-        creds_path = Some( next_value( tokens, i + 1, "--creds" )?.to_string() );
-        i += 1;
-      }
-      "--timeout" =>
-      {
-        let raw      = next_value( tokens, i + 1, "--timeout" )?;
-        timeout_secs = parse_timeout( raw )?;
-        i += 1;
-      }
-      "--trace" =>
-      {
-        trace = true;
-      }
-      "-h" | "--help" => { super::print_refresh_help(); }
-      s if s.starts_with( '-' ) =>
-      {
-        return Err( Error::msg( format!(
-          "unknown option: {s}\nRun with --help for usage."
-        ) ) );
-      }
-      _ => {} // refresh accepts no positional arguments
-    }
-    i += 1;
-  }
-  let creds_path = creds_path.unwrap_or_default();
-  Ok( RefreshArgs { creds_path, timeout_secs, trace } )
-}
-
-/// Apply `CLR_CREDS`, `CLR_TIMEOUT`, and `CLR_TRACE` env var fallbacks for the `refresh` subcommand.
-///
-/// `CLR_TIMEOUT` applies when `timeout_secs == 45` (the refresh default); explicit `--timeout 45`
-/// is indistinguishable from the default and is an accepted limitation (same design as isolated).
-pub( super ) fn apply_refresh_env_vars( parsed : &mut RefreshArgs )
-{
-  if parsed.creds_path.is_empty()
-  {
-    parsed.creds_path = env_str( "CLR_CREDS" ).unwrap_or_default();
-  }
-  if parsed.timeout_secs == 45
-  {
-    if let Some( v ) = env_str( "CLR_TIMEOUT" )
-    {
-      if let Ok( secs ) = v.parse::< u64 >() { parsed.timeout_secs = secs; }
-    }
-  }
-  if !parsed.trace { parsed.trace = env_bool( "CLR_TRACE" ); }
-}

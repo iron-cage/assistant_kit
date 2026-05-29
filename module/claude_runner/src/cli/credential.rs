@@ -127,9 +127,13 @@ pub( super ) fn run_refresh_command
   trace        : bool,
 ) -> !
 {
-  // Fixed args: trigger Claude's startup token refresh with a trivial prompt.
-  let fixed_args = vec![ "--print".to_string(), ".".to_string() ];
-  if trace { emit_credential_trace( "refresh", creds_path, &IsolatedModel::Default, &fixed_args, timeout_secs ); }
+  if trace
+  {
+    // Mirror the args run_isolated_command builds from message = Some(".")
+    let trace_args = vec![ "--print".to_string(), ".".to_string() ];
+    emit_credential_trace( "refresh", creds_path, &IsolatedModel::Default, &trace_args, timeout_secs );
+  }
   // Pass trace=false: refresh already emitted its own trace above.
-  run_isolated_command( creds_path, timeout_secs, false, IsolatedModel::Default, None, &fixed_args );
+  // message = Some(".") triggers Claude's startup token refresh with a trivial prompt.
+  run_isolated_command( creds_path, timeout_secs, false, IsolatedModel::Default, Some( "." ), &[] );
 }

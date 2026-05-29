@@ -115,7 +115,7 @@ fn t53_help_lists_no_ultrathink()
 
 // T54: empty positional arg `""` is ignored — treated as no message
 //
-// ## Root Cause (bug_reproducer(issue-empty-msg-ultrathink))
+// ## Root Cause (bug_reproducer(BUG-219))
 //
 // An empty string passed as a positional arg (`clr ""`) was pushed to the positional
 // list, joined into `message = Some("")`, then the ultrathink prefix produced
@@ -141,7 +141,7 @@ fn t53_help_lists_no_ultrathink()
 // Do not use `positional.join(" ").trim().is_empty()` to filter after joining — this
 // would also filter whitespace-only strings which are valid non-empty messages (e.g. " ").
 // The correct fix skips only empty tokens at the individual-token level.
-// test_kind: bug_reproducer(issue-empty-msg-ultrathink)
+// test_kind: bug_reproducer(BUG-219)
 #[ test ]
 fn t54_empty_positional_arg_ignored()
 {
@@ -166,7 +166,7 @@ fn t54_empty_positional_arg_ignored()
 
 // T55: `--help` wins over subsequent unknown flags
 //
-// ## Root Cause (bug_reproducer(issue-help-loses-to-unknown))
+// ## Root Cause (bug_reproducer(BUG-221))
 //
 // `parse_args` processes tokens left-to-right and returns Err immediately on the first
 // unknown flag. When `--help` precedes an unknown flag, `parsed.help` is set to true, but
@@ -192,7 +192,7 @@ fn t54_empty_positional_arg_ignored()
 //
 // Don't use `cli.help` to gate the pre-scan — the pre-scan IS what sets cli.help for
 // the error-recovery path. Without the pre-scan, the error path in main() runs first.
-// test_kind: bug_reproducer(issue-help-loses-to-unknown)
+// test_kind: bug_reproducer(BUG-221)
 #[ test ]
 fn t55_help_wins_over_subsequent_unknown_flag()
 {
@@ -209,12 +209,12 @@ fn t55_help_wins_over_subsequent_unknown_flag()
   );
 }
 
-// T56: `--help` wins over preceding unknown flags (part 2 of issue-help-loses-to-unknown)
+// T56: `--help` wins over preceding unknown flags (part 2 of BUG-221)
 //
 // Companion to T55: when the unknown flag appears BEFORE --help, the early-return Err
 // triggered by the unknown flag also prevents --help from ever being processed.
 // The fix (pre-scan in parse_args) handles both orderings.
-// test_kind: bug_reproducer(issue-help-loses-to-unknown)
+// test_kind: bug_reproducer(BUG-221)
 #[ test ]
 fn t56_help_wins_over_preceding_unknown_flag()
 {
@@ -233,7 +233,7 @@ fn t56_help_wins_over_preceding_unknown_flag()
 
 // T57: empty string positional arg after `--` separator is silently skipped
 //
-// ## Root Cause (bug_reproducer(issue-empty-msg-double-dash))
+// ## Root Cause (bug_reproducer(BUG-220))
 //
 // The `--` arm in `parse_args` uses `positional.extend(tokens[i+1..])` which copies
 // all remaining tokens verbatim, including empty strings. The `_` arm (which handles
@@ -260,7 +260,7 @@ fn t56_help_wins_over_preceding_unknown_flag()
 // The `--` arm must filter at the individual-token level, not on the joined string,
 // for the same reason as the `_` arm: whitespace-only strings like `" "` are valid
 // messages and must pass through.
-// test_kind: bug_reproducer(issue-empty-msg-double-dash)
+// test_kind: bug_reproducer(BUG-220)
 #[ test ]
 fn t57_empty_positional_after_double_dash_ignored()
 {
@@ -285,7 +285,7 @@ fn t57_empty_positional_after_double_dash_ignored()
 
 // T58: ultrathink is appended as suffix ("\n\nultrathink") not prepended as prefix
 //
-// ## Root Cause (bug_reproducer(issue-ultrathink-suffix))
+// ## Root Cause (bug_reproducer(BUG-224))
 //
 // TSK-090 implemented ultrathink injection as `format!("ultrathink {msg}")` (prefix),
 // but the correct behavior is `format!("{msg}\n\nultrathink")` (suffix after two
@@ -313,6 +313,7 @@ fn t57_empty_positional_after_double_dash_ignored()
 //
 // `String::contains("ultrathink")` passes for both `"ultrathink hello"` (prefix) and
 // `"hello\n\nultrathink"` (suffix). Always test the exact injection form.
+// test_kind: bug_reproducer(BUG-224)
 #[ test ]
 fn t58_default_message_gets_ultrathink_suffix()
 {

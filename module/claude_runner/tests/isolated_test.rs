@@ -473,7 +473,7 @@ fn ec_creds3_lim_it_relative_path()
   );
 }
 
-/// IT-10: `clr isolate --help` and `clr isol` exit 1 with unknown-subcommand error.
+/// BUG-225: `clr isolate --help` and `clr isol` exit 1 with unknown-subcommand error.
 ///
 /// Reproduces the silent unknown-subcommand fallthrough when the first CLI token
 /// resembles a known subcommand but is not an exact match (issue-unknown-subcommand).
@@ -505,9 +505,9 @@ fn ec_creds3_lim_it_relative_path()
 /// A bare string comparison against known subcommands only guards exact matches; typos and
 /// truncations pass silently unless a separate prefix-match guard is also placed between
 /// the subcommand dispatch block and the main argument parser.
-// test_kind: bug_reproducer(issue-unknown-subcommand)
+// test_kind: bug_reproducer(BUG-225)
 #[ test ]
-fn it10_bug_unknown_subcommand_typo_exits_one()
+fn bug_reproducer_225_unknown_subcommand_typo()
 {
   let bin = env!( "CARGO_BIN_EXE_clr" );
 
@@ -560,24 +560,28 @@ fn it10_bug_unknown_subcommand_typo_exits_one()
 
 /// IT-9: `clr isolated --help` exits 0 and prints isolated-specific help text.
 ///
-/// bug_reproducer(issue-isolated-help)
-///
-/// Root Cause: `parse_isolated_args()` had no `"-h" | "--help"` arm before the
+/// ## Root Cause (bug_reproducer(BUG-222))
+/// `parse_isolated_args()` had no `"-h" | "--help"` arm before the
 /// `s if s.starts_with('-')` catch-all, so `--help` matched the catch-all and
 /// returned `Err("unknown option: --help")`, causing exit 1.
 ///
-/// Why Not Caught: only happy-path and error-flag tests existed for `isolated`;
+/// ## Why Not Caught
+/// Only happy-path and error-flag tests existed for `isolated`;
 /// no test exercised `--help` on the subcommand.
 ///
-/// Fix Applied: added `print_isolated_help()` function (exits 0) and inserted a
+/// ## Fix Applied
+/// Added `print_isolated_help()` function (exits 0) and inserted a
 /// `"-h" | "--help"` match arm before the catch-all in `parse_isolated_args()`.
 ///
-/// Prevention: test both `-h` and `--help` exit codes and stdout content for
+/// ## Prevention
+/// Test both `-h` and `--help` exit codes and stdout content for
 /// every subcommand that accepts flags.
 ///
-/// Pitfall: `print_isolated_help()` must call `std::process::exit(0)` directly —
+/// ## Pitfall
+/// `print_isolated_help()` must call `std::process::exit(0)` directly —
 /// returning `Ok(...)` from the arm is insufficient because the caller checks
 /// `creds_path` and would error on the missing `--creds` argument.
+// test_kind: bug_reproducer(BUG-222)
 #[ test ]
 fn it9_isolated_help_exits_zero()
 {

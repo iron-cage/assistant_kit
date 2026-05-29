@@ -21,7 +21,6 @@ use cli_binary_test_helpers::run_cli;
 ///
 /// Spec: `01_claude_native_flags.md` CC-1
 #[ test ]
-
 fn g1cc1_all_claude_native_flags_forwarded_together()
 {
   let out = run_cli( &[
@@ -54,7 +53,6 @@ fn g1cc1_all_claude_native_flags_forwarded_together()
 ///
 /// Spec: `01_claude_native_flags.md` CC-2
 #[ test ]
-
 fn g1cc2_model_and_verbose_coexist()
 {
   let out = run_cli( &[ "--dry-run", "--model", "opus", "--verbose", "Fix bug" ] );
@@ -69,7 +67,6 @@ fn g1cc2_model_and_verbose_coexist()
 ///
 /// Spec: `01_claude_native_flags.md` CC-3
 #[ test ]
-
 fn g1cc3_verbose_and_effort_max_both_present()
 {
   let out = run_cli( &[ "--dry-run", "--verbose", "--effort", "max", "Fix bug" ] );
@@ -86,7 +83,6 @@ fn g1cc3_verbose_and_effort_max_both_present()
 ///
 /// Spec: `01_claude_native_flags.md` CC-4
 #[ test ]
-
 fn g1cc4_no_group_flags_only_defaults_injected()
 {
   let out = run_cli( &[ "--dry-run", "Fix bug" ] );
@@ -106,7 +102,6 @@ fn g1cc4_no_group_flags_only_defaults_injected()
 ///
 /// Spec: `01_claude_native_flags.md` CC-5
 #[ test ]
-
 fn g1cc5_new_claude_native_flags_forwarded_together()
 {
   let out = run_cli( &[
@@ -141,7 +136,6 @@ fn g1cc5_new_claude_native_flags_forwarded_together()
 ///
 /// Spec: `02_runner_control.md` CC-1
 #[ test ]
-
 fn g2cc1_dry_run_and_no_ultrathink_preview_suppressed()
 {
   let out = run_cli( &[ "--dry-run", "--no-ultrathink", "Fix bug" ] );
@@ -159,7 +153,6 @@ fn g2cc1_dry_run_and_no_ultrathink_preview_suppressed()
 ///
 /// Spec: `02_runner_control.md` CC-2
 #[ test ]
-
 fn g2cc2_new_session_and_session_dir_both_accepted()
 {
   let out = run_cli( &[
@@ -184,7 +177,6 @@ fn g2cc2_new_session_and_session_dir_both_accepted()
 ///
 /// Spec: `02_runner_control.md` CC-3
 #[ test ]
-
 fn g2cc3_no_skip_permissions_and_no_effort_max_both_suppressed()
 {
   let out = run_cli( &[ "--dry-run", "--no-skip-permissions", "--no-effort-max", "Fix bug" ] );
@@ -207,7 +199,6 @@ fn g2cc3_no_skip_permissions_and_no_effort_max_both_suppressed()
 ///
 /// Spec: `02_runner_control.md` CC-4
 #[ test ]
-
 fn g2cc4_all_runner_control_flags_no_conflict()
 {
   let out = run_cli( &[
@@ -247,7 +238,6 @@ fn g2cc4_all_runner_control_flags_no_conflict()
 ///
 /// Spec: `02_runner_control.md` CC-5
 #[ test ]
-
 fn g2cc5_file_strip_fences_keep_claudecode_accepted()
 {
   let tmp = tempfile::NamedTempFile::new().expect( "tmp" );
@@ -273,7 +263,6 @@ fn g2cc5_file_strip_fences_keep_claudecode_accepted()
 ///
 /// Spec: `03_system_prompt.md` CC-1
 #[ test ]
-
 fn g3cc1_system_prompt_alone_forwarded()
 {
   let out = run_cli( &[ "--dry-run", "--system-prompt", "Be concise.", "test" ] );
@@ -293,7 +282,6 @@ fn g3cc1_system_prompt_alone_forwarded()
 ///
 /// Spec: `03_system_prompt.md` CC-2
 #[ test ]
-
 fn g3cc2_append_system_prompt_alone_forwarded()
 {
   let out = run_cli( &[ "--dry-run", "--append-system-prompt", "Always JSON.", "test" ] );
@@ -316,7 +304,6 @@ fn g3cc2_append_system_prompt_alone_forwarded()
 ///
 /// Spec: `03_system_prompt.md` CC-3
 #[ test ]
-
 fn g3cc3_both_system_prompt_flags_forwarded()
 {
   let out = run_cli( &[
@@ -343,7 +330,6 @@ fn g3cc3_both_system_prompt_flags_forwarded()
 ///
 /// Spec: `03_system_prompt.md` CC-4
 #[ test ]
-
 fn g3cc4_neither_system_prompt_no_injection()
 {
   let out = run_cli( &[ "--dry-run", "test" ] );
@@ -372,7 +358,6 @@ fn g3cc4_neither_system_prompt_no_injection()
 ///
 /// Spec: `04_credential_operations.md` CC-6
 #[ test ]
-
 fn g4cc6_trace_on_credential_ops()
 {
   use cli_binary_test_helpers::run_cli_with_env;
