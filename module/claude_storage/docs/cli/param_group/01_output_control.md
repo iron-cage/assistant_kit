@@ -11,13 +11,13 @@
 **Semantic Coherence Test:**
 - "Does `verbosity::` control output detail level?" → YES
 
-**Why NOT `entries::` and `metadata::`:**
-- `entries::` controls *what content* is shown (all entries vs summary), not *how much detail* per line
-- `metadata::` toggles content suppression — a mode switch, not a verbosity adjustment
+**Why NOT `show_entries::` and `show_metadata::`:**
+- `show_entries::` controls *what content* is shown (all entries vs summary), not *how much detail* per line
+- `show_metadata::` toggles content suppression — a mode switch, not a verbosity adjustment
 - Different semantic purpose: display mode vs output density
 
-**Why NOT `sessions::` (bool):**
-- `sessions::` controls whether sessions are shown at all — an on/off toggle for the entire session display tier
+**Why NOT `show_sessions::` (bool):**
+- `show_sessions::` controls whether sessions are shown at all — an on/off toggle for the entire session display tier
 - Different semantic level: tier visibility vs density of output
 
 **Parameter Details:**

@@ -1,4 +1,4 @@
-# Parameter :: 3. `entries::`
+# Parameter :: 3. `show_entries::`
 
 Show all individual entries in a session display.
 
@@ -19,8 +19,8 @@ Show all individual entries in a session display.
 
 **Examples:**
 ```bash
-entries::0    # Summary view
-entries::1    # Full entry listing
+show_entries::0    # Summary view
+show_entries::1    # Full entry listing
 ```
 
 ### Referenced Type

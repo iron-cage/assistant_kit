@@ -73,7 +73,7 @@
       aliases: ["v"]
       tags: []
 
-    - name: "sessions"
+    - name: "show_sessions"
       kind: "Boolean"
       description: "Show sessions for each project (auto-enabled when session filters provided, explicit 0/1 overrides)"
       hint: "Show sessions (auto-detected)"
@@ -141,12 +141,12 @@
   examples:
     - ".list"
     - ".list type::uuid"
-    - ".list sessions::1"
+    - ".list show_sessions::1"
     - ".list path::assistant"
     - ".list session::commit"
     - ".list agent::1 min_entries::10"
     - ".list path::claude_storage session::default"
-    - ".list sessions::0 session::commit"
+    - ".list show_sessions::0 session::commit"
     - ".list type::conversation project::abc123"
     - ".list type::conversation count::1 project::abc123"
   auto_help_enabled: true
@@ -193,7 +193,7 @@
       aliases: ["v"]
       tags: []
 
-    - name: "entries"
+    - name: "show_entries"
       kind: "Boolean"
       description: "Show all entries in session"
       hint: "Show entries"
@@ -203,7 +203,7 @@
       aliases: []
       tags: []
 
-    - name: "metadata"
+    - name: "show_metadata"
       kind: "Boolean"
       description: "Show metadata only (old behavior, default shows conversation content)"
       hint: "Metadata only mode"
@@ -228,8 +228,8 @@
     - ".show session_id::abc123"
     - ".show project::/home/alice/project"
     - ".show session_id::abc123 project::/home/alice/project"
-    - ".show session_id::abc123 metadata::1"
-    - ".show session_id::abc123 entries::1"
+    - ".show session_id::abc123 show_metadata::1"
+    - ".show session_id::abc123 show_entries::1"
   auto_help_enabled: true
 
 

@@ -46,8 +46,8 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   let project_param = cmd.get_string( "project" );
   let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
-  let show_entries = cmd.get_boolean( "entries" ).unwrap_or( false );
-  let metadata_only = cmd.get_boolean( "metadata" ).unwrap_or( false );
+  let show_entries = cmd.get_boolean( "show_entries" ).unwrap_or( false );
+  let metadata_only = cmd.get_boolean( "show_metadata" ).unwrap_or( false );
 
   validate_verbosity( verbosity )?;
 

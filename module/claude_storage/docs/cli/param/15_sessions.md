@@ -1,4 +1,4 @@
-# Parameter :: 15. `sessions::`
+# Parameter :: 15. `show_sessions::`
 
 Explicit control over session display in `.list`.
 
@@ -16,12 +16,12 @@ Explicit control over session display in `.list`.
 
 **Commands:** `.list`
 
-**Purpose:** Normally session display is auto-controlled: the presence of any session filter enables it. `sessions::` provides an explicit override — `sessions::0` suppresses display even when filters are set (useful for counting projects that have matching sessions), and `sessions::1` forces display even with no filters.
+**Purpose:** Normally session display is auto-controlled: the presence of any session filter enables it. `show_sessions::` provides an explicit override — `show_sessions::0` suppresses display even when filters are set (useful for counting projects that have matching sessions), and `show_sessions::1` forces display even with no filters.
 
 **Examples:**
 ```bash
-sessions::0    # Force off (suppress even when filters active)
-sessions::1    # Force on (show even with no filters)
+show_sessions::0    # Force off (suppress even when filters active)
+show_sessions::1    # Force on (show even with no filters)
                # (unset) — auto-detect from other params
 ```
 

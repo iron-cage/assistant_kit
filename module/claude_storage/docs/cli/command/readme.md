@@ -4,7 +4,7 @@ All commands for the `claude_storage` CLI. Parameters use `param::value` syntax.
 
 See [param/readme.md](../param/readme.md) for full parameter specs and [type/readme.md](../type/readme.md) for type definitions.
 
-## Responsibility Table
+### Responsibility Table
 
 | File | Responsibility |
 |------|----------------|
@@ -20,20 +20,20 @@ See [param/readme.md](../param/readme.md) for full parameter specs and [type/rea
 | `10_session_dir.md` | .session.dir — compute session working directory path |
 | `11_session_ensure.md` | .session.ensure — ensure session directory exists |
 
-## Commands Table
+### Commands Table
 
-| # | Command | Purpose | Params |
-|---|---------|---------|--------|
-| 1 | [`.status`](01_status.md) | Show storage overview and statistics | 2 |
-| 2 | [`.list`](02_list.md) | List projects or sessions | 10 |
-| 3 | [`.show`](03_show.md) | Display session or project details | 7 |
-| 4 | [`.count`](04_count.md) | Fast counting of items | 5 |
-| 5 | [`.search`](05_search.md) | Search session content by query | 8 |
-| 6 | [`.export`](06_export.md) | Export session to file | 6 |
-| 7 | [`.projects`](07_projects.md) | Scoped project list with per-project conversation listing | 7 |
-| 8 | [`.project.path`](08_project_path.md) | Compute Claude storage path for a directory | 2 |
-| 9 | [`.project.exists`](09_project_exists.md) | Check conversation history exists (exits 1 when absent) | 2 |
-| 10 | [`.session.dir`](10_session_dir.md) | Compute session working directory path | 2 |
-| 11 | [`.session.ensure`](11_session_ensure.md) | Ensure session directory exists, report resume strategy | 3 |
+| # | Command | Purpose | Params | Example |
+|---|---------|---------|--------|---------|
+| 1 | [`.status`](01_status.md) | Show storage overview and statistics | 2 | `claude_storage .status` |
+| 2 | [`.list`](02_list.md) | List projects or sessions | 10 | `claude_storage .list` |
+| 3 | [`.show`](03_show.md) | Display session or project details | 7 | `claude_storage .show session_id::ID` |
+| 4 | [`.count`](04_count.md) | Fast counting of items | 5 | `claude_storage .count` |
+| 5 | [`.search`](05_search.md) | Search session content by query | 8 | `claude_storage .search query::QUERY` |
+| 6 | [`.export`](06_export.md) | Export session to file | 6 | `claude_storage .export session_id::ID output::PATH` |
+| 7 | [`.projects`](07_projects.md) | Scoped project list with per-project conversation listing | 7 | `claude_storage .projects` |
+| 8 | [`.project.path`](08_project_path.md) | Compute Claude storage path for a directory | 2 | `claude_storage .project.path` |
+| 9 | [`.project.exists`](09_project_exists.md) | Check conversation history exists (exits 1 when absent) | 2 | `claude_storage .project.exists` |
+| 10 | [`.session.dir`](10_session_dir.md) | Compute session working directory path | 2 | `claude_storage .session.dir` |
+| 11 | [`.session.ensure`](11_session_ensure.md) | Ensure session directory exists, report resume strategy | 3 | `claude_storage .session.ensure` |
 
 **Total:** 11 commands
