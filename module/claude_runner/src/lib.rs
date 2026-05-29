@@ -53,6 +53,10 @@ pub fn register_commands( _registry : &mut unilang::registry::CommandRegistry ) 
 mod cli;
 
 #[ cfg( feature = "enabled" ) ]
+#[ doc( hidden ) ]
+pub use cli::strip_fences;
+
+#[ cfg( feature = "enabled" ) ]
 /// Run the `clr`/`claude_runner` CLI.
 ///
 /// Entry point shared by the `clr` and `claude_runner` binary targets.
@@ -61,7 +65,7 @@ pub fn run_cli()
 {
   use cli::{
     parse_args, build_claude_command, handle_dry_run,
-    print_help, run_print_mode, run_interactive,
+    print_help, run_built_command,
     dispatch_ask, dispatch_isolated, dispatch_refresh,
     apply_env_vars, guard_unknown_subcommand,
   };
@@ -137,27 +141,5 @@ pub fn run_cli()
     return;
   }
 
-  let verbosity = cli.verbosity.unwrap_or_default();
-
-  // Trace / verbose detail preview: show command to stderr before executing.
-  if cli.trace || verbosity.shows_verbose_detail()
-  {
-    let env = builder.describe_env();
-    let command = builder.describe();
-    let mut preview = String::new();
-    if !env.is_empty() { preview.push_str( &env ); preview.push( '\n' ); }
-    preview.push_str( &command );
-    eprintln!( "{preview}" );
-  }
-
-  // Dispatch to print mode when message given (default) or -p/--print explicit.
-  // --interactive overrides the message-default back to TTY passthrough.
-  if cli.print_mode || ( cli.message.is_some() && !cli.interactive )
-  {
-    run_print_mode( &builder, verbosity, cli.strip_fences );
-  }
-  else
-  {
-    run_interactive( &builder, verbosity );
-  }
+  run_built_command( &builder, &cli );
 }

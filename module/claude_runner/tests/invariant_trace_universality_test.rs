@@ -143,10 +143,12 @@ fn it_04_refresh_trace_stderr_output()
   assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );
 }
 
-/// IT-5: Static — `"--trace"` appears ≥ 3× in `src/cli/parse.rs` (one per parse function).
+/// IT-5: Static — `"--trace"` appears ≥ 3× across `src/cli/parse.rs` and
+/// `src/cli/cred_parse.rs` combined (one per parse function).
 ///
 /// Verifies that `parse_args()`, `parse_isolated_args()`, and `parse_refresh_args()`
-/// all register the `--trace` flag.  Reads the actual source file at runtime via
+/// all register the `--trace` flag.  `parse_args` lives in `parse.rs`; the credential
+/// parsers live in `cred_parse.rs`.  Reads both source files at runtime via
 /// `CARGO_MANIFEST_DIR` (baked Docker image source — ensure image is current before running).
 ///
 /// Source: tests/docs/invariant/004_trace_universality.md#it-5
@@ -154,13 +156,20 @@ fn it_04_refresh_trace_stderr_output()
 fn it_05_static_trace_universality()
 {
   let manifest_dir = env!( "CARGO_MANIFEST_DIR" );
-  let cli_path     = format!( "{manifest_dir}/src/cli/parse.rs" );
-  let cli_rs       = std::fs::read_to_string( &cli_path )
-    .unwrap_or_else( | e | panic!( "failed to read {cli_path}: {e}" ) );
-  let count = cli_rs.matches( "\"--trace\"" ).count();
+
+  let parse_path = format!( "{manifest_dir}/src/cli/parse.rs" );
+  let parse_rs   = std::fs::read_to_string( &parse_path )
+    .unwrap_or_else( | e | panic!( "failed to read {parse_path}: {e}" ) );
+
+  let cred_path = format!( "{manifest_dir}/src/cli/cred_parse.rs" );
+  let cred_rs   = std::fs::read_to_string( &cred_path )
+    .unwrap_or_else( | e | panic!( "failed to read {cred_path}: {e}" ) );
+
+  let count = parse_rs.matches( "\"--trace\"" ).count()
+            + cred_rs.matches( "\"--trace\"" ).count();
   assert!(
     count >= 3,
-    "expected '\"--trace\"' to appear ≥ 3 times in src/cli/parse.rs \
-     (parse_args, parse_isolated_args, parse_refresh_args); got {count}"
+    "expected '\"--trace\"' to appear ≥ 3 times across src/cli/parse.rs and \
+     src/cli/cred_parse.rs (parse_args, parse_isolated_args, parse_refresh_args); got {count}"
   );
 }

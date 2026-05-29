@@ -8,7 +8,6 @@ license.workspace = true
 readme = "readme.md"
 repository.workspace = true
 homepage.workspace = true
-documentation = "https://docs.rs/claude_runner"
 description = "CLI for executing Claude Code via builder pattern; YAML schema constants for command registration"
 keywords = [ "claude", "ai", "runner", "cli", "execution" ]
 categories = [ "development-tools", "command-line-utilities" ]
@@ -37,7 +36,6 @@ required-features = [ "enabled" ]
 
 [features]
 default = [ "enabled" ]
-full = [ "enabled" ]
 enabled = [
   "dep:claude_runner_core",
   "claude_runner_core/enabled",
