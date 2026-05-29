@@ -234,6 +234,11 @@ fn read_token( credential_store : &std::path::Path, name : &str ) -> Result< Str
 /// duplicate when `row.name` matches an existing stored account (BUG-218).
 fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : AccountQuota )
 {
+  // Fix(BUG-218): Guard insertion so the synthetic row is only added when absent.
+  // Root cause: unconditional insert(0) duplicated the active account when it was
+  //   already fetched into `results` as a named stored account.
+  // Pitfall: any future caller that passes a synthetic row must ensure `row.name`
+  //   exactly matches the stored account name — case-sensitive equality is the guard.
   if !results.iter().any( |r| r.name == row.name )
   {
     results.insert( 0, row );
@@ -2204,6 +2209,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
   Ok( OutputData::new( content, "text" ) )
 }
 
+// Private-fn unit tests — kept here per project exception (feedback_private_fn_test_placement.md):
 // ── Unit tests ─────────────────────────────────────────────────────────────────
 
 #[ cfg( test ) ]
@@ -5886,7 +5892,7 @@ mod tests
   /// `any_current == false` is also true when BUG-217 installs a stale email that matches
   /// an existing account — that is the exact collision precondition. Both bugs compound:
   /// BUG-217 makes collision possible; BUG-218 makes it destructive.
-  // test_kind: bug_reproducer(BUG-218)
+  #[ doc = "bug_reproducer(BUG-218)" ]
   #[ test ]
   fn test_mre_bug218_fetch_all_quota_no_duplicate_synthetic_row()
   {

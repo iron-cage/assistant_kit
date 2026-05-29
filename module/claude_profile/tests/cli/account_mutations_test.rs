@@ -43,7 +43,7 @@
 //! | aw10 | `aw10_switch_dry_run_nonexistent_exits_2` | dry-run nonexistent → exit 2 | N |
 //! | aw11 | `aw11_switch_slash_in_email_local_part_exits_1` | `/` in email local part → exit 1 | N |
 //! | — | `switch_restores_claude_json` | `~/.claude.json` restored after switch (issue-122) | P |
-//! | — | `mre_bug217_switch_account_enforces_emailaddress` | switch enforces `emailAddress == name` over stale snapshot | P |
+//! | — | `mre_bug_217_switch_account_enforces_emailaddress` | switch enforces `emailAddress == name` over stale snapshot | P |
 //! | aw13 | `aw13_use_positional_bare_arg` | positional email `personal@home.com` → switches | P |
 //! | aw14 | `aw14_use_prefix_resolves` | prefix `car` resolves to `carol@example.com`, switches | P |
 //! | aw15 | `aw15_use_prefix_ambiguous_exits_1` | ambiguous prefix `a` → exit 1 with "ambiguous" | N |
@@ -362,7 +362,7 @@ fn aw02_switch_dry_run()
   let out = run_cs_with_env( &[ ".account.use", "name::alice@home.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "dry-run" ), "must say dry-run, got:\n{text}" );
+  assert!( text.contains( "[dry-run] would switch to 'alice@home.com'" ), "must print full dry-run message, got:\n{text}" );
   let after = std::fs::read_to_string( dir.path().join( ".claude" ).join( ".credentials.json" ) ).unwrap();
   assert_eq!( before, after, "dry-run must not change credentials" );
 }
@@ -496,7 +496,7 @@ fn ad02_delete_dry_run_keeps_file()
   let out = run_cs_with_env( &[ ".account.delete", "name::alice@oldco.com", "dry::1" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "dry-run" ), "must say dry-run, got:\n{text}" );
+  assert!( text.contains( "[dry-run] would delete account 'alice@oldco.com'" ), "must print full dry-run message, got:\n{text}" );
   assert!( account_exists( dir.path(), "alice@oldco.com" ), "dry-run must not delete file" );
 }
 
@@ -1010,12 +1010,8 @@ fn relogin_mre_no_name_uses_active()
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
-    text.contains( "work@acme.com" ),
-    "dry-run must name the active account, got:\n{text}",
-  );
-  assert!(
-    text.contains( "dry-run" ),
-    "must include dry-run marker, got:\n{text}",
+    text.contains( "[dry-run] would re-authenticate 'work@acme.com' via browser login" ),
+    "dry-run must print full re-auth message naming active account, got:\n{text}",
   );
 }
 
@@ -1087,12 +1083,8 @@ fn ar05_relogin_dry_explicit_name()
   assert_exit( &out, 0 );
   let text = stdout( &out );
   assert!(
-    text.contains( "work@acme.com" ),
-    "dry-run output must name the account, got:\n{text}",
-  );
-  assert!(
-    text.contains( "dry-run" ),
-    "output must include dry-run marker, got:\n{text}",
+    text.contains( "[dry-run] would re-authenticate 'work@acme.com' via browser login" ),
+    "dry-run must print full re-auth message, got:\n{text}",
   );
 }
 
@@ -1987,28 +1979,40 @@ fn mre_bug213_account_use_refuses_expired_token_on_fetch_error()
 
 // ── BUG-217 ───────────────────────────────────────────────────────────────────
 
-/// bug_reproducer(BUG-217): `switch_account()` inserts `oauthAccount` verbatim from
-/// the per-account snapshot, carrying the stale `emailAddress` field into `~/.claude.json`.
+/// `switch_account()` inserts `oauthAccount` verbatim from the per-account snapshot,
+/// carrying the stale `emailAddress` field into `~/.claude.json`.
 ///
-/// ## Fix Documentation — BUG-217
+/// # Root Cause
 ///
-/// - **Root Cause:** `switch_account()` calls `obj.insert("oauthAccount", oauth)` where
-///   `oauth` is cloned verbatim from `{name}.claude.json`. When `emailAddress` in the
-///   snapshot is stale (from a prior corruption cycle), the wrong email propagates to
-///   `~/.claude.json`, causing `account_save_routine()` to infer the wrong account name
-///   on subsequent saves.
-/// - **Why Not Caught:** `switch_restores_claude_json` saves via `.account.save` so
-///   snapshots are always correct — it never exercised a pre-existing stale snapshot.
-///   No test seeded `{name}.claude.json` with a wrong `emailAddress` before switching.
-/// - **Fix Applied:** After extracting `oauth` from the snapshot, `as_object_mut()` is
-///   used to overwrite `emailAddress` with `name` before `obj.insert("oauthAccount", oauth)`.
-/// - **Prevention:** Identity fields in per-account snapshots must not be trusted when
-///   the account key IS the canonical source. Override before inserting into shared files.
-/// - **Pitfall:** Corruption is self-perpetuating: stale email installed in shared file →
-///   read by save as primary name source → saved under wrong account → same stale email
-///   re-installed on next switch. Both BUG-217 and BUG-218 must be fixed together.
+/// `switch_account()` called `obj.insert("oauthAccount", oauth)` where `oauth` was cloned
+/// verbatim from `{name}.claude.json`. When `emailAddress` in the snapshot was stale (from
+/// a prior corruption cycle), the wrong email propagated to `~/.claude.json`, causing
+/// `account_save_routine()` to infer the wrong account name on subsequent saves.
+///
+/// # Why Not Caught
+///
+/// `switch_restores_claude_json` saves via `.account.save` so snapshots are always
+/// correct — it never exercised a pre-existing stale snapshot. No test seeded
+/// `{name}.claude.json` with a wrong `emailAddress` before switching.
+///
+/// # Fix Applied
+///
+/// After extracting `oauth` from the snapshot, `as_object_mut()` is used to overwrite
+/// `emailAddress` with `name` before `obj.insert("oauthAccount", oauth)`.
+///
+/// # Prevention
+///
+/// Identity fields in per-account snapshots must not be trusted when the account key IS
+/// the canonical source. Override before inserting into shared files.
+///
+/// # Pitfall
+///
+/// Corruption is self-perpetuating: stale email installed in shared file → read by save
+/// as primary name source → saved under wrong account → same stale email re-installed on
+/// next switch. Both BUG-217 and BUG-218 must be fixed together.
+#[ doc = "bug_reproducer(BUG-217)" ]
 #[ test ]
-fn mre_bug217_switch_account_enforces_emailaddress()
+fn mre_bug_217_switch_account_enforces_emailaddress()
 {
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();

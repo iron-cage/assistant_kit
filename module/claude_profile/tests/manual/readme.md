@@ -45,7 +45,7 @@
    ```
    Verify:
    - `~/.claude/.credentials.json` content matches `work@acme.com.credentials.json`
-   - `~/.persistent/claude/credential/_active` contains `"work@acme.com"`
+   - `~/.persistent/claude/credential/_active_{hostname}_{user}` (use `active_marker_filename()`) contains `"work@acme.com"`
    - Running `claude --version` or a minimal `claude` invocation succeeds
 
 5. **Token status after switch**
@@ -60,10 +60,11 @@
    - Delete it: `account::delete("temp@test.com", &credential_store).expect("delete")`
    - Verify: `~/.persistent/claude/credential/temp@test.com.credentials.json` is gone
 
-7. **Active-account guard**
-   - Ensure `_active` marker points to `"work@acme.com"`
-   - Try: `account::delete("work@acme.com", &credential_store).expect_err("must fail")`
-   - Verify: returns `PermissionDenied` error
+7. **Active-account deletion**
+   - Ensure the per-machine active marker (`_active_{hostname}_{user}`) points to `"work@acme.com"`
+   - Delete: `account::delete("work@acme.com", &credential_store).expect("active account deletion succeeds")`
+   - Verify: `work@acme.com.credentials.json` is gone; the per-machine active marker is also removed
+   - System is now in "no active account" state; next use of `.account.use` or `.account.save` restores it
 
 ### Expected Outcome
 
