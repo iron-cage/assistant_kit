@@ -63,8 +63,8 @@ work@acme.com
 
 ```
   Account         5h Left  ...  Expires    ~Renews   → Next
-✓ alice@acme.com  86%      ...  in 7h 24m  ~in 6d    +5h in 3h 19m   ← current
-* work@acme.com   100%     ...  in 5h 02m  ~in 11d   +5h in 4h 58m   ← active marker, not current
+✓ alice@acme.com  86%      ...  in 7h 24m  ~in 6d    +7d in 4d 23h   ← current
+* work@acme.com   100%     ...  in 5h 02m  ~in 11d   +7d in 6d 14h   ← active marker, not current
   other@acme.com  —        ...  EXPIRED    ?         —
 ```
 

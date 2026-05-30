@@ -30,7 +30,7 @@
 //! }
 //!
 //! // Save current credentials as "alice@acme.com"
-//! account::save( "alice@acme.com", credential_store, &paths, true ).expect( "failed to save" );
+//! account::save( "alice@acme.com", credential_store, &paths, true, None ).expect( "failed to save" );
 //!
 //! // Switch to "alice@home.com"
 //! account::switch_account( "alice@home.com", credential_store, &paths ).expect( "failed to switch" );
@@ -192,23 +192,36 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
   Ok( accounts )
 }
 
-/// Save the current credentials as a named account in `credential_store`.
+/// Save credentials as a named account in `credential_store`.
 ///
 /// Creates `{credential_store}/{name}.credentials.json`. Overwrites if exists.
 /// Also writes `{credential_store}/_active` = `name` so that the saved account
 /// is immediately visible as the active account without a separate switch call.
+///
+/// When `creds` is `Some(bytes)`, writes `bytes` directly to the credential file.
+/// When `creds` is `None`, copies from `paths.credentials_file()` (the live session file).
 ///
 /// # Errors
 ///
 /// Returns an error if the name is invalid, the credentials file cannot be
 /// read, or the credential store cannot be written.
 #[ inline ]
-pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths, update_marker : bool ) -> Result< (), std::io::Error >
+pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths, update_marker : bool, creds : Option< &[u8] > ) -> Result< (), std::io::Error >
 {
   validate_name( name )?;
   std::fs::create_dir_all( credential_store )?;
   let dest = credential_store.join( format!( "{name}.credentials.json" ) );
-  std::fs::copy( paths.credentials_file(), dest )?;
+  // Fix(BUG-221): accept direct credential bytes to bypass the copy-from-live-file path.
+  // Root cause: refresh_account_token() Some(paths) branch wrote new_creds to the live
+  //   session file before calling save(); save() then copied from the live file to the store.
+  //   This orphaned write clobbered live credentials during every batch refresh invocation.
+  // Pitfall: callers passing None (account.save, account.relogin) still copy from the live
+  //   file (existing behaviour unchanged); callers passing Some(bytes) bypass the live file.
+  match creds
+  {
+    Some( bytes ) => std::fs::write( &dest, bytes )?,
+    None          => { std::fs::copy( paths.credentials_file(), &dest )?; }
+  }
   // Best-effort: extract oauthAccount subtree from ~/.claude.json and save it.
   // Fix(BUG-174): save() previously used std::fs::copy for the entire ~/.claude.json,
   //   including machine-global keys (commands.*, mcpServers, projects). On switch_account(),
@@ -609,13 +622,20 @@ pub fn refresh_account_token(
       eprintln!( "[trace] {label}  {name}  run_isolated: OK credentials={creds_status}  ({:.1}s)", t_run.elapsed().as_secs_f64() );
     }
     let new_creds = isolated.credentials?;
-    if let Err( e ) = std::fs::write( p.credentials_file(), &new_creds )
+    // Fix(BUG-221): write refreshed credentials directly to the credential store, not to
+    //   p.credentials_file() (the live session file ~/.claude/.credentials.json).
+    // Root cause: BUG-175's fix (TSK-208) removed switch_account() but left the write to the
+    //   live file intact; every batch refresh call clobbered the active session credentials.
+    // Pitfall: save() is called with Some(&new_creds) so it writes from bytes directly,
+    //   bypassing the copy-from-live-file path that would copy now-stale credentials.
+    let store_cred_path = credential_store.join( format!( "{name}.credentials.json" ) );
+    if let Err( e ) = std::fs::write( &store_cred_path, &new_creds )
     {
       if trace { eprintln!( "[trace] {label}  {name}  write credentials: Err({e})" ); }
       return None;
     }
     if trace { eprintln!( "[trace] {label}  {name}  write credentials: OK" ); }
-    match save( name, credential_store, p, false )
+    match save( name, credential_store, p, false, Some( new_creds.as_bytes() ) )
     {
       Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}  save: OK" ); } }
       Err( e ) =>

@@ -41,7 +41,7 @@
 //! |----|---------------|-----------|-----|
 //! | csh01 | `csh01_help_shows_all_param_descriptions` | `.credentials.status.help` → all 13 param names + description text present | P |
 
-use crate::helpers::{ run_cs, stdout, assert_exit };
+use crate::cli_runner::{ run_cs, stdout, assert_exit };
 
 // ── csh01 ─────────────────────────────────────────────────────────────────────
 

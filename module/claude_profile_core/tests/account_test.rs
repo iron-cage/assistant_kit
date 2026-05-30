@@ -145,7 +145,7 @@ fn test_mre_bug211_save_false_leaves_marker_unchanged()
 
   let paths = ClaudePaths::with_home( tmp.path() );
 
-  account::save( "alice@test.com", &store, &paths, false ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None ).unwrap();
 
   let marker = store.join( account::active_marker_filename() );
   assert!(
@@ -269,7 +269,7 @@ fn as_save_writes_active_marker()
 
   let paths = ClaudePaths::with_home( tmp.path() );
 
-  account::save( "alice@acme.com", &store, &paths, true ).unwrap();
+  account::save( "alice@acme.com", &store, &paths, true, None ).unwrap();
 
   let marker_name = account::active_marker_filename();
   let active = std::fs::read_to_string( store.join( &marker_name ) )

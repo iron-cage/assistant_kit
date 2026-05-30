@@ -36,7 +36,7 @@
 //! Any future HTTP client added to `claude_profile` MUST be gated behind the `enabled`
 //! feature and MUST NOT use [`std::process::Command`] (banned by the responsibility test).
 
-use crate::helpers::{
+use crate::cli_runner::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
   write_credentials, write_account,

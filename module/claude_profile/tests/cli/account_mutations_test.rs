@@ -145,7 +145,7 @@
 //! |----|---------------|-----------|-----|
 //! | mre_bug209 | `mre_bug_209_account_save_uses_active_marker_not_stale_email` | `.account.save` reads `_active` marker, not stale `emailAddress` | P |
 
-use crate::helpers::{
+use crate::cli_runner::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
   write_credentials, write_account, write_claude_json, account_exists,
@@ -2971,7 +2971,7 @@ fn as27_host_with_spaces()
 #[ test ]
 fn as28_host_missing_user_hostname_stores_empty()
 {
-  use crate::helpers::BIN;
+  use crate::cli_runner::BIN;
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );

@@ -45,7 +45,7 @@
 | `7d_reset` | Duration string |
 | `expires` | Duration or timestamp string |
 | `renews` | Duration string, e.g. `~in 6d` or `in 3h 47m` |
-| `next_event_type` | Event label string, e.g. `"+5h"` |
+| `next_event_type` | Event label string, e.g. `"+7d"` |
 | `next_event_secs` | Seconds to next event, e.g. `10800` |
 | `sub` | Subscription tier, e.g. `max` |
 | `status` | Emoji: `🟢`, `🟡`, or `🔴` |

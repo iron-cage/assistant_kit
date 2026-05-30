@@ -214,7 +214,7 @@
 //! | it245 | `it245_min_7d_get_account_err_passes_returns_name`  | `min_7d::1 get::account` on Err account — returns name (absent passes) | P | no |
 //! | it246 | `it246_min_7d_only_valid_removes_err_account`       | `min_7d::1 only_valid::1` — Err passes `min_7d` but `only_valid` removes it | P | no |
 
-use crate::helpers::{
+use crate::cli_runner::{
   BIN,
   run_cs, run_cs_with_env, run_cs_without_home, run_cs_bytes_for_secs,
   stdout, stderr, assert_exit,
@@ -6357,13 +6357,13 @@ fn it224_lim_it_abs_true_shows_token_counts()
 
 // ── it225: → Next cell shows event label + duration (live) ───────────────────
 
-/// it225 — The `→ Next` column cells contain a recognized event-label-and-duration string.
+/// it225 — The `→ Next` column cells contain a recognized strategic event-label-and-duration string.
 ///
 /// Given a live account with valid quota data, the `→ Next` column must show the soonest
-/// upcoming event as `<label> in <duration>` — not an empty cell or bare header.
+/// upcoming strategic event as `<label> in <duration>` — not an empty cell or bare header.
 ///
-/// Note: exact label depends on live account state (which event comes soonest). The test
-/// verifies one of the four known event labels appears followed by "in" — not a specific one.
+/// After TSK-228, only `+7d` (7-day reset) and `$ren` (billing renewal) are candidates.
+/// Token expiry (`!tok`) and 5h session reset (`+5h`) are no longer included.
 ///
 /// Spec: [`tests/docs/cli/command/009_usage.md` IT-71]
 #[ test ]
@@ -6387,16 +6387,15 @@ fn it225_lim_it_it71_next_event_cell_shows_label_and_duration()
     text.contains( "\u{2192} Next" ),
     "→ Next column header must appear in default output (IT-71), got:\n{text}",
   );
-  // At least one recognized event-label pattern must appear in the output.
-  // Valid labels: +5h, !tok, +7d, $ren — each followed by " in ".
+  // At least one strategic event-label pattern must appear in the output.
+  // Valid labels after TSK-228: +7d, $ren — each followed by " in ".
+  // !tok and +5h are not candidates (token expiry / 5h reset excluded from → Next).
   let has_event_label =
-    text.contains( "+5h in " )
-    || text.contains( "!tok in " )
-    || text.contains( "+7d in " )
+    text.contains( "+7d in " )
     || text.contains( "$ren in " );
   assert!(
     has_event_label,
-    "→ Next cell must contain '<label> in <duration>' for live account (IT-71), got:\n{text}",
+    "→ Next cell must contain '+7d in ...' or '$ren in ...' for live account (IT-71), got:\n{text}",
   );
 }
 
@@ -6699,11 +6698,13 @@ fn it233_get_bogus_exits_1_names_valid_fields()
   );
 }
 
-/// it234 `lim_it` (045 EC-7): `get::next_event_type` outputs label; `get::next_event_secs` outputs integer.
+/// it234 `lim_it` (045 EC-7): `get::next_event_type` outputs strategic label; `get::next_event_secs` outputs integer.
 ///
 /// With a live account with an upcoming quota event, `get::next_event_type` must
-/// output a recognized event-label string; `get::next_event_secs` must output a
-/// bare non-negative integer.
+/// output a recognized strategic event-label string (`+7d` or `$ren`); `get::next_event_secs`
+/// must output a bare non-negative integer.
+///
+/// After TSK-228, only `+7d` and `$ren` are candidates. `!tok` and `+5h` are excluded.
 ///
 /// Spec: [`tests/docs/cli/param/045_get.md` EC-7]
 #[ test ]
@@ -6725,10 +6726,11 @@ fn it234_lim_it_get_next_event_type_and_secs()
   assert_exit( &out_type, 0 );
   let type_text = stdout( &out_type );
   let type_str  = type_text.trim();
-  let valid_labels = [ "+5h", "!tok", "+7d", "$ren" ];
+  // After TSK-228: only +7d and $ren are strategic next-event candidates.
+  let valid_labels = [ "+7d", "$ren" ];
   assert!(
     valid_labels.contains( &type_str ),
-    "get::next_event_type must output a recognized event label (045 EC-7), got:\n{type_str}",
+    "get::next_event_type must output '+7d' or '$ren' (045 EC-7 after TSK-228), got:\n{type_str}",
   );
 
   let out_secs = run_cs_with_env(

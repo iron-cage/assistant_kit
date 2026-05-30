@@ -187,10 +187,8 @@ pub( crate ) fn renews_label(
 /// Return the winning next-event candidate as `(secs, prefix, is_estimate)`.
 ///
 /// Candidates with `secs == 0` are excluded. Minimum-secs wins; ties by iteration order.
-/// Prefixes: `"!tok"` (token expiry), `"+5h"` (5h reset), `"+7d"` (7d reset), `"$ren"` (renewal).
+/// Prefixes: `"+7d"` (7d reset), `"$ren"` (renewal). Token expiry and 5h resets are not candidates.
 pub( crate ) fn next_event_raw(
-  expires_in_secs       : u64,
-  five_hour_resets_secs : Option< u64 >,
   seven_day_resets_secs : Option< u64 >,
   renewal_secs_opt      : Option< u64 >,
   renewal_is_estimate   : bool,
@@ -210,26 +208,23 @@ pub( crate ) fn next_event_raw(
       other                                  => other,
     }
   };
-  let mut best = consider( None,  expires_in_secs,   "!tok", false               );
-  if let Some( s ) = five_hour_resets_secs { best = consider( best, s, "+5h",  false               ); }
+  let mut best = None;
   if let Some( s ) = seven_day_resets_secs { best = consider( best, s, "+7d",  false               ); }
   if let Some( s ) = renewal_secs_opt      { best = consider( best, s, "$ren", renewal_is_estimate ); }
   best
 }
 
-/// Format the soonest upcoming event as a compact label for the `→ Next` column.
+/// Format the soonest upcoming strategic event as a compact label for the `→ Next` column.
 ///
-/// All absent / zero → `"—"` (em-dash). Estimate renewal → `"$ren ~in Xd"`.
+/// Only `+7d` (7-day reset) and `$ren` (billing renewal) are candidates. All absent / zero → `"—"`.
 pub( crate ) fn next_event_label(
-  expires_in_secs       : u64,
-  five_hour_resets_secs : Option< u64 >,
   seven_day_resets_secs : Option< u64 >,
   renewal_secs_opt      : Option< u64 >,
   renewal_is_estimate   : bool,
 ) -> String
 {
   match next_event_raw(
-    expires_in_secs, five_hour_resets_secs, seven_day_resets_secs,
+    seven_day_resets_secs,
     renewal_secs_opt, renewal_is_estimate,
   )
   {
@@ -876,68 +871,56 @@ mod tests
 
   // ── next_event_label (Phase 3 RED gate — TSK-227) ─────────────────────────
 
-  /// FT-18 — `next_event_label`: token expiry soonest → `"!tok in 2h"`.
+  /// TSK-228 regression guard — `next_event_label` uses 3-param signature; only `+7d` and `$ren` candidates.
   ///
-  /// `expires_in_secs=7200` (2h), `5h_reset=Some(14400)` (4h), others absent.
-  ///
-  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
-  /// Source: [`009_token_usage.md` AC-28]
-  #[ test ]
-  fn ne_tok_soonest()
-  {
-    let result = next_event_label( 7200, Some( 14400 ), None, None, false );
-    assert_eq!( result, "!tok in 2h", "token soonest → '!tok in 2h', got: {result}" );
-  }
-
-  /// FT-18 variant — `next_event_label`: 5h reset soonest → `"+5h in 30m"`.
-  ///
-  /// `expires_in_secs=7200`, `5h_reset=Some(1800)` (30m), others absent.
+  /// After TSK-228, `expires_in_secs` and `five_hour_resets_secs` params are removed. Passing only a
+  /// 7d reset of 7200s must yield `"+7d in 2h"` — confirming `!tok` and `+5h` are not selectable.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]
   #[ test ]
-  fn ne_5h_soonest()
+  fn ne_tok_excluded_after_tsk228()
   {
-    let result = next_event_label( 7200, Some( 1800 ), None, None, false );
-    assert_eq!( result, "+5h in 30m", "5h reset soonest → '+5h in 30m', got: {result}" );
+    let result = next_event_label( Some( 7200 ), None, false );
+    assert_eq!( result, "+7d in 2h", "only 7d reset present → '+7d in 2h', got: {result}" );
   }
 
   /// FT-18 variant — `next_event_label`: 7d reset soonest → `"+7d in 2d"`.
   ///
-  /// `expires_in_secs=10d`, `5h_reset=Some(5d)`, `7d_reset=Some(2d)`, `renewal=None`.
+  /// `7d_reset=Some(2d)`, `renewal=None`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]
   #[ test ]
   fn ne_7d_soonest()
   {
-    let result = next_event_label( 10 * 86400, Some( 5 * 86400 ), Some( 2 * 86400 ), None, false );
+    let result = next_event_label( Some( 2 * 86400 ), None, false );
     assert_eq!( result, "+7d in 2d", "7d reset soonest → '+7d in 2d', got: {result}" );
   }
 
   /// FT-18 variant — `next_event_label`: exact billing renewal soonest → `"$ren in 6h"`.
   ///
-  /// `expires_in_secs=1d`, `5h_reset=Some(1d)`, `renewal=Some(21600)` (6h), `is_estimate=false`.
+  /// `7d_reset=None`, `renewal=Some(21600)` (6h), `is_estimate=false`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]
   #[ test ]
   fn ne_renewal_soonest_exact()
   {
-    let result = next_event_label( 86400, Some( 86400 ), None, Some( 21600 ), false );
+    let result = next_event_label( None, Some( 21600 ), false );
     assert_eq!( result, "$ren in 6h", "exact renewal soonest → '$ren in 6h', got: {result}" );
   }
 
   /// FT-18 variant — `next_event_label`: estimated billing renewal soonest → `"$ren ~in 3d"`.
   ///
-  /// `expires_in_secs=10d`, others absent, `renewal=Some(3d)`, `is_estimate=true`.
+  /// `7d_reset=None`, `renewal=Some(3d)`, `is_estimate=true`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]
   #[ test ]
   fn ne_renewal_soonest_estimate()
   {
-    let result = next_event_label( 10 * 86400, None, None, Some( 3 * 86400 ), true );
+    let result = next_event_label( None, Some( 3 * 86400 ), true );
     assert_eq!( result, "$ren ~in 3d", "estimate renewal soonest → '$ren ~in 3d', got: {result}" );
   }
 
@@ -948,7 +931,7 @@ mod tests
   #[ test ]
   fn ne_all_none_returns_dash()
   {
-    let result = next_event_label( 0, None, None, None, false );
+    let result = next_event_label( None, None, false );
     assert_eq!( result, "\u{2014}", "all absent → em-dash, got: {result}" );
   }
 

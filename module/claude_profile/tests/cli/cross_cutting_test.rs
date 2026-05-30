@@ -42,7 +42,7 @@
 //! | e12 | `e12_fmt_alias_token_status_json` | fmt::json → .token.status outputs JSON object | P |
 //! | e13 | `e13_verbosity_out_of_range_on_non_verbosity_cmd` | verbosity::3 on .credentials.status → "Unknown parameter" not "out of range" | N |
 
-use crate::helpers::{
+use crate::cli_runner::{
   run_cs, run_cs_with_env, run_cs_without_home,
   stdout, stderr, assert_exit,
   write_credentials, write_account, account_exists,
@@ -385,7 +385,7 @@ fn e10_accounts_home_unset_exits_0()
     stdout( &out ).contains( "(no accounts configured)" ),
     "HOME unset must show advisory, got stdout: {:?}, stderr: {:?}",
     stdout( &out ),
-    crate::helpers::stderr( &out ),
+    crate::cli_runner::stderr( &out ),
   );
 }
 
@@ -415,7 +415,7 @@ fn e11_fmt_alias_accounts_json()
     text.trim_start().starts_with( '[' ),
     "fmt::json must produce JSON array, got stdout: {:?}, stderr: {:?}",
     text,
-    crate::helpers::stderr( &out ),
+    crate::cli_runner::stderr( &out ),
   );
 }
 
@@ -435,7 +435,7 @@ fn e12_fmt_alias_token_status_json()
     text.trim_start().starts_with( '{' ),
     "fmt::json must produce JSON object, got stdout: {:?}, stderr: {:?}",
     text,
-    crate::helpers::stderr( &out ),
+    crate::cli_runner::stderr( &out ),
   );
 }
 

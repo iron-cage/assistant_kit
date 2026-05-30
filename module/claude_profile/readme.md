@@ -75,7 +75,7 @@ for acct in account::list( &credential_store ).expect( "failed to list accounts"
 }
 
 // Save current credentials as "work@acme.com"
-account::save( "work@acme.com", &credential_store, &claude, true ).expect( "failed to save account" );
+account::save( "work@acme.com", &credential_store, &claude, true, None ).expect( "failed to save account" );
 
 // Switch to "personal@home.com"
 account::switch_account( "personal@home.com", &credential_store, &claude ).expect( "failed to switch" );

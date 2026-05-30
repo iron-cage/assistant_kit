@@ -895,11 +895,11 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ---
 
-### IT-71: `→ Next` column shows soonest upcoming event label and duration
+### IT-71: `→ Next` column shows soonest upcoming strategic event label and duration
 
-- **Given:** One account with live quota data: `five_hour.resets_at` set to ~3h in the future; token expiry is 8h away; no `_renewal_at`. The `+5h` reset is soonest.
+- **Given:** One account with live quota data: `seven_day.resets_at` set to ~2 days in the future; no `_renewal_at`. The `+7d` reset is soonest.
 - **When:** `clp .usage`
-- **Then:** Exits 0. The `→ Next` column header appears in the table header row. That account's `→ Next` cell contains `+5h in` followed by a duration string (e.g., `+5h in 3h 0m`). No other event label (`!tok`, `+7d`, `$ren`) appears in that cell.
+- **Then:** Exits 0. The `→ Next` column header appears in the table header row. That account's `→ Next` cell contains `+7d in` followed by a duration string (e.g., `+7d in 2d 0m`). No `!tok` or `+5h` label appears — token expiry and 5h resets are not candidates for `→ Next`.
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it225_lim_it_it71_next_event_cell_shows_label_and_duration` (in `tests/cli/usage_test.rs`)
@@ -909,13 +909,13 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 ### IT-72: `format::json` output contains new fields; `next_renewal_est` absent
 
-- **Given:** One account with `_renewal_at` set to a future timestamp (~6 days away). Token expiry is 8h away; `five_hour.resets_at` is 3h away.
+- **Given:** One account with `_renewal_at` set to a future timestamp (~6 days away). Token expiry is 8h away; `five_hour.resets_at` is 3h away; no `seven_day.resets_at` present.
 - **When:** `clp .usage format::json`
 - **Then:** Exits 0. JSON array contains one element with:
   - `renewal_secs`: positive integer (~518400 for 6 days)
   - `renewal_is_estimate`: `false` (sourced from `_renewal_at`, not estimate)
-  - `next_event_type`: `"+5h"` (soonest event)
-  - `next_event_secs`: positive integer (~10800 for 3h)
+  - `next_event_type`: `"ren"` (soonest strategic event is `$ren`; sigil stripped in JSON output)
+  - `next_event_secs`: positive integer (~518400 for 6 days)
   - No `next_renewal_est` key present in the object.
 - **Exit:** 0
 - **Live:** yes

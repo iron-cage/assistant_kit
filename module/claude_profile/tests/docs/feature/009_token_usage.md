@@ -270,13 +270,13 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 ---
 
-### FT-18: `→ Next` column shows soonest upcoming event label and duration
+### FT-18: `→ Next` column shows soonest strategic event label and duration
 
-- **Given (unit test):** `next_event_label(expires_in_secs, five_hour_resets_secs, seven_day_resets_secs, renewal_secs, renewal_is_estimate)` with `expires_in_secs = 7200` (2h), `five_hour_resets_secs = Some(14400)` (4h), `seven_day_resets_secs = None`, `renewal_secs = None`.
-- **When:** `next_event_label()` called with the above inputs.
-- **Then:** Returns `"!tok in 2h"` — token expiry is soonest; label is `!tok`.
+- **Given (unit test):** `next_event_label(seven_day_resets_secs, renewal_secs, renewal_is_estimate)` — only `+7d` and `$ren` are candidates; `!tok` (token expiry) and `+5h` (5h reset) are not candidates since they are already shown in `Expires` and `5h Reset` columns.
+- **When:** `next_event_label()` called with `seven_day_resets_secs = Some(7200)` (2h), `renewal_secs = None`.
+- **Then:** Returns `"+7d in 2h"` — weekly reset is soonest strategic event.
 - **Exit:** n/a (unit test)
-- **Source fn:** `ne_tok_soonest`, `ne_5h_soonest`, `ne_7d_soonest`, `ne_renewal_soonest_exact`, `ne_renewal_soonest_estimate`, `ne_all_none_returns_dash` (in `src/usage/format.rs`)
+- **Source fn:** `ne_tok_excluded_after_tsk228`, `ne_7d_soonest`, `ne_renewal_soonest_exact`, `ne_renewal_soonest_estimate`, `ne_all_none_returns_dash` (in `src/usage/format.rs`)
 - **Source:** [009_token_usage.md AC-28](../../../../docs/feature/009_token_usage.md)
 
 ---

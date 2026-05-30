@@ -21,6 +21,9 @@
 //! | `art_some_paths_run_isolated_invoked_trace_no_panic`    | `Some(paths)` | `trace=true`; cred in store; `.claude/` exists    | no panic, `None`   |
 //! | `bug_mre_bug205_refresh_token_read_write_ok_trace_structural` | structural | grep account.rs for `"read credentials: OK"` and `"write credentials: OK"` | ≥2 each |
 //! | `bug_mre_bug175_no_switch_account_in_some_branch` | structural | grep account.rs for `"switch_account( name, credential_store, p )"` | 0 occurrences |
+//! | `bug_mre_bug221_some_branch_no_p_credentials_file_write` | structural | grep account.rs for `std::fs::write( p.credentials_file(),` | 0 occurrences |
+//! | `mre_bug221_save_some_creds_writes_to_store_not_live_file` | unit | `save("acct", store, paths, false, Some(b"data"))` | store = `b"data"`; live file unchanged |
+//! | `mre_bug221_save_none_creds_copies_from_live_file` | unit | `save("acct", store, paths, false, None)` | store = live file content; live file unchanged |
 //!
 //! ## Pitfall: Consumer Feature Activation
 //!
@@ -208,4 +211,99 @@ fn bug_mre_bug205_refresh_token_read_write_ok_trace_structural()
   );
 }
 
+// ── structural (BUG-221) ──────────────────────────────────────────────────────
 
+#[ test ]
+// Root Cause: refresh_account_token() Some(paths) branch called std::fs::write(p.credentials_file(), &new_creds)
+//   before calling save(), clobbering the live session credentials file (~/.claude/.credentials.json)
+//   on every batch refresh call. BUG-175's fix (TSK-208) removed switch_account() but left this write intact.
+// Why Not Caught: Some(paths) branch tests covered only error paths (no store cred, no .claude/ dir);
+//   no test verified the live file was untouched after a successful refresh cycle in the Some branch.
+// Fix Applied: changed write target from p.credentials_file() to credential_store path; added
+//   creds: Option<&[u8]> to save() so save(Some(&new_creds)) writes from bytes without reading live file.
+// Prevention: structural test asserts 0 occurrences of the old write-to-live-file pattern; any regression
+//   reintroducing the write to p.credentials_file() in the Some(paths) branch fails immediately.
+// Pitfall: grep for the full function-call pattern to avoid matching doc comments or other write() calls
+//   that are not the live-file clobber.
+fn bug_mre_bug221_some_branch_no_p_credentials_file_write()
+{
+  let account_rs = std::path::Path::new( env!( "CARGO_MANIFEST_DIR" ) ).join( "src/account.rs" );
+  let content    = std::fs::read_to_string( &account_rs )
+    .unwrap_or_else( |e| panic!( "cannot read {}: {e}", account_rs.display() ) );
+  let count = content.matches( "std::fs::write( p.credentials_file()," ).count();
+  assert!(
+    count == 0,
+    "BUG-221: expected 0 occurrences of 'std::fs::write( p.credentials_file(),' in account.rs, found {count}"
+  );
+}
+
+#[ test ]
+// Root Cause: save() always copied from paths.credentials_file() (the live session file); refresh_account_token()
+//   Some(paths) branch had to write to the live file first so save() could copy refreshed credentials.
+//   This orphaned write was the core of BUG-221.
+// Why Not Caught: save() callers (.account.save, .account.relogin) legitimately copy from the live file;
+//   no test exercised a code path where save() needed to write from bytes without touching the live file.
+// Fix Applied: save() gained creds: Option<&[u8]>; Some(bytes) writes directly to the store file;
+//   None copies from the live file as before (existing .account.save / .account.relogin behaviour preserved).
+// Prevention: unit test calls save(Some(bytes)) directly and asserts the store file = bytes and live file unchanged.
+// Pitfall: save() with Some(bytes) still runs oauthAccount merge and _active marker logic; only the
+//   credential file write is bypassed — the rest of save() runs identically for both Some and None.
+fn mre_bug221_save_some_creds_writes_to_store_not_live_file()
+{
+  let store      = TempDir::new().unwrap();
+  let fake_home  = TempDir::new().unwrap();
+  let dot_claude = fake_home.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  let live_file  = dot_claude.join( ".credentials.json" );
+  std::fs::write( &live_file, b"original_live_creds" ).unwrap();
+  let paths      = ClaudePaths::with_home( fake_home.path() );
+
+  account::save( "acct@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ) ).unwrap();
+
+  let store_file = store.path().join( "acct@test.com.credentials.json" );
+  assert!( store_file.exists(), "save(Some(bytes)) must create the credential store file" );
+  assert_eq!(
+    std::fs::read( &store_file ).unwrap(),
+    b"new_creds_bytes",
+    "save(Some(bytes)) must write bytes to the credential store file",
+  );
+  assert_eq!(
+    std::fs::read( &live_file ).unwrap(),
+    b"original_live_creds",
+    "save(Some(bytes)) must NOT modify the live credentials file",
+  );
+}
+
+#[ test ]
+// Root Cause: (see mre_bug221_save_some_creds_writes_to_store_not_live_file)
+// Why Not Caught: (same root cause — no tests exercised the None path in isolation)
+// Fix Applied: (same — save() creds param; None path copies from live file, unchanged from before)
+// Prevention: unit test verifies save(None) still copies from the live file (callers .account.save
+//   and .account.relogin depend on this behaviour — breaking it would silently break account saving).
+// Pitfall: save(None) is the pre-existing behaviour; this test guards against accidentally breaking it
+//   while fixing the Some(bytes) path.
+fn mre_bug221_save_none_creds_copies_from_live_file()
+{
+  let store      = TempDir::new().unwrap();
+  let fake_home  = TempDir::new().unwrap();
+  let dot_claude = fake_home.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  let live_file  = dot_claude.join( ".credentials.json" );
+  std::fs::write( &live_file, b"live_creds_content" ).unwrap();
+  let paths      = ClaudePaths::with_home( fake_home.path() );
+
+  account::save( "acct@test.com", store.path(), &paths, false, None ).unwrap();
+
+  let store_file = store.path().join( "acct@test.com.credentials.json" );
+  assert!( store_file.exists(), "save(None) must create the credential store file" );
+  assert_eq!(
+    std::fs::read( &store_file ).unwrap(),
+    b"live_creds_content",
+    "save(None) must copy from the live credentials file",
+  );
+  assert_eq!(
+    std::fs::read( &live_file ).unwrap(),
+    b"live_creds_content",
+    "save(None) must NOT modify the live credentials file",
+  );
+}

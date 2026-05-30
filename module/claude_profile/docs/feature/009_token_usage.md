@@ -4,7 +4,7 @@
 
 - **Purpose**: Surface live quota utilization for all saved accounts and the currently live session via `GET /api/oauth/usage`, showing 5h, 7d, and Sonnet-specific weekly quota remaining.
 - **Responsibility**: Documents the `usage` module and `.usage` CLI command.
-- **In Scope**: Per-account quota fetch via `claude_quota::fetch_oauth_usage()` calling `GET /api/oauth/usage`, `OauthUsageData` parsing with `five_hour`/`seven_day`/`seven_day_sonnet` fields, parallel fetch of account billing state via `claude_quota::fetch_oauth_account()` → `OauthAccountData` (`billing_type`, `has_max`, `org_created_at`), token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for active-marker-but-not-current accounts), synthetic `(current session)` row when live credentials are unsaved, `Sub` column (subscription label: `max`/`pro`/`—`/`?`, hidden by default — `cols::+sub` to show), `~Renews` column (duration countdown to billing renewal: exact when `_renewal_at` ISO-8601 UTC override present in `{name}.claude.json`, estimated with `~` prefix when derived from `org_created_at` day-of-month), `→ Next` column (soonest upcoming state-change event among `!tok` token expiry, `+5h` 5h quota reset, `+7d` 7d quota reset, `$ren` billing renewal), `_renewal_at` optional ISO-8601 UTC field in `{name}.claude.json` (written by `.account.renewal`, preserved by `save()` read-merge), table output using `data_fmt`, graceful handling of expired/missing tokens, composite `●` status emoji (AND of 5h and 7d), per-column emoji in `5h Left` and `7d Left` values, three-tier universal display grouping (🟢 → 🟡 → 🔴) with h-exhausted sub-group before weekly-exhausted sub-group within 🟡, `cols::` column visibility modifiers, `next::` recommendation strategy parameter, multi-strategy footer, `7d Son Reset` column (hidden by default), duration format capped to 2 significant units, `format::json` output.
+- **In Scope**: Per-account quota fetch via `claude_quota::fetch_oauth_usage()` calling `GET /api/oauth/usage`, `OauthUsageData` parsing with `five_hour`/`seven_day`/`seven_day_sonnet` fields, parallel fetch of account billing state via `claude_quota::fetch_oauth_account()` → `OauthAccountData` (`billing_type`, `has_max`, `org_created_at`), token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for active-marker-but-not-current accounts), synthetic `(current session)` row when live credentials are unsaved, `Sub` column (subscription label: `max`/`pro`/`—`/`?`, hidden by default — `cols::+sub` to show), `~Renews` column (duration countdown to billing renewal: exact when `_renewal_at` ISO-8601 UTC override present in `{name}.claude.json`, estimated with `~` prefix when derived from `org_created_at` day-of-month), `→ Next` column (soonest upcoming strategic event among `+7d` 7d quota reset and `$ren` billing renewal — token expiry and 5h resets are excluded as they are already surfaced in `Expires` and `5h Reset` columns respectively), `_renewal_at` optional ISO-8601 UTC field in `{name}.claude.json` (written by `.account.renewal`, preserved by `save()` read-merge), table output using `data_fmt`, graceful handling of expired/missing tokens, composite `●` status emoji (AND of 5h and 7d), per-column emoji in `5h Left` and `7d Left` values, three-tier universal display grouping (🟢 → 🟡 → 🔴) with h-exhausted sub-group before weekly-exhausted sub-group within 🟡, `cols::` column visibility modifiers, `next::` recommendation strategy parameter, multi-strategy footer, `7d Son Reset` column (hidden by default), duration format capped to 2 significant units, `format::json` output.
 - **Out of Scope**: Historical token counts from stats-cache.json (replaced by live API data); verbosity levels (single fixed output level per command design); relying on per-machine active marker for `✓` determination (live credential matching via `accessToken` comparison determines `✓`; active marker determines `*` only).
 
 ### Design
@@ -53,10 +53,10 @@
    - `7d(Son)`: remaining Sonnet-only weekly quota percentage; sourced from `OauthUsageData.seven_day_sonnet.utilization`; shows `—` when `seven_day_sonnet` is `None`
    - `5h Reset` / `7d Reset`: countdown formatted via `format_duration_secs` (capped to 2 significant units); sourced from `five_hour.resets_at` / `seven_day.resets_at` (ISO-8601 UTC string → Unix seconds via `iso_to_unix_secs`)
    - `7d Son Reset` (hidden by default): countdown to Sonnet-specific weekly reset; shows `—` when `seven_day_sonnet` is `None`
-   - `→ Next`: Soonest upcoming state-change event among: `!tok` (token expires, from credential file `expiresAt`), `+5h` (5h quota resets, from `five_hour.resets_at`), `+7d` (7d quota resets, from `seven_day.resets_at`), `$ren` (billing renewal, from `_renewal_at` override or `org_created_at` estimate). Format: `"EVENT in Xh Ym"` for exact timestamps; `"$ren ~in Xd"` when billing source is an estimate. Shows `—` when no event has a known future timestamp.
+   - `→ Next`: Soonest upcoming strategic event among: `+7d` (7d quota resets, from `seven_day.resets_at`) and `$ren` (billing renewal, from `_renewal_at` override or `org_created_at` estimate). Token expiry (`!tok`) and 5h resets (`+5h`) are not included — they are already surfaced in the `Expires` and `5h Reset` columns. Format: `"EVENT in Xh Ym"` for exact timestamps; `"$ren ~in Xd"` when billing source is an estimate. Shows `—` when no event has a known future timestamp.
    - Unavailable accounts show `—` for all quota columns and a shortened error reason in parentheses in the last visible quota data column (the `5h Left`–`7d Reset` range); metadata columns `Expires`, `Sub`, and `~Renews` are populated from their respective non-quota sources and are not overwritten by the error reason
    - `Sub` and `~Renews` are populated from `OauthAccountData` regardless of whether the quota fetch succeeded; `Sub` shows `"?"` when the account fetch failed; `~Renews` shows `"?"` when neither `_renewal_at` nor `OauthAccountData` is available
-   - `→ Next` selects the minimum-timestamp event; events are excluded when the corresponding timestamp is absent (`resets_at = null`) or in the past
+   - `→ Next` selects the minimum-timestamp event among `+7d` and `$ren`; events are excluded when the corresponding timestamp is absent (`resets_at = null`) or in the past
    - **Three-tier display grouping:** Before applying the sort strategy, accounts are grouped by composite health tier: 🟢 tier (`5h Left > 15%` and `7d Left > 5%`) → 🟡 tier (either `5h Left ≤ 15%` or `7d Left ≤ 5%`) → 🔴 tier (error). Within the 🟡 tier, accounts are further ordered into two sub-groups: **h-exhausted** (`5h Left ≤ 15%`) first, then **weekly-exhausted** (`5h Left > 15%` and `7d Left ≤ 5%`). Accounts where both quotas are below threshold fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. This ensures healthy accounts always appear above exhausted or errored accounts regardless of sort strategy or direction, and session-blocked accounts are visually separated above weekly-blocked accounts within 🟡.
    - **Duration format:** `format_duration_secs` output is capped to 2 significant units (e.g., `1d 2h` not `1d 2h 45m`, `3h 19m` not `3h 19m 5s`).
 7. Append footer when ≥2 accounts with valid quota data exist. Footer always shows one recommendation line per strategy (endurance, drain). The `→` table marker appears on the account selected by the `next::` strategy (see [023_next_account_strategies.md](023_next_account_strategies.md)). Omit footer when 0 or 1 valid account.
@@ -68,9 +68,9 @@
 Quota
 
   ●  Account              5h Left     5h Reset    7d Left     7d(Son)  7d Reset   Expires     ~Renews        → Next
-✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%     35%      in 4d 23h  in 7h 24m   in 3h 47m      +5h in 3h 19m
-  🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         +5h in 4h 58m
-→ 🟡 carol@example.com    🟡 3%      in 0h 23m  🟢 52%     18%      in 2d 11h  in 1h 12m   ~in 8d         +5h in 0h 23m
+✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%     35%      in 4d 23h  in 7h 24m   in 3h 47m      $ren in 3h 47m
+  🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         +7d in 6d 14h
+→ 🟡 carol@example.com    🟡 3%      in 0h 23m  🟢 52%     18%      in 2d 11h  in 1h 12m   ~in 8d         +7d in 2d 11h
   🔴 dave@example.com     —          —           —          —        —          EXPIRED      ?              —
   🔴 eve@example.com      —          —           —          —        —          EXPIRED      ?              —
 
@@ -87,9 +87,9 @@ Valid: 3 / 5   ->  Next by strategy:
 Quota
 
   ●  Account              5h Left     5h Reset    7d Left     7d(Son)  7d Reset   Expires     ~Renews        → Next
-✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%     35%      in 4d 23h  in 7h 24m   in 3h 47m      +5h in 3h 19m
-* 🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         +5h in 4h 58m
-→ 🟢 carol@example.com    🟢 95%     in 3h 44m  🟢 72%     54%      in 5d 01h  in 6h 11m   ~in 11d        +5h in 3h 44m
+✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%     35%      in 4d 23h  in 7h 24m   in 3h 47m      $ren in 3h 47m
+* 🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         +7d in 6d 14h
+→ 🟢 carol@example.com    🟢 95%     in 3h 44m  🟢 72%     54%      in 5d 01h  in 6h 11m   ~in 11d        +7d in 5d 1h
 
 Valid: 3 / 3   ->  Next by strategy:
   endurance  carol@example.com   95% session, 72% 7d left, expires in 6h 11m
@@ -104,8 +104,8 @@ Valid: 3 / 3   ->  Next by strategy:
 Quota
 
   ●  Account              5h Left     5h Reset    7d Left     7d(Son)  7d Reset   Expires     ~Renews        → Next
-✓ 🟢 (current session)    🟢 64%     in 1h 39m  🟢 39%     —        in 3d 17h  in 4h 39m   ?              +5h in 1h 39m
-→ 🟢 alice@example.com    🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   in 3h 47m      +5h in 4h 58m
+✓ 🟢 (current session)    🟢 64%     in 1h 39m  🟢 39%     —        in 3d 17h  in 4h 39m   ?              +7d in 3d 17h
+→ 🟢 alice@example.com    🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   in 3h 47m      $ren in 3h 47m
   🔴 bob@example.com      —          —           —          —        —          EXPIRED      ?              —
 
 Valid: 2 / 3   ->  Next by strategy:
@@ -117,8 +117,8 @@ Valid: 2 / 3   ->  Next by strategy:
 
 ```json
 [
-  {"account":"alice@example.com","is_current":true,"is_active":false,"expires_in_secs":26640,"billing_type":"stripe_subscription","has_max":true,"renewal_secs":13620,"renewal_is_estimate":false,"next_event_type":"+5h","next_event_secs":11940,"session_5h_left_pct":86,"session_5h_resets_in_secs":11940,"weekly_7d_left_pct":65,"weekly_7d_sonnet_left_pct":35,"weekly_7d_resets_in_secs":432540},
-  {"account":"bob@example.com","is_current":false,"is_active":true,"expires_in_secs":18120,"billing_type":"stripe_subscription","has_max":true,"renewal_secs":518400,"renewal_is_estimate":true,"next_event_type":"+5h","next_event_secs":17880,"session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_sonnet_left_pct":28,"weekly_7d_resets_in_secs":500040},
+  {"account":"alice@example.com","is_current":true,"is_active":false,"expires_in_secs":26640,"billing_type":"stripe_subscription","has_max":true,"renewal_secs":13620,"renewal_is_estimate":false,"next_event_type":"ren","next_event_secs":13620,"session_5h_left_pct":86,"session_5h_resets_in_secs":11940,"weekly_7d_left_pct":65,"weekly_7d_sonnet_left_pct":35,"weekly_7d_resets_in_secs":432540},
+  {"account":"bob@example.com","is_current":false,"is_active":true,"expires_in_secs":18120,"billing_type":"stripe_subscription","has_max":true,"renewal_secs":518400,"renewal_is_estimate":true,"next_event_type":"7d","next_event_secs":500040,"session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_sonnet_left_pct":28,"weekly_7d_resets_in_secs":500040},
   {"account":"carol@example.com","is_current":false,"is_active":false,"expires_in_secs":0,"billing_type":null,"has_max":null,"renewal_secs":null,"renewal_is_estimate":null,"next_event_type":null,"next_event_secs":null,"error":"missing accessToken"},
   {"account":"dave@example.com","is_current":false,"is_active":false,"expires_in_secs":0,"billing_type":null,"has_max":null,"renewal_secs":null,"renewal_is_estimate":null,"next_event_type":null,"next_event_secs":null,"error":"missing accessToken"}
 ]
@@ -164,8 +164,16 @@ Valid: 2 / 3   ->  Next by strategy:
 - **AC-25**: `format_duration_secs` output is capped to 2 significant units: shows at most 2 time components (e.g., `1d 2h`, `3h 19m`, `23m`), never 3.
 - **AC-26**: Within the 🟡 tier, h-exhausted accounts (`5h Left ≤ 15%`) appear before weekly-exhausted accounts (`5h Left > 15%` and `7d Left ≤ 5%`). Accounts where both `5h Left ≤ 15%` and `7d Left ≤ 5%` fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. The sub-grouping is never reversed by `desc::`.
 - **AC-27**: `~Renews` column shows `in Xh Ym` (exact duration, no `~` prefix) when `_renewal_at` is present in `{name}.claude.json` and auto-advances monthly when past; shows `~in Xd` (with `~` prefix, 2 significant units max) when only `org_created_at` is available; shows `"?"` when neither source is available; shows `"—"` when timestamp parsing fails.
-- **AC-28**: `→ Next` column shows the chronologically soonest event among `!tok` (token expiry from credential file `expiresAt`), `+5h` (5h quota reset from `five_hour.resets_at`), `+7d` (7d quota reset from `seven_day.resets_at`), and `$ren` (billing renewal from `_renewal_at` override or `org_created_at` estimate). Format: `"EVENT in Xh Ym"` for exact sources; `"$ren ~in Xd"` when billing source is an estimate. Shows `—` when no event has a known future timestamp. Events with absent or past timestamps are excluded from consideration.
-- **AC-29**: `format::json` output includes `renewal_secs` (u64 seconds to next billing renewal, or `null`), `renewal_is_estimate` (`true` when sourced from `org_created_at`, `false` when from `_renewal_at`, or `null`), `next_event_type` (string event label `"!tok"`, `"+5h"`, `"+7d"`, `"$ren"`, or `null`), and `next_event_secs` (u64 seconds to next event, or `null`). `get::` accepts `next_event_type` and `next_event_secs` as valid field IDs.
+- **AC-28**: `→ Next` column shows the chronologically soonest strategic event among `+7d` (7d quota reset from `seven_day.resets_at`) and `$ren` (billing renewal from `_renewal_at` override or `org_created_at` estimate). Token expiry (`!tok`) and 5h resets (`+5h`) are not candidates — they are already surfaced in `Expires` and `5h Reset` columns. Format: `"EVENT in Xh Ym"` for exact sources; `"$ren ~in Xd"` when billing source is an estimate. Shows `—` when no event has a known future timestamp. Events with absent or past timestamps are excluded. Selection: minimum-seconds candidate wins; ties broken by iteration order `+7d` → `$ren`.
+
+  **Next Event Type Registry:**
+
+  | Prefix | Event | Source field | Estimated form | Excluded when |
+  |--------|-------|-------------|----------------|---------------|
+  | `+7d`  | 7d weekly quota reset | `seven_day.resets_at` from API | — (always exact) | `resets_at` absent or past |
+  | `$ren` | Billing renewal | `_renewal_at` override or `org_created_at` estimate | `$ren ~in Xd` (tilde prefix) | absent or past |
+  | `—`    | No event | — | — | both sources absent / past |
+- **AC-29**: `format::json` output includes `renewal_secs` (u64 seconds to next billing renewal, or `null`), `renewal_is_estimate` (`true` when sourced from `org_created_at`, `false` when from `_renewal_at`, or `null`), `next_event_type` (string event label `"7d"` or `"ren"` — sigil characters `+` and `$` are stripped in JSON output — or `null` when no strategic event has a future timestamp), and `next_event_secs` (u64 seconds to next event, or `null`). Note: `get::next_event_type` preserves the display sigil and outputs `+7d` or `$ren` (see [feature/028_usage_row_filtering.md](028_usage_row_filtering.md)).
 
 ### Cross-References
 

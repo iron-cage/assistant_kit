@@ -34,7 +34,7 @@
 //! | p09 | `p09_paths_field_returns_single_value` | field::credential_store → 1-line raw path; exit 0 | P |
 //! | p10 | `p10_paths_field_unknown_exits_1` | field::nonexistent → exit 1; stderr names the bad field | N |
 
-use crate::helpers::{
+use crate::cli_runner::{
   run_cs_with_env, run_cs_without_home,
   stdout, stderr, assert_exit,
   write_credentials,

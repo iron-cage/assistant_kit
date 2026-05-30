@@ -83,7 +83,7 @@
 //! | pho03 | `pho03_bug204_account_relogin_help_name_optional` | `.account.relogin.help` → `name` still `optional` | P |
 //! | pho04 | `pho04_bug204_accounts_help_name_optional` | `.accounts.help` → `name` still `optional` | P |
 
-use crate::helpers::{ run_cs, stdout, assert_exit };
+use crate::cli_runner::{ run_cs, stdout, assert_exit };
 
 // ── BUG-203 reproducers ─────────────────────────────────────────────────────
 

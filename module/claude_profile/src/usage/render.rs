@@ -5,7 +5,7 @@
 //! produces a no-emoji version of the text table; `extract_get_field` extracts one
 //! column value as a bare string. All consumed by `api.rs::usage_routine`.
 
-use data_fmt::{ RowBuilder, TableFormatter, Format };
+use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Format };
 use crate::output::{ format_duration_secs, json_escape };
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility, GetField };
 use super::format::{
@@ -145,10 +145,6 @@ pub( crate ) fn render_text(
           now_secs,
         ).unzip();
         let next_cell    = next_event_label(
-          ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ),
-          data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() )
-            .and_then( claude_quota::iso_to_unix_secs )
-            .map( |t| t.saturating_sub( now_secs ) ),
           data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() )
             .and_then( claude_quota::iso_to_unix_secs )
             .map( |t| t.saturating_sub( now_secs ) ),
@@ -210,7 +206,7 @@ pub( crate ) fn render_text(
   }
 
   let view  = builder.build_view();
-  let table = Format::format( &TableFormatter::new(), &view ).unwrap_or_default();
+  let table = Format::format( &TableFormatter::with_config( TableConfig::default().auto_wrap( false ) ), &view ).unwrap_or_default();
   let body  = format!( "Quota\n\n{table}\n" );
 
   // Footer: shown only when ≥2 valid accounts (AC-09 from 023_next_account_strategies.md).
@@ -304,15 +300,10 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
         let weekly_pct    = pct_str( data.seven_day.as_ref().map( |p| p.utilization ) );
         let sonnet_pct    = pct_str( data.seven_day_sonnet.as_ref().map( |p| p.utilization ) );
         let weekly_reset  = reset_str( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) );
-        let five_reset_secs = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() )
-          .and_then( claude_quota::iso_to_unix_secs )
-          .map( |t| t.saturating_sub( now_secs ) );
         let seven_reset_secs = data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() )
           .and_then( claude_quota::iso_to_unix_secs )
           .map( |t| t.saturating_sub( now_secs ) );
         let ( next_type_str, next_secs_str ) = match next_event_raw(
-          ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ),
-          five_reset_secs,
           seven_reset_secs,
           ren_pair.map( |( s, _ )| s ),
           ren_pair.is_some_and( |( _, est )| est ),
@@ -339,8 +330,6 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
         // Err accounts lack quota data but still have token-expiry and optional renewal;
         // compute next_event from those two sources so JSON callers get useful data.
         let ( next_type_str, next_secs_str ) = match next_event_raw(
-          expires_in_secs,
-          None,
           None,
           ren_pair.map( |( s, _ )| s ),
           ren_pair.is_some_and( |( _, est )| est ),
@@ -459,10 +448,6 @@ pub( crate ) fn render_tsv(
           now_secs,
         ).unzip();
         let next_str = next_event_label(
-          ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ),
-          data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() )
-            .and_then( claude_quota::iso_to_unix_secs )
-            .map( |t| t.saturating_sub( now_secs ) ),
           data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() )
             .and_then( claude_quota::iso_to_unix_secs )
             .map( |t| t.saturating_sub( now_secs ) ),
@@ -560,8 +545,6 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
     {
       if let Ok( data ) = &aq.result
       {
-        let five_reset  = data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() )
-          .and_then( claude_quota::iso_to_unix_secs ).map( |t| t.saturating_sub( now_secs ) );
         let seven_reset = data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() )
           .and_then( claude_quota::iso_to_unix_secs ).map( |t| t.saturating_sub( now_secs ) );
         let ren_pair = renewal_secs(
@@ -570,8 +553,7 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
           now_secs,
         );
         match next_event_raw(
-          ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ),
-          five_reset, seven_reset,
+          seven_reset,
           ren_pair.map( |( s, _ )| s ),
           ren_pair.is_some_and( |( _, est )| est ),
         )

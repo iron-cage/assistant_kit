@@ -27,7 +27,7 @@
 //! | f18ft01 | `f18_ft01_live_0_single_fetch`                | AC-24 | no    |
 //! | f18ft06 | `f18_ft06_live_stagger_per_account_trace`     | AC-29 | no    |
 
-use crate::helpers::{
+use crate::cli_runner::{
   BIN,
   run_cs_with_env,
   stdout, stderr, assert_exit,

@@ -17,7 +17,7 @@
 //! | rot07 | `rot07_output_confirms_name` | output contains `rotated to` + account name | P |
 //! | rot08 | `rot08_unknown_param_exits_1` | unknown parameter → exit 1 | N |
 
-use crate::helpers::{
+use crate::cli_runner::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
   write_credentials, write_account,

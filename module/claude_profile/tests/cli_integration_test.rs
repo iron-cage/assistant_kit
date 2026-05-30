@@ -33,8 +33,8 @@
 //! `cargo nextest run -p claude_profile --no-fail-fast` to distinguish contention
 //! from a genuine logic regression. The tests themselves are deterministic.
 
-#[ path = "cli/helpers.rs" ]
-pub mod helpers;
+#[ path = "cli/cli_runner.rs" ]
+pub mod cli_runner;
 
 #[ path = "cli/accounts_test.rs" ]
 mod accounts_test;

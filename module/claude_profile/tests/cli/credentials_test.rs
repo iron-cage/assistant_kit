@@ -82,7 +82,7 @@
 //! | cred45 | `cred45_ft09_format_json_includes_all_5_org_fields` | format::json includes all 5 org fields | P |
 //! | cred46 | `cred46_ft11_null_workspace_fields_render_as_empty_string` | null workspace_uuid/workspace_name → `""` in JSON | P |
 
-use crate::helpers::{
+use crate::cli_runner::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
   write_credentials, write_claude_json, write_claude_json_full, write_settings_json,

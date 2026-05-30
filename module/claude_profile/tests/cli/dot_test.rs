@@ -21,7 +21,7 @@
 //! | dot11 | `dot11_options_section_hints`           | format/dry/name hints in Options section      | P   |
 //! | dot12 | `dot12_no_ansi_in_subprocess_output`    | zero ESC (`0x1b`) bytes in stdout             | P   |
 
-use crate::helpers::{ run_cs, stdout, assert_exit };
+use crate::cli_runner::{ run_cs, stdout, assert_exit };
 
 // ── dot01 — `.` and `.help` produce identical stdout ─────────────────────────
 

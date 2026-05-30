@@ -71,7 +71,7 @@
 //! | acc49 | `acc49_accounts_host_role_shows_profile_metadata` | `host::1 role::1` → Host/Role from profile.json | P |
 //! | acc50 | `acc50_accounts_host_no_profile_json_exits_0` | absent profile.json → no non-zero exit, Host: N/A | P |
 
-use crate::helpers::{
+use crate::cli_runner::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token, write_credentials, write_claude_json_full, write_settings_json,
