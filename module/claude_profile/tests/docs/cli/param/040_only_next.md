@@ -33,7 +33,7 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 - **When:** `clp .usage only_next::1`
 - **Then:** Exits 0. Table has 0 data rows. No error.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it160_only_next_1_no_valid_accounts_shows_empty` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/040_only_next.md](../../../../docs/cli/param/040_only_next.md)
 
 ---
@@ -56,7 +56,7 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 - **When:** `clp .usage only_next::bad`
 - **Then:** Exits 1. Stderr names valid values: `0`, `1`, `false`, `true`.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it161_only_next_bad_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/040_only_next.md](../../../../docs/cli/param/040_only_next.md)
 
 ---
@@ -67,7 +67,7 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 - **When:** `clp .usage only_next::0`
 - **Then:** Exits 0. Both rows shown — the → account and the non-→ account.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it162_only_next_0_shows_all_rows` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/040_only_next.md](../../../../docs/cli/param/040_only_next.md)
 
 ---

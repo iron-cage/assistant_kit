@@ -16,7 +16,7 @@
 //!
 //! Tests used simple synthetic sessions with only user and assistant entries.
 //! Real Claude Code sessions contain metadata lines (queue-operation records for
-//! consumer_runner integration, summary entries, etc.) that are invisible to existing tests.
+//! `consumer_runner` integration, summary entries, etc.) that are invisible to existing tests.
 //!
 //! ### Fix Applied (then replaced by issue-018 fix)
 //!

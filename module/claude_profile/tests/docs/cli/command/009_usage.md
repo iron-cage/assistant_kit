@@ -902,7 +902,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 - **Then:** Exits 0. The `→ Next` column header appears in the table header row. That account's `→ Next` cell contains `+5h in` followed by a duration string (e.g., `+5h in 3h 0m`). No other event label (`!tok`, `+7d`, `$ren`) appears in that cell.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it225_lim_it_it71_next_event_cell_shows_label_and_duration` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/009_token_usage.md AC-28](../../../../docs/feature/009_token_usage.md)
 
 ---
@@ -919,7 +919,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
   - No `next_renewal_est` key present in the object.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it222_lim_it_it72_json_new_renewal_fields` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/009_token_usage.md AC-29](../../../../docs/feature/009_token_usage.md)
 
 ---

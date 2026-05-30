@@ -95,6 +95,12 @@ pub struct Account
   /// Workspace display name from saved `{name}.roles.json` `workspace_name`.
   /// Empty string when snapshot absent or field missing (personal accounts have `null`).
   pub workspace_name : String,
+  /// Machine host label from saved `{name}.profile.json` `host`.
+  /// Empty string when file absent or field missing.
+  pub profile_host : String,
+  /// User-defined role label from saved `{name}.profile.json` `role`.
+  /// Empty string when file absent or field missing.
+  pub profile_role : String,
 }
 
 /// List all accounts in `credential_store`.
@@ -151,6 +157,12 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
     let workspace_uuid    = parse_string_field( &roles_json, "workspace_uuid"    ).unwrap_or_default();
     let workspace_name    = parse_string_field( &roles_json, "workspace_name"    ).unwrap_or_default();
 
+    let profile_json = std::fs::read_to_string(
+      credential_store.join( format!( "{name}.profile.json" ) )
+    ).unwrap_or_default();
+    let profile_host = parse_string_field( &profile_json, "host" ).unwrap_or_default();
+    let profile_role = parse_string_field( &profile_json, "role" ).unwrap_or_default();
+
     accounts.push( Account
     {
       name,
@@ -171,6 +183,8 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
       organization_role,
       workspace_uuid,
       workspace_name,
+      profile_host,
+      profile_role,
     } );
   }
 

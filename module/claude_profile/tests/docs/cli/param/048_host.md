@@ -21,7 +21,7 @@ Edge case coverage for the `host::` parameter on `.account.save`. See [param/048
 - **When:** `clp .account.save name::test@example.com host::mybox`
 - **Then:** Exits 0. `{credential_store}/test@example.com.profile.json` contains `"host": "mybox"`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as_save_writes_profile_json` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/048_host.md](../../../../docs/cli/param/048_host.md)
 
 ---
@@ -32,7 +32,7 @@ Edge case coverage for the `host::` parameter on `.account.save`. See [param/048
 - **When:** `clp .account.save name::test@example.com` (no `host::`)
 - **Then:** Exits 0. `profile.json` contains `"host": "alice@myworkstation"`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as24_host_auto_capture_user_hostname` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/048_host.md](../../../../docs/cli/param/048_host.md)
 
 ---
@@ -43,7 +43,7 @@ Edge case coverage for the `host::` parameter on `.account.save`. See [param/048
 - **When:** `clp .account.save name::test@example.com host::` (empty value)
 - **Then:** Exits 0. `profile.json` contains `"host": "bob@laptop"` (empty value triggers auto-capture, same as omitting `host::`).
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as25_host_empty_triggers_auto_capture` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/048_host.md](../../../../docs/cli/param/048_host.md)
 
 ---
@@ -55,7 +55,7 @@ Edge case coverage for the `host::` parameter on `.account.save`. See [param/048
 - **Then:** Exits 0. Table row for `test@example.com` shows "mybox" in Host column.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it202_cols_host_shows_host_column` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/048_host.md](../../../../docs/cli/param/048_host.md)
 
 ---
@@ -66,7 +66,7 @@ Edge case coverage for the `host::` parameter on `.account.save`. See [param/048
 - **When:** `clp .account.save name::test@example.com host::newbox`
 - **Then:** Exits 0. `profile.json` now contains `"host": "newbox"`. Old value `"oldbox"` no longer present.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as26_host_resave_overwrites` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/048_host.md](../../../../docs/cli/param/048_host.md)
 
 ---
@@ -77,5 +77,5 @@ Edge case coverage for the `host::` parameter on `.account.save`. See [param/048
 - **When:** `clp .account.save name::test@example.com host::my work laptop`
 - **Then:** Exits 0. `profile.json` contains `"host": "my work laptop"` (value with spaces preserved verbatim).
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as27_host_with_spaces` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/048_host.md](../../../../docs/cli/param/048_host.md)

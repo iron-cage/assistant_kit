@@ -53,7 +53,7 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 - **When:** `clp .account.save name::test@example.com` (no `host::` param)
 - **Then:** Exits 0. `{credential_store}/test@example.com.profile.json` contains `"host": "alice@workstation"`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as24_host_auto_capture_user_hostname` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-02](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -64,7 +64,7 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 - **When:** `clp .account.save name::test@example.com` (no `host::` param)
 - **Then:** Exits 0. `{credential_store}/test@example.com.profile.json` contains `"host": ""`. No error.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as28_host_missing_user_hostname_stores_empty` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-03](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -75,7 +75,7 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 - **When:** `clp .account.save name::test@example.com host::newbox role::dev`
 - **Then:** Exits 0. `{credential_store}/test@example.com.profile.json` now contains `{"host": "newbox", "role": "dev"}`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as26_host_resave_overwrites` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-04](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -87,7 +87,7 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 - **Then:** Exits 0. Table header contains "Host". The row for `test@example.com` shows "mybox" in that column.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it202_cols_host_shows_host_column` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-05](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -99,7 +99,7 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 - **Then:** Exits 0. Table header contains "Role". The row for `test@example.com` shows "work" in that column.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it203_cols_role_shows_role_column` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-06](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -111,7 +111,7 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 - **Then:** Exits 0. Stdout is exactly `mybox` (bare string, no headers or footer).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it220_ft029_07_get_host_extracts_bare` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-07](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -122,7 +122,7 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 - **When:** `clp .accounts host::1 role::1`
 - **Then:** Exits 0. Output contains `Host: mybox` and `Role: work` for the account.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/accounts_test.rs`)
+- **Source fn:** `acc49_accounts_host_role_shows_profile_metadata` (in `tests/cli/accounts_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-08](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -135,7 +135,7 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 - **Then-A:** Exits 0. Host column present; `test@example.com` row shows empty cell.
 - **Then-B:** Exits 0. Host field absent from output (not an error).
 - **Exit:** 0 both
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`, `tests/cli/accounts_test.rs`)
+- **Source fn:** `it221_ft029_09_usage_no_profile_shows_empty_host` (When-A, in `tests/cli/usage_test.rs`); `acc50_accounts_host_no_profile_json_exits_0` (When-B, in `tests/cli/accounts_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-09](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -146,5 +146,5 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 - **When:** `clp .account.save name::test@example.com host::newbox`
 - **Then:** Exits 0. `test@example.com.credentials.json` SHA-256 is unchanged. `profile.json` updated.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as29_resave_credentials_unchanged` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-10](../../../../docs/feature/029_account_host_metadata.md)

@@ -161,5 +161,5 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
   - `oauthAccount` — updated with fresh content from `~/.claude.json`
   - No other pre-existing top-level keys are removed.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as22_save_preserves_renewal_at` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/002_account_save.md AC-17](../../../../docs/feature/002_account_save.md)

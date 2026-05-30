@@ -86,7 +86,7 @@ Edge case coverage for the `cols::` parameter on `.usage`. See [param/033_cols.m
 - **When:** `clp .usage cols::+host`
 - **Then:** Exits 0. Table header contains "Host". The account row shows "mybox" in the Host column.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it202_cols_host_shows_host_column` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/033_cols.md](../../../../docs/cli/param/033_cols.md), [feature/029_account_host_metadata.md AC-05](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -97,7 +97,7 @@ Edge case coverage for the `cols::` parameter on `.usage`. See [param/033_cols.m
 - **When:** `clp .usage cols::+role`
 - **Then:** Exits 0. Table header contains "Role". The account row shows "work" in the Role column.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it203_cols_role_shows_role_column` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/033_cols.md](../../../../docs/cli/param/033_cols.md), [feature/029_account_host_metadata.md AC-06](../../../../docs/feature/029_account_host_metadata.md)
 
 ---
@@ -108,7 +108,7 @@ Edge case coverage for the `cols::` parameter on `.usage`. See [param/033_cols.m
 - **When:** `clp .usage cols::+bogus`
 - **Then:** Exits 1. Stderr names valid column IDs including "host" and "role" (in addition to existing IDs like "status", "expires", "sub", etc.).
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it204_cols_bogus_names_host_and_role_in_error` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/033_cols.md](../../../../docs/cli/param/033_cols.md)
 
 ---

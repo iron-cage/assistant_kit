@@ -5,6 +5,15 @@ use unilang::{ VerifiedCommand, ExecutionContext, OutputData, ErrorData, ErrorCo
 use super::storage::{ create_storage, parse_project_parameter, find_session_mut };
 use super::format::format_entry_content;
 
+/// Display control flags for session output.
+struct SessionDisplayOptions
+{
+  show_entries  : bool,
+  metadata_only : bool,
+  show_stat     : bool,
+  show_tokens   : bool,
+}
+
 /// Show session or project details (location-aware)
 ///
 /// Smart behavior based on parameters:
@@ -45,10 +54,13 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   };
 
   let project_param = cmd.get_string( "project" );
-  let show_entries = cmd.get_boolean( "show_entries" ).unwrap_or( false );
-  let metadata_only = cmd.get_boolean( "show_metadata" ).unwrap_or( false );
-  let show_stat = cmd.get_boolean( "show_stat" ).unwrap_or( false );
-  let show_tokens = cmd.get_boolean( "show_tokens" ).unwrap_or( false );
+  let opts = SessionDisplayOptions
+  {
+    show_entries  : cmd.get_boolean( "show_entries" ).unwrap_or( false ),
+    metadata_only : cmd.get_boolean( "show_metadata" ).unwrap_or( false ),
+    show_stat     : cmd.get_boolean( "show_stat" ).unwrap_or( false ),
+    show_tokens   : cmd.get_boolean( "show_tokens" ).unwrap_or( false ),
+  };
 
   // Fix(issue-001): Validate entries parameter requires session_id
   //
@@ -59,7 +71,7 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   // Pitfall: Always validate parameter compatibility. If parameter P only works
   // with parameter Q, reject the combination where P is set but Q is not.
   // Silent ignoring of valid-syntax parameters creates user frustration.
-  if show_entries && session_id.is_none()
+  if opts.show_entries && session_id.is_none()
   {
     return Err
     (
@@ -99,7 +111,7 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     // Case 2: session_id only → Show session in current project
     ( Some( sid ), None ) =>
     {
-      show_session_in_cwd_impl( sid, show_entries, metadata_only, show_stat, show_tokens )
+      show_session_in_cwd_impl( sid, opts )
     }
 
     // Case 3: project only → Show that project
@@ -111,7 +123,7 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
     // Case 4: Both parameters → Show session in that project
     ( Some( sid ), Some( proj ) ) =>
     {
-      show_session_in_project_impl( sid, proj, show_entries, metadata_only, show_stat, show_tokens )
+      show_session_in_project_impl( sid, proj, opts )
     }
   }
 }
@@ -119,10 +131,7 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 /// Helper: Show session in current directory project
 fn show_session_in_cwd_impl(
   session_id : &str,
-  show_entries : bool,
-  metadata_only : bool,
-  show_stat : bool,
-  show_tokens : bool,
+  opts : SessionDisplayOptions,
 ) -> core::result::Result< OutputData, ErrorData >
 {
   // Fix(issue-036)
@@ -153,7 +162,7 @@ fn show_session_in_cwd_impl(
 
     if dir_name != eb && !dir_name.starts_with( &topic_prefix ) { continue; }
 
-    if let Ok( output ) = format_session_output( project, session_id, show_entries, metadata_only, show_stat, show_tokens )
+    if let Ok( output ) = format_session_output( project, session_id, &opts )
     {
       return Ok( output );
     }
@@ -166,10 +175,7 @@ fn show_session_in_cwd_impl(
 fn show_session_in_project_impl(
   session_id : &str,
   project_param : &str,
-  show_entries : bool,
-  metadata_only : bool,
-  show_stat : bool,
-  show_tokens : bool,
+  opts : SessionDisplayOptions,
 ) -> core::result::Result< OutputData, ErrorData >
 {
   let storage = create_storage()?;
@@ -189,7 +195,7 @@ fn show_session_in_project_impl(
       format!( "Failed to load project {proj_id:?}: {e}" )
     ))?;
 
-  format_session_output( &project, session_id, show_entries, metadata_only, show_stat, show_tokens )
+  format_session_output( &project, session_id, &opts )
 }
 
 /// Helper: Show project for current directory
@@ -243,10 +249,7 @@ fn show_project_impl( project_param : &str )
 fn format_session_output(
   project : &claude_storage_core::Project,
   session_id : &str,
-  show_entries : bool,
-  metadata_only : bool,
-  show_stat : bool,
-  show_tokens : bool,
+  opts : &SessionDisplayOptions,
 ) -> core::result::Result< OutputData, ErrorData >
 {
   // Find session
@@ -285,7 +288,7 @@ fn format_session_output(
   writeln!( output, "Session: {} ({} {entry_noun})", session_id, stats.total_entries ).unwrap();
 
   // Metadata-only mode (show_metadata::1)
-  if metadata_only
+  if opts.metadata_only
   {
     writeln!( output, "Path: {}", session.storage_path().display() ).unwrap();
     writeln!( output, "Agent Session: {}", stats.is_agent_session ).unwrap();
@@ -303,7 +306,7 @@ fn format_session_output(
       writeln!( output, "Last Entry: {last}" ).unwrap();
     }
 
-    if show_tokens
+    if opts.show_tokens
     {
       output.push_str( "\nToken Usage:\n" );
       writeln!( output, "- Input: {}", stats.total_input_tokens ).unwrap();
@@ -313,7 +316,7 @@ fn format_session_output(
     }
 
     // Old entries::1 behavior (UUID list) for backward compat
-    if show_entries
+    if opts.show_entries
     {
       let entries = session.entries()
         .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to load entries: {e}" ) ) )?;
@@ -355,7 +358,7 @@ fn format_session_output(
     output.push_str( "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" );
 
     // Session statistics footer (show_stat::1)
-    if show_stat
+    if opts.show_stat
     {
       output.push( '\n' );
       output.push_str( "Session Metadata:\n" );
@@ -365,7 +368,7 @@ fn format_session_output(
     }
 
     // Token usage section (show_tokens::1)
-    if show_tokens
+    if opts.show_tokens
     {
       output.push_str( "\nToken Usage:\n" );
       writeln!( output, "- Input: {}", stats.total_input_tokens ).unwrap();

@@ -45,7 +45,7 @@ fn detect_current_account(
 /// Returns `"(no accounts configured)\n"` when `accounts` is empty.
 /// When any field flag is `true`, each account block is followed by its fields
 /// and separated from the next account by a blank line.
-// Conditional rendering for 16 optional account fields; extraction into a helper
+// Conditional rendering for 18 optional account fields; extraction into a helper
 // would require passing all booleans again — no readability gain.
 #[ allow( clippy::fn_params_excessive_bools, clippy::too_many_arguments, clippy::too_many_lines ) ]
 #[ inline ]
@@ -59,6 +59,7 @@ fn render_accounts_text(
   show_expires      : bool,
   show_email        : bool,
   show_display_name : bool,
+  show_host         : bool,
   show_role         : bool,
   show_billing      : bool,
   show_model        : bool,
@@ -72,8 +73,8 @@ fn render_accounts_text(
   // show_current is false when current::0 or when creds file is unreadable (current_name=None).
   let emit_current = show_current && current_name.is_some();
   let any_field = show_active || emit_current || show_sub || show_tier || show_expires || show_email
-    || show_display_name || show_role || show_billing || show_model || show_uuid || show_capabilities
-    || show_org_uuid || show_org_name;
+    || show_display_name || show_host || show_role || show_billing || show_model || show_uuid
+    || show_capabilities || show_org_uuid || show_org_name;
   let mut out   = String::new();
   let last_idx  = accounts.len() - 1;
   for ( idx, a ) in accounts.iter().enumerate()
@@ -128,9 +129,14 @@ fn render_accounts_text(
         let dn = if a.display_name.is_empty() { "N/A" } else { &a.display_name };
         let _ = writeln!( out, "  Display: {dn}" );
       }
+      if show_host
+      {
+        let host = if a.profile_host.is_empty() { "N/A" } else { &a.profile_host };
+        let _ = writeln!( out, "  Host:    {host}" );
+      }
       if show_role
       {
-        let role = if a.role.is_empty() { "N/A" } else { &a.role };
+        let role = if a.profile_role.is_empty() { "N/A" } else { &a.profile_role };
         let _ = writeln!( out, "  Role:    {role}" );
       }
       if show_billing
@@ -189,7 +195,8 @@ fn render_accounts_json( accounts : &[ &crate::account::Account ], current_name 
        \"display_name\":\"{}\",\"role\":\"{}\",\"billing\":\"{}\",\"model\":\"{}\",\
        \"tagged_id\":\"{}\",\"capabilities\":{},\
        \"organization_uuid\":\"{}\",\"organization_name\":\"{}\",\
-       \"organization_role\":\"{}\",\"workspace_uuid\":\"{}\",\"workspace_name\":\"{}\"}}",
+       \"organization_role\":\"{}\",\"workspace_uuid\":\"{}\",\"workspace_name\":\"{}\",\
+       \"profile_host\":\"{}\",\"profile_role\":\"{}\"}}",
       json_escape( &a.name ),
       a.is_active,
       is_current,
@@ -208,6 +215,8 @@ fn render_accounts_json( accounts : &[ &crate::account::Account ], current_name 
       json_escape( &a.organization_role ),
       json_escape( &a.workspace_uuid ),
       json_escape( &a.workspace_name ),
+      json_escape( &a.profile_host ),
+      json_escape( &a.profile_role ),
     )
   } ).collect();
   format!( "[{}]\n", entries.join( "," ) )
@@ -356,6 +365,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
   let show_expires      = matches!( cmd.arguments.get( "expires"      ), Some( Value::Boolean( true ) ) | None );
   let show_email        = matches!( cmd.arguments.get( "email"        ), Some( Value::Boolean( true ) ) | None );
   let show_display_name = matches!( cmd.arguments.get( "display_name" ), Some( Value::Boolean( true ) ) );
+  let show_host         = crate::output::parse_int_flag( &cmd, "host",         0 )? != 0;
   let show_role         = matches!( cmd.arguments.get( "role"         ), Some( Value::Boolean( true ) ) );
   let show_billing      = matches!( cmd.arguments.get( "billing"      ), Some( Value::Boolean( true ) ) );
   let show_model        = matches!( cmd.arguments.get( "model"        ), Some( Value::Boolean( true ) ) );
@@ -378,7 +388,7 @@ pub fn accounts_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Res
         &accounts,
         show_active, show_current, current_name.as_deref(),
         show_sub, show_tier, show_expires, show_email,
-        show_display_name, show_role, show_billing, show_model,
+        show_display_name, show_host, show_role, show_billing, show_model,
         show_uuid, show_capabilities,
         show_org_uuid, show_org_name,
       )

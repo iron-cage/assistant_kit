@@ -22,7 +22,7 @@ Edge case coverage for the `offset::` parameter on `.usage`. See [param/038_offs
 - **When-B:** `clp .usage sort::name offset::2`
 - **Then:** When-B rows match rows 3–4 from When-A.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it184_offset_2_skips_first_2_rows` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/038_offset.md](../../../../docs/cli/param/038_offset.md)
 
 ---
@@ -33,7 +33,7 @@ Edge case coverage for the `offset::` parameter on `.usage`. See [param/038_offs
 - **When:** `clp .usage offset::0`
 - **Then:** Exits 0. All rows shown (offset::0 = no skip).
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it185_offset_0_shows_all_rows` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/038_offset.md](../../../../docs/cli/param/038_offset.md)
 
 ---
@@ -44,7 +44,7 @@ Edge case coverage for the `offset::` parameter on `.usage`. See [param/038_offs
 - **When:** `clp .usage offset::99`
 - **Then:** Exits 0. Table has 0 data rows (offset exceeds account count). Header still shown.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it186_offset_99_shows_empty` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/038_offset.md](../../../../docs/cli/param/038_offset.md)
 
 ---
@@ -55,7 +55,7 @@ Edge case coverage for the `offset::` parameter on `.usage`. See [param/038_offs
 - **When:** `clp .usage offset::abc`
 - **Then:** Exits 1. Stderr contains a type error message.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it187_offset_abc_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/038_offset.md](../../../../docs/cli/param/038_offset.md)
 
 ---
@@ -66,7 +66,7 @@ Edge case coverage for the `offset::` parameter on `.usage`. See [param/038_offs
 - **When:** `clp .usage count::1 offset::1 sort::name`
 - **Then:** Exits 0. Exactly 1 row shown — `bob` (second alphabetically). `alice` skipped by offset; `charlie` excluded by count.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it188_offset_1_count_1_shows_second_row` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/038_offset.md](../../../../docs/cli/param/038_offset.md)
 
 ---
@@ -77,5 +77,5 @@ Edge case coverage for the `offset::` parameter on `.usage`. See [param/038_offs
 - **When:** `clp .usage offset::-1`
 - **Then:** Exits 1. Stderr indicates value must be a non-negative integer.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it189_offset_minus_1_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/038_offset.md](../../../../docs/cli/param/038_offset.md)

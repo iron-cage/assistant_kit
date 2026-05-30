@@ -237,7 +237,9 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     {
       let user     = std::env::var( "USER" ).unwrap_or_default();
       let hostname = std::env::var( "HOSTNAME" ).unwrap_or_default();
-      format!( "{user}@{hostname}" )
+      // Both absent: store empty string rather than bare "@" (AC-03).
+      if user.is_empty() && hostname.is_empty() { String::new() }
+      else { format!( "{user}@{hostname}" ) }
     }
   };
   let role_val = match cmd.arguments.get( "role" )

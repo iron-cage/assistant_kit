@@ -23,7 +23,7 @@ Note: This is distinct from param 016 `role::` (boolean display toggle for `.cre
 - **When:** `clp .account.save name::test@example.com role::work`
 - **Then:** Exits 0. `{credential_store}/test@example.com.profile.json` contains `"role": "work"`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as30_role_writes_profile_json` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/052_role.md](../../../../docs/cli/param/052_role.md)
 
 ---
@@ -34,7 +34,7 @@ Note: This is distinct from param 016 `role::` (boolean display toggle for `.cre
 - **When:** `clp .account.save name::test@example.com` (no `role::` param)
 - **Then:** Exits 0. `profile.json` contains `"role": ""` (empty string, not absent).
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as31_role_omit_stores_empty` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/052_role.md](../../../../docs/cli/param/052_role.md)
 
 ---
@@ -45,7 +45,7 @@ Note: This is distinct from param 016 `role::` (boolean display toggle for `.cre
 - **When:** `clp .account.save name::test@example.com role::` (empty value)
 - **Then:** Exits 0. `profile.json` contains `"role": ""` — same as omitting `role::`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as32_role_empty_stores_empty` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/052_role.md](../../../../docs/cli/param/052_role.md)
 
 ---
@@ -57,7 +57,7 @@ Note: This is distinct from param 016 `role::` (boolean display toggle for `.cre
 - **Then:** Exits 0. Table row for `test@example.com` shows "work" in Role column.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it203_cols_role_shows_role_column` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/052_role.md](../../../../docs/cli/param/052_role.md)
 
 ---
@@ -68,7 +68,7 @@ Note: This is distinct from param 016 `role::` (boolean display toggle for `.cre
 - **When:** `clp .account.save name::test@example.com role::dev`
 - **Then:** Exits 0. `profile.json` now contains `"role": "dev"`. Old value `"personal"` no longer present.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as33_role_resave_overwrites` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/052_role.md](../../../../docs/cli/param/052_role.md)
 
 ---
@@ -79,5 +79,5 @@ Note: This is distinct from param 016 `role::` (boolean display toggle for `.cre
 - **When:** `clp .account.save name::test@example.com role::dev ops team`
 - **Then:** Exits 0. `profile.json` contains `"role": "dev ops team"` (value with spaces preserved verbatim).
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `as34_role_with_spaces` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/052_role.md](../../../../docs/cli/param/052_role.md)

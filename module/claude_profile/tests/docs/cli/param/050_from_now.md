@@ -22,7 +22,7 @@ Edge case coverage for the `from_now::` parameter on `.account.renewal`. See [pa
 - **When:** `clp .account.renewal name::test@example.com from_now::+1h30m`
 - **Then:** Exits 0. `_renewal_at` is written as an ISO-8601 UTC string approximately 1h30m in the future (within 5s tolerance from command invocation time).
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft02_account_renewal_from_now_positive` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
 
 ---
@@ -33,7 +33,7 @@ Edge case coverage for the `from_now::` parameter on `.account.renewal`. See [pa
 - **When:** `clp .account.renewal name::test@example.com from_now::+0m`
 - **Then:** Exits 0. `_renewal_at` is written as an ISO-8601 UTC timestamp within 5s of now. `.usage` would auto-advance it monthly at render time.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `arn24_from_now_zero_delta_writes_current_time` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
 
 ---
@@ -44,7 +44,7 @@ Edge case coverage for the `from_now::` parameter on `.account.renewal`. See [pa
 - **When:** `clp .account.renewal name::test@example.com from_now::-30m`
 - **Then:** Exits 0. `_renewal_at` is written as an ISO-8601 UTC timestamp ~30 minutes in the past. No validation error — past timestamps are accepted; auto-advance happens at read time in `.usage`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft03_account_renewal_from_now_negative` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
 
 ---
@@ -55,7 +55,7 @@ Edge case coverage for the `from_now::` parameter on `.account.renewal`. See [pa
 - **When:** `clp .account.renewal name::test@example.com from_now::+1d`
 - **Then:** Exits 0. `_renewal_at` is written approximately 24h in the future.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `arn25_from_now_single_day_unit_accepted` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
 
 ---
@@ -66,7 +66,7 @@ Edge case coverage for the `from_now::` parameter on `.account.renewal`. See [pa
 - **When:** `clp .account.renewal name::test@example.com from_now::+1h at::2026-06-29T21:00:00Z`
 - **Then:** Exits 1. Stderr names the conflicting parameters. No file written.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft07_account_renewal_at_from_now_conflict` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
 
 ---
@@ -77,7 +77,7 @@ Edge case coverage for the `from_now::` parameter on `.account.renewal`. See [pa
 - **When:** `clp .account.renewal name::test@example.com from_now::+1h clear::1`
 - **Then:** Exits 1. Stderr names the conflicting parameters. No file written.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft09_account_renewal_from_now_clear_conflict` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
 
 ---
@@ -88,5 +88,5 @@ Edge case coverage for the `from_now::` parameter on `.account.renewal`. See [pa
 - **When:** `clp .account.renewal name::test@example.com from_now::invalid`
 - **Then:** Exits 1. Stderr contains a parse error message. No file written.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `arn17_from_now_invalid_format_exits_1` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)

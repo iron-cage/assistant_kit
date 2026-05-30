@@ -32,7 +32,7 @@ Edge case coverage for the `only_valid::` parameter on `.usage`. See [param/043_
 - **When:** `clp .usage only_valid::0`
 - **Then:** Exits 0. All rows shown.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it169_only_valid_0_shows_all_rows` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/043_only_valid.md](../../../../docs/cli/param/043_only_valid.md)
 
 ---
@@ -43,7 +43,7 @@ Edge case coverage for the `only_valid::` parameter on `.usage`. See [param/043_
 - **When:** `clp .usage only_valid::bad`
 - **Then:** Exits 1. Stderr names valid values: `0`, `1`, `false`, `true`.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it170_only_valid_bad_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/043_only_valid.md](../../../../docs/cli/param/043_only_valid.md)
 
 ---
@@ -54,7 +54,7 @@ Edge case coverage for the `only_valid::` parameter on `.usage`. See [param/043_
 - **When:** `clp .usage only_valid::1`
 - **Then:** Exits 0. Table has 0 data rows (all filtered). No error.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it171_only_valid_1_all_red_shows_empty` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/043_only_valid.md](../../../../docs/cli/param/043_only_valid.md)
 
 ---
@@ -65,7 +65,7 @@ Edge case coverage for the `only_valid::` parameter on `.usage`. See [param/043_
 - **When:** `clp .usage only_valid::true`
 - **Then:** Exits 0. 🟢 and 🟡 rows shown — same result as `only_valid::1`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it172_only_valid_true_accepted` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/043_only_valid.md](../../../../docs/cli/param/043_only_valid.md)
 
 ---
@@ -76,5 +76,5 @@ Edge case coverage for the `only_valid::` parameter on `.usage`. See [param/043_
 - **When:** `clp .usage only_valid::false`
 - **Then:** Exits 0. All rows shown — same result as `only_valid::0`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it173_only_valid_false_shows_all_rows` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/043_only_valid.md](../../../../docs/cli/param/043_only_valid.md)

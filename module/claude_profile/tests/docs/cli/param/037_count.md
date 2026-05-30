@@ -21,7 +21,7 @@ Edge case coverage for the `count::` parameter on `.usage`. See [param/037_count
 - **When:** `clp .usage count::3`
 - **Then:** Exits 0. Table body has at most 3 data rows. Header and footer shown.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it178_count_3_shows_first_3_rows` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/037_count.md](../../../../docs/cli/param/037_count.md)
 
 ---
@@ -32,7 +32,7 @@ Edge case coverage for the `count::` parameter on `.usage`. See [param/037_count
 - **When:** `clp .usage count::0`
 - **Then:** Exits 0. All 3 rows shown (count::0 = no limit).
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it179_count_0_shows_all_rows` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/037_count.md](../../../../docs/cli/param/037_count.md)
 
 ---
@@ -43,7 +43,7 @@ Edge case coverage for the `count::` parameter on `.usage`. See [param/037_count
 - **When:** `clp .usage count::100`
 - **Then:** Exits 0. Both rows shown (count exceeds available rows).
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it180_count_100_exceeding_shows_all` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/037_count.md](../../../../docs/cli/param/037_count.md)
 
 ---
@@ -54,7 +54,7 @@ Edge case coverage for the `count::` parameter on `.usage`. See [param/037_count
 - **When:** `clp .usage count::abc`
 - **Then:** Exits 1. Stderr contains a type error message (expected non-negative integer).
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it181_count_abc_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/037_count.md](../../../../docs/cli/param/037_count.md)
 
 ---
@@ -65,7 +65,7 @@ Edge case coverage for the `count::` parameter on `.usage`. See [param/037_count
 - **When:** `clp .usage count::1 sort::name`
 - **Then:** Exits 0. Exactly 1 row in the table body — the alphabetically first account. Remaining 2 accounts not shown.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it182_count_1_sort_name_shows_only_first` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/037_count.md](../../../../docs/cli/param/037_count.md)
 
 ---
@@ -76,5 +76,5 @@ Edge case coverage for the `count::` parameter on `.usage`. See [param/037_count
 - **When:** `clp .usage count::-1`
 - **Then:** Exits 1. Stderr indicates value must be a non-negative integer.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it183_count_minus_1_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/037_count.md](../../../../docs/cli/param/037_count.md)

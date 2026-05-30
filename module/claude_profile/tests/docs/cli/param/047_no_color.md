@@ -21,7 +21,7 @@ Edge case coverage for the `no_color::` parameter on `.usage`. See [param/047_no
 - **When:** `clp .usage no_color::1`
 - **Then:** Exits 0. Stdout contains none of: `🟢`, `🟡`, `🔴`, `→`, `✓`, `*` (emoji/special markers). No ANSI escape sequences.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it198_no_color_1_no_emoji_in_output` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/047_no_color.md](../../../../docs/cli/param/047_no_color.md)
 
 ---
@@ -32,7 +32,7 @@ Edge case coverage for the `no_color::` parameter on `.usage`. See [param/047_no
 - **When:** `clp .usage no_color::1`
 - **Then:** Exits 0. Status column (●) shows text label `ok` instead of `🟢`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it199_no_color_1_status_shows_err_text_label` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/047_no_color.md](../../../../docs/cli/param/047_no_color.md)
 
 ---
@@ -55,7 +55,7 @@ Edge case coverage for the `no_color::` parameter on `.usage`. See [param/047_no
 - **When:** `clp .usage no_color::bad`
 - **Then:** Exits 1. Stderr names valid values: `0`, `1`, `false`, `true`.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it200_no_color_bad_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/047_no_color.md](../../../../docs/cli/param/047_no_color.md)
 
 ---
@@ -77,5 +77,5 @@ Edge case coverage for the `no_color::` parameter on `.usage`. See [param/047_no
 - **When:** `clp .usage no_color::true`
 - **Then:** Exits 0. No emoji in output — same result as `no_color::1`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it201_no_color_true_accepted` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/047_no_color.md](../../../../docs/cli/param/047_no_color.md)

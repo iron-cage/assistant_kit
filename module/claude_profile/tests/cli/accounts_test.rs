@@ -68,13 +68,15 @@
 //! | acc46 | `acc46_org_name_shows_from_roles_json` | `org_name::1` → Org: line from roles.json | P |
 //! | acc47 | `acc47_org_name_absent_by_default` | no `org_name::` → Org: absent | P |
 //! | acc48 | `acc48_org_name_missing_roles_json_na` | `org_name::1`, no roles.json → Org: N/A | P |
+//! | acc49 | `acc49_accounts_host_role_shows_profile_metadata` | `host::1 role::1` → Host/Role from profile.json | P |
+//! | acc50 | `acc50_accounts_host_no_profile_json_exits_0` | absent profile.json → no non-zero exit, Host: N/A | P |
 
 use crate::helpers::{
   run_cs, run_cs_with_env,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token, write_credentials, write_claude_json_full, write_settings_json,
   write_account_claude_json, write_account_settings_json, write_live_credentials_with_token,
-  write_account_claude_json_extended, write_account_roles_json,
+  write_account_claude_json_extended, write_account_roles_json, write_account_profile_json,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
@@ -656,7 +658,13 @@ fn acc20_display_name_shows_from_snapshot()
   );
 }
 
-/// acc21 (T02+T03+T04): `role::1 billing::1 model::1` renders three snapshot lines.
+/// acc21 (T02+T03+T04): `role::1 billing::1 model::1` renders three lines.
+///
+/// After TSK-225: `role::1` shows the profile.json role label (`profile_role` field), not
+/// the OAuth snapshot org role. The test now writes `profile.json` with `role: "admin"`
+/// so the assertion "Role: admin" still holds — the source is profile.json, not
+/// the claude.json snapshot. Snapshot org role lives in `a.role` and is still surfaced
+/// via the JSON format output.
 ///
 /// Root Cause (before fix): `Account` struct lacked `role`, `billing`, `model` fields;
 ///   `list()` did not read snapshot files; rendering did not handle these params.
@@ -675,6 +683,9 @@ fn acc21_role_billing_model_from_snapshots()
   write_account( dir.path(), "alice@acme.com", "max", "tier4", FAR_FUTURE_MS, true );
   write_account_claude_json( dir.path(), "alice@acme.com", "alice@acme.com", "Alice K", "admin", "stripe_sub" );
   write_account_settings_json( dir.path(), "alice@acme.com", "claude-sonnet" );
+  // role::1 now shows profile.json role label (TSK-225); write profile.json so the
+  // "Role: admin" assertion holds with the new profile-based semantics.
+  write_account_profile_json( dir.path(), "alice@acme.com", None, Some( "admin" ) );
 
   let out  = run_cs_with_env(
     &[ ".accounts", "role::1", "billing::1", "model::1" ],
@@ -682,7 +693,7 @@ fn acc21_role_billing_model_from_snapshots()
   );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "Role:    admin"         ), "role::1 must render Role: from snapshot, got:\n{text}"    );
+  assert!( text.contains( "Role:    admin"         ), "role::1 must render Role: from profile.json, got:\n{text}"  );
   assert!( text.contains( "Billing: stripe_sub"    ), "billing::1 must render Billing: from snapshot, got:\n{text}" );
   assert!( text.contains( "Model:   claude-sonnet" ), "model::1 must render Model: from snapshot, got:\n{text}"  );
 }
@@ -1377,5 +1388,62 @@ fn it_trace_accounts_accepted()
   assert!(
     err.contains( "[trace]" ),
     "trace::1 must emit [trace] lines to stderr for .accounts, got:\n{err}",
+  );
+}
+
+// ── acc49: host::1 role::1 shows profile metadata ────────────────────────────
+
+/// acc49 — `.accounts host::1 role::1` shows Host and Role from profile.json.
+///
+/// Spec: [`tests/docs/feature/029_account_host_metadata.md` FT-08]
+#[ test ]
+fn acc49_accounts_host_role_shows_profile_metadata()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_profile_json( dir.path(), "test@example.com", Some( "mybox" ), Some( "work" ) );
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "host::1", "role::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Host:    mybox" ),
+    "host::1 must show Host: from profile.json, got:\n{text}",
+  );
+  assert!(
+    text.contains( "Role:    work" ),
+    "role::1 must show Role: from profile.json, got:\n{text}",
+  );
+}
+
+// ── acc50: absent profile.json — host::1 exits 0, shows N/A ──────────────────
+
+/// acc50 — absent `profile.json` must not cause any command to exit non-zero.
+///
+/// When `host::1` is given but no `{name}.profile.json` exists, the Host field
+/// shows `N/A` (empty → fallback) and exit is 0. Resilience spec.
+///
+/// Spec: [`tests/docs/feature/029_account_host_metadata.md` FT-09]
+#[ test ]
+fn acc50_accounts_host_no_profile_json_exits_0()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  // No profile.json written — must be treated as optional metadata.
+
+  let out  = run_cs_with_env(
+    &[ ".accounts", "host::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Host:    N/A" ),
+    "absent profile.json must show Host: N/A (not error), got:\n{text}",
   );
 }

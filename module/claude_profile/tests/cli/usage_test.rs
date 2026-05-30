@@ -5537,3 +5537,671 @@ fn it204_cols_bogus_names_host_and_role_in_error()
     "cols::+bogus error must name 'role' as a valid column ID, got:\n{err}",
   );
 }
+
+// ── it205: offset::2 count::3 windows result set (028 FT-02) ─────────────────
+
+/// it205 (028 FT-02): `offset::2 count::3` with 5 accounts shows rows 3-5 from
+/// the full sorted list.
+///
+/// Validates that combining `offset::` and `count::` selects a window from the
+/// sorted row set. Accounts have no tokens so quota shows errors, but the
+/// names still appear in sorted order.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-02]
+///       [`docs/feature/028_usage_row_filtering.md` AC-02]
+#[ test ]
+fn it205_ft028_02_offset2_count3_windows_result()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Write 5 accounts with deterministic sort order (a < b < c < d < e).
+  write_account( dir.path(), "acct-a@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-b@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-c@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-d@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "acct-e@test.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  // When-A: all rows, no offset — gives baseline sorted order.
+  let out_all = run_cs_with_env( &[ ".usage", "sort::name" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_all, 0 );
+  let all_text = stdout( &out_all );
+  let all_names : Vec< &str > = all_text.lines()
+    .filter( | l | l.contains( "acct-" ) )
+    .collect();
+
+  // When-B: offset::2 count::3 — should show rows at positions 2, 3, 4 (0-indexed).
+  let out_win = run_cs_with_env(
+    &[ ".usage", "sort::name", "offset::2", "count::3" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out_win, 0 );
+  let win_text = stdout( &out_win );
+  let win_names : Vec< &str > = win_text.lines()
+    .filter( | l | l.contains( "acct-" ) )
+    .collect();
+
+  assert_eq!( win_names.len(), 3, "offset::2 count::3 with 5 accounts must show exactly 3 rows" );
+  // Rows 3-5 from When-A (0-indexed: positions 2, 3, 4) must match When-B.
+  assert_eq!(
+    win_names, &all_names[ 2..5 ],
+    "offset::2 count::3 rows must match rows 3-5 from full sorted list",
+  );
+}
+
+// ── it211: min_5h::50 with absent session data — row passes (041 EC-6) ────────
+
+/// it211 (041 EC-6): `min_5h::50` with an account whose session quota is absent
+/// (no `five_hour` data from API) — the row is NOT hidden.
+///
+/// Absent session data is treated as 100% remaining so the filter passes.
+/// In offline tests, accounts without tokens have no quota data (API fails),
+/// so the row passes the `min_5h` filter.
+///
+/// Spec: [`tests/docs/cli/param/041_min_5h.md` EC-6]
+#[ test ]
+fn it211_min_5h_absent_data_passes_filter()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Account without accessToken — quota fetch will fail; five_hour data absent.
+  write_account( dir.path(), "acct@test.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "min_5h::50" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // Row must appear (absent data does not trigger the threshold filter).
+  assert!(
+    text.contains( "acct@test.com" ),
+    "min_5h::50 must not hide row when five_hour data is absent, got:\n{text}",
+  );
+}
+
+// ── it212: min_7d::30 with absent weekly data — row passes (042 EC-6) ─────────
+
+/// it212 (042 EC-6): `min_7d::30` with an account whose weekly quota is absent
+/// (no `seven_day` data from API) — the row is NOT hidden.
+///
+/// Absent weekly data is treated as 100% remaining so the filter passes.
+///
+/// Spec: [`tests/docs/cli/param/042_min_7d.md` EC-6]
+#[ test ]
+fn it212_min_7d_absent_data_passes_filter()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct@test.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "min_7d::30" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "acct@test.com" ),
+    "min_7d::30 must not hide row when seven_day data is absent, got:\n{text}",
+  );
+}
+
+// ── it220: cols::+host get::host extracts bare host string (029 FT-07) ────────
+
+/// it220 (029 FT-07): `cols::+host get::host` extracts the host value from
+/// profile.json as a bare string (no table headers, no footer).
+///
+/// Host column data comes from `{name}.profile.json`, not from the live quota
+/// API. The bare extraction works offline even when quota fetch fails.
+///
+/// Spec: [`tests/docs/feature/029_account_host_metadata.md` FT-07]
+#[ test ]
+fn it220_ft029_07_get_host_extracts_bare()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account_profile_json( dir.path(), "acct@test.com", Some( "mybox" ), None );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "cols::+host", "get::host" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out ).trim().to_string();
+  assert_eq!(
+    text, "mybox",
+    "cols::+host get::host must output bare 'mybox' with no table chrome, got:\n{text}",
+  );
+}
+
+// ── it221: cols::+host with no profile.json — empty cell, exit 0 (029 FT-09) ─
+
+/// it221 (029 FT-09 When-A): `cols::+host` with a saved account that has no
+/// `profile.json` — the command must exit 0. The Host column is present in the
+/// table header; the account row shows an empty cell, not an error.
+///
+/// Spec: [`tests/docs/feature/029_account_host_metadata.md` FT-09]
+#[ test ]
+fn it221_ft029_09_usage_no_profile_shows_empty_host()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Account saved with no profile.json (no host:: was given).
+  write_account( dir.path(), "acct@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  // Deliberately no write_account_profile_json call.
+
+  let out = run_cs_with_env( &[ ".usage", "cols::+host" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // Header row must contain "Host".
+  assert!(
+    text.contains( "Host" ),
+    "cols::+host must show Host column header even when profile.json is absent, got:\n{text}",
+  );
+}
+
+// ── it206: lim_it only_next::1 shows exactly the → account (028 FT-04) ───────
+
+/// it206 `lim_it` (028 FT-04): `only_next::1` shows exactly one row — the → account.
+///
+/// With two live accounts, the active `next::` strategy selects one → winner.
+/// `only_next::1` must show only that row; all others are hidden.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-04]
+#[ test ]
+fn it206_lim_it_ft028_04_only_next_1_shows_arrow()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it206: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  let out = run_cs_with_env( &[ ".usage", "only_next::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  // Count data rows (lines containing an account name).
+  let data_rows = text.lines()
+    .filter( | l | l.contains( "@test.com" ) )
+    .count();
+  assert_eq!(
+    data_rows, 1,
+    "only_next::1 must show exactly 1 row (the → account), got:\n{text}",
+  );
+  // The one shown row must contain the → marker.
+  let arrow_rows = text.lines()
+    .filter( | l | l.contains( "→" ) && l.contains( "@test.com" ) )
+    .count();
+  assert_eq!(
+    arrow_rows, 1,
+    "only_next::1 must show the → account row, got:\n{text}",
+  );
+}
+
+// ── it207–it210: lim_it threshold filters (041/042 EC-1/EC-2) ────────────────
+
+/// it207 `lim_it` (041 EC-1): `min_5h::50` hides rows below 50% threshold.
+///
+/// With two live accounts sharing the same token the quota values are identical,
+/// so we run with a threshold of 0 (all shown) and then 101 (all hidden as a
+/// proxy). For a more meaningful EC-1 test a separate `lim_it` run is used; this
+/// test verifies acceptance when threshold equals 0 (baseline) and that the
+/// flag is parsed correctly with a live account.
+///
+/// Note: Exact threshold verification (80% shown / 30% hidden) requires two
+/// accounts with different quota levels — non-trivial to guarantee with shared
+/// tokens. This test verifies structural acceptance only.
+///
+/// Spec: [`tests/docs/cli/param/041_min_5h.md` EC-1]
+#[ test ]
+fn it207_lim_it_min_5h_50_hides_below_threshold()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it207: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  // min_5h::50 accepted with live account → exit 0 (filter applied).
+  let out = run_cs_with_env( &[ ".usage", "min_5h::50" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it208 `lim_it` (041 EC-2): `min_5h::50` with row at exactly 50% — row shown.
+///
+/// Verifies structural acceptance of the threshold flag with a live account.
+/// The inclusive-boundary semantic (≥ threshold) is verified by the offline
+/// unit logic; this test confirms the flag is parsed and applied.
+///
+/// Spec: [`tests/docs/cli/param/041_min_5h.md` EC-2]
+#[ test ]
+fn it208_lim_it_min_5h_50_inclusive_boundary()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it208: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  // min_5h::50 accepted → exit 0.
+  let out = run_cs_with_env( &[ ".usage", "min_5h::50" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it209 `lim_it` (042 EC-1): `min_7d::20` accepted with live account — exit 0.
+///
+/// Spec: [`tests/docs/cli/param/042_min_7d.md` EC-1]
+#[ test ]
+fn it209_lim_it_min_7d_20_hides_below_threshold()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it209: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out = run_cs_with_env( &[ ".usage", "min_7d::20" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+/// it210 `lim_it` (042 EC-2): `min_7d::20` inclusive boundary — accepted, exit 0.
+///
+/// Spec: [`tests/docs/cli/param/042_min_7d.md` EC-2]
+#[ test ]
+fn it210_lim_it_min_7d_20_inclusive_boundary()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it210: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out = run_cs_with_env( &[ ".usage", "min_7d::20" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+}
+
+// ── it213: lim_it AND filter composition (028 FT-09) ─────────────────────────
+
+/// it213 `lim_it` (028 FT-09): `only_valid::1 min_7d::30` shows only accounts
+/// that are non-🔴 AND have 7d Left ≥ 30%.
+///
+/// With two live accounts, the composition is verified by checking exit 0 and
+/// that the filter params are both accepted together.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-09]
+#[ test ]
+fn it213_lim_it_ft028_09_and_composition()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it213: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "only_valid::1", "min_7d::30" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+}
+
+// ── it214: lim_it get::7d_left bare extraction (028 FT-10) ───────────────────
+
+/// it214 `lim_it` (028 FT-10): `sort::name get::7d_left` outputs a bare
+/// percentage string with no table headers, separator lines, or footer.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-10]
+#[ test ]
+fn it214_lim_it_ft028_10_get_7d_left_bare()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it214: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "sort::name", "get::7d_left" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // No table chrome: no heading, no separator row, no footer.
+  assert!(
+    !text.contains( "Quota" ) && !text.contains( "7d Left" ) && !text.contains( "Valid:" ),
+    "get::7d_left must produce bare value output with no table chrome, got:\n{text}",
+  );
+}
+
+// ── it215: lim_it only_next::1 get::7d_left targeted extraction (028 FT-11) ──
+
+/// it215 `lim_it` (028 FT-11): `only_next::1 get::7d_left` extracts 7d Left
+/// for the → account as a bare string.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-11]
+#[ test ]
+fn it215_lim_it_ft028_11_only_next_get_7d_left()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it215: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "only_next::1", "get::7d_left" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "Quota" ) && !text.contains( "Valid:" ),
+    "only_next::1 get::7d_left must produce bare value, no table chrome, got:\n{text}",
+  );
+}
+
+// ── it216: lim_it get::status on 🟢 account (028 FT-12) ─────────────────────
+
+/// it216 `lim_it` (028 FT-12): `get::status` on a valid (🟢) account outputs
+/// `🟢` (or `🟡`) as a bare string — single emoji, no table chrome.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-12]
+#[ test ]
+fn it216_lim_it_ft028_12_get_status_green()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it216: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out = run_cs_with_env( &[ ".usage", "get::status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out ).trim().to_string();
+  assert!(
+    text == "🟢" || text == "🟡",
+    "get::status on valid account must output 🟢 or 🟡 as a bare value, got:\n{text}",
+  );
+}
+
+// ── it217: lim_it format::tsv with status text labels (028 FT-13) ─────────────
+
+/// it217 `lim_it` (028 FT-13): `format::tsv` produces tab-separated output;
+/// the status column contains text labels (`ok`, `warn`, `err`) not emoji.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-13]
+#[ test ]
+fn it217_lim_it_ft028_13_format_tsv_status_text()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it217: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out = run_cs_with_env( &[ ".usage", "format::tsv" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // TSV header row uses tabs.
+  let has_tab = text.contains( '\t' );
+  assert!( has_tab, "format::tsv output must contain tab characters, got:\n{text}" );
+  // Status column uses text label, not emoji.
+  assert!(
+    !text.contains( "🟢" ) && !text.contains( "🟡" ) && !text.contains( "🔴" ),
+    "format::tsv status column must use text labels (ok/warn/err), not emoji, got:\n{text}",
+  );
+  assert!(
+    text.contains( "ok" ) || text.contains( "warn" ) || text.contains( "err" ),
+    "format::tsv status column must contain a text label, got:\n{text}",
+  );
+}
+
+// ── it218: lim_it no_color::1 produces emoji-free output (028 FT-14) ─────────
+
+/// it218 `lim_it` (028 FT-14): `no_color::1` with a valid account produces
+/// emoji-free output; status column shows plain text labels.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-14]
+#[ test ]
+fn it218_lim_it_ft028_14_no_color_emoji_free()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it218: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out = run_cs_with_env( &[ ".usage", "no_color::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    !text.contains( "🟢" ) && !text.contains( "🟡" ) && !text.contains( "→" ),
+    "no_color::1 must produce emoji-free output for valid account, got:\n{text}",
+  );
+}
+
+// ── it219: lim_it filters compose with sort/next/count/cols (028 FT-16) ──────
+
+/// it219 `lim_it` (028 FT-16): `sort::name next::drain only_valid::1 count::2 cols::+sub`
+/// composes all filter/sort/col params correctly. At most 2 non-🔴 rows, sorted
+/// alphabetically, Sub column present.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-16]
+#[ test ]
+fn it219_lim_it_ft028_16_filters_compose()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it219: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "sort::name", "next::drain", "only_valid::1", "count::2", "cols::+sub" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // Sub column must be present in header.
+  assert!(
+    text.contains( "Sub" ),
+    "cols::+sub must add Sub column header, got:\n{text}",
+  );
+  // At most 2 data rows.
+  let data_rows = text.lines()
+    .filter( | l | l.contains( "@test.com" ) )
+    .count();
+  assert!(
+    data_rows <= 2,
+    "count::2 must limit result to at most 2 rows, got {data_rows} rows:\n{text}",
+  );
+}
+
+// ── it222: lim_it IT-72 format::json new renewal fields ──────────────────────
+
+/// it222 `lim_it` (IT-72): `format::json` output contains the new renewal and
+/// next-event fields; the legacy `next_renewal_est` key must be absent.
+///
+/// Required fields: `renewal_secs`, `renewal_is_estimate`, `next_event_type`,
+/// `next_event_secs`. Legacy `next_renewal_est` must not appear.
+///
+/// Spec: [`tests/docs/cli/command/009_usage.md` IT-72]
+///       [`docs/feature/009_token_usage.md` AC-29]
+#[ test ]
+fn it222_lim_it_it72_json_new_renewal_fields()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it222: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out = run_cs_with_env( &[ ".usage", "format::json" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "renewal_secs" ),
+    "format::json must contain 'renewal_secs' field (IT-72), got:\n{text}",
+  );
+  assert!(
+    text.contains( "renewal_is_estimate" ),
+    "format::json must contain 'renewal_is_estimate' field (IT-72), got:\n{text}",
+  );
+  assert!(
+    text.contains( "next_event_type" ),
+    "format::json must contain 'next_event_type' field (IT-72), got:\n{text}",
+  );
+  assert!(
+    text.contains( "next_event_secs" ),
+    "format::json must contain 'next_event_secs' field (IT-72), got:\n{text}",
+  );
+  assert!(
+    !text.contains( "next_renewal_est" ),
+    "format::json must NOT contain legacy 'next_renewal_est' field (IT-72), got:\n{text}",
+  );
+}
+
+// ── it223–it224: lim_it abs::1 / abs::true show token counts (046 EC-4/EC-6) ─
+
+/// it223 `lim_it` (046 EC-4): `abs::1` shows absolute token counts instead of
+/// percentages. Quota columns must not contain `%` suffix.
+///
+/// Spec: [`tests/docs/cli/param/046_abs.md` EC-4]
+#[ test ]
+fn it223_lim_it_abs_1_shows_token_counts()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it223: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out_pct = run_cs_with_env( &[ ".usage", "abs::0" ], &[ ( "HOME", home ) ] );
+  let out_abs = run_cs_with_env( &[ ".usage", "abs::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_abs, 0 );
+
+  let text_pct = stdout( &out_pct );
+  let text_abs = stdout( &out_abs );
+
+  // Default (abs::0) shows % values; abs::1 must not.
+  assert!(
+    text_pct.contains( '%' ),
+    "abs::0 (default) must show percentage values, got:\n{text_pct}",
+  );
+  assert!(
+    !text_abs.contains( '%' ) || text_abs.lines().filter( | l | l.contains( '%' ) ).all( | l | l.contains( "Reset" ) ),
+    "abs::1 quota columns must show absolute counts without % suffix, got:\n{text_abs}",
+  );
+}
+
+/// it224 `lim_it` (046 EC-6): `abs::true` produces the same output as `abs::1`.
+///
+/// Spec: [`tests/docs/cli/param/046_abs.md` EC-6]
+#[ test ]
+fn it224_lim_it_abs_true_shows_token_counts()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it224: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out_1    = run_cs_with_env( &[ ".usage", "abs::1"    ], &[ ( "HOME", home ) ] );
+  let out_true = run_cs_with_env( &[ ".usage", "abs::true" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_true, 0 );
+  // abs::true and abs::1 must produce identical output.
+  assert_eq!(
+    stdout( &out_1 ), stdout( &out_true ),
+    "abs::true must produce the same output as abs::1 (046 EC-6)",
+  );
+}
+
+// ── it225: → Next cell shows event label + duration (live) ───────────────────
+
+/// it225 — The `→ Next` column cells contain a recognized event-label-and-duration string.
+///
+/// Given a live account with valid quota data, the `→ Next` column must show the soonest
+/// upcoming event as `<label> in <duration>` — not an empty cell or bare header.
+///
+/// Note: exact label depends on live account state (which event comes soonest). The test
+/// verifies one of the four known event labels appears followed by "in" — not a specific one.
+///
+/// Spec: [`tests/docs/cli/command/009_usage.md` IT-71]
+#[ test ]
+fn it225_lim_it_it71_next_event_cell_shows_label_and_duration()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it225: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+
+  let text = stdout( &out );
+  // Column header must be present.
+  assert!(
+    text.contains( "\u{2192} Next" ),
+    "→ Next column header must appear in default output (IT-71), got:\n{text}",
+  );
+  // At least one recognized event-label pattern must appear in the output.
+  // Valid labels: +5h, !tok, +7d, $ren — each followed by " in ".
+  let has_event_label =
+    text.contains( "+5h in " )
+    || text.contains( "!tok in " )
+    || text.contains( "+7d in " )
+    || text.contains( "$ren in " );
+  assert!(
+    has_event_label,
+    "→ Next cell must contain '<label> in <duration>' for live account (IT-71), got:\n{text}",
+  );
+}

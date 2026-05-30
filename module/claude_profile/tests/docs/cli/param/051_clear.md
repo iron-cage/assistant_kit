@@ -21,7 +21,7 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **When:** `clp .account.renewal name::test@example.com clear::1`
 - **Then:** Exits 0. `{credential_store}/test@example.com.claude.json` no longer contains `_renewal_at` key.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft04_account_renewal_clear_removes_key` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---
@@ -32,7 +32,7 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **When:** `clp .account.renewal name::test@example.com clear::1`
 - **Then:** Exits 0. No error. File state unchanged (or empty `{}` if `.claude.json` was absent).
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `arn19_clear_no_prior_renewal_at_exits_0` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---
@@ -66,7 +66,7 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **When:** `clp .account.renewal name::test@example.com clear::1 at::2026-06-29T21:00:00Z`
 - **Then:** Exits 1. Stderr names the conflicting parameters. No file written.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft08_account_renewal_at_clear_conflict` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---
@@ -77,5 +77,5 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **When:** `clp .account.renewal name::test@example.com clear::1 from_now::+1h`
 - **Then:** Exits 1. Stderr names the conflicting parameters. No file written.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `ft09_account_renewal_from_now_clear_conflict` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)

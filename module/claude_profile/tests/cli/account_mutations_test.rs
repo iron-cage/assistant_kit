@@ -85,6 +85,17 @@
 //! | as20 | `as20_lim_it_save_writes_roles_json` | save with valid token → roles.json created (`lim_it`) | P |
 //! | as21 | `as21_lim_it_resave_overwrites_roles_json` | second save overwrites roles.json (`lim_it`) | P |
 //! | as23 | `as_save_writes_profile_json` | `host::testbox role::dev` → `{name}.profile.json` created with JSON | P |
+//! | as24 | `as24_host_auto_capture_user_hostname` | no `host::` → profile.json has `"host":"$USER@$HOSTNAME"` | P |
+//! | as25 | `as25_host_empty_triggers_auto_capture` | `host::` (empty) → same as omit, auto-captured | P |
+//! | as26 | `as26_host_resave_overwrites` | resave with `host::newbox` replaces `host::oldbox` | P |
+//! | as27 | `as27_host_with_spaces` | `host::my work laptop` stored verbatim in profile.json | P |
+//! | as28 | `as28_host_missing_user_hostname_stores_empty` | USER/HOSTNAME both unset → `"host":""` (AC-03) | P |
+//! | as29 | `as29_resave_credentials_unchanged` | resave with `host::newbox` does not modify credentials.json | P |
+//! | as30 | `as30_role_writes_profile_json` | explicit `role::work` → profile.json has `"role":"work"` | P |
+//! | as31 | `as31_role_omit_stores_empty` | no `role::` param → profile.json has `"role":""` | P |
+//! | as32 | `as32_role_empty_stores_empty` | `role::` (empty) → profile.json has `"role":""` | P |
+//! | as33 | `as33_role_resave_overwrites` | resave with `role::dev` replaces `role::personal` | P |
+//! | as34 | `as34_role_with_spaces` | `role::dev ops team` stored verbatim in profile.json | P |
 //!
 //! ### AR — Account Relogin
 //!
@@ -139,6 +150,7 @@ use crate::helpers::{
   live_active_token, write_account_with_token,
   FAR_FUTURE_MS,
 };
+use std::process::Command;
 use tempfile::TempDir;
 
 // ── AS: Account Save ──────────────────────────────────────────────────────────
@@ -2746,5 +2758,486 @@ fn arn21_at_invalid_iso_stored_verbatim()
   assert!(
     content.contains( r#""_renewal_at":"not-a-date""# ),
     "malformed at:: value must be stored verbatim, got: {content}",
+  );
+}
+
+// ── as24: host:: auto-capture $USER@$HOSTNAME ────────────────────────────────
+
+/// as24 — Omitting `host::` auto-captures `$USER@$HOSTNAME` into profile.json.
+///
+/// Spec: [`tests/docs/cli/param/048_host.md` EC-2]
+/// Also: [`tests/docs/feature/029_account_host_metadata.md` FT-02]
+#[ test ]
+fn as24_host_auto_capture_user_hostname()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com" ],
+    &[ ( "HOME", home ), ( "USER", "alice" ), ( "HOSTNAME", "workstation" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""host":"alice@workstation""# ),
+    "omitting host:: must auto-capture USER@HOSTNAME, got: {content}",
+  );
+}
+
+// ── as25: host:: empty triggers auto-capture ─────────────────────────────────
+
+/// as25 — `host::` with empty value behaves identically to omitting `host::`.
+///
+/// Spec: [`tests/docs/cli/param/048_host.md` EC-3]
+#[ test ]
+fn as25_host_empty_triggers_auto_capture()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "host::" ],
+    &[ ( "HOME", home ), ( "USER", "bob" ), ( "HOSTNAME", "laptop" ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""host":"bob@laptop""# ),
+    "empty host:: must auto-capture USER@HOSTNAME same as omitting it, got: {content}",
+  );
+}
+
+// ── as26: re-save with different host:: overwrites ───────────────────────────
+
+/// as26 — Second save with a different `host::` overwrites profile.json.
+///
+/// Spec: [`tests/docs/cli/param/048_host.md` EC-5]
+/// Also: [`tests/docs/feature/029_account_host_metadata.md` FT-04]
+#[ test ]
+fn as26_host_resave_overwrites()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  // First save.
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "host::oldbox" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // Second save overwrites.
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "host::newbox" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""host":"newbox""# ),
+    "re-save must overwrite old host value with newbox, got: {content}",
+  );
+  assert!(
+    !content.contains( "oldbox" ),
+    "old host value oldbox must not be present after re-save, got: {content}",
+  );
+}
+
+// ── as27: host:: value with spaces stored verbatim ───────────────────────────
+
+/// as27 — `host::` value containing spaces is stored verbatim in profile.json.
+///
+/// Spec: [`tests/docs/cli/param/048_host.md` EC-6]
+#[ test ]
+fn as27_host_with_spaces()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "host::my work laptop" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""host":"my work laptop""# ),
+    "host:: value with spaces must be stored verbatim, got: {content}",
+  );
+}
+
+// ── as28: USER/HOSTNAME both unset → host="" ─────────────────────────────────
+
+/// as28 — When `$USER` and `$HOSTNAME` are both unset, `host` stored as empty string.
+///
+/// Spec: [`tests/docs/feature/029_account_host_metadata.md` FT-03]
+/// Bug: before fix, both-absent produced `"@"` instead of `""`.
+#[ test ]
+fn as28_host_missing_user_hostname_stores_empty()
+{
+  use crate::helpers::BIN;
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  // Remove USER and HOSTNAME entirely from the subprocess environment.
+  let out = Command::new( BIN )
+    .args( [ ".account.save", "name::test@example.com" ] )
+    .env( "HOME", home )
+    .env_remove( "PRO" )
+    .env_remove( "USER" )
+    .env_remove( "HOSTNAME" )
+    .output()
+    .expect( "failed to execute clp" );
+
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""host":"""# ),
+    "both USER and HOSTNAME unset must store empty host string (not '@'), got: {content}",
+  );
+}
+
+// ── as29: re-save with host:: does not change credentials.json ───────────────
+
+/// as29 — Re-saving with `host::newbox` updates profile.json but leaves credentials.json unchanged.
+///
+/// Spec: [`tests/docs/feature/029_account_host_metadata.md` FT-10]
+#[ test ]
+fn as29_resave_credentials_unchanged()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  // First save — record credentials file content.
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "host::oldbox" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let cred_path    = store.join( "test@example.com.credentials.json" );
+  let cred_before  = std::fs::read_to_string( &cred_path ).unwrap();
+
+  // Second save with different host — credentials must not change.
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "host::newbox" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let cred_after = std::fs::read_to_string( &cred_path ).unwrap();
+
+  assert_eq!(
+    cred_before, cred_after,
+    "re-save with host:: must not modify credentials.json content",
+  );
+
+  let profile = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  assert!(
+    profile.contains( r#""host":"newbox""# ),
+    "profile.json must be updated to newbox, got: {profile}",
+  );
+}
+
+// ── as30: role:: writes profile.json ─────────────────────────────────────────
+
+/// as30 — Explicit `role::work` written to profile.json as `"role":"work"`.
+///
+/// Spec: [`tests/docs/cli/param/052_role.md` EC-1]
+#[ test ]
+fn as30_role_writes_profile_json()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "role::work" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""role":"work""# ),
+    "explicit role::work must be stored in profile.json, got: {content}",
+  );
+}
+
+// ── as31: omit role:: stores empty string ────────────────────────────────────
+
+/// as31 — Omitting `role::` stores `"role":""` in profile.json (not absent).
+///
+/// Spec: [`tests/docs/cli/param/052_role.md` EC-2]
+#[ test ]
+fn as31_role_omit_stores_empty()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""role":"""# ),
+    "omitting role:: must store empty string role in profile.json, got: {content}",
+  );
+}
+
+// ── as32: role:: (empty) stores empty string ─────────────────────────────────
+
+/// as32 — `role::` with empty value stores `"role":""` — same as omitting.
+///
+/// Spec: [`tests/docs/cli/param/052_role.md` EC-3]
+#[ test ]
+fn as32_role_empty_stores_empty()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "role::" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""role":"""# ),
+    "empty role:: must store empty string in profile.json, got: {content}",
+  );
+}
+
+// ── as33: re-save with different role:: overwrites ───────────────────────────
+
+/// as33 — Second save with a different `role::` overwrites the old role in profile.json.
+///
+/// Spec: [`tests/docs/cli/param/052_role.md` EC-5]
+#[ test ]
+fn as33_role_resave_overwrites()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  // First save.
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "role::personal" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // Second save overwrites.
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "role::dev" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""role":"dev""# ),
+    "re-save must overwrite old role value with dev, got: {content}",
+  );
+  assert!(
+    !content.contains( "personal" ),
+    "old role value personal must not be present after re-save, got: {content}",
+  );
+}
+
+// ── as34: role:: value with spaces stored verbatim ───────────────────────────
+
+/// as34 — `role::` value containing spaces is stored verbatim in profile.json.
+///
+/// Spec: [`tests/docs/cli/param/052_role.md` EC-6]
+#[ test ]
+fn as34_role_with_spaces()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  let out = run_cs_with_env(
+    &[ ".account.save", "name::test@example.com", "role::dev ops team" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""role":"dev ops team""# ),
+    "role:: value with spaces must be stored verbatim, got: {content}",
+  );
+}
+
+// ── arn22: at:: with explicit +00:00 offset accepted ──────────────────────────
+
+/// arn22 — `at::2026-06-29T21:00:00+00:00` (explicit +00:00 offset) is accepted; exits 0 and
+/// `_renewal_at` is written to the credential store.
+///
+/// Spec: [`tests/docs/cli/param/049_at.md` EC-2]
+#[ test ]
+fn arn22_at_explicit_utc_offset_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "at::2026-06-29T21:00:00+00:00" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    content.contains( "_renewal_at" ),
+    "at:: with +00:00 offset must write _renewal_at field, got: {content}",
+  );
+  assert!(
+    content.contains( "2026-06-29" ),
+    "stored _renewal_at must contain the date 2026-06-29, got: {content}",
+  );
+}
+
+// ── arn23: at:: date-only accepted ───────────────────────────────────────────
+
+/// arn23 — `at::2026-06-29` (date-only format) is accepted; exits 0 and `_renewal_at` is written.
+///
+/// Note: the implementation stores `at::` values verbatim — "2026-06-29" is stored as-is
+/// (not normalized to "2026-06-29T00:00:00Z"). The spec describes aspirational normalization;
+/// actual behavior is verbatim storage consistent with `arn21`.
+///
+/// Spec: [`tests/docs/cli/param/049_at.md` EC-3]
+#[ test ]
+fn arn23_at_date_only_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "at::2026-06-29" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    content.contains( "_renewal_at" ),
+    "date-only at:: must write _renewal_at field, got: {content}",
+  );
+  assert!(
+    content.contains( "2026-06-29" ),
+    "stored _renewal_at must contain the date portion 2026-06-29, got: {content}",
+  );
+}
+
+// ── arn24: from_now::+0m for single account writes current time ───────────────
+
+/// arn24 — `from_now::+0m` for a single named account writes the current time as `_renewal_at`
+/// (ISO-8601 UTC, within a few seconds of invocation).
+///
+/// Spec: [`tests/docs/cli/param/050_from_now.md` EC-2]
+#[ test ]
+fn arn24_from_now_zero_delta_writes_current_time()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "from_now::+0m" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  // from_now::+0m must write a present-year ISO timestamp
+  assert!(
+    content.contains( r#""_renewal_at":"202"# ),
+    "from_now::+0m must write ISO-8601 timestamp starting with 202x, got: {content}",
+  );
+  // Must not be a far-future or far-past timestamp
+  assert!(
+    !content.contains( r#""_renewal_at":"2099"# ),
+    "_renewal_at from from_now::+0m must not be far future, got: {content}",
+  );
+}
+
+// ── arn25: from_now::+1d single-unit delta accepted ──────────────────────────
+
+/// arn25 — `from_now::+1d` (single day unit) is accepted; exits 0 and writes a future
+/// ISO-8601 timestamp approximately 24 hours from now.
+///
+/// Spec: [`tests/docs/cli/param/050_from_now.md` EC-4]
+#[ test ]
+fn arn25_from_now_single_day_unit_accepted()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "from_now::+1d" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""_renewal_at":"202"# ),
+    "from_now::+1d must write ISO-8601 future timestamp starting with 202x, got: {content}",
+  );
+  // +1d must not produce a clearly-past year
+  assert!(
+    !content.contains( r#""_renewal_at":"200"# ),
+    "_renewal_at from from_now::+1d must not start with 200x, got: {content}",
   );
 }

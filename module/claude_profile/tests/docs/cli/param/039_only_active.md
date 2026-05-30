@@ -21,7 +21,7 @@ Edge case coverage for the `only_active::` parameter on `.usage`. See [param/039
 - **When:** `clp .usage only_active::1`
 - **Then:** Exits 0. Exactly one row in the table body — the active account.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it154_only_active_1_shows_active_account_row` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/039_only_active.md](../../../../docs/cli/param/039_only_active.md)
 
 ---
@@ -32,7 +32,7 @@ Edge case coverage for the `only_active::` parameter on `.usage`. See [param/039
 - **When:** `clp .usage only_active::0`
 - **Then:** Exits 0. All rows shown (default behavior).
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it155_only_active_0_shows_all_rows` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/039_only_active.md](../../../../docs/cli/param/039_only_active.md)
 
 ---
@@ -43,7 +43,7 @@ Edge case coverage for the `only_active::` parameter on `.usage`. See [param/039
 - **When:** `clp .usage only_active::bad`
 - **Then:** Exits 1. Stderr names valid values: `0`, `1`, `false`, `true`.
 - **Exit:** 1
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it156_only_active_bad_exits_1` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/039_only_active.md](../../../../docs/cli/param/039_only_active.md)
 
 ---
@@ -54,7 +54,7 @@ Edge case coverage for the `only_active::` parameter on `.usage`. See [param/039
 - **When:** `clp .usage only_active::1`
 - **Then:** Exits 0. Table has 0 data rows (no active account to show). No error.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it157_only_active_1_no_active_marker_shows_empty` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/039_only_active.md](../../../../docs/cli/param/039_only_active.md)
 
 ---
@@ -65,7 +65,7 @@ Edge case coverage for the `only_active::` parameter on `.usage`. See [param/039
 - **When:** `clp .usage only_active::true`
 - **Then:** Exits 0. Exactly one row shown — same result as `only_active::1`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it158_only_active_true_accepted` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/039_only_active.md](../../../../docs/cli/param/039_only_active.md)
 
 ---
@@ -76,5 +76,5 @@ Edge case coverage for the `only_active::` parameter on `.usage`. See [param/039
 - **When:** `clp .usage only_active::false`
 - **Then:** Exits 0. Both rows shown — same result as `only_active::0`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it159_only_active_false_shows_all_rows` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/039_only_active.md](../../../../docs/cli/param/039_only_active.md)
