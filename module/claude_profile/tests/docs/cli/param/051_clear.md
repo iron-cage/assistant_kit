@@ -43,7 +43,7 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **When:** `clp .account.renewal name::test@example.com clear::1`
 - **Then:** Exits 0. `_renewal_at` is absent. `oauthAccount` content is unchanged (read-merge preserved non-`_renewal_at` keys).
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `arc02_clear_preserves_oauth_account_content` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---
@@ -55,7 +55,7 @@ Edge case coverage for the `clear::` parameter on `.account.renewal`. See [param
 - **Then:** `~Renews` column for that account shows `~in Xd` (estimated, with `~` prefix from `org_created_at`) — not the exact `in Xh Ym` format.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it237_lim_it_clear_usage_shows_tilde_estimate` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/051_clear.md](../../../../docs/cli/param/051_clear.md)
 
 ---

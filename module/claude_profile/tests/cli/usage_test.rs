@@ -191,6 +191,26 @@
 //! | it202 | `it202_cols_host_shows_host_column`                 | `cols::+host` shows Host header + profile host value (033 EC-7) | P | no |
 //! | it203 | `it203_cols_role_shows_role_column`                 | `cols::+role` shows Role header + profile role value (033 EC-8) | P | no |
 //! | it204 | `it204_cols_bogus_names_host_and_role_in_error`     | `cols::+bogus` exit 1 stderr names `host` and `role` (033 EC-9) | N | no |
+//! | it225 | `it225_lim_it_it71_next_event_cell_shows_label_and_duration` | → Next cell shows event label + duration (009 IT-71) | P | yes |
+//! | it226 | `it226_lim_it_only_next_1_drain_shows_winner`       | `only_next::1 next::drain` shows 1 row with → (040 EC-3) | P | yes |
+//! | it227 | `it227_lim_it_only_next_true_shows_arrow_row`       | `only_next::true` accepted, shows → row (040 EC-6) | P | yes |
+//! | it228 | `it228_lim_it_only_valid_1_shows_green_hides_red`   | `only_valid::1` shows 🟢 live account, hides 🔴 error (043 EC-1) | P | yes |
+//! | it229 | `it229_lim_it_exclude_exhausted_1_shows_green`      | `exclude_exhausted::1` shows 🟢, hides 🔴 (044 EC-1) | P | yes |
+//! | it230 | `it230_lim_it_exclude_exhausted_stricter_than_only_valid` | `exclude_exhausted::1` ≤ rows than `only_valid::1` (044 EC-3) | P | yes |
+//! | it231 | `it231_lim_it_get_7d_left_extracts_bare_pct`        | `get::7d_left` outputs bare `65%`, no chrome (045 EC-1) | P | yes |
+//! | it232 | `it232_lim_it_get_status_extracts_green_emoji`      | `get::status` outputs `🟢` for live account (045 EC-3) | P | yes |
+//! | it233 | `it233_get_bogus_exits_1_names_valid_fields`        | `get::bogus` exits 1; stderr names `next_event_type` etc. (045 EC-5) | N | no |
+//! | it234 | `it234_lim_it_get_next_event_type_and_secs`         | `get::next_event_type` → label; `get::next_event_secs` → integer (045 EC-7) | P | yes |
+//! | it235 | `it235_lim_it_no_color_0_output_includes_emoji`     | `no_color::0` default includes 🟢 emoji (047 EC-3) | P | yes |
+//! | it236 | `it236_lim_it_no_color_1_footer_uses_ascii_arrow`   | `no_color::1` footer has `->` not `→` (047 EC-5) | P | yes |
+//! | it237 | `it237_lim_it_clear_usage_shows_tilde_estimate`     | after `clear::1`, `_renewal_at` absent from file (051 EC-4) | P | yes |
+//! | it238 | `it238_lim_it_get_bypasses_cols_restriction`        | `cols::-7d_left get::7d_left` still extracts value (005 CC-3) | P | yes |
+//! | it239 | `it239_cols_sub_and_no_color_independent`           | `cols::+sub no_color::1` — Sub header present + no emoji (005 CC-4) | P | no |
+//! | it240 | `it240_lim_it_cols_host_role_shows_profile_data`    | `cols::+host,+role` shows both from profile.json (006 CC-4) | P | yes |
+//! | it241 | `it241_min_5h_and_min_7d_both_pass_err_account`     | `min_5h::50 min_7d::30` both pass Err account (absent data) | P | no |
+//! | it242 | `it242_min_5h_only_valid_removes_err_account`       | `min_5h::1 only_valid::1` — Err passes min_5h but only_valid removes it | P | no |
+//! | it243 | `it243_min_5h_get_account_err_passes_returns_name`  | `min_5h::1 get::account` on Err account — returns name (absent passes) | P | no |
+//! | it244 | `it244_get_host_absent_profile_json_empty_stdout`   | `get::host` on account without profile.json — empty stdout | P | no |
 
 use crate::helpers::{
   BIN,
@@ -5640,6 +5660,122 @@ fn it212_min_7d_absent_data_passes_filter()
   );
 }
 
+// ── it241: min_5h + min_7d both applied — Err account passes both ─────────────
+
+/// it241: `min_5h::50 min_7d::30` both applied simultaneously; Err account passes both.
+///
+/// Each threshold filter independently passes Err accounts (absent data ≠ exhausted).
+/// When both are applied, the Err account survives both retain passes.
+///
+/// Spec: [`tests/docs/cli/param/041_min_5h.md` EC-6] and [`tests/docs/cli/param/042_min_7d.md` EC-6]
+#[ test ]
+fn it241_min_5h_and_min_7d_both_pass_err_account()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct@test.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "min_5h::50", "min_7d::30" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "acct@test.com" ),
+    "min_5h::50 min_7d::30 must not hide row when both quota fields are absent, got:\n{text}",
+  );
+}
+
+// ── it242: min_5h + only_valid — only_valid removes Err even after min_5h passes ──
+
+/// it242: `min_5h::1 only_valid::1` — Err account passes `min_5h` (absent data),
+/// but is subsequently removed by `only_valid::1` (which filters on `result.is_err()`).
+///
+/// Tests that `min_5h` and `only_valid` are independent filters in AND-composition:
+/// `only_valid` still applies to accounts that survived `min_5h`.
+///
+/// Spec: [`tests/docs/cli/param/041_min_5h.md` EC-6] + [`tests/docs/cli/param/043_only_valid.md` EC-4]
+#[ test ]
+fn it242_min_5h_only_valid_removes_err_account()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Err account: passes min_5h::1 (absent data), but NOT only_valid::1
+  write_account( dir.path(), "acct-err@test.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "min_5h::1", "only_valid::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // only_valid::1 must remove the Err account even though min_5h::1 would have kept it.
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "min_5h::1 only_valid::1 must produce empty table for all-Err accounts, got:\n{text}",
+  );
+}
+
+// ── it243: min_5h::1 get::account on Err account — returns name ───────────────
+
+/// it243: `min_5h::1 get::account` with an Err account — Err passes the `min_5h`
+/// filter (absent data ≠ exhausted), and then `get::account` extracts its name.
+///
+/// This is the positive complement of it242: without `only_valid::1`, the Err account
+/// survives `min_5h` and `get::` operates on it normally.
+///
+/// Spec: [`tests/docs/cli/param/041_min_5h.md` EC-6] + [`tests/docs/cli/param/045_get.md` EC-2]
+#[ test ]
+fn it243_min_5h_get_account_err_passes_returns_name()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct@test.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "min_5h::1", "get::account" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  // Err account passes min_5h (absent data), so get::account returns its name.
+  assert_eq!(
+    text.trim(),
+    "acct@test.com",
+    "min_5h::1 get::account must return account name when Err account passes filter, got:\n{text}",
+  );
+}
+
+// ── it244: get::host when profile.json absent — empty stdout ─────────────────
+
+/// it244: `get::host` on an account without `profile.json` — returns empty stdout.
+///
+/// `read_profile_metadata` returns `(String::new(), String::new())` when the file
+/// is absent.  `extract_get_field(aq, GetField::Host, ...)` returns `aq.host.clone()`
+/// = "".  Empty string → `content = String::new()` → empty stdout (exit 0).
+///
+/// Spec: [`tests/docs/cli/param_group/006_account_targeting.md` CC-2 implication]
+#[ test ]
+fn it244_get_host_absent_profile_json_empty_stdout()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // No profile.json written — host is absent.
+  write_account( dir.path(), "acct@test.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "get::host" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.trim().is_empty(),
+    "get::host on account without profile.json must output empty stdout, got:\n{text}",
+  );
+}
+
 // ── it220: cols::+host get::host extracts bare host string (029 FT-07) ────────
 
 /// it220 (029 FT-07): `cols::+host get::host` extracts the host value from
@@ -6203,5 +6339,579 @@ fn it225_lim_it_it71_next_event_cell_shows_label_and_duration()
   assert!(
     has_event_label,
     "→ Next cell must contain '<label> in <duration>' for live account (IT-71), got:\n{text}",
+  );
+}
+
+// ── it226–it227: only_next:: live tests (040 EC-3/6) ─────────────────────────
+
+/// it226 `lim_it` (040 EC-3): `only_next::1 next::drain` shows → row from drain strategy.
+///
+/// With two live accounts sharing the same token, `only_next::1 next::drain`
+/// must show exactly one row — the drain-strategy winner — which has the `→` marker.
+///
+/// Spec: [`tests/docs/cli/param/040_only_next.md` EC-3]
+#[ test ]
+fn it226_lim_it_only_next_1_drain_shows_winner()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it226: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "only_next::1", "next::drain" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  let data_rows = text.lines()
+    .filter( | l | l.contains( "@test.com" ) )
+    .count();
+  assert_eq!(
+    data_rows, 1,
+    "only_next::1 next::drain must show exactly 1 row (040 EC-3), got:\n{text}",
+  );
+  let arrow_rows = text.lines()
+    .filter( | l | l.contains( "\u{2192}" ) && l.contains( "@test.com" ) )
+    .count();
+  assert_eq!(
+    arrow_rows, 1,
+    "only_next::1 next::drain must show the → account row (040 EC-3), got:\n{text}",
+  );
+}
+
+/// it227 `lim_it` (040 EC-6): `only_next::true` accepted as alias for 1.
+///
+/// With two live accounts, `only_next::true` must behave like `only_next::1` —
+/// exactly one row shown, the → account.
+///
+/// Spec: [`tests/docs/cli/param/040_only_next.md` EC-6]
+#[ test ]
+fn it227_lim_it_only_next_true_shows_arrow_row()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it227: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "only_next::true" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  let data_rows = text.lines()
+    .filter( | l | l.contains( "@test.com" ) )
+    .count();
+  assert_eq!(
+    data_rows, 1,
+    "only_next::true must show exactly 1 row (040 EC-6), got:\n{text}",
+  );
+  let arrow_rows = text.lines()
+    .filter( | l | l.contains( "\u{2192}" ) && l.contains( "@test.com" ) )
+    .count();
+  assert_eq!(
+    arrow_rows, 1,
+    "only_next::true must show the → account row (040 EC-6), got:\n{text}",
+  );
+}
+
+// ── it228–it230: only_valid/exclude_exhausted live tests (043/044 EC-1/3) ─────
+
+/// it228 `lim_it` (043 EC-1): `only_valid::1` shows 🟢 account; hides 🔴 error.
+///
+/// With one live account (🟢) and one error account (🔴), `only_valid::1`
+/// must show only the live account and hide the error account.
+///
+/// Spec: [`tests/docs/cli/param/043_only_valid.md` EC-1]
+#[ test ]
+fn it228_lim_it_only_valid_1_shows_green_hides_red()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it228: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "live-acct@test.com",  &token, true  );
+  write_account( dir.path(), "error-acct@test.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "only_valid::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  assert!(
+    text.contains( "live-acct@test.com" ),
+    "only_valid::1 must show 🟢 live account (043 EC-1), got:\n{text}",
+  );
+  assert!(
+    !text.contains( "error-acct@test.com" ),
+    "only_valid::1 must hide 🔴 error account (043 EC-1), got:\n{text}",
+  );
+}
+
+/// it229 `lim_it` (044 EC-1): `exclude_exhausted::1` shows 🟢; hides 🔴 error.
+///
+/// With one live account (🟢) and one error account (🔴), `exclude_exhausted::1`
+/// must show only the live account and hide the error account.
+///
+/// Note: the 🟡 (quota-exhausted, valid token) divergence from `only_valid::1`
+/// requires a real exhausted account state unavailable with shared tokens.
+///
+/// Spec: [`tests/docs/cli/param/044_exclude_exhausted.md` EC-1]
+#[ test ]
+fn it229_lim_it_exclude_exhausted_1_shows_green()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it229: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "live-acct@test.com",  &token, true  );
+  write_account( dir.path(), "error-acct@test.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env( &[ ".usage", "exclude_exhausted::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  assert!(
+    text.contains( "live-acct@test.com" ),
+    "exclude_exhausted::1 must show 🟢 live account (044 EC-1), got:\n{text}",
+  );
+  assert!(
+    !text.contains( "error-acct@test.com" ),
+    "exclude_exhausted::1 must hide 🔴 error account (044 EC-1), got:\n{text}",
+  );
+}
+
+/// it230 `lim_it` (044 EC-3): `exclude_exhausted::1` is at least as strict as `only_valid::1`.
+///
+/// Both filters applied to the same accounts: `exclude_exhausted::1` must show
+/// no more rows than `only_valid::1`. The 🟡-divergence (kept by `only_valid::1`,
+/// filtered by `exclude_exhausted::1`) requires an exhausted account state that
+/// cannot be manufactured with shared live tokens.
+///
+/// Spec: [`tests/docs/cli/param/044_exclude_exhausted.md` EC-3]
+#[ test ]
+fn it230_lim_it_exclude_exhausted_stricter_than_only_valid()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it230: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "live-acct@test.com",  &token, true  );
+  write_account( dir.path(), "error-acct@test.com", "max", "default", FAR_FUTURE_MS, false );
+
+  let out_valid = run_cs_with_env( &[ ".usage", "only_valid::1" ],        &[ ( "HOME", home ) ] );
+  let out_excl  = run_cs_with_env( &[ ".usage", "exclude_exhausted::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out_valid, 0 );
+  assert_exit( &out_excl,  0 );
+
+  let rows_valid = stdout( &out_valid ).lines().filter( | l | l.contains( "@test.com" ) ).count();
+  let rows_excl  = stdout( &out_excl  ).lines().filter( | l | l.contains( "@test.com" ) ).count();
+
+  assert!(
+    rows_excl <= rows_valid,
+    "exclude_exhausted::1 must show ≤ rows than only_valid::1 (044 EC-3): valid={rows_valid} excl={rows_excl}",
+  );
+  assert!(
+    !stdout( &out_excl ).contains( "error-acct@test.com" ),
+    "exclude_exhausted::1 must hide 🔴 error account (044 EC-3)",
+  );
+}
+
+// ── it231–it234: get:: live/offline tests (045 EC-1/3/5/7) ───────────────────
+
+/// it231 `lim_it` (045 EC-1): `get::7d_left` extracts bare percentage string.
+///
+/// With a live account, `get::7d_left` must output exactly one percentage string
+/// (e.g., `65%`) on stdout — no column headers, no footer.
+///
+/// Spec: [`tests/docs/cli/param/045_get.md` EC-1]
+#[ test ]
+fn it231_lim_it_get_7d_left_extracts_bare_pct()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it231: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "sort::name", "get::7d_left" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text  = stdout( &out );
+  let trimmed = text.trim();
+
+  assert!(
+    trimmed.ends_with( '%' ),
+    "get::7d_left must output a percentage string e.g. '65%' (045 EC-1), got:\n{trimmed}",
+  );
+  assert!(
+    !trimmed.contains( "7d Left" ),
+    "get::7d_left must not contain column headers (045 EC-1), got:\n{trimmed}",
+  );
+  assert!(
+    !trimmed.contains( "Valid:" ),
+    "get::7d_left must not contain footer (045 EC-1), got:\n{trimmed}",
+  );
+}
+
+/// it232 `lim_it` (045 EC-3): `get::status` extracts bare 🟢 emoji for live account.
+///
+/// With a live (🟢) account, `get::status` must output `🟢` as the sole content.
+///
+/// Spec: [`tests/docs/cli/param/045_get.md` EC-3]
+#[ test ]
+fn it232_lim_it_get_status_extracts_green_emoji()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it232: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out = run_cs_with_env( &[ ".usage", "get::status" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text    = stdout( &out );
+  let trimmed = text.trim();
+
+  assert_eq!(
+    trimmed, "\u{1f7e2}",
+    "get::status on live (🟢) account must output exactly '🟢' (045 EC-3), got:\n{trimmed}",
+  );
+}
+
+/// it233 (045 EC-5): `get::bogus` exits 1; stderr names all valid field IDs.
+///
+/// After TSK-225, `host`, `role`, `next_event_type`, `next_event_secs` were
+/// added as valid `get::` field IDs. The error message must list all of them.
+///
+/// Spec: [`tests/docs/cli/param/045_get.md` EC-5]
+#[ test ]
+fn it233_get_bogus_exits_1_names_valid_fields()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env( &[ ".usage", "get::bogus" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "next_event_type" ),
+    "get::bogus stderr must list 'next_event_type' (045 EC-5), got:\n{err}",
+  );
+  assert!(
+    err.contains( "next_event_secs" ),
+    "get::bogus stderr must list 'next_event_secs' (045 EC-5), got:\n{err}",
+  );
+  assert!(
+    err.contains( "7d_left" ),
+    "get::bogus stderr must list '7d_left' (045 EC-5), got:\n{err}",
+  );
+  assert!(
+    err.contains( "account" ),
+    "get::bogus stderr must list 'account' (045 EC-5), got:\n{err}",
+  );
+}
+
+/// it234 `lim_it` (045 EC-7): `get::next_event_type` outputs label; `get::next_event_secs` outputs integer.
+///
+/// With a live account with an upcoming quota event, `get::next_event_type` must
+/// output a recognized event-label string; `get::next_event_secs` must output a
+/// bare non-negative integer.
+///
+/// Spec: [`tests/docs/cli/param/045_get.md` EC-7]
+#[ test ]
+fn it234_lim_it_get_next_event_type_and_secs()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it234: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out_type = run_cs_with_env(
+    &[ ".usage", "get::next_event_type" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out_type, 0 );
+  let type_text = stdout( &out_type );
+  let type_str  = type_text.trim();
+  let valid_labels = [ "+5h", "!tok", "+7d", "$ren" ];
+  assert!(
+    valid_labels.contains( &type_str ),
+    "get::next_event_type must output a recognized event label (045 EC-7), got:\n{type_str}",
+  );
+
+  let out_secs = run_cs_with_env(
+    &[ ".usage", "get::next_event_secs" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out_secs, 0 );
+  let secs_text = stdout( &out_secs );
+  let secs_str  = secs_text.trim();
+  assert!(
+    secs_str.parse::<u64>().is_ok(),
+    "get::next_event_secs must output a bare integer (045 EC-7), got:\n{secs_str}",
+  );
+}
+
+// ── it235–it236: no_color:: live tests (047 EC-3/5) ──────────────────────────
+
+/// it235 `lim_it` (047 EC-3): `no_color::0` (default) includes 🟢 emoji.
+///
+/// With a live (🟢) account, `no_color::0` does not suppress status emoji.
+/// Stdout must contain `🟢`.
+///
+/// Spec: [`tests/docs/cli/param/047_no_color.md` EC-3]
+#[ test ]
+fn it235_lim_it_no_color_0_output_includes_emoji()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it235: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out  = run_cs_with_env( &[ ".usage", "no_color::0" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "\u{1f7e2}" ),
+    "no_color::0 must include 🟢 status emoji for live account (047 EC-3), got:\n{text}",
+  );
+}
+
+/// it236 `lim_it` (047 EC-5): `no_color::1` footer uses ASCII `->` not `→`.
+///
+/// With two live accounts (valid quota), `no_color::1` must replace the unicode
+/// `→` arrow with ASCII `->` in footer strategy lines.
+///
+/// Spec: [`tests/docs/cli/param/047_no_color.md` EC-5]
+#[ test ]
+fn it236_lim_it_no_color_1_footer_uses_ascii_arrow()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it236: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
+  write_account_with_token( dir.path(), "acct-b@test.com", &token, false );
+
+  let out  = run_cs_with_env( &[ ".usage", "no_color::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  assert!(
+    text.contains( "->" ),
+    "no_color::1 footer must use ASCII '->' (047 EC-5), got:\n{text}",
+  );
+  assert!(
+    !text.contains( "\u{2192}" ),
+    "no_color::1 must replace unicode '→' with '->' (047 EC-5), got:\n{text}",
+  );
+}
+
+// ── it237: clear:: live test (051 EC-4) ──────────────────────────────────────
+
+/// it237 `lim_it` (051 EC-4): after `clear::1`, `_renewal_at` is absent from `.claude.json`.
+///
+/// With a live account that has an injected `_renewal_at` override, `clear::1`
+/// must remove it. After clearing, the `.claude.json` must not contain `_renewal_at`.
+///
+/// Spec: [`tests/docs/cli/param/051_clear.md` EC-4]
+#[ test ]
+fn it237_lim_it_clear_usage_shows_tilde_estimate()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it237: no live token — skipping" );
+    return;
+  };
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  // Inject a far-future _renewal_at override.
+  std::fs::write(
+    store.join( "acct-a@test.com.claude.json" ),
+    r#"{"_renewal_at":"2030-01-01T00:00:00Z"}"#,
+  ).unwrap();
+
+  // Clear the renewal override.
+  let clear_out = run_cs_with_env(
+    &[ ".account.renewal", "name::acct-a@test.com", "clear::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &clear_out, 0 );
+
+  // After clear, _renewal_at must be absent from the file.
+  let content = std::fs::read_to_string( store.join( "acct-a@test.com.claude.json" ) ).unwrap();
+  assert!(
+    !content.contains( "_renewal_at" ),
+    "clear::1 must remove _renewal_at from .claude.json (051 EC-4), got: {content}",
+  );
+
+  // .usage must still succeed after clear.
+  let usage_out = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &usage_out, 0 );
+}
+
+// ── it238–it239: display control param group (005 CC-3/4) ────────────────────
+
+/// it238 `lim_it` (005 CC-3): `get::` bypasses `cols::` column visibility.
+///
+/// `cols::-7d_left` hides the `7d_left` column from table output, but
+/// `get::7d_left` must still extract the underlying data value unchanged —
+/// `get::` reads from the data model, not the rendered column set.
+///
+/// Spec: [`tests/docs/cli/param_group/005_display_control.md` CC-3]
+#[ test ]
+fn it238_lim_it_get_bypasses_cols_restriction()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it238: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+
+  let out_hidden = run_cs_with_env(
+    &[ ".usage", "cols::-7d_left", "get::7d_left" ],
+    &[ ( "HOME", home ) ],
+  );
+  let out_normal = run_cs_with_env(
+    &[ ".usage", "get::7d_left" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out_hidden, 0 );
+  assert_exit( &out_normal, 0 );
+
+  assert_eq!(
+    stdout( &out_hidden ).trim(),
+    stdout( &out_normal ).trim(),
+    "get::7d_left with cols::-7d_left must produce same output as without cols:: (005 CC-3)",
+  );
+}
+
+/// it239 (005 CC-4): `cols::+sub` and `no_color::1` apply simultaneously and independently.
+///
+/// `cols::+sub` adds the Sub column; `no_color::1` strips emoji. Both must be
+/// independently active: Sub column header present in output, no emoji in output.
+///
+/// Spec: [`tests/docs/cli/param_group/005_display_control.md` CC-4]
+#[ test ]
+fn it239_cols_sub_and_no_color_independent()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-a", "max", "default", FAR_FUTURE_MS, false );
+
+  let out  = run_cs_with_env(
+    &[ ".usage", "cols::+sub", "no_color::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  // cols::+sub applies — Sub column header present.
+  assert!(
+    text.contains( "Sub" ),
+    "cols::+sub must add 'Sub' column header (005 CC-4), got:\n{text}",
+  );
+  // no_color::1 applies — no emoji in output.
+  assert!(
+    !text.contains( "\u{1f534}" ),
+    "no_color::1 must remove 🔴 emoji (005 CC-4), got:\n{text}",
+  );
+  assert!(
+    !text.contains( "\u{1f7e2}" ),
+    "no_color::1 must not contain 🟢 (005 CC-4), got:\n{text}",
+  );
+}
+
+// ── it240: account targeting param group (006 CC-4) ──────────────────────────
+
+/// it240 `lim_it` (006 CC-4): `cols::+host,+role` shows both columns from profile.json.
+///
+/// When an account has a `profile.json` with `host` and `role`, `.usage` with
+/// `cols::+host,+role` must show both the Host and Role columns populated with
+/// the stored values, regardless of token validity.
+///
+/// Spec: [`tests/docs/cli/param_group/006_account_targeting.md` CC-4]
+#[ test ]
+fn it240_lim_it_cols_host_role_shows_profile_data()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it240: no live token — skipping" );
+    return;
+  };
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
+  write_account_profile_json( dir.path(), "acct-a@test.com", Some( "mybox" ), Some( "work" ) );
+
+  let out  = run_cs_with_env(
+    &[ ".usage", "cols::+host,+role" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  assert!(
+    text.contains( "Host" ),
+    "cols::+host,+role must add 'Host' column header (006 CC-4), got:\n{text}",
+  );
+  assert!(
+    text.contains( "Role" ),
+    "cols::+host,+role must add 'Role' column header (006 CC-4), got:\n{text}",
+  );
+  assert!(
+    text.contains( "mybox" ),
+    "cols::+host must show 'mybox' host value from profile.json (006 CC-4), got:\n{text}",
+  );
+  assert!(
+    text.contains( "work" ),
+    "cols::+role must show 'work' role value from profile.json (006 CC-4), got:\n{text}",
   );
 }

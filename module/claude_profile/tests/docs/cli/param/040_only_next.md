@@ -22,7 +22,7 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 - **Then:** Exits 0. Exactly one row shown — the → account. Footer still shown.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it206_lim_it_ft028_04_only_next_1_shows_arrow` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/040_only_next.md](../../../../docs/cli/param/040_only_next.md)
 
 ---
@@ -45,7 +45,7 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 - **Then:** Exits 0. The row shown is the drain strategy winner (not the renew default winner).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it226_lim_it_only_next_1_drain_shows_winner` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/040_only_next.md](../../../../docs/cli/param/040_only_next.md)
 
 ---
@@ -78,5 +78,5 @@ Edge case coverage for the `only_next::` parameter on `.usage`. See [param/040_o
 - **When:** `clp .usage only_next::true`
 - **Then:** Exits 0. Exactly one row shown — same result as `only_next::1`.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it227_lim_it_only_next_true_shows_arrow_row` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/040_only_next.md](../../../../docs/cli/param/040_only_next.md)

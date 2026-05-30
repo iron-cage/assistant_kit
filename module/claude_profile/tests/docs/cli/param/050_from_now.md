@@ -13,6 +13,7 @@ Edge case coverage for the `from_now::` parameter on `.account.renewal`. See [pa
 | EC-5 | `from_now::` combined with `at::` exits 1 | Mutual Exclusion |
 | EC-6 | `from_now::` combined with `clear::` exits 1 | Mutual Exclusion |
 | EC-7 | `from_now::invalid` exits 1 with parse error | Invalid Format |
+| EC-8 | `from_now::+` (sign only, no units) exits 1 | Invalid Format |
 
 ---
 
@@ -89,4 +90,16 @@ Edge case coverage for the `from_now::` parameter on `.account.renewal`. See [pa
 - **Then:** Exits 1. Stderr contains a parse error message. No file written.
 - **Exit:** 1
 - **Source fn:** `arn17_from_now_invalid_format_exits_1` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)
+
+---
+
+### EC-8: `from_now::+` (sign only, no units) exits 1
+
+- **Given:** Account `test@example.com` exists.
+- **When:** `clp .account.renewal name::test@example.com from_now::+`
+- **Then:** Exits 1. Stderr contains a parse error message mentioning `from_now::`. No file written.
+- **Note:** Previously (BUG-220), the parser returned `Ok(0)` (zero-second delta) for sign-only input, silently setting `_renewal_at` to the current time. Fixed by adding an empty-rest guard in `parse_from_now_delta`.
+- **Exit:** 1
+- **Source fn:** `arn26_from_now_plus_no_units_exits_1` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/050_from_now.md](../../../../docs/cli/param/050_from_now.md)

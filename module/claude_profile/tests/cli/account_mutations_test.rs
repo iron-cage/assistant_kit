@@ -133,8 +133,11 @@
 //! | arn17 | `arn17_from_now_invalid_format_exits_1` | `from_now::invalid` (no +/-) → exit 1 with parse error | N |
 //! | arn18 | `arn18_from_now_unsupported_unit_exits_1` | `from_now::+1s` (unit 's') → exit 1 with parse error | N |
 //! | arn19 | `arn19_clear_no_prior_renewal_at_exits_0` | `clear::1` when no `_renewal_at` → exit 0, no error | P |
+//! | arn26 | `arn26_from_now_plus_no_units_exits_1` | `from_now::+` (sign only) → exit 1 with parse error | N |
+//! | arn27 | `arn27_from_now_minus_no_units_exits_1` | `from_now::-` (sign only) → exit 1 with parse error | N |
 //! | arn20 | `arn20_all_three_conflict_exits_1` | `at:: from_now:: clear::` all together → exit 1 | N |
 //! | arn21 | `arn21_at_invalid_iso_stored_verbatim` | `at::not-a-date` stored verbatim; exit 0 | P |
+//! | arc02 | `arc02_clear_preserves_oauth_account_content` | `clear::1` removes `_renewal_at`; `oauthAccount` preserved | P |
 //!
 //! ### Bug Reproducers
 //!
@@ -2679,6 +2682,82 @@ fn arn18_from_now_unsupported_unit_exits_1()
   );
 }
 
+// ── arn22: from_now::+ (sign only, no units) exits 1 ────────────────────────
+
+/// arn22 (BUG-220): `from_now::+` (sign with no duration units) must exit 1.
+///
+/// Previously, `parse_from_now_delta("+")` returned `Ok(0)` (zero-second delta),
+/// silently setting `_renewal_at` to the current time instead of rejecting the
+/// malformed input.  The fix adds an empty-rest guard before the parsing loop.
+///
+/// # Root Cause (BUG-220)
+/// `parse_from_now_delta` consumed the sign, then entered the while loop on an empty
+/// `rest` slice — the loop body never ran, `total_secs` stayed 0, and `Ok(0)` was
+/// returned with no error.
+///
+/// # Fix Applied
+/// Added `if rest.trim().is_empty() { return Err(...) }` immediately after sign
+/// extraction in `parse_from_now_delta` (`claude_profile_core/src/account.rs`).
+///
+/// # Why Not Caught
+/// No test existed for sign-only input.  All prior tests had at least one numeric unit
+/// component (`+1h`, `-30m`, `+0m`).
+///
+/// # Prevention
+/// Any `from_now::` value that consists of only a sign character (after trimming) must
+/// be rejected with a clear error message referencing `from_now::`.
+///
+/// # Pitfall
+/// Zero-delta IS valid when written explicitly as `+0m` or `+0h` (sets renewal to now
+/// intentionally).  Sign-only `+` or `-` is a user mistake and must be rejected.
+#[ doc = "bug_reproducer(BUG-220)" ]
+#[ test ]
+fn arn26_from_now_plus_no_units_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "from_now::+" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "from_now::" ),
+    "from_now::+ must exit 1 with parse error mentioning from_now::, got: {err}",
+  );
+}
+
+// ── arn23: from_now::- (sign only, no units) exits 1 ────────────────────────
+
+/// arn23: `from_now::-` (sign only, no units) must also exit 1.
+///
+/// Symmetric case to arn22 — the negative sign alone is equally malformed.
+///
+/// Spec: same fix as BUG-220 covers both `+` and `-` sign-only inputs.
+#[ test ]
+fn arn27_from_now_minus_no_units_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "from_now::-" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+
+  let err = stderr( &out );
+  assert!(
+    err.contains( "from_now::" ),
+    "from_now::- must exit 1 with parse error mentioning from_now::, got: {err}",
+  );
+}
+
 #[ test ]
 fn arn19_clear_no_prior_renewal_at_exits_0()
 {
@@ -3239,5 +3318,53 @@ fn arn25_from_now_single_day_unit_accepted()
   assert!(
     !content.contains( r#""_renewal_at":"200"# ),
     "_renewal_at from from_now::+1d must not start with 200x, got: {content}",
+  );
+}
+
+// ── arc02: clear::1 preserves oauthAccount content ───────────────────────────
+
+/// arc02 — `clear::1` removes `_renewal_at` while preserving all other keys.
+///
+/// Given a `.claude.json` with both `oauthAccount` and `_renewal_at`, a `clear::1`
+/// operation must remove only `_renewal_at` via read-merge semantics. The
+/// `oauthAccount` field — including nested fields — must be unchanged afterward.
+///
+/// Spec: [`tests/docs/cli/param/051_clear.md` EC-3]
+#[ test ]
+fn arc02_clear_preserves_oauth_account_content()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
+  // Write .claude.json with both oauthAccount and _renewal_at.
+  std::fs::write(
+    store.join( "test@example.com.claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"test@example.com","subscriptionType":"max"},"_renewal_at":"2026-06-29T21:00:00Z"}"#,
+  ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::test@example.com", "clear::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  assert!(
+    !content.contains( "_renewal_at" ),
+    "clear::1 must remove _renewal_at key (051 EC-3), got: {content}",
+  );
+  assert!(
+    content.contains( "oauthAccount" ),
+    "clear::1 must preserve oauthAccount key (051 EC-3), got: {content}",
+  );
+  assert!(
+    content.contains( "emailAddress" ),
+    "clear::1 must preserve nested oauthAccount.emailAddress (051 EC-3), got: {content}",
+  );
+  assert!(
+    content.contains( "subscriptionType" ),
+    "clear::1 must preserve nested oauthAccount.subscriptionType (051 EC-3), got: {content}",
   );
 }

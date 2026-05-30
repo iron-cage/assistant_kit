@@ -44,7 +44,7 @@ Edge case coverage for the `no_color::` parameter on `.usage`. See [param/047_no
 - **Then:** Exits 0. Stdout contains `🟢` status emoji (default behavior with color).
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it235_lim_it_no_color_0_output_includes_emoji` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/047_no_color.md](../../../../docs/cli/param/047_no_color.md)
 
 ---
@@ -66,7 +66,7 @@ Edge case coverage for the `no_color::` parameter on `.usage`. See [param/047_no
 - **When:** `clp .usage no_color::1`
 - **Then:** Exits 0. Footer lines use `->` (ASCII) for strategy labels. Unicode arrow `→` not present in footer.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it236_lim_it_no_color_1_footer_uses_ascii_arrow` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/047_no_color.md](../../../../docs/cli/param/047_no_color.md)
 
 ---

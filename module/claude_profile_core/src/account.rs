@@ -833,6 +833,12 @@ pub fn parse_from_now_delta( s : &str ) -> Result< i64, String >
     Some( '-' ) => ( -1_i64, &s[ 1.. ] ),
     _           => return Err( format!( "from_now:: must start with '+' or '-', got: '{s}'" ) ),
   };
+  if rest.trim().is_empty()
+  {
+    return Err( format!(
+      "from_now:: '{s}' has no duration components; expected e.g. +1h, +30m, +1d"
+    ) );
+  }
   let mut total_secs = 0_i64;
   let mut pos        = 0_usize;
   let bytes          = rest.as_bytes();

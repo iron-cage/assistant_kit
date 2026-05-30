@@ -56,5 +56,5 @@ See [param_group/006_account_targeting.md](../../../../docs/cli/param_group/006_
 - **Then:** Exits 0. Table row for `test@example.com` shows `"mybox"` in the `Host` column and `"work"` in the `Role` column. Both columns appear in the header row.
 - **Exit:** 0
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it240_lim_it_cols_host_role_shows_profile_data` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md](../../../../docs/feature/029_account_host_metadata.md)
