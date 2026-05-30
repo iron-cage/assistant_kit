@@ -44,7 +44,7 @@ Interaction tests for Group 5 (Display Control: `cols::`, `no_color::`, `abs::`,
 - **Then-A and Then-B:** Both output `70%` (or equivalent). Hiding the `5h_left` column via `cols::` does not suppress `get::` extraction — `get::` reads the underlying data, not the rendered column.
 - **Exit:** 0 both cases
 - **Live:** yes
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it238_lim_it_get_bypasses_cols_restriction` (in `tests/cli/usage_test.rs`)
 - **Source:** [param_group/005_display_control.md](../../../../docs/cli/param_group/005_display_control.md)
 
 ---
@@ -55,5 +55,5 @@ Interaction tests for Group 5 (Display Control: `cols::`, `no_color::`, `abs::`,
 - **When:** `clp .usage cols::+sub no_color::1`
 - **Then:** Exits 0. Sub column is present in output (cols:: still applies). Status column shows text label `ok` instead of `🟢` (no_color:: still applies). Both modifiers are independently active.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it239_cols_sub_and_no_color_independent` (in `tests/cli/usage_test.rs`)
 - **Source:** [param_group/005_display_control.md](../../../../docs/cli/param_group/005_display_control.md)

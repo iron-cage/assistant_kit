@@ -21,7 +21,7 @@ Edge case coverage for the `only_valid::` parameter on `.usage`. See [param/043_
 - **When:** `clp .usage only_valid::1`
 - **Then:** Exits 0. 🟢 and 🟡 rows shown; 🔴 row hidden.
 - **Exit:** 0
-- **Source fn:** ⏳ (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it228_lim_it_only_valid_1_shows_green_hides_red` (in `tests/cli/usage_test.rs`)
 - **Source:** [param/043_only_valid.md](../../../../docs/cli/param/043_only_valid.md)
 
 ---

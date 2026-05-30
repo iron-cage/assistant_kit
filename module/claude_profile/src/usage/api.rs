@@ -353,16 +353,17 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     if params.only_valid        { accounts.retain( |aq| aq.result.is_ok() ); }
     if params.exclude_exhausted { accounts.retain( |aq| status_emoji( &aq.result ) == "🟢" ); }
 
-    // Threshold filters: rows with no valid quota (Err) score as 0 and are also hidden.
+    // Threshold filters: only applied to accounts with valid quota data.
+    // Accounts with no valid quota (Err) pass through — absent data ≠ exhausted.
     if params.min_5h > 0
     {
       let threshold = f64::from( params.min_5h );
-      accounts.retain( |aq| five_hour_left( aq ) >= threshold );
+      accounts.retain( |aq| aq.result.is_err() || five_hour_left( aq ) >= threshold );
     }
     if params.min_7d > 0
     {
       let threshold = f64::from( params.min_7d );
-      accounts.retain( |aq| seven_day_left( aq ) >= threshold );
+      accounts.retain( |aq| aq.result.is_err() || seven_day_left( aq ) >= threshold );
     }
 
     // Pagination window (applied last, after all boolean/threshold filters).
