@@ -211,6 +211,8 @@
 //! | it242 | `it242_min_5h_only_valid_removes_err_account`       | `min_5h::1 only_valid::1` — Err passes min_5h but only_valid removes it | P | no |
 //! | it243 | `it243_min_5h_get_account_err_passes_returns_name`  | `min_5h::1 get::account` on Err account — returns name (absent passes) | P | no |
 //! | it244 | `it244_get_host_absent_profile_json_empty_stdout`   | `get::host` on account without profile.json — empty stdout | P | no |
+//! | it245 | `it245_min_7d_get_account_err_passes_returns_name`  | `min_7d::1 get::account` on Err account — returns name (absent passes) | P | no |
+//! | it246 | `it246_min_7d_only_valid_removes_err_account`       | `min_7d::1 only_valid::1` — Err passes `min_7d` but `only_valid` removes it | P | no |
 
 use crate::helpers::{
   BIN,
@@ -5773,6 +5775,62 @@ fn it244_get_host_absent_profile_json_empty_stdout()
   assert!(
     text.trim().is_empty(),
     "get::host on account without profile.json must output empty stdout, got:\n{text}",
+  );
+}
+
+// ── it245: min_7d::1 get::account on Err account — returns name ──────────────
+
+/// it245: `min_7d::1 get::account` with an Err account — Err passes the `min_7d`
+/// filter (absent data ≠ exhausted), and then `get::account` extracts its name.
+///
+/// Symmetric counterpart of it243 (`min_5h`+`get::`): confirms the same Err-pass
+/// semantics apply to the `min_7d` threshold filter.
+///
+/// Spec: [`tests/docs/cli/param/042_min_7d.md`] + [`tests/docs/cli/param/045_get.md` EC-2]
+#[ test ]
+fn it245_min_7d_get_account_err_passes_returns_name()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct@test.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "min_7d::1", "get::account" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert_eq!(
+    text.trim(), "acct@test.com",
+    "`min_7d::1 get::account` on Err account must return bare name, got:\n{text}",
+  );
+}
+
+// ── it246: min_7d::1 + only_valid — only_valid removes Err even after min_7d passes ──
+
+/// it246: `min_7d::1 only_valid::1` — Err account passes `min_7d` (absent data),
+/// but is subsequently removed by `only_valid::1` (which filters on `result.is_ok()`).
+///
+/// Symmetric counterpart of it242 (`min_5h`+`only_valid`): confirms the AND-composition
+/// ordering applies identically to the `min_7d` threshold filter.
+///
+/// Spec: [`tests/docs/cli/param/042_min_7d.md`] + [`tests/docs/cli/param/043_only_valid.md` EC-4]
+#[ test ]
+fn it246_min_7d_only_valid_removes_err_account()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "acct-err@test.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "min_7d::1", "only_valid::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "(no accounts configured)" ),
+    "`min_7d::1 only_valid::1` must produce empty table for all-Err accounts, got:\n{text}",
   );
 }
 
