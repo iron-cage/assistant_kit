@@ -7,7 +7,7 @@
 | `api/` | Index of API doc instances covering COMMANDS_YAML, VerbosityLevel, and register_commands contracts | [api/readme.md](api/readme.md) | 1 |
 | `cli/` | Index of CLI reference instances covering commands, params, types, groups, dictionary, user stories, env params | [cli/readme.md](cli/readme.md) | 5 |
 | `cli/param/` | Index of individual parameter reference instances (27 parameters) | [cli/param/readme.md](cli/param/readme.md) | 27 |
-| `cli/user_story/` | Index of user goal and usage pattern instances (16 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 16 |
+| `cli/user_story/` | Index of user goal and usage pattern instances (21 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 21 |
 | `feature/` | Index of feature doc instances covering the clr binary tool design | [feature/readme.md](feature/readme.md) | 1 |
 | `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, and trace universality | [invariant/readme.md](invariant/readme.md) | 4 |
 
@@ -64,6 +64,11 @@
 | cli/user_story | 014 | Credential Refresh | [cli/user_story/014_credential_refresh.md](cli/user_story/014_credential_refresh.md) |
 | cli/user_story | 015 | Ask Mode | [cli/user_story/015_ask_mode.md](cli/user_story/015_ask_mode.md) |
 | cli/user_story | 016 | CLI Discoverability | [cli/user_story/016_cli_discoverability.md](cli/user_story/016_cli_discoverability.md) |
+| cli/user_story | 017 | Model Selection | [cli/user_story/017_model_selection.md](cli/user_story/017_model_selection.md) |
+| cli/user_story | 018 | Env-var Configuration | [cli/user_story/018_env_var_configuration.md](cli/user_story/018_env_var_configuration.md) |
+| cli/user_story | 019 | MCP Config Injection | [cli/user_story/019_mcp_config_injection.md](cli/user_story/019_mcp_config_injection.md) |
+| cli/user_story | 020 | Suppress Effort Max | [cli/user_story/020_suppress_effort_max.md](cli/user_story/020_suppress_effort_max.md) |
+| cli/user_story | 021 | Keep ClaudeCode Context | [cli/user_story/021_keep_claudecode_context.md](cli/user_story/021_keep_claudecode_context.md) |
 | feature | 001 | Runner Tool | [feature/001_runner_tool.md](feature/001_runner_tool.md) |
 | invariant | 001 | Default Flags | [invariant/001_default_flags.md](invariant/001_default_flags.md) |
 | invariant | 002 | Dependency Constraints | [invariant/002_dep_constraints.md](invariant/002_dep_constraints.md) |

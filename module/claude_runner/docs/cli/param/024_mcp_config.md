@@ -42,4 +42,6 @@ any `--dir` change is applied).
 
 ### Referenced User Stories
 
-*None — no user story directly exercises `--mcp-config`.*
+| # | User Story | Persona |
+|---|------------|---------|
+| 19 | [019_mcp_config_injection.md](../user_story/019_mcp_config_injection.md) | Developer |

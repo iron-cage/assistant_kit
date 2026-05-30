@@ -54,4 +54,6 @@ is equivalent to `CLAUDECODE=1 clr --keep-claudecode "task"`.
 
 ### Referenced User Stories
 
-*None — no user story directly exercises `--keep-claudecode`.*
+| # | User Story | Persona |
+|---|------------|---------|
+| 21 | [021_keep_claudecode_context.md](../user_story/021_keep_claudecode_context.md) | Developer |

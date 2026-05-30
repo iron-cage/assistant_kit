@@ -12,11 +12,19 @@
 //! invalid resources.  Credential subcommands (`isolated`, `refresh`) use
 //! `--trace` since they lack `--dry-run` support.
 //!
+//! ## Doc Comment Convention
+//!
+//! Clippy `doc_markdown` lint flags `SCREAMING_SNAKE_CASE` identifiers and
+//! `IDENT=value` patterns in `///` doc comments that are not wrapped in backticks.
+//! All `CLR_*` env var names (e.g. `` `CLR_MODEL` ``) and `IDENT=value` patterns
+//! (e.g. `` `CLR_NO_ULTRATHINK=true` ``) must use backticks in doc comments.
+//! `--flag` patterns do **not** trigger this lint and may appear bare.
+//!
 //! ## Test Matrix
 //!
 //! | Spec | Story | Cases | Method |
 //! |------|-------|-------|--------|
-//! | 01 | Interactive REPL | US-1..4 | dry-run / PATH trick |
+//! | 01 | Interactive REPL | US-1..4 (US-5 in param_edge_cases_test.rs) | dry-run / PATH trick |
 //! | 02 | Print Mode Capture | US-1..4 | dry-run / PATH trick |
 //! | 03 | Interactive With Message | US-1..4 | dry-run |
 //! | 04 | Dry-run Preview | US-1..4 | dry-run |
@@ -32,6 +40,11 @@
 //! | 14 | Credential Refresh | US-1..4 | trace / error path |
 //! | 15 | Ask Mode | US-1..4 | dry-run |
 //! | 16 | CLI Discoverability | US-1..4 | help / PATH trick |
+//! | 17 | Model Selection | US-1..4 | dry-run / env var |
+//! | 18 | Env-var Configuration | US-1..4 | dry-run / env var |
+//! | 19 | MCP Config Injection | US-1..4 | dry-run / env var |
+//! | 20 | Suppress Effort Max | US-1..4 | dry-run / env var |
+//! | 21 | Keep ClaudeCode Context | US-1..4 | dry-run / env var |
 
 #![ cfg( feature = "enabled" ) ]
 
@@ -1279,5 +1292,302 @@ fn in4_run_subcommand_explicit_dispatch_identical_to_default()
     stdout_run,
     stdout_default,
     "`clr run --dry-run 'Fix bug'` stdout must be identical to `clr --dry-run 'Fix bug'` stdout"
+  );
+}
+
+// ── US17: Model Selection ────────────────────────────────────────────────────
+// Source: tests/docs/cli/user_story/17_model_selection.md
+
+/// US-1: --model flag appears in the assembled dry-run command.
+#[ test ]
+fn us17_1_model_flag_in_command()
+{
+  let output = run_dry( &[ "--model", "sonnet", "Fix bug" ] );
+  assert!(
+    output.contains( "--model sonnet" ),
+    "--model sonnet must appear in dry-run output. Got:\n{output}"
+  );
+}
+
+/// US-2: `CLR_MODEL` env var injects `--model` when CLI flag is absent.
+#[ test ]
+fn us17_2_env_var_sets_model()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "Fix bug" ], &[ ( "CLR_MODEL", "haiku" ) ] );
+  assert!( out.status.success(), "CLR_MODEL must be accepted. Got: {:?}", out.status.code() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--model haiku" ),
+    "CLR_MODEL=haiku must inject --model haiku. Got:\n{stdout}"
+  );
+}
+
+/// US-3: explicit CLI `--model` overrides `CLR_MODEL` env var.
+#[ test ]
+fn us17_3_cli_wins_over_env_var()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--model", "opus", "Fix bug" ],
+    &[ ( "CLR_MODEL", "haiku" ) ],
+  );
+  assert!( out.status.success(), "CLI --model with CLR_MODEL must exit 0" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--model opus" ),
+    "CLI --model opus must appear. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "--model haiku" ),
+    "CLR_MODEL=haiku must be suppressed by CLI flag. Got:\n{stdout}"
+  );
+}
+
+/// US-4: --model accepted in the ask command.
+#[ test ]
+fn us17_4_model_in_ask_command()
+{
+  let output = run_ask_dry( &[ "--model", "sonnet", "What is X?" ] );
+  assert!(
+    output.contains( "--model sonnet" ),
+    "--model sonnet must appear in ask dry-run. Got:\n{output}"
+  );
+}
+
+// ── US18: Env-var Configuration ──────────────────────────────────────────────
+// Source: tests/docs/cli/user_story/18_env_var_configuration.md
+
+/// US-1: `CLR_*` env var applies when the corresponding CLI flag is absent.
+#[ test ]
+fn us18_1_env_var_applies_when_cli_absent()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "task" ], &[ ( "CLR_MODEL", "haiku" ) ] );
+  assert!( out.status.success(), "CLR_MODEL must be accepted" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--model haiku" ),
+    "CLR_MODEL must inject --model when CLI flag absent. Got:\n{stdout}"
+  );
+}
+
+/// US-2: explicit CLI flag always wins over `CLR_*` env var.
+#[ test ]
+fn us18_2_cli_wins_over_env_var()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--model", "opus", "task" ],
+    &[ ( "CLR_MODEL", "haiku" ) ],
+  );
+  assert!( out.status.success(), "CLI --model with CLR_MODEL must exit 0" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--model opus" ),
+    "CLI --model opus must win. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "haiku" ),
+    "CLR_MODEL=haiku must be overridden by CLI flag. Got:\n{stdout}"
+  );
+}
+
+/// US-3: bool `CLR_*` env var accepts "true" literal as truthy.
+///
+/// `CLR_NO_ULTRATHINK=true` sets `no_ultrathink=true`, suppressing the "ultrathink"
+/// suffix. The word "ultrathink" must be absent from the assembled command.
+#[ test ]
+fn us18_3_bool_env_var_accepts_true_literal()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "task" ], &[ ( "CLR_NO_ULTRATHINK", "true" ) ] );
+  assert!( out.status.success(), "CLR_NO_ULTRATHINK=true must exit 0" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "ultrathink" ),
+    "CLR_NO_ULTRATHINK=true must suppress ultrathink suffix. Got:\n{stdout}"
+  );
+}
+
+/// US-4: bool `CLR_*` env var rejects "yes" — not a valid truthy value.
+///
+/// `CLR_NO_ULTRATHINK=yes` is silently rejected; the default behaviour (inject
+/// "ultrathink") applies and the suffix must appear in the assembled command.
+#[ test ]
+fn us18_4_bool_env_var_rejects_yes()
+{
+  let out = run_cli_with_env( &[ "--dry-run", "task" ], &[ ( "CLR_NO_ULTRATHINK", "yes" ) ] );
+  assert!( out.status.success(), "CLR_NO_ULTRATHINK=yes must exit 0 (silently rejected)" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "ultrathink" ),
+    "CLR_NO_ULTRATHINK=yes must not suppress ultrathink ('yes' is not truthy). Got:\n{stdout}"
+  );
+}
+
+// ── US19: MCP Config Injection ───────────────────────────────────────────────
+// Source: tests/docs/cli/user_story/19_mcp_config_injection.md
+
+/// US-1: --mcp-config path appears in the assembled command.
+#[ test ]
+fn us19_1_mcp_config_in_command()
+{
+  let output = run_dry( &[ "--mcp-config", "/tmp/mcp.json", "Fix bug" ] );
+  assert!(
+    output.contains( "--mcp-config /tmp/mcp.json" ),
+    "--mcp-config /tmp/mcp.json must appear in dry-run output. Got:\n{output}"
+  );
+}
+
+/// US-2: multiple --mcp-config flags are each forwarded individually.
+#[ test ]
+fn us19_2_multiple_mcp_configs_forwarded()
+{
+  let output = run_dry( &[
+    "--mcp-config", "/tmp/us19a.json",
+    "--mcp-config", "/tmp/us19b.json",
+    "Fix bug",
+  ] );
+  assert!(
+    output.contains( "--mcp-config /tmp/us19a.json" ),
+    "first --mcp-config must appear. Got:\n{output}"
+  );
+  assert!(
+    output.contains( "--mcp-config /tmp/us19b.json" ),
+    "second --mcp-config must appear. Got:\n{output}"
+  );
+}
+
+/// US-3: `CLR_MCP_CONFIG` env var sets a single config when flag is absent.
+#[ test ]
+fn us19_3_env_var_sets_mcp_config()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "Fix bug" ],
+    &[ ( "CLR_MCP_CONFIG", "/tmp/us19env.json" ) ],
+  );
+  assert!( out.status.success(), "CLR_MCP_CONFIG must be accepted. Got: {:?}", out.status.code() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--mcp-config /tmp/us19env.json" ),
+    "CLR_MCP_CONFIG must inject --mcp-config. Got:\n{stdout}"
+  );
+}
+
+/// US-4: no --mcp-config flag appears by default (absent when not specified).
+#[ test ]
+fn us19_4_no_mcp_config_by_default()
+{
+  let output = run_dry( &[ "Fix bug" ] );
+  assert!(
+    !output.contains( "--mcp-config" ),
+    "no --mcp-config must appear when flag is absent. Got:\n{output}"
+  );
+}
+
+// ── US20: Suppress Effort Max ────────────────────────────────────────────────
+// Source: tests/docs/cli/user_story/20_suppress_effort_max.md
+
+/// US-1: default assembled command includes --effort max.
+#[ test ]
+fn us20_1_default_has_effort_max()
+{
+  let output = run_dry( &[ "Fix bug" ] );
+  assert!(
+    output.contains( "--effort max" ),
+    "default run must inject --effort max. Got:\n{output}"
+  );
+}
+
+/// US-2: --no-effort-max suppresses all --effort injection.
+#[ test ]
+fn us20_2_no_effort_max_suppresses_injection()
+{
+  let output = run_dry( &[ "--no-effort-max", "Fix bug" ] );
+  assert!(
+    !output.contains( "--effort" ),
+    "--no-effort-max must suppress all --effort flags. Got:\n{output}"
+  );
+}
+
+/// US-3: --no-effort-max wins over an explicit --effort flag.
+#[ test ]
+fn us20_3_no_effort_max_wins_over_effort()
+{
+  let output = run_dry( &[ "--no-effort-max", "--effort", "medium", "Fix bug" ] );
+  assert!(
+    !output.contains( "--effort" ),
+    "--no-effort-max must suppress --effort even when --effort is explicit. Got:\n{output}"
+  );
+}
+
+/// US-4: `CLR_NO_EFFORT_MAX=1` suppresses effort injection via env var.
+#[ test ]
+fn us20_4_env_var_suppresses_effort()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "Fix bug" ],
+    &[ ( "CLR_NO_EFFORT_MAX", "1" ) ],
+  );
+  assert!( out.status.success(), "CLR_NO_EFFORT_MAX=1 must exit 0. Got: {:?}", out.status.code() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "--effort" ),
+    "CLR_NO_EFFORT_MAX=1 must suppress --effort. Got:\n{stdout}"
+  );
+}
+
+// ── US21: Keep ClaudeCode Context ────────────────────────────────────────────
+// Source: tests/docs/cli/user_story/21_keep_claudecode_context.md
+
+/// US-1: --keep-claudecode flag accepted; command assembles without error.
+#[ test ]
+fn us21_1_flag_accepted()
+{
+  let output = run_dry( &[ "--keep-claudecode", "Fix bug" ] );
+  assert!(
+    output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=" ),
+    "--keep-claudecode must assemble a valid command. Got:\n{output}"
+  );
+}
+
+/// US-2: `CLR_KEEP_CLAUDECODE=1` env var accepted; command assembles.
+#[ test ]
+fn us21_2_env_var_1_accepted()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "Fix bug" ],
+    &[ ( "CLR_KEEP_CLAUDECODE", "1" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_KEEP_CLAUDECODE=1 must exit 0. Got: {:?}",
+    out.status.code()
+  );
+}
+
+/// US-3: `CLR_KEEP_CLAUDECODE=true` env var accepted; command assembles.
+#[ test ]
+fn us21_3_env_var_true_accepted()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "Fix bug" ],
+    &[ ( "CLR_KEEP_CLAUDECODE", "true" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_KEEP_CLAUDECODE=true must exit 0. Got: {:?}",
+    out.status.code()
+  );
+}
+
+/// US-4: `CLR_KEEP_CLAUDECODE=yes` silently rejected; exit 0 (not a hard error).
+#[ test ]
+fn us21_4_env_var_yes_silently_rejected()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "Fix bug" ],
+    &[ ( "CLR_KEEP_CLAUDECODE", "yes" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_KEEP_CLAUDECODE=yes must exit 0 (silently rejected). Got: {:?}",
+    out.status.code()
   );
 }

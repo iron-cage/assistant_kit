@@ -81,3 +81,5 @@ clr --trace "Fix bug" --dir /project
 | 8 | [008_trace_execution.md](../user_story/008_trace_execution.md) | Developer |
 | 11 | [011_file_input.md](../user_story/011_file_input.md) | Developer |
 | 12 | [012_code_block_extraction.md](../user_story/012_code_block_extraction.md) | Developer |
+| 20 | [020_suppress_effort_max.md](../user_story/020_suppress_effort_max.md) | Developer |
+| 21 | [021_keep_claudecode_context.md](../user_story/021_keep_claudecode_context.md) | Developer |

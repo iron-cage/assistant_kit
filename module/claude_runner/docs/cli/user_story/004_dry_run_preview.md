@@ -47,3 +47,4 @@ Inspect the fully assembled `claude` subprocess command — including all defaul
 | # | User Story | Relationship |
 |---|------------|--------------|
 | 8 | [Trace Execution](008_trace_execution.md) | `--trace` is the execute-as-well variant |
+| 18 | [Env-var Configuration](018_env_var_configuration.md) | `--dry-run` is the discovery mechanism for CLR_* effective values |

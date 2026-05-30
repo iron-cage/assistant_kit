@@ -73,3 +73,5 @@ clr -p "Fix bug" --model sonnet --verbose
 | 2 | [002_print_mode_capture.md](../user_story/002_print_mode_capture.md) | Developer |
 | 12 | [012_code_block_extraction.md](../user_story/012_code_block_extraction.md) | Developer |
 | 13 | [013_structured_json_pipeline.md](../user_story/013_structured_json_pipeline.md) | Developer |
+| 17 | [017_model_selection.md](../user_story/017_model_selection.md) | Developer |
+| 19 | [019_mcp_config_injection.md](../user_story/019_mcp_config_injection.md) | Developer |

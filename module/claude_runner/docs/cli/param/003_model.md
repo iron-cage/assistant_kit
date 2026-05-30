@@ -38,3 +38,4 @@ clr --model opus "Fix bug"
 |---|------------|---------|
 | 2 | [002_print_mode_capture.md](../user_story/002_print_mode_capture.md) | Developer |
 | 7 | [007_fresh_session.md](../user_story/007_fresh_session.md) | Developer |
+| 17 | [017_model_selection.md](../user_story/017_model_selection.md) | Developer |

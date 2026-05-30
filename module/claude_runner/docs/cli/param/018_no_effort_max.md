@@ -41,4 +41,6 @@ If `--no-effort-max` is set, any `--effort` value is ignored.
 
 ### Referenced User Stories
 
-*None — no user story directly exercises `--no-effort-max`.*
+| # | User Story | Persona |
+|---|------------|---------|
+| 20 | [020_suppress_effort_max.md](../user_story/020_suppress_effort_max.md) | Developer |
