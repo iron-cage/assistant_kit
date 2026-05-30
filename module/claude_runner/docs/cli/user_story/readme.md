@@ -27,6 +27,11 @@
 | 014_credential_refresh.md | User story: refresh OAuth credentials without running a task |
 | 015_ask_mode.md | User story: quick Q&A with lightweight defaults |
 | 016_cli_discoverability.md | User story: discover CLI commands and usage via help |
+| 017_model_selection.md | User story: select the Claude model for an invocation |
+| 018_env_var_configuration.md | User story: configure clr defaults via CLR_* env vars |
+| 019_mcp_config_injection.md | User story: forward MCP server configs to subprocess |
+| 020_suppress_effort_max.md | User story: suppress automatic --effort max injection |
+| 021_keep_claudecode_context.md | User story: preserve CLAUDECODE in subprocess env |
 
 ### Index
 
@@ -48,3 +53,8 @@
 | 014 | Credential Refresh | `--creds`, `--timeout`, `--trace` | `refresh` |
 | 015 | Ask Mode | `[MESSAGE]`, `--effort`, `--max-tokens` | `ask` |
 | 016 | CLI Discoverability | (none) | `help` |
+| 017 | Model Selection | `--model` | `run`, `ask` |
+| 018 | Env-var Configuration | (env vars) | `run` |
+| 019 | MCP Config Injection | `--mcp-config` | `run` |
+| 020 | Suppress Effort Max | `--no-effort-max` | `run` |
+| 021 | Keep ClaudeCode Context | `--keep-claudecode` | `run` |

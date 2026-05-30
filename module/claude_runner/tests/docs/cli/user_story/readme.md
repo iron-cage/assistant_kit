@@ -4,7 +4,7 @@
 
 - **Purpose**: Test case specs for user story doc instances in `docs/cli/user_story/`.
 - **Responsibility**: Per-user-story test spec files covering end-to-end user workflows.
-- **In Scope**: All 16 user stories: Interactive REPL, Print Mode Capture, Interactive With Message, Dry-run Preview, Project-specific Execution, Verbose Debugging, Fresh Session, Trace Execution, Custom System Prompt, Credential-isolated Execution, File Input, Code Block Extraction, Structured JSON Pipeline, Credential Refresh, Ask Mode, CLI Discoverability.
+- **In Scope**: All 21 user stories: Interactive REPL, Print Mode Capture, Interactive With Message, Dry-run Preview, Project-specific Execution, Verbose Debugging, Fresh Session, Trace Execution, Custom System Prompt, Credential-isolated Execution, File Input, Code Block Extraction, Structured JSON Pipeline, Credential Refresh, Ask Mode, CLI Discoverability, Model Selection, Env-var Configuration, MCP Config Injection, Suppress Effort Max, Keep ClaudeCode Context.
 - **Out of Scope**: Parameter-level edge cases (-> `param/`), command-level integration (-> `command/`), type validation (-> `type/`).
 
 ### Responsibility Table
@@ -27,3 +27,8 @@
 | `14_credential_refresh.md` | `user_story` spec for Credential Refresh | ✅ |
 | `15_ask_mode.md` | `user_story` spec for Ask Mode | ✅ |
 | `16_cli_discoverability.md` | `user_story` spec for CLI Discoverability | ✅ |
+| `17_model_selection.md` | `user_story` spec for Model Selection | ✅ |
+| `18_env_var_configuration.md` | `user_story` spec for Env-var Configuration | ✅ |
+| `19_mcp_config_injection.md` | `user_story` spec for MCP Config Injection | ✅ |
+| `20_suppress_effort_max.md` | `user_story` spec for Suppress Effort Max | ✅ |
+| `21_keep_claudecode_context.md` | `user_story` spec for Keep ClaudeCode Context | ✅ |
