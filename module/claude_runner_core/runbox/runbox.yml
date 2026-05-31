@@ -7,7 +7,7 @@ test_user: testuser
 # per-crate scope to avoid OOM when committing large workspace target directory as image layer
 cmd_scope: --package claude_runner_core
 # baked into the image default CMD; excludes tests needing external I/O (offline-safe default)
-cmd_filter: "!test(lim_it) & !binary(behavior)"
+cmd_filter: "!binary(behavior)"
 
 # script invoked by `.test` inside the container (path relative to /workspace)
 test_script: module/claude_runner_core/verb/test.d/l1

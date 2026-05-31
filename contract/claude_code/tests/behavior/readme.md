@@ -33,4 +33,4 @@ If Claude Code changes behavior, the corresponding test goes RED.
 | `b22_no_session_persistence_flag.rs` | B22 | `--no-session-persistence` flag documented in `claude --help` |
 | `b23_session_dir_override.rs` | B23 | `CLAUDE_CODE_SESSION_DIR` env var not explicitly rejected by binary |
 | `b24_from_pr_flag.rs` | B24 | `--from-pr` flag documented in `claude --help` |
-| `b16h_tools_system_prompt.rs` | B16h | Live API token comparison (`lim_it` test; excluded from default filter) |
+| `b16h_tools_system_prompt.rs` | B16h | Live API token comparison (`lim_it` test; runs by default in container) |

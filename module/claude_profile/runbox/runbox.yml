@@ -7,8 +7,8 @@ test_user: testuser
 # pre-cooked (nextest workspace metadata resolves assert_cmd → anstyle regardless of scope).
 # Test execution is controlled by test_script (l1), not this field.
 cmd_scope: --workspace
-# baked into the image default CMD; excludes rate-limit tests needing external I/O (offline-safe default)
-cmd_filter: "!test(lim_it)"
+# baked into the image default CMD; all() runs every test — lim_it tests skip automatically without credentials
+cmd_filter: "all()"
 
 # script invoked by `.test` inside the container (path relative to /workspace)
 test_script: module/claude_profile/verb/test.d/l1

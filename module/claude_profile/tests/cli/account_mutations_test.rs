@@ -1422,6 +1422,8 @@ fn aw27_lim_it_touch_with_live_token()
   };
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
+  // Create ~/.claude/ so switch_account() can copy credentials there (it does not create the dir).
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
   // Source account (provides live credentials in the store).
   write_account_with_token( dir.path(), "source@example.com", &token, true );
   // Target account — same token so quota fetch may succeed if account is idle.
@@ -1458,6 +1460,8 @@ fn aw28_lim_it_trace_idle_account_all_lines()
   };
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
+  // Create ~/.claude/ so switch_account() can copy credentials there (it does not create the dir).
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
   write_account_with_token( dir.path(), "source@example.com", &token, true );
   write_account_with_token( dir.path(), "target@example.com", &token, false );
 
@@ -1525,6 +1529,8 @@ fn aw29_lim_it_trace_active_account_subprocess_skipped()
   };
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
+  // Create ~/.claude/ so switch_account() can copy credentials there (it does not create the dir).
+  write_credentials( dir.path(), "max", "default_claude_max_20x", FAR_FUTURE_MS );
   write_account_with_token( dir.path(), "source@example.com", &token, true );
   write_account_with_token( dir.path(), "target@example.com", &token, false );
 

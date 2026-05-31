@@ -258,6 +258,31 @@ pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths, update
       }
     }
   }
+  // Fix(BUG-222): capture model preference from ~/.claude/settings.json into {name}.settings.json.
+  // Root cause: save() wrote credentials and oauthAccount snapshots but never captured the model
+  //   preference, so switch_account() had no per-account model data to restore; the prior
+  //   account's model persisted silently after every switch.
+  // Pitfall: best-effort only — skip silently when model is absent to avoid creating vacuous
+  //   {name}.settings.json files; never let a settings write failure propagate as an error.
+  if let Ok( live_settings ) = std::fs::read_to_string( paths.settings_file() )
+  {
+    if let Some( model ) = parse_string_field( &live_settings, "model" )
+    {
+      let settings_path = credential_store.join( format!( "{name}.settings.json" ) );
+      let mut snapshot = std::fs::read_to_string( &settings_path )
+        .ok()
+        .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+        .unwrap_or_else( || serde_json::json!( {} ) );
+      if let Some( obj ) = snapshot.as_object_mut()
+      {
+        obj.insert( "model".to_string(), serde_json::Value::String( model ) );
+      }
+      let _ = std::fs::write(
+        settings_path,
+        serde_json::to_string( &snapshot ).unwrap_or_default(),
+      );
+    }
+  }
   // Best-effort: fetch org identity from endpoint 005 and persist as {name}.roles.json.
   // Requires accessToken in the credentials file. Network errors or absent token are silently
   // skipped — save() must not fail for network unavailability or missing optional data.
@@ -417,6 +442,34 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
         }
       }
     }
+  }
+
+  // Fix(BUG-222): restore per-account model preference from {name}.settings.json into ~/.claude/settings.json.
+  // Root cause: switch_account() patched credentials and oauthAccount but left ~/.claude/settings.json
+  //   untouched; the prior account's model persisted after every switch (switching from sonnet to an
+  //   account with no preference still ran on sonnet).
+  // Pitfall: must handle both directions — if {name}.settings.json has a model, install it; if absent
+  //   (or no model field), REMOVE the model key from live settings.json so no stale model persists.
+  //   Best-effort: credentials switch already succeeded; a settings failure must never propagate.
+  {
+    let settings_path = credential_store.join( format!( "{name}.settings.json" ) );
+    let model = std::fs::read_to_string( &settings_path )
+      .ok()
+      .and_then( |s| parse_string_field( &s, "model" ) );
+    let live_settings_path = paths.settings_file();
+    let mut live_settings = std::fs::read_to_string( &live_settings_path )
+      .ok()
+      .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+      .unwrap_or_else( || serde_json::json!( {} ) );
+    if let Some( obj ) = live_settings.as_object_mut()
+    {
+      match model
+      {
+        Some( m ) => { obj.insert( "model".to_string(), serde_json::Value::String( m ) ); }
+        None      => { obj.remove( "model" ); }
+      }
+    }
+    let _ = std::fs::write( live_settings_path, serde_json::to_string( &live_settings ).unwrap_or_default() );
   }
 
   Ok( () )

@@ -21,7 +21,7 @@ Adapted from hypothesis table format. Status reflects certainty of the observati
 - `FLAG-VFY` — test verifies flag exists in `--help` or is accepted without parse error
 - `NEG-ONLY` — test asserts env var is NOT explicitly rejected (cannot confirm acceptance vs silent ignore)
 - `UNVERIFIED` — test has no `assert!`; logs observation only; never goes RED
-- `MEASURE` — live API measurement; no pass/fail; excluded from default filter (`lim_it_` prefix)
+- `MEASURE` — live API measurement; no pass/fail; runs by default in container where `~/.claude` is mounted (`lim_it_` prefix)
 - `VALIDATED†` — test proves feasibility of mechanism but not that the binary uses it
 
 | ID | Behavior | Category | Status | Certainty | Tier | Evidence |
@@ -130,7 +130,7 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | FLAG-VFY | 8 | B3, B4, B16, B19, B20, B21, B22, B24 |
 | NEG-ONLY | 2 | B11, B23 |
 | UNVERIFIED | 1 | B8 |
-| MEASURE | 1 | B16h (lim_it; excluded from default filter) |
+| MEASURE | 1 | B16h (lim_it; runs by default in container) |
 
 **Validation gap:** 12 of 25 behaviors are fully validated with behavioral assertions.
 See `../../-plan/001_behavior_validation_upgrade.plan.md` for the upgrade roadmap.
@@ -167,7 +167,7 @@ Each behavior instance has a corresponding invalidation test in `contract/claude
 | `b22_no_session_persistence_flag.rs` | B22 | FLAG-VFY |
 | `b23_session_dir_override.rs` | B23 | NEG-ONLY |
 | `b24_from_pr_flag.rs` | B24 | FLAG-VFY |
-| `b16h_tools_system_prompt.rs` | B16h | MEASURE (lim_it; excluded from default filter) |
+| `b16h_tools_system_prompt.rs` | B16h | MEASURE (lim_it; runs by default in container) |
 
 To run:
 ```bash

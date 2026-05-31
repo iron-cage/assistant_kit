@@ -15,7 +15,7 @@
 
 The flag also accepts specific tool names: `--tools "Bash,Edit,Read"` enables only those tools.
 
-**Note:** FLAG-VFY tier means the test confirms the flag is documented and accepted at parse time. Actual invocation-blocking behavior requires a live `lim_it_` test (excluded from default filter). B16h documents a related uncertainty about tool definitions in the assembled system prompt.
+**Note:** FLAG-VFY tier means the test confirms the flag is documented and accepted at parse time. Actual invocation-blocking behavior requires a live `lim_it_` test (runs by default in container). B16h documents a related uncertainty about tool definitions in the assembled system prompt.
 
 ### Evidence
 

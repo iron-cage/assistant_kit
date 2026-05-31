@@ -287,6 +287,6 @@ USER $TEST_USER
 # ENV promotes each ARG so the value persists to container runtime (ARGs alone expire after build).
 ARG CMD_SCOPE=--workspace
 ENV CMD_SCOPE=$CMD_SCOPE
-ARG CMD_FILTER=!test(lim_it) & !binary(behavior)
+ARG CMD_FILTER=!binary(behavior)
 ENV CMD_FILTER=$CMD_FILTER
 CMD cargo nextest run $CMD_SCOPE $CARGO_FEATURES --filter-expr "$CMD_FILTER"

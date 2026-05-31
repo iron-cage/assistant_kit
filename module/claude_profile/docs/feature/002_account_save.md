@@ -24,10 +24,13 @@
 4. Read `~/.claude/.credentials.json`.
 5. Write contents to `{credential_store}/{name}.credentials.json` (creates or overwrites).
 6. Extract `oauthAccount` subtree from `~/.claude.json`. If `{credential_store}/{name}.claude.json` already exists, read its current content and merge: update the `oauthAccount` key while preserving all other existing keys (notably `_renewal_at` written by `.account.renewal`). Write the merged result to `{credential_store}/{name}.claude.json` (best-effort: skip silently if source absent or `oauthAccount` key missing; merge failure silently falls back to overwrite).
-7. Call `claude_quota::fetch_claude_cli_roles(&access_token)` (feature-gated, best-effort): on success, write response to `{credential_store}/{name}.roles.json`; on any failure, skip silently — save still succeeds.
-8. Write `{credential_store}/_active_{hostname}_{user}` = `{name}` via `active_marker_filename()` — mark the saved account as the current active account (per-machine marker, see feature 025) (when invoked from `.account.save` or `.account.relogin`; background refresh callers pass `update_marker=false` and do not write the marker).
+7. Capture model preference: read `model` field from `~/.claude/settings.json`; if present, write `{"model": "<value>"}` to `{credential_store}/{name}.settings.json` (creates or overwrites); if `~/.claude/settings.json` is absent or lacks a `model` field, skip silently — save still succeeds. This enables `switch_account()` to restore the per-account model preference on next switch.
+8. Call `claude_quota::fetch_claude_cli_roles(&access_token)` (feature-gated, best-effort): on success, write response to `{credential_store}/{name}.roles.json`; on any failure, skip silently — save still succeeds.
+9. Write `{credential_store}/_active_{hostname}_{user}` = `{name}` via `active_marker_filename()` — mark the saved account as the current active account (per-machine marker, see feature 025) (when invoked from `.account.save` or `.account.relogin`; background refresh callers pass `update_marker=false` and do not write the marker).
 
 **Idempotency as metadata refresh:** `save()` overwrites all snapshot files on every invocation. Re-running `clp .account.save` for an existing account name re-fetches endpoint 005 and overwrites `{name}.roles.json` alongside all other snapshots. This is the canonical mechanism for refreshing cached metadata when org membership or role changes — no separate command required.
+
+**Model preference capture (BUG-222 fix):** `save()` reads the `model` field from `~/.claude/settings.json` and writes it to `{credential_store}/{name}.settings.json` as `{"model": "<value>"}`. This snapshot enables `switch_account()` to restore the per-account model preference on the next switch. If `~/.claude/settings.json` is absent or lacks a `model` field, no `{name}.settings.json` is written and save still succeeds.
 
 **Dry-run mode** (`dry::1`): Print `[dry-run] would save current credentials as '{name}'` without modifying any files.
 
@@ -49,6 +52,7 @@
 - **AC-15**: Background refresh calls to `save()` (via `refresh_account_token`) pass `update_marker=false`; the per-machine active marker is not written; any concurrent `.account.use` switch is not disturbed.
 - **AC-16**: `clp .account.save` (no `name::`) when `~/.claude.json` contains `oauthAccount.emailAddress = "i5@wbox.pro"` and the per-machine active marker contains `"i2@wbox.pro"` (stale from a prior clp session) saves credentials as `i5@wbox.pro`; `i2@wbox.pro.credentials.json` is NOT created or modified. (BUG-212 regression guard.)
 - **AC-17**: When `{credential_store}/{name}.claude.json` already exists and contains a `_renewal_at` key, re-running `clp .account.save` preserves the `_renewal_at` value in the updated snapshot (read-merge, not full overwrite); the `oauthAccount` key is updated and all other keys are retained.
+- **AC-18**: `clp .account.save name::alice@acme.com` when `~/.claude/settings.json` contains `{"model": "sonnet"}` creates `{credential_store}/alice@acme.com.settings.json` with `{"model": "sonnet"}`. When `~/.claude/settings.json` is absent or has no `model` field, no `alice@acme.com.settings.json` is written and exit code is still 0.
 
 ### Cross-References
 
@@ -67,3 +71,4 @@
 | doc | [014_rich_account_metadata.md](014_rich_account_metadata.md) | Metadata fields snapshotted by `save()` |
 | doc | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | `{name}.roles.json` lifecycle and org fields |
 | doc | [030_account_renewal_override.md](030_account_renewal_override.md) | `_renewal_at` field written by `.account.renewal`; preserved by `save()` read-merge (AC-17) |
+| bug | `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes `{name}.settings.json` with current model preference (step 7); `switch_account()` restores model on switch |

@@ -6,7 +6,7 @@ test_user: testuser
 # crate scope for nextest run and cargo chef cook — single source of truth for both
 cmd_scope: --workspace
 # baked into the image default CMD; excludes tests needing external I/O (offline-safe default)
-cmd_filter: "!test(lim_it) & !binary(behavior)"
+cmd_filter: "!binary(behavior)"
 
 # script invoked by `.test` inside the container (path relative to /workspace)
 test_script: verb/test.d/l1
