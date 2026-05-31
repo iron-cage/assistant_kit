@@ -2546,6 +2546,62 @@ fn ft16_account_renewal_creates_new_claude_json()
   );
 }
 
+#[ test ]
+fn ft17_account_renewal_single_prefix_resolves()
+{
+  // IT-15 / EC-21 (AC-12): single bare prefix `name::alice` resolves to `alice@acme.com`.
+  // Root cause guard for TSK-232: the single-name path already called resolve_account_name(),
+  //   so this test confirms no regression in that path after the comma-list loop refactor.
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "alice@acme.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::alice", "at::2026-07-01T00:00:00Z" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "alice@acme.com.claude.json" ) ).unwrap();
+  assert!(
+    content.contains( r#""_renewal_at":"2026-07-01T00:00:00Z""# ),
+    "single prefix must resolve to full email and write _renewal_at, got: {content}",
+  );
+}
+
+#[ test ]
+fn ft18_account_renewal_comma_list_prefix_tokens()
+{
+  // IT-16 / EC-22 (AC-13): comma-list `name::alice,bob` — each prefix token resolved independently.
+  // Root cause guard for TSK-232: the comma-list branch previously collected raw tokens without
+  //   calling resolve_account_name(), causing prefix tokens to fail with "account not found".
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+
+  write_account( dir.path(), "alice@acme.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "bob@acme.com",   "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.renewal", "name::alice,bob", "at::2026-07-01T00:00:00Z" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  let alice = std::fs::read_to_string( store.join( "alice@acme.com.claude.json" ) ).unwrap();
+  let bob   = std::fs::read_to_string( store.join( "bob@acme.com.claude.json" ) ).unwrap();
+  assert!(
+    alice.contains( r#""_renewal_at":"2026-07-01T00:00:00Z""# ),
+    "alice@acme.com must have _renewal_at after comma-list prefix resolution, got: {alice}",
+  );
+  assert!(
+    bob.contains( r#""_renewal_at":"2026-07-01T00:00:00Z""# ),
+    "bob@acme.com must have _renewal_at after comma-list prefix resolution, got: {bob}",
+  );
+}
+
 // ── AS-22: save() read-merge preserving _renewal_at ───────────────────────────
 
 #[ test ]

@@ -12,6 +12,8 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 | EC-17 | Omitted `name::` on `.account.save` with `oauthAccount.emailAddress` present — inferred (primary path) | Name Inference |
 | EC-19 | Omitted `name::` on `.account.save` with `oauthAccount.emailAddress` absent, `_active` marker present — inferred (fallback path) | Name Inference |
 | EC-20 | Omitted `name::` on `.account.save` — `oauthAccount.emailAddress` disagrees with `_active` marker — `oauthAccount` wins (BUG-212) | Name Inference |
+| EC-21 | `.account.renewal name::alice at::...` where `alice@acme.com` is saved — prefix resolves to full email | Prefix Resolution (renewal) |
+| EC-22 | `.account.renewal name::alice,bob at::...` where `alice@acme.com` and `bob@acme.com` are saved — comma-list prefix tokens each resolve | Prefix Resolution (renewal comma-list) |
 | EC-4 | `name::` with `/` (no `@`) rejected with exit 1 | Forbidden Characters |
 | EC-5 | `name::` with `\` (no `@`) rejected with exit 1 | Forbidden Characters |
 | EC-6 | `name::` with `*` (no `@`) rejected with exit 1 | Forbidden Characters |
@@ -38,11 +40,13 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - Boundary Value: 1 test
 - Optional on Accounts: 3 tests
 - Optional on Limits (FR-18): 3 tests
+- Prefix Resolution (renewal): 2 tests
 
-**Total:** 20 edge cases
+**Total:** 22 edge cases
 
 **Behavioral Divergence Pair:** EC-1 (valid/expected path) ↔ EC-2 (invalid/rejected path)
 **Name Inference Divergence:** EC-17 (`oauthAccount.emailAddress` primary path) ↔ EC-19 (`_active` marker fallback path)
+**Prefix Resolution Divergence:** EC-21 (single prefix on `.account.renewal`) ↔ EC-22 (comma-list prefix tokens on `.account.renewal`)
 
 ---
 
@@ -235,6 +239,26 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 - **Commands:** `.account.save`
 - **Note:** Tests the `_active` marker fallback path. Primary path (`oauthAccount.emailAddress` present) is covered by EC-17. Both paths together form the name inference divergence pair.
 - **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/002_account_save.md FT-04](../../feature/002_account_save.md)
+
+---
+
+### EC-21: Prefix Resolution on `.account.renewal` — single prefix
+
+- **Given:** `alice@acme.com` account saved in credential store.
+- **When:** `clp .account.renewal name::alice at::2026-07-01T00:00:00Z`
+- **Then:** Exit 0; `{credential_store}/alice@acme.com.claude.json` contains `_renewal_at: "2026-07-01T00:00:00Z"`. Prefix `alice` resolves to full email before the renewal write.
+- **Exit:** 0
+- **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/015_name_shortcut_syntax.md AC-12](../../../../docs/feature/015_name_shortcut_syntax.md)
+
+---
+
+### EC-22: Prefix Resolution on `.account.renewal` — comma-list with prefix tokens
+
+- **Given:** `alice@acme.com` and `bob@acme.com` accounts saved in credential store.
+- **When:** `clp .account.renewal name::alice,bob at::2026-07-01T00:00:00Z`
+- **Then:** Exit 0; both `alice@acme.com.claude.json` and `bob@acme.com.claude.json` contain `_renewal_at: "2026-07-01T00:00:00Z"`. Each comma token is resolved independently via prefix resolution before the renewal write.
+- **Exit:** 0
+- **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/015_name_shortcut_syntax.md AC-13](../../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 

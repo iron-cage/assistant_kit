@@ -55,7 +55,7 @@
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/account.rs` | `save()` implementation — validate, init dir, copy credentials |
-| source | `src/commands/credentials.rs` | `account_save_routine()` — CLI handler |
+| source | `src/commands/account_ops.rs` | `account_save_routine()` — CLI handler |
 | test | `tests/cli/accounts_test.rs` | Verifies credential file and metadata snapshots created with correct content |
 | test | `claude_profile_core/tests/account_test.rs` | `as_save_writes_active_marker` — unit test: active marker written after `save()` |
 | test | `tests/cli/credentials_test.rs` | `cred14` — CLI: `.credentials.status` shows `Account: {name}` after `.account.save` |

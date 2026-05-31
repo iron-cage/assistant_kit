@@ -525,9 +525,26 @@ pub fn account_renewal_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let mut had_error  = false;
   let mut error_code = 0_i32;
 
-  for name in &names
+  // Fix(issue-renewal-comma-prefix): comma-list tokens were used as raw strings without
+  //   prefix resolution, causing `name::i9,i11` to fail when i9@host, i11@host are saved.
+  // Root cause: the comma-list branch collected raw tokens; only the single-name branch
+  //   called resolve_account_name(). Full emails pass through the @-fast-path unchanged.
+  // Pitfall: resolve_account_name() returns ErrorData (not io::Error); match on ErrorCode
+  //   to get the correct exit code (ArgumentTypeMismatch=ambiguous→1, InternalError=not found→2).
+  for raw in &names
   {
-    match crate::account::account_renewal( name, &credential_store, &op, dry )
+    let name = match resolve_account_name( raw, &credential_store )
+    {
+      Ok( n )  => n,
+      Err( e ) =>
+      {
+        had_error  = true;
+        error_code = if e.code == ErrorCode::ArgumentTypeMismatch { 1 } else { 2 };
+        eprintln!( "account renewal error: {raw}: {e}" );
+        continue;
+      }
+    };
+    match crate::account::account_renewal( &name, &credential_store, &op, dry )
     {
       Ok( line ) => output.push_str( &line ),
       Err( e )   =>

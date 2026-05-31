@@ -18,3 +18,5 @@ Set or clear a billing renewal timestamp override (`_renewal_at`) stored in `{na
 | IT-12 | Existing `oauthAccount` content preserved on write | Account with full `oauthAccount`; after `at::`; `oauthAccount` unchanged | 0 |
 | IT-13 | Past `at::` value accepted (auto-advanced by `.usage`) | `at::2020-01-01T00:00:00Z`; exits 0; field written verbatim | 0 |
 | IT-14 | Unknown parameter rejected → exit 1 | `clp .account.renewal unknown::x` | 1 |
+| IT-15 | Single prefix resolves to full email | Account `alice@acme.com` saved; `name::alice at::2026-07-01T00:00:00Z`; `_renewal_at` written to `alice@acme.com.claude.json` | 0 |
+| IT-16 | Comma-list with prefix tokens resolves each | Accounts `alice@acme.com` and `bob@acme.com` saved; `name::alice,bob at::2026-07-01T00:00:00Z`; both `.claude.json` files updated | 0 |

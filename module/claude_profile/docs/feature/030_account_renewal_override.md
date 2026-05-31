@@ -71,11 +71,12 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/account.rs` | `account_renewal()` — read-merge `_renewal_at` into `{name}.claude.json`; multi-account dispatch |
-| source | `src/commands.rs` | `account_renewal_routine()` — CLI handler; param validation |
+| source | `src/commands/account_ops.rs` | `account_renewal_routine()` — CLI handler; param validation; comma-list token resolution via `resolve_account_name()` |
 | source | `src/usage/format.rs` | `renews_label()` — `~Renews` exact vs. estimated rendering; `next_event_label()` — `→ Next` event selection |
 | test | `tests/cli/account_mutations_test.rs` | AC-01…AC-15 test cases |
 | doc | [002_account_save.md](002_account_save.md) | `save()` read-merge preserving `_renewal_at` (AC-17 there) |
 | doc | [009_token_usage.md](009_token_usage.md) | `.usage` rendering; `~Renews` and `→ Next` columns; AC-27/AC-28/AC-29 |
+| doc | [015_name_shortcut_syntax.md](015_name_shortcut_syntax.md) | Prefix resolution for `name::` — AC-12/AC-13 cover single and comma-list prefix resolution on `.account.renewal` |
 | doc | [command/001_account.md](../cli/command/001_account.md#command--14-accountrenewal) | CLI command specification |
 | param | [cli/param/049_at.md](../cli/param/049_at.md) | `at::` — absolute renewal timestamp |
 | param | [cli/param/050_from_now.md](../cli/param/050_from_now.md) | `from_now::` — relative renewal delta |

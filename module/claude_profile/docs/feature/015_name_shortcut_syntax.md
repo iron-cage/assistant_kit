@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Allow `name::` to be supplied as a bare positional argument or resolved from a prefix, removing friction when typing account-management commands.
-- **Responsibility**: Documents the positional-argument adapter rewrite and prefix-resolution logic for the four `name::` commands.
-- **In Scope**: Positional rewrite in `src/adapter.rs`; prefix resolution in `src/commands/accounts.rs`, `src/commands/account_ops.rs` affecting `.accounts`, `.account.use`, `.account.delete`, `.account.limits`.
+- **Responsibility**: Documents the positional-argument adapter rewrite and prefix-resolution logic for `name::` commands.
+- **In Scope**: Positional rewrite in `src/adapter.rs`; prefix resolution in `src/commands/accounts.rs`, `src/commands/account_ops.rs` affecting `.accounts`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, and `.account.renewal` (comma-list token resolution).
 - **Out of Scope**: Email validation (`account::validate_name()` — unchanged); `.account.save` name inference from `~/.claude.json` (→ 002_account_save.md); `~/.claude/.credentials.json` live account detection (→ 009_token_usage.md).
 
 ### Design
@@ -12,7 +12,7 @@
 Two complementary shortcuts reduce typing without changing the underlying `name::` parameter:
 
 **Positional argument (adapter layer):**
-When a command that accepts `name::` receives a bare token (no `::`) as its first parameter, the adapter layer (`argv_to_unilang_tokens()`) rewrites it to `name::{value}` before the unilang pipeline. The following commands participate: `.accounts`, `.account.use`, `.account.delete`, `.account.limits`.
+When a command that accepts `name::` receives a bare token (no `::`) as its first parameter, the adapter layer (`argv_to_unilang_tokens()`) rewrites it to `name::{value}` before the unilang pipeline. The following commands participate: `.accounts`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`.
 
 ```bash
 clp .account.use alice@home.com       # rewritten to: .account.use name::alice@home.com
@@ -47,18 +47,21 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use car` →
 - **AC-09**: `clp .account.use alice@home.com dry::1` works — positional and `dry::` can be combined.
 - **AC-10**: The `print_usage()` Examples section shows `clp .account.use alice@acme.com` (without `name::` prefix).
 - **AC-11**: `clp .account.use i1` where `i1@wbox.pro`, `i11@wbox.pro`, and `i12@wbox.pro` all exist → exits 0 and switches to `i1@wbox.pro` (exact local-part match wins over longer prefix matches).
+- **AC-12**: `clp .account.renewal name::alice at::2026-07-01T00:00:00Z` (where `alice@acme.com` is the only saved account whose local part is `alice`) → resolves to `alice@acme.com`, writes `_renewal_at`, exits 0.
+- **AC-13**: `clp .account.renewal name::alice,bob at::2026-07-01T00:00:00Z` → resolves each comma token independently via prefix resolution; `alice@acme.com` and `bob@acme.com` both updated; exits 0.
 
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/adapter.rs` | `argv_to_unilang_tokens()` — positional rewrite for name-taking commands |
-| source | `src/commands/account_ops.rs`, `src/commands/accounts.rs`, `src/commands/limits.rs` | `account_use_routine`, `account_delete_routine`, `accounts_routine`, `account_limits_routine` — prefix resolution |
+| source | `src/commands/account_ops.rs`, `src/commands/accounts.rs`, `src/commands/limits.rs` | `account_use_routine`, `account_delete_routine`, `account_relogin_routine`, `accounts_routine`, `account_limits_routine` — prefix resolution; `account_renewal_routine` — comma-list token resolution |
 | source | `src/lib.rs` | `cli::print_usage()` — update example to use positional form |
-| test | `tests/cli/account_mutations_test.rs` | account.use (aw13–aw15) and account.delete (ad13–ad14) positional and prefix cases |
+| test | `tests/cli/account_mutations_test.rs` | account.use (aw13–aw15), account.delete (ad13–ad14), and account.renewal (ar15–ar16) positional, prefix, and comma-list cases |
 | test | `tests/cli/accounts_test.rs` | accounts (acc29–acc30) positional and prefix cases |
 | test | `tests/cli/account_limits_test.rs` | account.limits (lim09–lim10) positional and prefix cases |
 | doc | [cli/param/001_name.md](../cli/param/001_name.md) | `name::` parameter specification |
 | doc | [command/readme.md](../cli/command/readme.md) | Syntax blocks for affected commands |
 | doc | [004_account_use.md](004_account_use.md) | Base switch behavior |
 | doc | [005_account_delete.md](005_account_delete.md) | Base delete behavior |
+| doc | [030_account_renewal_override.md](030_account_renewal_override.md) | `.account.renewal` multi-account dispatch and `name::all`/comma-list handling |
