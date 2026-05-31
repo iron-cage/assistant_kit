@@ -123,9 +123,20 @@ fn parse_value_flag(
     {
       parsed.file = Some( next_value( tokens, next, "--file" )?.to_string() );
     }
+    // Fix(BUG-230): reject subdir names containing `/` — spec requires single name component
+    // Root cause: no validation; `create_dir_all` silently created nested dirs for `a/b`
+    // Pitfall: must reject `/` in the value, not just leading `/` — any separator violates
+    // the "directory name component" type constraint in 028_subdir.md
     "--subdir" =>
     {
-      parsed.subdir = Some( next_value( tokens, next, "--subdir" )?.to_string() );
+      let val = next_value( tokens, next, "--subdir" )?;
+      if val.contains( '/' )
+      {
+        return Err( Error::msg(
+          "--subdir must be a single directory name component (no '/' separators)"
+        ) );
+      }
+      parsed.subdir = Some( val.to_string() );
     }
     "--verbosity" =>
     {

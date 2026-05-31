@@ -27,8 +27,8 @@
 //! | EC-creds-2 | Absolute path → resolved correctly | **Yes** (`lim_it`) |
 //! | EC-creds-3 | Relative path → resolved via cwd | **Yes** (`lim_it`) |
 //!
-//! Tests prefixed with `lim_it` are excluded from the default nextest run
-//! (see `.config/nextest.toml`). Run with `-E 'all()'` to include them.
+//! Tests containing `lim_it` run by default in container environments.
+//! They early-return when the `claude` binary is absent from `$PATH`.
 
 #![ cfg( feature = "enabled" ) ]
 
@@ -59,6 +59,21 @@ fn make_creds_file( content : &str ) -> NamedTempFile
   let mut f = NamedTempFile::new().expect( "failed to create temp creds file" );
   f.write_all( content.as_bytes() ).expect( "failed to write creds content" );
   f
+}
+
+/// Returns `true` when the `claude` binary is reachable in `$PATH`.
+///
+/// Tests that spawn the real `claude` subprocess must early-return when this
+/// returns `false` — the binary is absent in the current environment
+/// (e.g. containerized CI without the CLI installed).
+fn claude_binary_available() -> bool
+{
+  std::process::Command::new( "claude" )
+    .arg( "--version" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .status()
+    .is_ok()
 }
 
 /// Copy the live credentials file to a `NamedTempFile` and return `(file, path)`.
@@ -282,6 +297,7 @@ fn test_ec_timeout3_large_accepted()
 #[ test ]
 fn it1_lim_it_happy_path()
 {
+  if !claude_binary_available() { return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
@@ -384,6 +400,7 @@ fn it5_lim_it_interactive_mode()
 #[ test ]
 fn it6_lim_it_flag_passthrough()
 {
+  if !claude_binary_available() { return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
