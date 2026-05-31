@@ -30,9 +30,24 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
 {
   let mut builder = ClaudeCommand::new();
 
-  if let Some( ref dir ) = cli.dir
+  let base_dir = cli.dir.as_deref().map( std::path::PathBuf::from );
+  let effective_working_dir : Option< std::path::PathBuf > =
+    match cli.subdir.as_deref()
+    {
+      Some( sub ) if sub != "." =>
+      {
+        let base = base_dir.unwrap_or_else( ||
+          std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) )
+        );
+        let effective = base.join( format!( "-{sub}" ) );
+        let _ = std::fs::create_dir_all( &effective );
+        Some( effective )
+      }
+      _ => base_dir,
+    };
+  if let Some( ref dir ) = effective_working_dir
   {
-    builder = builder.with_working_directory( dir.clone() );
+    builder = builder.with_working_directory( dir.to_string_lossy().into_owned() );
   }
   if let Some( n ) = cli.max_tokens
   {

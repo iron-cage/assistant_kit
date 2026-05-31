@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clr parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 27 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`.
+- **In Scope**: All 28 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
@@ -40,3 +40,4 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `25_file.md` | Edge cases for `--file` parameter | ✅ |
 | `26_strip_fences.md` | Edge cases for `--strip-fences` flag | ✅ |
 | `27_keep_claudecode.md` | Edge cases for `--keep-claudecode` flag | ✅ |
+| `28_subdir.md` | Edge cases for `--subdir` parameter | ✅ |

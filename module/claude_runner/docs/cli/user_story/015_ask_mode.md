@@ -21,7 +21,7 @@ Send a single-turn question to Claude and get a clean, direct answer on stdout, 
 - Print mode is always on for `ask` regardless of whether a message is given
 - No session state is persisted (`--no-persist` default ON for ask)
 - No chrome browser context (`--no-chrome` default ON for ask)
-- All 25 parameters from `run` are accepted and can override the ask defaults: `clr ask --effort max "..."`, `clr ask --max-tokens 200000 "..."`, etc.
+- All 26 parameters from `run` are accepted and can override the ask defaults: `clr ask --effort max "..."`, `clr ask --max-tokens 200000 "..."`, `clr ask --subdir work "..."`, etc.
 - `clr ask --dry-run "What is X?"` shows assembled command reflecting ask defaults
 
 ### Referenced Commands
@@ -48,6 +48,7 @@ Send a single-turn question to Claude and get a clean, direct answer on stdout, 
 | 14 | [`--no-ultrathink`](../param/014_no_ultrathink.md) | Default ON for ask |
 | 17 | [`--effort`](../param/017_effort.md) | Default `high` for ask (overridable) |
 | 25 | [`--file`](../param/025_file.md) | Pipe file content as stdin to ask |
+| 28 | [`--subdir`](../param/028_subdir.md) | Named workspace isolation within ask |
 
 ### Related User Stories
 
@@ -55,3 +56,5 @@ Send a single-turn question to Claude and get a clean, direct answer on stdout, 
 |---|------------|--------------|
 | 2 | [Print Mode Capture](002_print_mode_capture.md) | `ask` always uses print mode |
 | 7 | [Fresh Session](007_fresh_session.md) | `ask` defaults to new session (no `-c`) |
+| 17 | [Model Selection](017_model_selection.md) | `ask` accepts `--model` to override the default model |
+| 20 | [Suppress Effort Max](020_suppress_effort_max.md) | `ask` defaults to `--effort high`; `--no-effort-max` suppresses the run-mode `max` default |

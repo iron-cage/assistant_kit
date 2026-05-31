@@ -68,7 +68,7 @@ Combine with `--dry-run` if you want to preview without executing (`run` and `as
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | 15 other params |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | 16 other params |
 | 4 | [Credential Operations](../param_group/04_credential_operations.md) | Full | `--creds`, `--timeout` |
 
 ### Referenced Commands

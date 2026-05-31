@@ -1,6 +1,6 @@
 //! CLR_* Environment Variable Tests
 //!
-//! Covers E01–E28: one test per `CLR_*` env var.
+//! Covers E01–E29: one test per `CLR_*` env var.
 //! Source: `task/claude_runner/148_env_var_all_params.md`
 //!
 //! All tests use `run_cli_with_env()` — no `std::env::set_var`, no thread-global mutation.
@@ -39,6 +39,7 @@
 //! | E26  | `CLR_STRIP_FENCES`         | dry-run accepted; fence stripping verified in execution_mode_test.rs S76 |
 //! | E27  | `CLR_KEEP_CLAUDECODE`      | dry-run accepted; env preservation verified in execution_mode_test.rs S77 |
 //! | E28  | `CLR_TRACE` (isolated)     | stderr contains trace output for isolated subcommand        |
+//! | E29  | `CLR_SUBDIR`               | stdout contains `/-feature` path suffix                     |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli_with_env;
@@ -730,5 +731,42 @@ fn e28_clr_trace_applies_to_isolated()
   assert!(
     stderr.contains( "# creds:" ),
     "CLR_TRACE=1 trace must include '# creds:' line: {stderr}",
+  );
+}
+
+// ─── E29: CLR_SUBDIR ──────────────────────────────────────────────────────────
+
+/// E29: `CLR_SUBDIR` appends `/-NAME` to the effective working directory.
+///
+/// CLI-wins: explicit `--subdir build` takes precedence over `CLR_SUBDIR=debug`.
+///
+/// Spec: `tests/docs/cli/user_story/22_session_isolation_subdir.md` US-3, US-4, US-5
+#[ test ]
+fn e29_clr_subdir_sets_effective_dir()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "t" ],
+    &[ ( "CLR_SUBDIR", "feature" ) ],
+  );
+  assert!( out.status.success(), "exit must be 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "/-feature" ),
+    "CLR_SUBDIR=feature must produce path ending in /-feature: {stdout}",
+  );
+  // CLI-wins: --subdir build must take precedence over CLR_SUBDIR=debug
+  let out2 = run_cli_with_env(
+    &[ "--dry-run", "--subdir", "build", "t" ],
+    &[ ( "CLR_SUBDIR", "debug" ) ],
+  );
+  assert!( out2.status.success(), "CLI --subdir with CLR_SUBDIR must exit 0: {out2:?}" );
+  let stdout2 = String::from_utf8_lossy( &out2.stdout );
+  assert!(
+    stdout2.contains( "/-build" ),
+    "CLI --subdir build must win over CLR_SUBDIR=debug: {stdout2}",
+  );
+  assert!(
+    !stdout2.contains( "/-debug" ),
+    "CLR_SUBDIR=debug must be suppressed by CLI --subdir: {stdout2}",
   );
 }

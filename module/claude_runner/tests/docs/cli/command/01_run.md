@@ -24,6 +24,7 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 | IT-16 | `--effort invalid` → exit 1, error message | Error Handling |
 | IT-17 | `clr run "msg"` → identical to `clr "msg"` (BUG-212 coverage) | Explicit run alias |
 | IT-18 | Empty `--session-dir` → no `-c` in assembled command (BUG-214 regression) | First-use edge case |
+| IT-19 | `--subdir NAME` → dry-run effective dir ends with `/-NAME` | Subdir |
 
 ## Test Coverage Summary
 
@@ -42,8 +43,9 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 - Default Injection: 1 test
 - Explicit run alias: 1 test
 - First-use edge case: 1 test
+- Subdir: 1 test
 
-**Total:** 18 tests
+**Total:** 19 tests
 
 ---
 
@@ -206,3 +208,12 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 - **Expected behavior:** Assembled command does NOT include `-c`; `session_exists()` guard detects empty directory and suppresses injection
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../../docs/invariant/001_default_flags.md), [--session-dir](../../../../docs/cli/param/010_session_dir.md)
+
+---
+
+### IT-19: `--subdir NAME` → effective dir ends with `/-NAME`
+
+- **Command:** `clr --dry-run --subdir build "Fix bug"`
+- **Expected behavior:** Dry-run output contains a path ending in `/-build`; exit 0
+- **Exit:** 0
+- **Source:** [--subdir](../../../../docs/cli/param/028_subdir.md), [user_story/022_session_isolation_subdir.md](../../../../docs/cli/user_story/022_session_isolation_subdir.md)

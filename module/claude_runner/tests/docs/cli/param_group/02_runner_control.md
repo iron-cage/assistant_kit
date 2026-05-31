@@ -1,9 +1,9 @@
 # Parameter Group :: Runner Control
 
 Interaction tests for Group 2 (Runner Control): `--no-skip-permissions`, `--interactive`,
-`--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`,
+`--new-session`, `--dir`, `--subdir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`,
 `--trace`, `--no-ultrathink`, `--no-effort-max`, `--no-chrome`, `--no-persist`,
-`--file`, `--strip-fences`, `--keep-claudecode`. Tests validate these flags
+`--file`, `--strip-fences`, `--keep-claudecode`. Tests validate these seventeen flags
 coexist without conflict and are consumed by the runner, not forwarded to claude.
 
 **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
@@ -17,13 +17,14 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 | CC-3 | `--no-skip-permissions` + `--no-effort-max` → both suppressed | Interaction |
 | CC-4 | All runner control flags together → no conflict | Combined |
 | CC-5 | `--file` + `--strip-fences` + `--keep-claudecode` together → all accepted | Interaction |
+| CC-6 | `--dir PATH` + `--subdir NAME` → effective dir is `PATH/-NAME` | Interaction |
 
 ## Test Coverage Summary
 
-- Interaction: 4 tests (CC-1, CC-2, CC-3, CC-5)
+- Interaction: 5 tests (CC-1, CC-2, CC-3, CC-5, CC-6)
 - Combined: 1 test (CC-4)
 
-**Total:** 5 corner cases
+**Total:** 6 corner cases
 
 ## Test Cases
 ---
@@ -61,8 +62,8 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 ### CC-4: All runner control flags together → no conflict
 
 - **Given:** `/tmp/rc_test.txt` exists and is readable; clean environment
-- **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --max-tokens 100000 --session-dir /tmp/sessions --verbosity 2 --trace --no-ultrathink --no-effort-max --no-chrome --no-persist --file /tmp/rc_test.txt --strip-fences --keep-claudecode "Fix bug"`
-- **Then:** Exit 0; all sixteen flags accepted without conflict; command assembled correctly; `--chrome` and `--dangerously-skip-permissions` are absent from assembled command; no unknown-flag error for any runner-control flag
+- **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --subdir work --max-tokens 100000 --session-dir /tmp/sessions --verbosity 2 --trace --no-ultrathink --no-effort-max --no-chrome --no-persist --file /tmp/rc_test.txt --strip-fences --keep-claudecode "Fix bug"`
+- **Then:** Exit 0; all seventeen flags accepted without conflict; command assembled correctly; effective dir contains `/tmp/test/-work`; `--chrome` and `--dangerously-skip-permissions` are absent from assembled command; no unknown-flag error for any runner-control flag
 - **Exit:** 0
 - **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
 - **Commands:** run, ask
@@ -74,6 +75,17 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 - **Given:** `/tmp/cc5_input.txt` exists and is readable; parent env has `CLAUDECODE=1`
 - **When:** `clr --dry-run --file /tmp/cc5_input.txt --strip-fences --keep-claudecode "task"`
 - **Then:** Exit 0; describe output includes the file path; `CLAUDECODE` is present in the subprocess environment; no conflict between the three flags
+- **Exit:** 0
+- **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
+- **Commands:** run, ask
+
+---
+
+### CC-6: `--dir PATH` + `--subdir NAME` → effective dir is `PATH/-NAME`
+
+- **Given:** clean environment
+- **When:** `clr --dry-run --dir /tmp --subdir build "task"`
+- **Then:** Exit 0; dry-run output contains `cd /tmp/-build`; effective dir is `PATH/-NAME` (not `PATH` alone, not `/tmp/build`)
 - **Exit:** 0
 - **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
 - **Commands:** run, ask

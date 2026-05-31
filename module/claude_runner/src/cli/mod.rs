@@ -52,6 +52,7 @@ pub( super ) fn print_help()
   println!( "  --max-tokens <N>                   Max output tokens (default: 200000)" );
   println!( "  --session-dir <PATH>               Session storage directory" );
   println!( "  --dir <PATH>                       Working directory" );
+  println!( "  --subdir <NAME>                    Named subdirectory appended to --dir as /-NAME; . = identity" );
   println!( "  --dry-run                          Print command without executing" );
   println!( "  --trace                            Print command to stderr then execute (like set -x)" );
   println!( "  --system-prompt <TEXT>             Set system prompt (replaces the default)" );
@@ -155,6 +156,7 @@ fn print_ask_help() -> !
   println!( "  --system-prompt <TEXT>             Set system prompt" );
   println!( "  --append-system-prompt <TEXT>      Append to default system prompt" );
   println!( "  --dir <PATH>                       Working directory" );
+  println!( "  --subdir <NAME>                    Named subdirectory appended to --dir as /-NAME; . = identity" );
   println!( "  --session-dir <PATH>               Session storage directory" );
   println!( "  --verbosity <0-5>                  Runner output verbosity level" );
   println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
