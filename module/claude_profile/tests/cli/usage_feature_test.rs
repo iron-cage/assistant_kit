@@ -32,7 +32,7 @@ use crate::cli_runner::{
   run_cs_with_env,
   stdout, stderr, assert_exit,
   write_account, write_account_with_token,
-  write_live_credentials_with_token,
+  write_live_credentials_with_token, require_live_api,
   FAR_FUTURE_MS, PAST_MS,
 };
 use claude_profile::output::jwt_exp_ms;
@@ -90,6 +90,7 @@ fn write_account_with_expired_token( home : &std::path::Path, name : &str, token
 #[ test ]
 fn ft02_lim_it_http_401_shortens_to_auth_expired()
 {
+  if !require_live_api( "ft02" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_expired_token( dir.path(), "expired@test.com", "invalid-token-for-401-test" );

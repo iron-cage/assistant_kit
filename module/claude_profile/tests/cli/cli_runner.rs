@@ -542,6 +542,62 @@ pub fn live_active_token() -> Option< String >
   claude_profile::account::parse_string_field( &content, "accessToken" )
 }
 
+/// Check whether the live Anthropic API is accessible (not rate-limited).
+///
+/// Makes a single `curl` probe on first call, then caches the result in a
+/// temp file for 60 seconds so all test processes within the same nextest
+/// run share one probe.  Returns `false` when the API returns HTTP 429.
+///
+/// `lim_it` tests that require **successful** API responses should call
+/// this guard.  Tests that handle error responses gracefully (e.g. testing
+/// the "fetch failed" trace path) do NOT need this guard.
+#[ inline ]
+#[ must_use ]
+pub fn require_live_api( label : &str ) -> bool
+{
+  let probe_path = std::env::temp_dir().join( ".lim_it_api_probe" );
+
+  // Reuse a recent probe result (same nextest run — typically < 30s).
+  if let Ok( meta ) = std::fs::metadata( &probe_path )
+  {
+    if meta.modified().ok()
+      .and_then( |m| m.elapsed().ok() )
+      .is_some_and( |age| age.as_secs() < 60 )
+    {
+      let cached = std::fs::read_to_string( &probe_path )
+        .is_ok_and( |s| s.trim() == "1" );
+      if !cached
+      {
+        eprintln!( "{label}: API rate-limited (cached probe) — skipping" );
+      }
+      return cached;
+    }
+  }
+
+  // First probe in this nextest run: hit the API WITH the live token.
+  // Per-token 429 means this session is rate-limited even if the global
+  // endpoint would accept unauthenticated requests.
+  let token = live_active_token().unwrap_or_default();
+  let http_code = std::process::Command::new( "curl" )
+    .args([
+      "-s", "-o", "/dev/null", "-w", "%{http_code}", "--max-time", "5",
+      "-H", &format!( "Authorization: Bearer {token}" ),
+      "https://api.claude.ai/api/oauth/usage",
+    ])
+    .output()
+    .ok()
+    .and_then( |o| String::from_utf8( o.stdout ).ok() )
+    .and_then( |s| s.trim().parse::< u16 >().ok() )
+    .unwrap_or( 0 );
+  let ok = http_code != 0 && http_code != 429;
+  let _ = std::fs::write( &probe_path, if ok { "1" } else { "0" } );
+  if !ok
+  {
+    eprintln!( "{label}: API rate-limited (HTTP {http_code}) — skipping" );
+  }
+  ok
+}
+
 /// Spawn the binary, wait `secs` seconds, kill it, and return all bytes written to stdout.
 ///
 /// Reads from the piped stdout using a background thread so bytes accumulate even
