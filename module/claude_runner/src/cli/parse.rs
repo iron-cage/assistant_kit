@@ -350,6 +350,14 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs )
   if parsed.file.is_none()             { parsed.file             = env_str( "CLR_FILE" ); }
   if !parsed.strip_fences              { parsed.strip_fences     = env_bool( "CLR_STRIP_FENCES" ); }
   if !parsed.keep_claudecode           { parsed.keep_claudecode  = env_bool( "CLR_KEEP_CLAUDECODE" ); }
-  if parsed.subdir.is_none()           { parsed.subdir           = env_str( "CLR_SUBDIR" ); }
+  // Fix(BUG-233): validate CLR_SUBDIR same as --subdir — reject `/` in the value.
+  // Matches apply_env_vars convention: silently ignore invalid env values.
+  if parsed.subdir.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_SUBDIR" )
+    {
+      if !v.contains( '/' ) { parsed.subdir = Some( v ); }
+    }
+  }
 }
 
