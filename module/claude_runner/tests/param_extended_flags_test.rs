@@ -515,6 +515,7 @@ fn s85_subdir_with_dir_combined()
 ///
 /// ## Pitfall
 /// `env_str` already filters empty strings — only the CLI path can deliver `""`.
+// test_kind: bug_reproducer(BUG-229)
 #[ test ]
 fn s86_subdir_empty_string_is_identity()
 {
@@ -543,6 +544,7 @@ fn s86_subdir_empty_string_is_identity()
 ///
 /// ## Pitfall
 /// The type constraint is "directory name component (no `/` separators)" in the spec.
+// test_kind: bug_reproducer(BUG-230)
 #[ test ]
 fn s87_subdir_rejects_slash()
 {
@@ -575,6 +577,7 @@ fn s87_subdir_rejects_slash()
 ///
 /// ## Pitfall
 /// Builder computes the path for display; only the run path needs the physical directory.
+// test_kind: bug_reproducer(BUG-231)
 #[ test ]
 fn s88_dryrun_subdir_no_mkdir()
 {

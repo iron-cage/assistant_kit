@@ -34,7 +34,7 @@ invalid values (parse failure → field stays at default).
 
 | # | Variable | CLI Parameter | Type | Notes |
 |---|----------|---------------|------|-------|
-| 1 | `CLR_MESSAGE` | [`[MESSAGE]`](param/001_message.md) | string | |
+| 1 | `CLR_MESSAGE` | [`[MESSAGE]`](param/001_message.md) | string | Escape hatch for messages containing shell-special characters (`(`, `)`, `&`, `;`, `\|`, etc.) — bypasses bash tokenization |
 | 2 | `CLR_PRINT` | [`--print`](param/002_print.md) | bool | |
 | 3 | `CLR_MODEL` | [`--model`](param/003_model.md) | string | |
 | 4 | `CLR_VERBOSE` | [`--verbose`](param/004_verbose.md) | bool | |
