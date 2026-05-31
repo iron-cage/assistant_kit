@@ -18,7 +18,7 @@ Run Claude in a named subdirectory of the current project directory so each task
 ### Acceptance Criteria
 
 - AC-001: `--subdir NAME` appends `/-NAME` to the base directory (`--dir` or cwd) to produce the effective execution directory
-- AC-002: The effective directory is created automatically before subprocess spawn (no manual `mkdir` needed)
+- AC-002: The effective directory is created automatically before subprocess spawn (no manual `mkdir` needed); in `--dry-run` mode, directory creation is suppressed — dry-run is side-effect-free
 - AC-003: Different `--subdir` values under the same `--dir` produce independent Claude session histories
 - AC-004: `--subdir .` (explicit default) leaves the base directory unchanged — identity semantics
 - AC-005: `CLR_SUBDIR=NAME` env var is equivalent to `--subdir NAME`; CLI flag wins when both are present

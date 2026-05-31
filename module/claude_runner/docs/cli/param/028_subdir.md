@@ -4,7 +4,7 @@ Appends a named subdirectory under the effective working directory to produce th
 actual execution directory passed to the Claude subprocess. Default `.` is the
 identity value — the working directory is used as-is, with no subdirectory appended.
 
-- **Type:** string (directory name component or `.` identity)
+- **Type:** string (single directory name component; no `/` separators; `.` or `""` = identity)
 - **Default:** `.` (identity — no subdirectory appended)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
@@ -16,9 +16,17 @@ clr --dir /project --subdir debug "x"  # effective dir = /project/-debug
 clr --subdir . "Fix bug"               # explicit identity — same as default
 ```
 
-**How it works:** When `--subdir` is a non-`.` value, `/-<name>` is appended to the
+**How it works:** When `--subdir` is a non-identity value, `/-<name>` is appended to the
 base directory (`--dir` value or cwd). The resulting directory is created automatically
-(`create_dir_all`) before subprocess spawn — no manual `mkdir` needed.
+(`create_dir_all`) before subprocess spawn — no manual `mkdir` needed. In dry-run mode,
+directory creation is suppressed so `--dry-run` remains side-effect-free.
+
+**Identity values:** Both `.` (explicit) and `""` (empty string) are treated as identity —
+no `/-` suffix is appended and no directory is created.
+
+**Validation:** Values containing `/` are rejected at parse time (`--subdir must be a
+single directory name component (no '/' separators)`). Use `--dir` for base directory
+scoping; `--subdir` is the final name only.
 
 **Session isolation:** Claude Code session state is keyed by working directory, so
 `--subdir build` and `--subdir debug` within the same `--dir` produce independent
@@ -37,7 +45,7 @@ and `CLR_SUBDIR` is non-empty. `CLR_SUBDIR=build clr "task"` is equivalent to
 
 | Type | Kind | Fundamental | Key Constraint |
 |------|------|-------------|----------------|
-| string | Primitive | &str | `.` (identity) or valid directory name component (no `/` separators) |
+| string | Primitive | &str | `.` or `""` (identity) or valid single name component (no `/`; validated at parse time) |
 
 ### Referenced Parameter Groups
 

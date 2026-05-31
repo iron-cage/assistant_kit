@@ -770,3 +770,44 @@ fn e29_clr_subdir_sets_effective_dir()
     "CLR_SUBDIR=debug must be suppressed by CLI --subdir: {stdout2}",
   );
 }
+
+// ─── E30: CLR_SUBDIR slash validation ──────────────────────────────────────────
+
+/// Fix(BUG-233): `CLR_SUBDIR=a/b` must be silently ignored — same constraint as `--subdir`.
+///
+/// ## Root Cause
+/// `apply_env_vars` assigned `CLR_SUBDIR` directly to `parsed.subdir` without the
+/// `contains('/')` check that `parse_value_flag` applies to CLI `--subdir`.
+///
+/// ## Why Not Caught
+/// BUG-230 only fixed the CLI parse path; env-var path was not tested for slashes.
+///
+/// ## Fix Applied
+/// Added `!v.contains('/')` guard in `apply_env_vars` for `CLR_SUBDIR`.
+///
+/// ## Prevention
+/// When adding validation to a CLI flag, audit the corresponding env-var path too.
+///
+/// ## Pitfall
+/// `apply_env_vars` doesn't return `Result` — invalid env values are silently ignored,
+/// not rejected with an error. This matches the existing convention (see `CLR_EFFORT`).
+// test_kind: bug_reproducer(BUG-233)
+#[ test ]
+fn e30_clr_subdir_slash_silently_ignored()
+{
+  // CLR_SUBDIR=a/b should be silently dropped — no /-a/b in output
+  let out = run_cli_with_env(
+    &[ "--dry-run", "t" ],
+    &[ ( "CLR_SUBDIR", "a/b" ) ],
+  );
+  assert!( out.status.success(), "must exit 0 even with invalid CLR_SUBDIR: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "/-a/b" ),
+    "CLR_SUBDIR=a/b must be silently ignored — no /-a/b in output: {stdout}",
+  );
+  assert!(
+    !stdout.contains( "/-a" ),
+    "CLR_SUBDIR=a/b must not be partially applied: {stdout}",
+  );
+}

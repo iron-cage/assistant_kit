@@ -13,6 +13,25 @@ clr "Fix the bug in auth.rs"
 clr Fix the bug       # equivalent — words joined with space
 ```
 
+### Shell Quoting
+
+The unquoted multi-word form works when no word contains shell-special characters. When the
+message includes `(`, `)`, `&`, `;`, `|`, `` ` ``, `$`, `!`, `{`, `}`, `<`, or `>`, bash
+tokenizes them before `clr` is invoked — the command fails with a shell syntax error.
+
+Use any of these alternatives:
+
+```sh
+clr "Fix (the nasty bug)"            # double-quote the whole message
+clr 'Fix (the nasty bug)'            # single-quote suppresses all expansion
+
+CLR_MESSAGE='Fix (a nasty bug)' clr  # env var: no quoting needed; bypasses shell parsing
+```
+
+`CLR_MESSAGE` is the recommended escape hatch for messages with shell-special characters —
+it bypasses bash argument parsing entirely. The env var is applied when no positional message
+is present on the CLI.
+
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |

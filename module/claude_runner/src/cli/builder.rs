@@ -22,6 +22,36 @@ fn session_exists( session_dir : Option< &std::path::Path > ) -> bool
     .is_ok_and( | mut entries | entries.next().is_some() )
 }
 
+/// Resolve the effective working directory from `--dir` and `--subdir` args.
+///
+/// Fix(BUG-229): guard empty string — `--subdir ""` must be identity, not degenerate `/-`
+/// Root cause: only `"."` was checked; empty string passed the guard and produced bare-hyphen dir
+/// Pitfall: `env_str` already filters empty, but CLI path can deliver `""` via `--subdir ""`
+///
+/// Fix(BUG-231): skip `create_dir_all` in dry-run — dry-run must be side-effect-free
+/// Root cause: `build_claude_command` runs before the dry-run branch; mkdir executed unconditionally
+/// Pitfall: builder computes the path for display; only the run path needs the physical directory
+fn resolve_effective_dir( cli : &CliArgs ) -> Option< std::path::PathBuf >
+{
+  let base_dir = cli.dir.as_deref().map( std::path::PathBuf::from );
+  match cli.subdir.as_deref()
+  {
+    Some( sub ) if sub != "." && !sub.is_empty() =>
+    {
+      let base = base_dir.unwrap_or_else( ||
+        std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) )
+      );
+      let effective = base.join( format!( "-{sub}" ) );
+      if !cli.dry_run
+      {
+        let _ = std::fs::create_dir_all( &effective );
+      }
+      Some( effective )
+    }
+    _ => base_dir,
+  }
+}
+
 /// Translate parsed CLI args into a `ClaudeCommand` builder.
 ///
 /// Session continuation (`-c`) is applied by default unless `--new-session` is set
@@ -30,21 +60,7 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
 {
   let mut builder = ClaudeCommand::new();
 
-  let base_dir = cli.dir.as_deref().map( std::path::PathBuf::from );
-  let effective_working_dir : Option< std::path::PathBuf > =
-    match cli.subdir.as_deref()
-    {
-      Some( sub ) if sub != "." =>
-      {
-        let base = base_dir.unwrap_or_else( ||
-          std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) )
-        );
-        let effective = base.join( format!( "-{sub}" ) );
-        let _ = std::fs::create_dir_all( &effective );
-        Some( effective )
-      }
-      _ => base_dir,
-    };
+  let effective_working_dir = resolve_effective_dir( cli );
   if let Some( ref dir ) = effective_working_dir
   {
     builder = builder.with_working_directory( dir.to_string_lossy().into_owned() );

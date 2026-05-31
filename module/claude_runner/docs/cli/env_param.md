@@ -34,7 +34,7 @@ invalid values (parse failure → field stays at default).
 
 | # | Variable | CLI Parameter | Type | Notes |
 |---|----------|---------------|------|-------|
-| 1 | `CLR_MESSAGE` | [`[MESSAGE]`](param/001_message.md) | string | |
+| 1 | `CLR_MESSAGE` | [`[MESSAGE]`](param/001_message.md) | string | Escape hatch for messages containing shell-special characters (`(`, `)`, `&`, `;`, `\|`, etc.) — bypasses bash tokenization |
 | 2 | `CLR_PRINT` | [`--print`](param/002_print.md) | bool | |
 | 3 | `CLR_MODEL` | [`--model`](param/003_model.md) | string | |
 | 4 | `CLR_VERBOSE` | [`--verbose`](param/004_verbose.md) | bool | |
@@ -59,7 +59,7 @@ invalid values (parse failure → field stays at default).
 | 23 | `CLR_FILE` | [`--file`](param/025_file.md) | string | Applied when `--file` absent; value is the file path |
 | 24 | `CLR_STRIP_FENCES` | [`--strip-fences`](param/026_strip_fences.md) | bool | |
 | 25 | `CLR_KEEP_CLAUDECODE` | [`--keep-claudecode`](param/027_keep_claudecode.md) | bool | |
-| 26 | `CLR_SUBDIR` | [`--subdir`](param/028_subdir.md) | string | Applied when `--subdir` absent and `CLR_SUBDIR` non-empty; `.` = identity |
+| 26 | `CLR_SUBDIR` | [`--subdir`](param/028_subdir.md) | string | Applied when `--subdir` absent and `CLR_SUBDIR` non-empty; `.` = identity; values containing `/` silently ignored (Fix: BUG-233) |
 
 **Precedence:**
 
