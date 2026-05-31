@@ -17,7 +17,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 | IT-9 | Saved file content matches active credentials exactly | Data Integrity |
 | IT-10 | Missing `name::` and no active marker exits 1 | Inference Failure |
 | IT-14 | Missing `name::` — infers from `oauthAccount.emailAddress`; falls back to active marker | Name Inference |
-| IT-11 | Save creates `{name}.claude.json` with `oauthAccount` subtree; no `.settings.json` created (BUG-174 fix) | Metadata Snapshot |
+| IT-11 | Save creates `{name}.claude.json` with `oauthAccount` subtree and `{name}.settings.json` with model (BUG-222 fix) | Metadata Snapshot |
 | IT-12 | Save succeeds when `~/.claude.json` absent — only credential file created | Metadata Snapshot / Best-Effort |
 | IT-13 | Save succeeds when `~/.claude.json` present but lacks `oauthAccount` key — no `.claude.json` snapshot created | Metadata Snapshot / Best-Effort |
 | IT-15 | Save writes active marker — `.credentials.status` shows `Account: {name}` immediately after save | Active Marker |
@@ -148,11 +148,11 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 ---
 
-### IT-11: Save creates `oauthAccount` snapshot; no settings.json created
+### IT-11: Save creates `oauthAccount` + settings snapshots
 
-- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists with `oauthAccount.displayName = "alice"`. `~/.claude/settings.json` exists with `model = "sonnet"` (present but not used by save).
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists with `oauthAccount.displayName = "alice"`. `~/.claude/settings.json` exists with `model = "sonnet"`.
 - **When:** `clp .account.save name::work@acme.com`
-- **Then:** `{credential_store}/work@acme.com.claude.json` created containing only `{"oauthAccount": {...}}`; `{credential_store}/work@acme.com.settings.json` NOT created (BUG-174 fix: settings.json is machine-global, never captured in per-account snapshot).
+- **Then:** `{credential_store}/work@acme.com.claude.json` created containing only `{"oauthAccount": {...}}`; `{credential_store}/work@acme.com.settings.json` created containing `{"model": "sonnet"}` (BUG-222 fix: model preference captured for restore by `switch_account()`).
 - **Exit:** 0
 - **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
 

@@ -1,6 +1,6 @@
 # Parameter :: `model::`
 
-Edge case tests for the `model::` parameter. Tests validate boolean enforcement, default behavior, and active model field control from settings. Used by `.credentials.status` (live `~/.claude/settings.json`). For `.accounts`, always returns `N/A` — `settings.json` is not captured in per-account snapshots (BUG-174 fix).
+Edge case tests for the `model::` parameter. Tests validate boolean enforcement, default behavior, and active model field control from settings. Used by `.credentials.status` (live `~/.claude/settings.json`). For `.accounts`, read from `{name}.settings.json` per-account snapshot (captured by `save()` — BUG-222 fix); shows `N/A` when snapshot absent or `model` field missing.
 
 **Source:** [params.md#parameter--18-model](../../../../docs/cli/param/017_model.md)
 
