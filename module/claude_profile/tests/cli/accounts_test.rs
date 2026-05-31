@@ -915,19 +915,22 @@ fn acc27_save_succeeds_without_claude_json()
 }
 
 /// acc28 (T09 — save with `.claude.json` but without `settings.json`): confirms oauthAccount
-/// extraction succeeds when `settings.json` is absent (it is never copied after BUG-174).
+/// extraction succeeds when `settings.json` source is absent; no `{name}.settings.json`
+/// snapshot is created when the source has no `model` field.
 ///
 /// Root Cause (before fix): After the initial snapshot feature was added, `save()` tried
 ///   to copy both `.claude.json` and `settings.json`; a missing `settings.json` could
-///   interfere. BUG-174 removed the `settings.json` copy entirely (machine-global config).
+///   interfere. BUG-222 added model-only capture: `save()` reads `model` from
+///   `~/.claude/settings.json` and writes `{name}.settings.json` when present.
 /// Why Not Caught: No test verified that `settings.json` absence did not affect the
 ///   `.claude.json` snapshot creation.
-/// Fix Applied (BUG-174): `settings.json` is never copied — it is machine-global config
-///   and must not be stored per-account. Only the `oauthAccount` subtree is extracted.
-/// Prevention: Explicitly verify `settings.json` is NOT created; confirm `.claude.json`
-///   snapshot is independent of `settings.json` presence.
-/// Pitfall: Machine-global files (settings.json, commands.*, mcpServers) must never be
-///   stored per-account — restoring them on `switch_account()` clobbers machine config.
+/// Fix Applied (BUG-222): `save()` captures `model` from `~/.claude/settings.json` into
+///   `{name}.settings.json` when present. When source is absent or has no `model` field,
+///   no `{name}.settings.json` is written — save still succeeds.
+/// Prevention: Explicitly verify `settings.json` snapshot is NOT created when source absent;
+///   confirm `.claude.json` snapshot is independent of `settings.json` presence.
+/// Pitfall: `save()` only captures the `model` field, not the entire `settings.json`;
+///   machine-global keys (commands.*, mcpServers) are never stored per-account.
 #[ test ]
 fn acc28_save_succeeds_without_settings_json()
 {
