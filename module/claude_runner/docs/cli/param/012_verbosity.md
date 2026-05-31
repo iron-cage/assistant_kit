@@ -24,7 +24,7 @@ clr --verbosity 4 "Debug"         # verbose command preview
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | 15 other params |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | 16 other params |
 
 ### Referenced Commands
 

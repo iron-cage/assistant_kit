@@ -15,6 +15,7 @@ Integration test planning for the `ask` command. See [command/05_ask.md](../../.
 | IT-7 | `clr ask --max-tokens 200000 "question"` → overrides default tokens | Override |
 | IT-8 | Unknown flag → exit 1, error message | Error Handling |
 | IT-9 | `clr ask --trace "question"` → stderr contains ask-specific trace output | Trace |
+| IT-10 | `clr ask --subdir NAME "question"` → effective dir ends with `/-NAME` | Subdir |
 
 ## Test Coverage Summary
 
@@ -22,8 +23,9 @@ Integration test planning for the `ask` command. See [command/05_ask.md](../../.
 - Override: 2 tests (IT-6, IT-7)
 - Error Handling: 1 test (IT-8)
 - Trace: 1 test (IT-9)
+- Subdir: 1 test (IT-10)
 
-**Total:** 9 tests
+**Total:** 10 tests
 
 ---
 
@@ -106,3 +108,12 @@ Integration test planning for the `ask` command. See [command/05_ask.md](../../.
 - **Expected behavior:** stderr contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384` and the assembled `claude --effort high --print "What is X?"` command line (no `-c`, no `--dangerously-skip-permissions`, no `--chrome`); subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)
+
+---
+
+### IT-10: `clr ask --subdir NAME "question"` → effective dir ends with `/-NAME`
+
+- **Command:** `clr ask --dry-run --subdir feature "What is X?"`
+- **Expected behavior:** Dry-run output contains a path ending in `/-feature`; ask applies conservative defaults (no `-c`, `--effort high`) alongside effective-dir routing
+- **Exit:** 0
+- **Source:** [--subdir](../../../../docs/cli/param/028_subdir.md), [command/05_ask.md](../../../../docs/cli/command/05_ask.md)

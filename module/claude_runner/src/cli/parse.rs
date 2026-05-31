@@ -33,6 +33,7 @@ pub( crate ) struct CliArgs
   pub( crate ) file                 : Option< String >,
   pub( crate ) strip_fences         : bool,
   pub( crate ) keep_claudecode      : bool,
+  pub( crate ) subdir               : Option< String >,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -121,6 +122,10 @@ fn parse_value_flag(
     "--file" =>
     {
       parsed.file = Some( next_value( tokens, next, "--file" )?.to_string() );
+    }
+    "--subdir" =>
+    {
+      parsed.subdir = Some( next_value( tokens, next, "--subdir" )?.to_string() );
     }
     "--verbosity" =>
     {
@@ -281,7 +286,7 @@ pub( super ) fn env_str( var : &str ) -> Option< String >
   std::env::var( var ).ok().filter( | v | !v.is_empty() )
 }
 
-/// Apply `CLR_*` environment variable fallbacks for the 28 run parameters.
+/// Apply `CLR_*` environment variable fallbacks for the 29 run parameters.
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
@@ -334,5 +339,6 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs )
   if parsed.file.is_none()             { parsed.file             = env_str( "CLR_FILE" ); }
   if !parsed.strip_fences              { parsed.strip_fences     = env_bool( "CLR_STRIP_FENCES" ); }
   if !parsed.keep_claudecode           { parsed.keep_claudecode  = env_bool( "CLR_KEEP_CLAUDECODE" ); }
+  if parsed.subdir.is_none()           { parsed.subdir           = env_str( "CLR_SUBDIR" ); }
 }
 

@@ -27,8 +27,8 @@
 | Stale-ref guards + dep constraints (IT-2, IT-3, IT-4) | `stale_ref_guard_test.rs` | No `claude_runner_plugin` or `dream_agent` refs; dep constraint invariants |
 | Isolated subcommand | `isolated_test.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection |
 | Strip-fences unit (sf01–sf08) | `fence_test.rs` | `strip_fences` correctness: pair stripping, pass-through, edge cases |
-| CLR_* env vars (E01–E28) | `env_var_test.rs` | CLR_* env var fallback for all 28 params, CLI-wins checks |
-| User stories (US-1–US-4 × 21) | `user_story_test.rs` | End-to-end user story workflows for all 21 user stories |
+| CLR_* env vars (E01–E29) | `env_var_test.rs` | CLR_* env var fallback for all 28 params, CLI-wins checks |
+| User stories (US-1–US-5 × 22) | `user_story_test.rs` | End-to-end user story workflows for all 22 user stories |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
 ### Responsibility Table
@@ -52,8 +52,8 @@
 | `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`. |
 | `param_group_test.rs` | Param group combined invocations (CC-N): multi-flag interaction tests. |
 | `fence_test.rs` | `strip_fences` unit tests: fence-pair stripping, pass-through, edge cases (sf01–sf08). |
-| `env_var_test.rs` | CLR_* env var fallback: E01–E28, one per param, CLI-wins verification. |
-| `user_story_test.rs` | User story end-to-end workflows: US-1–US-4 for all 21 stories from `tests/docs/cli/user_story/`. |
+| `env_var_test.rs` | CLR_* env var fallback: E01–E29, one per param (+ CLR_SUBDIR E29), CLI-wins verification. |
+| `user_story_test.rs` | User story end-to-end workflows: US-1–US-4 for all 22 stories from `tests/docs/cli/user_story/`. |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

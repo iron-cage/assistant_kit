@@ -24,6 +24,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--interactive`](../param/006_interactive.md) | bool | false | Interactive TTY passthrough when message given |
 | [`--new-session`](../param/007_new_session.md) | bool | false | Start fresh session (disables default continuation) |
 | [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory |
+| [`--subdir`](../param/028_subdir.md) | string | `.` | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity |
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 200000 | Max output tokens |
 | [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage directory |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Print command without executing |
@@ -120,3 +121,4 @@ clr --dry-run "Run tests" --max-tokens 50000
 | 11 | [011_file_input.md](../user_story/011_file_input.md) | Developer |
 | 12 | [012_code_block_extraction.md](../user_story/012_code_block_extraction.md) | Developer |
 | 13 | [013_structured_json_pipeline.md](../user_story/013_structured_json_pipeline.md) | Developer |
+| 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |

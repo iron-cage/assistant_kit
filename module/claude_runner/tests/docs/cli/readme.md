@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 5 clr commands, all 27 parameters, all 12 types, all 4 parameter groups, 2 env parameter specs, 21 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 5 clr commands, all 28 parameters, all 12 types, all 4 parameter groups, 2 env parameter specs, 22 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -26,11 +26,11 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
 | Commands | 5 | ≥8 IT each |
-| Parameters | 27 | ≥6 EC each |
+| Parameters | 28 | ≥6 EC each |
 | Parameter groups | 4 | ≥4 CC each |
 | Types | 12 | ≥4 TC each |
 | Env params | 2 | ≥6 EC each |
-| User stories | 21 | ≥4 US each |
+| User stories | 22 | ≥4 US each |
 | Dictionary | 1 | ≥4 DT total |
 
 ### Navigation
@@ -70,6 +70,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`--file`](param/25_file.md)
 - [`--strip-fences`](param/26_strip_fences.md)
 - [`--keep-claudecode`](param/27_keep_claudecode.md)
+- [`--subdir`](param/28_subdir.md)
 
 #### Parameter Groups
 - [Claude-Native Flags](param_group/01_claude_native_flags.md)
@@ -113,7 +114,8 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [MCP Config Injection](user_story/19_mcp_config_injection.md)
 - [Suppress Effort Max](user_story/20_suppress_effort_max.md)
 - [Keep ClaudeCode Context](user_story/21_keep_claudecode_context.md)
+- [Session Isolation via Subdirectory](user_story/22_session_isolation_subdir.md)
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)
-- [`CLR_* (28 vars)`](env_param/02_clr_input_vars.md)
+- [`CLR_* (29 vars)`](env_param/02_clr_input_vars.md)

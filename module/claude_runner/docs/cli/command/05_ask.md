@@ -1,7 +1,7 @@
 # CLI Command: ask
 
 Quick single-turn Q&A with lightweight defaults. Facade of `run` — accepts the same
-25 parameters but with defaults tuned for read-only, single-turn consultation. No
+26 parameters but with defaults tuned for read-only, single-turn consultation. No
 tools, no session continuation, no extended thinking unless explicitly overridden.
 
 **Syntax:**
@@ -12,7 +12,7 @@ clr ask [OPTIONS] [MESSAGE]
 
 **Parameters:**
 
-All 25 parameters from [`run`](01_run.md) are accepted. The following defaults differ:
+All 26 parameters from [`run`](01_run.md) are accepted. The following defaults differ:
 
 | Parameter | `run` default | `ask` default | Notes |
 |-----------|---------------|---------------|-------|
@@ -78,3 +78,4 @@ be reversed within `ask`; use `run` when full control is needed.
 | # | User Story | Persona |
 |---|------------|---------|
 | 15 | [015_ask_mode.md](../user_story/015_ask_mode.md) | Developer |
+| 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |

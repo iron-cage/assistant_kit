@@ -7,21 +7,21 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (29 total)
+### All Env Parameters (30 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
-| Input (CLR_*) — `run` subcommand | 25 | Caller env fallbacks for `run` parameters |
+| Input (CLR_*) — `run` subcommand | 26 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 29 environment variables
+**Total:** 30 environment variables
 
 ---
 
 ### Env Param 1: CLR_* Input Parameters — `run` Subcommand
 
-Environment variable fallbacks for all 25 `run` subcommand parameters.
+Environment variable fallbacks for all 26 `run` subcommand parameters.
 `apply_env_vars()` in `src/cli/parse.rs` reads these immediately after CLI parsing, before command
 dispatch. Each variable is applied **only when the corresponding CLI field is still at its
 zero/absent value** — the CLI flag always wins when both are present.
@@ -59,6 +59,7 @@ invalid values (parse failure → field stays at default).
 | 23 | `CLR_FILE` | [`--file`](param/025_file.md) | string | Applied when `--file` absent; value is the file path |
 | 24 | `CLR_STRIP_FENCES` | [`--strip-fences`](param/026_strip_fences.md) | bool | |
 | 25 | `CLR_KEEP_CLAUDECODE` | [`--keep-claudecode`](param/027_keep_claudecode.md) | bool | |
+| 26 | `CLR_SUBDIR` | [`--subdir`](param/028_subdir.md) | string | Applied when `--subdir` absent and `CLR_SUBDIR` non-empty; `.` = identity |
 
 **Precedence:**
 

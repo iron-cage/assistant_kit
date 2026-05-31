@@ -24,7 +24,7 @@ clr --dry-run "test" --model sonnet --max-tokens 50000
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | 15 other params |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | 16 other params |
 
 ### Referenced Commands
 
@@ -40,3 +40,4 @@ clr --dry-run "test" --model sonnet --max-tokens 50000
 | 4 | [004_dry_run_preview.md](../user_story/004_dry_run_preview.md) | Developer |
 | 6 | [006_verbose_debugging.md](../user_story/006_verbose_debugging.md) | Developer |
 | 8 | [008_trace_execution.md](../user_story/008_trace_execution.md) | Developer |
+| 18 | [018_env_var_configuration.md](../user_story/018_env_var_configuration.md) | Developer |

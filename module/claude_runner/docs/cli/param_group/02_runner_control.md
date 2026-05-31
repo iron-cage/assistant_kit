@@ -6,7 +6,7 @@
 
 ### Semantic Coherence Test
 
-"Is this flag consumed by the runner, not Claude?" — YES for all 16.
+"Is this flag consumed by the runner, not Claude?" — YES for all 17.
 
 ### Why NOT X
 
@@ -38,8 +38,8 @@ clr --trace "Fix bug" --dir /project
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 16 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 16 params apply; only defaults differ |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 17 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 17 params apply; only defaults differ |
 
 ### Referenced Parameters
 
@@ -49,6 +49,7 @@ clr --trace "Fix bug" --dir /project
 | [`--interactive`](../param/006_interactive.md) | bool | false | Mode selector | Interactive TTY passthrough when message given |
 | [`--new-session`](../param/007_new_session.md) | bool | false | Session mode | Start fresh session (disable default continuation) |
 | [`--dir`](../param/008_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | cwd | Working directory | Working directory for subprocess |
+| [`--subdir`](../param/028_subdir.md) | string | `.` | Named workspace | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity |
 | [`--max-tokens`](../param/009_max_tokens.md) | [`TokenLimit`](../type/03_token_limit.md) | 200000 | Token cap | Max output tokens |
 | [`--session-dir`](../param/010_session_dir.md) | [`DirectoryPath`](../type/02_directory_path.md) | — | Session storage | Session storage directory |
 | [`--dry-run`](../param/011_dry_run.md) | bool | false | Execution gate | Preview without executing |
@@ -83,3 +84,4 @@ clr --trace "Fix bug" --dir /project
 | 12 | [012_code_block_extraction.md](../user_story/012_code_block_extraction.md) | Developer |
 | 20 | [020_suppress_effort_max.md](../user_story/020_suppress_effort_max.md) | Developer |
 | 21 | [021_keep_claudecode_context.md](../user_story/021_keep_claudecode_context.md) | Developer |
+| 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |
