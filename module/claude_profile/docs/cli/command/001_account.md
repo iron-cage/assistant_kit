@@ -174,7 +174,7 @@ clp .account.use name::alice@home.com trace::1
 **Notes:**
 - `touch::1` (default): fetches quota for the target account; if `five_hour.resets_at` is absent (idle), spawns `run_isolated(["--print", "."])` with resolved model/effort to start a 5h session. Quota fetch failure checks `expiresAt` — if locally expired, exits 3 with an error; if not expired, skips touch silently and the switch completes.
 - `touch::0`: pure credential rotation — no quota fetch, no subprocess, no expiry check. Pre-Feature-027 behavior.
-- `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `resolve_model()` selects Sonnet when `7d(Son) ≥ 30%`, Opus otherwise; `resolve_effort()` maps Sonnet → `high`, Opus → `max`, Haiku → no flag. `imodel::haiku` is explicit only — `auto` never selects it.
+- `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `resolve_model()` selects Sonnet when `7d(Son) ≥ 20%`, Opus otherwise; `resolve_effort()` maps Sonnet → `high`, Opus → `max`, Haiku → no flag. `imodel::haiku` is explicit only — `auto` never selects it.
 - `trace::1` only produces output when `touch::1`; with `touch::0` there are no fetch operations to trace.
 - See [feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) for full execution sequence and acceptance criteria.
 

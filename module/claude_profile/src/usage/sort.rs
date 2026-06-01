@@ -5,7 +5,7 @@
 
 use crate::output::format_duration_secs;
 use super::types::{ AccountQuota, SortStrategy, PreferStrategy, NextStrategy };
-use super::format::{ five_hour_left, prefer_weekly };
+use super::format::{ five_hour_left, prefer_weekly, renewal_secs };
 
 // ── Sort ──────────────────────────────────────────────────────────────────────
 
@@ -125,25 +125,34 @@ pub( crate ) fn sort_indices(
 
     SortStrategy::Renew =>
     {
-      let reset_secs_of = |i : usize| -> u64
+      // Fix(BUG-229): sort key is min(7d_reset, sub_renewal) — subscription renewal is a
+      //   significant quota event just like 7d reset; ignoring it caused wrong sort order.
+      // Root cause: original code used only seven_day.resets_at, missing subscription leg.
+      // Pitfall: renewal_secs returns None when no account data is present; treat as u64::MAX
+      //   (never fires), matching the convention for absent reset timers.
+      let renewal_event_secs = |i : usize| -> u64
       {
-        if let Ok( data ) = &accounts[ i ].result
-        {
-          data.seven_day.as_ref()
-            .and_then( |p| p.resets_at.as_deref() )
-            .and_then( claude_quota::iso_to_unix_secs )
-            .map_or( u64::MAX, |t| t.saturating_sub( now_secs ) )
-        }
-        else { u64::MAX }
+        let aq = &accounts[ i ];
+        let Ok( data ) = &aq.result else { return u64::MAX; };
+        let d7 = data.seven_day.as_ref()
+          .and_then( |p| p.resets_at.as_deref() )
+          .and_then( claude_quota::iso_to_unix_secs )
+          .map_or( u64::MAX, |t| t.saturating_sub( now_secs ) );
+        let sub = renewal_secs(
+          aq.renewal_at.as_deref(),
+          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          now_secs,
+        ).map_or( u64::MAX, |( s, _ )| s );
+        d7.min( sub )
       };
 
       let ( mut non_exhausted, exhausted_vec ) : ( Vec< usize >, Vec< usize > ) =
         all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 15.0 );
 
-      // Canonical: ascending 7d reset_secs (soonest weekly reset first); tiebreak ascending prefer_weekly.
+      // Canonical: ascending min(7d_reset, sub_renewal) (soonest event first); tiebreak ascending prefer_weekly.
       non_exhausted.sort_by( |&a, &b|
       {
-        reset_secs_of( a ).cmp( &reset_secs_of( b ) )
+        renewal_event_secs( a ).cmp( &renewal_event_secs( b ) )
           .then_with( ||
           {
             let wa = prefer_weekly( &accounts[ a ], prefer );
@@ -155,6 +164,40 @@ pub( crate ) fn sort_indices(
       if reversed { non_exhausted.reverse(); }
       non_exhausted.extend( exhausted_vec );
       non_exhausted
+    }
+
+    SortStrategy::Expires =>
+    {
+      // Sort by token expiry (expires_at_ms) ascending — accounts expiring soonest appear first.
+      // Accounts with expires_at_ms == 0 (unknown expiry) are placed at the end.
+      let expiry_secs_of = |i : usize| -> u64
+      {
+        let ms = accounts[ i ].expires_at_ms;
+        if ms == 0 { u64::MAX } else { ms / 1000 }
+      };
+      let mut v = all;
+      v.sort_by_key( |&a| expiry_secs_of( a ) );
+      if reversed { v.reverse(); }
+      v
+    }
+
+    SortStrategy::Renews =>
+    {
+      // Sort by subscription renewal timer ascending — accounts whose billing cycle renews
+      // soonest appear first. Accounts without subscription data score u64::MAX (placed last).
+      let renews_secs_of = |i : usize| -> u64
+      {
+        let aq = &accounts[ i ];
+        renewal_secs(
+          aq.renewal_at.as_deref(),
+          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          now_secs,
+        ).map_or( u64::MAX, |( s, _ )| s )
+      };
+      let mut v = all;
+      v.sort_by_key( |&a| renews_secs_of( a ) );
+      if reversed { v.reverse(); }
+      v
     }
 
     // sort::next is always resolved to Drain or Endurance in parse_usage_params
@@ -193,8 +236,8 @@ where F : Fn( &AccountQuota ) -> bool
 /// eligible (non-current, non-active, non-expired, `Ok`) account.
 /// `Drain` additionally skips accounts where `prefer_weekly == 0` — nothing
 /// remains to drain, so recommending them would be self-defeating.
-/// `Renew` picks the eligible account whose minimum running reset timer
-/// (min of `5h_resets_at` and `7d_resets_at`) fires soonest. Absent timers
+/// `Renew` picks the eligible account whose minimum renewal event
+/// (min of `7d_resets_at` and `subscription_renewal`) fires soonest. Absent timers
 /// score as `u64::MAX` (account never started — treated as furthest out).
 pub( crate ) fn find_next_for_strategy(
   accounts  : &[ AccountQuota ],
@@ -207,20 +250,24 @@ pub( crate ) fn find_next_for_strategy(
   {
     NextStrategy::Renew =>
     {
-      // Compute the soonest running reset timer for one account (in secs from now).
-      // Uses actual `resets_at` fields — not account index or name (Anti-Cheating §5).
-      let min_reset_secs_of = |aq : &AccountQuota| -> u64
+      // Fix(BUG-229): criterion is min(7d_reset, sub_renewal) — the soonest quota
+      //   renewal event, whether a weekly window reset or a subscription billing cycle.
+      // Root cause: previous code used min(h5, d7); 5h is NOT a renewal event, and
+      //   subscription renewal was completely ignored.
+      // Pitfall: absent timers must score u64::MAX (never fires), not 0 (immediately).
+      let renewal_event_secs_of = |aq : &AccountQuota| -> u64
       {
         let Ok( data ) = &aq.result else { return u64::MAX; };
-        let h5 = data.five_hour.as_ref()
-          .and_then( |p| p.resets_at.as_deref() )
-          .and_then( claude_quota::iso_to_unix_secs )
-          .map_or( u64::MAX, |t| t.saturating_sub( now_secs ) );
         let d7 = data.seven_day.as_ref()
           .and_then( |p| p.resets_at.as_deref() )
           .and_then( claude_quota::iso_to_unix_secs )
           .map_or( u64::MAX, |t| t.saturating_sub( now_secs ) );
-        h5.min( d7 )
+        let sub = renewal_secs(
+          aq.renewal_at.as_deref(),
+          aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+          now_secs,
+        ).map_or( u64::MAX, |( s, _ )| s );
+        d7.min( sub )
       };
       ( 0..accounts.len() )
         .filter( |&i|
@@ -230,7 +277,7 @@ pub( crate ) fn find_next_for_strategy(
             && ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) > 0
             && aq.result.is_ok()
         } )
-        .min_by_key( |&i| min_reset_secs_of( &accounts[ i ] ) )
+        .min_by_key( |&i| renewal_event_secs_of( &accounts[ i ] ) )
     }
     NextStrategy::Endurance =>
     {
@@ -268,15 +315,24 @@ pub( crate ) fn strategy_metric(
   {
     NextStrategy::Renew =>
     {
-      let h5_str = data.five_hour.as_ref()
-        .and_then( |p| p.resets_at.as_deref() )
-        .and_then( claude_quota::iso_to_unix_secs )
-        .map_or_else( || "\u{2014}".to_string(), |t| format_duration_secs( t.saturating_sub( now_secs ) ) );
+      // Fix(BUG-229): show min(7d_reset, sub_renewal) — the two legs of the renew criterion.
+      // Root cause: previous format showed 5h and 7d timers; 5h is not a renewal event.
+      // Pitfall: subscription renewal may be absent (no OauthAccountData); show only 7d in that case.
       let d7_str = data.seven_day.as_ref()
         .and_then( |p| p.resets_at.as_deref() )
         .and_then( claude_quota::iso_to_unix_secs )
         .map_or_else( || "\u{2014}".to_string(), |t| format_duration_secs( t.saturating_sub( now_secs ) ) );
-      format!( "{session_pct:.0}% session, 5h resets in {h5_str} / 7d resets in {d7_str}" )
+      let sub_pair = renewal_secs(
+        aq.renewal_at.as_deref(),
+        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        now_secs,
+      );
+      match sub_pair
+      {
+        Some( ( s, false ) ) => format!( "7d resets in {d7_str}, renews in {}", format_duration_secs( s ) ),
+        Some( ( s, true  ) ) => format!( "7d resets in {d7_str}, ~renews in {}", format_duration_secs( s ) ),
+        None                 => format!( "7d resets in {d7_str}" ),
+      }
     }
     NextStrategy::Endurance =>
     {
@@ -1101,6 +1157,306 @@ mod tests
     assert!(
       result.contains( "7d resets in" ),
       "BUG-216 regression: 7d-binding reset label must be '7d resets in'; got: {result}",
+    );
+  }
+
+  // ── BUG-229: renew criterion must use min(7d_reset, sub_renewal) ──────────
+
+  /// BUG-229 MRE: `sort::renew` must rank the account with the soonest subscription
+  /// renewal above one with a sooner 7d reset when the subscription fires first.
+  ///
+  /// # Root Cause
+  /// `sort_indices::Renew` closure used only `seven_day.resets_at`, ignoring the
+  /// subscription renewal leg entirely.
+  ///
+  /// # Why Not Caught
+  /// All prior renew sort tests set `renewal_at: None`, so the subscription leg
+  /// was always `u64::MAX` and the 7d timer always won by default.
+  ///
+  /// # Fix Applied
+  /// `renewal_event_secs` closure computes `d7.min(sub)` where `sub` comes from
+  /// `renewal_secs(aq.renewal_at, aq.account.org_created_at, now_secs)`.
+  ///
+  /// # Prevention
+  /// All renew sort tests that exercise the primary sort key must include at least
+  /// one account with `renewal_at` set shorter than the 7d reset.
+  ///
+  /// # Pitfall
+  /// `mk_aq_with_7d_reset` sets `renewal_at: None`; to test subscription leg, mutate
+  /// the struct after construction or build it directly.
+  #[ doc = "bug_reproducer(BUG-229)" ]
+  #[ test ]
+  fn mre_bug229_sort_renew_subscription_sooner_than_7d_ranks_first()
+  {
+    let now : u64 = 1_700_000_000;
+    // Account A: 7d_reset = 1h, no subscription → renewal_event = 3600s.
+    let acct_a = mk_aq_with_7d_reset( "a@test.com", 30.0, now, 3600 );
+    // Account B: 7d_reset = 24h, subscription renewal = 30min → renewal_event = min(86400,1800) = 1800s.
+    let mut acct_b = mk_aq_with_7d_reset( "b@test.com", 30.0, now, 86400 );
+    acct_b.renewal_at = Some( reset_iso_at( now, 1800 ) );
+
+    let accounts = vec![ acct_a, acct_b ];
+    let indices  = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, now );
+
+    assert_eq!(
+      accounts[ indices[ 0 ] ].name, "b@test.com",
+      "BUG-229: sort::renew must rank b first (sub 30min < a 7d 1h); got: {}",
+      accounts[ indices[ 0 ] ].name,
+    );
+    assert_eq!(
+      accounts[ indices[ 1 ] ].name, "a@test.com",
+      "BUG-229: sort::renew must rank a second; got: {}",
+      accounts[ indices[ 1 ] ].name,
+    );
+  }
+
+  /// BUG-229 MRE: `next::renew` must pick the account with the soonest subscription
+  /// renewal when it fires before any 7d reset.
+  ///
+  /// # Root Cause
+  /// `find_next_for_strategy::Renew` closure used `h5.min(d7)` — 5h is not a renewal
+  /// event, and subscription renewal was never consulted.
+  ///
+  /// # Why Not Caught
+  /// All prior `next::renew` tests set `renewal_at: None`, exercising only the 7d leg.
+  ///
+  /// # Fix Applied
+  /// `renewal_event_secs_of` closure computes `d7.min(sub)` using `renewal_secs`.
+  ///
+  /// # Prevention
+  /// `find_next_for_strategy` tests must exercise the subscription leg with a concrete
+  /// `renewal_at` value that fires before the 7d timer of the competing account.
+  ///
+  /// # Pitfall
+  /// `renewal_secs` returns `None` for accounts with no `renewal_at` and no
+  /// `account.org_created_at`; those score `u64::MAX` for the sub leg (correct: never fires).
+  #[ doc = "bug_reproducer(BUG-229)" ]
+  #[ test ]
+  fn mre_bug229_find_next_renew_picks_account_with_sooner_subscription()
+  {
+    let now : u64 = 1_700_000_000;
+    // Account A: is_current → skip.
+    let mut acct_a = mk_aq_sort( "a@test.com", 30.0, FAR_FUTURE_MS );
+    acct_a.is_current = true;
+    // Account B: 7d_reset = 24h, subscription renewal = 30min → event = 1800s.
+    let mut acct_b = mk_aq_with_7d_reset( "b@test.com", 30.0, now, 86400 );
+    acct_b.renewal_at = Some( reset_iso_at( now, 1800 ) );
+    // Account C: 7d_reset = 1h, no subscription → event = 3600s.
+    let acct_c = mk_aq_with_7d_reset( "c@test.com", 30.0, now, 3600 );
+
+    let accounts = vec![ acct_a, acct_b, acct_c ];
+    let winner   = find_next_for_strategy( &accounts, NextStrategy::Renew, PreferStrategy::Any, now );
+
+    assert_eq!(
+      winner, Some( 1 ),
+      "BUG-229: next::renew must pick b (sub 30min < c 7d 1h); got: {winner:?}",
+    );
+    assert_eq!( accounts[ winner.unwrap() ].name, "b@test.com",
+      "BUG-229: winner name must be b@test.com" );
+  }
+
+  /// BUG-229 MRE: `strategy_metric(Renew)` must show `"7d resets in X, renews in Y"`
+  /// when subscription data is present (exact), and `"7d resets in X"` only when absent.
+  ///
+  /// # Root Cause
+  /// Previous format was `"{pct}% session, 5h resets in {h5} / 7d resets in {d7}"` — the
+  /// criterion timers (d7 + sub) were not shown; session% and 5h are irrelevant to renew.
+  ///
+  /// # Why Not Caught
+  /// No test asserted the renew metric format; only drain/endurance metric tests existed.
+  ///
+  /// # Fix Applied
+  /// Renew arm now computes `d7_str` and `sub_pair` from `renewal_secs`, producing
+  /// `"7d resets in {d7}, renews in {sub}"` or `"7d resets in {d7}"` when no sub data.
+  ///
+  /// # Prevention
+  /// Test all three branches: exact sub, estimated sub (via `org_created_at`), no sub.
+  ///
+  /// # Pitfall
+  /// `strategy_metric` receives `&AccountQuota` — the test must include `renewal_at` and/or
+  /// `account: Some(OauthAccountData{...})` on the struct, not on the `OauthUsageData` inside.
+  #[ doc = "bug_reproducer(BUG-229)" ]
+  #[ test ]
+  fn mre_bug229_strategy_metric_renew_exact_sub_shows_both_timers()
+  {
+    let now  = 1_700_000_000_u64;
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 30.0, resets_at : None } ),
+      seven_day        : Some( claude_quota::PeriodUsage
+      {
+        utilization : 50.0,
+        resets_at   : Some( reset_iso_at( now, 86400 ) ),  // 7d reset in 24h
+      } ),
+      seven_day_sonnet : None,
+    };
+    let aq = AccountQuota
+    {
+      name          : "test@example.com".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Ok( data ),
+      account       : None,
+      host          : String::new(),
+      role          : String::new(),
+      renewal_at    : Some( reset_iso_at( now, 3600 ) ),  // exact sub renewal in 1h
+    };
+
+    let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now );
+
+    assert!(
+      metric.contains( "7d resets in" ),
+      "BUG-229: renew metric with sub must show '7d resets in': {metric}",
+    );
+    assert!(
+      metric.contains( "renews in" ),
+      "BUG-229: renew metric with exact sub must show 'renews in': {metric}",
+    );
+    assert!(
+      !metric.contains( "~renews" ),
+      "BUG-229: exact sub renewal must not have '~' prefix: {metric}",
+    );
+    assert!(
+      !metric.contains( "session" ),
+      "BUG-229: renew metric must not show session%%: {metric}",
+    );
+    assert!(
+      !metric.contains( "5h resets" ),
+      "BUG-229: renew metric must not show 5h timer: {metric}",
+    );
+  }
+
+  #[ doc = "bug_reproducer(BUG-229)" ]
+  #[ test ]
+  fn mre_bug229_strategy_metric_renew_no_sub_shows_7d_only()
+  {
+    let now  = 1_700_000_000_u64;
+    let data = claude_quota::OauthUsageData
+    {
+      five_hour        : Some( claude_quota::PeriodUsage { utilization : 30.0, resets_at : None } ),
+      seven_day        : Some( claude_quota::PeriodUsage
+      {
+        utilization : 50.0,
+        resets_at   : Some( reset_iso_at( now, 3600 ) ),
+      } ),
+      seven_day_sonnet : None,
+    };
+    let aq = AccountQuota
+    {
+      name          : "test@example.com".to_string(),
+      is_current    : false,
+      is_active     : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Ok( data ),
+      account       : None,
+      host          : String::new(),
+      role          : String::new(),
+      renewal_at    : None,  // no subscription data
+    };
+
+    let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now );
+
+    assert!(
+      metric.contains( "7d resets in" ),
+      "BUG-229: renew metric without sub must still show '7d resets in': {metric}",
+    );
+    assert!(
+      !metric.contains( "renews" ),
+      "BUG-229: renew metric without sub must not show 'renews': {metric}",
+    );
+    assert!(
+      !metric.contains( "session" ),
+      "BUG-229: renew metric must not show session%%: {metric}",
+    );
+  }
+
+  // ── BUG-224: sort::expires and sort::renews ───────────────────────────────
+
+  /// BUG-224: `sort::expires` sorts by `expires_at_ms` ascending — soonest expiry first.
+  ///
+  /// # Root Cause (BUG-224)
+  /// No sort strategy exposed token expiry or billing renewal as sort dimensions; users
+  /// wanting to see which accounts expire soonest had no direct way to order them.
+  ///
+  /// # Fix Applied
+  /// `SortStrategy::Expires` arm sorts by `expires_at_ms / 1000` ascending; accounts with
+  /// `expires_at_ms == 0` (unknown expiry) score `u64::MAX` and appear last.
+  ///
+  /// # Prevention
+  /// Asserts that the account with the soonest expiry appears first and the account with
+  /// no expiry data (0) appears last.
+  ///
+  /// # Pitfall
+  /// `expires_at_ms == 0` means unknown, not epoch — treat as `u64::MAX`, not smallest.
+  #[ test ]
+  fn test_sort_expires_ascending()
+  {
+    let soon_ms   = 1_700_000_000_000_u64;  // expires soonest
+    let later_ms  = 1_800_000_000_000_u64;  // expires later
+    let unknown   = 0_u64;                   // unknown expiry → last
+
+    let accounts = vec![
+      mk_aq_sort( "later@test.com",   50.0, later_ms  ),
+      mk_aq_sort( "unknown@test.com", 50.0, unknown   ),
+      mk_aq_sort( "soon@test.com",    50.0, soon_ms   ),
+    ];
+    let idx = sort_indices( &accounts, SortStrategy::Expires, None, PreferStrategy::Any, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "soon@test.com",
+      "sort::expires: soonest expiry must be first",
+    );
+    assert_eq!(
+      accounts[ idx[ 1 ] ].name, "later@test.com",
+      "sort::expires: later expiry must be second",
+    );
+    assert_eq!(
+      accounts[ idx[ 2 ] ].name, "unknown@test.com",
+      "sort::expires: unknown expiry (expires_at_ms=0) must be last",
+    );
+  }
+
+  /// BUG-224: `sort::renews` sorts by subscription renewal timer ascending — soonest renewal first.
+  ///
+  /// # Root Cause (BUG-224)
+  /// See `test_sort_expires_ascending`. Billing renewal was not a sort dimension.
+  ///
+  /// # Fix Applied
+  /// `SortStrategy::Renews` arm sorts by `renewal_secs(aq.renewal_at, org_created_at, now)`;
+  /// accounts with no renewal data score `u64::MAX` and appear last.
+  ///
+  /// # Prevention
+  /// Asserts account with soonest `renewal_at` appears first; account with no `renewal_at` last.
+  ///
+  /// # Pitfall
+  /// `renewal_at` is an ISO-8601 string on `AccountQuota`. Use `reset_iso_at` to build
+  /// deterministic timestamps relative to `now`.
+  #[ test ]
+  fn test_sort_renews_ascending()
+  {
+    let now : u64 = 1_700_000_000;
+    // Account: renewal in 1h.
+    let mut acct_soon = mk_aq_sort( "soon_renew@test.com", 50.0, FAR_FUTURE_MS );
+    acct_soon.renewal_at = Some( reset_iso_at( now, 3_600 ) );
+    // Account: renewal in 24h.
+    let mut acct_later = mk_aq_sort( "later_renew@test.com", 50.0, FAR_FUTURE_MS );
+    acct_later.renewal_at = Some( reset_iso_at( now, 86_400 ) );
+    // Account: no renewal data.
+    let acct_none = mk_aq_sort( "no_renew@test.com", 50.0, FAR_FUTURE_MS );
+
+    let accounts = vec![ acct_later, acct_none, acct_soon ];
+    let idx = sort_indices( &accounts, SortStrategy::Renews, None, PreferStrategy::Any, now );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "soon_renew@test.com",
+      "sort::renews: soonest renewal must be first",
+    );
+    assert_eq!(
+      accounts[ idx[ 1 ] ].name, "later_renew@test.com",
+      "sort::renews: later renewal must be second",
+    );
+    assert_eq!(
+      accounts[ idx[ 2 ] ].name, "no_renew@test.com",
+      "sort::renews: no renewal data must be last (scored as u64::MAX)",
     );
   }
 }

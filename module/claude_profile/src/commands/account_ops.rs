@@ -124,9 +124,10 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     .map_err( |e| io_err_to_error_data( &e, "account use" ) )?;
 
   // Post-switch: activate idle session if quota indicated it was idle before switch.
+  // Fix(BUG-225): also performs quota-aware Sonnet→Opus session model override when 7d(Son) < 20%.
   if let Some( ctx ) = touch_ctx
   {
-    crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str, trace );
+    crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str, trace, &paths );
   }
 
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )

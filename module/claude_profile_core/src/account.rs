@@ -517,6 +517,50 @@ pub fn auto_rotate( credential_store : &Path, paths : &ClaudePaths ) -> Result< 
   Ok( name )
 }
 
+/// Override the session model to Opus in `~/.claude/settings.json` when the current model is Sonnet.
+///
+/// Returns `true` when the override was written (current model was Sonnet or absent);
+/// `false` when the model was already non-Sonnet (Opus, Haiku, etc.) — no write occurs.
+///
+/// Best-effort: any I/O failure is silently ignored (same policy as the `switch_account`
+/// model-restore block — `settings.json` mutations must never fail the caller).
+///
+/// # Fix(BUG-225)
+///
+/// `switch_account()` restores the snapshot model unconditionally, ignoring current quota.
+/// When Sonnet quota is low (< 20%), this leaves the session on Sonnet even though
+/// `resolve_model(auto)` would have selected Opus. This function corrects the session model
+/// after the switch, keeping it consistent with the subprocess model threshold.
+///
+/// # Pitfall
+///
+/// Only fires when quota data is available (i.e., `touch_ctx` is `Some`). When the quota
+/// fetch returns 429 (`touch_ctx = None`), the model-aware upgrade cannot fire and the
+/// snapshot model is used as-is. See BUG-226 for the documented limitation.
+#[ must_use ]
+#[ inline ]
+pub fn override_session_model_to_opus( paths : &ClaudePaths ) -> bool
+{
+  let path = paths.settings_file();
+  let mut live = std::fs::read_to_string( &path )
+    .ok()
+    .and_then( | s | serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  let Some( obj ) = live.as_object_mut() else { return false; };
+  let current = obj.get( "model" ).and_then( | v | v.as_str() ).unwrap_or( "" );
+  // Override Sonnet → Opus. Already-Opus/Haiku/other models are left unchanged.
+  if current == "claude-sonnet-4-6" || current.is_empty()
+  {
+    obj.insert( "model".to_string(), serde_json::Value::String( "claude-opus-4-6".to_string() ) );
+    let _ = std::fs::write( path, serde_json::to_string( &live ).unwrap_or_default() );
+    true
+  }
+  else
+  {
+    false
+  }
+}
+
 /// Validate that a named account can be deleted (name valid + file exists).
 ///
 /// Called by both `delete` and the CLI dry-run path so that dry-run

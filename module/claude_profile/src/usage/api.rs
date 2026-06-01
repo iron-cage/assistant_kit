@@ -187,6 +187,8 @@ pub( crate ) fn pre_switch_touch_ctx(
 ///
 /// When `trace` is true, emits `[trace] account.use  {name}  model: ...  effort: ...` and
 /// `[trace] account.use  {name}  subprocess: spawned` to stderr after dispatching.
+/// When the Sonnet→Opus override fires (BUG-225), also emits
+/// `[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)`.
 ///
 /// `imodel_str` and `effort_str` must have been pre-validated by [`validate_imodel_str`]
 /// / [`validate_effort_str`]; the `parse()` calls below are infallible on validated input.
@@ -202,10 +204,27 @@ pub( crate ) fn apply_post_switch_touch(
   imodel_str : &str,
   effort_str : &str,
   trace      : bool,
+  paths      : &crate::ClaudePaths,
 )
 {
   let imodel = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
   let effort = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
+  // Fix(BUG-225): quota-aware Sonnet→Opus session model override.
+  // Root cause: switch_account() restores snapshot model unconditionally; snapshot may pre-date
+  //   Sonnet quota depletion, leaving the session on Sonnet even when quota is now < 20%.
+  // Pitfall: override only fires when touch_ctx is available (quota fetch succeeded).
+  // Limitation(BUG-226): when quota fetch returns 429 (rate-limited) or any other error,
+  //   touch_ctx is None — apply_post_switch_touch is never called and this override cannot fire.
+  //   The snapshot model is installed as-is; the user must manually override via imodel::opus.
+  let sonnet_left = ctx.quota.seven_day_sonnet.as_ref().map_or( 0.0, | p | 100.0 - p.utilization );
+  if sonnet_left < 20.0
+  {
+    let overrode = crate::account::override_session_model_to_opus( paths );
+    if overrode && trace
+    {
+      eprintln!( "[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
+    }
+  }
   // Build a minimal AccountQuota to reuse the existing resolve_model() path.
   let aq = AccountQuota
   {

@@ -22,10 +22,16 @@ fn b6_sessions_accumulate_in_real_project()
 
   // Include ALL .jsonl files (including agent and zero-byte) to check long-term accumulation.
   // Threshold >= 5 distinguishes this from B2's creation check (>= 2).
-  let has_many = projects.iter().any( | p | super::find_all_jsonl( p ).len() >= 5 );
+  let max_count = projects.iter()
+    .map( | p | super::find_all_jsonl( p ).len() )
+    .max()
+    .unwrap_or( 0 );
+
+  eprintln!( "B6: max .jsonl count across all projects = {max_count}" );
+
   assert!(
-    has_many,
-    "B6 violated: no project has 5+ .jsonl files.\n\
+    max_count >= 5,
+    "B6 violated: no project has 5+ .jsonl files (max = {max_count}).\n\
      Claude Code may be rotating or compacting session files (threshold >= 5 tests non-rotation)."
   );
 }

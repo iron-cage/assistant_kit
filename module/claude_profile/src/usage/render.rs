@@ -20,8 +20,8 @@ use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
 ///
 /// Empty store renders `(no accounts configured)` without a table.
 /// Column visibility is controlled by `cols` (structural `flag` and `account`
-/// columns are always shown). Footer (TSK-184): always-visible 2-strategy block
-/// when ≥2 accounts have valid quota — shows `endurance` and `drain` lines.
+/// columns are always shown). Footer (TSK-184): unconditional 3-strategy block
+/// when ≥2 accounts have valid quota — shows `renew`, `endurance`, and `drain` lines.
 /// The `→` marker in the table body points to the active-strategy winner.
 /// Footer is omitted when < 2 accounts have valid quota data.
 #[ allow( clippy::too_many_lines ) ]
@@ -120,6 +120,12 @@ pub( crate ) fn render_text(
     };
 
     let expires_cell = compute_expires_cell( aq.expires_at_ms, now_secs );
+    // Fix(BUG-227): pass token expiry as a candidate for → Next; None when expiry unknown (== 0).
+    // Root cause: TSK-228 removed token expiry from next_event_raw(), causing the column to report
+    //   a quota event days away even when the token expires in minutes.
+    // Pitfall: expires_at_ms==0 means unknown (fetch failed); pass None, not Some(0).
+    let tok_secs     = if aq.expires_at_ms == 0 { None }
+                       else { Some( ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) ) };
     let sub_str      = sub_label( aq.account.as_ref() ).to_string();
     let renews_str   = renews_label(
       aq.renewal_at.as_deref(),
@@ -150,6 +156,7 @@ pub( crate ) fn render_text(
             .map( |t| t.saturating_sub( now_secs ) ),
           ren_secs,
           ren_est.unwrap_or( false ),
+          tok_secs,
         );
 
         let mut row : Vec< String > = vec![ flag_cell ];
@@ -266,6 +273,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
     let is_current_str   = if aq.is_current { "true" } else { "false" };
     let is_active_str    = if aq.is_active  { "true" } else { "false" };
     let expires_in_secs  = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
+    let tok_secs_json    = if aq.expires_at_ms == 0 { None } else { Some( expires_in_secs ) };
     let billing_type_str = aq.account.as_ref()
       .map_or_else( || "null".to_string(), |a| format!( "\"{}\"", json_escape( &a.billing_type ) ) );
     let has_max_str      = aq.account.as_ref()
@@ -307,6 +315,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
           seven_reset_secs,
           ren_pair.map( |( s, _ )| s ),
           ren_pair.is_some_and( |( _, est )| est ),
+          tok_secs_json,
         )
         {
           None                        => ( "null".to_string(), "null".to_string() ),
@@ -333,6 +342,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
           None,
           ren_pair.map( |( s, _ )| s ),
           ren_pair.is_some_and( |( _, est )| est ),
+          tok_secs_json,
         )
         {
           None                         => ( "null".to_string(), "null".to_string() ),
@@ -412,6 +422,8 @@ pub( crate ) fn render_tsv(
       _    => "err",
     };
     let expires_str = compute_expires_cell( aq.expires_at_ms, now_secs );
+    let tok_secs    = if aq.expires_at_ms == 0 { None }
+                      else { Some( ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) ) };
     let sub_str     = sub_label( aq.account.as_ref() ).to_string();
     let renews_str  = renews_label(
       aq.renewal_at.as_deref(),
@@ -453,6 +465,7 @@ pub( crate ) fn render_tsv(
             .map( |t| t.saturating_sub( now_secs ) ),
           ren_secs,
           ren_est.unwrap_or( false ),
+          tok_secs,
         );
         if cols.h5_left      { row.push( h5_left_bare ); }
         if cols.h5_reset     { row.push( cells[ 1 ].clone() ); }
@@ -552,10 +565,14 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
           aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
           now_secs,
         );
+        // Fix(BUG-227): pass token expiry as a candidate for next event
+        let tok_secs = if aq.expires_at_ms == 0 { None }
+                       else { Some( ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) ) };
         match next_event_raw(
           seven_reset,
           ren_pair.map( |( s, _ )| s ),
           ren_pair.is_some_and( |( _, est )| est ),
+          tok_secs,
         )
         {
           None => dash,
