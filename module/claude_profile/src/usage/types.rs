@@ -187,22 +187,24 @@ impl ColsVisibility
 /// Per-account quota fetch result, bundling identity, state flags, and the raw usage data.
 pub( crate ) struct AccountQuota
 {
-  pub( crate ) name          : String,
+  pub( crate ) name                  : String,
   /// Live-token match: `accessToken` in `~/.claude/.credentials.json` equals this account's stored token.
-  pub( crate ) is_current    : bool,
+  pub( crate ) is_current            : bool,
   /// Active-marker match: per-machine active marker file in the credential store names this account.
-  pub( crate ) is_active     : bool,
-  pub( crate ) expires_at_ms : u64,
+  pub( crate ) is_active             : bool,
+  /// Another machine's `_active_*` file names this account.
+  pub( crate ) is_occupied_elsewhere : bool,
+  pub( crate ) expires_at_ms         : u64,
   /// `Ok` = live quota fetched; `Err` = reason string (expired, network, etc.).
-  pub( crate ) result        : Result< OauthUsageData, String >,
+  pub( crate ) result                : Result< OauthUsageData, String >,
   /// Billing state from `GET /api/oauth/account`; `None` if the fetch failed.
-  pub( crate ) account       : Option< claude_quota::OauthAccountData >,
+  pub( crate ) account               : Option< claude_quota::OauthAccountData >,
   /// Machine label from `{name}.profile.json`; empty when absent.
-  pub( crate ) host          : String,
+  pub( crate ) host                  : String,
   /// User-defined role tag from `{name}.profile.json`; empty when absent.
-  pub( crate ) role          : String,
+  pub( crate ) role                  : String,
   /// Override billing renewal date from `{name}.claude.json`; `None` when not set.
-  pub( crate ) renewal_at    : Option< String >,
+  pub( crate ) renewal_at            : Option< String >,
 }
 
 // ── Command handler ────────────────────────────────────────────────────────────

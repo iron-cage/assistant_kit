@@ -69,9 +69,9 @@
 Quota
 
   ●  Account              5h Left     5h Reset    7d Left     7d(Son)  7d Reset   Expires     ~Renews        → Next
-✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%     35%      in 4d 23h  in 7h 24m   in 3h 47m      $ren in 3h 47m
-  🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         +7d in 6d 14h
-→ 🟡 carol@example.com    🟡 3%      in 0h 23m  🟢 52%     18%      in 2d 11h  in 1h 12m   ~in 8d         +7d in 2d 11h
+✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%     35%      in 4d 23h  in 7h 24m   in 3h 47m      in 3h 47m $ren
+  🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         in 6d 14h +7d
+→ 🟡 carol@example.com    🟡 3%      in 0h 23m  🟢 52%     18%      in 2d 11h  in 1h 12m   ~in 8d         in 2d 11h +7d
   🔴 dave@example.com     —          —           —          —        —          EXPIRED      ?              —
   🔴 eve@example.com      —          —           —          —        —          EXPIRED      ?              —
 
@@ -89,9 +89,9 @@ Valid: 3 / 5   ->  Next by strategy:
 Quota
 
   ●  Account              5h Left     5h Reset    7d Left     7d(Son)  7d Reset   Expires     ~Renews        → Next
-✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%     35%      in 4d 23h  in 7h 24m   in 3h 47m      $ren in 3h 47m
-* 🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         +7d in 6d 14h
-→ 🟢 carol@example.com    🟢 95%     in 3h 44m  🟢 72%     54%      in 5d 01h  in 6h 11m   ~in 11d        +7d in 5d 1h
+✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%     35%      in 4d 23h  in 7h 24m   in 3h 47m      in 3h 47m $ren
+* 🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         in 6d 14h +7d
+→ 🟢 carol@example.com    🟢 95%     in 3h 44m  🟢 72%     54%      in 5d 01h  in 6h 11m   ~in 11d        in 5d 1h +7d
 
 Valid: 3 / 3   ->  Next by strategy:
   renew      carol@example.com   95% session, 5h resets in 3h 44m / 7d resets in 5d 1h
@@ -107,9 +107,9 @@ Valid: 3 / 3   ->  Next by strategy:
 Quota
 
   ●  Account              5h Left     5h Reset    7d Left     7d(Son)  7d Reset   Expires     ~Renews        → Next
-✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%     35%      in 4d 23h  in 7h 24m   in 3h 47m      $ren in 3h 47m
-@ 🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         +7d in 6d 14h
-→ 🟢 carol@example.com    🟢 95%     in 3h 44m  🟢 72%     54%      in 5d 01h  in 6h 11m   ~in 11d        +7d in 5d 1h
+✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%     35%      in 4d 23h  in 7h 24m   in 3h 47m      in 3h 47m $ren
+@ 🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         in 6d 14h +7d
+→ 🟢 carol@example.com    🟢 95%     in 3h 44m  🟢 72%     54%      in 5d 01h  in 6h 11m   ~in 11d        in 5d 1h +7d
 
 Valid: 3 / 3   ->  Next by strategy:
   renew      carol@example.com   95% session, 5h resets in 3h 44m / 7d resets in 5d 1h
@@ -125,8 +125,8 @@ Valid: 3 / 3   ->  Next by strategy:
 Quota
 
   ●  Account              5h Left     5h Reset    7d Left     7d(Son)  7d Reset   Expires     ~Renews        → Next
-✓ 🟢 (current session)    🟢 64%     in 1h 39m  🟢 39%     —        in 3d 17h  in 4h 39m   ?              +7d in 3d 17h
-→ 🟢 alice@example.com    🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   in 3h 47m      $ren in 3h 47m
+✓ 🟢 (current session)    🟢 64%     in 1h 39m  🟢 39%     —        in 3d 17h  in 4h 39m   ?              in 3d 17h +7d
+→ 🟢 alice@example.com    🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   in 3h 47m      in 3h 47m $ren
   🔴 bob@example.com      —          —           —          —        —          EXPIRED      ?              —
 
 Valid: 2 / 3   ->  Next by strategy:
@@ -186,14 +186,14 @@ Valid: 2 / 3   ->  Next by strategy:
 - **AC-25**: `format_duration_secs` output is capped to 2 significant units: shows at most 2 time components (e.g., `1d 2h`, `3h 19m`, `23m`), never 3.
 - **AC-26**: Within the 🟡 tier, h-exhausted accounts (`5h Left ≤ 15%`) appear before weekly-exhausted accounts (`5h Left > 15%` and `7d Left ≤ 5%`). Accounts where both `5h Left ≤ 15%` and `7d Left ≤ 5%` fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. The sub-grouping is never reversed by `desc::`.
 - **AC-27**: `~Renews` column shows `in Xh Ym` (exact duration, no `~` prefix) when `_renewal_at` is present in `{name}.claude.json` and auto-advances monthly when past; shows `~in Xd` (with `~` prefix, 2 significant units max) when only `org_created_at` is available; shows `"?"` when neither source is available; shows `"—"` when timestamp parsing fails.
-- **AC-28**: `→ Next` column shows the chronologically soonest strategic event among `+7d` (7d quota reset from `seven_day.resets_at`) and `$ren` (billing renewal from `_renewal_at` override or `org_created_at` estimate). Token expiry (`!tok`) and 5h resets (`+5h`) are not candidates — token expiry is already surfaced in the `Expires` column, and 5h resets are already surfaced in the `5h Reset` column. Format: `"EVENT in Xh Ym"` for exact sources; `"$ren ~in Xd"` when billing source is an estimate. Shows `—` when no event has a known future timestamp. Events with absent or past timestamps are excluded. Selection: minimum-seconds candidate wins; ties broken by iteration order `+7d` → `$ren`.
+- **AC-28**: `→ Next` column shows the chronologically soonest strategic event among `+7d` (7d quota reset from `seven_day.resets_at`) and `$ren` (billing renewal from `_renewal_at` override or `org_created_at` estimate). Token expiry (`!tok`) and 5h resets (`+5h`) are not candidates — token expiry is already surfaced in the `Expires` column, and 5h resets are already surfaced in the `5h Reset` column. Format: `"in Xh Ym EVENT"` for exact sources; `"~in Xd $ren"` when billing source is an estimate. Shows `—` when no event has a known future timestamp. Events with absent or past timestamps are excluded. Selection: minimum-seconds candidate wins; ties broken by iteration order `+7d` → `$ren`.
 
   **Next Event Type Registry:**
 
   | Prefix | Event | Source field | Estimated form | Excluded when |
   |--------|-------|-------------|----------------|---------------|
   | `+7d`  | 7d weekly quota reset | `seven_day.resets_at` from API | — (always exact) | `resets_at` absent or past |
-  | `$ren` | Billing renewal | `_renewal_at` override or `org_created_at` estimate | `$ren ~in Xd` (tilde prefix) | absent or past |
+  | `$ren` | Billing renewal | `_renewal_at` override or `org_created_at` estimate | `~in Xd $ren` (tilde prefix) | absent or past |
   | `—`    | No event | — | — | both sources absent or past |
 - **AC-29**: `format::json` output includes `renewal_secs` (u64 seconds to next billing renewal, or `null`), `renewal_is_estimate` (`true` when sourced from `org_created_at`, `false` when from `_renewal_at`, or `null`), `next_event_type` (string event label `"7d"` or `"ren"` — sigil characters `+` and `$` are stripped in JSON output — or `null` when no event has a future timestamp), and `next_event_secs` (u64 seconds to next event, or `null`). Note: `get::next_event_type` preserves the display sigil and outputs `+7d` or `$ren` (see [feature/028_usage_row_filtering.md](028_usage_row_filtering.md)).
 - **AC-30**: Accounts with `is_occupied_elsewhere = true` — their name appears in any `_active_*` marker file in the credential store other than the current machine's own marker (as returned by `other_machines_active(store)`) — receive `@` in the flag column when `is_active = false` AND `is_current = false`. Flag priority chain: `✓` > `*` > `@` > `→` > blank; an account receives at most one flag character per row. `format::json` output includes `is_occupied_elsewhere` (bool) per object. `format::json` never emits `@` — the field is a bool, not the single-character flag.

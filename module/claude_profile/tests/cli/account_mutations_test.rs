@@ -1392,19 +1392,22 @@ fn aw25_effort_bad_value_exits_1()
   );
 }
 
-/// aw26: `.account.use.help` lists `touch`, `imodel`, `effort`, and `trace` parameters (IT-23).
+/// aw26: `.account.use.help` lists `touch`, `imodel`, `effort`, `trace`, and `refresh`
+/// parameters (IT-23).
 ///
-/// Extended from Feature 027 (touch/imodel/effort) to include `trace::` per BUG-207.
+/// Extended from Feature 027 (touch/imodel/effort) to include `trace::` per BUG-207,
+/// and `refresh::` per BUG-230.
 #[ test ]
 fn aw26_help_shows_touch_imodel_effort()
 {
   let out  = run_cs( &[ ".account.use.help" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
-  assert!( text.contains( "touch" ),  "`.account.use.help` must list `touch` param, got:\n{text}" );
-  assert!( text.contains( "imodel" ), "`.account.use.help` must list `imodel` param, got:\n{text}" );
-  assert!( text.contains( "effort" ), "`.account.use.help` must list `effort` param, got:\n{text}" );
-  assert!( text.contains( "trace" ),  "`.account.use.help` must list `trace` param, got:\n{text}" );
+  assert!( text.contains( "touch" ),   "`.account.use.help` must list `touch` param, got:\n{text}" );
+  assert!( text.contains( "imodel" ),  "`.account.use.help` must list `imodel` param, got:\n{text}" );
+  assert!( text.contains( "effort" ),  "`.account.use.help` must list `effort` param, got:\n{text}" );
+  assert!( text.contains( "trace" ),   "`.account.use.help` must list `trace` param, got:\n{text}" );
+  assert!( text.contains( "refresh" ), "`.account.use.help` must list `refresh` param, got:\n{text}" );
 }
 
 /// aw27: `lim_it` — live token + `touch::1` → switch exits 0 (IT-17/IT-19).
@@ -1956,10 +1959,17 @@ fn mre_bug_212_account_save_stale_marker_uses_oauth_email()
 ///
 /// # Fix Applied
 ///
-/// In `account_use_routine()`, after `pre_switch_touch_ctx()` returns `None`:
+/// BUG-213: In `account_use_routine()`, after `pre_switch_touch_ctx()` returns `None`:
 /// when `touch != 0 && touch_ctx.is_none()`, read `expiresAt` from the target
 /// credential file. If `now_ms > expiresAt`, emit a clear error on stderr and
 /// call `std::process::exit(3)` without calling `switch_account()`.
+///
+/// BUG-230: The exit-3 block now first attempts `attempt_expired_token_refresh()`
+/// when `refresh::1` (default). In this test, the target has no `accessToken`, so
+/// the refresh attempt fails immediately → exit 3 with `"and refresh failed"`. The
+/// `err.contains("account credentials expired")` assertion still holds because the
+/// new message `"account credentials expired and refresh failed"` contains the substring.
+/// For the `refresh::0` (immediate-exit) path, see `aw33_refresh_disabled_exits_3_immediately`.
 ///
 /// # Prevention
 ///
@@ -2026,6 +2036,142 @@ fn mre_bug213_account_use_refuses_expired_token_on_fetch_error()
   assert!(
     !marker.contains( "alice@home.com" ),
     "active marker must NOT be updated when exit 3 fires, got: '{marker}'",
+  );
+}
+
+// ── BUG-230 ───────────────────────────────────────────────────────────────────
+
+/// `.account.use` with an expired token and `refresh::1` (default) attempts refresh;
+/// when refresh fails (no `accessToken` in credential file), exits 3 with
+/// `"account credentials expired and refresh failed"` on stderr.
+///
+/// # Root Cause (BUG-230)
+///
+/// The BUG-213 guard added `exit(3)` on expired token without attempting an OAuth
+/// token refresh. Token expiry is recoverable via `refresh_account_token()` —
+/// the same mechanism used by `.usage refresh::1`. The guard gave up without trying.
+///
+/// # Why Not Caught
+///
+/// BUG-213 tests verified that the switch is refused on expiry but did not distinguish
+/// "refuse immediately" from "try refresh then refuse". The `refresh::` parameter did
+/// not exist at the time BUG-213 was fixed, so no test covered the refresh-attempt path.
+///
+/// # Fix Applied
+///
+/// Added `refresh::` parameter (default 1) to `.account.use`. When `refresh::1` and
+/// token is locally expired: calls `attempt_expired_token_refresh()`. If `None` returned
+/// (refresh failed), exits 3 with `"account credentials expired and refresh failed: {name}"`.
+///
+/// # Prevention
+///
+/// Any "refuse on expired credential" guard must first attempt refresh when `refresh::1`.
+/// Use `err.contains("and refresh failed")` to detect the failure-after-attempt path;
+/// use `refresh::0` to test the immediate-refusal path.
+///
+/// # Pitfall
+///
+/// The `mre_bug213` test (expired + no accessToken) still passes because the new message
+/// `"account credentials expired and refresh failed"` contains `"account credentials expired"`.
+/// But it now exercises the refresh-attempt path, not the immediate-refusal path.
+/// Use `refresh::0` for tests that need the old immediate-exit-3 semantics.
+#[ doc = "bug_reproducer(BUG-230)" ]
+#[ test ]
+fn mre_bug230_account_use_refresh_fails_exits_3_with_updated_message()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Active session — must be unchanged.
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  // Target: expiresAt = 1000 (expired), no accessToken (refresh will fail immediately).
+  write_account( dir.path(), "alice@home.com", "max", "default", 1000, false );
+
+  let creds_path   = dir.path().join( ".claude" ).join( ".credentials.json" );
+  let creds_before = std::fs::read_to_string( &creds_path ).unwrap();
+
+  // Default refresh::1 — will attempt refresh, fail (no accessToken), then exit 3.
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::alice@home.com" ],
+    &[ ( "HOME", home ) ],
+  );
+
+  assert_exit( &out, 3 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "account credentials expired and refresh failed" ),
+    "BUG-230: stderr must contain 'account credentials expired and refresh failed', got:\n{err}",
+  );
+  assert!(
+    err.contains( "alice@home.com" ),
+    "BUG-230: stderr must name the account, got:\n{err}",
+  );
+
+  // switch_account() must NOT have been called — credentials unchanged.
+  let creds_after = std::fs::read_to_string( &creds_path ).unwrap();
+  assert_eq!(
+    creds_before,
+    creds_after,
+    "BUG-230: credentials must be unchanged when exit 3 fires after refresh failure",
+  );
+}
+
+/// aw33: `refresh::0` on an expired token → exits 3 immediately with old message,
+/// no refresh attempt (FT-18).
+///
+/// Verifies that the immediate-refusal path (BUG-213 semantics) is preserved when
+/// `refresh::0` is explicitly set.
+#[ test ]
+fn aw33_refresh_disabled_exits_3_immediately()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+  write_account( dir.path(), "alice@home.com", "max", "default", 1000, false );
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::alice@home.com", "refresh::0", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+
+  assert_exit( &out, 3 );
+  let err = stderr( &out );
+  // refresh::0 uses the old message (no "and refresh failed").
+  assert!(
+    err.contains( "account credentials expired: alice@home.com" ),
+    "aw33: stderr must contain 'account credentials expired: alice@home.com', got:\n{err}",
+  );
+  assert!(
+    !err.contains( "and refresh failed" ),
+    "aw33: refresh::0 must NOT emit 'and refresh failed' (no refresh attempted), got:\n{err}",
+  );
+  // Trace must show refused (refresh::0) annotation.
+  assert!(
+    err.contains( "refused (refresh::0)" ),
+    "aw33: trace must include 'refused (refresh::0)', got:\n{err}",
+  );
+}
+
+/// aw34: `refresh::bad` → exit 1; stderr names all valid values (IT-28).
+///
+/// Validation fires before any filesystem I/O — no accounts needed in the temp dir.
+#[ test ]
+fn aw34_refresh_bad_value_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::any@example.com", "refresh::bad" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 1 );
+  let err = stderr( &out );
+  assert!(
+    err.contains( "refresh::" ) && err.contains( '0' ) && err.contains( '1' ) && err.contains( "false" ) && err.contains( "true" ),
+    "aw34: stderr must name all valid refresh:: values (0, 1, false, true); got:\n{err}",
   );
 }
 

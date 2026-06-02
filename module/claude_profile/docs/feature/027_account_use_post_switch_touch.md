@@ -4,8 +4,8 @@
 
 - **Purpose**: Activate the switched-to account's idle 5h session window immediately after credential rotation, using the same model/effort resolution as `.usage`; expose the post-switch touch lifecycle via `trace::` for diagnostics.
 - **Responsibility**: Documents the `touch::`, `imodel::`, `effort::`, and `trace::` parameters on `.account.use` and the post-switch quota fetch, subprocess logic, and trace instrumentation in `account_use_routine`.
-- **In Scope**: Quota fetch for the target account using its saved credential file; idle-session check (`five_hour.resets_at.is_none()`); `resolve_model()` + `resolve_effort()` reuse from `usage.rs`; `run_isolated()` subprocess spawn; `touch::` (default `1`), `imodel::`, `effort::`, `trace::` (default `0`) parameter registration on `.account.use`; graceful skip when quota fetch fails; `[trace] account.use` lines covering credential read, quota fetch, idle check, model/effort resolution, and subprocess dispatch.
-- **Out of Scope**: Refreshing expired tokens on auth error (→ 017_token_refresh.md); `.usage` subprocess control (→ 026_subprocess_model_effort.md); credential rotation mechanics (→ 004_account_use.md).
+- **In Scope**: Quota fetch for the target account using its saved credential file; idle-session check (`five_hour.resets_at.is_none()`); `resolve_model()` + `resolve_effort()` reuse from `usage.rs`; `run_isolated()` subprocess spawn; `touch::` (default `1`), `refresh::` (default `1`), `imodel::`, `effort::`, `trace::` (default `0`) parameter registration on `.account.use`; graceful skip when quota fetch fails; OAuth token refresh when locally expired and `refresh::1`; `[trace] account.use` lines covering credential read, quota fetch, idle check, model/effort resolution, subprocess dispatch, and refresh attempt.
+- **Out of Scope**: `.usage` subprocess control (→ 026_subprocess_model_effort.md); credential rotation mechanics (→ 004_account_use.md).
 
 ### Design
 
@@ -29,15 +29,18 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
 
 ```
 [trace] account.use  {name}  reading {cred_path}
-[trace] account.use  {name}  reading: OK                                        ← omitted on Err; Err → subprocess: skipped (no further lines)
-[trace] account.use  {name}  quota fetch: OK                                    ← or Err({msg}); Err → subprocess: skipped + optional expiry check
-[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)         ← fetch Err path only; always precedes expiry check line
-[trace] account.use  {name}  expiry check: expired(4h 21m ago) → refused        ← fetch Err + expiresAt past: exits 3; no switch
-                                         OR: valid (expires in 3h 34m)         ← fetch Err + expiresAt future; omitted when expiresAt absent
-[trace] account.use  {name}  idle check: resets_at=absent → idle                ← fetch OK path only; or resets_at=present → already active
-[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left=5%)      ← fetch OK + 7d(Son) < 20% + snapshot was Sonnet; omitted otherwise
-[trace] account.use  {name}  model: {model}  effort: {effort}                   ← fetch OK path only
-[trace] account.use  {name}  subprocess: spawned                                ← or skipped (reason: already active); fetch OK path only
+[trace] account.use  {name}  reading: OK                                              ← omitted on Err; Err → subprocess: skipped (no further lines)
+[trace] account.use  {name}  quota fetch: OK                                          ← or Err({msg}); Err → subprocess: skipped + optional expiry check
+[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)               ← fetch Err path only; always precedes expiry check line
+[trace] account.use  {name}  expiry check: expired(4h 21m ago) → attempting refresh  ← refresh::1 (default) + expired; refresh attempt follows
+[trace] account.use  {name}  expiry check: refresh OK — re-probing touch context      ← refresh succeeded; switch continues
+           OR: expiry check: refresh failed → refused                                 ← refresh failed; exits 3
+           OR: expiry check: expired(4h 21m ago) → refused (refresh::0)              ← refresh::0; exits 3 immediately
+           OR: expiry check: valid (expires in 3h 34m)                               ← expiresAt in future; switch continues; omitted when expiresAt absent
+[trace] account.use  {name}  idle check: resets_at=absent → idle                     ← fetch OK path only; or resets_at=present → already active
+[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left=5%)           ← fetch OK + 7d(Son) < 20% + snapshot was Sonnet; omitted otherwise
+[trace] account.use  {name}  model: {model}  effort: {effort}                        ← fetch OK path only
+[trace] account.use  {name}  subprocess: spawned                                      ← or skipped (reason: already active); fetch OK path only
 ```
 
 When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operations performed). When `trace::0` (default): no trace output.
@@ -52,7 +55,7 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 - 0: success (switch completed; touch fired if idle, skipped if active or fetch failed)
 - 1: usage error (invalid name format or invalid `imodel::`/`effort::` value)
 - 2: runtime error (account not found or HOME unset)
-- 3: account credentials expired — locally-expired `expiresAt` detected when `touch::1` and quota fetch fails (see AC-17)
+- 3: account credentials expired AND refresh failed (or `refresh::0`) — locally-expired `expiresAt` detected when `touch::1` and quota fetch fails; refresh attempted first when `refresh::1` (see AC-17, AC-20)
 
 ### Acceptance Criteria
 
@@ -64,7 +67,7 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 - **AC-06**: `effort::auto` injects `--effort high` for Sonnet and `--effort max` for Opus; no `--effort` flag for `imodel::keep` or `imodel::haiku`.
 - **AC-07**: `imodel::bad` exits 1 with stderr naming `auto`, `sonnet`, `opus`, `haiku`, `keep`; `effort::bad` exits 1 with stderr naming `auto`, `low`, `normal`, `high`, `max`.
 - **AC-08**: `dry::1` prints `[dry-run] would switch to '{name}'` without modifying credentials or spawning a subprocess.
-- **AC-09**: `touch::`, `imodel::`, `effort::`, and `trace::` appear in `.account.use --help` output with their defaults (`1`, `auto`, `auto`, `0`).
+- **AC-09**: `touch::`, `refresh::`, `imodel::`, `effort::`, and `trace::` appear in `.account.use --help` output with their defaults (`1`, `1`, `auto`, `auto`, `0`).
 - **AC-10**: When `trace::1` and `touch::1`: emits `[trace] account.use  {name}  reading {path}` followed by `reading: OK` on success; if the credential file read fails, emits `reading: Err({msg})` and stops — no further trace lines for this invocation.
 - **AC-11**: When `trace::1` and `touch::1` and credential read succeeds: emits `[trace] account.use  {name}  quota fetch: OK` on success or `quota fetch: Err({msg})` on failure; Err stops idle-check and model/subprocess trace lines and triggers the expiry check (AC-17) when `expiresAt` is present in the credential file.
 - **AC-12**: When `trace::1` and `touch::1` and quota fetch succeeds: emits `[trace] account.use  {name}  idle check: resets_at=present → already active` (active path) or `idle check: resets_at=absent → idle` (idle path).
@@ -72,9 +75,10 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 - **AC-14**: When `trace::1` and `touch::1`: emits `[trace] account.use  {name}  subprocess: spawned` when the subprocess is dispatched (idle + fetch OK), or `subprocess: skipped (reason: already active)` / `subprocess: skipped (reason: fetch failed)` otherwise.
 - **AC-15**: When `trace::1` and `touch::0`: no `[trace] account.use` lines emitted — no quota fetch operations are performed on the `touch::0` path.
 - **AC-16**: `trace::` (Kind::String, default `0`) is registered on `.account.use`; `trace::bad` exits 1 with stderr naming `0`, `1`, `false`, `true`.
-- **AC-17**: When `touch::1` (default) and the quota fetch fails (returns Err) AND the target account's token is locally expired (current time > `expiresAt` from `{credential_store}/{name}.credentials.json`): exits 3 with `account credentials expired: {name} (expired {N}h {M}m ago)` on stderr; `switch_account()` is NOT called. When `trace::1`: emits `[trace] account.use  {name}  expiry check: expired({N}h {M}m ago) → refused` after the `quota fetch: Err(...)` line. (Fix for BUG-213.)
+- **AC-17**: When `touch::1` (default) and the quota fetch fails (returns Err) AND the target account's token is locally expired (current time > `expiresAt` from `{credential_store}/{name}.credentials.json`) AND `refresh::1` (default): first calls `attempt_expired_token_refresh()`. If refresh succeeds: re-probes touch context with fresh token; continues with the switch (exits 0 on success). If refresh fails: exits 3 with `account credentials expired and refresh failed: {name} (expired {N}h {M}m ago)` on stderr; `switch_account()` is NOT called. When `trace::1`: emits `expired({N}h {M}m ago) → attempting refresh` → then `refresh OK — re-probing touch context` or `refresh failed → refused`. (Fix for BUG-213; extended by BUG-230.)
 - **AC-18**: When quota fetch succeeded (step 2) and `seven_day_sonnet` remaining < 20% and the just-restored session model is `"claude-sonnet-4-6"` (or absent): overwrites `~/.claude/settings.json` model with `"claude-opus-4-6"` before the subprocess step. (Fix for BUG-225.)
 - **AC-19**: When `trace::1` and the model override fires (AC-18): emits `[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)` before the `model:` line. Omitted when override does not fire (model was already Opus) or when quota fetch failed.
+- **AC-20**: When `touch::1` (default) and the quota fetch fails AND the target token is locally expired AND `refresh::0`: exits 3 immediately with `account credentials expired: {name} (expired {N}h {M}m ago)` on stderr; no refresh attempt is made. When `trace::1`: emits `expired({N}h {M}m ago) → refused (refresh::0)`. (Fix for BUG-230.)
 - **Limitation (BUG-226)**: When the quota fetch returns 429 (rate-limited) or any other error, `touch_ctx` is `None` and the quota-aware model upgrade (AC-18) cannot fire. The snapshot model restored by `switch_account()` is installed as-is — potentially leaving the session on Sonnet even when Sonnet quota is exhausted. No workaround exists at the `.account.use` layer; the user must manually override via `imodel::opus`.
 
 ### Cross-References

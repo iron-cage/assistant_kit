@@ -100,15 +100,16 @@ pub( crate ) fn attempt_expired_token_refresh(
   // result=Err("401") drives auto model selection to Opus (conservative when no quota data).
   let aq        = AccountQuota
   {
-    name          : name.to_string(),
-    is_current    : false,
-    is_active     : false,
-    expires_at_ms : 0,
-    result        : Err( "401".to_string() ),
-    account       : None,
-    host          : String::new(),
-    role          : String::new(),
-    renewal_at    : None,
+    name                 : name.to_string(),
+    is_current           : false,
+    is_active            : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms        : 0,
+    result               : Err( "401".to_string() ),
+    account              : None,
+    host                 : String::new(),
+    role                 : String::new(),
+    renewal_at           : None,
   };
   let model     = super::subprocess::resolve_model( &aq, imodel );
   let pre_args  = super::subprocess::effort_pre_args( &model, effort );
@@ -203,15 +204,16 @@ pub( crate ) fn pre_switch_touch_ctx(
       let effort       = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
       let aq           = AccountQuota
       {
-        name          : name.to_string(),
-        is_current    : false,
-        is_active     : false,
-        expires_at_ms : 0,
-        result        : Ok( quota ),
-        account       : None,
-        host          : String::new(),
-        role          : String::new(),
-        renewal_at    : None,
+        name                 : name.to_string(),
+        is_current           : false,
+        is_active            : false,
+        is_occupied_elsewhere : false,
+        expires_at_ms        : 0,
+        result               : Ok( quota ),
+        account              : None,
+        host                 : String::new(),
+        role                 : String::new(),
+        renewal_at           : None,
       };
       let model        = resolve_model( &aq, imodel );
       let effort_val   = resolve_effort( &model, effort );
@@ -277,15 +279,16 @@ pub( crate ) fn apply_post_switch_touch(
   // Build a minimal AccountQuota to reuse the existing resolve_model() path.
   let aq = AccountQuota
   {
-    name          : name.to_string(),
-    is_current    : false,
-    is_active     : false,
-    expires_at_ms : 0,
-    result        : Ok( ctx.quota ),
-    account       : None,
-    host          : String::new(),
-    role          : String::new(),
-    renewal_at    : None,
+    name                 : name.to_string(),
+    is_current           : false,
+    is_active            : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms        : 0,
+    result               : Ok( ctx.quota ),
+    account              : None,
+    host                 : String::new(),
+    role                 : String::new(),
+    renewal_at           : None,
   };
   let model        = resolve_model( &aq, imodel );
   let effort_val   = resolve_effort( &model, effort );

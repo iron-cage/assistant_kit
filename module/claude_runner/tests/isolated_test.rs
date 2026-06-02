@@ -9,6 +9,11 @@
 //! | IT-8 | Missing `--creds` → exit 1, required arg | No |
 //! | IT-9 | `clr isolated --help` → exit 0, help text shown | No |
 //! | IT-10 | `--creds <f> --trace "msg"` → credential trace on stderr before attempt | No |
+//! | T1 | No `--creds`/`CLR_CREDS`, HOME set, file exists → trace shows HOME default path | No |
+//! | T2 | Same setup, `clr refresh --trace` → trace shows HOME default path | No |
+//! | T3 | `CLR_CREDS` set + `HOME` set → `CLR_CREDS` wins (tier 2 > tier 3) | No |
+//! | T4 | HOME unset, no `--creds`/`CLR_CREDS` → exit 1, stderr names HOME failure | No |
+//! | T5 | HOME set, `$HOME/.claude/.credentials.json` absent → exit 1, no "missing --creds" | No |
 //! | EC-creds-4 | Nonexistent creds file → exit 1 | No |
 //! | EC-creds-5 | `--creds` without value → exit 1 | No |
 //! | EC-creds-6 | `--creds` omitted → exit 1 | No |
@@ -129,13 +134,21 @@ fn test_it7_invalid_timeout()
   );
 }
 
-/// IT-8: `--creds` omitted entirely → exit 1, missing required argument.
+/// IT-8: `--creds` omitted, no `CLR_CREDS`, `HOME` unset → exit 1; error mentions `--creds`.
+///
+/// All three credential tiers are absent; the command must exit 1 with an actionable message.
+/// HOME is explicitly removed so the 3rd-tier default does not fire.
 ///
 /// Source: tests/docs/cli/command/03_isolated.md#it-8
 #[ test ]
 fn test_it8_missing_creds_flag()
 {
-  let out = run_isolated( &[ "test" ] );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "isolated", "test" ] )
+    .env_remove( "HOME" )
+    .output()
+    .expect( "failed to invoke clr binary" );
   assert_eq!( exit_code( &out ), 1, "expected exit 1; stderr: {}", stderr_str( &out ) );
   assert!(
     stderr_str( &out ).contains( "--creds" ),
@@ -172,18 +185,26 @@ fn test_ec_creds5_no_value()
   );
 }
 
-/// EC-creds-6: `--creds` omitted entirely → exit 1, missing required argument.
+/// EC-creds-6: all three creds tiers absent (no `--creds`, no `CLR_CREDS`, no `HOME`) → exit 1.
+///
+/// `HOME` is removed so Tier 3 (`$HOME/.claude/.credentials.json`) cannot resolve.
 ///
 /// Source: tests/docs/cli/param/19_creds.md#ec-6
 #[ test ]
 fn test_ec_creds6_required_flag()
 {
-  let out = run_isolated( &[ "test" ] );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "isolated", "test" ] )
+    .env_remove( "HOME" )
+    .env_remove( "CLR_CREDS" )
+    .output()
+    .expect( "failed to invoke clr binary" );
   assert_eq!( exit_code( &out ), 1, "expected exit 1; stderr: {}", stderr_str( &out ) );
   let err = stderr_str( &out );
   assert!(
-    err.contains( "--creds" ) && ( err.contains( "missing" ) || err.contains( "required" ) ),
-    "expected '--creds' + missing/required message; got: {err}"
+    err.contains( "--creds" ) && err.contains( "cannot resolve" ),
+    "expected '--creds' + 'cannot resolve' message; got: {err}"
   );
 }
 
@@ -654,4 +675,131 @@ fn it10_isolated_trace_stderr_output()
   );
   let code = out.status.code().unwrap_or( -1 );
   assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );
+}
+
+// ── creds HOME default (TSK-197) ──────────────────────────────────────────────
+
+/// T1: No `--creds`, no `CLR_CREDS`, `HOME` set, `$HOME/.claude/.credentials.json` exists →
+/// trace shows the resolved HOME default path; exit 1 (no real claude binary).
+///
+/// Proves `apply_isolated_env_vars()` populates `creds_path` from the 3rd-tier HOME default.
+#[ test ]
+fn it_t1_creds_home_default_isolated_trace()
+{
+  let dir        = tempfile::TempDir::new().unwrap();
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( ".credentials.json" ), b"{}" ).unwrap();
+  let home     = dir.path().to_str().unwrap();
+  let expected = format!( "{home}/.claude/.credentials.json" );
+  let out      = cli_binary_test_helpers::run_cli_with_env(
+    &[ "isolated", "--trace", "test" ],
+    &[ ( "HOME", home ) ],
+  );
+  let err = stderr_str( &out );
+  assert!(
+    err.contains( &expected ),
+    "T1: stderr must contain HOME default creds path `{expected}`; got:\n{err}",
+  );
+}
+
+/// T2: No `--creds`, no `CLR_CREDS`, `HOME` set, `$HOME/.claude/.credentials.json` exists →
+/// `clr refresh --trace` shows the resolved HOME default path in stderr.
+///
+/// Proves `apply_refresh_env_vars()` also uses the 3rd-tier HOME default.
+#[ test ]
+fn it_t2_creds_home_default_refresh_trace()
+{
+  let dir        = tempfile::TempDir::new().unwrap();
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( ".credentials.json" ), b"{}" ).unwrap();
+  let home     = dir.path().to_str().unwrap();
+  let expected = format!( "{home}/.claude/.credentials.json" );
+  let out      = cli_binary_test_helpers::run_cli_with_env(
+    &[ "refresh", "--trace" ],
+    &[ ( "HOME", home ) ],
+  );
+  let err = stderr_str( &out );
+  assert!(
+    err.contains( &expected ),
+    "T2: stderr must contain HOME default creds path `{expected}`; got:\n{err}",
+  );
+}
+
+/// T3: `CLR_CREDS` set, `HOME` also set → `CLR_CREDS` wins (tier 2 > tier 3).
+///
+/// Regression guard: the new 3rd tier must not override tier 2.
+#[ test ]
+fn it_t3_clr_creds_wins_over_home_default()
+{
+  let dir        = tempfile::TempDir::new().unwrap();
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( ".credentials.json" ), b"{}" ).unwrap();
+  let home       = dir.path().to_str().unwrap();
+  let home_creds = format!( "{home}/.claude/.credentials.json" );
+  // CLR_CREDS path need not exist — trace fires before file-read attempt.
+  let clr_creds  = "/tmp/it_t3_clr_creds_wins.json";
+  let out = cli_binary_test_helpers::run_cli_with_env(
+    &[ "isolated", "--trace", "test" ],
+    &[ ( "HOME", home ), ( "CLR_CREDS", clr_creds ) ],
+  );
+  let err = stderr_str( &out );
+  assert!(
+    err.contains( clr_creds ),
+    "T3: stderr must contain CLR_CREDS path `{clr_creds}`; got:\n{err}",
+  );
+  assert!(
+    !err.contains( &home_creds ),
+    "T3: stderr must NOT contain HOME default path when CLR_CREDS is set; got:\n{err}",
+  );
+}
+
+/// T4: No `--creds`, no `CLR_CREDS`, `HOME` unset → exit 1; stderr names resolution failure.
+///
+/// When all three tiers fail, the command must exit 1 with a clear error about HOME.
+#[ test ]
+fn it_t4_home_unset_exits_1()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "isolated", "test" ] )
+    .env_remove( "HOME" )
+    .output()
+    .expect( "failed to invoke clr binary" );
+  assert_eq!(
+    exit_code( &out ), 1,
+    "T4: must exit 1 when HOME is unset; got: {}", exit_code( &out ),
+  );
+  let err = stderr_str( &out );
+  assert!(
+    err.contains( "cannot resolve" ) || err.contains( "HOME" ),
+    "T4: stderr must name HOME resolution failure; got:\n{err}",
+  );
+}
+
+/// T5: No `--creds`, no `CLR_CREDS`, `HOME` set but `$HOME/.claude/.credentials.json` absent →
+/// exit 1; stderr shows file-not-found, NOT "missing required argument: --creds".
+///
+/// The 3rd tier resolves a path; the error comes from file reading, not the missing-arg guard.
+#[ test ]
+fn it_t5_home_creds_file_absent_exits_1()
+{
+  let dir  = tempfile::TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // No .claude directory or .credentials.json created.
+  let out = cli_binary_test_helpers::run_cli_with_env(
+    &[ "isolated", "test" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_eq!(
+    exit_code( &out ), 1,
+    "T5: must exit 1 when default creds file absent; got: {}", exit_code( &out ),
+  );
+  let err = stderr_str( &out );
+  assert!(
+    !err.contains( "missing required argument: --creds" ),
+    "T5: must NOT show old 'missing --creds' error after 3rd tier is active; got:\n{err}",
+  );
 }

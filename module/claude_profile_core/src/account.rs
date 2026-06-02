@@ -816,6 +816,38 @@ pub fn active_marker_filename() -> String
   format!( "_active_{}_{}", clean( &hostname ), clean( &user ) )
 }
 
+/// Returns the set of account names that are marked as active on other machines.
+///
+/// Reads every `_active_*` file in `credential_store` except the current
+/// machine's own marker (as returned by [`active_marker_filename`]). Each
+/// such file contains the name of the account active on that other machine.
+/// Returns the collected names as a `HashSet` so callers can check membership
+/// in O(1).
+///
+/// Missing or unreadable files are silently skipped (another machine's marker
+/// may not be present locally at all times).
+#[ inline ]
+#[ must_use ]
+pub fn other_machines_active( credential_store : &Path ) -> std::collections::HashSet< String >
+{
+  let own = active_marker_filename();
+  std::fs::read_dir( credential_store )
+    .ok()
+    .into_iter()
+    .flatten()
+    .filter_map( Result::ok )
+    .filter( | e |
+    {
+      let name = e.file_name();
+      let n = name.to_string_lossy();
+      n.starts_with( "_active_" ) && n != own.as_str()
+    } )
+    .filter_map( | e | std::fs::read_to_string( e.path() ).ok() )
+    .map( | s | s.trim().to_string() )
+    .filter( | s | !s.is_empty() )
+    .collect()
+}
+
 // ── Account renewal ───────────────────────────────────────────────────────────
 
 /// The operation to apply to `_renewal_at` in `{name}.claude.json`.

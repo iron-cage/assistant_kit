@@ -125,8 +125,8 @@ clp .account.save name::alice@acme.com dry::1
 
 Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent.
 
--- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::`/`trace::` value) | 2 (runtime: account not found or HOME unset) | 3 (account credentials expired — `touch::1` + fetch failed + `expiresAt` in the past)
+-- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`refresh::`](../param/019_refresh.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`trace::`](../param/023_trace.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::`/`trace::` value) | 2 (runtime: account not found or HOME unset) | 3 (account credentials expired — `touch::1` + fetch failed + `expiresAt` in the past, AND refresh failed or `refresh::0`)
 
 **Syntax:**
 
@@ -136,6 +136,7 @@ clp .account.use alice@home.com               # positional: same as name::alice@
 clp .account.use car                           # prefix: first saved account starting with "car"
 clp .account.use name::alice@home.com dry::1
 clp .account.use name::alice@home.com touch::0
+clp .account.use name::alice@home.com refresh::0
 clp .account.use name::alice@home.com imodel::opus effort::max
 clp .account.use name::alice@home.com trace::1
 ```
@@ -145,6 +146,7 @@ clp .account.use name::alice@home.com trace::1
 | `name::` | [`AccountName`](../type/001_account_name.md) | **(required)** | Account email to switch to |
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `touch::` | `bool` | `1` | Activate idle 5h session window via subprocess after switch |
+| `refresh::` | `bool` | `1` | Attempt OAuth token refresh when locally expired before refusing with exit 3 |
 | `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (high for sonnet, max for opus, none for haiku/keep), `low`, `normal`, `high`, `max` |
 | `trace::` | `bool` | `0` | Print `[trace] account.use` lines to stderr: credential read, quota fetch, idle check, model resolution, subprocess dispatch |
@@ -172,7 +174,7 @@ clp .account.use name::alice@home.com trace::1
 ```
 
 **Notes:**
-- `touch::1` (default): fetches quota for the target account; if `five_hour.resets_at` is absent (idle), spawns `run_isolated(["--print", "."])` with resolved model/effort to start a 5h session. Quota fetch failure checks `expiresAt` — if locally expired, exits 3 with an error; if not expired, skips touch silently and the switch completes.
+- `touch::1` (default): fetches quota for the target account; if `five_hour.resets_at` is absent (idle), spawns `run_isolated(["--print", "."])` with resolved model/effort to start a 5h session. Quota fetch failure checks `expiresAt` — if locally expired and `refresh::1` (default), attempts token refresh and re-probes touch context on success; exits 3 if refresh fails. If locally expired and `refresh::0`, exits 3 immediately. If `expiresAt` is absent or not yet expired, skips touch silently and the switch completes.
 - `touch::0`: pure credential rotation — no quota fetch, no subprocess, no expiry check. Pre-Feature-027 behavior.
 - `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `resolve_model()` selects Sonnet when `7d(Son) ≥ 20%`, Opus otherwise; `resolve_effort()` maps Sonnet → `high`, Opus → `max`, Haiku → no flag. `imodel::haiku` is explicit only — `auto` never selects it.
 - `trace::1` only produces output when `touch::1`; with `touch::0` there are no fetch operations to trace.

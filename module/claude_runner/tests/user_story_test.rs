@@ -732,11 +732,19 @@ fn us10_3_nonexistent_creds_errors()
   );
 }
 
-/// US-4: isolated without --creds flag → exit 1, missing --creds.
+/// US-4: all three creds tiers absent (no `--creds`, no `CLR_CREDS`, no `HOME`) → exit 1.
+///
+/// `HOME` is removed so Tier 3 (`$HOME/.claude/.credentials.json`) cannot resolve.
 #[ test ]
 fn us10_4_isolated_without_creds_errors()
 {
-  let out = run_cli( &[ "isolated", "test" ] );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = Command::new( bin )
+    .args( [ "isolated", "test" ] )
+    .env_remove( "HOME" )
+    .env_remove( "CLR_CREDS" )
+    .output()
+    .expect( "failed to invoke clr binary" );
   assert_eq!( exit_code( &out ), 1, "isolated without --creds must exit 1" );
   let stderr = stderr_str( &out );
   assert!(

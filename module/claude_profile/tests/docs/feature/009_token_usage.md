@@ -276,7 +276,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 - **Given (unit test):** `next_event_label(seven_day_resets_secs, renewal_secs, renewal_is_estimate)` — only `+7d` and `$ren` are candidates; `!tok` (token expiry) and `+5h` (5h reset) are not candidates since they are already shown in `Expires` and `5h Reset` columns.
 - **When:** `next_event_label()` called with `seven_day_resets_secs = Some(7200)` (2h), `renewal_secs = None`.
-- **Then:** Returns `"+7d in 2h"` — weekly reset is soonest strategic event.
+- **Then:** Returns `"in 2h +7d"` — weekly reset is soonest strategic event.
 - **Exit:** n/a (unit test)
 - **Source fn:** `ne_tok_excluded_after_tsk228`, `ne_7d_soonest`, `ne_renewal_soonest_exact`, `ne_renewal_soonest_estimate`, `ne_all_none_returns_dash` (in `src/usage/format.rs`)
 - **Source:** [009_token_usage.md AC-28](../../../../docs/feature/009_token_usage.md)

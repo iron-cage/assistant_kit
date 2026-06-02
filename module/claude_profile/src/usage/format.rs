@@ -227,8 +227,8 @@ pub( crate ) fn next_event_label(
   match next_event_raw( seven_day_resets_secs, renewal_secs_opt, renewal_is_estimate )
   {
     None                             => "\u{2014}".to_string(),
-    Some( ( secs, prefix, true  ) ) => format!( "{prefix} ~in {}", format_duration_secs( secs ) ),
-    Some( ( secs, prefix, false ) ) => format!( "{prefix} in {}",  format_duration_secs( secs ) ),
+    Some( ( secs, prefix, true  ) ) => format!( "~in {} {prefix}", format_duration_secs( secs ) ),
+    Some( ( secs, prefix, false ) ) => format!( "in {} {prefix}",  format_duration_secs( secs ) ),
   }
 }
 
@@ -878,12 +878,12 @@ mod tests
   #[ test ]
   fn ne_tok_excluded_after_tsk228()
   {
-    // Even if a token would expire in 5m, !tok is not a candidate — +7d in 2h must win.
+    // Even if a token would expire in 5m, !tok is not a candidate — in 2h +7d must win.
     let result = next_event_label( Some( 7200 ), None, false );
-    assert_eq!( result, "+7d in 2h", "!tok must not be a candidate; got: {result}" );
+    assert_eq!( result, "in 2h +7d", "!tok must not be a candidate; got: {result}" );
   }
 
-  /// FT-18 variant — `next_event_label`: 7d reset soonest → `"+7d in 2d"`.
+  /// FT-18 variant — `next_event_label`: 7d reset soonest → `"in 2d +7d"`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]
@@ -891,10 +891,10 @@ mod tests
   fn ne_7d_soonest()
   {
     let result = next_event_label( Some( 2 * 86400 ), None, false );
-    assert_eq!( result, "+7d in 2d", "7d reset soonest → '+7d in 2d', got: {result}" );
+    assert_eq!( result, "in 2d +7d", "7d reset soonest → 'in 2d +7d', got: {result}" );
   }
 
-  /// FT-18 variant — `next_event_label`: exact billing renewal soonest → `"$ren in 6h"`.
+  /// FT-18 variant — `next_event_label`: exact billing renewal soonest → `"in 6h $ren"`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]
@@ -902,10 +902,10 @@ mod tests
   fn ne_renewal_soonest_exact()
   {
     let result = next_event_label( None, Some( 21600 ), false );
-    assert_eq!( result, "$ren in 6h", "exact renewal soonest → '$ren in 6h', got: {result}" );
+    assert_eq!( result, "in 6h $ren", "exact renewal soonest → 'in 6h $ren', got: {result}" );
   }
 
-  /// FT-18 variant — `next_event_label`: estimated billing renewal soonest → `"$ren ~in 3d"`.
+  /// FT-18 variant — `next_event_label`: estimated billing renewal soonest → `"~in 3d $ren"`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]
@@ -913,7 +913,7 @@ mod tests
   fn ne_renewal_soonest_estimate()
   {
     let result = next_event_label( None, Some( 3 * 86400 ), true );
-    assert_eq!( result, "$ren ~in 3d", "estimate renewal soonest → '$ren ~in 3d', got: {result}" );
+    assert_eq!( result, "~in 3d $ren", "estimate renewal soonest → '~in 3d $ren', got: {result}" );
   }
 
   /// FT-18 variant — `next_event_label`: all sources absent or zero → em-dash.

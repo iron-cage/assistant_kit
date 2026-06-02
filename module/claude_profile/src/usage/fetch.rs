@@ -73,6 +73,9 @@ pub( crate ) fn fetch_all_quota(
     .ok()
     .and_then( |s| crate::account::parse_string_field( &s, "accessToken" ) );
 
+  // Compute once — which account names are active on OTHER machines.
+  let occupied_elsewhere = crate::account::other_machines_active( credential_store );
+
   let mut results = Vec::with_capacity( accounts.len() );
   for acct in &accounts
   {
@@ -144,10 +147,11 @@ pub( crate ) fn fetch_all_quota(
     let renewal_at = read_renewal_at( credential_store, &acct.name );
     results.push( AccountQuota
     {
-      name          : acct.name.clone(),
+      name                  : acct.name.clone(),
       is_current,
-      is_active     : acct.is_active,
-      expires_at_ms : acct.expires_at_ms,
+      is_active             : acct.is_active,
+      is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
+      expires_at_ms         : acct.expires_at_ms,
       result,
       account,
       host,
@@ -185,15 +189,16 @@ fn inject_synthetic_row_if_needed(
   let account       = claude_quota::fetch_oauth_account( &token ).ok();
   inject_synthetic_if_new( results, AccountQuota
   {
-    name : synthetic_name,
-    is_current    : true,
-    is_active     : false,
+    name                  : synthetic_name,
+    is_current            : true,
+    is_active             : false,
+    is_occupied_elsewhere : false,
     expires_at_ms,
     result,
     account,
-    host          : String::new(),
-    role          : String::new(),
-    renewal_at    : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
   } );
 }
 
@@ -357,29 +362,31 @@ mod tests
     //   when synthetic_name == "i6@wbox.pro" which already exists, count becomes 2.
     let stored_row = AccountQuota
     {
-      name          : "i6@wbox.pro".to_string(),
-      is_current    : false,
-      is_active     : false,
-      expires_at_ms : FAR_FUTURE_MS,
-      result        : Err( "missing accessToken".to_string() ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
+      name                 : "i6@wbox.pro".to_string(),
+      is_current           : false,
+      is_active            : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms        : FAR_FUTURE_MS,
+      result               : Err( "missing accessToken".to_string() ),
+      account              : None,
+      host                 : String::new(),
+      role                 : String::new(),
+      renewal_at           : None,
     };
     let mut results = vec![ stored_row ];
 
     let synthetic = AccountQuota
     {
-      name          : "i6@wbox.pro".to_string(),
-      is_current    : true,
-      is_active     : false,
-      expires_at_ms : FAR_FUTURE_MS,
-      result        : Err( "missing accessToken".to_string() ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
+      name                 : "i6@wbox.pro".to_string(),
+      is_current           : true,
+      is_active            : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms        : FAR_FUTURE_MS,
+      result               : Err( "missing accessToken".to_string() ),
+      account              : None,
+      host                 : String::new(),
+      role                 : String::new(),
+      renewal_at           : None,
     };
 
     // Fix(BUG-218): guarded injection — only insert when name is absent from results.

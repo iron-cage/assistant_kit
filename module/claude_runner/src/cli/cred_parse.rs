@@ -3,6 +3,7 @@
 //! Contains `IsolatedArgs`, `RefreshArgs`, their parsers, and env-var fallback application
 //! for the `isolated` and `refresh` subcommands.
 
+use claude_core::paths::ClaudePaths;
 use error_tools::{ Error, Result };
 use super::parse::{ next_value, env_str, env_bool };
 
@@ -54,6 +55,13 @@ fn apply_cred_env_vars(
   if creds_path.is_empty()
   {
     *creds_path = env_str( "CLR_CREDS" ).unwrap_or_default();
+  }
+  if creds_path.is_empty()
+  {
+    if let Some( paths ) = ClaudePaths::new()
+    {
+      *creds_path = paths.credentials_file().to_string_lossy().into_owned();
+    }
   }
   if *timeout_secs == default_timeout
   {

@@ -15,7 +15,10 @@ mod touch;
 mod params;
 mod api;
 
-pub( crate ) use api::{ validate_imodel_str, validate_effort_str, pre_switch_touch_ctx, apply_post_switch_touch };
+pub( crate ) use api::{
+  validate_imodel_str, validate_effort_str, pre_switch_touch_ctx, apply_post_switch_touch,
+  attempt_expired_token_refresh, TouchCtx,
+};
 pub use api::usage_routine;
 
 // ── Test support ──────────────────────────────────────────────────────────────
@@ -46,7 +49,8 @@ pub( crate ) mod test_support
     {
       name          : "test@example.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
@@ -63,7 +67,8 @@ pub( crate ) mod test_support
     {
       name          : "bad@example.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "missing accessToken".to_string() ),
       account       : None,
@@ -88,7 +93,8 @@ pub( crate ) mod test_support
     {
       name          : "test@example.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
@@ -116,7 +122,8 @@ pub( crate ) mod test_support
     {
       name          : name.to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms,
       result        : Ok( data ),
       account       : None,
@@ -147,7 +154,8 @@ pub( crate ) mod test_support
     {
       name          : name.to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
@@ -196,7 +204,8 @@ pub( crate ) mod test_support
     {
       name          : name.to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
@@ -231,7 +240,8 @@ pub( crate ) mod test_support
     {
       name          : name.to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
@@ -256,7 +266,8 @@ pub( crate ) mod test_support
     {
       name          : name.to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
@@ -273,7 +284,8 @@ pub( crate ) mod test_support
     {
       name          : name.to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "missing accessToken".to_string() ),
       account       : None,
@@ -292,7 +304,8 @@ pub( crate ) mod test_support
     {
       name          : "test@example.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( claude_quota::OauthUsageData
       {
@@ -316,7 +329,8 @@ pub( crate ) mod test_support
     {
       name          : "test@example.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( claude_quota::OauthUsageData
       {
@@ -340,7 +354,8 @@ pub( crate ) mod test_support
     {
       name          : "test@example.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( claude_quota::OauthUsageData
       {
@@ -489,7 +504,7 @@ mod tests
     let accounts = vec![
       AccountQuota
       {
-        name : "fail@test.com".to_string(), is_current : false, is_active : false,
+        name : "fail@test.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
         expires_at_ms : 0, result : Err( "auth failed".to_string() ), account : None,
         host : String::new(), role : String::new(), renewal_at : None,
       },
@@ -506,7 +521,7 @@ mod tests
     let accounts = vec![
       AccountQuota
       {
-        name : "test\"@evil.com".to_string(), is_current : false, is_active : false,
+        name : "test\"@evil.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
         expires_at_ms : 0, result : Err( "fail".to_string() ), account : None,
         host : String::new(), role : String::new(), renewal_at : None,
       },
@@ -534,7 +549,8 @@ mod tests
       {
         name          : "ok@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : FAR_FUTURE_MS,
         result        : Ok( quota ),
         account       : None,
@@ -546,7 +562,8 @@ mod tests
       {
         name          : "err@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,

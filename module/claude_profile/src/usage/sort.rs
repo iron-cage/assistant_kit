@@ -532,7 +532,8 @@ mod tests
       {
         name          : name.to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : FAR_FUTURE_MS,
         result        : Ok( OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None } ),
         account       : None,
@@ -882,7 +883,8 @@ mod tests
       {
         name          : name.to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : u64::MAX,
         result        : Ok( claude_quota::OauthUsageData
         {
@@ -949,7 +951,7 @@ mod tests
     };
     let aq = AccountQuota
     {
-      name : "test@example.com".to_string(), is_current : false, is_active : false,
+      name : "test@example.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
@@ -979,7 +981,7 @@ mod tests
     };
     let aq = AccountQuota
     {
-      name : "test@example.com".to_string(), is_current : false, is_active : false,
+      name : "test@example.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
@@ -1008,7 +1010,7 @@ mod tests
     };
     let aq = AccountQuota
     {
-      name : "test@example.com".to_string(), is_current : false, is_active : false,
+      name : "test@example.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
@@ -1033,7 +1035,7 @@ mod tests
     };
     let aq = AccountQuota
     {
-      name : "test@example.com".to_string(), is_current : false, is_active : false,
+      name : "test@example.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
@@ -1089,7 +1091,7 @@ mod tests
     };
     let aq = AccountQuota
     {
-      name : "son_binding@test.com".to_string(), is_current : false, is_active : false,
+      name : "son_binding@test.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : ( now + 86400 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
@@ -1138,7 +1140,7 @@ mod tests
     };
     let aq = AccountQuota
     {
-      name : "7d_binding@test.com".to_string(), is_current : false, is_active : false,
+      name : "7d_binding@test.com".to_string(), is_current : false, is_active : false, is_occupied_elsewhere : false,
       expires_at_ms : ( now + 86400 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
@@ -1294,7 +1296,8 @@ mod tests
     {
       name          : "test@example.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,
@@ -1346,7 +1349,8 @@ mod tests
     {
       name          : "test@example.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Ok( data ),
       account       : None,

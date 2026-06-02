@@ -201,7 +201,8 @@ mod tests
       {
         name          : "test-acct".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
         account       : None,
@@ -233,7 +234,8 @@ mod tests
       {
         name          : "ok-acct".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Ok( quota ),
         account       : None,
@@ -260,7 +262,8 @@ mod tests
       {
         name          : "net-acct".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( err_msg.clone() ),
         account       : None,
@@ -303,7 +306,8 @@ mod tests
       {
         name          : "ghost@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
@@ -332,7 +336,8 @@ mod tests
       {
         name          : "ghost@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 403".to_string() ),
         account       : None,
@@ -366,7 +371,8 @@ mod tests
       {
         name          : "a@ok.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Ok( quota ),
         account       : None,
@@ -378,7 +384,8 @@ mod tests
       {
         name          : "b@ratelimited.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
         account       : None,
@@ -390,7 +397,8 @@ mod tests
       {
         name          : "c@expired.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
@@ -402,7 +410,8 @@ mod tests
       {
         name          : "d@network.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "connection refused".to_string() ),
         account       : None,
@@ -442,7 +451,8 @@ mod tests
       {
         name          : "trace@test.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
@@ -494,7 +504,8 @@ mod tests
       {
         name          : "alice@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
@@ -570,7 +581,8 @@ mod tests
       {
         name          : "bob@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
@@ -612,7 +624,8 @@ mod tests
       {
         name          : "alice@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,  // expired: 0/1000=0 <= now_secs
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
         account       : None,
@@ -648,7 +661,8 @@ mod tests
       {
         name          : "alice@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : FAR_FUTURE_MS,  // non-expired; 403 triggers regardless of expiry
         result        : Err( "HTTP transport error: HTTP 403".to_string() ),
         account       : None,
@@ -690,7 +704,8 @@ mod tests
       {
         name          : "alice@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
@@ -742,7 +757,8 @@ mod tests
       {
         name          : "trace@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
@@ -864,7 +880,8 @@ mod tests
       {
         name          : "alice@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
@@ -892,7 +909,8 @@ mod tests
       {
         name          : "alice@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : FAR_FUTURE_MS,  // non-expired → 429 is genuine rate-limit
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
         account       : None,
@@ -929,7 +947,8 @@ mod tests
       {
         name          : "alice@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 429".to_string() ),
         account       : None,
@@ -1047,7 +1066,8 @@ mod tests
       {
         name          : "bob@example.com".to_string(),
         is_current    : false,
-        is_active     : false,
+        is_active             : false,
+        is_occupied_elsewhere : false,
         expires_at_ms : 0,
         result        : Err( "HTTP transport error: HTTP 401".to_string() ),
         account       : None,
@@ -1086,7 +1106,8 @@ mod tests
     {
       name          : "a@test.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "HTTP transport error: HTTP 401".to_string() ),
       account       : None,
@@ -1105,7 +1126,8 @@ mod tests
     {
       name          : "a@test.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS,
       result        : Err( "HTTP transport error: HTTP 403".to_string() ),
       account       : None,
@@ -1128,7 +1150,8 @@ mod tests
     {
       name          : "a@test.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : 0, // locally expired
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
       account       : None,
@@ -1153,7 +1176,8 @@ mod tests
     {
       name          : "a@test.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : FAR_FUTURE_MS, // not expired
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
       account       : None,
@@ -1178,7 +1202,8 @@ mod tests
     {
       name          : "a@test.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : 5_000,
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
       account       : None,
@@ -1203,7 +1228,8 @@ mod tests
     {
       name          : "a@test.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : 6_000,  // one second ahead of now_secs=5
       result        : Err( "HTTP transport error: HTTP 429".to_string() ),
       account       : None,
@@ -1226,7 +1252,8 @@ mod tests
     {
       name          : "a@test.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : 0,
       result        : Ok( quota ),
       account       : None,
@@ -1245,7 +1272,8 @@ mod tests
     {
       name          : "a@test.com".to_string(),
       is_current    : false,
-      is_active     : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
       expires_at_ms : 0,
       result        : Err( "connection refused".to_string() ),
       account       : None,

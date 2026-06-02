@@ -16,6 +16,7 @@ use super::shared::{
 /// Returns `ErrorData` if name is missing/empty, HOME is unset,
 /// or the target account does not exist.
 #[ inline ]
+#[ allow( clippy::too_many_lines ) ]
 pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   // Validate all CLI arguments before any I/O (fast-fail on bad values before filesystem access).
@@ -71,80 +72,12 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   };
 
   // Fix(BUG-213): when touch is enabled and the quota fetch failed (touch_ctx is None),
-  //   check expiresAt from the target's credential file before calling switch_account().
-  // Root cause: pre_switch_touch_ctx() returns None for any fetch Err without signaling
-  //   whether the target token is locally expired. account_use_routine() then called
-  //   switch_account() unconditionally, installing credentials that immediately fail
-  //   all API calls with 401 — violating the invariant: "after .account.use X succeeds,
-  //   X is usable for API calls."
-  // Pitfall: a None return from a probe function that also reads credential state conflates
-  //   "valid-but-fetch-failed" with "expired-and-fetch-failed". Callers treating all None
-  //   returns identically must add their own expiry guard at the decision point.
+  //   check expiresAt and attempt refresh (BUG-230) before calling switch_account().
   if touch != 0 && touch_ctx.is_none()
   {
-    let cred_path  = credential_store.join( format!( "{name}.credentials.json" ) );
-    if let Ok( cred_str ) = std::fs::read_to_string( &cred_path )
-    {
-      let needle     = "\"expiresAt\":";
-      let expires_ms = cred_str.find( needle ).and_then( | pos |
-      {
-        let rest = cred_str[ pos + needle.len().. ].trim_start();
-        let end  = rest.find( | c : char | !c.is_ascii_digit() ).unwrap_or( rest.len() );
-        rest[ ..end ].parse::< u64 >().ok()
-      } );
-      if let Some( exp_ms ) = expires_ms
-      {
-        use std::time::{ SystemTime, UNIX_EPOCH };
-        let now_ms = u64::try_from(
-          SystemTime::now()
-            .duration_since( UNIX_EPOCH )
-            .unwrap_or_default()
-            .as_millis()
-        ).unwrap_or( u64::MAX );
-        if now_ms > exp_ms
-        {
-          let elapsed_secs = ( now_ms - exp_ms ) / 1000;
-          let h            = elapsed_secs / 3600;
-          let m            = ( elapsed_secs % 3600 ) / 60;
-          // Fix(BUG-230): attempt OAuth token refresh before giving up on expired token.
-          // Root cause: BUG-213 guard exited 3 without attempting refresh — token expiry is
-          //   recoverable when `refresh::1` (default), the same way `.usage` handles 401/429+expired.
-          // Pitfall: after a successful refresh the touch_ctx must be re-probed; the old None
-          //   result is stale — the fresh token now makes quota fetch viable.
-          if refresh != 0
-          {
-            if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → attempting refresh" ) }
-            let refreshed = crate::usage::attempt_expired_token_refresh(
-              &name, &credential_store, &paths, trace, &imodel_str, &effort_str,
-            );
-            if refreshed
-            {
-              if trace { eprintln!( "[trace] account.use  {name}  expiry check: refresh OK — re-probing touch context" ) }
-              touch_ctx = crate::usage::pre_switch_touch_ctx( &name, &credential_store, trace, &imodel_str, &effort_str );
-            }
-            else
-            {
-              if trace { eprintln!( "[trace] account.use  {name}  expiry check: refresh failed → refused" ) }
-              eprintln!( "account credentials expired and refresh failed: {name} (expired {h}h {m}m ago)" );
-              std::process::exit( 3 );
-            }
-          }
-          else
-          {
-            if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → refused (refresh::0)" ) }
-            eprintln!( "account credentials expired: {name} (expired {h}h {m}m ago)" );
-            std::process::exit( 3 );
-          }
-        }
-        else if trace
-        {
-          let remaining_secs = ( exp_ms - now_ms ) / 1000;
-          let h              = remaining_secs / 3600;
-          let m              = ( remaining_secs % 3600 ) / 60;
-          eprintln!( "[trace] account.use  {name}  expiry check: valid (expires in {h}h {m}m)" );
-        }
-      }
-    }
+    touch_ctx = check_expiry_and_refresh(
+      &name, &credential_store, &paths, refresh, trace, &imodel_str, &effort_str,
+    );
   }
 
   crate::account::switch_account( &name, &credential_store, &paths )
@@ -158,6 +91,80 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   }
 
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )
+}
+
+/// Check whether the target account's token is expired; attempt refresh if so.
+///
+/// Called only when `touch` is enabled and `pre_switch_touch_ctx()` returned `None`.
+/// Returns a new `TouchCtx` when refresh succeeds, `None` when the token is not expired
+/// (or the credential file cannot be read). Exits the process with code 3 when the token
+/// is expired but cannot be refreshed.
+///
+/// # Fix(BUG-213)
+/// Root cause: `pre_switch_touch_ctx()` returns `None` for any fetch error without
+/// distinguishing "token valid but quota unreachable" from "token locally expired".
+/// Pitfall: callers treating all `None` returns identically must add their own expiry
+/// guard at the decision point, as done here.
+///
+/// # Fix(BUG-230)
+/// Root cause: the original BUG-213 guard exited 3 without attempting OAuth refresh.
+/// Token expiry is recoverable when `refresh != 0` (the default).
+/// Pitfall: after a successful refresh the `touch_ctx` must be re-probed — the old `None`
+/// is stale once the fresh token makes quota fetch viable.
+fn check_expiry_and_refresh(
+  name             : &str,
+  credential_store : &std::path::Path,
+  paths            : &crate::ClaudePaths,
+  refresh          : i64,
+  trace            : bool,
+  imodel_str       : &str,
+  effort_str       : &str,
+) -> Option< crate::usage::TouchCtx >
+{
+  let cred_path  = credential_store.join( format!( "{name}.credentials.json" ) );
+  let cred_str = std::fs::read_to_string( &cred_path ).ok()?;
+  let needle     = "\"expiresAt\":";
+  let expires_ms = cred_str.find( needle ).and_then( | pos |
+  {
+    let rest = cred_str[ pos + needle.len().. ].trim_start();
+    let end  = rest.find( | c : char | !c.is_ascii_digit() ).unwrap_or( rest.len() );
+    rest[ ..end ].parse::< u64 >().ok()
+  } );
+  let exp_ms = expires_ms?;
+  use std::time::{ SystemTime, UNIX_EPOCH };
+  let now_ms = u64::try_from(
+    SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_millis()
+  ).unwrap_or( u64::MAX );
+  if now_ms <= exp_ms
+  {
+    if trace
+    {
+      let rem_s = ( exp_ms - now_ms ) / 1000;
+      eprintln!( "[trace] account.use  {name}  expiry check: valid (expires in {}h {}m)", rem_s / 3600, ( rem_s % 3600 ) / 60 );
+    }
+    return None;
+  }
+  let elapsed_s = ( now_ms - exp_ms ) / 1000;
+  let h         = elapsed_s / 3600;
+  let m         = ( elapsed_s % 3600 ) / 60;
+  if refresh != 0
+  {
+    if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → attempting refresh" ) }
+    let refreshed = crate::usage::attempt_expired_token_refresh( name, credential_store, paths, trace, imodel_str, effort_str );
+    if refreshed
+    {
+      if trace { eprintln!( "[trace] account.use  {name}  expiry check: refresh OK — re-probing touch context" ) }
+      return crate::usage::pre_switch_touch_ctx( name, credential_store, trace, imodel_str, effort_str );
+    }
+    if trace { eprintln!( "[trace] account.use  {name}  expiry check: refresh failed → refused" ) }
+    eprintln!( "account credentials expired and refresh failed: {name} (expired {h}h {m}m ago)" );
+  }
+  else
+  {
+    if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → refused (refresh::0)" ) }
+    eprintln!( "account credentials expired: {name} (expired {h}h {m}m ago)" );
+  }
+  std::process::exit( 3 );
 }
 
 /// `.account.rotate` — auto-rotate to the highest-expiry inactive account.

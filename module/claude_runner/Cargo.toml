@@ -39,6 +39,8 @@ default = [ "enabled" ]
 enabled = [
   "dep:claude_runner_core",
   "claude_runner_core/enabled",
+  "dep:claude_core",
+  "claude_core/enabled",
   "dep:error_tools",
   "error_tools/enabled",
   "error_tools/error_untyped",
@@ -48,6 +50,7 @@ enabled = [
 
 [dependencies]
 claude_runner_core = { workspace = true, optional = true }
+claude_core        = { workspace = true, optional = true }
 error_tools        = { workspace = true, optional = true }
 unilang            = { workspace = true, optional = true }
 

@@ -101,10 +101,11 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     Box::new( account_save_routine    ) );
   reg_cmd( registry, ".account.use",    "Switch active account by name with atomic credential rotation",
     vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry(),
-      reg_arg_opt( "touch",  Kind::String ).with_description( "Activate idle 5h session window via subprocess after switch (0/false = off; 1/true = on, default)" ),
-      reg_arg_opt( "imodel", Kind::String ).with_description( "Subprocess model: `auto` (default, ≥30% 7d(Son) remaining → sonnet, else → opus), `sonnet`, `opus`, `haiku` (claude-haiku-4-5-20251001), `keep`" ),
-      reg_arg_opt( "effort", Kind::String ).with_description( "Subprocess effort level: `auto` (default, high for Sonnet, max for Opus), `low`, `normal`, `high`, `max`" ),
-      reg_arg_opt( "trace",  Kind::String ).with_description( "Print [trace] lines to stderr for each internal operation (0 = off, default; 1 = on)" ) ],
+      reg_arg_opt( "touch",   Kind::String  ).with_description( "Activate idle 5h session window via subprocess after switch (0/false = off; 1/true = on, default)" ),
+      reg_arg_opt( "refresh", Kind::String  ).with_description( "Attempt OAuth token refresh when stored credentials are locally expired (1 = enabled, default; 0 = disabled)" ),
+      reg_arg_opt( "imodel",  Kind::String  ).with_description( "Subprocess model: `auto` (default, ≥30% 7d(Son) remaining → sonnet, else → opus), `sonnet`, `opus`, `haiku` (claude-haiku-4-5-20251001), `keep`" ),
+      reg_arg_opt( "effort",  Kind::String  ).with_description( "Subprocess effort level: `auto` (default, high for Sonnet, max for Opus), `low`, `normal`, `high`, `max`" ),
+      reg_arg_opt( "trace",   Kind::String  ).with_description( "Print [trace] lines to stderr for each internal operation (0 = off, default; 1 = on)" ) ],
     Box::new( account_use_routine     ) );
   reg_cmd( registry, ".account.delete", "Delete a saved account from the account store",                                   vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry(), trc() ], Box::new( account_delete_routine  ) );
   reg_cmd( registry, ".account.relogin", "Force browser re-authentication for a named account with dead refreshToken",     vec![ nam(), dry(), trc() ], Box::new( account_relogin_routine ) );

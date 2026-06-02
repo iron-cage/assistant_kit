@@ -6406,14 +6406,14 @@ fn it225_lim_it_it71_next_event_cell_shows_label_and_duration()
     "→ Next column header must appear in default output (IT-71), got:\n{text}",
   );
   // At least one strategic event-label pattern must appear in the output.
-  // Valid labels after TSK-228: +7d, $ren — each followed by " in ".
+  // Valid labels after TSK-228: +7d, $ren — now formatted as "in <dur> +7d" / "in <dur> $ren".
   // !tok and +5h are not candidates (token expiry / 5h reset excluded from → Next).
   let has_event_label =
-    text.contains( "+7d in " )
-    || text.contains( "$ren in " );
+    text.contains( " +7d" )
+    || text.contains( " $ren" );
   assert!(
     has_event_label,
-    "→ Next cell must contain '+7d in ...' or '$ren in ...' for live account (IT-71), got:\n{text}",
+    "→ Next cell must contain 'in ... +7d' or 'in ... $ren' for live account (IT-71), got:\n{text}",
   );
 }
 
