@@ -98,7 +98,7 @@ clp .usage live::1 interval::60 jitter::10
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
 - `Sub` is sourced from `GET /api/oauth/account` (parallel fetch); shows `?` when that fetch fails.
 - `~Renews` shows an exact duration (`in Xh Ym`, no `~`) when `_renewal_at` is set in `{name}.claude.json` (via `.account.renewal`); shows an estimated `~in Xd` from `org_created_at` day-of-month when not set; shows `?` when neither source is available.
-- `→ Next` shows the soonest upcoming event among token expiry (`!tok`), 7d quota reset (`+7d`), and billing renewal (`$ren`). Only 5h session resets are not candidates — already shown in `5h Reset`. Shows `—` when all candidates are absent or in the past.
+- `→ Next` shows the soonest upcoming strategic event among 7d quota reset (`+7d`) and billing renewal (`$ren`). Token expiry (`!tok`) and 5h session resets are not candidates — already shown in `Expires` and `5h Reset`. Shows `—` when all candidates are absent or in the past.
 - Accounts with failed quota fetch (expired/missing `accessToken`, 429 rate-limit, or other API error) show `—` for all quota columns (`5h Left` through `7d Reset`) with a shortened error reason replacing the **last visible quota column**. `Expires`, `Sub`, and `~Renews` are sourced independently and retain their values regardless of quota fetch failure.
 - Footer: always shows one recommendation per strategy (renew, endurance, drain) when ≥2 accounts have valid quota data; `next::` controls only which account receives `→` in the table body.
 - Empty credential store exits 0 with `(no accounts configured)`.

@@ -187,18 +187,12 @@ pub( crate ) fn renews_label(
 /// Return the winning next-event candidate as `(secs, prefix, is_estimate)`.
 ///
 /// Candidates with `secs == 0` are excluded. Minimum-secs wins; ties by iteration order.
-/// Prefixes: `"!tok"` (token expiry — most urgent, exact), `"+7d"` (7d reset), `"$ren"` (renewal).
-/// Pass `token_expires_secs = None` when `expires_at_ms == 0` (expiry unknown or already expired).
-///
-/// Fix(BUG-227): token expiry re-added as a candidate so the column surfaces the most urgent event.
-/// Root cause: TSK-228 removed it to simplify the 3-param signature; the "account becomes unusable"
-///   scenario was not considered when token expires before any quota or billing event.
-/// Pitfall: `consider()` already skips secs==0, so `Some(0)` (just-expired) is safe to pass.
+/// Prefixes: `"+7d"` (7d reset), `"$ren"` (renewal). Token expiry (`!tok`) is not a candidate —
+/// it is already surfaced in the `Expires` column. 5h resets are not candidates either.
 pub( crate ) fn next_event_raw(
   seven_day_resets_secs : Option< u64 >,
   renewal_secs_opt      : Option< u64 >,
   renewal_is_estimate   : bool,
-  token_expires_secs    : Option< u64 >,
 ) -> Option< ( u64, &'static str, bool ) >
 {
   let consider = |current : Option< ( u64, &'static str, bool ) >,
@@ -216,7 +210,6 @@ pub( crate ) fn next_event_raw(
     }
   };
   let mut best = None;
-  if let Some( s ) = token_expires_secs     { best = consider( best, s, "!tok", false               ); }
   if let Some( s ) = seven_day_resets_secs  { best = consider( best, s, "+7d",  false               ); }
   if let Some( s ) = renewal_secs_opt       { best = consider( best, s, "$ren", renewal_is_estimate ); }
   best
@@ -224,20 +217,14 @@ pub( crate ) fn next_event_raw(
 
 /// Format the soonest upcoming strategic event as a compact label for the `→ Next` column.
 ///
-/// Candidates: `!tok` (token expiry — soonest/most urgent), `+7d` (7-day reset), `$ren` (renewal).
-/// All absent / zero → `"—"`. Pass `token_expires_secs = None` when expiry is unknown.
+/// Candidates: `+7d` (7-day reset), `$ren` (renewal). All absent / zero → `"—"`.
 pub( crate ) fn next_event_label(
   seven_day_resets_secs : Option< u64 >,
   renewal_secs_opt      : Option< u64 >,
   renewal_is_estimate   : bool,
-  token_expires_secs    : Option< u64 >,
 ) -> String
 {
-  match next_event_raw(
-    seven_day_resets_secs,
-    renewal_secs_opt, renewal_is_estimate,
-    token_expires_secs,
-  )
+  match next_event_raw( seven_day_resets_secs, renewal_secs_opt, renewal_is_estimate )
   {
     None                             => "\u{2014}".to_string(),
     Some( ( secs, prefix, true  ) ) => format!( "{prefix} ~in {}", format_duration_secs( secs ) ),
@@ -880,60 +867,30 @@ mod tests
     assert_eq!( result, "?", "both absent must return '?', got: {result}" );
   }
 
-  // ── next_event_label (Phase 3 RED gate — TSK-227) ─────────────────────────
+  // ── next_event_label ───────────────────────────────────────────────────────
 
-  /// BUG-227 MRE: `next_event_label` must select `!tok` when token expiry fires before 7d reset.
+  /// TSK-235 guard: `!tok` is not a candidate; `+7d` must win even when token expires sooner.
   ///
-  /// # Root Cause
-  /// TSK-228 removed token expiry as a candidate to simplify the function signature. The "account
-  /// becomes unusable" scenario was not considered — if the token expires before any quota or billing
-  /// event, the column showed a misleading quota event days away.
-  ///
-  /// # Why Not Caught
-  /// `ne_tok_excluded_after_tsk228` was a deliberate regression guard FOR the exclusion — it asserted
-  /// the wrong behavior as the expected behavior.
-  ///
-  /// # Fix Applied
-  /// `token_expires_secs: Option<u64>` param added to `next_event_raw()` and `next_event_label()`;
-  /// `"!tok"` candidate added before `"+7d"` and `"$ren"` in the consideration loop.
-  ///
-  /// # Prevention
-  /// `→ Next` column's purpose is "most actionable upcoming event." Token expiry = account becomes
-  /// unusable = maximally actionable. Any future removal requires explicit written rationale.
-  ///
-  /// # Pitfall
-  /// Call sites must pass `token_expires_secs = None` when `expires_at_ms == 0` (expiry unknown),
-  /// not `Some(0)`, to avoid misleading `!tok in 0s` output. (Both work due to `consider()` secs==0
-  /// guard, but `None` is semantically cleaner.)
+  /// `→ Next` is strategic-only: `+7d` and `$ren` only. Token expiry is already shown in `Expires`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
-  #[ doc = "bug_reproducer(BUG-227)" ]
+  /// Source: [`009_token_usage.md` AC-28]
   #[ test ]
-  fn mre_bug227_tok_soonest_when_before_7d_reset()
+  fn ne_tok_excluded_after_tsk228()
   {
-    // Token expires in 5m, 7d reset in 2h — !tok must win.
-    let result = next_event_label( Some( 7200 ), None, false, Some( 300 ) );
-    assert_eq!( result, "!tok in 5m", "token expiry soonest → '!tok in 5m', got: {result}" );
+    // Even if a token would expire in 5m, !tok is not a candidate — +7d in 2h must win.
+    let result = next_event_label( Some( 7200 ), None, false );
+    assert_eq!( result, "+7d in 2h", "!tok must not be a candidate; got: {result}" );
   }
 
-  /// BUG-227: `!tok` defers when 7d reset is soonest.
-  #[ doc = "bug_reproducer(BUG-227)" ]
-  #[ test ]
-  fn mre_bug227_7d_wins_when_tok_later()
-  {
-    // 7d reset in 1h, token expires in 6h — +7d must win.
-    let result = next_event_label( Some( 3600 ), None, false, Some( 21600 ) );
-    assert_eq!( result, "+7d in 1h", "7d reset soonest → '+7d in 1h', got: {result}" );
-  }
-
-  /// FT-18 variant — `next_event_label`: 7d reset soonest (no token expiry) → `"+7d in 2d"`.
+  /// FT-18 variant — `next_event_label`: 7d reset soonest → `"+7d in 2d"`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]
   #[ test ]
   fn ne_7d_soonest()
   {
-    let result = next_event_label( Some( 2 * 86400 ), None, false, None );
+    let result = next_event_label( Some( 2 * 86400 ), None, false );
     assert_eq!( result, "+7d in 2d", "7d reset soonest → '+7d in 2d', got: {result}" );
   }
 
@@ -944,7 +901,7 @@ mod tests
   #[ test ]
   fn ne_renewal_soonest_exact()
   {
-    let result = next_event_label( None, Some( 21600 ), false, None );
+    let result = next_event_label( None, Some( 21600 ), false );
     assert_eq!( result, "$ren in 6h", "exact renewal soonest → '$ren in 6h', got: {result}" );
   }
 
@@ -955,7 +912,7 @@ mod tests
   #[ test ]
   fn ne_renewal_soonest_estimate()
   {
-    let result = next_event_label( None, Some( 3 * 86400 ), true, None );
+    let result = next_event_label( None, Some( 3 * 86400 ), true );
     assert_eq!( result, "$ren ~in 3d", "estimate renewal soonest → '$ren ~in 3d', got: {result}" );
   }
 
@@ -966,7 +923,7 @@ mod tests
   #[ test ]
   fn ne_all_none_returns_dash()
   {
-    let result = next_event_label( None, None, false, None );
+    let result = next_event_label( None, None, false );
     assert_eq!( result, "\u{2014}", "all absent → em-dash, got: {result}" );
   }
 
