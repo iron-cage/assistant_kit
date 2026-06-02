@@ -187,7 +187,8 @@ pub( crate ) fn renews_label(
 /// Return the winning next-event candidate as `(secs, prefix, is_estimate)`.
 ///
 /// Candidates with `secs == 0` are excluded. Minimum-secs wins; ties by iteration order.
-/// Prefixes: `"+7d"` (7d reset), `"$ren"` (renewal). Token expiry and 5h resets are not candidates.
+/// Prefixes: `"+7d"` (7d reset), `"$ren"` (renewal). Token expiry (`!tok`) is not a candidate —
+/// it is already surfaced in the `Expires` column. 5h resets are not candidates either.
 pub( crate ) fn next_event_raw(
   seven_day_resets_secs : Option< u64 >,
   renewal_secs_opt      : Option< u64 >,
@@ -209,24 +210,21 @@ pub( crate ) fn next_event_raw(
     }
   };
   let mut best = None;
-  if let Some( s ) = seven_day_resets_secs { best = consider( best, s, "+7d",  false               ); }
-  if let Some( s ) = renewal_secs_opt      { best = consider( best, s, "$ren", renewal_is_estimate ); }
+  if let Some( s ) = seven_day_resets_secs  { best = consider( best, s, "+7d",  false               ); }
+  if let Some( s ) = renewal_secs_opt       { best = consider( best, s, "$ren", renewal_is_estimate ); }
   best
 }
 
 /// Format the soonest upcoming strategic event as a compact label for the `→ Next` column.
 ///
-/// Only `+7d` (7-day reset) and `$ren` (billing renewal) are candidates. All absent / zero → `"—"`.
+/// Candidates: `+7d` (7-day reset), `$ren` (renewal). All absent / zero → `"—"`.
 pub( crate ) fn next_event_label(
   seven_day_resets_secs : Option< u64 >,
   renewal_secs_opt      : Option< u64 >,
   renewal_is_estimate   : bool,
 ) -> String
 {
-  match next_event_raw(
-    seven_day_resets_secs,
-    renewal_secs_opt, renewal_is_estimate,
-  )
+  match next_event_raw( seven_day_resets_secs, renewal_secs_opt, renewal_is_estimate )
   {
     None                             => "\u{2014}".to_string(),
     Some( ( secs, prefix, true  ) ) => format!( "{prefix} ~in {}", format_duration_secs( secs ) ),
@@ -869,25 +867,23 @@ mod tests
     assert_eq!( result, "?", "both absent must return '?', got: {result}" );
   }
 
-  // ── next_event_label (Phase 3 RED gate — TSK-227) ─────────────────────────
+  // ── next_event_label ───────────────────────────────────────────────────────
 
-  /// TSK-228 regression guard — `next_event_label` uses 3-param signature; only `+7d` and `$ren` candidates.
+  /// TSK-235 guard: `!tok` is not a candidate; `+7d` must win even when token expires sooner.
   ///
-  /// After TSK-228, `expires_in_secs` and `five_hour_resets_secs` params are removed. Passing only a
-  /// 7d reset of 7200s must yield `"+7d in 2h"` — confirming `!tok` and `+5h` are not selectable.
+  /// `→ Next` is strategic-only: `+7d` and `$ren` only. Token expiry is already shown in `Expires`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]
   #[ test ]
   fn ne_tok_excluded_after_tsk228()
   {
+    // Even if a token would expire in 5m, !tok is not a candidate — +7d in 2h must win.
     let result = next_event_label( Some( 7200 ), None, false );
-    assert_eq!( result, "+7d in 2h", "only 7d reset present → '+7d in 2h', got: {result}" );
+    assert_eq!( result, "+7d in 2h", "!tok must not be a candidate; got: {result}" );
   }
 
   /// FT-18 variant — `next_event_label`: 7d reset soonest → `"+7d in 2d"`.
-  ///
-  /// `7d_reset=Some(2d)`, `renewal=None`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]
@@ -900,8 +896,6 @@ mod tests
 
   /// FT-18 variant — `next_event_label`: exact billing renewal soonest → `"$ren in 6h"`.
   ///
-  /// `7d_reset=None`, `renewal=Some(21600)` (6h), `is_estimate=false`.
-  ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]
   #[ test ]
@@ -912,8 +906,6 @@ mod tests
   }
 
   /// FT-18 variant — `next_event_label`: estimated billing renewal soonest → `"$ren ~in 3d"`.
-  ///
-  /// `7d_reset=None`, `renewal=Some(3d)`, `is_estimate=true`.
   ///
   /// Spec: [`tests/docs/feature/009_token_usage.md` FT-18]
   /// Source: [`009_token_usage.md` AC-28]

@@ -17,7 +17,8 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
 2. Fetch quota for the target account from `{credential_store}/{name}.credentials.json` — one HTTP call to `/api/oauth/usage`. If fetch fails (network error, expired token), record failure and continue to step 4.
 3. Determine idle status from fetched data: `five_hour.resets_at.is_none()` → idle; `resets_at.is_some()` → already active.
 4. If `dry::1`: print `[dry-run] would switch to '{name}'` (no files changed, no subprocess).
-5. `switch_account(name)` — atomic credential rotation (credentials, active marker, best-effort `oauthAccount` patch).
+5. `switch_account(name)` — atomic credential rotation (credentials, active marker, best-effort `oauthAccount` patch); model snapshot restore from `{name}.settings.json` into `~/.claude/settings.json`.
+5b. If quota fetch succeeded (step 2): check `seven_day_sonnet` utilization; if remaining < 20% and restored model is Sonnet, overwrite `~/.claude/settings.json` model with `"claude-opus-4-6"` (BUG-225 fix). When `touch_ctx` is absent (fetch failed — see BUG-226 limitation), this step is skipped and the snapshot model is installed as-is.
 6. If quota fetch succeeded (step 2) AND account was idle (step 3): call `resolve_model(quota, imodel_param)` → `IsolatedModel`; call `resolve_effort(&model, effort_param)` → `Option<&str>`; spawn `run_isolated()` with `["--print", "."]` plus optional `--model` and `--effort` flags.
 
 **When `touch::0`:** Steps 1, 4, 5 only. No quota fetch, no subprocess. Pure credential rotation (pre-Feature-027 behavior).
@@ -34,6 +35,7 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
 [trace] account.use  {name}  expiry check: expired(4h 21m ago) → refused        ← fetch Err + expiresAt past: exits 3; no switch
                                          OR: valid (expires in 3h 34m)         ← fetch Err + expiresAt future; omitted when expiresAt absent
 [trace] account.use  {name}  idle check: resets_at=absent → idle                ← fetch OK path only; or resets_at=present → already active
+[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left=5%)      ← fetch OK + 7d(Son) < 20% + snapshot was Sonnet; omitted otherwise
 [trace] account.use  {name}  model: {model}  effort: {effort}                   ← fetch OK path only
 [trace] account.use  {name}  subprocess: spawned                                ← or skipped (reason: already active); fetch OK path only
 ```
@@ -41,7 +43,7 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
 When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operations performed). When `trace::0` (default): no trace output.
 
 **Model/effort resolution:** Delegates entirely to `resolve_model()` and `resolve_effort()` in `usage.rs`. All semantics from Feature 026 apply unchanged:
-- `imodel::auto` (default): `claude-sonnet-4-6` if `7d(Son) ≥ 30%`, else `claude-opus-4-6`
+- `imodel::auto` (default): `claude-sonnet-4-6` if `7d(Son) ≥ 20%`, else `claude-opus-4-6`
 - `effort::auto` (default): `high` for Sonnet, `max` for Opus, no flag for `imodel::keep` or `imodel::haiku`
 
 **Layer assignment:** Quota fetch and subprocess call are added to `account_use_routine()` in `commands.rs`. Resolution functions (`resolve_model`, `resolve_effort`) are reused from `usage.rs` with no changes.
@@ -58,7 +60,7 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 - **AC-02**: `clp .account.use name::alice@home.com touch::0` performs pure credential rotation with no quota fetch and no subprocess.
 - **AC-03**: `clp .account.use` against an already-active account (`resets_at.is_some()`) completes without spawning a subprocess; exits 0.
 - **AC-04**: When the quota fetch fails (network error, auth error) AND the target account's token is NOT locally expired (`expiresAt` absent or in the future): touch is skipped silently and the switch still completes; exits 0.
-- **AC-05**: `imodel::auto` selects `claude-sonnet-4-6` when `7d(Son) ≥ 30%` and `claude-opus-4-6` when `7d(Son) < 30%` or unavailable; delegates to `resolve_model()`.
+- **AC-05**: `imodel::auto` selects `claude-sonnet-4-6` when `7d(Son) ≥ 20%` and `claude-opus-4-6` when `7d(Son) < 20%` or unavailable; delegates to `resolve_model()`.
 - **AC-06**: `effort::auto` injects `--effort high` for Sonnet and `--effort max` for Opus; no `--effort` flag for `imodel::keep` or `imodel::haiku`.
 - **AC-07**: `imodel::bad` exits 1 with stderr naming `auto`, `sonnet`, `opus`, `haiku`, `keep`; `effort::bad` exits 1 with stderr naming `auto`, `low`, `normal`, `high`, `max`.
 - **AC-08**: `dry::1` prints `[dry-run] would switch to '{name}'` without modifying credentials or spawning a subprocess.
@@ -71,6 +73,9 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 - **AC-15**: When `trace::1` and `touch::0`: no `[trace] account.use` lines emitted — no quota fetch operations are performed on the `touch::0` path.
 - **AC-16**: `trace::` (Kind::String, default `0`) is registered on `.account.use`; `trace::bad` exits 1 with stderr naming `0`, `1`, `false`, `true`.
 - **AC-17**: When `touch::1` (default) and the quota fetch fails (returns Err) AND the target account's token is locally expired (current time > `expiresAt` from `{credential_store}/{name}.credentials.json`): exits 3 with `account credentials expired: {name} (expired {N}h {M}m ago)` on stderr; `switch_account()` is NOT called. When `trace::1`: emits `[trace] account.use  {name}  expiry check: expired({N}h {M}m ago) → refused` after the `quota fetch: Err(...)` line. (Fix for BUG-213.)
+- **AC-18**: When quota fetch succeeded (step 2) and `seven_day_sonnet` remaining < 20% and the just-restored session model is `"claude-sonnet-4-6"` (or absent): overwrites `~/.claude/settings.json` model with `"claude-opus-4-6"` before the subprocess step. (Fix for BUG-225.)
+- **AC-19**: When `trace::1` and the model override fires (AC-18): emits `[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)` before the `model:` line. Omitted when override does not fire (model was already Opus) or when quota fetch failed.
+- **Limitation (BUG-226)**: When the quota fetch returns 429 (rate-limited) or any other error, `touch_ctx` is `None` and the quota-aware model upgrade (AC-18) cannot fire. The snapshot model restored by `switch_account()` is installed as-is — potentially leaving the session on Sonnet even when Sonnet quota is exhausted. No workaround exists at the `.account.use` layer; the user must manually override via `imodel::opus`.
 
 ### Cross-References
 

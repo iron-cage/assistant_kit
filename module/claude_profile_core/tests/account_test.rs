@@ -470,3 +470,68 @@ fn mre_bug222_switch_account_clears_model_when_no_snapshot()
     "model key must be removed from live settings.json when target account has no settings snapshot",
   );
 }
+
+/// BUG-225 MRE: `override_session_model_to_opus` upgrades Sonnet→Opus when settings has Sonnet.
+///
+/// # Root Cause (BUG-225)
+/// `switch_account()` restores the snapshot model unconditionally. When the account's Sonnet
+/// quota is < 20%, the restored Sonnet model leaves the session on an exhausted tier.
+///
+/// # Why Not Caught
+/// No test covered save-with-Sonnet → deplete-Sonnet → switch → assert-session-model-opus.
+///
+/// # Fix Applied
+/// `override_session_model_to_opus()` reads settings.json and overwrites Sonnet with Opus;
+/// returns `true` when the override was applied.
+///
+/// # Prevention
+/// This test asserts the write happens (return `true`) and the model in settings.json
+/// changes to "claude-opus-4-6".
+///
+/// # Pitfall
+/// Function is best-effort: if settings.json is missing, it creates a new object with
+/// just "model": "claude-opus-4-6" — absence of settings is treated as Sonnet (model empty).
+#[ doc = "bug_reproducer(BUG-225)" ]
+#[ test ]
+fn mre_bug225_override_session_model_to_opus_fires_when_sonnet()
+{
+  let tmp        = TempDir::new().unwrap();
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( "settings.json" ), r#"{"model":"claude-sonnet-4-6","theme":"dark"}"# ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  let overrode = account::override_session_model_to_opus( &paths );
+
+  assert!( overrode, "override must return true when model was Sonnet" );
+  let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
+  let model = account::parse_string_field( &live, "model" );
+  assert_eq!( model.as_deref(), Some( "claude-opus-4-6" ), "model must be upgraded to opus" );
+}
+
+/// BUG-225 MRE: `override_session_model_to_opus` is a no-op when model is already Opus.
+///
+/// # Root Cause (BUG-225)
+/// Same as above. This test verifies the inverse: when the snapshot already has Opus,
+/// the override must not touch settings.json (returns `false`).
+///
+/// # Prevention
+/// Ensures the function skips the write for already-correct models.
+///
+/// # Pitfall
+/// A bug that unconditionally writes would fail this test by writing Opus over Opus
+/// unnecessarily, but returning `true` — callers would emit spurious trace lines.
+#[ doc = "bug_reproducer(BUG-225)" ]
+#[ test ]
+fn mre_bug225_override_session_model_to_opus_no_op_when_already_opus()
+{
+  let tmp        = TempDir::new().unwrap();
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+  std::fs::write( dot_claude.join( "settings.json" ), r#"{"model":"claude-opus-4-6"}"# ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  let overrode = account::override_session_model_to_opus( &paths );
+
+  assert!( !overrode, "override must return false when model was already Opus" );
+}

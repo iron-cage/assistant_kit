@@ -8,7 +8,7 @@ use claude_quota::OauthUsageData;
 // ── Sort and prefer strategies ─────────────────────────────────────────────────
 
 #[ derive( Copy, Clone, PartialEq, Eq, Debug ) ]
-pub( crate ) enum SortStrategy { Name, Endurance, Drain, Renew, Next }
+pub( crate ) enum SortStrategy { Name, Endurance, Drain, Renew, Next, Expires, Renews }
 
 impl SortStrategy
 {
@@ -21,8 +21,10 @@ impl SortStrategy
       "drain"     => Ok( Self::Drain ),
       "renew"     => Ok( Self::Renew ),
       "next"      => Ok( Self::Next ),
+      "expires"   => Ok( Self::Expires ),
+      "renews"    => Ok( Self::Renews ),
       _           => Err( format!(
-        "invalid sort:: value {s:?}: valid values are `name`, `endurance`, `drain`, `renew`, `next`",
+        "invalid sort:: value {s:?}: valid values are `name`, `endurance`, `drain`, `renew`, `next`, `expires`, `renews`",
       ) ),
     }
   }

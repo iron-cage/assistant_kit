@@ -20,8 +20,8 @@ use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
 ///
 /// Empty store renders `(no accounts configured)` without a table.
 /// Column visibility is controlled by `cols` (structural `flag` and `account`
-/// columns are always shown). Footer (TSK-184): always-visible 2-strategy block
-/// when ≥2 accounts have valid quota — shows `endurance` and `drain` lines.
+/// columns are always shown). Footer (TSK-184): unconditional 3-strategy block
+/// when ≥2 accounts have valid quota — shows `renew`, `endurance`, and `drain` lines.
 /// The `→` marker in the table body points to the active-strategy winner.
 /// Footer is omitted when < 2 accounts have valid quota data.
 #[ allow( clippy::too_many_lines ) ]
@@ -311,7 +311,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
         {
           None                        => ( "null".to_string(), "null".to_string() ),
           Some( ( secs, prefix, _ ) ) =>
-            ( format!( "\"{}\"", prefix.trim_start_matches( '+' ).trim_start_matches( '!' ).trim_start_matches( '$' ) ),
+            ( format!( "\"{}\"", prefix.trim_start_matches( '+' ).trim_start_matches( '$' ) ),
               secs.to_string() ),
         };
         format!(
@@ -327,8 +327,8 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
       }
       Err( reason ) =>
       {
-        // Err accounts lack quota data but still have token-expiry and optional renewal;
-        // compute next_event from those two sources so JSON callers get useful data.
+        // Err accounts lack quota data but still have optional renewal;
+        // compute next_event from that source so JSON callers get useful data.
         let ( next_type_str, next_secs_str ) = match next_event_raw(
           None,
           ren_pair.map( |( s, _ )| s ),
@@ -337,7 +337,7 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
         {
           None                         => ( "null".to_string(), "null".to_string() ),
           Some( ( secs, prefix, _ ) ) =>
-            ( format!( "\"{}\"", prefix.trim_start_matches( '+' ).trim_start_matches( '!' ).trim_start_matches( '$' ) ),
+            ( format!( "\"{}\"", prefix.trim_start_matches( '+' ).trim_start_matches( '$' ) ),
               secs.to_string() ),
         };
         format!(

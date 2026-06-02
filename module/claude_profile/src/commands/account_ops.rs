@@ -48,6 +48,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     }
     _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "effort:: must be a string".to_string() ) ),
   };
+  let refresh          = crate::output::parse_int_flag( &cmd, "refresh", 1 )?;
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
   let name             = resolve_account_name( &raw_name, &credential_store )?;
@@ -60,7 +61,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   }
 
   // Pre-fetch quota before the switch while the target credential file is still readable.
-  let touch_ctx = if touch != 0
+  let mut touch_ctx = if touch != 0
   {
     crate::usage::pre_switch_touch_ctx( &name, &credential_store, trace, &imodel_str, &effort_str )
   }
@@ -105,9 +106,35 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
           let elapsed_secs = ( now_ms - exp_ms ) / 1000;
           let h            = elapsed_secs / 3600;
           let m            = ( elapsed_secs % 3600 ) / 60;
-          if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → refused" ) }
-          eprintln!( "account credentials expired: {name} (expired {h}h {m}m ago)" );
-          std::process::exit( 3 );
+          // Fix(BUG-230): attempt OAuth token refresh before giving up on expired token.
+          // Root cause: BUG-213 guard exited 3 without attempting refresh — token expiry is
+          //   recoverable when `refresh::1` (default), the same way `.usage` handles 401/429+expired.
+          // Pitfall: after a successful refresh the touch_ctx must be re-probed; the old None
+          //   result is stale — the fresh token now makes quota fetch viable.
+          if refresh != 0
+          {
+            if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → attempting refresh" ) }
+            let refreshed = crate::usage::attempt_expired_token_refresh(
+              &name, &credential_store, &paths, trace, &imodel_str, &effort_str,
+            );
+            if refreshed
+            {
+              if trace { eprintln!( "[trace] account.use  {name}  expiry check: refresh OK — re-probing touch context" ) }
+              touch_ctx = crate::usage::pre_switch_touch_ctx( &name, &credential_store, trace, &imodel_str, &effort_str );
+            }
+            else
+            {
+              if trace { eprintln!( "[trace] account.use  {name}  expiry check: refresh failed → refused" ) }
+              eprintln!( "account credentials expired and refresh failed: {name} (expired {h}h {m}m ago)" );
+              std::process::exit( 3 );
+            }
+          }
+          else
+          {
+            if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → refused (refresh::0)" ) }
+            eprintln!( "account credentials expired: {name} (expired {h}h {m}m ago)" );
+            std::process::exit( 3 );
+          }
         }
         else if trace
         {
@@ -124,9 +151,10 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     .map_err( |e| io_err_to_error_data( &e, "account use" ) )?;
 
   // Post-switch: activate idle session if quota indicated it was idle before switch.
+  // Fix(BUG-225): also performs quota-aware Sonnet→Opus session model override when 7d(Son) < 20%.
   if let Some( ctx ) = touch_ctx
   {
-    crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str, trace );
+    crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str, trace, &paths );
   }
 
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )

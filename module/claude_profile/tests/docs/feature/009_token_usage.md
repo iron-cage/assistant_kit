@@ -26,6 +26,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-18 | `→ Next` column shows soonest upcoming event label and duration | AC-28 | — |
 | FT-19 | JSON includes `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | AC-29 | — |
 | FT-20 | `~Renews` shows renewal date (not error reason) for 429 accounts when `OauthAccountData` is available | AC-03 | — |
+| FT-21 | `@` in flag column for accounts active on another machine's `_active_*` marker | AC-30 | — |
 
 ### Test Case Index
 
@@ -51,8 +52,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-18 | `→ Next` column shows soonest event label and duration | AC-28 | `→ Next` Column |
 | FT-19 | JSON `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | AC-29 | JSON Fields |
 | FT-20 | `~Renews` shows billing renewal date (not error reason) for 429 accounts with valid `OauthAccountData` | AC-03 | `~Renews` Error Preservation |
+| FT-21 | `@` in flag column when account is active on another machine's `_active_*` marker | AC-30 | Occupied Elsewhere |
 
-**Total:** 20 FT cases
+**Total:** 21 FT cases
 
 ---
 
@@ -308,3 +310,21 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Note:** Fix for BUG-220. The defect had `render_text()` using `last_mut()` positional overwrite (hitting `~Renews` as the last non-host/role column) and `render_tsv()` explicitly pushing `error_str` for the renews cell. Both renderers must preserve `renews_str` (from `OauthAccountData`) regardless of `result` error state.
 - **Source fn:** `mre_bug_220_renews_preserved_for_429_accounts` (in `src/usage/render.rs`)
 - **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-21: `@` in flag column when account is active on another machine's `_active_*` marker
+
+- **Given (unit test):** Two `AccountQuota` structs rendered via `render_text()`:
+  - `alice@x.com`: `is_current = true`, `is_active = true`, `is_occupied_elsewhere = false`, `result = Ok(...)`.
+  - `bob@x.com`: `is_current = false`, `is_active = false`, `is_occupied_elsewhere = true`, `result = Ok(...)`.
+  - `bob@x.com` is NOT the recommended next account (so `→` does not apply).
+- **When:** `render_text()` called with these two accounts and default `ColsVisibility`.
+- **Then:**
+  - The line containing `alice@x.com` starts with `✓` in the flag column.
+  - The line containing `bob@x.com` starts with `@` in the flag column.
+  - No line contains both `@` and `✓` or both `@` and `*`.
+- **Exit:** n/a (unit test — string content assertion)
+- **Note:** `is_occupied_elsewhere = true` sets `@` only when neither `is_current` nor `is_active` is true (priority: `✓` > `*` > `@` > `→` > blank).
+- **Source fn:** `test_ft21_009_occupied_elsewhere_at_flag` (in `src/usage/render.rs`)
+- **Source:** [009_token_usage.md AC-30](../../../../docs/feature/009_token_usage.md)

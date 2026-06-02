@@ -17,9 +17,9 @@ Accounts
    alice@home.com  pro   default_claude_pro        in 5h 30m   N/A
 ```
 
-**Columns:** flag (`✓`/`*`/`→`/space), Account, Sub, Tier, Expires, Email.
+**Columns:** flag (`✓`/`*`/`@`/`→`/space), Account, Sub, Tier, Expires, Email.
 
-**Flag semantics:** `✓` = current (live session) account; `*` = active-marker-but-not-current (divergence); `→` = recommended next account (most quota remaining).
+**Flag semantics:** `✓` = current (live session) account; `*` = active-marker-but-not-current (divergence); `@` = occupied on another machine; `→` = recommended next account (most quota remaining). Priority: `✓` > `*` > `@` > `→` > blank.
 
 ### Rendering Mechanism
 

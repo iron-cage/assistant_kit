@@ -150,7 +150,7 @@ use crate::cli_runner::{
   stdout, stderr, assert_exit,
   write_credentials, write_account, write_claude_json, account_exists,
   write_account_claude_json, write_account_settings_json, write_account_roles_json,
-  live_active_token, write_account_with_token,
+  live_active_token, write_account_with_token, require_live_api,
   FAR_FUTURE_MS,
 };
 use std::process::Command;
@@ -1458,6 +1458,7 @@ fn aw28_lim_it_trace_idle_account_all_lines()
     eprintln!( "aw28: no live token — skipping" );
     return;
   };
+  if !require_live_api( "aw28" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   // Create ~/.claude/ so switch_account() can copy credentials there (it does not create the dir).

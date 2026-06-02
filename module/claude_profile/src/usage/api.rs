@@ -68,6 +68,55 @@ pub( crate ) fn validate_effort_str( s : &str ) -> Result< (), String >
   SubprocessEffort::parse( s ).map( |_| () )
 }
 
+// ── Expired-token refresh helper ──────────────────────────────────────────────
+
+/// Attempt OAuth token refresh for a locally-expired account credential.
+///
+/// Resolves the subprocess model from `imodel_str`/`effort_str`, then calls
+/// `refresh_account_token()` to spawn an isolated subprocess and rewrite the
+/// per-account credential file with a fresh token.
+///
+/// Returns `true` when `refresh_account_token` succeeds (returns `Some`);
+/// `false` when it returns `None` (subprocess failed or credential file lacks `accessToken`).
+///
+/// # Fix(BUG-230)
+/// Called from `account_use_routine` when `expiresAt` is in the past and `refresh::1`.
+/// Root cause: BUG-213 guard exited 3 without attempting refresh — token expiry is
+///   recoverable via OAuth refresh, not a fatal condition when `refresh::1`.
+/// Pitfall: this path requires `credential_store` (not `paths.credentials_file()`) because
+///   the per-account file is the refresh source, not the live session credentials file.
+pub( crate ) fn attempt_expired_token_refresh(
+  name             : &str,
+  credential_store : &std::path::Path,
+  paths            : &crate::ClaudePaths,
+  trace            : bool,
+  imodel_str       : &str,
+  effort_str       : &str,
+) -> bool
+{
+  let imodel    = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
+  let effort    = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
+  // Build a minimal AccountQuota for model resolution.
+  // result=Err("401") drives auto model selection to Opus (conservative when no quota data).
+  let aq        = AccountQuota
+  {
+    name          : name.to_string(),
+    is_current    : false,
+    is_active     : false,
+    expires_at_ms : 0,
+    result        : Err( "401".to_string() ),
+    account       : None,
+    host          : String::new(),
+    role          : String::new(),
+    renewal_at    : None,
+  };
+  let model     = super::subprocess::resolve_model( &aq, imodel );
+  let pre_args  = super::subprocess::effort_pre_args( &model, effort );
+  crate::account::refresh_account_token(
+    name, credential_store, Some( paths ), trace, "account.use", model, &pre_args,
+  ).is_some()
+}
+
 // ── Pre/post-switch touch context ─────────────────────────────────────────────
 
 /// Pre-fetch quota for `name` and return a [`TouchCtx`] when the account is idle.
@@ -187,6 +236,8 @@ pub( crate ) fn pre_switch_touch_ctx(
 ///
 /// When `trace` is true, emits `[trace] account.use  {name}  model: ...  effort: ...` and
 /// `[trace] account.use  {name}  subprocess: spawned` to stderr after dispatching.
+/// When the Sonnet→Opus override fires (BUG-225), also emits
+/// `[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)`.
 ///
 /// `imodel_str` and `effort_str` must have been pre-validated by [`validate_imodel_str`]
 /// / [`validate_effort_str`]; the `parse()` calls below are infallible on validated input.
@@ -202,10 +253,27 @@ pub( crate ) fn apply_post_switch_touch(
   imodel_str : &str,
   effort_str : &str,
   trace      : bool,
+  paths      : &crate::ClaudePaths,
 )
 {
   let imodel = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
   let effort = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
+  // Fix(BUG-225): quota-aware Sonnet→Opus session model override.
+  // Root cause: switch_account() restores snapshot model unconditionally; snapshot may pre-date
+  //   Sonnet quota depletion, leaving the session on Sonnet even when quota is now < 20%.
+  // Pitfall: override only fires when touch_ctx is available (quota fetch succeeded).
+  // Limitation(BUG-226): when quota fetch returns 429 (rate-limited) or any other error,
+  //   touch_ctx is None — apply_post_switch_touch is never called and this override cannot fire.
+  //   The snapshot model is installed as-is; the user must manually override via imodel::opus.
+  let sonnet_left = ctx.quota.seven_day_sonnet.as_ref().map_or( 0.0, | p | 100.0 - p.utilization );
+  if sonnet_left < 20.0
+  {
+    let overrode = crate::account::override_session_model_to_opus( paths );
+    if overrode && trace
+    {
+      eprintln!( "[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
+    }
+  }
   // Build a minimal AccountQuota to reuse the existing resolve_model() path.
   let aq = AccountQuota
   {

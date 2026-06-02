@@ -4,7 +4,7 @@
 
 - **Purpose**: Eliminate git churn on shared credential stores by making the active-account marker file specific to each machine and user.
 - **Responsibility**: Documents the `active_marker_filename()` API and the `_active_{hostname}_{user}` naming convention.
-- **In Scope**: Marker filename derivation; `.gitignore` exclusion of `_active_*`.
+- **In Scope**: Marker filename derivation; `.gitignore` exclusion of `_active_*`; `other_machines_active()` API for reading all non-own `_active_*` markers.
 - **Out of Scope**: Switching logic (→ 004_account_use.md); prefix resolution in general (→ 015_name_shortcut_syntax.md).
 
 ### Design
@@ -38,7 +38,7 @@ The `.gitignore` pattern `_active_*` excludes all per-machine marker files from 
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `module/claude_profile_core/src/account.rs` | `active_marker_filename()` — derives per-machine marker name; `read_active_marker()`, `switch_account()`, `save()`, `delete()` — use it |
+| source | `module/claude_profile_core/src/account.rs` | `active_marker_filename()` — derives per-machine marker name; `read_active_marker()`, `switch_account()`, `save()`, `delete()` — use it; `other_machines_active(store)` — reads all `_active_*` except own marker, returns `HashSet<String>` of account names |
 | source | `src/commands/credentials.rs`, `src/commands/account_ops.rs` | `resolve_account_name()` — exact-local-part match priority; `account_save_routine()` — reads `oauthAccount.emailAddress` from `~/.claude.json` as primary name inference source when `name::` is omitted; falls back to `_active` marker (BUG-212 fix, TSK-215) |
 | source | `src/usage/refresh.rs`, `src/usage/touch.rs` | `apply_refresh` and `apply_touch` snapshot/restore the `_active` marker around per-account processing; snapshot+restore removed by BUG-211 fix (`save()` now writes conditionally via `update_marker=false` — see AC-15 in [002_account_save.md](002_account_save.md)); reads removed in Phases 3/4 of TSK-214 |
 | config | `.gitignore` | `_active_*` pattern excludes per-machine markers from version control |

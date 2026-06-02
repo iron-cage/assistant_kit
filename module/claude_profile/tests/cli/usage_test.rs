@@ -220,6 +220,7 @@ use crate::cli_runner::{
   stdout, stderr, assert_exit,
   write_account, write_account_with_token, write_claude_json, live_active_token,
   write_live_credentials_with_token, write_account_renewal_json, write_account_profile_json,
+  require_live_api,
   FAR_FUTURE_MS, PAST_MS,
 };
 use tempfile::TempDir;
@@ -277,11 +278,13 @@ fn it002_lim_it_active_account_marked()
     eprintln!( "it002: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it002" ) { return; }
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
+  write_live_credentials_with_token( dir.path(), &token );
   write_account_with_token( dir.path(), "acct-a", &token, true  );
-  write_account_with_token( dir.path(), "acct-b", &token, false );
+  write_account_with_token( dir.path(), "acct-b", "dummy_inactive_token", false );
 
   let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
@@ -340,6 +343,7 @@ fn it004_lim_it_json_format_valid_array()
     eprintln!( "it004: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it004" ) { return; }
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -558,6 +562,7 @@ fn it011_lim_it_recommendation_marker_shown()
     eprintln!( "it011: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it011" ) { return; }
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -593,6 +598,7 @@ fn it012_lim_it_footer_shows_valid_count()
     eprintln!( "it012: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it012" ) { return; }
 
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
@@ -2943,6 +2949,7 @@ fn it102_lim_it_next_endurance_places_arrow_on_winner()
     eprintln!( "it102: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it102" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -2978,6 +2985,7 @@ fn it103_lim_it_next_drain_places_arrow_on_winner()
     eprintln!( "it103: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it103" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -3013,6 +3021,7 @@ fn it104_lim_it_footer_always_shows_both_strategy_lines()
     eprintln!( "it104: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it104" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -3187,6 +3196,7 @@ fn it110_lim_it_touch_1_subprocess_spawned_for_idle_account()
     eprintln!( "it110: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it110" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -3385,6 +3395,7 @@ fn it116_lim_it_account_with_resets_at_absent_is_touched()
     eprintln!( "it116: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it116" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -3519,6 +3530,7 @@ fn it120_lim_it_ft12_touch_trigger_fires_per_idle_account_cycle()
     eprintln!( "it120: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it120" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct@test.com", &token, true );
@@ -4082,6 +4094,7 @@ fn it145_lim_it_next_renew_places_arrow_on_soonest_refill()
     eprintln!( "it145: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it145" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -5905,6 +5918,7 @@ fn it206_lim_it_ft028_04_only_next_1_shows_arrow()
     eprintln!( "it206: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it206" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -6131,6 +6145,7 @@ fn it216_lim_it_ft028_12_get_status_green()
     eprintln!( "it216: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it216" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -6221,6 +6236,7 @@ fn it219_lim_it_ft028_16_filters_compose()
     eprintln!( "it219: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it219" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -6308,6 +6324,7 @@ fn it223_lim_it_abs_1_shows_token_counts()
     eprintln!( "it223: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it223" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -6374,6 +6391,7 @@ fn it225_lim_it_it71_next_event_cell_shows_label_and_duration()
     eprintln!( "it225: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it225" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -6415,6 +6433,7 @@ fn it226_lim_it_only_next_1_drain_shows_winner()
     eprintln!( "it226: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it226" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -6457,6 +6476,7 @@ fn it227_lim_it_only_next_true_shows_arrow_row()
     eprintln!( "it227: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it227" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true  );
@@ -6501,6 +6521,7 @@ fn it228_lim_it_only_valid_1_shows_green_hides_red()
     eprintln!( "it228: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it228" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "live-acct@test.com",  &token, true  );
@@ -6537,6 +6558,7 @@ fn it229_lim_it_exclude_exhausted_1_shows_green()
     eprintln!( "it229: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it229" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "live-acct@test.com",  &token, true  );
@@ -6611,6 +6633,7 @@ fn it231_lim_it_get_7d_left_extracts_bare_pct()
     eprintln!( "it231: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it231" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -6650,6 +6673,7 @@ fn it232_lim_it_get_status_extracts_green_emoji()
     eprintln!( "it232: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it232" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -6715,6 +6739,7 @@ fn it234_lim_it_get_next_event_type_and_secs()
     eprintln!( "it234: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it234" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
@@ -6762,6 +6787,7 @@ fn it235_lim_it_no_color_0_output_includes_emoji()
     eprintln!( "it235: no live token — skipping" );
     return;
   };
+  if !require_live_api( "it235" ) { return; }
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account_with_token( dir.path(), "acct-a@test.com", &token, true );
