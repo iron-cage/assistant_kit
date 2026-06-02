@@ -88,10 +88,16 @@ after subcommand argument parsing.
 | 2 | `CLR_TIMEOUT` | [`--timeout`](param/020_timeout.md) | u64 | Applied when CLI timeout equals its command default (30 for `isolated`, 45 for `refresh`) |
 | 3 | `CLR_TRACE` | [`--trace`](param/013_trace.md) | bool | Applied when `--trace` absent; also applies to `run` via Section 1 |
 
-**Precedence:**
+**Precedence (`--creds` only):**
 
-1. `--creds` / `--timeout` / `--trace` CLI flag (wins)
-2. `CLR_CREDS` / `CLR_TIMEOUT` / `CLR_TRACE` env var (applied when CLI field absent/default)
+1. `--creds` CLI flag (wins unconditionally when provided)
+2. `CLR_CREDS` env var (applied when `--creds` absent)
+3. `$HOME/.claude/.credentials.json` default (used when both `--creds` and `CLR_CREDS` are absent; exits 1 if `HOME` unset or file missing)
+
+**Precedence (`--timeout`, `--trace`):**
+
+1. `--timeout` / `--trace` CLI flag (wins)
+2. `CLR_TIMEOUT` / `CLR_TRACE` env var (applied when CLI field absent/default)
 
 **Limitation (`CLR_TIMEOUT`):** The env var check uses equality with the command's default
 timeout as the sentinel, so an explicit `--timeout 30` on `isolated` (or `--timeout 45`

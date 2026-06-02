@@ -5,7 +5,7 @@ mod fence;
 mod credential;
 
 use super::VerbosityLevel;
-use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel };
+use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel, signal_exit_code };
 use parse::CliArgs;
 use cred_parse::{
   parse_isolated_args, parse_refresh_args,
@@ -258,28 +258,42 @@ fn run_print_mode(
   strip_fences_flag : bool,
 )
 {
+  // Fix(BUG-240): always emit fatal spawn errors regardless of verbosity.
+  // Root cause: the Err branch was guarded by verbosity.shows_errors(); at CLR_VERBOSITY=0
+  //   spawn failures (binary not found, permission denied) produced zero stderr output while
+  //   still exiting 1 — a perfectly silent failure with no diagnostic.
+  // Pitfall: verbosity controls runner diagnostics (progress, trace); it must never gate
+  //   fatal errors that signal a broken environment — those are always user-visible.
   let output = match builder.execute()
   {
     Ok( o )  => o,
     Err( e ) =>
     {
-      if verbosity.shows_errors()
-      {
-        eprintln!( "Error: {e}" );
-      }
+      eprintln!( "Error: {e}" );
       std::process::exit( 1 );
     }
   };
 
   if !output.stderr.is_empty() { eprint!( "{}", output.stderr ); }
 
+  // Fix(BUG-037): detect silent failure (empty stderr + non-zero exit — e.g. 429 rate limit)
+  // Root cause: prior code gated all diagnostics on !stderr.is_empty(); 429 exits non-zero with
+  //   empty stderr, causing the wrapper to produce zero output and swallow the failure silently.
+  // Pitfall: `claude --print` on 429 writes the rate-limit reason only to its JSONL session file,
+  //   not to stderr. Never assume stderr is populated when a subprocess exits non-zero.
+  if output.stderr.is_empty() && output.exit_code != 0 && verbosity.shows_errors()
+  {
+    eprintln!( "Error: Claude exited without output (possible rate limit or quota exhaustion)" );
+  }
+
+  // Fix(BUG-239): propagate the exact subprocess exit code instead of collapsing to 1.
+  // Root cause: `std::process::exit(1)` was hardcoded; callers that branch on exit code
+  //   (e.g. 2 = rate-limit, 130 = SIGINT cancel) received 1 regardless of actual cause.
+  // Pitfall: never substitute a generic exit code where the subprocess's code is available;
+  //   use output.exit_code directly so all domain-specific codes are preserved.
   if output.exit_code != 0
   {
-    if verbosity.shows_errors()
-    {
-      eprintln!( "Error: Claude exited with code {}", output.exit_code );
-    }
-    std::process::exit( 1 );
+    std::process::exit( output.exit_code );
   }
 
   let out = if strip_fences_flag { strip_fences( &output.stdout ) } else { output.stdout };
@@ -287,24 +301,33 @@ fn run_print_mode(
 }
 
 /// Execute in interactive mode (TTY passthrough).
-fn run_interactive( builder : &ClaudeCommand, verbosity : VerbosityLevel )
+fn run_interactive( builder : &ClaudeCommand, _verbosity : VerbosityLevel )
 {
+  // Fix(BUG-240): always emit fatal spawn errors regardless of verbosity.
+  // Root cause: same as run_print_mode — the Err branch was gated on shows_errors();
+  //   at verbosity 0 a missing binary or permission error produced no stderr output.
+  // Pitfall: mirrors the fix in run_print_mode; both execution paths must be updated
+  //   together — missing one leaves interactive mode silently broken at low verbosity.
   let status = match builder.execute_interactive()
   {
     Ok( s )  => s,
     Err( e ) =>
     {
-      if verbosity.shows_errors()
-      {
-        eprintln!( "Error: {e}" );
-      }
+      eprintln!( "Error: {e}" );
       std::process::exit( 1 );
     }
   };
 
   if !status.success()
   {
-    std::process::exit( status.code().unwrap_or( 1 ) );
+    // Fix(BUG-242): use signal_exit_code() so SIGTERM (→143) and SIGKILL (→137) are
+    //   propagated correctly in interactive mode.
+    // Root cause: unwrap_or(1) collapsed all signal kills to exit code 1 in interactive
+    //   mode; callers using Claude interactively could not distinguish Ctrl+C (SIGINT=130)
+    //   from other kills.
+    // Pitfall: mirrors the fix in execute() in claude_runner_core; both execution paths
+    //   (print mode and interactive) must use signal_exit_code() for consistency.
+    std::process::exit( signal_exit_code( &status ) );
   }
 }
 
@@ -363,7 +386,7 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
   apply_isolated_env_vars( &mut cli );
   if cli.creds_path.is_empty()
   {
-    eprintln!( "Error: missing required argument: --creds\nRun with --help for usage." );
+    eprintln!( "Error: cannot resolve credentials path: HOME is not set; provide --creds or set CLR_CREDS\nRun with --help for usage." );
     std::process::exit( 1 );
   }
   run_isolated_command( &cli.creds_path, cli.timeout_secs, cli.trace, IsolatedModel::Default, cli.message.as_deref(), &cli.passthrough_args )
@@ -380,7 +403,7 @@ pub( super ) fn dispatch_refresh( tokens : &[ String ] ) -> !
   apply_refresh_env_vars( &mut cli );
   if cli.creds_path.is_empty()
   {
-    eprintln!( "Error: missing required argument: --creds\nRun with --help for usage." );
+    eprintln!( "Error: cannot resolve credentials path: HOME is not set; provide --creds or set CLR_CREDS\nRun with --help for usage." );
     std::process::exit( 1 );
   }
   run_refresh_command( &cli.creds_path, cli.timeout_secs, cli.trace )

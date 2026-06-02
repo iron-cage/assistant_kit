@@ -6,12 +6,12 @@
 //! |----|------|----------------------|
 //! | IT-2 | `--creds missing.json` → exit 1 | No |
 //! | IT-7 | `--timeout abc` → exit 1, invalid timeout | No |
-//! | IT-8 | Missing `--creds` → exit 1, required arg | No |
+//! | IT-8 | No `--creds`, `CLR_CREDS` unset → defaults to `$HOME/.claude/.credentials.json`; trace confirms | No |
 //! | IT-9 | `clr isolated --help` → exit 0, help text shown | No |
 //! | IT-10 | `--creds <f> --trace "msg"` → credential trace on stderr before attempt | No |
 //! | EC-creds-4 | Nonexistent creds file → exit 1 | No |
 //! | EC-creds-5 | `--creds` without value → exit 1 | No |
-//! | EC-creds-6 | `--creds` omitted → exit 1 | No |
+//! | EC-creds-6 | `--creds` omitted, `CLR_CREDS` unset → trace confirms default path | No |
 //! | EC-timeout-4 | `--timeout -1` → exit 1 | No |
 //! | EC-timeout-5 | `--timeout abc` → exit 1 | No |
 //! | EC-timeout-6 | `--timeout` without value → exit 1 | No |
@@ -129,17 +129,35 @@ fn test_it7_invalid_timeout()
   );
 }
 
-/// IT-8: `--creds` omitted entirely → exit 1, missing required argument.
+/// IT-8: No `--creds`, `CLR_CREDS` unset → defaults to `$HOME/.claude/.credentials.json`; trace confirms path.
 ///
 /// Source: tests/docs/cli/command/03_isolated.md#it-8
 #[ test ]
 fn test_it8_missing_creds_flag()
 {
-  let out = run_isolated( &[ "test" ] );
-  assert_eq!( exit_code( &out ), 1, "expected exit 1; stderr: {}", stderr_str( &out ) );
+  let tmp      = tempfile::tempdir().expect( "create tmp home" );
+  let creds_dir = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &creds_dir ).expect( "create .claude dir" );
+  std::fs::write( creds_dir.join( ".credentials.json" ), "{}" ).expect( "write placeholder creds" );
+  let expected = creds_dir.join( ".credentials.json" );
+
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "isolated", "--trace", "test" ] )
+    .env( "HOME", tmp.path() )
+    .env_remove( "CLR_CREDS" )
+    .env( "PATH", "/nonexistent" )
+    .output()
+    .expect( "invoke clr isolated" );
+
+  let stderr      = String::from_utf8_lossy( &out.stderr );
+  let expected_str = expected.to_str().unwrap();
   assert!(
-    stderr_str( &out ).contains( "--creds" ),
-    "expected '--creds' in error; got: {}", stderr_str( &out )
+    stderr.contains( "# creds:" ),
+    "trace must emit '# creds:' line; got stderr:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( expected_str ),
+    "trace must contain default path '{expected_str}'; got stderr:\n{stderr}"
   );
 }
 
@@ -172,18 +190,35 @@ fn test_ec_creds5_no_value()
   );
 }
 
-/// EC-creds-6: `--creds` omitted entirely → exit 1, missing required argument.
+/// EC-creds-6: `--creds` omitted, `CLR_CREDS` unset → trace confirms default `$HOME/.claude/.credentials.json`.
 ///
 /// Source: tests/docs/cli/param/19_creds.md#ec-6
 #[ test ]
 fn test_ec_creds6_required_flag()
 {
-  let out = run_isolated( &[ "test" ] );
-  assert_eq!( exit_code( &out ), 1, "expected exit 1; stderr: {}", stderr_str( &out ) );
-  let err = stderr_str( &out );
+  let tmp      = tempfile::tempdir().expect( "create tmp home" );
+  let creds_dir = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &creds_dir ).expect( "create .claude dir" );
+  std::fs::write( creds_dir.join( ".credentials.json" ), "{}" ).expect( "write placeholder creds" );
+  let expected = creds_dir.join( ".credentials.json" );
+
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "isolated", "--trace", "test" ] )
+    .env( "HOME", tmp.path() )
+    .env_remove( "CLR_CREDS" )
+    .env( "PATH", "/nonexistent" )
+    .output()
+    .expect( "invoke clr isolated" );
+
+  let stderr      = String::from_utf8_lossy( &out.stderr );
+  let expected_str = expected.to_str().unwrap();
   assert!(
-    err.contains( "--creds" ) && ( err.contains( "missing" ) || err.contains( "required" ) ),
-    "expected '--creds' + missing/required message; got: {err}"
+    stderr.contains( "# creds:" ),
+    "trace must emit '# creds:' line; got stderr:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( expected_str ),
+    "trace must show default path '{expected_str}'; got stderr:\n{stderr}"
   );
 }
 

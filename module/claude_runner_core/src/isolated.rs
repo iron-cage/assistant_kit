@@ -80,11 +80,25 @@ pub enum RunnerError
   ClaudeNotFound,
   /// Creating the isolated temp directory failed.
   TempDirFailed( String ),
-  /// The subprocess did not complete within `secs` seconds.
+  /// The subprocess did not complete within `secs` seconds (no stdout buffered).
   Timeout
   {
     /// The timeout limit that was exceeded.
     secs : u64,
+  },
+  /// The subprocess did not complete within `secs` seconds; partial stdout captured.
+  ///
+  /// Fix(BUG-243): the old `Timeout` variant discarded all buffered subprocess output.
+  /// Root cause: the thread/channel approach lost the `Child` handle on timeout, making
+  ///   `wait_with_output()` unreachable; all partial output was silently dropped.
+  /// Pitfall: always use `spawn_piped()` + polling so the `Child` handle stays in scope
+  ///   through the timeout; then `child.kill()` + `child.wait_with_output()` recovers data.
+  TimeoutWithOutput
+  {
+    /// The timeout limit that was exceeded.
+    secs           : u64,
+    /// Partial stdout emitted by the subprocess before it was killed.
+    partial_stdout : String,
   },
   /// An I/O error occurred (file write, read, or cleanup).
   Io( String ),
@@ -102,6 +116,17 @@ impl fmt::Display for RunnerError
         write!( f, "failed to create temp dir: {reason}" ),
       RunnerError::Timeout { secs } =>
         write!( f, "claude timed out after {secs} seconds" ),
+      RunnerError::TimeoutWithOutput { secs, partial_stdout } =>
+      {
+        if partial_stdout.is_empty()
+        {
+          write!( f, "claude timed out after {secs} seconds (no output captured)" )
+        }
+        else
+        {
+          write!( f, "claude timed out after {secs} seconds; partial output:\n{partial_stdout}" )
+        }
+      }
       RunnerError::Io( reason ) =>
         write!( f, "{reason}" ),
     }
@@ -141,7 +166,6 @@ pub fn run_isolated
   model            : IsolatedModel,
 ) -> Result< IsolatedRunResult, RunnerError >
 {
-  use std::sync::mpsc;
   use core::time::Duration;
 
   // Step 1: Create isolated temp HOME containing only .claude/
@@ -168,17 +192,68 @@ pub fn run_isolated
     .with_home( &temp_dir )
     .with_args( full_args );
 
-  // Step 4: Spawn thread; subprocess result arrives via channel
-  let ( tx, rx ) = mpsc::channel();
-  std::thread::spawn( move ||
+  // Step 4: Spawn subprocess with piped I/O so we keep the Child handle.
+  //
+  // Fix(BUG-243): use spawn_piped() + try_wait polling instead of the old
+  //   thread/channel approach. The thread approach buried the Child inside the
+  //   spawned thread; on recv_timeout the subprocess kept running as an orphan
+  //   and all accumulated stdout was irrecoverably discarded.
+  // Root cause: cmd.execute() (called inside the thread) calls cmd.output() which
+  //   blocks until EOF; the main thread's recv_timeout fired before that, leaving
+  //   the thread running with no way to kill or read the child.
+  // Pitfall: always keep the Child handle in scope through the timeout so that
+  //   child.kill() + child.wait_with_output() can recover buffered data.
+  let mut child = cmd.spawn_piped().map_err( |e|
   {
-    let _ = tx.send( cmd.execute() );
-  } );
+    if e.kind() == std::io::ErrorKind::NotFound
+    {
+      RunnerError::ClaudeNotFound
+    }
+    else
+    {
+      RunnerError::Io( e.to_string() )
+    }
+  } )?;
 
-  // Step 5: Wait up to timeout_secs for the subprocess to finish
-  let exec_result = rx.recv_timeout( Duration::from_secs( timeout_secs ) );
+  // Step 5: Poll for completion with a 50 ms tick up to the deadline.
+  let deadline = std::time::Instant::now() + Duration::from_secs( timeout_secs );
+  let mut timed_out = false;
+  let subprocess_output : Result< std::process::Output, RunnerError > = loop
+  {
+    match child.try_wait()
+    {
+      Ok( Some( _ ) ) =>
+      {
+        // Subprocess exited — collect full stdout/stderr.
+        break child.wait_with_output()
+          .map_err( |e| RunnerError::Io( e.to_string() ) );
+      }
+      Ok( None ) =>
+      {
+        if std::time::Instant::now() >= deadline
+        {
+          // Timeout: kill the subprocess and collect whatever was buffered.
+          timed_out = true;
+          let _ = child.kill();
+          break child.wait_with_output()
+            .map_err( |e| RunnerError::Io( e.to_string() ) );
+        }
+        std::thread::sleep( Duration::from_millis( 50 ) );
+      }
+      Err( e ) => break Err( RunnerError::Io( e.to_string() ) ),
+    }
+  };
 
-  // Step 6: Read credentials unconditionally (before cleanup — order matters)
+  // Step 6: Read credentials unconditionally (before cleanup — order matters).
+  //
+  // Fix(issue-isolated-credentials-on-timeout): when the subprocess times out but
+  // already refreshed credentials (e.g. OAuth token refresh at startup before
+  // waiting for interactive input), return Ok so callers can access the new creds.
+  // Root cause: Claude refreshes the OAuth token at startup then waits for input;
+  //             previously the timeout fired and discarded the refreshed credentials,
+  //             breaking the refresh::1 retry path in usage_routine().
+  // Pitfall: check credentials BEFORE deciding to return Err(Timeout) — the token
+  //          may have been written before the subprocess started blocking.
   let credentials = std::fs::read_to_string( &creds_path )
     .ok()
     .and_then( |new|
@@ -186,59 +261,34 @@ pub fn run_isolated
       if new.as_bytes() == credentials_json.as_bytes() { None } else { Some( new ) }
     } );
 
-  // Step 7: Unconditional cleanup — no early return may appear before this line
+  // Step 7: Unconditional cleanup — no early return may appear before this line.
   let _ = std::fs::remove_dir_all( &temp_dir );
 
-  // Step 8: Translate execution result into IsolatedRunResult or RunnerError
-  //
-  // Fix(issue-isolated-credentials-on-timeout): When the subprocess times out but
-  // already refreshed credentials (e.g. OAuth token refresh at startup before
-  // waiting for interactive input), return Ok so callers can access the new creds.
-  // Root cause: Claude refreshes the OAuth token at startup then waits for input;
-  //             previously the timeout fired and discarded the refreshed credentials,
-  //             breaking the refresh::1 retry path in usage_routine().
-  // Pitfall: Check credentials BEFORE deciding to return Err(Timeout) — the token
-  //          may have been written before the subprocess started blocking.
-  match exec_result
+  // Step 8: Translate execution result into IsolatedRunResult or RunnerError.
+  let output = subprocess_output?;
+  let stdout = String::from_utf8_lossy( &output.stdout ).to_string();
+  let stderr = String::from_utf8_lossy( &output.stderr ).to_string();
+
+  if timed_out
   {
-    Err( _ ) =>
+    // If credentials were updated during the timeout window, preserve them.
+    if credentials.is_some()
     {
-      // If credentials were updated during the timeout window, preserve them.
-      if credentials.is_some()
+      return Ok( IsolatedRunResult
       {
-        Ok( IsolatedRunResult
-        {
-          exit_code   : -1,
-          stdout      : String::new(),
-          stderr      : String::new(),
-          credentials,
-        } )
-      }
-      else
-      {
-        Err( RunnerError::Timeout { secs : timeout_secs } )
-      }
+        exit_code   : -1,
+        stdout      : String::new(),
+        stderr      : String::new(),
+        credentials,
+      } );
     }
-
-    Ok( Err( e ) ) =>
+    return Err( RunnerError::TimeoutWithOutput
     {
-      let msg = e.to_string();
-      if msg.contains( "not found" ) || msg.contains( "No such file" ) || msg.contains( "cannot find" )
-      {
-        Err( RunnerError::ClaudeNotFound )
-      }
-      else
-      {
-        Err( RunnerError::Io( msg ) )
-      }
-    }
-
-    Ok( Ok( output ) ) => Ok( IsolatedRunResult
-    {
-      exit_code   : output.exit_code,
-      stdout      : output.stdout,
-      stderr      : output.stderr,
-      credentials,
-    } ),
+      secs           : timeout_secs,
+      partial_stdout : stdout,
+    } );
   }
+
+  let exit_code = crate::signal_exit_code( &output.status );
+  Ok( IsolatedRunResult { exit_code, stdout, stderr, credentials } )
 }

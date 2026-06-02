@@ -9,14 +9,14 @@ the token refresh completes.
 **Syntax:**
 
 ```sh
-clr refresh --creds <FILE> [--timeout <SECS>] [--trace]
+clr refresh [--creds <FILE>] [--timeout <SECS>] [--trace]
 ```
 
 **Parameters:**
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | — | Credentials JSON file path (required) |
+| [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Credentials JSON file path (optional; defaults to current account credentials) |
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 45 | Max seconds to wait for refresh |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
 | `-h`/`--help` | — | — | Print refresh subcommand help and exit 0 |
@@ -32,14 +32,17 @@ clr refresh --creds <FILE> [--timeout <SECS>] [--trace]
 **Examples:**
 
 ```sh
-# Refresh credentials with default 45s timeout
+# Refresh current account credentials (no --creds needed)
+clr refresh
+
+# Refresh specific credentials file with default 45s timeout
 clr refresh --creds ~/.claude/.credentials.json
 
 # Refresh with custom timeout for slow networks
 clr refresh --creds /path/to/creds.json --timeout 90
 
 # Trace the underlying call to see what happens
-clr refresh --creds creds.json --trace
+clr refresh --trace
 ```
 
 **Notes:**

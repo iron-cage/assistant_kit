@@ -27,7 +27,7 @@
 //! | E01 | Binary not found, interactive | interactive (no msg) | Exit 1, stderr error |
 //! | E02 | Binary not found, print | print (-p flag) | Exit 1, stderr error |
 //! | E03 | Subprocess exits non-zero, interactive | `--interactive "test"` | Exit code propagated |
-//! | E04 | Subprocess exits non-zero, print | print (-p flag) | Exit 1, stderr error message |
+//! | E04 | Subprocess exits non-zero + stderr populated | print (-p flag) | Subprocess stderr forwarded, exit non-zero |
 //! | E05 | Print mode: stderr forwarded | print (-p flag) | Subprocess stderr appears in runner stderr |
 //! | E06 | Print mode: stdout captured | print (-p flag) | Subprocess stdout appears in runner stdout |
 //! | E07 | Interactive mode: binary not found, verbosity 0 | interactive (no msg) | Exit 1, stderr empty |
@@ -37,6 +37,7 @@
 //! | E11 | --new-session flag | interactive (no msg) | Subprocess does not receive -c |
 //! | E12 | message, no -p | default print | Subprocess receives `--print` |
 //! | E13 | --interactive "msg" | explicit interactive | Subprocess does NOT receive `--print` |
+//! | E14 | Empty stderr + non-zero exit (rate limit) | print (-p flag) | Rate-limit diagnostic emitted |
 
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
@@ -104,17 +105,18 @@ fn e03_interactive_exit_code_propagated()
   );
 }
 
-// E04: Print mode: subprocess non-zero exit triggers error message.
+// E04: Print mode: subprocess exits non-zero with populated stderr → stderr forwarded, exit non-zero.
+// (Empty-stderr + non-zero case is covered by E14 — the rate-limit silent failure path.)
 #[ test ]
-fn e04_print_exit_nonzero_error()
+fn e04_print_exit_nonzero_stderr_forwarded()
 {
-  let ( _tmp, path ) = fake_claude( "#!/bin/sh\nexit 3\n" );
+  let ( _tmp, path ) = fake_claude( "#!/bin/sh\necho 'claude error detail' >&2\nexit 3\n" );
   let out = run_with_path( &[ "-p", "test" ], &path );
   assert!( !out.status.success(), "must exit non-zero" );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "Claude exited with code 3" ),
-    "must report exit code in error. Got:\n{stderr}"
+    stderr.contains( "claude error detail" ),
+    "subprocess stderr must be forwarded on failure. Got:\n{stderr}"
   );
 }
 
@@ -360,6 +362,45 @@ fn e13_interactive_flag_with_message_uses_interactive_mode()
   assert!(
     !received.contains( "--print" ),
     "--interactive must suppress --print (interactive mode). Received: {received}"
+  );
+}
+
+// E14: Print mode: empty stderr + non-zero exit emits rate-limit diagnostic.
+// test_kind: bug_reproducer(BUG-037)
+//
+// ## Root Cause
+// `run_print_mode()` gated its only diagnostic on `!stderr.is_empty()`.  When
+// `claude --print` exits non-zero with empty stderr (as 429 rate-limit does),
+// the gate was false and no message was emitted — complete silence.
+//
+// ## Why Not Caught
+// E04 used `exit 3` (empty stderr) and asserted "Claude exited with code 3",
+// which was the generic fallthrough message.  The *meaningful* rate-limit case
+// (empty stderr + non-zero exit → zero output) was never separately exercised.
+//
+// ## Fix Applied
+// Added an explicit `output.stderr.is_empty() && output.exit_code != 0` branch
+// before the exit call that emits "possible rate limit or quota exhaustion".
+//
+// ## Prevention
+// Every subprocess wrapper that gates diagnostics on `!stderr.is_empty()` must
+// also handle the empty-stderr + non-zero-exit case with its own actionable
+// message.
+//
+// ## Pitfall
+// `claude --print` on 429 writes the rate-limit reason only to its JSONL
+// session file, not to stderr.  Any wrapper relying solely on stderr for
+// failure signal will silently swallow rate-limit errors.
+#[ test ]
+fn e14_print_silent_failure_rate_limit_diagnostic()
+{
+  let ( _tmp, path ) = fake_claude( "#!/bin/sh\nexit 1\n" );
+  let out = run_with_path( &[ "-p", "test" ], &path );
+  assert!( !out.status.success(), "must exit non-zero on silent failure" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "possible rate limit or quota exhaustion" ),
+    "must emit diagnostic on silent failure (empty stderr + non-zero exit). Got:\n{stderr}"
   );
 }
 

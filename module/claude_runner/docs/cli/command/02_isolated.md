@@ -9,7 +9,7 @@ OAuth token, the updated credentials are written back to `--creds` in-place.
 **Syntax:**
 
 ```sh
-clr isolated --creds <FILE> [--timeout <SECS>] [MESSAGE]
+clr isolated [--creds <FILE>] [--timeout <SECS>] [MESSAGE]
 ```
 
 **Parameters:**
@@ -17,7 +17,7 @@ clr isolated --creds <FILE> [--timeout <SECS>] [MESSAGE]
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | [`[MESSAGE]`](../param/001_message.md) | [`MessageText`](../type/01_message_text.md) | — | Prompt forwarded to Claude |
-| [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | — | Credentials JSON file path (required) |
+| [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Credentials JSON file path (optional; defaults to current account credentials) |
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30 | Max seconds to wait for subprocess |
 | [`--trace`](../param/013_trace.md) | bool | false | Print underlying call details to stderr then execute |
 | `-h`/`--help` | — | — | Print isolated subcommand help and exit 0 |

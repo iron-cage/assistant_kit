@@ -25,9 +25,10 @@
 **Typical usage:**
 
 ```sh
+clr isolated "Fix bug"                                    # uses ~/.claude/.credentials.json
 clr isolated --creds ~/.claude/.credentials.json "Fix bug"
 clr isolated --creds /path/to/creds.json --timeout 120 --trace "Refactor this"
-clr refresh --creds ~/.claude/.credentials.json
+clr refresh                                               # uses ~/.claude/.credentials.json
 clr refresh --creds creds.json --timeout 90 --trace
 ```
 
@@ -42,7 +43,7 @@ clr refresh --creds creds.json --timeout 90 --trace
 
 | Parameter | Type | Default | Role in Group | Description |
 |-----------|------|---------|---------------|-------------|
-| [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | — | Credentials source | Credentials JSON file (required) |
+| [`--creds`](../param/019_creds.md) | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Credentials source | Credentials JSON file (optional; defaults to current account credentials) |
 | [`--timeout`](../param/020_timeout.md) | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30/45 | Duration limit | Max seconds to wait (30 isolated, 45 refresh) |
 | [`--trace`](../param/013_trace.md) | bool | false | Trace mode | Print underlying call details to stderr then execute |
 

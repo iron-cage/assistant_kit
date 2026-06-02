@@ -31,7 +31,7 @@ Test file: `tests/env_var_test.rs`
 | E20 | `CLR_NO_PERSIST` adds no-session-persistence | `CLR_NO_PERSIST` | `--no-session-persistence` in assembled command |
 | E21 | `CLR_JSON_SCHEMA` sets schema | `CLR_JSON_SCHEMA` | `--json-schema` appears in assembled command |
 | E22 | `CLR_MCP_CONFIG` adds config path | `CLR_MCP_CONFIG` | `--mcp-config` and path appear in assembled command |
-| E23 | `CLR_CREDS` supplies isolated creds path | `CLR_CREDS` | "missing required argument: --creds" NOT in stderr |
+| E23 | `CLR_CREDS` supplies isolated creds path | `CLR_CREDS` | file-not-found error (creds path populated from env); no HOME-resolution error |
 | E24 | `CLR_TIMEOUT` sets isolated timeout | `CLR_TIMEOUT` | argument parsing succeeds with `CLR_CREDS+CLR_TIMEOUT` |
 | E25 | `CLR_FILE` supplies file path | `CLR_FILE` | describe output includes the file path (same as `--file`) |
 | E26 | `CLR_STRIP_FENCES=1` strips fences | `CLR_STRIP_FENCES` | captured stdout has fences removed (same as `--strip-fences`) |
@@ -282,8 +282,7 @@ Test file: `tests/env_var_test.rs`
 
 - **Given:** `CLR_CREDS=/tmp/e23.creds.json`; no `--creds` on CLI
 - **When:** `clr isolated`
-- **Then:** stderr does NOT contain `missing required argument: --creds`
-- **Note:** error shifts to file-not-found, confirming `creds_path` was populated from env
+- **Then:** stderr contains a file-not-found error referencing the CLR_CREDS path (not a HOME-resolution error); confirms `creds_path` was populated from tier-2 env var
 - **Source:** [env_param.md §2](../../../../docs/cli/env_param.md)
 
 ---
@@ -292,8 +291,7 @@ Test file: `tests/env_var_test.rs`
 
 - **Given:** `CLR_CREDS=/tmp/e24.creds.json` + `CLR_TIMEOUT=5`; no `--creds`/`--timeout` on CLI
 - **When:** `clr isolated`
-- **Then:** stderr does NOT contain `missing required argument: --creds`
-- **Note:** combined with CLR_CREDS to pass argument validation; confirms both vars applied
+- **Then:** stderr contains a file-not-found error (creds path populated from CLR_CREDS); no HOME-resolution error; confirms both tier-2 vars applied
 - **Source:** [env_param.md §2](../../../../docs/cli/env_param.md)
 
 ---
