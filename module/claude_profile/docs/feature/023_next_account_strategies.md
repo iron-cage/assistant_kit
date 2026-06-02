@@ -36,7 +36,7 @@ Each footer line shows: strategy name (left-aligned, 10 chars), account name (le
 
 **`→` table marker:**
 
-The account selected by the active `next::` strategy receives the `→` flag in the table body (flag column priority: `✓` > `*` > `→` > blank). When no eligible candidate exists for the selected strategy, no `→` is placed on any row. The `→` marker and the footer are independent — the footer always shows all three strategy recommendations; the marker shows only the winner for the chosen strategy.
+The account selected by the active `next::` strategy receives the `→` flag in the table body (flag column priority: `✓` > `*` > `@` > `→` > blank). When no eligible candidate exists for the selected strategy, no `→` is placed on any row. The `→` marker and the footer are independent — the footer always shows all three strategy recommendations; the marker shows only the winner for the chosen strategy.
 
 **Interaction with `prefer::`:** Both endurance and drain strategies reference weekly quota (`endurance` qualification threshold, `drain` primary sort key) and use the `prefer::` parameter to select which weekly column to evaluate.
 

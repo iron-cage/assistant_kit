@@ -75,10 +75,11 @@ clp .usage
 #   ●  Account              5h Left     5h Reset    7d Left  7d(Son)  7d Reset   Expires     ~Renews      → Next
 #   🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   28%      in 6d 14h  in 5h 02m   ~in 30d      +7d in 6d 14h
 # ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   35%      in 4d 23h  in 7h 24m   ~in 6d       +7d in 4d 23h
+# @ 🟢 carol@example.com    🟢 91%     in 4h 12m  🟢 73%   41%      in 5d 8h   in 2h 30m   ~in 14d      +7d in 5d 8h
 # → 🟡 frank@example.com    🟡 3%      in 0h 23m  🟢 52%   18%      in 2d 11h  in 1h 12m   ~in 8d       +7d in 2d 11h
 #   🔴 dave@example.com     —          —           —        —        —          EXPIRED      ?            —
 #
-# Valid: 3 / 4   ->  Next by strategy:
+# Valid: 4 / 5   ->  Next by strategy:
 #   renew      frank@example.com   7d resets in 2d 11h, ~renews in 8d
 #   endurance  bob@example.com     100% session, 88% 7d left, expires in 5h 02m
 #   drain      bob@example.com     28% 7d left, 7d resets in 6d 14h
@@ -93,7 +94,7 @@ clp .usage live::1 interval::60 jitter::10
 
 **Notes:**
 - Accounts are enumerated from `{credential_store}/*.credentials.json` in alphabetical order.
-- Flag column priority: `✓` = current account, `*` = active-but-not-current (divergence), `→` = recommended next account. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
+- Flag column priority: `✓` = current account, `*` = active-but-not-current (divergence), `@` = occupied on another machine (another machine's `_active_*` marker names this account), `→` = recommended next account. Priority: `✓` > `*` > `@` > `→` > blank. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md) and [feature/025_per_machine_active_marker.md](../../feature/025_per_machine_active_marker.md).
 - Status emoji column (`●`): composite AND of 5h and 7d — `🟢` = valid token + `5h Left > 15%` and `7d Left > 5%`; `🟡` = valid token + either `5h Left ≤ 15%` or `7d Left ≤ 5%`; `🔴` = invalid/missing token. Per-column emoji also embedded in `5h Left` (🟢/🟡 at ≤15% threshold) and `7d Left` (🟢/🟡 at ≤5% threshold). No JSON equivalent.
 - `Expires` is sourced from `expiresAt` in the credential file — available even when the API call fails.
 - `Sub` is sourced from `GET /api/oauth/account` (parallel fetch); shows `?` when that fetch fails.

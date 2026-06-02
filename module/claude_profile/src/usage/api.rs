@@ -68,6 +68,55 @@ pub( crate ) fn validate_effort_str( s : &str ) -> Result< (), String >
   SubprocessEffort::parse( s ).map( |_| () )
 }
 
+// ── Expired-token refresh helper ──────────────────────────────────────────────
+
+/// Attempt OAuth token refresh for a locally-expired account credential.
+///
+/// Resolves the subprocess model from `imodel_str`/`effort_str`, then calls
+/// `refresh_account_token()` to spawn an isolated subprocess and rewrite the
+/// per-account credential file with a fresh token.
+///
+/// Returns `true` when `refresh_account_token` succeeds (returns `Some`);
+/// `false` when it returns `None` (subprocess failed or credential file lacks `accessToken`).
+///
+/// # Fix(BUG-230)
+/// Called from `account_use_routine` when `expiresAt` is in the past and `refresh::1`.
+/// Root cause: BUG-213 guard exited 3 without attempting refresh — token expiry is
+///   recoverable via OAuth refresh, not a fatal condition when `refresh::1`.
+/// Pitfall: this path requires `credential_store` (not `paths.credentials_file()`) because
+///   the per-account file is the refresh source, not the live session credentials file.
+pub( crate ) fn attempt_expired_token_refresh(
+  name             : &str,
+  credential_store : &std::path::Path,
+  paths            : &crate::ClaudePaths,
+  trace            : bool,
+  imodel_str       : &str,
+  effort_str       : &str,
+) -> bool
+{
+  let imodel    = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
+  let effort    = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
+  // Build a minimal AccountQuota for model resolution.
+  // result=Err("401") drives auto model selection to Opus (conservative when no quota data).
+  let aq        = AccountQuota
+  {
+    name          : name.to_string(),
+    is_current    : false,
+    is_active     : false,
+    expires_at_ms : 0,
+    result        : Err( "401".to_string() ),
+    account       : None,
+    host          : String::new(),
+    role          : String::new(),
+    renewal_at    : None,
+  };
+  let model     = super::subprocess::resolve_model( &aq, imodel );
+  let pre_args  = super::subprocess::effort_pre_args( &model, effort );
+  crate::account::refresh_account_token(
+    name, credential_store, Some( paths ), trace, "account.use", model, &pre_args,
+  ).is_some()
+}
+
 // ── Pre/post-switch touch context ─────────────────────────────────────────────
 
 /// Pre-fetch quota for `name` and return a [`TouchCtx`] when the account is idle.

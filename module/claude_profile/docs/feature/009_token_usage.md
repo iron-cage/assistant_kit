@@ -4,7 +4,7 @@
 
 - **Purpose**: Surface live quota utilization for all saved accounts and the currently live session via `GET /api/oauth/usage`, showing 5h, 7d, and Sonnet-specific weekly quota remaining.
 - **Responsibility**: Documents the `usage` module and `.usage` CLI command.
-- **In Scope**: Per-account quota fetch via `claude_quota::fetch_oauth_usage()` calling `GET /api/oauth/usage`, `OauthUsageData` parsing with `five_hour`/`seven_day`/`seven_day_sonnet` fields, parallel fetch of account billing state via `claude_quota::fetch_oauth_account()` → `OauthAccountData` (`billing_type`, `has_max`, `org_created_at`), token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for active-marker-but-not-current accounts), synthetic `(current session)` row when live credentials are unsaved, `Sub` column (subscription label: `max`/`pro`/`—`/`?`, hidden by default — `cols::+sub` to show), `~Renews` column (duration countdown to billing renewal: exact when `_renewal_at` ISO-8601 UTC override present in `{name}.claude.json`, estimated with `~` prefix when derived from `org_created_at` day-of-month), `→ Next` column (soonest upcoming strategic event among `+7d` 7d quota reset and `$ren` billing renewal — token expiry (`!tok`) and 5h resets (`+5h`) are excluded; token expiry already surfaced in `Expires` column, 5h resets already surfaced in `5h Reset` column), `_renewal_at` optional ISO-8601 UTC field in `{name}.claude.json` (written by `.account.renewal`, preserved by `save()` read-merge), table output using `data_fmt`, graceful handling of expired/missing tokens, composite `●` status emoji (AND of 5h and 7d), per-column emoji in `5h Left` and `7d Left` values, three-tier universal display grouping (🟢 → 🟡 → 🔴) with h-exhausted sub-group before weekly-exhausted sub-group within 🟡, `cols::` column visibility modifiers, `next::` recommendation strategy parameter, multi-strategy footer, `7d Son Reset` column (hidden by default), duration format capped to 2 significant units, `format::json` output.
+- **In Scope**: Per-account quota fetch via `claude_quota::fetch_oauth_usage()` calling `GET /api/oauth/usage`, `OauthUsageData` parsing with `five_hour`/`seven_day`/`seven_day_sonnet` fields, parallel fetch of account billing state via `claude_quota::fetch_oauth_account()` → `OauthAccountData` (`billing_type`, `has_max`, `org_created_at`), token expiry from credential files (`expires_at_ms`), live account detection by matching `accessToken` in `~/.claude/.credentials.json` against saved account tokens, active account divergence marker (`*` in flag column for active-marker-but-not-current accounts), `@` occupied-elsewhere flag (accounts named by any `_active_*` marker in the credential store other than the current machine's own marker receive `@` in the flag column when no higher-priority flag applies; `other_machines_active()` reads all non-own `_active_*` files and returns the set of account names), synthetic `(current session)` row when live credentials are unsaved, `Sub` column (subscription label: `max`/`pro`/`—`/`?`, hidden by default — `cols::+sub` to show), `~Renews` column (duration countdown to billing renewal: exact when `_renewal_at` ISO-8601 UTC override present in `{name}.claude.json`, estimated with `~` prefix when derived from `org_created_at` day-of-month), `→ Next` column (soonest upcoming strategic event among `+7d` 7d quota reset and `$ren` billing renewal — token expiry (`!tok`) and 5h resets (`+5h`) are excluded; token expiry already surfaced in `Expires` column, 5h resets already surfaced in `5h Reset` column), `_renewal_at` optional ISO-8601 UTC field in `{name}.claude.json` (written by `.account.renewal`, preserved by `save()` read-merge), table output using `data_fmt`, graceful handling of expired/missing tokens, composite `●` status emoji (AND of 5h and 7d), per-column emoji in `5h Left` and `7d Left` values, three-tier universal display grouping (🟢 → 🟡 → 🔴) with h-exhausted sub-group before weekly-exhausted sub-group within 🟡, `cols::` column visibility modifiers, `next::` recommendation strategy parameter, multi-strategy footer, `7d Son Reset` column (hidden by default), duration format capped to 2 significant units, `format::json` output.
 - **Out of Scope**: Historical token counts from stats-cache.json (replaced by live API data); verbosity levels (single fixed output level per command design); relying on per-machine active marker for `✓` determination (live credential matching via `accessToken` comparison determines `✓`; active marker determines `*` only).
 
 ### Design
@@ -35,9 +35,10 @@
 5. Post-process:
    a. Mark the live account (detected in step 3) with `✓` in the flag column (`is_current = true`).
    b. Mark the active account with `*` in the flag column when `is_active = true` AND `is_current = false`. No `*` is emitted when the active and current accounts are the same.
-   c. Recommendation is controlled by the `next::` parameter (see [023_next_account_strategies.md](023_next_account_strategies.md)). The account selected by the active strategy receives `→` in the table body; the footer always shows one recommendation per strategy. Default strategy is `renew`.
+   c. Mark accounts occupied on other machines with `@` in the flag column when `is_occupied_elsewhere = true` AND `is_active = false` AND `is_current = false`. `other_machines_active(store)` reads all `_active_*` files in the credential store, skips the current machine's own marker (from `active_marker_filename()`), and returns the set of account names referenced by the remaining markers. `is_occupied_elsewhere` is set by looking up each account's name in that returned set.
+   d. Recommendation is controlled by the `next::` parameter (see [023_next_account_strategies.md](023_next_account_strategies.md)). The account selected by the active strategy receives `→` in the table body; the footer always shows one recommendation per strategy. Default strategy is `renew`.
 6. Render results as a table using `data_fmt`:
-   - **Default columns:** flag (`✓`/`*`/`→`/ blank, priority `✓` > `*` > `→` > blank), status (`🔴`/`🟡`/`🟢`, header `●`), Account, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews, → Next
+   - **Default columns:** flag (`✓`/`*`/`@`/`→`/ blank, priority `✓` > `*` > `@` > `→` > blank), status (`🔴`/`🟡`/`🟢`, header `●`), Account, 5h Left, 5h Reset, 7d Left, 7d(Son), 7d Reset, Expires, ~Renews, → Next
    - **Hidden-by-default columns:** Sub, 7d Son Reset — available via `cols::+sub`, `cols::+7d_son_reset`
    - **Column visibility:** The `cols::` parameter accepts comma-separated `+col_id` / `-col_id` modifiers relative to the default column set. The `flag` and `account` columns are structural and always visible. See [param/033_cols.md](../cli/param/033_cols.md).
    - **Composite status emoji column (`●`):** placed between the flag and Account columns; populated on every row; uses AND logic of 5h and 7d:
@@ -100,6 +101,24 @@ Valid: 3 / 3   ->  Next by strategy:
 
 (`*` = active marker points here, but live credentials belong to `alice@example.com`. All three strategies agree — carol is the only eligible account.)
 
+**Output format (text) — occupied elsewhere:**
+
+```
+Quota
+
+  ●  Account              5h Left     5h Reset    7d Left     7d(Son)  7d Reset   Expires     ~Renews        → Next
+✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%     35%      in 4d 23h  in 7h 24m   in 3h 47m      $ren in 3h 47m
+@ 🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%     28%      in 6d 14h  in 5h 02m   ~in 6d         +7d in 6d 14h
+→ 🟢 carol@example.com    🟢 95%     in 3h 44m  🟢 72%     54%      in 5d 01h  in 6h 11m   ~in 11d        +7d in 5d 1h
+
+Valid: 3 / 3   ->  Next by strategy:
+  renew      carol@example.com   95% session, 5h resets in 3h 44m / 7d resets in 5d 1h
+  endurance  carol@example.com   95% session, 54% 7d left, expires in 6h 11m
+  drain      carol@example.com   54% 7d(Son) left, 7d(Son) resets in 5d 1h
+```
+
+(`@` = bob is the active account on another machine: some other machine's `_active_*` marker in the credential store names bob, while this machine's own marker names alice, and alice is also the live session. `is_occupied_elsewhere = true` for bob; `is_active = false` and `is_current = false` for bob on this machine. No higher-priority flag applies, so bob receives `@`.)
+
 **Output format (text) — unsaved account is live (synthetic row):**
 
 ```
@@ -120,14 +139,14 @@ Valid: 2 / 3   ->  Next by strategy:
 
 ```json
 [
-  {"account":"alice@example.com","is_current":true,"is_active":false,"expires_in_secs":26640,"billing_type":"stripe_subscription","has_max":true,"renewal_secs":13620,"renewal_is_estimate":false,"next_event_type":"ren","next_event_secs":13620,"session_5h_left_pct":86,"session_5h_resets_in_secs":11940,"weekly_7d_left_pct":65,"weekly_7d_sonnet_left_pct":35,"weekly_7d_resets_in_secs":432540},
-  {"account":"bob@example.com","is_current":false,"is_active":true,"expires_in_secs":18120,"billing_type":"stripe_subscription","has_max":true,"renewal_secs":518400,"renewal_is_estimate":true,"next_event_type":"7d","next_event_secs":500040,"session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_sonnet_left_pct":28,"weekly_7d_resets_in_secs":500040},
-  {"account":"carol@example.com","is_current":false,"is_active":false,"expires_in_secs":0,"billing_type":null,"has_max":null,"renewal_secs":null,"renewal_is_estimate":null,"next_event_type":null,"next_event_secs":null,"error":"missing accessToken"},
-  {"account":"dave@example.com","is_current":false,"is_active":false,"expires_in_secs":0,"billing_type":null,"has_max":null,"renewal_secs":null,"renewal_is_estimate":null,"next_event_type":null,"next_event_secs":null,"error":"missing accessToken"}
+  {"account":"alice@example.com","is_current":true,"is_active":false,"is_occupied_elsewhere":false,"expires_in_secs":26640,"billing_type":"stripe_subscription","has_max":true,"renewal_secs":13620,"renewal_is_estimate":false,"next_event_type":"ren","next_event_secs":13620,"session_5h_left_pct":86,"session_5h_resets_in_secs":11940,"weekly_7d_left_pct":65,"weekly_7d_sonnet_left_pct":35,"weekly_7d_resets_in_secs":432540},
+  {"account":"bob@example.com","is_current":false,"is_active":true,"is_occupied_elsewhere":false,"expires_in_secs":18120,"billing_type":"stripe_subscription","has_max":true,"renewal_secs":518400,"renewal_is_estimate":true,"next_event_type":"7d","next_event_secs":500040,"session_5h_left_pct":100,"session_5h_resets_in_secs":17880,"weekly_7d_left_pct":88,"weekly_7d_sonnet_left_pct":28,"weekly_7d_resets_in_secs":500040},
+  {"account":"carol@example.com","is_current":false,"is_active":false,"is_occupied_elsewhere":false,"expires_in_secs":0,"billing_type":null,"has_max":null,"renewal_secs":null,"renewal_is_estimate":null,"next_event_type":null,"next_event_secs":null,"error":"missing accessToken"},
+  {"account":"dave@example.com","is_current":false,"is_active":false,"is_occupied_elsewhere":false,"expires_in_secs":0,"billing_type":null,"has_max":null,"renewal_secs":null,"renewal_is_estimate":null,"next_event_type":null,"next_event_secs":null,"error":"missing accessToken"}
 ]
 ```
 
-(`weekly_7d_sonnet_left_pct` is `null` when `seven_day_sonnet` is absent from the API response. `billing_type`, `has_max`, `renewal_secs`, `renewal_is_estimate`, `next_event_type`, and `next_event_secs` are `null` when the account fetch failed or the token could not be read.)
+(`weekly_7d_sonnet_left_pct` is `null` when `seven_day_sonnet` is absent from the API response. `billing_type`, `has_max`, `renewal_secs`, `renewal_is_estimate`, `next_event_type`, and `next_event_secs` are `null` when the account fetch failed or the token could not be read. `is_occupied_elsewhere` is always a bool — `true` when any other machine's `_active_*` marker names this account.)
 
 **Table rendering:** All table and tree output MUST use the `data_fmt` crate. No hand-rolled string formatting.
 
@@ -144,7 +163,7 @@ Valid: 2 / 3   ->  Next by strategy:
 - **AC-02**: The **live account** — the saved account whose `accessToken` matches the live `~/.claude/.credentials.json` token — has `✓` in the flag column. The per-machine active marker is NOT used for `✓` determination.
 - **AC-03**: Accounts with expired or missing tokens show `—` in quota columns and a shortened error reason in the final visible quota data column (`5h Left` through `7d Reset` range). Metadata columns `Expires`, `Sub`, and `~Renews` are populated from their respective non-quota sources (`expires_at_ms`, `OauthAccountData`) and are not overwritten by the error reason. (**BUG-220 ✅ Closed** 2026-05-30)
 - **AC-04**: Table output is rendered by `data_fmt`.
-- **AC-05**: `format::json` returns a valid JSON array with one object per account; each object includes `expires_in_secs`, `is_current` (bool), `is_active` (bool), `billing_type` (string or `null`), `has_max` (bool or `null`), `renewal_secs` (u64 or `null`), `renewal_is_estimate` (bool or `null`), `next_event_type` (string or `null`), and `next_event_secs` (u64 or `null`); successful rows also include `session_5h_left_pct`, `weekly_7d_left_pct`, and `weekly_7d_sonnet_left_pct` (all remaining, not consumed); `weekly_7d_sonnet_left_pct` is `null` when Sonnet quota data is absent from the API response; `billing_type`, `has_max`, `renewal_secs`, `renewal_is_estimate`, `next_event_type`, and `next_event_secs` are `null` when the account fetch failed.
+- **AC-05**: `format::json` returns a valid JSON array with one object per account; each object includes `expires_in_secs`, `is_current` (bool), `is_active` (bool), `is_occupied_elsewhere` (bool), `billing_type` (string or `null`), `has_max` (bool or `null`), `renewal_secs` (u64 or `null`), `renewal_is_estimate` (bool or `null`), `next_event_type` (string or `null`), and `next_event_secs` (u64 or `null`); successful rows also include `session_5h_left_pct`, `weekly_7d_left_pct`, and `weekly_7d_sonnet_left_pct` (all remaining, not consumed); `weekly_7d_sonnet_left_pct` is `null` when Sonnet quota data is absent from the API response; `billing_type`, `has_max`, `renewal_secs`, `renewal_is_estimate`, `next_event_type`, and `next_event_secs` are `null` when the account fetch failed.
 - **AC-06**: Missing credential store exits 2 with an actionable error message.
 - **AC-07**: The `Expires` column shows token TTL ("in Xh Ym") for valid tokens and "EXPIRED" for tokens whose `expiresAt` is in the past; sourced from the credential file without an API call.
 - **AC-08**: `5h Left` and `7d Left` show remaining quota percentage (100 − consumed); `7d(Son)` shows remaining Sonnet-only weekly quota (100 − consumed) or `—` when absent; `5h Reset` and `7d Reset` show independent reset countdowns as separate columns; all quota data sourced from `claude_quota::fetch_oauth_usage()` → `OauthUsageData`.
@@ -177,6 +196,7 @@ Valid: 2 / 3   ->  Next by strategy:
   | `$ren` | Billing renewal | `_renewal_at` override or `org_created_at` estimate | `$ren ~in Xd` (tilde prefix) | absent or past |
   | `—`    | No event | — | — | both sources absent or past |
 - **AC-29**: `format::json` output includes `renewal_secs` (u64 seconds to next billing renewal, or `null`), `renewal_is_estimate` (`true` when sourced from `org_created_at`, `false` when from `_renewal_at`, or `null`), `next_event_type` (string event label `"7d"` or `"ren"` — sigil characters `+` and `$` are stripped in JSON output — or `null` when no event has a future timestamp), and `next_event_secs` (u64 seconds to next event, or `null`). Note: `get::next_event_type` preserves the display sigil and outputs `+7d` or `$ren` (see [feature/028_usage_row_filtering.md](028_usage_row_filtering.md)).
+- **AC-30**: Accounts with `is_occupied_elsewhere = true` — their name appears in any `_active_*` marker file in the credential store other than the current machine's own marker (as returned by `other_machines_active(store)`) — receive `@` in the flag column when `is_active = false` AND `is_current = false`. Flag priority chain: `✓` > `*` > `@` > `→` > blank; an account receives at most one flag character per row. `format::json` output includes `is_occupied_elsewhere` (bool) per object. `format::json` never emits `@` — the field is a bool, not the single-character flag.
 
 ### Cross-References
 
@@ -189,6 +209,7 @@ Valid: 2 / 3   ->  Next by strategy:
 | doc | [013_account_limits.md](013_account_limits.md) | `.account.limits` command for single-account quota |
 | doc | [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | CLI command specification |
 | doc | [016_current_account_awareness.md](016_current_account_awareness.md) | Shared current-account detection algorithm; `*` flag semantics; JSON field renaming |
+| doc | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | `_active_*` naming convention; `other_machines_active()` — reads non-own markers; `@` occupied-elsewhere flag source |
 | doc | [017_token_refresh.md](017_token_refresh.md) | Token refresh extension; `apply_refresh()` and `refresh::` parameter |
 | doc | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies; three-tier grouping; `sort::`, `desc::`, `prefer::` parameters |
 | doc | [023_next_account_strategies.md](023_next_account_strategies.md) | Recommendation strategies; `next::` parameter; multi-strategy footer |
