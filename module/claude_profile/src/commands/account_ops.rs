@@ -48,6 +48,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     }
     _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "effort:: must be a string".to_string() ) ),
   };
+  let refresh          = crate::output::parse_int_flag( &cmd, "refresh", 1 )?;
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
   let name             = resolve_account_name( &raw_name, &credential_store )?;
@@ -60,7 +61,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   }
 
   // Pre-fetch quota before the switch while the target credential file is still readable.
-  let touch_ctx = if touch != 0
+  let mut touch_ctx = if touch != 0
   {
     crate::usage::pre_switch_touch_ctx( &name, &credential_store, trace, &imodel_str, &effort_str )
   }
