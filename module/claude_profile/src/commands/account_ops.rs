@@ -106,9 +106,35 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
           let elapsed_secs = ( now_ms - exp_ms ) / 1000;
           let h            = elapsed_secs / 3600;
           let m            = ( elapsed_secs % 3600 ) / 60;
-          if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → refused" ) }
-          eprintln!( "account credentials expired: {name} (expired {h}h {m}m ago)" );
-          std::process::exit( 3 );
+          // Fix(BUG-230): attempt OAuth token refresh before giving up on expired token.
+          // Root cause: BUG-213 guard exited 3 without attempting refresh — token expiry is
+          //   recoverable when `refresh::1` (default), the same way `.usage` handles 401/429+expired.
+          // Pitfall: after a successful refresh the touch_ctx must be re-probed; the old None
+          //   result is stale — the fresh token now makes quota fetch viable.
+          if refresh != 0
+          {
+            if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → attempting refresh" ) }
+            let refreshed = crate::usage::attempt_expired_token_refresh(
+              &name, &credential_store, &paths, trace, &imodel_str, &effort_str,
+            );
+            if refreshed
+            {
+              if trace { eprintln!( "[trace] account.use  {name}  expiry check: refresh OK — re-probing touch context" ) }
+              touch_ctx = crate::usage::pre_switch_touch_ctx( &name, &credential_store, trace, &imodel_str, &effort_str );
+            }
+            else
+            {
+              if trace { eprintln!( "[trace] account.use  {name}  expiry check: refresh failed → refused" ) }
+              eprintln!( "account credentials expired and refresh failed: {name} (expired {h}h {m}m ago)" );
+              std::process::exit( 3 );
+            }
+          }
+          else
+          {
+            if trace { eprintln!( "[trace] account.use  {name}  expiry check: expired({h}h {m}m ago) → refused (refresh::0)" ) }
+            eprintln!( "account credentials expired: {name} (expired {h}h {m}m ago)" );
+            std::process::exit( 3 );
+          }
         }
         else if trace
         {
