@@ -13,14 +13,15 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 | IT-5 | `--creds file.json` (no message) → interactive REPL mode in isolation | Interactive |
 | IT-6 | `--creds file.json -- --version` → passes `--version` through to claude | Flag Passthrough |
 | IT-7 | `--creds file.json --timeout abc` → exit 1, invalid timeout error | Error: Invalid Timeout |
-| IT-8 | Missing `--creds` → exit 1, missing required argument error | Error: Missing Creds Flag |
+| IT-8 | No `--creds`, `CLR_CREDS` unset → defaults to `$HOME/.claude/.credentials.json`; trace confirms | Default Fallback |
 | IT-9 | `clr isolated --help` → exit 0, prints isolated-specific help | Help |
 | IT-10 | `--creds <f> --trace "msg"` → call details on stderr before execution attempt | Trace |
 
 ## Test Coverage Summary
 
 - Happy Path: 1 test (IT-1)
-- Error Handling: 3 tests (IT-2, IT-7, IT-8)
+- Error Handling: 2 tests (IT-2, IT-7)
+- Default Fallback: 1 test (IT-8)
 - Timeout Behavior: 2 tests (IT-3, IT-4)
 - Mode Selection: 2 tests (IT-5, IT-6)
 - Help: 1 test (IT-9)
@@ -100,10 +101,11 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 
 ---
 
-### IT-8: Missing `--creds` → exit 1, missing required argument
+### IT-8: No `--creds` → defaults to `$HOME/.claude/.credentials.json`; trace confirms path
 
-- **Command:** `clr isolated "test"`
-- **Expected behavior:** exit 1; stderr contains "missing" or "required" message referencing `--creds`; no subprocess launched
+- **Setup:** `$HOME/.claude/.credentials.json` exists (readable; content `{}`; no live credentials needed — trace fires before subprocess attempt); `CLR_CREDS` unset
+- **Command:** `clr isolated --trace "test"`
+- **Expected behavior:** trace stderr contains `# creds: <HOME>/.claude/.credentials.json`; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md), [--creds](../../../../docs/cli/param/019_creds.md)
 

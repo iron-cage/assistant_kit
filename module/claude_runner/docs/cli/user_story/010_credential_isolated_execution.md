@@ -17,9 +17,10 @@ Execute a Claude task using a specified credentials file with no access to the c
 
 ### Acceptance Criteria
 
+- `clr isolated` (no `--creds`) defaults to `$HOME/.claude/.credentials.json` and runs the subprocess in isolation using the current account's credentials
 - `clr isolated --creds <path>` runs the subprocess with a temporary HOME containing only the provided credentials file
 - Subprocess has no access to the caller's real HOME, settings, or session history
-- OAuth tokens refreshed during the run are written back to the `--creds` file before exit
+- OAuth tokens refreshed during the run are written back to the resolved credentials file (explicit or default) before exit
 - `--timeout <secs>` sets the max wait time; `--timeout 0` forces the credential-refresh path without a full session
 - Temp HOME is deleted unconditionally on exit regardless of timeout or error
 
@@ -40,5 +41,5 @@ Execute a Claude task using a specified credentials file with no access to the c
 | # | Parameter | Role |
 |---|-----------|------|
 | 13 | [`--trace`](../param/013_trace.md) | Print underlying call details to stderr |
-| 19 | [`--creds`](../param/019_creds.md) | Path to credentials JSON file (required) |
+| 19 | [`--creds`](../param/019_creds.md) | Path to credentials JSON file (optional; defaults to `~/.claude/.credentials.json`) |
 | 20 | [`--timeout`](../param/020_timeout.md) | Max seconds to wait for isolated subprocess |

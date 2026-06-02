@@ -732,24 +732,24 @@ fn us10_3_nonexistent_creds_errors()
   );
 }
 
-/// US-4: all three creds tiers absent (no `--creds`, no `CLR_CREDS`, no `HOME`) → exit 1.
+/// US-4: isolated with `HOME` unset and no `CLR_CREDS` → exit 1, error references `HOME`.
 ///
-/// `HOME` is removed so Tier 3 (`$HOME/.claude/.credentials.json`) cannot resolve.
+/// With `--creds` omitted and `HOME` unset, the 3rd-tier default cannot be resolved.
 #[ test ]
 fn us10_4_isolated_without_creds_errors()
 {
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = Command::new( bin )
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "isolated", "test" ] )
     .env_remove( "HOME" )
     .env_remove( "CLR_CREDS" )
     .output()
-    .expect( "failed to invoke clr binary" );
-  assert_eq!( exit_code( &out ), 1, "isolated without --creds must exit 1" );
+    .expect( "invoke clr isolated" );
+
+  assert_eq!( exit_code( &out ), 1, "isolated with HOME unset must exit 1" );
   let stderr = stderr_str( &out );
   assert!(
-    stderr.contains( "--creds" ),
-    "error must mention --creds. Got:\n{stderr}"
+    stderr.contains( "HOME" ) || stderr.contains( "cannot resolve" ),
+    "error must reference HOME or resolution failure; got:\n{stderr}"
   );
 }
 

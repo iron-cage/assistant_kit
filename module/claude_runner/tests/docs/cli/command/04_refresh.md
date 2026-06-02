@@ -10,7 +10,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 | IT-2 | `--creds missing.json` → exit 1, file-not-found error | Error: Missing Creds |
 | IT-3 | `--creds file.json --timeout 90` → explicit timeout applied, exit 0 | Custom Timeout |
 | IT-4 | `--creds file.json --timeout 0` → immediate expiry, exit 2 | Timeout |
-| IT-5 | Missing `--creds` → exit 1, missing required argument error | Error: Missing Creds Flag |
+| IT-5 | No `--creds`, `CLR_CREDS` unset → defaults to `$HOME/.claude/.credentials.json`; trace confirms | Default Fallback |
 | IT-6 | `--creds file.json --timeout abc` → exit 1, invalid timeout error | Error: Invalid Timeout |
 | IT-7 | `--creds file.json --trace` → call details printed to stderr before execution | Trace |
 | IT-8 | `clr refresh --help` → exit 0, prints refresh-specific help | Help |
@@ -18,8 +18,9 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 ## Test Coverage Summary
 
 - Happy Path: 1 test (IT-1)
-- Error Handling: 3 tests (IT-2, IT-5, IT-6)
+- Error Handling: 2 tests (IT-2, IT-6)
 - Timeout Behavior: 2 tests (IT-3, IT-4)
+- Default Fallback: 1 test (IT-5)
 - Trace: 1 test (IT-7)
 - Help: 1 test (IT-8)
 
@@ -70,10 +71,11 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 
 ---
 
-### IT-5: Missing `--creds` → exit 1, missing required argument
+### IT-5: No `--creds` → defaults to `$HOME/.claude/.credentials.json`; trace confirms path
 
-- **Command:** `clr refresh`
-- **Expected behavior:** exit 1; stderr contains "missing" or "required" message referencing `--creds`; no subprocess launched
+- **Setup:** `$HOME/.claude/.credentials.json` exists (readable; content `{}`; no live credentials needed — trace fires before subprocess attempt); `CLR_CREDS` unset
+- **Command:** `clr refresh --trace`
+- **Expected behavior:** trace stderr contains `# creds: <HOME>/.claude/.credentials.json`; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md), [--creds](../../../../docs/cli/param/019_creds.md)
 

@@ -17,7 +17,8 @@ Refresh the OAuth credentials in a given file — triggering the `claude` binary
 
 ### Acceptance Criteria
 
-- `clr refresh --creds <path>` refreshes the OAuth token and writes it back to `--creds`
+- `clr refresh` (no `--creds`) defaults to `$HOME/.claude/.credentials.json` and refreshes the OAuth token in-place
+- `clr refresh --creds <path>` refreshes the OAuth token in the specified file and writes it back in-place
 - Exit 0 when credentials were refreshed; exit 1 on error; exit 2 on timeout
 - No Claude task is executed — the subprocess receives `["--print", "."]` which returns immediately after the startup token refresh
 - Default timeout is 45 seconds (sufficient for slow networks and API rate limits)
@@ -40,7 +41,7 @@ Refresh the OAuth credentials in a given file — triggering the `claude` binary
 | # | Parameter | Role |
 |---|-----------|------|
 | 13 | [`--trace`](../param/013_trace.md) | Print underlying call details to stderr |
-| 19 | [`--creds`](../param/019_creds.md) | Path to credentials JSON file (required) |
+| 19 | [`--creds`](../param/019_creds.md) | Path to credentials JSON file (optional; defaults to `~/.claude/.credentials.json`) |
 | 20 | [`--timeout`](../param/020_timeout.md) | Max seconds to wait (default: 45 for refresh) |
 
 ### Related User Stories

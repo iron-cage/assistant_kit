@@ -8,3 +8,4 @@ Completed task files for the `claude_runner` crate. Each file documents a resolv
 
 | File | Responsibility |
 |------|----------------|
+| `010_optional_creds_default.md` | Make --creds optional with $HOME default fallback |

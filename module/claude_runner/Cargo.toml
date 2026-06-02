@@ -37,6 +37,7 @@ required-features = [ "enabled" ]
 [features]
 default = [ "enabled" ]
 enabled = [
+  "dep:claude_core",
   "dep:claude_runner_core",
   "claude_runner_core/enabled",
   "dep:claude_core",
@@ -49,6 +50,7 @@ enabled = [
 ]
 
 [dependencies]
+claude_core        = { workspace = true, optional = true }
 claude_runner_core = { workspace = true, optional = true }
 claude_core        = { workspace = true, optional = true }
 error_tools        = { workspace = true, optional = true }

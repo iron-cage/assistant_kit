@@ -55,7 +55,7 @@
 | 16 | `--append-system-prompt` | [`SystemPromptText`](../type/06_system_prompt_text.md) | — | Any text | Append text to the default system prompt | 1 cmd |
 | 17 | `--effort` | [`EffortLevel`](../type/07_effort_level.md) | max | low/medium/high/max | Reasoning effort level forwarded to claude | 1 cmd |
 | 18 | `--no-effort-max` | bool | false | present/absent | Suppress default `--effort max` injection | 1 cmd |
-| 19 | `--creds` | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | — | Any existing file path | Credentials JSON file (required) | 2 cmds |
+| 19 | `--creds` | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Any existing file path | Credentials JSON file (optional; defaults to current account) | 2 cmds |
 | 20 | `--timeout` | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30/45 | Non-negative integer | Max seconds to wait for subprocess (30 isolated, 45 refresh) | 2 cmds |
 | 21 | `--no-chrome` | bool | false | present/absent | Suppress default `--chrome` injection | 1 cmd |
 | 22 | `--no-persist` | bool | false | present/absent | Disable session persistence (`--no-session-persistence`) | 1 cmd |

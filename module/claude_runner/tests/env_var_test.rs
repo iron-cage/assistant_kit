@@ -584,9 +584,9 @@ fn e22_clr_mcp_config_sets_path()
 
 /// E23: `CLR_CREDS` supplies the credentials path for the `isolated` subcommand.
 ///
-/// Without `CLR_CREDS` and no `--creds` CLI flag, `isolated` exits 1 with
-/// `missing required argument: --creds`. With `CLR_CREDS` set, that error must
-/// not appear (the error shifts to file-not-found, confirming `creds_path` was populated).
+/// `CLR_CREDS` is the tier-2 resolution for `creds_path` (tier 1: `--creds` flag;
+/// tier 3: `$HOME/.claude/.credentials.json`).  Setting `CLR_CREDS` to a non-existent
+/// file shifts the error to file-not-found, confirming the path was populated from env.
 ///
 /// Spec: `148_env_var_all_params.md` param 19
 #[ test ]
@@ -607,9 +607,9 @@ fn e23_clr_creds_supplies_creds_path()
 
 /// E24: `CLR_TIMEOUT` sets the subprocess timeout for the `isolated` subcommand.
 ///
-/// Combined with `CLR_CREDS` to pass argument validation. Without either env var,
-/// `isolated` exits with `missing required argument: --creds`. With both set,
-/// that error must not appear (argument parsing succeeds; `timeout_secs` uses the env value).
+/// Combined with `CLR_CREDS` to supply the credentials path (tier 2) and override
+/// the default timeout.  Both env vars must take effect: creds path populated from
+/// `CLR_CREDS`, timeout set from `CLR_TIMEOUT`.
 ///
 /// Spec: `148_env_var_all_params.md` param 20
 #[ test ]
