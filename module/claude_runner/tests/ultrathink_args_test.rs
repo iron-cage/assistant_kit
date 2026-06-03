@@ -153,10 +153,12 @@ fn t54_empty_positional_arg_ignored()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
+  // No -c: the test cwd has no prior Claude session; session_exists() checks project-specific
+  // storage ($HOME/.claude/projects/{encoded(cwd)}/), not the global ~/.claude/ dir.
   assert_eq!(
     last_line,
-    "claude --dangerously-skip-permissions --chrome --effort max -c",
-    "empty positional arg must produce bare command (no --print, no message). Got:\n{stdout}"
+    "claude --dangerously-skip-permissions --chrome --effort max",
+    "empty positional arg must produce bare command (no --print, no message, no -c in fresh dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),
@@ -272,10 +274,12 @@ fn t57_empty_positional_after_double_dash_ignored()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
+  // No -c: the test cwd has no prior Claude session; session_exists() checks project-specific
+  // storage ($HOME/.claude/projects/{encoded(cwd)}/), not the global ~/.claude/ dir.
   assert_eq!(
     last_line,
-    "claude --dangerously-skip-permissions --chrome --effort max -c",
-    "empty arg after -- must produce bare command (no --print, no message). Got:\n{stdout}"
+    "claude --dangerously-skip-permissions --chrome --effort max",
+    "empty arg after -- must produce bare command (no --print, no message, no -c in fresh dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),

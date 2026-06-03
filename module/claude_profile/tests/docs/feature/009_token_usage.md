@@ -27,6 +27,8 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-19 | JSON includes `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | AC-29 | — |
 | FT-20 | `~Renews` shows renewal date (not error reason) for 429 accounts when `OauthAccountData` is available | AC-03 | — |
 | FT-21 | `@` in flag column for accounts active on another machine's `_active_*` marker | AC-30 | — |
+| FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | — |
+| FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | — |
 
 ### Test Case Index
 
@@ -53,8 +55,10 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-19 | JSON `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | AC-29 | JSON Fields |
 | FT-20 | `~Renews` shows billing renewal date (not error reason) for 429 accounts with valid `OauthAccountData` | AC-03 | `~Renews` Error Preservation |
 | FT-21 | `@` in flag column when account is active on another machine's `_active_*` marker | AC-30 | Occupied Elsewhere |
+| FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | Subscription State |
+| FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | Subscription State |
 
-**Total:** 21 FT cases
+**Total:** 23 FT cases
 
 ---
 
@@ -328,3 +332,38 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Note:** `is_occupied_elsewhere = true` sets `@` only when neither `is_current` nor `is_active` is true (priority: `✓` > `*` > `@` > `→` > blank).
 - **Source fn:** `test_ft21_009_occupied_elsewhere_at_flag` (in `src/usage/render.rs`)
 - **Source:** [009_token_usage.md AC-30](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-22: Cancelled subscription shows `(no subscription)` in last quota column
+
+- **Given (unit test):** One `AccountQuota`:
+  - `result = Err("no subscription")` (overridden at fetch time when `billing_type == "none"`)
+  - `account = Some(OauthAccountData { billing_type: "none", has_max: false, org_created_at: "..." })`
+  - Default `ColsVisibility` (7d Reset is last visible quota column)
+- **When:** Rendered via `render_text()` and `render_tsv()`.
+- **Then:**
+  - The `7d Reset` column cell contains `(no subscription)`.
+  - No cell contains `(rate limited (429))`.
+  - `Sub` column (when visible via `cols::+sub`) shows `"—"` (from `sub_label` with `billing_type="none"`).
+- **Exit:** n/a (unit test)
+- **Note:** Fix(BUG-233) Class A: fetch layer now overrides `result` to `Err("no subscription")` after `account_handle.join()` when `billing_type == "none"`. The previous BUG-231 display-layer workaround (`error_label` in `format.rs`) is deleted — superseded by this data-layer fix (AC-31).
+- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render.rs`); `test_class_a_billing_none_override_predicate` (in `src/usage/fetch.rs`)
+- **Source:** [009_token_usage.md AC-03, AC-31](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-23: `~Renews` shows `"—"` for cancelled subscription accounts
+
+- **Given (unit test):** One `AccountQuota`:
+  - `result = Err("no subscription")`
+  - `account = Some(OauthAccountData { billing_type: "none", has_max: false, org_created_at: "2024-01-15T00:00:00Z" })`
+  - `renewal_at = None` (no override)
+  - Default `ColsVisibility` (`~Renews` visible)
+- **When:** Rendered via `render_text()` and `render_tsv()`.
+- **Then:**
+  - The `~Renews` column cell contains `"—"` (em dash, not `"?"`, not `"~in Nd"`).
+  - Despite `org_created_at` being present and parseable, no billing estimate is shown — the subscription is cancelled.
+- **Exit:** n/a (unit test)
+- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render.rs`)
+- **Source:** [009_token_usage.md AC-27, AC-31](../../../../docs/feature/009_token_usage.md)
