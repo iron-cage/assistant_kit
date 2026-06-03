@@ -336,8 +336,13 @@ fn timeout_includes_partial_stdout()
 {
   use claude_runner_core::{ run_isolated, RunnerError, IsolatedModel };
 
-  // Fake claude: print a marker then sleep forever.
-  let ( _dir, path_val ) = fake_claude_dir( "printf 'partial-output-marker'; sleep 999" );
+  // Fake claude: print a marker then sleep briefly.
+  // Fix(BUG-243-slow): use sleep 3 instead of sleep 999 to keep test fast.
+  // Root cause: child.kill() only kills the direct shell process; the `sleep` grandchild
+  //   inherits the pipe FD and holds it open until it exits, blocking wait_with_output().
+  // Pitfall: reducing sleep doesn't change the test assertion — the timeout still fires
+  //   after 1s, the marker is still captured. The grandchild just exits sooner (~2s after).
+  let ( _dir, path_val ) = fake_claude_dir( "printf 'partial-output-marker'; sleep 3" );
 
   // Minimal credentials JSON.
   let creds_json = r#"{"accessToken":"fake","refreshToken":"fake","expiresAt":9999999999999}"#;

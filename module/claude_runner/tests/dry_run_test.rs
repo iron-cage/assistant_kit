@@ -133,7 +133,9 @@ fn combined_flags_all_appear()
   ] );
   assert!( output.contains( "cd /tmp" ), "Must have cd line" );
   assert!( output.contains( "--dangerously-skip-permissions" ), "Must have skip-permissions (default)" );
-  assert!( output.contains( " -c" ), "Must have -c (automatic)" );
+  // Note: -c is omitted because /tmp has no prior Claude session; session_exists() uses
+  // project-specific storage ($HOME/.claude/projects/{encoded(/tmp)}/), not the global dir.
+  // Use a temp dir with a dummy session file if -c injection needs to be tested (see t10).
   assert!( output.contains( "--effort max" ), "Must have --effort max (default). Got:\n{output}" );
   assert!( output.contains( "\"fix it\n\nultrathink\"" ), "Must have ultrathink-suffixed quoted message" );
 }
@@ -529,6 +531,62 @@ fn bug_reproducer_214_empty_session_dir_no_continue_flag()
   assert!(
     !output.contains( " -c" ),
     "empty session dir must not inject -c (BUG-214 regression). Got:\n{output}"
+  );
+}
+
+// BUG-214 reopen: bare `clr --dry-run` in a fresh directory (no --session-dir) injects -c
+// because session_exists(None) fell back to $HOME/.claude/ which is always non-empty.
+//
+// ## Root Cause (bug_reproducer(BUG-214))
+//
+// The None branch of session_exists() checked $HOME/.claude/ (Claude's global config dir).
+// That directory always has entries (credentials.json, projects/, etc.) regardless of whether
+// the CURRENT project directory has any Claude session history.  Result: -c was unconditionally
+// injected for every default invocation, causing "No conversation found to continue" in any
+// directory without a prior session.
+//
+// ## Why Not Caught
+//
+// The existing BUG-214 MRE test always supplied --session-dir pointing to an empty temp dir.
+// That case correctly exercises the Some(dir) branch which checks the custom dir directly.
+// The None (no --session-dir) branch was never tested in isolation in a fresh cwd.
+//
+// ## Fix Applied
+//
+// session_exists(None, effective_dir) now calls
+// claude_storage_core::continuation::check_continuation(&cwd) which looks up
+// $HOME/.claude/projects/{encoded(cwd)}/ — the project-specific storage — instead
+// of the global $HOME/.claude/ directory.
+//
+// ## Prevention
+//
+// Test bare --dry-run in a fresh temp directory as the cwd; assert no -c.
+// The session check must always use the project-specific path, not the global claude home.
+//
+// ## Pitfall
+//
+// $HOME/.claude/ is Claude's global config directory, not per-project session storage.
+// Per-project sessions live at $HOME/.claude/projects/{encoded(project_dir)}/.
+// Any check for "has prior session" must look at the encoded project path, not the global home.
+//
+// test_kind: bug_reproducer(BUG-214)
+#[ test ]
+fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
+{
+  // Run --dry-run from a fresh temp dir that has NO prior Claude session.
+  // The session check must look at $HOME/.claude/projects/{encoded(tmp_dir)}/ which does not
+  // exist, so -c must NOT appear in the output.
+  let tmp = tempfile::TempDir::new().expect( "create temp dir" );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "--dry-run", "Fix bug" ] )
+    .current_dir( tmp.path() )
+    .output()
+    .expect( "invoke clr --dry-run" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( " -c" ),
+    "fresh cwd with no prior session must not inject -c (BUG-214 reopen). Got:\n{stdout}"
   );
 }
 

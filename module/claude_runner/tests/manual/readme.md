@@ -374,3 +374,86 @@ cargo run -p claude_runner -- --dry-run --session-dir /tmp "test"
 All TC-1 through TC-47 must pass without unexpected errors or panics.
 TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-47 are runnable without a configured Claude API key.
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
+
+---
+
+## Corner Cases (CC-1 through CC-85) — Automated
+
+These are exhaustively tested by the integration test suite (not manual). Listed here for traceability.
+
+### Parser
+
+- **CC-1/2:** `--help` wins even when unknown flags precede it (BUG-221 regression)
+- **CC-3/4:** `--effort invalid_level` → exit 1, error mentions "effort"
+- **CC-5/6:** `--effort` without value → exit 1, missing-value error
+- **CC-7/8:** `--effort low` and `--effort high` accepted
+- **CC-9/10:** `--max-tokens 4294967296` (overflow) → exit 1, mentions "max-tokens"
+- **CC-11/12:** `--max-tokens 1.5` and `--max-tokens ""` → exit 1
+- **CC-13/14:** `--verbosity 6` → exit 1, mentions "verbosity"
+- **CC-15/16:** `--verbosity 5` and `--verbosity 0` → accepted with `--dry-run`
+- **CC-17/18:** `--subdir a/b` (slash) → exit 1, mentions "subdir"
+- **CC-19:** `--subdir .` → identity (no `-prefix` join)
+- **CC-20:** `--subdir ""` → identity (empty string filtered)
+- **CC-21:** `--subdir mywork` → path contains `-mywork`
+- **CC-22:** `--dir /tmp --subdir mywork` → `/tmp/-mywork`
+
+### Env vars
+
+- **CC-23:** `CLR_MAX_TOKENS=bad` → silently ignored (default preserved)
+- **CC-24:** `CLR_VERBOSITY=6` → silently ignored (valid values: 0–5)
+- **CC-25:** `CLR_EFFORT=invalid` → silently ignored (default max used)
+- **CC-26:** `CLR_SUBDIR=a/b` → silently ignored (slash rejected)
+- **CC-27:** `CLR_NEW_SESSION=1` → suppresses `-c`
+- **CC-28:** `CLR_PRINT=1` without message → exit 1 ("--print requires a message")
+- **CC-29:** `CLR_PRINT=1` with message → `--print` in output
+- **CC-30:** `CLR_INTERACTIVE=1` → suppresses auto `--print`
+- **CC-31:** `CLR_MCP_CONFIG=...` without CLI flag → used
+- **CC-32/32b:** CLI `--mcp-config` wins over `CLR_MCP_CONFIG`
+
+### Empty/whitespace messages
+
+- **CC-33:** `clr ""` → empty arg filtered → no `--print`
+- **CC-34:** `clr -- ""` → empty after `--` filtered → no `--print`
+- **CC-35:** `clr " "` → whitespace-only IS a valid message → `--print` added
+
+### Flag interactions
+
+- **CC-36:** Message already ending in "ultrathink" → no double suffix (idempotent)
+- **CC-37/38:** `--no-effort-max` wins over `--effort medium` regardless of order
+- **CC-39/39b:** Duplicate `--system-prompt` → last value wins
+- **CC-40:** `--system-prompt` + `--append-system-prompt` together → both appear
+- **CC-41:** `--session-dir /nonexistent` → no `-c`
+- **CC-42:** `--session-dir /path/to/file` (not a dir) → no `-c`
+
+### Subcommand help
+
+- **CC-43–48:** `isolated/refresh/ask --help` and `-h` each exit 0
+- **CC-49–51:** Help output contains expected keywords
+
+### Error cases
+
+- **CC-52–55:** `refresh/isolated --unknown-flag` → exit 1, "unknown option"
+- **CC-56–60:** Invalid `--timeout` values (`-1`, `abc`) → exit 1, mentions "timeout"
+
+### Typo guard
+
+- **CC-61:** `rn` (2 chars) — below 4-char threshold; treated as positional message (by design)
+- **CC-62–64:** `isol`, `refre`, `askk` → typo guard fires, suggests correct subcommand
+- **CC-65:** `hel` (3 chars) — below 4-char threshold; treated as positional message
+- **CC-65b/65c:** `helpx`, `runn` (4+ chars) → typo guard fires
+
+### Subcommand edge cases
+
+- **CC-66:** `clr refresh some_word --creds ...` → positional silently ignored, no parse error
+- **CC-67:** `clr ask --dry-run` (no message) → no `--print`
+- **CC-68:** `clr ask --effort max` → overrides ask default (High)
+- **CC-69:** `clr ask --dry-run test` → no `--dangerously-skip-permissions` (unconditional)
+- **CC-70:** `clr ask --dry-run test` → `--no-session-persistence` present (unconditional)
+- **CC-71/72:** Ask mode → no ultrathink, no chrome (unconditional)
+- **CC-73:** Ask default max-tokens = 16384
+
+### BUG-245 (CLR_EFFORT/CLR_MAX_TOKENS in ask mode)
+
+- **CC-79:** `CLR_EFFORT=low clr ask` → env var overrides ask soft default (was broken before fix)
+- Equivalent test: `CLR_MAX_TOKENS=50000 clr ask` → overrides 16384 default
+- Automated in: `it_11_clr_effort_env_overrides_ask_default`, `it_12_clr_max_tokens_env_overrides_ask_default`

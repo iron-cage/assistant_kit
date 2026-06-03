@@ -73,10 +73,10 @@ clp .usage
 # Quota
 #
 #   ●  Account              5h Left     5h Reset    7d Left  7d(Son)  7d Reset   Expires     ~Renews      → Next
-#   🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   28%      in 6d 14h  in 5h 02m   ~in 30d      +7d in 6d 14h
-# ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   35%      in 4d 23h  in 7h 24m   ~in 6d       +7d in 4d 23h
-# @ 🟢 carol@example.com    🟢 91%     in 4h 12m  🟢 73%   41%      in 5d 8h   in 2h 30m   ~in 14d      +7d in 5d 8h
-# → 🟡 frank@example.com    🟡 3%      in 0h 23m  🟢 52%   18%      in 2d 11h  in 1h 12m   ~in 8d       +7d in 2d 11h
+#   🟢 bob@example.com      🟢 100%    in 4h 58m  🟢 88%   28%      in 6d 14h  in 5h 02m   ~in 30d      in 6d 14h +7d
+# ✓ 🟢 alice@example.com    🟢 86%     in 3h 19m  🟢 65%   35%      in 4d 23h  in 7h 24m   ~in 6d       in 4d 23h +7d
+# @ 🟢 carol@example.com    🟢 91%     in 4h 12m  🟢 73%   41%      in 5d 8h   in 2h 30m   ~in 14d      in 5d 8h +7d
+# → 🟡 frank@example.com    🟡 3%      in 0h 23m  🟢 52%   18%      in 2d 11h  in 1h 12m   ~in 8d       in 2d 11h +7d
 #   🔴 dave@example.com     —          —           —        —        —          EXPIRED      ?            —
 #
 # Valid: 4 / 5   ->  Next by strategy:

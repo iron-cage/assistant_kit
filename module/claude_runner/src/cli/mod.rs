@@ -357,11 +357,18 @@ pub( super ) fn dispatch_ask( tokens : &[ String ] ) -> !
   cli.no_chrome           = true;
   cli.no_persist          = true;
   cli.no_ultrathink       = true;
-  // Soft defaults — only applied when CLI did not explicitly set the field.
+  // Fix(BUG-245): apply env var fallbacks BEFORE soft defaults so the priority chain
+  //   CLI flag > CLR_* env var > ask default is preserved for soft fields.
+  // Root cause: soft defaults (.or(Some(…))) ran before apply_env_vars; because the
+  //   None-sentinel was replaced with the ask default, the env-var guard
+  //   (if parsed.effort.is_none()) misfired and silently ignored CLR_EFFORT / CLR_MAX_TOKENS.
+  // Pitfall: unconditional fields (no_skip_permissions, no_ultrathink, …) are set above
+  //   and already non-default when apply_env_vars runs; their guards (if !parsed.no_chrome)
+  //   correctly block env-var override — that is intentional and unchanged.
+  apply_env_vars( &mut cli );
+  // Soft defaults — only applied when neither CLI flag nor env var set the field.
   cli.effort     = cli.effort.or( Some( EffortLevel::High ) );
   cli.max_tokens = cli.max_tokens.or( Some( 16384 ) );
-  // Apply CLR_* env var fallbacks (CLI already took precedence during parse_args).
-  apply_env_vars( &mut cli );
 
   let builder = build_claude_command( &cli );
 

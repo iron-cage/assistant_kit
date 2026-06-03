@@ -48,8 +48,8 @@ fn emit_credential_trace
 /// - **Success (`exit_code >= 0`):** propagates the subprocess exit code.
 /// - **Success (`exit_code == -1`, creds refreshed at startup before timeout):**
 ///   writes back updated credentials and exits 0.
-/// - **`Err(Timeout)`:** subprocess exceeded the deadline without refreshing
-///   credentials — exits 2.
+/// - **`Err(Timeout)` / `Err(TimeoutWithOutput)`:** subprocess exceeded the deadline
+///   without refreshing credentials — exits 2.
 /// - **Other errors:** exits 1 with an error message.
 ///
 /// This function never returns; it always calls `std::process::exit`.
@@ -100,7 +100,7 @@ pub( super ) fn run_isolated_command
       let exit_code = if result.exit_code == -1 { 0 } else { result.exit_code };
       std::process::exit( exit_code );
     }
-    Err( RunnerError::Timeout { secs } ) =>
+    Err( RunnerError::Timeout { secs } | RunnerError::TimeoutWithOutput { secs, .. } ) =>
     {
       eprintln!( "Error: isolated subprocess timed out after {secs} seconds" );
       std::process::exit( 2 );

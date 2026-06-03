@@ -163,9 +163,13 @@ fn e07_interactive_not_found_verbosity_zero()
     .expect( "Failed to invoke" );
   assert!( !out.status.success(), "must exit non-zero" );
   let stderr = String::from_utf8_lossy( &out.stderr );
+  // Fix(BUG-240): fatal spawn errors must be visible at verbosity 0.
+  // Root cause: prior code gated the Err branch on shows_errors(); at verbosity 0
+  //   spawn failures produced zero stderr output — a perfectly silent failure.
+  // Pitfall: verbosity 0 suppresses runner diagnostics, never fatal errors.
   assert!(
-    stderr.is_empty(),
-    "--verbosity 0 must suppress error output. Got:\n{stderr}"
+    !stderr.is_empty(),
+    "--verbosity 0 must still emit fatal spawn errors (BUG-240 fix). Got empty stderr"
   );
 }
 
@@ -184,9 +188,13 @@ fn e08_print_not_found_verbosity_zero()
     .expect( "Failed to invoke" );
   assert!( !out.status.success(), "must exit non-zero" );
   let stderr = String::from_utf8_lossy( &out.stderr );
+  // Fix(BUG-240): fatal spawn errors must be visible at verbosity 0.
+  // Root cause: prior code gated the Err branch on shows_errors(); at verbosity 0
+  //   spawn failures produced zero stderr output — a perfectly silent failure.
+  // Pitfall: verbosity 0 suppresses runner diagnostics, never fatal errors.
   assert!(
-    stderr.is_empty(),
-    "--verbosity 0 must suppress error output. Got:\n{stderr}"
+    !stderr.is_empty(),
+    "--verbosity 0 must still emit fatal spawn errors (BUG-240 fix). Got empty stderr"
   );
 }
 

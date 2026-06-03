@@ -65,8 +65,9 @@ Use `--new-session` to start fresh.
 | Code | Meaning |
 |------|---------|
 | 0 | Success |
-| 1 | Error (parse failure, print mode without message, execution error) |
-| N | Passthrough from claude subprocess |
+| 1 | Error (parse failure, print mode without message, execution error, binary not found) |
+| N | Passthrough from claude subprocess (print mode propagates the subprocess exit code exactly) |
+| 128+signal | Subprocess killed by signal; follows POSIX convention (e.g., SIGTERM → 143, SIGKILL → 137) |
 
 **Examples:**
 

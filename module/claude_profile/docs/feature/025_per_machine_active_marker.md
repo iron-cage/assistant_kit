@@ -33,6 +33,7 @@ The `.gitignore` pattern `_active_*` excludes all per-machine marker files from 
 - **AC-02**: `active_marker_filename()` returns `_active_<hostname>_<user>` where hostname and user reflect the running machine.
 - **AC-03**: Two machines sharing the same credential store directory can each have their own active account without affecting each other.
 - **AC-04**: `_active_*` is listed in `.gitignore` at the repository root.
+- **AC-05**: `other_machines_active(credential_store)` returns a `HashSet<String>` containing account names found in every `_active_*` file in the credential store EXCEPT the current machine's own marker (as returned by `active_marker_filename()`). Each file's content is trimmed; empty strings after trimming are excluded. Missing or unreadable files are silently skipped.
 
 ### Cross-References
 
@@ -47,3 +48,4 @@ The `.gitignore` pattern `_active_*` excludes all per-machine marker files from 
 | doc | [015_name_shortcut_syntax.md](015_name_shortcut_syntax.md) | Prefix resolution; AC-11 added for exact-local-part match |
 | doc | [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | Atomicity invariant; `_active` marker note updated |
 | test | `tests/cli/account_mutations_test.rs` (aw16, aw17) | aw16: exact-local-part wins over prefix; aw17: no exact match falls through to ambiguous |
+| test | `module/claude_profile_core/tests/account_test.rs` | FT-11: other_machines_active returns others' names; FT-12: returns empty HashSet when only own marker or empty store |

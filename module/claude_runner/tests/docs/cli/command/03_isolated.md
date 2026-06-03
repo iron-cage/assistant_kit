@@ -16,18 +16,19 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 | IT-8 | No `--creds`, `CLR_CREDS` unset → defaults to `$HOME/.claude/.credentials.json`; trace confirms | Default Fallback |
 | IT-9 | `clr isolated --help` → exit 0, prints isolated-specific help | Help |
 | IT-10 | `--creds <f> --trace "msg"` → call details on stderr before execution attempt | Trace |
+| IT-11 | Timeout with partial stdout → exit 2, error includes accumulated output (BUG-243) | Timeout Behavior |
 
 ## Test Coverage Summary
 
 - Happy Path: 1 test (IT-1)
 - Error Handling: 2 tests (IT-2, IT-7)
 - Default Fallback: 1 test (IT-8)
-- Timeout Behavior: 2 tests (IT-3, IT-4)
+- Timeout Behavior: 3 tests (IT-3, IT-4, IT-11)
 - Mode Selection: 2 tests (IT-5, IT-6)
 - Help: 1 test (IT-9)
 - Trace: 1 test (IT-10)
 
-**Total:** 10 test cases
+**Total:** 11 test cases
 
 ---
 
@@ -127,3 +128,14 @@ Integration test planning for the `isolated` command. See [command/02_isolated.m
 - **Expected behavior:** stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --chrome --model claude-sonnet-4-6 --print "Fix bug"` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md), [--trace](../../../../docs/cli/param/013_trace.md)
+
+---
+
+### IT-11: Timeout with partial stdout → exit 2, error includes accumulated output (BUG-243)
+
+- **Setup:** fake-claude script that emits one line of output then blocks indefinitely (e.g. `echo "partial output"; sleep 60`); credentials JSON at `/tmp/it11_creds.json`; script injected via PATH or `CLR_CLAUDE_BIN`
+- **Command:** `clr isolated --creds /tmp/it11_creds.json --timeout 1 "test"`
+- **Expected behavior:** subprocess is killed after 1 second; exit 2 (timeout without credentials refresh); the partial stdout emitted before the timeout is included in the error output — diagnostic context is not discarded
+- **Exit:** 2
+- **Source:** [--timeout](../../../../docs/cli/param/020_timeout.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Note:** Implemented in TSK-196 (BUG-243); test function `timeout_includes_partial_stdout` in `tests/bug_reproducers_239_244_test.rs`; also covered by EC-7 in [tests/docs/cli/param/20_timeout.md](../param/20_timeout.md)
