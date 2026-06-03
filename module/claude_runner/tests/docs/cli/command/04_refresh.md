@@ -46,6 +46,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Expected behavior:** exit 1; stderr contains "not found" or equivalent; no subprocess launched
 - **Exit:** 1
 - **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
+- **Note:** Implemented; test function `test_it2_creds_file_not_found` in `tests/refresh_test.rs`
 
 ---
 
@@ -66,7 +67,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Command:** `clr refresh --creds /tmp/it4_refresh_creds.json --timeout 0`
 - **Expected behavior:** subprocess killed immediately (0-second deadline); exit 2 (timeout before any token refresh)
 - **Exit:** 2
-- **Note:** lim_it — fast-path credential check; matches `isolated --timeout 0` semantics
+- **Note:** lim_it variant for live-credential environments; offline fake-claude variant implemented as test function `test_it4_timeout_zero_exits_two` in `tests/refresh_test.rs` (`#[cfg(unix)]`)
 - **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
 
 ---
@@ -78,6 +79,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Expected behavior:** trace stderr contains `# creds: <HOME>/.claude/.credentials.json`; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md), [--creds](../../../../docs/cli/param/019_creds.md)
+- **Note:** Implemented; test function `t2_refresh_no_creds_uses_home_default` in `tests/creds_default_test.rs`
 
 ---
 
@@ -88,6 +90,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Expected behavior:** exit 1; stderr contains invalid `--timeout` error; no subprocess launched
 - **Exit:** 1
 - **Source:** [type/09_timeout_secs.md](../../../../docs/cli/type/09_timeout_secs.md)
+- **Note:** Implemented; test function `test_it6_invalid_timeout` in `tests/refresh_test.rs`
 
 ---
 
@@ -98,6 +101,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Expected behavior:** stderr contains `# clr refresh`, `# creds: /tmp/it7_refresh_creds.json`, `# timeout: 45s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --chrome --model claude-sonnet-4-6 --print "."` before any subprocess attempt; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md), [--trace](../../../../docs/cli/param/013_trace.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)
+- **Note:** Implemented; test function `it_04_refresh_trace_stderr_output` in `tests/invariant_trace_universality_test.rs`
 
 ---
 
@@ -107,3 +111,4 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Expected behavior:** exit 0; stdout contains `--creds`, `--timeout`, `--trace`, and `--help`; no subprocess launched; no error in stderr
 - **Exit:** 0
 - **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
+- **Note:** Implemented; test function `test_it8_help_exits_zero` in `tests/refresh_test.rs`

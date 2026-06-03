@@ -18,7 +18,7 @@ Open the Claude Code REPL with automatic session continuation so the conversatio
 ### Acceptance Criteria
 
 - `clr` with no message launches the interactive REPL (stdin/stdout connected to subprocess)
-- Session continues from the most recent conversation automatically (`-c` injected by default)
+- Session continues from the most recent conversation automatically (`-c` injected by default when a prior session exists for the effective working directory)
 - `--dir <path>` sets the subprocess working directory for project-specific REPL sessions
 - `--new-session` discards prior context and opens a fresh conversation
 

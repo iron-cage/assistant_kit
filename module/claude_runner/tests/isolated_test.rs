@@ -357,6 +357,7 @@ fn it1_lim_it_happy_path()
 #[ test ]
 fn it3_lim_it_timeout_no_refresh()
 {
+  if !claude_binary_available() { return; }
   let Some( ( _tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );
@@ -382,6 +383,7 @@ fn it3_lim_it_timeout_no_refresh()
 #[ test ]
 fn it4_lim_it_timeout_with_refresh()
 {
+  if !claude_binary_available() { return; }
   let Some( ( tmp, path ) ) = live_creds_file() else
   {
     panic!( "lim_it test requires live credentials at $HOME/.claude/.credentials.json — run only in credentialed environments, not in standard CI" );

@@ -127,13 +127,16 @@ fn message_appears_in_command_quoted()
 fn combined_flags_all_appear()
 {
   // --dangerously-skip-permissions appears automatically (default-on; no explicit flag needed).
-  // No explicit -c needed — it appears automatically via default continuation.
+  // Note: -c is NOT checked here — /tmp has no prior Claude session so session_exists() returns
+  // false. The -c default is covered by default_continuation_always_present (same cwd as project).
   let output = run_dry( &[
     "--dry-run", "--dir", "/tmp", "fix it",
   ] );
   assert!( output.contains( "cd /tmp" ), "Must have cd line" );
   assert!( output.contains( "--dangerously-skip-permissions" ), "Must have skip-permissions (default)" );
-  assert!( output.contains( " -c" ), "Must have -c (automatic)" );
+  // Note: -c is omitted because /tmp has no prior Claude session; session_exists() uses
+  // project-specific storage ($HOME/.claude/projects/{encoded(/tmp)}/), not the global dir.
+  // Use a temp dir with a dummy session file if -c injection needs to be tested (see t10).
   assert!( output.contains( "--effort max" ), "Must have --effort max (default). Got:\n{output}" );
   assert!( output.contains( "\"fix it\n\nultrathink\"" ), "Must have ultrathink-suffixed quoted message" );
 }
@@ -217,14 +220,15 @@ fn new_session_suppresses_continue_flag()
   );
 }
 
-// Default continuation: bare --dry-run always shows -c.
+// Default continuation: bare --dry-run shows -c when the project CWD has prior sessions.
+// This test runs from the project directory, which always has sessions on a dev machine.
 #[ test ]
 fn default_continuation_always_present()
 {
   let output = run_dry( &[ "--dry-run", "test" ] );
   assert!(
     output.contains( " -c" ),
-    "Dry-run output must always contain -c (automatic session continuation). Got:\n{output}"
+    "Dry-run from project cwd (has sessions) must contain -c. Got:\n{output}"
   );
 }
 
@@ -487,48 +491,59 @@ fn trace_with_dry_run_emits_no_stderr()
   );
 }
 
-// BUG-214: bare `clr` exits with "No conversation found" on first use (empty session dir).
+// BUG-214 reopen: bare `clr --dry-run` in a fresh directory (no --session-dir) injects -c
+// because session_exists(None) fell back to $HOME/.claude/ which is always non-empty.
 //
 // ## Root Cause (bug_reproducer(BUG-214))
 //
-// `build_claude_command()` in `cli/mod.rs` injected `-c` unconditionally whenever
-// `--new-session` was absent. On first use with no prior session in claude storage,
-// the claude binary exits "No conversation found to continue" rather than opening
-// the interactive REPL, violating US-1 AC "bare `clr` launches the interactive REPL".
+// The None branch of session_exists() checked $HOME/.claude/ (Claude's global config dir).
+// That directory always has entries (credentials.json, projects/, etc.) regardless of whether
+// the CURRENT project directory has any Claude session history.  Result: -c was unconditionally
+// injected for every default invocation, causing "No conversation found to continue" in any
+// directory without a prior session.
 //
 // ## Why Not Caught
 //
-// All pre-existing tests ran on machines where `~/.claude/` already contained prior
-// sessions, so `-c` always succeeded. The first-use (empty session dir) scenario was
-// never exercised.
+// The existing BUG-214 MRE test always supplied --session-dir pointing to an empty temp dir.
+// That case correctly exercises the Some(dir) branch which checks the custom dir directly.
+// The None (no --session-dir) branch was never tested in isolation in a fresh cwd.
 //
 // ## Fix Applied
 //
-// `session_exists(session_dir: Option<&Path>) -> bool` guards the injection site in
-// `cli/mod.rs`: `-c` is now only injected when the resolved session directory is
-// non-empty. An empty or absent directory suppresses the flag.
+// session_exists(None, effective_dir) now calls
+// claude_storage_core::continuation::check_continuation(&cwd) which looks up
+// $HOME/.claude/projects/{encoded(cwd)}/ — the project-specific storage — instead
+// of the global $HOME/.claude/ directory.
 //
 // ## Prevention
 //
-// Pin the invariant: `clr --dry-run --session-dir <empty>` must never contain ` -c`.
-// Use a real temp directory — not a stub — so the guard exercises real filesystem I/O.
+// Test bare --dry-run in a fresh temp directory as the cwd; assert no -c.
+// The session check must always use the project-specific path, not the global claude home.
 //
 // ## Pitfall
 //
-// `-c` / `--continue` require a resumable session. Injecting without an existence check
-// causes silent process exit rather than an actionable error. Always gate resumption flags
-// behind a presence check of the storage directory.
+// $HOME/.claude/ is Claude's global config directory, not per-project session storage.
+// Per-project sessions live at $HOME/.claude/projects/{encoded(project_dir)}/.
+// Any check for "has prior session" must look at the encoded project path, not the global home.
 //
 // test_kind: bug_reproducer(BUG-214)
 #[ test ]
-fn bug_reproducer_214_empty_session_dir_no_continue_flag()
+fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
 {
+  // Run --dry-run from a fresh temp dir that has NO prior Claude session.
+  // The session check must look at $HOME/.claude/projects/{encoded(tmp_dir)}/ which does not
+  // exist, so -c must NOT appear in the output.
   let tmp = tempfile::TempDir::new().expect( "create temp dir" );
-  let session_dir = tmp.path().to_str().expect( "valid utf8 path" );
-  let output = run_dry( &[ "--dry-run", "--session-dir", session_dir, "Fix bug" ] );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [ "--dry-run", "Fix bug" ] )
+    .current_dir( tmp.path() )
+    .output()
+    .expect( "invoke clr --dry-run" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
-    !output.contains( " -c" ),
-    "empty session dir must not inject -c (BUG-214 regression). Got:\n{output}"
+    !stdout.contains( " -c" ),
+    "fresh cwd with no prior session must not inject -c (BUG-214 reopen). Got:\n{stdout}"
   );
 }
 

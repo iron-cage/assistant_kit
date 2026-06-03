@@ -28,7 +28,7 @@ clr isolated [--creds <FILE>] [--timeout <SECS>] [MESSAGE]
 |------|---------|
 | 0 | Claude exited successfully (may have refreshed creds in-place) |
 | 1 | Error (creds file not found, claude not in PATH, I/O failure) |
-| 2 | Timeout — subprocess did not finish within `--timeout` seconds |
+| 2 | Timeout — subprocess did not finish within `--timeout` seconds; any partial stdout accumulated before the timeout is preserved in the error output |
 | N | Passthrough from claude subprocess (non-zero) |
 
 **Examples:**

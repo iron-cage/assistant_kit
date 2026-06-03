@@ -30,7 +30,7 @@ Edge case tests for the new session flag. Tests validate continuation suppressio
 
 ### EC-1: Default → `-c` in assembled command (when session storage non-empty)
 
-- **Given:** clean environment; default session dir (`~/.claude/`) contains at least one session file (post-BUG-214: `session_exists()` guard injects `-c` only when storage is non-empty)
+- **Given:** clean environment; project session dir (`~/.claude/projects/{encoded(cwd)}/`) contains at least one session file (post-BUG-214-reopen: `check_continuation()` checks the project-specific path, not `~/.claude/` globally)
 - **When:** `clr --dry-run "Fix bug"`
 - **Then:** Assembled command contains `-c` (continuation flag)
 - **Exit:** 0

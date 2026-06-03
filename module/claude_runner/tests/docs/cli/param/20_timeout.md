@@ -17,12 +17,12 @@ Edge case test planning for the `--timeout` parameter. See [020_timeout.md](../.
 
 ## Test Coverage Summary
 
-- Behavioral Divergence: 2 tests (EC-1, EC-2)
+- Behavioral Divergence: 3 tests (EC-1, EC-2, EC-7)
 - Valid: 1 test (EC-3)
 - Invalid: 2 tests (EC-4, EC-5)
 - Missing Value: 1 test (EC-6)
 
-**Total:** 6 test cases
+**Total:** 7 test cases
 
 ---
 
@@ -89,3 +89,15 @@ Edge case test planning for the `--timeout` parameter. See [020_timeout.md](../.
 - **Exit:** 1
 - **Source:** [020_timeout.md](../../../../docs/cli/param/020_timeout.md)
 - **Commands:** isolated, refresh
+
+---
+
+### EC-7: timeout preserves partial stdout in error output
+
+- **Given:** fake-claude subprocess that emits partial output then hangs; `--timeout 1`
+- **When:** `clr isolated --creds /tmp/ec7_creds.json --timeout 1 "test"` (subprocess never exits)
+- **Then:** exit 2; error message includes any partial stdout emitted before the timeout fired
+- **Exit:** 2
+- **Source:** [020_timeout.md — partial stdout note](../../../../docs/cli/param/020_timeout.md)
+- **Commands:** isolated
+- **Note:** Implemented in TSK-196 (BUG-243); test function `timeout_includes_partial_stdout` in `tests/bug_reproducers_239_244_test.rs`

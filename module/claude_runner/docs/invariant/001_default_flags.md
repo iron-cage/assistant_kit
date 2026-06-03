@@ -25,7 +25,7 @@ These defaults are intentional and must not be removed without explicit design d
 ### Enforcement Mechanism
 
 The flag injection is implemented at three layers:
-- `-c`: injected by `build_claude_command()` via `session_exists()` guard — only when `!cli.new_session` AND the configured session directory (or `$HOME/.claude/` default) is non-empty. `--dangerously-skip-permissions`: injected unconditionally unless `--no-skip-permissions` is set.
+- `-c`: injected by `build_claude_command()` via `session_exists()` guard — only when `!cli.new_session` AND the configured session directory (or `$HOME/.claude/projects/{encoded(effective_dir)}/` default, checked via `check_continuation()`) contains conversation files. `--dangerously-skip-permissions`: injected unconditionally unless `--no-skip-permissions` is set.
 - `--chrome`: injected via `ClaudeCommand::new()` builder default (`chrome: Some(true)`). CLI opt-out: `--no-chrome`. Rust API callers can also override with `with_chrome(None)` or `with_chrome(Some(false))`.
 - `"\n\nultrathink"` message suffix: appended to the message string inside `build_claude_command()` before `builder.with_message()` is called. Skipped when `cli.no_ultrathink` is set or the message already ends with `"ultrathink"` (idempotent guard — `msg.trim_end().ends_with("ultrathink")`).
 - `--effort max`: injected by `build_claude_command()` via `builder.with_effort(cli.effort.unwrap_or(EffortLevel::Max))`. Skipped entirely when `cli.no_effort_max` is set. Overridden to a different level when `cli.effort` is `Some(level)`.
@@ -50,7 +50,7 @@ If any default injection is removed:
 **BUG-214 (fixed 2026-05-28) — `-c` was injected unconditionally regardless of session existence:**
 `build_claude_command()` now calls `session_exists()` before injecting `-c`. On first invocation or with an empty `--session-dir`, `-c` is suppressed and the REPL opens unconditionally. The invariant above (`-c` on by default) now carries the implicit precondition: session storage must be non-empty.
 
-- **Root cause:** `cli/mod.rs:199-205` — `session_exists()` guard, `Fix(BUG-214)` comment
+- **Root cause:** `src/cli/builder.rs` — `session_exists()` + `check_continuation()`, `Fix(BUG-214-reopen)` comment; original `cli/mod.rs` path is now `builder.rs` after refactor
 - **Bug report:** `claude_tools/task/claude_runner/bug/214_bare_clr_exits_no_session.md` (external to crate)
 
 ### Features
@@ -63,7 +63,8 @@ If any default injection is removed:
 
 | File | Relationship |
 |------|--------------|
-| `../../src/cli/mod.rs` | `build_claude_command()` flag injection implementation |
+| `../../src/cli/mod.rs` | `build_claude_command()` entry point and CLI dispatch |
+| `../../src/cli/builder.rs` | `session_exists()` guard and `build_claude_command()` implementation |
 
 ### Tests
 
@@ -72,6 +73,8 @@ If any default injection is removed:
 | `../../tests/cli_args_test.rs` | T01–T49 flag parsing; --new-session, --no-skip-permissions, --no-ultrathink, --no-effort-max, --no-chrome, --keep-claudecode |
 | `../../tests/ultrathink_args_test.rs` | T50–T58 ultrathink suffix injection, idempotent guard, and --no-ultrathink opt-out |
 | `../../tests/effort_args_test.rs` | T59–T70 --effort max default injection and override behavior |
+| `../../tests/param_edge_cases_test.rs` | `bug_214_empty_session_dir_suppresses_continue_flag` — BUG-214 regression (empty `--session-dir` → no `-c`) |
+| `../../tests/dry_run_test.rs` | `bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag` — BUG-214-reopen regression (fresh CWD, no `--session-dir` → no `-c`) |
 
 ### Provenance
 
