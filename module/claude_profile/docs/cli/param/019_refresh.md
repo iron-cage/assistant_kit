@@ -5,8 +5,8 @@ When an account's quota fetch returns an HTTP auth error (401 or 403), or an HTT
 - **Type:** `bool`
 - **Default:** `1` (on — expired tokens silently refreshed before reporting failure)
 - **Constraints:** Accepted values: `0`, `1`, `false`, `true`; effective only under `#[cfg(feature = "enabled")]` — in offline builds the parameter is accepted but has no effect
-- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage), [`.account.use`](../command/001_account.md#command--5-accountuse)
-- **Purpose:** For `.usage`: silently recovers expired OAuth tokens on 401/403/429-with-expired-local-token errors, retrying the fetch once so the table shows current quota rather than error rows. For `.account.use` (`touch::1` path): when quota fetch fails and `expiresAt` is locally expired, attempts token refresh before refusing with exit 3; `refresh::0` refuses immediately without a retry.
+- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage), [`.account.use`](../command/001_account.md#command--5-accountuse), [`.account.inspect`](../command/001_account.md#command--15-accountinspect)
+- **Purpose:** For `.usage`: silently recovers expired OAuth tokens on 401/403/429-with-expired-local-token errors, retrying the fetch once so the table shows current quota rather than error rows. For `.account.use` (`touch::1` path): when quota fetch fails and `expiresAt` is locally expired, attempts token refresh before refusing with exit 3; `refresh::0` refuses immediately without a retry. For `.account.inspect`: when `expiresAt` is locally expired, attempts token refresh before making endpoint 001/002/005 calls; `refresh::0` skips the refresh and all endpoints fall back to local snapshot data.
 - **Group:** [Fetch Behavior](../param_group/003_fetch_behavior.md)
 
 **Examples:**

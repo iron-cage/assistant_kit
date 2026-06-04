@@ -29,6 +29,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-21 | `@` in flag column for accounts active on another machine's `_active_*` marker | AC-30 | — |
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | — |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | — |
+| FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
 
 ### Test Case Index
 
@@ -57,8 +58,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-21 | `@` in flag column when account is active on another machine's `_active_*` marker | AC-30 | Occupied Elsewhere |
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | Subscription State |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | Subscription State |
+| FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | Trace Ordering |
 
-**Total:** 23 FT cases
+**Total:** 24 FT cases
 
 ---
 
@@ -367,3 +369,19 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render.rs`)
 - **Source:** [009_token_usage.md AC-27, AC-31](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-24: `[trace] result:` emitted AFTER Class A billing_type override
+
+- **Given (structural test):** Source file `src/usage/fetch.rs` as a string (via `include_str!`).
+- **When:** Position of the Class A override pattern (`a.billing_type == "none" ) { Err( "no subscription"`) and position of the trace emission pattern (`eprintln!( "[trace] {}  result: OK"`) are extracted from the source string.
+- **Then:**
+  - The Class A override pattern is found (non-None) — the override is present.
+  - The trace emission pattern is found (non-None) — the trace line is present.
+  - `override_pos < trace_pos` — the override precedes the trace emission in source order.
+  - Observable consequence: for `billing_type="none"` accounts, `[trace] result:` emits `Err(no subscription)`, matching the table — no `result: OK` / `(no subscription)` contradiction.
+- **Exit:** n/a (structural unit test — assertion failure if positions violate ordering)
+- **Note:** BUG-234 fix. The bug was introduced when the BUG-233 Class A override was added after the trace block rather than before it. Structural test prevents regression without requiring live API calls. Source ordering is the correctness invariant — at runtime, any `billing_type="none"` override applied before the trace emission guarantees trace-result consistency.
+- **Source fn:** `mre_bug234_result_trace_after_billing_type_override` (in `src/usage/fetch.rs`)
+- **Source:** [009_token_usage.md AC-31](../../../../docs/feature/009_token_usage.md)

@@ -14,6 +14,9 @@ use super::fetch::{ read_token, parse_u64_from_str };
 ///
 /// Triggers on:
 /// - 401 or 403 — authentication failure; token rejected by the server.
+/// - "token expired (local)" — `fetch_all_quota` skipped the API call because
+///   `expiresAt` is in the past; the OAuth **refresh** token is still valid and
+///   Claude Code will renew the access token automatically via `run_isolated()`.
 /// - 429 AND locally expired (`expires_at_ms / 1000 ≤ now_secs`) — the per-account
 ///   credentials file may be stale (Claude Code updated the live session file but not
 ///   the saved per-account copy). Refreshing updates both the token and `expiresAt`.
@@ -23,6 +26,16 @@ use super::fetch::{ read_token, parse_u64_from_str };
 fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
 {
   if matches!( aq.result, Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) )
+  {
+    return true;
+  }
+  // Fix(BUG-235): refresh when token is locally expired — OAuth refresh token still valid.
+  // Root cause: `fetch_all_quota` stores Err("token expired (local)") and skips the API call
+  //   (correct — avoids a guaranteed 401). But `should_refresh` only checked for "401"/"403"/"429";
+  //   "token expired (local)" matched none of them, so the account was silently skipped.
+  // Pitfall: the access token and refresh token have independent lifetimes; a past `expiresAt`
+  //   does NOT mean the refresh token is expired. Always attempt renewal for locally-expired tokens.
+  if matches!( aq.result, Err( ref e ) if e.contains( "token expired (local)" ) )
   {
     return true;
   }
@@ -1282,5 +1295,58 @@ mod tests
       renewal_at    : None,
     };
     assert!( !should_refresh( &aq, 9_999 ), "generic error must not trigger refresh" );
+  }
+
+  // ── BUG-235 MRE: locally-expired tokens must trigger refresh ─────────────────
+
+  /// MRE for BUG-235: `should_refresh` returns `true` for `Err("token expired (local)")`.
+  ///
+  /// # Root Cause
+  /// `should_refresh` only checked for "401", "403", and "429+expired". The string
+  /// `"token expired (local)"` matched none of those patterns, so accounts whose access
+  /// token had passed `expiresAt` were permanently skipped — `should_refresh` returned
+  /// `false` even though the OAuth refresh token was still valid and renewal was possible.
+  ///
+  /// # Why Not Caught
+  /// No test covered the `"token expired (local)"` error string. The three handled error
+  /// classes (401/403/429) all originate from HTTP responses; the local-expiry error is
+  /// generated BEFORE any HTTP call is attempted, making it an invisible fourth class that
+  /// fell through all existing match arms.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-235): added `"token expired (local)"` arm to `should_refresh()` — returns
+  /// `true` unconditionally when that string is present. No expiry re-check is needed:
+  /// the error string itself implies `expires_at_ms ≤ now`.
+  ///
+  /// # Prevention
+  /// Any new error string produced by pre-API skips (e.g., `"token expired (local)"`) must
+  /// also be added to `should_refresh`; otherwise the account is silently frozen red.
+  ///
+  /// # Pitfall
+  /// The access token and OAuth refresh token have independent lifetimes. A past `expiresAt`
+  /// does NOT mean the refresh token is expired. Always attempt renewal for locally-expired
+  /// tokens — the subprocess will fail fast if the refresh token is also expired.
+  #[ doc = "bug_reproducer(BUG-235)" ]
+  #[ test ]
+  fn mre_bug235_locally_expired_triggers_should_refresh()
+  {
+    let aq = AccountQuota
+    {
+      name          : "i11@wbox.pro".to_string(),
+      is_current    : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms : 0,
+      result        : Err( "token expired (local)".to_string() ),
+      account       : None,
+      host          : String::new(),
+      role          : String::new(),
+      renewal_at    : None,
+    };
+    assert!(
+      should_refresh( &aq, 9_999 ),
+      "BUG-235: Err(\"token expired (local)\") must trigger should_refresh — \
+       OAuth refresh token may still be valid even when access token is locally expired",
+    );
   }
 }

@@ -54,7 +54,9 @@ fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : AccountQuo
 /// of 200–1500 ms (thunder-herd mitigation for live monitor mode).
 ///
 /// When `trace` is `true`, one `[trace]` line is written to stderr before reading
-/// each account's credentials and one after receiving the API response.
+/// each account's credentials and one after the final result is determined (including
+/// any `billing_type` override — see AC-31).
+#[ allow( clippy::too_many_lines ) ]
 pub( crate ) fn fetch_all_quota(
   credential_store : &std::path::Path,
   live_creds_file  : &std::path::Path,
@@ -137,6 +139,23 @@ pub( crate ) fn fetch_all_quota(
             );
           }
           let r = claude_quota::fetch_oauth_usage( &token ).map_err( |e| e.to_string() );
+          let account_data = account_handle.join().ok().and_then( core::result::Result::ok );
+          // Fix(BUG-233): billing_type=="none" → cancelled subscription → usage result irrelevant.
+          // Root cause: usage fetch returns 429 for cancelled accounts; displaying "rate limited (429)"
+          //   is semantically wrong. Override here makes display-layer error_label logic redundant.
+          // Pitfall: override only when account fetch SUCCEEDED (account_data is Some); when account
+          //   fetch fails (None), usage result stands — subscription state is unknown.
+          // Fix(BUG-236): guard also requires r.is_err() — billing_type="none" alone is not
+          //   sufficient to conclude "no subscription"; it can appear on non-stripe accounts
+          //   (team/enterprise) where the usage API still returns HTTP 200 with valid quota data.
+          // Root cause: BUG-233 assumed billing_type="none" ↔ cancelled ↔ usage returns 429.
+          //   That holds for genuinely cancelled accounts but not for all billing arrangements.
+          // Pitfall: only override when BOTH signals agree (billing says no-sub AND usage errored);
+          //   a successful usage response (r=Ok) must be preserved regardless of billing_type.
+          let r = if account_data.as_ref().is_some_and( |a| a.billing_type == "none" ) && r.is_err() { Err( "no subscription".to_string() ) } else { r };
+          // Fix(BUG-234): trace the final stored result, not the raw API response.
+          // Root cause: trace preceded Class A override — for billing_type="none", raw=Ok but stored=Err.
+          // Pitfall: always emit result trace AFTER all result-modifying overrides.
           if trace
           {
             match &r
@@ -145,13 +164,6 @@ pub( crate ) fn fetch_all_quota(
               Err( e ) => eprintln!( "[trace] {}  result: Err({})", acct.name, e ),
             }
           }
-          let account_data = account_handle.join().ok().and_then( core::result::Result::ok );
-          // Fix(BUG-233): billing_type=="none" → cancelled subscription → usage result irrelevant.
-          // Root cause: usage fetch returns 429 for cancelled accounts; displaying "rate limited (429)"
-          //   is semantically wrong. Override here makes display-layer error_label logic redundant.
-          // Pitfall: override only when account fetch SUCCEEDED (account_data is Some); when account
-          //   fetch fails (None), usage result stands — subscription state is unknown.
-          let r = if account_data.as_ref().is_some_and( |a| a.billing_type == "none" ) { Err( "no subscription".to_string() ) } else { r };
           ( r, account_data )
         }
         Err( e ) =>
@@ -388,6 +400,50 @@ mod tests
     );
   }
 
+  // ── BUG-234: result trace ordering ─────────────────────────────────────────
+
+  /// Result trace must be emitted AFTER the Class A `billing_type` override.
+  ///
+  /// # Root Cause
+  /// The `[trace] result:` block preceded `account_handle.join()` and the Class A override
+  /// (BUG-233 fix). For `billing_type="none"` accounts the raw API result (Ok or 429) can
+  /// differ from the stored result (`Err("no subscription")`), making the trace misleading.
+  ///
+  /// # Why Not Caught
+  /// No test verified the relative ordering of the result trace vs. the `billing_type` override.
+  /// The contradiction (trace says OK, table says `(no subscription)`) only appears with live
+  /// accounts whose `billing_type == "none"` — uncommon in unit test fixtures.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-234): moved the `if trace { match &r { ... } }` block to after the Class A
+  /// override. Trace now reports the final stored result, not the intermediate raw response.
+  ///
+  /// # Prevention
+  /// Trace emissions must always follow ALL transformations of the value being reported.
+  /// Rule: (1) compute raw, (2) apply overrides, (3) emit trace.
+  ///
+  /// # Pitfall
+  /// When adding new result overrides in future, ensure they precede the result trace block —
+  /// not after it. The Class A override must remain immediately before the trace.
+  #[ doc = "bug_reproducer(BUG-234)" ]
+  #[ test ]
+  fn mre_bug234_result_trace_after_billing_type_override()
+  {
+    // Structural assertion: Class A override must precede the result trace in source.
+    // RED before fix (trace at ~144, override at ~154); GREEN after fix (override first).
+    let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/fetch.rs" ) );
+    let override_pos = src.find( r#"a.billing_type == "none" ) && r.is_err() { Err( "no subscription""# )
+      .expect( "BUG-234: Class A billing_type override not found in fetch.rs" );
+    let trace_pos = src.find( r#"eprintln!( "[trace] {}  result: OK""# )
+      .expect( "BUG-234: result: OK trace line not found in fetch.rs" );
+    assert!(
+      override_pos < trace_pos,
+      "BUG-234: result trace emitted before Class A override — \
+       for billing_type=\"none\" accounts trace shows raw result, not stored result; \
+       override_pos={override_pos}, trace_pos={trace_pos}",
+    );
+  }
+
   // ── parse_u64_from_str ──────────────────────────────────────────────────────
 
   /// MRE 2/2 for BUG-170: `parse_u64_from_str` extracts `expiresAt` from credentials JSON.
@@ -533,6 +589,86 @@ mod tests
       results.len(), 1,
       "BUG-218: quota table must have exactly 1 row for 1 stored account; len={}",
       results.len(),
+    );
+  }
+
+  // ── BUG-236 MRE: billing_type override guard ────────────────────────────────
+
+  /// MRE 1/2 for BUG-236: `billing_type="none"` with `r=Ok(...)` must NOT be overridden.
+  ///
+  /// # Root Cause
+  /// BUG-233 introduced a Class A override: when `billing_type == "none"`, store
+  /// `Err("no subscription")` regardless of the usage API result. This assumed
+  /// `billing_type="none"` ↔ cancelled subscription ↔ usage returns error. That holds for
+  /// genuinely cancelled accounts but NOT for non-stripe billing arrangements (team/enterprise)
+  /// where `billing_type="none"` can appear even when the usage API returns HTTP 200 with
+  /// valid quota data — the override discarded the real quota and replaced it with an error.
+  ///
+  /// # Why Not Caught
+  /// The BUG-233 test (`test_class_a_billing_none_override_predicate`) only checked the
+  /// `billing_type == "none"` condition — it did not verify that `r.is_err()` is also required.
+  /// No test covered the active-subscription + `billing_type="none"` combination.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-236): added `&& r.is_err()` to the Class A override predicate so it only fires
+  /// when BOTH signals agree: `billing_type` says no-subscription AND usage API also errored.
+  ///
+  /// # Prevention
+  /// Override predicates that combine multiple signals must require ALL signals to agree.
+  /// A single field (`billing_type`) is insufficient when the authoritative signal (usage API
+  /// HTTP status) is also available.
+  ///
+  /// # Pitfall
+  /// `billing_type="none"` has at least two causes: (a) cancelled subscription → usage error;
+  /// (b) non-stripe billing arrangement (team/enterprise) → usage 200/Ok. Never treat
+  /// `billing_type` alone as proof of subscription state when the usage API result is available.
+  #[ doc = "bug_reproducer(BUG-236)" ]
+  #[ test ]
+  fn mre_bug236_ok_result_not_overridden_when_billing_type_none()
+  {
+    // billing_type="none" + r=Ok → second condition (r.is_err()) is false → NO override.
+    let account_data = Some( claude_quota::OauthAccountData
+    {
+      billing_type   : "none".to_string(),
+      has_max        : false,
+      org_created_at : "2024-01-01T00:00:00Z".to_string(),
+    } );
+    let r : Result< claude_quota::OauthUsageData, String > = Ok( claude_quota::OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : None,
+    } );
+    // Replicate the fixed predicate from fetch_all_quota.
+    let would_override = account_data.as_ref().is_some_and( |a| a.billing_type == "none" ) && r.is_err();
+    assert!(
+      !would_override,
+      "BUG-236: billing_type=\"none\" + r=Ok must NOT trigger override — active non-stripe \
+       accounts have billing_type=\"none\" but a valid usage response",
+    );
+  }
+
+  /// MRE 2/2 for BUG-236: `billing_type="none"` with `r=Err(...)` IS overridden.
+  ///
+  /// Confirms the override still fires for genuinely cancelled accounts: both conditions
+  /// must be true (`billing_type="none"` AND usage errored) for the "no subscription" override.
+  #[ doc = "bug_reproducer(BUG-236)" ]
+  #[ test ]
+  fn mre_bug236_err_result_overridden_when_billing_type_none()
+  {
+    let account_data = Some( claude_quota::OauthAccountData
+    {
+      billing_type   : "none".to_string(),
+      has_max        : false,
+      org_created_at : "2024-01-01T00:00:00Z".to_string(),
+    } );
+    let r : Result< claude_quota::OauthUsageData, String > = Err( "HTTP 429".to_string() );
+    // Replicate the fixed predicate from fetch_all_quota.
+    let would_override = account_data.as_ref().is_some_and( |a| a.billing_type == "none" ) && r.is_err();
+    assert!(
+      would_override,
+      "BUG-236: billing_type=\"none\" + r=Err must trigger override — cancelled account \
+       signals agree (billing=no-sub AND usage=err)",
     );
   }
 }

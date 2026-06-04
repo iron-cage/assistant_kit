@@ -12,6 +12,7 @@ use crate::commands::
   account_relogin_routine,
   account_renewal_routine,
   account_rotate_routine,
+  account_inspect_routine,
   token_status_routine,
   paths_routine,
   usage_routine,
@@ -19,7 +20,7 @@ use crate::commands::
 
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 12 commands (credentials status, account management including limits, relogin, rotate, and renewal, token status, paths, usage).
+/// Registers 13 commands (credentials status, account management including limits, relogin, rotate, renewal, and inspect, token status, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -120,6 +121,14 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     ],
     Box::new( account_renewal_routine ) );
   reg_cmd( registry, ".account.rotate", "Auto-rotate to the best inactive account (highest remaining token expiry)",       vec![ dry(), trc() ], Box::new( account_rotate_routine ) );
+  reg_cmd( registry, ".account.inspect", "Show identity, subscription, and org fields for one account via live endpoints",
+    vec![
+      nam(),
+      bfs( "refresh", "Attempt OAuth token refresh when stored credentials are locally expired (1 = enabled, default; 0 = disabled)" ),
+      trc(),
+      fmt(),
+    ],
+    Box::new( account_inspect_routine ) );
   reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr(), trc() ], Box::new( token_status_routine   ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",
     vec![
