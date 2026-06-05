@@ -7,21 +7,21 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (29 total)
+### All Env Parameters (30 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
-| Input (CLR_*) — `run` subcommand | 25 | Caller env fallbacks for `run` parameters |
+| Input (CLR_*) — `run` subcommand | 26 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 29 environment variables
+**Total:** 30 environment variables
 
 ---
 
 ### Env Param 1: CLR_* Input Parameters — `run` Subcommand
 
-Environment variable fallbacks for all 25 `run` subcommand parameters.
+Environment variable fallbacks for all 26 `run` subcommand parameters.
 `apply_env_vars()` in `src/cli/parse.rs` reads these immediately after CLI parsing, before command
 dispatch. Each variable is applied **only when the corresponding CLI field is still at its
 zero/absent value** — the CLI flag always wins when both are present.
@@ -34,7 +34,7 @@ invalid values (parse failure → field stays at default).
 
 | # | Variable | CLI Parameter | Type | Notes |
 |---|----------|---------------|------|-------|
-| 1 | `CLR_MESSAGE` | [`[MESSAGE]`](param/001_message.md) | string | |
+| 1 | `CLR_MESSAGE` | [`[MESSAGE]`](param/001_message.md) | string | Escape hatch for messages containing shell-special characters (`(`, `)`, `&`, `;`, `\|`, etc.) — bypasses bash tokenization |
 | 2 | `CLR_PRINT` | [`--print`](param/002_print.md) | bool | |
 | 3 | `CLR_MODEL` | [`--model`](param/003_model.md) | string | |
 | 4 | `CLR_VERBOSE` | [`--verbose`](param/004_verbose.md) | bool | |
@@ -59,6 +59,7 @@ invalid values (parse failure → field stays at default).
 | 23 | `CLR_FILE` | [`--file`](param/025_file.md) | string | Applied when `--file` absent; value is the file path |
 | 24 | `CLR_STRIP_FENCES` | [`--strip-fences`](param/026_strip_fences.md) | bool | |
 | 25 | `CLR_KEEP_CLAUDECODE` | [`--keep-claudecode`](param/027_keep_claudecode.md) | bool | |
+| 26 | `CLR_SUBDIR` | [`--subdir`](param/028_subdir.md) | string | Applied when `--subdir` absent and `CLR_SUBDIR` non-empty; `.` = identity; values containing `/` silently ignored (Fix: BUG-233) |
 
 **Precedence:**
 
@@ -87,10 +88,16 @@ after subcommand argument parsing.
 | 2 | `CLR_TIMEOUT` | [`--timeout`](param/020_timeout.md) | u64 | Applied when CLI timeout equals its command default (30 for `isolated`, 45 for `refresh`) |
 | 3 | `CLR_TRACE` | [`--trace`](param/013_trace.md) | bool | Applied when `--trace` absent; also applies to `run` via Section 1 |
 
-**Precedence:**
+**Precedence (`--creds` only):**
 
-1. `--creds` / `--timeout` / `--trace` CLI flag (wins)
-2. `CLR_CREDS` / `CLR_TIMEOUT` / `CLR_TRACE` env var (applied when CLI field absent/default)
+1. `--creds` CLI flag (wins unconditionally when provided)
+2. `CLR_CREDS` env var (applied when `--creds` absent)
+3. `$HOME/.claude/.credentials.json` default (used when both `--creds` and `CLR_CREDS` are absent; exits 1 if `HOME` unset or file missing)
+
+**Precedence (`--timeout`, `--trace`):**
+
+1. `--timeout` / `--trace` CLI flag (wins)
+2. `CLR_TIMEOUT` / `CLR_TRACE` env var (applied when CLI field absent/default)
 
 **Limitation (`CLR_TIMEOUT`):** The env var check uses equality with the command's default
 timeout as the sentinel, so an explicit `--timeout 30` on `isolated` (or `--timeout 45`

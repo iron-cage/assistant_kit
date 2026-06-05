@@ -42,3 +42,9 @@ Run Claude scoped to a specific project directory and session storage location s
 | 7 | [`--new-session`](../param/007_new_session.md) | Discard prior session at that location |
 | 8 | [`--dir`](../param/008_dir.md) | Set subprocess working directory |
 | 10 | [`--session-dir`](../param/010_session_dir.md) | Set project-specific session storage path |
+
+### Related User Stories
+
+| # | User Story | Relationship |
+|---|------------|--------------|
+| 22 | [022_session_isolation_subdir.md](022_session_isolation_subdir.md) | `--subdir` for task-level session isolation within the same project dir |

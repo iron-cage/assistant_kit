@@ -32,6 +32,7 @@
 | 019_mcp_config_injection.md | User story: forward MCP server configs to subprocess |
 | 020_suppress_effort_max.md | User story: suppress automatic --effort max injection |
 | 021_keep_claudecode_context.md | User story: preserve CLAUDECODE in subprocess env |
+| 022_session_isolation_subdir.md | User story: named workspace session isolation via --subdir |
 
 ### Index
 
@@ -58,3 +59,24 @@
 | 019 | MCP Config Injection | `--mcp-config` | `run` |
 | 020 | Suppress Effort Max | `--no-effort-max` | `run` |
 | 021 | Keep ClaudeCode Context | `--keep-claudecode` | `run` |
+| 022 | Session Isolation via Subdirectory | `--subdir` | `run`, `ask` |
+
+### Adding User Stories
+
+When adding new user stories, update these files in order:
+
+1. `docs/cli/user_story/NNN_*.md` — feature doc (Scope, Persona, Goal, ACs, cross-refs)
+2. `tests/docs/cli/user_story/NNN_*.md` — test spec (4 US cases)
+3. `tests/user_story_test.rs` — 4 test functions + matrix row in module doc
+4. `docs/cli/user_story/readme.md` — Responsibility Table row + Index row *(this file)*
+5. `tests/docs/cli/user_story/readme.md` — Responsibility Table row + In Scope count
+6. `docs/cli/param/NNN_*.md` — Referenced User Stories for each param involved
+7. `docs/002_entities.md` — count in header row + new instance row
+8. `docs/cli/readme.md` — count in 4 places (Responsibility Table, Completion Matrix ×2, Navigation)
+9. `tests/readme.md` — count in 2 places (Domain Map, Responsibility Table)
+10. `tests/docs/cli/readme.md` — count in Scope, Coverage Summary, nav links
+11. `docs/cli/param_group/01_claude_native_flags.md` — Referenced User Stories (if story uses Claude-Native flags: `--model`, `--mcp-config`, etc.)
+12. `docs/cli/param_group/02_runner_control.md` — Referenced User Stories (if story uses Runner Control flags: `--dry-run`, `--no-effort-max`, etc.)
+13. Existing related story files — Related User Stories back-references
+
+**Note:** The phrase "YES for all 17" in `docs/cli/param_group/02_runner_control.md` refers to the 17 Runner Control *parameters* in that group — do not update this count when fixing user story totals.

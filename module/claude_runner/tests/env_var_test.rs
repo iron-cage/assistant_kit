@@ -1,6 +1,6 @@
 //! CLR_* Environment Variable Tests
 //!
-//! Covers E01–E28: one test per `CLR_*` env var.
+//! Covers E01–E29: one test per `CLR_*` env var.
 //! Source: `task/claude_runner/148_env_var_all_params.md`
 //!
 //! All tests use `run_cli_with_env()` — no `std::env::set_var`, no thread-global mutation.
@@ -39,6 +39,7 @@
 //! | E26  | `CLR_STRIP_FENCES`         | dry-run accepted; fence stripping verified in execution_mode_test.rs S76 |
 //! | E27  | `CLR_KEEP_CLAUDECODE`      | dry-run accepted; env preservation verified in execution_mode_test.rs S77 |
 //! | E28  | `CLR_TRACE` (isolated)     | stderr contains trace output for isolated subcommand        |
+//! | E29  | `CLR_SUBDIR`               | stdout contains `/-feature` path suffix                     |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli_with_env;
@@ -583,9 +584,9 @@ fn e22_clr_mcp_config_sets_path()
 
 /// E23: `CLR_CREDS` supplies the credentials path for the `isolated` subcommand.
 ///
-/// Without `CLR_CREDS` and no `--creds` CLI flag, `isolated` exits 1 with
-/// `missing required argument: --creds`. With `CLR_CREDS` set, that error must
-/// not appear (the error shifts to file-not-found, confirming `creds_path` was populated).
+/// `CLR_CREDS` is the tier-2 resolution for `creds_path` (tier 1: `--creds` flag;
+/// tier 3: `$HOME/.claude/.credentials.json`).  Setting `CLR_CREDS` to a non-existent
+/// file shifts the error to file-not-found, confirming the path was populated from env.
 ///
 /// Spec: `148_env_var_all_params.md` param 19
 #[ test ]
@@ -606,9 +607,9 @@ fn e23_clr_creds_supplies_creds_path()
 
 /// E24: `CLR_TIMEOUT` sets the subprocess timeout for the `isolated` subcommand.
 ///
-/// Combined with `CLR_CREDS` to pass argument validation. Without either env var,
-/// `isolated` exits with `missing required argument: --creds`. With both set,
-/// that error must not appear (argument parsing succeeds; `timeout_secs` uses the env value).
+/// Combined with `CLR_CREDS` to supply the credentials path (tier 2) and override
+/// the default timeout.  Both env vars must take effect: creds path populated from
+/// `CLR_CREDS`, timeout set from `CLR_TIMEOUT`.
 ///
 /// Spec: `148_env_var_all_params.md` param 20
 #[ test ]
@@ -730,5 +731,83 @@ fn e28_clr_trace_applies_to_isolated()
   assert!(
     stderr.contains( "# creds:" ),
     "CLR_TRACE=1 trace must include '# creds:' line: {stderr}",
+  );
+}
+
+// ─── E29: CLR_SUBDIR ──────────────────────────────────────────────────────────
+
+/// E29: `CLR_SUBDIR` appends `/-NAME` to the effective working directory.
+///
+/// CLI-wins: explicit `--subdir build` takes precedence over `CLR_SUBDIR=debug`.
+///
+/// Spec: `tests/docs/cli/user_story/22_session_isolation_subdir.md` US-3, US-4, US-5
+#[ test ]
+fn e29_clr_subdir_sets_effective_dir()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "t" ],
+    &[ ( "CLR_SUBDIR", "feature" ) ],
+  );
+  assert!( out.status.success(), "exit must be 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "/-feature" ),
+    "CLR_SUBDIR=feature must produce path ending in /-feature: {stdout}",
+  );
+  // CLI-wins: --subdir build must take precedence over CLR_SUBDIR=debug
+  let out2 = run_cli_with_env(
+    &[ "--dry-run", "--subdir", "build", "t" ],
+    &[ ( "CLR_SUBDIR", "debug" ) ],
+  );
+  assert!( out2.status.success(), "CLI --subdir with CLR_SUBDIR must exit 0: {out2:?}" );
+  let stdout2 = String::from_utf8_lossy( &out2.stdout );
+  assert!(
+    stdout2.contains( "/-build" ),
+    "CLI --subdir build must win over CLR_SUBDIR=debug: {stdout2}",
+  );
+  assert!(
+    !stdout2.contains( "/-debug" ),
+    "CLR_SUBDIR=debug must be suppressed by CLI --subdir: {stdout2}",
+  );
+}
+
+// ─── E30: CLR_SUBDIR slash validation ──────────────────────────────────────────
+
+/// Fix(BUG-233): `CLR_SUBDIR=a/b` must be silently ignored — same constraint as `--subdir`.
+///
+/// ## Root Cause
+/// `apply_env_vars` assigned `CLR_SUBDIR` directly to `parsed.subdir` without the
+/// `contains('/')` check that `parse_value_flag` applies to CLI `--subdir`.
+///
+/// ## Why Not Caught
+/// BUG-230 only fixed the CLI parse path; env-var path was not tested for slashes.
+///
+/// ## Fix Applied
+/// Added `!v.contains('/')` guard in `apply_env_vars` for `CLR_SUBDIR`.
+///
+/// ## Prevention
+/// When adding validation to a CLI flag, audit the corresponding env-var path too.
+///
+/// ## Pitfall
+/// `apply_env_vars` doesn't return `Result` — invalid env values are silently ignored,
+/// not rejected with an error. This matches the existing convention (see `CLR_EFFORT`).
+// test_kind: bug_reproducer(BUG-233)
+#[ test ]
+fn e30_clr_subdir_slash_silently_ignored()
+{
+  // CLR_SUBDIR=a/b should be silently dropped — no /-a/b in output
+  let out = run_cli_with_env(
+    &[ "--dry-run", "t" ],
+    &[ ( "CLR_SUBDIR", "a/b" ) ],
+  );
+  assert!( out.status.success(), "must exit 0 even with invalid CLR_SUBDIR: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "/-a/b" ),
+    "CLR_SUBDIR=a/b must be silently ignored — no /-a/b in output: {stdout}",
+  );
+  assert!(
+    !stdout.contains( "/-a" ),
+    "CLR_SUBDIR=a/b must not be partially applied: {stdout}",
   );
 }

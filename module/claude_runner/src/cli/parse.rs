@@ -33,6 +33,7 @@ pub( crate ) struct CliArgs
   pub( crate ) file                 : Option< String >,
   pub( crate ) strip_fences         : bool,
   pub( crate ) keep_claudecode      : bool,
+  pub( crate ) subdir               : Option< String >,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -121,6 +122,21 @@ fn parse_value_flag(
     "--file" =>
     {
       parsed.file = Some( next_value( tokens, next, "--file" )?.to_string() );
+    }
+    // Fix(BUG-230): reject subdir names containing `/` — spec requires single name component
+    // Root cause: no validation; `create_dir_all` silently created nested dirs for `a/b`
+    // Pitfall: must reject `/` in the value, not just leading `/` — any separator violates
+    // the "directory name component" type constraint in 028_subdir.md
+    "--subdir" =>
+    {
+      let val = next_value( tokens, next, "--subdir" )?;
+      if val.contains( '/' )
+      {
+        return Err( Error::msg(
+          "--subdir must be a single directory name component (no '/' separators)"
+        ) );
+      }
+      parsed.subdir = Some( val.to_string() );
     }
     "--verbosity" =>
     {
@@ -281,7 +297,7 @@ pub( super ) fn env_str( var : &str ) -> Option< String >
   std::env::var( var ).ok().filter( | v | !v.is_empty() )
 }
 
-/// Apply `CLR_*` environment variable fallbacks for the 28 run parameters.
+/// Apply `CLR_*` environment variable fallbacks for the 29 run parameters.
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
@@ -334,5 +350,14 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs )
   if parsed.file.is_none()             { parsed.file             = env_str( "CLR_FILE" ); }
   if !parsed.strip_fences              { parsed.strip_fences     = env_bool( "CLR_STRIP_FENCES" ); }
   if !parsed.keep_claudecode           { parsed.keep_claudecode  = env_bool( "CLR_KEEP_CLAUDECODE" ); }
+  // Fix(BUG-233): validate CLR_SUBDIR same as --subdir — reject `/` in the value.
+  // Matches apply_env_vars convention: silently ignore invalid env values.
+  if parsed.subdir.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_SUBDIR" )
+    {
+      if !v.contains( '/' ) { parsed.subdir = Some( v ); }
+    }
+  }
 }
 

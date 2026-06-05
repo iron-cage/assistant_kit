@@ -43,6 +43,16 @@
 //! - S55: `--help` output contains `--mcp-config` (`24_mcp_config.md` EC-4)
 //! - S56: `--mcp-config` + `--model` → both forwarded (`24_mcp_config.md` EC-5)
 //! - S57: `--mcp-config` without message → exit 0; path in assembled command (`24_mcp_config.md` EC-6)
+//!
+//! --subdir:
+//! - S81: default (no `--subdir`) → no `/-` path component in dry-run output (`28_subdir.md` EC-1)
+//! - S82: `--subdir NAME` → effective dir ends with `/-NAME` (`28_subdir.md` EC-2)
+//! - S83: `--subdir .` → identity; no `/-` suffix in dry-run output (`28_subdir.md` EC-3)
+//! - S84: `--help` output contains `--subdir` (`28_subdir.md` EC-4)
+//! - S85: `--subdir NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`28_subdir.md` EC-5)
+//! - S86: `--subdir ""` → identity (BUG-229 reproducer)
+//! - S87: `--subdir "a/b"` → rejected, slash in name (BUG-230 reproducer)
+//! - S88: `--dry-run --subdir NAME` → no directory created (BUG-231 reproducer)
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
@@ -416,4 +426,177 @@ fn s57_mcp_config_without_message_accepted()
     stdout.contains( "--mcp-config /tmp/mcp.json" ),
     "--mcp-config must appear in assembled command. Got:\n{stdout}"
   );
+}
+
+// ─── --subdir ─────────────────────────────────────────────────────────────────
+// Source: tests/docs/cli/param/28_subdir.md
+// EC-6 (env var) and EC-7 (CLI-wins) are covered by env_var_test.rs E29.
+
+// S81: default (no `--subdir`) → no `/-` path component in dry-run output (`28_subdir.md` EC-1)
+#[ test ]
+fn s81_default_no_subdir_no_hyphen_prefix()
+{
+  let out = run_cli( &[ "--dry-run", "task" ] );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "/-" ),
+    "without --subdir, no /- path component must appear. Got:\n{stdout}"
+  );
+}
+
+// S82: `--subdir NAME` → effective dir ends with `/-NAME` (`28_subdir.md` EC-2)
+#[ test ]
+fn s82_subdir_name_appends_hyphen_prefix()
+{
+  let out = run_cli( &[ "--dry-run", "--subdir", "build", "task" ] );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "/-build" ),
+    "--subdir build must produce path ending in /-build. Got:\n{stdout}"
+  );
+}
+
+// S83: `--subdir .` → identity; no `/-` suffix in dry-run output (`28_subdir.md` EC-3)
+#[ test ]
+fn s83_subdir_dot_identity_no_suffix()
+{
+  let out = run_cli( &[ "--dry-run", "--subdir", ".", "task" ] );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "/-" ),
+    "--subdir . must not append any /- suffix. Got:\n{stdout}"
+  );
+}
+
+// S84: `--help` output contains `--subdir` (`28_subdir.md` EC-4)
+#[ test ]
+fn s84_help_lists_subdir()
+{
+  let out = run_cli( &[ "--help" ] );
+  assert!( out.status.success() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--subdir" ),
+    "--help must mention --subdir. Got:\n{stdout}"
+  );
+}
+
+// S85: `--subdir NAME` + `--dir PATH` → effective dir is `PATH/-NAME` (`28_subdir.md` EC-5)
+#[ test ]
+fn s85_subdir_with_dir_combined()
+{
+  let out = run_cli( &[ "--dry-run", "--dir", "/tmp/project", "--subdir", "debug", "task" ] );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "/tmp/project/-debug" ),
+    "--dir /tmp/project --subdir debug must produce /tmp/project/-debug. Got:\n{stdout}"
+  );
+}
+
+// ─── --subdir bug-fix reproducing tests ─────────────────────────────────────
+
+/// Fix(BUG-229): `--subdir ""` must be identity — no degenerate `/-` directory.
+///
+/// ## Root Cause
+/// Only `"."` was checked; empty string passed the guard and produced a bare-hyphen dir.
+///
+/// ## Why Not Caught
+/// No test covered empty-string input; only `"."` identity and valid names were tested.
+///
+/// ## Fix Applied
+/// Added `!sub.is_empty()` guard alongside `sub != "."` in `build_claude_command`.
+///
+/// ## Prevention
+/// Fuzz-like edge case tests for all string-typed CLI parameters.
+///
+/// ## Pitfall
+/// `env_str` already filters empty strings — only the CLI path can deliver `""`.
+// test_kind: bug_reproducer(BUG-229)
+#[ test ]
+fn s86_subdir_empty_string_is_identity()
+{
+  let out = run_cli( &[ "--dry-run", "--subdir", "", "task" ] );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "/-" ),
+    "--subdir '' (empty) must be identity — no /- suffix. Got:\n{stdout}"
+  );
+}
+
+/// Fix(BUG-230): `--subdir` must reject names containing `/`.
+///
+/// ## Root Cause
+/// No validation; `create_dir_all` silently created nested dirs for `a/b`.
+///
+/// ## Why Not Caught
+/// All prior tests used simple alphanumeric names; slash input was never tested.
+///
+/// ## Fix Applied
+/// Added `val.contains('/')` validation in `parse_value_flag` for `--subdir`.
+///
+/// ## Prevention
+/// Validate all string-typed params against their documented type constraints.
+///
+/// ## Pitfall
+/// The type constraint is "directory name component (no `/` separators)" in the spec.
+// test_kind: bug_reproducer(BUG-230)
+#[ test ]
+fn s87_subdir_rejects_slash()
+{
+  let out = run_cli( &[ "--dry-run", "--subdir", "a/b", "task" ] );
+  assert!(
+    !out.status.success(),
+    "--subdir a/b must be rejected (contains '/'). Got exit: {:?}",
+    out.status.code()
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "no '/' separators" ),
+    "--subdir a/b error must mention slash constraint. Got:\n{stderr}"
+  );
+}
+
+/// Fix(BUG-231): `--dry-run --subdir NAME` must NOT create the directory.
+///
+/// ## Root Cause
+/// `build_claude_command` runs `create_dir_all` before the dry-run branch in `lib.rs`.
+///
+/// ## Why Not Caught
+/// Tests only checked stdout output strings; no test verified filesystem state.
+///
+/// ## Fix Applied
+/// Added `!cli.dry_run` guard around `create_dir_all` in `build_claude_command`.
+///
+/// ## Prevention
+/// Dry-run tests should assert absence of side effects, not just correct output.
+///
+/// ## Pitfall
+/// Builder computes the path for display; only the run path needs the physical directory.
+// test_kind: bug_reproducer(BUG-231)
+#[ test ]
+fn s88_dryrun_subdir_no_mkdir()
+{
+  let unique = format!( "clr_drytest_{}", std::process::id() );
+  let base = std::env::temp_dir().join( &unique );
+  let expected_dir = base.join( "-probe" );
+  // ensure clean slate
+  let _ = std::fs::remove_dir_all( &base );
+  let out = run_cli( &[
+    "--dry-run",
+    "--dir", base.to_str().unwrap(),
+    "--subdir", "probe",
+    "task",
+  ] );
+  assert!( out.status.success(), "must exit 0: {out:?}" );
+  assert!(
+    !expected_dir.exists(),
+    "--dry-run must not create directory {expected_dir:?}"
+  );
+  // cleanup
+  let _ = std::fs::remove_dir_all( &base );
 }

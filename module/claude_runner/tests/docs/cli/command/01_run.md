@@ -24,6 +24,10 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 | IT-16 | `--effort invalid` → exit 1, error message | Error Handling |
 | IT-17 | `clr run "msg"` → identical to `clr "msg"` (BUG-212 coverage) | Explicit run alias |
 | IT-18 | Empty `--session-dir` → no `-c` in assembled command (BUG-214 regression) | First-use edge case |
+| IT-19 | `--subdir NAME` → dry-run effective dir ends with `/-NAME` | Subdir |
+| IT-20 | Print mode subprocess exits 42 → clr exits 42 (BUG-239 regression) | Exit Code Passthrough |
+| IT-21 | SIGTERM-killed subprocess → clr exits 143 (128+15) (BUG-242, unix-only) | Exit Code Passthrough |
+| IT-22 | Binary not found → stderr contains install hint (BUG-241) | Error Diagnostics |
 
 ## Test Coverage Summary
 
@@ -42,8 +46,11 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 - Default Injection: 1 test
 - Explicit run alias: 1 test
 - First-use edge case: 1 test
+- Subdir: 1 test
+- Exit Code Passthrough: 2 tests (IT-20, IT-21)
+- Error Diagnostics: 1 test (IT-22)
 
-**Total:** 18 tests
+**Total:** 22 tests
 
 ---
 
@@ -206,3 +213,46 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 - **Expected behavior:** Assembled command does NOT include `-c`; `session_exists()` guard detects empty directory and suppresses injection
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../../docs/invariant/001_default_flags.md), [--session-dir](../../../../docs/cli/param/010_session_dir.md)
+
+---
+
+### IT-19: `--subdir NAME` → effective dir ends with `/-NAME`
+
+- **Command:** `clr --dry-run --subdir build "Fix bug"`
+- **Expected behavior:** Dry-run output contains a path ending in `/-build`; exit 0
+- **Exit:** 0
+- **Source:** [--subdir](../../../../docs/cli/param/028_subdir.md), [user_story/022_session_isolation_subdir.md](../../../../docs/cli/user_story/022_session_isolation_subdir.md)
+
+---
+
+### IT-20: Print mode subprocess exits 42 → clr exits 42 (BUG-239 regression)
+
+- **Setup:** Fake-claude script that unconditionally exits 42; script injected via PATH
+- **Command:** `clr --print "test"` with fake-claude in PATH
+- **Expected behavior:** `clr` exits 42; exit code is propagated exactly from the subprocess, not hardcoded to 1
+- **Exit:** 42
+- **Source:** [command/01_run.md — Exit Codes table](../../../../docs/cli/command/01_run.md)
+- **Note:** Implemented in TSK-196 (BUG-239); test function `print_mode_propagates_exit_42` in `tests/bug_reproducers_239_244_test.rs`
+
+---
+
+### IT-21: SIGTERM-killed subprocess → clr exits 143 (128+15) (BUG-242, unix-only)
+
+- **Setup:** Fake-claude script that sleeps indefinitely; script injected via PATH
+- **Command:** `clr --print "test"` with sleeping fake-claude; SIGTERM sent to subprocess PID
+- **Expected behavior:** `clr` exits 143 (= 128 + 15); signal-killed exit codes follow POSIX 128+signal convention
+- **Exit:** 143
+- **Source:** [command/01_run.md — Exit Codes table](../../../../docs/cli/command/01_run.md)
+- **Platform:** `#[cfg(unix)]` — not applicable on Windows
+- **Note:** Implemented in TSK-196 (BUG-242); test function `signal_sigterm_exits_143` in `tests/bug_reproducers_239_244_test.rs`
+
+---
+
+### IT-22: Binary not found → stderr contains install hint (BUG-241)
+
+- **Setup:** PATH set to a directory containing no `claude` binary; `CLR_CLAUDE_BIN` unset
+- **Command:** `clr "Fix bug"` (or `clr --print "Fix bug"`)
+- **Expected behavior:** stderr contains both `"not found"` and `"install"`; user-actionable install hint shown instead of raw OS error
+- **Exit:** 1
+- **Source:** [command/01_run.md](../../../../docs/cli/command/01_run.md), [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md)
+- **Note:** Implemented in TSK-196 (BUG-241); test function `binary_not_found_shows_install_hint` in `tests/bug_reproducers_239_244_test.rs`

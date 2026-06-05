@@ -20,6 +20,15 @@
 //! (e.g. `` `CLR_NO_ULTRATHINK=true` ``) must use backticks in doc comments.
 //! `--flag` patterns do **not** trigger this lint and may appear bare.
 //!
+//! ## Bool Env Var Semantics
+//!
+//! `CLR_*` bool env vars use a strict two-value rule: only `"1"` and `"true"`
+//! (case-insensitive) are truthy.  `"yes"`, `"0"`, `"false"`, empty string,
+//! and absent all evaluate to false (silently ignored).  US-18 US-4 exercises
+//! this: `CLR_NO_ULTRATHINK=yes` is rejected — the ultrathink suffix remains
+//! present in the assembled command, distinguishing it from the accepted
+//! `CLR_NO_ULTRATHINK=true` case (US-18 US-3).
+//!
 //! ## Test Matrix
 //!
 //! | Spec | Story | Cases | Method |
@@ -45,6 +54,7 @@
 //! | 19 | MCP Config Injection | US-1..4 | dry-run / env var |
 //! | 20 | Suppress Effort Max | US-1..4 | dry-run / env var |
 //! | 21 | Keep ClaudeCode Context | US-1..4 | dry-run / env var |
+//! | 22 | Session Isolation via Subdirectory | US-1..5 | dry-run / env var |
 
 #![ cfg( feature = "enabled" ) ]
 
@@ -163,10 +173,8 @@ fn us01_4_repl_with_custom_dir()
     output.contains( "cd /tmp" ),
     "--dir must produce 'cd /tmp' prefix. Got:\n{output}"
   );
-  assert!(
-    output.contains( " -c" ),
-    "session continuation must remain active with --dir. Got:\n{output}"
-  );
+  // Note: -c is NOT asserted here — /tmp has no prior Claude session so session_exists()
+  // correctly returns false. Session continuation is tested separately in us01_2 (default cwd).
 }
 
 // ── US02: Print Mode Capture ────────────────────────────────────────────────
@@ -722,16 +730,24 @@ fn us10_3_nonexistent_creds_errors()
   );
 }
 
-/// US-4: isolated without --creds flag → exit 1, missing --creds.
+/// US-4: isolated with `HOME` unset and no `CLR_CREDS` → exit 1, error references `HOME`.
+///
+/// With `--creds` omitted and `HOME` unset, the 3rd-tier default cannot be resolved.
 #[ test ]
 fn us10_4_isolated_without_creds_errors()
 {
-  let out = run_cli( &[ "isolated", "test" ] );
-  assert_eq!( exit_code( &out ), 1, "isolated without --creds must exit 1" );
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "isolated", "test" ] )
+    .env_remove( "HOME" )
+    .env_remove( "CLR_CREDS" )
+    .output()
+    .expect( "invoke clr isolated" );
+
+  assert_eq!( exit_code( &out ), 1, "isolated with HOME unset must exit 1" );
   let stderr = stderr_str( &out );
   assert!(
-    stderr.contains( "--creds" ),
-    "error must mention --creds. Got:\n{stderr}"
+    stderr.contains( "HOME" ) || stderr.contains( "cannot resolve" ),
+    "error must reference HOME or resolution failure; got:\n{stderr}"
   );
 }
 
@@ -1589,5 +1605,82 @@ fn us21_4_env_var_yes_silently_rejected()
     out.status.success(),
     "CLR_KEEP_CLAUDECODE=yes must exit 0 (silently rejected). Got: {:?}",
     out.status.code()
+  );
+}
+
+// ── US22: Session Isolation via Subdirectory ──────────────────────────────────
+// Source: tests/docs/cli/user_story/22_session_isolation_subdir.md
+
+/// US-1: `--subdir NAME` appends `/-NAME` to the effective working directory.
+#[ test ]
+fn us22_us1_subdir_name_appends_hyphen_name()
+{
+  let output = run_dry( &[ "--subdir", "build", "Fix bug" ] );
+  assert!(
+    output.contains( "/-build" ),
+    "--subdir build must produce path ending in /-build. Got:\n{output}"
+  );
+}
+
+/// US-2: `--subdir .` is identity — no `/-` suffix in effective dir.
+#[ test ]
+fn us22_us2_subdir_dot_identity()
+{
+  let output = run_dry( &[ "--subdir", ".", "Fix bug" ] );
+  assert!(
+    !output.contains( "/-" ),
+    "--subdir . must not append any /-NAME suffix. Got:\n{output}"
+  );
+}
+
+/// US-3: `CLR_SUBDIR=feature` env var accepted; effective dir ends in `/-feature`.
+#[ test ]
+fn us22_us3_clr_subdir_env_var()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "Fix bug" ],
+    &[ ( "CLR_SUBDIR", "feature" ) ],
+  );
+  assert!( out.status.success(), "CLR_SUBDIR must exit 0. Got: {:?}", out.status.code() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "/-feature" ),
+    "CLR_SUBDIR=feature must produce path ending in /-feature. Got:\n{stdout}"
+  );
+}
+
+/// US-4: `CLR_SUBDIR=.` env var identity — no `/-` suffix in effective dir.
+#[ test ]
+fn us22_us4_clr_subdir_dot_identity()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "Fix bug" ],
+    &[ ( "CLR_SUBDIR", "." ) ],
+  );
+  assert!( out.status.success(), "CLR_SUBDIR=. must exit 0. Got: {:?}", out.status.code() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    !stdout.contains( "/-" ),
+    "CLR_SUBDIR=. must not append any /-NAME suffix. Got:\n{stdout}"
+  );
+}
+
+/// US-5: CLI `--subdir cliname` wins over `CLR_SUBDIR=envname`.
+#[ test ]
+fn us22_us5_cli_wins_over_env_var()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "--subdir", "cliname", "Fix bug" ],
+    &[ ( "CLR_SUBDIR", "envname" ) ],
+  );
+  assert!( out.status.success(), "CLI --subdir with CLR_SUBDIR must exit 0: {:?}", out.status.code() );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "/-cliname" ),
+    "CLI --subdir cliname must win over CLR_SUBDIR=envname. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "/-envname" ),
+    "CLR_SUBDIR=envname must be suppressed by CLI --subdir. Got:\n{stdout}"
   );
 }

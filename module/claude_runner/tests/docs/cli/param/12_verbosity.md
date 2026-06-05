@@ -15,6 +15,7 @@ Edge case tests for the runner verbosity level parameter. Tests validate level r
 | EC-5 | Default verbosity (level 3) applied when unset | Default |
 | EC-6 | `--verbosity` with non-numeric value → exit 1 | Type Validation |
 | EC-7 | `--verbosity -1` → exit 1 (below range) | Boundary Values |
+| EC-8 | `--verbosity 0` with spawn failure → fatal error still visible on stderr (BUG-240) | Fatal Error Exception |
 
 ## Test Coverage Summary
 
@@ -23,8 +24,9 @@ Edge case tests for the runner verbosity level parameter. Tests validate level r
 - Missing Value: 1 test (EC-4)
 - Default: 1 test (EC-5)
 - Type Validation: 1 test (EC-6)
+- Fatal Error Exception: 1 test (EC-8)
 
-**Total:** 7 edge cases
+**Total:** 8 edge cases
 
 
 ## Test Cases
@@ -98,3 +100,15 @@ Edge case tests for the runner verbosity level parameter. Tests validate level r
 - **Exit:** 1
 - **Source:** [012_verbosity.md](../../../../docs/cli/param/012_verbosity.md)
 - **Commands:** run, ask
+
+---
+
+### EC-8: `--verbosity 0` with spawn failure → fatal error still visible (BUG-240)
+
+- **Given:** PATH set to a directory containing no `claude` binary; `CLR_CLAUDE_BIN` unset
+- **When:** `clr --verbosity 0 "Fix bug"`
+- **Then:** stderr is NOT empty; fatal spawn error is emitted regardless of verbosity level 0; the verbosity gate suppresses runner diagnostics but never fatal errors
+- **Exit:** 1
+- **Source:** [feature/001_runner_tool.md — verbosity gate](../../../../docs/feature/001_runner_tool.md)
+- **Commands:** run
+- **Note:** Implemented in TSK-196 (BUG-240); test function `e07_interactive_not_found_verbosity_zero` and `e08_print_not_found_verbosity_zero` in `tests/execution_mode_test.rs`; also covered by FT-7 in [tests/docs/feature/01_runner_tool.md](../../feature/01_runner_tool.md)

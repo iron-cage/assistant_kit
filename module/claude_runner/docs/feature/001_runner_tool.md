@@ -19,7 +19,7 @@ claude_runner serves two distinct consumers from one crate:
 
 **Default flag injection:** See [invariant/001_default_flags.md](../invariant/001_default_flags.md) for the complete default injection rules and opt-out mechanisms.
 
-**Verbosity gate:** The `--verbosity <0-5>` flag (default 3) controls how much runner diagnostic output is emitted. At level 0 all diagnostic output is suppressed. At level 4 a command preview is printed to stderr before execution. `--dry-run` output is always shown regardless of verbosity level.
+**Verbosity gate:** The `--verbosity <0-5>` flag (default 3) controls how much runner diagnostic output is emitted. At level 0 all runner diagnostic output is suppressed — except fatal errors (spawn failures, binary not found), which are always emitted to stderr regardless of verbosity level. When the `claude` binary is not found, the message is: `claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code`. At level 4 a command preview is printed to stderr before execution. `--dry-run` output is always shown regardless of verbosity level.
 
 **Trace mode:** `--trace` prints environment variables and the full command to stderr (like `set -x`), then executes normally. This is independent of verbosity level.
 

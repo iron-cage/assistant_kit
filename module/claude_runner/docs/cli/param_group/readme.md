@@ -3,7 +3,7 @@
 ### Scope
 
 - **Purpose**: Define semantically coherent parameter clusters by runner responsibility.
-- **Responsibility**: Group 27 parameters into 4 categories based on consumption pattern (claude-native, runner-consumed, system-prompt, credential-ops).
+- **Responsibility**: Group 28 parameters into 4 categories based on consumption pattern (claude-native, runner-consumed, system-prompt, credential-ops).
 - **In Scope**: Group membership, coherence tests, invariants, and cross-references to commands/params/tests/user stories.
 - **Out of Scope**: Individual parameter semantics (-> `../param/`), type constraints (-> `../type/`).
 

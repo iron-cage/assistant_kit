@@ -30,7 +30,7 @@
 //! - T07: `--session-dir` appears as env var
 //! - T08: `--dir` produces `cd <path>` prefix
 //! - T09: `--dry-run` alone accepted (no message required)
-//! - T10: multiple flags combined (no explicit `-c` needed — automatic)
+//! - T10: multiple flags combined with session-dir containing files → `-c` injected
 //! - T11: unknown flag rejected
 //! - T12: `--max-tokens` non-numeric rejected
 //! - T13: `--print` without message rejected
@@ -180,21 +180,31 @@ fn t09_dry_run_without_message()
   assert!( stdout.contains( "claude" ), "dry-run output must contain 'claude'. Got:\n{stdout}" );
 }
 
-// T10: multiple flags combined (no explicit -c needed — automatic continuation)
+// T10: multiple flags combined — session-dir with a file triggers -c injection
 #[ test ]
 fn t10_multiple_flags_combined()
 {
-  let out = run_cli( &[
-    "--dry-run", "--dir", "/tmp",
-    "--model", "claude-sonnet-4-6", "fix it",
-  ] );
+  // Create a session dir with one dummy file so session_exists returns true.
+  let session_dir = tempfile::tempdir().expect( "create temp session dir" );
+  std::fs::write( session_dir.path().join( "session.json" ), b"{}" )
+    .expect( "write dummy session file" );
+  let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
+
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [
+      "--dry-run", "--dir", "/tmp",
+      "--session-dir", session_dir_str,
+      "--model", "claude-sonnet-4-6", "fix it",
+    ] )
+    .output()
+    .expect( "invoke clr" );
   assert!( out.status.success(), "multiple flags must be accepted" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!( stdout.contains( "cd /tmp" ), "Must have cd line" );
-  assert!( stdout.contains( "--dangerously-skip-permissions" ), "Must have skip-permissions (default-on)" );
-  assert!( stdout.contains( " -c" ), "Must have -c (automatic)" );
-  assert!( stdout.contains( "claude-sonnet-4-6" ), "Must have model" );
-  assert!( stdout.contains( "\"fix it\n\nultrathink\"" ), "Must have ultrathink-suffixed quoted message" );
+  assert!( stdout.contains( "cd /tmp" ), "Must have cd line. Got:\n{stdout}" );
+  assert!( stdout.contains( "--dangerously-skip-permissions" ), "Must have skip-permissions (default-on). Got:\n{stdout}" );
+  assert!( stdout.contains( " -c" ), "Must have -c when session-dir is non-empty. Got:\n{stdout}" );
+  assert!( stdout.contains( "claude-sonnet-4-6" ), "Must have model. Got:\n{stdout}" );
+  assert!( stdout.contains( "\"fix it\n\nultrathink\"" ), "Must have ultrathink-suffixed quoted message. Got:\n{stdout}" );
 }
 
 // T11: unknown flag rejected

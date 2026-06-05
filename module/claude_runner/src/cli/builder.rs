@@ -3,23 +3,67 @@
 use super::parse::CliArgs;
 use claude_runner_core::{ ClaudeCommand, EffortLevel };
 
-/// Returns `true` when the resolved session directory exists and contains at least one entry.
+/// Returns `true` when there is prior conversation history for the resolved session directory.
 ///
-/// When `session_dir` is `None`, falls back to `$HOME/.claude/` (the claude default).
-/// Returns `false` on any I/O error, missing directory, or empty directory.
-fn session_exists( session_dir : Option< &std::path::Path > ) -> bool
+/// Fix(BUG-214-reopen): use project-specific storage path when no `--session-dir` is given.
+/// Root cause: the previous fallback checked `$HOME/.claude/` (always non-empty — holds
+/// credentials, projects/ dir, etc.) so `-c` was injected even for fresh project directories.
+/// Pitfall: `$HOME/.claude/` is Claude's global config dir, not per-project session storage;
+/// actual project sessions live at `$HOME/.claude/projects/{encoded(cwd)}/`.
+///
+/// - With `--session-dir <dir>`: sessions are stored directly in `<dir>`; check its entries.
+/// - Without `--session-dir`: sessions are in `$HOME/.claude/projects/{encoded(effective_dir)}/`;
+///   use `claude_storage_core::continuation::check_continuation` which encodes the path correctly.
+fn session_exists
+(
+  session_dir  : Option< &std::path::Path >,
+  effective_dir : Option< &std::path::Path >,
+) -> bool
 {
-  let path = if let Some( p ) = session_dir
+  if let Some( dir ) = session_dir
   {
-    p.to_path_buf()
+    // Custom --session-dir: claude stores sessions directly inside this directory.
+    std::fs::read_dir( dir ).is_ok_and( | mut entries | entries.next().is_some() )
   }
   else
   {
-    let Ok( home ) = std::env::var( "HOME" ) else { return false; };
-    std::path::PathBuf::from( home ).join( ".claude" )
-  };
-  std::fs::read_dir( &path )
-    .is_ok_and( | mut entries | entries.next().is_some() )
+    // Default: project sessions live at $HOME/.claude/projects/{encoded(cwd)}/
+    let cwd = effective_dir.map_or_else(
+      || std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) ),
+      std::path::Path::to_path_buf,
+    );
+    claude_storage_core::continuation::check_continuation( &cwd )
+  }
+}
+
+/// Resolve the effective working directory from `--dir` and `--subdir` args.
+///
+/// Fix(BUG-229): guard empty string — `--subdir ""` must be identity, not degenerate `/-`
+/// Root cause: only `"."` was checked; empty string passed the guard and produced bare-hyphen dir
+/// Pitfall: `env_str` already filters empty, but CLI path can deliver `""` via `--subdir ""`
+///
+/// Fix(BUG-231): skip `create_dir_all` in dry-run — dry-run must be side-effect-free
+/// Root cause: `build_claude_command` runs before the dry-run branch; mkdir executed unconditionally
+/// Pitfall: builder computes the path for display; only the run path needs the physical directory
+fn resolve_effective_dir( cli : &CliArgs ) -> Option< std::path::PathBuf >
+{
+  let base_dir = cli.dir.as_deref().map( std::path::PathBuf::from );
+  match cli.subdir.as_deref()
+  {
+    Some( sub ) if sub != "." && !sub.is_empty() =>
+    {
+      let base = base_dir.unwrap_or_else( ||
+        std::env::current_dir().unwrap_or_else( | _ | std::path::PathBuf::from( "." ) )
+      );
+      let effective = base.join( format!( "-{sub}" ) );
+      if !cli.dry_run
+      {
+        let _ = std::fs::create_dir_all( &effective );
+      }
+      Some( effective )
+    }
+    _ => base_dir,
+  }
 }
 
 /// Translate parsed CLI args into a `ClaudeCommand` builder.
@@ -30,9 +74,10 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
 {
   let mut builder = ClaudeCommand::new();
 
-  if let Some( ref dir ) = cli.dir
+  let effective_working_dir = resolve_effective_dir( cli );
+  if let Some( ref dir ) = effective_working_dir
   {
-    builder = builder.with_working_directory( dir.clone() );
+    builder = builder.with_working_directory( dir.to_string_lossy().into_owned() );
   }
   if let Some( n ) = cli.max_tokens
   {
@@ -41,7 +86,10 @@ pub( crate ) fn build_claude_command( cli : &CliArgs ) -> ClaudeCommand
   // Fix(BUG-214): inject -c only when a prior session exists in storage
   // Root cause: unconditional -c causes claude binary to exit on first use with no session
   // Pitfall: resumption flags (-c, --continue) require state to resume; guard with existence check
-  if !cli.new_session && session_exists( cli.session_dir.as_deref().map( std::path::Path::new ) )
+  if !cli.new_session && session_exists(
+    cli.session_dir.as_deref().map( std::path::Path::new ),
+    effective_working_dir.as_deref(),
+  )
   {
     builder = builder.with_continue_conversation( true );
   }

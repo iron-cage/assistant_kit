@@ -24,6 +24,7 @@
 //! - IT-7: `clr ask --dry-run --max-tokens 200000 "X"` — CLI max-tokens overrides ask default
 //! - IT-8: `clr ask --unknown-flag "X"` — unknown flag rejected (exit 1, stderr error)
 //! - IT-9: `clr ask --trace "X"` — stderr contains ask-default env block + command before invocation
+//! - IT-10: `clr ask --subdir NAME "X"` — effective dir ends with `/-NAME`
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
@@ -186,4 +187,17 @@ fn it_09_ask_trace_stderr_output()
   // exit 1 (claude absent) is acceptable — trace fires before subprocess invocation
   let code = out.status.code().unwrap_or( -1 );
   assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );
+}
+
+// IT-10: ask --subdir NAME → effective dir ends with /-NAME
+//
+// Source: tests/docs/cli/command/05_ask.md#it-10
+#[ test ]
+fn it_10_ask_subdir_effective_dir()
+{
+  let output = run_ask_dry( &[ "--subdir", "feature", "What is X?" ] );
+  assert!(
+    output.contains( "/-feature" ),
+    "ask --subdir feature must produce path ending in /-feature. Got:\n{output}"
+  );
 }

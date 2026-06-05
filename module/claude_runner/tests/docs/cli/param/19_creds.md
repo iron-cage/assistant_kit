@@ -13,7 +13,9 @@ Edge case test planning for the `--creds` parameter. See [019_creds.md](../../..
 | EC-3 | Relative path → resolved against caller's cwd | Valid |
 | EC-4 | File does not exist → exit 1 with file-not-found error | Invalid |
 | EC-5 | `--creds` without value → exit 1, argument requires value | Missing Value |
-| EC-6 | `--creds` omitted entirely → exit 1, missing required argument | Required |
+| EC-6 | `--creds` omitted, `CLR_CREDS` unset → defaults to `$HOME/.claude/.credentials.json` | Default Fallback |
+| EC-7 | `--creds` omitted, `CLR_CREDS` set → `CLR_CREDS` value used (wins over default) | Default Fallback |
+| EC-8 | `--creds` omitted, `CLR_CREDS` unset, `HOME` unset → exit 1 with error | Default Fallback: No HOME |
 
 ## Test Coverage Summary
 
@@ -21,9 +23,9 @@ Edge case test planning for the `--creds` parameter. See [019_creds.md](../../..
 - Valid: 1 test (EC-3)
 - Invalid: 1 test (EC-4)
 - Missing Value: 1 test (EC-5)
-- Required Enforcement: 1 test (EC-6)
+- Default Fallback: 3 tests (EC-6, EC-7, EC-8)
 
-**Total:** 6 test cases
+**Total:** 8 test cases
 
 ---
 
@@ -82,11 +84,33 @@ Edge case test planning for the `--creds` parameter. See [019_creds.md](../../..
 
 ---
 
-### EC-6: `--creds` omitted entirely → exit 1, missing required argument
+### EC-6: `--creds` omitted, `CLR_CREDS` unset → trace confirms default path
 
-- **Given:** clean environment
+- **Given:** `$HOME/.claude/.credentials.json` exists (readable; content `{}`); `CLR_CREDS` unset
+- **When:** `clr isolated --trace "test"` (no `--creds`)
+- **Then:** trace stderr contains `# creds: <HOME>/.claude/.credentials.json`; subprocess attempt fails (claude absent in test environment)
+- **Exit:** 1
+- **Source:** [019_creds.md](../../../../docs/cli/param/019_creds.md)
+- **Commands:** isolated, refresh
+
+---
+
+### EC-7: `CLR_CREDS` set, `--creds` omitted → `CLR_CREDS` wins over default
+
+- **Given:** `CLR_CREDS=/tmp/ec7_creds.json` set; `/tmp/ec7_creds.json` exists
+- **When:** `clr isolated --trace "test"` (no `--creds`)
+- **Then:** trace stderr contains `# creds: /tmp/ec7_creds.json` (not the HOME default); subprocess attempt fails (claude absent in test environment)
+- **Exit:** 1
+- **Source:** [019_creds.md](../../../../docs/cli/param/019_creds.md)
+- **Commands:** isolated, refresh
+
+---
+
+### EC-8: `--creds` omitted, `CLR_CREDS` unset, `HOME` unset → exit 1
+
+- **Given:** `HOME` unset in subprocess environment; `CLR_CREDS` unset; `--creds` not provided
 - **When:** `clr isolated "test"`
-- **Then:** exit 1; stderr indicates `--creds` is required for `isolated`
+- **Then:** exit 1; stderr contains an error (cannot resolve default path without HOME); no subprocess launched
 - **Exit:** 1
 - **Source:** [019_creds.md](../../../../docs/cli/param/019_creds.md)
 - **Commands:** isolated, refresh

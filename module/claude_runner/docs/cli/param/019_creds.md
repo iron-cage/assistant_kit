@@ -1,21 +1,28 @@
 # CLI Parameter: --creds
 
 Path to a JSON credentials file written to the isolated subprocess's
-`~/.claude/.credentials.json`. Required for the `isolated` and `refresh` commands.
+`~/.claude/.credentials.json`. Optional for the `isolated` and `refresh` commands;
+when omitted, defaults to `~/.claude/.credentials.json` in the caller's real `HOME`
+(the current Claude Code account's credentials file).
 If Claude refreshes its OAuth token during the run, the credentials
 file is updated in-place with the new token before `clr` exits.
 
 - **Type:** [`CredentialsFilePath`](../type/08_credentials_file_path.md)
-- **Default:** — (required)
+- **Default:** `~/.claude/.credentials.json`
 - **Command:** [`isolated`](../command/02_isolated.md), [`refresh`](../command/03_refresh.md)
 
 ```sh
+clr isolated "Fix bug"                                    # uses ~/.claude/.credentials.json
 clr isolated --creds ~/.claude/.credentials.json "Fix bug"
 clr isolated --creds /tmp/test_creds.json --timeout 10 "hi"
+clr refresh                                               # uses ~/.claude/.credentials.json
 clr refresh --creds ~/.claude/.credentials.json
 ```
 
-**Note:** The file must exist before invocation.
+**Note:** The file must exist and be readable at invocation time, whether specified
+explicitly or resolved from the default. When `--creds` is omitted and `CLR_CREDS`
+is unset, the default `$HOME/.claude/.credentials.json` is used; if `HOME` is not
+set or the file is absent, the command exits 1 with a file-not-found error.
 The path is resolved against the caller's working directory; relative paths
 are NOT resolved against the temp HOME created for the subprocess.
 
@@ -38,8 +45,8 @@ are NOT resolved against the temp HOME created for the subprocess.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 2 | [`isolated`](../command/02_isolated.md) | — | Required parameter |
-| 3 | [`refresh`](../command/03_refresh.md) | — | Required parameter |
+| 2 | [`isolated`](../command/02_isolated.md) | `~/.claude/.credentials.json` | Optional; defaults to current account credentials |
+| 3 | [`refresh`](../command/03_refresh.md) | `~/.claude/.credentials.json` | Optional; defaults to current account credentials |
 
 ### Referenced User Stories
 

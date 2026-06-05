@@ -12,17 +12,18 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 | FT-4 | `--trace --dry-run` → trace on stderr, dry-run preview on stdout | Trace Mode |
 | FT-5 | Assembled command starts with `claude` binary (execution delegated) | Separation of Concerns |
 | FT-6 | `--print` present when message is provided (mode selection default) | Mode Selection |
+| FT-7 | `--verbosity 0` with missing binary → fatal error still visible on stderr | Verbosity Gate |
 
 ## Test Coverage Summary
 
 - Combined Defaults: 1 test (FT-1)
 - Output Format: 1 test (FT-2)
-- Verbosity Gate: 1 test (FT-3)
+- Verbosity Gate: 2 tests (FT-3, FT-7)
 - Trace Mode: 1 test (FT-4)
 - Separation of Concerns: 1 test (FT-5)
 - Mode Selection: 1 test (FT-6)
 
-**Total:** 6 tests
+**Total:** 7 tests
 
 
 ---
@@ -84,3 +85,14 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **Then:** Assembled command contains `--print`; print mode is the default when a message is supplied
 - **Exit:** 0
 - **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [--print](../../../../docs/cli/param/002_print.md)
+
+---
+
+### FT-7: `--verbosity 0` with missing binary → fatal error still visible on stderr
+
+- **Given:** `PATH` set to directory with no `claude` binary; `CLR_CLAUDE_BIN` unset
+- **When:** `clr --verbosity 0 "Fix bug" 2>&1 | cat`
+- **Then:** stderr is NOT empty; error message contains "not found" and "install" regardless of verbosity level 0
+- **Exit:** non-zero
+- **Source:** [feature/001_runner_tool.md — verbosity gate](../../../../docs/feature/001_runner_tool.md)
+- **Note:** Implemented in TSK-196 (BUG-240 + BUG-241); test function `spawn_error_visible_at_verbosity_0` in `tests/execution_mode_test.rs`

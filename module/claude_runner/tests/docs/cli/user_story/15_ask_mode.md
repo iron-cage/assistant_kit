@@ -33,7 +33,7 @@
 
 - **Given:** User wants extended output with maximum effort
 - **When:** `clr ask --effort max --max-tokens 200000 --dry-run "Write a detailed analysis"`
-- **Then:** Assembled command shows `--effort max` and `--max-tokens 200000` overriding the ask defaults of `high` and `16384`; all 25 run parameters are accepted
+- **Then:** Assembled command shows `--effort max` and `--max-tokens 200000` overriding the ask defaults of `high` and `16384`; all 26 run parameters are accepted
 - **Exit:** 0
 
 ### US-4: no-persist and no-chrome defaults

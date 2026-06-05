@@ -47,3 +47,4 @@ use `--no-effort-max`.
 | # | User Story | Persona |
 |---|------------|---------|
 | 15 | [015_ask_mode.md](../user_story/015_ask_mode.md) | Developer |
+| 20 | [020_suppress_effort_max.md](../user_story/020_suppress_effort_max.md) | Developer |

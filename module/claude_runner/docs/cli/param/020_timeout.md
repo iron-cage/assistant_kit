@@ -20,6 +20,10 @@ clr isolated --creds creds.json --timeout 0 "test"         # immediate timeout
 execution), `refresh` defaults to 45s (allows headroom for slow networks and
 API rate limiting during OAuth token exchange).
 
+**Note:** On timeout, any partial stdout accumulated by the subprocess before
+the timeout fires is preserved in the error output, so diagnostic context is
+not discarded.
+
 **Note:** A timeout of `0` causes immediate expiry — useful for testing the
 credential-refresh path (OAuth token written at startup before subprocess
 blocks on input).

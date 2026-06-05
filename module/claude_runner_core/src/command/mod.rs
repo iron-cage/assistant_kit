@@ -388,12 +388,34 @@ impl ClaudeCommand {
       cmd.stdin( std::process::Stdio::from( file ) );
     }
 
+    // Fix(BUG-241): map NotFound to an actionable install hint.
+    // Root cause: Command::output() on a missing binary returns io::ErrorKind::NotFound
+    //   with a raw OS error string ("No such file or directory (os error 2)") — giving
+    //   the caller no actionable information about what to install or where.
+    // Pitfall: always check e.kind() before formatting the error; NotFound is a distinct
+    //   user-fixable condition and must produce a separate message from other spawn failures.
     let output = cmd.output()
-      .map_err( |e| Error::msg( format!( "Failed to execute Claude Code: {e}" ) ) )?;
+      .map_err( |e|
+      {
+        if e.kind() == std::io::ErrorKind::NotFound
+        {
+          Error::msg( "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code" )
+        }
+        else
+        {
+          Error::msg( format!( "Failed to execute Claude Code: {e}" ) )
+        }
+      } )?;
 
     let stdout = String::from_utf8_lossy( &output.stdout ).to_string();
     let stderr = String::from_utf8_lossy( &output.stderr ).to_string();
-    let exit_code = output.status.code().unwrap_or( -1 );
+    // Fix(BUG-242): use signal_exit_code() so SIGTERM (→143) and SIGKILL (→137) are
+    //   preserved instead of collapsed to -1.
+    // Root cause: unwrap_or(-1) returns -1 for any signal-killed subprocess on Unix;
+    //   callers cannot distinguish a signal kill from any other non-exit condition.
+    // Pitfall: code() returns None only for signal kills on Unix — never for a normal exit;
+    //   the #[cfg(unix)] branch in signal_exit_code fires exactly in those cases.
+    let exit_code = crate::signal_exit_code( &output.status );
 
     Ok( crate::types::ExecutionOutput { stdout, stderr, exit_code } )
   }
@@ -446,8 +468,23 @@ impl ClaudeCommand {
       cmd.stdin( std::process::Stdio::from( file ) );
     }
 
+    // Fix(BUG-241): map NotFound to install hint (mirrors the fix in execute()).
+    // Root cause: same as execute() — Command::status() on a missing binary emits
+    //   a raw OS error string with no install guidance.
+    // Pitfall: both execute() and execute_interactive() must carry this fix; missing
+    //   one leaves interactive mode with an unhelpful message.
     let status = cmd.status()
-      .map_err( |e| Error::msg( format!( "Failed to execute Claude Code: {e}" ) ) )?;
+      .map_err( |e|
+      {
+        if e.kind() == std::io::ErrorKind::NotFound
+        {
+          Error::msg( "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code" )
+        }
+        else
+        {
+          Error::msg( format!( "Failed to execute Claude Code: {e}" ) )
+        }
+      } )?;
 
     Ok( status )
   }
@@ -604,6 +641,56 @@ impl Default for ClaudeCommand {
   #[inline]
   fn default() -> Self {
     Self::new()
+  }
+}
+
+// ============================================================================
+// Subprocess spawning
+// ============================================================================
+
+impl ClaudeCommand {
+  /// Spawn the Claude Code process with piped stdout/stderr and return the `Child` handle.
+  ///
+  /// Unlike [`execute`](Self::execute), this method does **not** wait for the subprocess
+  /// to finish. The caller owns the `Child` and is responsible for calling
+  /// [`Child::wait`](std::process::Child::wait) or
+  /// [`Child::wait_with_output`](std::process::Child::wait_with_output).
+  ///
+  /// Used by `run_isolated()` to enable timeout-with-kill-and-partial-output handling.
+  ///
+  /// # Errors
+  ///
+  /// Returns `io::Error` on spawn failure. Check `e.kind() == ErrorKind::NotFound` to
+  /// detect a missing `claude` binary.
+  ///
+  /// # Example
+  ///
+  /// ```no_run
+  /// use claude_runner_core::ClaudeCommand;
+  ///
+  /// let mut child = ClaudeCommand::new()
+  ///   .with_message( "hello" )
+  ///   .spawn_piped()?;
+  /// let output = child.wait_with_output()?;
+  /// # Ok::<(), std::io::Error>(())
+  /// ```
+  #[ inline ]
+  pub fn spawn_piped( &self ) -> std::io::Result< std::process::Child >
+  {
+    use std::process::Stdio;
+    let mut cmd = self.build_command();
+    if let Some( ref path ) = self.stdin_file
+    {
+      let file = std::fs::File::open( path )?;
+      cmd.stdin( Stdio::from( file ) );
+    }
+    else
+    {
+      cmd.stdin( Stdio::null() );
+    }
+    cmd.stdout( Stdio::piped() );
+    cmd.stderr( Stdio::piped() );
+    cmd.spawn()
   }
 }
 

@@ -14,6 +14,8 @@ clr --verbosity 0 "Silent run"    # suppress runner output
 clr --verbosity 4 "Debug"         # verbose command preview
 ```
 
+**Note:** Fatal errors bypass the verbosity gate — spawn failures and binary-not-found errors are always emitted to stderr at every level, including 0. `--dry-run` output is similarly unaffected by verbosity level. Level 0 suppresses runner diagnostics only; it does not silence errors that indicate the subprocess could not be launched.
+
 ### Referenced Type
 
 | Type | Kind | Fundamental | Key Constraint |
@@ -24,7 +26,7 @@ clr --verbosity 4 "Debug"         # verbose command preview
 
 | # | Group | Membership | Co-members |
 |---|-------|------------|------------|
-| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | 15 other params |
+| 2 | [Runner Control](../param_group/02_runner_control.md) | Full | 16 other params |
 
 ### Referenced Commands
 

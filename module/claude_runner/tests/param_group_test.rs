@@ -4,7 +4,7 @@
 //! Source: `tests/docs/cli/param_group/`
 //!
 //! - Group 1 (Claude-Native Flags): G1CC1–G1CC5 (`01_claude_native_flags.md`)
-//! - Group 2 (Runner Control):      G2CC1–G2CC5 (`02_runner_control.md`)
+//! - Group 2 (Runner Control):      G2CC1–G2CC6 (`02_runner_control.md`)
 //! - Group 3 (System Prompt):       G3CC1–G3CC4 (`03_system_prompt.md`)
 //! - Group 4 (Credential Ops):      G4CC6       (`04_credential_operations.md`; CC-1–CC-5 are `lim_it`)
 
@@ -192,21 +192,27 @@ fn g2cc3_no_skip_permissions_and_no_effort_max_both_suppressed()
   );
 }
 
-/// G2CC4: All 12 runner control flags together → exit 0; no unknown-flag error.
+/// G2CC4: All 17 runner control flags together → exit 0; no unknown-flag error.
 ///
 /// Every runner control flag accepted without conflict. `--dry-run` wins over `--trace`,
 /// so stderr is empty. `--no-chrome` suppresses the default `--chrome` injection.
+/// `--subdir work` produces an effective dir containing `/-work`.
 ///
 /// Spec: `02_runner_control.md` CC-4
 #[ test ]
 fn g2cc4_all_runner_control_flags_no_conflict()
 {
+  let tmp = tempfile::NamedTempFile::new().expect( "tmp" );
+  std::io::Write::write_all( &mut tmp.as_file(), b"input" ).expect( "write" );
+  let file_path = tmp.path().to_str().expect( "path" );
+
   let out = run_cli( &[
     "--dry-run",
     "--no-skip-permissions",
     "--interactive",
     "--new-session",
     "--dir", "/tmp/test",
+    "--subdir", "work",
     "--max-tokens", "100000",
     "--session-dir", "/tmp/sessions",
     "--verbosity", "2",
@@ -214,11 +220,15 @@ fn g2cc4_all_runner_control_flags_no_conflict()
     "--no-ultrathink",
     "--no-effort-max",
     "--no-chrome",
+    "--no-persist",
+    "--file", file_path,
+    "--strip-fences",
+    "--keep-claudecode",
     "Fix bug",
   ] );
   assert!(
     out.status.success(),
-    "all runner control flags must be accepted without conflict: {out:?}",
+    "all 17 runner control flags must be accepted without conflict: {out:?}",
   );
   assert!(
     out.stderr.is_empty(),
@@ -229,6 +239,10 @@ fn g2cc4_all_runner_control_flags_no_conflict()
   assert!(
     !stdout.contains( "--chrome" ),
     "--no-chrome must suppress --chrome injection: {stdout}",
+  );
+  assert!(
+    stdout.contains( "/tmp/test/-work" ),
+    "effective dir must contain /tmp/test/-work: {stdout}",
   );
 }
 
@@ -254,6 +268,21 @@ fn g2cc5_file_strip_fences_keep_claudecode_accepted()
   assert!( out.status.success(), "exit must be 0: {out:?}" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!( stdout.contains( path ), "output must reference file path: {stdout}" );
+}
+
+/// G2CC6: `--dir PATH` + `--subdir NAME` → effective dir is `PATH/-NAME`.
+///
+/// Spec: `02_runner_control.md` CC-6
+#[ test ]
+fn g2cc6_dir_plus_subdir_effective_dir()
+{
+  let out = run_cli( &[ "--dry-run", "--dir", "/tmp", "--subdir", "build", "task" ] );
+  assert!( out.status.success(), "exit must be 0: {out:?}" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "/tmp/-build" ),
+    "effective dir must be /tmp/-build (not /tmp alone, not /tmp/build): {stdout}",
+  );
 }
 
 // ─── Group 3: System Prompt ────────────────────────────────────────────────────

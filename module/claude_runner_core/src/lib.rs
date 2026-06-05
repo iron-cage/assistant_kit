@@ -72,12 +72,14 @@
 //! See [spec.md](../spec.md) for complete documentation.
 
 mod command;
+mod exit_code;
 mod isolated;
 mod types;
 pub mod process;
 pub mod session_dir;
 
 pub use crate::command::{ ClaudeCommand, claude_version };
+pub use crate::exit_code::signal_exit_code;
 pub use crate::isolated::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLATED_DEFAULT_MODEL };
 pub use crate::types::{ ActionMode, EffortLevel, ExecutionOutput, InputFormat, LogLevel, OutputFormat, PermissionMode };
 pub use crate::session_dir::{ SessionManager, Strategy };

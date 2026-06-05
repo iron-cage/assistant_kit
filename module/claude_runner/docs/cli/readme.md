@@ -24,8 +24,8 @@ clr [OPTIONS] [MESSAGE]
 | `env_param.md` | CLR_* env var fallbacks and CLAUDE_CODE_* subprocess vars |
 | `param_group/` | Logical parameter groupings (4 groups) |
 | `type/` | Semantic type definitions (12 types) |
-| `param/` | Individual parameter reference docs (27 parameters) |
-| `user_story/` | User goal and usage pattern docs (21 user stories) |
+| `param/` | Individual parameter reference docs (28 parameters) |
+| `user_story/` | User goal and usage pattern docs (22 user stories) |
 
 ### Completion Matrix
 
@@ -33,21 +33,21 @@ clr [OPTIONS] [MESSAGE]
 |--------|----|----|----|----|----|----|
 | readme.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | command/ (5 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| param/ (27 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| param/ (28 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | dictionary.md | ✅ | ✅ | ➖ | ➖ | ➖ | Complete |
 | type/ (12 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | param_group/ (4 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
-| user_story/ (21 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
+| user_story/ (22 instances) | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | env_param.md | ✅ | ✅ | ✅ | ➖ | ➖ | Complete |
 | config_param.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no config file mechanism |
 | format.md | ➖ | ➖ | ➖ | ➖ | ➖ | N/A — no named output formats |
 | tests/docs/cli/readme.md | ➖ | ➖ | ➖ | ✅ | ➖ | Complete |
 | tests/docs/cli/command/ (5 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/param/ (27 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/param/ (28 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/param_group/ (4 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/type/ (12 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 | tests/docs/cli/env_param/ (2 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
-| tests/docs/cli/user_story/ (21 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
+| tests/docs/cli/user_story/ (22 files) | ➖ | ➖ | ➖ | ✅ | ✅ | Complete |
 
 **Current Level:** L5
 **Design Completeness:** 100%
@@ -56,12 +56,12 @@ clr [OPTIONS] [MESSAGE]
 ### Navigation
 
 - [Commands](command/readme.md) — command reference (5 commands)
-- [Parameters](param/readme.md) — flag and argument reference (27 parameters)
+- [Parameters](param/readme.md) — flag and argument reference (28 parameters)
 - [Types](type/readme.md) — semantic type definitions (12 types)
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (4 groups)
 - [Dictionary](dictionary.md) — domain vocabulary
-- [User Stories](user_story/readme.md) — user goals and usage patterns (21 user stories)
-- [Env Parameters](env_param.md) — input and subprocess environment variables (29 variables)
+- [User Stories](user_story/readme.md) — user goals and usage patterns (22 user stories)
+- [Env Parameters](env_param.md) — input and subprocess environment variables (30 variables)
 
 ### See Also
 

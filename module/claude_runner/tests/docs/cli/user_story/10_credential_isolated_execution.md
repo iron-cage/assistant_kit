@@ -11,7 +11,7 @@
 | US-1 | Happy path | `clr isolated --creds` runs with temp HOME isolation |
 | US-2 | Parameter interaction | `--timeout` controls subprocess wait time |
 | US-3 | Failure path | `--creds` with non-existent file errors |
-| US-4 | Boundary | OAuth tokens written back to credentials file |
+| US-4 | Boundary | `HOME` unset and no `CLR_CREDS` → exit 1, error references `HOME` |
 
 ---
 
@@ -36,9 +36,9 @@
 - **Then:** Error — credentials file not found or not readable
 - **Exit:** non-zero
 
-### US-4: isolated without creds flag
+### US-4: HOME unset and no CLR_CREDS → exit 1, error references HOME
 
-- **Given:** No `--creds` flag provided
+- **Given:** `HOME` unset in the process environment; `CLR_CREDS` unset; no `--creds` flag
 - **When:** `clr isolated "test"`
-- **Then:** Error — `isolated` command requires `--creds` flag
-- **Exit:** non-zero
+- **Then:** Exit 1; stderr contains error referencing `HOME` or "cannot resolve"; no subprocess launched — the 3rd-tier default `$HOME/.claude/.credentials.json` cannot be resolved
+- **Exit:** 1

@@ -31,8 +31,9 @@
 | 025_file.md | `--file` parameter spec |
 | 026_strip_fences.md | `--strip-fences` flag spec |
 | 027_keep_claudecode.md | `--keep-claudecode` flag spec |
+| 028_subdir.md | `--subdir` parameter spec |
 
-### All Parameters (27 total)
+### All Parameters (28 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -54,7 +55,7 @@
 | 16 | `--append-system-prompt` | [`SystemPromptText`](../type/06_system_prompt_text.md) | — | Any text | Append text to the default system prompt | 1 cmd |
 | 17 | `--effort` | [`EffortLevel`](../type/07_effort_level.md) | max | low/medium/high/max | Reasoning effort level forwarded to claude | 1 cmd |
 | 18 | `--no-effort-max` | bool | false | present/absent | Suppress default `--effort max` injection | 1 cmd |
-| 19 | `--creds` | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | — | Any existing file path | Credentials JSON file (required) | 2 cmds |
+| 19 | `--creds` | [`CredentialsFilePath`](../type/08_credentials_file_path.md) | `~/.claude/.credentials.json` | Any existing file path | Credentials JSON file (optional; defaults to current account) | 2 cmds |
 | 20 | `--timeout` | [`TimeoutSecs`](../type/09_timeout_secs.md) | 30/45 | Non-negative integer | Max seconds to wait for subprocess (30 isolated, 45 refresh) | 2 cmds |
 | 21 | `--no-chrome` | bool | false | present/absent | Suppress default `--chrome` injection | 1 cmd |
 | 22 | `--no-persist` | bool | false | present/absent | Disable session persistence (`--no-session-persistence`) | 1 cmd |
@@ -63,10 +64,11 @@
 | 25 | `--file` | [`FilePath`](../type/12_file_path.md) | — | Any readable file path | File content piped as subprocess stdin | 1 cmd |
 | 26 | `--strip-fences` | bool | false | present/absent | Strip outermost markdown code fences from stdout | 1 cmd |
 | 27 | `--keep-claudecode` | bool | false | present/absent | Preserve `CLAUDECODE` env var in subprocess (default: removed) | 1 cmd |
+| 28 | `--subdir` | string | `.` | `.` or any name | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity | 2 cmds |
 
-**Total:** 27 parameters
+**Total:** 28 parameters
 
-**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25, 26, and 27 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
+**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25, 26, 27, and 28 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
 
 ### Navigation
 
@@ -97,11 +99,12 @@
 - [`--file`](025_file.md)
 - [`--strip-fences`](026_strip_fences.md)
 - [`--keep-claudecode`](027_keep_claudecode.md)
+- [`--subdir`](028_subdir.md)
 
 ### Quick Reference
 
 **Required parameters:** `[MESSAGE]` is required for print mode (which is the default when a message is given).
 
-**Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
+**Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 25 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 26 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.
