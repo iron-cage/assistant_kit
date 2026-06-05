@@ -683,6 +683,17 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
   let show_tree = cmd.get_boolean( "show_tree" ).unwrap_or( false );
 
+  let verbosity_raw = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
+  if !( 0..=5 ).contains( &verbosity_raw )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "Invalid verbosity: {verbosity_raw}. Valid range: 0-5" ),
+    ) );
+  }
+  // show_tree::1 implies verbosity 2+ (grouped view)
+  let verbosity = if show_tree && verbosity_raw < 2 { 2 } else { verbosity_raw };
+
   let min_entries_filter = if let Some( n ) = cmd.get_integer( "min_entries" )
   {
     if n < 0
@@ -865,6 +876,16 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let total_projects = summaries.len();
   let mut output = String::new();
 
+  // verbosity::0 — paths only, no header, no session details
+  if verbosity == 0
+  {
+    for summary in &summaries
+    {
+      writeln!( output, "{}", summary.display_path ).unwrap();
+    }
+    return Ok( OutputData::new( output, "text" ) );
+  }
+
   // Family grouping: at v1 with no explicit agent:: filter, agents are grouped
   // into families under their root sessions instead of shown flat (P6: preserved).
   let use_families = agent_filter.is_none();
@@ -915,7 +936,7 @@ pub fn projects_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
         writeln!( output, "{display_path}: ({root_count} {r_noun})" ).unwrap();
       }
 
-      if show_tree
+      if verbosity >= 2
       {
         render_families_v2( &mut output, &families );
       }

@@ -7,9 +7,9 @@
 //!
 //! | Feature   | Adds                                                    | Extra dep |
 //! |-----------|---------------------------------------------------------|-----------|
-//! | (none)    | `RateLimitData`, `OauthUsageData`, `OauthAccountData`, `PeriodUsage`, `QuotaError` | — |
-//! | (none)    | `parse_headers`, `parse_oauth_usage`, `parse_oauth_account`, `iso_to_unix_secs` | — |
-//! | `enabled` | `fetch_rate_limits(token)`, `fetch_oauth_usage(token)`, `fetch_oauth_account(token)` | `ureq` |
+//! | (none)    | `RateLimitData`, `OauthUsageData`, `OauthAccountData`, `MembershipRaw`, `UserinfoData`, `ClaudeCliRolesData`, `PeriodUsage`, `QuotaError` | — |
+//! | (none)    | `parse_headers`, `parse_oauth_usage`, `parse_oauth_account`, `parse_userinfo`, `parse_subscriptions`, `parse_claude_cli_roles`, `select_membership_index`, `iso_to_unix_secs` | — |
+//! | `enabled` | `fetch_rate_limits(token)`, `fetch_oauth_usage(token)`, `fetch_oauth_account(token)`, `fetch_userinfo(token)`, `fetch_subscriptions(token)`, `fetch_claude_cli_roles(token)` | `ureq` |
 //!
 //! # Testability
 //!
@@ -481,9 +481,7 @@ pub const OAUTH_ACCOUNT_URL : &str = "https://api.anthropic.com/api/oauth/accoun
 
 /// Account identity and subscription state parsed from `GET /api/oauth/account`.
 ///
-/// Only the billing-relevant fields from `memberships[0].organization` are captured.
-/// The full response also contains user identity fields and large `settings` objects
-/// not needed for quota display.
+/// Fields are populated from the priority-selected membership (see [`select_membership_index`]).
 ///
 /// # Pitfall
 ///
@@ -501,41 +499,286 @@ pub struct OauthAccountData
   pub org_created_at : String,
 }
 
+/// One membership entry parsed from `GET /api/oauth/account` or `GET /api/oauth/claude_cli/subscriptions`.
+///
+/// Used by [`select_membership_index`] to pick the billing-relevant membership,
+/// and by `.account.inspect` to display all memberships with a selection indicator.
+#[ derive( Debug ) ]
+pub struct MembershipRaw
+{
+  /// Zero-based position in the `memberships` array.
+  pub index          : usize,
+  /// Billing status: `"stripe_subscription"` or `"none"`.
+  pub billing_type   : String,
+  /// Whether `"claude_max"` appears in this membership's org `capabilities` array.
+  pub has_max        : bool,
+  /// Raw capability strings from this membership's org `capabilities` array.
+  pub capabilities   : Vec< String >,
+  /// ISO-8601 UTC org creation timestamp (billing cycle anchor), or empty string if absent.
+  pub org_created_at : String,
+}
+
+/// User identity parsed from `GET /api/oauth/userinfo`.
+#[ derive( Debug ) ]
+pub struct UserinfoData
+{
+  /// Stable user identifier (e.g. `"user_01ABCDEFGhijklmnopqrstuvwx"`).
+  pub tagged_id     : String,
+  /// User UUID.
+  pub uuid          : String,
+  /// Primary email address.
+  pub email_address : String,
+}
+
+/// Return the index of the highest-priority membership in `memberships`.
+///
+/// Priority (descending):
+/// 1. `billing_type == "stripe_subscription"` **and** `has_max == true`
+/// 2. `billing_type == "stripe_subscription"` (any)
+/// 3. `0` (index fallback — always valid because memberships is non-empty)
+///
+/// # Panics
+///
+/// Does not panic; returns `0` for an empty slice.
+#[ inline ]
+pub fn select_membership_index( memberships : &[ MembershipRaw ] ) -> usize
+{
+  // Priority 1: stripe + max
+  if let Some( m ) = memberships.iter().find( |m| m.billing_type == "stripe_subscription" && m.has_max )
+  {
+    return m.index;
+  }
+  // Priority 2: stripe any
+  if let Some( m ) = memberships.iter().find( |m| m.billing_type == "stripe_subscription" )
+  {
+    return m.index;
+  }
+  // Priority 3: fallback to first
+  0
+}
+
+/// Extract all string elements from a JSON array field inside a block.
+///
+/// Finds `"key": [...]` inside `block` and returns each quoted string token.
+/// Returns an empty `Vec` if the key is absent or the array is empty.
+fn parse_string_array( block : &str, key : &str ) -> Vec< String >
+{
+  let needle = format!( "\"{}\":", key );
+  let Some( pos ) = block.find( needle.as_str() ) else { return vec![]; };
+  let rest = block[ pos + needle.len() .. ].trim_start();
+  let Some( arr_start ) = rest.find( '[' ) else { return vec![]; };
+  let inner = &rest[ arr_start + 1 .. ];
+  let Some( arr_end ) = inner.find( ']' ) else { return vec![]; };
+  let array_content = &inner[ ..arr_end ];
+  let mut caps = Vec::new();
+  let mut scan = array_content;
+  while let Some( start ) = scan.find( '"' )
+  {
+    scan = &scan[ start + 1 .. ];
+    let Some( end ) = scan.find( '"' ) else { break; };
+    let token = &scan[ ..end ];
+    if !token.is_empty() { caps.push( token.to_string() ); }
+    scan = &scan[ end + 1 .. ];
+  }
+  caps
+}
+
+/// Parse all membership objects from the `"memberships"` array of a JSON body.
+///
+/// Iterates membership `{...}` objects using brace-balanced scanning, extracts the
+/// nested `"organization":` block from each, and returns one [`MembershipRaw`] per entry.
+///
+/// Returns `Err(ResponseParse)` if the `"memberships":` key or its opening `[` is absent,
+/// or if no membership objects with an `"organization"` block are found.
+fn parse_membership_list( body : &str ) -> Result< Vec< MembershipRaw >, QuotaError >
+{
+  let mem_label = "\"memberships\":";
+  let mem_pos   = body
+    .find( mem_label )
+    .ok_or_else( || QuotaError::ResponseParse( "memberships".to_string() ) )?;
+  let after_label = &body[ mem_pos + mem_label.len() .. ];
+  let arr_offset  = after_label
+    .find( '[' )
+    .ok_or_else( || QuotaError::ResponseParse( "memberships: no array".to_string() ) )?;
+  let array_body = &after_label[ arr_offset + 1 .. ];
+
+  let mut memberships = Vec::new();
+  let mut pos = 0_usize;
+  let mut idx = 0_usize;
+
+  loop
+  {
+    let rest = &array_body[ pos .. ];
+    // Find next '{' or stop at ']' (end of memberships array)
+    let close_pos = rest.find( ']' ).unwrap_or( rest.len() );
+    let obj_pos   = match rest.find( '{' )
+    {
+      Some( p ) if p < close_pos => p,
+      _                          => break,
+    };
+    let obj_slice     = &rest[ obj_pos .. ];
+    let Some( membership_block ) = extract_object_block( obj_slice ) else { break };
+
+    // Extract the nested "organization": { ... } block
+    if let Some( org_label_pos ) = membership_block.find( "\"organization\":" )
+    {
+      let org_label   = "\"organization\":";
+      let after_org   = membership_block[ org_label_pos + org_label.len() .. ].trim_start();
+      if let Some( org_block ) = extract_object_block( after_org )
+      {
+        let billing_type   = parse_optional_string_in_block( org_block, "billing_type" )
+          .unwrap_or_default();
+        let has_max        = org_block.contains( "\"claude_max\"" );
+        let org_created_at = parse_optional_string_in_block( org_block, "created_at" )
+          .unwrap_or_default();
+        let capabilities   = parse_string_array( org_block, "capabilities" );
+        memberships.push( MembershipRaw { index: idx, billing_type, has_max, capabilities, org_created_at } );
+      }
+    }
+
+    pos += obj_pos + membership_block.len();
+    idx += 1;
+  }
+
+  if memberships.is_empty()
+  {
+    return Err( QuotaError::ResponseParse( "memberships: empty or missing organization".to_string() ) );
+  }
+  Ok( memberships )
+}
+
 /// Parse the body of `GET /api/oauth/account` into [`OauthAccountData`].
 ///
-/// Locates `memberships[0].organization` by string-needle scanning and extracts
-/// `billing_type`, `capabilities`, and `created_at`.
+/// Iterates ALL membership objects using brace-balanced scanning, applies
+/// [`select_membership_index`] to pick the billing-relevant entry, then extracts
+/// `billing_type`, `has_max`, and `created_at` from the selected membership's
+/// `organization` block.
 ///
 /// # Errors
 ///
-/// Returns [`QuotaError::ResponseParse`] if `memberships`, `organization`,
-/// `billing_type`, or `created_at` are absent or the object block is malformed.
+/// Returns [`QuotaError::ResponseParse`] if `memberships`, a valid `organization` block,
+/// or `billing_type` are absent.
+///
+/// # Fix(BUG-237)
+///
+/// Previously used `str::find("\"organization\":")` on the full memberships string,
+/// which always resolved to `memberships[0]`'s organization regardless of which
+/// membership held the active subscription.
 pub fn parse_oauth_account( body : &str ) -> Result< OauthAccountData, QuotaError >
 {
-  let memberships_pos = body
-    .find( "\"memberships\":" )
-    .ok_or_else( || QuotaError::ResponseParse( "memberships".to_string() ) )?;
+  let memberships = parse_membership_list( body )?;
+  let sel         = select_membership_index( &memberships );
+  let m           = &memberships[ sel ];
+  if m.billing_type.is_empty()
+  {
+    return Err( QuotaError::ResponseParse( "organization.billing_type".to_string() ) );
+  }
+  Ok( OauthAccountData
+  {
+    billing_type   : m.billing_type.clone(),
+    has_max        : m.has_max,
+    org_created_at : m.org_created_at.clone(),
+  } )
+}
 
-  let after_memberships = &body[ memberships_pos + "\"memberships\":".len() .. ];
+/// Userinfo endpoint URL — returns the authenticated user's stable identity fields.
+pub const OAUTH_USERINFO_URL : &str = "https://api.anthropic.com/api/oauth/userinfo";
 
-  let org_pos = after_memberships
-    .find( "\"organization\":" )
-    .ok_or_else( || QuotaError::ResponseParse( "organization".to_string() ) )?;
+/// Subscriptions endpoint URL — returns all org memberships with billing state.
+pub const CLAUDE_CLI_SUBSCRIPTIONS_URL : &str = "https://api.anthropic.com/api/oauth/claude_cli/subscriptions";
 
-  let after_org = after_memberships[ org_pos + "\"organization\":".len() .. ].trim_start();
-  let org_block = extract_object_block( after_org )
-    .ok_or_else( || QuotaError::ResponseParse( "organization: unclosed object".to_string() ) )?;
+/// Parse the body of `GET /api/oauth/userinfo` into [`UserinfoData`].
+///
+/// Uses string-needle scanning so it is available without feature flags.
+///
+/// # Errors
+///
+/// Returns [`QuotaError::ResponseParse`] if `tagged_id`, `uuid`, or `email_address`
+/// are absent from the response body.
+pub fn parse_userinfo( body : &str ) -> Result< UserinfoData, QuotaError >
+{
+  let tagged_id = parse_optional_string_in_block( body, "tagged_id" )
+    .or_else( || parse_optional_string_in_block( body, "taggedId" ) )
+    .ok_or_else( || QuotaError::ResponseParse( "tagged_id".to_string() ) )?;
+  let uuid = parse_optional_string_in_block( body, "uuid" )
+    .ok_or_else( || QuotaError::ResponseParse( "uuid".to_string() ) )?;
+  let email_address = parse_optional_string_in_block( body, "email_address" )
+    .or_else( || parse_optional_string_in_block( body, "emailAddress" ) )
+    .ok_or_else( || QuotaError::ResponseParse( "email_address".to_string() ) )?;
+  Ok( UserinfoData { tagged_id, uuid, email_address } )
+}
 
-  let billing_type = parse_optional_string_in_block( org_block, "billing_type" )
-    .ok_or_else( || QuotaError::ResponseParse( "organization.billing_type".to_string() ) )?;
+/// Parse the body of `GET /api/oauth/claude_cli/subscriptions` into a membership list.
+///
+/// Delegates to [`parse_membership_list`] — the subscriptions endpoint uses the same
+/// `memberships: [...]` structure as `/api/oauth/account`.
+///
+/// # Errors
+///
+/// Returns [`QuotaError::ResponseParse`] if the response body cannot be parsed.
+pub fn parse_subscriptions( body : &str ) -> Result< Vec< MembershipRaw >, QuotaError >
+{
+  parse_membership_list( body )
+}
 
-  let org_created_at = parse_optional_string_in_block( org_block, "created_at" )
-    .ok_or_else( || QuotaError::ResponseParse( "organization.created_at".to_string() ) )?;
+/// Fetch user identity from the Anthropic OAuth userinfo endpoint.
+///
+/// # Errors
+///
+/// Returns [`QuotaError::HttpTransport`] on network failure, or
+/// [`QuotaError::ResponseParse`] if the response body cannot be parsed.
+#[ cfg( feature = "enabled" ) ]
+pub fn fetch_userinfo( token : &str ) -> Result< UserinfoData, QuotaError >
+{
+  let resp = http_agent().get( OAUTH_USERINFO_URL )
+    .set( "Authorization",     &format!( "Bearer {token}" ) )
+    .set( "anthropic-version", ANTHROPIC_VERSION )
+    .call();
 
-  // capabilities is a JSON array — check for the literal string token
-  let has_max = org_block.contains( "\"claude_max\"" );
+  let body = match resp
+  {
+    Ok( r ) => r.into_string().map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?,
+    Err( ureq::Error::Status( _, r ) ) =>
+    {
+      return Err( QuotaError::HttpTransport( format!( "HTTP {}", r.status() ) ) );
+    }
+    Err( ureq::Error::Transport( t ) ) =>
+    {
+      return Err( QuotaError::HttpTransport( t.to_string() ) );
+    }
+  };
 
-  Ok( OauthAccountData { billing_type, has_max, org_created_at } )
+  parse_userinfo( &body )
+}
+
+/// Fetch all org memberships from the Anthropic subscriptions endpoint.
+///
+/// # Errors
+///
+/// Returns [`QuotaError::HttpTransport`] on network failure, or
+/// [`QuotaError::ResponseParse`] if the response body cannot be parsed.
+#[ cfg( feature = "enabled" ) ]
+pub fn fetch_subscriptions( token : &str ) -> Result< Vec< MembershipRaw >, QuotaError >
+{
+  let resp = http_agent().get( CLAUDE_CLI_SUBSCRIPTIONS_URL )
+    .set( "Authorization",     &format!( "Bearer {token}" ) )
+    .set( "anthropic-version", ANTHROPIC_VERSION )
+    .call();
+
+  let body = match resp
+  {
+    Ok( r ) => r.into_string().map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?,
+    Err( ureq::Error::Status( _, r ) ) =>
+    {
+      return Err( QuotaError::HttpTransport( format!( "HTTP {}", r.status() ) ) );
+    }
+    Err( ureq::Error::Transport( t ) ) =>
+    {
+      return Err( QuotaError::HttpTransport( t.to_string() ) );
+    }
+  };
+
+  parse_subscriptions( &body )
 }
 
 /// Fetch account identity and subscription state from the Anthropic OAuth account endpoint.
@@ -659,4 +902,87 @@ pub fn fetch_claude_cli_roles( token : &str ) -> Result< ClaudeCliRolesData, Quo
   };
 
   parse_claude_cli_roles( &body )
+}
+
+// ── Tests ─────────────────────────────────────────────────────────────────────
+
+#[ cfg( test ) ]
+mod tests
+{
+  use super::*;
+
+  // ── BUG-237 MRE: multi-membership selection ─────────────────────────────────
+
+  #[ test ]
+  #[ doc = "bug_reproducer(237)" ]
+  /// `parse_oauth_account` selects the stripe+max membership over a none-billing entry.
+  ///
+  /// # Root Cause
+  /// `str::find("\"organization\":")` always resolves to `memberships[0]`'s organization
+  /// block. Accounts with a paid subscription at index > 0 were silently misclassified as
+  /// having no subscription.
+  ///
+  /// # Why Not Caught
+  /// All test fixtures used single-membership bodies. Multi-membership accounts require
+  /// separate Anthropic org entities — uncommon in CI fixtures.
+  ///
+  /// # Fix Applied
+  /// `parse_oauth_account` now calls `parse_membership_list` which iterates ALL membership
+  /// objects using brace-balanced scanning, then `select_membership_index` picks the
+  /// highest-priority entry.
+  ///
+  /// # Prevention
+  /// This test must FAIL before the fix (memberships[0] is "none") and PASS after.
+  ///
+  /// # Pitfall
+  /// Always use brace-balanced extraction when iterating JSON arrays containing nested
+  /// objects — `str::find` on a needle will collide with nested occurrences of the same key.
+  fn mre_bug237_multi_membership_selects_stripe_max_over_none()
+  {
+    let body = r#"{
+      "tagged_id": "user_01ABC",
+      "memberships": [
+        { "role": "member", "organization": { "billing_type": "none", "capabilities": ["chat"], "created_at": "2024-01-01T00:00:00Z" } },
+        { "role": "admin",  "organization": { "billing_type": "stripe_subscription", "capabilities": ["claude_max","chat"], "created_at": "2024-02-01T00:00:00Z" } }
+      ]
+    }"#;
+    let result = parse_oauth_account( body ).expect( "should parse" );
+    assert_eq!( result.billing_type, "stripe_subscription", "must select membership[1] (stripe+max), not membership[0] (none)" );
+    assert!( result.has_max, "membership[1] has claude_max capability" );
+    assert_eq!( result.org_created_at, "2024-02-01T00:00:00Z" );
+  }
+
+  #[ test ]
+  #[ doc = "bug_reproducer(237)" ]
+  /// `parse_oauth_account` selects stripe (no max) over none when no max tier is present.
+  fn mre_bug237_multi_membership_selects_stripe_over_none_no_max()
+  {
+    let body = r#"{
+      "tagged_id": "user_01ABC",
+      "memberships": [
+        { "role": "member", "organization": { "billing_type": "none", "capabilities": ["chat"], "created_at": "2024-01-01T00:00:00Z" } },
+        { "role": "admin",  "organization": { "billing_type": "stripe_subscription", "capabilities": ["chat"], "created_at": "2024-03-01T00:00:00Z" } }
+      ]
+    }"#;
+    let result = parse_oauth_account( body ).expect( "should parse" );
+    assert_eq!( result.billing_type, "stripe_subscription" );
+    assert!( !result.has_max, "no claude_max in membership[1]" );
+    assert_eq!( result.org_created_at, "2024-03-01T00:00:00Z" );
+  }
+
+  #[ test ]
+  #[ doc = "bug_reproducer(237)" ]
+  /// Single-membership body: index 0 is always selected (Priority 3 fallback unchanged).
+  fn mre_bug237_single_membership_fallback_unchanged()
+  {
+    let body = r#"{
+      "tagged_id": "user_01ABC",
+      "memberships": [
+        { "role": "member", "organization": { "billing_type": "none", "capabilities": ["chat"], "created_at": "2024-01-01T00:00:00Z" } }
+      ]
+    }"#;
+    let result = parse_oauth_account( body ).expect( "should parse" );
+    assert_eq!( result.billing_type, "none", "single membership always selected via Priority 3" );
+    assert!( !result.has_max );
+  }
 }

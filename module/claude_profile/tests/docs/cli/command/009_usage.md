@@ -899,7 +899,7 @@ Integration test planning for the `.usage` command. See [command/namespace.md](.
 
 - **Given:** One account with live quota data: `seven_day.resets_at` set to ~2 days in the future; no `_renewal_at`. The `+7d` reset is soonest.
 - **When:** `clp .usage`
-- **Then:** Exits 0. The `→ Next` column header appears in the table header row. That account's `→ Next` cell contains `+7d in` followed by a duration string (e.g., `+7d in 2d 0m`). No `!tok` or `+5h` label appears — token expiry and 5h resets are not candidates for `→ Next`.
+- **Then:** Exits 0. The `→ Next` column header appears in the table header row. That account's `→ Next` cell contains `in` followed by a duration string and then ` +7d` (e.g., `in 2d 0m +7d`). No `!tok` or `+5h` label appears — token expiry and 5h resets are not candidates for `→ Next`.
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it225_lim_it_it71_next_event_cell_shows_label_and_duration` (in `tests/cli/usage_test.rs`)

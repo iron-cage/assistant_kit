@@ -23,6 +23,7 @@
 //! | `account_rotate_test` | .account.rotate auto-rotation | ROT |
 //! | `dot_test` | `.` / `.help` help output | dot |
 //! | `param_help_test` | convenience closure param descriptions + optionality | phd, pho |
+//! | `account_inspect_test` | .account.inspect diagnostic command | AI |
 //!
 //! ## Parallel Execution Note
 //!
@@ -74,3 +75,6 @@ mod dot_test;
 
 #[ path = "cli/param_help_test.rs" ]
 mod param_help_test;
+
+#[ path = "cli/account_inspect_test.rs" ]
+mod account_inspect_test;

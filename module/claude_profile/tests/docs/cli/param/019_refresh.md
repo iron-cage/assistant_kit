@@ -1,6 +1,6 @@
 # Parameter :: `refresh::`
 
-Edge case tests for the `refresh::` parameter. Tests validate boolean enforcement, default-on behavior, and conditional 429 trigger logic. Used by `.usage` to silently retry expired OAuth tokens before reporting auth errors.
+Edge case tests for the `refresh::` parameter. Tests validate boolean enforcement, default-on behavior, and conditional 429 trigger logic. Used by `.usage` to silently retry expired OAuth tokens before reporting auth errors, and by `.account.use` to attempt token refresh before refusing with exit 3 on locally-expired tokens.
 
 **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md)
 
@@ -15,6 +15,8 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 | EC-5 | Default value is `1` (refresh on by default) | Default |
 | EC-6 | 429 + non-expired local token — NOT retried even with `refresh::1` | Conditional 429 |
 | EC-7 | 429 + expired local token — refresh triggered with `refresh::1` | Conditional 429 |
+| EC-8 | `.account.use refresh::0` + expired `expiresAt` — exits 3 immediately, no refresh attempt | `.account.use` Opt-out |
+| EC-9 | `.account.use refresh::1` (default) + expired `expiresAt` — refresh attempted, exits 3 on failure | `.account.use` Default-on |
 
 ## Test Coverage Summary
 
@@ -24,8 +26,10 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - Type Validation: 1 test (EC-4)
 - Default: 1 test (EC-5)
 - Conditional 429: 2 tests (EC-6, EC-7)
+- `.account.use` Opt-out: 1 test (EC-8)
+- `.account.use` Default-on: 1 test (EC-9)
 
-**Total:** 7 edge cases
+**Total:** 9 edge cases
 
 **Behavioral Divergence Pair:** EC-2 (explicit opt-out — auth errors shown) ↔ EC-5 (default on — auth errors silently retried)
 
@@ -100,3 +104,23 @@ Edge case tests for the `refresh::` parameter. Tests validate boolean enforcemen
 - **Exit:** 0
 - **Source fn:** `test_apply_refresh_ft5_429_expired_refresh_path_entered_no_cred`
 - **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md)
+---
+
+### EC-8: `.account.use refresh::0` + expired token — exits 3 immediately, no refresh attempt
+
+- **Given:** Account `alice@home.com` saved with `expiresAt` in the past (locally expired) and no `accessToken`. Per-machine active marker set to a different account.
+- **When:** `clp .account.use name::alice@home.com refresh::0 trace::1`
+- **Then:** Exits 3. Stderr contains `account credentials expired: alice@home.com`. Does NOT contain `"and refresh failed"` (no refresh was attempted). Trace contains `refused (refresh::0)`. `~/.claude/.credentials.json` unchanged.
+- **Exit:** 3
+- **Source fn:** `aw33_refresh_disabled_exits_3_immediately` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md), [feature/027_account_use_post_switch_touch.md AC-20](../../../../docs/feature/027_account_use_post_switch_touch.md)
+---
+
+### EC-9: `.account.use refresh::1` (default) + expired token — refresh attempted, exits 3 on failure
+
+- **Given:** Account `alice@home.com` saved with `expiresAt` in the past (locally expired) and no `accessToken` (refresh will fail because there is no valid credential to run the subprocess with). Default `refresh::1` applies.
+- **When:** `clp .account.use name::alice@home.com` (default `refresh::1`)
+- **Then:** Exits 3. Stderr contains `account credentials expired and refresh failed: alice@home.com`. The refresh was attempted (no `accessToken` → subprocess fails immediately). `~/.claude/.credentials.json` unchanged.
+- **Exit:** 3
+- **Source fn:** `mre_bug230_account_use_refresh_fails_exits_3_with_updated_message` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [params.md#parameter--19-refresh](../../../../docs/cli/param/019_refresh.md), [feature/027_account_use_post_switch_touch.md AC-17](../../../../docs/feature/027_account_use_post_switch_touch.md)

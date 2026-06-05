@@ -14,12 +14,22 @@ use super::storage::{ create_storage, resolve_path_parameter };
 /// Returns error if path resolution fails, storage creation fails, or
 /// statistics retrieval fails.
 #[ allow( clippy::needless_pass_by_value ) ]
+#[ allow( clippy::too_many_lines ) ]
 #[ inline ]
 pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   -> core::result::Result< OutputData, ErrorData >
 {
   let show_tokens = cmd.get_boolean( "show_tokens" ).unwrap_or( false );
   let custom_path = cmd.get_string( "path" );
+
+  let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
+  if !( 0..=5 ).contains( &verbosity )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "Invalid verbosity: {verbosity}. Valid range: 0-5" ),
+    ) );
+  }
 
   // Fix(issue-014): Resolve path parameter before using
   //
@@ -64,6 +74,15 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   //
   // Pitfall: Never call global_stats() for a command that only needs project/session
   // counts — the entry/token parsing is O(total JSONL bytes), not O(project count).
+
+  // verbosity::0 — compact machine-readable key-value format (no decorations)
+  if verbosity == 0
+  {
+    let stats = storage.global_stats_fast()
+      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to get statistics: {e}" ) ) )?;
+    let output = format!( "projects: {}\nsessions: {}\n", stats.total_projects, stats.total_sessions );
+    return Ok( OutputData::new( output, "text" ) );
+  }
 
   let output = if show_tokens
   {
@@ -119,6 +138,36 @@ pub fn status_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
       stats.agent_sessions,
     )
   };
+
+  // verbosity::2+ — append per-project breakdown with user/assistant entry counts
+  if verbosity >= 2
+  {
+    use core::fmt::Write as FmtWrite;
+    let mut detail = output;
+    detail.push_str( "\n\nPer-project sessions:\n" );
+    let projects = storage.list_projects()
+      .map_err( | e | ErrorData::new( ErrorCode::InternalError, format!( "Failed to list projects: {e}" ) ) )?;
+    for project in projects
+    {
+      if let Ok( stats ) = project.project_stats()
+      {
+        writeln!(
+          detail,
+          "  {:?}: {} sessions, User: {}, Assistant: {}",
+          project.id(),
+          stats.session_count,
+          stats.total_user_entries,
+          stats.total_assistant_entries,
+        ).ok();
+      }
+      else
+      {
+        let count = project.count_sessions().unwrap_or( 0 );
+        writeln!( detail, "  {:?}: {count} sessions", project.id() ).ok();
+      }
+    }
+    return Ok( OutputData::new( detail, "text" ) );
+  }
 
   Ok( OutputData::new( output, "text" ) )
 }

@@ -60,11 +60,11 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 
 ---
 
-### FT-03: `oauthAccount` snapshot created; no `.settings.json`
+### FT-03: `oauthAccount` + `settings.json` snapshots created
 
-- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists with an `oauthAccount` subtree containing account identity fields. `~/.claude/settings.json` exists with machine-global settings.
+- **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists with an `oauthAccount` subtree containing account identity fields. `~/.claude/settings.json` exists with `{"model": "claude-sonnet"}`.
 - **When:** `clp .account.save name::alice@acme.com`
-- **Then:** Exits 0. `{credential_store}/alice@acme.com.claude.json` is created containing only `{"oauthAccount": {...}}` with the extracted subtree. `{credential_store}/alice@acme.com.settings.json` is NOT created — machine-global settings are never captured.
+- **Then:** Exits 0. `{credential_store}/alice@acme.com.claude.json` is created containing only `{"oauthAccount": {...}}` with the extracted subtree. `{credential_store}/alice@acme.com.settings.json` is created containing the `model` field from `~/.claude/settings.json` (BUG-222 fix).
 - **Exit:** 0
 - **Source fn:** `acc26_save_creates_snapshot_files` (in `tests/cli/accounts_test.rs`)
 - **Source:** [feature/002_account_save.md AC-05](../../../../docs/feature/002_account_save.md)

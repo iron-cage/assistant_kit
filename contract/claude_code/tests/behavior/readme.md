@@ -10,7 +10,7 @@ If Claude Code changes behavior, the corresponding test goes RED.
 |------|----------|----------------|
 | `mod.rs` | — | Test binary entry point; shared helpers for `~/.claude/` inspection |
 | `b01_default_continues.rs` | B1 | Resumable (non-empty, non-agent) session exists in real storage |
-| `b02_new_session.rs` | B2 | Multiple non-agent session files in real `~/.claude/` (binary creates separate `.jsonl` per invocation) |
+| `b02_new_session.rs` | B2 | `--continue` flag in binary help (binary-level proof of separate-session default); multiple non-agent `.jsonl` files in real storage |
 | `b03_print_flag.rs` | B3 | `-p`/`--print` flag documented in `claude --help` |
 | `b04_continue_flag.rs` | B4 | `-c`/`--continue` flag documented in `claude --help` |
 | `b05_mtime_selection.rs` | B5 | Multiple sessions have distinct observable mtimes |
@@ -33,4 +33,4 @@ If Claude Code changes behavior, the corresponding test goes RED.
 | `b22_no_session_persistence_flag.rs` | B22 | `--no-session-persistence` flag documented in `claude --help` |
 | `b23_session_dir_override.rs` | B23 | `CLAUDE_CODE_SESSION_DIR` env var not explicitly rejected by binary |
 | `b24_from_pr_flag.rs` | B24 | `--from-pr` flag documented in `claude --help` |
-| `b16h_tools_system_prompt.rs` | B16h | Live API token comparison (`lim_it` test; excluded from default filter) |
+| `b16h_tools_system_prompt.rs` | B16h | Live API token comparison (`lim_it` test; runs by default in container) |

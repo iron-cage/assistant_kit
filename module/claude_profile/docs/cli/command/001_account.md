@@ -125,8 +125,8 @@ clp .account.save name::alice@acme.com dry::1
 
 Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent.
 
--- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::`/`trace::` value) | 2 (runtime: account not found or HOME unset) | 3 (account credentials expired — `touch::1` + fetch failed + `expiresAt` in the past)
+-- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`refresh::`](../param/019_refresh.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`trace::`](../param/023_trace.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::`/`trace::` value) | 2 (runtime: account not found or HOME unset) | 3 (account credentials expired — `touch::1` + fetch failed + `expiresAt` in the past, AND refresh failed or `refresh::0`)
 
 **Syntax:**
 
@@ -136,6 +136,7 @@ clp .account.use alice@home.com               # positional: same as name::alice@
 clp .account.use car                           # prefix: first saved account starting with "car"
 clp .account.use name::alice@home.com dry::1
 clp .account.use name::alice@home.com touch::0
+clp .account.use name::alice@home.com refresh::0
 clp .account.use name::alice@home.com imodel::opus effort::max
 clp .account.use name::alice@home.com trace::1
 ```
@@ -145,6 +146,7 @@ clp .account.use name::alice@home.com trace::1
 | `name::` | [`AccountName`](../type/001_account_name.md) | **(required)** | Account email to switch to |
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `touch::` | `bool` | `1` | Activate idle 5h session window via subprocess after switch |
+| `refresh::` | `bool` | `1` | Attempt OAuth token refresh when locally expired before refusing with exit 3 |
 | `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (high for sonnet, max for opus, none for haiku/keep), `low`, `normal`, `high`, `max` |
 | `trace::` | `bool` | `0` | Print `[trace] account.use` lines to stderr: credential read, quota fetch, idle check, model resolution, subprocess dispatch |
@@ -172,9 +174,9 @@ clp .account.use name::alice@home.com trace::1
 ```
 
 **Notes:**
-- `touch::1` (default): fetches quota for the target account; if `five_hour.resets_at` is absent (idle), spawns `run_isolated(["--print", "."])` with resolved model/effort to start a 5h session. Quota fetch failure checks `expiresAt` — if locally expired, exits 3 with an error; if not expired, skips touch silently and the switch completes.
+- `touch::1` (default): fetches quota for the target account; if `five_hour.resets_at` is absent (idle), spawns `run_isolated(["--print", "."])` with resolved model/effort to start a 5h session. Quota fetch failure checks `expiresAt` — if locally expired and `refresh::1` (default), attempts token refresh and re-probes touch context on success; exits 3 if refresh fails. If locally expired and `refresh::0`, exits 3 immediately. If `expiresAt` is absent or not yet expired, skips touch silently and the switch completes.
 - `touch::0`: pure credential rotation — no quota fetch, no subprocess, no expiry check. Pre-Feature-027 behavior.
-- `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `resolve_model()` selects Sonnet when `7d(Son) ≥ 30%`, Opus otherwise; `resolve_effort()` maps Sonnet → `high`, Opus → `max`, Haiku → no flag. `imodel::haiku` is explicit only — `auto` never selects it.
+- `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `resolve_model()` selects Sonnet when `7d(Son) ≥ 20%`, Opus otherwise; `resolve_effort()` maps Sonnet → `high`, Opus → `max`, Haiku → no flag. `imodel::haiku` is explicit only — `auto` never selects it.
 - `trace::1` only produces output when `touch::1`; with `touch::0` there are no fetch operations to trace.
 - See [feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) for full execution sequence and acceptance criteria.
 
@@ -405,3 +407,86 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 - `from_now::+0m` sets the override to the current time, which immediately enters the monthly auto-advance cycle.
 - `name::all` targets every account in the credential store at the time of execution.
 - See [feature/030_account_renewal_override.md](../../feature/030_account_renewal_override.md) for full semantics, `~Renews` rendering rules, and acceptance criteria.
+
+---
+
+### Command :: 15. `.account.inspect`
+
+Live diagnostic inspection of identity, subscription, and org fields for one account. Calls endpoints 001 (userinfo), 002 (subscriptions/memberships), and 005 (roles) and renders all fields including ALL membership entries with a selection-priority indicator. Primary use case: diagnosing unexpected subscription display when an account has multiple memberships (see BUG-237 / feature 031).
+
+-- **Parameters:** [`name::`](../param/001_name.md), [`refresh::`](../param/019_refresh.md), [`trace::`](../param/023_trace.md), [`format::`](../param/002_format.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid param) | 2 (runtime: account not found or credential store unreadable)
+
+**Syntax:**
+
+```bash
+clp .account.inspect                    # default: active account
+clp .account.inspect name::alice@acme.com
+clp .account.inspect alice             # prefix
+clp .account.inspect refresh::0        # skip token refresh on expired credentials
+clp .account.inspect format::json
+clp .account.inspect trace::1          # show [trace] endpoint calls to stderr
+```
+
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `name::` | [`AccountName`](../type/001_account_name.md) | *(active account)* | Account to inspect; omit to use the currently active account |
+| `refresh::` | `bool` | `1` | Attempt OAuth token refresh via isolated subprocess when `expiresAt` is locally expired, before endpoint calls |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each endpoint call: URL, HTTP status, field extraction summary |
+| `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format: `text` (default) or `json` |
+
+**Output (text):**
+
+```
+Account:         alice@acme.com
+Status:          🟢 valid (expires in 3h 52m)
+Tagged ID:       user_01abc...def
+UUID:            aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+
+Memberships:     2
+  [0]  billing_type=none              has_max=false  capabilities=[chat]
+  [1]  billing_type=stripe_subscription  has_max=true   capabilities=[claude_max, chat]  ← selected
+
+Billing:         stripe_subscription
+Has Max:         yes
+Org:             alice@acme.com's Organization
+Org UUID:        aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+Org Role:        admin
+Workspace UUID:  (none)
+Workspace:       (none)
+```
+
+**Membership selection priority:**
+
+| Priority | Criteria |
+|----------|----------|
+| 1 (highest) | `billing_type == "stripe_subscription"` AND capabilities contain `"claude_max"` |
+| 2 | `billing_type == "stripe_subscription"` (any capabilities) |
+| 3 (fallback) | `memberships[0]` |
+
+The selected membership is marked `← selected` when there are multiple memberships; the `Billing:` and `Has Max:` fields reflect the selected membership.
+
+**Examples:**
+
+```bash
+clp .account.inspect
+# Account:     alice@acme.com
+# Status:      🟢 valid (expires in 3h 52m)
+# ...
+
+clp .account.inspect name::i5@wbox.pro
+# Account:     i5@wbox.pro
+# Memberships: 2
+#   [0]  billing_type=none              has_max=false  ...
+#   [1]  billing_type=stripe_subscription  has_max=true  ...  ← selected
+# Billing:     stripe_subscription
+
+clp .account.inspect format::json | jq '.memberships | length'
+# 2
+```
+
+**Notes:**
+- Endpoints 001, 002, and 005 are called independently. A failure on one endpoint falls back to the local snapshot from `{name}.claude.json` / `{name}.roles.json` with a `(snapshot)` suffix per field; other endpoints still contribute live data.
+- `refresh::1` (default) behaves identically to `.usage`'s `refresh::1`: calls `refresh_account_token()` once when `expiresAt` is locally expired; retries endpoint calls with the fresh token.
+- This command does NOT show quota data (5h/7d utilization) — use `.usage` for that.
+- See [feature/031_account_inspect.md](../../feature/031_account_inspect.md) for full design, graceful fallback semantics, and all acceptance criteria.

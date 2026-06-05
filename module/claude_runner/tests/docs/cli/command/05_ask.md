@@ -16,6 +16,8 @@ Integration test planning for the `ask` command. See [command/05_ask.md](../../.
 | IT-8 | Unknown flag → exit 1, error message | Error Handling |
 | IT-9 | `clr ask --trace "question"` → stderr contains ask-specific trace output | Trace |
 | IT-10 | `clr ask --subdir NAME "question"` → effective dir ends with `/-NAME` | Subdir |
+| IT-11 | `CLR_EFFORT=low clr ask "question"` → env var overrides ask soft default | BUG-245 Regression |
+| IT-12 | `CLR_MAX_TOKENS=50000 clr ask "question"` → env var overrides ask soft default | BUG-245 Regression |
 
 ## Test Coverage Summary
 
@@ -24,8 +26,9 @@ Integration test planning for the `ask` command. See [command/05_ask.md](../../.
 - Error Handling: 1 test (IT-8)
 - Trace: 1 test (IT-9)
 - Subdir: 1 test (IT-10)
+- BUG-245 Regression: 2 tests (IT-11, IT-12)
 
-**Total:** 10 tests
+**Total:** 12 tests
 
 ---
 
@@ -117,3 +120,23 @@ Integration test planning for the `ask` command. See [command/05_ask.md](../../.
 - **Expected behavior:** Dry-run output contains a path ending in `/-feature`; ask applies conservative defaults (no `-c`, `--effort high`) alongside effective-dir routing
 - **Exit:** 0
 - **Source:** [--subdir](../../../../docs/cli/param/028_subdir.md), [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
+
+---
+
+### IT-11: `CLR_EFFORT=low` overrides ask soft default
+
+- **Command:** `CLR_EFFORT=low clr ask --dry-run "What is X?"`
+- **Expected behavior:** Command line contains `--effort low` (not `--effort high`); env var wins over ask soft default. Priority chain: CLI > env var > ask default.
+- **Exit:** 0
+- **Source:** BUG-245; [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
+- **Note:** Implemented; test function `it_11_clr_effort_env_overrides_ask_default` in `tests/ask_command_test.rs`
+
+---
+
+### IT-12: `CLR_MAX_TOKENS=50000` overrides ask soft default
+
+- **Command:** `CLR_MAX_TOKENS=50000 clr ask --dry-run "What is X?"`
+- **Expected behavior:** Env output contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=50000` (not `16384`); env var wins over ask soft default.
+- **Exit:** 0
+- **Source:** BUG-245; [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
+- **Note:** Implemented; test function `it_12_clr_max_tokens_env_overrides_ask_default` in `tests/ask_command_test.rs`

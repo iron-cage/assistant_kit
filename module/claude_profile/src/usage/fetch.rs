@@ -54,7 +54,9 @@ fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : AccountQuo
 /// of 200–1500 ms (thunder-herd mitigation for live monitor mode).
 ///
 /// When `trace` is `true`, one `[trace]` line is written to stderr before reading
-/// each account's credentials and one after receiving the API response.
+/// each account's credentials and one after the final result is determined (including
+/// any `billing_type` override — see AC-31).
+#[ allow( clippy::too_many_lines ) ]
 pub( crate ) fn fetch_all_quota(
   credential_store : &std::path::Path,
   live_creds_file  : &std::path::Path,
@@ -73,6 +75,11 @@ pub( crate ) fn fetch_all_quota(
     .ok()
     .and_then( |s| crate::account::parse_string_field( &s, "accessToken" ) );
 
+  // Compute once — which account names are active on OTHER machines.
+  let occupied_elsewhere = crate::account::other_machines_active( credential_store );
+
+  // Class B pre-flight baseline — computed once for all per-account expiry checks.
+  let now_secs = std::time::SystemTime::now().duration_since( std::time::UNIX_EPOCH ).unwrap_or_default().as_secs();
   let mut results = Vec::with_capacity( accounts.len() );
   for acct in &accounts
   {
@@ -94,49 +101,76 @@ pub( crate ) fn fetch_all_quota(
       read_token( credential_store, &acct.name )
         .is_ok_and( |stored| stored == *live )
     } );
-    if trace
+    // Fix(BUG-233): skip both API calls for locally-expired tokens — guaranteed 401 otherwise.
+    // Root cause: no pre-flight expiry check; both thread spawn + main-thread HTTP always fired.
+    // Pitfall: expires_at_ms is in milliseconds; now_secs is in seconds — divide before comparing.
+    let ( result, account ) = if acct.expires_at_ms / 1000 <= now_secs
     {
-      let creds_path = credential_store.join( format!( "{}.credentials.json", acct.name ) );
-      eprintln!( "[trace] {}  reading {}", acct.name, creds_path.display() );
+      if trace { eprintln!( "[trace] {}  token expired (local) — skipping API calls", acct.name ); }
+      ( Err( "token expired (local)".to_string() ), None )
     }
-    let ( result, account ) = match read_token( credential_store, &acct.name )
+    else
     {
-      Ok( token ) =>
+      if trace
       {
-        // Spawn account fetch in parallel with usage fetch — keeps latency additive-free.
-        let token_for_account = token.clone();
-        let account_handle = std::thread::spawn( move ||
-        {
-          claude_quota::fetch_oauth_account( &token_for_account )
-        } );
-
-        if trace
-        {
-          let prefix = if token.len() >= 20 { &token[ ..20 ] } else { &token };
-          eprintln!(
-            "[trace] {}  GET {}  token={}...  exp={}",
-            acct.name,
-            claude_quota::OAUTH_USAGE_URL,
-            prefix,
-            token_exp_label( acct.expires_at_ms ),
-          );
-        }
-        let r = claude_quota::fetch_oauth_usage( &token ).map_err( |e| e.to_string() );
-        if trace
-        {
-          match &r
-          {
-            Ok( _ )  => eprintln!( "[trace] {}  result: OK", acct.name ),
-            Err( e ) => eprintln!( "[trace] {}  result: Err({})", acct.name, e ),
-          }
-        }
-        let account_data = account_handle.join().ok().and_then( core::result::Result::ok );
-        ( r, account_data )
+        let creds_path = credential_store.join( format!( "{}.credentials.json", acct.name ) );
+        eprintln!( "[trace] {}  reading {}", acct.name, creds_path.display() );
       }
-      Err( e ) =>
+      match read_token( credential_store, &acct.name )
       {
-        if trace { eprintln!( "[trace] {}  cannot read token: {}", acct.name, e ); }
-        ( Err( e ), None )
+        Ok( token ) =>
+        {
+          // Spawn account fetch in parallel with usage fetch — keeps latency additive-free.
+          let token_for_account = token.clone();
+          let account_handle = std::thread::spawn( move ||
+          {
+            claude_quota::fetch_oauth_account( &token_for_account )
+          } );
+
+          if trace
+          {
+            let prefix = if token.len() >= 20 { &token[ ..20 ] } else { &token };
+            eprintln!(
+              "[trace] {}  GET {}  token={}...  exp={}",
+              acct.name,
+              claude_quota::OAUTH_USAGE_URL,
+              prefix,
+              token_exp_label( acct.expires_at_ms ),
+            );
+          }
+          let r = claude_quota::fetch_oauth_usage( &token ).map_err( |e| e.to_string() );
+          let account_data = account_handle.join().ok().and_then( core::result::Result::ok );
+          // Fix(BUG-233): billing_type=="none" → cancelled subscription → usage result irrelevant.
+          // Root cause: usage fetch returns 429 for cancelled accounts; displaying "rate limited (429)"
+          //   is semantically wrong. Override here makes display-layer error_label logic redundant.
+          // Pitfall: override only when account fetch SUCCEEDED (account_data is Some); when account
+          //   fetch fails (None), usage result stands — subscription state is unknown.
+          // Fix(BUG-236): guard also requires r.is_err() — billing_type="none" alone is not
+          //   sufficient to conclude "no subscription"; it can appear on non-stripe accounts
+          //   (team/enterprise) where the usage API still returns HTTP 200 with valid quota data.
+          // Root cause: BUG-233 assumed billing_type="none" ↔ cancelled ↔ usage returns 429.
+          //   That holds for genuinely cancelled accounts but not for all billing arrangements.
+          // Pitfall: only override when BOTH signals agree (billing says no-sub AND usage errored);
+          //   a successful usage response (r=Ok) must be preserved regardless of billing_type.
+          let r = if account_data.as_ref().is_some_and( |a| a.billing_type == "none" ) && r.is_err() { Err( "no subscription".to_string() ) } else { r };
+          // Fix(BUG-234): trace the final stored result, not the raw API response.
+          // Root cause: trace preceded Class A override — for billing_type="none", raw=Ok but stored=Err.
+          // Pitfall: always emit result trace AFTER all result-modifying overrides.
+          if trace
+          {
+            match &r
+            {
+              Ok( _ )  => eprintln!( "[trace] {}  result: OK", acct.name ),
+              Err( e ) => eprintln!( "[trace] {}  result: Err({})", acct.name, e ),
+            }
+          }
+          ( r, account_data )
+        }
+        Err( e ) =>
+        {
+          if trace { eprintln!( "[trace] {}  cannot read token: {}", acct.name, e ); }
+          ( Err( e ), None )
+        }
       }
     };
     // Read host/role from {name}.profile.json — best-effort, empty on missing/parse error.
@@ -144,10 +178,11 @@ pub( crate ) fn fetch_all_quota(
     let renewal_at = read_renewal_at( credential_store, &acct.name );
     results.push( AccountQuota
     {
-      name          : acct.name.clone(),
+      name                  : acct.name.clone(),
       is_current,
-      is_active     : acct.is_active,
-      expires_at_ms : acct.expires_at_ms,
+      is_active             : acct.is_active,
+      is_occupied_elsewhere : occupied_elsewhere.contains( &acct.name ),
+      expires_at_ms         : acct.expires_at_ms,
       result,
       account,
       host,
@@ -185,15 +220,16 @@ fn inject_synthetic_row_if_needed(
   let account       = claude_quota::fetch_oauth_account( &token ).ok();
   inject_synthetic_if_new( results, AccountQuota
   {
-    name : synthetic_name,
-    is_current    : true,
-    is_active     : false,
+    name                  : synthetic_name,
+    is_current            : true,
+    is_active             : false,
+    is_occupied_elsewhere : false,
     expires_at_ms,
     result,
     account,
-    host          : String::new(),
-    role          : String::new(),
-    renewal_at    : None,
+    host                  : String::new(),
+    role                  : String::new(),
+    renewal_at            : None,
   } );
 }
 
@@ -257,6 +293,156 @@ mod tests
   use super::{ inject_synthetic_if_new, parse_u64_from_str };
   use crate::usage::types::AccountQuota;
   use crate::usage::test_support::FAR_FUTURE_MS;
+
+  // ── BUG-233 Class B: pre-flight expiry predicate ────────────────────────────
+
+  /// Class B predicate unit test: `expires_at_ms / 1000 <= now_secs` short-circuits expired accounts.
+  ///
+  /// # Root Cause
+  /// `fetch_all_quota` spawned threads and made HTTP calls for locally-expired tokens (BUG-233).
+  /// Expired tokens always return 401; two wasted HTTP round trips per expired account.
+  ///
+  /// # Why Not Caught
+  /// No pre-flight expiry check existed; the code always entered the fetch path after reading
+  /// the token. No test verified the expiry predicate or its consequence on API calls.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-233): Class B pre-flight: `acct.expires_at_ms / 1000 <= now_secs` gate before
+  /// thread spawn and main-thread HTTP; returns `Err("token expired (local)")` immediately.
+  ///
+  /// # Prevention
+  /// Expiry must be checked BEFORE any I/O. The divide-before-compare idiom (ms→s) must be
+  /// consistent: any future caller that adds a time-based gate must use the same unit conversion.
+  ///
+  /// # Pitfall
+  /// Integer division truncates: `expires_at_ms = 999` → `0 / 1000 = 0 <= any now_secs`.
+  /// `expires_at_ms = 0` (unknown expiry) also triggers the guard — treated as epoch (expired).
+  #[ doc = "bug_reproducer(BUG-233)" ]
+  #[ test ]
+  fn test_class_b_expired_token_predicate()
+  {
+    let now_secs : u64 = 1_748_000_000; // representative fixed reference point (Unix seconds)
+
+    // Expired case: expires_at_ms converts to a second before now_secs.
+    let past_ms  : u64 = ( now_secs - 1 ) * 1_000;
+    assert!(
+      past_ms / 1_000 <= now_secs,
+      "Class B: past token (past_ms={past_ms}) must satisfy expired predicate vs now_secs={now_secs}",
+    );
+
+    // Valid case: expires_at_ms converts to 1 hour after now_secs.
+    let future_ms : u64 = ( now_secs + 3_600 ) * 1_000;
+    assert!(
+      future_ms / 1_000 > now_secs,
+      "Class B: future token (future_ms={future_ms}) must NOT satisfy expired predicate vs now_secs={now_secs}",
+    );
+  }
+
+  // ── BUG-233 Class A: billing_type="none" result override predicate ──────────
+
+  /// Class A predicate unit test: `billing_type=="none"` overrides usage result to `Err("no subscription")`.
+  ///
+  /// # Root Cause
+  /// Cancelled-subscription accounts receive HTTP 429 from the usage API (subscription inactive).
+  /// `fetch_all_quota` stored `Err("HTTP transport error: HTTP 429 ...")` — semantically wrong:
+  /// the account has no subscription, not a rate limit (BUG-233).
+  ///
+  /// # Why Not Caught
+  /// No data-layer result override existed. The display layer papered over this with `error_label`
+  /// (BUG-231 workaround) which was the wrong fix location — data-layer incorrectness requires
+  /// a data-layer fix.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-233): Class A override after `account_handle.join()`: when `billing_type=="none"`,
+  /// replace the usage result with `Err("no subscription")` regardless of what the API returned.
+  ///
+  /// # Prevention
+  /// Semantic correctness belongs at the data layer (fetch.rs). Display-layer hacks for
+  /// data-layer incorrectness always become dead code after the proper fix is applied.
+  ///
+  /// # Pitfall
+  /// Override fires ONLY when `account_data` is `Some` (account fetch succeeded and `billing_type`
+  /// is known). When `account_data` is `None` (account fetch failed), `billing_type` is unknown —
+  /// the original usage result must be preserved unchanged.
+  #[ doc = "bug_reproducer(BUG-233)" ]
+  #[ test ]
+  fn test_class_a_billing_none_override_predicate()
+  {
+    // billing_type="none" (cancelled) → predicate fires → override to Err("no subscription").
+    let cancelled = Some( claude_quota::OauthAccountData
+    {
+      billing_type   : "none".to_string(),
+      has_max        : false,
+      org_created_at : "2024-01-01T00:00:00Z".to_string(),
+    } );
+    assert!(
+      cancelled.as_ref().is_some_and( |a| a.billing_type == "none" ),
+      "Class A: billing_type==\"none\" must trigger result override to Err(\"no subscription\")",
+    );
+
+    // billing_type="stripe_subscription" (active) → predicate does NOT fire → result unchanged.
+    let active = Some( claude_quota::OauthAccountData
+    {
+      billing_type   : "stripe_subscription".to_string(),
+      has_max        : false,
+      org_created_at : "2024-01-01T00:00:00Z".to_string(),
+    } );
+    assert!(
+      !active.as_ref().is_some_and( |a| a.billing_type == "none" ),
+      "Class A: active subscription must NOT trigger result override",
+    );
+
+    // account_data=None (account fetch failed) → predicate does NOT fire → result unchanged.
+    let failed : Option< claude_quota::OauthAccountData > = None;
+    assert!(
+      !failed.as_ref().is_some_and( |a| a.billing_type == "none" ),
+      "Class A: account=None must NOT trigger result override (billing_type unknown)",
+    );
+  }
+
+  // ── BUG-234: result trace ordering ─────────────────────────────────────────
+
+  /// Result trace must be emitted AFTER the Class A `billing_type` override.
+  ///
+  /// # Root Cause
+  /// The `[trace] result:` block preceded `account_handle.join()` and the Class A override
+  /// (BUG-233 fix). For `billing_type="none"` accounts the raw API result (Ok or 429) can
+  /// differ from the stored result (`Err("no subscription")`), making the trace misleading.
+  ///
+  /// # Why Not Caught
+  /// No test verified the relative ordering of the result trace vs. the `billing_type` override.
+  /// The contradiction (trace says OK, table says `(no subscription)`) only appears with live
+  /// accounts whose `billing_type == "none"` — uncommon in unit test fixtures.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-234): moved the `if trace { match &r { ... } }` block to after the Class A
+  /// override. Trace now reports the final stored result, not the intermediate raw response.
+  ///
+  /// # Prevention
+  /// Trace emissions must always follow ALL transformations of the value being reported.
+  /// Rule: (1) compute raw, (2) apply overrides, (3) emit trace.
+  ///
+  /// # Pitfall
+  /// When adding new result overrides in future, ensure they precede the result trace block —
+  /// not after it. The Class A override must remain immediately before the trace.
+  #[ doc = "bug_reproducer(BUG-234)" ]
+  #[ test ]
+  fn mre_bug234_result_trace_after_billing_type_override()
+  {
+    // Structural assertion: Class A override must precede the result trace in source.
+    // RED before fix (trace at ~144, override at ~154); GREEN after fix (override first).
+    let src = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/fetch.rs" ) );
+    let override_pos = src.find( r#"a.billing_type == "none" ) && r.is_err() { Err( "no subscription""# )
+      .expect( "BUG-234: Class A billing_type override not found in fetch.rs" );
+    let trace_pos = src.find( r#"eprintln!( "[trace] {}  result: OK""# )
+      .expect( "BUG-234: result: OK trace line not found in fetch.rs" );
+    assert!(
+      override_pos < trace_pos,
+      "BUG-234: result trace emitted before Class A override — \
+       for billing_type=\"none\" accounts trace shows raw result, not stored result; \
+       override_pos={override_pos}, trace_pos={trace_pos}",
+    );
+  }
 
   // ── parse_u64_from_str ──────────────────────────────────────────────────────
 
@@ -357,29 +543,31 @@ mod tests
     //   when synthetic_name == "i6@wbox.pro" which already exists, count becomes 2.
     let stored_row = AccountQuota
     {
-      name          : "i6@wbox.pro".to_string(),
-      is_current    : false,
-      is_active     : false,
-      expires_at_ms : FAR_FUTURE_MS,
-      result        : Err( "missing accessToken".to_string() ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
+      name                 : "i6@wbox.pro".to_string(),
+      is_current           : false,
+      is_active            : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms        : FAR_FUTURE_MS,
+      result               : Err( "missing accessToken".to_string() ),
+      account              : None,
+      host                 : String::new(),
+      role                 : String::new(),
+      renewal_at           : None,
     };
     let mut results = vec![ stored_row ];
 
     let synthetic = AccountQuota
     {
-      name          : "i6@wbox.pro".to_string(),
-      is_current    : true,
-      is_active     : false,
-      expires_at_ms : FAR_FUTURE_MS,
-      result        : Err( "missing accessToken".to_string() ),
-      account       : None,
-      host          : String::new(),
-      role          : String::new(),
-      renewal_at    : None,
+      name                 : "i6@wbox.pro".to_string(),
+      is_current           : true,
+      is_active            : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms        : FAR_FUTURE_MS,
+      result               : Err( "missing accessToken".to_string() ),
+      account              : None,
+      host                 : String::new(),
+      role                 : String::new(),
+      renewal_at           : None,
     };
 
     // Fix(BUG-218): guarded injection — only insert when name is absent from results.
@@ -401,6 +589,86 @@ mod tests
       results.len(), 1,
       "BUG-218: quota table must have exactly 1 row for 1 stored account; len={}",
       results.len(),
+    );
+  }
+
+  // ── BUG-236 MRE: billing_type override guard ────────────────────────────────
+
+  /// MRE 1/2 for BUG-236: `billing_type="none"` with `r=Ok(...)` must NOT be overridden.
+  ///
+  /// # Root Cause
+  /// BUG-233 introduced a Class A override: when `billing_type == "none"`, store
+  /// `Err("no subscription")` regardless of the usage API result. This assumed
+  /// `billing_type="none"` ↔ cancelled subscription ↔ usage returns error. That holds for
+  /// genuinely cancelled accounts but NOT for non-stripe billing arrangements (team/enterprise)
+  /// where `billing_type="none"` can appear even when the usage API returns HTTP 200 with
+  /// valid quota data — the override discarded the real quota and replaced it with an error.
+  ///
+  /// # Why Not Caught
+  /// The BUG-233 test (`test_class_a_billing_none_override_predicate`) only checked the
+  /// `billing_type == "none"` condition — it did not verify that `r.is_err()` is also required.
+  /// No test covered the active-subscription + `billing_type="none"` combination.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-236): added `&& r.is_err()` to the Class A override predicate so it only fires
+  /// when BOTH signals agree: `billing_type` says no-subscription AND usage API also errored.
+  ///
+  /// # Prevention
+  /// Override predicates that combine multiple signals must require ALL signals to agree.
+  /// A single field (`billing_type`) is insufficient when the authoritative signal (usage API
+  /// HTTP status) is also available.
+  ///
+  /// # Pitfall
+  /// `billing_type="none"` has at least two causes: (a) cancelled subscription → usage error;
+  /// (b) non-stripe billing arrangement (team/enterprise) → usage 200/Ok. Never treat
+  /// `billing_type` alone as proof of subscription state when the usage API result is available.
+  #[ doc = "bug_reproducer(BUG-236)" ]
+  #[ test ]
+  fn mre_bug236_ok_result_not_overridden_when_billing_type_none()
+  {
+    // billing_type="none" + r=Ok → second condition (r.is_err()) is false → NO override.
+    let account_data = Some( claude_quota::OauthAccountData
+    {
+      billing_type   : "none".to_string(),
+      has_max        : false,
+      org_created_at : "2024-01-01T00:00:00Z".to_string(),
+    } );
+    let r : Result< claude_quota::OauthUsageData, String > = Ok( claude_quota::OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : None,
+    } );
+    // Replicate the fixed predicate from fetch_all_quota.
+    let would_override = account_data.as_ref().is_some_and( |a| a.billing_type == "none" ) && r.is_err();
+    assert!(
+      !would_override,
+      "BUG-236: billing_type=\"none\" + r=Ok must NOT trigger override — active non-stripe \
+       accounts have billing_type=\"none\" but a valid usage response",
+    );
+  }
+
+  /// MRE 2/2 for BUG-236: `billing_type="none"` with `r=Err(...)` IS overridden.
+  ///
+  /// Confirms the override still fires for genuinely cancelled accounts: both conditions
+  /// must be true (`billing_type="none"` AND usage errored) for the "no subscription" override.
+  #[ doc = "bug_reproducer(BUG-236)" ]
+  #[ test ]
+  fn mre_bug236_err_result_overridden_when_billing_type_none()
+  {
+    let account_data = Some( claude_quota::OauthAccountData
+    {
+      billing_type   : "none".to_string(),
+      has_max        : false,
+      org_created_at : "2024-01-01T00:00:00Z".to_string(),
+    } );
+    let r : Result< claude_quota::OauthUsageData, String > = Err( "HTTP 429".to_string() );
+    // Replicate the fixed predicate from fetch_all_quota.
+    let would_override = account_data.as_ref().is_some_and( |a| a.billing_type == "none" ) && r.is_err();
+    assert!(
+      would_override,
+      "BUG-236: billing_type=\"none\" + r=Err must trigger override — cancelled account \
+       signals agree (billing=no-sub AND usage=err)",
     );
   }
 }

@@ -3,13 +3,18 @@
 # dry_run_test invokes the real `claude` binary which takes 60-120s under load.
 # Without this override, nextest treats the test as hung and cancels it.
 #
-# lim_it tests require valid live Anthropic API credentials; they are excluded
-# from default runs.  Run with -E 'all()' to include them when credentials are
-# fresh.
+# lim_it tests require valid live Anthropic API credentials; they run by default
+# in container environments where ~/.claude is mounted via plugin_mount.
 #
 [profile.default]
-default-filter = "!test(lim_it)"
 
 [[profile.default.overrides]]
 filter = "binary(dry_run_test)"
 slow-timeout = { period = "120s", terminate-after = 10 }
+
+# bug_reproducers_239_244_test includes timeout tests (BUG-243) that spawn
+# real subprocesses. Per-test limit prevents indefinite hangs if kill() is
+# silently ignored in a restricted container environment.
+[[profile.default.overrides]]
+filter = "binary(bug_reproducers_239_244_test)"
+slow-timeout = { period = "30s", terminate-after = 1 }

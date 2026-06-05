@@ -1,7 +1,7 @@
 //! Public API surface for the `.usage` command and account-use touch context.
 //!
-//! Exports: `TouchCtx`, `validate_imodel_str`, `validate_effort_str`,
-//! `pre_switch_touch_ctx`, `apply_post_switch_touch`, `usage_routine`.
+//! Exports: `PreSwitchOutcome`, `validate_imodel_str`, `validate_effort_str`,
+//! `pre_switch_touch_ctx`, `apply_model_override`, `apply_post_switch_touch`, `usage_routine`.
 
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
@@ -40,12 +40,34 @@ fn apply_no_color( s : String ) -> String
 ///
 /// Created by [`pre_switch_touch_ctx`] before the account switch; consumed by
 /// [`apply_post_switch_touch`] after. `commands.rs` treats this as a black box.
+#[ derive( Debug ) ]
 pub( crate ) struct TouchCtx
 {
   /// Raw credentials JSON read from the account credential file before the switch.
   credentials_json : String,
   /// Pre-fetched quota data used to resolve the subprocess model.
   quota            : OauthUsageData,
+}
+
+/// Result of the pre-switch quota probe for `.account.use`.
+///
+/// Distinguishes three outcomes so the caller can apply the model override
+/// for all fetch-succeeded cases, not just idle accounts.
+// Fix(BUG-238): pre_switch_touch_ctx() returned None for already-active accounts,
+//   skipping apply_post_switch_touch() and its BUG-225 Sonnet→Opus override entirely.
+// Root cause: quota data was discarded for active accounts — only idle accounts
+//   got a TouchCtx, coupling the model override to subprocess dispatch.
+// Pitfall: any post-switch side-effect gated on touch_ctx.is_some() is invisible
+//   for already-active accounts; always check if the effect needs quota data vs idle state.
+#[ derive( Debug ) ]
+pub( crate ) enum PreSwitchOutcome
+{
+  /// Quota fetched, account idle — needs subprocess touch after switch.
+  NeedTouch( TouchCtx ),
+  /// Quota fetched, account already active — model override only, no subprocess.
+  AlreadyActive { quota : OauthUsageData },
+  /// Quota unavailable (read error, auth error, fetch error) — no override possible.
+  Unavailable,
 }
 
 // ── Validators ────────────────────────────────────────────────────────────────
@@ -66,6 +88,56 @@ pub( crate ) fn validate_imodel_str( s : &str ) -> Result< (), String >
 pub( crate ) fn validate_effort_str( s : &str ) -> Result< (), String >
 {
   SubprocessEffort::parse( s ).map( |_| () )
+}
+
+// ── Expired-token refresh helper ──────────────────────────────────────────────
+
+/// Attempt OAuth token refresh for a locally-expired account credential.
+///
+/// Resolves the subprocess model from `imodel_str`/`effort_str`, then calls
+/// `refresh_account_token()` to spawn an isolated subprocess and rewrite the
+/// per-account credential file with a fresh token.
+///
+/// Returns `true` when `refresh_account_token` succeeds (returns `Some`);
+/// `false` when it returns `None` (subprocess failed or credential file lacks `accessToken`).
+///
+/// # Fix(BUG-230)
+/// Called from `account_use_routine` when `expiresAt` is in the past and `refresh::1`.
+/// Root cause: BUG-213 guard exited 3 without attempting refresh — token expiry is
+///   recoverable via OAuth refresh, not a fatal condition when `refresh::1`.
+/// Pitfall: this path requires `credential_store` (not `paths.credentials_file()`) because
+///   the per-account file is the refresh source, not the live session credentials file.
+pub( crate ) fn attempt_expired_token_refresh(
+  name             : &str,
+  credential_store : &std::path::Path,
+  paths            : &crate::ClaudePaths,
+  trace            : bool,
+  imodel_str       : &str,
+  effort_str       : &str,
+) -> bool
+{
+  let imodel    = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
+  let effort    = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
+  // Build a minimal AccountQuota for model resolution.
+  // result=Err("401") drives auto model selection to Opus (conservative when no quota data).
+  let aq        = AccountQuota
+  {
+    name                 : name.to_string(),
+    is_current           : false,
+    is_active            : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms        : 0,
+    result               : Err( "401".to_string() ),
+    account              : None,
+    host                 : String::new(),
+    role                 : String::new(),
+    renewal_at           : None,
+  };
+  let model     = super::subprocess::resolve_model( &aq, imodel );
+  let pre_args  = super::subprocess::effort_pre_args( &model, effort );
+  crate::account::refresh_account_token(
+    name, credential_store, Some( paths ), trace, "account.use", model, &pre_args,
+  ).is_some()
 }
 
 // ── Pre/post-switch touch context ─────────────────────────────────────────────
@@ -98,9 +170,9 @@ pub( crate ) fn pre_switch_touch_ctx(
   name       : &str,
   store_path : &std::path::Path,
   trace      : bool,
-  imodel_str : &str,
-  effort_str : &str,
-) -> Option< TouchCtx >
+  _imodel_str : &str,
+  _effort_str : &str,
+) -> PreSwitchOutcome
 {
   let path = store_path.join( format!( "{name}.credentials.json" ) );
   if trace { eprintln!( "[trace] account.use  {name}  reading {}", path.display() ) }
@@ -114,7 +186,7 @@ pub( crate ) fn pre_switch_touch_ctx(
         eprintln!( "[trace] account.use  {name}  reading: Err({e})" );
         eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)" );
       }
-      return None;
+      return PreSwitchOutcome::Unavailable;
     }
   };
   let Some( token ) = crate::account::parse_string_field( &credentials_json, "accessToken" ) else
@@ -124,7 +196,7 @@ pub( crate ) fn pre_switch_touch_ctx(
       eprintln!( "[trace] account.use  {name}  quota fetch: Err(no accessToken in credentials)" );
       eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)" );
     }
-    return None;
+    return PreSwitchOutcome::Unavailable;
   };
   let quota = match claude_quota::fetch_oauth_usage( &token )
   {
@@ -136,46 +208,19 @@ pub( crate ) fn pre_switch_touch_ctx(
         eprintln!( "[trace] account.use  {name}  quota fetch: Err({e})" );
         eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: fetch failed)" );
       }
-      return None;
+      return PreSwitchOutcome::Unavailable;
     }
   };
   let is_idle = quota.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_none();
   if is_idle
   {
     if trace { eprintln!( "[trace] account.use  {name}  idle check: resets_at=absent → idle" ) }
-    Some( TouchCtx { credentials_json, quota } )
+    PreSwitchOutcome::NeedTouch( TouchCtx { credentials_json, quota } )
   }
   else
   {
-    if trace
-    {
-      eprintln!( "[trace] account.use  {name}  idle check: resets_at=present → already active" );
-      let imodel       = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
-      let effort       = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
-      let aq           = AccountQuota
-      {
-        name          : name.to_string(),
-        is_current    : false,
-        is_active     : false,
-        expires_at_ms : 0,
-        result        : Ok( quota ),
-        account       : None,
-        host          : String::new(),
-        role          : String::new(),
-        renewal_at    : None,
-      };
-      let model        = resolve_model( &aq, imodel );
-      let effort_val   = resolve_effort( &model, effort );
-      let model_str    = match &model
-      {
-        claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(),
-        _                                                => "keep-current",
-      };
-      let effort_label = effort_val.unwrap_or( "(none)" );
-      eprintln!( "[trace] account.use  {name}  model: {model_str}  effort: {effort_label}" );
-      eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: already active)" );
-    }
-    None
+    if trace { eprintln!( "[trace] account.use  {name}  idle check: resets_at=present → already active" ) }
+    PreSwitchOutcome::AlreadyActive { quota }
   }
 }
 
@@ -187,9 +232,78 @@ pub( crate ) fn pre_switch_touch_ctx(
 ///
 /// When `trace` is true, emits `[trace] account.use  {name}  model: ...  effort: ...` and
 /// `[trace] account.use  {name}  subprocess: spawned` to stderr after dispatching.
+/// When the Sonnet→Opus override fires (BUG-225), also emits
+/// `[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)`.
 ///
 /// `imodel_str` and `effort_str` must have been pre-validated by [`validate_imodel_str`]
 /// / [`validate_effort_str`]; the `parse()` calls below are infallible on validated input.
+/// Quota-aware Sonnet→Opus session model override (BUG-225 fix).
+///
+/// Called AFTER `switch_account()` for every fetch-succeeded case — both idle and
+/// already-active accounts. When `seven_day_sonnet` remaining is below 20% and the
+/// current session model is Sonnet (or empty), overrides `~/.claude/settings.json`
+/// to `claude-opus-4-6`.
+///
+/// # Limitation (BUG-226)
+///
+/// When the quota fetch failed entirely (`PreSwitchOutcome::Unavailable`), this
+/// function is not called — the snapshot model from `switch_account()` is kept as-is.
+pub( crate ) fn apply_model_override(
+  quota : &OauthUsageData,
+  paths : &crate::ClaudePaths,
+  trace : bool,
+  name  : &str,
+)
+{
+  let sonnet_left = quota.seven_day_sonnet.as_ref().map_or( 0.0, | p | 100.0 - p.utilization );
+  if sonnet_left < 20.0
+  {
+    let overrode = crate::account::override_session_model_to_opus( paths );
+    if overrode && trace
+    {
+      eprintln!( "[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
+    }
+  }
+}
+
+/// Emit the `model:` and `subprocess: skipped` trace lines for already-active accounts.
+///
+/// Takes `quota` by value because `AccountQuota.result` consumes it.
+/// Called from `account_use_routine()` when the outcome is `AlreadyActive`.
+pub( crate ) fn trace_already_active(
+  name       : &str,
+  quota      : OauthUsageData,
+  imodel_str : &str,
+  effort_str : &str,
+)
+{
+  let imodel     = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
+  let effort     = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
+  let aq         = AccountQuota
+  {
+    name                 : name.to_string(),
+    is_current           : false,
+    is_active            : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms        : 0,
+    result               : Ok( quota ),
+    account              : None,
+    host                 : String::new(),
+    role                 : String::new(),
+    renewal_at           : None,
+  };
+  let model      = resolve_model( &aq, imodel );
+  let effort_val = resolve_effort( &model, effort );
+  let model_str  = match &model
+  {
+    claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(),
+    _                                                => "keep-current",
+  };
+  let effort_label = effort_val.unwrap_or( "(none)" );
+  eprintln!( "[trace] account.use  {name}  model: {model_str}  effort: {effort_label}" );
+  eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: already active)" );
+}
+
 // Fix(BUG-207): `apply_post_switch_touch` had no `trace` param — model/effort resolution
 //   and subprocess spawn were invisible; only the missing [trace] lines in `pre_switch_touch_ctx`
 //   were apparent; both functions required the same fix.
@@ -202,22 +316,26 @@ pub( crate ) fn apply_post_switch_touch(
   imodel_str : &str,
   effort_str : &str,
   trace      : bool,
+  paths      : &crate::ClaudePaths,
 )
 {
   let imodel = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
   let effort = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
+  // Fix(BUG-225): delegate to apply_model_override for the Sonnet→Opus check.
+  apply_model_override( &ctx.quota, paths, trace, name );
   // Build a minimal AccountQuota to reuse the existing resolve_model() path.
   let aq = AccountQuota
   {
-    name          : name.to_string(),
-    is_current    : false,
-    is_active     : false,
-    expires_at_ms : 0,
-    result        : Ok( ctx.quota ),
-    account       : None,
-    host          : String::new(),
-    role          : String::new(),
-    renewal_at    : None,
+    name                 : name.to_string(),
+    is_current           : false,
+    is_active            : false,
+    is_occupied_elsewhere : false,
+    expires_at_ms        : 0,
+    result               : Ok( ctx.quota ),
+    account              : None,
+    host                 : String::new(),
+    role                 : String::new(),
+    renewal_at           : None,
   };
   let model        = resolve_model( &aq, imodel );
   let effort_val   = resolve_effort( &model, effort );
@@ -415,9 +533,11 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[ cfg( test ) ]
+// Exception to tests-in-tests/ rule: pub(crate) fns (pre_switch_touch_ctx, apply_model_override)
+// are not accessible from the external tests/ directory — unit tests must live here.
 mod tests
 {
-  use super::pre_switch_touch_ctx;
+  use super::{ pre_switch_touch_ctx, apply_model_override, PreSwitchOutcome };
   use tempfile::TempDir;
 
   /// Structural test: `pre_switch_touch_ctx` with an invalid credential file (no accessToken).
@@ -464,11 +584,58 @@ mod tests
       "auto",
     );
 
-    // Fetch-failed path must return None (no touch context, credential read succeeded but
-    // accessToken absent → fetch branch exits early).
+    // Fetch-failed path must return Unavailable (credential read OK but accessToken absent).
     assert!(
-      result.is_none(),
-      "fetch-failed path must return None, got Some(..)",
+      matches!( result, PreSwitchOutcome::Unavailable ),
+      "fetch-failed path must return Unavailable, got {result:?}",
+    );
+  }
+
+  /// `mre_bug238` — `apply_model_override()` writes opus when 7d(Son) consumed > 80%.
+  ///
+  /// # Root Cause
+  /// `account_use_routine()` matched `PreSwitchOutcome::AlreadyActive` but skipped
+  /// `apply_model_override()` — the model override never fired for already-active accounts.
+  /// The `AlreadyActive` branch only emitted trace and returned; the extract was not wired in.
+  ///
+  /// # Why Not Caught
+  /// No unit test for `apply_model_override()` existed. Full CLI path requires a live OAuth
+  /// token to fetch quota, which is impractical in CI.
+  ///
+  /// # Fix Applied
+  /// `AlreadyActive { quota }` branch in `account_use_routine()` now calls
+  /// `apply_model_override(&quota, &paths, trace, &name)` before the trace line.
+  ///
+  /// # Prevention
+  /// Any new `PreSwitchOutcome` match arm that receives `OauthUsageData` must call
+  /// `apply_model_override()`. Test the helper directly to stay independent of CLI plumbing.
+  ///
+  /// # Pitfall
+  /// `apply_model_override` only fires when `sonnet_left < 20.0`. Test input must push
+  /// `utilization` to ≥ 80.0 (leaving < 20%). Also: the `.claude/` parent dir must exist
+  /// before the write or `override_session_model_to_opus` silently no-ops.
+  #[ doc = "bug_reproducer(BUG-238)" ]
+  #[ test ]
+  fn mre_bug238_model_override_fires_for_active_account()
+  {
+    use claude_quota::{ OauthUsageData, PeriodUsage };
+    let dir   = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( dir.path() );
+    // Create ~/.claude/ so override_session_model_to_opus can write settings.json.
+    std::fs::create_dir_all( paths.base() ).unwrap();
+
+    let quota = OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
+    };
+    apply_model_override( &quota, &paths, false, "test-account" );
+
+    let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
+    assert!(
+      content.contains( "claude-opus-4-6" ),
+      "apply_model_override must write opus to settings.json when 7d(Son) is 90% consumed (10% left), got: {content}",
     );
   }
 }

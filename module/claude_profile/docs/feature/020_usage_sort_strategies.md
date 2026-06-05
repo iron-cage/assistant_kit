@@ -3,13 +3,13 @@
 ### Scope
 
 - **Purpose**: Provide configurable row ordering in `.usage` output, optimized for distinct operational workflows — long-running agent sessions, draining low-quota accounts, and exploiting upcoming quota resets.
-- **Responsibility**: Documents the `sort::`, `desc::`, and `prefer::` parameters on `.usage`, including the 4 heuristic sort strategies, the `renew` default, and the `next` meta-strategy.
-- **In Scope**: Sort strategies (`name`, `endurance`, `drain`, `renew`, `next`), direction control (`desc::`), model preference for weekly quota selection (`prefer::`), context-sensitive `desc::` defaults per strategy, three-tier universal display grouping (🟢 → 🟡 → 🔴 applied before sort within each tier, with h-exhausted sub-group before weekly-exhausted sub-group within 🟡), `renew` as the default strategy, `next` as a meta-strategy that mirrors the active `next::` algorithm so the `→` winner always appears first.
+- **Responsibility**: Documents the `sort::`, `desc::`, and `prefer::` parameters on `.usage`, including the 6 sort strategies (`name`, `endurance`, `drain`, `renew`, `expires`, `renews`), the `renew` default, and the `next` meta-strategy.
+- **In Scope**: Sort strategies (`name`, `endurance`, `drain`, `renew`, `expires`, `renews`, `next`), direction control (`desc::`), model preference for weekly quota selection (`prefer::`), context-sensitive `desc::` defaults per strategy, three-tier universal display grouping (🟢 → 🟡 → 🔴 applied before sort within each tier, with h-exhausted sub-group before weekly-exhausted sub-group within 🟡), `renew` as the default strategy, `next` as a meta-strategy that mirrors the active `next::` algorithm so the `→` winner always appears first.
 - **Out of Scope**: Row rendering (→ 009_token_usage.md), `→ Next` recommendation algorithm (→ 023_next_account_strategies.md), `.account.rotate` selection (→ 008_auto_rotate.md), `live::` monitor loop mechanics (→ 018_live_monitor.md).
 
 ### Design
 
-`.usage` accepts a `sort::` parameter to control row ordering. The default (`sort::renew`) puts accounts with the soonest weekly quota reset at the top — maximizing throughput by consuming quota that will be replenished first. Alphabetical ordering (`sort::name`) is available for positional stability, especially in `live::1` monitor mode. Four heuristic strategies are available for single-shot decision-making, plus `sort::next` — a meta-strategy that dynamically mirrors whatever `next::` algorithm is active, guaranteeing the `→` recommended account always appears at the top of the table.
+`.usage` accepts a `sort::` parameter to control row ordering. The default (`sort::renew`) puts accounts with the soonest weekly quota reset at the top — maximizing throughput by consuming quota that will be replenished first. Alphabetical ordering (`sort::name`) is available for positional stability, especially in `live::1` monitor mode. Six heuristic strategies are available for single-shot decision-making, plus `sort::next` — a meta-strategy that dynamically mirrors whatever `next::` algorithm is active, guaranteeing the `→` recommended account always appears at the top of the table.
 
 **Three-tier display grouping:** Regardless of the chosen sort strategy, accounts are first grouped by composite health tier: 🟢 tier (`5h Left > 15%` and `7d Left > 5%`) → 🟡 tier (either `5h Left ≤ 15%` or `7d Left ≤ 5%`) → 🔴 tier (error/missing token). Within the 🟡 tier, accounts are further ordered into two sub-groups: **h-exhausted** (`5h Left ≤ 15%`) first, then **weekly-exhausted** (`5h Left > 15%` and `7d Left ≤ 5%`). Accounts where both quotas are below threshold fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. This ensures healthy accounts always appear above exhausted or errored accounts, regardless of sort direction or strategy.
 
@@ -29,6 +29,8 @@
 | `endurance` | `1` (descending) | Best-qualified on top |
 | `drain` | `0` (ascending) | Drain targets on top |
 | `renew` | `0` (ascending) | Soonest reset on top |
+| `expires` | `0` (ascending) | Soonest token expiry on top |
+| `renews` | `0` (ascending) | Soonest billing renewal on top |
 
 #### Strategy 1: `sort::name`
 
@@ -60,14 +62,14 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 #### Strategy 4: `sort::renew`
 
-**Goal:** Use accounts whose weekly quota (7d) refills soonest.
+**Goal:** Use accounts whose next quota renewal event fires soonest — either a weekly (7d) window reset or a subscription billing cycle.
 
 **Algorithm:**
 1. **h-exhausted** accounts (`5h Left` ≤ 15%): sunk to bottom.
-2. Remaining accounts sorted by `7d Reset` countdown ascending (soonest weekly quota reset first; no `resets_at` → placed at end of non-exhausted).
-3. Tiebreak: `7d Left` (prefer-aware, via `prefer::`) ascending (among same reset time, drain more weekly-depleted first).
+2. Remaining accounts sorted by `min(7d Reset, ~Renews)` countdown ascending (soonest renewal event first; absent timers → placed at end of non-exhausted).
+3. Tiebreak: `7d Left` (prefer-aware, via `prefer::`) ascending (among same renewal time, drain more weekly-depleted first).
 
-**Rationale:** An account whose weekly quota resets soon can be freely drained — the 7d budget will be replenished. This maximizes throughput by consuming quota that would otherwise expire unused before the weekly reset.
+**Rationale:** Both the weekly window reset and the subscription billing cycle replenish quota. Whichever fires first is the more relevant event for deciding which account to consume now — it can be freely drained because its budget will be replenished soonest.
 
 #### Strategy 5: `sort::next`
 
@@ -79,23 +81,45 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 
 **Rationale:** Keeps sort and recommendation aligned without requiring the user to specify both `sort::drain next::drain` (or both endurance variants) separately. When `sort::next` is used, the account the footer recommends is always visible at row 1.
 
+#### Strategy 6: `sort::expires`
+
+**Goal:** Order accounts by token expiry time so accounts that will expire soonest appear first.
+
+**Algorithm:**
+1. Sort all accounts by `expires_at_ms` ascending (soonest expiry first).
+2. Accounts with `expires_at_ms == 0` (unknown expiry) are placed at the end (scored as `u64::MAX`).
+
+**Rationale:** Useful for identifying which accounts need re-authentication soonest.
+
+#### Strategy 7: `sort::renews`
+
+**Goal:** Order accounts by subscription renewal timer so accounts whose billing cycle renews soonest appear first.
+
+**Algorithm:**
+1. Sort all accounts by `renewal_secs(aq.renewal_at, aq.org_created_at, now)` ascending.
+2. Accounts without subscription data (no `renewal_at` and no `org_created_at` billing day) score `u64::MAX` and appear last.
+
+**Rationale:** Useful for seeing which accounts will have their full weekly quota restored soonest through a billing cycle.
+
 ### Acceptance Criteria
 
 - **AC-01**: `sort::drain` sorts rows by `7d Left` (prefer-aware) ascending within each tier; tiebreak is `5h Left` ascending. `sort::name` sorts alphabetically. When `sort::` is omitted, `renew` is used.
 - **AC-02**: `sort::endurance` ranks qualified accounts (5h Reset 15–60 min, weekly(prefer) ≥ 30%) above unqualified accounts; within qualified, highest weekly first then soonest reset; within unqualified, highest `weekly(prefer)` first as tiebreaker when session quotas are equal.
 - **AC-03**: `sort::drain` sorts by `7d Left` (prefer-aware) ascending; tiebreak is `5h Left` ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
-- **AC-04**: `sort::renew` sorts by `7d Reset` countdown ascending (soonest weekly reset first); tiebreak is `7d Left` (prefer-aware) ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
+- **AC-04**: `sort::renew` sorts by `min(7d Reset, ~Renews)` countdown ascending (soonest renewal event first — weekly window reset or subscription billing cycle, whichever is earlier); tiebreak is `7d Left` (prefer-aware) ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
 - **AC-05**: `desc::1` reverses the sort direction within each tier; `desc::0` uses the strategy's natural direction. The three-tier grouping (🟢 → 🟡 → 🔴) and the 🟡 h-/weekly-exhausted sub-grouping are never reversed by `desc::`.
-- **AC-06**: Each strategy has a context-sensitive `desc::` default: `name`→`0`, `endurance`→`1`, `drain`→`0`, `renew`→`0`.
+- **AC-06**: Each strategy has a context-sensitive `desc::` default: `name`→`0`, `endurance`→`1`, `drain`→`0`, `renew`→`0`, `expires`→`0`, `renews`→`0`.
 - **AC-07**: `prefer::any` (default) uses `min(7d Left, 7d(Son))` as weekly quota; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
-- **AC-08**: `prefer::` affects `sort::endurance` (qualification gate ≥ 30%), `sort::drain` (primary sort key), and `sort::renew` (tiebreak). For drain: `prefer_weekly` is the primary sort key (ascending — lowest first); `5h Left` is the tiebreak. For renew: `7d Reset` countdown is the primary key; `prefer_weekly` is the tiebreak (ascending).
-- **AC-09**: Invalid `sort::` value exits 1 with an error naming the valid values.
+- **AC-08**: `prefer::` affects `sort::endurance` (qualification gate ≥ 30%), `sort::drain` (primary sort key), and `sort::renew` (tiebreak). For drain: `prefer_weekly` is the primary sort key (ascending — lowest first); `5h Left` is the tiebreak. For renew: `min(7d Reset, ~Renews)` countdown is the primary key; `prefer_weekly` is the tiebreak (ascending).
+- **AC-09**: Invalid `sort::` value exits 1 with an error naming the valid values (`name`, `endurance`, `drain`, `renew`, `next`, `expires`, `renews`).
 - **AC-10**: Invalid `prefer::` value exits 1 with an error naming the valid values.
-- **AC-11**: `sort::` and `desc::` do not affect the `→` recommendation marker or footer — those are controlled by the `next::` parameter (see 023_next_account_strategies.md). The footer always shows both strategy recommendations (endurance, drain) regardless of `sort::` or `next::` values. The `next::endurance` and `next::drain` strategies reuse the same sort algorithms but select independently from the table sort order.
+- **AC-11**: `sort::` and `desc::` do not affect the `→` recommendation marker or footer — those are controlled by the `next::` parameter (see 023_next_account_strategies.md). The footer always shows three strategy recommendations (renew, endurance, drain) regardless of `sort::` or `next::` values. The `next::renew`, `next::endurance`, and `next::drain` strategies reuse the same sort algorithms but select independently from the table sort order.
 - **AC-12**: `sort::` and `desc::` work correctly with `live::1` — sort order is stable within each refresh cycle.
 - **AC-13**: `format::json` output is NOT affected by `sort::` or `desc::` — `render_json` preserves the input slice order without re-sorting (alphabetical in practice since `fetch_all_quota` returns accounts alphabetically; stable schema for pipeline consumers).
 - **AC-14**: Three-tier display grouping (🟢 → 🟡 → 🔴) is applied universally before any sort strategy. Accounts are grouped by composite health: 🟢 (`5h Left > 15%` and `7d Left > 5%`), 🟡 (either `5h Left ≤ 15%` or `7d Left ≤ 5%`), 🔴 (error). Within 🟡, h-exhausted accounts (`5h Left ≤ 15%`) appear before weekly-exhausted accounts (`5h Left > 15%` and `7d Left ≤ 5%`); accounts with both below threshold fall in the h-exhausted sub-group. Sort strategy applies within each sub-group.
 - **AC-15**: `sort::next` resolves to the concrete sort strategy matching the active `next::` parameter: `next::drain` → `sort::drain`; `next::endurance` → `sort::endurance`. The resolution happens at param-parse time, so `sort::next` is never stored as a distinct strategy — it is transparent to all downstream logic. The `→` recommended account always appears at row 1 when `sort::next` is used.
+- **AC-16**: `sort::expires` sorts by `expires_at_ms` ascending; accounts with `expires_at_ms == 0` (unknown expiry) are placed last. Default `desc::` is `0`.
+- **AC-17**: `sort::renews` sorts by subscription renewal timer ascending via `renewal_secs()`; accounts with no subscription data are placed last (scored as `u64::MAX`). Default `desc::` is `0`.
 
 ### Cross-References
 

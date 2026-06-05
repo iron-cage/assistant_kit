@@ -26,6 +26,10 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-18 | `→ Next` column shows soonest upcoming event label and duration | AC-28 | — |
 | FT-19 | JSON includes `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | AC-29 | — |
 | FT-20 | `~Renews` shows renewal date (not error reason) for 429 accounts when `OauthAccountData` is available | AC-03 | — |
+| FT-21 | `@` in flag column for accounts active on another machine's `_active_*` marker | AC-30 | — |
+| FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | — |
+| FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | — |
+| FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
 
 ### Test Case Index
 
@@ -51,8 +55,12 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-18 | `→ Next` column shows soonest event label and duration | AC-28 | `→ Next` Column |
 | FT-19 | JSON `renewal_secs`, `renewal_is_estimate`, `next_event_type`, `next_event_secs` | AC-29 | JSON Fields |
 | FT-20 | `~Renews` shows billing renewal date (not error reason) for 429 accounts with valid `OauthAccountData` | AC-03 | `~Renews` Error Preservation |
+| FT-21 | `@` in flag column when account is active on another machine's `_active_*` marker | AC-30 | Occupied Elsewhere |
+| FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | Subscription State |
+| FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | Subscription State |
+| FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | Trace Ordering |
 
-**Total:** 20 FT cases
+**Total:** 24 FT cases
 
 ---
 
@@ -274,7 +282,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 
 - **Given (unit test):** `next_event_label(seven_day_resets_secs, renewal_secs, renewal_is_estimate)` — only `+7d` and `$ren` are candidates; `!tok` (token expiry) and `+5h` (5h reset) are not candidates since they are already shown in `Expires` and `5h Reset` columns.
 - **When:** `next_event_label()` called with `seven_day_resets_secs = Some(7200)` (2h), `renewal_secs = None`.
-- **Then:** Returns `"+7d in 2h"` — weekly reset is soonest strategic event.
+- **Then:** Returns `"in 2h +7d"` — weekly reset is soonest strategic event.
 - **Exit:** n/a (unit test)
 - **Source fn:** `ne_tok_excluded_after_tsk228`, `ne_7d_soonest`, `ne_renewal_soonest_exact`, `ne_renewal_soonest_estimate`, `ne_all_none_returns_dash` (in `src/usage/format.rs`)
 - **Source:** [009_token_usage.md AC-28](../../../../docs/feature/009_token_usage.md)
@@ -308,3 +316,72 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Note:** Fix for BUG-220. The defect had `render_text()` using `last_mut()` positional overwrite (hitting `~Renews` as the last non-host/role column) and `render_tsv()` explicitly pushing `error_str` for the renews cell. Both renderers must preserve `renews_str` (from `OauthAccountData`) regardless of `result` error state.
 - **Source fn:** `mre_bug_220_renews_preserved_for_429_accounts` (in `src/usage/render.rs`)
 - **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-21: `@` in flag column when account is active on another machine's `_active_*` marker
+
+- **Given (unit test):** Two `AccountQuota` structs rendered via `render_text()`:
+  - `alice@x.com`: `is_current = true`, `is_active = true`, `is_occupied_elsewhere = false`, `result = Ok(...)`.
+  - `bob@x.com`: `is_current = false`, `is_active = false`, `is_occupied_elsewhere = true`, `result = Ok(...)`.
+  - `bob@x.com` is NOT the recommended next account (so `→` does not apply).
+- **When:** `render_text()` called with these two accounts and default `ColsVisibility`.
+- **Then:**
+  - The line containing `alice@x.com` starts with `✓` in the flag column.
+  - The line containing `bob@x.com` starts with `@` in the flag column.
+  - No line contains both `@` and `✓` or both `@` and `*`.
+- **Exit:** n/a (unit test — string content assertion)
+- **Note:** `is_occupied_elsewhere = true` sets `@` only when neither `is_current` nor `is_active` is true (priority: `✓` > `*` > `@` > `→` > blank).
+- **Source fn:** `test_ft21_009_occupied_elsewhere_at_flag` (in `src/usage/render.rs`)
+- **Source:** [009_token_usage.md AC-30](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-22: Cancelled subscription shows `(no subscription)` in last quota column
+
+- **Given (unit test):** One `AccountQuota`:
+  - `result = Err("no subscription")` (overridden at fetch time when `billing_type == "none"`)
+  - `account = Some(OauthAccountData { billing_type: "none", has_max: false, org_created_at: "..." })`
+  - Default `ColsVisibility` (7d Reset is last visible quota column)
+- **When:** Rendered via `render_text()` and `render_tsv()`.
+- **Then:**
+  - The `7d Reset` column cell contains `(no subscription)`.
+  - No cell contains `(rate limited (429))`.
+  - `Sub` column (when visible via `cols::+sub`) shows `"—"` (from `sub_label` with `billing_type="none"`).
+- **Exit:** n/a (unit test)
+- **Note:** Fix(BUG-233) Class A: fetch layer now overrides `result` to `Err("no subscription")` after `account_handle.join()` when `billing_type == "none"`. The previous BUG-231 display-layer workaround (`error_label` in `format.rs`) is deleted — superseded by this data-layer fix (AC-31).
+- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render.rs`); `test_class_a_billing_none_override_predicate` (in `src/usage/fetch.rs`)
+- **Source:** [009_token_usage.md AC-03, AC-31](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-23: `~Renews` shows `"—"` for cancelled subscription accounts
+
+- **Given (unit test):** One `AccountQuota`:
+  - `result = Err("no subscription")`
+  - `account = Some(OauthAccountData { billing_type: "none", has_max: false, org_created_at: "2024-01-15T00:00:00Z" })`
+  - `renewal_at = None` (no override)
+  - Default `ColsVisibility` (`~Renews` visible)
+- **When:** Rendered via `render_text()` and `render_tsv()`.
+- **Then:**
+  - The `~Renews` column cell contains `"—"` (em dash, not `"?"`, not `"~in Nd"`).
+  - Despite `org_created_at` being present and parseable, no billing estimate is shown — the subscription is cancelled.
+- **Exit:** n/a (unit test)
+- **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render.rs`)
+- **Source:** [009_token_usage.md AC-27, AC-31](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-24: `[trace] result:` emitted AFTER Class A billing_type override
+
+- **Given (structural test):** Source file `src/usage/fetch.rs` as a string (via `include_str!`).
+- **When:** Position of the Class A override pattern (`a.billing_type == "none" ) { Err( "no subscription"`) and position of the trace emission pattern (`eprintln!( "[trace] {}  result: OK"`) are extracted from the source string.
+- **Then:**
+  - The Class A override pattern is found (non-None) — the override is present.
+  - The trace emission pattern is found (non-None) — the trace line is present.
+  - `override_pos < trace_pos` — the override precedes the trace emission in source order.
+  - Observable consequence: for `billing_type="none"` accounts, `[trace] result:` emits `Err(no subscription)`, matching the table — no `result: OK` / `(no subscription)` contradiction.
+- **Exit:** n/a (structural unit test — assertion failure if positions violate ordering)
+- **Note:** BUG-234 fix. The bug was introduced when the BUG-233 Class A override was added after the trace block rather than before it. Structural test prevents regression without requiring live API calls. Source ordering is the correctness invariant — at runtime, any `billing_type="none"` override applied before the trace emission guarantees trace-result consistency.
+- **Source fn:** `mre_bug234_result_trace_after_billing_type_override` (in `src/usage/fetch.rs`)
+- **Source:** [009_token_usage.md AC-31](../../../../docs/feature/009_token_usage.md)

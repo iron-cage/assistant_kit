@@ -25,9 +25,11 @@
 //! - IT-8: `clr ask --unknown-flag "X"` — unknown flag rejected (exit 1, stderr error)
 //! - IT-9: `clr ask --trace "X"` — stderr contains ask-default env block + command before invocation
 //! - IT-10: `clr ask --subdir NAME "X"` — effective dir ends with `/-NAME`
+//! - IT-11: `CLR_EFFORT=low clr ask --dry-run "X"` — env var overrides ask soft default (BUG-245 regression)
+//! - IT-12: `CLR_MAX_TOKENS=50000 clr ask --dry-run "X"` — env var overrides ask soft default (BUG-245 regression)
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
 use std::process::Command;
 
 /// Invoke `clr ask --dry-run` with the given args and return stdout.
@@ -199,5 +201,62 @@ fn it_10_ask_subdir_effective_dir()
   assert!(
     output.contains( "/-feature" ),
     "ask --subdir feature must produce path ending in /-feature. Got:\n{output}"
+  );
+}
+
+// IT-11: CLR_EFFORT env var overrides ask soft default (BUG-245 regression guard).
+//
+// Root cause: soft defaults (cli.effort.or(Some(High))) ran before apply_env_vars;
+//   the None-sentinel was replaced by the ask default so the env-var guard
+//   (if parsed.effort.is_none()) misfired and silently ignored CLR_EFFORT.
+// Fix: apply_env_vars called before soft defaults in dispatch_ask.
+// Pitfall: priority chain must be CLI flag > CLR_* env var > ask default;
+//   placing soft defaults before env-var application reverses env/default priority.
+#[ test ]
+fn it_11_clr_effort_env_overrides_ask_default()
+{
+  let out = run_cli_with_env(
+    &[ "ask", "--dry-run", "What is X?" ],
+    &[ ( "CLR_EFFORT", "low" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_EFFORT=low clr ask --dry-run should exit 0"
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--effort low" ),
+    "CLR_EFFORT=low must override ask default (high). Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "--effort high" ),
+    "ask must not inject --effort high when CLR_EFFORT=low. Got:\n{stdout}"
+  );
+}
+
+// IT-12: CLR_MAX_TOKENS env var overrides ask soft default (BUG-245 regression guard).
+//
+// Root cause: same ordering bug as IT-11 — soft default (16384) filled the field
+//   before apply_env_vars could apply CLR_MAX_TOKENS.
+// Fix: apply_env_vars called before soft defaults in dispatch_ask.
+#[ test ]
+fn it_12_clr_max_tokens_env_overrides_ask_default()
+{
+  let out = run_cli_with_env(
+    &[ "ask", "--dry-run", "What is X?" ],
+    &[ ( "CLR_MAX_TOKENS", "50000" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_MAX_TOKENS=50000 clr ask --dry-run should exit 0"
+  );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=50000" ),
+    "CLR_MAX_TOKENS=50000 must override ask default (16384). Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384" ),
+    "ask must not inject 16384 when CLR_MAX_TOKENS=50000. Got:\n{stdout}"
   );
 }

@@ -70,6 +70,7 @@ Edge case tests for the runner verbosity level parameter. Tests validate level r
 - **Exit:** 1
 - **Source:** [012_verbosity.md](../../../../docs/cli/param/012_verbosity.md)
 - **Commands:** run, ask
+- **Note:** Implemented; test function `t12_verbosity_missing_value_exits_one` in `tests/verbosity_test.rs`
 ---
 
 ### EC-5: Default verbosity level 3 when unset
@@ -100,6 +101,7 @@ Edge case tests for the runner verbosity level parameter. Tests validate level r
 - **Exit:** 1
 - **Source:** [012_verbosity.md](../../../../docs/cli/param/012_verbosity.md)
 - **Commands:** run, ask
+- **Note:** Implemented; test function `t13_verbosity_negative_one_exits_one` in `tests/verbosity_test.rs`
 
 ---
 

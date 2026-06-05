@@ -122,6 +122,8 @@ clp .usage format::json
 | `endurance` | `1` | Best-qualified on top |
 | `drain` | `0` | Lowest quota on top |
 | `renew` | `0` | Soonest reset on top |
+| `expires` | `0` | Soonest token expiry on top |
+| `renews` | `0` | Soonest billing renewal on top |
 | `next` | inherits | Resolved to concrete strategy at parse time; inherits that strategy's `desc::` default |
 
 **Rationale:** Each strategy has a single natural direction that matches its workflow goal. Requiring explicit `desc::` in every invocation would be noisy; the default makes the common case require no extra flag.
@@ -244,7 +246,7 @@ clp .usage cols::-renews format::json
 clp .usage next::endurance format::json
 # [...array in fetch_all_quota order (alphabetical in practice)...]
 
-# next::drain (default) has no effect on JSON — no "strategy" fields injected
+# next::renew (default) has no effect on JSON — no "strategy" fields injected
 clp .usage format::json
 # [...array without recommendation fields...]
 ```

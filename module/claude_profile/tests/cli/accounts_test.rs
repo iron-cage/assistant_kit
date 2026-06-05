@@ -45,7 +45,7 @@
 //! | acc23 | `acc23_json_includes_new_fields` | `format::json` → includes display_name, role, billing, model | P |
 //! | acc24 | `acc24_new_fields_absent_by_default` | no opt-in → Display/Role/Billing/Model absent | P |
 //! | acc25 | `acc25_email_reads_from_snapshot` | Email: default-on → real email from snapshot | P |
-//! | acc26 | `acc26_save_creates_snapshot_files` | `save` creates `{name}.claude.json` (no `.settings.json` since BUG-174) | P |
+//! | acc26 | `acc26_save_creates_snapshot_files` | `save` creates `{name}.claude.json` and `{name}.settings.json` when model present (BUG-222) | P |
 //! | acc27 | `acc27_save_succeeds_without_claude_json` | save OK when `~/.claude.json` absent (best-effort) | P |
 //! | acc28 | `acc28_save_succeeds_without_settings_json` | save OK when `settings.json` absent but `.claude.json` present | P |
 //! | acc29 | `acc29_accounts_positional_bare_arg` | positional email → shows single account block | P |
@@ -826,18 +826,19 @@ fn acc25_email_reads_from_snapshot()
   );
 }
 
-/// acc26 (T09 — save with claude.json snapshot): `account::save` writes credential + `.claude.json`
-/// snapshot files; `settings.json` is NOT written (machine-global, not per-account — BUG-174).
+/// acc26 (T09 — save with claude.json + settings.json): `account::save` writes credential,
+/// `.claude.json`, and `.settings.json` snapshot files when all sources are present (BUG-222 fix).
 ///
 /// Root Cause (before fix): `save()` only called `std::fs::copy(paths.credentials_file(), dest)`.
 ///   The `oauthAccount` data from `~/.claude.json` was never persisted to the credential store.
 /// Why Not Caught: No save test verified the presence of snapshot files after save.
 /// Fix Applied: `save()` surgically extracts the `oauthAccount` subtree from `~/.claude.json`
-///   and writes it to `{name}.claude.json`. `settings.json` is machine-global and is NOT saved
-///   (BUG-174: wholesale copy of `~/.claude.json` was replaced by surgical `oauthAccount` extraction
-///   to avoid clobbering machine-global config on `switch_account`).
-/// Prevention: After any `save()` implementation change, verify ALL expected output files exist
-///   and verify machine-global files (settings.json, commands.*, mcpServers) are NOT saved.
+///   and writes it to `{name}.claude.json`. BUG-222 additionally captures `model` from
+///   `~/.claude/settings.json` into `{name}.settings.json`, enabling model preference restore
+///   on `switch_account()`. When settings.json source is absent, no snapshot is written (acc28).
+/// Prevention: After any `save()` implementation change, verify ALL expected output files exist.
+///   `settings.json` snapshot must be created when source model is present; absent when source
+///   is absent (see acc28 for the no-source case).
 /// Pitfall: The `oauthAccount` extraction silently skips if the key is absent — this is
 ///   intentional best-effort, but means a wrong source path would silently produce no output.
 ///   This test catches that by asserting `{name}.claude.json` EXISTS after save.
@@ -863,10 +864,17 @@ fn acc26_save_creates_snapshot_files()
     store.join( "alice@acme.com.claude.json" ).exists(),
     "save must create .claude.json snapshot, store: {}", store.display(),
   );
-  // Fix(BUG-174): settings.json is no longer per-account — save() no longer copies it.
+  // Fix(BUG-222): save() captures model from ~/.claude/settings.json into {name}.settings.json.
+  //   write_settings_json above created the source with "claude-sonnet" → snapshot must exist.
+  let settings_snap = store.join( "alice@acme.com.settings.json" );
   assert!(
-    !store.join( "alice@acme.com.settings.json" ).exists(),
-    "save must NOT create settings.json snapshot (BUG-174: removed), store: {}", store.display(),
+    settings_snap.exists(),
+    "save must create settings.json snapshot when source model present (BUG-222), store: {}", store.display(),
+  );
+  let settings_content = std::fs::read_to_string( &settings_snap ).unwrap();
+  assert!(
+    settings_content.contains( "claude-sonnet" ),
+    "settings.json snapshot must contain the source model value, got: {settings_content}",
   );
 }
 
@@ -907,19 +915,22 @@ fn acc27_save_succeeds_without_claude_json()
 }
 
 /// acc28 (T09 — save with `.claude.json` but without `settings.json`): confirms oauthAccount
-/// extraction succeeds when `settings.json` is absent (it is never copied after BUG-174).
+/// extraction succeeds when `settings.json` source is absent; no `{name}.settings.json`
+/// snapshot is created when the source has no `model` field.
 ///
 /// Root Cause (before fix): After the initial snapshot feature was added, `save()` tried
 ///   to copy both `.claude.json` and `settings.json`; a missing `settings.json` could
-///   interfere. BUG-174 removed the `settings.json` copy entirely (machine-global config).
+///   interfere. BUG-222 added model-only capture: `save()` reads `model` from
+///   `~/.claude/settings.json` and writes `{name}.settings.json` when present.
 /// Why Not Caught: No test verified that `settings.json` absence did not affect the
 ///   `.claude.json` snapshot creation.
-/// Fix Applied (BUG-174): `settings.json` is never copied — it is machine-global config
-///   and must not be stored per-account. Only the `oauthAccount` subtree is extracted.
-/// Prevention: Explicitly verify `settings.json` is NOT created; confirm `.claude.json`
-///   snapshot is independent of `settings.json` presence.
-/// Pitfall: Machine-global files (settings.json, commands.*, mcpServers) must never be
-///   stored per-account — restoring them on `switch_account()` clobbers machine config.
+/// Fix Applied (BUG-222): `save()` captures `model` from `~/.claude/settings.json` into
+///   `{name}.settings.json` when present. When source is absent or has no `model` field,
+///   no `{name}.settings.json` is written — save still succeeds.
+/// Prevention: Explicitly verify `settings.json` snapshot is NOT created when source absent;
+///   confirm `.claude.json` snapshot is independent of `settings.json` presence.
+/// Pitfall: `save()` only captures the `model` field, not the entire `settings.json`;
+///   machine-global keys (commands.*, mcpServers) are never stored per-account.
 #[ test ]
 fn acc28_save_succeeds_without_settings_json()
 {

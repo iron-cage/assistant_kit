@@ -27,6 +27,7 @@ pub use account_ops::{
   account_delete_routine,
   account_relogin_routine,
   account_renewal_routine,
+  account_inspect_routine,
 };
 pub use limits::account_limits_routine;
 pub use token_paths::{ token_status_routine, paths_routine };

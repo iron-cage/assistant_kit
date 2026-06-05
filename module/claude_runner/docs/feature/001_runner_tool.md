@@ -51,7 +51,8 @@ claude_runner serves two distinct consumers from one crate:
 | File | Relationship |
 |------|--------------|
 | `../../src/lib.rs` | `run_cli()` entry point |
-| `../../src/cli/mod.rs` | Mode dispatch (`run_print_mode`, `run_interactive`), command builder, subcommand dispatch |
+| `../../src/cli/mod.rs` | Mode dispatch (`run_print_mode`, `run_interactive`), subcommand dispatch, CLI entry point |
+| `../../src/cli/builder.rs` | `build_claude_command()` implementation, `session_exists()` guard, effective-dir resolution |
 | `../../src/cli/parse.rs` | CLI argument parsing, env var fallbacks |
 | `../../src/cli/credential.rs` | Credential-isolated execution (`run_isolated_command`, `run_refresh_command`), trace emission for isolated/refresh |
 

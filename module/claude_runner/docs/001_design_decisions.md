@@ -49,7 +49,7 @@ This also decouples `clr` from external session orchestration.
 **Consequence:** removed `-c`/`--continue` from public flag list (redundant); added
 `--new-session` (the only way to disable default continuation). Net: 11 flags → 11 flags.
 
-**Fixed (BUG-214, 2026-05-28):** The "most invocations are continuations" assumption was false on first use. When no prior session existed in storage, `-c` caused the claude binary to exit immediately with "No conversation found to continue". Fixed by adding `session_exists()` guard in `build_claude_command()`: `-c` is now injected only when session storage is non-empty.
+**Fixed (BUG-214, 2026-05-28; reopened and re-fixed 2026-06-03):** The "most invocations are continuations" assumption was false on first use. When no prior session existed in storage, `-c` caused the claude binary to exit immediately with "No conversation found to continue". Fixed by adding `session_exists()` guard in `build_claude_command()`: `-c` is now injected only when session storage is non-empty. Initial fix used `$HOME/.claude/` (always non-empty — contains credentials and config). Re-fix uses `claude_storage_core::continuation::check_continuation()` which checks the correct project-specific path `$HOME/.claude/projects/{encoded(cwd)}/`.
 
 ### D8 — Three-layer docs/cli/ replaces 42-file structure
 

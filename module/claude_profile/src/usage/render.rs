@@ -20,8 +20,8 @@ use super::sort::{ sort_indices, find_next_for_strategy, strategy_metric };
 ///
 /// Empty store renders `(no accounts configured)` without a table.
 /// Column visibility is controlled by `cols` (structural `flag` and `account`
-/// columns are always shown). Footer (TSK-184): always-visible 2-strategy block
-/// when ≥2 accounts have valid quota — shows `endurance` and `drain` lines.
+/// columns are always shown). Footer (TSK-184): unconditional 3-strategy block
+/// when ≥2 accounts have valid quota — shows `renew`, `endurance`, and `drain` lines.
 /// The `→` marker in the table body points to the active-strategy winner.
 /// Footer is omitted when < 2 accounts have valid quota data.
 #[ allow( clippy::too_many_lines ) ]
@@ -101,7 +101,7 @@ pub( crate ) fn render_text(
   for orig_idx in sorted_indices.iter().copied()
   {
     let aq = &accounts[ orig_idx ];
-    // Four-level priority: ✓ (is_current) > * (is_active, not current) > → (active-strategy winner) > blank.
+    // Five-level priority: ✓ (is_current) > * (is_active, not current) > @ (occupied on another machine) > → (active-strategy winner) > blank.
     let flag_cell = if aq.is_current
     {
       "✓".to_string()
@@ -109,6 +109,10 @@ pub( crate ) fn render_text(
     else if aq.is_active
     {
       "*".to_string()
+    }
+    else if aq.is_occupied_elsewhere
+    {
+      "@".to_string()
     }
     else if best_idx == Some( orig_idx )
     {
@@ -121,11 +125,22 @@ pub( crate ) fn render_text(
 
     let expires_cell = compute_expires_cell( aq.expires_at_ms, now_secs );
     let sub_str      = sub_label( aq.account.as_ref() ).to_string();
-    let renews_str   = renews_label(
-      aq.renewal_at.as_deref(),
-      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
-      now_secs,
-    );
+    // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
+    // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
+    // Pitfall: org_created_at may be present even when subscription is cancelled; must check
+    //   billing_type BEFORE passing org_created_at to renews_label.
+    let renews_str = if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" )
+    {
+      "\u{2014}".to_string()
+    }
+    else
+    {
+      renews_label(
+        aq.renewal_at.as_deref(),
+        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        now_secs,
+      )
+    };
 
     match &aq.result
     {
@@ -263,8 +278,9 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
   for aq in accounts
   {
     let name_esc         = json_escape( &aq.name );
-    let is_current_str   = if aq.is_current { "true" } else { "false" };
-    let is_active_str    = if aq.is_active  { "true" } else { "false" };
+    let is_current_str            = if aq.is_current            { "true" } else { "false" };
+    let is_active_str             = if aq.is_active             { "true" } else { "false" };
+    let is_occupied_elsewhere_str = if aq.is_occupied_elsewhere { "true" } else { "false" };
     let expires_in_secs  = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
     let billing_type_str = aq.account.as_ref()
       .map_or_else( || "null".to_string(), |a| format!( "\"{}\"", json_escape( &a.billing_type ) ) );
@@ -311,11 +327,12 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
         {
           None                        => ( "null".to_string(), "null".to_string() ),
           Some( ( secs, prefix, _ ) ) =>
-            ( format!( "\"{}\"", prefix.trim_start_matches( '+' ).trim_start_matches( '!' ).trim_start_matches( '$' ) ),
+            ( format!( "\"{}\"", prefix.trim_start_matches( '+' ).trim_start_matches( '$' ) ),
               secs.to_string() ),
         };
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
+\"is_occupied_elsewhere\":{is_occupied_elsewhere_str},\
 \"expires_in_secs\":{expires_in_secs},\
 \"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\
 \"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\
@@ -327,8 +344,8 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
       }
       Err( reason ) =>
       {
-        // Err accounts lack quota data but still have token-expiry and optional renewal;
-        // compute next_event from those two sources so JSON callers get useful data.
+        // Err accounts lack quota data but still have optional renewal;
+        // compute next_event from that source so JSON callers get useful data.
         let ( next_type_str, next_secs_str ) = match next_event_raw(
           None,
           ren_pair.map( |( s, _ )| s ),
@@ -337,11 +354,12 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
         {
           None                         => ( "null".to_string(), "null".to_string() ),
           Some( ( secs, prefix, _ ) ) =>
-            ( format!( "\"{}\"", prefix.trim_start_matches( '+' ).trim_start_matches( '!' ).trim_start_matches( '$' ) ),
+            ( format!( "\"{}\"", prefix.trim_start_matches( '+' ).trim_start_matches( '$' ) ),
               secs.to_string() ),
         };
         format!(
           "{{\"account\":\"{name_esc}\",\"is_current\":{is_current_str},\"is_active\":{is_active_str},\
+\"is_occupied_elsewhere\":{is_occupied_elsewhere_str},\
 \"expires_in_secs\":{expires_in_secs},\
 \"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\
 \"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\
@@ -404,7 +422,7 @@ pub( crate ) fn render_tsv(
   for idx in sorted_indices
   {
     let aq         = &accounts[ idx ];
-    let flag_cell  = if aq.is_current { "\u{2713}" } else if aq.is_active { "*" } else { "" };
+    let flag_cell  = if aq.is_current { "\u{2713}" } else if aq.is_active { "*" } else if aq.is_occupied_elsewhere { "@" } else { "" };
     let status_str = match status_emoji( &aq.result )
     {
       "🟢" => "ok",
@@ -413,11 +431,22 @@ pub( crate ) fn render_tsv(
     };
     let expires_str = compute_expires_cell( aq.expires_at_ms, now_secs );
     let sub_str     = sub_label( aq.account.as_ref() ).to_string();
-    let renews_str  = renews_label(
-      aq.renewal_at.as_deref(),
-      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
-      now_secs,
-    );
+    // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
+    // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
+    // Pitfall: org_created_at may be present even when subscription is cancelled; must check
+    //   billing_type BEFORE passing org_created_at to renews_label.
+    let renews_str = if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" )
+    {
+      "\u{2014}".to_string()
+    }
+    else
+    {
+      renews_label(
+        aq.renewal_at.as_deref(),
+        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        now_secs,
+      )
+    };
 
     let mut row = vec![ flag_cell.to_string() ];
     if cols.status { row.push( status_str.to_string() ); }
@@ -534,11 +563,22 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
     GetField::Account => aq.name.clone(),
     GetField::Expires => compute_expires_cell( aq.expires_at_ms, now_secs ),
     GetField::Sub    => sub_label( aq.account.as_ref() ).to_string(),
-    GetField::Renews => renews_label(
-      aq.renewal_at.as_deref(),
-      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
-      now_secs,
-    ),
+    // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
+    // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
+    // Pitfall: org_created_at may be present even when subscription is cancelled; must check
+    //   billing_type BEFORE passing org_created_at to renews_label.
+    GetField::Renews => if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" )
+    {
+      "\u{2014}".to_string()
+    }
+    else
+    {
+      renews_label(
+        aq.renewal_at.as_deref(),
+        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        now_secs,
+      )
+    },
     GetField::Host         => aq.host.clone(),
     GetField::Role         => aq.role.clone(),
     GetField::NextEventType | GetField::NextEventSecs =>
@@ -644,9 +684,10 @@ mod tests
     {
       name          : "i11@test.com".to_string(),
       is_current    : false,
-      is_active     : false,
-      expires_at_ms : FAR_FUTURE_MS,
-      result        : Err( "rate limited (429)".to_string() ),
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Err( "rate limited (429)".to_string() ),
       account       : Some( claude_quota::OauthAccountData
       {
         billing_type   : "stripe_subscription".to_string(),
@@ -691,6 +732,167 @@ mod tests
     assert!(
       text.contains( "(rate limited (429))" ),
       "BUG-220: error reason must appear in render_text output (in a quota column)",
+    );
+  }
+
+  /// FT-21/009 — `@` flag in text and TSV for accounts occupied on another machine.
+  ///
+  /// Priority chain under test: `✓` (`is_current`) outranks `@`; `@` appears when
+  /// `is_current=false` AND `is_active=false` AND `is_occupied_elsewhere=true`.
+  ///
+  /// Both renderers use the same flag priority — this test covers both.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-21]
+  #[ test ]
+  fn test_ft21_009_occupied_elsewhere_at_flag()
+  {
+    let mk_aq = | name : &str, is_current : bool, is_active : bool, is_occupied_elsewhere : bool |
+    {
+      AccountQuota
+      {
+        name                  : name.to_string(),
+        is_current,
+        is_active,
+        is_occupied_elsewhere,
+        expires_at_ms         : FAR_FUTURE_MS,
+        result                : Ok( claude_quota::OauthUsageData
+        {
+          five_hour        : Some( claude_quota::PeriodUsage { utilization : 50.0, resets_at : None } ),
+          seven_day        : None,
+          seven_day_sonnet : None,
+        } ),
+        account               : None,
+        host                  : String::new(),
+        role                  : String::new(),
+        renewal_at            : None,
+      }
+    };
+
+    // alice: is_current=true → ✓; bob: is_occupied_elsewhere=true, not current/active → @
+    let accounts = vec!
+    [
+      mk_aq( "alice@test.com", true,  true,  false ),
+      mk_aq( "bob@test.com",   false, false, true  ),
+    ];
+    let cols = ColsVisibility::default_set();
+
+    // --- text renderer ---
+    let text = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &cols,
+    );
+    let alice_text = text.lines().find( | l | l.contains( "alice@test.com" ) )
+      .expect( "FT-21: alice line missing from render_text" );
+    let bob_text   = text.lines().find( | l | l.contains( "bob@test.com" ) )
+      .expect( "FT-21: bob line missing from render_text" );
+
+    assert!(
+      alice_text.contains( '\u{2713}' ),
+      "FT-21: alice (is_current=true) must show ✓ in text render; got: {alice_text:?}",
+    );
+    assert_eq!(
+      bob_text.split_whitespace().next().unwrap_or( "" ),
+      "@",
+      "FT-21: bob (is_occupied_elsewhere=true) first token must be @ in text render; got: {bob_text:?}",
+    );
+
+    // --- TSV renderer ---
+    let tsv   = render_tsv( &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols );
+    let mut tsv_lines = tsv.lines();
+    let _header  = tsv_lines.next().expect( "FT-21: TSV must have a header row" );
+    // rows sorted by Name: alice before bob
+    let alice_tsv = tsv_lines.next().expect( "FT-21: alice TSV row missing" );
+    let bob_tsv   = tsv_lines.next().expect( "FT-21: bob TSV row missing" );
+
+    let alice_flag_tsv = alice_tsv.split( '\t' ).next().unwrap_or( "" );
+    let bob_flag_tsv   = bob_tsv.split( '\t' ).next().unwrap_or( "" );
+
+    assert_eq!(
+      alice_flag_tsv, "\u{2713}",
+      "FT-21: alice TSV flag cell must be ✓; got: {alice_flag_tsv:?}",
+    );
+    assert_eq!(
+      bob_flag_tsv, "@",
+      "FT-21: bob TSV flag cell must be @; got: {bob_flag_tsv:?}",
+    );
+  }
+
+  /// FT-23/009 — `~Renews` must show `"—"` for cancelled-subscription accounts.
+  ///
+  /// # Root Cause
+  /// `renews_label` uses `org_created_at` unconditionally to project a billing date —
+  /// it has no `billing_type` parameter. Accounts with `billing_type == "none"` showed
+  /// `~in Nd` in `~Renews` despite `Sub = "—"` — the two columns contradicted each other.
+  ///
+  /// # Why Not Caught
+  /// No prior Err-arm test supplied `OauthAccountData { billing_type: "none" }` and
+  /// checked the `~Renews` column. All prior tests used `account: None` → `"?"`.
+  ///
+  /// # Fix Applied
+  /// Caller-side guard in `render_text()` and `render_tsv()`: when `billing_type == "none"`,
+  /// short-circuit to `"\u{2014}"` before passing `org_created_at` to `renews_label`.
+  /// Fix(BUG-232).
+  ///
+  /// # Prevention
+  /// Any Err-arm test for cancelled-subscription accounts must verify `~Renews = "—"`,
+  /// not just the error label column.
+  ///
+  /// # Pitfall
+  /// `org_created_at` may be present and parseable even after subscription cancellation.
+  /// The guard must check `billing_type` BEFORE consulting `org_created_at` — presence of
+  /// the org date does not imply an active renewal cycle.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-23]
+  #[ doc = "bug_reproducer(BUG-232)" ]
+  #[ test ]
+  fn test_ft23_009_renews_dash_for_cancelled_subscription()
+  {
+    let aq = AccountQuota
+    {
+      name                  : "cancelled@test.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Err( "no subscription".to_string() ),
+      account               : Some( claude_quota::OauthAccountData
+      {
+        billing_type   : "none".to_string(),
+        has_max        : false,
+        org_created_at : "2024-01-15T00:00:00Z".to_string(),
+      } ),
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+    };
+    let accounts = vec![ aq ];
+    let cols     = ColsVisibility::default_set();
+
+    // text renderer: ~Renews must be "—", NOT "~in Nd"
+    let text = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &cols,
+    );
+    assert!(
+      text.contains( "\u{2014}" ),
+      "FT-23: render_text must contain em-dash for cancelled subscription ~Renews; got:\n{text}",
+    );
+    assert!(
+      !text.contains( "~in " ),
+      "FT-23: render_text must NOT contain '~in ' for cancelled subscription; got:\n{text}",
+    );
+
+    // TSV renderer: renews column must be "—"
+    let tsv       = render_tsv( &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols );
+    let mut lines = tsv.lines();
+    let header    = lines.next().expect( "FT-23: TSV must have header row" );
+    let data_row  = lines.next().expect( "FT-23: TSV must have data row" );
+    let headers   : Vec< &str > = header.split( '\t' ).collect();
+    let fields    : Vec< &str > = data_row.split( '\t' ).collect();
+    let renews_idx = headers.iter().position( |h| *h == "renews" )
+      .expect( "FT-23: renews column must be present in TSV header" );
+    let renews_val = fields.get( renews_idx ).copied().unwrap_or( "" );
+    assert_eq!(
+      renews_val, "\u{2014}",
+      "FT-23: TSV ~Renews must be em-dash for billing_type='none'; got: {renews_val:?}",
     );
   }
 }

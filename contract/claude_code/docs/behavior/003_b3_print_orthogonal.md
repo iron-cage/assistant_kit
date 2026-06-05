@@ -18,6 +18,8 @@ claude -p "message"          # new session + print output (non-interactive)
 claude -p -c "message"       # resume session + print output
 ```
 
+**Write behavior (inferred):** `-p` mode writes session entries to disk by default, the same as interactive mode. The `--no-session-persistence` flag (B22) is required to suppress writes — and its help text explicitly restricts it to `--print` mode ("only works with --print"). This restriction implies `-p` mode normally does write sessions; without writing, `--no-session-persistence` would have no effect in `--print` mode and the restriction would be meaningless. Unconfirmed by live invocation; TBD pending direct observation.
+
 ### Evidence
 
 | ID | Supports | Type | Source | Location | Content |

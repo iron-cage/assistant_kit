@@ -25,7 +25,7 @@
 //! - T58: message is suffixed (not prefixed) with `"\n\nultrathink"` — suffix position guard
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ run_cli, make_session_dir };
 
 // T50: message is suffixed with "\n\nultrathink" by default
 //
@@ -145,7 +145,8 @@ fn t53_help_lists_no_ultrathink()
 #[ test ]
 fn t54_empty_positional_arg_ignored()
 {
-  let out = run_cli( &[ "--dry-run", "" ] );
+  let ( _session, session_path ) = make_session_dir();
+  let out = run_cli( &[ "--dry-run", "--session-dir", &session_path, "" ] );
   assert!(
     out.status.success(),
     "empty positional arg must not error. stderr: {}",
@@ -153,10 +154,12 @@ fn t54_empty_positional_arg_ignored()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
+  // No -c: the test cwd has no prior Claude session; session_exists() checks project-specific
+  // storage ($HOME/.claude/projects/{encoded(cwd)}/), not the global ~/.claude/ dir.
   assert_eq!(
     last_line,
-    "claude --dangerously-skip-permissions --chrome --effort max -c",
-    "empty positional arg must produce bare command (no --print, no message). Got:\n{stdout}"
+    "claude --dangerously-skip-permissions --chrome --effort max",
+    "empty positional arg must produce bare command (no --print, no message, no -c in fresh dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),
@@ -264,7 +267,8 @@ fn t56_help_wins_over_preceding_unknown_flag()
 #[ test ]
 fn t57_empty_positional_after_double_dash_ignored()
 {
-  let out = run_cli( &[ "--dry-run", "--", "" ] );
+  let ( _session, session_path ) = make_session_dir();
+  let out = run_cli( &[ "--dry-run", "--session-dir", &session_path, "--", "" ] );
   assert!(
     out.status.success(),
     "empty arg after -- must not error. stderr: {}",
@@ -272,10 +276,12 @@ fn t57_empty_positional_after_double_dash_ignored()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
+  // No -c: the test cwd has no prior Claude session; session_exists() checks project-specific
+  // storage ($HOME/.claude/projects/{encoded(cwd)}/), not the global ~/.claude/ dir.
   assert_eq!(
     last_line,
-    "claude --dangerously-skip-permissions --chrome --effort max -c",
-    "empty arg after -- must produce bare command (no --print, no message). Got:\n{stdout}"
+    "claude --dangerously-skip-permissions --chrome --effort max",
+    "empty arg after -- must produce bare command (no --print, no message, no -c in fresh dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),

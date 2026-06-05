@@ -6,6 +6,7 @@ use super::storage::{ create_storage, parse_project_parameter, find_session_mut 
 use super::format::format_entry_content;
 
 /// Display control flags for session output.
+#[ allow( clippy::struct_excessive_bools ) ]
 struct SessionDisplayOptions
 {
   show_entries  : bool,
@@ -54,10 +55,13 @@ pub fn show_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   };
 
   let project_param = cmd.get_string( "project" );
+  // verbosity::0 maps to metadata-only mode (compact output without full conversation)
+  let metadata_only = cmd.get_boolean( "show_metadata" ).unwrap_or( false )
+    || cmd.get_integer( "verbosity" ).unwrap_or( 1 ) == 0;
   let opts = SessionDisplayOptions
   {
     show_entries  : cmd.get_boolean( "show_entries" ).unwrap_or( false ),
-    metadata_only : cmd.get_boolean( "show_metadata" ).unwrap_or( false ),
+    metadata_only,
     show_stat     : cmd.get_boolean( "show_stat" ).unwrap_or( false ),
     show_tokens   : cmd.get_boolean( "show_tokens" ).unwrap_or( false ),
   };

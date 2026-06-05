@@ -258,6 +258,31 @@ pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths, update
       }
     }
   }
+  // Fix(BUG-222): capture model preference from ~/.claude/settings.json into {name}.settings.json.
+  // Root cause: save() wrote credentials and oauthAccount snapshots but never captured the model
+  //   preference, so switch_account() had no per-account model data to restore; the prior
+  //   account's model persisted silently after every switch.
+  // Pitfall: best-effort only — skip silently when model is absent to avoid creating vacuous
+  //   {name}.settings.json files; never let a settings write failure propagate as an error.
+  if let Ok( live_settings ) = std::fs::read_to_string( paths.settings_file() )
+  {
+    if let Some( model ) = parse_string_field( &live_settings, "model" )
+    {
+      let settings_path = credential_store.join( format!( "{name}.settings.json" ) );
+      let mut snapshot = std::fs::read_to_string( &settings_path )
+        .ok()
+        .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+        .unwrap_or_else( || serde_json::json!( {} ) );
+      if let Some( obj ) = snapshot.as_object_mut()
+      {
+        obj.insert( "model".to_string(), serde_json::Value::String( model ) );
+      }
+      let _ = std::fs::write(
+        settings_path,
+        serde_json::to_string( &snapshot ).unwrap_or_default(),
+      );
+    }
+  }
   // Best-effort: fetch org identity from endpoint 005 and persist as {name}.roles.json.
   // Requires accessToken in the credentials file. Network errors or absent token are silently
   // skipped — save() must not fail for network unavailability or missing optional data.
@@ -419,6 +444,34 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
     }
   }
 
+  // Fix(BUG-222): restore per-account model preference from {name}.settings.json into ~/.claude/settings.json.
+  // Root cause: switch_account() patched credentials and oauthAccount but left ~/.claude/settings.json
+  //   untouched; the prior account's model persisted after every switch (switching from sonnet to an
+  //   account with no preference still ran on sonnet).
+  // Pitfall: must handle both directions — if {name}.settings.json has a model, install it; if absent
+  //   (or no model field), REMOVE the model key from live settings.json so no stale model persists.
+  //   Best-effort: credentials switch already succeeded; a settings failure must never propagate.
+  {
+    let settings_path = credential_store.join( format!( "{name}.settings.json" ) );
+    let model = std::fs::read_to_string( &settings_path )
+      .ok()
+      .and_then( |s| parse_string_field( &s, "model" ) );
+    let live_settings_path = paths.settings_file();
+    let mut live_settings = std::fs::read_to_string( &live_settings_path )
+      .ok()
+      .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+      .unwrap_or_else( || serde_json::json!( {} ) );
+    if let Some( obj ) = live_settings.as_object_mut()
+    {
+      match model
+      {
+        Some( m ) => { obj.insert( "model".to_string(), serde_json::Value::String( m ) ); }
+        None      => { obj.remove( "model" ); }
+      }
+    }
+    let _ = std::fs::write( live_settings_path, serde_json::to_string( &live_settings ).unwrap_or_default() );
+  }
+
   Ok( () )
 }
 
@@ -462,6 +515,50 @@ pub fn auto_rotate( credential_store : &Path, paths : &ClaudePaths ) -> Result< 
   let name = candidate.name;
   switch_account( &name, credential_store, paths )?;
   Ok( name )
+}
+
+/// Override the session model to Opus in `~/.claude/settings.json` when the current model is Sonnet.
+///
+/// Returns `true` when the override was written (current model was Sonnet or absent);
+/// `false` when the model was already non-Sonnet (Opus, Haiku, etc.) — no write occurs.
+///
+/// Best-effort: any I/O failure is silently ignored (same policy as the `switch_account`
+/// model-restore block — `settings.json` mutations must never fail the caller).
+///
+/// # Fix(BUG-225)
+///
+/// `switch_account()` restores the snapshot model unconditionally, ignoring current quota.
+/// When Sonnet quota is low (< 20%), this leaves the session on Sonnet even though
+/// `resolve_model(auto)` would have selected Opus. This function corrects the session model
+/// after the switch, keeping it consistent with the subprocess model threshold.
+///
+/// # Pitfall
+///
+/// Only fires when quota data is available (i.e., `touch_ctx` is `Some`). When the quota
+/// fetch returns 429 (`touch_ctx = None`), the model-aware upgrade cannot fire and the
+/// snapshot model is used as-is. See BUG-226 for the documented limitation.
+#[ must_use ]
+#[ inline ]
+pub fn override_session_model_to_opus( paths : &ClaudePaths ) -> bool
+{
+  let path = paths.settings_file();
+  let mut live = std::fs::read_to_string( &path )
+    .ok()
+    .and_then( | s | serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  let Some( obj ) = live.as_object_mut() else { return false; };
+  let current = obj.get( "model" ).and_then( | v | v.as_str() ).unwrap_or( "" );
+  // Override Sonnet → Opus. Already-Opus/Haiku/other models are left unchanged.
+  if current == "claude-sonnet-4-6" || current.is_empty()
+  {
+    obj.insert( "model".to_string(), serde_json::Value::String( "claude-opus-4-6".to_string() ) );
+    let _ = std::fs::write( path, serde_json::to_string( &live ).unwrap_or_default() );
+    true
+  }
+  else
+  {
+    false
+  }
 }
 
 /// Validate that a named account can be deleted (name valid + file exists).
@@ -690,6 +787,22 @@ pub fn refresh_account_token(
 /// Format: `` `_active_{hostname}_{user}` `` where `hostname` and `user` are
 /// sanitized (only alphanumeric, `-`, and `.` are kept; everything else becomes `_`).
 /// Reads `HOSTNAME` env var first, falls back to `/etc/hostname`; reads `USER`
+/// Resolves the current machine's hostname via fallback chain:
+/// `$HOSTNAME` env → `/etc/hostname` → `"local"`.
+#[ inline ]
+#[ must_use ]
+pub fn resolve_hostname() -> String
+{
+  std::env::var( "HOSTNAME" )
+    .unwrap_or_else( |_|
+    {
+      std::fs::read_to_string( "/etc/hostname" )
+        .unwrap_or_else( |_| "local".to_string() )
+        .trim()
+        .to_string()
+    } )
+}
+
 /// env var first, falls back to `USERNAME`, then to the literal `"user"`.
 ///
 /// The per-machine name means that switching accounts on one machine does not
@@ -699,14 +812,7 @@ pub fn refresh_account_token(
 #[ must_use ]
 pub fn active_marker_filename() -> String
 {
-  let hostname = std::env::var( "HOSTNAME" )
-    .unwrap_or_else( |_|
-    {
-      std::fs::read_to_string( "/etc/hostname" )
-        .unwrap_or_else( |_| "local".to_string() )
-        .trim()
-        .to_string()
-    } );
+  let hostname = resolve_hostname();
   let user = std::env::var( "USER" )
     .or_else( |_| std::env::var( "USERNAME" ) )
     .unwrap_or_else( |_| "user".to_string() );
@@ -717,6 +823,38 @@ pub fn active_marker_filename() -> String
       .collect()
   };
   format!( "_active_{}_{}", clean( &hostname ), clean( &user ) )
+}
+
+/// Returns the set of account names that are marked as active on other machines.
+///
+/// Reads every `_active_*` file in `credential_store` except the current
+/// machine's own marker (as returned by [`active_marker_filename`]). Each
+/// such file contains the name of the account active on that other machine.
+/// Returns the collected names as a `HashSet` so callers can check membership
+/// in O(1).
+///
+/// Missing or unreadable files are silently skipped (another machine's marker
+/// may not be present locally at all times).
+#[ inline ]
+#[ must_use ]
+pub fn other_machines_active( credential_store : &Path ) -> std::collections::HashSet< String >
+{
+  let own = active_marker_filename();
+  std::fs::read_dir( credential_store )
+    .ok()
+    .into_iter()
+    .flatten()
+    .filter_map( Result::ok )
+    .filter( | e |
+    {
+      let name = e.file_name();
+      let n = name.to_string_lossy();
+      n.starts_with( "_active_" ) && n != own.as_str()
+    } )
+    .filter_map( | e | std::fs::read_to_string( e.path() ).ok() )
+    .map( | s | s.trim().to_string() )
+    .filter( | s | !s.is_empty() )
+    .collect()
 }
 
 // ── Account renewal ───────────────────────────────────────────────────────────

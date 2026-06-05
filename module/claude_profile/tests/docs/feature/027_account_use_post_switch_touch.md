@@ -15,14 +15,16 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-07 | `imodel::bad` exits 1 naming all five valid values | AC-07 | Integration |
 | FT-08 | `effort::bad` exits 1 naming all five valid values | AC-07 | Integration |
 | FT-09 | `dry::1` — no credentials modified, no subprocess spawned | AC-08 | Integration |
-| FT-10 | `touch::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help` with defaults | AC-09, AC-16 | Integration |
+| FT-10 | `touch::`, `refresh::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help` with defaults | AC-09, AC-16 | Integration |
 | FT-11 | `trace::1 touch::1` idle account — all 6 trace lines emitted in order | AC-10, AC-11, AC-12, AC-13, AC-14 | Integration |
 | FT-12 | `trace::1 touch::1` active account — read+fetch+idle-check+model+subprocess-skipped lines | AC-10, AC-11, AC-12, AC-13, AC-14 | Integration |
 | FT-13 | `trace::1 touch::1` fetch failure + `expiresAt` future — fetch-err + expiry-valid emitted; idle/model omitted | AC-10, AC-11, AC-14 | Integration |
 | FT-14 | `trace::1 touch::0` — no `[trace] account.use` lines emitted | AC-15 | Integration |
 | FT-15 | `trace::0` (default) — no `[trace] account.use` lines emitted | AC-15 | Integration |
 | FT-16 | `trace::` with bad value exits 1 | AC-16 | Integration |
-| FT-17 | `touch::1` + fetch Err + expired `expiresAt` → exits 3; switch NOT executed | AC-17 | Integration (BUG-213 MRE) |
+| FT-17 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::1` → refresh fails → exits 3; switch NOT executed | AC-17 | Integration (BUG-213 + BUG-230 MRE) |
+| FT-18 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::0` → exits 3 immediately; no refresh attempt | AC-20 | Integration (BUG-230) |
+| FT-19 | Active account + 7d(Son) < 20% → model override fires after switch | AC-18 | Integration (BUG-238 MRE) |
 
 ### Test Case Index
 
@@ -37,16 +39,18 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-07 | imodel::bad exits 1 with valid values | AC-07 | Rejection |
 | FT-08 | effort::bad exits 1 with valid values | AC-07 | Rejection |
 | FT-09 | dry::1 performs no modification | AC-08 | Dry Run |
-| FT-10 | touch:: imodel:: effort:: trace:: in help with defaults | AC-09, AC-16 | Help Output |
+| FT-10 | touch:: refresh:: imodel:: effort:: trace:: in help with defaults | AC-09, AC-16 | Help Output |
 | FT-11 | trace::1 touch::1 idle account — all 6 trace lines emitted | AC-10, AC-11, AC-12, AC-13, AC-14 | Trace Output |
 | FT-12 | trace::1 touch::1 active account — read+fetch+idle-check+model+skipped lines | AC-10, AC-11, AC-12, AC-13, AC-14 | Trace Output |
 | FT-13 | trace::1 touch::1 fetch failure + expiresAt future — fetch-err + expiry-valid lines; idle/model omitted | AC-10, AC-11, AC-14 | Trace Output |
 | FT-14 | trace::1 touch::0 — no trace lines emitted | AC-15 | Trace Suppression |
 | FT-15 | trace::0 (default) — no trace lines emitted | AC-15 | Trace Default |
 | FT-16 | trace:: in .account.use --help with default 0 | AC-16 | Help Output |
-| FT-17 | touch::1 + fetch Err + expired expiresAt → exits 3; no switch_account call | AC-17 | BUG-213 MRE |
+| FT-17 | touch::1 + fetch Err + expired expiresAt + refresh::1 (default) → refresh fails → exits 3 | AC-17 | BUG-213 + BUG-230 MRE |
+| FT-18 | touch::1 + fetch Err + expired expiresAt + refresh::0 → exits 3 immediately, no refresh attempt | AC-20 | BUG-230 |
+| FT-19 | active account + 7d(Son) < 20% → model override sonnet→opus after switch | AC-18 | BUG-238 MRE |
 
-**Total:** 17 FT cases
+**Total:** 19 FT cases
 
 ---
 
@@ -151,13 +155,13 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ---
 
-### FT-10: `touch::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help` with correct defaults
+### FT-10: `touch::`, `refresh::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help` with correct defaults
 
 - **Given:** Standard environment.
 - **When:** `clp .account.use --help` (or `.account.use help::1`)
-- **Then:** Exits 0. Help output contains `touch::` with default `1`, `imodel::` with default `auto`, `effort::` with default `auto`, and `trace::` with default `0`.
+- **Then:** Exits 0. Help output contains `touch::` with default `1`, `refresh::` with default `1`, `imodel::` with default `auto`, `effort::` with default `auto`, and `trace::` with default `0`.
 - **Exit:** 0
-- **Source fn:** `aw26_help_shows_touch_imodel_effort` (in `tests/cli/account_mutations_test.rs`) — `trace::` presence asserted; default `0` value not yet verified
+- **Source fn:** `aw26_help_shows_touch_imodel_effort` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-09, AC-16](../../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
@@ -230,12 +234,34 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ---
 
-### FT-17: `touch::1` + fetch Err + expired `expiresAt` — exits 3, switch NOT executed (BUG-213 MRE)
+### FT-17: `touch::1` + fetch Err + expired `expiresAt` + `refresh::1` — refresh fails → exits 3 (BUG-213 + BUG-230 MRE)
 
-- **Given:** Account `alice@home.com` saved with a credential file where `expiresAt` is set to a timestamp in the past (locally expired token). The quota fetch against that token returns an Err (e.g., HTTP 429 or auth error).
-- **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
-- **Then:** Exits 3. Stderr contains `account credentials expired: alice@home.com (expired ...ago)`. `~/.claude/.credentials.json` is NOT overwritten — `switch_account()` was not called. The active marker (`_active_{hostname}_{user}`) is NOT updated.
+- **Given:** Account `alice@home.com` saved with a credential file where `expiresAt` is set to a timestamp in the past (locally expired token) and no `accessToken` (so the refresh subprocess immediately fails). Default `refresh::1` applies.
+- **When:** `clp .account.use name::alice@home.com` (default `touch::1 refresh::1`)
+- **Then:** Exits 3. Stderr contains `account credentials expired and refresh failed: alice@home.com (expired ...ago)`. `~/.claude/.credentials.json` is NOT overwritten. The active marker is NOT updated.
 - **Exit:** 3
-- **Source fn:** `mre_bug213_account_use_refuses_expired_token_on_fetch_error` (in `tests/cli/account_mutations_test.rs`)
-- **Note:** BUG-213 MRE — verifies that a locally-expired token causes `.account.use` to refuse the switch rather than silently installing unusable credentials. The complementary `aw23_touch_skipped_no_access_token` (AC-04) must still pass — it uses `expiresAt = FAR_FUTURE_MS` (not locally expired), so the expiry check passes and the switch completes normally (exits 0). The discriminant between FT-04 and FT-17 is the `expires_at_ms` argument to `write_account()`: `FAR_FUTURE_MS` (future, not expired) vs `1000` (past, expired).
+- **Source fn:** `mre_bug213_account_use_refuses_expired_token_on_fetch_error` + `mre_bug230_account_use_refresh_fails_exits_3_with_updated_message` (in `tests/cli/account_mutations_test.rs`)
+- **Note:** BUG-213 MRE still passes — `err.contains("account credentials expired")` holds because the new message `"account credentials expired and refresh failed"` is a superset. The BUG-230 MRE additionally asserts `err.contains("and refresh failed")`. For `refresh::0` (immediate exit), see FT-18. The discriminant between FT-04 and FT-17 is the `expires_at_ms` argument to `write_account()`: `FAR_FUTURE_MS` (future, not expired) vs `1000` (past, expired).
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-17](../../../../docs/feature/027_account_use_post_switch_touch.md)
+
+---
+
+### FT-18: `touch::1` + fetch Err + expired `expiresAt` + `refresh::0` — exits 3 immediately (BUG-230)
+
+- **Given:** Account `alice@home.com` saved with a credential file where `expiresAt` is in the past and no `accessToken`. `refresh::0` explicitly disables the refresh attempt.
+- **When:** `clp .account.use name::alice@home.com refresh::0 trace::1`
+- **Then:** Exits 3. Stderr contains `account credentials expired: alice@home.com (expired ...ago)`. Does NOT contain `"and refresh failed"` (no refresh attempted). Trace contains `refused (refresh::0)`. `~/.claude/.credentials.json` is NOT overwritten.
+- **Exit:** 3
+- **Source fn:** `aw33_refresh_disabled_exits_3_immediately` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-20](../../../../docs/feature/027_account_use_post_switch_touch.md)
+
+---
+
+### FT-19: Active account + 7d(Son) < 20% — model override sonnet→opus fires after switch (BUG-238 MRE)
+
+- **Given:** Account `alice@home.com` saved with valid OAuth token and an ACTIVE 5h window (`five_hour.resets_at` is set). `seven_day_sonnet.utilization > 80%` (remaining < 20%). The account's `{name}.settings.json` contains `{"model": "claude-sonnet-4-6"}` (stale snapshot).
+- **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
+- **Then:** Exits 0. `switched to 'alice@home.com'` on stdout. After the switch, `~/.claude/settings.json` contains `"model": "claude-opus-4-6"` — the BUG-225 Sonnet→Opus override fires even though the account is already active (no subprocess spawned, but model override still applied). Before the BUG-238 fix: model stayed at `claude-sonnet-4-6` because `pre_switch_touch_ctx()` returned `None` for active accounts, skipping the override.
+- **Exit:** 0
+- **Source fn:** `mre_bug238_model_override_fires_for_active_account` (in `tests/cli/account_mutations_test.rs`)
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../../docs/feature/027_account_use_post_switch_touch.md)

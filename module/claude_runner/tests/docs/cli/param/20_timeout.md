@@ -100,4 +100,4 @@ Edge case test planning for the `--timeout` parameter. See [020_timeout.md](../.
 - **Exit:** 2
 - **Source:** [020_timeout.md — partial stdout note](../../../../docs/cli/param/020_timeout.md)
 - **Commands:** isolated
-- **Note:** Implemented in TSK-196 (BUG-243); test function `timeout_includes_partial_stdout` in `tests/isolated_test.rs`
+- **Note:** Implemented in TSK-196 (BUG-243); test function `timeout_includes_partial_stdout` in `tests/bug_reproducers_239_244_test.rs`

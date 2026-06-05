@@ -7,8 +7,8 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 | FT | Criterion | AC | Notes |
 |----|-----------|-----|-------|
 | FT-01 | `host::` and `role::` params write `profile.json` | AC-01 | Integration |
-| FT-02 | Omitting `host::` auto-captures `$USER@$HOSTNAME` | AC-02 | Integration |
-| FT-03 | Missing env vars: save succeeds with empty host | AC-03 | Edge case |
+| FT-02 | Omitting `host::` auto-captures `$USER@<hostname>` via fallback chain | AC-02 | Integration |
+| FT-03 | Missing `$USER`: save succeeds with `@<hostname>` host | AC-03 | Edge case |
 | FT-04 | Re-save with new `host::` overwrites `profile.json` | AC-04 | Integration |
 | FT-05 | `cols::+host` shows Host column from profile | AC-05 | Integration |
 | FT-06 | `cols::+role` shows Role column from profile | AC-06 | Integration |
@@ -22,8 +22,8 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 | ID | Test Name | AC | Category |
 |----|-----------|-----|----------|
 | FT-01 | host:: and role:: write profile.json | AC-01 | Profile Write |
-| FT-02 | Auto-capture $USER@$HOSTNAME when host:: omitted | AC-02 | Auto-Capture |
-| FT-03 | Missing env vars: empty host, save succeeds | AC-03 | Resilience |
+| FT-02 | Auto-capture $USER@<hostname> via resolve_hostname() when host:: omitted | AC-02 | Auto-Capture |
+| FT-03 | Missing $USER: save stores @<hostname>, succeeds | AC-03 | Resilience |
 | FT-04 | Re-save overwrites profile.json | AC-04 | Idempotency |
 | FT-05 | cols::+host shows Host column | AC-05 | Display |
 | FT-06 | cols::+role shows Role column | AC-06 | Display |
@@ -47,9 +47,9 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 
 ---
 
-### FT-02: Auto-capture `$USER@$HOSTNAME` when `host::` omitted
+### FT-02: Auto-capture `$USER@<hostname>` via fallback chain when `host::` omitted
 
-- **Given:** `$USER=alice` and `$HOSTNAME=workstation` set in environment.
+- **Given:** `$USER=alice` set in environment. Machine hostname resolves to `workstation` via `resolve_hostname()` (`$HOSTNAME` env → `/etc/hostname` → `"local"`).
 - **When:** `clp .account.save name::test@example.com` (no `host::` param)
 - **Then:** Exits 0. `{credential_store}/test@example.com.profile.json` contains `"host": "alice@workstation"`.
 - **Exit:** 0
@@ -58,11 +58,11 @@ Feature behavioral requirement test cases for `docs/feature/029_account_host_met
 
 ---
 
-### FT-03: Missing env vars — save succeeds with empty host
+### FT-03: Missing `$USER` — save succeeds with `@<hostname>` host
 
-- **Given:** `$USER` and `$HOSTNAME` both unset.
+- **Given:** `$USER` unset. Hostname resolves via `resolve_hostname()` fallback chain (always produces a non-empty value: env → file → `"local"`).
 - **When:** `clp .account.save name::test@example.com` (no `host::` param)
-- **Then:** Exits 0. `{credential_store}/test@example.com.profile.json` contains `"host": ""`. No error.
+- **Then:** Exits 0. `{credential_store}/test@example.com.profile.json` contains `"host": "@<hostname>"` (user portion empty, hostname always resolved). No error.
 - **Exit:** 0
 - **Source fn:** `as28_host_missing_user_hostname_stores_empty` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/029_account_host_metadata.md AC-03](../../../../docs/feature/029_account_host_metadata.md)

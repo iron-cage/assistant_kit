@@ -28,7 +28,8 @@ Integration test planning for the `.account.use` command. See [command/namespace
 | IT-20 | `touch::1` with fetch failure — switch completes, exits 0 | Touch Subprocess |
 | IT-21 | `imodel::bad` on `.account.use` exits 1 with valid values in stderr | Validation |
 | IT-22 | `effort::bad` on `.account.use` exits 1 with valid values in stderr | Validation |
-| IT-23 | `touch::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help` | Help Output |
+| IT-23 | `touch::`, `refresh::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help` | Help Output |
+| IT-28 | `refresh::bad` exits 1 naming valid values `0`, `1`, `false`, `true` | Validation |
 | IT-24 | `trace::1 touch::1` idle account — 6 trace lines emitted to stderr in order | Trace Output |
 | IT-25 | `trace::1 touch::0` — no `[trace] account.use` lines emitted | Trace Suppression |
 | IT-26 | `trace::bad` exits 1 naming valid values `0`, `1`, `false`, `true` | Validation |
@@ -39,7 +40,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - Basic Invocation: 1 test
 - Marker Update: 1 test
 - Error Handling: 1 test
-- Validation: 5 tests
+- Validation: 6 tests
 - Dry Run: 1 test
 - Data Integrity: 1 test
 - Isolation: 1 test
@@ -55,7 +56,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - Trace Suppression: 1 test
 - Org Identity: 1 test
 
-**Total:** 27 integration tests
+**Total:** 28 integration tests
 
 ---
 
@@ -289,14 +290,14 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ---
 
-### IT-23: `touch::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help`
+### IT-23: `touch::`, `refresh::`, `imodel::`, `effort::`, `trace::` appear in `.account.use --help`
 
 - **Given:** Any state.
 - **When:** `clp .account.use --help` (or `.account.use help::1`)
-- **Then:** Exits 0; help output contains `touch::` with default `1`, `imodel::` with default `auto`, `effort::` with default `auto`, and `trace::` with default `0`.
+- **Then:** Exits 0; help output contains `touch::` with default `1`, `refresh::` with default `1`, `imodel::` with default `auto`, `effort::` with default `auto`, and `trace::` with default `0`.
 - **Exit:** 0
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-09, AC-16](../../../../docs/feature/027_account_use_post_switch_touch.md)
-- **Source fn:** `aw26_help_shows_touch_imodel_effort` — extend to assert `trace::` + default `0`
+- **Source fn:** `aw26_help_shows_touch_imodel_effort`
 
 ---
 
@@ -342,3 +343,14 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - **Exit:** 0
 - **Source:** [feature/004_account_use.md BUG-219](../../../../docs/feature/004_account_use.md)
 - **Source fn:** `mre_bug_219_switch_account_stale_org_name` (in `claude_profile_core/tests/account_test.rs`)
+
+---
+
+### IT-28: `refresh::bad` exits 1 naming valid values
+
+- **Given:** Any account store state (empty is fine — validation runs before any I/O).
+- **When:** `clp .account.use name::alice@home.com refresh::bad`
+- **Then:** Exits 1; stderr contains valid values `0`, `1`, `false`, `true`.
+- **Exit:** 1
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-09](../../../../docs/feature/027_account_use_post_switch_touch.md), [params/019_refresh.md](../../../../docs/cli/param/019_refresh.md)
+- **Source fn:** `aw34_refresh_bad_value_exits_1`

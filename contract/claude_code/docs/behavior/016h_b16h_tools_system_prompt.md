@@ -15,7 +15,7 @@ Tool *definitions* (~12k tokens) remain in the assembled system prompt even when
 
 **Architectural basis**: Tool definitions are injected into the assembled system prompt before behavioral flags are applied (confirmed for `--system-prompt` replacement via research on Piebald-AI/claude-code-system-prompts and ClaudeLog 2026-04). The `--tools` flag likely operates at the invocation-policy layer (what the model is permitted to call), not the definition-assembly layer (what goes into the system prompt). This is the same architectural split observed for `--system-prompt`.
 
-**Unconfirmed**: Requires live token-count comparison — two identical conversations, one with `--tools "default"` and one with `--tools ""`, measuring the difference in total input tokens. The MEASURE test does this but is excluded from the default filter (`lim_it_` prefix).
+**Unconfirmed**: Requires live token-count comparison — two identical conversations, one with `--tools "default"` and one with `--tools ""`, measuring the difference in total input tokens. The MEASURE test does this and runs by default in container where `~/.claude` is mounted.
 
 ### Evidence
 
@@ -29,4 +29,4 @@ Tool *definitions* (~12k tokens) remain in the assembled system prompt even when
 |------|------|----------------|
 | entity | [readme.md](readme.md) | Master index: evidence table, statistical summary, invalidation tests |
 | behavior | [016_b16_tools_flag.md](016_b16_tools_flag.md) | `--tools` flag invocation control |
-| test | `../../tests/behavior/b16h_tools_system_prompt.rs` | MEASURE test (lim_it; excluded from default filter) |
+| test | `../../tests/behavior/b16h_tools_system_prompt.rs` | MEASURE test (lim_it; runs by default in container) |

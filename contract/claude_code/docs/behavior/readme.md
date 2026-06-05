@@ -21,13 +21,13 @@ Adapted from hypothesis table format. Status reflects certainty of the observati
 - `FLAG-VFY` — test verifies flag exists in `--help` or is accepted without parse error
 - `NEG-ONLY` — test asserts env var is NOT explicitly rejected (cannot confirm acceptance vs silent ignore)
 - `UNVERIFIED` — test has no `assert!`; logs observation only; never goes RED
-- `MEASURE` — live API measurement; no pass/fail; excluded from default filter (`lim_it_` prefix)
+- `MEASURE` — live API measurement; no pass/fail; runs by default in container where `~/.claude` is mounted (`lim_it_` prefix)
 - `VALIDATED†` — test proves feasibility of mechanism but not that the binary uses it
 
 | ID | Behavior | Category | Status | Certainty | Tier | Evidence |
 |----|----------|----------|--------|-----------|------|----------|
-| [B1](001_b1_default_new_session.md) | `claude` binary defaults to NEW session; resuming requires explicit `--continue`/`-c`. `clr` wrapper inverts this default | Continuation | ✅ | 90% | VALIDATED | E1, E2, E11 |
-| [B2](002_b2_new_session_creates_file.md) | Each invocation without `--continue` creates a new `.jsonl`; `--new-session` is a `clr` wrapper flag | Storage | ✅ | 95% | VALIDATED | E1, E12 |
+| [B1](001_b1_default_new_session.md) | `claude` binary defaults to NEW session; resuming requires explicit `--continue`/`-c`. `clr` wrapper inverts this default | Continuation | ✅ | 90% | VALIDATED | E1, E2, E11, E47 |
+| [B2](002_b2_new_session_creates_file.md) | Each invocation without `--continue` creates a new `.jsonl`; `--new-session` is a `clr` wrapper flag | Storage | ✅ | 95% | VALIDATED | E1, E12, E47 |
 | [B3](003_b3_print_orthogonal.md) | `-p`/`--print` controls output mode only; does not affect session selection | Flags | ✅ | 95% | FLAG-VFY | E3, E13 |
 | [B4](004_b4_continue_flag.md) | `-c`/`--continue` is explicit opt-in for resuming most recently modified session | Flags | 🎯 | 85% | FLAG-VFY | E2, E14 |
 | [B5](005_b5_mtime_selection.md) | "Current" session resumed by `--continue` is the most recently modified `.jsonl` (mtime) | Selection | 🎯 | 60% | VALIDATED† | E4, E15 |
@@ -106,6 +106,7 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | E44 | B23 | Test | `../../tests/behavior/b23_session_dir_override.rs` | `b23_session_dir_env_var_not_rejected` | Binary does not explicitly reject `CLAUDE_CODE_SESSION_DIR` env var at startup |
 | E45 | B24 | Observation | `claude --help` live output | `--from-pr` flag entry | Help text documents `--from-pr [value]` flag for resuming sessions linked to GitHub pull requests |
 | E46 | B24 | Test | `../../tests/behavior/b24_from_pr_flag.rs` | `b24_from_pr_flag_documented_in_help` | `claude --help` output contains `--from-pr` flag |
+| E47 | B1, B2 | Test | `../../tests/behavior/b02_new_session.rs` | `b2_continue_flag_proves_separate_sessions` | `--continue` flag exists in `claude --help` — binary-level proof that new-session is the default; presence of a dedicated resume flag implies sessions are separate by default |
 
 ---
 
@@ -130,7 +131,7 @@ Evidence items are shared across behaviors (M:N relationship). Each item may sup
 | FLAG-VFY | 8 | B3, B4, B16, B19, B20, B21, B22, B24 |
 | NEG-ONLY | 2 | B11, B23 |
 | UNVERIFIED | 1 | B8 |
-| MEASURE | 1 | B16h (lim_it; excluded from default filter) |
+| MEASURE | 1 | B16h (lim_it; runs by default in container) |
 
 **Validation gap:** 12 of 25 behaviors are fully validated with behavioral assertions.
 See `../../-plan/001_behavior_validation_upgrade.plan.md` for the upgrade roadmap.
@@ -167,7 +168,7 @@ Each behavior instance has a corresponding invalidation test in `contract/claude
 | `b22_no_session_persistence_flag.rs` | B22 | FLAG-VFY |
 | `b23_session_dir_override.rs` | B23 | NEG-ONLY |
 | `b24_from_pr_flag.rs` | B24 | FLAG-VFY |
-| `b16h_tools_system_prompt.rs` | B16h | MEASURE (lim_it; excluded from default filter) |
+| `b16h_tools_system_prompt.rs` | B16h | MEASURE (lim_it; runs by default in container) |
 
 To run:
 ```bash

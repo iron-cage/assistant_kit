@@ -7,7 +7,7 @@
 //! ## Coverage
 //!
 //! - INT-1: Default output with real storage
-//! - INT-3: show_tokens::1 adds Tokens section in .status
+//! - INT-3: `show_tokens::1` adds Tokens section in .status
 //! - INT-4: Custom storage path via `path::`
 //! - INT-5: Custom storage path via `CLAUDE_STORAGE_ROOT` env
 //! - INT-6: Exit code 0 on success
@@ -85,14 +85,14 @@ fn int_1_default_output_with_real_storage()
   );
 }
 
-/// INT-3: show_tokens::1 adds Tokens section in .status.
+/// INT-3: `show_tokens::1` adds Tokens section in .status.
 ///
 /// ## Purpose
 /// Verify that `.status show_tokens::1` includes a "Tokens" section that
 /// bare `.status` omits.
 ///
 /// ## Coverage
-/// Tokens section present with show_tokens::1; more output than baseline; exit 0.
+/// Tokens section present with `show_tokens::1`; more output than baseline; exit 0.
 ///
 /// ## Validation Strategy
 /// Write 2 projects each with 1 session of 4 entries. Run bare `.status`

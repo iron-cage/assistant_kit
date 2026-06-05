@@ -43,6 +43,17 @@ pub fn search_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let case_sensitive = cmd.get_boolean( "case_sensitive" ).unwrap_or( false );
   let entry_type = cmd.get_string( "entry_type" );
 
+  // Validate verbosity range (0-5); reject values outside range
+  let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
+  if !( 0..=5 ).contains( &verbosity )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "Invalid verbosity: {verbosity}. Valid range: 0-5" ),
+    ) );
+  }
+  let _ = verbosity; // validated; output format unchanged between valid levels
+
   // Create storage instance
   let storage = create_storage()?;
 

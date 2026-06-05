@@ -9,7 +9,7 @@
 
 ### Behavior
 
-**Status**: ✅ Confirmed | **Certainty**: 90% | **Tier**: VALIDATED | **Evidence**: E1, E2, E11
+**Status**: ✅ Confirmed | **Certainty**: 90% | **Tier**: VALIDATED | **Evidence**: E1, E2, E11, E47
 
 The `claude` binary defaults to a NEW session on every invocation. Continuation requires an explicit `-c` / `--continue` flag:
 
@@ -36,6 +36,7 @@ Each session without `--continue` creates exactly one new `.jsonl` file in the p
 | E1 | B1, B2 | Code | `../../../../module/claude_runner/src/main.rs` | line 85 | `--new-session  Start a new session (default: continues previous)` — `clr` wrapper help text; confirms wrapper default is continuation |
 | E2 | B1, B4 | Code | `../../../../module/claude_runner_core/src/command.rs` | line 600 | `if self.continue_conversation { parts.push("-c") }` — `-c` is a builder option wrapping the native flag |
 | E11 | B1 | Test | `../../tests/behavior/b01_default_continues.rs` | `b1_resumable_session_exists_in_real_storage` | At least one non-empty non-agent session exists in real `~/.claude/` storage — prerequisite for default continuation |
+| E47 | B1, B2 | Test | `../../tests/behavior/b02_new_session.rs` | `b2_continue_flag_proves_separate_sessions` | `--continue` flag exists in `claude --help` — binary-level proof that new-session is the default; a dedicated resume flag implies sessions are separate by default |
 
 ### Cross-References
 

@@ -18,6 +18,8 @@
 //! | T09 | `VerbosityLevel::from_str("6")` | invalid parse | Returns `Err(...)` |
 //! | T10 | `VerbosityLevel::default()` | default value | Returns `VerbosityLevel(3)` |
 //! | T11 | `--verbosity 4 --dry-run` | verbose detail | Preview printed to stderr before execute |
+//! | T12 | `--verbosity` (no value) | Missing Value | Exit 1; error mentions `--verbosity` |
+//! | T13 | `--verbosity -1 "Fix bug"` | Below Range | Exit 1; error mentions `verbosity` |
 
 use claude_runner::VerbosityLevel;
 
@@ -201,4 +203,33 @@ fn t11_verbosity_four_shows_stderr_preview()
   );
   // Note: stderr preview only fires on the execute path (not dry-run).
   // Dry-run returns before the preview code. This is correct behavior.
+}
+
+// T12: --verbosity without value → exit 1, error mentions --verbosity.
+// Source: tests/docs/cli/param/12_verbosity.md#ec-4
+#[ test ]
+fn t12_verbosity_missing_value_exits_one()
+{
+  let out = cli_binary_test_helpers::run_cli( &[ "--verbosity" ] );
+  assert!( !out.status.success(), "--verbosity without value must exit 1" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "--verbosity" ),
+    "--verbosity without value must emit missing-value error. Got:\n{stderr}"
+  );
+}
+
+// T13: --verbosity -1 → exit 1; negative value fails u8 parse.
+// -1 is consumed as the value token (next_value reads unconditionally); u8::parse("-1") fails.
+// Source: tests/docs/cli/param/12_verbosity.md#ec-7
+#[ test ]
+fn t13_verbosity_negative_one_exits_one()
+{
+  let out = cli_binary_test_helpers::run_cli( &[ "--verbosity", "-1", "Fix bug" ] );
+  assert!( !out.status.success(), "--verbosity -1 must exit 1 (negative not accepted)" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "verbosity" ),
+    "--verbosity -1 must emit invalid-verbosity error. Got:\n{stderr}"
+  );
 }
