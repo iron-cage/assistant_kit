@@ -40,7 +40,7 @@
 //! - `""` empty positional arg ignored — bare command, no message, no degenerate ultrathink suffix
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ run_cli, make_session_dir };
 use std::process::Command;
 
 fn run_dry( args : &[ &str ] ) -> String
@@ -201,7 +201,8 @@ fn dir_with_spaces_produces_unquoted_cd_line()
 #[ test ]
 fn dry_run_without_message_shows_bare_command()
 {
-  let output = run_dry( &[ "--dry-run" ] );
+  let ( _dir, session_path ) = make_session_dir();
+  let output = run_dry( &[ "--dry-run", "--session-dir", &session_path ] );
   let last_line = output.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
     last_line, "claude --dangerously-skip-permissions --chrome --effort max -c",
@@ -220,15 +221,15 @@ fn new_session_suppresses_continue_flag()
   );
 }
 
-// Default continuation: bare --dry-run shows -c when the project CWD has prior sessions.
-// This test runs from the project directory, which always has sessions on a dev machine.
+// Default continuation: --dry-run shows -c when the session dir is non-empty.
 #[ test ]
 fn default_continuation_always_present()
 {
-  let output = run_dry( &[ "--dry-run", "test" ] );
+  let ( _dir, session_path ) = make_session_dir();
+  let output = run_dry( &[ "--dry-run", "--session-dir", &session_path, "test" ] );
   assert!(
     output.contains( " -c" ),
-    "Dry-run from project cwd (has sessions) must contain -c. Got:\n{output}"
+    "Dry-run with non-empty session dir must contain -c. Got:\n{output}"
   );
 }
 
@@ -557,9 +558,10 @@ fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
 #[ test ]
 fn empty_positional_arg_produces_bare_command()
 {
+  let ( _dir, session_path ) = make_session_dir();
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "--dry-run", "" ] )
+    .args( [ "--dry-run", "--session-dir", &session_path, "" ] )
     .output()
     .expect( "Failed to invoke clr binary" );
   assert!( out.status.success(), "empty positional arg must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );

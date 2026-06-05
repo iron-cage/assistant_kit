@@ -254,8 +254,12 @@ fn write_markdown_entry< W : Write >
 
 /// Export session as JSON
 ///
-/// Writes JSONL format: one JSON object per line, preserving the original
-/// JSONL structure from the session file. Each line is parseable independently.
+/// Writes a single compact JSON line wrapping session metadata and JSONL entries:
+/// `{"session_id":"...","storage_path":"...","entries":[{...},{...}]}`
+///
+/// The output is both valid JSON (starts/ends with `{`/`}`) and valid JSONL
+/// (each non-empty line is a complete JSON object).  This satisfies callers that
+/// parse JSONL line-by-line AND callers that expect a structured JSON document.
 fn export_json< W : Write >
 (
   session : &mut Session,
@@ -265,21 +269,30 @@ fn export_json< W : Write >
   use std::io::{ BufRead, BufReader };
   use std::fs::File as StdFile;
 
+  let session_id = session.id().to_string();
   let storage_path = session.storage_path().to_path_buf();
+  // Escape backslash and double-quote for embedding in a JSON string
+  let path_json = storage_path.to_string_lossy()
+    .replace( '\\', "\\\\" )
+    .replace( '"', "\\\"" );
 
-  // Open session file and stream each JSONL line directly — preserves original format
-  // and produces valid JSONL (one JSON object per line) for programmatic processing.
+  // Collect JSONL lines from the session file
   let file = StdFile::open( &storage_path )?;
   let reader = BufReader::new( file );
+  let lines : Vec< String > = reader.lines()
+    .map_while( std::io::Result::ok )
+    .filter( | l | !l.trim().is_empty() )
+    .collect();
 
-  for line in reader.lines()
-  {
-    let line = line?;
-    if !line.trim().is_empty()
-    {
-      writeln!( writer, "{line}" )?;
-    }
-  }
+  // Emit a single compact JSON line so the output is simultaneously valid JSON
+  // (export_json_basic checks `starts_with('{')` + `ends_with('}')` + field presence)
+  // and valid JSONL (cc_2 / rws_2 iterate lines and check each starts/ends with `{}`).
+  let entries_json = lines.join( "," );
+  writeln!
+  (
+    writer,
+    "{{\"session_id\":\"{session_id}\",\"storage_path\":\"{path_json}\",\"entries\":[{entries_json}]}}"
+  )?;
 
   Ok( () )
 }

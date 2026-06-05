@@ -82,6 +82,7 @@ pub fn run_cli_with_env
 ///
 /// Panics if the temp directory or the dummy file cannot be created.
 #[must_use]
+#[inline]
 #[allow(dead_code)]
 pub fn make_session_dir() -> ( tempfile::TempDir, String )
 {

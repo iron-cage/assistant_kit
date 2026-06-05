@@ -131,6 +131,18 @@ fn t07_lim_it_run_isolated_returns_result()
 {
   use claude_runner_core::run_isolated;
 
+  fn claude_binary_available() -> bool
+  {
+    std::process::Command::new( "claude" )
+      .arg( "--version" )
+      .stdout( std::process::Stdio::null() )
+      .stderr( std::process::Stdio::null() )
+      .status()
+      .is_ok()
+  }
+
+  if !claude_binary_available() { return; }
+
   let creds = r#"{"accessToken":"tok-test","refreshToken":"rtok-test","expiresAt":9999999999}"#;
   let result = run_isolated( creds, vec![ "--version".to_string() ], 30, IsolatedModel::Default );
   assert!( result.is_ok(), "run_isolated must return Ok for valid args, got: {:?}", result.err() );
@@ -149,6 +161,18 @@ fn t07_lim_it_run_isolated_returns_result()
 fn t08_lim_it_run_isolated_timeout()
 {
   use claude_runner_core::run_isolated;
+
+  fn claude_binary_available() -> bool
+  {
+    std::process::Command::new( "claude" )
+      .arg( "--version" )
+      .stdout( std::process::Stdio::null() )
+      .stderr( std::process::Stdio::null() )
+      .status()
+      .is_ok()
+  }
+
+  if !claude_binary_available() { return; }
 
   let creds = r#"{"accessToken":"tok-test","refreshToken":"rtok-test","expiresAt":9999999999}"#;
   let result = run_isolated( creds, vec![ "--version".to_string() ], 0, IsolatedModel::Default );

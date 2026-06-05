@@ -16,6 +16,8 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 | FT-08 | `clp .account.use i1` exits 1 when no `i1@` account and `i11@`/`i12@` both match | AC-06, AC-11 (015) | Integration (→ 015) |
 | FT-09 | `.account.save` (no `name::`) — `oauthAccount.emailAddress` absent, falls back to `_active` marker (BUG-209 regression) | AC-08 (002) | Integration (BUG-209) |
 | FT-10 | `.account.save` (no `name::`) — `oauthAccount.emailAddress` present, overrides stale `_active` marker (BUG-212) | AC-08 (002) | Integration (BUG-212) |
+| FT-11 | `other_machines_active()` returns other machines' account names, excludes own marker | AC-05 | Unit |
+| FT-12 | `other_machines_active()` returns empty HashSet when only own marker or empty store | AC-05 | Unit |
 
 ### Test Case Index
 
@@ -31,8 +33,10 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 | FT-08 | Prefix `i1` exits 1 when only `i11@`/`i12@` exist (no exact match) | AC-06, AC-11 (015) | Prefix Resolution |
 | FT-09 | .account.save falls back to `_active` marker when `oauthAccount.emailAddress` absent | AC-08 (002) | Name Resolution |
 | FT-10 | .account.save uses `oauthAccount.emailAddress` when present, ignores stale `_active` marker | AC-08 (002) | Name Resolution |
+| FT-11 | other_machines_active returns other machines' names, excludes own marker | AC-05 | Unit |
+| FT-12 | other_machines_active returns empty HashSet when only own marker or empty store | AC-05 | Unit |
 
-**Total:** 10 FT cases
+**Total:** 12 FT cases
 
 ---
 
@@ -146,3 +150,25 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
 - **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is written by both clp ops and external OAuth login; `_active` is written only by clp ops — external login leaves it stale. Primary over fallback precedence is the two-level inference introduced by TSK-215.
 - **Source:** [feature/002_account_save.md AC-08, AC-16](../../../../docs/feature/002_account_save.md)
+
+---
+
+### FT-11: `other_machines_active()` returns other machines' account names, excludes own marker
+
+- **Given:** A credential store (TempDir) containing three `_active_*` files: the current machine's own marker (as returned by `active_marker_filename()`) containing `"own@test.com"`, a second file `_active_machine2_user1` containing `"alice@test.com"`, and a third file `_active_machine3_user2` containing `"bob@test.com"`.
+- **When:** `other_machines_active(&store_path)` is called.
+- **Then:** Returns a `HashSet<String>` containing exactly `{"alice@test.com", "bob@test.com"}`. The own marker's content (`"own@test.com"`) is NOT present in the result. The set has exactly 2 elements.
+- **Note:** File names for the other machines must differ from `active_marker_filename()` — use hard-coded names like `_active_machine2_user1` to guarantee they differ from the current machine's marker regardless of environment.
+- **Source fn:** `test_ft11_025_other_machines_active_returns_others` (in `claude_profile_core/tests/account_test.rs`)
+- **Source:** [feature/025_per_machine_active_marker.md AC-05](../../../../docs/feature/025_per_machine_active_marker.md)
+
+---
+
+### FT-12: `other_machines_active()` returns empty HashSet when only own marker or empty store
+
+- **Given (Case A):** A credential store containing only the current machine's own marker (`active_marker_filename()`). **Given (Case B):** An empty credential store directory with no `_active_*` files.
+- **When:** `other_machines_active(&store_path)` is called in each case.
+- **Then:** Returns an empty `HashSet<String>` in both cases.
+- **Note:** Case A verifies the own-marker exclusion filter. Case B verifies graceful empty-directory handling. Both are covered in the same test function.
+- **Source fn:** `test_ft12_025_other_machines_active_empty_when_only_own` (in `claude_profile_core/tests/account_test.rs`)
+- **Source:** [feature/025_per_machine_active_marker.md AC-05](../../../../docs/feature/025_per_machine_active_marker.md)

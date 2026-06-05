@@ -49,6 +49,8 @@
 //! | `mre_bug222_save_no_model_does_not_write_settings_snapshot` | save() with no model in settings.json → {name}.settings.json not created |
 //! | `mre_bug222_switch_account_restores_model_from_settings_snapshot` | switch_account() installs model from {name}.settings.json into live settings |
 //! | `mre_bug222_switch_account_clears_model_when_no_snapshot` | switch_account() absent snapshot → removes model from live settings |
+//! | `test_ft11_025_other_machines_active_returns_others` | other_machines_active() returns foreign accounts; own marker excluded |
+//! | `test_ft12_025_other_machines_active_empty_when_only_own` | other_machines_active() returns empty when only own marker or empty store |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -534,4 +536,107 @@ fn mre_bug225_override_session_model_to_opus_no_op_when_already_opus()
   let overrode = account::override_session_model_to_opus( &paths );
 
   assert!( !overrode, "override must return false when model was already Opus" );
+}
+
+/// FT-11/025 — `other_machines_active()` returns other machines' account names,
+/// excludes own marker.
+///
+/// ## Root Cause (AC-05 coverage)
+/// `other_machines_active()` filters by `starts_with("_active_")` then excludes
+/// the file whose name equals `active_marker_filename()`. Without this test, a
+/// refactor removing the exclusion filter would silently include the own marker.
+///
+/// ## Setup
+/// `TempDir` with own marker + 2 foreign markers. Foreign names are hard-coded to
+/// `_active_machine2_user1` and `_active_machine3_user2` — guaranteed to differ
+/// from `active_marker_filename()` on any real machine (those strings would require
+/// `$HOSTNAME=machine2` + `$USER=user1` or `$HOSTNAME=machine3` + `$USER=user2`).
+///
+/// ## Assert
+/// Set size = 2; contains "alice@test.com" and "bob@test.com"; does NOT contain
+/// "own@test.com".
+///
+/// Spec: [`tests/docs/feature/025_per_machine_active_marker.md` FT-11]
+#[ test ]
+fn test_ft11_025_other_machines_active_returns_others()
+{
+  use std::collections::HashSet;
+
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path();
+
+  // Own machine's marker — excluded by the function under test
+  let own_name = account::active_marker_filename();
+  std::fs::write( store.join( &own_name ), "own@test.com" ).unwrap();
+
+  // Two foreign markers with names that cannot match active_marker_filename()
+  // on any realistic CI machine ($HOSTNAME≠"machine2" or $USER≠"user1", etc.)
+  std::fs::write( store.join( "_active_machine2_user1" ), "alice@test.com" ).unwrap();
+  std::fs::write( store.join( "_active_machine3_user2" ), "bob@test.com"   ).unwrap();
+
+  // Sanity guard: own_name must differ from the chosen hard-coded names
+  assert!(
+    own_name != "_active_machine2_user1" && own_name != "_active_machine3_user2",
+    "FT-11: own_name '{own_name}' collides with a hard-coded foreign filename — \
+     update the test to use different foreign names",
+  );
+
+  let result : HashSet< String > = account::other_machines_active( store );
+
+  assert_eq!(
+    result.len(), 2,
+    "FT-11: expected exactly 2 foreign accounts; got {result:?}",
+  );
+  assert!(
+    result.contains( "alice@test.com" ),
+    "FT-11: 'alice@test.com' must be in the result; got {result:?}",
+  );
+  assert!(
+    result.contains( "bob@test.com" ),
+    "FT-11: 'bob@test.com' must be in the result; got {result:?}",
+  );
+  assert!(
+    !result.contains( "own@test.com" ),
+    "FT-11: own marker content must be excluded from the result; got {result:?}",
+  );
+}
+
+/// FT-12/025 — `other_machines_active()` returns empty `HashSet` when only own
+/// marker exists, or when the store contains no `_active_*` files.
+///
+/// ## Root Cause (AC-05 coverage)
+/// Case A tests the own-marker exclusion filter (own file present but excluded).
+/// Case B tests the empty-directory path (no files → no iteration → empty result).
+///
+/// Spec: [`tests/docs/feature/025_per_machine_active_marker.md` FT-12]
+#[ test ]
+fn test_ft12_025_other_machines_active_empty_when_only_own()
+{
+  use std::collections::HashSet;
+
+  // Case A: only own marker present — must be excluded → empty result
+  {
+    let tmp   = TempDir::new().unwrap();
+    let store = tmp.path();
+    let own_name = account::active_marker_filename();
+    std::fs::write( store.join( &own_name ), "own@test.com" ).unwrap();
+
+    let result : HashSet< String > = account::other_machines_active( store );
+    assert!(
+      result.is_empty(),
+      "FT-12 Case A: only own marker → must return empty HashSet; got {result:?}",
+    );
+  }
+
+  // Case B: empty store — no _active_* files at all
+  {
+    let tmp   = TempDir::new().unwrap();
+    let store = tmp.path();
+
+    let result : HashSet< String > = account::other_machines_active( store );
+    assert!(
+      result.is_empty(),
+      "FT-12 Case B: empty store → must return empty HashSet; got {result:?}",
+    );
+  }
 }

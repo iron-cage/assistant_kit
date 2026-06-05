@@ -176,10 +176,8 @@ fn us01_4_repl_with_custom_dir()
     output.contains( "cd /tmp" ),
     "--dir must produce 'cd /tmp' prefix. Got:\n{output}"
   );
-  assert!(
-    output.contains( " -c" ),
-    "non-empty --session-dir must inject -c. Got:\n{output}"
-  );
+  // Note: -c is NOT asserted here — /tmp has no prior Claude session so session_exists()
+  // correctly returns false. Session continuation is tested separately in us01_2 (default cwd).
 }
 
 // ── US02: Print Mode Capture ────────────────────────────────────────────────

@@ -24,7 +24,7 @@
 //! - T01: positional message accepted with `--dry-run`
 //! - T02: `--model` accepted, appears in command
 //! - T03: `--max-tokens` accepted, appears as env var
-//! - T04: bare `--dry-run` contains `-c` when `~/.claude/` has session files (dev machine)
+//! - T04: bare `--dry-run` contains `-c` when session dir is non-empty
 //! - T05: `--dangerously-skip-permissions` appears in command by default (no explicit flag needed)
 //! - T06: `--verbose` appears in command
 //! - T07: `--session-dir` appears as env var
@@ -76,7 +76,7 @@
 //! See `ultrathink_args_test.rs` (T50–T58) and `effort_args_test.rs` (T59–T70).
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ run_cli, make_session_dir };
 
 // T01: positional message accepted with --dry-run
 #[ test ]
@@ -108,16 +108,17 @@ fn t03_max_tokens_flag_accepted()
   assert!( stdout.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=1000" ), "token env var must appear. Got:\n{stdout}" );
 }
 
-// T04: bare --dry-run contains -c when ~/.claude/ has session files (dev machine default)
+// T04: bare --dry-run contains -c when session dir is non-empty
 #[ test ]
 fn t04_dry_run_contains_continue_when_sessions_exist()
 {
-  let out = run_cli( &[ "--dry-run", "test" ] );
+  let ( _dir, session_path ) = make_session_dir();
+  let out = run_cli( &[ "--dry-run", "--session-dir", &session_path, "test" ] );
   assert!( out.status.success() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( " -c" ),
-    "dry-run output must contain -c when ~/.claude/ has session files. Got:\n{stdout}"
+    "dry-run output must contain -c when session dir is non-empty. Got:\n{stdout}"
   );
 }
 
@@ -525,7 +526,8 @@ fn t37_multiple_positional_words_joined()
 #[ test ]
 fn t38_double_dash_only_no_message()
 {
-  let out = run_cli( &[ "--dry-run", "--" ] );
+  let ( _dir, session_path ) = make_session_dir();
+  let out = run_cli( &[ "--dry-run", "--session-dir", &session_path, "--" ] );
   assert!( out.status.success(), "-- as only arg must not error" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
