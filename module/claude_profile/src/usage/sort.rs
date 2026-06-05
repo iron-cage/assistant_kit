@@ -313,8 +313,6 @@ pub( crate ) fn strategy_metric(
   now_secs : u64,
 ) -> String
 {
-  let expires_in_secs = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
-  let expires_str     = format_duration_secs( expires_in_secs );
   let Ok( data ) = &aq.result else { return String::new(); };
   let session_pct = data.five_hour.as_ref().map_or( 0.0, |p| 100.0 - p.utilization );
   match strategy
@@ -956,6 +954,70 @@ mod tests
     }
   }
 
+  /// Corner case: `five_hour = None` → account is NOT h-exhausted (conservative: absent ≠ exhausted).
+  ///
+  /// All three strategies must treat missing 5h data as eligible.
+  #[ test ]
+  fn test_cc_023_five_hour_none_not_h_exhausted()
+  {
+    let now = 0u64;
+    // A: five_hour = None (no 5h period data at all)
+    let mut a = mk_aq_sort( "no5h@test.com", 50.0, FAR_FUTURE_MS );
+    if let Ok( ref mut d ) = a.result { d.five_hour = None; }
+    // B: current (ineligible)
+    let mut b = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    b.is_current = true;
+    let accounts = vec![ a, b ];
+    for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      assert_eq!(
+        result, Some( 0 ),
+        "{strategy:?}: five_hour=None must NOT be treated as h-exhausted",
+      );
+    }
+  }
+
+  /// Corner case: utilization=84.9 (just below 85.0 threshold) → account IS eligible.
+  #[ test ]
+  fn test_cc_023_h_exhausted_boundary_below_threshold()
+  {
+    let now = 0u64;
+    let a = mk_aq_sort( "just_below@test.com", 84.9, FAR_FUTURE_MS );
+    let mut b = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    b.is_current = true;
+    let accounts = vec![ a, b ];
+    for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      assert_eq!(
+        result, Some( 0 ),
+        "{strategy:?}: utilization=84.9 (15.1% left) must be eligible — only >= 85.0 is h-exhausted",
+      );
+    }
+  }
+
+  /// Corner case: account is both occupied AND h-exhausted — first guard rejects it.
+  #[ test ]
+  fn test_cc_023_occupied_and_h_exhausted_skipped()
+  {
+    let now = 0u64;
+    let mut a = mk_aq_sort( "both@test.com", 92.0, FAR_FUTURE_MS );
+    a.is_occupied_elsewhere = true;
+    let b = mk_aq_sort( "good@test.com", 50.0, FAR_FUTURE_MS );
+    let mut c = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    c.is_current = true;
+    let accounts = vec![ a, b, c ];
+    for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      assert_eq!(
+        result, Some( 1 ),
+        "{strategy:?}: account with both occupied + h-exhausted must be skipped",
+      );
+    }
+  }
+
   // ── strategy_metric ───────────────────────────────────────────────────────
 
   /// FT-14 of feature/023 — endurance footer shows `session + 5h_reset`, not `7d left + expires`.
@@ -994,6 +1056,114 @@ mod tests
     assert!(
       !metric.contains( "90" ),
       "endurance metric must not contain weekly pct '90'; got: {metric}",
+    );
+  }
+
+  /// Corner case: endurance footer with `five_hour = None` → "0% session, 5h resets in —".
+  #[ test ]
+  fn test_cc_023_endurance_footer_five_hour_none()
+  {
+    let now : u64 = 1_700_000_000;
+    let aq = AccountQuota
+    {
+      name              : "none5h@test.com".to_string(),
+      is_current        : false,
+      is_active                 : false,
+      is_occupied_elsewhere     : false,
+      expires_at_ms     : FAR_FUTURE_MS,
+      result            : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : None,
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account           : None,
+      host              : String::new(),
+      role              : String::new(),
+      renewal_at        : None,
+    };
+    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!(
+      metric.contains( "0% session" ),
+      "five_hour=None → session_pct must be 0%; got: {metric}",
+    );
+    assert!(
+      metric.contains( "5h resets in \u{2014}" ),
+      "five_hour=None → reset must show em-dash; got: {metric}",
+    );
+  }
+
+  /// Corner case: endurance footer with `five_hour.resets_at = None` → em-dash for reset timer.
+  #[ test ]
+  fn test_cc_023_endurance_footer_resets_at_none()
+  {
+    let now : u64 = 1_700_000_000;
+    let aq = AccountQuota
+    {
+      name              : "no_reset@test.com".to_string(),
+      is_current        : false,
+      is_active                 : false,
+      is_occupied_elsewhere     : false,
+      expires_at_ms     : FAR_FUTURE_MS,
+      result            : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 30.0, resets_at : None } ),
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account           : None,
+      host              : String::new(),
+      role              : String::new(),
+      renewal_at        : None,
+    };
+    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!(
+      metric.contains( "70% session" ),
+      "utilization=30 → 70% session; got: {metric}",
+    );
+    assert!(
+      metric.contains( "5h resets in \u{2014}" ),
+      "resets_at=None → reset must show em-dash; got: {metric}",
+    );
+  }
+
+  /// Corner case: endurance footer with `resets_at` in the past → `saturating_sub` gives 0 → "0m".
+  #[ test ]
+  fn test_cc_023_endurance_footer_resets_at_in_past()
+  {
+    let now : u64 = 1_700_000_000;
+    // resets_at is 1000s before now
+    let past_iso = reset_iso_at( 0, now - 1000 );
+    let aq = AccountQuota
+    {
+      name              : "past@test.com".to_string(),
+      is_current        : false,
+      is_active                 : false,
+      is_occupied_elsewhere     : false,
+      expires_at_ms     : FAR_FUTURE_MS,
+      result            : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage
+        {
+          utilization : 40.0,
+          resets_at   : Some( past_iso ),
+        } ),
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account           : None,
+      host              : String::new(),
+      role              : String::new(),
+      renewal_at        : None,
+    };
+    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!(
+      metric.contains( "60% session" ),
+      "utilization=40 → 60% session; got: {metric}",
+    );
+    assert!(
+      metric.contains( "5h resets in 0m" ),
+      "resets_at in past → saturating_sub=0 → '0m'; got: {metric}",
     );
   }
 

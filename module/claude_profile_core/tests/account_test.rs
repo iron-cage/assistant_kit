@@ -547,7 +547,7 @@ fn mre_bug225_override_session_model_to_opus_no_op_when_already_opus()
 /// refactor removing the exclusion filter would silently include the own marker.
 ///
 /// ## Setup
-/// TempDir with own marker + 2 foreign markers. Foreign names are hard-coded to
+/// `TempDir` with own marker + 2 foreign markers. Foreign names are hard-coded to
 /// `_active_machine2_user1` and `_active_machine3_user2` — guaranteed to differ
 /// from `active_marker_filename()` on any real machine (those strings would require
 /// `$HOSTNAME=machine2` + `$USER=user1` or `$HOSTNAME=machine3` + `$USER=user2`).
@@ -585,23 +585,23 @@ fn test_ft11_025_other_machines_active_returns_others()
 
   assert_eq!(
     result.len(), 2,
-    "FT-11: expected exactly 2 foreign accounts; got {:?}", result,
+    "FT-11: expected exactly 2 foreign accounts; got {result:?}",
   );
   assert!(
     result.contains( "alice@test.com" ),
-    "FT-11: 'alice@test.com' must be in the result; got {:?}", result,
+    "FT-11: 'alice@test.com' must be in the result; got {result:?}",
   );
   assert!(
     result.contains( "bob@test.com" ),
-    "FT-11: 'bob@test.com' must be in the result; got {:?}", result,
+    "FT-11: 'bob@test.com' must be in the result; got {result:?}",
   );
   assert!(
     !result.contains( "own@test.com" ),
-    "FT-11: own marker content must be excluded from the result; got {:?}", result,
+    "FT-11: own marker content must be excluded from the result; got {result:?}",
   );
 }
 
-/// FT-12/025 — `other_machines_active()` returns empty HashSet when only own
+/// FT-12/025 — `other_machines_active()` returns empty `HashSet` when only own
 /// marker exists, or when the store contains no `_active_*` files.
 ///
 /// ## Root Cause (AC-05 coverage)
@@ -624,7 +624,7 @@ fn test_ft12_025_other_machines_active_empty_when_only_own()
     let result : HashSet< String > = account::other_machines_active( store );
     assert!(
       result.is_empty(),
-      "FT-12 Case A: only own marker → must return empty HashSet; got {:?}", result,
+      "FT-12 Case A: only own marker → must return empty HashSet; got {result:?}",
     );
   }
 
@@ -636,7 +636,7 @@ fn test_ft12_025_other_machines_active_empty_when_only_own()
     let result : HashSet< String > = account::other_machines_active( store );
     assert!(
       result.is_empty(),
-      "FT-12 Case B: empty store → must return empty HashSet; got {:?}", result,
+      "FT-12 Case B: empty store → must return empty HashSet; got {result:?}",
     );
   }
 }

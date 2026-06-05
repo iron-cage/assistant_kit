@@ -81,7 +81,7 @@ clp .usage
 #
 # Valid: 4 / 5   ->  Next by strategy:
 #   renew      frank@example.com   7d resets in 2d 11h, ~renews in 8d
-#   endurance  bob@example.com     100% session, 88% 7d left, expires in 5h 02m
+#   endurance  bob@example.com     100% session, 5h resets in 4h 58m
 #   drain      bob@example.com     28% 7d left, 7d resets in 6d 14h
 
 clp .usage live::1 interval::60 jitter::10

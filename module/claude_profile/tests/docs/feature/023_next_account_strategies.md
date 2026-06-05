@@ -188,7 +188,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When-D:** Same three strategies with only `A` and `C` (A occupied, C current — no free candidate).
 - **Then-D:** All return `None` — no eligible candidate exists.
 - **Exit:** n/a (unit test)
-- **Source fn:** TBD (in `src/usage/sort.rs`)
+- **Source fn:** `test_ft12_023_all_strategies_skip_occupied_elsewhere` (in `src/usage/sort.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-11](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -203,7 +203,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When-D:** Same three strategies with only `A` (h-exhausted) and `C` (current) — no healthy candidate.
 - **Then-D:** All return `None` — no eligible candidate.
 - **Exit:** n/a (unit test)
-- **Source fn:** TBD (in `src/usage/sort.rs`)
+- **Source fn:** `test_ft13_023_all_strategies_skip_h_exhausted` (in `src/usage/sort.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-12](../../../../docs/feature/023_next_account_strategies.md)
 
 ---
@@ -214,5 +214,5 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **When:** Unit test calls `strategy_metric(&aq, NextStrategy::Endurance, PreferStrategy::Any, now_secs)`.
 - **Then:** Returns a string containing `"80% session"` and `"5h resets in 2h 30m"`. Does NOT contain `"7d left"`, `"expires"`, or `"90%"`.
 - **Exit:** n/a (unit test)
-- **Source fn:** TBD (in `src/usage/sort.rs`)
+- **Source fn:** `test_ft14_023_endurance_footer_shows_5h_reset` (in `src/usage/sort.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-13](../../../../docs/feature/023_next_account_strategies.md)

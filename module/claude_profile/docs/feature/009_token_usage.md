@@ -78,7 +78,7 @@ Quota
 
 Valid: 3 / 5   ->  Next by strategy:
   renew      carol@example.com   7d resets in 2d 11h, ~renews in 8d
-  endurance  bob@example.com     100% session, 88% 7d left, expires in 5h 02m
+  endurance  bob@example.com     100% session, 5h resets in 4h 58m
   drain      bob@example.com     88% 7d left, 7d resets in 6d 14h
 ```
 
@@ -96,7 +96,7 @@ Quota
 
 Valid: 3 / 3   ->  Next by strategy:
   renew      carol@example.com   95% session, 5h resets in 3h 44m / 7d resets in 5d 1h
-  endurance  carol@example.com   95% session, 54% 7d left, expires in 6h 11m
+  endurance  carol@example.com   95% session, 5h resets in 3h 44m
   drain      carol@example.com   54% 7d(Son) left, 7d(Son) resets in 5d 1h
 ```
 
@@ -114,7 +114,7 @@ Quota
 
 Valid: 3 / 3   ->  Next by strategy:
   renew      carol@example.com   95% session, 5h resets in 3h 44m / 7d resets in 5d 1h
-  endurance  carol@example.com   95% session, 54% 7d left, expires in 6h 11m
+  endurance  carol@example.com   95% session, 5h resets in 3h 44m
   drain      carol@example.com   54% 7d(Son) left, 7d(Son) resets in 5d 1h
 ```
 
@@ -132,7 +132,7 @@ Quota
 
 Valid: 2 / 3   ->  Next by strategy:
   renew      alice@example.com   100% session, 5h resets in 4h 58m / 7d resets in 6d 14h
-  endurance  alice@example.com   100% session, 28% 7d left, expires in 5h 02m
+  endurance  alice@example.com   100% session, 5h resets in 4h 58m
   drain      alice@example.com   28% 7d(Son) left, 7d(Son) resets in 6d 14h
 ```
 
