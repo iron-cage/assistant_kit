@@ -62,20 +62,20 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   }
 
   // Pre-fetch quota before the switch while the target credential file is still readable.
-  let mut touch_ctx = if touch != 0
+  let mut outcome = if touch != 0
   {
     crate::usage::pre_switch_touch_ctx( &name, &credential_store, trace, &imodel_str, &effort_str )
   }
   else
   {
-    None
+    crate::usage::PreSwitchOutcome::Unavailable
   };
 
-  // Fix(BUG-213): when touch is enabled and the quota fetch failed (touch_ctx is None),
+  // Fix(BUG-213): when touch is enabled and the quota fetch failed (Unavailable),
   //   check expiresAt and attempt refresh (BUG-230) before calling switch_account().
-  if touch != 0 && touch_ctx.is_none()
+  if touch != 0 && matches!( outcome, crate::usage::PreSwitchOutcome::Unavailable )
   {
-    touch_ctx = check_expiry_and_refresh(
+    outcome = check_expiry_and_refresh(
       &name, &credential_store, &paths, refresh, trace, &imodel_str, &effort_str,
     );
   }
@@ -83,11 +83,22 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   crate::account::switch_account( &name, &credential_store, &paths )
     .map_err( |e| io_err_to_error_data( &e, "account use" ) )?;
 
-  // Post-switch: activate idle session if quota indicated it was idle before switch.
-  // Fix(BUG-225): also performs quota-aware Sonnet→Opus session model override when 7d(Son) < 20%.
-  if let Some( ctx ) = touch_ctx
+  // Post-switch: apply model override for ALL fetch-succeeded cases, then spawn
+  // subprocess only for idle accounts.
+  // Fix(BUG-225): Sonnet→Opus session model override when 7d(Son) < 20%.
+  // Fix(BUG-238): override now fires for already-active accounts too (not just idle).
+  match outcome
   {
-    crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str, trace, &paths );
+    crate::usage::PreSwitchOutcome::NeedTouch( ctx ) =>
+    {
+      crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str, trace, &paths );
+    }
+    crate::usage::PreSwitchOutcome::AlreadyActive { quota } =>
+    {
+      crate::usage::apply_model_override( &quota, &paths, trace, &name );
+      if trace { crate::usage::trace_already_active( &name, quota, &imodel_str, &effort_str ) }
+    }
+    crate::usage::PreSwitchOutcome::Unavailable => {}
   }
 
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )
@@ -95,10 +106,10 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
 
 /// Check whether the target account's token is expired; attempt refresh if so.
 ///
-/// Called only when `touch` is enabled and `pre_switch_touch_ctx()` returned `None`.
-/// Returns a new `TouchCtx` when refresh succeeds, `None` when the token is not expired
-/// (or the credential file cannot be read). Exits the process with code 3 when the token
-/// is expired but cannot be refreshed.
+/// Called only when `touch` is enabled and `pre_switch_touch_ctx()` returned `Unavailable`.
+/// Returns `PreSwitchOutcome` from re-probed quota when refresh succeeds, `Unavailable`
+/// when the token is not expired (or the credential file cannot be read). Exits the
+/// process with code 3 when the token is expired but cannot be refreshed.
 ///
 /// # Fix(BUG-213)
 /// Root cause: `pre_switch_touch_ctx()` returns `None` for any fetch error without
@@ -119,10 +130,11 @@ fn check_expiry_and_refresh(
   trace            : bool,
   imodel_str       : &str,
   effort_str       : &str,
-) -> Option< crate::usage::TouchCtx >
+) -> crate::usage::PreSwitchOutcome
 {
-  let cred_path  = credential_store.join( format!( "{name}.credentials.json" ) );
-  let cred_str = std::fs::read_to_string( &cred_path ).ok()?;
+  let cred_path = credential_store.join( format!( "{name}.credentials.json" ) );
+  let Ok( cred_str ) = std::fs::read_to_string( &cred_path )
+  else { return crate::usage::PreSwitchOutcome::Unavailable };
   let needle     = "\"expiresAt\":";
   let expires_ms = cred_str.find( needle ).and_then( | pos |
   {
@@ -130,7 +142,8 @@ fn check_expiry_and_refresh(
     let end  = rest.find( | c : char | !c.is_ascii_digit() ).unwrap_or( rest.len() );
     rest[ ..end ].parse::< u64 >().ok()
   } );
-  let exp_ms = expires_ms?;
+  let Some( exp_ms ) = expires_ms
+  else { return crate::usage::PreSwitchOutcome::Unavailable };
   use std::time::{ SystemTime, UNIX_EPOCH };
   let now_ms = u64::try_from(
     SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_millis()
@@ -142,7 +155,7 @@ fn check_expiry_and_refresh(
       let rem_s = ( exp_ms - now_ms ) / 1000;
       eprintln!( "[trace] account.use  {name}  expiry check: valid (expires in {}h {}m)", rem_s / 3600, ( rem_s % 3600 ) / 60 );
     }
-    return None;
+    return crate::usage::PreSwitchOutcome::Unavailable;
   }
   let elapsed_s = ( now_ms - exp_ms ) / 1000;
   let h         = elapsed_s / 3600;
@@ -264,17 +277,17 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
   if trace { eprintln!( "[trace] account.save  write: OK" ) }
 
   // Write {name}.profile.json with host and role metadata (TSK-225).
-  // host:: defaults to auto-captured $USER@$HOSTNAME when omitted.
+  // host:: defaults to auto-captured $USER@<hostname> when omitted.
+  // Fix(BUG-239): hostname resolved via resolve_hostname() fallback chain
+  // ($HOSTNAME env → /etc/hostname → "local") — never empty.
   let host_val = match cmd.arguments.get( "host" )
   {
     Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
     _ =>
     {
       let user     = std::env::var( "USER" ).unwrap_or_default();
-      let hostname = std::env::var( "HOSTNAME" ).unwrap_or_default();
-      // Both absent: store empty string rather than bare "@" (AC-03).
-      if user.is_empty() && hostname.is_empty() { String::new() }
-      else { format!( "{user}@{hostname}" ) }
+      let hostname = crate::account::resolve_hostname();
+      format!( "{user}@{hostname}" )
     }
   };
   let role_val = match cmd.arguments.get( "role" )

@@ -79,7 +79,7 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 - **AC-18**: When quota fetch succeeded (step 2) and `seven_day_sonnet` remaining < 20% and the just-restored session model is `"claude-sonnet-4-6"` (or absent): overwrites `~/.claude/settings.json` model with `"claude-opus-4-6"` before the subprocess step. (Fix for BUG-225.)
 - **AC-19**: When `trace::1` and the model override fires (AC-18): emits `[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)` before the `model:` line. Omitted when override does not fire (model was already Opus) or when quota fetch failed.
 - **AC-20**: When `touch::1` (default) and the quota fetch fails AND the target token is locally expired AND `refresh::0`: exits 3 immediately with `account credentials expired: {name} (expired {N}h {M}m ago)` on stderr; no refresh attempt is made. When `trace::1`: emits `expired({N}h {M}m ago) → refused (refresh::0)`. (Fix for BUG-230.)
-- **Limitation (BUG-226)**: When the quota fetch returns 429 (rate-limited) or any other error, `touch_ctx` is `None` and the quota-aware model upgrade (AC-18) cannot fire. The snapshot model restored by `switch_account()` is installed as-is — potentially leaving the session on Sonnet even when Sonnet quota is exhausted. No workaround exists at the `.account.use` layer; the user must manually override via `imodel::opus`.
+- **Limitation (BUG-226)**: When the quota fetch returns 429 (rate-limited) or any other error, quota data is unavailable and the quota-aware model upgrade (AC-18) cannot fire. The snapshot model restored by `switch_account()` is installed as-is — potentially leaving the session on Sonnet even when Sonnet quota is exhausted. No workaround exists at the `.account.use` layer; the user must manually override via `imodel::opus`.
 
 ### Cross-References
 
@@ -98,3 +98,4 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 | param | [cli/param/036_effort.md](../cli/param/036_effort.md) | `effort::` parameter specification (shared with `.usage`) |
 | command | [cli/command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | `.account.use` CLI specification |
 | bug | `task/claude_profile/bug/213_account_use_switches_to_expired_token_silently.md` | BUG-213 ✅ Fixed by TSK-216: expiry guard inserted in `account_use_routine()` before `switch_account()`; exits 3 when `now_ms > expiresAt` on the fetch-failed path |
+| bug | `task/claude_profile/bug/238_model_override_skipped_when_already_active.md` | BUG-238 ✅ Fixed: `pre_switch_touch_ctx()` refactored to `PreSwitchOutcome` enum; `apply_model_override()` extracted and called for both idle and already-active paths |

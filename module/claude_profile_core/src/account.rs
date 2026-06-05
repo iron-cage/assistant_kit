@@ -787,6 +787,22 @@ pub fn refresh_account_token(
 /// Format: `` `_active_{hostname}_{user}` `` where `hostname` and `user` are
 /// sanitized (only alphanumeric, `-`, and `.` are kept; everything else becomes `_`).
 /// Reads `HOSTNAME` env var first, falls back to `/etc/hostname`; reads `USER`
+/// Resolves the current machine's hostname via fallback chain:
+/// `$HOSTNAME` env → `/etc/hostname` → `"local"`.
+#[ inline ]
+#[ must_use ]
+pub fn resolve_hostname() -> String
+{
+  std::env::var( "HOSTNAME" )
+    .unwrap_or_else( |_|
+    {
+      std::fs::read_to_string( "/etc/hostname" )
+        .unwrap_or_else( |_| "local".to_string() )
+        .trim()
+        .to_string()
+    } )
+}
+
 /// env var first, falls back to `USERNAME`, then to the literal `"user"`.
 ///
 /// The per-machine name means that switching accounts on one machine does not
@@ -796,14 +812,7 @@ pub fn refresh_account_token(
 #[ must_use ]
 pub fn active_marker_filename() -> String
 {
-  let hostname = std::env::var( "HOSTNAME" )
-    .unwrap_or_else( |_|
-    {
-      std::fs::read_to_string( "/etc/hostname" )
-        .unwrap_or_else( |_| "local".to_string() )
-        .trim()
-        .to_string()
-    } );
+  let hostname = resolve_hostname();
   let user = std::env::var( "USER" )
     .or_else( |_| std::env::var( "USERNAME" ) )
     .unwrap_or_else( |_| "user".to_string() );

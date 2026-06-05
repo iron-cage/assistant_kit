@@ -17,6 +17,9 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-09 | drain skips `prefer_weekly ≤ 5.0` accounts (BUG-206) | AC-04 | Unit test |
 | FT-10 | drain footer label and reset source reflect binding weekly dimension (BUG-216) | AC-09 | Unit test |
 | FT-11 | `next::renew` places `→` on account with soonest quota refill | AC-10 | Integration |
+| FT-12 | All strategies skip `is_occupied_elsewhere` accounts | AC-11 | Unit test |
+| FT-13 | All strategies skip h-exhausted accounts (5h Left ≤ 15%) | AC-12 | Unit test |
+| FT-14 | Endurance footer shows `session + 5h_reset` instead of `7d left + expires` | AC-13 | Unit test |
 
 ### Test Case Index
 
@@ -33,8 +36,11 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-09 | drain never recommends `prefer_weekly ≤ 5.0` accounts | AC-04 | BUG-206 |
 | FT-10 | drain footer label and reset source reflect binding weekly dimension | AC-09 | BUG-216 |
 | FT-11 | next::renew places `→` on soonest-refill account | AC-10 | Strategy |
+| FT-12 | All strategies skip `is_occupied_elsewhere` accounts | AC-11 | Eligibility |
+| FT-13 | All strategies skip h-exhausted accounts (5h Left ≤ 15%) | AC-12 | Eligibility |
+| FT-14 | Endurance footer shows `session + 5h_reset` not `7d left + expires` | AC-13 | Footer |
 
-**Total:** 11 FT cases
+**Total:** 14 FT cases
 
 ---
 
@@ -169,3 +175,44 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Live:** yes (requires live quota data with active 5h timers)
 - **Source fn:** `it145_lim_it_next_renew_places_arrow_on_soonest_refill` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-10](../../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### FT-12: All strategies skip `is_occupied_elsewhere` accounts
+
+- **Given:** Three `AccountQuota` structs: `A` (is_current=false, is_active=false, is_occupied_elsewhere=true, result=Ok — occupied by another machine), `B` (is_current=false, is_active=false, is_occupied_elsewhere=false, result=Ok — free), `C` (is_current=true — ineligible).
+- **When-A:** `find_next_for_strategy(&accounts, NextStrategy::Renew, PreferStrategy::Any, now)`.
+- **When-B:** `find_next_for_strategy(&accounts, NextStrategy::Endurance, PreferStrategy::Any, now)`.
+- **When-C:** `find_next_for_strategy(&accounts, NextStrategy::Drain, PreferStrategy::Any, now)`.
+- **Then-A/B/C:** All return `Some(index_of_B)` — account `A` is skipped because `is_occupied_elsewhere == true`; only `B` is eligible.
+- **When-D:** Same three strategies with only `A` and `C` (A occupied, C current — no free candidate).
+- **Then-D:** All return `None` — no eligible candidate exists.
+- **Exit:** n/a (unit test)
+- **Source fn:** TBD (in `src/usage/sort.rs`)
+- **Source:** [feature/023_next_account_strategies.md AC-11](../../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### FT-13: All strategies skip h-exhausted accounts (5h Left ≤ 15%)
+
+- **Given:** Three `AccountQuota` structs: `A` (is_current=false, is_active=false, is_occupied_elsewhere=false, `five_hour.utilization=92.0` → 5h_left=8% — h-exhausted, result=Ok), `B` (same flags, `five_hour.utilization=70.0` → 5h_left=30% — healthy, result=Ok), `C` (is_current=true — ineligible).
+- **When-A:** `find_next_for_strategy(&accounts, NextStrategy::Renew, PreferStrategy::Any, now)`.
+- **When-B:** `find_next_for_strategy(&accounts, NextStrategy::Endurance, PreferStrategy::Any, now)`.
+- **When-C:** `find_next_for_strategy(&accounts, NextStrategy::Drain, PreferStrategy::Any, now)`.
+- **Then-A/B/C:** All return `Some(index_of_B)` — account `A` is skipped because `five_hour.utilization ≥ 85.0` (h-exhausted); only `B` is eligible.
+- **When-D:** Same three strategies with only `A` (h-exhausted) and `C` (current) — no healthy candidate.
+- **Then-D:** All return `None` — no eligible candidate.
+- **Exit:** n/a (unit test)
+- **Source fn:** TBD (in `src/usage/sort.rs`)
+- **Source:** [feature/023_next_account_strategies.md AC-12](../../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### FT-14: Endurance footer shows `session + 5h_reset` not `7d left + expires`
+
+- **Given:** An `AccountQuota` with `five_hour.utilization=20.0` (5h_left=80%), `five_hour.resets_at` = ISO timestamp T1 (2h 30m from now), `seven_day.utilization=10.0` (7d_left=90%), `expires_at_ms` = 5h from now.
+- **When:** Unit test calls `strategy_metric(&aq, NextStrategy::Endurance, PreferStrategy::Any, now_secs)`.
+- **Then:** Returns a string containing `"80% session"` and `"5h resets in 2h 30m"`. Does NOT contain `"7d left"`, `"expires"`, or `"90%"`.
+- **Exit:** n/a (unit test)
+- **Source fn:** TBD (in `src/usage/sort.rs`)
+- **Source:** [feature/023_next_account_strategies.md AC-13](../../../../docs/feature/023_next_account_strategies.md)
