@@ -208,8 +208,9 @@ pub( crate ) fn sort_indices(
 
 // ── Next-account recommendation ───────────────────────────────────────────────
 
-/// Return the first eligible (non-current, non-active, non-expired, `Ok`) account
-/// from a pre-sorted index slice that also satisfies `extra`, or `None` when none exist.
+/// Return the first eligible (non-current, non-active, non-occupied, non-h-exhausted,
+/// non-expired, `Ok`) account from a pre-sorted index slice that also satisfies `extra`,
+/// or `None` when none exist.
 fn find_first_eligible< F >(
   accounts  : &[ AccountQuota ],
   sorted    : &[ usize ],
@@ -222,8 +223,10 @@ where F : Fn( &AccountQuota ) -> bool
   {
     let aq = &accounts[ idx ];
     if aq.is_current || aq.is_active { continue; }
+    if aq.is_occupied_elsewhere { continue; }
+    let Ok( data ) = &aq.result else { continue; };
+    if data.five_hour.as_ref().is_some_and( |p| p.utilization >= 85.0 ) { continue; }
     if ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) == 0 { continue; }
-    if aq.result.is_err() { continue; }
     if !extra( aq ) { continue; }
     return Some( idx );
   }
@@ -233,9 +236,10 @@ where F : Fn( &AccountQuota ) -> bool
 /// Find the recommended next account for a specific `next` strategy.
 ///
 /// `Endurance` and `Drain` sort via `sort_indices()` then pick the first
-/// eligible (non-current, non-active, non-expired, `Ok`) account.
-/// `Drain` additionally skips accounts where `prefer_weekly == 0` — nothing
-/// remains to drain, so recommending them would be self-defeating.
+/// eligible (non-current, non-active, non-occupied, non-h-exhausted,
+/// non-expired, `Ok`) account.
+/// `Drain` additionally skips accounts where `prefer_weekly ≤ 5.0` — a
+/// weekly-exhausted account has too little remaining capacity to drain.
 /// `Renew` picks the eligible account whose minimum renewal event
 /// (min of `7d_resets_at` and `subscription_renewal`) fires soonest. Absent timers
 /// score as `u64::MAX` (account never started — treated as furthest out).
@@ -273,9 +277,11 @@ pub( crate ) fn find_next_for_strategy(
         .filter( |&i|
         {
           let aq = &accounts[ i ];
+          let Ok( data ) = &aq.result else { return false; };
           !aq.is_current && !aq.is_active
+            && !aq.is_occupied_elsewhere
+            && data.five_hour.as_ref().map_or( true, |p| p.utilization < 85.0 )
             && ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) > 0
-            && aq.result.is_ok()
         } )
         .min_by_key( |&i| renewal_event_secs_of( &accounts[ i ] ) )
     }
@@ -307,8 +313,6 @@ pub( crate ) fn strategy_metric(
   now_secs : u64,
 ) -> String
 {
-  let expires_in_secs = ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs );
-  let expires_str     = format_duration_secs( expires_in_secs );
   let Ok( data ) = &aq.result else { return String::new(); };
   let session_pct = data.five_hour.as_ref().map_or( 0.0, |p| 100.0 - p.utilization );
   match strategy
@@ -336,8 +340,11 @@ pub( crate ) fn strategy_metric(
     }
     NextStrategy::Endurance =>
     {
-      let weekly_pct = prefer_weekly( aq, prefer );
-      format!( "{session_pct:.0}% session, {weekly_pct:.0}% 7d left, expires in {expires_str}" )
+      let h5_reset_str = data.five_hour.as_ref()
+        .and_then( |p| p.resets_at.as_deref() )
+        .and_then( claude_quota::iso_to_unix_secs )
+        .map_or_else( || "\u{2014}".to_string(), |t| format_duration_secs( t.saturating_sub( now_secs ) ) );
+      format!( "{session_pct:.0}% session, 5h resets in {h5_reset_str}" )
     }
     NextStrategy::Drain =>
     {
@@ -850,7 +857,315 @@ mod tests
     );
   }
 
+  /// FT-12 of feature/023 — all strategies skip `is_occupied_elsewhere` accounts.
+  ///
+  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-12]
+  #[ test ]
+  fn test_ft12_023_all_strategies_skip_occupied_elsewhere()
+  {
+    let now = 0u64;
+    // A: occupied (parked on another machine), otherwise eligible
+    let mut a = mk_aq_sort( "occupied@test.com", 50.0, FAR_FUTURE_MS );
+    a.is_occupied_elsewhere = true;
+    // B: free, eligible
+    let b = mk_aq_sort( "free@test.com", 50.0, FAR_FUTURE_MS );
+    // C: current (ineligible)
+    let mut c = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    c.is_current = true;
+
+    let accounts = vec![ a, b, c ];
+    for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      assert_eq!(
+        result, Some( 1 ),
+        "{strategy:?}: must pick free@test.com (index 1), skipping occupied@test.com",
+      );
+    }
+
+    // D: only occupied + current — no free candidate
+    let mut a2 = mk_aq_sort( "occupied@test.com", 50.0, FAR_FUTURE_MS );
+    a2.is_occupied_elsewhere = true;
+    let mut c2 = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    c2.is_current = true;
+    let no_free = vec![ a2, c2 ];
+    for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
+    {
+      let result = find_next_for_strategy( &no_free, strategy, PreferStrategy::Any, now );
+      assert!(
+        result.is_none(),
+        "{strategy:?}: must return None when only occupied + current remain",
+      );
+    }
+  }
+
+  /// FT-13 of feature/023 — all strategies skip h-exhausted accounts (5h Left ≤ 15%).
+  ///
+  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-13]
+  #[ test ]
+  fn test_ft13_023_all_strategies_skip_h_exhausted()
+  {
+    let now = 0u64;
+    // A: h-exhausted (utilization=92.0 → 8% left, well below 15%)
+    let a = mk_aq_sort( "exhausted@test.com", 92.0, FAR_FUTURE_MS );
+    // B: healthy (utilization=70.0 → 30% left)
+    let b = mk_aq_sort( "healthy@test.com", 70.0, FAR_FUTURE_MS );
+    // C: current (ineligible)
+    let mut c = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    c.is_current = true;
+
+    let accounts = vec![ a, b, c ];
+    for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      assert_eq!(
+        result, Some( 1 ),
+        "{strategy:?}: must pick healthy@test.com (index 1), skipping h-exhausted (8% left)",
+      );
+    }
+
+    // Boundary: exactly at threshold (utilization=85.0 → 15% left → h-exhausted per AC-12)
+    let boundary = mk_aq_sort( "boundary@test.com", 85.0, FAR_FUTURE_MS );
+    let b2 = mk_aq_sort( "healthy@test.com", 70.0, FAR_FUTURE_MS );
+    let mut c2 = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    c2.is_current = true;
+    let boundary_accounts = vec![ boundary, b2, c2 ];
+    for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
+    {
+      let result = find_next_for_strategy( &boundary_accounts, strategy, PreferStrategy::Any, now );
+      assert_eq!(
+        result, Some( 1 ),
+        "{strategy:?}: utilization=85.0 (exactly 15% left) must be treated as h-exhausted",
+      );
+    }
+
+    // D: only h-exhausted + current — no healthy candidate
+    let a3 = mk_aq_sort( "exhausted@test.com", 92.0, FAR_FUTURE_MS );
+    let mut c3 = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    c3.is_current = true;
+    let no_healthy = vec![ a3, c3 ];
+    for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
+    {
+      let result = find_next_for_strategy( &no_healthy, strategy, PreferStrategy::Any, now );
+      assert!(
+        result.is_none(),
+        "{strategy:?}: must return None when only h-exhausted + current remain",
+      );
+    }
+  }
+
+  /// Corner case: `five_hour = None` → account is NOT h-exhausted (conservative: absent ≠ exhausted).
+  ///
+  /// All three strategies must treat missing 5h data as eligible.
+  #[ test ]
+  fn test_cc_023_five_hour_none_not_h_exhausted()
+  {
+    let now = 0u64;
+    // A: five_hour = None (no 5h period data at all)
+    let mut a = mk_aq_sort( "no5h@test.com", 50.0, FAR_FUTURE_MS );
+    if let Ok( ref mut d ) = a.result { d.five_hour = None; }
+    // B: current (ineligible)
+    let mut b = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    b.is_current = true;
+    let accounts = vec![ a, b ];
+    for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      assert_eq!(
+        result, Some( 0 ),
+        "{strategy:?}: five_hour=None must NOT be treated as h-exhausted",
+      );
+    }
+  }
+
+  /// Corner case: utilization=84.9 (just below 85.0 threshold) → account IS eligible.
+  #[ test ]
+  fn test_cc_023_h_exhausted_boundary_below_threshold()
+  {
+    let now = 0u64;
+    let a = mk_aq_sort( "just_below@test.com", 84.9, FAR_FUTURE_MS );
+    let mut b = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    b.is_current = true;
+    let accounts = vec![ a, b ];
+    for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      assert_eq!(
+        result, Some( 0 ),
+        "{strategy:?}: utilization=84.9 (15.1% left) must be eligible — only >= 85.0 is h-exhausted",
+      );
+    }
+  }
+
+  /// Corner case: account is both occupied AND h-exhausted — first guard rejects it.
+  #[ test ]
+  fn test_cc_023_occupied_and_h_exhausted_skipped()
+  {
+    let now = 0u64;
+    let mut a = mk_aq_sort( "both@test.com", 92.0, FAR_FUTURE_MS );
+    a.is_occupied_elsewhere = true;
+    let b = mk_aq_sort( "good@test.com", 50.0, FAR_FUTURE_MS );
+    let mut c = mk_aq_sort( "current@test.com", 50.0, FAR_FUTURE_MS );
+    c.is_current = true;
+    let accounts = vec![ a, b, c ];
+    for strategy in [ NextStrategy::Renew, NextStrategy::Endurance, NextStrategy::Drain ]
+    {
+      let result = find_next_for_strategy( &accounts, strategy, PreferStrategy::Any, now );
+      assert_eq!(
+        result, Some( 1 ),
+        "{strategy:?}: account with both occupied + h-exhausted must be skipped",
+      );
+    }
+  }
+
   // ── strategy_metric ───────────────────────────────────────────────────────
+
+  /// FT-14 of feature/023 — endurance footer shows `session + 5h_reset`, not `7d left + expires`.
+  ///
+  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-14]
+  #[ test ]
+  fn test_ft14_023_endurance_footer_shows_5h_reset()
+  {
+    let now : u64 = 1_700_000_000;
+    // 80% session (utilization=20.0), 5h resets in 2h 30m (9000s)
+    let mut aq = mk_aq_with_reset( "end@test.com", 20.0, now, 9000 );
+    // Populate seven_day so the absence assertion for "90%" is meaningful even with data present
+    if let Ok( ref mut data ) = aq.result
+    {
+      data.seven_day = Some( claude_quota::PeriodUsage { utilization : 10.0, resets_at : None } );
+    }
+
+    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!(
+      metric.contains( "80% session" ),
+      "endurance metric must contain '80% session'; got: {metric}",
+    );
+    assert!(
+      metric.contains( "5h resets in 2h 30m" ),
+      "endurance metric must contain '5h resets in 2h 30m'; got: {metric}",
+    );
+    // Must NOT contain irrelevant weekly/expiry metrics
+    assert!(
+      !metric.contains( "7d left" ),
+      "endurance metric must not contain '7d left'; got: {metric}",
+    );
+    assert!(
+      !metric.contains( "expires" ),
+      "endurance metric must not contain 'expires'; got: {metric}",
+    );
+    assert!(
+      !metric.contains( "90" ),
+      "endurance metric must not contain weekly pct '90'; got: {metric}",
+    );
+  }
+
+  /// Corner case: endurance footer with `five_hour = None` → "0% session, 5h resets in —".
+  #[ test ]
+  fn test_cc_023_endurance_footer_five_hour_none()
+  {
+    let now : u64 = 1_700_000_000;
+    let aq = AccountQuota
+    {
+      name              : "none5h@test.com".to_string(),
+      is_current        : false,
+      is_active                 : false,
+      is_occupied_elsewhere     : false,
+      expires_at_ms     : FAR_FUTURE_MS,
+      result            : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : None,
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account           : None,
+      host              : String::new(),
+      role              : String::new(),
+      renewal_at        : None,
+    };
+    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!(
+      metric.contains( "0% session" ),
+      "five_hour=None → session_pct must be 0%; got: {metric}",
+    );
+    assert!(
+      metric.contains( "5h resets in \u{2014}" ),
+      "five_hour=None → reset must show em-dash; got: {metric}",
+    );
+  }
+
+  /// Corner case: endurance footer with `five_hour.resets_at = None` → em-dash for reset timer.
+  #[ test ]
+  fn test_cc_023_endurance_footer_resets_at_none()
+  {
+    let now : u64 = 1_700_000_000;
+    let aq = AccountQuota
+    {
+      name              : "no_reset@test.com".to_string(),
+      is_current        : false,
+      is_active                 : false,
+      is_occupied_elsewhere     : false,
+      expires_at_ms     : FAR_FUTURE_MS,
+      result            : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 30.0, resets_at : None } ),
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account           : None,
+      host              : String::new(),
+      role              : String::new(),
+      renewal_at        : None,
+    };
+    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!(
+      metric.contains( "70% session" ),
+      "utilization=30 → 70% session; got: {metric}",
+    );
+    assert!(
+      metric.contains( "5h resets in \u{2014}" ),
+      "resets_at=None → reset must show em-dash; got: {metric}",
+    );
+  }
+
+  /// Corner case: endurance footer with `resets_at` in the past → `saturating_sub` gives 0 → "0m".
+  #[ test ]
+  fn test_cc_023_endurance_footer_resets_at_in_past()
+  {
+    let now : u64 = 1_700_000_000;
+    // resets_at is 1000s before now
+    let past_iso = reset_iso_at( 0, now - 1000 );
+    let aq = AccountQuota
+    {
+      name              : "past@test.com".to_string(),
+      is_current        : false,
+      is_active                 : false,
+      is_occupied_elsewhere     : false,
+      expires_at_ms     : FAR_FUTURE_MS,
+      result            : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage
+        {
+          utilization : 40.0,
+          resets_at   : Some( past_iso ),
+        } ),
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account           : None,
+      host              : String::new(),
+      role              : String::new(),
+      renewal_at        : None,
+    };
+    let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!(
+      metric.contains( "60% session" ),
+      "utilization=40 → 60% session; got: {metric}",
+    );
+    assert!(
+      metric.contains( "5h resets in 0m" ),
+      "resets_at in past → saturating_sub=0 → '0m'; got: {metric}",
+    );
+  }
 
   /// bug_reproducer(BUG-173): endurance unqualified sort must tiebreak by highest weekly.
   ///

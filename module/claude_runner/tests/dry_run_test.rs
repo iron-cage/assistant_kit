@@ -197,7 +197,9 @@ fn dir_with_spaces_produces_unquoted_cd_line()
   );
 }
 
-// No-message case: --dry-run with no message produces `claude --dangerously-skip-permissions --chrome --effort max -c` command.
+// No-message case: --dry-run with no message produces the bare command with all defaults
+// but WITHOUT -c because the test cwd has no prior Claude session.
+// session_exists() checks $HOME/.claude/projects/{encoded(cwd)}/ which does not exist here.
 #[ test ]
 fn dry_run_without_message_shows_bare_command()
 {
@@ -205,8 +207,8 @@ fn dry_run_without_message_shows_bare_command()
   let output = run_dry( &[ "--dry-run", "--session-dir", &session_path ] );
   let last_line = output.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
-    last_line, "claude --dangerously-skip-permissions --chrome --effort max -c",
-    "Bare --dry-run must end with default bypass, effort max, and continuation (no message arg). Got:\n{output}"
+    last_line, "claude --dangerously-skip-permissions --chrome --effort max",
+    "Bare --dry-run must end with default bypass and effort max (no message, no -c in fresh dir). Got:\n{output}"
   );
 }
 
@@ -221,15 +223,23 @@ fn new_session_suppresses_continue_flag()
   );
 }
 
-// Default continuation: --dry-run shows -c when the session dir is non-empty.
+// Continuation: --dry-run shows -c when --session-dir is non-empty.
+// session_exists(Some(dir)) checks the custom dir directly; a dummy file is enough.
 #[ test ]
-fn default_continuation_always_present()
+fn continuation_present_when_session_dir_nonempty()
 {
-  let ( _dir, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--dry-run", "--session-dir", &session_path, "test" ] );
+  let session_dir = tempfile::tempdir().expect( "create temp session dir" );
+  std::fs::write( session_dir.path().join( "session.json" ), b"{}" )
+    .expect( "write dummy session file" );
+  let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "--dry-run", "--session-dir", session_dir_str, "test" ] )
+    .output()
+    .expect( "invoke clr" );
+  let output = String::from_utf8_lossy( &out.stdout );
   assert!(
     output.contains( " -c" ),
-    "Dry-run with non-empty session dir must contain -c. Got:\n{output}"
+    "non-empty --session-dir must inject -c. Got:\n{output}"
   );
 }
 
@@ -567,9 +577,11 @@ fn empty_positional_arg_produces_bare_command()
   assert!( out.status.success(), "empty positional arg must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
+  // No -c: the test cwd has no prior Claude session; session_exists() checks project-specific
+  // storage ($HOME/.claude/projects/{encoded(cwd)}/), not the global ~/.claude/ dir.
   assert_eq!(
-    last_line, "claude --dangerously-skip-permissions --chrome --effort max -c",
-    "empty positional arg must produce bare command (no message). Got:\n{stdout}"
+    last_line, "claude --dangerously-skip-permissions --chrome --effort max",
+    "empty positional arg must produce bare command (no message, no -c in fresh dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),

@@ -108,17 +108,24 @@ fn t03_max_tokens_flag_accepted()
   assert!( stdout.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=1000" ), "token env var must appear. Got:\n{stdout}" );
 }
 
-// T04: bare --dry-run contains -c when session dir is non-empty
+// T04: --dry-run contains -c when --session-dir is non-empty.
+// session_exists(Some(dir)) checks the dir directly; a dummy file triggers -c injection.
 #[ test ]
 fn t04_dry_run_contains_continue_when_sessions_exist()
 {
-  let ( _dir, session_path ) = make_session_dir();
-  let out = run_cli( &[ "--dry-run", "--session-dir", &session_path, "test" ] );
+  let session_dir = tempfile::tempdir().expect( "create temp session dir" );
+  std::fs::write( session_dir.path().join( "session.json" ), b"{}" )
+    .expect( "write dummy session file" );
+  let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
+  let out = std::process::Command::new( env!( "CARGO_BIN_EXE_clr" ) )
+    .args( [ "--dry-run", "--session-dir", session_dir_str, "test" ] )
+    .output()
+    .expect( "invoke clr" );
   assert!( out.status.success() );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( " -c" ),
-    "dry-run output must contain -c when session dir is non-empty. Got:\n{stdout}"
+    "non-empty --session-dir must inject -c. Got:\n{stdout}"
   );
 }
 
@@ -531,10 +538,12 @@ fn t38_double_dash_only_no_message()
   assert!( out.status.success(), "-- as only arg must not error" );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
+  // No -c: the test cwd has no prior Claude session; session_exists() checks project-specific
+  // storage ($HOME/.claude/projects/{encoded(cwd)}/), not the global ~/.claude/ dir.
   assert_eq!(
     last_line,
-    "claude --dangerously-skip-permissions --chrome --effort max -c",
-    "-- with nothing after must produce command with default bypass, effort max, and continuation. Got:\n{stdout}"
+    "claude --dangerously-skip-permissions --chrome --effort max",
+    "-- with nothing after must produce bare command (default bypass, effort max, no -c in fresh dir). Got:\n{stdout}"
   );
 }
 

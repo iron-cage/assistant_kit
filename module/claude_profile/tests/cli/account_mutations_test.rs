@@ -89,7 +89,8 @@
 //! | as25 | `as25_host_empty_triggers_auto_capture` | `host::` (empty) → same as omit, auto-captured | P |
 //! | as26 | `as26_host_resave_overwrites` | resave with `host::newbox` replaces `host::oldbox` | P |
 //! | as27 | `as27_host_with_spaces` | `host::my work laptop` stored verbatim in profile.json | P |
-//! | as28 | `as28_host_missing_user_hostname_stores_empty` | USER/HOSTNAME both unset → `"host":""` (AC-03) | P |
+//! | as28 | `as28_host_missing_user_stores_at_resolved_hostname` | USER unset, HOSTNAME unset → `"host":"@<resolved>"` (AC-03) | P |
+//! | `mre_bug239` | `mre_bug239_hostname_resolved_when_env_absent` | HOSTNAME absent, USER=alice → host `"alice@<resolved>"` not `"alice@"` (BUG-239) | P |
 //! | as29 | `as29_resave_credentials_unchanged` | resave with `host::newbox` does not modify credentials.json | P |
 //! | as30 | `as30_role_writes_profile_json` | explicit `role::work` → profile.json has `"role":"work"` | P |
 //! | as31 | `as31_role_omit_stores_empty` | no `role::` param → profile.json has `"role":""` | P |
@@ -3171,14 +3172,16 @@ fn as27_host_with_spaces()
   );
 }
 
-// ── as28: USER/HOSTNAME both unset → host="" ─────────────────────────────────
+// ── as28: USER unset, HOSTNAME unset → host="@<resolved>" ────────────────────
 
-/// as28 — When `$USER` and `$HOSTNAME` are both unset, `host` stored as empty string.
+/// as28 — When `$USER` and `$HOSTNAME` are both unset, `host` is `"@<hostname>"` where
+/// the hostname comes from the `resolve_hostname()` fallback chain (BUG-239 fix).
 ///
 /// Spec: [`tests/docs/feature/029_account_host_metadata.md` FT-03]
-/// Bug: before fix, both-absent produced `"@"` instead of `""`.
+/// Before BUG-239 fix: HOSTNAME unset → empty hostname → guard `user.is_empty() && hostname.is_empty()` → `""`.
+/// After BUG-239 fix: `resolve_hostname()` → `/etc/hostname` or "local" → always resolves → `"@<hostname>"`.
 #[ test ]
-fn as28_host_missing_user_hostname_stores_empty()
+fn as28_host_missing_user_stores_at_resolved_hostname()
 {
   use crate::cli_runner::BIN;
   let dir   = TempDir::new().unwrap();
@@ -3200,9 +3203,78 @@ fn as28_host_missing_user_hostname_stores_empty()
   assert_exit( &out, 0 );
 
   let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  // host starts with "@" (USER absent) but has a non-empty resolved hostname (not bare "@").
   assert!(
-    content.contains( r#""host":"""# ),
-    "both USER and HOSTNAME unset must store empty host string (not '@'), got: {content}",
+    content.contains( r#""host":"@"# ),
+    "USER absent must produce host starting with '@', got: {content}",
+  );
+  assert!(
+    !content.contains( r#""host":"@""# ),
+    "hostname must not be empty when resolved via fallback chain (BUG-239), got: {content}",
+  );
+}
+
+// ── mre_bug239: HOSTNAME absent → host has resolved non-empty hostname ────────
+
+/// `mre_bug239` — `.account.save` with `$HOSTNAME` removed from subprocess env produces
+/// `"host":"alice@<resolved>"` — hostname from `resolve_hostname()` fallback chain.
+///
+/// # Root Cause
+/// `std::env::var("HOSTNAME")` returns `Err` in child processes spawned from bash when
+/// `$HOSTNAME` is not exported. Old code used `unwrap_or_default()` → empty string →
+/// `"alice@"` (bare user with empty hostname part).
+///
+/// # Why Not Caught
+/// The old `as24` / `as25` tests supplied `HOSTNAME` explicitly in the subprocess env.
+/// No test removed `HOSTNAME` while keeping `USER` to expose the empty-hostname path.
+///
+/// # Fix Applied
+/// `resolve_hostname()` extracted from `active_marker_filename()` with fallback chain:
+/// `$HOSTNAME` env → `/etc/hostname` → `"local"`. `account_save_routine()` now calls
+/// `resolve_hostname()` instead of `std::env::var("HOSTNAME")`.
+///
+/// # Prevention
+/// Never call `std::env::var("HOSTNAME")` directly — use `resolve_hostname()` everywhere.
+/// Hostname env is a bash built-in; it is not exported to child processes by default.
+///
+/// # Pitfall
+/// The resolved hostname value is environment-dependent (`/etc/hostname` or "local").
+/// Tests must assert "non-empty hostname after @" without hardcoding the hostname value.
+#[ doc = "bug_reproducer(BUG-239)" ]
+#[ test ]
+fn mre_bug239_hostname_resolved_when_env_absent()
+{
+  use crate::cli_runner::{ BIN, write_credentials, write_claude_json, FAR_FUTURE_MS };
+  use std::process::Command;
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
+  write_claude_json( dir.path(), "test@example.com" );
+
+  // Remove HOSTNAME to simulate bash child process where $HOSTNAME is not exported.
+  // Keep USER so the bug manifests as "alice@" (not "@").
+  let out = Command::new( BIN )
+    .args( [ ".account.save", "name::test@example.com" ] )
+    .env( "HOME", home )
+    .env( "USER", "alice" )
+    .env_remove( "PRO" )
+    .env_remove( "HOSTNAME" )
+    .output()
+    .expect( "failed to execute clp" );
+
+  assert_exit( &out, 0 );
+
+  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  // Before BUG-239 fix: host = "alice@" (empty hostname).
+  // After fix: host = "alice@<resolved>" (non-empty, from /etc/hostname or "local").
+  assert!(
+    !content.contains( r#""host":"alice@""# ),
+    "hostname must not be empty when $HOSTNAME env is absent — resolve_hostname() must use fallback chain, got: {content}",
+  );
+  assert!(
+    content.contains( "alice@" ),
+    "host must contain 'alice@' (user prefix), got: {content}",
   );
 }
 

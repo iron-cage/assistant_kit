@@ -407,3 +407,86 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 - `from_now::+0m` sets the override to the current time, which immediately enters the monthly auto-advance cycle.
 - `name::all` targets every account in the credential store at the time of execution.
 - See [feature/030_account_renewal_override.md](../../feature/030_account_renewal_override.md) for full semantics, `~Renews` rendering rules, and acceptance criteria.
+
+---
+
+### Command :: 15. `.account.inspect`
+
+Live diagnostic inspection of identity, subscription, and org fields for one account. Calls endpoints 001 (userinfo), 002 (subscriptions/memberships), and 005 (roles) and renders all fields including ALL membership entries with a selection-priority indicator. Primary use case: diagnosing unexpected subscription display when an account has multiple memberships (see BUG-237 / feature 031).
+
+-- **Parameters:** [`name::`](../param/001_name.md), [`refresh::`](../param/019_refresh.md), [`trace::`](../param/023_trace.md), [`format::`](../param/002_format.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid param) | 2 (runtime: account not found or credential store unreadable)
+
+**Syntax:**
+
+```bash
+clp .account.inspect                    # default: active account
+clp .account.inspect name::alice@acme.com
+clp .account.inspect alice             # prefix
+clp .account.inspect refresh::0        # skip token refresh on expired credentials
+clp .account.inspect format::json
+clp .account.inspect trace::1          # show [trace] endpoint calls to stderr
+```
+
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `name::` | [`AccountName`](../type/001_account_name.md) | *(active account)* | Account to inspect; omit to use the currently active account |
+| `refresh::` | `bool` | `1` | Attempt OAuth token refresh via isolated subprocess when `expiresAt` is locally expired, before endpoint calls |
+| `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each endpoint call: URL, HTTP status, field extraction summary |
+| `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format: `text` (default) or `json` |
+
+**Output (text):**
+
+```
+Account:         alice@acme.com
+Status:          🟢 valid (expires in 3h 52m)
+Tagged ID:       user_01abc...def
+UUID:            aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+
+Memberships:     2
+  [0]  billing_type=none              has_max=false  capabilities=[chat]
+  [1]  billing_type=stripe_subscription  has_max=true   capabilities=[claude_max, chat]  ← selected
+
+Billing:         stripe_subscription
+Has Max:         yes
+Org:             alice@acme.com's Organization
+Org UUID:        aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+Org Role:        admin
+Workspace UUID:  (none)
+Workspace:       (none)
+```
+
+**Membership selection priority:**
+
+| Priority | Criteria |
+|----------|----------|
+| 1 (highest) | `billing_type == "stripe_subscription"` AND capabilities contain `"claude_max"` |
+| 2 | `billing_type == "stripe_subscription"` (any capabilities) |
+| 3 (fallback) | `memberships[0]` |
+
+The selected membership is marked `← selected` when there are multiple memberships; the `Billing:` and `Has Max:` fields reflect the selected membership.
+
+**Examples:**
+
+```bash
+clp .account.inspect
+# Account:     alice@acme.com
+# Status:      🟢 valid (expires in 3h 52m)
+# ...
+
+clp .account.inspect name::i5@wbox.pro
+# Account:     i5@wbox.pro
+# Memberships: 2
+#   [0]  billing_type=none              has_max=false  ...
+#   [1]  billing_type=stripe_subscription  has_max=true  ...  ← selected
+# Billing:     stripe_subscription
+
+clp .account.inspect format::json | jq '.memberships | length'
+# 2
+```
+
+**Notes:**
+- Endpoints 001, 002, and 005 are called independently. A failure on one endpoint falls back to the local snapshot from `{name}.claude.json` / `{name}.roles.json` with a `(snapshot)` suffix per field; other endpoints still contribute live data.
+- `refresh::1` (default) behaves identically to `.usage`'s `refresh::1`: calls `refresh_account_token()` once when `expiresAt` is locally expired; retries endpoint calls with the fresh token.
+- This command does NOT show quota data (5h/7d utilization) — use `.usage` for that.
+- See [feature/031_account_inspect.md](../../feature/031_account_inspect.md) for full design, graceful fallback semantics, and all acceptance criteria.

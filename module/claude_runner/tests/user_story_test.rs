@@ -117,18 +117,17 @@ fn stderr_str( o : &std::process::Output ) -> String { String::from_utf8_lossy( 
 // ── US01: Interactive REPL ──────────────────────────────────────────────────
 // Source: tests/docs/cli/user_story/01_interactive_repl.md
 
-/// US-1: bare clr opens REPL — subprocess args include -c and --dangerously-skip-permissions.
+/// US-1: bare clr opens REPL — subprocess args include --dangerously-skip-permissions.
 ///
 /// Validated via --dry-run (no message → REPL route). Print mode is NOT injected.
+/// Note: -c is NOT asserted here — the test cwd has no prior Claude session so
+/// `session_exists()` correctly returns false. Session continuation is tested
+/// separately in `us01_2` (which uses --session-dir with a dummy session file).
 #[ test ]
 fn us01_1_bare_clr_repl_defaults()
 {
   let ( _session, session_path ) = make_session_dir();
   let output = run_dry( &[ "--session-dir", &session_path ] );
-  assert!(
-    output.contains( " -c" ),
-    "REPL mode must inject -c (session continuation). Got:\n{output}"
-  );
   assert!(
     output.contains( "--dangerously-skip-permissions" ),
     "REPL mode must inject --dangerously-skip-permissions. Got:\n{output}"
@@ -139,15 +138,20 @@ fn us01_1_bare_clr_repl_defaults()
   );
 }
 
-/// US-2: session continuation flag -c present in REPL subprocess args.
+/// US-2: session continuation flag -c present when a prior session exists.
+///
+/// Uses --session-dir pointing to a non-empty temp dir so `session_exists()` returns true.
 #[ test ]
 fn us01_2_session_continuation_flag_present()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--session-dir", &session_path ] );
+  let session_dir = tempfile::tempdir().expect( "create temp session dir" );
+  std::fs::write( session_dir.path().join( "session.json" ), b"{}" )
+    .expect( "write dummy session file" );
+  let session_dir_str = session_dir.path().to_str().expect( "session dir path is valid utf-8" );
+  let output = run_dry( &[ "--session-dir", session_dir_str ] );
   assert!(
     output.contains( " -c" ),
-    "dry-run must show -c for default session continuation. Got:\n{output}"
+    "non-empty --session-dir must inject -c. Got:\n{output}"
   );
 }
 
@@ -297,6 +301,9 @@ fn us03_4_interactive_with_new_session()
 // Source: tests/docs/cli/user_story/04_dry_run_preview.md
 
 /// US-1: --dry-run prints assembled command without executing.
+///
+/// Note: -c is NOT asserted — the test cwd has no prior Claude session so
+/// `session_exists()` correctly returns false. See `us01_2` for the positive -c test.
 #[ test ]
 fn us04_1_dry_run_prints_command()
 {
@@ -305,10 +312,6 @@ fn us04_1_dry_run_prints_command()
   assert!(
     output.contains( "--dangerously-skip-permissions" ),
     "dry-run must show --dangerously-skip-permissions. Got:\n{output}"
-  );
-  assert!(
-    output.contains( " -c" ),
-    "dry-run must show -c. Got:\n{output}"
   );
   assert!(
     output.contains( "--chrome" ),
@@ -320,13 +323,14 @@ fn us04_1_dry_run_prints_command()
   );
 }
 
-/// US-2: all injected defaults visible in dry-run output.
+/// US-2: all unconditional injected defaults visible in dry-run output.
+///
+/// Note: -c is NOT asserted — it is conditional on prior session history.
+/// See `us01_2` for the positive -c test.
 #[ test ]
 fn us04_2_all_defaults_visible()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--session-dir", &session_path, "test" ] );
-  assert!( output.contains( " -c" ), "must have -c. Got:\n{output}" );
+  let output = run_dry( &[ "test" ] );
   assert!(
     output.contains( "--dangerously-skip-permissions" ),
     "must have --dangerously-skip-permissions. Got:\n{output}"

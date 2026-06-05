@@ -15,11 +15,11 @@
 
 | Value | Name | Selection algorithm |
 |-------|------|---------------------|
-| `renew` (default) | Renew Top | First non-current, non-active account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). |
-| `endurance` | Endurance Top | First non-current, non-active account from endurance sort order (qualified accounts first by weekly desc then reset asc; unqualified by 5h_left desc, tiebreak weekly desc). |
-| `drain` | Drain Top | First non-current, non-active account from drain sort order (`prefer_weekly` ascending, h-exhausted sunk; tiebreak `5h_left` asc). |
+| `renew` (default) | Renew Top | First non-current, non-active, non-occupied, non-h-exhausted account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). |
+| `endurance` | Endurance Top | First non-current, non-active, non-occupied, non-h-exhausted account from endurance sort order (qualified accounts first by weekly desc then reset asc; unqualified by 5h_left desc, tiebreak weekly desc). |
+| `drain` | Drain Top | First non-current, non-active, non-occupied, non-h-exhausted account from drain sort order (`prefer_weekly` ascending; tiebreak `5h_left` asc). |
 
-**Recommendation eligibility:** All strategies skip accounts that are `is_current` (user is already on that session) or `is_active` (the active marker account when it differs from current). Only accounts with valid quota data and `expires_in_secs > 0` are eligible. Strategies select from all eligible accounts regardless of their composite health tier (-> 009_token_usage.md three-tier grouping) — the tier affects table display ordering, not recommendation eligibility. Exception: `drain` additionally skips accounts where `prefer_weekly ≤ 5.0` — a weekly-exhausted account (🟡 tier boundary: `7d Left ≤ 5%`) has too little remaining capacity to be a meaningful drain target, so recommending it is self-defeating. This aligns the eligibility gate with the visual tier boundary defined in `status_emoji`.
+**Recommendation eligibility:** All strategies skip accounts that are `is_current` (user is already on that session), `is_active` (the active marker account when it differs from current), `is_occupied_elsewhere` (parked by another host/user pair — see 025_per_machine_active_marker.md), or h-exhausted (`5h_left ≤ 15%` — the h-exhaustion threshold from TSK-190; switching to a session-exhausted account provides negligible usable capacity). Only accounts with valid quota data and `expires_in_secs > 0` are eligible. Exception: `drain` additionally skips accounts where `prefer_weekly ≤ 5.0` — a weekly-exhausted account (🟡 tier boundary: `7d Left ≤ 5%`) has too little remaining capacity to be a meaningful drain target.
 
 **Footer format (always shown when ≥2 valid accounts):**
 
@@ -28,11 +28,11 @@ The footer shows each strategy's recommendation on its own line with key qualify
 ```
 Valid: 7 / 8   ->  Next by strategy:
   renew      carol@example.com   7d resets in 0h 23m, ~renews in 12d 4h
-  endurance  bob@example.com     100% session, 76% 7d left, expires in 7h 56m
+  endurance  bob@example.com     100% session, 5h resets in 0h 42m
   drain      carol@example.com   2% 7d left, 7d resets in 1d 4h
 ```
 
-Each footer line shows: strategy name (left-aligned, 10 chars), account name (left-aligned), key metric string. The key metric reflects the strategy's selection criterion — renew shows the two renewal event countdowns: `7d resets in {d7}, renews in {sub}` (exact subscription date) or `7d resets in {d7}, ~renews in {sub}` (estimated subscription date); when no subscription data is available the line shows `7d resets in {d7}` only; endurance shows session + weekly + expires; drain shows weekly quota remaining + weekly reset countdown (matching drain's `prefer_weekly` ascending sort key). The drain metric label and reset countdown source reflect the binding weekly dimension: `"% 7d left, 7d resets in …"` when overall weekly quota is binding (`7d_left ≤ 7d_son_left`); `"% 7d(Son) left, 7d(Son) resets in …"` when Sonnet weekly quota is binding (`7d_son_left < 7d_left`). When multiple strategies recommend the same account, all lines appear independently (the agreement is itself useful signal). Strategy lines for which no eligible account exists are omitted rather than showing an empty line.
+Each footer line shows: strategy name (left-aligned, 10 chars), account name (left-aligned), key metric string. The key metric reflects the strategy's selection criterion — renew shows the two renewal event countdowns: `7d resets in {d7}, renews in {sub}` (exact subscription date) or `7d resets in {d7}, ~renews in {sub}` (estimated subscription date); when no subscription data is available the line shows `7d resets in {d7}` only; endurance shows session + 5h reset timing (`{session}% session, 5h resets in {time}`); drain shows weekly quota remaining + weekly reset countdown (matching drain's `prefer_weekly` ascending sort key). The drain metric label and reset countdown source reflect the binding weekly dimension: `"% 7d left, 7d resets in …"` when overall weekly quota is binding (`7d_left ≤ 7d_son_left`); `"% 7d(Son) left, 7d(Son) resets in …"` when Sonnet weekly quota is binding (`7d_son_left < 7d_left`). When multiple strategies recommend the same account, all lines appear independently (the agreement is itself useful signal). Strategy lines for which no eligible account exists are omitted rather than showing an empty line.
 
 **`→` table marker:**
 
@@ -45,11 +45,11 @@ The account selected by the active `next::` strategy receives the `→` flag in 
 | Dimension | `renew` | `endurance` | `drain` |
 |---|---|---|---|
 | Primary sort key | soonest renewal event (min of `7d_reset`, `subscription renewal`) | qualified-first, then `weekly` desc | `prefer_weekly` asc (lowest 7d Left first) |
-| h-exhausted handling | eligible (reset may be soonest) | treated as unqualified | sunk to bottom |
+| h-exhausted handling | skipped (5h Left ≤ 15%) | skipped (5h Left ≤ 15%) | skipped (5h Left ≤ 15%) |
 | Secondary sort | `expires_in_secs` asc | within qualified: `5h_reset` asc; within unqualified: `weekly` desc | `5h_left` asc |
-| Qualification gate | none (any non-current, non-active eligible) | `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` | none |
+| Qualification gate | none (non-current, non-active, non-occupied, non-h-exhausted) | `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` | non-h-exhausted + `prefer_weekly > 5.0` |
 | Uses weekly quota | no | yes (gate + rank) | yes (primary sort key) |
-| Picks account with… | soonest quota renewal event (7d reset or subscription) | freshest 5h reset + weekly runway | least weekly quota remaining (not h-exhausted; skips `prefer_weekly ≤ 5.0`) |
+| Picks account with… | soonest quota renewal event (7d reset or subscription) | freshest 5h reset + weekly runway | least weekly quota remaining (skips `prefer_weekly ≤ 5.0`) |
 | Best for | quick context switch to next available account | starting a long 5h+ agent run | active workstation rotation |
 
 ### Worked Example
@@ -80,7 +80,7 @@ Within qualified: weekly=34% tied, reset=33m tied → alphabetical: a before b. 
 **`drain`** — `prefer_weekly` ascending, skipping `prefer_weekly ≤ 5.0` (weekly-exhausted — nothing meaningful to drain); `prefer::any`:
 weekly(any): e=0% → skip (≤ 5.0); f=0% → skip (≤ 5.0); c=3% → skip (≤ 5.0); d=7% < active=13% (skip: is_active) < a=34%=b (tiebreak `5h_left`: a=32% < b=99%) < current=61% (skip: is_current). First eligible above threshold: **Winner: d@example.com.**
 
-Renew and endurance both pick a@example.com (different reasons — renew picks soonest reset; endurance picks qualified + most runway). Drain picks d@example.com (lowest `prefer_weekly > 5.0` = 7%). The footer always exposes all three picks regardless of which `next::` value is active (`next::renew` default — `→` on a@example.com):
+Renew and drain both pick d@example.com (different reasons — renew picks soonest 7d reset = 2d 8h; drain picks lowest `prefer_weekly > 5.0` = 7%). Endurance picks a@example.com (qualified, soonest 5h_reset + highest weekly). The footer always exposes all three picks regardless of which `next::` value is active (`next::renew` default — `→` on a@example.com):
 
 ```
    ●   Account              5h Left   5h Reset   7d Left  7d(Son)  7d Reset  Expires    ~Renews
@@ -96,7 +96,7 @@ Renew and endurance both pick a@example.com (different reasons — renew picks s
 
 Valid: 8 / 8   ->  Next by strategy:
   renew      d@example.com   7d resets in 2d 8h
-  endurance  a@example.com   32% session, 34% 7d left, expires in 5m
+  endurance  a@example.com   32% session, 5h resets in 33m
   drain      d@example.com   7% 7d left, 7d resets in 2d 8h
 ```
 
@@ -106,14 +106,17 @@ Valid: 8 / 8   ->  Next by strategy:
 
 - **AC-01**: The footer always shows one recommendation line per strategy (renew, endurance, drain) with account name and key metric, regardless of the `next::` parameter value. The footer is never suppressed by a `next::` value choice.
 - **AC-02**: Exactly one account receives the `→` flag in the table body — the account selected by the active `next::` strategy. No `→` is placed when no eligible candidate exists for that strategy.
-- **AC-03**: `next::endurance` places `→` on the top non-current, non-active account from endurance sort order.
-- **AC-04**: `next::drain` places `→` on the top non-current, non-active account from drain sort order.
+- **AC-03**: `next::endurance` places `→` on the top non-current, non-active, non-occupied, non-h-exhausted account from endurance sort order.
+- **AC-04**: `next::drain` places `→` on the top non-current, non-active, non-occupied, non-h-exhausted account from drain sort order.
 - **AC-05**: Invalid `next::` value exits 1 with an error naming the valid values (`renew`, `endurance`, `drain`).
 - **AC-06**: `next::` does not affect `format::json` output — JSON always uses alphabetical order without recommendation markers.
 - **AC-07**: Footer is omitted when 0 or 1 accounts have valid quota data (same threshold as 009_token_usage.md AC-10).
 - **AC-08**: Footer strategy lines for which no eligible account exists are omitted from the footer rather than showing an empty line.
 - **AC-09**: The drain footer metric label reflects the binding weekly dimension: `"% 7d left"` when overall weekly quota is binding (`7d_left ≤ 7d_son_left`); `"% 7d(Son) left"` when Sonnet weekly quota is binding (`7d_son_left < 7d_left`). The reset countdown sources the same quota's `resets_at` field as the percentage (BUG-216).
-- **AC-10**: `next::renew` (default) places `→` on the top non-current, non-active account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). The renew footer line shows the two renewal countdowns: `7d resets in {d7}, renews in {sub}` (exact subscription date), `7d resets in {d7}, ~renews in {sub}` (estimated subscription date), or `7d resets in {d7}` when no subscription data is available.
+- **AC-10**: `next::renew` (default) places `→` on the top non-current, non-active, non-occupied, non-h-exhausted account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). The renew footer line shows the two renewal countdowns: `7d resets in {d7}, renews in {sub}` (exact subscription date), `7d resets in {d7}, ~renews in {sub}` (estimated subscription date), or `7d resets in {d7}` when no subscription data is available.
+- **AC-11**: All three strategies (`renew`, `endurance`, `drain`) skip accounts where `is_occupied_elsewhere == true` — an account parked by another host/user pair is never recommended. When the only remaining eligible candidates are all occupied, the strategy returns no recommendation (same as no eligible candidate).
+- **AC-12**: All three strategies skip h-exhausted accounts (`5h_left ≤ 15%`, i.e., `five_hour.utilization ≥ 85.0`) — switching to a session-exhausted account provides negligible usable capacity. When all remaining eligible candidates are h-exhausted, the strategy returns no recommendation.
+- **AC-13**: The endurance footer metric line shows `{session}% session, 5h resets in {time}` — the session capacity and the 5h reset timing. It does NOT show `7d left` or `expires`; those are available in the main table and irrelevant to long-run scheduling.
 
 ### Cross-References
 

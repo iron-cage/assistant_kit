@@ -125,11 +125,22 @@ pub( crate ) fn render_text(
 
     let expires_cell = compute_expires_cell( aq.expires_at_ms, now_secs );
     let sub_str      = sub_label( aq.account.as_ref() ).to_string();
-    let renews_str   = renews_label(
-      aq.renewal_at.as_deref(),
-      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
-      now_secs,
-    );
+    // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
+    // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
+    // Pitfall: org_created_at may be present even when subscription is cancelled; must check
+    //   billing_type BEFORE passing org_created_at to renews_label.
+    let renews_str = if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" )
+    {
+      "\u{2014}".to_string()
+    }
+    else
+    {
+      renews_label(
+        aq.renewal_at.as_deref(),
+        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        now_secs,
+      )
+    };
 
     match &aq.result
     {
@@ -420,11 +431,22 @@ pub( crate ) fn render_tsv(
     };
     let expires_str = compute_expires_cell( aq.expires_at_ms, now_secs );
     let sub_str     = sub_label( aq.account.as_ref() ).to_string();
-    let renews_str  = renews_label(
-      aq.renewal_at.as_deref(),
-      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
-      now_secs,
-    );
+    // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
+    // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
+    // Pitfall: org_created_at may be present even when subscription is cancelled; must check
+    //   billing_type BEFORE passing org_created_at to renews_label.
+    let renews_str = if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" )
+    {
+      "\u{2014}".to_string()
+    }
+    else
+    {
+      renews_label(
+        aq.renewal_at.as_deref(),
+        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        now_secs,
+      )
+    };
 
     let mut row = vec![ flag_cell.to_string() ];
     if cols.status { row.push( status_str.to_string() ); }
@@ -541,11 +563,22 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
     GetField::Account => aq.name.clone(),
     GetField::Expires => compute_expires_cell( aq.expires_at_ms, now_secs ),
     GetField::Sub    => sub_label( aq.account.as_ref() ).to_string(),
-    GetField::Renews => renews_label(
-      aq.renewal_at.as_deref(),
-      aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
-      now_secs,
-    ),
+    // Fix(BUG-232): billing_type=="none" → no active subscription → no renewal date to show.
+    // Root cause: renews_label uses org_created_at unconditionally; has no billing_type param.
+    // Pitfall: org_created_at may be present even when subscription is cancelled; must check
+    //   billing_type BEFORE passing org_created_at to renews_label.
+    GetField::Renews => if aq.account.as_ref().is_some_and( |a| a.billing_type == "none" )
+    {
+      "\u{2014}".to_string()
+    }
+    else
+    {
+      renews_label(
+        aq.renewal_at.as_deref(),
+        aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
+        now_secs,
+      )
+    },
     GetField::Host         => aq.host.clone(),
     GetField::Role         => aq.role.clone(),
     GetField::NextEventType | GetField::NextEventSecs =>
@@ -780,6 +813,86 @@ mod tests
     assert_eq!(
       bob_flag_tsv, "@",
       "FT-21: bob TSV flag cell must be @; got: {bob_flag_tsv:?}",
+    );
+  }
+
+  /// FT-23/009 — `~Renews` must show `"—"` for cancelled-subscription accounts.
+  ///
+  /// # Root Cause
+  /// `renews_label` uses `org_created_at` unconditionally to project a billing date —
+  /// it has no `billing_type` parameter. Accounts with `billing_type == "none"` showed
+  /// `~in Nd` in `~Renews` despite `Sub = "—"` — the two columns contradicted each other.
+  ///
+  /// # Why Not Caught
+  /// No prior Err-arm test supplied `OauthAccountData { billing_type: "none" }` and
+  /// checked the `~Renews` column. All prior tests used `account: None` → `"?"`.
+  ///
+  /// # Fix Applied
+  /// Caller-side guard in `render_text()` and `render_tsv()`: when `billing_type == "none"`,
+  /// short-circuit to `"\u{2014}"` before passing `org_created_at` to `renews_label`.
+  /// Fix(BUG-232).
+  ///
+  /// # Prevention
+  /// Any Err-arm test for cancelled-subscription accounts must verify `~Renews = "—"`,
+  /// not just the error label column.
+  ///
+  /// # Pitfall
+  /// `org_created_at` may be present and parseable even after subscription cancellation.
+  /// The guard must check `billing_type` BEFORE consulting `org_created_at` — presence of
+  /// the org date does not imply an active renewal cycle.
+  ///
+  /// Spec: [`tests/docs/feature/009_token_usage.md` FT-23]
+  #[ doc = "bug_reproducer(BUG-232)" ]
+  #[ test ]
+  fn test_ft23_009_renews_dash_for_cancelled_subscription()
+  {
+    let aq = AccountQuota
+    {
+      name                  : "cancelled@test.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Err( "no subscription".to_string() ),
+      account               : Some( claude_quota::OauthAccountData
+      {
+        billing_type   : "none".to_string(),
+        has_max        : false,
+        org_created_at : "2024-01-15T00:00:00Z".to_string(),
+      } ),
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+    };
+    let accounts = vec![ aq ];
+    let cols     = ColsVisibility::default_set();
+
+    // text renderer: ~Renews must be "—", NOT "~in Nd"
+    let text = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &cols,
+    );
+    assert!(
+      text.contains( "\u{2014}" ),
+      "FT-23: render_text must contain em-dash for cancelled subscription ~Renews; got:\n{text}",
+    );
+    assert!(
+      !text.contains( "~in " ),
+      "FT-23: render_text must NOT contain '~in ' for cancelled subscription; got:\n{text}",
+    );
+
+    // TSV renderer: renews column must be "—"
+    let tsv       = render_tsv( &accounts, SortStrategy::Name, None, PreferStrategy::Any, &cols );
+    let mut lines = tsv.lines();
+    let header    = lines.next().expect( "FT-23: TSV must have header row" );
+    let data_row  = lines.next().expect( "FT-23: TSV must have data row" );
+    let headers   : Vec< &str > = header.split( '\t' ).collect();
+    let fields    : Vec< &str > = data_row.split( '\t' ).collect();
+    let renews_idx = headers.iter().position( |h| *h == "renews" )
+      .expect( "FT-23: renews column must be present in TSV header" );
+    let renews_val = fields.get( renews_idx ).copied().unwrap_or( "" );
+    assert_eq!(
+      renews_val, "\u{2014}",
+      "FT-23: TSV ~Renews must be em-dash for billing_type='none'; got: {renews_val:?}",
     );
   }
 }

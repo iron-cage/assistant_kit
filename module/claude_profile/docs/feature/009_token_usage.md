@@ -30,6 +30,7 @@
       1. Spawn `claude_quota::fetch_oauth_account(&token)` on a background thread.
       2. Call `claude_quota::fetch_oauth_usage(&token)` on the current thread → `OauthUsageData` or error reason.
       3. Join the background thread → `Option<OauthAccountData>` (`None` on any fetch or parse error).
+      4. If `OauthAccountData.billing_type == "none"` (confirmed cancelled subscription): override result to `Err("no subscription")` — the usage fetch result is discarded (see AC-31).
    d. On quota success: record `5h Left = 100.0 - five_hour.utilization`, `five_hour.resets_at`, `7d Left = 100.0 - seven_day.utilization`, `seven_day.resets_at`; `7d(Son) = 100.0 - seven_day_sonnet.utilization` when `seven_day_sonnet` is `Some`, else `None`.
    e. On any failure (token read or API): record the error reason.
 5. Post-process:
@@ -49,7 +50,7 @@
    - **Per-column emoji:** `5h Left` and `7d Left` column values embed an individual 🟢/🟡 emoji based on their own threshold: `5h Left` uses ≤15% (`🟢 86%` when > 15%, `🟡 12%` when ≤ 15%); `7d Left` uses ≤5% (`🟢 65%` when > 5%, `🟡 3%` when ≤ 5%). This provides drill-down visibility beyond the composite `●`.
    - `Expires`: "in Xh Ym" when `expires_in_secs > 0`; "EXPIRED" when `expires_in_secs == 0`
    - `Sub` (hidden by default): `"max"` (`billing_type == "stripe_subscription"` + `has_max`), `"pro"` (`billing_type == "stripe_subscription"` + `!has_max`), `"—"` (`billing_type == "none"`), `"?"` (`OauthAccountData` unavailable)
-   - `~Renews`: Duration countdown to next billing renewal. **Exact** (`in Xh Ym`, no `~` prefix) when `_renewal_at` ISO-8601 UTC override is present in `{name}.claude.json` (see [030_account_renewal_override.md](030_account_renewal_override.md)); auto-advanced by monthly increments when the override timestamp is in the past. **Estimated** (`~in Xd`, `~` prefix) when derived from `org_created_at` day-of-month projection. `"?"` when neither `_renewal_at` nor `OauthAccountData` is available; `"—"` when timestamp parsing fails.
+   - `~Renews`: Duration countdown to next billing renewal. `"—"` when `billing_type == "none"` (subscription cancelled — no active renewal to track). **Exact** (`in Xh Ym`, no `~` prefix) when `_renewal_at` ISO-8601 UTC override is present in `{name}.claude.json` (see [030_account_renewal_override.md](030_account_renewal_override.md)); auto-advanced by monthly increments when the override timestamp is in the past. **Estimated** (`~in Xd`, `~` prefix) when derived from `org_created_at` day-of-month projection. `"?"` when neither `_renewal_at` nor `OauthAccountData` is available; `"—"` when timestamp parsing fails.
    - `5h Left` / `7d Left`: remaining percentage (0–100, rounded to nearest integer) with per-column emoji prefix; sourced from `OauthUsageData.five_hour.utilization` / `seven_day.utilization` (0.0–100.0 scale, remaining = `100 - utilization`)
    - `7d(Son)`: remaining Sonnet-only weekly quota percentage; sourced from `OauthUsageData.seven_day_sonnet.utilization`; shows `—` when `seven_day_sonnet` is `None`
    - `5h Reset` / `7d Reset`: countdown formatted via `format_duration_secs` (capped to 2 significant units); sourced from `five_hour.resets_at` / `seven_day.resets_at` (ISO-8601 UTC string → Unix seconds via `iso_to_unix_secs`)
@@ -77,7 +78,7 @@ Quota
 
 Valid: 3 / 5   ->  Next by strategy:
   renew      carol@example.com   7d resets in 2d 11h, ~renews in 8d
-  endurance  bob@example.com     100% session, 88% 7d left, expires in 5h 02m
+  endurance  bob@example.com     100% session, 5h resets in 4h 58m
   drain      bob@example.com     88% 7d left, 7d resets in 6d 14h
 ```
 
@@ -95,7 +96,7 @@ Quota
 
 Valid: 3 / 3   ->  Next by strategy:
   renew      carol@example.com   95% session, 5h resets in 3h 44m / 7d resets in 5d 1h
-  endurance  carol@example.com   95% session, 54% 7d left, expires in 6h 11m
+  endurance  carol@example.com   95% session, 5h resets in 3h 44m
   drain      carol@example.com   54% 7d(Son) left, 7d(Son) resets in 5d 1h
 ```
 
@@ -113,7 +114,7 @@ Quota
 
 Valid: 3 / 3   ->  Next by strategy:
   renew      carol@example.com   95% session, 5h resets in 3h 44m / 7d resets in 5d 1h
-  endurance  carol@example.com   95% session, 54% 7d left, expires in 6h 11m
+  endurance  carol@example.com   95% session, 5h resets in 3h 44m
   drain      carol@example.com   54% 7d(Son) left, 7d(Son) resets in 5d 1h
 ```
 
@@ -131,7 +132,7 @@ Quota
 
 Valid: 2 / 3   ->  Next by strategy:
   renew      alice@example.com   100% session, 5h resets in 4h 58m / 7d resets in 6d 14h
-  endurance  alice@example.com   100% session, 28% 7d left, expires in 5h 02m
+  endurance  alice@example.com   100% session, 5h resets in 4h 58m
   drain      alice@example.com   28% 7d(Son) left, 7d(Son) resets in 6d 14h
 ```
 
@@ -161,7 +162,7 @@ Valid: 2 / 3   ->  Next by strategy:
 
 - **AC-01**: `.usage` fetches quota for every saved account, not only the active one.
 - **AC-02**: The **live account** — the saved account whose `accessToken` matches the live `~/.claude/.credentials.json` token — has `✓` in the flag column. The per-machine active marker is NOT used for `✓` determination.
-- **AC-03**: Accounts with expired or missing tokens show `—` in quota columns and a shortened error reason in the final visible quota data column (`5h Left` through `7d Reset` range). Metadata columns `Expires`, `Sub`, and `~Renews` are populated from their respective non-quota sources (`expires_at_ms`, `OauthAccountData`) and are not overwritten by the error reason. (**BUG-220 ✅ Closed** 2026-05-30)
+- **AC-03**: Accounts with expired or missing tokens show `—` in quota columns and a shortened error reason in the final visible quota data column (`5h Left` through `7d Reset` range). Metadata columns `Expires`, `Sub`, and `~Renews` are populated from their respective non-quota sources (`expires_at_ms`, `OauthAccountData`) and are not overwritten by the error reason. The error label is context-aware: HTTP 429 + `billing_type == "none"` (confirmed cancelled subscription) → `"no subscription"`; HTTP 429 with active subscription or unknown billing state → `"rate limited (429)"`. (**BUG-220 ✅ Closed** 2026-05-30; **BUG-231 ✅ Fixed** 2026-06-03)
 - **AC-04**: Table output is rendered by `data_fmt`.
 - **AC-05**: `format::json` returns a valid JSON array with one object per account; each object includes `expires_in_secs`, `is_current` (bool), `is_active` (bool), `is_occupied_elsewhere` (bool), `billing_type` (string or `null`), `has_max` (bool or `null`), `renewal_secs` (u64 or `null`), `renewal_is_estimate` (bool or `null`), `next_event_type` (string or `null`), and `next_event_secs` (u64 or `null`); successful rows also include `session_5h_left_pct`, `weekly_7d_left_pct`, and `weekly_7d_sonnet_left_pct` (all remaining, not consumed); `weekly_7d_sonnet_left_pct` is `null` when Sonnet quota data is absent from the API response; `billing_type`, `has_max`, `renewal_secs`, `renewal_is_estimate`, `next_event_type`, and `next_event_secs` are `null` when the account fetch failed.
 - **AC-06**: Missing credential store exits 2 with an actionable error message.
@@ -185,7 +186,7 @@ Valid: 2 / 3   ->  Next by strategy:
 - **AC-24**: Three-tier display grouping: accounts are grouped 🟢 → 🟡 → 🔴 by composite health before any sort strategy is applied. Sort strategy applies within each tier. The grouping is never reversed by `desc::`.
 - **AC-25**: `format_duration_secs` output is capped to 2 significant units: shows at most 2 time components (e.g., `1d 2h`, `3h 19m`, `23m`), never 3.
 - **AC-26**: Within the 🟡 tier, h-exhausted accounts (`5h Left ≤ 15%`) appear before weekly-exhausted accounts (`5h Left > 15%` and `7d Left ≤ 5%`). Accounts where both `5h Left ≤ 15%` and `7d Left ≤ 5%` fall in the h-exhausted sub-group. Sort strategy applies within each sub-group. The sub-grouping is never reversed by `desc::`.
-- **AC-27**: `~Renews` column shows `in Xh Ym` (exact duration, no `~` prefix) when `_renewal_at` is present in `{name}.claude.json` and auto-advances monthly when past; shows `~in Xd` (with `~` prefix, 2 significant units max) when only `org_created_at` is available; shows `"?"` when neither source is available; shows `"—"` when timestamp parsing fails.
+- **AC-27**: `~Renews` column shows `"—"` when `billing_type == "none"` (subscription cancelled — no active renewal to track); shows `in Xh Ym` (exact duration, no `~` prefix) when `_renewal_at` is present in `{name}.claude.json` and auto-advances monthly when past; shows `~in Xd` (with `~` prefix, 2 significant units max) when only `org_created_at` is available; shows `"?"` when neither source is available; shows `"—"` when timestamp parsing fails. (**BUG-232 ✅ Fixed** 2026-06-03)
 - **AC-28**: `→ Next` column shows the chronologically soonest strategic event among `+7d` (7d quota reset from `seven_day.resets_at`) and `$ren` (billing renewal from `_renewal_at` override or `org_created_at` estimate). Token expiry (`!tok`) and 5h resets (`+5h`) are not candidates — token expiry is already surfaced in the `Expires` column, and 5h resets are already surfaced in the `5h Reset` column. Format: `"in Xh Ym EVENT"` for exact sources; `"~in Xd $ren"` when billing source is an estimate. Shows `—` when no event has a known future timestamp. Events with absent or past timestamps are excluded. Selection: minimum-seconds candidate wins; ties broken by iteration order `+7d` → `$ren`.
 
   **Next Event Type Registry:**
@@ -197,6 +198,8 @@ Valid: 2 / 3   ->  Next by strategy:
   | `—`    | No event | — | — | both sources absent or past |
 - **AC-29**: `format::json` output includes `renewal_secs` (u64 seconds to next billing renewal, or `null`), `renewal_is_estimate` (`true` when sourced from `org_created_at`, `false` when from `_renewal_at`, or `null`), `next_event_type` (string event label `"7d"` or `"ren"` — sigil characters `+` and `$` are stripped in JSON output — or `null` when no event has a future timestamp), and `next_event_secs` (u64 seconds to next event, or `null`). Note: `get::next_event_type` preserves the display sigil and outputs `+7d` or `$ren` (see [feature/028_usage_row_filtering.md](028_usage_row_filtering.md)).
 - **AC-30**: Accounts with `is_occupied_elsewhere = true` — their name appears in any `_active_*` marker file in the credential store other than the current machine's own marker (as returned by `other_machines_active(store)`) — receive `@` in the flag column when `is_active = false` AND `is_current = false`. Flag priority chain: `✓` > `*` > `@` > `→` > blank; an account receives at most one flag character per row. `format::json` output includes `is_occupied_elsewhere` (bool) per object. `format::json` never emits `@` — the field is a bool, not the single-character flag.
+
+- **AC-31**: When `OauthAccountData.billing_type == "none"` (confirmed cancelled subscription via a successful account fetch), the account's per-fetch result is overridden to `Err("no subscription")` — the `GET /api/oauth/usage` HTTP response is discarded regardless of its status code. This makes the result semantically correct at the data layer and removes the need for context-aware display logic in `render.rs`. `~Renews` shows `"—"` for these accounts (AC-27). When `billing_type` is unknown (`OauthAccountData` fetch failed), the raw usage fetch result and standard error mapping apply. Trace behavior: when `trace::1`, `[trace] result:` is emitted AFTER the Class A override, so the trace correctly reflects the final stored result (not the raw API response). (**BUG-233 ✅ Fixed** 2026-06-03; **BUG-234 ✅ Fixed** 2026-06-03 — trace ordering)
 
 ### Cross-References
 

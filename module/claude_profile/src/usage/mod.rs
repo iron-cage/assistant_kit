@@ -1,7 +1,8 @@
 //! `.usage` command — quota fetch, render, and live-monitor for all saved accounts.
 //!
-//! Public surface: `usage_routine` (command handler), `TouchCtx`, `validate_imodel_str`,
-//! `validate_effort_str`, `pre_switch_touch_ctx`, `apply_post_switch_touch`.
+//! Public surface: `usage_routine` (command handler), `PreSwitchOutcome`,
+//! `validate_imodel_str`, `validate_effort_str`, `pre_switch_touch_ctx`,
+//! `apply_model_override`, `trace_already_active`, `apply_post_switch_touch`.
 
 mod types;
 mod fetch;
@@ -17,7 +18,8 @@ mod api;
 
 pub( crate ) use api::{
   validate_imodel_str, validate_effort_str, pre_switch_touch_ctx, apply_post_switch_touch,
-  attempt_expired_token_refresh, TouchCtx,
+  apply_model_override, trace_already_active, attempt_expired_token_refresh,
+  PreSwitchOutcome,
 };
 pub use api::usage_routine;
 
