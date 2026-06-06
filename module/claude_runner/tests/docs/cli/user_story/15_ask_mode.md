@@ -1,44 +1,44 @@
 # User Story: Ask Mode
 
 - **Source:** [docs/cli/user_story/015_ask_mode.md](../../../../docs/cli/user_story/015_ask_mode.md)
-- **Primary flags:** `[MESSAGE]`, `--effort`, `--max-tokens`
+- **Primary flags:** `[MESSAGE]` (all run params accepted identically)
 - **Command:** `ask`
 
 ## Test Case Index
 
 | ID | Category | Summary |
 |----|----------|---------|
-| US-1 | Happy path | `clr ask` applies conservative defaults (no -c, no permissions bypass, no ultrathink) |
-| US-2 | Boundary | Print mode always on for ask regardless of message presence |
-| US-3 | Parameter interaction | Ask defaults overridable via explicit flags |
-| US-4 | Happy path | `--no-persist` and `--no-chrome` default ON for ask |
+| US-1 | Equivalence | `clr ask --dry-run "X"` produces identical output to `clr run --dry-run "X"` |
+| US-2 | Equivalence | `clr ask --dry-run` (no message) produces identical output to `clr --dry-run` |
+| US-3 | No forced flags | ask injects no extra flags vs run — no forced `--new-session`, `--no-chrome`, `--no-persist`, etc. |
+| US-4 | Param passthrough | All run params accepted by ask with identical behavior |
 
 ---
 
-### US-1: conservative ask defaults
+### US-1: dry-run output identical to run (with message)
 
-- **Given:** No prior configuration
-- **When:** `clr ask --dry-run "What does this function do?"`
-- **Then:** Assembled command shows: no `-c` (new session), no `--dangerously-skip-permissions`, no ultrathink suffix, `--effort high`, `--max-tokens 16384`; question goes to Claude as a single-turn Q&A
+- **Given:** Same message text; no env vars set
+- **When:** `clr ask --dry-run "What does X do?"` vs `clr run --dry-run "What does X do?"`
+- **Then:** Both produce byte-for-byte identical stdout; no extra flags injected by ask
 - **Exit:** 0
 
-### US-2: print mode always on
+### US-2: dry-run output identical to run (no message)
 
-- **Given:** No explicit `--print` flag
-- **When:** `clr ask --dry-run "Explain closures"`
-- **Then:** Assembled command includes `--print` regardless of whether a message was provided; ask always operates in print mode
+- **Given:** No message; no env vars set
+- **When:** `clr ask --dry-run` vs `clr --dry-run` (run with no message)
+- **Then:** Both produce identical stdout
 - **Exit:** 0
 
-### US-3: override ask defaults
+### US-3: no flags forced by ask subcommand
 
-- **Given:** User wants extended output with maximum effort
-- **When:** `clr ask --effort max --max-tokens 200000 --dry-run "Write a detailed analysis"`
-- **Then:** Assembled command shows `--effort max` and `--max-tokens 200000` overriding the ask defaults of `high` and `16384`; all 26 run parameters are accepted
+- **Given:** No CLI flags beyond `--dry-run`
+- **When:** `clr ask --dry-run "task"`
+- **Then:** Assembled command contains no `--new-session`, no extra `--no-chrome`, no `--no-persist`, no `--no-ultrathink` beyond what run would inject; `--effort max` present (run default, not ask-specific); effectively identical to `clr run --dry-run "task"`
 - **Exit:** 0
 
-### US-4: no-persist and no-chrome defaults
+### US-4: all run params accepted by ask
 
-- **Given:** No explicit persistence or chrome flags
-- **When:** `clr ask --dry-run "Quick question"`
-- **Then:** Assembled command includes `--no-persist` (no session state saved) and `--no-chrome` (no browser context); ask is stateless by default
+- **Given:** Multiple run params passed including new Phase 2/3/7 params
+- **When:** `clr ask --dry-run --effort high --max-tokens 100000 --output-file /tmp/out.txt "task"`
+- **Then:** Exit 0; all flags accepted without unknown-flag error; assembled command reflects the values
 - **Exit:** 0

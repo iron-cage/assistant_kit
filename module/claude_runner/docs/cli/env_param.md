@@ -7,21 +7,21 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (30 total)
+### All Env Parameters (31 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
-| Input (CLR_*) — `run` subcommand | 26 | Caller env fallbacks for `run` parameters |
+| Input (CLR_*) — `run` subcommand | 31 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 30 environment variables
+**Total:** 35 environment variables
 
 ---
 
 ### Env Param 1: CLR_* Input Parameters — `run` Subcommand
 
-Environment variable fallbacks for all 26 `run` subcommand parameters.
+Environment variable fallbacks for all 31 `run` subcommand parameters.
 `apply_env_vars()` in `src/cli/parse.rs` reads these immediately after CLI parsing, before command
 dispatch. Each variable is applied **only when the corresponding CLI field is still at its
 zero/absent value** — the CLI flag always wins when both are present.
@@ -60,6 +60,11 @@ invalid values (parse failure → field stays at default).
 | 24 | `CLR_STRIP_FENCES` | [`--strip-fences`](param/026_strip_fences.md) | bool | |
 | 25 | `CLR_KEEP_CLAUDECODE` | [`--keep-claudecode`](param/027_keep_claudecode.md) | bool | |
 | 26 | `CLR_SUBDIR` | [`--subdir`](param/028_subdir.md) | string | Applied when `--subdir` absent and `CLR_SUBDIR` non-empty; `.` = identity; values containing `/` silently ignored (Fix: BUG-233) |
+| 27 | `CLR_OUTPUT_FILE` | [`--output-file`](param/029_output_file.md) | string | Applied when `--output-file` absent; value is the output file path |
+| 28 | `CLR_EXPECT` | [`--expect`](param/030_expect.md) | string | Applied when `--expect` absent; same `val1\|val2\|…` syntax |
+| 29 | `CLR_EXPECT_STRATEGY` | [`--expect-strategy`](param/031_expect_strategy.md) | string | Applied when `--expect-strategy` absent; accepts `fail`, `retry`, or `default:<V>` |
+| 30 | `CLR_EXPECT_RETRIES` | [`--expect-retries`](param/032_expect_retries.md) | u8 | Applied when `--expect-retries` absent; invalid values rejected at parse time |
+| 31 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 10) |
 
 **Precedence:**
 

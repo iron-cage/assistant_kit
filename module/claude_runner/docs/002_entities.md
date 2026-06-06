@@ -6,8 +6,8 @@
 |------|---------|-------------|----------:|
 | `api/` | Index of API doc instances covering COMMANDS_YAML, VerbosityLevel, and register_commands contracts | [api/readme.md](api/readme.md) | 1 |
 | `cli/` | Index of CLI reference instances covering commands, params, types, groups, dictionary, user stories, env params | [cli/readme.md](cli/readme.md) | 5 |
-| `cli/param/` | Index of individual parameter reference instances (29 parameters) | [cli/param/readme.md](cli/param/readme.md) | 29 |
-| `cli/user_story/` | Index of user goal and usage pattern instances (22 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 22 |
+| `cli/param/` | Index of individual parameter reference instances (33 parameters) | [cli/param/readme.md](cli/param/readme.md) | 33 |
+| `cli/user_story/` | Index of user goal and usage pattern instances (25 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 25 |
 | `feature/` | Index of feature doc instances covering the clr binary tool design | [feature/readme.md](feature/readme.md) | 1 |
 | `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, and trace universality | [invariant/readme.md](invariant/readme.md) | 4 |
 
@@ -49,6 +49,11 @@
 | cli/param | 026 | --strip-fences | [cli/param/026_strip_fences.md](cli/param/026_strip_fences.md) |
 | cli/param | 027 | --keep-claudecode | [cli/param/027_keep_claudecode.md](cli/param/027_keep_claudecode.md) |
 | cli/param | 028 | --subdir | [cli/param/028_subdir.md](cli/param/028_subdir.md) |
+| cli/param | 029 | --output-file | [cli/param/029_output_file.md](cli/param/029_output_file.md) |
+| cli/param | 030 | --expect | [cli/param/030_expect.md](cli/param/030_expect.md) |
+| cli/param | 031 | --expect-strategy | [cli/param/031_expect_strategy.md](cli/param/031_expect_strategy.md) |
+| cli/param | 032 | --expect-retries | [cli/param/032_expect_retries.md](cli/param/032_expect_retries.md) |
+| cli/param | 033 | --max-sessions | [cli/param/033_max_sessions.md](cli/param/033_max_sessions.md) |
 | cli/user_story | 001 | Interactive REPL | [cli/user_story/001_interactive_repl.md](cli/user_story/001_interactive_repl.md) |
 | cli/user_story | 002 | Print Mode Capture | [cli/user_story/002_print_mode_capture.md](cli/user_story/002_print_mode_capture.md) |
 | cli/user_story | 003 | Interactive With Message | [cli/user_story/003_interactive_with_message.md](cli/user_story/003_interactive_with_message.md) |
@@ -71,6 +76,9 @@
 | cli/user_story | 020 | Suppress Effort Max | [cli/user_story/020_suppress_effort_max.md](cli/user_story/020_suppress_effort_max.md) |
 | cli/user_story | 021 | Keep ClaudeCode Context | [cli/user_story/021_keep_claudecode_context.md](cli/user_story/021_keep_claudecode_context.md) |
 | cli/user_story | 022 | Session Isolation via Subdirectory | [cli/user_story/022_session_isolation_subdir.md](cli/user_story/022_session_isolation_subdir.md) |
+| cli/user_story | 023 | Output File Capture | [cli/user_story/023_output_file_capture.md](cli/user_story/023_output_file_capture.md) |
+| cli/user_story | 024 | Enum Output Validation | [cli/user_story/024_enum_output_validation.md](cli/user_story/024_enum_output_validation.md) |
+| cli/user_story | 025 | Session Concurrency Gate | [cli/user_story/025_concurrency_gate.md](cli/user_story/025_concurrency_gate.md) |
 | feature | 001 | Runner Tool | [feature/001_runner_tool.md](feature/001_runner_tool.md) |
 | invariant | 001 | Default Flags | [invariant/001_default_flags.md](invariant/001_default_flags.md) |
 | invariant | 002 | Dependency Constraints | [invariant/002_dep_constraints.md](invariant/002_dep_constraints.md) |

@@ -29,6 +29,27 @@ claude_runner serves two distinct consumers from one crate:
 
 **CLAUDECODE removal:** `clr` removes the `CLAUDECODE` environment variable from the subprocess environment before spawning (default-on). This prevents the subprocess from detecting a parent Claude Code session, which would alter its behaviour. Use `--keep-claudecode` to opt out and preserve `CLAUDECODE` in the subprocess environment.
 
+**Output file capture:** `--output-file <PATH>` captures subprocess stdout to a file in addition to
+printing it to stdout (tee behavior). The runner captures output first, then writes to the file
+and prints. Write errors (permission denied, directory absent) cause `clr` to exit 1 with the OS
+error on stderr. In dry-run mode the file is not created. `--output-file` is orthogonal to
+`--file` — `--file` feeds input to the subprocess; `--output-file` captures subprocess output.
+
+**Enum output validation:** `--expect "val1|val2|..."` validates captured stdout against a
+pipe-separated list of expected values (case-insensitive, whitespace-trimmed). The
+`--expect-strategy` parameter controls mismatch handling: `fail` (exit 3, default), `retry`
+(re-invoke up to `--expect-retries` times then exit 3), or `default:<VALUE>` (output fallback
+and exit 0). Exit code 3 is exclusive to `--expect` mismatch; it does not overlap with
+subprocess exit codes. Both parameters are silently ignored in interactive mode.
+
+**Session concurrency gate:** `--max-sessions <N>` (default 10, 0 = unlimited) counts active
+`claude` processes via `/proc` scan before spawning a subprocess. When the live count is at or
+above the limit, the runner emits a waiting message to stderr and polls every 30 seconds until a
+slot opens or the 15-minute timeout elapses (fatal exit 1 on timeout). Setting `--max-sessions 0`
+disables the gate entirely — the scan is skipped and the subprocess is launched immediately.
+The gate is also skipped in `--dry-run` mode. Provides deterministic backpressure in CI
+environments with parallel `clr` invocations hitting API rate limits.
+
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
 ### APIs
@@ -64,6 +85,10 @@ claude_runner serves two distinct consumers from one crate:
 | `../../tests/dry_run_test.rs` | Validates dry-run preview output including all injected flags |
 | `../../tests/execution_mode_test.rs` | E01–E13 live mode dispatch via fake claude binary |
 | `../../tests/isolated_test.rs` | Credential-isolated and refresh command execution; trace output for isolated/refresh |
+| `../../tests/output_file_test.rs` | T01–T06 --output-file tee behavior, write errors, dry-run skip |
+| `../../tests/expect_validation_test.rs` | T01–T17 --expect / --expect-strategy / --expect-retries validation loop |
+| `../../tests/bug_reproducers_247_test.rs` | BUG-247 stdout-to-stderr forwarding on subprocess failure |
+| `../../tests/bug_reproducers_248_test.rs` | BUG-248 --keep-claudecode warning when CLAUDECODE present |
 
 ### Provenance
 

@@ -42,6 +42,11 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--file`](../param/025_file.md) | [`FilePath`](../type/12_file_path.md) | — | File content piped as subprocess stdin |
 | [`--strip-fences`](../param/026_strip_fences.md) | bool | false | Strip outermost markdown code fences from stdout |
 | [`--keep-claudecode`](../param/027_keep_claudecode.md) | bool | false | Preserve `CLAUDECODE` env var in subprocess (default: removed) |
+| [`--output-file`](../param/029_output_file.md) | string | — | Write captured stdout to file in addition to printing (tee behavior) |
+| [`--expect`](../param/030_expect.md) | string | — | Pipe-separated enum values; stdout must match one after trim+lowercase |
+| [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch handling: exit 3 (`fail`), retry (`retry`), or fallback (`default:<V>`) |
+| [`--expect-retries`](../param/032_expect_retries.md) | u8 | `0` | Re-invocation cap when `--expect-strategy retry` is active |
+| [`--max-sessions`](../param/033_max_sessions.md) | u32 | `10` | Max concurrent claude sessions before blocking (0 = unlimited) |
 
 **Execution Modes:**
 
@@ -67,6 +72,7 @@ Use `--new-session` to start fresh.
 | 0 | Success |
 | 1 | Error (parse failure, print mode without message, execution error, binary not found) |
 | N | Passthrough from claude subprocess (print mode propagates the subprocess exit code exactly) |
+| 3 | Expect mismatch — output did not match `--expect` values after all retries |
 | 128+signal | Subprocess killed by signal; follows POSIX convention (e.g., SIGTERM → 143, SIGKILL → 137) |
 
 **Examples:**
@@ -123,3 +129,6 @@ clr --dry-run "Run tests" --max-tokens 50000
 | 12 | [012_code_block_extraction.md](../user_story/012_code_block_extraction.md) | Developer |
 | 13 | [013_structured_json_pipeline.md](../user_story/013_structured_json_pipeline.md) | Developer |
 | 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |
+| 23 | [023_output_file_capture.md](../user_story/023_output_file_capture.md) | Developer |
+| 24 | [024_enum_output_validation.md](../user_story/024_enum_output_validation.md) | Developer |
+| 25 | [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) | Developer |

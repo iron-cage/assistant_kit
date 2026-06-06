@@ -3,7 +3,7 @@
 ### Scope
 
 **Responsibilities:** Documentation for the `claude_runner_core` crate covering behavioral requirements, design patterns, API contracts, and non-functional constraints.
-**In Scope:** Parameter reference (`claude_params/`), builder pattern design (`pattern/`), execution API contracts (`api/`), type definitions (`data_structure/`), feature requirements (`feature/`), execution constraints (`invariant/`), and doc cross-reference graph.
+**In Scope:** Parameter reference (`claude_params/`), builder pattern design (`pattern/`), execution API contracts (`api/`), type definitions (`data_structure/`), feature requirements (`feature/`), execution constraints (`invariant/`), known silent failure modes (`failure_mode/`), and doc cross-reference graph.
 **Out of Scope:** Source code (→ `src/`), automated tests (→ `tests/`), build scripts (→ `verb/`).
 
 ### Responsibility Table
@@ -16,4 +16,5 @@
 | `data_structure/` | Type-safe configuration enum definitions |
 | `feature/` | Execution control, dry-run, describe, isolated subprocess, stdin file piping, and CLAUDECODE unsetting features |
 | `invariant/` | Single execution point and NFR conformance constraints |
+| `failure_mode/` | Known silent failure modes of the `claude` CLI — exit-code traps, channel misrouting, env-var leaks |
 | `doc_graph.yml` | Cross-reference graph for all doc instances |

@@ -32,8 +32,13 @@
 | 026_strip_fences.md | `--strip-fences` flag spec |
 | 027_keep_claudecode.md | `--keep-claudecode` flag spec |
 | 028_subdir.md | `--subdir` parameter spec |
+| 029_output_file.md | `--output-file` parameter spec |
+| 030_expect.md | `--expect` parameter spec |
+| 031_expect_strategy.md | `--expect-strategy` parameter spec |
+| 032_expect_retries.md | `--expect-retries` parameter spec |
+| 033_max_sessions.md | `--max-sessions` parameter spec |
 
-### All Parameters (28 total)
+### All Parameters (32 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -65,10 +70,15 @@
 | 26 | `--strip-fences` | bool | false | present/absent | Strip outermost markdown code fences from stdout | 1 cmd |
 | 27 | `--keep-claudecode` | bool | false | present/absent | Preserve `CLAUDECODE` env var in subprocess (default: removed) | 1 cmd |
 | 28 | `--subdir` | string | `.` | `.` or any name | Named subdirectory appended to `--dir` (`/-NAME`); `.` = identity | 2 cmds |
+| 29 | `--output-file` | string | — | Any writable path | Write stdout to file in addition to printing (tee behavior) | 2 cmds |
+| 30 | `--expect` | string | — | `val1\|val2\|…` | Pipe-separated enum values; stdout must match one after trim+lowercase | 2 cmds |
+| 31 | `--expect-strategy` | enum | `fail` | `fail`/`retry`/`default:<V>` | Mismatch handling: exit 3, retry N times, or output fallback value | 2 cmds |
+| 32 | `--expect-retries` | u8 | `0` | 0–255 | Re-invocation cap for `retry` strategy | 2 cmds |
+| 33 | `--max-sessions` | u32 | 10 | 0 to 4294967295 | Max concurrent Claude Code sessions before blocking; 0 = unlimited | 2 cmds |
 
-**Total:** 28 parameters
+**Total:** 33 parameters
 
-**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25, 26, 27, and 28 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
+**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25, 26, 27, 28, 29, 30, 31, 32, and 33 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
 
 ### Navigation
 
@@ -100,6 +110,11 @@
 - [`--strip-fences`](026_strip_fences.md)
 - [`--keep-claudecode`](027_keep_claudecode.md)
 - [`--subdir`](028_subdir.md)
+- [`--output-file`](029_output_file.md)
+- [`--expect`](030_expect.md)
+- [`--expect-strategy`](031_expect_strategy.md)
+- [`--expect-retries`](032_expect_retries.md)
+- [`--max-sessions`](033_max_sessions.md)
 
 ### Quick Reference
 
@@ -107,4 +122,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 26 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 31 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.

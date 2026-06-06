@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_runner_core
-  node_count: 11
-  edge_count: 31
+  node_count: 15
+  edge_count: 39
   component_count: 1
-  generated: 2026-06-06
+  generated: 2026-06-07
 
 nodes:
   - id: pattern/001
@@ -60,6 +60,26 @@ nodes:
     file: invariant/002_nfr_conformance.md
     label: NFR Conformance
     entity: invariant
+
+  - id: failure_mode/001
+    file: failure_mode/001_rate_limit_exit_2.md
+    label: Rate-Limit Exit 2
+    entity: failure_mode
+
+  - id: failure_mode/002
+    file: failure_mode/002_diagnostic_on_stdout.md
+    label: Diagnostic on Stdout
+    entity: failure_mode
+
+  - id: failure_mode/003
+    file: failure_mode/003_claudecode_env_leak.md
+    label: CLAUDECODE Env Leak
+    entity: failure_mode
+
+  - id: failure_mode/004
+    file: failure_mode/004_exit_1_ambiguity.md
+    label: Exit 1 Ambiguity
+    entity: failure_mode
 
 edges:
   - from: pattern/001
@@ -189,7 +209,7 @@ edges:
 components:
   - id: 1
     label: Main corpus
-    size: 11
+    size: 15
     isolated: false
     nodes:
       - pattern/001
@@ -203,5 +223,41 @@ components:
       - feature/006
       - invariant/001
       - invariant/002
+      - failure_mode/001
+      - failure_mode/002
+      - failure_mode/003
+      - failure_mode/004
+
+  - from: failure_mode/001
+    to: failure_mode/002
+    via: cross_references
+
+  - from: failure_mode/001
+    to: failure_mode/004
+    via: cross_references
+
+  - from: failure_mode/002
+    to: failure_mode/001
+    via: cross_references
+
+  - from: failure_mode/002
+    to: failure_mode/004
+    via: cross_references
+
+  - from: failure_mode/003
+    to: feature/006
+    via: cross_references
+
+  - from: failure_mode/003
+    to: feature/003
+    via: cross_references
+
+  - from: failure_mode/004
+    to: failure_mode/001
+    via: cross_references
+
+  - from: failure_mode/004
+    to: failure_mode/002
+    via: cross_references
 
 dangling_refs: []

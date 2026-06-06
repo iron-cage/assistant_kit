@@ -27,7 +27,7 @@ Set `clr` defaults via CLR_* environment variables so that repeated invocations 
 
 | # | Command | Role |
 |---|---------|------|
-| 1 | [`run`](../command/01_run.md) | All 25 CLR_* vars apply to `run` |
+| 1 | [`run`](../command/01_run.md) | All 30 CLR_* vars apply to `run` |
 
 ### Referenced Parameter Groups
 
