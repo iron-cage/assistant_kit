@@ -20,6 +20,7 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-12 | All strategies skip `is_occupied_elsewhere` accounts | AC-11 | Unit test |
 | FT-13 | All strategies skip h-exhausted accounts (5h Left ≤ 15%) | AC-12 | Unit test |
 | FT-14 | Endurance footer shows `session + 5h_reset` instead of `7d left + expires` | AC-13 | Unit test |
+| FT-15 | `next::renew` prefers lower `5h_left` account on equal renewal time (BUG-243) | AC-10 | Unit test |
 
 ### Test Case Index
 
@@ -39,8 +40,9 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 | FT-12 | All strategies skip `is_occupied_elsewhere` accounts | AC-11 | Eligibility |
 | FT-13 | All strategies skip h-exhausted accounts (5h Left ≤ 15%) | AC-12 | Eligibility |
 | FT-14 | Endurance footer shows `session + 5h_reset` not `7d left + expires` | AC-13 | Footer |
+| FT-15 | renew tiebreaker: prefers lower `5h_left` on equal renewal time | AC-10 | Tiebreaker |
 
-**Total:** 14 FT cases
+**Total:** 15 FT cases
 
 ---
 
@@ -216,3 +218,14 @@ Feature behavioral requirement test cases for `docs/feature/023_next_account_str
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_ft14_023_endurance_footer_shows_5h_reset` (in `src/usage/sort.rs`)
 - **Source:** [feature/023_next_account_strategies.md AC-13](../../../../docs/feature/023_next_account_strategies.md)
+
+---
+
+### FT-15: `next::renew` prefers lower `5h_left` account on equal renewal time (BUG-243)
+
+- **Given:** Two `AccountQuota` structs: `A` (is_current=false, is_active=false, is_occupied_elsewhere=false, result=Ok, `five_hour.utilization=77.0` → 5h_left=23%, `seven_day.resets_at` = T (same for both), `renewal_at` = R (same for both)); `B` (same flags, `five_hour.utilization=0.0` → 5h_left=100%, `seven_day.resets_at` = T, `renewal_at` = R). Both accounts have identical `renewal_event_secs`.
+- **When:** Unit test calls `find_next_for_strategy(&[A, B], NextStrategy::Renew, PreferStrategy::Any, now_secs)`.
+- **Then:** Returns `Some(index_of_A)` — `A` wins because `5h_left=23% < 100%` (more depleted, benefits more from the same renewal event). `B` is not selected despite equal renewal time.
+- **Exit:** n/a (unit test)
+- **Source fn:** `test_ft15_023_renew_tiebreaker_prefers_lower_5h_left` (in `src/usage/sort.rs`)
+- **Source:** [feature/023_next_account_strategies.md AC-10](../../../../docs/feature/023_next_account_strategies.md)

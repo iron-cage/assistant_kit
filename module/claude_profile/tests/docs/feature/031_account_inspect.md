@@ -25,6 +25,9 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 | FT-17 | Priority 3 fallback: all none memberships → memberships[0] selected | AC-03, AC-06 |
 | FT-18 | Credential file absent exits 2 | AC-16 |
 | FT-19 | Enterprise workspace fields shown | AC-17 |
+| FT-20 | Unicode account name (IDN email) resolves via full email lookup | AC-12 |
+| FT-21 | Empty credentials file (0 bytes) shows unknown status, exits 0 | AC-18 |
+| FT-22 | Malformed credentials JSON (missing `oauthAccount`) shows unknown status, exits 0 | AC-19 |
 
 ### Test Case Index
 
@@ -49,8 +52,11 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 | FT-17 | Priority 3 fallback: all none memberships selects memberships[0] | AC-03, AC-06 | Selection Priority |
 | FT-18 | Credential file absent exits 2 | AC-16 | Error Handling |
 | FT-19 | Enterprise workspace fields shown | AC-17 | Org Identity |
+| FT-20 | Unicode account name (IDN email) resolves via full email lookup | AC-12 | Name Resolution |
+| FT-21 | Empty credentials file (0 bytes) shows unknown status, exits 0 | AC-18 | Error Handling |
+| FT-22 | Malformed credentials JSON (missing `oauthAccount`) shows unknown status, exits 0 | AC-19 | Error Handling |
 
-**Total:** 19 FT cases
+**Total:** 22 FT cases
 
 ---
 
@@ -262,3 +268,42 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Exit:** 0
 - **Source fn:** `ai23_workspace_fields_show_values_when_non_null`
 - **Source:** [031_account_inspect.md AC-17](../../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-20: Unicode account name (IDN email) resolves via full email lookup
+
+- **Given:** An account named `alice@münchen.de` is registered via `write_account()` — the credentials file `alice@münchen.de.credentials.json` is present in the credential store (UTF-8 Linux filesystem).
+- **When:** `clp .account.inspect name::alice@münchen.de refresh::0`
+- **Then:** Exit 0; output contains `alice@münchen.de`. The AccountSelector performs a full email match; the unicode byte sequence in the filename survives the round-trip unchanged on a UTF-8 filesystem.
+- **Exit:** 0
+- **Source fn:** `ai27_unicode_account_name_resolves`
+- **Source:** [031_account_inspect.md AC-12](../../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-21: Empty credentials file (0 bytes) shows unknown status, exits 0
+
+- **Given:** The credentials file `u@test.com.credentials.json` exists in the credential store but contains 0 bytes (empty file — simulates a truncated write or disk error).
+- **When (text):** `clp .account.inspect name::u@test.com refresh::0`
+- **When (JSON):** `clp .account.inspect name::u@test.com refresh::0 format::json`
+- **Then (text):** Exit 0; output contains `unknown`.
+- **Then (JSON):** Exit 0; JSON output contains `"status":"unknown"`.
+- **Note:** Distinct from FT-18 (absent file → exits 2). An existing-but-empty file passes the file-existence check; the JSON parse failure produces an unknown status rather than a hard error exit.
+- **Exit:** 0
+- **Source fn:** `ai28_empty_credentials_file_shows_unknown_status`
+- **Source:** [031_account_inspect.md AC-18](../../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-22: Malformed credentials JSON (missing `oauthAccount`) shows unknown status, exits 0
+
+- **Given:** The credentials file `u@test.com.credentials.json` contains valid JSON `{"version":"2","data":{}}` — parseable but lacks the `oauthAccount` key, so `expiresAt` is absent.
+- **When (text):** `clp .account.inspect name::u@test.com refresh::0`
+- **When (JSON):** `clp .account.inspect name::u@test.com refresh::0 format::json`
+- **Then (text):** Exit 0; output contains `unknown`.
+- **Then (JSON):** Exit 0; JSON output contains `"status":"unknown"`.
+- **Note:** Simulates a version-mismatch schema written by an older tool. Graceful degradation (unknown status, exit 0) is required; panicking or exiting non-zero is a regression.
+- **Exit:** 0
+- **Source fn:** `ai29_malformed_credentials_json_shows_unknown_status`
+- **Source:** [031_account_inspect.md AC-19](../../../../docs/feature/031_account_inspect.md)

@@ -35,13 +35,13 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | Feature | File | Cases | Status |
 |---------|------|-------|--------|
 | 002_account_save | [002_account_save.md](002_account_save.md) | FT-01 … FT-11 | ✅ |
-| 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-20 | ✅ |
+| 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-25 | ✅ |
 | 017_token_refresh | [017_token_refresh.md](017_token_refresh.md) | FT-01 … FT-17 | ✅ |
 | 018_live_monitor | [018_live_monitor.md](018_live_monitor.md) | FT-01 … FT-09 | ✅ |
 | 020_usage_sort_strategies | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | FT-01 … FT-17 | ✅ |
 | 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | FT-01 … FT-09 | ✅ |
 | 022_org_identity_snapshot | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | FT-01 … FT-11 | ✅ |
-| 023_next_account_strategies | [023_next_account_strategies.md](023_next_account_strategies.md) | FT-01 … FT-14 | ✅ |
+| 023_next_account_strategies | [023_next_account_strategies.md](023_next_account_strategies.md) | FT-01 … FT-15 | ✅ |
 | 024_session_touch | [024_session_touch.md](024_session_touch.md) | FT-01 … FT-17 | ✅ |
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | FT-01 … FT-10 | ✅ |
 | 026_subprocess_model_effort | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | FT-01 … FT-17 | ✅ |
@@ -49,6 +49,6 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 028_usage_row_filtering | [028_usage_row_filtering.md](028_usage_row_filtering.md) | FT-01 … FT-16 | ✅ |
 | 029_account_host_metadata | [029_account_host_metadata.md](029_account_host_metadata.md) | FT-01 … FT-10 | ✅ |
 | 030_account_renewal_override | [030_account_renewal_override.md](030_account_renewal_override.md) | FT-01 … FT-15 | ✅ |
-| 031_account_inspect | [031_account_inspect.md](031_account_inspect.md) | FT-01 … FT-19 | ✅ |
+| 031_account_inspect | [031_account_inspect.md](031_account_inspect.md) | FT-01 … FT-22 | ✅ |
 
 **Total:** 16 feature specs; 15 of 31 feature instances not yet covered by dedicated FT specs.

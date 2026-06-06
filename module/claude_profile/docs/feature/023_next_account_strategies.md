@@ -15,7 +15,7 @@
 
 | Value | Name | Selection algorithm |
 |-------|------|---------------------|
-| `renew` (default) | Renew Top | First non-current, non-active, non-occupied, non-h-exhausted account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). |
+| `renew` (default) | Renew Top | First non-current, non-active, non-occupied, non-h-exhausted account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). Tiebreak: lowest `5h_left` (most session-depleted account preferred — benefits more from the same renewal event). |
 | `endurance` | Endurance Top | First non-current, non-active, non-occupied, non-h-exhausted account from endurance sort order (qualified accounts first by weekly desc then reset asc; unqualified by 5h_left desc, tiebreak weekly desc). |
 | `drain` | Drain Top | First non-current, non-active, non-occupied, non-h-exhausted account from drain sort order (`prefer_weekly` ascending; tiebreak `5h_left` asc). |
 
@@ -46,7 +46,7 @@ The account selected by the active `next::` strategy receives the `→` flag in 
 |---|---|---|---|
 | Primary sort key | soonest renewal event (min of `7d_reset`, `subscription renewal`) | qualified-first, then `weekly` desc | `prefer_weekly` asc (lowest 7d Left first) |
 | h-exhausted handling | skipped (5h Left ≤ 15%) | skipped (5h Left ≤ 15%) | skipped (5h Left ≤ 15%) |
-| Secondary sort | `expires_in_secs` asc | within qualified: `5h_reset` asc; within unqualified: `weekly` desc | `5h_left` asc |
+| Secondary sort | `5h_left` asc (lower session = more depleted = preferred on tie) | within qualified: `5h_reset` asc; within unqualified: `weekly` desc | `5h_left` asc |
 | Qualification gate | none (non-current, non-active, non-occupied, non-h-exhausted) | `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` | non-h-exhausted + `prefer_weekly > 5.0` |
 | Uses weekly quota | no | yes (gate + rank) | yes (primary sort key) |
 | Picks account with… | soonest quota renewal event (7d reset or subscription) | freshest 5h reset + weekly runway | least weekly quota remaining (skips `prefer_weekly ≤ 5.0`) |
@@ -113,7 +113,7 @@ Valid: 8 / 8   ->  Next by strategy:
 - **AC-07**: Footer is omitted when 0 or 1 accounts have valid quota data (same threshold as 009_token_usage.md AC-10).
 - **AC-08**: Footer strategy lines for which no eligible account exists are omitted from the footer rather than showing an empty line.
 - **AC-09**: The drain footer metric label reflects the binding weekly dimension: `"% 7d left"` when overall weekly quota is binding (`7d_left ≤ 7d_son_left`); `"% 7d(Son) left"` when Sonnet weekly quota is binding (`7d_son_left < 7d_left`). The reset countdown sources the same quota's `resets_at` field as the percentage (BUG-216).
-- **AC-10**: `next::renew` (default) places `→` on the top non-current, non-active, non-occupied, non-h-exhausted account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). The renew footer line shows the two renewal countdowns: `7d resets in {d7}, renews in {sub}` (exact subscription date), `7d resets in {d7}, ~renews in {sub}` (estimated subscription date), or `7d resets in {d7}` when no subscription data is available.
+- **AC-10**: `next::renew` (default) places `→` on the top non-current, non-active, non-occupied, non-h-exhausted account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). Tiebreak: when two accounts have equal renewal times, the one with lower `5h_left` (more session-depleted) is preferred — it benefits more from the upcoming renewal event and should be used while waiting. The renew footer line shows the two renewal countdowns: `7d resets in {d7}, renews in {sub}` (exact subscription date), `7d resets in {d7}, ~renews in {sub}` (estimated subscription date), or `7d resets in {d7}` when no subscription data is available.
 - **AC-11**: All three strategies (`renew`, `endurance`, `drain`) skip accounts where `is_occupied_elsewhere == true` — an account parked by another host/user pair is never recommended. When the only remaining eligible candidates are all occupied, the strategy returns no recommendation (same as no eligible candidate).
 - **AC-12**: All three strategies skip h-exhausted accounts (`5h_left ≤ 15%`, i.e., `five_hour.utilization ≥ 85.0`) — switching to a session-exhausted account provides negligible usable capacity. When all remaining eligible candidates are h-exhausted, the strategy returns no recommendation.
 - **AC-13**: The endurance footer metric line shows `{session}% session, 5h resets in {time}` — the session capacity and the 5h reset timing. It does NOT show `7d left` or `expires`; those are available in the main table and irrelevant to long-run scheduling.
@@ -128,3 +128,4 @@ Valid: 8 / 8   ->  Next by strategy:
 | doc | [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm |
 | doc | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategy algorithms reused by endurance/drain next strategies |
 | param | [cli/param/027_prefer.md](../cli/param/027_prefer.md) | `prefer::` affects weekly quota used by endurance/drain strategies |
+| bug | `task/claude_profile/bug/243_renew_strategy_missing_5h_tiebreaker.md` | BUG-243 ✅ Fixed: renew sort uses `five_hour_left` tiebreaker via `f64::total_cmp` on equal renewal time (TSK-248) |

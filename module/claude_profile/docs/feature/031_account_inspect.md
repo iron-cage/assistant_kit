@@ -166,6 +166,8 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 - **AC-15**: `clp .account.inspect name::user@host` with no credential store directory exits 2 with `credential file not found: {path}`. Absent store is treated identically to absent credential file — the email resolver short-circuits store lookup and the file existence check produces the error.
 - **AC-16**: `name::` resolves successfully but the account's credentials file (`{name}.credentials.json`) is absent: exits 2 with `credential file not found: {path}`.
 - **AC-17**: Enterprise accounts with non-null `workspace_uuid` and `workspace_name` from endpoint 005: `Workspace UUID:` shows the UUID string; `Workspace:` shows the workspace name. `(none)` is used only when the field is null or absent. In `format::json`, `workspace_uuid` and `workspace_name` contain the raw value (empty string when null/absent).
+- **AC-18**: Credentials file exists but is zero bytes (empty file): command runs, `Status:` shows `unknown`, exits 0. Distinct from AC-16 (absent file → exits 2) — an existing-but-empty file is not a missing file, so the resolver finds it; the JSON parse failure produces an unknown status rather than an error exit.
+- **AC-19**: Credentials file contains valid JSON but lacks the `oauthAccount` wrapper object (e.g. `{"version":"2","data":{}}`): command runs, `Status:` shows `unknown`, exits 0. The `expiresAt` field cannot be located; graceful degradation applies rather than a hard error.
 
 ### Cross-References
 
@@ -175,7 +177,7 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 | source | `src/commands/account_ops.rs` | `account_inspect_routine()` — three-endpoint fetch, selection priority, text/json render |
 | source | `src/registry.rs` | Registration of `.account.inspect` and its four parameters |
 | source | `claude_quota/src/lib.rs` | `fetch_userinfo()`, `fetch_subscriptions()`, `fetch_claude_cli_roles()` — endpoint transports; `select_membership_index()` — priority logic |
-| test | `tests/cli/account_inspect_test.rs` | Integration tests for AC-01..AC-17 |
+| test | `tests/cli/account_inspect_test.rs` | Integration tests for AC-01..AC-19 |
 | doc | [031_account_inspect.md](../tests/docs/feature/031_account_inspect.md) | FT-level behavioral test cases |
 | doc | [cli/command/001_account.md](../cli/command/001_account.md#command--15-accountinspect) | CLI command specification |
 | doc | [cli/param/001_name.md](../cli/param/001_name.md) | `name::` — AccountSelector |
