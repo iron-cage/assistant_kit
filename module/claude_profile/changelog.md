@@ -112,7 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Optional `name::` parameter; omitting falls back to the active-account path
   - Token state computed from the named account's own stored `expiresAt` (never the live
     credentials file) — prevents active account's token state leaking to non-active accounts
-  - Email and org shown from `~/.claude/.claude.json` for the active account only; `N/A`
+  - Email and org shown from `~/.claude.json` for the active account only; `N/A`
     for non-active accounts
   - Returns `NotFound` (exit 2) for unknown names; exit 1 for invalid characters in name
   - 10 integration tests: `account_status_name_test.rs::astname01–10`

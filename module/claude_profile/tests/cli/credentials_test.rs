@@ -17,7 +17,7 @@
 //! ## Fix Applied
 //!
 //! Introduced `.credentials.status` command that reads `~/.claude/.credentials.json`
-//! and `~/.claude/.claude.json` directly — no `_active`, no credential store scan.
+//! and `~/.claude.json` directly — no `_active`, no credential store scan.
 //!
 //! ## Prevention
 //!

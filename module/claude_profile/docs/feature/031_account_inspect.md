@@ -23,7 +23,7 @@
 5. GET /api/oauth/claude_cli/roles   (endpoint 005) → org identity
 ```
 
-Steps 3–5 are called independently. A failure on one endpoint is shown inline; the other endpoints still contribute their data. When all three fail (e.g., expired token with `refresh::0`), local snapshot data from `{name}.claude.json` and `{name}.roles.json` is shown with a `(snapshot)` suffix per field.
+Steps 3–5 are called independently. A failure on one endpoint is shown inline; the other endpoints still contribute their data. When all three fail (e.g., expired token with `refresh::0`), local snapshot data from `{name}.json` is shown with a `(snapshot)` suffix per field.
 
 #### Membership selection priority
 
@@ -155,9 +155,9 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 - **AC-04**: For a single-membership account, no `← selected` marker is shown.
 - **AC-05**: Endpoint 005 is called; `Org:`, `Org UUID:`, `Org Role:`, `Workspace UUID:`, `Workspace:` are shown.
 - **AC-06**: `Billing:` and `Has Max:` are taken from the selected membership (AC-03 priority rule), not necessarily `memberships[0]`.
-- **AC-07**: When endpoint 002 fails (auth error, network error), `Memberships:` shows `endpoint unavailable ({reason})`; `Billing:` and `Has Max:` fall back to the `{name}.claude.json` snapshot with `(snapshot)` suffix.
-- **AC-08**: When endpoint 001 fails, `Tagged ID:` and `UUID:` fall back to `{name}.claude.json` snapshot values with `(snapshot)` suffix.
-- **AC-09**: When endpoint 005 fails, org fields fall back to `{name}.roles.json` snapshot values with `(snapshot)` suffix.
+- **AC-07**: When endpoint 002 fails (auth error, network error), `Memberships:` shows `endpoint unavailable ({reason})`; `Billing:` and `Has Max:` fall back to the `{name}.json` snapshot with `(snapshot)` suffix.
+- **AC-08**: When endpoint 001 fails, `Tagged ID:` and `UUID:` fall back to `{name}.json` snapshot values with `(snapshot)` suffix.
+- **AC-09**: When endpoint 005 fails, org fields fall back to `{name}.json` snapshot values with `(snapshot)` suffix.
 - **AC-10**: `refresh::1` (default): when `expiresAt` is locally expired, attempts token refresh via `refresh_account_token()` before endpoint calls.
 - **AC-11**: `refresh::0`: locally-expired token is NOT refreshed; all three endpoint calls receive the stale token and fail with auth errors; graceful fallback to snapshot for all fields.
 - **AC-12**: `name::` resolves via `AccountSelector` (email, prefix, positional); invalid name exits 2 with `account not found: {name}`.

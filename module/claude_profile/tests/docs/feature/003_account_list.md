@@ -23,8 +23,8 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 | FT-15 | `format::json` includes `is_current` boolean per account | AC-15 |
 | FT-16 | `uuid::1` shows `ID:` line from snapshot; `N/A` when absent | AC-16 |
 | FT-17 | `capabilities::1` shows `Capabilities:` line; `N/A` when absent | AC-17 |
-| FT-18 | `org_uuid::1` shows `Org ID:` from `{name}.roles.json`; `N/A` when absent | AC-18 |
-| FT-19 | `org_name::1` shows `Org:` from `{name}.roles.json`; `N/A` when absent | AC-19 |
+| FT-18 | `org_uuid::1` shows `Org ID:` from `{name}.json`; `N/A` when absent | AC-18 |
+| FT-19 | `org_name::1` shows `Org:` from `{name}.json`; `N/A` when absent | AC-19 |
 
 ### Test Case Index
 
@@ -47,8 +47,8 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 | FT-15 | `format::json` includes `is_current` boolean per account | AC-15 | JSON Fields |
 | FT-16 | `uuid::1` shows `ID:` from snapshot; absent by default; `N/A` if no snapshot | AC-16 | Opt-In Fields |
 | FT-17 | `capabilities::1` shows `Capabilities:` list; absent by default; `N/A` if absent | AC-17 | Opt-In Fields |
-| FT-18 | `org_uuid::1` shows `Org ID:` from roles.json; `N/A` if absent | AC-18 | Opt-In Fields |
-| FT-19 | `org_name::1` shows `Org:` from roles.json; `N/A` if absent | AC-19 | Opt-In Fields |
+| FT-18 | `org_uuid::1` shows `Org ID:` from `{name}.json`; `N/A` if absent | AC-18 | Opt-In Fields |
+| FT-19 | `org_name::1` shows `Org:` from `{name}.json`; `N/A` if absent | AC-19 | Opt-In Fields |
 
 **Total:** 19 FT cases
 
@@ -69,7 +69,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 - **Given:** Two accounts are saved: `alice@acme.com` (non-active) and `work@acme.com` (active). `alice` has a valid `expiresAt`; `work` has no `expiresAt` field in its credentials.
 - **When:** `clp .accounts`
-- **Then:** Each account block has an email header line followed by indented `Key:  value` lines. A blank line separates consecutive blocks. A single account has no trailing blank line. The non-active account shows its own stored `expiresAt` value, not the active account's. An absent `expiresAt` is shown as `expired` (not an error). `Email:` line is shown from the saved `{name}.claude.json` snapshot.
+- **Then:** Each account block has an email header line followed by indented `Key:  value` lines. A blank line separates consecutive blocks. A single account has no trailing blank line. The non-active account shows its own stored `expiresAt` value, not the active account's. An absent `expiresAt` is shown as `expired` (not an error). `Email:` line is shown from the saved `{name}.json` snapshot.
 - **Exit:** 0
 - **Source fn:** `acc01_lists_accounts_as_indented_blocks`, `acc13_blank_line_between_blocks`, `acc14_nonactive_shows_own_stored_expires`, `acc18_single_account_no_trailing_blank`, `acc19_missing_expires_at_shows_expired`, `acc25_email_reads_from_snapshot`
 - **Source:** [003_account_list.md AC-02](../../../../docs/feature/003_account_list.md)
@@ -156,7 +156,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ### FT-09: `display_name::1` shows `Display:` line; absent by default
 
-- **Given:** An account with a saved `{name}.claude.json` snapshot containing `oauthAccount.displayName = "Alice"`.
+- **Given:** An account with a saved `{name}.json` snapshot containing `oauthAccount.displayName = "Alice"`.
 - **When (opt-in):** `clp .accounts display_name::1`
 - **Then:** Block includes `Display:  Alice`.
 - **When (default):** `clp .accounts` (no opt-in)
@@ -169,7 +169,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ### FT-10: `role::1 billing::1 model::1` show lines; absent by default
 
-- **Given:** An account with `{name}.claude.json` containing `organizationRole = "admin"`, `billingType = "stripe_subscription"`, and `{name}.settings.json` containing `model = "claude-opus-4-6"`.
+- **Given:** An account with `{name}.json` containing `organizationRole = "admin"`, `billingType = "stripe_subscription"`, and `model = "claude-opus-4-6"`.
 - **When (opt-in):** `clp .accounts role::1 billing::1 model::1`
 - **Then:** Block includes `Role:  admin`, `Billing:  stripe_subscription`, `Model:  claude-opus-4-6`.
 - **When (default):** `clp .accounts`
@@ -182,7 +182,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ### FT-11: Missing credential/snapshot data shows `N/A` for absent fields
 
-- **Given:** An account with a valid `{name}.credentials.json` but no `subscriptionType` or `rateLimitTier` fields; no `{name}.claude.json` snapshot at all.
+- **Given:** An account with a valid `{name}.credentials.json` but no `subscriptionType` or `rateLimitTier` fields; no `{name}.json` snapshot at all.
 - **When:** `clp .accounts display_name::1 role::1 billing::1 model::1 uuid::1 capabilities::1`
 - **Then:** `Sub:  N/A`, `Tier:  N/A`, `Email:  N/A`, `Display:  N/A`, `Role:  N/A`, `Billing:  N/A`, `Model:  N/A`, `ID:  N/A`, `Capabilities:  N/A`.
 - **Exit:** 0
@@ -239,7 +239,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ### FT-16: `uuid::1` shows `ID:` from snapshot; absent by default; `N/A` if no snapshot
 
-- **Given:** One account with `{name}.claude.json` containing `oauthAccount.taggedId = "user_01abc"`. One account with no snapshot.
+- **Given:** One account with `{name}.json` containing `oauthAccount.taggedId = "user_01abc"`. One account with no snapshot.
 - **When (opt-in):** `clp .accounts uuid::1`
 - **Then:** Account with snapshot shows `ID:  user_01abc`; account without snapshot shows `ID:  N/A`.
 - **When (default):** `clp .accounts`
@@ -252,7 +252,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ### FT-17: `capabilities::1` shows `Capabilities:` list; absent by default; `N/A` if absent
 
-- **Given:** One account with `{name}.claude.json` containing `capabilities = ["claude_max", "chat"]`. One account with no snapshot.
+- **Given:** One account with `{name}.json` containing `capabilities = ["claude_max", "chat"]`. One account with no snapshot.
 - **When (opt-in):** `clp .accounts capabilities::1`
 - **Then:** Account with snapshot shows `Capabilities:  claude_max, chat`; account without snapshot shows `Capabilities:  N/A`.
 - **When (default):** `clp .accounts`
@@ -263,11 +263,11 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ---
 
-### FT-18: `org_uuid::1` shows `Org ID:` from roles.json; `N/A` if absent
+### FT-18: `org_uuid::1` shows `Org ID:` from `{name}.json`; `N/A` if absent
 
-- **Given:** One account with `{name}.roles.json` containing `organization_uuid = "aaaa-bbbb"`. One account with no `roles.json`.
+- **Given:** One account with `{name}.json` containing `organization_uuid = "aaaa-bbbb"`. One account with no org identity fields.
 - **When (opt-in):** `clp .accounts org_uuid::1`
-- **Then:** Account with roles.json shows `Org ID:  aaaa-bbbb`; account without shows `Org ID:  N/A`.
+- **Then:** Account with `{name}.json` shows `Org ID:  aaaa-bbbb`; account without shows `Org ID:  N/A`.
 - **When (default):** `clp .accounts`
 - **Then:** No `Org ID:` line in any block.
 - **Exit:** 0
@@ -276,11 +276,11 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 
 ---
 
-### FT-19: `org_name::1` shows `Org:` from roles.json; `N/A` if absent
+### FT-19: `org_name::1` shows `Org:` from `{name}.json`; `N/A` if absent
 
-- **Given:** One account with `{name}.roles.json` containing `organization_name = "Acme Corp"`. One account with no `roles.json`.
+- **Given:** One account with `{name}.json` containing `organization_name = "Acme Corp"`. One account with no org identity fields.
 - **When (opt-in):** `clp .accounts org_name::1`
-- **Then:** Account with roles.json shows `Org:  Acme Corp`; account without shows `Org:  N/A`.
+- **Then:** Account with `{name}.json` shows `Org:  Acme Corp`; account without shows `Org:  N/A`.
 - **When (default):** `clp .accounts`
 - **Then:** No `Org:` line in any block.
 - **Exit:** 0

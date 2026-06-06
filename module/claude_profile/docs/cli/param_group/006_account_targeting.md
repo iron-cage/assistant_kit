@@ -2,14 +2,14 @@
 
 **Parameters:** `host::`, `role::`
 **Pattern:** Metadata labels attached to a saved account's profile
-**Purpose:** Provides account-level metadata (machine/user context, role label) that is stored in `{name}.profile.json` at `.account.save` time and displayed via column projection in `.usage`.
+**Purpose:** Provides account-level metadata (machine/user context, role label) that is stored in `{name}.json` at `.account.save` time and displayed via column projection in `.usage`.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| [`host::`](../param/048_host.md) | `string` | `""` (auto: `$USER@$HOSTNAME`) | Machine/user label written to `profile.json`; empty triggers auto-capture |
-| [`role::`](../param/052_role.md) | `string` | `""` | User-defined role label written to `profile.json`; persists across saves |
+| [`host::`](../param/048_host.md) | `string` | `""` (auto: `$USER@$HOSTNAME`) | Machine/user label written to `{name}.json`; empty triggers auto-capture |
+| [`role::`](../param/052_role.md) | `string` | `""` | User-defined role label written to `{name}.json`; persists across saves |
 
-**Used By:** [`.account.save`](../command/001_account.md#command--4-accountsave) (`host::`, `role::` — write metadata to `profile.json`), [`.accounts`](../command/001_account.md#command--3-accounts) (`host::` display toggle — opt-in boolean, reads stored label from `{name}.profile.json`)
+**Used By:** [`.account.save`](../command/001_account.md#command--4-accountsave) (`host::`, `role::` — write metadata to `{name}.json`), [`.accounts`](../command/001_account.md#command--3-accounts) (`host::` display toggle — opt-in boolean, reads stored label from `{name}.json`)
 
 **Typical Patterns:**
 
@@ -31,7 +31,7 @@ clp .usage cols::+host,+role
 
 > "Does parameter X attach a persistent metadata label to a saved account's profile?"
 
-`host::` (param 048) passes: writes a human-readable machine/user label to `{name}.profile.json`. `role::` (param 052) passes: writes a user-defined role label to `{name}.profile.json`. All other `.account.save` parameters fail — they store authentication data, not user-defined descriptive labels.
+`host::` (param 048) passes: writes a human-readable machine/user label to `{name}.json`. `role::` (param 052) passes: writes a user-defined role label to `{name}.json`. All other `.account.save` parameters fail — they store authentication data, not user-defined descriptive labels.
 
 **Cross-References**
 

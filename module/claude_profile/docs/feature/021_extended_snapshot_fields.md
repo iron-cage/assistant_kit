@@ -2,14 +2,14 @@
 
 ### Scope
 
-- **Purpose**: Expose additional user identity and capabilities fields already present in `{name}.claude.json` snapshots through new opt-in field-presence params on `.credentials.status` and `.accounts`.
+- **Purpose**: Expose additional user identity and capabilities fields already present in `{name}.json` snapshots through new opt-in field-presence params on `.credentials.status` and `.accounts`.
 - **Responsibility**: Documents the `tagged_id`, `uuid`, and `capabilities` fields added to the `Account` struct and the `uuid::` and `capabilities::` params (FR-21).
-- **In Scope**: Reading `taggedId`, `uuid`, `capabilities` from `{name}.claude.json` via `account::list()`; reading same fields from live `~/.claude.json` via `read_live_cred_meta()`; opt-in field-presence params `uuid::` and `capabilities::` on `.credentials.status` and `.accounts`; JSON output always including these fields; `parse_string_array_field` helper for array extraction.
+- **In Scope**: Reading `taggedId`, `uuid`, `capabilities` from `{name}.json` via `account::list()`; reading same fields from live `~/.claude.json` via `read_live_cred_meta()`; opt-in field-presence params `uuid::` and `capabilities::` on `.credentials.status` and `.accounts`; JSON output always including these fields; `parse_string_array_field` helper for array extraction.
 - **Out of Scope**: Mutations to `~/.claude.json` (read-only); OAuth API calls; org identity from endpoint 005 (→ 022_org_identity_snapshot.md).
 
 ### Design
 
-The `{name}.claude.json` snapshot (a copy of `~/.claude.json` taken at `save()` time) contains the full `oauthAccount` object written by Claude Code. The current `Account` struct reads four fields from it: `emailAddress`, `displayName`, `organizationRole`, `billingType`. Three additional fields are present in the same object and require no new API calls:
+The `{name}.json` snapshot (a copy of `~/.claude.json` taken at `save()` time) contains the full `oauthAccount` object written by Claude Code. The current `Account` struct reads four fields from it: `emailAddress`, `displayName`, `organizationRole`, `billingType`. Three additional fields are present in the same object and require no new API calls:
 
 | JSON key | Field type | `Account` field | Semantics |
 |----------|-----------|----------------|-----------|
@@ -19,14 +19,14 @@ The `{name}.claude.json` snapshot (a copy of `~/.claude.json` taken at `save()` 
 
 **Extraction:** `tagged_id` and `uuid` use the existing `parse_string_field()` helper. `capabilities` is a JSON array — a new `parse_string_array_field(json, key) -> Vec<String>` helper is required. This helper scans for `"key":[` and parses quoted strings until `]`.
 
-**Snapshot vs. live:** The snapshot in the credential store (`{name}.claude.json`) is used for `.accounts`. The live `~/.claude.json` is used for `.credentials.status` via `read_live_cred_meta()`. Both paths read the same three keys with the same helpers.
+**Snapshot vs. live:** The snapshot in the credential store (`{name}.json`) is used for `.accounts`. The live `~/.claude.json` is used for `.credentials.status` via `read_live_cred_meta()`. Both paths read the same three keys with the same helpers.
 
 **New field-presence params (all opt-in, default `0`):**
 
 | Param | Default | Source | Output Line |
 |-------|---------|--------|-------------|
-| `uuid::` | `0` | `{name}.claude.json` → `oauthAccount.taggedId` | `ID:           {tagged_id_or_N/A}` |
-| `capabilities::` | `0` | `{name}.claude.json` → `oauthAccount.capabilities[]` | `Capabilities: {cap1, cap2_or_N/A}` |
+| `uuid::` | `0` | `{name}.json` → `oauthAccount.taggedId` | `ID:           {tagged_id_or_N/A}` |
+| `capabilities::` | `0` | `{name}.json` → `oauthAccount.capabilities[]` | `Capabilities: {cap1, cap2_or_N/A}` |
 
 **Output format:** `capabilities` renders as comma-separated values (e.g. `max, chat`). Empty `Vec` → `N/A`.
 
@@ -38,8 +38,8 @@ The `{name}.claude.json` snapshot (a copy of `~/.claude.json` taken at `save()` 
 
 - **AC-01**: `clp .credentials.status uuid::1` shows `ID: {tagged_id}` or `ID: N/A`.
 - **AC-02**: `clp .credentials.status capabilities::1` shows `Capabilities: {list}` or `Capabilities: N/A`.
-- **AC-03**: `clp .accounts uuid::1` shows `ID:` line per account from saved `{name}.claude.json`.
-- **AC-04**: `clp .accounts capabilities::1` shows `Capabilities:` line per account from saved `{name}.claude.json`.
+- **AC-03**: `clp .accounts uuid::1` shows `ID:` line per account from saved `{name}.json`.
+- **AC-04**: `clp .accounts capabilities::1` shows `Capabilities:` line per account from saved `{name}.json`.
 - **AC-05**: Both params default to `0` — absent from default output.
 - **AC-06**: `format::json` on both commands always includes `tagged_id` (string) and `capabilities` (array) keys.
 - **AC-07**: Absent snapshot → `N/A` / `[]` for all three fields without error.

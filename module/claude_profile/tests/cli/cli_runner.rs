@@ -142,7 +142,7 @@ pub fn write_account( home : &std::path::Path, name : &str, sub_type : &str, tie
   }
 }
 
-/// Write `~/.claude/.claude.json` with an `OAuthAccount` profile entry.
+/// Write `~/.claude.json` with an `OAuthAccount` profile entry.
 ///
 /// Used to test email retrieval at `v::1` and above for the active account.
 ///
@@ -224,14 +224,30 @@ pub fn write_settings_json( home : &std::path::Path, model : &str )
   std::fs::write( claude_dir.join( "settings.json" ), content ).unwrap();
 }
 
-/// Write `{credential_store}/{name}.claude.json` with an `oauthAccount` snapshot.
+/// Merge key-value pairs into `{credential_store}/{name}.json`.
+///
+/// Reads the existing file (or starts with `{}`), merges `pairs` into
+/// the top-level object, and writes back. Used by all `write_account_*` helpers.
+fn merge_account_meta( home : &std::path::Path, name : &str, pairs : serde_json::Value )
+{
+  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
+  std::fs::create_dir_all( &credential_store ).unwrap();
+  let meta_path = credential_store.join( format!( "{name}.json" ) );
+  let mut val : serde_json::Value = std::fs::read_to_string( &meta_path )
+    .ok()
+    .and_then( | s | serde_json::from_str( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  if let ( Some( dst ), Some( src ) ) = ( val.as_object_mut(), pairs.as_object() )
+  {
+    for ( k, v ) in src { dst.insert( k.clone(), v.clone() ); }
+  }
+  std::fs::write( meta_path, serde_json::to_string( &val ).unwrap() ).unwrap();
+}
+
+/// Write `oauthAccount` snapshot into `{credential_store}/{name}.json`.
 ///
 /// Used to pre-populate `.accounts` snapshot data for `email`, `display_name`,
 /// `role`, and `billing` field tests. Mirrors what `account::save()` produces.
-///
-/// # Panics
-///
-/// Panics if the directory or file cannot be created.
 #[ inline ]
 pub fn write_account_claude_json(
   home    : &std::path::Path,
@@ -242,22 +258,19 @@ pub fn write_account_claude_json(
   billing : &str,
 )
 {
-  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &credential_store ).unwrap();
-  let content = format!(
-    r#"{{"oauthAccount":{{"emailAddress":"{email}","displayName":"{display}","organizationRole":"{role}","billingType":"{billing}"}}}}"#,
-  );
-  std::fs::write( credential_store.join( format!( "{name}.claude.json" ) ), content ).unwrap();
+  merge_account_meta( home, name, serde_json::json!({
+    "oauthAccount": {
+      "emailAddress": email,
+      "displayName": display,
+      "organizationRole": role,
+      "billingType": billing,
+    }
+  }) );
 }
 
-/// Write `{credential_store}/{name}.claude.json` with `taggedId`, `uuid`, and `capabilities`.
+/// Write extended `oauthAccount` fields into `{credential_store}/{name}.json`.
 ///
 /// Used to test `uuid::1` and `capabilities::1` in `.accounts`.
-/// Mirrors what `account::save()` produces (extended snapshot format).
-///
-/// # Panics
-///
-/// Panics if the directory or file cannot be created.
 #[ inline ]
 pub fn write_account_claude_json_extended(
   home         : &std::path::Path,
@@ -267,43 +280,30 @@ pub fn write_account_claude_json_extended(
   capabilities : &[ &str ],
 )
 {
-  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &credential_store ).unwrap();
-  let caps = capabilities.iter()
-    .map( | c | format!( "\"{c}\"" ) )
-    .collect::< Vec< _ > >()
-    .join( "," );
-  let content = format!(
-    r#"{{"oauthAccount":{{"taggedId":"{tagged_id}","uuid":"{uuid}","capabilities":[{caps}]}}}}"#,
-  );
-  std::fs::write( credential_store.join( format!( "{name}.claude.json" ) ), content ).unwrap();
+  let caps : Vec< serde_json::Value > = capabilities.iter()
+    .map( | c | serde_json::Value::String( (*c).to_string() ) )
+    .collect();
+  merge_account_meta( home, name, serde_json::json!({
+    "oauthAccount": {
+      "taggedId": tagged_id,
+      "uuid": uuid,
+      "capabilities": caps,
+    }
+  }) );
 }
 
-/// Write `{credential_store}/{name}.settings.json` with a `model` field.
+/// Write `model` field into `{credential_store}/{name}.json`.
 ///
 /// Used to pre-populate `.accounts` snapshot data for `model` field tests.
-/// Mirrors what `account::save()` produces.
-///
-/// # Panics
-///
-/// Panics if the directory or file cannot be created.
 #[ inline ]
 pub fn write_account_settings_json( home : &std::path::Path, name : &str, model : &str )
 {
-  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &credential_store ).unwrap();
-  let content = format!( r#"{{"model":"{model}"}}"# );
-  std::fs::write( credential_store.join( format!( "{name}.settings.json" ) ), content ).unwrap();
+  merge_account_meta( home, name, serde_json::json!({ "model": model }) );
 }
 
-/// Write `{credential_store}/{name}.roles.json` with org identity fields.
+/// Write org identity fields into `{credential_store}/{name}.json`.
 ///
 /// Used to pre-populate `.accounts` and `.credentials.status` org field tests.
-/// Mirrors the format written by `account::save()` when `fetch_claude_cli_roles` succeeds.
-///
-/// # Panics
-///
-/// Panics if the directory or file cannot be created.
 #[ inline ]
 pub fn write_account_roles_json(
   home     : &std::path::Path,
@@ -313,25 +313,19 @@ pub fn write_account_roles_json(
   org_role : &str,
 )
 {
-  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &credential_store ).unwrap();
-  let content = format!(
-    r#"{{"organization_uuid":"{org_uuid}","organization_name":"{org_name}","organization_role":"{org_role}","workspace_uuid":null,"workspace_name":null}}"#,
-  );
-  std::fs::write( credential_store.join( format!( "{name}.roles.json" ) ), content ).unwrap();
+  merge_account_meta( home, name, serde_json::json!({
+    "organization_uuid": org_uuid,
+    "organization_name": org_name,
+    "organization_role": org_role,
+    "workspace_uuid": null,
+    "workspace_name": null,
+  }) );
 }
 
-/// Write `{credential_store}/{name}.profile.json` with host and role metadata.
+/// Write host and role metadata into `{credential_store}/{name}.json`.
 ///
-/// Used to pre-populate host/role fields for `.usage cols::+host` / `.usage cols::+role` tests
-/// and for `.accounts host::1 role::1` display tests.
-/// Mirrors the format written by `account::save()` when `host::` / `role::` params are supplied.
-///
-/// Pass `None` to omit a field entirely from the JSON.
-///
-/// # Panics
-///
-/// Panics if the directory or file cannot be created.
+/// Used to pre-populate host/role fields for `.usage cols::+host` / `.usage cols::+role` tests.
+/// Pass `None` to omit a field (preserves existing value via merge).
 #[ inline ]
 pub fn write_account_profile_json(
   home : &std::path::Path,
@@ -340,30 +334,19 @@ pub fn write_account_profile_json(
   role : Option< &str >,
 )
 {
-  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &credential_store ).unwrap();
-  let mut fields = Vec::new();
-  if let Some( h ) = host { fields.push( format!( r#""host":"{h}""# ) ); }
-  if let Some( r ) = role { fields.push( format!( r#""role":"{r}""# ) ); }
-  let content = format!( "{{{}}}", fields.join( "," ) );
-  std::fs::write( credential_store.join( format!( "{name}.profile.json" ) ), content ).unwrap();
+  let mut pairs = serde_json::Map::new();
+  if let Some( h ) = host { pairs.insert( "host".into(), serde_json::Value::String( h.into() ) ); }
+  if let Some( r ) = role { pairs.insert( "role".into(), serde_json::Value::String( r.into() ) ); }
+  merge_account_meta( home, name, serde_json::Value::Object( pairs ) );
 }
 
-/// Write `{credential_store}/{name}.claude.json` containing only `_renewal_at`.
+/// Write `_renewal_at` into `{credential_store}/{name}.json`.
 ///
 /// Used to pre-populate renewal override tests without touching `oauthAccount`.
-/// The file is created as `{"_renewal_at":"<iso_ts>"}`.
-///
-/// # Panics
-///
-/// Panics if the directory or file cannot be created.
 #[ inline ]
 pub fn write_account_renewal_json( home : &std::path::Path, name : &str, renewal_at_iso : &str )
 {
-  let credential_store = home.join( ".persistent" ).join( "claude" ).join( "credential" );
-  std::fs::create_dir_all( &credential_store ).unwrap();
-  let content = format!( r#"{{"_renewal_at":"{renewal_at_iso}"}}"# );
-  std::fs::write( credential_store.join( format!( "{name}.claude.json" ) ), content ).unwrap();
+  merge_account_meta( home, name, serde_json::json!({ "_renewal_at": renewal_at_iso }) );
 }
 
 /// Check whether an account credential file exists.

@@ -6,11 +6,11 @@
 **Commands:** `.credentials.status`, `.accounts`
 **Group:** [Field Presence](../param_group/002_field_presence.md)
 
-Show the enabled product feature list (`capabilities`) from the `oauthAccount` object in `{name}.claude.json`.
+Show the enabled product feature list (`capabilities`) from the `oauthAccount` object in `{name}.json`.
 
 ## Behaviour
 
-When `capabilities::1`, appends a `Capabilities:` line showing the account's capabilities as a comma-separated list (e.g. `max, chat`). Sources from the `capabilities` string array inside `oauthAccount` in the `{name}.claude.json` snapshot. Shows `N/A` when the snapshot is absent, the field is missing, or the array is empty.
+When `capabilities::1`, appends a `Capabilities:` line showing the account's capabilities as a comma-separated list (e.g. `max, chat`). Sources from the `capabilities` string array inside `oauthAccount` in the `{name}.json` snapshot. Shows `N/A` when the snapshot is absent, the field is missing, or the array is empty.
 
 `format::json` always includes `capabilities` as a JSON array regardless of this param.
 

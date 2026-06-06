@@ -19,16 +19,16 @@
 | `subscriptionType` | Credential file JSON field | Empty or absent → shown as `N/A` |
 | `rateLimitTier` | Credential file JSON field | Empty or absent → shown as `N/A` |
 | `expiresAt` | Credential file `expiresAt` field | Unix epoch milliseconds |
-| `email` | Saved `{name}.claude.json` → `emailAddress` | Empty or absent → shown as `N/A` |
-| `display_name` | Saved `{name}.claude.json` → `oauthAccount.displayName` | Empty or absent → shown as `N/A` |
-| `role` | Saved `{name}.claude.json` → `oauthAccount.organizationRole` | Empty or absent → shown as `N/A` |
-| `billing` | Saved `{name}.claude.json` → `oauthAccount.billingType` | Empty or absent → shown as `N/A` |
-| `model` | Saved `{name}.settings.json` → `model` field (BUG-222 fix: captured by `save()`) | Empty or absent → shown as `N/A` |
-| `tagged_id` | Saved `{name}.claude.json` → `oauthAccount.taggedId` | Empty or absent → shown as `N/A` |
-| `uuid` | Saved `{name}.claude.json` → `oauthAccount.uuid` | Empty or absent → shown as `N/A` |
-| `capabilities` | Saved `{name}.claude.json` → `oauthAccount.capabilities[]` | Empty array or absent → shown as `N/A` |
-| `organization_uuid` | Saved `{name}.roles.json` → `organization_uuid` | Empty or absent → shown as `N/A` |
-| `organization_name` | Saved `{name}.roles.json` → `organization_name` | Empty or absent → shown as `N/A` |
+| `email` | Saved `{name}.json` → `emailAddress` | Empty or absent → shown as `N/A` |
+| `display_name` | Saved `{name}.json` → `oauthAccount.displayName` | Empty or absent → shown as `N/A` |
+| `role` | Saved `{name}.json` → `oauthAccount.organizationRole` | Empty or absent → shown as `N/A` |
+| `billing` | Saved `{name}.json` → `oauthAccount.billingType` | Empty or absent → shown as `N/A` |
+| `model` | Saved `{name}.json` → `model` field (BUG-222 fix: captured by `save()`) | Empty or absent → shown as `N/A` |
+| `tagged_id` | Saved `{name}.json` → `oauthAccount.taggedId` | Empty or absent → shown as `N/A` |
+| `uuid` | Saved `{name}.json` → `oauthAccount.uuid` | Empty or absent → shown as `N/A` |
+| `capabilities` | Saved `{name}.json` → `oauthAccount.capabilities[]` | Empty array or absent → shown as `N/A` |
+| `organization_uuid` | Saved `{name}.json` → `organization_uuid` | Empty or absent → shown as `N/A` |
+| `organization_name` | Saved `{name}.json` → `organization_name` | Empty or absent → shown as `N/A` |
 
 **Without `name::`:** Lists all accounts as indented key-val blocks, sorted alphabetically. Each block is a header line (email) followed by indented `Key:  value` lines. A blank line separates consecutive blocks.
 
@@ -68,7 +68,7 @@ When all field toggles are disabled, only bare account name lines are printed (n
 - **AC-06**: Field-presence toggles suppress individual lines from text output only.
 - **AC-07**: All fields disabled → bare name lines only; no blank-line separators.
 - **AC-08**: Accounts listed alphabetically by name.
-- **AC-09**: `display_name::1` shows `Display:` line per account from saved `{name}.claude.json`.
+- **AC-09**: `display_name::1` shows `Display:` line per account from saved `{name}.json`.
 - **AC-10**: `role::1`, `billing::1`, `model::1` show corresponding lines per account from saved snapshots.
 - **AC-11**: Accounts without saved metadata files show `N/A` for `email`, `display_name`, `role`, `billing`, `model`.
 - **AC-12**: `format::json` includes `email`, `display_name`, `role`, `billing`, `model`, `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` keys per account object.
@@ -77,8 +77,8 @@ When all field toggles are disabled, only bare account name lines are printed (n
 - **AC-15**: `format::json` includes `is_current` boolean field per account object.
 - **AC-16**: `uuid::1` shows `ID:` line from `tagged_id` field; `N/A` when absent from snapshot.
 - **AC-17**: `capabilities::1` shows `Capabilities:` line as comma-separated list; `N/A` when absent or empty.
-- **AC-18**: `org_uuid::1` shows `Org ID:` line from `{name}.roles.json`; `N/A` when roles.json absent.
-- **AC-19**: `org_name::1` shows `Org:` line from `{name}.roles.json`; `N/A` when roles.json absent.
+- **AC-18**: `org_uuid::1` shows `Org ID:` line from `{name}.json`; `N/A` when absent.
+- **AC-19**: `org_name::1` shows `Org:` line from `{name}.json`; `N/A` when absent.
 
 ### Cross-References
 

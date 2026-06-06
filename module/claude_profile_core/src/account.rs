@@ -4,8 +4,10 @@
 //!
 //! ```text
 //! $PRO/.persistent/claude/credential/
-//!   alice@acme.com.credentials.json   ← saved credential snapshot
+//!   alice@acme.com.credentials.json   ← OAuth credentials (tokens, expiry)
+//!   alice@acme.com.json               ← account metadata (identity, model, roles, profile)
 //!   alice@home.com.credentials.json
+//!   alice@home.com.json
 //!   _active_w003_user1                ← text: name of active account (per-machine)
 //! ```
 //!
@@ -30,7 +32,7 @@
 //! }
 //!
 //! // Save current credentials as "alice@acme.com"
-//! account::save( "alice@acme.com", credential_store, &paths, true, None ).expect( "failed to save" );
+//! account::save( "alice@acme.com", credential_store, &paths, true, None, None, None ).expect( "failed to save" );
 //!
 //! // Switch to "alice@home.com"
 //! account::switch_account( "alice@home.com", credential_store, &paths ).expect( "failed to switch" );
@@ -56,49 +58,49 @@ pub struct Account
   pub expires_at_ms : u64,
   /// Whether this account's credentials are currently active.
   pub is_active : bool,
-  /// Email address from saved `{name}.claude.json` `emailAddress`.
+  /// Email address from saved `{name}.json` `emailAddress`.
   /// Empty string when snapshot absent or field missing.
   pub email : String,
-  /// Display name from saved `{name}.claude.json` `oauthAccount.displayName`.
+  /// Display name from saved `{name}.json` `oauthAccount.displayName`.
   /// Empty string when snapshot absent or field missing.
   pub display_name : String,
-  /// Organisation role from saved `{name}.claude.json` `oauthAccount.organizationRole`.
+  /// Organisation role from saved `{name}.json` `oauthAccount.organizationRole`.
   /// Empty string when snapshot absent or field missing.
   pub role : String,
-  /// Billing type from saved `{name}.claude.json` `oauthAccount.billingType`.
+  /// Billing type from saved `{name}.json` `oauthAccount.billingType`.
   /// Empty string when snapshot absent or field missing.
   pub billing : String,
-  /// Active model from saved `{name}.settings.json` `model` field.
+  /// Active model from saved `{name}.json` `model` field.
   /// Empty string when snapshot absent or field missing.
   pub model : String,
-  /// Stable user identifier from saved `{name}.claude.json` `oauthAccount.taggedId`.
+  /// Stable user identifier from saved `{name}.json` `oauthAccount.taggedId`.
   /// Empty string when snapshot absent or field missing.
   pub tagged_id : String,
-  /// UUID form of user identifier from saved `{name}.claude.json` `oauthAccount.uuid`.
+  /// UUID form of user identifier from saved `{name}.json` `oauthAccount.uuid`.
   /// Empty string when snapshot absent or field missing.
   pub uuid : String,
-  /// Enabled product capabilities from saved `{name}.claude.json` `oauthAccount.capabilities`.
+  /// Enabled product capabilities from saved `{name}.json` `oauthAccount.capabilities`.
   /// Empty vec when snapshot absent or field missing.
   pub capabilities : Vec< String >,
-  /// Organisation UUID from saved `{name}.roles.json` `organization_uuid`.
+  /// Organisation UUID from saved `{name}.json` `organization_uuid`.
   /// Empty string when snapshot absent or field missing.
   pub organization_uuid : String,
-  /// Organisation display name from saved `{name}.roles.json` `organization_name`.
+  /// Organisation display name from saved `{name}.json` `organization_name`.
   /// Empty string when snapshot absent or field missing.
   pub organization_name : String,
-  /// User's role in the organisation from saved `{name}.roles.json` `organization_role`.
+  /// User's role in the organisation from saved `{name}.json` `organization_role`.
   /// Empty string when snapshot absent or field missing.
   pub organization_role : String,
-  /// Workspace UUID from saved `{name}.roles.json` `workspace_uuid`.
+  /// Workspace UUID from saved `{name}.json` `workspace_uuid`.
   /// Empty string when snapshot absent or field missing (personal accounts have `null`).
   pub workspace_uuid : String,
-  /// Workspace display name from saved `{name}.roles.json` `workspace_name`.
+  /// Workspace display name from saved `{name}.json` `workspace_name`.
   /// Empty string when snapshot absent or field missing (personal accounts have `null`).
   pub workspace_name : String,
-  /// Machine host label from saved `{name}.profile.json` `host`.
+  /// Machine host label from saved `{name}.json` `host`.
   /// Empty string when file absent or field missing.
   pub profile_host : String,
-  /// User-defined role label from saved `{name}.profile.json` `role`.
+  /// User-defined role label from saved `{name}.json` `role`.
   /// Empty string when file absent or field missing.
   pub profile_role : String,
 }
@@ -132,36 +134,25 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
       .unwrap_or( 0 );
     let is_active = active.as_deref() == Some( name.as_str() );
 
-    // Read per-account snapshot files written by save() — best-effort, empty when absent.
-    let claude_json = std::fs::read_to_string(
-      credential_store.join( format!( "{name}.claude.json" ) )
+    // Read unified per-account metadata from {name}.json — best-effort, empty when absent.
+    let meta_json = std::fs::read_to_string(
+      credential_store.join( format!( "{name}.json" ) )
     ).unwrap_or_default();
-    let settings_json = std::fs::read_to_string(
-      credential_store.join( format!( "{name}.settings.json" ) )
-    ).unwrap_or_default();
-    let email        = parse_string_field( &claude_json, "emailAddress"      ).unwrap_or_default();
-    let display_name = parse_string_field( &claude_json, "displayName"      ).unwrap_or_default();
-    let role         = parse_string_field( &claude_json, "organizationRole" ).unwrap_or_default();
-    let billing      = parse_string_field( &claude_json, "billingType"      ).unwrap_or_default();
-    let model        = parse_string_field( &settings_json, "model"          ).unwrap_or_default();
-    let tagged_id    = parse_string_field( &claude_json, "taggedId"         ).unwrap_or_default();
-    let uuid         = parse_string_field( &claude_json, "uuid"             ).unwrap_or_default();
-    let capabilities = parse_string_array_field( &claude_json, "capabilities" );
-
-    let roles_json = std::fs::read_to_string(
-      credential_store.join( format!( "{name}.roles.json" ) )
-    ).unwrap_or_default();
-    let organization_uuid = parse_string_field( &roles_json, "organization_uuid" ).unwrap_or_default();
-    let organization_name = parse_string_field( &roles_json, "organization_name" ).unwrap_or_default();
-    let organization_role = parse_string_field( &roles_json, "organization_role" ).unwrap_or_default();
-    let workspace_uuid    = parse_string_field( &roles_json, "workspace_uuid"    ).unwrap_or_default();
-    let workspace_name    = parse_string_field( &roles_json, "workspace_name"    ).unwrap_or_default();
-
-    let profile_json = std::fs::read_to_string(
-      credential_store.join( format!( "{name}.profile.json" ) )
-    ).unwrap_or_default();
-    let profile_host = parse_string_field( &profile_json, "host" ).unwrap_or_default();
-    let profile_role = parse_string_field( &profile_json, "role" ).unwrap_or_default();
+    let email        = parse_string_field( &meta_json, "emailAddress"      ).unwrap_or_default();
+    let display_name = parse_string_field( &meta_json, "displayName"      ).unwrap_or_default();
+    let role         = parse_string_field( &meta_json, "organizationRole" ).unwrap_or_default();
+    let billing      = parse_string_field( &meta_json, "billingType"      ).unwrap_or_default();
+    let model        = parse_string_field( &meta_json, "model"            ).unwrap_or_default();
+    let tagged_id    = parse_string_field( &meta_json, "taggedId"         ).unwrap_or_default();
+    let uuid         = parse_string_field( &meta_json, "uuid"             ).unwrap_or_default();
+    let capabilities = parse_string_array_field( &meta_json, "capabilities" );
+    let organization_uuid = parse_string_field( &meta_json, "organization_uuid" ).unwrap_or_default();
+    let organization_name = parse_string_field( &meta_json, "organization_name" ).unwrap_or_default();
+    let organization_role = parse_string_field( &meta_json, "organization_role" ).unwrap_or_default();
+    let workspace_uuid    = parse_string_field( &meta_json, "workspace_uuid"    ).unwrap_or_default();
+    let workspace_name    = parse_string_field( &meta_json, "workspace_name"    ).unwrap_or_default();
+    let profile_host = parse_string_field( &meta_json, "host" ).unwrap_or_default();
+    let profile_role = parse_string_field( &meta_json, "role" ).unwrap_or_default();
 
     accounts.push( Account
     {
@@ -194,132 +185,113 @@ pub fn list( credential_store : &Path ) -> Result< Vec< Account >, std::io::Erro
 
 /// Save credentials as a named account in `credential_store`.
 ///
-/// Creates `{credential_store}/{name}.credentials.json`. Overwrites if exists.
-/// Also writes `{credential_store}/_active` = `name` so that the saved account
-/// is immediately visible as the active account without a separate switch call.
+/// Writes two files per account:
+/// - `{name}.credentials.json` — OAuth tokens and expiry
+/// - `{name}.json` — unified metadata (identity, model, roles, profile)
 ///
 /// When `creds` is `Some(bytes)`, writes `bytes` directly to the credential file.
 /// When `creds` is `None`, copies from `paths.credentials_file()` (the live session file).
+///
+/// `host` / `role` are profile display metadata; pass `None` from background callers
+/// to preserve existing values via merge.
 ///
 /// # Errors
 ///
 /// Returns an error if the name is invalid, the credentials file cannot be
 /// read, or the credential store cannot be written.
 #[ inline ]
-pub fn save( name : &str, credential_store : &Path, paths : &ClaudePaths, update_marker : bool, creds : Option< &[u8] > ) -> Result< (), std::io::Error >
+pub fn save(
+  name             : &str,
+  credential_store : &Path,
+  paths            : &ClaudePaths,
+  update_marker    : bool,
+  creds            : Option< &[u8] >,
+  host             : Option< &str >,
+  role             : Option< &str >,
+) -> Result< (), std::io::Error >
 {
   validate_name( name )?;
   std::fs::create_dir_all( credential_store )?;
   let dest = credential_store.join( format!( "{name}.credentials.json" ) );
   // Fix(BUG-221): accept direct credential bytes to bypass the copy-from-live-file path.
-  // Root cause: refresh_account_token() Some(paths) branch wrote new_creds to the live
-  //   session file before calling save(); save() then copied from the live file to the store.
-  //   This orphaned write clobbered live credentials during every batch refresh invocation.
-  // Pitfall: callers passing None (account.save, account.relogin) still copy from the live
-  //   file (existing behaviour unchanged); callers passing Some(bytes) bypass the live file.
   match creds
   {
     Some( bytes ) => std::fs::write( &dest, bytes )?,
     None          => { std::fs::copy( paths.credentials_file(), &dest )?; }
   }
-  // Best-effort: extract oauthAccount subtree from ~/.claude.json and save it.
-  // Fix(BUG-174): save() previously used std::fs::copy for the entire ~/.claude.json,
-  //   including machine-global keys (commands.*, mcpServers, projects). On switch_account(),
-  //   restoring the full copy clobbered the current machine's config state.
-  // Root cause: wholesale copy/restore treated per-account auth data and machine-global
-  //   config as a single unit.
-  // Pitfall: the extraction must be surgical — only the oauthAccount subtree is
-  //   per-account; everything else belongs to the machine.
-  if let Ok( live_text ) = std::fs::read_to_string( paths.claude_json_file() )
+
+  // Build unified {name}.json — read-merge to preserve pre-existing keys (e.g. _renewal_at).
+  let meta_path = credential_store.join( format!( "{name}.json" ) );
+  let mut snapshot = std::fs::read_to_string( &meta_path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  if let Some( obj ) = snapshot.as_object_mut()
   {
-    if let Ok( live_val ) = serde_json::from_str::< serde_json::Value >( &live_text )
+    // Merge oauthAccount from live ~/.claude.json (surgical — only per-account data).
+    if let Ok( live_text ) = std::fs::read_to_string( paths.claude_json_file() )
     {
-      if let Some( oauth ) = live_val.get( "oauthAccount" )
+      if let Ok( live_val ) = serde_json::from_str::< serde_json::Value >( &live_text )
       {
-        // Fix(AC-17): read-merge preserves _renewal_at and any other pre-existing top-level keys
-        //   when save() is called after .account.renewal has set _renewal_at.
-        // Root cause: wholesale overwrite `{"oauthAccount": ...}` discarded pre-existing top-level
-        //   keys from {name}.claude.json on every save() call.
-        // Pitfall: must merge into existing object — never replace it — to avoid clobbering
-        //   keys written by .account.renewal or other tooling.
-        let claude_path = credential_store.join( format!( "{name}.claude.json" ) );
-        let mut snapshot = std::fs::read_to_string( &claude_path )
-          .ok()
-          .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
-          .unwrap_or_else( || serde_json::json!( {} ) );
-        if let Some( obj ) = snapshot.as_object_mut()
+        if let Some( oauth ) = live_val.get( "oauthAccount" )
         {
           obj.insert( "oauthAccount".to_string(), oauth.clone() );
         }
-        let _ = std::fs::write(
-          claude_path,
-          serde_json::to_string( &snapshot ).unwrap_or_default(),
-        );
       }
     }
-  }
-  // Fix(BUG-222): capture model preference from ~/.claude/settings.json into {name}.settings.json.
-  // Root cause: save() wrote credentials and oauthAccount snapshots but never captured the model
-  //   preference, so switch_account() had no per-account model data to restore; the prior
-  //   account's model persisted silently after every switch.
-  // Pitfall: best-effort only — skip silently when model is absent to avoid creating vacuous
-  //   {name}.settings.json files; never let a settings write failure propagate as an error.
-  if let Ok( live_settings ) = std::fs::read_to_string( paths.settings_file() )
-  {
-    if let Some( model ) = parse_string_field( &live_settings, "model" )
+    // Merge model preference from live ~/.claude/settings.json (best-effort).
+    if let Ok( live_settings ) = std::fs::read_to_string( paths.settings_file() )
     {
-      let settings_path = credential_store.join( format!( "{name}.settings.json" ) );
-      let mut snapshot = std::fs::read_to_string( &settings_path )
-        .ok()
-        .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
-        .unwrap_or_else( || serde_json::json!( {} ) );
-      if let Some( obj ) = snapshot.as_object_mut()
+      if let Some( model ) = parse_string_field( &live_settings, "model" )
       {
         obj.insert( "model".to_string(), serde_json::Value::String( model ) );
       }
-      let _ = std::fs::write(
-        settings_path,
-        serde_json::to_string( &snapshot ).unwrap_or_default(),
-      );
     }
-  }
-  // Best-effort: fetch org identity from endpoint 005 and persist as {name}.roles.json.
-  // Requires accessToken in the credentials file. Network errors or absent token are silently
-  // skipped — save() must not fail for network unavailability or missing optional data.
-  #[ cfg( feature = "enabled" ) ]
-  {
-    let creds_text = std::fs::read_to_string( paths.credentials_file() ).unwrap_or_default();
-    if let Some( token ) = parse_string_field( &creds_text, "accessToken" )
+    // Merge org identity from endpoint 005 (best-effort, network).
+    #[ cfg( feature = "enabled" ) ]
     {
-      if let Ok( roles ) = claude_quota::fetch_claude_cli_roles( &token )
+      let creds_text = std::fs::read_to_string( paths.credentials_file() ).unwrap_or_default();
+      if let Some( token ) = parse_string_field( &creds_text, "accessToken" )
       {
-        let null_str = | s : &str | -> String
+        if let Ok( roles ) = claude_quota::fetch_claude_cli_roles( &token )
         {
-          if s.is_empty() { "null".to_string() }
-          else { format!( "\"{}\"", s.replace( '"', "\\\"" ) ) }
-        };
-        let roles_json = format!(
-          "{{\"organization_uuid\":\"{}\",\"organization_name\":\"{}\",\
-           \"organization_role\":\"{}\",\"workspace_uuid\":{},\"workspace_name\":{}}}",
-          roles.organization_uuid.replace( '"', "\\\"" ),
-          roles.organization_name.replace( '"', "\\\"" ),
-          roles.organization_role.replace( '"', "\\\"" ),
-          null_str( &roles.workspace_uuid ),
-          null_str( &roles.workspace_name ),
-        );
-        let _ = std::fs::write( credential_store.join( format!( "{name}.roles.json" ) ), roles_json );
+          let val_or_null = | s : &str | -> serde_json::Value
+          {
+            if s.is_empty() { serde_json::Value::Null }
+            else { serde_json::Value::String( s.to_string() ) }
+          };
+          obj.insert( "organization_uuid".to_string(), serde_json::Value::String( roles.organization_uuid.clone() ) );
+          obj.insert( "organization_name".to_string(), serde_json::Value::String( roles.organization_name.clone() ) );
+          obj.insert( "organization_role".to_string(), serde_json::Value::String( roles.organization_role.clone() ) );
+          obj.insert( "workspace_uuid".to_string(), val_or_null( &roles.workspace_uuid ) );
+          obj.insert( "workspace_name".to_string(), val_or_null( &roles.workspace_name ) );
+        }
       }
     }
+    // Merge profile metadata when provided (CLI callers); None preserves existing values.
+    if let Some( h ) = host
+    {
+      obj.insert( "host".to_string(), serde_json::Value::String( h.to_string() ) );
+    }
+    if let Some( r ) = role
+    {
+      obj.insert( "role".to_string(), serde_json::Value::String( r.to_string() ) );
+    }
   }
-  // Fix(BUG-211): guard _active write behind update_marker so background refresh callers
-  //   (refresh_account_token) can pass false, suppressing marker mutation during per-account
-  //   cycling. Without this guard every refresh clobbered _active, enabling the TOCTOU race
-  //   where the subsequent snapshot+restore in apply_refresh/apply_touch overwrote a concurrent
-  //   .account.use switch. See bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md.
-  // Root cause: save() treated _active write as unconditional; callers had no opt-out, so every
-  //   background refresh mutated the active marker as a side effect.
-  // Pitfall: CLI callers (.account.save, .account.relogin) MUST pass true; passing false from a
-  //   user-triggered path leaves .credentials.status showing Account: N/A until next explicit save.
+  // Only write {name}.json when there is actual data to store — avoids empty {} files
+  // for accounts with no oauthAccount, no model, and no host/role metadata.
+  // Existing {name}.json is always non-empty (read-merged above), so this never drops data.
+  if snapshot.as_object().is_some_and( |obj| !obj.is_empty() )
+  {
+    let _ = std::fs::write( &meta_path, serde_json::to_string( &snapshot ).unwrap_or_default() );
+  }
+
+  // Clean up old satellite files (migration to unified {name}.json).
+  let _ = std::fs::remove_file( credential_store.join( format!( "{name}.claude.json" ) ) );
+  let _ = std::fs::remove_file( credential_store.join( format!( "{name}.settings.json" ) ) );
+  let _ = std::fs::remove_file( credential_store.join( format!( "{name}.roles.json" ) ) );
+  let _ = std::fs::remove_file( credential_store.join( format!( "{name}.profile.json" ) ) );
+
   if update_marker
   {
     std::fs::write( credential_store.join( active_marker_filename() ), name )?;
@@ -375,87 +347,51 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
   let marker = credential_store.join( active_marker_filename() );
   std::fs::write( marker, name )?;
 
-  // Fix(BUG-174): switch_account() previously used std::fs::copy to wholesale overwrite
-  //   ~/.claude.json with the saved snapshot. This clobbered machine-global keys
-  //   (commands.*, mcpServers, projects) with stale values from the snapshot.
-  // Root cause: save() captured the full file; switch_account() restored it wholesale.
-  //   Both sides now use surgical oauthAccount extraction/patching.
-  // Pitfall: the live ~/.claude.json must be READ before patching — if it's missing or
-  //   invalid JSON, the saved snapshot's oauthAccount is written as a new file (safe
-  //   fallback since there's nothing to clobber).
+  // Patch live ~/.claude.json and ~/.claude/settings.json from unified {name}.json.
   {
-    let saved_path = credential_store.join( format!( "{name}.claude.json" ) );
-    if let Ok( saved_text ) = std::fs::read_to_string( &saved_path )
+    let meta_path = credential_store.join( format!( "{name}.json" ) );
+    let meta_text = std::fs::read_to_string( &meta_path ).unwrap_or_default();
+
+    // Restore oauthAccount into live ~/.claude.json (surgical patch — preserves machine-global keys).
+    if let Ok( saved_val ) = serde_json::from_str::< serde_json::Value >( &meta_text )
     {
-      if let Ok( saved_val ) = serde_json::from_str::< serde_json::Value >( &saved_text )
+      if let Some( mut oauth ) = saved_val.get( "oauthAccount" ).cloned()
       {
-        if let Some( mut oauth ) = saved_val.get( "oauthAccount" ).cloned()
+        // Fix(BUG-217): enforce emailAddress == name — snapshot may contain stale email.
+        if let Some( oa_obj ) = oauth.as_object_mut()
         {
-          // Fix(BUG-217): enforce emailAddress == name — snapshot may contain stale email
-          // from an earlier BUG-212/BUG-217 corruption cycle; name is always the canonical
-          // identity source, regardless of what the per-account snapshot says.
-          // Root cause: verbatim insert propagated wrong email to ~/.claude.json, causing
-          // downstream save routines to infer the wrong account name.
-          // Pitfall: without this override the error self-perpetuates — stale email installed
-          // in shared file → read by save as primary name → snapshotted with wrong email →
-          // re-installed on next switch.
-          if let Some( oa_obj ) = oauth.as_object_mut()
+          oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
+          // Fix(BUG-219): override org-identity fields from saved roles data.
+          if let Some( org_name ) = parse_string_field( &meta_text, "organization_name" )
           {
-            oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
-            // Fix(BUG-219): override org-identity fields from {name}.roles.json — snapshot may
-            //   contain stale organizationName/organizationUuid captured while a different
-            //   account's session was active (BUG-217 partial fix only corrected emailAddress).
-            // Root cause: verbatim snapshot copy propagates cross-account org identity to
-            //   ~/.claude.json; Claude Code reads oauthAccount.organizationName from this file
-            //   and displays the wrong organization name after switch.
-            // Pitfall: roles.json read must be best-effort (absent file ≠ error); only override
-            //   when non-empty to avoid clearing org fields for accounts without roles.json.
-            let roles_path = credential_store.join( format!( "{name}.roles.json" ) );
-            if let Ok( roles_text ) = std::fs::read_to_string( &roles_path )
+            if !org_name.is_empty()
             {
-              if let Some( org_name ) = parse_string_field( &roles_text, "organization_name" )
-              {
-                if !org_name.is_empty()
-                {
-                  oa_obj.insert( "organizationName".to_string(), serde_json::Value::String( org_name ) );
-                }
-              }
-              if let Some( org_uuid ) = parse_string_field( &roles_text, "organization_uuid" )
-              {
-                if !org_uuid.is_empty()
-                {
-                  oa_obj.insert( "organizationUuid".to_string(), serde_json::Value::String( org_uuid ) );
-                }
-              }
+              oa_obj.insert( "organizationName".to_string(), serde_json::Value::String( org_name ) );
             }
           }
-          let live_path = paths.claude_json_file();
-          let mut live_val = std::fs::read_to_string( &live_path )
-            .ok()
-            .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
-            .unwrap_or_else( || serde_json::json!( {} ) );
-          if let Some( obj ) = live_val.as_object_mut()
+          if let Some( org_uuid ) = parse_string_field( &meta_text, "organization_uuid" )
           {
-            obj.insert( "oauthAccount".to_string(), oauth );
+            if !org_uuid.is_empty()
+            {
+              oa_obj.insert( "organizationUuid".to_string(), serde_json::Value::String( org_uuid ) );
+            }
           }
-          let _ = std::fs::write( live_path, serde_json::to_string( &live_val ).unwrap_or_default() );
         }
+        let live_path = paths.claude_json_file();
+        let mut live_val = std::fs::read_to_string( &live_path )
+          .ok()
+          .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+          .unwrap_or_else( || serde_json::json!( {} ) );
+        if let Some( obj ) = live_val.as_object_mut()
+        {
+          obj.insert( "oauthAccount".to_string(), oauth );
+        }
+        let _ = std::fs::write( live_path, serde_json::to_string( &live_val ).unwrap_or_default() );
       }
     }
-  }
 
-  // Fix(BUG-222): restore per-account model preference from {name}.settings.json into ~/.claude/settings.json.
-  // Root cause: switch_account() patched credentials and oauthAccount but left ~/.claude/settings.json
-  //   untouched; the prior account's model persisted after every switch (switching from sonnet to an
-  //   account with no preference still ran on sonnet).
-  // Pitfall: must handle both directions — if {name}.settings.json has a model, install it; if absent
-  //   (or no model field), REMOVE the model key from live settings.json so no stale model persists.
-  //   Best-effort: credentials switch already succeeded; a settings failure must never propagate.
-  {
-    let settings_path = credential_store.join( format!( "{name}.settings.json" ) );
-    let model = std::fs::read_to_string( &settings_path )
-      .ok()
-      .and_then( |s| parse_string_field( &s, "model" ) );
+    // Restore model preference into live ~/.claude/settings.json.
+    let model = parse_string_field( &meta_text, "model" );
     let live_settings_path = paths.settings_file();
     let mut live_settings = std::fs::read_to_string( &live_settings_path )
       .ok()
@@ -588,11 +524,9 @@ pub fn check_delete_preconditions( name : &str, credential_store : &Path ) -> Re
 
 /// Delete a named account from `credential_store`.
 ///
-/// Removes the credentials snapshot and, best-effort, the accompanying
-/// `.claude.json` and `.settings.json` snapshots created by `save()`, and
-/// the `_active` marker if it currently points at the deleted account.
-/// All best-effort removals use `let _ = ...` — accounts saved before snapshot
-/// support was introduced have no snapshot files, and missing files are silently skipped.
+/// Removes `{name}.credentials.json` and `{name}.json` (unified metadata),
+/// plus any legacy satellite files from the pre-consolidation layout.
+/// Clears the `_active` marker if it points at the deleted account.
 ///
 /// # Errors
 ///
@@ -600,22 +534,14 @@ pub fn check_delete_preconditions( name : &str, credential_store : &Path ) -> Re
 #[ inline ]
 pub fn delete( name : &str, credential_store : &Path ) -> Result< (), std::io::Error >
 {
-  // Fix(issue-snapshot-orphan):
-  // Root cause: save() creates 3 files but delete() only removed .credentials.json,
-  //   leaving .claude.json and .settings.json as orphans after every delete.
-  // Pitfall: snapshot removal must be best-effort (let _ = ...) — pre-snapshot accounts
-  //   have no snapshot files; a strict remove_file() would fail them.
   check_delete_preconditions( name, credential_store )?;
-  let target = credential_store.join( format!( "{name}.credentials.json" ) );
-  std::fs::remove_file( target )?;
+  std::fs::remove_file( credential_store.join( format!( "{name}.credentials.json" ) ) )?;
+  let _ = std::fs::remove_file( credential_store.join( format!( "{name}.json" ) ) );
+  // Clean up legacy satellite files from pre-consolidation layout.
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.claude.json" ) ) );
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.settings.json" ) ) );
   let _ = std::fs::remove_file( credential_store.join( format!( "{name}.roles.json" ) ) );
-  // Fix(issue-delete-active):
-  // Root cause: `PermissionDenied` guard blocked deleting the active account; `delete()`
-  //   never cleaned up `_active`, leaving a stale marker after any deletion.
-  // Pitfall: Never block on `_active` marker state — the live credential file is already
-  //   deployed; clean up the stale marker after deletion rather than refusing the operation.
+  let _ = std::fs::remove_file( credential_store.join( format!( "{name}.profile.json" ) ) );
   if read_active_marker( credential_store ).as_deref() == Some( name )
   {
     let _ = std::fs::remove_file( credential_store.join( active_marker_filename() ) );
@@ -732,7 +658,7 @@ pub fn refresh_account_token(
       return None;
     }
     if trace { eprintln!( "[trace] {label}  {name}  write credentials: OK" ); }
-    match save( name, credential_store, p, false, Some( new_creds.as_bytes() ) )
+    match save( name, credential_store, p, false, Some( new_creds.as_bytes() ), None, None )
     {
       Ok( () ) => { if trace { eprintln!( "[trace] {label}  {name}  save: OK" ); } }
       Err( e ) =>
@@ -859,7 +785,7 @@ pub fn other_machines_active( credential_store : &Path ) -> std::collections::Ha
 
 // ── Account renewal ───────────────────────────────────────────────────────────
 
-/// The operation to apply to `_renewal_at` in `{name}.claude.json`.
+/// The operation to apply to `_renewal_at` in `{name}.json`.
 #[ derive( Debug ) ]
 pub enum RenewalOperation
 {
@@ -869,9 +795,9 @@ pub enum RenewalOperation
   Clear,
 }
 
-/// Write or clear a billing renewal timestamp override in `{name}.claude.json`.
+/// Write or clear a billing renewal timestamp override in `{name}.json`.
 ///
-/// Reads the existing `{name}.claude.json` (or starts with `{}` if absent), applies `op`,
+/// Reads the existing `{name}.json` (or starts with `{}` if absent), applies `op`,
 /// and writes back. All other top-level keys (e.g. `oauthAccount`) are preserved.
 ///
 /// When `dry` is `true`, no file is written; returns a `[dry-run]` status line.
@@ -897,15 +823,15 @@ pub fn account_renewal(
     ) );
   }
 
-  let claude_path  = credential_store.join( format!( "{name}.claude.json" ) );
-  let existing_str = std::fs::read_to_string( &claude_path )
+  let meta_path    = credential_store.join( format!( "{name}.json" ) );
+  let existing_str = std::fs::read_to_string( &meta_path )
     .unwrap_or_else( |_| "{}".to_string() );
   let mut val = serde_json::from_str::< serde_json::Value >( &existing_str )
     .unwrap_or_else( |_| serde_json::json!( {} ) );
   let obj = val.as_object_mut()
     .ok_or_else( || std::io::Error::new(
       std::io::ErrorKind::InvalidData,
-      format!( "{name}.claude.json is not a JSON object" ),
+      format!( "{name}.json is not a JSON object" ),
     ) )?;
 
   let status_str = match op
@@ -929,7 +855,7 @@ pub fn account_renewal(
 
   let new_json = serde_json::to_string( &val )
     .map_err( |e| std::io::Error::new( std::io::ErrorKind::InvalidData, e.to_string() ) )?;
-  std::fs::write( &claude_path, new_json )?;
+  std::fs::write( &meta_path, new_json )?;
   Ok( format!( "{name}: {status_str}\n" ) )
 }
 

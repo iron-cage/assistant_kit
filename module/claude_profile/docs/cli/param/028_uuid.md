@@ -6,11 +6,11 @@
 **Commands:** `.credentials.status`, `.accounts`
 **Group:** [Field Presence](../param_group/002_field_presence.md)
 
-Show the stable user identifier (`taggedId`) from the `oauthAccount` object in `{name}.claude.json`.
+Show the stable user identifier (`taggedId`) from the `oauthAccount` object in `{name}.json`.
 
 ## Behaviour
 
-When `uuid::1`, appends an `ID:` line showing the account's `taggedId` value (e.g. `"user_01..."`) sourced from the `{name}.claude.json` snapshot. Shows `N/A` when the snapshot is absent or the field is missing.
+When `uuid::1`, appends an `ID:` line showing the account's `taggedId` value (e.g. `"user_01..."`) sourced from the `{name}.json` snapshot. Shows `N/A` when the snapshot is absent or the field is missing.
 
 `format::json` always includes `tagged_id` regardless of this param.
 

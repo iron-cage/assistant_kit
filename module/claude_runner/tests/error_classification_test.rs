@@ -10,6 +10,7 @@
 //! |------|----------|-----------------|
 //! | T09 | fake-claude exits 2, empty output | `"Error: rate limit (exit 2)"` |
 //! | T10 | fake-claude writes auth pattern to stdout, exits 1 | `"Error: auth error"` |
+//! | T11 | fake-claude writes quota pattern to stderr, exits 1 | `"Error: quota exhausted (exit 1)"` |
 //!
 //! # Root Cause (BUG-037)
 //!
@@ -123,5 +124,30 @@ fn auth_error_pattern_in_stdout_emits_labeled_message()
   assert!(
     !err.contains( "possible rate limit or quota exhaustion" ),
     "T10 (BUG-037): generic phrase must be absent; got:\n{err}"
+  );
+}
+
+// ── T11 ───────────────────────────────────────────────────────────────────────
+
+/// T11 (TSK-253): fake-claude writes quota exhaustion pattern to stderr, exits 1 →
+/// clr stderr contains `"Error: quota exhausted (exit 1)"`.
+///
+/// Verifies that `QuotaExhausted` is distinct from `RateLimit` at the CLR
+/// output layer — quota exhaustion emits "quota exhausted" not "rate limit".
+#[ test ]
+fn quota_exhausted_pattern_emits_labeled_message()
+{
+  let ( _dir, path_val ) = fake_claude_dir(
+    "echo \"You've hit your limit\" >&2; exit 1",
+  );
+  let out = run_clr( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let err = stderr_str( &out );
+  assert!(
+    err.contains( "Error: quota exhausted (exit 1)" ),
+    "T11 (TSK-253): stderr must contain 'Error: quota exhausted (exit 1)'; got:\n{err}"
+  );
+  assert!(
+    !err.contains( "rate limit" ),
+    "T11 (TSK-253): 'rate limit' must be absent for quota exhaustion; got:\n{err}"
   );
 }

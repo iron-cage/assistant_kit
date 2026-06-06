@@ -199,11 +199,11 @@ pub( crate ) struct AccountQuota
   pub( crate ) result                : Result< OauthUsageData, String >,
   /// Billing state from `GET /api/oauth/account`; `None` if the fetch failed.
   pub( crate ) account               : Option< claude_quota::OauthAccountData >,
-  /// Machine label from `{name}.profile.json`; empty when absent.
+  /// Machine label from `{name}.json`; empty when absent.
   pub( crate ) host                  : String,
-  /// User-defined role tag from `{name}.profile.json`; empty when absent.
+  /// User-defined role tag from `{name}.json`; empty when absent.
   pub( crate ) role                  : String,
-  /// Override billing renewal date from `{name}.claude.json`; `None` when not set.
+  /// Override billing renewal date from `{name}.json`; `None` when not set.
   pub( crate ) renewal_at            : Option< String >,
 }
 

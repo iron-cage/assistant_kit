@@ -198,7 +198,7 @@ fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
 
   // Fix(BUG-037): classify non-zero exit and emit labeled per-type diagnostic.
   // Root cause: prior code emitted a generic "possible rate limit" message for ALL silent
-  //   failures, hiding the actual failure mode (rate limit vs auth vs API error vs signal).
+  //   failures, hiding the actual failure mode (rate limit vs quota vs auth vs API error vs signal).
   // Pitfall: classify_error() scans stdout AND stderr — `claude --print` on rate-limit
   //   writes the reason only to its JSONL session file, so stderr is often empty; the
   //   stdout scan ensures auth/rate-limit patterns are still caught.
@@ -208,11 +208,12 @@ fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
     {
       let label = match kind
       {
-        ErrorKind::RateLimit => "rate limit",
-        ErrorKind::ApiError  => "API error",
-        ErrorKind::AuthError => "auth error",
-        ErrorKind::Signal    => "terminated by signal",
-        ErrorKind::Unknown   => "unknown error",
+        ErrorKind::RateLimit      => "rate limit",
+        ErrorKind::QuotaExhausted => "quota exhausted",
+        ErrorKind::ApiError       => "API error",
+        ErrorKind::AuthError      => "auth error",
+        ErrorKind::Signal         => "terminated by signal",
+        ErrorKind::Unknown        => "unknown error",
       };
       eprintln!( "Error: {label} (exit {})", output.exit_code );
     }

@@ -1,6 +1,6 @@
 # Parameter :: `capabilities::`
 
-Edge case tests for the `capabilities::` parameter. Tests validate boolean enforcement, default behavior, and product capabilities list control from `oauthAccount.capabilities`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.claude.json` snapshot).
+Edge case tests for the `capabilities::` parameter. Tests validate boolean enforcement, default behavior, and product capabilities list control from `oauthAccount.capabilities`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.json` snapshot).
 
 **Source:** [params.md#parameter--29-capabilities](../../../../docs/cli/param/029_capabilities.md)
 

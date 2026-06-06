@@ -4369,7 +4369,7 @@ fn it151_past_renewal_at_auto_advances_in_usage()
 
   // The file on disk must NOT have been modified — auto-advance is read-only.
   let store   = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let on_disk = std::fs::read_to_string( store.join( "past@renewal.com.claude.json" ) ).unwrap();
+  let on_disk = std::fs::read_to_string( store.join( "past@renewal.com.json" ) ).unwrap();
   assert!(
     on_disk.contains( "2020-03-15T00:00:00Z" ),
     "stored _renewal_at must NOT be modified by render-time auto-advance, got: {on_disk}",
@@ -5493,7 +5493,7 @@ fn it201_no_color_true_accepted()
 
 /// it202 — `cols::+host` adds Host column; account row shows value from profile.json.
 ///
-/// `write_account_profile_json` creates `{name}.profile.json` with `{"host":"mybox"}`.
+/// `write_account_profile_json` creates `{name}.json` with `{"host":"mybox"}`.
 /// The `host` field is loaded regardless of token status.
 ///
 /// Spec: [`tests/docs/cli/param/033_cols.md` EC-7]
@@ -5854,7 +5854,7 @@ fn it246_min_7d_only_valid_removes_err_account()
 /// it220 (029 FT-07): `cols::+host get::host` extracts the host value from
 /// profile.json as a bare string (no table headers, no footer).
 ///
-/// Host column data comes from `{name}.profile.json`, not from the live quota
+/// Host column data comes from `{name}.json`, not from the live quota
 /// API. The bare extraction works offline even when quota fetch fails.
 ///
 /// Spec: [`tests/docs/feature/029_account_host_metadata.md` FT-07]
@@ -6838,10 +6838,10 @@ fn it236_lim_it_no_color_1_footer_uses_ascii_arrow()
 
 // ── it237: clear:: live test (051 EC-4) ──────────────────────────────────────
 
-/// it237 `lim_it` (051 EC-4): after `clear::1`, `_renewal_at` is absent from `.claude.json`.
+/// it237 `lim_it` (051 EC-4): after `clear::1`, `_renewal_at` is absent from `.json`.
 ///
 /// With a live account that has an injected `_renewal_at` override, `clear::1`
-/// must remove it. After clearing, the `.claude.json` must not contain `_renewal_at`.
+/// must remove it. After clearing, the `.json` must not contain `_renewal_at`.
 ///
 /// Spec: [`tests/docs/cli/param/051_clear.md` EC-4]
 #[ test ]
@@ -6859,7 +6859,7 @@ fn it237_lim_it_clear_usage_shows_tilde_estimate()
 
   // Inject a far-future _renewal_at override.
   std::fs::write(
-    store.join( "acct-a@test.com.claude.json" ),
+    store.join( "acct-a@test.com.json" ),
     r#"{"_renewal_at":"2030-01-01T00:00:00Z"}"#,
   ).unwrap();
 
@@ -6871,10 +6871,10 @@ fn it237_lim_it_clear_usage_shows_tilde_estimate()
   assert_exit( &clear_out, 0 );
 
   // After clear, _renewal_at must be absent from the file.
-  let content = std::fs::read_to_string( store.join( "acct-a@test.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "acct-a@test.com.json" ) ).unwrap();
   assert!(
     !content.contains( "_renewal_at" ),
-    "clear::1 must remove _renewal_at from .claude.json (051 EC-4), got: {content}",
+    "clear::1 must remove _renewal_at from .json (051 EC-4), got: {content}",
   );
 
   // .usage must still succeed after clear.

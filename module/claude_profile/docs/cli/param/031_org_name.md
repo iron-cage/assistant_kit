@@ -6,13 +6,13 @@
 **Commands:** `.credentials.status`, `.accounts`
 **Group:** [Field Presence](../param_group/002_field_presence.md)
 
-Show the organization display name from `{name}.roles.json` (populated at `save()` time via endpoint 005).
+Show the organization display name from `{name}.json` (populated at `save()` time via endpoint 005).
 
 ## Behaviour
 
-When `org_name::1`, appends an `Org:` line showing the account's `organization_name` value (e.g. `"alice@example.com's Organization"`). Sources from `{name}.roles.json` in the credential store. Shows `N/A` when `{name}.roles.json` is absent or the field is missing.
+When `org_name::1`, appends an `Org:` line showing the account's `organization_name` value (e.g. `"alice@example.com's Organization"`). Sources from `{name}.json` in the credential store. Shows `N/A` when `{name}.json` is absent or the field is missing.
 
-For `.credentials.status`: reads from the active account's `{active_account}.roles.json`; `N/A` when no active account or no roles snapshot.
+For `.credentials.status`: reads from the active account's `{active_account}.json`; `N/A` when no active account or no roles snapshot.
 
 `format::json` always includes `organization_name` regardless of this param.
 

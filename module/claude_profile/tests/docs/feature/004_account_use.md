@@ -12,8 +12,8 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 | FT-04 | `dry::1` prints message; no files changed | AC-04 |
 | FT-05 | `credentials.status` shows new email after switch | AC-05 |
 | FT-06 | Path-unsafe characters in name → exit 1 | AC-06 |
-| FT-07 | `oauthAccount.emailAddress` enforced; org fields overridden from roles.json | AC-07 |
-| FT-08 | Model preference restored from snapshot; cleared when snapshot absent | AC-08 |
+| FT-07 | `oauthAccount.emailAddress` enforced; org fields overridden from `{name}.json` | AC-07 |
+| FT-08 | Model preference restored from `{name}.json`; cleared when absent | AC-08 |
 
 ### Test Case Index
 
@@ -25,8 +25,8 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 | FT-04 | Dry-run prints message without modifying any files | AC-04 | Dry Run |
 | FT-05 | `.credentials.status` shows new email after switch | AC-05 | Verification |
 | FT-06 | Empty name, slash in name, or path-unsafe chars → exit 1 | AC-06 | Validation |
-| FT-07 | `emailAddress` enforced as account name; org fields from roles.json | AC-07 | oauthAccount |
-| FT-08 | Model preference restored from settings snapshot; cleared when absent | AC-08 | Model Restore |
+| FT-07 | `emailAddress` enforced as account name; org fields from `{name}.json` | AC-07 | oauthAccount |
+| FT-08 | Model preference restored from `{name}.json`; cleared when absent | AC-08 | Model Restore |
 
 **Total:** 8 FT cases
 
@@ -107,23 +107,23 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 
 ---
 
-### FT-07: `emailAddress` enforced as account name; org fields from roles.json
+### FT-07: `emailAddress` enforced as account name; org fields from `{name}.json`
 
-- **Given:** Account `alice@acme.com` with `alice@acme.com.claude.json` snapshot containing `oauthAccount.emailAddress = "stale@oldco.com"` and `alice@acme.com.roles.json` containing `organizationName = "Acme"`, `organizationUuid = "org-123"`.
+- **Given:** Account `alice@acme.com` with `alice@acme.com.json` snapshot containing `oauthAccount.emailAddress = "stale@oldco.com"` and `organizationName = "Acme"`, `organizationUuid = "org-123"`.
 - **When:** `clp .account.use name::alice@acme.com`
-- **Then:** `~/.claude.json oauthAccount.emailAddress` is `"alice@acme.com"` — the account name wins over the stale snapshot value (BUG-217 fix). `~/.claude.json oauthAccount.organizationName` is `"Acme"` and `oauthAccount.organizationUuid` is `"org-123"` (BUG-219 fix — org fields from roles.json override snapshot). All other keys in `~/.claude.json` (e.g., `commands`, `mcpServers`, `projects`) are untouched.
+- **Then:** `~/.claude.json oauthAccount.emailAddress` is `"alice@acme.com"` — the account name wins over the stale snapshot value (BUG-217 fix). `~/.claude.json oauthAccount.organizationName` is `"Acme"` and `oauthAccount.organizationUuid` is `"org-123"` (BUG-219 fix — org fields from `{name}.json` override snapshot). All other keys in `~/.claude.json` (e.g., `commands`, `mcpServers`, `projects`) are untouched.
 - **Exit:** 0
 - **Source fn:** `mre_bug_217_switch_account_enforces_emailaddress`
 - **Source:** [004_account_use.md AC-07](../../../../docs/feature/004_account_use.md)
 
 ---
 
-### FT-08: Model preference restored from settings snapshot; cleared when absent
+### FT-08: Model preference restored from `{name}.json`; cleared when absent
 
-- **Given (restore):** Account `alice@acme.com` with `alice@acme.com.settings.json` containing `{"model": "claude-opus-4-6"}`. `~/.claude/settings.json` currently contains `{"model": "claude-sonnet-4-6"}`.
+- **Given (restore):** Account `alice@acme.com` with `alice@acme.com.json` containing `{"model": "claude-opus-4-6"}`. `~/.claude/settings.json` currently contains `{"model": "claude-sonnet-4-6"}`.
 - **When:** `clp .account.use name::alice@acme.com`
 - **Then:** `~/.claude/settings.json` `model` field is updated to `"claude-opus-4-6"`. All other keys in `~/.claude/settings.json` are preserved.
-- **Given (clear):** Account `bob@acme.com` with no `bob@acme.com.settings.json` snapshot. `~/.claude/settings.json` currently has `model` set from a prior account.
+- **Given (clear):** Account `bob@acme.com` with no `model` field in `bob@acme.com.json` snapshot. `~/.claude/settings.json` currently has `model` set from a prior account.
 - **When:** `clp .account.use name::bob@acme.com`
 - **Then:** `~/.claude/settings.json` `model` key is removed (preventing prior account's model from persisting). Other keys preserved.
 - **Note:** Coverage in `claude_profile_core` unit tests; no dedicated CLI integration test exists for this AC.

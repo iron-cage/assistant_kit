@@ -11,7 +11,7 @@
 
 `.credentials.status` reads `emailAddress` from `~/.claude.json` via `read_live_cred_meta()`. This feature extends that read to expose additional `oauthAccount` fields and the active model setting — both on `.credentials.status` (live data) and `.accounts` (per-account snapshots).
 
-**`.accounts` integration:** `account::save()` extracts the `oauthAccount` subtree from `~/.claude.json` into `{name}.claude.json`. `account::list()` reads that snapshot to populate the `oauthAccount`-derived fields (`display_name`, `role`, `billing`) per account. The `model` field for `.accounts` is read from `{credential_store}/{name}.settings.json` if present; returns `N/A` when that file is absent or lacks a `model` field. `save()` captures the current `model` from `~/.claude/settings.json` and writes it to `{credential_store}/{name}.settings.json`; `switch_account()` reads this snapshot to restore or clear the `model` field in `~/.claude/settings.json` on each account switch (BUG-222 fix — see Feature 002 step 7, Feature 004 step 6).
+**`.accounts` integration:** `account::save()` extracts the `oauthAccount` subtree from `~/.claude.json` into `{name}.json`. `account::list()` reads that snapshot to populate the `oauthAccount`-derived fields (`display_name`, `role`, `billing`) per account. The `model` field for `.accounts` is read from `{credential_store}/{name}.json` if present; returns `N/A` when that file is absent or lacks a `model` field. `save()` captures the current `model` from `~/.claude/settings.json` and writes it to `{credential_store}/{name}.json`; `switch_account()` reads this snapshot to restore or clear the `model` field in `~/.claude/settings.json` on each account switch (BUG-222 fix — see Feature 002 step 7, Feature 004 step 6).
 
 **New field-presence params (all opt-in, default `0`):**
 
@@ -64,9 +64,9 @@ This label is NOT a separate field param — it is the formatted output of the e
 - **AC-06**: `format::json` includes `display_name`, `role`, `billing`, `model` keys regardless of field-presence params.
 - **AC-07**: Absent `~/.claude.json` → all three oauthAccount fields show `N/A` without error.
 - **AC-08**: Absent `~/.claude/settings.json` → `model` shows `N/A` without error.
-- **AC-09**: `clp .accounts display_name::1` shows `Display:` line per account from saved `~/.claude.json` snapshot.
-- **AC-10**: `clp .accounts role::1 billing::1` shows corresponding lines per account; `model::1` shows the value from `{name}.settings.json` if present, or `N/A` if that file is absent or lacks a `model` field. `save()` writes `{name}.settings.json` with the current model preference (BUG-222 fix); `switch_account()` restores it on account switch.
-- **AC-11**: Accounts with no `.claude.json` snapshot on disk show `N/A` for `display_name`, `role`, `billing`; `model` shows `N/A` when `{name}.settings.json` is absent.
+- **AC-09**: `clp .accounts display_name::1` shows `Display:` line per account from saved `{name}.json` snapshot.
+- **AC-10**: `clp .accounts role::1 billing::1` shows corresponding lines per account; `model::1` shows the value from `{name}.json` if present, or `N/A` if that file is absent or lacks a `model` field. `save()` writes the current model preference to `{name}.json` (BUG-222 fix); `switch_account()` restores it on account switch.
+- **AC-11**: Accounts with no `{name}.json` snapshot on disk show `N/A` for `display_name`, `role`, `billing`, `model`.
 - **AC-12**: `clp .accounts format::json` includes `display_name`, `role`, `billing`, `model` keys per account object.
 
 ### Cross-References
@@ -83,6 +83,6 @@ This label is NOT a separate field param — it is the formatted output of the e
 | doc | [012_live_credentials_status.md](012_live_credentials_status.md) | Base `.credentials.status` command |
 | doc | [command/002_credentials.md](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI command specification |
 | doc | [cli/param/readme.md](../cli/param/readme.md) | New param entries (display_name::, role::, billing::, model::) |
-| bug | `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes `{name}.settings.json`; `switch_account()` restores/clears `model` in `~/.claude/settings.json` on each switch |
+| bug | `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json`; `switch_account()` restores/clears `model` in `~/.claude/settings.json` on each switch |
 | doc | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | Extends this feature: `uuid::`, `capabilities::` params |
 | doc | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Extends this feature: `org_uuid::`, `org_name::` params via endpoint 005 |

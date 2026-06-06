@@ -3,19 +3,19 @@
 //! ## Purpose
 //!
 //! Verify `account::save()` writes `_active` = `name` on every successful save,
-//! that `account::delete()` removes all three files created by `save()`:
-//! `{name}.credentials.json`, `{name}.claude.json`, and `{name}.settings.json`,
+//! that `account::delete()` removes the consolidated file created by `save()`:
+//! `{name}.json`,
 //! and that `account::switch_account()` correctly restores per-account model preference
-//! from `{name}.settings.json` into `~/.claude/settings.json` (BUG-222).
+//! from `{name}.json` into `~/.claude/settings.json` (BUG-222).
 //!
 //! ## Fix Documentation — issue-snapshot-orphan
 //!
-//! - **Root Cause:** `save()` creates 3 files but `delete()` only removed `.credentials.json`,
-//!   leaving `.claude.json` and `.settings.json` as orphans after every deletion.
+//! - **Root Cause:** `save()` creates multiple satellite files but `delete()` only removed
+//!   `.credentials.json`, leaving `.json` and other snapshot files as orphans after deletion.
 //! - **Why Not Caught:** No test verified that snapshot files are absent after `delete()`; the
 //!   orphan files accumulated silently over every `save` / `delete` call pair.
-//! - **Fix Applied:** After the mandatory `remove_file(credentials)`, two best-effort
-//!   `let _ = remove_file(...)` calls clean up `.claude.json` and `.settings.json`.
+//! - **Fix Applied:** After the mandatory `remove_file(credentials)`, best-effort
+//!   `let _ = remove_file(...)` calls clean up `{name}.json` and legacy satellite files.
 //! - **Prevention:** `ad_delete_also_removes_snapshots` asserts all 3 files absent post-delete.
 //! - **Pitfall:** Snapshot removal must be best-effort (`let _ = ...`) — accounts saved before
 //!   snapshot support was added have no snapshot files; a strict `remove_file` would fail them.
@@ -28,7 +28,7 @@
 //! - **Why Not Caught:** All `switch_account()` tests asserted on credentials and oauthAccount fields;
 //!   `settings.json` was not part of any assertion. The silent persistence of model was invisible.
 //! - **Fix Applied:** `save()` reads `~/.claude/settings.json`, extracts `model`, and write-merges
-//!   it into `{name}.settings.json` when present. `switch_account()` reads `{name}.settings.json`,
+//!   it into `{name}.json` when present. `switch_account()` reads `{name}.json`,
 //!   and either installs the saved model or removes the `model` key from live `settings.json`.
 //! - **Prevention:** Structural test confirms `settings_file()` call exists in `account.rs`; four
 //!   MRE tests cover both directions of save and switch for present and absent model.
@@ -43,11 +43,11 @@
 //! | `test_mre_bug211_save_false_leaves_marker_unchanged` | save() with update_marker=false → `_active` not written |
 //! | `ad_delete_also_removes_snapshots` | All 3 files exist → all 3 absent after delete |
 //! | `ad_delete_succeeds_when_snapshots_absent` | Only credentials → delete succeeds, no error |
-//! | `mre_bug_219_switch_account_stale_org_name` | switch_account() overrides org fields from roles.json |
+//! | `mre_bug_219_switch_account_stale_org_name` | switch_account() overrides org fields from {name}.json |
 //! | `bug_mre_bug222_switch_account_reads_settings_snapshot` | structural: `settings_file()` present in account.rs |
-//! | `mre_bug222_save_captures_model_to_settings_snapshot` | save() with model in settings.json → {name}.settings.json has model |
-//! | `mre_bug222_save_no_model_does_not_write_settings_snapshot` | save() with no model in settings.json → {name}.settings.json not created |
-//! | `mre_bug222_switch_account_restores_model_from_settings_snapshot` | switch_account() installs model from {name}.settings.json into live settings |
+//! | `mre_bug222_save_captures_model_to_settings_snapshot` | save() with model in settings.json → {name}.json has model |
+//! | `mre_bug222_save_no_model_does_not_write_settings_snapshot` | save() with no model in settings.json → {name}.json not created |
+//! | `mre_bug222_switch_account_restores_model_from_settings_snapshot` | switch_account() installs model from {name}.json into live settings |
 //! | `mre_bug222_switch_account_clears_model_when_no_snapshot` | switch_account() absent snapshot → removes model from live settings |
 //! | `test_ft11_025_other_machines_active_returns_others` | other_machines_active() returns foreign accounts; own marker excluded |
 //! | `test_ft12_025_other_machines_active_empty_when_only_own` | other_machines_active() returns empty when only own marker or empty store |
@@ -82,30 +82,25 @@ fn ad_delete_also_removes_snapshots()
   // Active account is different — allows deletion of old@archive.com
   write_active( store, "work@acme.com" );
   write_credentials_file( store, "old@archive.com" );
-  std::fs::write( store.join( "old@archive.com.claude.json" ),    r#"{"emailAddress":"old@archive.com"}"# ).unwrap();
-  std::fs::write( store.join( "old@archive.com.settings.json" ),  "{}" ).unwrap();
+  std::fs::write( store.join( "old@archive.com.json" ),    r#"{"emailAddress":"old@archive.com"}"# ).unwrap();
 
   let result = account::delete( "old@archive.com", store );
-  assert!( result.is_ok(), "delete must succeed when all 3 files exist: {result:?}" );
+  assert!( result.is_ok(), "delete must succeed when all 2 files exist: {result:?}" );
 
   assert!(
     !store.join( "old@archive.com.credentials.json" ).exists(),
     "credentials file must be absent after delete",
   );
   assert!(
-    !store.join( "old@archive.com.claude.json" ).exists(),
-    "claude.json snapshot must be absent after delete",
-  );
-  assert!(
-    !store.join( "old@archive.com.settings.json" ).exists(),
-    "settings.json snapshot must be absent after delete",
+    !store.join( "old@archive.com.json" ).exists(),
+    "metadata file must be absent after delete",
   );
 }
 
 #[ test ]
 fn ad_delete_succeeds_when_snapshots_absent()
 {
-  // Guard: accounts saved before snapshot support have no .claude.json / .settings.json;
+  // Guard: accounts saved before consolidation have no .json;
   // delete() must still succeed.
   let tmp   = TempDir::new().unwrap();
   let store = tmp.path();
@@ -169,7 +164,7 @@ fn test_mre_bug211_save_false_leaves_marker_unchanged()
 
   let paths = ClaudePaths::with_home( tmp.path() );
 
-  account::save( "alice@test.com", &store, &paths, false, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None ).unwrap();
 
   let marker = store.join( account::active_marker_filename() );
   assert!(
@@ -179,7 +174,7 @@ fn test_mre_bug211_save_false_leaves_marker_unchanged()
 }
 
 /// BUG-219 MRE: `switch_account()` must override `oauthAccount.organizationName`
-/// and `oauthAccount.organizationUuid` from `{name}.roles.json`, not from the stale snapshot.
+/// and `oauthAccount.organizationUuid` from `{name}.json`, not from the stale snapshot.
 ///
 /// # Root Cause
 /// The BUG-217 fix block (`account.rs` ~line 338) only inserts `emailAddress`. All other
@@ -195,7 +190,7 @@ fn test_mre_bug211_save_false_leaves_marker_unchanged()
 /// `~/.claude.json` `oauthAccount` — stale) were never exercised together.
 ///
 /// # Fix Applied
-/// After the BUG-217 `emailAddress` insert, read `{name}.roles.json` and override
+/// After the BUG-217 `emailAddress` insert, read `{name}.json` and override
 /// `organizationName` and `organizationUuid` using `parse_string_field`.
 ///
 /// # Prevention
@@ -233,16 +228,12 @@ fn mre_bug_219_switch_account_stale_org_name()
     r#"{"accessToken":"tok-i6","expiresAt":9999999999999,"subscriptionType":"pro"}"#,
   ).unwrap();
 
-  // i6's claude.json snapshot — STALE: contains i7's org (captured while i7 was active)
+  // i6's unified metadata snapshot — oauthAccount has stale org (captured while i7 was active),
+  // but top-level organization_* fields have the correct values from the live API.
+  // switch_account() must override oauthAccount org fields from the top-level fields.
   std::fs::write(
-    store.join( "i6@test.com.claude.json" ),
-    r#"{"oauthAccount":{"emailAddress":"i6@test.com","organizationName":"i7 Org","organizationUuid":"uuid-i7"}}"#,
-  ).unwrap();
-
-  // i6's roles.json — CORRECT: contains i6's actual org from live API
-  std::fs::write(
-    store.join( "i6@test.com.roles.json" ),
-    r#"{"organization_uuid":"uuid-i6","organization_name":"i6 Org","organization_role":"member"}"#,
+    store.join( "i6@test.com.json" ),
+    r#"{"oauthAccount":{"emailAddress":"i6@test.com","organizationName":"i7 Org","organizationUuid":"uuid-i7"},"organization_uuid":"uuid-i6","organization_name":"i6 Org","organization_role":"member"}"#,
   ).unwrap();
 
   let paths = ClaudePaths::with_home( tmp.path() );
@@ -293,7 +284,7 @@ fn as_save_writes_active_marker()
 
   let paths = ClaudePaths::with_home( tmp.path() );
 
-  account::save( "alice@acme.com", &store, &paths, true, None ).unwrap();
+  account::save( "alice@acme.com", &store, &paths, true, None, None, None ).unwrap();
 
   let marker_name = account::active_marker_filename();
   let active = std::fs::read_to_string( store.join( &marker_name ) )
@@ -308,7 +299,7 @@ fn as_save_writes_active_marker()
 // ── BUG-222 — per-account model preference capture and restore ─────────────────
 
 #[ test ]
-// Root Cause: switch_account() never read {name}.settings.json or touched
+// Root Cause: switch_account() never read {name}.json or touched
 //   ~/.claude/settings.json; the active model persisted from the prior account
 //   after every switch regardless of the target account's preference (BUG-222).
 // Why Not Caught: switch_account() tests asserted only on credentials and oauthAccount;
@@ -333,13 +324,13 @@ fn bug_mre_bug222_switch_account_reads_settings_snapshot()
 
 #[ test ]
 // Root Cause: save() wrote credentials and oauthAccount snapshots but never captured the
-//   model preference from ~/.claude/settings.json, so no {name}.settings.json was created
+//   model preference from ~/.claude/settings.json, so no {name}.json was created
 //   with model data; switch_account() had nothing to restore (BUG-222).
-// Why Not Caught: no test exercised the {name}.settings.json write path in save();
+// Why Not Caught: no test exercised the {name}.json write path in save();
 //   the file appeared only in delete() as a best-effort orphan removal target.
 // Fix Applied: save() reads ~/.claude/settings.json, extracts "model" via parse_string_field,
-//   and write-merges it into {name}.settings.json when present.
-// Prevention: asserts {name}.settings.json is created and contains the correct model value
+//   and write-merges it into {name}.json when present.
+// Prevention: asserts {name}.json is created and contains the correct model value
 //   after save() when ~/.claude/settings.json has a model key.
 // Pitfall: save() is best-effort on settings capture — a failing settings write does NOT
 //   cause save() to return Err; only the credentials write is mandatory.
@@ -355,23 +346,23 @@ fn mre_bug222_save_captures_model_to_settings_snapshot()
   std::fs::write( dot_claude.join( "settings.json" ), r#"{"model":"claude-opus-4-5","theme":"dark"}"# ).unwrap();
 
   let paths = ClaudePaths::with_home( tmp.path() );
-  account::save( "alice@test.com", &store, &paths, false, None ).unwrap();
+  account::save( "alice@test.com", &store, &paths, false, None, None, None ).unwrap();
 
-  let snap_path = store.join( "alice@test.com.settings.json" );
-  assert!( snap_path.exists(), "save() must create {{name}}.settings.json when model is present in live settings" );
+  let snap_path = store.join( "alice@test.com.json" );
+  assert!( snap_path.exists(), "save() must create {{name}}.json when model is present in live settings" );
   let snap = std::fs::read_to_string( &snap_path )
-    .expect( "{{name}}.settings.json must be readable after save()" );
+    .expect( "{{name}}.json must be readable after save()" );
   let model = account::parse_string_field( &snap, "model" )
-    .expect( "{{name}}.settings.json must contain 'model' after save() with model in live settings" );
+    .expect( "{{name}}.json must contain 'model' after save() with model in live settings" );
   assert_eq!( model, "claude-opus-4-5", "captured model must equal the value in ~/.claude/settings.json" );
 }
 
 #[ test ]
 // Root Cause: (same — save() did not read settings.json at all before BUG-222 fix)
 // Why Not Caught: (same — no test exercised any save()/settings.json interaction)
-// Fix Applied: save() skips {name}.settings.json creation when model is absent from
+// Fix Applied: save() skips {name}.json creation when model is absent from
 //   ~/.claude/settings.json — avoids orphan files for accounts with no model preference.
-// Prevention: asserts {name}.settings.json is NOT created when model key absent.
+// Prevention: asserts {name}.json is NOT created when model key absent.
 // Pitfall: the skip applies when the model key is absent; other keys in settings.json
 //   are not captured — only model is a per-account preference (BUG-222 scope).
 fn mre_bug222_save_no_model_does_not_write_settings_snapshot()
@@ -386,12 +377,12 @@ fn mre_bug222_save_no_model_does_not_write_settings_snapshot()
   std::fs::write( dot_claude.join( "settings.json" ), r#"{"theme":"dark"}"# ).unwrap();
 
   let paths = ClaudePaths::with_home( tmp.path() );
-  account::save( "bob@test.com", &store, &paths, false, None ).unwrap();
+  account::save( "bob@test.com", &store, &paths, false, None, None, None ).unwrap();
 
-  let snap_path = store.join( "bob@test.com.settings.json" );
+  let snap_path = store.join( "bob@test.com.json" );
   assert!(
     !snap_path.exists(),
-    "save() must NOT create {{name}}.settings.json when model is absent from ~/.claude/settings.json",
+    "save() must NOT create {{name}}.json when model is absent from ~/.claude/settings.json",
   );
 }
 
@@ -401,7 +392,7 @@ fn mre_bug222_save_no_model_does_not_write_settings_snapshot()
 //   switch — switching from sonnet to an account saved with haiku still ran on sonnet (BUG-222).
 // Why Not Caught: switch_account() tests validated credentials and oauthAccount; settings.json
 //   was never asserted on, so the stale model was invisible.
-// Fix Applied: switch_account() reads {name}.settings.json, extracts model, and installs it
+// Fix Applied: switch_account() reads {name}.json, extracts model, and installs it
 //   into ~/.claude/settings.json; if model is absent it removes the key (see next test).
 // Prevention: asserts the target account's saved model appears in live settings.json after
 //   switch; any regression removing the restore step fails this assertion.
@@ -420,7 +411,7 @@ fn mre_bug222_switch_account_restores_model_from_settings_snapshot()
     r#"{"accessToken":"tok-max","expiresAt":9999999999999,"subscriptionType":"max"}"#,
   ).unwrap();
   std::fs::write(
-    store.join( "max@test.com.settings.json" ),
+    store.join( "max@test.com.json" ),
     r#"{"model":"claude-haiku-4-5"}"#,
   ).unwrap();
   std::fs::write( dot_claude.join( "settings.json" ), r#"{"model":"claude-sonnet-4-6","theme":"dark"}"# ).unwrap();
@@ -441,11 +432,11 @@ fn mre_bug222_switch_account_restores_model_from_settings_snapshot()
 #[ test ]
 // Root Cause: (same — switch_account() left settings.json untouched entirely before BUG-222 fix)
 // Why Not Caught: (same — no tests asserted on settings.json after switch)
-// Fix Applied: when {name}.settings.json is absent or has no model, switch_account() removes
+// Fix Applied: when {name}.json is absent or has no model, switch_account() removes
 //   the "model" key from live settings.json so no stale model persists.
 // Prevention: asserts model key is ABSENT from live settings.json after switching to an account
 //   with no settings snapshot; any regression re-introducing stale persistence fails this.
-// Pitfall: absent {name}.settings.json is not an error; clearing is the correct behaviour when
+// Pitfall: absent {name}.json is not an error; clearing is the correct behaviour when
 //   the target account was never saved with a model preference.
 fn mre_bug222_switch_account_clears_model_when_no_snapshot()
 {
@@ -459,7 +450,7 @@ fn mre_bug222_switch_account_clears_model_when_no_snapshot()
     store.join( "free@test.com.credentials.json" ),
     r#"{"accessToken":"tok-free","expiresAt":9999999999999,"subscriptionType":"free"}"#,
   ).unwrap();
-  // No {name}.settings.json for this account.
+  // No {name}.json for this account.
   std::fs::write( dot_claude.join( "settings.json" ), r#"{"model":"claude-opus-4-6","theme":"light"}"# ).unwrap();
 
   let paths = ClaudePaths::with_home( tmp.path() );

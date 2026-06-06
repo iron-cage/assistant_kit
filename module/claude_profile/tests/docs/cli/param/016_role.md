@@ -1,6 +1,6 @@
 # Parameter :: `role::`
 
-Edge case tests for the `role::` parameter. Tests validate boolean enforcement, default behavior, and organization role field control from `oauthAccount`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.claude.json` snapshot).
+Edge case tests for the `role::` parameter. Tests validate boolean enforcement, default behavior, and organization role field control from `oauthAccount`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.json` snapshot).
 
 **Source:** [params.md#parameter--16-role](../../../../docs/cli/param/015_role.md)
 

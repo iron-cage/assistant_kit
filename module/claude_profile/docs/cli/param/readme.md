@@ -54,8 +54,8 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [048_host.md](048_host.md) | `host::` — host/machine label captured at account save time |
 | [049_at.md](049_at.md) | `at::` — absolute ISO-8601 UTC renewal timestamp for `.account.renewal` |
 | [050_from_now.md](050_from_now.md) | `from_now::` — signed duration delta from now for `.account.renewal` |
-| [051_clear.md](051_clear.md) | `clear::` — remove billing renewal override from `{name}.claude.json` |
-| [052_role.md](052_role.md) | `role::` (metadata label) — free-text role label written to `{name}.profile.json` at account save |
+| [051_clear.md](051_clear.md) | `clear::` — remove billing renewal override from `{name}.json` |
+| [052_role.md](052_role.md) | `role::` (metadata label) — free-text role label written to `{name}.json` at account save |
 | [053_for.md](053_for.md) | `for::` — `USER@MACHINE` target identity for `.account.assign` |
 
 **Total:** 53 parameters

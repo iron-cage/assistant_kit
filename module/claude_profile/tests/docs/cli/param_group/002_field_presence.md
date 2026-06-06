@@ -159,7 +159,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 
 ### EC-12: Opt-in fields on `.accounts` with saved snapshots
 
-- **Given:** `work@acme.com` in credential store with saved `.claude.json` (displayName, organizationRole, billingType) and `.settings.json` (model).
+- **Given:** `work@acme.com` in credential store with saved `{name}.json` containing displayName, organizationRole, billingType, and model.
 - **When:** `clp .accounts display_name::1 role::1 billing::1 model::1`
 - **Then:** Account block contains `Display:`, `Role:`, `Billing:`, `Model:` lines with values from saved snapshots.; all 4 opt-in metadata fields render from per-account snapshots
 - **Exit:** 0
@@ -169,7 +169,7 @@ Both `.accounts` and `.credentials.status` are Full Implementors for their own f
 
 ### EC-13: Shared opt-in params consistent across both commands
 
-- **Given:** Active credentials with live `~/.claude.json` and saved per-account `.claude.json` snapshot for same account.
+- **Given:** Active credentials with live `~/.claude.json` and saved per-account `{name}.json` snapshot for same account.
 - **When:**
   1. `clp .credentials.status display_name::1 role::1`
   2. `clp .accounts display_name::1 role::1`

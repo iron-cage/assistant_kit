@@ -1,6 +1,6 @@
 # Parameter :: 50. `from_now::`
 
-Sets the billing renewal override timestamp to a computed offset from the current time. Computes `now ± delta` at execution time and stores the result as ISO-8601 UTC in `_renewal_at` in `{name}.claude.json`.
+Sets the billing renewal override timestamp to a computed offset from the current time. Computes `now ± delta` at execution time and stores the result as ISO-8601 UTC in `_renewal_at` in `{name}.json`.
 
 - **Type:** `string` — signed duration delta (e.g., `+3h30m`, `-30m`, `+1d`, `+0m`)
 - **Default:** *(omit; required when neither `at::` nor `clear::1` is provided)*

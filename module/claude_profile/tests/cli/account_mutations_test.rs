@@ -78,26 +78,26 @@
 //! | ad09 | `ad09_double_delete_exits_2` | delete twice → second exit 2 | N |
 //! | ad10 | `ad10_delete_dry_run_active_exits_0` | dry delete active → exit 0, file kept | P |
 //! | ad11 | `ad11_delete_dry_run_nonexistent_exits_2` | dry delete nonexistent → exit 2 | N |
-//! | ad12 | `ad12_delete_removes_snapshot_files` | delete removes .claude.json + .settings.json snapshots | P |
+//! | ad12 | `ad12_delete_removes_snapshot_files` | delete removes `{name}.json` snapshot | P |
 //! | ad13 | `ad13_delete_positional_bare_arg` | positional email `old@archive.com` → deletes account | P |
 //! | ad14 | `ad14_delete_prefix_resolves` | prefix `old` resolves to `old@archive.com`, deletes | P |
-//! | ad15 | `ad15_delete_removes_roles_json` | delete removes .roles.json snapshot | P |
-//! | as19 | `as19_save_best_effort_no_roles_json` | save with no valid token → exit 0; no roles.json | P |
-//! | as20 | `as20_lim_it_save_writes_roles_json` | save with valid token → roles.json created (`lim_it`) | P |
-//! | as21 | `as21_lim_it_resave_overwrites_roles_json` | second save overwrites roles.json (`lim_it`) | P |
-//! | as23 | `as_save_writes_profile_json` | `host::testbox role::dev` → `{name}.profile.json` created with JSON | P |
-//! | as24 | `as24_host_auto_capture_user_hostname` | no `host::` → profile.json has `"host":"$USER@$HOSTNAME"` | P |
+//! | ad15 | `ad15_delete_removes_roles_json` | delete removes `{name}.json` snapshot (roles data) | P |
+//! | as19 | `as19_save_best_effort_no_roles_json` | save with no valid token → exit 0; no `{name}.json` | P |
+//! | as20 | `as20_lim_it_save_writes_roles_json` | save with valid token → `{name}.json` created (`lim_it`) | P |
+//! | as21 | `as21_lim_it_resave_overwrites_roles_json` | second save overwrites `{name}.json` (`lim_it`) | P |
+//! | as23 | `as_save_writes_profile_json` | `host::testbox role::dev` → `{name}.json` created with JSON | P |
+//! | as24 | `as24_host_auto_capture_user_hostname` | no `host::` → `{name}.json` has `"host":"$USER@$HOSTNAME"` | P |
 //! | as25 | `as25_host_empty_triggers_auto_capture` | `host::` (empty) → same as omit, auto-captured | P |
 //! | as26 | `as26_host_resave_overwrites` | resave with `host::newbox` replaces `host::oldbox` | P |
-//! | as27 | `as27_host_with_spaces` | `host::my work laptop` stored verbatim in profile.json | P |
+//! | as27 | `as27_host_with_spaces` | `host::my work laptop` stored verbatim in `{name}.json` | P |
 //! | as28 | `as28_host_missing_user_stores_at_resolved_hostname` | USER unset, HOSTNAME unset → `"host":"@<resolved>"` (AC-03) | P |
 //! | `mre_bug239` | `mre_bug239_hostname_resolved_when_env_absent` | HOSTNAME absent, USER=alice → host `"alice@<resolved>"` not `"alice@"` (BUG-239) | P |
 //! | as29 | `as29_resave_credentials_unchanged` | resave with `host::newbox` does not modify credentials.json | P |
-//! | as30 | `as30_role_writes_profile_json` | explicit `role::work` → profile.json has `"role":"work"` | P |
-//! | as31 | `as31_role_omit_stores_empty` | no `role::` param → profile.json has `"role":""` | P |
-//! | as32 | `as32_role_empty_stores_empty` | `role::` (empty) → profile.json has `"role":""` | P |
+//! | as30 | `as30_role_writes_profile_json` | explicit `role::work` → `{name}.json` has `"role":"work"` | P |
+//! | as31 | `as31_role_omit_stores_empty` | no `role::` param → `{name}.json` has `"role":""` | P |
+//! | as32 | `as32_role_empty_stores_empty` | `role::` (empty) → `{name}.json` has `"role":""` | P |
 //! | as33 | `as33_role_resave_overwrites` | resave with `role::dev` replaces `role::personal` | P |
-//! | as34 | `as34_role_with_spaces` | `role::dev ops team` stored verbatim in profile.json | P |
+//! | as34 | `as34_role_with_spaces` | `role::dev ops team` stored verbatim in `{name}.json` | P |
 //!
 //! ### AR — Account Relogin
 //!
@@ -131,7 +131,7 @@
 //! | arn13 | `ft13_account_renewal_partial_comma_list` | unknown in comma-list reported; others processed | N |
 //! | arn14 | `ft14_account_renewal_past_at_accepted` | past `at::` written verbatim; not auto-advanced at write | P |
 //! | arn15 | `ft15_account_renewal_unknown_param_exits_1` | unknown param rejected → exit 1 | N |
-//! | arn16 | `ft16_account_renewal_creates_new_claude_json` | no prior `.claude.json` → file created | P |
+//! | arn16 | `ft16_account_renewal_creates_new_claude_json` | no prior `{name}.json` → file created | P |
 //! | arn17 | `arn17_from_now_invalid_format_exits_1` | `from_now::invalid` (no +/-) → exit 1 with parse error | N |
 //! | arn18 | `arn18_from_now_unsupported_unit_exits_1` | `from_now::+1s` (unit 's') → exit 1 with parse error | N |
 //! | arn19 | `arn19_clear_no_prior_renewal_at_exits_0` | `clear::1` when no `_renewal_at` → exit 0, no error | P |
@@ -694,7 +694,7 @@ fn ad11_delete_dry_run_nonexistent_exits_2()
 #[ test ]
 fn ad12_delete_removes_snapshot_files()
 {
-  // IT-11: delete removes all 3 files — credentials, .claude.json, and .settings.json snapshots.
+  // IT-11: delete removes credentials and {name}.json snapshot.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "work@acme.com",  "pro", "standard", FAR_FUTURE_MS, true );
@@ -707,8 +707,7 @@ fn ad12_delete_removes_snapshot_files()
 
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   assert!( !store.join( "old@archive.com.credentials.json" ).exists(), "credentials must be removed after delete" );
-  assert!( !store.join( "old@archive.com.claude.json" ).exists(),      "claude.json snapshot must be removed after delete" );
-  assert!( !store.join( "old@archive.com.settings.json" ).exists(),    "settings.json snapshot must be removed after delete" );
+  assert!( !store.join( "old@archive.com.json" ).exists(),      "{{name}}.json snapshot must be removed after delete" );
 }
 
 // ── as16 ──────────────────────────────────────────────────────────────────────
@@ -757,7 +756,7 @@ fn as16_save_writes_active_marker()
 /// ## Fix Documentation — issue-122
 ///
 /// - **Root Cause:** `switch_account()` restored only `.credentials.json`; the
-///   companion `~/.claude.json` restore (from `{name}.claude.json` snapshot) was
+///   companion `~/.claude.json` restore (from `{name}.json` snapshot) was
 ///   never added, leaving the active JSON pointing at the previous account's data.
 /// - **Why Not Caught:** Prior tests never called `.credentials.status` after
 ///   `.account.use` in a two-account setup, so the email mismatch was invisible.
@@ -1193,7 +1192,7 @@ fn ar09_relogin_invalid_chars_exits_1()
 #[ test ]
 fn ad15_delete_removes_roles_json()
 {
-  // AC-04: delete removes {name}.roles.json alongside credentials and other snapshots.
+  // AC-04: delete removes {name}.json alongside credentials.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_account( dir.path(), "work@acme.com",   "pro", "standard", FAR_FUTURE_MS, true  );
@@ -1205,7 +1204,7 @@ fn ad15_delete_removes_roles_json()
 
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   assert!( !store.join( "old@archive.com.credentials.json" ).exists(), "credentials must be removed" );
-  assert!( !store.join( "old@archive.com.roles.json" ).exists(),       "roles.json snapshot must be removed after delete" );
+  assert!( !store.join( "old@archive.com.json" ).exists(),       "{{name}}.json snapshot must be removed after delete" );
 }
 
 // ── as19 ──────────────────────────────────────────────────────────────────────
@@ -1213,8 +1212,8 @@ fn ad15_delete_removes_roles_json()
 #[ test ]
 fn as19_save_best_effort_no_roles_json()
 {
-  // AC-02: save with no valid accessToken in credentials → exit 0; roles.json not created.
-  // The roles.json fetch is best-effort: network failure or absent token is silently skipped.
+  // AC-02: save with no valid accessToken in credentials → exit 0; roles data absent from
+  // {{name}}.json.  The unified file must not contain org identity fields.
   let dir  = TempDir::new().unwrap();
   let home = dir.path().to_str().unwrap();
   write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
@@ -1224,7 +1223,12 @@ fn as19_save_best_effort_no_roles_json()
   assert_exit( &out, 0 );
 
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  assert!( !store.join( "user@example.com.roles.json" ).exists(), "roles.json must not be created when no accessToken" );
+  let meta = std::fs::read_to_string( store.join( "user@example.com.json" ) )
+    .unwrap_or_default();
+  assert!(
+    !meta.contains( "organization_uuid" ),
+    "{{name}}.json must not contain org identity when no accessToken, got: {meta}",
+  );
 }
 
 // ── as20 (lim_it) ─────────────────────────────────────────────────────────────
@@ -1233,7 +1237,7 @@ fn as19_save_best_effort_no_roles_json()
 fn as20_lim_it_save_writes_roles_json()
 {
   // AC-01 (FT-01): .account.save with a valid accessToken calls fetch_claude_cli_roles and
-  // writes {name}.roles.json to the credential store. Requires live Anthropic credentials.
+  // writes {name}.json to the credential store. Requires live Anthropic credentials.
   let Some( token ) = live_active_token() else
   {
     eprintln!( "as20: no live token — skipping" );
@@ -1254,11 +1258,11 @@ fn as20_lim_it_save_writes_roles_json()
   assert_exit( &out, 0 );
 
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let roles_path = store.join( "user@example.com.roles.json" );
-  assert!( roles_path.exists(), "roles.json must be created after save with valid token" );
+  let roles_path = store.join( "user@example.com.json" );
+  assert!( roles_path.exists(), "{{name}}.json must be created after save with valid token" );
   let content = std::fs::read_to_string( &roles_path ).unwrap();
-  assert!( content.contains( "\"organization_uuid\"" ), "roles.json must contain organization_uuid, got:\n{content}" );
-  assert!( content.contains( "\"organization_name\"" ), "roles.json must contain organization_name, got:\n{content}" );
+  assert!( content.contains( "\"organization_uuid\"" ), "{{name}}.json must contain organization_uuid, got:\n{content}" );
+  assert!( content.contains( "\"organization_name\"" ), "{{name}}.json must contain organization_name, got:\n{content}" );
 }
 
 // ── as21 (lim_it) ─────────────────────────────────────────────────────────────
@@ -1266,8 +1270,8 @@ fn as20_lim_it_save_writes_roles_json()
 #[ test ]
 fn as21_lim_it_resave_overwrites_roles_json()
 {
-  // AC-03 (FT-03): Second .account.save overwrites existing roles.json with fresh data.
-  // Idempotency: stale roles.json is replaced by new API response. Requires live credentials.
+  // AC-03 (FT-03): Second .account.save overwrites existing {name}.json with fresh data.
+  // Idempotency: stale snapshot is replaced by new API response. Requires live credentials.
   let Some( token ) = live_active_token() else
   {
     eprintln!( "as21: no live token — skipping" );
@@ -1282,10 +1286,10 @@ fn as21_lim_it_resave_overwrites_roles_json()
     .join( ".persistent" ).join( "claude" ).join( "credential" )
     .join( "user@example.com.credentials.json" );
   std::fs::copy( &cred_src, claude_dir.join( ".credentials.json" ) ).unwrap();
-  // Pre-seed stale roles.json with a sentinel value.
+  // Pre-seed stale {name}.json with a sentinel value.
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::write(
-    store.join( "user@example.com.roles.json" ),
+    store.join( "user@example.com.json" ),
     r#"{"organization_uuid":"stale-sentinel","organization_name":"Stale","organization_role":"none","workspace_uuid":null,"workspace_name":null}"#,
   ).unwrap();
 
@@ -1293,12 +1297,12 @@ fn as21_lim_it_resave_overwrites_roles_json()
   let out = run_cs_with_env( &[ ".account.save", "name::user@example.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 0 );
 
-  let roles_path = store.join( "user@example.com.roles.json" );
-  assert!( roles_path.exists(), "roles.json must still exist after re-save" );
+  let roles_path = store.join( "user@example.com.json" );
+  assert!( roles_path.exists(), "{{name}}.json must still exist after re-save" );
   let content = std::fs::read_to_string( &roles_path ).unwrap();
   assert!(
     !content.contains( "stale-sentinel" ),
-    "re-save must overwrite stale roles.json; sentinel must be gone, got:\n{content}",
+    "re-save must overwrite stale {{name}}.json; sentinel must be gone, got:\n{content}",
   );
 }
 
@@ -2210,7 +2214,7 @@ fn aw35_help_shows_positional_example()
 /// # Root Cause
 ///
 /// `switch_account()` called `obj.insert("oauthAccount", oauth)` where `oauth` was cloned
-/// verbatim from `{name}.claude.json`. When `emailAddress` in the snapshot was stale (from
+/// verbatim from `{name}.json`. When `emailAddress` in the snapshot was stale (from
 /// a prior corruption cycle), the wrong email propagated to `~/.claude.json`, causing
 /// `account_save_routine()` to infer the wrong account name on subsequent saves.
 ///
@@ -2218,7 +2222,7 @@ fn aw35_help_shows_positional_example()
 ///
 /// `switch_restores_claude_json` saves via `.account.save` so snapshots are always
 /// correct — it never exercised a pre-existing stale snapshot. No test seeded
-/// `{name}.claude.json` with a wrong `emailAddress` before switching.
+/// `{name}.json` with a wrong `emailAddress` before switching.
 ///
 /// # Fix Applied
 ///
@@ -2253,7 +2257,7 @@ fn mre_bug_217_switch_account_enforces_emailaddress()
   // BUG-217: switch_account() reads this and installs it verbatim into ~/.claude.json.
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
   std::fs::write(
-    store.join( "i7@wbox.pro.claude.json" ),
+    store.join( "i7@wbox.pro.json" ),
     r#"{"oauthAccount":{"emailAddress":"i1@wbox.pro","id":"uuid-placeholder"}}"#,
   ).unwrap();
 
@@ -2303,7 +2307,7 @@ fn ft01_account_renewal_at_writes_renewal_at()
 
   write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
   std::fs::write(
-    store.join( "test@example.com.claude.json" ),
+    store.join( "test@example.com.json" ),
     r#"{"oauthAccount":{"emailAddress":"test@example.com","subscriptionType":"max"}}"#,
   ).unwrap();
 
@@ -2313,7 +2317,7 @@ fn ft01_account_renewal_at_writes_renewal_at()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
     "must write exact _renewal_at value, got: {content}",
@@ -2340,7 +2344,7 @@ fn ft02_account_renewal_from_now_positive()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""_renewal_at":"202"# ),
     "must write ISO-8601 timestamp starting with 202x in _renewal_at, got: {content}",
@@ -2368,7 +2372,7 @@ fn ft03_account_renewal_from_now_negative()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   // from_now::-30m on 2026-05-29 still gives a 2026 timestamp
   assert!(
     content.contains( r#""_renewal_at":"202"# ),
@@ -2391,7 +2395,7 @@ fn ft04_account_renewal_clear_removes_key()
 
   write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
   std::fs::write(
-    store.join( "test@example.com.claude.json" ),
+    store.join( "test@example.com.json" ),
     r#"{"oauthAccount":{"emailAddress":"test@example.com"},"_renewal_at":"2026-06-29T21:00:00Z"}"#,
   ).unwrap();
 
@@ -2401,7 +2405,7 @@ fn ft04_account_renewal_clear_removes_key()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     !content.contains( "_renewal_at" ),
     "clear::1 must remove _renewal_at from file, got: {content}",
@@ -2429,8 +2433,8 @@ fn ft05_account_renewal_name_all_updates_all()
   );
   assert_exit( &out, 0 );
 
-  let alice = std::fs::read_to_string( store.join( "alice@a.com.claude.json" ) ).unwrap();
-  let bob   = std::fs::read_to_string( store.join( "bob@a.com.claude.json" ) ).unwrap();
+  let alice = std::fs::read_to_string( store.join( "alice@a.com.json" ) ).unwrap();
+  let bob   = std::fs::read_to_string( store.join( "bob@a.com.json" ) ).unwrap();
   assert!(
     alice.contains( r#""_renewal_at":"202"# ),
     "alice must have _renewal_at after name::all, got: {alice}",
@@ -2463,8 +2467,8 @@ fn ft06_account_renewal_dry_no_write()
     "dry::1 must print [dry-run] prefix in stdout, got: {text}",
   );
   assert!(
-    !store.join( "test@example.com.claude.json" ).exists(),
-    "dry::1 must not create .claude.json",
+    !store.join( "test@example.com.json" ).exists(),
+    "dry::1 must not create {{name}}.json",
   );
 }
 
@@ -2607,8 +2611,8 @@ fn ft12_account_renewal_comma_list_updates_both()
   );
   assert_exit( &out, 0 );
 
-  let alice = std::fs::read_to_string( store.join( "alice@a.com.claude.json" ) ).unwrap();
-  let bob   = std::fs::read_to_string( store.join( "bob@a.com.claude.json" ) ).unwrap();
+  let alice = std::fs::read_to_string( store.join( "alice@a.com.json" ) ).unwrap();
+  let bob   = std::fs::read_to_string( store.join( "bob@a.com.json" ) ).unwrap();
   assert!(
     alice.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
     "alice must have exact _renewal_at after comma-list, got: {alice}",
@@ -2644,7 +2648,7 @@ fn ft13_account_renewal_partial_comma_list()
   );
 
   // alice must still be processed despite the partial failure
-  let alice = std::fs::read_to_string( store.join( "alice@a.com.claude.json" ) ).unwrap();
+  let alice = std::fs::read_to_string( store.join( "alice@a.com.json" ) ).unwrap();
   assert!(
     alice.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
     "alice must have _renewal_at even in partial failure, got: {alice}",
@@ -2667,7 +2671,7 @@ fn ft14_account_renewal_past_at_accepted()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""_renewal_at":"2020-01-01T00:00:00Z""# ),
     "past at:: must be stored verbatim without auto-advance at write time, got: {content}",
@@ -2701,16 +2705,16 @@ fn ft15_account_renewal_unknown_param_exits_1()
 #[ test ]
 fn ft16_account_renewal_creates_new_claude_json()
 {
-  // AC-05 edge: no pre-existing `.claude.json` → `at::` creates the file.
+  // AC-05 edge: no pre-existing `{name}.json` → `at::` creates the file.
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
 
   write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
-  // Pre-condition: claude.json must not exist before command
+  // Pre-condition: {name}.json must not exist before command
   assert!(
-    !store.join( "test@example.com.claude.json" ).exists(),
-    "pre-condition: .claude.json must not exist before command",
+    !store.join( "test@example.com.json" ).exists(),
+    "pre-condition: {{name}}.json must not exist before command",
   );
 
   let out = run_cs_with_env(
@@ -2719,10 +2723,10 @@ fn ft16_account_renewal_creates_new_claude_json()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
-    "must create .claude.json with _renewal_at when file did not exist before, got: {content}",
+    "must create {{name}}.json with _renewal_at when file did not exist before, got: {content}",
   );
 }
 
@@ -2744,7 +2748,7 @@ fn ft17_account_renewal_single_prefix_resolves()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "alice@acme.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""_renewal_at":"2026-07-01T00:00:00Z""# ),
     "single prefix must resolve to full email and write _renewal_at, got: {content}",
@@ -2770,8 +2774,8 @@ fn ft18_account_renewal_comma_list_prefix_tokens()
   );
   assert_exit( &out, 0 );
 
-  let alice = std::fs::read_to_string( store.join( "alice@acme.com.claude.json" ) ).unwrap();
-  let bob   = std::fs::read_to_string( store.join( "bob@acme.com.claude.json" ) ).unwrap();
+  let alice = std::fs::read_to_string( store.join( "alice@acme.com.json" ) ).unwrap();
+  let bob   = std::fs::read_to_string( store.join( "bob@acme.com.json" ) ).unwrap();
   assert!(
     alice.contains( r#""_renewal_at":"2026-07-01T00:00:00Z""# ),
     "alice@acme.com must have _renewal_at after comma-list prefix resolution, got: {alice}",
@@ -2796,16 +2800,16 @@ fn as22_save_preserves_renewal_at()
   write_credentials( dir.path(), "max", "standard", FAR_FUTURE_MS );
   write_claude_json( dir.path(), "test@example.com" );
 
-  // First save — establishes account credential file and initial claude.json snapshot
+  // First save — establishes account credential file and initial {name}.json snapshot
   let first = run_cs_with_env(
     &[ ".account.save", "name::test@example.com" ],
     &[ ( "HOME", home ) ],
   );
   assert_exit( &first, 0 );
 
-  // Inject _renewal_at into the existing .claude.json (simulates a prior .account.renewal run)
+  // Inject _renewal_at into the existing {name}.json (simulates a prior .account.renewal run)
   std::fs::write(
-    store.join( "test@example.com.claude.json" ),
+    store.join( "test@example.com.json" ),
     r#"{"oauthAccount":{"emailAddress":"test@example.com","subscriptionType":"max"},"_renewal_at":"2026-06-29T21:00:00Z"}"#,
   ).unwrap();
 
@@ -2822,14 +2826,14 @@ fn as22_save_preserves_renewal_at()
   );
   assert_exit( &second, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""_renewal_at":"2026-06-29T21:00:00Z""# ),
     "second .account.save must preserve _renewal_at via read-merge (not overwrite), got: {content}",
   );
   assert!(
     content.contains( "oauthAccount" ),
-    "oauthAccount must remain in claude.json after second save, got: {content}",
+    "oauthAccount must remain in {{name}}.json after second save, got: {content}",
   );
   assert!(
     content.contains( "\"subscriptionType\":\"pro\"" ),
@@ -2837,13 +2841,13 @@ fn as22_save_preserves_renewal_at()
   );
 }
 
-// ── as23: save writes profile.json with host and role ─────────────────────────
+// ── as23: save writes {name}.json with host and role ──────────────────────────
 
 #[ test ]
 fn as_save_writes_profile_json()
 {
   // TSK-225 RED gate: `.account.save host::testbox role::dev` must create
-  // `{name}.profile.json` containing the host and role values as JSON.
+  // `{name}.json` containing the host and role values as JSON.
   let dir   = TempDir::new().unwrap();
   let home  = dir.path().to_str().unwrap();
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
@@ -2857,20 +2861,20 @@ fn as_save_writes_profile_json()
   );
   assert_exit( &out, 0 );
 
-  let profile_path = store.join( "test@example.com.profile.json" );
+  let profile_path = store.join( "test@example.com.json" );
   assert!(
     profile_path.exists(),
-    "profile.json must be created by .account.save when host:: is passed, path: {}",
+    "{{name}}.json must be created by .account.save when host:: is passed, path: {}",
     profile_path.display(),
   );
   let content = std::fs::read_to_string( &profile_path ).unwrap();
   assert!(
     content.contains( r#""host":"testbox""# ),
-    "profile.json must contain host value, got: {content}",
+    "{{name}}.json must contain host value, got: {content}",
   );
   assert!(
     content.contains( r#""role":"dev""# ),
-    "profile.json must contain role value, got: {content}",
+    "{{name}}.json must contain role value, got: {content}",
   );
 }
 
@@ -3004,9 +3008,9 @@ fn arn19_clear_no_prior_renewal_at_exits_0()
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
 
   write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
-  // Write a .claude.json with oauthAccount but NO _renewal_at
+  // Write a {name}.json with oauthAccount but NO _renewal_at
   std::fs::write(
-    store.join( "test@example.com.claude.json" ),
+    store.join( "test@example.com.json" ),
     r#"{"oauthAccount":{"emailAddress":"test@example.com"}}"#,
   ).unwrap();
 
@@ -3017,7 +3021,7 @@ fn arn19_clear_no_prior_renewal_at_exits_0()
   assert_exit( &out, 0 );
 
   // oauthAccount must be preserved; _renewal_at must not appear.
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     !content.contains( "_renewal_at" ),
     "clear on no-prior _renewal_at must not introduce the key, got: {content}",
@@ -3069,7 +3073,7 @@ fn arn21_at_invalid_iso_stored_verbatim()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""_renewal_at":"not-a-date""# ),
     "malformed at:: value must be stored verbatim, got: {content}",
@@ -3078,7 +3082,7 @@ fn arn21_at_invalid_iso_stored_verbatim()
 
 // ── as24: host:: auto-capture $USER@$HOSTNAME ────────────────────────────────
 
-/// as24 — Omitting `host::` auto-captures `$USER@$HOSTNAME` into profile.json.
+/// as24 — Omitting `host::` auto-captures `$USER@$HOSTNAME` into `{name}.json`.
 ///
 /// Spec: [`tests/docs/cli/param/048_host.md` EC-2]
 /// Also: [`tests/docs/feature/029_account_host_metadata.md` FT-02]
@@ -3097,7 +3101,7 @@ fn as24_host_auto_capture_user_hostname()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""host":"alice@workstation""# ),
     "omitting host:: must auto-capture USER@HOSTNAME, got: {content}",
@@ -3124,7 +3128,7 @@ fn as25_host_empty_triggers_auto_capture()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""host":"bob@laptop""# ),
     "empty host:: must auto-capture USER@HOSTNAME same as omitting it, got: {content}",
@@ -3133,7 +3137,7 @@ fn as25_host_empty_triggers_auto_capture()
 
 // ── as26: re-save with different host:: overwrites ───────────────────────────
 
-/// as26 — Second save with a different `host::` overwrites profile.json.
+/// as26 — Second save with a different `host::` overwrites `{name}.json`.
 ///
 /// Spec: [`tests/docs/cli/param/048_host.md` EC-5]
 /// Also: [`tests/docs/feature/029_account_host_metadata.md` FT-04]
@@ -3160,7 +3164,7 @@ fn as26_host_resave_overwrites()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""host":"newbox""# ),
     "re-save must overwrite old host value with newbox, got: {content}",
@@ -3173,7 +3177,7 @@ fn as26_host_resave_overwrites()
 
 // ── as27: host:: value with spaces stored verbatim ───────────────────────────
 
-/// as27 — `host::` value containing spaces is stored verbatim in profile.json.
+/// as27 — `host::` value containing spaces is stored verbatim in `{name}.json`.
 ///
 /// Spec: [`tests/docs/cli/param/048_host.md` EC-6]
 #[ test ]
@@ -3191,7 +3195,7 @@ fn as27_host_with_spaces()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""host":"my work laptop""# ),
     "host:: value with spaces must be stored verbatim, got: {content}",
@@ -3228,7 +3232,7 @@ fn as28_host_missing_user_stores_at_resolved_hostname()
 
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   // host starts with "@" (USER absent) but has a non-empty resolved hostname (not bare "@").
   assert!(
     content.contains( r#""host":"@"# ),
@@ -3291,7 +3295,7 @@ fn mre_bug239_hostname_resolved_when_env_absent()
 
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   // Before BUG-239 fix: host = "alice@" (empty hostname).
   // After fix: host = "alice@<resolved>" (non-empty, from /etc/hostname or "local").
   assert!(
@@ -3306,7 +3310,7 @@ fn mre_bug239_hostname_resolved_when_env_absent()
 
 // ── as29: re-save with host:: does not change credentials.json ───────────────
 
-/// as29 — Re-saving with `host::newbox` updates profile.json but leaves credentials.json unchanged.
+/// as29 — Re-saving with `host::newbox` updates `{name}.json` but leaves credentials.json unchanged.
 ///
 /// Spec: [`tests/docs/feature/029_account_host_metadata.md` FT-10]
 #[ test ]
@@ -3340,16 +3344,16 @@ fn as29_resave_credentials_unchanged()
     "re-save with host:: must not modify credentials.json content",
   );
 
-  let profile = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let profile = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     profile.contains( r#""host":"newbox""# ),
-    "profile.json must be updated to newbox, got: {profile}",
+    "{{name}}.json must be updated to newbox, got: {profile}",
   );
 }
 
-// ── as30: role:: writes profile.json ─────────────────────────────────────────
+// ── as30: role:: writes {name}.json ──────────────────────────────────────────
 
-/// as30 — Explicit `role::work` written to profile.json as `"role":"work"`.
+/// as30 — Explicit `role::work` written to `{name}.json` as `"role":"work"`.
 ///
 /// Spec: [`tests/docs/cli/param/052_role.md` EC-1]
 #[ test ]
@@ -3367,16 +3371,16 @@ fn as30_role_writes_profile_json()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""role":"work""# ),
-    "explicit role::work must be stored in profile.json, got: {content}",
+    "explicit role::work must be stored in {{name}}.json, got: {content}",
   );
 }
 
 // ── as31: omit role:: stores empty string ────────────────────────────────────
 
-/// as31 — Omitting `role::` stores `"role":""` in profile.json (not absent).
+/// as31 — Omitting `role::` stores `"role":""` in `{name}.json` (not absent).
 ///
 /// Spec: [`tests/docs/cli/param/052_role.md` EC-2]
 #[ test ]
@@ -3394,10 +3398,10 @@ fn as31_role_omit_stores_empty()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""role":"""# ),
-    "omitting role:: must store empty string role in profile.json, got: {content}",
+    "omitting role:: must store empty string role in {{name}}.json, got: {content}",
   );
 }
 
@@ -3421,16 +3425,16 @@ fn as32_role_empty_stores_empty()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""role":"""# ),
-    "empty role:: must store empty string in profile.json, got: {content}",
+    "empty role:: must store empty string in {{name}}.json, got: {content}",
   );
 }
 
 // ── as33: re-save with different role:: overwrites ───────────────────────────
 
-/// as33 — Second save with a different `role::` overwrites the old role in profile.json.
+/// as33 — Second save with a different `role::` overwrites the old role in `{name}.json`.
 ///
 /// Spec: [`tests/docs/cli/param/052_role.md` EC-5]
 #[ test ]
@@ -3456,7 +3460,7 @@ fn as33_role_resave_overwrites()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""role":"dev""# ),
     "re-save must overwrite old role value with dev, got: {content}",
@@ -3469,7 +3473,7 @@ fn as33_role_resave_overwrites()
 
 // ── as34: role:: value with spaces stored verbatim ───────────────────────────
 
-/// as34 — `role::` value containing spaces is stored verbatim in profile.json.
+/// as34 — `role::` value containing spaces is stored verbatim in `{name}.json`.
 ///
 /// Spec: [`tests/docs/cli/param/052_role.md` EC-6]
 #[ test ]
@@ -3487,7 +3491,7 @@ fn as34_role_with_spaces()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.profile.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""role":"dev ops team""# ),
     "role:: value with spaces must be stored verbatim, got: {content}",
@@ -3515,7 +3519,7 @@ fn arn22_at_explicit_utc_offset_accepted()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( "_renewal_at" ),
     "at:: with +00:00 offset must write _renewal_at field, got: {content}",
@@ -3550,7 +3554,7 @@ fn arn23_at_date_only_accepted()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( "_renewal_at" ),
     "date-only at:: must write _renewal_at field, got: {content}",
@@ -3582,7 +3586,7 @@ fn arn24_from_now_zero_delta_writes_current_time()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   // from_now::+0m must write a present-year ISO timestamp
   assert!(
     content.contains( r#""_renewal_at":"202"# ),
@@ -3616,7 +3620,7 @@ fn arn25_from_now_single_day_unit_accepted()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     content.contains( r#""_renewal_at":"202"# ),
     "from_now::+1d must write ISO-8601 future timestamp starting with 202x, got: {content}",
@@ -3632,7 +3636,7 @@ fn arn25_from_now_single_day_unit_accepted()
 
 /// arc02 — `clear::1` removes `_renewal_at` while preserving all other keys.
 ///
-/// Given a `.claude.json` with both `oauthAccount` and `_renewal_at`, a `clear::1`
+/// Given a `{name}.json` with both `oauthAccount` and `_renewal_at`, a `clear::1`
 /// operation must remove only `_renewal_at` via read-merge semantics. The
 /// `oauthAccount` field — including nested fields — must be unchanged afterward.
 ///
@@ -3645,9 +3649,9 @@ fn arc02_clear_preserves_oauth_account_content()
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
 
   write_account( dir.path(), "test@example.com", "max", "standard", FAR_FUTURE_MS, false );
-  // Write .claude.json with both oauthAccount and _renewal_at.
+  // Write {name}.json with both oauthAccount and _renewal_at.
   std::fs::write(
-    store.join( "test@example.com.claude.json" ),
+    store.join( "test@example.com.json" ),
     r#"{"oauthAccount":{"emailAddress":"test@example.com","subscriptionType":"max"},"_renewal_at":"2026-06-29T21:00:00Z"}"#,
   ).unwrap();
 
@@ -3657,7 +3661,7 @@ fn arc02_clear_preserves_oauth_account_content()
   );
   assert_exit( &out, 0 );
 
-  let content = std::fs::read_to_string( store.join( "test@example.com.claude.json" ) ).unwrap();
+  let content = std::fs::read_to_string( store.join( "test@example.com.json" ) ).unwrap();
   assert!(
     !content.contains( "_renewal_at" ),
     "clear::1 must remove _renewal_at key (051 EC-3), got: {content}",

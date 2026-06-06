@@ -1,6 +1,6 @@
 # Parameter :: 51. `clear::`
 
-Removes the `_renewal_at` billing renewal override from `{name}.claude.json`. After clearing, `.usage` reverts to the `~`-prefixed estimate derived from `org_created_at`.
+Removes the `_renewal_at` billing renewal override from `{name}.json`. After clearing, `.usage` reverts to the `~`-prefixed estimate derived from `org_created_at`.
 
 - **Type:** `bool`
 - **Default:** `0`

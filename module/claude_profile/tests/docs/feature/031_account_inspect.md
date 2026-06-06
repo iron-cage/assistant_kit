@@ -132,7 +132,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 
 ### FT-07: Endpoint 002 failure: Memberships shows error; Billing falls back with (snapshot)
 
-- **Given:** An account with a valid token; endpoint 002 returns a network error; `{name}.claude.json` snapshot exists with `billing_type: "stripe_subscription"`.
+- **Given:** An account with a valid token; endpoint 002 returns a network error; `{name}.json` snapshot exists with `billing_type: "stripe_subscription"`.
 - **When:** `clp .account.inspect`
 - **Then:** `Memberships: endpoint unavailable (network error)` (or similar); `Billing: stripe_subscription (snapshot)`; `Has Max: yes (snapshot)`. Exit 0.
 - **Exit:** 0
@@ -143,7 +143,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 
 ### FT-08: Endpoint 001 failure: Tagged ID and UUID fall back with (snapshot)
 
-- **Given:** An account with a valid token; endpoint 001 returns HTTP 500; `{name}.claude.json` snapshot contains `taggedId: "user_01abc"` and `uuid: "aaaa"`.
+- **Given:** An account with a valid token; endpoint 001 returns HTTP 500; `{name}.json` snapshot contains `taggedId: "user_01abc"` and `uuid: "aaaa"`.
 - **When:** `clp .account.inspect`
 - **Then:** `Tagged ID: user_01abc (snapshot)`; `UUID: aaaa (snapshot)`. Other fields (from endpoints 002 and 005) show live data. Exit 0.
 - **Exit:** 0
@@ -154,7 +154,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 
 ### FT-09: Endpoint 005 failure: org fields fall back with (snapshot)
 
-- **Given:** An account with a valid token; endpoint 005 returns HTTP 403; `{name}.roles.json` snapshot contains `organization_name: "alice's Org"`, etc.
+- **Given:** An account with a valid token; endpoint 005 returns HTTP 403; `{name}.json` snapshot contains `organization_name: "alice's Org"`, etc.
 - **When:** `clp .account.inspect`
 - **Then:** `Org: alice's Org (snapshot)`; `Org UUID: aaaa (snapshot)`; etc. Fields from endpoints 001 and 002 show live data. Exit 0.
 - **Exit:** 0

@@ -167,7 +167,7 @@ pub( crate ) fn fetch_quota_for_list(
         }
       }
     };
-    // Read host/role from {name}.profile.json — best-effort, empty on missing/parse error.
+    // Read host/role from {name}.json — best-effort, empty on missing/parse error.
     let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
     let renewal_at = read_renewal_at( credential_store, &acct.name );
     results.push( AccountQuota
@@ -250,26 +250,26 @@ fn inject_synthetic_row_if_needed(
 
 // ── Profile metadata reader ───────────────────────────────────────────────────
 
-/// Read `host` and `role` from `{name}.profile.json` in the credential store.
+/// Read `host` and `role` from `{name}.json` in the credential store.
 ///
 /// Returns `(String::new(), String::new())` when the file is absent or unparseable —
 /// profile metadata is always optional (AC-09 from `docs/feature/029_account_host_metadata.md`).
 fn read_profile_metadata( credential_store : &std::path::Path, name : &str ) -> ( String, String )
 {
-  let path = credential_store.join( format!( "{name}.profile.json" ) );
+  let path = credential_store.join( format!( "{name}.json" ) );
   let Ok( text ) = std::fs::read_to_string( &path ) else { return ( String::new(), String::new() ) };
   let host = crate::account::parse_string_field( &text, "host" ).unwrap_or_default();
   let role = crate::account::parse_string_field( &text, "role" ).unwrap_or_default();
   ( host, role )
 }
 
-/// Read `_renewal_at` from `{name}.claude.json` in the credential store.
+/// Read `_renewal_at` from `{name}.json` in the credential store.
 ///
 /// Returns `None` when the file is absent or `_renewal_at` is missing/unparseable.
 /// The field is written by `.account.renewal` and must survive round-trips through `save()`.
 fn read_renewal_at( credential_store : &std::path::Path, name : &str ) -> Option< String >
 {
-  let path = credential_store.join( format!( "{name}.claude.json" ) );
+  let path = credential_store.join( format!( "{name}.json" ) );
   let text = std::fs::read_to_string( &path ).ok()?;
   crate::account::parse_string_field( &text, "_renewal_at" )
 }

@@ -70,7 +70,7 @@ fn credential_store( home : &std::path::Path ) -> std::path::PathBuf
   home.join( ".persistent" ).join( "claude" ).join( "credential" )
 }
 
-/// Write `{credential_store}/{name}.claude.json` with all inspect-relevant fields.
+/// Write `{credential_store}/{name}.json` with all inspect-relevant fields.
 ///
 /// Combines `billingType`, `taggedId`, `uuid`, and `capabilities` in one file,
 /// which none of the standard helpers provide in combination.
@@ -89,7 +89,7 @@ fn write_inspect_claude_json(
   let content = format!(
     "{{\"oauthAccount\":{{\"billingType\":\"{billing}\",\"taggedId\":\"{tagged_id}\",\"uuid\":\"{uuid}\",\"emailAddress\":\"{name}\",\"capabilities\":{caps}}}}}",
   );
-  std::fs::write( store.join( format!( "{name}.claude.json" ) ), content ).unwrap();
+  std::fs::write( store.join( format!( "{name}.json" ) ), content ).unwrap();
 }
 
 /// Run `.account.inspect` with the given extra args under the isolated home directory.
@@ -235,7 +235,7 @@ fn ai08_expired_token_shows_expired_status()
 /// AC-07, AC-08, AC-09, AC-11: Snapshot fields shown with `(snapshot)` suffix when all endpoints fail.
 ///
 /// All endpoints fail with "no token" (no `accessToken` in credentials).
-/// Snapshot data is read from `{name}.claude.json` and `{name}.roles.json`.
+/// Snapshot data is read from `{name}.json`.
 ///
 /// Source: `tests/docs/feature/031_account_inspect.md § FT-11`
 fn ai09_snapshot_all_fields_when_no_token()
@@ -368,7 +368,7 @@ fn ai22_credential_store_absent_exits_2()
 /// actual strings — not as `(none)` — in both text and `format::json` output.
 ///
 /// Uses the snapshot path: credentials have no `accessToken`, so endpoint 005 fails and
-/// the command falls back to `{name}.roles.json`. The snapshot contains non-null workspace
+/// the command falls back to `{name}.json`. The snapshot contains non-null workspace
 /// values, which must appear as actual strings in text output (with `(snapshot)` suffix)
 /// and as raw string values in `format::json`.
 ///
@@ -381,7 +381,7 @@ fn ai23_workspace_fields_show_values_when_non_null()
   // Write roles snapshot with non-null workspace fields (endpoint 005 fails → snapshot).
   let store = credential_store( dir.path() );
   std::fs::write(
-    store.join( "alice@acme.com.roles.json" ),
+    store.join( "alice@acme.com.json" ),
     r#"{"organization_uuid":"org-uuid-1","organization_name":"alice's Org","organization_role":"admin","workspace_uuid":"ws-uuid-123","workspace_name":"alice's Workspace"}"#,
   ).unwrap();
 

@@ -76,10 +76,9 @@ Feature behavioral requirement test cases for `docs/feature/005_account_delete.m
 
 ### FT-05: Snapshot files removed with credentials; absent snapshots are no-ops
 
-- **Given:** Account `alice@acme.com` with `alice@acme.com.credentials.json`, `alice@acme.com.claude.json`, `alice@acme.com.settings.json`, and `alice@acme.com.roles.json` all present in the credential store.
+- **Given:** Account `alice@acme.com` with `alice@acme.com.credentials.json` and `alice@acme.com.json` both present in the credential store.
 - **When:** `clp .account.delete name::alice@acme.com`
-- **Then:** Exit 0. All four files are removed: `.credentials.json`, `.claude.json`, `.settings.json`, `.roles.json`. Deletion is best-effort per file; an absent snapshot file does not cause a non-zero exit.
-- **Note:** `roles.json` is specifically covered because it was added later (Feature 022). The existing `ad12` test verifies `.claude.json` and `.settings.json`; `ad15` verifies `.roles.json` independently.
+- **Then:** Exit 0. Both files are removed: `.credentials.json` and `.json`. Deletion is best-effort per file; an absent snapshot file does not cause a non-zero exit.
 - **Exit:** 0
 - **Source fn:** `ad12_delete_removes_snapshot_files`, `ad15_delete_removes_roles_json`
 - **Source:** [005_account_delete.md AC-05](../../../../docs/feature/005_account_delete.md)

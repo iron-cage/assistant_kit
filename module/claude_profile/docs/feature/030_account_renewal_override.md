@@ -3,18 +3,18 @@
 ### Scope
 
 - **Purpose**: Allow users to store an exact billing renewal timestamp for any account, correcting the approximate `org_created_at`-based estimate when the actual Stripe billing anchor differs.
-- **Responsibility**: Documents the `.account.renewal` CLI command, `_renewal_at` field lifecycle in `{name}.claude.json`, and its effect on `~Renews` column display in `.usage`.
-- **In Scope**: `.account.renewal` command parameters (`name::`, `at::`, `from_now::`, `clear::`, `dry::`), `_renewal_at` ISO-8601 UTC field written to `{name}.claude.json`, monthly auto-advance when `_renewal_at` is in the past, exact vs. estimated `~Renews` display, `save()` read-merge preserving `_renewal_at` across re-saves.
+- **Responsibility**: Documents the `.account.renewal` CLI command, `_renewal_at` field lifecycle in `{name}.json`, and its effect on `~Renews` column display in `.usage`.
+- **In Scope**: `.account.renewal` command parameters (`name::`, `at::`, `from_now::`, `clear::`, `dry::`), `_renewal_at` ISO-8601 UTC field written to `{name}.json`, monthly auto-advance when `_renewal_at` is in the past, exact vs. estimated `~Renews` display, `save()` read-merge preserving `_renewal_at` across re-saves.
 - **Out of Scope**: Stripe API integration (no subscription renewal endpoint is reachable via OAuth token); automatic detection of billing day from payment events; historical renewal tracking.
 
 ### Design
 
 The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, but this equals the organization creation date (typically free account creation), not the subscription start date. When users upgrade from free to paid after account creation, the Stripe billing anchor diverges from `org.created_at`, making the estimated renewal date wrong.
 
-`.account.renewal` writes an optional `_renewal_at` ISO-8601 UTC string directly into `{name}.claude.json` alongside the existing `oauthAccount` key. The `.usage` command reads this field during rendering and uses it as the authoritative renewal timestamp when present, falling back to the `org_created_at` estimate otherwise.
+`.account.renewal` writes an optional `_renewal_at` ISO-8601 UTC string directly into `{name}.json` alongside the existing `oauthAccount` key. The `.usage` command reads this field during rendering and uses it as the authoritative renewal timestamp when present, falling back to the `org_created_at` estimate otherwise.
 
 **`_renewal_at` field semantics:**
-- Stored as a top-level key in `{name}.claude.json`: `{"oauthAccount": {...}, "_renewal_at": "2026-06-29T21:00:00Z"}`
+- Stored as a top-level key in `{name}.json`: `{"oauthAccount": {...}, "_renewal_at": "2026-06-29T21:00:00Z"}`
 - When `_renewal_at` is in the past: auto-advanced by monthly increments until the result is in the future, using the same day-of-month from the original timestamp (Stripe-style billing cycle advance)
 - When absent or `null`: falls back to `org_created_at`-based estimate (existing algorithm); `~Renews` shows `~` prefix
 - `save()` preserves `_renewal_at` via read-merge (not overwrite) — see [002_account_save.md](002_account_save.md)
@@ -22,19 +22,19 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 **`.account.renewal` operation steps:**
 1. Resolve `name::`: `all` targets every account in the credential store; a comma-separated list targets the listed accounts; single email/prefix resolves via `AccountSelector`
 2. Validate that exactly one of `at::`, `from_now::`, `clear::1` is provided (exits 1 on conflict or if none provided)
-3. For each targeted account, read `{name}.claude.json` (or start with empty object if absent)
+3. For each targeted account, read `{name}.json` (or start with empty object if absent)
 4. Apply operation:
    - `at::VALUE`: parse ISO-8601, set `_renewal_at = VALUE`
    - `from_now::DELTA`: parse `±Xd Xh Xm` delta, compute `now ± delta` as ISO-8601 UTC, set `_renewal_at`
    - `clear::1`: remove `_renewal_at` key from the object
-5. Write result to `{name}.claude.json` (skips if `dry::1`)
+5. Write result to `{name}.json` (skips if `dry::1`)
 6. Print one status line per account
 
 **`at::` format:** ISO-8601 UTC datetime string. Accepts trailing `Z` or `+00:00` offset. Date-only form (`2026-06-29`) is interpreted as `2026-06-29T00:00:00Z`. Past values are accepted and auto-advanced on read.
 
 **`from_now::` format:** Signed duration with `+`/`-` prefix. Supported units: `d` (days), `h` (hours), `m` (minutes). Examples: `+3h30m`, `-30m`, `+1d`, `+0m` (now). Multiple units may be combined (`+1d12h`). Computes `now ± delta` at command execution time and stores as ISO-8601 UTC.
 
-**`clear::1`:** Removes `_renewal_at` from `{name}.claude.json`. Restores `~`-prefixed estimate in `.usage`. Mutually exclusive with `at::` and `from_now::`.
+**`clear::1`:** Removes `_renewal_at` from `{name}.json`. Restores `~`-prefixed estimate in `.usage`. Mutually exclusive with `at::` and `from_now::`.
 
 **`dry::1`:** Prints the would-be operation and computed timestamp without writing any files.
 
@@ -50,11 +50,11 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 
 ### Acceptance Criteria
 
-- **AC-01**: `clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z` writes `_renewal_at: "2026-06-29T21:00:00Z"` into `{credential_store}/alice@acme.com.claude.json`; the existing `oauthAccount` content is preserved.
+- **AC-01**: `clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z` writes `_renewal_at: "2026-06-29T21:00:00Z"` into `{credential_store}/alice@acme.com.json`; the existing `oauthAccount` content is preserved.
 - **AC-02**: `clp .account.renewal name::alice@acme.com from_now::+1h30m` writes `_renewal_at` as the current time plus 1 hour 30 minutes (ISO-8601 UTC); the existing `oauthAccount` content is preserved.
 - **AC-03**: `clp .account.renewal name::alice@acme.com from_now::-30m` writes `_renewal_at` as the current time minus 30 minutes; `.usage` then auto-advances it monthly until future.
-- **AC-04**: `clp .account.renewal name::alice@acme.com clear::1` removes `_renewal_at` from `{credential_store}/alice@acme.com.claude.json`; `oauthAccount` content is preserved; `.usage` reverts to `~`-prefixed estimate.
-- **AC-05**: `clp .account.renewal name::all from_now::+0m` writes the current timestamp into `_renewal_at` for every saved account; accounts without an existing `.claude.json` get a new file with only `{"_renewal_at": "..."}`.
+- **AC-04**: `clp .account.renewal name::alice@acme.com clear::1` removes `_renewal_at` from `{credential_store}/alice@acme.com.json`; `oauthAccount` content is preserved; `.usage` reverts to `~`-prefixed estimate.
+- **AC-05**: `clp .account.renewal name::all from_now::+0m` writes the current timestamp into `_renewal_at` for every saved account; accounts without an existing `{name}.json` get a new file with only `{"_renewal_at": "..."}`.
 - **AC-06**: `clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1` prints the would-be value without modifying any file.
 - **AC-07**: `at::` and `from_now::` used together exits 1 with an error naming the conflict.
 - **AC-08**: `at::` and `clear::` used together exits 1 with an error naming the conflict.
@@ -70,7 +70,7 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/account.rs` | `account_renewal()` — read-merge `_renewal_at` into `{name}.claude.json`; multi-account dispatch |
+| source | `src/account.rs` | `account_renewal()` — read-merge `_renewal_at` into `{name}.json`; multi-account dispatch |
 | source | `src/commands/account_ops.rs` | `account_renewal_routine()` — CLI handler; param validation; comma-list token resolution via `resolve_account_name()` |
 | source | `src/usage/format.rs` | `renews_label()` — `~Renews` exact vs. estimated rendering; `next_event_label()` — `→ Next` event selection |
 | test | `tests/cli/account_mutations_test.rs` | AC-01…AC-15 test cases |

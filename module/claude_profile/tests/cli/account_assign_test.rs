@@ -487,7 +487,8 @@ fn ec7_dot_hyphen_in_machine_preserved()
 /// `for::alice@corp.com@laptop` splits into:
 /// - user component: `alice`
 /// - machine component: `corp.com@laptop` (sanitized: `@` → `_` → `corp.com_laptop`)
-///   Written filename: `_active_corp.com_laptop_alice`.
+///
+/// Written filename: `_active_corp.com_laptop_alice`.
 fn ec8_multiple_at_splits_on_first()
 {
   let dir  = TempDir::new().unwrap();

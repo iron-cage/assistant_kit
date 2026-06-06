@@ -259,7 +259,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ### FT-19: Active account + 7d(Son) < 20% — model override sonnet→opus fires after switch (BUG-238 MRE)
 
-- **Given:** Account `alice@home.com` saved with valid OAuth token and an ACTIVE 5h window (`five_hour.resets_at` is set). `seven_day_sonnet.utilization > 80%` (remaining < 20%). The account's `{name}.settings.json` contains `{"model": "claude-sonnet-4-6"}` (stale snapshot).
+- **Given:** Account `alice@home.com` saved with valid OAuth token and an ACTIVE 5h window (`five_hour.resets_at` is set). `seven_day_sonnet.utilization > 80%` (remaining < 20%). The account's `{name}.json` contains `{"model": "claude-sonnet-4-6"}` (stale snapshot).
 - **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
 - **Then:** Exits 0. `switched to 'alice@home.com'` on stdout. After the switch, `~/.claude/settings.json` contains `"model": "claude-opus-4-6"` — the BUG-225 Sonnet→Opus override fires even though the account is already active (no subprocess spawned, but model override still applied). Before the BUG-238 fix: model stayed at `claude-sonnet-4-6` because `pre_switch_touch_ctx()` returned `None` for active accounts, skipping the override.
 - **Exit:** 0

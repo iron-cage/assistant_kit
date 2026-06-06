@@ -198,6 +198,11 @@ fn g2cc3_no_skip_permissions_and_no_effort_max_both_suppressed()
 /// so stderr is empty. `--no-chrome` suppresses the default `--chrome` injection.
 /// `--subdir work` produces an effective dir containing `/-work`.
 ///
+/// `CLAUDECODE` is removed from the subprocess environment to implement the spec's
+/// "clean environment" precondition (CC-4 Given). Without removal, the BUG-248 fix
+/// emits a `--keep-claudecode` warning on stderr when `CLAUDECODE` is inherited from
+/// the host Claude Code session, failing the `stderr.is_empty()` assertion.
+///
 /// Spec: `02_runner_control.md` CC-4
 #[ test ]
 fn g2cc4_all_runner_control_flags_no_conflict()
@@ -206,26 +211,35 @@ fn g2cc4_all_runner_control_flags_no_conflict()
   std::io::Write::write_all( &mut tmp.as_file(), b"input" ).expect( "write" );
   let file_path = tmp.path().to_str().expect( "path" );
 
-  let out = run_cli( &[
-    "--dry-run",
-    "--no-skip-permissions",
-    "--interactive",
-    "--new-session",
-    "--dir", "/tmp/test",
-    "--subdir", "work",
-    "--max-tokens", "100000",
-    "--session-dir", "/tmp/sessions",
-    "--verbosity", "2",
-    "--trace",
-    "--no-ultrathink",
-    "--no-effort-max",
-    "--no-chrome",
-    "--no-persist",
-    "--file", file_path,
-    "--strip-fences",
-    "--keep-claudecode",
-    "Fix bug",
-  ] );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .args( [
+      "--dry-run",
+      "--no-skip-permissions",
+      "--interactive",
+      "--new-session",
+      "--dir", "/tmp/test",
+      "--subdir", "work",
+      "--max-tokens", "100000",
+      "--session-dir", "/tmp/sessions",
+      "--verbosity", "2",
+      "--trace",
+      "--no-ultrathink",
+      "--no-effort-max",
+      "--no-chrome",
+      "--no-persist",
+      "--file", file_path,
+      "--strip-fences",
+      "--keep-claudecode",
+      "Fix bug",
+    ] )
+    // Spec CC-4 requires "clean environment" — unset CLAUDECODE so the BUG-248 warning
+    // (fires when --keep-claudecode + CLAUDECODE in env + verbosity >= 2) does not appear.
+    // Root cause of fragility: host Claude Code sessions inject CLAUDECODE=1 into the
+    // environment; container runs (CLAUDECODE absent) pass without this guard.
+    .env_remove( "CLAUDECODE" )
+    .output()
+    .expect( "failed to invoke clr binary" );
   assert!(
     out.status.success(),
     "all 17 runner control flags must be accepted without conflict: {out:?}",

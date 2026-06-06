@@ -82,7 +82,7 @@ Edge case coverage for the `cols::` parameter on `.usage`. See [param/033_cols.m
 
 ### EC-7: `cols::+host` shows Host column (off-by-default metadata column)
 
-- **Given:** One saved account with `{name}.profile.json` containing `{"host": "mybox", "role": "work"}`.
+- **Given:** One saved account with `{name}.json` containing `{"host": "mybox", "role": "work"}`.
 - **When:** `clp .usage cols::+host`
 - **Then:** Exits 0. Table header contains "Host". The account row shows "mybox" in the Host column.
 - **Exit:** 0
@@ -93,7 +93,7 @@ Edge case coverage for the `cols::` parameter on `.usage`. See [param/033_cols.m
 
 ### EC-8: `cols::+role` shows Role column (off-by-default metadata column)
 
-- **Given:** One saved account with `{name}.profile.json` containing `{"host": "mybox", "role": "work"}`.
+- **Given:** One saved account with `{name}.json` containing `{"host": "mybox", "role": "work"}`.
 - **When:** `clp .usage cols::+role`
 - **Then:** Exits 0. Table header contains "Role". The account row shows "work" in the Role column.
 - **Exit:** 0

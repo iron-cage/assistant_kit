@@ -8,7 +8,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 |----|-----------|----|-------|
 | FT-01 | `clp .account.save name::alice@acme.com` exits 0 and creates credential file | AC-01 | Integration |
 | FT-02 | `dry::1` prints preview message; no file created | AC-04 | Integration |
-| FT-03 | `oauthAccount` snapshot created alongside credential file; no `.settings.json` | AC-05 | Integration |
+| FT-03 | `oauthAccount` + model snapshot created alongside credential file | AC-05 | Integration |
 | FT-04 | No `name::` with valid `_active` marker — name inferred, save succeeds | AC-08 | Integration (BUG-209) |
 | FT-05 | No `name::` with no `_active` marker — exits 1 with clear error | AC-09 | Integration (BUG-209) |
 | FT-06 | Active marker written after save — `.credentials.status` shows account | AC-10 | Integration |
@@ -60,11 +60,11 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 
 ---
 
-### FT-03: `oauthAccount` + `settings.json` snapshots created
+### FT-03: `oauthAccount` + model snapshot created
 
 - **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists with an `oauthAccount` subtree containing account identity fields. `~/.claude/settings.json` exists with `{"model": "claude-sonnet"}`.
 - **When:** `clp .account.save name::alice@acme.com`
-- **Then:** Exits 0. `{credential_store}/alice@acme.com.claude.json` is created containing only `{"oauthAccount": {...}}` with the extracted subtree. `{credential_store}/alice@acme.com.settings.json` is created containing the `model` field from `~/.claude/settings.json` (BUG-222 fix).
+- **Then:** Exits 0. `{credential_store}/alice@acme.com.json` is created containing `{"oauthAccount": {...}, "model": "claude-sonnet"}` with the extracted subtree and `model` field from `~/.claude/settings.json` (BUG-222 fix).
 - **Exit:** 0
 - **Source fn:** `acc26_save_creates_snapshot_files` (in `tests/cli/accounts_test.rs`)
 - **Source:** [feature/002_account_save.md AC-05](../../../../docs/feature/002_account_save.md)
@@ -131,7 +131,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 ### FT-09: `save(update_marker=false)` does not write `_active`; background callers pass `false`
 
 - **Given:** Empty credential store (no `_active` marker file). Valid credentials at `~/.claude/.credentials.json`.
-- **When:** `account::save("alice@test.com", store.path(), &paths, false)` is called (unit test — simulates `refresh_account_token` context).
+- **When:** `account::save("alice@test.com", store.path(), &paths, false, None, None, None)` is called (unit test — simulates `refresh_account_token` context).
 - **Then:** The credential file `alice@test.com.credentials.json` is written. The `_active_{hostname}_{user}` marker file does NOT exist — `update_marker=false` suppresses the write. A concurrent `.account.use` switch would be unaffected.
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `test_mre_bug211_save_false_leaves_marker_unchanged` (in `claude_profile_core/tests/account_test.rs`)
@@ -154,9 +154,9 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 
 ### FT-11: Re-running `.account.save` preserves `_renewal_at` key (read-merge, not overwrite)
 
-- **Given:** Account `test@example.com` already has `{credential_store}/test@example.com.claude.json` with `_renewal_at: "2026-06-29T21:00:00Z"` and a current `oauthAccount` snapshot. Fresh credentials available at `~/.claude/.credentials.json` with updated `oauthAccount` content.
+- **Given:** Account `test@example.com` already has `{credential_store}/test@example.com.json` with `_renewal_at: "2026-06-29T21:00:00Z"` and a current `oauthAccount` snapshot. Fresh credentials available at `~/.claude/.credentials.json` with updated `oauthAccount` content.
 - **When:** `clp .account.save name::test@example.com` is run a second time.
-- **Then:** Exits 0. `test@example.com.claude.json` contains:
+- **Then:** Exits 0. `test@example.com.json` contains:
   - `_renewal_at: "2026-06-29T21:00:00Z"` — unchanged (preserved from prior run)
   - `oauthAccount` — updated with fresh content from `~/.claude.json`
   - No other pre-existing top-level keys are removed.

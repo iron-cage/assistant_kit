@@ -1,6 +1,6 @@
 # Parameter :: 10. `email::`
 
-Controls whether the email address line appears in output. Source for `.credentials.status`: `emailAddress` field in live `~/.claude.json`. Source for `.accounts`: `emailAddress` field in saved `{name}.claude.json` snapshot.
+Controls whether the email address line appears in output. Source for `.credentials.status`: `emailAddress` field in live `~/.claude.json`. Source for `.accounts`: `emailAddress` field in saved `{name}.json` snapshot.
 
 - **Type:** `bool`
 - **Default:** `1` (shown)
