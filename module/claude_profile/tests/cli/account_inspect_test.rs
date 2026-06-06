@@ -39,6 +39,9 @@
 //! | ai24 | `ai24_ambiguous_prefix_exits_1` | AC-12 | Name | N | no |
 //! | ai25 | `ai25_missing_expires_at_shows_unknown_status` | AC-01 | Status | P | no |
 //! | ai26 | `ai26_name_with_invalid_chars_exits_1` | AC-12 | Name | N | no |
+//! | ai27 | `ai27_unicode_account_name_resolves` | AC-12 | Name | P | no |
+//! | ai28 | `ai28_empty_credentials_file_shows_unknown_status` | AC-18 | Status | P | no |
+//! | ai29 | `ai29_malformed_credentials_json_shows_unknown_status` | AC-19 | Status | P | no |
 //! | ai14 | `lim_it_ai14_identity_fields_from_endpoint_001` | AC-01 | Identity | P | yes |
 //! | ai15 | `lim_it_ai15_memberships_shown_with_count` | AC-02 | Memberships | P | yes |
 //! | ai16 | `lim_it_ai16_selected_marker_multi_membership` | AC-03,04 | Memberships | P | yes |
@@ -490,6 +493,95 @@ fn ai26_name_with_invalid_chars_exits_1()
       "name '{bad_name}' must report invalid characters, got: {err}",
     );
   }
+}
+
+#[ test ]
+/// AC-12: Account name containing Unicode characters (IDN email) resolves by
+/// full email lookup.
+///
+/// Verifies that UTF-8 account names like `alice@münchen.de` are written and
+/// read back correctly — the credential filename `alice@münchen.de.credentials.json`
+/// must survive the round-trip on Linux UTF-8 filesystems.
+fn ai27_unicode_account_name_resolves()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@münchen.de", "pro", "standard", FAR_FUTURE_MS, true );
+  let out   = run_inspect( home, &[ "name::alice@münchen.de", "refresh::0" ] );
+  assert_exit( &out, 0 );
+  let text  = stdout( &out );
+  assert!(
+    text.contains( "alice@münchen.de" ),
+    "output must contain the Unicode account name, got:\n{text}",
+  );
+}
+
+#[ test ]
+/// AC-01: Credentials file exists but is zero bytes → Status shows "unknown".
+///
+/// Simulates filesystem corruption (truncated write, disk error). The command
+/// must not panic or exit non-zero; graceful fallback to "unknown" is required.
+fn ai28_empty_credentials_file_shows_unknown_status()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = credential_store( dir.path() );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write( store.join( "u@test.com.credentials.json" ), b"" ).unwrap();
+
+  // Text format
+  let out  = run_inspect( home, &[ "name::u@test.com", "refresh::0" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "unknown" ),
+    "empty credentials file must show status 'unknown', got:\n{text}",
+  );
+
+  // JSON format
+  let json_out  = run_inspect( home, &[ "name::u@test.com", "refresh::0", "format::json" ] );
+  assert_exit( &json_out, 0 );
+  let json_text = stdout( &json_out );
+  assert!(
+    json_text.contains( "\"status\":\"unknown\"" ),
+    "JSON status must be \"unknown\" for empty credentials file, got:\n{json_text}",
+  );
+}
+
+#[ test ]
+/// AC-01: Valid JSON in credentials but missing `oauthAccount` key → Status shows "unknown".
+///
+/// Simulates a version-mismatch write (old tool wrote a different schema).
+/// The command must not panic; graceful "unknown" status is required because
+/// `expiresAt` cannot be found in JSON that has no `oauthAccount` wrapper.
+fn ai29_malformed_credentials_json_shows_unknown_status()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = credential_store( dir.path() );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write(
+    store.join( "u@test.com.credentials.json" ),
+    r#"{"version":"2","data":{}}"#,
+  ).unwrap();
+
+  // Text format
+  let out  = run_inspect( home, &[ "name::u@test.com", "refresh::0" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "unknown" ),
+    "missing oauthAccount key must show status 'unknown', got:\n{text}",
+  );
+
+  // JSON format
+  let json_out  = run_inspect( home, &[ "name::u@test.com", "refresh::0", "format::json" ] );
+  assert_exit( &json_out, 0 );
+  let json_text = stdout( &json_out );
+  assert!(
+    json_text.contains( "\"status\":\"unknown\"" ),
+    "JSON status must be \"unknown\" for malformed credentials, got:\n{json_text}",
+  );
 }
 
 // ── AI lim_it: live-endpoint tests ───────────────────────────────────────────

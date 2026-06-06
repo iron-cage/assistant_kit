@@ -283,7 +283,19 @@ pub( crate ) fn find_next_for_strategy(
             && data.five_hour.as_ref().map_or( true, |p| p.utilization < 85.0 )
             && ( aq.expires_at_ms / 1000 ).saturating_sub( now_secs ) > 0
         } )
-        .min_by_key( |&i| renewal_event_secs_of( &accounts[ i ] ) )
+        .min_by( |&a, &b|
+        {
+          let ra = renewal_event_secs_of( &accounts[ a ] );
+          let rb = renewal_event_secs_of( &accounts[ b ] );
+          // Fix(BUG-243): composite tiebreaker — lower five_hour_left (more depleted) preferred
+          //   on equal renewal time; depleted account benefits more from the upcoming renewal event.
+          // Root cause: single-key .min_by_key() fell through to input-slice order on ties.
+          // Pitfall: five_hour_left returns 100.0 for None (absent data) — treated as fully loaded,
+          //   so accounts with no session data are deprioritised on tie (conservative).
+          let ha = five_hour_left( &accounts[ a ] );
+          let hb = five_hour_left( &accounts[ b ] );
+          ra.cmp( &rb ).then_with( || ha.total_cmp( &hb ) )
+        } )
     }
     NextStrategy::Endurance =>
     {
@@ -1056,6 +1068,56 @@ mod tests
     assert!(
       !metric.contains( "90" ),
       "endurance metric must not contain weekly pct '90'; got: {metric}",
+    );
+  }
+
+  /// FT-15 of feature/023 — `next::renew` prefers lower `5h_left` account on equal renewal time.
+  ///
+  /// When two accounts share an identical `renewal_event_secs_of()` value, the tiebreaker must
+  /// select the more session-depleted account (lower `5h_left`) — it benefits more from the same
+  /// upcoming renewal event.
+  ///
+  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-15]
+  #[ test ]
+  fn test_ft15_023_renew_tiebreaker_prefers_lower_5h_left()
+  {
+    let now_secs : u64 = 1_700_000_000;
+    // Both accounts use reset_offset=10_800 (3h) → identical seven_day.resets_at → identical
+    // renewal_event_secs_of() → tiebreaker fires.
+    // A: util=77.0 → five_hour_left=23% (depleted — lower = preferred on tie)
+    // B: util=0.0  → five_hour_left=100% (fully loaded — higher = deprioritised on tie)
+
+    // A-first ordering: primary key ties; A wins tiebreaker (23% < 100%)
+    let result_ab = find_next_for_strategy(
+      &[
+        mk_aq_with_7d_reset( "a@test.com", 77.0, now_secs, 10_800 ),
+        mk_aq_with_7d_reset( "b@test.com", 0.0,  now_secs, 10_800 ),
+      ],
+      NextStrategy::Renew,
+      PreferStrategy::Any,
+      now_secs,
+    );
+    assert_eq!(
+      result_ab,
+      Some( 0 ),
+      "A-first: must pick a@test.com (index 0, 23% 5h_left)",
+    );
+
+    // B-first ordering: .min_by_key() would return Some(0) = B (wrong — slice order wins).
+    // After the fix (.min_by with composite key), must return Some(1) = A (tiebreaker fires).
+    let result_ba = find_next_for_strategy(
+      &[
+        mk_aq_with_7d_reset( "b@test.com", 0.0,  now_secs, 10_800 ),
+        mk_aq_with_7d_reset( "a@test.com", 77.0, now_secs, 10_800 ),
+      ],
+      NextStrategy::Renew,
+      PreferStrategy::Any,
+      now_secs,
+    );
+    assert_eq!(
+      result_ba,
+      Some( 1 ),
+      "B-first: must pick a@test.com (index 1, 23% 5h_left) — tiebreaker fires over B (100%)",
     );
   }
 

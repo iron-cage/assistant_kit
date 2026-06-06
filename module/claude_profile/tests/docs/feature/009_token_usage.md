@@ -30,6 +30,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | — |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | — |
 | FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | — |
+| FT-25 | `.usage` applies model override for current account when `7d(Son) < 20%` | AC-32 | — |
 
 ### Test Case Index
 
@@ -59,8 +60,9 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 | FT-22 | Cancelled subscription (`billing_type == "none"`) shows `(no subscription)` in last quota column | AC-03, AC-31 | Subscription State |
 | FT-23 | `~Renews` shows `"—"` for cancelled subscription accounts (`billing_type == "none"`) | AC-27, AC-31 | Subscription State |
 | FT-24 | `[trace] result:` emitted AFTER Class A billing_type override — trace matches stored result | AC-31 | Trace Ordering |
+| FT-25 | `.usage` applies model override for current account when `7d(Son) < 20%` | AC-32 | Model Override |
 
-**Total:** 24 FT cases
+**Total:** 25 FT cases
 
 ---
 
@@ -385,3 +387,20 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Note:** BUG-234 fix. The bug was introduced when the BUG-233 Class A override was added after the trace block rather than before it. Structural test prevents regression without requiring live API calls. Source ordering is the correctness invariant — at runtime, any `billing_type="none"` override applied before the trace emission guarantees trace-result consistency.
 - **Source fn:** `mre_bug234_result_trace_after_billing_type_override` (in `src/usage/fetch.rs`)
 - **Source:** [009_token_usage.md AC-31](../../../../docs/feature/009_token_usage.md)
+
+---
+
+### FT-25: `.usage` applies model override for current account when `7d(Son) < 20%`
+
+- **Given (unit test):** One `AccountQuota` for the current account (`is_current = true`):
+  - `result = Ok(OauthUsageData)` with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, resets_at: Some("...") })` — 10% left (< 20% threshold)
+  - `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"`
+  - `ClaudePaths` pointing to a temp directory
+- **When:** `apply_model_override(&data, &paths, false, "test@example.com")` is called with the current account's quota data.
+- **Then:**
+  - `~/.claude/settings.json` now contains `"model": "claude-opus-4-6"` — the override fired.
+  - The structural test verifies that `usage_routine()` calls `apply_model_override` after the touch loop for the current account (source position assertion or direct call test).
+- **Exit:** n/a (unit test)
+- **Note:** Fix for BUG-244. The model override was previously only reachable from `.account.use` (`account_ops.rs`). This test verifies the `.usage` path also applies it. Reuses the existing `apply_model_override()` function (tested by BUG-238 MRE) but validates it is called from the `.usage` pipeline.
+- **Source fn:** TBD (to be implemented by task)
+- **Source:** [009_token_usage.md AC-32](../../../../docs/feature/009_token_usage.md)
