@@ -210,15 +210,15 @@ fn t12_unset_claudecode_last_write_wins()
   );
 }
 
-// T13 / 005 regression: describe_compact() with stdin_file must start with "claude"
+// T13 / 005 regression: describe_compact() with stdin_file must start with "env -u CLAUDECODE"
 //
 // Root Cause: describe() emits "< path" as a separate last line when it is pushed to
 //   `lines` instead of `parts`. describe_compact() = lines().last() would then return
-//   "< path" rather than the claude invocation.
+//   "< path" rather than the invocation line.
 // Why Not Caught: T01 uses contains("< path") which passes even if "< path" is the
-//   ONLY content; it does not assert that "claude" precedes it.
-// Fix Applied: "< path" is pushed to `parts` (inline with the claude invocation) before
-//   lines.push(parts.join(" ")), so it always appears on the same line as "claude".
+//   ONLY content; it does not assert that the invocation line precedes it.
+// Fix Applied: "< path" is pushed to `parts` (inline with the invocation) before
+//   lines.push(parts.join(" ")), so it always appears on the same invocation line.
 // Prevention: This test asserts describe_compact() starts_with("env -u CLAUDECODE") when
 //   stdin_file is set, catching any future regression where "< path" moves to a
 //   separate line and becomes the last() line.
