@@ -272,14 +272,8 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     return Ok( OutputData::new( format!( "[dry-run] would save current credentials as '{name}'\n" ), "text" ) );
   }
 
-  crate::account::save( &name, &credential_store, &paths, true, None )
-    .map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
-  if trace { eprintln!( "[trace] account.save  write: OK" ) }
-
-  // Write {name}.profile.json with host and role metadata (TSK-225).
+  // Resolve host/role profile metadata before calling save().
   // host:: defaults to auto-captured $USER@<hostname> when omitted.
-  // Fix(BUG-239): hostname resolved via resolve_hostname() fallback chain
-  // ($HOSTNAME env → /etc/hostname → "local") — never empty.
   let host_val = match cmd.arguments.get( "host" )
   {
     Some( Value::String( s ) ) if !s.is_empty() => s.clone(),
@@ -295,13 +289,10 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
     Some( Value::String( s ) ) => s.clone(),
     _                          => String::new(),
   };
-  let profile_json = format!(
-    "{{\"host\":\"{}\",\"role\":\"{}\"}}",
-    host_val.replace( '"', "\\\"" ),
-    role_val.replace( '"', "\\\"" ),
-  );
-  let _ = std::fs::write( credential_store.join( format!( "{name}.profile.json" ) ), &profile_json );
-  if trace { eprintln!( "[trace] account.save  profile.json: {profile_json}" ) }
+
+  crate::account::save( &name, &credential_store, &paths, true, None, Some( &host_val ), Some( &role_val ) )
+    .map_err( |e| io_err_to_error_data( &e, "account save" ) )?;
+  if trace { eprintln!( "[trace] account.save  write: OK  host={host_val}  role={role_val}" ) }
 
   Ok( OutputData::new( format!( "saved current credentials as '{name}'\n" ), "text" ) )
 }
@@ -430,7 +421,7 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   if updated
   {
     // Persist the refreshed credentials into the account store.
-    crate::account::save( &name, &credential_store, &paths, true, None )
+    crate::account::save( &name, &credential_store, &paths, true, None, None, None )
       .map_err( |e| io_err_to_error_data( &e, "account relogin: save" ) )?;
   }
 
@@ -457,7 +448,7 @@ pub fn account_relogin_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
 /// `.account.renewal` — set or clear a billing renewal timestamp override for one or more accounts.
 ///
-/// Writes `_renewal_at` (ISO-8601 UTC string) to `{name}.claude.json` via read-merge, or removes
+/// Writes `_renewal_at` (ISO-8601 UTC string) to `{name}.json` via read-merge, or removes
 /// it when `clear::1` is passed. Existing `oauthAccount` and other top-level keys are preserved.
 ///
 /// # Errors
@@ -615,7 +606,7 @@ pub fn account_renewal_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 
 // ── .account.inspect helpers ──────────────────────────────────────────────────
 
-/// Snapshot data read from `{name}.claude.json` and `{name}.roles.json` for per-endpoint fallback.
+/// Snapshot data read from `{name}.json` for per-endpoint fallback.
 struct InspectSnapshot
 {
   tagged_id    : String,
@@ -771,7 +762,7 @@ fn inspect_call_roles(
   r
 }
 
-/// Build per-endpoint snapshot data from `{name}.claude.json` and `{name}.roles.json`.
+/// Build per-endpoint snapshot data from `{name}.json`.
 fn build_inspect_snapshot( claude_json : &str, roles_json : &str ) -> InspectSnapshot
 {
   let oa_pos       = claude_json.find( "\"oauthAccount\":" );
@@ -992,7 +983,7 @@ fn format_inspect_json(
 /// `.account.inspect` — show identity, subscription, and org fields for one account via live endpoints.
 ///
 /// Calls endpoints 001 (userinfo), 002 (subscriptions), and 005 (roles) independently.
-/// Falls back to local `{name}.claude.json` / `{name}.roles.json` snapshots per-endpoint on failure.
+/// Falls back to local `{name}.json` snapshot per-endpoint on failure.
 ///
 /// # Errors
 ///
@@ -1060,11 +1051,9 @@ pub fn account_inspect_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let ep_subs     = inspect_call_subs( tok, trace, &name );
   let ep_roles    = inspect_call_roles( tok, trace, &name );
 
-  let claude_json = std::fs::read_to_string( credential_store.join( format!( "{name}.claude.json" ) ) )
+  let meta_json = std::fs::read_to_string( credential_store.join( format!( "{name}.json" ) ) )
     .unwrap_or_default();
-  let roles_json  = std::fs::read_to_string( credential_store.join( format!( "{name}.roles.json" ) ) )
-    .unwrap_or_default();
-  let snap        = build_inspect_snapshot( &claude_json, &roles_json );
+  let snap      = build_inspect_snapshot( &meta_json, &meta_json );
 
   let live_count  = [ ep_userinfo.is_ok(), ep_subs.is_ok(), ep_roles.is_ok() ]
     .iter().filter( |&&b| b ).count();

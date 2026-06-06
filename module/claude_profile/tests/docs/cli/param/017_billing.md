@@ -1,6 +1,6 @@
 # Parameter :: `billing::`
 
-Edge case tests for the `billing::` parameter. Tests validate boolean enforcement, default behavior, and billing type field control from `oauthAccount`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.claude.json` snapshot).
+Edge case tests for the `billing::` parameter. Tests validate boolean enforcement, default behavior, and billing type field control from `oauthAccount`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.json` snapshot).
 
 **Source:** [params.md#parameter--17-billing](../../../../docs/cli/param/016_billing.md)
 

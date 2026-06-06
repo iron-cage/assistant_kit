@@ -22,29 +22,29 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 | IT-14 | Non-active account shows its own stored expiry, not active's | Bug Reproducer |
 | IT-15 | Missing `subscriptionType` in credential file → `Sub:     N/A` | Edge Case |
 | IT-16 | Missing `rateLimitTier` in credential file → `Tier:    N/A` | Edge Case |
-| IT-17 | `display_name::1` shows `Display:` line from saved `.claude.json` snapshot | Rich Metadata |
+| IT-17 | `display_name::1` shows `Display:` line from saved `{name}.json` snapshot | Rich Metadata |
 | IT-18 | `role::1 billing::1 model::1` shows corresponding lines from saved snapshots | Rich Metadata |
 | IT-19 | Account without saved metadata snapshots → `N/A` for all 4 new fields | Rich Metadata / Edge Case |
 | IT-20 | `format::json` includes `display_name`, `role`, `billing`, `model` keys | Rich Metadata / JSON |
 | IT-21 | New metadata fields absent by default (opt-in) | Rich Metadata / Default |
-| IT-22 | `email::` shows value from saved `.claude.json` snapshot (default-on) | Rich Metadata / Email |
+| IT-22 | `email::` shows value from saved `{name}.json` snapshot (default-on) | Rich Metadata / Email |
 | IT-23 | `format::table` renders one-row-per-account table with flag, Account, Sub, Tier, Expires, Email columns | Table Format |
 | IT-24 | Positional bare arg `alice@acme.com` (no `name::`) shows single account | Positional Syntax |
 | IT-25 | Prefix `alice` resolves to `alice@acme.com` and shows that account | Prefix Resolution |
 | IT-26 | Account matching live `accessToken` shows `Current:  yes`; others show `Current:  no` | Current Account |
 | IT-27 | `Current:` line suppressed when `~/.claude/.credentials.json` is unreadable | Current Account |
 | IT-28 | `current::0` suppresses `Current:` line; `format::json` includes `is_current` field | Current Account |
-| IT-29 | `uuid::1` shows `ID:` line from `taggedId` in saved `.claude.json` snapshot | Extended Snapshot |
+| IT-29 | `uuid::1` shows `ID:` line from `taggedId` in saved `{name}.json` snapshot | Extended Snapshot |
 | IT-30 | `capabilities::1` shows `Capabilities:` line as comma-separated list | Extended Snapshot |
 | IT-31 | Empty capabilities array in snapshot → `Capabilities: N/A` | Extended Snapshot / Edge Case |
-| IT-32 | Account without `.claude.json` snapshot → `ID: N/A`, `Capabilities: N/A` | Extended Snapshot / Edge Case |
-| IT-33 | `org_uuid::1` shows `Org ID:` line from saved `{name}.roles.json` | Org Identity |
-| IT-34 | `org_name::1` shows `Org:` line from saved `{name}.roles.json` | Org Identity |
-| IT-35 | Account without `roles.json` snapshot → `Org ID: N/A`, `Org: N/A` | Org Identity / Edge Case |
+| IT-32 | Account without `{name}.json` snapshot → `ID: N/A`, `Capabilities: N/A` | Extended Snapshot / Edge Case |
+| IT-33 | `org_uuid::1` shows `Org ID:` line from saved `{name}.json` | Org Identity |
+| IT-34 | `org_name::1` shows `Org:` line from saved `{name}.json` | Org Identity |
+| IT-35 | Account without org fields in `{name}.json` → `Org ID: N/A`, `Org: N/A` | Org Identity / Edge Case |
 | IT-36 | `format::json` includes `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` | Extended Snapshot / JSON |
 | IT-37 | `uuid::`, `capabilities::`, `org_uuid::`, `org_name::` all absent by default | Extended Snapshot / Default |
-| IT-38 | `host::1` shows `Host:` line from saved `{name}.profile.json` | Host Metadata |
-| IT-39 | `role::1` shows user-defined role label from saved `{name}.profile.json` | Host Metadata |
+| IT-38 | `host::1` shows `Host:` line from saved `{name}.json` | Host Metadata |
+| IT-39 | `role::1` shows user-defined role label from saved `{name}.json` | Host Metadata |
 
 ### Test Coverage Summary
 
@@ -237,7 +237,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-17: `display_name::1` shows Display line from saved snapshot
 
-- **Given:** `work@acme.com` with saved `.claude.json` containing `{"oauthAccount":{"displayName":"alice"}}`. Active account.
+- **Given:** `work@acme.com` with saved `{name}.json` containing `{"oauthAccount":{"displayName":"alice"}}`. Active account.
 - **When:** `clp .accounts display_name::1`
 - **Then:** Stdout contains `Display: alice`.; display name rendered from saved snapshot
 - **Exit:** 0
@@ -247,7 +247,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-18: `role::1 billing::1 model::1` shows corresponding lines
 
-- **Given:** `work@acme.com` with saved `.claude.json` containing `{"oauthAccount":{"organizationRole":"admin","billingType":"stripe_subscription"}}` and saved `.settings.json` containing `{"model":"sonnet"}`.
+- **Given:** `work@acme.com` with saved `{name}.json` containing `{"oauthAccount":{"organizationRole":"admin","billingType":"stripe_subscription"}, "model":"sonnet"}`.
 - **When:** `clp .accounts role::1 billing::1 model::1`
 - **Then:** Stdout contains `Role:    admin`, `Billing: stripe_subscription`, `Model:   sonnet`.; all 3 metadata fields rendered
 - **Exit:** 0
@@ -257,7 +257,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-19: Account without saved metadata → N/A for new fields
 
-- **Given:** `work@acme.com` with credential file only (no `.claude.json` or `.settings.json` snapshots).
+- **Given:** `work@acme.com` with credential file only (no `{name}.json` snapshot).
 - **When:** `clp .accounts display_name::1 role::1 billing::1 model::1`
 - **Then:** Stdout contains `Display: N/A`, `Role:    N/A`, `Billing: N/A`, `Model:   N/A`.; absent snapshots degrade gracefully
 - **Exit:** 0
@@ -267,7 +267,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-20: JSON includes new metadata keys
 
-- **Given:** `work@acme.com` with saved `.claude.json` snapshot containing display name and role.
+- **Given:** `work@acme.com` with saved `{name}.json` snapshot containing display name and role.
 - **When:** `clp .accounts format::json`
 - **Then:** Valid JSON array where each object contains `display_name`, `role`, `billing`, `model` keys.; JSON shape includes all metadata regardless of snapshot presence
 - **Exit:** 0
@@ -277,7 +277,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-21: New metadata fields absent by default
 
-- **Given:** `work@acme.com` with saved `.claude.json` snapshot containing `oauthAccount` rich metadata and `{name}.settings.json` with `model` field (BUG-222 fix).
+- **Given:** `work@acme.com` with saved `{name}.json` snapshot containing `oauthAccount` rich metadata and `model` field (BUG-222 fix).
 - **When:** `clp .accounts`
 - **Then:** Stdout does NOT contain `Display:`, `Role:`, `Billing:`, `Model:` lines.; opt-in fields absent by default
 - **Exit:** 0
@@ -287,7 +287,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-22: `email::` shows value from saved snapshot
 
-- **Given:** `work@acme.com` with saved `.claude.json` containing `{"emailAddress":"work@acme.com"}`.
+- **Given:** `work@acme.com` with saved `{name}.json` containing `{"emailAddress":"work@acme.com"}`.
 - **When:** `clp .accounts`
 - **Then:** Stdout contains `Email:   work@acme.com`.; email address populated from saved snapshot (default-on)
 - **Exit:** 0
@@ -357,7 +357,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-29: `uuid::1` shows `ID:` line from taggedId
 
-- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.claude.json` containing `{"oauthAccount":{"taggedId":"user_abc123"}}`.
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"oauthAccount":{"taggedId":"user_abc123"}}`.
 - **When:** `clp .accounts uuid::1`
 - **Then:** Output block for `work@acme.com` contains `ID:      user_abc123`.
 - **Exit:** 0
@@ -367,7 +367,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-30: `capabilities::1` shows `Capabilities:` as comma-separated list
 
-- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.claude.json` containing `{"oauthAccount":{"capabilities":["claude_code","pro"]}}`.
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"oauthAccount":{"capabilities":["claude_code","pro"]}}`.
 - **When:** `clp .accounts capabilities::1`
 - **Then:** Output block contains `Capabilities: claude_code, pro`.
 - **Exit:** 0
@@ -377,7 +377,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-31: Empty capabilities array → `Capabilities: N/A`
 
-- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.claude.json` containing `{"oauthAccount":{"capabilities":[]}}`.
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"oauthAccount":{"capabilities":[]}}`.
 - **When:** `clp .accounts capabilities::1`
 - **Then:** Output block contains `Capabilities: N/A`.
 - **Exit:** 0
@@ -385,9 +385,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-32: Account without `.claude.json` snapshot → N/A for uuid and capabilities
+### IT-32: Account without `{name}.json` snapshot → N/A for uuid and capabilities
 
-- **Given:** `work@acme.com` with credential file only — no `{credential_store}/work@acme.com.claude.json` snapshot.
+- **Given:** `work@acme.com` with credential file only — no `{credential_store}/work@acme.com.json` snapshot.
 - **When:** `clp .accounts uuid::1 capabilities::1`
 - **Then:** Output block contains `ID:      N/A` and `Capabilities: N/A`.
 - **Exit:** 0
@@ -395,9 +395,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-33: `org_uuid::1` shows `Org ID:` from roles.json
+### IT-33: `org_uuid::1` shows `Org ID:` from `{name}.json`
 
-- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.roles.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`.
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`.
 - **When:** `clp .accounts org_uuid::1`
 - **Then:** Output block contains `Org ID:  org-xyz-789`.
 - **Exit:** 0
@@ -405,9 +405,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-34: `org_name::1` shows `Org:` from roles.json
+### IT-34: `org_name::1` shows `Org:` from `{name}.json`
 
-- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.roles.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`.
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`.
 - **When:** `clp .accounts org_name::1`
 - **Then:** Output block contains `Org:     Acme Corp`.
 - **Exit:** 0
@@ -415,9 +415,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-35: Account without `roles.json` → N/A for org fields
+### IT-35: Account without org fields in `{name}.json` → N/A for org fields
 
-- **Given:** `work@acme.com` saved with credential file only — no `{credential_store}/work@acme.com.roles.json` snapshot.
+- **Given:** `work@acme.com` saved with credential file only — no org identity fields in `{credential_store}/work@acme.com.json` snapshot.
 - **When:** `clp .accounts org_uuid::1 org_name::1`
 - **Then:** Output block contains `Org ID:  N/A` and `Org:     N/A`.
 - **Exit:** 0
@@ -427,7 +427,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-36: `format::json` includes extended snapshot and org fields
 
-- **Given:** `work@acme.com` saved with `.claude.json` snapshot (taggedId="user_abc123", capabilities=["claude_code"]) and `roles.json` snapshot (organization_uuid="org-xyz", organization_name="Acme").
+- **Given:** `work@acme.com` saved with `{name}.json` snapshot (taggedId="user_abc123", capabilities=["claude_code"], organization_uuid="org-xyz", organization_name="Acme").
 - **When:** `clp .accounts format::json`
 - **Then:** Valid JSON array where each object contains `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` keys; `work@acme.com` has non-null values for all four.
 - **Exit:** 0
@@ -437,7 +437,7 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ### IT-37: Extended params absent by default
 
-- **Given:** `work@acme.com` saved with `.claude.json` containing taggedId and capabilities, and `roles.json` containing org fields.
+- **Given:** `work@acme.com` saved with `{name}.json` containing taggedId, capabilities, and org fields.
 - **When:** `clp .accounts` (no extended params)
 - **Then:** Stdout does NOT contain `ID:`, `Capabilities:`, `Org ID:`, `Org:` lines. Only default-on fields present.
 - **Exit:** 0
@@ -445,9 +445,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-38: `host::1` shows Host line from profile.json
+### IT-38: `host::1` shows Host line from `{name}.json`
 
-- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.profile.json` containing `{"host":"workstation","role":"dev"}`.
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"host":"workstation","role":"dev"}`.
 - **When:** `clp .accounts host::1`
 - **Then:** Output block for `work@acme.com` contains `Host:    workstation`. No `Host:` line appears in default output without `host::1`.
 - **Exit:** 0
@@ -455,10 +455,10 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 
 ---
 
-### IT-39: `role::1` shows user-defined role label from profile.json
+### IT-39: `role::1` shows user-defined role label from `{name}.json`
 
-- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.profile.json` containing `{"host":"workstation","role":"dev"}`.
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.json` containing `{"host":"workstation","role":"dev"}`.
 - **When:** `clp .accounts role::1`
-- **Then:** Output block for `work@acme.com` contains `Role:    dev`. Label is sourced from `profile.json` (written by `.account.save role::`) — not from `organizationRole` in `.claude.json`.
+- **Then:** Output block for `work@acme.com` contains `Role:    dev`. Label is sourced from the `role` field in `{name}.json` (written by `.account.save role::`) — not from `organizationRole` in the `oauthAccount` subtree.
 - **Exit:** 0
 - **Source:** [feature/029_account_host_metadata.md FT-08](../../../../docs/feature/029_account_host_metadata.md), [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)

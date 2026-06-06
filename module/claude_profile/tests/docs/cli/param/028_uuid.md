@@ -1,6 +1,6 @@
 # Parameter :: `uuid::`
 
-Edge case tests for the `uuid::` parameter. Tests validate boolean enforcement, default behavior, and stable user ID field control from `oauthAccount.taggedId`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.claude.json` snapshot).
+Edge case tests for the `uuid::` parameter. Tests validate boolean enforcement, default behavior, and stable user ID field control from `oauthAccount.taggedId`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.json` snapshot).
 
 **Source:** [params.md#parameter--28-uuid](../../../../docs/cli/param/028_uuid.md)
 

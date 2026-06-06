@@ -553,7 +553,7 @@ pub( crate ) fn render_plain(
 ///
 /// The returned string is the same value that would appear in the corresponding
 /// cell of the text table — but without trailing whitespace or ANSI sequences.
-/// `host` and `role` return the values from `{name}.profile.json`, empty when absent.
+/// `host` and `role` return the values from `{name}.json`, empty when absent.
 pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_secs : u64 ) -> String
 {
   let dash = "\u{2014}".to_string();

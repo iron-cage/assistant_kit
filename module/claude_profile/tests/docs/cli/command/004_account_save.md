@@ -17,13 +17,13 @@ Integration test planning for the `.account.save` command. See [command/namespac
 | IT-9 | Saved file content matches active credentials exactly | Data Integrity |
 | IT-10 | Missing `name::` and no active marker exits 1 | Inference Failure |
 | IT-14 | Missing `name::` — infers from `oauthAccount.emailAddress`; falls back to active marker | Name Inference |
-| IT-11 | Save creates `{name}.claude.json` with `oauthAccount` subtree and `{name}.settings.json` with model (BUG-222 fix) | Metadata Snapshot |
-| IT-12 | Save succeeds when `~/.claude.json` absent — only credential file created | Metadata Snapshot / Best-Effort |
-| IT-13 | Save succeeds when `~/.claude.json` present but lacks `oauthAccount` key — no `.claude.json` snapshot created | Metadata Snapshot / Best-Effort |
+| IT-11 | Save creates `{name}.json` with `oauthAccount` subtree and model (BUG-222 fix) | Metadata Snapshot |
+| IT-12 | Save succeeds when `~/.claude.json` absent — `{name}.json` created without `oauthAccount` field | Metadata Snapshot / Best-Effort |
+| IT-13 | Save succeeds when `~/.claude.json` has no `oauthAccount` key — `{name}.json` created without `oauthAccount` | Metadata Snapshot / Best-Effort |
 | IT-15 | Save writes active marker — `.credentials.status` shows `Account: {name}` immediately after save | Active Marker |
 | IT-16 | Save with path-unsafe chars in email local part (`/`, `\`) exits 1 | Validation |
-| IT-17 | Save writes `{name}.roles.json` when endpoint 005 returns org identity | Org Identity Snapshot |
-| IT-18 | Save succeeds even when endpoint 005 call fails — no `roles.json`, no error | Org Identity Snapshot / Best-Effort |
+| IT-17 | Save writes org identity to `{name}.json` when endpoint 005 returns org identity | Org Identity Snapshot |
+| IT-18 | Save succeeds even when endpoint 005 call fails — no org fields in `{name}.json`, no error | Org Identity Snapshot / Best-Effort |
 | IT-19 | Stale `_active` marker overridden by `oauthAccount.emailAddress` (BUG-212) | Name Inference / Regression |
 
 ### Test Coverage Summary
@@ -152,7 +152,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 - **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists with `oauthAccount.displayName = "alice"`. `~/.claude/settings.json` exists with `model = "sonnet"`.
 - **When:** `clp .account.save name::work@acme.com`
-- **Then:** `{credential_store}/work@acme.com.claude.json` created containing only `{"oauthAccount": {...}}`; `{credential_store}/work@acme.com.settings.json` created containing `{"model": "sonnet"}` (BUG-222 fix: model preference captured for restore by `switch_account()`).
+- **Then:** `{credential_store}/work@acme.com.json` created containing `{"oauthAccount": {...}, "model": "sonnet"}` (BUG-222 fix: model preference captured for restore by `switch_account()`).
 - **Exit:** 0
 - **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
 
@@ -162,17 +162,17 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 - **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` does NOT exist.
 - **When:** `clp .account.save name::work@acme.com`
-- **Then:** Credential file created. No `.claude.json` snapshot created. No error emitted; save succeeds silently despite missing source.; save completes successfully; no error for absent optional source
+- **Then:** Credential file created. `{name}.json` created but contains no `oauthAccount` field (source absent — best-effort skipped). No error emitted; save completes successfully; no error for absent optional source.
 - **Exit:** 0
 - **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
 
 ---
 
-### IT-13: Save extracts `oauthAccount` only; `~/.claude.json` present with no `oauthAccount` key → no snapshot
+### IT-13: Save extracts `oauthAccount` only; `~/.claude.json` present with no `oauthAccount` key → no `oauthAccount` in snapshot
 
 - **Given:** `~/.claude/.credentials.json` exists with valid credentials. `~/.claude.json` exists but contains only `{"commands": {"foo": 1}}` (no `oauthAccount` key).
 - **When:** `clp .account.save name::work@acme.com`
-- **Then:** Credential file created. No `.claude.json` snapshot created (no `oauthAccount` to extract). No error emitted; save completes successfully.
+- **Then:** Credential file created. `{name}.json` created but contains no `oauthAccount` key (absent in source — extraction skipped). No error emitted; save completes successfully.
 - **Exit:** 0
 - **Source:** [command/001_account.md — .account.save](../../../../docs/cli/command/001_account.md#command--4-accountsave)
 
@@ -208,11 +208,11 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 ---
 
-### IT-17: Save writes `{name}.roles.json` when endpoint 005 returns org identity
+### IT-17: Save writes org identity to `{name}.json` when endpoint 005 returns org identity
 
 - **Given:** `~/.claude/.credentials.json` exists with valid credentials that allow endpoint 005 to return `{"organization_uuid":"org-xyz","organization_name":"Acme Corp"}`.
 - **When:** `clp .account.save name::work@acme.com`
-- **Then:** `{credential_store}/work@acme.com.roles.json` created and contains `organization_uuid` and `organization_name` fields with the returned values. Credential file and metadata snapshots also created. Exit 0 with normal success message.
+- **Then:** `{credential_store}/work@acme.com.json` contains `organization_uuid` and `organization_name` fields with the returned values. Credential file and metadata snapshot also created. Exit 0 with normal success message.
 - **Exit:** 0
 - **Source:** [022_org_identity_snapshot.md AC-01](../../../../docs/feature/022_org_identity_snapshot.md), [002_account_save.md AC-12](../../../../docs/feature/002_account_save.md)
 
@@ -222,7 +222,7 @@ Integration test planning for the `.account.save` command. See [command/namespac
 
 - **Given:** `~/.claude/.credentials.json` exists with valid credentials. Endpoint 005 is unreachable or returns an error (simulate with invalid/expired credentials or network mock if available).
 - **When:** `clp .account.save name::work@acme.com`
-- **Then:** Exit 0 with normal success message. Credential file and metadata snapshots created. `{credential_store}/work@acme.com.roles.json` is NOT created. No error message on stderr referencing endpoint 005 failure.
+- **Then:** Exit 0 with normal success message. Credential file and metadata snapshot created. `{credential_store}/work@acme.com.json` does NOT contain org identity fields. No error message on stderr referencing endpoint 005 failure.
 - **Exit:** 0
 - **Source:** [022_org_identity_snapshot.md AC-02](../../../../docs/feature/022_org_identity_snapshot.md), [002_account_save.md AC-13](../../../../docs/feature/002_account_save.md)
 

@@ -1,6 +1,6 @@
 # Parameter :: `org_name::`
 
-Edge case tests for the `org_name::` parameter. Tests validate boolean enforcement, default behavior, and organisation display name field control from `{name}.roles.json`. Used by `.accounts` (saved credential store snapshot) and `.credentials.status` (active account's `{active_account}.roles.json`).
+Edge case tests for the `org_name::` parameter. Tests validate boolean enforcement, default behavior, and organisation display name field control from `{name}.json`. Used by `.accounts` (saved credential store snapshot) and `.credentials.status` (active account's `{active_account}.json`).
 
 **Source:** [params.md#parameter--31-org_name](../../../../docs/cli/param/031_org_name.md)
 
@@ -14,7 +14,7 @@ Edge case tests for the `org_name::` parameter. Tests validate boolean enforceme
 | EC-4 | Default value is `0` (absent by default, opt-in) | Default |
 | EC-5 | `org_name::0` explicit disable accepted — field absent | Field Control |
 | EC-6 | `format::json` always emits `organization_name` key regardless of `org_name::0` | Interaction |
-| EC-7 | Missing `roles.json` snapshot → `Org: N/A` | Edge Case |
+| EC-7 | Missing `{name}.json` snapshot → `Org: N/A` | Edge Case |
 
 ## Test Coverage Summary
 
@@ -34,7 +34,7 @@ Edge case tests for the `org_name::` parameter. Tests validate boolean enforceme
 
 ### EC-1: `org_name::1` — Org: field included in output
 
-- **Given:** Active account with `{credential_store}/{active_account}.roles.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`
+- **Given:** Active account with `{credential_store}/{active_account}.json` containing `{"organization_uuid":"org-xyz-789","organization_name":"Acme Corp"}`
 - **When:** `clp .credentials.status org_name::1`
 - **Then:** Output contains `Org:` line with value `Acme Corp`
 - **Exit:** 0
@@ -61,7 +61,7 @@ Edge case tests for the `org_name::` parameter. Tests validate boolean enforceme
 
 ### EC-4: Default value (absent by default, opt-in)
 
-- **Given:** Active account with `roles.json` containing organization_name
+- **Given:** Active account with `{name}.json` containing organization_name
 - **When:** `clp .credentials.status` (no `org_name::` param)
 - **Then:** `Org:` line absent from output; organization_name not exposed unless opted in
 - **Exit:** 0
@@ -70,7 +70,7 @@ Edge case tests for the `org_name::` parameter. Tests validate boolean enforceme
 
 ### EC-5: `org_name::0` explicit disable accepted — field absent
 
-- **Given:** Active account with `roles.json` containing organization_name
+- **Given:** Active account with `{name}.json` containing organization_name
 - **When:** `clp .credentials.status org_name::0`
 - **Then:** `Org:` line absent from output; explicit 0 same as default-off
 - **Exit:** 0
@@ -79,16 +79,16 @@ Edge case tests for the `org_name::` parameter. Tests validate boolean enforceme
 
 ### EC-6: `format::json` always emits `organization_name` key
 
-- **Given:** Active account with `roles.json` containing `organization_name="Acme Corp"`
+- **Given:** Active account with `{name}.json` containing `organization_name="Acme Corp"`
 - **When:** `clp .credentials.status format::json org_name::0`
 - **Then:** JSON output contains `"organization_name"` key with value `"Acme Corp"` regardless of `org_name::0`
 - **Exit:** 0
 - **Source:** [params.md#parameter--31-org_name](../../../../docs/cli/param/031_org_name.md)
 ---
 
-### EC-7: Missing `roles.json` → `Org: N/A`
+### EC-7: Missing `{name}.json` → `Org: N/A`
 
-- **Given:** Active account set via per-machine active marker but no `{active_account}.roles.json` file in credential store
+- **Given:** Active account set via per-machine active marker but no `{active_account}.json` file in credential store
 - **When:** `clp .credentials.status org_name::1`
 - **Then:** Output contains `Org:     N/A`
 - **Exit:** 0

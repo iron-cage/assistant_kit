@@ -142,10 +142,10 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
     .filter( | s | !s.is_empty() );
   let account = active_name.clone().unwrap_or_else( || "N/A".to_string() );
 
-  // Org identity: read from {_active}.roles.json best-effort; empty when absent.
+  // Org identity: read from {_active}.json best-effort; empty when absent.
   let roles_json = active_name.as_deref()
     .and_then( | name | std::fs::read_to_string(
-      credential_store.join( format!( "{name}.roles.json" ) )
+      credential_store.join( format!( "{name}.json" ) )
     ).ok() )
     .unwrap_or_default();
   let org_uuid = crate::account::parse_string_field( &roles_json, "organization_uuid" ).unwrap_or_default();

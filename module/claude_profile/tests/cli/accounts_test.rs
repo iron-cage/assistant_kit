@@ -45,7 +45,7 @@
 //! | acc23 | `acc23_json_includes_new_fields` | `format::json` → includes display_name, role, billing, model | P |
 //! | acc24 | `acc24_new_fields_absent_by_default` | no opt-in → Display/Role/Billing/Model absent | P |
 //! | acc25 | `acc25_email_reads_from_snapshot` | Email: default-on → real email from snapshot | P |
-//! | acc26 | `acc26_save_creates_snapshot_files` | `save` creates `{name}.claude.json` and `{name}.settings.json` when model present (BUG-222) | P |
+//! | acc26 | `acc26_save_creates_snapshot_files` | `save` creates `{name}.json` when model present (BUG-222) | P |
 //! | acc27 | `acc27_save_succeeds_without_claude_json` | save OK when `~/.claude.json` absent (best-effort) | P |
 //! | acc28 | `acc28_save_succeeds_without_settings_json` | save OK when `settings.json` absent but `.claude.json` present | P |
 //! | acc29 | `acc29_accounts_positional_bare_arg` | positional email → shows single account block | P |
@@ -635,7 +635,7 @@ fn acc19_missing_expires_at_shows_expired()
 /// Root Cause (before fix): `Account` struct lacked `display_name` field; `list()` never
 ///   read snapshot files; `render_accounts_text()` did not accept `show_display_name` param.
 /// Why Not Caught: All prior tests used only the 5 original Account fields.
-/// Fix Applied: `Account` gains `display_name`; `list()` reads `{name}.claude.json`;
+/// Fix Applied: `Account` gains `display_name`; `list()` reads `{name}.json`;
 ///   `render_accounts_text()` renders `Display:` when `show_display_name` is true.
 /// Prevention: Whenever adding opt-in fields, write a snapshot-present test (acc20)
 ///   and a snapshot-absent test (acc22) to cover both code paths.
@@ -673,7 +673,7 @@ fn acc20_display_name_shows_from_snapshot()
 ///   files; `render_accounts_text()` renders the three new lines when enabled.
 /// Prevention: Test all three in one function to catch the common mistake of reading
 ///   one snapshot file but forgetting the other.
-/// Pitfall: `model` comes from `{name}.settings.json`, not `{name}.claude.json`. A single
+/// Pitfall: `model` comes from `{name}.json`, not `{name}.json`. A single
 ///   snapshot read call is insufficient — both files must be read independently.
 #[ test ]
 fn acc21_role_billing_model_from_snapshots()
@@ -798,7 +798,7 @@ fn acc24_new_fields_absent_by_default()
 /// Root Cause (before fix): `list()` read `organizationName` for `Account.org`; the
 ///   `emailAddress` field was never read from the per-account snapshot file.
 /// Why Not Caught: No test verified that Email: shows the actual stored emailAddress value.
-/// Fix Applied: `list()` reads `{name}.claude.json` → `emailAddress` and populates
+/// Fix Applied: `list()` reads `{name}.json` → `emailAddress` and populates
 ///   `Account.email`; `render_accounts_text()` uses `a.email` with empty-string → N/A guard.
 /// Prevention: When a display value is derived from a data source, write a test that
 ///   verifies the ACTUAL VALUE appears — not just the label line.
@@ -826,22 +826,22 @@ fn acc25_email_reads_from_snapshot()
   );
 }
 
-/// acc26 (T09 — save with claude.json + settings.json): `account::save` writes credential,
-/// `.claude.json`, and `.settings.json` snapshot files when all sources are present (BUG-222 fix).
+/// acc26 (T09 — save with claude.json + settings.json): `account::save` writes credential
+/// and `.json` snapshot files when all sources are present (BUG-222 fix).
 ///
 /// Root Cause (before fix): `save()` only called `std::fs::copy(paths.credentials_file(), dest)`.
 ///   The `oauthAccount` data from `~/.claude.json` was never persisted to the credential store.
 /// Why Not Caught: No save test verified the presence of snapshot files after save.
 /// Fix Applied: `save()` surgically extracts the `oauthAccount` subtree from `~/.claude.json`
-///   and writes it to `{name}.claude.json`. BUG-222 additionally captures `model` from
-///   `~/.claude/settings.json` into `{name}.settings.json`, enabling model preference restore
+///   and writes it to `{name}.json`. BUG-222 additionally captures `model` from
+///   `~/.claude/settings.json` into `{name}.json`, enabling model preference restore
 ///   on `switch_account()`. When settings.json source is absent, no snapshot is written (acc28).
 /// Prevention: After any `save()` implementation change, verify ALL expected output files exist.
 ///   `settings.json` snapshot must be created when source model is present; absent when source
 ///   is absent (see acc28 for the no-source case).
 /// Pitfall: The `oauthAccount` extraction silently skips if the key is absent — this is
 ///   intentional best-effort, but means a wrong source path would silently produce no output.
-///   This test catches that by asserting `{name}.claude.json` EXISTS after save.
+///   This test catches that by asserting `{name}.json` EXISTS after save.
 #[ test ]
 fn acc26_save_creates_snapshot_files()
 {
@@ -861,12 +861,12 @@ fn acc26_save_creates_snapshot_files()
     "save must create credentials snapshot, store: {}", store.display(),
   );
   assert!(
-    store.join( "alice@acme.com.claude.json" ).exists(),
-    "save must create .claude.json snapshot, store: {}", store.display(),
+    store.join( "alice@acme.com.json" ).exists(),
+    "save must create .json snapshot, store: {}", store.display(),
   );
-  // Fix(BUG-222): save() captures model from ~/.claude/settings.json into {name}.settings.json.
+  // Fix(BUG-222): save() captures model from ~/.claude/settings.json into {name}.json.
   //   write_settings_json above created the source with "claude-sonnet" → snapshot must exist.
-  let settings_snap = store.join( "alice@acme.com.settings.json" );
+  let settings_snap = store.join( "alice@acme.com.json" );
   assert!(
     settings_snap.exists(),
     "save must create settings.json snapshot when source model present (BUG-222), store: {}", store.display(),
@@ -880,11 +880,11 @@ fn acc26_save_creates_snapshot_files()
 
 /// acc27 (T09 — save without `~/.claude.json`): save succeeds even when source is absent.
 ///
-/// Root Cause (before fix): `save()` only copied credentials; no `.claude.json` snapshot
+/// Root Cause (before fix): `save()` only copied credentials; no `.json` snapshot
 ///   was ever created. After BUG-174, oauthAccount extraction was added but must silently
 ///   skip if `~/.claude.json` is absent or unparseable.
 /// Why Not Caught: All prior save tests relied on a credentials file being present;
-///   no test verified the best-effort behaviour for the optional `.claude.json` source.
+///   no test verified the best-effort behaviour for the optional `.json` source.
 /// Fix Applied: `save()` wraps the oauthAccount extraction in `if let Ok(text) = read_to_string(...)` —
 ///   absent or malformed `~/.claude.json` silently skips; credential copy still uses `?` (required).
 /// Prevention: For every best-effort file operation, add a test where the source is absent
@@ -907,28 +907,28 @@ fn acc27_save_succeeds_without_claude_json()
     store.join( "alice@acme.com.credentials.json" ).exists(),
     "save must still create credential file when snapshots absent",
   );
-  // Snapshot files must be absent (not created from non-existent sources).
+  // Unified {{name}}.json is always created but must not contain oauthAccount (no source).
+  let meta = std::fs::read_to_string( store.join( "alice@acme.com.json" ) )
+    .unwrap_or_default();
   assert!(
-    !store.join( "alice@acme.com.claude.json" ).exists(),
-    "no .claude.json source → no .claude.json snapshot must be created",
+    !meta.contains( "oauthAccount" ),
+    "no ~/.claude.json → {{name}}.json must not contain oauthAccount, got: {meta}",
   );
 }
 
 /// acc28 (T09 — save with `.claude.json` but without `settings.json`): confirms oauthAccount
-/// extraction succeeds when `settings.json` source is absent; no `{name}.settings.json`
-/// snapshot is created when the source has no `model` field.
+/// extraction succeeds when `settings.json` source is absent; `{name}.json` is created
+/// with oauthAccount but no `model` field when `settings.json` has no model.
 ///
 /// Root Cause (before fix): After the initial snapshot feature was added, `save()` tried
-///   to copy both `.claude.json` and `settings.json`; a missing `settings.json` could
-///   interfere. BUG-222 added model-only capture: `save()` reads `model` from
-///   `~/.claude/settings.json` and writes `{name}.settings.json` when present.
+///   to read `settings.json`; a missing file could interfere. BUG-222 made model capture
+///   best-effort: `save()` reads `model` from `~/.claude/settings.json` when present.
 /// Why Not Caught: No test verified that `settings.json` absence did not affect the
-///   `.claude.json` snapshot creation.
-/// Fix Applied (BUG-222): `save()` captures `model` from `~/.claude/settings.json` into
-///   `{name}.settings.json` when present. When source is absent or has no `model` field,
-///   no `{name}.settings.json` is written — save still succeeds.
-/// Prevention: Explicitly verify `settings.json` snapshot is NOT created when source absent;
-///   confirm `.claude.json` snapshot is independent of `settings.json` presence.
+///   `{name}.json` snapshot creation.
+/// Fix Applied (BUG-222): `save()` merges `model` from `~/.claude/settings.json` into
+///   `{name}.json` when present. When source is absent, `{name}.json` is still written
+///   with whatever other data is available (e.g. oauthAccount).
+/// Prevention: Verify `{name}.json` contains oauthAccount but no model when source absent.
 /// Pitfall: `save()` only captures the `model` field, not the entire `settings.json`;
 ///   machine-global keys (commands.*, mcpServers) are never stored per-account.
 #[ test ]
@@ -948,13 +948,15 @@ fn acc28_save_succeeds_without_settings_json()
     store.join( "alice@acme.com.credentials.json" ).exists(),
     "save must create credential snapshot",
   );
+  let meta = std::fs::read_to_string( store.join( "alice@acme.com.json" ) )
+    .expect( "save must create {{name}}.json" );
   assert!(
-    store.join( "alice@acme.com.claude.json" ).exists(),
-    "save must create .claude.json snapshot when source present",
+    meta.contains( "oauthAccount" ),
+    "{{name}}.json must contain oauthAccount from ~/.claude.json, got: {meta}",
   );
   assert!(
-    !store.join( "alice@acme.com.settings.json" ).exists(),
-    "no settings.json source → no settings.json snapshot must be created",
+    !meta.contains( "\"model\"" ),
+    "no settings.json source → {{name}}.json must not contain model, got: {meta}",
   );
 }
 
@@ -1257,7 +1259,7 @@ fn acc41_no_snapshot_uuid_capabilities_na()
 
 // ── acc42 ─────────────────────────────────────────────────────────────────────
 
-/// acc42 (EC-1): `org_uuid::1` shows `Org ID:` line with value from `{name}.roles.json`.
+/// acc42 (EC-1): `org_uuid::1` shows `Org ID:` line with value from `{name}.json`.
 #[ test ]
 fn acc42_org_uuid_shows_from_roles_json()
 {
@@ -1328,7 +1330,7 @@ fn acc45_json_includes_org_uuid()
 
 // ── acc46 ─────────────────────────────────────────────────────────────────────
 
-/// acc46 (EC-1): `org_name::1` shows `Org:` line with value from `{name}.roles.json`.
+/// acc46 (EC-1): `org_name::1` shows `Org:` line with value from `{name}.json`.
 #[ test ]
 fn acc46_org_name_shows_from_roles_json()
 {
@@ -1435,7 +1437,7 @@ fn acc49_accounts_host_role_shows_profile_metadata()
 
 /// acc50 — absent `profile.json` must not cause any command to exit non-zero.
 ///
-/// When `host::1` is given but no `{name}.profile.json` exists, the Host field
+/// When `host::1` is given but no `{name}.json` exists, the Host field
 /// shows `N/A` (empty → fallback) and exit is 0. Resilience spec.
 ///
 /// Spec: [`tests/docs/feature/029_account_host_metadata.md` FT-09]

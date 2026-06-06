@@ -337,9 +337,9 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ### IT-27: `oauthAccount.organizationName` reflects switched-to account (BUG-219 guard)
 
-- **Given:** Account `i7@test.com` saved with `{credential_store}/i7@test.com.claude.json` containing `oauthAccount.organizationName = "i7 Org"` (and active, so `~/.claude.json` has this org). Account `i6@test.com` saved with `{credential_store}/i6@test.com.claude.json` also containing `organizationName = "i7 Org"` (snapshot was captured while i7 was active — stale cross-account contamination). Account `i6@test.com` has `{credential_store}/i6@test.com.roles.json` with `organization_name = "i6 Org"`.
+- **Given:** Account `i7@test.com` saved with `{credential_store}/i7@test.com.json` containing `oauthAccount.organizationName = "i7 Org"` (and active, so `~/.claude.json` has this org). Account `i6@test.com` saved with `{credential_store}/i6@test.com.json` also containing `organizationName = "i7 Org"` (snapshot was captured while i7 was active — stale cross-account contamination). Account `i6@test.com` has `organization_name = "i6 Org"` in its `{credential_store}/i6@test.com.json`.
 - **When:** `clp .account.use name::i6@test.com`
-- **Then:** Exits 0; `switched to 'i6@test.com'` on stdout. `~/.claude.json` contains `oauthAccount.organizationName = "i6 Org"` (reflecting i6's org from `roles.json`), NOT `"i7 Org"` (the stale snapshot value). `oauthAccount.emailAddress = "i6@test.com"`.
+- **Then:** Exits 0; `switched to 'i6@test.com'` on stdout. `~/.claude.json` contains `oauthAccount.organizationName = "i6 Org"` (reflecting i6's org from `{name}.json`), NOT `"i7 Org"` (the stale snapshot value). `oauthAccount.emailAddress = "i6@test.com"`.
 - **Exit:** 0
 - **Source:** [feature/004_account_use.md BUG-219](../../../../docs/feature/004_account_use.md)
 - **Source fn:** `mre_bug_219_switch_account_stale_org_name` (in `claude_profile_core/tests/account_test.rs`)

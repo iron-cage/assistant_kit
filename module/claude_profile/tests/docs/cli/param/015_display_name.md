@@ -1,6 +1,6 @@
 # Parameter :: `display_name::`
 
-Edge case tests for the `display_name::` parameter. Tests validate boolean enforcement, default behavior, and display name field control from `oauthAccount`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.claude.json` snapshot).
+Edge case tests for the `display_name::` parameter. Tests validate boolean enforcement, default behavior, and display name field control from `oauthAccount`. Used by `.credentials.status` (live `~/.claude.json`) and `.accounts` (saved `{name}.json` snapshot).
 
 **Source:** [params.md#parameter--15-display_name](../../../../docs/cli/param/014_display_name.md)
 

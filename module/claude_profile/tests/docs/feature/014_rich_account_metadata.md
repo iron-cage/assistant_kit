@@ -33,7 +33,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 | FT-08 | Absent `settings.json` → `model` `N/A` | AC-08 | N/A Handling |
 | FT-09 | `.accounts display_name::1` → `Display:` per account | AC-09 | Accounts Integration |
 | FT-10 | `.accounts role::1 billing::1 model::1` → per-account lines | AC-10 | Accounts Integration |
-| FT-11 | No `.claude.json` snapshot → `N/A` for all new fields | AC-11 | N/A Handling |
+| FT-11 | No `{name}.json` snapshot → `N/A` for all new fields | AC-11 | N/A Handling |
 | FT-12 | `.accounts format::json` includes 4 new keys per object | AC-12 | JSON Format |
 
 **Total:** 12 FT cases
@@ -130,7 +130,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 
 ### FT-09: `.accounts display_name::1` → `Display:` per account
 
-- **Given:** An account saved with a `{name}.claude.json` snapshot containing `displayName`.
+- **Given:** An account saved with a `{name}.json` snapshot containing `displayName`.
 - **When:** `clp .accounts display_name::1`
 - **Then:** Each account block includes a `Display:` line populated from the snapshot.
 - **Exit:** 0
@@ -141,18 +141,18 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 
 ### FT-10: `.accounts role::1 billing::1 model::1` → per-account lines
 
-- **Given:** Accounts saved with `{name}.claude.json` snapshots and `{name}.settings.json`.
+- **Given:** Accounts saved with `{name}.json` snapshots containing `oauthAccount` and `model` fields.
 - **When:** `clp .accounts role::1 billing::1 model::1`
-- **Then:** Each account block shows `Role:`, `Billing:`, and `Model:` lines from their respective snapshots. `Model:` is `N/A` if `{name}.settings.json` is absent.
+- **Then:** Each account block shows `Role:`, `Billing:`, and `Model:` lines from their respective snapshots. `Model:` is `N/A` if `model` field is absent in `{name}.json`.
 - **Exit:** 0
 - **Source fn:** `acc21_role_billing_model_from_snapshots`
 - **Source:** [014_rich_account_metadata.md AC-10](../../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
-### FT-11: No `.claude.json` snapshot → `N/A` for all new fields
+### FT-11: No `{name}.json` snapshot → `N/A` for all new fields
 
-- **Given:** An account with no `{name}.claude.json` snapshot on disk.
+- **Given:** An account with no `{name}.json` snapshot on disk.
 - **When:** `clp .accounts display_name::1 role::1 billing::1 model::1`
 - **Then:** All four lines show `N/A` for the affected account. No error.
 - **Exit:** 0

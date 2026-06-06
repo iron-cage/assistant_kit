@@ -8,31 +8,31 @@ Note: This is distinct from param 015 `role::` (boolean display toggle for `.acc
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| EC-1 | `role::work` writes role label to profile.json | Behavioral Divergence |
-| EC-2 | Omitting `role::` stores empty role in profile.json | Behavioral Divergence |
+| EC-1 | `role::work` writes role label to `{name}.json` | Behavioral Divergence |
+| EC-2 | Omitting `role::` stores empty role in `{name}.json` | Behavioral Divergence |
 | EC-3 | `role::` (empty string) stores empty role (same as omitting) | Empty String Semantics |
 | EC-4 | `role::work` appears in `clp .usage cols::+role` | Display |
-| EC-5 | Re-save with different `role::` overwrites old value in profile.json | Update Semantics |
-| EC-6 | `role::` value with spaces stored verbatim in profile.json | Special Characters |
+| EC-5 | Re-save with different `role::` overwrites old value in `{name}.json` | Update Semantics |
+| EC-6 | `role::` value with spaces stored verbatim in `{name}.json` | Special Characters |
 
 ---
 
-### EC-1: `role::work` writes role label to `profile.json`
+### EC-1: `role::work` writes role label to `{name}.json`
 
 - **Given:** No pre-existing `test@example.com` account.
 - **When:** `clp .account.save name::test@example.com role::work`
-- **Then:** Exits 0. `{credential_store}/test@example.com.profile.json` contains `"role": "work"`.
+- **Then:** Exits 0. `{credential_store}/test@example.com.json` contains `"role": "work"`.
 - **Exit:** 0
 - **Source fn:** `as30_role_writes_profile_json` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/052_role.md](../../../../docs/cli/param/052_role.md)
 
 ---
 
-### EC-2: Omitting `role::` stores empty role in profile.json
+### EC-2: Omitting `role::` stores empty role in `{name}.json`
 
 - **Given:** No pre-existing account.
 - **When:** `clp .account.save name::test@example.com` (no `role::` param)
-- **Then:** Exits 0. `profile.json` contains `"role": ""` (empty string, not absent).
+- **Then:** Exits 0. `{name}.json` contains `"role": ""` (empty string, not absent).
 - **Exit:** 0
 - **Source fn:** `as31_role_omit_stores_empty` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/052_role.md](../../../../docs/cli/param/052_role.md)
@@ -43,7 +43,7 @@ Note: This is distinct from param 015 `role::` (boolean display toggle for `.acc
 
 - **Given:** No pre-existing account.
 - **When:** `clp .account.save name::test@example.com role::` (empty value)
-- **Then:** Exits 0. `profile.json` contains `"role": ""` — same as omitting `role::`.
+- **Then:** Exits 0. `{name}.json` contains `"role": ""` — same as omitting `role::`.
 - **Exit:** 0
 - **Source fn:** `as32_role_empty_stores_empty` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/052_role.md](../../../../docs/cli/param/052_role.md)
@@ -62,22 +62,22 @@ Note: This is distinct from param 015 `role::` (boolean display toggle for `.acc
 
 ---
 
-### EC-5: Re-save with different `role::` overwrites old value in profile.json
+### EC-5: Re-save with different `role::` overwrites old value in `{name}.json`
 
 - **Given:** Account `test@example.com` saved with `role::personal`.
 - **When:** `clp .account.save name::test@example.com role::dev`
-- **Then:** Exits 0. `profile.json` now contains `"role": "dev"`. Old value `"personal"` no longer present.
+- **Then:** Exits 0. `{name}.json` now contains `"role": "dev"`. Old value `"personal"` no longer present.
 - **Exit:** 0
 - **Source fn:** `as33_role_resave_overwrites` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/052_role.md](../../../../docs/cli/param/052_role.md)
 
 ---
 
-### EC-6: `role::` value with spaces stored verbatim in profile.json
+### EC-6: `role::` value with spaces stored verbatim in `{name}.json`
 
 - **Given:** No pre-existing account.
 - **When:** `clp .account.save name::test@example.com role::dev ops team`
-- **Then:** Exits 0. `profile.json` contains `"role": "dev ops team"` (value with spaces preserved verbatim).
+- **Then:** Exits 0. `{name}.json` contains `"role": "dev ops team"` (value with spaces preserved verbatim).
 - **Exit:** 0
 - **Source fn:** `as34_role_with_spaces` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [param/052_role.md](../../../../docs/cli/param/052_role.md)

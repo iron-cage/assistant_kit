@@ -17,7 +17,7 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
 2. Fetch quota for the target account from `{credential_store}/{name}.credentials.json` — one HTTP call to `/api/oauth/usage`. If fetch fails (network error, expired token), record failure and continue to step 4.
 3. Determine idle status from fetched data: `five_hour.resets_at.is_none()` → idle; `resets_at.is_some()` → already active.
 4. If `dry::1`: print `[dry-run] would switch to '{name}'` (no files changed, no subprocess).
-5. `switch_account(name)` — atomic credential rotation (credentials, active marker, best-effort `oauthAccount` patch); model snapshot restore from `{name}.settings.json` into `~/.claude/settings.json`.
+5. `switch_account(name)` — atomic credential rotation (credentials, active marker, best-effort `oauthAccount` patch); model snapshot restore from `{name}.json` into `~/.claude/settings.json`.
 5b. If quota fetch succeeded (step 2): check `seven_day_sonnet` utilization; if remaining < 20% and restored model is Sonnet, overwrite `~/.claude/settings.json` model with `"claude-opus-4-6"` (BUG-225 fix). When `touch_ctx` is absent (fetch failed — see BUG-226 limitation), this step is skipped and the snapshot model is installed as-is.
 6. If quota fetch succeeded (step 2) AND account was idle (step 3): call `resolve_model(quota, imodel_param)` → `IsolatedModel`; call `resolve_effort(&model, effort_param)` → `Option<&str>`; spawn `run_isolated()` with `["--print", "."]` plus optional `--model` and `--effort` flags.
 

@@ -36,7 +36,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 
 ### FT-01: `uuid::1` shows `ID:` line on `.credentials.status`
 
-- **Given:** Active account set; the active account's `{name}.claude.json` in the credential store contains `"oauthAccount":{"taggedId":"user_01AbCdEfGh","uuid":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}`.
+- **Given:** Active account set; the active account's `{name}.json` in the credential store contains `"oauthAccount":{"taggedId":"user_01AbCdEfGh","uuid":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"}`.
 - **When:** `clp .credentials.status uuid::1`
 - **Then:** Stdout contains a line matching `ID:` followed by `user_01AbCdEfGh`. Exit 0.
 - **Exit:** 0
@@ -47,7 +47,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 
 ### FT-02: `capabilities::1` shows `Capabilities:` line on `.credentials.status`
 
-- **Given:** Active account set; the active account's `{name}.claude.json` contains `"capabilities":["claude_max","chat"]`.
+- **Given:** Active account set; the active account's `{name}.json` contains `"capabilities":["claude_max","chat"]`.
 - **When:** `clp .credentials.status capabilities::1`
 - **Then:** Stdout contains a line matching `Capabilities:` followed by `claude_max, chat` (comma-separated). Exit 0.
 - **Exit:** 0
@@ -58,7 +58,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 
 ### FT-03: `uuid::1` shows `ID:` per account on `.accounts`
 
-- **Given:** Two saved accounts `alice@a.com` and `bob@a.com`; each `{name}.claude.json` contains `taggedId` values `"user_01Alice"` and `"user_01Bob"` respectively.
+- **Given:** Two saved accounts `alice@a.com` and `bob@a.com`; each `{name}.json` contains `taggedId` values `"user_01Alice"` and `"user_01Bob"` respectively.
 - **When:** `clp .accounts uuid::1`
 - **Then:** Stdout contains an `ID: user_01Alice` line for alice's block and an `ID: user_01Bob` line for bob's block. Exit 0.
 - **Exit:** 0
@@ -69,7 +69,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 
 ### FT-04: `capabilities::1` shows `Capabilities:` per account on `.accounts`
 
-- **Given:** Two saved accounts; each `{name}.claude.json` contains `"capabilities":["claude_max"]`.
+- **Given:** Two saved accounts; each `{name}.json` contains `"capabilities":["claude_max"]`.
 - **When:** `clp .accounts capabilities::1`
 - **Then:** Stdout contains a `Capabilities: claude_max` line for each account block. Exit 0.
 - **Exit:** 0
@@ -80,7 +80,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 
 ### FT-05: No `ID:` or `Capabilities:` line in default output
 
-- **Given:** Active account set; `{name}.claude.json` contains both `taggedId` and `capabilities` fields.
+- **Given:** Active account set; `{name}.json` contains both `taggedId` and `capabilities` fields.
 - **When:** `clp .credentials.status` (no `uuid::` or `capabilities::` params)
 - **Then:** Stdout does NOT contain `ID:` or `Capabilities:` lines. All other standard credential fields appear. Exit 0.
 - **Exit:** 0
@@ -92,7 +92,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 
 ### FT-06: `format::json` always includes `tagged_id` and `capabilities` keys
 
-- **Given:** Active account with `taggedId` and `capabilities` in `{name}.claude.json`. `uuid::` and `capabilities::` params are NOT passed.
+- **Given:** Active account with `taggedId` and `capabilities` in `{name}.json`. `uuid::` and `capabilities::` params are NOT passed.
 - **When:** `clp .credentials.status format::json`
 - **Then:** JSON output contains a `tagged_id` key (string value, e.g. `"user_01AbCdEfGh"`) and a `capabilities` key (array value). Both keys present regardless of `uuid::` / `capabilities::` flags. Exit 0.
 - **Exit:** 0
@@ -104,7 +104,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 
 ### FT-07: Missing `oauthAccount` fields render `N/A` without error
 
-- **Given:** Active account whose `{name}.claude.json` does NOT contain `taggedId` or `capabilities` keys in `oauthAccount` (or has no `oauthAccount` object at all).
+- **Given:** Active account whose `{name}.json` does NOT contain `taggedId` or `capabilities` keys in `oauthAccount` (or has no `oauthAccount` object at all).
 - **When:** `clp .credentials.status uuid::1 capabilities::1`
 - **Then:** Stdout contains `ID: N/A` and `Capabilities: N/A`. Exit 0. No error message on stderr.
 - **Exit:** 0
@@ -126,7 +126,7 @@ Feature behavioral requirement test cases for `docs/feature/021_extended_snapsho
 
 ### FT-09: Empty `capabilities` array renders `N/A` in text and `[]` in JSON
 
-- **Given:** Active account whose `{name}.claude.json` contains `"capabilities":[]` (present but empty array).
+- **Given:** Active account whose `{name}.json` contains `"capabilities":[]` (present but empty array).
 - **When:** `clp .credentials.status capabilities::1`
 - **Then:** Stdout contains `Capabilities: N/A`. When `clp .credentials.status format::json` (no `capabilities::` param), the JSON output contains `"capabilities":[]`. Exit 0 for both.
 - **Exit:** 0

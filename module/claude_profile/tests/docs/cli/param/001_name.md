@@ -246,7 +246,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 
 - **Given:** `alice@acme.com` account saved in credential store.
 - **When:** `clp .account.renewal name::alice at::2026-07-01T00:00:00Z`
-- **Then:** Exit 0; `{credential_store}/alice@acme.com.claude.json` contains `_renewal_at: "2026-07-01T00:00:00Z"`. Prefix `alice` resolves to full email before the renewal write.
+- **Then:** Exit 0; `{credential_store}/alice@acme.com.json` contains `_renewal_at: "2026-07-01T00:00:00Z"`. Prefix `alice` resolves to full email before the renewal write.
 - **Exit:** 0
 - **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/015_name_shortcut_syntax.md AC-12](../../../../docs/feature/015_name_shortcut_syntax.md)
 
@@ -256,7 +256,7 @@ Edge case coverage for the `name::` parameter. See [params.md](../../../../docs/
 
 - **Given:** `alice@acme.com` and `bob@acme.com` accounts saved in credential store.
 - **When:** `clp .account.renewal name::alice,bob at::2026-07-01T00:00:00Z`
-- **Then:** Exit 0; both `alice@acme.com.claude.json` and `bob@acme.com.claude.json` contain `_renewal_at: "2026-07-01T00:00:00Z"`. Each comma token is resolved independently via prefix resolution before the renewal write.
+- **Then:** Exit 0; both `alice@acme.com.json` and `bob@acme.com.json` contain `_renewal_at: "2026-07-01T00:00:00Z"`. Each comma token is resolved independently via prefix resolution before the renewal write.
 - **Exit:** 0
 - **Source:** [params.md -- name::](../../../../docs/cli/param/001_name.md), [feature/015_name_shortcut_syntax.md AC-13](../../../../docs/feature/015_name_shortcut_syntax.md)
 

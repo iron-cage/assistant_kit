@@ -32,16 +32,16 @@ clp .accounts format::table
 | `sub::` | `bool` | `1` | Show subscription type line |
 | `tier::` | `bool` | `1` | Show rate-limit tier line |
 | `expires::` | `bool` | `1` | Show token expiry duration line |
-| `email::` | `bool` | `1` | Show email address from saved `{name}.claude.json` snapshot |
-| `display_name::` | `bool` | `0` | Show display name from saved `~/.claude.json` snapshot (opt-in) |
-| `host::` | `bool` | `0` | Show host/machine label from saved `{name}.profile.json` (opt-in) |
-| `role::` | `bool` | `0` | Show user-defined role label from saved `{name}.profile.json` (opt-in) |
-| `billing::` | `bool` | `0` | Show billing type from saved `~/.claude.json` snapshot (opt-in) |
-| `model::` | `bool` | `0` | Show active model (always `N/A` for saved accounts — settings.json not captured in snapshot) (opt-in) |
-| `uuid::` | `bool` | `0` | Show stable user ID (`taggedId`) from saved `.claude.json` snapshot (opt-in) |
-| `capabilities::` | `bool` | `0` | Show product capabilities list from saved `.claude.json` snapshot (opt-in) |
-| `org_uuid::` | `bool` | `0` | Show organisation UUID from saved `{name}.roles.json` snapshot (opt-in) |
-| `org_name::` | `bool` | `0` | Show organisation display name from saved `{name}.roles.json` snapshot (opt-in) |
+| `email::` | `bool` | `1` | Show email address from saved `{name}.json` snapshot |
+| `display_name::` | `bool` | `0` | Show display name from saved `{name}.json` snapshot (opt-in) |
+| `host::` | `bool` | `0` | Show host/machine label from saved `{name}.json` (opt-in) |
+| `role::` | `bool` | `0` | Show user-defined role label from saved `{name}.json` (opt-in) |
+| `billing::` | `bool` | `0` | Show billing type from saved `{name}.json` snapshot (opt-in) |
+| `model::` | `bool` | `0` | Show active model from saved `{name}.json` snapshot (opt-in) |
+| `uuid::` | `bool` | `0` | Show stable user ID (`taggedId`) from saved `{name}.json` snapshot (opt-in) |
+| `capabilities::` | `bool` | `0` | Show product capabilities list from saved `{name}.json` snapshot (opt-in) |
+| `org_uuid::` | `bool` | `0` | Show organisation UUID from saved `{name}.json` snapshot (opt-in) |
+| `org_name::` | `bool` | `0` | Show organisation display name from saved `{name}.json` snapshot (opt-in) |
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each credential file read |
 
@@ -85,15 +85,15 @@ clp .accounts format::table
 - Field params affect text output only; `format::json` always includes all fields regardless of presence params.
 - `format::table` renders a compact one-row-per-account table with fixed columns (flag, Account, Sub, Tier, Expires, Email) — field-presence params are ignored in table mode.
 - `current::` shows `Current: yes` for the account whose `accessToken` matches `~/.claude/.credentials.json`. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
-- `host::`, `role::` source from `{name}.profile.json` (written by `.account.save host::` / `role::`) — `N/A` when no profile exists. See [feature/029_account_host_metadata.md](../../feature/029_account_host_metadata.md).
-- `uuid::`, `capabilities::` source from `{name}.claude.json` snapshot — `N/A` when snapshot absent. See [feature/021_extended_snapshot_fields.md](../../feature/021_extended_snapshot_fields.md).
-- `org_uuid::`, `org_name::` source from `{name}.roles.json` snapshot (written by `.account.save` via endpoint 005) — `N/A` when snapshot absent. See [feature/022_org_identity_snapshot.md](../../feature/022_org_identity_snapshot.md).
+- `host::`, `role::` source from `{name}.json` (written by `.account.save host::` / `role::`) — `N/A` when no metadata exists. See [feature/029_account_host_metadata.md](../../feature/029_account_host_metadata.md).
+- `uuid::`, `capabilities::` source from `{name}.json` snapshot — `N/A` when snapshot absent. See [feature/021_extended_snapshot_fields.md](../../feature/021_extended_snapshot_fields.md).
+- `org_uuid::`, `org_name::` source from `{name}.json` snapshot (written by `.account.save` via endpoint 005) — `N/A` when snapshot absent. See [feature/022_org_identity_snapshot.md](../../feature/022_org_identity_snapshot.md).
 
 ---
 
 ### Command :: 4. `.account.save`
 
-Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and extracts the `oauthAccount` subtree from `~/.claude.json` into `{name}.claude.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`, `settings.json`) is not captured. Use this to preserve account identity before switching.
+Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and merges identity, model, roles, and profile metadata into the unified `{name}.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`) is not captured. Use this to preserve account identity before switching.
 
 -- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`host::`](../param/048_host.md), [`role::`](../param/052_role.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid name or no active account set) | 2 (runtime: credentials unreadable)
@@ -104,8 +104,8 @@ Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.j
 clp .account.save                                      # infer name from oauthAccount.emailAddress in ~/.claude.json (falls back to _active_{hostname}_{user})
 clp .account.save name::alice@acme.com                # explicit name
 clp .account.save name::alice@acme.com dry::1
-clp .account.save host::workstation                   # store host label in {name}.profile.json
-clp .account.save role::work                          # store role label in {name}.profile.json
+clp .account.save host::workstation                   # store host label in {name}.json
+clp .account.save role::work                          # store role label in {name}.json
 clp .account.save host::workstation role::personal    # both metadata fields
 ```
 
@@ -113,15 +113,15 @@ clp .account.save host::workstation role::personal    # both metadata fields
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | `auto` (inferred from `oauthAccount.emailAddress` in `~/.claude.json`; falls back to per-machine active marker — see [Feature 025](../../feature/025_per_machine_active_marker.md); exits 1 if neither source present) | Account email to save as |
 | `dry::` | `bool` | `0` | Preview action without executing |
-| `host::` | `string` | `""` (auto-detected hostname) | Machine/host label stored in `{name}.profile.json` (see [feature/029](../../feature/029_account_host_metadata.md)) |
-| `role::` | `string` | `""` | User-defined role label stored in `{name}.profile.json` (see [param 052](../param/052_role.md)) |
+| `host::` | `string` | `""` (auto-detected hostname) | Machine/host label stored in `{name}.json` (see [feature/029](../../feature/029_account_host_metadata.md)) |
+| `role::` | `string` | `""` | User-defined role label stored in `{name}.json` (see [param 052](../param/052_role.md)) |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for credential read and file write steps |
 
 **Algorithm (5 steps):**
 1. Resolve `name::`: read `oauthAccount.emailAddress` from `~/.claude.json`; fall back to `_active_{hostname}_{user}` marker; exit 1 if neither present
 2. `(when dry::0)` Copy `~/.claude/.credentials.json` → `{name}.credentials.json` (atomic write)
-3. `(when dry::0)` Read `~/.claude.json`; replace `oauthAccount` key; write-merge to `{name}.claude.json` (preserves `_renewal_at` and other keys)
-4. `(when dry::0)` Call `GET /api/oauth/claude_cli/roles` (best-effort); write `{name}.roles.json` on success; skip on failure
+3. `(when dry::0)` Read `~/.claude.json` + `~/.claude/settings.json` + call `GET /api/oauth/claude_cli/roles` (best-effort); merge all into unified `{name}.json` (preserves `_renewal_at` and other keys)
+4. `(when dry::0)` Write host/role profile metadata into `{name}.json` (auto-capture `$USER@$HOSTNAME` when `host::` omitted)
 5. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (per-machine active marker)
 
 **Examples:**
@@ -139,8 +139,8 @@ clp .account.save host::workstation role::work
 
 **Notes:**
 - Also writes `{credential_store}/_active_{hostname}_{user}` = `{name}` on every successful save (per-machine active marker via `active_marker_filename()`).
-- Also calls endpoint 005 (`GET /api/oauth/claude_cli/roles`) and writes `{name}.roles.json` (best-effort: failure is silently skipped).
-- **Metadata refresh:** Re-running `.account.save` for an existing name refreshes all snapshot files and re-fetches endpoint 005 — this is the canonical way to refresh cached org identity without re-login. `{name}.claude.json` is updated via read-merge (not full overwrite): the `oauthAccount` key is replaced but all other keys (e.g., `_renewal_at` set by `.account.renewal`) are preserved.
+- Also calls endpoint 005 (`GET /api/oauth/claude_cli/roles`) and merges result into `{name}.json` (best-effort: failure is silently skipped).
+- **Metadata refresh:** Re-running `.account.save` for an existing name refreshes the unified `{name}.json` and re-fetches endpoint 005 — this is the canonical way to refresh cached org identity without re-login. `{name}.json` is updated via read-merge (not full overwrite): the `oauthAccount` key is replaced but all other keys (e.g., `_renewal_at` set by `.account.renewal`) are preserved.
 
 ---
 
@@ -215,7 +215,7 @@ clp .account.use name::alice@home.com trace::1
 
 ### Command :: 6. `.account.delete`
 
-Removes `{credential_store}/{name}.credentials.json` from the credential store and best-effort removes the accompanying `{name}.claude.json` and `{name}.settings.json` snapshot files.
+Removes `{credential_store}/{name}.credentials.json` and `{name}.json` from the credential store, plus any legacy satellite files from pre-consolidation layout.
 
 -- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid name) | 2 (runtime: account not found)
@@ -238,7 +238,7 @@ clp .account.delete name::alice@oldco.com dry::1
 **Algorithm (4 steps):**
 1. Resolve `name::` via `AccountSelector`; validate account exists in credential store
 2. `(when dry::0)` Delete `{name}.credentials.json`
-3. `(when dry::0)` Best-effort delete `{name}.claude.json`, `{name}.settings.json`, `{name}.roles.json` (skip missing files silently)
+3. `(when dry::0)` Best-effort delete `{name}.json` + legacy files (`.claude.json`, `.settings.json`, `.roles.json`, `.profile.json`; skip missing)
 4. `(when dry::0 + deleted account = active)` Delete `_active_{hostname}_{user}` marker
 
 **Examples:**
@@ -252,7 +252,7 @@ clp .account.delete name::alice@oldco.com dry::1
 ```
 
 **Notes:**
-- Snapshot files (`{name}.claude.json`, `{name}.settings.json`) are removed best-effort: missing snapshots are silently skipped.
+- Metadata file (`{name}.json`) and legacy satellite files are removed best-effort: missing files are silently skipped.
 - Deleting the active account also removes the active marker (`_active_{hostname}_{user}`).
 
 ---
@@ -405,7 +405,7 @@ clp .account.rotate
 
 ### Command :: 14. `.account.renewal`
 
-Set, preview, or clear the billing renewal timestamp override (`_renewal_at`) stored in `{name}.claude.json`. When set, the `.usage` `~Renews` column shows an exact duration (`in Xh Ym`) instead of the estimated `~`-prefixed value derived from `org_created_at`. Supports single account, comma-separated list, or `name::all` to update every saved account in one operation.
+Set, preview, or clear the billing renewal timestamp override (`_renewal_at`) stored in `{name}.json`. When set, the `.usage` `~Renews` column shows an exact duration (`in Xh Ym`) instead of the estimated `~`-prefixed value derived from `org_created_at`. Supports single account, comma-separated list, or `name::all` to update every saved account in one operation.
 
 -- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`at::`](../param/049_at.md), [`from_now::`](../param/050_from_now.md), [`clear::`](../param/051_clear.md), [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: no operation provided, conflicting params, or invalid format) | 2 (runtime: account not found or credential store unreadable)
@@ -427,15 +427,15 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 | `name::` | [`AccountName`](../type/001_account_name.md) or `all` or comma-list | **(required)** | Target account(s): single email/prefix, comma-separated list, or `all` for every saved account |
 | `at::` | `string` | *(omit)* | Absolute ISO-8601 UTC renewal timestamp (e.g., `2026-06-29T21:00:00Z`); mutually exclusive with `from_now::` and `clear::` |
 | `from_now::` | `string` | *(omit)* | Signed duration delta from now (e.g., `+3h30m`, `-30m`, `+0m`); mutually exclusive with `at::` and `clear::` |
-| `clear::` | `bool` | `0` | Remove `_renewal_at` from `{name}.claude.json`; mutually exclusive with `at::` and `from_now::` |
+| `clear::` | `bool` | `0` | Remove `_renewal_at` from `{name}.json`; mutually exclusive with `at::` and `from_now::` |
 | `dry::` | `bool` | `0` | Preview operation without writing files |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each file read and write step |
 
 **Algorithm (4 steps):**
 1. Resolve target account list from `name::`: single email/prefix, comma-separated list, or `all` (every saved account)
-2. For each target: read `{name}.claude.json`
+2. For each target: read `{name}.json`
 3. Compute new `_renewal_at` value from `at::` (absolute ISO-8601), `from_now::` (signed delta), or `clear::1` (remove key)
-4. `(when dry::0)` Write `{name}.claude.json` with updated `_renewal_at` key per account
+4. `(when dry::0)` Write `{name}.json` with updated `_renewal_at` key per account
 
 **Examples:**
 
@@ -456,7 +456,7 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 ```
 
 **Notes:**
-- `_renewal_at` is stored as a top-level key in `{name}.claude.json` alongside `oauthAccount`. It is preserved when `clp .account.save` re-saves that account (read-merge).
+- `_renewal_at` is stored as a top-level key in `{name}.json` alongside `oauthAccount`. It is preserved when `clp .account.save` re-saves that account (read-merge).
 - Past `_renewal_at` values are auto-advanced monthly by `.usage` at render time — no need to re-set after each billing cycle.
 - `from_now::+0m` sets the override to the current time, which immediately enters the monthly auto-advance cycle.
 - `name::all` targets every account in the credential store at the time of execution.
@@ -547,7 +547,7 @@ clp .account.inspect format::json | jq '.memberships | length'
 ```
 
 **Notes:**
-- Endpoints 001, 002, and 005 are called independently. A failure on one endpoint falls back to the local snapshot from `{name}.claude.json` / `{name}.roles.json` with a `(snapshot)` suffix per field; other endpoints still contribute live data.
+- Endpoints 001, 002, and 005 are called independently. A failure on one endpoint falls back to the local snapshot from `{name}.json` with a `(snapshot)` suffix per field; other endpoints still contribute live data.
 - `refresh::1` (default) behaves identically to `.usage`'s `refresh::1`: calls `refresh_account_token()` once when `expiresAt` is locally expired; retries endpoint calls with the fresh token.
 - This command does NOT show quota data (5h/7d utilization) — use `.usage` for that.
 - See [feature/031_account_inspect.md](../../feature/031_account_inspect.md) for full design, graceful fallback semantics, and all acceptance criteria.

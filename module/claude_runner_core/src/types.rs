@@ -450,8 +450,10 @@ impl core::fmt::Display for ExecutionOutput
 #[ derive( Debug, Clone, PartialEq, Eq ) ]
 pub enum ErrorKind
 {
-  /// Rate limit reached (exit code 2 or "You've hit your limit" pattern).
+  /// Transient rate limit reached (exit code 2 — HTTP 429, retry in seconds).
   RateLimit,
+  /// Period quota exhausted ("You've hit your limit" pattern — wait for reset or switch account).
+  QuotaExhausted,
   /// API-level error (HTTP 5xx/4xx — "API Error: " pattern).
   ApiError,
   /// Authentication/authorization failure ("Your organization does not have access" pattern).
@@ -467,7 +469,7 @@ pub enum ErrorKind
 // ("Your organization..." + "API Error:") hit AuthError, not ApiError.
 const ERROR_PATTERNS : &[ ( &str, ErrorKind ) ] =
 &[
-  ( "You've hit your limit",                            ErrorKind::RateLimit ),
+  ( "You've hit your limit",                            ErrorKind::QuotaExhausted ),
   ( "Your organization does not have access to Claude", ErrorKind::AuthError ),
   ( "API Error: ",                                      ErrorKind::ApiError ),
 ];
@@ -477,8 +479,9 @@ impl ExecutionOutput
   /// Classify the subprocess failure type from stderr/stdout patterns and exit code.
   ///
   /// Returns `None` when `exit_code == 0` (success). For non-zero exits:
-  /// 1. Scans both stderr and stdout for known patterns (priority order).
-  /// 2. Falls back to exit code 2 → `RateLimit` (canonical rate-limit sentinel).
+  /// 1. Scans both stderr and stdout for known patterns (priority order,
+  ///    including `QuotaExhausted` for period limits).
+  /// 2. Falls back to exit code 2 → `RateLimit` (transient rate-limit sentinel).
   /// 3. Falls back to exit code > 128 → `Signal`.
   /// 4. Returns `Unknown` for all other non-zero exits.
   #[ inline ]

@@ -48,9 +48,9 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 
 ### FT-01: `at::` writes `_renewal_at`; `oauthAccount` content preserved
 
-- **Given:** Account `test@example.com` exists with a full `oauthAccount` object in `.claude.json`.
+- **Given:** Account `test@example.com` exists with a full `oauthAccount` object in `{name}.json`.
 - **When:** `clp .account.renewal name::test@example.com at::2026-06-29T21:00:00Z`
-- **Then:** Exits 0. `{credential_store}/test@example.com.claude.json` contains `"_renewal_at": "2026-06-29T21:00:00Z"`. Existing `oauthAccount` subtree is unchanged (read-merge preserved it).
+- **Then:** Exits 0. `{credential_store}/test@example.com.json` contains `"_renewal_at": "2026-06-29T21:00:00Z"`. Existing `oauthAccount` subtree is unchanged (read-merge preserved it).
 - **Exit:** 0
 - **Source fn:** `ft01_account_renewal_at_writes_renewal_at` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [030_account_renewal_override.md AC-01](../../../../docs/feature/030_account_renewal_override.md)
@@ -83,7 +83,7 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 
 ### FT-04: `clear::1` removes `_renewal_at`; `oauthAccount` preserved
 
-- **Given:** Account `test@example.com` has both `oauthAccount` and `_renewal_at: "2026-06-29T21:00:00Z"` in `.claude.json`.
+- **Given:** Account `test@example.com` has both `oauthAccount` and `_renewal_at: "2026-06-29T21:00:00Z"` in `{name}.json`.
 - **When:** `clp .account.renewal name::test@example.com clear::1`
 - **Then:** Exits 0. `_renewal_at` key absent from file. `oauthAccount` subtree unchanged.
 - **Exit:** 0
@@ -94,9 +94,9 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 
 ### FT-05: `name::all from_now::+0m` writes current time to all accounts
 
-- **Given:** Two accounts `alice@a.com` and `bob@a.com` in credential store; neither has `.claude.json`.
+- **Given:** Two accounts `alice@a.com` and `bob@a.com` in credential store; neither has `{name}.json`.
 - **When:** `clp .account.renewal name::all from_now::+0m`
-- **Then:** Exits 0. Both `alice@a.com.claude.json` and `bob@a.com.claude.json` exist and contain `_renewal_at` as an ISO-8601 string within ±10s of now.
+- **Then:** Exits 0. Both `alice@a.com.json` and `bob@a.com.json` exist and contain `_renewal_at` as an ISO-8601 string within ±10s of now.
 - **Exit:** 0
 - **Source fn:** `ft05_account_renewal_name_all_updates_all` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [030_account_renewal_override.md AC-05](../../../../docs/feature/030_account_renewal_override.md)
@@ -105,9 +105,9 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 
 ### FT-06: `dry::1` prints would-be value without writing any file
 
-- **Given:** Account `test@example.com` exists; no `.claude.json` present.
+- **Given:** Account `test@example.com` exists; no `{name}.json` present.
 - **When:** `clp .account.renewal name::test@example.com at::2026-06-29T21:00:00Z dry::1`
-- **Then:** Exits 0. Stdout contains `[dry-run]` prefix and the target timestamp. `test@example.com.claude.json` does NOT exist after the command.
+- **Then:** Exits 0. Stdout contains `[dry-run]` prefix and the target timestamp. `test@example.com.json` does NOT exist after the command.
 - **Exit:** 0
 - **Source fn:** `ft06_account_renewal_dry_no_write` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [030_account_renewal_override.md AC-06](../../../../docs/feature/030_account_renewal_override.md)
@@ -199,7 +199,7 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 
 - **Given:** Accounts `alice@a.com` and `bob@a.com` exist.
 - **When:** `clp .account.renewal name::alice@a.com,bob@a.com at::2026-06-29T21:00:00Z`
-- **Then:** Exits 0. Both `alice@a.com.claude.json` and `bob@a.com.claude.json` contain `_renewal_at: "2026-06-29T21:00:00Z"`. Stdout contains one status line per account.
+- **Then:** Exits 0. Both `alice@a.com.json` and `bob@a.com.json` contain `_renewal_at: "2026-06-29T21:00:00Z"`. Stdout contains one status line per account.
 - **Exit:** 0
 - **Source fn:** `ft12_account_renewal_comma_list_updates_both` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [030_account_renewal_override.md AC-14](../../../../docs/feature/030_account_renewal_override.md)
@@ -210,7 +210,7 @@ Feature behavioral requirement test cases for `docs/feature/030_account_renewal_
 
 - **Given:** `alice@a.com` exists; `unknown@a.com` does not.
 - **When:** `clp .account.renewal name::alice@a.com,unknown@a.com at::2026-06-29T21:00:00Z`
-- **Then:** Non-zero exit. `alice@a.com.claude.json` contains `_renewal_at` (was processed). Stderr contains an error message for `unknown@a.com`. Stdout contains the status line for `alice@a.com`.
+- **Then:** Non-zero exit. `alice@a.com.json` contains `_renewal_at` (was processed). Stderr contains an error message for `unknown@a.com`. Stdout contains the status line for `alice@a.com`.
 - **Exit:** non-zero
 - **Source fn:** `ft13_account_renewal_partial_comma_list` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [030_account_renewal_override.md AC-15](../../../../docs/feature/030_account_renewal_override.md)

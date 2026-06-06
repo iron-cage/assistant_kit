@@ -38,8 +38,8 @@ clp .credentials.status format::json
 | `model::` | `bool` | `0` | Show active model from `~/.claude/settings.json` (opt-in) |
 | `uuid::` | `bool` | `0` | Show stable user ID (`taggedId`) from `~/.claude.json` (opt-in) |
 | `capabilities::` | `bool` | `0` | Show product capabilities list from `~/.claude.json` (opt-in) |
-| `org_uuid::` | `bool` | `0` | Show organisation UUID from active account's `{name}.roles.json` snapshot (opt-in) |
-| `org_name::` | `bool` | `0` | Show organisation display name from active account's `{name}.roles.json` snapshot (opt-in) |
+| `org_uuid::` | `bool` | `0` | Show organisation UUID from active account's `{name}.json` snapshot (opt-in) |
+| `org_name::` | `bool` | `0` | Show organisation display name from active account's `{name}.json` snapshot (opt-in) |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for the credential file read and each supplementary snapshot read |
 
 **Algorithm (3 steps):**

@@ -258,7 +258,7 @@ fn mre_bug221_save_some_creds_writes_to_store_not_live_file()
   std::fs::write( &live_file, b"original_live_creds" ).unwrap();
   let paths      = ClaudePaths::with_home( fake_home.path() );
 
-  account::save( "acct@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ) ).unwrap();
+  account::save( "acct@test.com", store.path(), &paths, false, Some( b"new_creds_bytes" ), None, None ).unwrap();
 
   let store_file = store.path().join( "acct@test.com.credentials.json" );
   assert!( store_file.exists(), "save(Some(bytes)) must create the credential store file" );
@@ -292,7 +292,7 @@ fn mre_bug221_save_none_creds_copies_from_live_file()
   std::fs::write( &live_file, b"live_creds_content" ).unwrap();
   let paths      = ClaudePaths::with_home( fake_home.path() );
 
-  account::save( "acct@test.com", store.path(), &paths, false, None ).unwrap();
+  account::save( "acct@test.com", store.path(), &paths, false, None, None, None ).unwrap();
 
   let store_file = store.path().join( "acct@test.com.credentials.json" );
   assert!( store_file.exists(), "save(None) must create the credential store file" );
