@@ -36,3 +36,4 @@ Task work items scoped to the `claude_runner` crate.
 | 8 | 008 | 0 | 7 | 9 | 9 | 0 | ✅ (Completed) | ai | BUG-233: CLR_SUBDIR env-var slash bypass | Extend BUG-230 slash validation to `apply_env_vars()` CLR_SUBDIR path |
 | 9 | 010 | 0 | 8 | 8 | 9 | 0 | ✅ (Completed) | ai | [Optional --creds default fallback](completed/010_optional_creds_default.md) | Make `--creds` optional: fall back to `$HOME/.claude/.credentials.json` when absent |
 | 10 | 011 | 0 | 9 | 7 | 9 | 0 | ✅ (Completed) | ai | BUG-214-reopen: session-existence guard uses wrong path | Initial fix checked `$HOME/.claude/` (always non-empty); re-fixed using `check_continuation()` for project-specific `$HOME/.claude/projects/{encoded(cwd)}/` |
+| 11 | 012 | 0 | 7 | 8 | 9 | 0 | ✅ (Completed) | ai | [Error Classification in CLR](completed/012_error_classification.md) | Add `ErrorKind` enum and `classify_error()` to replace generic silent-failure message with labeled per-type diagnostics |

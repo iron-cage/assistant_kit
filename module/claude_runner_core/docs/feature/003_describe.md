@@ -17,10 +17,12 @@ Returns a human-readable multi-line string showing the working directory change 
 
 ```
 cd /path/to/working/dir
-claude --max-output-tokens 200000 --continue "the message"
+env -u CLAUDECODE claude --max-output-tokens 200000 --continue "the message"
 ```
 
-The `cd` line appears only when `working_directory` is set. The second line is the `claude` binary followed by all flags and arguments in construction order.
+The `cd` line appears only when `working_directory` is set. The invocation line starts with `env -u CLAUDECODE claude` when `unset_claudecode` is true (the default set by `ClaudeCommand::new()`), or with plain `claude` when `unset_claudecode` is false (e.g. when `--keep-claudecode` is passed).
+
+**WYSIWYG invariant:** `describe()` output is the exact printed form of what `build_command()` will execute. Every `env_remove()` call in `build_command()` must be reflected in `describe()` at the same position — `env_remove("CLAUDECODE")` appears as the `env -u CLAUDECODE` prefix. Any divergence between `describe()` and `build_command()` is a bug. See `feature/006_unset_claudecode.md` for the unset_claudecode field that controls this prefix.
 
 **Escaping rules for the message field in `describe()` output:**
 - Double-quotes (`"`) are escaped to `\"` for shell correctness
@@ -43,7 +45,7 @@ dir: /path/to/working/dir
 cmd: claude --flags "message"
 ```
 
-Label width is 4 characters (`dir:`, `cmd:`), colon-terminated with a trailing space. The `cmd:` value is the last line of `describe()` (the `claude ...` line only). When `working_directory` is `None`, the `dir:` line is omitted.
+Label width is 4 characters (`dir:`, `cmd:`), colon-terminated with a trailing space. The `cmd:` value is the last line of `describe()` — `env -u CLAUDECODE claude ...` by default, or plain `claude ...` when `unset_claudecode` is false. When `working_directory` is `None`, the `dir:` line is omitted.
 
 `describe_compact()` is used by dry-run mode (`with_dry_run(true)`) as the stdout value returned by `execute()`.
 
@@ -55,6 +57,7 @@ Label width is 4 characters (`dir:`, `cmd:`), colon-terminated with a trailing s
 |------|------|----------------|
 | doc | [feature/002_dry_run.md](002_dry_run.md) | Dry-run mode that uses describe_compact() as execute() output |
 | doc | [api/001_execution_api.md](../api/001_execution_api.md) | execute() contract that returns describe_compact() in dry-run |
+| doc | [feature/006_unset_claudecode.md](006_unset_claudecode.md) | unset_claudecode field that controls the env -u CLAUDECODE prefix in describe() |
 | source | `../../src/command.rs` | describe(), describe_env(), describe_compact() implementation |
 
 ### Sources

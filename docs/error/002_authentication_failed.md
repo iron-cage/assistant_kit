@@ -47,6 +47,16 @@ Unable to start session: account information is unavailable
 3. **Check network for OAuth DNS**: Ensure `auth.anthropic.com` and `api.anthropic.com` resolve. On corporate networks, add them to proxy exceptions or use `clp account auto-rotate` to switch to an account that still has a valid token.
 4. **Re-copy the login code**: If `OAuth error: Invalid code`, the full alphanumeric code must be copied precisely from the browser; retry `claude login`.
 
+### CLR Detection
+
+When `clr` invokes `claude --print` and authentication fails, the subprocess exits non-zero. Some auth-failure paths emit to stderr; others exit silently with empty output.
+
+- **Pattern match**: if stderr or stdout contains `"Your organization does not have access to Claude"` — confirms auth rejection by the Anthropic API
+- **Exit code**: 1 (no dedicated exit code for auth failures; differs from rate-limit which uses exit 2)
+- **CLR stderr output**: `Error: auth error (exit 1)`
+
+Unlike rate-limit errors, auth errors require a corrective action (re-authentication or key rotation) — not a simple wait-and-retry. Callers that receive `ErrorKind::AuthError` from `ExecutionOutput::classify_error()` should stop retrying and escalate.
+
 ### Cross-References
 
 | Type | File | Responsibility |
@@ -54,3 +64,4 @@ Unable to start session: account information is unavailable
 | error | [error/001_rate_limit_reached.md](001_rate_limit_reached.md) | Rate-limit error — different HTTP status (429) and recovery path |
 | source | `../../module/claude_profile/src/commands.rs` | `account auto-rotate` and credential status commands |
 | source | `../../module/claude_profile/src/token.rs` | Credential file parsing and expiry detection |
+| source | `../../module/claude_runner_core/src/types.rs` | `ErrorKind::AuthError` variant and `classify_error()` on `ExecutionOutput` |

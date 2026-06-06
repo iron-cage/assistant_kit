@@ -210,20 +210,20 @@ fn t12_unset_claudecode_last_write_wins()
   );
 }
 
-// T13 / 005 regression: describe_compact() with stdin_file must start with "claude"
+// T13 / 005 regression: describe_compact() with stdin_file must start with "env -u CLAUDECODE"
 //
 // Root Cause: describe() emits "< path" as a separate last line when it is pushed to
 //   `lines` instead of `parts`. describe_compact() = lines().last() would then return
-//   "< path" rather than the claude invocation.
+//   "< path" rather than the invocation line.
 // Why Not Caught: T01 uses contains("< path") which passes even if "< path" is the
-//   ONLY content; it does not assert that "claude" precedes it.
-// Fix Applied: "< path" is pushed to `parts` (inline with the claude invocation) before
-//   lines.push(parts.join(" ")), so it always appears on the same line as "claude".
-// Prevention: This test asserts describe_compact() starts_with("claude") when
+//   ONLY content; it does not assert that the invocation line precedes it.
+// Fix Applied: "< path" is pushed to `parts` (inline with the invocation) before
+//   lines.push(parts.join(" ")), so it always appears on the same invocation line.
+// Prevention: This test asserts describe_compact() starts_with("env -u CLAUDECODE") when
 //   stdin_file is set, catching any future regression where "< path" moves to a
 //   separate line and becomes the last() line.
 // Pitfall: contains("< path") alone is insufficient to guard inline placement;
-//   always pair with starts_with("claude") in describe_compact assertions.
+//   always pair with starts_with("env -u CLAUDECODE") in describe_compact assertions.
 //
 // Source: feature/005_stdin_file.md
 #[ test ]
@@ -232,10 +232,11 @@ fn t13_stdin_file_describe_compact_on_claude_line()
   let compact = ClaudeCommand::new()
     .with_stdin_file( std::path::PathBuf::from( "/tmp/t13_stdin.txt" ) )
     .describe_compact();
+  // Fix(BUG-246): default unset_claudecode=true → starts with "env -u CLAUDECODE"
   assert!(
-    compact.starts_with( "claude" ),
-    "describe_compact() must start with 'claude' when stdin_file is set \
-     ('< path' must be inline on the claude line, not the last separate line). Got: {compact}"
+    compact.starts_with( "env -u CLAUDECODE" ),
+    "describe_compact() must start with 'env -u CLAUDECODE' when stdin_file is set \
+     ('< path' must be inline on the invocation line, not the last separate line). Got: {compact}"
   );
   assert!(
     compact.contains( "< /tmp/t13_stdin.txt" ),

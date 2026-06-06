@@ -8,7 +8,7 @@
 //! | Test Case | Scenario | Input | Expected | Status |
 //! |-----------|----------|-------|----------|--------|
 //! | `describe_shows_cd_with_working_directory` | Working dir set | `/tmp/project` | First line is `cd /tmp/project` | ✅ |
-//! | `describe_without_working_directory_no_cd` | No working dir | none | Starts with `claude` | ✅ |
+//! | `describe_without_working_directory_no_cd` | No working dir | none | Starts with `env -u CLAUDECODE` (default) | ✅ |
 //! | `describe_shows_skip_permissions_flag` | `skip_permissions=true` | `with_skip_permissions(true)` | Contains `--dangerously-skip-permissions` | ✅ |
 //! | `describe_omits_skip_permissions_when_false` | `skip_permissions=false` | `with_skip_permissions(false)` | Does not contain `--dangerously-skip-permissions` | ✅ |
 //! | `describe_shows_continuation_flag` | continue=true | `with_continue_conversation(true)` | Contains ` -c` | ✅ |
@@ -42,7 +42,7 @@
 //! - ✅ `system_prompt`: appears as raw CLI args (no quoting)
 //! - ✅ `api_key`: appears in plaintext (no masking)
 //! - ✅ Flag output order is fixed by `describe()` implementation, NOT by `with_*` call order:
-//!   `--dangerously-skip-permissions` → `--chrome`/`--no-chrome` → custom args → `-c` → `"<message>"`.
+//!   `env -u CLAUDECODE` (prefix, default) → `claude` → `--dangerously-skip-permissions` → `--chrome`/`--no-chrome` → custom args → `-c` → `"<message>"`.
 //!   Tests using `assert_eq!` on the full output string must match this exact order.
 //!   Use `contains` for individual flag checks when order is not the assertion subject.
 //!
@@ -70,6 +70,14 @@
 //!   omits the flag entirely. Test: `describe_claude_version_chain_omits_chrome`.
 //!   Prevention: Always call `.with_chrome(None)` (or override other automation defaults)
 //!   in system-query builder chains that must not inherit session-oriented flags.
+//!
+//! - **2026-06-06 (BUG-246):** `describe()` started with `"claude"` unconditionally even though
+//!   `ClaudeCommand::new()` defaults `unset_claudecode = true` which removes CLAUDECODE via
+//!   `env_remove()` in `build_command()`. The removal was invisible in trace/dry-run output,
+//!   breaking WYSIWYG. Fix: `describe()` now starts with `"env -u CLAUDECODE claude ..."` when
+//!   `unset_claudecode` is true. All `starts_with("claude")` assertions updated.
+//!   Prevention: When adding a new `build_command()` env manipulation, immediately update
+//!   `describe()` to mirror it. The two methods must stay in sync — any divergence is a bug.
 
 use claude_runner_core::{ ClaudeCommand, ActionMode, LogLevel };
 
@@ -93,7 +101,8 @@ fn describe_without_working_directory_no_cd()
   let desc = ClaudeCommand::new().describe();
 
   assert!( !desc.contains( "cd " ) );
-  assert!( desc.starts_with( "claude" ) );
+  // Fix(BUG-246): default unset_claudecode=true → describe() starts with "env -u CLAUDECODE"
+  assert!( desc.starts_with( "env -u CLAUDECODE" ) );
 }
 
 #[test]
@@ -170,7 +179,8 @@ fn describe_full_command()
   let lines : Vec< &str > = desc.lines().collect();
   assert_eq!( lines.len(), 2 );
   assert_eq!( lines[ 0 ], "cd /home/user/proj" );
-  assert!( lines[ 1 ].starts_with( "claude --dangerously-skip-permissions" ) );
+  // Fix(BUG-246): default unset_claudecode=true → invocation line starts with "env -u CLAUDECODE"
+  assert!( lines[ 1 ].contains( "claude --dangerously-skip-permissions" ) );
   assert!( lines[ 1 ].contains( "-c" ) );
   assert!( lines[ 1 ].ends_with( "\"fix bug\"" ) );
 }

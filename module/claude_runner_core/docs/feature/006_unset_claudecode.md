@@ -27,6 +27,15 @@ Sets `unset_claudecode = unset`. Passing `false` preserves `CLAUDECODE` in the s
 
 Callers that deliberately want the subprocess to operate in nested-agent mode should call `with_unset_claudecode(false)`. This is rare; the default covers virtually all automation use-cases.
 
+**WYSIWYG in `describe()` output:**
+
+`describe()` mirrors `build_command()`'s env manipulation so trace and dry-run output is WYSIWYG:
+
+- When `unset_claudecode` is `true` (the default): `describe()` starts with `env -u CLAUDECODE claude ...`
+- When `unset_claudecode` is `false`: `describe()` starts with plain `claude ...`
+
+This is the WYSIWYG invariant: every `env_remove()` call in `build_command()` must appear in `describe()` at the same position. Before BUG-246, `describe()` always started with `"claude"` regardless of `unset_claudecode` — the env removal was invisible in trace/dry-run output.
+
 **`run_isolated()` interaction:**
 
 `run_isolated()` constructs its subprocess environment independently (it sets `HOME` to a temp directory and uses `Command::env_clear()` or selective inheritance). The `unset_claudecode` field on `ClaudeCommand` does not apply to `run_isolated()` — that function manages `CLAUDECODE` removal as part of its own environment construction.
@@ -37,5 +46,6 @@ Callers that deliberately want the subprocess to operate in nested-agent mode sh
 |------|------|----------------|
 | doc | [pattern/001_command_builder.md](../pattern/001_command_builder.md) | Builder method registration for `with_unset_claudecode()` |
 | doc | [api/001_execution_api.md](../api/001_execution_api.md) | `execute()` contract — env modification effect |
+| doc | [feature/003_describe.md](003_describe.md) | WYSIWYG invariant: describe() mirrors build_command() env manipulations |
 | doc | [feature/004_run_isolated.md](004_run_isolated.md) | Isolated subprocess which manages its own env separately |
 | source | `../../src/command.rs` | `with_unset_claudecode()`, `unset_claudecode` field, `build_command()` implementation |

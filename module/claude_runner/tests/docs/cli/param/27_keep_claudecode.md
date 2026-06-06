@@ -46,11 +46,11 @@ Edge case coverage for the `--keep-claudecode` flag. See [027_keep_claudecode.md
 
 ---
 
-### EC-3: Dry-run shows unset_claudecode state
+### EC-3: Dry-run shows unset_claudecode state in describe output
 
 - **Given:** clean environment
 - **When:** `clr --dry-run "task"` vs `clr --dry-run --keep-claudecode "task"`
-- **Then:** The two describe outputs differ in the `unset_claudecode` field representation
+- **Then:** Default (`--dry-run`): last line of stdout starts with `"env -u CLAUDECODE claude ..."` (WYSIWYG: CLAUDECODE removal visible). With `--keep-claudecode`: last line starts with `"claude ..."` (no `env -u CLAUDECODE` prefix — removal suppressed)
 - **Exit:** 0
 - **Source:** [--keep-claudecode](../../../../docs/cli/param/027_keep_claudecode.md)
 - **Commands:** run, ask

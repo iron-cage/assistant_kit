@@ -28,7 +28,7 @@ Test case planning for [invariant/004_trace_universality.md](../../../../docs/in
 
 - **Given:** clean environment; claude binary absent in test environment
 - **When:** `clr --trace "Fix bug"` (no `--dry-run`)
-- **Then:** stderr contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` and the assembled `claude --dangerously-skip-permissions --chrome -c --print "Fix bug\n\nultrathink"` command line before invocation attempt; exit 1 (claude absent)
+- **Then:** stderr contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` and the assembled `env -u CLAUDECODE claude --dangerously-skip-permissions --chrome -c --print "Fix bug\n\nultrathink"` command line before invocation attempt; the `env -u CLAUDECODE` prefix reflects the default `unset_claudecode=true` (BUG-246 WYSIWYG fix); exit 1 (claude absent)
 - **Exit:** 1 (claude absent) or 0 (claude present)
 - **Source:** [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md), [cli/param/013_trace.md](../../../../docs/cli/param/013_trace.md)
 

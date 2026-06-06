@@ -24,9 +24,29 @@ Claude Code prints `API Error: Rate limit reached` when the Anthropic API return
 3. **Reduce concurrency**: Serialize `clr` / `claude` invocations instead of running them in parallel to stay within per-minute limits.
 4. **Rotate account**: Use `clp account auto-rotate` to switch to an account with remaining quota when multiple accounts are configured in the workspace.
 
+### CLR Detection
+
+When `clr` invokes `claude --print` and a rate-limit condition occurs, the subprocess exits non-zero with empty stderr — the rate-limit reason is written only to Claude's JSONL session file, not to stderr or stdout.
+
+- **Primary signal — exit code 2**: the Claude CLI uses exit 2 specifically for rate-limit rejections; no output scanning is required
+- **Secondary signal — pattern match**: if stderr or stdout contains `"You've hit your limit"`, the rate-limit is confirmed regardless of exit code
+- **CLR stderr output**: `Error: rate limit (exit 2)`
+
+Downstream scripts can detect this reliably:
+
+```bash
+clr run "..." 2>err.txt; code=$?
+if grep -qF "rate limit" err.txt || [ "$code" = "2" ]; then
+  sleep 60 && retry
+fi
+```
+
+`ExecutionOutput::classify_error()` returns `Some(ErrorKind::RateLimit)` for this case, enabling programmatic branching without string-parsing CLR output.
+
 ### Cross-References
 
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `../../module/claude_profile/src/commands.rs` | `account auto-rotate` command — mitigates rate-limit exhaustion across accounts |
 | source | `../../module/claude_runner/src/main.rs` | Entry point that invokes the `claude` binary and propagates its exit code |
+| source | `../../module/claude_runner_core/src/types.rs` | `ErrorKind::RateLimit` variant and `classify_error()` on `ExecutionOutput` |

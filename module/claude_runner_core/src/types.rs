@@ -442,3 +442,68 @@ impl core::fmt::Display for ExecutionOutput
     write!( f, "{}", self.stdout )
   }
 }
+
+/// Classification of CLR subprocess failure modes.
+///
+/// Returned by [`ExecutionOutput::classify_error`] when stderr/stdout content
+/// or exit code indicates a specific failure category.
+#[ derive( Debug, Clone, PartialEq, Eq ) ]
+pub enum ErrorKind
+{
+  /// Rate limit reached (exit code 2 or "You've hit your limit" pattern).
+  RateLimit,
+  /// API-level error (HTTP 5xx/4xx — "API Error: " pattern).
+  ApiError,
+  /// Authentication/authorization failure ("Your organization does not have access" pattern).
+  AuthError,
+  /// Process killed by signal (exit code > 128).
+  Signal,
+  /// Non-zero exit with no recognized pattern and no signal code.
+  Unknown,
+}
+
+// Priority-ordered stderr/stdout patterns → ErrorKind.
+// AuthError appears before ApiError so 401 responses
+// ("Your organization..." + "API Error:") hit AuthError, not ApiError.
+const ERROR_PATTERNS : &[ ( &str, ErrorKind ) ] =
+&[
+  ( "You've hit your limit",                            ErrorKind::RateLimit ),
+  ( "Your organization does not have access to Claude", ErrorKind::AuthError ),
+  ( "API Error: ",                                      ErrorKind::ApiError ),
+];
+
+impl ExecutionOutput
+{
+  /// Classify the subprocess failure type from stderr/stdout patterns and exit code.
+  ///
+  /// Returns `None` when `exit_code == 0` (success). For non-zero exits:
+  /// 1. Scans both stderr and stdout for known patterns (priority order).
+  /// 2. Falls back to exit code 2 → `RateLimit` (canonical rate-limit sentinel).
+  /// 3. Falls back to exit code > 128 → `Signal`.
+  /// 4. Returns `Unknown` for all other non-zero exits.
+  #[ inline ]
+  #[ must_use ]
+  pub fn classify_error( &self ) -> Option< ErrorKind >
+  {
+    if self.exit_code == 0
+    {
+      return None;
+    }
+    for ( pattern, kind ) in ERROR_PATTERNS
+    {
+      if self.stderr.contains( pattern ) || self.stdout.contains( pattern )
+      {
+        return Some( kind.clone() );
+      }
+    }
+    if self.exit_code == 2
+    {
+      return Some( ErrorKind::RateLimit );
+    }
+    if self.exit_code > 128
+    {
+      return Some( ErrorKind::Signal );
+    }
+    Some( ErrorKind::Unknown )
+  }
+}

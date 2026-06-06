@@ -33,6 +33,18 @@ Exit code: non-zero. Claude Code does not auto-retry for overloaded errors (unli
 4. **Use account rotation**: `clp account auto-rotate` switches to a different account; if the overload is per-account or the accounts are on different API credentials, it may land on a less-loaded path.
 5. **Defer non-urgent work**: If the task is not time-sensitive, schedule it for off-peak hours (early morning UTC tends to have lower API load).
 
+### CLR Detection
+
+When `clr` invokes `claude --print` and the API is overloaded, Claude emits an `API Error: 529` line to stderr before exiting non-zero.
+
+- **Pattern match**: stderr or stdout contains `"API Error: "` — matches the `API Error: 529 {...}` prefix Claude emits for HTTP 529 responses
+- **Exit code**: non-zero (typically 1); no dedicated exit code for 529
+- **CLR stderr output**: `Error: API error (exit 1)`
+
+**Scope of the `"API Error: "` pattern**: this pattern matches any error where Claude prints the `API Error:` prefix — including 400, 401, and 529. The `ErrorKind::ApiError` label therefore means "Claude reported an API-level error"; consult the original stderr for the specific HTTP status to distinguish overloaded (529) from authentication (401) from invalid request (400). Auth errors (`"authentication_error"` in the body) are caught by a higher-priority pattern first and classified as `ErrorKind::AuthError`, not `ErrorKind::ApiError`.
+
+`ExecutionOutput::classify_error()` returns `Some(ErrorKind::ApiError)` when the `"API Error: "` pattern matches and no higher-priority pattern fires first.
+
 ### Cross-References
 
 | Type | File | Responsibility |
@@ -40,3 +52,4 @@ Exit code: non-zero. Claude Code does not auto-retry for overloaded errors (unli
 | error | [error/001_rate_limit_reached.md](001_rate_limit_reached.md) | Rate-limit error (429) — per-key quota, distinct from capacity overload |
 | error | [error/004_request_timed_out.md](004_request_timed_out.md) | Timeout error — connection-level failure vs server-side capacity rejection |
 | source | `../../module/claude_profile/src/commands.rs` | `account auto-rotate` command for switching accounts under error conditions |
+| source | `../../module/claude_runner_core/src/types.rs` | `ErrorKind::ApiError` variant and `classify_error()` on `ExecutionOutput` |

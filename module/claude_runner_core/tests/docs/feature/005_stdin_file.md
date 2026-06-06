@@ -14,7 +14,7 @@ Behavioral requirement cases for the `stdin_file` field on `ClaudeCommand`. See
 | FT-5 | `with_stdin_file(a).with_stdin_file(b)` → describe shows `b`, not `a` (last-write wins) | Override Semantics |
 | FT-6 | Nonexistent file path → `execute_interactive()` returns `Err` with path in message | Interactive Error Path |
 | FT-7 | `with_dry_run(true)` + nonexistent path → `execute_interactive()` returns `Ok` (file not opened) | Dry-Run Interaction |
-| FT-8 | `describe_compact()` with `stdin_file` set starts with `"claude"` (not `"< path"`) | Inline Placement |
+| FT-8 | `describe_compact()` with `stdin_file` set starts with `"env -u CLAUDECODE"` (not `"< path"`) | Inline Placement |
 
 ## Test Coverage Summary
 
@@ -98,6 +98,6 @@ Behavioral requirement cases for the `stdin_file` field on `ClaudeCommand`. See
 
 - **Given:** `ClaudeCommand::new().with_stdin_file(path)` (no dry_run)
 - **When:** `describe_compact()` is called
-- **Then:** The returned string starts with `"claude"` AND contains `"< "` followed by the path — proving `< path` is inline on the claude invocation line, not emitted as a separate last line
-- **Note:** `contains("< path")` alone is insufficient — it passes even if `< path` is the only line. `starts_with("claude")` is required to guard inline placement.
+- **Then:** The returned string starts with `"env -u CLAUDECODE"` AND contains `"< "` followed by the path — proving `< path` is inline on the invocation line, not emitted as a separate last line
+- **Note:** `contains("< path")` alone is insufficient — it passes even if `< path` is the only line. `starts_with("env -u CLAUDECODE")` is required to guard inline placement.
 - **Source:** [feature/005_stdin_file.md](../../../docs/feature/005_stdin_file.md)

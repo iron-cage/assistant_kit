@@ -147,11 +147,11 @@ impl ClaudeCommand {
     }
   }
 
-  /// Describe only the `claude ...` invocation line (no `cd` prefix)
+  /// Describe only the invocation line (no `cd` prefix)
   ///
-  /// Unlike `describe()`, this always returns a single line containing only
-  /// the `claude` invocation. When a working directory is set, `describe()`
-  /// returns two lines (`cd /dir\nclaude ...`); this method returns only the last.
+  /// Unlike `describe()`, this always returns a single line (without the leading `cd /dir` line).
+  /// When `unset_claudecode` is active (the default), the line starts with `env -u CLAUDECODE claude ...`;
+  /// when disabled via `with_unset_claudecode(false)`, it starts with `claude ...`.
   ///
   /// # Critical: Implementation Must Use `describe().lines().last()`
   ///
@@ -164,12 +164,13 @@ impl ClaudeCommand {
   /// ```
   /// use claude_runner_core::ClaudeCommand;
   ///
+  /// // Default: CLAUDECODE is removed — invocation line starts with "env -u CLAUDECODE"
   /// let compact = ClaudeCommand::new()
   ///   .with_working_directory( "/tmp" )
   ///   .with_skip_permissions( true )
   ///   .describe_compact();
   ///
-  /// assert!( compact.starts_with( "claude" ) );
+  /// assert!( compact.starts_with( "env -u CLAUDECODE" ) );
   /// assert!( !compact.contains( "cd " ) );
   /// ```
   #[inline]
@@ -196,6 +197,7 @@ impl ClaudeCommand {
   /// The command-line flag order in the output is fixed by the implementation,
   /// **not** by the order in which `with_*` builder methods are called. The order is:
   ///
+  /// 0. `env -u CLAUDECODE` prefix (if `unset_claudecode` is true, the default)
   /// 1. `--dangerously-skip-permissions` (if `skip_permissions` is true)
   /// 2. `--chrome` or `--no-chrome` (from `chrome` field; default `Some(true)` = `--chrome`)
   /// 3. custom args (in insertion order via `with_arg`)
@@ -240,7 +242,20 @@ impl ClaudeCommand {
       lines.push( format!( "cd {}", dir.display() ) );
     }
 
-    let mut parts = vec![ "claude".to_string() ];
+    // Fix(BUG-246): prefix `env -u CLAUDECODE` when unset_claudecode is active so
+    //   trace/dry-run output is WYSIWYG — what you see is what subprocess actually runs.
+    // Root cause: describe() started with "claude" unconditionally; env_remove("CLAUDECODE")
+    //   in build_command() is an OS-level call invisible in the displayed command string.
+    // Pitfall: both describe() and build_command() must be kept in sync — every env
+    //   manipulation in build_command() must appear in describe() output at the same position.
+    let mut parts = if self.unset_claudecode
+    {
+      vec![ "env".to_string(), "-u".to_string(), "CLAUDECODE".to_string(), "claude".to_string() ]
+    }
+    else
+    {
+      vec![ "claude".to_string() ]
+    };
 
     if self.skip_permissions {
       parts.push( "--dangerously-skip-permissions".to_string() );
@@ -493,9 +508,10 @@ impl ClaudeCommand {
   ///
   /// SINGLE EXECUTION POINT: This is the ONLY location where `Command::new("claude")` appears
   ///
-  /// Pitfall: any typed-field CLI flag added here MUST also be added to `describe()` at the
-  /// same relative position — otherwise dry-run output diverges from actual execution.
+  /// Pitfall: any typed-field CLI flag OR env manipulation added here MUST also
+  /// appear in `describe()` at the same relative position — otherwise dry-run/trace diverges.
   /// Typed-field flags: `skip_permissions`, `chrome`, `continue_conversation` (see `describe()`).
+  /// Env manipulations: `unset_claudecode` → `cmd.env_remove("CLAUDECODE")` → shown as `env -u CLAUDECODE` prefix.
   /// Flags pushed via `self.args` are automatically mirrored; only typed fields need manual sync.
   #[inline]
   fn build_command( &self ) -> std::process::Command {

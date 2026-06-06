@@ -259,7 +259,8 @@ fn describe_compact_with_many_flags_still_single_line()
     .with_dry_run( true );
   let compact = cmd.describe_compact();
   assert_eq!( compact.lines().count(), 1, "describe_compact must always return a single line: {compact:?}" );
-  assert!( compact.starts_with( "claude" ), "describe_compact must start with 'claude'" );
+  // Fix(BUG-246): default unset_claudecode=true → starts with "env -u CLAUDECODE"
+  assert!( compact.starts_with( "env -u CLAUDECODE" ), "describe_compact must start with 'env -u CLAUDECODE'" );
 }
 
 // ── Pattern E empty then non-empty in sequence ───────────────────────────────

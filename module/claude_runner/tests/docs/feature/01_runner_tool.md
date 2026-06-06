@@ -10,7 +10,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 | FT-2 | Dry-run output has env-vars block and assembled-command block | Output Format |
 | FT-3 | `--verbosity 0 --dry-run` → dry-run output still shown (verbosity does not suppress it) | Verbosity Gate |
 | FT-4 | `--trace --dry-run` → trace on stderr, dry-run preview on stdout | Trace Mode |
-| FT-5 | Assembled command starts with `claude` binary (execution delegated) | Separation of Concerns |
+| FT-5 | Assembled command contains `claude` binary invocation (execution delegated, not `clr`) | Separation of Concerns |
 | FT-6 | `--print` present when message is provided (mode selection default) | Mode Selection |
 | FT-7 | `--verbosity 0` with missing binary → fatal error still visible on stderr | Verbosity Gate |
 
@@ -68,11 +68,11 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 
 ---
 
-### FT-5: Assembled command starts with `claude` binary
+### FT-5: Assembled command delegates to `claude` binary
 
 - **Given:** clean environment
 - **When:** `clr --dry-run "Fix bug"`
-- **Then:** The assembled command line in the dry-run output starts with `claude` (not `clr` or any other binary); execution is delegated to the claude binary
+- **Then:** The assembled command line in the dry-run output contains `claude` (the binary being invoked is `claude`, not `clr`); execution is delegated to the claude binary. The line starts with `env -u CLAUDECODE claude` by default (BUG-246 WYSIWYG fix).
 - **Exit:** 0
 - **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md)
 

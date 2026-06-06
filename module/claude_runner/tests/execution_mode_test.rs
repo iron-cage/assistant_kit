@@ -373,7 +373,7 @@ fn e13_interactive_flag_with_message_uses_interactive_mode()
   );
 }
 
-// E14: Print mode: empty stderr + non-zero exit emits rate-limit diagnostic.
+// E14: Print mode: empty stderr + non-zero exit emits labeled error diagnostic.
 // test_kind: bug_reproducer(BUG-037)
 //
 // ## Root Cause
@@ -387,8 +387,9 @@ fn e13_interactive_flag_with_message_uses_interactive_mode()
 // (empty stderr + non-zero exit → zero output) was never separately exercised.
 //
 // ## Fix Applied
-// Added an explicit `output.stderr.is_empty() && output.exit_code != 0` branch
-// before the exit call that emits "possible rate limit or quota exhaustion".
+// BUG-037 block replaced with `classify_error()` — each ErrorKind variant emits
+// `"Error: {label} (exit {code})"`.  exit 1 with no pattern → Unknown label.
+// The old generic phrase "possible rate limit or quota exhaustion" is fully removed.
 //
 // ## Prevention
 // Every subprocess wrapper that gates diagnostics on `!stderr.is_empty()` must
@@ -407,8 +408,12 @@ fn e14_print_silent_failure_rate_limit_diagnostic()
   assert!( !out.status.success(), "must exit non-zero on silent failure" );
   let stderr = String::from_utf8_lossy( &out.stderr );
   assert!(
-    stderr.contains( "possible rate limit or quota exhaustion" ),
-    "must emit diagnostic on silent failure (empty stderr + non-zero exit). Got:\n{stderr}"
+    stderr.contains( "Error: unknown error (exit 1)" ),
+    "must emit classified diagnostic on silent failure (empty stderr + non-zero exit). Got:\n{stderr}"
+  );
+  assert!(
+    !stderr.contains( "possible rate limit or quota exhaustion" ),
+    "generic phrase must be absent after BUG-037 fix. Got:\n{stderr}"
   );
 }
 
