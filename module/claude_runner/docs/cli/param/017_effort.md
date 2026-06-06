@@ -40,7 +40,7 @@ use `--no-effort-max`.
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | max | clr default; claude binary default is medium |
-| 5 | [`ask`](../command/05_ask.md) | high | Lower default for Q&A |
+| 5 | [`ask`](../command/05_ask.md) | max | Pure alias — same default as `run` |
 
 ### Referenced User Stories
 

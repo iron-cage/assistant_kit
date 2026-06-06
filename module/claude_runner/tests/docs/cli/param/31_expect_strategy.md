@@ -12,15 +12,16 @@ Edge case coverage for the `--expect-strategy` parameter. See [031_expect_strate
 | EC-4 | `default:no` → outputs "no", exit 0 on mismatch | Behavioral Divergence |
 | EC-5 | Invalid strategy value → exit 1, error message | Error Handling |
 | EC-6 | `--expect-strategy` without `--expect` → silently ignored | Edge Case |
+| EC-7 | `default:` with empty VALUE → accepted (produces empty-string fallback) | Edge Case |
 
 ## Test Coverage Summary
 
 - Behavioral Divergence: 2 tests (EC-1, EC-4)
 - Behavioral: 2 tests (EC-2, EC-3)
 - Error Handling: 1 test (EC-5)
-- Edge Case: 1 test (EC-6)
+- Edge Case: 2 tests (EC-6, EC-7)
 
-**Total:** 6 edge cases
+**Total:** 7 edge cases
 
 ## Implementation Notes
 
@@ -32,6 +33,7 @@ Edge case coverage for the `--expect-strategy` parameter. See [031_expect_strate
 | EC-4 | `t09_default_strategy_outputs_fallback_exits_0` | `expect_validation_test.rs` |
 | EC-5 | `t10_invalid_strategy_exits_1` | `expect_validation_test.rs` |
 | EC-6 | `t12_strategy_without_expect_silently_ignored` | `expect_validation_test.rs` |
+| EC-7 | `t18_default_strategy_empty_value_accepted` | `expect_validation_test.rs` |
 
 ---
 
@@ -95,6 +97,17 @@ Edge case coverage for the `--expect-strategy` parameter. See [031_expect_strate
 - **Given:** `--expect-strategy fail` but no `--expect`
 - **When:** `clr --dry-run --expect-strategy fail "task"`
 - **Then:** Exit 0; no error; assembled command unaffected
+- **Exit:** 0
+- **Source:** [031_expect_strategy.md](../../../../docs/cli/param/031_expect_strategy.md)
+- **Commands:** run, ask
+
+---
+
+### EC-7: `default:` with empty VALUE → accepted
+
+- **Given:** `--expect "yes" --expect-strategy "default:" --dry-run "test"`
+- **When:** parse time (dry-run, no subprocess)
+- **Then:** Exit 0; `default:` is valid — empty string is a legal fallback value per the spec ("emitted as-is")
 - **Exit:** 0
 - **Source:** [031_expect_strategy.md](../../../../docs/cli/param/031_expect_strategy.md)
 - **Commands:** run, ask

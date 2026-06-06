@@ -22,10 +22,10 @@ clr --trace "Fix bug"
 # Stderr: claude --dangerously-skip-permissions --chrome -c --print "Fix bug\n\nultrathink"
 # Then: subprocess executes normally
 
-# Trace on ask
+# Trace on ask (pure alias — identical output to run)
 clr ask --trace "What is X?"
-# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384
-# Stderr: claude --effort high --print "What is X?"
+# Stderr: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+# Stderr: claude --dangerously-skip-permissions --chrome --effort max --print -c "What is X?\n\nultrathink"
 # Then: subprocess executes normally
 
 # Trace on isolated

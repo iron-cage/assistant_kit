@@ -117,7 +117,7 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
       // one but parse_isolated_args was written without it.
       // Pitfall: any catch-all for unknown flags silently swallows --help and -h;
       // always add an explicit --help arm before the catch-all in every subcommand parser.
-      "-h" | "--help" => { super::print_isolated_help(); }
+      "-h" | "--help" => { super::help::print_isolated_help(); }
       s if s.starts_with( '-' ) =>
       {
         return Err( Error::msg( format!(
@@ -176,7 +176,7 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
       {
         trace = true;
       }
-      "-h" | "--help" => { super::print_refresh_help(); }
+      "-h" | "--help" => { super::help::print_refresh_help(); }
       s if s.starts_with( '-' ) =>
       {
         return Err( Error::msg( format!(

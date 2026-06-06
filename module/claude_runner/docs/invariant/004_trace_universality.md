@@ -14,7 +14,7 @@ Every `clr` command that invokes or manages a subprocess must accept `--trace` a
 | Command | Subprocess | Supports `--trace` | Stderr Diagnostic Content |
 |---------|-----------|-------------------|--------------------------|
 | `run` | `claude` binary | yes | env vars + assembled `claude` command line |
-| `ask` | `claude` binary | yes | env vars + assembled `claude` command line (ask defaults) |
+| `ask` | `claude` binary | yes | env vars + assembled `claude` command line (identical to `run` — pure alias) |
 | `isolated` | `claude` binary (temp HOME) | yes | credential headers (`# clr isolated`, `# creds: {path}`, `# timeout: 30s`), env vars, assembled `claude --chrome --model {model} [args]` |
 | `refresh` | `claude` binary (temp HOME, fixed args) | yes | credential headers (`# clr refresh`, `# creds: {path}`, `# timeout: 45s`), env vars, assembled `claude --chrome --model {model} --print "."` |
 | `help` | — | exempt | no subprocess; `--trace` is not parsed |
@@ -43,13 +43,12 @@ If a subprocess-executing command does not support `--trace`:
 #### run / ask commands
 
 Emitted via `describe_env()` + `describe()`:
-- `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` (run) or `=16384` (ask)
+- `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`
 - `CLAUDE_CODE_BASH_TIMEOUT=3600000`
 - `CLAUDE_CODE_BASH_MAX_TIMEOUT=7200000`
 - `CLAUDE_CODE_AUTO_CONTINUE=true`
 - `CLAUDE_CODE_TELEMETRY=false`
-- Command line: `claude --dangerously-skip-permissions --chrome --effort max -c "msg\nultrathink"` (run)
-- Command line: `claude --effort high --print "msg"` (ask — no `--chrome`, no `-c`, no `--dangerously-skip-permissions`)
+- Command line: `claude --dangerously-skip-permissions --chrome --effort max -c "msg\nultrathink"` (run and ask — identical output since ask is a pure alias)
 
 #### isolated / refresh commands
 

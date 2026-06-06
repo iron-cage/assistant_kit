@@ -25,7 +25,7 @@
 | 012_code_block_extraction.md | User story: strip code fence from captured output |
 | 013_structured_json_pipeline.md | User story: generate schema-constrained JSON for downstream tools |
 | 014_credential_refresh.md | User story: refresh OAuth credentials without running a task |
-| 015_ask_mode.md | User story: quick Q&A with lightweight defaults |
+| 015_ask_mode.md | User story: `ask` as pure semantic alias for `run` |
 | 016_cli_discoverability.md | User story: discover CLI commands and usage via help |
 | 017_model_selection.md | User story: select the Claude model for an invocation |
 | 018_env_var_configuration.md | User story: configure clr defaults via CLR_* env vars |

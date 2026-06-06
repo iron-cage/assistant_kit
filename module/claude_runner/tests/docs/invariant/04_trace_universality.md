@@ -7,7 +7,7 @@ Test case planning for [invariant/004_trace_universality.md](../../../../docs/in
 | ID | Test Name | Category |
 |----|-----------|----------|
 | IN-1 | `clr --trace "msg"` (run) → stderr contains env + command | Run Trace |
-| IN-2 | `clr ask --trace "msg"` → stderr contains ask-default trace | Ask Trace |
+| IN-2 | `clr ask --trace "msg"` → stderr identical to run trace (pure alias) | Ask Trace |
 | IN-3 | `clr isolated --creds <f> --trace "msg"` → stderr contains `# clr isolated` / `# creds:` / `# timeout: 30s` | Isolated Trace |
 | IN-4 | `clr refresh --creds <f> --trace` → stderr contains `# clr refresh` / `# creds:` / `# timeout: 45s` | Refresh Trace |
 | IN-5 | Static: `--trace` parsed by all four subprocess-executing commands | Structural Invariant |
@@ -34,11 +34,11 @@ Test case planning for [invariant/004_trace_universality.md](../../../../docs/in
 
 ---
 
-### IN-2: `clr ask --trace "msg"` → stderr contains ask-default trace
+### IN-2: `clr ask --trace "msg"` → stderr identical to run trace (pure alias)
 
 - **Given:** clean environment; claude binary absent in test environment
 - **When:** `clr ask --trace "What is X?"`
-- **Then:** stderr contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384` and `claude --effort high --print "What is X?"` (no `-c`, no `--dangerously-skip-permissions`, no `--chrome`); exit 1 (claude absent)
+- **Then:** stderr contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` and the assembled `env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max --print -c "What is X?\n\nultrathink"` command line — identical to `clr --trace "What is X?"` output since ask is a pure semantic alias; exit 1 (claude absent)
 - **Exit:** 1 (claude absent) or 0 (claude present)
 - **Source:** [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md), [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
 

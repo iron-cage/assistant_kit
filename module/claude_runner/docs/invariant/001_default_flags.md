@@ -9,7 +9,7 @@
 
 ### Invariant Statement
 
-`clr run` must inject the following flags on every invocation unless explicitly overridden. These defaults apply to the `run` command (including the implicit default when no subcommand is given). The `ask` command is a facade of `run` with a different set of defaults — see [command/05_ask.md](../cli/command/05_ask.md).
+`clr run` must inject the following flags on every invocation unless explicitly overridden. These defaults apply to the `run` command (including the implicit default when no subcommand is given). The `ask` command is a pure semantic alias for `run` with identical defaults — see [command/05_ask.md](../cli/command/05_ask.md).
 
 | Flag | Default | Override | Rationale |
 |------|---------|----------|-----------|

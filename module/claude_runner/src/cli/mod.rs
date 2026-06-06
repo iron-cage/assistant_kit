@@ -3,6 +3,8 @@ mod cred_parse;
 mod builder;
 mod fence;
 mod credential;
+mod help;
+mod gate;
 
 use super::VerbosityLevel;
 use claude_runner_core::{ ClaudeCommand, ErrorKind, IsolatedModel, signal_exit_code };
@@ -13,163 +15,12 @@ use cred_parse::{
 };
 pub use fence::strip_fences;
 use credential::{ run_isolated_command, run_refresh_command };
+use help::print_ask_help;
+use gate::wait_for_session_slot;
 
 pub( super ) use parse::{ parse_args, apply_env_vars };
 pub( super ) use builder::build_claude_command;
-
-pub( super ) fn print_help()
-{
-  println!( "clr — Execute Claude Code with configurable parameters" );
-  println!();
-  println!( "USAGE:" );
-  println!( "  clr [OPTIONS] [MESSAGE]" );
-  println!( "  clr run      [OPTIONS] [MESSAGE]" );
-  println!( "  clr ask      [OPTIONS] [QUESTION]" );
-  println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [--trace] [MESSAGE]" );
-  println!( "  clr refresh  --creds <FILE> [--timeout <SECS>] [--trace]" );
-  println!( "  clr help" );
-  println!();
-  println!( "COMMANDS:" );
-  // Fix(BUG-212): `run` was absent from COMMANDS despite being a valid explicit subcommand.
-  // Root cause: print_help() only listed ask/isolated/refresh/help; discoverability AC violated.
-  // Pitfall: `clr run` must strip the leading token before reaching the parser — see lib.rs.
-  println!( "  run                                Execute Claude Code with configurable parameters (default mode)" );
-  println!( "  ask                                Semantic alias for `run` (identical behavior)" );
-  println!( "  isolated                           Run Claude with credential-isolated temp HOME" );
-  println!( "  refresh                            Refresh OAuth credentials without running a task" );
-  println!( "  help                               Print usage information and exit" );
-  println!();
-  println!( "ARGUMENTS:" );
-  println!( "  [MESSAGE]                          Prompt message for Claude" );
-  println!();
-  println!( "OPTIONS:" );
-  println!( "  -p, --print                        Non-interactive mode (capture and print output)" );
-  println!( "  --interactive                      Force interactive mode even when a message is given" );
-  println!( "  --new-session                      Start a new session (default: continues previous)" );
-  println!( "  --model <MODEL>                    Model to use" );
-  println!( "  --verbose                          Enable verbose output" );
-  println!( "  --no-skip-permissions              Disable automatic permission bypass (on by default)" );
-  println!( "  --max-tokens <N>                   Max output tokens (default: 200000)" );
-  println!( "  --session-dir <PATH>               Session storage directory" );
-  println!( "  --dir <PATH>                       Working directory" );
-  println!( "  --subdir <NAME>                    Named subdirectory appended to --dir as /-NAME; . = identity" );
-  println!( "  --dry-run                          Print command without executing" );
-  println!( "  --trace                            Print command to stderr then execute (like set -x)" );
-  println!( "  --system-prompt <TEXT>             Set system prompt (replaces the default)" );
-  println!( "  --append-system-prompt <TEXT>      Append text to the default system prompt" );
-  println!( "  --no-ultrathink                    Disable automatic \"\\n\\nultrathink\" message suffix" );
-  println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max)" );
-  println!( "  --no-effort-max                    Suppress default --effort max injection" );
-  println!( "  --no-chrome                        Suppress default --chrome injection" );
-  println!( "  --no-persist                       Disable session persistence (--no-session-persistence)" );
-  println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
-  println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
-  println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
-  println!( "  --strip-fences                     Strip outermost markdown code fences from stdout" );
-  println!( "  --keep-claudecode                  Preserve CLAUDECODE env var in subprocess (default: removed)" );
-  println!( "  --verbosity <0-5>                  Runner output verbosity level (default: 3)" );
-  println!( "  --output-file <PATH>               Write captured output to file (tee: stdout + file)" );
-  println!( "  --expect <VALS>                    Pipe-separated expected values; mismatch → exit 3 (case-insensitive, trimmed)" );
-  println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default), retry, default:<VAL>" );
-  println!( "  --expect-retries <N>               Retry attempts when --expect-strategy retry (0–255, default: 0)" );
-  println!( "  --max-sessions <N>                 Max concurrent claude sessions before blocking (0=unlimited, default: 10)" );
-  println!( "  -h, --help                         Show this help" );
-  println!();
-  println!( "CREDENTIAL OPTIONS (isolated, refresh):" );
-  println!( "  --creds <FILE>                     Credentials JSON file (required)" );
-  println!( "  --timeout <SECS>                   Max seconds to wait (default: 30 isolated, 45 refresh)" );
-  println!( "  --trace                            Print creds path, timeout, and claude invocation to stderr" );
-}
-
-/// Print help for the `isolated` subcommand and exit 0.
-///
-/// Called when `parse_isolated_args` encounters `-h` or `--help`.
-/// Terminates the process via `std::process::exit(0)` so the caller
-/// never needs to handle a return value.
-fn print_isolated_help() -> !
-{
-  println!( "clr isolated — Run Claude Code with credential-isolated temp HOME" );
-  println!();
-  println!( "USAGE:" );
-  println!( "  clr isolated --creds <FILE> [--timeout <SECS>] [MESSAGE] [-- PASSTHROUGH...]" );
-  println!();
-  println!( "ARGUMENTS:" );
-  println!( "  [MESSAGE]                          Prompt message for Claude" );
-  println!();
-  println!( "CREDENTIAL OPTIONS:" );
-  println!( "  --creds <FILE>                     Credentials JSON file (required)" );
-  println!( "  --timeout <SECS>                   Max seconds to wait for subprocess (default: 30)" );
-  println!( "  --trace                            Print underlying call details to stderr" );
-  println!( "  -h, --help                         Show this help" );
-  println!();
-  println!( "EXIT CODES:" );
-  println!( "  0    Success" );
-  println!( "  1    Error (bad arguments, subprocess failure)" );
-  println!( "  2    Timeout — subprocess did not finish within --timeout seconds" );
-  std::process::exit( 0 );
-}
-
-/// Print help for the `refresh` subcommand and exit 0.
-fn print_refresh_help() -> !
-{
-  println!( "clr refresh — Refresh OAuth credentials without running a task" );
-  println!();
-  println!( "USAGE:" );
-  println!( "  clr refresh --creds <FILE> [--timeout <SECS>] [--trace]" );
-  println!();
-  println!( "CREDENTIAL OPTIONS:" );
-  println!( "  --creds <FILE>                     Credentials JSON file (required)" );
-  println!( "  --timeout <SECS>                   Max seconds to wait for refresh (default: 45)" );
-  println!( "  --trace                            Print underlying call details to stderr" );
-  println!( "  -h, --help                         Show this help" );
-  println!();
-  println!( "EXIT CODES:" );
-  println!( "  0    Credentials were refreshed and written back" );
-  println!( "  1    Error (bad arguments, no refresh occurred, subprocess failure)" );
-  println!( "  2    Timeout — subprocess did not finish within --timeout seconds" );
-  std::process::exit( 0 );
-}
-
-/// Print help for the `ask` subcommand and exit 0.
-///
-/// Called when `--help` or `-h` is detected in `dispatch_ask` before delegating to `dispatch_run`.
-fn print_ask_help() -> !
-{
-  println!( "clr ask — Semantic alias for `clr run`" );
-  println!();
-  println!( "USAGE:" );
-  println!( "  clr ask [OPTIONS] [QUESTION]" );
-  println!();
-  println!( "ARGUMENTS:" );
-  println!( "  [QUESTION]                         Question to ask Claude" );
-  println!();
-  println!( "`clr ask` is a pure semantic alias for `clr run` — all options are identical." );
-  println!( "See `clr --help` or `clr run --help` for the full option list." );
-  println!();
-  println!( "OPTIONS:" );
-  println!( "  -p, --print                        Non-interactive mode (capture and print output)" );
-  println!( "  --effort <LEVEL>                   Reasoning effort: low, medium, high, max (default: max)" );
-  println!( "  --max-tokens <N>                   Max output tokens (default: 200000)" );
-  println!( "  --model <MODEL>                    Model to use" );
-  println!( "  --dry-run                          Print command without executing" );
-  println!( "  --trace                            Print command to stderr then execute" );
-  println!( "  --system-prompt <TEXT>             Set system prompt" );
-  println!( "  --append-system-prompt <TEXT>      Append to default system prompt" );
-  println!( "  --dir <PATH>                       Working directory" );
-  println!( "  --subdir <NAME>                    Named subdirectory appended to --dir as /-NAME; . = identity" );
-  println!( "  --session-dir <PATH>               Session storage directory" );
-  println!( "  --verbosity <0-5>                  Runner output verbosity level" );
-  println!( "  --json-schema <SCHEMA>             JSON schema for structured output" );
-  println!( "  --mcp-config <PATH>                MCP server config file (repeatable)" );
-  println!( "  --file <PATH>                      Pipe file content to subprocess stdin" );
-  println!( "  --strip-fences                     Strip outermost markdown code fences" );
-  println!( "  --output-file <PATH>               Write captured output to file (tee: stdout + file)" );
-  println!( "  --expect <VALS>                    Pipe-separated expected values; mismatch → exit 3 (case-insensitive, trimmed)" );
-  println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default), retry, default:<VAL>" );
-  println!( "  --expect-retries <N>               Retry attempts when --expect-strategy retry (0–255, default: 0)" );
-  println!( "  -h, --help                         Show this help" );
-  std::process::exit( 0 );
-}
+pub( super ) use help::print_help;
 
 /// Handle dry-run mode: print command preview and exit.
 ///
@@ -217,66 +68,6 @@ pub( super ) fn guard_unknown_subcommand( tokens : &[ String ] )
         }
       }
     }
-  }
-}
-
-/// Emit trace preview then dispatch to print mode or interactive mode.
-///
-/// Called after a command has been built and the dry-run branch has been handled.
-/// Dispatches to `run_print_mode` when a message is given (or `-p` is set),
-/// and to `run_interactive` otherwise.
-/// Count running `claude` binary processes by scanning `/proc/*/cmdline`.
-///
-/// Reads the NUL-delimited argv from each numeric `/proc/<pid>/cmdline` entry and
-/// checks whether the first argument's file-name component equals `"claude"`.
-/// Returns 0 on any I/O failure so the gate degrades gracefully.
-fn count_claude_sessions() -> usize
-{
-  let Ok( entries ) = std::fs::read_dir( "/proc" ) else { return 0; };
-  entries
-    .flatten()
-    .filter( | e | e.file_name().to_string_lossy().chars().all( | c | c.is_ascii_digit() ) )
-    .filter( | e |
-    {
-      let cmdline_path = e.path().join( "cmdline" );
-      std::fs::read( cmdline_path )
-        .is_ok_and( | bytes |
-        {
-          // cmdline is NUL-separated argv; first arg is the binary path.
-          let first     = bytes.split( | &c | c == 0 ).next().unwrap_or_default();
-          let first_str = String::from_utf8_lossy( first );
-          std::path::Path::new( first_str.as_ref() )
-            .file_name()
-            .is_some_and( | n | n == "claude" )
-        } )
-    } )
-    .count()
-}
-
-/// Block until fewer than `max` `claude` sessions are running, or until the 15-minute
-/// timeout elapses.  `max == 0` means unlimited — returns immediately without checking.
-fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel )
-{
-  if max == 0 { return; }
-  let timeout = core::time::Duration::from_secs( 15 * 60 );
-  let poll    = core::time::Duration::from_secs( 30 );
-  let start   = std::time::Instant::now();
-  loop
-  {
-    let count = count_claude_sessions();
-    if u32::try_from( count ).unwrap_or( u32::MAX ) < max { return; }
-    if start.elapsed() >= timeout
-    {
-      eprintln!(
-        "Error: --max-sessions limit ({max}) reached; timed out after 15 minutes waiting for a slot."
-      );
-      std::process::exit( 1 );
-    }
-    if verbosity.shows_warnings()
-    {
-      eprintln!( "Info: {count} claude session(s) running (limit {max}); waiting 30s for a free slot..." );
-    }
-    std::thread::sleep( poll );
   }
 }
 

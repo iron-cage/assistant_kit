@@ -47,7 +47,7 @@ const TEST_HOST : &str = "testmachine";
 const DEFAULT_MARKER : &str = "_active_testmachine_testuser";
 
 /// Standard env block that sets HOME, USER, and HOSTNAME for deterministic behavior.
-fn test_env<'a>( home : &'a str ) -> Vec< ( &'a str, &'a str ) >
+fn test_env( home : &str ) -> Vec< ( &str, &str ) >
 {
   vec![ ( "HOME", home ), ( "USER", TEST_USER ), ( "HOSTNAME", TEST_HOST ) ]
 }
@@ -62,12 +62,11 @@ fn credential_store( home : &std::path::Path ) -> std::path::PathBuf
 fn active_marker_count( store : &std::path::Path ) -> usize
 {
   std::fs::read_dir( store )
-    .map( | entries | entries
-      .filter_map( | e | e.ok() )
+    .map_or( 0, | entries | entries
+      .filter_map( core::result::Result::ok )
       .filter( | e | e.file_name().to_string_lossy().starts_with( "_active" ) )
       .count()
     )
-    .unwrap_or( 0 )
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -200,7 +199,7 @@ fn aa06_for_without_at_exits_1()
   assert_exit( &out, 1 );
 
   let err_text = stderr( &out );
-  assert!( err_text.contains( "USER@MACHINE" ) || err_text.contains( "@" ),
+  assert!( err_text.contains( "USER@MACHINE" ) || err_text.contains( '@' ),
     "stderr must explain the required format: {err_text}" );
 }
 
@@ -488,7 +487,7 @@ fn ec7_dot_hyphen_in_machine_preserved()
 /// `for::alice@corp.com@laptop` splits into:
 /// - user component: `alice`
 /// - machine component: `corp.com@laptop` (sanitized: `@` → `_` → `corp.com_laptop`)
-/// Written filename: `_active_corp.com_laptop_alice`.
+///   Written filename: `_active_corp.com_laptop_alice`.
 fn ec8_multiple_at_splits_on_first()
 {
   let dir  = TempDir::new().unwrap();

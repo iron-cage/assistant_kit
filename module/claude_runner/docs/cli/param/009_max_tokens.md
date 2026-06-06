@@ -30,7 +30,7 @@ clr "Summarize" --max-tokens 50000
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
 | 1 | [`run`](../command/01_run.md) | 200000 | — |
-| 5 | [`ask`](../command/05_ask.md) | 16384 | Shorter default for Q&A |
+| 5 | [`ask`](../command/05_ask.md) | 200000 | Pure alias — same default as `run` |
 
 ### Referenced User Stories
 

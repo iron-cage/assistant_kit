@@ -16,7 +16,7 @@ Domain vocabulary for the `clr` CLI. Terms are organized by category below.
 | Term | Definition |
 |------|------------|
 | run | Default command that builds and executes a `claude` subprocess with the given flags |
-| ask | Alias for `run` with interactive mode off and print mode on by default; same flags as `run` |
+| ask | Semantic alias for `run` with identical parameters and defaults; no behavioral differences |
 | isolated | Subcommand that runs `claude` in a credential-isolated temporary HOME; requires `--creds` |
 | refresh | Subcommand that refreshes OAuth credentials via `run_isolated()` with `["--print", "."]`; requires `--creds`; no task executed |
 | help | Display usage information and exit; canonical form `clr help`; `--help`/`-h` are parameter aliases |

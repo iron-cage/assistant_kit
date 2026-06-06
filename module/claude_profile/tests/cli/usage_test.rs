@@ -7050,7 +7050,7 @@ fn it247_synthetic_row_suppressed_name_collision()
 
 // ── it_ft028_17 ───────────────────────────────────────────────────────────────
 
-/// it_ft028_17 `lim_it` (028 FT-17 / AC-17): `only_active::1` performs exactly 1 HTTP fetch
+/// `it_ft028_17` `lim_it` (028 FT-17 / AC-17): `only_active::1` performs exactly 1 HTTP fetch
 /// on a store with N ≥ 3 accounts.
 ///
 /// With `only_active::1`, the pipeline must fetch quota data only for the account that has the

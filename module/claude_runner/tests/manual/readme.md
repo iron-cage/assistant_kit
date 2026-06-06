@@ -232,6 +232,8 @@ cargo run -p claude_runner -- --trace "test" 2>/tmp/trace29_err.txt; echo "exit:
 
 **Expected:** Command preview (env vars + command) written to stderr. Invocation attempt made (may fail if Claude binary absent). Exit code 0 on success, non-zero if Claude not found.
 
+**Precondition:** Requires fewer than `--max-sessions` live claude sessions on the host. If the gate fires (e.g., 10/10 sessions running), the gate-wait message appears on stderr BEFORE the trace block runs — this is correct gate-before-trace ordering by design. Test in container where session count is 0 for reliable results.
+
 ### TC-30: No-Skip-Permissions in Dry-Run
 ```sh
 cargo run -p claude_runner -- --dry-run --no-skip-permissions "test"
@@ -424,7 +426,7 @@ TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for ful
 
 ---
 
-## Corner Cases (CC-1 through CC-90) — Automated
+## Corner Cases (CC-1 through CC-101) — Automated
 
 These are exhaustively tested by the integration test suite (not manual). Listed here for traceability.
 
@@ -523,3 +525,24 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-89:** `--max-sessions 0 --dry-run "test"` → exit 0 (gate disabled)
 - **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 10 used)
 - Automated in: `output_file_test.rs`, `expect_validation_test.rs`, `param_edge_cases_test.rs`, `env_var_test.rs`
+
+### Env vars for expect/output-file params
+
+- **CC-91:** `CLR_OUTPUT_FILE=/tmp/x.txt --dry-run "test"` → exit 0; runner-level, not forwarded to claude command
+- **CC-92:** `CLR_EXPECT="yes|no" --dry-run "test"` → exit 0; runner-level, not forwarded
+- **CC-93:** `CLR_EXPECT_STRATEGY=fail --dry-run "test"` → exit 0
+- **CC-94:** `CLR_EXPECT_STRATEGY=bogus --dry-run "test"` → exit 1 with error "CLR_EXPECT_STRATEGY: invalid"
+- **CC-95:** `CLR_EXPECT_RETRIES=5 --dry-run "test"` → exit 0
+- **CC-96:** `CLR_EXPECT_RETRIES=256 --dry-run "test"` → exit 1 with error "CLR_EXPECT_RETRIES: invalid"
+
+### expect-strategy edge cases
+
+- **CC-97:** `--expect-strategy "default:" --dry-run "test"` → exit 0; empty-value default is valid (returns `""` on mismatch)
+- **CC-98:** `--expect "yes" --expect-strategy fail --expect-retries 3 --dry-run "test"` → exit 0; retries silently ignored when strategy is `fail`
+
+### Runner-level flags not forwarded to claude
+
+- **CC-99:** `--file /etc/hostname --dry-run "test"` → dry-run shows `< /etc/hostname` as stdin redirect, NOT `--file` flag
+- **CC-100:** `--strip-fences --dry-run "test"` → dry-run shows no `--strip-fences` in claude command (runner post-processing)
+- **CC-101:** `--keep-claudecode --dry-run "test"` → dry-run shows `claude ...` WITHOUT `env -u CLAUDECODE` prefix
+- Automated in: `user_story_test.rs`, `env_var_test.rs`, `fence_test.rs`

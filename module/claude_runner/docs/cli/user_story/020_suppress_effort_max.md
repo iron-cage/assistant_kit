@@ -45,5 +45,5 @@ Suppress the automatic `--effort max` injection to run Claude with no effort ove
 
 | # | User Story | Relationship |
 |---|------------|--------------|
-| 15 | [Ask Mode](015_ask_mode.md) | Ask mode uses `--effort high` default instead of max |
+| 15 | [Ask Mode](015_ask_mode.md) | Ask is a pure alias for run; uses same `--effort max` default |
 | 18 | [Env-var Configuration](018_env_var_configuration.md) | `CLR_NO_EFFORT_MAX` is one of 25 CLR_* env vars |

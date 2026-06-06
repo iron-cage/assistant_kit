@@ -2195,7 +2195,7 @@ fn aw35_help_shows_positional_example()
   // positional syntax.  We check for a known example from the spec (or any bare-email pattern).
   let has_positional = text
     .lines()
-    .any( |l| l.contains( "@" ) && !l.contains( "name::" ) && !l.trim_start().starts_with( "##" ) );
+    .any( |l| l.contains( '@' ) && !l.contains( "name::" ) && !l.trim_start().starts_with( "##" ) );
   assert!(
     has_positional,
     ".account.use.help must show a positional example (email without name:: prefix), got:\n{text}",

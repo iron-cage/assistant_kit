@@ -30,6 +30,7 @@
 //! - T09: `default:<VAL>` strategy → emits fallback, exit 0
 //! - T10: invalid `--expect-strategy` value → exit 1 at parse time
 //! - T11: `--expect-retries 256` → exit 1 at parse time (out of range)
+//! - T18: `default:` with empty VALUE → accepted at parse time (dry-run exits 0)
 #![ cfg( unix ) ]
 
 mod cli_binary_test_helpers;
@@ -498,4 +499,27 @@ fn t16_retries_3_makes_4_total_attempts()
     .parse::<u32>()
     .expect( "count is a number" );
   assert_eq!( count, 4, "must invoke exactly 4 times (1 initial + 3 retries). Got: {count}" );
+}
+
+// ── T18: default: with empty VALUE → accepted at parse time (31-EC-7) ─────────
+
+/// T18: `--expect-strategy "default:"` (empty VALUE after colon) is a valid parse.
+///
+/// The spec states the fallback is emitted "as-is" — an empty string is a legal
+/// fallback value (signals "no output on mismatch" while still exiting 0).
+/// Covers 31-EC-7.
+#[ test ]
+fn t18_default_strategy_empty_value_accepted()
+{
+  let out = run_cli( &[
+    "--dry-run",
+    "--expect",          "yes",
+    "--expect-strategy", "default:",
+    "test",
+  ] );
+  assert!(
+    out.status.success(),
+    "default: with empty VALUE must exit 0 at parse time. stderr: {}",
+    String::from_utf8_lossy( &out.stderr )
+  );
 }

@@ -26,7 +26,7 @@ documentation only: `ask` communicates that the invocation is a question.
 - `clr ask --dry-run "X"` and `clr run --dry-run "X"` produce identical assembled commands
 - No flags are forced or overridden by the `ask` subcommand — `--new-session`, `--no-chrome`,
   `--no-persist`, `--no-ultrathink`, `--effort`, `--max-tokens` are all at their `run` defaults
-- All 32 parameters from `run` are accepted by `ask` with identical defaults and behavior
+- All 31 parameters from `run` are accepted by `ask` with identical defaults and behavior
 - `clr ask --effort high "..."`, `clr ask --max-tokens 200000 "..."`,
   `clr ask --new-session "..."` all work exactly as they do under `run`
 

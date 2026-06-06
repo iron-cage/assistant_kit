@@ -72,7 +72,9 @@ environments with parallel `clr` invocations hitting API rate limits.
 | File | Relationship |
 |------|--------------|
 | `../../src/lib.rs` | `run_cli()` entry point |
-| `../../src/cli/mod.rs` | Mode dispatch (`run_print_mode`, `run_interactive`), subcommand dispatch, CLI entry point |
+| `../../src/cli/mod.rs` | Subcommand dispatch, execution dispatch (`run_print_mode`, `run_interactive`), dry-run, guard |
+| `../../src/cli/help.rs` | Help text printing for all subcommands (`clr`, `ask`, `isolated`, `refresh`) |
+| `../../src/cli/gate.rs` | Session concurrency gate (`count_claude_sessions`, `wait_for_session_slot`) |
 | `../../src/cli/builder.rs` | `build_claude_command()` implementation, `session_exists()` guard, effective-dir resolution |
 | `../../src/cli/parse.rs` | CLI argument parsing, env var fallbacks |
 | `../../src/cli/credential.rs` | Credential-isolated execution (`run_isolated_command`, `run_refresh_command`), trace emission for isolated/refresh |

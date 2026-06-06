@@ -38,7 +38,7 @@
 | 032_expect_retries.md | `--expect-retries` parameter spec |
 | 033_max_sessions.md | `--max-sessions` parameter spec |
 
-### All Parameters (32 total)
+### All Parameters (33 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
