@@ -1,6 +1,6 @@
 //! CLR_* Environment Variable Tests
 //!
-//! Covers E01–E29: one test per `CLR_*` env var.
+//! Covers E01–E34: one test per `CLR_*` env var.
 //! Source: `task/claude_runner/148_env_var_all_params.md`
 //!
 //! All tests use `run_cli_with_env()` — no `std::env::set_var`, no thread-global mutation.
@@ -40,6 +40,11 @@
 //! | E27  | `CLR_KEEP_CLAUDECODE`      | dry-run accepted; env preservation verified in execution_mode_test.rs S77 |
 //! | E28  | `CLR_TRACE` (isolated)     | stderr contains trace output for isolated subcommand        |
 //! | E29  | `CLR_SUBDIR`               | stdout contains `/-feature` path suffix                     |
+//! | E30  | `CLR_MAX_SESSIONS`         | dry-run exit 0; invalid value silently ignored              |
+//! | E31  | `CLR_OUTPUT_FILE`          | dry-run exit 0; CLI wins over env                           |
+//! | E32  | `CLR_EXPECT`               | dry-run exit 0; CLI wins over env                           |
+//! | E33  | `CLR_EXPECT_STRATEGY`      | dry-run exit 0; CLI wins; invalid value → exit 1            |
+//! | E34  | `CLR_EXPECT_RETRIES`       | dry-run exit 0; CLI wins; out-of-range → exit 1             |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli_with_env;
@@ -771,7 +776,53 @@ fn e29_clr_subdir_sets_effective_dir()
   );
 }
 
-// ─── E30: CLR_SUBDIR slash validation ──────────────────────────────────────────
+// ─── E30: CLR_MAX_SESSIONS ────────────────────────────────────────────────────
+
+/// E30: `CLR_MAX_SESSIONS=N` sets the session concurrency limit.
+///
+/// Dry-run bypasses the gate so we can verify parsing without blocking.
+/// Invalid value silently ignored (parse failure → default 10 used).
+/// CLI wins: `--max-sessions 5` overrides `CLR_MAX_SESSIONS=2`.
+///
+/// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E30
+#[ test ]
+fn e30_clr_max_sessions_accepted_in_dry_run()
+{
+  // Env-alone: dry-run exits 0 (gate bypassed by dry-run path)
+  let out = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_MAX_SESSIONS", "3" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_MAX_SESSIONS=3 + --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+
+  // Invalid value silently ignored — still exits 0
+  let out2 = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_MAX_SESSIONS", "notanumber" ) ],
+  );
+  assert!(
+    out2.status.success(),
+    "CLR_MAX_SESSIONS=notanumber must be silently ignored and exit 0. stderr: {}",
+    String::from_utf8_lossy( &out2.stderr ),
+  );
+
+  // CLI-wins: --max-sessions 5 takes precedence over CLR_MAX_SESSIONS=2
+  let out3 = run_cli_with_env(
+    &[ "--dry-run", "--max-sessions", "5", "task" ],
+    &[ ( "CLR_MAX_SESSIONS", "2" ) ],
+  );
+  assert!(
+    out3.status.success(),
+    "CLI --max-sessions with CLR_MAX_SESSIONS must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out3.stderr ),
+  );
+}
+
+// ─── BUG-233 CLR_SUBDIR slash validation (bug reproducer) ──────────────────────
 
 /// Fix(BUG-233): `CLR_SUBDIR=a/b` must be silently ignored — same constraint as `--subdir`.
 ///
@@ -793,7 +844,7 @@ fn e29_clr_subdir_sets_effective_dir()
 /// not rejected with an error. This matches the existing convention (see `CLR_EFFORT`).
 // test_kind: bug_reproducer(BUG-233)
 #[ test ]
-fn e30_clr_subdir_slash_silently_ignored()
+fn bug233_clr_subdir_slash_silently_ignored()
 {
   // CLR_SUBDIR=a/b should be silently dropped — no /-a/b in output
   let out = run_cli_with_env(
@@ -809,5 +860,168 @@ fn e30_clr_subdir_slash_silently_ignored()
   assert!(
     !stdout.contains( "/-a" ),
     "CLR_SUBDIR=a/b must not be partially applied: {stdout}",
+  );
+}
+
+// ─── E31: CLR_OUTPUT_FILE ─────────────────────────────────────────────────────
+
+/// E31: `CLR_OUTPUT_FILE` sets the output capture path.
+///
+/// Dry-run exits 0 (no file is created); CLI `--output-file` wins over env.
+///
+/// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E31
+#[ test ]
+fn e31_clr_output_file_sets_path()
+{
+  // Env-alone: dry-run exits 0 (gate logic skipped, file not created)
+  let out = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_OUTPUT_FILE", "/tmp/e31_out.txt" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_OUTPUT_FILE + --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+
+  // CLI-wins: --output-file /tmp/cli.txt takes precedence over CLR_OUTPUT_FILE=/tmp/env.txt
+  let out2 = run_cli_with_env(
+    &[ "--dry-run", "--output-file", "/tmp/cli.txt", "task" ],
+    &[ ( "CLR_OUTPUT_FILE", "/tmp/env.txt" ) ],
+  );
+  assert!(
+    out2.status.success(),
+    "CLI --output-file with CLR_OUTPUT_FILE must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out2.stderr ),
+  );
+}
+
+// ─── E32: CLR_EXPECT ──────────────────────────────────────────────────────────
+
+/// E32: `CLR_EXPECT` sets the enum validation pattern.
+///
+/// Dry-run exits 0 (no subprocess, no validation); CLI `--expect` wins over env.
+///
+/// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E32
+#[ test ]
+fn e32_clr_expect_sets_pattern()
+{
+  // Env-alone: dry-run exits 0
+  let out = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_EXPECT", "yes|no" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_EXPECT=yes|no + --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+
+  // CLI-wins: --expect ok|fail takes precedence over CLR_EXPECT=yes|no
+  let out2 = run_cli_with_env(
+    &[ "--dry-run", "--expect", "ok|fail", "task" ],
+    &[ ( "CLR_EXPECT", "yes|no" ) ],
+  );
+  assert!(
+    out2.status.success(),
+    "CLI --expect with CLR_EXPECT must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out2.stderr ),
+  );
+}
+
+// ─── E33: CLR_EXPECT_STRATEGY ─────────────────────────────────────────────────
+
+/// E33: `CLR_EXPECT_STRATEGY` sets the mismatch handling strategy.
+///
+/// Valid values (fail/retry/default:V) accepted; invalid value → exit 1.
+/// CLI `--expect-strategy` wins over env.
+///
+/// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E33
+#[ test ]
+fn e33_clr_expect_strategy_sets_handler()
+{
+  // Env-alone with valid value: dry-run exits 0
+  let out = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_EXPECT_STRATEGY", "retry" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_EXPECT_STRATEGY=retry + --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+
+  // CLI-wins: --expect-strategy fail takes precedence over CLR_EXPECT_STRATEGY=retry
+  let out2 = run_cli_with_env(
+    &[ "--dry-run", "--expect-strategy", "fail", "task" ],
+    &[ ( "CLR_EXPECT_STRATEGY", "retry" ) ],
+  );
+  assert!(
+    out2.status.success(),
+    "CLI --expect-strategy with CLR_EXPECT_STRATEGY must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out2.stderr ),
+  );
+
+  // Invalid value: parse failure must exit 1 with error message
+  let out3 = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_EXPECT_STRATEGY", "bogus" ) ],
+  );
+  assert_eq!(
+    out3.status.code(),
+    Some( 1 ),
+    "CLR_EXPECT_STRATEGY=bogus must exit 1. stderr: {}",
+    String::from_utf8_lossy( &out3.stderr ),
+  );
+  let stderr3 = String::from_utf8_lossy( &out3.stderr );
+  assert!(
+    !stderr3.is_empty(),
+    "CLR_EXPECT_STRATEGY=bogus must emit an error message on stderr",
+  );
+}
+
+// ─── E34: CLR_EXPECT_RETRIES ──────────────────────────────────────────────────
+
+/// E34: `CLR_EXPECT_RETRIES` sets the retry cap.
+///
+/// Valid u8 values accepted; values exceeding 255 → exit 1.
+/// CLI `--expect-retries` wins over env.
+///
+/// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E34
+#[ test ]
+fn e34_clr_expect_retries_sets_cap()
+{
+  // Env-alone with valid value: dry-run exits 0
+  let out = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_EXPECT_RETRIES", "3" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_EXPECT_RETRIES=3 + --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+
+  // CLI-wins: --expect-retries 5 takes precedence over CLR_EXPECT_RETRIES=3
+  let out2 = run_cli_with_env(
+    &[ "--dry-run", "--expect-retries", "5", "task" ],
+    &[ ( "CLR_EXPECT_RETRIES", "3" ) ],
+  );
+  assert!(
+    out2.status.success(),
+    "CLI --expect-retries with CLR_EXPECT_RETRIES must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out2.stderr ),
+  );
+
+  // Out-of-range: 256 exceeds u8 max (255) → exit 1
+  let out3 = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_EXPECT_RETRIES", "256" ) ],
+  );
+  assert_eq!(
+    out3.status.code(),
+    Some( 1 ),
+    "CLR_EXPECT_RETRIES=256 must exit 1 (exceeds u8 max). stderr: {}",
+    String::from_utf8_lossy( &out3.stderr ),
   );
 }

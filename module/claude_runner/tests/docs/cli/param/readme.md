@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clr parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 28 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`.
+- **In Scope**: All 33 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`, `--output-file`, `--expect`, `--expect-strategy`, `--expect-retries`, `--max-sessions`.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
@@ -41,3 +41,8 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `26_strip_fences.md` | Edge cases for `--strip-fences` flag | ✅ |
 | `27_keep_claudecode.md` | Edge cases for `--keep-claudecode` flag | ✅ |
 | `28_subdir.md` | Edge cases for `--subdir` parameter | ✅ |
+| `29_output_file.md` | Edge cases for `--output-file` parameter | ✅ |
+| `30_expect.md` | Edge cases for `--expect` parameter | ✅ |
+| `31_expect_strategy.md` | Edge cases for `--expect-strategy` parameter | ✅ |
+| `32_expect_retries.md` | Edge cases for `--expect-retries` parameter | ✅ |
+| `33_max_sessions.md` | Edge cases for `--max-sessions` parameter | ✅ |

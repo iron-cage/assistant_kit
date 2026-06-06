@@ -2,100 +2,54 @@
 
 Integration test planning for the `ask` command. See [command/05_ask.md](../../../../docs/cli/command/05_ask.md) for specification.
 
+`ask` is a semantic alias for `run` — no behavioral differences. Tests focus on
+structural equivalence and shared behavior.
+
 ## Test Case Index
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| IT-1 | `clr ask "question"` → no `-c`, no skip-permissions | Default Diff |
-| IT-2 | `clr ask "question"` → `--effort high` (not `--effort max`) | Default Diff |
-| IT-3 | `clr ask "question"` → `CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384` | Default Diff |
-| IT-4 | `clr ask "question"` → no ultrathink suffix | Default Diff |
-| IT-5 | `clr ask "question"` → no chrome flag | Default Diff |
-| IT-6 | `clr ask --effort max "question"` → overrides default effort | Override |
-| IT-7 | `clr ask --max-tokens 200000 "question"` → overrides default tokens | Override |
-| IT-8 | Unknown flag → exit 1, error message | Error Handling |
-| IT-9 | `clr ask --trace "question"` → stderr contains ask-specific trace output | Trace |
-| IT-10 | `clr ask --subdir NAME "question"` → effective dir ends with `/-NAME` | Subdir |
-| IT-11 | `CLR_EFFORT=low clr ask "question"` → env var overrides ask soft default | BUG-245 Regression |
-| IT-12 | `CLR_MAX_TOKENS=50000 clr ask "question"` → env var overrides ask soft default | BUG-245 Regression |
+| IT-1 | `clr ask "q"` dry-run output identical to `clr "q"` dry-run output | Equivalence |
+| IT-2 | `clr ask --dry-run` (no message) identical to `clr --dry-run` | Equivalence |
+| IT-3 | Unknown flag → exit 1, error message | Error Handling |
+| IT-4 | `clr ask --trace "q"` → stderr contains assembled command | Trace |
+| IT-5 | `clr ask --subdir NAME "q"` → effective dir ends with `/-NAME` | Subdir |
+| IT-6 | `clr ask --dry-run --effort high "q"` → contains `--effort high` | Param Passthrough |
+| IT-7 | `clr ask --dry-run --model sonnet "q"` → contains `--model sonnet` | Param Passthrough |
+| IT-8 | `clr ask help` → dispatches to help, exit 0 | Help |
 
 ## Test Coverage Summary
 
-- Default Diff: 5 tests (IT-1 through IT-5)
-- Override: 2 tests (IT-6, IT-7)
-- Error Handling: 1 test (IT-8)
-- Trace: 1 test (IT-9)
-- Subdir: 1 test (IT-10)
-- BUG-245 Regression: 2 tests (IT-11, IT-12)
+- Equivalence: 2 tests (IT-1, IT-2)
+- Error Handling: 1 test (IT-3)
+- Trace: 1 test (IT-4)
+- Subdir: 1 test (IT-5)
+- Param Passthrough: 2 tests (IT-6, IT-7)
+- Help: 1 test (IT-8)
 
-**Total:** 12 tests
+**Total:** 8 tests
 
 ---
 
-### IT-1: `clr ask "question"` → no `-c`, no skip-permissions
+### IT-1: `clr ask "q"` dry-run identical to `clr "q"` dry-run
 
-- **Command:** `clr ask --dry-run "What does X do?"`
-- **Expected behavior:** Command line does NOT contain ` -c`; does NOT contain `--dangerously-skip-permissions`; contains `--print`; contains `--no-session-persistence`
+- **Command:** `clr ask --dry-run "What does X do?"` vs `clr --dry-run "What does X do?"`
+- **Expected behavior:** Both produce identical stdout (same assembled command, same env)
 - **Exit:** 0
 - **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
 
 ---
 
-### IT-2: `clr ask "question"` → effort `high`
+### IT-2: `clr ask --dry-run` (no message) identical to `clr --dry-run`
 
-- **Command:** `clr ask --dry-run "What does X do?"`
-- **Expected behavior:** Command line contains `--effort high` (not `--effort max`)
+- **Command:** `clr ask --dry-run` vs `clr --dry-run` (with identical empty session dir)
+- **Expected behavior:** Both produce identical stdout
 - **Exit:** 0
 - **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
 
 ---
 
-### IT-3: `clr ask "question"` → max-tokens 16384
-
-- **Command:** `clr ask --dry-run "What does X do?"`
-- **Expected behavior:** Env output contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384`
-- **Exit:** 0
-- **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
-
----
-
-### IT-4: `clr ask "question"` → no ultrathink suffix
-
-- **Command:** `clr ask --dry-run "What does X do?"`
-- **Expected behavior:** Message argument does NOT contain `ultrathink`; message appears verbatim
-- **Exit:** 0
-- **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
-
----
-
-### IT-5: `clr ask "question"` → no chrome flag
-
-- **Command:** `clr ask --dry-run "What does X do?"`
-- **Expected behavior:** Command line contains neither `--chrome` nor `--no-chrome`; chrome is absent
-- **Exit:** 0
-- **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
-
----
-
-### IT-6: `clr ask --effort max "question"` → overrides default effort
-
-- **Command:** `clr ask --dry-run --effort max "What does X do?"`
-- **Expected behavior:** Command line contains `--effort max` (not `--effort high`)
-- **Exit:** 0
-- **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
-
----
-
-### IT-7: `clr ask --max-tokens 200000 "question"` → overrides default tokens
-
-- **Command:** `clr ask --dry-run --max-tokens 200000 "What does X do?"`
-- **Expected behavior:** Env output contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`
-- **Exit:** 0
-- **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
-
----
-
-### IT-8: Unknown flag → exit 1
+### IT-3: Unknown flag → exit 1
 
 - **Command:** `clr ask --unknown-flag "What does X do?"`
 - **Expected behavior:** Stderr contains "unknown option"; exit code 1
@@ -104,39 +58,46 @@ Integration test planning for the `ask` command. See [command/05_ask.md](../../.
 
 ---
 
-### IT-9: `clr ask --trace "question"` → stderr contains ask-specific trace output
+### IT-4: `clr ask --trace "q"` → stderr contains assembled command
 
 - **Setup:** clean environment; claude binary absent in test environment
 - **Command:** `clr ask --trace "What is X?"` (no `--dry-run`; trace fires before invocation)
-- **Expected behavior:** stderr contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384` and the assembled `claude --effort high --print "What is X?"` command line (no `-c`, no `--dangerously-skip-permissions`, no `--chrome`); subprocess attempt fails (claude absent in test environment)
+- **Expected behavior:** stderr contains the assembled `claude ... "What is X?\n\nultrathink"` command line; subprocess attempt fails (claude absent)
 - **Exit:** 1
 - **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)
 
 ---
 
-### IT-10: `clr ask --subdir NAME "question"` → effective dir ends with `/-NAME`
+### IT-5: `clr ask --subdir NAME "q"` → effective dir ends with `/-NAME`
 
 - **Command:** `clr ask --dry-run --subdir feature "What is X?"`
-- **Expected behavior:** Dry-run output contains a path ending in `/-feature`; ask applies conservative defaults (no `-c`, `--effort high`) alongside effective-dir routing
+- **Expected behavior:** Dry-run output contains a path ending in `/-feature`
 - **Exit:** 0
 - **Source:** [--subdir](../../../../docs/cli/param/028_subdir.md), [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
 
 ---
 
-### IT-11: `CLR_EFFORT=low` overrides ask soft default
+### IT-6: `--effort high` passed through correctly
 
-- **Command:** `CLR_EFFORT=low clr ask --dry-run "What is X?"`
-- **Expected behavior:** Command line contains `--effort low` (not `--effort high`); env var wins over ask soft default. Priority chain: CLI > env var > ask default.
+- **Command:** `clr ask --dry-run --effort high "What does X do?"`
+- **Expected behavior:** Command line contains `--effort high`
 - **Exit:** 0
-- **Source:** BUG-245; [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
-- **Note:** Implemented; test function `it_11_clr_effort_env_overrides_ask_default` in `tests/ask_command_test.rs`
+- **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
 
 ---
 
-### IT-12: `CLR_MAX_TOKENS=50000` overrides ask soft default
+### IT-7: `--model sonnet` passed through correctly
 
-- **Command:** `CLR_MAX_TOKENS=50000 clr ask --dry-run "What is X?"`
-- **Expected behavior:** Env output contains `CLAUDE_CODE_MAX_OUTPUT_TOKENS=50000` (not `16384`); env var wins over ask soft default.
+- **Command:** `clr ask --dry-run --model sonnet "What does X do?"`
+- **Expected behavior:** Command line contains `--model sonnet`
 - **Exit:** 0
-- **Source:** BUG-245; [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
-- **Note:** Implemented; test function `it_12_clr_max_tokens_env_overrides_ask_default` in `tests/ask_command_test.rs`
+- **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md)
+
+---
+
+### IT-8: `clr ask help` → dispatches to help
+
+- **Command:** `clr ask help`
+- **Expected behavior:** stdout contains usage information; exit code 0
+- **Exit:** 0
+- **Source:** [command/05_ask.md](../../../../docs/cli/command/05_ask.md)

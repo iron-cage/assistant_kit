@@ -64,10 +64,9 @@ pub use cli::strip_fences;
 pub fn run_cli()
 {
   use cli::{
-    parse_args, build_claude_command, handle_dry_run,
-    print_help, run_built_command,
+    print_help, dispatch_run,
     dispatch_ask, dispatch_isolated, dispatch_refresh,
-    apply_env_vars, guard_unknown_subcommand,
+    guard_unknown_subcommand,
   };
 
   let tokens : Vec< String > = std::env::args().skip( 1 ).collect();
@@ -109,37 +108,5 @@ pub fn run_cli()
 
   guard_unknown_subcommand( &tokens );
 
-  let mut cli = match parse_args( &tokens )
-  {
-    Ok( c )  => c,
-    Err( e ) =>
-    {
-      eprintln!( "Error: {e}" );
-      std::process::exit( 1 );
-    }
-  };
-  apply_env_vars( &mut cli );
-
-  if cli.help
-  {
-    print_help();
-    return;
-  }
-
-  if cli.print_mode && cli.message.is_none()
-  {
-    eprintln!( "Error: --print requires a message argument" );
-    eprintln!( "Run with --help for usage." );
-    std::process::exit( 1 );
-  }
-
-  let builder = build_claude_command( &cli );
-
-  if cli.dry_run
-  {
-    handle_dry_run( &builder );
-    return;
-  }
-
-  run_built_command( &builder, &cli );
+  dispatch_run( &tokens );
 }

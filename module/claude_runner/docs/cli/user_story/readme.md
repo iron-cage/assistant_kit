@@ -33,6 +33,9 @@
 | 020_suppress_effort_max.md | User story: suppress automatic --effort max injection |
 | 021_keep_claudecode_context.md | User story: preserve CLAUDECODE in subprocess env |
 | 022_session_isolation_subdir.md | User story: named workspace session isolation via --subdir |
+| 023_output_file_capture.md | User story: tee captured stdout to a file with --output-file |
+| 024_enum_output_validation.md | User story: validate print-mode output against a fixed enum with --expect |
+| 025_concurrency_gate.md | User story: limit concurrent Claude Code sessions with --max-sessions |
 
 ### Index
 
@@ -60,6 +63,9 @@
 | 020 | Suppress Effort Max | `--no-effort-max` | `run` |
 | 021 | Keep ClaudeCode Context | `--keep-claudecode` | `run` |
 | 022 | Session Isolation via Subdirectory | `--subdir` | `run`, `ask` |
+| 023 | Output File Capture | `--output-file` | `run`, `ask` |
+| 024 | Enum Output Validation | `--expect`, `--expect-strategy`, `--expect-retries` | `run`, `ask` |
+| 025 | Session Concurrency Gate | `--max-sessions` | `run`, `ask` |
 
 ### Adding User Stories
 
@@ -79,4 +85,4 @@ When adding new user stories, update these files in order:
 12. `docs/cli/param_group/02_runner_control.md` — Referenced User Stories (if story uses Runner Control flags: `--dry-run`, `--no-effort-max`, etc.)
 13. Existing related story files — Related User Stories back-references
 
-**Note:** The phrase "YES for all 17" in `docs/cli/param_group/02_runner_control.md` refers to the 17 Runner Control *parameters* in that group — do not update this count when fixing user story totals.
+**Note:** The phrase "YES for all 22" in `docs/cli/param_group/02_runner_control.md` refers to the 22 Runner Control *parameters* in that group — do not update this count when fixing user story totals.

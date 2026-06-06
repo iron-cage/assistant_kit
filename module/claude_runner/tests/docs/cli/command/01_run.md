@@ -28,6 +28,7 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 | IT-20 | Print mode subprocess exits 42 → clr exits 42 (BUG-239 regression) | Exit Code Passthrough |
 | IT-21 | SIGTERM-killed subprocess → clr exits 143 (128+15) (BUG-242, unix-only) | Exit Code Passthrough |
 | IT-22 | Binary not found → stderr contains install hint (BUG-241) | Error Diagnostics |
+| IT-23 | `--expect` mismatch → exit 3 | Expect Validation |
 
 ## Test Coverage Summary
 
@@ -49,8 +50,9 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 - Subdir: 1 test
 - Exit Code Passthrough: 2 tests (IT-20, IT-21)
 - Error Diagnostics: 1 test (IT-22)
+- Expect Validation: 1 test (IT-23)
 
-**Total:** 22 tests
+**Total:** 23 tests
 
 ---
 
@@ -256,3 +258,13 @@ Integration test planning for the `run` command. See [command/01_run.md](../../.
 - **Exit:** 1
 - **Source:** [command/01_run.md](../../../../docs/cli/command/01_run.md), [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md)
 - **Note:** Implemented in TSK-196 (BUG-241); test function `binary_not_found_shows_install_hint` in `tests/bug_reproducers_239_244_test.rs`
+
+---
+
+### IT-23: `--expect` mismatch → exit 3
+
+- **Setup:** Fake-claude script outputs `maybe`; script injected via PATH
+- **Command:** `clr -p --expect "yes|no" "Fix bug"` with fake-claude in PATH
+- **Expected behavior:** Captured stdout (`maybe`) does not match any value in `yes|no`; `clr` exits 3 (`--expect-strategy fail` default); exit code 3 is exclusive to `--expect` mismatch and does not overlap with subprocess exit codes
+- **Exit:** 3
+- **Source:** [command/01_run.md — Exit Codes table](../../../../docs/cli/command/01_run.md), [--expect](../../../../docs/cli/param/030_expect.md)

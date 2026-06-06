@@ -13,6 +13,9 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 | FT-5 | Assembled command contains `claude` binary invocation (execution delegated, not `clr`) | Separation of Concerns |
 | FT-6 | `--print` present when message is provided (mode selection default) | Mode Selection |
 | FT-7 | `--verbosity 0` with missing binary → fatal error still visible on stderr | Verbosity Gate |
+| FT-8 | `--output-file` in dry-run → file NOT created | Output File Capture |
+| FT-9 | `--expect` mismatch → exit 3 (fail strategy default) | Enum Output Validation |
+| FT-10 | Gate skipped in dry-run mode | Concurrency Gate |
 
 ## Test Coverage Summary
 
@@ -22,8 +25,11 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - Trace Mode: 1 test (FT-4)
 - Separation of Concerns: 1 test (FT-5)
 - Mode Selection: 1 test (FT-6)
+- Output File Capture: 1 test (FT-8)
+- Enum Output Validation: 1 test (FT-9)
+- Concurrency Gate: 1 test (FT-10)
 
-**Total:** 7 tests
+**Total:** 10 tests
 
 
 ---
@@ -96,3 +102,33 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 - **Exit:** non-zero
 - **Source:** [feature/001_runner_tool.md — verbosity gate](../../../../docs/feature/001_runner_tool.md)
 - **Note:** Implemented in TSK-196 (BUG-240 + BUG-241); test function `spawn_error_visible_at_verbosity_0` in `tests/execution_mode_test.rs`
+
+---
+
+### FT-8: `--output-file` in dry-run → file NOT created
+
+- **Given:** writable temporary path for output file; `--dry-run` active
+- **When:** `clr --dry-run --output-file /tmp/feature_test_out.txt "task"`
+- **Then:** exit 0; dry-run preview printed to stdout; file at the specified path does NOT exist (output file creation is skipped in dry-run mode)
+- **Exit:** 0
+- **Source:** [feature/001_runner_tool.md — output file capture](../../../../docs/feature/001_runner_tool.md), [--output-file](../../../../docs/cli/param/029_output_file.md)
+
+---
+
+### FT-9: `--expect` mismatch → exit 3
+
+- **Given:** fake-claude script outputs `maybe`; script injected via PATH; `--expect-strategy fail` (default)
+- **When:** `clr -p --expect "yes|no" "task"` with fake-claude in PATH
+- **Then:** `clr` exits 3; exit code 3 is exclusive to `--expect` mismatch and does not overlap with subprocess exit codes
+- **Exit:** 3
+- **Source:** [feature/001_runner_tool.md — enum output validation](../../../../docs/feature/001_runner_tool.md), [--expect](../../../../docs/cli/param/030_expect.md)
+
+---
+
+### FT-10: Gate skipped in dry-run mode
+
+- **Given:** `--max-sessions 5` combined with `--dry-run`
+- **When:** `clr --dry-run --max-sessions 5 "task"`
+- **Then:** no "waiting" message on stderr; session count scan is skipped in dry-run mode; exit 0
+- **Exit:** 0
+- **Source:** [feature/001_runner_tool.md — session concurrency gate](../../../../docs/feature/001_runner_tool.md), [--max-sessions](../../../../docs/cli/param/033_max_sessions.md)

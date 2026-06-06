@@ -19,6 +19,7 @@ Task work items scoped to the `claude_runner` crate.
 | `unverified/` | Unverified task files awaiting Verification Gate |
 | `completed/` | Completed task files (all validation passed) |
 | `cancelled/` | Cancelled task files (reopenable) |
+| `bug/` | Bug reports for confirmed or filed defects (BUG-NNN global namespace) |
 | `actors/` | Actors Registry — canonical identity for all task actors |
 | `action_plan/` | Per-actor action plan files |
 
@@ -37,3 +38,9 @@ Task work items scoped to the `claude_runner` crate.
 | 9 | 010 | 0 | 8 | 8 | 9 | 0 | ✅ (Completed) | ai | [Optional --creds default fallback](completed/010_optional_creds_default.md) | Make `--creds` optional: fall back to `$HOME/.claude/.credentials.json` when absent |
 | 10 | 011 | 0 | 9 | 7 | 9 | 0 | ✅ (Completed) | ai | BUG-214-reopen: session-existence guard uses wrong path | Initial fix checked `$HOME/.claude/` (always non-empty); re-fixed using `check_continuation()` for project-specific `$HOME/.claude/projects/{encoded(cwd)}/` |
 | 11 | 012 | 0 | 7 | 8 | 9 | 0 | ✅ (Completed) | ai | [Error Classification in CLR](completed/012_error_classification.md) | Add `ErrorKind` enum and `classify_error()` to replace generic silent-failure message with labeled per-type diagnostics |
+| 12 | 013 | 0 | 8 | 8 | 9 | 0 | ✅ (Completed) | ai | [Ask Alias Simplification](completed/013_ask_alias_simplification.md) | Remove 7 behavioral overrides from `dispatch_ask()` to make `ask` a pure semantic alias for `run` |
+| 13 | 014 | 0 | 7 | 7 | 9 | 0 | ✅ (Completed) | ai | [Output File Parameter](completed/014_output_file_param.md) | Implement `--output-file <PATH>` tee behavior in `run_print_mode` |
+| 14 | 015 | 0 | 8 | 6 | 9 | 0 | ✅ (Completed) | ai | [Expect Output Validation Group](completed/015_expect_validation_group.md) | Implement `--expect` / `--expect-strategy` / `--expect-retries` enum output validation in `run_print_mode` |
+| 15 | 016 | 0 | 7 | 9 | 9 | 0 | ✅ (Completed) | ai | [BUG-247: stdout swallowed on failure](completed/016_bug247_stdout_swallowed.md) | Forward stdout to stderr when exit_code != 0 in `run_print_mode()` |
+| 16 | 017 | 0 | 6 | 9 | 9 | 0 | ✅ (Completed) | ai | [BUG-248: --keep-claudecode no warning](completed/017_bug248_keep_claudecode_warning.md) | Emit warning when `--keep-claudecode` disables CLAUDECODE protection while env var is set |
+| 17 | 018 | 0 | 8 | 7 | 9 | 0 | ✅ (Completed) | ai | [Session Concurrency Gate](completed/018_max_sessions_gate.md) | Implement `--max-sessions <N>` concurrency gate with 30s polling and 15-minute timeout |

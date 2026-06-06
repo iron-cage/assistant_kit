@@ -348,12 +348,13 @@ cargo run -p claude_runner -- run help
 
 **Note:** Before BUG-215 fix, `clr run help` stripped the `run` token but did not re-check for the `help` subcommand, causing "help" to be treated as a positional message and claude to be invoked.
 
-### TC-45: `clr run ask` Dispatches Ask Mode
+### TC-45: `clr run ask` Routes to ask — Pure Alias Parity (BUG-213 regression guard)
 ```sh
-cargo run -p claude_runner -- run ask --dry-run "question"
+cargo run -p claude_runner -- ask --dry-run "question"
+cargo run -p claude_runner -- run --dry-run "question"
 ```
 
-**Expected:** Dry-run output shows ask-mode defaults: `--effort high`, max tokens 16384, no `-c`, no `--dangerously-skip-permissions`. Exit code 0.
+**Expected:** Both commands produce **identical** dry-run output — `--effort max`, `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`, `-c` continuation, `--dangerously-skip-permissions`, ultrathink suffix, `--chrome`. `ask` is a pure semantic alias for `run` since plan-007; all old ask-specific overrides (effort high, 16384 tokens, no `-c`, no skip-permissions) were removed. Exit code 0 on both.
 
 ### TC-46: Empty Session Dir — No `-c` Injected (BUG-214 regression guard)
 ```sh
@@ -369,15 +370,61 @@ cargo run -p claude_runner -- --dry-run --session-dir /tmp "test"
 
 **Expected:** Dry-run output contains `-c` (non-empty `/tmp` means session history present). Exit code 0.
 
+### TC-48: Output-File — Runner-Internal, Not Forwarded to Claude
+```sh
+cargo run -p claude_runner -- --dry-run --output-file /tmp/out.txt "test"
+```
+
+**Expected:** Dry-run output shows the assembled claude command without any `--output-file` flag (it's a runner option, not a claude flag). Exit code 0.
+
+### TC-49: Expect — Runner-Level Validation Param
+```sh
+cargo run -p claude_runner -- --dry-run --expect "yes|no" "test"
+```
+
+**Expected:** Dry-run output shows assembled claude command without `--expect` forwarded to claude (runner option). Exit code 0.
+
+### TC-50: Expect-Strategy — Valid and Invalid Values
+```sh
+# Valid: fail, retry, default:<val>
+cargo run -p claude_runner -- --dry-run --expect "yes|no" --expect-strategy fail "test"
+cargo run -p claude_runner -- --dry-run --expect "yes|no" --expect-strategy retry "test"
+cargo run -p claude_runner -- --dry-run --expect "yes|no" --expect-strategy "default:yes" "test"
+
+# Invalid value → exit 1
+cargo run -p claude_runner -- --dry-run --expect "yes|no" --expect-strategy bogus "test"
+```
+
+**Expected:** First three exit 0. Last exits 1 with `Error: invalid --expect-strategy value: bogus`.
+
+### TC-51: Expect-Retries — Range Validation
+```sh
+# Valid: 0-255
+cargo run -p claude_runner -- --dry-run --expect "yes|no" --expect-strategy retry --expect-retries 3 "test"
+
+# Out of range: 256 → exit 1
+cargo run -p claude_runner -- --dry-run --expect "yes|no" --expect-strategy retry --expect-retries 256 "test"
+```
+
+**Expected:** First exits 0. Second exits 1 with `Error: invalid --expect-retries value: 256`.
+
+### TC-52: Max-Sessions — Gate Disabled at 0
+```sh
+cargo run -p claude_runner -- --dry-run --max-sessions 0 "test"
+cargo run -p claude_runner -- --dry-run --max-sessions 5 "test"
+```
+
+**Expected:** Both exit 0. Neither produces session-gate messages (dry-run bypasses actual execution). When `--max-sessions 0`, the gate is disabled entirely regardless of session count.
+
 ## Pass Criteria
 
-All TC-1 through TC-47 must pass without unexpected errors or panics.
-TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-47 are runnable without a configured Claude API key.
+All TC-1 through TC-52 must pass without unexpected errors or panics.
+TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-52 are runnable without a configured Claude API key.
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
 
 ---
 
-## Corner Cases (CC-1 through CC-85) — Automated
+## Corner Cases (CC-1 through CC-90) — Automated
 
 These are exhaustively tested by the integration test suite (not manual). Listed here for traceability.
 
@@ -446,14 +493,33 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 
 - **CC-66:** `clr refresh some_word --creds ...` → positional silently ignored, no parse error
 - **CC-67:** `clr ask --dry-run` (no message) → no `--print`
-- **CC-68:** `clr ask --effort max` → overrides ask default (High)
-- **CC-69:** `clr ask --dry-run test` → no `--dangerously-skip-permissions` (unconditional)
-- **CC-70:** `clr ask --dry-run test` → `--no-session-persistence` present (unconditional)
-- **CC-71/72:** Ask mode → no ultrathink, no chrome (unconditional)
-- **CC-73:** Ask default max-tokens = 16384
+- **CC-68:** `clr ask --dry-run test` == `clr run --dry-run test` stdout-identical (pure alias T01)
+- **CC-69:** `clr ask --dry-run test` → has `--dangerously-skip-permissions` (pure alias — no suppression)
+- **CC-70:** `clr ask --dry-run test` → does NOT have `--no-session-persistence` (pure alias — no injection)
+- **CC-71:** `clr ask --dry-run test` → has ultrathink suffix (pure alias — no suppression)
+- **CC-72:** `clr ask --dry-run test` → has `--chrome` (pure alias — no suppression)
+- **CC-73:** `clr ask --dry-run test` → `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000` (pure alias — not 16384)
+- **CC-74:** `clr ask help` (positional) → shows ask help, exits 0 (BUG-249 regression guard)
+- **CC-75:** `clr ask --effort high --dry-run test` → has `--effort high` (explicit override respected)
+- Automated in: `ask_command_test.rs` T01–T11
 
 ### BUG-245 (CLR_EFFORT/CLR_MAX_TOKENS in ask mode)
 
-- **CC-79:** `CLR_EFFORT=low clr ask` → env var overrides ask soft default (was broken before fix)
-- Equivalent test: `CLR_MAX_TOKENS=50000 clr ask` → overrides 16384 default
+- **CC-79:** `CLR_EFFORT=low clr ask` → env var applied (was broken before fix when ask had soft defaults)
+- Equivalent test: `CLR_MAX_TOKENS=50000 clr ask` → overrides default 200000
 - Automated in: `it_11_clr_effort_env_overrides_ask_default`, `it_12_clr_max_tokens_env_overrides_ask_default`
+
+### New features: output-file, expect, expect-strategy, expect-retries, max-sessions
+
+- **CC-80:** `--output-file /tmp/out.txt --dry-run "test"` → exit 0; runner option not forwarded to claude
+- **CC-81:** `--expect "yes|no" --dry-run "test"` → exit 0; expect is runner-level, dry-run exits before validation
+- **CC-82:** `--expect-strategy fail --dry-run "test"` → exit 0; runner option, no effect on dry-run
+- **CC-83:** `--expect-strategy retry --dry-run "test"` → exit 0
+- **CC-84:** `--expect-strategy "default:yes" --dry-run "test"` → exit 0
+- **CC-85:** `--expect-strategy bogus --dry-run "test"` → exit 1; error "invalid --expect-strategy value"
+- **CC-86:** `--expect-retries 3 --dry-run "test"` → exit 0
+- **CC-87:** `--expect-retries 256 --dry-run "test"` → exit 1; error "invalid --expect-retries value"
+- **CC-88:** `--max-sessions 5 --dry-run "test"` → exit 0
+- **CC-89:** `--max-sessions 0 --dry-run "test"` → exit 0 (gate disabled)
+- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 10 used)
+- Automated in: `output_file_test.rs`, `expect_validation_test.rs`, `param_edge_cases_test.rs`, `env_var_test.rs`

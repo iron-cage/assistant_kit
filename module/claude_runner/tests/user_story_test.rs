@@ -47,7 +47,7 @@
 //! | 12 | Code Block Extraction | US-1..4 | dry-run |
 //! | 13 | Structured JSON Pipeline | US-1..4 | dry-run |
 //! | 14 | Credential Refresh | US-1..4 | trace / error path |
-//! | 15 | Ask Mode | US-1..4 | dry-run |
+//! | 15 | Ask Mode (pure alias) | US-1..4 | dry-run |
 //! | 16 | CLI Discoverability | US-1..4 | help / PATH trick |
 //! | 17 | Model Selection | US-1..4 | dry-run / env var |
 //! | 18 | Env-var Configuration | US-1..4 | dry-run / env var |
@@ -55,6 +55,9 @@
 //! | 20 | Suppress Effort Max | US-1..4 | dry-run / env var |
 //! | 21 | Keep ClaudeCode Context | US-1..4 | dry-run / env var |
 //! | 22 | Session Isolation via Subdirectory | US-1..5 | dry-run / env var |
+//! | 23 | Output File Capture | US-1..4 | dry-run / fake claude / error path |
+//! | 24 | Enum Output Validation | US-1..4 | fake claude / parse error |
+//! | 25 | Session Concurrency Gate | US-1..4 | dry-run / env var |
 
 #![ cfg( feature = "enabled" ) ]
 
@@ -62,6 +65,9 @@ mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, run_cli_with_env, make_session_dir };
 use std::io::Write as _;
 use std::process::Command;
+
+#[ cfg( unix ) ]
+use std::os::unix::fs::PermissionsExt as _;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -1053,63 +1059,65 @@ fn us14_4_trace_shows_details()
 // ── US15: Ask Mode ──────────────────────────────────────────────────────────
 // Source: tests/docs/cli/user_story/15_ask_mode.md
 
-/// US-1: ask applies conservative defaults — no -c, no skip-perms bypass, effort high, max 16384.
+/// US-1: ask is a pure semantic alias for run — identical dry-run output.
 #[ test ]
-fn us15_1_conservative_ask_defaults()
+fn us15_1_ask_is_pure_alias_for_run()
 {
-  let output = run_ask_dry( &[ "What does this function do?" ] );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let ask_out = Command::new( bin )
+    .args( [ "ask", "--dry-run", "What does this function do?" ] )
+    .output()
+    .expect( "failed to invoke clr ask" );
+  let run_out = Command::new( bin )
+    .args( [ "run", "--dry-run", "What does this function do?" ] )
+    .output()
+    .expect( "failed to invoke clr run" );
   assert!(
-    !output.contains( " -c" ),
-    "ask must not include -c. Got:\n{output}"
+    ask_out.status.success() && run_out.status.success(),
+    "both ask and run --dry-run must exit 0"
   );
-  assert!(
-    !output.contains( "--dangerously-skip-permissions" ),
-    "ask must not include --dangerously-skip-permissions. Got:\n{output}"
-  );
-  assert!(
-    output.contains( "--effort high" ),
-    "ask must use --effort high. Got:\n{output}"
-  );
-  assert!(
-    output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384" ),
-    "ask must use max tokens 16384. Got:\n{output}"
+  let ask_stdout = String::from_utf8_lossy( &ask_out.stdout );
+  let run_stdout = String::from_utf8_lossy( &run_out.stdout );
+  assert_eq!(
+    ask_stdout, run_stdout,
+    "ask and run must produce identical dry-run output.\nask:\n{ask_stdout}\nrun:\n{run_stdout}"
   );
 }
 
-/// US-2: print mode always on for ask regardless of message presence.
+/// US-2: ask with message triggers print mode (same as run).
 #[ test ]
-fn us15_2_print_mode_always_on()
+fn us15_2_ask_with_message_triggers_print_mode()
 {
   let output = run_ask_dry( &[ "Explain closures" ] );
   assert!(
     output.contains( "--print" ),
-    "ask must always include --print. Got:\n{output}"
+    "ask with message must include --print. Got:\n{output}"
   );
 }
 
-/// US-3: ask defaults overridable via explicit flags.
+/// US-3: ask uses run defaults — effort max, 200000 max tokens.
 #[ test ]
-fn us15_3_override_ask_defaults()
+fn us15_3_ask_uses_run_defaults()
 {
-  let output = run_ask_dry( &[ "--effort", "max", "--max-tokens", "200000", "Write a detailed analysis" ] );
+  let output = run_ask_dry( &[ "Write a detailed analysis" ] );
   assert!(
     output.contains( "--effort max" ),
-    "--effort max must override ask default. Got:\n{output}"
+    "ask must use --effort max (run default). Got:\n{output}"
   );
   assert!(
-    output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
-    "--max-tokens 200000 must override ask default. Got:\n{output}"
+    !output.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384" ),
+    "ask must NOT use old ask default of 16384. Got:\n{output}"
   );
 }
 
-/// US-4: --no-persist and --no-chrome default ON for ask.
+/// US-4: explicit flags are accepted by ask (same as run).
 #[ test ]
-fn us15_4_no_persist_no_chrome_defaults()
+fn us15_4_ask_explicit_flags_accepted()
 {
-  let output = run_ask_dry( &[ "Quick question" ] );
+  let output = run_ask_dry( &[ "--effort", "low", "--no-effort-max", "Quick question" ] );
   assert!(
-    !output.contains( "--chrome" ),
-    "ask must suppress --chrome (--no-chrome default ON). Got:\n{output}"
+    !output.contains( "--effort" ) || output.contains( "--effort low" ),
+    "explicit --effort low must be respected by ask. Got:\n{output}"
   );
 }
 
@@ -1691,5 +1699,213 @@ fn us22_us5_cli_wins_over_env_var()
   assert!(
     !stdout.contains( "/-envname" ),
     "CLR_SUBDIR=envname must be suppressed by CLI --subdir. Got:\n{stdout}"
+  );
+}
+
+// ── US23: Output File Capture ───────────────────────────────────────────────
+// Source: tests/docs/cli/user_story/23_output_file_capture.md
+
+/// Create a fake `claude` binary that prints `text` to stdout and exits 0.
+///
+/// Returns `(tempdir, modified_path)` — keep `tempdir` alive for the test duration.
+#[ cfg( unix ) ]
+fn make_fake_claude_for_us( text : &str ) -> ( tempfile::TempDir, String )
+{
+  let dir  = tempfile::TempDir::new().expect( "create temp dir for fake claude" );
+  let bin  = dir.path().join( "claude" );
+  let src  = format!( "#!/bin/sh\nprintf '%s\\n' '{}'\n", text.replace( '\'', "'\\''" ) );
+  std::fs::write( &bin, src.as_bytes() ).expect( "write fake claude" );
+  let mut perms = std::fs::metadata( &bin ).expect( "metadata" ).permissions();
+  perms.set_mode( 0o755 );
+  std::fs::set_permissions( &bin, perms ).expect( "chmod fake claude" );
+  let dir_str = dir.path().to_str().expect( "UTF-8 dir path" ).to_string();
+  let orig    = std::env::var( "PATH" ).unwrap_or_default();
+  let path    = format!( "{dir_str}:{orig}" );
+  ( dir, path )
+}
+
+/// US23-1: `clr -p --output-file <tmp>` creates file; stdout and file content are identical.
+///
+/// Uses fake claude to emit deterministic text.
+#[ test ]
+#[ cfg( unix ) ]
+fn us23_1_output_file_created_with_tee_content()
+{
+  let ( _dir, path ) = make_fake_claude_for_us( "hello_tee_test" );
+  let tmp  = tempfile::NamedTempFile::new().expect( "create temp output file" );
+  let dest = tmp.path().to_str().expect( "UTF-8 path" ).to_string();
+  drop( tmp ); // let clr create it fresh
+
+  let out = run_cli_with_env(
+    &[ "-p", "--output-file", &dest, "--max-sessions", "0", "task" ],
+    &[ ( "PATH", &path ) ],
+  );
+  assert!( out.status.success(), "US23-1: must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout_content  = String::from_utf8_lossy( &out.stdout ).to_string();
+  let file_content    = std::fs::read_to_string( &dest ).expect( "US23-1: output file must exist" );
+  assert_eq!(
+    stdout_content, file_content,
+    "US23-1: file content must equal stdout. stdout: {stdout_content:?}, file: {file_content:?}",
+  );
+  assert!( stdout_content.contains( "hello_tee_test" ), "US23-1: output must contain echoed text" );
+}
+
+/// US23-2: `--dry-run` with `--output-file` — file is NOT created.
+#[ test ]
+fn us23_2_dry_run_skips_output_file()
+{
+  let path = format!( "/tmp/us23_2_should_not_exist_{}.txt", std::process::id() );
+  let _    = std::fs::remove_file( &path );
+  let out  = run_cli( &[ "--dry-run", "--output-file", &path, "task" ] );
+  assert!( out.status.success(), "US23-2: dry-run must exit 0" );
+  assert!( !std::path::Path::new( &path ).exists(), "US23-2: dry-run must NOT create the output file" );
+}
+
+/// US23-3: non-writable path → exit 1, stderr contains path and OS error.
+///
+/// Uses fake claude so clr reaches the file-write step.
+#[ test ]
+#[ cfg( unix ) ]
+fn us23_3_nonwritable_path_exits_1()
+{
+  let ( _dir, path ) = make_fake_claude_for_us( "text" );
+  let bad = "/nonexistent_dir_us23_3/out.txt";
+  let out = run_cli_with_env(
+    &[ "-p", "--output-file", bad, "--max-sessions", "0", "task" ],
+    &[ ( "PATH", &path ) ],
+  );
+  assert_eq!( out.status.code(), Some( 1 ), "US23-3: bad path must exit 1. Got: {:?}", out.status.code() );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!( stderr.contains( bad ), "US23-3: stderr must contain the bad path. Got:\n{stderr}" );
+}
+
+/// US23-4: `CLR_OUTPUT_FILE` env var — file created with captured output.
+///
+/// Uses fake claude so clr reaches the file-write step.
+#[ test ]
+#[ cfg( unix ) ]
+fn us23_4_env_var_output_file_applied()
+{
+  let ( _dir, path ) = make_fake_claude_for_us( "env_var_text" );
+  let tmp  = tempfile::NamedTempFile::new().expect( "create temp output file" );
+  let dest = tmp.path().to_str().expect( "UTF-8 path" ).to_string();
+  drop( tmp );
+
+  let out = run_cli_with_env(
+    &[ "-p", "--max-sessions", "0", "task" ],
+    &[ ( "PATH", &path ), ( "CLR_OUTPUT_FILE", &dest ) ],
+  );
+  assert!( out.status.success(), "US23-4: CLR_OUTPUT_FILE must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let file_content = std::fs::read_to_string( &dest ).expect( "US23-4: output file must exist" );
+  assert!( file_content.contains( "env_var_text" ), "US23-4: file must contain echoed text. Got: {file_content:?}" );
+}
+
+// ── US24: Enum Output Validation ────────────────────────────────────────────
+// Source: tests/docs/cli/user_story/24_enum_output_validation.md
+
+/// US24-1: output matches `--expect "yes|no"` (case-insensitive, trimmed) → exit 0.
+#[ test ]
+#[ cfg( unix ) ]
+fn us24_1_expect_match_exits_0()
+{
+  let ( _dir, path ) = make_fake_claude_for_us( "yes" );
+  let out = run_cli_with_env(
+    &[ "-p", "--expect", "yes|no", "--max-sessions", "0", "task" ],
+    &[ ( "PATH", &path ) ],
+  );
+  assert!( out.status.success(), "US24-1: matching output must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+/// US24-2: output does not match `--expect "yes|no"`, default strategy (fail) → exit 3.
+#[ test ]
+#[ cfg( unix ) ]
+fn us24_2_expect_mismatch_exits_3()
+{
+  let ( _dir, path ) = make_fake_claude_for_us( "maybe" );
+  let out = run_cli_with_env(
+    &[ "-p", "--expect", "yes|no", "--max-sessions", "0", "task" ],
+    &[ ( "PATH", &path ) ],
+  );
+  assert_eq!( out.status.code(), Some( 3 ), "US24-2: mismatch must exit 3. Got: {:?}", out.status.code() );
+}
+
+/// US24-3: `--expect-strategy default:no` on mismatch → stdout = "no", exit 0.
+#[ test ]
+#[ cfg( unix ) ]
+fn us24_3_expect_strategy_default_prints_fallback()
+{
+  let ( _dir, path ) = make_fake_claude_for_us( "maybe" );
+  let out = run_cli_with_env(
+    &[ "-p", "--expect", "yes|no", "--expect-strategy", "default:no", "--max-sessions", "0", "task" ],
+    &[ ( "PATH", &path ) ],
+  );
+  assert!( out.status.success(), "US24-3: default strategy must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert_eq!( stdout.trim(), "no", "US24-3: stdout must be fallback 'no'. Got: {stdout:?}" );
+}
+
+/// US24-4: parse error — `--expect-strategy bogus` → exit 1, stderr contains error.
+#[ test ]
+fn us24_4_invalid_strategy_exits_1()
+{
+  let out = run_cli( &[ "--expect", "yes|no", "--expect-strategy", "bogus", "task" ] );
+  assert_eq!( out.status.code(), Some( 1 ), "US24-4: invalid strategy must exit 1. Got: {:?}", out.status.code() );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.contains( "Error" ) || stderr.contains( "invalid" ),
+    "US24-4: stderr must contain error message. Got:\n{stderr}",
+  );
+}
+
+// ── US25: Session Concurrency Gate ──────────────────────────────────────────
+// Source: tests/docs/cli/user_story/25_concurrency_gate.md
+
+/// US25-1: `--max-sessions 0` (unlimited) proceeds immediately; no waiting messages.
+#[ test ]
+fn us25_1_max_sessions_0_unlimited_no_wait()
+{
+  let out = run_cli( &[ "--max-sessions", "0", "--dry-run", "task" ] );
+  assert!( out.status.success(), "US25-1: --max-sessions 0 must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "waiting" ) && !stderr.contains( "session" ),
+    "US25-1: no waiting messages with --max-sessions 0. Got stderr:\n{stderr}",
+  );
+}
+
+/// US25-2: `CLR_MAX_SESSIONS=N` env-var fallback — accepted, dry-run exits 0 immediately.
+#[ test ]
+fn us25_2_clr_max_sessions_env_var_applied()
+{
+  let out = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_MAX_SESSIONS", "3" ) ],
+  );
+  assert!( out.status.success(), "US25-2: CLR_MAX_SESSIONS=3 + dry-run must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+/// US25-3: CLI `--max-sessions M` wins over `CLR_MAX_SESSIONS=N` — accepted, dry-run exits 0.
+#[ test ]
+fn us25_3_cli_max_sessions_wins_over_env()
+{
+  let out = run_cli_with_env(
+    &[ "--max-sessions", "10", "--dry-run", "task" ],
+    &[ ( "CLR_MAX_SESSIONS", "1" ) ],
+  );
+  assert!( out.status.success(), "US25-3: CLI --max-sessions wins over CLR_MAX_SESSIONS must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+}
+
+/// US25-4: `--dry-run` bypasses the session gate — no counting, no waiting.
+///
+/// Even with `--max-sessions 1`, dry-run exits 0 immediately without checking /proc.
+#[ test ]
+fn us25_4_dry_run_bypasses_gate()
+{
+  let out = run_cli( &[ "--max-sessions", "1", "--dry-run", "task" ] );
+  assert!( out.status.success(), "US25-4: --dry-run must bypass gate and exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "waiting" ),
+    "US25-4: dry-run must not emit any waiting message. Got stderr:\n{stderr}",
   );
 }

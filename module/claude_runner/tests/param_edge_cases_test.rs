@@ -75,6 +75,10 @@
 //!
 //! invariant:
 //! - S33: all opt-outs together remove all suppressible defaults (`invariant/001_default_flags.md` IT-6)
+//!
+//! --max-sessions:
+//! - EC-1: `--help` output contains `--max-sessions` (`33_max_sessions.md` EC-1)
+//! - EC-7: `--dry-run` with default max and 0 active sessions → no gate messages (`33_max_sessions.md` EC-7)
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
@@ -522,6 +526,47 @@ fn s33_all_opt_outs_together_remove_all_suppressible_defaults()
     "--effort must be suppressed by --no-effort-max. Got:\n{stdout}" );
   assert!( !stdout.contains( "ultrathink" ),
     "ultrathink suffix must be suppressed by --no-ultrathink. Got:\n{stdout}" );
+}
+
+// ── --max-sessions EC-1 and EC-7 ─────────────────────────────────────────────
+
+/// EC-1: `clr --help` output contains `--max-sessions`.
+///
+/// Documentation hygiene: the flag must be discoverable via help text.
+/// Covers `33_max_sessions.md` EC-1.
+#[ test ]
+fn ec1_max_sessions_help_listed()
+{
+  let out = run_cli( &[ "--help" ] );
+  assert!( out.status.success(), "clr --help must exit 0" );
+  let stdout = String::from_utf8_lossy( &out.stdout );
+  assert!(
+    stdout.contains( "--max-sessions" ),
+    "`clr --help` must list --max-sessions. Got:\n{stdout}"
+  );
+}
+
+/// EC-7: With default max-sessions and 0 active sessions, no gate messages are emitted.
+///
+/// Dry-run bypasses gate so no /proc scan occurs, and stderr must be silent.
+/// Covers `33_max_sessions.md` EC-7.
+///
+/// **Architectural constraint:** gate-triggered behavior (waiting messages when sessions ≥ limit)
+/// cannot be tested without live Claude processes. Dry-run is used here to avoid spawning a real
+/// subprocess. The divergence from EC-2 (max=0) is at the code-path level: max=0 bypasses
+/// `count_claude_sessions()` entirely; max=10 (default) enters the gate code path in non-dry-run
+/// execution. See `33_max_sessions.md § Architectural Constraint`.
+#[ test ]
+fn ec7_max_sessions_no_gate_messages_below_limit()
+{
+  // No --max-sessions override → default 10; dry-run skips gate entirely.
+  let out = run_cli( &[ "--dry-run", "task" ] );
+  assert!( out.status.success(), "dry-run with default max must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    !stderr.contains( "waiting" ) && !stderr.contains( "session" ),
+    "no gate messages must appear on stderr. Got:\n{stderr}"
+  );
 }
 
 /// BUG-214 reproducer: empty `--session-dir` must suppress `-c` injection.

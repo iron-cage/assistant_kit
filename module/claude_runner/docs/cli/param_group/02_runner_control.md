@@ -6,7 +6,7 @@
 
 ### Semantic Coherence Test
 
-"Is this flag consumed by the runner, not Claude?" — YES for all 17.
+"Is this flag consumed by the runner, not Claude?" — YES for all 22.
 
 ### Why NOT X
 
@@ -38,8 +38,8 @@ clr --trace "Fix bug" --dir /project
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 17 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 17 params apply; only defaults differ |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 22 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 22 params apply; identical behavior — pure alias for run |
 
 ### Referenced Parameters
 
@@ -62,6 +62,11 @@ clr --trace "Fix bug" --dir /project
 | [`--file`](../param/025_file.md) | [`FilePath`](../type/12_file_path.md) | — | Stdin source | File content piped as subprocess stdin |
 | [`--strip-fences`](../param/026_strip_fences.md) | bool | false | Output processor | Strip outermost markdown code fences from stdout |
 | [`--keep-claudecode`](../param/027_keep_claudecode.md) | bool | false | Env filter | Preserve `CLAUDECODE` env var in subprocess (default: removed) |
+| [`--output-file`](../param/029_output_file.md) | string | — | Output sink | Write captured stdout to a file (tee behavior) |
+| [`--expect`](../param/030_expect.md) | string | — | Output validator | Pipe-separated enum values; stdout must match one after trim+lowercase |
+| [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch handler | Mismatch handling: exit 3, retry N times, or output fallback value |
+| [`--expect-retries`](../param/032_expect_retries.md) | u8 | `0` | Retry cap | Re-invocation cap for `retry` strategy |
+| [`--max-sessions`](../param/033_max_sessions.md) | u32 | 10 | Concurrency gate | Max concurrent Claude Code sessions before blocking; 0 = unlimited |
 
 ### Referenced Tests
 
@@ -85,3 +90,6 @@ clr --trace "Fix bug" --dir /project
 | 20 | [020_suppress_effort_max.md](../user_story/020_suppress_effort_max.md) | Developer |
 | 21 | [021_keep_claudecode_context.md](../user_story/021_keep_claudecode_context.md) | Developer |
 | 22 | [022_session_isolation_subdir.md](../user_story/022_session_isolation_subdir.md) | Developer |
+| 23 | [023_output_file_capture.md](../user_story/023_output_file_capture.md) | Developer |
+| 24 | [024_enum_output_validation.md](../user_story/024_enum_output_validation.md) | Developer |
+| 25 | [025_concurrency_gate.md](../user_story/025_concurrency_gate.md) | Developer |

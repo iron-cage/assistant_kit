@@ -10,7 +10,7 @@
 
 | Domain | File | Tests What |
 |--------|------|------------|
-| ask subcommand (IT-1–IT-9) | `ask_command_test.rs` | `clr ask` defaults, CLI overrides, and live-trace path |
+| ask subcommand (IT-1–IT-8) | `ask_command_test.rs` | `clr ask` pure-alias equivalence, param passthrough, and live-trace path |
 | Trace Universality invariant (IT-1–IT-5) | `invariant_trace_universality_test.rs` | `--trace` on all subprocess-executing commands |
 | CLI flags (T01–T49) | `cli_args_test.rs` | Core flag parsing and builder translation |
 | Ultrathink (T50–T58) | `ultrathink_args_test.rs` | Message suffix injection and opt-out |
@@ -32,15 +32,19 @@
 | Bug reproducers BUG-246 | `bug_reproducers_246_test.rs` | WYSIWYG: CLAUDECODE removal visible in trace/dry-run; `--keep-claudecode` suppresses prefix |
 | Bug reproducers BUG-037 (T09–T10) | `error_classification_test.rs` | Labeled per-type CLR stderr diagnostics via classify_error() |
 | Strip-fences unit (sf01–sf08) | `fence_test.rs` | `strip_fences` correctness: pair stripping, pass-through, edge cases |
-| CLR_* env vars (E01–E29) | `env_var_test.rs` | CLR_* env var fallback for all 28 params, CLI-wins checks |
-| User stories (US-1–US-5 × 22) | `user_story_test.rs` | End-to-end user story workflows for all 22 user stories |
+| CLR_* env vars (E01–E34) | `env_var_test.rs` | CLR_* env var fallback for all 34 CLR_* vars, CLI-wins checks |
+| Output file capture (T01–T06) | `output_file_test.rs` | `--output-file` tee behavior, write errors, dry-run skip |
+| Expect output validation (T01–T17) | `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--expect-retries` validation loop |
+| Bug reproducers BUG-247 | `bug_reproducers_247_test.rs` | Stdout-to-stderr forwarding on subprocess failure |
+| Bug reproducers BUG-248 | `bug_reproducers_248_test.rs` | `--keep-claudecode` warning when CLAUDECODE present |
+| User stories (US-1–US-4 × 25) | `user_story_test.rs` | End-to-end user story workflows for all 25 user stories |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
 ### Responsibility Table
 
 | File | Responsibility |
 |------|----------------|
-| `ask_command_test.rs` | `clr ask` subcommand: Q&A defaults, CLI overrides, and live-trace tests IT-1–IT-9. |
+| `ask_command_test.rs` | `clr ask` subcommand: pure-alias equivalence, param passthrough, and live-trace tests IT-1–IT-8. |
 | `invariant_trace_universality_test.rs` | Trace Universality invariant (INV-004): `--trace` on all subprocess-executing commands IT-1–IT-5. |
 | `cli_args_test.rs` | CLI flag parsing: core flags T01–T49, correct translation to builder calls. |
 | `ultrathink_args_test.rs` | Ultrathink suffix injection and `--no-ultrathink` opt-out (T50–T58). |
@@ -62,8 +66,12 @@
 | `param_extended_flags_test.rs` | Extended flag edge cases (S34–S57): `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`. |
 | `param_group_test.rs` | Param group combined invocations (CC-N): multi-flag interaction tests. |
 | `fence_test.rs` | `strip_fences` unit tests: fence-pair stripping, pass-through, edge cases (sf01–sf08). |
-| `env_var_test.rs` | CLR_* env var fallback: E01–E29, one per param (+ CLR_SUBDIR E29), CLI-wins verification. |
-| `user_story_test.rs` | User story end-to-end workflows: US-1–US-4 for all 22 stories from `tests/docs/cli/user_story/`. |
+| `output_file_test.rs` | `--output-file` tee behavior, write-error exit 1, dry-run file skip (T01–T06). |
+| `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--expect-retries` validation loop: match, mismatch, retry, default (T01–T17). |
+| `bug_reproducers_247_test.rs` | Bug reproducer BUG-247: stdout forwarded to stderr on subprocess failure. |
+| `bug_reproducers_248_test.rs` | Bug reproducer BUG-248: `--keep-claudecode` warning when CLAUDECODE is set in env. |
+| `env_var_test.rs` | CLR_* env var fallback: E01–E34, one per CLR_* variable, CLI-wins verification. |
+| `user_story_test.rs` | User story end-to-end workflows: US-1–US-4 for all 25 stories from `tests/docs/cli/user_story/`. |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

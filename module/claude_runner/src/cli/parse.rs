@@ -2,6 +2,41 @@ use crate::VerbosityLevel;
 use claude_runner_core::EffortLevel;
 use error_tools::{ Error, Result };
 
+/// Strategy for `--expect` output validation.
+///
+/// Determines how `run_print_mode` behaves when the captured output does not
+/// match any value listed in `--expect`.
+pub( crate ) enum ExpectStrategy
+{
+  /// Exit 3 immediately on first mismatch (default).
+  Fail,
+  /// Re-invoke the subprocess up to `--expect-retries` more times; exit 3 if exhausted.
+  Retry,
+  /// Print the fallback value and exit 0 regardless of subprocess output.
+  Default( String ),
+}
+
+impl core::str::FromStr for ExpectStrategy
+{
+  type Err = String;
+  fn from_str( s : &str ) -> core::result::Result< Self, Self::Err >
+  {
+    match s
+    {
+      "fail"  => Ok( ExpectStrategy::Fail ),
+      "retry" => Ok( ExpectStrategy::Retry ),
+      _ if s.starts_with( "default:" ) =>
+      {
+        let val = s[ "default:".len() .. ].to_string();
+        Ok( ExpectStrategy::Default( val ) )
+      }
+      _ => Err( format!(
+        "invalid --expect-strategy value: {s}\nExpected: fail, retry, or default:<VALUE>"
+      ) ),
+    }
+  }
+}
+
 /// Parsed CLI arguments.
 #[ allow( clippy::struct_excessive_bools ) ]
 #[ derive( Default ) ]
@@ -34,6 +69,11 @@ pub( crate ) struct CliArgs
   pub( crate ) strip_fences         : bool,
   pub( crate ) keep_claudecode      : bool,
   pub( crate ) subdir               : Option< String >,
+  pub( crate ) output_file          : Option< String >,
+  pub( crate ) expect               : Option< String >,
+  pub( crate ) expect_strategy      : Option< ExpectStrategy >,
+  pub( crate ) expect_retries       : Option< u8 >,
+  pub( crate ) max_sessions         : Option< u32 >,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -64,6 +104,39 @@ fn parse_token_limit( raw : &str ) -> Result< u32 >
 fn parse_effort_level( raw : &str ) -> Result< EffortLevel >
 {
   raw.parse::< EffortLevel >().map_err( Error::msg )
+}
+
+/// Parse a raw string as an `ExpectStrategy` with a clear error message.
+///
+/// Called from `parse_value_flag()`. Delegates to `ExpectStrategy::from_str`.
+fn parse_expect_strategy( raw : &str ) -> Result< ExpectStrategy >
+{
+  raw.parse::< ExpectStrategy >().map_err( Error::msg )
+}
+
+/// Parse a raw string as an expect-retries count (0–255) with a clear error message.
+///
+/// Called from `parse_value_flag()`. Rejects values outside u8 range.
+fn parse_expect_retries( raw : &str ) -> Result< u8 >
+{
+  raw.parse::< u32 >()
+    .ok()
+    .and_then( | v | u8::try_from( v ).ok() )
+    .ok_or_else( || Error::msg( format!(
+      "invalid --expect-retries value: {raw}\nExpected integer 0–255"
+    ) ) )
+}
+
+/// Parse a raw string as a max-sessions count (u32) with a clear error message.
+///
+/// Called from `parse_value_flag()`. 0 means unlimited.
+fn parse_max_sessions( raw : &str ) -> Result< u32 >
+{
+  raw.parse::< u32 >().map_err( | _ |
+    Error::msg( format!(
+      "invalid --max-sessions value: {raw}\nExpected unsigned integer (0 = unlimited)"
+    ) )
+  )
 }
 
 /// Parse a value-consuming flag (`--flag value` pair) into `parsed`.
@@ -142,6 +215,32 @@ fn parse_value_flag(
     {
       let raw = next_value( tokens, next, "--verbosity" )?;
       parsed.verbosity = Some( raw.parse::< VerbosityLevel >().map_err( Error::msg )? );
+    }
+    "--output-file" =>
+    {
+      parsed.output_file = Some( next_value( tokens, next, "--output-file" )?.to_string() );
+    }
+    "--expect" =>
+    {
+      parsed.expect = Some( next_value( tokens, next, "--expect" )?.to_string() );
+    }
+    "--expect-strategy" =>
+    {
+      parsed.expect_strategy = Some(
+        parse_expect_strategy( next_value( tokens, next, "--expect-strategy" )? )?
+      );
+    }
+    "--expect-retries" =>
+    {
+      parsed.expect_retries = Some(
+        parse_expect_retries( next_value( tokens, next, "--expect-retries" )? )?
+      );
+    }
+    "--max-sessions" =>
+    {
+      parsed.max_sessions = Some(
+        parse_max_sessions( next_value( tokens, next, "--max-sessions" )? )?
+      );
     }
     _ => return Ok( false ),
   }
@@ -297,11 +396,16 @@ pub( super ) fn env_str( var : &str ) -> Option< String >
   std::env::var( var ).ok().filter( | v | !v.is_empty() )
 }
 
-/// Apply `CLR_*` environment variable fallbacks for the 29 run parameters.
+/// Apply `CLR_*` environment variable fallbacks for the 33 run parameters.
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
-pub( crate ) fn apply_env_vars( parsed : &mut CliArgs )
+///
+/// Returns `Err` for env vars with values that fail validation: `CLR_EXPECT_STRATEGY`
+/// (invalid strategy name) and `CLR_EXPECT_RETRIES` (exceeds u8 range).  All other
+/// env var parse failures are silently ignored so operators can set global env vars
+/// safely without breaking unconfigured invocations.
+pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
 {
   if parsed.message.is_none()              { parsed.message              = env_str( "CLR_MESSAGE" ); }
   if !parsed.print_mode                    { parsed.print_mode           = env_bool( "CLR_PRINT" ); }
@@ -359,5 +463,37 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs )
       if !v.contains( '/' ) { parsed.subdir = Some( v ); }
     }
   }
+  if parsed.output_file.is_none()  { parsed.output_file  = env_str( "CLR_OUTPUT_FILE" ); }
+  if parsed.expect.is_none()       { parsed.expect        = env_str( "CLR_EXPECT" ); }
+  if parsed.expect_strategy.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_EXPECT_STRATEGY" )
+    {
+      parsed.expect_strategy = Some(
+        v.parse::< ExpectStrategy >().map_err( | e |
+          Error::msg( format!( "CLR_EXPECT_STRATEGY: {e}" ) )
+        )?
+      );
+    }
+  }
+  if parsed.expect_retries.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_EXPECT_RETRIES" )
+    {
+      parsed.expect_retries = Some(
+        parse_expect_retries( &v ).map_err( | e |
+          Error::msg( format!( "CLR_EXPECT_RETRIES: {e}" ) )
+        )?
+      );
+    }
+  }
+  if parsed.max_sessions.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_MAX_SESSIONS" )
+    {
+      parsed.max_sessions = v.parse::< u32 >().ok();
+    }
+  }
+  Ok( () )
 }
 

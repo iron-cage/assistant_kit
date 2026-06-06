@@ -60,6 +60,11 @@ fn it_01_run_trace_stderr_output()
 /// IT-2: `clr ask --trace "What is X?"` → stderr contains ask-default env+command.
 ///
 /// Trace fires before subprocess attempt; exit 1 (claude absent) is acceptable.
+/// Uses `PATH=/nonexistent` to prevent a real claude binary from running (mirrors IT-1 approach).
+///
+/// `ask` is a pure semantic alias for `run` (task 013 removed ask-specific overrides), so the
+/// assembled command is identical to a `run` invocation: uses `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`
+/// and `--effort max`, not the old ask-specific 16384/high defaults.
 ///
 /// Cross-invariant confirmation: verifies `ask` trace from the invariant test file's perspective.
 /// Not a duplicate of IT-9 (`ask_command_test.rs`) — these two tests cover the same behavior
@@ -69,15 +74,18 @@ fn it_01_run_trace_stderr_output()
 #[ test ]
 fn it_02_ask_trace_stderr_output()
 {
-  let out    = cli_binary_test_helpers::run_cli( &[ "ask", "--trace", "What is X?" ] );
+  let out    = cli_binary_test_helpers::run_cli_with_env(
+    &[ "ask", "--trace", "What is X?" ],
+    &[ ( "PATH", "/nonexistent" ) ],
+  );
   let stderr = stderr_str( &out );
   assert!(
-    stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384" ),
-    "ask --trace must emit CLAUDE_CODE_MAX_OUTPUT_TOKENS=16384 on stderr. Got:\n{stderr}"
+    stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
+    "ask --trace must emit CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000 on stderr. Got:\n{stderr}"
   );
   assert!(
-    stderr.contains( "--effort high" ),
-    "ask --trace must emit --effort high on stderr. Got:\n{stderr}"
+    stderr.contains( "--effort max" ),
+    "ask --trace must emit --effort max on stderr. Got:\n{stderr}"
   );
   let code = out.status.code().unwrap_or( -1 );
   assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );

@@ -1,6 +1,6 @@
 # Env Param :: CLR_* Input Variables
 
-Edge cases for the 29 `CLR_*` input environment variable fallbacks.
+Edge cases for the 34 `CLR_*` input environment variable fallbacks.
 Source: [`env_param.md`](../../../../docs/cli/env_param.md)
 Implementation: `apply_env_vars()` in `src/cli/parse.rs`; `apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/cred_parse.rs`
 Test file: `tests/env_var_test.rs`
@@ -38,18 +38,24 @@ Test file: `tests/env_var_test.rs`
 | E27 | `CLAUDECODE=1 CLR_KEEP_CLAUDECODE=1` preserves env var | `CLR_KEEP_CLAUDECODE` | subprocess env contains `CLAUDECODE` (same as `--keep-claudecode`) |
 | E28 | `CLR_TRACE` enables trace for `isolated`/`refresh` | `CLR_TRACE` | trace output appears in stderr for credential ops (cross-command) |
 | E29 | `CLR_SUBDIR=NAME` appends subdirectory to base dir | `CLR_SUBDIR` | dry-run output contains effective dir ending in `/-NAME` |
+| E30 | `CLR_MAX_SESSIONS=N` sets session limit; invalid value silently ignored | `CLR_MAX_SESSIONS` | gate uses N as limit; invalid value → default 10 used; CLI wins |
+| E31 | `CLR_OUTPUT_FILE=<path>` sets output file path | `CLR_OUTPUT_FILE` | dry-run exits 0; CLI flag wins over env var |
+| E32 | `CLR_EXPECT=val1\|val2` sets expect pattern | `CLR_EXPECT` | dry-run exits 0; CLI flag wins; same `|`-separated syntax |
+| E33 | `CLR_EXPECT_STRATEGY=<strategy>` sets mismatch handler | `CLR_EXPECT_STRATEGY` | dry-run exits 0; CLI flag wins; invalid value rejected |
+| E34 | `CLR_EXPECT_RETRIES=N` sets retry cap | `CLR_EXPECT_RETRIES` | dry-run exits 0; CLI flag wins; out-of-range rejected |
 
 ## Test Coverage Summary
 
 - Bool vars (truthy only): E02, E04, E05, E06, E07, E11, E13, E14, E18, E19, E28 (11 tests)
-- String vars: E01, E03, E08, E10, E15, E16, E21, E22, E23, E29 (10 tests)
-- Parsed vars (with silent-ignore): E09, E12, E17 (3 tests)
+- String vars: E01, E03, E08, E10, E15, E16, E21, E22, E23, E29, E31, E32, E33 (13 tests)
+- Parsed vars (with silent-ignore): E09, E12, E17, E30 (4 tests)
+- Parsed vars (with rejection): E34 (1 test)
 - Negation suppression (suppress default injection): E05, E06, E07, E18, E19 (5 tests)
-- CLI-wins verification: E01, E03, E29 (3 tests)
+- CLI-wins verification: E01, E03, E29, E30, E31, E32, E33, E34 (8 tests)
 - Isolated subcommand: E23, E24 (2 tests)
 - Credential ops (cross-command): E28 (1 test)
 
-**Total:** 29 edge cases (E01–E29)
+**Total:** 34 edge cases (E01–E34)
 
 ## Test Cases
 
@@ -344,4 +350,62 @@ Test file: `tests/env_var_test.rs`
 - **Then:** dry-run output contains the effective dir ending in `/-feature`
 - **Exit:** 0
 - **CLI-wins:** `clr --dry-run --subdir cliname task` with `CLR_SUBDIR=envname` → effective dir ends in `/-cliname`, NOT `/-envname`
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E30: CLR_MAX_SESSIONS=N sets session limit; invalid value silently ignored
+
+- **Given:** `CLR_MAX_SESSIONS=3`; no `--max-sessions` on CLI; `--dry-run` set
+- **When:** `CLR_MAX_SESSIONS=3 clr --dry-run task`
+- **Then:** exit 0; env var applied (gate uses 3 as limit in a live run); dry-run skips gate and produces output immediately
+- **Exit:** 0
+- **Invalid-ignored:** `CLR_MAX_SESSIONS=notanumber` → parse failure silently ignored; default 10 used; `--dry-run` exits 0 normally
+- **CLI-wins:** `clr --max-sessions 5 --dry-run task` with `CLR_MAX_SESSIONS=2` → CLI value 5 used; env var 2 ignored
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E31: CLR_OUTPUT_FILE sets output file path
+
+- **Given:** `CLR_OUTPUT_FILE=/tmp/e31_out.txt`; no `--output-file` on CLI; `--dry-run` set
+- **When:** `CLR_OUTPUT_FILE=/tmp/e31_out.txt clr --dry-run task`
+- **Then:** exit 0; env var applied (output would tee to `/tmp/e31_out.txt` in a live run); dry-run exits 0 normally without creating the file
+- **Exit:** 0
+- **CLI-wins:** `clr --output-file /tmp/cli.txt --dry-run task` with `CLR_OUTPUT_FILE=/tmp/env.txt` → CLI value `/tmp/cli.txt` used; env var `/tmp/env.txt` ignored
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E32: CLR_EXPECT sets expect pattern
+
+- **Given:** `CLR_EXPECT=yes|no`; no `--expect` on CLI; `--dry-run` set
+- **When:** `CLR_EXPECT=yes|no clr --dry-run task`
+- **Then:** exit 0; env var applied (validation would check stdout against `yes|no` in a live run); dry-run exits 0 normally
+- **Exit:** 0
+- **CLI-wins:** `clr --expect "ok|fail" --dry-run task` with `CLR_EXPECT=yes|no` → CLI value `ok|fail` used; env var ignored
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E33: CLR_EXPECT_STRATEGY sets mismatch handler
+
+- **Given:** `CLR_EXPECT_STRATEGY=retry`; no `--expect-strategy` on CLI; `--dry-run` set
+- **When:** `CLR_EXPECT_STRATEGY=retry clr --dry-run task`
+- **Then:** exit 0; env var applied; dry-run exits 0 normally
+- **Exit:** 0
+- **CLI-wins:** `clr --expect-strategy fail --dry-run task` with `CLR_EXPECT_STRATEGY=retry` → CLI value `fail` used; env var `retry` ignored
+- **Invalid:** `CLR_EXPECT_STRATEGY=bogus clr --dry-run task` → parse failure; exit 1 with error message about invalid strategy value
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E34: CLR_EXPECT_RETRIES sets retry cap
+
+- **Given:** `CLR_EXPECT_RETRIES=3`; no `--expect-retries` on CLI; `--dry-run` set
+- **When:** `CLR_EXPECT_RETRIES=3 clr --dry-run task`
+- **Then:** exit 0; env var applied (retry cap would be 3 in a live run with `--expect-strategy retry`); dry-run exits 0 normally
+- **Exit:** 0
+- **CLI-wins:** `clr --expect-retries 5 --dry-run task` with `CLR_EXPECT_RETRIES=3` → CLI value 5 used; env var 3 ignored
+- **Out-of-range:** `CLR_EXPECT_RETRIES=256 clr --dry-run task` → exit 1; stderr contains error about value exceeding u8 range (max 255)
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)

@@ -1,8 +1,8 @@
 # CLI Command: ask
 
-Quick single-turn Q&A with lightweight defaults. Facade of `run` — accepts the same
-26 parameters but with defaults tuned for read-only, single-turn consultation. No
-tools, no session continuation, no extended thinking unless explicitly overridden.
+Semantic alias for `run`. Accepts the same parameters with identical defaults and
+execution behavior. Use `ask` in scripts and shell history to signal intent — the
+invocation is a single-turn question rather than a long-running task.
 
 **Syntax:**
 
@@ -12,26 +12,16 @@ clr ask [OPTIONS] [MESSAGE]
 
 **Parameters:**
 
-All 26 parameters from [`run`](01_run.md) are accepted. The following defaults differ:
-
-| Parameter | `run` default | `ask` default | Notes |
-|-----------|---------------|---------------|-------|
-| [`-p`/`--print`](../param/002_print.md) | auto | **true** | Always on for `ask` |
-| [`--no-skip-permissions`](../param/005_no_skip_permissions.md) | false | **true** | No bypass by default |
-| [`--new-session`](../param/007_new_session.md) | false | **true** | No continuation by default |
-| [`--max-tokens`](../param/009_max_tokens.md) | 200000 | **16384** | Shorter default for Q&A |
-| [`--no-ultrathink`](../param/014_no_ultrathink.md) | false | **true** | No suffix by default |
-| [`--effort`](../param/017_effort.md) | max | **high** | Lower reasoning default |
-| [`--no-chrome`](../param/021_no_chrome.md) | false | **true** | No browser by default |
-| [`--no-persist`](../param/022_no_persist.md) | false | **true** | No session state by default |
+All parameters from [`run`](01_run.md) are accepted with identical defaults.
+No behavioral differences exist between `ask` and `run`.
 
 **Execution Modes:**
 
 | Invocation | Mode | Path |
 |------------|------|------|
-| `clr ask` | Interactive REPL | `execute_interactive()` (no `-c`) |
-| `clr ask "What is X?"` | **Print (default)** | `execute()` + `--print` (no `-c`) |
-| `clr ask --interactive "What is X?"` | Interactive | `execute_interactive()` (no `-c`) |
+| `clr ask` | Interactive REPL | `execute_interactive()` |
+| `clr ask "What is X?"` | Print (default) | `execute()` + `--print` |
+| `clr ask --interactive "What is X?"` | Interactive | `execute_interactive()` |
 | `clr ask --dry-run "What is X?"` | Preview only | `describe()` / `describe_env()` |
 | `clr ask --trace "What is X?"` | Trace (print then execute) | `describe_env()` + `describe()` to stderr, then `execute()` |
 
@@ -41,6 +31,7 @@ All 26 parameters from [`run`](01_run.md) are accepted. The following defaults d
 |------|---------|
 | 0 | Success |
 | 1 | Error (parse failure, execution error) |
+| 3 | Expect mismatch — output did not match `--expect` values after all retries |
 | N | Passthrough from claude subprocess |
 
 **Examples:**
@@ -52,18 +43,18 @@ clr ask "What does the ClaudeCommand builder do?"
 # Ask about a specific file
 clr ask --file src/lib.rs "Summarize the public API"
 
-# Override effort for complex analysis
-clr ask --effort max "Analyze this architectural decision"
+# Ask with lower effort
+clr ask --effort high "What does this function return?"
 
-# Override token limit for a detailed answer
-clr ask --max-tokens 200000 "Explain Rust lifetime rules in detail"
+# Ask in a specific project directory
+clr ask --dir ~/project "What is the entry point?"
 ```
 
 **Notes:**
 
-`ask` is a facade of `run` — same parameter set, same execution path, different defaults.
-Parameters without a counterpart opt-in flag (e.g., `--no-chrome`, `--no-persist`) cannot
-be reversed within `ask`; use `run` when full control is needed.
+`ask` is a pure semantic alias for `run` — identical parameter set, identical
+execution path, identical defaults. The distinction is documentation only: `ask`
+communicates that the invocation is a question, not a task.
 
 ### Referenced Parameter Groups
 

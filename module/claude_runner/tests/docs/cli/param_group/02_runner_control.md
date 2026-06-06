@@ -3,7 +3,8 @@
 Interaction tests for Group 2 (Runner Control): `--no-skip-permissions`, `--interactive`,
 `--new-session`, `--dir`, `--subdir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`,
 `--trace`, `--no-ultrathink`, `--no-effort-max`, `--no-chrome`, `--no-persist`,
-`--file`, `--strip-fences`, `--keep-claudecode`. Tests validate these seventeen flags
+`--file`, `--strip-fences`, `--keep-claudecode`, `--output-file`, `--expect`,
+`--expect-strategy`, `--expect-retries`, `--max-sessions`. Tests validate these twenty-two flags
 coexist without conflict and are consumed by the runner, not forwarded to claude.
 
 **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
@@ -62,8 +63,8 @@ coexist without conflict and are consumed by the runner, not forwarded to claude
 ### CC-4: All runner control flags together → no conflict
 
 - **Given:** `/tmp/rc_test.txt` exists and is readable; clean environment
-- **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --subdir work --max-tokens 100000 --session-dir /tmp/sessions --verbosity 2 --trace --no-ultrathink --no-effort-max --no-chrome --no-persist --file /tmp/rc_test.txt --strip-fences --keep-claudecode "Fix bug"`
-- **Then:** Exit 0; all seventeen flags accepted without conflict; command assembled correctly; effective dir contains `/tmp/test/-work`; `--chrome` and `--dangerously-skip-permissions` are absent from assembled command; no unknown-flag error for any runner-control flag
+- **When:** `clr --dry-run --no-skip-permissions --interactive --new-session --dir /tmp/test --subdir work --max-tokens 100000 --session-dir /tmp/sessions --verbosity 2 --trace --no-ultrathink --no-effort-max --no-chrome --no-persist --file /tmp/rc_test.txt --strip-fences --keep-claudecode --output-file /tmp/rc_out.txt --expect "yes|no" --expect-strategy fail --expect-retries 2 --max-sessions 5 "Fix bug"`
+- **Then:** Exit 0; all twenty-two flags accepted without conflict; command assembled correctly; effective dir contains `/tmp/test/-work`; `--chrome` and `--dangerously-skip-permissions` are absent from assembled command; no unknown-flag error for any runner-control flag
 - **Exit:** 0
 - **Source:** [param_group/02_runner_control.md](../../../../docs/cli/param_group/02_runner_control.md)
 - **Commands:** run, ask

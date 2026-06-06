@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration and edge case test plans for all clr commands, parameters, and types.
 - **Responsibility**: Index of per-command, per-parameter, per-type, per-group, and per-env-param test case planning files.
-- **In Scope**: All 5 clr commands, all 28 parameters, all 12 types, all 4 parameter groups, 2 env parameter specs, 22 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
+- **In Scope**: All 5 clr commands, all 33 parameters, all 12 types, all 4 parameter groups, 2 env parameter specs, 25 user story specs, 1 dictionary vocabulary check, and test surface for feature/invariant/api doc instances.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 Test case planning for `clr` CLI. Each file contains a Test Case Index with coverage summary. Detailed test sections (executable specs) are added at L5.
@@ -26,11 +26,11 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
 | Commands | 5 | ≥8 IT each |
-| Parameters | 28 | ≥6 EC each |
+| Parameters | 33 | ≥6 EC each |
 | Parameter groups | 4 | ≥4 CC each |
 | Types | 12 | ≥4 TC each |
 | Env params | 2 | ≥6 EC each |
-| User stories | 22 | ≥4 US each |
+| User stories | 25 | ≥4 US each |
 | Dictionary | 1 | ≥4 DT total |
 
 ### Navigation
@@ -71,6 +71,11 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`--strip-fences`](param/26_strip_fences.md)
 - [`--keep-claudecode`](param/27_keep_claudecode.md)
 - [`--subdir`](param/28_subdir.md)
+- [`--output-file`](param/29_output_file.md)
+- [`--expect`](param/30_expect.md)
+- [`--expect-strategy`](param/31_expect_strategy.md)
+- [`--expect-retries`](param/32_expect_retries.md)
+- [`--max-sessions`](param/33_max_sessions.md)
 
 #### Parameter Groups
 - [Claude-Native Flags](param_group/01_claude_native_flags.md)
@@ -115,7 +120,10 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [Suppress Effort Max](user_story/20_suppress_effort_max.md)
 - [Keep ClaudeCode Context](user_story/21_keep_claudecode_context.md)
 - [Session Isolation via Subdirectory](user_story/22_session_isolation_subdir.md)
+- [Output File Capture](user_story/23_output_file_capture.md)
+- [Enum Output Validation](user_story/24_enum_output_validation.md)
+- [Session Concurrency Gate](user_story/25_concurrency_gate.md)
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)
-- [`CLR_* (29 vars)`](env_param/02_clr_input_vars.md)
+- [`CLR_* (34 vars)`](env_param/02_clr_input_vars.md)
