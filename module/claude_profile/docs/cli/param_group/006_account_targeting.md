@@ -1,16 +1,15 @@
 # Group :: 6. Account Targeting
 
-**Parameters:** `host::`
+**Parameters:** `host::`, `role::`
 **Pattern:** Metadata labels attached to a saved account's profile
 **Purpose:** Provides account-level metadata (machine/user context, role label) that is stored in `{name}.profile.json` at `.account.save` time and displayed via column projection in `.usage`.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | [`host::`](../param/048_host.md) | `string` | `""` (auto: `$USER@$HOSTNAME`) | Machine/user label written to `profile.json`; empty triggers auto-capture |
+| [`role::`](../param/052_role.md) | `string` | `""` | User-defined role label written to `profile.json`; persists across saves |
 
-**Note:** `.account.save` also accepts the pre-existing [`role::`](../param/015_role.md) parameter (param 015) as a string label for the account's role context (e.g., `"work"`, `"dev"`). On `.account.save`, `role::` takes a free-form string value; on `.credentials.status`, `role::` is a boolean field-presence toggle — the semantics are command-scoped.
-
-**Used By (1 command):** [`.account.save`](../command/001_account.md#command--4-accountsave)
+**Used By:** [`.account.save`](../command/001_account.md#command--4-accountsave) (`host::`, `role::` — write metadata to `profile.json`), [`.accounts`](../command/001_account.md#command--3-accounts) (`host::` display toggle — opt-in boolean, reads stored label from `{name}.profile.json`)
 
 **Typical Patterns:**
 
@@ -32,11 +31,12 @@ clp .usage cols::+host,+role
 
 > "Does parameter X attach a persistent metadata label to a saved account's profile?"
 
-`host::` passes: it writes a human-readable machine/user label to `{name}.profile.json` that persists across saves. `role::` (param 015 on `.account.save`) also passes when used with that command. All other `.account.save` parameters (the credential/token fields) fail — they store authentication data, not user-defined descriptive labels.
+`host::` (param 048) passes: writes a human-readable machine/user label to `{name}.profile.json`. `role::` (param 052) passes: writes a user-defined role label to `{name}.profile.json`. All other `.account.save` parameters fail — they store authentication data, not user-defined descriptive labels.
 
 **Cross-References**
 
 - [../../feature/029_account_host_metadata.md](../../feature/029_account_host_metadata.md) — feature spec for host/role metadata storage and display
-- [../param/015_role.md](../param/015_role.md) — `role::` dual-use: Account Targeting (`.account.save`) and Field Presence (`.credentials.status`)
+- [../param/052_role.md](../param/052_role.md) — `role::` (metadata label) specification
+- [../param/015_role.md](../param/015_role.md) — `role::` (field-presence toggle) for `.accounts` and `.credentials.status`
 - [../param/048_host.md](../param/048_host.md) — `host::` parameter specification
 - [../param/033_cols.md](../param/033_cols.md) — `host` and `role` column IDs in `.usage`

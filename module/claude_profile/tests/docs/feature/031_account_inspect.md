@@ -23,6 +23,8 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 | FT-15 | No credential store exits 2 | AC-15 |
 | FT-16 | Priority 2 selection: stripe_subscription (no claude_max) preferred over none | AC-03, AC-06 |
 | FT-17 | Priority 3 fallback: all none memberships → memberships[0] selected | AC-03, AC-06 |
+| FT-18 | Credential file absent exits 2 | AC-16 |
+| FT-19 | Enterprise workspace fields shown | AC-17 |
 
 ### Test Case Index
 
@@ -45,8 +47,10 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 | FT-15 | No credential store exits 2 | AC-15 | Error Handling |
 | FT-16 | Priority 2 selection: stripe_subscription without claude_max preferred over none | AC-03, AC-06 | Selection Priority |
 | FT-17 | Priority 3 fallback: all none memberships selects memberships[0] | AC-03, AC-06 | Selection Priority |
+| FT-18 | Credential file absent exits 2 | AC-16 | Error Handling |
+| FT-19 | Enterprise workspace fields shown | AC-17 | Org Identity |
 
-**Total:** 17 FT cases
+**Total:** 19 FT cases
 
 ---
 
@@ -208,11 +212,11 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 
 ### FT-15: No credential store exits 2
 
-- **Given:** No credential store exists (e.g., `$CREDENTIAL_STORE` points to a nonexistent directory).
-- **When:** `clp .account.inspect`
-- **Then:** Exit 2 with `credential store not found`.
+- **Given:** No credential store directory exists (fresh `$HOME`, no `.persistent/claude/credential/`).
+- **When:** `clp .account.inspect name::alice@acme.com` (full email bypasses store lookup)
+- **Then:** Exit 2 with `credential file not found: {path}`. The absent store is treated identically to an absent credential file — no distinct store-not-found branch exists.
 - **Exit:** 2
-- **Source fn:** `ai01_credential_file_absent_exits_2`
+- **Source fn:** `ai22_credential_store_absent_exits_2`
 - **Source:** [031_account_inspect.md AC-15](../../../../docs/feature/031_account_inspect.md)
 
 ---
@@ -236,3 +240,25 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Exit:** 0
 - **Source fn:** `lim_it_ai16_selected_marker_multi_membership` (marker count and single-vs-multi branching); fallback rule verified by `mre_bug237_single_membership_fallback_unchanged` in `claude_quota` crate
 - **Source:** [031_account_inspect.md AC-03, AC-06](../../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-18: Credential file absent exits 2
+
+- **Given:** Credential store directory exists (`{credential_store}/`) but `alice@acme.com.credentials.json` is absent.
+- **When:** `clp .account.inspect name::alice@acme.com`
+- **Then:** Exit 2 with `credential file not found: {path}`. Unlike AC-15, the store directory is present; the credential file for the specific account is simply missing.
+- **Exit:** 2
+- **Source fn:** `ai01_credential_file_absent_exits_2`
+- **Source:** [031_account_inspect.md AC-16](../../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-19: Enterprise workspace fields show non-none values
+
+- **Given:** An account whose endpoint 005 response includes non-null `workspace_uuid` and `workspace_name` (enterprise account with a named workspace).
+- **When:** `clp .account.inspect`
+- **Then:** `Workspace UUID:` shows the UUID string (not `(none)`); `Workspace:` shows the workspace name string (not `(none)`). In `format::json`, `workspace_uuid` and `workspace_name` contain the raw string values.
+- **Exit:** 0
+- **Source fn:** `ai23_workspace_fields_show_values_when_non_null`
+- **Source:** [031_account_inspect.md AC-17](../../../../docs/feature/031_account_inspect.md)

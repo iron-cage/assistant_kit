@@ -1,6 +1,6 @@
 # Parameter :: 19. `refresh::`
 
-When an account's quota fetch returns an HTTP auth error (401 or 403), or an HTTP 429 rate-limit error when the per-account credential file has a locally-expired `expiresAt`, silently attempt a token refresh via `claude_profile_core::account::refresh_account_token()` and retry the fetch once before reporting failure.
+Attempt a token refresh via `claude_profile_core::account::refresh_account_token()` and retry once before reporting failure; trigger and semantics vary by command — HTTP auth error (`.usage`, `.account.use`) or locally-expired `expiresAt` before endpoint calls (`.account.inspect`). See Purpose below for per-command details.
 
 - **Type:** `bool`
 - **Default:** `1` (on — expired tokens silently refreshed before reporting failure)

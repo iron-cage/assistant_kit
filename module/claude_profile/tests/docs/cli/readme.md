@@ -6,7 +6,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 
 - **Purpose**: Document integration and edge case test plans for all clp commands and parameters.
 - **Responsibility**: Index of per-command, per-parameter, and per-group test case planning files.
-- **In Scope**: All 13 clp commands plus binary meta-flags (`--version`/`-V`), all 35 parameters, and all 5 parameter groups.
+- **In Scope**: All 15 clp commands plus binary meta-flags (`--version`/`-V`), all 52 parameters, and all 6 parameter groups.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 ### Responsibility Table
@@ -21,9 +21,9 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
-| Commands + meta-flags | 14 | >=8 IT each |
-| Parameters | 35 | >=6 EC each |
-| Parameter groups | 5 | >=4 IT each |
+| Commands + meta-flags | 15 | >=8 IT each |
+| Parameters | 52 | >=6 EC each |
+| Parameter groups | 6 | >=4 IT each |
 
 ### Navigation
 
@@ -42,6 +42,8 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`.account.limits`](command/011_account_limits.md)
 - [`.account.relogin`](command/012_account_relogin.md)
 - [`.account.rotate`](command/013_account_rotate.md)
+- [`.account.renewal`](command/014_account_renewal.md)
+- [`.account.inspect`](command/015_account_inspect.md)
 
 **Parameters:**
 - [`name::`](param/001_name.md)
@@ -79,6 +81,22 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`touch::`](param/034_touch.md)
 - [`imodel::`](param/035_imodel.md)
 - [`effort::`](param/036_effort.md)
+- [`count::`](param/037_count.md)
+- [`offset::`](param/038_offset.md)
+- [`only_active::`](param/039_only_active.md)
+- [`only_next::`](param/040_only_next.md)
+- [`min_5h::`](param/041_min_5h.md)
+- [`min_7d::`](param/042_min_7d.md)
+- [`only_valid::`](param/043_only_valid.md)
+- [`exclude_exhausted::`](param/044_exclude_exhausted.md)
+- [`get::`](param/045_get.md)
+- [`abs::`](param/046_abs.md)
+- [`no_color::`](param/047_no_color.md)
+- [`host::`](param/048_host.md)
+- [`at::`](param/049_at.md)
+- [`from_now::`](param/050_from_now.md)
+- [`clear::`](param/051_clear.md)
+- [`role::` (metadata label)](param/052_role.md)
 
 **Parameter Groups:**
 - [Output Control](param_group/001_output_control.md)
@@ -86,3 +104,4 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [Fetch Behavior](param_group/003_fetch_behavior.md)
 - [Sort Control](param_group/004_sort_control.md)
 - [Display Control](param_group/005_display_control.md)
+- [Account Targeting](param_group/006_account_targeting.md)

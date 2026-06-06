@@ -33,6 +33,9 @@ Integration and edge case coverage for the Output Control parameter group (`form
   2. `clp .paths format::json`
   3. `clp .usage format::json`
   4. `clp .account.limits format::json`
+  5. `clp .accounts format::json`
+  6. `clp .credentials.status format::json`
+  7. `clp .account.inspect format::json`
 - **Then:** Each produces a valid JSON object or array with all fields present. All exit 0.
 - **Exit:** 0
 - **Source:** [parameter_groups.md — Output Control](../../../../docs/cli/param_group/readme.md#group--1-output-control)

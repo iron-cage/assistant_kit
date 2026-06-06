@@ -7,7 +7,7 @@
 | `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 31 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 6 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 51 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 52 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](cli/param_group/readme.md) | 6 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 4 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](cli/format/readme.md) | 3 |
@@ -110,6 +110,7 @@
 | param | 049 | `at::` | [cli/param/049_at.md](cli/param/049_at.md) |
 | param | 050 | `from_now::` | [cli/param/050_from_now.md](cli/param/050_from_now.md) |
 | param | 051 | `clear::` | [cli/param/051_clear.md](cli/param/051_clear.md) |
+| param | 052 | `role::` (metadata label) | [cli/param/052_role.md](cli/param/052_role.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](cli/param_group/003_fetch_behavior.md) |

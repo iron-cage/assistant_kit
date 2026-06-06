@@ -8,7 +8,7 @@ Account management commands: list, save, use, delete, limits, and relogin.
 
 List all saved accounts or show a single named account with per-field presence control. Without `name::`: shows every account in the credential store as an indented key-val block; with `name::EMAIL`: shows that account's block only.
 
--- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`active::`](../param/013_active.md), [`current::`](../param/018_current.md), [`sub::`](../param/006_sub.md), [`tier::`](../param/007_tier.md), [`expires::`](../param/009_expires.md), [`email::`](../param/010_email.md), [`display_name::`](../param/014_display_name.md), [`role::`](../param/015_role.md), [`billing::`](../param/016_billing.md), [`model::`](../param/017_model.md), [`uuid::`](../param/028_uuid.md), [`capabilities::`](../param/029_capabilities.md), [`org_uuid::`](../param/030_org_uuid.md), [`org_name::`](../param/031_org_name.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional)*, [`active::`](../param/013_active.md), [`current::`](../param/018_current.md), [`sub::`](../param/006_sub.md), [`tier::`](../param/007_tier.md), [`expires::`](../param/009_expires.md), [`email::`](../param/010_email.md), [`display_name::`](../param/014_display_name.md), [`host::`](../param/048_host.md), [`role::`](../param/015_role.md), [`billing::`](../param/016_billing.md), [`model::`](../param/017_model.md), [`uuid::`](../param/028_uuid.md), [`capabilities::`](../param/029_capabilities.md), [`org_uuid::`](../param/030_org_uuid.md), [`org_name::`](../param/031_org_name.md), [`format::`](../param/002_format.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid `name::` chars) | 2 (runtime: account not found or credential store unreadable)
 
 **Syntax:**
@@ -34,7 +34,8 @@ clp .accounts format::table
 | `expires::` | `bool` | `1` | Show token expiry duration line |
 | `email::` | `bool` | `1` | Show email address from saved `{name}.claude.json` snapshot |
 | `display_name::` | `bool` | `0` | Show display name from saved `~/.claude.json` snapshot (opt-in) |
-| `role::` | `bool` | `0` | Show organisation role from saved `~/.claude.json` snapshot (opt-in) |
+| `host::` | `bool` | `0` | Show host/machine label from saved `{name}.profile.json` (opt-in) |
+| `role::` | `bool` | `0` | Show user-defined role label from saved `{name}.profile.json` (opt-in) |
 | `billing::` | `bool` | `0` | Show billing type from saved `~/.claude.json` snapshot (opt-in) |
 | `model::` | `bool` | `0` | Show active model (always `N/A` for saved accounts — settings.json not captured in snapshot) (opt-in) |
 | `uuid::` | `bool` | `0` | Show stable user ID (`taggedId`) from saved `.claude.json` snapshot (opt-in) |
@@ -78,6 +79,7 @@ clp .accounts format::table
 - Field params affect text output only; `format::json` always includes all fields regardless of presence params.
 - `format::table` renders a compact one-row-per-account table with fixed columns (flag, Account, Sub, Tier, Expires, Email) — field-presence params are ignored in table mode.
 - `current::` shows `Current: yes` for the account whose `accessToken` matches `~/.claude/.credentials.json`. See [feature/016_current_account_awareness.md](../../feature/016_current_account_awareness.md).
+- `host::`, `role::` source from `{name}.profile.json` (written by `.account.save host::` / `role::`) — `N/A` when no profile exists. See [feature/029_account_host_metadata.md](../../feature/029_account_host_metadata.md).
 - `uuid::`, `capabilities::` source from `{name}.claude.json` snapshot — `N/A` when snapshot absent. See [feature/021_extended_snapshot_fields.md](../../feature/021_extended_snapshot_fields.md).
 - `org_uuid::`, `org_name::` source from `{name}.roles.json` snapshot (written by `.account.save` via endpoint 005) — `N/A` when snapshot absent. See [feature/022_org_identity_snapshot.md](../../feature/022_org_identity_snapshot.md).
 
@@ -87,21 +89,26 @@ clp .accounts format::table
 
 Copies `~/.claude/.credentials.json` to `{credential_store}/{name}.credentials.json` and extracts the `oauthAccount` subtree from `~/.claude.json` into `{name}.claude.json`. Machine-global state (`commands.*`, `mcpServers`, `projects`, `settings.json`) is not captured. Use this to preserve account identity before switching.
 
--- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`trace::`](../param/023_trace.md)
+-- **Parameters:** [`name::`](../param/001_name.md), [`dry::`](../param/004_dry.md), [`host::`](../param/048_host.md), [`role::`](../param/052_role.md), [`trace::`](../param/023_trace.md)
 -- **Exit:** 0 (success) | 1 (usage: invalid name or no active account set) | 2 (runtime: credentials unreadable)
 
 **Syntax:**
 
 ```bash
-clp .account.save                          # infer name from oauthAccount.emailAddress in ~/.claude.json (falls back to _active_{hostname}_{user})
-clp .account.save name::alice@acme.com    # explicit name
+clp .account.save                                      # infer name from oauthAccount.emailAddress in ~/.claude.json (falls back to _active_{hostname}_{user})
+clp .account.save name::alice@acme.com                # explicit name
 clp .account.save name::alice@acme.com dry::1
+clp .account.save host::workstation                   # store host label in {name}.profile.json
+clp .account.save role::work                          # store role label in {name}.profile.json
+clp .account.save host::workstation role::personal    # both metadata fields
 ```
 
 | Parameter | Type | Default | Purpose |
 |-----------|------|---------|---------|
 | `name::` | [`AccountName`](../type/001_account_name.md) | `auto` (inferred from `oauthAccount.emailAddress` in `~/.claude.json`; falls back to per-machine active marker — see [Feature 025](../../feature/025_per_machine_active_marker.md); exits 1 if neither source present) | Account email to save as |
 | `dry::` | `bool` | `0` | Preview action without executing |
+| `host::` | `string` | `""` (auto-detected hostname) | Machine/host label stored in `{name}.profile.json` (see [feature/029](../../feature/029_account_host_metadata.md)) |
+| `role::` | `string` | `""` | User-defined role label stored in `{name}.profile.json` (see [param 052](../param/052_role.md)) |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for credential read and file write steps |
 
 **Examples:**
@@ -112,6 +119,9 @@ clp .account.save
 
 clp .account.save name::alice@acme.com dry::1
 # [dry-run] would save current credentials as 'alice@acme.com'
+
+clp .account.save host::workstation role::work
+# saved current credentials as 'alice@acme.com'   (host='workstation', role='work')
 ```
 
 **Notes:**

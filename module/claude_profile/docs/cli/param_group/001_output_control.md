@@ -10,7 +10,7 @@
 | [`get::`](../param/045_get.md) | `string` | Extract single column value for first filtered row as bare string; implies `format::value` |
 
 **Used By:**
-- `format::` — [`.accounts`](../command/001_account.md#command--3-accounts), [`.token.status`](../command/005_token.md#command--7-tokenstatus), [`.paths`](../command/004_paths.md#command--8-paths), [`.usage`](../command/006_usage.md#command--9-usage), [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus), [`.account.limits`](../command/001_account.md#command--11-accountlimits) — 6 commands
+- `format::` — [`.accounts`](../command/001_account.md#command--3-accounts), [`.token.status`](../command/005_token.md#command--7-tokenstatus), [`.paths`](../command/004_paths.md#command--8-paths), [`.usage`](../command/006_usage.md#command--9-usage), [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus), [`.account.limits`](../command/001_account.md#command--11-accountlimits), [`.account.inspect`](../command/001_account.md#command--15-accountinspect) — 7 commands
 - `get::` — [`.usage`](../command/006_usage.md#command--9-usage) only
 
 **Typical Patterns:**

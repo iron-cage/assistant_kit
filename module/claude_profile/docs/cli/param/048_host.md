@@ -5,7 +5,7 @@ Specifies the host/machine label to store in the account profile at `.account.sa
 - **Type:** `string`
 - **Default:** `""` (auto-captured from `$USER@<hostname>` via `resolve_hostname()` fallback chain)
 - **Constraints:** Any non-empty string; empty string triggers auto-capture
-- **Commands:** [`.account.save`](../command/001_account.md#command--4-accountsave)
+- **Commands:** [`.account.save`](../command/001_account.md#command--4-accountsave) (write metadata), [`.accounts`](../command/001_account.md#command--3-accounts) (display toggle)
 - **Purpose:** Tag a saved account with the machine/user context where it was saved.
 - **Group:** Account Targeting
 

@@ -163,7 +163,7 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 - **AC-12**: `name::` resolves via `AccountSelector` (email, prefix, positional); invalid name exits 2 with `account not found: {name}`.
 - **AC-13**: `format::json` always includes all fields: `account`, `status`, `expires_in_secs`, `tagged_id`, `uuid`, `memberships[]` (with `index`, `billing_type`, `has_max`, `capabilities`, `selected`), `billing_type`, `has_max`, `organization_name`, `organization_uuid`, `organization_role`, `workspace_uuid`, `workspace_name`, `data_source`.
 - **AC-14**: `trace::1` emits `[trace]` lines to stderr for each endpoint call: URL, HTTP status, and field count extracted.
-- **AC-15**: `clp .account.inspect` with no credential store exits 2 with `credential store not found`.
+- **AC-15**: `clp .account.inspect name::user@host` with no credential store directory exits 2 with `credential file not found: {path}`. Absent store is treated identically to absent credential file — the email resolver short-circuits store lookup and the file existence check produces the error.
 - **AC-16**: `name::` resolves successfully but the account's credentials file (`{name}.credentials.json`) is absent: exits 2 with `credential file not found: {path}`.
 - **AC-17**: Enterprise accounts with non-null `workspace_uuid` and `workspace_name` from endpoint 005: `Workspace UUID:` shows the UUID string; `Workspace:` shows the workspace name. `(none)` is used only when the field is null or absent. In `format::json`, `workspace_uuid` and `workspace_name` contain the raw value (empty string when null/absent).
 

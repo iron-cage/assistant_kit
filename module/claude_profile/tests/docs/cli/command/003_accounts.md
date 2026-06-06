@@ -43,6 +43,8 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 | IT-35 | Account without `roles.json` snapshot → `Org ID: N/A`, `Org: N/A` | Org Identity / Edge Case |
 | IT-36 | `format::json` includes `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` | Extended Snapshot / JSON |
 | IT-37 | `uuid::`, `capabilities::`, `org_uuid::`, `org_name::` all absent by default | Extended Snapshot / Default |
+| IT-38 | `host::1` shows `Host:` line from saved `{name}.profile.json` | Host Metadata |
+| IT-39 | `role::1` shows user-defined role label from saved `{name}.profile.json` | Host Metadata |
 
 ### Test Coverage Summary
 
@@ -67,8 +69,9 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - Org Identity / Edge Case: 1 test (IT-35)
 - Extended Snapshot / JSON: 1 test (IT-36)
 - Extended Snapshot / Default: 1 test (IT-37)
+- Host Metadata: 2 tests (IT-38, IT-39)
 
-**Total:** 37 integration tests
+**Total:** 39 integration tests
 
 ---
 
@@ -439,3 +442,23 @@ Integration test planning for the `.accounts` command. See [command/namespace.md
 - **Then:** Stdout does NOT contain `ID:`, `Capabilities:`, `Org ID:`, `Org:` lines. Only default-on fields present.
 - **Exit:** 0
 - **Source:** [021_extended_snapshot_fields.md AC-05](../../../../docs/feature/021_extended_snapshot_fields.md), [022_org_identity_snapshot.md](../../../../docs/feature/022_org_identity_snapshot.md) Design §New field-presence params
+
+---
+
+### IT-38: `host::1` shows Host line from profile.json
+
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.profile.json` containing `{"host":"workstation","role":"dev"}`.
+- **When:** `clp .accounts host::1`
+- **Then:** Output block for `work@acme.com` contains `Host:    workstation`. No `Host:` line appears in default output without `host::1`.
+- **Exit:** 0
+- **Source:** [feature/029_account_host_metadata.md FT-08](../../../../docs/feature/029_account_host_metadata.md), [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)
+
+---
+
+### IT-39: `role::1` shows user-defined role label from profile.json
+
+- **Given:** `work@acme.com` saved with `{credential_store}/work@acme.com.profile.json` containing `{"host":"workstation","role":"dev"}`.
+- **When:** `clp .accounts role::1`
+- **Then:** Output block for `work@acme.com` contains `Role:    dev`. Label is sourced from `profile.json` (written by `.account.save role::`) — not from `organizationRole` in `.claude.json`.
+- **Exit:** 0
+- **Source:** [feature/029_account_host_metadata.md FT-08](../../../../docs/feature/029_account_host_metadata.md), [command/001_account.md — .accounts](../../../../docs/cli/command/001_account.md#command--3-accounts)

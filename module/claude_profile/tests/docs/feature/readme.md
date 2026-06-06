@@ -28,6 +28,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 025_per_machine_active_marker.md | FT cases for Feature 025 — Per-Machine Active Marker |
 | 026_subprocess_model_effort.md | FT cases for Feature 026 — Subprocess Model and Effort Control |
 | 027_account_use_post_switch_touch.md | FT cases for Feature 027 — `.account.use` Post-Switch Touch |
+| 031_account_inspect.md | FT cases for Feature 031 — Account Inspect |
 
 ### Coverage Summary
 
@@ -48,5 +49,6 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 028_usage_row_filtering | [028_usage_row_filtering.md](028_usage_row_filtering.md) | FT-01 … FT-16 | ✅ |
 | 029_account_host_metadata | [029_account_host_metadata.md](029_account_host_metadata.md) | FT-01 … FT-10 | ✅ |
 | 030_account_renewal_override | [030_account_renewal_override.md](030_account_renewal_override.md) | FT-01 … FT-15 | ✅ |
+| 031_account_inspect | [031_account_inspect.md](031_account_inspect.md) | FT-01 … FT-19 | ✅ |
 
-**Total:** 15 feature specs; 15 of 30 feature instances not yet covered by dedicated FT specs.
+**Total:** 16 feature specs; 15 of 31 feature instances not yet covered by dedicated FT specs.

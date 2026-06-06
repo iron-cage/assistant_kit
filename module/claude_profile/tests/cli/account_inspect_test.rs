@@ -34,6 +34,11 @@
 //! | ai11 | `ai11_json_all_required_fields` | AC-13 | JSON | P | no |
 //! | ai12 | `ai12_json_data_source_snapshot_when_all_fail` | AC-13 | JSON | P | no |
 //! | ai13 | `ai13_trace_emits_lines_to_stderr` | AC-14 | Trace | P | no |
+//! | ai22 | `ai22_credential_store_absent_exits_2` | AC-15 | Error | N | no |
+//! | ai23 | `ai23_workspace_fields_show_values_when_non_null` | AC-17 | Org Identity | P | no |
+//! | ai24 | `ai24_ambiguous_prefix_exits_1` | AC-12 | Name | N | no |
+//! | ai25 | `ai25_missing_expires_at_shows_unknown_status` | AC-01 | Status | P | no |
+//! | ai26 | `ai26_name_with_invalid_chars_exits_1` | AC-12 | Name | N | no |
 //! | ai14 | `lim_it_ai14_identity_fields_from_endpoint_001` | AC-01 | Identity | P | yes |
 //! | ai15 | `lim_it_ai15_memberships_shown_with_count` | AC-02 | Memberships | P | yes |
 //! | ai16 | `lim_it_ai16_selected_marker_multi_membership` | AC-03,04 | Memberships | P | yes |
@@ -329,6 +334,162 @@ fn ai13_trace_emits_lines_to_stderr()
   let err   = stderr( &out );
   assert!( err.contains( "[trace]" ), "trace::1 must emit [trace] lines to stderr, got:\n{err}" );
   assert!( err.contains( "status" ), "trace must include status line, got:\n{err}" );
+}
+
+#[ test ]
+/// AC-15: No credential store directory → exit 2 with `credential file not found`.
+///
+/// The store directory is never created. With a full email `name::`, the account resolver
+/// short-circuits (contains `@`) and proceeds directly to the credential file existence
+/// check — producing the same error as AC-16. No distinct "store not found" branch exists.
+///
+/// Source: `tests/docs/feature/031_account_inspect.md § FT-15`
+fn ai22_credential_store_absent_exits_2()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Store directory NOT created — neither store dir nor credential file exists.
+  let out  = run_inspect( home, &[ "name::alice@acme.com" ] );
+  assert_exit( &out, 2 );
+  let err  = stderr( &out );
+  assert!(
+    err.contains( "credential file not found" ),
+    "absent store must produce credential-file-not-found error, got: {err}",
+  );
+}
+
+#[ test ]
+/// AC-17: Non-null `workspace_uuid` and `workspace_name` in the roles snapshot render as
+/// actual strings — not as `(none)` — in both text and `format::json` output.
+///
+/// Uses the snapshot path: credentials have no `accessToken`, so endpoint 005 fails and
+/// the command falls back to `{name}.roles.json`. The snapshot contains non-null workspace
+/// values, which must appear as actual strings in text output (with `(snapshot)` suffix)
+/// and as raw string values in `format::json`.
+///
+/// Source: `tests/docs/feature/031_account_inspect.md § FT-19`
+fn ai23_workspace_fields_show_values_when_non_null()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", PAST_MS, false );
+  // Write roles snapshot with non-null workspace fields (endpoint 005 fails → snapshot).
+  let store = credential_store( dir.path() );
+  std::fs::write(
+    store.join( "alice@acme.com.roles.json" ),
+    r#"{"organization_uuid":"org-uuid-1","organization_name":"alice's Org","organization_role":"admin","workspace_uuid":"ws-uuid-123","workspace_name":"alice's Workspace"}"#,
+  ).unwrap();
+
+  // ── Text format: workspace values appear as actual strings, not "(none)" ──
+  let out   = run_inspect( home, &[ "name::alice@acme.com", "refresh::0" ] );
+  assert_exit( &out, 0 );
+  let text  = stdout( &out );
+  assert!(
+    text.contains( "ws-uuid-123" ),
+    "Workspace UUID must show actual value when non-null, got:\n{text}",
+  );
+  assert!(
+    text.contains( "alice's Workspace" ),
+    "Workspace must show actual name when non-null, got:\n{text}",
+  );
+
+  // ── JSON format: workspace fields contain raw string values, not null/empty ─
+  let json_out  = run_inspect( home, &[ "name::alice@acme.com", "refresh::0", "format::json" ] );
+  assert_exit( &json_out, 0 );
+  let json_text = stdout( &json_out );
+  assert!(
+    json_text.contains( "\"ws-uuid-123\"" ),
+    "workspace_uuid must be actual string in JSON output, got:\n{json_text}",
+  );
+  assert!(
+    json_text.contains( "\"alice's Workspace\"" ),
+    "workspace_name must be actual string in JSON output, got:\n{json_text}",
+  );
+}
+
+#[ test ]
+/// AC-12: Prefix matches two accounts with the same local part but different domains → exit 1.
+///
+/// `name::alice` is not an exact local-part match (two accounts share local part "alice"),
+/// so the resolver falls through to prefix scanning which also finds both — ambiguous.
+///
+/// Source: `resolve_account_name` ambiguous branch (exit 1 / `ArgumentTypeMismatch`)
+fn ai24_ambiguous_prefix_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "alice@corp.com", "pro", "standard", FAR_FUTURE_MS, false );
+  let out  = run_inspect( home, &[ "name::alice", "refresh::0" ] );
+  assert_exit( &out, 1 );
+  let err  = stderr( &out );
+  assert!( err.contains( "ambiguous" ), "must report ambiguous prefix, got: {err}" );
+  assert!( err.contains( "alice@acme.com" ), "must list matching accounts, got: {err}" );
+  assert!( err.contains( "alice@corp.com" ), "must list matching accounts, got: {err}" );
+}
+
+#[ test ]
+/// AC-01: Credentials without `expiresAt` field produce `Status: unknown` in text and
+/// `"status":"unknown"` in JSON — the command still exits 0.
+///
+/// Real credential files always have `expiresAt`; this tests graceful handling of malformed
+/// or stripped credential files that omit it.
+fn ai25_missing_expires_at_shows_unknown_status()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  // Credential file with no `expiresAt` field.
+  let store = credential_store( dir.path() );
+  std::fs::create_dir_all( &store ).unwrap();
+  std::fs::write(
+    store.join( "u@test.com.credentials.json" ),
+    r#"{"oauthAccount":{"subscriptionType":"max","rateLimitTier":"default"}}"#,
+  ).unwrap();
+
+  // ── Text format ────────────────────────────────────────────────────────────
+  let out   = run_inspect( home, &[ "name::u@test.com", "refresh::0" ] );
+  assert_exit( &out, 0 );
+  let text  = stdout( &out );
+  assert!(
+    text.contains( "Status:" ),
+    "must show Status: label, got:\n{text}",
+  );
+  assert!(
+    text.contains( "unknown" ),
+    "status must be 'unknown' when expiresAt is absent, got:\n{text}",
+  );
+
+  // ── JSON format ────────────────────────────────────────────────────────────
+  let json_out  = run_inspect( home, &[ "name::u@test.com", "refresh::0", "format::json" ] );
+  assert_exit( &json_out, 0 );
+  let json_text = stdout( &json_out );
+  assert!(
+    json_text.contains( "\"status\":\"unknown\"" ),
+    "JSON status must be \"unknown\" when expiresAt is absent, got:\n{json_text}",
+  );
+}
+
+#[ test ]
+/// AC-12: `name::` value containing `/`, `\`, or `*` is rejected immediately → exit 1.
+///
+/// These characters are invalid in account name prefixes as they could be used
+/// for path traversal or glob expansion against the credential store.
+fn ai26_name_with_invalid_chars_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+
+  for bad_name in &[ "foo/bar", "foo*bar", r"foo\bar" ]
+  {
+    let out = run_inspect( home, &[ &format!( "name::{bad_name}" ) ] );
+    assert_exit( &out, 1 );
+    let err = stderr( &out );
+    assert!(
+      err.contains( "invalid characters" ) || err.contains( "invalid" ),
+      "name '{bad_name}' must report invalid characters, got: {err}",
+    );
+  }
 }
 
 // ── AI lim_it: live-endpoint tests ───────────────────────────────────────────

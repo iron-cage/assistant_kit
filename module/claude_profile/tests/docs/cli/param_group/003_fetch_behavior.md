@@ -8,8 +8,8 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 |----|-----------|----------|
 | FB-1 | `refresh::1` retries once on 401 auth error | refresh retry |
 | FB-2 | `refresh::1` retries once on 403 auth error | refresh retry |
-| FB-3 | `refresh::1` does NOT retry on 429 rate-limit error | refresh guard |
-| FB-4 | `refresh::0` (default) passes auth errors through as error rows | refresh default |
+| FB-3 | `refresh::1` does NOT retry on 429 when local `expiresAt` is still valid | refresh guard |
+| FB-4 | `refresh::0` (explicit disable) passes auth errors through as error rows | refresh disabled |
 | FB-5 | `live::1 format::json` exits 1 before any fetch | live incompatibility |
 | FB-6 | `interval::` and `jitter::` ignored (not validated) when `live::0` | live guard |
 | FB-7 | `live::1 interval::29` exits 1 (interval too low) | interval validation |
@@ -25,7 +25,7 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 
 - refresh retry: 2 tests
 - refresh guard: 1 test
-- refresh default: 1 test
+- refresh disabled: 1 test
 - live incompatibility: 1 test
 - live guard: 1 test
 - interval validation: 1 test
@@ -56,18 +56,18 @@ Integration and edge case coverage for the Fetch Behavior parameter group (`refr
 
 ---
 
-### FB-3: refresh does NOT retry on 429
+### FB-3: refresh does NOT retry on 429 when local token is still valid
 
-- **Given:** One saved account whose `fetch_oauth_usage()` returns `Err` containing `"429"`.
+- **Given:** One saved account whose `fetch_oauth_usage()` returns `Err` containing `"429"`; account's `expiresAt` is in the future (local token not expired).
 - **When:** `clp .usage refresh::1`
-- **Then:** No subprocess is launched. The 429 error appears directly as an error row in the table. No 30-second subprocess timeout is incurred.
+- **Then:** No subprocess is launched. The 429 error appears directly as an error row in the table. No 30-second subprocess timeout is incurred. (Note: 429 with a locally-expired `expiresAt` DOES trigger a refresh attempt — see param 019.)
 
 ---
 
-### FB-4: refresh default passes errors through
+### FB-4: refresh::0 explicit disable passes errors through
 
 - **Given:** One saved account returning an auth error.
-- **When:** `clp .usage` (no `refresh::1`)
+- **When:** `clp .usage refresh::0`
 - **Then:** Error appears in the account's row with no retry. Exit 0.
 
 ---

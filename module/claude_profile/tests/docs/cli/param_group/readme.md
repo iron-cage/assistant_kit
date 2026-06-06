@@ -4,7 +4,7 @@
 
 - **Purpose**: Document interaction tests for clp parameter groups.
 - **Responsibility**: Index of per-parameter-group interaction test files covering group-level behavior.
-- **In Scope**: Output Control group (Group 1), Field Presence group (Group 2), Fetch Behavior group (Group 3), Sort Control group (Group 4), and Display Control group (Group 5) interaction tests.
+- **In Scope**: Output Control group (Group 1), Field Presence group (Group 2), Fetch Behavior group (Group 3), Sort Control group (Group 4), Display Control group (Group 5), and Account Targeting group (Group 6) interaction tests.
 - **Out of Scope**: Per-command tests (→ `command/`), per-parameter edge cases (→ `param/`).
 
 ### Responsibility Table
@@ -16,3 +16,4 @@
 | 003_fetch_behavior.md | Interaction tests for Group 3 (Fetch Behavior) |
 | 004_sort_control.md | Interaction tests for Group 4 (Sort Control) |
 | 005_display_control.md | Interaction tests for Group 5 (Display Control) |
+| 006_account_targeting.md | Interaction tests for Group 6 (Account Targeting) |

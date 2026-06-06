@@ -1,0 +1,21 @@
+[build]
+# Redirect host-side cargo target directory to dev/-host-target/.
+#
+# Why: dev/target/ can be written by container processes (testuser = UID 1000)
+# under Podman --userns=keep-id.  In that two-level UID namespace chain, container
+# UID 1000 maps to host UID 166536 — not user1 (UID 1001).  Files testuser writes
+# to a host bind-mount appear as chown 166536, which user1 cannot overwrite,
+# causing EPERM on all subsequent host-side cargo operations (cargo install, etc.).
+#
+# Solution: host cargo uses dev/-host-target/ (separate from dev/target/).
+# Containers continue using /workspace/target/ (their cook-stage baked path).
+# The two directories never overlap regardless of what containers do to dev/target/.
+#
+# Path is relative to workspace root (dev/).
+# Hyphen prefix (-host-target) means it is already gitignored by the -* rule
+# in dev/.gitignore — no additional gitignore entry needed.
+#
+# SAFETY: dev/.dockerignore excludes .cargo/ from all Docker build contexts so
+# this file is NEVER baked into container images.  Container cargo must keep using
+# /workspace/target/ for cook-stage cache coherence across all 14+ crates.
+target-dir = "-host-target"

@@ -355,7 +355,13 @@ cmd_shell()
 {
   _ensure_image
   _ensure_build_cache
-  local args=( --rm -it -v "${IMAGE}_$CACHE_DIR:$WORKSPACE_DIR/$CACHE_DIR" )
+  # Run as the host user (same as cmd_test) so any files written to bind-mounted
+  # host directories appear as user1, not testuser (UID 1000 → host UID 166536
+  # under Podman --userns=keep-id).  Without this, cargo or other tools inside the
+  # shell can create foreign-owned files on host bind-mounts.
+  local userns_arg=()
+  [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  local args=( --rm -it "${userns_arg[@]}" --user "$(id -u):$(id -g)" -v "${IMAGE}_$CACHE_DIR:$WORKSPACE_DIR/$CACHE_DIR" )
   local plugin_extra_args=()
   _plugin_shell_extra_args
   args+=( "${plugin_extra_args[@]}" )

@@ -2,7 +2,7 @@
 
 Edge case coverage for the `role::` free-text metadata label parameter on `.account.save`. See [param/052_role.md](../../../../docs/cli/param/052_role.md) for specification.
 
-Note: This is distinct from param 016 `role::` (boolean display toggle for `.credentials.status`).
+Note: This is distinct from param 015 `role::` (boolean display toggle for `.accounts`/`.credentials.status`).
 
 ### Test Case Index
 

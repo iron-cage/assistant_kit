@@ -20,10 +20,17 @@ clp .token.status
 # List all accounts with full metadata
 clp .accounts
 
+# Inspect subscription and membership for the active account (diagnose auth / subscription issues)
+clp .account.inspect
+# subscription_type: pro | max | free | ...
+# or for a specific account:
+clp .account.inspect name::user@example.com
+
 # Machine-readable snapshot for support tickets
 clp .paths format::json > /tmp/diag-paths.json
 clp .accounts format::json > /tmp/diag-accounts.json
 clp .token.status format::json > /tmp/diag-token.json
+clp .account.inspect format::json > /tmp/diag-inspect.json
 ```
 
-**When to use:** Filing support tickets, debugging environment issues, verifying correct `~/.claude/` layout.
+**When to use:** Filing support tickets, debugging environment issues, verifying correct `~/.claude/` layout, diagnosing subscription or membership problems.

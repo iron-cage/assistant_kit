@@ -2,11 +2,11 @@
 
 **Parameters:** `refresh::`, `live::`, `interval::`, `jitter::`, `trace::`, `touch::`, `imodel::`, `effort::`
 **Pattern:** Per-invocation fetch control
-**Purpose:** Controls how `.usage` fetches and re-fetches quota data — whether to refresh expired tokens on auth errors, whether to run as a continuous monitor loop, and how isolated subprocesses are configured.
+**Purpose:** Controls fetch behavior across quota, inspection, and switch commands — token refresh on auth error or locally-expired credentials, continuous monitor loop configuration, and isolated subprocess setup.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| [`refresh::`](../param/019_refresh.md) | `bool` | `1` | On 401/403 auth error, refresh token via isolated subprocess and retry once per account |
+| [`refresh::`](../param/019_refresh.md) | `bool` | `1` | Refresh expired OAuth token via isolated subprocess and retry once; trigger is 401/403 auth error (`.usage`) or locally-expired `expiresAt` before endpoint calls (`.account.inspect`) — see [param 019](../param/019_refresh.md) |
 | [`live::`](../param/020_live.md) | `bool` | `0` | Enable continuous refresh loop (Ctrl-C to exit cleanly) |
 | [`interval::`](../param/021_interval.md) | `u64` | `30` | Seconds between refresh cycles (≥ 30; validated only when `live::1`) |
 | [`jitter::`](../param/022_jitter.md) | `u64` | `0` | Max random seconds added to each cycle delay (0 ≤ jitter ≤ interval; validated only when `live::1`) |
@@ -15,7 +15,7 @@
 | [`imodel::`](../param/035_imodel.md) | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
 | [`effort::`](../param/036_effort.md) | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (max for model), `low`, `normal`, `high`, `max` |
 
-**Used By:** [`.usage`](../command/006_usage.md#command--9-usage) (all 8 params), [`.account.use`](../command/001_account.md#command--5-accountuse) (`trace::`, `touch::`, `imodel::`, `effort::`)
+**Used By:** [`.usage`](../command/006_usage.md#command--9-usage) (all 8 params), [`.account.use`](../command/001_account.md#command--5-accountuse) (`trace::`, `touch::`, `imodel::`, `effort::`), [`.account.inspect`](../command/001_account.md#command--15-accountinspect) (`refresh::`, `trace::`)
 
 **Typical Patterns:**
 
@@ -35,9 +35,9 @@ clp .usage
 
 **Semantic Coherence Test**
 
-> "Does parameter X control **how `.usage` fetches quota data** (retry strategy or iteration mode)?"
+> "Does parameter X control **how commands fetch remote data** (retry strategy, iteration mode, or isolated subprocess configuration)?"
 
-All 8 members pass: `refresh::` (retry strategy on auth error), `live::` (iteration mode), `interval::` (loop cycle duration), `jitter::` (loop timing variance), `trace::` (diagnostic output during fetch operations), `touch::` (active-window extension strategy), `imodel::` (subprocess model configuration), `effort::` (subprocess effort configuration). `format::` fails (output serialisation, not fetch strategy) and is correctly excluded.
+All 8 members pass: `refresh::` (retry strategy on auth error or locally-expired token), `live::` (iteration mode), `interval::` (loop cycle duration), `jitter::` (loop timing variance), `trace::` (diagnostic output during fetch operations), `touch::` (active-window extension strategy), `imodel::` (subprocess model configuration), `effort::` (subprocess effort configuration). `format::` fails (output serialisation, not fetch strategy) and is correctly excluded.
 
 **Invariants**
 
