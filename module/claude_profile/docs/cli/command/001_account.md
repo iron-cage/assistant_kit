@@ -45,6 +45,12 @@ clp .accounts format::table
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each credential file read |
 
+**Algorithm (4 steps):**
+1. Enumerate `{credential_store}/*.credentials.json` alphabetically; build account list
+2. `(when name:: provided)` Resolve via `AccountSelector`; filter list to single match
+3. For each matched account: read credential JSON + `_active_{hostname}_{user}` marker + snapshot files per enabled field params
+4. Render in requested `format::`
+
 **Examples:**
 
 ```bash
@@ -111,6 +117,13 @@ clp .account.save host::workstation role::personal    # both metadata fields
 | `role::` | `string` | `""` | User-defined role label stored in `{name}.profile.json` (see [param 052](../param/052_role.md)) |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for credential read and file write steps |
 
+**Algorithm (5 steps):**
+1. Resolve `name::`: read `oauthAccount.emailAddress` from `~/.claude.json`; fall back to `_active_{hostname}_{user}` marker; exit 1 if neither present
+2. `(when dry::0)` Copy `~/.claude/.credentials.json` → `{name}.credentials.json` (atomic write)
+3. `(when dry::0)` Read `~/.claude.json`; replace `oauthAccount` key; write-merge to `{name}.claude.json` (preserves `_renewal_at` and other keys)
+4. `(when dry::0)` Call `GET /api/oauth/claude_cli/roles` (best-effort); write `{name}.roles.json` on success; skip on failure
+5. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (per-machine active marker)
+
 **Examples:**
 
 ```bash
@@ -160,6 +173,14 @@ clp .account.use name::alice@home.com trace::1
 | `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (high for sonnet, max for opus, none for haiku/keep), `low`, `normal`, `high`, `max` |
 | `trace::` | `bool` | `0` | Print `[trace] account.use` lines to stderr: credential read, quota fetch, idle check, model resolution, subprocess dispatch |
+
+**Algorithm (6 steps):**
+1. Resolve `name::` via `AccountSelector`; load `{name}.credentials.json`
+2. `(when dry::0)` Atomically overwrite `~/.claude/.credentials.json` via write-then-rename
+3. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (active marker)
+4. `(when dry::0)` Best-effort patch `~/.claude.json["oauthAccount"]` from saved snapshot (preserves machine-global keys)
+5. `(when touch::1)` Fetch quota via `GET /api/oauth/usage`; `(when refresh::1 + locally expired)` call `refresh_account_token()` first; evaluate idle: `five_hour.resets_at` absent → idle
+6. `(when touch::1 + idle)` Resolve model+effort via `resolve_model()`/`resolve_effort()`; spawn isolated subprocess via `run_isolated()`
 
 **Examples:**
 
@@ -214,6 +235,12 @@ clp .account.delete name::alice@oldco.com dry::1
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each file removal step |
 
+**Algorithm (4 steps):**
+1. Resolve `name::` via `AccountSelector`; validate account exists in credential store
+2. `(when dry::0)` Delete `{name}.credentials.json`
+3. `(when dry::0)` Best-effort delete `{name}.claude.json`, `{name}.settings.json`, `{name}.roles.json` (skip missing files silently)
+4. `(when dry::0 + deleted account = active)` Delete `_active_{hostname}_{user}` marker
+
 **Examples:**
 
 ```bash
@@ -252,6 +279,11 @@ clp .account.limits format::json
 | `name::` | [`AccountName`](../type/001_account_name.md) | *(omit for active)* | Query a named account instead of the active account |
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for credential store read and API call |
+
+**Algorithm (3 steps):**
+1. Resolve `name::` (omit → active account from `_active_{hostname}_{user}` marker); load credentials
+2. Fetch rate-limit headers via `fetch_rate_limits()` (`anthropic-ratelimit-unified-*` response headers)
+3. Render session (5h), weekly all-model (7d), and weekly sonnet utilization in requested `format::`
 
 **Examples:**
 
@@ -294,7 +326,7 @@ clp .account.relogin dry::1            # dry-run for active account
 | `dry::` | `bool` | `0` | Preview the steps without executing |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each step: store read, switch, spawn, credential change, save, restore |
 
-**Mechanism (6 steps):**
+**Algorithm (6 steps):**
 1. Resolve `name::` via [`AccountSelector`](../type/004_account_selector.md) → validate account exists in credential store
 2. Snapshot the current active account name (for restoration after login)
 3. `switch_account(name)` — makes the named account active in `~/.claude/`
@@ -341,6 +373,12 @@ clp .account.rotate dry::1
 |-----------|------|---------|---------|
 | `dry::` | `bool` | `0` | Preview which account would be selected without switching |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for account selection and switch step |
+
+**Algorithm (4 steps):**
+1. Enumerate all saved accounts; read `_active_{hostname}_{user}` marker
+2. Filter to inactive accounts (name ≠ active marker value); exit 2 if none
+3. Select account with highest `expiresAt` value (`account::auto_rotate()`)
+4. `(when dry::0)` Execute `.account.use` steps for selected account
 
 **Examples:**
 
@@ -393,6 +431,12 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 | `dry::` | `bool` | `0` | Preview operation without writing files |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each file read and write step |
 
+**Algorithm (4 steps):**
+1. Resolve target account list from `name::`: single email/prefix, comma-separated list, or `all` (every saved account)
+2. For each target: read `{name}.claude.json`
+3. Compute new `_renewal_at` value from `at::` (absolute ISO-8601), `from_now::` (signed delta), or `clear::1` (remove key)
+4. `(when dry::0)` Write `{name}.claude.json` with updated `_renewal_at` key per account
+
 **Examples:**
 
 ```bash
@@ -444,6 +488,13 @@ clp .account.inspect trace::1          # show [trace] endpoint calls to stderr
 | `refresh::` | `bool` | `1` | Attempt OAuth token refresh via isolated subprocess when `expiresAt` is locally expired, before endpoint calls |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for each endpoint call: URL, HTTP status, field extraction summary |
 | `format::` | [`OutputFormat`](../type/002_output_format.md) | `text` | Output format: `text` (default) or `json` |
+
+**Algorithm (5 steps):**
+1. Resolve `name::` (omit → active account from `_active_{hostname}_{user}` marker); load credentials
+2. `(when refresh::1 + locally expired)` Call `refresh_account_token()` to obtain a fresh token
+3. Call endpoint 001 (`GET /api/oauth/userinfo`), endpoint 002 (`GET /api/oauth/claude_cli/memberships`), and endpoint 005 (`GET /api/oauth/claude_cli/roles`) — each independently; failure falls back to local snapshots with `(snapshot)` suffix per field
+4. Apply membership selection priority: `billing_type=stripe_subscription + claude_max` > `billing_type=stripe_subscription` > `memberships[0]`
+5. Render all fields in requested `format::`
 
 **Output (text):**
 
@@ -500,3 +551,77 @@ clp .account.inspect format::json | jq '.memberships | length'
 - `refresh::1` (default) behaves identically to `.usage`'s `refresh::1`: calls `refresh_account_token()` once when `expiresAt` is locally expired; retries endpoint calls with the fresh token.
 - This command does NOT show quota data (5h/7d utilization) — use `.usage` for that.
 - See [feature/031_account_inspect.md](../../feature/031_account_inspect.md) for full design, graceful fallback semantics, and all acceptance criteria.
+
+---
+
+### Command :: 16. `.account.assign`
+
+Write (or overwrite) the per-machine active-account marker for any host+user pair without performing a full credential rotation. No `~/.claude.*` files are touched — marker-only write.
+
+-- **Parameters:** [`name::`](../param/001_name.md) *(optional¹)*, [`for::`](../param/053_for.md), [`dry::`](../param/004_dry.md)
+-- **Exit:** 0 (success; or live usage block when `name::` absent) | 1 (usage: invalid `name::` chars, `for::` missing `@`, or empty `for::` component) | 2 (runtime: account not found)
+
+¹ When `name::` is absent the command emits a live usage block instead of an error.
+
+**Syntax:**
+
+```bash
+clp .account.assign                                         # live usage block (current machine + active account)
+clp .account.assign name::alice@corp.com                   # assign to current machine
+clp .account.assign name::alice@corp.com for::bob@laptop   # assign to remote machine
+clp .account.assign name::alice@corp.com dry::1            # preview without writing
+clp .account.assign name::alice for::bob@laptop            # prefix resolution
+```
+
+| Parameter | Type | Default | Purpose |
+|-----------|------|---------|---------|
+| `name::` | [`AccountName`](../type/001_account_name.md) | *(omit for usage block)* | Account to assign; prefix resolution supported |
+| `for::` | `string` (`USER@MACHINE`) | current `$USER@resolve_hostname()` | Target identity; split on first `@`; both parts required when provided; sanitized per `active_marker_filename()` rules |
+| `dry::` | `bool` | `0` | Preview the would-be write without creating or modifying any file |
+
+**Algorithm (5 steps):**
+1. `(when name:: absent)` Emit live usage block with current machine identity and active account; exit 0
+2. Resolve `name::` via `AccountSelector`; validate account exists in credential store
+3. Resolve `for::`: split on first `@` (left = user, right = machine); default to `$USER@resolve_hostname()` when omitted
+4. Sanitize each component (alphanumeric, `-`, `.` kept; other chars → `_`); compute target filename `_active_{machine}_{user}`
+5. `(when dry::0)` Write `{credential_store}/_active_{machine}_{user}` = `{name}`
+
+**Live usage block (no `name::`):**
+
+```
+.account.assign — write the active-account marker for any machine without credential rotation.
+
+  name::   account to assign (required)
+  for::    USER@MACHINE to target  (default: current machine)
+  dry::1   preview without writing
+
+Current machine:  user1@w003  (→ _active_w003_user1)
+Active account:   alice@corp.com
+
+Ready to copy:
+  clp .account.assign name::alice@corp.com
+  clp .account.assign name::alice@corp.com for::user1@w003
+  clp .account.assign name::alice@corp.com for::otheruser@othermachine dry::1
+```
+
+The `Current machine:` and `Active account:` lines are resolved at runtime. When no active account is set, `Active account:` shows `(none)` and the `Ready to copy:` section is omitted.
+
+**Examples:**
+
+```bash
+clp .account.assign name::alice@corp.com for::bob@laptop
+# Assigned alice@corp.com for bob@laptop  →  _active_laptop_bob
+
+clp .account.assign name::alice@corp.com
+# Assigned alice@corp.com for user1@w003  →  _active_w003_user1
+
+clp .account.assign name::alice@corp.com for::bob@laptop dry::1
+# [dry-run] would assign alice@corp.com for bob@laptop  →  _active_laptop_bob
+```
+
+**Notes:**
+- Writes only `{credential_store}/_active_{machine}_{user}`; never touches `~/.claude/.credentials.json`, `~/.claude.json`, or `~/.claude/settings.json`.
+- `for::` is split on the first `@`: left = user component, right = machine component. Each is sanitized: alphanumeric, `-`, `.` kept; all other characters become `_`.
+- Use `.account.use` for full credential rotation (credential copy + `~/.claude.*` patches + post-switch touch). Use `.account.assign` when only the preference marker needs to be set.
+- After `.account.assign` for a remote machine, that machine can run `.account.use name::alice@corp.com` to activate the credentials. The marker set by `.account.assign` is visible via `.accounts` on any machine sharing the same credential store.
+- See [feature/032_account_assign.md](../../feature/032_account_assign.md) for full design and all acceptance criteria.

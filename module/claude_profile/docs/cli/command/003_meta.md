@@ -13,6 +13,8 @@ Print the binary name and version string, then exit. This flag takes priority ov
 - **Output:** `clp X.Y.Z` (one line on stdout; stderr is empty)
 - **Implementation:** `src/lib.rs::cli::run()`
 
+**Algorithm (1 step):** Read compiled version constant; print `clp X.Y.Z` to stdout; exit 0.
+
 **Examples:**
 
 ```bash
@@ -73,6 +75,8 @@ Examples:
   clp .credentials.status
 ```
 
+**Algorithm (1 step):** Call `print_usage()`; render grouped command list to stdout (ANSI colour on TTY, stripped in pipe); exit 0.
+
 **Notes:**
 - On a TTY, group headers and command names are rendered in ANSI colour (yellow/bold-cyan); piped output strips ANSI codes automatically (`std::io::IsTerminal`).
 - Commands are grouped into "Account management" and "Status & info"; no per-command parameter listings are shown at this level of abstraction.
@@ -94,6 +98,8 @@ Pre-registered by the unilang `CommandRegistry`. At the adapter layer, `.help` (
 clp .help
 clp help
 ```
+
+**Algorithm (1 step):** Call `print_usage()` (identical to `.`); exit 0.
 
 **Notes:**
 - Output is identical to `clp .` (both call `print_usage()`).

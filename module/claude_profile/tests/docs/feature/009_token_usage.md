@@ -396,11 +396,11 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `result = Ok(OauthUsageData)` with `seven_day_sonnet = Some(PeriodUsage { utilization: 90.0, resets_at: Some("...") })` — 10% left (< 20% threshold)
   - `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"`
   - `ClaudePaths` pointing to a temp directory
-- **When:** `apply_model_override(&data, &paths, false, "test@example.com")` is called with the current account's quota data.
+- **When:** `apply_model_override(&data, &paths, false, "usage", "test@example.com")` is called with the current account's quota data.
 - **Then:**
   - `~/.claude/settings.json` now contains `"model": "claude-opus-4-6"` — the override fired.
   - The structural test verifies that `usage_routine()` calls `apply_model_override` after the touch loop for the current account (source position assertion or direct call test).
 - **Exit:** n/a (unit test)
 - **Note:** Fix for BUG-244. The model override was previously only reachable from `.account.use` (`account_ops.rs`). This test verifies the `.usage` path also applies it. Reuses the existing `apply_model_override()` function (tested by BUG-238 MRE) but validates it is called from the `.usage` pipeline.
-- **Source fn:** TBD (to be implemented by task)
+- **Source fn:** `mre_bug244_usage_routine_never_calls_apply_model_override` (in `src/usage/api.rs`)
 - **Source:** [009_token_usage.md AC-32](../../../../docs/feature/009_token_usage.md)

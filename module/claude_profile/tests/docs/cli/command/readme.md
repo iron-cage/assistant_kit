@@ -27,3 +27,4 @@
 | 013_account_rotate.md | Test cases for `.account.rotate` command |
 | 014_account_renewal.md | Test cases for `.account.renewal` command |
 | 015_account_inspect.md | Test cases for `.account.inspect` command |
+| 016_account_assign.md | Test cases for `.account.assign` command |

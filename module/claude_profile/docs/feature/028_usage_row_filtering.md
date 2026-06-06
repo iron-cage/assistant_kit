@@ -12,12 +12,14 @@
 `.usage` applies row filtering after sort but before rendering. Filters are composable — multiple filters combine with AND logic (a row must satisfy all active filters to appear). After filtering, `count::` and `offset::` apply as a window on the filtered result set.
 
 **Filter evaluation order:**
-1. Per-account quota fetch (existing)
-2. Sort and tier grouping (existing)
-3. Boolean row filters: `only_active::`, `only_next::`, `only_valid::`, `exclude_exhausted::` (skip rows not matching)
-4. Threshold filters: `min_5h::`, `min_7d::` (skip rows below threshold)
-5. Offset: skip first N rows from the filtered result
-6. Count: truncate to at most N rows after offset
+1. Account list from filesystem (no HTTP) — `account::list()` reads `_active_{hostname}_{user}` marker to populate `is_active`
+2. Request-Constraint pre-fetch gate: `only_active::` — filesystem-based; reduces account list to at most 1 entry before the HTTP fetch loop begins (Pipeline-Constraint rule: O(1) fetch when result is known to be ≤1)
+3. Per-account quota fetch (HTTP — only for accounts not excluded in step 2)
+4. Sort and tier grouping
+5. Post-fetch boolean row filters: `only_next::`, `only_valid::`, `exclude_exhausted::` — predicates require quota data from step 3
+6. Threshold filters: `min_5h::`, `min_7d::` — require per-account quota percentage data
+7. Offset: skip first N rows from the filtered result
+8. Count: truncate to at most N rows after offset
 
 **Row filter parameters:**
 
@@ -25,7 +27,7 @@
 |-----------|------|---------|----------|
 | `count::` | `u64` | `0` | Maximum rows to display; `0` means show all remaining rows after offset |
 | `offset::` | `u64` | `0` | Skip first N rows from the filtered result before display |
-| `only_active::` | `bool` | `0` | Show only the row whose account matches the per-machine active marker |
+| `only_active::` | `bool` | `0` | Show only the row whose account matches the per-machine active marker; filesystem-based — gates HTTP fetch (Pipeline-Constraint) |
 | `only_next::` | `bool` | `0` | Show only the row that received the `→` marker from the active `next::` strategy |
 | `min_5h::` | `f64` | `0` | Hide rows where `5h Left` is below this percentage (0–100); rows with `—` (no valid quota) are also hidden |
 | `min_7d::` | `f64` | `0` | Hide rows where `7d Left` is below this percentage (0–100); rows with `—` are also hidden |
@@ -86,6 +88,7 @@
 - **AC-14**: `clp .usage no_color::1` produces output with no emoji and no ANSI sequences; status column renders as plain text labels.
 - **AC-15**: Invalid `get::` field ID exits 1 with an error listing the valid field IDs.
 - **AC-16**: `count::`, `offset::`, filter params, and `get::` all work combined with `sort::`, `next::`, `prefer::`, and `cols::`.
+- **AC-17**: `clp .usage only_active::1 get::status` on an N-account store performs exactly 1 HTTP request to the OAuth usage API regardless of N. The active account is identified from the `_active_{hostname}_{user}` filesystem marker before any HTTP call; non-active accounts are excluded from the fetch set at step 2.
 
 ### Cross-References
 

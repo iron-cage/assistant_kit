@@ -207,6 +207,7 @@ Valid: 2 / 3   ->  Next by strategy:
 
 | Type | File | Responsibility |
 |------|------|----------------|
+| bug | `task/claude_profile/bug/244_usage_command_never_applies_model_override.md` | BUG-244 ✅ Fixed: `apply_model_override()` call added to `usage_routine()` before row-filter pipeline; `label: &str` param added to distinguish `.usage` from `.account.use` trace prefix (TSK-249) |
 | source | `src/usage/api.rs`, `src/usage/fetch.rs`, `src/usage/render.rs` | `usage_routine()` CLI handler (incl. `apply_model_override` for current account — AC-32), quota fetching, table rendering, JSON output |
 | dep | `claude_quota` | `fetch_oauth_usage()`, `fetch_oauth_account()` — transport functions; `OauthUsageData`, `OauthAccountData`, `PeriodUsage` types |
 | dep | `data_fmt` | Table rendering for all output |

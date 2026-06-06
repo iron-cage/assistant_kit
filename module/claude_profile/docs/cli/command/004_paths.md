@@ -26,6 +26,11 @@ clp .paths field::credentials
 | `field::` | `String` | `""` (show all) | Output a single named path value; valid: `base`, `credentials`, `credential_store`, `projects`, `stats`, `settings`, `session_env`, `sessions` |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for home resolution source and each resolved path |
 
+**Algorithm (3 steps):**
+1. Resolve `HOME`; derive all canonical `~/.claude/` paths via `ClaudePaths`
+2. `(when field:: provided)` Extract the named field value; exit 1 on unknown field name
+3. Render all paths (or single field) in requested `format::` (`field::` takes priority over `format::`)
+
 **Examples:**
 
 ```bash

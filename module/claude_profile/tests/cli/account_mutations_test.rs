@@ -61,6 +61,7 @@
 //! | aw30 | `aw30_trace_fetch_failure_skips_idle_model_lines` | `trace::1` + invalid token → fetch-err + subprocess-skipped only | N |
 //! | aw31 | `aw31_trace_touch_disabled_no_trace_lines` | `touch::0 trace::1` → no `[trace] account.use` lines | P |
 //! | aw32 | `aw32_trace_bad_value_exits_1` | `trace::bad` → exit 1, stderr lists valid values | N |
+//! | aw35 | `aw35_help_shows_positional_example` | `.account.use.help` examples contain positional form (no `name::`) (015 FT-10/AC-10) | P |
 //!
 //! ### AD — Account Delete
 //!
@@ -2173,6 +2174,31 @@ fn aw34_refresh_bad_value_exits_1()
   assert!(
     err.contains( "refresh::" ) && err.contains( '0' ) && err.contains( '1' ) && err.contains( "false" ) && err.contains( "true" ),
     "aw34: stderr must name all valid refresh:: values (0, 1, false, true); got:\n{err}",
+  );
+}
+
+// ── aw35 ──────────────────────────────────────────────────────────────────────
+
+/// aw35 (015 FT-10 / AC-10): `.account.use.help` Examples section shows the positional form
+/// `clp .account.use alice@acme.com` — without `name::` prefix.
+///
+/// Feature 015 requires that help text shows the shortcut syntax, not only the explicit form.
+/// Prevents doc-drift where the help block lists only `name::EMAIL` examples.
+#[ test ]
+fn aw35_help_shows_positional_example()
+{
+  let out  = run_cs( &[ ".account.use.help" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  // The examples section must include a bare email (no "name::" keyword) to demonstrate
+  // positional syntax.  We check for a known example from the spec (or any bare-email pattern).
+  let has_positional = text
+    .lines()
+    .any( |l| l.contains( "@" ) && !l.contains( "name::" ) && !l.trim_start().starts_with( "##" ) );
+  assert!(
+    has_positional,
+    ".account.use.help must show a positional example (email without name:: prefix), got:\n{text}",
   );
 }
 

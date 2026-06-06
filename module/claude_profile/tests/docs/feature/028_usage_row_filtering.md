@@ -22,6 +22,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 | FT-14 | `no_color::1` produces emoji-free output | AC-14 | Integration |
 | FT-15 | Invalid `get::` field ID exits 1 listing valid IDs | AC-15 | Validation |
 | FT-16 | Filters compose with `sort::`, `next::`, `prefer::`, `cols::` | AC-16 | Composability |
+| FT-17 | `only_active::1` performs exactly 1 HTTP fetch on N-account store | AC-17 | Pipeline-Constraint |
 
 ### Test Case Index
 
@@ -43,8 +44,9 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 | FT-14 | no_color::1 plain output | AC-14 | Format |
 | FT-15 | Invalid get:: field ID rejected | AC-15 | Validation |
 | FT-16 | Filters compose with sort/next/prefer/cols | AC-16 | Composability |
+| FT-17 | only_active::1 performs exactly 1 HTTP fetch (N-account store) | AC-17 | Pipeline-Constraint |
 
-**Total:** 16 FT cases
+**Total:** 17 FT cases
 
 ---
 
@@ -234,3 +236,15 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Live:** yes
 - **Source fn:** `it219_lim_it_ft028_16_filters_compose` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/028_usage_row_filtering.md AC-16](../../../../docs/feature/028_usage_row_filtering.md)
+
+---
+
+### FT-17: `only_active::1` performs exactly 1 HTTP fetch on N-account store
+
+- **Given:** Credential store with N ≥ 3 accounts; one account has the `_active_{hostname}_{user}` filesystem marker.
+- **When:** `clp .usage only_active::1 get::status trace::1`
+- **Then:** Exits 0. Trace output contains exactly 1 `[trace] ... result:` line (one HTTP fetch). Non-active accounts produce no trace result lines. The single result line corresponds to the active account.
+- **Exit:** 0
+- **Live:** yes
+- **Source fn:** `it_ft028_17_only_active_single_http_fetch` (in `tests/cli/usage_test.rs`)
+- **Source:** [feature/028_usage_row_filtering.md AC-17](../../../../docs/feature/028_usage_row_filtering.md)

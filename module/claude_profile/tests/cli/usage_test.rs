@@ -207,6 +207,8 @@
 //! | it238 | `it238_lim_it_get_bypasses_cols_restriction`        | `cols::-7d_left get::7d_left` still extracts value (005 CC-3) | P | yes |
 //! | it239 | `it239_cols_sub_and_no_color_independent`           | `cols::+sub no_color::1` — Sub header present + no emoji (005 CC-4) | P | no |
 //! | it240 | `it240_lim_it_cols_host_role_shows_profile_data`    | `cols::+host,+role` shows both from profile.json (006 CC-4) | P | yes |
+//! | it247 | `it247_synthetic_row_suppressed_name_collision`     | stored account's token matches live → no duplicate row (016 FT-10/AC-10) | P | no |
+//! | it_ft028_17 | `it_ft028_17_only_active_single_http_fetch` | `only_active::1 get::status trace::1` → exactly 1 trace result line (028 FT-17/AC-17) | P | yes |
 //! | it241 | `it241_min_5h_and_min_7d_both_pass_err_account`     | `min_5h::50 min_7d::30` both pass Err account (absent data) | P | no |
 //! | it242 | `it242_min_5h_only_valid_removes_err_account`       | `min_5h::1 only_valid::1` — Err passes min_5h but only_valid removes it | P | no |
 //! | it243 | `it243_min_5h_get_account_err_passes_returns_name`  | `min_5h::1 get::account` on Err account — returns name (absent passes) | P | no |
@@ -6999,5 +7001,102 @@ fn it240_lim_it_cols_host_role_shows_profile_data()
   assert!(
     text.contains( "work" ),
     "cols::+role must show 'work' role value from profile.json (006 CC-4), got:\n{text}",
+  );
+}
+
+// ── it247 ──────────────────────────────────────────────────────────────────────
+
+/// it247 (016 FT-10 / AC-10): synthetic row is suppressed when the live token belongs to a
+/// stored account — no duplicate row for that account name.
+///
+/// Setup: `alice@acme.com` is saved with token `tok-alice`. Live `~/.claude/.credentials.json`
+/// also uses `tok-alice`. Because `alice@acme.com` is found in the credential store with a
+/// matching token, the synthetic-row injection path must NOT fire; the stored row carries
+/// all data. `✓` appears on the stored row; `alice@acme.com` appears exactly once.
+#[ test ]
+fn it247_synthetic_row_suppressed_name_collision()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Store alice with token tok-alice; mark her active.
+  write_account_with_token( dir.path(), "alice@acme.com", "tok-alice", true );
+  // Live creds also use the same token → alice IS the current account.
+  write_live_credentials_with_token( dir.path(), "tok-alice" );
+
+  let out  = run_cs_with_env( &[ ".usage" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+
+  // alice@acme.com must appear exactly once (no synthetic duplicate).
+  let alice_count = text.matches( "alice@acme.com" ).count();
+  assert_eq!(
+    alice_count, 1,
+    "alice@acme.com must appear exactly once — no synthetic duplicate row, got:\n{text}",
+  );
+
+  // No "(current session)" synthetic row — name collision must suppress injection.
+  assert!(
+    !text.contains( "(current session)" ),
+    "synthetic row must be suppressed when stored account has matching token, got:\n{text}",
+  );
+
+  // The stored row must carry the ✓ flag.
+  let alice_current = text.lines().any( |l|
+    l.contains( '\u{2713}' ) && l.contains( "alice@acme.com" )
+  );
+  assert!( alice_current, "stored alice@acme.com row must carry ✓ when her token matches live creds, got:\n{text}" );
+}
+
+// ── it_ft028_17 ───────────────────────────────────────────────────────────────
+
+/// it_ft028_17 `lim_it` (028 FT-17 / AC-17): `only_active::1` performs exactly 1 HTTP fetch
+/// on a store with N ≥ 3 accounts.
+///
+/// With `only_active::1`, the pipeline must fetch quota data only for the account that has the
+/// active marker. Non-active accounts must be skipped (no HTTP fetch). `trace::1` makes each
+/// quota fetch observable: every actual HTTP call produces a `[trace] ... result:` line on
+/// stderr. Exactly 1 such line must appear; N lines would indicate the pipeline violation
+/// tracked in BUG-245/BUG-246.
+///
+/// Spec: [`tests/docs/feature/028_usage_row_filtering.md` FT-17 AC-17]
+#[ test ]
+fn it_ft028_17_only_active_single_http_fetch()
+{
+  let Some( token ) = live_active_token() else
+  {
+    eprintln!( "it_ft028_17: no live token — skipping" );
+    return;
+  };
+  if !require_live_api( "it_ft028_17" ) { return; }
+
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Active account (with live token, active marker set).
+  write_account_with_token( dir.path(), "active@test.com",  &token, true );
+  // Two additional accounts without tokens (no HTTP fetch should happen for these).
+  write_account( dir.path(), "other1@test.com", "max", "standard", FAR_FUTURE_MS, false );
+  write_account( dir.path(), "other2@test.com", "max", "standard", FAR_FUTURE_MS, false );
+
+  let out = run_cs_with_env(
+    &[ ".usage", "only_active::1", "get::status", "trace::1" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let err = stderr( &out );
+
+  // Count lines that are both [trace] lines and contain "result:" — each corresponds to
+  // one HTTP fetch attempt.
+  let result_lines : Vec< &str > = err
+    .lines()
+    .filter( |l| l.contains( "[trace]" ) && l.contains( "result:" ) )
+    .collect();
+
+  assert_eq!(
+    result_lines.len(), 1,
+    "only_active::1 must trigger exactly 1 HTTP fetch (1 trace result line); \
+     {} found — non-active accounts must be skipped; trace:\n{err}",
+    result_lines.len(),
   );
 }

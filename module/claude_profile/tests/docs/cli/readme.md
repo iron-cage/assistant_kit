@@ -6,7 +6,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 
 - **Purpose**: Document integration and edge case test plans for all clp commands and parameters.
 - **Responsibility**: Index of per-command, per-parameter, and per-group test case planning files.
-- **In Scope**: All 15 clp commands plus binary meta-flags (`--version`/`-V`), all 52 parameters, and all 6 parameter groups.
+- **In Scope**: All 16 clp commands plus binary meta-flags (`--version`/`-V`), all 53 parameters, and all 6 parameter groups.
 - **Out of Scope**: Automated test implementations (→ `tests/` in crate), spec documentation (→ `docs/feature/`).
 
 ### Responsibility Table
@@ -21,8 +21,8 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 
 | Scope | Files | Min Tests |
 |-------|-------|-----------|
-| Commands + meta-flags | 15 | >=8 IT each |
-| Parameters | 52 | >=6 EC each |
+| Commands + meta-flags | 16 | >=8 IT each |
+| Parameters | 53 | >=6 EC each |
 | Parameter groups | 6 | >=4 IT each |
 
 ### Navigation
@@ -44,6 +44,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`.account.rotate`](command/013_account_rotate.md)
 - [`.account.renewal`](command/014_account_renewal.md)
 - [`.account.inspect`](command/015_account_inspect.md)
+- [`.account.assign`](command/016_account_assign.md)
 
 **Parameters:**
 - [`name::`](param/001_name.md)
@@ -97,6 +98,7 @@ Test case planning for clp CLI. Each file contains a Test Case Index with covera
 - [`from_now::`](param/050_from_now.md)
 - [`clear::`](param/051_clear.md)
 - [`role::` (metadata label)](param/052_role.md)
+- [`for::`](param/053_for.md)
 
 **Parameter Groups:**
 - [Output Control](param_group/001_output_control.md)

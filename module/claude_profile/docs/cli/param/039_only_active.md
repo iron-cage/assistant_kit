@@ -8,8 +8,9 @@ Filters the `.usage` table to show only the row for the currently active account
 - **Commands:** [`.usage`](../command/006_usage.md#command--9-usage)
 - **Purpose:** Show only the active account row.
 - **Group:** Display Control
+- **Pipeline Stage:** fetch — `is_active` from filesystem `_active_{hostname}_{user}` marker; account list reduced to ≤1 entry before HTTP fetch loop begins
 
-**Behavior:** When `only_active::1`, only the row whose account name matches `{credential_store}/_active_{hostname}_{user}` is displayed. The footer is still shown. If the active account has no valid quota (🔴 row), it is still included — `only_active::1` does not filter by health status.
+**Behavior:** When `only_active::1`, the active account is identified from the `_active_{hostname}_{user}` filesystem marker before any HTTP call, reducing the fetch set to at most 1 account (Pipeline-Constraint rule: short-circuit after first match). Only the row whose account matches this marker is displayed. The footer is still shown. If the active account has no valid quota (🔴 row), it is still included — `only_active::1` does not filter by health status.
 
 **Examples:**
 

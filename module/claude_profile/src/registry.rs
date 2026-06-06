@@ -13,6 +13,7 @@ use crate::commands::
   account_renewal_routine,
   account_rotate_routine,
   account_inspect_routine,
+  account_assign_routine,
   token_status_routine,
   paths_routine,
   usage_routine,
@@ -20,7 +21,7 @@ use crate::commands::
 
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 13 commands (credentials status, account management including limits, relogin, rotate, renewal, and inspect, token status, paths, usage).
+/// Registers 14 commands (credentials status, account management including limits, relogin, rotate, renewal, inspect, and assign, token status, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -101,7 +102,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     ],
     Box::new( account_save_routine    ) );
   reg_cmd( registry, ".account.use",    "Switch active account by name with atomic credential rotation",
-    vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name to operate on" ), dry(),
+    vec![ reg_arg_req( "name", Kind::String ).with_description( "Account name (positional: alice@acme.com; or keyword: name::alice@acme.com)" ), dry(),
       reg_arg_opt( "touch",   Kind::String  ).with_description( "Activate idle 5h session window via subprocess after switch (0/false = off; 1/true = on, default)" ),
       reg_arg_opt( "refresh", Kind::String  ).with_description( "Attempt OAuth token refresh when stored credentials are locally expired (1 = enabled, default; 0 = disabled)" ),
       reg_arg_opt( "imodel",  Kind::String  ).with_description( "Subprocess model: `auto` (default, ≥30% 7d(Son) remaining → sonnet, else → opus), `sonnet`, `opus`, `haiku` (claude-haiku-4-5-20251001), `keep`" ),
@@ -129,6 +130,14 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       fmt(),
     ],
     Box::new( account_inspect_routine ) );
+  reg_cmd( registry, ".account.assign", "Write the per-machine active-account marker for any host+user pair without credential rotation",
+    vec![
+      nam(),
+      reg_arg_opt( "for", Kind::String ).with_description( "Target identity as USER@MACHINE (default: current $USER@hostname); split on first '@'; both parts sanitized (alphanumeric, '-', '.' kept)" ),
+      dry(),
+      trc(),
+    ],
+    Box::new( account_assign_routine ) );
   reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr(), trc() ], Box::new( token_status_routine   ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",
     vec![

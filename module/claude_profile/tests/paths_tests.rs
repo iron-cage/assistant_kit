@@ -15,6 +15,8 @@
 //! | P-07 | `settings_file_returns_settings_json` | → `settings.json` under base | P |
 //! | P-08 | `session_env_dir_returns_session_env_under_base` | → `session-env/` under base | P |
 //! | P-09 | `sessions_dir_returns_sessions_under_base` | → `sessions/` under base | P |
+//! | FT-04 | `ft04_claude_json_file_returns_home_dot_claude_json` | → `$HOME/.claude.json` (at HOME level) (007 FT-04/AC-04) | P |
+//! | FT-05 | `ft05_claude_json_file_is_sibling_not_inside_dot_claude` | path does NOT contain `.claude/claude.json` (007 FT-05/AC-05) | P |
 
 use claude_profile::ClaudePaths;
 use std::path::PathBuf;
@@ -88,4 +90,35 @@ fn sessions_dir_returns_sessions_under_base()
   std::env::set_var( "HOME", "/test/home" );
   let p = ClaudePaths::new().expect( "HOME is set" );
   assert_eq!( p.sessions_dir(), PathBuf::from( "/test/home/.claude/sessions" ) );
+}
+
+#[ test ]
+/// FT-04 (007 AC-04): `claude_json_file()` returns `$HOME/.claude.json` — one level above `.claude/`.
+fn ft04_claude_json_file_returns_home_dot_claude_json()
+{
+  let p = ClaudePaths::with_home( std::path::Path::new( "/test/home" ) );
+  assert_eq!(
+    p.claude_json_file(),
+    PathBuf::from( "/test/home/.claude.json" ),
+    "claude_json_file() must point to $HOME/.claude.json, not inside .claude/",
+  );
+}
+
+#[ test ]
+/// FT-05 (007 AC-05): `claude_json_file()` is a sibling of `.claude/`, not inside it.
+///
+/// Confirms the path does NOT contain `.claude/claude.json` — the historical incorrect location.
+fn ft05_claude_json_file_is_sibling_not_inside_dot_claude()
+{
+  let p = ClaudePaths::with_home( std::path::Path::new( "/test/home" ) );
+  let path = p.claude_json_file();
+  let path_str = path.to_string_lossy();
+  assert!(
+    !path_str.contains( ".claude/claude.json" ),
+    "claude_json_file() must NOT be inside .claude/ — got: {path_str}",
+  );
+  assert!(
+    path_str.ends_with( "/.claude.json" ),
+    "claude_json_file() must end with /.claude.json — got: {path_str}",
+  );
 }

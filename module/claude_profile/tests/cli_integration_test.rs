@@ -24,6 +24,7 @@
 //! | `dot_test` | `.` / `.help` help output | dot |
 //! | `param_help_test` | convenience closure param descriptions + optionality | phd, pho |
 //! | `account_inspect_test` | .account.inspect diagnostic command | AI |
+//! | `account_assign_test` | .account.assign marker-only write | AA |
 //!
 //! ## Parallel Execution Note
 //!
@@ -78,3 +79,6 @@ mod param_help_test;
 
 #[ path = "cli/account_inspect_test.rs" ]
 mod account_inspect_test;
+
+#[ path = "cli/account_assign_test.rs" ]
+mod account_assign_test;
