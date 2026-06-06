@@ -58,8 +58,14 @@ pub( super ) fn guard_unknown_subcommand( tokens : &[ String ] )
     {
       for &sub in KNOWN
       {
+        // Fix(BUG-250): extend guard to catch one-character insertion/substitution typos.
+        // Root cause: prefix/superstring checks only caught truncations and extensions;
+        //   mid-word insertions (e.g. "assk" for "ask") bypassed the guard and fell through
+        //   to dispatch_run, treating the typo silently as the message argument to Claude.
+        // Pitfall: is_close_typo requires matching first char to avoid false positives for
+        //   common English words that happen to be within edit distance 1 (e.g. "task" → "ask").
         if first != sub
-          && ( sub.starts_with( first.as_str() ) || first.starts_with( sub ) )
+          && ( sub.starts_with( first.as_str() ) || first.starts_with( sub ) || is_close_typo( first, sub ) )
         {
           eprintln!(
             "Error: unknown subcommand: {first}. Did you mean '{sub}'?\nRun with --help for usage."
@@ -69,6 +75,47 @@ pub( super ) fn guard_unknown_subcommand( tokens : &[ String ] )
       }
     }
   }
+}
+
+/// Returns `true` when `first` is likely a one-character typo of `sub`.
+///
+/// Two conditions must both hold:
+/// 1. The first character matches — typos virtually always preserve the initial letter;
+///    a different first character means a different word entirely, not a typo.
+/// 2. Levenshtein distance exactly 1 — one substitution, insertion, or deletion.
+///
+/// The first-character constraint prevents false positives for common English words that
+/// happen to be within edit distance 1 of a known short subcommand name (e.g. `"task"`
+/// has edit distance 1 from `"ask"`, but `'t' ≠ 'a'` so it is correctly excluded).
+///
+/// Used by [`guard_unknown_subcommand`] for mid-word insertion/substitution typos that
+/// are not caught by either `starts_with` direction (e.g. `"assk"` vs `"ask"`).
+fn is_close_typo( first : &str, sub : &str ) -> bool
+{
+  // First-character guard: real typos start with the correct letter.
+  if first.chars().next() != sub.chars().next() { return false; }
+  let a = first.as_bytes();
+  let b = sub.as_bytes();
+  let la = a.len();
+  let lb = b.len();
+  if la.abs_diff( lb ) > 1 { return false; }
+  if la == lb
+  {
+    // Same length: exactly one character substitution.
+    return a.iter().zip( b.iter() ).filter( |( x, y )| x != y ).count() == 1;
+  }
+  // Lengths differ by 1: exactly one insertion or deletion.
+  let ( longer, shorter ) = if la > lb { ( a, b ) } else { ( b, a ) };
+  let mut i = 0;
+  let mut j = 0;
+  let mut skipped = false;
+  while i < longer.len() && j < shorter.len()
+  {
+    if longer[ i ] == shorter[ j ] { i += 1; j += 1; }
+    else if skipped               { return false; }
+    else                          { skipped = true; i += 1; }
+  }
+  true
 }
 
 pub( super ) fn run_built_command( builder : &ClaudeCommand, cli : &CliArgs )

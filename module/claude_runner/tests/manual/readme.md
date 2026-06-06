@@ -546,3 +546,50 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-100:** `--strip-fences --dry-run "test"` → dry-run shows no `--strip-fences` in claude command (runner post-processing)
 - **CC-101:** `--keep-claudecode --dry-run "test"` → dry-run shows `claude ...` WITHOUT `env -u CLAUDECODE` prefix
 - Automated in: `user_story_test.rs`, `env_var_test.rs`, `fence_test.rs`
+
+---
+
+## New Corner Cases (NC-1 through NC-6) — Discovered During Manual Testing
+
+### NC-1: QuotaExhausted Label (Automated)
+
+`clr run` against a fake script that exits 2 with "Usage limit reached" in stdout → stderr contains "quota exhausted" label.
+Automated in: `error_classification_test.rs::quota_exhausted_pattern_emits_labeled_message`.
+
+### NC-2: `--keep-claudecode` Warning Suppressed at Low Verbosity
+
+```sh
+CLAUDECODE=1 cargo run -p claude_runner -- --keep-claudecode --verbosity 0 --dry-run "test"
+```
+
+**Expected:** No warning on stderr (verbosity 0 suppresses BUG-248 warning). Exit code 0.
+
+### NC-3: `--keep-claudecode` Warning Fires at Verbosity ≥ 2
+
+```sh
+CLAUDECODE=1 cargo run -p claude_runner -- --keep-claudecode --verbosity 2 --dry-run "test"
+```
+
+**Expected:** Warning on stderr: `Warning: CLAUDECODE is set in environment...`. Exit code 0.
+
+### NC-4: `--keep-claudecode` Warning Fires Even in Dry-Run (Verbosity ≥ 2)
+
+```sh
+CLAUDECODE=1 cargo run -p claude_runner -- --keep-claudecode --verbosity 2 --dry-run "test"
+```
+
+**Expected:** Warning fires on stderr AND dry-run output on stdout. Exit code 0. Confirms BUG-248 fix fires before dry-run short-circuit.
+
+### NC-5: g2cc4 Host Fragility — CLAUDECODE Inherited From Shell
+
+`param_group_test::g2cc4_all_runner_control_flags_no_conflict` uses `--keep-claudecode --verbosity 2`. When run inside a Claude Code session on the host, `CLAUDECODE` is inherited from the outer process environment, causing the BUG-248 warning to fire and breaking the `stderr.is_empty()` assertion.
+
+Fix: test explicitly calls `.env_remove("CLAUDECODE")` to enforce CC-4 "clean environment" precondition. Automated in: `param_group_test.rs::g2cc4`.
+
+### NC-6: Live End-to-End Print Mode (`clr ask hello`)
+
+```sh
+clr ask hello
+```
+
+**Expected:** Returns a real Claude response (e.g., "Hey. What are we working on?"), exits 0. Confirms full round-trip: arg parsing → env setup → claude spawn → stdout capture → exit propagation. This is the live equivalent of TC-3.

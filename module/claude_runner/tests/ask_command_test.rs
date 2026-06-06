@@ -23,6 +23,7 @@
 //! - T08: `clr ask --new-session --dry-run "X"` — explicit flag respected (no `-c` in output)
 //! - T09: `clr ask --unknown-flag "X"` — unknown flag rejected (exit 1, stderr error)
 //! - T10: `clr ask --subdir NAME "X"` — effective dir ends with `/-NAME`
+//! - T12: `clr assk …` — edit-distance-1 typo caught by guard; exits 1, "Did you mean 'ask'?"
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli;
@@ -243,5 +244,64 @@ fn t10_ask_subdir_effective_dir()
   assert!(
     output.contains( "/-feature" ),
     "ask --subdir feature must produce path ending in /-feature. Got:\n{output}"
+  );
+}
+
+/// T12: `clr assk` triggers the unknown-subcommand guard with "Did you mean 'ask'?".
+///
+/// Reproduces BUG-250: `guard_unknown_subcommand` only checked prefix/superstring matches
+/// (`starts_with`), missing one-character insertion typos like "assk" for "ask".  The
+/// extra 's' in the middle is not caught by either `starts_with` direction, so the guard
+/// silently fell through and `dispatch_run` treated "assk" as the message argument.
+///
+/// ## Root Cause
+/// `guard_unknown_subcommand` used two `starts_with` checks only.  `"assk".starts_with("ask")`
+/// is false (first three chars are `'a','s','s'`, not `'a','s','k'`) and `"ask".starts_with("assk")`
+/// is false (shorter string cannot start with a longer one).  No edit-distance check existed.
+///
+/// ## Why Not Caught
+/// The existing BUG-225 test (`isolated_test.rs`) only exercised prefix truncations ("isol",
+/// "isolate").  No test exercised a mid-word character insertion for a short subcommand name.
+///
+/// ## Fix Applied
+/// Added `is_close_typo()` helper in `src/cli/mod.rs` and extended the guard condition
+/// to include `|| is_close_typo(first, sub)`.  The helper returns `true` when the first
+/// character matches AND the Levenshtein distance is exactly 1.  The first-character
+/// constraint prevents false positives for common English words whose deletion of the
+/// leading character yields "ask" (e.g. "task" → "ask", first char 't' ≠ 'a').
+///
+/// ## Prevention
+/// Every subcommand must have a test covering at least one edit-distance-1 typo (mid-word
+/// insertion or substitution), not just prefix/truncation variants.
+///
+/// ## Pitfall
+/// `starts_with` does not catch mid-word insertions: `"assk".starts_with("ask")` is false
+/// because the third character `'s'` ≠ `'k'`, even though `"assk"` and `"ask"` differ by
+/// exactly one character.  Use edit distance, not substring matching, for typo detection.
+// test_kind: bug_reproducer(BUG-250)
+#[ test ]
+fn t12_ask_edit_distance_typo_caught_by_guard()
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  // "assk" = "ask" with an extra 's' inserted — edit distance 1, not caught by starts_with
+  let out = std::process::Command::new( bin )
+    .args( [ "assk", "--dry-run" ] )
+    .output()
+    .expect( "failed to invoke clr assk --dry-run" );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert_eq!(
+    out.status.code(),
+    Some( 1 ),
+    "'clr assk' must exit 1 (unknown subcommand guard); got {:?}\nstderr: {stderr}",
+    out.status.code(),
+  );
+  assert!(
+    stderr.contains( "unknown subcommand" ),
+    "stderr must contain 'unknown subcommand'; got: {stderr}"
+  );
+  assert!(
+    stderr.contains( "ask" ),
+    "stderr must suggest 'ask'; got: {stderr}"
   );
 }
