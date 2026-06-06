@@ -59,7 +59,7 @@
 #![ cfg( feature = "enabled" ) ]
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, run_cli_with_env };
+use cli_binary_test_helpers::{ run_cli, run_cli_with_env, make_session_dir };
 use std::io::Write as _;
 use std::process::Command;
 
@@ -126,7 +126,8 @@ fn stderr_str( o : &std::process::Output ) -> String { String::from_utf8_lossy( 
 #[ test ]
 fn us01_1_bare_clr_repl_defaults()
 {
-  let output = run_dry( &[] );
+  let ( _session, session_path ) = make_session_dir();
+  let output = run_dry( &[ "--session-dir", &session_path ] );
   assert!(
     output.contains( "--dangerously-skip-permissions" ),
     "REPL mode must inject --dangerously-skip-permissions. Got:\n{output}"
@@ -173,7 +174,8 @@ fn us01_3_non_interactive_no_message_errors()
 #[ test ]
 fn us01_4_repl_with_custom_dir()
 {
-  let output = run_dry( &[ "--dir", "/tmp" ] );
+  let ( _session, session_path ) = make_session_dir();
+  let output = run_dry( &[ "--dir", "/tmp", "--session-dir", &session_path ] );
   assert!(
     output.contains( "cd /tmp" ),
     "--dir must produce 'cd /tmp' prefix. Got:\n{output}"
@@ -305,7 +307,8 @@ fn us03_4_interactive_with_new_session()
 #[ test ]
 fn us04_1_dry_run_prints_command()
 {
-  let output = run_dry( &[ "test message" ] );
+  let ( _session, session_path ) = make_session_dir();
+  let output = run_dry( &[ "--session-dir", &session_path, "test message" ] );
   assert!(
     output.contains( "--dangerously-skip-permissions" ),
     "dry-run must show --dangerously-skip-permissions. Got:\n{output}"

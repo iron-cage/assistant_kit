@@ -85,7 +85,7 @@ fn cc_1_default_output_consistent_across_commands()
 /// output that is absent from bare `.status`.
 ///
 /// ## Coverage
-/// Tokens section present with show_tokens::1; absent without it; exit 0.
+/// Tokens section present with `show_tokens::1`; absent without it; exit 0.
 ///
 /// ## Related Requirements
 /// `tests/docs/cli/param_group/01_output_control.md` — CC-2

@@ -13,14 +13,15 @@ Test case planning for [invariant/001_default_flags.md](../../../../docs/invaria
 | IN-5 | Message has `ultrathink` suffix by default | Default Present |
 | IN-6 | All opt-outs together remove all suppressible defaults | Combined Suppression |
 | IN-7 | Empty `--session-dir` → `-c` absent from assembled command (BUG-214 regression) | First-use guard |
+| IN-8 | Fresh CWD, no `--session-dir` → `-c` absent from assembled command (BUG-214-reopen regression) | First-use guard |
 
 ## Test Coverage Summary
 
 - Default Present: 5 tests (IN-1, IN-2, IN-3, IN-4, IN-5)
 - Combined Suppression: 1 test (IN-6)
-- First-use guard: 1 test (IN-7)
+- First-use guard: 2 tests (IN-7, IN-8)
 
-**Total:** 7 tests
+**Total:** 8 tests
 
 
 ---
@@ -92,3 +93,15 @@ Test case planning for [invariant/001_default_flags.md](../../../../docs/invaria
 - **Then:** Assembled command does NOT contain ` -c`; `session_exists()` guard detected empty directory and suppressed `-c` injection
 - **Exit:** 0
 - **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../../docs/invariant/001_default_flags.md)
+- **Implementation:** `tests/param_edge_cases_test.rs` — `bug_214_empty_session_dir_suppresses_continue_flag`
+
+---
+
+### IN-8: Fresh CWD, no `--session-dir` → `-c` absent (BUG-214-reopen regression)
+
+- **Given:** fresh temporary directory with no prior Claude sessions; no `--session-dir` given
+- **When:** `clr --dry-run "Fix bug"` run from the fresh temporary directory
+- **Then:** Assembled command does NOT contain ` -c`; `check_continuation()` checked the project-specific path `$HOME/.claude/projects/{encoded(cwd)}/` and found no sessions — injection suppressed
+- **Exit:** 0
+- **Source:** [invariant/001_default_flags.md § Fixed Defects](../../../../docs/invariant/001_default_flags.md)
+- **Implementation:** `tests/dry_run_test.rs` — `bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag`

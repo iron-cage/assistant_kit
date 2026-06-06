@@ -41,7 +41,7 @@
 
 - **Given:** Terminal with TTY; directory `/tmp/test_project` exists
 - **When:** `clr --dir /tmp/test_project`
-- **Then:** Subprocess launches with working directory set to `/tmp/test_project`; session continuation remains active
+- **Then:** Dry-run output contains `cd /tmp/test_project`; working directory is set to `/tmp/test_project`. Session continuation (`-c`) is injected only when prior sessions exist for `/tmp/test_project` — not asserted here (see US-5 and T10 for session-dir coverage)
 - **Exit:** 0
 
 ---

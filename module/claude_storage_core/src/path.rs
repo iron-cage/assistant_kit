@@ -373,43 +373,60 @@ fn decode_component( component : &str, is_hyphen_prefixed : bool ) -> String
     {
       let prev_part = parts[ i - 1 ];
 
-      // Determine if this hyphen is a path separator or underscore
-      let is_separator = if let Some( mod_idx ) = module_idx
+      // Fix(BUG-path-consumer-app): '/' = path separator, '_' = was underscore, '-' = literal hyphen.
+      //
+      // Root cause: original code only had `is_separator: bool` → '/' or '_', which forced
+      // `consumer-app` to decode as `consumer_app` (wrong) or `consumer/app` (also wrong).
+      // The correct decoding preserves '-' as a literal hyphen for unknown components before
+      // the `module/` boundary.
+      //
+      // Pitfall: never default to separator before the module boundary — only split when at
+      // least one adjacent part is a known PATH or PROJECT component; otherwise preserve '-'.
+      let sep_char = if let Some( mod_idx ) = module_idx
       {
         // Special handling when "module" directory is in the path
         if i == mod_idx + 1
         {
-          // Immediately after "module": this is path separator (module/ → name)
-          true
+          // Immediately after "module": path separator (module/ → crate name)
+          '/'
         }
         else if i == mod_idx + 2
         {
-          // Second part of module name: use underscore (claude-storage → claude_storage)
-          false
+          // Second part of module name: underscore (claude-storage → claude_storage)
+          '_'
+        }
+        else if i <= mod_idx
+        {
+          // Before "module/": split only on known components; otherwise preserve literal hyphen
+          let prev_is_known = PATH_COMPONENTS.contains( &prev_part )
+            || PROJECT_COMPONENTS.contains( &prev_part );
+          let curr_is_known = PATH_COMPONENTS.contains( part )
+            || PROJECT_COMPONENTS.contains( part );
+          if prev_is_known || curr_is_known { '/' } else { '-' }
         }
         else
         {
-          // Before module or after module name: use default heuristic (path separator)
-          true
+          // After module name (i > mod_idx + 2): path separator
+          '/'
         }
       }
       else if PATH_COMPONENTS.contains( part ) || PATH_COMPONENTS.contains( &prev_part )
       {
-        // Known path components: use path separator
-        true
+        // Known path components: path separator
+        '/'
       }
       else if PROJECT_COMPONENTS.contains( part ) || PROJECT_COMPONENTS.contains( &prev_part )
       {
-        // Known project components: use path separator
-        true
+        // Known project components: path separator
+        '/'
       }
       else
       {
         // Default: path separator (normal paths have subdirectories)
-        true
+        '/'
       };
 
-      result.push( if is_separator { '/' } else { '_' } );
+      result.push( sep_char );
     }
 
     result.push_str( part );

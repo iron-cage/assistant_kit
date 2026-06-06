@@ -32,7 +32,7 @@ Test case planning for [feature/001_runner_tool.md](../../../../docs/feature/001
 
 - **Given:** clean environment
 - **When:** `clr --dry-run "Fix bug"`
-- **Then:** Assembled command contains `-c`, `--dangerously-skip-permissions`, `--chrome`, `--effort max`, and the message has `ultrathink` suffix; all five defaults present simultaneously
+- **Then:** Assembled command contains `--dangerously-skip-permissions`, `--chrome`, `--effort max`, and the message has `ultrathink` suffix; `-c` is present when run from a directory with prior Claude sessions (verified separately by `default_continuation_always_present` using the project cwd, and by `t10_multiple_flags_combined` via explicit `--session-dir`)
 - **Exit:** 0
 - **Source:** [feature/001_runner_tool.md](../../../../docs/feature/001_runner_tool.md), [invariant/001_default_flags.md](../../../../docs/invariant/001_default_flags.md)
 

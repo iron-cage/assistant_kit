@@ -41,6 +41,17 @@ pub fn list_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
 {
   let project_type = cmd.get_string( "type" ).unwrap_or( "all" );
 
+  let verbosity = cmd.get_integer( "verbosity" ).unwrap_or( 1 );
+  if !( 0..=5 ).contains( &verbosity )
+  {
+    return Err( ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "Invalid verbosity: {verbosity}. Valid range: 0-5" ),
+    ) );
+  }
+  // verbosity is validated above; currently not used to change output (all valid levels produce same format)
+  let _ = verbosity;
+
   // Early dispatch: conversation listing requires project:: and is handled separately.
   if project_type == "conversation"
   {
