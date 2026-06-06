@@ -6,11 +6,11 @@
 - **Actor:** null
 - **Claimed At:** null
 - **Reopen Count:** 0
-- **State:** 🎯 (Verified)
+- **State:** ✅ (Completed)
 - **Closes:** null
 - **Blocked Reason:** null
-- **Validated By:** null
-- **Validation Date:** null
+- **Validated By:** verb/test (exit 0, all suites green)
+- **Validation Date:** 2026-06-06
 
 ## Goal
 
@@ -186,6 +186,8 @@ Task is complete when ALL of the following hold:
 ## History
 
 - **[2026-05-25]** `CREATED` — Implement 25 RWS-N user story acceptance tests in Rust, one file per story, covering all 5 user story test spec files added during the cli/user_story/ entity normalization session.
+- **[2026-06-06]** `IMPLEMENTED` — 25 RWS-N functions implemented in same commit (`a405168`) as the task file. Files named `cli_user_story_*_test.rs` (not `us1_*` as originally specified — naming convention updated during implementation). All files registered in `tests/readme.md`. All 25 tests pass (`verb/test` exit 0, all suites green).
+- **[2026-06-06]** `COMPLETED` — Verified via `verb/test`: local nextest ✅, workspace nextest ✅, doc tests ✅, clippy ✅.
 
 ## Verification Record
 
