@@ -16,3 +16,4 @@
 | `param_help_test.rs` | Param description presence and optionality guard (BUG-203, BUG-204) — phd01–phd04, pho01–pho04. |
 | `account_limits_test.rs` | FR-18: `.account.limits` error paths — lim01–lim05 (IT-5 through IT-8). |
 | `dot_test.rs` | Help output and `.` / `.help` delegation tests (dot01–dot12). |
+| `account_assign_test.rs` | `.account.assign` marker-only write tests (aa01–aa12). |

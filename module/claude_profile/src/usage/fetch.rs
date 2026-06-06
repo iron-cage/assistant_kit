@@ -37,16 +37,15 @@ fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : AccountQuo
   }
 }
 
-/// Enumerate all saved accounts and fetch their live quota data.
+/// Fetch live quota data for a pre-built account list.
 ///
-/// Accounts are listed in alphabetical order (delegated to `account::list()`).
 /// Per-account failures are stored inline in `AccountQuota::result`; only
-/// fatal errors (credential store unreadable) propagate as `ErrorData`.
+/// fatal errors propagate as `ErrorData`.
 ///
 /// `live_creds_file` is read once to extract the live `accessToken`; any failure
 /// (absent file, parse error) silently sets `is_current = false` for all accounts.
 ///
-/// If no saved account's token matches the live token, a synthetic entry is prepended
+/// If no supplied account's token matches the live token, a synthetic entry is prepended
 /// (AC-09): `is_current: true`, name from `~/.claude.json` email or `(current session)`.
 /// Pitfall: this case is easy to miss when only testing the normal single-account path.
 ///
@@ -57,19 +56,14 @@ fn inject_synthetic_if_new( results : &mut Vec< AccountQuota >, row : AccountQuo
 /// each account's credentials and one after the final result is determined (including
 /// any `billing_type` override — see AC-31).
 #[ allow( clippy::too_many_lines ) ]
-pub( crate ) fn fetch_all_quota(
+pub( crate ) fn fetch_quota_for_list(
+  accounts         : &[ crate::account::Account ],
   credential_store : &std::path::Path,
   live_creds_file  : &std::path::Path,
   stagger          : bool,
   trace            : bool,
-) -> Result< Vec< AccountQuota >, ErrorData >
+) -> Vec< AccountQuota >
 {
-  let accounts = crate::account::list( credential_store )
-    .map_err( |e| ErrorData::new(
-      ErrorCode::InternalError,
-      format!( "cannot read credential store: {e}" ),
-    ) )?;
-
   // Read the live session token once (graceful degradation on any error).
   let live_token : Option< String > = std::fs::read_to_string( live_creds_file )
     .ok()
@@ -81,7 +75,7 @@ pub( crate ) fn fetch_all_quota(
   // Class B pre-flight baseline — computed once for all per-account expiry checks.
   let now_secs = std::time::SystemTime::now().duration_since( std::time::UNIX_EPOCH ).unwrap_or_default().as_secs();
   let mut results = Vec::with_capacity( accounts.len() );
-  for acct in &accounts
+  for acct in accounts
   {
     // Per-account stagger delay — prevents simultaneous API bursts in live mode.
     if stagger
@@ -192,7 +186,28 @@ pub( crate ) fn fetch_all_quota(
   }
 
   inject_synthetic_row_if_needed( &mut results, live_token, live_creds_file );
-  Ok( results )
+  results
+}
+
+/// Enumerate all saved accounts and fetch their live quota data.
+///
+/// Calls `account::list()` to enumerate the credential store, then delegates
+/// to `fetch_quota_for_list()` for the HTTP fetch loop.
+/// Signature kept stable — callers that need a pre-filtered account list should
+/// call `fetch_quota_for_list()` directly.
+pub( crate ) fn fetch_all_quota(
+  credential_store : &std::path::Path,
+  live_creds_file  : &std::path::Path,
+  stagger          : bool,
+  trace            : bool,
+) -> Result< Vec< AccountQuota >, ErrorData >
+{
+  let accounts = crate::account::list( credential_store )
+    .map_err( |e| ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "cannot read credential store: {e}" ),
+    ) )?;
+  Ok( fetch_quota_for_list( &accounts, credential_store, live_creds_file, stagger, trace ) )
 }
 
 /// Prepend a synthetic current-session row when no stored account matches the live token.

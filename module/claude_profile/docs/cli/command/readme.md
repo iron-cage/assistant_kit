@@ -5,13 +5,13 @@
 | File | Responsibility |
 |------|----------------|
 | [003_meta.md](003_meta.md) | Meta-commands: `.`, `.help`, `--version` flag |
-| [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal`, `.account.inspect` |
+| [001_account.md](001_account.md) | Account namespace: `.accounts`, `.account.save`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, `.account.rotate`, `.account.renewal`, `.account.inspect`, `.account.assign` |
 | [005_token.md](005_token.md) | Token namespace: `.token.status` |
 | [002_credentials.md](002_credentials.md) | Credentials namespace: `.credentials.status` |
 | [006_usage.md](006_usage.md) | Usage namespace: `.usage` |
 | [004_paths.md](004_paths.md) | Paths namespace: `.paths` |
 
-**Total:** 15 commands (14 visible + 1 hidden)
+**Total:** 16 commands (15 visible + 1 hidden)
 
 ### All Commands
 
@@ -32,6 +32,7 @@
 | 13 | `.account.rotate` | Auto-rotate to the best inactive account by token expiry | 2 | `clp .account.rotate` |
 | 14 | `.account.renewal` | Set/clear billing renewal timestamp override for one or all accounts | 6 | `clp .account.renewal name::alice@acme.com from_now::+0m` |
 | 15 | `.account.inspect` | Live diagnostic inspection of identity, subscription, and org fields | 4 | `clp .account.inspect` |
+| 16 | `.account.assign` | Write the per-machine active-account marker for any `USER@MACHINE` without credential rotation | 3 | `clp .account.assign name::alice@corp.com` |
 
 ### Quick Reference
 
@@ -47,7 +48,7 @@
 |-------|----------|
 | 0 | `.`, `.help` |
 | 2 | `.account.rotate` |
-| 3 | `.paths`, `.account.delete`, `.token.status`, `.account.limits`, `.account.relogin` |
+| 3 | `.paths`, `.account.delete`, `.token.status`, `.account.limits`, `.account.relogin`, `.account.assign` |
 | 4 | `.account.inspect` |
 | 5 | `.account.save` |
 | 6 | `.account.renewal` |

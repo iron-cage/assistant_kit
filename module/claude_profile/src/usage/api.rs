@@ -9,7 +9,7 @@ use unilang::semantic::VerifiedCommand;
 use claude_quota::OauthUsageData;
 use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort, UsageOutputFormat };
 use super::subprocess::{ resolve_model, resolve_effort };
-use super::fetch::fetch_all_quota;
+use super::fetch::fetch_quota_for_list;
 use super::render::{ render_text, render_json, render_tsv, render_plain, extract_get_field };
 use super::live::execute_live_mode;
 use super::refresh::apply_refresh;
@@ -427,7 +427,19 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     return execute_live_mode( &credential_store, &live_creds_file, &params );
   }
 
-  let mut accounts = fetch_all_quota( &credential_store, &live_creds_file, false, params.trace )?;
+  // BUG-245/246 fix: pre-filter before HTTP fetch loop.
+  // account::list() reads the _active_{hostname}_{user} filesystem marker — no HTTP required.
+  // When only_active::1, retain reduces the list to ≤1 account before fetch_quota_for_list
+  // runs the HTTP loop. apply_touch (below) then also evaluates only the 1-entry slice.
+  // Pitfall: model-override block uses is_current (not is_active) and must stay ABOVE the
+  //   filter pipeline; it is placed after fetch_quota_for_list returns (line ~455+).
+  let mut acct_list : Vec< crate::account::Account > = crate::account::list( &credential_store )
+    .map_err( |e| ErrorData::new(
+      ErrorCode::InternalError,
+      format!( "cannot read credential store: {e}" ),
+    ) )?;
+  if params.only_active { acct_list.retain( |aq| aq.is_active ); }
+  let mut accounts = fetch_quota_for_list( &acct_list, &credential_store, &live_creds_file, false, params.trace );
 
   // Retry-once per account on 401/403 auth errors or 429+locally-expired: if
   // refresh::1 and any account's quota fetch failed with an auth error OR a
@@ -487,7 +499,7 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     }
 
     // Boolean row filters.
-    if params.only_active       { accounts.retain( |aq| aq.is_active ); }
+    // only_active: pre-filtered before HTTP in fetch_quota_for_list (BUG-245/246 fix).
     if params.only_valid        { accounts.retain( |aq| aq.result.is_ok() ); }
     if params.exclude_exhausted { accounts.retain( |aq| status_emoji( &aq.result ) == "🟢" ); }
 
@@ -830,6 +842,56 @@ mod tests
     assert!(
       !output.contains( "[trace] account.use" ),
       "trace output must NOT contain '[trace] account.use' when label='usage', got: {output}",
+    );
+  }
+
+  /// # MRE: BUG-245 + BUG-246 — `only_active` retain fires after HTTP fetch
+  ///
+  /// ## Root Cause
+  /// `usage_routine()` placed `accounts.retain( |aq| aq.is_active )` at ~line 490,
+  /// after `fetch_all_quota` (~line 430). With N saved accounts and `only_active::1`,
+  /// all N accounts were HTTP-fetched before the row filter reduced output to 1 row.
+  ///
+  /// ## Why Not Caught
+  /// No structural test enforced ordering of the pre-filter vs. the HTTP fetch call.
+  /// Output was correct (1 row shown) but N unnecessary HTTP round trips occurred.
+  ///
+  /// ## Fix Applied
+  /// Pre-filter via `account::list()` (filesystem marker, no HTTP) in `usage_routine()`
+  /// before the HTTP fetch. When `only_active::1`, only the active account is passed to
+  /// `fetch_quota_for_list()` — exactly 1 HTTP call per invocation. BUG-246 (touch loop)
+  /// is fixed simultaneously: `apply_touch` iterates the pre-filtered 1-entry slice.
+  ///
+  /// ## Prevention
+  /// This structural test: assert that `retain( |aq| aq.is_active )` appears in
+  /// `usage_routine` source BEFORE `fetch_quota_for_list(` — maintains the ordering invariant.
+  ///
+  /// ## Pitfall
+  /// The pre-filter uses `Vec<Account>` (from `account::list()`), not `Vec<AccountQuota>`.
+  /// Both types have `is_active: bool` — the retain closure `|aq| aq.is_active` works on either.
+  #[ doc = "bug_reproducer(BUG-245)" ]
+  #[ doc = "bug_reproducer(BUG-246)" ]
+  #[ test ]
+  fn mre_bug245_only_active_retain_fires_before_http_fetch()
+  {
+    let src      = include_str!( "api.rs" );
+    let fn_start = src.find( "pub fn usage_routine" ).expect( "usage_routine not found" );
+    let body_end = {
+      let after = &src[ fn_start + 1.. ];
+      let a     = after.find( "\npub fn " ).unwrap_or( after.len() );
+      let b     = after.find( "\n#[ cfg( t" ).unwrap_or( after.len() );
+      let c     = after.find( "\n#[cfg(t" ).unwrap_or( after.len() );
+      fn_start + 1 + a.min( b ).min( c )
+    };
+    let body       = &src[ fn_start..body_end ];
+    let retain_pos = body.find( "retain( |aq| aq.is_active )" )
+      .expect( "BUG-245: retain( |aq| aq.is_active ) must exist in usage_routine body" );
+    let fetch_pos  = body.find( "fetch_quota_for_list(" )
+      .expect( "BUG-245: fetch_quota_for_list call must exist in usage_routine body" );
+    assert!(
+      retain_pos < fetch_pos,
+      "BUG-245/246: retain must fire BEFORE fetch_quota_for_list — \
+      retain at ~{retain_pos}, fetch at ~{fetch_pos}",
     );
   }
 

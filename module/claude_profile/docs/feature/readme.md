@@ -42,4 +42,5 @@
 | 029 | [Account Host and Role Metadata](029_account_host_metadata.md) | Capture host/role labels at `.account.save` time; display via `cols::+host` and `cols::+role` | ✅ |
 | 030 | [Account Billing Renewal Override](030_account_renewal_override.md) | `.account.renewal` command; `_renewal_at` field in `{name}.claude.json`; exact `~Renews` and `→ Next` columns in `.usage` | ✅ |
 | 031 | [Account Inspect](031_account_inspect.md) | `.account.inspect` command; live endpoints 001/002/005; all memberships with selection-priority indicator | ✅ |
+| 032 | [Account Marker Assignment](032_account_assign.md) | `.account.assign` command; marker-only write for any `USER@MACHINE`; live usage block when called without `name::` | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

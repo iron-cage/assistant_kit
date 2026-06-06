@@ -66,6 +66,17 @@ clp .usage imodel::keep effort::high
 | `abs::` | `bool` | `0` | Show absolute token counts instead of percentages |
 | `no_color::` | `bool` | `0` | Strip emoji and ANSI colors from output |
 
+**Algorithm (9 steps):**
+1. Enumerate `{credential_store}/*.credentials.json` alphabetically; build account list
+2. `(when only_active::1)` Pre-filter: retain only the `is_active` account (filesystem `_active_{hostname}_{user}` marker; pre-fetch)
+3. `(when touch::1)` `apply_touch()`: for each account with any quota timer absent, spawn isolated subprocess; re-fetch quota
+4. `apply_refresh()`: for 401/403 errors or 429 + locally-expired token, retry via isolated subprocess
+5. `fetch_all_quota()`: call `GET /api/oauth/usage` per account; call `GET /api/oauth/account` in parallel thread
+6. Post-filter: apply `only_next::`, `only_valid::`, `exclude_exhausted::`, `min_5h::`, `min_7d::`, `count::`, `offset::` predicates
+7. Compute derived fields: status emoji, `→ Next` column, `~Renews`, flag column priority (`✓`/`*`/`@`/`→`)
+8. Three-tier sort (`🟢`→`🟡`→`🔴`); apply `sort::` strategy + `desc::` direction within each tier
+9. `(when format::text)` Render table + footer; `(when get:: provided)` extract single field from first match; `(when live::1)` loop with `interval::` + `jitter::` delay
+
 **Examples:**
 
 ```bash

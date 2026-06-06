@@ -81,6 +81,7 @@
 //! | cred44 | `cred44_org_name_missing_roles_json_na` | missing roles.json → Org:     N/A | P |
 //! | cred45 | `cred45_ft09_format_json_includes_all_5_org_fields` | format::json includes all 5 org fields | P |
 //! | cred46 | `cred46_ft11_null_workspace_fields_render_as_empty_string` | null workspace_uuid/workspace_name → `""` in JSON | P |
+//! | cred47 | `cred47_absent_settings_json_model_shows_na` | absent `~/.claude/settings.json` + `model::1` → `Model: N/A` (014 FT-08/AC-08) | P |
 
 use crate::cli_runner::{
   run_cs_with_env,
@@ -1026,6 +1027,33 @@ fn cred46_ft11_null_workspace_fields_render_as_empty_string()
   let text = stdout( &out );
   assert!( text.contains( "\"workspace_uuid\":\"\"" ), "null workspace_uuid must render as empty string in JSON, got:\n{text}" );
   assert!( text.contains( "\"workspace_name\":\"\"" ), "null workspace_name must render as empty string in JSON, got:\n{text}" );
+}
+
+// ── cred47 ────────────────────────────────────────────────────────────────────
+
+/// cred47 (014 FT-08 / AC-08): absent `~/.claude/settings.json` → `Model:` shows `N/A`.
+///
+/// When `settings.json` does not exist, `model::1` must still succeed (exit 0) and
+/// print `Model: N/A` rather than omitting the line or erroring.
+#[ test ]
+fn cred47_absent_settings_json_model_shows_na()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  // Write credentials but do NOT write settings.json.
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  let out  = run_cs_with_env( &[ ".credentials.status", "model::1" ], &[ ( "HOME", home ) ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "Model:" ),
+    "Model: line must appear even when settings.json is absent, got:\n{text}",
+  );
+  assert!(
+    text.contains( "N/A" ),
+    "Model: value must be N/A when settings.json is absent, got:\n{text}",
+  );
 }
 
 // ── it_trace_credentials_status_accepted ──────────────────────────────────────

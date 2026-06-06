@@ -25,6 +25,11 @@ clp .token.status format::json
 | `threshold::` | [`WarningThreshold`](../type/003_warning_threshold.md) | `3600` | ExpiringSoon threshold in seconds |
 | `trace::` | `bool` | `0` | Print `[trace]` lines to stderr for the credential file read |
 
+**Algorithm (3 steps):**
+1. Read `expiresAt` from `~/.claude/.credentials.json`
+2. Classify: `Valid` (`expiresAt > now + threshold::`), `ExpiringSoon` (`now < expiresAt ≤ now + threshold::`), or `Expired` (`expiresAt ≤ now`)
+3. Render in requested `format::`
+
 **Examples:**
 
 ```bash

@@ -4,10 +4,10 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|-----------|
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 31 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 32 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 6 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 52 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 53 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](cli/param_group/readme.md) | 6 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 4 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](cli/format/readme.md) | 3 |
@@ -49,6 +49,7 @@
 | feature | 029 | Account Host Metadata | [feature/029_account_host_metadata.md](feature/029_account_host_metadata.md) |
 | feature | 030 | Account Billing Renewal Override | [feature/030_account_renewal_override.md](feature/030_account_renewal_override.md) |
 | feature | 031 | Account Inspect | [feature/031_account_inspect.md](feature/031_account_inspect.md) |
+| feature | 032 | Account Marker Assignment | [feature/032_account_assign.md](feature/032_account_assign.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](cli/003_env_param.md) |
@@ -111,6 +112,7 @@
 | param | 050 | `from_now::` | [cli/param/050_from_now.md](cli/param/050_from_now.md) |
 | param | 051 | `clear::` | [cli/param/051_clear.md](cli/param/051_clear.md) |
 | param | 052 | `role::` (metadata label) | [cli/param/052_role.md](cli/param/052_role.md) |
+| param | 053 | `for::` | [cli/param/053_for.md](cli/param/053_for.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](cli/param_group/003_fetch_behavior.md) |

@@ -519,7 +519,7 @@ fn ai27_unicode_account_name_resolves()
 }
 
 #[ test ]
-/// AC-01: Credentials file exists but is zero bytes → Status shows "unknown".
+/// AC-18: Credentials file exists but is zero bytes → Status shows "unknown".
 ///
 /// Simulates filesystem corruption (truncated write, disk error). The command
 /// must not panic or exit non-zero; graceful fallback to "unknown" is required.
@@ -551,7 +551,7 @@ fn ai28_empty_credentials_file_shows_unknown_status()
 }
 
 #[ test ]
-/// AC-01: Valid JSON in credentials but missing `oauthAccount` key → Status shows "unknown".
+/// AC-19: Valid JSON in credentials but missing `oauthAccount` key → Status shows "unknown".
 ///
 /// Simulates a version-mismatch write (old tool wrote a different schema).
 /// The command must not panic; graceful "unknown" status is required because
