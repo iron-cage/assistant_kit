@@ -12,6 +12,8 @@ Behavioral requirement cases for the `unset_claudecode` field on `ClaudeCommand`
 | FT-3 | `with_unset_claudecode(true)` explicit → same as default (CLAUDECODE removed) | Default Confirmation |
 | FT-4 | env removal is in `build_command()` — applies in dry-run inspect via `build_command_for_test()` | Wiring Location |
 | FT-5 | `with_unset_claudecode(false).with_unset_claudecode(true)` → last-write wins (CLAUDECODE removed) | Override Semantics |
+| FT-6 | Default `new()` → `describe()` starts with `"env -u CLAUDECODE"` (WYSIWYG invariant) | WYSIWYG Describe |
+| FT-7 | `with_unset_claudecode(false)` → `describe()` starts with plain `"claude"` (no env prefix) | WYSIWYG Describe |
 
 ## Test Coverage Summary
 
@@ -19,8 +21,9 @@ Behavioral requirement cases for the `unset_claudecode` field on `ClaudeCommand`
 - Default Confirmation: 1 test (FT-3)
 - Wiring Location: 1 test (FT-4)
 - Override Semantics: 1 test (FT-5)
+- WYSIWYG Describe: 2 tests (FT-6, FT-7)
 
-**Total:** 5 feature cases
+**Total:** 7 feature cases
 
 ---
 
@@ -66,3 +69,21 @@ Behavioral requirement cases for the `unset_claudecode` field on `ClaudeCommand`
 - **When:** the built command's env pairs are inspected via `get_envs()`
 - **Then:** `get_envs()` contains `("CLAUDECODE", None)` — the final `true` value wins
 - **Source:** [feature/006_unset_claudecode.md](../../../docs/feature/006_unset_claudecode.md)
+
+---
+
+### FT-6: Default → describe() starts with "env -u CLAUDECODE" (WYSIWYG invariant)
+
+- **Given:** `ClaudeCommand::new()` (default: `unset_claudecode = true`); `describe()` called
+- **When:** the returned string is inspected
+- **Then:** The string starts with `"env -u CLAUDECODE"` — mirroring the `env_remove("CLAUDECODE")` in `build_command()`; describes WYSIWYG what will actually execute
+- **Source:** [feature/006_unset_claudecode.md](../../../docs/feature/006_unset_claudecode.md), [feature/003_describe.md](../../../docs/feature/003_describe.md)
+
+---
+
+### FT-7: with_unset_claudecode(false) → describe() starts with plain "claude"
+
+- **Given:** `ClaudeCommand::new().with_unset_claudecode(false)`; `describe()` called
+- **When:** the returned string is inspected
+- **Then:** The string starts with `"claude"` (no `env -u CLAUDECODE` prefix) — CLAUDECODE is NOT removed in `build_command()` so it does NOT appear in `describe()` output
+- **Source:** [feature/006_unset_claudecode.md](../../../docs/feature/006_unset_claudecode.md), [feature/003_describe.md](../../../docs/feature/003_describe.md)

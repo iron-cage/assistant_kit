@@ -25,7 +25,7 @@
 //! - T58: message is suffixed (not prefixed) with `"\n\nultrathink"` — suffix position guard
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, make_session_dir };
+use cli_binary_test_helpers::run_cli;
 
 // T50: message is suffixed with "\n\nultrathink" by default
 //
@@ -145,8 +145,12 @@ fn t53_help_lists_no_ultrathink()
 #[ test ]
 fn t54_empty_positional_arg_ignored()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let out = run_cli( &[ "--dry-run", "--session-dir", &session_path, "" ] );
+  // Empty session dir → no -c (session_exists returns false for empty dir).
+  // Fix(BUG-246): last_line now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
+  // Do NOT use make_session_dir() here — that writes a file causing -c injection.
+  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
+  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
+  let out = run_cli( &[ "--dry-run", "--session-dir", session_path, "" ] );
   assert!(
     out.status.success(),
     "empty positional arg must not error. stderr: {}",
@@ -154,12 +158,10 @@ fn t54_empty_positional_arg_ignored()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
-  // No -c: the test cwd has no prior Claude session; session_exists() checks project-specific
-  // storage ($HOME/.claude/projects/{encoded(cwd)}/), not the global ~/.claude/ dir.
   assert_eq!(
     last_line,
-    "claude --dangerously-skip-permissions --chrome --effort max",
-    "empty positional arg must produce bare command (no --print, no message, no -c in fresh dir). Got:\n{stdout}"
+    "env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max",
+    "empty positional arg must produce bare command (no --print, no message, no -c in empty session dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),
@@ -267,8 +269,11 @@ fn t56_help_wins_over_preceding_unknown_flag()
 #[ test ]
 fn t57_empty_positional_after_double_dash_ignored()
 {
-  let ( _session, session_path ) = make_session_dir();
-  let out = run_cli( &[ "--dry-run", "--session-dir", &session_path, "--", "" ] );
+  // Empty session dir → no -c (session_exists returns false for empty dir).
+  // Fix(BUG-246): last_line now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
+  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
+  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
+  let out = run_cli( &[ "--dry-run", "--session-dir", session_path, "--", "" ] );
   assert!(
     out.status.success(),
     "empty arg after -- must not error. stderr: {}",
@@ -276,12 +281,10 @@ fn t57_empty_positional_after_double_dash_ignored()
   );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
-  // No -c: the test cwd has no prior Claude session; session_exists() checks project-specific
-  // storage ($HOME/.claude/projects/{encoded(cwd)}/), not the global ~/.claude/ dir.
   assert_eq!(
     last_line,
-    "claude --dangerously-skip-permissions --chrome --effort max",
-    "empty arg after -- must produce bare command (no --print, no message, no -c in fresh dir). Got:\n{stdout}"
+    "env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max",
+    "empty arg after -- must produce bare command (no --print, no message, no -c in empty session dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),

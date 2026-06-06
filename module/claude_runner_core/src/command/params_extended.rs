@@ -176,7 +176,7 @@ impl ClaudeCommand {
   ///   .with_message( "hello" )
   ///   .with_dry_run( true )
   ///   .execute()?;
-  /// assert!( output.stdout.starts_with( "claude" ) );
+  /// assert!( output.stdout.starts_with( "env -u CLAUDECODE" ) );
   /// # Ok::<(), Box<dyn std::error::Error>>(())
   /// ```
   #[inline]

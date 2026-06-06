@@ -40,7 +40,7 @@
 //! - `""` empty positional arg ignored — bare command, no message, no degenerate ultrathink suffix
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, make_session_dir };
+use cli_binary_test_helpers::run_cli;
 use std::process::Command;
 
 fn run_dry( args : &[ &str ] ) -> String
@@ -198,17 +198,20 @@ fn dir_with_spaces_produces_unquoted_cd_line()
 }
 
 // No-message case: --dry-run with no message produces the bare command with all defaults
-// but WITHOUT -c because the test cwd has no prior Claude session.
-// session_exists() checks $HOME/.claude/projects/{encoded(cwd)}/ which does not exist here.
+// but WITHOUT -c because the session dir is empty → session_exists() returns false.
+// Fix(BUG-246): describe() now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
+// Do NOT use make_session_dir() here — that writes a dummy file making session_exists() true,
+// which would inject -c and break the "no -c" assertion.
 #[ test ]
 fn dry_run_without_message_shows_bare_command()
 {
-  let ( _dir, session_path ) = make_session_dir();
-  let output = run_dry( &[ "--dry-run", "--session-dir", &session_path ] );
+  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
+  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
+  let output = run_dry( &[ "--dry-run", "--session-dir", session_path ] );
   let last_line = output.trim_end().lines().last().unwrap_or_default();
   assert_eq!(
-    last_line, "claude --dangerously-skip-permissions --chrome --effort max",
-    "Bare --dry-run must end with default bypass and effort max (no message, no -c in fresh dir). Got:\n{output}"
+    last_line, "env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max",
+    "Bare --dry-run must end with default bypass and effort max (no message, no -c in empty session dir). Got:\n{output}"
   );
 }
 
@@ -558,62 +561,6 @@ fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
   );
 }
 
-// BUG-214 reopen: bare `clr --dry-run` in a fresh directory (no --session-dir) injects -c
-// because session_exists(None) fell back to $HOME/.claude/ which is always non-empty.
-//
-// ## Root Cause (bug_reproducer(BUG-214))
-//
-// The None branch of session_exists() checked $HOME/.claude/ (Claude's global config dir).
-// That directory always has entries (credentials.json, projects/, etc.) regardless of whether
-// the CURRENT project directory has any Claude session history.  Result: -c was unconditionally
-// injected for every default invocation, causing "No conversation found to continue" in any
-// directory without a prior session.
-//
-// ## Why Not Caught
-//
-// The existing BUG-214 MRE test always supplied --session-dir pointing to an empty temp dir.
-// That case correctly exercises the Some(dir) branch which checks the custom dir directly.
-// The None (no --session-dir) branch was never tested in isolation in a fresh cwd.
-//
-// ## Fix Applied
-//
-// session_exists(None, effective_dir) now calls
-// claude_storage_core::continuation::check_continuation(&cwd) which looks up
-// $HOME/.claude/projects/{encoded(cwd)}/ — the project-specific storage — instead
-// of the global $HOME/.claude/ directory.
-//
-// ## Prevention
-//
-// Test bare --dry-run in a fresh temp directory as the cwd; assert no -c.
-// The session check must always use the project-specific path, not the global claude home.
-//
-// ## Pitfall
-//
-// $HOME/.claude/ is Claude's global config directory, not per-project session storage.
-// Per-project sessions live at $HOME/.claude/projects/{encoded(project_dir)}/.
-// Any check for "has prior session" must look at the encoded project path, not the global home.
-//
-// test_kind: bug_reproducer(BUG-214)
-#[ test ]
-fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
-{
-  // Run --dry-run from a fresh temp dir that has NO prior Claude session.
-  // The session check must look at $HOME/.claude/projects/{encoded(tmp_dir)}/ which does not
-  // exist, so -c must NOT appear in the output.
-  let tmp = tempfile::TempDir::new().expect( "create temp dir" );
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let out = std::process::Command::new( bin )
-    .args( [ "--dry-run", "Fix bug" ] )
-    .current_dir( tmp.path() )
-    .output()
-    .expect( "invoke clr --dry-run" );
-  let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!(
-    !stdout.contains( " -c" ),
-    "fresh cwd with no prior session must not inject -c (BUG-214 reopen). Got:\n{stdout}"
-  );
-}
-
 // Empty positional arg `""` is ignored — bare command, no message, no degenerate ultrathink.
 //
 // Bug reproducer: before the fix, `clr ""` produced `"ultrathink "` (trailing space)
@@ -624,20 +571,21 @@ fn bug_reproducer_214_no_session_dir_fresh_cwd_no_continue_flag()
 #[ test ]
 fn empty_positional_arg_produces_bare_command()
 {
-  let ( _dir, session_path ) = make_session_dir();
+  // Empty session dir → no -c (session_exists returns false for empty dir).
+  // Fix(BUG-246): last_line now starts with "env -u CLAUDECODE" (default unset_claudecode=true).
+  let empty_dir = tempfile::TempDir::new().expect( "create empty session dir" );
+  let session_path = empty_dir.path().to_str().expect( "session dir path valid utf-8" );
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
-    .args( [ "--dry-run", "--session-dir", &session_path, "" ] )
+    .args( [ "--dry-run", "--session-dir", session_path, "" ] )
     .output()
     .expect( "Failed to invoke clr binary" );
   assert!( out.status.success(), "empty positional arg must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   let last_line = stdout.trim_end().lines().last().unwrap_or_default();
-  // No -c: the test cwd has no prior Claude session; session_exists() checks project-specific
-  // storage ($HOME/.claude/projects/{encoded(cwd)}/), not the global ~/.claude/ dir.
   assert_eq!(
-    last_line, "claude --dangerously-skip-permissions --chrome --effort max",
-    "empty positional arg must produce bare command (no message, no -c in fresh dir). Got:\n{stdout}"
+    last_line, "env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max",
+    "empty positional arg must produce bare command (no message, no -c in empty session dir). Got:\n{stdout}"
   );
   assert!(
     !stdout.contains( "\"ultrathink \"" ),

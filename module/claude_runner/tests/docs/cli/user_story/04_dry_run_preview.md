@@ -19,7 +19,7 @@
 
 - **Given:** No subprocess execution expected
 - **When:** `clr --dry-run "test message"`
-- **Then:** stdout contains the full assembled `claude` command; no subprocess is spawned; output includes all default flags (`-c`, `--dangerously-skip-permissions`, `--chrome`, `--effort max`, ultrathink suffix)
+- **Then:** stdout contains the full assembled command starting with `env -u CLAUDECODE claude` (default: CLAUDECODE removal is visible in output per WYSIWYG invariant — BUG-246 fix); no subprocess is spawned; output includes all default flags (`--dangerously-skip-permissions`, `--chrome`, `--effort max`, ultrathink suffix)
 - **Exit:** 0
 
 ### US-2: all injected defaults visible

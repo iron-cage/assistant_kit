@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_runner_core
-  node_count: 8
-  edge_count: 22
+  node_count: 11
+  edge_count: 31
   component_count: 1
-  generated: 2026-04-07
+  generated: 2026-06-06
 
 nodes:
   - id: pattern/001
@@ -34,6 +34,21 @@ nodes:
   - id: feature/003
     file: feature/003_describe.md
     label: Describe
+    entity: feature
+
+  - id: feature/004
+    file: feature/004_run_isolated.md
+    label: Run Isolated
+    entity: feature
+
+  - id: feature/005
+    file: feature/005_stdin_file.md
+    label: Stdin File
+    entity: feature
+
+  - id: feature/006
+    file: feature/006_unset_claudecode.md
+    label: Unset CLAUDECODE
     entity: feature
 
   - id: invariant/001
@@ -119,6 +134,42 @@ edges:
     to: api/001
     via: cross_references
 
+  - from: feature/003
+    to: feature/006
+    via: cross_references
+
+  - from: feature/004
+    to: invariant/001
+    via: cross_references
+
+  - from: feature/005
+    to: pattern/001
+    via: cross_references
+
+  - from: feature/005
+    to: api/001
+    via: cross_references
+
+  - from: feature/005
+    to: feature/002
+    via: cross_references
+
+  - from: feature/006
+    to: pattern/001
+    via: cross_references
+
+  - from: feature/006
+    to: api/001
+    via: cross_references
+
+  - from: feature/006
+    to: feature/003
+    via: cross_references
+
+  - from: feature/006
+    to: feature/004
+    via: cross_references
+
   - from: invariant/001
     to: feature/001
     via: cross_references
@@ -138,7 +189,7 @@ edges:
 components:
   - id: 1
     label: Main corpus
-    size: 8
+    size: 11
     isolated: false
     nodes:
       - pattern/001
@@ -147,6 +198,9 @@ components:
       - feature/001
       - feature/002
       - feature/003
+      - feature/004
+      - feature/005
+      - feature/006
       - invariant/001
       - invariant/002
 

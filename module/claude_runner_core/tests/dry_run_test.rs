@@ -3,18 +3,18 @@
 //! ## Purpose
 //!
 //! Verify `with_dry_run()` short-circuits execution and `describe_compact()` returns
-//! only the `claude ...` invocation line (without any leading `cd /dir` line).
+//! only the invocation line (without any leading `cd /dir` line).
 //!
 //! ## Root Cause (design invariant)
 //!
 //! `describe()` returns two lines when `working_directory` is set:
-//! `"cd /dir\nclaude ..."`. `describe_compact()` MUST extract only the last line
+//! `"cd /dir\nenv -u CLAUDECODE claude ..."`. `describe_compact()` MUST extract only the last line
 //! via `self.describe().lines().last()` to avoid the double-cd pitfall.
 //!
 //! ## Evidence
 //!
-//! - `describe_compact()` returns `"claude ..."` (single line, no cd prefix)
-//! - `describe_compact()` with `working_dir` set still returns only the claude line
+//! - `describe_compact()` returns `"env -u CLAUDECODE claude ..."` (single line, no cd prefix; BUG-246 fix)
+//! - `describe_compact()` with `working_dir` set still returns only the invocation line
 //! - `execute()` with `dry_run=true` returns `describe_compact()` as stdout without spawning
 //! - `execute()` with `dry_run=true` returns `exit_code` 0
 //! - `execute()` with `dry_run=true` returns empty stderr
@@ -28,6 +28,7 @@
 //! | no working dir | ✅ | ✅ | ✅ |
 //! | with working dir | ✅ | — | — |
 //! | dry_run=false | — | — | — |
+//! | CLAUDECODE env removal (BUG-246) | ✅ | — | — |
 
 use claude_runner_core::ClaudeCommand;
 
@@ -41,11 +42,19 @@ fn describe_compact_returns_single_line() {
   assert_eq!( compact.lines().count(), 1, "describe_compact must return exactly one line" );
 }
 
+// Fix(BUG-246): describe_compact() now starts with "env -u CLAUDECODE" (the default).
+// Root cause: describe() was WYSIWYG-broken — ClaudeCommand::new() unsets CLAUDECODE by default
+//   via env_remove(), but describe() showed "claude ..." hiding the env manipulation.
+// Pitfall: describe() and build_command() must stay in sync; any env_remove() in build_command()
+//   must appear explicitly in describe() output so trace/dry-run is WYSIWYG.
 #[test]
-fn describe_compact_starts_with_claude() {
+fn describe_compact_starts_with_env_unset_claudecode() {
   let cmd = ClaudeCommand::new();
   let compact = cmd.describe_compact();
-  assert!( compact.starts_with( "claude" ), "describe_compact must start with 'claude', got: {compact}" );
+  assert!(
+    compact.starts_with( "env -u CLAUDECODE" ),
+    "describe_compact must start with 'env -u CLAUDECODE' (default: unset_claudecode=true), got: {compact}"
+  );
 }
 
 #[test]
@@ -58,7 +67,10 @@ fn describe_compact_excludes_cd_prefix_when_working_dir_set() {
     .with_message( "hello" );
   let compact = cmd.describe_compact();
   assert!( !compact.contains( "cd " ), "describe_compact must not contain 'cd', got: {compact}" );
-  assert!( compact.starts_with( "claude" ), "describe_compact must start with 'claude', got: {compact}" );
+  assert!(
+    compact.starts_with( "env -u CLAUDECODE" ),
+    "describe_compact must start with 'env -u CLAUDECODE', got: {compact}"
+  );
 }
 
 #[test]
@@ -109,7 +121,10 @@ fn execute_dry_run_with_working_dir_compact_has_no_cd() {
     .execute()
     .expect( "dry_run execute must not fail" );
   assert!( !output.stdout.contains( "cd " ), "dry_run stdout must not contain 'cd'" );
-  assert!( output.stdout.starts_with( "claude" ), "dry_run stdout must start with 'claude'" );
+  assert!(
+    output.stdout.starts_with( "env -u CLAUDECODE" ),
+    "dry_run stdout must start with 'env -u CLAUDECODE', got: {}", output.stdout
+  );
 }
 
 // dry_run execute_interactive() tests
