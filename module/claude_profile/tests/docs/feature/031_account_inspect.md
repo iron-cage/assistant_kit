@@ -28,6 +28,8 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 | FT-20 | Unicode account name (IDN email) resolves via full email lookup | AC-12 |
 | FT-21 | Empty credentials file (0 bytes) shows unknown status, exits 0 | AC-18 |
 | FT-22 | Malformed credentials JSON (missing `oauthAccount`) shows unknown status, exits 0 | AC-19 |
+| FT-23 | `format` parameter is case-sensitive — uppercase `JSON` rejected, exits 1 | AC-13 |
+| FT-24 | Token with `expiresAt=0` (Unix epoch) shows status "expired", exits 0 | AC-01 |
 
 ### Test Case Index
 
@@ -55,8 +57,10 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 | FT-20 | Unicode account name (IDN email) resolves via full email lookup | AC-12 | Name Resolution |
 | FT-21 | Empty credentials file (0 bytes) shows unknown status, exits 0 | AC-18 | Error Handling |
 | FT-22 | Malformed credentials JSON (missing `oauthAccount`) shows unknown status, exits 0 | AC-19 | Error Handling |
+| FT-23 | `format` parameter is case-sensitive — uppercase `JSON` rejected, exits 1 | AC-13 | Format |
+| FT-24 | Token with `expiresAt=0` (Unix epoch) shows status "expired", exits 0 | AC-01 | Status |
 
-**Total:** 22 FT cases
+**Total:** 24 FT cases
 
 ---
 
@@ -200,7 +204,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **When:** `clp .account.inspect format::json`
 - **Then:** JSON output is valid; contains `memberships` array where each element has `index`, `billing_type`, `has_max`, `capabilities`, `selected`; the high-priority membership has `"selected": true`; the other has `"selected": false`. Also contains `account`, `status`, `expires_in_secs`, `tagged_id`, `uuid`, `billing_type`, `has_max`, `organization_name`, `organization_uuid`, `organization_role`, `workspace_uuid`, `workspace_name`, `data_source`.
 - **Exit:** 0
-- **Source fn:** `ai11_json_all_required_fields`, `ai12_json_data_source_snapshot_when_all_fail`, `ai05_format_invalid_exits_1`, `lim_it_ai19_valid_token_live_data_source_json`
+- **Source fn:** `ai11_json_all_required_fields`, `ai12_json_data_source_snapshot_when_all_fail`, `ai05_format_invalid_exits_1`, `ai30_format_case_sensitive_uppercase_exits_1`, `lim_it_ai19_valid_token_live_data_source_json`
 - **Source:** [031_account_inspect.md AC-13](../../../../docs/feature/031_account_inspect.md)
 
 ---
@@ -307,3 +311,27 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Exit:** 0
 - **Source fn:** `ai29_malformed_credentials_json_shows_unknown_status`
 - **Source:** [031_account_inspect.md AC-19](../../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-23: `format` parameter is case-sensitive — uppercase `JSON` rejected, exits 1
+
+- **Given:** A valid account `alice@acme.com` exists in the credential store.
+- **When:** `clp .account.inspect name::alice@acme.com format::JSON`
+- **Then:** Exit 1; stderr contains the invalid value or a reference to the `format` parameter.
+- **Note:** The parameter validator only accepts lowercase `"text"` and `"json"`. Case variants (`"JSON"`, `"Text"`) must be rejected, not silently accepted or mapped. This prevents silent fallback masking a user typo.
+- **Exit:** 1
+- **Source fn:** `ai30_format_case_sensitive_uppercase_exits_1`
+- **Source:** [031_account_inspect.md AC-13](../../../../docs/feature/031_account_inspect.md)
+
+---
+
+### FT-24: Token with `expiresAt=0` (Unix epoch) shows status "expired", exits 0
+
+- **Given:** `u@test.com.credentials.json` contains `{"oauthAccount":{"expiresAt":0,...}}` — `expiresAt` is present and zero (Unix epoch, 1970-01-01).
+- **When:** `clp .account.inspect name::u@test.com refresh::0`
+- **Then:** Exit 0; output contains `expired`. Output must NOT contain `unknown`.
+- **Note:** `expiresAt=0` is a valid timestamp (parseable integer). It must produce `"expired"`, not `"unknown"` (which is reserved for missing or unparseable `expiresAt`). This is the lower boundary of the expiry parser.
+- **Exit:** 0
+- **Source fn:** `ai31_expires_at_zero_shows_expired_status`
+- **Source:** [031_account_inspect.md AC-01](../../../../docs/feature/031_account_inspect.md)

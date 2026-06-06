@@ -42,6 +42,8 @@
 //! | ai27 | `ai27_unicode_account_name_resolves` | AC-12 | Name | P | no |
 //! | ai28 | `ai28_empty_credentials_file_shows_unknown_status` | AC-18 | Status | P | no |
 //! | ai29 | `ai29_malformed_credentials_json_shows_unknown_status` | AC-19 | Status | P | no |
+//! | ai30 | `ai30_format_case_sensitive_uppercase_exits_1` | AC-13 | Format | N | no |
+//! | ai31 | `ai31_expires_at_zero_shows_expired_status` | AC-01 | Status | P | no |
 //! | ai14 | `lim_it_ai14_identity_fields_from_endpoint_001` | AC-01 | Identity | P | yes |
 //! | ai15 | `lim_it_ai15_memberships_shown_with_count` | AC-02 | Memberships | P | yes |
 //! | ai16 | `lim_it_ai16_selected_marker_multi_membership` | AC-03,04 | Memberships | P | yes |
@@ -581,6 +583,57 @@ fn ai29_malformed_credentials_json_shows_unknown_status()
   assert!(
     json_text.contains( "\"status\":\"unknown\"" ),
     "JSON status must be \"unknown\" for malformed credentials, got:\n{json_text}",
+  );
+}
+
+#[ test ]
+/// AC-13: `format` parameter is case-sensitive — uppercase `JSON` is rejected → exit 1.
+///
+/// The format parameter only accepts lowercase `"text"` and `"json"`.
+/// Verifies the argument validator rejects unrecognised values (including
+/// same-word different-case) rather than silently falling back to text output.
+fn ai30_format_case_sensitive_uppercase_exits_1()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, false );
+  let out  = run_inspect( home, &[ "name::alice@acme.com", "format::JSON" ] );
+  assert_exit( &out, 1 );
+  let err  = stderr( &out );
+  assert!(
+    err.contains( "JSON" ) || err.contains( "format" ) || err.contains( "invalid" ),
+    "must report invalid format value, got: {err}",
+  );
+}
+
+#[ test ]
+/// AC-01: Token with `expiresAt=0` (Unix epoch) → Status shows "expired".
+///
+/// Tests the lower boundary of the expiry time parser. An epoch timestamp is
+/// far in the past so the status must be "expired", not "unknown".
+/// Distinguishes `expiresAt` present-but-zero from `expiresAt` absent.
+fn ai31_expires_at_zero_shows_expired_status()
+{
+  let dir   = TempDir::new().unwrap();
+  let home  = dir.path().to_str().unwrap();
+  let store = credential_store( dir.path() );
+  std::fs::create_dir_all( &store ).unwrap();
+  // `expiresAt=0` is a valid timestamp (Unix epoch, 1970-01-01), always in the past.
+  std::fs::write(
+    store.join( "u@test.com.credentials.json" ),
+    r#"{"oauthAccount":{"expiresAt":0,"subscriptionType":"pro","rateLimitTier":"standard"}}"#,
+  ).unwrap();
+
+  let out  = run_inspect( home, &[ "name::u@test.com", "refresh::0" ] );
+  assert_exit( &out, 0 );
+  let text = stdout( &out );
+  assert!(
+    text.contains( "expired" ),
+    "expiresAt=0 must show status 'expired' (not 'unknown'), got:\n{text}",
+  );
+  assert!(
+    !text.contains( "unknown" ),
+    "expiresAt=0 must not show 'unknown' — zero timestamp IS parseable, got:\n{text}",
   );
 }
 

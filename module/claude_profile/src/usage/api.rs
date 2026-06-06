@@ -248,10 +248,14 @@ pub( crate ) fn pre_switch_touch_ctx(
 ///
 /// When the quota fetch failed entirely (`PreSwitchOutcome::Unavailable`), this
 /// function is not called — the snapshot model from `switch_account()` is kept as-is.
+// Fix(BUG-244): apply_model_override was never called from usage_routine; trace prefix was hardcoded.
+// Root cause: function had no label param; caller context (account.use vs usage) was indistinguishable.
+// Pitfall: insert the usage_routine call BEFORE row-filter pipeline — filters can remove is_current from slice.
 pub( crate ) fn apply_model_override(
   quota : &OauthUsageData,
   paths : &crate::ClaudePaths,
   trace : bool,
+  label : &str,
   name  : &str,
 )
 {
@@ -261,7 +265,7 @@ pub( crate ) fn apply_model_override(
     let overrode = crate::account::override_session_model_to_opus( paths );
     if overrode && trace
     {
-      eprintln!( "[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
+      eprintln!( "[trace] {label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
     }
   }
 }
@@ -322,7 +326,7 @@ pub( crate ) fn apply_post_switch_touch(
   let imodel = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
   let effort = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
   // Fix(BUG-225): delegate to apply_model_override for the Sonnet→Opus check.
-  apply_model_override( &ctx.quota, paths, trace, name );
+  apply_model_override( &ctx.quota, paths, trace, "account.use", name );
   // Build a minimal AccountQuota to reuse the existing resolve_model() path.
   let aq = AccountQuota
   {
@@ -445,6 +449,22 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
     for aq in &mut accounts
     {
       apply_touch( aq, &credential_store, claude_paths.as_ref(), params.trace, params.imodel, params.effort );
+    }
+  }
+
+  // ── Session-model override (BUG-244: .usage path, AC-32) ──────────────────
+  // Must run BEFORE row-filter pipeline — filters can remove is_current from slice.
+  {
+    let claude_paths = crate::ClaudePaths::new();
+    if let Some( ref claude_paths ) = claude_paths
+    {
+      if let Some( current ) = accounts.iter().find( |aq| aq.is_current )
+      {
+        if let Ok( ref data ) = current.result
+        {
+          apply_model_override( data, claude_paths, params.trace, "usage", &current.name );
+        }
+      }
     }
   }
 
@@ -630,12 +650,229 @@ mod tests
       seven_day        : None,
       seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
     };
-    apply_model_override( &quota, &paths, false, "test-account" );
+    apply_model_override( &quota, &paths, false, "account.use", "test-account" );
 
     let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
     assert!(
       content.contains( "claude-opus-4-6" ),
       "apply_model_override must write opus to settings.json when 7d(Son) is 90% consumed (10% left), got: {content}",
+    );
+  }
+
+  // ── BUG-244 tests: label param + usage_routine wiring ─────────────────────
+
+  #[ test ]
+  fn t01_model_override_fires_when_sonnet_below_threshold()
+  {
+    use claude_quota::{ OauthUsageData, PeriodUsage };
+    let dir   = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( dir.path() );
+    std::fs::create_dir_all( paths.base() ).unwrap();
+    let quota = OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
+    };
+    apply_model_override( &quota, &paths, false, "usage", "test-account" );
+    let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
+    assert!(
+      content.contains( "claude-opus-4-6" ),
+      "must write opus when 7d(Son) utilization=90% (10% left), got: {content}",
+    );
+  }
+
+  #[ test ]
+  fn t02_model_override_skips_when_sonnet_above_threshold()
+  {
+    use claude_quota::{ OauthUsageData, PeriodUsage };
+    let dir   = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( dir.path() );
+    std::fs::create_dir_all( paths.base() ).unwrap();
+    let quota = OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : Some( PeriodUsage { utilization : 70.0, resets_at : None } ),
+    };
+    apply_model_override( &quota, &paths, false, "usage", "test-account" );
+    assert!(
+      !paths.settings_file().exists(),
+      "must NOT write settings.json when 7d(Son) utilization=70% (30% left)",
+    );
+  }
+
+  #[ test ]
+  fn t03_model_override_skips_when_already_opus()
+  {
+    use claude_quota::{ OauthUsageData, PeriodUsage };
+    let dir   = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( dir.path() );
+    std::fs::create_dir_all( paths.base() ).unwrap();
+    // Pre-write settings.json with opus already set.
+    std::fs::write( paths.settings_file(), r#"{"model":"claude-opus-4-6"}"# ).unwrap();
+    let quota = OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
+    };
+    apply_model_override( &quota, &paths, false, "usage", "test-account" );
+    let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
+    assert!(
+      content.contains( "claude-opus-4-6" ),
+      "settings.json must still contain opus after call when already opus, got: {content}",
+    );
+    assert!(
+      !content.contains( "claude-sonnet" ),
+      "must not downgrade to sonnet, got: {content}",
+    );
+  }
+
+  #[ test ]
+  fn t04_model_override_skips_on_error_result()
+  {
+    // Guard test: usage_routine must guard apply_model_override with result.is_ok(),
+    // since OauthUsageData is unavailable for Err accounts.
+    let src      = include_str!( "api.rs" );
+    let fn_start = src.find( "pub fn usage_routine" ).expect( "usage_routine not found" );
+    let call_rel = src[ fn_start.. ]
+      .find( "apply_model_override(" )
+      .expect( "BUG-244: apply_model_override must be called in usage_routine" );
+    // before_call: from fn_start to call site — ASCII boundaries, no multibyte risk.
+    let before_call = &src[ fn_start .. fn_start + call_rel ];
+    assert!(
+      before_call.contains( "is_ok()" ) || before_call.contains( "Ok( ref " ),
+      "apply_model_override call in usage_routine must be guarded by result.is_ok()",
+    );
+  }
+
+  #[ test ]
+  fn t05_apply_model_override_absent_from_usage_routine_before_fix()
+  {
+    let src      = include_str!( "api.rs" );
+    let fn_start = src.find( "pub fn usage_routine" ).expect( "usage_routine not found" );
+    let body_end = {
+      let after = &src[ fn_start + 1.. ];
+      let a     = after.find( "\npub fn " ).unwrap_or( after.len() );
+      let b     = after.find( "\n#[ cfg( t" ).unwrap_or( after.len() );
+      let c     = after.find( "\n#[cfg(t" ).unwrap_or( after.len() );
+      fn_start + 1 + a.min( b ).min( c )
+    };
+    let body       = &src[ fn_start..body_end ];
+    let call_count = body.matches( "apply_model_override(" ).count();
+    assert_eq!(
+      call_count, 1,
+      "apply_model_override must be called exactly once in usage_routine body",
+    );
+  }
+
+  #[ test ]
+  fn t06_model_override_skips_for_non_current_account()
+  {
+    // Guard test: usage_routine must only call apply_model_override for is_current accounts.
+    let src      = include_str!( "api.rs" );
+    let fn_start = src.find( "pub fn usage_routine" ).expect( "usage_routine not found" );
+    let call_rel = src[ fn_start.. ]
+      .find( "apply_model_override(" )
+      .expect( "BUG-244: apply_model_override must be called in usage_routine" );
+    // before_call: from fn_start to call site — ASCII boundaries, no multibyte risk.
+    let before_call = &src[ fn_start .. fn_start + call_rel ];
+    assert!(
+      before_call.contains( "is_current" ),
+      "apply_model_override call in usage_routine must be guarded by is_current check",
+    );
+  }
+
+  #[ test ]
+  fn t07_model_override_skips_at_exact_20pct_boundary()
+  {
+    use claude_quota::{ OauthUsageData, PeriodUsage };
+    let dir   = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( dir.path() );
+    std::fs::create_dir_all( paths.base() ).unwrap();
+    // utilization=80.0 → sonnet_left = 100.0 - 80.0 = 20.0; 20.0 < 20.0 == false.
+    let quota = OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : Some( PeriodUsage { utilization : 80.0, resets_at : None } ),
+    };
+    apply_model_override( &quota, &paths, false, "usage", "test-account" );
+    assert!(
+      !paths.settings_file().exists(),
+      "must NOT write at exact 20% boundary (utilization=80.0)",
+    );
+  }
+
+  #[ test ]
+  fn t08_model_override_trace_label_is_usage()
+  {
+    use claude_quota::{ OauthUsageData, PeriodUsage };
+    use std::io::Read;
+    let dir   = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( dir.path() );
+    std::fs::create_dir_all( paths.base() ).unwrap();
+    let quota = OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
+    };
+    let mut buf = gag::BufferRedirect::stderr().unwrap();
+    apply_model_override( &quota, &paths, true, "usage", "test-account" );
+    let mut output = String::new();
+    buf.read_to_string( &mut output ).unwrap();
+    assert!(
+      output.contains( "[trace] usage" ),
+      "trace output must contain '[trace] usage' when label='usage', got: {output}",
+    );
+    assert!(
+      !output.contains( "[trace] account.use" ),
+      "trace output must NOT contain '[trace] account.use' when label='usage', got: {output}",
+    );
+  }
+
+  /// # MRE: BUG-244 — `usage_routine` never called `apply_model_override`
+  ///
+  /// ## Root Cause
+  /// `usage_routine()` in `src/usage/api.rs` had no call to `apply_model_override()`.
+  /// The function existed and worked (called from `.account.use` path) but was never
+  /// invoked from the `.usage` command path.
+  ///
+  /// ## Why Not Caught
+  /// No test exercised the full `usage_routine()` → `apply_model_override()` wiring.
+  /// Unit tests for `apply_model_override` passed trivially (calling it directly).
+  ///
+  /// ## Fix Applied
+  /// Added `apply_model_override( data, claude_paths, params.trace, "usage", &current.name )`
+  /// in `usage_routine()` after the touch loop, before the row-filter pipeline,
+  /// guarded by `aq.is_current && aq.result.is_ok()`.
+  /// Also added `label: &str` parameter to `apply_model_override` (was hardcoded "account.use").
+  ///
+  /// ## Prevention
+  /// T05 structural test: grep of `usage_routine` body must contain exactly one call.
+  ///
+  /// ## Pitfall
+  /// Insert the call BEFORE the row-filter pipeline (`only_next`/`only_active`/etc.) — those
+  /// filters can remove the `is_current` entry from the slice, causing a silent no-op.
+  #[ doc = "bug_reproducer(BUG-244)" ]
+  #[ test ]
+  fn mre_bug244_usage_routine_never_calls_apply_model_override()
+  {
+    let src      = include_str!( "api.rs" );
+    let fn_start = src.find( "pub fn usage_routine" ).expect( "usage_routine not found" );
+    let body_end = {
+      let after = &src[ fn_start + 1.. ];
+      let a     = after.find( "\npub fn " ).unwrap_or( after.len() );
+      let b     = after.find( "\n#[ cfg( t" ).unwrap_or( after.len() );
+      let c     = after.find( "\n#[cfg(t" ).unwrap_or( after.len() );
+      fn_start + 1 + a.min( b ).min( c )
+    };
+    let body = &src[ fn_start..body_end ];
+    assert!(
+      body.contains( "apply_model_override(" ),
+      "BUG-244: apply_model_override must be called from usage_routine — was absent before fix",
     );
   }
 }

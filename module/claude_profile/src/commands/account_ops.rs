@@ -95,7 +95,7 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     }
     crate::usage::PreSwitchOutcome::AlreadyActive { quota } =>
     {
-      crate::usage::apply_model_override( &quota, &paths, trace, &name );
+      crate::usage::apply_model_override( &quota, &paths, trace, "account.use", &name );
       if trace { crate::usage::trace_already_active( &name, quota, &imodel_str, &effort_str ) }
     }
     crate::usage::PreSwitchOutcome::Unavailable => {}
