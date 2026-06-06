@@ -5,7 +5,7 @@ mod fence;
 mod credential;
 
 use super::VerbosityLevel;
-use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel, signal_exit_code };
+use claude_runner_core::{ ClaudeCommand, EffortLevel, ErrorKind, IsolatedModel, signal_exit_code };
 use parse::CliArgs;
 use cred_parse::{
   parse_isolated_args, parse_refresh_args,
@@ -276,14 +276,26 @@ fn run_print_mode(
 
   if !output.stderr.is_empty() { eprint!( "{}", output.stderr ); }
 
-  // Fix(BUG-037): detect silent failure (empty stderr + non-zero exit — e.g. 429 rate limit)
-  // Root cause: prior code gated all diagnostics on !stderr.is_empty(); 429 exits non-zero with
-  //   empty stderr, causing the wrapper to produce zero output and swallow the failure silently.
-  // Pitfall: `claude --print` on 429 writes the rate-limit reason only to its JSONL session file,
-  //   not to stderr. Never assume stderr is populated when a subprocess exits non-zero.
-  if output.stderr.is_empty() && output.exit_code != 0 && verbosity.shows_errors()
+  // Fix(BUG-037): classify non-zero exit and emit labeled per-type diagnostic.
+  // Root cause: prior code emitted a generic "possible rate limit" message for ALL silent
+  //   failures, hiding the actual failure mode (rate limit vs auth vs API error vs signal).
+  // Pitfall: classify_error() scans stdout AND stderr — `claude --print` on rate-limit
+  //   writes the reason only to its JSONL session file, so stderr is often empty; the
+  //   stdout scan ensures auth/rate-limit patterns are still caught.
+  if let Some( kind ) = output.classify_error()
   {
-    eprintln!( "Error: Claude exited without output (possible rate limit or quota exhaustion)" );
+    if verbosity.shows_errors()
+    {
+      let label = match kind
+      {
+        ErrorKind::RateLimit => "rate limit",
+        ErrorKind::ApiError  => "API error",
+        ErrorKind::AuthError => "auth error",
+        ErrorKind::Signal    => "terminated by signal",
+        ErrorKind::Unknown   => "unknown error",
+      };
+      eprintln!( "Error: {label} (exit {})", output.exit_code );
+    }
   }
 
   // Fix(BUG-239): propagate the exact subprocess exit code instead of collapsing to 1.

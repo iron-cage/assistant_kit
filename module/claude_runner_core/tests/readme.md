@@ -38,9 +38,10 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `terminal_ide_params_test.rs` | Test terminal and IDE parameter builder methods (TSK-079) |
 | `pattern_e_empty_and_edge_cases_test.rs` | Test Pattern E empty-iterator bug fix and float edge cases |
 | `isolated_test.rs` | Test IsolatedRunResult fields and RunnerError Display (T01–T08) |
+| `classify_error_test.rs` | Test classify_error() and ErrorKind variants (T01–T12, BUG-037) |
 | `docs/` | Test surface spec files (feature behavioral requirement cases) |
 
-## Organization (32 test files)
+## Organization (33 test files)
 
 Tests organized by functional domain and architectural principles (see Responsibility Table above).
 

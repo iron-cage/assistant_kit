@@ -81,7 +81,7 @@ pub mod session_dir;
 pub use crate::command::{ ClaudeCommand, claude_version };
 pub use crate::exit_code::signal_exit_code;
 pub use crate::isolated::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLATED_DEFAULT_MODEL };
-pub use crate::types::{ ActionMode, EffortLevel, ExecutionOutput, InputFormat, LogLevel, OutputFormat, PermissionMode };
+pub use crate::types::{ ActionMode, EffortLevel, ErrorKind, ExecutionOutput, InputFormat, LogLevel, OutputFormat, PermissionMode };
 pub use crate::session_dir::{ SessionManager, Strategy };
 
 #[ cfg( feature = "enabled" ) ]

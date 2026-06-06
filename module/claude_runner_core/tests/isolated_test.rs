@@ -14,7 +14,7 @@
 //! | T05 | `RunnerError::Timeout { secs }` Display               | contains "timed out" + secs value    | no    |
 //! | T06 | `RunnerError::Io(String)` Display                     | contains the reason string           | no    |
 //! | T07 | `run_isolated()` with valid creds → exit_code -1/0    | `IsolatedRunResult` returned         | yes   |
-//! | T08 | `run_isolated()` with timeout 0 → `Err(Timeout)`      | `RunnerError::Timeout { secs: 0 }`   | yes   |
+//! | T08 | `run_isolated()` with timeout 0 → `Err(TimeoutWithOutput)` | `secs: 0`, `partial_stdout: ""`  | yes   |
 //! | T09 | timeout-with-credentials sentinel: `exit_code = -1`   | `Ok` with `credentials: Some(...)`   | no    |
 //! | T10 | `IsolatedModel::model_id()` all 3 variants + constant | correct `Option<&str>` per variant   | no    |
 
@@ -153,9 +153,10 @@ fn t07_lim_it_run_isolated_returns_result()
 
 // ── T08 ───────────────────────────────────────────────────────────────────────
 
-/// T08 (`lim_it`): `run_isolated()` with timeout 0 returns `Err(RunnerError::Timeout)`.
+/// T08 (`lim_it`): `run_isolated()` with timeout 0 returns `Err(RunnerError::TimeoutWithOutput)`.
 ///
 /// A 0-second timeout should expire before any subprocess can complete.
+/// After BUG-243 fix, timeout always returns `TimeoutWithOutput` (`partial_stdout` may be empty).
 #[ cfg( feature = "enabled" ) ]
 #[ test ]
 fn t08_lim_it_run_isolated_timeout()
@@ -178,11 +179,11 @@ fn t08_lim_it_run_isolated_timeout()
   let result = run_isolated( creds, vec![ "--version".to_string() ], 0, IsolatedModel::Default );
   match result
   {
-    Err( RunnerError::Timeout { secs } ) =>
+    Err( RunnerError::TimeoutWithOutput { secs, .. } ) =>
     {
       assert_eq!( secs, 0, "Timeout secs must match the given timeout, got: {secs}" );
     }
-    other => panic!( "expected Err(Timeout), got: {other:?}" ),
+    other => panic!( "expected Err(TimeoutWithOutput), got: {other:?}" ),
   }
 }
 

@@ -30,6 +30,25 @@ If either workspace is relocated, the path deps in the consumer workspace's `Car
 
 **Exposed crates:** Layer 1 core crates (`claude_profile_core`, `claude_runner_core`, `claude_version_core`, `claude_assets_core`) and Layer 2 library facade (`dream`) are the natural consumer entry points. The Layer 2 CLI crates (`claude_version`, `claude_storage`, `assistant`, etc.) are standalone CLI tools not intended for library consumers.
 
+**Error classification on `ExecutionOutput`** (`claude_runner_core`):
+
+After calling `ClaudeCommand::execute()`, consumers can classify the failure without parsing CLR's stderr text:
+
+```rust
+let output = cmd.execute()?;
+match output.classify_error()
+{
+  Some( ErrorKind::RateLimit ) => { /* wait ~60 s, retry or rotate account */ }
+  Some( ErrorKind::AuthError ) => { /* stop retrying; re-authenticate */ }
+  Some( ErrorKind::ApiError )  => { /* transient API error; retry once with backoff */ }
+  Some( ErrorKind::Signal )    => { /* process killed by signal (exit 130/143) */ }
+  Some( ErrorKind::Unknown )   => { /* non-zero exit, no known pattern */ }
+  None                         => { /* success — output.exit_code == 0 */ }
+}
+```
+
+`ErrorKind` and `classify_error()` are defined in `claude_runner_core::types`. Classification priority: pattern match in stderr/stdout first (specific error strings take precedence), then exit code semantics (exit `2` → `RateLimit`, exit `130`/`143` → `Signal`). When `output.exit_code == 0`, `classify_error()` always returns `None`.
+
 ### Error Handling
 
 If the co-location requirement is not met, `cargo build` in the consumer workspace fails with "no such file or directory" on the path dep. Fix: ensure both repos are siblings under the same parent, or update the path in the consumer workspace's `Cargo.toml`.
