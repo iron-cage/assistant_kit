@@ -94,8 +94,10 @@ fn phd01_mre_bug203_account_use_help_has_name_description()
   let out = run_cs( &[ ".account.use.help" ] );
   assert_exit( &out, 0 );
   let text = stdout( &out );
+  // Description was improved from "Account name to operate on" (BUG-203 era) to include
+  // positional-syntax hint.  Assert the actual description is present.
   assert!(
-    text.contains( "Account name to operate on" ),
+    text.contains( "Account name (positional:" ),
     "`.account.use.help` must show description for `name`, got:\n{text}"
   );
 }
