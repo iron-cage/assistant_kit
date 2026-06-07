@@ -67,7 +67,7 @@ cargo run -p claude_runner -- --dry-run --dir /tmp "test"
 **Expected:**
 - Prints env var lines (`CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`, etc.)
 - Prints: `cd /tmp`
-- Prints: `claude --dangerously-skip-permissions --chrome --effort max --print -c "test\n\nultrathink"` (bypass, chrome, effort max, print, and `-c` appear automatically; ultrathink suffix added)
+- Prints: `env -u CLAUDECODE claude --dangerously-skip-permissions --chrome --effort max --print "test\n\nultrathink"` (bypass, chrome, effort max, print, ultrathink suffix; `env -u CLAUDECODE` prefix from Feature 006; `-c` omitted because `/tmp` has no session history for this project per BUG-214 fix — `-c` appears only when `$HOME/.claude/projects/{encoded(dir)}/` is non-empty)
 - Does NOT invoke Claude binary
 - Exit code 0
 
@@ -580,7 +580,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-88:** `--max-sessions 5 --dry-run "test"` → exit 0
 - **CC-89:** `--max-sessions 0 --dry-run "test"` → exit 0 (gate disabled)
 - **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 10 used)
-- Automated in: `output_file_test.rs`, `expect_validation_test.rs`, `param_edge_cases_test.rs`, `env_var_test.rs`
+- Automated in: `output_file_test.rs`, `expect_validation_test.rs`, `param_edge_cases_test.rs`, `env_var_ext_test.rs`
 
 ### Env vars for expect/output-file params
 
@@ -601,7 +601,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-99:** `--file /etc/hostname --dry-run "test"` → dry-run shows `< /etc/hostname` as stdin redirect, NOT `--file` flag
 - **CC-100:** `--strip-fences --dry-run "test"` → dry-run shows no `--strip-fences` in claude command (runner post-processing)
 - **CC-101:** `--keep-claudecode --dry-run "test"` → dry-run shows `claude ...` WITHOUT `env -u CLAUDECODE` prefix
-- Automated in: `user_story_test.rs`, `env_var_test.rs`, `fence_test.rs`
+- Automated in: `user_story_output_test.rs`, `env_var_ext_test.rs`, `fence_test.rs`
 
 ### New features: retry-on-rate-limit, retry-delay, timeout (run/ask)
 
@@ -677,3 +677,28 @@ Three categories of clippy errors found when running Level 3 (`-D warnings`):
 3. `doc_markdown` errors — 17 in `retry_rate_limit_test.rs`, 8 in `timeout_test.rs`; bare identifiers (`CLR_RETRY_ON_RATE_LIMIT`, `QuotaExhausted`, `classify_error()`, `ERROR_PATTERNS`, `RateLimit`, `CLR_RETRY_DELAY`, `CLR_TIMEOUT`, `spawn_piped`, `try_wait`) in `///` and `//!` doc comments needed backtick wrapping.
 
 Root cause: new test files written without running full clippy sweep. Prevention: run Level 3 immediately after adding doc comments in test files.
+
+### NC-9: `clr isolated` Without `--creds` Auto-Detects Default Credentials
+
+```sh
+clr isolated "some task"
+```
+
+**Expected:** No "creds required" error. `apply_cred_env_vars` falls back to `ClaudePaths::new().credentials_file()` (`~/.claude/.credentials.json`). If the file exists the subprocess runs; if not, exits 1 with "cannot read credentials file". `--creds` is listed as `(required)` in help, meaning credentials are required in some form — not that the CLI flag is mandatory.
+
+### NC-10: `clr refresh` Without `--creds` On Machine With Default Credentials
+
+```sh
+clr refresh
+```
+
+**Expected:** If `~/.claude/.credentials.json` exists: subprocess runs with `--print "."`, Claude responds "." (ISOLATED_CLAUDE_MD instruction: single-char input → reply with "."), exits 0. Uses real API credits. Confirms auto-detection path works end-to-end.
+
+### NC-11: `clr isolated --trace --creds /nonexistent "msg"` — Trace Fires Before Error
+
+```sh
+clr isolated --trace --creds /nonexistent "test"
+```
+
+**Expected:** Trace printed to stderr first (`# clr isolated`, `# creds: /nonexistent`, command preview), THEN `Error: cannot read credentials file '/nonexistent'`. Exit 1. Trace fires before any I/O (from `emit_credential_trace` being called before `read_to_string`).
+

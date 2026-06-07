@@ -22,6 +22,21 @@ use core::fmt;
 /// Default model ID used by [`IsolatedModel::Default`] for real user tasks.
 pub const ISOLATED_DEFAULT_MODEL : &str = "claude-opus-4-6";
 
+/// CLAUDE.md content written to the isolated temp HOME before subprocess spawn.
+///
+/// Instructs the subprocess to respond immediately without extended thinking,
+/// no preamble, and no tool use — preventing interactive blocking in print mode.
+pub const ISOLATED_CLAUDE_MD : &str = "\
+# Isolated subprocess\n\n\
+Execute the given task immediately and exit.\n\n\
+- Do not use extended thinking — respond directly and concisely.\n\
+- Do not ask clarifying questions — act on the message as given.\n\
+- Do not request human confirmation for any operation.\n\
+- Do not explain your reasoning or narrate your steps.\n\
+- Do not use tool calls — produce the answer from your own knowledge.\n\
+- Output only the direct result of the task; no preamble, no summary.\n\
+- If the input is a single character or whitespace only, reply with a single period.\n";
+
 /// Default model ID for OAuth credential-refresh pings (trivial `"."` prompt).
 pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-4-6";
 
@@ -189,14 +204,7 @@ pub fn run_isolated
   // Without user-level behavioral instructions the subprocess may ask clarifying
   // questions, request confirmation, or produce verbose narration — all of which
   // block the subprocess permanently in non-interactive print mode.
-  let claude_md_content = "# Isolated subprocess\n\n\
-    Execute the given task immediately and exit.\n\n\
-    - Do not ask clarifying questions \u{2014} act on the message as given.\n\
-    - Do not request human confirmation for any operation.\n\
-    - Do not explain your reasoning or narrate your steps.\n\
-    - Output only the direct result of the task; no preamble, no summary.\n\
-    - If the input is a single character or whitespace only, reply with a single period.\n";
-  std::fs::write( claude_dir.join( "CLAUDE.md" ), claude_md_content )
+  std::fs::write( claude_dir.join( "CLAUDE.md" ), ISOLATED_CLAUDE_MD )
     .map_err( |e| RunnerError::Io( e.to_string() ) )?;
 
   // Step 3: Build command — prepend --model flag then user args

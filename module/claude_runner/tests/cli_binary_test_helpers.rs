@@ -4,9 +4,14 @@
 //!
 //! | Helper | Used By |
 //! |--------|---------|
-//! | `run_cli` | `cli_args_test`, `dry_run_test`, `ultrathink_args_test`, `effort_args_test`, `param_edge_cases_test`, `param_extended_flags_test`, `param_group_test`, `execution_mode_test`, `verbosity_test`, `ask_command_test`, `user_story_test` |
-//! | `run_cli_with_env` | `env_var_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test` |
+//! | `run_cli` | `cli_args_test`, `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `effort_args_test`, `param_edge_cases_test`, `param_extended_flags_test`, `param_group_test`, `execution_mode_test`, `verbosity_test`, `ask_command_test`, `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test` |
+//! | `run_cli_with_env` | `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test` |
 //! | `make_session_dir` | `cli_args_test`, `ultrathink_args_test`, `user_story_test` |
+//! | `exit_code` | `refresh_test`, `bug_reproducers_239_244_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_test` |
+//! | `stderr_str` | `refresh_test`, `bug_reproducers_239_244_test`, `invariant_trace_universality_test`, `error_classification_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test` |
+//! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test` |
+//! | `make_creds_file` | `refresh_test`, `param_trace_edge_cases_test`, `invariant_trace_universality_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test` |
+//! | `fake_claude_dir` (unix) | `bug_reproducers_239_244_test`, `error_classification_test` |
 //!
 //! # Testing Techniques
 //!
@@ -91,4 +96,79 @@ pub fn make_session_dir() -> ( tempfile::TempDir, String )
     .expect( "failed to write dummy session file" );
   let path = dir.path().to_str().expect( "session dir path must be valid UTF-8" ).to_owned();
   ( dir, path )
+}
+
+/// Extract the process exit code from a subprocess `Output`.
+///
+/// Returns `-1` when the process was terminated by a signal (no numeric exit code).
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn exit_code( o : &std::process::Output ) -> i32 { o.status.code().unwrap_or( -1 ) }
+
+/// Extract `stderr` as a UTF-8 string from a subprocess `Output`.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn stderr_str( o : &std::process::Output ) -> String
+{
+  String::from_utf8_lossy( &o.stderr ).to_string()
+}
+
+/// Extract `stdout` as a UTF-8 string from a subprocess `Output`.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn stdout_str( o : &std::process::Output ) -> String
+{
+  String::from_utf8_lossy( &o.stdout ).to_string()
+}
+
+/// Write `content` to a new `NamedTempFile` and return it.
+///
+/// The caller must keep the returned file alive for the duration of the test;
+/// dropping it deletes the file on disk.
+///
+/// # Panics
+///
+/// Panics if the temp file cannot be created or written.
+#[inline]
+#[must_use]
+#[allow(dead_code)]
+pub fn make_creds_file( content : &str ) -> tempfile::NamedTempFile
+{
+  use std::io::Write as _;
+  let mut f = tempfile::NamedTempFile::new().expect( "failed to create temp creds file" );
+  f.write_all( content.as_bytes() ).expect( "failed to write creds content" );
+  f
+}
+
+/// Create a temp dir containing a `claude` shell script with the given body.
+///
+/// Returns `(TempDir, path_val)` where `path_val` prepends the dir to `$PATH`
+/// for injection into subprocess env.  The caller must keep the `TempDir` alive
+/// for the duration of the test; dropping it deletes the script.
+///
+/// # Panics
+///
+/// Panics if the temp directory, script file, or permissions cannot be set.
+#[cfg(unix)]
+#[inline]
+#[must_use]
+#[allow(dead_code)]
+pub fn fake_claude_dir( body : &str ) -> ( tempfile::TempDir, String )
+{
+  use std::os::unix::fs::PermissionsExt as _;
+  let dir  = tempfile::TempDir::new().expect( "tmpdir" );
+  let path = dir.path().join( "claude" );
+  let script = format!( "#!/bin/sh\n{body}\n" );
+  std::fs::write( &path, script.as_bytes() ).expect( "write fake-claude" );
+  std::fs::set_permissions( &path, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake-claude" );
+  let path_val = format!(
+    "{}:{}",
+    dir.path().display(),
+    std::env::var( "PATH" ).unwrap_or_default(),
+  );
+  ( dir, path_val )
 }

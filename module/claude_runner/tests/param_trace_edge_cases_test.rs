@@ -22,16 +22,7 @@
 //! - S60: `isolated --creds /nonexistent --trace "msg"` → trace fires on stderr before creds-read failure (bug reproducer)
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
-use std::io::Write as _;
-use tempfile::NamedTempFile;
-
-fn make_creds_file( content : &str ) -> NamedTempFile
-{
-  let mut f = NamedTempFile::new().expect( "failed to create temp creds file" );
-  f.write_all( content.as_bytes() ).expect( "failed to write creds content" );
-  f
-}
+use cli_binary_test_helpers::{ make_creds_file, run_cli };
 
 // S04: --trace without --dry-run → stderr has command; exit 1 (claude absent)
 #[ test ]

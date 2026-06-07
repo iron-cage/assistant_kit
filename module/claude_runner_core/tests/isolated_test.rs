@@ -240,20 +240,20 @@ fn t09_timeout_with_changed_credentials_result_type()
 // ── T10 ───────────────────────────────────────────────────────────────────────
 
 /// T10: `IsolatedModel::model_id()` returns the correct `Option<&str>` for all
-/// three variants, and `ISOLATED_DEFAULT_MODEL` equals `"claude-sonnet-4-6"`.
+/// three variants, and `ISOLATED_DEFAULT_MODEL` equals `"claude-opus-4-6"`.
 ///
 /// Covers FT-1 through FT-4 from `tests/docs/feature/004_run_isolated.md`:
 /// - FT-1: `Default.model_id()` → `Some(ISOLATED_DEFAULT_MODEL)`
 /// - FT-2: `KeepCurrent.model_id()` → `None` (no `--model` flag injected)
 /// - FT-3: `Specific("custom-model").model_id()` → `Some("custom-model")`
-/// - FT-4: `ISOLATED_DEFAULT_MODEL == "claude-sonnet-4-6"` (constant stability)
+/// - FT-4: `ISOLATED_DEFAULT_MODEL == "claude-opus-4-6"` (Opus for real tasks; Task 021)
 #[ test ]
 fn t10_isolated_model_model_id_all_variants()
 {
-  // FT-4: constant value pinned to the current production Sonnet model ID.
+  // FT-4: constant value pinned to the current production Opus model ID (Task 021).
   assert_eq!(
-    ISOLATED_DEFAULT_MODEL, "claude-sonnet-4-6",
-    "ISOLATED_DEFAULT_MODEL must equal the current production Sonnet ID",
+    ISOLATED_DEFAULT_MODEL, "claude-opus-4-6",
+    "ISOLATED_DEFAULT_MODEL must equal the current production Opus ID",
   );
 
   // FT-1: Default → Some(ISOLATED_DEFAULT_MODEL).

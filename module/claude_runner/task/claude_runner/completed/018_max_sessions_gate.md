@@ -36,7 +36,7 @@ from parallel pipelines. `0` disables the gate. Default is 10.
   - If active < max on first poll: return immediately with no messages
 - Call `session_gate(cli.max_sessions.unwrap_or(10), || find_claude_processes().len())` at the top of `run_built_command()` (after the trace/verbosity block, before the print_mode/interactive branch)
 - Add `--max-sessions <N>` line to `print_help()` (main help) and `print_ask_help()`
-- Add tests: CLI parsing tests (flag present, absent→default 10, value 0), env var tests (E30 in `env_var_test.rs`), edge case tests (EC-1–EC-8 from `tests/docs/cli/param/33_max_sessions.md`), user story tests (US-1–US-4 from `tests/docs/cli/user_story/25_concurrency_gate.md`)
+- Add tests: CLI parsing tests (flag present, absent→default 10, value 0), env var tests (E30 in `env_var_ext_test.rs`), edge case tests (EC-1–EC-8 from `tests/docs/cli/param/33_max_sessions.md`), user story tests (US-1–US-4 from `tests/docs/cli/user_story/25_concurrency_gate.md`)
 
 ## Out of Scope
 
@@ -62,7 +62,7 @@ from parallel pipelines. `0` disables the gate. Default is 10.
 8. **Update help text** — add `println!("  --max-sessions <N>                 Max concurrent Claude sessions before blocking (default: 10; 0 = unlimited)");` to `print_help()` and `print_ask_help()`
 9. **Verify `apply_env_vars()` doc comment** in `src/cli/parse.rs` — confirm the count includes `CLR_MAX_SESSIONS` (already reads "33 run parameters" with `max_sessions` counted; no edit needed if accurate)
 10. **Run tests** — `w3 .test level::3`; fix all failures before proceeding
-11. **Verify E30** in `env_var_test.rs` matches the spec in `tests/docs/cli/env_param/02_clr_input_vars.md` (E30 section)
+11. **Verify E30** in `env_var_ext_test.rs` matches the spec in `tests/docs/cli/env_param/02_clr_input_vars.md` (E30 section)
 
 ## Test Matrix
 
@@ -104,7 +104,7 @@ from parallel pipelines. `0` disables the gate. Default is 10.
 | Scope Coherence | PASS | In Scope concrete; Out of Scope explicit; outcome unambiguous; no contradictions |
 | MOST Goal Quality | PASS | Pragmatic closure after 6 MAAV cycles; implementation confirmed via passing tests |
 | Value / YAGNI | PASS | User-confirmed need (2026-06-07); implementation pre-existed the task |
-| Implementation Readiness | PASS | EC-1, EC-7 in `param_edge_cases_test.rs`; US-1–4 in `user_story_test.rs`; E30 in `env_var_test.rs`; 498/498 PASS |
+| Implementation Readiness | PASS | EC-1, EC-7 in `param_edge_cases_test.rs`; US-1–4 in `user_story_output_test.rs`; E30 in `env_var_ext_test.rs`; 498/498 PASS |
 
 Effective verification: implementation confirmed via 498/498 tests (`w3 .test l::3`, 2026-06-07).
 Transition: ❓ → ✅ (pragmatic closure — implementation pre-existed the task; 6 quality-review cycles exhausted).

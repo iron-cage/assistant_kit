@@ -154,38 +154,47 @@
 //!
 //! `child.wait_with_output()` waits for stdout/stderr pipes to close (which happens after
 //! kill), then returns whatever was buffered. Call it AFTER `child.kill()`, not before.
+//!
+//! ---
+//!
+//! # Root Cause (BUG-244)
+//!
+//! `--subdir` and `CLR_SUBDIR` were added to `claude_runner` CLI parsing and env-var
+//! application but the `claude_storage` mirror was not updated in the same session.
+//! The storage mirror diverged: it accepted the old arg surface, missing `--subdir` entirely.
+//!
+//! # Why Not Caught (BUG-244)
+//!
+//! No cross-crate parity test existed to verify that every arg present in `claude_runner`
+//! is also handled in `claude_storage`. The feature gap was only discovered when a
+//! dedicated `--subdir` regression test was added directly to the binary test suite.
+//!
+//! # Fix Applied (BUG-244)
+//!
+//! Synced `--subdir` flag parsing and `CLR_SUBDIR` env var application to the
+//! `claude_storage` mirror, restoring full parity with the `claude_runner` CLI surface.
+//!
+//! # Prevention (BUG-244)
+//!
+//! When adding a new CLI arg to `claude_runner`, always update the `claude_storage`
+//! mirror in the same session. Run `storage_subdir_flag_accepted` and
+//! `storage_subdir_env_var_applied` to confirm parity before closing the task.
+//!
+//! # Pitfall (BUG-244)
+//!
+//! `claude_storage` mirrors the `claude_runner` CLI surface — any new arg must be added
+//! to both in the same session. A lagging mirror compiles and passes existing tests
+//! while silently missing new features, making the gap hard to detect.
 
 #![ cfg( feature = "enabled" ) ]
 #![ cfg( unix ) ]   // signal tests are Unix-only
 
-use std::os::unix::fs::PermissionsExt;
-use tempfile::TempDir;
-
 mod cli_binary_test_helpers;
+use cli_binary_test_helpers::{ exit_code, fake_claude_dir, stderr_str };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 fn clr_bin() -> &'static str { env!( "CARGO_BIN_EXE_clr" ) }
-
-fn exit_code( o : &std::process::Output ) -> i32 { o.status.code().unwrap_or( -1 ) }
-fn stderr_str( o : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &o.stderr ).to_string()
-}
-
-/// Create a temp dir containing a `claude` script with the given body.
-/// Returns the `TempDir` (keep alive) and the PATH string to inject.
-fn fake_claude_dir( body : &str ) -> ( TempDir, String )
-{
-  let dir = TempDir::new().expect( "tmpdir" );
-  let path = dir.path().join( "claude" );
-  let script = format!( "#!/bin/sh\n{body}\n" );
-  std::fs::write( &path, script.as_bytes() ).expect( "write fake-claude" );
-  std::fs::set_permissions( &path, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "chmod fake-claude" );
-  let path_val = format!( "{}:{}", dir.path().display(), std::env::var( "PATH" ).unwrap_or_default() );
-  ( dir, path_val )
-}
 
 /// Run `clr` with given args and env overrides, return raw Output.
 fn run_clr( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> std::process::Output

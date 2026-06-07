@@ -20,9 +20,14 @@ use super::fetch::{ read_token, parse_u64_from_str };
 /// - 429 AND locally expired (`expires_at_ms / 1000 ≤ now_secs`) — the per-account
 ///   credentials file may be stale (Claude Code updated the live session file but not
 ///   the saved per-account copy). Refreshing updates both the token and `expiresAt`.
+/// - `cached=true` AND locally expired — the cache fallback in `fetch_all_quota`
+///   converts `Err` to `Ok(cached_data)`; all Err guards are bypassed. An expired
+///   cached entry needs a fresh token just as much as an Err entry does (BUG-255).
 ///
 /// Returns `false` for 429 with a non-expired local token: the token is valid;
 /// refreshing would add a 30-second subprocess wait with no benefit.
+/// Returns `false` for cached accounts with a valid (non-expired) token: the cache
+/// hit is legitimate; there is nothing to refresh.
 fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
 {
   if matches!( aq.result, Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) )
@@ -45,8 +50,18 @@ fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
   //   file may be stale — the token may need refreshing despite the 429 response.
   // Pitfall: don't refresh ALL 429 accounts (as task 142 did) — that adds a
   //   pointless 30-second wait for valid-but-rate-limited accounts.
-  matches!( aq.result, Err( ref e ) if e.contains( "429" ) )
+  if matches!( aq.result, Err( ref e ) if e.contains( "429" ) )
     && ( aq.expires_at_ms / 1000 ) <= now_secs
+  {
+    return true;
+  }
+  // Fix(BUG-255): refresh cached+expired account — cache fallback converts Err to Ok.
+  // Root cause: when fetch fails, `fetch_all_quota` returns Ok(cached_data) with cached=true.
+  //   All existing guards match only Err variants; a cached account with Ok result and an
+  //   expired local token is never refreshed, leaving stale credentials permanently.
+  // Pitfall: don't refresh ALL cached accounts — only those with an expired token; a cached
+  //   account with a valid (non-expired) token needs no credential refresh.
+  aq.cached && ( aq.expires_at_ms / 1000 ) <= now_secs
 }
 
 // ── Refresh loop ──────────────────────────────────────────────────────────────
@@ -1405,6 +1420,89 @@ mod tests
       should_refresh( &aq, 9_999 ),
       "BUG-235: Err(\"token expired (local)\") must trigger should_refresh — \
        OAuth refresh token may still be valid even when access token is locally expired",
+    );
+  }
+
+  // ── BUG-255 MRE: cached + expired account must trigger should_refresh ─────────
+
+  /// MRE for BUG-255: `should_refresh` returns `true` for cached, locally-expired account.
+  ///
+  /// # Root Cause
+  /// When `fetch_all_quota` fails to fetch live quota data, the cache fallback path converts
+  /// `Err` to `Ok(cached_data)` and sets `cached=true`. All existing guards in `should_refresh`
+  /// matched only `Err` variants — the cached `Ok` result bypassed every check, leaving the
+  /// account permanently unrefreshed even when its access token was locally expired.
+  ///
+  /// # Why Not Caught
+  /// SR-7 (`test_should_refresh_ok_no_trigger`) has `cached=false`; it tests the "live Ok"
+  /// case only. The `cached=true` + expired combination was never tested — no guard existed.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-255): added explicit `aq.cached && expired` arm to `should_refresh()` — returns
+  /// `true` when the result came from the cache fallback AND the local token is expired.
+  ///
+  /// # Prevention
+  /// When adding new quota-result paths that produce `Ok` (e.g., future cache variants),
+  /// verify that `should_refresh` still handles expired-token cases correctly. Do not rely
+  /// solely on Err-pattern guards; check `cached` and `expires_at_ms` independently.
+  ///
+  /// # Pitfall
+  /// The fix must NOT trigger for cached accounts with a valid (non-expired) token — a cache
+  /// hit is legitimately Ok if `expires_at_ms / 1000 > now_secs`. Only expired+cached entries
+  /// need refreshing. SR-10 covers the non-expired cached case.
+  #[ doc = "bug_reproducer(BUG-255)" ]
+  #[ test ]
+  fn mre_bug255_cache_defeats_refresh()
+  {
+    let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let aq = AccountQuota
+    {
+      name                  : "alice@example.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : 0,  // 0 / 1000 = 0 ≤ any now_secs → locally expired
+      result                : Ok( quota ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : true,  // cache fallback used — Err was converted to Ok
+      cache_age_secs        : Some( 3600 ),
+    };
+    assert!(
+      should_refresh( &aq, 9_999 ),
+      "BUG-255: cached+expired account (result=Ok, cached=true, expires_at_ms=0) must trigger \
+       should_refresh — cache fallback converts Err to Ok, defeating the existing Err-pattern guards",
+    );
+  }
+
+  /// SR-10 — cached account with valid (non-expired) token does NOT trigger refresh.
+  ///
+  /// Contrast with BUG-255 MRE: the fix only applies when `expires_at_ms` is expired.
+  /// A cache hit with a live token is legitimately Ok — refreshing would waste 30 s.
+  #[ test ]
+  fn test_should_refresh_cached_valid_token_no_trigger()
+  {
+    let quota = claude_quota::OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None };
+    let aq = AccountQuota
+    {
+      name                  : "alice@example.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : u64::MAX,  // far future → not expired
+      result                : Ok( quota ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : true,
+      cache_age_secs        : Some( 60 ),
+    };
+    assert!(
+      !should_refresh( &aq, 9_999 ),
+      "cached account with valid (non-expired) token must NOT trigger refresh",
     );
   }
 }

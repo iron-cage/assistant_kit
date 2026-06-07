@@ -6,7 +6,7 @@
 //! | ID | Test | Requires Live Claude |
 //! |----|------|----------------------|
 //! | IT-2 | `--creds missing.json` → exit 1 | No |
-//! | IT-4 | `--timeout 0` with fake sleeping claude → exit 2 | No (Unix) |
+//! | IT-4 | `--timeout 0` → unlimited (no watchdog), exit 0 | No (Unix) |
 //! | IT-6 | `--creds <f> --timeout abc` → exit 1, invalid timeout | No |
 //! | IT-8 | `clr refresh --help` → exit 0, help text shown | No |
 //!
@@ -15,22 +15,10 @@
 //!
 //! Source: `tests/docs/cli/command/04_refresh.md`
 
-use std::io::Write as _;
-use tempfile::NamedTempFile;
-
 mod cli_binary_test_helpers;
+use cli_binary_test_helpers::{ exit_code, make_creds_file, stderr_str, stdout_str };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-fn exit_code( o : &std::process::Output ) -> i32 { o.status.code().unwrap_or( -1 ) }
-fn stderr_str( o : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &o.stderr ).to_string()
-}
-fn stdout_str( o : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &o.stdout ).to_string()
-}
 
 /// Invoke `clr refresh <args>` and return raw output.
 ///
@@ -41,17 +29,6 @@ fn run_refresh( args : &[ &str ] ) -> std::process::Output
   let mut full = vec![ "refresh" ];
   full.extend_from_slice( args );
   cli_binary_test_helpers::run_cli( &full )
-}
-
-/// Write `content` to a new `NamedTempFile` and return it.
-///
-/// The caller must keep the returned file alive for the duration of the test;
-/// dropping it deletes the file on disk.
-fn make_creds_file( content : &str ) -> NamedTempFile
-{
-  let mut f = NamedTempFile::new().expect( "failed to create temp creds file" );
-  f.write_all( content.as_bytes() ).expect( "failed to write creds content" );
-  f
 }
 
 // ── offline tests (no live claude required) ───────────────────────────────────
@@ -71,28 +48,23 @@ fn test_it2_creds_file_not_found()
   );
 }
 
-/// IT-4: `--timeout 0` with fake sleeping claude → exit 2 (timeout before creds refresh).
+/// IT-4: `--timeout 0` → unlimited (no watchdog); subprocess runs to natural exit.
 ///
-/// Creates a fake `claude` shell script that sleeps indefinitely.  With `--timeout 0`,
-/// the subprocess is killed immediately after spawning (deadline fires on first `try_wait`
-/// check) and `clr refresh` exits 2.
+/// Creates a fake `claude` shell script that sleeps briefly.  With `--timeout 0`,
+/// no watchdog is spawned — the subprocess runs until it exits naturally and
+/// `clr refresh` forwards the subprocess exit code (0).
 ///
 /// Source: tests/docs/cli/command/04_refresh.md#it-4
 #[ cfg( unix ) ]
 #[ test ]
-fn test_it4_timeout_zero_exits_two()
+fn test_it4_timeout_zero_unlimited()
 {
   use std::os::unix::fs::PermissionsExt;
 
   let dir = tempfile::tempdir().expect( "tmpdir" );
   let script = dir.path().join( "claude" );
-  // Fix(BUG-243-slow): use sleep 3 instead of sleep 60 to keep test fast.
-  // Root cause: child.kill() only kills the direct shell process; the `sleep` grandchild
-  //   inherits the pipe FD and holds it open until it exits, blocking wait_with_output().
-  // Pitfall: using large sleep values (60s+) causes nextest to flag the test as SLOW and
-  //   adds unnecessary CI overhead — keep the sleep value just above the timeout to confirm
-  //   the subprocess was actually killed, not that it exited naturally.
-  std::fs::write( &script, "#!/bin/sh\nsleep 3\n" ).expect( "write fake claude" );
+  // timeout-0 = unlimited: subprocess runs to completion — use short sleep to keep test fast.
+  std::fs::write( &script, "#!/bin/sh\nsleep 1\n" ).expect( "write fake claude" );
   std::fs::set_permissions( &script, std::fs::Permissions::from_mode( 0o755 ) )
     .expect( "chmod fake claude" );
   let path_val = format!(
@@ -113,8 +85,8 @@ fn test_it4_timeout_zero_exits_two()
 
   assert_eq!(
     exit_code( &out ),
-    2,
-    "IT-4: --timeout 0 with sleeping fake claude must exit 2 (timeout without refresh); stderr: {}",
+    0,
+    "IT-4: --timeout 0 must let subprocess run to completion (unlimited); stderr: {}",
     stderr_str( &out ),
   );
 }
@@ -161,5 +133,13 @@ fn test_it8_help_exits_zero()
   assert!(
     stdout.contains( "--timeout" ),
     "help text must mention --timeout; got:\n{stdout}",
+  );
+  assert!(
+    stdout.contains( "--trace" ),
+    "help text must mention --trace; got:\n{stdout}",
+  );
+  assert!(
+    stdout.contains( "--help" ),
+    "help text must mention --help; got:\n{stdout}",
   );
 }

@@ -32,10 +32,10 @@ pub enum RunnerError {
 }
 
 /// Default model ID injected by IsolatedModel::Default.
-pub const ISOLATED_DEFAULT_MODEL: &str = "claude-sonnet-4-6";
+pub const ISOLATED_DEFAULT_MODEL: &str = "claude-opus-4-6";
 
 pub enum IsolatedModel {
-    Default,           // prepends --model claude-sonnet-4-6
+    Default,           // prepends --model claude-opus-4-6
     KeepCurrent,       // no --model flag; Claude binary chooses
     Specific(String),  // prepends --model <id>
 }
@@ -72,11 +72,11 @@ pub fn run_isolated(
     content instructs subprocess to respond immediately without extended thinking
     on write failure → cleanup temp, return RunnerError::Io
 3.  build command; if model != KeepCurrent, prepend ["--model", <id>] to args:
-      ClaudeCommand::new().with_home(<temp>).with_home_isolation().with_args([--model <id>, <args...>])
+      ClaudeCommand::new().with_home(<temp>).with_args([--model <id>, <args...>])
       env HOME=<temp>
       (all other env vars inherited from parent process)
       stdout and stderr piped
-      NOTE: home-isolated mode suppresses --chrome flag (not needed for credential-only subprocesses)
+      NOTE: isolated subprocesses keep chrome active — user tasks may invoke browser tools
 4.  spawn command via spawn_piped() (single execution point: ClaudeCommand)
     if "claude" binary not found → RunnerError::ClaudeNotFound
 5.  poll subprocess in 50ms ticks until exit or deadline:
@@ -115,7 +115,7 @@ The temp directory structure is:
     CLAUDE.md             ← minimal instruction file: respond immediately, no extended thinking
 ```
 
-`HOME` is set to `{tmp}/claude_isolated_{pid}`. Other env vars are inherited. The subprocess sees a fresh `~/.claude/.credentials.json` with the provided credentials and a `CLAUDE.md` that instructs it to respond immediately without extended thinking — preventing timeout on keep-alive `--print .` prompts. No other `~/.claude/` files are present (no `settings.json`, no session state). The `--chrome` flag is suppressed — it is not needed for credential-only subprocess invocations and adds unnecessary overhead.
+`HOME` is set to `{tmp}/claude_isolated_{pid}`. Other env vars are inherited. The subprocess sees a fresh `~/.claude/.credentials.json` with the provided credentials and a `CLAUDE.md` that instructs it to respond immediately without extended thinking — preventing timeout on keep-alive `--print .` prompts. No other `~/.claude/` files are present (no `settings.json`, no session state). Isolated subprocesses keep the default chrome setting active — user tasks may invoke browser tools. Chrome suppression (`--no-chrome`) applies only to credential-refresh subprocesses (`clr refresh`), where browser access is never needed.
 
 **Credential change detection:**
 
@@ -134,7 +134,7 @@ The temp directory is removed in all code paths: success, timeout, and I/O error
 ### Acceptance Criteria
 
 - **AC-33**: `run_isolated(creds_json, args, timeout_secs, model)` spawns `claude` with `HOME` overridden to a temp directory containing `.claude/.credentials.json` (populated with `creds_json`) and `.claude/CLAUDE.md` (minimal instruction file directing Claude to respond immediately without extended thinking). When `model` is not `KeepCurrent`, `--model <id>` is prepended to `args` before the subprocess is spawned.
-- **AC-41**: The `--chrome` flag is not passed to isolated subprocesses. `ClaudeCommand` used by `run_isolated()` must not inject `--chrome` regardless of any global `ClaudeCommand::new()` defaults — chrome mode is not needed for credential-only subprocess invocations.
+- **AC-41**: `with_home_isolation()` is a `ClaudeCommand` builder method that suppresses `--chrome` by calling `with_chrome(None)`. It is used by credential-refresh subprocesses (`clr refresh`), not by `run_isolated()` — OAuth exchange is a pure HTTP operation requiring no browser access. Isolated subprocesses keep chrome active; user tasks may invoke browser tools.
 - **AC-42**: The `CLAUDE.md` written to `<temp>/.claude/CLAUDE.md` contains at minimum the instruction: respond immediately to `--print` prompts without extended thinking, no preamble, no tool use. This prevents isolated subprocesses from entering extended thinking mode on keep-alive prompts, which would cause them to exceed the subprocess timeout.
 - **AC-34**: When the subprocess exits normally, `run_isolated()` returns `Ok(IsolatedRunResult)` with the correct `exit_code`, `stdout`, and `stderr`.
 - **AC-35**: When the subprocess rewrites `.claude.json`, `credentials` is `Some(new_json)` with the updated content.
@@ -151,7 +151,7 @@ The temp directory is removed in all code paths: success, timeout, and I/O error
 | source | `src/isolated.rs` | `run_isolated()` implementation; `IsolatedRunResult`, `RunnerError` types; `ISOLATED_CLAUDE_MD` constant |
 | source | `src/lib.rs` | Re-exports `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, `ISOLATED_DEFAULT_MODEL`, `run_isolated` |
 | source | `src/command/mod.rs` | `ClaudeCommand` builder; `with_home()` method; chrome injection logic |
-| source | `src/command/params_core.rs` | `with_home_isolation()` method — chains `with_chrome(None)` to suppress chrome in isolated mode |
+| source | `src/command/params_core.rs` | `with_home_isolation()` method — chains `with_chrome(None)` to suppress chrome in refresh mode |
 | invariant | [invariant/001_single_execution_point.md](../invariant/001_single_execution_point.md) | `Command::new("claude")` must appear exactly once |
 | task | `task/claude_runner_core/136_run_isolated_subprocess.md` | Implementation task for this feature |
 | dep | `claude_profile` | `usage.rs` — `refresh::` retry logic calling `run_isolated()` |

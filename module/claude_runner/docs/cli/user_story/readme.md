@@ -73,7 +73,7 @@ When adding new user stories, update these files in order:
 
 1. `docs/cli/user_story/NNN_*.md` — feature doc (Scope, Persona, Goal, ACs, cross-refs)
 2. `tests/docs/cli/user_story/NNN_*.md` — test spec (4 US cases)
-3. `tests/user_story_test.rs` — 4 test functions + matrix row in module doc
+3. Appropriate test file (US01–09: `tests/user_story_test.rs`; US10–18: `tests/user_story_creds_isolated_test.rs`; US19–25: `tests/user_story_output_test.rs`) — 4 test functions + matrix row in module doc
 4. `docs/cli/user_story/readme.md` — Responsibility Table row + Index row *(this file)*
 5. `tests/docs/cli/user_story/readme.md` — Responsibility Table row + In Scope count
 6. `docs/cli/param/NNN_*.md` — Referenced User Stories for each param involved

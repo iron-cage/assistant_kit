@@ -67,7 +67,7 @@ Integration test planning for the `refresh` command. See [command/03_refresh.md]
 - **Command:** `clr refresh --creds /tmp/it4_refresh_creds.json --timeout 0`
 - **Expected behavior:** `0` disables the watchdog entirely — subprocess runs until it exits naturally (matching `run`/`ask` semantics); exit code is the subprocess exit code, not 2
 - **Exit:** 0 or passthrough
-- **Note:** lim_it variant for live-credential environments; offline fake-claude variant `test_it4_timeout_zero_exits_two` in `tests/refresh_test.rs` needs updating to expect non-timeout behavior
+- **Note:** lim_it variant for live-credential environments; offline fake-claude variant `test_it4_timeout_zero_unlimited` in `tests/refresh_test.rs`
 - **Source:** [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
 
 ---

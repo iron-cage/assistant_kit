@@ -664,12 +664,14 @@ fn test_builder_methods_return_self()
   // Verify at least some exist
   assert!( !with_methods.is_empty(), "Should have with_* methods" );
 
-  // Check that they take self and return Self (builder pattern)
+  // Check that they take self by value and return Self (builder pattern).
+  // Methods that delegate immediately may use ( self ) without mut;
+  // methods that modify fields directly use ( mut self ). Both are valid.
   for method in &with_methods
   {
-    // Builder methods should have "mut self" in signature
-    assert!( method.contains( "mut self" ),
-      "Builder method should take mut self: {method}" );
+    let takes_self_by_value = method.contains( "mut self" ) || method.contains( "( self )" );
+    assert!( takes_self_by_value,
+      "Builder method should take self by value (with or without mut): {method}" );
   }
 }
 

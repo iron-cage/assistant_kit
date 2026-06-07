@@ -17,39 +17,22 @@
 
 #![ cfg( feature = "enabled" ) ]
 #![ cfg( unix ) ]
+#![ allow( clippy::doc_markdown ) ]
 
-use std::io::Write as _;
 use std::os::unix::fs::PermissionsExt;
-use tempfile::NamedTempFile;
 
 mod cli_binary_test_helpers;
-
-fn make_creds_file( content : &str ) -> NamedTempFile
-{
-  let mut f = NamedTempFile::new().expect( "failed to create temp creds file" );
-  f.write_all( content.as_bytes() ).expect( "failed to write creds content" );
-  f
-}
-
-fn stderr_str( o : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &o.stderr ).to_string()
-}
-
-fn stdout_str( o : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &o.stdout ).to_string()
-}
+use cli_binary_test_helpers::{ make_creds_file, stderr_str, stdout_str };
 
 // ── CT-1 / CT-2 / CT-3 / CT-4: flag injection trace checks ──────────────────
 
 /// CT-1: `clr isolated --trace "x"` → stderr contains `--no-session-persistence`.
 ///
-/// Root Cause: run_isolated_command() did not inject --no-session-persistence;
+/// Root Cause: `run_isolated_command()` did not inject --no-session-persistence;
 ///   session files were written to temp HOME that is discarded after every run
 ///   (pure I/O waste per gap I3 in command_defaults.md).
 /// Why Not Caught: no test for injected flags in isolated trace.
-/// Fix Applied: Task 022 S3 prepends --no-session-persistence in run_isolated_command().
+/// Fix Applied: Task 022 S3 prepends --no-session-persistence in `run_isolated_command()`.
 /// Prevention: this test; trace checked for flag presence.
 /// Pitfall: injecting after --print instead of before breaks passthrough override order.
 #[ test ]
@@ -74,7 +57,7 @@ fn ct1_isolated_trace_has_no_session_persistence()
 
 /// CT-2: `clr isolated --trace "x"` → stderr contains `--dangerously-skip-permissions`.
 ///
-/// Root Cause: run_isolated_command() did not inject --dangerously-skip-permissions;
+/// Root Cause: `run_isolated_command()` did not inject --dangerously-skip-permissions;
 ///   isolated tasks with tool use blocked at every tool call waiting for interactive
 ///   permission prompt (gap I5 in command_defaults.md).
 /// Why Not Caught: no test for injected flags; live execution blocks silently.
@@ -104,13 +87,13 @@ fn ct2_isolated_trace_has_skip_permissions_when_message_present()
 
 /// CT-3: `clr refresh --trace` → stderr contains `--no-chrome`.
 ///
-/// Root Cause: run_refresh_command() used ClaudeCommand::new() defaults which include
+/// Root Cause: `run_refresh_command()` used `ClaudeCommand::new()` defaults which include
 ///   --chrome; refresh is an HTTP-only OAuth ping and does not need browser context
 ///   (gap I4 in command_defaults.md).
 /// Why Not Caught: no trace test for refresh flag injection.
 /// Fix Applied: Task 022 S4 adds "--no-chrome" to refresh passthrough args.
 /// Prevention: this test; trace checked for --no-chrome in refresh.
-/// Pitfall: --chrome is injected by ClaudeCommand::new(); --no-chrome must appear
+/// Pitfall: --chrome is injected by `ClaudeCommand::new()`; --no-chrome must appear
 ///   after --chrome in the arg list so last-wins semantics apply correctly.
 #[ test ]
 fn ct3_refresh_trace_has_no_chrome()
@@ -163,7 +146,7 @@ fn ct4_isolated_no_message_no_skip_permissions()
 
 /// CT-5: `--timeout 0` → subprocess NOT killed; runs to natural completion.
 ///
-/// Root Cause: run_isolated() set deadline = Instant::now() + Duration::from_secs(0)
+/// Root Cause: `run_isolated()` set deadline = `Instant::now()` + `Duration::from_secs(0)`
 ///   unconditionally; with timeout_secs==0 the deadline was already expired on first
 ///   poll (50ms later), killing the subprocess immediately (gap I2 in command_defaults.md).
 /// Why Not Caught: behavior diverges from run/ask (where 0 = unlimited) but no test.
@@ -216,7 +199,7 @@ fn ct5_timeout_zero_is_unlimited()
 
 /// CT-6: CLAUDE.md written to temp HOME before subprocess spawn.
 ///
-/// Root Cause: run_isolated() did not write CLAUDE.md to the temp HOME; the subprocess
+/// Root Cause: `run_isolated()` did not write CLAUDE.md to the temp HOME; the subprocess
 ///   had no user-level behavioral instructions, potentially asking clarifying questions
 ///   or requesting interactive confirmation (gap I6 in command_defaults.md).
 /// Why Not Caught: no test for CLAUDE.md presence; subprocess blocking is silent in tests.

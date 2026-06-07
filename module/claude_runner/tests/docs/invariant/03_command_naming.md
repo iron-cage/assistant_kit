@@ -62,7 +62,7 @@ Test case planning for [invariant/003_command_naming.md](../../../../docs/invari
 - **Then:** stdout contains assembled command (same as `clr --dry-run "Fix bug"`); `run` bare-word prefix accepted and dispatched to the run command
 - **Exit:** 0
 - **Source:** [invariant/003_command_naming.md](../../../../docs/invariant/003_command_naming.md)
-- **Test:** `in4_run_subcommand_explicit_dispatch_identical_to_default` in `tests/user_story_test.rs` (Fix(BUG-212))
+- **Test:** `in4_run_subcommand_explicit_dispatch_identical_to_default` in `tests/user_story_creds_isolated_test.rs` (Fix(BUG-212))
 
 ---
 

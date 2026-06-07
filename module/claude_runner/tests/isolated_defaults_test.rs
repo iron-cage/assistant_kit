@@ -273,23 +273,20 @@ mod isolated_defaults_test
   {
     use std::os::unix::fs::PermissionsExt;
 
-    let script_path = std::env::temp_dir()
-      .join( format!( "isd12_fake_claude_{}", std::process::id() ) );
-    // Fake script: sleep briefly then exit 0.
-    std::fs::write(
-      &script_path,
-      "#!/bin/sh\nsleep 0.3\nexit 0\n",
-    ).expect( "write fake script" );
-    std::fs::set_permissions(
-      &script_path,
-      std::fs::Permissions::from_mode( 0o755 ),
-    ).expect( "chmod fake script" );
+    let tmp = tempfile::tempdir().expect( "create temp dir for fake claude" );
+    let fake = tmp.path().join( "claude" );
+    std::fs::write( &fake, "#!/bin/sh\nsleep 0.3\nexit 0\n" )
+      .expect( "write fake claude" );
+    std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+      .expect( "chmod fake claude" );
 
     let creds = temp_creds();
-    let fake_dir = script_path.parent().unwrap();
+    let old_path = std::env::var( "PATH" ).unwrap_or_default();
+    let new_path = format!( "{}:{old_path}", tmp.path().display() );
 
     let out = clr()
-      .env( "PATH", fake_dir )
+      .env( "PATH", &new_path )
+      .env_remove( "CLAUDECODE" )
       .args( [
         "isolated",
         "--creds", creds.to_str().unwrap(),
@@ -311,7 +308,6 @@ mod isolated_defaults_test
       "fake claude must complete normally with --timeout 0; status: {:?}", out.status
     );
 
-    let _ = std::fs::remove_file( &script_path );
     let _ = std::fs::remove_file( &creds );
   }
 

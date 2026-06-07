@@ -430,7 +430,7 @@ fn s57_mcp_config_without_message_accepted()
 
 // ─── --subdir ─────────────────────────────────────────────────────────────────
 // Source: tests/docs/cli/param/28_subdir.md
-// EC-6 (env var) and EC-7 (CLI-wins) are covered by env_var_test.rs E29.
+// EC-6 (env var) and EC-7 (CLI-wins) are covered by env_var_ext_test.rs E29.
 
 // S81: default (no `--subdir`) → no `/-` path component in dry-run output (`28_subdir.md` EC-1)
 #[ test ]

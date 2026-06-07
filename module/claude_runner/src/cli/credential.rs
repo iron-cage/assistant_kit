@@ -60,6 +60,7 @@ fn emit_credential_trace
 /// - **Other errors:** exits 1 with an error message.
 ///
 /// This function never returns; it always calls `std::process::exit`.
+#[ allow( clippy::too_many_arguments ) ]
 pub( super ) fn run_isolated_command
 (
   label            : &str,

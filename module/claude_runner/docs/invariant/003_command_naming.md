@@ -69,6 +69,7 @@ If a command were prefixed with `--`:
 | File | Relationship |
 |------|--------------|
 | `../../tests/cli_args_test.rs` | `clr help` word dispatch, `--help`/`-h` flag aliases, unknown subcommand detection |
+| `../../tests/cli_args_ext_test.rs` | BUG-212 reproducer: `clr run` stripping; BUG-215: `clr run help` dispatching |
 
 ### Provenance
 
