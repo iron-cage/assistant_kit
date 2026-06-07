@@ -20,9 +20,11 @@ Claude Code має внутрішню файлову систему, яку ні
   settings.json
 
 $PRO/.persistent/claude/credential/   ← або $HOME/.persistent/claude/credential/
-  work@acme.com.credentials.json  ← іменований знімок облікових даних
+  work@acme.com.credentials.json  ← OAuth-токени і термін дії
+  work@acme.com.json              ← метадані акаунта (ідентичність, модель, org, host, role)
   personal@home.com.credentials.json
-  _active                         ← «work@acme.com» ← один текстовий файл, одна відповідальність
+  personal@home.com.json          ← метадані акаунта
+  _active_{hostname}_{user}       ← «work@acme.com» ← маркер активного акаунта для машини
 ```
 
 Кожен шлях у цьому дереві, що має значення для інструментів, обчислюється через
@@ -107,8 +109,8 @@ RESPONSIBILITY VIOLATION: claude_profile MUST NOT import std::process::Command
 ## Поточний стан
 
 Усі чотири бібліотечні модулі — `account`, `token`, `paths`, `persist` — реалізовані та повністю
-протестовані. Бінарний шар CLI додає `adapter`, `output` і `commands` (11 команд за
-фічею `enabled`). Функціональні вимоги знаходяться в [`docs/feature/`](docs/feature/) (FR-6 до FR-20);
+протестовані. Бінарний шар CLI додає `adapter`, `output` і `commands` (16 команд за
+фічею `enabled`). Функціональні вимоги знаходяться в [`docs/feature/`](docs/feature/) (FR-6 до FR-32);
 кожен екземпляр документа пов'язаний з тестами через секції Cross-References. Усі тести проходять. Нуль попереджень clippy.
 
 Крейт використовується в продакшні для визначення шляхів та ротації облікових записів.

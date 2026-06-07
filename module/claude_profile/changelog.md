@@ -7,7 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Per-account credential store consolidated from 5 files to 2**
+  - Previous satellite files `{name}.claude.json`, `{name}.settings.json`, `{name}.roles.json`,
+    and `{name}.profile.json` merged into a single `{name}.json`
+  - `{name}.json` is now the unified per-account metadata file: OAuth identity (`oauthAccount`),
+    model preference, org identity (endpoint 005), and host/role labels — all co-located in one
+    document; read-merged on every `save()` to preserve existing keys across callers
+  - `save()` signature extended with `host: Option<&str>` and `role: Option<&str>` trailing
+    params; CLI commands pass explicit values; background token refresh passes `None, None`
+    (no metadata capture in the background path)
+  - Legacy satellite files removed best-effort by `save()` on every invocation — no migration
+    script needed; files are cleaned up on the next `clp .account.save`
+  - Test assertions expecting "file must not exist" converted to content-based checks;
+    CLI-triggered `save()` always writes `{name}.json`
+
 ### Added
+
+- **`.account.assign` — write per-machine active-account marker** (FR-32, TSK-251)
+  - New command (Command 16); writes only `_active_{machine}_{user}` for any `USER@MACHINE` pair
+  - No credential rotation; `~/.claude/.credentials.json` and `~/.claude.json` are never touched
+  - `name::` absent → emits live usage block (current machine identity, active account, copy-paste examples); exit 0
+  - `for::USER@MACHINE` targets a remote machine; both components sanitized (alphanumeric, `-`, `.` kept; others → `_`)
+  - Exit 2 when account not found; exit 1 when `for::` format invalid (no `@`, or empty component)
+  - 12 integration tests (aa01–aa12) covering marker write, remote target, dry-run, usage block, errors, sanitization, prefix resolution
+
+- **`.account.inspect` — live identity, subscription, and org details** (TSK-246)
+  - New command; calls Anthropic identity endpoints using the named (or active) account's token
+  - Shows: taggedId, UUID, billing type, max flag, org name/UUID, workspace UUID/name, capabilities
+  - `format::json` returns structured JSON with all fields
+  - `refresh::` (default 1) attempts OAuth refresh when stored credentials are locally expired
+
+- **`.account.renewal` — set or clear billing renewal timestamp override** (TSK-248)
+  - New command; writes a `renewal_override` field into `{name}.json` for one account, all, or a comma-separated list
+  - `at::` — exact ISO-8601 UTC timestamp; `from_now::` — relative offset (e.g. `+1h30m`, `-30m`); `clear::1` — remove override
+  - Affects `.usage` renews column: overrides display with `~`-prefixed estimate when no server data available
+
+- **`.account.relogin` — force browser re-authentication** (TSK-249)
+  - New command; launches `claude auth login` in browser mode for a named account with a dead `refreshToken`
+  - Saves the freshly captured credentials under the account name; supports `dry::` preview
+  - Required when OAuth refresh fails and the stored `refreshToken` is no longer accepted
 
 - **`.usage` redesigned — live quota from Anthropic API** (FR-14, task 127)
   - Replaced `stats-cache.json` file reading with live `claude_quota::fetch_rate_limits()` calls

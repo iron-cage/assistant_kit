@@ -4,7 +4,7 @@
 
 - **Purpose**: Allow `name::` to be supplied as a bare positional argument or resolved from a prefix, removing friction when typing account-management commands.
 - **Responsibility**: Documents the positional-argument adapter rewrite and prefix-resolution logic for `name::` commands.
-- **In Scope**: Positional rewrite in `src/adapter.rs`; prefix resolution in `src/commands/accounts.rs`, `src/commands/account_ops.rs` affecting `.accounts`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, and `.account.renewal` (comma-list token resolution).
+- **In Scope**: Positional rewrite in `src/adapter.rs`; prefix resolution in `src/commands/accounts.rs`, `src/commands/account_ops.rs`, `src/commands/account_relogin.rs`, `src/commands/account_renewal.rs` affecting `.accounts`, `.account.use`, `.account.delete`, `.account.limits`, `.account.relogin`, and `.account.renewal` (comma-list token resolution).
 - **Out of Scope**: Email validation (`account::validate_name()` — unchanged); `.account.save` name inference from `~/.claude.json` (→ 002_account_save.md); `~/.claude/.credentials.json` live account detection (→ 009_token_usage.md).
 
 ### Design
@@ -55,7 +55,10 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use car` →
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/adapter.rs` | `argv_to_unilang_tokens()` — positional rewrite for name-taking commands |
-| source | `src/commands/account_ops.rs`, `src/commands/accounts.rs`, `src/commands/limits.rs` | `account_use_routine`, `account_delete_routine`, `account_relogin_routine`, `accounts_routine`, `account_limits_routine` — prefix resolution; `account_renewal_routine` — comma-list token resolution |
+| source | `src/commands/account_ops.rs` | `account_use_routine`, `account_delete_routine` — prefix resolution |
+| source | `src/commands/account_relogin.rs` | `account_relogin_routine` — prefix resolution |
+| source | `src/commands/account_renewal.rs` | `account_renewal_routine` — comma-list token resolution |
+| source | `src/commands/accounts.rs`, `src/commands/limits.rs` | `accounts_routine`, `account_limits_routine` — prefix resolution |
 | source | `src/lib.rs` | `cli::print_usage()` — update example to use positional form |
 | test | `tests/cli/account_mutations_test.rs` | account.use (aw13–aw15), account.delete (ad13–ad14), and account.renewal (ar15–ar16) positional, prefix, and comma-list cases |
 | test | `tests/cli/accounts_test.rs` | accounts (acc29–acc30) positional and prefix cases |

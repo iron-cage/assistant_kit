@@ -24,7 +24,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 |----|-----------|-----|----------|
 | FT-01 | Core save creates credential file | AC-01 | Basic Invocation |
 | FT-02 | dry::1 previews without writing | AC-04 | Dry Run |
-| FT-03 | `oauthAccount` snapshot created; no `settings.json` | AC-05 | Metadata Snapshot |
+| FT-03 | `oauthAccount` + model snapshot created in `{name}.json` | AC-05 | Metadata Snapshot |
 | FT-04 | Name inferred from per-machine active marker | AC-08 | Name Inference |
 | FT-05 | Missing marker exits 1 with actionable error | AC-09 | Inference Failure |
 | FT-06 | Active marker written after save | AC-10 | Active Marker |

@@ -24,9 +24,11 @@ That is its founding purpose, and everything else follows from it.
   settings.json
 
 $PRO/.persistent/claude/credential/   ← or $HOME/.persistent/claude/credential/
-  work@acme.com.credentials.json  ← named credential snapshot
+  work@acme.com.credentials.json  ← OAuth tokens and expiry
+  work@acme.com.json              ← account metadata (identity, model, org, host, role)
   personal@home.com.credentials.json
-  _active                         ← "work@acme.com"  ← single text file, single responsibility
+  personal@home.com.json          ← account metadata
+  _active_{hostname}_{user}       ← "work@acme.com"  ← per-machine active marker
 ```
 
 Every path in that tree that matters to tooling is computed through
@@ -109,8 +111,8 @@ about credentials. The credential crate knows nothing about execution.
 ## Where the Crate Stands
 
 All four library modules — `account`, `token`, `paths`, `persist` — are implemented and
-fully tested. The CLI binary layer adds `adapter`, `output`, and `commands` (13 commands
-behind the `enabled` feature). Functional requirements live in [`docs/feature/`](docs/feature/) (FR-6 through FR-20);
+fully tested. The CLI binary layer adds `adapter`, `output`, and `commands` (16 commands
+behind the `enabled` feature). Functional requirements live in [`docs/feature/`](docs/feature/) (FR-6 through FR-32);
 each doc instance maps to named tests via Cross-References sections. All tests pass. No clippy warnings.
 
 The crate is used in production for path resolution and account rotation.

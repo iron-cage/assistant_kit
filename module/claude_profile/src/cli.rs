@@ -30,7 +30,7 @@ pub( super ) fn exit_code_for( e : &unilang::error::Error ) -> i32
 
 /// Register all `claude_profile` commands with their argument definitions and routines.
 ///
-/// Delegates 11 shared commands to `claude_profile::register_commands()` and
+/// Delegates 14 shared commands to `claude_profile::register_commands()` and
 /// adds the `.` (dot) hidden command inline (binary-specific).
 pub( super ) fn build_registry() -> CommandRegistry
 {
@@ -51,7 +51,7 @@ pub( super ) fn build_registry() -> CommandRegistry
 
   // `.help` is pre-registered by CommandRegistry::new() — do not register again.
 
-  // Register 11 shared commands (credentials, account, token, paths, usage).
+  // Register 14 shared commands (credentials, account, token, paths, usage).
   crate::register_commands( &mut registry );
 
   registry

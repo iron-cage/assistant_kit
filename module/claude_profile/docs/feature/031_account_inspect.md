@@ -174,7 +174,7 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/account.rs` | `account::list()` — reads local snapshot data for fallback |
-| source | `src/commands/account_ops.rs` | `account_inspect_routine()` — three-endpoint fetch, selection priority, text/json render |
+| source | `src/commands/account_inspect.rs` | `account_inspect_routine()` — three-endpoint fetch, selection priority, text/json render |
 | source | `src/registry.rs` | Registration of `.account.inspect` and its four parameters |
 | source | `claude_quota/src/lib.rs` | `fetch_userinfo()`, `fetch_subscriptions()`, `fetch_claude_cli_roles()` — endpoint transports; `select_membership_index()` — priority logic |
 | test | `tests/cli/account_inspect_test.rs` | Integration tests for AC-01..AC-19 |

@@ -44,7 +44,7 @@ clp .credentials.status format::json
 
 **Algorithm (3 steps):**
 1. Read `~/.claude/.credentials.json`; read `_active_{hostname}_{user}` marker (best-effort)
-2. `(when snapshot fields enabled)` Read `~/.claude.json`, `~/.claude/settings.json`, and `{active_name}.roles.json` per enabled field params (best-effort; missing files → `N/A`)
+2. `(when snapshot fields enabled)` Read `~/.claude.json`, `~/.claude/settings.json`, and `{active_name}.json` per enabled field params (best-effort; missing files → `N/A`)
 3. Render enabled fields in requested `format::`
 
 **Examples:**

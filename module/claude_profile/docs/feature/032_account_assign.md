@@ -102,7 +102,7 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/commands/account_ops.rs` | `account_assign_routine()` — CLI handler |
+| source | `src/commands/account_assign.rs` | `account_assign_routine()` — CLI handler |
 | source | `module/claude_profile_core/src/account.rs` | `active_marker_filename()`, `resolve_hostname()`, sanitization logic reused |
 | param | [cli/param/001_name.md](../cli/param/001_name.md) | `name::` — account identifier with prefix resolution |
 | param | [cli/param/053_for.md](../cli/param/053_for.md) | `for::` — `USER@MACHINE` target identity |

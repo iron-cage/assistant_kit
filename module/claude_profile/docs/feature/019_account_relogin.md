@@ -46,7 +46,7 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/commands/account_ops.rs` | `account_relogin_routine()` — CLI handler; 6-step TTY spawn and credential capture |
+| source | `src/commands/account_relogin.rs` | `account_relogin_routine()` — CLI handler; 6-step TTY spawn and credential capture |
 | source | `src/account.rs` | `switch_account()`, `save()` — credential rotation and store write-back |
 | invariant | [invariant/006_param_defaults.md](../invariant/006_param_defaults.md) | Governing principle: `name::` defaults to active account when omitted |
 | doc | [017_token_refresh.md](017_token_refresh.md) | Automated refresh path — use `.account.relogin` when `refresh::1` returns `credentials=None` |

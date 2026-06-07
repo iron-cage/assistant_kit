@@ -71,7 +71,7 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 | Type | File | Responsibility |
 |------|------|----------------|
 | source | `src/account.rs` | `account_renewal()` — read-merge `_renewal_at` into `{name}.json`; multi-account dispatch |
-| source | `src/commands/account_ops.rs` | `account_renewal_routine()` — CLI handler; param validation; comma-list token resolution via `resolve_account_name()` |
+| source | `src/commands/account_renewal.rs` | `account_renewal_routine()` — CLI handler; param validation; comma-list token resolution via `resolve_account_name()` |
 | source | `src/usage/format.rs` | `renews_label()` — `~Renews` exact vs. estimated rendering; `next_event_label()` — `→ Next` event selection |
 | test | `tests/cli/account_mutations_test.rs` | AC-01…AC-15 test cases |
 | doc | [002_account_save.md](002_account_save.md) | `save()` read-merge preserving `_renewal_at` (AC-17 there) |
