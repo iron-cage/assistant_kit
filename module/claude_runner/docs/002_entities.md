@@ -6,7 +6,7 @@
 |------|---------|-------------|----------:|
 | `api/` | Index of API doc instances covering COMMANDS_YAML, VerbosityLevel, and register_commands contracts | [api/readme.md](api/readme.md) | 1 |
 | `cli/` | Index of CLI reference instances covering commands, params, types, groups, dictionary, user stories, env params | [cli/readme.md](cli/readme.md) | 5 |
-| `cli/param/` | Index of individual parameter reference instances (33 parameters) | [cli/param/readme.md](cli/param/readme.md) | 33 |
+| `cli/param/` | Index of individual parameter reference instances (36 parameters) | [cli/param/readme.md](cli/param/readme.md) | 36 |
 | `cli/user_story/` | Index of user goal and usage pattern instances (25 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 25 |
 | `feature/` | Index of feature doc instances covering the clr binary tool design | [feature/readme.md](feature/readme.md) | 1 |
 | `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, and trace universality | [invariant/readme.md](invariant/readme.md) | 4 |
@@ -54,6 +54,9 @@
 | cli/param | 031 | --expect-strategy | [cli/param/031_expect_strategy.md](cli/param/031_expect_strategy.md) |
 | cli/param | 032 | --expect-retries | [cli/param/032_expect_retries.md](cli/param/032_expect_retries.md) |
 | cli/param | 033 | --max-sessions | [cli/param/033_max_sessions.md](cli/param/033_max_sessions.md) |
+| cli/param | 034 | --retry-on-rate-limit | [cli/param/034_retry_on_rate_limit.md](cli/param/034_retry_on_rate_limit.md) |
+| cli/param | 035 | --retry-delay | [cli/param/035_retry_delay.md](cli/param/035_retry_delay.md) |
+| cli/param | 036 | --timeout (run/ask) | [cli/param/036_timeout.md](cli/param/036_timeout.md) |
 | cli/user_story | 001 | Interactive REPL | [cli/user_story/001_interactive_repl.md](cli/user_story/001_interactive_repl.md) |
 | cli/user_story | 002 | Print Mode Capture | [cli/user_story/002_print_mode_capture.md](cli/user_story/002_print_mode_capture.md) |
 | cli/user_story | 003 | Interactive With Message | [cli/user_story/003_interactive_with_message.md](cli/user_story/003_interactive_with_message.md) |
