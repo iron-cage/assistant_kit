@@ -47,7 +47,7 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 
 **Model/effort resolution:** Delegates entirely to `resolve_model()` and `resolve_effort()` in `usage.rs`. All semantics from Feature 026 apply unchanged:
 - `imodel::auto` (default): `claude-sonnet-4-6` if `7d(Son) ≥ 20%`, else `claude-opus-4-6`
-- `effort::auto` (default): `high` for Sonnet, `max` for Opus, no flag for `imodel::keep` or `imodel::haiku`
+- `effort::auto` (default): `low` for any model that supports effort; no flag for `imodel::keep` or `imodel::haiku`
 
 **Layer assignment:** Quota fetch and subprocess call are added to `account_use_routine()` in `commands.rs`. Resolution functions (`resolve_model`, `resolve_effort`) are reused from `usage.rs` with no changes.
 
@@ -64,7 +64,7 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 - **AC-03**: `clp .account.use` against an already-active account (`resets_at.is_some()`) completes without spawning a subprocess; exits 0.
 - **AC-04**: When the quota fetch fails (network error, auth error) AND the target account's token is NOT locally expired (`expiresAt` absent or in the future): touch is skipped silently and the switch still completes; exits 0.
 - **AC-05**: `imodel::auto` selects `claude-sonnet-4-6` when `7d(Son) ≥ 20%` and `claude-opus-4-6` when `7d(Son) < 20%` or unavailable; delegates to `resolve_model()`.
-- **AC-06**: `effort::auto` injects `--effort high` for Sonnet and `--effort max` for Opus; no `--effort` flag for `imodel::keep` or `imodel::haiku`.
+- **AC-06**: `effort::auto` injects `--effort low` for any model that supports effort; no `--effort` flag for `imodel::keep` or `imodel::haiku`.
 - **AC-07**: `imodel::bad` exits 1 with stderr naming `auto`, `sonnet`, `opus`, `haiku`, `keep`; `effort::bad` exits 1 with stderr naming `auto`, `low`, `normal`, `high`, `max`.
 - **AC-08**: `dry::1` prints `[dry-run] would switch to '{name}'` without modifying credentials or spawning a subprocess.
 - **AC-09**: `touch::`, `refresh::`, `imodel::`, `effort::`, and `trace::` appear in `.account.use --help` output with their defaults (`1`, `1`, `auto`, `auto`, `0`).

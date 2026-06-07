@@ -113,6 +113,27 @@ impl ClaudeCommand {
     self
   }
 
+  /// Configure the command for home-isolated subprocess invocations.
+  ///
+  /// Suppresses `--chrome` injection — chrome is not needed for credential-only
+  /// subprocesses and adds unnecessary overhead (AC-41).
+  ///
+  /// # Example
+  ///
+  /// ```
+  /// use claude_runner_core::ClaudeCommand;
+  ///
+  /// let cmd = ClaudeCommand::new()
+  ///   .with_home( std::path::Path::new( "/tmp/isolated" ) )
+  ///   .with_home_isolation();
+  /// ```
+  #[ inline ]
+  #[ must_use ]
+  pub fn with_home_isolation( self ) -> Self
+  {
+    self.with_chrome( None )
+  }
+
   /// Add multiple arguments to the command
   ///
   /// # Example

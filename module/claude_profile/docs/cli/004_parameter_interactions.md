@@ -283,7 +283,7 @@ clp .usage effort::max format::json
 
 **Effect:** When `imodel::keep` is combined with `effort::auto`, no `--effort` flag is injected into subprocess args. The subprocess runs with neither `--model` nor `--effort` overrides.
 
-**Rationale:** `effort::auto` resolves to `high` (Sonnet) or `max` (Opus) based on the known model. When `imodel::keep`, the model is unknown at dispatch time; injecting an effort level without knowing the model risks sending `--effort max` to a Sonnet model (which may downgrade silently or behave unexpectedly). The safe resolution is no effort override.
+**Rationale:** `effort::auto` resolves to `low` for any known model. When `imodel::keep`, the model is unknown at dispatch time; injecting an effort level without knowing the model risks unexpected behavior. The safe resolution is no effort override.
 
 **Commands affected:** [`.usage`](command/006_usage.md#command--9-usage)
 

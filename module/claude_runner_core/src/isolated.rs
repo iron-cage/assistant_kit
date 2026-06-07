@@ -22,6 +22,12 @@ use core::fmt;
 /// Default model ID used by [`IsolatedModel::Default`].
 pub const ISOLATED_DEFAULT_MODEL : &str = "claude-sonnet-4-6";
 
+/// Minimal instructions written to `<temp>/.claude/CLAUDE.md` by `run_isolated()`.
+/// Directs the subprocess to respond immediately without extended thinking (AC-42).
+pub const ISOLATED_CLAUDE_MD : &str = "\
+Respond immediately to --print prompts without extended thinking. \
+Do not use extended thinking. Do not add preamble. Do not use tools.";
+
 /// Claude model selection for isolated subprocess invocations.
 ///
 /// Controls whether `--model <id>` is prepended to the subprocess argument list.
@@ -180,6 +186,15 @@ pub fn run_isolated
   std::fs::write( &creds_path, credentials_json )
     .map_err( |e| RunnerError::Io( e.to_string() ) )?;
 
+  // Step 2b: write CLAUDE.md — instructs subprocess to skip extended thinking (AC-42)
+  let claude_md_path = claude_dir.join( "CLAUDE.md" );
+  std::fs::write( &claude_md_path, ISOLATED_CLAUDE_MD )
+    .map_err( |e|
+    {
+      let _ = std::fs::remove_dir_all( &temp_dir );
+      RunnerError::Io( e.to_string() )
+    } )?;
+
   // Step 3: Build command — prepend --model flag then user args
   let mut full_args = Vec::with_capacity( args.len() + 2 );
   if let Some( id ) = model.model_id()
@@ -190,6 +205,7 @@ pub fn run_isolated
   full_args.extend( args );
   let cmd = crate::ClaudeCommand::new()
     .with_home( &temp_dir )
+    .with_home_isolation()
     .with_args( full_args );
 
   // Step 4: Spawn subprocess with piped I/O so we keep the Child handle.

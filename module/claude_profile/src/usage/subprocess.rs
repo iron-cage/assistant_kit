@@ -49,7 +49,7 @@ pub( crate ) fn resolve_model( aq : &AccountQuota, imodel : SubprocessModel ) ->
 /// Resolve the `--effort` flag value for a subprocess given the resolved model.
 ///
 /// Returns `None` when no `--effort` flag should be injected.
-/// AC-05: `auto` → model-dependent: `high` (Sonnet), `max` (Opus), `None` (Haiku, `KeepCurrent`).
+/// AC-05: `auto` → `low` for any model that supports effort (Sonnet, Opus); `None` for Haiku or `KeepCurrent`.
 ///         Haiku has no extended thinking; injecting `--effort` would have no effect or API error.
 ///         `KeepCurrent` → `None` (model unknown at dispatch time).
 /// AC-06: `high` always injects `--effort high`.
@@ -69,8 +69,7 @@ pub( crate ) fn resolve_effort( model : &claude_runner_core::IsolatedModel, effo
     SubprocessEffort::Auto => match model
     {
       IsolatedModel::Specific( m ) if m.as_str() == "claude-haiku-4-5-20251001" => None,
-      IsolatedModel::Specific( m ) if m.as_str() == "claude-sonnet-4-6"         => Some( "high" ),
-      IsolatedModel::Specific( _ )                                               => Some( "max" ),
+      IsolatedModel::Specific( _ )                                               => Some( "low" ),
       IsolatedModel::KeepCurrent | IsolatedModel::Default                       => None,
     },
   }
@@ -248,18 +247,18 @@ mod tests
     assert_eq!( resolve_effort( &keep,   SubprocessEffort::Max ), Some( "max" ) );
   }
 
-  /// `effort::auto` + Sonnet → `Some("high")`; + Opus → `Some("max")`; + `KeepCurrent` → `None`.
+  /// AC-05: `effort::auto` → `low` for Sonnet and Opus; `None` for `KeepCurrent`.
   ///
   /// Spec: [`tests/docs/cli/param/036_effort.md` EC-7–EC-9]
   #[ test ]
-  fn it_effort_auto_model_dependent()
+  fn it_effort_auto_uniform_low()
   {
     let sonnet = claude_runner_core::IsolatedModel::Specific( "claude-sonnet-4-6".to_string() );
     let opus   = claude_runner_core::IsolatedModel::Specific( "claude-opus-4-6".to_string() );
     let keep   = claude_runner_core::IsolatedModel::KeepCurrent;
-    assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Auto ), Some( "high" ), "auto+sonnet must be high" );
-    assert_eq!( resolve_effort( &opus,   SubprocessEffort::Auto ), Some( "max" ),  "auto+opus must be max" );
-    assert_eq!( resolve_effort( &keep,   SubprocessEffort::Auto ), None,           "auto+keep must be None" );
+    assert_eq!( resolve_effort( &sonnet, SubprocessEffort::Auto ), Some( "low" ), "auto+sonnet must be low" );
+    assert_eq!( resolve_effort( &opus,   SubprocessEffort::Auto ), Some( "low" ), "auto+opus must be low" );
+    assert_eq!( resolve_effort( &keep,   SubprocessEffort::Auto ), None,          "auto+keep must be None" );
   }
 
   /// `imodel::keep` + `effort::auto` → no `--effort` flag (`effort_pre_args` returns empty vec).

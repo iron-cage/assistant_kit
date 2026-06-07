@@ -12,8 +12,8 @@ Edge case coverage for the `effort::` parameter on `.usage`. For `.account.use` 
 | EC-4 | `effort::bad` exits 1, stderr names all five valid values | Invalid Value |
 | EC-5 | `effort::high` — args contain `--effort high` regardless of model | Arg Construction |
 | EC-6 | `effort::max` — args contain `--effort max` regardless of model | Arg Construction |
-| EC-7 | `effort::auto` with resolved model=sonnet → `--effort high` | Behavioral Divergence |
-| EC-8 | `effort::auto` with resolved model=opus → `--effort max` | Behavioral Divergence |
+| EC-7 | `effort::auto` with resolved model=sonnet → `--effort low` | Behavioral Uniform |
+| EC-8 | `effort::auto` with resolved model=opus → `--effort low` | Behavioral Uniform |
 | EC-9 | `imodel::keep effort::auto` — neither `--model` nor `--effort` in args | Interaction |
 | EC-10 | `effort::low` accepted with empty credential store | Valid Value |
 | EC-11 | `effort::normal` accepted with empty credential store | Valid Value |
@@ -89,22 +89,22 @@ Edge case coverage for the `effort::` parameter on `.usage`. For `.account.use` 
 
 ---
 
-### EC-7: `effort::auto` with resolved model=sonnet → `--effort high` (Behavioral Divergence A)
+### EC-7: `effort::auto` with resolved model=sonnet → `--effort low` (Behavioral Uniform A)
 
 - **Given:** Resolved model = `IsolatedModel::Specific("claude-sonnet-4-6")`; `effort::auto`.
 - **When:** Unit test of `resolve_effort(&IsolatedModel::Specific("claude-sonnet-4-6"), "auto")`
-- **Then:** Returns `Some("high")`. Subprocess arg slice contains `--effort high`.
+- **Then:** Returns `Some("low")`. Subprocess arg slice contains `--effort low`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_auto_sonnet_path` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
-### EC-8: `effort::auto` with resolved model=opus → `--effort max` (Behavioral Divergence B)
+### EC-8: `effort::auto` with resolved model=opus → `--effort low` (Behavioral Uniform B)
 
-- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")`; `effort::auto`. Same `effort::auto` parameter as EC-7 but different resolved model.
+- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")`; `effort::auto`. Same `effort::auto` parameter as EC-7, same resolved model.
 - **When:** Unit test of `resolve_effort(&IsolatedModel::Specific("claude-opus-4-6"), "auto")`
-- **Then:** Returns `Some("max")`. Divergence from EC-7: the SAME `effort::auto` produces `high` for Sonnet and `max` for Opus, proving model-dependent resolution.
+- **Then:** Returns `Some("low")`. Same as EC-7: `effort::auto` always produces `low` regardless of model — uniform model-independent resolution.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_auto_opus_path` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../../docs/feature/026_subprocess_model_effort.md)

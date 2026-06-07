@@ -70,6 +70,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 | feature | [024_session_touch.md](024_session_touch.md) | Touch lifecycle — cache persists touch state |
 | feature | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | Model override — cache persists override decision |
 | feature | [029_account_host_metadata.md](029_account_host_metadata.md) | `{name}.json` structure — cache extends the same file |
-| source | `src/usage/fetch.rs` | Quota fetch — cache write point |
-| source | `src/usage/mod.rs` | Display render — cache read and staleness display |
-| source | `src/account.rs` | `save()` read-merge-write — same pattern reused for cache writes |
+| source | `src/usage/fetch.rs` | Cache write on fetch success (`write_quota_cache`); cache read on fetch error (`read_quota_cache`) |
+| source | `src/usage/render.rs` | Staleness display — `~` prefix via `prefix_tilde()`, `(Nm ago)` age label, `(stale)` markers, `cache_json_fields()` |
+| source | `src/usage/api.rs` | Side-effect cache — `write_cache_string()` (model_override, AC-05) and `write_cache_bool()` (touch_idle, AC-06) |
+| source | `claude_profile_core/src/account.rs` | Storage layer — `QuotaCacheEntry`, `read_quota_cache()`, `write_quota_cache()`, `write_cache_field()` |

@@ -171,7 +171,7 @@ clp .account.use name::alice@home.com trace::1
 | `touch::` | `bool` | `1` | Activate idle 5h session window via subprocess after switch |
 | `refresh::` | `bool` | `1` | Attempt OAuth token refresh when locally expired before refusing with exit 3 |
 | `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
-| `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (high for sonnet, max for opus, none for haiku/keep), `low`, `normal`, `high`, `max` |
+| `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
 | `trace::` | `bool` | `0` | Print `[trace] account.use` lines to stderr: credential read, quota fetch, idle check, model resolution, subprocess dispatch |
 
 **Algorithm (6 steps):**
@@ -199,7 +199,7 @@ clp .account.use name::alice@home.com trace::1
 # [trace] account.use  alice@home.com  reading: OK
 # [trace] account.use  alice@home.com  quota fetch: OK
 # [trace] account.use  alice@home.com  idle check: resets_at=absent → idle
-# [trace] account.use  alice@home.com  model: claude-opus-4-6  effort: max
+# [trace] account.use  alice@home.com  model: claude-opus-4-6  effort: low
 # [trace] account.use  alice@home.com  subprocess: spawned
 # switched to 'alice@home.com'
 ```
@@ -207,7 +207,7 @@ clp .account.use name::alice@home.com trace::1
 **Notes:**
 - `touch::1` (default): fetches quota for the target account; if `five_hour.resets_at` is absent (idle), spawns `run_isolated(["--print", "."])` with resolved model/effort to start a 5h session. Quota fetch failure checks `expiresAt` — if locally expired and `refresh::1` (default), attempts token refresh and re-probes touch context on success; exits 3 if refresh fails. If locally expired and `refresh::0`, exits 3 immediately. If `expiresAt` is absent or not yet expired, skips touch silently and the switch completes.
 - `touch::0`: pure credential rotation — no quota fetch, no subprocess, no expiry check. Pre-Feature-027 behavior.
-- `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `resolve_model()` selects Sonnet when `7d(Son) ≥ 20%`, Opus otherwise; `resolve_effort()` maps Sonnet → `high`, Opus → `max`, Haiku → no flag. `imodel::haiku` is explicit only — `auto` never selects it.
+- `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `resolve_model()` selects Sonnet when `7d(Son) ≥ 20%`, Opus otherwise; `resolve_effort()` maps Sonnet/Opus → `low`, Haiku → no flag, Keep → no flag. `imodel::haiku` is explicit only — `auto` never selects it.
 - `trace::1` only produces output when `touch::1`; with `touch::0` there are no fetch operations to trace.
 - See [feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) for full execution sequence and acceptance criteria.
 

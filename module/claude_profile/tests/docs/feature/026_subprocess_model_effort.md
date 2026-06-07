@@ -13,8 +13,8 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 | FT-05 | `imodel::sonnet` always injects `--model claude-sonnet-4-6` | AC-02 | Unit |
 | FT-06 | `imodel::opus` always injects `--model claude-opus-4-6` | AC-03 | Unit |
 | FT-07 | `imodel::keep` injects no `--model` flag | AC-04 | Unit |
-| FT-08 | `effort::auto` + sonnet → `--effort high` | AC-05 | Unit |
-| FT-09 | `effort::auto` + opus → `--effort max` | AC-05 | Unit |
+| FT-08 | `effort::auto` + sonnet → `--effort low` | AC-05 | Unit |
+| FT-09 | `effort::auto` + opus → `--effort low` | AC-05 | Unit |
 | FT-10 | `imodel::keep effort::auto` → no `--effort` injected | AC-05 | Unit |
 | FT-11 | `effort::high` always injects `--effort high` | AC-06 | Unit |
 | FT-12 | `effort::max` always injects `--effort max` | AC-07 | Unit |
@@ -39,8 +39,8 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 | FT-05 | imodel::sonnet explicit always sonnet | AC-02 | Explicit |
 | FT-06 | imodel::opus explicit always opus | AC-03 | Explicit |
 | FT-07 | imodel::keep no model flag | AC-04 | Explicit |
-| FT-08 | effort::auto sonnet path produces high | AC-05 | Effort Auto |
-| FT-09 | effort::auto opus path produces max | AC-05 | Effort Auto |
+| FT-08 | effort::auto sonnet path produces low | AC-05 | Effort Auto |
+| FT-09 | effort::auto opus path produces low | AC-05 | Effort Auto |
 | FT-10 | imodel::keep effort::auto no effort flag | AC-05 | Interaction |
 | FT-11 | effort::high explicit always high | AC-06 | Explicit |
 | FT-12 | effort::max explicit always max | AC-07 | Explicit |
@@ -135,22 +135,22 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ---
 
-### FT-08: `effort::auto` + resolved model=sonnet → subprocess receives `--effort high`
+### FT-08: `effort::auto` + resolved model=sonnet → subprocess receives `--effort low`
 
 - **Given:** Resolved model = `IsolatedModel::Specific("claude-sonnet-4-6")`; `effort::auto`.
 - **When:** `resolve_effort(&IsolatedModel::Specific("claude-sonnet-4-6"), "auto")`
-- **Then:** Returns `Some("high")`. The arg slice prepended before `["--print", "."]` contains `["--effort", "high"]`.
+- **Then:** Returns `Some("low")`. The arg slice prepended before `["--print", "."]` contains `["--effort", "low"]`. `low` prevents extended thinking which would cause isolated subprocess timeouts.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_auto_sonnet_path` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
-### FT-09: `effort::auto` + resolved model=opus → subprocess receives `--effort max`
+### FT-09: `effort::auto` + resolved model=opus → subprocess receives `--effort low`
 
-- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")`; `effort::auto`. Same parameter as FT-08 but different resolved model.
+- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")`; `effort::auto`. Same parameter as FT-08 — same `low` result regardless of model.
 - **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-6"), "auto")`
-- **Then:** Returns `Some("max")`. The arg slice contains `["--effort", "max"]`. Divergence from FT-08: Opus produces `max` while Sonnet produces `high`.
+- **Then:** Returns `Some("low")`. The arg slice contains `["--effort", "low"]`. Same as FT-08: `effort::auto` always produces `low` regardless of whether the model is Sonnet or Opus.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_auto_opus_path` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../../docs/feature/026_subprocess_model_effort.md)
@@ -170,9 +170,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-11: `effort::high` always injects `--effort high`
 
-- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")` (would produce `max` under `auto`); `effort::high`.
+- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")` (would produce `low` under `auto`); `effort::high`.
 - **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-6"), "high")`
-- **Then:** Returns `Some("high")`. Explicit value overrides model-derived maximum.
+- **Then:** Returns `Some("high")`. Explicit value overrides the model-independent `auto` default of `low`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_high_explicit` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-06](../../../../docs/feature/026_subprocess_model_effort.md)
@@ -181,9 +181,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-12: `effort::max` always injects `--effort max`
 
-- **Given:** Resolved model = `IsolatedModel::Specific("claude-sonnet-4-6")` (would produce `high` under `auto`); `effort::max`.
+- **Given:** Resolved model = `IsolatedModel::Specific("claude-sonnet-4-6")` (would produce `low` under `auto`); `effort::max`.
 - **When:** `resolve_effort(&IsolatedModel::Specific("claude-sonnet-4-6"), "max")`
-- **Then:** Returns `Some("max")`. Explicit value overrides model-derived maximum.
+- **Then:** Returns `Some("max")`. Explicit value overrides the model-independent `auto` default of `low`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_max_explicit` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-07](../../../../docs/feature/026_subprocess_model_effort.md)
@@ -270,9 +270,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-20: `effort::low` always injects `--effort low`
 
-- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")` (would produce `max` under `auto`); `effort::low`.
+- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")` (would produce `low` under `auto`); `effort::low`.
 - **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-6"), "low")`
-- **Then:** Returns `Some("low")`. Explicit value overrides model-derived maximum.
+- **Then:** Returns `Some("low")`. Explicit `low` matches the auto default; no override needed.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_low_explicit` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-15](../../../../docs/feature/026_subprocess_model_effort.md)
@@ -281,9 +281,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ### FT-21: `effort::normal` always injects `--effort normal`
 
-- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")` (would produce `max` under `auto`); `effort::normal`.
+- **Given:** Resolved model = `IsolatedModel::Specific("claude-opus-4-6")` (would produce `low` under `auto`); `effort::normal`.
 - **When:** `resolve_effort(&IsolatedModel::Specific("claude-opus-4-6"), "normal")`
-- **Then:** Returns `Some("normal")`. Explicit value overrides model-derived maximum.
+- **Then:** Returns `Some("normal")`. Explicit value overrides the auto default of `low`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_normal_explicit` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-16](../../../../docs/feature/026_subprocess_model_effort.md)

@@ -115,7 +115,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 - **Given:** Feature 026 unit tests cover `resolve_effort()` exhaustively (FT-08 through FT-12 in [026_subprocess_model_effort.md](026_subprocess_model_effort.md)).
 - **When:** `.account.use` dispatches its post-switch touch subprocess — it calls `resolve_effort(&model, effort_param)` with the resolved model.
-- **Then:** Effort injection behavior is identical to `.usage` touch path — `effort::auto` injects `--effort high` for Sonnet, `--effort max` for Opus, nothing for `imodel::keep` or `imodel::haiku`. All injection semantics governed by Feature 026.
+- **Then:** Effort injection behavior is identical to `.usage` touch path — `effort::auto` injects `--effort low` for any model, nothing for `imodel::keep` or `imodel::haiku`. All injection semantics governed by Feature 026.
 - **Exit:** n/a (structural — no new unit test; coverage via Feature 026 FT-08..FT-12)
 - **Source fn:** (covered by Feature 026 unit tests — `resolve_effort` is shared)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-06](../../../../docs/feature/027_account_use_post_switch_touch.md)

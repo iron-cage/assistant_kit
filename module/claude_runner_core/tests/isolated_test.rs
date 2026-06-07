@@ -17,8 +17,10 @@
 //! | T08 | `run_isolated()` with timeout 0 → `Err(TimeoutWithOutput)` | `secs: 0`, `partial_stdout: ""`  | yes   |
 //! | T09 | timeout-with-credentials sentinel: `exit_code = -1`   | `Ok` with `credentials: Some(...)`   | no    |
 //! | T10 | `IsolatedModel::model_id()` all 3 variants + constant | correct `Option<&str>` per variant   | no    |
+//! | T11 | `ISOLATED_CLAUDE_MD` keyword content (AC-42)          | contains expected instruction terms   | no    |
+//! | T12 | `with_home_isolation()` suppresses `--chrome` (AC-41) | `describe()` omits `--chrome`        | no    |
 
-use claude_runner_core::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLATED_DEFAULT_MODEL };
+use claude_runner_core::{ IsolatedModel, IsolatedRunResult, RunnerError, ISOLATED_DEFAULT_MODEL, ISOLATED_CLAUDE_MD };
 
 // ── T01 ───────────────────────────────────────────────────────────────────────
 
@@ -273,5 +275,55 @@ fn t10_isolated_model_model_id_all_variants()
     IsolatedModel::Specific( custom.to_string() ).model_id(),
     Some( custom ),
     "IsolatedModel::Specific.model_id() must return Some of the given model ID",
+  );
+}
+
+// ── T11 ───────────────────────────────────────────────────────────────────────
+
+/// T11: `ISOLATED_CLAUDE_MD` contains the required instruction keywords (AC-42).
+///
+/// The constant must instruct the subprocess to respond immediately without
+/// extended thinking, no preamble, and no tool use. These keywords are checked
+/// individually so that any future rewording must still satisfy all three.
+///
+/// Spec: [`tests/docs/feature/004_run_isolated.md` FT-5]
+#[ test ]
+fn t_run_isolated_claude_md_content()
+{
+  assert!(
+    ISOLATED_CLAUDE_MD.contains( "extended thinking" ),
+    "ISOLATED_CLAUDE_MD must mention extended thinking, got: {ISOLATED_CLAUDE_MD}",
+  );
+  assert!(
+    ISOLATED_CLAUDE_MD.contains( "preamble" ),
+    "ISOLATED_CLAUDE_MD must mention no preamble, got: {ISOLATED_CLAUDE_MD}",
+  );
+  assert!(
+    ISOLATED_CLAUDE_MD.contains( "tool" ),
+    "ISOLATED_CLAUDE_MD must mention no tool use, got: {ISOLATED_CLAUDE_MD}",
+  );
+}
+
+// ── T12 ───────────────────────────────────────────────────────────────────────
+
+/// T12: `with_home_isolation()` suppresses `--chrome` from `ClaudeCommand` output (AC-41).
+///
+/// `ClaudeCommand::new()` defaults to `chrome: Some(true)`, which injects `--chrome`.
+/// `with_home_isolation()` calls `with_chrome(None)`, which must eliminate the flag.
+///
+/// Spec: [`tests/docs/feature/004_run_isolated.md` FT-6]
+#[ test ]
+fn t_isolated_no_chrome_flag()
+{
+  use claude_runner_core::ClaudeCommand;
+
+  let tmp = std::env::temp_dir().join( "t_isolated_no_chrome_flag" );
+  let desc = ClaudeCommand::new()
+    .with_home( &tmp )
+    .with_home_isolation()
+    .describe();
+  assert!(
+    !desc.contains( "--chrome" ),
+    "with_home_isolation() must suppress --chrome; got: {desc}",
   );
 }

@@ -48,7 +48,7 @@ trace::1   → print [trace] lines to stderr; stdout output unchanged
   [trace] account.use  alice@home.com  reading: OK
   [trace] account.use  alice@home.com  quota fetch: OK
   [trace] account.use  alice@home.com  idle check: resets_at=absent → idle
-  [trace] account.use  alice@home.com  model: claude-opus-4-6  effort: max
+  [trace] account.use  alice@home.com  model: claude-opus-4-6  effort: low
   [trace] account.use  alice@home.com  subprocess: spawned
   ```
 - `.account.use` trace for an already-active account (subprocess skipped):

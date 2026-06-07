@@ -3,13 +3,13 @@
 ### Scope
 
 - **Purpose**: Provide a way to spawn `claude` with a temporary, isolated HOME directory containing only a single credential file, capture the exit code and output, detect any credential changes written by the subprocess, and return them to the caller — all without contaminating the host environment.
-- **Responsibility**: Documents the `run_isolated()` function API, the `IsolatedRunResult`, `RunnerError`, and `IsolatedModel` types, the temp-HOME construction algorithm, the thread-based timeout mechanism, credential change detection by byte comparison, unconditional temp-dir cleanup, and the single-execution-point constraint.
-- **In Scope**: `run_isolated()` signature and contract; `IsolatedRunResult`, `RunnerError`, and `IsolatedModel` types; temp HOME construction; SIGINT/timeout handling via `mpsc::channel + recv_timeout`; credential write-back detection; thread ownership and cleanup; `#[cfg(feature = "enabled")]` gate; `lim_it` test categorisation.
+- **Responsibility**: Documents the `run_isolated()` function API, the `IsolatedRunResult`, `RunnerError`, and `IsolatedModel` types, the temp-HOME construction algorithm, the `spawn_piped()` + `try_wait()` polling timeout mechanism, CLAUDE.md write to isolated HOME, chrome flag suppression, credential change detection by byte comparison, unconditional temp-dir cleanup, and the single-execution-point constraint.
+- **In Scope**: `run_isolated()` signature and contract; `IsolatedRunResult`, `RunnerError` (including `TimeoutWithOutput` variant), and `IsolatedModel` types; temp HOME construction; timeout handling via `spawn_piped()` + `try_wait()` polling with 50 ms ticks; CLAUDE.md write to `<temp>/.claude/CLAUDE.md`; `--chrome` suppression in isolated mode; credential write-back detection; `#[cfg(feature = "enabled")]` gate; `lim_it` test categorisation.
 - **Out of Scope**: `refresh::` retry logic (→ `claude_profile/docs/feature/017_token_refresh.md`); how callers use the returned credentials; `run_isolated()` argument construction (caller responsibility).
 
 ### Design
 
-`run_isolated()` spawns `claude` with `HOME` overridden to a temporary directory containing only a single `.claude.json` credentials file. When `claude` completes (or times out), the function checks whether the subprocess wrote updated credentials back to that temp HOME. The result — exit code, captured stdout/stderr, and optionally refreshed credentials JSON — is returned to the caller without modifying any host-environment files.
+`run_isolated()` spawns `claude` with `HOME` overridden to a temporary directory containing `.claude/.credentials.json` (credentials) and `.claude/CLAUDE.md` (instructions to respond immediately without extended thinking). When `claude` completes (or times out), the function checks whether the subprocess wrote updated credentials back to that temp HOME. The result — exit code, captured stdout/stderr, and optionally refreshed credentials JSON — is returned to the caller without modifying any host-environment files.
 
 **Types (always available — no `#[cfg(feature = "enabled")]` gate on types):**
 
@@ -24,7 +24,10 @@ pub struct IsolatedRunResult {
 pub enum RunnerError {
     ClaudeNotFound,
     TempDirFailed(String),
+    /// Timeout with no partial output captured.
     Timeout { secs: u64 },
+    /// Timeout with partial stdout captured (Fix BUG-243: old Timeout discarded all buffered output).
+    TimeoutWithOutput { secs: u64, partial_stdout: String },
     Io(String),
 }
 
@@ -65,24 +68,30 @@ pub fn run_isolated(
     on failure → RunnerError::TempDirFailed
 2.  write credentials_json to <temp>/.claude/.credentials.json
     on write failure → cleanup temp, return RunnerError::Io
+2b. write minimal CLAUDE.md to <temp>/.claude/CLAUDE.md
+    content instructs subprocess to respond immediately without extended thinking
+    on write failure → cleanup temp, return RunnerError::Io
 3.  build command; if model != KeepCurrent, prepend ["--model", <id>] to args:
-      ClaudeCommand::new().with_home(<temp>).with_args([--model <id>, <args...>])
+      ClaudeCommand::new().with_home(<temp>).with_home_isolation().with_args([--model <id>, <args...>])
       env HOME=<temp>
       (all other env vars inherited from parent process)
       stdout and stderr piped
-4.  spawn command (single execution point: ClaudeCommand::execute())
+      NOTE: home-isolated mode suppresses --chrome flag (not needed for credential-only subprocesses)
+4.  spawn command via spawn_piped() (single execution point: ClaudeCommand)
     if "claude" binary not found → RunnerError::ClaudeNotFound
-5.  transfer Child ownership to thread T
-    T calls execute() → sends result via mpsc::Sender
+5.  poll subprocess in 50ms ticks until exit or deadline:
+      try_wait() → Some(_): subprocess exited; break to step 6
+      try_wait() → None AND now >= deadline: timeout; kill child; break to step 5b
+      try_wait() → Err: return RunnerError::Io
+5b. (timeout path only) kill() + wait_with_output() to collect partial stdout
 6.  read credentials from <temp>/.claude/.credentials.json (before cleanup — order matters)
     compare bytes with original credentials_json argument
     if different AND valid UTF-8: credentials = Some(new_json)
     else: credentials = None
 7.  unconditionally remove temp dir (even on timeout or error paths)
-8.  caller blocks on receiver.recv_timeout(timeout_secs)
-    on timeout AND credentials is Some: return Ok (credentials refreshed before blocking)
-    on timeout AND credentials is None: RunnerError::Timeout { secs: timeout_secs }
-    on Ok(output): return Ok(IsolatedRunResult { exit_code, stdout, stderr, credentials })
+8.  if timed_out AND credentials is Some: return Ok (credentials refreshed before timeout fired)
+    if timed_out AND credentials is None: return RunnerError::TimeoutWithOutput { partial_stdout }
+    else: return Ok(IsolatedRunResult { exit_code, stdout, stderr, credentials })
 ```
 
 **Timeout-with-credentials fix (`issue-isolated-credentials-on-timeout`):** Claude Code refreshes OAuth tokens at startup before blocking for user input. A subprocess that successfully refreshes credentials may then block waiting for a message — triggering the timeout before producing any output. In this case, the subprocess has already written refreshed credentials to `<temp>/.claude/.credentials.json`. The fix: credentials are read from disk _before_ the timeout check. If timeout fires but `credentials` is `Some`, `run_isolated()` returns `Ok` so callers receive the refreshed credentials despite the timeout.
@@ -93,7 +102,7 @@ pub fn run_isolated(
 
 **Timeout mechanism:**
 
-`std::process::Child::wait_with_output()` blocks indefinitely. To implement a timeout without a `tokio` dependency, the child is sent to a dedicated OS thread via ownership transfer. The calling thread waits on `mpsc::channel::Receiver::recv_timeout(duration)`. On timeout, the receiver drops and the caller kills the child process by PID (`child.kill()` is called on the `Child` value stored in the thread before the thread is abandoned).
+`run_isolated()` uses `spawn_piped()` + `try_wait()` polling in 50 ms ticks. The `Child` handle stays in scope through the timeout deadline, enabling `child.kill()` + `child.wait_with_output()` to recover any buffered output on timeout (Fix BUG-243: the previous thread/channel approach abandoned the `Child` inside a spawned thread on `recv_timeout`, making buffered stdout irrecoverable). On timeout, `RunnerError::TimeoutWithOutput { partial_stdout }` is returned with any output that was buffered before the kill.
 
 **Temp HOME isolation:**
 
@@ -103,9 +112,10 @@ The temp directory structure is:
 {tmp}/claude_isolated_{pid}/
   .claude/
     .credentials.json     ← credentials_json written here
+    CLAUDE.md             ← minimal instruction file: respond immediately, no extended thinking
 ```
 
-`HOME` is set to `{tmp}/claude_isolated_{pid}`. Other env vars are inherited. The subprocess sees a fresh `~/.claude/.credentials.json` with the provided credentials and nothing else — no other `~/.claude/` files, no `settings.json`, no session state.
+`HOME` is set to `{tmp}/claude_isolated_{pid}`. Other env vars are inherited. The subprocess sees a fresh `~/.claude/.credentials.json` with the provided credentials and a `CLAUDE.md` that instructs it to respond immediately without extended thinking — preventing timeout on keep-alive `--print .` prompts. No other `~/.claude/` files are present (no `settings.json`, no session state). The `--chrome` flag is suppressed — it is not needed for credential-only subprocess invocations and adds unnecessary overhead.
 
 **Credential change detection:**
 
@@ -123,11 +133,13 @@ The temp directory is removed in all code paths: success, timeout, and I/O error
 
 ### Acceptance Criteria
 
-- **AC-33**: `run_isolated(creds_json, args, timeout_secs, model)` spawns `claude` with `HOME` overridden to a temp directory containing only `.claude/.credentials.json` populated with `creds_json`. When `model` is not `KeepCurrent`, `--model <id>` is prepended to `args` before the subprocess is spawned.
+- **AC-33**: `run_isolated(creds_json, args, timeout_secs, model)` spawns `claude` with `HOME` overridden to a temp directory containing `.claude/.credentials.json` (populated with `creds_json`) and `.claude/CLAUDE.md` (minimal instruction file directing Claude to respond immediately without extended thinking). When `model` is not `KeepCurrent`, `--model <id>` is prepended to `args` before the subprocess is spawned.
+- **AC-41**: The `--chrome` flag is not passed to isolated subprocesses. `ClaudeCommand` used by `run_isolated()` must not inject `--chrome` regardless of any global `ClaudeCommand::new()` defaults — chrome mode is not needed for credential-only subprocess invocations.
+- **AC-42**: The `CLAUDE.md` written to `<temp>/.claude/CLAUDE.md` contains at minimum the instruction: respond immediately to `--print` prompts without extended thinking, no preamble, no tool use. This prevents isolated subprocesses from entering extended thinking mode on keep-alive prompts, which would cause them to exceed the subprocess timeout.
 - **AC-34**: When the subprocess exits normally, `run_isolated()` returns `Ok(IsolatedRunResult)` with the correct `exit_code`, `stdout`, and `stderr`.
 - **AC-35**: When the subprocess rewrites `.claude.json`, `credentials` is `Some(new_json)` with the updated content.
 - **AC-36**: When the subprocess does not modify `.claude.json`, `credentials` is `None`.
-- **AC-37**: When `timeout_secs` elapses before the subprocess exits, `run_isolated()` returns `Err(RunnerError::Timeout { secs })` and terminates the child process.
+- **AC-37**: When `timeout_secs` elapses before the subprocess exits and no credentials were refreshed, `run_isolated()` kills the child process and returns `Err(RunnerError::TimeoutWithOutput { secs, partial_stdout })` where `partial_stdout` contains any output captured before the kill. When credentials were refreshed before the timeout fired, returns `Ok` so callers receive the refreshed credentials.
 - **AC-38**: The temp directory is removed in all code paths — success, timeout, and I/O error — with no temp-dir leak.
 - **AC-39**: `run_isolated()` does not call `Command::new("claude")` directly; it routes through `ClaudeCommand::with_home()` and the existing `execute()` path (single-execution-point invariant).
 - **AC-40**: `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, and `ISOLATED_DEFAULT_MODEL` are available without `#[cfg(feature = "enabled")]`; `run_isolated()` is available only with it.
@@ -136,9 +148,10 @@ The temp directory is removed in all code paths: success, timeout, and I/O error
 
 | Type | File | Responsibility |
 |------|------|----------------|
-| source | `src/isolated.rs` | `run_isolated()` implementation; `IsolatedRunResult`, `RunnerError` types |
+| source | `src/isolated.rs` | `run_isolated()` implementation; `IsolatedRunResult`, `RunnerError` types; `ISOLATED_CLAUDE_MD` constant |
 | source | `src/lib.rs` | Re-exports `IsolatedRunResult`, `RunnerError`, `IsolatedModel`, `ISOLATED_DEFAULT_MODEL`, `run_isolated` |
-| source | `src/command.rs` | `ClaudeCommand::with_home()` builder method (single execution point) |
+| source | `src/command/mod.rs` | `ClaudeCommand` builder; `with_home()` method; chrome injection logic |
+| source | `src/command/params_core.rs` | `with_home_isolation()` method — chains `with_chrome(None)` to suppress chrome in isolated mode |
 | invariant | [invariant/001_single_execution_point.md](../invariant/001_single_execution_point.md) | `Command::new("claude")` must appear exactly once |
 | task | `task/claude_runner_core/136_run_isolated_subprocess.md` | Implementation task for this feature |
 | dep | `claude_profile` | `usage.rs` — `refresh::` retry logic calling `run_isolated()` |

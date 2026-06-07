@@ -13,7 +13,7 @@
 | [`trace::`](../param/023_trace.md) | `bool` | `0` | Print `[trace]` lines to stderr: credential reads, API calls, and refresh steps |
 | [`touch::`](../param/034_touch.md) | `bool` | `1` | Activate idle 5h windows via isolated subprocess |
 | [`imodel::`](../param/035_imodel.md) | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
-| [`effort::`](../param/036_effort.md) | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (max for model), `low`, `normal`, `high`, `max` |
+| [`effort::`](../param/036_effort.md) | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
 
 **Used By:** [`.usage`](../command/006_usage.md#command--9-usage) (all 8 params), [`.account.use`](../command/001_account.md#command--5-accountuse) (`trace::`, `touch::`, `imodel::`, `effort::`), [`.account.inspect`](../command/001_account.md#command--15-accountinspect) (`refresh::`, `trace::`)
 
