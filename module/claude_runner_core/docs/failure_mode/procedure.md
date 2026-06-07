@@ -24,4 +24,4 @@ Adding failure mode document `005_signal_exit_codes`:
 1. Check `readme.md` Overview Table — current highest ID is `004`
 2. Create `005_signal_exit_codes.md` in this directory
 3. Add row to Overview Table: `| 005 | Signal Exit Codes | Exit 128+N means killed by signal | ✅ |`
-4. Add row to Silent Fails Table: `| 005 | [Signal Exit Codes](005_signal_exit_codes.md) | Process killed by signal | exit code | \`exit_code >= 128\` |`
+4. Add row to Silent Fails Table: `| 005 | [Signal Exit Codes](005_signal_exit_codes.md) | Process killed by signal | exit code | \`exit_code > 128\` |`

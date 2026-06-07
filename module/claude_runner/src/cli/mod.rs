@@ -6,7 +6,7 @@ mod credential;
 mod help;
 mod gate;
 
-use claude_runner_core::{ ClaudeCommand, ErrorKind, ExecutionOutput, IsolatedModel, signal_exit_code };
+use claude_runner_core::{ ClaudeCommand, EffortLevel, ErrorKind, ExecutionOutput, IsolatedModel, signal_exit_code };
 use parse::{ CliArgs, ExpectStrategy };
 use cred_parse::{
   parse_isolated_args, parse_refresh_args,
@@ -553,7 +553,18 @@ pub( super ) fn dispatch_isolated( tokens : &[ String ] ) -> !
     eprintln!( "Error: cannot resolve credentials path: HOME is not set; provide --creds or set CLR_CREDS\nRun with --help for usage." );
     std::process::exit( 1 );
   }
-  run_isolated_command( &cli.creds_path, cli.timeout_secs, cli.trace, IsolatedModel::Default, cli.message.as_deref(), &cli.passthrough_args )
+  run_isolated_command(
+    "isolated",
+    &cli.creds_path,
+    cli.timeout_secs,
+    cli.trace,
+    IsolatedModel::Default,
+    EffortLevel::Max,
+    cli.message.as_deref(),
+    &cli.passthrough_args,
+    cli.message.is_some(), // skip-perms when a real task message is present
+    false,                 // chrome stays on for isolated tasks (may use browser tools)
+  )
 }
 
 /// Parse, validate, and execute the `refresh` subcommand.  Never returns.

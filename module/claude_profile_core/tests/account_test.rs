@@ -708,7 +708,7 @@ fn mre_bug254_switch_account_patches_email_when_metadata_absent()
 /// AC-01: `write_quota_cache` writes `"cache"` key to `{name}.json` preserving existing fields.
 ///
 /// Given: `alice@acme.com.json` containing `{"host":"wbox"}`
-/// When: `write_quota_cache` called with five_hour utilization 14.0
+/// When: `write_quota_cache` called with `five_hour` utilization 14.0
 /// Then: file contains both `"host":"wbox"` and `"cache"` with `fetched_at` + `five_hour.left_pct`
 #[ test ]
 fn cache_write_preserves_existing_fields()
@@ -898,7 +898,7 @@ fn cache_read_none_when_fetched_at_missing()
 
 /// `write_quota_cache` preserves `model_override` written by a prior `write_cache_string`.
 ///
-/// The quota write copies side-effect fields (model_override, last_touch_at, touch_idle)
+/// The quota write copies side-effect fields (`model_override`, `last_touch_at`, `touch_idle`)
 /// from the previous cache object into the new one (lines 1207-1212 in account.rs).
 #[ test ]
 fn cache_write_preserves_prior_side_effects()

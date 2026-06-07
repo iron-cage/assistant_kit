@@ -116,3 +116,11 @@
 - **Given**: `ExecutionOutput { exit_code: 1, stdout: "", stderr: "YOU'VE HIT YOUR LIMIT" }`
 - **When**: `classify_error()` is called
 - **Then**: Returns `Some(ErrorKind::Unknown)` — `str::contains` is case-sensitive; uppercase variant does not match `"You've hit your limit"`
+
+### Non-Coverage Notes
+
+The following scenarios are intentionally not tested because they are not observable through `classify_error()` in print mode:
+
+**E3 (Context Limit) — in-session UI form**: `"Context limit reached · /compact or /clear to continue"` is displayed by the interactive TUI and never written to stdout/stderr in `--print` mode. The API-level overflow form (`"API Error: 400 ..."`) is already covered by FT-05/FT-09/FT-11 via the `"API Error: "` pattern → `ApiError`.
+
+**E4 (Request Timed Out) — hang scenario**: After 10 retries the subprocess becomes unresponsive without exiting. `classify_error()` is never called because no exit code is produced. The retry message `"API Error (Request timed out.)"` uses parenthesis, not `"API Error: "` (colon-space), so it would not match the `ApiError` pattern if the subprocess did exit — but since it hangs, this is moot. When `--timeout` kills the subprocess it gets SIGTERM → already covered by FT-06/FT-07 (`Signal`).

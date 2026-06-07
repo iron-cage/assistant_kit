@@ -192,13 +192,15 @@ fn g2cc3_no_skip_permissions_and_no_effort_max_both_suppressed()
   );
 }
 
-/// G2CC4: All 20 runner control flags together → exit 0; no unknown-flag error.
+/// G2CC4: All 25 runner control flags together → exit 0; no unknown-flag error.
 ///
 /// Every runner control flag accepted without conflict. `--dry-run` wins over `--trace`,
 /// so stderr is empty. `--no-chrome` suppresses the default `--chrome` injection.
 /// `--subdir work` produces an effective dir containing `/-work`.
-/// `--retry-on-rate-limit`, `--retry-delay`, and `--timeout` are parsed and accepted;
-/// no retry or watchdog fires because `--dry-run` short-circuits before subprocess spawn.
+/// `--output-file`, `--expect`, `--expect-strategy`, `--expect-retries`, `--max-sessions`,
+/// `--retry-on-rate-limit`, `--retry-delay`, and `--timeout` are all parsed and accepted;
+/// no retry, watchdog, concurrency gate, or expect-validation fires because `--dry-run`
+/// short-circuits before subprocess spawn.
 ///
 /// `CLAUDECODE` is removed from the subprocess environment to implement the spec's
 /// "clean environment" precondition (CC-4 Given). Without removal, the BUG-248 fix
@@ -233,6 +235,11 @@ fn g2cc4_all_runner_control_flags_no_conflict()
       "--file", file_path,
       "--strip-fences",
       "--keep-claudecode",
+      "--output-file", "/tmp/rc_out.txt",
+      "--expect", "yes|no",
+      "--expect-strategy", "fail",
+      "--expect-retries", "2",
+      "--max-sessions", "5",
       "--retry-on-rate-limit", "3",
       "--retry-delay", "30",
       "--timeout", "60",
@@ -247,7 +254,7 @@ fn g2cc4_all_runner_control_flags_no_conflict()
     .expect( "failed to invoke clr binary" );
   assert!(
     out.status.success(),
-    "all 20 runner control flags must be accepted without conflict: {out:?}",
+    "all 25 runner control flags must be accepted without conflict: {out:?}",
   );
   assert!(
     out.stderr.is_empty(),

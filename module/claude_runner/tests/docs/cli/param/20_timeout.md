@@ -9,7 +9,7 @@ Edge case test planning for the `--timeout` parameter. See [020_timeout.md](../.
 | ID | Test Name | Category |
 |----|-----------|----------|
 | EC-1 | `--timeout 30` → accepted (default value) | Behavioral Divergence |
-| EC-2 | `--timeout 0` → immediate expiry | Behavioral Divergence |
+| EC-2 | `--timeout 0` → unlimited (no watchdog) | Behavioral Divergence |
 | EC-3 | `--timeout 3600` → large value accepted | Valid |
 | EC-4 | `--timeout -1` → exit 1, negative not accepted | Invalid |
 | EC-5 | `--timeout abc` → exit 1, non-numeric rejected | Invalid |
@@ -37,13 +37,13 @@ Edge case test planning for the `--timeout` parameter. See [020_timeout.md](../.
 
 ---
 
-### EC-2: `--timeout 0` → immediate expiry
+### EC-2: `--timeout 0` → unlimited (no watchdog)
 
 - **Given:** credentials JSON at `/tmp/ec2_to_creds.json`
 - **When:** `clr isolated --creds /tmp/ec2_to_creds.json --timeout 0 "test"`
-- **Then:** no parse error; subprocess attempted then immediately timed out; exit 2 (timeout before any creds refresh)
-- **Exit:** 2
-- **Source:** [020_timeout.md (Note: timeout 0 causes immediate expiry)](../../../../docs/cli/param/020_timeout.md)
+- **Then:** no parse error; `0` disables the watchdog entirely — subprocess runs until it exits naturally (no deadline enforced); exit code is the subprocess exit code, not 2
+- **Exit:** 0 or passthrough
+- **Source:** [020_timeout.md](../../../../docs/cli/param/020_timeout.md), [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
 - **Commands:** isolated, refresh
 
 ---

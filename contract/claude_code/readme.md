@@ -10,9 +10,10 @@ Code changes behavior, the corresponding test goes RED.
 
 | Path | Responsibility |
 |------|----------------|
-| `docs/` | Claude Code contract specifications (9 entity types, 137 instances) |
+| `docs/` | Claude Code contract specifications (10 entity types, 137 instances) |
 | `src/lib.rs` | Crate documentation |
 | `tests/behavior/` | Behavior hypothesis invalidation test suite (B1–B24 + B16h) |
+| `tests/docs/` | Test spec documents for fault classification (FT-01–FT-07) |
 
 ## Running
 

@@ -67,7 +67,7 @@ invalid values (parse failure → field stays at default).
 | 31 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 10) |
 | 32 | `CLR_RETRY_ON_RATE_LIMIT` | [`--retry-on-rate-limit`](param/034_retry_on_rate_limit.md) | u8 | Applied when `--retry-on-rate-limit` absent; invalid values silently ignored (parse failure → field stays at default 0) |
 | 33 | `CLR_RETRY_DELAY` | [`--retry-delay`](param/035_retry_delay.md) | u32 | Applied when `--retry-delay` absent; invalid values silently ignored (parse failure → field stays at default 60) |
-| 34 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (different semantics: `0` = immediate expiry there) |
+| 34 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (same semantics: `0` = unlimited) |
 
 **Precedence:**
 
@@ -93,7 +93,7 @@ after subcommand argument parsing.
 | # | Variable | CLI Parameter | Type | Notes |
 |---|----------|---------------|------|-------|
 | 1 | `CLR_CREDS` | [`--creds`](param/019_creds.md) | string | Applied when `--creds` absent (`creds_path` is empty string) |
-| 2 | `CLR_TIMEOUT` | [`--timeout`](param/020_timeout.md) | u64 | Applied when CLI timeout equals its command default (30 for `isolated`, 45 for `refresh`); `0` = immediate expiry for these commands. Also applies to `run`/`ask` via Section 1 row 34 where `0` = unlimited (different semantic) |
+| 2 | `CLR_TIMEOUT` | [`--timeout`](param/020_timeout.md) | u64 | Applied when CLI timeout equals its command default (30 for `isolated`, 45 for `refresh`); `0` = unlimited (no watchdog), matching `run`/`ask` semantics. Also applies to `run`/`ask` via Section 1 row 34 |
 | 3 | `CLR_TRACE` | [`--trace`](param/013_trace.md) | bool | Applied when `--trace` absent; also applies to `run` via Section 1 |
 
 **Precedence (`--creds` only):**

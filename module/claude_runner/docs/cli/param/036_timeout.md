@@ -22,11 +22,9 @@ clr -p "task" --timeout 60 --dry-run      # parsed; dry-run skips subprocess
 `clr` waits indefinitely for the subprocess. This is the default behavior and
 preserves backward compatibility with all existing `clr run`/`clr ask` invocations.
 
-**IMPORTANT — semantic difference from isolated/refresh:** The `--timeout` parameter
-on `isolated`/`refresh` (see [`020_timeout.md`](020_timeout.md)) uses `0` to mean
-*immediate expiry* (the subprocess deadline is set to `now`). On `run`/`ask`, `0`
-means *unlimited* (watchdog not started). These are opposite semantics for the same
-flag value on different commands.
+**Cross-command parity:** The `--timeout` parameter on `isolated`/`refresh`
+(see [`020_timeout.md`](020_timeout.md)) uses the same semantics: `0` = unlimited
+(no watchdog). All four commands treat `--timeout 0` identically.
 
 **Note:** When the timeout fires, `clr` emits to stderr:
 `"Error: timeout after {N}s"` and exits with code 2. Any partial stdout accumulated
@@ -59,4 +57,4 @@ wins when both are present.
 
 ### See Also
 
-- [`020_timeout.md`](020_timeout.md) — `--timeout` for `isolated`/`refresh` (different semantics: 0 = immediate expiry)
+- [`020_timeout.md`](020_timeout.md) — `--timeout` for `isolated`/`refresh` (same semantics: 0 = unlimited)

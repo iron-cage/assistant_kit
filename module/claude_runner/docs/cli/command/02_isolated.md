@@ -50,8 +50,30 @@ clr isolated --creds /path/to/creds.json
 **Notes:**
 
 The isolated subprocess has no access to the caller's real `$HOME` — no
-`~/.claude/settings.json`, no previous conversation state, no CLAUDE.md
-from the user's home. Only `.claude/.credentials.json` is present.
+`~/.claude/settings.json`, no previous conversation state. A minimal
+`~/.claude/CLAUDE.md` is written to the temp HOME before spawn instructing
+the subprocess to execute immediately without asking clarifying questions or
+requesting confirmation.
+
+The subprocess is invoked with the following injected defaults (see
+[`invariant/005_isolated_subprocess_defaults.md`](../../invariant/005_isolated_subprocess_defaults.md)):
+
+- `--model claude-opus-4-6` (`ISOLATED_DEFAULT_MODEL` — maximum capability for real tasks)
+- `--effort max` (maximum reasoning effort)
+- `--no-session-persistence` (temp HOME is discarded after every run; session writes are waste)
+- `--dangerously-skip-permissions` — injected when `[MESSAGE]` is present (tool calls must
+  not block interactively); omitted in interactive mode (no message)
+- `--chrome` active (ClaudeCommand default; isolated tasks may use browser tools)
+
+Injected flags are prepended before `--print` and message so passthrough args can
+override them via last-wins semantics:
+
+```sh
+# Override effort for a lighter task:
+clr isolated "summarize this file" -- --effort medium
+# Opt out of skip-permissions for a read-only task:
+clr isolated "what is 2+2?" -- --no-skip-permissions
+```
 
 If the subprocess times out but already wrote refreshed credentials (OAuth
 token refresh at startup before blocking on input), `clr isolated` exits 0
@@ -59,10 +81,8 @@ and writes updated credentials back to `--creds` instead of returning exit 2.
 This matches the `IsolatedRunResult { exit_code: -1, credentials: Some(…) }`
 path in `claude_runner_core::run_isolated()`.
 
-The subprocess is always invoked with `--chrome` and `--model claude-sonnet-4-6`
-(injected via `ClaudeCommand::new()` defaults and `IsolatedModel::Default`). No
-`--dangerously-skip-permissions` or `-c` flags are injected — isolated mode is
-not a full-permissions interactive run.
+`--timeout 0` disables the watchdog entirely (unlimited runtime), matching
+`run`/`ask` semantics.
 
 ### Referenced Parameter Groups
 
