@@ -37,6 +37,8 @@
 | Expect output validation (T01–T17) | `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--expect-retries` validation loop |
 | Bug reproducers BUG-247 | `bug_reproducers_247_test.rs` | Stdout-to-stderr forwarding on subprocess failure |
 | Bug reproducers BUG-248 | `bug_reproducers_248_test.rs` | `--keep-claudecode` warning when CLAUDECODE present |
+| Retry on rate limit (EC-1–EC-9, EC-1–EC-7) | `retry_rate_limit_test.rs` | `--retry-on-rate-limit` and `--retry-delay` parse, env var, retry, exhaustion, quota exclusion |
+| Timeout run/ask (EC-1–EC-8) | `timeout_test.rs` | `--timeout` parse, env var, watchdog kill, fast-exit no-fire |
 | User stories (US-1–US-4 × 25) | `user_story_test.rs` | End-to-end user story workflows for all 25 user stories |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
@@ -70,6 +72,8 @@
 | `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--expect-retries` validation loop: match, mismatch, retry, default (T01–T17). |
 | `bug_reproducers_247_test.rs` | Bug reproducer BUG-247: stdout forwarded to stderr on subprocess failure. |
 | `bug_reproducers_248_test.rs` | Bug reproducer BUG-248: `--keep-claudecode` warning when CLAUDECODE is set in env. |
+| `retry_rate_limit_test.rs` | `--retry-on-rate-limit` and `--retry-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion/quota-excluded (EC-1–EC-9 param 34, EC-1–EC-7 param 35). |
+| `timeout_test.rs` | `--timeout` (run/ask) integration: parse, env var, CLI-wins, fake-subprocess watchdog kill and fast-exit no-fire (EC-1–EC-8). |
 | `env_var_test.rs` | CLR_* env var fallback: E01–E34, one per CLR_* variable, CLI-wins verification. |
 | `user_story_test.rs` | User story end-to-end workflows: US-1–US-4 for all 25 stories from `tests/docs/cli/user_story/`. |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |

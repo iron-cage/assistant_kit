@@ -708,6 +708,36 @@ impl ClaudeCommand {
     cmd.stderr( Stdio::piped() );
     cmd.spawn()
   }
+
+  /// Spawn the Claude Code process with inherited TTY stdio and return the `Child` handle.
+  ///
+  /// Unlike [`spawn_piped`](Self::spawn_piped), stdout and stderr are inherited from the
+  /// parent process so Claude can use the terminal for interactive output. stdin is
+  /// either the provided `--file` content or inherited from the parent TTY.
+  ///
+  /// The caller owns the `Child` and is responsible for calling
+  /// [`Child::wait`](std::process::Child::wait) after killing or waiting for the process.
+  ///
+  /// Used by `run_interactive` in `claude_runner` when `--timeout > 0` to enable
+  /// watchdog-kill while preserving the full TTY experience.
+  ///
+  /// # Errors
+  ///
+  /// Returns `io::Error` on spawn failure. Check `e.kind() == ErrorKind::NotFound` to
+  /// detect a missing `claude` binary.
+  #[ inline ]
+  pub fn spawn_tty( &self ) -> std::io::Result< std::process::Child >
+  {
+    use std::process::Stdio;
+    let mut cmd = self.build_command();
+    if let Some( ref path ) = self.stdin_file
+    {
+      let file = std::fs::File::open( path )?;
+      cmd.stdin( Stdio::from( file ) );
+    }
+    // stdout and stderr inherit from parent (TTY passthrough) — no redirection needed.
+    cmd.spawn()
+  }
 }
 
 // ============================================================================

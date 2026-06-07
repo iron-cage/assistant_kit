@@ -6,7 +6,7 @@
 
 ### Semantic Coherence Test
 
-"Is this flag consumed by the runner, not Claude?" — YES for all 22.
+"Is this flag consumed by the runner, not Claude?" — YES for all 25.
 
 ### Why NOT X
 
@@ -38,8 +38,8 @@ clr --trace "Fix bug" --dir /project
 
 | # | Command | Membership | Excluded Params | Notes |
 |---|---------|------------|-----------------|-------|
-| 1 | [`run`](../command/01_run.md) | Full | — | All 22 params apply; default command |
-| 5 | [`ask`](../command/05_ask.md) | Full | — | All 22 params apply; identical behavior — pure alias for run |
+| 1 | [`run`](../command/01_run.md) | Full | — | All 25 params apply; default command |
+| 5 | [`ask`](../command/05_ask.md) | Full | — | All 25 params apply; identical behavior — pure alias for run |
 
 ### Referenced Parameters
 
@@ -67,6 +67,9 @@ clr --trace "Fix bug" --dir /project
 | [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch handler | Mismatch handling: exit 3, retry N times, or output fallback value |
 | [`--expect-retries`](../param/032_expect_retries.md) | u8 | `0` | Retry cap | Re-invocation cap for `retry` strategy |
 | [`--max-sessions`](../param/033_max_sessions.md) | u32 | 10 | Concurrency gate | Max concurrent Claude Code sessions before blocking; 0 = unlimited |
+| [`--retry-on-rate-limit`](../param/034_retry_on_rate_limit.md) | u8 | `0` | Retry controller | Auto-retry count on transient rate-limit exit; 0 = no retry; `QuotaExhausted` never retried |
+| [`--retry-delay`](../param/035_retry_delay.md) | u32 | `60` | Retry delay | Seconds between rate-limit retries; 0 = immediate; ignored when `--retry-on-rate-limit` is 0 |
+| [`--timeout`](../param/036_timeout.md) | u32 | `0` | Execution watchdog | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) |
 
 ### Referenced Tests
 

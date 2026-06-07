@@ -7,21 +7,21 @@
 - **In Scope**: CLR_* input vars for run/isolated/refresh, CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (35 total)
+### All Env Parameters (38 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
-| Input (CLR_*) — `run` subcommand | 31 | Caller env fallbacks for `run` parameters |
+| Input (CLR_*) — `run` subcommand | 34 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 35 environment variables
+**Total:** 38 environment variables
 
 ---
 
 ### Env Param 1: CLR_* Input Parameters — `run` Subcommand
 
-Environment variable fallbacks for all 31 `run` subcommand parameters.
+Environment variable fallbacks for all 34 `run` subcommand parameters.
 `apply_env_vars()` in `src/cli/parse.rs` reads these immediately after CLI parsing, before command
 dispatch. Each variable is applied **only when the corresponding CLI field is still at its
 zero/absent value** — the CLI flag always wins when both are present.
@@ -29,7 +29,7 @@ zero/absent value** — the CLI flag always wins when both are present.
 **Bool variables** accept `"1"` or `"true"` (case-insensitive) as truthy.
 Any other value — including `"yes"`, `"0"`, `"false"`, empty, or absent — resolves to `false`.
 
-**Parsed variables** (`CLR_MAX_TOKENS`, `CLR_VERBOSITY`, `CLR_EFFORT`) silently ignore
+**Parsed variables** (`CLR_MAX_TOKENS`, `CLR_VERBOSITY`, `CLR_EFFORT`, `CLR_RETRY_ON_RATE_LIMIT`, `CLR_RETRY_DELAY`, `CLR_TIMEOUT`) silently ignore
 invalid values (parse failure → field stays at default).
 
 | # | Variable | CLI Parameter | Type | Notes |
@@ -65,6 +65,9 @@ invalid values (parse failure → field stays at default).
 | 29 | `CLR_EXPECT_STRATEGY` | [`--expect-strategy`](param/031_expect_strategy.md) | string | Applied when `--expect-strategy` absent; accepts `fail`, `retry`, or `default:<V>` |
 | 30 | `CLR_EXPECT_RETRIES` | [`--expect-retries`](param/032_expect_retries.md) | u8 | Applied when `--expect-retries` absent; invalid values rejected at parse time |
 | 31 | `CLR_MAX_SESSIONS` | [`--max-sessions`](param/033_max_sessions.md) | u32 | Applied when `--max-sessions` absent; invalid values silently ignored (parse failure → field stays at default 10) |
+| 32 | `CLR_RETRY_ON_RATE_LIMIT` | [`--retry-on-rate-limit`](param/034_retry_on_rate_limit.md) | u8 | Applied when `--retry-on-rate-limit` absent; invalid values silently ignored (parse failure → field stays at default 0) |
+| 33 | `CLR_RETRY_DELAY` | [`--retry-delay`](param/035_retry_delay.md) | u32 | Applied when `--retry-delay` absent; invalid values silently ignored (parse failure → field stays at default 60) |
+| 34 | `CLR_TIMEOUT` | [`--timeout`](param/036_timeout.md) | u32 | Applied when `--timeout` absent; `0` = unlimited (no watchdog); invalid values silently ignored. **Cross-command:** also applies to `isolated`/`refresh` via Section 2 (different semantics: `0` = immediate expiry there) |
 
 **Precedence:**
 
@@ -90,7 +93,7 @@ after subcommand argument parsing.
 | # | Variable | CLI Parameter | Type | Notes |
 |---|----------|---------------|------|-------|
 | 1 | `CLR_CREDS` | [`--creds`](param/019_creds.md) | string | Applied when `--creds` absent (`creds_path` is empty string) |
-| 2 | `CLR_TIMEOUT` | [`--timeout`](param/020_timeout.md) | u64 | Applied when CLI timeout equals its command default (30 for `isolated`, 45 for `refresh`) |
+| 2 | `CLR_TIMEOUT` | [`--timeout`](param/020_timeout.md) | u64 | Applied when CLI timeout equals its command default (30 for `isolated`, 45 for `refresh`); `0` = immediate expiry for these commands. Also applies to `run`/`ask` via Section 1 row 34 where `0` = unlimited (different semantic) |
 | 3 | `CLR_TRACE` | [`--trace`](param/013_trace.md) | bool | Applied when `--trace` absent; also applies to `run` via Section 1 |
 
 **Precedence (`--creds` only):**

@@ -37,8 +37,11 @@
 | 031_expect_strategy.md | `--expect-strategy` parameter spec |
 | 032_expect_retries.md | `--expect-retries` parameter spec |
 | 033_max_sessions.md | `--max-sessions` parameter spec |
+| 034_retry_on_rate_limit.md | `--retry-on-rate-limit` parameter spec |
+| 035_retry_delay.md | `--retry-delay` parameter spec |
+| 036_timeout.md | `--timeout` parameter spec (run/ask) |
 
-### All Parameters (33 total)
+### All Parameters (36 total)
 
 | # | Parameter | Type | Default | Valid Values | Description | Used In |
 |---|-----------|------|---------|--------------|-------------|---------|
@@ -75,10 +78,13 @@
 | 31 | `--expect-strategy` | enum | `fail` | `fail`/`retry`/`default:<V>` | Mismatch handling: exit 3, retry N times, or output fallback value | 2 cmds |
 | 32 | `--expect-retries` | u8 | `0` | 0–255 | Re-invocation cap for `retry` strategy | 2 cmds |
 | 33 | `--max-sessions` | u32 | 10 | 0 to 4294967295 | Max concurrent Claude Code sessions before blocking; 0 = unlimited | 2 cmds |
+| 34 | `--retry-on-rate-limit` | u8 | `0` | 0–255 | Automatic retry count on transient rate-limit exit; 0 = no retry; never retries QuotaExhausted | 2 cmds |
+| 35 | `--retry-delay` | u32 | `60` | 0 to 4294967295 | Seconds to wait between rate-limit retries; ignored when --retry-on-rate-limit is 0 | 2 cmds |
+| 36 | `--timeout` | u32 | `0` | 0 to 4294967295 | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) | 2 cmds |
 
-**Total:** 33 parameters
+**Total:** 36 parameters
 
-**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25, 26, 27, 28, 29, 30, 31, 32, and 33 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
+**Groups:** Parameters 2–4, 17, 23, and 24 form [Claude-Native Flags](../param_group/01_claude_native_flags.md). Parameters 5–14, 18, 21, 22, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, and 36 form [Runner Control](../param_group/02_runner_control.md). Parameters 15–16 form [System Prompt](../param_group/03_system_prompt.md). Parameters 19–20 form [Credential Operations](../param_group/04_credential_operations.md).
 
 ### Navigation
 
@@ -115,6 +121,9 @@
 - [`--expect-strategy`](031_expect_strategy.md)
 - [`--expect-retries`](032_expect_retries.md)
 - [`--max-sessions`](033_max_sessions.md)
+- [`--retry-on-rate-limit`](034_retry_on_rate_limit.md)
+- [`--retry-delay`](035_retry_delay.md)
+- [`--timeout` (run/ask)](036_timeout.md)
 
 ### Quick Reference
 
@@ -122,4 +131,4 @@
 
 **Most used parameters:** `--model` (model selection), `--dir` (project targeting), `--subdir` (session isolation by task name), `--dry-run` (debugging), `--new-session` (fresh start), `--interactive` (TTY passthrough with prompt), `--file` (stdin from file), `--strip-fences` (extract code block content).
 
-**Commands by parameter count:** `run` = 31 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.
+**Commands by parameter count:** `run` = 34 parameters, `isolated` = 4 parameters, `refresh` = 3 parameters, `help` = 0 parameters.

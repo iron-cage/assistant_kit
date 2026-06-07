@@ -55,6 +55,9 @@ pub( crate ) fn print_help()
   println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default), retry, default:<VAL>" );
   println!( "  --expect-retries <N>               Retry attempts when --expect-strategy retry (0–255, default: 0)" );
   println!( "  --max-sessions <N>                 Max concurrent claude sessions before blocking (0=unlimited, default: 10)" );
+  println!( "  --retry-on-rate-limit <N>          Retry on transient rate limit up to N times (0–255, default: 0; 0 = no retry)" );
+  println!( "  --retry-delay <SECS>               Seconds between rate-limit retries (default: 60; 0 = immediate)" );
+  println!( "  --timeout <SECS>                   Kill subprocess after N seconds (0 = unlimited, default: 0)" );
   println!( "  -h, --help                         Show this help" );
   println!();
   println!( "CREDENTIAL OPTIONS (isolated, refresh):" );
@@ -149,6 +152,9 @@ pub( crate ) fn print_ask_help() -> !
   println!( "  --expect <VALS>                    Pipe-separated expected values; mismatch → exit 3 (case-insensitive, trimmed)" );
   println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default), retry, default:<VAL>" );
   println!( "  --expect-retries <N>               Retry attempts when --expect-strategy retry (0–255, default: 0)" );
+  println!( "  --retry-on-rate-limit <N>          Retry on transient rate limit up to N times (0–255, default: 0)" );
+  println!( "  --retry-delay <SECS>               Seconds between rate-limit retries (default: 60; 0 = immediate)" );
+  println!( "  --timeout <SECS>                   Kill subprocess after N seconds (0 = unlimited, default: 0)" );
   println!( "  -h, --help                         Show this help" );
   std::process::exit( 0 );
 }

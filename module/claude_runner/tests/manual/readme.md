@@ -418,15 +418,71 @@ cargo run -p claude_runner -- --dry-run --max-sessions 5 "test"
 
 **Expected:** Both exit 0. Neither produces session-gate messages (dry-run bypasses actual execution). When `--max-sessions 0`, the gate is disabled entirely regardless of session count.
 
+### TC-53: Retry-on-Rate-Limit Dry-Run
+```sh
+cargo run -p claude_runner -- --dry-run --retry-on-rate-limit 3 "test"
+```
+
+**Expected:** Exit 0. No retry messages on stderr (dry-run skips subprocess). The flag is parsed and accepted without error.
+
+### TC-54: Retry-Delay Dry-Run
+```sh
+cargo run -p claude_runner -- --dry-run --retry-delay 30 "test"
+```
+
+**Expected:** Exit 0. Flag accepted without error.
+
+### TC-55: Help Lists New Retry and Timeout Flags
+```sh
+cargo run -p claude_runner -- --help
+```
+
+**Expected:** Help output contains `--retry-on-rate-limit`, `--retry-delay`, and `--timeout` (run/ask variant). Exit 0.
+
+### TC-56: CLR_RETRY_ON_RATE_LIMIT Env Var Accepted
+```sh
+CLR_RETRY_ON_RATE_LIMIT=2 cargo run -p claude_runner -- --dry-run "test"
+```
+
+**Expected:** Exit 0. Env var applied silently; no error.
+
+### TC-57: Retry-on-Rate-Limit 0 — Default No-Retry Behavior
+```sh
+cargo run -p claude_runner -- --dry-run --retry-on-rate-limit 0 "test"
+```
+
+**Expected:** Exit 0. No retry logic invoked. Behavior identical to omitting the flag.
+
+### TC-58: Timeout 0 (Unlimited Default)
+```sh
+cargo run -p claude_runner -- --dry-run --timeout 0 "test"
+```
+
+**Expected:** Exit 0. Unlimited mode; no watchdog engaged.
+
+### TC-59: Timeout 30 Accepted in Dry-Run
+```sh
+cargo run -p claude_runner -- --dry-run --timeout 30 "test"
+```
+
+**Expected:** Exit 0. Watchdog param parsed but dry-run exits before subprocess is spawned.
+
+### TC-60: CLR_TIMEOUT Env Var Accepted
+```sh
+CLR_TIMEOUT=10 cargo run -p claude_runner -- --dry-run "test"
+```
+
+**Expected:** Exit 0. Env var applied silently; no error.
+
 ## Pass Criteria
 
-All TC-1 through TC-52 must pass without unexpected errors or panics.
-TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-52 are runnable without a configured Claude API key.
+All TC-1 through TC-60 must pass without unexpected errors or panics.
+TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-60 are runnable without a configured Claude API key.
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
 
 ---
 
-## Corner Cases (CC-1 through CC-101) — Automated
+## Corner Cases (CC-1 through CC-112) — Automated
 
 These are exhaustively tested by the integration test suite (not manual). Listed here for traceability.
 
@@ -547,9 +603,24 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-101:** `--keep-claudecode --dry-run "test"` → dry-run shows `claude ...` WITHOUT `env -u CLAUDECODE` prefix
 - Automated in: `user_story_test.rs`, `env_var_test.rs`, `fence_test.rs`
 
+### New features: retry-on-rate-limit, retry-delay, timeout (run/ask)
+
+- **CC-102:** `--retry-on-rate-limit 256 --dry-run "test"` → exit 1; error "invalid --retry-on-rate-limit value: 256" (u8 overflow)
+- **CC-103:** `CLR_RETRY_ON_RATE_LIMIT=abc --dry-run "test"` → exit 0 (silently ignored; invalid env var values are non-fatal)
+- **CC-104:** `CLR_RETRY_DELAY=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-105:** `CLR_TIMEOUT=abc --dry-run "test"` → exit 0 (silently ignored)
+- **CC-106:** `--retry-on-rate-limit 0 --retry-delay 60 --dry-run "test"` → exit 0 (delay ignored when retry count is 0)
+- **CC-107:** `--timeout 4294967295 --dry-run "test"` → exit 0 (u32 max accepted)
+- **CC-108:** `--retry-on-rate-limit 255 --dry-run "test"` → exit 0 (u8 max accepted)
+- **CC-109:** `--retry-on-rate-limit` (missing value) → exit 1; error "requires a value"
+- **CC-110:** `--retry-delay` (missing value) → exit 1; error "requires a value"
+- **CC-111:** `--timeout` (missing value, run/ask) → exit 1; error "requires a value"
+- **CC-112:** `clr ask --retry-on-rate-limit 3 --dry-run "q"` == `clr run --retry-on-rate-limit 3 --dry-run "q"` (pure alias parity)
+- Automated in: `retry_rate_limit_test.rs`, `timeout_test.rs`
+
 ---
 
-## New Corner Cases (NC-1 through NC-6) — Discovered During Manual Testing
+## New Corner Cases (NC-1 through NC-8) — Discovered During Manual Testing
 
 ### NC-1: QuotaExhausted Label (Automated)
 
@@ -593,3 +664,16 @@ clr ask hello
 ```
 
 **Expected:** Returns a real Claude response (e.g., "Hey. What are we working on?"), exits 0. Confirms full round-trip: arg parsing → env setup → claude spawn → stdout capture → exit propagation. This is the live equivalent of TC-3.
+
+### NC-7: Orphaned Import `use super::VerbosityLevel` in `src/cli/mod.rs`
+
+After `run_interactive` signature changed from `_verbosity: VerbosityLevel` to `cli: &CliArgs`, the import became unused. Clippy fired: `unused import: use super::VerbosityLevel`. Removed the orphaned import. Automated regression: `RUSTFLAGS="-D warnings" cargo nextest run` would have caught it.
+
+### NC-8: Clippy Lints in New Test Files (`retry_rate_limit_test.rs`, `timeout_test.rs`)
+
+Three categories of clippy errors found when running Level 3 (`-D warnings`):
+1. `u32 as u64` casts in `src/cli/mod.rs` — 3 occurrences; fixed with `u64::from(x)` (cast_lossless lint)
+2. `std::time::Duration` instead of `core::time::Duration` — 5 occurrences in `src/cli/mod.rs` (std_instead_of_core lint)
+3. `doc_markdown` errors — 17 in `retry_rate_limit_test.rs`, 8 in `timeout_test.rs`; bare identifiers (`CLR_RETRY_ON_RATE_LIMIT`, `QuotaExhausted`, `classify_error()`, `ERROR_PATTERNS`, `RateLimit`, `CLR_RETRY_DELAY`, `CLR_TIMEOUT`, `spawn_piped`, `try_wait`) in `///` and `//!` doc comments needed backtick wrapping.
+
+Root cause: new test files written without running full clippy sweep. Prevention: run Level 3 immediately after adding doc comments in test files.
