@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clr parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: All 33 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout`, `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`, `--output-file`, `--expect`, `--expect-strategy`, `--expect-retries`, `--max-sessions`.
+- **In Scope**: All 36 clr parameters: `[MESSAGE]`, `--print`, `--model`, `--verbose`, `--no-skip-permissions`, `--interactive`, `--new-session`, `--dir`, `--max-tokens`, `--session-dir`, `--dry-run`, `--verbosity`, `--trace`, `--no-ultrathink`, `--system-prompt`, `--append-system-prompt`, `--effort`, `--no-effort-max`, `--creds`, `--timeout` (isolated/refresh), `--no-chrome`, `--no-persist`, `--json-schema`, `--mcp-config`, `--file`, `--strip-fences`, `--keep-claudecode`, `--subdir`, `--output-file`, `--expect`, `--expect-strategy`, `--expect-retries`, `--max-sessions`, `--retry-on-rate-limit`, `--retry-delay`, `--timeout` (run/ask).
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
 Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../docs/cli/param/readme.md) for specification.
@@ -46,3 +46,6 @@ Per-parameter edge case indices for `clr`. See [param/readme.md](../../../../doc
 | `31_expect_strategy.md` | Edge cases for `--expect-strategy` parameter | ✅ |
 | `32_expect_retries.md` | Edge cases for `--expect-retries` parameter | ✅ |
 | `33_max_sessions.md` | Edge cases for `--max-sessions` parameter | ✅ |
+| `34_retry_on_rate_limit.md` | Edge cases for `--retry-on-rate-limit` parameter | ✅ |
+| `35_retry_delay.md` | Edge cases for `--retry-delay` parameter | ✅ |
+| `36_timeout.md` | Edge cases for `--timeout` flag (run/ask) | ✅ |

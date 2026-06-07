@@ -85,4 +85,4 @@ When adding new user stories, update these files in order:
 12. `docs/cli/param_group/02_runner_control.md` — Referenced User Stories (if story uses Runner Control flags: `--dry-run`, `--no-effort-max`, etc.)
 13. Existing related story files — Related User Stories back-references
 
-**Note:** The phrase "YES for all 22" in `docs/cli/param_group/02_runner_control.md` refers to the 22 Runner Control *parameters* in that group — do not update this count when fixing user story totals.
+**Note:** The phrase "YES for all 25" in `docs/cli/param_group/02_runner_control.md` refers to the 25 Runner Control *parameters* in that group — do not update this count when fixing user story totals.

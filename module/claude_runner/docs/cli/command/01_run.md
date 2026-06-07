@@ -47,6 +47,9 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--expect-strategy`](../param/031_expect_strategy.md) | enum | `fail` | Mismatch handling: exit 3 (`fail`), retry (`retry`), or fallback (`default:<V>`) |
 | [`--expect-retries`](../param/032_expect_retries.md) | u8 | `0` | Re-invocation cap when `--expect-strategy retry` is active |
 | [`--max-sessions`](../param/033_max_sessions.md) | u32 | `10` | Max concurrent claude sessions before blocking (0 = unlimited) |
+| [`--retry-on-rate-limit`](../param/034_retry_on_rate_limit.md) | u8 | `0` | Retry count on transient rate-limit exit (0 = no retry; `QuotaExhausted` never retried) |
+| [`--retry-delay`](../param/035_retry_delay.md) | u32 | `60` | Seconds between rate-limit retries (0 = immediate; ignored when `--retry-on-rate-limit` is 0) |
+| [`--timeout`](../param/036_timeout.md) | u32 | `0` | Seconds before watchdog kills subprocess (0 = unlimited; contrast: isolated/refresh where 0 = immediate expiry) |
 
 **Execution Modes:**
 
@@ -71,6 +74,7 @@ Use `--new-session` to start fresh.
 |------|---------|
 | 0 | Success |
 | 1 | Error (parse failure, print mode without message, execution error, binary not found) |
+| 2 | Rate-limit passthrough from claude (subprocess exited 2); or runner-generated: watchdog timeout (`--timeout` expiry) / rate-limit retries exhausted (`--retry-on-rate-limit` depleted) |
 | N | Passthrough from claude subprocess (print mode propagates the subprocess exit code exactly) |
 | 3 | Expect mismatch — output did not match `--expect` values after all retries |
 | 128+signal | Subprocess killed by signal; follows POSIX convention (e.g., SIGTERM → 143, SIGKILL → 137) |

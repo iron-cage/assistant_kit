@@ -38,16 +38,19 @@ After calling `ClaudeCommand::execute()`, consumers can classify the failure wit
 let output = cmd.execute()?;
 match output.classify_error()
 {
-  Some( ErrorKind::RateLimit ) => { /* wait ~60 s, retry or rotate account */ }
-  Some( ErrorKind::AuthError ) => { /* stop retrying; re-authenticate */ }
-  Some( ErrorKind::ApiError )  => { /* transient API error; retry once with backoff */ }
-  Some( ErrorKind::Signal )    => { /* process killed by signal (exit 130/143) */ }
-  Some( ErrorKind::Unknown )   => { /* non-zero exit, no known pattern */ }
-  None                         => { /* success — output.exit_code == 0 */ }
+  Some( ErrorKind::RateLimit )      => { /* transient — wait ~60 s, retry or rotate account */ }
+  Some( ErrorKind::QuotaExhausted ) => { /* period boundary — switch account or wait for reset; do NOT retry */ }
+  Some( ErrorKind::AuthError )      => { /* stop retrying; re-authenticate */ }
+  Some( ErrorKind::ApiError )       => { /* transient API error; retry once with backoff */ }
+  Some( ErrorKind::Signal )         => { /* process killed by signal (exit 130/143) */ }
+  Some( ErrorKind::Unknown )        => { /* non-zero exit, no known pattern */ }
+  None                              => { /* success — output.exit_code == 0 */ }
 }
 ```
 
-`ErrorKind` and `classify_error()` are defined in `claude_runner_core::types`. Classification priority: pattern match in stderr/stdout first (specific error strings take precedence), then exit code semantics (exit `2` → `RateLimit`, exit `130`/`143` → `Signal`). When `output.exit_code == 0`, `classify_error()` always returns `None`.
+`ErrorKind` and `classify_error()` are defined in `claude_runner_core::types`. Classification priority: pattern match in stderr/stdout first (pattern `"You've hit your limit"` → `QuotaExhausted`; `"Your organization does not have access"` → `AuthError`; `"API Error: "` → `ApiError`), then exit code semantics (exit `2` → `RateLimit`; exit `> 128` → `Signal`). When `output.exit_code == 0`, `classify_error()` always returns `None`.
+
+`RateLimit` and `QuotaExhausted` require different consumer responses: rate limits are transient (seconds) and safe to retry; quota exhaustion is a period-boundary condition (hours to days) — retrying wastes resources. Use `clp .account.assign` to switch to an account with remaining quota.
 
 ### Error Handling
 

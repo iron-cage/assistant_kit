@@ -44,3 +44,5 @@ Task work items scoped to the `claude_runner` crate.
 | 15 | 016 | 0 | 7 | 9 | 9 | 0 | ✅ (Completed) | ai | [BUG-247: stdout swallowed on failure](completed/016_bug247_stdout_swallowed.md) | Forward stdout to stderr when exit_code != 0 in `run_print_mode()` |
 | 16 | 017 | 0 | 6 | 9 | 9 | 0 | ✅ (Completed) | ai | [BUG-248: --keep-claudecode no warning](completed/017_bug248_keep_claudecode_warning.md) | Emit warning when `--keep-claudecode` disables CLAUDECODE protection while env var is set |
 | 17 | 018 | 0 | 8 | 7 | 9 | 0 | ✅ (Completed) | ai | [Session Concurrency Gate](completed/018_max_sessions_gate.md) | Implement `--max-sessions <N>` concurrency gate with 30s polling and 15-minute timeout |
+| 18 | 019 | — | 8 | 7 | 9 | — | ✅ (Completed) | ai | [Retry on Rate Limit](completed/019_retry_on_rate_limit.md) | Auto-retry run/ask on transient rate-limit exit (exit code 2) up to N times |
+| 19 | 020 | — | 7 | 6 | 9 | — | ✅ (Completed) | ai | [Subprocess Timeout for run/ask](completed/020_run_ask_timeout.md) | Kill subprocess after --timeout <SECS>; exit 2 on expiry; parity with isolated/refresh |

@@ -6,8 +6,7 @@ mod credential;
 mod help;
 mod gate;
 
-use super::VerbosityLevel;
-use claude_runner_core::{ ClaudeCommand, ErrorKind, IsolatedModel, signal_exit_code };
+use claude_runner_core::{ ClaudeCommand, ErrorKind, ExecutionOutput, IsolatedModel, signal_exit_code };
 use parse::{ CliArgs, ExpectStrategy };
 use cred_parse::{
   parse_isolated_args, parse_refresh_args,
@@ -143,7 +142,7 @@ pub( super ) fn run_built_command( builder : &ClaudeCommand, cli : &CliArgs )
   }
   else
   {
-    run_interactive( builder, verbosity );
+    run_interactive( builder, cli );
   }
 }
 
@@ -218,103 +217,239 @@ fn apply_expect_validation( cli : &CliArgs, builder : &ClaudeCommand, out : Stri
   }
 }
 
-/// Execute in non-interactive print mode (captures output).
+/// Execute one print-mode subprocess attempt with an optional timeout watchdog.
 ///
-/// Both `--print` (passed to claude) and `execute()` (captures stdout) are required:
-/// `--print` tells claude to run single-shot with clean text output (no TUI);
-/// `execute()` captures that output into memory for programmatic use.
-/// Without `--print`, captured output would be TUI escape codes.
-/// Without `execute()`, clean output would go straight to terminal uncaptured.
-fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
+/// Returns the completed `ExecutionOutput`. On spawn failure or timeout, exits the
+/// process directly (timeout → exit 2; spawn error → exit 1).  The caller is
+/// responsible for retry logic and success/failure dispatch.
+///
+/// When `timeout_secs == 0`, `builder.execute()` is used (blocking, no polling overhead).
+/// When `timeout_secs > 0`, `spawn_piped()` + `try_wait()` polling is used, mirroring the
+/// established pattern in `claude_runner_core::isolated`.
+fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 ) -> ExecutionOutput
 {
-  let verbosity = cli.verbosity.unwrap_or_default();
-
-  // Fix(BUG-240): always emit fatal spawn errors regardless of verbosity.
-  // Root cause: the Err branch was guarded by verbosity.shows_errors(); at CLR_VERBOSITY=0
-  //   spawn failures (binary not found, permission denied) produced zero stderr output while
-  //   still exiting 1 — a perfectly silent failure with no diagnostic.
-  // Pitfall: verbosity controls runner diagnostics (progress, trace); it must never gate
-  //   fatal errors that signal a broken environment — those are always user-visible.
-  let output = match builder.execute()
+  if timeout_secs == 0
   {
-    Ok( o )  => o,
-    Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
-  };
-
-  if !output.stderr.is_empty() { eprint!( "{}", output.stderr ); }
-
-  // Fix(BUG-037): classify non-zero exit and emit labeled per-type diagnostic.
-  // Root cause: prior code emitted a generic "possible rate limit" message for ALL silent
-  //   failures, hiding the actual failure mode (rate limit vs quota vs auth vs API error vs signal).
-  // Pitfall: classify_error() scans stdout AND stderr — `claude --print` on rate-limit
-  //   writes the reason only to its JSONL session file, so stderr is often empty; the
-  //   stdout scan ensures auth/rate-limit patterns are still caught.
-  if let Some( kind ) = output.classify_error()
-  {
-    if verbosity.shows_errors()
+    // Fix(BUG-240): always emit fatal spawn errors regardless of verbosity.
+    return match builder.execute()
     {
-      let label = match kind
-      {
-        ErrorKind::RateLimit      => "rate limit",
-        ErrorKind::QuotaExhausted => "quota exhausted",
-        ErrorKind::ApiError       => "API error",
-        ErrorKind::AuthError      => "auth error",
-        ErrorKind::Signal         => "terminated by signal",
-        ErrorKind::Unknown        => "unknown error",
-      };
-      eprintln!( "Error: {label} (exit {})", output.exit_code );
-    }
+      Ok( o )  => o,
+      Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    };
   }
 
-  // Fix(BUG-239): propagate the exact subprocess exit code instead of collapsing to 1.
-  // Root cause: `std::process::exit(1)` was hardcoded; callers that branch on exit code
-  //   (e.g. 2 = rate-limit, 130 = SIGINT cancel) received 1 regardless of actual cause.
-  // Pitfall: never substitute a generic exit code where the subprocess's code is available;
-  //   use output.exit_code directly so all domain-specific codes are preserved.
-  // Fix(BUG-247): forward captured stdout to stderr on subprocess failure so callers see it.
-  // Root cause: std::process::exit() was called before stdout was printed; on the failure
-  //   path the captured output was silently discarded.
-  // Pitfall: stdout must be emitted BEFORE the exit call; order of these two blocks is load-bearing.
-  if output.exit_code != 0 && !output.stdout.is_empty() { eprint!( "{}", output.stdout ); }
-  if output.exit_code != 0 { std::process::exit( output.exit_code ); }
-
-  // Expect validation: compare trimmed, lowercased output against allowed values.
-  // Only active in print mode (run_print_mode is never called from run_interactive).
-  let out = if cli.strip_fences { strip_fences( &output.stdout ) } else { output.stdout };
-  let out = apply_expect_validation( cli, builder, out );
-
-  write_output_file( cli.output_file.as_deref(), &out );
-  print!( "{out}" );
-}
-
-/// Execute in interactive mode (TTY passthrough).
-fn run_interactive( builder : &ClaudeCommand, _verbosity : VerbosityLevel )
-{
-  // Fix(BUG-240): always emit fatal spawn errors regardless of verbosity.
-  // Root cause: same as run_print_mode — the Err branch was gated on shows_errors();
-  //   at verbosity 0 a missing binary or permission error produced no stderr output.
-  // Pitfall: mirrors the fix in run_print_mode; both execution paths must be updated
-  //   together — missing one leaves interactive mode silently broken at low verbosity.
-  let status = match builder.execute_interactive()
+  // Timeout path: spawn and poll with try_wait(), mirroring isolated.rs BUG-243 fix.
+  // Pitfall: keep the Child in scope so child.kill() + child.wait() can recover output
+  //   and prevent the subprocess from becoming an orphan.
+  let mut child = match builder.spawn_piped()
   {
-    Ok( s )  => s,
+    Ok( c )  => c,
     Err( e ) =>
     {
-      eprintln!( "Error: {e}" );
+      let msg = if e.kind() == std::io::ErrorKind::NotFound
+      {
+        "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code".to_string()
+      }
+      else
+      {
+        format!( "Failed to execute Claude Code: {e}" )
+      };
+      eprintln!( "Error: {msg}" );
       std::process::exit( 1 );
     }
   };
 
-  if !status.success()
+  let deadline = std::time::Instant::now()
+    + core::time::Duration::from_secs( u64::from( timeout_secs ) );
+
+  loop
   {
-    // Fix(BUG-242): use signal_exit_code() so SIGTERM (→143) and SIGKILL (→137) are
-    //   propagated correctly in interactive mode.
-    // Root cause: unwrap_or(1) collapsed all signal kills to exit code 1 in interactive
-    //   mode; callers using Claude interactively could not distinguish Ctrl+C (SIGINT=130)
-    //   from other kills.
-    // Pitfall: mirrors the fix in execute() in claude_runner_core; both execution paths
-    //   (print mode and interactive) must use signal_exit_code() for consistency.
-    std::process::exit( signal_exit_code( &status ) );
+    match child.try_wait()
+    {
+      Ok( Some( _ ) ) =>
+      {
+        let raw = match child.wait_with_output()
+        {
+          Ok( o )  => o,
+          Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+        };
+        let exit_code = signal_exit_code( &raw.status );
+        let stdout = String::from_utf8_lossy( &raw.stdout ).to_string();
+        let stderr = String::from_utf8_lossy( &raw.stderr ).to_string();
+        return ExecutionOutput { stdout, stderr, exit_code };
+      }
+      Ok( None ) =>
+      {
+        if std::time::Instant::now() >= deadline
+        {
+          let _ = child.kill();
+          let _ = child.wait();
+          eprintln!( "Error: timeout after {timeout_secs}s" );
+          std::process::exit( 2 );
+        }
+        std::thread::sleep( core::time::Duration::from_millis( 50 ) );
+      }
+      Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    }
+  }
+}
+
+/// Execute in non-interactive print mode (captures output).
+///
+/// Both `--print` (passed to claude) and output capture are required:
+/// `--print` tells claude to run single-shot with clean text output (no TUI);
+/// output capture makes the content available for programmatic use.
+/// Without `--print`, captured output would be TUI escape codes.
+///
+/// Supports automatic retry on transient `RateLimit` errors (exit code 2 with no
+/// `QuotaExhausted` pattern) when `--retry-on-rate-limit` is set to a non-zero value.
+/// Supports subprocess timeout via `--timeout` (0 = unlimited).
+fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
+{
+  let verbosity    = cli.verbosity.unwrap_or_default();
+  let retry_limit  = cli.retry_on_rate_limit.unwrap_or( 0 ) as usize;
+  let retry_delay  = cli.retry_delay.unwrap_or( 60 );
+  let timeout_secs = cli.timeout.unwrap_or( 0 );
+  let mut attempts = 0usize;
+
+  loop
+  {
+    // Fix(BUG-240): spawn errors always emitted regardless of verbosity (inside execute_print_attempt).
+    let output = execute_print_attempt( builder, timeout_secs );
+
+    if !output.stderr.is_empty() { eprint!( "{}", output.stderr ); }
+
+    if output.exit_code != 0
+    {
+      // Fix(BUG-037): classify non-zero exit for labeled diagnostic.
+      // Pitfall: classify_error() scans stdout AND stderr — rate-limit reason may be in stdout.
+      let kind = output.classify_error();
+
+      // Retry on transient RateLimit if retries remain.
+      // QuotaExhausted, AuthError, ApiError, Signal, Unknown: never retry.
+      if let Some( ErrorKind::RateLimit ) = &kind
+      {
+        if attempts < retry_limit
+        {
+          attempts += 1;
+          if verbosity.shows_warnings()
+          {
+            eprintln!(
+              "Rate limit (attempt {attempts}/{}); retrying in {retry_delay}s…",
+              retry_limit + 1
+            );
+          }
+          if retry_delay > 0
+          {
+            std::thread::sleep( core::time::Duration::from_secs( u64::from( retry_delay ) ) );
+          }
+          continue;
+        }
+      }
+
+      // Non-retriable error or retries exhausted.
+      if verbosity.shows_errors()
+      {
+        let label = match &kind
+        {
+          Some( ErrorKind::RateLimit ) if attempts > 0 => "rate limit retries exhausted",
+          Some( ErrorKind::RateLimit )                 => "rate limit",
+          Some( ErrorKind::QuotaExhausted )            => "quota exhausted",
+          Some( ErrorKind::ApiError )                  => "API error",
+          Some( ErrorKind::AuthError )                 => "auth error",
+          Some( ErrorKind::Signal )                    => "terminated by signal",
+          Some( ErrorKind::Unknown ) | None            => "unknown error",
+        };
+        eprintln!( "Error: {label} (exit {})", output.exit_code );
+      }
+
+      // Fix(BUG-239): propagate exact subprocess exit code.
+      // Fix(BUG-247): forward captured stdout to stderr on failure before exiting.
+      if !output.stdout.is_empty() { eprint!( "{}", output.stdout ); }
+      std::process::exit( output.exit_code );
+    }
+
+    // Success path — expect validation, file write, stdout.
+    let out = if cli.strip_fences { strip_fences( &output.stdout ) } else { output.stdout };
+    let out = apply_expect_validation( cli, builder, out );
+    write_output_file( cli.output_file.as_deref(), &out );
+    print!( "{out}" );
+    return;
+  }
+}
+
+/// Execute in interactive mode (TTY passthrough) with optional timeout.
+///
+/// When `timeout_secs == 0`, uses the blocking `execute_interactive()` path.
+/// When `timeout_secs > 0`, uses `spawn_tty()` + `try_wait()` polling so the
+/// subprocess can be killed after the deadline while still using the TTY.
+fn run_interactive( builder : &ClaudeCommand, cli : &CliArgs )
+{
+  let timeout_secs = cli.timeout.unwrap_or( 0 );
+
+  if timeout_secs == 0
+  {
+    // Fix(BUG-240): always emit fatal spawn errors regardless of verbosity.
+    // Fix(BUG-242): use signal_exit_code() for interactive signal propagation.
+    let status = match builder.execute_interactive()
+    {
+      Ok( s )  => s,
+      Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    };
+    if !status.success()
+    {
+      std::process::exit( signal_exit_code( &status ) );
+    }
+    return;
+  }
+
+  // Timeout path: spawn with inherited TTY stdio and poll, mirroring execute_print_attempt.
+  let mut child = match builder.spawn_tty()
+  {
+    Ok( c )  => c,
+    Err( e ) =>
+    {
+      let msg = if e.kind() == std::io::ErrorKind::NotFound
+      {
+        "claude binary not found in PATH — install with: npm i -g @anthropic-ai/claude-code".to_string()
+      }
+      else
+      {
+        format!( "Failed to execute Claude Code: {e}" )
+      };
+      eprintln!( "Error: {msg}" );
+      std::process::exit( 1 );
+    }
+  };
+
+  let deadline = std::time::Instant::now()
+    + core::time::Duration::from_secs( u64::from( timeout_secs ) );
+
+  loop
+  {
+    match child.try_wait()
+    {
+      Ok( Some( status ) ) =>
+      {
+        if !status.success()
+        {
+          std::process::exit( signal_exit_code( &status ) );
+        }
+        return;
+      }
+      Ok( None ) =>
+      {
+        if std::time::Instant::now() >= deadline
+        {
+          let _ = child.kill();
+          let _ = child.wait();
+          eprintln!( "Error: timeout after {timeout_secs}s" );
+          std::process::exit( 2 );
+        }
+        std::thread::sleep( core::time::Duration::from_millis( 50 ) );
+      }
+      Err( e ) => { eprintln!( "Error: {e}" ); std::process::exit( 1 ); }
+    }
   }
 }
 

@@ -74,6 +74,9 @@ pub( crate ) struct CliArgs
   pub( crate ) expect_strategy      : Option< ExpectStrategy >,
   pub( crate ) expect_retries       : Option< u8 >,
   pub( crate ) max_sessions         : Option< u32 >,
+  pub( crate ) retry_on_rate_limit  : Option< u8 >,
+  pub( crate ) retry_delay          : Option< u32 >,
+  pub( crate ) timeout              : Option< u32 >,
 }
 
 /// Consume the next argv element as a flag's value.
@@ -139,7 +142,49 @@ fn parse_max_sessions( raw : &str ) -> Result< u32 >
   )
 }
 
+/// Parse a raw string as a retry count (u8) with a clear error message.
+///
+/// Called from `parse_value_flag()`. Identical logic to `parse_expect_retries` but
+/// for `--retry-on-rate-limit` which controls rate-limit automatic retry.
+fn parse_retry_count( raw : &str ) -> Result< u8 >
+{
+  raw.parse::< u32 >()
+    .ok()
+    .and_then( | v | u8::try_from( v ).ok() )
+    .ok_or_else( || Error::msg( format!(
+      "invalid --retry-on-rate-limit value: {raw}\nExpected integer 0–255"
+    ) ) )
+}
+
+/// Parse a raw string as a retry delay in seconds (u32) with a clear error message.
+///
+/// Called from `parse_value_flag()`. 0 = immediate retry (no sleep between attempts).
+fn parse_retry_delay( raw : &str ) -> Result< u32 >
+{
+  raw.parse::< u32 >().map_err( | _ |
+    Error::msg( format!(
+      "invalid --retry-delay value: {raw}\nExpected unsigned integer (seconds)"
+    ) )
+  )
+}
+
+/// Parse a raw string as a timeout in seconds (u32) with a clear error message.
+///
+/// Called from `parse_value_flag()`. 0 = unlimited (no watchdog started).
+fn parse_timeout_secs( raw : &str ) -> Result< u32 >
+{
+  raw.parse::< u32 >().map_err( | _ |
+    Error::msg( format!(
+      "invalid --timeout value: {raw}\nExpected unsigned integer (seconds; 0 = unlimited)"
+    ) )
+  )
+}
+
 /// Parse a value-consuming flag (`--flag value` pair) into `parsed`.
+///
+/// Handles flags that are forwarded to the Claude command line or modify
+/// the subprocess environment. Falls through to `parse_runner_value_flag`
+/// for runner-behavior flags (output capture, validation, concurrency, timeouts).
 ///
 /// Returns `true` when `token` is a recognised value-consuming flag and its
 /// following value was consumed into `parsed`. Returns `false` when `token`
@@ -216,6 +261,25 @@ fn parse_value_flag(
       let raw = next_value( tokens, next, "--verbosity" )?;
       parsed.verbosity = Some( raw.parse::< VerbosityLevel >().map_err( Error::msg )? );
     }
+    _ => return parse_runner_value_flag( token, tokens, next, parsed ),
+  }
+  Ok( true )
+}
+
+/// Parse runner-behavior value flags into `parsed`.
+///
+/// Handles flags that control output capture, expect validation, session concurrency,
+/// retry logic, and subprocess timeouts — none of which are forwarded to the claude
+/// command line directly.
+fn parse_runner_value_flag(
+  token  : &str,
+  tokens : &[ String ],
+  next   : usize,
+  parsed : &mut CliArgs,
+) -> Result< bool >
+{
+  match token
+  {
     "--output-file" =>
     {
       parsed.output_file = Some( next_value( tokens, next, "--output-file" )?.to_string() );
@@ -240,6 +304,24 @@ fn parse_value_flag(
     {
       parsed.max_sessions = Some(
         parse_max_sessions( next_value( tokens, next, "--max-sessions" )? )?
+      );
+    }
+    "--retry-on-rate-limit" =>
+    {
+      parsed.retry_on_rate_limit = Some(
+        parse_retry_count( next_value( tokens, next, "--retry-on-rate-limit" )? )?
+      );
+    }
+    "--retry-delay" =>
+    {
+      parsed.retry_delay = Some(
+        parse_retry_delay( next_value( tokens, next, "--retry-delay" )? )?
+      );
+    }
+    "--timeout" =>
+    {
+      parsed.timeout = Some(
+        parse_timeout_secs( next_value( tokens, next, "--timeout" )? )?
       );
     }
     _ => return Ok( false ),
@@ -396,7 +478,7 @@ pub( super ) fn env_str( var : &str ) -> Option< String >
   std::env::var( var ).ok().filter( | v | !v.is_empty() )
 }
 
-/// Apply `CLR_*` environment variable fallbacks for the 33 run parameters.
+/// Apply `CLR_*` environment variable fallbacks for the 36 run parameters.
 ///
 /// Each field is updated only when it is still at its zero/default value — the CLI
 /// flag always wins when both are present (CLI-wins field-default check).
@@ -492,6 +574,27 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
     if let Some( v ) = env_str( "CLR_MAX_SESSIONS" )
     {
       parsed.max_sessions = v.parse::< u32 >().ok();
+    }
+  }
+  if parsed.retry_on_rate_limit.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_ON_RATE_LIMIT" )
+    {
+      parsed.retry_on_rate_limit = v.parse::< u8 >().ok();
+    }
+  }
+  if parsed.retry_delay.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_RETRY_DELAY" )
+    {
+      parsed.retry_delay = v.parse::< u32 >().ok();
+    }
+  }
+  if parsed.timeout.is_none()
+  {
+    if let Some( v ) = env_str( "CLR_TIMEOUT" )
+    {
+      parsed.timeout = v.parse::< u32 >().ok();
     }
   }
   Ok( () )
