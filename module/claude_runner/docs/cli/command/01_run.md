@@ -49,7 +49,7 @@ The `run` token is optional — both forms are equivalent. When `run` appears as
 | [`--max-sessions`](../param/033_max_sessions.md) | u32 | `10` | Max concurrent claude sessions before blocking (0 = unlimited) |
 | [`--retry-on-rate-limit`](../param/034_retry_on_rate_limit.md) | u8 | `0` | Retry count on transient rate-limit exit (0 = no retry; `QuotaExhausted` never retried) |
 | [`--retry-delay`](../param/035_retry_delay.md) | u32 | `60` | Seconds between rate-limit retries (0 = immediate; ignored when `--retry-on-rate-limit` is 0) |
-| [`--timeout`](../param/036_timeout.md) | u32 | `0` | Seconds before watchdog kills subprocess (0 = unlimited; contrast: isolated/refresh where 0 = immediate expiry) |
+| [`--timeout`](../param/036_timeout.md) | u32 | `0` | Seconds before watchdog kills subprocess (0 = unlimited, matching isolated/refresh) |
 
 **Execution Modes:**
 

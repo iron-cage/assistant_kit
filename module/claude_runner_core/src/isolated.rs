@@ -19,25 +19,22 @@ use core::fmt;
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
-/// Default model ID used by [`IsolatedModel::Default`].
-pub const ISOLATED_DEFAULT_MODEL : &str = "claude-sonnet-4-6";
+/// Default model ID used by [`IsolatedModel::Default`] for real user tasks.
+pub const ISOLATED_DEFAULT_MODEL : &str = "claude-opus-4-6";
 
-/// Minimal instructions written to `<temp>/.claude/CLAUDE.md` by `run_isolated()`.
-/// Directs the subprocess to respond immediately without extended thinking (AC-42).
-pub const ISOLATED_CLAUDE_MD : &str = "\
-Respond immediately to --print prompts without extended thinking. \
-Do not use extended thinking. Do not add preamble. Do not use tools.";
+/// Default model ID for OAuth credential-refresh pings (trivial `"."` prompt).
+pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-4-6";
 
 /// Claude model selection for isolated subprocess invocations.
 ///
 /// Controls whether `--model <id>` is prepended to the subprocess argument list.
-/// The `Default` variant targets the current production Sonnet; callers that want
-/// the Claude binary to use whatever model it would normally select should pass
-/// `KeepCurrent`.
+/// The `Default` variant targets the current production Opus (highest capability)
+/// for real user tasks; callers that want the Claude binary to use whatever model
+/// it would normally select should pass `KeepCurrent`.
 #[ derive( Debug, Clone ) ]
 pub enum IsolatedModel
 {
-  /// Prepend `--model claude-sonnet-4-6` to subprocess args.
+  /// Prepend `--model claude-opus-4-6` to subprocess args.
   Default,
   /// Pass no `--model` flag; the Claude binary chooses the model.
   KeepCurrent,
@@ -164,6 +161,7 @@ impl core::error::Error for RunnerError {}
 /// - `RunnerError::Timeout { secs }` if the subprocess exceeds `timeout_secs`.
 #[ cfg( feature = "enabled" ) ]
 #[ inline ]
+#[ allow( clippy::too_many_lines ) ]
 pub fn run_isolated
 (
   credentials_json : &str,
@@ -186,14 +184,20 @@ pub fn run_isolated
   std::fs::write( &creds_path, credentials_json )
     .map_err( |e| RunnerError::Io( e.to_string() ) )?;
 
-  // Step 2b: write CLAUDE.md — instructs subprocess to skip extended thinking (AC-42)
-  let claude_md_path = claude_dir.join( "CLAUDE.md" );
-  std::fs::write( &claude_md_path, ISOLATED_CLAUDE_MD )
-    .map_err( |e|
-    {
-      let _ = std::fs::remove_dir_all( &temp_dir );
-      RunnerError::Io( e.to_string() )
-    } )?;
+  // Step 2a: Write CLAUDE.md to isolated HOME before spawn.
+  //
+  // Without user-level behavioral instructions the subprocess may ask clarifying
+  // questions, request confirmation, or produce verbose narration — all of which
+  // block the subprocess permanently in non-interactive print mode.
+  let claude_md_content = "# Isolated subprocess\n\n\
+    Execute the given task immediately and exit.\n\n\
+    - Do not ask clarifying questions \u{2014} act on the message as given.\n\
+    - Do not request human confirmation for any operation.\n\
+    - Do not explain your reasoning or narrate your steps.\n\
+    - Output only the direct result of the task; no preamble, no summary.\n\
+    - If the input is a single character or whitespace only, reply with a single period.\n";
+  std::fs::write( claude_dir.join( "CLAUDE.md" ), claude_md_content )
+    .map_err( |e| RunnerError::Io( e.to_string() ) )?;
 
   // Step 3: Build command — prepend --model flag then user args
   let mut full_args = Vec::with_capacity( args.len() + 2 );
@@ -205,7 +209,6 @@ pub fn run_isolated
   full_args.extend( args );
   let cmd = crate::ClaudeCommand::new()
     .with_home( &temp_dir )
-    .with_home_isolation()
     .with_args( full_args );
 
   // Step 4: Spawn subprocess with piped I/O so we keep the Child handle.
@@ -232,7 +235,19 @@ pub fn run_isolated
   } )?;
 
   // Step 5: Poll for completion with a 50 ms tick up to the deadline.
-  let deadline = std::time::Instant::now() + Duration::from_secs( timeout_secs );
+  //
+  // Fix(I2): when timeout_secs == 0, skip the deadline entirely (no watchdog),
+  //   matching run/ask semantics where 0 means unlimited.  Previously 0 computed
+  //   a deadline of Instant::now() + 0s, which fired on the very first poll tick
+  //   and killed the subprocess immediately — making unlimited timeout impossible.
+  let deadline : Option< std::time::Instant > = if timeout_secs > 0
+  {
+    Some( std::time::Instant::now() + Duration::from_secs( timeout_secs ) )
+  }
+  else
+  {
+    None
+  };
   let mut timed_out = false;
   let subprocess_output : Result< std::process::Output, RunnerError > = loop
   {
@@ -246,7 +261,7 @@ pub fn run_isolated
       }
       Ok( None ) =>
       {
-        if std::time::Instant::now() >= deadline
+        if deadline.is_some_and( |d| std::time::Instant::now() >= d )
         {
           // Timeout: kill the subprocess and collect whatever was buffered.
           timed_out = true;

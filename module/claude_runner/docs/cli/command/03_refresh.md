@@ -47,18 +47,24 @@ clr refresh --trace
 
 **Notes:**
 
-Internally calls `run_isolated()` with fixed args `["--print", "."]`. The `claude`
-binary refreshes its OAuth token at startup before processing the trivial `.` prompt,
-then exits. If the token was refreshed, `clr refresh` writes the updated credentials
-back to `--creds` and exits 0.
+Internally calls `run_isolated()` with fixed args. The `claude` binary refreshes
+its OAuth token at startup before processing the trivial `.` prompt, then exits.
+If the token was refreshed, `clr refresh` writes the updated credentials back to
+`--creds` and exits 0.
 
 The default timeout of 45 seconds (vs 30 for `isolated`) allows headroom for slow
-networks and API rate limiting during the OAuth token exchange.
+networks and API rate limiting during the OAuth token exchange. `--timeout 0`
+disables the watchdog entirely (unlimited runtime).
 
-The subprocess is always invoked with `--chrome` and `--model claude-sonnet-4-6`
-(injected via `ClaudeCommand::new()` defaults and `IsolatedModel::Default`). No
-`--dangerously-skip-permissions` or `-c` flags are injected — refresh is a
-credential-only operation, not a full-permissions run.
+The subprocess is invoked with the following injected defaults (see
+[`invariant/005_isolated_subprocess_defaults.md`](../../invariant/005_isolated_subprocess_defaults.md)):
+
+- `--model claude-sonnet-4-6` (`REFRESH_DEFAULT_MODEL` — Sonnet is sufficient for a trivial ping)
+- `--effort low` (minimal reasoning for a one-character OAuth-trigger prompt)
+- `--no-session-persistence` (temp HOME is discarded after run; session writes are waste)
+- `--no-chrome` (OAuth token exchange is pure HTTP; browser context adds overhead with no benefit)
+- No `--dangerously-skip-permissions` (refresh invokes no tools; no permission prompts)
+- CLAUDE.md written to temp HOME (same as isolated; suppresses interactive prompts)
 
 ### Referenced Parameter Groups
 

@@ -1,10 +1,15 @@
-use claude_runner_core::{ ClaudeCommand, IsolatedModel, RunnerError, run_isolated };
+use claude_runner_core::{ ClaudeCommand, EffortLevel, IsolatedModel, REFRESH_DEFAULT_MODEL, RunnerError, run_isolated };
 
 /// Emit trace diagnostics for a credential-operation command (`isolated` or `refresh`).
 ///
 /// Reconstructs the `ClaudeCommand` exactly as `run_isolated()` would build it
 /// (model flag prepended, then `with_home(&temp_dir)`, then `with_args(args)`) and
 /// prints `describe_env()` + `describe()` to stderr, matching the format of `run` trace.
+///
+/// `args` must be the fully-assembled arg list that will be passed to `run_isolated()`,
+/// including all injected flags (`--effort`, `--no-session-persistence`,
+/// `--dangerously-skip-permissions`, `--no-chrome`, `--print`, message, passthrough).
+/// WYSIWYG: the reconstructed command here must match what `run_isolated()` actually runs.
 ///
 /// Pitfall: if `run_isolated()` in `claude_runner_core` is updated to modify the
 /// `ClaudeCommand` beyond prepending the model flag, `with_home()`, and `with_args()`,
@@ -40,37 +45,54 @@ fn emit_credential_trace
   eprintln!( "{cmd_out}" );
 }
 
-/// Execute the `isolated` subcommand.
+/// Execute an `isolated` or `refresh` subprocess command.
 ///
-/// Reads the credentials file at `creds_path`, builds the argument list for
-/// `run_isolated`, then handles the result:
+/// Builds the full argument list with all injected defaults (effort, session
+/// persistence suppression, permissions, chrome), emits trace if requested,
+/// reads the credentials file, calls `run_isolated()`, and propagates the result.
+///
+/// Injected flags are prepended before `--print` and message so that passthrough
+/// args come last and can override them via claude's last-wins flag semantics.
 ///
 /// - **Success (`exit_code >= 0`):** propagates the subprocess exit code.
-/// - **Success (`exit_code == -1`, creds refreshed at startup before timeout):**
-///   writes back updated credentials and exits 0.
-/// - **`Err(Timeout)` / `Err(TimeoutWithOutput)`:** subprocess exceeded the deadline
-///   without refreshing credentials — exits 2.
+/// - **Success (`exit_code == -1`, creds refreshed before timeout kill):** exits 0.
+/// - **`Err(Timeout)` / `Err(TimeoutWithOutput)`:** exits 2.
 /// - **Other errors:** exits 1 with an error message.
 ///
 /// This function never returns; it always calls `std::process::exit`.
 pub( super ) fn run_isolated_command
 (
+  label            : &str,
   creds_path       : &str,
   timeout_secs     : u64,
   trace            : bool,
   model            : IsolatedModel,
+  effort           : EffortLevel,
   message          : Option< &str >,
   passthrough_args : &[ String ],
+  skip_perms       : bool,
+  no_chrome        : bool,
 ) -> !
 {
-  // Build args first so trace can emit them before any I/O that may exit early.
-  // This ensures trace fires even when the creds file is missing (matching
-  // `run_refresh_command` which also emits trace before any validation).
-  let mut args : Vec< String > = message
-    .map( | m | vec![ "--print".to_string(), m.to_string() ] )
-    .unwrap_or_default();
+  // Build the full arg list with all injected defaults prepended before --print.
+  // Order: [--no-chrome?] --effort <level> --no-session-persistence
+  //        [--dangerously-skip-permissions?] [--print <msg>] [passthrough]
+  let mut args : Vec< String > = Vec::new();
+  if no_chrome    { args.push( "--no-chrome".to_string() ); }
+  args.push( "--effort".to_string() );
+  args.push( effort.as_str().to_string() );
+  args.push( "--no-session-persistence".to_string() );
+  if skip_perms   { args.push( "--dangerously-skip-permissions".to_string() ); }
+  if let Some( m ) = message
+  {
+    args.push( "--print".to_string() );
+    args.push( m.to_string() );
+  }
   args.extend_from_slice( passthrough_args );
-  if trace { emit_credential_trace( "isolated", creds_path, &model, &args, timeout_secs ); }
+
+  // Emit trace before any I/O so it fires even when the creds file is missing.
+  if trace { emit_credential_trace( label, creds_path, &model, &args, timeout_secs ); }
+
   let creds_json = match std::fs::read_to_string( creds_path )
   {
     Ok( s )  => s,
@@ -95,14 +117,13 @@ pub( super ) fn run_isolated_command
       }
       if !result.stderr.is_empty() { eprint!( "{}", result.stderr ); }
       if !result.stdout.is_empty() { print!( "{}", result.stdout ); }
-      // exit_code == -1: subprocess was killed by timeout BUT credentials were
-      // refreshed before the kill — per spec, exit 0 and write-back already done.
+      // exit_code == -1: killed by timeout but creds already refreshed — exit 0.
       let exit_code = if result.exit_code == -1 { 0 } else { result.exit_code };
       std::process::exit( exit_code );
     }
     Err( RunnerError::Timeout { secs } | RunnerError::TimeoutWithOutput { secs, .. } ) =>
     {
-      eprintln!( "Error: isolated subprocess timed out after {secs} seconds" );
+      eprintln!( "Error: {label} subprocess timed out after {secs} seconds" );
       std::process::exit( 2 );
     }
     Err( e ) =>
@@ -119,6 +140,10 @@ pub( super ) fn run_isolated_command
 /// performs its OAuth token refresh at startup. Writes the refreshed credentials
 /// back to `creds_path` if the subprocess updated them.
 ///
+/// Injected defaults for refresh: `--no-chrome` (HTTP-only OAuth exchange;
+/// no browser context needed), `--effort low` (trivial ping), `--no-session-persistence`
+/// (temp HOME discarded after run). No `--dangerously-skip-permissions` (no tool use).
+///
 /// This function never returns; it always calls `std::process::exit`.
 pub( super ) fn run_refresh_command
 (
@@ -127,13 +152,16 @@ pub( super ) fn run_refresh_command
   trace        : bool,
 ) -> !
 {
-  if trace
-  {
-    // Mirror the args run_isolated_command builds from message = Some(".")
-    let trace_args = vec![ "--print".to_string(), ".".to_string() ];
-    emit_credential_trace( "refresh", creds_path, &IsolatedModel::Default, &trace_args, timeout_secs );
-  }
-  // Pass trace=false: refresh already emitted its own trace above.
-  // message = Some(".") triggers Claude's startup token refresh with a trivial prompt.
-  run_isolated_command( creds_path, timeout_secs, false, IsolatedModel::Default, Some( "." ), &[] );
+  run_isolated_command(
+    "refresh",
+    creds_path,
+    timeout_secs,
+    trace,
+    IsolatedModel::Specific( REFRESH_DEFAULT_MODEL.to_string() ),
+    EffortLevel::Low,
+    Some( "." ),
+    &[],
+    false, // no skip-perms: refresh is HTTP-only, invokes no tools
+    true,  // no-chrome: OAuth token exchange is pure HTTP; suppress browser context
+  );
 }

@@ -21,6 +21,7 @@ clr [OPTIONS] [MESSAGE]
 |------|----------------|
 | `command/` | Command reference: run, ask, isolated, refresh, help (5 commands) |
 | `dictionary.md` | Domain vocabulary for clr CLI concepts |
+| `command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
 | `env_param.md` | CLR_* env var fallbacks and CLAUDE_CODE_* subprocess vars |
 | `param_group/` | Logical parameter groupings (4 groups) |
 | `type/` | Semantic type definitions (12 types) |

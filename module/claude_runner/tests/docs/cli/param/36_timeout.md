@@ -3,10 +3,9 @@
 Edge case coverage for the `--timeout` parameter on the `run`/`ask` dispatch paths. See [036_timeout.md](../../../../docs/cli/param/036_timeout.md) for specification.
 
 **Scope note:** This file covers `--timeout` for the `run`/`ask` commands only. `--timeout` for
-the `isolated`/`refresh` commands is covered in [20_timeout.md](20_timeout.md). The semantics
-differ: for `run`/`ask`, `--timeout 0` means **unlimited** (current default behavior preserved);
-for `isolated`/`refresh`, `--timeout 0` means **immediate expiry**. Tests in this file must not
-be confused with those in `20_timeout.md`.
+the `isolated`/`refresh` commands is covered in [20_timeout.md](20_timeout.md). All four commands
+now share the same semantics: `--timeout 0` means **unlimited** (no watchdog). Tests in this file
+must not be confused with those in `20_timeout.md`.
 
 ## Test Case Index
 
@@ -41,10 +40,9 @@ sleeps 30 seconds but the timeout fires after 1 second, producing exit 2 and a s
 containing "timeout". EC-8 verifies the no-timeout path: the fake script exits immediately and
 the timeout watchdog is disarmed without firing.
 
-**Semantic distinction from 20_timeout.md:** `--timeout 0` for `run`/`ask` means unlimited
-(watchdog not started). `--timeout 0` for `isolated`/`refresh` means immediate expiry (the
-timeout deadline is set to `now`, so the subprocess is killed before it can produce output).
-Tests in this file must never invoke `clr isolated` or `clr refresh`.
+**Cross-command parity with 20_timeout.md:** All four commands now use the same `--timeout 0`
+semantics: unlimited (no watchdog). Tests in this file cover `run`/`ask` only;
+`isolated`/`refresh` timeout tests are in `20_timeout.md`.
 
 ## Implementation Notes
 
@@ -76,7 +74,7 @@ Tests in this file must never invoke `clr isolated` or `clr refresh`.
 
 - **Given:** `--timeout 0` and `--dry-run` set
 - **When:** `clr --timeout 0 --dry-run "task"`
-- **Then:** Exit 0; dry-run output produced; no watchdog started (0 = unlimited, not immediate expiry). **Divergence from EC-3:** value 0 disables the watchdog entirely — no `child.kill()` thread is spawned; value 30 (EC-3) activates the watchdog code path with a 30-second countdown. **Semantic contrast with isolated:** in `clr isolated`, `--timeout 0` fires immediately (deadline = now); here it preserves current unlimited behavior
+- **Then:** Exit 0; dry-run output produced; no watchdog started (0 = unlimited). **Divergence from EC-3:** value 0 disables the watchdog entirely — no `child.kill()` thread is spawned; value 30 (EC-3) activates the watchdog code path with a 30-second countdown. All commands (`run`, `ask`, `isolated`, `refresh`) now share the same `--timeout 0` = unlimited semantics
 - **Exit:** 0
 - **Source:** [036_timeout.md](../../../../docs/cli/param/036_timeout.md)
 - **Commands:** run, ask

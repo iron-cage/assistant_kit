@@ -1,8 +1,8 @@
 # CLI Type: TimeoutSecs
 
 Unsigned integer representing seconds to wait for the isolated Claude
-subprocess to complete. Zero causes immediate expiry — useful for testing
-the credential-refresh path without waiting for Claude to start.
+subprocess to complete. Zero disables the watchdog entirely (unlimited
+runtime), matching `run`/`ask` semantics.
 
 - **Purpose:** Subprocess wait limit in seconds
 - **Fundamental Type:** unsigned 64-bit integer
@@ -12,7 +12,7 @@ the credential-refresh path without waiting for Claude to start.
 - **Methods:** —
 
 ```sh
-clr isolated --creds creds.json --timeout 0 "test"    # immediate timeout
+clr isolated --creds creds.json --timeout 0 "test"    # unlimited (no watchdog)
 clr isolated --creds creds.json --timeout 30 "test"   # default (same as omitting)
 clr isolated --creds creds.json --timeout 120 "test"  # 2-minute window
 clr isolated --creds creds.json --timeout -1 "test"   # error: negative

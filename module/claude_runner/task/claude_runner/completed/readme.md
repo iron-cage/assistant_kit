@@ -18,3 +18,5 @@ Completed task files for the `claude_runner` crate. Each file documents a resolv
 | `018_max_sessions_gate.md` | Implement --max-sessions concurrency gate with polling and timeout |
 | `019_retry_on_rate_limit.md` | Auto-retry run/ask on transient rate-limit exit (exit code 2) |
 | `020_run_ask_timeout.md` | Add --timeout <SECS> subprocess kill to run/ask dispatch paths |
+| `021_isolated_capability_upgrade.md` | Upgrade isolated to Opus + max effort; refresh to Sonnet + low effort |
+| `022_isolated_subprocess_correctness.md` | Fix timeout-0 semantics, session-persistence, skip-permissions, chrome, CLAUDE.md |

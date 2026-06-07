@@ -46,3 +46,5 @@ Task work items scoped to the `claude_runner` crate.
 | 17 | 018 | 0 | 8 | 7 | 9 | 0 | ✅ (Completed) | ai | [Session Concurrency Gate](completed/018_max_sessions_gate.md) | Implement `--max-sessions <N>` concurrency gate with 30s polling and 15-minute timeout |
 | 18 | 019 | — | 8 | 7 | 9 | — | ✅ (Completed) | ai | [Retry on Rate Limit](completed/019_retry_on_rate_limit.md) | Auto-retry run/ask on transient rate-limit exit (exit code 2) up to N times |
 | 19 | 020 | — | 7 | 6 | 9 | — | ✅ (Completed) | ai | [Subprocess Timeout for run/ask](completed/020_run_ask_timeout.md) | Kill subprocess after --timeout <SECS>; exit 2 on expiry; parity with isolated/refresh |
+| 20 | 021 | — | 8 | 7 | 9 | — | ✅ (Completed) | ai | [Isolated Capability Upgrade](completed/021_isolated_capability_upgrade.md) | Upgrade isolated to Opus + max effort; refresh to Sonnet + low effort |
+| 21 | 022 | — | 9 | 6 | 9 | — | ✅ (Completed) | ai | [Isolated Subprocess Correctness](completed/022_isolated_subprocess_correctness.md) | Fix timeout-0 semantics, session-persistence, skip-permissions, chrome, CLAUDE.md |

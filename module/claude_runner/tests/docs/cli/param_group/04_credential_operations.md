@@ -10,7 +10,7 @@ Interaction tests for Group 4 (Credential Operations): `--creds`, `--timeout`, `
 |----|-----------|----------|
 | CC-1 | `--creds` + `--timeout` both explicit → subprocess launched with both | Combined |
 | CC-2 | `isolated` `--creds` only → default 30-second deadline | Default |
-| CC-3 | `isolated` `--timeout 0` → immediate expiry, exit 2, write-back triggered | Interaction |
+| CC-3 | `isolated` `--timeout 0` → unlimited (no watchdog), subprocess runs to natural exit | Interaction |
 | CC-4 | `--creds` + `-- --version` passthrough → subprocess flag forwarded | Interaction |
 | CC-5 | `refresh` `--creds` only → default 45-second deadline | Default |
 | CC-6 | `--trace` on credential ops → call details printed to stderr | Trace |
@@ -49,13 +49,13 @@ Interaction tests for Group 4 (Credential Operations): `--creds`, `--timeout`, `
 - **Commands:** isolated, refresh
 ---
 
-### CC-3: `--timeout 0` → immediate expiry
+### CC-3: `--timeout 0` → unlimited (no watchdog)
 
 - **Given:** valid credentials file `/tmp/creds.json`
 - **When:** `clr isolated --creds /tmp/creds.json --timeout 0 "dummy"`
-- **Then:** subprocess killed immediately (0-second deadline); exit 2 (timeout before any token refresh)
-- **Exit:** 2
-- **Note:** lim_it — requires valid credentials; fast path (no full session needed)
+- **Then:** `0` disables the watchdog entirely — subprocess runs until it exits naturally (matching `run`/`ask` semantics); exit code is the subprocess exit code
+- **Exit:** 0 or passthrough
+- **Note:** lim_it — requires valid credentials
 - **Source:** [param_group/04_credential_operations.md](../../../../docs/cli/param_group/04_credential_operations.md)
 - **Commands:** isolated, refresh
 ---

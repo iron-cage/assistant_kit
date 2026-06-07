@@ -48,9 +48,9 @@ Test case planning for [invariant/004_trace_universality.md](../../../../docs/in
 
 - **Given:** credentials JSON written to a temp file `<f>` (file is readable; content `{}`)
 - **When:** `clr isolated --creds <f> --trace "Fix bug"` (no `--dry-run`; trace fires before creds file read, so output appears on stderr regardless of whether the file is readable)
-- **Then:** stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --chrome --model claude-sonnet-4-6 --print "Fix bug"` before any subprocess attempt; exit 0 or 1
+- **Then:** stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --model claude-opus-4-6 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"` before any subprocess attempt; `--chrome` is active via ClaudeCommand default (not shown as explicit flag); exit 0 or 1
 - **Exit:** 1 (claude absent) or 0 (claude present)
-- **Source:** [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md)
+- **Source:** [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md), [command/02_isolated.md](../../../../docs/cli/command/02_isolated.md), [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 
@@ -58,9 +58,9 @@ Test case planning for [invariant/004_trace_universality.md](../../../../docs/in
 
 - **Given:** credentials JSON written to a temp file `<f>` (file is readable; content `{}`)
 - **When:** `clr refresh --creds <f> --trace` (no `--dry-run`; trace fires before creds file read)
-- **Then:** stderr contains `# clr refresh`, `# creds: <path>`, `# timeout: 45s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --chrome --model claude-sonnet-4-6 --print "."` before any subprocess attempt; exit 0 or 1
+- **Then:** stderr contains `# clr refresh`, `# creds: <path>`, `# timeout: 45s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --model claude-sonnet-4-6 --no-chrome --effort low --no-session-persistence --print "."` before any subprocess attempt; exit 0 or 1
 - **Exit:** 1 (claude absent) or 0 (claude present)
-- **Source:** [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md), [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md)
+- **Source:** [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md), [command/03_refresh.md](../../../../docs/cli/command/03_refresh.md), [invariant/005_isolated_subprocess_defaults.md](../../../../docs/invariant/005_isolated_subprocess_defaults.md)
 
 ---
 

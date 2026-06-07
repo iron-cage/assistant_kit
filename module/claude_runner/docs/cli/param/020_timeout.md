@@ -13,7 +13,7 @@ timeout window, the updated file is written back and exit code is 0.
 clr isolated --creds creds.json --timeout 60 "Explain closures"
 clr isolated --creds creds.json --timeout 5 -- --version   # fast check
 clr refresh --creds creds.json --timeout 90                # slow network
-clr isolated --creds creds.json --timeout 0 "test"         # immediate timeout
+clr isolated --creds creds.json --timeout 0 "test"         # unlimited (no watchdog)
 ```
 
 **Note:** Default differs by command: `isolated` defaults to 30s (general task
@@ -24,9 +24,9 @@ API rate limiting during OAuth token exchange).
 the timeout fires is preserved in the error output, so diagnostic context is
 not discarded.
 
-**Note:** A timeout of `0` causes immediate expiry — useful for testing the
-credential-refresh path (OAuth token written at startup before subprocess
-blocks on input).
+**Note:** A timeout of `0` disables the watchdog entirely (unlimited runtime),
+matching `run`/`ask` semantics. The subprocess runs until it exits naturally
+with no deadline enforced.
 
 ### Referenced Type
 

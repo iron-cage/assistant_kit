@@ -4,8 +4,8 @@
 
 - **Purpose**: Document that `claude` uses exit code 1 for multiple distinct failure modes, making exit-code-only error handling incorrect.
 - **Responsibility**: List all failure modes that produce exit 1, explain pattern-priority ordering, and provide correct detection guidance.
-- **In Scope**: Rate-limit via text pattern (exit 1), auth errors (exit 1), API errors (exit 1), unknown errors (exit 1).
-- **Out of Scope**: Exit code 2 rate-limit sentinel (→ `failure_mode/001_rate_limit_exit_2.md`), signal exits (exit ≥ 128).
+- **In Scope**: Quota exhaustion via text pattern (exit 1), auth errors (exit 1), API errors (exit 1), unknown errors (exit 1).
+- **Out of Scope**: Exit code 2 rate-limit sentinel (→ `failure_mode/001_rate_limit_exit_2.md`), signal exits (exit > 128).
 
 ### Behavior
 
@@ -13,7 +13,7 @@ The `claude` binary exits with code **1** for all of the following:
 
 | Failure Mode | Example Text | `ErrorKind` |
 |--------------|--------------|-------------|
-| Rate-limit (with message) | `"You've hit your limit"` in stdout or stderr | `RateLimit` |
+| Quota exhausted | `"You've hit your limit"` in stdout or stderr | `QuotaExhausted` |
 | Auth / org access denied | `"Your organization does not have access to Claude"` | `AuthError` |
 | API error (4xx/5xx) | `"API Error: 529 overloaded"` | `ApiError` |
 | Unknown / unrecognized | no matching text | `Unknown` |
@@ -29,14 +29,15 @@ A caller that maps `exit_code != 0` → generic error will conflate these four d
 Never branch on exit code 1 alone. Always inspect output first:
 
 ```
-1. scan stdout + stderr for AuthError pattern  → ErrorKind::AuthError
-2. scan stdout + stderr for RateLimit pattern  → ErrorKind::RateLimit
-3. scan stdout + stderr for ApiError pattern   → ErrorKind::ApiError
-4. if exit_code >= 128                         → ErrorKind::Signal
-5. if exit_code == 2                           → ErrorKind::RateLimit   (silent sentinel)
-6. any other non-zero exit                     → ErrorKind::Unknown
+1. scan stdout + stderr for QuotaExhausted pattern → ErrorKind::QuotaExhausted
+2. scan stdout + stderr for AuthError pattern      → ErrorKind::AuthError
+3. scan stdout + stderr for ApiError pattern       → ErrorKind::ApiError
+4. if exit_code == 2                               → ErrorKind::RateLimit   (silent sentinel)
+5. if exit_code > 128                              → ErrorKind::Signal
+6. any other non-zero exit                         → ErrorKind::Unknown
 ```
 
+QuotaExhausted is priority 1 (distinct pattern; never co-occurs with AuthError text).
 AuthError is checked before ApiError because 401 responses can contain both `"Your organization does not have access to Claude"` and `"API Error: "` simultaneously — AuthError wins.
 
 ### Anti-Pattern
@@ -49,12 +50,13 @@ if output.exit_code != 0 {
 
 // Correct: classify before acting
 match output.classify_error() {
-    Some(ErrorKind::RateLimit)  => back_off_and_retry(),
-    Some(ErrorKind::AuthError)  => alert_operator(),
-    Some(ErrorKind::ApiError)   => retry_with_backoff(),
-    Some(ErrorKind::Signal)     => log_signal_kill(),
-    Some(ErrorKind::Unknown)    => log_and_investigate(),
-    None                        => { /* success */ }
+    Some(ErrorKind::RateLimit)       => back_off_and_retry(),
+    Some(ErrorKind::QuotaExhausted)  => switch_account_or_wait(),
+    Some(ErrorKind::AuthError)       => alert_operator(),
+    Some(ErrorKind::ApiError)        => retry_with_backoff(),
+    Some(ErrorKind::Signal)          => log_signal_kill(),
+    Some(ErrorKind::Unknown)         => log_and_investigate(),
+    None                             => { /* success */ }
 }
 ```
 

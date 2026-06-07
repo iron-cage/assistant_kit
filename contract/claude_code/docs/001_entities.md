@@ -13,6 +13,7 @@
 | `taxonomy` | Four-level concept hierarchy: Project, Conversation, Session, Entry | [taxonomy/readme.md](taxonomy/readme.md) | 3 |
 | `params` | CLI parameter specifications for the `claude` binary | [params/readme.md](params/readme.md) | 73 |
 | `endpoint` | Wire contracts for Anthropic HTTP endpoints consumed by workspace crates | [endpoint/readme.md](endpoint/readme.md) | 10 |
+| `fault` | Aggregated index of all fault conditions: terminal errors (E1–E6), silent failures (F1–F4), and quirks (Q1–Q5) with detection signals and `classify_error()` priority order | [fault/readme.md](fault/readme.md) | 0 |
 
 **Total doc instances**: 137 (25 + 3 + 4 + 10 + 3 + 6 + 3 + 73 + 10)
 

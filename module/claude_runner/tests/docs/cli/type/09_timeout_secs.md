@@ -8,7 +8,7 @@ Validation tests for the `TimeoutSecs` semantic type (u64: non-negative integer 
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| TC-1 | `0` → accepted, immediate expiry | Valid Boundary |
+| TC-1 | `0` → accepted, unlimited (no watchdog) | Valid Boundary |
 | TC-2 | `30` → accepted (default) | Valid |
 | TC-3 | `3600` → accepted | Valid |
 | TC-4 | `-1` → exit 1, negative rejected | Invalid |
@@ -28,12 +28,12 @@ Validation tests for the `TimeoutSecs` semantic type (u64: non-negative integer 
 
 ---
 
-### TC-1: `0` → accepted, immediate expiry
+### TC-1: `0` → accepted, unlimited (no watchdog)
 
 - **Given:** credentials JSON at `/tmp/tc1_ts.json`
 - **When:** `clr isolated --creds /tmp/tc1_ts.json --timeout 0 "test"`
-- **Then:** no parse error for `0`; subprocess attempted; immediately timed out; exit 0 if creds refreshed, exit 2 otherwise
-- **Exit:** 0 or 2
+- **Then:** no parse error for `0`; `0` disables the watchdog entirely — subprocess runs until it exits naturally (matching `run`/`ask` semantics); exit code is the subprocess exit code
+- **Exit:** 0 or passthrough
 - **Source:** [type/09_timeout_secs.md](../../../../docs/cli/type/09_timeout_secs.md)
 
 ---

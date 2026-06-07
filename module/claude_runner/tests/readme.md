@@ -26,6 +26,8 @@
 | Library API | `lib_test.rs` | `register_commands()` callability |
 | Stale-ref guards + dep constraints (IT-2, IT-3, IT-4) | `stale_ref_guard_test.rs` | No `claude_runner_plugin` or `dream_agent` refs; dep constraint invariants |
 | Isolated subcommand | `isolated_test.rs` | `clr isolated`: parsing, errors, exit codes, lim_it live runs, unknown-subcommand detection |
+| Isolated/refresh defaults (DT-1–DT-6) | `isolated_defaults_test.rs` | Invariant 005: model constants, effort injection, passthrough override, effort-before-print order |
+| Isolated/refresh correctness (CT-1–CT-6) | `isolated_correctness_test.rs` | Correctness gaps S2–S6: no-session-persistence, skip-perms with/without message, no-chrome for refresh, timeout-0 unlimited, CLAUDE.md provisioning |
 | Refresh subcommand | `refresh_test.rs` | `clr refresh`: error cases, timeout exit 2, help text (IT-2, IT-4, IT-6, IT-8) |
 | Credential defaults (T1–T5) | `creds_default_test.rs` | `--creds` 3-tier resolution: HOME default, CLR_CREDS tier, and refresh path |
 | Bug reproducers BUG-239–244 | `bug_reproducers_239_244_test.rs` | Silent-failure: exit code propagation, signal codes, verbosity gate, install hint, timeout output, mirror sync |
@@ -58,6 +60,8 @@
 | `lib_test.rs` | Library API: `register_commands()` callable. |
 | `stale_ref_guard_test.rs` | Guard against stale `claude_runner_plugin` and `dream_agent` references; dep constraint invariants IT-2, IT-3, IT-4. |
 | `isolated_test.rs` | `clr isolated` subcommand: parsing, error cases, exit codes, lim_it live runs, unknown-subcommand detection. |
+| `isolated_defaults_test.rs` | Invariant 005 model and effort defaults: DT-1–DT-6 covering constants, trace injection, passthrough override, arg order. |
+| `isolated_correctness_test.rs` | Isolated/refresh correctness gaps CT-1–CT-6: no-session-persistence, skip-perms condition, no-chrome, timeout-0 unlimited, CLAUDE.md provisioning. |
 | `refresh_test.rs` | `clr refresh` subcommand: error cases, timeout exit 2, and help text (IT-2, IT-4, IT-6, IT-8). |
 | `creds_default_test.rs` | `--creds` 3-tier resolution: HOME default, CLR_CREDS tier, and refresh path (T1–T5). |
 | `bug_reproducers_239_244_test.rs` | Bug reproducers BUG-239–244: exit code passthrough, signal codes, verbosity gate, install hint, timeout output, mirror sync. |

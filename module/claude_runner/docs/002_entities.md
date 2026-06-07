@@ -9,7 +9,7 @@
 | `cli/param/` | Index of individual parameter reference instances (36 parameters) | [cli/param/readme.md](cli/param/readme.md) | 36 |
 | `cli/user_story/` | Index of user goal and usage pattern instances (25 user stories) | [cli/user_story/readme.md](cli/user_story/readme.md) | 25 |
 | `feature/` | Index of feature doc instances covering the clr binary tool design | [feature/readme.md](feature/readme.md) | 1 |
-| `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, and trace universality | [invariant/readme.md](invariant/readme.md) | 4 |
+| `invariant/` | Index of invariant doc instances covering default flag injection, dependency constraints, command naming, trace universality, and isolated/refresh subprocess defaults | [invariant/readme.md](invariant/readme.md) | 5 |
 
 ### Master Doc Instances Table
 
@@ -87,3 +87,4 @@
 | invariant | 002 | Dependency Constraints | [invariant/002_dep_constraints.md](invariant/002_dep_constraints.md) |
 | invariant | 003 | Command Naming | [invariant/003_command_naming.md](invariant/003_command_naming.md) |
 | invariant | 004 | Trace Universality | [invariant/004_trace_universality.md](invariant/004_trace_universality.md) |
+| invariant | 005 | Isolated Subprocess Defaults | [invariant/005_isolated_subprocess_defaults.md](invariant/005_isolated_subprocess_defaults.md) |

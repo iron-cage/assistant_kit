@@ -467,6 +467,15 @@ pub enum ErrorKind
 // Priority-ordered stderr/stdout patterns → ErrorKind.
 // AuthError appears before ApiError so 401 responses
 // ("Your organization..." + "API Error:") hit AuthError, not ApiError.
+//
+// NOTE: E4 (Request Timed Out) retry progress uses "API Error (Request timed out.)"
+// which does NOT match "API Error: " (parenthesis, not colon-space). However, E4 hangs
+// after 10 retries without exiting — classify_error() is never called in that scenario.
+// When --timeout kills the subprocess it gets SIGTERM → Signal, not Unknown.
+//
+// NOTE: E3 (Context Limit) API-overflow form begins with "API Error: 400 ..." and
+// matches ApiError. The in-session UI text ("Context limit reached") is interactive-only
+// and never appears in print-mode captured stdout/stderr.
 const ERROR_PATTERNS : &[ ( &str, ErrorKind ) ] =
 &[
   ( "You've hit your limit",                            ErrorKind::QuotaExhausted ),
