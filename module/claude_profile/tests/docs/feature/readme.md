@@ -45,6 +45,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 030_account_renewal_override.md | FT cases for Feature 030 — Account Billing Renewal Override |
 | 031_account_inspect.md | FT cases for Feature 031 — Account Inspect |
 | 032_account_assign.md | FT cases for Feature 032 — Account Marker Assignment |
+| 033_quota_cache.md | FT cases for Feature 033 — Quota Cache Fallback |
 
 ### Coverage Summary
 
@@ -53,7 +54,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 001_account_store_init | [001_account_store_init.md](001_account_store_init.md) | FT-01 … FT-04 | ✅ |
 | 002_account_save | [002_account_save.md](002_account_save.md) | FT-01 … FT-11 | ✅ |
 | 003_account_list | [003_account_list.md](003_account_list.md) | FT-01 … FT-19 | ✅ |
-| 004_account_use | [004_account_use.md](004_account_use.md) | FT-01 … FT-08 | ✅ |
+| 004_account_use | [004_account_use.md](004_account_use.md) | FT-01 … FT-09 | ✅ |
 | 005_account_delete | [005_account_delete.md](005_account_delete.md) | FT-01 … FT-05 | ✅ |
 | 006_token_status | [006_token_status.md](006_token_status.md) | FT-01 … FT-04 | ✅ |
 | 007_file_topology | [007_file_topology.md](007_file_topology.md) | FT-01 … FT-06 | ✅ |
@@ -82,5 +83,6 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 030_account_renewal_override | [030_account_renewal_override.md](030_account_renewal_override.md) | FT-01 … FT-15 | ✅ |
 | 031_account_inspect | [031_account_inspect.md](031_account_inspect.md) | FT-01 … FT-24 | ✅ |
 | 032_account_assign | [032_account_assign.md](032_account_assign.md) | FT-01 … FT-12 | ✅ |
+| 033_quota_cache | [033_quota_cache.md](033_quota_cache.md) | FT-01 … FT-09 | ✅ |
 
-**Total:** 32 feature specs; all 32 feature instances covered by dedicated FT specs.
+**Total:** 33 feature specs; all 33 feature instances covered by dedicated FT specs.

@@ -222,6 +222,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
 
@@ -255,6 +257,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -283,6 +287,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -327,6 +333,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -357,6 +365,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -392,6 +402,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
       AccountQuota
       {
@@ -405,6 +417,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
       AccountQuota
       {
@@ -418,6 +432,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
       AccountQuota
       {
@@ -431,6 +447,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
 
@@ -472,6 +490,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -525,6 +545,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
 
@@ -602,6 +624,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
 
@@ -645,6 +669,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -682,6 +708,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
 
@@ -725,6 +753,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
     apply_refresh( &mut accounts, store.path(), Some( &paths ), false, SubprocessModel::Auto, SubprocessEffort::Auto );
@@ -778,6 +808,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
     // Must not panic — switch_account fails (no cred file), trace logs to stderr.
@@ -901,6 +933,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
     // Must not panic — switch_account succeeds; run_isolated invoked; fails fast (fake creds).
@@ -930,6 +964,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
 
@@ -968,6 +1004,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
 
@@ -1087,6 +1125,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       },
     ];
 
@@ -1127,6 +1167,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
     assert!( should_refresh( &aq, 0 ), "401 must trigger refresh" );
   }
@@ -1147,6 +1189,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
     assert!( should_refresh( &aq, 0 ), "403 must trigger refresh" );
   }
@@ -1171,6 +1215,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
     assert!(
       should_refresh( &aq, 9_999 ),
@@ -1197,6 +1243,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
     assert!(
       !should_refresh( &aq, 0 ),
@@ -1223,6 +1271,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
     assert!(
       should_refresh( &aq, 5 ),
@@ -1249,6 +1299,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
     assert!(
       !should_refresh( &aq, 5 ),
@@ -1273,6 +1325,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
     assert!( !should_refresh( &aq, 9_999 ), "Ok result must not trigger refresh" );
   }
@@ -1293,6 +1347,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
     assert!( !should_refresh( &aq, 9_999 ), "generic error must not trigger refresh" );
   }
@@ -1342,6 +1398,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
     assert!(
       should_refresh( &aq, 9_999 ),

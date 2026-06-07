@@ -227,3 +227,4 @@ Valid: 2 / 3   ->  Next by strategy:
 | param | [cli/param/049_at.md](../cli/param/049_at.md) | `at::` — absolute renewal timestamp for `.account.renewal` |
 | param | [cli/param/050_from_now.md](../cli/param/050_from_now.md) | `from_now::` — relative renewal delta for `.account.renewal` |
 | param | [cli/param/051_clear.md](../cli/param/051_clear.md) | `clear::` — remove `_renewal_at` override; restores `~`-prefixed estimate in `~Renews` |
+| doc | [033_quota_cache.md](033_quota_cache.md) | Quota cache fallback — persist last-known quota in `{name}.json`; display cached values with `~` prefix when live fetch fails |

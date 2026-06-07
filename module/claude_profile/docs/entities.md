@@ -4,7 +4,7 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|-----------|
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 32 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 33 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 6 |
 | `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 53 |
@@ -50,6 +50,7 @@
 | feature | 030 | Account Billing Renewal Override | [feature/030_account_renewal_override.md](feature/030_account_renewal_override.md) |
 | feature | 031 | Account Inspect | [feature/031_account_inspect.md](feature/031_account_inspect.md) |
 | feature | 032 | Account Marker Assignment | [feature/032_account_assign.md](feature/032_account_assign.md) |
+| feature | 033 | Quota Cache Fallback | [feature/033_quota_cache.md](feature/033_quota_cache.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](cli/003_env_param.md) |

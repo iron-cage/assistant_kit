@@ -34,6 +34,7 @@ Integration test planning for the `.account.use` command. See [command/namespace
 | IT-25 | `trace::1 touch::0` — no `[trace] account.use` lines emitted | Trace Suppression |
 | IT-26 | `trace::bad` exits 1 naming valid values `0`, `1`, `false`, `true` | Validation |
 | IT-27 | `oauthAccount.organizationName` in `~/.claude.json` reflects switched-to account (BUG-219 guard) | Org Identity |
+| IT-29 | `oauthAccount.emailAddress` in `~/.claude.json` patched unconditionally even when `{name}.json` absent (BUG-254 guard) | oauthAccount Email |
 
 ### Test Coverage Summary
 
@@ -55,8 +56,9 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - Trace Output: 2 tests
 - Trace Suppression: 1 test
 - Org Identity: 1 test
+- oauthAccount Email: 1 test
 
-**Total:** 28 integration tests
+**Total:** 29 integration tests
 
 ---
 
@@ -354,3 +356,14 @@ Integration test planning for the `.account.use` command. See [command/namespace
 - **Exit:** 1
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-09](../../../../docs/feature/027_account_use_post_switch_touch.md), [params/019_refresh.md](../../../../docs/cli/param/019_refresh.md)
 - **Source fn:** `aw34_refresh_bad_value_exits_1`
+
+---
+
+### IT-29: `oauthAccount.emailAddress` patched unconditionally when `{name}.json` absent (BUG-254 guard)
+
+- **Given:** Account `bob@acme.com` has `bob@acme.com.credentials.json` but NO `bob@acme.com.json` metadata file. Current active is `alice@acme.com` with `~/.claude.json` containing `oauthAccount.emailAddress = "alice@acme.com"`.
+- **When:** `clp .account.use name::bob@acme.com`
+- **Then:** Exits 0; `switched to 'bob@acme.com'` on stdout. `~/.claude.json` contains `oauthAccount.emailAddress = "bob@acme.com"` — patched unconditionally even without metadata file. All other `oauthAccount` fields retain their previous values from alice's session. `_active_{hostname}_{user}` marker contains `bob@acme.com`.
+- **Exit:** 0
+- **Source:** [feature/004_account_use.md AC-09](../../../../docs/feature/004_account_use.md)
+- **Source fn:** `mre_bug254_switch_account_patches_email_when_metadata_absent` (core), `aw12_switch_patches_email_when_metadata_absent` (FT)

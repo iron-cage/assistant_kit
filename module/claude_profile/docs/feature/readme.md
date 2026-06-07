@@ -43,4 +43,5 @@
 | 030 | [Account Billing Renewal Override](030_account_renewal_override.md) | `.account.renewal` command; `_renewal_at` field in `{name}.json`; exact `~Renews` and `→ Next` columns in `.usage` | ✅ |
 | 031 | [Account Inspect](031_account_inspect.md) | `.account.inspect` command; live endpoints 001/002/005; all memberships with selection-priority indicator | ✅ |
 | 032 | [Account Marker Assignment](032_account_assign.md) | `.account.assign` command; marker-only write for any `USER@MACHINE`; live usage block when called without `name::` | ✅ |
+| 033 | [Quota Cache Fallback](033_quota_cache.md) | Persist last-known quota in `{name}.json`; display cached values with staleness indicator when API unavailable | ✅ |
 | — | [procedure.md](procedure.md) | Workflow for creating and updating feature doc instances | ✅ |

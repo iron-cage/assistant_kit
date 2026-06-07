@@ -14,6 +14,7 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 | FT-06 | Path-unsafe characters in name → exit 1 | AC-06 |
 | FT-07 | `oauthAccount.emailAddress` enforced; org fields overridden from `{name}.json` | AC-07 |
 | FT-08 | Model preference restored from `{name}.json`; cleared when absent | AC-08 |
+| FT-09 | emailAddress patched unconditionally even when `{name}.json` absent | AC-09 |
 
 ### Test Case Index
 
@@ -27,8 +28,9 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 | FT-06 | Empty name, slash in name, or path-unsafe chars → exit 1 | AC-06 | Validation |
 | FT-07 | `emailAddress` enforced as account name; org fields from `{name}.json` | AC-07 | oauthAccount |
 | FT-08 | Model preference restored from `{name}.json`; cleared when absent | AC-08 | Model Restore |
+| FT-09 | emailAddress patched unconditionally even when `{name}.json` absent | AC-09 | oauthAccount |
 
-**Total:** 8 FT cases
+**Total:** 9 FT cases
 
 ---
 
@@ -130,3 +132,14 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Exit:** 0
 - **Source fn:** `mre_bug222_switch_account_restores_model_from_settings_snapshot`, `mre_bug222_switch_account_clears_model_when_no_snapshot` (in `module/claude_profile_core/tests/account_test.rs`)
 - **Source:** [004_account_use.md AC-08](../../../../docs/feature/004_account_use.md)
+
+---
+
+### FT-09: emailAddress patched unconditionally even when `{name}.json` metadata file is absent
+
+- **Given:** Account `bob@acme.com` has `bob@acme.com.credentials.json` but NO `bob@acme.com.json` metadata file. Current active is `alice@acme.com` with `~/.claude.json` containing `oauthAccount.emailAddress = "alice@acme.com"`.
+- **When:** `clp .account.use name::bob@acme.com`
+- **Then:** Exit 0. `~/.claude.json oauthAccount.emailAddress` is `"bob@acme.com"` — patched unconditionally even without metadata file. All other `oauthAccount` fields retain their previous values from alice's session. `_active_{hostname}_{user}` marker contains `bob@acme.com`.
+- **Exit:** 0
+- **Source fn:** `mre_bug254_switch_account_patches_email_when_metadata_absent` (core), `aw12_switch_patches_email_when_metadata_absent` (FT)
+- **Source:** [004_account_use.md AC-09](../../../../docs/feature/004_account_use.md)

@@ -170,6 +170,36 @@ pub( crate ) fn fetch_quota_for_list(
     // Read host/role from {name}.json — best-effort, empty on missing/parse error.
     let ( host, role ) = read_profile_metadata( credential_store, &acct.name );
     let renewal_at = read_renewal_at( credential_store, &acct.name );
+    // Cache write on success; cache read on failure (Feature 033).
+    let ( result, cached, cache_age_secs ) = match result
+    {
+      Ok( ref data ) =>
+      {
+        let h5 = data.five_hour.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+        let d7 = data.seven_day.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+        let sn = data.seven_day_sonnet.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+        claude_profile_core::account::write_quota_cache( credential_store, &acct.name, h5, d7, sn );
+        ( result, false, None )
+      }
+      Err( ref _e ) =>
+      {
+        if let Some( entry ) = claude_profile_core::account::read_quota_cache( credential_store, &acct.name )
+        {
+          let age = cache_age_from_fetched_at( &entry.fetched_at );
+          let data = claude_quota::OauthUsageData
+          {
+            five_hour        : entry.five_hour.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
+            seven_day        : entry.seven_day.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
+            seven_day_sonnet : entry.seven_day_sonnet.map( |( u, r )| claude_quota::PeriodUsage { utilization : u, resets_at : r } ),
+          };
+          ( Ok( data ), true, Some( age ) )
+        }
+        else
+        {
+          ( result, false, None )
+        }
+      }
+    };
     results.push( AccountQuota
     {
       name                  : acct.name.clone(),
@@ -182,6 +212,8 @@ pub( crate ) fn fetch_quota_for_list(
       host,
       role,
       renewal_at,
+      cached,
+      cache_age_secs,
     } );
   }
 
@@ -245,7 +277,19 @@ fn inject_synthetic_row_if_needed(
     host                  : String::new(),
     role                  : String::new(),
     renewal_at            : None,
+    cached                : false,
+    cache_age_secs        : None,
   } );
+}
+
+// ── Cache age ────────────────────────────────────────────────────────────────
+
+/// Compute seconds elapsed since a `fetched_at` ISO-8601 UTC timestamp.
+fn cache_age_from_fetched_at( fetched_at : &str ) -> u64
+{
+  let now = std::time::SystemTime::now().duration_since( std::time::UNIX_EPOCH ).unwrap_or_default().as_secs();
+  let then = claude_profile_core::account::parse_iso_utc_secs( fetched_at ).unwrap_or( now );
+  now.saturating_sub( then )
 }
 
 // ── Profile metadata reader ───────────────────────────────────────────────────
@@ -568,6 +612,8 @@ mod tests
       host                 : String::new(),
       role                 : String::new(),
       renewal_at           : None,
+      cached               : false,
+      cache_age_secs       : None,
     };
     let mut results = vec![ stored_row ];
 
@@ -583,6 +629,8 @@ mod tests
       host                 : String::new(),
       role                 : String::new(),
       renewal_at           : None,
+      cached               : false,
+      cache_age_secs       : None,
     };
 
     // Fix(BUG-218): guarded injection — only insert when name is absent from results.

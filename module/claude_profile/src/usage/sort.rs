@@ -559,6 +559,8 @@ mod tests
         host          : String::new(),
         role          : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       }
     };
     let accounts = vec![
@@ -1143,6 +1145,8 @@ mod tests
       host              : String::new(),
       role              : String::new(),
       renewal_at        : None,
+      cached            : false,
+      cache_age_secs    : None,
     };
     let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
     assert!(
@@ -1177,6 +1181,8 @@ mod tests
       host              : String::new(),
       role              : String::new(),
       renewal_at        : None,
+      cached            : false,
+      cache_age_secs    : None,
     };
     let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
     assert!(
@@ -1217,6 +1223,8 @@ mod tests
       host              : String::new(),
       role              : String::new(),
       renewal_at        : None,
+      cached            : false,
+      cache_age_secs    : None,
     };
     let metric = strategy_metric( &aq, NextStrategy::Endurance, PreferStrategy::Any, now );
     assert!(
@@ -1273,6 +1281,8 @@ mod tests
         host    : String::new(),
         role    : String::new(),
         renewal_at    : None,
+        cached        : false,
+        cache_age_secs : None,
       }
     };
 
@@ -1332,6 +1342,8 @@ mod tests
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -1362,6 +1374,8 @@ mod tests
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Sonnet, now );
@@ -1391,6 +1405,8 @@ mod tests
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Opus, now );
@@ -1416,6 +1432,8 @@ mod tests
       expires_at_ms : ( now + 18000 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -1472,6 +1490,8 @@ mod tests
       expires_at_ms : ( now + 86400 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
 
     let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -1521,6 +1541,8 @@ mod tests
       expires_at_ms : ( now + 86400 ) * 1000, result : Ok( data ), account : None,
       host : String::new(), role : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
 
     let result = strategy_metric( &aq, NextStrategy::Drain, PreferStrategy::Any, now );
@@ -1681,6 +1703,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : Some( reset_iso_at( now, 3600 ) ),  // exact sub renewal in 1h
+      cached        : false,
+      cache_age_secs : None,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now );
@@ -1734,6 +1758,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : None,  // no subscription data
+      cached        : false,
+      cache_age_secs : None,
     };
 
     let metric = strategy_metric( &aq, NextStrategy::Renew, PreferStrategy::Any, now );

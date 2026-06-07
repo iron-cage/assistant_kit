@@ -327,6 +327,15 @@ pub fn check_switch_preconditions( name : &str, credential_store : &Path ) -> Re
 /// Atomically overwrites the credentials file with the named account's
 /// credentials using write-then-rename, then updates `{credential_store}/_active`.
 ///
+/// Fix(BUG-254)
+/// Root cause: `emailAddress` patch was gated inside `if let Ok(saved_val)` which
+/// requires `{name}.json` to exist AND parse. When absent, `serde_json::from_str("")`
+/// returns `Err` and the entire oauthAccount block is skipped — including the
+/// BUG-217 emailAddress enforcement. Stale emailAddress persists in `~/.claude.json`.
+/// Pitfall: identity-critical updates (`emailAddress`, `_active` marker) must be
+/// unconditional. Non-critical data (model, org fields) can remain conditional on
+/// metadata file availability.
+///
 /// # Errors
 ///
 /// Returns `NotFound` if the account does not exist, or an I/O error if
@@ -349,6 +358,25 @@ pub fn switch_account( name : &str, credential_store : &Path, paths : &ClaudePat
 
   // Patch live ~/.claude.json and ~/.claude/settings.json from unified {name}.json.
   {
+    // Unconditional emailAddress patch — must fire regardless of {name}.json state.
+    let live_path = paths.claude_json_file();
+    {
+      let mut live_val = std::fs::read_to_string( &live_path )
+        .ok()
+        .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+        .unwrap_or_else( || serde_json::json!( {} ) );
+      if let Some( obj ) = live_val.as_object_mut()
+      {
+        let oauth = obj.entry( "oauthAccount" )
+          .or_insert_with( || serde_json::json!( {} ) );
+        if let Some( oa_obj ) = oauth.as_object_mut()
+        {
+          oa_obj.insert( "emailAddress".to_string(), serde_json::Value::String( name.to_string() ) );
+        }
+      }
+      let _ = std::fs::write( &live_path, serde_json::to_string( &live_val ).unwrap_or_default() );
+    }
+
     let meta_path = credential_store.join( format!( "{name}.json" ) );
     let meta_text = std::fs::read_to_string( &meta_path ).unwrap_or_default();
 
@@ -1115,6 +1143,231 @@ pub fn read_access_token_from_file( path : &std::path::Path ) -> Result< String,
     .map_err( |e| format!( "cannot read credentials: {e}" ) )?;
   parse_string_field( &content, "accessToken" )
     .ok_or_else( || "missing accessToken".to_string() )
+}
+
+// ── Quota cache ──────────────────────────────────────────────────────────────
+
+/// Cached quota entry read from `{name}.json` `"cache"` key.
+#[ derive( Debug ) ]
+pub struct QuotaCacheEntry
+{
+  /// UTC ISO-8601 timestamp of the last successful fetch.
+  pub fetched_at        : String,
+  /// 5h period: (`utilization` 0–100, `resets_at` ISO string or `None`).
+  pub five_hour         : Option< ( f64, Option< String > ) >,
+  /// 7d period: (`utilization`, `resets_at`).
+  pub seven_day         : Option< ( f64, Option< String > ) >,
+  /// 7d-sonnet period: (`utilization`, `resets_at`).
+  pub seven_day_sonnet  : Option< ( f64, Option< String > ) >,
+  /// Persisted model override decision.
+  pub model_override    : Option< String >,
+  /// Last touch timestamp (UTC ISO-8601).
+  pub last_touch_at     : Option< String >,
+  /// Whether the account is idle (no active 5h window).
+  pub touch_idle        : Option< bool >,
+}
+
+/// Write quota cache to `{name}.json` using read-merge-write.
+///
+/// Persists the last successful fetch result so it can be used as fallback
+/// when the usage API is unavailable.  Failures are silently ignored.
+#[ inline ]
+pub fn write_quota_cache(
+  credential_store  : &std::path::Path,
+  name              : &str,
+  five_hour         : Option< ( f64, Option< &str > ) >,
+  seven_day         : Option< ( f64, Option< &str > ) >,
+  seven_day_sonnet  : Option< ( f64, Option< &str > ) >,
+)
+{
+  let meta_path = credential_store.join( format!( "{name}.json" ) );
+  let mut snapshot = std::fs::read_to_string( &meta_path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  if let Some( obj ) = snapshot.as_object_mut()
+  {
+    let now = chrono_now_utc();
+    let mut cache = serde_json::json!( { "fetched_at": now, "status": "ok" } );
+    if let Some( co ) = cache.as_object_mut()
+    {
+      if let Some( ( u, r ) ) = five_hour
+      {
+        co.insert( "five_hour".into(), period_json( u, r ) );
+      }
+      if let Some( ( u, r ) ) = seven_day
+      {
+        co.insert( "seven_day".into(), period_json( u, r ) );
+      }
+      if let Some( ( u, r ) ) = seven_day_sonnet
+      {
+        co.insert( "seven_day_sonnet".into(), period_json( u, r ) );
+      }
+      // Preserve model_override and touch state from prior cache.
+      if let Some( prev ) = obj.get( "cache" ).and_then( |c| c.as_object() )
+      {
+        if let Some( v ) = prev.get( "model_override" ) { co.insert( "model_override".into(), v.clone() ); }
+        if let Some( v ) = prev.get( "last_touch_at" )  { co.insert( "last_touch_at".into(), v.clone() ); }
+        if let Some( v ) = prev.get( "touch_idle" )     { co.insert( "touch_idle".into(), v.clone() ); }
+      }
+    }
+    obj.insert( "cache".to_string(), cache );
+  }
+  let _ = std::fs::write( &meta_path, serde_json::to_string( &snapshot ).unwrap_or_default() );
+}
+
+/// Read cached quota from `{name}.json`.
+///
+/// Returns `None` when the file is absent, unparseable, or has no `"cache"` key.
+#[ inline ]
+pub fn read_quota_cache( credential_store : &std::path::Path, name : &str ) -> Option< QuotaCacheEntry >
+{
+  let meta_path = credential_store.join( format!( "{name}.json" ) );
+  let text = std::fs::read_to_string( &meta_path ).ok()?;
+  let val : serde_json::Value = serde_json::from_str( &text ).ok()?;
+  let cache = val.get( "cache" )?.as_object()?;
+  let fetched_at = cache.get( "fetched_at" )?.as_str()?.to_string();
+  Some( QuotaCacheEntry
+  {
+    fetched_at,
+    five_hour        : read_period( cache, "five_hour" ),
+    seven_day        : read_period( cache, "seven_day" ),
+    seven_day_sonnet : read_period( cache, "seven_day_sonnet" ),
+    model_override   : cache.get( "model_override" ).and_then( |v| v.as_str() ).map( str::to_string ),
+    last_touch_at    : cache.get( "last_touch_at" ).and_then( |v| v.as_str() ).map( str::to_string ),
+    touch_idle       : cache.get( "touch_idle" ).and_then( serde_json::Value::as_bool ),
+  } )
+}
+
+/// Write a single field into the cache object in `{name}.json` (read-merge-write).
+///
+/// Used by model override and touch persistence to update one cache field
+/// without clobbering the quota data written by `write_quota_cache`.
+#[ inline ]
+pub fn write_cache_field(
+  credential_store : &std::path::Path,
+  name             : &str,
+  key              : &str,
+  value            : serde_json::Value,
+)
+{
+  let meta_path = credential_store.join( format!( "{name}.json" ) );
+  let mut snapshot = std::fs::read_to_string( &meta_path )
+    .ok()
+    .and_then( |s| serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  if let Some( obj ) = snapshot.as_object_mut()
+  {
+    let cache = obj.entry( "cache" ).or_insert_with( || serde_json::json!( {} ) );
+    if let Some( co ) = cache.as_object_mut()
+    {
+      co.insert( key.to_string(), value );
+    }
+  }
+  let _ = std::fs::write( &meta_path, serde_json::to_string( &snapshot ).unwrap_or_default() );
+}
+
+/// Write a string value into the cache object (typed convenience wrapper).
+#[ inline ]
+pub fn write_cache_string(
+  credential_store : &std::path::Path,
+  name             : &str,
+  key              : &str,
+  value            : &str,
+)
+{
+  write_cache_field( credential_store, name, key, serde_json::Value::String( value.to_string() ) );
+}
+
+/// Write a bool value into the cache object (typed convenience wrapper).
+#[ inline ]
+pub fn write_cache_bool(
+  credential_store : &std::path::Path,
+  name             : &str,
+  key              : &str,
+  value            : bool,
+)
+{
+  write_cache_field( credential_store, name, key, serde_json::Value::Bool( value ) );
+}
+
+/// Build a period cache JSON value from utilization + optional `resets_at`.
+fn period_json( utilization : f64, resets_at : Option< &str > ) -> serde_json::Value
+{
+  let mut m = serde_json::Map::new();
+  m.insert( "left_pct".into(), serde_json::Value::from( utilization ) );
+  if let Some( r ) = resets_at
+  {
+    m.insert( "resets_at".into(), serde_json::Value::String( r.to_string() ) );
+  }
+  serde_json::Value::Object( m )
+}
+
+/// Extract a period tuple from a cache object.
+fn read_period( cache : &serde_json::Map< String, serde_json::Value >, key : &str ) -> Option< ( f64, Option< String > ) >
+{
+  let p = cache.get( key )?.as_object()?;
+  let left_pct = p.get( "left_pct" )?.as_f64()?;
+  let resets_at = p.get( "resets_at" ).and_then( |v| v.as_str() ).map( str::to_string );
+  Some( ( left_pct, resets_at ) )
+}
+
+/// Current UTC timestamp as ISO-8601 string (second precision).
+///
+/// Uses manual computation to avoid a chrono dependency — the format is
+/// fixed and only needs second-level precision for cache age display.
+#[ must_use ]
+#[ inline ]
+pub fn chrono_now_utc() -> String
+{
+  use std::time::{ SystemTime, UNIX_EPOCH };
+  let secs = SystemTime::now().duration_since( UNIX_EPOCH ).unwrap_or_default().as_secs();
+  // 86400 secs/day, days since epoch → year/month/day via civil calendar algorithm
+  #[ allow( clippy::cast_possible_wrap ) ]
+  let days = ( secs / 86400 ) as i64;
+  let tod  = secs % 86400;
+  let hh   = tod / 3600;
+  let mm   = ( tod % 3600 ) / 60;
+  let ss   = tod % 60;
+  // Euclidean affine conversion from rata die to Y/M/D (Howard Hinnant algorithm).
+  let z = days + 719_468;
+  let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+  let doe = z - era * 146_097;
+  let yoe = ( doe - doe / 1460 + doe / 36524 - doe / 146_096 ) / 365;
+  let y   = yoe + era * 400;
+  let doy = doe - ( 365 * yoe + yoe / 4 - yoe / 100 );
+  let mp  = ( 5 * doy + 2 ) / 153;
+  let d   = doy - ( 153 * mp + 2 ) / 5 + 1;
+  let m   = if mp < 10 { mp + 3 } else { mp - 9 };
+  let y   = if m <= 2 { y + 1 } else { y };
+  format!( "{y:04}-{m:02}-{d:02}T{hh:02}:{mm:02}:{ss:02}Z" )
+}
+
+/// Parse an ISO-8601 UTC timestamp to seconds since epoch.
+///
+/// Accepts the format `YYYY-MM-DDTHH:MM:SSZ` as produced by `chrono_now_utc`.
+/// Returns `None` on any parse failure.
+#[ must_use ]
+#[ inline ]
+pub fn parse_iso_utc_secs( s : &str ) -> Option< u64 >
+{
+  if s.len() < 20 || !s.ends_with( 'Z' ) { return None; }
+  let y : i64 = s[ 0..4 ].parse().ok()?;
+  let m : i64 = s[ 5..7 ].parse().ok()?;
+  let d : i64 = s[ 8..10 ].parse().ok()?;
+  let hh : u64 = s[ 11..13 ].parse().ok()?;
+  let mm : u64 = s[ 14..16 ].parse().ok()?;
+  let ss : u64 = s[ 17..19 ].parse().ok()?;
+  // Inverse of Hinnant: Y/M/D → days since epoch.
+  let y2 = if m <= 2 { y - 1 } else { y };
+  let era = if y2 >= 0 { y2 } else { y2 - 399 } / 400;
+  let yoe = y2 - era * 400;
+  let m2  = if m > 2 { m - 3 } else { m + 9 };
+  let doy = ( 153 * m2 + 2 ) / 5 + d - 1;
+  let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+  #[ allow( clippy::cast_sign_loss ) ]
+  let days = ( era * 146_097 + doe - 719_468 ) as u64;
+  Some( days * 86400 + hh * 3600 + mm * 60 + ss )
 }
 
 #[ cfg( test ) ]

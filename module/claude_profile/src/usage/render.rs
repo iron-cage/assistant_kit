@@ -146,14 +146,32 @@ pub( crate ) fn render_text(
     {
       Ok( data ) =>
       {
-        let cells        = quota_text_cells( data, now_secs );
-        let son_reset    = data.seven_day_sonnet.as_ref()
+        let mut cells = quota_text_cells( data, now_secs );
+        if aq.cached
+        {
+          prefix_tilde( &mut cells );
+          // For cached rows: saturating_sub clamps negative countdowns to 0 in quota_text_cells,
+          // making "in 0s" indistinguishable from a future event. Re-check timestamps here.
+          let is_past = |iso : Option< &str >| -> bool
+          {
+            iso.and_then( claude_quota::iso_to_unix_secs ).is_some_and( |t| t < now_secs )
+          };
+          if is_past( data.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ) ) { cells[ 1 ] = "(stale)".to_string(); }
+          if is_past( data.seven_day.as_ref().and_then( |p| p.resets_at.as_deref() ) ) { cells[ 4 ] = "(stale)".to_string(); }
+        }
+        let son_unix  = data.seven_day_sonnet.as_ref()
           .and_then( |p| p.resets_at.as_deref() )
-          .and_then( claude_quota::iso_to_unix_secs )
-          .map_or_else(
-            || "\u{2014}".to_string(),
-            |t| format!( "in {}", format_duration_secs( t.saturating_sub( now_secs ) ) ),
-          );
+          .and_then( claude_quota::iso_to_unix_secs );
+        let son_reset = match son_unix
+        {
+          None                                    => "\u{2014}".to_string(),
+          Some( t ) if aq.cached && t < now_secs => "(stale)".to_string(),
+          Some( t ) =>
+          {
+            let label = format!( "in {}", format_duration_secs( t.saturating_sub( now_secs ) ) );
+            if aq.cached { format!( "~{label}" ) } else { label }
+          }
+        };
         let ( ren_secs, ren_est ) = renewal_secs(
           aq.renewal_at.as_deref(),
           aq.account.as_ref().map( |a| a.org_created_at.as_str() ),
@@ -167,9 +185,17 @@ pub( crate ) fn render_text(
           ren_est.unwrap_or( false ),
         );
 
+        let name_display = if aq.cached
+        {
+          format!( "{} {}", aq.name, cache_age_label( aq.cache_age_secs.unwrap_or( 0 ) ) )
+        }
+        else
+        {
+          aq.name.clone()
+        };
         let mut row : Vec< String > = vec![ flag_cell ];
         if cols.status       { row.push( status_emoji( &aq.result ).to_string() ); }
-        row.push( aq.name.clone() );
+        row.push( name_display );
         if cols.h5_left      { row.push( cells[ 0 ].clone() ); }
         if cols.h5_reset     { row.push( cells[ 1 ].clone() ); }
         if cols.d7_left      { row.push( cells[ 2 ].clone() ); }
@@ -253,6 +279,35 @@ pub( crate ) fn render_text(
 }
 
 // ── JSON renderer ─────────────────────────────────────────────────────────────
+
+// ── Staleness display helpers ─────────────────────────────────────────────────
+
+/// Prefix each non-dash cell with `~` to indicate cached (stale) data.
+fn prefix_tilde( cells : &mut [ String; 5 ] )
+{
+  let dash = "\u{2014}";
+  for cell in cells.iter_mut()
+  {
+    if *cell != dash
+    {
+      *cell = format!( "~{cell}" );
+    }
+  }
+}
+
+/// Format a cache age as a human-readable suffix: `(Nm ago)` or `(Nh ago)`.
+fn cache_age_label( secs : u64 ) -> String
+{
+  if secs < 3600 { format!( "({}m ago)", secs / 60 ) }
+  else { format!( "({}h ago)", secs / 3600 ) }
+}
+
+/// Produce the `"cached":bool,"cache_age_secs":N|null` JSON fragment.
+fn cache_json_fields( cached : bool, age : Option< u64 > ) -> String
+{
+  let age_str = age.map_or_else( || "null".to_string(), |a| a.to_string() );
+  format!( "\"cached\":{cached},\"cache_age_secs\":{age_str}" )
+}
 
 /// Render quota results as a JSON array (one object per account).
 ///
@@ -339,7 +394,8 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
 \"next_event_type\":{next_type_str},\"next_event_secs\":{next_secs_str},\
 \"session_5h_left_pct\":{session_pct},\"session_5h_resets_in_secs\":{session_reset},\
 \"weekly_7d_left_pct\":{weekly_pct},\"weekly_7d_sonnet_left_pct\":{sonnet_pct},\
-\"weekly_7d_resets_in_secs\":{weekly_reset}}}",
+\"weekly_7d_resets_in_secs\":{weekly_reset},{cached_json}}}",
+          cached_json = cache_json_fields( aq.cached, aq.cache_age_secs ),
         )
       }
       Err( reason ) =>
@@ -364,8 +420,9 @@ pub( crate ) fn render_json( accounts : &[ AccountQuota ] ) -> String
 \"billing_type\":{billing_type_str},\"has_max\":{has_max_str},\
 \"renewal_secs\":{renewal_secs_str},\"renewal_is_estimate\":{renewal_is_estimate_str},\
 \"next_event_type\":{next_type_str},\"next_event_secs\":{next_secs_str},\
-\"error\":\"{}\"}}",
+\"error\":\"{}\",{cached_json}}}",
           json_escape( reason ),
+          cached_json = cache_json_fields( aq.cached, aq.cache_age_secs ),
         )
       }
     };
@@ -643,7 +700,7 @@ pub( crate ) fn extract_get_field( aq : &AccountQuota, field : GetField, now_sec
 #[ cfg( test ) ]
 mod tests
 {
-  use super::{ render_text, render_tsv };
+  use super::{ render_text, render_tsv, render_json };
   use crate::usage::types::{ AccountQuota, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility };
   use crate::usage::test_support::FAR_FUTURE_MS;
 
@@ -697,6 +754,8 @@ mod tests
       host          : String::new(),
       role          : String::new(),
       renewal_at    : None,
+      cached        : false,
+      cache_age_secs : None,
     };
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();
@@ -765,6 +824,8 @@ mod tests
         host                  : String::new(),
         role                  : String::new(),
         renewal_at            : None,
+        cached                : false,
+        cache_age_secs        : None,
       }
     };
 
@@ -816,6 +877,160 @@ mod tests
     );
   }
 
+  /// FT-03/033 — `render_text` prefixes non-dash quota cells with `~` for cached rows.
+  ///
+  /// # Root Cause
+  /// Cached rows return `Ok()` with `cached=true`; `render_text` must prefix
+  /// all non-dash percentage cells with `~` to indicate stale data via `prefix_tilde`.
+  ///
+  /// # Why Not Caught
+  /// No test exercised a cached `AccountQuota` through `render_text`.
+  ///
+  /// # Fix Applied
+  /// `prefix_tilde` mutates cells in-place when `aq.cached` is true.
+  ///
+  /// # Prevention
+  /// Any change to the `Ok` render path must verify tilde prefix for cached rows.
+  ///
+  /// # Pitfall
+  /// Em-dash cells must NOT receive the tilde prefix — only percentage and reset cells.
+  ///
+  /// Spec: [`tests/docs/feature/033_quota_cache.md` FT-03]
+  #[ test ]
+  fn ft03_033_render_text_cached_shows_tilde_prefix()
+  {
+    let aq = AccountQuota
+    {
+      name                  : "cached@example.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 14.0, resets_at : None } ),
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : true,
+      cache_age_secs        : Some( 300 ),
+    };
+    let accounts = vec![ aq ];
+    let cols     = ColsVisibility::default_set();
+    let text = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &cols,
+    );
+    assert!(
+      text.contains( '~' ),
+      "FT-03/033: cached row must show ~ prefix on non-dash quota cells; got:\n{text}",
+    );
+    assert!(
+      text.contains( "~🟢 86%" ),
+      "FT-03/033: 5h Left cell (14% util → 86% left, green) must be '~🟢 86%'; got:\n{text}",
+    );
+  }
+
+  /// FT-09/033 — `render_json` includes `"cached"` and `"cache_age_secs"` fields.
+  ///
+  /// # Root Cause
+  /// JSON output must surface cache metadata so consumers can distinguish
+  /// live from stale quota data.
+  ///
+  /// # Why Not Caught
+  /// No test exercised a cached `AccountQuota` through `render_json`.
+  ///
+  /// # Fix Applied
+  /// `cache_json_fields` appended to each JSON entry in both `Ok` and `Err` arms.
+  ///
+  /// # Prevention
+  /// Any change to the JSON output format must verify `"cached"` and `"cache_age_secs"` present.
+  ///
+  /// # Pitfall
+  /// `cache_age_secs` must emit the numeric value (not `null`) when `Some(_)` is set.
+  ///
+  /// Spec: [`tests/docs/feature/033_quota_cache.md` FT-09]
+  #[ test ]
+  fn ft09_033_render_json_cached_includes_fields()
+  {
+    let aq = AccountQuota
+    {
+      name                  : "cached@example.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage { utilization : 14.0, resets_at : None } ),
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : true,
+      cache_age_secs        : Some( 720 ),
+    };
+    let accounts = vec![ aq ];
+    let json = render_json( &accounts );
+    assert!(
+      json.contains( "\"cached\":true" ),
+      "FT-09/033: render_json must include '\"cached\":true' for cached rows; got:\n{json}",
+    );
+    assert!(
+      json.contains( "\"cache_age_secs\":720" ),
+      "FT-09/033: render_json must include '\"cache_age_secs\":720'; got:\n{json}",
+    );
+  }
+
+  /// FT-03/033 — cached sonnet reset column must show `~in` tilde prefix.
+  ///
+  /// `son_reset` was computed separately from the 5-cell `cells` array and
+  /// bypassed `prefix_tilde`. Only visible when `cols::7d_son_reset` is enabled.
+  #[ test ]
+  fn ft03_033_cached_sonnet_reset_shows_tilde()
+  {
+    let aq = AccountQuota
+    {
+      name                  : "cached@example.com".to_string(),
+      is_current            : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms         : FAR_FUTURE_MS,
+      result                : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : None,
+        seven_day        : None,
+        seven_day_sonnet : Some( claude_quota::PeriodUsage
+        {
+          utilization : 80.0,
+          resets_at   : Some( "2099-01-01T00:00:00Z".to_string() ),
+        } ),
+      } ),
+      account               : None,
+      host                  : String::new(),
+      role                  : String::new(),
+      renewal_at            : None,
+      cached                : true,
+      cache_age_secs        : Some( 600 ),
+    };
+    let accounts = vec![ aq ];
+    let mut cols = ColsVisibility::default_set();
+    cols.d7_son_reset = true;
+    let text = render_text(
+      &accounts, SortStrategy::Name, None, PreferStrategy::Any, NextStrategy::Endurance, &cols,
+    );
+    assert!(
+      text.contains( "~in " ),
+      "cached sonnet reset must show ~in prefix; got:\n{text}",
+    );
+  }
+
   /// FT-23/009 — `~Renews` must show `"—"` for cancelled-subscription accounts.
   ///
   /// # Root Cause
@@ -863,6 +1078,8 @@ mod tests
       host                  : String::new(),
       role                  : String::new(),
       renewal_at            : None,
+      cached                : false,
+      cache_age_secs        : None,
     };
     let accounts = vec![ aq ];
     let cols     = ColsVisibility::default_set();

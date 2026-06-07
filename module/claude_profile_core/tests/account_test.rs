@@ -631,3 +631,404 @@ fn test_ft12_025_other_machines_active_empty_when_only_own()
     );
   }
 }
+
+/// # Root Cause
+/// `switch_account()` gates the `emailAddress` patch inside `if let Ok(saved_val) =
+/// serde_json::from_str(&meta_text)`. When `{name}.json` is absent, `meta_text` is `""`,
+/// `from_str("")` returns `Err`, and the entire oauthAccount patch block is skipped —
+/// including the BUG-217 `emailAddress` enforcement. `~/.claude.json` retains the previous
+/// account's `emailAddress`, causing downstream `save()` name inference to target the wrong file.
+///
+/// # Why Not Caught
+/// All existing `switch_account()` tests provide a `{name}.json` metadata file. No test
+/// covers the absent-metadata-file path where only credentials exist.
+///
+/// # Fix Applied
+/// Lift the unconditional `emailAddress` patch out of the metadata-file-conditional block.
+/// Patch `~/.claude.json oauthAccount.emailAddress = name` before attempting to read
+/// `{name}.json`. The full overlay (BUG-217 + BUG-219) still fires when metadata is present.
+///
+/// # Prevention
+/// This MRE test creates a credential-only account (no `{name}.json`) and asserts that
+/// `emailAddress` is patched to the switched-to name after `switch_account()`.
+///
+/// # Pitfall
+/// `claude_json_file()` returns `$HOME/.claude.json` (HOME level), not `$HOME/.claude/claude.json`.
+/// Machine-global keys (`commands`, `mcpServers`) must survive the patch — assert preservation.
+#[ doc = "bug_reproducer(BUG-254)" ]
+#[ test ]
+fn mre_bug254_switch_account_patches_email_when_metadata_absent()
+{
+  let tmp   = TempDir::new().unwrap();
+  let store = tmp.path().join( "store" );
+  std::fs::create_dir_all( &store ).unwrap();
+
+  let dot_claude = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot_claude ).unwrap();
+
+  // Seed ~/.claude.json with alice's session + machine-global keys.
+  std::fs::write(
+    tmp.path().join( ".claude.json" ),
+    r#"{"oauthAccount":{"emailAddress":"alice@acme.com","displayName":"Alice"},"commands":{"enabled":true},"mcpServers":{}}"#,
+  ).unwrap();
+
+  // bob has credentials ONLY — no bob@acme.com.json metadata file.
+  std::fs::write(
+    store.join( "bob@acme.com.credentials.json" ),
+    r#"{"accessToken":"tok-bob","expiresAt":9999999999999}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  account::switch_account( "bob@acme.com", &store, &paths ).unwrap();
+
+  let claude_json = std::fs::read_to_string( tmp.path().join( ".claude.json" ) )
+    .expect( "~/.claude.json must exist after switch_account" );
+
+  // Core assertion: emailAddress must be patched unconditionally.
+  let email = account::parse_string_field( &claude_json, "emailAddress" )
+    .expect( "oauthAccount.emailAddress must be present" );
+  assert_eq!(
+    email, "bob@acme.com",
+    "emailAddress must be patched to switched-to name even when {{name}}.json is absent",
+  );
+
+  // Machine-global keys must be preserved.
+  assert!(
+    claude_json.contains( r#""commands":"# ),
+    "machine-global key 'commands' must survive the emailAddress patch",
+  );
+  assert!(
+    claude_json.contains( r#""mcpServers":"# ),
+    "machine-global key 'mcpServers' must survive the emailAddress patch",
+  );
+}
+
+// ── Quota cache (Feature 033) ────────────────────────────────────────────────
+
+/// AC-01: `write_quota_cache` writes `"cache"` key to `{name}.json` preserving existing fields.
+///
+/// Given: `alice@acme.com.json` containing `{"host":"wbox"}`
+/// When: `write_quota_cache` called with five_hour utilization 14.0
+/// Then: file contains both `"host":"wbox"` and `"cache"` with `fetched_at` + `five_hour.left_pct`
+#[ test ]
+fn cache_write_preserves_existing_fields()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "alice@acme.com";
+  let meta  = store.path().join( format!( "{name}.json" ) );
+  std::fs::write( &meta, r#"{"host":"wbox","role":"dev"}"# ).unwrap();
+
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name,
+    Some( ( 14.0, Some( "2026-06-07T12:00:00Z" ) ) ),
+    Some( ( 25.0, None ) ),
+    None,
+  );
+
+  let content = std::fs::read_to_string( &meta ).unwrap();
+  assert!( content.contains( r#""host":"wbox""# ), "host preserved: {content}" );
+  assert!( content.contains( r#""role":"dev""# ), "role preserved: {content}" );
+  assert!( content.contains( r#""cache""# ), "cache key present: {content}" );
+  assert!( content.contains( r#""fetched_at""# ), "fetched_at present: {content}" );
+  assert!( content.contains( r#""left_pct""# ), "left_pct present: {content}" );
+  assert!( content.contains( r#""five_hour""# ), "five_hour present: {content}" );
+  assert!( content.contains( r#""seven_day""# ), "seven_day present: {content}" );
+}
+
+/// AC-02: `read_quota_cache` returns `None` when no cache exists.
+///
+/// Given: `{name}.json` with `{"host":"wbox"}` but no `"cache"` key
+/// When: `read_quota_cache` called
+/// Then: returns `None`
+#[ test ]
+fn cache_read_returns_none_when_absent()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "bob@acme.com";
+  let meta  = store.path().join( format!( "{name}.json" ) );
+  std::fs::write( &meta, r#"{"host":"wbox"}"# ).unwrap();
+
+  let result = claude_profile_core::account::read_quota_cache( store.path(), name );
+  assert!( result.is_none(), "no cache key must return None" );
+}
+
+/// AC-02: `read_quota_cache` returns cached data when valid cache exists.
+///
+/// Given: `{name}.json` with a fully populated `"cache"` object
+/// When: `read_quota_cache` called
+/// Then: returns `Some(QuotaCacheEntry)` with all fields matching
+#[ test ]
+fn cache_read_returns_entry_when_present()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "carol@acme.com";
+  let meta  = store.path().join( format!( "{name}.json" ) );
+  std::fs::write( &meta, r#"{"cache":{"fetched_at":"2026-06-07T10:00:00Z","status":"ok","five_hour":{"left_pct":86.0,"resets_at":"2026-06-07T15:00:00Z"},"seven_day":{"left_pct":42.5},"model_override":"opus","last_touch_at":"2026-06-07T09:55:00Z","touch_idle":false}}"# ).unwrap();
+
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "valid cache must return Some" );
+  assert_eq!( entry.fetched_at, "2026-06-07T10:00:00Z" );
+  let ( h5_util, h5_reset ) = entry.five_hour.expect( "five_hour must be Some" );
+  assert!( ( h5_util - 86.0 ).abs() < f64::EPSILON, "five_hour utilization: {h5_util}" );
+  assert_eq!( h5_reset.as_deref(), Some( "2026-06-07T15:00:00Z" ) );
+  let ( d7_util, d7_reset ) = entry.seven_day.expect( "seven_day must be Some" );
+  assert!( ( d7_util - 42.5 ).abs() < f64::EPSILON, "seven_day utilization: {d7_util}" );
+  assert!( d7_reset.is_none(), "seven_day resets_at must be None" );
+  assert!( entry.seven_day_sonnet.is_none(), "seven_day_sonnet must be None" );
+  assert_eq!( entry.model_override.as_deref(), Some( "opus" ) );
+  assert_eq!( entry.last_touch_at.as_deref(), Some( "2026-06-07T09:55:00Z" ) );
+  assert_eq!( entry.touch_idle, Some( false ) );
+}
+
+/// AC-07: `write_quota_cache` round-trips through `read_quota_cache`.
+///
+/// Given: empty credential store
+/// When: write then read
+/// Then: read returns the same values written
+#[ test ]
+fn cache_write_read_roundtrip()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "rt@test.com";
+
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name,
+    Some( ( 50.0, Some( "2026-06-07T18:00:00Z" ) ) ),
+    None,
+    Some( ( 90.0, Some( "2026-06-14T00:00:00Z" ) ) ),
+  );
+
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "written cache must be readable" );
+  let ( h5, h5r ) = entry.five_hour.expect( "five_hour present" );
+  assert!( ( h5 - 50.0 ).abs() < f64::EPSILON );
+  assert_eq!( h5r.as_deref(), Some( "2026-06-07T18:00:00Z" ) );
+  assert!( entry.seven_day.is_none() );
+  let ( sn, snr ) = entry.seven_day_sonnet.expect( "sonnet present" );
+  assert!( ( sn - 90.0 ).abs() < f64::EPSILON );
+  assert_eq!( snr.as_deref(), Some( "2026-06-14T00:00:00Z" ) );
+}
+
+/// `parse_iso_utc_secs` correctly converts known timestamps.
+#[ test ]
+fn parse_iso_utc_secs_known_values()
+{
+  // 2026-06-07T12:00:00Z = a known date, verify deterministic output.
+  let secs = claude_profile_core::account::parse_iso_utc_secs( "2026-06-07T12:00:00Z" );
+  assert!( secs.is_some(), "valid ISO must parse" );
+  let s = secs.unwrap();
+  // Cross-check: 2026-06-07 is day index from epoch; rough range 1780000000..1790000000
+  assert!( s > 1_780_000_000, "must be in 2026 range: {s}" );
+  assert!( s < 1_790_000_000, "must be in 2026 range: {s}" );
+
+  // Invalid inputs return None.
+  assert!( claude_profile_core::account::parse_iso_utc_secs( "short" ).is_none() );
+  assert!( claude_profile_core::account::parse_iso_utc_secs( "not-a-date-at-all!" ).is_none() );
+}
+
+/// AC-05: `write_cache_string` persists a field in the cache sub-object.
+#[ test ]
+fn cache_field_string_persisted()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "field@test.com";
+  // Pre-populate with cache.
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name, Some( ( 10.0, None ) ), None, None,
+  );
+  // Write model_override field.
+  claude_profile_core::account::write_cache_string( store.path(), name, "model_override", "opus" );
+
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "cache must be readable" );
+  assert_eq!( entry.model_override.as_deref(), Some( "opus" ) );
+  // Quota data must survive the field write.
+  assert!( entry.five_hour.is_some(), "five_hour must survive write_cache_string" );
+}
+
+/// AC-06: `write_cache_bool` persists a boolean in the cache sub-object.
+#[ test ]
+fn cache_field_bool_persisted()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "bool@test.com";
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name, Some( ( 20.0, None ) ), None, None,
+  );
+  claude_profile_core::account::write_cache_bool( store.path(), name, "touch_idle", false );
+
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "cache must be readable" );
+  assert_eq!( entry.touch_idle, Some( false ) );
+  assert!( entry.five_hour.is_some(), "five_hour must survive write_cache_bool" );
+}
+
+// ── Cache corner cases ────────────────────────────────────────────────────────
+
+/// `read_quota_cache` returns `None` when `{name}.json` does not exist.
+#[ test ]
+fn cache_read_none_when_file_absent()
+{
+  let store = tempfile::tempdir().unwrap();
+  let result = claude_profile_core::account::read_quota_cache( store.path(), "ghost@test.com" );
+  assert!( result.is_none(), "absent file must return None" );
+}
+
+/// `read_quota_cache` returns `None` when `{name}.json` contains malformed JSON.
+#[ test ]
+fn cache_read_none_when_json_malformed()
+{
+  let store = tempfile::tempdir().unwrap();
+  let meta  = store.path().join( "bad@test.com.json" );
+  std::fs::write( &meta, "{not valid json!!!}" ).unwrap();
+  let result = claude_profile_core::account::read_quota_cache( store.path(), "bad@test.com" );
+  assert!( result.is_none(), "malformed JSON must return None" );
+}
+
+/// `read_quota_cache` returns `None` when cache object has no `fetched_at` key.
+#[ test ]
+fn cache_read_none_when_fetched_at_missing()
+{
+  let store = tempfile::tempdir().unwrap();
+  let meta  = store.path().join( "notime@test.com.json" );
+  std::fs::write( &meta, r#"{"cache":{"status":"ok","five_hour":{"left_pct":50.0}}}"# ).unwrap();
+  let result = claude_profile_core::account::read_quota_cache( store.path(), "notime@test.com" );
+  assert!( result.is_none(), "cache without fetched_at must return None" );
+}
+
+/// `write_quota_cache` preserves `model_override` written by a prior `write_cache_string`.
+///
+/// The quota write copies side-effect fields (model_override, last_touch_at, touch_idle)
+/// from the previous cache object into the new one (lines 1207-1212 in account.rs).
+#[ test ]
+fn cache_write_preserves_prior_side_effects()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "preserve@test.com";
+  // Step 1: write side-effect fields via cache field API.
+  claude_profile_core::account::write_cache_string( store.path(), name, "model_override", "opus" );
+  claude_profile_core::account::write_cache_string( store.path(), name, "last_touch_at", "2026-06-07T09:00:00Z" );
+  claude_profile_core::account::write_cache_bool( store.path(), name, "touch_idle", true );
+  // Step 2: write quota cache — must preserve all three side-effect fields.
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name,
+    Some( ( 30.0, Some( "2026-06-07T20:00:00Z" ) ) ),
+    None,
+    None,
+  );
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "cache must be readable" );
+  assert_eq!( entry.model_override.as_deref(), Some( "opus" ), "model_override must survive" );
+  assert_eq!( entry.last_touch_at.as_deref(), Some( "2026-06-07T09:00:00Z" ), "last_touch_at must survive" );
+  assert_eq!( entry.touch_idle, Some( true ), "touch_idle must survive" );
+  assert!( entry.five_hour.is_some(), "quota data must be present" );
+}
+
+/// `write_cache_field` creates `{name}.json` from scratch when file is absent.
+#[ test ]
+fn cache_field_creates_file_from_scratch()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "scratch@test.com";
+  let meta  = store.path().join( format!( "{name}.json" ) );
+  assert!( !meta.exists(), "pre-condition: file must not exist" );
+  claude_profile_core::account::write_cache_string( store.path(), name, "model_override", "sonnet" );
+  assert!( meta.exists(), "write_cache_string must create file" );
+  let content = std::fs::read_to_string( &meta ).unwrap();
+  assert!( content.contains( r#""model_override":"sonnet""# ), "field must be in file: {content}" );
+  // read_quota_cache returns None because no fetched_at.
+  assert!(
+    claude_profile_core::account::read_quota_cache( store.path(), name ).is_none(),
+    "cache without fetched_at must return None even after write_cache_field",
+  );
+}
+
+/// Second `write_quota_cache` replaces first period data.
+#[ test ]
+fn cache_write_second_replaces_first()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "overwrite@test.com";
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name,
+    Some( ( 10.0, Some( "2026-06-07T12:00:00Z" ) ) ),
+    None,
+    None,
+  );
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name,
+    Some( ( 90.0, Some( "2026-06-07T18:00:00Z" ) ) ),
+    Some( ( 50.0, None ) ),
+    None,
+  );
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "cache must be readable" );
+  let ( h5, h5r ) = entry.five_hour.expect( "five_hour must be present" );
+  assert!( ( h5 - 90.0 ).abs() < f64::EPSILON, "five_hour must be from second write: {h5}" );
+  assert_eq!( h5r.as_deref(), Some( "2026-06-07T18:00:00Z" ) );
+  assert!( entry.seven_day.is_some(), "seven_day from second write must be present" );
+}
+
+/// All three periods written and read back simultaneously.
+#[ test ]
+fn cache_write_read_all_three_periods()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "all3@test.com";
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name,
+    Some( ( 14.0, Some( "2026-06-07T12:00:00Z" ) ) ),
+    Some( ( 25.0, Some( "2026-06-14T00:00:00Z" ) ) ),
+    Some( ( 100.0, None ) ),
+  );
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "cache must be readable" );
+  let ( h5, _ ) = entry.five_hour.expect( "five_hour present" );
+  assert!( ( h5 - 14.0 ).abs() < f64::EPSILON );
+  let ( d7, _ ) = entry.seven_day.expect( "seven_day present" );
+  assert!( ( d7 - 25.0 ).abs() < f64::EPSILON );
+  let ( sn, sn_r ) = entry.seven_day_sonnet.expect( "sonnet present" );
+  assert!( ( sn - 100.0 ).abs() < f64::EPSILON, "100.0 utilization boundary" );
+  assert!( sn_r.is_none(), "sonnet resets_at must be None" );
+}
+
+/// `chrono_now_utc` output is parseable by `parse_iso_utc_secs` (round-trip).
+#[ test ]
+fn chrono_now_utc_parse_roundtrip()
+{
+  let ts   = claude_profile_core::account::chrono_now_utc();
+  let secs = claude_profile_core::account::parse_iso_utc_secs( &ts )
+    .expect( "chrono_now_utc output must be parseable" );
+  let now  = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH )
+    .unwrap_or_default()
+    .as_secs();
+  assert!(
+    now.abs_diff( secs ) <= 2,
+    "round-trip must be within 2 seconds of wall clock: now={now}, parsed={secs}",
+  );
+}
+
+/// `write_quota_cache` gracefully handles malformed existing `{name}.json`.
+///
+/// When the file contains invalid JSON, `serde_json::from_str` returns Err
+/// and the code falls back to an empty object. The cache is written to a fresh
+/// JSON — non-cache fields (host, role) in the malformed file are lost.
+#[ test ]
+fn cache_write_recovers_from_malformed_json()
+{
+  let store = tempfile::tempdir().unwrap();
+  let name  = "recover@test.com";
+  let meta  = store.path().join( format!( "{name}.json" ) );
+  std::fs::write( &meta, "NOT VALID JSON AT ALL" ).unwrap();
+  claude_profile_core::account::write_quota_cache(
+    store.path(), name,
+    Some( ( 45.0, None ) ),
+    None,
+    None,
+  );
+  let entry = claude_profile_core::account::read_quota_cache( store.path(), name )
+    .expect( "cache must be readable after recovery" );
+  let ( h5, _ ) = entry.five_hour.expect( "five_hour must be present" );
+  assert!( ( h5 - 45.0 ).abs() < f64::EPSILON, "five_hour utilization: {h5}" );
+}

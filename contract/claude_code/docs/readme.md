@@ -14,3 +14,4 @@
 | `endpoint/` | Anthropic HTTP endpoint wire contracts (URL, auth, schema, errors) |
 | `params/` | CLI parameter specifications — one file per runtime parameter (73 instances) |
 | `001_entities.md` | Cross-entity index: all doc entity types with instance counts |
+| `fault/` | Fault doc entity — all known error, silent failure, and quirk conditions of the `claude` binary |

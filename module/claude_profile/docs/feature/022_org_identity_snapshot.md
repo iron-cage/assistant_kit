@@ -15,7 +15,7 @@
 
 `delete()` removes `{credential_store}/{name}.json` best-effort. Missing file is silently skipped.
 
-`switch_account()` requires no change — org identity metadata in `{name}.json` is read directly from the credential store by `list()`; it does not need to be restored to any `~/.claude/` path.
+`switch_account()` patches `organizationName` and `organizationUuid` inside `oauthAccount` from the saved org identity metadata in `{name}.json` when switching accounts (BUG-219 fix). This is best-effort: silently skipped when `{name}.json` is absent or org fields are empty. The org identity metadata in `{name}.json` is read directly from the credential store by `list()`; it does not need to be restored to any `~/.claude/` path.
 
 **Metadata refresh via `.account.save` idempotency:** Because `save()` overwrites all snapshot files on every invocation, re-running `.account.save` (with the same name or inferring the name from `~/.claude.json`) acts as a full metadata refresh — re-fetches endpoint 005 and overwrites org identity fields in `{name}.json` alongside all other snapshots. No separate refresh command is needed.
 

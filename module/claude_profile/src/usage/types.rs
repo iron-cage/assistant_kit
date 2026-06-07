@@ -185,6 +185,7 @@ impl ColsVisibility
 // ── Per-account quota result ───────────────────────────────────────────────────
 
 /// Per-account quota fetch result, bundling identity, state flags, and the raw usage data.
+#[ allow( clippy::struct_excessive_bools ) ]
 pub( crate ) struct AccountQuota
 {
   pub( crate ) name                  : String,
@@ -205,6 +206,10 @@ pub( crate ) struct AccountQuota
   pub( crate ) role                  : String,
   /// Override billing renewal date from `{name}.json`; `None` when not set.
   pub( crate ) renewal_at            : Option< String >,
+  /// `true` when result was loaded from cache (fetch failed, fallback used).
+  pub( crate ) cached                : bool,
+  /// Seconds since last successful fetch; present only when `cached == true`.
+  pub( crate ) cache_age_secs        : Option< u64 >,
 }
 
 // ── Command handler ────────────────────────────────────────────────────────────

@@ -132,6 +132,8 @@ pub( crate ) fn attempt_expired_token_refresh(
     host                 : String::new(),
     role                 : String::new(),
     renewal_at           : None,
+    cached               : false,
+    cache_age_secs       : None,
   };
   let model     = super::subprocess::resolve_model( &aq, imodel );
   let pre_args  = super::subprocess::effort_pre_args( &model, effort );
@@ -263,9 +265,15 @@ pub( crate ) fn apply_model_override(
   if sonnet_left < 20.0
   {
     let overrode = crate::account::override_session_model_to_opus( paths );
-    if overrode && trace
+    if overrode
     {
-      eprintln!( "[trace] {label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
+      claude_profile_core::account::write_cache_string(
+        paths.base(), name, "model_override", "opus",
+      );
+      if trace
+      {
+        eprintln!( "[trace] {label}  {name}  model override: sonnet→opus (7d(Son) left={sonnet_left:.0}%)" );
+      }
     }
   }
 }
@@ -295,6 +303,8 @@ pub( crate ) fn trace_already_active(
     host                 : String::new(),
     role                 : String::new(),
     renewal_at           : None,
+    cached               : false,
+    cache_age_secs       : None,
   };
   let model      = resolve_model( &aq, imodel );
   let effort_val = resolve_effort( &model, effort );
@@ -340,6 +350,8 @@ pub( crate ) fn apply_post_switch_touch(
     host                 : String::new(),
     role                 : String::new(),
     renewal_at           : None,
+    cached               : false,
+    cache_age_secs       : None,
   };
   let model        = resolve_model( &aq, imodel );
   let effort_val   = resolve_effort( &model, effort );
@@ -358,6 +370,13 @@ pub( crate ) fn apply_post_switch_touch(
   args.push( "--print".to_string() );
   args.push( ".".to_string() );
   let _ = claude_runner_core::run_isolated( &ctx.credentials_json, args, 120, model );
+  // Persist touch timestamp to cache (Feature 033 AC-06).
+  claude_profile_core::account::write_cache_string(
+    paths.base(), name, "last_touch_at", &claude_profile_core::account::chrono_now_utc(),
+  );
+  claude_profile_core::account::write_cache_bool(
+    paths.base(), name, "touch_idle", false,
+  );
   if trace { eprintln!( "[trace] account.use  {name}  subprocess: spawned" ) }
 }
 

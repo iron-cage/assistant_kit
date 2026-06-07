@@ -43,6 +43,7 @@
 //! | aw09 | `aw09_switch_copies_credentials` | switch copies correct cred content | P |
 //! | aw10 | `aw10_switch_dry_run_nonexistent_exits_2` | dry-run nonexistent → exit 2 | N |
 //! | aw11 | `aw11_switch_slash_in_email_local_part_exits_1` | `/` in email local part → exit 1 | N |
+//! | aw12 | `aw12_switch_patches_email_when_metadata_absent` | emailAddress patched when `{name}.json` absent (BUG-254) | P |
 //! | — | `switch_restores_claude_json` | `~/.claude.json` restored after switch (issue-122) | P |
 //! | — | `mre_bug_217_switch_account_enforces_emailaddress` | switch enforces `emailAddress == name` over stale snapshot | P |
 //! | aw13 | `aw13_use_positional_bare_arg` | positional email `personal@home.com` → switches | P |
@@ -882,6 +883,100 @@ fn aw11_switch_slash_in_email_local_part_exits_1()
 
   let out = run_cs_with_env( &[ ".account.use", "name::a/b@c.com" ], &[ ( "HOME", home ) ] );
   assert_exit( &out, 1 );
+}
+
+// ── aw12 ──────────────────────────────────────────────────────────────────────
+
+/// # Root Cause
+///
+/// `switch_account()` gates the `emailAddress` patch inside `if let Ok(saved_val) =
+/// serde_json::from_str(&meta_text)`. When `{name}.json` is absent, `meta_text` is `""`,
+/// `from_str("")` returns `Err`, and the entire oauthAccount patch block is skipped —
+/// including the BUG-217 `emailAddress` enforcement. `~/.claude.json` retains the previous
+/// account's `emailAddress`, causing downstream `save()` name inference to target the wrong
+/// file.
+///
+/// # Why Not Caught
+///
+/// All existing `switch_account()` FT tests provide a `{name}.json` metadata file via
+/// `.account.save`. No FT test covers the absent-metadata-file path where only credentials
+/// exist.
+///
+/// # Fix Applied
+///
+/// Lift the unconditional `emailAddress` patch out of the metadata-file-conditional block.
+/// Patch `~/.claude.json oauthAccount.emailAddress = name` before attempting to read
+/// `{name}.json`. The full overlay (BUG-217 + BUG-219) still fires when metadata is present.
+///
+/// # Prevention
+///
+/// This FT test creates a credential-only account (no `{name}.json`) and asserts that
+/// `emailAddress` is patched to the switched-to name after `.account.use`.
+///
+/// # Pitfall
+///
+/// `claude_json_file()` returns `$HOME/.claude.json` (HOME level), not
+/// `$HOME/.claude/claude.json`. Machine-global keys must survive the patch — assert
+/// preservation.
+/// FT-09: AC-09 — emailAddress patched unconditionally even when metadata absent
+#[ doc = "bug_reproducer(BUG-254)" ]
+#[ test ]
+fn aw12_switch_patches_email_when_metadata_absent()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+
+  // Live credentials (required so switch_account can copy to .credentials.json).
+  write_credentials( dir.path(), "pro", "standard", FAR_FUTURE_MS );
+
+  // alice: credentials + active marker.  bob: credentials ONLY — NO bob@acme.com.json.
+  write_account( dir.path(), "alice@acme.com", "pro", "standard", FAR_FUTURE_MS, true  );
+  write_account( dir.path(), "bob@acme.com",   "max", "tier4",    FAR_FUTURE_MS, false );
+
+  // Seed ~/.claude.json with alice's emailAddress + machine-global keys.
+  let claude_json_path = dir.path().join( ".claude.json" );
+  std::fs::write(
+    &claude_json_path,
+    r#"{"oauthAccount":{"emailAddress":"alice@acme.com","displayName":"Alice"},"commands":{"enabled":true},"mcpServers":{}}"#,
+  ).unwrap();
+
+  // touch::0 disables pre-fetch HTTP calls — tests the pure file switch.
+  let out = run_cs_with_env(
+    &[ ".account.use", "name::bob@acme.com", "touch::0" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+
+  // After switch: emailAddress must be patched to bob even though bob@acme.com.json is absent.
+  let claude_json = std::fs::read_to_string( &claude_json_path ).unwrap();
+  assert!(
+    claude_json.contains( r#""emailAddress":"bob@acme.com""# ),
+    "BUG-254: emailAddress must be 'bob@acme.com' after switch, got:\n{claude_json}",
+  );
+  assert!(
+    !claude_json.contains( r#""emailAddress":"alice@acme.com""# ),
+    "BUG-254: stale emailAddress 'alice@acme.com' must not remain, got:\n{claude_json}",
+  );
+
+  // Machine-global keys must survive the unconditional patch.
+  assert!(
+    claude_json.contains( r#""commands""# ),
+    "machine-global key 'commands' must survive, got:\n{claude_json}",
+  );
+  assert!(
+    claude_json.contains( r#""mcpServers""# ),
+    "machine-global key 'mcpServers' must survive, got:\n{claude_json}",
+  );
+
+  // _active marker must point at bob.
+  let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
+  let active = std::fs::read_to_string(
+    store.join( claude_profile::account::active_marker_filename() )
+  ).expect( "_active must exist" );
+  assert_eq!(
+    active.trim(), "bob@acme.com",
+    "_active marker must point at switched-to account",
+  );
 }
 
 // ── aw13 ──────────────────────────────────────────────────────────────────────
