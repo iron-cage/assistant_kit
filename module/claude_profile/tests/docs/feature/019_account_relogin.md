@@ -106,7 +106,7 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **When:** `clp .account.relogin name::carol@example.com` (live, interactive)
 - **Then:** `{credential_store}/carol@example.com.credentials.json` is updated with the new credentials (same as if `.account.save` had run). Exit 0.
 - **Exit:** 0
-- **Source fn:** ⏳ TBD (live TTY test — manual only)
+- **Source fn:** manual — IT-5 in `tests/manual/readme.md`
 - **Source:** [019_account_relogin.md AC-07](../../../../docs/feature/019_account_relogin.md)
 
 ---
@@ -117,7 +117,7 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **When:** `clp .account.relogin name::carol@example.com` (live, interactive)
 - **Then:** After re-authentication completes, the active account is restored to `alice@acme.com`. The user's session context is unchanged. Exit 0.
 - **Exit:** 0
-- **Source fn:** ⏳ TBD (live TTY test — manual only)
+- **Source fn:** manual — IT-6 in `tests/manual/readme.md`
 - **Source:** [019_account_relogin.md AC-08](../../../../docs/feature/019_account_relogin.md)
 
 ---
@@ -128,5 +128,5 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **When:** `clp .account.relogin name::carol@example.com` (live, interactive)
 - **Then:** A diagnostic message is printed to stderr indicating credentials were unchanged. Process exits 3 (not 0 or 2).
 - **Exit:** 3
-- **Source fn:** ⏳ TBD (live TTY test — manual only)
+- **Source fn:** manual — IT-7 in `tests/manual/readme.md`
 - **Source:** [019_account_relogin.md AC-09](../../../../docs/feature/019_account_relogin.md)

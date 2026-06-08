@@ -41,7 +41,7 @@ Feature behavioral requirement test cases for `docs/feature/013_account_limits.m
 - **When:** `clp .account.limits name::alice@acme.com`
 - **Then:** Limits are shown for `alice@acme.com`, not the active account. Exit 0 or 2 depending on data availability.
 - **Exit:** 0
-- **Source fn:** ⏳ TBD (manual only — IT-4 in `tests/manual/readme.md`)
+- **Source fn:** manual — IT-4 in `tests/manual/readme.md`
 - **Source:** [013_account_limits.md AC-02](../../../../docs/feature/013_account_limits.md)
 
 ---

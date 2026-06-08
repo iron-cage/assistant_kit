@@ -71,7 +71,8 @@ tests/
 │   ├── credentials_status_help_test.rs   # .credentials.status help descriptions
 │   ├── param_help_test.rs                # param description presence + optionality (BUG-203, BUG-204)
 │   ├── account_limits_test.rs            # .account.limits error paths
-│   └── dot_test.rs                       # . / .help output tests
+│   ├── dot_test.rs                       # . / .help output tests
+│   └── account_assign_test.rs            # .account.assign marker-only write tests
 ├── manual/
 │   └── readme.md                         # manual testing plan
 └── docs/
@@ -110,6 +111,7 @@ tests/
 | Account limits CLI | `cli/account_limits_test.rs` | .account.limits error paths |
 | Param help/optionality CLI | `cli/param_help_test.rs` | phd01–phd04 (BUG-203), pho01–pho04 (BUG-204) |
 | Dot / help CLI | `cli/dot_test.rs` | . and .help output, delegation, ANSI suppression |
+| Account assign CLI | `cli/account_assign_test.rs` | .account.assign marker-only write (aa01–aa12) |
 | Arch boundary | `responsibility_no_process_execution_test.rs` | no std::process in crate source |
 
 ## Adding New Tests
