@@ -1121,4 +1121,83 @@ mod tests
     );
   }
 
+  // ── BUG-256 MRE: retry OK arm must clear cached metadata and write cache file ─
+
+  /// MRE for BUG-256: retry OK arm clears `cached` flag, `cache_age_secs`, and writes
+  /// fresh quota data to `{{name}}.json` via `write_quota_cache()`.
+  ///
+  /// # Root Cause
+  /// The retry OK arm in `apply_refresh` only set `aq.result = Ok(retried)` — it did not
+  /// clear `aq.cached` or `aq.cache_age_secs`, so `render.rs` kept the `~` prefix on every
+  /// quota cell and the `(Xh ago)` age label on every row. `write_quota_cache` was also
+  /// absent, so `{{name}}.json` retained stale cached quota across restarts. The bug was
+  /// introduced by merge f83d78d (conflict resolution chose the remote branch, dropping the
+  /// three mutations that were in 518d0a4).
+  ///
+  /// # Why Not Caught
+  /// No test guarded the content of the retry OK arm. Mutations were dropped silently by
+  /// a merge conflict resolution — only a source-structure assertion catches this class of
+  /// omission.
+  ///
+  /// # Fix Applied
+  /// Fix(BUG-256): in the retry OK arm of `apply_refresh`, extract h5/d7/sn references
+  /// BEFORE moving `retried` into `aq.result`, then call `write_quota_cache`, and set
+  /// `aq.cached = false` and `aq.cache_age_secs = None`.
+  ///
+  /// # Prevention
+  /// This test greps the source of the retry OK arm for the three AC-11 mutations.
+  /// Any merge conflict that drops them will cause this test to fail.
+  ///
+  /// # Pitfall
+  /// The `write_quota_cache` call must appear BEFORE `aq.result = Ok( retried )` —
+  /// h5/d7/sn borrow from `retried`; moving it first would be use-after-move.
+  /// The order check below enforces this structural constraint statically.
+  #[ doc = "bug_reproducer(BUG-256)" ]
+  #[ test ]
+  fn mre_bug256_retry_ok_stale_cached_metadata()
+  {
+    let src      = include_str!( concat!( env!( "CARGO_MANIFEST_DIR" ), "/src/usage/refresh.rs" ) );
+    let fn_start = src.find( "pub( crate ) fn apply_refresh(" ).expect( "apply_refresh not found" );
+
+    // Locate the retry OK arm within the function body.
+    let ok_arm_rel = src[ fn_start.. ]
+      .find( "Ok( retried ) =>" )
+      .expect( "BUG-256: retry OK arm `Ok( retried ) =>` not found in apply_refresh" );
+    let ok_arm_start = fn_start + ok_arm_rel;
+
+    // Bound the OK arm: ends at the `Err( e ) =>` arm that follows.
+    let err_arm_rel = src[ ok_arm_start.. ]
+      .find( "Err( e ) =>" )
+      .expect( "Err arm not found after retry OK arm" );
+    let ok_arm = &src[ ok_arm_start .. ok_arm_start + err_arm_rel ];
+
+    // AC-11 check 1: aq.cached must be cleared to false.
+    assert!(
+      ok_arm.contains( "aq.cached         = false" ),
+      "BUG-256: retry OK arm must set `aq.cached = false` to clear ~ prefix from render",
+    );
+
+    // AC-11 check 2: aq.cache_age_secs must be cleared to None.
+    assert!(
+      ok_arm.contains( "aq.cache_age_secs = None" ),
+      "BUG-256: retry OK arm must set `aq.cache_age_secs = None` to remove (Xh ago) label",
+    );
+
+    // AC-11 check 3: write_quota_cache must be called with fresh data.
+    assert!(
+      ok_arm.contains( "write_quota_cache(" ),
+      "BUG-256: retry OK arm must call write_quota_cache to persist fresh data to {{name}}.json",
+    );
+
+    // Order check: write_quota_cache must appear before the move of retried into aq.result.
+    let cache_write_pos = ok_arm.find( "write_quota_cache(" ).unwrap();
+    let result_move_pos = ok_arm.find( "aq.result         = Ok( retried )" )
+      .expect( "aq.result = Ok( retried ) not found in retry OK arm" );
+    assert!(
+      cache_write_pos < result_move_pos,
+      "BUG-256: write_quota_cache must appear before `aq.result = Ok( retried )` — \
+       h5/d7/sn borrow from retried and would be use-after-move otherwise",
+    );
+  }
+
 }

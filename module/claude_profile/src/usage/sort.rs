@@ -217,7 +217,6 @@ mod tests
   {
     FAR_FUTURE_MS,
     mk_aq_sort, mk_aq_sort_weekly, mk_aq_with_reset, mk_aq_with_7d_reset,
-    reset_iso_at,
   };
 
   // ── sort_indices: name strategy ──────────────────────────────────────────
