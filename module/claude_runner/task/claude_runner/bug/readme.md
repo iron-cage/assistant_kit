@@ -21,7 +21,7 @@ Filed bug reports for the `claude_runner` crate. Each file documents a confirmed
 
 | ID | Title | Status | Date | File |
 |----|-------|--------|------|------|
-| BUG-247 | `run_print_mode()` discards stdout content when exit_code != 0 | Verified | 2026-06-07 | [247_stdout_swallowed_on_failure.md](247_stdout_swallowed_on_failure.md) |
-| BUG-248 | No warning when `--keep-claudecode` disables CLAUDECODE protection | Verified | 2026-06-07 | [248_keep_claudecode_no_warning.md](248_keep_claudecode_no_warning.md) |
-| BUG-249 | `clr ask help` hits session gate instead of showing help | Verified | 2026-06-07 | [249_ask_help_hits_session_gate.md](249_ask_help_hits_session_gate.md) |
-| BUG-250 | Guard misses edit-distance-1 typos ("assk" for "ask") | Verified | 2026-06-07 | [250_guard_misses_edit_distance_1_typos.md](250_guard_misses_edit_distance_1_typos.md) |
+| BUG-247 | `run_print_mode()` discards stdout content when exit_code != 0 | Fixed | 2026-06-07 | [247_stdout_swallowed_on_failure.md](247_stdout_swallowed_on_failure.md) |
+| BUG-248 | No warning when `--keep-claudecode` disables CLAUDECODE protection | Fixed | 2026-06-07 | [248_keep_claudecode_no_warning.md](248_keep_claudecode_no_warning.md) |
+| BUG-249 | `clr ask help` hits session gate instead of showing help | Fixed | 2026-06-07 | [249_ask_help_hits_session_gate.md](249_ask_help_hits_session_gate.md) |
+| BUG-250 | Guard misses edit-distance-1 typos ("assk" for "ask") | Fixed | 2026-06-07 | [250_guard_misses_edit_distance_1_typos.md](250_guard_misses_edit_distance_1_typos.md) |
