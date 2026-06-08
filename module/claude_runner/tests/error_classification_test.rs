@@ -39,33 +39,12 @@
 //! to stdout (e.g. auth errors via `--print` JSON output), the stderr scan alone would
 //! miss it. Always drive a test that puts the pattern in stdout, not only stderr.
 
-use std::os::unix::fs::PermissionsExt;
-use tempfile::TempDir;
+#![ cfg( unix ) ]
+
+mod cli_binary_test_helpers;
+use cli_binary_test_helpers::{ fake_claude_dir, stderr_str };
 
 fn clr_bin() -> &'static str { env!( "CARGO_BIN_EXE_clr" ) }
-
-fn stderr_str( o : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &o.stderr ).to_string()
-}
-
-/// Create a temp dir containing a `claude` script with the given body.
-/// Returns the `TempDir` (keep alive) and the PATH string to inject.
-fn fake_claude_dir( body : &str ) -> ( TempDir, String )
-{
-  let dir = TempDir::new().expect( "tmpdir" );
-  let path = dir.path().join( "claude" );
-  let script = format!( "#!/bin/sh\n{body}\n" );
-  std::fs::write( &path, script.as_bytes() ).expect( "write fake-claude" );
-  std::fs::set_permissions( &path, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "chmod fake-claude" );
-  let path_val = format!(
-    "{}:{}",
-    dir.path().display(),
-    std::env::var( "PATH" ).unwrap_or_default()
-  );
-  ( dir, path_val )
-}
 
 /// Run `clr` with given args and env overrides, return raw Output.
 fn run_clr( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> std::process::Output

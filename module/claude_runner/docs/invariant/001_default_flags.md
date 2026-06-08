@@ -70,7 +70,8 @@ If any default injection is removed:
 
 | File | Relationship |
 |------|--------------|
-| `../../tests/cli_args_test.rs` | T01–T49 flag parsing; --new-session, --no-skip-permissions, --no-ultrathink, --no-effort-max, --no-chrome, --keep-claudecode |
+| `../../tests/cli_args_test.rs` | T01–T35 flag parsing; --new-session, --no-skip-permissions, --no-ultrathink, --no-effort-max, --no-chrome |
+| `../../tests/cli_args_ext_test.rs` | T36–T49, S58–S79; --keep-claudecode and extended flag coverage |
 | `../../tests/ultrathink_args_test.rs` | T50–T58 ultrathink suffix injection, idempotent guard, and --no-ultrathink opt-out |
 | `../../tests/effort_args_test.rs` | T59–T70 --effort max default injection and override behavior |
 | `../../tests/param_edge_cases_test.rs` | `bug_214_empty_session_dir_suppresses_continue_flag` — BUG-214 regression (empty `--session-dir` → no `-c`) |

@@ -41,19 +41,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `clr -- ""` now behaves identically to `clr --` (no message, no `--print`, interactive REPL)
   - Root cause: the `--` arm in `parse_args` used `positional.extend()` which copies all tokens verbatim; the empty-token guard in the `_` arm did not apply to this code path
   - Fix: filter empty tokens in the `--` arm via `.filter(|t| !t.is_empty())` before extending positional
-  - Reproducer: `t57_empty_positional_after_double_dash_ignored` in `tests/cli_args_test.rs`
+  - Reproducer: `t57_empty_positional_after_double_dash_ignored` in `tests/ultrathink_args_test.rs`
 
 - **Empty positional arg `""` no longer produces degenerate `"ultrathink "` message** (issue-empty-msg-ultrathink)
   - `clr ""` now behaves identically to bare `clr` (no message, no `--print`, interactive REPL)
   - Root cause: empty token was pushed to positional list, joined to `message = Some("")`, then the ultrathink prefix produced `"ultrathink "` (trailing space) and triggered print mode
   - Fix: skip empty tokens in the positional-arg collection path of `parse_args`
-  - Reproducer: `t54_empty_positional_arg_ignored` in `tests/cli_args_test.rs`
+  - Reproducer: `t54_empty_positional_arg_ignored` in `tests/ultrathink_args_test.rs`
 
 - **`--help`/`-h` now wins over unknown flags regardless of position** (issue-help-loses-to-unknown)
   - `clr --help --unknown` and `clr --unknown --help` both now exit 0 and show USAGE
   - Root cause: `parse_args` returned `Err` immediately on the first unknown flag; `main()` then took the error path before ever consulting `cli.help`
   - Fix: pre-scan for `--help`/`-h` at the top of `parse_args`; if found, return `CliArgs { help: true, .. }` immediately without full parsing
-  - Reproducers: `t55_help_wins_over_subsequent_unknown_flag` and `t56_help_wins_over_preceding_unknown_flag` in `tests/cli_args_test.rs`
+  - Reproducers: `t55_help_wins_over_subsequent_unknown_flag` and `t56_help_wins_over_preceding_unknown_flag` in `tests/ultrathink_args_test.rs`
 
 ### Added
 

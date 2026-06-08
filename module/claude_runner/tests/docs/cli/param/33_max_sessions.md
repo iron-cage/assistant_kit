@@ -42,13 +42,13 @@ be exercised in this test surface.
 | EC | Test Function | File |
 |----|---------------|------|
 | EC-1 | `ec1_max_sessions_help_listed` | `param_edge_cases_test.rs` |
-| EC-2 | `us25_1_max_sessions_0_unlimited_no_wait` | `user_story_test.rs` |
-| EC-3 | `us25_2_clr_max_sessions_env_var_applied`, `e30_clr_max_sessions_accepted_in_dry_run` | `user_story_test.rs`, `env_var_test.rs` |
-| EC-4 | `us25_3_cli_max_sessions_wins_over_env`, `e30_clr_max_sessions_accepted_in_dry_run` | `user_story_test.rs`, `env_var_test.rs` |
-| EC-5 | `e30_clr_max_sessions_accepted_in_dry_run` (invalid value sub-assertion) | `env_var_test.rs` |
-| EC-6 | `us25_1_max_sessions_0_unlimited_no_wait` | `user_story_test.rs` |
+| EC-2 | `us25_1_max_sessions_0_unlimited_no_wait` | `user_story_output_test.rs` |
+| EC-3 | `us25_2_clr_max_sessions_env_var_applied`, `e30_clr_max_sessions_accepted_in_dry_run` | `user_story_output_test.rs`, `env_var_ext_test.rs` |
+| EC-4 | `us25_3_cli_max_sessions_wins_over_env`, `e30_clr_max_sessions_accepted_in_dry_run` | `user_story_output_test.rs`, `env_var_ext_test.rs` |
+| EC-5 | `e30_clr_max_sessions_accepted_in_dry_run` (invalid value sub-assertion) | `env_var_ext_test.rs` |
+| EC-6 | `us25_1_max_sessions_0_unlimited_no_wait` | `user_story_output_test.rs` |
 | EC-7 | `ec7_max_sessions_no_gate_messages_below_limit` | `param_edge_cases_test.rs` |
-| EC-8 | `us25_1_max_sessions_0_unlimited_no_wait` | `user_story_test.rs` |
+| EC-8 | `us25_1_max_sessions_0_unlimited_no_wait` | `user_story_output_test.rs` |
 
 ---
 

@@ -12,7 +12,8 @@
 |--------|------|------------|
 | ask subcommand (IT-1–IT-8) | `ask_command_test.rs` | `clr ask` pure-alias equivalence, param passthrough, and live-trace path |
 | Trace Universality invariant (IT-1–IT-5) | `invariant_trace_universality_test.rs` | `--trace` on all subprocess-executing commands |
-| CLI flags (T01–T49) | `cli_args_test.rs` | Core flag parsing and builder translation |
+| CLI flags (T01–T35) | `cli_args_test.rs` | Core flag parsing and builder translation |
+| CLI flags extended (T36–T49, S58–S79, BUG-212, BUG-215) | `cli_args_ext_test.rs` | Positional edge cases, session combos, new flags, bug reproducers |
 | Ultrathink (T50–T58) | `ultrathink_args_test.rs` | Message suffix injection and opt-out |
 | Effort flags (T59–T70) | `effort_args_test.rs` | Default max injection, overrides, suppression |
 | Param edge cases (EC-N) | `param_edge_cases_test.rs` | Per-param positive/negative edge cases: help, model, verbose, no-skip-permissions, interactive, new-session, dir, session-dir, dry-run, verbosity, print, system-prompt, append-system-prompt, no-effort-max, invariant |
@@ -34,14 +35,17 @@
 | Bug reproducers BUG-246 | `bug_reproducers_246_test.rs` | WYSIWYG: CLAUDECODE removal visible in trace/dry-run; `--keep-claudecode` suppresses prefix |
 | Bug reproducers BUG-037 (T09–T10) | `error_classification_test.rs` | Labeled per-type CLR stderr diagnostics via classify_error() |
 | Strip-fences unit (sf01–sf08) | `fence_test.rs` | `strip_fences` correctness: pair stripping, pass-through, edge cases |
-| CLR_* env vars (E01–E34) | `env_var_test.rs` | CLR_* env var fallback for all 34 CLR_* vars, CLI-wins checks |
+| CLR_* env vars (E01–E17) | `env_var_test.rs` | CLR_* env var fallback for vars 1–17, CLI-wins checks |
+| CLR_* env vars extended (E18–E34, BUG-233) | `env_var_ext_test.rs` | CLR_* env var fallback for vars 18–34, BUG-233 subdir slash guard |
 | Output file capture (T01–T06) | `output_file_test.rs` | `--output-file` tee behavior, write errors, dry-run skip |
 | Expect output validation (T01–T17) | `expect_validation_test.rs` | `--expect`/`--expect-strategy`/`--expect-retries` validation loop |
 | Bug reproducers BUG-247 | `bug_reproducers_247_test.rs` | Stdout-to-stderr forwarding on subprocess failure |
 | Bug reproducers BUG-248 | `bug_reproducers_248_test.rs` | `--keep-claudecode` warning when CLAUDECODE present |
 | Retry on rate limit (EC-1–EC-9, EC-1–EC-7) | `retry_rate_limit_test.rs` | `--retry-on-rate-limit` and `--retry-delay` parse, env var, retry, exhaustion, quota exclusion |
 | Timeout run/ask (EC-1–EC-8) | `timeout_test.rs` | `--timeout` parse, env var, watchdog kill, fast-exit no-fire |
-| User stories (US-1–US-4 × 25) | `user_story_test.rs` | End-to-end user story workflows for all 25 user stories |
+| User stories (US01–US09) | `user_story_test.rs` | End-to-end user story workflows: core run/ask/model/verbose stories |
+| User stories (US10–US18) | `user_story_creds_isolated_test.rs` | End-to-end user story workflows: credential, isolated, and refresh stories |
+| User stories (US19–US25) | `user_story_output_test.rs` | End-to-end user story workflows: MCP config, output file, concurrency stories |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
 ### Responsibility Table
@@ -50,7 +54,8 @@
 |------|----------------|
 | `ask_command_test.rs` | `clr ask` subcommand: pure-alias equivalence, param passthrough, and live-trace tests IT-1–IT-8. |
 | `invariant_trace_universality_test.rs` | Trace Universality invariant (INV-004): `--trace` on all subprocess-executing commands IT-1–IT-5. |
-| `cli_args_test.rs` | CLI flag parsing: core flags T01–T49, correct translation to builder calls. |
+| `cli_args_test.rs` | CLI flag parsing: core flags T01–T35, correct translation to builder calls. |
+| `cli_args_ext_test.rs` | CLI flag parsing extended: T36–T49, S58–S79, BUG-212, BUG-215 reproducers. |
 | `ultrathink_args_test.rs` | Ultrathink suffix injection and `--no-ultrathink` opt-out (T50–T58). |
 | `effort_args_test.rs` | Effort flag defaults, overrides, suppression, and corner cases (T59–T70). |
 | `dry_run_test.rs` | Dry-run output: env vars and command line structure. |
@@ -78,8 +83,11 @@
 | `bug_reproducers_248_test.rs` | Bug reproducer BUG-248: `--keep-claudecode` warning when CLAUDECODE is set in env. |
 | `retry_rate_limit_test.rs` | `--retry-on-rate-limit` and `--retry-delay` integration: parse, env var, CLI-wins, fake-subprocess retry/exhaustion/quota-excluded (EC-1–EC-9 param 34, EC-1–EC-7 param 35). |
 | `timeout_test.rs` | `--timeout` (run/ask) integration: parse, env var, CLI-wins, fake-subprocess watchdog kill and fast-exit no-fire (EC-1–EC-8). |
-| `env_var_test.rs` | CLR_* env var fallback: E01–E34, one per CLR_* variable, CLI-wins verification. |
-| `user_story_test.rs` | User story end-to-end workflows: US-1–US-4 for all 25 stories from `tests/docs/cli/user_story/`. |
+| `env_var_test.rs` | CLR_* env var fallback: E01–E17, one per CLR_* variable, CLI-wins verification. |
+| `env_var_ext_test.rs` | CLR_* env var fallback extended: E18–E34, BUG-233 subdir slash validation. |
+| `user_story_test.rs` | User story end-to-end workflows: US01–US09 (core run/ask/model/verbose stories). |
+| `user_story_creds_isolated_test.rs` | User story end-to-end workflows: US10–US18 (credential, isolated, refresh stories). |
+| `user_story_output_test.rs` | User story end-to-end workflows: US19–US25 (MCP config, output file, concurrency gate). |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |

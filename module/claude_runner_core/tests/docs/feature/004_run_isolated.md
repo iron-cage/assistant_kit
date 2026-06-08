@@ -55,7 +55,7 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 - **Given:** no external resources
 - **When:** `ISOLATED_DEFAULT_MODEL` constant value is asserted
-- **Then:** equals `"claude-opus-4-6"`; `IsolatedModel::Default.model_id()` returns `Some(ISOLATED_DEFAULT_MODEL)`
+- **Then:** equals `"claude-opus-4-6"`; `IsolatedModel::Default.model_id()` returns `Some(ISOLATED_DEFAULT_MODEL)` (Task 021 changed isolated default from Sonnet to Opus)
 - **Source fn:** `t10_isolated_model_model_id_all_variants` (in `tests/isolated_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md)
 
@@ -65,7 +65,7 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 - **Given:** a temporary directory structure is prepared as by `run_isolated()`
 - **When:** the CLAUDE.md content written to `<temp>/.claude/CLAUDE.md` is inspected (via the `ISOLATED_CLAUDE_MD` constant or equivalent)
-- **Then:** the content contains at minimum the instructions: no clarifying questions, no confirmation, no preamble (AC-42)
+- **Then:** the content contains at minimum the instruction to respond immediately to `--print` prompts without extended thinking, no preamble, and no tool use (AC-42)
 - **Source fn:** `t_run_isolated_claude_md_content` (in `tests/isolated_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md) AC-42
 

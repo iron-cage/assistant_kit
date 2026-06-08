@@ -83,7 +83,8 @@ environments with parallel `clr` invocations hitting API rate limits.
 
 | File | Relationship |
 |------|--------------|
-| `../../tests/cli_args_test.rs` | T01–T49 flag parsing; --interactive, --print mode dispatch coverage |
+| `../../tests/cli_args_test.rs` | T01–T35 flag parsing; --interactive, --print mode dispatch coverage |
+| `../../tests/cli_args_ext_test.rs` | T36–T49, S58–S79 extended flags; BUG-212, BUG-215 reproducers |
 | `../../tests/dry_run_test.rs` | Validates dry-run preview output including all injected flags |
 | `../../tests/execution_mode_test.rs` | E01–E13 live mode dispatch via fake claude binary |
 | `../../tests/isolated_test.rs` | Credential-isolated and refresh command execution; trace output for isolated/refresh |

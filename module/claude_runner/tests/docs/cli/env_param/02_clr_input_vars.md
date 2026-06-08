@@ -3,7 +3,7 @@
 Edge cases for the 34 `CLR_*` input environment variable fallbacks.
 Source: [`env_param.md`](../../../../docs/cli/env_param.md)
 Implementation: `apply_env_vars()` in `src/cli/parse.rs`; `apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/cred_parse.rs`
-Test file: `tests/env_var_test.rs`
+Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E18–E34)
 
 ## Test Case Index
 

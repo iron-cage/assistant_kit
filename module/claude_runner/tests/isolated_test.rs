@@ -36,6 +36,7 @@ use std::io::Write as _;
 use tempfile::NamedTempFile;
 
 mod cli_binary_test_helpers;
+use cli_binary_test_helpers::{ exit_code, make_creds_file, stderr_str, stdout_str };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,17 +49,6 @@ fn run_isolated( args : &[ &str ] ) -> std::process::Output
   let mut full = vec![ "isolated" ];
   full.extend_from_slice( args );
   cli_binary_test_helpers::run_cli( &full )
-}
-
-/// Write `content` to a new `NamedTempFile` and return it.
-///
-/// The caller must keep the returned file alive for the duration of the test;
-/// dropping it deletes the file on disk.
-fn make_creds_file( content : &str ) -> NamedTempFile
-{
-  let mut f = NamedTempFile::new().expect( "failed to create temp creds file" );
-  f.write_all( content.as_bytes() ).expect( "failed to write creds content" );
-  f
 }
 
 /// Returns `true` when the `claude` binary is reachable in `$PATH`.
@@ -91,10 +81,6 @@ fn live_creds_file() -> Option< ( NamedTempFile, String ) >
   let path    = tmp.path().to_str()?.to_string();
   Some( ( tmp, path ) )
 }
-
-fn exit_code( o : &std::process::Output ) -> i32 { o.status.code().unwrap_or( -1 ) }
-fn stderr_str( o : &std::process::Output ) -> String { String::from_utf8_lossy( &o.stderr ).to_string() }
-fn stdout_str( o : &std::process::Output ) -> String { String::from_utf8_lossy( &o.stdout ).to_string() }
 
 // ── offline tests (no live claude required) ───────────────────────────────────
 

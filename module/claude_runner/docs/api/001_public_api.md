@@ -75,7 +75,8 @@ The library surface has no fallible operations. `COMMANDS_YAML` is a `&'static s
 
 | File | Relationship |
 |------|--------------|
-| `../../tests/cli_args_test.rs` | T01–T49 flag parsing; covers --verbosity flag and VerbosityLevel parsing |
+| `../../tests/cli_args_test.rs` | T01–T35 flag parsing; covers --verbosity flag and VerbosityLevel parsing |
+| `../../tests/cli_args_ext_test.rs` | T36–T49, S58–S79 extended flag parsing coverage |
 | `../../tests/commands_yaml_test.rs` | Validates COMMANDS_YAML path resolves to a readable, well-formed YAML file |
 | `../../tests/verbosity_test.rs` | Full VerbosityLevel range, boundary, default, and method predicate coverage |
 

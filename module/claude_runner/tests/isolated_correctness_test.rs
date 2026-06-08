@@ -17,41 +17,24 @@
 
 #![ cfg( feature = "enabled" ) ]
 #![ cfg( unix ) ]
+#![ allow( clippy::doc_markdown ) ]
 
-use std::io::Write as _;
 use std::os::unix::fs::PermissionsExt;
-use tempfile::NamedTempFile;
 
 mod cli_binary_test_helpers;
-
-fn make_creds_file( content : &str ) -> NamedTempFile
-{
-  let mut f = NamedTempFile::new().expect( "failed to create temp creds file" );
-  f.write_all( content.as_bytes() ).expect( "failed to write creds content" );
-  f
-}
-
-fn stderr_str( o : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &o.stderr ).to_string()
-}
-
-fn stdout_str( o : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &o.stdout ).to_string()
-}
+use cli_binary_test_helpers::{ make_creds_file, stderr_str, stdout_str };
 
 // ── CT-1 / CT-2 / CT-3 / CT-4: flag injection trace checks ──────────────────
 
 /// CT-1: `clr isolated --trace "x"` → stderr contains `--no-session-persistence`.
 ///
-/// Root Cause: `run_isolated_command()` did not inject `--no-session-persistence`;
+/// Root Cause: `run_isolated_command()` did not inject --no-session-persistence;
 ///   session files were written to temp HOME that is discarded after every run
-///   (pure I/O waste per gap I3 in `command_defaults.md`).
+///   (pure I/O waste per gap I3 in command_defaults.md).
 /// Why Not Caught: no test for injected flags in isolated trace.
-/// Fix Applied: Task 022 S3 prepends `--no-session-persistence` in `run_isolated_command()`.
+/// Fix Applied: Task 022 S3 prepends --no-session-persistence in `run_isolated_command()`.
 /// Prevention: this test; trace checked for flag presence.
-/// Pitfall: injecting after `--print` instead of before breaks passthrough override order.
+/// Pitfall: injecting after --print instead of before breaks passthrough override order.
 #[ test ]
 fn ct1_isolated_trace_has_no_session_persistence()
 {
@@ -74,14 +57,14 @@ fn ct1_isolated_trace_has_no_session_persistence()
 
 /// CT-2: `clr isolated --trace "x"` → stderr contains `--dangerously-skip-permissions`.
 ///
-/// Root Cause: `run_isolated_command()` did not inject `--dangerously-skip-permissions`;
+/// Root Cause: `run_isolated_command()` did not inject --dangerously-skip-permissions;
 ///   isolated tasks with tool use blocked at every tool call waiting for interactive
-///   permission prompt (gap I5 in `command_defaults.md`).
+///   permission prompt (gap I5 in command_defaults.md).
 /// Why Not Caught: no test for injected flags; live execution blocks silently.
-/// Fix Applied: Task 022 S5 injects `--dangerously-skip-permissions` when message present.
+/// Fix Applied: Task 022 S5 injects --dangerously-skip-permissions when message present.
 /// Prevention: this test; trace checked for flag when message is non-empty.
 /// Pitfall: injecting unconditionally (even without a message) would affect no-message
-///   interactive mode; S5 condition is `message.is_some()`.
+///   interactive mode; S5 condition is message.is_some().
 #[ test ]
 fn ct2_isolated_trace_has_skip_permissions_when_message_present()
 {
@@ -105,13 +88,13 @@ fn ct2_isolated_trace_has_skip_permissions_when_message_present()
 /// CT-3: `clr refresh --trace` → stderr contains `--no-chrome`.
 ///
 /// Root Cause: `run_refresh_command()` used `ClaudeCommand::new()` defaults which include
-///   `--chrome`; refresh is an HTTP-only OAuth ping and does not need browser context
-///   (gap I4 in `command_defaults.md`).
+///   --chrome; refresh is an HTTP-only OAuth ping and does not need browser context
+///   (gap I4 in command_defaults.md).
 /// Why Not Caught: no trace test for refresh flag injection.
-/// Fix Applied: Task 022 S4 adds `--no-chrome` to refresh passthrough args.
-/// Prevention: this test; trace checked for `--no-chrome` in refresh.
-/// Pitfall: `--chrome` is injected by `ClaudeCommand::new()`; `--no-chrome` must appear
-///   after `--chrome` in the arg list so last-wins semantics apply correctly.
+/// Fix Applied: Task 022 S4 adds "--no-chrome" to refresh passthrough args.
+/// Prevention: this test; trace checked for --no-chrome in refresh.
+/// Pitfall: --chrome is injected by `ClaudeCommand::new()`; --no-chrome must appear
+///   after --chrome in the arg list so last-wins semantics apply correctly.
 #[ test ]
 fn ct3_refresh_trace_has_no_chrome()
 {
@@ -134,11 +117,11 @@ fn ct3_refresh_trace_has_no_chrome()
 
 /// CT-4: `clr isolated --trace` without a message → `--dangerously-skip-permissions` absent.
 ///
-/// Root Cause: not a bug — this tests the S5 guard condition (`message.is_some()`).
+/// Root Cause: not a bug — this tests the S5 guard condition (message.is_some()).
 /// Why Not Caught: S5 condition not tested; injecting unconditionally would over-grant.
-/// Fix Applied: Task 022 S5 injection is gated on `message.is_some()`.
+/// Fix Applied: Task 022 S5 injection is gated on message.is_some().
 /// Prevention: this test; trace checked for absence when no message.
-/// Pitfall: removing the `is_some()` guard would inject skip-perms for interactive mode too.
+/// Pitfall: removing the is_some() guard would inject skip-perms for interactive mode too.
 #[ test ]
 fn ct4_isolated_no_message_no_skip_permissions()
 {
@@ -164,10 +147,10 @@ fn ct4_isolated_no_message_no_skip_permissions()
 /// CT-5: `--timeout 0` → subprocess NOT killed; runs to natural completion.
 ///
 /// Root Cause: `run_isolated()` set deadline = `Instant::now()` + `Duration::from_secs(0)`
-///   unconditionally; with `timeout_secs == 0` the deadline was already expired on first
-///   poll (50ms later), killing the subprocess immediately (gap I2 in `command_defaults.md`).
+///   unconditionally; with timeout_secs==0 the deadline was already expired on first
+///   poll (50ms later), killing the subprocess immediately (gap I2 in command_defaults.md).
 /// Why Not Caught: behavior diverges from run/ask (where 0 = unlimited) but no test.
-/// Fix Applied: Task 022 S2 gates deadline computation on `timeout_secs > 0`.
+/// Fix Applied: Task 022 S2 gates deadline computation on timeout_secs > 0.
 /// Prevention: this test; fake subprocess sleeps 3s; timeout=0 must not kill it.
 /// Pitfall: reverting the guard causes deadline to fire on first 50ms poll.
 #[ test ]
@@ -218,9 +201,9 @@ fn ct5_timeout_zero_is_unlimited()
 ///
 /// Root Cause: `run_isolated()` did not write CLAUDE.md to the temp HOME; the subprocess
 ///   had no user-level behavioral instructions, potentially asking clarifying questions
-///   or requesting interactive confirmation (gap I6 in `command_defaults.md`).
+///   or requesting interactive confirmation (gap I6 in command_defaults.md).
 /// Why Not Caught: no test for CLAUDE.md presence; subprocess blocking is silent in tests.
-/// Fix Applied: Task 022 S6 writes CLAUDE.md to `claude_dir` before spawn.
+/// Fix Applied: Task 022 S6 writes CLAUDE.md to claude_dir before spawn.
 /// Prevention: this test; fake claude reads and outputs CLAUDE.md content to stdout.
 /// Pitfall: cleanup removes the temp dir after execution; CLAUDE.md must be written
 ///   BEFORE spawn (not after) to be visible to the subprocess.

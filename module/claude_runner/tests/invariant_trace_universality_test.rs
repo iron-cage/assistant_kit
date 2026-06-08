@@ -5,28 +5,8 @@
 //!
 //! Source: `tests/docs/invariant/004_trace_universality.md`
 
-use std::io::Write as _;
-use tempfile::NamedTempFile;
-
 mod cli_binary_test_helpers;
-
-// ── helper ───────────────────────────────────────────────────────────────────
-
-/// Write `content` to a new `NamedTempFile` and return it.
-///
-/// Caller must keep the returned handle alive; dropping it deletes the file.
-/// RAII: `creds` binding must outlive the `run_cli(...)` call.
-fn make_creds_file( content : &str ) -> NamedTempFile
-{
-  let mut f = NamedTempFile::new().expect( "failed to create temp creds file" );
-  f.write_all( content.as_bytes() ).expect( "failed to write creds content" );
-  f
-}
-
-fn stderr_str( o : &std::process::Output ) -> String
-{
-  String::from_utf8_lossy( &o.stderr ).to_string()
-}
+use cli_binary_test_helpers::{ make_creds_file, stderr_str };
 
 // ── tests ─────────────────────────────────────────────────────────────────────
 
@@ -146,6 +126,26 @@ fn it_04_refresh_trace_stderr_output()
   assert!(
     stderr.contains( "# timeout: 45s" ),
     "refresh --trace must emit '# timeout: 45s' (default from parse_refresh_args) on stderr. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000" ),
+    "refresh --trace must emit env var block including CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "--model claude-sonnet-4-6" ),
+    "refresh --trace must show default model 'claude-sonnet-4-6'. Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "--effort low" ),
+    "refresh --trace must show '--effort low' (refresh default effort). Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "--no-chrome" ),
+    "refresh --trace must show '--no-chrome' (refresh-specific flag). Got:\n{stderr}"
+  );
+  assert!(
+    stderr.contains( "--no-session-persistence" ),
+    "refresh --trace must show '--no-session-persistence'. Got:\n{stderr}"
   );
   let code = out.status.code().unwrap_or( -1 );
   assert!( code == 0 || code == 1, "expected exit 0 or 1 (trace before invoke); got {code}" );

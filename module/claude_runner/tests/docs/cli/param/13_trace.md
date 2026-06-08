@@ -95,7 +95,7 @@ Edge case tests for the trace flag. Tests validate command echoing to stderr bef
 
 - **Given:** credentials JSON written to a temp file `<f>` (file is readable); claude binary absent
 - **When:** `clr isolated --creds <f> --trace "Fix bug"` (trace fires before subprocess attempt)
-- **Then:** Stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --chrome --model claude-sonnet-4-6 --print "Fix bug"`; subprocess attempt fails (claude absent in test environment)
+- **Then:** Stderr contains `# clr isolated`, `# creds: <path>`, `# timeout: 30s`, env var block (including `CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000`), and `claude --chrome --model claude-opus-4-6 --effort max --no-session-persistence --dangerously-skip-permissions --print "Fix bug"`; subprocess attempt fails (claude absent in test environment)
 - **Exit:** 1
 - **Source:** [013_trace.md](../../../../docs/cli/param/013_trace.md), [invariant/004_trace_universality.md](../../../../docs/invariant/004_trace_universality.md)
 - **Commands:** run, isolated, refresh, ask

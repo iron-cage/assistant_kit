@@ -231,6 +231,8 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 ) -> Exec
   if timeout_secs == 0
   {
     // Fix(BUG-240): always emit fatal spawn errors regardless of verbosity.
+    // Root cause: Err(e) branch was inside `if verbosity.shows_errors()`; verbosity 0 swallowed fatal errors.
+    // Pitfall: verbosity gates runner diagnostics only — never fatal errors.
     return match builder.execute()
     {
       Ok( o )  => o,
@@ -315,6 +317,8 @@ fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
   loop
   {
     // Fix(BUG-240): spawn errors always emitted regardless of verbosity (inside execute_print_attempt).
+    // Root cause: Err(e) branch was guarded by verbosity check; verbosity 0 swallowed fatal spawn errors.
+    // Pitfall: verbosity gates diagnostics only — fatal errors must surface regardless of verbosity level.
     let output = execute_print_attempt( builder, timeout_secs );
 
     if !output.stderr.is_empty() { eprint!( "{}", output.stderr ); }
@@ -322,6 +326,7 @@ fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
     if output.exit_code != 0
     {
       // Fix(BUG-037): classify non-zero exit for labeled diagnostic.
+      // Root cause: no error classification existed; all non-zero exits produced identical log output.
       // Pitfall: classify_error() scans stdout AND stderr — rate-limit reason may be in stdout.
       let kind = output.classify_error();
 
@@ -364,7 +369,11 @@ fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
       }
 
       // Fix(BUG-239): propagate exact subprocess exit code.
+      // Root cause: std::process::exit(1) was hardcoded; subprocess exit code was discarded.
+      // Pitfall: any hardcoded exit(1) after a subprocess wait silently discards the real code.
       // Fix(BUG-247): forward captured stdout to stderr on failure before exiting.
+      // Root cause: on non-zero exit, captured stdout was never forwarded; diagnostic output was lost.
+      // Pitfall: in print mode stdout is captured — on failure it must be re-emitted to stderr.
       if !output.stdout.is_empty() { eprint!( "{}", output.stdout ); }
       std::process::exit( output.exit_code );
     }
@@ -390,7 +399,11 @@ fn run_interactive( builder : &ClaudeCommand, cli : &CliArgs )
   if timeout_secs == 0
   {
     // Fix(BUG-240): always emit fatal spawn errors regardless of verbosity.
+    // Root cause: Err(e) branch was inside `if verbosity.shows_errors()`; verbosity 0 swallowed errors.
+    // Pitfall: verbosity gates diagnostics only — never fatal errors.
     // Fix(BUG-242): use signal_exit_code() for interactive signal propagation.
+    // Root cause: status.code().unwrap_or(1) collapsed SIGTERM (143) and SIGKILL (137) to 1.
+    // Pitfall: on Unix code() returns None for signal-killed processes; always use signal_exit_code().
     let status = match builder.execute_interactive()
     {
       Ok( s )  => s,
