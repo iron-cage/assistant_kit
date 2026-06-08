@@ -36,7 +36,7 @@
 | 023 | [Next Account Recommendation Strategies](023_next_account_strategies.md) | Configurable account recommendation in `.usage` output — `next::` parameter with `renew` (default), `endurance`, `drain` strategies; always-visible 3-strategy footer | ✅ |
 | 024 | [Session Touch via Isolated Subprocess](024_session_touch.md) | Activate idle accounts' 5h session windows by sending minimal prompt via isolated subprocess; `touch::` parameter | ✅ |
 | 025 | [Per-Machine Active Marker](025_per_machine_active_marker.md) | Machine-specific `_active_{hostname}_{user}` marker; exact local-part prefix resolution | ✅ |
-| 026 | [Subprocess Model and Effort Control](026_subprocess_model_effort.md) | `imodel::` and `effort::` parameters; per-account auto model selection (30% threshold); effort resolution | ✅ |
+| 026 | [Subprocess Model and Effort Control](026_subprocess_model_effort.md) | `imodel::` and `effort::` parameters; per-account auto model selection (20% threshold); effort resolution | ✅ |
 | 027 | [`.account.use` Post-Switch Touch](027_account_use_post_switch_touch.md) | Activate idle 5h window after account switch; `touch::`, `imodel::`, `effort::` on `.account.use` | ✅ |
 | 028 | [Usage Row Filtering and Extraction](028_usage_row_filtering.md) | Row-level filters, count/offset pagination, and `get::` single-value extraction for `.usage` output | ✅ |
 | 029 | [Account Host and Role Metadata](029_account_host_metadata.md) | Capture host/role labels at `.account.save` time; display via `cols::+host` and `cols::+role` | ✅ |

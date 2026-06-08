@@ -170,7 +170,7 @@ clp .account.use name::alice@home.com trace::1
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `touch::` | `bool` | `1` | Activate idle 5h session window via subprocess after switch |
 | `refresh::` | `bool` | `1` | Attempt OAuth token refresh when locally expired before refusing with exit 3 |
-| `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
+| `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (sonnet if `7d(Son)≥20%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
 | `trace::` | `bool` | `0` | Print `[trace] account.use` lines to stderr: credential read, quota fetch, idle check, model resolution, subprocess dispatch |
 

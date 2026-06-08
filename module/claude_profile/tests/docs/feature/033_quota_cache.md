@@ -4,7 +4,7 @@
 
 - **Purpose**: Test cases for quota cache fallback behavior — write-on-success, read-on-failure, staleness display, and side-effect persistence.
 - **Source**: `docs/feature/033_quota_cache.md`
-- **Covers**: AC-01 through AC-09
+- **Covers**: AC-01 through AC-11
 
 ### Test Cases
 
@@ -19,9 +19,13 @@
 | FT-07 | AC-07 | Cache write→read round-trip preserves all quota fields | `cache_write_read_roundtrip` |
 | FT-08 | AC-08 | Strategy recommendations operate on cached values | structural (cached rows have `Ok` result) |
 | FT-09 | AC-09 | JSON output includes `"cached"` and `"cache_age_secs"` fields | `ft09_033_render_json_cached_includes_fields` |
+| FT-10 | AC-10 | Cached+expired account triggers `should_refresh()` | `mre_bug255_cache_defeats_refresh` |
+| FT-11 | AC-11 | After retry OK, `cached` flag cleared and cache file written with fresh data | `mre_bug256_retry_ok_stale_cached_metadata` |
 
 ### Notes
 
 - FT-01 through FT-07 are implemented as unit tests in `claude_profile_core/tests/account_test.rs`.
 - FT-03 and FT-09 are implemented as render integration tests in `claude_profile/src/usage/render.rs` (tests module).
 - FT-08 is structural: cached rows are stored as `result: Ok(data)` with `cached: true` — all sort/strategy/next logic operates on `Ok` rows identically regardless of the `cached` flag.
+- FT-10 is implemented as a unit test in `src/usage/refresh.rs` `#[cfg(test)]` module (private fn test). MRE for BUG-255.
+- FT-11 is a unit test in `src/usage/refresh.rs` `#[cfg(test)]` module. Verifies the retry OK arm clears `aq.cached`/`aq.cache_age_secs` and writes the quota cache file. MRE for BUG-256.

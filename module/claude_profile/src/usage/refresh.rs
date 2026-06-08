@@ -13,6 +13,9 @@ use super::fetch::{ read_token, parse_u64_from_str };
 /// Return `true` when `apply_refresh` should attempt a token refresh for `aq`.
 ///
 /// Triggers on:
+/// - `cached = true` AND locally expired (`expires_at_ms / 1000 ≤ now_secs`) — the cache
+///   fallback in `fetch.rs` converts `Err(...)` to `Ok(cached_data)` for display continuity,
+///   making the `Err`-pattern guards below blind to these accounts. This guard fires first.
 /// - 401 or 403 — authentication failure; token rejected by the server.
 /// - "token expired (local)" — `fetch_all_quota` skipped the API call because
 ///   `expiresAt` is in the past; the OAuth **refresh** token is still valid and
@@ -25,6 +28,17 @@ use super::fetch::{ read_token, parse_u64_from_str };
 /// refreshing would add a 30-second subprocess wait with no benefit.
 fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
 {
+  // Fix(BUG-255): refresh when cached+expired — cache fallback converted Err to Ok.
+  // Root cause: `fetch.rs` cache fallback stores Ok(cached_data) for display continuity,
+  //   but this makes `should_refresh` see Ok (no error to match). Accounts with an expired
+  //   token and a cache entry were silently skipped — the Err-pattern guards all return false
+  //   for an Ok result, so `should_refresh` returned false and the account was never refreshed.
+  // Pitfall: don't check `aq.result.is_ok()` alone — truly-Ok non-cached accounts (successful
+  //   live fetches) must NOT trigger refresh. The guard requires BOTH cached=true AND expired.
+  if aq.cached && ( aq.expires_at_ms / 1000 ) <= now_secs
+  {
+    return true;
+  }
   if matches!( aq.result, Err( ref e ) if e.contains( "401" ) || e.contains( "403" ) )
   {
     return true;
@@ -91,7 +105,14 @@ pub( crate ) fn apply_refresh(
     let should_retry = should_refresh( aq, now_secs );
     if trace
     {
-      let reason = aq.result.as_ref().err().map_or( "ok", String::as_str );
+      let reason = if aq.cached && aq.result.is_ok()
+      {
+        "cached"
+      }
+      else
+      {
+        aq.result.as_ref().err().map_or( "ok", String::as_str )
+      };
       eprintln!( "[trace] refresh  {}  should_retry={} (reason: {})", aq.name, should_retry, reason );
     }
     if !should_retry { continue; }
@@ -139,7 +160,16 @@ pub( crate ) fn apply_refresh(
       Ok( retried ) =>
       {
         if trace { eprintln!( "[trace] refresh  {}  retry OK", aq.name ); }
-        aq.result = Ok( retried );
+        // Fix(BUG-256): retry OK arm only updated aq.result; aq.cached/cache_age_secs
+        //   never cleared — render.rs kept ~ prefix and (Xh ago). write_quota_cache absent.
+        // Pitfall: extract h5/d7/sn BEFORE move into aq.result = Ok(retried).
+        let h5 = retried.five_hour.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+        let d7 = retried.seven_day.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+        let sn = retried.seven_day_sonnet.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+        claude_profile_core::account::write_quota_cache( credential_store, &aq.name, h5, d7, sn );
+        aq.result         = Ok( retried );
+        aq.cached         = false;
+        aq.cache_age_secs = None;
         // Fix(BUG-171): account must be re-fetched after refresh; initial fetch used
         //   the expired token; quota fetch path and account fetch path diverged.
         // Root cause: fetch_oauth_account was added to fetch_all_quota later than apply_refresh;
@@ -163,7 +193,6 @@ pub( crate ) fn apply_refresh(
       }
     }
   }
-
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -1405,6 +1434,118 @@ mod tests
       should_refresh( &aq, 9_999 ),
       "BUG-235: Err(\"token expired (local)\") must trigger should_refresh — \
        OAuth refresh token may still be valid even when access token is locally expired",
+    );
+  }
+
+  // ── AC-10: cached+expired → should_refresh ────────────────────────────────
+
+  /// AC-10: Cached+expired account must still trigger `should_refresh()`.
+  ///
+  /// The cache fallback in `fetch.rs` converts `Err(...)` to `Ok(cached_data)`
+  /// for display continuity. This means `should_refresh` sees `Ok` instead of
+  /// `Err` — the existing `matches!(Err(...))` guards all fail, returning `false`,
+  /// so cached+expired accounts are silently skipped and never refreshed.
+  ///
+  /// # Root Cause
+  /// `fetch.rs` cache fallback stores `Ok(cached_data)` when a cache entry exists
+  /// for an account that returned an error, setting `cached = true`. `should_refresh`
+  /// only pattern-matches `Err(...)` variants; it never inspects `cached` or
+  /// `expires_at_ms` for `Ok` results.
+  ///
+  /// # Why Not Caught
+  /// Feature 033 was designed around display continuity, not the refresh predicate
+  /// interaction. The integration was not tested because `fetch.rs` and `refresh.rs`
+  /// tests are independent; the combination path was invisible at unit-test level.
+  ///
+  /// # Fix Applied
+  /// Add a `cached + expired` guard at the top of `should_refresh()`: when
+  /// `aq.cached && (aq.expires_at_ms / 1000) <= now_secs`, return `true` before
+  /// any `Err`-matching logic runs.
+  ///
+  /// # Prevention
+  /// This MRE asserts the exact predicate failure: `result: Ok(...)`, `cached: true`,
+  /// `expires_at_ms: 0` (always expired). Removing or weakening the guard will cause
+  /// this test to fail.
+  ///
+  /// # Pitfall
+  /// Do not check `aq.result.is_ok()` alone — non-cached `Ok` accounts (successful
+  /// live fetches) must NOT trigger refresh. The guard requires BOTH `cached = true`
+  /// AND `expires_at_ms` in the past.
+  #[ doc = "bug_reproducer(BUG-255)" ]
+  #[ test ]
+  fn mre_bug255_cache_defeats_refresh()
+  {
+    let aq = AccountQuota
+    {
+      name          : "test".to_string(),
+      is_current    : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms : 0,
+      result        : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : None,
+        seven_day        : None,
+        seven_day_sonnet : None,
+      } ),
+      account       : None,
+      host          : String::new(),
+      role          : String::new(),
+      renewal_at    : None,
+      cached        : true,
+      cache_age_secs : None,
+    };
+    assert!(
+      should_refresh( &aq, 1 ),
+      "BUG-255: cached+expired account (result=Ok, cached=true, expires_at_ms=0) \
+       must trigger should_refresh — cache fallback converts Err to Ok, \
+       defeating the existing Err-pattern guards",
+    );
+  }
+
+  /// MRE for BUG-256: retry OK arm does not clear `cached` metadata.
+  ///
+  /// # Root Cause
+  /// The `Ok(retried)` arm in `apply_refresh` only sets `aq.result = Ok(retried)`.
+  /// Three mutations are missing: `aq.cached = false`, `aq.cache_age_secs = None`,
+  /// and `write_quota_cache()`. The rendering code gates `~` prefix and `(Xh ago)`
+  /// label solely on `aq.cached`, so freshly-fetched retry data still looks stale.
+  ///
+  /// # Why Not Caught
+  /// No test inspected the retry OK arm for cache-clearing mutations; existing tests
+  /// only verified the result value, not the metadata fields.
+  ///
+  /// # Fix Applied
+  /// Add `aq.cached = false`, `aq.cache_age_secs = None`, and `write_quota_cache()`
+  /// call to the `Ok(retried)` arm, extracting quota refs before `retried` is moved.
+  ///
+  /// # Prevention
+  /// Structural MRE asserts presence of all three mutations in the retry OK arm via
+  /// `include_str!` bounded search. Removing any mutation fails this test.
+  ///
+  /// # Pitfall
+  /// `include_str!` reads BAKED image source — run `runbox .build` after source edits
+  /// before testing in Docker.
+  #[ doc = "bug_reproducer(BUG-256)" ]
+  #[ test ]
+  fn mre_bug256_retry_ok_stale_cached_metadata()
+  {
+    let src       = include_str!( "refresh.rs" );
+    let ok_pos    = src.find( "retry OK\", aq.name" ).expect( "retry OK trace must exist" );
+    let err_pos   = src.find( "retry Err(" ).expect( "retry Err trace must exist" );
+    assert!( ok_pos < err_pos, "retry OK must appear before retry Err in source" );
+    let retry_arm = &src[ ok_pos..err_pos ];
+    assert!(
+      retry_arm.contains( "aq.cached" ) && retry_arm.contains( "false" ),
+      "BUG-256: retry OK arm must reset aq.cached to false",
+    );
+    assert!(
+      retry_arm.contains( "aq.cache_age_secs" ) && retry_arm.contains( "None" ),
+      "BUG-256: retry OK arm must clear aq.cache_age_secs to None",
+    );
+    assert!(
+      retry_arm.contains( "write_quota_cache" ),
+      "BUG-256: retry OK arm must call write_quota_cache with fresh data",
     );
   }
 }

@@ -71,11 +71,11 @@ fn test_it2_creds_file_not_found()
   );
 }
 
-/// IT-4: `--timeout 0` with fake sleeping claude → exit 2 (timeout before creds refresh).
+/// IT-4: `--timeout 0` with fake sleeping claude → not exit 2 (watchdog disabled, unlimited).
 ///
-/// Creates a fake `claude` shell script that sleeps indefinitely.  With `--timeout 0`,
-/// the subprocess is killed immediately after spawning (deadline fires on first `try_wait`
-/// check) and `clr refresh` exits 2.
+/// Creates a fake `claude` shell script that sleeps briefly then exits.  With `--timeout 0`,
+/// the watchdog is disabled entirely (deadline = None); the subprocess runs to completion
+/// and `clr refresh` exits with the subprocess exit code — never with 2 (timeout).
 ///
 /// Source: tests/docs/cli/command/04_refresh.md#it-4
 #[ cfg( unix ) ]
@@ -86,13 +86,8 @@ fn test_it4_timeout_zero_exits_two()
 
   let dir = tempfile::tempdir().expect( "tmpdir" );
   let script = dir.path().join( "claude" );
-  // Fix(BUG-243-slow): use sleep 3 instead of sleep 60 to keep test fast.
-  // Root cause: child.kill() only kills the direct shell process; the `sleep` grandchild
-  //   inherits the pipe FD and holds it open until it exits, blocking wait_with_output().
-  // Pitfall: using large sleep values (60s+) causes nextest to flag the test as SLOW and
-  //   adds unnecessary CI overhead — keep the sleep value just above the timeout to confirm
-  //   the subprocess was actually killed, not that it exited naturally.
-  std::fs::write( &script, "#!/bin/sh\nsleep 3\n" ).expect( "write fake claude" );
+  // Short sleep (0.3s) so the test completes quickly; the subprocess exits naturally.
+  std::fs::write( &script, "#!/bin/sh\nsleep 0.3\nexit 0\n" ).expect( "write fake claude" );
   std::fs::set_permissions( &script, std::fs::Permissions::from_mode( 0o755 ) )
     .expect( "chmod fake claude" );
   let path_val = format!(
@@ -111,10 +106,10 @@ fn test_it4_timeout_zero_exits_two()
     .output()
     .expect( "invoke clr refresh" );
 
-  assert_eq!(
+  assert_ne!(
     exit_code( &out ),
     2,
-    "IT-4: --timeout 0 with sleeping fake claude must exit 2 (timeout without refresh); stderr: {}",
+    "IT-4: --timeout 0 must disable watchdog (unlimited) — exit 2 means timeout fired; stderr: {}",
     stderr_str( &out ),
   );
 }

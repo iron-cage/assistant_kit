@@ -25,6 +25,18 @@ pub const ISOLATED_DEFAULT_MODEL : &str = "claude-opus-4-6";
 /// Default model ID for OAuth credential-refresh pings (trivial `"."` prompt).
 pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-4-6";
 
+/// Minimal instructions written to `<temp>/.claude/CLAUDE.md` by `run_isolated()`.
+///
+/// Directs the subprocess to execute immediately without interactive behavior:
+/// no clarifying questions, no confirmation, no narration, no preamble (AC-42).
+pub const ISOLATED_CLAUDE_MD : &str = "# Isolated subprocess\n\n\
+    Execute the given task immediately and exit.\n\n\
+    - Do not ask clarifying questions \u{2014} act on the message as given.\n\
+    - Do not request human confirmation for any operation.\n\
+    - Do not explain your reasoning or narrate your steps.\n\
+    - Output only the direct result of the task; no preamble, no summary.\n\
+    - If the input is a single character or whitespace only, reply with a single period.\n";
+
 /// Claude model selection for isolated subprocess invocations.
 ///
 /// Controls whether `--model <id>` is prepended to the subprocess argument list.
@@ -189,14 +201,7 @@ pub fn run_isolated
   // Without user-level behavioral instructions the subprocess may ask clarifying
   // questions, request confirmation, or produce verbose narration — all of which
   // block the subprocess permanently in non-interactive print mode.
-  let claude_md_content = "# Isolated subprocess\n\n\
-    Execute the given task immediately and exit.\n\n\
-    - Do not ask clarifying questions \u{2014} act on the message as given.\n\
-    - Do not request human confirmation for any operation.\n\
-    - Do not explain your reasoning or narrate your steps.\n\
-    - Output only the direct result of the task; no preamble, no summary.\n\
-    - If the input is a single character or whitespace only, reply with a single period.\n";
-  std::fs::write( claude_dir.join( "CLAUDE.md" ), claude_md_content )
+  std::fs::write( claude_dir.join( "CLAUDE.md" ), ISOLATED_CLAUDE_MD )
     .map_err( |e| RunnerError::Io( e.to_string() ) )?;
 
   // Step 3: Build command — prepend --model flag then user args
@@ -209,6 +214,7 @@ pub fn run_isolated
   full_args.extend( args );
   let cmd = crate::ClaudeCommand::new()
     .with_home( &temp_dir )
+    .with_home_isolation()
     .with_args( full_args );
 
   // Step 4: Spawn subprocess with piped I/O so we keep the Child handle.

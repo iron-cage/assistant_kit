@@ -52,7 +52,7 @@ clp .usage imodel::keep effort::high
 | `next::` | `enum` | `renew` | Strategy placing `→` on recommended account: `renew`, `endurance`, `drain`; footer always shows renew, endurance, and drain recommendations regardless of `next::` value |
 | `cols::` | `string` | `""` | Column visibility modifiers: comma-separated `+col_id` / `-col_id` relative to default set |
 | `touch::` | `bool` | `1` | Activate accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet window) by sending minimal prompt via isolated subprocess; re-fetch quota |
-| `imodel::` | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥30%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
+| `imodel::` | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥20%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (`low` for any model; no flag for haiku or keep), `low`, `normal`, `high`, `max` |
 | `count::` | `u64` | `0` | Maximum rows to display (0 = all rows) |
 | `offset::` | `u64` | `0` | Skip first N rows from display |

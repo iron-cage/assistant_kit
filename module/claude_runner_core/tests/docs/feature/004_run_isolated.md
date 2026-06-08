@@ -6,10 +6,10 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 | ID | Test Name | Category |
 |----|-----------|----------|
-| FT-1 | `IsolatedModel::Default.model_id()` → `Some("claude-sonnet-4-6")` | Unit |
+| FT-1 | `IsolatedModel::Default.model_id()` → `Some("claude-opus-4-6")` | Unit |
 | FT-2 | `IsolatedModel::KeepCurrent.model_id()` → `None` | Unit |
 | FT-3 | `IsolatedModel::Specific("custom-model").model_id()` → `Some("custom-model")` | Unit |
-| FT-4 | `ISOLATED_DEFAULT_MODEL` constant → `"claude-sonnet-4-6"` | Unit |
+| FT-4 | `ISOLATED_DEFAULT_MODEL` constant → `"claude-opus-4-6"` | Unit |
 | FT-5 | `run_isolated()` writes `CLAUDE.md` with immediate-response instruction to temp HOME | Unit |
 | FT-6 | `ClaudeCommand` built with `with_home_isolation()` does not include `--chrome` in args | Unit |
 
@@ -21,11 +21,11 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 ---
 
-### FT-1: `IsolatedModel::Default.model_id()` → `Some("claude-sonnet-4-6")`
+### FT-1: `IsolatedModel::Default.model_id()` → `Some("claude-opus-4-6")`
 
 - **Given:** no external resources; `IsolatedModel::Default` constructed inline
 - **When:** `IsolatedModel::Default.model_id()` called
-- **Then:** returns `Some("claude-sonnet-4-6")`
+- **Then:** returns `Some("claude-opus-4-6")`
 - **Source fn:** `t10_isolated_model_model_id_all_variants` (in `tests/isolated_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md)
 
@@ -51,11 +51,11 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 ---
 
-### FT-4: `ISOLATED_DEFAULT_MODEL` constant equals `"claude-sonnet-4-6"`
+### FT-4: `ISOLATED_DEFAULT_MODEL` constant equals `"claude-opus-4-6"`
 
 - **Given:** no external resources
 - **When:** `ISOLATED_DEFAULT_MODEL` constant value is asserted
-- **Then:** equals `"claude-sonnet-4-6"`; `IsolatedModel::Default.model_id()` returns `Some(ISOLATED_DEFAULT_MODEL)`
+- **Then:** equals `"claude-opus-4-6"`; `IsolatedModel::Default.model_id()` returns `Some(ISOLATED_DEFAULT_MODEL)`
 - **Source fn:** `t10_isolated_model_model_id_all_variants` (in `tests/isolated_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md)
 
@@ -65,7 +65,7 @@ Test case planning for [feature/004_run_isolated.md](../../../docs/feature/004_r
 
 - **Given:** a temporary directory structure is prepared as by `run_isolated()`
 - **When:** the CLAUDE.md content written to `<temp>/.claude/CLAUDE.md` is inspected (via the `ISOLATED_CLAUDE_MD` constant or equivalent)
-- **Then:** the content contains at minimum the instruction to respond immediately to `--print` prompts without extended thinking, no preamble, and no tool use (AC-42)
+- **Then:** the content contains at minimum the instructions: no clarifying questions, no confirmation, no preamble (AC-42)
 - **Source fn:** `t_run_isolated_claude_md_content` (in `tests/isolated_test.rs`)
 - **Source:** [feature/004_run_isolated.md](../../../docs/feature/004_run_isolated.md) AC-42
 

@@ -129,7 +129,8 @@ impl ClaudeCommand {
   /// ```
   #[ inline ]
   #[ must_use ]
-  pub fn with_home_isolation( self ) -> Self
+  #[ allow( unused_mut ) ]
+  pub fn with_home_isolation( mut self ) -> Self
   {
     self.with_chrome( None )
   }

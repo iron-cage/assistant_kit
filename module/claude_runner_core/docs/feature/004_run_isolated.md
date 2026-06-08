@@ -9,7 +9,7 @@
 
 ### Design
 
-`run_isolated()` spawns `claude` with `HOME` overridden to a temporary directory containing `.claude/.credentials.json` (credentials) and `.claude/CLAUDE.md` (instructions to respond immediately without extended thinking). When `claude` completes (or times out), the function checks whether the subprocess wrote updated credentials back to that temp HOME. The result — exit code, captured stdout/stderr, and optionally refreshed credentials JSON — is returned to the caller without modifying any host-environment files.
+`run_isolated()` spawns `claude` with `HOME` overridden to a temporary directory containing `.claude/.credentials.json` (credentials) and `.claude/CLAUDE.md` (instructions to execute immediately without interactive behavior). When `claude` completes (or times out), the function checks whether the subprocess wrote updated credentials back to that temp HOME. The result — exit code, captured stdout/stderr, and optionally refreshed credentials JSON — is returned to the caller without modifying any host-environment files.
 
 **Types (always available — no `#[cfg(feature = "enabled")]` gate on types):**
 
@@ -32,10 +32,10 @@ pub enum RunnerError {
 }
 
 /// Default model ID injected by IsolatedModel::Default.
-pub const ISOLATED_DEFAULT_MODEL: &str = "claude-sonnet-4-6";
+pub const ISOLATED_DEFAULT_MODEL: &str = "claude-opus-4-6";
 
 pub enum IsolatedModel {
-    Default,           // prepends --model claude-sonnet-4-6
+    Default,           // prepends --model claude-opus-4-6
     KeepCurrent,       // no --model flag; Claude binary chooses
     Specific(String),  // prepends --model <id>
 }
@@ -69,7 +69,7 @@ pub fn run_isolated(
 2.  write credentials_json to <temp>/.claude/.credentials.json
     on write failure → cleanup temp, return RunnerError::Io
 2b. write minimal CLAUDE.md to <temp>/.claude/CLAUDE.md
-    content instructs subprocess to respond immediately without extended thinking
+    content instructs subprocess to execute immediately without interactive behavior
     on write failure → cleanup temp, return RunnerError::Io
 3.  build command; if model != KeepCurrent, prepend ["--model", <id>] to args:
       ClaudeCommand::new().with_home(<temp>).with_home_isolation().with_args([--model <id>, <args...>])
@@ -112,10 +112,10 @@ The temp directory structure is:
 {tmp}/claude_isolated_{pid}/
   .claude/
     .credentials.json     ← credentials_json written here
-    CLAUDE.md             ← minimal instruction file: respond immediately, no extended thinking
+    CLAUDE.md             ← minimal instruction file: execute immediately, no clarifying questions
 ```
 
-`HOME` is set to `{tmp}/claude_isolated_{pid}`. Other env vars are inherited. The subprocess sees a fresh `~/.claude/.credentials.json` with the provided credentials and a `CLAUDE.md` that instructs it to respond immediately without extended thinking — preventing timeout on keep-alive `--print .` prompts. No other `~/.claude/` files are present (no `settings.json`, no session state). The `--chrome` flag is suppressed — it is not needed for credential-only subprocess invocations and adds unnecessary overhead.
+`HOME` is set to `{tmp}/claude_isolated_{pid}`. Other env vars are inherited. The subprocess sees a fresh `~/.claude/.credentials.json` with the provided credentials and a `CLAUDE.md` that instructs it to execute immediately without interactive behavior — preventing the subprocess from blocking permanently on keep-alive `--print .` prompts. No other `~/.claude/` files are present (no `settings.json`, no session state). The `--chrome` flag is suppressed — it is not needed for credential-only subprocess invocations and adds unnecessary overhead.
 
 **Credential change detection:**
 
@@ -133,9 +133,9 @@ The temp directory is removed in all code paths: success, timeout, and I/O error
 
 ### Acceptance Criteria
 
-- **AC-33**: `run_isolated(creds_json, args, timeout_secs, model)` spawns `claude` with `HOME` overridden to a temp directory containing `.claude/.credentials.json` (populated with `creds_json`) and `.claude/CLAUDE.md` (minimal instruction file directing Claude to respond immediately without extended thinking). When `model` is not `KeepCurrent`, `--model <id>` is prepended to `args` before the subprocess is spawned.
+- **AC-33**: `run_isolated(creds_json, args, timeout_secs, model)` spawns `claude` with `HOME` overridden to a temp directory containing `.claude/.credentials.json` (populated with `creds_json`) and `.claude/CLAUDE.md` (minimal instruction file directing Claude to execute immediately without interactive behavior). When `model` is not `KeepCurrent`, `--model <id>` is prepended to `args` before the subprocess is spawned.
 - **AC-41**: The `--chrome` flag is not passed to isolated subprocesses. `ClaudeCommand` used by `run_isolated()` must not inject `--chrome` regardless of any global `ClaudeCommand::new()` defaults — chrome mode is not needed for credential-only subprocess invocations.
-- **AC-42**: The `CLAUDE.md` written to `<temp>/.claude/CLAUDE.md` contains at minimum the instruction: respond immediately to `--print` prompts without extended thinking, no preamble, no tool use. This prevents isolated subprocesses from entering extended thinking mode on keep-alive prompts, which would cause them to exceed the subprocess timeout.
+- **AC-42**: The `CLAUDE.md` written to `<temp>/.claude/CLAUDE.md` contains at minimum the instructions: no clarifying questions, no confirmation, no preamble. This prevents isolated subprocesses from blocking permanently in non-interactive mode on keep-alive prompts, which would cause them to exceed the subprocess timeout.
 - **AC-34**: When the subprocess exits normally, `run_isolated()` returns `Ok(IsolatedRunResult)` with the correct `exit_code`, `stdout`, and `stderr`.
 - **AC-35**: When the subprocess rewrites `.claude.json`, `credentials` is `Some(new_json)` with the updated content.
 - **AC-36**: When the subprocess does not modify `.claude.json`, `credentials` is `None`.

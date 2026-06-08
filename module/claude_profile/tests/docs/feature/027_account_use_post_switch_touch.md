@@ -104,7 +104,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 - **Given:** Feature 026 unit tests cover `resolve_model()` exhaustively (FT-01 through FT-07 in [026_subprocess_model_effort.md](026_subprocess_model_effort.md)).
 - **When:** `.account.use` dispatches its post-switch touch subprocess — it calls `resolve_model(&quota, imodel_param)` with the quota fetched for the target account.
-- **Then:** Model selection behavior is identical to `.usage` touch path — `imodel::auto` picks Sonnet when `7d(Son) ≥ 30%`, Opus otherwise. All resolution semantics are governed by Feature 026.
+- **Then:** Model selection behavior is identical to `.usage` touch path — `imodel::auto` picks Sonnet when `7d(Son) ≥ 20%`, Opus otherwise. All resolution semantics are governed by Feature 026.
 - **Exit:** n/a (structural — no new unit test; coverage via Feature 026 FT-01..FT-07)
 - **Source fn:** (covered by Feature 026 unit tests — `resolve_model` is shared)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-05](../../../../docs/feature/027_account_use_post_switch_touch.md)

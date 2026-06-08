@@ -240,20 +240,20 @@ fn t09_timeout_with_changed_credentials_result_type()
 // ── T10 ───────────────────────────────────────────────────────────────────────
 
 /// T10: `IsolatedModel::model_id()` returns the correct `Option<&str>` for all
-/// three variants, and `ISOLATED_DEFAULT_MODEL` equals `"claude-sonnet-4-6"`.
+/// three variants, and `ISOLATED_DEFAULT_MODEL` equals `"claude-opus-4-6"`.
 ///
 /// Covers FT-1 through FT-4 from `tests/docs/feature/004_run_isolated.md`:
 /// - FT-1: `Default.model_id()` → `Some(ISOLATED_DEFAULT_MODEL)`
 /// - FT-2: `KeepCurrent.model_id()` → `None` (no `--model` flag injected)
 /// - FT-3: `Specific("custom-model").model_id()` → `Some("custom-model")`
-/// - FT-4: `ISOLATED_DEFAULT_MODEL == "claude-sonnet-4-6"` (constant stability)
+/// - FT-4: `ISOLATED_DEFAULT_MODEL == "claude-opus-4-6"` (constant stability)
 #[ test ]
 fn t10_isolated_model_model_id_all_variants()
 {
-  // FT-4: constant value pinned to the current production Sonnet model ID.
+  // FT-4: constant value pinned to the current production Opus model ID.
   assert_eq!(
-    ISOLATED_DEFAULT_MODEL, "claude-sonnet-4-6",
-    "ISOLATED_DEFAULT_MODEL must equal the current production Sonnet ID",
+    ISOLATED_DEFAULT_MODEL, "claude-opus-4-6",
+    "ISOLATED_DEFAULT_MODEL must equal the current production Opus ID",
   );
 
   // FT-1: Default → Some(ISOLATED_DEFAULT_MODEL).
@@ -282,25 +282,26 @@ fn t10_isolated_model_model_id_all_variants()
 
 /// T11: `ISOLATED_CLAUDE_MD` contains the required instruction keywords (AC-42).
 ///
-/// The constant must instruct the subprocess to respond immediately without
-/// extended thinking, no preamble, and no tool use. These keywords are checked
-/// individually so that any future rewording must still satisfy all three.
+/// The constant must instruct the subprocess to execute immediately without
+/// interactive behavior: no clarifying questions, no confirmation, no preamble.
+/// Keywords are checked individually so that any future rewording must still
+/// satisfy all three.
 ///
 /// Spec: [`tests/docs/feature/004_run_isolated.md` FT-5]
 #[ test ]
 fn t_run_isolated_claude_md_content()
 {
   assert!(
-    ISOLATED_CLAUDE_MD.contains( "extended thinking" ),
-    "ISOLATED_CLAUDE_MD must mention extended thinking, got: {ISOLATED_CLAUDE_MD}",
-  );
-  assert!(
     ISOLATED_CLAUDE_MD.contains( "preamble" ),
     "ISOLATED_CLAUDE_MD must mention no preamble, got: {ISOLATED_CLAUDE_MD}",
   );
   assert!(
-    ISOLATED_CLAUDE_MD.contains( "tool" ),
-    "ISOLATED_CLAUDE_MD must mention no tool use, got: {ISOLATED_CLAUDE_MD}",
+    ISOLATED_CLAUDE_MD.contains( "clarifying questions" ),
+    "ISOLATED_CLAUDE_MD must mention no clarifying questions, got: {ISOLATED_CLAUDE_MD}",
+  );
+  assert!(
+    ISOLATED_CLAUDE_MD.contains( "confirmation" ),
+    "ISOLATED_CLAUDE_MD must mention no confirmation, got: {ISOLATED_CLAUDE_MD}",
   );
 }
 

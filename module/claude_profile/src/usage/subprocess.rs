@@ -10,7 +10,7 @@ use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort };
 
 /// Resolve the subprocess model for one account based on `imodel::` and quota data.
 ///
-/// AC-01: `auto` selects Sonnet when 7d(Son) remaining ≥ 30%; otherwise Opus (conservative).
+/// AC-01: `auto` selects Sonnet when 7d(Son) remaining ≥ 20%; otherwise Opus (conservative).
 ///         `None` `seven_day_sonnet` → treated as 0% remaining → Opus.
 /// AC-02: `sonnet` always maps to `claude-sonnet-4-6`.
 /// AC-03: `opus` always maps to `claude-opus-4-6`.
