@@ -100,3 +100,49 @@ clp .account.limits name::work@acme.com
 
 Expected exit: 0 — uses `work@acme.com.credentials.json` (not active `.credentials.json`).
 Expected: same utilization output as default (uses the named account's API key).
+
+---
+
+## Manual Testing Plan — `.account.relogin` Happy Path
+
+**Trigger:** After any change to `account::relogin`, the credential-capture subprocess path,
+or the active-account save/restore logic in `apply_refresh`.
+
+**Automated tests:** None — all relogin scenarios require an interactive TTY `claude` spawn
+that cannot be mocked. These must be run manually.
+
+### Prerequisites
+
+- Valid `~/.claude/.credentials.json` with a Claude Max session
+- `clp` binary compiled with `--features enabled`
+- A saved named account: `clp .account.save name::carol@example.com`
+- A second account active: `clp .account.use name::alice@acme.com`
+
+### IT-5: Successful relogin updates credential store (FT-07)
+
+```
+clp .account.relogin name::carol@example.com
+```
+
+Expected: interactive `claude` TTY prompt appears; after successful login,
+`{credential_store}/carol@example.com.credentials.json` is updated. Exit 0.
+
+### IT-6: Active account restored after relogin (FT-08)
+
+```
+# alice@acme.com is active
+clp .account.relogin name::carol@example.com
+clp .usage   # verify alice@acme.com still shows as active (✓)
+```
+
+Expected: after relogin completes, active account marker points back to
+`alice@acme.com` — not `carol@example.com`. Exit 0.
+
+### IT-7: Abandoned login → exit 3 diagnostic (FT-09)
+
+```
+clp .account.relogin name::carol@example.com
+# Press Ctrl-C or close TTY without completing login
+```
+
+Expected: stderr diagnostic "credentials unchanged"; exit 3 (not 0 or 2).

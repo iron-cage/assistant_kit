@@ -10,7 +10,7 @@ Claude Code account credential management.
 | `src/` | Library modules and CLI binary (account, token, paths, adapter, commands) |
 | `tests/` | Test suite for credential management |
 | `docs/` | Behavioral requirements: features (FR-6–FR-20), invariants, CLI reference |
-| `unilang.commands.yaml` | YAML command metadata for 9 profile commands |
+| `unilang.commands.yaml` | YAML command metadata for 11 profile commands |
 | `runbox/` | Container runner: thin wrapper, config manifest, and test script. |
 | `verb/` | Shell scripts for each `do` protocol verb (build, test, clean, run, lint). |
 | `vision.md` | Crate vision, design decisions, and open problems |
