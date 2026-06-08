@@ -40,18 +40,6 @@ Execute the given task immediately and exit.\n\n\
 /// Default model ID for OAuth credential-refresh pings (trivial `"."` prompt).
 pub const REFRESH_DEFAULT_MODEL : &str = "claude-sonnet-4-6";
 
-/// Minimal instructions written to `<temp>/.claude/CLAUDE.md` by `run_isolated()`.
-///
-/// Directs the subprocess to execute immediately without interactive behavior:
-/// no clarifying questions, no confirmation, no narration, no preamble (AC-42).
-pub const ISOLATED_CLAUDE_MD : &str = "# Isolated subprocess\n\n\
-    Execute the given task immediately and exit.\n\n\
-    - Do not ask clarifying questions \u{2014} act on the message as given.\n\
-    - Do not request human confirmation for any operation.\n\
-    - Do not explain your reasoning or narrate your steps.\n\
-    - Output only the direct result of the task; no preamble, no summary.\n\
-    - If the input is a single character or whitespace only, reply with a single period.\n";
-
 /// Claude model selection for isolated subprocess invocations.
 ///
 /// Controls whether `--model <id>` is prepended to the subprocess argument list.
