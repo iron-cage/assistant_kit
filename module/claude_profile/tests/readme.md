@@ -10,7 +10,7 @@
 | `cli_adapter_test.rs` | Adapter and output module: argv conversion, aliases, bool normalization, validation, json_escape, format_duration_secs. |
 | `cli_clp_alias_test.rs` | Binary alias smoke tests: both `clp` and `claude_profile` aliases run and self-identify. |
 | `cli_integration_test.rs` | CLI binary integration: entry point for cli/ modules. |
-| `cli/` | Split integration test modules (help, accounts, mutations, rotate, token, paths, usage, persist, credentials, limits, param-help, dot, cross-cutting). |
+| `cli/` | Split integration test modules (help, accounts, mutations, rotate, token, paths, usage, persist, credentials, limits, param-help, dot, cross-cutting, account-inspect). |
 | `manual/` | Manual testing plan: live Claude Code account switching. |
 | `docs/` | Test-lens documentation: per-command, per-parameter, per-group, and per-feature test case indices. |
 
@@ -58,7 +58,7 @@ tests/
 ├── responsibility_no_process_execution_test.rs  # arch boundary guard
 ├── cli/
 │   ├── readme.md                         # integration submodule index
-│   ├── helpers.rs                        # shared binary runner + fixtures
+│   ├── cli_runner.rs                     # shared binary runner + fixtures
 │   ├── accounts_test.rs                  # help output and .accounts command
 │   ├── account_mutations_test.rs         # account save, use, delete
 │   ├── account_rotate_test.rs            # .account.rotate auto-rotation (rot01–rot08)
@@ -72,16 +72,17 @@ tests/
 │   ├── param_help_test.rs                # param description presence + optionality (BUG-203, BUG-204)
 │   ├── account_limits_test.rs            # .account.limits error paths
 │   ├── dot_test.rs                       # . / .help output tests
-│   └── account_assign_test.rs            # .account.assign marker-only write tests
+│   ├── account_assign_test.rs            # .account.assign marker-only write tests
+│   └── account_inspect_test.rs           # .account.inspect command tests
 ├── manual/
 │   └── readme.md                         # manual testing plan
 └── docs/
     ├── readme.md                         # test docs surface index
     ├── cli/
     │   ├── readme.md                     # CLI test-lens index
-    │   ├── command/                      # per-command test case files (00–11)
-    │   ├── param/                        # per-parameter test case files (01–18)
-    │   └── param_group/                  # per-group test case files (01–03)
+    │   ├── command/                      # per-command test case files (000–016)
+    │   ├── param/                        # per-parameter test case files (001–053)
+    │   └── param_group/                  # per-group test case files (001–006)
     └── feature/
         ├── readme.md                     # feature test-lens index
         └── 09_token_usage.md             # FT cases for Feature 009 (FR-14)
@@ -112,6 +113,7 @@ tests/
 | Param help/optionality CLI | `cli/param_help_test.rs` | phd01–phd04 (BUG-203), pho01–pho04 (BUG-204) |
 | Dot / help CLI | `cli/dot_test.rs` | . and .help output, delegation, ANSI suppression |
 | Account assign CLI | `cli/account_assign_test.rs` | .account.assign marker-only write (aa01–aa12) |
+| Account inspect CLI | `cli/account_inspect_test.rs` | .account.inspect command tests |
 | Arch boundary | `responsibility_no_process_execution_test.rs` | no std::process in crate source |
 
 ## Adding New Tests
