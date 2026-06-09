@@ -49,6 +49,17 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     }
     _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "effort:: must be a string".to_string() ) ),
   };
+  let set_model_str = match cmd.arguments.get( "set_model" )
+  {
+    None                       => None,
+    Some( Value::String( s ) ) =>
+    {
+      crate::usage::validate_set_model( s )
+        .map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?;
+      Some( s.clone() )
+    }
+    _ => return Err( ErrorData::new( ErrorCode::ArgumentTypeMismatch, "set_model:: must be a string".to_string() ) ),
+  };
   let refresh          = crate::output::parse_int_flag( &cmd, "refresh", 1 )?;
   let paths            = require_claude_paths()?;
   let credential_store = require_credential_store()?;
@@ -95,10 +106,22 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
     }
     crate::usage::PreSwitchOutcome::AlreadyActive { quota } =>
     {
-      crate::usage::apply_model_override( &quota, &paths, trace, "account.use", &name );
+      if set_model_str.is_none()
+      {
+        crate::usage::apply_model_override( &quota, &paths, trace, "account.use", &name );
+      }
       if trace { crate::usage::trace_already_active( &name, quota, &imodel_str, &effort_str ) }
     }
     crate::usage::PreSwitchOutcome::Unavailable => {}
+  }
+
+  // When set_model:: is explicit, write the requested model last (takes precedence over
+  // automatic apply_model_override from apply_post_switch_touch or AlreadyActive path).
+  if let Some( ref sm ) = set_model_str
+  {
+    let model_id = crate::usage::validate_set_model( sm ).ok().flatten();
+    claude_profile_core::account::set_session_model( &paths, model_id );
+    if trace { eprintln!( "[trace] account.use  {name}  set_model: {sm}" ) }
   }
 
   Ok( OutputData::new( format!( "switched to '{name}'\n" ), "text" ) )

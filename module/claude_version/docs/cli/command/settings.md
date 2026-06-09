@@ -1,11 +1,13 @@
 # settings — Settings Namespace Commands
 
+> **Deprecation notice:** `.settings.show`, `.settings.get`, and `.settings.set` are deprecated in favor of the unified [`.config`](config.md) command. They remain functional but will be removed in a future version.
+
 ### Scope
 
-- **Purpose**: Reference for settings-namespace cm commands.
+- **Purpose**: Reference for settings-namespace cm commands (deprecated).
 - **Responsibility**: Command syntax, parameters, exit codes, and cross-references for `.settings.show`, `.settings.get`, and `.settings.set`.
 - **In Scope**: `.settings.show`, `.settings.get`, `.settings.set`.
-- **Out of Scope**: Version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)).
+- **Out of Scope**: Version commands (→ [version.md](version.md)), process commands (→ [processes.md](processes.md)), unified config command (→ [config.md](config.md)).
 
 ---
 

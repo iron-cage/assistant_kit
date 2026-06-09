@@ -118,14 +118,30 @@ Valid: 8 / 8   ->  Next by strategy:
 - **AC-12**: All three strategies skip h-exhausted accounts (`5h_left ≤ 15%`, i.e., `five_hour.utilization ≥ 85.0`) — switching to a session-exhausted account provides negligible usable capacity. When all remaining eligible candidates are h-exhausted, the strategy returns no recommendation.
 - **AC-13**: The endurance footer metric line shows `{session}% session, 5h resets in {time}` — the session capacity and the 5h reset timing. It does NOT show `7d left` or `expires`; those are available in the main table and irrelevant to long-run scheduling.
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/usage/sort.rs` | `find_next_for_strategy()` — strategy selection logic |
-| source | `src/usage/render.rs` | `render_text()` — footer rendering (three strategy lines) |
-| param | [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter specification |
-| doc | [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm |
-| doc | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategy algorithms reused by endurance/drain next strategies |
-| param | [cli/param/027_prefer.md](../cli/param/027_prefer.md) | `prefer::` affects weekly quota used by endurance/drain strategies |
-| bug | `task/claude_profile/bug/243_renew_strategy_missing_5h_tiebreaker.md` | BUG-243 ✅ Fixed: renew sort uses `five_hour_left` tiebreaker via `f64::total_cmp` on equal renewal time (TSK-248) |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/243_renew_strategy_missing_5h_tiebreaker.md` | BUG-243 ✅ Fixed: renew sort uses `five_hour_left` tiebreaker via `f64::total_cmp` on equal renewal time (TSK-248) |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategy algorithms reused by endurance/drain next strategies |
+| [024_session_touch.md](024_session_touch.md) | Session touch activates idle accounts, enabling endurance strategy eligibility |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/027_prefer.md](../cli/param/027_prefer.md) | `prefer::` affects weekly quota used by endurance/drain strategies |
+| [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter specification |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/usage/sort.rs` | `find_next_for_strategy()` — strategy selection logic |
+| `src/usage/render.rs` | `render_text()` — footer rendering (three strategy lines) |

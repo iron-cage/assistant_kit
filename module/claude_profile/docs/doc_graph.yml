@@ -1,9 +1,9 @@
 meta:
   description: Cross-reference graph for all doc instances in claude_profile
-  node_count: 19
-  edge_count: 14
+  node_count: 40
+  edge_count: 70
   component_count: 8
-  generated: 2026-05-07
+  generated: 2026-06-09
 
 nodes:
   - id: feature/001
@@ -76,6 +76,106 @@ nodes:
     label: Rich Account Metadata
     entity: feature
 
+  - id: feature/015
+    file: feature/015_name_shortcut_syntax.md
+    label: Account Name Shortcut Syntax
+    entity: feature
+
+  - id: feature/016
+    file: feature/016_current_account_awareness.md
+    label: Current Account Awareness
+    entity: feature
+
+  - id: feature/017
+    file: feature/017_token_refresh.md
+    label: Expired Token Refresh via Isolated Subprocess
+    entity: feature
+
+  - id: feature/018
+    file: feature/018_live_monitor.md
+    label: Live Quota Monitor Mode
+    entity: feature
+
+  - id: feature/019
+    file: feature/019_account_relogin.md
+    label: Browser Re-Authentication for Named Account
+    entity: feature
+
+  - id: feature/020
+    file: feature/020_usage_sort_strategies.md
+    label: Usage Sort Strategies
+    entity: feature
+
+  - id: feature/021
+    file: feature/021_extended_snapshot_fields.md
+    label: Extended Snapshot Fields
+    entity: feature
+
+  - id: feature/022
+    file: feature/022_org_identity_snapshot.md
+    label: Org Identity Snapshot
+    entity: feature
+
+  - id: feature/023
+    file: feature/023_next_account_strategies.md
+    label: Next Account Recommendation Strategies
+    entity: feature
+
+  - id: feature/024
+    file: feature/024_session_touch.md
+    label: Session Touch via Isolated Subprocess
+    entity: feature
+
+  - id: feature/025
+    file: feature/025_per_machine_active_marker.md
+    label: Per-Machine Active Marker
+    entity: feature
+
+  - id: feature/026
+    file: feature/026_subprocess_model_effort.md
+    label: Subprocess Model and Effort Control
+    entity: feature
+
+  - id: feature/027
+    file: feature/027_account_use_post_switch_touch.md
+    label: .account.use Post-Switch Touch
+    entity: feature
+
+  - id: feature/028
+    file: feature/028_usage_row_filtering.md
+    label: Usage Row Filtering and Extraction
+    entity: feature
+
+  - id: feature/029
+    file: feature/029_account_host_metadata.md
+    label: Account Host and Role Metadata
+    entity: feature
+
+  - id: feature/030
+    file: feature/030_account_renewal_override.md
+    label: Account Billing Renewal Override
+    entity: feature
+
+  - id: feature/031
+    file: feature/031_account_inspect.md
+    label: Account Inspect
+    entity: feature
+
+  - id: feature/032
+    file: feature/032_account_assign.md
+    label: Account Marker Assignment
+    entity: feature
+
+  - id: feature/033
+    file: feature/033_quota_cache.md
+    label: Quota Cache Fallback
+    entity: feature
+
+  - id: feature/034
+    file: feature/034_explicit_session_model_override.md
+    label: Explicit Session Model Override
+    entity: feature
+
   - id: invariant/001
     file: invariant/001_zero_third_party_deps.md
     label: Zero Third-Party Dependencies
@@ -101,21 +201,28 @@ nodes:
     label: Atomic Account Switching
     entity: invariant
 
+  - id: invariant/006
+    file: invariant/006_param_defaults.md
+    label: Parameters Default to Active Context
+    entity: invariant
+
 edges:
+  # ── features 001–014 / invariants 001–005 (original 14 edges) ────────────
+
   # feature/002 → feature/001: save triggers store initialization
   - {from: feature/002, to: feature/001, label: "save triggers store init"}
 
-  # feature/004 ↔ invariant/005: switch feature is governed by atomicity invariant
+  # feature/004 ↔ invariant/005: switch governed by atomicity invariant
   - {from: feature/004, to: invariant/005, label: "governed by atomicity invariant"}
   - {from: invariant/005, to: feature/004, label: "enforces atomicity on switch"}
 
-  # feature/008 → feature/004: auto_rotate uses switch_account primitive
+  # feature/008 → feature/004: auto_rotate delegates to switch_account
   - {from: feature/008, to: feature/004, label: "delegates to switch_account"}
 
   # feature/008 → feature/006: auto_rotate triggered by token expiry detection
   - {from: feature/008, to: feature/006, label: "triggered after token expiry check"}
 
-  # feature/009 → feature/013: usage reports historical tokens; limits reports live utilization
+  # feature/009 ↔ feature/013: usage vs live rate-limit are distinct
   - {from: feature/009, to: feature/013, label: "distinct from live rate-limit data"}
   - {from: feature/013, to: feature/009, label: "historical token context"}
 
@@ -123,33 +230,179 @@ edges:
   - {from: feature/011, to: feature/012, label: "related: account-store-free alternative"}
   - {from: feature/012, to: feature/011, label: "related: account-store-aware sibling"}
 
-  # feature/013 → feature/011: .account.limits uses same name:: account selection pattern
+  # feature/013 → feature/011: shares name:: account selection pattern
   - {from: feature/013, to: feature/011, label: "shares name:: account selection pattern"}
 
-  # feature/014 → feature/002: rich metadata extends save() to snapshot metadata files
+  # feature/014 → feature/002: rich metadata extends save()
   - {from: feature/014, to: feature/002, label: "extends save() with metadata snapshots"}
 
-  # feature/014 → feature/003: rich metadata extends list() to read snapshot fields
+  # feature/014 → feature/003: rich metadata extends list()
   - {from: feature/014, to: feature/003, label: "extends list() with snapshot field reading"}
 
-  # feature/014 → feature/012: rich metadata extends credentials.status with new opt-in fields
+  # feature/014 → feature/012: rich metadata extends credentials.status
   - {from: feature/014, to: feature/012, label: "adds opt-in fields to credentials.status"}
 
-  # invariant/004 → invariant/001: both enforce boundary constraints on the library
+  # invariant/004 → invariant/001: related boundary constraints
   - {from: invariant/004, to: invariant/001, label: "related boundary constraint"}
+
+  # ── feature/015: Account Name Shortcut Syntax ─────────────────────────────
+
+  # shortcut resolves on switch (account.use) and delete (account.delete)
+  - {from: feature/015, to: feature/004, label: "shortcut resolves via prefix match on switch"}
+  - {from: feature/015, to: feature/005, label: "shortcut resolves via prefix match on delete"}
+
+  # shortcut syntax shared with renewal override command
+  - {from: feature/015, to: feature/030, label: "shortcut syntax applies to renewal override"}
+  - {from: feature/030, to: feature/015, label: "uses name shortcut for account targeting"}
+
+  # ── feature/016: Current Account Awareness ───────────────────────────────
+
+  - {from: feature/016, to: feature/003, label: "current account marker displayed in list"}
+  - {from: feature/016, to: feature/009, label: "current account marker displayed in usage"}
+
+  # ── feature/017: Expired Token Refresh via Isolated Subprocess ───────────
+
+  - {from: feature/017, to: feature/009, label: "extends usage command with refresh:: param"}
+
+  # ── feature/018: Live Quota Monitor Mode ─────────────────────────────────
+
+  - {from: feature/018, to: feature/009, label: "live monitor wraps usage fetch loop"}
+  - {from: feature/018, to: feature/017, label: "live monitor triggers refresh when expired"}
+
+  # ── feature/019: Browser Re-Authentication ───────────────────────────────
+
+  - {from: feature/019, to: feature/017, label: "relogin is fallback when token refresh fails"}
+
+  # ── feature/020: Usage Sort Strategies ───────────────────────────────────
+
+  - {from: feature/020, to: feature/009, label: "sort strategies applied to usage output rows"}
+  - {from: feature/020, to: feature/023, label: "sort strategies integrate next recommendation"}
+  - {from: feature/023, to: feature/020, label: "recommendation relies on sort order"}
+  - {from: feature/020, to: feature/018, label: "sort strategies apply in live monitor mode"}
+  - {from: feature/020, to: feature/008, label: "sort strategies consider auto-rotate candidates"}
+
+  # ── feature/021: Extended Snapshot Fields ────────────────────────────────
+
+  - {from: feature/021, to: feature/014, label: "extended snapshot fields add to rich metadata"}
+  - {from: feature/021, to: feature/003, label: "extended fields displayed in list output"}
+
+  # ── feature/022: Org Identity Snapshot ───────────────────────────────────
+
+  - {from: feature/022, to: feature/002, label: "org identity captured at save time"}
+  - {from: feature/022, to: feature/005, label: "org identity removed on account delete"}
+  - {from: feature/022, to: feature/014, label: "org identity extends rich metadata"}
+
+  # ── feature/024: Session Touch via Isolated Subprocess ───────────────────
+
+  - {from: feature/024, to: feature/009, label: "touch embedded in usage fetch cycle"}
+  - {from: feature/024, to: feature/017, label: "touch uses refresh subprocess pattern"}
+  - {from: feature/024, to: feature/023, label: "touch eligible accounts factor into next recommendation"}
+  - {from: feature/024, to: feature/020, label: "touch state affects sort strategy output"}
+
+  # feature/024 ↔ feature/027: post-switch touch delegates to session touch primitive
+  - {from: feature/024, to: feature/027, label: "post-switch touch delegates to session touch"}
+  - {from: feature/027, to: feature/024, label: "account.use touch uses session touch primitive"}
+
+  # ── feature/025: Per-Machine Active Marker ───────────────────────────────
+
+  - {from: feature/025, to: feature/002, label: "per-machine marker written at save time"}
+
+  # feature/025 ↔ feature/032: assign command is the per-machine marker write operation
+  - {from: feature/025, to: feature/032, label: "marker write exposed via assign command"}
+  - {from: feature/032, to: feature/025, label: "marker assignment implements per-machine marker"}
+
+  - {from: feature/025, to: feature/004, label: "per-machine marker updated on switch"}
+  - {from: feature/025, to: feature/015, label: "marker resolution uses prefix shortcut"}
+  - {from: feature/025, to: invariant/005, label: "marker write is part of atomic switch"}
+
+  # ── feature/026: Subprocess Model and Effort Control ─────────────────────
+
+  - {from: feature/026, to: feature/024, label: "model/effort control governs touch subprocess"}
+  - {from: feature/026, to: feature/017, label: "model/effort control governs refresh subprocess"}
+
+  # feature/026 ↔ feature/027: model/effort params forwarded to post-switch touch
+  - {from: feature/026, to: feature/027, label: "model/effort params forwarded to post-switch touch"}
+  - {from: feature/027, to: feature/026, label: "post-switch touch inherits model/effort params"}
+
+  # ── feature/027: .account.use Post-Switch Touch ──────────────────────────
+
+  - {from: feature/027, to: feature/004, label: "post-switch touch triggered after account.use"}
+
+  # ── feature/028: Usage Row Filtering and Extraction ──────────────────────
+
+  - {from: feature/028, to: feature/009, label: "row filtering applied to usage output"}
+  - {from: feature/028, to: feature/020, label: "filtering interacts with sort strategies"}
+  - {from: feature/028, to: feature/023, label: "filtering interacts with next recommendation"}
+
+  # ── feature/029: Account Host and Role Metadata ───────────────────────────
+
+  - {from: feature/029, to: feature/002, label: "host metadata captured at save time"}
+  - {from: feature/029, to: feature/009, label: "host metadata displayed in usage output"}
+  - {from: feature/029, to: feature/028, label: "host is a filterable field in row filtering"}
+  - {from: feature/029, to: feature/025, label: "host metadata written alongside per-machine marker"}
+
+  # ── feature/030: Account Billing Renewal Override ────────────────────────
+
+  - {from: feature/030, to: feature/002, label: "renewal override stored alongside account at save"}
+  - {from: feature/030, to: feature/009, label: "renewal override displayed in usage output"}
+
+  # ── feature/032: Account Marker Assignment ───────────────────────────────
+
+  - {from: feature/032, to: feature/004, label: "assign command interacts with switch primitive"}
+  - {from: feature/032, to: feature/029, label: "assign uses host metadata from account file"}
+
+  # ── feature/033: Quota Cache Fallback ────────────────────────────────────
+
+  - {from: feature/033, to: feature/009, label: "quota cache fallback for usage reporting"}
+  - {from: feature/033, to: feature/024, label: "cache persists touch state"}
+  - {from: feature/033, to: feature/026, label: "cache persists model override decision"}
+  - {from: feature/033, to: feature/029, label: "cache extends account host metadata file"}
+
+  # ── feature/034: Explicit Session Model Override ──────────────────────────
+
+  - {from: feature/034, to: feature/027, label: "explicit override bypasses auto-override in post-switch touch"}
+  - {from: feature/034, to: feature/026, label: "set_model:: is orthogonal to imodel:: subprocess model control"}
+  - {from: feature/034, to: feature/004, label: "set_model:: runs after account.use credential rotation"}
+  - {from: feature/034, to: feature/009, label: "set_model:: applies to .usage session-model override block"}
 
 components:
   - id: 1
-    size: 8
+    size: 31
     isolated: false
-    nodes: [feature/001, feature/002, feature/003, feature/009, feature/011, feature/012, feature/013, feature/014]
+    nodes:
+      - feature/001
+      - feature/002
+      - feature/003
+      - feature/004
+      - feature/005
+      - feature/006
+      - feature/008
+      - feature/009
+      - feature/011
+      - feature/012
+      - feature/013
+      - feature/014
+      - feature/015
+      - feature/016
+      - feature/017
+      - feature/018
+      - feature/019
+      - feature/020
+      - feature/021
+      - feature/022
+      - feature/023
+      - feature/024
+      - feature/025
+      - feature/026
+      - feature/027
+      - feature/028
+      - feature/029
+      - feature/030
+      - feature/032
+      - feature/033
+      - invariant/005
 
   - id: 2
-    size: 4
-    isolated: false
-    nodes: [feature/004, feature/006, feature/008, invariant/005]
-
-  - id: 3
     size: 2
     isolated: true
     nodes: [invariant/001, invariant/004]
@@ -158,16 +411,7 @@ components:
       cross-references to the feature or feature-linked invariant components. Isolation is
       expected: they govern library-level constraints rather than any specific feature flow.
 
-  - id: 4
-    size: 1
-    isolated: true
-    nodes: [feature/005]
-    gap: >
-      Delete Account is an orthogonal write capability with no dependency edges to other
-      features in the doc graph (the active-account guard is a runtime check, not a
-      cross-referenced design dependency). Isolation is expected.
-
-  - id: 5
+  - id: 3
     size: 1
     isolated: true
     nodes: [feature/007]
@@ -175,7 +419,7 @@ components:
       File Topology is a foundational path-registry capability consumed by all other features
       but not cross-referenced back to them in the doc instances. Isolation is expected.
 
-  - id: 6
+  - id: 4
     size: 1
     isolated: true
     nodes: [feature/010]
@@ -183,7 +427,16 @@ components:
       Persistent Storage Path is an orthogonal path-resolution capability with no
       cross-references to other doc instances. Isolation is expected.
 
-  - id: 7
+  - id: 5
+    size: 1
+    isolated: true
+    nodes: [feature/031]
+    gap: >
+      Account Inspect is a live-only read command (endpoints 001/002/005) that does not
+      extend any persisted feature flow. It has no doc-level cross-references to other
+      feature instances. Isolation is expected.
+
+  - id: 6
     size: 1
     isolated: true
     nodes: [invariant/002]
@@ -191,12 +444,21 @@ components:
       Cross-Platform Compatibility is a broad constraint that applies across all features
       but is not cross-referenced from individual feature doc instances. Isolation is expected.
 
-  - id: 8
+  - id: 7
     size: 1
     isolated: true
     nodes: [invariant/003]
     gap: >
       Clear Error Messages is a broad quality constraint that applies across all features
       but is not cross-referenced from individual feature doc instances. Isolation is expected.
+
+  - id: 8
+    size: 1
+    isolated: true
+    nodes: [invariant/006]
+    gap: >
+      Parameters Default to Active Context is a cross-cutting behavioral invariant that
+      governs all parameter resolution but is not cross-referenced from individual feature
+      doc instances. Isolation is expected.
 
 dangling_refs: []

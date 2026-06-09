@@ -65,18 +65,28 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 - **AC-10**: When cache fallback converts a fetch error to `Ok(cached_data)` (AC-02 path), accounts whose local token is expired (`expires_at_ms / 1000 <= now_secs`) are still flagged for token refresh by `should_refresh()` via the `cached + expired` guard — the `Ok` result does not suppress refresh when `cached = true` and the token is locally expired.
 - **AC-11**: After `apply_refresh()` executes a successful token refresh and quota retry (`retry OK`), `aq.cached` is reset to `false` and `aq.cache_age_secs` is cleared to `None` on the in-memory `AccountQuota`, and the fresh data is written to `{name}.json` via `write_quota_cache()`. The row no longer shows `~` prefix or `(Xh ago)` label, and the next run reads fresh cache data.
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| feature | [009_token_usage.md](009_token_usage.md) | Live quota reporting — this feature adds fallback when live fetch fails |
-| feature | [024_session_touch.md](024_session_touch.md) | Touch lifecycle — cache persists touch state |
-| feature | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | Model override — cache persists override decision |
-| feature | [029_account_host_metadata.md](029_account_host_metadata.md) | `{name}.json` structure — cache extends the same file |
-| source | `src/usage/fetch.rs` | Cache write on fetch success (`write_quota_cache`); cache read on fetch error (`read_quota_cache`) |
-| source | `src/usage/refresh.rs` | `apply_refresh()` retry cache write — clears `aq.cached`/`aq.cache_age_secs` and calls `write_quota_cache()` after `retry OK` (AC-11); `should_refresh()` `cached + expired` guard (AC-10) |
-| source | `src/usage/render.rs` | Staleness display — `~` prefix via `prefix_tilde()`, `(Nm ago)` age label, `(stale)` markers, `cache_json_fields()` |
-| source | `src/usage/api.rs` | Side-effect cache — `write_cache_string()` (model_override, AC-05) and `write_cache_bool()` (touch_idle, AC-06) |
-| source | `claude_profile_core/src/account.rs` | Storage layer — `QuotaCacheEntry`, `read_quota_cache()`, `write_quota_cache()`, `write_cache_field()` |
-| bug | [BUG-255 🟢 Fixed](../../../task/claude_profile/bug/255_cache_fallback_defeats_should_refresh.md) | Cache fallback Err→Ok conversion defeats `should_refresh()` — fixed via `cached + expired` guard in `should_refresh()` |
-| bug | [BUG-256 🟢 Fixed](../../../task/claude_profile/bug/256_retry_ok_does_not_clear_cached_metadata.md) | `retry OK` does not clear `cached` metadata — `~` and `(Xh ago)` persist after successful refresh; fix = AC-11 |
+| File | Relationship |
+|------|--------------|
+| [BUG-255 🟢 Fixed](../../../../../task/claude_profile/bug/255_cache_fallback_defeats_should_refresh.md) | Cache fallback Err→Ok conversion defeats `should_refresh()` — fixed via `cached + expired` guard in `should_refresh()` |
+| [BUG-256 🟢 Fixed](../../../../../task/claude_profile/bug/256_retry_ok_does_not_clear_cached_metadata.md) | `retry OK` does not clear `cached` metadata — `~` and `(Xh ago)` persist after successful refresh; fix = AC-11 |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [009_token_usage.md](009_token_usage.md) | Live quota reporting — this feature adds fallback when live fetch fails |
+| [024_session_touch.md](024_session_touch.md) | Touch lifecycle — cache persists touch state |
+| [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | Model override — cache persists override decision |
+| [029_account_host_metadata.md](029_account_host_metadata.md) | `{name}.json` structure — cache extends the same file |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/usage/fetch.rs` | Cache write on fetch success (`write_quota_cache`); cache read on fetch error (`read_quota_cache`) |
+| `src/usage/refresh.rs` | `apply_refresh()` retry cache write — clears `aq.cached`/`aq.cache_age_secs` and calls `write_quota_cache()` after `retry OK` (AC-11); `should_refresh()` `cached + expired` guard (AC-10) |
+| `src/usage/render.rs` | Staleness display — `~` prefix via `prefix_tilde()`, `(Nm ago)` age label, `(stale)` markers, `cache_json_fields()` |
+| `src/usage/api.rs` | Side-effect cache — `write_cache_string()` (model_override, AC-05) and `write_cache_bool()` (touch_idle, AC-06) |
+| `claude_profile_core/src/account.rs` | Storage layer — `QuotaCacheEntry`, `read_quota_cache()`, `write_quota_cache()`, `write_cache_field()` |

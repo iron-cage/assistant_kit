@@ -25,11 +25,13 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-17 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::1` → refresh fails → exits 3; switch NOT executed | AC-17 | Integration (BUG-213 + BUG-230 MRE) |
 | FT-18 | `touch::1` + fetch Err + expired `expiresAt` + `refresh::0` → exits 3 immediately; no refresh attempt | AC-20 | Integration (BUG-230) |
 | FT-19 | Active account + 7d(Son) < 20% → model override fires after switch | AC-18 | Integration (BUG-238 MRE) |
+| FT-20 | `override_session_model_to_opus()` fires for shorthand `"sonnet"` input, writes `"opus"` | AC-18 | Unit (BUG-257 MRE) |
 
 ### Test Case Index
 
 | ID | Test Name | AC | Category |
 |----|-----------|-----|----------|
+| FT-20 | override_session_model_to_opus fires for shorthand "sonnet" input, writes "opus" | AC-18 | BUG-257 MRE |
 | FT-01 | touch::1 idle account dispatches subprocess | AC-01 | Touch Dispatch |
 | FT-02 | touch::0 suppresses subprocess and quota fetch | AC-02 | Touch Suppression |
 | FT-03 | active account suppresses subprocess | AC-03 | Idle Guard |
@@ -50,7 +52,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-18 | touch::1 + fetch Err + expired expiresAt + refresh::0 → exits 3 immediately, no refresh attempt | AC-20 | BUG-230 |
 | FT-19 | active account + 7d(Son) < 20% → model override sonnet→opus after switch | AC-18 | BUG-238 MRE |
 
-**Total:** 19 FT cases
+**Total:** 20 FT cases
 
 ---
 
@@ -259,9 +261,20 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ### FT-19: Active account + 7d(Son) < 20% — model override sonnet→opus fires after switch (BUG-238 MRE)
 
-- **Given:** Account `alice@home.com` saved with valid OAuth token and an ACTIVE 5h window (`five_hour.resets_at` is set). `seven_day_sonnet.utilization > 80%` (remaining < 20%). The account's `{name}.json` contains `{"model": "claude-sonnet-4-6"}` (stale snapshot).
+- **Given:** Account `alice@home.com` saved with valid OAuth token and an ACTIVE 5h window (`five_hour.resets_at` is set). `seven_day_sonnet.utilization > 80%` (remaining < 20%). The account's `{name}.json` contains `{"model": "sonnet"}` (shorthand — the production convention Claude Code uses in `settings.json`; see BUG-257).
 - **When:** `clp .account.use name::alice@home.com` (default `touch::1`)
-- **Then:** Exits 0. `switched to 'alice@home.com'` on stdout. After the switch, `~/.claude/settings.json` contains `"model": "claude-opus-4-6"` — the BUG-225 Sonnet→Opus override fires even though the account is already active (no subprocess spawned, but model override still applied). Before the BUG-238 fix: model stayed at `claude-sonnet-4-6` because `pre_switch_touch_ctx()` returned `None` for active accounts, skipping the override.
+- **Then:** Exits 0. `switched to 'alice@home.com'` on stdout. After the switch, `~/.claude/settings.json` contains `"model": "opus"` (shorthand — BUG-257 write-side fix; `override_session_model_to_opus()` now writes the shorthand convention). The BUG-225 Sonnet→Opus override fires even though the account is already active (no subprocess spawned, but model override still applied). Before the BUG-238 fix: model stayed at `"sonnet"` because `pre_switch_touch_ctx()` returned `None` for active accounts, skipping the override.
 - **Exit:** 0
-- **Source fn:** `mre_bug238_model_override_fires_for_active_account` (in `tests/cli/account_mutations_test.rs`)
+- **Source fn:** `mre_bug238_model_override_fires_for_active_account` (in `src/usage/api.rs` `#[cfg(test)]` block) — fixture and assertion updated to shorthand as part of TSK-261 (BUG-257 fix)
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../../docs/feature/027_account_use_post_switch_touch.md)
+
+---
+
+### FT-20: `override_session_model_to_opus()` fires for shorthand `"sonnet"` input, writes `"opus"` (BUG-257 MRE)
+
+- **Given:** `~/.claude/` directory exists. `~/.claude/settings.json` contains `{"model": "sonnet"}` (Claude Code shorthand alias).
+- **When:** `override_session_model_to_opus(&paths)` is called directly.
+- **Then:** Returns `true`. `~/.claude/settings.json` now contains `"model": "opus"`. Additional scenarios verified in the same test: full-ID input `"claude-sonnet-4-6"` also returns `true` and writes `"opus"`; absent model (empty settings.json) returns `true` and writes `"opus"`; non-Sonnet `"opus"` returns `false`, settings.json unchanged; non-Sonnet `"haiku"` returns `false`, settings.json unchanged.
+- **Exit:** n/a (unit test)
+- **Source fn:** `mre_bug257_override_shorthand_alias` (in `claude_profile_core/tests/account_test.rs`) — ✅ TSK-261
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../../docs/feature/027_account_use_post_switch_touch.md)

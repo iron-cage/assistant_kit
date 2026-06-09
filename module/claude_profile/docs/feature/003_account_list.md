@@ -80,13 +80,29 @@ When all field toggles are disabled, only bare account name lines are printed (n
 - **AC-18**: `org_uuid::1` shows `Org ID:` line from `{name}.json`; `N/A` when absent.
 - **AC-19**: `org_name::1` shows `Org:` line from `{name}.json`; `N/A` when absent.
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/account.rs` | `list()` — enumerates credential store, reads per-machine active marker |
-| source | `src/commands/accounts.rs` | `accounts_routine()` — CLI handler |
-| doc | [command/001_account.md](../cli/command/001_account.md#command--3-accounts) | CLI command specification |
-| doc | [tests/docs/cli/command/003_accounts.md](../../tests/docs/cli/command/003_accounts.md) | Integration test plan |
-| doc | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` fields and `uuid::`, `capabilities::` params |
-| doc | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Org identity fields and `org_uuid::`, `org_name::` params |
+| File | Relationship |
+|------|--------------|
+| [command/001_account.md](../cli/command/001_account.md#command--3-accounts) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [016_current_account_awareness.md](016_current_account_awareness.md) | Current-account detection algorithm and `Current:` field additions |
+| [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` fields and `uuid::`, `capabilities::` params |
+| [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Org identity fields and `org_uuid::`, `org_name::` params |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/account.rs` | `list()` — enumerates credential store, reads per-machine active marker |
+| `src/commands/accounts.rs` | `accounts_routine()` — CLI handler |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| [tests/docs/cli/command/003_accounts.md](../../tests/docs/cli/command/003_accounts.md) | Integration test plan |

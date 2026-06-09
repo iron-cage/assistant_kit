@@ -7,6 +7,8 @@
 - **In Scope**: `.settings.show`, `.settings.get`, `.settings.set`, JSON format, atomic temp-file write, nested object preservation.
 - **Out of Scope**: Type inference for value:: (→ `algorithm/001_settings_type_inference.md`), dry-run mode (→ `feature/004_dry_run.md`).
 
+> **Deprecation notice:** `.settings.show`, `.settings.get`, and `.settings.set` are deprecated in favor of the unified `.config` command (→ `feature/006_config_command.md`). They remain functional but will be removed in a future version.
+
 ### Design
 
 **Settings format:** `~/.claude/settings.json` is a flat `{ "k1": v1, ... }` JSON object. Values may be booleans, integers, floats, strings, or nested objects.
@@ -33,6 +35,7 @@
 | doc | [algorithm/001_settings_type_inference.md](../algorithm/001_settings_type_inference.md) | Type inference rules for value:: |
 | doc | [feature/004_dry_run.md](004_dry_run.md) | dry::1 preview mode for .settings.set |
 | doc | [feature/005_cli_design.md](005_cli_design.md) | CLI routing and required parameter validation |
+| doc | [feature/006_config_command.md](006_config_command.md) | Unified `.config` command replacing `.settings.*` |
 | source | `../../src/settings_io.rs` | Settings JSON read/write implementation |
 
 ### Sources

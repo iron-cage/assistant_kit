@@ -36,7 +36,7 @@
 | 1 | Usage error | Unknown param, bad value, missing required |
 | 2 | Runtime error | `ErrorCode::InternalError` or `CommandNotImplemented` |
 
-**Help listing:** `.help` displays all 12 commands, all parameters, and a usage line. Empty argv also displays help and exits 0. `.help` anywhere in argv triggers help output.
+**Help listing:** `.help` displays all 13 commands, all parameters, and a usage line. Empty argv also displays help and exits 0. `.help` anywhere in argv triggers help output.
 
 **Binary names:** `claude_version` (primary binary) and `clv` (alias binary). Both delegate to `run_cli()`.
 
@@ -49,6 +49,7 @@
 | doc | [feature/001_version_management.md](001_version_management.md) | Version commands handled by this pipeline |
 | doc | [feature/002_process_lifecycle.md](002_process_lifecycle.md) | Process commands handled by this pipeline |
 | doc | [feature/003_settings_management.md](003_settings_management.md) | Settings commands handled by this pipeline |
+| doc | [feature/006_config_command.md](006_config_command.md) | Unified `.config` command handled by this pipeline |
 | source | `../../src/lib.rs` | run_cli() 5-phase pipeline |
 | source | `../../src/adapter.rs` | Argv → unilang token adapter |
 

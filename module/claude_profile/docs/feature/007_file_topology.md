@@ -43,11 +43,27 @@ All methods return `PathBuf` computed from `HOME`. No filesystem access is perfo
 - **AC-05**: `claude_json_file()` is NOT inside the `.claude/` directory — it is a sibling to it at `$HOME`.
 - **AC-06**: `ClaudePaths::with_home(home)` returns a `ClaudePaths` whose `credentials_file()` resolves to `{home}/.claude/.credentials.json`.
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/paths.rs` | `ClaudePaths` struct and all path methods |
-| source | `src/commands/token_paths.rs` | `paths_routine()` — CLI handler |
-| test | `tests/paths_tests.rs` | All path methods return correct values |
-| doc | [command/004_paths.md](../cli/command/004_paths.md#command--8-paths) | CLI command specification |
+| File | Relationship |
+|------|--------------|
+| [command/004_paths.md](../cli/command/004_paths.md#command--8-paths) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [014_rich_account_metadata.md](014_rich_account_metadata.md) | Uses `claude_json_file()` path for `~/.claude.json` access |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/paths.rs` | `ClaudePaths` struct and all path methods |
+| `src/commands/token_paths.rs` | `paths_routine()` — CLI handler |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/paths_tests.rs` | All path methods return correct values |

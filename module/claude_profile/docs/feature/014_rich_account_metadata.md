@@ -69,20 +69,45 @@ This label is NOT a separate field param — it is the formatted output of the e
 - **AC-11**: Accounts with no `{name}.json` snapshot on disk show `N/A` for `display_name`, `role`, `billing`, `model`.
 - **AC-12**: `clp .accounts format::json` includes `display_name`, `role`, `billing`, `model` keys per account object.
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `module/claude_core/src/paths.rs` | `claude_json_file()` — path to `~/.claude.json` (FR-19) |
-| source | `src/commands/credentials.rs`, `src/commands/accounts.rs` | `read_live_cred_meta()` — reads new fields; `credentials_status_routine()` — wires params; `accounts_routine()` — renders saved metadata |
-| source | `src/lib.rs` | Registration of `display_name::`, `role::`, `billing::`, `model::` params |
-| source | `claude_profile_core/src/account.rs` | `Account` struct with new fields; `save()` snapshots metadata files; `list()` reads snapshots |
-| test | `tests/cli/credentials_test.rs` | Test cases for each opt-in field on `.credentials.status` |
-| test | `tests/cli/accounts_test.rs` | Test cases for rich metadata fields on `.accounts` |
-| doc | [007_file_topology.md](007_file_topology.md) | `claude_json_file()` path method |
-| doc | [012_live_credentials_status.md](012_live_credentials_status.md) | Base `.credentials.status` command |
-| doc | [command/002_credentials.md](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI command specification |
-| doc | [cli/param/readme.md](../cli/param/readme.md) | New param entries (display_name::, role::, billing::, model::) |
-| bug | `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json`; `switch_account()` restores/clears `model` in `~/.claude/settings.json` on each switch |
-| doc | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | Extends this feature: `uuid::`, `capabilities::` params |
-| doc | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Extends this feature: `org_uuid::`, `org_name::` params via endpoint 005 |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json`; `switch_account()` restores/clears `model` in `~/.claude/settings.json` on each switch |
+
+### Commands
+
+| File | Relationship |
+|------|--------------|
+| [command/002_credentials.md](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [007_file_topology.md](007_file_topology.md) | `claude_json_file()` path method |
+| [012_live_credentials_status.md](012_live_credentials_status.md) | Base `.credentials.status` command |
+| [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | Extends this feature: `uuid::`, `capabilities::` params |
+| [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Extends this feature: `org_uuid::`, `org_name::` params via endpoint 005 |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/readme.md](../cli/param/readme.md) | New param entries (display_name::, role::, billing::, model::) |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `module/claude_core/src/paths.rs` | `claude_json_file()` — path to `~/.claude.json` (FR-19) |
+| `src/commands/credentials.rs`, `src/commands/accounts.rs` | `read_live_cred_meta()` — reads new fields; `credentials_status_routine()` — wires params; `accounts_routine()` — renders saved metadata |
+| `src/lib.rs` | Registration of `display_name::`, `role::`, `billing::`, `model::` params |
+| `claude_profile_core/src/account.rs` | `Account` struct with new fields; `save()` snapshots metadata files; `list()` reads snapshots |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/credentials_test.rs` | Test cases for each opt-in field on `.credentials.status` |
+| `tests/cli/accounts_test.rs` | Test cases for rich metadata fields on `.accounts` |

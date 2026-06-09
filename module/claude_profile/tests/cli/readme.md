@@ -18,3 +18,4 @@
 | `dot_test.rs` | Help output and `.` / `.help` delegation tests (dot01–dot12). |
 | `account_assign_test.rs` | `.account.assign` marker-only write tests (aa01–aa12). |
 | `account_inspect_test.rs` | `.account.inspect` command tests. |
+| `set_model_test.rs` | `set_model::` explicit session model override tests (FT-01..FT-09, EC-1..EC-7). |

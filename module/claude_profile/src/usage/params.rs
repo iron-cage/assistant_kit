@@ -6,7 +6,7 @@
 use unilang::semantic::VerifiedCommand;
 use unilang::types::Value;
 use unilang::data::{ ErrorCode, ErrorData };
-use super::types::{ UsageParams, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility, SubprocessModel, SubprocessEffort, UsageOutputFormat, GetField };
+use super::types::{ UsageParams, SortStrategy, PreferStrategy, NextStrategy, ColsVisibility, SubprocessModel, SubprocessEffort, UsageOutputFormat, GetField, validate_set_model };
 
 // ── Parameter parser ──────────────────────────────────────────────────────────
 
@@ -200,10 +200,23 @@ pub( super ) fn parse_usage_params( cmd : &VerifiedCommand ) -> Result< UsagePar
   };
   let abs      = crate::output::parse_int_flag( cmd, "abs",      0 )? != 0;
   let no_color = crate::output::parse_int_flag( cmd, "no_color", 0 )? != 0;
+  let set_model = match cmd.arguments.get( "set_model" )
+  {
+    None                       => None,
+    Some( Value::String( s ) ) =>
+    {
+      validate_set_model( s ).map_err( |e| ErrorData::new( ErrorCode::ArgumentTypeMismatch, e ) )?;
+      Some( s.clone() )
+    }
+    _ => return Err( ErrorData::new(
+      ErrorCode::ArgumentTypeMismatch,
+      "set_model:: must be a string".to_string(),
+    ) ),
+  };
   Ok( UsageParams
   {
     refresh, live, interval, jitter, trace, sort, desc : desc_param, prefer, next, cols, touch, imodel, effort,
     count, offset, only_active, only_next, min_5h : h5_min, min_7d : d7_min, only_valid, exclude_exhausted,
-    format, get, abs, no_color,
+    format, get, abs, no_color, set_model,
   } )
 }

@@ -512,10 +512,14 @@ pub fn override_session_model_to_opus( paths : &ClaudePaths ) -> bool
     .unwrap_or_else( || serde_json::json!( {} ) );
   let Some( obj ) = live.as_object_mut() else { return false; };
   let current = obj.get( "model" ).and_then( | v | v.as_str() ).unwrap_or( "" );
-  // Override Sonnet → Opus. Already-Opus/Haiku/other models are left unchanged.
-  if current == "claude-sonnet-4-6" || current.is_empty()
+  // Fix(BUG-257): exact match "claude-sonnet-4-6" missed shorthand "sonnet" — Claude Code
+  //   writes shorthand to settings.json; full-ID check never matched production values.
+  //   Write "opus" shorthand (not "claude-opus-4-6") to match Claude Code convention.
+  // Root cause: BUG-225 fix used full model IDs; Claude Code stores shorthand in settings.json.
+  // Pitfall: contains("sonnet") matches both "sonnet" shorthand and "claude-sonnet-4-6" full ID.
+  if current.contains( "sonnet" ) || current.is_empty()
   {
-    obj.insert( "model".to_string(), serde_json::Value::String( "claude-opus-4-6".to_string() ) );
+    obj.insert( "model".to_string(), serde_json::Value::String( "opus".to_string() ) );
     let _ = std::fs::write( path, serde_json::to_string( &live ).unwrap_or_default() );
     true
   }
@@ -523,6 +527,41 @@ pub fn override_session_model_to_opus( paths : &ClaudePaths ) -> bool
   {
     false
   }
+}
+
+/// Write an explicit session model to `~/.claude/settings.json`.
+///
+/// `model_id` is the full model string (e.g., `"claude-opus-4-6"`).
+/// Pass `None` to remove the `model` key (revert to Claude Code default).
+/// Creates `~/.claude/` if it does not exist — ensures the write succeeds
+/// in environments where Claude Code has not yet initialised the directory.
+/// Any remaining I/O failure is silently ignored (best-effort policy).
+///
+/// # Fix(BUG-258)
+/// Root cause: the prior implementation called `fs::write` without first creating
+///   the parent directory. When `~/.claude/` was absent (fresh home, test isolation),
+///   `fs::write` failed with `NotFound` and the `let _` discarded the error, silently
+///   leaving `settings.json` unwritten — violating AC-01/AC-02/AC-03 for the `.usage` path.
+/// Pitfall: the `.account.use` path was unaffected because `switch_account` always
+///   writes `.credentials.json` to `~/.claude/`, creating the directory first. The
+///   `.usage` path had no such pre-condition, making the failure path-specific.
+#[ inline ]
+pub fn set_session_model( paths : &ClaudePaths, model_id : Option< &str > )
+{
+  let path = paths.settings_file();
+  // Ensure the parent directory exists before writing (Fix(BUG-258)).
+  if let Some( parent ) = path.parent() { let _ = std::fs::create_dir_all( parent ); }
+  let mut live = std::fs::read_to_string( &path )
+    .ok()
+    .and_then( | s | serde_json::from_str::< serde_json::Value >( &s ).ok() )
+    .unwrap_or_else( || serde_json::json!( {} ) );
+  let Some( obj ) = live.as_object_mut() else { return; };
+  match model_id
+  {
+    Some( id ) => { obj.insert( "model".to_string(), serde_json::Value::String( id.to_string() ) ); }
+    None       => { obj.remove( "model" ); }
+  }
+  let _ = std::fs::write( path, serde_json::to_string( &live ).unwrap_or_default() );
 }
 
 /// Validate that a named account can be deleted (name valid + file exists).

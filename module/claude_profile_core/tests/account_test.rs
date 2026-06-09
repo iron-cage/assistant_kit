@@ -51,6 +51,9 @@
 //! | `mre_bug222_switch_account_clears_model_when_no_snapshot` | switch_account() absent snapshot → removes model from live settings |
 //! | `test_ft11_025_other_machines_active_returns_others` | other_machines_active() returns foreign accounts; own marker excluded |
 //! | `test_ft12_025_other_machines_active_empty_when_only_own` | other_machines_active() returns empty when only own marker or empty store |
+//! | `ft10_set_session_model_preserves_existing_keys` | set_session_model() merges model into existing settings.json without losing other keys |
+//! | `ft11_set_session_model_creates_file_when_absent` | set_session_model() creates settings.json when file is absent (dir exists) |
+//! | `mre_bug258_set_session_model_creates_parent_dir_when_absent` | BUG-258: set_session_model() creates ~/.claude/ dir + file when dir is absent |
 
 use tempfile::TempDir;
 use claude_profile_core::account;
@@ -499,7 +502,7 @@ fn mre_bug225_override_session_model_to_opus_fires_when_sonnet()
   assert!( overrode, "override must return true when model was Sonnet" );
   let live = std::fs::read_to_string( dot_claude.join( "settings.json" ) ).unwrap();
   let model = account::parse_string_field( &live, "model" );
-  assert_eq!( model.as_deref(), Some( "claude-opus-4-6" ), "model must be upgraded to opus" );
+  assert_eq!( model.as_deref(), Some( "opus" ), "model must be upgraded to opus shorthand" );
 }
 
 /// BUG-225 MRE: `override_session_model_to_opus` is a no-op when model is already Opus.
@@ -521,12 +524,115 @@ fn mre_bug225_override_session_model_to_opus_no_op_when_already_opus()
   let tmp        = TempDir::new().unwrap();
   let dot_claude = tmp.path().join( ".claude" );
   std::fs::create_dir_all( &dot_claude ).unwrap();
-  std::fs::write( dot_claude.join( "settings.json" ), r#"{"model":"claude-opus-4-6"}"# ).unwrap();
+  std::fs::write( dot_claude.join( "settings.json" ), r#"{"model":"opus"}"# ).unwrap();
 
   let paths = ClaudePaths::with_home( tmp.path() );
   let overrode = account::override_session_model_to_opus( &paths );
 
   assert!( !overrode, "override must return false when model was already Opus" );
+}
+
+/// FT-20 MRE: `override_session_model_to_opus` handles Claude Code shorthand `"sonnet"` input
+/// and writes shorthand `"opus"` (not full ID `"claude-opus-4-6"`).
+///
+/// # Root Cause (BUG-257)
+/// `override_session_model_to_opus()` checked `current == "claude-sonnet-4-6"` but Claude Code
+/// writes the shorthand `"sonnet"` to `~/.claude/settings.json`. The exact-string check never
+/// matched production values — the session remained on Sonnet even when quota was exhausted.
+/// Additionally, the write side used `"claude-opus-4-6"` (full ID) instead of `"opus"` shorthand.
+///
+/// # Why Not Caught
+/// BUG-225 tests pre-wrote the full ID `"claude-sonnet-4-6"` — not the shorthand
+/// `"sonnet"` that Claude Code actually writes. The test passed while the real-world
+/// path was always broken.
+///
+/// # Fix Applied
+/// Read side: `current == "claude-sonnet-4-6"` → `current.contains("sonnet")`.
+/// Write side: `"claude-opus-4-6"` → `"opus"` (matches Claude Code shorthand convention).
+///
+/// # Prevention
+/// Scenario 1 asserts BOTH return value AND written content. Scenario 2 guards the
+/// full-ID path as a regression guard. Scenario 3 guards non-Sonnet models are left alone.
+///
+/// # Pitfall
+/// `contains("sonnet")` is intentionally broad — matches `"sonnet"`, `"claude-sonnet-4-6"`,
+/// and any future sonnet variant. A `"sonnet"` substring in an opus ID would be a naming
+/// regression in the Claude API, not a code concern here.
+#[ doc = "bug_reproducer(BUG-257)" ]
+#[ test ]
+fn mre_bug257_override_shorthand_alias()
+{
+  let tmp   = TempDir::new().unwrap();
+  let paths = ClaudePaths::with_home( tmp.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+
+  // Scenario 1: shorthand "sonnet" → must return true + write "opus"
+  let settings = paths.settings_file();
+  std::fs::write( &settings, r#"{"model":"sonnet"}"# ).unwrap();
+  let overrode = account::override_session_model_to_opus( &paths );
+  assert!( overrode, "BUG-257: override must fire for shorthand \"sonnet\" input" );
+  let content = std::fs::read_to_string( &settings ).unwrap();
+  assert!(
+    content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
+    "BUG-257: override must write shorthand \"opus\", not full ID; got: {content}",
+  );
+
+  // Scenario 2: full ID "claude-sonnet-4-6" still fires (regression guard)
+  std::fs::write( &settings, r#"{"model":"claude-sonnet-4-6"}"# ).unwrap();
+  let overrode = account::override_session_model_to_opus( &paths );
+  assert!( overrode, "full ID claude-sonnet-4-6 must still fire override" );
+
+  // Scenario 3: non-sonnet model "opus" → must NOT fire
+  std::fs::write( &settings, r#"{"model":"opus"}"# ).unwrap();
+  let overrode = account::override_session_model_to_opus( &paths );
+  assert!( !overrode, "non-sonnet model must not trigger override" );
+
+  // Scenario 4: absent model → must fire (empty string case)
+  std::fs::write( &settings, r"{}" ).unwrap();
+  let overrode = account::override_session_model_to_opus( &paths );
+  assert!( overrode, "absent model field must trigger override (defaults to opus)" );
+}
+
+/// `set_session_model()` writes the correct model ID or removes the key.
+///
+/// ## Scenarios
+/// - `Some("claude-opus-4-6")` → writes `"model": "claude-opus-4-6"`
+/// - `Some("claude-sonnet-4-6")` → writes `"model": "claude-sonnet-4-6"`
+/// - `Some("claude-haiku-4-5-20251001")` → writes `"model": "claude-haiku-4-5-20251001"`
+/// - `None` (default) → removes the `model` key entirely
+///
+/// ## Why This Test Exists
+/// `set_session_model` is the exclusive mechanism for `set_model::` param — no
+/// other code path writes arbitrary model IDs to `settings.json`. Testing the
+/// 4 accepted values confirms write correctness and key removal.
+#[ test ]
+fn it_set_session_model_writes_and_removes()
+{
+  let tmp   = TempDir::new().unwrap();
+  let paths = ClaudePaths::with_home( tmp.path() );
+  std::fs::create_dir_all( paths.base() ).unwrap();
+  let settings = paths.settings_file();
+
+  // opus
+  std::fs::write( &settings, r"{}" ).unwrap();
+  account::set_session_model( &paths, Some( "claude-opus-4-6" ) );
+  let content = std::fs::read_to_string( &settings ).unwrap();
+  assert!( content.contains( "\"claude-opus-4-6\"" ), "set_session_model opus must write full ID; got: {content}" );
+
+  // sonnet
+  account::set_session_model( &paths, Some( "claude-sonnet-4-6" ) );
+  let content = std::fs::read_to_string( &settings ).unwrap();
+  assert!( content.contains( "\"claude-sonnet-4-6\"" ), "set_session_model sonnet must write full ID; got: {content}" );
+
+  // haiku
+  account::set_session_model( &paths, Some( "claude-haiku-4-5-20251001" ) );
+  let content = std::fs::read_to_string( &settings ).unwrap();
+  assert!( content.contains( "\"claude-haiku-4-5-20251001\"" ), "set_session_model haiku must write full ID; got: {content}" );
+
+  // default (None) — removes key
+  account::set_session_model( &paths, None );
+  let content = std::fs::read_to_string( &settings ).unwrap();
+  assert!( !content.contains( "\"model\"" ), "set_session_model None must remove model key; got: {content}" );
 }
 
 /// FT-11/025 — `other_machines_active()` returns other machines' account names,
@@ -1031,4 +1137,115 @@ fn cache_write_recovers_from_malformed_json()
     .expect( "cache must be readable after recovery" );
   let ( h5, _ ) = entry.five_hour.expect( "five_hour must be present" );
   assert!( ( h5 - 45.0 ).abs() < f64::EPSILON, "five_hour utilization: {h5}" );
+}
+
+// ── set_session_model ─────────────────────────────────────────────────────────
+
+/// FT-10 (AC-10): `set_session_model()` preserves all pre-existing `settings.json` keys.
+///
+/// A write with `model_id = Some("claude-opus-4-6")` must NOT remove other keys
+/// such as `theme` or `autoUpdaterStatus`.
+#[ test ]
+fn ft10_set_session_model_preserves_existing_keys()
+{
+  let tmp   = TempDir::new().unwrap();
+  let dot   = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  std::fs::write(
+    dot.join( "settings.json" ),
+    r#"{"theme":"dark","autoUpdaterStatus":"disabled"}"#,
+  ).unwrap();
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  claude_profile_core::account::set_session_model( &paths, Some( "claude-opus-4-6" ) );
+
+  let content = std::fs::read_to_string( dot.join( "settings.json" ) )
+    .expect( "settings.json must exist after set_session_model" );
+  assert!(
+    content.contains( "\"model\"" ) && content.contains( "claude-opus-4-6" ),
+    "settings.json must contain the written model, got: {content}",
+  );
+  assert!(
+    content.contains( "\"theme\"" ) && content.contains( "dark" ),
+    "settings.json must preserve `theme` key, got: {content}",
+  );
+  assert!(
+    content.contains( "\"autoUpdaterStatus\"" ) && content.contains( "disabled" ),
+    "settings.json must preserve `autoUpdaterStatus` key, got: {content}",
+  );
+}
+
+/// FT-11 (AC-11): `set_session_model()` creates `settings.json` when the file is absent.
+///
+/// When `~/.claude/settings.json` does not exist, `set_session_model()` creates it
+/// containing only the requested `model` key.
+#[ test ]
+fn ft11_set_session_model_creates_file_when_absent()
+{
+  let tmp = TempDir::new().unwrap();
+  let dot = tmp.path().join( ".claude" );
+  std::fs::create_dir_all( &dot ).unwrap();
+  // settings.json intentionally absent.
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  claude_profile_core::account::set_session_model( &paths, Some( "claude-opus-4-6" ) );
+
+  let settings = dot.join( "settings.json" );
+  assert!( settings.exists(), "set_session_model must create settings.json when absent" );
+  let content = std::fs::read_to_string( &settings )
+    .expect( "settings.json must be readable" );
+  assert!(
+    content.contains( "\"model\"" ) && content.contains( "claude-opus-4-6" ),
+    "created settings.json must contain the requested model, got: {content}",
+  );
+}
+
+/// MRE for BUG-258: `set_session_model()` silently failed when `~/.claude/` dir absent.
+///
+/// ## Root Cause
+/// `set_session_model()` called `fs::write(path, ...)` without first ensuring the
+/// parent directory existed. When `~/.claude/` was absent, `fs::write` failed with
+/// `NotFound`; `let _` silently discarded the error. The model was not written,
+/// violating AC-01/AC-02/AC-03 for the `.usage` invocation path.
+///
+/// ## Why Not Caught
+/// FT-11 tests the case where the file is absent but the directory exists (callers
+/// always created the dir manually). No test started without `~/.claude/` at all.
+///
+/// ## Fix Applied
+/// `set_session_model()` now calls `create_dir_all(path.parent())` before `fs::write`.
+///
+/// ## Prevention
+/// Precondition `assert!(!dot.exists())` confirms the directory is truly absent —
+/// if the fixture accidentally creates it, the test would be a false negative.
+///
+/// ## Pitfall
+/// Unit test callers always pass `ClaudePaths::with_home(tmp.path())` with an explicit
+/// `TempDir`, so they must NOT call `create_dir_all` on `~/.claude/` when testing this path.
+#[ doc = "bug_reproducer(BUG-258)" ]
+#[ test ]
+fn mre_bug258_set_session_model_creates_parent_dir_when_absent()
+{
+  let tmp = TempDir::new().unwrap();
+  let dot = tmp.path().join( ".claude" );
+  // Precondition: ~/.claude/ must NOT exist.
+  assert!(
+    !dot.exists(),
+    "test precondition: ~/.claude/ must not exist before calling set_session_model",
+  );
+
+  let paths = ClaudePaths::with_home( tmp.path() );
+  claude_profile_core::account::set_session_model( &paths, Some( "claude-opus-4-6" ) );
+
+  let settings = dot.join( "settings.json" );
+  assert!(
+    settings.exists(),
+    "set_session_model must create ~/.claude/ and settings.json when parent dir absent",
+  );
+  let content = std::fs::read_to_string( &settings )
+    .expect( "settings.json must be readable after set_session_model creates parent dir" );
+  assert!(
+    content.contains( "\"model\"" ) && content.contains( "claude-opus-4-6" ),
+    "settings.json must contain the requested model, got: {content}",
+  );
 }

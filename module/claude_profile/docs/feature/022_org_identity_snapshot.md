@@ -85,21 +85,41 @@ Applied to `.credentials.status` (reads from live `~/.claude.json` — org field
 - **AC-10**: `fetch_claude_cli_roles()` is feature-gated; `claude_profile_core` with `default-features = false` does not require `claude_quota` dep.
 - **AC-11**: Personal accounts (null workspace fields in API response) → `workspace_uuid`, `workspace_name` are stored as empty string in `Account`, shown as `N/A` in text output, and included as `""` in JSON output (per AC-09).
 
-### Cross-References
+### Contracts
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `claude_profile_core/src/account.rs` | `Account` struct org fields; `save()` writes org identity to `{name}.json` (feature-gated); `delete()` removes `{name}.json` best-effort; `list()` reads org identity from `{name}.json` |
-| source | `claude_quota/src/lib.rs` | `fetch_claude_cli_roles()` transport; `ClaudeCliRolesData` struct |
-| source | `src/commands/credentials.rs`, `src/commands/accounts.rs` | `credentials_status_routine()` — reads active account org identity from `{name}.json`; `accounts_routine()` — renders org fields |
-| source | `src/lib.rs` | Registration of `org_uuid::` and `org_name::` params |
-| test | `tests/cli/accounts_test.rs` | org field rendering from `{name}.json` snapshot |
-| test | `tests/cli/account_mutations_test.rs` | org identity in `{name}.json` created on save; removed on delete |
-| test | `tests/cli/credentials_test.rs` | `org_uuid::` and `org_name::` on `.credentials.status` |
-| doc | [002_account_save.md](002_account_save.md) | `.account.save` — org identity written to `{name}.json` and idempotency |
-| doc | [005_account_delete.md](005_account_delete.md) | `.account.delete` — `{name}.json` removed best-effort |
-| doc | [014_rich_account_metadata.md](014_rich_account_metadata.md) | Base rich metadata feature (FR-20); this feature extends it |
-| doc | [cli/param/030_org_uuid.md](../cli/param/030_org_uuid.md) | `org_uuid::` param specification |
-| doc | [cli/param/031_org_name.md](../cli/param/031_org_name.md) | `org_name::` param specification |
-| doc | `contract/claude_code/docs/endpoint/005_claude_cli_roles.md` | Endpoint 005 wire contract |
-| doc | [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) | Field presence group — `org_uuid::` and `org_name::` are members |
+| File | Relationship |
+|------|--------------|
+| `contract/claude_code/docs/endpoint/005_claude_cli_roles.md` | Endpoint 005 wire contract |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [002_account_save.md](002_account_save.md) | `.account.save` — org identity written to `{name}.json` and idempotency |
+| [005_account_delete.md](005_account_delete.md) | `.account.delete` — `{name}.json` removed best-effort |
+| [014_rich_account_metadata.md](014_rich_account_metadata.md) | Base rich metadata feature (FR-20); this feature extends it |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/030_org_uuid.md](../cli/param/030_org_uuid.md) | `org_uuid::` param specification |
+| [cli/param/031_org_name.md](../cli/param/031_org_name.md) | `org_name::` param specification |
+| [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) | Field presence group — `org_uuid::` and `org_name::` are members |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `claude_profile_core/src/account.rs` | `Account` struct org fields; `save()` writes org identity to `{name}.json` (feature-gated); `delete()` removes `{name}.json` best-effort; `list()` reads org identity from `{name}.json` |
+| `claude_quota/src/lib.rs` | `fetch_claude_cli_roles()` transport; `ClaudeCliRolesData` struct |
+| `src/commands/credentials.rs`, `src/commands/accounts.rs` | `credentials_status_routine()` — reads active account org identity from `{name}.json`; `accounts_routine()` — renders org fields |
+| `src/lib.rs` | Registration of `org_uuid::` and `org_name::` params |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/accounts_test.rs` | org field rendering from `{name}.json` snapshot |
+| `tests/cli/account_mutations_test.rs` | org identity in `{name}.json` created on save; removed on delete |
+| `tests/cli/credentials_test.rs` | `org_uuid::` and `org_name::` on `.credentials.status` |

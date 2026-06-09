@@ -98,18 +98,38 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 - **AC-11**: The command does not invoke `switch_account()` — `~/.claude/.credentials.json` and `~/.claude.json` are left unchanged by a successful assign.
 - **AC-12**: `clp .account.assign name::alice@corp.com for::bob@laptop dry::1` includes `_active_laptop_bob` in the dry-run stdout.
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/commands/account_assign.rs` | `account_assign_routine()` — CLI handler |
-| source | `module/claude_profile_core/src/account.rs` | `active_marker_filename()`, `resolve_hostname()`, sanitization logic reused |
-| param | [cli/param/001_name.md](../cli/param/001_name.md) | `name::` — account identifier with prefix resolution |
-| param | [cli/param/053_for.md](../cli/param/053_for.md) | `for::` — `USER@MACHINE` target identity |
-| param | [cli/param/004_dry.md](../cli/param/004_dry.md) | `dry::` — dry-run flag |
-| doc | [cli/command/001_account.md](../cli/command/001_account.md#command--16-accountassign) | CLI command specification |
-| doc | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Marker filename derivation, `active_marker_filename()`, `resolve_hostname()` |
-| doc | [004_account_use.md](004_account_use.md) | Full credential rotation (contrast: `.account.assign` is marker-only) |
-| doc | [029_account_host_metadata.md](029_account_host_metadata.md) | `host::` on `.account.save` is a display label; `for::` on `.account.assign` is a marker target |
-| test | `tests/cli/account_assign_test.rs` | Integration tests for `.account.assign` |
-| test | [tests/docs/feature/032_account_assign.md](../../tests/docs/feature/032_account_assign.md) | FT spec mapping ACs to test cases |
+| File | Relationship |
+|------|--------------|
+| [cli/command/001_account.md](../cli/command/001_account.md#command--16-accountassign) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [004_account_use.md](004_account_use.md) | Full credential rotation (contrast: `.account.assign` is marker-only) |
+| [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Marker filename derivation, `active_marker_filename()`, `resolve_hostname()` |
+| [029_account_host_metadata.md](029_account_host_metadata.md) | `host::` on `.account.save` is a display label; `for::` on `.account.assign` is a marker target |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/001_name.md](../cli/param/001_name.md) | `name::` — account identifier with prefix resolution |
+| [cli/param/004_dry.md](../cli/param/004_dry.md) | `dry::` — dry-run flag |
+| [cli/param/053_for.md](../cli/param/053_for.md) | `for::` — `USER@MACHINE` target identity |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/commands/account_assign.rs` | `account_assign_routine()` — CLI handler |
+| `module/claude_profile_core/src/account.rs` | `active_marker_filename()`, `resolve_hostname()`, sanitization logic reused |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/account_assign_test.rs` | Integration tests for `.account.assign` |
+| [tests/docs/feature/032_account_assign.md](../../tests/docs/feature/032_account_assign.md) | FT spec mapping ACs to test cases |

@@ -90,25 +90,41 @@
 - **AC-16**: `count::`, `offset::`, filter params, and `get::` all work combined with `sort::`, `next::`, `prefer::`, and `cols::`.
 - **AC-17**: `clp .usage only_active::1 get::status` on an N-account store performs exactly 1 HTTP request to the OAuth usage API regardless of N. The active account is identified from the `_active_{hostname}_{user}` filesystem marker before any HTTP call; non-active accounts are excluded from the fetch set at step 2.
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/usage/mod.rs` | filter pipeline application and orchestration |
-| source | `src/usage/render.rs` | `get::` field extraction, `format::value`/`tsv`/`plain` rendering |
-| param | [cli/param/037_count.md](../cli/param/037_count.md) | `count::` parameter specification |
-| param | [cli/param/038_offset.md](../cli/param/038_offset.md) | `offset::` parameter specification |
-| param | [cli/param/039_only_active.md](../cli/param/039_only_active.md) | `only_active::` parameter specification |
-| param | [cli/param/040_only_next.md](../cli/param/040_only_next.md) | `only_next::` parameter specification |
-| param | [cli/param/041_min_5h.md](../cli/param/041_min_5h.md) | `min_5h::` parameter specification |
-| param | [cli/param/042_min_7d.md](../cli/param/042_min_7d.md) | `min_7d::` parameter specification |
-| param | [cli/param/043_only_valid.md](../cli/param/043_only_valid.md) | `only_valid::` parameter specification |
-| param | [cli/param/044_exclude_exhausted.md](../cli/param/044_exclude_exhausted.md) | `exclude_exhausted::` parameter specification |
-| param | [cli/param/045_get.md](../cli/param/045_get.md) | `get::` parameter specification |
-| param | [cli/param/046_abs.md](../cli/param/046_abs.md) | `abs::` parameter specification |
-| param | [cli/param/047_no_color.md](../cli/param/047_no_color.md) | `no_color::` parameter specification |
-| param | [cli/param/002_format.md](../cli/param/002_format.md) | `format::` extensions (`value`, `tsv`, `plain`) |
-| doc | [009_token_usage.md](009_token_usage.md) | Base `.usage` rendering and column definitions |
-| doc | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort applied before row filtering |
-| doc | [023_next_account_strategies.md](023_next_account_strategies.md) | `next::` strategy used by `only_next::1` and `get::` |
-| command | [cli/command/006_usage.md](../cli/command/006_usage.md) | `.usage` command parameter table |
+| File | Relationship |
+|------|--------------|
+| [cli/command/006_usage.md](../cli/command/006_usage.md) | `.usage` command parameter table |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [009_token_usage.md](009_token_usage.md) | Base `.usage` rendering and column definitions |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort applied before row filtering |
+| [023_next_account_strategies.md](023_next_account_strategies.md) | `next::` strategy used by `only_next::1` and `get::` |
+| [029_account_host_metadata.md](029_account_host_metadata.md) | `get::host` and `get::role` field extraction |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/002_format.md](../cli/param/002_format.md) | `format::` extensions (`value`, `tsv`, `plain`) |
+| [cli/param/037_count.md](../cli/param/037_count.md) | `count::` parameter specification |
+| [cli/param/038_offset.md](../cli/param/038_offset.md) | `offset::` parameter specification |
+| [cli/param/039_only_active.md](../cli/param/039_only_active.md) | `only_active::` parameter specification |
+| [cli/param/040_only_next.md](../cli/param/040_only_next.md) | `only_next::` parameter specification |
+| [cli/param/041_min_5h.md](../cli/param/041_min_5h.md) | `min_5h::` parameter specification |
+| [cli/param/042_min_7d.md](../cli/param/042_min_7d.md) | `min_7d::` parameter specification |
+| [cli/param/043_only_valid.md](../cli/param/043_only_valid.md) | `only_valid::` parameter specification |
+| [cli/param/044_exclude_exhausted.md](../cli/param/044_exclude_exhausted.md) | `exclude_exhausted::` parameter specification |
+| [cli/param/045_get.md](../cli/param/045_get.md) | `get::` parameter specification |
+| [cli/param/046_abs.md](../cli/param/046_abs.md) | `abs::` parameter specification |
+| [cli/param/047_no_color.md](../cli/param/047_no_color.md) | `no_color::` parameter specification |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/usage/mod.rs` | filter pipeline application and orchestration |
+| `src/usage/render.rs` | `get::` field extraction, `format::value`/`tsv`/`plain` rendering |

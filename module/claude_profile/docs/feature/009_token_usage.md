@@ -203,28 +203,58 @@ Valid: 2 / 3   ->  Next by strategy:
 
 - **AC-31**: When `OauthAccountData.billing_type == "none"` (confirmed cancelled subscription via a successful account fetch), the account's per-fetch result is overridden to `Err("no subscription")` — the `GET /api/oauth/usage` HTTP response is discarded regardless of its status code. This makes the result semantically correct at the data layer and removes the need for context-aware display logic in `render.rs`. `~Renews` shows `"—"` for these accounts (AC-27). When `billing_type` is unknown (`OauthAccountData` fetch failed), the raw usage fetch result and standard error mapping apply. Trace behavior: when `trace::1`, `[trace] result:` is emitted AFTER the Class A override, so the trace correctly reflects the final stored result (not the raw API response). (**BUG-233 ✅ Fixed** 2026-06-03; **BUG-234 ✅ Fixed** 2026-06-03 — trace ordering)
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| bug | `task/claude_profile/bug/244_usage_command_never_applies_model_override.md` | BUG-244 ✅ Fixed: `apply_model_override()` call added to `usage_routine()` before row-filter pipeline; `label: &str` param added to distinguish `.usage` from `.account.use` trace prefix (TSK-249) |
-| source | `src/usage/api.rs`, `src/usage/fetch.rs`, `src/usage/render.rs` | `usage_routine()` CLI handler (incl. `apply_model_override` for current account — AC-32), quota fetching, table rendering, JSON output |
-| dep | `claude_quota` | `fetch_oauth_usage()`, `fetch_oauth_account()` — transport functions; `OauthUsageData`, `OauthAccountData`, `PeriodUsage` types |
-| dep | `data_fmt` | Table rendering for all output |
-| test | `tests/cli/usage_test.rs` | All-accounts quota table and JSON output tests |
-| doc | [013_account_limits.md](013_account_limits.md) | `.account.limits` command for single-account quota |
-| doc | [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | CLI command specification |
-| doc | [016_current_account_awareness.md](016_current_account_awareness.md) | Shared current-account detection algorithm; `*` flag semantics; JSON field renaming |
-| doc | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | `_active_*` naming convention; `other_machines_active()` — reads non-own markers; `@` occupied-elsewhere flag source |
-| doc | [017_token_refresh.md](017_token_refresh.md) | Token refresh extension; `apply_refresh()` and `refresh::` parameter |
-| doc | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies; three-tier grouping; `sort::`, `desc::`, `prefer::` parameters |
-| doc | [023_next_account_strategies.md](023_next_account_strategies.md) | Recommendation strategies; `next::` parameter; multi-strategy footer |
-| doc | [024_session_touch.md](024_session_touch.md) | Session touch; idle 5h window activation; `touch::` parameter |
-| param | [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter specification |
-| param | [cli/param/033_cols.md](../cli/param/033_cols.md) | `cols::` parameter specification |
-| param | [cli/param/034_touch.md](../cli/param/034_touch.md) | `touch::` parameter specification |
-| doc | [030_account_renewal_override.md](030_account_renewal_override.md) | `.account.renewal` command; `_renewal_at` field lifecycle; `~Renews` exact vs. estimated rendering |
-| param | [cli/param/049_at.md](../cli/param/049_at.md) | `at::` — absolute renewal timestamp for `.account.renewal` |
-| param | [cli/param/050_from_now.md](../cli/param/050_from_now.md) | `from_now::` — relative renewal delta for `.account.renewal` |
-| param | [cli/param/051_clear.md](../cli/param/051_clear.md) | `clear::` — remove `_renewal_at` override; restores `~`-prefixed estimate in `~Renews` |
-| doc | [033_quota_cache.md](033_quota_cache.md) | Quota cache fallback — persist last-known quota in `{name}.json`; display cached values with `~` prefix when live fetch fails |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/244_usage_command_never_applies_model_override.md` | BUG-244 ✅ Fixed: `apply_model_override()` call added to `usage_routine()` before row-filter pipeline; `label: &str` param added to distinguish `.usage` from `.account.use` trace prefix (TSK-249) |
+
+### Commands
+
+| File | Relationship |
+|------|--------------|
+| [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | CLI command specification |
+
+### Dependencies
+
+| File | Relationship |
+|------|--------------|
+| `claude_quota` | `fetch_oauth_usage()`, `fetch_oauth_account()` — transport functions; `OauthUsageData`, `OauthAccountData`, `PeriodUsage` types |
+| `data_fmt` | Table rendering for all output |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [013_account_limits.md](013_account_limits.md) | `.account.limits` command for single-account quota |
+| [016_current_account_awareness.md](016_current_account_awareness.md) | Shared current-account detection algorithm; `*` flag semantics; JSON field renaming |
+| [017_token_refresh.md](017_token_refresh.md) | Token refresh extension; `apply_refresh()` and `refresh::` parameter |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategies; three-tier grouping; `sort::`, `desc::`, `prefer::` parameters |
+| [023_next_account_strategies.md](023_next_account_strategies.md) | Recommendation strategies; `next::` parameter; multi-strategy footer |
+| [024_session_touch.md](024_session_touch.md) | Session touch; idle 5h window activation; `touch::` parameter |
+| [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | `_active_*` naming convention; `other_machines_active()` — reads non-own markers; `@` occupied-elsewhere flag source |
+| [030_account_renewal_override.md](030_account_renewal_override.md) | `.account.renewal` command; `_renewal_at` field lifecycle; `~Renews` exact vs. estimated rendering |
+| [033_quota_cache.md](033_quota_cache.md) | Quota cache fallback — persist last-known quota in `{name}.json`; display cached values with `~` prefix when live fetch fails |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter specification |
+| [cli/param/033_cols.md](../cli/param/033_cols.md) | `cols::` parameter specification |
+| [cli/param/034_touch.md](../cli/param/034_touch.md) | `touch::` parameter specification |
+| [cli/param/049_at.md](../cli/param/049_at.md) | `at::` — absolute renewal timestamp for `.account.renewal` |
+| [cli/param/050_from_now.md](../cli/param/050_from_now.md) | `from_now::` — relative renewal delta for `.account.renewal` |
+| [cli/param/051_clear.md](../cli/param/051_clear.md) | `clear::` — remove `_renewal_at` override; restores `~`-prefixed estimate in `~Renews` |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/usage/api.rs`, `src/usage/fetch.rs`, `src/usage/render.rs` | `usage_routine()` CLI handler (incl. `apply_model_override` for current account — AC-32), quota fetching, table rendering, JSON output |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/usage_test.rs` | All-accounts quota table and JSON output tests |

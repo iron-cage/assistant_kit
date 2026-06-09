@@ -121,16 +121,27 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 - **AC-16**: `sort::expires` sorts by `expires_at_ms` ascending; accounts with `expires_at_ms == 0` (unknown expiry) are placed last. Default `desc::` is `0`.
 - **AC-17**: `sort::renews` sorts by subscription renewal timer ascending via `renewal_secs()`; accounts with no subscription data are placed last (scored as `u64::MAX`). Default `desc::` is `0`.
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/usage/sort.rs`, `src/usage/params.rs` | Sort implementation; strategy parsing |
-| param | [cli/param/025_sort.md](../cli/param/025_sort.md) | `sort::` parameter specification |
-| param | [cli/param/026_desc.md](../cli/param/026_desc.md) | `desc::` parameter specification |
-| param | [cli/param/027_prefer.md](../cli/param/027_prefer.md) | `prefer::` parameter specification |
-| doc | [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm; `●` composite status emoji; per-column emoji |
-| doc | [023_next_account_strategies.md](023_next_account_strategies.md) | `→ Next` recommendation strategies (reuse sort algorithms) |
-| doc | [018_live_monitor.md](018_live_monitor.md) | `live::1` continuous mode |
-| doc | [008_auto_rotate.md](008_auto_rotate.md) | `.account.rotate` — different algorithm (highest `expires_at_ms`) |
-| param | [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter — reuses sort strategy algorithms for recommendation |
+| File | Relationship |
+|------|--------------|
+| [008_auto_rotate.md](008_auto_rotate.md) | `.account.rotate` — different algorithm (highest `expires_at_ms`) |
+| [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm; `●` composite status emoji; per-column emoji |
+| [018_live_monitor.md](018_live_monitor.md) | `live::1` continuous mode |
+| [023_next_account_strategies.md](023_next_account_strategies.md) | `→ Next` recommendation strategies (reuse sort algorithms) |
+| [024_session_touch.md](024_session_touch.md) | Session touch — endurance qualification requires concrete `5h_reset` |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/025_sort.md](../cli/param/025_sort.md) | `sort::` parameter specification |
+| [cli/param/026_desc.md](../cli/param/026_desc.md) | `desc::` parameter specification |
+| [cli/param/027_prefer.md](../cli/param/027_prefer.md) | `prefer::` parameter specification |
+| [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter — reuses sort strategy algorithms for recommendation |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/usage/sort.rs`, `src/usage/params.rs` | Sort implementation; strategy parsing |

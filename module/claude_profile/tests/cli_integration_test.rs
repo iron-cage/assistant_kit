@@ -25,6 +25,7 @@
 //! | `param_help_test` | convenience closure param descriptions + optionality | phd, pho |
 //! | `account_inspect_test` | .account.inspect diagnostic command | AI |
 //! | `account_assign_test` | .account.assign marker-only write | AA |
+//! | `set_model_test` | `set_model::` explicit session model override | FT, EC |
 //!
 //! ## Parallel Execution Note
 //!
@@ -82,3 +83,6 @@ mod account_inspect_test;
 
 #[ path = "cli/account_assign_test.rs" ]
 mod account_assign_test;
+
+#[ path = "cli/set_model_test.rs" ]
+mod set_model_test;

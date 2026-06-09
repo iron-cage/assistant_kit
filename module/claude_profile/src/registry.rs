@@ -113,9 +113,10 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       dry(),
       reg_arg_opt( "touch",   Kind::String ).with_description( "Activate idle 5h session window via subprocess after switch (0/false = off; 1/true = on, default)" ),
       reg_arg_opt( "refresh", Kind::String ).with_description( "Attempt OAuth token refresh when stored credentials are locally expired (1 = enabled, default; 0 = disabled)" ),
-      reg_arg_opt( "imodel",  Kind::String ).with_description( "Subprocess model: `auto` (default, ≥20% 7d(Son) remaining → sonnet, else → opus), `sonnet`, `opus`, `haiku` (claude-haiku-4-5-20251001), `keep`" ),
-      reg_arg_opt( "effort",  Kind::String ).with_description( "Subprocess effort level: `auto` (default, low for any model), `low`, `normal`, `high`, `max`" ),
-      reg_arg_opt( "trace",   Kind::String ).with_description( "Print [trace] lines to stderr for each internal operation (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "imodel",    Kind::String ).with_description( "Subprocess model: `auto` (default, haiku — sufficient for keep-alive), `sonnet`, `opus`, `haiku` (claude-haiku-4-5-20251001), `keep`" ),
+      reg_arg_opt( "effort",    Kind::String ).with_description( "Subprocess effort level: `auto` (default, low for any model), `low`, `normal`, `high`, `max`" ),
+      reg_arg_opt( "set_model", Kind::String ).with_description( "Set Claude Code session model: `opus` (claude-opus-4-6), `sonnet` (claude-sonnet-4-6), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)" ),
+      reg_arg_opt( "trace",     Kind::String ).with_description( "Print [trace] lines to stderr for each internal operation (0 = off, default; 1 = on)" ),
     ] )
     .examples( vec![ "clp .account.use alice@acme.com".to_string() ] )
     .end();
@@ -174,7 +175,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "next",      Kind::String  ).with_description( "Recommendation strategy: `renew` (default, soonest reset timer), `endurance` (most quota left), `drain` (least quota left)" ),
       reg_arg_opt( "cols",      Kind::String  ).with_description( "Column visibility modifiers (comma-separated `+col_id`/`-col_id`); default shows all except `sub` and `7d_son_reset`" ),
       reg_arg_opt( "touch",             Kind::String  ).with_description( "Extend active 5h session windows via isolated subprocess for accounts with an active reset countdown (0/false = off; 1/true = on, default)" ),
-      reg_arg_opt( "imodel",            Kind::String  ).with_description( "Subprocess model for touch/refresh: `auto` (default, ≥20% 7d(Son) remaining → sonnet, else → opus), `sonnet` (claude-sonnet-4-6), `opus` (claude-opus-4-6), `haiku` (claude-haiku-4-5-20251001), `keep` (no --model flag)" ),
+      reg_arg_opt( "imodel",            Kind::String  ).with_description( "Subprocess model for touch/refresh: `auto` (default, haiku — sufficient for keep-alive), `sonnet` (claude-sonnet-4-6), `opus` (claude-opus-4-6), `haiku` (claude-haiku-4-5-20251001), `keep` (no --model flag)" ),
       reg_arg_opt( "effort",            Kind::String  ).with_description( "Subprocess effort level: `auto` (default, low for any model), `low` (always --effort low), `normal` (always --effort normal), `high` (always --effort high), `max` (always --effort max)" ),
       // Row filtering parameters (TSK-223)
       reg_arg_opt( "count",             Kind::Integer ).with_description( "Max rows to display; 0 = show all (default)" ),
@@ -186,9 +187,10 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       reg_arg_opt( "only_valid",        Kind::String  ).with_description( "Hide 🔴 rows (invalid/expired token) (0 = off, default; 1 = on)" ),
       reg_arg_opt( "exclude_exhausted", Kind::String  ).with_description( "Hide 🟡 and 🔴 rows; show only 🟢 rows (0 = off, default; 1 = on)" ),
       // Extraction and display (TSK-224)
-      reg_arg_opt( "get",      Kind::String  ).with_description( "Extract bare field value for first row: `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `expires`, `renews`, `sub`, `status`, `account`, `host`, `role`, `next_event_type`, `next_event_secs`" ),
-      reg_arg_opt( "abs",      Kind::String  ).with_description( "Replace percentage columns with absolute token counts where available (0 = off, default; 1 = on)" ),
-      reg_arg_opt( "no_color", Kind::String  ).with_description( "Strip emoji and ANSI sequences; status shows `ok`/`warn`/`err` (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "get",       Kind::String  ).with_description( "Extract bare field value for first row: `5h_left`, `5h_reset`, `7d_left`, `7d_son`, `7d_reset`, `expires`, `renews`, `sub`, `status`, `account`, `host`, `role`, `next_event_type`, `next_event_secs`" ),
+      reg_arg_opt( "abs",       Kind::String  ).with_description( "Replace percentage columns with absolute token counts where available (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "no_color",  Kind::String  ).with_description( "Strip emoji and ANSI sequences; status shows `ok`/`warn`/`err` (0 = off, default; 1 = on)" ),
+      reg_arg_opt( "set_model", Kind::String  ).with_description( "Set Claude Code session model: `opus` (claude-opus-4-6), `sonnet` (claude-sonnet-4-6), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)" ),
     ],
     Box::new( usage_routine          ) );
 }

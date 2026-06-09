@@ -485,11 +485,17 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 
   // ── Session-model override (BUG-244: .usage path, AC-32) ──────────────────
   // Must run BEFORE row-filter pipeline — filters can remove is_current from slice.
+  // When set_model:: is explicit, write the requested model and skip apply_model_override.
   {
     let claude_paths = crate::ClaudePaths::new();
     if let Some( ref claude_paths ) = claude_paths
     {
-      if let Some( current ) = accounts.iter().find( |aq| aq.is_current )
+      if let Some( ref sm ) = params.set_model
+      {
+        let model_id = super::types::validate_set_model( sm ).ok().flatten();
+        claude_profile_core::account::set_session_model( claude_paths, model_id );
+      }
+      else if let Some( current ) = accounts.iter().find( |aq| aq.is_current )
       {
         if let Ok( ref data ) = current.result
         {
@@ -685,8 +691,8 @@ mod tests
 
     let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
     assert!(
-      content.contains( "claude-opus-4-6" ),
-      "apply_model_override must write opus to settings.json when 7d(Son) is 90% consumed (10% left), got: {content}",
+      content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
+      "apply_model_override must write opus shorthand to settings.json when 7d(Son) is 90% consumed (10% left), got: {content}",
     );
   }
 
@@ -708,8 +714,8 @@ mod tests
     apply_model_override( &quota, &paths, false, "usage", "test-account" );
     let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
     assert!(
-      content.contains( "claude-opus-4-6" ),
-      "must write opus when 7d(Son) utilization=90% (10% left), got: {content}",
+      content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
+      "must write opus shorthand when 7d(Son) utilization=90% (10% left), got: {content}",
     );
   }
 
@@ -740,8 +746,8 @@ mod tests
     let dir   = TempDir::new().unwrap();
     let paths = crate::ClaudePaths::with_home( dir.path() );
     std::fs::create_dir_all( paths.base() ).unwrap();
-    // Pre-write settings.json with opus already set.
-    std::fs::write( paths.settings_file(), r#"{"model":"claude-opus-4-6"}"# ).unwrap();
+    // Pre-write settings.json with opus shorthand already set (production convention).
+    std::fs::write( paths.settings_file(), r#"{"model":"opus"}"# ).unwrap();
     let quota = OauthUsageData
     {
       five_hour        : None,
@@ -751,11 +757,11 @@ mod tests
     apply_model_override( &quota, &paths, false, "usage", "test-account" );
     let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
     assert!(
-      content.contains( "claude-opus-4-6" ),
+      content.contains( "\"opus\"" ),
       "settings.json must still contain opus after call when already opus, got: {content}",
     );
     assert!(
-      !content.contains( "claude-sonnet" ),
+      !content.contains( "sonnet" ),
       "must not downgrade to sonnet, got: {content}",
     );
   }

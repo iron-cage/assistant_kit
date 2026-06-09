@@ -54,21 +54,41 @@
 - **AC-17**: When `{credential_store}/{name}.json` already exists and contains a `_renewal_at` key, re-running `clp .account.save` preserves the `_renewal_at` value in the updated snapshot (read-merge, not full overwrite); the `oauthAccount` key is updated and all other keys are retained.
 - **AC-18**: `clp .account.save name::alice@acme.com` when `~/.claude/settings.json` contains `{"model": "sonnet"}` writes `{"model": "sonnet"}` into `{credential_store}/alice@acme.com.json`. When `~/.claude/settings.json` is absent or has no `model` field, no model field is written to `alice@acme.com.json` and exit code is still 0.
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/account.rs` | `save()` implementation — validate, init dir, copy credentials |
-| source | `src/commands/account_ops.rs` | `account_save_routine()` — CLI handler |
-| test | `tests/cli/accounts_test.rs` | Verifies credential file and metadata snapshots created with correct content |
-| test | `claude_profile_core/tests/account_test.rs` | `as_save_writes_active_marker` — unit test: active marker written after `save()` |
-| test | `tests/cli/credentials_test.rs` | `cred14` — CLI: `.credentials.status` shows `Account: {name}` after `.account.save` |
-| test | `tests/cli/account_mutations_test.rs` | `as15` — name inferred from active marker (AC-08); `as16` — active marker written after save (AC-10); `as17`/`as18` — path-unsafe chars in local part exit 1 (AC-11); `mre_bug_209_account_save_uses_active_marker_not_stale_email` — BUG-209 regression: stale `emailAddress` ignored (AC-08); `mre_bug_212_account_save_stale_marker_uses_oauth_email` — BUG-212 regression: stale `_active` overridden by `oauthAccount.emailAddress` (AC-16) |
-| test-doc | [tests/docs/feature/002_account_save.md](../../tests/docs/feature/002_account_save.md) | FT-01…FT-10 test case planning for Feature 002 |
-| doc | [001_account_store_init.md](001_account_store_init.md) | Directory initialization triggered by save |
-| doc | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine marker naming convention used in step 8 |
-| doc | [command/001_account.md](../cli/command/001_account.md#command--4-accountsave) | CLI command specification |
-| doc | [014_rich_account_metadata.md](014_rich_account_metadata.md) | Metadata fields snapshotted by `save()` |
-| doc | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Org identity metadata lifecycle and org fields in `{name}.json` |
-| doc | [030_account_renewal_override.md](030_account_renewal_override.md) | `_renewal_at` field written by `.account.renewal`; preserved by `save()` read-merge (AC-17) |
-| bug | `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json` (step 7); `switch_account()` restores model on switch |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `save()` now writes model to `{name}.json` (step 7); `switch_account()` restores model on switch |
+
+### Commands
+
+| File | Relationship |
+|------|--------------|
+| [command/001_account.md](../cli/command/001_account.md#command--4-accountsave) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [001_account_store_init.md](001_account_store_init.md) | Directory initialization triggered by save |
+| [014_rich_account_metadata.md](014_rich_account_metadata.md) | Metadata fields snapshotted by `save()` |
+| [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Org identity metadata lifecycle and org fields in `{name}.json` |
+| [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine marker naming convention used in step 8 |
+| [030_account_renewal_override.md](030_account_renewal_override.md) | `_renewal_at` field written by `.account.renewal`; preserved by `save()` read-merge (AC-17) |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/account.rs` | `save()` implementation — validate, init dir, copy credentials |
+| `src/commands/account_ops.rs` | `account_save_routine()` — CLI handler |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/accounts_test.rs` | Verifies credential file and metadata snapshots created with correct content |
+| `claude_profile_core/tests/account_test.rs` | `as_save_writes_active_marker` — unit test: active marker written after `save()` |
+| `tests/cli/credentials_test.rs` | `cred14` — CLI: `.credentials.status` shows `Account: {name}` after `.account.save` |
+| `tests/cli/account_mutations_test.rs` | `as15` — name inferred from active marker (AC-08); `as16` — active marker written after save (AC-10); `as17`/`as18` — path-unsafe chars in local part exit 1 (AC-11); `mre_bug_209_account_save_uses_active_marker_not_stale_email` — BUG-209 regression: stale `emailAddress` ignored (AC-08); `mre_bug_212_account_save_stale_marker_uses_oauth_email` — BUG-212 regression: stale `_active` overridden by `oauthAccount.emailAddress` (AC-16) |
+| [tests/docs/feature/002_account_save.md](../../tests/docs/feature/002_account_save.md) | FT-01…FT-10 test case planning for Feature 002 |

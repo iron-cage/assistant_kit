@@ -34,11 +34,27 @@
 - **AC-03**: `threshold::1800` changes the classification boundary to 30 minutes.
 - **AC-04**: `format::json` returns `{"status":"valid","expires_in_secs":N}`.
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/token.rs` | `status()`, `status_with_threshold()`, `TokenStatus` enum |
-| source | `src/commands/token_paths.rs` | `token_status_routine()` — CLI handler |
-| test | `tests/token_tests.rs` | Valid/ExpiringSoon/Expired classification tests |
-| doc | [command/005_token.md](../cli/command/005_token.md#command--7-tokenstatus) | CLI command specification |
+| File | Relationship |
+|------|--------------|
+| [command/005_token.md](../cli/command/005_token.md#command--7-tokenstatus) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [008_auto_rotate.md](008_auto_rotate.md) | Consumes token status to detect when rotation is needed |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/token.rs` | `status()`, `status_with_threshold()`, `TokenStatus` enum |
+| `src/commands/token_paths.rs` | `token_status_routine()` — CLI handler |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/token_tests.rs` | Valid/ExpiringSoon/Expired classification tests |

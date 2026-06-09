@@ -46,14 +46,29 @@ These headers are never cached locally — no local file contains them. `stats-c
 - **AC-03**: `format::json` returns structured JSON with utilization fields.
 - **AC-04**: Missing data source → exits 2 with an actionable error (not a silent zero).
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| doc | [009_token_usage.md](009_token_usage.md) | Related: all-accounts live quota table (distinct from single-account limits) |
-| doc | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account selection pattern via `name::` |
-| doc | [command/001_account.md](../cli/command/001_account.md#command--11-accountlimits) | CLI command specification |
-| source | `src/commands/limits.rs` | `account_limits_routine()` — delegates HTTP transport to `claude_quota::fetch_rate_limits` (feature-gated) |
-| test | `tests/cli/account_limits_test.rs` | Error-path coverage: not-found, no credentials, data unavailable, invalid chars, existing-account data-unavailable |
-| test | `tests/cli/account_limits_test.rs` — `lim_it1`, `lim_it3` | Automated live API tests: default text, JSON format |
-| doc | [tests/docs/cli/command/011_account_limits.md](../../tests/docs/cli/command/011_account_limits.md) | Integration test case planning |
+| File | Relationship |
+|------|--------------|
+| [command/001_account.md](../cli/command/001_account.md#command--11-accountlimits) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [009_token_usage.md](009_token_usage.md) | Related: all-accounts live quota table (distinct from single-account limits) |
+| [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account selection pattern via `name::` |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/commands/limits.rs` | `account_limits_routine()` — delegates HTTP transport to `claude_quota::fetch_rate_limits` (feature-gated) |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/account_limits_test.rs` | Error-path coverage: not-found, no credentials, data unavailable, invalid chars, existing-account data-unavailable |
+| `tests/cli/account_limits_test.rs` — `lim_it1`, `lim_it3` | Automated live API tests: default text, JSON format |
+| [tests/docs/cli/command/011_account_limits.md](../../tests/docs/cli/command/011_account_limits.md) | Integration test case planning |

@@ -39,12 +39,23 @@
 - **AC-06**: `$PRO` set to an existing directory → `credential_store()` returns `$PRO/.persistent/claude/credential/`.
 - **AC-07**: `$PRO` unset → `credential_store()` uses `$HOME/.persistent/claude/credential/`.
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/persist.rs` | `PersistPaths` struct, resolution chain, `base()`, `credential_store()`, `ensure_exists()` |
-| test | `tests/cli/persist_test.rs::p01–p15` | Resolution chain (base()), idempotency, error cases (AC-01 through AC-05) |
-| test | `tests/cli/persist_test.rs::p16` | `credential_store()` under `$PRO` — path starts with `$PRO` (AC-06) |
-| test | `tests/cli/persist_test.rs::p17` | `credential_store()` path ends with `.persistent/claude/credential` under `$PRO` (AC-06) |
-| test | `tests/cli/persist_test.rs::p18` | `credential_store()` path ends with `.persistent/claude/credential` under `$HOME` (AC-07) |
+| File | Relationship |
+|------|--------------|
+| [001_account_store_init.md](001_account_store_init.md) | Persistent storage path is the store location initialized by first-save |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/persist.rs` | `PersistPaths` struct, resolution chain, `base()`, `credential_store()`, `ensure_exists()` |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/persist_test.rs::p01–p15` | Resolution chain (base()), idempotency, error cases (AC-01 through AC-05) |
+| `tests/cli/persist_test.rs::p16` | `credential_store()` under `$PRO` — path starts with `$PRO` (AC-06) |
+| `tests/cli/persist_test.rs::p17` | `credential_store()` path ends with `.persistent/claude/credential` under `$PRO` (AC-06) |
+| `tests/cli/persist_test.rs::p18` | `credential_store()` path ends with `.persistent/claude/credential` under `$HOME` (AC-07) |

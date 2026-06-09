@@ -4,9 +4,9 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|-----------|
-| `feature/` | Behavioral requirements for claude_version capabilities | [readme.md](feature/readme.md) | 5 |
+| `feature/` | Behavioral requirements for claude_version capabilities | [readme.md](feature/readme.md) | 6 |
 | `pattern/` | Reusable design patterns applied in the crate | [readme.md](pattern/readme.md) | 1 |
-| `algorithm/` | Documented algorithms with step-by-step procedures | [readme.md](algorithm/readme.md) | 1 |
+| `algorithm/` | Documented algorithms with step-by-step procedures | [readme.md](algorithm/readme.md) | 2 |
 | `cli/` | CLI reference: commands, parameters, types, groups, formats, user stories | [readme.md](cli/readme.md) | 15 (8 reference + 5 user_story + 2 format) |
 | standalone | Design rationale for the cm CLI redesign | — | 1 |
 
@@ -19,8 +19,10 @@
 | feature | 003 | Settings Management | [feature/003_settings_management.md](feature/003_settings_management.md) |
 | feature | 004 | Dry Run | [feature/004_dry_run.md](feature/004_dry_run.md) |
 | feature | 005 | CLI Design | [feature/005_cli_design.md](feature/005_cli_design.md) |
+| feature | 006 | Config Command | [feature/006_config_command.md](feature/006_config_command.md) |
 | pattern | 001 | Version Lock | [pattern/001_version_lock.md](pattern/001_version_lock.md) |
 | algorithm | 001 | Settings Type Inference | [algorithm/001_settings_type_inference.md](algorithm/001_settings_type_inference.md) |
+| algorithm | 002 | Config Resolution | [algorithm/002_config_resolution.md](algorithm/002_config_resolution.md) |
 | cli | 001 | Commands | [cli/command/readme.md](cli/command/readme.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](cli/002_dictionary.md) |
 | cli | 003 | Parameter Groups | [cli/param_group/readme.md](cli/param_group/readme.md) |

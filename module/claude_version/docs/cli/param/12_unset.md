@@ -1,0 +1,37 @@
+# Parameter :: 12. `unset::`
+
+-- **Summary:** Remove a settings key from the target scope file instead of writing a value.
+-- **Type:** bool
+-- **Default:** false
+-- **Commands:** `.config`
+-- **Group:** Config Identity
+
+When `unset::1`, `.config key::K` deletes key K from the target scope's settings file rather than reading or writing it. Mutually exclusive with `value::`.
+
+- **Type:** bool (0 or 1)
+- **Default:** `false` (0)
+- **Validation:** `unset::1` requires `key::` to be present; `unset::1` with `value::` → exit 1
+
+```sh
+cm .config key::theme unset::1            # removes "theme" from user settings
+cm .config key::theme unset::1 scope::project  # removes "theme" from project settings
+cm .config key::theme unset::1 dry::1     # previews removal without changing file
+```
+
+### Referenced Commands
+
+| # | Command |
+|---|---------|
+| 1 | [`.config`](../command/config.md#command--13-config) |
+
+### Referenced Parameter Groups
+
+| # | Group |
+|---|-------|
+| 1 | [Config Identity](../param_group/04_config_identity.md) |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|-----------|---------|
+| 1 | [004 Settings Management](../user_story/004_settings_management.md) | Developer (settings management) |

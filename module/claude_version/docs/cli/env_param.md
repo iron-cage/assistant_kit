@@ -7,11 +7,12 @@
 - **In Scope**: All env vars read by cm at startup or during command execution.
 - **Out of Scope**: CLI parameter reference (→ `005_params.md`), config file parameters (→ `config_param.md`).
 
-### All Environment Variables (1 total)
+### All Environment Variables (2 total)
 
 | # | Variable | Type | Default | Purpose |
 |---|----------|------|---------|---------|
 | 1 | `HOME` | Path | *(OS-provided)* | Locates settings file and credential store |
+| 2 | `CLAUDE_MODEL` | String | — | Overrides `model` setting; highest priority in `.config` resolution chain |
 
 ---
 
@@ -23,4 +24,14 @@ Standard Unix home directory path. cm uses this to resolve:
 
 If `HOME` is unset, commands that access settings or credentials exit with code 2.
 
-**Consumed by:** `.status`, `.version.install`, `.version.guard`, `.version.history`, `.settings.show`, `.settings.get`, `.settings.set`
+**Consumed by:** `.status`, `.version.install`, `.version.guard`, `.version.history`, `.settings.show`, `.settings.get`, `.settings.set`, `.config`
+
+---
+
+### Variable :: 2. `CLAUDE_MODEL`
+
+When set, provides the effective value for the `model` settings key in the `.config` resolution chain (env layer = highest priority). Overrides project config, user config, and catalog default.
+
+If set to an empty string, it is treated as absent (env layer skipped for `model`).
+
+**Consumed by:** `.config` (env layer of resolution chain, key `model` only)

@@ -3,11 +3,10 @@
 -- **Summary:** The value to write to a settings entry; type-inferred for JSON storage.
 -- **Type:** `SettingsValue`
 -- **Default:** (required)
--- **Commands:** `.settings.set`
--- **Group:** Settings Identity
+-- **Commands:** `.settings.set`, `.config`
+-- **Group:** Settings Identity, Config Identity
 
-Required for `.settings.set`. Type-inferred: `"true"`/`"false"` -> JSON bool,
-integer/float -> JSON number, otherwise -> JSON string.
+Required for `.settings.set`. Optional for `.config` (when present alongside `key::`, triggers set mode). Type-inferred: `"true"`/`"false"` -> JSON bool, integer/float -> JSON number, otherwise -> JSON string.
 
 - **Type:** [`SettingsValue`](../type/05_settings_value.md)
 - **Default:** **(required)**
@@ -24,12 +23,14 @@ cm .settings.set key::autoUpdate value::true  # -> true (bool)
 | # | Command |
 |---|---------|
 | 1 | [`.settings.set`](../command/settings.md#command--11-settingsset) |
+| 2 | [`.config`](../command/config.md#command--13-config) |
 
 ### Referenced Parameter Groups
 
 | # | Group |
 |---|-------|
 | 1 | [Settings Identity](../param_group/03_settings_identity.md) |
+| 2 | [Config Identity](../param_group/04_config_identity.md) |
 
 ### Referenced Types
 

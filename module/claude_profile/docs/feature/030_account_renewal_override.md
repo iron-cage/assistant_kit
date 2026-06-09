@@ -66,18 +66,38 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 - **AC-14**: Comma-list `name::alice@acme.com,bob@acme.com` updates both accounts; output shows one status line per account.
 - **AC-15**: Comma-list with one unknown account: the unknown account reports an error per-account; other accounts are still processed; command exits with a non-zero code reflecting the partial failure.
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/account.rs` | `account_renewal()` — read-merge `_renewal_at` into `{name}.json`; multi-account dispatch |
-| source | `src/commands/account_renewal.rs` | `account_renewal_routine()` — CLI handler; param validation; comma-list token resolution via `resolve_account_name()` |
-| source | `src/usage/format.rs` | `renews_label()` — `~Renews` exact vs. estimated rendering; `next_event_label()` — `→ Next` event selection |
-| test | `tests/cli/account_mutations_test.rs` | AC-01…AC-15 test cases |
-| doc | [002_account_save.md](002_account_save.md) | `save()` read-merge preserving `_renewal_at` (AC-17 there) |
-| doc | [009_token_usage.md](009_token_usage.md) | `.usage` rendering; `~Renews` and `→ Next` columns; AC-27/AC-28/AC-29 |
-| doc | [015_name_shortcut_syntax.md](015_name_shortcut_syntax.md) | Prefix resolution for `name::` — AC-12/AC-13 cover single and comma-list prefix resolution on `.account.renewal` |
-| doc | [command/001_account.md](../cli/command/001_account.md#command--14-accountrenewal) | CLI command specification |
-| param | [cli/param/049_at.md](../cli/param/049_at.md) | `at::` — absolute renewal timestamp |
-| param | [cli/param/050_from_now.md](../cli/param/050_from_now.md) | `from_now::` — relative renewal delta |
-| param | [cli/param/051_clear.md](../cli/param/051_clear.md) | `clear::` — remove renewal override |
+| File | Relationship |
+|------|--------------|
+| [cli/command/001_account.md](../cli/command/001_account.md#command--14-accountrenewal) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [002_account_save.md](002_account_save.md) | `save()` read-merge preserving `_renewal_at` (AC-17 there) |
+| [009_token_usage.md](009_token_usage.md) | `.usage` rendering; `~Renews` and `→ Next` columns; AC-27/AC-28/AC-29 |
+| [015_name_shortcut_syntax.md](015_name_shortcut_syntax.md) | Prefix resolution for `name::` — AC-12/AC-13 cover single and comma-list prefix resolution on `.account.renewal` |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/049_at.md](../cli/param/049_at.md) | `at::` — absolute renewal timestamp |
+| [cli/param/050_from_now.md](../cli/param/050_from_now.md) | `from_now::` — relative renewal delta |
+| [cli/param/051_clear.md](../cli/param/051_clear.md) | `clear::` — remove renewal override |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/account.rs` | `account_renewal()` — read-merge `_renewal_at` into `{name}.json`; multi-account dispatch |
+| `src/commands/account_renewal.rs` | `account_renewal_routine()` — CLI handler; param validation; comma-list token resolution via `resolve_account_name()` |
+| `src/usage/format.rs` | `renews_label()` — `~Renews` exact vs. estimated rendering; `next_event_label()` — `→ Next` event selection |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/account_mutations_test.rs` | AC-01…AC-15 test cases |
