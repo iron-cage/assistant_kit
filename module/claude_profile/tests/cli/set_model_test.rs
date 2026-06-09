@@ -33,6 +33,7 @@
 //! | CC-6  | `cc6_usage_set_model_default_removes_key`             | `.usage set_model::default` removes `model` key                 | P   |
 //! | CC-7  | `cc7_usage_set_model_haiku_overwrites_existing_opus`  | `.usage set_model::haiku` overwrites pre-seeded opus            | P   |
 //! | CC-8  | `cc8_usage_set_model_creates_dir_when_absent`         | `~/.claude/` absent → `set_session_model` creates dir + writes  | P   |
+//! | CC-9  | `cc9_set_model_recovers_from_malformed_settings_json` | malformed `settings.json` → treated as `{}`; model written      | P   |
 //! | CC-13 | `cc13_usage_set_model_no_trace_line_emitted`          | `.usage trace::1 set_model::` emits NO set_model trace line     | P   |
 
 use crate::cli_runner::{
@@ -663,11 +664,50 @@ fn cc8_usage_set_model_creates_dir_when_absent()
     &[ ( "HOME", home ) ],
   );
   assert_exit( &out, 0 );
+  assert!(
+    dir.path().join( ".claude" ).exists(),
+    "`~/.claude/` must be created by `set_session_model` when parent dir was absent",
+  );
   let model = read_settings_model( dir.path() );
   assert_eq!(
     model.as_deref(),
     Some( "claude-opus-4-6" ),
     "`.usage set_model::opus` must write settings.json even when `~/.claude/` was absent; got: {model:?}\nstderr: {}",
+    stderr( &out ),
+  );
+}
+
+/// CC-9: `.usage set_model::opus` when `settings.json` contains malformed JSON — graceful recovery.
+///
+/// `set_session_model()` parses `settings.json` with
+/// `.ok().and_then(|s| serde_json::from_str(...).ok()).unwrap_or_else(|| json!({}))`.
+/// When the file contains invalid JSON, the parse returns `None` and the fallback
+/// `{}` is used as the base object. The `model` key is inserted and written back.
+///
+/// Without this graceful fallback, a corrupt `settings.json` would silently block
+/// all `set_model::` writes.
+#[ test ]
+fn cc9_set_model_recovers_from_malformed_settings_json()
+{
+  let dir  = TempDir::new().unwrap();
+  let home = dir.path().to_str().unwrap();
+  write_account( dir.path(), "alice@example.com", "max", "default", FAR_FUTURE_MS, false );
+  // Pre-create ~/.claude/ with a corrupt settings.json.
+  let claude_dir = dir.path().join( ".claude" );
+  std::fs::create_dir_all( &claude_dir ).unwrap();
+  std::fs::write( claude_dir.join( "settings.json" ), b"{ INVALID JSON garbage" ).unwrap();
+
+  let out = run_cs_with_env(
+    &[ ".usage", "set_model::opus" ],
+    &[ ( "HOME", home ) ],
+  );
+  assert_exit( &out, 0 );
+  let model = read_settings_model( dir.path() );
+  assert_eq!(
+    model.as_deref(),
+    Some( "claude-opus-4-6" ),
+    "malformed `settings.json` must be treated as `{{}}` — `set_model::opus` must still \
+     write the model key; got: {model:?}\nstderr: {}",
     stderr( &out ),
   );
 }

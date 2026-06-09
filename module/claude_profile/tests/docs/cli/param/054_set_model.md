@@ -71,22 +71,22 @@ Edge case coverage for the `set_model::` parameter on `.account.use` and `.usage
 
 ---
 
-### EC-6: `.account.use` explicit override wins over `apply_post_switch_touch`
+### EC-6: `.account.use` explicit override wins over `switch_account` model restore
 
-- **Given:** Account `alice` with idle 5h window and Sonnet quota < 20% (auto-override would select Opus). `settings.json` set to `"sonnet"`.
+- **Given:** Account `alice` whose `{name}.json` stores `"model": "claude-opus-4-6"` (what `switch_account` would restore to `settings.json`).
 - **When:** `clp .account.use name::alice set_model::sonnet`
-- **Then:** Exits 0. `settings.json` contains `"model": "claude-sonnet-4-6"` — the explicit value wins over the Sonnet→Opus auto-override. The explicit write runs after `apply_post_switch_touch`.
+- **Then:** Exits 0. `settings.json` contains `"model": "claude-sonnet-4-6"` — the explicit post-match write overwrites the per-account restore.
 - **Exit:** 0
 - **Source fn:** ✅ `ec6_account_use_set_model_wins_over_switch_restore`
 - **Source:** [feature/034_explicit_session_model_override.md AC-05](../../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
-### EC-7: `.usage` explicit `set_model::` skips `apply_model_override()`
+### EC-7: `.usage` explicit `set_model::` writes to `settings.json`
 
-- **Given:** Account `alice` is the `is_current` account; `seven_day_sonnet` < 20% (auto-override would write `opus`). `settings.json` contains `"model": "claude-sonnet-4-6"`.
+- **Given:** Account `alice`. `settings.json` pre-seeded with `"model": "claude-opus-4-6"` (simulating what `apply_model_override()` would write).
 - **When:** `clp .usage set_model::sonnet`
-- **Then:** Exits 0. `settings.json` still contains `"model": "claude-sonnet-4-6"` — `apply_model_override()` was not called.
+- **Then:** Exits 0. `settings.json` contains `"model": "claude-sonnet-4-6"` — explicit `set_model::sonnet` overwrote the pre-seeded opus value, proving `apply_model_override()` was bypassed.
 - **Exit:** 0
 - **Source fn:** ✅ `ec7_usage_set_model_writes_to_settings`
 - **Source:** [feature/034_explicit_session_model_override.md AC-05](../../../../docs/feature/034_explicit_session_model_override.md)

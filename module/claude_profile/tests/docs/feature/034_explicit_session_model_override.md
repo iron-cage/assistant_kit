@@ -14,7 +14,7 @@
 | FT-02 | AC-02 | `set_model::sonnet` writes `claude-sonnet-4-6` to `settings.json` | ✅ `ft02_set_model_sonnet_writes_full_id` |
 | FT-03 | AC-03 | `set_model::haiku` writes `claude-haiku-4-5-20251001` to `settings.json` | ✅ `ft03_set_model_haiku_writes_full_id` |
 | FT-04 | AC-04 | `set_model::default` removes `model` key; other keys preserved | ✅ `ft04_set_model_default_removes_key_preserves_others` |
-| FT-05 | AC-05 | Explicit override prevents `apply_model_override()` from firing | ✅ `ft05_explicit_set_model_wins_over_switch_restore` |
+| FT-05 | AC-05 | Explicit `set_model::` wins over `switch_account` per-account model restore (`.account.use` path) | ✅ `ft05_explicit_set_model_wins_over_switch_restore` |
 | FT-06 | AC-06 | `trace::1` + `set_model::X` emits `[trace] account.use  {name}  set_model: X` | ✅ `ft06_trace_line_emitted_with_set_model` |
 | FT-07 | AC-07 | `set_model::bad` exits 1 with all four valid values in stderr | ✅ `ft07_set_model_bad_value_exits_1` |
 | FT-08 | AC-08 | `set_model::` appears in `--help` on `.account.use` and `.usage` | ✅ `ft08_set_model_appears_in_help_output` |
@@ -24,7 +24,7 @@
 
 ### Notes
 
-- All FT cases are integration tests to be implemented in `tests/cli/` (see TSK-262).
+- All FT cases are integration tests in `tests/cli/` (TSK-262).
 - FT-05 and FT-06 require `.account.use` with a real account fixture and a seeded `settings.json`.
 - FT-07 through FT-09 can be exercised with an empty credential store.
 - FT-10 and FT-11 are unit-level tests for `set_session_model()` in `claude_profile_core/tests/account_test.rs`.
@@ -75,12 +75,13 @@
 
 ---
 
-### FT-05: Explicit override prevents `apply_model_override()` from firing
+### FT-05: Explicit `set_model::` wins over `switch_account` model restore
 
-- **Given:** An account `alice` with `seven_day_sonnet` remaining < 20% (would normally trigger auto Sonnet→Opus override). `settings.json` starts with `"model": "claude-sonnet-4-6"`.
+- **Given:** An account `alice` whose `{name}.json` stores `"model": "claude-opus-4-6"` (what `switch_account` would restore to `settings.json`).
 - **When:** `clp .account.use name::alice set_model::sonnet`
-- **Then:** `settings.json` still contains `"model": "claude-sonnet-4-6"` — the explicit value wins; the auto-override did NOT fire. Exits 0.
+- **Then:** `settings.json` contains `"model": "claude-sonnet-4-6"` — the explicit post-match write overwrites the per-account restore. Exits 0.
 - **Exit:** 0
+- **Note:** Tests the `.account.use` post-match ordering (explicit `set_session_model` runs AFTER `switch_account`). The `.usage` path's `apply_model_override` mutual exclusion (`if set_model.is_some() { write } else { apply_model_override }`) is covered by EC-7.
 - **Source fn:** ✅ `ft05_explicit_set_model_wins_over_switch_restore`
 - **Source:** [034_explicit_session_model_override.md AC-05](../../../../docs/feature/034_explicit_session_model_override.md)
 
