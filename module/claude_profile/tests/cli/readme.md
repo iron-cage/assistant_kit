@@ -2,7 +2,7 @@
 
 | File | Responsibility |
 |------|----------------|
-| `helpers.rs` | Shared binary runner, assertion, and fixture helpers. |
+| `cli_runner.rs` | Shared binary runner, assertion, and fixture helpers. |
 | `accounts_test.rs` | Help output and `.accounts` command tests (h01–h07, acc01–acc16). |
 | `account_mutations_test.rs` | Account save, use, and delete tests. |
 | `account_rotate_test.rs` | `.account.rotate` command tests (rot01–rot08, trace). |
@@ -17,3 +17,4 @@
 | `account_limits_test.rs` | FR-18: `.account.limits` error paths — lim01–lim05 (IT-5 through IT-8). |
 | `dot_test.rs` | Help output and `.` / `.help` delegation tests (dot01–dot12). |
 | `account_assign_test.rs` | `.account.assign` marker-only write tests (aa01–aa12). |
+| `account_inspect_test.rs` | `.account.inspect` command tests. |
