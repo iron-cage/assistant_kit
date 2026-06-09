@@ -3,14 +3,14 @@
 -- **Summary:** Identify the settings entry to read or write.
 -- **Type:** `SettingsKey`
 -- **Default:** (required)
--- **Commands:** `.settings.get`, `.settings.set`
--- **Group:** Settings Identity
+-- **Commands:** `.settings.get`, `.settings.set`, `.config`
+-- **Group:** Settings Identity, Config Identity
 
-Required for `.settings.get` and `.settings.set`. Missing or empty value exits 1.
+Required for `.settings.get` and `.settings.set`. Optional for `.config` — absent means show-all mode. When present, value must not be empty.
 
-- **Type:** [`SettingsKey`](../type/04_settings_key.md)
-- **Default:** **(required)**
-- **Validation:** must not be empty; `key::` (empty) -> exit 1
+- **Type:** [`SettingsKey`](../type/04_settings_key.md) / [`ConfigKey`](../type/07_config_key.md)
+- **Default:** (required for `.settings.*`; optional for `.config`)
+- **Validation:** when present, must not be empty; `key::` (empty) -> exit 1
 
 ```sh
 cm .settings.get key::theme
@@ -23,12 +23,14 @@ cm .settings.set key::theme value::dark
 |---|---------|
 | 1 | [`.settings.get`](../command/settings.md#command--10-settingsget) |
 | 2 | [`.settings.set`](../command/settings.md#command--11-settingsset) |
+| 3 | [`.config`](../command/config.md#command--13-config) |
 
 ### Referenced Parameter Groups
 
 | # | Group |
 |---|-------|
 | 1 | [Settings Identity](../param_group/03_settings_identity.md) |
+| 2 | [Config Identity](../param_group/04_config_identity.md) |
 
 ### Referenced Types
 

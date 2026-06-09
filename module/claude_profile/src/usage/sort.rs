@@ -66,7 +66,7 @@ pub( crate ) fn sort_indices(
             && prefer_weekly( &accounts[ i ], prefer ) >= 30.0
         } );
 
-      // Qualified canonical: highest weekly first, then soonest reset.
+      // Qualified canonical: highest weekly first, then soonest reset, then name.
       qualified.sort_by( |&a, &b|
       {
         let wa = prefer_weekly( &accounts[ a ], prefer );
@@ -78,9 +78,10 @@ pub( crate ) fn sort_indices(
             let rb = reset_secs_of( b ).unwrap_or( u64::MAX );
             ra.cmp( &rb )
           } )
+          .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
       } );
 
-      // Unqualified canonical: highest 5h_left first; tiebreak highest weekly.
+      // Unqualified canonical: highest 5h_left first; tiebreak highest weekly, then name.
       unqualified.sort_by( |&a, &b|
       {
         let la = five_hour_left( &accounts[ a ] );
@@ -92,6 +93,7 @@ pub( crate ) fn sort_indices(
             let wb = prefer_weekly( &accounts[ b ], prefer );
             wb.partial_cmp( &wa ).unwrap_or( core::cmp::Ordering::Equal )
           } )
+          .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
       } );
 
       let mut result = qualified;
@@ -105,7 +107,7 @@ pub( crate ) fn sort_indices(
       let ( mut non_exhausted, exhausted_vec ) : ( Vec< usize >, Vec< usize > ) =
         all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 15.0 );
 
-      // Canonical: ascending prefer_weekly (lowest 7d Left first); tiebreak ascending 5h_left.
+      // Canonical: ascending prefer_weekly (lowest 7d Left first); tiebreak ascending 5h_left, then name.
       non_exhausted.sort_by( |&a, &b|
       {
         let wa = prefer_weekly( &accounts[ a ], prefer );
@@ -117,9 +119,13 @@ pub( crate ) fn sort_indices(
             let lb = five_hour_left( &accounts[ b ] );
             la.partial_cmp( &lb ).unwrap_or( core::cmp::Ordering::Equal )
           } )
+          .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
       } );
 
       if reversed { non_exhausted.reverse(); }
+      // Fix(BUG-259): sort exhausted tier by name — partition order is filesystem-dependent.
+      let mut exhausted_vec = exhausted_vec;
+      exhausted_vec.sort_by( |&a, &b| accounts[ a ].name.cmp( &accounts[ b ].name ) );
       non_exhausted.extend( exhausted_vec );
       non_exhausted
     }
@@ -150,7 +156,8 @@ pub( crate ) fn sort_indices(
       let ( mut non_exhausted, exhausted_vec ) : ( Vec< usize >, Vec< usize > ) =
         all.into_iter().partition( |&i| five_hour_left( &accounts[ i ] ) > 15.0 );
 
-      // Canonical: ascending min(7d_reset, sub_renewal) (soonest event first); tiebreak ascending prefer_weekly.
+      // Canonical: ascending min(7d_reset, sub_renewal) (soonest event first); tiebreak ascending prefer_weekly, then name.
+      // Fix(BUG-259): name as final tiebreaker makes sort deterministic when numeric keys are tied (same-token accounts).
       non_exhausted.sort_by( |&a, &b|
       {
         renewal_event_secs( a ).cmp( &renewal_event_secs( b ) )
@@ -160,9 +167,12 @@ pub( crate ) fn sort_indices(
             let wb = prefer_weekly( &accounts[ b ], prefer );
             wa.partial_cmp( &wb ).unwrap_or( core::cmp::Ordering::Equal )
           } )
+          .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
       } );
 
       if reversed { non_exhausted.reverse(); }
+      let mut exhausted_vec = exhausted_vec;
+      exhausted_vec.sort_by( |&a, &b| accounts[ a ].name.cmp( &accounts[ b ].name ) );
       non_exhausted.extend( exhausted_vec );
       non_exhausted
     }
@@ -177,7 +187,7 @@ pub( crate ) fn sort_indices(
         if ms == 0 { u64::MAX } else { ms / 1000 }
       };
       let mut v = all;
-      v.sort_by_key( |&a| expiry_secs_of( a ) );
+      v.sort_by( |&a, &b| expiry_secs_of( a ).cmp( &expiry_secs_of( b ) ).then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) ) );
       if reversed { v.reverse(); }
       v
     }
@@ -196,7 +206,7 @@ pub( crate ) fn sort_indices(
         ).map_or( u64::MAX, |( s, _ )| s )
       };
       let mut v = all;
-      v.sort_by_key( |&a| renews_secs_of( a ) );
+      v.sort_by( |&a, &b| renews_secs_of( a ).cmp( &renews_secs_of( b ) ).then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) ) );
       if reversed { v.reverse(); }
       v
     }
@@ -306,9 +316,9 @@ mod tests
       mk_aq_sort( "third@test.com",  95.0, FAR_FUTURE_MS ),  // 5% left — exhausted
     ];
     let idx = sort_indices( &accounts, SortStrategy::Drain, None, PreferStrategy::Any, 0 );
-    assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted drain: input order preserved" );
-    assert_eq!( accounts[ idx[ 1 ] ].name, "second@test.com", "all-exhausted drain: input order preserved" );
-    assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted drain: input order preserved" );
+    assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted drain: alphabetical within exhausted tier" );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "second@test.com", "all-exhausted drain: alphabetical within exhausted tier" );
+    assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted drain: alphabetical within exhausted tier" );
   }
 
   /// CC-026 — `sort::drain prefer::sonnet` primary sort key: lowest `7d(Son)` ascending.
@@ -460,9 +470,9 @@ mod tests
       mk_aq_with_reset( "third@test.com",  95.0, now, 3600 ),  // 5% left — exhausted
     ];
     let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, now );
-    assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted renew: input order preserved" );
-    assert_eq!( accounts[ idx[ 1 ] ].name, "second@test.com", "all-exhausted renew: input order preserved" );
-    assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted renew: input order preserved" );
+    assert_eq!( accounts[ idx[ 0 ] ].name, "first@test.com",  "all-exhausted renew: alphabetical within exhausted tier" );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "second@test.com", "all-exhausted renew: alphabetical within exhausted tier" );
+    assert_eq!( accounts[ idx[ 2 ] ].name, "third@test.com",  "all-exhausted renew: alphabetical within exhausted tier" );
   }
 
   // ── sort_indices: endurance strategy ─────────────────────────────────────
@@ -514,6 +524,51 @@ mod tests
     assert_eq!( idx_any.len(),    1 );
     assert_eq!( idx_sonnet.len(), 1 );
     assert_eq!( idx_opus.len(),   1 );
+  }
+
+  // ── sort_indices: determinism (BUG-259 MRE) ──────────────────────────────
+
+  /// BUG-259 MRE — `sort::renew` with all keys tied must produce alphabetical order.
+  ///
+  /// # Root Cause
+  /// `sort_by` had no final name tiebreaker; when `renewal_event_secs` and `prefer_weekly`
+  /// are identical (same-token accounts), row order depended on filesystem `read_dir`
+  /// iteration — non-deterministic across runs.
+  ///
+  /// # Why Not Caught
+  /// `it008_lim_it_accounts_in_alpha_order` tests this end-to-end but requires live
+  /// tokens; it is flaky (passes when the filesystem returns accounts in alpha order).
+  ///
+  /// # Fix Applied
+  /// Added `.then_with(|| accounts[a].name.cmp(&accounts[b].name))` as a final
+  /// tiebreaker to every `sort_by` closure in `sort_indices`, and added a name sort
+  /// on each `exhausted_vec` before appending to `non_exhausted`.
+  ///
+  /// # Prevention
+  /// Unit test creates accounts in reverse alphabetical order (charlie, bravo, alpha)
+  /// with identical sort keys and asserts alphabetical output.
+  ///
+  /// # Pitfall
+  /// `sort_by_key` was converted to `sort_by` for `Expires`/`Renews` — `sort_by_key`
+  /// does not support chaining a name tiebreaker.
+  #[ doc = "bug_reproducer(BUG-259)" ]
+  #[ test ]
+  fn mre_bug259_sort_renew_alphabetical_when_all_keys_tied()
+  {
+    // Inserted in reverse alphabetical order — before fix, output order was non-deterministic.
+    let accounts = vec![
+      mk_aq_sort( "charlie@test.com", 50.0, FAR_FUTURE_MS ),
+      mk_aq_sort( "bravo@test.com",   50.0, FAR_FUTURE_MS ),
+      mk_aq_sort( "alpha@test.com",   50.0, FAR_FUTURE_MS ),
+    ];
+    let idx = sort_indices( &accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0 );
+    assert_eq!(
+      accounts[ idx[ 0 ] ].name, "alpha@test.com",
+      "renew: identical-key accounts must sort alphabetically; got: {:?}",
+      idx.iter().map( |&i| &accounts[ i ].name ).collect::< Vec< _ > >(),
+    );
+    assert_eq!( accounts[ idx[ 1 ] ].name, "bravo@test.com",   "second alphabetically" );
+    assert_eq!( accounts[ idx[ 2 ] ].name, "charlie@test.com", "third alphabetically" );
   }
 
   /// CC-059/CC-060 — `prefer_weekly` with absent period data treats account as fully available.

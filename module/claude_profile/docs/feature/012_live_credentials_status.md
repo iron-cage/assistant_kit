@@ -55,12 +55,28 @@ Each output line is independently controlled by a boolean param. All default to 
 - **AC-06**: `sub::0 tier::0 expires::0 email::0 account::0` → only Token line shown.
 - **AC-07**: `file::1 saved::1` → File and Saved lines appended after default-on fields.
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/commands/credentials.rs` | `credentials_status_routine()` — reads credentials directly, no account store calls |
-| test | `tests/cli/credentials_test.rs::cred01–cred07` | Account-store independence, field presence, JSON, N/A cases |
-| doc | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account-store-aware status command |
-| doc | [command/002_credentials.md](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI command specification |
-| doc | [tests/docs/cli/command/010_credentials_status.md](../../tests/docs/cli/command/010_credentials_status.md) | Test case planning |
+| File | Relationship |
+|------|--------------|
+| [command/002_credentials.md](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account-store-aware status command |
+| [014_rich_account_metadata.md](014_rich_account_metadata.md) | Extends this command with opt-in rich metadata fields |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/commands/credentials.rs` | `credentials_status_routine()` — reads credentials directly, no account store calls |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/credentials_test.rs::cred01–cred07` | Account-store independence, field presence, JSON, N/A cases |
+| [tests/docs/cli/command/010_credentials_status.md](../../tests/docs/cli/command/010_credentials_status.md) | Test case planning |

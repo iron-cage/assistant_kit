@@ -37,14 +37,30 @@
 - **AC-02**: `auto_rotate( credential_store, paths )` returns `NotFound` when no inactive accounts exist.
 - **AC-03**: After `auto_rotate( credential_store, paths )`, `~/.claude/.credentials.json` contains the selected account's credentials.
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/account.rs` | `auto_rotate()` implementation |
-| source | `src/commands/account_ops.rs` | `account_rotate_routine()` — CLI handler for `.account.rotate` |
-| test | `tests/account_tests.rs::auto_rotate_*` | Rotation selection and switch tests |
-| test | `tests/docs/cli/command/013_account_rotate.md` | CLI integration test spec (IT-1..IT-8) |
-| doc | [cli/command/001_account.md#command--13-accountrotate](../cli/command/001_account.md#command--13-accountrotate) | CLI command specification |
-| doc | [004_account_use.md](004_account_use.md) | Switch primitive used by auto_rotate |
-| doc | [006_token_status.md](006_token_status.md) | Token detection to trigger rotation |
+| File | Relationship |
+|------|--------------|
+| [cli/command/001_account.md#command--13-accountrotate](../cli/command/001_account.md#command--13-accountrotate) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [004_account_use.md](004_account_use.md) | Switch primitive used by auto_rotate |
+| [006_token_status.md](006_token_status.md) | Token detection to trigger rotation |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Configurable sort strategies for `.usage`; references this command's selection algorithm as a contrast point |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/account.rs` | `auto_rotate()` implementation |
+| `src/commands/account_ops.rs` | `account_rotate_routine()` — CLI handler for `.account.rotate` |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/account_tests.rs::auto_rotate_*` | Rotation selection and switch tests |
+| [tests/docs/cli/command/013_account_rotate.md](../../tests/docs/cli/command/013_account_rotate.md) | CLI integration test spec (IT-1..IT-8) |

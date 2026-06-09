@@ -6,10 +6,10 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 | FT | Criterion | AC | Notes |
 |----|-----------|-----|-------|
-| FT-01 | `imodel::auto` selects opus when `7d(Son) < 20%` | AC-01 | Unit |
-| FT-02 | `imodel::auto` selects sonnet when `7d(Son) ≥ 20%` | AC-01 | Unit |
-| FT-03 | `imodel::auto` selects sonnet at exactly 20% boundary | AC-01 | Unit |
-| FT-04 | `imodel::auto` fallback to opus when `7d(Son)` unavailable | AC-01 | Unit |
+| FT-01 | `imodel::auto` selects haiku regardless of quota state | AC-01 | Unit |
+| FT-02 | `imodel::auto` selects haiku with high quota state | AC-01 | Unit |
+| FT-03 | `imodel::auto` selects haiku at quota boundary | AC-01 | Unit |
+| FT-04 | `imodel::auto` selects haiku when quota data absent | AC-01 | Unit |
 | FT-05 | `imodel::sonnet` always injects `--model claude-sonnet-4-6` | AC-02 | Unit |
 | FT-06 | `imodel::opus` always injects `--model claude-opus-4-6` | AC-03 | Unit |
 | FT-07 | `imodel::keep` injects no `--model` flag | AC-04 | Unit |
@@ -32,10 +32,10 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 | ID | Test Name | AC | Category |
 |----|-----------|-----|----------|
-| FT-01 | imodel::auto selects opus when sonnet low | AC-01 | Model Auto |
-| FT-02 | imodel::auto selects sonnet when sonnet above threshold | AC-01 | Model Auto |
-| FT-03 | imodel::auto selects sonnet at exactly 20% boundary | AC-01 | Boundary |
-| FT-04 | imodel::auto fallback opus when quota unavailable | AC-01 | Fallback |
+| FT-01 | imodel::auto selects haiku regardless of quota | AC-01 | Model Auto |
+| FT-02 | imodel::auto selects haiku with high quota state | AC-01 | Model Auto |
+| FT-03 | imodel::auto selects haiku at quota boundary | AC-01 | Boundary |
+| FT-04 | imodel::auto selects haiku when quota absent | AC-01 | Fallback |
 | FT-05 | imodel::sonnet explicit always sonnet | AC-02 | Explicit |
 | FT-06 | imodel::opus explicit always opus | AC-03 | Explicit |
 | FT-07 | imodel::keep no model flag | AC-04 | Explicit |
@@ -58,46 +58,46 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 ---
 
-### FT-01: `imodel::auto` selects opus when `7d(Son) < 20%`
+### FT-01: `imodel::auto` selects haiku regardless of quota state
 
-- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(15.0)` (Sonnet utilization 85%, 15% remaining — below 20% threshold).
+- **Given:** Account quota data with any `seven_day_sonnet_left_pct` value (quota state is irrelevant).
 - **When:** `resolve_model(&quota, "auto")`
-- **Then:** Returns `IsolatedModel::Specific("claude-opus-4-6")`.
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Subprocess keep-alive pings don't need expensive models; Haiku conserves Sonnet and Opus quota.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_opus_when_sonnet_low` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it_imodel_auto_selects_haiku` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
-### FT-02: `imodel::auto` selects sonnet when `7d(Son) ≥ 20%`
+### FT-02: `imodel::auto` selects haiku with high quota state
 
-- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(35.0)` (above 20% threshold).
+- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(35.0)` (quota state does not affect auto selection).
 - **When:** `resolve_model(&quota, "auto")`
-- **Then:** Returns `IsolatedModel::Specific("claude-sonnet-4-6")`.
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Quota data is not consulted — auto always yields Haiku.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_sonnet_above_threshold` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it_imodel_auto_selects_haiku` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
-### FT-03: `imodel::auto` selects sonnet at exactly 20% boundary
+### FT-03: `imodel::auto` selects haiku at quota boundary
 
-- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(20.0)` (exactly at threshold — boundary case).
+- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(20.0)` (former 20% threshold boundary — now irrelevant).
 - **When:** `resolve_model(&quota, "auto")`
-- **Then:** Returns `IsolatedModel::Specific("claude-sonnet-4-6")`. The condition is `>= 20.0` (inclusive); 20.0 selects Sonnet.
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Quota percentage is not consulted — auto always yields Haiku regardless.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_selects_sonnet_at_boundary` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it_imodel_auto_selects_haiku` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
-### FT-04: `imodel::auto` fallback to opus when `7d(Son)` unavailable
+### FT-04: `imodel::auto` selects haiku when quota data absent
 
 - **Given:** Account quota data where `seven_day_sonnet_left_pct = None` (quota fetch returned no Sonnet data).
 - **When:** `resolve_model(&quota_without_sonnet_pct, "auto")`
-- **Then:** Returns `IsolatedModel::Specific("claude-opus-4-6")`. The `else` branch treats `None` identically to `<20.0` — Opus is the conservative safe choice.
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. No quota data is needed — auto always yields Haiku.
 - **Exit:** n/a (unit test)
-- **Source fn:** `it_imodel_auto_fallback_when_quota_unavailable` (in `tests/cli/usage_test.rs`)
+- **Source fn:** `it_imodel_auto_selects_haiku_without_quota_data` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
@@ -250,7 +250,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 - **Given:** Account quota data with any `seven_day_sonnet_left_pct` value; `imodel::haiku`.
 - **When:** `resolve_model(&quota, "haiku")`
-- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Quota state is ignored; explicit value always wins. `imodel::auto` never selects Haiku — the auto algorithm only chooses between Sonnet and Opus based on `7d(Son)`.
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Quota state is ignored; explicit value always wins. `imodel::haiku` and `imodel::auto` both resolve to Haiku — auto is the default, haiku is the explicit form.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_haiku_explicit` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-13](../../../../docs/feature/026_subprocess_model_effort.md)

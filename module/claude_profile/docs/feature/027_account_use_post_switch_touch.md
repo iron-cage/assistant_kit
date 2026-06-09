@@ -18,7 +18,7 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
 3. Determine idle status from fetched data: `five_hour.resets_at.is_none()` → idle; `resets_at.is_some()` → already active.
 4. If `dry::1`: print `[dry-run] would switch to '{name}'` (no files changed, no subprocess).
 5. `switch_account(name)` — atomic credential rotation (credentials, active marker, best-effort `oauthAccount` patch); model snapshot restore from `{name}.json` into `~/.claude/settings.json`.
-5b. If quota fetch succeeded (step 2): check `seven_day_sonnet` utilization; if remaining < 20% and restored model is Sonnet, overwrite `~/.claude/settings.json` model with `"claude-opus-4-6"` (BUG-225 fix). When `touch_ctx` is absent (fetch failed — see BUG-226 limitation), this step is skipped and the snapshot model is installed as-is.
+5b. If quota fetch succeeded (step 2): check `seven_day_sonnet` utilization; if remaining < 20% and restored model is Sonnet (any form: `"sonnet"`, `"claude-sonnet-4-6"`, or absent), overwrite `~/.claude/settings.json` model with `"opus"` (BUG-225 fix; BUG-257 alias fix). When `touch_ctx` is absent (fetch failed — see BUG-226 limitation), this step is skipped and the snapshot model is installed as-is.
 6. If quota fetch succeeded (step 2) AND account was idle (step 3): call `resolve_model(quota, imodel_param)` → `IsolatedModel`; call `resolve_effort(&model, effort_param)` → `Option<&str>`; spawn `run_isolated()` with `["--print", "."]` plus optional `--model` and `--effort` flags.
 
 **When `touch::0`:** Steps 1, 4, 5 only. No quota fetch, no subprocess. Pure credential rotation (pre-Feature-027 behavior).
@@ -38,7 +38,7 @@ After `switch_account()` succeeds, `.account.use` fetches quota data for the tar
            OR: expiry check: expired(4h 21m ago) → refused (refresh::0)              ← refresh::0; exits 3 immediately
            OR: expiry check: valid (expires in 3h 34m)                               ← expiresAt in future; switch continues; omitted when expiresAt absent
 [trace] account.use  {name}  idle check: resets_at=absent → idle                     ← fetch OK path only; or resets_at=present → already active
-[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left=5%)           ← fetch OK + 7d(Son) < 20% + snapshot was Sonnet; omitted otherwise
+[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left=5%)           ← fetch OK + 7d(Son) < 20% + snapshot was Sonnet (any form); omitted otherwise
 [trace] account.use  {name}  model: {model}  effort: {effort}                        ← fetch OK path only
 [trace] account.use  {name}  subprocess: spawned                                      ← or skipped (reason: already active); fetch OK path only
 ```
@@ -76,26 +76,53 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 - **AC-15**: When `trace::1` and `touch::0`: no `[trace] account.use` lines emitted — no quota fetch operations are performed on the `touch::0` path.
 - **AC-16**: `trace::` (Kind::String, default `0`) is registered on `.account.use`; `trace::bad` exits 1 with stderr naming `0`, `1`, `false`, `true`.
 - **AC-17**: When `touch::1` (default) and the quota fetch fails (returns Err) AND the target account's token is locally expired (current time > `expiresAt` from `{credential_store}/{name}.credentials.json`) AND `refresh::1` (default): first calls `attempt_expired_token_refresh()`. If refresh succeeds: re-probes touch context with fresh token; continues with the switch (exits 0 on success). If refresh fails: exits 3 with `account credentials expired and refresh failed: {name} (expired {N}h {M}m ago)` on stderr; `switch_account()` is NOT called. When `trace::1`: emits `expired({N}h {M}m ago) → attempting refresh` → then `refresh OK — re-probing touch context` or `refresh failed → refused`. (Fix for BUG-213; extended by BUG-230.)
-- **AC-18**: When quota fetch succeeded (step 2) and `seven_day_sonnet` remaining < 20% and the just-restored session model is `"claude-sonnet-4-6"` (or absent): overwrites `~/.claude/settings.json` model with `"claude-opus-4-6"` before the subprocess step. (Fix for BUG-225.)
+- **AC-18**: When quota fetch succeeded (step 2) and `seven_day_sonnet` remaining < 20% and the just-restored session model contains `"sonnet"` (matches both shorthand `"sonnet"` and full ID `"claude-sonnet-4-6"`) or is absent: overwrites `~/.claude/settings.json` model with `"opus"` before the subprocess step. (Fix for BUG-225; alias fix for BUG-257.)
 - **AC-19**: When `trace::1` and the model override fires (AC-18): emits `[trace] account.use  {name}  model override: sonnet→opus (7d(Son) left={N}%)` before the `model:` line. Omitted when override does not fire (model was already Opus) or when quota fetch failed.
 - **AC-20**: When `touch::1` (default) and the quota fetch fails AND the target token is locally expired AND `refresh::0`: exits 3 immediately with `account credentials expired: {name} (expired {N}h {M}m ago)` on stderr; no refresh attempt is made. When `trace::1`: emits `expired({N}h {M}m ago) → refused (refresh::0)`. (Fix for BUG-230.)
 - **Limitation (BUG-226)**: When the quota fetch returns 429 (rate-limited) or any other error, quota data is unavailable and the quota-aware model upgrade (AC-18) cannot fire. The snapshot model restored by `switch_account()` is installed as-is — potentially leaving the session on Sonnet even when Sonnet quota is exhausted. No workaround exists at the `.account.use` layer; the user must manually override via `imodel::opus`.
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/commands/account_ops.rs` | `account_use_routine()` — adds quota fetch + subprocess call after credential rotation |
-| source | `src/lib.rs` | `touch::`, `imodel::`, `effort::`, `trace::` parameter registration on `.account.use` |
-| source | `src/usage/subprocess.rs`, `src/usage/api.rs` | `resolve_model()`, `resolve_effort()` reused from Feature 026; new: `TouchCtx`, `validate_imodel_str()`, `validate_effort_str()`, `pre_switch_touch_ctx()`, `apply_post_switch_touch()` |
-| dep | `claude_runner_core` | `run_isolated()`, `IsolatedModel` — subprocess execution |
-| doc | [004_account_use.md](004_account_use.md) | Credential rotation mechanics — prerequisite step |
-| doc | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | Model/effort resolution algorithm (`resolve_model`, `resolve_effort`) |
-| doc | [024_session_touch.md](024_session_touch.md) | Touch subprocess trigger conditions and idle-session semantics |
-| param | [cli/param/023_trace.md](../cli/param/023_trace.md) | `trace::` parameter specification (shared with `.usage`) |
-| param | [cli/param/034_touch.md](../cli/param/034_touch.md) | `touch::` parameter specification |
-| param | [cli/param/035_imodel.md](../cli/param/035_imodel.md) | `imodel::` parameter specification (shared with `.usage`) |
-| param | [cli/param/036_effort.md](../cli/param/036_effort.md) | `effort::` parameter specification (shared with `.usage`) |
-| command | [cli/command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | `.account.use` CLI specification |
-| bug | `task/claude_profile/bug/213_account_use_switches_to_expired_token_silently.md` | BUG-213 ✅ Fixed by TSK-216: expiry guard inserted in `account_use_routine()` before `switch_account()`; exits 3 when `now_ms > expiresAt` on the fetch-failed path |
-| bug | `task/claude_profile/bug/238_model_override_skipped_when_already_active.md` | BUG-238 ✅ Fixed: `pre_switch_touch_ctx()` refactored to `PreSwitchOutcome` enum; `apply_model_override()` extracted and called for both idle and already-active paths |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/213_account_use_switches_to_expired_token_silently.md` | BUG-213 ✅ Fixed by TSK-216: expiry guard inserted in `account_use_routine()` before `switch_account()`; exits 3 when `now_ms > expiresAt` on the fetch-failed path |
+| `task/claude_profile/bug/238_model_override_skipped_when_already_active.md` | BUG-238 ✅ Fixed: `pre_switch_touch_ctx()` refactored to `PreSwitchOutcome` enum; `apply_model_override()` extracted and called for both idle and already-active paths |
+| `task/claude_profile/bug/257_override_session_model_exact_match_misses_shorthand_alias.md` | BUG-257 ✅ Fixed (TSK-261): `contains("sonnet")` + write `"opus"` shorthand |
+
+### Commands
+
+| File | Relationship |
+|------|--------------|
+| [cli/command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | `.account.use` CLI specification |
+
+### Dependencies
+
+| File | Relationship |
+|------|--------------|
+| `claude_runner_core` | `run_isolated()`, `IsolatedModel` — subprocess execution |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [004_account_use.md](004_account_use.md) | Credential rotation mechanics — prerequisite step |
+| [024_session_touch.md](024_session_touch.md) | Touch subprocess trigger conditions and idle-session semantics |
+| [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | Model/effort resolution algorithm (`resolve_model`, `resolve_effort`) |
+| [034_explicit_session_model_override.md](034_explicit_session_model_override.md) | Explicit session model override — `set_model::` on `.account.use` bypasses `apply_model_override()` |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/023_trace.md](../cli/param/023_trace.md) | `trace::` parameter specification (shared with `.usage`) |
+| [cli/param/034_touch.md](../cli/param/034_touch.md) | `touch::` parameter specification |
+| [cli/param/035_imodel.md](../cli/param/035_imodel.md) | `imodel::` parameter specification (shared with `.usage`) |
+| [cli/param/036_effort.md](../cli/param/036_effort.md) | `effort::` parameter specification (shared with `.usage`) |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/commands/account_ops.rs` | `account_use_routine()` — adds quota fetch + subprocess call after credential rotation |
+| `src/lib.rs` | `touch::`, `imodel::`, `effort::`, `trace::` parameter registration on `.account.use` |
+| `src/usage/subprocess.rs`, `src/usage/api.rs` | `resolve_model()`, `resolve_effort()` reused from Feature 026; new: `TouchCtx`, `validate_imodel_str()`, `validate_effort_str()`, `pre_switch_touch_ctx()`, `apply_post_switch_touch()`, `apply_model_override()` |

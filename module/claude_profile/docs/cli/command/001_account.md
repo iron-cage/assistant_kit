@@ -148,8 +148,8 @@ clp .account.save host::workstation role::work
 
 Atomically overwrites `~/.claude/.credentials.json` with the named account's credentials (write-then-rename), updates the active marker (`_active_{hostname}_{user}`), and best-effort patches `~/.claude.json["oauthAccount"]` from the saved snapshot — preserving all machine-global keys untouched. When `touch::1` (default), fetches quota for the target account and spawns an isolated subprocess to activate its idle 5h session window if `five_hour.resets_at` is absent.
 
--- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`refresh::`](../param/019_refresh.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`trace::`](../param/023_trace.md)
--- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::`/`trace::` value) | 2 (runtime: account not found or HOME unset) | 3 (account credentials expired — `touch::1` + fetch failed + `expiresAt` in the past, AND refresh failed or `refresh::0`)
+-- **Parameters:** [`name::`](../param/001_name.md) **(required)**, [`dry::`](../param/004_dry.md), [`touch::`](../param/034_touch.md), [`refresh::`](../param/019_refresh.md), [`imodel::`](../param/035_imodel.md), [`effort::`](../param/036_effort.md), [`trace::`](../param/023_trace.md), [`set_model::`](../param/054_set_model.md)
+-- **Exit:** 0 (success) | 1 (usage: invalid name or invalid `imodel::`/`effort::`/`trace::`/`set_model::` value) | 2 (runtime: account not found or HOME unset) | 3 (account credentials expired — `touch::1` + fetch failed + `expiresAt` in the past, AND refresh failed or `refresh::0`)
 
 **Syntax:**
 
@@ -162,6 +162,8 @@ clp .account.use name::alice@home.com touch::0
 clp .account.use name::alice@home.com refresh::0
 clp .account.use name::alice@home.com imodel::opus effort::max
 clp .account.use name::alice@home.com trace::1
+clp .account.use name::alice@home.com set_model::opus
+clp .account.use name::alice@home.com set_model::default
 ```
 
 | Parameter | Type | Default | Purpose |
@@ -170,17 +172,19 @@ clp .account.use name::alice@home.com trace::1
 | `dry::` | `bool` | `0` | Preview action without executing |
 | `touch::` | `bool` | `1` | Activate idle 5h session window via subprocess after switch |
 | `refresh::` | `bool` | `1` | Attempt OAuth token refresh when locally expired before refusing with exit 3 |
-| `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (sonnet if `7d(Son)≥20%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
+| `imodel::` | `enum` | `auto` | Model for post-switch subprocess: `auto` (haiku — sufficient for keep-alive), `sonnet`, `opus`, `haiku`, `keep` |
 | `effort::` | `enum` | `auto` | Effort for post-switch subprocess: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
 | `trace::` | `bool` | `0` | Print `[trace] account.use` lines to stderr: credential read, quota fetch, idle check, model resolution, subprocess dispatch |
+| `set_model::` | `enum` | *(omit)* | Explicitly write session model to `settings.json`: `opus` (`claude-opus-4-6`), `sonnet` (`claude-sonnet-4-6`), `haiku` (`claude-haiku-4-5-20251001`), `default` (removes override); takes precedence over automatic `apply_model_override()` |
 
-**Algorithm (6 steps):**
+**Algorithm (7 steps):**
 1. Resolve `name::` via `AccountSelector`; load `{name}.credentials.json`
 2. `(when dry::0)` Atomically overwrite `~/.claude/.credentials.json` via write-then-rename
 3. `(when dry::0)` Write `_active_{hostname}_{user}` = `{name}` (active marker)
 4. `(when dry::0)` Best-effort patch `~/.claude.json["oauthAccount"]` from saved snapshot (preserves machine-global keys)
 5. `(when touch::1)` Fetch quota via `GET /api/oauth/usage`; `(when refresh::1 + locally expired)` call `refresh_account_token()` first; evaluate idle: `five_hour.resets_at` absent → idle
 6. `(when touch::1 + idle)` Resolve model+effort via `resolve_model()`/`resolve_effort()`; spawn isolated subprocess via `run_isolated()`
+7. Session-model override: `(when set_model:: provided)` write requested model via `set_session_model()`; `(otherwise, when target was already active + valid quota)` write resolved model via `apply_model_override()`
 
 **Examples:**
 
@@ -207,7 +211,8 @@ clp .account.use name::alice@home.com trace::1
 **Notes:**
 - `touch::1` (default): fetches quota for the target account; if `five_hour.resets_at` is absent (idle), spawns `run_isolated(["--print", "."])` with resolved model/effort to start a 5h session. Quota fetch failure checks `expiresAt` — if locally expired and `refresh::1` (default), attempts token refresh and re-probes touch context on success; exits 3 if refresh fails. If locally expired and `refresh::0`, exits 3 immediately. If `expiresAt` is absent or not yet expired, skips touch silently and the switch completes.
 - `touch::0`: pure credential rotation — no quota fetch, no subprocess, no expiry check. Pre-Feature-027 behavior.
-- `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `resolve_model()` selects Sonnet when `7d(Son) ≥ 20%`, Opus otherwise; `resolve_effort()` maps Sonnet/Opus → `low`, Haiku → no flag, Keep → no flag. `imodel::haiku` is explicit only — `auto` never selects it.
+- `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `imodel::auto` always selects Haiku (sufficient for keep-alive pings); `resolve_effort()` maps Haiku and keep → no `--effort` flag, other models → `low`. See [feature/026](../../feature/026_subprocess_model_effort.md).
+- `set_model::`: when provided, `set_session_model()` writes the requested model to `settings.json` last (after any `apply_post_switch_touch()` or `apply_model_override()`), ensuring it takes precedence. `default` removes the `model` key entirely.
 - `trace::1` only produces output when `touch::1`; with `touch::0` there are no fetch operations to trace.
 - See [feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) for full execution sequence and acceptance criteria.
 

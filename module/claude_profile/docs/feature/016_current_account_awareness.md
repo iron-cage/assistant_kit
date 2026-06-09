@@ -82,17 +82,42 @@ work@acme.com
 - **AC-10**: `.accounts` `is_current` and `.usage` `is_current` both use the same detection algorithm (token equality, no hashing, no prefix matching).
 - **AC-11**: The quota table produced by `fetch_all_quota()` contains at most one row per unique account name. The synthetic-row injection path enforces this via a lookup-then-insert (`results.iter().any(|r| r.name == synthetic_name)`) before calling `results.insert(0, ...)`. This invariant prevents the downstream `apply_refresh` and `apply_touch` phases from processing the same account twice, which would cause spurious double-refresh or double-subprocess spawning against the same credential file.
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/commands/accounts.rs` | `accounts_routine()` — `is_current` detection, `Current:` line, `current::` param |
-| source | `src/usage/fetch.rs` | `fetch_all_quota()` — `is_current` via token matching; `is_active` from per-machine active marker; `*` flag rendering; synthetic-row name-collision guard (AC-09, AC-11) |
-| doc | [003_account_list.md](003_account_list.md) | `.accounts` base command — field table and AC extended here |
-| doc | [009_token_usage.md](009_token_usage.md) | `.usage` base command — flag column and JSON schema extended here |
-| doc | [cli/param/018_current.md](../cli/param/018_current.md) | `current::` field-presence parameter |
-| doc | [command/readme.md](../cli/command/readme.md) | Syntax blocks for `.accounts` and `.usage` |
-| test | `tests/cli/accounts_test.rs` | IT-26, IT-27, IT-28 — current detection in `.accounts` |
-| test | `tests/cli/usage_test.rs` | IT-13..IT-16 — live detection and active divergence in `.usage` |
-| bug | `task/claude_profile/bug/218_fetch_all_quota_synthetic_row_collides_with_existing_account.md` | BUG-218 🟢 Fixed: `fetch_all_quota()` now guards synthetic-row insertion via `inject_synthetic_if_new()` — suppresses insert when `synthetic_name` already appears in stored-account list |
-| bug | `task/claude_profile/bug/217_switch_account_corrupts_claude_json_with_stale_snapshot_emailaddress.md` | BUG-217 🟢 Fixed: stale `emailAddress` precondition eliminated; `switch_account()` now enforces `emailAddress == name` before insert |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/217_switch_account_corrupts_claude_json_with_stale_snapshot_emailaddress.md` | BUG-217 🟢 Fixed: stale `emailAddress` precondition eliminated; `switch_account()` now enforces `emailAddress == name` before insert |
+| `task/claude_profile/bug/218_fetch_all_quota_synthetic_row_collides_with_existing_account.md` | BUG-218 🟢 Fixed: `fetch_all_quota()` now guards synthetic-row insertion via `inject_synthetic_if_new()` — suppresses insert when `synthetic_name` already appears in stored-account list |
+
+### Commands
+
+| File | Relationship |
+|------|--------------|
+| [command/readme.md](../cli/command/readme.md) | Syntax blocks for `.accounts` and `.usage` |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [003_account_list.md](003_account_list.md) | `.accounts` base command — field table and AC extended here |
+| [009_token_usage.md](009_token_usage.md) | `.usage` base command — flag column and JSON schema extended here |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/018_current.md](../cli/param/018_current.md) | `current::` field-presence parameter |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/commands/accounts.rs` | `accounts_routine()` — `is_current` detection, `Current:` line, `current::` param |
+| `src/usage/fetch.rs` | `fetch_all_quota()` — `is_current` via token matching; `is_active` from per-machine active marker; `*` flag rendering; synthetic-row name-collision guard (AC-09, AC-11) |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/accounts_test.rs` | IT-26, IT-27, IT-28 — current detection in `.accounts` |
+| `tests/cli/usage_test.rs` | IT-13..IT-16 — live detection and active divergence in `.usage` |

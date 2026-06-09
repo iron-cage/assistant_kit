@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration test cases for each cm command.
 - **Responsibility**: Index of per-command integration test case files covering command-level behavior.
-- **In Scope**: All 12 cm command test files.
+- **In Scope**: All 13 cm command test files.
 - **Out of Scope**: Per-parameter edge cases (→ `param/`), parameter group interactions (→ `param_group/`).
 
 ### Overview Table
@@ -23,4 +23,5 @@
 | 010_settings_get.md | Integration tests for `.settings.get` command | ✅ |
 | 011_settings_set.md | Integration tests for `.settings.set` command | ✅ |
 | 012_version_history.md | Integration tests for `.version.history` command | ✅ |
+| 013_config.md | Integration tests for `.config` command (show-all/get/set/unset modes) | ✅ |
 | procedure.md | Workflow for creating and updating command test specs | ✅ |

@@ -113,19 +113,37 @@ Valid: 8 / 8   ->  Next by strategy:
 - **AC-07**: Footer is omitted when 0 or 1 accounts have valid quota data (same threshold as 009_token_usage.md AC-10).
 - **AC-08**: Footer strategy lines for which no eligible account exists are omitted from the footer rather than showing an empty line.
 - **AC-09**: The drain footer metric label reflects the binding weekly dimension: `"% 7d left"` when overall weekly quota is binding (`7d_left ≤ 7d_son_left`); `"% 7d(Son) left"` when Sonnet weekly quota is binding (`7d_son_left < 7d_left`). The reset countdown sources the same quota's `resets_at` field as the percentage (BUG-216).
-- **AC-10**: `next::renew` (default) places `→` on the top non-current, non-active, non-occupied, non-h-exhausted account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). Tiebreak: when two accounts have equal renewal times, the one with lower `5h_left` (more session-depleted) is preferred — it benefits more from the upcoming renewal event and should be used while waiting. The renew footer line shows the two renewal countdowns: `7d resets in {d7}, renews in {sub}` (exact subscription date), `7d resets in {d7}, ~renews in {sub}` (estimated subscription date), or `7d resets in {d7}` when no subscription data is available.
+- **AC-10**: `next::renew` (default) places `→` on the top non-current, non-active, non-occupied, non-h-exhausted account from renew sort order — the account whose next quota renewal event fires soonest (minimum of running `7d_reset` and `subscription renewal` timers). Tiebreak 1: when two accounts have equal renewal times, the one with lower `5h_left` (more session-depleted) is preferred — it benefits more from the upcoming renewal event and should be used while waiting. Tiebreak 2: when both sort keys are equal, the account whose name sorts first alphabetically is selected — ensuring deterministic output regardless of filesystem iteration order (BUG-260). The renew footer line shows the two renewal countdowns: `7d resets in {d7}, renews in {sub}` (exact subscription date), `7d resets in {d7}, ~renews in {sub}` (estimated subscription date), or `7d resets in {d7}` when no subscription data is available.
 - **AC-11**: All three strategies (`renew`, `endurance`, `drain`) skip accounts where `is_occupied_elsewhere == true` — an account parked by another host/user pair is never recommended. When the only remaining eligible candidates are all occupied, the strategy returns no recommendation (same as no eligible candidate).
 - **AC-12**: All three strategies skip h-exhausted accounts (`5h_left ≤ 15%`, i.e., `five_hour.utilization ≥ 85.0`) — switching to a session-exhausted account provides negligible usable capacity. When all remaining eligible candidates are h-exhausted, the strategy returns no recommendation.
 - **AC-13**: The endurance footer metric line shows `{session}% session, 5h resets in {time}` — the session capacity and the 5h reset timing. It does NOT show `7d left` or `expires`; those are available in the main table and irrelevant to long-run scheduling.
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/usage/sort.rs` | `find_next_for_strategy()` — strategy selection logic |
-| source | `src/usage/render.rs` | `render_text()` — footer rendering (three strategy lines) |
-| param | [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter specification |
-| doc | [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm |
-| doc | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategy algorithms reused by endurance/drain next strategies |
-| param | [cli/param/027_prefer.md](../cli/param/027_prefer.md) | `prefer::` affects weekly quota used by endurance/drain strategies |
-| bug | `task/claude_profile/bug/243_renew_strategy_missing_5h_tiebreaker.md` | BUG-243 ✅ Fixed: renew sort uses `five_hour_left` tiebreaker via `f64::total_cmp` on equal renewal time (TSK-248) |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/243_renew_strategy_missing_5h_tiebreaker.md` | BUG-243 ✅ Fixed: renew sort uses `five_hour_left` tiebreaker via `f64::total_cmp` on equal renewal time (TSK-248) |
+| `task/claude_profile/bug/260_renew_next_selection_nondeterministic_when_fully_tied.md` | BUG-260 ✅ Fixed: added `.then_with(name cmp)` at `sort_next.rs:107`; MRE `mre_bug260_renew_nondeterministic_when_fully_tied` (TSK-263) |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategy algorithms reused by endurance/drain next strategies |
+| [024_session_touch.md](024_session_touch.md) | Session touch activates idle accounts, enabling endurance strategy eligibility |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/027_prefer.md](../cli/param/027_prefer.md) | `prefer::` affects weekly quota used by endurance/drain strategies |
+| [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter specification |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/usage/sort_next.rs` | `find_next_for_strategy()` — strategy selection logic; `strategy_metric()` — per-strategy footer metric |
+| `src/usage/sort.rs` | `sort_indices()` — sort algorithms reused by endurance/drain next strategies |
+| `src/usage/render.rs` | `render_text()` — footer rendering (three strategy lines) |

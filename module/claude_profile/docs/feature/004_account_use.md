@@ -46,19 +46,49 @@
 - **AC-08**: `.account.use name::alice@acme.com` when `{credential_store}/alice@acme.com.json` contains `{"model": "sonnet"}` writes `"model": "sonnet"` into `~/.claude/settings.json` while preserving all other keys; when `alice@acme.com.json` lacks `model`, removes the `model` key from `~/.claude/settings.json` (clearing stale model preference from prior account).
 - **AC-09**: `.account.use name::bob@acme.com` when `{credential_store}/bob@acme.com.json` does not exist still patches `~/.claude.json oauthAccount.emailAddress` to `"bob@acme.com"`. All other `oauthAccount` fields and machine-global keys in `~/.claude.json` are preserved. (BUG-254 regression guard.)
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/account.rs` | `switch_account()` — read, temp write, atomic rename, active marker update, best-effort `oauthAccount` patch in `~/.claude.json` with `emailAddress` enforced to equal `name` |
-| source | `src/commands/account_ops.rs` | `account_use_routine()` — CLI handler |
-| test | `tests/cli/account_mutations_test.rs` (aw01–aw11) | Verifies atomic overwrite, active marker update, dry-run, path-unsafe char rejection, edge cases |
-| test | `tests/cli/account_mutations_test.rs::switch_restores_claude_json` | Verifies `~/.claude.json` restored after switch (issue-122) |
-| doc | [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | Atomicity invariant for this feature |
-| doc | [command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | CLI command specification |
-| doc | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch subprocess activation of idle 5h session window; AC-17 adds expiry guard before switch |
-| bug | `task/claude_profile/bug/213_account_use_switches_to_expired_token_silently.md` | BUG-213 ✅ Fixed by TSK-216: expiry guard inserted in `account_use_routine()` before `switch_account()`; exits 3 when `now_ms > expiresAt` on the fetch-failed path (→ Feature 027 AC-17) |
-| bug | `task/claude_profile/bug/217_switch_account_corrupts_claude_json_with_stale_snapshot_emailaddress.md` | BUG-217 🟢 Fixed: `switch_account()` now enforces `emailAddress == name` before inserting `oauthAccount`; `oauth["emailAddress"] = name` assignment added at `account.rs:335` |
-| bug | `task/claude_profile/bug/219_switch_account_stale_oauthaccount_org_fields.md` | BUG-219 ✅ Fixed by TSK-221: `switch_account()` now reads org identity from `{name}.json` and overrides `organizationName` + `organizationUuid` after the BUG-217 `emailAddress` insert |
-| bug | `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `switch_account()` now reads `{name}.json` and restores/clears `model` in `~/.claude/settings.json` (step 6) |
-| bug | `task/claude_profile/bug/254_switch_account_skips_email_patch_when_metadata_file_absent.md` | BUG-254 ✅ Fixed (TSK-255): `switch_account()` emailAddress patch lifted out of metadata-file-conditional block — now fires unconditionally; AC-09 regression guard added |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/213_account_use_switches_to_expired_token_silently.md` | BUG-213 ✅ Fixed by TSK-216: expiry guard inserted in `account_use_routine()` before `switch_account()`; exits 3 when `now_ms > expiresAt` on the fetch-failed path (→ Feature 027 AC-17) |
+| `task/claude_profile/bug/217_switch_account_corrupts_claude_json_with_stale_snapshot_emailaddress.md` | BUG-217 🟢 Fixed: `switch_account()` now enforces `emailAddress == name` before inserting `oauthAccount`; `oauth["emailAddress"] = name` assignment added at `account.rs:335` |
+| `task/claude_profile/bug/219_switch_account_stale_oauthaccount_org_fields.md` | BUG-219 ✅ Fixed by TSK-221: `switch_account()` now reads org identity from `{name}.json` and overrides `organizationName` + `organizationUuid` after the BUG-217 `emailAddress` insert |
+| `task/claude_profile/bug/222_switch_account_model_preference_not_restored.md` | BUG-222 ✅ Fixed (TSK-234): `switch_account()` now reads `{name}.json` and restores/clears `model` in `~/.claude/settings.json` (step 6) |
+| `task/claude_profile/bug/254_switch_account_skips_email_patch_when_metadata_file_absent.md` | BUG-254 ✅ Fixed (TSK-255): `switch_account()` emailAddress patch lifted out of metadata-file-conditional block — now fires unconditionally; AC-09 regression guard added |
+
+### Commands
+
+| File | Relationship |
+|------|--------------|
+| [command/001_account.md](../cli/command/001_account.md#command--5-accountuse) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [008_auto_rotate.md](008_auto_rotate.md) | Auto rotation primitive that uses `switch_account()` for the actual switch |
+| [015_name_shortcut_syntax.md](015_name_shortcut_syntax.md) | Positional and prefix shortcut for `name::` on this command |
+| [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine active marker written in step 4 of `switch_account()` |
+| [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch subprocess activation of idle 5h session window; AC-17 adds expiry guard before switch |
+| [032_account_assign.md](032_account_assign.md) | Marker-only write for any `USER@MACHINE` pair — contrast with full credential rotation here |
+| [034_explicit_session_model_override.md](034_explicit_session_model_override.md) | Explicit session model override — `set_model::` runs after switch completes |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | Atomicity invariant for this feature |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/account.rs` | `switch_account()` — read, temp write, atomic rename, active marker update, best-effort `oauthAccount` patch in `~/.claude.json` with `emailAddress` enforced to equal `name` |
+| `src/commands/account_ops.rs` | `account_use_routine()` — CLI handler |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/account_mutations_test.rs` (aw01–aw11) | Verifies atomic overwrite, active marker update, dry-run, path-unsafe char rejection, edge cases |
+| `tests/cli/account_mutations_test.rs::switch_restores_claude_json` | Verifies `~/.claude.json` restored after switch (issue-122) |

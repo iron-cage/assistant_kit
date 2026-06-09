@@ -97,16 +97,47 @@ In live mode, `format::json` is rejected before the first fetch (see Validation)
 - **AC-31**: `interval::` and `jitter::` have no effect when `live::0`; their values are not validated unless `live::1` is present.
 - **AC-32**: `live::`, `interval::`, and `jitter::` appear in `.usage --help` output with their default values (`0`, `30`, `0`).
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/usage/live.rs`, `src/usage/params.rs` | `live::` loop; stagger delay; countdown footer; SIGINT handler; param validation |
-| source | `src/lib.rs` | `live::`, `interval::`, `jitter::` parameter registration via `register_commands()` |
-| dep | `libc` | `signal()` for SIGINT handler (transitive dep, no new crate) |
-| test | `tests/cli/usage_test.rs` | it21 (live loop), it22–it24 (guards), it25–it29 (boundary/edge), it30 (SIGINT clean-exit) |
-| task | `task/claude_profile/138_usage_live_monitor.md` | Implementation task for this feature |
-| doc | [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm and table format that this extends |
-| doc | [017_token_refresh.md](017_token_refresh.md) | `refresh::` parameter — composable with live mode |
-| doc | [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | `.usage` CLI command specification |
-| doc | [cli/param/020_live.md](../cli/param/020_live.md) | `live::`, `interval::`, `jitter::` parameter specifications |
+| File | Relationship |
+|------|--------------|
+| [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | `.usage` CLI command specification |
+
+### Dependencies
+
+| File | Relationship |
+|------|--------------|
+| `libc` | `signal()` for SIGINT handler (transitive dep, no new crate) |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm and table format that this extends |
+| [017_token_refresh.md](017_token_refresh.md) | `refresh::` parameter — composable with live mode |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Sort strategy algorithms applied per-cycle in live mode |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/020_live.md](../cli/param/020_live.md) | `live::`, `interval::`, `jitter::` parameter specifications |
+
+### Tasks
+
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/138_usage_live_monitor.md` | Implementation task for this feature |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/usage/live.rs`, `src/usage/params.rs` | `live::` loop; stagger delay; countdown footer; SIGINT handler; param validation |
+| `src/lib.rs` | `live::`, `interval::`, `jitter::` parameter registration via `register_commands()` |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/usage_test.rs` | it21 (live loop), it22–it24 (guards), it25–it29 (boundary/edge), it30 (SIGINT clean-exit) |

@@ -42,13 +42,33 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 - **AC-08**: After re-authentication, the original active account is restored — the user's session context is unchanged.
 - **AC-09**: If `claude` exits without updating `~/.claude/.credentials.json`, a diagnostic message is printed to stderr indicating credentials were unchanged, and the process exits 3.
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/commands/account_relogin.rs` | `account_relogin_routine()` — CLI handler; 6-step TTY spawn and credential capture |
-| source | `src/account.rs` | `switch_account()`, `save()` — credential rotation and store write-back |
-| invariant | [invariant/006_param_defaults.md](../invariant/006_param_defaults.md) | Governing principle: `name::` defaults to active account when omitted |
-| doc | [017_token_refresh.md](017_token_refresh.md) | Automated refresh path — use `.account.relogin` when `refresh::1` returns `credentials=None` |
-| doc | [command/001_account.md](../cli/command/001_account.md#command--12-accountrelogin) | CLI command specification |
-| doc | [tests/docs/cli/command/012_account_relogin.md](../../tests/docs/cli/command/012_account_relogin.md) | Integration test plan |
+| File | Relationship |
+|------|--------------|
+| [command/001_account.md](../cli/command/001_account.md#command--12-accountrelogin) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [017_token_refresh.md](017_token_refresh.md) | Automated refresh path — use `.account.relogin` when `refresh::1` returns `credentials=None` |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/006_param_defaults.md](../invariant/006_param_defaults.md) | Governing principle: `name::` defaults to active account when omitted |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/commands/account_relogin.rs` | `account_relogin_routine()` — CLI handler; 6-step TTY spawn and credential capture |
+| `src/account.rs` | `switch_account()`, `save()` — credential rotation and store write-back |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| [tests/docs/cli/command/012_account_relogin.md](../../tests/docs/cli/command/012_account_relogin.md) | Integration test plan |

@@ -13,7 +13,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 
 | Value | `--model` injected | Selection logic |
 |-------|-------------------|-----------------|
-| `auto` (default) | Per-account | `claude-sonnet-4-6` if account's `7d(Son) ≥ 20%`; `claude-opus-4-6` otherwise |
+| `auto` (default) | `claude-haiku-4-5-20251001` always | Sufficient for keep-alive pings; conserves Sonnet and Opus quota |
 | `sonnet` | `claude-sonnet-4-6` | Always Sonnet, regardless of quota |
 | `opus` | `claude-opus-4-6` | Always Opus, regardless of quota |
 | `haiku` | `claude-haiku-4-5-20251001` | Always Haiku — lightweight; no extended thinking (effort::auto → no --effort flag) |
@@ -22,7 +22,7 @@ Controls which Claude model is used by isolated subprocesses spawned during `tou
 **Examples:**
 
 ```text
-imodel::auto     → per-account: sonnet when 7d(Son)≥20%, opus when <20% (default)
+imodel::auto     → always --model claude-haiku-4-5-20251001 (default; keep-alive pings)
 imodel::sonnet   → always --model claude-sonnet-4-6
 imodel::opus     → always --model claude-opus-4-6
 imodel::haiku    → always --model claude-haiku-4-5-20251001
@@ -30,8 +30,7 @@ imodel::keep     → no --model flag injected
 ```
 
 **Notes:**
-- `auto` reads `7d(Son)` from the already-fetched quota data — no extra API call is made.
-- Fallback when `7d(Son)` is unavailable (e.g., `refresh::` accounts with failed quota fetch): `claude-opus-4-6`. Auth-error accounts have authentication failures, not quota exhaustion; Opus is the appropriate conservative choice.
+- `auto` always selects Haiku — subprocess keep-alive pings don't need expensive models; this conserves Sonnet and Opus quota.
 - On `.usage`: applies to both `touch::` and `refresh::` subprocess calls within the same invocation.
 - On `.account.use`: applies to the single post-switch subprocess spawned when `touch::1` and the target account is idle.
 - Has no effect when no subprocess is spawned (`.usage` with neither `touch::1` nor `refresh::1` active; `.account.use` with `touch::0` or target already active).

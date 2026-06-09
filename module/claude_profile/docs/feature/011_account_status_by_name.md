@@ -33,12 +33,28 @@
 - **AC-04**: `clp .accounts` without `name::` lists all accounts (backward compatible).
 - **AC-05**: Empty or absent `subscriptionType`/`rateLimitTier` → shown as `N/A`, never blank.
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/commands/accounts.rs` | `accounts_routine()` — named-account branch |
-| test | `tests/cli/accounts_test.rs` | Named-account path coverage (acc04, acc05, acc06) |
-| doc | [012_live_credentials_status.md](012_live_credentials_status.md) | Related command — live credentials without account store |
-| doc | [command/001_account.md](../cli/command/001_account.md#command--3-accounts) | CLI command specification |
-| doc | [tests/docs/cli/command/003_accounts.md](../../tests/docs/cli/command/003_accounts.md) | Integration tests IT-4, IT-5, IT-6 |
+| File | Relationship |
+|------|--------------|
+| [command/001_account.md](../cli/command/001_account.md#command--3-accounts) | CLI command specification |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [012_live_credentials_status.md](012_live_credentials_status.md) | Related command — live credentials without account store |
+| [013_account_limits.md](013_account_limits.md) | Uses named-account selection pattern via `name::` |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/commands/accounts.rs` | `accounts_routine()` — named-account branch |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/accounts_test.rs` | Named-account path coverage (acc04, acc05, acc06) |
+| [tests/docs/cli/command/003_accounts.md](../../tests/docs/cli/command/003_accounts.md) | Integration tests IT-4, IT-5, IT-6 |

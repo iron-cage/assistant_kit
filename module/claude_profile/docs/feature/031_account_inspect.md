@@ -169,22 +169,47 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 - **AC-18**: Credentials file exists but is zero bytes (empty file): command runs, `Status:` shows `unknown`, exits 0. Distinct from AC-16 (absent file → exits 2) — an existing-but-empty file is not a missing file, so the resolver finds it; the JSON parse failure produces an unknown status rather than an error exit.
 - **AC-19**: Credentials file contains valid JSON but lacks the `oauthAccount` wrapper object (e.g. `{"version":"2","data":{}}`): command runs, `Status:` shows `unknown`, exits 0. The `expiresAt` field cannot be located; graceful degradation applies rather than a hard error.
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/account.rs` | `account::list()` — reads local snapshot data for fallback |
-| source | `src/commands/account_inspect.rs` | `account_inspect_routine()` — three-endpoint fetch, selection priority, text/json render |
-| source | `src/registry.rs` | Registration of `.account.inspect` and its four parameters |
-| source | `claude_quota/src/lib.rs` | `fetch_userinfo()`, `fetch_subscriptions()`, `fetch_claude_cli_roles()` — endpoint transports; `select_membership_index()` — priority logic |
-| test | `tests/cli/account_inspect_test.rs` | Integration tests for AC-01..AC-19 |
-| doc | [031_account_inspect.md](../tests/docs/feature/031_account_inspect.md) | FT-level behavioral test cases |
-| doc | [cli/command/001_account.md](../cli/command/001_account.md#command--15-accountinspect) | CLI command specification |
-| doc | [cli/param/001_name.md](../cli/param/001_name.md) | `name::` — AccountSelector |
-| doc | [cli/param/019_refresh.md](../cli/param/019_refresh.md) | `refresh::` — token refresh on expired credentials |
-| doc | [cli/param/023_trace.md](../cli/param/023_trace.md) | `trace::` |
-| doc | [cli/param/002_format.md](../cli/param/002_format.md) | `format::` |
-| bug | `task/claude_profile/bug/237_parse_oauth_account_multi_membership_reads_first_only.md` | BUG-237 — motivation for multi-membership display |
-| contract | `contract/claude_code/docs/endpoint/011_oauth_userinfo.md` (to create) | Wire contract for `GET /api/oauth/userinfo` — identity fields |
-| contract | `contract/claude_code/docs/endpoint/012_claude_cli_subscriptions.md` (to create) | Wire contract for `GET /api/oauth/claude_cli/subscriptions` — all memberships |
-| contract | `contract/claude_code/docs/endpoint/005_claude_cli_roles.md` | Wire contract for `GET /api/oauth/claude_cli/roles` — org identity |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/237_parse_oauth_account_multi_membership_reads_first_only.md` | BUG-237 — motivation for multi-membership display |
+
+### Commands
+
+| File | Relationship |
+|------|--------------|
+| [cli/command/001_account.md](../cli/command/001_account.md#command--15-accountinspect) | CLI command specification |
+
+### Contracts
+
+| File | Relationship |
+|------|--------------|
+| `contract/claude_code/docs/endpoint/011_oauth_userinfo.md` (to create) | Wire contract for `GET /api/oauth/userinfo` — identity fields |
+| `contract/claude_code/docs/endpoint/012_claude_cli_subscriptions.md` (to create) | Wire contract for `GET /api/oauth/claude_cli/subscriptions` — all memberships |
+| `contract/claude_code/docs/endpoint/005_claude_cli_roles.md` | Wire contract for `GET /api/oauth/claude_cli/roles` — org identity |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/001_name.md](../cli/param/001_name.md) | `name::` — AccountSelector |
+| [cli/param/002_format.md](../cli/param/002_format.md) | `format::` |
+| [cli/param/019_refresh.md](../cli/param/019_refresh.md) | `refresh::` — token refresh on expired credentials |
+| [cli/param/023_trace.md](../cli/param/023_trace.md) | `trace::` |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/account.rs` | `account::list()` — reads local snapshot data for fallback |
+| `src/commands/account_inspect.rs` | `account_inspect_routine()` — three-endpoint fetch, selection priority, text/json render |
+| `src/registry.rs` | Registration of `.account.inspect` and its four parameters |
+| `claude_quota/src/lib.rs` | `fetch_userinfo()`, `fetch_subscriptions()`, `fetch_claude_cli_roles()` — endpoint transports; `select_membership_index()` — priority logic |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/account_inspect_test.rs` | Integration tests for AC-01..AC-19 |
+| [tests/docs/feature/031_account_inspect.md](../../tests/docs/feature/031_account_inspect.md) | FT-level behavioral test cases |

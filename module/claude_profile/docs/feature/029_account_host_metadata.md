@@ -39,17 +39,32 @@ This file is created or overwritten on every `save()` invocation (same idempoten
 - **AC-09**: `{name}.json` absence does not cause any command to exit non-zero — the file is treated as optional metadata.
 - **AC-10**: Re-running `clp .account.save` with `host::newbox` updates the host label in `{name}.json` without affecting credential files.
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/account.rs` | `save()` — `{name}.json` host/role write; host/role capture |
-| source | `src/commands/account_ops.rs` | `account_save_routine()` — host/role param extraction |
-| source | `src/usage/render.rs` | host/role column rendering in quota table |
-| param | [cli/param/048_host.md](../cli/param/048_host.md) | `host::` parameter specification for `.account.save` |
-| param | [cli/param/033_cols.md](../cli/param/033_cols.md) | `cols::` registry — `host` and `role` column IDs |
-| doc | [002_account_save.md](002_account_save.md) | Account save operation this feature extends |
-| doc | [009_token_usage.md](009_token_usage.md) | Base `.usage` rendering that gains `host`/`role` columns |
-| doc | [028_usage_row_filtering.md](028_usage_row_filtering.md) | `get::host` and `get::role` field extraction |
-| doc | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | `resolve_hostname()` fallback chain shared with `active_marker_filename()` |
-| bug | `task/claude_profile/bug/239_account_save_hostname_empty_env_var.md` | BUG-239 ✅ Fixed: `resolve_hostname()` fallback chain (`$HOSTNAME` → `/etc/hostname` → `"local"`) extracted and shared with `active_marker_filename()` |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/239_account_save_hostname_empty_env_var.md` | BUG-239 ✅ Fixed: `resolve_hostname()` fallback chain (`$HOSTNAME` → `/etc/hostname` → `"local"`) extracted and shared with `active_marker_filename()` |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [002_account_save.md](002_account_save.md) | Account save operation this feature extends |
+| [009_token_usage.md](009_token_usage.md) | Base `.usage` rendering that gains `host`/`role` columns |
+| [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | `resolve_hostname()` fallback chain shared with `active_marker_filename()` |
+| [028_usage_row_filtering.md](028_usage_row_filtering.md) | `get::host` and `get::role` field extraction |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/033_cols.md](../cli/param/033_cols.md) | `cols::` registry — `host` and `role` column IDs |
+| [cli/param/048_host.md](../cli/param/048_host.md) | `host::` parameter specification for `.account.save` |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/account.rs` | `save()` — `{name}.json` host/role write; host/role capture |
+| `src/commands/account_ops.rs` | `account_save_routine()` — host/role param extraction |
+| `src/usage/render.rs` | host/role column rendering in quota table |

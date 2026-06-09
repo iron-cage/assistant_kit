@@ -4,15 +4,16 @@
 
 | Type | Purpose | Master File | Instances |
 |------|---------|-------------|-----------|
-| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 33 |
+| `feature/` | Functional requirements for claude_profile capabilities | [readme.md](feature/readme.md) | 34 |
 | `cli/` (standalone) | Cross-cutting CLI reference (config params, dictionary, env params, interactions) | [cli/readme.md](cli/readme.md) | 4 |
 | `cli/command/` | CLI command specifications | [cli/command/readme.md](cli/command/readme.md) | 6 |
-| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 53 |
+| `cli/param/` | CLI parameter specifications | [cli/param/readme.md](cli/param/readme.md) | 54 |
 | `cli/param_group/` | CLI parameter group definitions | [cli/param_group/readme.md](cli/param_group/readme.md) | 6 |
 | `cli/type/` | CLI type definitions | [cli/type/readme.md](cli/type/readme.md) | 4 |
 | `cli/format/` | CLI output format specifications | [cli/format/readme.md](cli/format/readme.md) | 3 |
 | `cli/workflow_scenario/` | End-to-end CLI workflow examples | [cli/workflow_scenario/readme.md](cli/workflow_scenario/readme.md) | 10 |
 | `invariant/` | Measurable constraints and architectural guarantees | [invariant/readme.md](invariant/readme.md) | 6 |
+| `research_interactive/` | Investigation findings on Claude binary behavior | [research_interactive/readme.md](research_interactive/readme.md) | 1 |
 
 ## Master Doc Instances Table
 
@@ -51,6 +52,7 @@
 | feature | 031 | Account Inspect | [feature/031_account_inspect.md](feature/031_account_inspect.md) |
 | feature | 032 | Account Marker Assignment | [feature/032_account_assign.md](feature/032_account_assign.md) |
 | feature | 033 | Quota Cache Fallback | [feature/033_quota_cache.md](feature/033_quota_cache.md) |
+| feature | 034 | Explicit Session Model Override | [feature/034_explicit_session_model_override.md](feature/034_explicit_session_model_override.md) |
 | cli | 001 | Config Parameters | [cli/001_config_param.md](cli/001_config_param.md) |
 | cli | 002 | Dictionary | [cli/002_dictionary.md](cli/002_dictionary.md) |
 | cli | 003 | Environment Parameters | [cli/003_env_param.md](cli/003_env_param.md) |
@@ -114,6 +116,7 @@
 | param | 051 | `clear::` | [cli/param/051_clear.md](cli/param/051_clear.md) |
 | param | 052 | `role::` (metadata label) | [cli/param/052_role.md](cli/param/052_role.md) |
 | param | 053 | `for::` | [cli/param/053_for.md](cli/param/053_for.md) |
+| param | 054 | `set_model::` | [cli/param/054_set_model.md](cli/param/054_set_model.md) |
 | param_group | 001 | Output Control | [cli/param_group/001_output_control.md](cli/param_group/001_output_control.md) |
 | param_group | 002 | Field Presence | [cli/param_group/002_field_presence.md](cli/param_group/002_field_presence.md) |
 | param_group | 003 | Fetch Behavior | [cli/param_group/003_fetch_behavior.md](cli/param_group/003_fetch_behavior.md) |
@@ -143,3 +146,4 @@
 | invariant | 004 | No Process Execution | [invariant/004_no_process_execution.md](invariant/004_no_process_execution.md) |
 | invariant | 005 | Atomic Account Switching | [invariant/005_atomic_switching.md](invariant/005_atomic_switching.md) |
 | invariant | 006 | Parameters Default to Active Context | [invariant/006_param_defaults.md](invariant/006_param_defaults.md) |
+| research_interactive | 001 | Claude Interactive Session Control | [research_interactive/001_claude_interactive_session_control.md](research_interactive/001_claude_interactive_session_control.md) |

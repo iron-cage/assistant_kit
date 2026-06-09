@@ -13,6 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
+| 000_doc_structure.md | DT cases for Rule 9a structural compliance — all 33 feature docs |
 | 001_account_store_init.md | FT cases for Feature 001 — Account Store Initialization |
 | 002_account_save.md | FT cases for Feature 002 — Save Account |
 | 003_account_list.md | FT cases for Feature 003 — Accounts |
@@ -46,11 +47,13 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 031_account_inspect.md | FT cases for Feature 031 — Account Inspect |
 | 032_account_assign.md | FT cases for Feature 032 — Account Marker Assignment |
 | 033_quota_cache.md | FT cases for Feature 033 — Quota Cache Fallback |
+| 034_explicit_session_model_override.md | FT cases for Feature 034 — Explicit Session Model Override |
 
 ### Coverage Summary
 
 | Feature | File | Cases | Status |
 |---------|------|-------|--------|
+| doc_structure (collection) | [000_doc_structure.md](000_doc_structure.md) | DT-01 … DT-07 | ✅ |
 | 001_account_store_init | [001_account_store_init.md](001_account_store_init.md) | FT-01 … FT-04 | ✅ |
 | 002_account_save | [002_account_save.md](002_account_save.md) | FT-01 … FT-11 | ✅ |
 | 003_account_list | [003_account_list.md](003_account_list.md) | FT-01 … FT-19 | ✅ |
@@ -58,7 +61,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 005_account_delete | [005_account_delete.md](005_account_delete.md) | FT-01 … FT-05 | ✅ |
 | 006_token_status | [006_token_status.md](006_token_status.md) | FT-01 … FT-04 | ✅ |
 | 007_file_topology | [007_file_topology.md](007_file_topology.md) | FT-01 … FT-06 | ✅ |
-| 008_auto_rotate | [008_auto_rotate.md](008_auto_rotate.md) | FT-01 … FT-03 | ✅ |
+| 008_auto_rotate | [008_auto_rotate.md](008_auto_rotate.md) | FT-01 … FT-04 | ✅ |
 | 009_token_usage | [009_token_usage.md](009_token_usage.md) | FT-01 … FT-25 | ✅ |
 | 010_persistent_storage | [010_persistent_storage.md](010_persistent_storage.md) | FT-01 … FT-07 | ✅ |
 | 011_account_status_by_name | [011_account_status_by_name.md](011_account_status_by_name.md) | FT-01 … FT-05 | ✅ |
@@ -83,6 +86,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 030_account_renewal_override | [030_account_renewal_override.md](030_account_renewal_override.md) | FT-01 … FT-15 | ✅ |
 | 031_account_inspect | [031_account_inspect.md](031_account_inspect.md) | FT-01 … FT-24 | ✅ |
 | 032_account_assign | [032_account_assign.md](032_account_assign.md) | FT-01 … FT-12 | ✅ |
-| 033_quota_cache | [033_quota_cache.md](033_quota_cache.md) | FT-01 … FT-09 | ✅ |
+| 033_quota_cache | [033_quota_cache.md](033_quota_cache.md) | FT-01 … FT-11 | ✅ |
+| 034_explicit_session_model_override | [034_explicit_session_model_override.md](034_explicit_session_model_override.md) | FT-01 … FT-11 | ✅ |
 
-**Total:** 33 feature specs; all 33 feature instances covered by dedicated FT specs.
+**Total:** 35 specs — 34 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).

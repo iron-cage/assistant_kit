@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Allow `.usage` and `.account.use` to configure which Claude model and effort level are used by isolated subprocesses spawned during `touch::` and `refresh::` operations, with a per-account automatic selection mode based on remaining weekly Sonnet quota.
-- **Responsibility**: Documents the `imodel::` and `effort::` parameters, the `auto` model-selection algorithm (20% `7d(Son)` threshold), the effort resolution rule (`low` for all models to avoid extended thinking overhead), and the interaction with `IsolatedModel` in `claude_runner_core`.
-- **In Scope**: `imodel::` parameter with 5 values (`auto`, `sonnet`, `opus`, `keep`, `haiku`); `effort::` parameter with 5 values (`auto`, `high`, `max`, `low`, `normal`); `auto` model-selection logic reading per-account `7d(Son)` from already-fetched quota data; `auto` effort resolution (`low` for all models that support effort; no flag for haiku or keep — no extended thinking overhead in isolated subprocesses); fallback rules when `7d(Son)` is unavailable; application to `touch::` and `refresh::` subprocess calls on `.usage`, and to the single post-switch subprocess on `.account.use`; no effect on `format::json` output.
+- **Purpose**: Allow `.usage` and `.account.use` to configure which Claude model and effort level are used by isolated subprocesses spawned during `touch::` and `refresh::` operations, with `auto` defaulting to Haiku (sufficient for keep-alive pings) and explicit overrides for advanced use.
+- **Responsibility**: Documents the `imodel::` and `effort::` parameters, the `auto` model-selection algorithm (always Haiku — keep-alive pings don't need expensive models), the effort resolution rule (`low` for Sonnet/Opus; `None` for Haiku — no extended thinking), and the interaction with `IsolatedModel` in `claude_runner_core`.
+- **In Scope**: `imodel::` parameter with 5 values (`auto`, `sonnet`, `opus`, `keep`, `haiku`); `effort::` parameter with 5 values (`auto`, `high`, `max`, `low`, `normal`); `auto` model-selection always returning Haiku; `auto` effort resolution (`low` for all models that support effort; no flag for haiku or keep — no extended thinking overhead in isolated subprocesses); application to `touch::` and `refresh::` subprocess calls on `.usage`, and to the single post-switch subprocess on `.account.use`; no effect on `format::json` output.
 - **Out of Scope**: `run_isolated()` internals (-> `claude_runner_core/src/isolated.rs`); `IsolatedModel` type definition (-> `claude_runner_core`); subprocess timeout (-> 024_session_touch.md, 017_token_refresh.md); endurance qualification (-> 020_usage_sort_strategies.md).
 
 ### Design
@@ -15,7 +15,7 @@
 
 | Value | Model injected via `--model` | When to use |
 |-------|------------------------------|-------------|
-| `auto` (default) | Per-account: `claude-sonnet-4-6` if account's `7d(Son) ≥ 20%`, else `claude-opus-4-6` | Automatically preserves Sonnet quota when running low |
+| `auto` (default) | `claude-haiku-4-5-20251001` always | Sufficient for keep-alive pings; conserves Sonnet and Opus quota |
 | `sonnet` | `claude-sonnet-4-6` always | Force Sonnet regardless of quota state |
 | `opus` | `claude-opus-4-6` always | Force Opus regardless of quota state |
 | `haiku` | `claude-haiku-4-5-20251001` always | Force Haiku — lightweight model; note: no extended thinking support |
@@ -23,7 +23,7 @@
 
 **`auto` model-selection algorithm:**
 
-For each account being touched or refreshed, the model is chosen from the already-fetched quota data (available before the subprocess is spawned):
+`auto` always selects Haiku — subprocess operations are keep-alive pings that only need to maintain a session; Haiku is sufficient and conserves Sonnet and Opus quota:
 
 ```
 fn resolve_model(account_quota, imodel_param) -> IsolatedModel:
@@ -36,14 +36,8 @@ fn resolve_model(account_quota, imodel_param) -> IsolatedModel:
     if imodel_param == "keep":
         return KeepCurrent
     // auto:
-    sonnet_pct = account_quota.seven_day_sonnet_left_pct  // 100.0 - utilization
-    if sonnet_pct is Some(pct) AND pct >= 20.0:
-        return Specific("claude-sonnet-4-6")   // plenty of Sonnet headroom
-    else:
-        return Specific("claude-opus-4-6")     // Sonnet low or unavailable; use Opus
+    return Specific("claude-haiku-4-5-20251001")
 ```
-
-**Fallback when `7d(Son)` is unavailable** (accounts whose quota fetch failed — only relevant for `refresh::` subprocesses on auth-error accounts): fall back to `claude-opus-4-6`. When quota data is absent, Sonnet headroom cannot be confirmed ≥20%; Opus is the conservative safe choice. The `else` branch of the algorithm handles both the `<20%` and `unavailable` cases uniformly.
 
 **`effort::` — isolated subprocess effort level:**
 
@@ -106,7 +100,7 @@ if let Some(effort) = effort_opt {
 
 ### Acceptance Criteria
 
-- **AC-01**: `imodel::auto` (default) selects `claude-sonnet-4-6` for accounts whose `7d(Son) ≥ 20%` and `claude-opus-4-6` for accounts whose `7d(Son) < 20%` or is unavailable.
+- **AC-01**: `imodel::auto` (default) selects `claude-haiku-4-5-20251001` for all accounts — subprocess keep-alive operations are trivial API calls; Haiku is sufficient and conserves Sonnet and Opus quota.
 - **AC-02**: `imodel::sonnet` always injects `--model claude-sonnet-4-6` into subprocess args regardless of quota state.
 - **AC-03**: `imodel::opus` always injects `--model claude-opus-4-6` into subprocess args regardless of quota state.
 - **AC-04**: `imodel::keep` injects no `--model` flag; `IsolatedModel::KeepCurrent` is passed to `run_isolated()`.
@@ -118,21 +112,38 @@ if let Some(effort) = effort_opt {
 - **AC-10**: Invalid `imodel::` value exits 1 with an error naming the valid values (`auto`, `sonnet`, `opus`, `haiku`, `keep`).
 - **AC-11**: Invalid `effort::` value exits 1 with an error naming the valid values (`auto`, `low`, `normal`, `high`, `max`).
 - **AC-12**: `imodel::` and `effort::` parameters appear in `.usage --help` output with their default values (`auto`).
-- **AC-13**: `imodel::haiku` always injects `--model claude-haiku-4-5-20251001` into subprocess args regardless of quota state. `imodel::auto` never selects Haiku — the auto algorithm selects only between Sonnet and Opus based on `7d(Son)`.
+- **AC-13**: `imodel::haiku` always injects `--model claude-haiku-4-5-20251001` into subprocess args regardless of quota state. `imodel::auto` also resolves to Haiku — it is both the explicit choice and the default.
 - **AC-14**: `effort::auto` with a Haiku subprocess (`imodel::haiku` or any path where resolved model is `Specific("claude-haiku-4-5-20251001")`) injects no `--effort` flag. Haiku has no extended thinking support.
 - **AC-15**: `effort::low` always injects `--effort low` regardless of model.
 - **AC-16**: `effort::normal` always injects `--effort normal` regardless of model.
 
-### Cross-References
+### Dependencies
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/usage/subprocess.rs` | `resolve_model()`, `resolve_effort()`, subprocess arg construction |
-| source | `src/lib.rs` | `imodel::` and `effort::` parameter registration via `register_commands()` |
-| dep | `claude_runner_core` | `IsolatedModel`, `run_isolated()` — subprocess execution |
-| doc | [024_session_touch.md](024_session_touch.md) | `touch::` subprocess trigger conditions; `imodel::`/`effort::` apply here |
-| doc | [017_token_refresh.md](017_token_refresh.md) | `refresh::` subprocess trigger conditions; `imodel::`/`effort::` apply here |
-| param | [cli/param/035_imodel.md](../cli/param/035_imodel.md) | `imodel::` parameter specification |
-| param | [cli/param/036_effort.md](../cli/param/036_effort.md) | `effort::` parameter specification |
-| dep | [claude_runner_core/src/isolated.rs](../../../../claude_runner_core/src/isolated.rs) | `IsolatedModel` enum definition and `run_isolated()` signature |
-| doc | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | `.account.use` post-switch subprocess — also uses `resolve_model()` and `resolve_effort()` |
+| File | Relationship |
+|------|--------------|
+| `claude_runner_core` | `IsolatedModel`, `run_isolated()` — subprocess execution |
+| [claude_runner_core/src/isolated.rs](../../../claude_runner_core/src/isolated.rs) | `IsolatedModel` enum definition and `run_isolated()` signature |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [017_token_refresh.md](017_token_refresh.md) | `refresh::` subprocess trigger conditions; `imodel::`/`effort::` apply here |
+| [024_session_touch.md](024_session_touch.md) | `touch::` subprocess trigger conditions; `imodel::`/`effort::` apply here |
+| [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | `.account.use` post-switch subprocess — also uses `resolve_model()` and `resolve_effort()` |
+| [033_quota_cache.md](033_quota_cache.md) | Quota cache — cache persists model override decision |
+| [034_explicit_session_model_override.md](034_explicit_session_model_override.md) | `set_model::` for session model — orthogonal to `imodel::` subprocess model |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/035_imodel.md](../cli/param/035_imodel.md) | `imodel::` parameter specification |
+| [cli/param/036_effort.md](../cli/param/036_effort.md) | `effort::` parameter specification |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/usage/subprocess.rs` | `resolve_model()`, `resolve_effort()`, subprocess arg construction |
+| `src/lib.rs` | `imodel::` and `effort::` parameter registration via `register_commands()` |

@@ -270,6 +270,9 @@ pub( crate ) struct UsageParams
   pub( crate ) abs       : bool,
   /// When true, strip emoji and ANSI sequences from the output.
   pub( crate ) no_color  : bool,
+  /// When `Some`, write this value to `set_session_model` instead of running `apply_model_override`.
+  /// String is the raw user-provided value (e.g., `"opus"`, `"default"`); resolve at use site.
+  pub( crate ) set_model : Option< String >,
 }
 
 // ── Output format ─────────────────────────────────────────────────────────────
@@ -380,5 +383,22 @@ impl SubprocessEffort
       "normal" => Ok( Self::Normal ),
       _ => Err( format!( "effort:: must be one of: auto, high, max, low, normal; got {s:?}" ) ),
     }
+  }
+}
+
+/// Validate a `set_model::` string and resolve to the model ID to write.
+///
+/// Returns `Ok(Some(model_id))` for `opus`, `sonnet`, `haiku`;
+/// `Ok(None)` for `default` (removes the `model` key from `settings.json`);
+/// `Err(message)` for unknown values.
+pub( crate ) fn validate_set_model( s : &str ) -> Result< Option< &'static str >, String >
+{
+  match s
+  {
+    "opus"    => Ok( Some( "claude-opus-4-6" ) ),
+    "sonnet"  => Ok( Some( "claude-sonnet-4-6" ) ),
+    "haiku"   => Ok( Some( "claude-haiku-4-5-20251001" ) ),
+    "default" => Ok( None ),
+    _         => Err( format!( "set_model:: must be one of: opus, sonnet, haiku, default; got {s:?}" ) ),
   }
 }

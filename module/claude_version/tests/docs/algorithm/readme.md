@@ -12,3 +12,4 @@
 | Name | Purpose | Status |
 |------|---------|--------|
 | 001_settings_type_inference.md | AC- test cases for 4-step type inference cascade | ✅ |
+| 002_config_resolution.md | AT- test cases for 4-layer resolution algorithm (env/project/user/default) | ✅ |

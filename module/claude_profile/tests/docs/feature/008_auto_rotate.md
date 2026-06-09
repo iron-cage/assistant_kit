@@ -9,6 +9,7 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 | FT-01 | Returns inactive account with highest `expires_at_ms` | AC-01 |
 | FT-02 | Returns `NotFound` when no inactive accounts exist | AC-02 |
 | FT-03 | After rotation, `~/.claude/.credentials.json` holds selected account | AC-03 |
+| FT-04 | Highest expiry wins from three inactive candidates | AC-01 |
 
 ### Test Case Index
 
@@ -17,8 +18,9 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 | FT-01 | Selects inactive account with highest expiry | AC-01 | Selection |
 | FT-02 | `NotFound` when all accounts are active or store is empty | AC-02 | Not Found |
 | FT-03 | Credentials file updated to selected account after rotation | AC-03 | Side Effects |
+| FT-04 | Three inactive accounts — global max selected | AC-01 | Selection |
 
-**Total:** 3 FT cases
+**Total:** 4 FT cases
 
 ---
 
@@ -53,3 +55,14 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 - **Exit:** Ok(name)
 - **Source fn:** `auto_rotate_switches_to_inactive_account`
 - **Source:** [008_auto_rotate.md AC-03](../../../../docs/feature/008_auto_rotate.md)
+
+---
+
+### FT-04: Highest-expiry account selected from three inactive candidates
+
+- **Given:** Three inactive accounts in the store: `a` (expires_at_ms=1000), `b` (expires_at_ms=9000), `c` (expires_at_ms=5000). One active account `d`.
+- **When:** `account::auto_rotate(credential_store, paths)` is called.
+- **Then:** Returns the name of `b` (expires_at_ms=9000). Account `c` is not selected despite being inactive with higher expiry than `a`.
+- **Exit:** Ok("b")
+- **Source fn:** `auto_rotate_picks_max_from_multiple_candidates`
+- **Source:** [008_auto_rotate.md AC-01](../../../../docs/feature/008_auto_rotate.md)

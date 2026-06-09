@@ -23,6 +23,7 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-15 | Within 🟡: h-exhausted before weekly-exhausted; `desc::` doesn't swap sub-groups | AC-14 | Unit test |
 | FT-16 | `sort::endurance` unqualified tiebreak by highest weekly when session quotas tied | AC-02 | Unit test |
 | FT-17 | `sort::next` delegates to active `next::` strategy; `→` winner appears at row 1 | AC-15 | Integration |
+| FT-18 | `sort::renew` alphabetical when all numeric sort keys tied (BUG-259) | AC-04 | Tiebreaker |
 
 ### Test Case Index
 
@@ -45,8 +46,9 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 | FT-15 | Within 🟡: h-exhausted before weekly-exhausted; sub-grouping not reversed by `desc::` | AC-14 | Yellow Sub-Grouping |
 | FT-16 | sort::endurance unqualified tiebreak by weekly | AC-02 | Tiebreak |
 | FT-17 | sort::next delegates to active next:: strategy | AC-15 | Meta-Strategy |
+| FT-18 | sort::renew alphabetical tiebreaker when all numeric keys tied | AC-04 | Tiebreaker |
 
-**Total:** 17 FT cases
+**Total:** 18 FT cases
 
 ---
 
@@ -249,3 +251,14 @@ Feature behavioral requirement test cases for `docs/feature/020_usage_sort_strat
 - **Exit:** 0 both cases
 - **Source fn:** `it121_sort_next_accepted`, `it138_sort_next_resolves_to_drain_structural`, `it139_sort_next_resolves_to_endurance_structural` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/020_usage_sort_strategies.md AC-15](../../../../docs/feature/020_usage_sort_strategies.md)
+
+---
+
+### FT-18: `sort::renew` alphabetical when all numeric sort keys tied (BUG-259)
+
+- **Given:** Three `AccountQuota` structs inserted in **reverse** alphabetical order: `charlie@test.com`, `bravo@test.com`, `alpha@test.com`. All have identical `seven_day.utilization=50%` and `seven_day.resets_at` set to `FAR_FUTURE_MS` — all sort keys are identical.
+- **When:** `sort_indices(&accounts, SortStrategy::Renew, None, PreferStrategy::Any, 0)`
+- **Then:** `alpha@test.com` ranks first (alphabetical winner when all numeric keys tie). Confirms the final name tiebreaker prevents filesystem-order-dependent non-determinism.
+- **Exit:** n/a (unit test — name assertion on `accounts[idx[0]].name`)
+- **Source fn:** ✅ `mre_bug259_sort_renew_alphabetical_when_all_keys_tied` (in `src/usage/sort.rs`)
+- **Source:** [feature/020_usage_sort_strategies.md AC-04](../../../../docs/feature/020_usage_sort_strategies.md)

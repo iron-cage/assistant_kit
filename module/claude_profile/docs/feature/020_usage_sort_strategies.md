@@ -45,7 +45,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
    - Qualified: `5h Reset` is 15–60 minutes away AND `weekly(prefer)` ≥ 30%.
    - All others: unqualified.
 2. Qualified accounts are ranked first. Within qualified: highest `weekly(prefer)` → soonest `5h Reset`.
-3. Unqualified accounts follow, sorted by `5h Left` descending; tiebreak by highest `weekly(prefer)` first.
+3. Unqualified accounts follow, sorted by `5h Left` descending; tiebreak by highest `weekly(prefer)` first; final tiebreak: alphabetical name.
 
 **Rationale:** An account whose 5h window resets in 15–60 minutes will soon have 100% fresh session quota. Combined with ≥30% weekly runway, it can sustain a full 5-hour agent run without hitting any limit. The 15-minute floor avoids accounts that reset imminently (race condition with session start).
 
@@ -56,7 +56,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 **Algorithm:**
 1. **h-exhausted** accounts (`5h Left` ≤ 15%): sunk to bottom.
 2. Remaining accounts sorted by `7d Left` (prefer-aware, via `prefer::`) ascending (lowest first — drain these).
-3. Tiebreak: `5h Left` ascending (among equal weekly quota, drain lower session ones first).
+3. Tiebreak: `5h Left` ascending (among equal weekly quota, drain lower session ones first); final tiebreak: alphabetical name.
 
 **Rationale:** Weekly quota is the scarcest resource — it doesn't reset for 7 days. Draining accounts with the lowest 7d runway first ensures the limited weekly budget is consumed before expiry, rather than targeting only session-depleted accounts (which reset every 5 hours anyway).
 
@@ -67,7 +67,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 **Algorithm:**
 1. **h-exhausted** accounts (`5h Left` ≤ 15%): sunk to bottom.
 2. Remaining accounts sorted by `min(7d Reset, ~Renews)` countdown ascending (soonest renewal event first; absent timers → placed at end of non-exhausted).
-3. Tiebreak: `7d Left` (prefer-aware, via `prefer::`) ascending (among same renewal time, drain more weekly-depleted first).
+3. Tiebreak: `7d Left` (prefer-aware, via `prefer::`) ascending (among same renewal time, drain more weekly-depleted first); final tiebreak: alphabetical name.
 
 **Rationale:** Both the weekly window reset and the subscription billing cycle replenish quota. Whichever fires first is the more relevant event for deciding which account to consume now — it can be freely drained because its budget will be replenished soonest.
 
@@ -88,6 +88,7 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 **Algorithm:**
 1. Sort all accounts by `expires_at_ms` ascending (soonest expiry first).
 2. Accounts with `expires_at_ms == 0` (unknown expiry) are placed at the end (scored as `u64::MAX`).
+3. Tiebreak: alphabetical name.
 
 **Rationale:** Useful for identifying which accounts need re-authentication soonest.
 
@@ -98,19 +99,20 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 **Algorithm:**
 1. Sort all accounts by `renewal_secs(aq.renewal_at, aq.org_created_at, now)` ascending.
 2. Accounts without subscription data (no `renewal_at` and no `org_created_at` billing day) score `u64::MAX` and appear last.
+3. Tiebreak: alphabetical name.
 
 **Rationale:** Useful for seeing which accounts will have their full weekly quota restored soonest through a billing cycle.
 
 ### Acceptance Criteria
 
 - **AC-01**: `sort::drain` sorts rows by `7d Left` (prefer-aware) ascending within each tier; tiebreak is `5h Left` ascending. `sort::name` sorts alphabetically. When `sort::` is omitted, `renew` is used.
-- **AC-02**: `sort::endurance` ranks qualified accounts (5h Reset 15–60 min, weekly(prefer) ≥ 30%) above unqualified accounts; within qualified, highest weekly first then soonest reset; within unqualified, highest `weekly(prefer)` first as tiebreaker when session quotas are equal.
-- **AC-03**: `sort::drain` sorts by `7d Left` (prefer-aware) ascending; tiebreak is `5h Left` ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
-- **AC-04**: `sort::renew` sorts by `min(7d Reset, ~Renews)` countdown ascending (soonest renewal event first — weekly window reset or subscription billing cycle, whichever is earlier); tiebreak is `7d Left` (prefer-aware) ascending; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
+- **AC-02**: `sort::endurance` ranks qualified accounts (5h Reset 15–60 min, weekly(prefer) ≥ 30%) above unqualified accounts; within qualified, highest weekly first then soonest reset; within unqualified, highest `weekly(prefer)` first as tiebreaker when session quotas are equal; final tiebreak within any sub-group: alphabetical name.
+- **AC-03**: `sort::drain` sorts by `7d Left` (prefer-aware) ascending; tiebreak is `5h Left` ascending; final tiebreak is alphabetical name; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
+- **AC-04**: `sort::renew` sorts by `min(7d Reset, ~Renews)` countdown ascending (soonest renewal event first — weekly window reset or subscription billing cycle, whichever is earlier); tiebreak is `7d Left` (prefer-aware) ascending; final tiebreak is alphabetical name; h-exhausted accounts (`5h Left` ≤ 15%) are sunk to the bottom.
 - **AC-05**: `desc::1` reverses the sort direction within each tier; `desc::0` uses the strategy's natural direction. The three-tier grouping (🟢 → 🟡 → 🔴) and the 🟡 h-/weekly-exhausted sub-grouping are never reversed by `desc::`.
 - **AC-06**: Each strategy has a context-sensitive `desc::` default: `name`→`0`, `endurance`→`1`, `drain`→`0`, `renew`→`0`, `expires`→`0`, `renews`→`0`.
 - **AC-07**: `prefer::any` (default) uses `min(7d Left, 7d(Son))` as weekly quota; `prefer::opus` uses `7d Left`; `prefer::sonnet` uses `7d(Son)`.
-- **AC-08**: `prefer::` affects `sort::endurance` (qualification gate ≥ 30%), `sort::drain` (primary sort key), and `sort::renew` (tiebreak). For drain: `prefer_weekly` is the primary sort key (ascending — lowest first); `5h Left` is the tiebreak. For renew: `min(7d Reset, ~Renews)` countdown is the primary key; `prefer_weekly` is the tiebreak (ascending).
+- **AC-08**: `prefer::` affects `sort::endurance` (qualification gate ≥ 30%), `sort::drain` (primary sort key), and `sort::renew` (tiebreak). For drain: `prefer_weekly` is the primary sort key (ascending — lowest first); `5h Left` is the secondary tiebreak; alphabetical name is the final tiebreak. For renew: `min(7d Reset, ~Renews)` countdown is the primary key; `prefer_weekly` is the secondary tiebreak (ascending); alphabetical name is the final tiebreak.
 - **AC-09**: Invalid `sort::` value exits 1 with an error naming the valid values (`name`, `endurance`, `drain`, `renew`, `next`, `expires`, `renews`).
 - **AC-10**: Invalid `prefer::` value exits 1 with an error naming the valid values.
 - **AC-11**: `sort::` and `desc::` do not affect the `→` recommendation marker or footer — those are controlled by the `next::` parameter (see 023_next_account_strategies.md). The footer always shows three strategy recommendations (renew, endurance, drain) regardless of `sort::` or `next::` values. The `next::renew`, `next::endurance`, and `next::drain` strategies reuse the same sort algorithms but select independently from the table sort order.
@@ -121,16 +123,33 @@ Alphabetical by account name, ascending. Stable positional layout across refresh
 - **AC-16**: `sort::expires` sorts by `expires_at_ms` ascending; accounts with `expires_at_ms == 0` (unknown expiry) are placed last. Default `desc::` is `0`.
 - **AC-17**: `sort::renews` sorts by subscription renewal timer ascending via `renewal_secs()`; accounts with no subscription data are placed last (scored as `u64::MAX`). Default `desc::` is `0`.
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/usage/sort.rs`, `src/usage/params.rs` | Sort implementation; strategy parsing |
-| param | [cli/param/025_sort.md](../cli/param/025_sort.md) | `sort::` parameter specification |
-| param | [cli/param/026_desc.md](../cli/param/026_desc.md) | `desc::` parameter specification |
-| param | [cli/param/027_prefer.md](../cli/param/027_prefer.md) | `prefer::` parameter specification |
-| doc | [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm; `●` composite status emoji; per-column emoji |
-| doc | [023_next_account_strategies.md](023_next_account_strategies.md) | `→ Next` recommendation strategies (reuse sort algorithms) |
-| doc | [018_live_monitor.md](018_live_monitor.md) | `live::1` continuous mode |
-| doc | [008_auto_rotate.md](008_auto_rotate.md) | `.account.rotate` — different algorithm (highest `expires_at_ms`) |
-| param | [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter — reuses sort strategy algorithms for recommendation |
+| File | Relationship |
+|------|--------------|
+| [008_auto_rotate.md](008_auto_rotate.md) | `.account.rotate` — different algorithm (highest `expires_at_ms`) |
+| [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm; `●` composite status emoji; per-column emoji |
+| [018_live_monitor.md](018_live_monitor.md) | `live::1` continuous mode |
+| [023_next_account_strategies.md](023_next_account_strategies.md) | `→ Next` recommendation strategies (reuse sort algorithms) |
+| [024_session_touch.md](024_session_touch.md) | Session touch — endurance qualification requires concrete `5h_reset` |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/025_sort.md](../cli/param/025_sort.md) | `sort::` parameter specification |
+| [cli/param/026_desc.md](../cli/param/026_desc.md) | `desc::` parameter specification |
+| [cli/param/027_prefer.md](../cli/param/027_prefer.md) | `prefer::` parameter specification |
+| [cli/param/032_next.md](../cli/param/032_next.md) | `next::` parameter — reuses sort strategy algorithms for recommendation |
+
+### Bugs
+
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/259_sort_non_deterministic_when_all_keys_tied.md` | BUG-259 ✅ Fixed: `sort_indices` all `sort_by` closures missing final name tiebreaker — non-deterministic row order when all numeric keys tie |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/usage/sort.rs`, `src/usage/params.rs` | Sort implementation; strategy parsing |

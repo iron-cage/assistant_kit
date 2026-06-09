@@ -96,7 +96,15 @@ pub( crate ) fn find_next_for_strategy(
           //   so accounts with no session data are deprioritised on tie (conservative).
           let ha = five_hour_left( &accounts[ a ] );
           let hb = five_hour_left( &accounts[ b ] );
-          ra.cmp( &rb ).then_with( || ha.total_cmp( &hb ) )
+          // Fix(BUG-260): add name tiebreaker — when both sort keys tie, min_by fell through to
+          //   input-slice / filesystem order (account::list() read_dir) without this.
+          // Root cause: BUG-259 added the name tiebreaker to sort_indices (sort.rs) but this
+          //   min_by closure is an independent code path not covered by that fix.
+          // Pitfall: sort_indices and find_next_for_strategy(Renew) implement the same sort
+          //   semantics independently — a fix to one never propagates to the other automatically.
+          ra.cmp( &rb )
+            .then_with( || ha.total_cmp( &hb ) )
+            .then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )
         } )
     }
     NextStrategy::Endurance =>
@@ -1352,6 +1360,58 @@ mod tests
     assert_eq!(
       accounts[ idx[ 2 ] ].name, "no_renew@test.com",
       "sort::renews: no renewal data must be last (scored as u64::MAX)",
+    );
+  }
+
+  /// FT-16 of feature/023 — `next::renew` deterministic when all numeric keys tied (BUG-260).
+  ///
+  /// # Root Cause
+  /// `find_next_for_strategy(Renew)` `min_by` at `sort_next.rs:99` had only 2 comparison
+  /// levels (`renewal_event_secs` primary, `five_hour_left` secondary). When both tie,
+  /// `min_by` returns the first matching iterator index — input-slice / filesystem iteration
+  /// order (non-deterministic).
+  ///
+  /// # Why Not Caught
+  /// BUG-243 added the `five_hour_left` tiebreaker but stopped there. BUG-259 added the
+  /// name tiebreaker to `sort_indices` (`sort.rs`) but the `sort_next.rs` Renew arm was out
+  /// of scope because it owns its own `min_by` closure rather than delegating to
+  /// `sort_indices` (unlike Endurance and Drain arms).
+  ///
+  /// # Fix Applied
+  /// Added `.then_with( || accounts[ a ].name.cmp( &accounts[ b ].name ) )` after
+  /// `ha.total_cmp( &hb )` — same pattern as BUG-259 fix in `sort.rs:170`.
+  ///
+  /// # Prevention
+  /// When adding a numeric tiebreaker to a `min_by`/`sort_by` closure, always add a final
+  /// name tiebreaker for determinism — every sort in this module should end with name cmp.
+  ///
+  /// # Pitfall
+  /// `min_by` (not `sort_by`): for `sort_by` the stable sort preserves order on equal; for
+  /// `min_by` the iterator stops at the first minimum found (first in slice order wins on
+  /// tie). This makes the missing tiebreaker silently non-deterministic.
+  ///
+  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-16]
+  #[ doc = "bug_reproducer(BUG-260)" ]
+  #[ test ]
+  fn mre_bug260_renew_nondeterministic_when_fully_tied()
+  {
+    let now_secs : u64 = 1_700_000_000;
+    // Both accounts: util=0.0 → five_hour_left=100%; same 7d reset offset → identical
+    // renewal_event_secs. All numeric keys fully tied → name tiebreaker fires.
+    // Slice order is reverse-alpha (zorro at 0, alice at 1); alphabetical winner is alice.
+    let zorro = mk_aq_with_7d_reset( "zorro@test.com", 0.0, now_secs, 10_800 );
+    let alice = mk_aq_with_7d_reset( "alice@test.com", 0.0, now_secs, 10_800 );
+
+    let result = find_next_for_strategy(
+      &[ zorro, alice ],
+      NextStrategy::Renew,
+      PreferStrategy::Any,
+      now_secs,
+    );
+    assert_eq!(
+      result,
+      Some( 1 ),
+      "BUG-260: tied candidates must resolve alphabetically; alice@test.com (index 1) must win over zorro@test.com (index 0)",
     );
   }
 }

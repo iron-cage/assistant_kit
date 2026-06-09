@@ -83,24 +83,51 @@ render results as table
 - **AC-13**: No `switch_account` call occurs in `apply_touch`. The previous AC-13 restore trace is superseded — trace output for touch lifecycle steps remains unchanged (per AC-09), but no `restore switch_account` line is emitted. Fix for BUG-211.
 - **AC-14**: Accounts with 7d weekly quota fully exhausted (`seven_day_left <= 0%`) are skipped by `apply_touch` even when idle (`five_hour.resets_at` absent) and 5h budget is non-zero. The Anthropic API does not open a new 5h session when the 7d budget is exhausted — spawning a subprocess for such accounts wastes wall time (~2.3s per account for a 429 rejection) and produces misleading `run_isolated: OK credentials=None` trace without establishing a session. Fixed in TSK-217 (Docker L3 ✅).
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/usage/touch.rs`, `src/usage/params.rs` | `touch::` param read; idle-account detection (`resets_at` absent); subprocess call; re-fetch |
-| source | `src/lib.rs` | `touch::` parameter registration via `register_commands()` |
-| source | `claude_profile_core/src/account.rs` | `refresh_account_token()` — reused for touch |
-| dep | `claude_runner_core` | `run_isolated()` — subprocess mechanism |
-| dep | `claude_quota` | `fetch_oauth_usage()` — re-fetch after touch |
-| doc | [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm that this extends |
-| doc | [017_token_refresh.md](017_token_refresh.md) | Shared subprocess infrastructure and `refresh_account_token()` design |
-| doc | [023_next_account_strategies.md](023_next_account_strategies.md) | Endurance strategy requires concrete `5h_reset` — motivation for touch |
-| doc | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Endurance qualification: `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` |
-| invariant | [invariant/004_no_process_execution.md](../invariant/004_no_process_execution.md) | `claude_profile` delegates all process execution to `claude_runner_core` |
-| param | [cli/param/034_touch.md](../cli/param/034_touch.md) | `touch::` parameter specification |
-| param | [cli/param/019_refresh.md](../cli/param/019_refresh.md) | `refresh::` — runs before touch when both active |
-| doc | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch touch on `.account.use` — extends the touch concept to account switching |
-| bug | `task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md` | BUG-208 (Closed): restore `switch_account` calls wrapped in `let _ = ...` — silent error discard; superseded by BUG-211 (restore removed from `apply_touch`) |
-| bug | `task/claude_profile/bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md` | BUG-211 (Fixed): snapshot+restore removed from `apply_touch`; `save(update_marker=false)` suppresses `_active` writes during per-account cycling |
-| bug | `task/claude_profile/bug/214_touch_fires_for_7d_exhausted_accounts.md` | BUG-214 (TSK-217, ✅ Fixed): `apply_touch` fired subprocess for 7d-exhausted accounts — fixed via `seven_day_left()` guard |
-| bug | `task/claude_profile/bug/215_touch_idle_detection_ignores_7d_and_7d_sonnet_timers.md` | BUG-215 (TSK-218, ✅ Fixed): `apply_touch` trigger checked only `five_hour.resets_at`; 7d and 7d-Sonnet timer absence was ignored — fixed via 3-timer `all_running` check |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md` | BUG-208 (Closed): restore `switch_account` calls wrapped in `let _ = ...` — silent error discard; superseded by BUG-211 (restore removed from `apply_touch`) |
+| `task/claude_profile/bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md` | BUG-211 (Fixed): snapshot+restore removed from `apply_touch`; `save(update_marker=false)` suppresses `_active` writes during per-account cycling |
+| `task/claude_profile/bug/214_touch_fires_for_7d_exhausted_accounts.md` | BUG-214 (TSK-217, ✅ Fixed): `apply_touch` fired subprocess for 7d-exhausted accounts — fixed via `seven_day_left()` guard |
+| `task/claude_profile/bug/215_touch_idle_detection_ignores_7d_and_7d_sonnet_timers.md` | BUG-215 (TSK-218, ✅ Fixed): `apply_touch` trigger checked only `five_hour.resets_at`; 7d and 7d-Sonnet timer absence was ignored — fixed via 3-timer `all_running` check |
+
+### Dependencies
+
+| File | Relationship |
+|------|--------------|
+| `claude_runner_core` | `run_isolated()` — subprocess mechanism |
+| `claude_quota` | `fetch_oauth_usage()` — re-fetch after touch |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [009_token_usage.md](009_token_usage.md) | Base `.usage` algorithm that this extends |
+| [017_token_refresh.md](017_token_refresh.md) | Shared subprocess infrastructure and `refresh_account_token()` design |
+| [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Endurance qualification: `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` |
+| [023_next_account_strategies.md](023_next_account_strategies.md) | Endurance strategy requires concrete `5h_reset` — motivation for touch |
+| [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | `imodel::` and `effort::` subprocess parameters apply to touch subprocesses |
+| [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch touch on `.account.use` — extends the touch concept to account switching |
+| [033_quota_cache.md](033_quota_cache.md) | Quota cache — persists touch state (`last_touch_at`, `touch_idle`) |
+
+### Invariants
+
+| File | Relationship |
+|------|--------------|
+| [invariant/004_no_process_execution.md](../invariant/004_no_process_execution.md) | `claude_profile` delegates all process execution to `claude_runner_core` |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/019_refresh.md](../cli/param/019_refresh.md) | `refresh::` — runs before touch when both active |
+| [cli/param/034_touch.md](../cli/param/034_touch.md) | `touch::` parameter specification |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/usage/touch.rs`, `src/usage/params.rs` | `touch::` param read; idle-account detection (`resets_at` absent); subprocess call; re-fetch |
+| `src/lib.rs` | `touch::` parameter registration via `register_commands()` |
+| `claude_profile_core/src/account.rs` | `refresh_account_token()` — reused for touch |

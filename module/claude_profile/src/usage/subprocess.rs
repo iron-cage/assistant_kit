@@ -10,14 +10,14 @@ use super::types::{ AccountQuota, SubprocessModel, SubprocessEffort };
 
 /// Resolve the subprocess model for one account based on `imodel::` and quota data.
 ///
-/// AC-01: `auto` selects Sonnet when 7d(Son) remaining ≥ 20%; otherwise Opus (conservative).
-///         `None` `seven_day_sonnet` → treated as 0% remaining → Opus.
+/// AC-01: `auto` selects Haiku — subprocess operations are keep-alive pings,
+///        Haiku is sufficient and conserves quota.
 /// AC-02: `sonnet` always maps to `claude-sonnet-4-6`.
 /// AC-03: `opus` always maps to `claude-opus-4-6`.
 /// AC-04: `keep` passes `IsolatedModel::KeepCurrent` — no `--model` flag injected.
-/// AC-13: `haiku` always maps to `claude-haiku-4-5-20251001` (explicit-only; `auto` never selects it).
+/// AC-13: `haiku` always maps to `claude-haiku-4-5-20251001`.
 #[ inline ]
-pub( crate ) fn resolve_model( aq : &AccountQuota, imodel : SubprocessModel ) -> claude_runner_core::IsolatedModel
+pub( crate ) fn resolve_model( _aq : &AccountQuota, imodel : SubprocessModel ) -> claude_runner_core::IsolatedModel
 {
   use claude_runner_core::IsolatedModel;
   match imodel
@@ -28,18 +28,8 @@ pub( crate ) fn resolve_model( aq : &AccountQuota, imodel : SubprocessModel ) ->
     SubprocessModel::Haiku  => IsolatedModel::Specific( "claude-haiku-4-5-20251001".to_string() ),
     SubprocessModel::Auto   =>
     {
-      // AC-01: ≥20% Sonnet headroom → sonnet; else → opus.  None quota data → 0% → opus.
-      let sonnet_left = aq.result.as_ref().ok()
-        .and_then( |d| d.seven_day_sonnet.as_ref() )
-        .map( |p| 100.0 - p.utilization );
-      if sonnet_left.is_some_and( |pct| pct >= 20.0 )
-      {
-        IsolatedModel::Specific( "claude-sonnet-4-6".to_string() )
-      }
-      else
-      {
-        IsolatedModel::Specific( "claude-opus-4-6".to_string() )
-      }
+      // AC-01: Haiku is sufficient for keep-alive pings (touch/refresh) — conserves quota.
+      IsolatedModel::Specific( "claude-haiku-4-5-20251001".to_string() )
     }
   }
 }
@@ -98,84 +88,64 @@ mod tests
 
   // ── resolve_model ──────────────────────────────────────────────────────────
 
-  /// FT-01 / EC-9: `imodel::auto` with 7d(Son) utilization 85% (15% left, below 20%) → opus.
+  /// FT-01: `imodel::auto` selects haiku regardless of quota state.
+  ///
+  /// Subprocess keep-alive operations don't need expensive models; Haiku conserves quota.
+  /// Quota data is read but not used — any quota percentage yields haiku.
   ///
   /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-01]
-  ///       [`tests/docs/cli/param/035_imodel.md` EC-9]
   #[ test ]
-  fn it_imodel_auto_selects_opus_when_sonnet_low()
+  fn it_imodel_auto_selects_haiku()
   {
-    // 85% utilization → 15% remaining → below 20% threshold → opus.
     let aq       = mk_aq_with_sonnet_util( 85.0 );
     let model    = resolve_model( &aq, SubprocessModel::Auto );
     let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
     assert_eq!(
-      model_id, "claude-opus-4-6",
-      "imodel::auto with 15% sonnet remaining must select opus (below 20% threshold)",
+      model_id, "claude-haiku-4-5-20251001",
+      "imodel::auto must always select haiku for keep-alive operations",
     );
   }
 
-  /// FT-02 / EC-10: `imodel::auto` with 7d(Son) utilization 65% (35% left, above 20%) → sonnet.
-  ///
-  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-02]
-  ///       [`tests/docs/cli/param/035_imodel.md` EC-10]
-  #[ test ]
-  fn it_imodel_auto_selects_sonnet_above_threshold()
-  {
-    // 65% utilization → 35% remaining → above 20% threshold → sonnet.
-    let aq       = mk_aq_with_sonnet_util( 65.0 );
-    let model    = resolve_model( &aq, SubprocessModel::Auto );
-    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
-    assert_eq!(
-      model_id, "claude-sonnet-4-6",
-      "imodel::auto with 35% sonnet remaining must select sonnet (above 20% threshold)",
-    );
-  }
-
-  /// FT-03: `imodel::auto` at exactly 20% remaining (utilization 80%) → sonnet (boundary).
-  ///
-  /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-03]
-  #[ test ]
-  fn it_imodel_auto_selects_sonnet_at_boundary()
-  {
-    // 80% utilization → exactly 20% remaining → boundary → sonnet (≥20% condition).
-    let aq       = mk_aq_with_sonnet_util( 80.0 );
-    let model    = resolve_model( &aq, SubprocessModel::Auto );
-    let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
-    assert_eq!(
-      model_id, "claude-sonnet-4-6",
-      "imodel::auto at exactly 20% remaining must select sonnet (boundary: ≥20% is true)",
-    );
-  }
-
-  /// FT-04: `imodel::auto` with absent `seven_day_sonnet` data → opus (conservative fallback).
+  /// FT-04: `imodel::auto` with absent quota data → haiku (quota not needed).
   ///
   /// Spec: [`tests/docs/feature/026_subprocess_model_effort.md` FT-04]
   #[ test ]
-  fn it_imodel_auto_fallback_when_quota_unavailable()
+  fn it_imodel_auto_selects_haiku_without_quota_data()
   {
-    // None seven_day_sonnet → cannot confirm ≥20% → opus conservative fallback.
     let aq       = mk_aq_no_sonnet_data();
     let model    = resolve_model( &aq, SubprocessModel::Auto );
     let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
     assert_eq!(
-      model_id, "claude-opus-4-6",
-      "imodel::auto with absent seven_day_sonnet must fall back to opus",
+      model_id, "claude-haiku-4-5-20251001",
+      "imodel::auto with absent quota data must still select haiku",
     );
   }
 
-  /// EC-9a: `imodel::auto` with account error result → opus (conservative fallback).
-  ///
-  /// Auth-errored accounts have no quota data; `auto` falls to opus.
+  /// EC-9a: `imodel::auto` with account error result → haiku (quota data irrelevant).
   #[ test ]
-  fn it_imodel_auto_err_result_falls_to_opus()
+  fn it_imodel_auto_selects_haiku_with_err_result()
   {
     let aq       = mk_aq_err();
     let model    = resolve_model( &aq, SubprocessModel::Auto );
     let model_id = match &model { claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(), _ => "" };
     assert_eq!(
-      model_id, "claude-opus-4-6",
-      "imodel::auto with Err result must fall back to opus",
+      model_id, "claude-haiku-4-5-20251001",
+      "imodel::auto with Err result must select haiku (quota data not needed)",
+    );
+  }
+
+  /// Auto model + `effort::auto` → `None` (haiku does not support extended thinking).
+  ///
+  /// End-to-end: `resolve_model(aq, Auto)` returns haiku; `resolve_effort(haiku, Auto)` → `None`.
+  #[ test ]
+  fn it_effort_auto_resolves_none_for_auto_haiku()
+  {
+    let aq     = mk_aq_no_sonnet_data();
+    let model  = resolve_model( &aq, SubprocessModel::Auto );
+    let effort = resolve_effort( &model, SubprocessEffort::Auto );
+    assert!(
+      effort.is_none(),
+      "imodel::auto + effort::auto must produce None effort (haiku has no extended thinking), got: {effort:?}",
     );
   }
 

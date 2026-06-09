@@ -50,7 +50,7 @@ if refresh_param == 1:
 render results as table
 ```
 
-**`expiresAt` not written by subprocess (BUG-162):** The isolated subprocess updates `accessToken` and `refreshToken` in the credentials file but does NOT update `expiresAt` — that field is a server-side claim set at token issuance and is not written back during the OAuth refresh exchange. Reading `expiresAt` from the credentials file after the subprocess returns therefore yields the **original expired timestamp**, causing `compute_expires_cell` to continue showing `EXPIRED` regardless of the successful refresh. The correct source for post-refresh expiry is the JWT `exp` claim embedded in the new `accessToken` (second `.`-separated base64url segment, `"exp"` field, seconds → multiply by 1000 for ms). See [BUG-162](../../../../task/claude_profile/bug/162_expiresAt_not_updated_by_subprocess.md) and TSK-163.
+**`expiresAt` not written by subprocess (BUG-162):** The isolated subprocess updates `accessToken` and `refreshToken` in the credentials file but does NOT update `expiresAt` — that field is a server-side claim set at token issuance and is not written back during the OAuth refresh exchange. Reading `expiresAt` from the credentials file after the subprocess returns therefore yields the **original expired timestamp**, causing `compute_expires_cell` to continue showing `EXPIRED` regardless of the successful refresh. The correct source for post-refresh expiry is the JWT `exp` claim embedded in the new `accessToken` (second `.`-separated base64url segment, `"exp"` field, seconds → multiply by 1000 for ms). See [BUG-162](../../../../../task/claude_profile/bug/162_expiresAt_not_updated_by_subprocess.md) and TSK-163.
 
 **Expired refresh token (expected limitation):** When an account's OAuth refresh token has itself expired (distinct from access token expiry), `run_isolated` cannot obtain new credentials — Claude Code contacts the OAuth server with the expired refresh token, gets rejected, and does not update the credential file. In this case `credentials` is `None`, the account is skipped, and the original auth error persists in the output. The operational remedy is to re-authenticate the affected account via browser-based OAuth flow and `clp .account.save`.
 
@@ -58,13 +58,13 @@ render results as table
 
 **Retry semantics:** Exactly one retry per account per invocation. If the retried `fetch_oauth_usage` also fails, the final error is shown in the account's row — the table continues processing remaining accounts (non-aborting).
 
-**Credential write-back:** When `run_isolated` returns `credentials: Some(new_json)`, `account::save()` writes `new_json` directly to `{credential_store}/{name}.credentials.json` (via `creds: Some(new_json.as_bytes())`, the 5th param added by BUG-221) and updates the companion `{name}.json` (oauthAccount snapshot, org identity). The live session file (`~/.claude/.credentials.json`) is NOT written during batch refresh — writing to it was the root cause of [BUG-221](../../../../task/claude_profile/bug/221_refresh_account_token_some_branch_clobbers_live_credentials.md) (fixed in TSK-230): every batch refresh clobbered the user's live Claude session. See also [BUG-165](../../../../task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md) for the original lifecycle extraction history.
+**Credential write-back:** When `run_isolated` returns `credentials: Some(new_json)`, `account::save()` writes `new_json` directly to `{credential_store}/{name}.credentials.json` (via `creds: Some(new_json.as_bytes())`, the 5th param added by BUG-221) and updates the companion `{name}.json` (oauthAccount snapshot, org identity). The live session file (`~/.claude/.credentials.json`) is NOT written during batch refresh — writing to it was the root cause of [BUG-221](../../../../../task/claude_profile/bug/221_refresh_account_token_some_branch_clobbers_live_credentials.md) (fixed in TSK-230): every batch refresh clobbered the user's live Claude session. See also [BUG-165](../../../../../task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md) for the original lifecycle extraction history.
 
 **Subprocess trigger mechanism:** `run_isolated` must be invoked with `["--print", "."]` so Claude Code performs its startup OAuth token refresh before making the API call. At process startup, Claude Code refreshes the OAuth access token if expired — writing updated credentials to `$HOME/.claude/.credentials.json` — then attempts the `--print .` API call. The API call may succeed, fail, or time out, but credentials are written at startup regardless. The `isolated.rs` `issue-isolated-credentials-on-timeout` fix handles timeout exactly: when the credentials file changes before the 35-second timeout fires, `run_isolated` returns `Ok(IsolatedRunResult { credentials: Some(new_json), exit_code: -1 })` — the updated credentials are captured even when the subprocess was terminated by timeout.
 
 Two other arg combinations are broken and must not be used:
-- **Empty args `[]`** (TSK-168 regression, [BUG-169](../../../../task/claude_profile/bug/169_refresh_args_interactive_mode_regression.md)): Claude Code in non-TTY mode with no args detects it has nothing to do and exits immediately, without performing startup OAuth token refresh. The subprocess returns exit 0 but never writes to the credentials file — `run_isolated` returns `credentials: None` for every expired account.
-- **`["--print", ".", "--max-tokens", "1"]`** (original issue-151 bug): `--max-tokens 1` triggers an API rejection before the OAuth exchange can occur. Credentials are never written. See [TSK-151](../../../../task/claude_profile/151_refresh_failure_message.md).
+- **Empty args `[]`** (TSK-168 regression, [BUG-169](../../../../../task/claude_profile/bug/169_refresh_args_interactive_mode_regression.md)): Claude Code in non-TTY mode with no args detects it has nothing to do and exits immediately, without performing startup OAuth token refresh. The subprocess returns exit 0 but never writes to the credentials file — `run_isolated` returns `credentials: None` for every expired account.
+- **`["--print", ".", "--max-tokens", "1"]`** (original issue-151 bug): `--max-tokens 1` triggers an API rejection before the OAuth exchange can occur. Credentials are never written. See [TSK-151](../../../../../task/claude_profile/completed/151_refresh_failure_message.md).
 
 **Feature gate:** The retry logic is compiled only under `#[cfg(feature = "enabled")]`, matching `fetch_oauth_usage`. When `enabled` is absent, `refresh::1` is accepted as a parameter but no refresh attempt is made (offline builds cannot spawn subprocesses).
 
@@ -77,43 +77,77 @@ Two other arg combinations are broken and must not be used:
 - **AC-18**: `refresh::0` produces no calls to `run_isolated`; `.usage` behavior is unchanged from the baseline. Use `refresh::0` to explicitly disable the default refresh behavior.
 - **AC-19**: `refresh::1` (default) invokes `claude_profile_core::account::refresh_account_token()` (which internally calls `claude_runner_core::run_isolated()`) for any account whose `fetch_oauth_usage` returns an HTTP authentication error (401 or 403), or an HTTP 429 rate-limit error when the per-account credential file has a locally-expired `expiresAt`. HTTP 429 with a non-expired local token is passed through unchanged.
 - **AC-24**: The `refresh::` parameter description in `.usage --help` documents the conditional 429 case ("429 when token is locally expired") and does NOT describe 429 as unconditionally excluded from refresh.
-- **AC-20**: When `run_isolated` returns `credentials: Some(new_json)`, `account::save()` writes `new_creds` directly to `{credential_store}/{name}.credentials.json` and updates the companion `{name}.json` (oauthAccount snapshot, org identity) before the retry fetch. `~/.claude/.credentials.json` is NOT written. Fix for [BUG-221](../../../../task/claude_profile/bug/221_refresh_account_token_some_branch_clobbers_live_credentials.md).
+- **AC-20**: When `run_isolated` returns `credentials: Some(new_json)`, `account::save()` writes `new_creds` directly to `{credential_store}/{name}.credentials.json` and updates the companion `{name}.json` (oauthAccount snapshot, org identity) before the retry fetch. `~/.claude/.credentials.json` is NOT written. Fix for [BUG-221](../../../../../task/claude_profile/bug/221_refresh_account_token_some_branch_clobbers_live_credentials.md).
 - **AC-21**: If the refresh attempt fails (subprocess error, or retried fetch still fails), the account's row shows the final error; the remaining accounts are still processed and the table is still rendered.
 - **AC-22**: `refresh::` does not affect `format::json` output structure — refreshed accounts appear as normal data objects, failed-refresh accounts appear as error objects.
 - **AC-23**: The `refresh::` parameter appears in `.usage --help` output with its default value (`1`).
-- **AC-25**: After `run_isolated` returns `credentials: Some(new_json)`, `account_quota.expires_at_ms` is updated using a two-step fallback: (1) decode the JWT `exp` claim from the new `accessToken` via `jwt_exp_ms(new_json)` — preferred for JWT-format tokens; (2) if JWT decoding returns `None` (e.g., opaque `sk-ant-oat01-*` tokens with no `.` separator), read `expiresAt` directly from the credentials JSON via `parse_u064_field(new_json, "expiresAt")`. If both strategies fail, `expires_at_ms` is left unchanged as a last-resort safe fallback. Fix for [BUG-170](../../../../task/claude_profile/bug/170_expires_column_stale_after_refresh_opaque_token.md).
-- **AC-26**: When `trace=true`, `refresh_account_token` emits `[trace] refresh {name}  {step}: {outcome}` lines to stderr for each lifecycle step — `read credentials`, `run_isolated` (with `"invoking claude  args=["--print", "."]  timeout=35s"` before the call), `write credentials`, and `save`. Each outcome is either `OK` (or `OK credentials={Some|None}` for `run_isolated`) or `Err({error})`. The `trace` parameter is forwarded by `apply_refresh` into `refresh_account_token` so the full lifecycle is observable from `clp .usage refresh::1 trace::1`. Fix for [BUG-166](../../../../task/claude_profile/bug/166_refresh_account_token_no_trace.md).
+- **AC-25**: After `run_isolated` returns `credentials: Some(new_json)`, `account_quota.expires_at_ms` is updated using a two-step fallback: (1) decode the JWT `exp` claim from the new `accessToken` via `jwt_exp_ms(new_json)` — preferred for JWT-format tokens; (2) if JWT decoding returns `None` (e.g., opaque `sk-ant-oat01-*` tokens with no `.` separator), read `expiresAt` directly from the credentials JSON via `parse_u064_field(new_json, "expiresAt")`. If both strategies fail, `expires_at_ms` is left unchanged as a last-resort safe fallback. Fix for [BUG-170](../../../../../task/claude_profile/bug/170_expires_column_stale_after_refresh_opaque_token.md).
+- **AC-26**: When `trace=true`, `refresh_account_token` emits `[trace] refresh {name}  {step}: {outcome}` lines to stderr for each lifecycle step — `read credentials`, `run_isolated` (with `"invoking claude  args=["--print", "."]  timeout=35s"` before the call), `write credentials`, and `save`. Each outcome is either `OK` (or `OK credentials={Some|None}` for `run_isolated`) or `Err({error})`. The `trace` parameter is forwarded by `apply_refresh` into `refresh_account_token` so the full lifecycle is observable from `clp .usage refresh::1 trace::1`. Fix for [BUG-166](../../../../../task/claude_profile/bug/166_refresh_account_token_no_trace.md).
 - **AC-27**: After `apply_refresh()` successfully re-fetches quota (i.e., `account_quota.result` transitions to `Ok`), `account_quota.account` is re-populated by calling `fetch_oauth_account()` with the new token. Consequence: `~Renews` and `Sub` columns show current data for successfully-refreshed accounts rather than the stale `?` they would show if `aq.account` were left as `None`. If the `fetch_oauth_account()` call fails, the original `account_quota.account` value is preserved unchanged (non-aborting). Fix for BUG-171.
 - **AC-28**: After the per-account refresh loop, `apply_refresh` does NOT call `switch_account` to restore the active account. Instead, `refresh_account_token` passes `update_marker=false` to `save()` — the `_active` marker is never written during per-account cycling, so no restore is needed. Fix for BUG-211.
-- **AC-29**: After `apply_refresh()` completes (regardless of how many accounts were refreshed), `~/.claude/.credentials.json` is byte-identical to its state at `apply_refresh()` entry. Batch refresh must not disrupt the user's live Claude session. Fix for [BUG-221](../../../../task/claude_profile/bug/221_refresh_account_token_some_branch_clobbers_live_credentials.md).
+- **AC-29**: After `apply_refresh()` completes (regardless of how many accounts were refreshed), `~/.claude/.credentials.json` is byte-identical to its state at `apply_refresh()` entry. Batch refresh must not disrupt the user's live Claude session. Fix for [BUG-221](../../../../../task/claude_profile/bug/221_refresh_account_token_some_branch_clobbers_live_credentials.md).
 
-### Cross-References
+### Bugs
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/usage/refresh.rs` | `refresh::` param read; retry trigger; calls `account::refresh_account_token()`; expiry derivation; retry fetch |
-| source | `src/lib.rs` | `refresh::` parameter registration via `register_commands()` |
-| source | `claude_profile_core/src/account.rs` | `refresh_account_token()` — `read credentials → run_isolated → write credentials → save` lifecycle |
-| dep | `claude_runner_core` | `run_isolated()` — called by `refresh_account_token()` in `_core`; `IsolatedRunResult`, `RunnerError` types |
-| dep | `claude_quota` | `fetch_oauth_usage()` — quota HTTP transport; `QuotaError::HttpTransport` |
-| task | `task/claude_runner_core/136_run_isolated_subprocess.md` | Prerequisite: implement `run_isolated()` |
-| task | `task/claude_profile/137_usage_refresh_param.md` | Implementation task for this feature |
-| task | `task/claude_profile/142_fix_refresh_per_account.md` | Per-account loop fix (replaced batch refresh) |
-| task | `task/claude_profile/150_fix_apply_refresh_429_trigger.md` | Removed 429 from unconditional retry guard |
-| bug | `task/claude_profile/bug/156_refresh_429_expired_not_refreshed.md` | BUG-156: conditional 429+expired refresh fix |
-| bug | `task/claude_profile/bug/162_expiresAt_not_updated_by_subprocess.md` | BUG-162: subprocess never writes `expiresAt`; use JWT `exp` instead |
-| bug | `task/claude_profile/bug/170_expires_column_stale_after_refresh_opaque_token.md` | BUG-170: `jwt_exp_ms` returns None for opaque tokens; add `expiresAt` fallback |
-| bug | `task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md` | BUG-165: live session not updated after refresh; fixed by account lifecycle |
-| bug | `task/claude_profile/bug/175_switch_account_before_run_isolated_unnecessary_global_write.md` | BUG-175: `Some(paths)` branch called `switch_account` before reading creds — unnecessary global write; removed |
-| bug | `task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md` | BUG-208 (Closed): restore `switch_account` calls wrapped in `let _ = ...` — silent error discard; `match` arms added for trace; superseded by BUG-211 |
-| bug | `task/claude_profile/bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md` | BUG-211 (Fixed): snapshot+restore removed from `apply_refresh`; `save(update_marker=false)` suppresses `_active` writes during per-account cycling |
-| bug | `task/claude_profile/bug/166_refresh_account_token_no_trace.md` | BUG-166: `refresh_account_token` had no trace param; all failure paths silently returned `None` |
-| bug | `task/claude_profile/bug/169_refresh_args_interactive_mode_regression.md` | BUG-169: TSK-168 regression — empty args `[]` broken; `["--print", "."]` is the only correct invocation |
-| bug | `task/claude_profile/bug/221_refresh_account_token_some_branch_clobbers_live_credentials.md` | BUG-221 (Fixed 2026-05-30, TSK-230): `Some(paths)` branch writes refreshed creds directly to credential store; `save()` gained `creds: Option<&[u8]>` — live session file no longer written during batch refresh |
-| task | `task/claude_profile/163_fix_expiresAt_jwt_decode.md` | TSK-163: implement `jwt_exp_ms()` and fix `apply_refresh` expiry derivation |
-| task | `task/claude_profile/151_refresh_failure_message.md` | Fixed empty args in `run_isolated` call |
-| task | `task/claude_profile/168_fix_refresh_account_token_args.md` | TSK-168: fix broken `--print . --max-tokens 1` args — use `["--print", "."]` (introduced BUG-169 regression) |
-| doc | [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm that this extends |
-| doc | `claude_runner_core/docs/feature/004_run_isolated.md` | `run_isolated()` API contract |
-| doc | [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | `.usage` CLI command specification |
-| doc | [cli/param/019_refresh.md](../cli/param/019_refresh.md) | `refresh::` parameter specification |
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/156_refresh_429_expired_not_refreshed.md` | BUG-156: conditional 429+expired refresh fix |
+| `task/claude_profile/bug/162_expiresAt_not_updated_by_subprocess.md` | BUG-162: subprocess never writes `expiresAt`; use JWT `exp` instead |
+| `task/claude_profile/bug/165_apply_refresh_skips_account_lifecycle.md` | BUG-165: live session not updated after refresh; fixed by account lifecycle |
+| `task/claude_profile/bug/166_refresh_account_token_no_trace.md` | BUG-166: `refresh_account_token` had no trace param; all failure paths silently returned `None` |
+| `task/claude_profile/bug/169_refresh_args_interactive_mode_regression.md` | BUG-169: TSK-168 regression — empty args `[]` broken; `["--print", "."]` is the only correct invocation |
+| `task/claude_profile/bug/170_expires_column_stale_after_refresh_opaque_token.md` | BUG-170: `jwt_exp_ms` returns None for opaque tokens; add `expiresAt` fallback |
+| `task/claude_profile/bug/175_switch_account_before_run_isolated_unnecessary_global_write.md` | BUG-175: `Some(paths)` branch called `switch_account` before reading creds — unnecessary global write; removed |
+| `task/claude_profile/bug/208_restore_switch_account_silent_result_discard.md` | BUG-208 (Closed): restore `switch_account` calls wrapped in `let _ = ...` — silent error discard; `match` arms added for trace; superseded by BUG-211 |
+| `task/claude_profile/bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md` | BUG-211 (Fixed): snapshot+restore removed from `apply_refresh`; `save(update_marker=false)` suppresses `_active` writes during per-account cycling |
+| `task/claude_profile/bug/221_refresh_account_token_some_branch_clobbers_live_credentials.md` | BUG-221 (Fixed 2026-05-30, TSK-230): `Some(paths)` branch writes refreshed creds directly to credential store; `save()` gained `creds: Option<&[u8]>` — live session file no longer written during batch refresh |
+
+### Commands
+
+| File | Relationship |
+|------|--------------|
+| [command/006_usage.md](../cli/command/006_usage.md#command--9-usage) | `.usage` CLI command specification |
+
+### Dependencies
+
+| File | Relationship |
+|------|--------------|
+| `claude_runner_core` | `run_isolated()` — called by `refresh_account_token()` in `_core`; `IsolatedRunResult`, `RunnerError` types |
+| `claude_quota` | `fetch_oauth_usage()` — quota HTTP transport; `QuotaError::HttpTransport` |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [009_token_usage.md](009_token_usage.md) | Baseline `.usage` algorithm that this extends |
+| [018_live_monitor.md](018_live_monitor.md) | Live monitor mode that composites with `refresh::` |
+| [019_account_relogin.md](019_account_relogin.md) | Browser re-authentication fallback when `refresh_account_token` returns `credentials=None` |
+| [024_session_touch.md](024_session_touch.md) | Session touch — reuses `refresh_account_token()` subprocess infrastructure |
+| [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | `imodel::` and `effort::` apply to refresh subprocesses |
+| `claude_runner_core/docs/feature/004_run_isolated.md` | `run_isolated()` API contract |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/019_refresh.md](../cli/param/019_refresh.md) | `refresh::` parameter specification |
+
+### Tasks
+
+| File | Relationship |
+|------|--------------|
+| `task/claude_runner_core/136_run_isolated_subprocess.md` | Prerequisite: implement `run_isolated()` |
+| `task/claude_profile/137_usage_refresh_param.md` | Implementation task for this feature |
+| `task/claude_profile/142_fix_refresh_per_account.md` | Per-account loop fix (replaced batch refresh) |
+| `task/claude_profile/150_fix_apply_refresh_429_trigger.md` | Removed 429 from unconditional retry guard |
+| `task/claude_profile/151_refresh_failure_message.md` | Fixed empty args in `run_isolated` call |
+| `task/claude_profile/163_fix_expiresAt_jwt_decode.md` | TSK-163: implement `jwt_exp_ms()` and fix `apply_refresh` expiry derivation |
+| `task/claude_profile/168_fix_refresh_account_token_args.md` | TSK-168: fix broken `--print . --max-tokens 1` args — use `["--print", "."]` (introduced BUG-169 regression) |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/usage/refresh.rs` | `refresh::` param read; retry trigger; calls `account::refresh_account_token()`; expiry derivation; retry fetch |
+| `src/lib.rs` | `refresh::` parameter registration via `register_commands()` |
+| `claude_profile_core/src/account.rs` | `refresh_account_token()` — `read credentials → run_isolated → write credentials → save` lifecycle |

@@ -50,21 +50,42 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use car` →
 - **AC-12**: `clp .account.renewal name::alice at::2026-07-01T00:00:00Z` (where `alice@acme.com` is the only saved account whose local part is `alice`) → resolves to `alice@acme.com`, writes `_renewal_at`, exits 0.
 - **AC-13**: `clp .account.renewal name::alice,bob at::2026-07-01T00:00:00Z` → resolves each comma token independently via prefix resolution; `alice@acme.com` and `bob@acme.com` both updated; exits 0.
 
-### Cross-References
+### Commands
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `src/adapter.rs` | `argv_to_unilang_tokens()` — positional rewrite for name-taking commands |
-| source | `src/commands/account_ops.rs` | `account_use_routine`, `account_delete_routine` — prefix resolution |
-| source | `src/commands/account_relogin.rs` | `account_relogin_routine` — prefix resolution |
-| source | `src/commands/account_renewal.rs` | `account_renewal_routine` — comma-list token resolution |
-| source | `src/commands/accounts.rs`, `src/commands/limits.rs` | `accounts_routine`, `account_limits_routine` — prefix resolution |
-| source | `src/lib.rs` | `cli::print_usage()` — update example to use positional form |
-| test | `tests/cli/account_mutations_test.rs` | account.use (aw13–aw15), account.delete (ad13–ad14), and account.renewal (ar15–ar16) positional, prefix, and comma-list cases |
-| test | `tests/cli/accounts_test.rs` | accounts (acc29–acc30) positional and prefix cases |
-| test | `tests/cli/account_limits_test.rs` | account.limits (lim09–lim10) positional and prefix cases |
-| doc | [cli/param/001_name.md](../cli/param/001_name.md) | `name::` parameter specification |
-| doc | [command/readme.md](../cli/command/readme.md) | Syntax blocks for affected commands |
-| doc | [004_account_use.md](004_account_use.md) | Base switch behavior |
-| doc | [005_account_delete.md](005_account_delete.md) | Base delete behavior |
-| doc | [030_account_renewal_override.md](030_account_renewal_override.md) | `.account.renewal` multi-account dispatch and `name::all`/comma-list handling |
+| File | Relationship |
+|------|--------------|
+| [command/readme.md](../cli/command/readme.md) | Syntax blocks for affected commands |
+
+### Features
+
+| File | Relationship |
+|------|--------------|
+| [004_account_use.md](004_account_use.md) | Base switch behavior |
+| [005_account_delete.md](005_account_delete.md) | Base delete behavior |
+| [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine active marker naming convention; AC-11 added for exact-local-part match |
+| [030_account_renewal_override.md](030_account_renewal_override.md) | `.account.renewal` multi-account dispatch and `name::all`/comma-list handling |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/001_name.md](../cli/param/001_name.md) | `name::` parameter specification |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `src/adapter.rs` | `argv_to_unilang_tokens()` — positional rewrite for name-taking commands |
+| `src/commands/account_ops.rs` | `account_use_routine`, `account_delete_routine` — prefix resolution |
+| `src/commands/account_relogin.rs` | `account_relogin_routine` — prefix resolution |
+| `src/commands/account_renewal.rs` | `account_renewal_routine` — comma-list token resolution |
+| `src/commands/accounts.rs`, `src/commands/limits.rs` | `accounts_routine`, `account_limits_routine` — prefix resolution |
+| `src/lib.rs` | `cli::print_usage()` — update example to use positional form |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/account_mutations_test.rs` | account.use (aw13–aw15), account.delete (ad13–ad14), and account.renewal (ar15–ar16) positional, prefix, and comma-list cases |
+| `tests/cli/accounts_test.rs` | accounts (acc29–acc30) positional and prefix cases |
+| `tests/cli/account_limits_test.rs` | account.limits (lim09–lim10) positional and prefix cases |

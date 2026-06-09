@@ -46,17 +46,32 @@ The `{name}.json` snapshot (a copy of `~/.claude.json` taken at `save()` time) c
 - **AC-08**: `parse_string_array_field` correctly extracts `["claude_max","chat"]` → `vec!["claude_max", "chat"]`.
 - **AC-09**: `capabilities` with empty array `[]` in snapshot → `N/A` in text output, `[]` in JSON.
 
-### Cross-References
+### Features
 
-| Type | File | Responsibility |
-|------|------|----------------|
-| source | `claude_profile_core/src/account.rs` | `Account` struct new fields; `list()` reads them; `parse_string_array_field` helper |
-| source | `src/commands/accounts.rs`, `src/commands/credentials.rs` | `read_live_cred_meta()` — reads new fields from live `~/.claude.json`; `accounts_routine()`, `credentials_status_routine()` — render params |
-| source | `src/lib.rs` | Registration of `uuid::` and `capabilities::` params |
-| test | `tests/cli/credentials_test.rs` | Test cases for `uuid::` and `capabilities::` on `.credentials.status` |
-| test | `tests/cli/accounts_test.rs` | Test cases for `uuid::` and `capabilities::` on `.accounts` |
-| doc | [014_rich_account_metadata.md](014_rich_account_metadata.md) | Base rich metadata feature (FR-20); `uuid::` and `capabilities::` extend it |
-| doc | [003_account_list.md](003_account_list.md) | `.accounts` command |
-| doc | [cli/param/028_uuid.md](../cli/param/028_uuid.md) | `uuid::` param specification |
-| doc | [cli/param/029_capabilities.md](../cli/param/029_capabilities.md) | `capabilities::` param specification |
-| doc | [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) | Field presence group — `uuid::` and `capabilities::` are members |
+| File | Relationship |
+|------|--------------|
+| [003_account_list.md](003_account_list.md) | `.accounts` command |
+| [014_rich_account_metadata.md](014_rich_account_metadata.md) | Base rich metadata feature (FR-20); `uuid::` and `capabilities::` extend it |
+
+### Parameters
+
+| File | Relationship |
+|------|--------------|
+| [cli/param/028_uuid.md](../cli/param/028_uuid.md) | `uuid::` param specification |
+| [cli/param/029_capabilities.md](../cli/param/029_capabilities.md) | `capabilities::` param specification |
+| [cli/param_group/002_field_presence.md](../cli/param_group/002_field_presence.md) | Field presence group — `uuid::` and `capabilities::` are members |
+
+### Sources
+
+| File | Relationship |
+|------|--------------|
+| `claude_profile_core/src/account.rs` | `Account` struct new fields; `list()` reads them; `parse_string_array_field` helper |
+| `src/commands/accounts.rs`, `src/commands/credentials.rs` | `read_live_cred_meta()` — reads new fields from live `~/.claude.json`; `accounts_routine()`, `credentials_status_routine()` — render params |
+| `src/lib.rs` | Registration of `uuid::` and `capabilities::` params |
+
+### Tests
+
+| File | Relationship |
+|------|--------------|
+| `tests/cli/credentials_test.rs` | Test cases for `uuid::` and `capabilities::` on `.credentials.status` |
+| `tests/cli/accounts_test.rs` | Test cases for `uuid::` and `capabilities::` on `.accounts` |
