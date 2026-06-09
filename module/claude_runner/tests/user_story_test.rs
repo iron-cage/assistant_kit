@@ -37,29 +37,7 @@
 #![ cfg( feature = "enabled" ) ]
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ make_creds_file, run_cli, run_cli_with_env, make_session_dir, stderr_str };
-use std::process::Command;
-
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-/// Invoke `clr --dry-run` with extra args and return stdout.  Asserts exit 0.
-fn run_dry( args : &[ &str ] ) -> String
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut full = vec![ "--dry-run" ];
-  full.extend_from_slice( args );
-  let out = Command::new( bin )
-    .args( &full )
-    .output()
-    .expect( "Failed to invoke clr binary" );
-  assert!(
-    out.status.success(),
-    "dry-run failed (exit {}): {}",
-    out.status.code().unwrap_or( -1 ),
-    String::from_utf8_lossy( &out.stderr )
-  );
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
+use cli_binary_test_helpers::{ make_creds_file, make_session_dir, run_cli, run_cli_with_env, run_dry, stderr_str };
 
 // ── US01: Interactive REPL ──────────────────────────────────────────────────
 // Source: tests/docs/cli/user_story/01_interactive_repl.md

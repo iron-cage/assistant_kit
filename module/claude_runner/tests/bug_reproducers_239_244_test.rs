@@ -190,21 +190,7 @@
 #![ cfg( unix ) ]   // signal tests are Unix-only
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ exit_code, fake_claude_dir, stderr_str };
-
-// ── helpers ──────────────────────────────────────────────────────────────────
-
-fn clr_bin() -> &'static str { env!( "CARGO_BIN_EXE_clr" ) }
-
-/// Run `clr` with given args and env overrides, return raw Output.
-fn run_clr( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> std::process::Output
-{
-  std::process::Command::new( clr_bin() )
-    .args( args )
-    .envs( env.iter().copied() )
-    .output()
-    .expect( "failed to invoke clr" )
-}
+use cli_binary_test_helpers::{ exit_code, fake_claude_dir, run_cli_with_env, stderr_str };
 
 // ── BUG-239 ──────────────────────────────────────────────────────────────────
 
@@ -217,7 +203,7 @@ fn run_clr( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> std::process::Outpu
 fn print_mode_propagates_exit_42()
 {
   let ( _dir, path_val ) = fake_claude_dir( "exit 42" );
-  let out = run_clr( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
   assert_eq!(
     exit_code( &out ),
     42,
@@ -233,7 +219,7 @@ fn print_mode_propagates_exit_42()
 fn print_mode_propagates_exit_0()
 {
   let ( _dir, path_val ) = fake_claude_dir( "exit 0" );
-  let out = run_clr( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
   assert_eq!(
     exit_code( &out ),
     0,
@@ -253,7 +239,7 @@ fn print_mode_propagates_exit_0()
 #[ doc = "bug_reproducer(BUG-240)" ]
 fn spawn_error_visible_at_verbosity_0()
 {
-  let out = run_clr(
+  let out = run_cli_with_env(
     &[ "--print", "test" ],
     &[ ( "PATH", "/tmp" ), ( "CLR_VERBOSITY", "0" ) ],
   );
@@ -276,7 +262,7 @@ fn spawn_error_visible_at_verbosity_0()
 #[ doc = "bug_reproducer(BUG-241)" ]
 fn binary_not_found_shows_install_hint()
 {
-  let out = run_clr( &[ "--print", "test" ], &[ ( "PATH", "/tmp" ) ] );
+  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", "/tmp" ) ] );
   assert_ne!( exit_code( &out ), 0, "BUG-241: must exit non-zero when binary absent" );
   let err = stderr_str( &out );
   assert!(
@@ -303,7 +289,7 @@ fn signal_sigterm_exits_143()
   // `kill -TERM $$` sends SIGTERM to the shell itself; it dies by the signal so the
   // parent sees WIFSIGNALED=true, WTERMSIG=15 → signal_exit_code returns 143.
   let ( _dir, path_val ) = fake_claude_dir( "kill -TERM $$" );
-  let out = run_clr( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
   assert_eq!(
     exit_code( &out ),
     143,
@@ -319,7 +305,7 @@ fn signal_sigterm_exits_143()
 fn signal_sigkill_exits_137()
 {
   let ( _dir, path_val ) = fake_claude_dir( "kill -KILL $$" );
-  let out = run_clr( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
   assert_eq!(
     exit_code( &out ),
     137,
@@ -397,7 +383,7 @@ fn timeout_includes_partial_stdout()
 #[ test ]
 fn storage_subdir_flag_accepted()
 {
-  let out = run_clr( &[ "--subdir", "foo", "--dry-run", "test" ], &[] );
+  let out = run_cli_with_env( &[ "--subdir", "foo", "--dry-run", "test" ], &[] );
   assert_eq!(
     exit_code( &out ),
     0,
@@ -411,7 +397,7 @@ fn storage_subdir_flag_accepted()
 #[ test ]
 fn storage_subdir_env_var_applied()
 {
-  let out = run_clr( &[ "--dry-run", "test" ], &[ ( "CLR_SUBDIR", "foo" ) ] );
+  let out = run_cli_with_env( &[ "--dry-run", "test" ], &[ ( "CLR_SUBDIR", "foo" ) ] );
   assert_eq!(
     exit_code( &out ),
     0,

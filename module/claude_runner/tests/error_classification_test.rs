@@ -42,19 +42,7 @@
 #![ cfg( unix ) ]
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude_dir, stderr_str };
-
-fn clr_bin() -> &'static str { env!( "CARGO_BIN_EXE_clr" ) }
-
-/// Run `clr` with given args and env overrides, return raw Output.
-fn run_clr( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> std::process::Output
-{
-  std::process::Command::new( clr_bin() )
-    .args( args )
-    .envs( env.iter().copied() )
-    .output()
-    .expect( "failed to invoke clr" )
-}
+use cli_binary_test_helpers::{ fake_claude_dir, run_cli_with_env, stderr_str };
 
 // ── T09 ───────────────────────────────────────────────────────────────────────
 
@@ -68,7 +56,7 @@ fn run_clr( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> std::process::Outpu
 fn rate_limit_exit2_emits_labeled_message()
 {
   let ( _dir, path_val ) = fake_claude_dir( "exit 2" );
-  let out = run_clr( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
   let err = stderr_str( &out );
   assert!(
     err.contains( "Error: rate limit (exit 2)" ),
@@ -94,7 +82,7 @@ fn auth_error_pattern_in_stdout_emits_labeled_message()
   let ( _dir, path_val ) = fake_claude_dir(
     "echo 'Your organization does not have access to Claude'; exit 1",
   );
-  let out = run_clr( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
   let err = stderr_str( &out );
   assert!(
     err.contains( "Error: auth error" ),
@@ -119,7 +107,7 @@ fn quota_exhausted_pattern_emits_labeled_message()
   let ( _dir, path_val ) = fake_claude_dir(
     "echo \"You've hit your limit\" >&2; exit 1",
   );
-  let out = run_clr( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
   let err = stderr_str( &out );
   assert!(
     err.contains( "Error: quota exhausted (exit 1)" ),

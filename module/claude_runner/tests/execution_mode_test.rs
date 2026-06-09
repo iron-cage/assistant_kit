@@ -39,31 +39,10 @@
 //! | E13 | --interactive "msg" | explicit interactive | Subprocess does NOT receive `--print` |
 //! | E14 | Empty stderr + non-zero exit (rate limit) | print (-p flag) | Rate-limit diagnostic emitted |
 
-use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 
-/// Create a fake `claude` binary in a temp directory; return (tempdir, modified PATH).
-fn fake_claude( script : &str ) -> ( tempfile::TempDir, String )
-{
-  let tmp = tempfile::tempdir().expect( "Failed to create temp dir" );
-  let fake = tmp.path().join( "claude" );
-  std::fs::write( &fake, script ).expect( "Failed to write fake claude" );
-  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "Failed to chmod fake claude" );
-  let old_path = std::env::var( "PATH" ).unwrap_or_default();
-  let new_path = format!( "{}:{old_path}", tmp.path().display() );
-  ( tmp, new_path )
-}
-
-fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  Command::new( bin )
-    .args( args )
-    .env( "PATH", path )
-    .output()
-    .expect( "Failed to invoke clr binary" )
-}
+mod cli_binary_test_helpers;
+use cli_binary_test_helpers::{ fake_claude, run_with_path };
 
 // E01: Interactive mode: binary not found exits 1 with error on stderr.
 #[ test ]

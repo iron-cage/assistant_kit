@@ -117,65 +117,27 @@ fn parse_expect_strategy( raw : &str ) -> Result< ExpectStrategy >
   raw.parse::< ExpectStrategy >().map_err( Error::msg )
 }
 
-/// Parse a raw string as an expect-retries count (0–255) with a clear error message.
+/// Parse a raw string as a bounded u8 (0–255) with a labeled error message.
 ///
-/// Called from `parse_value_flag()`. Rejects values outside u8 range.
-fn parse_expect_retries( raw : &str ) -> Result< u8 >
+/// Used for flags like `--expect-retries` and `--retry-on-rate-limit`.
+fn parse_u8_bounded( raw : &str, flag_name : &str ) -> Result< u8 >
 {
   raw.parse::< u32 >()
     .ok()
     .and_then( | v | u8::try_from( v ).ok() )
     .ok_or_else( || Error::msg( format!(
-      "invalid --expect-retries value: {raw}\nExpected integer 0–255"
+      "invalid {flag_name} value: {raw}\nExpected integer 0–255"
     ) ) )
 }
 
-/// Parse a raw string as a max-sessions count (u32) with a clear error message.
+/// Parse a raw string as a u32 flag value with a labeled error message and hint.
 ///
-/// Called from `parse_value_flag()`. 0 means unlimited.
-fn parse_max_sessions( raw : &str ) -> Result< u32 >
+/// Used for flags like `--max-sessions`, `--retry-delay`, and `--timeout`.
+fn parse_u32_flag( raw : &str, flag_name : &str, hint : &str ) -> Result< u32 >
 {
   raw.parse::< u32 >().map_err( | _ |
     Error::msg( format!(
-      "invalid --max-sessions value: {raw}\nExpected unsigned integer (0 = unlimited)"
-    ) )
-  )
-}
-
-/// Parse a raw string as a retry count (u8) with a clear error message.
-///
-/// Called from `parse_value_flag()`. Identical logic to `parse_expect_retries` but
-/// for `--retry-on-rate-limit` which controls rate-limit automatic retry.
-fn parse_retry_count( raw : &str ) -> Result< u8 >
-{
-  raw.parse::< u32 >()
-    .ok()
-    .and_then( | v | u8::try_from( v ).ok() )
-    .ok_or_else( || Error::msg( format!(
-      "invalid --retry-on-rate-limit value: {raw}\nExpected integer 0–255"
-    ) ) )
-}
-
-/// Parse a raw string as a retry delay in seconds (u32) with a clear error message.
-///
-/// Called from `parse_value_flag()`. 0 = immediate retry (no sleep between attempts).
-fn parse_retry_delay( raw : &str ) -> Result< u32 >
-{
-  raw.parse::< u32 >().map_err( | _ |
-    Error::msg( format!(
-      "invalid --retry-delay value: {raw}\nExpected unsigned integer (seconds)"
-    ) )
-  )
-}
-
-/// Parse a raw string as a timeout in seconds (u32) with a clear error message.
-///
-/// Called from `parse_value_flag()`. 0 = unlimited (no watchdog started).
-fn parse_timeout_secs( raw : &str ) -> Result< u32 >
-{
-  raw.parse::< u32 >().map_err( | _ |
-    Error::msg( format!(
-      "invalid --timeout value: {raw}\nExpected unsigned integer (seconds; 0 = unlimited)"
+      "invalid {flag_name} value: {raw}\nExpected unsigned integer{hint}"
     ) )
   )
 }
@@ -297,31 +259,31 @@ fn parse_runner_value_flag(
     "--expect-retries" =>
     {
       parsed.expect_retries = Some(
-        parse_expect_retries( next_value( tokens, next, "--expect-retries" )? )?
+        parse_u8_bounded( next_value( tokens, next, "--expect-retries" )?, "--expect-retries" )?
       );
     }
     "--max-sessions" =>
     {
       parsed.max_sessions = Some(
-        parse_max_sessions( next_value( tokens, next, "--max-sessions" )? )?
+        parse_u32_flag( next_value( tokens, next, "--max-sessions" )?, "--max-sessions", " (0 = unlimited)" )?
       );
     }
     "--retry-on-rate-limit" =>
     {
       parsed.retry_on_rate_limit = Some(
-        parse_retry_count( next_value( tokens, next, "--retry-on-rate-limit" )? )?
+        parse_u8_bounded( next_value( tokens, next, "--retry-on-rate-limit" )?, "--retry-on-rate-limit" )?
       );
     }
     "--retry-delay" =>
     {
       parsed.retry_delay = Some(
-        parse_retry_delay( next_value( tokens, next, "--retry-delay" )? )?
+        parse_u32_flag( next_value( tokens, next, "--retry-delay" )?, "--retry-delay", " (seconds)" )?
       );
     }
     "--timeout" =>
     {
       parsed.timeout = Some(
-        parse_timeout_secs( next_value( tokens, next, "--timeout" )? )?
+        parse_u32_flag( next_value( tokens, next, "--timeout" )?, "--timeout", " (seconds; 0 = unlimited)" )?
       );
     }
     _ => return Ok( false ),
@@ -563,7 +525,7 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
     if let Some( v ) = env_str( "CLR_EXPECT_RETRIES" )
     {
       parsed.expect_retries = Some(
-        parse_expect_retries( &v ).map_err( | e |
+        parse_u8_bounded( &v, "--expect-retries" ).map_err( | e |
           Error::msg( format!( "CLR_EXPECT_RETRIES: {e}" ) )
         )?
       );

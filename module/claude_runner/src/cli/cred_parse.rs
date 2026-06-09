@@ -2,6 +2,14 @@
 //!
 //! Contains `IsolatedArgs`, `RefreshArgs`, their parsers, and env-var fallback application
 //! for the `isolated` and `refresh` subcommands.
+//!
+//! # Type Note: u64 vs u32 for `timeout_secs`
+//!
+//! `IsolatedArgs` and `RefreshArgs` store `timeout_secs` as `u64`, while the main
+//! `CliArgs` in `parse.rs` uses `u32`. The divergence is intentional: isolated/refresh
+//! subprocesses may run longer-lived operations where the wider type provides headroom.
+//! `parse_timeout_secs` here returns `u64`; the one in `parse.rs` returns `u32`. Do not
+//! unify the types without updating all struct fields and callers.
 
 use claude_core::paths::ClaudePaths;
 use error_tools::{ Error, Result };
@@ -30,7 +38,7 @@ pub( super ) struct RefreshArgs
 ///
 /// Rejects negative numbers (which start with `-` and fail `u64` parsing)
 /// and non-numeric strings with a clear error message.
-fn parse_timeout( raw : &str ) -> Result< u64 >
+fn parse_timeout_secs( raw : &str ) -> Result< u64 >
 {
   raw.parse::< u64 >().map_err( | _ |
     Error::msg( format!(
@@ -104,7 +112,7 @@ pub( super ) fn parse_isolated_args( tokens : &[ String ] ) -> Result< IsolatedA
       "--timeout" =>
       {
         let raw      = next_value( tokens, i + 1, "--timeout" )?;
-        timeout_secs = parse_timeout( raw )?;
+        timeout_secs = parse_timeout_secs( raw )?;
         i += 1;
       }
       "--trace" =>
@@ -169,7 +177,7 @@ pub( super ) fn parse_refresh_args( tokens : &[ String ] ) -> Result< RefreshArg
       "--timeout" =>
       {
         let raw      = next_value( tokens, i + 1, "--timeout" )?;
-        timeout_secs = parse_timeout( raw )?;
+        timeout_secs = parse_timeout_secs( raw )?;
         i += 1;
       }
       "--trace" =>

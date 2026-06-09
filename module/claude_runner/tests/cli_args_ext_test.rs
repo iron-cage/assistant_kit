@@ -188,7 +188,7 @@ fn t45_interactive_flag_in_help()
 fn t46_no_skip_permissions_disables_default()
 {
   let out = run_cli( &[ "--dry-run", "--no-skip-permissions", "test" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( "--dangerously-skip-permissions" ),

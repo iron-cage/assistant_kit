@@ -108,7 +108,7 @@ fn t04_dry_run_contains_continue_when_sessions_exist()
     .args( [ "--dry-run", "--session-dir", session_dir_str, "test" ] )
     .output()
     .expect( "invoke clr" );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( " -c" ),
@@ -121,7 +121,7 @@ fn t04_dry_run_contains_continue_when_sessions_exist()
 fn t05_skip_permissions_default_on()
 {
   let out = run_cli( &[ "--dry-run", "test" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--dangerously-skip-permissions" ),
@@ -134,7 +134,7 @@ fn t05_skip_permissions_default_on()
 fn t06_verbose_flag_passed_to_claude()
 {
   let out = run_cli( &[ "--dry-run", "--verbose", "test" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--verbose" ),
@@ -147,7 +147,7 @@ fn t06_verbose_flag_passed_to_claude()
 fn t07_session_dir_flag()
 {
   let out = run_cli( &[ "--dry-run", "--session-dir", "/tmp/sess", "test" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "CLAUDE_CODE_SESSION_DIR=/tmp/sess" ),
@@ -160,7 +160,7 @@ fn t07_session_dir_flag()
 fn t08_dir_flag()
 {
   let out = run_cli( &[ "--dry-run", "--dir", "/tmp/test-dir", "test" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!( stdout.contains( "cd /tmp/test-dir" ), "--dir must produce cd prefix. Got:\n{stdout}" );
 }
@@ -250,7 +250,7 @@ fn t15_short_help_flag_works()
   let out = run_cli( &[ "-h" ] );
   assert!( out.status.success(), "-h must exit 0" );
   let stdout = String::from_utf8_lossy( &out.stdout );
-  assert!( stdout.contains( "USAGE:" ) );
+  assert!( stdout.contains( "USAGE:" ), "help output must contain USAGE:. Got:\n{stdout}" );
 }
 
 // T16: help lists all documented options (--new-session present, --continue absent)
@@ -258,7 +258,7 @@ fn t15_short_help_flag_works()
 fn t16_help_lists_all_options()
 {
   let out = run_cli( &[ "--help" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   for opt in &[
     "--print", "--new-session", "--model", "--verbose",
@@ -280,7 +280,7 @@ fn t16_help_lists_all_options()
 fn t17_error_output_goes_to_stderr_not_stdout()
 {
   let out = run_cli( &[ "--unknown-flag" ] );
-  assert!( !out.status.success() );
+  assert!( !out.status.success(), "unknown flag must fail; exit={}", out.status.code().unwrap_or( -1 ) );
   assert!(
     out.stdout.is_empty(),
     "stdout must be empty on error; got: {}",

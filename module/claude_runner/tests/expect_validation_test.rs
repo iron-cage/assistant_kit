@@ -34,36 +34,9 @@
 #![ cfg( unix ) ]
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ fake_claude, run_cli, run_with_path };
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
-
-/// Create a fake `claude` binary in a temp directory; return `(tempdir, modified PATH)`.
-///
-/// The tempdir must be kept alive for the duration of the test — drop it after the subprocess
-/// has exited. Uses the same PATH-injection strategy as `execution_mode_test.rs`.
-fn fake_claude( script : &str ) -> ( tempfile::TempDir, String )
-{
-  let tmp = tempfile::tempdir().expect( "Failed to create temp dir" );
-  let fake = tmp.path().join( "claude" );
-  std::fs::write( &fake, script ).expect( "Failed to write fake claude" );
-  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "Failed to chmod fake claude" );
-  let old_path = std::env::var( "PATH" ).unwrap_or_default();
-  let new_path = format!( "{}:{old_path}", tmp.path().display() );
-  ( tmp, new_path )
-}
-
-/// Invoke `clr` with `args` and a custom `PATH` env var.
-fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  Command::new( bin )
-    .args( args )
-    .env( "PATH", path )
-    .output()
-    .expect( "Failed to invoke clr binary" )
-}
 
 // ── T01: Output matches → exit 0 ─────────────────────────────────────────────
 

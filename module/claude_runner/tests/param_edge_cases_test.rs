@@ -144,7 +144,7 @@ fn s07_model_at_end_of_argv_rejected()
 fn s08_model_absent_from_default_command()
 {
   let out = run_cli( &[ "--dry-run", "Fix bug" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( "--model" ),
@@ -157,7 +157,7 @@ fn s08_model_absent_from_default_command()
 fn s09_verbose_absent_from_default_command()
 {
   let out = run_cli( &[ "--dry-run", "Fix bug" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( "--verbose" ),
@@ -197,7 +197,7 @@ fn s11_verbose_specified_twice_not_duplicated()
 fn s12_no_skip_permissions_with_message_forwards_message()
 {
   let out = run_cli( &[ "--dry-run", "--no-skip-permissions", "Explain this" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "Explain this" ),
@@ -226,7 +226,7 @@ fn s13_no_skip_permissions_alone_accepted()
 fn s14_no_skip_permissions_with_verbose_coexist()
 {
   let out = run_cli( &[ "--dry-run", "--no-skip-permissions", "--verbose", "Fix bug" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--verbose" ),
@@ -243,7 +243,7 @@ fn s14_no_skip_permissions_with_verbose_coexist()
 fn s15_interactive_with_verbose_both_forwarded()
 {
   let out = run_cli( &[ "--dry-run", "--interactive", "--verbose", "Fix bug" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--verbose" ),
@@ -294,7 +294,7 @@ fn s17_new_session_with_session_dir_accepted()
 fn s18_dir_absent_from_default_output()
 {
   let out = run_cli( &[ "--dry-run", "Fix bug" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( "cd " ),
@@ -324,7 +324,7 @@ fn s19_dir_nonexistent_path_accepted()
 fn s20_session_dir_absent_from_default_output()
 {
   let out = run_cli( &[ "--dry-run", "Fix bug" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( "CLAUDE_CODE_SESSION_DIR=" ),
@@ -432,7 +432,7 @@ fn s27_system_prompt_empty_string_forwarded()
 fn s28_system_prompt_with_spaces_as_single_arg()
 {
   let out = run_cli( &[ "--dry-run", "--system-prompt", "Be concise and accurate.", "test" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "Be concise and accurate." ),
@@ -457,7 +457,7 @@ fn s29_append_system_prompt_empty_string_forwarded()
 fn s30_append_system_prompt_with_spaces_as_single_arg()
 {
   let out = run_cli( &[ "--dry-run", "--append-system-prompt", "Always respond in JSON.", "test" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "Always respond in JSON." ),

@@ -5,13 +5,16 @@
 //! | Helper | Used By |
 //! |--------|---------|
 //! | `run_cli` | `cli_args_test`, `cli_args_ext_test`, `dry_run_test`, `ultrathink_args_test`, `effort_args_test`, `param_edge_cases_test`, `param_extended_flags_test`, `param_group_test`, `execution_mode_test`, `verbosity_test`, `ask_command_test`, `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test` |
-//! | `run_cli_with_env` | `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test` |
+//! | `run_cli_with_env` | `env_var_test`, `env_var_ext_test`, `invariant_trace_universality_test`, `param_trace_edge_cases_test`, `param_group_test`, `isolated_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `bug_reproducers_239_244_test`, `error_classification_test` |
 //! | `make_session_dir` | `cli_args_test`, `ultrathink_args_test`, `user_story_test` |
 //! | `exit_code` | `refresh_test`, `bug_reproducers_239_244_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_test` |
 //! | `stderr_str` | `refresh_test`, `bug_reproducers_239_244_test`, `invariant_trace_universality_test`, `error_classification_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test` |
 //! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test` |
 //! | `make_creds_file` | `refresh_test`, `param_trace_edge_cases_test`, `invariant_trace_universality_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test` |
 //! | `fake_claude_dir` (unix) | `bug_reproducers_239_244_test`, `error_classification_test` |
+//! | `fake_claude` (unix) | `execution_mode_test`, `expect_validation_test` |
+//! | `run_with_path` | `execution_mode_test`, `expect_validation_test` |
+//! | `run_dry` | `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test` |
 //!
 //! # Testing Techniques
 //!
@@ -171,4 +174,80 @@ pub fn fake_claude_dir( body : &str ) -> ( tempfile::TempDir, String )
     std::env::var( "PATH" ).unwrap_or_default(),
   );
   ( dir, path_val )
+}
+
+/// Create a fake `claude` binary from a full shell script; return `(tempdir, modified PATH)`.
+///
+/// Unlike `fake_claude_dir`, the caller provides the full script including the shebang
+/// (`#!/bin/sh`). The temp dir is prepended to `$PATH` so the fake binary is found first.
+/// The caller must keep the returned `TempDir` alive for the duration of the test.
+///
+/// # Panics
+///
+/// Panics if the temp directory, script file, or permissions cannot be set.
+#[cfg(unix)]
+#[inline]
+#[must_use]
+#[allow(dead_code)]
+pub fn fake_claude( script : &str ) -> ( tempfile::TempDir, String )
+{
+  use std::os::unix::fs::PermissionsExt as _;
+  let tmp  = tempfile::tempdir().expect( "Failed to create temp dir" );
+  let fake = tmp.path().join( "claude" );
+  std::fs::write( &fake, script ).expect( "Failed to write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "Failed to chmod fake claude" );
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  ( tmp, new_path )
+}
+
+/// Invoke `clr --dry-run` with `args`; assert exit 0 and return stdout as a `String`.
+///
+/// Prepends `--dry-run` to the given args, invokes the binary, asserts success,
+/// and returns the captured stdout. The caller need not add `--dry-run` themselves.
+///
+/// # Panics
+///
+/// Panics if the subprocess cannot be launched or exits non-zero.
+#[ must_use ]
+#[ inline ]
+#[ allow( dead_code ) ]
+pub fn run_dry( args : &[ &str ] ) -> String
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut full = vec![ "--dry-run" ];
+  full.extend_from_slice( args );
+  let out = Command::new( bin )
+    .args( &full )
+    .output()
+    .expect( "Failed to invoke clr binary" );
+  assert!(
+    out.status.success(),
+    "dry-run failed (exit {}): {}",
+    out.status.code().unwrap_or( -1 ),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  String::from_utf8_lossy( &out.stdout ).into_owned()
+}
+
+/// Invoke `clr` binary with `args` and a custom `PATH`; return raw `Output`.
+///
+/// Sets only the `PATH` environment variable; all other env vars are inherited.
+/// Use this when tests inject a fake `claude` binary via PATH manipulation.
+///
+/// # Panics
+///
+/// Panics if the `clr` binary cannot be launched.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  Command::new( bin )
+    .args( args )
+    .env( "PATH", path )
+    .output()
+    .expect( "Failed to invoke clr binary" )
 }

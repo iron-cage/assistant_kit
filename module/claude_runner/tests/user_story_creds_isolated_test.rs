@@ -9,29 +9,10 @@
 #![ cfg( feature = "enabled" ) ]
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ exit_code, make_creds_file, run_cli, run_cli_with_env, stderr_str };
+use cli_binary_test_helpers::{ exit_code, make_creds_file, run_cli, run_cli_with_env, run_dry, stderr_str };
 use std::process::Command;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-/// Invoke `clr --dry-run` with extra args and return stdout.  Asserts exit 0.
-fn run_dry( args : &[ &str ] ) -> String
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut full = vec![ "--dry-run" ];
-  full.extend_from_slice( args );
-  let out = Command::new( bin )
-    .args( &full )
-    .output()
-    .expect( "Failed to invoke clr binary" );
-  assert!(
-    out.status.success(),
-    "dry-run failed (exit {}): {}",
-    out.status.code().unwrap_or( -1 ),
-    String::from_utf8_lossy( &out.stderr )
-  );
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
 /// Invoke `clr ask --dry-run` with extra args and return stdout.  Asserts exit 0.
 fn run_ask_dry( args : &[ &str ] ) -> String

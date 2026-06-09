@@ -75,7 +75,7 @@ fn s34_no_chrome_suppresses_chrome_flag()
 fn s35_default_chrome_injected()
 {
   let out = run_cli( &[ "--dry-run", "Fix bug" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--chrome" ),
@@ -105,7 +105,7 @@ fn s36_no_chrome_without_message_accepted()
 fn s37_help_lists_no_chrome()
 {
   let out = run_cli( &[ "--help" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--no-chrome" ),
@@ -119,7 +119,7 @@ fn s37_help_lists_no_chrome()
 fn s38_no_chrome_with_no_skip_permissions_both_suppressed()
 {
   let out = run_cli( &[ "--dry-run", "--no-chrome", "--no-skip-permissions", "Fix bug" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( "--chrome" ),
@@ -167,7 +167,7 @@ fn s40_no_persist_forwards_no_session_persistence()
 fn s41_default_no_session_persistence_absent()
 {
   let out = run_cli( &[ "--dry-run", "Fix bug" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( "--no-session-persistence" ),
@@ -197,7 +197,7 @@ fn s42_no_persist_without_message_accepted()
 fn s43_help_lists_no_persist()
 {
   let out = run_cli( &[ "--help" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--no-persist" ),
@@ -262,7 +262,7 @@ fn s46_json_schema_forwarded()
 fn s47_default_json_schema_absent()
 {
   let out = run_cli( &[ "--dry-run", "task" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( "--json-schema" ),
@@ -289,7 +289,7 @@ fn s48_json_schema_complex_forwarded_verbatim()
 fn s49_help_lists_json_schema()
 {
   let out = run_cli( &[ "--help" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--json-schema" ),
@@ -302,7 +302,7 @@ fn s49_help_lists_json_schema()
 fn s50_json_schema_with_model_both_forwarded()
 {
   let out = run_cli( &[ "--dry-run", "--json-schema", r#"{"type":"string"}"#, "--model", "sonnet", "task" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--json-schema" ),
@@ -349,7 +349,7 @@ fn s52_mcp_config_forwarded()
 fn s53_default_mcp_config_absent()
 {
   let out = run_cli( &[ "--dry-run", "task" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     !stdout.contains( "--mcp-config" ),
@@ -386,7 +386,7 @@ fn s54_mcp_config_multiple_forwarded_individually()
 fn s55_help_lists_mcp_config()
 {
   let out = run_cli( &[ "--help" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--mcp-config" ),
@@ -399,7 +399,7 @@ fn s55_help_lists_mcp_config()
 fn s56_mcp_config_with_model_both_forwarded()
 {
   let out = run_cli( &[ "--dry-run", "--mcp-config", "/tmp/mcp.json", "--model", "sonnet", "task" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--mcp-config" ),
@@ -476,7 +476,7 @@ fn s83_subdir_dot_identity_no_suffix()
 fn s84_help_lists_subdir()
 {
   let out = run_cli( &[ "--help" ] );
-  assert!( out.status.success() );
+  assert!( out.status.success(), "exit={} stderr={}", out.status.code().unwrap_or( -1 ), String::from_utf8_lossy( &out.stderr ) );
   let stdout = String::from_utf8_lossy( &out.stdout );
   assert!(
     stdout.contains( "--subdir" ),
