@@ -45,7 +45,7 @@ subprocess exit codes. Both parameters are silently ignored in interactive mode.
 **Session concurrency gate:** `--max-sessions <N>` (default 15, 0 = unlimited) counts active
 `claude` processes via `/proc` scan before spawning a subprocess. When the live count is at or
 above the limit, the runner emits a waiting message to stderr and polls every 30 seconds until a
-slot opens or the 15-minute timeout elapses (fatal exit 1 on timeout). Setting `--max-sessions 0`
+slot opens or the 20-attempt limit is exhausted (fatal exit 1 on exhaustion). Setting `--max-sessions 0`
 disables the gate entirely — the scan is skipped and the subprocess is launched immediately.
 The gate is also skipped in `--dry-run` mode. Provides deterministic backpressure in CI
 environments with parallel `clr` invocations hitting API rate limits.

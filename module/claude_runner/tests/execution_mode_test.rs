@@ -42,7 +42,7 @@
 use std::process::Command;
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ fake_claude, run_with_path };
+use cli_binary_test_helpers::{ fake_claude, fake_claude_dir, run_with_path };
 
 // E01: Interactive mode: binary not found exits 1 with error on stderr.
 #[ test ]
@@ -207,21 +207,10 @@ fn e09_verbosity_four_stderr_preview()
 #[ test ]
 fn e10_interactive_message_forwarded()
 {
-  let tmp = tempfile::tempdir().expect( "create temp dir" );
-  let args_file = tmp.path().join( "received_args" );
-
-  // Fake claude that writes its arguments to a file.
-  let fake = tmp.path().join( "claude" );
-  let script = format!(
-    "#!/bin/sh\necho \"$@\" > \"{}\"\n",
-    args_file.display()
-  );
-  std::fs::write( &fake, script ).expect( "write fake" );
-  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "chmod" );
-
-  let old_path = std::env::var( "PATH" ).unwrap_or_default();
-  let path = format!( "{}:{old_path}", tmp.path().display() );
+  let args_file      = tempfile::NamedTempFile::new().expect( "create args file" );
+  let args_path      = args_file.path().display().to_string();
+  let script         = format!( "echo \"$@\" > \"{args_path}\"\n" );
+  let ( _tmp, path ) = fake_claude_dir( &script );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
@@ -232,7 +221,7 @@ fn e10_interactive_message_forwarded()
 
   assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
 
-  let received = std::fs::read_to_string( &args_file )
+  let received = std::fs::read_to_string( args_file.path() )
     .expect( "read args file" );
   assert!(
     received.contains( "hello world" ),
@@ -248,20 +237,10 @@ fn e10_interactive_message_forwarded()
 #[ test ]
 fn e11_new_session_does_not_pass_continue()
 {
-  let tmp = tempfile::tempdir().expect( "create temp dir" );
-  let args_file = tmp.path().join( "received_args" );
-
-  let fake = tmp.path().join( "claude" );
-  let script = format!(
-    "#!/bin/sh\necho \"$@\" > \"{}\"\n",
-    args_file.display()
-  );
-  std::fs::write( &fake, script ).expect( "write fake" );
-  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "chmod" );
-
-  let old_path = std::env::var( "PATH" ).unwrap_or_default();
-  let path = format!( "{}:{old_path}", tmp.path().display() );
+  let args_file      = tempfile::NamedTempFile::new().expect( "create args file" );
+  let args_path      = args_file.path().display().to_string();
+  let script         = format!( "echo \"$@\" > \"{args_path}\"\n" );
+  let ( _tmp, path ) = fake_claude_dir( &script );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
@@ -272,7 +251,7 @@ fn e11_new_session_does_not_pass_continue()
 
   assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
 
-  let received = std::fs::read_to_string( &args_file )
+  let received = std::fs::read_to_string( args_file.path() )
     .expect( "read args file" );
   assert!(
     !received.contains( " -c" ),
@@ -284,20 +263,10 @@ fn e11_new_session_does_not_pass_continue()
 #[ test ]
 fn e12_message_without_print_flag_uses_print_mode()
 {
-  let tmp = tempfile::tempdir().expect( "create temp dir" );
-  let args_file = tmp.path().join( "received_args" );
-
-  let fake = tmp.path().join( "claude" );
-  let script = format!(
-    "#!/bin/sh\necho \"$@\" > \"{}\"\n",
-    args_file.display()
-  );
-  std::fs::write( &fake, &script ).expect( "write fake" );
-  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "chmod" );
-
-  let old_path = std::env::var( "PATH" ).unwrap_or_default();
-  let path = format!( "{}:{old_path}", tmp.path().display() );
+  let args_file      = tempfile::NamedTempFile::new().expect( "create args file" );
+  let args_path      = args_file.path().display().to_string();
+  let script         = format!( "echo \"$@\" > \"{args_path}\"\n" );
+  let ( _tmp, path ) = fake_claude_dir( &script );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
@@ -308,7 +277,7 @@ fn e12_message_without_print_flag_uses_print_mode()
 
   assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
 
-  let received = std::fs::read_to_string( &args_file )
+  let received = std::fs::read_to_string( args_file.path() )
     .expect( "read args file" );
   assert!(
     received.contains( "--print" ),
@@ -320,20 +289,10 @@ fn e12_message_without_print_flag_uses_print_mode()
 #[ test ]
 fn e13_interactive_flag_with_message_uses_interactive_mode()
 {
-  let tmp = tempfile::tempdir().expect( "create temp dir" );
-  let args_file = tmp.path().join( "received_args" );
-
-  let fake = tmp.path().join( "claude" );
-  let script = format!(
-    "#!/bin/sh\necho \"$@\" > \"{}\"\n",
-    args_file.display()
-  );
-  std::fs::write( &fake, &script ).expect( "write fake" );
-  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
-    .expect( "chmod" );
-
-  let old_path = std::env::var( "PATH" ).unwrap_or_default();
-  let path = format!( "{}:{old_path}", tmp.path().display() );
+  let args_file      = tempfile::NamedTempFile::new().expect( "create args file" );
+  let args_path      = args_file.path().display().to_string();
+  let script         = format!( "echo \"$@\" > \"{args_path}\"\n" );
+  let ( _tmp, path ) = fake_claude_dir( &script );
 
   let bin = env!( "CARGO_BIN_EXE_clr" );
   let out = Command::new( bin )
@@ -344,7 +303,7 @@ fn e13_interactive_flag_with_message_uses_interactive_mode()
 
   assert!( out.status.success(), "must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
 
-  let received = std::fs::read_to_string( &args_file )
+  let received = std::fs::read_to_string( args_file.path() )
     .expect( "read args file" );
   assert!(
     !received.contains( "--print" ),

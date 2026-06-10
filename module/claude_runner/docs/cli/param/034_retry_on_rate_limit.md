@@ -8,7 +8,7 @@ the retry counter. On exhaustion, `clr` emits an exhaustion message to stderr
 and propagates exit code 2.
 
 - **Type:** u8 (0–255)
-- **Default:** `0` (no automatic retry; current behavior preserved)
+- **Default:** `1` (single automatic retry on transient rate-limit exit)
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 
@@ -16,7 +16,7 @@ and propagates exit code 2.
 clr -p "refactor module" --retry-on-rate-limit 3    # retry up to 3 times on rate-limit exit
 clr -p "task" --retry-on-rate-limit 2 --retry-delay 30  # retry twice, wait 30s each
 CLR_RETRY_ON_RATE_LIMIT=2 clr -p "task"             # env-var equivalent
-clr -p "task" --retry-on-rate-limit 0               # default; no retry (explicit)
+clr -p "task" --retry-on-rate-limit 0               # disable retry (override default 1)
 clr -p "task" --retry-on-rate-limit 1 --dry-run     # parsed; dry-run skips retry logic
 ```
 
@@ -43,7 +43,7 @@ the default): `"Info: rate-limit exit; retrying ({N} retries remaining)..."`.
 On exhaustion: `"Error: rate-limit retries exhausted after {N+1} attempt(s)."`.
 
 **Env var:** `CLR_RETRY_ON_RATE_LIMIT` — accepts a decimal integer string (0–255);
-invalid values are silently ignored (parse failure → field stays at default 0);
+invalid values are silently ignored (parse failure → field stays at default 1);
 CLI flag wins when both are present.
 
 ### Referenced Parameter Groups
@@ -56,8 +56,8 @@ CLI flag wins when both are present.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`run`](../command/01_run.md) | 0 | Retry logic wraps `run_print_mode()` call |
-| 5 | [`ask`](../command/05_ask.md) | 0 | Same behavior; pure alias for run |
+| 1 | [`run`](../command/01_run.md) | 1 | Retry logic wraps `run_print_mode()` call |
+| 5 | [`ask`](../command/05_ask.md) | 1 | Same behavior; pure alias for run |
 
 ### See Also
 

@@ -4,7 +4,7 @@
 
 - **Purpose**: Document `--max-sessions` as a rate-limit guard that limits concurrent Claude Code sessions before a new invocation proceeds.
 - **Responsibility**: Define acceptance criteria for the session concurrency gate: waiting behavior, timeout behavior, disabled state, env-var fallback.
-- **In Scope**: `--max-sessions` limit, 30s polling interval, 15-minute timeout, `0` = unlimited semantics, `CLR_MAX_SESSIONS` env var, stderr status messages, dry-run bypass.
+- **In Scope**: `--max-sessions` limit, 30s polling interval, 20-attempt limit, `0` = unlimited semantics, `CLR_MAX_SESSIONS` env var, stderr status messages, dry-run bypass.
 - **Out of Scope**: Per-project session scoping (-> 022_session_isolation_subdir.md), subprocess execution timeout (-> 020_timeout.md).
 
 ### Persona
@@ -22,7 +22,7 @@ parallel pipelines.
 
 - AC-001: When active Claude processes < `--max-sessions`, `clr` proceeds immediately with no gate messages to stderr
 - AC-002: When active Claude processes >= `--max-sessions`, `clr` emits a waiting message to stderr (at verbosity ≥ 2) and polls every 30 seconds
-- AC-003: When 15 minutes elapse without a slot opening, `clr` emits an error message to stderr and exits with code 1
+- AC-003: When 20 attempts are exhausted without a slot opening, `clr` emits an error message to stderr and exits with code 1
 - AC-004: `--max-sessions 0` disables the gate; `clr` proceeds immediately with no process scan or messages
 - AC-005: `CLR_MAX_SESSIONS=N` is equivalent to `--max-sessions N` when the CLI flag is absent; CLI flag wins when both are present
 - AC-006: In `--dry-run` mode, the gate is not triggered; the command preview is produced immediately

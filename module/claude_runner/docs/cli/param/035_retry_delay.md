@@ -2,10 +2,10 @@
 
 Number of seconds to wait between automatic retry attempts when
 `--retry-on-rate-limit` is active and a transient rate-limit exit is detected.
-Has no effect when `--retry-on-rate-limit` is `0` (the default).
+Has no effect when `--retry-on-rate-limit` is `0`.
 
 - **Type:** u32 (seconds)
-- **Default:** `60`
+- **Default:** `30`
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 - **Group:** [Runner Control](../param_group/02_runner_control.md)
 
@@ -28,7 +28,7 @@ Useful for integration tests that use fake scripts with controlled exit sequence
 the delay value is never used.
 
 **Env var:** `CLR_RETRY_DELAY` — accepts a decimal integer string (u32 seconds);
-invalid values are silently ignored (parse failure → field stays at default 60);
+invalid values are silently ignored (parse failure → field stays at default 30);
 CLI flag wins when both are present.
 
 ### Referenced Parameter Groups
@@ -41,8 +41,8 @@ CLI flag wins when both are present.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`run`](../command/01_run.md) | 60 | Delay applied inside retry wrapper |
-| 5 | [`ask`](../command/05_ask.md) | 60 | Same behavior; pure alias for run |
+| 1 | [`run`](../command/01_run.md) | 30 | Delay applied inside retry wrapper |
+| 5 | [`ask`](../command/05_ask.md) | 30 | Same behavior; pure alias for run |
 
 ### See Also
 

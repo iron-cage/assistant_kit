@@ -56,7 +56,12 @@ use cli_binary_test_helpers::{ fake_claude_dir, run_cli_with_env, stderr_str };
 fn rate_limit_exit2_emits_labeled_message()
 {
   let ( _dir, path_val ) = fake_claude_dir( "exit 2" );
-  let out = run_cli_with_env( &[ "--print", "test" ], &[ ( "PATH", &path_val ) ] );
+  // Explicitly disable retry so the rate-limit label fires immediately (default retry=1 would
+  // sleep 30s and emit "retries exhausted" instead; this test targets classification, not retry).
+  let out = run_cli_with_env(
+    &[ "--print", "--retry-on-rate-limit", "0", "--max-sessions", "0", "test" ],
+    &[ ( "PATH", &path_val ) ],
+  );
   let err = stderr_str( &out );
   assert!(
     err.contains( "Error: rate limit (exit 2)" ),

@@ -309,8 +309,8 @@ fn execute_print_attempt( builder : &ClaudeCommand, timeout_secs : u32 ) -> Exec
 fn run_print_mode( builder : &ClaudeCommand, cli : &CliArgs )
 {
   let verbosity    = cli.verbosity.unwrap_or_default();
-  let retry_limit  = cli.retry_on_rate_limit.unwrap_or( 0 ) as usize;
-  let retry_delay  = cli.retry_delay.unwrap_or( 60 );
+  let retry_limit  = cli.retry_on_rate_limit.unwrap_or( 1 ) as usize;
+  let retry_delay  = cli.retry_delay.unwrap_or( 30 );
   let timeout_secs = cli.timeout.unwrap_or( 0 );
   let mut attempts = 0usize;
 
