@@ -242,6 +242,8 @@ mod isolated_defaults_test
       "Do not explain your reasoning or narrate your steps.",
       "Output only the direct result of the task",
       "If the input is a single character or whitespace only, reply with a single period.",
+      "Do not use extended thinking",
+      "Do not use tool calls",
     ];
 
     // Source of truth: read the constant from the source file directly.
