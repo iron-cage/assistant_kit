@@ -78,7 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Env var fallback: `CLR_EXPECT_RETRIES`
   - Documented as param 032, Group 2 (Runner Control)
 
-- **`--max-sessions <N>` parameter** — max concurrent claude sessions before blocking (0=unlimited, default: 10)
+- **`--max-sessions <N>` parameter** — max concurrent claude sessions before blocking (0=unlimited, default: 15)
   - Blocks up to 15 minutes polling `/proc/*/cmdline` for running `claude` processes
   - Env var fallback: `CLR_MAX_SESSIONS`
   - Documented as param 033, Group 2 (Runner Control)

@@ -6,7 +6,7 @@ for up to 15 minutes, then exits with code 1. Setting `0` disables the gate enti
 (unlimited sessions, no process scan).
 
 - **Type:** u32
-- **Default:** 10
+- **Default:** 15
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 
 ```sh
@@ -45,8 +45,8 @@ without scanning for active sessions.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`run`](../command/01_run.md) | 10 | Gate applied before subprocess launch |
-| 5 | [`ask`](../command/05_ask.md) | 10 | Same behavior; pure alias for run |
+| 1 | [`run`](../command/01_run.md) | 15 | Gate applied before subprocess launch |
+| 5 | [`ask`](../command/05_ask.md) | 15 | Same behavior; pure alias for run |
 
 ### Referenced User Stories
 
