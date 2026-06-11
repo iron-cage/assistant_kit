@@ -88,6 +88,7 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 | `task/claude_profile/bug/238_model_override_skipped_when_already_active.md` | BUG-238 ✅ Fixed: `pre_switch_touch_ctx()` refactored to `PreSwitchOutcome` enum; `apply_model_override()` extracted and called for all NeedTouch outcomes. Note: the AlreadyActive variant was subsequently removed by BUG-285. |
 | `task/claude_profile/bug/285_account_use_already_active_wrong_oracle.md` | BUG-285 ✅ Fixed: idle check (`resets_at.is_none()`) removed from `pre_switch_touch_ctx`; `AlreadyActive` variant removed from `PreSwitchOutcome`; subprocess always fires when fetch succeeds |
 | `task/claude_profile/bug/257_override_session_model_exact_match_misses_shorthand_alias.md` | BUG-257 ✅ Fixed (TSK-261): `contains("sonnet")` + write `"opus"` shorthand |
+| `task/claude_profile/bug/285_account_use_already_active_wrong_oracle.md` | BUG-285 🔴 Open: `pre_switch_touch_ctx()` uses server-side `resets_at` as proxy for local subprocess identity — false `AlreadyActive` classification when quota window open from any session/machine; subprocess spawn skipped |
 
 ### Commands
 
