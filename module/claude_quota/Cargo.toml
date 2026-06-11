@@ -1,8 +1,20 @@
 [package]
-name        = "claude_quota"
-version     = "0.1.0"
+name              = "claude_quota"
+version           = "0.1.0"
 edition.workspace = true
-description = "Anthropic API rate-limit HTTP transport — Layer * standalone primitive."
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme            = "readme.md"
+documentation     = "https://docs.rs/claude_quota"
+description       = "Anthropic API rate-limit HTTP transport — Layer * standalone primitive."
+keywords          = [ "claude", "anthropic", "rate-limit", "quota", "api" ]
+categories        = [ "web-programming::http-client", "development-tools" ]
+
+[lints]
+workspace = true
 
 [features]
 enabled = [ "dep:ureq" ]

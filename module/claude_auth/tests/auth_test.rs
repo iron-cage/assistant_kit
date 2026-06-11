@@ -1,4 +1,4 @@
-//! Unit tests: OAuth token refresh response parsing and AuthError display.
+//! Unit tests: OAuth token refresh response parsing and `AuthError` display.
 //!
 //! Tests use the body-string interface `parse_response(body, now_ms)` to avoid
 //! any dependency on `ureq` or a live network.
@@ -26,7 +26,7 @@ use claude_auth::{ TokenRefreshResult, AuthError, parse_response };
 
 // Suppress "unused import" warning — TokenRefreshResult is used via type inference in T01.
 #[ allow( unused_imports ) ]
-use std::convert::identity;
+use core::convert::identity;
 
 // ── T01 ───────────────────────────────────────────────────────────────────────
 

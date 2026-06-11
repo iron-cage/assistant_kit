@@ -1,7 +1,7 @@
-//! CLR_* Environment Variable Tests — Extended (E18–E34)
+//! CLR_* Environment Variable Tests — Extended (E18–E37)
 //!
 //! Extension of `env_var_test.rs` (E01–E17) covering suppression flags, credentials,
-//! input/output pipeline vars, and session/concurrency controls.
+//! input/output pipeline vars, session/concurrency controls, and retry/timeout vars.
 //!
 //! All tests use `run_cli_with_env()` — no `std::env::set_var`, no thread-global mutation.
 //!
@@ -25,6 +25,9 @@
 //! | E32  | `CLR_EXPECT`               | dry-run exit 0; CLI wins over env                           |
 //! | E33  | `CLR_EXPECT_STRATEGY`      | dry-run exit 0; CLI wins; invalid value → exit 1            |
 //! | E34  | `CLR_EXPECT_RETRIES`       | dry-run exit 0; CLI wins; out-of-range → exit 1             |
+//! | E35  | `CLR_RETRY_ON_RATE_LIMIT`  | dry-run exit 0; CLI wins; invalid value silently ignored    |
+//! | E36  | `CLR_RETRY_DELAY`          | dry-run exit 0; CLI wins; invalid value silently ignored    |
+//! | E37  | `CLR_TIMEOUT` (run/ask)    | dry-run exit 0; CLI wins; invalid value silently ignored    |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::run_cli_with_env;
@@ -569,5 +572,153 @@ fn e34_clr_expect_retries_sets_cap()
     Some( 1 ),
     "CLR_EXPECT_RETRIES=256 must exit 1 (exceeds u8 max). stderr: {}",
     String::from_utf8_lossy( &out3.stderr ),
+  );
+}
+
+// ─── E35: CLR_RETRY_ON_RATE_LIMIT ─────────────────────────────────────────────
+
+/// E35: `CLR_RETRY_ON_RATE_LIMIT` sets the rate-limit retry count for run/ask.
+///
+/// Valid u8 values silently accepted; invalid values silently ignored (field stays at default 1).
+/// CLI `--retry-on-rate-limit` wins over env.
+///
+/// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E35
+#[ test ]
+fn e35_clr_retry_on_rate_limit_sets_retry_count()
+{
+  // Env-alone with valid value: dry-run exits 0 (env var accepted)
+  let out = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_RETRY_ON_RATE_LIMIT", "3" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_RETRY_ON_RATE_LIMIT=3 + --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+
+  // CLI-wins: --retry-on-rate-limit 0 takes precedence over CLR_RETRY_ON_RATE_LIMIT=3
+  let out2 = run_cli_with_env(
+    &[ "--dry-run", "--retry-on-rate-limit", "0", "task" ],
+    &[ ( "CLR_RETRY_ON_RATE_LIMIT", "3" ) ],
+  );
+  assert!(
+    out2.status.success(),
+    "CLI --retry-on-rate-limit with CLR_RETRY_ON_RATE_LIMIT must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out2.stderr ),
+  );
+
+  // Invalid value: parse failure silently ignored → default used; dry-run exits 0
+  let out3 = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_RETRY_ON_RATE_LIMIT", "notanumber" ) ],
+  );
+  assert!(
+    out3.status.success(),
+    "CLR_RETRY_ON_RATE_LIMIT=notanumber silently ignored; --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out3.stderr ),
+  );
+}
+
+// ─── E36: CLR_RETRY_DELAY ─────────────────────────────────────────────────────
+
+/// E36: `CLR_RETRY_DELAY` sets the delay (seconds) between rate-limit retries for run/ask.
+///
+/// Valid u32 values silently accepted; invalid values silently ignored (field stays at default 30).
+/// CLI `--retry-delay` wins over env.
+///
+/// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E36
+#[ test ]
+fn e36_clr_retry_delay_sets_delay()
+{
+  // Env-alone with valid value: dry-run exits 0 (env var accepted)
+  let out = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_RETRY_DELAY", "60" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_RETRY_DELAY=60 + --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+
+  // CLI-wins: --retry-delay 5 takes precedence over CLR_RETRY_DELAY=60
+  let out2 = run_cli_with_env(
+    &[ "--dry-run", "--retry-delay", "5", "task" ],
+    &[ ( "CLR_RETRY_DELAY", "60" ) ],
+  );
+  assert!(
+    out2.status.success(),
+    "CLI --retry-delay with CLR_RETRY_DELAY must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out2.stderr ),
+  );
+
+  // Invalid value: parse failure silently ignored → default used; dry-run exits 0
+  let out3 = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_RETRY_DELAY", "notanumber" ) ],
+  );
+  assert!(
+    out3.status.success(),
+    "CLR_RETRY_DELAY=notanumber silently ignored; --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out3.stderr ),
+  );
+}
+
+// ─── E37: CLR_TIMEOUT (run/ask) ───────────────────────────────────────────────
+
+/// E37: `CLR_TIMEOUT` sets the subprocess timeout for run/ask dispatch paths.
+///
+/// `0` = unlimited (no watchdog; same as default). Valid u32 values silently accepted;
+/// invalid values silently ignored (field stays at default 0). CLI `--timeout` wins over env.
+///
+/// Note: `CLR_TIMEOUT` also applies to `isolated`/`refresh` (tested separately in E24).
+///
+/// Spec: `tests/docs/cli/env_param/02_clr_input_vars.md` E37
+#[ test ]
+fn e37_clr_timeout_sets_run_timeout()
+{
+  // Env-alone with valid value: dry-run exits 0 (env var accepted)
+  let out = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_TIMEOUT", "30" ) ],
+  );
+  assert!(
+    out.status.success(),
+    "CLR_TIMEOUT=30 + --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out.stderr ),
+  );
+
+  // CLI-wins: --timeout 60 takes precedence over CLR_TIMEOUT=30
+  let out2 = run_cli_with_env(
+    &[ "--dry-run", "--timeout", "60", "task" ],
+    &[ ( "CLR_TIMEOUT", "30" ) ],
+  );
+  assert!(
+    out2.status.success(),
+    "CLI --timeout with CLR_TIMEOUT must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out2.stderr ),
+  );
+
+  // Zero: unlimited — dry-run exits 0 (no watchdog spawned)
+  let out3 = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_TIMEOUT", "0" ) ],
+  );
+  assert!(
+    out3.status.success(),
+    "CLR_TIMEOUT=0 (unlimited) + --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out3.stderr ),
+  );
+
+  // Invalid value: parse failure silently ignored → default 0 used; dry-run exits 0
+  let out4 = run_cli_with_env(
+    &[ "--dry-run", "task" ],
+    &[ ( "CLR_TIMEOUT", "notanumber" ) ],
+  );
+  assert!(
+    out4.status.success(),
+    "CLR_TIMEOUT=notanumber silently ignored; --dry-run must exit 0. stderr: {}",
+    String::from_utf8_lossy( &out4.stderr ),
   );
 }

@@ -1,9 +1,9 @@
 # Env Param :: CLR_* Input Variables
 
-Edge cases for the 34 `CLR_*` input environment variable fallbacks.
+Edge cases for the 37 `CLR_*` input environment variable fallbacks (34 for `run` + 3 for `isolated`/`refresh`).
 Source: [`env_param.md`](../../../../docs/cli/env_param.md)
 Implementation: `apply_env_vars()` in `src/cli/parse.rs`; `apply_isolated_env_vars()` and `apply_refresh_env_vars()` in `src/cli/cred_parse.rs`
-Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E18–E34)
+Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E18–E37)
 
 ## Test Case Index
 
@@ -38,24 +38,27 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 | E27 | `CLAUDECODE=1 CLR_KEEP_CLAUDECODE=1` preserves env var | `CLR_KEEP_CLAUDECODE` | subprocess env contains `CLAUDECODE` (same as `--keep-claudecode`) |
 | E28 | `CLR_TRACE` enables trace for `isolated`/`refresh` | `CLR_TRACE` | trace output appears in stderr for credential ops (cross-command) |
 | E29 | `CLR_SUBDIR=NAME` appends subdirectory to base dir | `CLR_SUBDIR` | dry-run output contains effective dir ending in `/-NAME` |
-| E30 | `CLR_MAX_SESSIONS=N` sets session limit; invalid value silently ignored | `CLR_MAX_SESSIONS` | gate uses N as limit; invalid value → default 15 used; CLI wins |
+| E30 | `CLR_MAX_SESSIONS=N` sets session limit; invalid value silently ignored | `CLR_MAX_SESSIONS` | gate uses N as limit; invalid value → default 20 used; CLI wins |
 | E31 | `CLR_OUTPUT_FILE=<path>` sets output file path | `CLR_OUTPUT_FILE` | dry-run exits 0; CLI flag wins over env var |
 | E32 | `CLR_EXPECT=val1\|val2` sets expect pattern | `CLR_EXPECT` | dry-run exits 0; CLI flag wins; same `|`-separated syntax |
 | E33 | `CLR_EXPECT_STRATEGY=<strategy>` sets mismatch handler | `CLR_EXPECT_STRATEGY` | dry-run exits 0; CLI flag wins; invalid value rejected |
 | E34 | `CLR_EXPECT_RETRIES=N` sets retry cap | `CLR_EXPECT_RETRIES` | dry-run exits 0; CLI flag wins; out-of-range rejected |
+| E35 | `CLR_RETRY_ON_RATE_LIMIT=N` sets retry count | `CLR_RETRY_ON_RATE_LIMIT` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
+| E36 | `CLR_RETRY_DELAY=N` sets retry delay (secs) | `CLR_RETRY_DELAY` | dry-run exits 0; CLI flag wins; invalid value silently ignored |
+| E37 | `CLR_TIMEOUT=N` sets run/ask subprocess timeout | `CLR_TIMEOUT` | dry-run exits 0; CLI flag wins; `0` = unlimited; invalid silently ignored |
 
 ## Test Coverage Summary
 
 - Bool vars (truthy only): E02, E04, E05, E06, E07, E11, E13, E14, E18, E19, E28 (11 tests)
 - String vars: E01, E03, E08, E10, E15, E16, E21, E22, E23, E29, E31, E32, E33 (13 tests)
-- Parsed vars (with silent-ignore): E09, E12, E17, E30 (4 tests)
+- Parsed vars (with silent-ignore): E09, E12, E17, E30, E35, E36, E37 (7 tests)
 - Parsed vars (with rejection): E34 (1 test)
 - Negation suppression (suppress default injection): E05, E06, E07, E18, E19 (5 tests)
-- CLI-wins verification: E01, E03, E29, E30, E31, E32, E33, E34 (8 tests)
+- CLI-wins verification: E01, E03, E29, E30, E31, E32, E33, E34, E35, E36, E37 (11 tests)
 - Isolated subcommand: E23, E24 (2 tests)
 - Credential ops (cross-command): E28 (1 test)
 
-**Total:** 34 edge cases (E01–E34)
+**Total:** 37 edge cases (E01–E37)
 
 ## Test Cases
 
@@ -360,7 +363,7 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **When:** `CLR_MAX_SESSIONS=3 clr --dry-run task`
 - **Then:** exit 0; env var applied (gate uses 3 as limit in a live run); dry-run skips gate and produces output immediately
 - **Exit:** 0
-- **Invalid-ignored:** `CLR_MAX_SESSIONS=notanumber` → parse failure silently ignored; default 15 used; `--dry-run` exits 0 normally
+- **Invalid-ignored:** `CLR_MAX_SESSIONS=notanumber` → parse failure silently ignored; default 20 used; `--dry-run` exits 0 normally
 - **CLI-wins:** `clr --max-sessions 5 --dry-run task` with `CLR_MAX_SESSIONS=2` → CLI value 5 used; env var 2 ignored
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
 
@@ -408,4 +411,42 @@ Test files: `tests/env_var_test.rs` (E01–E17), `tests/env_var_ext_test.rs` (E1
 - **Exit:** 0
 - **CLI-wins:** `clr --expect-retries 5 --dry-run task` with `CLR_EXPECT_RETRIES=3` → CLI value 5 used; env var 3 ignored
 - **Out-of-range:** `CLR_EXPECT_RETRIES=256 clr --dry-run task` → exit 1; stderr contains error about value exceeding u8 range (max 255)
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E35: CLR_RETRY_ON_RATE_LIMIT sets rate-limit retry count
+
+- **Given:** `CLR_RETRY_ON_RATE_LIMIT=3`; no `--retry-on-rate-limit` on CLI; `--dry-run` set
+- **When:** `CLR_RETRY_ON_RATE_LIMIT=3 clr --dry-run task`
+- **Then:** exit 0; env var applied (retry count would be 3 on a rate-limit hit in a live run); dry-run exits 0 normally
+- **Exit:** 0
+- **CLI-wins:** `clr --retry-on-rate-limit 0 --dry-run task` with `CLR_RETRY_ON_RATE_LIMIT=3` → CLI value 0 used; env var 3 ignored
+- **Invalid-ignored:** `CLR_RETRY_ON_RATE_LIMIT=notanumber` → parse failure silently ignored; default 1 used; dry-run exits 0 normally
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E36: CLR_RETRY_DELAY sets retry delay in seconds
+
+- **Given:** `CLR_RETRY_DELAY=60`; no `--retry-delay` on CLI; `--dry-run` set
+- **When:** `CLR_RETRY_DELAY=60 clr --dry-run task`
+- **Then:** exit 0; env var applied (delay between rate-limit retries would be 60s in a live run); dry-run exits 0 normally
+- **Exit:** 0
+- **CLI-wins:** `clr --retry-delay 5 --dry-run task` with `CLR_RETRY_DELAY=60` → CLI value 5 used; env var 60 ignored
+- **Invalid-ignored:** `CLR_RETRY_DELAY=notanumber` → parse failure silently ignored; default 30 used; dry-run exits 0 normally
+- **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)
+
+---
+
+### E37: CLR_TIMEOUT sets run/ask subprocess timeout
+
+- **Given:** `CLR_TIMEOUT=30`; no `--timeout` on CLI; `--dry-run` set
+- **When:** `CLR_TIMEOUT=30 clr --dry-run task`
+- **Then:** exit 0; env var applied (subprocess watchdog would fire after 30s in a live run); dry-run exits 0 normally
+- **Exit:** 0
+- **CLI-wins:** `clr --timeout 60 --dry-run task` with `CLR_TIMEOUT=30` → CLI value 60 used; env var 30 ignored
+- **Zero:** `CLR_TIMEOUT=0` → unlimited (no watchdog); dry-run exits 0 normally
+- **Invalid-ignored:** `CLR_TIMEOUT=notanumber` → parse failure silently ignored; default 0 (unlimited) used; dry-run exits 0 normally
+- **Cross-command:** `CLR_TIMEOUT` also applies to `isolated`/`refresh` (same semantics: 0 = unlimited); tested separately in E24
 - **Source:** [env_param.md §1](../../../../docs/cli/env_param.md)

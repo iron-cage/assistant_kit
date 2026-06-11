@@ -18,7 +18,7 @@
 mod generated
 {
   #![ allow( missing_docs ) ]
-  use unilang::phf;
+  #![ allow( clippy::unreadable_literal ) ]
   include!( concat!( env!( "OUT_DIR" ), "/static_commands.rs" ) );
 }
 #[ cfg( feature = "enabled" ) ]

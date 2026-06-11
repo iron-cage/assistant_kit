@@ -1,4 +1,4 @@
-//! Unit tests: rate-limit header parsing and QuotaError display.
+//! Unit tests: rate-limit header parsing and `QuotaError` display.
 //!
 //! Tests use the closure interface `parse_headers(|name| map.get(name).map(|s| s.to_string()))`
 //! to avoid any dependency on `ureq::Response` or a live network.
@@ -14,7 +14,7 @@
 //! | T05 | `5h-reset` = `"abc"`                            | Err(MalformedHeader) with context     | ✅     |
 //! | T06 | `QuotaError::MissingHeader("x")` Display        | string contains "x"                   | ✅     |
 //! | T07 | `QuotaError::HttpTransport("refused")` Display  | string contains "refused"             | ✅     |
-//! | T08 | Field access on `RateLimitData`                 | utilization_5h = 0.42, status = "allowed" | ✅ |
+//! | T08 | Field access on `RateLimitData`                 | `utilization_5h` = 0.42, status = "allowed" | ✅ |
 //! | T09 | `QuotaError` implements `std::error::Error`     | all 3 variants pass trait bound       | ✅     |
 //! | T10 | `5h-reset` header absent                        | Err(MissingHeader) naming the header  | ✅     |
 //! | T11 | `7d-utilization` header absent                  | Err(MissingHeader) naming the header  | ✅     |
@@ -30,9 +30,9 @@
 //! - ✅ Each of the 5 required headers absent individually (T02, T03, T10, T11, T12)
 //! - ✅ Float headers malformed — 5h-utilization (T04), 7d-utilization (T13)
 //! - ✅ u64 headers malformed — 5h-reset (T05), 7d-reset (T14)
-//! - ✅ All 3 QuotaError variants: Display (T06, T07, T15) and std::error::Error bound (T09)
-//! - ✅ RateLimitData field accessibility (T08)
-//! - ✅ ANTHROPIC_BETA constant value canary (T16) — not in public docs; drift check
+//! - ✅ All 3 `QuotaError` variants: Display (T06, T07, T15) and `std::error::Error` bound (T09)
+//! - ✅ `RateLimitData` field accessibility (T08)
+//! - ✅ `ANTHROPIC_BETA` constant value canary (T16) — not in public docs; drift check
 //! - N/A: status empty string — parses as Ok(status: "") by design; no range constraint
 //! - N/A: utilization out of range (e.g. 1.5) — no range validation in spec; design choice
 
@@ -41,7 +41,7 @@ use claude_quota::{ parse_headers, RateLimitData, QuotaError, ANTHROPIC_BETA };
 
 fn get( m : &HashMap< &str, &str >, name : &str ) -> Option< String >
 {
-  m.get( name ).map( |s| s.to_string() )
+  m.get( name ).map( |s| (*s).to_string() )
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -70,18 +70,18 @@ fn t01_all_headers_valid_returns_ok_with_correct_fields()
     ( data.utilization_5h - 0.42 ).abs() < f64::EPSILON,
     "T01: utilization_5h should be 0.42, got {}", data.utilization_5h,
   );
-  assert_eq!( data.reset_5h,       1700000000u64, "T01: reset_5h" );
+  assert_eq!( data.reset_5h,       1_700_000_000_u64, "T01: reset_5h" );
   assert!(
     ( data.utilization_7d - 0.10 ).abs() < f64::EPSILON,
     "T01: utilization_7d should be 0.10, got {}", data.utilization_7d,
   );
-  assert_eq!( data.reset_7d,       1700086400u64, "T01: reset_7d" );
+  assert_eq!( data.reset_7d,       1_700_086_400_u64, "T01: reset_7d" );
   assert_eq!( data.status,         "allowed",     "T01: status" );
 }
 
 // ── T02 ───────────────────────────────────────────────────────────────────────
 
-/// T02: `5h-utilization` header absent — returns MissingHeader naming the header.
+/// T02: `5h-utilization` header absent — returns `MissingHeader` naming the header.
 #[ test ]
 fn t02_missing_5h_utilization_returns_missing_header_error()
 {
@@ -98,7 +98,7 @@ fn t02_missing_5h_utilization_returns_missing_header_error()
 
 // ── T03 ───────────────────────────────────────────────────────────────────────
 
-/// T03: `7d-reset` header absent — returns MissingHeader naming the header.
+/// T03: `7d-reset` header absent — returns `MissingHeader` naming the header.
 #[ test ]
 fn t03_missing_7d_reset_returns_missing_header_error()
 {
@@ -115,7 +115,7 @@ fn t03_missing_7d_reset_returns_missing_header_error()
 
 // ── T04 ───────────────────────────────────────────────────────────────────────
 
-/// T04: `5h-utilization` = `"not_a_float"` — returns MalformedHeader with context.
+/// T04: `5h-utilization` = `"not_a_float"` — returns `MalformedHeader` with context.
 #[ test ]
 fn t04_malformed_5h_utilization_returns_malformed_header_error()
 {
@@ -132,7 +132,7 @@ fn t04_malformed_5h_utilization_returns_malformed_header_error()
 
 // ── T05 ───────────────────────────────────────────────────────────────────────
 
-/// T05: `5h-reset` = `"abc"` — returns MalformedHeader with context.
+/// T05: `5h-reset` = `"abc"` — returns `MalformedHeader` with context.
 #[ test ]
 fn t05_malformed_5h_reset_returns_malformed_header_error()
 {
@@ -204,7 +204,7 @@ fn t09_quota_error_implements_std_error()
 
 // ── T10 ───────────────────────────────────────────────────────────────────────
 
-/// T10: `5h-reset` header absent — returns MissingHeader naming that header.
+/// T10: `5h-reset` header absent — returns `MissingHeader` naming that header.
 ///
 /// Completes the missing-header matrix: T02 covers 5h-utilization, T03 covers
 /// 7d-reset; this verifies the 5h-reset field is also individually required.
@@ -224,7 +224,7 @@ fn t10_missing_5h_reset_returns_missing_header_error()
 
 // ── T11 ───────────────────────────────────────────────────────────────────────
 
-/// T11: `7d-utilization` header absent — returns MissingHeader naming that header.
+/// T11: `7d-utilization` header absent — returns `MissingHeader` naming that header.
 ///
 /// Completes the missing-header matrix for the second 7-day field.
 #[ test ]
@@ -243,7 +243,7 @@ fn t11_missing_7d_utilization_returns_missing_header_error()
 
 // ── T12 ───────────────────────────────────────────────────────────────────────
 
-/// T12: `status` header absent — returns MissingHeader naming that header.
+/// T12: `status` header absent — returns `MissingHeader` naming that header.
 ///
 /// Completes the missing-header matrix for the fifth and final required header.
 #[ test ]
@@ -262,7 +262,7 @@ fn t12_missing_status_returns_missing_header_error()
 
 // ── T13 ───────────────────────────────────────────────────────────────────────
 
-/// T13: `7d-utilization` = `"not_a_float"` — returns MalformedHeader with context.
+/// T13: `7d-utilization` = `"not_a_float"` — returns `MalformedHeader` with context.
 ///
 /// Completes the malformed-header matrix for the second float field.
 /// T04 covers 5h-utilization; this covers 7d-utilization.
@@ -282,7 +282,7 @@ fn t13_malformed_7d_utilization_returns_malformed_header_error()
 
 // ── T14 ───────────────────────────────────────────────────────────────────────
 
-/// T14: `7d-reset` = `"not_a_u64"` — returns MalformedHeader with context.
+/// T14: `7d-reset` = `"not_a_u64"` — returns `MalformedHeader` with context.
 ///
 /// Completes the malformed-header matrix for the second u64 field.
 /// T05 covers 5h-reset; this covers 7d-reset.
@@ -304,8 +304,8 @@ fn t14_malformed_7d_reset_returns_malformed_header_error()
 
 /// T15: `QuotaError::MalformedHeader("ctx")` Display contains the context string.
 ///
-/// Completes the Display coverage matrix: T06 covers MissingHeader, T07 covers
-/// HttpTransport; this verifies the third variant formats its context string.
+/// Completes the Display coverage matrix: T06 covers `MissingHeader`, T07 covers
+/// `HttpTransport`; this verifies the third variant formats its context string.
 #[ test ]
 fn t15_malformed_header_display_contains_context()
 {

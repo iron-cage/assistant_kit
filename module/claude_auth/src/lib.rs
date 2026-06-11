@@ -7,7 +7,7 @@
 //! | Feature   | Adds                          | Extra dep  |
 //! |-----------|-------------------------------|------------|
 //! | (none)    | `TokenRefreshResult`, `AuthError`, `parse_response` | — |
-//! | `enabled` | `refresh_token`               | `ureq ~2`  |
+//! | `enabled` | `refresh_token`               | `ureq ~3`  |
 
 use std::fmt;
 
@@ -103,7 +103,7 @@ pub fn parse_response( body : &str, now_ms : u64 ) -> Result< TokenRefreshResult
 /// keys like `"token"` and `"access_token"`.
 fn parse_string_field( body : &str, key : &str ) -> Result< String, AuthError >
 {
-  let needle     = format!( "\"{}\":", key );
+  let needle     = format!( "\"{key}\":" );
   let after_key  = body
     .find( needle.as_str() )
     .map( | pos | &body[ pos + needle.len() .. ] )
@@ -130,7 +130,7 @@ fn parse_string_field( body : &str, key : &str ) -> Result< String, AuthError >
 /// integer) or if the digit sequence cannot be parsed as [`u64`].
 fn parse_u64_field( body : &str, key : &str ) -> Result< u64, AuthError >
 {
-  let needle     = format!( "\"{}\":", key );
+  let needle     = format!( "\"{key}\":" );
   let after_key  = body
     .find( needle.as_str() )
     .map( | pos | &body[ pos + needle.len() .. ] )
@@ -147,8 +147,7 @@ fn parse_u64_field( body : &str, key : &str ) -> Result< u64, AuthError >
   // Collect leading ASCII digits
   let digits : &str = after_colon
     .find( | c : char | !c.is_ascii_digit() )
-    .map( | end | &after_colon[ .. end ] )
-    .unwrap_or( after_colon );
+    .map_or( after_colon, | end | &after_colon[ .. end ] );
 
   digits
     .parse::< u64 >()
@@ -176,30 +175,34 @@ pub fn refresh_token( refresh_tok : &str, scope : &str ) -> Result< TokenRefresh
     r#"{{"grant_type":"refresh_token","refresh_token":"{refresh_tok}","client_id":"{CLIENT_ID}","scope":"{scope}"}}"#
   );
 
-  let response = ureq::post( TOKEN_URL )
-    .set( "Content-Type", "application/json" )
-    .send_string( &body );
+  let config = ureq::Agent::config_builder()
+    .http_status_as_error( false )
+    .build();
+  let agent = ureq::Agent::new_with_config( config );
 
-  match response
+  let mut resp = agent
+    .post( TOKEN_URL )
+    .header( "Content-Type", "application/json" )
+    .send( body.as_str() )
+    .map_err( |e| AuthError::HttpTransport( e.to_string() ) )?;
+
+  let status = resp.status().as_u16();
+  if status == 429
   {
-    Err( ureq::Error::Status( 429, _ ) ) => Err( AuthError::RateLimited ),
-    Err( ureq::Error::Status( _, resp ) ) =>
-    {
-      let status_text = resp.status_text().to_string();
-      Err( AuthError::HttpTransport( status_text ) )
-    },
-    Err( ureq::Error::Transport( t ) ) =>
-      Err( AuthError::HttpTransport( t.to_string() ) ),
-    Ok( resp ) =>
-    {
-      let text = resp
-        .into_string()
-        .map_err( | e | AuthError::HttpTransport( e.to_string() ) )?;
-      let now_ms = SystemTime::now()
-        .duration_since( UNIX_EPOCH )
-        .map( | d | d.as_millis() as u64 )
-        .unwrap_or( 0 );
-      parse_response( &text, now_ms )
-    },
+    return Err( AuthError::RateLimited );
   }
+  if status >= 400
+  {
+    return Err( AuthError::HttpTransport( format!( "HTTP {status}" ) ) );
+  }
+
+  let text = resp
+    .body_mut()
+    .read_to_string()
+    .map_err( |e| AuthError::HttpTransport( e.to_string() ) )?;
+
+  let now_ms = SystemTime::now()
+    .duration_since( UNIX_EPOCH )
+    .map_or( 0, | d | d.as_secs() * 1000 );
+  parse_response( &text, now_ms )
 }

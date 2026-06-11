@@ -1,7 +1,7 @@
 //! CLR_* Environment Variable Tests
 //!
 //! Covers E01–E17: one test per `CLR_*` env var.
-//! E18–E34 live in `env_var_ext_test.rs`.
+//! E18–E37 live in `env_var_ext_test.rs`.
 //! Source: `task/claude_runner/148_env_var_all_params.md`
 //!
 //! All tests use `run_cli_with_env()` — no `std::env::set_var`, no thread-global mutation.

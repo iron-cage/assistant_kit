@@ -12,17 +12,20 @@
 This workspace has zero knowledge of any upstream private workspace.
 
 **Permitted upstream dependencies:**
-- Published companion crates (error_tools, unilang, former, …)
+- Published companion crates (`error_tools`, `unilang`, `data_fmt`, `cli_fmt`, …)
 - Rust standard library
 - Published ecosystem crates (crates.io)
 
 **Forbidden:**
 - Path dependencies to any private consumer workspace
 - Any type, trait, or concept specific to a consumer workspace's internal job queue, orchestration, or agent layer
+- Out-of-workspace path dependencies without a `version` field (makes the depending crate unpublishable)
 
 ### Enforcement Mechanism
 
 The workspace `Cargo.toml` lists no path deps to any private workspace. Each crate's `Cargo.toml` must not introduce such path deps.
+
+Any out-of-workspace path dep (co-developed crates injected via Docker build contexts or sibling repos) must have a `version` field alongside `path`. Without `version`, Cargo refuses to publish any crate in the dependency chain.
 
 Dependency flow is strictly one-way:
 ```

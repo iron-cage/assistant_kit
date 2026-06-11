@@ -579,7 +579,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-87:** `--expect-retries 256 --dry-run "test"` → exit 1; error "invalid --expect-retries value"
 - **CC-88:** `--max-sessions 5 --dry-run "test"` → exit 0
 - **CC-89:** `--max-sessions 0 --dry-run "test"` → exit 0 (gate disabled)
-- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 15 used)
+- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 20 used)
 - Automated in: `output_file_test.rs`, `expect_validation_test.rs`, `param_edge_cases_test.rs`, `env_var_ext_test.rs`
 
 ### Env vars for expect/output-file params
@@ -701,4 +701,24 @@ clr isolated --trace --creds /nonexistent "test"
 ```
 
 **Expected:** Trace printed to stderr first (`# clr isolated`, `# creds: /nonexistent`, command preview), THEN `Error: cannot read credentials file '/nonexistent'`. Exit 1. Trace fires before any I/O (from `emit_credential_trace` being called before `read_to_string`).
+
+### NC-12: Gate Waiting Message Format — `X/Y sessions active`
+
+**Precondition:** Requires ≥20 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
+
+**Expected:** When the gate is triggered, each polling cycle emits to stderr:
+`Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {attempt}/{max_attempts})`
+
+Example with 20 sessions at default limit:
+`Info: 20/20 sessions active; waiting 30s for a slot... (attempt 1/50)`
+
+The old format `"X claude session(s) running (limit Y)"` is **not** emitted. The `X/Y` ratio format is the canonical output.
+
+### NC-13: Gate Exhaustion After 50 Attempts
+
+**Precondition:** Same as NC-12. Gate must fire and never find a free slot.
+
+**Expected:** After 50 polling cycles (25 minutes total), `clr` emits to stderr:
+`Error: --max-sessions {count}/{max} active; gave up after 50 attempts.`
+Then exits with code 1. The old limit of 20 attempts is **not** used.
 

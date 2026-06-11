@@ -17,15 +17,24 @@ All crates share a single version declared in `[workspace.package]` unless expli
 version = "1.0.0"
 ```
 
-All 10 crates inherit this version via `version.workspace = true` in their `Cargo.toml`.
+Most crates inherit this version via `version.workspace = true` in their `Cargo.toml`. The workspace currently has 15 publishable crates; 11 follow the shared version and 4 use explicit overrides (see table below).
 
-**Override (exception):** If a crate needs to diverge (e.g., a major API break to only one crate), override with an explicit `version = "x.y.z"` in that crate's `Cargo.toml`. The reason for the divergence must be documented.
+**Override (exception):** If a crate needs to diverge (e.g., a major API break to only one crate, or a standalone primitive with its own release cadence), override with an explicit `version = "x.y.z"` in that crate's `Cargo.toml`. The reason for the divergence must be documented.
+
+**Current version divergences:**
+
+| Crate | Version | Rationale |
+|-------|---------|-----------|
+| `claude_auth` | `0.1.0` | Standalone Layer * primitive; early-stage release; own cadence |
+| `claude_quota` | `0.1.0` | Standalone Layer * primitive; early-stage release; own cadence |
+| `dream` | `1.2.0` | Library facade; minor version ahead of workspace to track its own API additions |
+| `assistant` | `1.2.0` | Super-app binary; version tracks `dream` |
 
 ### Enforcement Mechanism
 
 The workspace `Cargo.toml` declares the shared version. Crates that need to diverge must explicitly override and cannot silently stay behind.
 
-**Rationale for shared version:** The 10 crates form a cohesive release unit. Changes to session path resolution typically ripple into storage parsing and runner configuration. A shared version prevents consumers from mixing incompatible crate versions from the same workspace.
+**Rationale for shared version:** The 11 cohesive crates form a coherent release unit. Changes to session path resolution typically ripple into storage parsing and runner configuration. A shared version prevents consumers from mixing incompatible crate versions from the same workspace.
 
 ### Violation Consequences
 

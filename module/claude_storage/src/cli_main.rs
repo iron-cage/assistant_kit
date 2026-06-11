@@ -6,12 +6,13 @@
 
 // The generated static command registry has no doc comments — allow that
 // for this module only; the outer lib enforces missing_docs everywhere else.
+// The generated static_commands.rs uses unreadable integer literals in phf map keys.
 #![ allow( missing_docs ) ]
+#![ allow( clippy::unreadable_literal ) ]
 
 use std::{ env, io::{ self, Write }, process };
 use crate::cli;
 use unilang::prelude::*;
-use unilang::phf;
 
 // Include compile-time generated static commands (produced by build.rs).
 include!( concat!( env!( "OUT_DIR" ), "/static_commands.rs" ) );

@@ -4,12 +4,12 @@
 
 - **Purpose**: Document the four-layer crate dependency hierarchy governing the assistant workspace.
 - **Responsibility**: Describe the layer definitions, Layer Invariant, permitted dep directions, and crate-to-layer assignments.
-- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, claude_storage_core position outside hierarchy.
+- **In Scope**: Layer 0–3 definitions, Layer Invariant (no cross-layer-N deps), dependency table, Layer * position (claude_storage_core, claude_auth, claude_quota — outside hierarchy).
 - **Out of Scope**: Cross-workspace integration (→ `integration/001_consumer_integration.md`), privacy invariant (→ `invariant/001_privacy_invariant.md`).
 
 ### Problem
 
-A workspace with 13 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
+A workspace with 15 crates that have varying responsibilities risks uncontrolled dependency graphs — any crate can depend on any other, creating cycles and tight coupling. Without explicit layer rules, adding a dependency that "just works" today can create a cycle that prevents future refactoring or publishing.
 
 ### Solution
 
@@ -25,6 +25,8 @@ Layer 1: claude_assets_core · claude_profile_core · claude_version_core · cla
              ↓
 Layer 0: claude_core                                                  (zero workspace deps — ClaudePaths + process utilities)
 *        claude_storage_core                                            (zero-dep JSONL parser — no claude_core dep)
+*        claude_auth                                                    (zero workspace deps — OAuth token refresh transport)
+*        claude_quota                                                   (zero workspace deps — API rate-limit HTTP transport)
 ```
 
 **Dependencies per crate:**
@@ -33,6 +35,8 @@ Layer 0: claude_core                                                  (zero work
 |-------|-------|------|----------|
 | 0 | `claude_core` | lib | — |
 | * | `claude_storage_core` | lib | — |
+| * | `claude_auth` | lib | — |
+| * | `claude_quota` | lib | — |
 | 1 | `claude_assets_core` | lib | — |
 | 1 | `claude_profile_core` | lib | — |
 | 1 | `claude_version_core` | lib | — |
@@ -47,7 +51,10 @@ Layer 0: claude_core                                                  (zero work
 
 `*` = outside layer hierarchy.
 
-**`claude_storage_core` position:** Sits outside the layer hierarchy. It has no `claude_core` dependency (uses env-var paths, not `ClaudePaths`) and is a zero-dep JSONL parsing primitive. Layer 2's `claude_storage` wraps it.
+**Layer `*` position:** Three crates sit outside the numbered layer hierarchy. They have no workspace dependencies (only an optional `ureq` or no external dep):
+- `claude_storage_core` — zero-dep JSONL parsing primitive; uses env-var paths, not `ClaudePaths`; wrapped by Layer 2's `claude_storage`
+- `claude_auth` — OAuth token refresh transport; standalone primitive usable without any workspace dep
+- `claude_quota` — API rate-limit HTTP transport; standalone primitive usable without any workspace dep
 
 ### Applicability
 

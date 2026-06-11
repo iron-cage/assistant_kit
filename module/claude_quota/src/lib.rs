@@ -108,6 +108,8 @@ impl std::error::Error for QuotaError {}
 ///
 /// Returns [`QuotaError::MissingHeader`] if a required header is absent, or
 /// [`QuotaError::MalformedHeader`] if a present header cannot be parsed.
+#[ inline ]
+#[ allow( clippy::similar_names ) ]
 pub fn parse_headers< F >( get : F ) -> Result< RateLimitData, QuotaError >
 where
   F : Fn( &str ) -> Option< String >,
@@ -117,24 +119,23 @@ where
     get( name ).ok_or_else( || QuotaError::MissingHeader( name.to_string() ) )
   };
 
-  let s_5h_util   = require( "anthropic-ratelimit-unified-5h-utilization" )?;
-  let s_5h_reset  = require( "anthropic-ratelimit-unified-5h-reset" )?;
-  let s_7d_util   = require( "anthropic-ratelimit-unified-7d-utilization" )?;
-  let s_7d_reset  = require( "anthropic-ratelimit-unified-7d-reset" )?;
-  let status      = require( "anthropic-ratelimit-unified-status" )?;
-
-  let utilization_5h = s_5h_util.parse::< f64 >().map_err( |e|
-    QuotaError::MalformedHeader( format!( "5h-utilization: {e}" ) )
-  )?;
-  let reset_5h = s_5h_reset.parse::< u64 >().map_err( |e|
-    QuotaError::MalformedHeader( format!( "5h-reset: {e}" ) )
-  )?;
-  let utilization_7d = s_7d_util.parse::< f64 >().map_err( |e|
-    QuotaError::MalformedHeader( format!( "7d-utilization: {e}" ) )
-  )?;
-  let reset_7d = s_7d_reset.parse::< u64 >().map_err( |e|
-    QuotaError::MalformedHeader( format!( "7d-reset: {e}" ) )
-  )?;
+  let utilization_5h = require( "anthropic-ratelimit-unified-5h-utilization" )?
+    .parse::< f64 >().map_err( |e|
+      QuotaError::MalformedHeader( format!( "5h-utilization: {e}" ) )
+    )?;
+  let reset_5h = require( "anthropic-ratelimit-unified-5h-reset" )?
+    .parse::< u64 >().map_err( |e|
+      QuotaError::MalformedHeader( format!( "5h-reset: {e}" ) )
+    )?;
+  let utilization_7d = require( "anthropic-ratelimit-unified-7d-utilization" )?
+    .parse::< f64 >().map_err( |e|
+      QuotaError::MalformedHeader( format!( "7d-utilization: {e}" ) )
+    )?;
+  let reset_7d = require( "anthropic-ratelimit-unified-7d-reset" )?
+    .parse::< u64 >().map_err( |e|
+      QuotaError::MalformedHeader( format!( "7d-reset: {e}" ) )
+    )?;
+  let status = require( "anthropic-ratelimit-unified-status" )?;
 
   Ok( RateLimitData
   {
@@ -142,7 +143,7 @@ where
     reset_5h,
     utilization_7d,
     reset_7d,
-    status : status.to_string(),
+    status,
   } )
 }
 
@@ -153,17 +154,19 @@ where
 /// # Fix(BUG-172)
 ///
 /// Root cause: bare ureq convenience functions use the global agent whose
-/// `timeout_read` defaults to `None` (indefinite), causing ~75–99s hangs when
+/// `timeout_recv_body` defaults to `None` (indefinite), causing ~75–99s hangs when
 /// a server TCP-connects but stalls the response body.
 /// Pitfall: all new HTTP call sites must use this helper, not bare ureq calls.
 #[ cfg( feature = "enabled" ) ]
 #[ inline ]
 fn http_agent() -> ureq::Agent
 {
-  ureq::AgentBuilder::new()
-    .timeout_read( std::time::Duration::from_secs( 10 ) )
-    .timeout_connect( std::time::Duration::from_secs( 5 ) )
-    .build()
+  let config = ureq::Agent::config_builder()
+    .timeout_recv_body( Some( core::time::Duration::from_secs( 10 ) ) )
+    .timeout_connect( Some( core::time::Duration::from_secs( 5 ) ) )
+    .http_status_as_error( false )
+    .build();
+  ureq::Agent::new_with_config( config )
 }
 
 // ── fetch_rate_limits ─────────────────────────────────────────────────────────
@@ -172,8 +175,8 @@ fn http_agent() -> ureq::Agent
 ///
 /// Makes a lightweight `POST /v1/messages` (`max_tokens: 1`) using the provided
 /// OAuth access token. Rate-limit headers are returned on **all** responses,
-/// including HTTP error codes — the `Ok(r) | Err(ureq::Error::Status(_, r))`
-/// pattern extracts the response body from both success and error variants.
+/// including HTTP error codes — `http_status_as_error(false)` on the agent
+/// ensures 4xx/5xx responses return `Ok(resp)` so headers are always accessible.
 ///
 /// # Fix(issue-oauth-beta-stale)
 ///
@@ -188,27 +191,28 @@ fn http_agent() -> ureq::Agent
 /// Returns [`QuotaError::HttpTransport`] on network failure, or parsing errors
 /// from [`parse_headers`] if required headers are absent or malformed.
 #[ cfg( feature = "enabled" ) ]
+#[ inline ]
 pub fn fetch_rate_limits( token : &str ) -> Result< RateLimitData, QuotaError >
 {
   let body = r#"{"model":"claude-haiku-4-5-20251001","max_tokens":1,"messages":[{"role":"user","content":"quota"}]}"#;
 
-  let req_result = http_agent().post( API_URL )
-    .set( "Authorization",    &format!( "Bearer {token}" ) )
-    .set( "anthropic-beta",   ANTHROPIC_BETA )
-    .set( "anthropic-version", ANTHROPIC_VERSION )
-    .set( "Content-Type",     "application/json" )
-    .send_string( body );
+  let resp = http_agent()
+    .post( API_URL )
+    .header( "Authorization",     &format!( "Bearer {token}" ) )
+    .header( "anthropic-beta",    ANTHROPIC_BETA )
+    .header( "anthropic-version", ANTHROPIC_VERSION )
+    .header( "Content-Type",      "application/json" )
+    .send( body )
+    .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
 
   // Rate-limit headers are present on ALL responses, including HTTP error codes.
-  // The Ok(r) | Err(ureq::Error::Status(_, r)) pattern extracts the response
-  // body from both success (2xx) and HTTP-error (4xx/5xx) variants.
-  let resp = match req_result
-  {
-    Ok( r ) | Err( ureq::Error::Status( _, r ) ) => r,
-    Err( e ) => return Err( QuotaError::HttpTransport( e.to_string() ) ),
-  };
-
-  parse_headers( |name| resp.header( name ).map( str::to_string ) )
+  // http_status_as_error(false) on the agent ensures 4xx/5xx responses return
+  // Ok(resp) so headers are always accessible regardless of HTTP status.
+  parse_headers( |name|
+    resp.headers().get( name )
+      .and_then( |v| v.to_str().ok() )
+      .map( str::to_string )
+  )
 }
 
 // ── OauthUsageData / PeriodUsage ──────────────────────────────────────────────
@@ -256,6 +260,7 @@ pub struct OauthUsageData
 ///
 /// Returns `None` on any parse failure (wrong format, non-numeric fields, etc.).
 #[ inline ]
+#[ must_use ]
 pub fn iso_to_unix_secs( s : &str ) -> Option< u64 >
 {
   // Require at least "YYYY-MM-DDTHH:MM:SS" (19 chars)
@@ -281,7 +286,7 @@ pub fn iso_to_unix_secs( s : &str ) -> Option< u64 >
   if hour > 23 || min > 59 || sec > 59 { return None; }
 
   // Days from 1970-01-01 to YYYY-01-01
-  let is_leap = |y : u64| ( y.is_multiple_of( 4 ) && !y.is_multiple_of( 100 ) ) || y.is_multiple_of( 400 );
+  let is_leap = |y : u64| ( y % 4 == 0 && y % 100 != 0 ) || y % 400 == 0;
   let mut days : u64 = 0;
   for y in 1970..year
   {
@@ -292,8 +297,8 @@ pub fn iso_to_unix_secs( s : &str ) -> Option< u64 >
   let days_in_month = [ 31u64, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ];
   for m in 1..month
   {
-    let extra = if m == 2 && is_leap( year ) { 1 } else { 0 };
-    days += days_in_month[ ( m - 1 ) as usize ] + extra;
+    let extra = u64::from( m == 2 && is_leap( year ) );
+    days += days_in_month[ usize::try_from( m - 1 ).unwrap_or( 0 ) ] + extra;
   }
 
   days += day - 1;
@@ -348,7 +353,7 @@ fn extract_object_block( s : &str ) -> Option< &str >
       '}' =>
       {
         depth -= 1;
-        if depth == 0 { return Some( &s[ ..i + 1 ] ); }
+        if depth == 0 { return Some( &s[ ..=i ] ); }
       }
       _ => {}
     }
@@ -366,7 +371,7 @@ fn extract_object_block( s : &str ) -> Option< &str >
 /// or if the JSON structure is unexpected.
 fn parse_period( body : &str, key : &str ) -> Result< Option< PeriodUsage >, QuotaError >
 {
-  let needle = format!( "\"{}\":", key );
+  let needle = format!( "\"{key}\":" );
   let after_key = body
     .find( needle.as_str() )
     .map( |pos| &body[ pos + needle.len() .. ] )
@@ -404,7 +409,7 @@ fn parse_period( body : &str, key : &str ) -> Result< Option< PeriodUsage >, Quo
 /// Returns `None` if the key is absent or the value is not a valid `f64`.
 fn parse_f64_in_block( block : &str, key : &str ) -> Option< f64 >
 {
-  let needle     = format!( "\"{}\":", key );
+  let needle     = format!( "\"{key}\":" );
   let after_key  = block.find( needle.as_str() ).map( |p| &block[ p + needle.len() .. ] )?;
   let value      = after_key.trim_start();
 
@@ -423,7 +428,7 @@ fn parse_f64_in_block( block : &str, key : &str ) -> Option< f64 >
 /// Returns `None` if the key is absent, the value is `null`, or parsing fails.
 fn parse_optional_string_in_block( block : &str, key : &str ) -> Option< String >
 {
-  let needle    = format!( "\"{}\":", key );
+  let needle    = format!( "\"{key}\":" );
   let after_key = block.find( needle.as_str() ).map( |p| &block[ p + needle.len() .. ] )?;
   let value     = after_key.trim_start();
 
@@ -454,22 +459,22 @@ fn parse_optional_string_in_block( block : &str, key : &str ) -> Option< String 
 #[ inline ]
 pub fn fetch_oauth_usage( token : &str ) -> Result< OauthUsageData, QuotaError >
 {
-  let resp = http_agent().get( OAUTH_USAGE_URL )
-    .set( "Authorization", &format!( "Bearer {token}" ) )
-    .call();
+  let mut resp = http_agent()
+    .get( OAUTH_USAGE_URL )
+    .header( "Authorization", &format!( "Bearer {token}" ) )
+    .call()
+    .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
 
-  let body = match resp
+  let status = resp.status().as_u16();
+  if status >= 400
   {
-    Ok( r ) => r.into_string().map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?,
-    Err( ureq::Error::Status( _, r ) ) =>
-    {
-      return Err( QuotaError::HttpTransport( format!( "HTTP {}", r.status() ) ) );
-    }
-    Err( ureq::Error::Transport( t ) ) =>
-    {
-      return Err( QuotaError::HttpTransport( t.to_string() ) );
-    }
-  };
+    return Err( QuotaError::HttpTransport( format!( "HTTP {status}" ) ) );
+  }
+
+  let body = resp
+    .body_mut()
+    .read_to_string()
+    .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
 
   parse_oauth_usage( &body )
 }
@@ -541,6 +546,7 @@ pub struct UserinfoData
 ///
 /// Does not panic; returns `0` for an empty slice.
 #[ inline ]
+#[ must_use ]
 pub fn select_membership_index( memberships : &[ MembershipRaw ] ) -> usize
 {
   // Priority 1: stripe + max
@@ -563,7 +569,7 @@ pub fn select_membership_index( memberships : &[ MembershipRaw ] ) -> usize
 /// Returns an empty `Vec` if the key is absent or the array is empty.
 fn parse_string_array( block : &str, key : &str ) -> Vec< String >
 {
-  let needle = format!( "\"{}\":", key );
+  let needle = format!( "\"{key}\":" );
   let Some( pos ) = block.find( needle.as_str() ) else { return vec![]; };
   let rest = block[ pos + needle.len() .. ].trim_start();
   let Some( arr_start ) = rest.find( '[' ) else { return vec![]; };
@@ -664,6 +670,7 @@ fn parse_membership_list( body : &str ) -> Result< Vec< MembershipRaw >, QuotaEr
 /// Previously used `str::find("\"organization\":")` on the full memberships string,
 /// which always resolved to `memberships[0]`'s organization regardless of which
 /// membership held the active subscription.
+#[ inline ]
 pub fn parse_oauth_account( body : &str ) -> Result< OauthAccountData, QuotaError >
 {
   let memberships = parse_membership_list( body )?;
@@ -695,6 +702,7 @@ pub const CLAUDE_CLI_SUBSCRIPTIONS_URL : &str = "https://api.anthropic.com/api/o
 ///
 /// Returns [`QuotaError::ResponseParse`] if `tagged_id`, `uuid`, or `email_address`
 /// are absent from the response body.
+#[ inline ]
 pub fn parse_userinfo( body : &str ) -> Result< UserinfoData, QuotaError >
 {
   let tagged_id = parse_optional_string_in_block( body, "tagged_id" )
@@ -716,6 +724,7 @@ pub fn parse_userinfo( body : &str ) -> Result< UserinfoData, QuotaError >
 /// # Errors
 ///
 /// Returns [`QuotaError::ResponseParse`] if the response body cannot be parsed.
+#[ inline ]
 pub fn parse_subscriptions( body : &str ) -> Result< Vec< MembershipRaw >, QuotaError >
 {
   parse_membership_list( body )
@@ -728,25 +737,26 @@ pub fn parse_subscriptions( body : &str ) -> Result< Vec< MembershipRaw >, Quota
 /// Returns [`QuotaError::HttpTransport`] on network failure, or
 /// [`QuotaError::ResponseParse`] if the response body cannot be parsed.
 #[ cfg( feature = "enabled" ) ]
+#[ inline ]
 pub fn fetch_userinfo( token : &str ) -> Result< UserinfoData, QuotaError >
 {
-  let resp = http_agent().get( OAUTH_USERINFO_URL )
-    .set( "Authorization",     &format!( "Bearer {token}" ) )
-    .set( "anthropic-version", ANTHROPIC_VERSION )
-    .call();
+  let mut resp = http_agent()
+    .get( OAUTH_USERINFO_URL )
+    .header( "Authorization",     &format!( "Bearer {token}" ) )
+    .header( "anthropic-version", ANTHROPIC_VERSION )
+    .call()
+    .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
 
-  let body = match resp
+  let status = resp.status().as_u16();
+  if status >= 400
   {
-    Ok( r ) => r.into_string().map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?,
-    Err( ureq::Error::Status( _, r ) ) =>
-    {
-      return Err( QuotaError::HttpTransport( format!( "HTTP {}", r.status() ) ) );
-    }
-    Err( ureq::Error::Transport( t ) ) =>
-    {
-      return Err( QuotaError::HttpTransport( t.to_string() ) );
-    }
-  };
+    return Err( QuotaError::HttpTransport( format!( "HTTP {status}" ) ) );
+  }
+
+  let body = resp
+    .body_mut()
+    .read_to_string()
+    .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
 
   parse_userinfo( &body )
 }
@@ -758,25 +768,26 @@ pub fn fetch_userinfo( token : &str ) -> Result< UserinfoData, QuotaError >
 /// Returns [`QuotaError::HttpTransport`] on network failure, or
 /// [`QuotaError::ResponseParse`] if the response body cannot be parsed.
 #[ cfg( feature = "enabled" ) ]
+#[ inline ]
 pub fn fetch_subscriptions( token : &str ) -> Result< Vec< MembershipRaw >, QuotaError >
 {
-  let resp = http_agent().get( CLAUDE_CLI_SUBSCRIPTIONS_URL )
-    .set( "Authorization",     &format!( "Bearer {token}" ) )
-    .set( "anthropic-version", ANTHROPIC_VERSION )
-    .call();
+  let mut resp = http_agent()
+    .get( CLAUDE_CLI_SUBSCRIPTIONS_URL )
+    .header( "Authorization",     &format!( "Bearer {token}" ) )
+    .header( "anthropic-version", ANTHROPIC_VERSION )
+    .call()
+    .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
 
-  let body = match resp
+  let status = resp.status().as_u16();
+  if status >= 400
   {
-    Ok( r ) => r.into_string().map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?,
-    Err( ureq::Error::Status( _, r ) ) =>
-    {
-      return Err( QuotaError::HttpTransport( format!( "HTTP {}", r.status() ) ) );
-    }
-    Err( ureq::Error::Transport( t ) ) =>
-    {
-      return Err( QuotaError::HttpTransport( t.to_string() ) );
-    }
-  };
+    return Err( QuotaError::HttpTransport( format!( "HTTP {status}" ) ) );
+  }
+
+  let body = resp
+    .body_mut()
+    .read_to_string()
+    .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
 
   parse_subscriptions( &body )
 }
@@ -790,25 +801,26 @@ pub fn fetch_subscriptions( token : &str ) -> Result< Vec< MembershipRaw >, Quot
 /// Returns [`QuotaError::HttpTransport`] on network failure, or
 /// [`QuotaError::ResponseParse`] if the response body cannot be parsed.
 #[ cfg( feature = "enabled" ) ]
+#[ inline ]
 pub fn fetch_oauth_account( token : &str ) -> Result< OauthAccountData, QuotaError >
 {
-  let resp = http_agent().get( OAUTH_ACCOUNT_URL )
-    .set( "Authorization",     &format!( "Bearer {token}" ) )
-    .set( "anthropic-version", ANTHROPIC_VERSION )
-    .call();
+  let mut resp = http_agent()
+    .get( OAUTH_ACCOUNT_URL )
+    .header( "Authorization",     &format!( "Bearer {token}" ) )
+    .header( "anthropic-version", ANTHROPIC_VERSION )
+    .call()
+    .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
 
-  let body = match resp
+  let status = resp.status().as_u16();
+  if status >= 400
   {
-    Ok( r ) => r.into_string().map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?,
-    Err( ureq::Error::Status( _, r ) ) =>
-    {
-      return Err( QuotaError::HttpTransport( format!( "HTTP {}", r.status() ) ) );
-    }
-    Err( ureq::Error::Transport( t ) ) =>
-    {
-      return Err( QuotaError::HttpTransport( t.to_string() ) );
-    }
-  };
+    return Err( QuotaError::HttpTransport( format!( "HTTP {status}" ) ) );
+  }
+
+  let body = resp
+    .body_mut()
+    .read_to_string()
+    .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
 
   parse_oauth_account( &body )
 }
@@ -849,6 +861,7 @@ pub struct ClaudeCliRolesData
 ///
 /// Returns [`QuotaError::ResponseParse`] if `organization_uuid` or `organization_name`
 /// are absent or the body is not valid JSON.
+#[ inline ]
 pub fn parse_claude_cli_roles( body : &str ) -> Result< ClaudeCliRolesData, QuotaError >
 {
   let organization_uuid = parse_optional_string_in_block( body, "organization_uuid" )
@@ -881,25 +894,26 @@ pub fn parse_claude_cli_roles( body : &str ) -> Result< ClaudeCliRolesData, Quot
 /// Returns [`QuotaError::HttpTransport`] on network failure, or
 /// [`QuotaError::ResponseParse`] if the response body cannot be parsed.
 #[ cfg( feature = "enabled" ) ]
+#[ inline ]
 pub fn fetch_claude_cli_roles( token : &str ) -> Result< ClaudeCliRolesData, QuotaError >
 {
-  let resp = http_agent().get( CLAUDE_CLI_ROLES_URL )
-    .set( "Authorization",     &format!( "Bearer {token}" ) )
-    .set( "anthropic-version", ANTHROPIC_VERSION )
-    .call();
+  let mut resp = http_agent()
+    .get( CLAUDE_CLI_ROLES_URL )
+    .header( "Authorization",     &format!( "Bearer {token}" ) )
+    .header( "anthropic-version", ANTHROPIC_VERSION )
+    .call()
+    .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
 
-  let body = match resp
+  let status = resp.status().as_u16();
+  if status >= 400
   {
-    Ok( r ) => r.into_string().map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?,
-    Err( ureq::Error::Status( _, r ) ) =>
-    {
-      return Err( QuotaError::HttpTransport( format!( "HTTP {}", r.status() ) ) );
-    }
-    Err( ureq::Error::Transport( t ) ) =>
-    {
-      return Err( QuotaError::HttpTransport( t.to_string() ) );
-    }
-  };
+    return Err( QuotaError::HttpTransport( format!( "HTTP {status}" ) ) );
+  }
+
+  let body = resp
+    .body_mut()
+    .read_to_string()
+    .map_err( |e| QuotaError::HttpTransport( e.to_string() ) )?;
 
   parse_claude_cli_roles( &body )
 }
@@ -914,7 +928,7 @@ mod tests
   // ── BUG-237 MRE: multi-membership selection ─────────────────────────────────
 
   #[ test ]
-  #[ doc = "bug_reproducer(237)" ]
+  #[ doc = "`bug_reproducer(237)`" ]
   /// `parse_oauth_account` selects the stripe+max membership over a none-billing entry.
   ///
   /// # Root Cause
@@ -953,7 +967,7 @@ mod tests
   }
 
   #[ test ]
-  #[ doc = "bug_reproducer(237)" ]
+  #[ doc = "`bug_reproducer(237)`" ]
   /// `parse_oauth_account` selects stripe (no max) over none when no max tier is present.
   fn mre_bug237_multi_membership_selects_stripe_over_none_no_max()
   {
@@ -971,7 +985,7 @@ mod tests
   }
 
   #[ test ]
-  #[ doc = "bug_reproducer(237)" ]
+  #[ doc = "`bug_reproducer(237)`" ]
   /// Single-membership body: index 0 is always selected (Priority 3 fallback unchanged).
   fn mre_bug237_single_membership_fallback_unchanged()
   {

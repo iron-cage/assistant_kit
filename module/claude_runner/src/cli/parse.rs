@@ -499,6 +499,8 @@ pub( crate ) fn apply_env_vars( parsed : &mut CliArgs ) -> Result< () >
   if !parsed.strip_fences              { parsed.strip_fences     = env_bool( "CLR_STRIP_FENCES" ); }
   if !parsed.keep_claudecode           { parsed.keep_claudecode  = env_bool( "CLR_KEEP_CLAUDECODE" ); }
   // Fix(BUG-233): validate CLR_SUBDIR same as --subdir — reject `/` in the value.
+  // Root cause: CLR_SUBDIR env var was accepted without the slash-rejection guard applied to --subdir.
+  // Pitfall: env-var fallbacks for validated flags must replicate the same validation as the flag parser.
   // Matches apply_env_vars convention: silently ignore invalid env values.
   if parsed.subdir.is_none()
   {

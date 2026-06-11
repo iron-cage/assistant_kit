@@ -62,7 +62,7 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`--effort`](param/17_effort.md)
 - [`--no-effort-max`](param/18_no_effort_max.md)
 - [`--creds`](param/19_creds.md)
-- [`--timeout`](param/20_timeout.md)
+- [`--timeout` (isolated/refresh)](param/20_timeout.md)
 - [`--no-chrome`](param/21_no_chrome.md)
 - [`--no-persist`](param/22_no_persist.md)
 - [`--json-schema`](param/23_json_schema.md)
@@ -76,6 +76,9 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 - [`--expect-strategy`](param/31_expect_strategy.md)
 - [`--expect-retries`](param/32_expect_retries.md)
 - [`--max-sessions`](param/33_max_sessions.md)
+- [`--retry-on-rate-limit`](param/34_retry_on_rate_limit.md)
+- [`--retry-delay`](param/35_retry_delay.md)
+- [`--timeout` (run/ask)](param/36_timeout.md)
 
 #### Parameter Groups
 - [Claude-Native Flags](param_group/01_claude_native_flags.md)
@@ -126,4 +129,4 @@ Test case planning for `clr` CLI. Each file contains a Test Case Index with cove
 
 #### Env Params
 - [`CLAUDE_CODE_MAX_OUTPUT_TOKENS`](env_param/01_max_output_tokens.md)
-- [`CLR_* (34 vars)`](env_param/02_clr_input_vars.md)
+- [`CLR_* (37 vars)`](env_param/02_clr_input_vars.md)

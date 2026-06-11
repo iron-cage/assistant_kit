@@ -104,7 +104,7 @@ fn t20_parse_oauth_usage_all_null()
 #[ test ]
 fn t21_parse_oauth_usage_invalid_json()
 {
-  let body = r#"not json"#;
+  let body = r"not json";
   let err  = parse_oauth_usage( body )
     .expect_err( "T21: should fail on invalid JSON" );
   assert!(

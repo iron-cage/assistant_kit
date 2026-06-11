@@ -37,10 +37,11 @@ fn tc079_help_command_exits_0()
   assert_exit( &out, 0 );
 }
 
-// TC-080: .help lists 12 commands (11 operational + help itself)
+// TC-080: .help lists 11 operational commands
 //
 // Unilang outputs "Available commands:" as the section header (not "COMMANDS:").
 // Command lines are indented with leading whitespace followed by ".".
+// Note: unilang 0.54 no longer includes .help itself in the listing (was 12 with 0.48).
 #[ test ]
 fn tc080_help_lists_12_commands()
 {
@@ -55,8 +56,8 @@ fn tc080_help_lists_12_commands()
     .count();
 
   assert_eq!(
-    cmd_lines, 12,
-    "help must list 12 commands (11 + help), found {cmd_lines}\nFull output:\n{text}"
+    cmd_lines, 11,
+    "help must list 11 operational commands, found {cmd_lines}\nFull output:\n{text}"
   );
 }
 
