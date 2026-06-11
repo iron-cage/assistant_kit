@@ -144,6 +144,12 @@ Two other arg combinations are broken and must not be used:
 | `task/claude_profile/163_fix_expiresAt_jwt_decode.md` | TSK-163: implement `jwt_exp_ms()` and fix `apply_refresh` expiry derivation |
 | `task/claude_profile/168_fix_refresh_account_token_args.md` | TSK-168: fix broken `--print . --max-tokens 1` args — use `["--print", "."]` (introduced BUG-169 regression) |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../cli/command/006_usage.md#command--9-usage) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

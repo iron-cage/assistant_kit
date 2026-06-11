@@ -438,7 +438,7 @@ mod tests
   /// The match is an exact prefix check — `starts_with` — so partial or differently
   /// formatted 429 strings would still pass through. Only
   /// `claude_quota::QuotaError::HttpTransport` formats as `"HTTP transport error: HTTP N"`.
-  #[ doc = "bug_reproducer(issue-150)" ]
+  #[ doc = "bug_reproducer(BUG-271)" ]
   #[ test ]
   fn test_shorten_error_429_returns_rate_limited()
   {
@@ -477,7 +477,7 @@ mod tests
   /// `QuotaError::HttpTransport` needs an explicit branch. The `else { reason }` arm is NOT
   /// a shortener; it is a verbatim passthrough. A new auth-failure code (e.g., 403) that the
   /// quota API might return in the future would silently appear in full in the table.
-  #[ doc = "bug_reproducer(issue-152)" ]
+  #[ doc = "bug_reproducer(BUG-152)" ]
   #[ test ]
   fn test_shorten_error_mre_401_shortened()
   {

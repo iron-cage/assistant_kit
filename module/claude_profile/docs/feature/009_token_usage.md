@@ -247,6 +247,12 @@ Valid: 2 / 3   ->  Next by strategy:
 | [cli/param/050_from_now.md](../cli/param/050_from_now.md) | `from_now::` — relative renewal delta for `.account.renewal` |
 | [cli/param/051_clear.md](../cli/param/051_clear.md) | `clear::` — remove `_renewal_at` override; restores `~`-prefixed estimate in `~Renews` |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../cli/command/006_usage.md#command--9-usage) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

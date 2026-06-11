@@ -272,7 +272,7 @@ fn e03_home_empty_exits_2()
 }
 
 #[ test ]
-// Fix(issue-accounts-require-claude-paths):
+// Fix(BUG-280):
 // Root cause: require_claude_paths()?; in accounts_routine hard-fails when HOME="",
 //   but .accounts is a graceful-read command — must return advisory, not exit 2.
 // Pitfall: e05 does NOT catch this bug — e05 uses a valid tmpdir HOME where
@@ -360,7 +360,7 @@ fn e09_empty_name_value_exits_1()
 }
 
 #[ test ]
-// Fix(issue-accounts-home-unset):
+// Fix(BUG-268):
 // Root cause: require_credential_store() → PersistPaths::new() fails when HOME is completely
 //   unset, because it requires $PRO or $HOME to be set. This propagates as exit 2, but
 //   .accounts is a graceful-read command — must return advisory "(no accounts configured)"
@@ -390,7 +390,7 @@ fn e10_accounts_home_unset_exits_0()
 }
 
 #[ test ]
-// Fix(issue-fmt-alias):
+// Fix(BUG-261):
 // Root cause: adapter.rs only expands v:: → verbosity:: but does not expand fmt:: → format::.
 //   The unilang.commands.yaml declares fmt as an alias for format, but programmatic
 //   registration in adapter.rs has no corresponding expansion — leaving fmt:: as an
@@ -419,7 +419,7 @@ fn e11_fmt_alias_accounts_json()
   );
 }
 
-#[ doc = "bug_reproducer(issue-fmt-alias)" ]
+#[ doc = "bug_reproducer(BUG-261)" ]
 #[ test ]
 fn e12_fmt_alias_token_status_json()
 {
@@ -439,7 +439,7 @@ fn e12_fmt_alias_token_status_json()
   );
 }
 
-#[ doc = "bug_reproducer(issue-verbosity-precheck)" ]
+#[ doc = "bug_reproducer(BUG-274)" ]
 #[ test ]
 // Root cause: adapter.rs pre-validated verbosity:: range (lines 168-172) for ALL commands
 //   before command dispatch. Commands that don't accept verbosity (e.g. .credentials.status)

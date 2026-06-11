@@ -74,12 +74,12 @@ pub( crate ) fn io_err_to_error_data( e : &std::io::Error, context : &str ) -> E
 ///   - Exactly 1 prefix match → return that name.
 ///   - 0 matches → `InternalError` (exit 2): not found.
 ///   - 2+ matches → `ArgumentTypeMismatch` (exit 1): ambiguous prefix.
-// Fix(issue-name-shortcut):
+// Fix(BUG-262):
 // Root cause: bare prefix args like `alice` were passed to `validate_name()` which rejected them
 //   with exit 1 ("not an email address"), masking the correct "not found" (exit 2) outcome.
 // Pitfall: Prefix resolution must occur BEFORE validate_name(); calling validate_name() on a
 //   bare prefix always returns exit 1, preventing the resolver from running at all.
-// Fix(issue-exact-local-part):
+// Fix(BUG-264):
 // Root cause: `starts_with("i1")` matched `i1@wbox.pro`, `i11@wbox.pro`, `i12@wbox.pro`, all
 //   reported as ambiguous even though `i1` is an exact local-part match for `i1@wbox.pro`.
 // Pitfall: Always check exact-local-part match before prefix scanning; prefix scanning is

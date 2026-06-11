@@ -295,7 +295,7 @@ fn delete_removes_credential_file()
 //   after deletion rather than refusing the operation.
 // Pitfall: Checking `_active` in preconditions creates a deadlock when no other accounts
 //   exist (must switch before delete, but can't switch with no other accounts).
-#[ doc = "bug_reproducer(issue-delete-active)" ]
+#[ doc = "bug_reproducer(BUG-275)" ]
 #[ test ]
 fn delete_active_account_succeeds()
 {

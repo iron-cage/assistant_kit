@@ -46,6 +46,12 @@
 |------|--------------|
 | [008_auto_rotate.md](008_auto_rotate.md) | Consumes token status to detect when rotation is needed |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.token.status`](../cli/command/005_token.md#command--7-tokenstatus) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

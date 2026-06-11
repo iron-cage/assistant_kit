@@ -2,12 +2,9 @@
 
 Controls row ordering in the `.usage` quota table. Each value implements a distinct heuristic optimized for a specific operational workflow.
 
-- **Type:** `enum`
 - **Default:** `renew`
 - **Constraints:** `name`, `endurance`, `drain`, `renew`, `next`, `expires`, `renews`
-- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage)
 - **Purpose:** Select the row sorting strategy for the quota table.
-- **Group:** Sort Control
 
 **Values:**
 
@@ -34,3 +31,25 @@ sort::renews     → accounts with soonest billing renewal first
 ```
 
 **See Also:** [feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md) for strategy algorithms.
+
+### Referenced Type
+
+- **Fundamental Type:** `enum`
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 1 | [Sort Control](../param_group/004_sort_control.md) | Member parameter |
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Row ordering in quota table |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | Workflow-optimized account ordering in quota view |

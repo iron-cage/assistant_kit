@@ -439,7 +439,7 @@ fn cred13_new_params_absent_by_default()
 /// Regression guard for the bug where `save()` did not write the active marker,
 /// leaving `.credentials.status Account:` as `N/A` after every save.
 ///
-/// ## Fix Documentation — issue-active-marker
+/// ## Fix Documentation — BUG-282
 ///
 /// - **Root Cause:** `save()` never wrote the active marker; only `switch_account()` did.
 /// - **Why Not Caught:** No cross-command test verified `Account:` output immediately after `.account.save`.
@@ -480,7 +480,7 @@ fn cred14_save_writes_active_shown_in_credentials_status()
 /// Confirms the full inferred-name path: `save()` reads the `_active` marker, writes `_active`
 /// (re-affirms the same name), and `.credentials.status` shows that email as `Account:`.
 ///
-/// ## Fix Documentation — issue-inferred-name-save
+/// ## Fix Documentation — BUG-284
 ///
 /// - **Root Cause:** No test covered the save-without-name path end-to-end.
 /// - **Why Not Caught:** cred14 only tested the explicit-name save path.

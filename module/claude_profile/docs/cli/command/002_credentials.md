@@ -76,3 +76,19 @@ clp .credentials.status format::json
 - Field-presence params only affect text output. `format::json` always includes all fields regardless of field-presence params.
 - `account::` reads the per-machine active marker; shows `N/A` on machines where no account has ever been saved.
 - `saved::` counts `*.credentials.json` files in the credential store; shows `0` when the credential store is absent.
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Live Credentials Status](../../feature/012_live_credentials_status.md) | Field set and read algorithm for live credential inspection |
+| 2 | [Rich Account Metadata](../../feature/014_rich_account_metadata.md) | Extended metadata fields surfaced by this command |
+| 3 | [Extended Snapshot Fields](../../feature/021_extended_snapshot_fields.md) | Opt-in snapshot fields (uuid, capabilities) |
+| 4 | [Org Identity Snapshot](../../feature/022_org_identity_snapshot.md) | Org identity fields (org_uuid, org_name) |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Onboarding](../user_story/002_onboarding.md) | Verify live credential state during account setup |
+| 2 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Primary command for live credential inspection |

@@ -89,6 +89,25 @@ clp .accounts format::table
 - `uuid::`, `capabilities::` source from `{name}.json` snapshot — `N/A` when snapshot absent. See [feature/021_extended_snapshot_fields.md](../../feature/021_extended_snapshot_fields.md).
 - `org_uuid::`, `org_name::` source from `{name}.json` snapshot (written by `.account.save` via endpoint 005) — `N/A` when snapshot absent. See [feature/022_org_identity_snapshot.md](../../feature/022_org_identity_snapshot.md).
 
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Account List](../../feature/003_account_list.md) | Account enumeration and per-account block rendering |
+| 2 | [Rich Account Metadata](../../feature/014_rich_account_metadata.md) | Extended metadata fields shown per account |
+| 3 | [Name Shortcut Syntax](../../feature/015_name_shortcut_syntax.md) | Prefix and positional `name::` resolution |
+| 4 | [Current Account Awareness](../../feature/016_current_account_awareness.md) | `current::` field and `✓` flag column |
+| 5 | [Extended Snapshot Fields](../../feature/021_extended_snapshot_fields.md) | Opt-in snapshot fields (`uuid::`, `capabilities::`) |
+| 6 | [Org Identity Snapshot](../../feature/022_org_identity_snapshot.md) | Org identity fields (`org_uuid::`, `org_name::`) |
+| 7 | [Host Metadata](../../feature/029_account_host_metadata.md) | `host::` and `role::` fields from saved snapshot |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Rotation](../user_story/001_account_rotation.md) | Inspect accounts before and after rotation |
+| 2 | [Account Onboarding](../user_story/002_onboarding.md) | Verify saved account metadata during onboarding |
+
 ---
 
 ### Command :: 4. `.account.save`
@@ -141,6 +160,22 @@ clp .account.save host::workstation role::work
 - Also writes `{credential_store}/_active_{hostname}_{user}` = `{name}` on every successful save (per-machine active marker via `active_marker_filename()`).
 - Also calls endpoint 005 (`GET /api/oauth/claude_cli/roles`) and merges result into `{name}.json` (best-effort: failure is silently skipped).
 - **Metadata refresh:** Re-running `.account.save` for an existing name refreshes the unified `{name}.json` and re-fetches endpoint 005 — this is the canonical way to refresh cached org identity without re-login. `{name}.json` is updated via read-merge (not full overwrite): the `oauthAccount` key is replaced but all other keys (e.g., `_renewal_at` set by `.account.renewal`) are preserved.
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Store Init](../../feature/001_store_init.md) | Credential store initialization before save |
+| 2 | [Save Account](../../feature/002_account_save.md) | Core save algorithm and file layout |
+| 3 | [Persistent Storage](../../feature/010_persistent_storage.md) | Unified `{name}.json` merge semantics |
+| 4 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | `_active_{hostname}_{user}` marker written on save |
+| 5 | [Host Metadata](../../feature/029_account_host_metadata.md) | `host::` and `role::` metadata stored in `{name}.json` |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Onboarding](../user_story/002_onboarding.md) | Saving credentials during initial account setup |
 
 ---
 
@@ -216,6 +251,22 @@ clp .account.use name::alice@home.com trace::1
 - `trace::1` only produces output when `touch::1`; with `touch::0` there are no fetch operations to trace.
 - See [feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) for full execution sequence and acceptance criteria.
 
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Switch Account](../../feature/004_account_use.md) | Atomic credential rotation and active marker update |
+| 2 | [Token Refresh](../../feature/017_token_refresh.md) | Pre-switch refresh on locally-expired token |
+| 3 | [Session Touch](../../feature/024_session_touch.md) | Idle 5h window activation after switch |
+| 4 | [Subprocess Model/Effort](../../feature/026_subprocess_model_effort.md) | Model and effort selection for post-switch subprocess |
+| 5 | [Post-Switch Touch](../../feature/027_account_use_post_switch_touch.md) | Full execution sequence with touch and model override |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Rotation](../user_story/001_account_rotation.md) | Primary command for switching to a named account |
+
 ---
 
 ### Command :: 6. `.account.delete`
@@ -259,6 +310,18 @@ clp .account.delete name::alice@oldco.com dry::1
 **Notes:**
 - Metadata file (`{name}.json`) and legacy satellite files are removed best-effort: missing files are silently skipped.
 - Deleting the active account also removes the active marker (`_active_{hostname}_{user}`).
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Delete Account](../../feature/005_account_delete.md) | File removal sequence and legacy satellite cleanup |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Onboarding](../user_story/002_onboarding.md) | Removing stale accounts during account management |
 
 ---
 
@@ -304,6 +367,18 @@ clp .account.limits format::json
 
 **Notes:**
 - Data source: `anthropic-ratelimit-unified-*` response headers; transport: `claude_quota::fetch_rate_limits()`. See [feature/013_account_limits.md](../../feature/013_account_limits.md).
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Account Limits](../../feature/013_account_limits.md) | Rate-limit header parsing and utilization rendering |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | Per-account rate-limit utilization check |
 
 ---
 
@@ -358,6 +433,18 @@ clp .account.relogin name::carol@example.com dry::1
 - If `claude` exits without updating `~/.claude/.credentials.json`, the command exits 3. The active account is still restored (step 6 runs regardless of outcome).
 - Use this when `clp .usage refresh::1 trace::1` shows `run_isolated: OK credentials=None` for an account — that trace indicates a dead refresh token requiring full browser re-auth.
 
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Auto Rotate](../../feature/008_auto_rotate.md) | Relogin as recovery path for dead refresh tokens |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Onboarding](../user_story/002_onboarding.md) | Re-authenticating an account with expired refresh token |
+
 ---
 
 ### Command :: 13. `.account.rotate`
@@ -405,6 +492,18 @@ clp .account.rotate
 - Equivalent to `clp .account.use $(best_account)` but without requiring the caller to determine the best candidate.
 - If only one account is configured, or all saved accounts match the active one, exits 2.
 - For explicit selection by name, use [`.account.use`](#command--5-accountuse).
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Auto Rotate](../../feature/008_auto_rotate.md) | Automatic best-account selection algorithm |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Rotation](../user_story/001_account_rotation.md) | Automatic rotation to the account with most remaining token life |
 
 ---
 
@@ -466,6 +565,18 @@ clp .account.renewal name::alice@acme.com at::2026-06-29T21:00:00Z dry::1
 - `from_now::+0m` sets the override to the current time, which immediately enters the monthly auto-advance cycle.
 - `name::all` targets every account in the credential store at the time of execution.
 - See [feature/030_account_renewal_override.md](../../feature/030_account_renewal_override.md) for full semantics, `~Renews` rendering rules, and acceptance criteria.
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Account Renewal Override](../../feature/030_account_renewal_override.md) | `_renewal_at` storage, monthly auto-advance, and `~Renews` rendering |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Onboarding](../user_story/002_onboarding.md) | Set accurate billing renewal dates during account setup |
 
 ---
 
@@ -557,6 +668,18 @@ clp .account.inspect format::json | jq '.memberships | length'
 - This command does NOT show quota data (5h/7d utilization) — use `.usage` for that.
 - See [feature/031_account_inspect.md](../../feature/031_account_inspect.md) for full design, graceful fallback semantics, and all acceptance criteria.
 
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Account Inspect](../../feature/031_account_inspect.md) | Multi-endpoint inspection with membership selection priority |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Live multi-endpoint inspection for subscription diagnosis |
+
 ---
 
 ### Command :: 16. `.account.assign`
@@ -630,3 +753,16 @@ clp .account.assign name::alice@corp.com for::bob@laptop dry::1
 - Use `.account.use` for full credential rotation (credential copy + `~/.claude.*` patches + post-switch touch). Use `.account.assign` when only the preference marker needs to be set.
 - After `.account.assign` for a remote machine, that machine can run `.account.use name::alice@corp.com` to activate the credentials. The marker set by `.account.assign` is visible via `.accounts` on any machine sharing the same credential store.
 - See [feature/032_account_assign.md](../../feature/032_account_assign.md) for full design and all acceptance criteria.
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Account Assign](../../feature/032_account_assign.md) | Marker-only write algorithm and `for::` resolution |
+| 2 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | `_active_{machine}_{user}` marker semantics and filename sanitization |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Onboarding](../user_story/002_onboarding.md) | Pre-configure active account for a remote machine |

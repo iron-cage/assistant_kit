@@ -51,6 +51,12 @@
 | [006_token_status.md](006_token_status.md) | Token detection to trigger rotation |
 | [020_usage_sort_strategies.md](020_usage_sort_strategies.md) | Configurable sort strategies for `.usage`; references this command's selection algorithm as a contrast point |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.rotate`](../cli/command/001_account.md#command--13-accountrotate) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

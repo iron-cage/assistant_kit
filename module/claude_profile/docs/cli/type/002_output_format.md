@@ -2,21 +2,15 @@
 
 **Purpose:** Selects between human-readable text, compact table, and machine-parseable JSON output. Enables pipeline composition via `format::json | jq`; enables at-a-glance multi-account comparison via `format::table`.
 
-**Fundamental Type:** Enum
-
-```rust
-pub enum OutputFormat
-{
-  Text,
-  Json,
-  Table,
-}
-```
+**Fundamental Type:** Enum — four named rendering modes plus three `.usage`-only variants
 
 **Constants:**
 - `TEXT` — human-readable labeled output (default)
-- `JSON` — structured JSON output
+- `JSON` — structured JSON output; all fields serialized regardless of field-presence toggles
 - `TABLE` — compact aligned table (`.accounts` only)
+- `VALUE` — bare scalar string, no headers or footer (`.usage` only; implied by `get::`)
+- `TSV` — tab-separated values with header row (`.usage` only)
+- `PLAIN` — text layout with no emoji or ANSI colors (`.usage` only; equivalent to `no_color::1`)
 - `DEFAULT = Text`
 
 **Constraints:**
@@ -26,20 +20,8 @@ pub enum OutputFormat
 
 **Parsing:**
 
-```rust
-impl OutputFormat
-{
-  pub fn new( s : &str ) -> Result< Self, String >
-  {
-    match s.to_lowercase().as_str()
-    {
-      "text"  => Ok( Self::Text ),
-      "json"  => Ok( Self::Json ),
-      "table" => Ok( Self::Table ),
-      other   => Err( format!( "unknown format '{}': expected text, json, or table", other ) ),
-    }
-  }
-}
+```
+pub fn new( s : &str ) -> Result< Self, String >
 ```
 
 **Methods:**
@@ -48,6 +30,27 @@ impl OutputFormat
 - `is_text() -> bool` — true for text format
 - `is_table() -> bool` — true for table format
 
-**Parameters:** [`format::`](../param/002_format.md)
+### Referenced Parameters
 
-**Commands:** [`.accounts`](../command/001_account.md#command--3-accounts), [`.token.status`](../command/005_token.md#command--7-tokenstatus), [`.paths`](../command/004_paths.md#command--8-paths), [`.usage`](../command/006_usage.md#command--9-usage), [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus), [`.account.limits`](../command/001_account.md#command--11-accountlimits)
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [`format::`](../param/002_format.md) | Selects rendering mode |
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Account list with text/json/table |
+| 2 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Token classification output |
+| 3 | [`.paths`](../command/004_paths.md#command--8-paths) | Path resolution output |
+| 4 | [`.usage`](../command/006_usage.md#command--9-usage) | Multi-account usage output |
+| 5 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Credential metadata output |
+| 6 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Quota limits output |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | format::json for structured quota data |
+| 2 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | format::json for CI/CD pipeline consumption |
+| 3 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | format::json for structured diagnostic comparison |

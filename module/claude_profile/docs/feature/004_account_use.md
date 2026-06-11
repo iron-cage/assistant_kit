@@ -79,6 +79,12 @@
 |------|--------------|
 | [invariant/005_atomic_switching.md](../invariant/005_atomic_switching.md) | Atomicity invariant for this feature |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.use`](../cli/command/001_account.md#command--5-accountuse) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

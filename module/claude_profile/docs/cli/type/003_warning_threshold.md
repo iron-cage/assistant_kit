@@ -4,10 +4,6 @@
 
 **Fundamental Type:** Newtype wrapping `u64` (seconds)
 
-```rust
-pub struct WarningThreshold( u64 );
-```
-
 **Constants:**
 - `DEFAULT = 3600` — 60 minutes (matches `token::WARNING_THRESHOLD_SECS`)
 - `MIN = 0` — never classify as ExpiringSoon
@@ -18,16 +14,8 @@ pub struct WarningThreshold( u64 );
 
 **Parsing:**
 
-```rust
-impl WarningThreshold
-{
-  pub fn new( s : &str ) -> Result< Self, String >
-  {
-    let secs : u64 = s.parse()
-      .map_err( | _ | format!( "invalid threshold '{}' — expected seconds as integer", s ) )?;
-    Ok( Self( secs ) )
-  }
-}
+```
+pub fn new( s : &str ) -> Result< Self, String >
 ```
 
 **Methods:**
@@ -35,6 +23,20 @@ impl WarningThreshold
 - `as_duration() -> Duration` — converts to `std::time::Duration`
 - `is_disabled() -> bool` — true when threshold is 0
 
-**Parameters:** [`threshold::`](../param/003_threshold.md)
+### Referenced Parameters
 
-**Commands:** [`.token.status`](../command/005_token.md#command--7-tokenstatus)
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [`threshold::`](../param/003_threshold.md) | Accepts warning threshold in seconds |
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Token expiry classification with this threshold |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Threshold tunes Valid / ExpiringSoon boundary |

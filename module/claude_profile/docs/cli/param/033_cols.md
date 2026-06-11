@@ -2,12 +2,9 @@
 
 Controls column visibility in the `.usage` quota table. Accepts comma-separated `+name` (show) and `-name` (hide) modifiers relative to the default column set.
 
-- **Type:** `string`
 - **Default:** (empty -- use default column set)
 - **Constraints:** comma-separated `+col_id` / `-col_id` modifiers
-- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage)
 - **Purpose:** Customize which data columns appear in the quota table.
-- **Group:** Display Control
 
 **Column registry:**
 
@@ -39,3 +36,26 @@ cols::+host,+role              -> show machine/host tag and user-defined role la
 ```
 
 **See Also:** [feature/009_token_usage.md](../../feature/009_token_usage.md) for column definitions.
+
+### Referenced Type
+
+- **Fundamental Type:** `string`
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 1 | [Display Control](../param_group/005_display_control.md) | Member parameter |
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Column visibility customization for quota table |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | Tailored column set for quota monitoring workflows |
+| 2 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | Reduced column set for script-friendly output |

@@ -55,6 +55,12 @@ All methods return `PathBuf` computed from `HOME`. No filesystem access is perfo
 |------|--------------|
 | [014_rich_account_metadata.md](014_rich_account_metadata.md) | Uses `claude_json_file()` path for `~/.claude.json` access |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.paths`](../cli/command/004_paths.md#command--8-paths) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

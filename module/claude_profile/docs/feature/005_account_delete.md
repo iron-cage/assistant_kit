@@ -48,6 +48,12 @@
 | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Org identity metadata lifecycle — delete removes it best-effort |
 | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine active marker naming convention used in deletion step |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.delete`](../cli/command/001_account.md#command--6-accountdelete) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

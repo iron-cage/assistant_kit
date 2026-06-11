@@ -46,7 +46,7 @@
 //! | it030 | `it030_live_sigint_exits_0`                      | `live::1`; after 3s send SIGINT → exit 0, stdout has "Monitor stopped."  | P | no |
 //! | it031 | `it031_usage_help_shows_live_params`             | `.usage.help` → exit 0, stdout contains `live`, `interval`, `jitter`     | P | no |
 //! | it032 | `it032_lim_it_refresh_per_account`               | real token + `refresh::1` → exit 0, account name visible (AC-19)         | P | yes |
-//! | it033 | `it033_mre_refresh_help_excludes_429`            | `.usage.help` refresh says 401/403 not 401/403/429 (issue-refresh-help-429) | P | no |
+//! | it033 | `it033_mre_refresh_help_excludes_429`            | `.usage.help` refresh says 401/403 not 401/403/429 (BUG-279) | P | no |
 //! | it034 | `it034_trace_param_writes_to_stderr`             | `trace::1` with no-token account → stderr contains `[trace]` lines         | P | no |
 //! | it035 | `it035_empty_store_json_format`                  | empty store + `format::json` → output is `[]`                              | P | no |
 //! | it036 | `it036_no_footer_when_no_valid_accounts`         | single failed account → no "Valid:" footer line                            | P | no |
@@ -443,7 +443,7 @@ fn it006_unreadable_store_exits_2()
 /// Offline: HOME removed from process environment → `PersistPaths::new()`
 /// cannot resolve the storage root → exit 2 with a non-empty error on stderr.
 #[ test ]
-// Fix(issue-pro-isolation):
+// Fix(BUG-281):
 // Root cause: run_cs_without_home() removed $HOME but not $PRO; when $PRO is set in the host
 //   environment, the binary resolved the credential store via $PRO and returned a result rather
 //   than failing with exit 2 as expected.
@@ -1199,7 +1199,7 @@ fn it031_usage_help_shows_live_params()
 /// # Pitfall
 /// The assertion relies on the exact substring "401/403/429" — a reformulated
 /// description that mentions 429 in different phrasing would not be caught.
-#[ doc = "bug_reproducer(issue-refresh-help-429)" ]
+#[ doc = "bug_reproducer(BUG-279)" ]
 #[ test ]
 fn it033_mre_refresh_help_excludes_429()
 {
@@ -1339,7 +1339,7 @@ fn it035_empty_store_json_format()
 /// ## Pitfall
 /// Any future edit to the description string in `lib.rs` that removes `"1 = enabled, default"`
 /// (e.g., reformulation keeping 429 but changing default wording) would break this test.
-#[ doc = "bug_reproducer(issue-155)" ]
+#[ doc = "bug_reproducer(BUG-155)" ]
 #[ test ]
 fn it037_mre_bug155_refresh_defaults_to_1()
 {
@@ -1387,7 +1387,7 @@ fn it037_mre_bug155_refresh_defaults_to_1()
 /// ## Pitfall
 /// it033 still guards against the old "401/403/429" combined string. This test
 /// adds the positive check: "429" appears separately for the conditional case.
-#[ doc = "bug_reproducer(issue-156)" ]
+#[ doc = "bug_reproducer(BUG-156)" ]
 #[ test ]
 fn it038_mre_bug156_refresh_help_mentions_429_expired()
 {

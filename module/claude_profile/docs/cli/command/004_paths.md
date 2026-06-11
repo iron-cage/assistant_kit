@@ -56,3 +56,16 @@ clp .paths field::unknown
 **Notes:**
 - `field::` takes priority over `format::` — when both are provided, `format::` is ignored.
 - Field names use underscores (`session_env`), matching the JSON key names from `format::json`.
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [File Topology](../../feature/007_file_topology.md) | Canonical path set resolved by this command |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | Script-accessible path resolution for tooling integration |
+| 2 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Path topology check during credential diagnostics |

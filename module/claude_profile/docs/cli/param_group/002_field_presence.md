@@ -24,7 +24,12 @@
 | [`org_uuid::`](../param/030_org_uuid.md) | `bool` | `0` | Both | Organisation UUID line (opt-in) |
 | [`org_name::`](../param/031_org_name.md) | `bool` | `0` | Both | Organisation display name line (opt-in) |
 
-**Used By (2 commands):** [`.accounts`](../command/001_account.md#command--3-accounts), [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus)
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | 13 field-presence params |
+| 2 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | 16 field-presence params |
 
 **Typical Patterns:**
 
@@ -60,3 +65,10 @@ All 17 members pass — each controls exactly one output line. `format::` fails 
 **Cross-References**
 
 - [../004_parameter_interactions.md](../004_parameter_interactions.md) — `format::json` override rule for field-presence params
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Onboarding](../user_story/002_onboarding.md) | Selective field display during account management |
+| 2 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Field-filtered credential diagnostic output |

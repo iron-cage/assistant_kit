@@ -9,4 +9,5 @@
 
 | File | Responsibility |
 |------|----------------|
+| procedure.md | Workflow for capturing and updating research findings |
 | 001_claude_interactive_session_control.md | Findings on controlling/avoiding full interactive REPL — `claude auth login` discovery |

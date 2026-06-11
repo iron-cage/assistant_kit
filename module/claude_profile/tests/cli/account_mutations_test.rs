@@ -44,7 +44,7 @@
 //! | aw10 | `aw10_switch_dry_run_nonexistent_exits_2` | dry-run nonexistent → exit 2 | N |
 //! | aw11 | `aw11_switch_slash_in_email_local_part_exits_1` | `/` in email local part → exit 1 | N |
 //! | aw12 | `aw12_switch_patches_email_when_metadata_absent` | emailAddress patched when `{name}.json` absent (BUG-254) | P |
-//! | — | `switch_restores_claude_json` | `~/.claude.json` restored after switch (issue-122) | P |
+//! | — | `switch_restores_claude_json` | `~/.claude.json` restored after switch (BUG-277) | P |
 //! | — | `mre_bug_217_switch_account_enforces_emailaddress` | switch enforces `emailAddress == name` over stale snapshot | P |
 //! | aw13 | `aw13_use_positional_bare_arg` | positional email `personal@home.com` → switches | P |
 //! | aw14 | `aw14_use_prefix_resolves` | prefix `car` resolves to `carol@example.com`, switches | P |
@@ -506,7 +506,7 @@ fn aw09_switch_copies_credentials()
 // ── AD: Account Delete ────────────────────────────────────────────────────────
 
 #[ test ]
-// Fix(issue-pro-isolation):
+// Fix(BUG-281):
 // Root cause: run_cs_with_env() set HOME to a temp dir but inherited $PRO from the test runner;
 //   PersistPaths::resolve_root() prefers $PRO over $HOME when $PRO is an existing directory, so
 //   the binary operated on the real credential store ($PRO/.persistent/claude/credential) while
@@ -645,7 +645,7 @@ fn ad09_double_delete_exits_2()
 //   mutation step is skipped.
 // Pitfall: Placing `is_dry()` before domain validation produces misleading "would do X"
 //   output for operations that would actually fail — always validate first, then dry-run.
-#[ doc = "bug_reproducer(issue-switch-dry-validation)" ]
+#[ doc = "bug_reproducer(BUG-265)" ]
 #[ test ]
 fn aw10_switch_dry_run_nonexistent_exits_2()
 {
@@ -680,7 +680,7 @@ fn ad10_delete_dry_run_active_exits_0()
 // Prevention: Dry-run path must include all validation; only file-system mutation is omitted.
 // Pitfall: Missing existence check in dry-run gives a false "operation would succeed"
 //   signal, masking configuration errors until the real run.
-#[ doc = "bug_reproducer(issue-delete-dry-validation)" ]
+#[ doc = "bug_reproducer(BUG-266)" ]
 #[ test ]
 fn ad11_delete_dry_run_nonexistent_exits_2()
 {
@@ -718,7 +718,7 @@ fn ad12_delete_removes_snapshot_files()
 /// CLI-level symmetry test with aw07: reads the active marker directly (not via
 /// `.credentials.status`) to confirm the write happened at the filesystem level.
 ///
-/// ## Fix Documentation — issue-active-marker
+/// ## Fix Documentation — BUG-282
 ///
 /// - **Root Cause:** `save()` never wrote the active marker; only `switch_account()` did.
 /// - **Why Not Caught:** No AS test verified the active marker file after `.account.save`.
@@ -751,10 +751,10 @@ fn as16_save_writes_active_marker()
 
 // ── switch_restores_claude_json ────────────────────────────────────────────────
 
-/// bug_reproducer(issue-122): `.account.use` does not restore `~/.claude.json`,
+/// bug_reproducer(BUG-277): `.account.use` does not restore `~/.claude.json`,
 /// so `.credentials.status` shows the previous account's email after a switch.
 ///
-/// ## Fix Documentation — issue-122
+/// ## Fix Documentation — BUG-277
 ///
 /// - **Root Cause:** `switch_account()` restored only `.credentials.json`; the
 ///   companion `~/.claude.json` restore (from `{name}.json` snapshot) was
@@ -770,7 +770,7 @@ fn as16_save_writes_active_marker()
 /// - **Pitfall:** The `let _ = ...` idiom silences copy errors intentionally —
 ///   `~/.claude.json` may legitimately not exist. The test must explicitly write
 ///   `~/.claude.json` for both accounts before saving so the snapshots exist.
-#[ doc = "bug_reproducer(issue-122)" ]
+#[ doc = "bug_reproducer(BUG-277)" ]
 #[ test ]
 fn switch_restores_claude_json()
 {
@@ -808,12 +808,12 @@ fn switch_restores_claude_json()
 
 // ── as17 ──────────────────────────────────────────────────────────────────────
 
-/// bug_reproducer(issue-123): `.account.save name::a/b@c.com` exits 2 instead
+/// bug_reproducer(BUG-278): `.account.save name::a/b@c.com` exits 2 instead
 /// of 1 because `validate_name()` passes `a/b@c.com` (local part non-empty,
 /// domain non-empty), then `save()` hits a filesystem error when creating
 /// `a/b@c.com.credentials.json`.
 ///
-/// ## Fix Documentation — issue-123
+/// ## Fix Documentation — BUG-278
 ///
 /// - **Root Cause:** `validate_name()` only checked `@` presence and non-empty
 ///   local/domain parts; it did not reject path-unsafe chars (`/`, `\`, `*`)
@@ -829,7 +829,7 @@ fn switch_restores_claude_json()
 ///   variants so any regression in the local-part check is caught immediately.
 /// - **Pitfall:** Only the local part (before `@`) needs the check; domain chars
 ///   cannot create path traversal in practice because the `@` separates them.
-#[ doc = "bug_reproducer(issue-123)" ]
+#[ doc = "bug_reproducer(BUG-278)" ]
 #[ test ]
 fn as17_save_slash_in_email_local_part_exits_1()
 {
@@ -850,11 +850,11 @@ fn as17_save_slash_in_email_local_part_exits_1()
 
 // ── as18 ──────────────────────────────────────────────────────────────────────
 
-/// bug_reproducer(issue-123): same root cause as as17 but for `\` in the local
+/// bug_reproducer(BUG-278): same root cause as as17 but for `\` in the local
 /// part of the email address.
 ///
 /// See as17 for full fix documentation.
-#[ doc = "bug_reproducer(issue-123)" ]
+#[ doc = "bug_reproducer(BUG-278)" ]
 #[ test ]
 fn as18_save_backslash_in_email_local_part_exits_1()
 {
@@ -868,12 +868,12 @@ fn as18_save_backslash_in_email_local_part_exits_1()
 
 // ── aw11 ──────────────────────────────────────────────────────────────────────
 
-/// bug_reproducer(issue-123): `.account.use name::a/b@c.com` exits 2 instead
+/// bug_reproducer(BUG-278): `.account.use name::a/b@c.com` exits 2 instead
 /// of 1 for the same reason as as17 — `validate_name()` passes the name, then
 /// `switch_account()` fails with a filesystem error.
 ///
 /// See as17 for full fix documentation.
-#[ doc = "bug_reproducer(issue-123)" ]
+#[ doc = "bug_reproducer(BUG-278)" ]
 #[ test ]
 fn aw11_switch_slash_in_email_local_part_exits_1()
 {

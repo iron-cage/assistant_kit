@@ -46,6 +46,12 @@
 | [012_live_credentials_status.md](012_live_credentials_status.md) | Related command — live credentials without account store |
 | [013_account_limits.md](013_account_limits.md) | Uses named-account selection pattern via `name::` |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.accounts`](../cli/command/001_account.md#command--3-accounts) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

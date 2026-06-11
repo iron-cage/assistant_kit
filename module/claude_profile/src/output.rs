@@ -44,16 +44,16 @@ impl OutputOptions
     {
       Some( Value::String( s ) ) =>
       {
-        match s.as_str()
+        match s.to_ascii_lowercase().as_str()
         {
           "text"  => OutputFormat::Text,
           "json"  => OutputFormat::Json,
           "table" => OutputFormat::Table,
-          other   =>
+          _other  =>
           {
             return Err( ErrorData::new(
               ErrorCode::ArgumentTypeMismatch,
-              format!( "unknown format '{other}': expected text, json, or table" ),
+              format!( "unknown format '{s}': expected text, json, or table" ),
             ) );
           }
         }

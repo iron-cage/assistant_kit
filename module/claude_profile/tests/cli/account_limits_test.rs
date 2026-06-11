@@ -218,7 +218,7 @@ fn lim05_existing_named_account_exits_2_with_data_unavailable()
 /// IT-1 (live): Active account, default text format — exits 0, shows utilization.
 ///
 /// Root Cause (original): `fetch_rate_limits` was a no-op stub until `ureq` HTTP client was added.
-/// Root Cause (regression — issue-oauth-beta-stale): `anthropic-beta: oauth-2023-09-22` was stale;
+/// Root Cause (regression — BUG-283): `anthropic-beta: oauth-2023-09-22` was stale;
 ///   the Anthropic API rejected it with 401 ("OAuth authentication is currently not supported"),
 ///   so rate-limit headers were never returned. Fix: update to `oauth-2025-04-20` (confirmed via
 ///   `strings $(which claude)`). The beta string tracks the Claude binary release — recheck

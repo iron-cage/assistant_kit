@@ -56,3 +56,24 @@ clp .paths
 # Settings:        /home/user/.claude/settings.json
 # Credential store: /home/user/.persistent/claude/credential/
 ```
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Default — account list labeled output |
+| 2 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | Default — token classification labeled output |
+| 3 | [`.paths`](../command/004_paths.md#command--8-paths) | Default — path resolution labeled output |
+| 4 | [`.usage`](../command/006_usage.md#command--9-usage) | Default — multi-account quota table |
+| 5 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | Default — credential metadata labeled output |
+| 6 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Default — quota limits labeled output |
+
+### Referenced User Stories
+
+| # | User Story | Relevance |
+|---|------------|-----------|
+| 1 | [Account Rotation](../user_story/001_account_rotation.md) | Default output for rotation status |
+| 2 | [Account Onboarding](../user_story/002_onboarding.md) | Default output for lifecycle commands |
+| 3 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | Interactive quota table output |
+| 4 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | Text output for human-readable logs |
+| 5 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Default output for diagnostic commands |

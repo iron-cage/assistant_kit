@@ -66,6 +66,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       bfs( "capabilities", "Show enabled capabilities list from `~/.claude.json` (opt-in)"                    ),
       bfs( "org_uuid",     "Show organisation UUID from active account's `{name}.json` snapshot (opt-in)"       ),
       bfs( "org_name",     "Show organisation display name from active account's `{name}.json` snapshot (opt-in)" ),
+      reg_arg_opt( "get", Kind::String ).with_description( "Extract bare field value for scripting: `subscription`, `tier`, `token`, `expires_in_secs`, `email`, `account`, `file`" ),
       trc(),
     ],
     Box::new( credentials_status_routine ) );

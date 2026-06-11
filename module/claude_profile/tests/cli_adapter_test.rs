@@ -55,8 +55,8 @@
 //! | O-02 | `output_format_json` | `fmt::json` → `OutputFormat::Json` | P |
 //! | O-03 | `output_format_xml_rejected` | `fmt::xml` → error | N |
 //! | O-04 | `output_format_default` | no `fmt::` → default `Text` | P |
-//! | O-05 | `output_format_case_json_rejected` | `fmt::JSON` (uppercase) → error | N |
-//! | O-06 | `output_format_case_text_rejected` | `fmt::Text` (capitalized) → error | N |
+//! | O-05 | `output_format_case_json_accepted` | `fmt::JSON` (uppercase) → `OutputFormat::Json` | P |
+//! | O-06 | `output_format_case_text_accepted` | `fmt::Text` (capitalized) → `OutputFormat::Text` | P |
 //! | O-11 | `json_escape_plain` | plain string unchanged | P |
 //! | O-12 | `json_escape_quote` | `"` → `\"` | P |
 //! | O-13 | `json_escape_backslash` | `\` → `\\` | P |
@@ -382,7 +382,7 @@ mod adapter
   // Adding `--help`/`-h` handling does NOT substitute for the pre-scan.
   // `argv[0]` checks are too narrow: users type `clp .accounts .help` or
   // `clp .accounts help` — the help token is not in position 0.
-  #[ doc = "bug_reproducer(issue-help-prescan)" ]
+  #[ doc = "bug_reproducer(BUG-273)" ]
   #[ test ]
   fn adapter_dot_help_in_second_position()
   {
@@ -515,22 +515,22 @@ mod output
     assert_eq!( opts.format, OutputFormat::Text );
   }
 
-  // O-05: format="JSON" (uppercase) → error
+  // O-05: format="JSON" (uppercase) → OutputFormat::Json (case-insensitive per type spec)
   #[ test ]
-  fn output_format_case_json_rejected()
+  fn output_format_case_json_accepted()
   {
     let cmd = make_cmd( vec![ ( "format", Value::String( "JSON".to_string() ) ) ] );
-    let err = OutputOptions::from_cmd( &cmd ).unwrap_err();
-    assert!( err.message.contains( "unknown format" ), "got: {}", err.message );
+    let opts = OutputOptions::from_cmd( &cmd ).unwrap();
+    assert_eq!( opts.format, OutputFormat::Json );
   }
 
-  // O-06: format="Text" (capitalized) → error
+  // O-06: format="Text" (capitalized) → OutputFormat::Text (case-insensitive per type spec)
   #[ test ]
-  fn output_format_case_text_rejected()
+  fn output_format_case_text_accepted()
   {
     let cmd = make_cmd( vec![ ( "format", Value::String( "Text".to_string() ) ) ] );
-    let err = OutputOptions::from_cmd( &cmd ).unwrap_err();
-    assert!( err.message.contains( "unknown format" ), "got: {}", err.message );
+    let opts = OutputOptions::from_cmd( &cmd ).unwrap();
+    assert_eq!( opts.format, OutputFormat::Text );
   }
 
   // O-11: json_escape plain

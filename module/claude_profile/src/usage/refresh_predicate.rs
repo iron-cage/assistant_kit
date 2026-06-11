@@ -42,7 +42,7 @@ pub( crate ) fn should_refresh( aq : &AccountQuota, now_secs : u64 ) -> bool
   {
     return true;
   }
-  // Fix(issue-156): also refresh when rate-limited AND locally expired.
+  // Fix(BUG-156): also refresh when rate-limited AND locally expired.
   // Root cause: 429+expired accounts were unconditionally excluded; the guard
   //   assumed "429 = valid token" but a past `expiresAt` indicates the per-account
   //   file may be stale — the token may need refreshing despite the 429 response.
@@ -120,7 +120,7 @@ mod tests
   ///
   /// Verifies BUG-156 fix: a rate-limited account with a stale (past) `expiresAt`
   /// must enter the refresh path so the credentials file gets updated.
-  #[ doc = "bug_reproducer(issue-156)" ]
+  #[ doc = "bug_reproducer(BUG-156)" ]
   #[ test ]
   fn test_should_refresh_mre_bug156_429_expired_triggers()
   {

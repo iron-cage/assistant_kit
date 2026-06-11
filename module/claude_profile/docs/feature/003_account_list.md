@@ -94,6 +94,12 @@ When all field toggles are disabled, only bare account name lines are printed (n
 | [021_extended_snapshot_fields.md](021_extended_snapshot_fields.md) | `tagged_id`, `uuid`, `capabilities` fields and `uuid::`, `capabilities::` params |
 | [022_org_identity_snapshot.md](022_org_identity_snapshot.md) | Org identity fields and `org_uuid::`, `org_name::` params |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.accounts`](../cli/command/001_account.md#command--3-accounts) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

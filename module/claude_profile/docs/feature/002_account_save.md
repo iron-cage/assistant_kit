@@ -76,6 +76,12 @@
 | [025_per_machine_active_marker.md](025_per_machine_active_marker.md) | Per-machine marker naming convention used in step 8 |
 | [030_account_renewal_override.md](030_account_renewal_override.md) | `_renewal_at` field written by `.account.renewal`; preserved by `save()` read-merge (AC-17) |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.save`](../cli/command/001_account.md#command--4-accountsave) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

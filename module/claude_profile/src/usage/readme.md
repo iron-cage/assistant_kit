@@ -16,3 +16,24 @@
 | `touch.rs` | Session touch/probe: apply_touch, pre_switch_touch_ctx. |
 | `params.rs` | Usage command parameter parsing and validation. |
 | `api.rs` | Public command entry point: usage_routine. |
+
+## Inline Test Exception
+
+**Exception to `files_structure.rulebook.md § File Type Separation : Absolute Prohibitions`:**
+All 12 source files in this module contain `#[cfg(test)] mod tests` blocks that would
+ordinarily belong in `tests/`. This exception applies exclusively to `src/usage/` and
+is justified by a visibility constraint:
+
+The functions under test (`pre_switch_touch_ctx`, `apply_model_override`, `apply_touch`,
+`should_refresh`, `resolve_model`, `render_text`, `sort_indices`, etc.) are declared
+`pub(crate)` — they are not part of the public API but must be tested in isolation.
+Rust does not permit external test crates to access `pub(crate)` items across crate
+boundaries, so moving the tests to `tests/` would require either:
+- Widening visibility to `pub` (changes the public API surface), or
+- Re-testing only through `pub` entry points (loses unit-level isolation)
+
+Neither is acceptable here. The inline `#[cfg(test)]` blocks are the minimum viable
+solution and are gated correctly — they produce no code in release builds.
+
+**Scope:** This exception applies only to files within `src/usage/`. No other `src/`
+directory in this crate is exempt from the Absolute Prohibition.

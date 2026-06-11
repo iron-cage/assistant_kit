@@ -1,9 +1,14 @@
 meta:
-  description: Cross-reference graph for all doc instances in claude_profile
+  description: Cross-reference graph for feature/ and invariant/ doc instances in claude_profile
   node_count: 40
   edge_count: 70
   component_count: 8
   generated: 2026-06-09
+  scope_note: >
+    Covers feature/ and invariant/ cross-references only. CLI entities
+    (command, param, param_group, type, format, workflow_scenario) and
+    research_interactive/ are excluded — their structure is captured in
+    per-directory readmes, not cross-reference edges.
 
 nodes:
   - id: feature/001
@@ -367,7 +372,7 @@ edges:
 
 components:
   - id: 1
-    size: 31
+    size: 32
     isolated: false
     nodes:
       - feature/001
@@ -400,6 +405,7 @@ components:
       - feature/030
       - feature/032
       - feature/033
+      - feature/034
       - invariant/005
 
   - id: 2

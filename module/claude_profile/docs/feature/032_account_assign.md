@@ -120,6 +120,12 @@ Where `{machine}` and `{user}` are the current machine's resolved values (same s
 | [cli/param/004_dry.md](../cli/param/004_dry.md) | `dry::` — dry-run flag |
 | [cli/param/053_for.md](../cli/param/053_for.md) | `for::` — `USER@MACHINE` target identity |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.assign`](../cli/command/001_account.md#command--16-accountassign) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

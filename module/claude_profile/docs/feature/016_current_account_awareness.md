@@ -108,6 +108,12 @@ work@acme.com
 |------|--------------|
 | [cli/param/018_current.md](../cli/param/018_current.md) | `current::` field-presence parameter |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [Command Index](../cli/command/readme.md) | Syntax blocks for `.accounts` and `.usage` |
+
 ### Sources
 
 | File | Relationship |

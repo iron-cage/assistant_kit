@@ -124,7 +124,7 @@ pub fn account_renewal_routine( cmd : VerifiedCommand, _ctx : ExecutionContext )
   let mut had_error  = false;
   let mut error_code = 0_i32;
 
-  // Fix(issue-renewal-comma-prefix): comma-list tokens were used as raw strings without
+  // Fix(BUG-267): comma-list tokens were used as raw strings without
   //   prefix resolution, causing `name::i9,i11` to fail when i9@host, i11@host are saved.
   // Root cause: the comma-list branch collected raw tokens; only the single-name branch
   //   called resolve_account_name(). Full emails pass through the @-fast-path unchanged.

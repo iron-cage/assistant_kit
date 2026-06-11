@@ -124,6 +124,10 @@ pub( crate ) fn sort_indices(
 
       if reversed { non_exhausted.reverse(); }
       // Fix(BUG-259): sort exhausted tier by name — partition order is filesystem-dependent.
+      // Root cause: exhausted_vec was appended in list() iteration order (filesystem-dependent),
+      //   producing non-deterministic sort output across runs with the same data.
+      // Pitfall: partition() preserves insertion order, not sort order — always sort the
+      //   partitioned slice before appending if determinism is required.
       let mut exhausted_vec = exhausted_vec;
       exhausted_vec.sort_by( |&a, &b| accounts[ a ].name.cmp( &accounts[ b ].name ) );
       non_exhausted.extend( exhausted_vec );
@@ -158,6 +162,8 @@ pub( crate ) fn sort_indices(
 
       // Canonical: ascending min(7d_reset, sub_renewal) (soonest event first); tiebreak ascending prefer_weekly, then name.
       // Fix(BUG-259): name as final tiebreaker makes sort deterministic when numeric keys are tied (same-token accounts).
+      // Root cause: see BUG-259 exhausted floor comment above — same determinism fix applied to the Renew sort.
+      // Pitfall: sorts on floating-point (prefer_weekly) require unwrap_or for NaN handling — never use cmp directly.
       non_exhausted.sort_by( |&a, &b|
       {
         renewal_event_secs( a ).cmp( &renewal_event_secs( b ) )

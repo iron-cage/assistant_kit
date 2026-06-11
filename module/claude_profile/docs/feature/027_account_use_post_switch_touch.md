@@ -119,6 +119,12 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 | [cli/param/035_imodel.md](../cli/param/035_imodel.md) | `imodel::` parameter specification (shared with `.usage`) |
 | [cli/param/036_effort.md](../cli/param/036_effort.md) | `effort::` parameter specification (shared with `.usage`) |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.use`](../cli/command/001_account.md#command--5-accountuse) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

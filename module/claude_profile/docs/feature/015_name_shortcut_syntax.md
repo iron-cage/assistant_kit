@@ -71,6 +71,12 @@ Prefix resolution applies AFTER positional rewriting: `clp .account.use car` →
 |------|--------------|
 | [cli/param/001_name.md](../cli/param/001_name.md) | `name::` parameter specification |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [Command Index](../cli/command/readme.md) | Syntax blocks for all name-taking commands |
+
 ### Sources
 
 | File | Relationship |

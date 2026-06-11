@@ -129,6 +129,12 @@ In live mode, `format::json` is rejected before the first fetch (see Validation)
 |------|--------------|
 | `task/claude_profile/138_usage_live_monitor.md` | Implementation task for this feature |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../cli/command/006_usage.md#command--9-usage) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

@@ -24,3 +24,4 @@ Domain types used by `clp` CLI parameters and commands.
 
 - [../param/](../param/readme.md) — parameters that use these types
 - [../command/](../command/readme.md) — commands that accept these types
+- [../user_story/](../user_story/readme.md) — user stories that exercise these types

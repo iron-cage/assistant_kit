@@ -96,6 +96,12 @@ This label is NOT a separate field param — it is the formatted output of the e
 |------|--------------|
 | [cli/param/readme.md](../cli/param/readme.md) | New param entries (display_name::, role::, billing::, model::) |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.credentials.status`](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

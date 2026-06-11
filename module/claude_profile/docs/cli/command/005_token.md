@@ -42,3 +42,17 @@ clp .token.status threshold::1800
 clp .token.status format::json
 # {"status":"valid","expires_in_secs":2820}
 ```
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Token Status](../../feature/006_token_status.md) | Token expiry classification algorithm |
+| 2 | [Auto Rotate](../../feature/008_auto_rotate.md) | Token status drives auto-rotation trigger |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Rotation](../user_story/001_account_rotation.md) | Token expiry check before rotation decision |
+| 2 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Live token status for diagnostic inspection |

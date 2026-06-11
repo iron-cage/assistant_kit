@@ -6,7 +6,7 @@
 //!
 //! # Known Pitfalls
 //!
-//! ## P1 — `exists()` vs `is_dir()` for `$PRO` validation (issue-001)
+//! ## P1 — `exists()` vs `is_dir()` for `$PRO` validation (BUG-263)
 //!
 //! `path.exists()` returns `true` for both files and directories. Using
 //! `exists()` to guard `$PRO` allows a file path to silently pass as a
@@ -104,7 +104,7 @@ impl PersistPaths
 
   fn resolve_root() -> Result< PathBuf, std::io::Error >
   {
-    // Fix(issue-001):
+    // Fix(BUG-263):
     // Root cause: path.exists() returns true for files — is_dir() is the correct guard;
     //   a file path produces a nonsensical base like `<file>/persistent/claude_profile`
     //   and makes ensure_exists() fail with ENOTDIR at call time, not at validation.

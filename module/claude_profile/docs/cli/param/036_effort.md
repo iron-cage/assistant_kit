@@ -2,12 +2,9 @@
 
 Controls the effort level (`--effort` flag) injected into isolated subprocesses spawned during `touch::` and `refresh::` operations. Default is `low` for all models that support effort.
 
-- **Type:** `enum`
 - **Default:** `auto`
 - **Constraints:** `auto`, `low`, `normal`, `high`, `max`
-- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage), [`.account.use`](../command/001_account.md#command--5-accountuse)
 - **Purpose:** Set subprocess effort level; `auto` uses `low` for any model, preventing extended thinking overhead in keep-alive subprocesses.
-- **Group:** [Fetch Behavior](../param_group/003_fetch_behavior.md)
 
 **Values:**
 
@@ -37,3 +34,26 @@ effort::max      → always --effort max
 - Does not affect `format::json` output structure.
 
 **See Also:** [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md) for the full effort-resolution algorithm and AC criteria.
+
+### Referenced Type
+
+- **Fundamental Type:** `enum`
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 1 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | Member parameter |
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Effort level for touch/refresh subprocesses |
+| 2 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Effort level for post-switch idle activation subprocess |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Rotation](../user_story/001_account_rotation.md) | Low-effort subprocess keeps keep-alive pings fast |
