@@ -88,6 +88,7 @@ When `trace::1` and `touch::0`: no `[trace] account.use` lines (no fetch operati
 | `task/claude_profile/bug/213_account_use_switches_to_expired_token_silently.md` | BUG-213 ✅ Fixed by TSK-216: expiry guard inserted in `account_use_routine()` before `switch_account()`; exits 3 when `now_ms > expiresAt` on the fetch-failed path |
 | `task/claude_profile/bug/238_model_override_skipped_when_already_active.md` | BUG-238 ✅ Fixed: `pre_switch_touch_ctx()` refactored to `PreSwitchOutcome` enum; `apply_model_override()` extracted and called for both idle and already-active paths |
 | `task/claude_profile/bug/257_override_session_model_exact_match_misses_shorthand_alias.md` | BUG-257 ✅ Fixed (TSK-261): `contains("sonnet")` + write `"opus"` shorthand |
+| `task/claude_profile/bug/285_account_use_already_active_wrong_oracle.md` | BUG-285 🔴 Open: `pre_switch_touch_ctx()` uses server-side `resets_at` as proxy for local subprocess identity — false `AlreadyActive` classification when quota window open from any session/machine; subprocess spawn skipped |
 
 ### Commands
 
