@@ -18,7 +18,11 @@
 | [`abs::`](../param/046_abs.md) | `bool` | `0` | Show absolute token counts instead of percentages |
 | [`no_color::`](../param/047_no_color.md) | `bool` | `0` | Strip emoji and ANSI sequences from output |
 
-**Used By (1 command):** [`.usage`](../command/006_usage.md#command--9-usage)
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | All 11 display and filter params |
 
 **Typical Patterns:**
 
@@ -74,3 +78,11 @@ Parameters that fail: `sort::`, `next::` (ordering strategy, not display); `form
 - [../../feature/009_token_usage.md](../../feature/009_token_usage.md) — column definitions, AC-22, AC-23; three-tier grouping
 - [../../feature/028_usage_row_filtering.md](../../feature/028_usage_row_filtering.md) — row filter evaluation order and AND-composition rules
 - [../param/033_cols.md](../param/033_cols.md) — complete column registry with IDs and defaults
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | `cols::`, `count::`, `min_5h::` for quota table customization |
+| 2 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | `only_next::`, `no_color::` for pipeline extraction |
+| 3 | [Account Rotation](../user_story/001_account_rotation.md) | `only_next::`, `only_active::` for rotation targeting |

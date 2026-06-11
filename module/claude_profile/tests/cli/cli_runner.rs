@@ -37,7 +37,7 @@ pub fn run_cs( args : &[ &str ] ) -> Output
 #[ must_use ]
 pub fn run_cs_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> Output
 {
-  // Fix(issue-pro-isolation): env_remove("PRO") prevents host $PRO from overriding the test HOME.
+  // Fix(BUG-281): env_remove("PRO") prevents host $PRO from overriding the test HOME.
   // Root cause: PersistPaths::resolve_root() prefers $PRO over $HOME when $PRO is an existing dir;
   //   tests that only set HOME inherited $PRO from the runner, causing the binary to operate on
   //   the real production credential store instead of the test-supplied temp dir.
@@ -61,7 +61,7 @@ pub fn run_cs_with_env( args : &[ &str ], env : &[ ( &str, &str ) ] ) -> Output
 #[ must_use ]
 pub fn run_cs_without_home( args : &[ &str ] ) -> Output
 {
-  // Fix(issue-pro-isolation): env_remove("PRO") prevents host $PRO from substituting for HOME.
+  // Fix(BUG-281): env_remove("PRO") prevents host $PRO from substituting for HOME.
   // Root cause: removing $HOME but not $PRO left a silent fallback; the binary resolved the
   //   credential store via $PRO and succeeded instead of failing as the test expected.
   // Pitfall: Removing only $HOME is insufficient — $PRO takes priority and must also be removed.
@@ -152,7 +152,7 @@ pub fn write_account( home : &std::path::Path, name : &str, sub_type : &str, tie
 #[ inline ]
 pub fn write_claude_json( home : &std::path::Path, email : &str )
 {
-  // Fix(FR-19): write to $HOME/.claude.json — production code reads from claude_json_file()
+  // Fix(BUG-270): write to $HOME/.claude.json — production code reads from claude_json_file()
   // Root cause: was writing to $HOME/.claude/.claude.json (one dir too deep), matching old bug.
   // Pitfall: fixture write path must equal production read path (Fixture–Production Path Alignment).
   let content = format!(

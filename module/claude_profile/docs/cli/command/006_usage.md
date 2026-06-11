@@ -128,3 +128,26 @@ clp .usage live::1 interval::60 jitter::10
 - `touch::` (default `1`) activates accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet window) by sending a minimal prompt; pass `touch::0` to suppress. Runs after `refresh::` when both active. See [feature/024_session_touch.md](../../feature/024_session_touch.md) for full trigger conditions including skip guards (h-exhausted, 7d-exhausted).
 - `imodel::` controls the Claude model injected into `touch::` and `refresh::` subprocesses. `auto` (default) selects Sonnet when an account's `7d(Son) ≥ 20%` and Opus otherwise. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
 - `effort::` controls the effort level (`--effort` flag) for those subprocesses. `auto` (default) uses `low` for any model; no flag for `imodel::haiku` or `imodel::keep`. Low effort prevents extended thinking in keep-alive subprocesses, avoiding timeouts. See [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md).
+
+### Referenced Features
+
+| # | Feature | Role |
+|---|---------|------|
+| 1 | [Token Usage Reporting](../../feature/009_token_usage.md) | Baseline quota fetch algorithm and AC criteria |
+| 2 | [Current Account Awareness](../../feature/016_current_account_awareness.md) | Flag column (`✓`/`*`) and active account detection |
+| 3 | [Token Refresh](../../feature/017_token_refresh.md) | Auth error recovery on 401/403/429 |
+| 4 | [Live Monitor](../../feature/018_live_monitor.md) | Continuous refresh loop behavior (`live::1`) |
+| 5 | [Sort Strategies](../../feature/020_usage_sort_strategies.md) | Row ordering strategies (`sort::`, `desc::`, `prefer::`) |
+| 6 | [Next Account Strategies](../../feature/023_next_account_strategies.md) | Recommendation strategy (`next::`) and footer display |
+| 7 | [Session Touch](../../feature/024_session_touch.md) | Idle account activation trigger conditions |
+| 8 | [Per-Machine Active Marker](../../feature/025_per_machine_active_marker.md) | Machine-local active marker (`@` flag column) |
+| 9 | [Subprocess Model/Effort](../../feature/026_subprocess_model_effort.md) | Model and effort selection for subprocesses |
+| 10 | [Row Filtering](../../feature/028_usage_row_filtering.md) | Filter predicates (`only_active::`, `min_5h::`, etc.) |
+| 11 | [Account Renewal Override](../../feature/030_account_renewal_override.md) | `~Renews` exact duration when `_renewal_at` is set |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | Primary command for live quota monitoring across accounts |
+| 2 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | Machine-readable quota data for automation scripts |

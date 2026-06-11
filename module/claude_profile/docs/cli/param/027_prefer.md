@@ -2,12 +2,9 @@
 
 Selects which weekly quota column is used by sort strategies and recommendation heuristics. Determines whether the overall weekly quota (`7d Left`), the Sonnet-specific weekly quota (`7d(Son)`), or the more constrained of the two is considered.
 
-- **Type:** `enum`
 - **Default:** `any`
 - **Constraints:** `any`, `opus`, `sonnet`
-- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage)
 - **Purpose:** Tell the sort/recommendation heuristics which model the user intends to run.
-- **Group:** Sort Control
 
 **Values:**
 
@@ -35,3 +32,25 @@ sort::endurance prefer::sonnet   → endurance filter uses 7d(Son) ≥ 30%
 sort::drain prefer::opus         → drain primary key uses 7d Left ascending
 sort::renew prefer::sonnet       → renew tiebreak uses 7d(Son) ascending
 ```
+
+### Referenced Type
+
+- **Fundamental Type:** `enum`
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 1 | [Sort Control](../param_group/004_sort_control.md) | Member parameter |
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Model preference for sort and recommendation heuristics |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | Model-aware quota sorting for workflow optimization |

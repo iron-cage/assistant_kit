@@ -88,6 +88,12 @@ The Anthropic OAuth API exposes `org.created_at` as the billing cycle anchor, bu
 | [cli/param/050_from_now.md](../cli/param/050_from_now.md) | `from_now::` — relative renewal delta |
 | [cli/param/051_clear.md](../cli/param/051_clear.md) | `clear::` — remove renewal override |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.renewal`](../cli/command/001_account.md#command--14-accountrenewal) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

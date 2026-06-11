@@ -326,11 +326,27 @@ fn aa11_no_credentials_json_side_effect()
 /// named account did not exist — contradicting the spec execution order (validate
 /// existence → then check dry-run flag).
 ///
-/// ## Why this is separate from aa05
+/// ## Why Not Caught
 ///
-/// `aa05` tests the non-dry case. `aa13` specifically guards the `dry::1` code path
-/// so that neither variant of the command can produce `[dry-run] would assign` output
-/// for a non-existent account.
+/// `aa05` tests the non-dry case; no prior test exercised the `dry::1` path with an
+/// @-containing name that is absent from the credential store.
+///
+/// ## Fix Applied
+///
+/// Added existence guard before the dry-run branch in `account_assign_routine()`:
+/// `check_account_exists()` now runs unconditionally — the dry-run flag only suppresses
+/// the write step, never the precondition checks.
+///
+/// ## Prevention
+///
+/// For every command that accepts a `dry::` flag, pair a dry-unknown-account test with
+/// the normal-path test. Validate-then-dry is the canonical order for all mutation commands.
+///
+/// ## Pitfall
+///
+/// `resolve_account_name` `@`-fast-path bypasses store validation intentionally (full email
+/// → no prefix expansion needed), but callers must still call `check_account_exists()` after
+/// resolution. Never assume a resolved name is a valid stored account.
 fn aa13_dry_run_unknown_account_exits_2()
 {
   let dir  = TempDir::new().unwrap();

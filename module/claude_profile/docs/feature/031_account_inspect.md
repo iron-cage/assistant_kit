@@ -198,6 +198,12 @@ Resolved via [`AccountSelector`](../cli/type/004_account_selector.md): full emai
 | [cli/param/019_refresh.md](../cli/param/019_refresh.md) | `refresh::` — token refresh on expired credentials |
 | [cli/param/023_trace.md](../cli/param/023_trace.md) | `trace::` |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.inspect`](../cli/command/001_account.md#command--15-accountinspect) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

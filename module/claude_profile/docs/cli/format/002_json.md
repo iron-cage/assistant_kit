@@ -36,3 +36,22 @@ clp .usage format::json
 **Notes:**
 - `format::json` combined with `live::1` exits 1 before any fetch (incompatible combination).
 - Field-presence params (`sub::0`, `tier::0`, etc.) are ignored in JSON mode — all fields always appear.
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | JSON array of account records |
+| 2 | [`.token.status`](../command/005_token.md#command--7-tokenstatus) | JSON object with classification and expiry |
+| 3 | [`.paths`](../command/004_paths.md#command--8-paths) | JSON object with canonical file paths |
+| 4 | [`.usage`](../command/006_usage.md#command--9-usage) | JSON array of usage records |
+| 5 | [`.credentials.status`](../command/002_credentials.md#command--10-credentialsstatus) | JSON object with credential metadata |
+| 6 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | JSON object with quota percentages |
+
+### Referenced User Stories
+
+| # | User Story | Relevance |
+|---|------------|-----------|
+| 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | Structured quota data for programmatic analysis |
+| 2 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | Machine-parseable output for CI/CD pipelines |
+| 3 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | Structured diagnostic state for comparison |

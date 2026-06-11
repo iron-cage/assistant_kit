@@ -26,6 +26,11 @@
 //! | `account_inspect_test` | .account.inspect diagnostic command | AI |
 //! | `account_assign_test` | .account.assign marker-only write | AA |
 //! | `set_model_test` | `set_model::` explicit session model override | FT, EC |
+//! | `type_test` | CLI type boundary contracts (`AccountName`, `OutputFormat`, `WarningThreshold`, `AccountSelector`) | TC |
+//! | `invariant_test` | Architectural invariant assertions (zero deps, cross-platform, clear errors, atomic, etc.) | IN |
+//! | `command_verb_test` | Command-verb behavioral contracts (save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status) | BV |
+//! | `command_noun_test` | Command-noun contracts (account, token, credentials) | NC |
+//! | `user_story_test` | User acceptance tests — account rotation, onboarding, quota monitoring, automation, diagnostics | UA |
 //!
 //! ## Parallel Execution Note
 //!
@@ -86,3 +91,18 @@ mod account_assign_test;
 
 #[ path = "cli/set_model_test.rs" ]
 mod set_model_test;
+
+#[ path = "cli/type_test.rs" ]
+mod type_test;
+
+#[ path = "cli/invariant_test.rs" ]
+mod invariant_test;
+
+#[ path = "cli/command_verb_test.rs" ]
+mod command_verb_test;
+
+#[ path = "cli/command_noun_test.rs" ]
+mod command_noun_test;
+
+#[ path = "cli/user_story_test.rs" ]
+mod user_story_test;

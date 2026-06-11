@@ -14,7 +14,7 @@ use super::shared::{ require_claude_paths, require_credential_store, derive_toke
 ///
 /// Called by `credentials_status_routine()` to read subscription, tier, email, display, role, and billing.
 /// Gracefully returns `"N/A"` for any absent or empty field.
-// Fix(issue-empty-field-blank):
+// Fix(BUG-269):
 // Root cause: `Option::unwrap_or_else` only fires on `None`, not `Some("")`. Empty strings
 //   in credential JSON (unusual but possible) produced blank output lines instead of "N/A".
 // Pitfall: When adding new `parse_string_field` chains, always pair `.filter(|s| !s.is_empty())`
@@ -29,7 +29,7 @@ fn read_live_cred_meta( paths : &crate::ClaudePaths )
   let tier    = crate::account::parse_string_field( &creds, "rateLimitTier" )
     .filter( | s | !s.is_empty() )
     .unwrap_or_else( || "N/A".to_string() );
-  // Fix(FR-19): use claude_json_file() — ~/.claude.json lives at $HOME level, not inside ~/.claude/
+  // Fix(BUG-270): use claude_json_file() — ~/.claude.json lives at $HOME level, not inside ~/.claude/
   // Root cause: base().join(".claude.json") produced ~/.claude/.claude.json (one dir too deep).
   // Pitfall: ClaudePaths::base() is $HOME/.claude/, so joining there lands inside the .claude dir.
   let cj      = std::fs::read_to_string( paths.claude_json_file() ).unwrap_or_default();
@@ -161,6 +161,26 @@ pub fn credentials_status_routine( cmd : VerifiedCommand, _ctx : ExecutionContex
       .count() );
 
   let file_path = paths.credentials_file().display().to_string();
+
+  // Handle get:: bare-field extraction for shell scripting (mirrors .usage get:: pattern).
+  if let Some( Value::String( field ) ) = cmd.arguments.get( "get" )
+  {
+    let value = match field.as_str()
+    {
+      "subscription"    => sub.clone(),
+      "tier"            => tier.clone(),
+      "token"           => tok.clone(),
+      "expires_in_secs" => exp_secs.to_string(),
+      "email"           => email.clone(),
+      "account"         => account.clone(),
+      "file"            => file_path.clone(),
+      _ => return Err( ErrorData::new(
+        ErrorCode::ArgumentTypeMismatch,
+        format!( "unknown get:: field: {field}; valid: subscription, tier, token, expires_in_secs, email, account, file" ),
+      ) ),
+    };
+    return Ok( OutputData::new( format!( "{value}\n" ), "text" ) );
+  }
 
   let content = match opts.format
   {

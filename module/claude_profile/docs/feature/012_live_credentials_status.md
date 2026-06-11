@@ -68,6 +68,12 @@ Each output line is independently controlled by a boolean param. All default to 
 | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account-store-aware status command |
 | [014_rich_account_metadata.md](014_rich_account_metadata.md) | Extends this command with opt-in rich metadata fields |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.credentials.status`](../cli/command/002_credentials.md#command--10-credentialsstatus) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

@@ -60,6 +60,12 @@ When `refresh::1` silently fails (`run_isolated` returns `credentials=None`), th
 |------|--------------|
 | [invariant/006_param_defaults.md](../invariant/006_param_defaults.md) | Governing principle: `name::` defaults to active account when omitted |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.relogin`](../cli/command/001_account.md#command--12-accountrelogin) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

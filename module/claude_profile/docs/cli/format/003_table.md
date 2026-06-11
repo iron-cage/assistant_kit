@@ -44,3 +44,16 @@ clp .usage format::table
 **Notes:**
 - Only `.accounts` accepts `format::table`; all other format-capable commands reject it with exit 1.
 - Field-presence parameters (`sub::`, `tier::`, `expires::`, `email::`) are ignored in table mode — all columns always appear.
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Compact aligned table of all accounts |
+
+### Referenced User Stories
+
+| # | User Story | Relevance |
+|---|------------|-----------|
+| 1 | [Account Rotation](../user_story/001_account_rotation.md) | At-a-glance account status before rotation |
+| 2 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | Multi-account side-by-side quota comparison |

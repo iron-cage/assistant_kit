@@ -299,7 +299,7 @@ fn render_accounts_table(
 ///
 /// Storage unavailable (HOME/PRO unset) returns advisory "(no accounts configured)"
 /// with exit 0 — same graceful behavior as an empty credential store.
-// Fix(issue-accounts-home-unset):
+// Fix(BUG-268):
 // Root cause: require_credential_store()?; propagated Err (exit 2) when HOME and PRO are
 //   both unset. .accounts is a graceful-read command; storage unavailability means the same
 //   thing as an empty store — show advisory, not an error.

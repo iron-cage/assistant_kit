@@ -2,12 +2,9 @@
 
 Explicitly writes a Claude Code session model to `~/.claude/settings.json`. When provided, overrides the automatic `apply_model_override()` logic for that invocation.
 
-- **Type:** `enum`
 - **Default:** *(omit)* — automatic override behavior runs as usual
 - **Constraints:** `opus`, `sonnet`, `haiku`, `default`
-- **Commands:** [`.account.use`](../command/001_account.md#command--5-accountuse), [`.usage`](../command/006_usage.md#command--9-usage)
 - **Purpose:** Explicitly set the Claude Code session model from `clp` without using the interactive `/model` picker or editing `settings.json` manually.
-- **Group:** [Fetch Behavior](../param_group/003_fetch_behavior.md)
 
 **Values:**
 
@@ -37,3 +34,26 @@ clp .usage set_model::default
 - On `.usage`: `set_session_model()` is called for the current session (is_current account) instead of `apply_model_override()`.
 - Does not affect `format::json` output structure.
 - Does not affect subprocess model selection — use `imodel::` for that.
+
+### Referenced Type
+
+- **Fundamental Type:** `enum`
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 1 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | Member parameter |
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Set session model after account switch |
+| 2 | [`.usage`](../command/006_usage.md#command--9-usage) | Set session model for current account |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Rotation](../user_story/001_account_rotation.md) | Lock session model after switching to target account |

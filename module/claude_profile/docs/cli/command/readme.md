@@ -62,3 +62,6 @@
 - [../param/](../param/readme.md) — parameter specifications
 - [../type/](../type/readme.md) — types used by commands
 - [../param_group/](../param_group/readme.md) — parameter group definitions
+- [../user_story/](../user_story/readme.md) — user stories referencing these commands
+- [../command_noun/](../command_noun/readme.md) — domain noun documentation
+- [../command_verb/](../command_verb/readme.md) — domain verb documentation

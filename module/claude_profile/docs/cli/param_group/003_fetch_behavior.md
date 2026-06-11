@@ -15,7 +15,13 @@
 | [`imodel::`](../param/035_imodel.md) | `enum` | `auto` | Model for isolated subprocesses: `auto` (sonnet if `7d(Son)≥20%`, else opus), `sonnet`, `opus`, `haiku`, `keep` |
 | [`effort::`](../param/036_effort.md) | `enum` | `auto` | Effort level for isolated subprocesses: `auto` (`low` for any model; no flag for haiku/keep), `low`, `normal`, `high`, `max` |
 
-**Used By:** [`.usage`](../command/006_usage.md#command--9-usage) (all 8 params), [`.account.use`](../command/001_account.md#command--5-accountuse) (`trace::`, `touch::`, `imodel::`, `effort::`), [`.account.inspect`](../command/001_account.md#command--15-accountinspect) (`refresh::`, `trace::`)
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | All 8 params |
+| 2 | [`.account.use`](../command/001_account.md#command--5-accountuse) | `trace::`, `touch::`, `imodel::`, `effort::` |
+| 3 | [`.account.inspect`](../command/001_account.md#command--15-accountinspect) | `refresh::`, `trace::` |
 
 **Typical Patterns:**
 
@@ -53,3 +59,11 @@ All 8 members pass: `refresh::` (retry strategy on auth error or locally-expired
 - [../../feature/024_session_touch.md](../../feature/024_session_touch.md) — `touch::` feature design
 - [../../feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md) — `imodel::` / `effort::` feature design
 - [../../feature/027_account_use_post_switch_touch.md](../../feature/027_account_use_post_switch_touch.md) — `touch::`, `imodel::`, `effort::` on `.account.use`
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | `live::`, `interval::`, `jitter::` for continuous monitoring |
+| 2 | [Account Rotation](../user_story/001_account_rotation.md) | `touch::`, `refresh::` for post-switch activation |
+| 3 | [Credential Diagnostics](../user_story/005_credential_diagnostics.md) | `trace::`, `refresh::` for deep diagnostic depth |

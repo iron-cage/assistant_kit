@@ -31,11 +31,31 @@ input contains '@'?
 - Prefix resolution is case-sensitive (matches use `str::starts_with`)
 - Multiple prefix matches cause exit 1 — the user must be more specific
 
-**Parameters:** [`name::`](../param/001_name.md) — the parameter that accepts `AccountSelector` input
-
-**Commands:** [`.accounts`](../command/001_account.md#command--3-accounts) *(optional)*, [`.account.use`](../command/001_account.md#command--5-accountuse), [`.account.delete`](../command/001_account.md#command--6-accountdelete), [`.account.limits`](../command/001_account.md#command--11-accountlimits) *(optional)*, [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) *(optional/active)*, [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) *(required)*
-
 **Notes:**
 - `.account.save` does NOT use prefix resolution — its `name::` value must be a full email (or omitted for auto-inference from the per-machine `_active` marker in the credential store).
 - `.account.renewal` additionally accepts `name::all` (targets all saved accounts) and `name::a@x.com,b@x.com` (comma-separated list). Prefix resolution applies to each individual token in the comma list; `all` is handled as a keyword and bypasses resolution.
 - `AccountSelector` is a documentation concept describing the adapter layer's resolution contract. The concrete Rust type that appears in function signatures after resolution is always `AccountName`.
+
+### Referenced Parameters
+
+| # | Parameter | Role |
+|---|-----------|------|
+| 1 | [`name::`](../param/001_name.md) | Accepts any account selector form |
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.accounts`](../command/001_account.md#command--3-accounts) | Optional — account list display |
+| 2 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Activates selected account |
+| 3 | [`.account.delete`](../command/001_account.md#command--6-accountdelete) | Removes selected account |
+| 4 | [`.account.limits`](../command/001_account.md#command--11-accountlimits) | Optional — limits for selected account |
+| 5 | [`.account.relogin`](../command/001_account.md#command--12-accountrelogin) | Refreshes credentials for selected account |
+| 6 | [`.account.renewal`](../command/001_account.md#command--14-accountrenewal) | Schedules renewal for selected account |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Rotation](../user_story/001_account_rotation.md) | Selector resolves active account for rotation |
+| 2 | [Account Onboarding](../user_story/002_onboarding.md) | Selector used for delete and relogin flows |

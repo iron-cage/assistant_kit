@@ -428,7 +428,7 @@ fn acc13_blank_line_between_blocks()
 //   per-account data must come from the stored credential struct.
 // Pitfall: Future fields that seem to require live credential reads (e.g. token validation)
 //   must be refused for non-active accounts — use stored data only for consistency.
-#[ doc = "bug_reproducer(issue-p2-named-account-token)" ]
+#[ doc = "bug_reproducer(BUG-276)" ]
 #[ test ]
 fn acc14_nonactive_shows_own_stored_expires()
 {
@@ -466,7 +466,7 @@ fn acc14_nonactive_shows_own_stored_expires()
 //   `.is_empty()` because `account::list()` returns "" for absent JSON fields.
 // Pitfall: `account::list()` returns "" (not None) for missing fields; Option-based
 //   patterns like `.unwrap_or("N/A")` will NOT catch it — check `.is_empty()`.
-#[ doc = "bug_reproducer(issue-empty-field-blank)" ]
+#[ doc = "bug_reproducer(BUG-269)" ]
 #[ test ]
 fn acc15_missing_sub_field_shows_na()
 {

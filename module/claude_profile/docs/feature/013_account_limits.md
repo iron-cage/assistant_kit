@@ -59,6 +59,12 @@ These headers are never cached locally — no local file contains them. `stats-c
 | [009_token_usage.md](009_token_usage.md) | Related: all-accounts live quota table (distinct from single-account limits) |
 | [011_account_status_by_name.md](011_account_status_by_name.md) | Related: account selection pattern via `name::` |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.limits`](../cli/command/001_account.md#command--11-accountlimits) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

@@ -11,9 +11,9 @@
 
 | File | Responsibility |
 |------|----------------|
-| 001_output_control.md | Interaction tests for Group 1 (Output Control) |
-| 002_field_presence.md | Interaction tests for Group 2 (Field Presence) |
-| 003_fetch_behavior.md | Interaction tests for Group 3 (Fetch Behavior) |
-| 004_sort_control.md | Interaction tests for Group 4 (Sort Control) |
-| 005_display_control.md | Interaction tests for Group 5 (Display Control) |
-| 006_account_targeting.md | Interaction tests for Group 6 (Account Targeting) |
+| 01_output_control.md | Interaction tests for Group 1 (Output Control) |
+| 02_field_presence.md | Interaction tests for Group 2 (Field Presence) |
+| 03_fetch_behavior.md | Interaction tests for Group 3 (Fetch Behavior) |
+| 04_sort_control.md | Interaction tests for Group 4 (Sort Control) |
+| 05_display_control.md | Interaction tests for Group 5 (Display Control) |
+| 06_account_targeting.md | Interaction tests for Group 6 (Account Targeting) |

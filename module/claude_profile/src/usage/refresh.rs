@@ -21,10 +21,10 @@ use super::fetch::{ read_token, parse_u64_from_str };
 /// back to the persistent store and all companion files.  Falls back to direct persistent-
 /// store reads/writes when `claude_paths` is `None`.  Mutates `accounts` in place.
 ///
-/// Fix(issue-150) — HTTP 429 removed from unconditional retry guard.
+/// Fix(BUG-271) — HTTP 429 removed from unconditional retry guard.
 /// Root cause: HTTP 429 is a rate-limit response, not an authentication failure.
 /// Pitfall: Task 142 added 429 unconditionally; task 150 removed it. The correct
-/// behaviour (issue-156) is to refresh only when 429 AND locally expired.
+/// behaviour (BUG-156) is to refresh only when 429 AND locally expired.
 // Fix(BUG-211): snapshot+restore pattern removed — refresh_account_token now passes
 //   update_marker=false to save(), so _active is never written during per-account
 //   cycling. The post-loop restore clobbered concurrent .account.use switches that
@@ -72,7 +72,7 @@ pub( crate ) fn apply_refresh(
       continue;
     };
 
-    // Fix(issue-162): derive expiry from JWT exp claim — subprocess does not update expiresAt.
+    // Fix(BUG-162): derive expiry from JWT exp claim — subprocess does not update expiresAt.
     // Root cause: the isolated subprocess writes refreshed accessToken/refreshToken but leaves
     //   expiresAt at the original expired timestamp; re-reading from file gives stale value.
     // Pitfall: expiresAt is a server-issued claim the subprocess cannot update; always derive
@@ -127,7 +127,7 @@ pub( crate ) fn apply_refresh(
       Err( e ) =>
       {
         if trace { eprintln!( "[trace] refresh  {}  retry Err({})", aq.name, e ); }
-        // Fix(issue-156): propagate the retry error to show the current post-refresh status.
+        // Fix(BUG-156): propagate the retry error to show the current post-refresh status.
         // Root cause: on retry failure the original error (e.g. "401 expired") was kept,
         //   hiding the actual post-refresh state (e.g. "429 rate-limited after refresh").
         // Pitfall: ignoring the retry error masks the true current state after refresh.
@@ -176,7 +176,7 @@ mod tests
   /// way. This test validates the guard does not corrupt the result, but is NOT a full guard
   /// against re-adding 429: even with the bug restored, this test would still pass (no creds).
   /// The `shorten_error` test (T04) provides the stronger behavioral invariant.
-  #[ doc = "bug_reproducer(issue-150)" ]
+  #[ doc = "bug_reproducer(BUG-271)" ]
   #[ test ]
   fn test_apply_refresh_429_not_retried()
   {
@@ -484,7 +484,7 @@ mod tests
   /// (fallback/test) branch. Zero tests exercised `Some(paths)` (lifecycle/production branch).
   ///
   /// # Fix Applied
-  /// BUG-165 / issue-165: extracted `refresh_account_token` (full lifecycle: switch → refresh →
+  /// BUG-165: extracted `refresh_account_token` (full lifecycle: switch → refresh →
   /// save); `apply_refresh` delegates via `crate::account::refresh_account_token`; skips the
   /// account with `continue` if `refresh_account_token` returns `None`.
   ///

@@ -23,7 +23,7 @@ const POSITIONAL_NAME_COMMANDS : &[ &str ] = &[
 ];
 
 /// Short alias for format param.
-// Fix(issue-fmt-alias):
+// Fix(BUG-261):
 // Root cause: adapter.rs expanded v:: → verbosity:: but had no corresponding expansion
 //   for fmt:: → format::, despite the YAML aliases list declaring it. Because the YAML
 //   file is metadata-only (not read at runtime), all alias expansion must be coded here.
@@ -121,7 +121,7 @@ pub fn argv_to_unilang_tokens( argv : &[ String ] ) -> Result< ( Vec< String >, 
 
   // Step 5-6: process remaining args as key::value pairs
   // Positional rewrite (A1): bare first arg → name::{value} for name-taking commands.
-  // Fix(issue-name-shortcut):
+  // Fix(BUG-262):
   // Root cause: name-taking commands required `name::email` syntax; bare first args were
   //   rejected as "expected param::value syntax", preventing shortcut forms like `clp .account.use alice`.
   // Pitfall: Only rewrite when the arg has no `::` and does not start with `-`; never

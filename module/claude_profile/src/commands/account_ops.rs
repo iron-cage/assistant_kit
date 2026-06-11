@@ -20,8 +20,10 @@ use super::shared::{
 pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
   // Validate all CLI arguments before any I/O (fast-fail on bad values before filesystem access).
-  // Fix(issue-switch-dry-validation): is_dry() check comes after existence validation so
+  // Fix(BUG-265): is_dry() check comes after existence validation so
   //   dry-run on nonexistent accounts correctly exits 2 (not silently succeeds).
+  // Root cause: is_dry() was checked before existence validation, so `dry::1` on a
+  //   missing account silently returned exit 0 instead of exit 2.
   // Pitfall: Only the mutating step (file copy + marker write) is skipped in dry-run;
   //   all validation and precondition checks must run unconditionally.
   let raw_name   = require_nonempty_string_arg( &cmd, "name" )?;
@@ -98,6 +100,9 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   // subprocess only for idle accounts.
   // Fix(BUG-225): Sonnet→Opus session model override when 7d(Son) < 20%.
   // Fix(BUG-238): override now fires for already-active accounts too (not just idle).
+  // Root cause: see apply_model_override() in usage/api.rs for full root cause.
+  // Pitfall: override must run for both NeedTouch and AlreadyActive paths — missing
+  //   the AlreadyActive branch meant active sessions kept Sonnet when quota was low.
   match outcome
   {
     crate::usage::PreSwitchOutcome::NeedTouch( ctx ) =>
@@ -329,7 +334,7 @@ pub fn account_save_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) ->
 #[ inline ]
 pub fn account_delete_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result< OutputData, ErrorData >
 {
-  // Fix(issue-delete-dry-validation):
+  // Fix(BUG-266):
   // Root cause: is_dry() was checked before existence check,
   //   so dry-run bypassed NotFound (missing account).
   // Pitfall: precondition checks must run before the dry-run shortcut.

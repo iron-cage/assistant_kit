@@ -9,7 +9,12 @@
 | [`host::`](../param/048_host.md) | `string` | `""` (auto: `$USER@$HOSTNAME`) | Machine/user label written to `{name}.json`; empty triggers auto-capture |
 | [`role::`](../param/052_role.md) | `string` | `""` | User-defined role label written to `{name}.json`; persists across saves |
 
-**Used By:** [`.account.save`](../command/001_account.md#command--4-accountsave) (`host::`, `role::` — write metadata to `{name}.json`), [`.accounts`](../command/001_account.md#command--3-accounts) (`host::` display toggle — opt-in boolean, reads stored label from `{name}.json`)
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.save`](../command/001_account.md#command--4-accountsave) | `host::`, `role::` — write metadata to `{name}.json` |
+| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | `host::` display toggle — opt-in boolean |
 
 **Typical Patterns:**
 
@@ -40,3 +45,9 @@ clp .usage cols::+host,+role
 - [../param/015_role.md](../param/015_role.md) — `role::` (field-presence toggle) for `.accounts` and `.credentials.status`
 - [../param/048_host.md](../param/048_host.md) — `host::` parameter specification
 - [../param/033_cols.md](../param/033_cols.md) — `host` and `role` column IDs in `.usage`
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Onboarding](../user_story/002_onboarding.md) | `host::`, `role::` metadata captured at account save |

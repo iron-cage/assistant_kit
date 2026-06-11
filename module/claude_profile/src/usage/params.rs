@@ -18,9 +18,13 @@ use super::types::{ UsageParams, SortStrategy, PreferStrategy, NextStrategy, Col
 /// or wrong-type value. `interval` and `jitter` constraint validation is deferred
 /// to `usage_routine` because it only applies when `live = 1`.
 ///
-/// Fix(issue-155): `refresh` default is 1 (enabled). Omitting the param ≠
+/// Fix(BUG-155): `refresh` default is 1 (enabled). Omitting the param ≠
 /// "user wants disabled" — auto-refresh is the safer default.
-/// Fix(issue-157): strict 0/1 range guard added for `refresh`, `live`, `trace`.
+/// Root cause: original default was 0 (disabled), causing silent no-refresh behaviour
+///   when users omitted `refresh::` — the unexpected opt-in requirement caused confusion.
+/// Fix(BUG-272): strict 0/1 range guard added for `refresh`, `live`, `trace`.
+/// Root cause: without range validation, values like `refresh::2` silently mapped to
+///   truthy and were accepted as valid booleans, masking user typos.
 /// Pitfall: bool-typed params (e.g. `touch::`) use `Kind::String` registration so
 /// `"true"`/`"false"` pass through; `crate::output::parse_int_flag` is the sole normalisation point.
 #[ allow( clippy::too_many_lines ) ]

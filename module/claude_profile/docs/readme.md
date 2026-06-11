@@ -10,8 +10,8 @@
 | File | Responsibility |
 |------|----------------|
 | cli/ | CLI design documentation (commands, params, types) |
-| feature/ | Functional requirement doc instances (FR-6 through FR-23) |
-| invariant/ | Non-functional constraint doc instances (NFR-1, NFR-3–NFR-6) |
-| entities.md | Master index of all doc entities and their instances |
-| doc_graph.yml | Cross-reference graph for all doc instances |
+| feature/ | Functional requirement doc instances (feature/001 through feature/034) |
+| invariant/ | Non-functional constraint doc instances (invariant/001 through invariant/006) |
+| entities/ | Master index of all doc entities and instances |
+| doc_graph.yml | Cross-reference graph for feature/ and invariant/ doc instances |
 | research_interactive/ | Investigation findings on Claude binary behavior and interaction modes |

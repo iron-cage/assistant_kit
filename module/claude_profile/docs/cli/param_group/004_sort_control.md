@@ -11,7 +11,11 @@
 | [`prefer::`](../param/027_prefer.md) | `enum` | `any` | Weekly quota column for sort heuristics: `any`, `opus`, `sonnet` |
 | [`next::`](../param/032_next.md) | `enum` | `drain` | Recommendation strategy placing `→` on recommended account: `drain`, `endurance`; footer always shows both |
 
-**Used By (1 command):** [`.usage`](../command/006_usage.md#command--9-usage)
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | All 4 sort and recommendation params |
 
 **Typical Patterns:**
 
@@ -56,3 +60,10 @@ All 4 members pass: `sort::` (ordering strategy), `desc::` (sort direction), `pr
 - [../004_parameter_interactions.md](../004_parameter_interactions.md) — interactions 5, 6, 7 govern sort parameter co-dependencies
 - [../../feature/020_usage_sort_strategies.md](../../feature/020_usage_sort_strategies.md) — full strategy algorithm definitions and ACs
 - [../../feature/023_next_account_strategies.md](../../feature/023_next_account_strategies.md) — `next::` recommendation algorithm definitions and ACs
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Multi-Account Quota Monitoring](../user_story/003_quota_monitoring.md) | `sort::`, `desc::`, `prefer::`, `next::` for quota ordering |
+| 2 | [Scripted Pipeline Automation](../user_story/004_scripted_automation.md) | `sort::` for consistent next-account extraction |

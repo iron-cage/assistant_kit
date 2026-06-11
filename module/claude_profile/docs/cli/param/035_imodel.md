@@ -2,12 +2,9 @@
 
 Controls which Claude model is used by isolated subprocesses spawned during `touch::` and `refresh::` operations. Determines whether `--model <id>` is injected into each subprocess invocation, and which model ID to use.
 
-- **Type:** `enum`
 - **Default:** `auto`
 - **Constraints:** `auto`, `sonnet`, `opus`, `haiku`, `keep`
-- **Commands:** [`.usage`](../command/006_usage.md#command--9-usage), [`.account.use`](../command/001_account.md#command--5-accountuse)
 - **Purpose:** Preserve Sonnet quota automatically (via `auto`) or override subprocess model selection explicitly.
-- **Group:** [Fetch Behavior](../param_group/003_fetch_behavior.md)
 
 **Values:**
 
@@ -37,3 +34,26 @@ imodel::keep     → no --model flag injected
 - Does not affect `format::json` output structure.
 
 **See Also:** [feature/026_subprocess_model_effort.md](../../feature/026_subprocess_model_effort.md) for the full model-selection algorithm and AC criteria.
+
+### Referenced Type
+
+- **Fundamental Type:** `enum`
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 1 | [Fetch Behavior](../param_group/003_fetch_behavior.md) | Member parameter |
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../command/006_usage.md#command--9-usage) | Model for touch/refresh subprocesses during quota fetch |
+| 2 | [`.account.use`](../command/001_account.md#command--5-accountuse) | Model for post-switch idle activation subprocess |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Rotation](../user_story/001_account_rotation.md) | Quota-preserving subprocess model during account switch |

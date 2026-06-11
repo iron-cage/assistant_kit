@@ -19,3 +19,8 @@
 | `account_assign_test.rs` | `.account.assign` marker-only write tests (aa01–aa12). |
 | `account_inspect_test.rs` | `.account.inspect` command tests. |
 | `set_model_test.rs` | `set_model::` explicit session model override tests (FT-01..FT-09, EC-1..EC-7). |
+| `type_test.rs` | CLI type boundary contracts: AccountName (TC-1..6), OutputFormat (TC-1..5), WarningThreshold (TC-1..4), AccountSelector (TC-1..4). |
+| `invariant_test.rs` | Architectural invariant assertions: zero-third-party-deps, cross-platform, clear errors, no-process-execution, atomic switching, param defaults (IN-1..2 each). |
+| `command_verb_test.rs` | Command-verb behavioral contracts for all 10 verbs: save, use, delete, limits, relogin, rotate, renewal, inspect, assign, status (BV-1..3 each; BV-4 for status). |
+| `command_noun_test.rs` | Command-noun contracts for account, token, credentials nouns: lifecycle, JSON output schema, error codes (NC-1..3 each). |
+| `user_story_test.rs` | User acceptance tests: account rotation (UA-1..5), onboarding (UA-1..6), quota monitoring (UA-1..5), scripted automation (UA-1..4), credential diagnostics (UA-1..4). |

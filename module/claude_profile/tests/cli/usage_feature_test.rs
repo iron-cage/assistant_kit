@@ -217,7 +217,7 @@ fn ft05_unreadable_credential_store_exits_2()
 /// Root Cause: `apply_refresh` called `parse_u64_field(&creds_path, "expiresAt")` after
 ///   writing refreshed credentials; but the subprocess never updates `expiresAt` — that
 ///   field is a server-issued JWT claim not emitted during the OAuth refresh exchange.
-/// Why Not Caught: Fix(issue-156) assumed the subprocess writes `expiresAt`; that assumption
+/// Why Not Caught: Fix(BUG-156) assumed the subprocess writes `expiresAt`; that assumption
 ///   was never tested with a credentials fixture where `expiresAt` and `exp` differ.
 /// Fix Applied: `apply_refresh` now calls `jwt_exp_ms(&new_creds)` to extract `exp * 1000`
 ///   from the refreshed `accessToken`, which always reflects the new token's true expiry.

@@ -122,6 +122,12 @@
 | [cli/param/046_abs.md](../cli/param/046_abs.md) | `abs::` parameter specification |
 | [cli/param/047_no_color.md](../cli/param/047_no_color.md) | `no_color::` parameter specification |
 
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.usage`](../cli/command/006_usage.md#command--9-usage) | CLI surface for this feature |
+
 ### Sources
 
 | File | Relationship |

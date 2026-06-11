@@ -2,12 +2,9 @@
 
 Specifies the host/machine label to store in the account profile at `.account.save` time. Displayed via `cols::+host` in `.usage`.
 
-- **Type:** `string`
 - **Default:** `""` (auto-captured from `$USER@<hostname>` via `resolve_hostname()` fallback chain)
 - **Constraints:** Any non-empty string; empty string triggers auto-capture
-- **Commands:** [`.account.save`](../command/001_account.md#command--4-accountsave) (write metadata), [`.accounts`](../command/001_account.md#command--3-accounts) (display toggle)
 - **Purpose:** Tag a saved account with the machine/user context where it was saved.
-- **Group:** Account Targeting
 
 **Behavior:** When `host::` is omitted or empty, the value is auto-captured as `$USER@<hostname>` at save time, where hostname is resolved via `resolve_hostname()` (`$HOSTNAME` env → `/etc/hostname` → `"local"`). When provided, the explicit value overrides auto-capture. The value is written to `{name}.json` and persists until the next `save()` call with a different `host::` value.
 
@@ -20,3 +17,26 @@ clp .account.save host::laptop role::dev  -> host "laptop", role "dev"
 ```
 
 **See Also:** [feature/029_account_host_metadata.md](../../feature/029_account_host_metadata.md) for profile storage and display.
+
+### Referenced Type
+
+- **Fundamental Type:** `string`
+
+### Referenced Parameter Groups
+
+| # | Parameter Group | Role |
+|---|-----------------|------|
+| 1 | [Account Targeting](../param_group/006_account_targeting.md) | Member parameter |
+
+### Referenced Commands
+
+| # | Command | Role |
+|---|---------|------|
+| 1 | [`.account.save`](../command/001_account.md#command--4-accountsave) | Write host metadata to account profile |
+| 2 | [`.accounts`](../command/001_account.md#command--3-accounts) | Display host column when `cols::+host` |
+
+### Referenced User Stories
+
+| # | User Story | Persona |
+|---|------------|---------|
+| 1 | [Account Onboarding](../user_story/002_onboarding.md) | Machine context tag during account profile creation |

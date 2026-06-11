@@ -28,3 +28,4 @@ Semantic groupings of parameters that share a common behavioral pattern.
 
 - [../param/](../param/readme.md) — individual parameter specifications
 - [../004_parameter_interactions.md](../004_parameter_interactions.md) — cross-parameter interaction rules
+- [../user_story/](../user_story/readme.md) — user stories that exercise these parameter groups

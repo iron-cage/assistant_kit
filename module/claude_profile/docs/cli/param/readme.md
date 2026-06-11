@@ -66,7 +66,7 @@ All `clp` CLI parameters with type, default, and command coverage.
 | # | Parameter | Type | Default | Valid Values | Purpose | Used In |
 |---|-----------|------|---------|--------------|---------|---------|
 | 1 | `name::` | `AccountName` | Varies | Email or prefix | Target account identifier | 8 cmds |
-| 2 | `format::` / `fmt::` | `OutputFormat` | `text` | `text`, `json` | Output format | 7 cmds |
+| 2 | `format::` / `fmt::` | `OutputFormat` | `text` | `text`, `json`, `table`; `value`/`tsv`/`plain` (.usage only) | Output format | 7 cmds |
 | 3 | `threshold::` | `WarningThreshold` | `3600` | Non-negative integer (seconds) | Token expiry warning boundary | 1 cmd |
 | 4 | `dry::` | `bool` | `0` | `0`, `1`, `false`, `true` | Dry-run simulation | 6 cmds |
 | 5 | `account::` | `bool` | `1` | `0`, `1` | Account name line toggle | 1 cmd |
@@ -127,3 +127,6 @@ All `clp` CLI parameters with type, default, and command coverage.
 - [../type/](../type/readme.md) — types used by parameters
 - [../command/](../command/readme.md) — commands that accept these parameters
 - [../param_group/](../param_group/readme.md) — parameter group definitions
+- [../user_story/](../user_story/readme.md) — user stories that reference these parameters
+- [../command_noun/](../command_noun/readme.md) — domain nouns whose commands accept these parameters
+- [../command_verb/](../command_verb/readme.md) — domain verbs that list common parameters
