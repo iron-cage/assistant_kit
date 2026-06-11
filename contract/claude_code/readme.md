@@ -18,5 +18,5 @@ Code changes behavior, the corresponding test goes RED.
 ## Running
 
 ```bash
-cargo nextest run -p claude_code --test behavior
+cd contract/claude_code && cargo nextest run --test behavior
 ```

@@ -124,6 +124,31 @@ pub fn set_setting( path : &Path, key : &str, raw_value : &str ) -> Result< Stor
   Ok( stored_as )
 }
 
+/// Remove a top-level key from a JSON settings file.  No-op if the key or
+/// file is absent.  Uses atomic write.
+///
+/// # Errors
+///
+/// Returns `Err` if the file cannot be read (except `NotFound`, which is a
+/// no-op) or if the write fails.
+#[ inline ]
+pub fn remove_setting( path : &Path, key : &str ) -> Result< (), io::Error >
+{
+  let mut pairs = match read_all_settings( path )
+  {
+    Ok( p )  => p,
+    Err( e ) if e.kind() == io::ErrorKind::NotFound => return Ok( () ),
+    Err( e ) => return Err( e ),
+  };
+
+  let before = pairs.len();
+  pairs.retain( | ( k, _ ) | k != key );
+  if pairs.len() == before { return Ok( () ); }
+
+  let json = json_serialize_flat_object( &pairs );
+  atomic_write( path, &json )
+}
+
 /// Set a key inside the `"env"` sub-object of a JSON settings file.
 ///
 /// Creates the `"env"` key if absent.  Environment variable values are
