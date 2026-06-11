@@ -2,11 +2,11 @@
 
 Maximum number of concurrent Claude Code sessions allowed before this invocation blocks.
 When the active session count meets or exceeds this limit, `clr` polls every 30 seconds
-for up to 15 minutes, then exits with code 1. Setting `0` disables the gate entirely
+for up to 20 attempts, then exits with code 1. Setting `0` disables the gate entirely
 (unlimited sessions, no process scan).
 
 - **Type:** u32
-- **Default:** 10
+- **Default:** 15
 - **Command:** [`run`](../command/01_run.md), [`ask`](../command/05_ask.md)
 
 ```sh
@@ -23,10 +23,10 @@ all running Claude Code processes system-wide, not per-project.
 
 **Note:** When the gate waits, `clr` emits a message to stderr each polling cycle (only at
 verbosity ≥ 2, which is the default):
-`"Info: {count} claude session(s) running (limit {max}); waiting 30s for a free slot..."`.
-When a slot opens, `clr` proceeds without a message. On timeout (15 minutes elapsed without
-a slot), `clr` emits:
-`"Error: --max-sessions limit ({max}) reached; timed out after 15 minutes waiting for a slot."`
+`"Info: {count} claude session(s) running (limit {max}); waiting 30s for a free slot... (attempt {n}/{max_attempts})"`.
+When a slot opens, `clr` proceeds without a message. After 20 failed attempts (no slot
+opened), `clr` emits:
+`"Error: --max-sessions limit ({max}) reached; gave up after {max_attempts} attempts waiting for a slot."`
 and exits with code 1.
 
 **Note:** In `--dry-run` mode, the session gate is not triggered — the command preview
@@ -45,8 +45,8 @@ without scanning for active sessions.
 
 | # | Command | Default | Notes |
 |---|---------|---------|-------|
-| 1 | [`run`](../command/01_run.md) | 10 | Gate applied before subprocess launch |
-| 5 | [`ask`](../command/05_ask.md) | 10 | Same behavior; pure alias for run |
+| 1 | [`run`](../command/01_run.md) | 15 | Gate applied before subprocess launch |
+| 5 | [`ask`](../command/05_ask.md) | 15 | Same behavior; pure alias for run |
 
 ### Referenced User Stories
 

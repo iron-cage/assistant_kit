@@ -16,19 +16,20 @@
 //!
 //! ### --retry-on-rate-limit (param 34)
 //! - EC-1: help lists flag
-//! - EC-2: value 0 (default, no retry) accepted in dry-run
+//! - EC-2: value 0 (explicit disable, overrides default 1) accepted in dry-run
 //! - EC-3: value 3 (retry enabled) accepted in dry-run
 //! - EC-4: `CLR_RETRY_ON_RATE_LIMIT` env var applied
 //! - EC-5: CLI wins over env var
-//! - EC-6: invalid env var silently ignored
+//! - EC-6: invalid env var silently ignored; default 1 used
 //! - EC-7: fake exits 2 once then 0; retries=1, delay=0 → exit 0; stderr has "retry"
 //! - EC-8: fake always exits 2; retries=2, delay=0 → exit 2; stderr has "exhausted"/"failed"
 //! - EC-9: `QuotaExhausted` pattern → never retried; exit 2; no retry message
+//! - EC-10: no flag, no env var → default 1 fires; fake exits 2 once then 0 → exit 0
 //!
 //! ### --retry-delay (param 35)
 //! - EC-1 (delay): help lists flag
 //! - EC-2 (delay): delay 0 accepted in dry-run
-//! - EC-3 (delay): delay 60 accepted in dry-run
+//! - EC-3 (delay): delay 30 (default) accepted in dry-run
 //! - EC-4 (delay): `CLR_RETRY_DELAY` env var applied
 //! - EC-5 (delay): CLI wins over env var
 //! - EC-6 (delay): invalid env var silently ignored
@@ -59,7 +60,7 @@ fn ec1_retry_on_rate_limit_help_listed()
 
 // ── EC-2: --retry-on-rate-limit 0 --dry-run → exit 0 ────────────────────────
 
-/// EC-2 (param 34): value 0 (default, no retry) accepted in dry-run.
+/// EC-2 (param 34): value 0 (explicit disable, overrides default 1) accepted in dry-run.
 #[ test ]
 fn ec2_retry_on_rate_limit_zero_dry_run()
 {
@@ -286,6 +287,70 @@ fn ec9_quota_exhausted_not_retried()
   );
 }
 
+// ── EC-10: default retry=1 fires without explicit flag ───────────────────────
+
+/// EC-10 (param 34): no `--retry-on-rate-limit` flag and no `CLR_RETRY_ON_RATE_LIMIT` env var;
+/// default=1 fires when fake exits 2 once then 0.
+///
+/// Root Cause: default was 0 (no retry); changed to 1 for single-retry on first transient failure
+/// Why Not Caught: previous default=0 meant no retry occurred without explicit flag
+/// Fix Applied: `unwrap_or( 1 )` in `run_print_mode()` sets default retry count to 1
+/// Prevention: this test guards against regression where default reverts to 0 (no retry)
+/// Pitfall: test must NOT set `--retry-on-rate-limit`; if it does, it tests explicit value not default
+#[ cfg( unix ) ]
+#[ test ]
+fn ec10_default_retry_fires_without_flag()
+{
+  let tmp   = tempfile::tempdir().expect( "create temp dir" );
+  let fake  = tmp.path().join( "claude" );
+  let count = tmp.path().join( "count" );
+
+  // Script: exits 2 on first call, exits 0 on second call
+  let script = format!(
+    "#!/bin/sh\n\
+     COUNT={}\n\
+     N=$(cat \"$COUNT\" 2>/dev/null || echo 0)\n\
+     echo $((N + 1)) > \"$COUNT\"\n\
+     if [ \"$N\" -eq 0 ]; then exit 2; fi\n\
+     exit 0\n",
+    count.display()
+  );
+  std::fs::write( &fake, script.as_bytes() ).expect( "write fake claude" );
+  std::fs::set_permissions( &fake, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod fake claude" );
+
+  let old_path = std::env::var( "PATH" ).unwrap_or_default();
+  let new_path = format!( "{}:{old_path}", tmp.path().display() );
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+
+  // No --retry-on-rate-limit flag; --retry-delay 0 to avoid 30s sleep; --max-sessions 0 for test isolation
+  let out = Command::new( bin )
+    .args( [ "-p", "--retry-delay", "0", "--max-sessions", "0", "x" ] )
+    .env( "PATH", &new_path )
+    .env_remove( "CLR_RETRY_ON_RATE_LIMIT" )
+    .output()
+    .expect( "invoke clr" );
+
+  assert_eq!(
+    out.status.code(),
+    Some( 0 ),
+    "default retry=1 must cause retry and exit 0 after success. Got: {:?}. stderr: {}",
+    out.status.code(),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  let stderr = String::from_utf8_lossy( &out.stderr );
+  assert!(
+    stderr.to_lowercase().contains( "retry" ),
+    "default retry must emit retry message on stderr. Got:\n{stderr}"
+  );
+  let n : u32 = std::fs::read_to_string( &count )
+    .unwrap_or_default()
+    .trim()
+    .parse()
+    .unwrap_or( 0 );
+  assert_eq!( n, 2, "fake claude must be invoked exactly 2 times (initial + 1 default retry). Got: {n}" );
+}
+
 // ── Param 35 — --retry-delay ──────────────────────────────────────────────────
 
 // ── EC-1 (delay): --help lists --retry-delay ─────────────────────────────────
@@ -317,13 +382,13 @@ fn ec2_retry_delay_zero_dry_run()
   );
 }
 
-// ── EC-3 (delay): --retry-delay 60 --dry-run → exit 0 ───────────────────────
+// ── EC-3 (delay): --retry-delay 30 --dry-run → exit 0 ───────────────────────
 
-/// EC-3 (param 35): delay=60 (default) accepted in dry-run.
+/// EC-3 (param 35): delay=30 (default) accepted in dry-run.
 #[ test ]
-fn ec3_retry_delay_sixty_dry_run()
+fn ec3_retry_delay_thirty_dry_run()
 {
-  let out = run_cli( &[ "--retry-delay", "60", "--dry-run", "task" ] );
+  let out = run_cli( &[ "--retry-delay", "30", "--dry-run", "task" ] );
   assert!(
     out.status.success(),
     "exit must be 0. stderr: {}",
@@ -393,7 +458,7 @@ fn ec6_clr_retry_delay_invalid_ignored()
 /// Why Not Caught: feature does not exist yet (TDD red phase)
 /// Fix Applied: will be fixed in mod.rs retry loop
 /// Prevention: guard with integration test verifying fast exit (no 60s wait)
-/// Pitfall: if delay=0 were treated as "infinite" or "default 60" the test would
+/// Pitfall: if delay=0 were treated as "infinite" or "default 30" the test would
 ///          timeout; the 0-check in the retry loop must branch to no-sleep
 #[ cfg( unix ) ]
 #[ test ]

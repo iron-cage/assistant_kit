@@ -554,12 +554,12 @@ fn ec1_max_sessions_help_listed()
 /// **Architectural constraint:** gate-triggered behavior (waiting messages when sessions ≥ limit)
 /// cannot be tested without live Claude processes. Dry-run is used here to avoid spawning a real
 /// subprocess. The divergence from EC-2 (max=0) is at the code-path level: max=0 bypasses
-/// `count_claude_sessions()` entirely; max=10 (default) enters the gate code path in non-dry-run
+/// `count_claude_sessions()` entirely; max=15 (default) enters the gate code path in non-dry-run
 /// execution. See `33_max_sessions.md § Architectural Constraint`.
 #[ test ]
 fn ec7_max_sessions_no_gate_messages_below_limit()
 {
-  // No --max-sessions override → default 10; dry-run skips gate entirely.
+  // No --max-sessions override → default 15; dry-run skips gate entirely.
   let out = run_cli( &[ "--dry-run", "task" ] );
   assert!( out.status.success(), "dry-run with default max must exit 0. stderr: {}", String::from_utf8_lossy( &out.stderr ) );
   let stderr = String::from_utf8_lossy( &out.stderr );

@@ -78,12 +78,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Env var fallback: `CLR_EXPECT_RETRIES`
   - Documented as param 032, Group 2 (Runner Control)
 
-- **`--max-sessions <N>` parameter** — max concurrent claude sessions before blocking (0=unlimited, default: 10)
-  - Blocks up to 15 minutes polling `/proc/*/cmdline` for running `claude` processes
+- **`--max-sessions <N>` parameter** — max concurrent claude sessions before blocking (0=unlimited, default: 15)
+  - Blocks up to 20 attempts (30s each) polling `/proc/*/cmdline` for running `claude` processes
   - Env var fallback: `CLR_MAX_SESSIONS`
   - Documented as param 033, Group 2 (Runner Control)
 
-- **`--retry-on-rate-limit <N>` parameter** — automatic retry on transient rate-limit exit (0–255, default: 0)
+- **`--retry-on-rate-limit <N>` parameter** — automatic retry on transient rate-limit exit (0–255, default: 1)
   - When subprocess exits 2 (`ErrorKind::RateLimit`) and retries remain, waits `--retry-delay` seconds and re-invokes
   - `QuotaExhausted`, `AuthError`, `ApiError`, `Signal`, `Unknown` are never retried
   - On exhaustion: emits "rate limit retries exhausted" to stderr, propagates exit 2
@@ -91,7 +91,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Env var fallback: `CLR_RETRY_ON_RATE_LIMIT`
   - Documented as param 034, Group 2 (Runner Control)
 
-- **`--retry-delay <SECS>` parameter** — seconds between rate-limit retries (u32, default: 60)
+- **`--retry-delay <SECS>` parameter** — seconds between rate-limit retries (u32, default: 30)
   - 0 = immediate retry (no sleep); silently ignored when `--retry-on-rate-limit` is 0
   - Env var fallback: `CLR_RETRY_DELAY`
   - Documented as param 035, Group 2 (Runner Control)

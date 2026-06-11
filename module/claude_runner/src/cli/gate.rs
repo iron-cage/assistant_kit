@@ -28,28 +28,30 @@ fn count_claude_sessions() -> usize
     .count()
 }
 
-/// Block until fewer than `max` `claude` sessions are running, or until the 15-minute
-/// timeout elapses.  `max == 0` means unlimited — returns immediately without checking.
+/// Block until fewer than `max` `claude` sessions are running, or until the 20-attempt
+/// limit is exhausted.  `max == 0` means unlimited — returns immediately without checking.
 pub( super ) fn wait_for_session_slot( max : u32, verbosity : VerbosityLevel )
 {
   if max == 0 { return; }
-  let timeout = core::time::Duration::from_secs( 15 * 60 );
-  let poll    = core::time::Duration::from_secs( 30 );
-  let start   = std::time::Instant::now();
-  loop
+  let poll         = core::time::Duration::from_secs( 30 );
+  let max_attempts = 20_u32;
+  for attempt in 1..=max_attempts
   {
     let count = count_claude_sessions();
     if u32::try_from( count ).unwrap_or( u32::MAX ) < max { return; }
-    if start.elapsed() >= timeout
+    if attempt == max_attempts
     {
       eprintln!(
-        "Error: --max-sessions limit ({max}) reached; timed out after 15 minutes waiting for a slot."
+        "Error: --max-sessions limit ({max}) reached; gave up after {max_attempts} attempts waiting for a slot."
       );
       std::process::exit( 1 );
     }
     if verbosity.shows_warnings()
     {
-      eprintln!( "Info: {count} claude session(s) running (limit {max}); waiting 30s for a free slot..." );
+      eprintln!(
+        "Info: {count} claude session(s) running (limit {max}); \
+         waiting 30s for a free slot... (attempt {attempt}/{max_attempts})"
+      );
     }
     std::thread::sleep( poll );
   }

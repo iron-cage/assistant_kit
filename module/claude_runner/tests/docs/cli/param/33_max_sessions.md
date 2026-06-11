@@ -10,7 +10,7 @@ Edge case coverage for the `--max-sessions` parameter. See [033_max_sessions.md]
 | EC-2 | `--max-sessions 0` + `--dry-run` → exit 0; no gate messages | Behavioral Divergence |
 | EC-3 | `CLR_MAX_SESSIONS=5` + `--dry-run` → exit 0 (env var applied; gate skipped in dry-run) | Env Var |
 | EC-4 | `--max-sessions 5` + `CLR_MAX_SESSIONS=2` + `--dry-run` → CLI 5 wins; exit 0 | CLI-wins |
-| EC-5 | `CLR_MAX_SESSIONS=notanumber` → silently ignored; default 10 used; command proceeds | Validation |
+| EC-5 | `CLR_MAX_SESSIONS=notanumber` → silently ignored; default 15 used; command proceeds | Validation |
 | EC-6 | `--max-sessions 0` → gate disabled; no stderr waiting messages emitted | Behavioral |
 | EC-7 | No gate messages when sessions below limit (dry-run, default max) | Behavioral Divergence |
 | EC-8 | Gate disabled with explicit 0 → no stderr messages | Edge Case |
@@ -96,11 +96,11 @@ be exercised in this test surface.
 
 ---
 
-### EC-5: CLR_MAX_SESSIONS=invalid → silently ignored; default 10 used
+### EC-5: CLR_MAX_SESSIONS=invalid → silently ignored; default 15 used
 
 - **Given:** `CLR_MAX_SESSIONS=notanumber` set; no `--max-sessions` CLI flag; `--dry-run` set
 - **When:** `CLR_MAX_SESSIONS=notanumber clr --dry-run "task"`
-- **Then:** Exit 0; invalid env var silently ignored; default 10 used (gate skipped in dry-run)
+- **Then:** Exit 0; invalid env var silently ignored; default 15 used (gate skipped in dry-run)
 - **Exit:** 0
 - **Source:** [--max-sessions](../../../../docs/cli/param/033_max_sessions.md)
 - **Commands:** run, ask
@@ -121,8 +121,8 @@ be exercised in this test surface.
 ### EC-7: No gate messages when sessions below limit (dry-run, default max)
 
 - **Given:** clean environment; no `--max-sessions` override; real session count is 0 (no claude processes running)
-- **When:** `clr --dry-run "task"` (default max=10; 0 active sessions; gate not triggered)
-- **Then:** Exit 0; no "waiting" or "session" messages on stderr; command preview produced immediately. **Divergence from EC-2:** value 10 activates the gate code path — in non-dry-run execution `count_claude_sessions()` would be called (finds 0 < 10, proceeds); value 0 (EC-2) bypasses `count_claude_sessions()` entirely regardless of mode, as a configuration-level disable
+- **When:** `clr --dry-run "task"` (default max=15; 0 active sessions; gate not triggered)
+- **Then:** Exit 0; no "waiting" or "session" messages on stderr; command preview produced immediately. **Divergence from EC-2:** value 15 activates the gate code path — in non-dry-run execution `count_claude_sessions()` would be called (finds 0 < 15, proceeds); value 0 (EC-2) bypasses `count_claude_sessions()` entirely regardless of mode, as a configuration-level disable
 - **Exit:** 0
 - **Source:** [--max-sessions](../../../../docs/cli/param/033_max_sessions.md)
 - **Commands:** run, ask

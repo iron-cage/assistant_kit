@@ -446,12 +446,12 @@ CLR_RETRY_ON_RATE_LIMIT=2 cargo run -p claude_runner -- --dry-run "test"
 
 **Expected:** Exit 0. Env var applied silently; no error.
 
-### TC-57: Retry-on-Rate-Limit 0 — Default No-Retry Behavior
+### TC-57: Retry-on-Rate-Limit 0 — Explicit Disable (Overrides Default 1)
 ```sh
 cargo run -p claude_runner -- --dry-run --retry-on-rate-limit 0 "test"
 ```
 
-**Expected:** Exit 0. No retry logic invoked. Behavior identical to omitting the flag.
+**Expected:** Exit 0. No retry logic invoked. `0` explicitly disables retry, overriding the default of `1`.
 
 ### TC-58: Timeout 0 (Unlimited Default)
 ```sh
@@ -579,7 +579,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-87:** `--expect-retries 256 --dry-run "test"` → exit 1; error "invalid --expect-retries value"
 - **CC-88:** `--max-sessions 5 --dry-run "test"` → exit 0
 - **CC-89:** `--max-sessions 0 --dry-run "test"` → exit 0 (gate disabled)
-- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 10 used)
+- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 15 used)
 - Automated in: `output_file_test.rs`, `expect_validation_test.rs`, `param_edge_cases_test.rs`, `env_var_ext_test.rs`
 
 ### Env vars for expect/output-file params

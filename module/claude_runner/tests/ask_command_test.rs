@@ -199,7 +199,7 @@ fn t09_ask_unknown_flag_rejected()
 //
 // ### Why Not Caught
 // IT-8 in `tests/docs/cli/command/05_ask.md` specifies the behavior but no automated test
-// exercised the positional form. Session-gate blocking only manifests when ≥10 sessions are
+// exercised the positional form. Session-gate blocking only manifests when ≥15 sessions are
 // active, making the regression intermittent in clean environments.
 //
 // ### Fix Applied
