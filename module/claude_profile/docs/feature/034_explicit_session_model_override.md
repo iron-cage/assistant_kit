@@ -25,7 +25,7 @@
 
 `set_model::` validation runs at argument parse time. The resolved string is stored as `set_model_str: Option<String>`.
 
-Post-match placement: `set_session_model()` is called AFTER the full `switch_account` dispatch match block, ensuring it wins over any `apply_model_override()` call that fires inside `apply_post_switch_touch()`. The AlreadyActive match arm uses `set_model_str.is_none()` as a guard to skip `apply_model_override()` when an explicit override is present, avoiding a redundant write:
+Post-match placement: `set_session_model()` is called AFTER the `PreSwitchOutcome` match block, ensuring it wins over any `apply_model_override()` call that fires inside `apply_post_switch_touch()`. No guard is needed: `apply_post_switch_touch()` runs for `NeedTouch` outcomes and calls `apply_model_override()` internally; `set_session_model()` writes last — the explicit value always wins by ordering. (Note: the `AlreadyActive` match arm referenced in earlier versions of this doc was removed by Fix(BUG-285).)
 
 ```rust
 // Post-match: explicit override always wins
@@ -77,7 +77,7 @@ if let Some( ref sm ) = set_model_str
 
 | File | Relationship |
 |------|--------------|
-| `src/commands/account_ops.rs` | `set_model_str` parsing, post-match `set_session_model()` call, AlreadyActive guard, `[trace]` emission |
+| `src/commands/account_ops.rs` | `set_model_str` parsing, post-match `set_session_model()` call, `[trace]` emission |
 | `src/usage/api.rs` | `.usage` session-model override block — `set_model` branch vs `apply_model_override` branch |
 | `src/usage/types.rs` | `validate_set_model()` — four-value mapping, `Err` for unknown values |
 | `claude_profile_core/src/account.rs` | `set_session_model()` — read-merge-write on `~/.claude/settings.json` |

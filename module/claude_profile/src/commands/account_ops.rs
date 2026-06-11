@@ -96,32 +96,22 @@ pub fn account_use_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> 
   crate::account::switch_account( &name, &credential_store, &paths )
     .map_err( |e| io_err_to_error_data( &e, "account use" ) )?;
 
-  // Post-switch: apply model override for ALL fetch-succeeded cases, then spawn
-  // subprocess only for idle accounts.
+  // Post-switch: spawn subprocess touch for all fetch-succeeded cases.
   // Fix(BUG-225): Sonnet→Opus session model override when 7d(Son) < 20%.
-  // Fix(BUG-238): override now fires for already-active accounts too (not just idle).
-  // Root cause: see apply_model_override() in usage/api.rs for full root cause.
-  // Pitfall: override must run for both NeedTouch and AlreadyActive paths — missing
-  //   the AlreadyActive branch meant active sessions kept Sonnet when quota was low.
+  // Fix(BUG-285): AlreadyActive path removed — the is_idle check used server-side
+  //   resets_at as proxy for local subprocess identity (category error). Always spawn;
+  //   the subprocess is idempotent and exits immediately when already active.
   match outcome
   {
     crate::usage::PreSwitchOutcome::NeedTouch( ctx ) =>
     {
       crate::usage::apply_post_switch_touch( &name, ctx, &imodel_str, &effort_str, trace, &paths );
     }
-    crate::usage::PreSwitchOutcome::AlreadyActive { quota } =>
-    {
-      if set_model_str.is_none()
-      {
-        crate::usage::apply_model_override( &quota, &paths, trace, "account.use", &name );
-      }
-      if trace { crate::usage::trace_already_active( &name, quota, &imodel_str, &effort_str ) }
-    }
     crate::usage::PreSwitchOutcome::Unavailable => {}
   }
 
   // When set_model:: is explicit, write the requested model last (takes precedence over
-  // automatic apply_model_override from apply_post_switch_touch or AlreadyActive path).
+  // automatic apply_model_override from apply_post_switch_touch).
   if let Some( ref sm ) = set_model_str
   {
     let model_id = crate::usage::validate_set_model( sm ).ok().flatten();

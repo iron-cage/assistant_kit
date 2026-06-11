@@ -179,7 +179,7 @@ fn token_nc1_status_is_stateless()
 
   // No new files in credential store
   let store = dir.path().join( ".persistent" ).join( "claude" ).join( "credential" );
-  let file_count = std::fs::read_dir( &store ).map( core::iter::Iterator::count ).unwrap_or( 0 );
+  let file_count = std::fs::read_dir( &store ).map_or( 0, core::iter::Iterator::count );
   assert_eq!( file_count, 0, ".token.status must not create files in credential store" );
 }
 

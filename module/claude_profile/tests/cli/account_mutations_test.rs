@@ -1544,12 +1544,11 @@ fn aw27_lim_it_touch_with_live_token()
   );
 }
 
-/// aw28: `trace::1 touch::1` live token → trace lines appear on stderr (FT-11, IT-24).
+/// aw28: `trace::1 touch::1` live token — subprocess always dispatched when quota fetch OK (FT-11, IT-24).
 ///
-/// `lim_it` — skips without a live OAuth token. Verifies lines common to all trace paths
-/// (reading, quota fetch). Conditionally checks idle-path or active-path depending on the
-/// live account's quota state. This test cannot force idle state — it verifies structural
-/// correctness of whichever path the live account happens to be in.
+/// `lim_it` — skips without a live OAuth token. Verifies reading, quota fetch, and subprocess
+/// dispatch trace lines. Fix(BUG-285): idle check removed — subprocess always fires when fetch
+/// succeeds regardless of `resets_at` state; `idle check:` trace line no longer emitted.
 ///
 /// Fix(BUG-207): `pre_switch_touch_ctx` had no `trace` param — all operations were invisible.
 /// Root cause: Feature 027 put `trace::` Out-of-Scope; no trace lines were emitted for .account.use.
@@ -1588,42 +1587,38 @@ fn aw28_lim_it_trace_idle_account_all_lines()
     err.contains( "reading" ) && err.contains( "reading: OK" ),
     "aw28: stderr must contain reading + reading: OK trace lines, got:\n{err}",
   );
+  // Fix(BUG-285): idle check removed — no `idle check:` line emitted; only scheduled + spawned.
   assert!(
-    err.contains( "quota fetch: OK" ),
-    "aw28: stderr must contain quota fetch: OK, got:\n{err}",
+    !err.contains( "idle check:" ),
+    "aw28: `idle check:` trace line must not appear (BUG-285 removed idle check), got:\n{err}",
   );
-  assert!(
-    err.contains( "idle check:" ),
-    "aw28: stderr must contain idle check: line, got:\n{err}",
-  );
-  // Branch on live quota state — we cannot control which path the test takes.
-  if err.contains( "resets_at=absent" )
+  if err.contains( "quota fetch: OK" )
   {
     assert!(
+      err.contains( "subprocess: scheduled (idle check removed)" ),
+      "aw28: fetch-OK path must emit subprocess: scheduled (idle check removed), got:\n{err}",
+    );
+    assert!(
       err.contains( "model:" ),
-      "aw28: idle path must emit model: line, got:\n{err}",
+      "aw28: fetch-OK path must emit model: line, got:\n{err}",
     );
     assert!(
       err.contains( "subprocess: spawned" ),
-      "aw28: idle path must emit subprocess: spawned, got:\n{err}",
+      "aw28: fetch-OK path must emit subprocess: spawned (always; BUG-285 fix), got:\n{err}",
     );
   }
   else
   {
-    // Account is active — idle-path assertions not applicable.
-    eprintln!( "aw28: account is active — idle-path assertions skipped" );
-    assert!(
-      err.contains( "subprocess: skipped" ),
-      "aw28: active path must emit subprocess: skipped, got:\n{err}",
-    );
+    eprintln!( "aw28: quota fetch failed — fetch-OK assertions skipped" );
   }
 }
 
-/// aw29: `trace::1 touch::1` live active account — model/effort + subprocess-skipped trace (FT-12).
+/// aw29: `trace::1 touch::1` live account — subprocess always spawned when quota fetch OK (FT-12).
 ///
-/// `lim_it` — skips without a live OAuth token. Verifies that when quota fetch succeeded AND
-/// the account is already active, the trace emits: idle-check, model/effort, subprocess-skipped.
-/// Skips active-path assertions if the account is idle (live state may differ from expectation).
+/// `lim_it` — skips without a live OAuth token. Verifies that when quota fetch succeeded,
+/// the subprocess is always dispatched regardless of `resets_at` state (Fix(BUG-285): idle
+/// check removed; `AlreadyActive` variant removed from `PreSwitchOutcome`; subprocess is
+/// idempotent and exits immediately when already active).
 #[ test ]
 fn aw29_lim_it_trace_active_account_subprocess_skipped()
 {
@@ -1649,28 +1644,34 @@ fn aw29_lim_it_trace_active_account_subprocess_skipped()
     err.contains( "[trace] account.use" ),
     "aw29: stderr must contain [trace] account.use prefix, got:\n{err}",
   );
-  if err.contains( "resets_at=present" )
+  // Fix(BUG-285): no idle check — subprocess always fires when fetch OK.
+  // Old trace `idle check: resets_at=present → already active` no longer exists.
+  if err.contains( "quota fetch: OK" )
   {
     assert!(
-      err.contains( "subprocess: skipped (reason: already active)" ),
-      "aw29: active path must emit subprocess: skipped (reason: already active), got:\n{err}",
+      err.contains( "subprocess: scheduled (idle check removed)" ),
+      "aw29: fetch-OK path must emit subprocess: scheduled (idle check removed), got:\n{err}",
     );
     assert!(
       err.contains( "model:" ),
-      "aw29: active path must emit model: line when quota fetch OK (BUG-210 fix), got:\n{err}",
+      "aw29: fetch-OK path must emit model: line, got:\n{err}",
     );
     assert!(
       err.contains( "effort:" ),
-      "aw29: active path must emit effort: line when quota fetch OK (BUG-210 fix), got:\n{err}",
+      "aw29: fetch-OK path must emit effort: line, got:\n{err}",
     );
     assert!(
-      !err.contains( "subprocess: spawned" ),
-      "aw29: active path must NOT emit subprocess: spawned, got:\n{err}",
+      err.contains( "subprocess: spawned" ),
+      "aw29: fetch-OK path must emit subprocess: spawned (always; BUG-285 fix), got:\n{err}",
+    );
+    assert!(
+      !err.contains( "subprocess: skipped (reason: already active)" ),
+      "aw29: subprocess: skipped (reason: already active) must not appear (BUG-285 fix), got:\n{err}",
     );
   }
   else
   {
-    eprintln!( "aw29: account is idle — active-path assertions skipped" );
+    eprintln!( "aw29: quota fetch failed — fetch-OK assertions skipped" );
   }
 }
 

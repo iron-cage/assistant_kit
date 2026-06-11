@@ -168,25 +168,25 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 
 ---
 
-### FT-11: `trace::1 touch::1` idle account — all 6 trace lines emitted
+### FT-11: `trace::1 touch::1` account — subprocess always dispatched when quota fetch OK
 
-- **Given:** Account `alice@home.com` saved with valid OAuth token and idle 5h window (`five_hour.resets_at` absent). Credential store has a valid `alice@home.com.credentials.json`.
+- **Given:** Account `alice@home.com` saved with valid OAuth token. Credential store has a valid `alice@home.com.credentials.json`.
 - **When:** `clp .account.use name::alice@home.com trace::1`
-- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr (in order): `[trace] account.use  alice@home.com  reading {path}`, `reading: OK`, `quota fetch: OK`, `idle check: resets_at=absent → idle`, `model: {model}  effort: {effort}`, `subprocess: spawned`.
+- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr (in order): `[trace] account.use  alice@home.com  reading {path}`, `reading: OK`, `quota fetch: OK`, `subprocess: scheduled (idle check removed)`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Fix(BUG-285): `idle check:` trace line removed; subprocess always fires when fetch succeeds.
 - **Exit:** 0
-- **Live:** yes (requires valid OAuth token and `five_hour.resets_at = None` in live quota response)
+- **Live:** yes (requires valid OAuth token)
 - **Source fn:** `aw28_lim_it_trace_idle_account_all_lines` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-10, AC-11, AC-12, AC-13, AC-14](../../../../docs/feature/027_account_use_post_switch_touch.md)
 
 ---
 
-### FT-12: `trace::1 touch::1` active account — reading + fetch + idle-check + model + subprocess-skipped
+### FT-12: `trace::1 touch::1` account with active 5h window — subprocess spawned (idempotent)
 
 - **Given:** Account `alice@home.com` saved with valid OAuth token and an active 5h window (`five_hour.resets_at` present).
 - **When:** `clp .account.use name::alice@home.com trace::1`
-- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr (in order): `reading {path}`, `reading: OK`, `quota fetch: OK`, `idle check: resets_at=present → already active`, `model: {model}  effort: {effort}`, `subprocess: skipped (reason: already active)`. The model/effort line IS emitted — quota fetch succeeded so model/effort can be resolved regardless of idle state.
+- **Then:** Exits 0. Stdout: `switched to 'alice@home.com'`. Stderr contains: `quota fetch: OK`, `subprocess: scheduled (idle check removed)`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Fix(BUG-285): `subprocess: skipped (reason: already active)` no longer emitted; subprocess is always dispatched and exits immediately when already active.
 - **Exit:** 0
-- **Live:** yes (requires valid OAuth token and `five_hour.resets_at` present in live quota response)
+- **Live:** yes (requires valid OAuth token with `five_hour.resets_at` present in live quota response)
 - **Source fn:** `aw29_lim_it_trace_active_account_subprocess_skipped` (in `tests/cli/account_mutations_test.rs`)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-10, AC-11, AC-12, AC-13, AC-14](../../../../docs/feature/027_account_use_post_switch_touch.md)
 
