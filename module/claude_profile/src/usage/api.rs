@@ -1,7 +1,8 @@
 //! Public API surface for the `.usage` command and account-use touch context.
 //!
 //! Exports: `PreSwitchOutcome`, `validate_imodel_str`, `validate_effort_str`,
-//! `pre_switch_touch_ctx`, `apply_model_override`, `apply_post_switch_touch`, `usage_routine`.
+//! `pre_switch_touch_ctx`, `apply_post_switch_touch`, `usage_routine`.
+//! Internal: `apply_model_override` (used within api.rs; not re-exported from the `usage` module).
 
 use unilang::data::{ ErrorCode, ErrorData, OutputData };
 use unilang::interpreter::ExecutionContext;
@@ -51,21 +52,21 @@ pub( crate ) struct TouchCtx
 
 /// Result of the pre-switch quota probe for `.account.use`.
 ///
-/// Distinguishes three outcomes so the caller can apply the model override
-/// for all fetch-succeeded cases, not just idle accounts.
+/// Distinguishes two outcomes: quota available (always spawn subprocess) or unavailable.
 // Fix(BUG-238): pre_switch_touch_ctx() returned None for already-active accounts,
 //   skipping apply_post_switch_touch() and its BUG-225 Sonnet→Opus override entirely.
 // Root cause: quota data was discarded for active accounts — only idle accounts
 //   got a TouchCtx, coupling the model override to subprocess dispatch.
 // Pitfall: any post-switch side-effect gated on touch_ctx.is_some() is invisible
 //   for already-active accounts; always check if the effect needs quota data vs idle state.
+// Fix(BUG-285): AlreadyActive variant removed — the is_idle oracle used server-side
+//   resets_at as proxy for local subprocess identity (category error). Always return
+//   NeedTouch; the subprocess is idempotent and exits immediately when already active.
 #[ derive( Debug ) ]
 pub( crate ) enum PreSwitchOutcome
 {
-  /// Quota fetched, account idle — needs subprocess touch after switch.
+  /// Quota fetched — spawn subprocess touch after switch.
   NeedTouch( TouchCtx ),
-  /// Quota fetched, account already active — model override only, no subprocess.
-  AlreadyActive { quota : OauthUsageData },
   /// Quota unavailable (read error, auth error, fetch error) — no override possible.
   Unavailable,
 }
@@ -144,30 +145,27 @@ pub( crate ) fn attempt_expired_token_refresh(
 
 // ── Pre/post-switch touch context ─────────────────────────────────────────────
 
-/// Pre-fetch quota for `name` and return a [`TouchCtx`] when the account is idle.
+/// Pre-fetch quota for `name` and return a touch context for post-switch subprocess dispatch.
 ///
-/// Returns `None` when any of the following hold:
+/// Returns [`PreSwitchOutcome::Unavailable`] when any of the following hold:
 /// - credentials file missing or lacks `accessToken`
 /// - quota API fetch fails
-/// - account already has an active 5h reset countdown (`five_hour.resets_at.is_some()`)
+///
+/// Returns [`PreSwitchOutcome::NeedTouch`] when quota is successfully fetched.
+/// The subprocess is always dispatched; it exits immediately when the account is already active.
 ///
 /// When `trace` is true, emits `[trace] account.use  {name}  {step}` lines to stderr
-/// for each internal operation, including the reason when `None` is returned.
+/// for each internal operation, including the reason when `Unavailable` is returned.
 ///
 /// Called BEFORE the switch so the target account's credential file still holds the
 /// pre-switch token. The returned `TouchCtx` is passed through the switch and consumed
 /// by [`apply_post_switch_touch`] after `switch_account()` returns.
 // Fix(BUG-207): `pre_switch_touch_ctx` had no `trace` param — credential read, quota fetch,
-//   idle check, and skip-reason were all invisible; the caller always saw "switched to '{name}'".
+//   and skip-reason were all invisible; the caller always saw "switched to '{name}'".
 // Root cause: Feature 027 scope explicitly deferred trace:: as "Out of Scope"; no rule required
 //   trace:: on commands performing fetch operations.
 // Pitfall: Any command extended to perform HTTP/file/subprocess operations must add trace:: in
 //   the same pass — grep [trace] emission sites in source and verify each emitting command registers trace::.
-// Fix(BUG-210): `pre_switch_touch_ctx` emitted no model/effort trace in the already-active branch.
-// Root cause: model/effort resolution lived in `apply_post_switch_touch` only — unreachable when
-//   the already-active skip path fires.
-// Pitfall: any new skip path that bypasses `apply_post_switch_touch` will also miss model/effort
-//   unless it calls `resolve_model`/`resolve_effort` directly.
 pub( crate ) fn pre_switch_touch_ctx(
   name       : &str,
   store_path : &std::path::Path,
@@ -213,17 +211,11 @@ pub( crate ) fn pre_switch_touch_ctx(
       return PreSwitchOutcome::Unavailable;
     }
   };
-  let is_idle = quota.five_hour.as_ref().and_then( |p| p.resets_at.as_deref() ).is_none();
-  if is_idle
-  {
-    if trace { eprintln!( "[trace] account.use  {name}  idle check: resets_at=absent → idle" ) }
-    PreSwitchOutcome::NeedTouch( TouchCtx { credentials_json, quota } )
-  }
-  else
-  {
-    if trace { eprintln!( "[trace] account.use  {name}  idle check: resets_at=present → already active" ) }
-    PreSwitchOutcome::AlreadyActive { quota }
-  }
+  // Fix(BUG-285): removed is_idle check — resets_at is server-side state set by any session
+  //   on any machine; using it as a local subprocess identity oracle is a category error.
+  //   Always return NeedTouch; the subprocess (claude --print .) is idempotent.
+  if trace { eprintln!( "[trace] account.use  {name}  subprocess: scheduled (idle check removed)" ) }
+  PreSwitchOutcome::NeedTouch( TouchCtx { credentials_json, quota } )
 }
 
 /// Spawn an isolated subprocess to activate the idle 5h session window for `name`.
@@ -278,45 +270,6 @@ pub( crate ) fn apply_model_override(
   }
 }
 
-/// Emit the `model:` and `subprocess: skipped` trace lines for already-active accounts.
-///
-/// Takes `quota` by value because `AccountQuota.result` consumes it.
-/// Called from `account_use_routine()` when the outcome is `AlreadyActive`.
-pub( crate ) fn trace_already_active(
-  name       : &str,
-  quota      : OauthUsageData,
-  imodel_str : &str,
-  effort_str : &str,
-)
-{
-  let imodel     = SubprocessModel::parse( imodel_str ).unwrap_or( SubprocessModel::Auto );
-  let effort     = SubprocessEffort::parse( effort_str ).unwrap_or( SubprocessEffort::Auto );
-  let aq         = AccountQuota
-  {
-    name                 : name.to_string(),
-    is_current           : false,
-    is_active            : false,
-    is_occupied_elsewhere : false,
-    expires_at_ms        : 0,
-    result               : Ok( quota ),
-    account              : None,
-    host                 : String::new(),
-    role                 : String::new(),
-    renewal_at           : None,
-    cached               : false,
-    cache_age_secs       : None,
-  };
-  let model      = resolve_model( &aq, imodel );
-  let effort_val = resolve_effort( &model, effort );
-  let model_str  = match &model
-  {
-    claude_runner_core::IsolatedModel::Specific( m ) => m.as_str(),
-    _                                                => "keep-current",
-  };
-  let effort_label = effort_val.unwrap_or( "(none)" );
-  eprintln!( "[trace] account.use  {name}  model: {model_str}  effort: {effort_label}" );
-  eprintln!( "[trace] account.use  {name}  subprocess: skipped (reason: already active)" );
-}
 
 // Fix(BUG-207): `apply_post_switch_touch` had no `trace` param — model/effort resolution
 //   and subprocess spawn were invisible; only the missing [trace] lines in `pre_switch_touch_ctx`
@@ -960,6 +913,58 @@ mod tests
     assert!(
       body.contains( "apply_model_override(" ),
       "BUG-244: apply_model_override must be called from usage_routine — was absent before fix",
+    );
+  }
+
+  /// # MRE: BUG-285 — idle check used server-side `resets_at` as local subprocess oracle
+  ///
+  /// ## Root Cause
+  /// `pre_switch_touch_ctx()` computed `is_idle` from `quota.five_hour.resets_at.is_none()`.
+  /// `resets_at` is set server-side by Anthropic's API for any session on any machine —
+  /// it is NOT a local subprocess identity indicator. An account with `resets_at=Some`
+  /// (set by a session on another machine) returned `AlreadyActive` and skipped the
+  /// subprocess touch, even though no local subprocess was running.
+  ///
+  /// ## Why Not Caught
+  /// The `is_idle` check appeared logically sound in single-machine setups: if the 5h window
+  /// is counting down, a subprocess must have started it. This reasoning fails for accounts
+  /// used across multiple machines where any machine can advance the server-side state.
+  ///
+  /// ## Fix Applied
+  /// Removed `is_idle` check entirely from `pre_switch_touch_ctx`. Function now always
+  /// returns `NeedTouch` when quota is successfully fetched. `AlreadyActive` variant
+  /// removed from `PreSwitchOutcome`. `trace_already_active()` deleted as dead code.
+  ///
+  /// ## Prevention
+  /// This structural test asserts that `let is_idle` assignment and `AlreadyActive` return
+  /// no longer appear in `pre_switch_touch_ctx` — any reintroduction of the oracle pattern
+  /// fails the test.
+  ///
+  /// ## Pitfall
+  /// `resets_at` presence does NOT mean a local subprocess is active. Server-side state
+  /// reflects global account state; local subprocess identity requires local process
+  /// introspection, not quota API responses.
+  #[ doc = "bug_reproducer(BUG-285)" ]
+  #[ test ]
+  fn mre_bug285_idle_check_uses_resets_at_as_wrong_oracle()
+  {
+    let src      = include_str!( "api.rs" );
+    let fn_start = src
+      .find( "pub( crate ) fn pre_switch_touch_ctx(" )
+      .expect( "pre_switch_touch_ctx not found in api.rs" );
+    let fn_end   = src[ fn_start + 1.. ]
+      .find( "\npub( crate ) fn " )
+      .map_or( src.len(), |rel| fn_start + 1 + rel );
+    let fn_body  = &src[ fn_start..fn_end ];
+
+    assert!(
+      !fn_body.contains( "let is_idle" ),
+      "BUG-285 regression: `let is_idle` variable must not exist in pre_switch_touch_ctx body\n\
+      resets_at is server-side state and cannot proxy local subprocess identity",
+    );
+    assert!(
+      !fn_body.contains( "AlreadyActive" ),
+      "BUG-285 regression: AlreadyActive must not be returned from pre_switch_touch_ctx",
     );
   }
 }
