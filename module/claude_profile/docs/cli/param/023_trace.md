@@ -39,22 +39,14 @@ trace::1   → print [trace] lines to stderr; stdout output unchanged
   [trace] alice@example.com  result: Err(HTTP transport error: HTTP 429)
   [trace] refresh  alice@example.com  should_retry=false (reason: HTTP transport error: HTTP 429)
   ```
-- Full `.account.use` trace for an idle account (subprocess spawned):
+- Full `.account.use` trace when quota fetch succeeds (subprocess always dispatched; Fix(BUG-285)):
   ```
   [trace] account.use  alice@home.com  reading /home/user/.pro/.../alice@home.com.credentials.json
   [trace] account.use  alice@home.com  reading: OK
   [trace] account.use  alice@home.com  quota fetch: OK
-  [trace] account.use  alice@home.com  idle check: resets_at=absent → idle
+  [trace] account.use  alice@home.com  subprocess: scheduled (idle check removed)
   [trace] account.use  alice@home.com  model: claude-opus-4-6  effort: low
   [trace] account.use  alice@home.com  subprocess: spawned
-  ```
-- `.account.use` trace for an already-active account (subprocess skipped):
-  ```
-  [trace] account.use  alice@home.com  reading /home/user/.pro/.../alice@home.com.credentials.json
-  [trace] account.use  alice@home.com  reading: OK
-  [trace] account.use  alice@home.com  quota fetch: OK
-  [trace] account.use  alice@home.com  idle check: resets_at=present → already active
-  [trace] account.use  alice@home.com  subprocess: skipped (reason: already active)
   ```
 
 ### Referenced Type

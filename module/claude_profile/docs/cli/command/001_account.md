@@ -237,14 +237,14 @@ clp .account.use name::alice@home.com trace::1
 # [trace] account.use  alice@home.com  reading /...alice@home.com.credentials.json
 # [trace] account.use  alice@home.com  reading: OK
 # [trace] account.use  alice@home.com  quota fetch: OK
-# [trace] account.use  alice@home.com  idle check: resets_at=absent → idle
+# [trace] account.use  alice@home.com  subprocess: scheduled (idle check removed)
 # [trace] account.use  alice@home.com  model: claude-opus-4-6  effort: low
 # [trace] account.use  alice@home.com  subprocess: spawned
 # switched to 'alice@home.com'
 ```
 
 **Notes:**
-- `touch::1` (default): fetches quota for the target account; if `five_hour.resets_at` is absent (idle), spawns `run_isolated(["--print", "."])` with resolved model/effort to start a 5h session. Quota fetch failure checks `expiresAt` — if locally expired and `refresh::1` (default), attempts token refresh and re-probes touch context on success; exits 3 if refresh fails. If locally expired and `refresh::0`, exits 3 immediately. If `expiresAt` is absent or not yet expired, skips touch silently and the switch completes.
+- `touch::1` (default): fetches quota for the target account; when fetch succeeds, always spawns `run_isolated(["--print", "."])` with resolved model/effort (subprocess is idempotent; Fix(BUG-285): idle check removed). Quota fetch failure checks `expiresAt` — if locally expired and `refresh::1` (default), attempts token refresh and re-probes touch context on success; exits 3 if refresh fails. If locally expired and `refresh::0`, exits 3 immediately. If `expiresAt` is absent or not yet expired, skips touch silently and the switch completes.
 - `touch::0`: pure credential rotation — no quota fetch, no subprocess, no expiry check. Pre-Feature-027 behavior.
 - `imodel::` and `effort::` follow the same resolution logic as `.usage` (Feature 026): `imodel::auto` always selects Haiku (sufficient for keep-alive pings); `resolve_effort()` maps Haiku and keep → no `--effort` flag, other models → `low`. See [feature/026](../../feature/026_subprocess_model_effort.md).
 - `set_model::`: when provided, `set_session_model()` writes the requested model to `settings.json` last (after any `apply_post_switch_touch()` or `apply_model_override()`), ensuring it takes precedence. `default` removes the `model` key entirely.

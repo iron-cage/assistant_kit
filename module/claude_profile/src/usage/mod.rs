@@ -2,8 +2,7 @@
 //!
 //! Public surface: `usage_routine` (command handler), `PreSwitchOutcome`,
 //! `validate_imodel_str`, `validate_effort_str`, `validate_set_model`,
-//! `pre_switch_touch_ctx`, `apply_model_override`, `trace_already_active`,
-//! `apply_post_switch_touch`.
+//! `pre_switch_touch_ctx`, `apply_post_switch_touch`, `attempt_expired_token_refresh`.
 
 mod types;
 mod fetch;
@@ -21,7 +20,7 @@ mod api;
 
 pub( crate ) use api::{
   validate_imodel_str, validate_effort_str, pre_switch_touch_ctx, apply_post_switch_touch,
-  apply_model_override, trace_already_active, attempt_expired_token_refresh,
+  attempt_expired_token_refresh,
   PreSwitchOutcome,
 };
 pub( crate ) use types::validate_set_model;

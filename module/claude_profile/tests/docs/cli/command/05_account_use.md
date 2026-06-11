@@ -303,13 +303,13 @@ Integration test planning for the `.account.use` command. See [command/namespace
 
 ---
 
-### IT-24: `trace::1 touch::1` idle account — 6 trace lines emitted to stderr
+### IT-24: `trace::1 touch::1` account — subprocess always dispatched when quota fetch OK
 
-- **Given:** Account `alice@home.com` saved with valid token and idle 5h window (`five_hour.resets_at` absent).
+- **Given:** Account `alice@home.com` saved with valid token.
 - **When:** `clp .account.use name::alice@home.com trace::1`
-- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout. Stderr (in order) contains: `reading {path}`, `reading: OK`, `quota fetch: OK`, `idle check: resets_at=absent → idle`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Prefix of every trace line is `[trace] account.use  alice@home.com`.
+- **Then:** Exits 0; `switched to 'alice@home.com'` on stdout. Stderr (in order) contains: `reading {path}`, `reading: OK`, `quota fetch: OK`, `subprocess: scheduled (idle check removed)`, `model: {model}  effort: {effort}`, `subprocess: spawned`. Fix(BUG-285): `idle check:` trace line removed; subprocess always fires when fetch succeeds. Prefix of every trace line is `[trace] account.use  alice@home.com`.
 - **Exit:** 0
-- **Live:** yes (requires valid token with idle `five_hour.resets_at = None`)
+- **Live:** yes (requires valid token)
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-10–AC-14](../../../../docs/feature/027_account_use_post_switch_touch.md)
 - **Source fn:** `aw28_lim_it_trace_idle_account_all_lines`
 
