@@ -172,7 +172,7 @@ Each behavior instance has a corresponding invalidation test in `contract/claude
 
 To run:
 ```bash
-cargo nextest run -p claude_code --test behavior
+cd contract/claude_code && cargo nextest run --test behavior
 ```
 
 ### Type-Specific Requirements

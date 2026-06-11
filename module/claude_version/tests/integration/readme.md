@@ -12,5 +12,6 @@ Module files for integration tests. All files are included by `tests/integration
 | `framework_test.rs` | Pipeline smoke tests: `.help`, unknown command, exit codes |
 | `read_commands_test.rs` | Integration tests for 8 read-only commands |
 | `mutation_commands_test.rs` | Integration tests for 4 mutation commands |
+| `config_commands_test.rs` | Integration tests for `.config` command (IT + FT) |
 | `cross_cutting_test.rs` | Cross-cutting: dry+force interaction, verbosity parity, format parity |
 | `error_messages_test.rs` | Error message content and format validation |

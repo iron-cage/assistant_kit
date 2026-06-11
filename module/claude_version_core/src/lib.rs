@@ -6,6 +6,8 @@
 //!
 //! # Modules
 //!
+//! - [`config_catalog`]: Known settings catalog (`SettingDef` registry)
+//! - [`config_resolve`]: 4-layer effective-value resolution engine
 //! - [`settings_io`]: Read and write `~/.claude/settings.json`
 //! - [`version`]: Detect, install, resolve, and validate Claude Code versions
 //!
@@ -18,6 +20,8 @@
 #![ warn( missing_docs ) ]
 #![ warn( missing_debug_implementations ) ]
 
+pub mod config_catalog;
+pub mod config_resolve;
 pub mod settings_io;
 pub mod version;
 

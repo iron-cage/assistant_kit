@@ -17,6 +17,9 @@ mod read_commands_test;
 #[ path = "integration/mutation_commands_test.rs" ]
 mod mutation_commands_test;
 
+#[ path = "integration/config_commands_test.rs" ]
+mod config_commands_test;
+
 #[ path = "integration/cross_cutting_test.rs" ]
 mod cross_cutting_test;
 

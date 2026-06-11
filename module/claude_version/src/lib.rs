@@ -74,6 +74,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
     version_guard_routine, version_list_routine, version_history_routine,
     processes_routine, processes_kill_routine,
     settings_show_routine, settings_get_routine, settings_set_routine,
+    config_routine,
   };
   let v   = || reg_arg_opt( "verbosity", Kind::Integer );
   let fmt = || reg_arg_opt( "format",    Kind::String  );
@@ -84,6 +85,8 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   let val = || reg_arg_opt( "value",     Kind::String  );
   let itv = || reg_arg_opt( "interval",  Kind::Integer );
   let cnt = || reg_arg_opt( "count",     Kind::Integer );
+  let scp = || reg_arg_opt( "scope",     Kind::String  );
+  let uns = || reg_arg_opt( "unset",     Kind::Boolean );
 
   reg_cmd( registry, ".status",          "Show installation state, process count, and active account", vec![ v(), fmt() ],                      Box::new( status_routine          ) );
   reg_cmd( registry, ".version.show",    "Print the currently installed Claude Code version",          vec![ v(), fmt() ],                      Box::new( version_show_routine    ) );
@@ -96,6 +99,7 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
   reg_cmd( registry, ".settings.show",   "Print all settings from ~/.claude/settings.json",            vec![ v(), fmt() ],                      Box::new( settings_show_routine   ) );
   reg_cmd( registry, ".settings.get",    "Read a single setting by key",                               vec![ key(), v(), fmt() ],               Box::new( settings_get_routine    ) );
   reg_cmd( registry, ".settings.set",    "Write a single setting atomically",                          vec![ key(), val(), dry() ],             Box::new( settings_set_routine    ) );
+  reg_cmd( registry, ".config",          "Show, get, set, or unset settings with 4-layer resolution",  vec![ key(), val(), scp(), uns(), dry(), v(), fmt() ], Box::new( config_routine ) );
 }
 
 /// Run the `claude_version` CLI — 5-phase unilang pipeline.

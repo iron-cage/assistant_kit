@@ -26,7 +26,7 @@ This directory contains comprehensive documentation for the `claude_storage` cra
 ### Claude Code Knowledge (shared)
 
 Core specifications for Claude Code's storage layout, file formats, and JSONL schema have moved
-to the workspace-level [`contract/claude_code/docs/`](../../../contract/claude_code/docs/) directory, since they are
+to the repo-level [`contract/claude_code/docs/`](../../../contract/claude_code/docs/) directory, since they are
 consumed by multiple crates (`claude_storage`, `claude_version`, `claude_runner`, `claude_profile`).
 
 Key entity directories there: `behavior/` (25 hypotheses), `storage/`, `filesystem/`, `jsonl/`, `settings/`, `formats/`, `taxonomy/`, `params/` (73 params), `endpoint/`.

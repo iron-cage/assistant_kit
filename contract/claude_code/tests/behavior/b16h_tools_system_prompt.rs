@@ -20,7 +20,7 @@
 ///
 /// Run manually with:
 /// ```bash
-/// cargo nextest run -p claude_code --test behavior lim_it_b16h
+/// cargo nextest run --test behavior lim_it_b16h
 /// ```
 #[ test ]
 fn lim_it_b16h_tools_system_prompt_token_comparison()
