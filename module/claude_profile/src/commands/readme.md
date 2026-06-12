@@ -12,5 +12,6 @@
 | `account_inspect.rs` | `.account.inspect` per-account detail view routine. |
 | `account_assign.rs` | `.account.assign` active-marker write routine. |
 | `limits.rs` | `.account.limits` API rate-limit fetch routine. |
+| `model.rs` | `.model` get/set session model routine. |
 | `token_paths.rs` | `.token.status` and `.paths` command routines. |
 | `dot.rs` | `.` dot-shorthand command routine. |

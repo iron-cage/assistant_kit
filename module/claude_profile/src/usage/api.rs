@@ -604,21 +604,25 @@ mod tests
   /// `mre_bug238` — `apply_model_override()` writes opus when 7d(Son) consumed > 80%.
   ///
   /// # Root Cause
-  /// `account_use_routine()` matched `PreSwitchOutcome::AlreadyActive` but skipped
-  /// `apply_model_override()` — the model override never fired for already-active accounts.
-  /// The `AlreadyActive` branch only emitted trace and returned; the extract was not wired in.
+  /// `pre_switch_touch_ctx()` originally returned `PreSwitchOutcome::AlreadyActive` for
+  /// accounts with an active 5h window, and `apply_post_switch_touch()` skipped
+  /// `apply_model_override()` in that branch — the model override never fired for
+  /// already-active accounts.
   ///
   /// # Why Not Caught
   /// No unit test for `apply_model_override()` existed. Full CLI path requires a live OAuth
   /// token to fetch quota, which is impractical in CI.
   ///
   /// # Fix Applied
-  /// `AlreadyActive { quota }` branch in `account_use_routine()` now calls
-  /// `apply_model_override(&quota, &paths, trace, &name)` before the trace line.
+  /// BUG-238 fix: wired `apply_model_override` into the `AlreadyActive` branch.
+  /// BUG-285 follow-up: the `AlreadyActive` variant was subsequently removed entirely —
+  ///   `pre_switch_touch_ctx` now always returns `NeedTouch` when the quota fetch succeeds
+  ///   (the subprocess is idempotent). `apply_model_override` fires unconditionally for all
+  ///   fetch-succeeded outcomes.
   ///
   /// # Prevention
-  /// Any new `PreSwitchOutcome` match arm that receives `OauthUsageData` must call
-  /// `apply_model_override()`. Test the helper directly to stay independent of CLI plumbing.
+  /// Test `apply_model_override` directly to stay independent of CLI plumbing. Any future
+  /// `PreSwitchOutcome` variant that carries `OauthUsageData` must wire in `apply_model_override`.
   ///
   /// # Pitfall
   /// `apply_model_override` only fires when `sonnet_left < 20.0`. Test input must push
@@ -646,6 +650,53 @@ mod tests
     assert!(
       content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
       "apply_model_override must write opus shorthand to settings.json when 7d(Son) is 90% consumed (10% left), got: {content}",
+    );
+  }
+
+  /// `mre_bug286` — full model ID `"claude-opus-4-6"` in settings.json must be
+  /// normalized to shorthand `"opus"` by `apply_model_override`.
+  ///
+  /// # Root Cause
+  /// BUG-257 fix added `contains("sonnet")` for sonnet alias coverage, but did not
+  /// add the analogous full-ID opus → shorthand normalization path. When settings.json
+  /// contained `"claude-opus-4-6"` (written by a prior `set_session_model`), the gate
+  /// `contains("sonnet") || is_empty()` was false — override never fired.
+  ///
+  /// # Why Not Caught
+  /// No test wrote a full-ID opus value to settings.json before calling
+  /// `apply_model_override`. All existing tests started from empty or shorthand values.
+  ///
+  /// # Fix Applied
+  /// Added `current == "claude-opus-4-6"` arm to the gate condition in
+  /// `override_session_model_to_opus`.
+  ///
+  /// # Prevention
+  /// This test pre-writes the full opus ID and asserts normalization to shorthand.
+  ///
+  /// # Pitfall
+  /// Any path that writes model to settings.json must write Claude Code shorthand
+  /// ("opus"/"sonnet"), never full IDs ("claude-opus-4-6").
+  #[ doc = "bug_reproducer(BUG-286)" ]
+  #[ test ]
+  fn mre_bug286_full_opus_id_normalized_to_shorthand()
+  {
+    use claude_quota::{ OauthUsageData, PeriodUsage };
+    let dir   = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( dir.path() );
+    std::fs::create_dir_all( paths.base() ).unwrap();
+    // Pre-write full opus ID — as stored in {name}.json snapshots from older convention.
+    std::fs::write( paths.settings_file(), r#"{"model":"claude-opus-4-6"}"# ).unwrap();
+    let quota = OauthUsageData
+    {
+      five_hour        : None,
+      seven_day        : None,
+      seven_day_sonnet : Some( PeriodUsage { utilization : 90.0, resets_at : None } ),
+    };
+    apply_model_override( &quota, &paths, false, "account.use", "test-account" );
+    let content = std::fs::read_to_string( paths.settings_file() ).unwrap();
+    assert!(
+      content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
+      "BUG-286: full-ID opus must be normalized to shorthand 'opus', got: {content}",
     );
   }
 

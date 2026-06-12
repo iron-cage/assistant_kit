@@ -533,7 +533,8 @@ fn mre_bug225_override_session_model_to_opus_no_op_when_already_opus()
 }
 
 /// FT-20 MRE: `override_session_model_to_opus` handles Claude Code shorthand `"sonnet"` input
-/// and writes shorthand `"opus"` (not full ID `"claude-opus-4-6"`).
+/// and writes shorthand `"opus"` (not full ID `"claude-opus-4-6"`). Also verifies BUG-286
+/// fix: full-ID `"claude-opus-4-6"` is normalized to shorthand `"opus"` when model override fires.
 ///
 /// # Root Cause (BUG-257)
 /// `override_session_model_to_opus()` checked `current == "claude-sonnet-4-6"` but Claude Code
@@ -541,24 +542,32 @@ fn mre_bug225_override_session_model_to_opus_no_op_when_already_opus()
 /// matched production values — the session remained on Sonnet even when quota was exhausted.
 /// Additionally, the write side used `"claude-opus-4-6"` (full ID) instead of `"opus"` shorthand.
 ///
+/// # Root Cause (BUG-286)
+/// `set_model::opus` writes `"claude-opus-4-6"` (full ID) to `settings.json`. When
+/// `override_session_model_to_opus` ran next, gate `contains("sonnet") || is_empty()`
+/// did not match `"claude-opus-4-6"` — full-ID form stayed in `settings.json` unmodified.
+///
 /// # Why Not Caught
 /// BUG-225 tests pre-wrote the full ID `"claude-sonnet-4-6"` — not the shorthand
 /// `"sonnet"` that Claude Code actually writes. The test passed while the real-world
-/// path was always broken.
+/// path was always broken. BUG-286 was introduced when `set_model::opus` write path
+/// used full ID; the `override_session_model_to_opus` read path was never updated.
 ///
 /// # Fix Applied
-/// Read side: `current == "claude-sonnet-4-6"` → `current.contains("sonnet")`.
-/// Write side: `"claude-opus-4-6"` → `"opus"` (matches Claude Code shorthand convention).
+/// BUG-257: read side `current == "claude-sonnet-4-6"` → `current.contains("sonnet")`;
+///   write side `"claude-opus-4-6"` → `"opus"` shorthand.
+/// BUG-286: gate extended with `|| current == "claude-opus-4-6"` to normalize full-ID opus.
 ///
 /// # Prevention
 /// Scenario 1 asserts BOTH return value AND written content. Scenario 2 guards the
-/// full-ID path as a regression guard. Scenario 3 guards non-Sonnet models are left alone.
+/// full-ID sonnet path as a regression guard. Scenario 6 guards full-ID opus normalization.
 ///
 /// # Pitfall
 /// `contains("sonnet")` is intentionally broad — matches `"sonnet"`, `"claude-sonnet-4-6"`,
 /// and any future sonnet variant. A `"sonnet"` substring in an opus ID would be a naming
 /// regression in the Claude API, not a code concern here.
 #[ doc = "bug_reproducer(BUG-257)" ]
+#[ doc = "bug_reproducer(BUG-286)" ]
 #[ test ]
 fn mre_bug257_override_shorthand_alias()
 {
@@ -591,6 +600,24 @@ fn mre_bug257_override_shorthand_alias()
   std::fs::write( &settings, r"{}" ).unwrap();
   let overrode = account::override_session_model_to_opus( &paths );
   assert!( overrode, "absent model field must trigger override (defaults to opus)" );
+
+  // Scenario 5: non-sonnet model "haiku" → must NOT fire (Fix(BUG-286) regression guard)
+  std::fs::write( &settings, r#"{"model":"haiku"}"# ).unwrap();
+  let overrode = account::override_session_model_to_opus( &paths );
+  assert!( !overrode, "BUG-286: haiku model must not trigger override" );
+
+  // Scenario 6: full-ID "claude-opus-4-6" → must fire; normalize to shorthand "opus" (Fix(BUG-286))
+  // BUG: `set_model::opus` writes "claude-opus-4-6" full ID to settings.json; gate
+  //   `contains("sonnet") || is_empty()` did not match it, leaving "claude-opus-4-6"
+  //   in settings.json rather than normalising to "opus" shorthand on next override call.
+  std::fs::write( &settings, r#"{"model":"claude-opus-4-6"}"# ).unwrap();
+  let overrode = account::override_session_model_to_opus( &paths );
+  assert!( overrode, "BUG-286: full-ID \"claude-opus-4-6\" must trigger override to normalize to shorthand" );
+  let content = std::fs::read_to_string( &settings ).unwrap();
+  assert!(
+    content.contains( "\"opus\"" ) && !content.contains( "claude-opus-4-6" ),
+    "BUG-286: override must write shorthand \"opus\", not full ID; got: {content}",
+  );
 }
 
 /// `set_session_model()` writes the correct model ID or removes the key.

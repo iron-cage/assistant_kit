@@ -45,7 +45,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Then:** Exits 0. stdout contains `saved current credentials as 'alice@acme.com'`. `{credential_store}/alice@acme.com.credentials.json` exists with content identical to source credentials.
 - **Exit:** 0
 - **Source fn:** `as01_save_creates_file` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/002_account_save.md AC-01](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-01](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -56,7 +56,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Then:** Exits 0. stdout contains `[dry-run] would save current credentials as 'alice@acme.com'`. No credential file created in `{credential_store}`.
 - **Exit:** 0
 - **Source fn:** `as02_save_dry_run` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/002_account_save.md AC-04](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-04](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -67,7 +67,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Then:** Exits 0. `{credential_store}/alice@acme.com.json` is created containing `{"oauthAccount": {...}, "model": "claude-sonnet"}` with the extracted subtree and `model` field from `~/.claude/settings.json` (BUG-222 fix).
 - **Exit:** 0
 - **Source fn:** `acc26_save_creates_snapshot_files` (in `tests/cli/accounts_test.rs`)
-- **Source:** [feature/002_account_save.md AC-05](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-05](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -79,7 +79,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Exit:** 0
 - **Source fn:** `as15_save_infers_name_from_active_marker` (in `tests/cli/account_mutations_test.rs`)
 - **Note:** Tests the `_active` marker FALLBACK path only. Primary path (`oauthAccount.emailAddress` present) is covered by FT-10.
-- **Source:** [feature/002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-08](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -90,7 +90,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Then:** Exits 1. stderr contains `cannot infer account name: no active account set — pass name:: explicitly`. No credential file created.
 - **Exit:** 1
 - **Source fn:** `as10_save_infer_absent_email_exits_1` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/002_account_save.md AC-09](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-09](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -101,7 +101,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Then:** Exits 0. `{credential_store}/_active_{hostname}_{user}` contains `"alice@acme.com"`. A subsequent `clp .credentials.status` shows `Account: alice@acme.com`.
 - **Exit:** 0
 - **Source fn:** `as16_save_writes_active_marker` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/002_account_save.md AC-10](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-10](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -112,7 +112,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Then:** Exits 1. stderr indicates path-unsafe characters in account name. No file created in `{credential_store}` — validation occurs before any filesystem operation.
 - **Exit:** 1
 - **Source fn:** `as17_save_slash_in_email_local_part_exits_1` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/002_account_save.md AC-11](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-11](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -124,7 +124,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Exit:** 0
 - **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `tests/cli/account_mutations_test.rs`)
 - **Note:** Tests the fallback path — exercises the case where `oauthAccount.emailAddress` is absent, so the `_active` marker is used. The primary path (oauthAccount.emailAddress wins over a stale marker) is covered by FT-10.
-- **Source:** [feature/002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-08](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -136,7 +136,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Exit:** N/A (unit test — no exit code)
 - **Source fn:** `test_mre_bug211_save_false_leaves_marker_unchanged` (in `claude_profile_core/tests/account_test.rs`)
 - **Note:** BUG-211 MRE — verifies the `update_marker` guard in `save()`. Background refresh calls (`refresh_account_token`) pass `false`; user CLI calls (`.account.save`, `.account.relogin`) pass `true`.
-- **Source:** [feature/002_account_save.md AC-15](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-15](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -148,7 +148,7 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
 - **Exit:** 0
 - **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
 - **Note:** BUG-212 MRE — verifies that `oauthAccount.emailAddress` from `~/.claude.json` is the primary name inference source; the stale `_active` marker is only used as a fallback when `oauthAccount.emailAddress` is absent or empty. External OAuth login updates `oauthAccount.emailAddress` but not the `_active` marker.
-- **Source:** [feature/002_account_save.md AC-16](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-16](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -162,4 +162,4 @@ Feature behavioral requirement test cases for `docs/feature/002_account_save.md`
   - No other pre-existing top-level keys are removed.
 - **Exit:** 0
 - **Source fn:** `as22_save_preserves_renewal_at` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/002_account_save.md AC-17](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-17](../../../docs/feature/002_account_save.md)
