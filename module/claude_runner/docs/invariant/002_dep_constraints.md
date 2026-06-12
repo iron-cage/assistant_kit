@@ -19,12 +19,12 @@ The library surface of `claude_runner` must not depend on any consumer workspace
 
 #### Binary Deps Gated by `enabled`
 
-The binary dependencies — `claude_runner_core`, `error_tools`, and `unilang` — must be optional and gated behind the `enabled` feature in `Cargo.toml`. Library consumers that only need `COMMANDS_YAML` must not pull in these heavier dependencies.
+The binary dependencies — `claude_runner_core`, `error_tools`, `unilang`, and `data_fmt` — must be optional and gated behind the `enabled` feature in `Cargo.toml`. Library consumers that only need `COMMANDS_YAML` must not pull in these heavier dependencies.
 
 Feature structure:
 ```
 default = ["enabled"]
-enabled = ["dep:claude_runner_core", "dep:error_tools", ..., "dep:unilang", ...]
+enabled = ["dep:claude_runner_core", "dep:error_tools", ..., "dep:unilang", ..., "dep:data_fmt"]
 ```
 
 #### No `routines.rs`

@@ -19,6 +19,7 @@ pub( crate ) fn print_help()
   println!( "  ask                                Semantic alias for `run` (identical behavior)" );
   println!( "  isolated                           Run Claude with credential-isolated temp HOME" );
   println!( "  refresh                            Refresh OAuth credentials without running a task" );
+  println!( "  ps                                 List running Claude Code sessions" );
   println!( "  help                               Print usage information and exit" );
   println!();
   println!( "ARGUMENTS:" );
@@ -54,7 +55,7 @@ pub( crate ) fn print_help()
   println!( "  --expect <VALS>                    Pipe-separated expected values; mismatch → exit 3 (case-insensitive, trimmed)" );
   println!( "  --expect-strategy <STRAT>          Mismatch handling: fail (default), retry, default:<VAL>" );
   println!( "  --expect-retries <N>               Retry attempts when --expect-strategy retry (0–255, default: 0)" );
-  println!( "  --max-sessions <N>                 Max concurrent claude sessions before blocking (0=unlimited, default: 20)" );
+  println!( "  --max-sessions <N>                 Max concurrent claude sessions before blocking (0=unlimited, default: 25)" );
   println!( "  --retry-on-rate-limit <N>          Retry on transient rate limit up to N times (0–255, default: 1; 0 = no retry)" );
   println!( "  --retry-delay <SECS>               Seconds between rate-limit retries (default: 30; 0 = immediate)" );
   println!( "  --timeout <SECS>                   Kill subprocess after N seconds (0 = unlimited, default: 0)" );

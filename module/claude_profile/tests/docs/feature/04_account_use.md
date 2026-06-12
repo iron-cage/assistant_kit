@@ -41,7 +41,7 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Then:** Exit 0. `~/.claude/.credentials.json` now contains `work@acme.com`'s token. `_active_{hostname}_{user}` marker file contains `work@acme.com`. The active marker is updated atomically via rename; no partial-write state is possible. Switching to the same account (idempotent) also exits 0 with the credentials in place.
 - **Exit:** 0
 - **Source fn:** `aw01_switch_swaps_credentials`, `aw07_switch_updates_active_marker`, `aw08_switch_same_account_idempotent`, `aw09_switch_copies_credentials`
-- **Source:** [004_account_use.md AC-01](../../../../docs/feature/004_account_use.md)
+- **Source:** [004_account_use.md AC-01](../../../docs/feature/004_account_use.md)
 
 ---
 
@@ -54,7 +54,7 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Then:** Exit 2 (not-found guard fires before dry-run message is printed).
 - **Exit:** 2
 - **Source fn:** `aw03_switch_nonexistent_exits_2`, `aw10_switch_dry_run_nonexistent_exits_2`
-- **Source:** [004_account_use.md AC-02](../../../../docs/feature/004_account_use.md)
+- **Source:** [004_account_use.md AC-02](../../../docs/feature/004_account_use.md)
 
 ---
 
@@ -66,7 +66,7 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Note:** This invariant has no dedicated integration test — it is a filesystem atomicity guarantee. See `docs/invariant/005_atomic_switching.md` for the invariant specification. The active marker (step 4) and `oauthAccount` patch (step 5) are best-effort; a crash after step 3 always leaves authentication credentials correct.
 - **Exit:** 0
 - **Source fn:** (no integration test — POSIX rename atomicity; see `docs/invariant/005_atomic_switching.md`)
-- **Source:** [004_account_use.md AC-03](../../../../docs/feature/004_account_use.md)
+- **Source:** [004_account_use.md AC-03](../../../docs/feature/004_account_use.md)
 
 ---
 
@@ -77,7 +77,7 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Then:** Exit 0. Output contains `[dry-run] would switch to 'alice@acme.com'`. `~/.claude/.credentials.json` still contains `work@acme.com`'s token. Active marker file unchanged.
 - **Exit:** 0
 - **Source fn:** `aw02_switch_dry_run`
-- **Source:** [004_account_use.md AC-04](../../../../docs/feature/004_account_use.md)
+- **Source:** [004_account_use.md AC-04](../../../docs/feature/004_account_use.md)
 
 ---
 
@@ -88,7 +88,7 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Then:** `.credentials.status` output contains `Email: work@acme.com`. The `~/.claude.json oauthAccount.emailAddress` was patched from the snapshot during the switch, so the status command reads the correct email.
 - **Exit:** 0
 - **Source fn:** `switch_restores_claude_json`
-- **Source:** [004_account_use.md AC-05](../../../../docs/feature/004_account_use.md)
+- **Source:** [004_account_use.md AC-05](../../../docs/feature/004_account_use.md)
 
 ---
 
@@ -105,7 +105,7 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Then:** Exit 1 — the slash character is path-unsafe even in the domain portion of an email.
 - **Exit:** 1
 - **Source fn:** `aw04_switch_empty_name_exits_1`, `aw05_switch_slash_name_exits_1`, `aw06_switch_missing_name_param_exits_1`, `aw11_switch_slash_in_email_local_part_exits_1`
-- **Source:** [004_account_use.md AC-06](../../../../docs/feature/004_account_use.md)
+- **Source:** [004_account_use.md AC-06](../../../docs/feature/004_account_use.md)
 
 ---
 
@@ -116,7 +116,7 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Then:** `~/.claude.json oauthAccount.emailAddress` is `"alice@acme.com"` — the account name wins over the stale snapshot value (BUG-217 fix). `~/.claude.json oauthAccount.organizationName` is `"Acme"` and `oauthAccount.organizationUuid` is `"org-123"` (BUG-219 fix — org fields from `{name}.json` override snapshot). All other keys in `~/.claude.json` (e.g., `commands`, `mcpServers`, `projects`) are untouched.
 - **Exit:** 0
 - **Source fn:** `mre_bug_217_switch_account_enforces_emailaddress`
-- **Source:** [004_account_use.md AC-07](../../../../docs/feature/004_account_use.md)
+- **Source:** [004_account_use.md AC-07](../../../docs/feature/004_account_use.md)
 
 ---
 
@@ -131,7 +131,7 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Note:** Coverage in `claude_profile_core` unit tests; no dedicated CLI integration test exists for this AC.
 - **Exit:** 0
 - **Source fn:** `mre_bug222_switch_account_restores_model_from_settings_snapshot`, `mre_bug222_switch_account_clears_model_when_no_snapshot` (in `module/claude_profile_core/tests/account_test.rs`)
-- **Source:** [004_account_use.md AC-08](../../../../docs/feature/004_account_use.md)
+- **Source:** [004_account_use.md AC-08](../../../docs/feature/004_account_use.md)
 
 ---
 
@@ -142,4 +142,4 @@ Feature behavioral requirement test cases for `docs/feature/004_account_use.md` 
 - **Then:** Exit 0. `~/.claude.json oauthAccount.emailAddress` is `"bob@acme.com"` — patched unconditionally even without metadata file. All other `oauthAccount` fields retain their previous values from alice's session. `_active_{hostname}_{user}` marker contains `bob@acme.com`.
 - **Exit:** 0
 - **Source fn:** `mre_bug254_switch_account_patches_email_when_metadata_absent` (core), `aw12_switch_patches_email_when_metadata_absent` (FT)
-- **Source:** [004_account_use.md AC-09](../../../../docs/feature/004_account_use.md)
+- **Source:** [004_account_use.md AC-09](../../../docs/feature/004_account_use.md)

@@ -66,6 +66,7 @@ if let Some( ref sm ) = set_model_str
 | [004_account_use.md](004_account_use.md) | `.account.use` credential rotation — `set_model::` runs after switch completes |
 | [026_subprocess_model_effort.md](026_subprocess_model_effort.md) | `imodel::` for subprocess model — orthogonal to `set_model::` |
 | [027_account_use_post_switch_touch.md](027_account_use_post_switch_touch.md) | Post-switch touch execution — `apply_model_override()` skipped when `set_model::` present |
+| [035_model_command.md](035_model_command.md) | Standalone `.model` get/set command — shares `set_session_model()` and the `map_model_shorthand()` inner function extracted from `validate_set_model()` |
 
 ### Parameters
 
@@ -79,6 +80,6 @@ if let Some( ref sm ) = set_model_str
 |------|--------------|
 | `src/commands/account_ops.rs` | `set_model_str` parsing, post-match `set_session_model()` call, `[trace]` emission |
 | `src/usage/api.rs` | `.usage` session-model override block — `set_model` branch vs `apply_model_override` branch |
-| `src/usage/types.rs` | `validate_set_model()` — four-value mapping, `Err` for unknown values |
+| `src/usage/types.rs` | `validate_set_model()` — calls `map_model_shorthand()` inner function and formats error with `set_model::` prefix; four-value mapping |
 | `claude_profile_core/src/account.rs` | `set_session_model()` — read-merge-write on `~/.claude/settings.json` |
 | `src/lib.rs` | `set_model::` parameter registration on `.account.use` and `.usage` |

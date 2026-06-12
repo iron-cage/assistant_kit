@@ -45,7 +45,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Then:** `alice@acme.com`'s block shows `Current:  yes`; `work@acme.com`'s block shows `Current:  no`.
 - **Exit:** 0
 - **Source fn:** `acc31_accounts_shows_current_yes_no`
-- **Source:** [016_current_account_awareness.md AC-01](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-01](../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -56,7 +56,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Then:** Neither account shows a `Current:` line at all. No misleading `Current: no` on any block.
 - **Exit:** 0
 - **Source fn:** `acc32_accounts_suppresses_current_when_creds_absent`
-- **Source:** [016_current_account_awareness.md AC-02](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-02](../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -67,7 +67,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Then:** No `Current:` line appears in any account block.
 - **Exit:** 0
 - **Source fn:** `acc33_accounts_current_param_and_json`
-- **Source:** [016_current_account_awareness.md AC-03](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-03](../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -78,7 +78,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Then:** Each account object in the JSON array has an `is_current` boolean field. The matching account has `"is_current": true`; others have `"is_current": false`.
 - **Exit:** 0
 - **Source fn:** `acc33_accounts_current_param_and_json`
-- **Source:** [016_current_account_awareness.md AC-04](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-04](../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -89,7 +89,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Then:** `work@acme.com`'s row shows `✓` flag. `alice@acme.com`'s row shows `*` flag. Other rows show ` ` (space).
 - **Exit:** 0
 - **Source fn:** `it013_active_divergence_shows_star`
-- **Source:** [016_current_account_awareness.md AC-05](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-05](../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -100,7 +100,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Then:** Only the active account (not current) shows `*`. When current = active (normal case), no `*` appears on any row.
 - **Exit:** 0
 - **Source fn:** `it013_active_divergence_shows_star`, `it015_current_equals_active_no_star`
-- **Source:** [016_current_account_awareness.md AC-06](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-06](../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -111,7 +111,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Then:** No `✓` on any row. The active account still shows `*`. No error.
 - **Exit:** 0
 - **Source fn:** `it014_creds_unreadable_no_checkmark_star_shown`
-- **Source:** [016_current_account_awareness.md AC-07](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-07](../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -122,7 +122,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Then:** Each object has `"is_current"` and `"is_active"` boolean fields. No `"active"` field (old name). Current account has `"is_current": true`; active has `"is_active": true`.
 - **Exit:** 0
 - **Source fn:** `it016_json_is_current_is_active`
-- **Source:** [016_current_account_awareness.md AC-08](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-08](../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -133,7 +133,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Then:** A synthetic row for `stranger@example.com` is prepended to the table with `✓`. Other stored accounts have no `✓`.
 - **Exit:** 0
 - **Source fn:** `it018_synthetic_row_when_no_saved_match`, `it025_synthetic_row_uses_claude_json_email`
-- **Source:** [016_current_account_awareness.md AC-09](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-09](../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -144,7 +144,7 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Then:** No duplicate row for `alice@acme.com`. The stored row carries the quota data. `✓` appears on the stored row.
 - **Exit:** 0
 - **Source fn:** `it247_synthetic_row_suppressed_name_collision`
-- **Source:** [016_current_account_awareness.md AC-10](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-10](../../../docs/feature/016_current_account_awareness.md)
 
 ---
 
@@ -155,4 +155,4 @@ Feature behavioral requirement test cases for `docs/feature/016_current_account_
 - **Then:** No account name appears more than once in the output table. The quota table produced by `fetch_all_quota()` enforces deduplication via lookup-then-insert.
 - **Exit:** 0
 - **Source fn:** `it018_synthetic_row_when_no_saved_match` (at-most-one invariant enforced by fixture design — no duplicate injected when stored account already has the matching token)
-- **Source:** [016_current_account_awareness.md AC-11](../../../../docs/feature/016_current_account_awareness.md)
+- **Source:** [016_current_account_awareness.md AC-11](../../../docs/feature/016_current_account_awareness.md)

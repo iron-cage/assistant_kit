@@ -7,7 +7,7 @@
 //! # Modules
 //!
 //! - [`paths`]: [`ClaudePaths`] — all `~/.claude/` canonical paths from `HOME`
-//! - [`process`]: [`ProcessInfo`] and process signal utilities
+//! - [`process`]: [`ProcessInfo`], [`ProcessMetrics`] (Linux), and process signal utilities
 
 #![ cfg_attr( not( feature = "enabled" ), allow( unused ) ) ]
 #![ warn( missing_docs ) ]

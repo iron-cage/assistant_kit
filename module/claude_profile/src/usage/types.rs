@@ -386,6 +386,28 @@ impl SubprocessEffort
   }
 }
 
+/// Map a model shorthand to its full model ID.
+///
+/// Returns `Some(Some(model_id))` for `opus`, `sonnet`, `haiku`;
+/// `Some(None)` for `default` (removes the `model` key from `settings.json`);
+/// `None` for unknown values.
+///
+/// Shared by `validate_set_model` (`.account.use` / `.usage` `set_model::` parameter)
+/// and the `.model` command handler. The model-ID table lives here exactly once.
+// `Option<Option<T>>` is intentional: tri-state (known model / remove key / unknown input).
+#[ allow( clippy::option_option ) ]
+pub( crate ) fn map_model_shorthand( s : &str ) -> Option< Option< &'static str > >
+{
+  match s
+  {
+    "opus"    => Some( Some( "claude-opus-4-6" ) ),
+    "sonnet"  => Some( Some( "claude-sonnet-4-6" ) ),
+    "haiku"   => Some( Some( "claude-haiku-4-5-20251001" ) ),
+    "default" => Some( None ),
+    _         => None,
+  }
+}
+
 /// Validate a `set_model::` string and resolve to the model ID to write.
 ///
 /// Returns `Ok(Some(model_id))` for `opus`, `sonnet`, `haiku`;
@@ -393,12 +415,6 @@ impl SubprocessEffort
 /// `Err(message)` for unknown values.
 pub( crate ) fn validate_set_model( s : &str ) -> Result< Option< &'static str >, String >
 {
-  match s
-  {
-    "opus"    => Ok( Some( "claude-opus-4-6" ) ),
-    "sonnet"  => Ok( Some( "claude-sonnet-4-6" ) ),
-    "haiku"   => Ok( Some( "claude-haiku-4-5-20251001" ) ),
-    "default" => Ok( None ),
-    _         => Err( format!( "set_model:: must be one of: opus, sonnet, haiku, default; got {s:?}" ) ),
-  }
+  map_model_shorthand( s )
+    .ok_or_else( || format!( "set_model:: must be one of: opus, sonnet, haiku, default; got {s:?}" ) )
 }

@@ -57,6 +57,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`clr ps` subcommand** — list all running Claude Code sessions in a unicode-box table
+  - Columns: `#`, `PID`, `Started`, `CPU%`, `RAM`, `State`, `Absolute Path`, `Task`
+  - Data sourced from `/proc/{pid}/stat`, `/proc/{pid}/status`, `~/.claude/projects/` JSONL logs
+  - "No active Claude Code sessions." message when 0 processes found; self-PID excluded from output
+  - Typo guard: `clr p` and `clr pss` trigger "Did you mean 'ps'?" and exit 1
+  - Linux-only (`#[cfg(target_os = "linux")]`); depends on `data_fmt` for table formatting
+  - Documented as command 06, user story 026
+
 - **`--output-file <PATH>` parameter** — write captured output to file (tee: stdout + file simultaneously)
   - Output is both printed to stdout and written to the specified path; file is created/truncated on each run
   - Env var fallback: `CLR_OUTPUT_FILE`
@@ -78,8 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Env var fallback: `CLR_EXPECT_RETRIES`
   - Documented as param 032, Group 2 (Runner Control)
 
-- **`--max-sessions <N>` parameter** — max concurrent claude sessions before blocking (0=unlimited, default: 20)
-  - Blocks up to 50 attempts (30s each) polling `/proc/*/cmdline` for running `claude` processes
+- **`--max-sessions <N>` parameter** — max concurrent claude sessions before blocking (0=unlimited, default: 25)
+  - Blocks up to 100 attempts (30s each) polling `/proc/*/cmdline` for running `claude` processes
   - Env var fallback: `CLR_MAX_SESSIONS`
   - Documented as param 033, Group 2 (Runner Control)
 
@@ -128,9 +136,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`guard_unknown_subcommand` threshold loosened** — now fires for any non-empty first token
+  - Previously required `first.len() >= 4`; short typos like `clr p` and `clr pss` were unguarded
+  - Safe because known subcommands (run, ask, isolated, refresh, ps) are dispatched before the guard
+  - First-char check in `is_close_typo` prevents false positives for common words
+
+- **Gate dedup: private `count_claude_sessions()` removed from `gate.rs`**
+  - Replaced with `find_claude_processes().len()` from `claude_core::process` — single canonical source
+  - No behavioral change; eliminates redundant `/proc` scanning logic
+
 - **`src/cli/mod.rs` split into focused submodules** (Plan 007 refactor)
   - `cli/help.rs` — all 4 help-printing functions (`print_help`, `print_ask_help`, `print_isolated_help`, `print_refresh_help`)
-  - `cli/gate.rs` — `count_claude_sessions()` + `wait_for_session_slot()` concurrency gate
+  - `cli/gate.rs` — `wait_for_session_slot()` concurrency gate (uses `find_claude_processes()` from `claude_core::process`)
   - `cli/mod.rs` reduced from ~600 lines to ~440 lines
 
 - **`--dangerously-skip-permissions` is now default-on** (task 058)

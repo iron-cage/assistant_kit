@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Document the five clr subcommands and their parameters, modes, and usage examples.
+- **Purpose**: Document the six clr subcommands and their parameters, modes, and usage examples.
 - **Responsibility**: Specify each command's behavior, accepted parameters, and usage.
-- **In Scope**: run, ask, isolated, refresh, help commands and their invocation modes.
+- **In Scope**: run, ask, isolated, refresh, help, ps commands and their invocation modes.
 - **Out of Scope**: Parameter definitions (-> `../param/`), type definitions (-> `../type/`), user stories (-> `../user_story/`).
 
 ### Responsibility Table
@@ -16,8 +16,9 @@
 | 03_refresh.md | Command spec: OAuth credential refresh without running a task |
 | 04_help.md | Command spec: print usage information and exit |
 | 05_ask.md | Command spec: semantic alias for run (identical defaults) |
+| 06_ps.md | Command spec: list running Claude Code sessions in a unicode-box table |
 
-### All Commands (5 total)
+### All Commands (6 total)
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
@@ -26,5 +27,6 @@
 | 3 | `refresh` | Refresh OAuth credentials without running a task | 3 | `clr refresh --creds creds.json` |
 | 4 | `help` | Print usage information and exit | 0 | `clr help` |
 | 5 | `ask` | Semantic alias for run (identical defaults) | 31 | `clr ask "What does X do?"` |
+| 6 | `ps` | List running Claude Code sessions | 0 | `clr ps` |
 
-**Total:** 5 commands
+**Total:** 6 commands

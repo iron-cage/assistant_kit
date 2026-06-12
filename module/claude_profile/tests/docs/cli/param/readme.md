@@ -4,7 +4,7 @@
 
 - **Purpose**: Document edge case coverage for individual clp parameters.
 - **Responsibility**: Index of per-parameter edge case test files covering parameter-level behavior.
-- **In Scope**: 53 active clp parameter edge case files (`name::` through `set_model::`, params 1–54 except param 2); `current::` (docs param 18) has no dedicated EC file — covered by `command/003_accounts.md` IT tests.
+- **In Scope**: 55 active clp parameter edge case files (`name::` through `set::`, params 1–55 except param 2); `current::` (docs param 18) has no dedicated EC file — covered by `command/003_accounts.md` IT tests.
 - **Numbering note**: Test doc numbering is offset +1 from `docs/cli/param/` starting at position 2 (test `003_format.md` ↔ production `002_format.md`). Test file `002_` does not exist; this is intentional — the offset arose when `current::` was excluded from EC coverage, shifting subsequent test IDs by one.
 - **Out of Scope**: Command-level tests (→ `command/`), parameter group interactions (→ `param_group/`).
 
@@ -65,3 +65,4 @@
 | 52_role.md | Edge cases for `role::` parameter (`.account.save` free-text metadata label) |
 | 53_for.md | Edge cases for `for::` parameter (`USER@MACHINE` target identity for `.account.assign`) |
 | 54_set_model.md | Edge cases for `set_model::` parameter (explicit session model override) |
+| 55_set.md | Edge cases for `set::` parameter (`.model` mode selector: absent = get, present = set) |

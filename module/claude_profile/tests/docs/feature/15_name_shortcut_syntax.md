@@ -49,7 +49,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Switches to `alice@home.com`. Identical result to `clp .account.use name::alice@home.com`. Exit 0.
 - **Exit:** 0
 - **Source fn:** `aw13_use_positional_bare_arg`
-- **Source:** [015_name_shortcut_syntax.md AC-01](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-01](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -60,7 +60,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Deletes `alice@oldco.com`. Identical result to `clp .account.delete name::alice@oldco.com`. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ad13_delete_positional_bare_arg`
-- **Source:** [015_name_shortcut_syntax.md AC-02](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-02](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -71,7 +71,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Shows one block for `alice@home.com`. Exit 0.
 - **Exit:** 0
 - **Source fn:** `acc29_accounts_positional_bare_arg`
-- **Source:** [015_name_shortcut_syntax.md AC-03](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-03](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -82,7 +82,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Shows limits for `alice@acme.com`. Exits 0 or 2 depending on data availability; not exit 1 (no validation error).
 - **Exit:** 0 or 2
 - **Source fn:** `lim09_limits_positional_bare_arg`
-- **Source:** [015_name_shortcut_syntax.md AC-04](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-04](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -93,7 +93,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Resolves to `carol@example.com`; switches successfully. Exit 0.
 - **Exit:** 0
 - **Source fn:** `aw14_use_prefix_resolves`, `acc30_accounts_prefix_resolves`, `lim10_limits_prefix_resolves`
-- **Source:** [015_name_shortcut_syntax.md AC-05](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-05](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -104,7 +104,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Exits 1 with a message listing the ambiguous matches (e.g., `alice@example.com`, `amy@example.com`).
 - **Exit:** 1
 - **Source fn:** `aw15_use_prefix_ambiguous_exits_1`
-- **Source:** [015_name_shortcut_syntax.md AC-06](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-06](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -115,7 +115,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Exits 2 with `account not found: 'ghost'`.
 - **Exit:** 2
 - **Source fn:** `aw03_switch_nonexistent_exits_2`
-- **Source:** [015_name_shortcut_syntax.md AC-07](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-07](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -126,7 +126,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Works identically to the positional form. Exit 0.
 - **Exit:** 0
 - **Source fn:** `aw01_switch_swaps_credentials`
-- **Source:** [015_name_shortcut_syntax.md AC-08](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-08](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -137,7 +137,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Dry-run output shows intent for `alice@home.com`. Both positional and `dry::` params are accepted together. Exit 0.
 - **Exit:** 0
 - **Source fn:** `aw02_switch_dry_run`
-- **Source:** [015_name_shortcut_syntax.md AC-09](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-09](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -148,7 +148,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** The Examples section shows `clp .account.use alice@acme.com` (without `name::` prefix).
 - **Exit:** 0
 - **Source fn:** `aw35_help_shows_positional_example`
-- **Source:** [015_name_shortcut_syntax.md AC-10](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-10](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -159,7 +159,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Resolves to `i1@wbox.pro` (exact local-part match). Does NOT exit 1 with ambiguous-prefix error. Exit 0.
 - **Exit:** 0
 - **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix`
-- **Source:** [015_name_shortcut_syntax.md AC-11](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-11](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -170,7 +170,7 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Resolves `alice` to `alice@acme.com`. Writes `_renewal_at` for that account. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ft17_account_renewal_single_prefix_resolves`
-- **Source:** [015_name_shortcut_syntax.md AC-12](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-12](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -181,4 +181,4 @@ Feature behavioral requirement test cases for `docs/feature/015_name_shortcut_sy
 - **Then:** Both tokens resolve via prefix: `alice` → `alice@acme.com`, `bob` → `bob@acme.com`. Both accounts get `_renewal_at` written. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ft18_account_renewal_comma_list_prefix_tokens`
-- **Source:** [015_name_shortcut_syntax.md AC-13](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [015_name_shortcut_syntax.md AC-13](../../../docs/feature/015_name_shortcut_syntax.md)

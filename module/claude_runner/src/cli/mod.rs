@@ -5,6 +5,7 @@ mod fence;
 mod credential;
 mod help;
 mod gate;
+mod ps;
 
 use claude_runner_core::{ ClaudeCommand, EffortLevel, ErrorKind, ExecutionOutput, IsolatedModel, signal_exit_code };
 use parse::{ CliArgs, ExpectStrategy };
@@ -16,6 +17,7 @@ pub use fence::strip_fences;
 use credential::{ run_isolated_command, run_refresh_command };
 use help::print_ask_help;
 use gate::wait_for_session_slot;
+pub( super ) use ps::dispatch_ps;
 
 pub( super ) use parse::{ parse_args, apply_env_vars };
 pub( super ) use builder::build_claude_command;
@@ -45,13 +47,11 @@ pub( super ) fn guard_unknown_subcommand( tokens : &[ String ] )
 {
   // Fix(BUG-212): `run` was absent from KNOWN; typing `clr running` produced no helpful error.
   // Root cause: KNOWN list was never updated when `run` became an explicit subcommand.
-  // Pitfall: `clr run` (len=3) bypasses is_identifier guard (requires len>=4), so it reaches
-  //   the run_cli dispatch before guard is called — that is correct and expected.
-  const KNOWN : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help" ];
+  const KNOWN : &[ &str ] = &[ "run", "ask", "isolated", "refresh", "help", "ps" ];
   if let Some( first ) = tokens.first()
   {
     let is_identifier = !first.starts_with( '-' )
-      && first.len() >= 4
+      && !first.is_empty()
       && first.chars().all( | c | c.is_alphanumeric() || c == '_' || c == '-' );
     if is_identifier
     {
@@ -122,8 +122,8 @@ pub( super ) fn run_built_command( builder : &ClaudeCommand, cli : &CliArgs )
   let verbosity = cli.verbosity.unwrap_or_default();
 
   // Concurrency gate: block before subprocess launch when max active claude sessions is reached.
-  // Default limit is 20; 0 = unlimited.  dry-run is bypassed by caller (never reaches here).
-  let max_sessions = cli.max_sessions.unwrap_or( 20 );
+  // Default limit is 25; 0 = unlimited.  dry-run is bypassed by caller (never reaches here).
+  let max_sessions = cli.max_sessions.unwrap_or( 25 );
   wait_for_session_slot( max_sessions, verbosity );
 
   if cli.trace || verbosity.shows_verbose_detail()

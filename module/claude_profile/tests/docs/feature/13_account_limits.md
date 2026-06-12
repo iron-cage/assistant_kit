@@ -31,7 +31,7 @@ Feature behavioral requirement test cases for `docs/feature/013_account_limits.m
 - **Then:** Output contains session (5h) utilization, weekly (7d) utilization, and rate-limit status (`allowed` / `allowed_warning` / `rejected`). Exit 0.
 - **Exit:** 0
 - **Source fn:** `lim_it1_active_account_exits_0_with_utilization_text`
-- **Source:** [013_account_limits.md AC-01](../../../../docs/feature/013_account_limits.md)
+- **Source:** [013_account_limits.md AC-01](../../../docs/feature/013_account_limits.md)
 
 ---
 
@@ -42,7 +42,7 @@ Feature behavioral requirement test cases for `docs/feature/013_account_limits.m
 - **Then:** Limits are shown for `alice@acme.com`, not the active account. Exit 0 or 2 depending on data availability.
 - **Exit:** 0
 - **Source fn:** manual — IT-4 in `tests/manual/readme.md`
-- **Source:** [013_account_limits.md AC-02](../../../../docs/feature/013_account_limits.md)
+- **Source:** [013_account_limits.md AC-02](../../../docs/feature/013_account_limits.md)
 
 ---
 
@@ -53,7 +53,7 @@ Feature behavioral requirement test cases for `docs/feature/013_account_limits.m
 - **Then:** Output is valid JSON containing utilization fields (5h, 7d percentages and reset timestamps).
 - **Exit:** 0
 - **Source fn:** `lim_it3_json_format_exits_0_with_valid_json`
-- **Source:** [013_account_limits.md AC-03](../../../../docs/feature/013_account_limits.md)
+- **Source:** [013_account_limits.md AC-03](../../../docs/feature/013_account_limits.md)
 
 ---
 
@@ -66,4 +66,4 @@ Feature behavioral requirement test cases for `docs/feature/013_account_limits.m
 - **Then:** Exits 2 with an actionable error. Never silently exits 0 with missing data.
 - **Exit:** 2
 - **Source fn:** `lim01_unknown_named_account_exits_2`, `lim02_no_active_credentials_exits_2`, `lim03_data_unavailable_exits_2_not_silent`, `lim05_existing_named_account_exits_2_with_data_unavailable`
-- **Source:** [013_account_limits.md AC-04](../../../../docs/feature/013_account_limits.md)
+- **Source:** [013_account_limits.md AC-04](../../../docs/feature/013_account_limits.md)

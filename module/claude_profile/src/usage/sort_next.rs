@@ -110,7 +110,14 @@ pub( crate ) fn find_next_for_strategy(
     NextStrategy::Endurance =>
     {
       let sorted = sort_indices( accounts, SortStrategy::Endurance, None, prefer, now_secs );
-      find_first_eligible( accounts, &sorted, now_secs, |_| true )
+      // Fix(BUG-287): endurance arm had no weekly-floor gate; |_| true allowed
+      //   weekly-exhausted (prefer_weekly ≤ 5.0) accounts to be selected when
+      //   unqualified tier sorted five_hour_left DESC placed them first.
+      // Root cause: BUG-206 fix added > 5.0 gate only to drain arm; endurance
+      //   arm was a parallel gap not fixed at the time.
+      // Pitfall: any new find_first_eligible call site must include a weekly-floor
+      //   gate — |_| true is not safe when weekly-exhausted accounts can appear.
+      find_first_eligible( accounts, &sorted, now_secs, |aq| prefer_weekly( aq, prefer ) > 5.0 )
     }
     NextStrategy::Drain =>
     {
@@ -1412,6 +1419,75 @@ mod tests
       result,
       Some( 1 ),
       "BUG-260: tied candidates must resolve alphabetically; alice@test.com (index 1) must win over zorro@test.com (index 0)",
+    );
+  }
+
+  /// FT-17/023 (BUG-287) — endurance never recommends `prefer_weekly ≤ 5.0` accounts.
+  ///
+  /// # Root Cause
+  /// Endurance arm used `|_| true` as the eligibility predicate, allowing weekly-exhausted
+  /// accounts (`prefer_weekly` ≤ 5.0) to be selected when they sorted first in the unqualified
+  /// tier (`five_hour_left` DESC). BUG-206 added the > 5.0 gate only to drain; endurance was
+  /// a parallel gap left unaddressed at the time.
+  ///
+  /// # Why Not Caught
+  /// No test covered the endurance + weekly-exhausted combination; drain was the only
+  /// call site with a gate test, and endurance was treated as a simpler parallel path.
+  ///
+  /// # Fix Applied
+  /// Replaced `|_| true` with `|aq| prefer_weekly(aq, prefer) > 5.0` in the endurance arm
+  /// `find_first_eligible` call at `sort_next.rs`.
+  ///
+  /// # Prevention
+  /// Any new `find_first_eligible` call site must include a weekly-floor gate — `|_| true`
+  /// is not safe when weekly-exhausted accounts can appear in the sorted slice.
+  ///
+  /// # Pitfall
+  /// Boundary is strictly > 5.0 (not ≥ 5.0); an account with exactly `prefer_weekly=5.0`
+  /// is treated as exhausted (🟡 yellow tier) and must be skipped, matching the UI threshold.
+  ///
+  /// Spec: [`tests/docs/feature/023_next_account_strategies.md` FT-17]
+  #[ doc = "bug_reproducer(BUG-287)" ]
+  #[ test ]
+  fn mre_bug287_endurance_skips_weekly_exhausted_unqualified()
+  {
+    let now = 0u64;
+    // yellow accounts: five_hour_util=10.0 → five_hour_left=90%; sorts FIRST in unqualified
+    //   tier (Endurance sorts five_hour_left DESC). All have prefer_weekly ≤ 5.0 → must be skipped.
+    // green accounts: five_hour_util=50.0 → five_hour_left=50%; sorts after yellow.
+    //   prefer_weekly = min(100-40, 100-40) = 60.0 → passes > 5.0 gate.
+
+    // Sub-scenario 1: prefer_weekly = 0.0 (both 7d periods at 100% utilization).
+    let yellow_0 = mk_aq_sort_weekly( "yellow_0@test.com", 10.0, 100.0, 100.0 );
+    let green_0  = mk_aq_sort_weekly( "green_0@test.com",  50.0,  40.0,  40.0 );
+
+    let idx = find_next_for_strategy( &[ yellow_0, green_0 ], NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!( idx.is_some(), "BUG-287: endurance must find green_0 even when yellow_0 (prefer_weekly=0.0) sorts first" );
+    assert_eq!(
+      idx.unwrap(), 1,
+      "BUG-287: endurance must skip yellow_0 (prefer_weekly=0.0) and pick green_0 (index 1); got {idx:?}",
+    );
+
+    // Sub-scenario 2: prefer_weekly = 3.0 (both 7d periods at 97% utilization).
+    let yellow_3 = mk_aq_sort_weekly( "yellow_3@test.com", 10.0, 97.0, 97.0 );
+    let green_3  = mk_aq_sort_weekly( "green_3@test.com",  50.0, 40.0, 40.0 );
+
+    let idx2 = find_next_for_strategy( &[ yellow_3, green_3 ], NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!( idx2.is_some(), "BUG-287: endurance must find green_3 even when yellow_3 (prefer_weekly=3.0) sorts first" );
+    assert_eq!(
+      idx2.unwrap(), 1,
+      "BUG-287: endurance must skip yellow_3 (prefer_weekly=3.0) and pick green_3 (index 1); got {idx2:?}",
+    );
+
+    // Sub-scenario 3: prefer_weekly = 5.0 exactly (boundary — > 5.0 is strict, not ≥).
+    let yellow_5 = mk_aq_sort_weekly( "yellow_5@test.com", 10.0, 95.0, 95.0 );
+    let green_5  = mk_aq_sort_weekly( "green_5@test.com",  50.0, 40.0, 40.0 );
+
+    let idx3 = find_next_for_strategy( &[ yellow_5, green_5 ], NextStrategy::Endurance, PreferStrategy::Any, now );
+    assert!( idx3.is_some(), "BUG-287: endurance must find green_5 even when yellow_5 (prefer_weekly=5.0) sorts first" );
+    assert_eq!(
+      idx3.unwrap(), 1,
+      "BUG-287: endurance must skip yellow_5 (prefer_weekly=5.0 — boundary: > 5.0 not ≥) and pick green_5 (index 1); got {idx3:?}",
     );
   }
 }

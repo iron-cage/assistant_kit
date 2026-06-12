@@ -58,8 +58,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | [052_role.md](052_role.md) | `role::` (metadata label) — free-text role label written to `{name}.json` at account save |
 | [053_for.md](053_for.md) | `for::` — `USER@MACHINE` target identity for `.account.assign` |
 | [054_set_model.md](054_set_model.md) | `set_model::` — explicit Claude Code session model write to `settings.json` |
+| [055_set.md](055_set.md) | `set::` — model shorthand to write on `.model`; absent = get mode |
 
-**Total:** 54 parameters
+**Total:** 55 parameters
 
 ### Overview Table
 
@@ -119,8 +120,9 @@ All `clp` CLI parameters with type, default, and command coverage.
 | 52 | `role::` (metadata label) | `string` | `""` | Any string | User-defined role label at account save | 1 cmd |
 | 53 | `for::` | `string` | `$USER@resolve_hostname()` | `USER@MACHINE` | Target host+user identity for `.account.assign` | 1 cmd |
 | 54 | `set_model::` | `enum` | *(omit)* | `opus`, `sonnet`, `haiku`, `default` | Explicit session model write to `settings.json` | 2 cmds |
+| 55 | `set::` | `enum` | *(omit)* | `opus`, `sonnet`, `haiku`, `default` | Mode selector on `.model`: absent = get, present = set | 1 cmd |
 
-*Param 1 = cross-command account selector (no formal group); params 48, 52 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file)*
+*Param 1 = cross-command account selector (no formal group); params 48, 52 = Group 006 Account Targeting; params 49–51 = ungrouped (`.account.renewal`-specific); param 53 = ungrouped (`.account.assign`-specific); param 55 = ungrouped (`.model`-specific); param 2 = Output Control group; params 5–18, 28–31 = Field Presence group; params 19–23, 34–36, 54 = Fetch Behavior group; param 24 = ungrouped; params 25–27, 32 = Sort Control group; params 33, 37–47 = Display Control group (contains both display-toggle params and pipeline-coupled request-constraint row filters — see Pipeline Stage attribute in each param file)*
 
 ### See Also
 

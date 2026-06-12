@@ -23,7 +23,7 @@ pub( crate ) use api::{
   attempt_expired_token_refresh,
   PreSwitchOutcome,
 };
-pub( crate ) use types::validate_set_model;
+pub( crate ) use types::{ validate_set_model, map_model_shorthand };
 pub use api::usage_routine;
 
 // ── Test support ──────────────────────────────────────────────────────────────

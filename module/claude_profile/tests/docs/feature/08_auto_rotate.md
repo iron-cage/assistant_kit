@@ -31,7 +31,7 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 - **Then:** Returns the name of the inactive account with `expires_at_ms = 9000`. The lower-expiry inactive account is not selected.
 - **Exit:** Ok(name)
 - **Source fn:** `auto_rotate_picks_account_with_highest_expires_at`, `auto_rotate_returns_switched_account_name`
-- **Source:** [008_auto_rotate.md AC-01](../../../../docs/feature/008_auto_rotate.md)
+- **Source:** [008_auto_rotate.md AC-01](../../../docs/feature/008_auto_rotate.md)
 
 ---
 
@@ -43,7 +43,7 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 - **Then:** Returns `NotFound` in both cases. No panic, no credentials mutation.
 - **Exit:** Err(NotFound)
 - **Source fn:** `auto_rotate_fails_when_no_inactive_accounts`, `auto_rotate_fails_when_account_store_empty`
-- **Source:** [008_auto_rotate.md AC-02](../../../../docs/feature/008_auto_rotate.md)
+- **Source:** [008_auto_rotate.md AC-02](../../../docs/feature/008_auto_rotate.md)
 
 ---
 
@@ -54,7 +54,7 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 - **Then:** `~/.claude/.credentials.json` now contains the inactive account's credentials. The `_active_{hostname}_{user}` marker is updated to the selected account name.
 - **Exit:** Ok(name)
 - **Source fn:** `auto_rotate_switches_to_inactive_account`
-- **Source:** [008_auto_rotate.md AC-03](../../../../docs/feature/008_auto_rotate.md)
+- **Source:** [008_auto_rotate.md AC-03](../../../docs/feature/008_auto_rotate.md)
 
 ---
 
@@ -65,4 +65,4 @@ Feature behavioral requirement test cases for `docs/feature/008_auto_rotate.md` 
 - **Then:** Returns the name of `b` (expires_at_ms=9000). Account `c` is not selected despite being inactive with higher expiry than `a`.
 - **Exit:** Ok("b")
 - **Source fn:** `auto_rotate_picks_max_from_multiple_candidates`
-- **Source:** [008_auto_rotate.md AC-01](../../../../docs/feature/008_auto_rotate.md)
+- **Source:** [008_auto_rotate.md AC-01](../../../docs/feature/008_auto_rotate.md)

@@ -65,7 +65,7 @@ pub fn run_cli()
 {
   use cli::{
     print_help, dispatch_run,
-    dispatch_ask, dispatch_isolated, dispatch_refresh,
+    dispatch_ask, dispatch_isolated, dispatch_refresh, dispatch_ps,
     guard_unknown_subcommand,
   };
 
@@ -105,6 +105,7 @@ pub fn run_cli()
   if tokens.first().map( String::as_str ) == Some( "ask" )      { dispatch_ask( &tokens ); }
   if tokens.first().map( String::as_str ) == Some( "isolated" ) { dispatch_isolated( &tokens ); }
   if tokens.first().map( String::as_str ) == Some( "refresh" )  { dispatch_refresh( &tokens ); }
+  if tokens.first().map( String::as_str ) == Some( "ps" )       { dispatch_ps( &tokens ); }
 
   guard_unknown_subcommand( &tokens );
 

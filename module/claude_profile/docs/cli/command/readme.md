@@ -10,8 +10,9 @@
 | [002_credentials.md](002_credentials.md) | Credentials namespace: `.credentials.status` |
 | [006_usage.md](006_usage.md) | Usage namespace: `.usage` |
 | [004_paths.md](004_paths.md) | Paths namespace: `.paths` |
+| [007_model.md](007_model.md) | Model namespace: `.model` |
 
-**Total:** 16 commands (15 visible + 1 hidden)
+**Total:** 17 commands (16 visible + 1 hidden)
 
 ### All Commands
 
@@ -33,6 +34,7 @@
 | 14 | `.account.renewal` | Set/clear billing renewal timestamp override for one or all accounts | 6 | `clp .account.renewal name::alice@acme.com from_now::+0m` |
 | 15 | `.account.inspect` | Live diagnostic inspection of identity, subscription, and org fields | 4 | `clp .account.inspect` |
 | 16 | `.account.assign` | Write the per-machine active-account marker for any `USER@MACHINE` without credential rotation | 3 | `clp .account.assign name::alice@corp.com` |
+| 17 | `.model` | Get or set the Claude Code session model in `~/.claude/settings.json` | 2 | `clp .model set::opus` |
 
 ### Quick Reference
 
@@ -47,7 +49,7 @@
 | Count | Commands |
 |-------|----------|
 | 0 | `.`, `.help` |
-| 2 | `.account.rotate` |
+| 2 | `.account.rotate`, `.model` |
 | 3 | `.paths`, `.account.delete`, `.token.status`, `.account.limits`, `.account.relogin`, `.account.assign` |
 | 4 | `.account.inspect` |
 | 5 | `.account.save` |

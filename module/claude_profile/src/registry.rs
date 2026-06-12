@@ -14,6 +14,7 @@ use crate::commands::
   account_rotate_routine,
   account_inspect_routine,
   account_assign_routine,
+  model_routine,
   token_status_routine,
   paths_routine,
   usage_routine,
@@ -21,7 +22,7 @@ use crate::commands::
 
 /// Register all `claude_profile` commands into an existing registry.
 ///
-/// Registers 14 commands (credentials status, account management including limits, relogin, rotate, renewal, inspect, and assign, token status, paths, usage).
+/// Registers 15 commands (credentials status, account management including limits, relogin, rotate, renewal, inspect, and assign, model get/set, token status, paths, usage).
 /// The `.` (dot) hidden command and `.help` are binary-specific — they are NOT
 /// included here.
 ///
@@ -154,6 +155,12 @@ pub fn register_commands( registry : &mut unilang::registry::CommandRegistry )
       trc(),
     ],
     Box::new( account_assign_routine ) );
+  reg_cmd( registry, ".model", "Get or set the Claude Code session model in ~/.claude/settings.json",
+    vec![
+      reg_arg_opt( "set", Kind::String ).with_description( "Set model: `opus` (claude-opus-4-6), `sonnet` (claude-sonnet-4-6), `haiku` (claude-haiku-4-5-20251001), `default` (removes override)" ),
+      fmt(),
+    ],
+    Box::new( model_routine ) );
   reg_cmd( registry, ".token.status",   "Show active OAuth token expiry classification",                  vec![ fmt(), thr(), trc() ], Box::new( token_status_routine   ) );
   reg_cmd( registry, ".paths",          "Show all resolved ~/.claude/ canonical file paths",
     vec![

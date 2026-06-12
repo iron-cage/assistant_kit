@@ -36,6 +36,7 @@
 | 023_output_file_capture.md | User story: tee captured stdout to a file with --output-file |
 | 024_enum_output_validation.md | User story: validate print-mode output against a fixed enum with --expect |
 | 025_concurrency_gate.md | User story: limit concurrent Claude Code sessions with --max-sessions |
+| 026_session_listing.md | User story: list running Claude Code sessions with clr ps |
 
 ### Index
 
@@ -66,6 +67,7 @@
 | 023 | Output File Capture | `--output-file` | `run`, `ask` |
 | 024 | Enum Output Validation | `--expect`, `--expect-strategy`, `--expect-retries` | `run`, `ask` |
 | 025 | Session Concurrency Gate | `--max-sessions` | `run`, `ask` |
+| 026 | Session Listing | (none) | `ps` |
 
 ### Adding User Stories
 

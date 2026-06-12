@@ -73,7 +73,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** The account's row appears in the table; the last visible column shows a short error reason in parentheses (e.g., `(missing accessToken)`); the string does NOT begin with `HTTP transport error:`; all other accounts (none here) are still processed. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ft01_missing_access_token_short_error`
-- **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-03](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -85,7 +85,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** 0
 - **Source fn:** `ft02_lim_it_http_401_shortens_to_auth_expired`
 - **Note:** Fix for BUG-152; implemented by TSK-153 (`shorten_error` HTTP 401 branch).
-- **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-03](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -96,7 +96,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Stdout contains both `alice@a.com` and `bob@a.com`. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ft03_both_accounts_appear_regardless_of_active`
-- **Source:** [009_token_usage.md AC-01](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-01](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -107,7 +107,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** A line in stdout contains `✓` and `work@a.com`; no line contains `✓` and `alice@a.com`. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ft04_check_mark_follows_live_token_not_active`
-- **Source:** [009_token_usage.md AC-02](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-02](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -118,7 +118,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Exits 2; stderr contains a non-empty error message.
 - **Exit:** 2
 - **Source fn:** `ft05_unreadable_credential_store_exits_2`
-- **Source:** [009_token_usage.md AC-06](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-06](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -130,7 +130,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** n/a (unit test — function return assertion)
 - **Note:** TSK-184 deleted `find_recommendation()`; tiebreaker now verified via `find_next_for_strategy()` with `NextStrategy::Endurance`.
 - **Source fn:** `test_ft06_009_endurance_tiebreaker_higher_expiry_wins` (in `src/usage/sort.rs`)
-- **Source:** [009_token_usage.md AC-09](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-09](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -144,7 +144,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Returns `"🔴"` for A, `"🟢"` for B, `"🟡"` for C.
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_status_emoji_red`, `test_status_emoji_green`, `test_status_emoji_yellow`
-- **Source:** [009_token_usage.md AC-18](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-18](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -158,7 +158,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** A returns `"🟡"`; B returns `"🟢"`; C returns `"🟡"`. The 5h boundary is `left > 15.0`; the 7d boundary is `left > 5.0` (both strict greater-than).
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_status_emoji_boundary`
-- **Source:** [009_token_usage.md AC-19](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-19](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -169,7 +169,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Exits 0. The output string does NOT contain `🔴`, `🟡`, or `🟢`. The JSON array is present and valid.
 - **Exit:** 0
 - **Source fn:** `test_status_emoji_absent_in_json`
-- **Source:** [009_token_usage.md AC-20](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-20](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -182,7 +182,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Live:** yes (lim_it — requires expired token + live account with billing data)
 - **Note:** Fix(BUG-171): `apply_refresh()` previously left `aq.account` stale after refresh; `~Renews` reverted to `?` even though the account had valid billing data.
 - **Source fn:** `mre_bug_171_account_populated_after_refresh` (MRE test in `tests/cli/usage_test.rs`)
-- **Source:** [009_token_usage.md](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -195,7 +195,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Values above threshold produce `🟢` prefix; values at or below produce `🟡` prefix. Each dimension uses its own threshold independently.
 - **Exit:** n/a (unit test — string return assertion)
 - **Source fn:** `test_ft11_009_per_column_emoji_prefix_three_cases` (in `src/usage/format.rs`)
-- **Source:** [009_token_usage.md AC-21](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-21](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -209,7 +209,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - `cols::+7d_son_reset`: stdout contains `7d Son Reset` in the table header. Exit 0.
 - **Exit:** 0
 - **Source fn:** `it117_ft12_cols_plus_reveals_sub_and_7d_son_reset_columns` (in `tests/cli/usage_test.rs`)
-- **Source:** [009_token_usage.md AC-22](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-22](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -220,7 +220,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Exit 1. Stderr contains an error message naming valid column IDs (e.g., `sub`, `7d_son_reset`).
 - **Exit:** 1
 - **Source fn:** `it082_cols_unknown_id_exit_1` (in `tests/cli/usage_test.rs`)
-- **Source:** [009_token_usage.md AC-23](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-23](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -234,7 +234,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Output order is `carol@x.com` (🟢) → `bob@x.com` (🟡) → `alice@x.com` (🔴). The tier ordering 🟢 → 🟡 → 🔴 is preserved regardless of alphabetical order.
 - **Exit:** n/a (unit test — order assertion on sorted list)
 - **Source fn:** `test_three_tier_grouping_green_before_yellow_before_red` (in `src/usage/mod.rs`)
-- **Source:** [009_token_usage.md AC-24](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-24](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -248,7 +248,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Returns `"1d 1h"` (minutes dropped; 2 units shown), `"3h 19m"` (seconds dropped; 2 units shown), `"23m"` (1 unit — within the cap). No input produces a 3-component string.
 - **Exit:** n/a (unit test — string return assertion)
 - **Source fn:** `test_format_duration_secs_caps_at_two_units` (in `src/output.rs`)
-- **Source:** [009_token_usage.md AC-25](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-25](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -265,7 +265,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Edge case:** An account with both `5h Left ≤ 15%` AND `7d Left ≤ 5%` falls in the h-exhausted sub-group (verified by `c@x.com` if `seven_day.utilization` is set ≥ 95%).
 - **Exit:** n/a (unit test — position assertion via `output.find()`)
 - **Source fn:** `test_ft16_009_yellow_tier_session_before_weekly` (in `src/usage/mod.rs`)
-- **Source:** [009_token_usage.md AC-26](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-26](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -276,7 +276,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Returns `"in 3h 47m"` — no `~` prefix, exact duration format.
 - **Exit:** n/a (unit test)
 - **Source fn:** `rl_exact_from_renewal_at`, `rl_estimate_from_org_created_at`, `rl_auto_advance_past_renewal_at`, `rl_absent_returns_question` (in `src/usage/format.rs`)
-- **Source:** [009_token_usage.md AC-27](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-27](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -287,7 +287,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Then:** Returns `"in 2h +7d"` — weekly reset is soonest strategic event.
 - **Exit:** n/a (unit test)
 - **Source fn:** `ne_tok_excluded_after_tsk228`, `ne_7d_soonest`, `ne_renewal_soonest_exact`, `ne_renewal_soonest_estimate`, `ne_all_none_returns_dash` (in `src/usage/format.rs`)
-- **Source:** [009_token_usage.md AC-28](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-28](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -299,7 +299,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it147_json_renewal_secs_present`, `it153_json_renewal_fields_with_renewal_at` (in `tests/cli/usage_test.rs`)
-- **Source:** [009_token_usage.md AC-29](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-29](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -317,7 +317,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** n/a (unit test)
 - **Note:** Fix for BUG-220. The defect had `render_text()` using `last_mut()` positional overwrite (hitting `~Renews` as the last non-host/role column) and `render_tsv()` explicitly pushing `error_str` for the renews cell. Both renderers must preserve `renews_str` (from `OauthAccountData`) regardless of `result` error state.
 - **Source fn:** `mre_bug_220_renews_preserved_for_429_accounts` (in `src/usage/render.rs`)
-- **Source:** [009_token_usage.md AC-03](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-03](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -335,7 +335,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** n/a (unit test — string content assertion)
 - **Note:** `is_occupied_elsewhere = true` sets `@` only when neither `is_current` nor `is_active` is true (priority: `✓` > `*` > `@` > `→` > blank).
 - **Source fn:** `test_ft21_009_occupied_elsewhere_at_flag` (in `src/usage/render.rs`)
-- **Source:** [009_token_usage.md AC-30](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-30](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -353,7 +353,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** n/a (unit test)
 - **Note:** Fix(BUG-233) Class A: fetch layer now overrides `result` to `Err("no subscription")` after `account_handle.join()` when `billing_type == "none"`. The previous BUG-231 display-layer workaround (`error_label` in `format.rs`) is deleted — superseded by this data-layer fix (AC-31).
 - **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render.rs`); `test_class_a_billing_none_override_predicate` (in `src/usage/fetch.rs`)
-- **Source:** [009_token_usage.md AC-03, AC-31](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-03, AC-31](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -370,7 +370,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
   - Despite `org_created_at` being present and parseable, no billing estimate is shown — the subscription is cancelled.
 - **Exit:** n/a (unit test)
 - **Source fn:** `test_ft23_009_renews_dash_for_cancelled_subscription` (in `src/usage/render.rs`)
-- **Source:** [009_token_usage.md AC-27, AC-31](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-27, AC-31](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -386,7 +386,7 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** n/a (structural unit test — assertion failure if positions violate ordering)
 - **Note:** BUG-234 fix. The bug was introduced when the BUG-233 Class A override was added after the trace block rather than before it. Structural test prevents regression without requiring live API calls. Source ordering is the correctness invariant — at runtime, any `billing_type="none"` override applied before the trace emission guarantees trace-result consistency.
 - **Source fn:** `mre_bug234_result_trace_after_billing_type_override` (in `src/usage/fetch.rs`)
-- **Source:** [009_token_usage.md AC-31](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-31](../../../docs/feature/009_token_usage.md)
 
 ---
 
@@ -403,4 +403,4 @@ Feature behavioral requirement test cases for `docs/feature/009_token_usage.md` 
 - **Exit:** n/a (unit test)
 - **Note:** Fix for BUG-244. The model override was previously only reachable from `.account.use` (`account_ops.rs`). This test verifies the `.usage` path also applies it. Reuses the existing `apply_model_override()` function (tested by BUG-238 MRE) but validates it is called from the `.usage` pipeline.
 - **Source fn:** `mre_bug244_usage_routine_never_calls_apply_model_override` (in `src/usage/api.rs`)
-- **Source:** [009_token_usage.md AC-32](../../../../docs/feature/009_token_usage.md)
+- **Source:** [009_token_usage.md AC-32](../../../docs/feature/009_token_usage.md)

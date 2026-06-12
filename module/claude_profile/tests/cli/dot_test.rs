@@ -11,8 +11,8 @@
 //! | dot01 | `dot01_dot_and_help_byte_identical`     | `.` and `.help` stdout byte-identical         | P   |
 //! | dot02 | `dot02_dot_exits_0`                     | `.` exits 0                                   | P   |
 //! | dot03 | `dot03_dot_hidden_from_listing`         | no bare `.` command row in listing            | P   |
-//! | dot04 | `dot04_all_visible_commands_present`    | 11 commands present; removed commands absent  | P   |
-//! | dot05 | `dot05_exactly_eleven_command_rows`     | exactly 11 lines starting with `"    ."`      | P   |
+//! | dot04 | `dot04_all_visible_commands_present`    | 12 commands present; removed commands absent  | P   |
+//! | dot05 | `dot05_exactly_twelve_command_rows`     | exactly 12 lines starting with `"    ."`      | P   |
 //! | dot06 | `dot06_usage_line_present`              | stdout contains `"Usage: clp <command>"`      | P   |
 //! | dot07 | `dot07_unknown_param_ignored`           | `. foo::bar` output identical to bare `.`     | P   |
 //! | dot08 | `dot08_output_stable_across_invocations`| 3 invocations all byte-identical              | P   |
@@ -20,6 +20,22 @@
 //! | dot10 | `dot10_no_per_command_param_syntax`     | no `[`/`]` in command rows                   | P   |
 //! | dot11 | `dot11_options_section_hints`           | format/dry/name hints in Options section      | P   |
 //! | dot12 | `dot12_no_ansi_in_subprocess_output`    | zero ESC (`0x1b`) bytes in stdout             | P   |
+//!
+//! ## Maintenance: adding or removing a command
+//!
+//! `print_usage()` in `src/cli.rs` is a **manually maintained hardcoded list** —
+//! it is decoupled from the command registry in `src/lib.rs`. When a command is
+//! added or removed, THREE places must be updated together or dot04/dot05 will fail:
+//!
+//! 1. **`src/lib.rs` `register_commands()`** — add/remove the `Command::new(".name")` entry.
+//! 2. **`src/cli.rs` `print_usage()`** — add/remove the matching `CommandEntry` in the
+//!    correct `CommandGroup` (e.g., "Status & info", "Account management").
+//! 3. **This file** — update the `visible` array in `dot04` and change the
+//!    `assert_eq!(count, N, ...)` literal in `dot05` to the new total.
+//!
+//! Failure symptom when step 2 is skipped: `it13`-style test fails (command absent
+//! from help output). Failure symptom when step 3 is skipped: `dot05` assertion
+//! mismatch on the command-row count.
 
 use crate::cli_runner::{ run_cs, stdout, assert_exit };
 
@@ -61,7 +77,7 @@ fn dot03_dot_hidden_from_listing()
   );
 }
 
-// ── dot04 — all 11 visible commands present; removed names absent ─────────────
+// ── dot04 — all 12 visible commands present; removed names absent ─────────────
 
 #[ test ]
 fn dot04_all_visible_commands_present()
@@ -81,6 +97,7 @@ fn dot04_all_visible_commands_present()
     ".token.status",
     ".paths",
     ".usage",
+    ".model",
   ];
   for name in &visible
   {
@@ -91,15 +108,15 @@ fn dot04_all_visible_commands_present()
   assert!( !text.contains( ".account.status" ), ".account.status must not appear (removed)" );
 }
 
-// ── dot05 — exactly 11 command rows in listing ────────────────────────────────
+// ── dot05 — exactly 12 command rows in listing ────────────────────────────────
 
 #[ test ]
-fn dot05_exactly_eleven_command_rows()
+fn dot05_exactly_twelve_command_rows()
 {
   let out   = run_cs( &[ "." ] );
   let text  = stdout( &out );
   let count = text.lines().filter( |l| l.starts_with( "    ." ) ).count();
-  assert_eq!( count, 11, "expected 11 command rows starting with '    .', got {count}" );
+  assert_eq!( count, 12, "expected 12 command rows starting with '    .', got {count}" );
 }
 
 // ── dot06 — usage line includes `<command>` syntax ───────────────────────────

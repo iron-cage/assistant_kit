@@ -37,7 +37,7 @@ Feature behavioral requirement test cases for `docs/feature/012_live_credentials
 - **Then:** Exits 0. Output shows status fields without requiring any saved account store.
 - **Exit:** 0
 - **Source fn:** `cred01_no_credential_store_succeeds`
-- **Source:** [012_live_credentials_status.md AC-01](../../../../docs/feature/012_live_credentials_status.md)
+- **Source:** [012_live_credentials_status.md AC-01](../../../docs/feature/012_live_credentials_status.md)
 
 ---
 
@@ -48,7 +48,7 @@ Feature behavioral requirement test cases for `docs/feature/012_live_credentials
 - **Then:** Output contains lines for `Account:`, `Sub:`, `Tier:`, `Token:`, `Expires:`, `Email:`. No `File:`, `Saved:`, `Display:`, `Role:`, `Billing:`, `Model:` lines by default.
 - **Exit:** 0
 - **Source fn:** `cred02_default_with_claude_json`
-- **Source:** [012_live_credentials_status.md AC-02](../../../../docs/feature/012_live_credentials_status.md)
+- **Source:** [012_live_credentials_status.md AC-02](../../../docs/feature/012_live_credentials_status.md)
 
 ---
 
@@ -59,7 +59,7 @@ Feature behavioral requirement test cases for `docs/feature/012_live_credentials
 - **Then:** Output is valid JSON with all 12 keys: `subscription`, `tier`, `token`, `expires_in_secs`, `email`, `account`, `file`, `saved`, `display_name`, `role`, `billing`, `model`.
 - **Exit:** 0
 - **Source fn:** `cred03_format_json`
-- **Source:** [012_live_credentials_status.md AC-03](../../../../docs/feature/012_live_credentials_status.md)
+- **Source:** [012_live_credentials_status.md AC-03](../../../docs/feature/012_live_credentials_status.md)
 
 ---
 
@@ -70,7 +70,7 @@ Feature behavioral requirement test cases for `docs/feature/012_live_credentials
 - **Then:** Exits 2. Error message names the full expected path to `.credentials.json`.
 - **Exit:** 2
 - **Source fn:** `cred04_missing_credentials_file_exits_nonzero`
-- **Source:** [012_live_credentials_status.md AC-04](../../../../docs/feature/012_live_credentials_status.md)
+- **Source:** [012_live_credentials_status.md AC-04](../../../docs/feature/012_live_credentials_status.md)
 
 ---
 
@@ -81,7 +81,7 @@ Feature behavioral requirement test cases for `docs/feature/012_live_credentials
 - **Then:** `Email:` shows `N/A`. `Account:` shows `N/A`. No error.
 - **Exit:** 0
 - **Source fn:** `cred05_no_claude_json_shows_na`
-- **Source:** [012_live_credentials_status.md AC-05](../../../../docs/feature/012_live_credentials_status.md)
+- **Source:** [012_live_credentials_status.md AC-05](../../../docs/feature/012_live_credentials_status.md)
 
 ---
 
@@ -92,7 +92,7 @@ Feature behavioral requirement test cases for `docs/feature/012_live_credentials
 - **Then:** Only the `Token:` line appears in output. All suppressed fields are absent.
 - **Exit:** 0
 - **Source fn:** `cred06_suppress_all_default_on`
-- **Source:** [012_live_credentials_status.md AC-06](../../../../docs/feature/012_live_credentials_status.md)
+- **Source:** [012_live_credentials_status.md AC-06](../../../docs/feature/012_live_credentials_status.md)
 
 ---
 
@@ -103,4 +103,4 @@ Feature behavioral requirement test cases for `docs/feature/012_live_credentials
 - **Then:** Output appends a `File:` line (showing the path to `.credentials.json`) and a `Saved:` line (e.g., `2 account(s)`) after the default-on fields.
 - **Exit:** 0
 - **Source fn:** `cred07_opt_in_file_and_saved`
-- **Source:** [012_live_credentials_status.md AC-07](../../../../docs/feature/012_live_credentials_status.md)
+- **Source:** [012_live_credentials_status.md AC-07](../../../docs/feature/012_live_credentials_status.md)

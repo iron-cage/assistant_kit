@@ -13,7 +13,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 
 | File | Responsibility |
 |------|----------------|
-| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 34 feature docs |
+| 00_doc_structure.md | DT cases for Rule 9a structural compliance — all 35 feature docs |
 | 01_account_store_init.md | FT cases for Feature 001 — Account Store Initialization |
 | 02_account_save.md | FT cases for Feature 002 — Save Account |
 | 03_account_list.md | FT cases for Feature 003 — Accounts |
@@ -48,6 +48,7 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 32_account_assign.md | FT cases for Feature 032 — Account Marker Assignment |
 | 33_quota_cache.md | FT cases for Feature 033 — Quota Cache Fallback |
 | 34_explicit_session_model_override.md | FT cases for Feature 034 — Explicit Session Model Override |
+| 35_model_command.md | FT cases for Feature 035 — Dedicated Model Get/Set Command |
 
 ### Coverage Summary
 
@@ -76,11 +77,11 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 020_usage_sort_strategies | [020_usage_sort_strategies.md](20_usage_sort_strategies.md) | FT-01 … FT-17 | ✅ |
 | 021_extended_snapshot_fields | [021_extended_snapshot_fields.md](21_extended_snapshot_fields.md) | FT-01 … FT-09 | ✅ |
 | 022_org_identity_snapshot | [022_org_identity_snapshot.md](22_org_identity_snapshot.md) | FT-01 … FT-11 | ✅ |
-| 023_next_account_strategies | [023_next_account_strategies.md](23_next_account_strategies.md) | FT-01 … FT-15 | ✅ |
+| 023_next_account_strategies | [023_next_account_strategies.md](23_next_account_strategies.md) | FT-01 … FT-17 | ✅ |
 | 024_session_touch | [024_session_touch.md](24_session_touch.md) | FT-01 … FT-17 | ✅ |
 | 025_per_machine_active_marker | [025_per_machine_active_marker.md](25_per_machine_active_marker.md) | FT-01 … FT-12 | ✅ |
 | 026_subprocess_model_effort | [026_subprocess_model_effort.md](26_subprocess_model_effort.md) | FT-01 … FT-21 | ✅ |
-| 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](27_account_use_post_switch_touch.md) | FT-01 … FT-19 | ✅ |
+| 027_account_use_post_switch_touch | [027_account_use_post_switch_touch.md](27_account_use_post_switch_touch.md) | FT-01 … FT-20 | ✅ |
 | 028_usage_row_filtering | [028_usage_row_filtering.md](28_usage_row_filtering.md) | FT-01 … FT-17 | ✅ |
 | 029_account_host_metadata | [029_account_host_metadata.md](29_account_host_metadata.md) | FT-01 … FT-10 | ✅ |
 | 030_account_renewal_override | [030_account_renewal_override.md](30_account_renewal_override.md) | FT-01 … FT-15 | ✅ |
@@ -88,5 +89,10 @@ Feature behavioral requirement test cases for `claude_profile`. Each file covers
 | 032_account_assign | [032_account_assign.md](32_account_assign.md) | FT-01 … FT-12 | ✅ |
 | 033_quota_cache | [033_quota_cache.md](33_quota_cache.md) | FT-01 … FT-11 | ✅ |
 | 034_explicit_session_model_override | [034_explicit_session_model_override.md](34_explicit_session_model_override.md) | FT-01 … FT-11 | ✅ |
+| 035_model_command | [035_model_command.md](35_model_command.md) | FT-01 … FT-12 | ✅ |
 
-**Total:** 35 specs — 34 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+**Total:** 36 specs — 35 per-feature FT specs (behavioral) + 1 collection-level DT spec (doc structure compliance).
+
+### Cross-Reference Depth
+
+This directory is **3 levels** deep from the module root (`tests/docs/feature/`). Source cross-refs to `docs/feature/` must use `../../../docs/feature/NNN_*.md` (3-UP). Do NOT use `../../../../` (4-UP) — that overshoots into the parent of the module root. By contrast, `tests/docs/cli/command/` and `tests/docs/cli/param/` are 4 levels deep and correctly use `../../../../`.
