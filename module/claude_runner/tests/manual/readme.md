@@ -474,10 +474,45 @@ CLR_TIMEOUT=10 cargo run -p claude_runner -- --dry-run "test"
 
 **Expected:** Exit 0. Env var applied silently; no error.
 
+### TC-61: `clr ps` — No Sessions (Container Only)
+```sh
+cargo run -p claude_runner -- ps
+```
+
+**Expected:** Prints `No active Claude Code sessions.` to stdout. Exit code 0. Must run in container where 0 `claude` processes exist.
+
+### TC-62: `clr ps` — Sessions Present
+```sh
+cargo run -p claude_runner -- ps
+```
+
+**Expected:** Unicode-box table with columns `#`, `PID`, `Started`, `CPU%`, `RAM`, `State`, `Absolute Path`, `Task`. First line contains `┌`. Exit code 0. Requires ≥1 live `claude` process.
+
+### TC-63: `clr ps` — Self-Exclusion
+```sh
+cargo run -p claude_runner -- ps
+```
+
+**Expected:** The PID of the `clr ps` process itself does not appear as a row in the output table. Exit code 0.
+
+### TC-64: `clr p` — Typo Guard
+```sh
+cargo run -p claude_runner -- p
+```
+
+**Expected:** stderr contains `Did you mean 'ps'?`. Exit code 1.
+
+### TC-65: `clr ps --unknown` — Rejects Arguments
+```sh
+cargo run -p claude_runner -- ps --unknown
+```
+
+**Expected:** stderr error message about unexpected arguments. Exit code 1.
+
 ## Pass Criteria
 
-All TC-1 through TC-60 must pass without unexpected errors or panics.
-TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-60 are runnable without a configured Claude API key.
+All TC-1 through TC-65 must pass without unexpected errors or panics.
+TC-7 through TC-11, TC-13 through TC-20, TC-23 through TC-65 are runnable without a configured Claude API key (except TC-61 requires container, TC-62/TC-63 require live sessions).
 TC-1 through TC-6, TC-12, TC-21, TC-22 require Claude binary and API key for full execution test.
 
 ---
@@ -542,10 +577,10 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 
 ### Typo guard
 
-- **CC-61:** `rn` (2 chars) — below 4-char threshold; treated as positional message (by design)
+- **CC-61:** `rn` (2 chars) → typo guard fires, suggests `run` (first char 'r' matches, Levenshtein 1)
 - **CC-62–64:** `isol`, `refre`, `askk` → typo guard fires, suggests correct subcommand
-- **CC-65:** `hel` (3 chars) — below 4-char threshold; treated as positional message
-- **CC-65b/65c:** `helpx`, `runn` (4+ chars) → typo guard fires
+- **CC-65:** `hel` (3 chars) → typo guard fires, suggests `help` (`"help".starts_with("hel")`)
+- **CC-65b/65c:** `helpx`, `runn` → typo guard fires
 
 ### Subcommand edge cases
 
@@ -579,7 +614,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-87:** `--expect-retries 256 --dry-run "test"` → exit 1; error "invalid --expect-retries value"
 - **CC-88:** `--max-sessions 5 --dry-run "test"` → exit 0
 - **CC-89:** `--max-sessions 0 --dry-run "test"` → exit 0 (gate disabled)
-- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 20 used)
+- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 25 used)
 - Automated in: `output_file_test.rs`, `expect_validation_test.rs`, `param_edge_cases_test.rs`, `env_var_ext_test.rs`
 
 ### Env vars for expect/output-file params
@@ -714,11 +749,11 @@ Example with 20 sessions at default limit:
 
 The old format `"X claude session(s) running (limit Y)"` is **not** emitted. The `X/Y` ratio format is the canonical output.
 
-### NC-13: Gate Exhaustion After 50 Attempts
+### NC-13: Gate Exhaustion After 100 Attempts
 
 **Precondition:** Same as NC-12. Gate must fire and never find a free slot.
 
-**Expected:** After 50 polling cycles (25 minutes total), `clr` emits to stderr:
-`Error: --max-sessions {count}/{max} active; gave up after 50 attempts.`
-Then exits with code 1. The old limit of 20 attempts is **not** used.
+**Expected:** After 100 polling cycles (50 minutes total), `clr` emits to stderr:
+`Error: --max-sessions {count}/{max} active; gave up after 100 attempts.`
+Then exits with code 1. The old limit of 50 attempts is **not** used.
 

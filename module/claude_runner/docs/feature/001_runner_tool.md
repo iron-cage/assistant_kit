@@ -42,13 +42,22 @@ pipe-separated list of expected values (case-insensitive, whitespace-trimmed). T
 and exit 0). Exit code 3 is exclusive to `--expect` mismatch; it does not overlap with
 subprocess exit codes. Both parameters are silently ignored in interactive mode.
 
-**Session concurrency gate:** `--max-sessions <N>` (default 20, 0 = unlimited) counts active
+**Session concurrency gate:** `--max-sessions <N>` (default 25, 0 = unlimited) counts active
 `claude` processes via `/proc` scan before spawning a subprocess. When the live count is at or
 above the limit, the runner emits a waiting message to stderr and polls every 30 seconds until a
-slot opens or the 50-attempt limit is exhausted (fatal exit 1 on exhaustion). Setting `--max-sessions 0`
+slot opens or the 100-attempt limit is exhausted (fatal exit 1 on exhaustion). Setting `--max-sessions 0`
 disables the gate entirely — the scan is skipped and the subprocess is launched immediately.
 The gate is also skipped in `--dry-run` mode. Provides deterministic backpressure in CI
-environments with parallel `clr` invocations hitting API rate limits.
+environments with parallel `clr` invocations hitting API rate limits. The gate uses
+`claude_core::process::find_claude_processes()` (Linux `/proc` scanner) for the session count.
+
+**Session listing (`clr ps`):** Prints a unicode-box table of all running Claude Code processes.
+Each row shows `#`, `PID`, `Started`, `CPU%`, `RAM`, `State`, `Absolute Path`, and `Task`.
+Data sources: `/proc/{pid}/stat` (state, CPU jiffies, start time), `/proc/{pid}/status`
+(VmRSS in MB), `~/.claude/projects/` JSONL files (Task column — last user message, truncated
+to 35 chars), `/proc/{pid}/fd/0` symlink (TTY fallback: `interactive (pts/N)`). The current
+`clr ps` process is never listed. When no sessions are found: prints
+`No active Claude Code sessions.` and exits 0. Linux-only (`#[cfg(target_os = "linux")]`).
 
 **Separation of concerns:** `clr` owns CLI flag translation and automation defaults only. Process execution is delegated to `claude_runner_core`. Session storage paths come from `claude_profile` (via `--session-dir` flag passthrough or resolved externally).
 
@@ -74,7 +83,8 @@ environments with parallel `clr` invocations hitting API rate limits.
 | `../../src/lib.rs` | `run_cli()` entry point |
 | `../../src/cli/mod.rs` | Subcommand dispatch, execution dispatch (`run_print_mode`, `run_interactive`), dry-run, guard |
 | `../../src/cli/help.rs` | Help text printing for all subcommands (`clr`, `ask`, `isolated`, `refresh`) |
-| `../../src/cli/gate.rs` | Session concurrency gate (`count_claude_sessions`, `wait_for_session_slot`) |
+| `../../src/cli/gate.rs` | Session concurrency gate (`wait_for_session_slot`; delegates process scan to `claude_core`) |
+| `../../src/cli/ps.rs` | Session listing (`dispatch_ps`; reads `/proc` metrics, formats unicode-box table) |
 | `../../src/cli/builder.rs` | `build_claude_command()` implementation, `session_exists()` guard, effective-dir resolution |
 | `../../src/cli/parse.rs` | CLI argument parsing, env var fallbacks |
 | `../../src/cli/credential.rs` | Credential-isolated execution (`run_isolated_command`, `run_refresh_command`), trace emission for isolated/refresh |

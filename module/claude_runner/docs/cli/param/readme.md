@@ -77,7 +77,7 @@
 | 30 | `--expect` | string | — | `val1\|val2\|…` | Pipe-separated enum values; stdout must match one after trim+lowercase | 2 cmds |
 | 31 | `--expect-strategy` | enum | `fail` | `fail`/`retry`/`default:<V>` | Mismatch handling: exit 3, retry N times, or output fallback value | 2 cmds |
 | 32 | `--expect-retries` | u8 | `0` | 0–255 | Re-invocation cap for `retry` strategy | 2 cmds |
-| 33 | `--max-sessions` | u32 | 20 | 0 to 4294967295 | Max concurrent Claude Code sessions before blocking; 0 = unlimited | 2 cmds |
+| 33 | `--max-sessions` | u32 | 25 | 0 to 4294967295 | Max concurrent Claude Code sessions before blocking; 0 = unlimited | 2 cmds |
 | 34 | `--retry-on-rate-limit` | u8 | `1` | 0–255 | Automatic retry count on transient rate-limit exit; 0 = no retry; never retries QuotaExhausted | 2 cmds |
 | 35 | `--retry-delay` | u32 | `30` | 0 to 4294967295 | Seconds to wait between rate-limit retries; ignored when --retry-on-rate-limit is 0 | 2 cmds |
 | 36 | `--timeout` | u32 | `0` | 0 to 4294967295 | Seconds before watchdog kills subprocess; 0 = unlimited (run/ask only; contrast with param 20) | 2 cmds |

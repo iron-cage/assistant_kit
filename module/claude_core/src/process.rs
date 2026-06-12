@@ -4,6 +4,10 @@
 //! entries whose basename is exactly `"claude"`, and excludes the current
 //! process.  All I/O errors are silently ignored (`.ok()`) to handle TOCTOU
 //! races gracefully.
+//!
+//! On Linux, also provides [`ProcessMetrics`] and [`read_process_metrics`] for
+//! per-process resource snapshots (CPU%, RAM, state, start time) from `/proc/{pid}/stat`
+//! and `/proc/{pid}/status`.
 
 use std::io;
 use std::path::PathBuf;
@@ -75,6 +79,108 @@ pub fn find_claude_processes() -> Vec< ProcessInfo >
   }
 
   result
+}
+
+/// Resource snapshot for a running process, read from `/proc/{pid}/stat` and
+/// `/proc/{pid}/status`.
+///
+/// All fields are Linux-only because the data sources are entries in the Linux
+/// `/proc` virtual filesystem that do not exist on other platforms.
+#[ cfg( target_os = "linux" ) ]
+#[ derive( Debug ) ]
+pub struct ProcessMetrics
+{
+  /// Single-character process state from `/proc/{pid}/stat` field 3
+  /// (e.g. `'R'` = running, `'S'` = sleeping, `'D'` = uninterruptible, `'Z'` = zombie).
+  pub state      : char,
+  /// Resident set size in kilobytes from the `VmRSS` line in `/proc/{pid}/status`.
+  pub ram_kb     : u64,
+  /// Lifetime-average CPU percentage: `(utime + stime) / clock_ticks_per_sec / uptime_secs * 100`.
+  ///
+  /// This is NOT a point-in-time utilisation — it is the fraction of one CPU core consumed
+  /// over the process lifetime.  A long-running sleeping process will trend toward 0%.
+  pub cpu_pct    : f32,
+  /// Approximate Unix timestamp (seconds since epoch) when the process started.
+  ///
+  /// Computed as `boot_epoch + starttime_jiffies / 100`, where `boot_epoch` is derived
+  /// from `std::time::SystemTime::now()` minus `/proc/uptime`.
+  pub started_at : u64,
+}
+
+/// Read per-process resource metrics for `pid` from `/proc/{pid}/stat` and
+/// `/proc/{pid}/status`.
+///
+/// Returns `None` if the process does not exist or any required `/proc` entry is
+/// unreadable — the most common case being a process that exited between the
+/// [`find_claude_processes`] scan and this call (TOCTOU race).
+///
+/// The `cpu_pct` field is a lifetime average, not a point-in-time sample.
+/// Clock ticks per second is assumed to be 100 (correct for all mainstream
+/// `x86`/`x86_64` Linux kernels; `CONFIG_HZ=100` is the stable default).
+#[ cfg( target_os = "linux" ) ]
+#[ inline ]
+#[ must_use ]
+#[ allow( clippy::cast_possible_truncation, clippy::cast_sign_loss ) ]
+pub fn read_process_metrics( pid : u32 ) -> Option< ProcessMetrics >
+{
+  // --- /proc/{pid}/stat -------------------------------------------------------
+  // Format: `pid (comm) state ppid pgrp session tty_nr tpgid flags
+  //          minflt cminflt majflt cmajflt utime stime cutime cstime
+  //          priority nice num_threads itrealvalue starttime ...`
+  // The `comm` field (field 2) is enclosed in parentheses and may contain spaces.
+  // We find the closing ')' to locate field 3 and beyond unambiguously.
+  let stat        = std::fs::read_to_string( format!( "/proc/{pid}/stat" ) ).ok()?;
+  let after_comm  = stat.find( ") " )?;
+  let rest        = stat[ after_comm + 2 .. ].trim_start();
+  let mut fields  = rest.split_whitespace();
+
+  let state     = fields.next()?.chars().next().unwrap_or( '?' );
+  // Skip fields 4–13 (ppid, pgrp, session, tty_nr, tpgid, flags,
+  //                    minflt, cminflt, majflt, cmajflt) — 10 fields.
+  for _ in 0..10 { fields.next()?; }
+  let utime     : u64 = fields.next()?.parse().ok()?; // field 14
+  let stime     : u64 = fields.next()?.parse().ok()?; // field 15
+  // Skip fields 16–21 (cutime, cstime, priority, nice, num_threads, itrealvalue) — 6 fields.
+  for _ in 0..6 { fields.next()?; }
+  let starttime : u64 = fields.next()?.parse().ok()?; // field 22
+
+  // --- /proc/uptime -----------------------------------------------------------
+  let uptime_raw  = std::fs::read_to_string( "/proc/uptime" ).ok()?;
+  let uptime_secs : f64 = uptime_raw.split_whitespace().next()?.parse().ok()?;
+
+  // --- /proc/{pid}/status -----------------------------------------------------
+  let status = std::fs::read_to_string( format!( "/proc/{pid}/status" ) ).ok()?;
+  let mut ram_kb = 0_u64;
+  for line in status.lines()
+  {
+    if let Some( rest ) = line.strip_prefix( "VmRSS:" )
+    {
+      ram_kb = rest.split_whitespace().next().and_then( | v | v.parse().ok() ).unwrap_or( 0 );
+      break;
+    }
+  }
+
+  // --- Derived fields ---------------------------------------------------------
+  // Clock ticks per second on x86/x86_64 Linux (CONFIG_HZ=100, stable for 15+ years).
+  // We cannot call libc::sysconf without `unsafe`, which the workspace forbids.
+  let hz : f64        = 100.0;
+  let cpu_total_secs  = ( utime + stime ) as f64 / hz;
+  let cpu_pct         = if uptime_secs > 0.0
+  {
+    ( cpu_total_secs / uptime_secs * 100.0 ) as f32
+  }
+  else
+  {
+    0.0_f32
+  };
+
+  let current_unix : u64 = std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH )
+    .map_or( 0, | d | d.as_secs() );
+  let boot_epoch = current_unix.saturating_sub( uptime_secs as u64 );
+  let started_at = boot_epoch.saturating_add( starttime / hz as u64 );
+
+  Some( ProcessMetrics { state, ram_kb, cpu_pct, started_at } )
 }
 
 /// Send `SIGTERM` to the process with the given PID.
