@@ -39,7 +39,7 @@
 - **Then:** `alice.json` retains `expires_at_ms: 12345` and `token_count: 100`; a `cache` sub-object containing the new quota fields is present.
 - **Exit:** Ok(())
 - **Source fn:** `cache_write_preserves_existing_fields`
-- **Source:** [033_quota_cache.md AC-01](../../../../docs/feature/033_quota_cache.md)
+- **Source:** [033_quota_cache.md AC-01](../../../docs/feature/033_quota_cache.md)
 
 ---
 
@@ -50,7 +50,7 @@
 - **Then:** The returned `AccountQuota` uses the cached utilization values; no error is propagated to the caller.
 - **Exit:** Ok(cached_data)
 - **Source fn:** `cache_read_returns_entry_when_present`
-- **Source:** [033_quota_cache.md AC-02](../../../../docs/feature/033_quota_cache.md)
+- **Source:** [033_quota_cache.md AC-02](../../../docs/feature/033_quota_cache.md)
 
 ---
 
@@ -61,7 +61,7 @@
 - **Then:** The rendered line includes a `~` prefix on the utilization value and an age indicator (e.g., `~30%  5m`).
 - **Exit:** rendered string contains `~`
 - **Source fn:** `ft03_033_render_text_cached_shows_tilde_prefix`
-- **Source:** [033_quota_cache.md AC-03](../../../../docs/feature/033_quota_cache.md)
+- **Source:** [033_quota_cache.md AC-03](../../../docs/feature/033_quota_cache.md)
 
 ---
 
@@ -72,7 +72,7 @@
 - **Then:** The returned `AccountQuota` has all quota fields as dash/empty values — same as the live-fetch-absent baseline.
 - **Exit:** Ok(empty_data)
 - **Source fn:** `cache_read_returns_none_when_absent`
-- **Source:** [033_quota_cache.md AC-04](../../../../docs/feature/033_quota_cache.md)
+- **Source:** [033_quota_cache.md AC-04](../../../docs/feature/033_quota_cache.md)
 
 ---
 
@@ -83,7 +83,7 @@
 - **Then:** `alice.json` contains `"cache": {"model_override": "opus"}`.
 - **Exit:** Ok(())
 - **Source fn:** `cache_field_string_persisted`
-- **Source:** [033_quota_cache.md AC-05](../../../../docs/feature/033_quota_cache.md)
+- **Source:** [033_quota_cache.md AC-05](../../../docs/feature/033_quota_cache.md)
 
 ---
 
@@ -94,7 +94,7 @@
 - **Then:** `alice.json` contains `"cache": {"last_touch_at": <ts>, "touch_idle": true}`.
 - **Exit:** Ok(())
 - **Source fn:** `cache_field_bool_persisted`
-- **Source:** [033_quota_cache.md AC-06](../../../../docs/feature/033_quota_cache.md)
+- **Source:** [033_quota_cache.md AC-06](../../../docs/feature/033_quota_cache.md)
 
 ---
 
@@ -105,7 +105,7 @@
 - **Then:** All fields match the original payload exactly (no data loss or type corruption across the JSON serialization boundary).
 - **Exit:** Ok(original_data)
 - **Source fn:** `cache_write_read_roundtrip`
-- **Source:** [033_quota_cache.md AC-07](../../../../docs/feature/033_quota_cache.md)
+- **Source:** [033_quota_cache.md AC-07](../../../docs/feature/033_quota_cache.md)
 
 ---
 
@@ -116,7 +116,7 @@
 - **Then:** Cached rows participate in all strategy logic identically to live-fetched rows; no strategy short-circuits on the `cached` flag.
 - **Exit:** N/A — structural invariant; `Ok` rows are treated uniformly regardless of `cached` flag.
 - **Source fn:** structural (cached rows stored as `result: Ok(data)` with `cached: true`)
-- **Source:** [033_quota_cache.md AC-08](../../../../docs/feature/033_quota_cache.md)
+- **Source:** [033_quota_cache.md AC-08](../../../docs/feature/033_quota_cache.md)
 
 ---
 
@@ -127,7 +127,7 @@
 - **Then:** The JSON object contains `"cached": true` and `"cache_age_secs": 120`.
 - **Exit:** json object with both fields present
 - **Source fn:** `ft09_033_render_json_cached_includes_fields`
-- **Source:** [033_quota_cache.md AC-09](../../../../docs/feature/033_quota_cache.md)
+- **Source:** [033_quota_cache.md AC-09](../../../docs/feature/033_quota_cache.md)
 
 ---
 
@@ -138,7 +138,7 @@
 - **Then:** Returns `true` — the stale cached account is eligible for a fresh quota fetch attempt.
 - **Exit:** true
 - **Source fn:** `mre_bug255_cache_defeats_refresh`
-- **Source:** [033_quota_cache.md AC-10](../../../../docs/feature/033_quota_cache.md)
+- **Source:** [033_quota_cache.md AC-10](../../../docs/feature/033_quota_cache.md)
 
 ---
 
@@ -149,4 +149,4 @@
 - **Then:** `aq.cached` is cleared to `false`; `aq.cache_age_secs` is cleared; the fresh quota data is written to the `alice.json` `cache` sub-object.
 - **Exit:** Ok(fresh_data) with aq.cached = false
 - **Source fn:** `mre_bug256_retry_ok_stale_cached_metadata`
-- **Source:** [033_quota_cache.md AC-11](../../../../docs/feature/033_quota_cache.md)
+- **Source:** [033_quota_cache.md AC-11](../../../docs/feature/033_quota_cache.md)

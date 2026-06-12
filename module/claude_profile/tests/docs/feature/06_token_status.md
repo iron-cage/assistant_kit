@@ -32,7 +32,7 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 - **Then (Expired):** Returns `TokenStatus::Expired`.
 - **Exit:** Ok
 - **Source fn:** `status_returns_valid_when_far_future`, `status_returns_expired_when_expires_at_in_past`
-- **Source:** [006_token_status.md AC-01](../../../../docs/feature/006_token_status.md)
+- **Source:** [006_token_status.md AC-01](../../../docs/feature/006_token_status.md)
 
 ---
 
@@ -43,7 +43,7 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 - **Then:** Returns `TokenStatus::ExpiringSoon`.
 - **Exit:** Ok
 - **Source fn:** `status_returns_expiring_soon_within_default_threshold`
-- **Source:** [006_token_status.md AC-02](../../../../docs/feature/006_token_status.md)
+- **Source:** [006_token_status.md AC-02](../../../docs/feature/006_token_status.md)
 
 ---
 
@@ -54,7 +54,7 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 - **Then:** Returns `TokenStatus::ExpiringSoon` (within custom threshold). With default threshold (3600s) it would have returned `TokenStatus::ExpiringSoon` too, but at 4000s it would return `Valid` with custom threshold.
 - **Exit:** Ok
 - **Source fn:** `status_with_custom_threshold_classifies_correctly`, `status_with_threshold_zero_classifies_non_expired_as_expiring_soon`
-- **Source:** [006_token_status.md AC-03](../../../../docs/feature/006_token_status.md)
+- **Source:** [006_token_status.md AC-03](../../../docs/feature/006_token_status.md)
 
 ---
 
@@ -65,4 +65,4 @@ Feature behavioral requirement test cases for `docs/feature/006_token_status.md`
 - **Then:** Output is valid JSON containing `"status"` and `"expires_in_secs"` keys. `"status"` is one of `"valid"`, `"expiring_soon"`, `"expired"`. `"expires_in_secs"` is a non-negative integer.
 - **Exit:** 0
 - **Source fn:** `ts06_token_valid_json`, `ts07_token_expired_json`, `ts14_token_expiring_soon_json`
-- **Source:** [006_token_status.md AC-04](../../../../docs/feature/006_token_status.md)
+- **Source:** [006_token_status.md AC-04](../../../docs/feature/006_token_status.md)

@@ -38,7 +38,7 @@
 - **Then:** `~/.claude/settings.json` contains `"model": "claude-opus-4-6"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft01_set_model_opus_writes_full_id`
-- **Source:** [034_explicit_session_model_override.md AC-01](../../../../docs/feature/034_explicit_session_model_override.md)
+- **Source:** [034_explicit_session_model_override.md AC-01](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
@@ -49,7 +49,7 @@
 - **Then:** `~/.claude/settings.json` contains `"model": "claude-sonnet-4-6"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft02_set_model_sonnet_writes_full_id`
-- **Source:** [034_explicit_session_model_override.md AC-02](../../../../docs/feature/034_explicit_session_model_override.md)
+- **Source:** [034_explicit_session_model_override.md AC-02](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
@@ -60,7 +60,7 @@
 - **Then:** `~/.claude/settings.json` contains `"model": "claude-haiku-4-5-20251001"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft03_set_model_haiku_writes_full_id`
-- **Source:** [034_explicit_session_model_override.md AC-03](../../../../docs/feature/034_explicit_session_model_override.md)
+- **Source:** [034_explicit_session_model_override.md AC-03](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
@@ -71,7 +71,7 @@
 - **Then:** `~/.claude/settings.json` no longer contains the `"model"` key. `"theme": "dark"` is preserved. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft04_set_model_default_removes_key_preserves_others`
-- **Source:** [034_explicit_session_model_override.md AC-04](../../../../docs/feature/034_explicit_session_model_override.md)
+- **Source:** [034_explicit_session_model_override.md AC-04](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
@@ -83,7 +83,7 @@
 - **Exit:** 0
 - **Note:** Tests the `.account.use` post-match ordering (explicit `set_session_model` runs AFTER `switch_account`). The `.usage` path's `apply_model_override` mutual exclusion (`if set_model.is_some() { write } else { apply_model_override }`) is covered by EC-7.
 - **Source fn:** ✅ `ft05_explicit_set_model_wins_over_switch_restore`
-- **Source:** [034_explicit_session_model_override.md AC-05](../../../../docs/feature/034_explicit_session_model_override.md)
+- **Source:** [034_explicit_session_model_override.md AC-05](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
@@ -94,7 +94,7 @@
 - **Then:** Stderr contains `[trace] account.use  alice  set_model: opus`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft06_trace_line_emitted_with_set_model`
-- **Source:** [034_explicit_session_model_override.md AC-06](../../../../docs/feature/034_explicit_session_model_override.md)
+- **Source:** [034_explicit_session_model_override.md AC-06](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
@@ -105,7 +105,7 @@
 - **Then:** Exits 1. Stderr contains each of the four valid values: `opus`, `sonnet`, `haiku`, `default`.
 - **Exit:** 1
 - **Source fn:** ✅ `ft07_set_model_bad_value_exits_1`
-- **Source:** [034_explicit_session_model_override.md AC-07](../../../../docs/feature/034_explicit_session_model_override.md)
+- **Source:** [034_explicit_session_model_override.md AC-07](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
@@ -116,7 +116,7 @@
 - **Then:** Both help outputs contain `set_model::`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft08_set_model_appears_in_help_output`
-- **Source:** [034_explicit_session_model_override.md AC-08](../../../../docs/feature/034_explicit_session_model_override.md)
+- **Source:** [034_explicit_session_model_override.md AC-08](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
@@ -127,7 +127,7 @@
 - **Then:** JSON output structure is unchanged — no `set_model` field in the JSON; subprocess args (if any) do not contain the model string from `set_model`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft09_set_model_no_set_model_key_in_json`
-- **Source:** [034_explicit_session_model_override.md AC-09](../../../../docs/feature/034_explicit_session_model_override.md)
+- **Source:** [034_explicit_session_model_override.md AC-09](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
@@ -138,7 +138,7 @@
 - **Then:** `~/.claude/settings.json` contains `"theme": "dark"`, `"autoUpdaterStatus": "disabled"`, and `"model": "claude-opus-4-6"`. No pre-existing keys removed. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft10_set_session_model_preserves_existing_keys`
-- **Source:** [034_explicit_session_model_override.md AC-10](../../../../docs/feature/034_explicit_session_model_override.md)
+- **Source:** [034_explicit_session_model_override.md AC-10](../../../docs/feature/034_explicit_session_model_override.md)
 
 ---
 
@@ -149,4 +149,4 @@
 - **Then:** `~/.claude/settings.json` is created and contains `"model": "claude-opus-4-6"`. Exits 0.
 - **Exit:** 0
 - **Source fn:** ✅ `ft11_set_session_model_creates_file_when_absent`
-- **Source:** [034_explicit_session_model_override.md AC-11](../../../../docs/feature/034_explicit_session_model_override.md)
+- **Source:** [034_explicit_session_model_override.md AC-11](../../../docs/feature/034_explicit_session_model_override.md)

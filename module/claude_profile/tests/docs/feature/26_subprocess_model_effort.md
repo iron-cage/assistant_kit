@@ -65,7 +65,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Subprocess keep-alive pings don't need expensive models; Haiku conserves Sonnet and Opus quota.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_haiku` (in `src/usage/subprocess.rs #[cfg(test)]`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -76,7 +76,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Quota data is not consulted — auto always yields Haiku.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_haiku` (in `src/usage/subprocess.rs #[cfg(test)]`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -87,7 +87,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Quota percentage is not consulted — auto always yields Haiku regardless.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_haiku` (in `src/usage/subprocess.rs #[cfg(test)]`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -98,7 +98,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. No quota data is needed — auto always yields Haiku.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_haiku_without_quota_data` (in `src/usage/subprocess.rs #[cfg(test)]`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -109,7 +109,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `IsolatedModel::Specific("claude-sonnet-4-6")`. Quota state is ignored; explicit value always wins.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_sonnet_explicit` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-02](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-02](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -120,7 +120,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `IsolatedModel::Specific("claude-opus-4-6")`. Quota state is ignored; explicit value always wins.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_opus_explicit` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-03](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-03](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -131,7 +131,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `IsolatedModel::KeepCurrent`. The `run_isolated()` call receives `KeepCurrent` and does not prepend any `--model` flag.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_keep_no_model_flag` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-04](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-04](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -142,7 +142,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `Some("low")`. The arg slice prepended before `["--print", "."]` contains `["--effort", "low"]`. `low` prevents extended thinking which would cause isolated subprocess timeouts.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_auto_sonnet_path` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -153,7 +153,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `Some("low")`. The arg slice contains `["--effort", "low"]`. Same as FT-08: `effort::auto` always produces `low` regardless of whether the model is Sonnet or Opus.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_auto_opus_path` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -164,7 +164,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `None`. Combined subprocess arg slice contains neither `--model` nor `--effort`. The `KeepCurrent` branch of `resolve_effort()` skips injection — model is unknown at dispatch time; injecting any effort level would be speculative.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_keep_effort_auto_no_effort_flag` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-05](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -175,7 +175,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `Some("high")`. Explicit value overrides the model-independent `auto` default of `low`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_high_explicit` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-06](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-06](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -186,7 +186,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `Some("max")`. Explicit value overrides the model-independent `auto` default of `low`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_max_explicit` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-07](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-07](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -197,7 +197,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Both call sites are present; at least 2 hits for each function.
 - **Exit:** n/a (structural test)
 - **Source fn:** `it_imodel_and_effort_both_paths_structural` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-08](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-08](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -209,7 +209,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then-A and Then-B:** Both produce JSON arrays with identical schema. `imodel::` and `effort::` affect only subprocess invocation, not output rendering.
 - **Exit:** 0 both cases
 - **Source fn:** `it_imodel_effort_json_format_unaffected` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-09](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-09](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -220,7 +220,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Exits 1. Stderr contains each of: `auto`, `sonnet`, `opus`, `haiku`, `keep`.
 - **Exit:** 1
 - **Source fn:** `it123_imodel_bogus_exits_1` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-10](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-10](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -231,7 +231,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Exits 1. Stderr contains each of: `auto`, `low`, `normal`, `high`, `max`.
 - **Exit:** 1
 - **Source fn:** `it125_effort_bogus_exits_1` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-11](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-11](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -242,7 +242,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Exits 0. Stdout contains `"imodel"` with default value `auto` and `"effort"` with default value `auto`.
 - **Exit:** 0
 - **Source fn:** `it126_usage_help_shows_imodel_effort_params` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-12](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-12](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -253,7 +253,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Quota state is ignored; explicit value always wins. `imodel::haiku` and `imodel::auto` both resolve to Haiku — auto is the default, haiku is the explicit form.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_haiku_explicit` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-13](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-13](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -264,7 +264,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `None`. No `--effort` flag is prepended to subprocess args. Haiku has no extended thinking support — injecting any effort level under `auto` would be incorrect.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_haiku_effort_auto_no_effort_flag` (in `src/usage/subprocess.rs #[cfg(test)]`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-14](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-14](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -275,7 +275,7 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `Some("low")`. Explicit `low` matches the auto default; no override needed.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_low_explicit` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-15](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-15](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
@@ -286,4 +286,4 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Then:** Returns `Some("normal")`. Explicit value overrides the auto default of `low`.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_normal_explicit` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/026_subprocess_model_effort.md AC-16](../../../../docs/feature/026_subprocess_model_effort.md)
+- **Source:** [feature/026_subprocess_model_effort.md AC-16](../../../docs/feature/026_subprocess_model_effort.md)

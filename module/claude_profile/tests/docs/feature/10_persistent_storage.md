@@ -37,7 +37,7 @@ Feature behavioral requirement test cases for `docs/feature/010_persistent_stora
 - **Then:** Returns a path starting with `$PRO` and ending with `.persistent/claude_profile`.
 - **Exit:** Ok
 - **Source fn:** `p01_pro_set_base_under_pro`
-- **Source:** [010_persistent_storage.md AC-01](../../../../docs/feature/010_persistent_storage.md)
+- **Source:** [010_persistent_storage.md AC-01](../../../docs/feature/010_persistent_storage.md)
 
 ---
 
@@ -48,7 +48,7 @@ Feature behavioral requirement test cases for `docs/feature/010_persistent_stora
 - **Then:** Falls back silently to `$HOME`; returns path under `$HOME/.persistent/claude_profile`.
 - **Exit:** Ok
 - **Source fn:** `p14_pro_set_to_existing_file_falls_back_to_home`
-- **Source:** [010_persistent_storage.md AC-02](../../../../docs/feature/010_persistent_storage.md)
+- **Source:** [010_persistent_storage.md AC-02](../../../docs/feature/010_persistent_storage.md)
 
 ---
 
@@ -59,7 +59,7 @@ Feature behavioral requirement test cases for `docs/feature/010_persistent_stora
 - **Then:** Returns path starting with `$HOME` and ending with `.persistent/claude_profile`.
 - **Exit:** Ok
 - **Source fn:** `p02_pro_unset_home_set_base_under_home`, `p09_path_shape_ends_with_persistent_claude_profile_under_home`
-- **Source:** [010_persistent_storage.md AC-03](../../../../docs/feature/010_persistent_storage.md)
+- **Source:** [010_persistent_storage.md AC-03](../../../docs/feature/010_persistent_storage.md)
 
 ---
 
@@ -70,7 +70,7 @@ Feature behavioral requirement test cases for `docs/feature/010_persistent_stora
 - **Then:** Both calls return `Ok`. No error for pre-existing directory.
 - **Exit:** Ok
 - **Source fn:** `p10_ensure_exists_is_idempotent`, `p11_ensure_exists_succeeds_when_dir_already_exists`
-- **Source:** [010_persistent_storage.md AC-04](../../../../docs/feature/010_persistent_storage.md)
+- **Source:** [010_persistent_storage.md AC-04](../../../docs/feature/010_persistent_storage.md)
 
 ---
 
@@ -81,7 +81,7 @@ Feature behavioral requirement test cases for `docs/feature/010_persistent_stora
 - **Then:** Returns `Err(…)`. Error message is actionable.
 - **Exit:** Err
 - **Source fn:** `p03_both_unset_returns_err`, `p12_error_message_is_actionable_when_both_unset`
-- **Source:** [010_persistent_storage.md AC-05](../../../../docs/feature/010_persistent_storage.md)
+- **Source:** [010_persistent_storage.md AC-05](../../../docs/feature/010_persistent_storage.md)
 
 ---
 
@@ -92,7 +92,7 @@ Feature behavioral requirement test cases for `docs/feature/010_persistent_stora
 - **Then:** Returns path starting with `$PRO` and ending with `.persistent/claude/credential`.
 - **Exit:** Ok
 - **Source fn:** `p16_credential_store_under_pro`, `p17_credential_store_path_shape_under_pro`
-- **Source:** [010_persistent_storage.md AC-06](../../../../docs/feature/010_persistent_storage.md)
+- **Source:** [010_persistent_storage.md AC-06](../../../docs/feature/010_persistent_storage.md)
 
 ---
 
@@ -103,4 +103,4 @@ Feature behavioral requirement test cases for `docs/feature/010_persistent_stora
 - **Then:** Returns path starting with `$HOME` and ending with `.persistent/claude/credential`.
 - **Exit:** Ok
 - **Source fn:** `p18_credential_store_path_shape_under_home`
-- **Source:** [010_persistent_storage.md AC-07](../../../../docs/feature/010_persistent_storage.md)
+- **Source:** [010_persistent_storage.md AC-07](../../../docs/feature/010_persistent_storage.md)

@@ -4,7 +4,7 @@
 
 - **Purpose**: Document integration test cases for each clp command and binary meta-flags.
 - **Responsibility**: Index of per-command integration test case files covering command-level behavior.
-- **In Scope**: All 16 clp command test files plus binary meta-flag tests (`--version`/`-V`).
+- **In Scope**: All 18 test files: 17 clp command test files plus binary meta-flag tests (`00_version.md`/`--version`/`-V`).
 - **Out of Scope**: Per-parameter edge cases (→ `param/`), parameter group interactions (→ `param_group/`).
 
 ### Responsibility Table
@@ -28,3 +28,4 @@
 | 14_account_renewal.md | Test cases for `.account.renewal` command |
 | 15_account_inspect.md | Test cases for `.account.inspect` command |
 | 16_account_assign.md | Test cases for `.account.assign` command |
+| 17_model.md | Test cases for `.model` command |

@@ -71,7 +71,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output contains `Account: alice@acme.com`, `Status: 🟢 valid (expires in ...)`; `Tagged ID: user_01abc`; `UUID: aaaa-bbbb`. Exit 0.
 - **Exit:** 0
 - **Source fn:** `lim_it_ai14_identity_fields_from_endpoint_001`
-- **Source:** [031_account_inspect.md AC-01](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-01](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -82,7 +82,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output shows `Memberships: 2`; both membership lines appear with correct `[index]`, `billing_type`, `has_max`, and `capabilities` values. Exit 0.
 - **Exit:** 0
 - **Source fn:** `lim_it_ai15_memberships_shown_with_count`
-- **Source:** [031_account_inspect.md AC-02](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-02](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -93,7 +93,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** The line for `[1]` (stripe_subscription + claude_max) ends with `← selected`. The line for `[0]` has no marker. `Billing: stripe_subscription` and `Has Max: yes` reflect membership [1].
 - **Exit:** 0
 - **Source fn:** `lim_it_ai16_selected_marker_multi_membership`
-- **Source:** [031_account_inspect.md AC-03, AC-06](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-03, AC-06](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -104,7 +104,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output shows `Memberships: 1`; one membership line without `← selected` marker.
 - **Exit:** 0
 - **Source fn:** `lim_it_ai16_selected_marker_multi_membership`
-- **Source:** [031_account_inspect.md AC-04](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-04](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -115,7 +115,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output shows `Org: alice's Org`; `Org UUID: aaaa`; `Org Role: admin`; `Workspace UUID: (none)`; `Workspace: (none)`. Exit 0.
 - **Exit:** 0
 - **Source fn:** `lim_it_ai17_org_fields_from_endpoint_005`
-- **Source:** [031_account_inspect.md AC-05](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-05](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -126,7 +126,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** `Billing: stripe_subscription` (from [1], not [0]); `Has Max: yes` (from [1]). The `Billing:` field does NOT show `none`.
 - **Exit:** 0
 - **Source fn:** `lim_it_ai18_billing_from_selected_membership`
-- **Source:** [031_account_inspect.md AC-06](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-06](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -137,7 +137,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** `Memberships: endpoint unavailable (network error)` (or similar); `Billing: stripe_subscription (snapshot)`; `Has Max: yes (snapshot)`. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ai10_memberships_endpoint_unavailable_message`, `ai09_snapshot_all_fields_when_no_token`
-- **Source:** [031_account_inspect.md AC-07](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-07](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -148,7 +148,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** `Tagged ID: user_01abc (snapshot)`; `UUID: aaaa (snapshot)`. Other fields (from endpoints 002 and 005) show live data. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ai09_snapshot_all_fields_when_no_token`
-- **Source:** [031_account_inspect.md AC-08](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-08](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -159,7 +159,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** `Org: alice's Org (snapshot)`; `Org UUID: aaaa (snapshot)`; etc. Fields from endpoints 001 and 002 show live data. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ai09_snapshot_all_fields_when_no_token`
-- **Source:** [031_account_inspect.md AC-09](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-09](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -170,7 +170,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** `Status: 🟢 valid (expires in Xh Ym)` — the output reflects the refreshed token; live data shown for all endpoints. `refresh_account_token()` was called once. Exit 0.
 - **Exit:** 0
 - **Source fn:** `lim_it_ai20_refresh_attempted_on_expired_token`
-- **Source:** [031_account_inspect.md AC-10](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-10](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -181,7 +181,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** `Status: 🔴 expired (Xh Ym ago)`; `Memberships: endpoint unavailable (auth error)`; all fields show `(snapshot)` suffix or `N/A` if no snapshot. No `refresh_account_token()` call. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ai08_expired_token_shows_expired_status`, `ai09_snapshot_all_fields_when_no_token`, `ai10_memberships_endpoint_unavailable_message`
-- **Source:** [031_account_inspect.md AC-11](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-11](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -194,7 +194,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Exit 2 with `account not found: nobody@acme.com`.
 - **Exit:** 0 / 2
 - **Source fn:** `ai07_prefix_name_resolves`, `ai02_account_not_found_exits_2`, `ai03_empty_name_exits_1`, `ai04_no_active_account_exits_2`, `ai06_active_marker_used_when_no_name`
-- **Source:** [031_account_inspect.md AC-12](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-12](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -205,7 +205,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** JSON output is valid; contains `memberships` array where each element has `index`, `billing_type`, `has_max`, `capabilities`, `selected`; the high-priority membership has `"selected": true`; the other has `"selected": false`. Also contains `account`, `status`, `expires_in_secs`, `tagged_id`, `uuid`, `billing_type`, `has_max`, `organization_name`, `organization_uuid`, `organization_role`, `workspace_uuid`, `workspace_name`, `data_source`.
 - **Exit:** 0
 - **Source fn:** `ai11_json_all_required_fields`, `ai12_json_data_source_snapshot_when_all_fail`, `ai05_format_invalid_exits_1`, `ai30_format_case_sensitive_uppercase_exits_1`, `lim_it_ai19_valid_token_live_data_source_json`
-- **Source:** [031_account_inspect.md AC-13](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-13](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -216,7 +216,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Stderr contains at least three `[trace]` lines, one per endpoint (001, 002, 005), each showing the URL and HTTP status.
 - **Exit:** 0
 - **Source fn:** `ai13_trace_emits_lines_to_stderr`, `lim_it_ai21_trace_endpoint_lines_on_live_account`
-- **Source:** [031_account_inspect.md AC-14](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-14](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -227,7 +227,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Exit 2 with `credential file not found: {path}`. The absent store is treated identically to an absent credential file — no distinct store-not-found branch exists.
 - **Exit:** 2
 - **Source fn:** `ai22_credential_store_absent_exits_2`
-- **Source:** [031_account_inspect.md AC-15](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-15](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -238,7 +238,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output shows `Memberships: 2`; membership [1] is marked `← selected` (stripe_subscription beats none even without claude_max); `Billing: stripe_subscription`; membership [0] is unmarked.
 - **Exit:** 0
 - **Source fn:** `lim_it_ai16_selected_marker_multi_membership` (marker count and single-vs-multi branching); priority rule verified by `mre_bug237_multi_membership_selects_stripe_over_none_no_max` in `claude_quota` crate
-- **Source:** [031_account_inspect.md AC-03, AC-06](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-03, AC-06](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -249,7 +249,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Output shows `Memberships: 2`; membership [0] is marked `← selected` (Priority 3 fallback applies — no stripe_subscription in either; `memberships[0]` is the fallback); membership [1] is unmarked; `Billing: none`.
 - **Exit:** 0
 - **Source fn:** `lim_it_ai16_selected_marker_multi_membership` (marker count and single-vs-multi branching); fallback rule verified by `mre_bug237_single_membership_fallback_unchanged` in `claude_quota` crate
-- **Source:** [031_account_inspect.md AC-03, AC-06](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-03, AC-06](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -260,7 +260,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Exit 2 with `credential file not found: {path}`. Unlike AC-15, the store directory is present; the credential file for the specific account is simply missing.
 - **Exit:** 2
 - **Source fn:** `ai01_credential_file_absent_exits_2`
-- **Source:** [031_account_inspect.md AC-16](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-16](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -271,7 +271,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** `Workspace UUID:` shows the UUID string (not `(none)`); `Workspace:` shows the workspace name string (not `(none)`). In `format::json`, `workspace_uuid` and `workspace_name` contain the raw string values.
 - **Exit:** 0
 - **Source fn:** `ai23_workspace_fields_show_values_when_non_null`
-- **Source:** [031_account_inspect.md AC-17](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-17](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -282,7 +282,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Then:** Exit 0; output contains `alice@münchen.de`. The AccountSelector performs a full email match; the unicode byte sequence in the filename survives the round-trip unchanged on a UTF-8 filesystem.
 - **Exit:** 0
 - **Source fn:** `ai27_unicode_account_name_resolves`
-- **Source:** [031_account_inspect.md AC-12](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-12](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -296,7 +296,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Note:** Distinct from FT-18 (absent file → exits 2). An existing-but-empty file passes the file-existence check; the JSON parse failure produces an unknown status rather than a hard error exit.
 - **Exit:** 0
 - **Source fn:** `ai28_empty_credentials_file_shows_unknown_status`
-- **Source:** [031_account_inspect.md AC-18](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-18](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -310,7 +310,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Note:** Simulates a version-mismatch schema written by an older tool. Graceful degradation (unknown status, exit 0) is required; panicking or exiting non-zero is a regression.
 - **Exit:** 0
 - **Source fn:** `ai29_malformed_credentials_json_shows_unknown_status`
-- **Source:** [031_account_inspect.md AC-19](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-19](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -322,7 +322,7 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Note:** The parameter validator only accepts lowercase `"text"` and `"json"`. Case variants (`"JSON"`, `"Text"`) must be rejected, not silently accepted or mapped. This prevents silent fallback masking a user typo.
 - **Exit:** 1
 - **Source fn:** `ai30_format_case_sensitive_uppercase_exits_1`
-- **Source:** [031_account_inspect.md AC-13](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-13](../../../docs/feature/031_account_inspect.md)
 
 ---
 
@@ -334,4 +334,4 @@ Feature behavioral requirement test cases for `docs/feature/031_account_inspect.
 - **Note:** `expiresAt=0` is a valid timestamp (parseable integer). It must produce `"expired"`, not `"unknown"` (which is reserved for missing or unparseable `expiresAt`). This is the lower boundary of the expiry parser.
 - **Exit:** 0
 - **Source fn:** `ai31_expires_at_zero_shows_expired_status`
-- **Source:** [031_account_inspect.md AC-01](../../../../docs/feature/031_account_inspect.md)
+- **Source:** [031_account_inspect.md AC-01](../../../docs/feature/031_account_inspect.md)

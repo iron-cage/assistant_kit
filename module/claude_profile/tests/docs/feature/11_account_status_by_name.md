@@ -33,7 +33,7 @@ Feature behavioral requirement test cases for `docs/feature/011_account_status_b
 - **Then:** Output shows exactly one indented key-val block for `alice@acme.com`. Exit 0.
 - **Exit:** 0
 - **Source fn:** `acc04_name_scopes_to_single_block`
-- **Source:** [011_account_status_by_name.md AC-01](../../../../docs/feature/011_account_status_by_name.md)
+- **Source:** [011_account_status_by_name.md AC-01](../../../docs/feature/011_account_status_by_name.md)
 
 ---
 
@@ -44,7 +44,7 @@ Feature behavioral requirement test cases for `docs/feature/011_account_status_b
 - **Then:** Exits 2 with a not-found error message.
 - **Exit:** 2
 - **Source fn:** `acc05_name_not_found_exits_2`
-- **Source:** [011_account_status_by_name.md AC-02](../../../../docs/feature/011_account_status_by_name.md)
+- **Source:** [011_account_status_by_name.md AC-02](../../../docs/feature/011_account_status_by_name.md)
 
 ---
 
@@ -55,7 +55,7 @@ Feature behavioral requirement test cases for `docs/feature/011_account_status_b
 - **Then:** Exits 1 with a validation error.
 - **Exit:** 1
 - **Source fn:** `acc06_name_invalid_exits_1`
-- **Source:** [011_account_status_by_name.md AC-03](../../../../docs/feature/011_account_status_by_name.md)
+- **Source:** [011_account_status_by_name.md AC-03](../../../docs/feature/011_account_status_by_name.md)
 
 ---
 
@@ -66,7 +66,7 @@ Feature behavioral requirement test cases for `docs/feature/011_account_status_b
 - **Then:** All accounts are listed in alphabetical order. Backward-compatible with the full listing behavior.
 - **Exit:** 0
 - **Source fn:** `acc01_lists_accounts_as_indented_blocks`
-- **Source:** [011_account_status_by_name.md AC-04](../../../../docs/feature/011_account_status_by_name.md)
+- **Source:** [011_account_status_by_name.md AC-04](../../../docs/feature/011_account_status_by_name.md)
 
 ---
 
@@ -77,4 +77,4 @@ Feature behavioral requirement test cases for `docs/feature/011_account_status_b
 - **Then:** `Sub:` and `Tier:` lines show `N/A`, never blank.
 - **Exit:** 0
 - **Source fn:** `acc15_missing_sub_field_shows_na`, `acc16_missing_tier_field_shows_na`
-- **Source:** [011_account_status_by_name.md AC-05](../../../../docs/feature/011_account_status_by_name.md)
+- **Source:** [011_account_status_by_name.md AC-05](../../../docs/feature/011_account_status_by_name.md)

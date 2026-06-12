@@ -31,7 +31,7 @@ Feature behavioral requirement test cases for `docs/feature/001_account_store_in
 - **Then:** The credential store directory is created. A `{name}.credentials.json` file is written inside it. The call returns success.
 - **Exit:** Ok
 - **Source fn:** `save_creates_credential_store_when_missing`
-- **Source:** [001_account_store_init.md AC-01](../../../../docs/feature/001_account_store_init.md)
+- **Source:** [001_account_store_init.md AC-01](../../../docs/feature/001_account_store_init.md)
 
 ---
 
@@ -42,7 +42,7 @@ Feature behavioral requirement test cases for `docs/feature/001_account_store_in
 - **Then:** The call returns success. No error is produced for the pre-existing directory.
 - **Exit:** Ok
 - **Source fn:** `save_copies_credentials_to_named_file`
-- **Source:** [001_account_store_init.md AC-02](../../../../docs/feature/001_account_store_init.md)
+- **Source:** [001_account_store_init.md AC-02](../../../docs/feature/001_account_store_init.md)
 
 ---
 
@@ -53,7 +53,7 @@ Feature behavioral requirement test cases for `docs/feature/001_account_store_in
 - **Then:** The returned path starts with `$PRO` and ends with `.persistent/claude/credential`.
 - **Exit:** Ok
 - **Source fn:** `p16_credential_store_under_pro`, `p17_credential_store_path_shape_under_pro`
-- **Source:** [001_account_store_init.md AC-03](../../../../docs/feature/001_account_store_init.md)
+- **Source:** [001_account_store_init.md AC-03](../../../docs/feature/001_account_store_init.md)
 
 ---
 
@@ -64,4 +64,4 @@ Feature behavioral requirement test cases for `docs/feature/001_account_store_in
 - **Then:** The returned path starts with `$HOME` and ends with `.persistent/claude/credential`.
 - **Exit:** Ok
 - **Source fn:** `p18_credential_store_path_shape_under_home`
-- **Source:** [001_account_store_init.md AC-04](../../../../docs/feature/001_account_store_init.md)
+- **Source:** [001_account_store_init.md AC-04](../../../docs/feature/001_account_store_init.md)

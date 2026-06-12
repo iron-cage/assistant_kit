@@ -41,7 +41,7 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **Then:** Outputs `[dry-run] would re-authenticate 'carol@example.com' via browser login`. No files mutated. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ar05_relogin_dry_explicit_name`
-- **Source:** [019_account_relogin.md AC-01](../../../../docs/feature/019_account_relogin.md)
+- **Source:** [019_account_relogin.md AC-01](../../../docs/feature/019_account_relogin.md)
 
 ---
 
@@ -52,7 +52,7 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **Then:** Outputs `[dry-run] would re-authenticate 'alice@acme.com' via browser login`. Exit 0.
 - **Exit:** 0
 - **Source fn:** `relogin_mre_no_name_uses_active`
-- **Source:** [019_account_relogin.md AC-02](../../../../docs/feature/019_account_relogin.md)
+- **Source:** [019_account_relogin.md AC-02](../../../docs/feature/019_account_relogin.md)
 
 ---
 
@@ -63,7 +63,7 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **Then:** Exits 2 with an actionable message indicating no active account.
 - **Exit:** 2
 - **Source fn:** `relogin_mre_no_name_no_active_exits2`
-- **Source:** [019_account_relogin.md AC-03](../../../../docs/feature/019_account_relogin.md)
+- **Source:** [019_account_relogin.md AC-03](../../../docs/feature/019_account_relogin.md)
 
 ---
 
@@ -74,7 +74,7 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **Then:** Exits 2 with a not-found error.
 - **Exit:** 2
 - **Source fn:** `ar04_relogin_not_found_exits_2`
-- **Source:** [019_account_relogin.md AC-04](../../../../docs/feature/019_account_relogin.md)
+- **Source:** [019_account_relogin.md AC-04](../../../docs/feature/019_account_relogin.md)
 
 ---
 
@@ -85,7 +85,7 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **Then:** Positional arg is accepted; dry-run output shows `carol@example.com`. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ar07_relogin_positional_bare_arg`
-- **Source:** [019_account_relogin.md AC-05](../../../../docs/feature/019_account_relogin.md)
+- **Source:** [019_account_relogin.md AC-05](../../../docs/feature/019_account_relogin.md)
 
 ---
 
@@ -96,7 +96,7 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **Then:** Resolves to `carol@example.com`; dry-run output shows the resolved name. Exit 0.
 - **Exit:** 0
 - **Source fn:** `ar08_relogin_prefix_resolves`
-- **Source:** [019_account_relogin.md AC-06](../../../../docs/feature/019_account_relogin.md)
+- **Source:** [019_account_relogin.md AC-06](../../../docs/feature/019_account_relogin.md)
 
 ---
 
@@ -107,7 +107,7 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **Then:** `{credential_store}/carol@example.com.credentials.json` is updated with the new credentials (same as if `.account.save` had run). Exit 0.
 - **Exit:** 0
 - **Source fn:** manual — IT-5 in `tests/manual/readme.md`
-- **Source:** [019_account_relogin.md AC-07](../../../../docs/feature/019_account_relogin.md)
+- **Source:** [019_account_relogin.md AC-07](../../../docs/feature/019_account_relogin.md)
 
 ---
 
@@ -118,7 +118,7 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **Then:** After re-authentication completes, the active account is restored to `alice@acme.com`. The user's session context is unchanged. Exit 0.
 - **Exit:** 0
 - **Source fn:** manual — IT-6 in `tests/manual/readme.md`
-- **Source:** [019_account_relogin.md AC-08](../../../../docs/feature/019_account_relogin.md)
+- **Source:** [019_account_relogin.md AC-08](../../../docs/feature/019_account_relogin.md)
 
 ---
 
@@ -129,4 +129,4 @@ Feature behavioral requirement test cases for `docs/feature/019_account_relogin.
 - **Then:** A diagnostic message is printed to stderr indicating credentials were unchanged. Process exits 3 (not 0 or 2).
 - **Exit:** 3
 - **Source fn:** manual — IT-7 in `tests/manual/readme.md`
-- **Source:** [019_account_relogin.md AC-09](../../../../docs/feature/019_account_relogin.md)
+- **Source:** [019_account_relogin.md AC-09](../../../docs/feature/019_account_relogin.md)

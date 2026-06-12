@@ -517,7 +517,14 @@ pub fn override_session_model_to_opus( paths : &ClaudePaths ) -> bool
   //   Write "opus" shorthand (not "claude-opus-4-6") to match Claude Code convention.
   // Root cause: BUG-225 fix used full model IDs; Claude Code stores shorthand in settings.json.
   // Pitfall: contains("sonnet") matches both "sonnet" shorthand and "claude-sonnet-4-6" full ID.
-  if current.contains( "sonnet" ) || current.is_empty()
+  // Fix(BUG-286): full-ID "claude-opus-4-6" was not covered by contains("sonnet") gate;
+  //   `.account.use` wrote the full-ID form when re-applying model override, leaving settings.json
+  //   stuck on "claude-opus-4-6" across account switches instead of re-normalising to "opus".
+  // Root cause: gate only handled shorthand → shorthand normalisation; full-ID → shorthand
+  //   normalisation was a missing arm.
+  // Pitfall: both "opus" shorthand and "claude-opus-4-6" full-ID mean opus; the gate must
+  //   treat them as equivalent to avoid skipping re-normalisation when full-ID is present.
+  if current.contains( "sonnet" ) || current == "claude-opus-4-6" || current.is_empty()
   {
     obj.insert( "model".to_string(), serde_json::Value::String( "opus".to_string() ) );
     let _ = std::fs::write( path, serde_json::to_string( &live ).unwrap_or_default() );
@@ -562,6 +569,18 @@ pub fn set_session_model( paths : &ClaudePaths, model_id : Option< &str > )
     None       => { obj.remove( "model" ); }
   }
   let _ = std::fs::write( path, serde_json::to_string( &live ).unwrap_or_default() );
+}
+
+/// Read the current session model from `~/.claude/settings.json`.
+///
+/// Returns `Some(model)` when `settings.json` exists and contains a `"model"` key;
+/// `None` when the file is absent, unparseable, or the `"model"` key is missing.
+#[ must_use ]
+#[ inline ]
+pub fn get_session_model( paths : &ClaudePaths ) -> Option< String >
+{
+  let content = std::fs::read_to_string( paths.settings_file() ).ok()?;
+  parse_string_field( &content, "model" )
 }
 
 /// Validate that a named account can be deleted (name valid + file exists).

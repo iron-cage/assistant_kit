@@ -4,7 +4,7 @@
 
 - **Purpose**: Defines the functional capabilities of `claude_profile` — account credential management and the `clp` CLI.
 - **Responsibility**: Documents all functional requirements with their design, acceptance criteria, and test references.
-- **In Scope**: feature/001 through feature/034 — full functional capability set for claude_profile and the clp CLI.
+- **In Scope**: feature/001 through feature/035 — full functional capability set for claude_profile and the clp CLI.
 - **Out of Scope**: Quality constraints (→ invariant/), CLI design (→ cli/).
 
 ### Overview Table
@@ -45,3 +45,4 @@
 | 032 | [Account Marker Assignment](032_account_assign.md) | `.account.assign` command; marker-only write for any `USER@MACHINE`; live usage block when called without `name::` | ✅ |
 | 033 | [Quota Cache Fallback](033_quota_cache.md) | Persist last-known quota in `{name}.json`; display cached values with staleness indicator when API unavailable | ✅ |
 | 034 | [Explicit Session Model Override](034_explicit_session_model_override.md) | `set_model::` parameter on `.account.use` and `.usage`; writes explicit model ID to `~/.claude/settings.json` via `set_session_model()`, bypassing auto-override | ✅ |
+| 035 | [Dedicated Model Get/Set Command](035_model_command.md) | `.model` command for standalone get/set of session model in `settings.json`; `set::` parameter; `get_session_model()` helper; no-duplication via shared `map_model_shorthand()` | ✅ |

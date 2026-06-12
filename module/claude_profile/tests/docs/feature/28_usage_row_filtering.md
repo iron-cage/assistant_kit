@@ -58,7 +58,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it178_count_3_shows_first_3_rows` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-01](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-01](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -71,7 +71,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it205_ft028_02_offset2_count3_windows_result` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-02](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-02](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -82,7 +82,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Exactly one data row shown — the active account. All other rows absent.
 - **Exit:** 0
 - **Source fn:** `it154_only_active_1_shows_active_account_row` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-03](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-03](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -94,7 +94,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it206_lim_it_ft028_04_only_next_1_shows_arrow` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-04](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-04](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -106,7 +106,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it207_lim_it_min_5h_50_hides_below_threshold` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-05](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-05](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -118,7 +118,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it209_lim_it_min_7d_20_hides_below_threshold` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-06](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-06](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -129,7 +129,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. 🟢 and 🟡 rows shown; 🔴 row hidden.
 - **Exit:** 0
 - **Source fn:** `it171_only_valid_1_all_red_shows_empty` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-07](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-07](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -140,7 +140,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 0. Only the 🟢 row shown; both 🟡 and 🔴 rows hidden.
 - **Exit:** 0
 - **Source fn:** `it176_exclude_exhausted_1_all_red_shows_empty` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-08](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-08](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -152,7 +152,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it213_lim_it_ft028_09_and_composition` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-09](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-09](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -164,7 +164,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it214_lim_it_ft028_10_get_7d_left_bare` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-10](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-10](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -176,7 +176,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it215_lim_it_ft028_11_only_next_get_7d_left` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-11](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-11](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -188,7 +188,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it216_lim_it_ft028_12_get_status_green` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-12](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-12](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -200,7 +200,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it217_lim_it_ft028_13_format_tsv_status_text` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-13](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-13](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -212,7 +212,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it218_lim_it_ft028_14_no_color_emoji_free` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-14](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-14](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -223,7 +223,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Then:** Exits 1. Stderr contains a list of valid field IDs including `5h_left`, `7d_left`, `account`, `status`.
 - **Exit:** 1
 - **Source fn:** `ut_get_invalid_field_exits_1` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-15](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-15](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -235,7 +235,7 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it219_lim_it_ft028_16_filters_compose` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-16](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-16](../../../docs/feature/028_usage_row_filtering.md)
 
 ---
 
@@ -247,4 +247,4 @@ Feature behavioral requirement test cases for `docs/feature/028_usage_row_filter
 - **Exit:** 0
 - **Live:** yes
 - **Source fn:** `it_ft028_17_only_active_single_http_fetch` (in `tests/cli/usage_test.rs`)
-- **Source:** [feature/028_usage_row_filtering.md AC-17](../../../../docs/feature/028_usage_row_filtering.md)
+- **Source:** [feature/028_usage_row_filtering.md AC-17](../../../docs/feature/028_usage_row_filtering.md)

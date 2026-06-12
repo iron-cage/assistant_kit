@@ -1,6 +1,6 @@
 meta:
   description: Cross-reference graph for feature/ and invariant/ doc instances in claude_profile
-  node_count: 40
+  node_count: 41
   edge_count: 70
   component_count: 8
   generated: 2026-06-09
@@ -179,6 +179,11 @@ nodes:
   - id: feature/034
     file: feature/034_explicit_session_model_override.md
     label: Explicit Session Model Override
+    entity: feature
+
+  - id: feature/035
+    file: feature/035_model_command.md
+    label: Dedicated Model Get/Set Command
     entity: feature
 
   - id: invariant/001
@@ -370,9 +375,13 @@ edges:
   - {from: feature/034, to: feature/004, label: "set_model:: runs after account.use credential rotation"}
   - {from: feature/034, to: feature/009, label: "set_model:: applies to .usage session-model override block"}
 
+  # ── feature/035: Dedicated Model Get/Set Command ──────────────────────────
+
+  - {from: feature/035, to: feature/034, label: ".model shares set_session_model() and map_model_shorthand() extracted from validate_set_model()"}
+
 components:
   - id: 1
-    size: 32
+    size: 33
     isolated: false
     nodes:
       - feature/001
@@ -406,6 +415,7 @@ components:
       - feature/032
       - feature/033
       - feature/034
+      - feature/035
       - invariant/005
 
   - id: 2

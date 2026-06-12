@@ -19,7 +19,7 @@
 | `endurance` | Endurance Top | First non-current, non-active, non-occupied, non-h-exhausted account from endurance sort order (qualified accounts first by weekly desc then reset asc; unqualified by 5h_left desc, tiebreak weekly desc). |
 | `drain` | Drain Top | First non-current, non-active, non-occupied, non-h-exhausted account from drain sort order (`prefer_weekly` ascending; tiebreak `5h_left` asc). |
 
-**Recommendation eligibility:** All strategies skip accounts that are `is_current` (user is already on that session), `is_active` (the active marker account when it differs from current), `is_occupied_elsewhere` (parked by another host/user pair — see 025_per_machine_active_marker.md), or h-exhausted (`5h_left ≤ 15%` — the h-exhaustion threshold from TSK-190; switching to a session-exhausted account provides negligible usable capacity). Only accounts with valid quota data and `expires_in_secs > 0` are eligible. Exception: `drain` additionally skips accounts where `prefer_weekly ≤ 5.0` — a weekly-exhausted account (🟡 tier boundary: `7d Left ≤ 5%`) has too little remaining capacity to be a meaningful drain target.
+**Recommendation eligibility:** All strategies skip accounts that are `is_current` (user is already on that session), `is_active` (the active marker account when it differs from current), `is_occupied_elsewhere` (parked by another host/user pair — see 025_per_machine_active_marker.md), or h-exhausted (`5h_left ≤ 15%` — the h-exhaustion threshold from TSK-190; switching to a session-exhausted account provides negligible usable capacity). Only accounts with valid quota data and `expires_in_secs > 0` are eligible. Exception: `drain` and `endurance` (unqualified tier — the fallback when no qualified accounts exist) additionally skip accounts where `prefer_weekly ≤ 5.0` — a weekly-exhausted account (🟡 tier boundary: `7d Left ≤ 5%`) has too little remaining capacity to be a meaningful target. Fix(BUG-287): the endurance unqualified tier previously used `|_| true`, allowing weekly-exhausted accounts through; the fix mirrors the drain arm.
 
 **Footer format (always shown when ≥2 valid accounts):**
 
@@ -47,7 +47,7 @@ The account selected by the active `next::` strategy receives the `→` flag in 
 | Primary sort key | soonest renewal event (min of `7d_reset`, `subscription renewal`) | qualified-first, then `weekly` desc | `prefer_weekly` asc (lowest 7d Left first) |
 | h-exhausted handling | skipped (5h Left ≤ 15%) | skipped (5h Left ≤ 15%) | skipped (5h Left ≤ 15%) |
 | Secondary sort | `5h_left` asc (lower session = more depleted = preferred on tie) | within qualified: `5h_reset` asc; within unqualified: `weekly` desc | `5h_left` asc |
-| Qualification gate | none (non-current, non-active, non-occupied, non-h-exhausted) | `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` | non-h-exhausted + `prefer_weekly > 5.0` |
+| Qualification gate | none (non-current, non-active, non-occupied, non-h-exhausted) | `5h_reset ∈ [15m, 60m]` + `weekly ≥ 30%` (qualified); unqualified fallback: `prefer_weekly > 5.0` | non-h-exhausted + `prefer_weekly > 5.0` |
 | Uses weekly quota | no | yes (gate + rank) | yes (primary sort key) |
 | Picks account with… | soonest quota renewal event (7d reset or subscription) | freshest 5h reset + weekly runway | least weekly quota remaining (skips `prefer_weekly ≤ 5.0`) |
 | Best for | quick context switch to next available account | starting a long 5h+ agent run | active workstation rotation |
@@ -106,7 +106,7 @@ Valid: 8 / 8   ->  Next by strategy:
 
 - **AC-01**: The footer always shows one recommendation line per strategy (renew, endurance, drain) with account name and key metric, regardless of the `next::` parameter value. The footer is never suppressed by a `next::` value choice.
 - **AC-02**: Exactly one account receives the `→` flag in the table body — the account selected by the active `next::` strategy. No `→` is placed when no eligible candidate exists for that strategy.
-- **AC-03**: `next::endurance` places `→` on the top non-current, non-active, non-occupied, non-h-exhausted account from endurance sort order.
+- **AC-03**: `next::endurance` places `→` on the top non-current, non-active, non-occupied, non-h-exhausted account from endurance sort order. Qualified tier (`5h_reset ∈ [15m, 60m]` AND `weekly ≥ 30%`) is tried first; when empty, falls back to the unqualified tier. The unqualified tier additionally requires `prefer_weekly > 5.0` — accounts where `prefer_weekly ≤ 5.0` are skipped in both tiers (Fix BUG-287: mirrors drain's weekly-floor gate).
 - **AC-04**: `next::drain` places `→` on the top non-current, non-active, non-occupied, non-h-exhausted account from drain sort order.
 - **AC-05**: Invalid `next::` value exits 1 with an error naming the valid values (`renew`, `endurance`, `drain`).
 - **AC-06**: `next::` does not affect `format::json` output — JSON always uses alphabetical order without recommendation markers.
@@ -124,6 +124,7 @@ Valid: 8 / 8   ->  Next by strategy:
 |------|--------------|
 | `task/claude_profile/bug/243_renew_strategy_missing_5h_tiebreaker.md` | BUG-243 ✅ Fixed: renew sort uses `five_hour_left` tiebreaker via `f64::total_cmp` on equal renewal time (TSK-248) |
 | `task/claude_profile/bug/260_renew_next_selection_nondeterministic_when_fully_tied.md` | BUG-260 ✅ Fixed: added `.then_with(name cmp)` at `sort_next.rs:107`; MRE `mre_bug260_renew_nondeterministic_when_fully_tied` (TSK-263) |
+| `task/claude_profile/bug/287_endurance_missing_weekly_floor_gate.md` | BUG-287 🔴 Open (TSK-290): `find_first_eligible` at `sort_next.rs:113` uses `\|_\| true` — no weekly-floor gate on endurance unqualified tier; fix: replace with `\|aq\| prefer_weekly(aq, prefer) > 5.0` (mirrors drain arm BUG-206 fix at line 122). Fix documented in AC-03. |
 
 ### Features
 

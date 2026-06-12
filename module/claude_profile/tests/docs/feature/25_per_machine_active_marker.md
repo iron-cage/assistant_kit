@@ -1,6 +1,6 @@
 # Test: Feature 025 — Per-Machine Active Marker
 
-Feature behavioral requirement test cases for `docs/feature/025_per_machine_active_marker.md`. Each FT case maps to one acceptance criterion. Prefix resolution edge cases are in [cli/command/001_account.md](../cli/command/01_account.md) and [feature/015_name_shortcut_syntax.md](../../../../docs/feature/015_name_shortcut_syntax.md).
+Feature behavioral requirement test cases for `docs/feature/025_per_machine_active_marker.md`. Each FT case maps to one acceptance criterion. Prefix resolution edge cases are in [cli/command/001_account.md](../cli/command/01_account.md) and [feature/015_name_shortcut_syntax.md](../../../docs/feature/015_name_shortcut_syntax.md).
 
 ### AC Coverage Index
 
@@ -47,7 +47,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** The credential store contains a file named `_active_{hostname}_{user}` (as returned by `active_marker_filename()`) whose content is `alice@home.com`. No file named `_active` (bare) is created.
 - **Exit:** 0
 - **Source fn:** `aw07_switch_updates_active_marker` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/025_per_machine_active_marker.md AC-01](../../../../docs/feature/025_per_machine_active_marker.md)
+- **Source:** [feature/025_per_machine_active_marker.md AC-01](../../../docs/feature/025_per_machine_active_marker.md)
 
 ---
 
@@ -58,7 +58,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** The credential store contains `_active_{hostname}_{user}` = `"alice@home.com"`. No bare `_active` file is created. The fix in `save()` uses `active_marker_filename()` (not the old hard-coded `"_active"`).
 - **Exit:** 0
 - **Source fn:** `as16_save_writes_active_marker` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/025_per_machine_active_marker.md AC-01](../../../../docs/feature/025_per_machine_active_marker.md)
+- **Source:** [feature/025_per_machine_active_marker.md AC-01](../../../docs/feature/025_per_machine_active_marker.md)
 
 ---
 
@@ -70,7 +70,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Exit:** n/a (unit test, implicit)
 - **Note:** Validated by any test that writes a marker via `save()`/`switch_account()` and then reads it back using `active_marker_filename()` to locate the file. FT-01 and FT-02 both demonstrate this. Dedicated unit tests: `switch_account_updates_active_marker` and `list_marks_active_account_via_active_marker` in `tests/account_tests.rs`.
 - **Source fn:** `switch_account_updates_active_marker` (in `tests/account_tests.rs`)
-- **Source:** [feature/025_per_machine_active_marker.md AC-02](../../../../docs/feature/025_per_machine_active_marker.md)
+- **Source:** [feature/025_per_machine_active_marker.md AC-02](../../../docs/feature/025_per_machine_active_marker.md)
 
 ---
 
@@ -81,7 +81,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** Machine A writes `_active_A_user1`; machine B's `_active_B_user1` is untouched. Each machine reads its own marker independently.
 - **Note:** Design invariant guaranteed by distinct filenames (`HOSTNAME` + `USER` combination). No isolated test required; independence follows architecturally from non-overlapping filename keys. Both FT-01 and FT-02 implicitly rely on this property via TempDir HOME isolation.
 - **Source fn:** (design invariant — no dedicated test)
-- **Source:** [feature/025_per_machine_active_marker.md AC-03](../../../../docs/feature/025_per_machine_active_marker.md)
+- **Source:** [feature/025_per_machine_active_marker.md AC-03](../../../docs/feature/025_per_machine_active_marker.md)
 
 ---
 
@@ -92,7 +92,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** It contains the pattern `_active_*`, excluding all per-machine marker files from version control.
 - **Note:** Verified by static inspection of `dev/.gitignore` line 31: `_active_*`. Updated as part of Feature 025 implementation.
 - **Source fn:** (static config — no dedicated test)
-- **Source:** [feature/025_per_machine_active_marker.md AC-04](../../../../docs/feature/025_per_machine_active_marker.md)
+- **Source:** [feature/025_per_machine_active_marker.md AC-04](../../../docs/feature/025_per_machine_active_marker.md)
 
 ---
 
@@ -103,7 +103,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** Exits 0. Active marker contains `i1@wbox.pro`. The exact-local-part check resolves `i1@wbox.pro` before reaching the prefix scan — no ambiguity error.
 - **Exit:** 0
 - **Source fn:** `aw16_exact_local_part_wins_over_ambiguous_prefix` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/015_name_shortcut_syntax.md AC-11](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [feature/015_name_shortcut_syntax.md AC-11](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -114,7 +114,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** Exits 1. Stderr contains "ambiguous". No account switch occurs. The exact-local-part check finds no match, falling through to prefix scan which reports ambiguity.
 - **Exit:** 1
 - **Source fn:** `aw15_use_prefix_ambiguous_exits_1` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/015_name_shortcut_syntax.md AC-06](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [feature/015_name_shortcut_syntax.md AC-06](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -125,7 +125,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** Exits 1. Stderr contains "ambiguous". The exact-local-part check finds no match (no account with local part `i1`), falls through to prefix scan, which finds two matches and reports ambiguity.
 - **Exit:** 1
 - **Source fn:** `aw17_use_prefix_ambiguous_no_exact_local_part_exits_1` (in `tests/cli/account_mutations_test.rs`)
-- **Source:** [feature/015_name_shortcut_syntax.md AC-06, AC-11](../../../../docs/feature/015_name_shortcut_syntax.md)
+- **Source:** [feature/015_name_shortcut_syntax.md AC-06, AC-11](../../../docs/feature/015_name_shortcut_syntax.md)
 
 ---
 
@@ -137,7 +137,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Exit:** 0
 - **Source fn:** `mre_bug_209_account_save_uses_active_marker_not_stale_email` (in `tests/cli/account_mutations_test.rs`)
 - **Note:** Tests the fallback path. Primary path (`oauthAccount.emailAddress` present, overrides stale marker) is covered by FT-10 (BUG-212).
-- **Source:** [feature/002_account_save.md AC-08](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-08](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -149,7 +149,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Exit:** 0
 - **Source fn:** `mre_bug_212_account_save_stale_marker_uses_oauth_email` (in `tests/cli/account_mutations_test.rs`)
 - **Note:** BUG-212 regression guard. `oauthAccount.emailAddress` is written by both clp ops and external OAuth login; `_active` is written only by clp ops — external login leaves it stale. Primary over fallback precedence is the two-level inference introduced by TSK-215.
-- **Source:** [feature/002_account_save.md AC-08, AC-16](../../../../docs/feature/002_account_save.md)
+- **Source:** [feature/002_account_save.md AC-08, AC-16](../../../docs/feature/002_account_save.md)
 
 ---
 
@@ -160,7 +160,7 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** Returns a `HashSet<String>` containing exactly `{"alice@test.com", "bob@test.com"}`. The own marker's content (`"own@test.com"`) is NOT present in the result. The set has exactly 2 elements.
 - **Note:** File names for the other machines must differ from `active_marker_filename()` — use hard-coded names like `_active_machine2_user1` to guarantee they differ from the current machine's marker regardless of environment.
 - **Source fn:** `test_ft11_025_other_machines_active_returns_others` (in `claude_profile_core/tests/account_test.rs`)
-- **Source:** [feature/025_per_machine_active_marker.md AC-05](../../../../docs/feature/025_per_machine_active_marker.md)
+- **Source:** [feature/025_per_machine_active_marker.md AC-05](../../../docs/feature/025_per_machine_active_marker.md)
 
 ---
 
@@ -171,4 +171,4 @@ Feature behavioral requirement test cases for `docs/feature/025_per_machine_acti
 - **Then:** Returns an empty `HashSet<String>` in both cases.
 - **Note:** Case A verifies the own-marker exclusion filter. Case B verifies graceful empty-directory handling. Both are covered in the same test function.
 - **Source fn:** `test_ft12_025_other_machines_active_empty_when_only_own` (in `claude_profile_core/tests/account_test.rs`)
-- **Source:** [feature/025_per_machine_active_marker.md AC-05](../../../../docs/feature/025_per_machine_active_marker.md)
+- **Source:** [feature/025_per_machine_active_marker.md AC-05](../../../docs/feature/025_per_machine_active_marker.md)

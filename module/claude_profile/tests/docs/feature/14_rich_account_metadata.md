@@ -47,7 +47,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** Output includes `Display: {displayName}` line.
 - **Exit:** 0
 - **Source fn:** `cred08_display_name_opt_in`
-- **Source:** [014_rich_account_metadata.md AC-01](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-01](../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
@@ -58,7 +58,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** Output includes `Role: {organizationRole}` line.
 - **Exit:** 0
 - **Source fn:** `cred09_role_opt_in`
-- **Source:** [014_rich_account_metadata.md AC-02](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-02](../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
@@ -69,7 +69,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** Output includes `Billing: {billingType}` line.
 - **Exit:** 0
 - **Source fn:** `cred10_billing_opt_in`
-- **Source:** [014_rich_account_metadata.md AC-03](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-03](../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
@@ -80,7 +80,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** Output includes `Model: {model}` line.
 - **Exit:** 0
 - **Source fn:** `cred11_model_opt_in`
-- **Source:** [014_rich_account_metadata.md AC-04](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-04](../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
@@ -91,7 +91,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** None of `Display:`, `Role:`, `Billing:`, `Model:` lines appear in output.
 - **Exit:** 0
 - **Source fn:** `cred13_new_params_absent_by_default`
-- **Source:** [014_rich_account_metadata.md AC-05](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-05](../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
@@ -102,7 +102,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** JSON includes `"display_name"`, `"role"`, `"billing"`, `"model"` keys regardless of whether those params were explicitly passed.
 - **Exit:** 0
 - **Source fn:** `cred12_json_extended_shape`
-- **Source:** [014_rich_account_metadata.md AC-06](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-06](../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
@@ -113,7 +113,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** `Display:`, `Role:`, `Billing:` all show `N/A`. No error.
 - **Exit:** 0
 - **Source fn:** `cred05_no_claude_json_shows_na`
-- **Source:** [014_rich_account_metadata.md AC-07](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-07](../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
@@ -124,7 +124,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** `Model:` shows `N/A`. No error.
 - **Exit:** 0
 - **Source fn:** `cred47_absent_settings_json_model_shows_na`
-- **Source:** [014_rich_account_metadata.md AC-08](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-08](../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
@@ -135,7 +135,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** Each account block includes a `Display:` line populated from the snapshot.
 - **Exit:** 0
 - **Source fn:** `acc20_display_name_shows_from_snapshot`
-- **Source:** [014_rich_account_metadata.md AC-09](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-09](../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
@@ -146,7 +146,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** Each account block shows `Role:`, `Billing:`, and `Model:` lines from their respective snapshots. `Model:` is `N/A` if `model` field is absent in `{name}.json`.
 - **Exit:** 0
 - **Source fn:** `acc21_role_billing_model_from_snapshots`
-- **Source:** [014_rich_account_metadata.md AC-10](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-10](../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
@@ -157,7 +157,7 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** All four lines show `N/A` for the affected account. No error.
 - **Exit:** 0
 - **Source fn:** `acc22_no_snapshot_shows_na_for_new_fields`
-- **Source:** [014_rich_account_metadata.md AC-11](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-11](../../../docs/feature/014_rich_account_metadata.md)
 
 ---
 
@@ -168,4 +168,4 @@ Feature behavioral requirement test cases for `docs/feature/014_rich_account_met
 - **Then:** Each account object in the JSON array includes `"display_name"`, `"role"`, `"billing"`, `"model"` keys. Values are `N/A` strings when data is absent.
 - **Exit:** 0
 - **Source fn:** `acc23_json_includes_new_fields`
-- **Source:** [014_rich_account_metadata.md AC-12](../../../../docs/feature/014_rich_account_metadata.md)
+- **Source:** [014_rich_account_metadata.md AC-12](../../../docs/feature/014_rich_account_metadata.md)

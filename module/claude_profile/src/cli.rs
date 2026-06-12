@@ -62,6 +62,11 @@ pub( super ) fn build_registry() -> CommandRegistry
 /// Renders help via `cli_fmt::CliHelpTemplate` with two command groups,
 /// three options, and four examples. Colour is suppressed when stdout is
 /// not a terminal (TTY detection delegated to `CliHelpStyle::default()`).
+///
+/// **Maintenance:** this list is manually maintained and decoupled from the
+/// registry in `src/lib.rs`. When adding or removing a command, update both
+/// the registry (`register_commands()`) AND the `CommandEntry` list here.
+/// Also update `tests/cli/dot_test.rs` (`dot04` visible array + `dot05` count).
 pub( super ) fn print_usage( binary : &str )
 {
   use cli_fmt::help::*;
@@ -94,6 +99,7 @@ pub( super ) fn print_usage( binary : &str )
           CommandEntry { name : ".token.status".to_string(),       desc : "Show OAuth token expiry classification".to_string() },
           CommandEntry { name : ".paths".to_string(),              desc : "Show all resolved ~/.claude/ paths".to_string()     },
           CommandEntry { name : ".usage".to_string(),              desc : "Show live quota for all saved accounts".to_string() },
+          CommandEntry { name : ".model".to_string(),              desc : "Get or set session model in settings.json".to_string() },
         ],
       },
     ],

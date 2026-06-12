@@ -19,6 +19,7 @@ mod account_renewal;
 mod account_inspect;
 mod account_assign;
 mod limits;
+mod model;
 mod token_paths;
 mod dot;
 
@@ -35,6 +36,7 @@ pub use account_renewal::account_renewal_routine;
 pub use account_inspect::account_inspect_routine;
 pub use account_assign::account_assign_routine;
 pub use limits::account_limits_routine;
+pub use model::model_routine;
 pub use token_paths::{ token_status_routine, paths_routine };
 pub use dot::dot_routine;
 pub use crate::usage::usage_routine;

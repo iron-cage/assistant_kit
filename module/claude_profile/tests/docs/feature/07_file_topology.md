@@ -35,7 +35,7 @@ Feature behavioral requirement test cases for `docs/feature/007_file_topology.md
 - **Then:** Returns `None`. No panic.
 - **Exit:** Ok(None)
 - **Source fn:** `new_returns_none_when_home_not_set`
-- **Source:** [007_file_topology.md AC-01](../../../../docs/feature/007_file_topology.md)
+- **Source:** [007_file_topology.md AC-01](../../../docs/feature/007_file_topology.md)
 
 ---
 
@@ -52,7 +52,7 @@ Feature behavioral requirement test cases for `docs/feature/007_file_topology.md
   - `sessions_dir()` → `{home}/.claude/sessions/`
 - **Exit:** Ok
 - **Source fn:** `credentials_file_returns_dot_credentials_json`, `projects_dir_returns_projects_under_base`, `stats_file_returns_stats_cache_json`, `settings_file_returns_settings_json`, `session_env_dir_returns_session_env_under_base`, `sessions_dir_returns_sessions_under_base`
-- **Source:** [007_file_topology.md AC-02](../../../../docs/feature/007_file_topology.md)
+- **Source:** [007_file_topology.md AC-02](../../../docs/feature/007_file_topology.md)
 
 ---
 
@@ -63,7 +63,7 @@ Feature behavioral requirement test cases for `docs/feature/007_file_topology.md
 - **Then:** Exits 2. Stderr contains an actionable error message (not a generic panic).
 - **Exit:** 2
 - **Source fn:** `p05_paths_home_unset_exits_2`
-- **Source:** [007_file_topology.md AC-03](../../../../docs/feature/007_file_topology.md)
+- **Source:** [007_file_topology.md AC-03](../../../docs/feature/007_file_topology.md)
 
 ---
 
@@ -74,7 +74,7 @@ Feature behavioral requirement test cases for `docs/feature/007_file_topology.md
 - **Then:** Returns `{home}/.claude.json` — one level above the `.claude/` base directory.
 - **Exit:** Ok
 - **Source fn:** `ft04_claude_json_file_returns_home_dot_claude_json`
-- **Source:** [007_file_topology.md AC-04](../../../../docs/feature/007_file_topology.md)
+- **Source:** [007_file_topology.md AC-04](../../../docs/feature/007_file_topology.md)
 
 ---
 
@@ -85,7 +85,7 @@ Feature behavioral requirement test cases for `docs/feature/007_file_topology.md
 - **Then:** The returned path does NOT contain `.claude/claude.json`. It is `{home}/.claude.json` — outside the `.claude/` directory, not inside it.
 - **Exit:** Ok
 - **Source fn:** `ft05_claude_json_file_is_sibling_not_inside_dot_claude`
-- **Source:** [007_file_topology.md AC-05](../../../../docs/feature/007_file_topology.md)
+- **Source:** [007_file_topology.md AC-05](../../../docs/feature/007_file_topology.md)
 
 ---
 
@@ -96,4 +96,4 @@ Feature behavioral requirement test cases for `docs/feature/007_file_topology.md
 - **Then:** Returns `{home}/.claude/.credentials.json`.
 - **Exit:** Ok
 - **Source fn:** `credentials_file_returns_dot_credentials_json`
-- **Source:** [007_file_topology.md AC-06](../../../../docs/feature/007_file_topology.md)
+- **Source:** [007_file_topology.md AC-06](../../../docs/feature/007_file_topology.md)

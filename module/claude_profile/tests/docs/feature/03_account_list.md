@@ -61,7 +61,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** Output contains an advisory message (e.g., `(no accounts configured)`). Exit 0.
 - **Exit:** 0
 - **Source fn:** `acc03_empty_store_shows_advisory`, `acc11_missing_store_shows_advisory`
-- **Source:** [003_account_list.md AC-01](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-01](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -72,7 +72,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** Each account block has an email header line followed by indented `Key:  value` lines. A blank line separates consecutive blocks. A single account has no trailing blank line. The non-active account shows its own stored `expiresAt` value, not the active account's. An absent `expiresAt` is shown as `expired` (not an error). `Email:` line is shown from the saved `{name}.json` snapshot.
 - **Exit:** 0
 - **Source fn:** `acc01_lists_accounts_as_indented_blocks`, `acc13_blank_line_between_blocks`, `acc14_nonactive_shows_own_stored_expires`, `acc18_single_account_no_trailing_blank`, `acc19_missing_expires_at_shows_expired`, `acc25_email_reads_from_snapshot`
-- **Source:** [003_account_list.md AC-02](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-02](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -83,7 +83,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** `alice@acme.com`'s block shows `Active:  yes`; the other account shows `Active:  no`.
 - **Exit:** 0
 - **Source fn:** `acc02_active_shows_yes_inactive_shows_no`
-- **Source:** [003_account_list.md AC-03](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-03](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -96,7 +96,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** Output is `[]`.
 - **Exit:** 0
 - **Source fn:** `acc09_json_format_array`, `acc17_json_format_empty_store`
-- **Source:** [003_account_list.md AC-04](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-04](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -115,7 +115,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** Exit 1.
 - **Exit:** 0 / 1 / 2
 - **Source fn:** `acc04_name_scopes_to_single_block`, `acc05_name_not_found_exits_2`, `acc06_name_invalid_exits_1`, `acc29_accounts_positional_bare_arg`, `acc30_accounts_prefix_resolves`
-- **Source:** [003_account_list.md AC-05](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-05](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -128,7 +128,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** JSON output still includes all fields; field-presence toggles apply to text output only.
 - **Exit:** 0
 - **Source fn:** `acc07_field_presence_suppresses_lines`, `acc10_json_ignores_field_presence`
-- **Source:** [003_account_list.md AC-06](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-06](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -139,7 +139,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** Output contains only bare account name lines (no indentation, no `Key: value` pairs). No blank-line separators between accounts.
 - **Exit:** 0
 - **Source fn:** `acc08_all_fields_off_bare_names`
-- **Source:** [003_account_list.md AC-07](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-07](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -150,7 +150,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** Output lists `alice@x.com`, then `bob@x.com`, then `charlie@x.com` (alphabetical by name).
 - **Exit:** 0
 - **Source fn:** `acc12_sorted_alphabetically`
-- **Source:** [003_account_list.md AC-08](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-08](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -163,7 +163,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** Block does NOT contain a `Display:` line.
 - **Exit:** 0
 - **Source fn:** `acc20_display_name_shows_from_snapshot`, `acc24_new_fields_absent_by_default`
-- **Source:** [003_account_list.md AC-09](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-09](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -176,7 +176,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** None of those three lines appear in the block.
 - **Exit:** 0
 - **Source fn:** `acc21_role_billing_model_from_snapshots`, `acc24_new_fields_absent_by_default`
-- **Source:** [003_account_list.md AC-10](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-10](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -187,7 +187,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** `Sub:  N/A`, `Tier:  N/A`, `Email:  N/A`, `Display:  N/A`, `Role:  N/A`, `Billing:  N/A`, `Model:  N/A`, `ID:  N/A`, `Capabilities:  N/A`.
 - **Exit:** 0
 - **Source fn:** `acc15_missing_sub_field_shows_na`, `acc16_missing_tier_field_shows_na`, `acc22_no_snapshot_shows_na_for_new_fields`, `acc41_no_snapshot_uuid_capabilities_na`
-- **Source:** [003_account_list.md AC-11](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-11](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -198,7 +198,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** Each JSON object contains keys `email`, `display_name`, `role`, `billing`, `model`, `tagged_id`, `capabilities`, `organization_uuid`, `organization_name` — regardless of whether field-presence toggles are set.
 - **Exit:** 0
 - **Source fn:** `acc23_json_includes_new_fields`, `acc37_json_includes_tagged_id`, `acc40_json_includes_capabilities`, `acc45_json_includes_org_uuid`
-- **Source:** [003_account_list.md AC-12](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-12](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -209,7 +209,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** `work@acme.com`'s block shows `Current:  yes`; `alice@acme.com`'s block shows `Current:  no`.
 - **Exit:** 0
 - **Source fn:** `acc31_accounts_shows_current_yes_no`
-- **Source:** [003_account_list.md AC-13](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-13](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -222,7 +222,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** `Current:` line is absent from all blocks.
 - **Exit:** 0
 - **Source fn:** `acc32_accounts_suppresses_current_when_creds_absent`, `acc33_accounts_current_param_and_json`
-- **Source:** [003_account_list.md AC-14](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-14](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -233,7 +233,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** Each JSON object contains `is_current: true` or `is_current: false` accordingly.
 - **Exit:** 0
 - **Source fn:** `acc33_accounts_current_param_and_json`
-- **Source:** [003_account_list.md AC-15](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-15](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -246,7 +246,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** No `ID:` line in any block.
 - **Exit:** 0
 - **Source fn:** `acc35_uuid_shows_id_from_snapshot`, `acc36_uuid_absent_by_default`, `acc41_no_snapshot_uuid_capabilities_na`
-- **Source:** [003_account_list.md AC-16](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-16](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -259,7 +259,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** No `Capabilities:` line in any block.
 - **Exit:** 0
 - **Source fn:** `acc38_capabilities_shows_list_from_snapshot`, `acc39_capabilities_absent_by_default`, `acc41_no_snapshot_uuid_capabilities_na`
-- **Source:** [003_account_list.md AC-17](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-17](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -272,7 +272,7 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** No `Org ID:` line in any block.
 - **Exit:** 0
 - **Source fn:** `acc42_org_uuid_shows_from_roles_json`, `acc43_org_uuid_absent_by_default`, `acc44_org_uuid_missing_roles_json_na`
-- **Source:** [003_account_list.md AC-18](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-18](../../../docs/feature/003_account_list.md)
 
 ---
 
@@ -285,4 +285,4 @@ Feature behavioral requirement test cases for `docs/feature/003_account_list.md`
 - **Then:** No `Org:` line in any block.
 - **Exit:** 0
 - **Source fn:** `acc46_org_name_shows_from_roles_json`, `acc47_org_name_absent_by_default`, `acc48_org_name_missing_roles_json_na`
-- **Source:** [003_account_list.md AC-19](../../../../docs/feature/003_account_list.md)
+- **Source:** [003_account_list.md AC-19](../../../docs/feature/003_account_list.md)
