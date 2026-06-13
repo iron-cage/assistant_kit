@@ -32,6 +32,7 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | ID | Test Name | AC | Category |
 |----|-----------|-----|----------|
 | FT-20 | override_session_model_to_opus fires for shorthand "sonnet" input, writes "opus" | AC-18 | BUG-257 MRE |
+| FT-21 | post-subprocess re-fetch updates in-memory quota; failure preserves pre-subprocess data | AC-21 | BUG-288 MRE |
 | FT-01 | touch::1 idle account dispatches subprocess | AC-01 | Touch Dispatch |
 | FT-02 | touch::0 suppresses subprocess and quota fetch | AC-02 | Touch Suppression |
 | FT-03 | active account — subprocess spawned idempotently (BUG-285 fix) | AC-03 | Idle Guard |
@@ -51,8 +52,9 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 | FT-17 | touch::1 + fetch Err + expired expiresAt + refresh::1 (default) → refresh fails → exits 3 | AC-17 | BUG-213 + BUG-230 MRE |
 | FT-18 | touch::1 + fetch Err + expired expiresAt + refresh::0 → exits 3 immediately, no refresh attempt | AC-20 | BUG-230 |
 | FT-19 | active account + 7d(Son) < 20% → model override sonnet→opus after switch | AC-18 | BUG-238 MRE |
+| FT-21 | post-subprocess re-fetch updates in-memory quota; failure preserves pre-subprocess data | AC-21 | BUG-288 MRE |
 
-**Total:** 20 FT cases
+**Total:** 21 FT cases
 
 ---
 
@@ -278,3 +280,16 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **Exit:** n/a (unit test)
 - **Source fn:** `mre_bug257_override_shorthand_alias` (in `claude_profile_core/tests/account_test.rs`) — ✅ TSK-261
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-18](../../../docs/feature/027_account_use_post_switch_touch.md)
+
+---
+
+### FT-21: Post-subprocess quota re-fetch updates in-memory quota; failure preserves pre-subprocess data (BUG-288 MRE)
+
+- **Given:** `apply_post_switch_touch` is called with a valid `TouchCtx` containing quota data with `five_hour.resets_at = None` (idle). The subprocess runs and returns. A re-fetch is attempted via `fetch_oauth_usage`.
+- **When (success path):** Re-fetch returns `Ok(new_data)` where `new_data.five_hour.resets_at = Some(...)` (active).
+- **Then (success path):** The in-memory quota result reflects the post-subprocess state (`resets_at = Some`). A subsequent `apply_touch` call for the same account will see `all_running = true` and emit `skipped (reason: already active)` — no second subprocess spawned. Fix(BUG-288).
+- **When (failure path):** Re-fetch returns `Err(...)`.
+- **Then (failure path):** Pre-subprocess quota data is preserved; function returns without panicking or aborting the switch. The re-fetch failure is non-aborting.
+- **Exit:** n/a (unit test — no exit code)
+- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (in `src/usage/api.rs #[cfg(test)]`)
+- **Source:** [feature/027_account_use_post_switch_touch.md AC-21](../../../docs/feature/027_account_use_post_switch_touch.md)
