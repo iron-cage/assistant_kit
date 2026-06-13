@@ -9,9 +9,9 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-1 | No sessions: exit 0, no-sessions message | AC-002 | ✅ |
 | US-2 | Help lists `ps` subcommand | AC-003 | ✅ |
 | US-3 | Typo `clr p` triggers guard | AC-004 | ✅ |
-| US-4 | Sessions present: plain-style table with correct headers | AC-001, AC-005 | ⏳ |
+| US-4 | Sessions present: plain-style table with correct headers | AC-001, AC-005 | ✅ |
 | US-5 | `$PRO` prefix replaced by `"$PRO"` literal in Absolute Path column | AC-007 | ✅ |
-| US-6 | Queued CLR session shown when gate file present | AC-008 | ⏳ |
+| US-6 | Queued CLR session shown when gate file present | AC-008 | ✅ |
 
 ---
 

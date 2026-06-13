@@ -317,11 +317,14 @@ cmd_test()
   # Root cause: host workspace lacks plugin_mount subdir; :ro parent blocks creation.
   # Pitfall: pre-create all WORKSPACE_DIR-nested plugin targets in $WORKSPACE_ROOT first.
   local i
-  for (( i=0; i<${#mount_args[@]}; i++ )); do
-    if [[ "${mount_args[$i]}" == "-v" ]] && [[ $((i+1)) -lt ${#mount_args[@]} ]]; then
+  for (( i=0; i<${#mount_args[@]}; i++ ))
+  do
+    if [[ "${mount_args[$i]}" == "-v" ]] && [[ $((i+1)) -lt ${#mount_args[@]} ]]
+    then
       local container_path
       container_path="$( cut -d: -f2 <<< "${mount_args[$((i+1))]}" )"
-      if [[ "$container_path" == "$WORKSPACE_DIR/"* ]]; then
+      if [[ "$container_path" == "$WORKSPACE_DIR/"* ]]
+      then
         mkdir -p "$WORKSPACE_ROOT/${container_path#"$WORKSPACE_DIR/"}"
       fi
     fi

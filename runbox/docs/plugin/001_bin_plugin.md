@@ -18,5 +18,6 @@ bin_plugin_volume: /tmp/will_test_targets
 ```bash
 -v workspace_test_plugin_targets:/tmp/will_test_targets
 -v /usr/local/bin/w3:/usr/local/bin/w3:ro
+-e CARGO_TARGET_DIR=/tmp/will_test_targets
 ```
-Inside the container `w3` is callable at `/usr/local/bin/w3` exactly as on the host. The `workspace_test_plugin_targets` volume persists `w3`'s compilation artifacts across `.test` invocations — repeated calls reuse prior builds instead of recompiling. In `cmd_list()`, `CARGO_TARGET_DIR=/tmp/will_test_targets` redirects nextest's artifact path into the same volume so `.list` also benefits. A second binary plugin (e.g., `gh`) requires adding a parallel `bin_plugin_2` field to `runbox.yml` and handling it in `plugins.sh` — no changes to `runbox-run`.
+Inside the container `w3` is callable at `/usr/local/bin/w3` exactly as on the host. The `workspace_test_plugin_targets` volume persists `w3`'s compilation artifacts across `.test` invocations — repeated calls reuse prior builds instead of recompiling. `CARGO_TARGET_DIR` is set so `w3`/willbe writes build artifacts to the plugin volume instead of `/workspace/` — critical when `/workspace/` is bind-mounted `:ro` (Fix(BUG-001)). `cmd_list()` also sets `CARGO_TARGET_DIR=/tmp/will_test_targets` so `.list` benefits from the same cached artifacts. A second binary plugin (e.g., `gh`) requires adding a parallel `bin_plugin_2` field to `runbox.yml` and handling it in `plugins.sh` — no changes to `runbox-run`.

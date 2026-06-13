@@ -12,7 +12,7 @@ Configured via `runbox.yml` key `plugin_mount: host_path:container_path:type`. C
 
 `cmd_test()` in `runbox-run` handles this automatically: the `mkdir -p` loop before `podman run` pre-creates every `mount_args` container path that falls under `$WORKSPACE_DIR` in `$WORKSPACE_ROOT`.  No manual action required.
 
-**Dockerfile `RUN mkdir $WORKSPACE_DIR/.claude`** is kept as belt-and-suspenders for containers run without the workspace `:ro` overlay (e.g., custom `docker run` invocations).  It is not the primary fix for the workspace `:ro` scenario.  See BUG-001 in `agent_kit/task/runbox/bug/` for full root cause analysis.
+**Dockerfile `RUN mkdir -p $WORKSPACE_DIR/.claude`** is kept as belt-and-suspenders for containers run without the workspace `:ro` overlay (e.g., custom `docker run` invocations).  It is not the primary fix for the workspace `:ro` scenario.  See BUG-001 in `agent_kit/task/runbox/bug/` for full root cause analysis.
 
 ### Example
 
