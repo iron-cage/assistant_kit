@@ -291,5 +291,5 @@ Feature behavioral requirement test cases for `docs/feature/027_account_use_post
 - **When (failure path):** Re-fetch returns `Err(...)`.
 - **Then (failure path):** Pre-subprocess quota data is preserved; function returns without panicking or aborting the switch. The re-fetch failure is non-aborting.
 - **Exit:** n/a (unit test — no exit code)
-- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (in `src/usage/api.rs #[cfg(test)]`)
+- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (structural + no-token failure path) + `it_apply_post_switch_touch_cred_file_absent_skips_refetch` (file-absent failure path) — both in `src/usage/api.rs #[cfg(test)]`
 - **Source:** [feature/027_account_use_post_switch_touch.md AC-21](../../../docs/feature/027_account_use_post_switch_touch.md)

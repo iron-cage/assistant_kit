@@ -1097,7 +1097,8 @@ mod tests
         .expect( "apply_post_switch_touch not found in api.rs" );
       let fn_end   = src[ fn_start + 1.. ]
         .find( "\n// ── Main routine" )
-        .map_or( src.len(), |rel| fn_start + 1 + rel );
+        .map( |rel| fn_start + 1 + rel )
+        .expect( "anchor '// ── Main routine' must follow apply_post_switch_touch — update structural test if section was renamed" );
       let fn_body  = &src[ fn_start..fn_end ];
       assert!(
         fn_body.contains( "fetch_oauth_usage" ),
@@ -1140,6 +1141,10 @@ mod tests
       cache.contains( "last_touch_at" ),
       "BUG-288: last_touch_at must be written to cache even when re-fetch is skipped, got: {cache}",
     );
+    assert!(
+      cache.contains( "touch_idle" ),
+      "BUG-288: touch_idle must be written to cache even when re-fetch is skipped, got: {cache}",
+    );
 
     // Observable 2: quota re-fetch must have been skipped — `resets_at` must not appear.
     // If the re-fetch had fired with a live token and written new quota data, this would fail,
@@ -1148,6 +1153,76 @@ mod tests
     assert!(
       !cache.contains( "resets_at" ),
       "BUG-288: resets_at must not be written when accessToken is absent (re-fetch skipped), got: {cache}",
+    );
+  }
+
+  /// Corner case: credentials file absent → outer `read_to_string` guard fails →
+  /// entire re-fetch block skipped; `last_touch_at` and `touch_idle` still written; no panic.
+  ///
+  /// # Root Cause
+  /// The AC-21 re-fetch block uses three nested `if let` guards:
+  ///   1. `if let Ok(fresh_json) = read_to_string(&cred_path)` — outer: file I/O
+  ///   2. `if let Some(token) = parse_string_field(...)` — inner: JSON field
+  ///   3. `if let Ok(new_data) = fetch_oauth_usage(...)` — innermost: HTTP
+  ///
+  /// `mre_bug288_post_switch_touch_refetch_updates_quota` covers guard 2 (file present,
+  /// no `accessToken`). This test covers guard 1 (file absent entirely).
+  ///
+  /// # Why Not Caught
+  /// The file-absent path was not covered because the existing MRE test always writes a
+  /// credential file (albeit without `accessToken`). The outer guard is a distinct code
+  /// path even though observables are identical to the inner-guard failure path.
+  ///
+  /// # Fix Applied
+  /// No fix required — `if let Ok` on `read_to_string` already handles this correctly.
+  /// This test verifies the non-aborting invariant for the outer guard specifically.
+  ///
+  /// # Prevention
+  /// Nested `if let` re-fetch blocks must have unit tests per guard layer: outer I/O
+  /// guard and inner parse guard are independent failure modes requiring separate coverage.
+  ///
+  /// # Pitfall
+  /// File-absent and file-present-no-token produce identical observables (`last_touch_at`
+  /// written, no `resets_at`) but exercise different branches. Both must be tested to
+  /// confirm the non-aborting invariant holds at each layer of the nested guard chain.
+  #[ test ]
+  fn it_apply_post_switch_touch_cred_file_absent_skips_refetch()
+  {
+    use claude_quota::OauthUsageData;
+
+    let dir   = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( dir.path() );
+    std::fs::create_dir_all( paths.base() ).unwrap();
+    let name = "absent@example.com";
+
+    // No credentials file written — `read_to_string` returns Err.
+    // Outer `if let Ok` guard fires → entire re-fetch block bypassed.
+
+    let ctx = TouchCtx::for_test(
+      r#"{"subscriptionType":"pro"}"#.to_string(),
+      OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None },
+    );
+
+    // Must not panic: run_isolated discards result; outer re-fetch guard skips silently.
+    apply_post_switch_touch( name, ctx, "auto", "auto", false, &paths );
+
+    // Observable 1: last_touch_at and touch_idle written unconditionally (before re-fetch block).
+    let cache_path = paths.base().join( format!( "{name}.json" ) );
+    let cache = std::fs::read_to_string( &cache_path )
+      .expect( "cache file must exist even when credential file is absent" );
+    assert!(
+      cache.contains( "last_touch_at" ),
+      "last_touch_at must be written even when credential file is absent; got: {cache}",
+    );
+    assert!(
+      cache.contains( "touch_idle" ),
+      "touch_idle must be written even when credential file is absent; got: {cache}",
+    );
+
+    // Observable 2: re-fetch outer guard fired → no resets_at in cache.
+    assert!(
+      !cache.contains( "resets_at" ),
+      "resets_at must not appear when credential file is absent (outer guard bypassed); got: {cache}",
     );
   }
 }

@@ -49,6 +49,22 @@ pub( crate ) fn apply_touch(
     return;
   };
 
+  // Fix(BUG-288-FixB): read touch_idle flag written by apply_post_switch_touch.
+  //   When touch_idle=false, a subprocess already activated this account — skip as
+  //   defense-in-depth for API propagation lag (resets_at may not yet reflect the
+  //   new session at the quota endpoint even after Fix A's re-fetch).
+  // Root cause: api.rs:330-332 writes touch_idle=false with zero read sites — dead write.
+  // Pitfall: server-side quota propagation can lag; local cache flag is the only
+  //   coordination signal not subject to that lag.
+  if let Some( cache ) = claude_profile_core::account::read_quota_cache( credential_store, &aq.name )
+  {
+    if cache.touch_idle == Some( false )
+    {
+      if trace { eprintln!( "[trace] touch  {}  skipped (reason: touch_idle=false)", aq.name ) }
+      return;
+    }
+  }
+
   // Guard: skip accounts with all timers running, h-exhausted, or 7d-exhausted.
   // AC-02: trigger fires when ANY quota timer is absent and quota is valid (not exhausted).
   // Fix(BUG-214): d7_left guard skips 7d-weekly-exhausted accounts (seven_day_left <= 0%).
