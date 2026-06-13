@@ -25,6 +25,7 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-17 | 5h timer running but 7d or 7d-Sonnet timer absent → touch fires (3-timer trigger) | AC-15 | BUG-215 MRE |
 | FT-18 | After `apply_post_switch_touch` re-fetches quota (BUG-288 fix), `apply_touch` skips account as already-active; no second subprocess | AC-03 | BUG-288 Cross-Feature |
 | FT-19 | Account with `touch_idle=false` in quota cache skipped before `all_running` check; no subprocess spawned (BUG-288 Fix B defense-in-depth) | AC-16 | BUG-288 Fix B MRE |
+| FT-20 | `son_running=false` (5h+7d running, Sonnet 7d absent) + `imodel::auto` (Haiku) → touch fires both calls; Sonnet window unchanged; touch re-fires on second call (BUG-289 infinite loop MRE) | AC-02, AC-15 | BUG-289 MRE |
 
 ### Test Case Index
 
@@ -49,8 +50,9 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-17 | 5h timer running but 7d or 7d-Sonnet timer absent → touch fires (3-timer trigger) | AC-15 | BUG-215 MRE |
 | FT-18 | apply_post_switch_touch quota re-fetch prevents double subprocess in apply_touch | AC-03 | BUG-288 Cross-Feature |
 | FT-19 | account with touch_idle=false in cache skipped before all_running check — no subprocess (BUG-288 Fix B) | AC-16 | BUG-288 Fix B MRE |
+| FT-20 | son_running=false + imodel::auto (Haiku) fires touch both calls; Sonnet window unchanged; re-fires on second call (BUG-289 MRE) | AC-02, AC-15 | BUG-289 MRE |
 
-**Total:** 19 FT cases
+**Total:** 20 FT cases
 
 ---
 
@@ -272,3 +274,17 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Source fn:** `test_mre_bug288_apply_touch_skips_touch_idle_false` (in `src/usage/touch.rs #[cfg(test)]`) — behavioral: writes `touch_idle=Some(false)` to quota cache for an idle account (`resets_at=None`), calls `apply_touch` with `trace=true`, asserts `[trace] touch  <name>  skipped (reason: touch_idle=false)` emitted (guard fires before `all_running` check; no subprocess spawned because `claude_paths=None`).
 - **Note:** BUG-288 Fix B MRE (TSK-291). Before Fix B, `api.rs:330-332` wrote `touch_idle=false` with zero read sites — dead write. Fix B adds the read site at `touch.rs:59-66`. Defense-in-depth for API propagation lag: when the Anthropic API hasn't reflected the new session's `resets_at` at the quota endpoint by the time `.usage` runs (even after Fix A's re-fetch), the local `touch_idle=false` flag prevents a redundant subprocess.
 - **Source:** [feature/024_session_touch.md AC-16](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-20: `son_running=false` (5h+7d running, Sonnet 7d absent) + `imodel::auto` (Haiku) → touch fires on both calls; Sonnet window unchanged; re-fires on second call (BUG-289 MRE)
+
+- **Given (two-call design, two separate stores):** Two `TempDir` stores (`store_a`, `store_b`). Each account has `result=Ok`, `five_hour.resets_at=Some(...)` (5h running — `five_h_running=true`), `seven_day.resets_at=Some(...)` (7d running — `d7_running=true`), `seven_day_sonnet=Some(PeriodUsage { resets_at: None, ... })` (Sonnet 7d field present, no active session — `son_running=false`), `five_hour_left=50.0` (not h-exhausted), `seven_day_left=100.0` (not 7d-exhausted). No `touch_idle=false` cache entry in either store. `claude_paths=None` (subprocess returns `None` credentials — simulates Haiku completing without populating `seven_day_sonnet.resets_at`).
+- **Call A (store_a):** `apply_touch` with `imodel::auto`, `trace=true`. Capture stderr to `captured_a`.
+- **Then A:** `captured_a` contains `"run_isolated: invoking"` — touch fired (not skipped). Ensures the `son_running=false` trigger is non-vacuous: this call proves the guard EXISTS and fires for the given account state.
+- **Call B (store_b):** `apply_touch` with the same account state (fresh from scratch, same `seven_day_sonnet.resets_at=None`), `imodel::auto`, `trace=true`. Capture stderr to `captured_b`.
+- **Then B:** `captured_b` contains `"run_isolated: invoking"` — touch fires AGAIN for the identical account state. Neither call contains `"skipped (reason: already active)"`. This proves the infinite loop: `son_running=false` is never cleared by the Haiku subprocess (`resets_at` remains `None`), so the trigger fires on every invocation.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call` (in `src/usage/touch.rs #[cfg(test)]`)
+- **Note:** BUG-289 MRE (two-call non-vacuous pattern). Call A anchors non-vacuity (guard fires for `son_running=false`). Call B proves persistence (trigger not cleared — infinite loop). Uses separate stores to avoid state leakage. `claude_paths=None` keeps the test hermetic (no live API calls). Companion positive test: FT-22 in [tests/docs/feature/26_subprocess_model_effort.md](26_subprocess_model_effort.md) — `it_imodel_auto_selects_sonnet_for_sole_son_trigger` asserts `resolve_model` returns Sonnet when sole-son-trigger condition holds (Fix BUG-289, TSK-292). ✅ Passing.
+- **Source:** [feature/024_session_touch.md AC-02, AC-15](../../../docs/feature/024_session_touch.md)

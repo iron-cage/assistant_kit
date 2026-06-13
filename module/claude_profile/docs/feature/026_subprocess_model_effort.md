@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Allow `.usage` and `.account.use` to configure which Claude model and effort level are used by isolated subprocesses spawned during `touch::` and `refresh::` operations, with `auto` defaulting to Haiku (sufficient for keep-alive pings) and explicit overrides for advanced use.
-- **Responsibility**: Documents the `imodel::` and `effort::` parameters, the `auto` model-selection algorithm (always Haiku — keep-alive pings don't need expensive models), the effort resolution rule (`low` for Sonnet/Opus; `None` for Haiku — no extended thinking), and the interaction with `IsolatedModel` in `claude_runner_core`.
-- **In Scope**: `imodel::` parameter with 5 values (`auto`, `sonnet`, `opus`, `keep`, `haiku`); `effort::` parameter with 5 values (`auto`, `high`, `max`, `low`, `normal`); `auto` model-selection always returning Haiku; `auto` effort resolution (`low` for all models that support effort; no flag for haiku or keep — no extended thinking overhead in isolated subprocesses); application to `touch::` and `refresh::` subprocess calls on `.usage`, and to the single post-switch subprocess on `.account.use`; no effect on `format::json` output.
+- **Purpose**: Allow `.usage` and `.account.use` to configure which Claude model and effort level are used by isolated subprocesses spawned during `touch::` and `refresh::` operations, with `auto` selecting Haiku for general keep-alive pings (exception: Sonnet when `son_running=false` is the sole inactive timer — Fix BUG-289, TSK-292) and explicit overrides for advanced use.
+- **Responsibility**: Documents the `imodel::` and `effort::` parameters, the `auto` model-selection algorithm (Haiku for general keep-alive pings; Sonnet when `son_running=false` is sole inactive timer — Fix BUG-289, TSK-292), the effort resolution rule (`low` for Sonnet/Opus; `None` for Haiku — no extended thinking), and the interaction with `IsolatedModel` in `claude_runner_core`.
+- **In Scope**: `imodel::` parameter with 5 values (`auto`, `sonnet`, `opus`, `keep`, `haiku`); `effort::` parameter with 5 values (`auto`, `high`, `max`, `low`, `normal`); `auto` model-selection (Haiku for general keep-alive; Sonnet when `son_running=false` is sole inactive timer — Fix BUG-289, TSK-292); `auto` effort resolution (`low` for all models that support effort; no flag for haiku or keep — no extended thinking overhead in isolated subprocesses); application to `touch::` and `refresh::` subprocess calls on `.usage`, and to the single post-switch subprocess on `.account.use`; no effect on `format::json` output.
 - **Out of Scope**: `run_isolated()` internals (-> `claude_runner_core/src/isolated.rs`); `IsolatedModel` type definition (-> `claude_runner_core`); subprocess timeout (-> 024_session_touch.md, 017_token_refresh.md); endurance qualification (-> 020_usage_sort_strategies.md).
 
 ### Design
@@ -15,7 +15,7 @@
 
 | Value | Model injected via `--model` | When to use |
 |-------|------------------------------|-------------|
-| `auto` (default) | `claude-haiku-4-5-20251001` always | Sufficient for keep-alive pings; conserves Sonnet and Opus quota |
+| `auto` (default) | `claude-haiku-4-5-20251001` (general); `claude-sonnet-4-6` when `son_running=false` sole trigger | Haiku for 5h/7d session activation; Sonnet when only 7d-Sonnet window needs activation — Haiku cannot start it. Fix(BUG-289, TSK-292) |
 | `sonnet` | `claude-sonnet-4-6` always | Force Sonnet regardless of quota state |
 | `opus` | `claude-opus-4-6` always | Force Opus regardless of quota state |
 | `haiku` | `claude-haiku-4-5-20251001` always | Force Haiku — lightweight model; note: no extended thinking support |
@@ -23,7 +23,7 @@
 
 **`auto` model-selection algorithm:**
 
-`auto` always selects Haiku — subprocess operations are keep-alive pings that only need to maintain a session; Haiku is sufficient and conserves Sonnet and Opus quota:
+`auto` selects Haiku for general keep-alive pings (5h and 7d session activation) — Haiku conserves Sonnet and Opus quota. **Exception (BUG-289 fix, TSK-292):** The 7d-Sonnet window (`seven_day_sonnet.resets_at`) starts only on Sonnet-family API calls; a Haiku touch cannot activate it. When `son_running=false` is the sole inactive timer (`five_h_running=true AND d7_running=true AND seven_day_sonnet.resets_at=None`), `auto` selects Sonnet (`claude-sonnet-4-6`) so the touch subprocess can start the Sonnet window.
 
 ```
 fn resolve_model(account_quota, imodel_param) -> IsolatedModel:
@@ -35,8 +35,14 @@ fn resolve_model(account_quota, imodel_param) -> IsolatedModel:
         return Specific("claude-haiku-4-5-20251001")
     if imodel_param == "keep":
         return KeepCurrent
-    // auto:
-    return Specific("claude-haiku-4-5-20251001")
+    // auto — model-capability gate (Fix: BUG-289):
+    if account_quota.result is Ok(data):
+        five_h_running = data.five_hour.resets_at is Some
+        d7_running     = data.seven_day field absent OR data.seven_day.resets_at is Some
+        son_idle       = data.seven_day_sonnet field present AND data.seven_day_sonnet.resets_at is None
+        if five_h_running AND d7_running AND son_idle:
+            return Specific("claude-sonnet-4-6")   // sole-son-trigger: Haiku cannot start Sonnet window
+    return Specific("claude-haiku-4-5-20251001")   // general keep-alive (5h/7d activation or Err account)
 ```
 
 **`effort::` — isolated subprocess effort level:**
@@ -100,7 +106,7 @@ if let Some(effort) = effort_opt {
 
 ### Acceptance Criteria
 
-- **AC-01**: `imodel::auto` (default) selects `claude-haiku-4-5-20251001` for all accounts — subprocess keep-alive operations are trivial API calls; Haiku is sufficient and conserves Sonnet and Opus quota.
+- **AC-01**: `imodel::auto` (default) selects `claude-haiku-4-5-20251001` for general keep-alive pings (5h and 7d session activation); conserves Sonnet and Opus quota. **Exception:** When `son_running=false` is the sole inactive timer (`five_h_running=true AND d7_running=true AND seven_day_sonnet.resets_at=None`), `auto` selects `claude-sonnet-4-6` — the 7d-Sonnet window only activates on Sonnet-family API calls; Haiku cannot start it. This prevents the infinite per-call no-op loop documented in BUG-289. Fix(BUG-289, TSK-292).
 - **AC-02**: `imodel::sonnet` always injects `--model claude-sonnet-4-6` into subprocess args regardless of quota state.
 - **AC-03**: `imodel::opus` always injects `--model claude-opus-4-6` into subprocess args regardless of quota state.
 - **AC-04**: `imodel::keep` injects no `--model` flag; `IsolatedModel::KeepCurrent` is passed to `run_isolated()`.
@@ -116,6 +122,12 @@ if let Some(effort) = effort_opt {
 - **AC-14**: `effort::auto` with a Haiku subprocess (`imodel::haiku` or any path where resolved model is `Specific("claude-haiku-4-5-20251001")`) injects no `--effort` flag. Haiku has no extended thinking support.
 - **AC-15**: `effort::low` always injects `--effort low` regardless of model.
 - **AC-16**: `effort::normal` always injects `--effort normal` regardless of model.
+
+### Bugs
+
+| File | Relationship |
+|------|--------------|
+| `task/claude_profile/bug/289_son_running_false_haiku_touch_infinite_loop.md` | BUG-289 🟢 Fixed (TSK-292): `resolve_model(Auto)` now reads `aq.result` and returns Sonnet (`claude-sonnet-4-6`) when `five_h_running=true AND d7_running=true AND son_idle=true` (sole-son-trigger gate); Haiku remains the default for all other `auto` cases. |
 
 ### Dependencies
 

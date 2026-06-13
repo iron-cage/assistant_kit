@@ -6,9 +6,9 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 
 | FT | Criterion | AC | Notes |
 |----|-----------|-----|-------|
-| FT-01 | `imodel::auto` selects haiku regardless of quota state | AC-01 | Unit |
-| FT-02 | `imodel::auto` selects haiku with high quota state | AC-01 | Unit |
-| FT-03 | `imodel::auto` selects haiku at quota boundary | AC-01 | Unit |
+| FT-01 | `imodel::auto` selects haiku when 5h absent (Sonnet idle but sole-son-trigger does not fire) | AC-01 | Unit |
+| FT-02 | `imodel::auto` selects haiku with high Sonnet util (5h absent — not sole-son-trigger) | AC-01 | Unit |
+| FT-03 | `imodel::auto` selects haiku at util boundary (5h absent — not sole-son-trigger) | AC-01 | Unit |
 | FT-04 | `imodel::auto` selects haiku when quota data absent | AC-01 | Unit |
 | FT-05 | `imodel::sonnet` always injects `--model claude-sonnet-4-6` | AC-02 | Unit |
 | FT-06 | `imodel::opus` always injects `--model claude-opus-4-6` | AC-03 | Unit |
@@ -27,14 +27,18 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 | FT-19 | `effort::auto` + haiku → no `--effort` flag | AC-14 | Unit |
 | FT-20 | `effort::low` always injects `--effort low` | AC-15 | Unit |
 | FT-21 | `effort::normal` always injects `--effort normal` | AC-16 | Unit |
+| FT-22 | `imodel::auto` selects sonnet when `son_running=false` is sole inactive timer | AC-01 | Unit |
+| FT-23 | `imodel::auto` selects haiku when Sonnet tier absent (`seven_day_sonnet=None`) | AC-01 | Unit |
+| FT-24 | `imodel::auto` selects haiku when 7d timer idle (`seven_day=Some({resets_at:None})`) | AC-01 | Unit |
+| FT-25 | `imodel::auto` selects sonnet when 7d running via explicit Some path | AC-01 | Unit |
 
 ### Test Case Index
 
 | ID | Test Name | AC | Category |
 |----|-----------|-----|----------|
-| FT-01 | imodel::auto selects haiku regardless of quota | AC-01 | Model Auto |
-| FT-02 | imodel::auto selects haiku with high quota state | AC-01 | Model Auto |
-| FT-03 | imodel::auto selects haiku at quota boundary | AC-01 | Boundary |
+| FT-01 | imodel::auto selects haiku when 5h absent | AC-01 | Model Auto |
+| FT-02 | imodel::auto selects haiku with high util 5h absent | AC-01 | Model Auto |
+| FT-03 | imodel::auto selects haiku at util boundary 5h absent | AC-01 | Boundary |
 | FT-04 | imodel::auto selects haiku when quota absent | AC-01 | Fallback |
 | FT-05 | imodel::sonnet explicit always sonnet | AC-02 | Explicit |
 | FT-06 | imodel::opus explicit always opus | AC-03 | Explicit |
@@ -53,38 +57,42 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 | FT-19 | effort::auto haiku path no effort flag | AC-14 | Interaction |
 | FT-20 | effort::low explicit always low | AC-15 | Explicit |
 | FT-21 | effort::normal explicit always normal | AC-16 | Explicit |
+| FT-22 | imodel::auto selects sonnet sole-son-trigger | AC-01 | Model Auto |
+| FT-23 | imodel::auto selects haiku when son tier absent | AC-01 | Model Auto |
+| FT-24 | imodel::auto selects haiku when d7 idle | AC-01 | Model Auto |
+| FT-25 | imodel::auto selects sonnet when d7 running via Some | AC-01 | Model Auto |
 
-**Total:** 21 FT cases
+**Total:** 25 FT cases
 
 ---
 
-### FT-01: `imodel::auto` selects haiku regardless of quota state
+### FT-01: `imodel::auto` selects haiku when 5h absent (Sonnet idle, sole-son-trigger does not fire)
 
-- **Given:** Account quota data with any `seven_day_sonnet_left_pct` value (quota state is irrelevant).
-- **When:** `resolve_model(&quota, "auto")`
-- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Subprocess keep-alive pings don't need expensive models; Haiku conserves Sonnet and Opus quota.
+- **Given:** Account quota data where `five_hour=None` (`five_h_running=false`) and `seven_day_sonnet.resets_at=None` (Sonnet window idle). The five-hour window absence prevents the sole-son-trigger condition (`five_h_running AND d7_running AND son_idle`) from firing.
+- **When:** `resolve_model(&quota, SubprocessModel::Auto)`
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Five-hour window absent → `five_h_running=false` → sole-son-trigger gate is false; Haiku selected. Keep-alive pings don't need expensive models; Haiku conserves Sonnet and Opus quota.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_haiku` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
-### FT-02: `imodel::auto` selects haiku with high quota state
+### FT-02: `imodel::auto` selects haiku with high Sonnet util (5h absent — not sole-son-trigger)
 
-- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(35.0)` (quota state does not affect auto selection).
-- **When:** `resolve_model(&quota, "auto")`
-- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Quota data is not consulted — auto always yields Haiku.
+- **Given:** Account quota data where `five_hour=None` (`five_h_running=false`) and `seven_day_sonnet.util=35.0` with `resets_at=None` (Sonnet window idle, higher utilization). Five-hour absence prevents sole-son-trigger regardless of utilization value.
+- **When:** `resolve_model(&quota, SubprocessModel::Auto)`
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Sole-son-trigger requires `five_h_running=true`; with 5h absent, auto yields Haiku independent of utilization level.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_haiku` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
 
 ---
 
-### FT-03: `imodel::auto` selects haiku at quota boundary
+### FT-03: `imodel::auto` selects haiku at util boundary (5h absent — not sole-son-trigger)
 
-- **Given:** Account quota data where `seven_day_sonnet_left_pct = Some(20.0)` (former 20% threshold boundary — now irrelevant).
-- **When:** `resolve_model(&quota, "auto")`
-- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Quota percentage is not consulted — auto always yields Haiku regardless.
+- **Given:** Account quota data where `five_hour=None` (`five_h_running=false`) and `seven_day_sonnet.util=20.0` with `resets_at=None` (util at former 20% threshold boundary — utilization is now irrelevant for model selection). Five-hour absence prevents sole-son-trigger.
+- **When:** `resolve_model(&quota, SubprocessModel::Auto)`
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. Sole-son-trigger requires `five_h_running=true`; absent 5h, auto yields Haiku. Utilization percentage is not consulted in model selection.
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_imodel_auto_selects_haiku` (in `src/usage/subprocess.rs #[cfg(test)]`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
@@ -287,3 +295,47 @@ Feature behavioral requirement test cases for `docs/feature/026_subprocess_model
 - **Exit:** n/a (unit test)
 - **Source fn:** `it_effort_normal_explicit` (in `tests/cli/usage_test.rs`)
 - **Source:** [feature/026_subprocess_model_effort.md AC-16](../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-22: `imodel::auto` selects sonnet when `son_running=false` is sole inactive timer
+
+- **Given:** Account quota data where `five_h_running=true` (`five_hour.resets_at=Some(_)`), `d7_running=true` (7d window absent or `seven_day.resets_at=Some(_)`), and `seven_day_sonnet.resets_at=None` (`son_idle=true`). The sole-son-trigger condition (`five_h_running AND d7_running AND son_idle`) is true. Helper: `mk_aq_with_son_idle_sole_trigger()`.
+- **When:** `resolve_model(&aq, SubprocessModel::Auto)`
+- **Then:** Returns `IsolatedModel::Specific("claude-sonnet-4-6")`. The 7d-Sonnet window (`seven_day_sonnet.resets_at`) activates only on Sonnet-family API calls; a Haiku touch subprocess cannot start it. When Sonnet is the sole inactive timer, `auto` routes to Sonnet to break the infinite per-call no-op loop (BUG-289 fix, TSK-292).
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_imodel_auto_selects_sonnet_for_sole_son_trigger` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-23: `imodel::auto` selects haiku when Sonnet tier absent (`seven_day_sonnet=None`)
+
+- **Given:** Account where `seven_day_sonnet=None` (API does not track a Sonnet quota tier for this account). Other timers running: `five_hour=running, seven_day=None (absent → d7_running=true)`.
+- **When:** `resolve_model(&aq, SubprocessModel::Auto)`
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. `son_idle = None.is_some_and(...) = false`; sole-son-trigger gate does NOT fire (requires `son_idle=true`). Haiku selected.
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_son_tier_absent` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-24: `imodel::auto` selects haiku when 7d timer idle (`seven_day=Some({resets_at:None})`)
+
+- **Given:** Account where `seven_day=Some({resets_at:None})` (7d window tracked by API but no session started). Other timers: `five_hour=running, seven_day_sonnet=Some({resets_at:None})` (sole-son-trigger base except 7d is idle).
+- **When:** `resolve_model(&aq, SubprocessModel::Auto)`
+- **Then:** Returns `IsolatedModel::Specific("claude-haiku-4-5-20251001")`. `d7_running = seven_day.map_or(true, |p| p.resets_at.is_some()) = false` (closure fires; `is_some()` on `None` resets_at → `false`). Gate does NOT fire. Haiku selected.
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_imodel_auto_selects_haiku_when_d7_idle` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)
+
+---
+
+### FT-25: `imodel::auto` selects sonnet when 7d running via explicit Some path
+
+- **Given:** Account where `seven_day=Some({resets_at:Some("2026-06-15T10:00:00Z")})` (7d session active, field present and non-None). Other timers: `five_hour=running, seven_day_sonnet=Some({resets_at:None})` (sole-son-trigger base with 7d overridden to Some-running).
+- **When:** `resolve_model(&aq, SubprocessModel::Auto)`
+- **Then:** Returns `IsolatedModel::Specific("claude-sonnet-4-6")`. `d7_running = map_or(true, |p| p.resets_at.is_some()) = true` via closure branch; all three conditions hold: `five_h_running=true AND d7_running=true (Some path) AND son_idle=true` → gate fires → Sonnet.
+- **Exit:** n/a (unit test)
+- **Source fn:** `it_imodel_auto_selects_sonnet_when_d7_running_explicit` (in `src/usage/subprocess.rs #[cfg(test)]`)
+- **Source:** [feature/026_subprocess_model_effort.md AC-01](../../../docs/feature/026_subprocess_model_effort.md)

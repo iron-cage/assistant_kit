@@ -402,6 +402,46 @@ pub( crate ) mod test_support
       cache_age_secs : None,
     }
   }
+
+  /// Build an `AccountQuota` with the sole-son-trigger condition active.
+  ///
+  /// Condition: `five_h_running=true AND d7_running=true AND son_idle=true`
+  /// - `five_hour.resets_at=Some(...)` → `five_h_running=true`
+  /// - `seven_day=None` (absent → `d7_running=true` per `resolve_model` semantics)
+  /// - `seven_day_sonnet=Some({resets_at:None})` → `son_idle=true`
+  ///
+  /// Used by `resolve_model` BUG-289 fix test (`it_imodel_auto_selects_sonnet_for_sole_son_trigger`).
+  pub( crate ) fn mk_aq_with_son_idle_sole_trigger() -> AccountQuota
+  {
+    AccountQuota
+    {
+      name          : "test@example.com".to_string(),
+      is_current    : false,
+      is_active             : false,
+      is_occupied_elsewhere : false,
+      expires_at_ms : FAR_FUTURE_MS,
+      result        : Ok( claude_quota::OauthUsageData
+      {
+        five_hour        : Some( claude_quota::PeriodUsage
+        {
+          utilization : 50.0,
+          resets_at   : Some( "2026-06-14T10:00:00Z".to_string() ),
+        } ),
+        seven_day        : None,
+        seven_day_sonnet : Some( claude_quota::PeriodUsage
+        {
+          utilization : 50.0,
+          resets_at   : None,
+        } ),
+      } ),
+      account       : None,
+      host          : String::new(),
+      role          : String::new(),
+      renewal_at     : None,
+      cached         : false,
+      cache_age_secs : None,
+    }
+  }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

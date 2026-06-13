@@ -1,3 +1,5 @@
+// BUG-289 task/claude_profile/bug/289_son_running_false_haiku_touch_infinite_loop.md — son_running=false guard and re-fetch loop; Auto→Haiku cannot open Sonnet 7d window
+
 //! Session-touch logic for idle quota windows.
 //!
 //! `apply_touch` activates an idle 5h (or 7d) session window by spawning an isolated
@@ -904,5 +906,121 @@ mod tests
       !fake_home.join( ".claude" ).join( ".credentials.json" ).exists(),
       "apply_touch must not enter refresh path when resets_at is Some (already active)",
     );
+  }
+
+  /// FT-20 BUG-289 MRE: `apply_touch` fires on every call when `son_running=false`
+  /// (5h+7d running, Sonnet 7d absent) — Haiku subprocess cannot open the 7d-Sonnet window.
+  ///
+  /// # Root Cause
+  ///
+  /// `resolve_model(Auto, _aq)` ignored `_aq`; the `Auto` arm unconditionally returned Haiku.
+  /// When `five_h_running=true AND d7_running=true AND son_idle=true`, Haiku subprocesses
+  /// cannot activate the 7d-Sonnet window (`seven_day_sonnet.resets_at` stays `None`).
+  /// On each `.usage` call, `apply_touch` sees `son_running=false` → `all_running=false` →
+  /// trigger fires → Haiku subprocess → no-op → trigger fires again. Infinite loop.
+  ///
+  /// # Why Not Caught
+  ///
+  /// All prior touch trigger tests covered the 5h-idle case (`resets_at=None`) or the
+  /// all-timers-present skip case. The `son_idle-only` scenario — 5h and 7d running, Sonnet
+  /// timer absent — was never tested. FT-20 was absent from
+  /// `tests/docs/feature/24_session_touch.md` until TSK-292.
+  ///
+  /// # Fix Applied
+  ///
+  /// TSK-292 (BUG-289): `resolve_model` now reads `aq.result` in the `Auto` arm.
+  /// When `five_h_running AND d7_running AND son_idle`, returns `Specific("claude-sonnet-4-6")`
+  /// instead of Haiku (sole-son-trigger gate). Sonnet-family API calls activate the
+  /// 7d-Sonnet window, clearing `son_idle` and breaking the loop.
+  ///
+  /// # Prevention
+  ///
+  /// Model-capability interactions must be tested with two-call non-vacuous design: Call A
+  /// proves the trigger fires for the given state; Call B proves the state persists (pre-fix
+  /// loop proof). The companion test `it_imodel_auto_selects_sonnet_for_sole_son_trigger`
+  /// in `subprocess.rs` verifies `resolve_model` returns Sonnet for the sole-son-trigger
+  /// condition (BUG-289 positive fix test).
+  ///
+  /// # Pitfall
+  ///
+  /// Call A and Call B must use separate `TempDir` stores and fresh `AccountQuota` objects
+  /// to prevent state leakage. `claude_paths=None` keeps the test hermetic — `run_isolated`
+  /// is invoked (emitting `"run_isolated: invoking"`) but fails to find the binary, returning
+  /// `None` credentials. The credential file MUST be present in the store so `read_token`
+  /// succeeds and execution reaches the `"run_isolated: invoking"` trace line.
+  ///
+  /// Spec: [`tests/docs/feature/24_session_touch.md` FT-20]
+  #[ doc = "bug_reproducer(BUG-289)" ]
+  #[ test ]
+  fn test_mre_bug289_son_running_false_haiku_touch_fires_on_every_call()
+  {
+    use std::io::Read;
+    use crate::usage::test_support::mk_aq_with_son_idle_sole_trigger;
+
+    // Call A: prove the trigger fires for son_running=false (non-vacuity anchor).
+    // If the guard were absent, touch would be skipped as "already active" (all_running=true)
+    // and Call A would emit "skipped" — not "run_isolated: invoking".
+    {
+      let store_a = tempfile::TempDir::new().unwrap();
+      // Credential file required: read_token must succeed so "run_isolated: invoking" is emitted.
+      std::fs::write(
+        store_a.path().join( "test@example.com.credentials.json" ),
+        r#"{"accessToken":"tok-a","expiresAt":9999999999999}"#,
+      ).unwrap();
+
+      // Account state: five_h_running=true, d7_running=true, son_running=false.
+      // seven_day=Some({resets_at:Some(...)}) — explicit d7_running (not map_or(true) path).
+      let mut aq_a = mk_aq_with_son_idle_sole_trigger();
+      if let Ok( ref mut data ) = aq_a.result
+      {
+        data.seven_day = Some( claude_quota::PeriodUsage
+        {
+          utilization : 0.0,
+          resets_at   : Some( "2026-06-14T10:00:00Z".to_string() ),
+        } );
+      }
+
+      let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+      apply_touch( &mut aq_a, store_a.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
+      let mut captured_a = String::new();
+      stderr_buf.read_to_string( &mut captured_a ).unwrap();
+
+      assert!(
+        captured_a.contains( "run_isolated: invoking" ),
+        "call A: touch must fire (run_isolated invoked) for son_running=false; got:\n{captured_a}",
+      );
+    }
+
+    // Call B: prove the trigger fires AGAIN with identical fresh state — BUG-289 loop proof.
+    // Separate store and fresh aq prevent state leakage from Call A.
+    // Pre-fix: Haiku subprocess cannot open the 7d-Sonnet window → resets_at stays None →
+    // son_running=false on every call → trigger fires every time (infinite loop).
+    {
+      let store_b = tempfile::TempDir::new().unwrap();
+      std::fs::write(
+        store_b.path().join( "test@example.com.credentials.json" ),
+        r#"{"accessToken":"tok-b","expiresAt":9999999999999}"#,
+      ).unwrap();
+
+      let mut aq_b = mk_aq_with_son_idle_sole_trigger();
+      if let Ok( ref mut data ) = aq_b.result
+      {
+        data.seven_day = Some( claude_quota::PeriodUsage
+        {
+          utilization : 0.0,
+          resets_at   : Some( "2026-06-14T10:00:00Z".to_string() ),
+        } );
+      }
+
+      let mut stderr_buf = gag::BufferRedirect::stderr().expect( "stderr capture failed" );
+      apply_touch( &mut aq_b, store_b.path(), None, true, SubprocessModel::Auto, SubprocessEffort::Auto );
+      let mut captured_b = String::new();
+      stderr_buf.read_to_string( &mut captured_b ).unwrap();
+
+      assert!(
+        captured_b.contains( "run_isolated: invoking" ),
+        "call B: touch must fire AGAIN for identical son_running=false state (BUG-289 loop); got:\n{captured_b}",
+      );
+    }
   }
 }

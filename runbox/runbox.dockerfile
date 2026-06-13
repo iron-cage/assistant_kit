@@ -263,10 +263,10 @@ RUN cargo fetch
 RUN mkdir -p $WORKSPACE_DIR/target_seed
 
 # Fix(BUG-001): Belt-and-suspenders — pre-create the ~/.claude bind-mount target inside
-# the image for containers run without the workspace :ro overlay.  The primary fix is the
-# mkdir -p loop in cmd_test() (runbox/runbox-run) which creates the HOST-side directory
-# before podman run.  -p is used so this step is idempotent even if COPY . . brings in
-# a .claude/ dir (which .dockerignore normally excludes).
+# the image for containers that run without the workspace :ro overlay.  The primary fix
+# is the mkdir -p loop in cmd_test() (runbox/runbox-run) which creates the HOST-side
+# directory before podman run: after the workspace :ro mount is applied, /workspace
+# reflects the HOST directory so the IMAGE layer is irrelevant for mount-point resolution.
 # Root cause: host workspace lacked .claude/; runc found no mount point after workspace:ro.
 # Pitfall: when a parent dir is :ro mounted, child mount-point dirs must pre-exist on HOST.
 RUN mkdir -p $WORKSPACE_DIR/.claude
