@@ -194,12 +194,144 @@ EOF
   rm -rf "$lockdir" 2>/dev/null || true
 }
 
+# ── T3: stale content hash → _ensure_image rebuilds ──────────────────────────
+#
+# Simulates an image whose runbox.content_hash label is stale (old hash from a
+# previous build, before Cargo.toml or runbox.yml was changed on the host).
+# _ensure_image() must detect the mismatch via _is_stale() and call _build().
+#
+# Before staleness detection: _ensure_image() returns without rebuild → FAILS.
+# After staleness detection:  _ensure_image() calls _build() → PASSES.
+
+test_t3_stale_hash_triggers_rebuild()
+{
+  local tmp
+  tmp="$(mktemp -d)"
+
+  local mock_dir="$tmp/bin"
+  mkdir "$mock_dir"
+
+  local rebuild_triggered="$tmp/rebuild_triggered"
+
+  # Mock: image exists but carries a known-wrong hash.
+  # build: touch flag + exit 0; image inspect: return stale hash for --format queries.
+  cat > "$mock_dir/podman" << EOF
+#!/usr/bin/env bash
+case "\${1:-}" in
+  container) exit 0 ;;
+  build)
+    touch "${rebuild_triggered}"
+    exit 0
+    ;;
+  image)
+    if [[ "\${2:-}" == "inspect" ]]
+    then
+      [[ "\${4:-}" == "--format" ]] && echo "000deadbeef000" && exit 0
+      exit 0
+    fi
+    ;;
+  volume)
+    [[ "\${2:-}" == "inspect" ]] && exit 1  # volume absent — needs seed
+    exit 0
+    ;;
+  run) exit 0 ;;
+esac
+EOF
+  chmod +x "$mock_dir/podman"
+
+  _make_config "$tmp" "t3_stale_hash_test_image"
+
+  PATH="$mock_dir:$PATH" bash "$RUNBOX_RUN" "$tmp/runbox.yml" .test \
+    2>/dev/null || true
+
+  if [[ -f "$rebuild_triggered" ]]
+  then
+    _pass "T3: stale content hash triggers automatic image rebuild"
+  else
+    _fail "T3: stale content hash triggers automatic image rebuild (no rebuild detected — staleness check missing)"
+  fi
+
+  rm -rf "$tmp"
+}
+
+# ── T4: matching content hash → _ensure_image skips rebuild ──────────────────
+#
+# Simulates an image whose runbox.content_hash label matches the current host
+# state.  _ensure_image() must skip the rebuild and proceed directly to test.
+#
+# Before staleness detection (no label stored): image appears stale → rebuild.
+# After staleness detection with correct hash:  no rebuild → PASSES.
+
+test_t4_matching_hash_skips_rebuild()
+{
+  local tmp
+  tmp="$(mktemp -d)"
+
+  local mock_dir="$tmp/bin"
+  mkdir "$mock_dir"
+
+  local rebuild_triggered="$tmp/rebuild_triggered"
+
+  _make_config "$tmp" "t4_matching_hash_test_image"
+
+  # Compute the exact hash _content_hash() will produce for this config+workspace.
+  # Inside runbox-run: SCRIPT_DIR = dirname(runbox-run), WORKSPACE_ROOT = SCRIPT_DIR/..
+  # Must use the same derivation here, not SCRIPT_DIR of this test file.
+  local workspace_root
+  workspace_root="$( cd "$( dirname "$RUNBOX_RUN" )/.." && pwd )"
+  local current_hash
+  current_hash=$( {
+    find "$workspace_root" \( -name Cargo.toml -o -name Cargo.lock \) -print0 \
+      | sort -z | xargs -0 sha256sum 2>/dev/null
+    sha256sum "$tmp/runbox.yml" 2>/dev/null
+  } | sha256sum | cut -d' ' -f1 )
+
+  # Mock: image exists with the correct (current) hash label → no rebuild expected.
+  cat > "$mock_dir/podman" << EOF
+#!/usr/bin/env bash
+case "\${1:-}" in
+  container) exit 0 ;;
+  build)
+    touch "${rebuild_triggered}"
+    exit 0
+    ;;
+  image)
+    if [[ "\${2:-}" == "inspect" ]]
+    then
+      [[ "\${4:-}" == "--format" ]] && echo "${current_hash}" && exit 0
+      exit 0
+    fi
+    ;;
+  volume)
+    [[ "\${2:-}" == "inspect" ]] && exit 1
+    exit 0
+    ;;
+  run) exit 0 ;;
+esac
+EOF
+  chmod +x "$mock_dir/podman"
+
+  PATH="$mock_dir:$PATH" bash "$RUNBOX_RUN" "$tmp/runbox.yml" .test \
+    2>/dev/null || true
+
+  if [[ ! -f "$rebuild_triggered" ]]
+  then
+    _pass "T4: matching content hash skips rebuild (image reused as-is)"
+  else
+    _fail "T4: matching content hash skips rebuild (unexpected rebuild — hash comparison broken)"
+  fi
+
+  rm -rf "$tmp"
+}
+
 # ── Runner ────────────────────────────────────────────────────────────────────
 
 echo ""
 echo "── runbox build safety tests ─────────────────────────────────────────"
 test_t1_build_exits_nonzero_when_image_inaccessible_after_build
 test_t2_build_lock_directory_exists_during_build
+test_t3_stale_hash_triggers_rebuild
+test_t4_matching_hash_skips_rebuild
 echo ""
 echo "  Results: ${PASS_COUNT} passed, ${FAIL_COUNT} failed"
 echo "──────────────────────────────────────────────────────────────────────"

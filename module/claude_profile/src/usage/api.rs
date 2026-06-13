@@ -50,6 +50,15 @@ pub( crate ) struct TouchCtx
   quota            : OauthUsageData,
 }
 
+#[ cfg( test ) ]
+impl TouchCtx
+{
+  fn for_test( credentials_json : String, quota : claude_quota::OauthUsageData ) -> Self
+  {
+    Self { credentials_json, quota }
+  }
+}
+
 /// Result of the pre-switch quota probe for `.account.use`.
 ///
 /// Distinguishes two outcomes: quota available (always spawn subprocess) or unavailable.
@@ -331,6 +340,29 @@ pub( crate ) fn apply_post_switch_touch(
     paths.base(), name, "touch_idle", false,
   );
   if trace { eprintln!( "[trace] account.use  {name}  subprocess: spawned" ) }
+  // AC-21: post-subprocess quota re-fetch (best-effort, non-aborting on failure).
+  // Persists updated resets_at to cache so subsequent .usage sees the newly-activated
+  // session window, preventing the double-subprocess race (BUG-288).
+  // Fix(BUG-288): apply_post_switch_touch previously omitted this re-fetch,
+  //   causing apply_touch to see stale resets_at = None and spawn a redundant subprocess.
+  // Root cause: AC-21 was not defined when this function was first written; the re-fetch
+  //   was present in apply_touch (Feature 024 AC-03) but not mirrored here.
+  // Pitfall: any post-switch touch function must re-fetch quota after subprocess to keep
+  //   the cache consistent with the newly-activated session window.
+  let cred_path = paths.base().join( format!( "{name}.credentials.json" ) );
+  if let Ok( fresh_json ) = std::fs::read_to_string( &cred_path )
+  {
+    if let Some( token ) = crate::account::parse_string_field( &fresh_json, "accessToken" )
+    {
+      if let Ok( new_data ) = claude_quota::fetch_oauth_usage( &token )
+      {
+        let h5 = new_data.five_hour.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+        let d7 = new_data.seven_day.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+        let sn = new_data.seven_day_sonnet.as_ref().map( |p| ( p.utilization, p.resets_at.as_deref() ) );
+        claude_profile_core::account::write_quota_cache( paths.base(), name, h5, d7, sn );
+      }
+    }
+  }
 }
 
 // ── Main routine ──────────────────────────────────────────────────────────────
@@ -543,11 +575,11 @@ pub fn usage_routine( cmd : VerifiedCommand, _ctx : ExecutionContext ) -> Result
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[ cfg( test ) ]
-// Exception to tests-in-tests/ rule: pub(crate) fns (pre_switch_touch_ctx, apply_model_override)
-// are not accessible from the external tests/ directory — unit tests must live here.
+// Exception to tests-in-tests/ rule: pub(crate) fns (pre_switch_touch_ctx, apply_model_override,
+// apply_post_switch_touch, TouchCtx) are not accessible from the external tests/ directory.
 mod tests
 {
-  use super::{ pre_switch_touch_ctx, apply_model_override, PreSwitchOutcome };
+  use super::{ pre_switch_touch_ctx, apply_model_override, apply_post_switch_touch, PreSwitchOutcome, TouchCtx };
   use tempfile::TempDir;
 
   /// Structural test: `pre_switch_touch_ctx` with an invalid credential file (no accessToken).
@@ -1016,6 +1048,106 @@ mod tests
     assert!(
       !fn_body.contains( "AlreadyActive" ),
       "BUG-285 regression: AlreadyActive must not be returned from pre_switch_touch_ctx",
+    );
+  }
+
+  /// `mre_bug288` — `apply_post_switch_touch` re-fetch is non-aborting when the credentials
+  /// file has no `accessToken`; pre-re-fetch cache writes succeed regardless.
+  ///
+  /// # Root Cause
+  /// `apply_post_switch_touch` discarded the `run_isolated` result with `let _ = ...` and
+  /// performed no post-subprocess quota re-fetch. A subsequent `.usage touch` call then saw
+  /// stale `resets_at = None` and spawned a redundant second subprocess (double-subprocess race).
+  ///
+  /// # Why Not Caught
+  /// No unit test exercised `apply_post_switch_touch` directly. The only coverage was via
+  /// `lim_it` CLI integration tests requiring live OAuth credentials (`aw27`, `aw28`, `aw29`).
+  ///
+  /// # Fix Applied
+  /// Added post-subprocess quota re-fetch block (AC-21) to `apply_post_switch_touch`, mirroring
+  /// `apply_touch`'s AC-03 pattern. Reads credentials fresh from disk (not from
+  /// `ctx.credentials_json`) to capture any post-subprocess token rotation. On `Ok(new_data)`:
+  /// calls `write_quota_cache(paths.base(), name, ...)` to persist the updated quota. On
+  /// failure: silently skips — non-aborting per AC-21.
+  ///
+  /// # Prevention
+  /// This test verifies the non-aborting invariant: when `accessToken` is absent from the
+  /// credentials file, the re-fetch is silently skipped and the function returns normally.
+  /// Also verifies that `last_touch_at` and `touch_idle` (written before the re-fetch block)
+  /// are committed to disk even when the re-fetch is skipped.
+  ///
+  /// # Pitfall
+  /// `apply_post_switch_touch` is `pub(crate)` — only testable inline in `src/usage/api.rs`.
+  /// The re-fetch block reads credentials from `paths.base()/{name}.credentials.json` (fresh
+  /// disk read), NOT from `ctx.credentials_json` — tests must write the credential file at
+  /// that path, not just supply a non-empty string in the `TouchCtx`.
+  #[ doc = "bug_reproducer(BUG-288)" ]
+  #[ test ]
+  fn mre_bug288_post_switch_touch_refetch_updates_quota()
+  {
+    use claude_quota::OauthUsageData;
+
+    // ── Success path (structural): write_quota_cache is called when re-fetch succeeds ──
+    // Verifies Fix(BUG-288) is present: apply_post_switch_touch must call write_quota_cache
+    // on a successful fetch_oauth_usage result so subsequent .usage sees the updated resets_at.
+    {
+      let src      = include_str!( "api.rs" );
+      let fn_start = src
+        .find( "pub( crate ) fn apply_post_switch_touch(" )
+        .expect( "apply_post_switch_touch not found in api.rs" );
+      let fn_end   = src[ fn_start + 1.. ]
+        .find( "\n// ── Main routine" )
+        .map_or( src.len(), |rel| fn_start + 1 + rel );
+      let fn_body  = &src[ fn_start..fn_end ];
+      assert!(
+        fn_body.contains( "fetch_oauth_usage" ),
+        "BUG-288: apply_post_switch_touch must call fetch_oauth_usage for AC-21 re-fetch",
+      );
+      assert!(
+        fn_body.contains( "write_quota_cache" ),
+        "BUG-288: apply_post_switch_touch must call write_quota_cache on successful re-fetch \
+        so subsequent .usage sees the updated resets_at (no double-subprocess race)",
+      );
+    }
+
+    // ── Failure path (runtime): no accessToken → re-fetch silently skipped ──────────────
+    let dir   = TempDir::new().unwrap();
+    let paths = crate::ClaudePaths::with_home( dir.path() );
+    std::fs::create_dir_all( paths.base() ).unwrap();
+    let name = "test@example.com";
+
+    // Failure path: credentials file has no `accessToken` field.
+    // `parse_string_field` returns None → re-fetch skipped → non-aborting.
+    std::fs::write(
+      paths.base().join( format!( "{name}.credentials.json" ) ),
+      r#"{"subscriptionType":"pro","expiresAt":9999999999999}"#,
+    ).unwrap();
+
+    let ctx = TouchCtx::for_test(
+      r#"{"subscriptionType":"pro"}"#.to_string(),
+      OauthUsageData { five_hour : None, seven_day : None, seven_day_sonnet : None },
+    );
+
+    // Must not panic: run_isolated fails silently (let _ = ...); re-fetch skipped.
+    apply_post_switch_touch( name, ctx, "auto", "auto", false, &paths );
+
+    // Observable 1: pre-re-fetch cache writes (last_touch_at, touch_idle) must succeed
+    // even when the re-fetch block is skipped — they are written unconditionally before it.
+    let cache_path = paths.base().join( format!( "{name}.json" ) );
+    let cache = std::fs::read_to_string( &cache_path )
+      .expect( "BUG-288: cache file must exist after apply_post_switch_touch" );
+    assert!(
+      cache.contains( "last_touch_at" ),
+      "BUG-288: last_touch_at must be written to cache even when re-fetch is skipped, got: {cache}",
+    );
+
+    // Observable 2: quota re-fetch must have been skipped — `resets_at` must not appear.
+    // If the re-fetch had fired with a live token and written new quota data, this would fail,
+    // making it both an absence-check for the failure path and an implicit sentinel that the
+    // test fixture did not accidentally provide a live credential.
+    assert!(
+      !cache.contains( "resets_at" ),
+      "BUG-288: resets_at must not be written when accessToken is absent (re-fetch skipped), got: {cache}",
     );
   }
 }

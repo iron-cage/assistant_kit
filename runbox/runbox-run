@@ -6,6 +6,13 @@ set -euo pipefail
 
 CONFIG="$1"
 COMMAND="${2:-.}"
+FORCE_REBUILD=0
+for _arg in "${@:3}"
+do
+  case "$_arg" in
+    --rebuild|-R) FORCE_REBUILD=1 ;;
+  esac
+done
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 CONFIG_DIR="$( cd "$( dirname "$CONFIG" )" && pwd )"
@@ -125,6 +132,8 @@ _build()
     _bc_abspath="$( cd "$CONFIG_DIR/$_bc_relpath" && pwd )"
     _extra_ctx_args=( "--build-context" "${_bc_name}=${_bc_abspath}" )
   fi
+  local _hash
+  _hash=$( _content_hash )
   # shellcheck disable=SC2086
   "$CONTAINER_CMD" build \
     --rm=false \
@@ -138,6 +147,7 @@ _build()
     --build-arg "CARGO_FEATURES=$CARGO_FEATURES" \
     --build-arg "WORKSPACE_DIR=$WORKSPACE_DIR" \
     "${_extra_ctx_args[@]+"${_extra_ctx_args[@]}"}" \
+    --label "runbox.content_hash=$_hash" \
     -t "$IMAGE" \
     "$WORKSPACE_ROOT"
 
@@ -156,34 +166,65 @@ _build()
     exit 1
   fi
 
+  # Drop stale build caches so next use re-seeds from the new image.
+  local extra_volumes=()
+  _plugin_build_volumes
+  for _vol in "${IMAGE}_${CACHE_DIR}" "${extra_volumes[@]}"
+  do
+    if "$CONTAINER_CMD" volume inspect "$_vol" &>/dev/null
+    then
+      echo "Dropping stale build cache: $_vol..."
+      "$CONTAINER_CMD" volume rm "$_vol" &>/dev/null || true
+    fi
+  done
+
   rm -rf "$_build_lockdir"
+}
+
+_content_hash()
+{
+  # Hash workspace Cargo manifests + lockfiles + runbox.yml (contains build args
+  # like system_packages, rustup_components, cmd_scope that affect the image).
+  # Any change to these triggers an automatic image rebuild via _is_stale().
+  {
+    find "$WORKSPACE_ROOT" \( -name Cargo.toml -o -name Cargo.lock \) -print0 \
+      | sort -z | xargs -0 sha256sum 2>/dev/null
+    sha256sum "$CONFIG" 2>/dev/null
+  } | sha256sum | cut -d' ' -f1
+}
+
+_is_stale()
+{
+  local stored current
+  stored=$( "$CONTAINER_CMD" image inspect "$IMAGE" \
+    --format '{{index .Config.Labels "runbox.content_hash"}}' 2>/dev/null )
+  current=$( _content_hash )
+  [[ "$stored" != "$current" ]]
 }
 
 _ensure_image()
 {
+  if [[ "$FORCE_REBUILD" == "1" ]]
+  then
+    echo "Image $IMAGE: force rebuild (--rebuild)..."
+    _build
+    return
+  fi
   if ! "$CONTAINER_CMD" image inspect "$IMAGE" &>/dev/null
   then
     echo "Image $IMAGE not found — building first..."
     _build
     return
   fi
-  # Build a single probe that tests all configured scripts in one container run.
-  # Any missing file means the image predates a script addition — rebuild automatically
-  # rather than emitting a cryptic "not found" error.
-  local probe_parts=()
-  [[ -n "$TEST_SCRIPT" ]] && probe_parts+=( "test -f $WORKSPACE_DIR/$TEST_SCRIPT" )
-  [[ -n "$LINT_SCRIPT" ]] && probe_parts+=( "test -f $WORKSPACE_DIR/$LINT_SCRIPT" )
-  [[ -n "$RUN_SCRIPT"  ]] && probe_parts+=( "test -f $WORKSPACE_DIR/$RUN_SCRIPT" )
-  if [[ ${#probe_parts[@]} -gt 0 ]]
+  if _is_stale
   then
-    local probe_cmd="${probe_parts[0]}"
-    for part in "${probe_parts[@]:1}"; do probe_cmd+=" && $part"; done
-    if ! "$CONTAINER_CMD" run --rm "$IMAGE" bash -c "$probe_cmd" 2>/dev/null
-    then
-      echo "Image $IMAGE is stale (one or more configured scripts missing) — rebuilding..."
-      _build
-    fi
+    echo "Image $IMAGE is stale (Cargo.toml/Cargo.lock/runbox.yml changed) — rebuilding..."
+    _build
+    return
   fi
+  # Image exists and content hash matches — nothing to do.
+  # Scripts (test_script, lint_script, run_script) come from the host workspace via bind-mount,
+  # so baked-image script presence is not a useful staleness signal; content hash covers it.
 }
 
 _ensure_build_cache()
@@ -191,10 +232,12 @@ _ensure_build_cache()
   local volume="${IMAGE}_$CACHE_DIR"
   if ! "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
   then
-    echo "Seeding build cache from image (first run only)..."
+    echo "Seeding build cache from image (first use after build or rebuild)..."
     # Copy pre-compiled dep artifacts from image into the named volume.
     # The image target/ has deps from the cook stage; without seeding the volume
     # would start empty and force a full recompile from scratch on first use.
+    # _build() drops this volume after every image rebuild so this seed always
+    # reflects the freshly built image.
     # World-writable so the host uid (used by cmd_test via --user) can write build artifacts.
     "$CONTAINER_CMD" run --rm \
       -v "${volume}:$WORKSPACE_DIR/${CACHE_DIR}_seed" \
@@ -229,24 +272,12 @@ _ensure_plugin_targets()
 cmd_build()
 {
   _build
-  # Drop stale build caches so next use re-seeds from the new image.
-  local extra_volumes=()
-  _plugin_build_volumes
-  for volume in "${IMAGE}_$CACHE_DIR" "${extra_volumes[@]}"
-  do
-    if "$CONTAINER_CMD" volume inspect "$volume" &>/dev/null
-    then
-      echo "Removing stale build cache volume: $volume..."
-      "$CONTAINER_CMD" volume rm "$volume"
-    fi
-  done
 }
 
 cmd_test()
 {
-  # Pre-flight: verify test_script exists on host; a missing file here means a wrong
-  # path in runbox.yml — a rebuild won't help and _ensure_image's probe would rebuild
-  # endlessly without this guard.
+  # Pre-flight: verify test_script exists on host; a wrong path in runbox.yml is caught
+  # here with a clear error rather than failing silently inside the container.
   if [[ -n "$TEST_SCRIPT" ]] && [[ ! -f "$WORKSPACE_ROOT/$TEST_SCRIPT" ]]
   then
     echo "error: test_script '$TEST_SCRIPT' not found at $WORKSPACE_ROOT/$TEST_SCRIPT" >&2
@@ -256,6 +287,7 @@ cmd_test()
   local bin_args=() mount_args=()
   _plugin_test_args
   _ensure_image
+  _ensure_build_cache
   _ensure_plugin_targets
   echo "▶ $IMAGE ($CONTAINER_CMD)"
   # Run as the host user so mounted credential files (owned by host uid) are readable.
@@ -271,6 +303,8 @@ cmd_test()
     "${userns_arg[@]}" \
     --user "$(id -u):$(id -g)" \
     -e VERB_LAYER=l1 \
+    -v "$WORKSPACE_ROOT:$WORKSPACE_DIR:ro" \
+    -v "${IMAGE}_${CACHE_DIR}:$WORKSPACE_DIR/$CACHE_DIR" \
     "${bin_args[@]}" \
     "${mount_args[@]}" \
     "$IMAGE" \
@@ -301,11 +335,14 @@ cmd_lint()
   local userns_arg=()
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
   _ensure_image
+  _ensure_build_cache
   echo "▶ $IMAGE ($CONTAINER_CMD)"
   "$CONTAINER_CMD" run --rm \
     "${userns_arg[@]}" \
     --user "$(id -u):$(id -g)" \
     -e VERB_LAYER=l1 \
+    -v "$WORKSPACE_ROOT:$WORKSPACE_DIR:ro" \
+    -v "${IMAGE}_${CACHE_DIR}:$WORKSPACE_DIR/$CACHE_DIR" \
     "$IMAGE" \
     "$WORKSPACE_DIR/$LINT_SCRIPT"
 }
@@ -324,11 +361,14 @@ cmd_run()
   local userns_arg=()
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
   _ensure_image
+  _ensure_build_cache
   echo "▶ $IMAGE ($CONTAINER_CMD)"
   "$CONTAINER_CMD" run --rm \
     "${userns_arg[@]}" \
     --user "$(id -u):$(id -g)" \
     -e VERB_LAYER=l1 \
+    -v "$WORKSPACE_ROOT:$WORKSPACE_DIR:ro" \
+    -v "${IMAGE}_${CACHE_DIR}:$WORKSPACE_DIR/$CACHE_DIR" \
     "$IMAGE" \
     "$WORKSPACE_DIR/$RUN_SCRIPT"
 }
@@ -336,6 +376,7 @@ cmd_run()
 cmd_list()
 {
   _ensure_image
+  _ensure_build_cache
   _ensure_plugin_targets
   local userns_arg=() vol_args=() cargo_env="" list_cmd=""
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
@@ -346,6 +387,8 @@ cmd_list()
   "$CONTAINER_CMD" run --rm \
     "${userns_arg[@]}" \
     --user "$(id -u):$(id -g)" \
+    -v "$WORKSPACE_ROOT:$WORKSPACE_DIR:ro" \
+    -v "${IMAGE}_${CACHE_DIR}:$WORKSPACE_DIR/$CACHE_DIR" \
     "${vol_args[@]}" \
     "$IMAGE" \
     bash -c "$list_cmd"
@@ -361,7 +404,7 @@ cmd_shell()
   # shell can create foreign-owned files on host bind-mounts.
   local userns_arg=()
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
-  local args=( --rm -it "${userns_arg[@]}" --user "$(id -u):$(id -g)" -v "${IMAGE}_$CACHE_DIR:$WORKSPACE_DIR/$CACHE_DIR" )
+  local args=( --rm -it "${userns_arg[@]}" --user "$(id -u):$(id -g)" -v "$WORKSPACE_ROOT:$WORKSPACE_DIR:ro" -v "${IMAGE}_$CACHE_DIR:$WORKSPACE_DIR/$CACHE_DIR" )
   local plugin_extra_args=()
   _plugin_shell_extra_args
   args+=( "${plugin_extra_args[@]}" )
@@ -387,6 +430,9 @@ cmd_help()
   echo "  .lint           Run linter (requires lint_script in runbox.yml)"
   echo "  .list           List all test names without running"
   echo "  .shell          Interactive bash shell (mounts available)"
+  echo ""
+  echo "Flags (append after command):"
+  echo "  --rebuild, -R   Force image rebuild even if cache appears current"
   echo ""
   echo "Help:"
   echo "  .help           Show this help"
