@@ -266,7 +266,8 @@ fn build_queued_table() -> Option< String >
   // Sort by numeric PID for intuitive output order; string sort mis-orders "1000" < "200".
   entries.sort_by_key( |e|
   {
-    e.file_stem()
+    e.path()
+     .file_stem()
      .and_then( |s| s.to_str() )
      .and_then( |s| s.parse::< u32 >().ok() )
      .unwrap_or( u32::MAX )
