@@ -2,20 +2,21 @@
 
 ### Scope
 
-- **Purpose**: Document CLR_* environment variable fallbacks and the CLAUDE_CODE_MAX_OUTPUT_TOKENS subprocess variable.
+- **Purpose**: Document CLR_* environment variable fallbacks, runtime configuration overrides, and the CLAUDE_CODE_MAX_OUTPUT_TOKENS subprocess variable.
 - **Responsibility**: Specify env var names, corresponding CLI parameters, precedence rules, and type handling.
-- **In Scope**: CLR_* input vars for run/isolated/refresh, CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
+- **In Scope**: CLR_* input vars for run/isolated/refresh, CLR_* runtime config overrides (`CLR_GATE_DIR`), CLAUDE_CODE_MAX_OUTPUT_TOKENS injection, precedence, bool/parsed type semantics.
 - **Out of Scope**: CLI parameter descriptions (-> param/), subprocess behavior beyond env injection.
 
-### All Env Parameters (38 total)
+### All Env Parameters (39 total)
 
 | Category | Count | Purpose |
 |----------|-------|---------|
 | Input (CLR_*) — `run` subcommand | 34 | Caller env fallbacks for `run` parameters |
 | Input (CLR_*) — `isolated` and `refresh` subcommands | 3 | Caller env fallbacks for credential operation parameters |
+| Runtime config (CLR_*) | 1 | Runtime configuration overrides (not CLI parameter fallbacks) |
 | Subprocess (CLAUDE_CODE_*) | 1 | Set by `clr` before spawning the `claude` subprocess |
 
-**Total:** 38 environment variables
+**Total:** 39 environment variables
 
 ---
 
@@ -140,3 +141,26 @@ assembled environment before subprocess invocation.
 clr --dry-run "test"                         # shows: CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
 clr --max-tokens 50000 --dry-run "test"      # shows: CLAUDE_CODE_MAX_OUTPUT_TOKENS=50000
 ```
+
+---
+
+### Env Param 4: `CLR_GATE_DIR` — Runtime Configuration
+
+Overrides the default gate state directory used by `gate.rs` (write) and `ps.rs` (read).
+
+When a `clr` process is blocked at the `--max-sessions` concurrency gate, `gate.rs` writes
+a JSON state file to `$CLR_GATE_DIR/{pid}.json`. `clr ps` reads those files to populate the
+queued CLR processes table.
+
+- **Type:** directory path (string)
+- **Default:** `/tmp/clr-gate`
+- **Commands affected:** `run` / `ask` (writes gate files via `gate.rs`), `ps` (reads gate files)
+- **Mechanism:** read by `gate_dir()` in `gate.rs` and `gate_dir_ps()` in `ps.rs` at runtime
+- **Primary use:** test isolation — override in tests to point at a temp dir, preventing
+  cross-test contamination from real gate files in `/tmp/clr-gate/`
+
+| Variable | Default | Type | Notes |
+|----------|---------|------|-------|
+| `CLR_GATE_DIR` | `/tmp/clr-gate` | path | Override gate state directory for `gate.rs` and `ps.rs` |
+
+**No precedence rule** — this variable is always applied (there is no corresponding CLI flag).

@@ -7,17 +7,19 @@
 //! | ID   | Name                                        | Category         |
 //! |------|---------------------------------------------|------------------|
 //! | IT-1 | 0 sessions → no-sessions message            | No-sessions      |
-//! | IT-2 | ≥1 session → unicode-box border present      | Sessions present |
-//! | IT-3 | `clr --help` lists `ps`                     | Help listing     |
-//! | IT-4 | `clr p` (typo) → exit 1, Did you mean       | Typo guard       |
-//! | IT-5 | table contains PID, Absolute Path, Task      | Column presence  |
-//! | IT-6 | `clr pss` (typo) → exit 1, Did you mean     | Typo guard       |
-//! | IT-7 | own PID not in `clr ps` output              | Self-exclusion   |
-//! | IT-8 | `clr ps --unknown` → exit 1                 | Error handling   |
-//! | IT-9 | `$PRO` prefix replaced by `"$PRO"` in path  | Path shortening  |
+//! | IT-2  | ≥1 session → plain table (no `┌` border)      | Sessions present |
+//! | IT-3  | `clr --help` lists `ps`                       | Help listing     |
+//! | IT-4  | `clr p` (typo) → exit 1, Did you mean         | Typo guard       |
+//! | IT-5  | table contains PID, Elapsed, Absolute Path, Task | Column presence |
+//! | IT-6  | `clr pss` (typo) → exit 1, Did you mean       | Typo guard       |
+//! | IT-7  | own PID not in `clr ps` output                | Self-exclusion   |
+//! | IT-8  | `clr ps --unknown` → exit 1                   | Error handling   |
+//! | IT-9  | `$PRO` prefix replaced by `"$PRO"` in path    | Path shortening  |
+//! | IT-10 | Gate file present → queued table with headers  | Queued present   |
+//! | IT-11 | No gate files → no queued table in output      | Queued absent    |
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, stderr_str, stdout_str };
+use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
 
 #[ cfg( unix ) ]
 use cli_binary_test_helpers::{ fake_claude_binary_dir, run_clr_ps, spawn_fake_claude };
@@ -40,13 +42,13 @@ fn it_01_no_sessions_shows_message()
   );
 }
 
-// ── IT-2: ≥1 session → unicode-box ────────────────────────────────────────────
+// ── IT-2: ≥1 session → plain-style table ──────────────────────────────────────
 
 /// IT-2: with a fake `claude` process running, `clr ps` exits 0 and the
-/// output contains a unicode box-drawing border character (`┌`).
+/// output uses plain style — no unicode box-drawing border character (`┌`).
 #[ cfg( unix ) ]
 #[ test ]
-fn it_02_sessions_present_unicode_box()
+fn it_02_sessions_present_plain_style()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
@@ -59,8 +61,12 @@ fn it_02_sessions_present_unicode_box()
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "exit code must be 0, got {:?}", out.status.code() );
   assert!(
-    stdout.contains( '\u{250C}' ), // ┌
-    "stdout must contain unicode box border ┌, got: {stdout}"
+    stdout.contains( "PID" ),
+    "stdout must contain PID header, got: {stdout}"
+  );
+  assert!(
+    !stdout.contains( '\u{250C}' ), // must NOT have ┌
+    "stdout must use plain style — no ┌ border, got: {stdout}"
   );
 }
 
@@ -97,7 +103,7 @@ fn it_04_typo_clr_p()
 // ── IT-5: table headers present ───────────────────────────────────────────────
 
 /// IT-5: with a session running, `clr ps` output contains the expected
-/// column headers: PID, Absolute Path, Task.
+/// column headers: PID, Elapsed, Absolute Path, Task.
 #[ cfg( unix ) ]
 #[ test ]
 fn it_05_table_headers_present()
@@ -113,6 +119,7 @@ fn it_05_table_headers_present()
   let stdout = stdout_str( &out );
   assert!( out.status.success() );
   assert!( stdout.contains( "PID" ), "missing PID header: {stdout}" );
+  assert!( stdout.contains( "Elapsed" ), "missing Elapsed header: {stdout}" );
   assert!( stdout.contains( "Absolute Path" ), "missing Absolute Path header: {stdout}" );
   assert!( stdout.contains( "Task" ), "missing Task header: {stdout}" );
 }
@@ -224,5 +231,58 @@ fn it_09_pro_prefix_shortened_in_path_column()
   assert!(
     !stdout.contains( pro_str ),
     "IT-9: full PRO prefix must not appear in the table. Got:\n{stdout}"
+  );
+}
+
+// ── IT-10: gate file present → queued table ───────────────────────────────────
+
+/// IT-10: when a gate JSON file exists in `CLR_GATE_DIR`, `clr ps` exits 0
+/// and stdout contains the queued table headers (PID, CWD, Waiting).
+///
+/// No live `clr` waiter is needed — the test writes the state file directly.
+#[ test ]
+fn it_10_gate_file_present_shows_queued_table()
+{
+  let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
+  let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
+  let gate_file     = gate_dir.path().join( "99999.json" );
+  std::fs::write(
+    &gate_file,
+    r#"{"cwd":"/tmp/test-project","since":1720000000,"attempt":3,"message":"waiting for session slot"}"#,
+  ).expect( "write gate file" );
+
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ) ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+  assert!( stdout.contains( "PID" ), "missing PID header in queued table: {stdout}" );
+  assert!( stdout.contains( "CWD" ), "missing CWD header in queued table: {stdout}" );
+  assert!( stdout.contains( "Waiting" ), "missing Waiting header in queued table: {stdout}" );
+}
+
+// ── IT-11: no gate files → no queued table ────────────────────────────────────
+
+/// IT-11: when `CLR_GATE_DIR` points to an empty temp dir, `clr ps` exits 0
+/// and stdout does NOT contain queued table headers.
+#[ test ]
+fn it_11_no_gate_files_no_queued_table()
+{
+  let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
+  let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
+  // Dir is intentionally empty — no .json files.
+
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ) ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( "No active Claude Code sessions." ),
+    "must show no-sessions message with empty gate dir: {stdout}"
+  );
+  assert!(
+    !stdout.contains( "Waiting" ),
+    "must not contain Waiting header when no gate files: {stdout}"
+  );
+  assert!(
+    !stdout.contains( "Attempt" ),
+    "must not contain Attempt header when no gate files: {stdout}"
   );
 }

@@ -22,7 +22,7 @@ clr [OPTIONS] [MESSAGE]
 | `command/` | Command reference: run, ask, isolated, refresh, help, ps (6 commands) |
 | `dictionary.md` | Domain vocabulary for clr CLI concepts |
 | `command_defaults.md` | Cross-command parameter default matrix and isolated/refresh design targets |
-| `env_param.md` | CLR_* env var fallbacks and CLAUDE_CODE_* subprocess vars |
+| `env_param.md` | CLR_* env var fallbacks, CLR_GATE_DIR runtime config, and CLAUDE_CODE_* subprocess vars (39 vars) |
 | `param_group/` | Logical parameter groupings (4 groups) |
 | `type/` | Semantic type definitions (12 types) |
 | `param/` | Individual parameter reference docs (36 parameters) |
@@ -62,7 +62,7 @@ clr [OPTIONS] [MESSAGE]
 - [Parameter Groups](param_group/readme.md) — logical parameter groupings (4 groups)
 - [Dictionary](dictionary.md) — domain vocabulary
 - [User Stories](user_story/readme.md) — user goals and usage patterns (26 user stories)
-- [Env Parameters](env_param.md) — input and subprocess environment variables (38 variables)
+- [Env Parameters](env_param.md) — input, runtime config, and subprocess environment variables (39 variables)
 
 ### See Also
 

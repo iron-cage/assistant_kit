@@ -16,7 +16,7 @@
 | 03_refresh.md | Command spec: OAuth credential refresh without running a task |
 | 04_help.md | Command spec: print usage information and exit |
 | 05_ask.md | Command spec: semantic alias for run (identical defaults) |
-| 06_ps.md | Command spec: list running Claude Code sessions in a unicode-box table |
+| 06_ps.md | Command spec: list running Claude Code sessions and queued waiters in two plain-style tables |
 
 ### All Commands (6 total)
 

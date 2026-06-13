@@ -9,8 +9,9 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-1 | No sessions: exit 0, no-sessions message | AC-002 | ✅ |
 | US-2 | Help lists `ps` subcommand | AC-003 | ✅ |
 | US-3 | Typo `clr p` triggers guard | AC-004 | ✅ |
-| US-4 | Sessions present: unicode-box table with correct headers | AC-001, AC-005 | ✅ |
+| US-4 | Sessions present: plain-style table with correct headers | AC-001, AC-005 | ⏳ |
 | US-5 | `$PRO` prefix replaced by `"$PRO"` literal in Absolute Path column | AC-007 | ✅ |
+| US-6 | Queued CLR session shown when gate file present | AC-008 | ⏳ |
 
 ---
 
@@ -44,11 +45,11 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 
 ---
 
-### US-4: Sessions present — unicode-box table with headers
+### US-4: Sessions present — plain-style table with headers
 
 - **Given:** ≥1 fake `claude` process running; PATH prepended with fake dir
 - **When:** `clr ps`
-- **Then:** Exit 0; stdout contains `┌` and `PID` and `Absolute Path` and `Task`
+- **Then:** Exit 0; stdout contains `PID`, `Elapsed`, `Absolute Path`, and `Task`; stdout does NOT contain `┌` (plain style)
 - **Exit:** 0
 - **Verifies:** AC-001, AC-005
 
@@ -61,3 +62,13 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 - **Then:** Exit 0; stdout contains `"$PRO"`; stdout does NOT contain the full temp dir path
 - **Exit:** 0
 - **Verifies:** AC-007
+
+---
+
+### US-6: Queued CLR session shown when gate file present
+
+- **Given:** temp dir used as `CLR_GATE_DIR`; a gate JSON file written at `<temp_dir>/12345.json` with `cwd`, `since`, `attempt`, `message` fields
+- **When:** `clr ps` with `CLR_GATE_DIR=<temp_dir>` in env
+- **Then:** Exit 0; stdout contains `PID`, `CWD`, and `Waiting` (queued table headers); stdout contains `12345`
+- **Exit:** 0
+- **Verifies:** AC-008

@@ -1,12 +1,14 @@
-//! `clr ps` — list running Claude Code sessions in a unicode-box table.
+//! `clr ps` — list active Claude Code sessions and queued `clr` waiters in two
+//! plain-style tables.
 
 use claude_core::process::{ find_claude_processes, ProcessInfo };
 use data_fmt::{ RowBuilder, TableFormatter, TableConfig, Format };
+use std::path::PathBuf;
 
-/// Dispatch `clr ps`: list running Claude Code sessions in a unicode-box table.
+/// Dispatch `clr ps`: list active Claude Code sessions and queued `clr` waiters
+/// in two plain-style tables.
 ///
-/// Accepts no arguments.  Exits 0 with a unicode-box table when sessions are
-/// found; exits 0 with "No active Claude Code sessions." when none are running;
+/// Accepts no arguments.  Exits 0 with the tables (or empty-state messages);
 /// exits 1 on any unexpected argument.
 pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
 {
@@ -17,18 +19,45 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
     std::process::exit( 1 );
   }
 
-  let procs = find_claude_processes();
+  let procs        = find_claude_processes();
+  let active_table = build_active_table( &procs );
+  let queued_table = build_queued_table();
 
-  if procs.is_empty()
+  match ( active_table, queued_table )
   {
-    println!( "No active Claude Code sessions." );
-    std::process::exit( 0 );
+    ( None, None ) =>
+    {
+      println!( "No active Claude Code sessions." );
+    }
+    ( Some( at ), None ) =>
+    {
+      println!( "{at}" );
+    }
+    ( None, Some( qt ) ) =>
+    {
+      println!( "No active Claude Code sessions." );
+      println!();
+      println!( "{qt}" );
+    }
+    ( Some( at ), Some( qt ) ) =>
+    {
+      println!( "{at}" );
+      println!();
+      println!( "{qt}" );
+    }
   }
+  std::process::exit( 0 );
+}
+
+// Build the active sessions table, returning None when no sessions are running.
+fn build_active_table( procs : &[ ProcessInfo ] ) -> Option< String >
+{
+  if procs.is_empty() { return None; }
 
   let headers = vec![
     "#".to_string(),
     "PID".to_string(),
-    "Started".to_string(),
+    "Elapsed".to_string(),
     "CPU%".to_string(),
     "RAM".to_string(),
     "State".to_string(),
@@ -47,12 +76,11 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
   // auto_wrap: false — prevents word-wrapping long paths across continuation rows;
   // table width reflects content naturally (user scrolls if needed).
   let table = Format::format(
-    &TableFormatter::with_config( TableConfig::unicode_box().auto_wrap( false ) ),
+    &TableFormatter::with_config( TableConfig::plain().auto_wrap( false ) ),
     &view,
   ).unwrap_or_default();
 
-  println!( "{table}" );
-  std::process::exit( 0 );
+  Some( table )
 }
 
 // Build one table row for the given process.
@@ -61,13 +89,13 @@ fn build_row( idx : usize, proc : &ProcessInfo ) -> Vec< String >
   let pid = proc.pid;
 
   #[ cfg( target_os = "linux" ) ]
-  let ( started, cpu, ram, state ) =
+  let ( elapsed, cpu, ram, state ) =
   {
     use claude_core::process::read_process_metrics;
     match read_process_metrics( pid )
     {
       Some( m ) => (
-        ts_hhmm( m.started_at ),
+        elapsed_label( m.started_at ),
         format!( "{:.1}%", m.cpu_pct ),
         ram_label( m.ram_kb ),
         m.state.to_string(),
@@ -77,13 +105,13 @@ fn build_row( idx : usize, proc : &ProcessInfo ) -> Vec< String >
   };
 
   #[ cfg( not( target_os = "linux" ) ) ]
-  let ( started, cpu, ram, state ) =
+  let ( elapsed, cpu, ram, state ) =
     ( "-".to_string(), "-".to_string(), "-".to_string(), "-".to_string() );
 
   let path = shorten_path( &proc.cwd.display().to_string() );
   let task = resolve_task( proc );
 
-  vec![ idx.to_string(), pid.to_string(), started, cpu, ram, state, path, task ]
+  vec![ idx.to_string(), pid.to_string(), elapsed, cpu, ram, state, path, task ]
 }
 
 // Replace the $PRO prefix in a path with the literal "$PRO" when the PRO env var is set.
@@ -103,13 +131,34 @@ fn shorten_path( path : &str ) -> String
   path.to_string()
 }
 
-// Convert a Unix timestamp to a UTC "HH:MM" string.
-fn ts_hhmm( ts : u64 ) -> String
+// Return current Unix timestamp in seconds.
+fn unix_now_ps() -> u64
 {
-  let s_in_day = ts % 86_400;
-  let h        = s_in_day / 3_600;
-  let m        = ( s_in_day % 3_600 ) / 60;
-  format!( "{h:02}:{m:02}" )
+  std::time::SystemTime::now()
+    .duration_since( std::time::UNIX_EPOCH )
+    .map_or( 0, |d| d.as_secs() )
+}
+
+// Format elapsed seconds since `started_at` as a human-readable duration.
+fn elapsed_label( started_at : u64 ) -> String
+{
+  let elapsed = unix_now_ps().saturating_sub( started_at );
+  if elapsed < 60
+  {
+    format!( "{elapsed}s" )
+  }
+  else if elapsed < 3_600
+  {
+    let m = elapsed / 60;
+    let s = elapsed % 60;
+    format!( "{m}m {s}s" )
+  }
+  else
+  {
+    let h = elapsed / 3_600;
+    let m = ( elapsed % 3_600 ) / 60;
+    format!( "{h}h {m}m" )
+  }
 }
 
 // Format RAM in kilobytes as a human-readable label (K or M suffix).
@@ -166,4 +215,93 @@ fn try_jsonl_task( proc : &ProcessInfo ) -> Option< String >
   let truncated  : String = text.chars().take( 35 ).collect();
   if truncated.is_empty() { return None; }
   Some( truncated )
+}
+
+// Return the gate state directory — $CLR_GATE_DIR or /tmp/clr-gate.
+fn gate_dir_ps() -> PathBuf
+{
+  std::env::var( "CLR_GATE_DIR" )
+    .ok()
+    .filter( |s| !s.is_empty() )
+    .map_or_else( || PathBuf::from( "/tmp/clr-gate" ), PathBuf::from )
+}
+
+// Extract a string value for `key` from a compact JSON object in `content`.
+fn parse_json_str( content : &str, key : &str ) -> Option< String >
+{
+  let marker = format!( r#""{key}":""# );
+  let start  = content.find( marker.as_str() )? + marker.len();
+  let rest   = &content[ start.. ];
+  let end    = rest.find( '"' )?;
+  Some( rest[ ..end ].to_string() )
+}
+
+// Extract a u64 value for `key` from a compact JSON object in `content`.
+fn parse_json_u64( content : &str, key : &str ) -> Option< u64 >
+{
+  let marker = format!( r#""{key}":"# );
+  let start  = content.find( marker.as_str() )? + marker.len();
+  let rest   = &content[ start.. ];
+  let end    = rest.find( [ ',', '}' ] )?;
+  rest[ ..end ].trim().parse().ok()
+}
+
+// Read the gate state dir and build the queued CLR processes table.
+//
+// Returns None when the gate dir is absent or contains no .json files.
+fn build_queued_table() -> Option< String >
+{
+  let dir = gate_dir_ps();
+  let mut entries : Vec< _ > = std::fs::read_dir( &dir )
+    .ok()?
+    .flatten()
+    .filter( |e|
+    {
+      e.path().extension().and_then( |x| x.to_str() ) == Some( "json" )
+    } )
+    .collect();
+
+  if entries.is_empty() { return None; }
+
+  // Sort by filename (PID) for deterministic output.
+  entries.sort_by_key( std::fs::DirEntry::file_name );
+
+  let headers = vec![
+    "#".to_string(),
+    "PID".to_string(),
+    "CWD".to_string(),
+    "Waiting".to_string(),
+    "Attempt".to_string(),
+  ];
+
+  let mut builder = RowBuilder::new( headers );
+  for ( idx, entry ) in entries.iter().enumerate()
+  {
+    let path    = entry.path();
+    let pid_str = path
+      .file_stem()
+      .and_then( |s| s.to_str() )
+      .unwrap_or( "?" )
+      .to_string();
+    let content = std::fs::read_to_string( &path ).unwrap_or_default();
+    let cwd     = parse_json_str( &content, "cwd" ).unwrap_or_default();
+    let since   = parse_json_u64( &content, "since" ).unwrap_or( 0 );
+    let attempt = parse_json_u64( &content, "attempt" ).unwrap_or( 0 );
+    let row     = vec![
+      ( idx + 1 ).to_string(),
+      pid_str,
+      shorten_path( &cwd ),
+      elapsed_label( since ),
+      attempt.to_string(),
+    ];
+    builder = builder.add_row( row.into_iter().map( Into::into ).collect() );
+  }
+
+  let view  = builder.build_view();
+  let table = Format::format(
+    &TableFormatter::with_config( TableConfig::plain().auto_wrap( false ) ),
+    &view,
+  ).unwrap_or_default();
+
+  Some( table )
 }

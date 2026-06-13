@@ -9,11 +9,12 @@
 //! | US-1 | No sessions: exit 0, no-sessions message          | AC-002    |
 //! | US-2 | Help lists `ps` subcommand                        | AC-003    |
 //! | US-3 | Typo `clr p` triggers guard                       | AC-004    |
-//! | US-4 | Sessions present: unicode-box table with headers   | AC-001,005|
+//! | US-4 | Sessions present: plain-style table with headers   | AC-001,005|
 //! | US-5 | `$PRO` prefix shortened in Absolute Path column   | AC-007    |
+//! | US-6 | Queued CLR shown: PID, CWD, Waiting headers       | AC-008    |
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::{ run_cli, stderr_str, stdout_str };
+use cli_binary_test_helpers::{ run_cli, run_cli_with_env, stderr_str, stdout_str };
 
 #[ cfg( unix ) ]
 use cli_binary_test_helpers::{ fake_claude_binary_dir, run_clr_ps, spawn_fake_claude };
@@ -58,11 +59,12 @@ fn us_03_typo_guard()
 
 // ── US-4: Sessions present ────────────────────────────────────────────────────
 
-/// US-4 (AC-001, AC-005): ≥1 fake `claude` process → exit 0, stdout contains
-/// `┌` (unicode box border) and `PID`, `Absolute Path`, `Task` column headers.
+/// US-4 (AC-001, AC-005): ≥1 fake `claude` process → exit 0, stdout uses plain
+/// style (no `┌` border) and contains `PID`, `Elapsed`, `Absolute Path`, `Task`
+/// column headers.
 #[ cfg( unix ) ]
 #[ test ]
-fn us_04_sessions_unicode_box_with_headers()
+fn us_04_sessions_plain_style_with_headers()
 {
   let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
@@ -74,8 +76,9 @@ fn us_04_sessions_unicode_box_with_headers()
 
   let stdout = stdout_str( &out );
   assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
-  assert!( stdout.contains( '\u{250C}' ), "must contain ┌: {stdout}" );
+  assert!( !stdout.contains( '\u{250C}' ), "must not contain ┌ border (plain style): {stdout}" );
   assert!( stdout.contains( "PID" ), "missing PID header: {stdout}" );
+  assert!( stdout.contains( "Elapsed" ), "missing Elapsed header: {stdout}" );
   assert!( stdout.contains( "Absolute Path" ), "missing Absolute Path header: {stdout}" );
   assert!( stdout.contains( "Task" ), "missing Task header: {stdout}" );
 }
@@ -125,4 +128,29 @@ fn us_05_pro_prefix_shortened_in_path()
     !stdout.contains( pro_str ),
     "US-5: full PRO path must not appear in table. Got:\n{stdout}"
   );
+}
+
+// ── US-6: Queued CLR processes ────────────────────────────────────────────────
+
+/// US-6 (AC-008): when a gate file exists in `CLR_GATE_DIR`, `clr ps` exits 0
+/// and stdout contains the queued CLR processes table with PID, CWD, Waiting.
+///
+/// No live `clr` waiter needed — the test writes a gate state file directly.
+#[ test ]
+fn us_06_queued_clr_shows_queued_headers()
+{
+  let gate_dir      = tempfile::TempDir::new().expect( "create gate temp dir" );
+  let gate_dir_path = gate_dir.path().to_str().expect( "gate dir UTF-8" );
+  let gate_file     = gate_dir.path().join( "88888.json" );
+  std::fs::write(
+    &gate_file,
+    r#"{"cwd":"/tmp/us6-project","since":1720000000,"attempt":1,"message":"waiting for session slot"}"#,
+  ).expect( "write gate file" );
+
+  let out    = run_cli_with_env( &[ "ps" ], &[ ( "CLR_GATE_DIR", gate_dir_path ) ] );
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "exit 0 expected" );
+  assert!( stdout.contains( "PID" ), "queued table must show PID: {stdout}" );
+  assert!( stdout.contains( "CWD" ), "queued table must show CWD: {stdout}" );
+  assert!( stdout.contains( "Waiting" ), "queued table must show Waiting: {stdout}" );
 }
