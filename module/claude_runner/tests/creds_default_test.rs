@@ -19,8 +19,6 @@
 
 use std::process::Command;
 
-fn clr_bin() -> &'static str { env!( "CARGO_BIN_EXE_clr" ) }
-
 /// Create `{home}/.claude/.credentials.json` with empty JSON placeholder.
 fn write_placeholder_creds( home : &std::path::Path )
 {
@@ -40,7 +38,7 @@ fn t1_isolated_no_creds_uses_home_default()
   write_placeholder_creds( tmp.path() );
   let expected = tmp.path().join( ".claude" ).join( ".credentials.json" );
 
-  let out = Command::new( clr_bin() )
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "isolated", "--trace", "test" ] )
     .env( "HOME", tmp.path() )
     .env_remove( "CLR_CREDS" )
@@ -70,7 +68,7 @@ fn t2_refresh_no_creds_uses_home_default()
   write_placeholder_creds( tmp.path() );
   let expected = tmp.path().join( ".claude" ).join( ".credentials.json" );
 
-  let out = Command::new( clr_bin() )
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "refresh", "--trace" ] )
     .env( "HOME", tmp.path() )
     .env_remove( "CLR_CREDS" )
@@ -104,7 +102,7 @@ fn t3_clr_creds_wins_over_home_default()
   std::fs::write( tmp_creds.path(), "{}" ).expect( "write creds" );
   let clr_path = tmp_creds.path().to_str().unwrap().to_string();
 
-  let out = Command::new( clr_bin() )
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "isolated", "--trace", "test" ] )
     .env( "HOME", tmp_home.path() )
     .env( "CLR_CREDS", &clr_path )
@@ -129,7 +127,7 @@ fn t3_clr_creds_wins_over_home_default()
 #[ test ]
 fn t4_home_unset_exits_with_error()
 {
-  let out = Command::new( clr_bin() )
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "isolated", "test" ] )
     .env_remove( "HOME" )
     .env_remove( "CLR_CREDS" )
@@ -155,7 +153,7 @@ fn t5_default_file_missing_exits_with_error()
   // Deliberately NOT creating .claude/.credentials.json
   let expected = tmp.path().join( ".claude" ).join( ".credentials.json" );
 
-  let out = Command::new( clr_bin() )
+  let out = Command::new( env!( "CARGO_BIN_EXE_clr" ) )
     .args( [ "isolated", "--trace", "test" ] )
     .env( "HOME", tmp.path() )
     .env_remove( "CLR_CREDS" )

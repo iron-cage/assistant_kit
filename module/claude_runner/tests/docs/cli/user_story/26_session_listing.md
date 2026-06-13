@@ -10,6 +10,7 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 | US-2 | Help lists `ps` subcommand | AC-003 | ✅ |
 | US-3 | Typo `clr p` triggers guard | AC-004 | ✅ |
 | US-4 | Sessions present: unicode-box table with correct headers | AC-001, AC-005 | ✅ |
+| US-5 | `$PRO` prefix replaced by `"$PRO"` literal in Absolute Path column | AC-007 | ✅ |
 
 ---
 
@@ -50,3 +51,13 @@ Test case spec for [026_session_listing.md](../../../../docs/cli/user_story/026_
 - **Then:** Exit 0; stdout contains `┌` and `PID` and `Absolute Path` and `Task`
 - **Exit:** 0
 - **Verifies:** AC-001, AC-005
+
+---
+
+### US-5: `$PRO` prefix shortened in Absolute Path column
+
+- **Given:** temp dir as `$PRO` root; subdirectory `workspace` within it; fake `claude` ELF spawned in that subdir; `PRO` set to temp dir when running `clr ps`
+- **When:** `clr ps` with `PRO=<temp_dir>` in env
+- **Then:** Exit 0; stdout contains `"$PRO"`; stdout does NOT contain the full temp dir path
+- **Exit:** 0
+- **Verifies:** AC-007

@@ -44,8 +44,10 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
   }
 
   let view  = builder.build_view();
+  // auto_wrap: false — prevents word-wrapping long paths across continuation rows;
+  // table width reflects content naturally (user scrolls if needed).
   let table = Format::format(
-    &TableFormatter::with_config( TableConfig::unicode_box() ),
+    &TableFormatter::with_config( TableConfig::unicode_box().auto_wrap( false ) ),
     &view,
   ).unwrap_or_default();
 
@@ -78,10 +80,27 @@ fn build_row( idx : usize, proc : &ProcessInfo ) -> Vec< String >
   let ( started, cpu, ram, state ) =
     ( "-".to_string(), "-".to_string(), "-".to_string(), "-".to_string() );
 
-  let path = proc.cwd.display().to_string();
+  let path = shorten_path( &proc.cwd.display().to_string() );
   let task = resolve_task( proc );
 
   vec![ idx.to_string(), pid.to_string(), started, cpu, ram, state, path, task ]
+}
+
+// Replace the $PRO prefix in a path with the literal "$PRO" when the PRO env var is set.
+//
+// Keeps path strings short in the table without information loss: the user already knows
+// what $PRO expands to. Falls back to the full path when PRO is unset or empty.
+fn shorten_path( path : &str ) -> String
+{
+  if let Ok( pro ) = std::env::var( "PRO" )
+  {
+    if !pro.is_empty() && path.starts_with( pro.as_str() )
+    {
+      let rest = &path[ pro.len().. ];
+      return format!( "$PRO{rest}" );
+    }
+  }
+  path.to_string()
 }
 
 // Convert a Unix timestamp to a UTC "HH:MM" string.

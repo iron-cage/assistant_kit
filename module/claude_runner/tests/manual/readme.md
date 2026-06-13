@@ -739,13 +739,13 @@ clr isolated --trace --creds /nonexistent "test"
 
 ### NC-12: Gate Waiting Message Format — `X/Y sessions active`
 
-**Precondition:** Requires ≥20 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
+**Precondition:** Requires ≥25 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
 
 **Expected:** When the gate is triggered, each polling cycle emits to stderr:
 `Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {attempt}/{max_attempts})`
 
-Example with 20 sessions at default limit:
-`Info: 20/20 sessions active; waiting 30s for a slot... (attempt 1/50)`
+Example with 25 sessions at default limit:
+`Info: 25/25 sessions active; waiting 30s for a slot... (attempt 1/100)`
 
 The old format `"X claude session(s) running (limit Y)"` is **not** emitted. The `X/Y` ratio format is the canonical output.
 

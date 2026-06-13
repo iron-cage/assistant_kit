@@ -26,27 +26,8 @@
 //! - T12: `clr assk …` — edit-distance-1 typo caught by guard; exits 1, "Did you mean 'ask'?"
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli;
+use cli_binary_test_helpers::{ run_ask_dry, run_cli };
 use std::process::Command;
-
-/// Run `clr ask --dry-run` with extra args; return stdout.  Asserts exit 0.
-fn run_ask_dry( extra_args : &[ &str ] ) -> String
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  let mut args = vec![ "ask", "--dry-run" ];
-  args.extend_from_slice( extra_args );
-  let out = Command::new( bin )
-    .args( &args )
-    .output()
-    .expect( "failed to invoke clr binary" );
-  assert!(
-    out.status.success(),
-    "clr ask --dry-run failed (exit {}): {}",
-    out.status.code().unwrap_or( -1 ),
-    String::from_utf8_lossy( &out.stderr )
-  );
-  String::from_utf8_lossy( &out.stdout ).into_owned()
-}
 
 /// Run `clr run --dry-run` with extra args; return stdout.  Asserts exit 0.
 fn run_run_dry( extra_args : &[ &str ] ) -> String

@@ -47,7 +47,7 @@
 | User stories (US10–US18) | `user_story_creds_isolated_test.rs` | End-to-end user story workflows: credential, isolated, and refresh stories |
 | User stories (US19–US25) | `user_story_output_test.rs` | End-to-end user story workflows: MCP config, output file, concurrency stories |
 | User stories (US26) | `user_story_ps_test.rs` | End-to-end user story workflows: session listing via `clr ps` |
-| `clr ps` subcommand (IT-1–IT-8) | `ps_command_test.rs` | `clr ps` table output, no-sessions message, help listing, typo guard, self-exclusion |
+| `clr ps` subcommand (IT-1–IT-9) | `ps_command_test.rs` | `clr ps` table output, no-sessions message, help listing, typo guard, self-exclusion, path shortening |
 | Shared helpers | `cli_binary_test_helpers.rs` | Shared test helper: `run_cli()` and `run_cli_with_env()` invocation |
 
 ### Responsibility Table
@@ -91,7 +91,7 @@
 | `user_story_creds_isolated_test.rs` | User story end-to-end workflows: US10–US18 (credential, isolated, refresh stories). |
 | `user_story_output_test.rs` | User story end-to-end workflows: US19–US25 (MCP config, output file, concurrency gate). |
 | `user_story_ps_test.rs` | User story end-to-end workflows: US26 (session listing via `clr ps`). |
-| `ps_command_test.rs` | `clr ps` subcommand integration tests: table output, no-sessions, help, typo guard, self-exclusion (IT-1–IT-8). |
+| `ps_command_test.rs` | `clr ps` subcommand integration tests: table output, no-sessions, help, typo guard, self-exclusion, path shortening (IT-1–IT-9). |
 | `cli_binary_test_helpers.rs` | Shared test helpers: `run_cli()` and `run_cli_with_env()` binary invocation. |
 | `docs/` | Test documentation mirroring `docs/` — test case planning for CLI commands, params, groups. |
 | `manual/` | Manual testing plan for live Claude Code invocation. |
