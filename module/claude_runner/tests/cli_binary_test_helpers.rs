@@ -9,12 +9,16 @@
 //! | `make_session_dir` | `cli_args_test`, `ultrathink_args_test`, `user_story_test` |
 //! | `exit_code` | `refresh_test`, `bug_reproducers_239_244_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_test` |
 //! | `stderr_str` | `refresh_test`, `bug_reproducers_239_244_test`, `invariant_trace_universality_test`, `error_classification_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test` |
-//! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test` |
+//! | `stdout_str` | `refresh_test`, `isolated_correctness_test`, `isolated_test`, `dry_run_test` |
 //! | `make_creds_file` | `refresh_test`, `param_trace_edge_cases_test`, `invariant_trace_universality_test`, `user_story_test`, `user_story_creds_isolated_test`, `isolated_correctness_test`, `isolated_test` |
-//! | `fake_claude_dir` (unix) | `bug_reproducers_239_244_test`, `error_classification_test`, `execution_mode_test` |
+//! | `fake_claude_dir` (unix) | `bug_reproducers_239_244_test`, `error_classification_test`, `execution_mode_test`, `bug_reproducers_247_test` |
+//! | `fake_claude_binary_dir` (unix) | `ps_command_test`, `user_story_ps_test` |
 //! | `fake_claude` (unix) | `execution_mode_test`, `expect_validation_test` |
 //! | `run_with_path` | `execution_mode_test`, `expect_validation_test` |
-//! | `run_dry` | `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test` |
+//! | `run_dry` | `user_story_test`, `user_story_creds_isolated_test`, `user_story_output_test`, `dry_run_test` |
+//! | `run_ask_dry` | `ask_command_test`, `user_story_creds_isolated_test` |
+//! | `spawn_fake_claude` (unix) | `ps_command_test`, `user_story_ps_test` |
+//! | `run_clr_ps` (unix) | `ps_command_test`, `user_story_ps_test` |
 //!
 //! # Testing Techniques
 //!
@@ -174,6 +178,115 @@ pub fn fake_claude_dir( body : &str ) -> ( tempfile::TempDir, String )
     std::env::var( "PATH" ).unwrap_or_default(),
   );
   ( dir, path_val )
+}
+
+/// Create a temp dir containing a real `claude` binary (a copy of `/bin/sleep`).
+///
+/// Returns `(TempDir, path_val)` where `path_val` prepends the dir to `$PATH`.
+/// Because the file is a real ELF executable, `/proc/{pid}/cmdline` shows the
+/// basename as `"claude"` — making the spawned process visible to
+/// `find_claude_processes()`.  Spawn with `.arg("30")` to keep the process alive
+/// long enough for `clr ps` to observe it.
+///
+/// The caller must keep the `TempDir` alive and `kill()`+`wait()` the child.
+///
+/// # Panics
+///
+/// Panics if the temp directory cannot be created or `/bin/sleep` cannot be copied.
+#[cfg(unix)]
+#[inline]
+#[must_use]
+#[allow(dead_code)]
+pub fn fake_claude_binary_dir() -> ( tempfile::TempDir, String )
+{
+  use std::os::unix::fs::PermissionsExt as _;
+  let dir  = tempfile::TempDir::new().expect( "tmpdir" );
+  let dest = dir.path().join( "claude" );
+  std::fs::copy( "/bin/sleep", &dest ).expect( "copy /bin/sleep as claude" );
+  std::fs::set_permissions( &dest, std::fs::Permissions::from_mode( 0o755 ) )
+    .expect( "chmod claude" );
+  let path_val = format!(
+    "{}:{}",
+    dir.path().display(),
+    std::env::var( "PATH" ).unwrap_or_default(),
+  );
+  ( dir, path_val )
+}
+
+/// Spawn a fake `claude` ELF process using the given PATH env; return the `Child` handle.
+///
+/// Requires `fake_claude_binary_dir()` to have been called first — the PATH must contain
+/// a real ELF binary named `claude` (shell scripts appear as `sh` in `/proc/{pid}/cmdline`
+/// and are invisible to `find_claude_processes()`).
+/// The arg `"30"` is passed to the ELF binary (sleep duration) to keep the process alive.
+/// The caller must `kill()` + `wait()` the returned child to avoid leaks.
+///
+/// # Panics
+///
+/// Panics if the subprocess cannot be spawned.
+#[cfg(unix)]
+#[inline]
+#[must_use]
+#[allow(dead_code)]
+pub fn spawn_fake_claude( path_val : &str ) -> std::process::Child
+{
+  let child = std::process::Command::new( "claude" )
+    .env( "PATH", path_val )
+    .arg( "30" )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn fake claude" );
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+  child
+}
+
+/// Run `clr ps` with the given PATH env; return the raw `Output`.
+///
+/// # Panics
+///
+/// Panics if the subprocess cannot be launched.
+#[cfg(unix)]
+#[inline]
+#[must_use]
+#[allow(dead_code)]
+pub fn run_clr_ps( path_val : &str ) -> std::process::Output
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  std::process::Command::new( bin )
+    .arg( "ps" )
+    .env( "PATH", path_val )
+    .output()
+    .expect( "run clr ps" )
+}
+
+/// Invoke `clr ask --dry-run` with extra args; assert exit 0 and return stdout as `String`.
+///
+/// Prepends `["ask", "--dry-run"]` to the given args, invokes the binary, asserts success,
+/// and returns the captured stdout.
+///
+/// # Panics
+///
+/// Panics if the subprocess cannot be launched or exits non-zero.
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn run_ask_dry( extra_args : &[ &str ] ) -> String
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let mut args = vec![ "ask", "--dry-run" ];
+  args.extend_from_slice( extra_args );
+  let out = Command::new( bin )
+    .args( &args )
+    .output()
+    .expect( "failed to invoke clr binary" );
+  assert!(
+    out.status.success(),
+    "clr ask --dry-run failed (exit {}): {}",
+    out.status.code().unwrap_or( -1 ),
+    String::from_utf8_lossy( &out.stderr )
+  );
+  String::from_utf8_lossy( &out.stdout ).into_owned()
 }
 
 /// Create a fake `claude` binary from a full shell script; return `(tempdir, modified PATH)`.

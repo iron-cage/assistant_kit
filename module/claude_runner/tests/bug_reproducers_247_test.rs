@@ -40,33 +40,7 @@
 //! | `t05_stdout_forwarded_on_exit_2_rate_limit` | exits 2 with stdout content | content in clr stderr; clr exits 2 |
 
 mod cli_binary_test_helpers;
-use cli_binary_test_helpers::run_cli_with_env;
-
-use std::os::unix::fs::PermissionsExt;
-
-/// Create a fake `claude` binary (shell script) in a temp dir.
-///
-/// Returns `(dir, dir_path)` — the caller must keep `dir` alive for the test duration.
-/// Prepend `dir_path` to `PATH` when invoking `clr` so the fake binary shadows real `claude`.
-fn make_fake_claude( script_body : &str ) -> ( tempfile::TempDir, String )
-{
-  let dir  = tempfile::TempDir::new().expect( "create temp dir for fake claude" );
-  let path = dir.path().join( "claude" );
-  let src  = format!( "#!/bin/sh\n{script_body}\n" );
-  std::fs::write( &path, src.as_bytes() ).expect( "write fake claude" );
-  let mut perms = std::fs::metadata( &path ).expect( "metadata" ).permissions();
-  perms.set_mode( 0o755 );
-  std::fs::set_permissions( &path, perms ).expect( "chmod +x fake claude" );
-  let dir_path = dir.path().to_str().expect( "temp dir path is UTF-8" ).to_string();
-  ( dir, dir_path )
-}
-
-/// Build a PATH string with `dir_path` prepended to the current process's PATH.
-fn with_dir_first_in_path( dir_path : &str ) -> String
-{
-  let orig = std::env::var( "PATH" ).unwrap_or_default();
-  format!( "{dir_path}:{orig}" )
-}
+use cli_binary_test_helpers::{ fake_claude_dir, run_cli_with_env };
 
 // ── T01 ──────────────────────────────────────────────────────────────────────
 
@@ -78,11 +52,9 @@ fn with_dir_first_in_path( dir_path : &str ) -> String
 #[ doc = "bug_reproducer(BUG-247)" ]
 fn t01_stdout_forwarded_to_stderr_on_exit_1()
 {
-  let ( _dir, dir_path ) = make_fake_claude(
+  let ( _dir, path ) = fake_claude_dir(
     "echo 'API Error: 529 overloaded'; exit 1"
   );
-  let path = with_dir_first_in_path( &dir_path );
-
   let out = run_cli_with_env(
     &[ "-p", "--max-sessions", "0", "task" ],
     &[ ( "PATH", &path ) ],
@@ -109,11 +81,9 @@ fn t01_stdout_forwarded_to_stderr_on_exit_1()
 #[ doc = "bug_reproducer(BUG-247)" ]
 fn t02_stdout_and_stderr_both_forwarded_on_exit_1()
 {
-  let ( _dir, dir_path ) = make_fake_claude(
+  let ( _dir, path ) = fake_claude_dir(
     "echo 'STDOUT: diagnostic text'; echo 'STDERR: error detail' >&2; exit 1"
   );
-  let path = with_dir_first_in_path( &dir_path );
-
   let out = run_cli_with_env(
     &[ "-p", "--max-sessions", "0", "task" ],
     &[ ( "PATH", &path ) ],
@@ -140,11 +110,9 @@ fn t02_stdout_and_stderr_both_forwarded_on_exit_1()
 #[ doc = "bug_reproducer(BUG-247)" ]
 fn t03_empty_stdout_no_spurious_output_on_exit_1()
 {
-  let ( _dir, dir_path ) = make_fake_claude(
+  let ( _dir, path ) = fake_claude_dir(
     "echo 'stderr-only diagnostic' >&2; exit 1"
   );
-  let path = with_dir_first_in_path( &dir_path );
-
   let out = run_cli_with_env(
     &[ "-p", "--max-sessions", "0", "task" ],
     &[ ( "PATH", &path ) ],
@@ -173,11 +141,9 @@ fn t03_empty_stdout_no_spurious_output_on_exit_1()
 #[ doc = "bug_reproducer(BUG-247)" ]
 fn t04_stdout_on_success_path_goes_to_clr_stdout()
 {
-  let ( _dir, dir_path ) = make_fake_claude(
+  let ( _dir, path ) = fake_claude_dir(
     "echo 'SUCCESS: response text'; exit 0"
   );
-  let path = with_dir_first_in_path( &dir_path );
-
   let out = run_cli_with_env(
     &[ "-p", "--max-sessions", "0", "task" ],
     &[ ( "PATH", &path ) ],
@@ -208,11 +174,9 @@ fn t04_stdout_on_success_path_goes_to_clr_stdout()
 #[ doc = "bug_reproducer(BUG-247)" ]
 fn t05_stdout_forwarded_on_exit_2_rate_limit()
 {
-  let ( _dir, dir_path ) = make_fake_claude(
+  let ( _dir, path ) = fake_claude_dir(
     "echo 'Rate limit: please retry in 60s'; exit 2"
   );
-  let path = with_dir_first_in_path( &dir_path );
-
   let out = run_cli_with_env(
     &[ "-p", "--max-sessions", "0", "task" ],
     &[ ( "PATH", &path ) ],

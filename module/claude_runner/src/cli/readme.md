@@ -9,4 +9,5 @@
 | `fence.rs` | `strip_fences` utility — outermost code-fence stripping for `--strip-fences`. |
 | `credential.rs` | `run_isolated_command`, `run_refresh_command`, credential trace emission. |
 | `gate.rs` | Session count check and blocking wait for concurrent-session limit. |
+| `ps.rs` | `clr ps` dispatch — process scan, path shortening, unicode-box table output. |
 | `help.rs` | Help text printing for all subcommands (clr, ask, isolated, refresh). |

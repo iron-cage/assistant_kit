@@ -14,41 +14,13 @@
 //! | IT-6 | `clr pss` (typo) → exit 1, Did you mean     | Typo guard       |
 //! | IT-7 | own PID not in `clr ps` output              | Self-exclusion   |
 //! | IT-8 | `clr ps --unknown` → exit 1                 | Error handling   |
+//! | IT-9 | `$PRO` prefix replaced by `"$PRO"` in path  | Path shortening  |
 
 mod cli_binary_test_helpers;
 use cli_binary_test_helpers::{ run_cli, stderr_str, stdout_str };
 
 #[ cfg( unix ) ]
-use cli_binary_test_helpers::fake_claude_dir;
-
-/// Spawn a fake `claude` process using the given PATH; return the `Child` handle.
-///
-/// The caller must `kill()` + `wait()` the returned child to avoid leaks.
-#[ cfg( unix ) ]
-fn spawn_fake_claude( path_val : &str ) -> std::process::Child
-{
-  let child = std::process::Command::new( "claude" )
-    .env( "PATH", path_val )
-    .stdout( std::process::Stdio::null() )
-    .stderr( std::process::Stdio::null() )
-    .spawn()
-    .expect( "spawn fake claude" );
-  // Brief pause so the process appears in /proc.
-  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
-  child
-}
-
-/// Run `clr ps` with the given PATH env, return Output.
-#[ cfg( unix ) ]
-fn run_clr_ps( path_val : &str ) -> std::process::Output
-{
-  let bin = env!( "CARGO_BIN_EXE_clr" );
-  std::process::Command::new( bin )
-    .arg( "ps" )
-    .env( "PATH", path_val )
-    .output()
-    .expect( "run clr ps" )
-}
+use cli_binary_test_helpers::{ fake_claude_binary_dir, run_clr_ps, spawn_fake_claude };
 
 // ── IT-1: 0 sessions ──────────────────────────────────────────────────────────
 
@@ -76,7 +48,7 @@ fn it_01_no_sessions_shows_message()
 #[ test ]
 fn it_02_sessions_present_unicode_box()
 {
-  let ( _dir, path_val ) = fake_claude_dir( "sleep 10" );
+  let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
 
   let out = run_clr_ps( &path_val );
@@ -130,7 +102,7 @@ fn it_04_typo_clr_p()
 #[ test ]
 fn it_05_table_headers_present()
 {
-  let ( _dir, path_val ) = fake_claude_dir( "sleep 10" );
+  let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
 
   let out = run_clr_ps( &path_val );
@@ -172,7 +144,7 @@ fn it_06_typo_clr_pss()
 #[ test ]
 fn it_07_self_exclusion()
 {
-  let ( _dir, path_val ) = fake_claude_dir( "sleep 10" );
+  let ( _dir, path_val ) = fake_claude_binary_dir();
   let mut bg = spawn_fake_claude( &path_val );
 
   let out = run_clr_ps( &path_val );
@@ -202,5 +174,55 @@ fn it_08_unknown_flag()
   assert!(
     stderr.contains( "unexpected argument" ),
     "stderr must mention unexpected argument, got: {stderr}"
+  );
+}
+
+// ── IT-9: $PRO prefix shortened ───────────────────────────────────────────────
+
+/// IT-9: when `PRO` env var is set and a session CWD starts with that prefix,
+/// the Absolute Path column shows `$PRO/…` rather than the full path.
+///
+/// `shorten_path()` replaces the `$PRO` prefix with the literal `"$PRO"` string;
+/// the user already knows what `$PRO` expands to, keeping rows compact.
+#[ cfg( unix ) ]
+#[ test ]
+fn it_09_pro_prefix_shortened_in_path_column()
+{
+  let pro_dir = tempfile::TempDir::new().expect( "create tmp PRO dir" );
+  let sub_dir = pro_dir.path().join( "my" ).join( "project" );
+  std::fs::create_dir_all( &sub_dir ).expect( "create project subdir" );
+  let pro_str = pro_dir.path().to_str().expect( "PRO path is UTF-8" );
+
+  let ( _bin_dir, path_val ) = fake_claude_binary_dir();
+  let mut bg = std::process::Command::new( "claude" )
+    .env( "PATH", &path_val )
+    .arg( "30" )
+    .current_dir( &sub_dir )
+    .stdout( std::process::Stdio::null() )
+    .stderr( std::process::Stdio::null() )
+    .spawn()
+    .expect( "spawn fake claude in sub_dir" );
+  std::thread::sleep( core::time::Duration::from_millis( 200 ) );
+
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  let out = std::process::Command::new( bin )
+    .arg( "ps" )
+    .env( "PATH", &path_val )
+    .env( "PRO", pro_str )
+    .output()
+    .expect( "run clr ps with PRO set" );
+
+  let _ = bg.kill();
+  let _ = bg.wait();
+
+  let stdout = stdout_str( &out );
+  assert!( out.status.success(), "exit 0 expected, got {:?}", out.status.code() );
+  assert!(
+    stdout.contains( "$PRO" ),
+    "IT-9: path must be shortened to $PRO/… when PRO env var is set. Got:\n{stdout}"
+  );
+  assert!(
+    !stdout.contains( pro_str ),
+    "IT-9: full PRO prefix must not appear in the table. Got:\n{stdout}"
   );
 }
