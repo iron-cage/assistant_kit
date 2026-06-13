@@ -13,7 +13,8 @@
 
 use claude_core::paths::ClaudePaths;
 use error_tools::{ Error, Result };
-use super::parse::{ next_value, env_str, env_bool };
+use super::parse::next_value;
+use super::env::{ env_bool, env_str };
 
 /// Parsed arguments for the `isolated` subcommand.
 #[ derive( Default ) ]

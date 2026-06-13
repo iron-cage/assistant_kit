@@ -65,20 +65,16 @@ pub fn run_cli()
 {
   use cli::{
     print_help, dispatch_run,
-    dispatch_ask, dispatch_isolated, dispatch_refresh, dispatch_ps,
+    dispatch_ask, dispatch_isolated, dispatch_refresh, dispatch_ps, dispatch_kill,
     guard_unknown_subcommand,
   };
 
   let tokens : Vec< String > = std::env::args().skip( 1 ).collect();
 
-  // Dispatch `help` subcommand before everything else.
-  if tokens.first().map( String::as_str ) == Some( "help" )
-  {
-    print_help();
-    return;
-  }
-
-  // Fix(BUG-212): `run` is the default mode expressed as an explicit subcommand.
+  // Fix(BUG-212): strip the leading "run" token before any subcommand checks so that
+  //   `clr run msg` does not treat "run" as the message argument.
+  // Fix(BUG-215): stripping first also means the single help check below covers both
+  //   `clr help` and `clr run help` — no need for two separate checks.
   // Root cause: `clr run msg` treated "run" as the message argument — silent wrong behavior.
   // Pitfall: strip only the leading "run" token; remaining args are passed normally.
   let tokens : Vec< String > = if tokens.first().map( String::as_str ) == Some( "run" )
@@ -90,11 +86,7 @@ pub fn run_cli()
     tokens
   };
 
-  // Fix(BUG-215): re-check `help` after stripping `run` — `clr run help` must print help.
-  // Root cause: the `help` dispatch above fires before the `run` strip; after stripping,
-  // remaining `["help"]` fell through to parse_args which treated "help" as a message,
-  // causing claude to be invoked with "help\n\nultrathink" as the prompt.
-  // Pitfall: any subcommand dispatch that precedes a token-strip must be re-checked after.
+  // Single help check — covers both `clr help` and `clr run help` (post-strip above).
   if tokens.first().map( String::as_str ) == Some( "help" )
   {
     print_help();
@@ -102,10 +94,12 @@ pub fn run_cli()
   }
 
   // Dispatch subcommands — these functions never return.
+  // Keep in sync with KNOWN_SUBCOMMANDS in cli/mod.rs when adding a subcommand.
   if tokens.first().map( String::as_str ) == Some( "ask" )      { dispatch_ask( &tokens ); }
   if tokens.first().map( String::as_str ) == Some( "isolated" ) { dispatch_isolated( &tokens ); }
   if tokens.first().map( String::as_str ) == Some( "refresh" )  { dispatch_refresh( &tokens ); }
   if tokens.first().map( String::as_str ) == Some( "ps" )       { dispatch_ps( &tokens ); }
+  if tokens.first().map( String::as_str ) == Some( "kill" )     { dispatch_kill( &tokens ); }
 
   guard_unknown_subcommand( &tokens );
 

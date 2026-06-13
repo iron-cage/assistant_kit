@@ -19,13 +19,13 @@ slow-timeout = { period = "120s", terminate-after = 10 }
 filter = "binary(bug_reproducers_239_244_test)"
 slow-timeout = { period = "30s", terminate-after = 1 }
 
-# ps tests that check for 0 sessions (us_01, it_01) race with tests that spawn
-# fake claude processes (us_04, us_05, it_02, it_05, it_07, it_09).
-# Fake claude processes are real OS processes visible to `clr ps`, so tests from
-# both binaries can interfere.  Serialize the entire group to prevent false failures.
+# ps/kill tests share the `find_claude_processes()` resource: ps tests check for
+# 0 sessions while kill tests spawn fake ELF `claude` processes visible to that
+# scan.  All four binaries must run serially to prevent false no-session failures
+# in ps tests and mismatched-PID kills in kill tests.
 [test-groups]
 ps-serial = { max-threads = 1 }
 
 [[profile.default.overrides]]
-filter = "binary(user_story_ps_test) | binary(ps_command_test)"
+filter = "binary(user_story_ps_test) | binary(ps_command_test) | binary(kill_command_test) | binary(user_story_kill_test)"
 test-group = "ps-serial"

@@ -19,6 +19,7 @@
 //! | `run_ask_dry` | `ask_command_test`, `user_story_creds_isolated_test` |
 //! | `spawn_fake_claude` (unix) | `ps_command_test`, `user_story_ps_test` |
 //! | `run_clr_ps` (unix) | `ps_command_test`, `user_story_ps_test` |
+//! | `run_clr_kill` (unix) | `kill_command_test`, `user_story_kill_test` |
 //!
 //! # Testing Techniques
 //!
@@ -363,4 +364,25 @@ pub fn run_with_path( args : &[ &str ], path : &str ) -> std::process::Output
     .env( "PATH", path )
     .output()
     .expect( "Failed to invoke clr binary" )
+}
+
+/// Run `clr kill <pid>`; return the raw `Output`.
+///
+/// `dispatch_kill` reads `/proc` directly — PATH is not needed.  The helper
+/// exists for symmetry with `run_clr_ps` and to keep test call sites concise.
+///
+/// # Panics
+///
+/// Panics if the subprocess cannot be launched.
+#[cfg(unix)]
+#[must_use]
+#[inline]
+#[allow(dead_code)]
+pub fn run_clr_kill( pid : u32 ) -> std::process::Output
+{
+  let bin = env!( "CARGO_BIN_EXE_clr" );
+  Command::new( bin )
+    .args( [ "kill", &pid.to_string() ] )
+    .output()
+    .expect( "run clr kill" )
 }

@@ -39,15 +39,16 @@ This directory contains all functional tests for the `claude_runner_core` crate,
 | `pattern_e_empty_and_edge_cases_test.rs` | Test Pattern E empty-iterator bug fix and float edge cases |
 | `isolated_test.rs` | Test IsolatedRunResult fields and RunnerError Display (T01–T08) |
 | `classify_error_test.rs` | Test classify_error() and ErrorKind variants (T01–T12, BUG-037) |
+| `bug_243_test.rs` | BUG-243 reproducer: timeout with partial stdout preserved |
 | `docs/` | Test surface spec files (feature behavioral requirement cases) |
 
-## Organization (33 test files)
+## Organization (34 test files)
 
 Tests organized by functional domain and architectural principles (see Responsibility Table above).
 
 ### Scope
 
-This test suite covers the claude_runner_core crate's builder pattern API for Claude Code command construction and comprehensive verification framework (32 test files):
+This test suite covers the claude_runner_core crate's builder pattern API for Claude Code command construction and comprehensive verification framework (34 test files):
 
 **In Scope:**
 - Builder pattern API (4 test files):

@@ -4,7 +4,7 @@
 
 - **Purpose**: Test case specs for user story doc instances in `docs/cli/user_story/`.
 - **Responsibility**: Per-user-story test spec files covering end-to-end user workflows.
-- **In Scope**: All 26 user stories: Interactive REPL, Print Mode Capture, Interactive With Message, Dry-run Preview, Project-specific Execution, Verbose Debugging, Fresh Session, Trace Execution, Custom System Prompt, Credential-isolated Execution, File Input, Code Block Extraction, Structured JSON Pipeline, Credential Refresh, Ask Mode, CLI Discoverability, Model Selection, Env-var Configuration, MCP Config Injection, Suppress Effort Max, Keep ClaudeCode Context, Session Isolation via Subdirectory, Output File Capture, Enum Output Validation, Session Concurrency Gate, Session Listing.
+- **In Scope**: All 27 user stories: Interactive REPL, Print Mode Capture, Interactive With Message, Dry-run Preview, Project-specific Execution, Verbose Debugging, Fresh Session, Trace Execution, Custom System Prompt, Credential-isolated Execution, File Input, Code Block Extraction, Structured JSON Pipeline, Credential Refresh, Ask Mode, CLI Discoverability, Model Selection, Env-var Configuration, MCP Config Injection, Suppress Effort Max, Keep ClaudeCode Context, Session Isolation via Subdirectory, Output File Capture, Enum Output Validation, Session Concurrency Gate, Session Listing, Session Termination.
 - **Out of Scope**: Parameter-level edge cases (-> `param/`), command-level integration (-> `command/`), type validation (-> `type/`).
 
 ### Responsibility Table
@@ -37,3 +37,4 @@
 | `24_enum_output_validation.md` | `user_story` spec for Enum Output Validation | ✅ |
 | `25_concurrency_gate.md` | `user_story` spec for Session Concurrency Gate | ✅ |
 | `26_session_listing.md` | `user_story` spec for Session Listing | ✅ |
+| `27_session_termination.md` | `user_story` spec for Session Termination | ✅ |

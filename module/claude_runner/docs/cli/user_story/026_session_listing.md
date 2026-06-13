@@ -52,4 +52,5 @@ None. `ps` accepts no parameters.
 | # | User Story | Relationship |
 |---|------------|--------------|
 | 25 | [025_concurrency_gate.md](025_concurrency_gate.md) | `--max-sessions` counts sessions to gate; `clr ps` lists them for inspection |
+| 27 | [027_session_termination.md](027_session_termination.md) | `clr ps` discovers session PIDs; `clr kill` terminates them |
 | 16 | [016_cli_discoverability.md](016_cli_discoverability.md) | AC-003 verifies `ps` appears in `clr help` output |

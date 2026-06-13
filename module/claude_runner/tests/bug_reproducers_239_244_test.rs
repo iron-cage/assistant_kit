@@ -14,7 +14,6 @@
 //! | `binary_not_found_shows_install_hint`  | BUG-241 | Raw OS error emitted | No |
 //! | `signal_sigterm_exits_143`             | BUG-242 | `unwrap_or(1)` collapsed | No (Unix) |
 //! | `signal_sigkill_exits_137`             | BUG-242 | `unwrap_or(1)` collapsed | No (Unix) |
-//! | `timeout_includes_partial_stdout`      | BUG-243 | thread lost Child handle | No |
 //! | `storage_subdir_flag_accepted`         | BUG-244 | storage mirror behind | No |
 //! | `storage_subdir_env_var_applied`       | BUG-244 | storage mirror behind | No |
 //!
@@ -124,36 +123,6 @@
 //!
 //! `#[cfg(unix)]` is required for any code that calls `ExitStatusExt::signal()` —
 //! that trait is Unix-only. The non-unix fallback returns `status.code().unwrap_or(1)`.
-//!
-//! ---
-//!
-//! # Root Cause (BUG-243)
-//!
-//! `run_isolated()` spawned a thread that called `cmd.execute()` (which calls
-//! `cmd.output()`, blocking until EOF). The main thread used `recv_timeout` to impose
-//! a deadline. When the deadline fired, the thread kept the `Child` handle; no kill or
-//! partial-output collection was possible — all buffered stdout was irrecoverably dropped.
-//!
-//! # Why Not Caught (BUG-243)
-//!
-//! All timeout tests (IT-3, IT-4) used `timeout=0` and asserted on the error type, not
-//! on the content of the error message. No test verified that partial stdout was preserved.
-//!
-//! # Fix Applied (BUG-243)
-//!
-//! Restructured `run_isolated()` to use `spawn_piped()` (new method on `ClaudeCommand`)
-//! + `try_wait` polling. On timeout: `child.kill()` then `child.wait_with_output()`
-//!   collects buffered data. Added `RunnerError::TimeoutWithOutput { secs, partial_stdout }`.
-//!
-//! # Prevention (BUG-243)
-//!
-//! When you need timeout+kill+output: always keep the `Child` handle in scope through the
-//! timeout. Thread-based approaches that move `Child` into the thread lose this ability.
-//!
-//! # Pitfall (BUG-243)
-//!
-//! `child.wait_with_output()` waits for stdout/stderr pipes to close (which happens after
-//! kill), then returns whatever was buffered. Call it AFTER `child.kill()`, not before.
 //!
 //! ---
 //!
@@ -313,65 +282,6 @@ fn signal_sigkill_exits_137()
     exit_code( &out ),
     stderr_str( &out ),
   );
-}
-
-// ── BUG-243 ──────────────────────────────────────────────────────────────────
-
-/// BUG-243 reproducer T7: timeout fires after partial stdout → `TimeoutWithOutput` has content.
-///
-/// Before fix: the thread/channel approach left `Child` inside the spawned thread;
-/// `recv_timeout` fired and all buffered stdout was irrecoverably discarded — the error
-/// variant `Timeout { secs }` carried no output.
-/// After fix: `spawn_piped()` + `try_wait` polling keeps `Child` in scope; on timeout
-/// `child.kill()` + `child.wait_with_output()` recovers buffered data.
-#[ test ]
-#[ doc = "bug_reproducer(BUG-243)" ]
-#[ allow( unsafe_code ) ]
-fn timeout_includes_partial_stdout()
-{
-  use claude_runner_core::{ run_isolated, RunnerError, IsolatedModel };
-
-  // Fake claude: print a marker then sleep briefly.
-  // Fix(BUG-243-slow): use sleep 3 instead of sleep 999 to keep test fast.
-  // Root cause: child.kill() only kills the direct shell process; the `sleep` grandchild
-  //   inherits the pipe FD and holds it open until it exits, blocking wait_with_output().
-  // Pitfall: reducing sleep doesn't change the test assertion — the timeout still fires
-  //   after 1s, the marker is still captured. The grandchild just exits sooner (~2s after).
-  let ( _dir, path_val ) = fake_claude_dir( "printf 'partial-output-marker'; sleep 3" );
-
-  // Minimal credentials JSON.
-  let creds_json = r#"{"accessToken":"fake","refreshToken":"fake","expiresAt":9999999999999}"#;
-
-  // Set PATH in the environment for the subprocess spawned by run_isolated.
-  let orig_path = std::env::var( "PATH" ).unwrap_or_default();
-  // run_isolated inherits the current process env; temporarily extend PATH.
-  // We use a subprocess (clr binary path) rather than run_isolated directly
-  // because run_isolated reads PATH from the process environment at spawn time.
-  // Restore PATH after the test to avoid interfering with other tests.
-  // SAFETY: single-threaded test binary; no other test reads PATH concurrently.
-  unsafe { std::env::set_var( "PATH", &path_val ); }
-  let result = run_isolated( creds_json, vec![], 1, IsolatedModel::KeepCurrent );
-  // SAFETY: restoring PATH to the original value; single-threaded test binary.
-  unsafe { std::env::set_var( "PATH", &orig_path ); }
-
-  match result
-  {
-    Err( RunnerError::TimeoutWithOutput { secs : _, partial_stdout } ) =>
-    {
-      assert!(
-        partial_stdout.contains( "partial-output-marker" ),
-        "BUG-243: TimeoutWithOutput.partial_stdout must contain the marker; got:\n{partial_stdout}"
-      );
-    }
-    Err( RunnerError::Timeout { .. } ) =>
-    {
-      panic!( "BUG-243: expected TimeoutWithOutput (with content), got Timeout (empty)" );
-    }
-    other =>
-    {
-      panic!( "BUG-243: expected TimeoutWithOutput error; got: {other:?}" );
-    }
-  }
 }
 
 // ── BUG-244 ──────────────────────────────────────────────────────────────────

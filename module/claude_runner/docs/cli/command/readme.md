@@ -2,9 +2,9 @@
 
 ### Scope
 
-- **Purpose**: Document the six clr subcommands and their parameters, modes, and usage examples.
+- **Purpose**: Document the seven clr subcommands and their parameters, modes, and usage examples.
 - **Responsibility**: Specify each command's behavior, accepted parameters, and usage.
-- **In Scope**: run, ask, isolated, refresh, help, ps commands and their invocation modes.
+- **In Scope**: run, ask, isolated, refresh, help, ps, kill commands and their invocation modes.
 - **Out of Scope**: Parameter definitions (-> `../param/`), type definitions (-> `../type/`), user stories (-> `../user_story/`).
 
 ### Responsibility Table
@@ -17,8 +17,9 @@
 | 04_help.md | Command spec: print usage information and exit |
 | 05_ask.md | Command spec: semantic alias for run (identical defaults) |
 | 06_ps.md | Command spec: list running Claude Code sessions and queued waiters in two plain-style tables |
+| 07_kill.md | Command spec: terminate a running Claude Code session by PID via SIGTERM |
 
-### All Commands (6 total)
+### All Commands (7 total)
 
 | # | Command | Description | Params | Example |
 |---|---------|-------------|--------|---------|
@@ -28,5 +29,6 @@
 | 4 | `help` | Print usage information and exit | 0 | `clr help` |
 | 5 | `ask` | Semantic alias for run (identical defaults) | 31 | `clr ask "What does X do?"` |
 | 6 | `ps` | List running Claude Code sessions | 0 | `clr ps` |
+| 7 | `kill` | Terminate a running Claude Code session by PID | 0 | `clr kill 12345` |
 
-**Total:** 6 commands
+**Total:** 7 commands
