@@ -3,8 +3,8 @@
 ### Scope
 
 - **Purpose**: Allow `.usage` to activate idle quota windows by sending a minimal prompt in an isolated subprocess, so accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet session window) get sessions started, enabling them to qualify for endurance sort strategy and be available for immediate use.
-- **Responsibility**: Documents the `touch::` parameter, its trigger condition (any of the three quota timers absent — `five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at`), subprocess invocation via the existing `refresh_account_token()` infrastructure, quota re-fetch after any successful subprocess, and skip-reason trace lines for non-qualifying accounts.
-- **In Scope**: `touch::` parameter semantics; trigger condition (account has valid quota data AND at least one quota timer is absent — no active 5h, 7d, or 7d-Sonnet window); subprocess invocation via `account::refresh_account_token()` with `["--print", "."]`; quota re-fetch after any successful subprocess (unconditional on credentials); skip-reason trace line for non-qualifying accounts; interaction with `refresh::` and `live::`.
+- **Responsibility**: Documents the `touch::` parameter, its trigger condition (any of the three quota timers absent — `five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at`), subprocess invocation via the existing `refresh_account_token()` infrastructure, quota re-fetch after any successful subprocess, `touch_idle` quota cache read guard as defense-in-depth skip before timer checks (AC-16), and skip-reason trace lines for non-qualifying accounts.
+- **In Scope**: `touch::` parameter semantics; trigger condition (account has valid quota data AND at least one quota timer is absent — no active 5h, 7d, or 7d-Sonnet window); subprocess invocation via `account::refresh_account_token()` with `["--print", "."]`; quota re-fetch after any successful subprocess (unconditional on credentials); `touch_idle=false` quota cache read guard before timer checks (AC-16 — defense-in-depth for API propagation lag); skip-reason trace line for non-qualifying accounts; interaction with `refresh::` and `live::`.
 - **Out of Scope**: `run_isolated()` internals (-> `claude_runner_core/docs/feature/004_run_isolated.md`); the refresh trigger logic itself (-> 017_token_refresh.md); endurance qualification algorithm (-> 020_usage_sort_strategies.md); recommendation strategies (-> 023_next_account_strategies.md).
 
 ### Design
@@ -34,11 +34,23 @@ if touch_param == 1:
         seven_ds_running = seven_day_sonnet field absent OR seven_day_sonnet.resets_at is Some
         all_running      = five_h_running AND seven_d_running AND seven_ds_running
 
-        if account_quota.result is Err
-           OR all_running
+        if account_quota.result is Err:
+            // Skip: no valid quota
+            if trace:
+                emit "[trace] touch  <name>  skipped (reason: Err)"
+            continue
+
+        // Fix(BUG-288-FixB): defense-in-depth — read local touch_idle cache flag before timer checks
+        if read_quota_cache(credential_store, name) is Some(cache) AND cache.touch_idle == Some(false):
+            // Skip: subprocess already activated this account; local flag not subject to API lag
+            if trace:
+                emit "[trace] touch  <name>  skipped (reason: touch_idle=false)"
+            continue
+
+        if all_running
            OR five_hour_left(account_quota) <= 15.0%
            OR seven_day_left(account_quota) <= 0.0%:
-            // Skip: no valid quota; all timers running; h-exhausted; or 7d-exhausted
+            // Skip: all timers running; h-exhausted; or 7d-exhausted
             if trace:
                 emit "[trace] touch  <name>  skipped (reason: ...)"
             continue
@@ -69,19 +81,20 @@ render results as table
 
 - **AC-01**: `touch::1` (default) invokes subprocess activation for accounts with any quota timer absent (no active 5h, 7d, or 7d-Sonnet window). `touch::0` produces no subprocess spawning; all accounts appear as-is.
 - **AC-02**: `touch::1` invokes `account::refresh_account_token()` for each account whose quota fetch succeeded (`result is Ok`) AND at least one quota timer is absent (`five_hour.resets_at`, `seven_day.resets_at`, or `seven_day_sonnet.resets_at` = None — absent timer means no active session window for that quota dimension). Accounts where all three timers are present (all windows active) or with errored quota are skipped.
-- **AC-03**: After a successful touch subprocess, quota is re-fetched unconditionally (regardless of whether the subprocess returned credentials). The table shows an updated `5h Reset` countdown value set to ~5h from the current time (account transitioned from idle `—` to active countdown).
+- **AC-03**: After a successful touch subprocess, quota is re-fetched unconditionally (regardless of whether the subprocess returned credentials). This re-fetch requirement applies to ALL touch code paths — both `apply_touch` (this feature, `.usage`) and `apply_post_switch_touch` (Feature 027, `.account.use`). The table shows an updated `5h Reset` countdown value set to ~5h from the current time (account transitioned from idle `—` to active countdown). Fix(BUG-288): `apply_post_switch_touch` previously omitted this re-fetch, causing `.usage touch` to see stale quota and spawn a redundant second subprocess.
 - **AC-04**: Accounts with errored quota fetch (expired token, auth error, etc.) are never touched — the trigger requires a successful quota result with `five_hour.resets_at` absent.
 - **AC-05**: When both `refresh::1` and `touch::1` are active, refresh runs first; touch runs on post-refresh results. An account whose refresh already started a session (`resets_at` now present) is skipped by touch.
 - **AC-06**: After all touch operations complete, `apply_touch` does NOT call `switch_account`. The `_active` marker is not written during touch cycling (via `update_marker=false` in `save()` inside `refresh_account_token`), so no restore is needed. Fix for BUG-211.
 - **AC-07**: If the touch subprocess fails, the account's row shows its original quota data unchanged (touch failure is non-aborting).
 - **AC-08**: `touch::` does not affect `format::json` output structure — touched accounts appear as normal data objects with their re-fetched quota.
 - **AC-09**: When `trace=true`, every account processed by `apply_touch` emits a `[trace] touch` line: touched accounts show subprocess lifecycle steps (`read credentials`, `run_isolated` with elapsed time, `write credentials`, `save`); accounts skipped because they do not qualify (already active, or errored) emit a `[trace] touch  <name>  skipped (reason: ...)` line.
-- **AC-12**: When `trace=true`, accounts skipped by the touch trigger emit a skip-reason trace line covering all skip cases: all three timers running (already active — skip), h-exhausted (skip), 7d-exhausted (skip), and Err result (no valid quota). All skip cases are diagnostically distinct and produce a trace line.
+- **AC-12**: When `trace=true`, accounts skipped by the touch trigger emit a skip-reason trace line covering all skip cases: all three timers running (already active — skip), h-exhausted (skip), 7d-exhausted (skip), `touch_idle=false` (subprocess already activated — Fix B, BUG-288, see AC-16), and Err result (no valid quota). All skip cases are diagnostically distinct and produce a trace line.
 - **AC-10**: `touch::` parameter appears in `.usage --help` output with its default value (`1`).
 - **AC-11**: In `live::1` mode with `touch::1` active, touch runs on every cycle. For each cycle where any quota timer is absent (any session window lapsed since last cycle), the touch trigger fires and a new session is started. The trigger does not fire for accounts where all three timers are present (all windows still active).
 - **AC-15**: Touch trigger checks all three quota window timers — `five_hour.resets_at`, `seven_day.resets_at`, and `seven_day_sonnet.resets_at`. An account qualifies for touch if any of these is absent (None), subject to the h-exhausted and 7d-exhausted skip guards. When the `seven_day` or `seven_day_sonnet` field itself is absent (account plan has no weekly-quota tracking), that dimension is treated as "running" and does not trigger touch — only a field-present timer with `resets_at = None` triggers.
 - **AC-13**: No `switch_account` call occurs in `apply_touch`. The previous AC-13 restore trace is superseded — trace output for touch lifecycle steps remains unchanged (per AC-09), but no `restore switch_account` line is emitted. Fix for BUG-211.
 - **AC-14**: Accounts with 7d weekly quota fully exhausted (`seven_day_left <= 0%`) are skipped by `apply_touch` even when idle (`five_hour.resets_at` absent) and 5h budget is non-zero. The Anthropic API does not open a new 5h session when the 7d budget is exhausted — spawning a subprocess for such accounts wastes wall time (~2.3s per account for a 429 rejection) and produces misleading `run_isolated: OK credentials=None` trace without establishing a session. Fixed in TSK-217 (Docker L3 ✅).
+- **AC-16**: `apply_touch` reads the quota cache (via `read_quota_cache`) after the error-account skip guard and before the `all_running` timer check. If the cache entry has `touch_idle = Some(false)` — the flag written by `apply_post_switch_touch` at `api.rs:330-332` after its subprocess activated the account — `apply_touch` skips that account without spawning a subprocess and emits `[trace] touch  <name>  skipped (reason: touch_idle=false)` when trace is enabled. Defense-in-depth for server-side quota propagation lag: even when Fix A's post-subprocess re-fetch returns `resets_at = None` (API hasn't propagated the new session yet), the local `touch_idle=false` flag prevents a redundant subprocess spawn. The `api.rs:330-332` write is no longer a dead write (zero read sites). Fix(BUG-288-FixB), TSK-291.
 
 ### Bugs
 
@@ -91,6 +104,7 @@ render results as table
 | `task/claude_profile/bug/211_apply_refresh_touch_restore_clobbers_active_marker_race.md` | BUG-211 (Fixed): snapshot+restore removed from `apply_touch`; `save(update_marker=false)` suppresses `_active` writes during per-account cycling |
 | `task/claude_profile/bug/214_touch_fires_for_7d_exhausted_accounts.md` | BUG-214 (TSK-217, ✅ Fixed): `apply_touch` fired subprocess for 7d-exhausted accounts — fixed via `seven_day_left()` guard |
 | `task/claude_profile/bug/215_touch_idle_detection_ignores_7d_and_7d_sonnet_timers.md` | BUG-215 (TSK-218, ✅ Fixed): `apply_touch` trigger checked only `five_hour.resets_at`; 7d and 7d-Sonnet timer absence was ignored — fixed via 3-timer `all_running` check |
+| `task/claude_profile/bug/288_account_use_touch_not_confirmed_usage_double_subprocess.md` | BUG-288 🟢 Fixed (Fix A + Fix B): Fix A — `apply_post_switch_touch` re-fetches quota post-subprocess via `write_quota_cache` (AC-03, Feature 027 AC-21). Fix B — `apply_touch` reads `touch_idle=false` cache flag before `all_running` check as defense-in-depth for API propagation lag; dead write at `api.rs:330-332` now has a read site at `touch.rs:59-66` (TSK-291, AC-16) |
 
 ### Dependencies
 

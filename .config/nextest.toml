@@ -18,3 +18,14 @@ slow-timeout = { period = "120s", terminate-after = 10 }
 [[profile.default.overrides]]
 filter = "binary(bug_reproducers_239_244_test)"
 slow-timeout = { period = "30s", terminate-after = 1 }
+
+# ps tests that check for 0 sessions (us_01, it_01) race with tests that spawn
+# fake claude processes (us_04, us_05, it_02, it_05, it_07, it_09).
+# Fake claude processes are real OS processes visible to `clr ps`, so tests from
+# both binaries can interfere.  Serialize the entire group to prevent false failures.
+[test-groups]
+ps-serial = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = "binary(user_story_ps_test) | binary(ps_command_test)"
+test-group = "ps-serial"

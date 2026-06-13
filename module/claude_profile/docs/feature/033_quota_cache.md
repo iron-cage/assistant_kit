@@ -71,6 +71,7 @@ When the usage API (`GET /api/oauth/usage`) returns an error for an account, the
 |------|--------------|
 | [BUG-255 🟢 Fixed](../../../../../task/claude_profile/bug/255_cache_fallback_defeats_should_refresh.md) | Cache fallback Err→Ok conversion defeats `should_refresh()` — fixed via `cached + expired` guard in `should_refresh()` |
 | [BUG-256 🟢 Fixed](../../../../../task/claude_profile/bug/256_retry_ok_does_not_clear_cached_metadata.md) | `retry OK` does not clear `cached` metadata — `~` and `(Xh ago)` persist after successful refresh; fix = AC-11 |
+| [BUG-288 🟢 Fixed (Fix A)](../../../../../task/claude_profile/bug/288_account_use_touch_not_confirmed_usage_double_subprocess.md) | Fix A complete: `apply_post_switch_touch` now calls `write_quota_cache` with post-subprocess quota data; subsequent `apply_touch` reads updated quota (`resets_at = Some`) and skips the redundant subprocess. Fix B (`touch_idle` read site in `apply_touch` as defense-in-depth for server-side propagation lag) deferred; `touch_idle=false` write (AC-06) remains dead code pending follow-on task. |
 
 ### Features
 

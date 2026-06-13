@@ -23,6 +23,8 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-15 | no switch_account called in apply_touch; `_active` unchanged confirms no restore occurred | AC-13 | BUG-211 MRE |
 | FT-16 | 7d-exhausted account (7d Left = 0%, 5h idle) is NOT touched — 7d guard fires | AC-14 | BUG-214 MRE |
 | FT-17 | 5h timer running but 7d or 7d-Sonnet timer absent → touch fires (3-timer trigger) | AC-15 | BUG-215 MRE |
+| FT-18 | After `apply_post_switch_touch` re-fetches quota (BUG-288 fix), `apply_touch` skips account as already-active; no second subprocess | AC-03 | BUG-288 Cross-Feature |
+| FT-19 | Account with `touch_idle=false` in quota cache skipped before `all_running` check; no subprocess spawned (BUG-288 Fix B defense-in-depth) | AC-16 | BUG-288 Fix B MRE |
 
 ### Test Case Index
 
@@ -45,8 +47,10 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 | FT-15 | no switch_account called in apply_touch; _active unchanged confirms no restore | AC-13 | BUG-211 MRE |
 | FT-16 | 7d-exhausted account (7d Left = 0%, 5h idle) NOT touched — 7d guard fires | AC-14 | BUG-214 MRE |
 | FT-17 | 5h timer running but 7d or 7d-Sonnet timer absent → touch fires (3-timer trigger) | AC-15 | BUG-215 MRE |
+| FT-18 | apply_post_switch_touch quota re-fetch prevents double subprocess in apply_touch | AC-03 | BUG-288 Cross-Feature |
+| FT-19 | account with touch_idle=false in cache skipped before all_running check — no subprocess (BUG-288 Fix B) | AC-16 | BUG-288 Fix B MRE |
 
-**Total:** 17 FT cases
+**Total:** 19 FT cases
 
 ---
 
@@ -244,3 +248,27 @@ Feature behavioral requirement test cases for `docs/feature/024_session_touch.md
 - **Source fn:** `test_mre_bug215_apply_touch_fires_when_7d_timer_absent` (in `src/usage/touch.rs #[cfg(test)]`)
 - **Note:** BUG-215 MRE. The scenario where the 5h session is active but the 7d window was just reset (no `resets_at`) was incorrectly skipped as "already active" before the 3-timer fix. This test verifies the fix: touch fires whenever any timer is absent, not only when the 5h timer is absent.
 - **Source:** [feature/024_session_touch.md AC-15](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-18: After `apply_post_switch_touch` quota re-fetch, `apply_touch` skips account as already-active (BUG-288 cross-feature guard)
+
+- **Given:** `apply_post_switch_touch` has executed its post-subprocess `write_quota_cache` call (Fix(BUG-288)). The cache for the target account now records `five_hour.resets_at = Some(...)` — the subprocess activated the 5h session window and the re-fetch persisted it to disk. This is the state verified by Feature 027 FT-21 (`mre_bug288_post_switch_touch_refetch_updates_quota`, structural block).
+- **When:** `apply_touch` is subsequently called for that account and evaluates the trigger condition.
+- **Then:** `all_running = true` (5h `resets_at` is Some — active session); `apply_touch` skips the account with reason `already active` and does NOT spawn a second subprocess. Behavior is identical to FT-13 (`it_apply_touch_trigger_skips_resets_at_some`).
+- **Exit:** N/A (structural cross-reference — no separate test code; covered compositionally by FT-21 × FT-13)
+- **Source fn:** `mre_bug288_post_switch_touch_refetch_updates_quota` (in `src/usage/api.rs #[cfg(test)]`, structural block — asserts `write_quota_cache` is called in `apply_post_switch_touch` fn body) + `it_apply_touch_trigger_skips_resets_at_some` (in `src/usage/touch.rs #[cfg(test)]` — asserts `apply_touch` skips when `resets_at = Some`).
+- **Note:** BUG-288 cross-feature interaction. AC-03 re-fetch requirement applies to ALL touch paths — both `apply_touch` (this feature) and `apply_post_switch_touch` (Feature 027 AC-21). Before the fix, `apply_post_switch_touch` omitted the re-fetch: the on-disk cache still showed `resets_at = None`, so `apply_touch` saw a qualifying idle account and spawned a redundant second subprocess. After Fix A: `apply_post_switch_touch` writes updated quota (including `resets_at = Some`) to the cache, and `apply_touch` skips the account. End-to-end live coverage is provided by Feature 027 FT-01 (live integration test, marked `lim_it`).
+- **Source:** [feature/024_session_touch.md AC-03](../../../docs/feature/024_session_touch.md)
+
+---
+
+### FT-19: Account with `touch_idle=false` in quota cache is skipped before `all_running` check (BUG-288 Fix B MRE)
+
+- **Given:** `apply_touch` is called with one account whose quota cache entry has `touch_idle = Some(false)` — written by `apply_post_switch_touch` at `api.rs:330-332` after its subprocess activated the account. The account's quota data shows `five_hour.resets_at = None` (would qualify for touch by timer state alone — the API has not yet propagated the new session's `resets_at` to the quota endpoint).
+- **When:** `apply_touch` evaluates skip conditions for that account (with `trace=true`).
+- **Then:** `apply_touch` reads `touch_idle = Some(false)` from the quota cache; skips the account before the `all_running` check without spawning a subprocess; emits `[trace] touch  <name>  skipped (reason: touch_idle=false)`.
+- **Exit:** N/A (unit test — no exit code)
+- **Source fn:** `test_mre_bug288_apply_touch_skips_touch_idle_false` (in `src/usage/touch.rs #[cfg(test)]`) — behavioral: writes `touch_idle=Some(false)` to quota cache for an idle account (`resets_at=None`), calls `apply_touch` with `trace=true`, asserts `[trace] touch  <name>  skipped (reason: touch_idle=false)` emitted (guard fires before `all_running` check; no subprocess spawned because `claude_paths=None`).
+- **Note:** BUG-288 Fix B MRE (TSK-291). Before Fix B, `api.rs:330-332` wrote `touch_idle=false` with zero read sites — dead write. Fix B adds the read site at `touch.rs:59-66`. Defense-in-depth for API propagation lag: when the Anthropic API hasn't reflected the new session's `resets_at` at the quota endpoint by the time `.usage` runs (even after Fix A's re-fetch), the local `touch_idle=false` flag prevents a redundant subprocess.
+- **Source:** [feature/024_session_touch.md AC-16](../../../docs/feature/024_session_touch.md)
