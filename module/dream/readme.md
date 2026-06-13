@@ -33,7 +33,7 @@ Zero own logic — every public item originates from a core crate.
 ```toml
 # Cargo.toml
 [dependencies]
-dream = { version = "~1.1", features = ["profile", "runner"] }
+dream = { version = "^1.2", features = ["profile", "runner"] }
 ```
 
 ```rust,no_run
