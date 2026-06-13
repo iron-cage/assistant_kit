@@ -34,8 +34,10 @@ test_script: module/claude_profile/verb/test.d/l1
 ```bash
 docker run --rm \
   --user $(id -u):$(id -g) \
+  -e VERB_LAYER=l1 \
   -v claude_profile_test_plugin_targets:/tmp/will_test_targets \
   -v /usr/local/bin/w3:/usr/local/bin/w3:ro \
+  -e CARGO_TARGET_DIR=/tmp/will_test_targets \
   -v /home/user/.claude:/workspace/.claude:rw \
   claude_profile_test \
   /workspace/module/claude_profile/verb/test.d/l1
