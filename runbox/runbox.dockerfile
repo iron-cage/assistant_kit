@@ -260,7 +260,16 @@ RUN cargo fetch
 # ownership when _ensure_build_cache first mounts it.  Without this mkdir, Docker
 # creates $WORKSPACE_DIR/target_seed as root at container start (path absent from image),
 # and testuser cannot write into it — causing the seeding cp -a to fail.
-RUN mkdir $WORKSPACE_DIR/target_seed
+RUN mkdir -p $WORKSPACE_DIR/target_seed
+
+# Fix(BUG-001): Belt-and-suspenders — pre-create the ~/.claude bind-mount target inside
+# the image for containers run without the workspace :ro overlay.  The primary fix is the
+# mkdir -p loop in cmd_test() (runbox/runbox-run) which creates the HOST-side directory
+# before podman run.  -p is used so this step is idempotent even if COPY . . brings in
+# a .claude/ dir (which .dockerignore normally excludes).
+# Root cause: host workspace lacked .claude/; runc found no mount point after workspace:ro.
+# Pitfall: when a parent dir is :ro mounted, child mount-point dirs must pre-exist on HOST.
+RUN mkdir -p $WORKSPACE_DIR/.claude
 
 # Transfer workspace and cargo home ownership so TEST_USER can compile and run tests.
 # chmod a+rwX makes files writable by any uid so cmd_test can run as the host UID

@@ -60,7 +60,12 @@ _plugin_test_args()
     bin_container="${BIN_PLUGIN#*:}"
     bin_host="$(which "$bin_name" 2>/dev/null)" \
       || { echo "error: binary plugin '$bin_name' not found on PATH" >&2; exit 1; }
-    bin_args=( -v "${IMAGE}_plugin_targets:$BIN_PLUGIN_VOLUME" -v "$bin_host:$bin_container:ro" )
+    # Fix(BUG-001): Export CARGO_TARGET_DIR so w3/willbe writes build artifacts to the
+    # plugin_targets volume instead of /workspace/ (which is :ro in cmd_test).
+    # Root cause: workspace :ro mount added by task 126 blocked w3 temp-target writes.
+    # Pitfall: bin_plugin_volume must be exported as CARGO_TARGET_DIR or w3 writes to workspace.
+    bin_args=( -v "${IMAGE}_plugin_targets:$BIN_PLUGIN_VOLUME" -v "$bin_host:$bin_container:ro"
+               -e "CARGO_TARGET_DIR=$BIN_PLUGIN_VOLUME" )
   fi
   if [[ -n "$PLUGIN_MOUNT" ]]
   then

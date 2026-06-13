@@ -183,13 +183,22 @@ _build()
 
 _content_hash()
 {
-  # Hash workspace Cargo manifests + lockfiles + runbox.yml (contains build args
-  # like system_packages, rustup_components, cmd_scope that affect the image).
-  # Any change to these triggers an automatic image rebuild via _is_stale().
+  # Hash all files whose changes must invalidate the cached container image:
+  #   - Cargo.toml + Cargo.lock: Rust dependency manifest changes require a rebuild.
+  #   - $CONFIG (runbox.yml): build-arg changes (system_packages, cmd_scope, etc.).
+  #   - $0 (this script): new bind-mounts, changed container flags, or flag semantics.
+  #   - $SCRIPT_DIR/plugins.sh: plugin mount changes affect the container interface.
+  #   - $DOCKERFILE: new build stages, RUN mkdir, or ENV changes alter the image.
+  # Fix(BUG-002): Extended from Cargo+config-only to include infrastructure files.
+  # Root cause: _content_hash() excluded $0/plugins.sh/DOCKERFILE; infra changes ignored.
+  # Pitfall: Content hashes scoped to app inputs silently miss infrastructure changes.
   {
     find "$WORKSPACE_ROOT" \( -name Cargo.toml -o -name Cargo.lock \) -print0 \
       | sort -z | xargs -0 sha256sum 2>/dev/null
-    sha256sum "$CONFIG" 2>/dev/null
+    sha256sum "$CONFIG"                    2>/dev/null
+    sha256sum "$0"                         2>/dev/null
+    sha256sum "$SCRIPT_DIR/plugins.sh"     2>/dev/null
+    sha256sum "$DOCKERFILE"                2>/dev/null
   } | sha256sum | cut -d' ' -f1
 }
 
@@ -299,14 +308,32 @@ cmd_test()
   # uid can write cargo lock files and build artifacts without owning those files.
   local userns_arg=()
   [[ "$CONTAINER_CMD" == "podman" ]] && userns_arg=( --userns=keep-id )
+  # Fix(BUG-001): Pre-create plugin_mount target directories inside the host workspace.
+  # runc reorders bind-mounts by path depth (parent before child), so the workspace :ro
+  # mount always lands before nested child mounts (e.g. /workspace/.claude).  After the
+  # workspace :ro mount is applied, /workspace reflects the HOST directory — so
+  # /workspace/.claude exists only if $WORKSPACE_ROOT/.claude exists on the host.
+  # Without this mkdir, runc calls mkdirat on the :ro overlay and returns EROFS.
+  # Root cause: host workspace lacks plugin_mount subdir; :ro parent blocks creation.
+  # Pitfall: pre-create all WORKSPACE_DIR-nested plugin targets in $WORKSPACE_ROOT first.
+  local i
+  for (( i=0; i<${#mount_args[@]}; i++ )); do
+    if [[ "${mount_args[$i]}" == "-v" ]] && [[ $((i+1)) -lt ${#mount_args[@]} ]]; then
+      local container_path
+      container_path="$( cut -d: -f2 <<< "${mount_args[$((i+1))]}" )"
+      if [[ "$container_path" == "$WORKSPACE_DIR/"* ]]; then
+        mkdir -p "$WORKSPACE_ROOT/${container_path#"$WORKSPACE_DIR/"}"
+      fi
+    fi
+  done
   "$CONTAINER_CMD" run --rm \
     "${userns_arg[@]}" \
     --user "$(id -u):$(id -g)" \
     -e VERB_LAYER=l1 \
+    "${mount_args[@]}" \
     -v "$WORKSPACE_ROOT:$WORKSPACE_DIR:ro" \
     -v "${IMAGE}_${CACHE_DIR}:$WORKSPACE_DIR/$CACHE_DIR" \
     "${bin_args[@]}" \
-    "${mount_args[@]}" \
     "$IMAGE" \
     "$WORKSPACE_DIR/$TEST_SCRIPT"
 }

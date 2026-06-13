@@ -16,3 +16,12 @@ target/
 # Git history is not needed inside the image.
 .git/
 
+# .claude/ is created on the host by cmd_test() (runbox-run) before each run so runc
+# can attach ~/.claude as a child bind-mount under the :ro workspace mount.  Excluded
+# here for two reasons:
+#   1. Security: host credentials in .claude/ must never be baked into a container image.
+#   2. Correctness: COPY . . would include the directory, causing RUN mkdir -p .claude
+#      to find it already present — harmless with -p, but the directory would contain
+#      host-side credential data.
+.claude/
+
