@@ -10,11 +10,11 @@ Edge case coverage for the `--max-sessions` parameter. See [033_max_sessions.md]
 | EC-2 | `--max-sessions 0` + `--dry-run` → exit 0; no gate messages | Behavioral Divergence |
 | EC-3 | `CLR_MAX_SESSIONS=5` + `--dry-run` → exit 0 (env var applied; gate skipped in dry-run) | Env Var |
 | EC-4 | `--max-sessions 5` + `CLR_MAX_SESSIONS=2` + `--dry-run` → CLI 5 wins; exit 0 | CLI-wins |
-| EC-5 | `CLR_MAX_SESSIONS=notanumber` → silently ignored; default 25 used; command proceeds | Validation |
+| EC-5 | `CLR_MAX_SESSIONS=notanumber` → silently ignored; default 30 used; command proceeds | Validation |
 | EC-6 | `--max-sessions 0` → gate disabled; no stderr waiting messages emitted | Behavioral |
 | EC-7 | No gate messages when sessions below limit (dry-run, default max) | Behavioral Divergence |
 | EC-8 | Gate disabled with explicit 0 → no stderr messages | Edge Case |
-| EC-9 | `--help` output contains `default: 25` for `--max-sessions` | Documentation |
+| EC-9 | `--help` output contains `default: 30` for `--max-sessions` | Documentation |
 
 ## Test Coverage Summary
 
@@ -50,7 +50,7 @@ be exercised in this test surface.
 | EC-6 | `us25_1_max_sessions_0_unlimited_no_wait` | `user_story_output_test.rs` |
 | EC-7 | `ec7_max_sessions_no_gate_messages_below_limit` | `param_edge_cases_test.rs` |
 | EC-8 | `us25_1_max_sessions_0_unlimited_no_wait` | `user_story_output_test.rs` |
-| EC-9 | `ec9_max_sessions_help_shows_default_twenty_five` | `param_edge_cases_test.rs` |
+| EC-9 | `ec9_max_sessions_help_shows_default_thirty` | `param_edge_cases_test.rs` |
 
 ---
 
@@ -98,11 +98,11 @@ be exercised in this test surface.
 
 ---
 
-### EC-5: CLR_MAX_SESSIONS=invalid → silently ignored; default 25 used
+### EC-5: CLR_MAX_SESSIONS=invalid → silently ignored; default 30 used
 
 - **Given:** `CLR_MAX_SESSIONS=notanumber` set; no `--max-sessions` CLI flag; `--dry-run` set
 - **When:** `CLR_MAX_SESSIONS=notanumber clr --dry-run "task"`
-- **Then:** Exit 0; invalid env var silently ignored; default 25 used (gate skipped in dry-run)
+- **Then:** Exit 0; invalid env var silently ignored; default 30 used (gate skipped in dry-run)
 - **Exit:** 0
 - **Source:** [--max-sessions](../../../../docs/cli/param/033_max_sessions.md)
 - **Commands:** run, ask
@@ -123,8 +123,8 @@ be exercised in this test surface.
 ### EC-7: No gate messages when sessions below limit (dry-run, default max)
 
 - **Given:** clean environment; no `--max-sessions` override; real session count is 0 (no claude processes running)
-- **When:** `clr --dry-run "task"` (default max=25; 0 active sessions; gate not triggered)
-- **Then:** Exit 0; no "waiting" or "session" messages on stderr; command preview produced immediately. **Divergence from EC-2:** value 25 activates the gate code path — in non-dry-run execution `find_claude_processes()` would be called (finds 0 < 25, proceeds); value 0 (EC-2) bypasses `find_claude_processes()` entirely regardless of mode, as a configuration-level disable
+- **When:** `clr --dry-run "task"` (default max=30; 0 active sessions; gate not triggered)
+- **Then:** Exit 0; no "waiting" or "session" messages on stderr; command preview produced immediately. **Divergence from EC-2:** value 30 activates the gate code path — in non-dry-run execution `find_claude_processes()` would be called (finds 0 < 30, proceeds); value 0 (EC-2) bypasses `find_claude_processes()` entirely regardless of mode, as a configuration-level disable
 - **Exit:** 0
 - **Source:** [--max-sessions](../../../../docs/cli/param/033_max_sessions.md)
 - **Commands:** run, ask
@@ -142,11 +142,11 @@ be exercised in this test surface.
 
 ---
 
-### EC-9: --help shows correct default (25) for --max-sessions
+### EC-9: --help shows correct default (30) for --max-sessions
 
 - **Given:** clean environment
 - **When:** `clr --help`
-- **Then:** Stdout contains `--max-sessions` AND contains `default: 25`; prevents regression where help text shows stale default while code uses a different value
+- **Then:** Stdout contains `--max-sessions` AND contains `default: 30`; prevents regression where help text shows stale default while code uses a different value
 - **Exit:** 0
 - **Source:** [--max-sessions](../../../../docs/cli/param/033_max_sessions.md)
 - **Commands:** run, ask

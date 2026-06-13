@@ -42,7 +42,7 @@ pipe-separated list of expected values (case-insensitive, whitespace-trimmed). T
 and exit 0). Exit code 3 is exclusive to `--expect` mismatch; it does not overlap with
 subprocess exit codes. Both parameters are silently ignored in interactive mode.
 
-**Session concurrency gate:** `--max-sessions <N>` (default 25, 0 = unlimited) counts active
+**Session concurrency gate:** `--max-sessions <N>` (default 30, 0 = unlimited) counts active
 `claude` processes via `/proc` scan before spawning a subprocess. When the live count is at or
 above the limit, the runner emits a waiting message to stderr and polls every 30 seconds until a
 slot opens or the 100-attempt limit is exhausted (fatal exit 1 on exhaustion). Setting `--max-sessions 0`

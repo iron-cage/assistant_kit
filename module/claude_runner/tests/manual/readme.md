@@ -486,7 +486,7 @@ cargo run -p claude_runner -- ps
 cargo run -p claude_runner -- ps
 ```
 
-**Expected:** Unicode-box table with columns `#`, `PID`, `Started`, `CPU%`, `RAM`, `State`, `Absolute Path`, `Task`. First line contains `┌`. Exit code 0. Requires ≥1 live `claude` process.
+**Expected:** Plain-style table (no `┌` border) with column headers `#`, `PID`, `Elapsed`, `CPU%`, `RAM`, `State`, `Absolute Path`, `Task`. Header line contains `PID` and `Elapsed` but NOT `┌`. Exit code 0. Requires ≥1 live `claude` process.
 
 ### TC-63: `clr ps` — Self-Exclusion
 ```sh
@@ -614,7 +614,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 - **CC-87:** `--expect-retries 256 --dry-run "test"` → exit 1; error "invalid --expect-retries value"
 - **CC-88:** `--max-sessions 5 --dry-run "test"` → exit 0
 - **CC-89:** `--max-sessions 0 --dry-run "test"` → exit 0 (gate disabled)
-- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 25 used)
+- **CC-90:** `CLR_MAX_SESSIONS=notanumber --dry-run "test"` → exit 0 (silently ignored, default 30 used)
 - Automated in: `output_file_test.rs`, `expect_validation_test.rs`, `param_edge_cases_test.rs`, `env_var_ext_test.rs`
 
 ### Env vars for expect/output-file params
@@ -655,7 +655,7 @@ These are exhaustively tested by the integration test suite (not manual). Listed
 
 ---
 
-## New Corner Cases (NC-1 through NC-8) — Discovered During Manual Testing
+## New Corner Cases (NC-1 through NC-14) — Discovered During Manual Testing
 
 ### NC-1: QuotaExhausted Label (Automated)
 
@@ -739,13 +739,13 @@ clr isolated --trace --creds /nonexistent "test"
 
 ### NC-12: Gate Waiting Message Format — `X/Y sessions active`
 
-**Precondition:** Requires ≥25 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
+**Precondition:** Requires ≥30 live claude sessions running on the host (or use `--max-sessions N` with N sessions already running). Gate-blocked: cannot be tested in container (0 sessions).
 
 **Expected:** When the gate is triggered, each polling cycle emits to stderr:
 `Info: {count}/{max} sessions active; waiting 30s for a slot... (attempt {attempt}/{max_attempts})`
 
-Example with 25 sessions at default limit:
-`Info: 25/25 sessions active; waiting 30s for a slot... (attempt 1/100)`
+Example with 30 sessions at default limit:
+`Info: 30/30 sessions active; waiting 30s for a slot... (attempt 1/100)`
 
 The old format `"X claude session(s) running (limit Y)"` is **not** emitted. The `X/Y` ratio format is the canonical output.
 
@@ -756,4 +756,16 @@ The old format `"X claude session(s) running (limit Y)"` is **not** emitted. The
 **Expected:** After 100 polling cycles (50 minutes total), `clr` emits to stderr:
 `Error: --max-sessions {count}/{max} active; gave up after 100 attempts.`
 Then exits with code 1. The old limit of 50 attempts is **not** used.
+
+### NC-14: `clr ps` — Queued CLR Table via `CLR_GATE_DIR`
+
+```sh
+mkdir -p /tmp/test-gate
+printf '{"cwd":"/tmp/myproject","since":1720000000,"attempt":3,"message":"waiting for session slot"}' \
+  > /tmp/test-gate/99999.json
+CLR_GATE_DIR=/tmp/test-gate cargo run -p claude_runner -- ps
+rm -rf /tmp/test-gate
+```
+
+**Expected:** Output contains a plain-style queued CLR processes table with headers `PID`, `CWD`, `Waiting`, `Attempt`. PID column shows `99999`. `Waiting` shows a large elapsed value (epoch 1720000000 is in 2024, so format is `Xh Ym`). "No active Claude Code sessions." message also appears above the queued table. Exit code 0. No live `claude` sessions required — works in container.
 

@@ -35,6 +35,9 @@ pub( crate ) fn dispatch_ps( tokens : &[ String ] ) -> !
     }
     ( None, Some( qt ) ) =>
     {
+      // Print the "no active sessions" sentinel even when a queued table is
+      // present — users need context for WHY processes are waiting rather than
+      // seeing a queue table with no explanation of the active-session count.
       println!( "No active Claude Code sessions." );
       println!();
       println!( "{qt}" );
@@ -249,6 +252,11 @@ fn parse_json_u64( content : &str, key : &str ) -> Option< u64 >
 // Read the gate state dir and build the queued CLR processes table.
 //
 // Returns None when the gate dir is absent or contains no .json files.
+//
+// JSON parsing is manual (no serde) to keep dependencies minimal.  Gate files
+// are written by gate.rs using format!(), so the only structural constraint is
+// that `cwd` must not contain a literal `"` character — Unix paths never do,
+// so substring extraction in parse_json_str is safe in practice.
 fn build_queued_table() -> Option< String >
 {
   let dir = gate_dir_ps();
